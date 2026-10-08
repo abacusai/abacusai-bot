@@ -9,7 +9,7 @@ import {
   draftStore,
   clearDraft,
   updateDraft,
-} from "#renderer/features/chat/composer/draft-store";
+} from "#renderer/lib/continuity/composer-drafts";
 import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
 const os = implement(contract);
 /** `update.events` as main serves it: the current status first, then held open. */

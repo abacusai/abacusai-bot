@@ -35,7 +35,8 @@ it("keyless URL previews on the start route use the draft browser scope and reje
         ([name, input]) =>
           name === "browser.runtime.materialize" &&
           (input as { conversationKey: string; url: string })
-            .conversationKey === draftConversationKey("abacusai-bot") &&
+            .conversationKey ===
+            draftConversationKey("abacusai-bot", startDraftStore.state.id) &&
           (input as { url: string }).url === "https://draft.test"
       )
     ).toBe(true)

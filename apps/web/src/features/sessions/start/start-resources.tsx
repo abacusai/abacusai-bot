@@ -51,7 +51,7 @@ export const SessionStartResources = ({
   const draft = useSelector(startDraftStore, (s) => s);
   const id = draft.workspaceId ?? workspaceId;
   const workspace = useWorkspace(id ?? "");
-  const key = id ? draftConversationKey(id) : null;
+  const key = id ? draftConversationKey(id, draft.id) : null;
   const entries = useSelector(panelTabsStore, (s) =>
     key ? (s[key] ?? EMPTY_TABS) : EMPTY_TABS
   );

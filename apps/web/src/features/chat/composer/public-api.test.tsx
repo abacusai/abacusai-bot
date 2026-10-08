@@ -1,16 +1,17 @@
 import { fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
-import * as b from "../fixtures/builders";
-import { FakeRelay } from "../fixtures/relay";
-import { adoptDraftModel } from "../index";
-import { renderRelay } from "../testing";
 import {
   clearDraft,
   draftRevision,
   draftStore,
   updateDraft,
-} from "./draft-store";
+} from "#renderer/lib/continuity/composer-drafts";
+
+import * as b from "../fixtures/builders";
+import { FakeRelay } from "../fixtures/relay";
+import { adoptDraftModel } from "../index";
+import { renderRelay } from "../testing";
 
 let current: Awaited<ReturnType<typeof renderRelay>> | null = null;
 afterEach(async () => {

@@ -15,6 +15,7 @@ export type BrowserResourceId = string & {
 export type ConversationScope = {
   workspaceId: string;
   sessionId: string | null;
+  draftId?: string;
 };
 
 export type BrowserRuntimeGeneration = number & {
@@ -81,10 +82,11 @@ const assertNonEmpty = (value: string, label: string): string => {
 export const conversationKey = ({
   workspaceId,
   sessionId,
+  draftId,
 }: ConversationScope): ConversationKey =>
   sharedConversationKey(
     sessionId == null
-      ? draftConversationRef(workspaceId)
+      ? draftConversationRef(workspaceId, draftId)
       : sessionConversationRef(workspaceId, sessionId)
   );
 
@@ -99,6 +101,7 @@ export const conversationScopeFromKey = (
   return {
     workspaceId: ref.workspaceId,
     sessionId: ref.kind === "session" ? ref.sessionId : null,
+    ...(ref.kind === "draft" && ref.draftId ? { draftId: ref.draftId } : {}),
   };
 };
 

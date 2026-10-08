@@ -56,7 +56,9 @@ export const ReplyQuote = ({
     <>
       <span
         className={cn(
-          "block truncate text-xs font-semibold",
+          variant === "composer"
+            ? "shrink-0 text-xs font-semibold"
+            : "block truncate text-xs font-semibold",
           variant === "composer"
             ? "text-[var(--bot-accent,var(--primary))]"
             : "text-current"
@@ -66,7 +68,9 @@ export const ReplyQuote = ({
       </span>
       <span
         className={cn(
-          "block truncate text-[13px]/snug",
+          variant === "composer"
+            ? "truncate text-xs"
+            : "block truncate text-[13px]/snug",
           variant === "composer" ? "text-muted-foreground" : "opacity-75"
         )}
       >
@@ -81,7 +85,7 @@ export const ReplyQuote = ({
       className={cn(
         "flex min-w-0 items-center gap-1 overflow-hidden border-s-[3px]",
         variant === "composer"
-          ? "bg-foreground/[0.06] rounded-xl border-[var(--bot-accent,var(--primary))] py-1.5 ps-2.5 pe-1"
+          ? "bg-muted/50 h-[30px] rounded-lg border-[var(--bot-accent,var(--primary))] ps-2.5 pe-1"
           : "mb-1.5 rounded-xl border-current bg-[color-mix(in_oklch,currentColor_10%,transparent)] px-2.5 py-1.5"
       )}
     >
@@ -95,7 +99,14 @@ export const ReplyQuote = ({
           {content}
         </button>
       ) : (
-        <div className="min-w-0 flex-1">{content}</div>
+        <div
+          className={cn(
+            "min-w-0 flex-1",
+            variant === "composer" && "flex items-center gap-1.5"
+          )}
+        >
+          {content}
+        </div>
       )}
       {onCancel ? (
         <Button

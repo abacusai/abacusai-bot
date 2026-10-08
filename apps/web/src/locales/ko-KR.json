@@ -1888,7 +1888,15 @@
     "title": "Sessions",
     "unpin": "Unpin",
     "today": "Today",
-    "daysAgo": "{{count}} days ago"
+    "daysAgo": "{{count}} days ago",
+    "drafts": {
+      "heading": "Drafts",
+      "untitled": "Untitled draft",
+      "deleted": "Draft deleted",
+      "undo": "Undo",
+      "discard": "Discard draft: {{name}}",
+      "discardMenu": "Discard draft"
+    }
   },
   "terminalShells": {
     "busybox": {
@@ -2874,7 +2882,10 @@
       "noFavorites": "모델에 별표를 하면 여기에 남습니다.",
       "providers": "제공자",
       "providerNotConnected": "{{provider}}이(가) 연결되지 않았습니다",
-      "providerConnectHint": "연결하면 무료 모델을 포함해 그 모델을 사용할 수 있습니다."
+      "providerConnectHint": "연결하면 무료 모델을 포함해 그 모델을 사용할 수 있습니다.",
+      "retryAttachment": "Retry attachment",
+      "folderItems_one": "{{count}} item",
+      "folderItems_other": "{{count}} items"
     },
     "day": {
       "today": "Today",

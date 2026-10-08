@@ -1888,7 +1888,15 @@
     "title": "Sessions",
     "unpin": "Unpin",
     "today": "Today",
-    "daysAgo": "{{count}} days ago"
+    "daysAgo": "{{count}} days ago",
+    "drafts": {
+      "heading": "Drafts",
+      "untitled": "Untitled draft",
+      "deleted": "Draft deleted",
+      "undo": "Undo",
+      "discard": "Discard draft: {{name}}",
+      "discardMenu": "Discard draft"
+    }
   },
   "terminalShells": {
     "busybox": {
@@ -2874,7 +2882,10 @@
       "noFavorites": "किसी मॉडल को यहाँ रखने के लिए उस पर स्टार लगाएँ।",
       "providers": "प्रदाता",
       "providerNotConnected": "{{provider}} कनेक्ट नहीं है",
-      "providerConnectHint": "इसके मॉडल, मुफ़्त वाले भी, इस्तेमाल करने के लिए इसे कनेक्ट करें।"
+      "providerConnectHint": "इसके मॉडल, मुफ़्त वाले भी, इस्तेमाल करने के लिए इसे कनेक्ट करें।",
+      "retryAttachment": "Retry attachment",
+      "folderItems_one": "{{count}} item",
+      "folderItems_other": "{{count}} items"
     },
     "day": {
       "today": "Today",

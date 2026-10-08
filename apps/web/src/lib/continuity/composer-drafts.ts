@@ -16,13 +16,18 @@ export interface DraftAttachment {
   size?: number;
   mimeType?: string;
   error?: string;
+  kind?: "file" | "folder";
+  count?: number;
   /** Object URL of a pasted image, revoked on removal. */
   preview?: string;
 }
 
-import type { SubmissionEnvelope } from "../runtime/admission";
+import type { SubmissionEnvelope } from "./submission-envelope";
 
 export interface Draft {
+  selectionStart?: number;
+  selectionEnd?: number;
+  scrollTop?: number;
   pendingSubmit?: SubmissionEnvelope;
   replyTo?: import("@abacus-ai/contract/agent-types").UserTextTags["replyTo"];
   text: string;

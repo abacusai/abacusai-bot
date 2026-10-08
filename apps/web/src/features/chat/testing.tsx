@@ -12,10 +12,10 @@ import {
   FixtureDb,
   fixtureTransport,
 } from "#renderer/data/fixture-db/fixture-db";
+import { clearDraft } from "#renderer/lib/continuity/composer-drafts";
 import { i18n, initI18n } from "#renderer/lib/i18n";
 import { defaultSeed } from "#renderer/test-support/app-harness";
 
-import { clearDraft } from "./composer/draft-store";
 import {
   fixtureRuntime,
   type FixtureRuntime,

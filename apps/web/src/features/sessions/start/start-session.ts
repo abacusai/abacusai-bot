@@ -11,13 +11,20 @@ import { Store } from "@tanstack/react-store";
 import type { Db } from "#renderer/data/db";
 import { isRpcError } from "#renderer/data/query-client";
 import type { AppClient } from "#renderer/data/transport/types";
-import { updateDraft } from "#renderer/features/chat/composer/draft-store";
-import type { SubmissionEnvelope } from "#renderer/features/chat/runtime/admission";
+import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
 import { persistedStore } from "#renderer/lib/continuity/registry";
+import type { SubmissionEnvelope } from "#renderer/lib/continuity/submission-envelope";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 
 import { promoteTabs } from "../dock/panel-tabs-store";
-export type { SubmissionEnvelope } from "#renderer/features/chat/runtime/admission";
+import {
+  hasDraftContent,
+  saveSessionDraft,
+  restoreSessionDraft,
+  removeSessionDraft,
+  sessionDraftsStore,
+} from "./session-drafts";
+export type { SubmissionEnvelope } from "#renderer/lib/continuity/submission-envelope";
 export interface StartDraft {
   id: string;
   workspaceId: string | null;
@@ -42,6 +49,44 @@ export const startDraftStore = persistedStore<StartDraft>(
   "abacusai-bot:abacus.sessions.start",
   newStartDraft
 );
+const savedActiveId = sessionDraftsStore.state.activeId;
+const restored = savedActiveId ? restoreSessionDraft(savedActiveId) : undefined;
+if (restored) startDraftStore.setState(() => restored);
+else if (savedActiveId) startDraftStore.setState(newStartDraft);
+saveSessionDraft(startDraftStore.state, true);
+const subscription = startDraftStore.subscribe((draft) =>
+  saveSessionDraft(draft, true)
+);
+import.meta.hot?.dispose(() => subscription.unsubscribe());
+
+export const openStartDraft = (id?: string, workspaceId?: string): string => {
+  const current = startDraftStore.state;
+  const saved = id ? restoreSessionDraft(id) : undefined;
+  if (saved) startDraftStore.setState(() => saved);
+  else if (
+    id ||
+    current.envelope ||
+    hasDraftContent(
+      sessionDraftsStore.state.drafts[current.id]?.composer ?? {
+        text: "",
+        attachments: [],
+      }
+    )
+  )
+    startDraftStore.setState(() => ({
+      ...newStartDraft(),
+      workspaceId: workspaceId ?? null,
+    }));
+  else if (workspaceId)
+    startDraftStore.setState((d) => ({ ...d, workspaceId }));
+  requestAnimationFrame(() =>
+    document
+      .querySelector<HTMLTextAreaElement>("[data-slot=composer] textarea")
+      ?.focus()
+  );
+  return startDraftStore.state.id;
+};
+
 export const optimisticSession = (draft: StartDraft): SessionRow => {
   const now = new Date().toISOString();
   const picks = draft.envelope?.forwardedProps;
@@ -76,6 +121,13 @@ export interface StartSessionDeps {
   handoff(id: string, envelope: SubmissionEnvelope): Promise<void> | void;
   navigate(id: string): Promise<unknown> | void;
 }
+const sendingDrafts = new Map<string, Store<StartDraft>>();
+export const rejectStartSubmission = (id: string): void => {
+  const store = sendingDrafts.get(id);
+  if (store) store.setState((d) => ({ ...d, envelope: null }));
+  else if (startDraftStore.state.id === id)
+    startDraftStore.setState((d) => ({ ...d, envelope: null }));
+};
 const running = new WeakMap<Store<StartDraft>, Promise<void>>();
 const navigating = new WeakMap<Store<StartDraft>, number>();
 export const prepareStartDraft = (db: Db, workspaceId: string | null): void => {
@@ -104,25 +156,46 @@ export const startSession = async (
   deps: StartSessionDeps,
   envelope?: SubmissionEnvelope
 ): Promise<void> => {
-  const store = deps.store ?? startDraftStore;
+  const managed = deps.store === undefined;
+  const id = startDraftStore.state.id;
+  const store =
+    deps.store ?? sendingDrafts.get(id) ?? new Store(startDraftStore.state);
+  if (managed && !sendingDrafts.has(id)) {
+    sendingDrafts.set(id, store);
+    store.subscribe((draft) => {
+      saveSessionDraft(draft);
+      if (startDraftStore.state.id === draft.id)
+        startDraftStore.setState(() => draft);
+    });
+  }
   const sessionId = store.state.id;
   let task = running.get(store);
   if (!task) {
-    task = runStartSession(deps, envelope).finally(() => running.delete(store));
+    task = runStartSession({ ...deps, store }, envelope).finally(() =>
+      running.delete(store)
+    );
     running.set(store, task);
   }
   navigating.set(store, (navigating.get(store) ?? 0) + 1);
   try {
     await task;
-    await deps.navigate(sessionId);
-    if (navigating.get(store) === 1 && store.state.id === sessionId)
-      store.setState(() => newStartDraft());
+    if (!managed || startDraftStore.state.id === sessionId)
+      await deps.navigate(sessionId);
+    if (navigating.get(store) === 1) {
+      if (managed) {
+        removeSessionDraft(sessionId);
+        sendingDrafts.delete(sessionId);
+        if (startDraftStore.state.id === sessionId)
+          startDraftStore.setState(newStartDraft);
+      } else if (store.state.id === sessionId) store.setState(newStartDraft);
+    }
   } finally {
     const remaining = (navigating.get(store) ?? 1) - 1;
     if (remaining) navigating.set(store, remaining);
     else navigating.delete(store);
   }
 };
+
 const runStartSession = async (
   deps: StartSessionDeps,
   envelope?: SubmissionEnvelope
@@ -195,12 +268,12 @@ const runStartSession = async (
           throw new Error(result.error ?? "Couldn't attach checkout");
       }
     }
-    const from = draftConversationKey(workspaceId);
+    const from = draftConversationKey(workspaceId, sessionId);
     const to = sessionConversationKey(workspaceId, sessionId);
     const promotions = await Promise.allSettled([
       deps.client.terminal.promoteScope({
         draftConversationKey: from,
-        draftConversation: draftConversationRef(workspaceId),
+        draftConversation: draftConversationRef(workspaceId, sessionId),
         sessionConversationKey: to,
         sessionConversation: sessionConversationRef(workspaceId, sessionId),
       }),

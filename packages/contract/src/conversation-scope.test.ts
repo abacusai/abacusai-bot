@@ -11,6 +11,19 @@ import {
 } from "./conversation-scope";
 
 describe("conversation scope contract", () => {
+  it("keeps two drafts in one workspace separate from each other and a saved session", () => {
+    const first = draftConversationKey("workspace", "draft-one");
+    const second = draftConversationKey("workspace", "draft-two");
+    expect(first).not.toBe(second);
+    expect(first).not.toBe(sessionConversationKey("workspace", "draft-one"));
+    expect(conversationRefFromKey(first)).toEqual(
+      draftConversationRef("workspace", "draft-one")
+    );
+    expect(conversationBelongsToWorkspace(first, "workspace")).toBe(true);
+    expect(conversationRefFromKey(draftConversationKey("workspace"))).toEqual(
+      draftConversationRef("workspace")
+    );
+  });
   it("round-trips draft and saved-session identities", () => {
     const draft = draftConversationRef(" workspace-one ");
     const session = sessionConversationRef("workspace-one", " session-one ");

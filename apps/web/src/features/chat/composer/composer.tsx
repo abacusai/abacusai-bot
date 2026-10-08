@@ -7,7 +7,7 @@ import type { AgentMode } from "@abacus-ai/contract/agent-types";
  * element-level, except Stop (`Mod+.`), the one global shortcut.
  */
 import { Store, useSelector } from "@tanstack/react-store";
-import { ArrowUp, FileText, Folder, Mic, Plus, X } from "lucide-react";
+import { ArrowUp, FileText, Folder, Mic, Plus } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   createContext,
@@ -28,20 +28,21 @@ import { Spinner } from "#renderer/components/spinner";
 import { isNotFound } from "#renderer/data/ai";
 import { isRpcError } from "#renderer/data/query-client";
 import { cn } from "#renderer/lib/cn";
+import {
+  clearDraft,
+  draftStore,
+  draftRevision,
+  restoreDraft,
+  EMPTY_DRAFT,
+  updateDraft,
+  type Draft,
+} from "#renderer/lib/continuity/composer-drafts";
 import { useMotionPreference } from "#renderer/lib/motion";
 import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import { useMediaQuery } from "#renderer/lib/use-media-query";
 import type { VoiceState } from "#renderer/lib/voice/operation";
 import { useConnectedDictation } from "#renderer/lib/voice/use-dictation";
-import {
-  Attachment,
-  AttachmentAction,
-  AttachmentContent,
-  AttachmentDescription,
-  AttachmentGroup,
-  AttachmentMedia,
-  AttachmentTitle,
-} from "#renderer/ui/attachment";
+import { AttachmentGroup } from "#renderer/ui/attachment";
 import { Button } from "#renderer/ui/button";
 import {
   DropdownMenu,
@@ -66,22 +67,14 @@ import {
   useHost,
   useThreadStore,
 } from "../store/selectors";
+import { AttachmentChip } from "./attachment-chip";
 import {
   addFiles,
   addPaths,
-  formatSize,
+  retryAttachment,
   removeAttachment,
 } from "./attachments";
 import { ModeChip, ModelChip, type ModelChipHandle } from "./chips";
-import {
-  clearDraft,
-  draftStore,
-  draftRevision,
-  restoreDraft,
-  EMPTY_DRAFT,
-  updateDraft,
-  type Draft,
-} from "./draft-store";
 import { setQueueEditing } from "./queue-editing";
 import { TriggerMenu, triggerAt, type TriggerState } from "./triggers";
 
@@ -192,8 +185,8 @@ export const useComposerExpanded = (threadId: string): boolean => {
 };
 
 const Attachments = () => {
-  const { t } = useTranslation();
   const { threadId, draft } = useComposer();
+  const { runtime, composer: config } = useChatView();
   const pref = useMotionPreference();
   const morph = composerMorph(pref, threadId);
   return (
@@ -210,50 +203,26 @@ const Attachments = () => {
           exit={{ opacity: 0 }}
           transition={composerReveal(pref)}
         >
-          <AttachmentGroup className="scroll-fade-x">
+          <AttachmentGroup
+            className="scroll-fade-x gap-1.5 py-0.5"
+            tabIndex={0}
+          >
             {draft.attachments.map((attachment) => (
-              <Attachment
+              <AttachmentChip
                 key={attachment.id}
-                className="w-56"
-                data-state={attachment.state}
-              >
-                <AttachmentMedia>
-                  {attachment.state === "uploading" ? (
-                    <Spinner aria-hidden />
-                  ) : attachment.preview != null ? (
-                    <img
-                      src={attachment.preview}
-                      alt=""
-                      className="size-full object-cover"
-                    />
-                  ) : (
-                    <FileText aria-hidden />
-                  )}
-                </AttachmentMedia>
-                <AttachmentContent>
-                  <AttachmentTitle>{attachment.name}</AttachmentTitle>
-                  <AttachmentDescription
-                    className={cn(
-                      attachment.state === "error" && "text-destructive"
-                    )}
-                  >
-                    {attachment.state === "error"
-                      ? (attachment.error ?? t("chat.composer.attachFailed"))
-                      : [
-                          attachment.name.split(".").at(-1)?.toUpperCase(),
-                          formatSize(attachment.size),
-                        ]
-                          .filter(Boolean)
-                          .join(", ")}
-                  </AttachmentDescription>
-                </AttachmentContent>
-                <AttachmentAction
-                  aria-label={t("chat.composer.removeAttachment")}
-                  onClick={() => removeAttachment(threadId, attachment.id)}
-                >
-                  <X aria-hidden />
-                </AttachmentAction>
-              </Attachment>
+                attachment={attachment}
+                host={runtime.host}
+                root={config.attachmentsBase ?? null}
+                onRemove={() => removeAttachment(threadId, attachment.id)}
+                onRetry={() =>
+                  void retryAttachment(
+                    threadId,
+                    attachment.id,
+                    runtime.host,
+                    config.attachmentContext
+                  )
+                }
+              />
             ))}
           </AttachmentGroup>
         </motion.div>
@@ -303,7 +272,12 @@ const Attach = () => {
           <DropdownMenuItem
             onClick={async () => {
               const folder = await runtime.host.pickFolder();
-              if (folder != null) addPaths(threadId, [{ path: folder }]);
+              if (folder != null) {
+                const count = await runtime.host
+                  .folderCount?.(folder, config.attachmentContext)
+                  .catch(() => undefined);
+                addPaths(threadId, [{ path: folder, kind: "folder", count }]);
+              }
             }}
           >
             <Folder aria-hidden />
@@ -548,6 +522,7 @@ export const ThreadComposer = () => {
   );
   const [menuOpen, setMenuOpen] = useState(false);
   const modelChip = useRef<ModelChipHandle>(null);
+  const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [trigger, setTrigger] = useState<TriggerState | null>(() =>
     triggerAt(draft.text, draft.text.length, {
@@ -557,6 +532,16 @@ export const ThreadComposer = () => {
   );
   const field = useRef<HTMLTextAreaElement>(null);
   const submitting = useRef(false);
+  useEffect(() => {
+    const saved = draftStore.state[threadId];
+    if (field.current && saved) {
+      field.current.setSelectionRange(
+        saved.selectionStart ?? saved.text.length,
+        saved.selectionEnd ?? saved.text.length
+      );
+      field.current.scrollTop = saved.scrollTop ?? 0;
+    }
+  }, [threadId]);
   const pref = useMotionPreference();
   const fieldId = useId();
 
@@ -801,6 +786,7 @@ export const ThreadComposer = () => {
     );
   };
   const onDrop = (event: DragEvent<HTMLDivElement>) => {
+    setDragging(false);
     if (config.pending) {
       event.preventDefault();
       return;
@@ -960,11 +946,21 @@ export const ThreadComposer = () => {
         <motion.div
           {...morph}
           transition={surfaceTransition}
-          onDragOver={(event: DragEvent<HTMLDivElement>) =>
-            event.preventDefault()
-          }
+          onDragOver={(event: DragEvent<HTMLDivElement>) => {
+            if (event.dataTransfer.types.includes("Files")) {
+              event.preventDefault();
+              setDragging(true);
+            }
+          }}
+          onDragLeave={(event) => {
+            if (
+              !event.currentTarget.contains(event.relatedTarget as Node | null)
+            )
+              setDragging(false);
+          }}
           onDrop={onDrop}
           style={{ ...sharedStyle, borderRadius: radius }}
+          data-dragging={dragging || undefined}
           data-slot="composer-surface"
           data-layout={morph.layout ? "layout" : undefined}
           data-radius={radius}
@@ -975,6 +971,7 @@ export const ThreadComposer = () => {
             // the surface rather than drawn ahead of it. Clip, not hidden:
             // no scroll container, so focus never scrolls the surface.
             "relative z-10 flex flex-col overflow-clip bg-[var(--chat-surface)]",
+            dragging && "ring-primary/40 ring-2",
             // ComposerStates: the pill is 48 px; the typing box is the text
             // area over the toolbar row with 8 px under it, nothing else.
             expanded
@@ -1050,6 +1047,18 @@ export const ThreadComposer = () => {
                 onChange={(event) =>
                   setText(event.target.value, event.target.selectionStart)
                 }
+                onSelect={(event) => {
+                  const target = event.currentTarget;
+                  updateDraft(threadId, (d) => ({
+                    ...d,
+                    selectionStart: target.selectionStart,
+                    selectionEnd: target.selectionEnd,
+                  }));
+                }}
+                onScroll={(event) => {
+                  const scrollTop = event.currentTarget.scrollTop;
+                  updateDraft(threadId, (d) => ({ ...d, scrollTop }));
+                }}
                 onKeyDown={onKeyDown}
                 onPaste={onPaste}
                 style={

@@ -78,6 +78,12 @@ it("keeps the focused composer and text through admission and navigation without
     return { runId: input.runId, status: "started" as const };
   });
   const h = await mount(sends);
+  await waitFor(() => {
+    expect(h.router.state.location.search).toMatchObject({
+      draft: startDraftStore.state.id,
+    });
+    expect(h.router.state.status).toBe("idle");
+  });
   const navigate = vi.spyOn(h.router, "navigate").mockReturnValue(navigation);
   const removed: Node[] = [];
   const observer = new MutationObserver((records) =>

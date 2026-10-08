@@ -2,6 +2,7 @@ import { AgentMode } from "@abacus-ai/contract/agent-types";
 import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 import { resolveConfiguredModel } from "@abacus-ai/contract/models";
 import { useQuery } from "@tanstack/react-query";
+import { useSelector } from "@tanstack/react-store";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -13,11 +14,15 @@ import {
 import { useModelSetup } from "#renderer/components/model-setup/use-model-setup";
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
+import {
+  draftStore,
+  updateDraft,
+} from "#renderer/lib/continuity/composer-drafts";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 
 import { useCheckoutQueries, useSessionsTransport } from "./queries";
 import { setSessionModel } from "./session-actions";
-export const useSessionComposerModel = (row?: SessionRow) => {
+export const useSessionComposerModel = (row?: SessionRow, draftId?: string) => {
   const { t } = useTranslation();
   const db = useDb();
   const prefs = usePrefs();
@@ -40,7 +45,10 @@ export const useSessionComposerModel = (row?: SessionRow) => {
   const [draftModel, setDraftModel] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const models = catalog.data ?? [];
-  const value = row?.model ?? draftModel;
+  const savedModel = useSelector(draftStore, (state) =>
+    draftId ? state[draftId]?.model : undefined
+  );
+  const value = row?.model ?? (draftId ? savedModel : draftModel) ?? null;
   const selected = resolveConfiguredModel({
     requested: value,
     defaultModel: settings.data?.defaultModel,
@@ -48,7 +56,8 @@ export const useSessionComposerModel = (row?: SessionRow) => {
   });
   const changeModel = (id: string | null) => {
     if (!row) {
-      setDraftModel(id);
+      if (draftId) updateDraft(draftId, (d) => ({ ...d, model: id }));
+      else setDraftModel(id);
       return;
     }
     if (id)

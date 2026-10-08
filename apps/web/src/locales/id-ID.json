@@ -1888,7 +1888,15 @@
     "title": "Sessions",
     "unpin": "Unpin",
     "today": "Today",
-    "daysAgo": "{{count}} days ago"
+    "daysAgo": "{{count}} days ago",
+    "drafts": {
+      "heading": "Drafts",
+      "untitled": "Untitled draft",
+      "deleted": "Draft deleted",
+      "undo": "Undo",
+      "discard": "Discard draft: {{name}}",
+      "discardMenu": "Discard draft"
+    }
   },
   "terminalShells": {
     "busybox": {
@@ -2874,7 +2882,10 @@
       "noFavorites": "Beri bintang pada model untuk menyimpannya di sini.",
       "providers": "Penyedia",
       "providerNotConnected": "{{provider}} belum terhubung",
-      "providerConnectHint": "Hubungkan untuk memakai modelnya, termasuk yang gratis."
+      "providerConnectHint": "Hubungkan untuk memakai modelnya, termasuk yang gratis.",
+      "retryAttachment": "Retry attachment",
+      "folderItems_one": "{{count}} item",
+      "folderItems_other": "{{count}} items"
     },
     "day": {
       "today": "Today",

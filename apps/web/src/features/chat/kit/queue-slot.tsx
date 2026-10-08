@@ -70,7 +70,7 @@ const QueueRow = ({
   }, [problem, session, entry.id]);
   return (
     <div
-      className="flex h-10 items-center gap-2 rounded-xl bg-[var(--chat-surface-2)] ps-3.5 pe-2 text-[13px]"
+      className="flex h-8 items-center gap-1.5 rounded-lg border bg-[var(--chat-surface-2)] ps-2.5 pe-1 text-xs"
       data-slot="queue-row"
       data-entry={entry.id}
     >

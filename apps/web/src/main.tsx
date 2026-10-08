@@ -19,7 +19,6 @@ import { createDb, installDb, type Db } from "#renderer/data/db";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
 import { createQueryClient } from "#renderer/data/query-client";
 import { getTransport, type Transport } from "#renderer/data/transport";
-import { importLegacyDrafts } from "#renderer/features/chat/composer/draft-store";
 import { isToasterMounted } from "#renderer/features/shell/app-toaster";
 import { BootFailure } from "#renderer/features/shell/screens";
 import { installActivity } from "#renderer/lib/activity";
@@ -31,6 +30,7 @@ import {
   type BootError,
 } from "#renderer/lib/bootstrap";
 import { installUiContinuity } from "#renderer/lib/continuity";
+import { importLegacyDrafts } from "#renderer/lib/continuity/composer-drafts";
 import {
   changeLanguage,
   i18n,

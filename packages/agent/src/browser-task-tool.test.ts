@@ -31,8 +31,7 @@ const {
   DispatchBudget,
   DISPATCH_LIMIT,
   quotedUserWords,
-} =
-  await import("./browser-task-tool.js");
+} = await import("./browser-task-tool.js");
 
 const finished = (stoppedBy: BrowserTaskResult["stoppedBy"]) => ({
   text: "the report",

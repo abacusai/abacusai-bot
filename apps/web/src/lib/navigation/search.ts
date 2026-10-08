@@ -61,6 +61,7 @@ export const BotSearch = v.object({
 
 export const NewSessionSearch = v.object({
   workspace: optionalField(WorkspaceId),
+  draft: optionalField(v.pipe(v.string(), v.uuid())),
 });
 
 export const SESSION_DEFAULTS = { view: "split" } as const;

@@ -80,7 +80,6 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
   ],
   chat: [
     "composer/composer",
-    "composer/draft-store",
     "composer/start-composer",
     "fixture-runtime",
     "kit/lazy-view",
@@ -138,6 +137,8 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
     "session-workspace",
     "sessions-pages",
     "sessions-sidebar",
+    "start/session-drafts",
+    "start/start-session",
     "start/session-start-page",
     "start/start-resources",
   ],
@@ -152,6 +153,7 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
     "license-section",
     "models",
     "personal",
+    "referral-link",
     "search",
     "updates",
   ],
@@ -212,6 +214,7 @@ const featureBoundaryHits = (
           "lib/browser/files.ts",
           "lib/browser/host-files.ts",
           "lib/browser/sign-in.ts",
+          "lib/browser/sign-out.ts",
           "data/transport/index.ts",
         ].includes(file.path) &&
         ["/connect/services", "/lease"].includes(subpath ?? "");
@@ -222,7 +225,19 @@ const featureBoundaryHits = (
         (file.path === "features/shell/use-panel.ts" &&
           feature === "sessions" &&
           subpath === "/dock/panel-tabs-store");
-      if (!allowed && !platformSeam && !panelSeam)
+      // Shell navigation owns new-session actions and the account referral panel.
+      const shellActionSeam =
+        (feature === "sessions" &&
+          subpath === "/start/start-session" &&
+          [
+            "features/shell/app-root.tsx",
+            "features/shell/command-menu.tsx",
+            "features/shell/rail.tsx",
+          ].includes(file.path)) ||
+        (file.path === "features/shell/profile-menu.tsx" &&
+          feature === "settings" &&
+          subpath === "/referral-link");
+      if (!allowed && !platformSeam && !panelSeam && !shellActionSeam)
         hits.push(`${file.path}: ${specifier} (other feature)`);
       else if (
         subpath != null &&

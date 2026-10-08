@@ -38,6 +38,11 @@ export interface ChatHostActions extends CreditActions {
   /** A dropped file's real path, when it has one (spec 00 A.4.4). */
   pathForFile(file: File): string | null;
   readImage(filePath: string, hostRoot: string): Promise<string>;
+  readText?(filePath: string, hostRoot: string): Promise<string>;
+  folderCount?(
+    path: string,
+    context?: ResolveAttachmentContext
+  ): Promise<number>;
 }
 
 export const hostActionsFor = (
@@ -117,6 +122,18 @@ export const hostActionsFor = (
     pathForFile: (file) => transport.host.getPathForFile?.(file) || null,
     readImage: async (filePath, hostRoot) =>
       (await client.files.readImageAsDataUrl({ filePath, hostRoot })).dataUrl,
+    readText: async (filePath, hostRoot) =>
+      (await client.files.readText({ filePath, hostRoot, maxBytes: 4096 }))
+        .content,
+    folderCount: async (directoryPath, context) => {
+      const checkout = await context?.();
+      return (
+        await client.files.treeChildren({
+          directoryPath,
+          ...(checkout ? { checkout } : {}),
+        })
+      ).length;
+    },
   };
 };
 

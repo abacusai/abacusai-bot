@@ -26,17 +26,27 @@ const attachment = v.object({
   size: v.optional(v.number()),
   mimeType: v.optional(v.string()),
   error: v.optional(v.string()),
+  kind: v.optional(v.picklist(["file", "folder"])),
+  count: v.optional(v.number()),
 });
-const chat = v.record(
-  v.string(),
-  v.object({
-    text: v.string(),
-    attachments: v.array(attachment),
-    mode: v.optional(v.enum(AgentMode)),
-    model: v.optional(nullableString),
-    pendingSubmit: v.optional(envelope),
-  })
-);
+const composerDraft = v.object({
+  text: v.string(),
+  attachments: v.array(attachment),
+  mode: v.optional(v.enum(AgentMode)),
+  model: v.optional(nullableString),
+  pendingSubmit: v.optional(envelope),
+  replyTo: v.optional(
+    v.looseObject({
+      messageId: v.string(),
+      role: v.picklist(["user", "assistant"]),
+      excerpt: v.string(),
+    })
+  ),
+  selectionStart: v.optional(v.number()),
+  selectionEnd: v.optional(v.number()),
+  scrollTop: v.optional(v.number()),
+});
+const chat = v.record(v.string(), composerDraft);
 const botValues = v.object({
   name: v.string(),
   persona: v.string(),
@@ -164,6 +174,22 @@ export const CONTINUITY_STORES: ReadonlyArray<{
     schema: start,
   },
   {
+    key: "sessions.drafts.v1",
+    storage: "abacusai-bot:abacus.sessions.drafts",
+    schema: v.object({
+      activeId: nullableString,
+      drafts: v.record(
+        v.string(),
+        v.object({
+          ...start.entries,
+          createdAt: v.number(),
+          updatedAt: v.number(),
+          composer: composerDraft,
+        })
+      ),
+    }),
+  },
+  {
     key: "sessions.panelTabs.v1",
     storage: "abacusai-bot:abacus.sessions.tabs",
     schema: tabs,
@@ -257,7 +283,7 @@ export type PersistedStore<T> = Store<T> & {
 };
 
 /**
- * A module-level store kept in `sessionStorage` under `storage`, one of
+ * A module-level store kept in `sessionStorage` or durable `localStorage` under `storage`, one of
  * `CONTINUITY_STORES` (so its schema checks what is read back, and a
  * document swap carries it): read once at creation, keeping what the schema
  * accepts entry by entry (`initial` when nothing is usable; storage is left
@@ -281,13 +307,16 @@ export const persistedStore = <T>(
     batchMs?: number;
     urgent?(previous: T, next: T): boolean;
     bind?: boolean;
+    durable?: boolean;
   } = {}
 ): PersistedStore<T> => {
   const definition = definitionFor(storage);
   if (!definition) throw new Error(`Unregistered session store: ${storage}`);
+  const storageArea = () =>
+    options.durable ? globalThis.localStorage : globalThis.sessionStorage;
   const read = (): T => {
     try {
-      const raw = globalThis.sessionStorage?.getItem(storage);
+      const raw = storageArea()?.getItem(storage);
       if (raw == null) return initial();
       return (salvage(definition.schema, JSON.parse(raw)) as T) ?? initial();
     } catch {
@@ -301,8 +330,8 @@ export const persistedStore = <T>(
     timer = undefined;
     try {
       const value = options.serialize?.(store.state) ?? store.state;
-      if (value == null) globalThis.sessionStorage?.removeItem(storage);
-      else globalThis.sessionStorage?.setItem(storage, JSON.stringify(value));
+      if (value == null) storageArea()?.removeItem(storage);
+      else storageArea()?.setItem(storage, JSON.stringify(value));
     } catch {
       // Full or blocked: this document keeps it in memory.
     }

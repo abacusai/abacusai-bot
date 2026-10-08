@@ -11,10 +11,11 @@ import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
 import { useCollections } from "#renderer/data/db";
-import { updateDraft } from "#renderer/features/chat/composer/draft-store";
 import { loadFixtureRuntime } from "#renderer/features/chat/fixture-runtime";
 import { ChatView } from "#renderer/features/chat/kit/lazy-view";
 import { useSubagents } from "#renderer/features/chat/kit/subagents/use-subagents";
+import { openStartDraft } from "#renderer/features/sessions/start/start-session";
+import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
 import { platformSystem } from "#renderer/lib/platform-system";
 const SubagentDetail = lazy(() =>
   import("#renderer/features/chat/kit/subagents/detail").then((m) => ({
@@ -175,6 +176,7 @@ const PreviewRegistration = ({
 };
 const SessionGone = () => {
   const { t } = useTranslation();
+  const navigate = useAppNavigate();
   return (
     <div
       role="status"
@@ -183,7 +185,14 @@ const SessionGone = () => {
       <EmptyState
         title={t("sessions.gone")}
         action={
-          <Button nativeButton={false} render={<AppLink to="/sessions/new" />}>
+          <Button
+            onClick={() =>
+              void navigate({
+                to: "/sessions/new",
+                search: { draft: openStartDraft() },
+              })
+            }
+          >
             {t("sessions.sidebar.new")}
           </Button>
         }
