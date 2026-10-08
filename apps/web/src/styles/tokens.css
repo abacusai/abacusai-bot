@@ -719,3 +719,18 @@ html[data-window-focused="false"][data-platform][data-titlebar], html[data-windo
 :is([data-slot="sidebar-floating"], [data-slot="drawer-popup"][data-side-panel]) {
   border: 0;
 }
+
+/* Native progress semantics, using the same track and ink in both engines. */
+.flow-progress {
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--pane-radius);
+  background: var(--muted);
+  color: var(--primary);
+}
+.flow-progress::-webkit-progress-bar { background: var(--muted); }
+.flow-progress::-webkit-progress-value { background: var(--primary); }
+.flow-progress::-moz-progress-bar { background: var(--primary); }

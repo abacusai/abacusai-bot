@@ -226,8 +226,16 @@ it("the setup page maps every stage to a step, with a bar always measured", () =
         (li) => li.dataset.state
       );
       expect(steps, stage).toEqual(expected[stage]);
-      const bar = view.container.querySelector<HTMLElement>("[style*='width']");
-      expect(bar?.style.width, stage).toMatch(/^\d+%$/);
+      const bar = view.container.querySelector("progress")!;
+      expect(bar.max, stage).toBe(100);
+      expect(bar.value, stage).toBe(
+        stage === "starting"
+          ? 33
+          : stage === "installing" || stage === "updating"
+            ? 66
+            : 92
+      );
+      expect(bar.getAttribute("aria-label")).toBeTruthy();
       // The setup page holds the light theme while it shows.
       expect(themeOverride.state).toBe("light");
     } finally {
