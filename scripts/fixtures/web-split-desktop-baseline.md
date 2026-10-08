@@ -16,16 +16,15 @@ binary before it was fetched), this guard never ran. Against `7926220a`:
 -1 chunk, +53365 bytes (+0.83%), +22018 gzip bytes (+1.02%). The 1% allowance
 is unchanged.
 
-Where it grew, measured per merge from clean builds:
+Where it grew, measured per merge from clean builds (gzip bytes):
 
-- `4974ac1f` (#221, bot avatar expressions and character motion): +21522 gzip
-  bytes over `097b0934`. `7926220a` was measured on the license branch, which
-  did not have it, so it never counted against that baseline.
-- `420a4a54` (#224, the license browser merged on top): +11426.
-- `5104b70e`, `b8fad8cb`, `0d17bde2` (#225, #229, #230): +291 together.
-- `ee733431` (#235, browser model): +360.
-- `a7505a34` (#234, connectors): -222.
-- The merges after it to `700190fc` change no renderer code.
+- #221 (bot avatar expressions and character motion): +21522 over the build
+  before it. The previous baseline was measured on the license browser's
+  branch, which did not have #221, so it never counted. This is the overshoot.
+- #224 (the license browser): +11426 where it merged. It was already in the
+  previous baseline, which measured it at +11359, so it adds nothing here.
+- #225, #229, #230: +291 together; #235: +360; #234: -222.
+- The merges after it, through #238, change no renderer code.
 
 Measured from a clean worktree build of `700190fc` (frozen-lockfile install,
 Linux x64, Node 24); this baseline-only commit changes no renderer code.
