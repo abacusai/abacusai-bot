@@ -4172,6 +4172,7 @@
       "doneTitle": "C'est prêt",
       "doneBody": "Votre bot est sur WhatsApp. Écrivez-lui quand vous voulez.",
       "useDifferentNumber": "Utiliser un autre numéro"
-    }
+    },
+    "signOutDetail": "This ends your website session and clears this browser's bot data."
   }
 }

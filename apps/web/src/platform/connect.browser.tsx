@@ -50,6 +50,10 @@ import {
   installBrowserAttention,
   requestNotificationPermission,
 } from "#renderer/lib/browser/notifications";
+import {
+  installSignOutPeers,
+  installSignOutUnmount,
+} from "#renderer/lib/browser/sign-out";
 import { installUiContinuity } from "#renderer/lib/continuity";
 import { changeLanguage, fixedT, resolveLanguage } from "#renderer/lib/i18n";
 import { installLogRing } from "#renderer/lib/log-ring";
@@ -255,7 +259,11 @@ export const mountPlatformApp = async (root: Root): Promise<boolean> => {
     })
   );
 
-  installLease(() => transport.state === "open");
+  const stopLease = installLease(() => transport.state === "open");
+  installSignOutUnmount(() => {
+    root.unmount();
+    stopLease();
+  });
   installActivity(transport);
   installUiContinuity();
   installLogRing(transport);
@@ -265,6 +273,7 @@ export const mountPlatformApp = async (root: Root): Promise<boolean> => {
   });
   installTransitionTypes(router);
   followWriteAuthorization({ queryClient, transport }, router);
+  installSignOutPeers(router.options.context);
   root.render(
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />

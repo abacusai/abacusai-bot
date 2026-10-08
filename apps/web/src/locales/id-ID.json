@@ -4172,6 +4172,7 @@
       "doneTitle": "Semua siap",
       "doneBody": "Bot Anda ada di WhatsApp. Kirim pesan kapan saja.",
       "useDifferentNumber": "Gunakan nomor lain"
-    }
+    },
+    "signOutDetail": "This ends your website session and clears this browser's bot data."
   }
 }

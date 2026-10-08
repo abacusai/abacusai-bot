@@ -4172,6 +4172,7 @@
       "doneTitle": "準備完了",
       "doneBody": "ボットは WhatsApp にいます。いつでもメッセージを送れます。",
       "useDifferentNumber": "別の番号を使う"
-    }
+    },
+    "signOutDetail": "This ends your website session and clears this browser's bot data."
   }
 }

@@ -758,6 +758,7 @@ export const runHostConnection = async (
         );
         mismatches = 0;
       }
+      if (closed()) return;
       set({ attempting: true });
       const socket = new Socket(host.url, [
         "abacus-rpc",
