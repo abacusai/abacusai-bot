@@ -2713,6 +2713,8 @@
       "themeAccent": "テーマのアクセント",
       "customAccent": "カスタムアクセント",
       "colors": {
+        "abacusai": "AbacusAI",
+        "neutral": "ニュートラル",
         "blue": "青",
         "violet": "紫",
         "pink": "ピンク",

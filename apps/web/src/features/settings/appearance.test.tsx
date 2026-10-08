@@ -56,7 +56,7 @@ it("renders a live mini-app preview per theme from its own tokens", async () => 
     STOCK.light["chat-user-bubble"]
   );
   expect(stock.getPropertyValue("--ring")).toBe(
-    themeTokens(THEMES[0]!, "light", { high: false, accent: null }).ring
+    themeTokens(THEMES[0]!, "light", { high: false, accent: "default" }).ring
   );
   expect(document.documentElement.style.getPropertyValue("--background")).toBe(
     ""
@@ -87,7 +87,14 @@ it("moves through the gallery and the accents with arrow keys, one tab stop each
     accents.map(
       (radio) => radio.getAttribute("aria-label") ?? radio.textContent
     )
-  ).toEqual([copy.themeAccent, ...Object.values(copy.colors)]);
+  ).toEqual([
+    copy.colors.abacusai,
+    copy.themeAccent,
+    copy.colors.neutral,
+    ...Object.entries(copy.colors)
+      .filter(([name]) => name !== "abacusai" && name !== "neutral")
+      .map(([, name]) => name),
+  ]);
   fireEvent.keyDown(accents[0]!, { key: "ArrowLeft" });
   await waitFor(() => expect(look()?.accent).toBe("#12838f"));
 });

@@ -197,7 +197,7 @@ export const PREFS_GROUP_ENTRIES = {
     textSize: v.picklist(PREFS_TEXT_SIZES),
     bubbleTint: v.boolean(),
     palette: v.pipe(v.string(), v.regex(/^[a-z][\da-z-]{0,47}$/)),
-    accent: v.nullable(HexColor),
+    accent: v.nullable(v.union([v.literal("default"), HexColor])),
     contrast: v.picklist(["system", "standard", "high"]),
     radius: v.picklist(["sharp", "default", "round"]),
     uiFont: FontFamily,

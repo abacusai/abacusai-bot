@@ -40,6 +40,7 @@ import {
 } from "#renderer/lib/i18n";
 import { installLogRing } from "#renderer/lib/log-ring";
 import { resolvePrefsLook } from "#renderer/lib/look";
+import { DEFAULT_LOOK, resolveLook } from "#renderer/lib/look";
 import {
   guardSingleViewTransition,
   settleSkippedViewTransitions,
@@ -71,6 +72,11 @@ const media = () => ({
   high: matchMedia(CONTRAST_QUERY).matches,
 });
 if (IS_ELECTRON) setLookStore(localLookStore);
+applyLook(
+  document,
+  resolveLook(DEFAULT_LOOK, media().dark ? "dark" : "light", media().high),
+  true
+);
 applyTheme(document, applyBootLook(document, media()));
 
 // 3. Surface what would otherwise vanish.

@@ -42,7 +42,7 @@ export const DEFAULT_PREFS: Required<PrefsRow> & {
     textSize: 14,
     bubbleTint: true,
     palette: "default",
-    accent: null,
+    accent: "default",
     contrast: "system",
     radius: "default",
     uiFont: "",

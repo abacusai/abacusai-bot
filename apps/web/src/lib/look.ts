@@ -425,6 +425,7 @@ export const THEMES: readonly LookTheme[] = [
 
 /** The accent swatches, each with a translated name (settings.appearance.colors). */
 export const ACCENTS = [
+  ["abacusai", "#A233FB"],
   ["blue", "#2f6fde"],
   ["violet", "#7a4fd6"],
   ["pink", "#d6457a"],
@@ -660,7 +661,7 @@ export const DEFAULT_LOOK: Look = {
   textSize: 14,
   bubbleTint: true,
   palette: "default",
-  accent: null,
+  accent: "default",
   contrast: "system",
   radius: "default",
   uiFont: "",
@@ -713,6 +714,13 @@ export const themeTokens = (
 ): Record<string, string> =>
   deriveTokens(entry[themeMode(entry, wanted)]!, {
     ...options,
+    // Only Default inherits the logo purple; other palettes keep their seeds.
+    accent:
+      options.accent === "default"
+        ? entry.stock
+          ? ACCENTS[0][1]
+          : null
+        : options.accent,
     stock: entry.stock,
   });
 

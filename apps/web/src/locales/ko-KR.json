@@ -2713,6 +2713,8 @@
       "themeAccent": "테마 강조 색상",
       "customAccent": "사용자 지정 강조 색상",
       "colors": {
+        "abacusai": "AbacusAI",
+        "neutral": "중립",
         "blue": "파랑",
         "violet": "보라",
         "pink": "분홍",
