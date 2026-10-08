@@ -730,3 +730,11 @@ html[data-window-focused="false"][data-platform][data-titlebar], html[data-windo
 .titlebar-icon-button { width: var(--chrome-control-size); height: var(--chrome-control-size); flex-shrink: 0; border-radius: var(--chrome-control-radius); color: var(--muted-foreground); }
 .titlebar-icon-button:hover, .titlebar-icon-button[aria-pressed="true"] { background: var(--sidebar-accent); color: var(--sidebar-foreground); }
 .titlebar-icon-button .lucide, [data-slot="topbar"] .lucide { width: var(--chrome-glyph-size); height: var(--chrome-glyph-size); stroke-width: var(--chrome-icon-stroke); }
+
+/* A panel-owned rail leaves just the right-aligned toggle in the title bar. */
+[data-slot="topbar-panel-outlet"]:not(:has([data-slot="topbar-panel-tabs"])) {
+  justify-content: flex-end;
+}
+[data-slot="topbar"]:not(:has([role="tablist"])) [data-slot="topbar-identity"] {
+  max-width: calc(100vw - var(--workspace-context-start, 0px) - var(--titlebar-end) - var(--chrome-control-size) - var(--chrome-group-gap));
+}

@@ -35,6 +35,7 @@ import {
   PANEL_DRAG_TYPE,
   moveDockTab,
 } from "#renderer/components/panel-workspace";
+import { useTabsRailPlacement } from "#renderer/components/tabs-rail/placement";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { followNotices } from "#renderer/data/queries/notices";
 import { TopBar } from "#renderer/features/shell/top-bar";
@@ -393,6 +394,72 @@ export const SessionDock = ({
       </TopBar.IconButton>
     </TopBar.Group>
   );
+  const railPlacement = useTabsRailPlacement();
+  const rail =
+    entries.open && active ? (
+      <>
+        {
+          <TopBar.PanelTabs
+            tabs={[
+              ...(!split
+                ? [
+                    {
+                      ref: "chat",
+                      title: t("sessions.dock.chat"),
+                      openedAt: 0,
+                    },
+                  ]
+                : []),
+              ...titleTabs,
+            ].map((tab) => ({
+              id: tab.ref,
+              kind: (tab.ref.startsWith("preview:")
+                ? "files"
+                : tab.ref === "chat"
+                  ? "thread"
+                  : tab.ref === "agents"
+                    ? "agent"
+                    : tab.ref.split(":")[0]) as PanelTabKind,
+              title: tab.title,
+            }))}
+            active={active}
+            title={(tab) => tab.title ?? ""}
+            kinds={[]}
+            onDragStart={
+              expanded
+                ? (id, event) => event.dataTransfer.setData(PANEL_DRAG_TYPE, id)
+                : undefined
+            }
+            workspaceApi={dockApi}
+            onMove={
+              expanded
+                ? (id, position) => {
+                    moveDockTab(dockApi.current, id, position);
+                  }
+                : undefined
+            }
+            onRename={rename}
+            onChange={choose}
+            onReopen={() => {
+              const ref = reopenTab(key);
+              if (ref) select(ref);
+            }}
+            onClose={close}
+            onReorder={(ids) =>
+              updateTabs(key, (s) => ({
+                ...s,
+                order: ids,
+                tabs: ids
+                  .map((id) => s.tabs.find((tab) => tab.ref === id))
+                  .filter((tab): tab is PanelTab => tab != null),
+              }))
+            }
+            onAdd={add}
+          />
+        }
+        {controls}
+      </>
+    ) : null;
   return (
     <ViewTransition
       default="none"
@@ -404,71 +471,7 @@ export const SessionDock = ({
         className="relative flex size-full min-h-0 min-w-0 flex-col overflow-hidden"
       >
         <TopBarPanelSlot>
-          {entries.open && active ? (
-            <>
-              {
-                <TopBar.PanelTabs
-                  tabs={[
-                    ...(!split
-                      ? [
-                          {
-                            ref: "chat",
-                            title: t("sessions.dock.chat"),
-                            openedAt: 0,
-                          },
-                        ]
-                      : []),
-                    ...titleTabs,
-                  ].map((tab) => ({
-                    id: tab.ref,
-                    kind: (tab.ref.startsWith("preview:")
-                      ? "files"
-                      : tab.ref === "chat"
-                        ? "thread"
-                        : tab.ref === "agents"
-                          ? "agent"
-                          : tab.ref.split(":")[0]) as PanelTabKind,
-                    title: tab.title,
-                  }))}
-                  active={active}
-                  title={(tab) => tab.title ?? ""}
-                  kinds={[]}
-                  onDragStart={
-                    expanded
-                      ? (id, event) =>
-                          event.dataTransfer.setData(PANEL_DRAG_TYPE, id)
-                      : undefined
-                  }
-                  workspaceApi={dockApi}
-                  onMove={
-                    expanded
-                      ? (id, position) => {
-                          moveDockTab(dockApi.current, id, position);
-                        }
-                      : undefined
-                  }
-                  onRename={rename}
-                  onChange={choose}
-                  onReopen={() => {
-                    const ref = reopenTab(key);
-                    if (ref) select(ref);
-                  }}
-                  onClose={close}
-                  onReorder={(ids) =>
-                    updateTabs(key, (s) => ({
-                      ...s,
-                      order: ids,
-                      tabs: ids
-                        .map((id) => s.tabs.find((tab) => tab.ref === id))
-                        .filter((tab): tab is PanelTab => tab != null),
-                    }))
-                  }
-                  onAdd={add}
-                />
-              }
-              {controls}
-            </>
-          ) : null}
+          {railPlacement === "titlebar" && rail}
           <TopBar.PanelToggle
             open={entries.open === true && active != null}
             onToggle={() =>
@@ -478,6 +481,11 @@ export const SessionDock = ({
             }
           />
         </TopBarPanelSlot>
+        {railPlacement === "panel" && (
+          <div className="titlebar-nodrag flex min-w-0 shrink-0 items-center">
+            {rail}
+          </div>
+        )}
         {registerHotkeys(
           () => cycle(1),
           () => cycle(-1),

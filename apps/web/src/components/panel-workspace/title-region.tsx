@@ -1,5 +1,7 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
+import { useTabsRailWidthReporter } from "#renderer/components/tabs-rail/placement";
+
 /** Clip title controls to the island they control, independently of tab count. */
 export const titleRegion = (
   pane: { left: number; right: number },
@@ -12,6 +14,7 @@ export const titleRegion = (
 };
 
 export const WorkspaceTitleRegion = ({ children }: { children: ReactNode }) => {
+  const reportWidth = useTabsRailWidthReporter();
   const ref = useRef<HTMLDivElement>(null);
   const [region, setRegion] = useState({ left: 0, width: 0 });
   useLayoutEffect(() => {
@@ -71,6 +74,7 @@ export const WorkspaceTitleRegion = ({ children }: { children: ReactNode }) => {
         (leading?.right ?? barRect.left) + 8,
         barRect.right - end
       );
+      reportWidth?.(next.width);
       setRegion((previous) =>
         previous.left === next.left && previous.width === next.width
           ? previous
@@ -105,7 +109,7 @@ export const WorkspaceTitleRegion = ({ children }: { children: ReactNode }) => {
       bar.style.removeProperty("--workspace-title-start");
       bar.style.removeProperty("--workspace-context-start");
     };
-  }, []);
+  }, [reportWidth]);
   return (
     <div
       ref={ref}

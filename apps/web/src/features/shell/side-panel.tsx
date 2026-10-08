@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "#renderer/components/empty-state";
 import { TabsRail } from "#renderer/components/tabs-rail";
+import { useTabsRailPlacement } from "#renderer/components/tabs-rail/placement";
 import { TitleBarIconButton } from "#renderer/components/title-bar";
 import { cn } from "#renderer/lib/cn";
 import {
@@ -157,15 +158,18 @@ export const SidePanelDrawer = ({
 }) => {
   const { t } = useTranslation();
   const title = usePanelTabTitle();
+  const railPlacement = useTabsRailPlacement();
   return (
     <>
       <SidePanelScrim open={open} onClose={onClose} />
       <Drawer
         open={open}
         modal={false}
+        disablePointerDismissal
         swipeDirection="right"
-        onOpenChange={(next) => {
-          if (!next) onClose();
+        onOpenChange={(next, details) => {
+          // The shell scrim dismisses; title-bar tabs and their portals stay usable.
+          if (!next && details.reason !== "focus-out") onClose();
         }}
       >
         <DrawerContent
@@ -181,7 +185,9 @@ export const SidePanelDrawer = ({
           </DrawerHeader>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <div className="flex shrink-0 items-center justify-between gap-1 p-2">
-              {tabs.length > 0 && active != null && (
+              {railPlacement === "panel" &&
+              tabs.length > 0 &&
+              active != null ? (
                 <TabsRail
                   tabs={tabs}
                   active={active.id}
@@ -193,6 +199,10 @@ export const SidePanelDrawer = ({
                   onAdd={onAdd}
                   onReorder={onTabReorder}
                 />
+              ) : (
+                <span className="min-w-0 truncate px-1 text-sm font-medium">
+                  {active && title(active)}
+                </span>
               )}
               <TitleBarIconButton
                 className="shrink-0"

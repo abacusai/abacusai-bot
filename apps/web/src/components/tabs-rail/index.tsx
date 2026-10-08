@@ -59,6 +59,7 @@ import { Tabs, TabsList, TabsTrigger } from "#renderer/ui/tabs";
 import { Tooltip, TooltipTrigger, TooltipContent } from "#renderer/ui/tooltip";
 
 import { railLayout } from "./layout";
+import { MIN_TITLE_RAIL_WIDTH } from "./placement";
 import { TabLabel } from "./tab-label";
 const BarButton = TitleBarIconButton;
 const tabIcon = (kind: PanelTabKind) =>
@@ -133,7 +134,8 @@ export const TabsRail = ({
     const element = root.current;
     if (!element) return;
     const observer = new ResizeObserver(() => {
-      if (element.clientWidth > 0) setCompact(element.clientWidth < 240);
+      if (element.clientWidth > 0)
+        setCompact(element.clientWidth < MIN_TITLE_RAIL_WIDTH);
     });
     observer.observe(element);
     return () => observer.disconnect();
