@@ -15,3 +15,6 @@ export const DESKTOP_DOWNLOAD_URL = "https://bot.abacus.ai";
 
 export const ABACUS_AGENT_URL = "https://apps.abacus.ai/chatllm";
 export const ABACUS_TERMS_URL = "https://abacus.ai/terms";
+
+export const ABACUS_HELP_URL =
+  "https://github.com/abacusai/abacusai-bot/blob/main/README.md";
