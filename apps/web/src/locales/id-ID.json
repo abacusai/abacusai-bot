@@ -3489,7 +3489,9 @@
       "sound-routine-fired": "Routine fired",
       "terminalShell": "Terminal shell",
       "changelog": "What's new",
-      "mode-ACCEPTEDITS": "Edits go through, commands ask"
+      "mode-ACCEPTEDITS": "Edits go through, commands ask",
+      "showLinkPreviews": "Tampilkan pratinjau tautan dalam balasan",
+      "linkPreviewsDetail": "Judul halaman, ikon situs, dan pratinjau saat diarahkan menghubungi situs tertaut dan mengungkap alamat IP Anda di desktop. Di web, host mengambilnya."
     },
     "modeDescriptions": {
       "AUTO": "Sandboxed, no prompts",

@@ -3489,7 +3489,9 @@
       "sound-routine-fired": "Routine fired",
       "terminalShell": "Terminal shell",
       "changelog": "What's new",
-      "mode-ACCEPTEDITS": "Edits go through, commands ask"
+      "mode-ACCEPTEDITS": "Edits go through, commands ask",
+      "showLinkPreviews": "返信にリンクのプレビューを表示",
+      "linkPreviewsDetail": "ページタイトル、サイトアイコン、ホバー時のプレビューはリンク先にアクセスし、デスクトップではIPアドレスが公開されます。Webではホストが取得します。"
     },
     "modeDescriptions": {
       "AUTO": "Sandboxed, no prompts",

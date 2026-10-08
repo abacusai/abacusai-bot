@@ -158,6 +158,7 @@ export interface PrefsRow {
   recentFolders: string[];
   creditsExhaustedAt: number | null;
   browserHomepage: string | null;
+  showLinkPreviews?: boolean;
   onboardingStep: string | null;
   dismissals: {
     referralCardUntil: number | null;

@@ -15,6 +15,7 @@ import { db } from "./db";
 import { devices } from "./devices";
 import { files } from "./files";
 import { git } from "./git";
+import { links } from "./links";
 import { localModels } from "./local-models";
 import { mcp } from "./mcp";
 import { memory } from "./memory";
@@ -46,6 +47,7 @@ export const contract = {
   settings,
   models,
   localModels,
+  links,
   account,
   auth,
   referrals,

@@ -541,3 +541,35 @@ describe("r2 pageable message units", () => {
     }
   );
 });
+
+it("retains the selected DOM row while the moving window pages away", async () => {
+  const relay = new FakeRelay();
+  const retained = vi
+    .spyOn(ThreadSession.prototype, "retain")
+    .mockImplementation(() => {});
+  relay.emitAll([...b.sessionReady(), ...turns(500)]);
+  current = await renderRelay(relay, "bot");
+  const session = current.runtime.session(relay.threadId);
+  await act(async () => {
+    for (let i = 0; i < 20; i++) await session.loadOlder();
+  });
+  const row = document.querySelector('[data-message-id="a499"]')!;
+  const text = row.querySelector<HTMLElement>("[data-message-text]")!;
+  fireEvent.pointerDown(text, { button: 0 });
+  text.focus();
+  fireEvent.keyDown(text, { key: "a", metaKey: true });
+  fireEvent(document, new Event("selectionchange"));
+  fireEvent.pointerUp(document);
+  for (let i = 0; i < 5; i++) {
+    const earlier = screen.queryByRole("button", { name: /Show earlier/ });
+    if (!earlier) break;
+    fireEvent.click(earlier);
+  }
+  expect(row.isConnected).toBe(true);
+  expect(document.getSelection()!.toString()).toContain("answer 499");
+  document.getSelection()!.removeAllRanges();
+  fireEvent(document, new Event("selectionchange"));
+
+  await waitFor(() => expect(row.isConnected).toBe(false));
+  retained.mockRestore();
+});

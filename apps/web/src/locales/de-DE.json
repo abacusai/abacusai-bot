@@ -3489,7 +3489,9 @@
       "sound-routine-fired": "Routine fired",
       "terminalShell": "Terminal shell",
       "changelog": "What's new",
-      "mode-ACCEPTEDITS": "Edits go through, commands ask"
+      "mode-ACCEPTEDITS": "Edits go through, commands ask",
+      "showLinkPreviews": "Linkvorschauen in Antworten anzeigen",
+      "linkPreviewsDetail": "Seitentitel, Website-Symbole und Vorschaukarten kontaktieren verlinkte Websites und geben auf dem Desktop deine IP-Adresse preis. Im Web ruft der Host sie ab."
     },
     "modeDescriptions": {
       "AUTO": "Sandboxed, no prompts",

@@ -4,6 +4,7 @@
  * overrides: links routed by target, code blocks with a header and Copy,
  * inline math, scrolling tables, lazy images. Raw HTML stays escaped.
  */
+import { previewTarget } from "@abacus-ai/contract/contract/links";
 import { TextPart } from "@tanstack/ai-react/ui";
 import { Check, Copy } from "lucide-react";
 import {
@@ -21,11 +22,17 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { cn } from "#renderer/lib/cn";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { Button } from "#renderer/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 
+import { useMessageScope } from "../kit/message-scope";
 import { useCodeHighlighter } from "./highlighter";
+import { AUTOLINK_TITLE, replyLinks } from "./links";
 import { renderMath, useMathVersion } from "./math";
 import { MATH_SENTINEL, pathFromHref, prepass } from "./prepass";
+import { ReplyLink } from "./reply-link";
+import { SelectableText } from "./selection";
 
 interface MarkdownLinks {
   openFile(absPath: string): void;
@@ -39,6 +46,7 @@ export const MarkdownLinksProvider = LinksContext.Provider;
 
 /** Whether the message this block belongs to is still streaming. */
 const StreamingContext = createContext(false);
+const ReplyContext = createContext(false);
 
 const COLLAPSE_LINES = 30;
 
@@ -47,16 +55,33 @@ const COLLAPSE_LINES = 30;
  * navigate the window: every click is cancelled and routed by target.
  * In-message anchors (footnotes, `#section`) scroll within the transcript.
  */
-const ChatLink = ({ href, children, ...rest }: ComponentProps<"a">) => {
+export const ChatLink = ({ href, children, ...rest }: ComponentProps<"a">) => {
   const links = use(LinksContext);
+  const reply = use(ReplyContext);
+  const { message } = useMessageScope();
   const file = pathFromHref(href);
   const external = href != null && /^(https?:|mailto:)/i.test(href);
-  return (
+  const anchor = (
     <a
       {...rest}
       href={href}
+      title={external ? href : rest.title}
+      target={external ? "_blank" : undefined}
+      rel={external ? "noopener noreferrer" : undefined}
+      onAuxClick={(event) => {
+        if (event.button === 1 && external && IS_ELECTRON) {
+          event.preventDefault();
+          links.openExternal(href!);
+        }
+      }}
       data-file={file != null ? "" : undefined}
       onClick={(event) => {
+        if (
+          external &&
+          !IS_ELECTRON &&
+          (event.metaKey || event.ctrlKey || event.shiftKey)
+        )
+          return;
         event.preventDefault();
         if (file != null) links.openFile(file);
         else if (external) links.openExternal(href!);
@@ -66,6 +91,24 @@ const ChatLink = ({ href, children, ...rest }: ComponentProps<"a">) => {
     >
       {children}
     </a>
+  );
+  if (reply && message && href && previewTarget(href))
+    return (
+      <ReplyLink
+        anchor={anchor}
+        message={message}
+        bare={rest.title === AUTOLINK_TITLE}
+      />
+    );
+  return external ? (
+    <Tooltip>
+      <TooltipTrigger render={anchor} />
+      <TooltipContent className="max-w-[min(600px,90vw)] break-all">
+        {href}
+      </TooltipContent>
+    </Tooltip>
+  ) : (
+    anchor
   );
 };
 
@@ -213,6 +256,8 @@ export interface MarkdownProps {
   streaming?: boolean;
   workspaceRoot?: string | null;
   className?: string;
+  reply?: boolean;
+  selectable?: boolean;
 }
 
 export const Markdown = ({
@@ -221,6 +266,8 @@ export const Markdown = ({
   streaming = false,
   workspaceRoot = null,
   className,
+  reply = false,
+  selectable = false,
 }: MarkdownProps) => {
   // Re-render once temml has loaded (math renders as TeX until then). The
   // React Compiler memoises the element on its props, so the version is
@@ -229,21 +276,34 @@ export const Markdown = ({
   const codeHighlighter = useCodeHighlighter();
   const highlight = (...args: Parameters<typeof codeHighlighter>) =>
     args[1] === "math" ? renderMath(args[0], true) : codeHighlighter(...args);
-  const source = prepass(content, { workspaceRoot });
-  return (
-    <StreamingContext value={streaming}>
-      <TextPart
-        key={mathVersion}
-        content={source}
-        role={role}
-        highlighter={highlight}
-        components={COMPONENTS}
-        className={cn(
-          "chat-prose",
-          streaming && "chat-prose-streaming",
-          className
-        )}
-      />
-    </StreamingContext>
+  const [selecting, setSelecting] = useState(false);
+  const [retained, setRetained] = useState(content);
+  if (!selecting && retained !== content) setRetained(content);
+  const source = prepass(selecting ? retained : content, {
+    workspaceRoot,
+  });
+  const rendered = (
+    <ReplyContext value={reply && role === "assistant"}>
+      <StreamingContext value={streaming}>
+        <TextPart
+          key={mathVersion}
+          content={source}
+          role={role}
+          extensions={reply && role === "assistant" ? replyLinks : undefined}
+          highlighter={highlight}
+          components={COMPONENTS}
+          className={cn(
+            "chat-prose",
+            streaming && "chat-prose-streaming",
+            className
+          )}
+        />
+      </StreamingContext>
+    </ReplyContext>
+  );
+  return selectable ? (
+    <SelectableText onSelectionChange={setSelecting}>{rendered}</SelectableText>
+  ) : (
+    rendered
   );
 };

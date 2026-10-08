@@ -29,6 +29,7 @@ export const WEB_HOST_DENIED = [
 ] as const;
 // Exact paths: a new contract procedure requires an explicit platform decision.
 export const WEB_HOST_ALLOWED = [
+  "links.preview",
   "workspaces.add",
   "workspaces.ensureSessionHome",
   "workspaces.sessionHomePath",

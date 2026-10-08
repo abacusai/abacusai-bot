@@ -748,6 +748,18 @@ it("sessions show feedback and Copy on text hover or focus without reserving spa
   expect(
     host().querySelector('[data-slot="session-message-actions"]')?.className
   ).toContain("group-focus-within/message:opacity-100");
+  const text = host().querySelector<HTMLElement>("[data-message-text]")!;
+  text.focus();
+  fireEvent.keyDown(text, { key: "a", metaKey: true });
+  const selection = document.getSelection()!;
+  const selected = selection.toString();
+  expect(selected.length).toBeGreaterThan(0);
+  expect(
+    fireEvent.mouseDown(
+      within(host()).getByRole("button", { name: "Copy message" })
+    )
+  ).toBe(false);
+  expect(selection.toString()).toBe(selected);
 });
 
 it("sessions never render Copy or feedback for tool-only messages with blank text", async () => {
@@ -786,4 +798,20 @@ it("sessions never render Copy or feedback for tool-only messages with blank tex
   expect(
     document.querySelector('[data-slot="session-message-actions"]')
   ).toBeNull();
+});
+
+it("allows selection through the context-menu trigger and preserves it on action mouse-down", async () => {
+  await mount();
+  const text = host().querySelector<HTMLElement>("[data-message-text]")!;
+  const trigger = text.closest('[data-slot="context-menu-trigger"]')!;
+  expect(trigger.classList.contains("select-text")).toBe(true);
+  expect(trigger.classList.contains("select-none")).toBe(false);
+  text.focus();
+  fireEvent.keyDown(text, { key: "a", metaKey: true });
+  const selection = document.getSelection()!;
+  const before = selection.toString();
+  expect(before.length).toBeGreaterThan(0);
+  await reveal();
+  expect(fireEvent.mouseDown(smiley())).toBe(false);
+  expect(selection.toString()).toBe(before);
 });

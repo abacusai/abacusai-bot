@@ -95,6 +95,21 @@ export const GeneralPage = () => {
     <AreaPage title={t("settings.pages.general")}>
       <CompanionSettings />
       <GroupCard>
+        <SettingRow
+          id="showLinkPreviews"
+          title={t("phase5.settings.showLinkPreviews")}
+          detail={t("phase5.settings.linkPreviewsDetail")}
+        >
+          <SettingSwitch
+            id="showLinkPreviews"
+            checked={prefs.showLinkPreviews !== false}
+            onCheckedChange={(showLinkPreviews) =>
+              void update({ showLinkPreviews }).catch(fail)
+            }
+          />
+        </SettingRow>
+      </GroupCard>
+      <GroupCard>
         {IS_ELECTRON && info.data?.platform !== "linux" && (
           <SettingRow
             id="launchAtLogin"

@@ -3489,7 +3489,9 @@
       "sound-routine-fired": "Routine fired",
       "terminalShell": "Terminal shell",
       "changelog": "What's new",
-      "mode-ACCEPTEDITS": "Edits go through, commands ask"
+      "mode-ACCEPTEDITS": "Edits go through, commands ask",
+      "showLinkPreviews": "Mostra le anteprime dei link nelle risposte",
+      "linkPreviewsDetail": "Titoli, icone e anteprime al passaggio del cursore contattano i siti collegati e rivelano il tuo IP sul desktop. Sul web li recupera il server."
     },
     "modeDescriptions": {
       "AUTO": "Sandboxed, no prompts",

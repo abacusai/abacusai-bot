@@ -265,6 +265,7 @@ const UserMessage = ({
             <Markdown
               content={body}
               role="user"
+              selectable
               workspaceRoot={workspaceRoot}
             />
             {badge != null ? (
@@ -302,7 +303,10 @@ const Credits = ({ message }: { message: UIMessage }) => {
   if (credits == null || credits.length === 0) return null;
   const total = credits.reduce((sum, item) => sum + item.creditsUsed, 0);
   return (
-    <div className="text-muted-foreground text-xs">
+    <div
+      className="text-muted-foreground text-xs select-none"
+      data-selection-chrome=""
+    >
       {t("chat.message.credits", { count: total })}
     </div>
   );

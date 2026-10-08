@@ -3489,7 +3489,9 @@
       "sound-routine-fired": "Routine fired",
       "terminalShell": "Terminal shell",
       "changelog": "What's new",
-      "mode-ACCEPTEDITS": "Edits go through, commands ask"
+      "mode-ACCEPTEDITS": "Edits go through, commands ask",
+      "showLinkPreviews": "답변에 링크 미리보기 표시",
+      "linkPreviewsDetail": "페이지 제목, 사이트 아이콘 및 호버 미리보기를 가져오면 링크된 사이트에 접속하여 데스크톱에서 IP 주소가 공개됩니다. 웹에서는 호스트가 가져옵니다."
     },
     "modeDescriptions": {
       "AUTO": "Sandboxed, no prompts",

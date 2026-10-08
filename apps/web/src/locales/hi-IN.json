@@ -3489,7 +3489,9 @@
       "sound-routine-fired": "Routine fired",
       "terminalShell": "Terminal shell",
       "changelog": "What's new",
-      "mode-ACCEPTEDITS": "Edits go through, commands ask"
+      "mode-ACCEPTEDITS": "Edits go through, commands ask",
+      "showLinkPreviews": "जवाबों में लिंक का पूर्वावलोकन दिखाएं",
+      "linkPreviewsDetail": "पेज के शीर्षक, साइट आइकन और होवर प्रीव्यू के लिए लिंक की गई साइटों से संपर्क होता है और डेस्कटॉप पर आपका IP पता उजागर होता है। वेब पर होस्ट इन्हें लाता है।"
     },
     "modeDescriptions": {
       "AUTO": "Sandboxed, no prompts",
