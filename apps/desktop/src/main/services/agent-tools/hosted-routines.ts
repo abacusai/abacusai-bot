@@ -52,10 +52,6 @@ export interface HostedRoutineWire {
   connector_reads?: unknown;
   /** The bot that made it, if a bot did. */
   owner_bot_id?: string | null;
-  /** `pending` until the owner allows what it reads; null for a reminder. */
-  approval?: "pending" | "approved" | "denied" | null;
-  /** The server sent the owner this version's approval link itself. */
-  approval_sent?: boolean;
   watch_url?: string | null;
   next_run_at?: string | number | null;
   created_at?: string | number | null;
@@ -103,8 +99,8 @@ export interface HostedRoutineCreate {
   /** A job moved from this computer: a one-time moment that passed is kept. */
   migrated?: boolean;
   /**
-   * The model asked (the cronjob tool): the owner must approve it, a reminder
-   * too. Only "agent" is ever sent; the server refuses "user" from a bot key.
+   * The model asked (the cronjob tool). Only "agent" is ever sent; the server
+   * refuses "user" from a bot key.
    */
   createdBy?: "agent";
   /** An event routine's source; a migrated webhook keeps its local token. */
@@ -246,7 +242,7 @@ export const toRoutineListItem = (wire: HostedRoutineWire): RoutineListItem => {
     prompt: wire.prompt ?? wire.reminder_text ?? "",
     workspaceId: null,
     botId: wire.owner_bot_id ?? null,
-    // Only an active routine runs: paused, done, or waiting for approval is off.
+    // Only an active routine runs: paused or done is off.
     enabled:
       wire.status != null ? wire.status === "active" : (wire.enabled ?? true),
     createdAt: epochMs(wire.created_at) ?? 0,
@@ -268,8 +264,6 @@ export const toRoutineListItem = (wire: HostedRoutineWire): RoutineListItem => {
         (wire.source_hosts ?? []).map((host) => `https://${host}/`),
       reads: readsFromConnectorReads(wire.connector_reads),
       watchUrl: wire.watch_url ?? null,
-      pendingConfirmation: wire.approval === "pending",
-      approvalSent: wire.approval_sent === true,
       pausedReason: wire.paused_reason ?? null,
       lastRun,
     },
@@ -535,38 +529,6 @@ export class HostedRoutines {
     });
   }
 
-  /**
-   * Ask the server to send the owner a routine's approval link again (it
-   * sends it itself; the app never holds it). Whether it went; null when
-   * nothing waits.
-   */
-  async approvalLink(id: string): Promise<boolean | null> {
-    const result = await this.options.call({
-      action: "approval_link",
-      id: hostedServerId(id),
-    });
-    if (result.ok === false) {
-      const code = refusalCode(result.status, result.body);
-      if (code === "not_pending") return null;
-      throw new HostedRoutineRefusal(code, result.body);
-    }
-    return result.body.approval_sent === true;
-  }
-
-  /**
-   * After a move: one link for the owner to review every routine waiting on
-   * them, sent by the server. How many wait, and whether it went.
-   */
-  async sendReviewLink(): Promise<{ sent: boolean; pending: number }> {
-    const result = await this.options.call({ action: "send_review_link" });
-    if (result.ok === false) return { sent: false, pending: 0 };
-    return {
-      sent: result.body.approval_sent === true,
-      pending:
-        typeof result.body.pending === "number" ? result.body.pending : 0,
-    };
-  }
-
   async runs(id: string, limit = 20): Promise<HostedRoutineRun[]> {
     const result = await this.options.call({
       action: "runs",
@@ -623,13 +585,9 @@ export class HostedRoutines {
         result.body
       );
     const wire = result.body.routine as HostedRoutineWire | undefined;
-    // Whether the server sent the approval link comes beside the routine.
-    const sent = result.body.approval_sent;
     const routine =
       wire != null && typeof wire.id === "string"
-        ? toRoutineListItem(
-            typeof sent === "boolean" ? { ...wire, approval_sent: sent } : wire
-          )
+        ? toRoutineListItem(wire)
         : null;
     if (routine != null) {
       // Remembered before the panel hears of the row, so its echo carries it.

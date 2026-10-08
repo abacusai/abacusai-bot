@@ -404,7 +404,7 @@ describe("full access and a rewrite", () => {
     updateJob(job.id, { access: "full" });
     expect(
       updateJob(job.id, {
-        pendingReach: { sources: ["https://news.example/"], reads: [] },
+        reach: { sources: ["https://news.example/"], reads: [] },
       }).access
     ).toBe("unattended");
   });

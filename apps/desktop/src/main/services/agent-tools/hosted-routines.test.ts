@@ -187,14 +187,13 @@ describe("the hosted routines client", () => {
     expect(body).not.toHaveProperty("notify");
   });
 
-  it("names the model as the author, and asks the server for one review link after a move", async () => {
+  it("names the model as the author", async () => {
     const call = reply({
       capabilities: { ok: true, body: { hosted_routines: true } },
-      create: { ok: true, body: { routine: WIRE, approval_sent: true } },
-      send_review_link: { ok: true, body: { approval_sent: true, pending: 4 } },
+      create: { ok: true, body: { routine: WIRE } },
     });
     const hosted = new HostedRoutines({ call, hasKey: () => true });
-    const routine = await hosted.create({
+    await hosted.create({
       kind: "reminder",
       name: "Call",
       reminderText: "Call Alex",
@@ -205,8 +204,6 @@ describe("the hosted routines client", () => {
     expect(call.bodies.find((body) => body.action === "create")).toMatchObject({
       created_by: "agent",
     });
-    expect(routine.hosted?.approvalSent).toBe(true);
-    expect(await hosted.sendReviewLink()).toEqual({ sent: true, pending: 4 });
   });
 
   it("lists, pauses and deletes with routines switched off, and only answers so", async () => {
@@ -254,7 +251,7 @@ describe("the hosted routines client", () => {
     expect(update).not.toHaveProperty("prompt");
   });
 
-  it("reads a routine waiting for approval, its owner bot and its reach", async () => {
+  it("reads a routine's owner bot and its reach", async () => {
     const call = reply({
       capabilities: { ok: true, body: { hosted_routines: true } },
       create: {
@@ -262,12 +259,10 @@ describe("the hosted routines client", () => {
         body: {
           routine: {
             ...WIRE,
-            approval: "pending",
             owner_bot_id: "bot-1",
             source_urls: ["https://news.example/"],
             connector_reads: ["calendar.read"],
           },
-          approval_sent: true,
           created: true,
         },
       },
@@ -282,8 +277,6 @@ describe("the hosted routines client", () => {
     expect(routine).toMatchObject({
       botId: "bot-1",
       hosted: {
-        pendingConfirmation: true,
-        approvalSent: true,
         sources: ["https://news.example/"],
         reads: ["calendar.read"],
       },
@@ -330,15 +323,11 @@ describe("the hosted routines client", () => {
     });
   });
 
-  it("names the calling bot on every write, and asks for a fresh approval link", async () => {
+  it("names the calling bot on every write", async () => {
     const call = reply({
       pause: { ok: true, body: {} },
       delete: { ok: true, body: { ok: true } },
       run_now: { ok: true, body: { run: {} } },
-      approval_link: {
-        ok: true,
-        body: { approval_sent: true },
-      },
     });
     const hosted = new HostedRoutines({ call, hasKey: () => true });
     await hosted.setEnabled("hosted-r1", false, "bot-1");
@@ -351,18 +340,6 @@ describe("the hosted routines client", () => {
         )
         .map((body) => body.bot_id)
     ).toEqual(["bot-1", "bot-1", "bot-1"]);
-    expect(await hosted.approvalLink("hosted-r1")).toBe(true);
-    const none = new HostedRoutines({
-      call: reply({
-        approval_link: {
-          ok: false,
-          status: 409,
-          body: { code: "not_pending" },
-        },
-      }),
-      hasKey: () => true,
-    });
-    expect(await none.approvalLink("hosted-r1")).toBeNull();
   });
 
   it("tries once more when the server says the routine is busy", async () => {
@@ -812,13 +789,8 @@ describe("moving a host's routines", () => {
   });
 
   it("asks the model to say it once, in the user's language", () => {
-    const note = migrationNote(2, [{ name: "C", reason: "plan_limit" }], {
-      sent: true,
-      pending: 3,
-    });
+    const note = migrationNote(2, [{ name: "C", reason: "plan_limit" }]);
     expect(note).toMatch(/^\[routines moved\]/);
-    expect(note).toContain("3 of them are paused until the user reviews them");
-    expect(note).toContain("the server sent them a link");
     expect(note).not.toMatch(/now run on their own/);
     expect(note).not.toMatch(/https?:\/\//);
     expect(note).toContain("in their language");

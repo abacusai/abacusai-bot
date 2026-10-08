@@ -98,7 +98,6 @@ export const WEB_HOST_ALLOWED = [
   "routines.run",
   "routines.hostedRuns",
   "routines.runners",
-  "routines.approvalLink",
   "routines.refreshHosted",
   "routines.events",
   "settings.get",

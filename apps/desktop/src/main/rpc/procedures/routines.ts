@@ -23,19 +23,6 @@ export const routinesRouter = impl.routines.router({
       throw unavailable("The routine's runs could not be read right now.");
     }
   }),
-  approvalLink: impl.routines.approvalLink.handler(
-    async ({ input, context }) => {
-      if (!isHostedRoutineId(input.id)) return { sent: false };
-      try {
-        const sent = await context.deps.serviceHost.hostedRoutines.approvalLink(
-          input.id
-        );
-        return { sent: Boolean(sent) };
-      } catch {
-        throw unavailable("The approval link could not be sent right now.");
-      }
-    }
-  ),
   refreshHosted: impl.routines.refreshHosted.handler(async ({ context }) => {
     const hosted = context.deps.serviceHost.hostedRoutines;
     await hosted.refresh();
@@ -68,9 +55,6 @@ export const routinesRouter = impl.routines.router({
               type: "created",
               routineId: routine.id,
               name: routine.name,
-              pendingApproval:
-                routine.hosted?.pendingConfirmation === true ||
-                (routine.pendingReach ?? null) != null,
             })
         );
         return () => {

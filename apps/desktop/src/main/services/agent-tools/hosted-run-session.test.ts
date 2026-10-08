@@ -280,7 +280,7 @@ it("never makes a local routine on a hosted bot whose routines run on the server
   );
   // The user's own form names no author: the server refuses "user" from a bot key.
   expect(create.mock.calls[0]![0]).not.toHaveProperty("createdBy");
-  // The model's reminder is the model's: it waits for the owner's approval.
+  // The model's reminder names the agent as its author.
   await host.createRoutine(
     {
       runner: "hosted",
@@ -296,7 +296,7 @@ it("never makes a local routine on a hosted bot whose routines run on the server
   );
 });
 
-it("holds what the agent asks a local routine to read until the user allows it", async () => {
+it("puts what the agent asks a local routine to read in force at once", async () => {
   const { ServiceHost } = await import("../../service-host");
   const host = new ServiceHost();
   const internals = host as unknown as Record<string, any>;
@@ -312,12 +312,11 @@ it("holds what the agent asks a local routine to read until the user allows it",
     { byAgent: true }
   );
   expect(agent).toMatchObject({
-    pendingReach: {
+    reach: {
       sources: ["https://news.example/"],
       reads: ["gmail.search"],
     },
   });
-  expect(agent.reach ?? null).toBeNull();
   const user = await host.createRoutine({
     prompt: "y",
     schedule: "0 9 * * *",
@@ -335,13 +334,6 @@ it("holds what the agent asks a local routine to read until the user allows it",
       { byAgent: true }
     )
   ).rejects.toThrow(/cannot be a routine's sources/);
-  const confirmed = await host.updateRoutine(agent.id, {
-    confirmPendingReach: true,
-  });
-  expect(confirmed).toMatchObject({
-    reach: { sources: ["https://news.example/"], reads: ["gmail.search"] },
-    pendingReach: null,
-  });
 });
 
 it("runs a local routine unattended, held to what the user confirmed, unless given full access", async () => {

@@ -2,9 +2,8 @@ import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
 import { useTranslation } from "react-i18next";
 
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
-import { showError, showInfo } from "#renderer/lib/toast";
+import { showError } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
-import { Button } from "#renderer/ui/button";
 import { Item } from "#renderer/ui/item";
 import { Switch } from "#renderer/ui/switch";
 
@@ -44,14 +43,12 @@ export const pausedReasonKey = (reason: string): string => {
 };
 
 /**
- * What a routine's runs may reach, and what waits on the user: a hosted
- * routine's approval (at the server's one-time link), the reach the agent
- * asked a local one for, and a local one's full access. Each is the user's
+ * What a routine's runs may reach, and a local one's full access: the user's
  * own click; the agent cannot make it.
  */
 export const RoutineReachPanel = ({ row }: { row: RoutineRow }) => {
   const { t } = useTranslation();
-  const { db, transport } = useAppContext();
+  const { db } = useAppContext();
   // A local routine's reach is what main kept of what was asked.
   const reach = row.hosted ?? row.reach ?? { sources: [], reads: [] };
   const watchUrl = row.hosted?.watchUrl ?? null;
@@ -59,10 +56,6 @@ export const RoutineReachPanel = ({ row }: { row: RoutineRow }) => {
     ...reach.reads.map((read) => t(readKey(read))),
     ...reach.sources,
   ];
-  const decide = (allow: boolean) =>
-    transport.client.db.routines
-      .update({ id: row.id, patch: { confirmPendingReach: allow } })
-      .catch(() => showError(t("phase5.failed")));
   return (
     <section className="flex flex-col gap-2 text-[13px]">
       <p>
@@ -83,66 +76,6 @@ export const RoutineReachPanel = ({ row }: { row: RoutineRow }) => {
         <p className="text-muted-foreground text-xs">
           {t(pausedReasonKey(row.hosted.pausedReason))}
         </p>
-      )}
-      {row.hosted?.pendingConfirmation === true && (
-        <Item
-          variant="muted"
-          role="status"
-          className="flex-col items-start rounded-(--pane-radius)"
-        >
-          <p>{t("routines.reach.awaitingApproval")}</p>
-          <Button
-            size="sm"
-            onClick={() =>
-              // The server sends a fresh link to the owner's WhatsApp or email.
-              void transport.client.routines
-                .approvalLink({ id: row.id })
-                .then(({ sent }) =>
-                  showInfo(
-                    t(
-                      sent
-                        ? "routines.reach.approvalSent"
-                        : "routines.reach.notWaiting"
-                    )
-                  )
-                )
-                .catch(() => showError(t("phase5.failed")))
-            }
-          >
-            {t("routines.reach.approve")}
-          </Button>
-        </Item>
-      )}
-      {row.pendingReach != null && (
-        <Item
-          variant="muted"
-          role="status"
-          className="flex-col items-start rounded-(--pane-radius)"
-        >
-          <p>
-            {t("routines.reach.asked", {
-              items: [
-                ...row.pendingReach.reads.map((read) => t(readKey(read))),
-                ...row.pendingReach.sources,
-              ].join(", "),
-            })}
-          </p>
-          <span className="flex flex-wrap gap-2">
-            <ConfirmAction
-              title={t("routines.reach.allowTitle")}
-              description={t("routines.reach.allowDescription")}
-              label={t("routines.reach.allow")}
-              onConfirm={() => decide(true)}
-            />
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => void decide(false)}
-            >
-              {t("routines.reach.decline")}
-            </Button>
-          </span>
-        </Item>
       )}
       {!isHosted(row) && (
         <Item size="sm" className="rounded-(--pane-radius)">

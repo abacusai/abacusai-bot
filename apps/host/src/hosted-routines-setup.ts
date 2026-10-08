@@ -25,8 +25,6 @@ export interface HostedRoutinesSetupDeps {
   stopLocalScheduler: () => void;
   /** The bot's chat hears a note as a turn (the zone offer). */
   note: (text: string) => void;
-  /** After a move: the server sends the owner one link to review them all. */
-  sendReviewLink: () => Promise<{ sent: boolean; pending: number }>;
   readMarker?: () => MigrationMarker | null;
   writeMarker?: (marker: MigrationMarker) => void;
   now?: () => number;
@@ -99,18 +97,11 @@ export async function setUpHostedRoutines(
     // Jobs the server will not take are paused here with their reason, so
     // only a failure worth retrying keeps this computer's scheduler on.
     if (result.failed === 0) {
-      // Moved routines wait for the owner's review; the server sends one link.
-      const review =
-        result.moved > 0
-          ? await deps
-              .sendReviewLink()
-              .catch(() => ({ sent: false, pending: 0 }))
-          : { sent: false, pending: 0 };
       marker = {
         migratedAt: (deps.now ?? Date.now)(),
         note:
           result.moved + result.notMoved.length > 0
-            ? migrationNote(result.crons, result.notMoved, review)
+            ? migrationNote(result.crons, result.notMoved)
             : null,
       };
       writeMarker(marker);

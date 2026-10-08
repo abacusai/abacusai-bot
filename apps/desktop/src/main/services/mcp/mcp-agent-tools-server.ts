@@ -106,7 +106,6 @@ import type {
   DisconnectOutcome,
 } from "./tools/connect-outcome";
 import {
-  approvalNote,
   describeHostedRoutine,
   hostedCreatedNote,
   hostedCreateInput,
@@ -1057,7 +1056,7 @@ export class McpAgentToolsServer extends McpHttpServer {
     }
   }
 
-  /** pause, resume, remove, update, run or approval_link on a hosted routine, by its id. */
+  /** pause, resume, remove, update or run on a hosted routine, by its id. */
   private async hostedRoutineAction(
     action: string,
     id: string,
@@ -1067,17 +1066,6 @@ export class McpAgentToolsServer extends McpHttpServer {
   ): Promise<ToolResult> {
     const hosted = this.options.routines!.hosted;
     try {
-      if (action === "approval_link") {
-        // The server sends it to the owner itself; the model never sees it.
-        const sent = await hosted.approvalLink(id);
-        return this.ok(
-          sent == null
-            ? `${id} is not waiting for approval.`
-            : sent
-              ? `The link to allow it was sent to the user again (on WhatsApp, else by email). Tell them so in one line, in their language. Never write a link yourself.`
-              : "The server did not send the link again just now. Tell the user briefly, in their language, to use the one it sent them before."
-        );
-      }
       if (action === "remove") {
         await hosted.remove(id, botId);
         this.options.onCronChanged?.();
@@ -1087,12 +1075,7 @@ export class McpAgentToolsServer extends McpHttpServer {
         const routine = await hosted.setEnabled(id, action === "resume", botId);
         this.options.onCronChanged?.();
         return this.ok(
-          (routine != null
-            ? describeHostedRoutine(routine)
-            : `${action}d ${id}.`) +
-            (routine != null && routine.hosted?.pendingConfirmation === true
-              ? `\n\n${approvalNote(routine)}`
-              : "")
+          routine != null ? describeHostedRoutine(routine) : `${action}d ${id}.`
         );
       }
       if (action === "run") {
@@ -1145,15 +1128,8 @@ export class McpAgentToolsServer extends McpHttpServer {
         if (enabled != null)
           routine = await hosted.setEnabled(id, enabled, botId);
         this.options.onCronChanged?.();
-        // A change to what it does or reads waits for the user's approval.
-        const approval =
-          routine != null && routine.hosted?.pendingConfirmation === true
-            ? `\n\nThis change does not take effect until the user approves it. ${approvalNote(routine)}`
-            : "";
         return this.ok(
-          (routine != null
-            ? describeHostedRoutine(routine)
-            : `Updated ${id}.`) + approval
+          routine != null ? describeHostedRoutine(routine) : `Updated ${id}.`
         );
       }
       return this.err(`Unknown action "${action}".`);

@@ -267,7 +267,6 @@ const setup = (options: {
     startRunner: vi.fn(),
     stopLocalScheduler: vi.fn(),
     note: vi.fn(),
-    sendReviewLink: vi.fn(async () => ({ sent: true, pending: 2 })),
     readMarker: () => marker,
     writeMarker: vi.fn((next: typeof marker) => {
       marker = next;
@@ -319,11 +318,6 @@ describe("server-kept routines on the hosted bot", () => {
     expect(deps.note).toHaveBeenCalledTimes(1);
     expect(deps.note.mock.calls[0]![0]).toMatch(/^\[routines moved\]/);
     expect(deps.note.mock.calls[0]![0]).toContain("1 of them run on a clock");
-    // One review link for them all, sent by the server, never by the model.
-    expect(deps.sendReviewLink).toHaveBeenCalledTimes(1);
-    expect(deps.note.mock.calls[0]![0]).toContain(
-      "2 of them are paused until the user reviews them"
-    );
     expect(marker()).toEqual({ migratedAt: 42, note: null });
 
     // A restart: nothing moves again, and nothing is said again.
