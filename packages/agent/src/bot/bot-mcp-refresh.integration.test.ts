@@ -113,7 +113,7 @@ describe("a bot chat whose connector gateway gains a tool", () => {
     // session is told to refresh.
     server.setTools([{ name: "Slack_Tool", reply: () => "sent" }]);
     await bot.refreshMcp();
-    await bot.send("send hi to sreemanti on slack dm");
+    await bot.send("send hi to alex on slack dm");
 
     expect(offeredTools()).toContain("abacus-connectors_Slack_Tool");
     expect(systemPrompt()).toMatch(/`abacus-connectors` \(1 tool/);
