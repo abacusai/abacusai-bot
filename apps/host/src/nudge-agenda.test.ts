@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PendingWait } from "#main/services/agent-tools/pending-waits";
 
-import { NudgeAgenda, nudgeNotes, waitItem } from "./nudge-agenda";
+import { NudgeAgenda, nudgeNotes, siteName, waitItem } from "./nudge-agenda";
 import { PhoneLane } from "./phone-lane";
 import { refusedTextRule } from "./refused-text.test-support";
 
@@ -256,6 +256,88 @@ describe("the check-in agenda", () => {
     );
   });
 
+  it("puts what waits on the user ahead, two minutes after it began at the earliest, to expire with it", () => {
+    const wait = (over: Partial<PendingWait>): PendingWait => ({
+      itemId: "wait:1",
+      kind: "payment",
+      stage: "approval",
+      site: "akasaair.com",
+      since: NOW,
+      expiresAt: NOW + 8 * 60_000,
+      ...over,
+    });
+    expect(
+      waitItem(
+        wait({ merchant: "Akasa Air", amount: "5412.00", currency: "INR" })
+      )
+    ).toEqual({
+      item_id: "wait:1",
+      kind: "waiting",
+      at: (NOW + 2 * 60_000) / 1000,
+      expires_at: (NOW + 8 * 60_000) / 1000,
+      summary:
+        "A payment of ₹5,412 to Akasa Air is waiting for the user's approval on the page sent.",
+    });
+    expect(
+      waitItem(wait({ amount: "about 5k", currency: "INR" })).summary
+    ).toBe(
+      "A payment to akasaair is waiting for the user's approval on the page sent."
+    );
+  });
+
+  it("names a payee that reads as a domain by its name alone", () => {
+    const summary = waitItem({
+      itemId: "wait:1",
+      kind: "payment",
+      stage: "approval",
+      site: "amazon.in",
+      merchant: "Amazon.in",
+      amount: "499",
+      currency: "INR",
+      since: NOW,
+      expiresAt: NOW + 30 * 60_000,
+    }).summary;
+    expect(summary).toBe(
+      "A payment of ₹499 to amazon is waiting for the user's approval on the page sent."
+    );
+    expect(refusedTextRule(summary)).toBeNull();
+  });
+
+  it("names a site without its domain", () => {
+    expect(siteName("akasaair.com")).toBe("akasaair");
+    expect(siteName("www.booking.makemytrip.com")).toBe("makemytrip");
+    expect(siteName("tickets.example.co.uk")).toBe("example");
+    expect(siteName("localhost")).toBeNull();
+  });
+
+  it("lists waiting first, then due, then connect", async () => {
+    fs.writeFileSync(
+      path.join(dir, "zone.json"),
+      JSON.stringify({ timezone: "UTC" })
+    );
+    writeLoops([
+      { id: "L1", text: "Pay rent", due: "2026-10-09", status: "open" },
+    ]);
+    const { nudges } = agenda({
+      waits: [
+        gmail,
+        {
+          itemId: "wait:2",
+          kind: "vault_card",
+          stage: "page_sent",
+          site: null,
+          since: NOW,
+          expiresAt: NOW + 20 * 60_000,
+        },
+      ],
+    });
+    expect((await nudges.build()).items.map((item) => item.kind)).toEqual([
+      "waiting",
+      "due",
+      "connect",
+    ]);
+  });
+
   it("builds only summaries the server's deny-check lets through", () => {
     writeLoops([
       {
@@ -281,8 +363,61 @@ describe("the check-in agenda", () => {
       ...dueAgendaItems(dir, NOW, "Asia/Kolkata").map((item) => item.summary),
       waitItem(gmail).summary,
       waitItem({ ...gmail, label: "Google Calendar" }).summary,
+      ...(
+        [
+          { kind: "vault_login", stage: "page_sent", site: "akasaair.com" },
+          {
+            kind: "vault_login",
+            stage: "page_sent",
+            site: "accounts.example.co.uk",
+          },
+          { kind: "vault_card", stage: "page_sent", site: null },
+          { kind: "vault_code", stage: "page_sent", site: null },
+          {
+            kind: "payment",
+            stage: "approval",
+            site: "akasaair.com",
+            merchant: "Akasa Air",
+            amount: "5412.00",
+            currency: "INR",
+          },
+          {
+            kind: "payment",
+            stage: "approval",
+            site: "store.example.com",
+            amount: "1234567.89",
+            currency: "USD",
+          },
+          {
+            kind: "payment",
+            stage: "approval",
+            site: "amazon.in",
+            merchant: "Amazon.in",
+            amount: "499",
+            currency: "INR",
+          },
+          { kind: "checkout", stage: "details", site: "akasaair.com" },
+          { kind: "checkout", stage: "code", site: "akasaair.com" },
+          {
+            kind: "checkout",
+            stage: "payment",
+            site: "akasaair.com",
+            merchant: "Akasa Air",
+            amount: "18999.50",
+            currency: "EUR",
+          },
+        ] as const
+      ).map(
+        (over) =>
+          waitItem({
+            itemId: "wait:1",
+            since: NOW,
+            expiresAt: NOW + 60_000,
+            ...over,
+          }).summary
+      ),
     ];
-    expect(summaries).toHaveLength(5);
+    expect(summaries).toHaveLength(15);
     for (const summary of summaries)
       expect(refusedTextRule(summary), summary).toBeNull();
     // The port refuses what the server refuses.
@@ -335,6 +470,36 @@ describe("what the loop hears with a user message", () => {
     nudges.stop();
   });
 
+  it("stops asking for the language after three calls that left none set this start", async () => {
+    const { nudges, posts } = agenda();
+    nudges.start();
+    nudges.polled({});
+    await vi.waitFor(() => expect(posts()).toHaveLength(1));
+    for (let call = 0; call < 3; call += 1) {
+      expect(nudges.notes({ id: `m${call}`, text: "hola" })).toHaveLength(1);
+      nudges.languageCallEnded();
+    }
+    expect(nudges.notes({ id: "m9", text: "hola" })).toEqual([]);
+    nudges.stop();
+    nudges.start();
+    nudges.polled({});
+    await vi.waitFor(() => expect(posts()).toHaveLength(2));
+    expect(nudges.notes({ id: "m10", text: "hola" })).toHaveLength(1);
+    nudges.stop();
+  });
+
+  it("does not count a call that set the language", async () => {
+    const { nudges, posts } = agenda();
+    nudges.start();
+    nudges.polled({});
+    await vi.waitFor(() => expect(posts()).toHaveLength(1));
+    writeLanguage("es");
+    for (let call = 0; call < 5; call += 1) nudges.languageCallEnded();
+    fs.writeFileSync(path.join(dir, "checkins.json"), "{}");
+    expect(nudges.notes({ id: "m1", text: "hola" })).toHaveLength(1);
+    nudges.stop();
+  });
+
   it("has the linked greeting mention check-ins only when the server has them on", async () => {
     for (const enabled of [true, false]) {
       const { nudges, calls } = agenda({ enabled });
@@ -375,6 +540,47 @@ describe("what the loop hears with a user message", () => {
     });
     expect((await nudges.build()).items).toEqual([]);
     nudges.stop();
+  });
+
+  it("says a note once across a batch of messages", async () => {
+    const send = vi.fn(async () => true);
+    let polls = 0;
+    const phone = new PhoneLane(
+      {
+        call: (async (body: Record<string, unknown>) => {
+          if (body.action !== "inbox") return { ok: true };
+          polls += 1;
+          if (polls > 1) await new Promise(() => {});
+          return {
+            messages: [
+              { id: "m1", text: "hola" },
+              { id: "m2", text: "otra cosa", stop_keyword: true },
+            ],
+          };
+        }) as never,
+        hasKey: () => true,
+        openSession: async () => ({ workspaceId: "w", sessionId: "s" }),
+        stop: async () => {},
+        send,
+        onAgentEvent: () => () => {},
+        activity: () => {},
+        resolveMedia: () => ({ ok: false, reason: "none" }),
+        turnNotes: (entry) => [
+          "[check-ins language] Set it.",
+          ...nudgeNotes(entry),
+        ],
+        log: () => {},
+      },
+      { batchMs: 0 }
+    );
+    phone.start();
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    const text = (send.mock.calls[0] as unknown[])[2] as string;
+    expect(text.match(/\[check-ins language\]/g)).toHaveLength(1);
+    expect(text).toMatch(
+      /^\[check-ins language\] Set it\.\n\nhola\n\n\[stop keyword\] /
+    );
+    phone.stop();
   });
 
   it("reaches the session ahead of the message, and each poll reports its zone", async () => {

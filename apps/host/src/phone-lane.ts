@@ -349,11 +349,7 @@ export class PhoneLane {
     this.log(
       `[phone] handoff messages=${batch.length} linked=${batch.filter((message) => message.entry.kind === "linked").length}`
     );
-    void this.handOff(
-      batch,
-      handoff,
-      batch.map((message) => this.turnText(message.entry)).join("\n\n")
-    );
+    void this.handOff(batch, handoff, this.batchText(batch));
   }
 
   /** One send to the session, after those before it; a refusal requeues the messages. */
@@ -384,8 +380,20 @@ export class PhoneLane {
     return run;
   }
 
-  private turnText(entry: PhoneInboxEntry): string {
-    return phoneTurnText(entry, this.deps.turnNotes?.(entry) ?? []);
+  /** A note already said for an earlier entry of the batch is not said again. */
+  private turnText(entry: PhoneInboxEntry, said = new Set<string>()): string {
+    const notes = (this.deps.turnNotes?.(entry) ?? []).filter(
+      (note) => !said.has(note)
+    );
+    for (const note of notes) said.add(note);
+    return phoneTurnText(entry, notes);
+  }
+
+  private batchText(batch: readonly InboundMessage[]): string {
+    const said = new Set<string>();
+    return batch
+      .map((message) => this.turnText(message.entry, said))
+      .join("\n\n");
   }
 
   private async trySend(text: string, handoff: string): Promise<boolean> {
