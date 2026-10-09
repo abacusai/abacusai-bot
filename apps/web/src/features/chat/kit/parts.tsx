@@ -8,8 +8,8 @@ import { Brain, ChevronRight, FileText, Globe, Layers } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ABACUS_BUY_CREDITS_URL } from "#renderer/lib/abacus-links";
 import { cn } from "#renderer/lib/cn";
+import { useVisibleContextualUpsell } from "#renderer/lib/contextual-upsell";
 import {
   Attachment,
   AttachmentContent,
@@ -40,7 +40,8 @@ export const FeatureLimitNotice = ({
   host: ChatHostActions;
 }) => {
   const { t } = useTranslation();
-  const [action, setAction] = useState<"upgrade" | "top-up" | null>(null);
+  const [action, setAction] = useState<"upgrade" | "manage" | null>(null);
+  const promotionRef = useVisibleContextualUpsell(action === "upgrade");
   useEffect(() => {
     let live = true;
     void Promise.all([host.accountTier(), host.canTopUpCredits?.() ?? false])
@@ -50,7 +51,7 @@ export const FeatureLimitNotice = ({
             tier === "free" || (tier === "basic" && eligible)
               ? "upgrade"
               : tier === "paid" && eligible
-                ? "top-up"
+                ? "manage"
                 : null
           );
       })
@@ -63,19 +64,16 @@ export const FeatureLimitNotice = ({
     <div
       className="flex min-w-0 flex-col items-start gap-3 rounded-xl bg-[var(--chat-surface)] p-3 text-sm"
       data-slot="feature-limit"
+      ref={promotionRef}
     >
       {t("chat.part.featureLimit", { feature })}
       {action && (
         <Button
           variant="secondary"
           className="max-w-full whitespace-normal"
-          onClick={() =>
-            void (action === "upgrade"
-              ? host.openUpgrade()
-              : host.openExternal(ABACUS_BUY_CREDITS_URL))
-          }
+          onClick={() => void host.openUpgrade()}
         >
-          {t(action === "upgrade" ? "creditsCard.cta" : "creditsCard.topUpCta")}
+          {t(action === "upgrade" ? "creditsCard.cta" : "phase5.managePlan")}
         </Button>
       )}
     </div>
