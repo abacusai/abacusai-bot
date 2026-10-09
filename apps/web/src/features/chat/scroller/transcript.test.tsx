@@ -12,6 +12,7 @@ import { act, screen, waitFor, fireEvent } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MessageScrollerProvider } from "#renderer/ui/message-scroller";
+import * as scroller from "#renderer/ui/message-scroller";
 
 import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
@@ -572,4 +573,81 @@ it("retains the selected DOM row while the moving window pages away", async () =
 
   await waitFor(() => expect(row.isConnected).toBe(false));
   retained.mockRestore();
+});
+
+it("loads history when the spacer intersects, even if its centered button is outside view", async () => {
+  const observers: {
+    callback: IntersectionObserverCallback;
+    options?: IntersectionObserverInit;
+    target?: Element;
+  }[] = [];
+  const original = globalThis.IntersectionObserver;
+  vi.stubGlobal(
+    "IntersectionObserver",
+    class {
+      entry: (typeof observers)[number];
+      constructor(
+        callback: IntersectionObserverCallback,
+        options?: IntersectionObserverInit
+      ) {
+        this.entry = { callback, options };
+        observers.push(this.entry);
+      }
+      observe(target: Element) {
+        this.entry.target = target;
+      }
+      unobserve() {}
+      disconnect() {}
+    }
+  );
+  const away = vi
+    .spyOn(scroller, "useMessageScrollerScrollable")
+    .mockReturnValue({ start: true, end: true });
+  try {
+    const relay = new FakeRelay();
+    relay.emitAll([...b.sessionReady(), ...turns(80)]);
+    current = await renderRelay(relay, "session");
+    const session = current.runtime.session(relay.threadId);
+    await act(async () => {
+      for (let i = 0; i < 3; i++) await session.loadOlder();
+    });
+    const viewport = document.querySelector(
+      '[data-slot="message-scroller-viewport"]'
+    )!;
+    const first = viewport
+      .querySelector("[data-message-id]")!
+      .getAttribute("data-message-id");
+    const observer = observers.findLast(
+      (entry) =>
+        entry.options?.rootMargin === "400px 0px" &&
+        entry.target?.isConnected &&
+        entry.target.textContent?.includes("Show earlier")
+    );
+    expect(observer?.target?.parentElement).toBe(viewport);
+    expect(
+      observer?.target?.querySelector('[data-slot="window-placeholder"]')
+    ).not.toBeNull();
+    await act(async () =>
+      observer!.callback(
+        [
+          {
+            isIntersecting: true,
+            target: observer!.target!,
+          } as IntersectionObserverEntry,
+        ],
+        {} as IntersectionObserver
+      )
+    );
+    expect(
+      viewport
+        .querySelector("[data-message-id]")!
+        .getAttribute("data-message-id")
+    ).not.toBe(first);
+    expect(
+      viewport.querySelectorAll('[data-slot="message-scroller-item"]').length
+    ).toBeLessThanOrEqual(MAX_ROWS);
+  } finally {
+    away.mockRestore();
+    vi.stubGlobal("IntersectionObserver", original);
+  }
 });
