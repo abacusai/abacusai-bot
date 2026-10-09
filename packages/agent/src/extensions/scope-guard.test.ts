@@ -8,6 +8,7 @@ import {
   outsideScope,
   pathsNamedIn,
   shellPathOperands,
+  targetsOf,
   type TaskScope,
   taskScope,
 } from "./scope-guard.js";
@@ -91,6 +92,50 @@ describe("what a sub-agent may reach", () => {
       );
     }
   );
+});
+
+describe("toolchain and package-cache folders in home", () => {
+  const lodash = path.join(
+    home,
+    ".nvm/versions/node/v22.0.0/lib/node_modules/lodash/lodash.js"
+  );
+  const crate = path.join(home, ".cargo/registry/src/serde-1.0/src/lib.rs");
+
+  it("may be read, since a dependency's source often lives only there", () => {
+    expect(outsideScope(lodash, project, scope())).toBe(false);
+    expect(outsideScope(crate, project, scope(), "read")).toBe(false);
+  });
+
+  it("may not be written", () => {
+    expect(outsideScope(lodash, project, scope(), "write")).toBe(true);
+  });
+
+  it("does not open the rest of home", () => {
+    expect(
+      outsideScope(path.join(home, ".ssh/id_ed25519"), project, scope())
+    ).toBe(true);
+  });
+});
+
+describe("how a tool call reaches a path", () => {
+  it("reads with read, ls, grep and find; writes with write and edit", () => {
+    expect(targetsOf("grep", { pattern: "x", path: "/a" })).toEqual([
+      { path: "/a", access: "read" },
+    ]);
+    expect(targetsOf("edit", { path: "/a" })).toEqual([
+      { path: "/a", access: "write" },
+    ]);
+  });
+
+  it("writes where the shell redirects or copies to, and reads the rest", () => {
+    expect(targetsOf("bash", { command: "cat ~/.npm/a > ~/.npm/b" })).toEqual([
+      { path: "~/.npm/a", access: "read" },
+      { path: "~/.npm/b", access: "write" },
+    ]);
+    expect(targetsOf("bash", { command: "cp src/x $HOME/.cargo/y" })).toEqual([
+      { path: "~/.cargo/y", access: "write" },
+    ]);
+  });
 });
 
 describe("reading paths out of a task", () => {
