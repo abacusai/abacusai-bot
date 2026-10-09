@@ -156,6 +156,7 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
     "referral-link",
     "search",
     "updates",
+    "update-notice",
   ],
   shell: [
     "connect",

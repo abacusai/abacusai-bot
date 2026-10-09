@@ -311,10 +311,14 @@ it("a later exhaustion mark forces fresh counters and cannot be cleared by the p
     expect(app!.collections.prefs.get("app")?.creditsExhaustedAt).toBeNull()
   );
 });
-it("an install retry event carrying historical failure keeps the critical dialog installing", async () => {
+it("an install retry clears historical failure and shows a new error after handoff", async () => {
   let release!: () => void;
   const retried = new Promise<void>((resolve) => {
     release = resolve;
+  });
+  let failHandoff!: () => void;
+  const handoffFailed = new Promise<void>((resolve) => {
+    failHandoff = resolve;
   });
   const failed = {
     ...idle,
@@ -332,6 +336,12 @@ it("an install retry event carrying historical failure keeps the critical dialog
         events: os.update.events.handler(async function* ({ signal }) {
           yield failed;
           await retried;
+          // Native checking-for-update clears the previous failure before
+          // the installer handoff. A later error belongs to this attempt.
+          const cleared = { ...failed, error: null, failedPhase: null };
+          yield { ...cleared, checking: true };
+          yield { ...cleared, installing: true };
+          await handoffFailed;
           yield { ...failed, installing: true };
           await new Promise<void>((resolve) =>
             signal?.addEventListener("abort", () => resolve(), { once: true })
@@ -340,7 +350,7 @@ it("an install retry event carrying historical failure keeps the critical dialog
       },
     },
   });
-  const { within } = await import("@testing-library/react");
+  const { act, within } = await import("@testing-library/react");
   const dialog = await screen.findByRole("alertdialog");
   fireEvent.click(within(dialog).getByRole("button", { name: "Try again" }));
   await waitFor(() =>
@@ -354,6 +364,13 @@ it("an install retry event carrying historical failure keeps the critical dialog
   expect(
     within(dialog).queryByRole("button", { name: "Try again" })
   ).toBeNull();
+  await act(async () => failHandoff());
+  expect(await within(dialog).findByText("old install failure")).not.toBeNull();
+  expect(
+    within(dialog)
+      .getByRole("button", { name: "Restarting…" })
+      .hasAttribute("disabled")
+  ).toBe(true);
 });
 
 it("the quit watchdog event replaces the critical dialog with a stalled banner", async () => {
