@@ -68,7 +68,7 @@ vi.mock("./services/providers/abacus-auth-service", () => ({
   startAbacusAuth: vi.fn(async () => ({ ok: true, key: "s2_key" })),
 }));
 vi.mock("./services/providers/abacus-connector-service", () => ({
-  connectPageUrl: vi.fn(),
+  connectButtonLink: vi.fn(),
   disconnectAbacusConnector: vi.fn(),
   listAbacusConnectors: vi.fn(),
 }));

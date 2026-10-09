@@ -7,7 +7,7 @@ export const connectorsRouter = impl.connectors.router({
     context.deps.serviceHost.listConnectorStatuses()
   ),
   connect: impl.connectors.connect.handler(({ input, context }) =>
-    context.deps.serviceHost.connectConnector(input.connectorId, input.options)
+    context.deps.serviceHost.connectConnector(input.connectorId)
   ),
   submitFields: impl.connectors.submitFields.handler(({ input, context }) =>
     context.deps.serviceHost.submitConnectorFields(

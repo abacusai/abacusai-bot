@@ -35,16 +35,9 @@ export const connectors = {
   statuses: query.input(NoInput).output(type<ConnectorStatuses>()),
   /**
    * A flow with no fields: a platform connector answers with its connect
-   * page's `url` for the caller to open; an MCP server installs.
+   * link's `url` for the caller to open; an MCP server installs.
    */
-  connect: mutation
-    .input(
-      v.object({
-        ...ConnectorIdInput.entries,
-        options: v.optional(v.object({ hint: v.optional(v.string()) })),
-      })
-    )
-    .output(type<ConnectorOutcome>()),
+  connect: mutation.input(ConnectorIdInput).output(type<ConnectorOutcome>()),
   submitFields: mutation
     .input(
       v.object({

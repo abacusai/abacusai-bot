@@ -4,16 +4,13 @@ import type { Transport } from "#renderer/data/transport";
 import type { AppClient } from "#renderer/data/transport/types";
 import type { ConnectTarget } from "#renderer/lib/connect-target";
 export const platformSystem = (client: AppClient) => client.system;
-/**
- * The desktop's answer: main mints platform pages, and connects MCP servers
- * itself. The hint travels with the connect call instead.
- */
-export const connectTarget = (name: string, _hint?: string): ConnectTarget => {
+/** The desktop's answer: main mints platform links, and connects MCP servers itself. */
+export const connectTarget = (name: string): ConnectTarget => {
   const entry = connectorById(name);
   const ui = entry != null ? connectUi(entry) : "browser-hop";
   if (ui === "pairing" || ui === "fields") return { kind: ui };
   return entry?.kind === "platform"
-    ? { kind: "connect-link" }
+    ? { kind: "connect-link", opens: "external" }
     : { kind: "in-app" };
 };
 

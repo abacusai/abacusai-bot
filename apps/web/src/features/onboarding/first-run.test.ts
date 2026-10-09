@@ -9,7 +9,7 @@ afterEach(() => vi.useRealTimers());
 const setup = () => {
   const connect = vi.fn(async () => ({
     ok: true,
-    url: "https://apps.example/chatllm/connect-connector?service=gmailuser",
+    url: "https://apps.example/connect/google?r=req_1",
   }));
   const funnelStep = vi.fn(async () => {});
   const openExternal = vi.fn(async () => {});
@@ -44,7 +44,7 @@ const setup = () => {
   };
 };
 
-it("opens Gmail's connect page once, for the authenticated address, and reports once connected", async () => {
+it("opens Gmail's connect link once, as the host minted it, and reports once connected", async () => {
   vi.useFakeTimers();
   const { transport, connect, funnelStep, openExternal, statuses, changed } =
     setup();
@@ -54,11 +54,10 @@ it("opens Gmail's connect page once, for the authenticated address, and reports 
   ]);
   expect(connect).toHaveBeenCalledExactlyOnceWith({
     connectorId: "abacus-gmailuser",
-    options: { hint: "ada@example.com" },
   });
   await vi.advanceTimersByTimeAsync(0);
   expect(openExternal).toHaveBeenCalledExactlyOnceWith({
-    url: "https://apps.example/chatllm/connect-connector?service=gmailuser",
+    url: "https://apps.example/connect/google?r=req_1",
   });
   expect(funnelStep).not.toHaveBeenCalled();
   statuses.mockResolvedValue({

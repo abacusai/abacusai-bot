@@ -170,8 +170,11 @@ it("a two-platform route transition settles deferred setup without cancelling it
   }
 });
 
-it("on the desktop, main mints platform pages and connects MCP servers in the app", () => {
-  expect(connectTarget("abacus-slack")).toEqual({ kind: "connect-link" });
+it("on the desktop, main mints platform links and connects MCP servers in the app", () => {
+  expect(connectTarget("abacus-slack")).toEqual({
+    kind: "connect-link",
+    opens: "external",
+  });
   for (const name of ["notion", "huggingface", "my server"])
     expect(connectTarget(name)).toEqual({ kind: "in-app" });
   expect(connectTarget("messaging-telegram")).toEqual({ kind: "pairing" });

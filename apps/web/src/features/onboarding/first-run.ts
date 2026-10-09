@@ -17,15 +17,10 @@ const claim = (key: string): boolean => {
 /** The one Gmail consent this page load waits on; dismissing it cancels the wait. */
 let gmail: ConnectAttempt | null = null;
 
-/** Gmail's connect page for the signed-in address, then the wait for it to connect. */
-const connectGmail = (
-  transport: Transport,
-  email: string
-): Promise<ConnectorOutcome> => {
+/** Gmail's connect link (minted for the signed-in account), then the wait for it to connect. */
+const connectGmail = (transport: Transport): Promise<ConnectorOutcome> => {
   gmail?.cancel();
-  const attempt = new ConnectAttempt(transport, "abacus-gmailuser", {
-    hint: email,
-  });
+  const attempt = new ConnectAttempt(transport, "abacus-gmailuser");
   gmail = attempt;
   return attempt.result.finally(() => {
     if (gmail === attempt) gmail = null;
@@ -64,7 +59,7 @@ export const startFirstRunGmail = async (
     button.textContent = "Connect Gmail";
     button.onclick = () => {
       button.disabled = true;
-      void connectGmail(transport, email)
+      void connectGmail(transport)
         .then(async (outcome) => {
           await transport.client.system.funnelStep({
             step: outcome.ok ? "gmail_allowed" : "gmail_declined",
@@ -88,7 +83,7 @@ export const startFirstRunGmail = async (
     !claim("abacusai-bot:onboarding.gmailHop")
   )
     return;
-  void connectGmail(transport, email)
+  void connectGmail(transport)
     .then((outcome) =>
       transport.client.system.funnelStep({
         step: outcome.ok ? "gmail_allowed" : "gmail_declined",

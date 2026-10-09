@@ -772,7 +772,7 @@ export interface AbacusConnectorsSnapshot {
 }
 
 export type AbacusConnectorOutcome =
-  /** `url`: the connect page a platform connector opens, absolute. */
+  /** `url`: the connect link a platform connector opens, absolute. */
   | { ok: true; url?: string }
   | { ok: false; error: string; cancelled?: boolean };
 
@@ -810,11 +810,6 @@ export type ConnectorStatuses = Record<string, ConnectorStatus>;
 // The one MCP entry behind every platform connector card. The Bearer header is an
 // env placeholder expanded at connect time, so the key is never persisted.
 export const ABACUS_CONNECTORS_SERVER_NAME = GATEWAY_SERVER_NAME;
-
-/** `hint` is the account to pre-select on the provider's consent; it is only forwarded into the connect URL. */
-export interface ConnectorConnectOptions {
-  hint?: string;
-}
 
 export const abacusConnectorsMcpEntry = (mcpUrl: string): McpServerEntry => ({
   url: mcpUrl,

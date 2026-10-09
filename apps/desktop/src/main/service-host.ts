@@ -33,7 +33,6 @@ import {
 } from "@abacus-ai/contract/contract/checkout";
 import type { GitStateRow } from "@abacus-ai/contract/contract/rows";
 import type {
-  ConnectorConnectOptions,
   TranscriptSegment,
   TurnFeedbackInput,
   TurnFeedbackOutcome,
@@ -406,8 +405,8 @@ import {
   type SelfLanePlatform,
 } from "./services/messaging/messaging-gateway-service";
 import {
+  connectButtonLink,
   connectLinkStatus,
-  connectPageUrl,
   createConnectLink,
   disconnectAbacusConnector,
   listAbacusConnectors,
@@ -1498,12 +1497,13 @@ export class ServiceHost {
   /** How each kind connects and disconnects. The one implementation every Connect button uses. */
   readonly connectorFlow = new ConnectorFlowService({
     platform: {
-      connect: connectPageUrl,
+      connect: connectButtonLink,
       disconnect: disconnectAbacusConnector,
-      watch: (connectorId) =>
+      watch: (connectorId, requestId) =>
         this.connectWatcher.watch({
           connectorIds: [connectorId],
           sessionId: null,
+          requestId,
         }),
     },
     mcp: {
@@ -1653,11 +1653,8 @@ export class ServiceHost {
     if (moved) this.connectorStatusChangedSoon();
   }
 
-  async connectConnector(
-    connectorId: string,
-    options?: ConnectorConnectOptions
-  ): Promise<ConnectorOutcome> {
-    const outcome = await this.connectorFlow.connect(connectorId, options);
+  async connectConnector(connectorId: string): Promise<ConnectorOutcome> {
+    const outcome = await this.connectorFlow.connect(connectorId);
     this.connectorSync.changed();
     return outcome;
   }
