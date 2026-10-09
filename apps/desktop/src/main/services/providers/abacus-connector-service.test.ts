@@ -255,6 +255,47 @@ describe("listing connectors without a key", () => {
   });
 });
 
+describe("listing connectors with incomplete platform responses", () => {
+  it.each([
+    [null, { success: true, result: [] }],
+    [{ success: true, result: { GMAILUSER: { name: "Gmail" } } }, null],
+    [
+      { success: true, result: [] },
+      { success: true, result: [] },
+    ],
+    [
+      { success: true, result: {} },
+      { success: true, result: {} },
+    ],
+  ] as const)(
+    "reports an unavailable listing rather than inferring account policy",
+    async (catalog, active) => {
+      answer("_listAbacusbotConnectors", catalog);
+      answer("_listActiveUserLevelConnectors", active);
+
+      expect(await listAbacusConnectors()).toEqual({
+        ok: false,
+        error: "unavailable",
+        available: [],
+        connected: {},
+        accounts: {},
+      });
+    }
+  );
+
+  it("keeps a successful empty catalog as the account's actual policy", async () => {
+    answer("_listAbacusbotConnectors", { success: true, result: {} });
+    answer("_listActiveUserLevelConnectors", { success: true, result: [] });
+
+    expect(await listAbacusConnectors()).toEqual({
+      ok: true,
+      available: [],
+      connected: {},
+      accounts: {},
+    });
+  });
+});
+
 describe("a Connect button's link", () => {
   it("is the minted link exactly as the server returns it", async () => {
     answer("_createAbacusbotConnectLink", {

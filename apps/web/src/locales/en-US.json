@@ -1272,7 +1272,7 @@
     "pages.models.abacus": "Abacus.AI",
     "pages.models.openrouter": "OpenRouter",
     "pages.models.gemini": "Google Gemini",
-    "pages.connectors.body": "Pick your tools. You can add more later.",
+    "pages.connectors.body": "Connect your email and calendar to get help with replies and meetings, or message your bot from the apps you use. You can add more later.",
     "pages.first-bot.title": "We made your first bot for you",
     "pages.first-bot.body": "{{name}} runs your workday across Gmail, Calendar and Slack. Rename it, restyle it, or start from scratch.",
     "pages.done.title": "You’re set",
@@ -1341,7 +1341,16 @@
     "pages.models.downloading": "Downloading",
     "pages.models.download": "Download",
     "soundOn": "Sound on",
-    "soundOff": "Sound off"
+    "soundOff": "Sound off",
+    "connectorAction": "{{action}} {{name}}",
+    "connectorDetails": {
+      "abacus-gmailuser": "Read email and draft replies.",
+      "abacus-googlecalendar": "Check your day and schedule meetings.",
+      "abacus-googledriveuser": "Find and work with your files.",
+      "messaging-whatsapp": "Message your bot from WhatsApp.",
+      "messaging-telegram": "Message your bot from Telegram.",
+      "messaging-discord": "Message your bot from Discord."
+    }
   },
   "referralCard": {
     "cta": "Invite friends",
