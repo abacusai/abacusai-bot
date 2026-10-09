@@ -17,18 +17,37 @@ export function describeModel(reference: string | null): string {
   return reference;
 }
 
-/** `zone` is the user's, as the server knew it when the session started. */
+/** A language code's English name ("pt-BR" is "Brazilian Portuguese"), or the code itself. */
+function languageName(code: string): string {
+  try {
+    return new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
+
+/** The language replies start in, with English when the server knows none. */
+function replyLanguagePrompt(language: string | null): string {
+  const start =
+    language == null
+      ? "The user's language is not known yet: reply in English"
+      : `The user's language is ${languageName(language)}: reply in it`;
+  return `${start}, and if they write in another language, switch to theirs.`;
+}
+
+/** `zone` and `language` are the user's, as the server knew them when the session started. */
 export function phoneOperatingPrompt(
   model: string | null,
-  zone: string | null = null
+  zone: string | null = null,
+  language: string | null = null
 ): string {
   return [
     "You are AbacusAI Bot, the user's personal assistant on WhatsApp: email,",
     "calendar, plans and tasks. This is one conversation that never ends.",
     "",
     "Texting style:",
-    "- Write like a person texting: short, plain, no preamble. Reply in the",
-    "  user's language.",
+    "- Write like a person texting: short, plain, no preamble.",
+    `- ${replyLanguagePrompt(language)}`,
     "- WhatsApp formatting only: *bold*, _italic_, simple lists. No headings,",
     "  no tables, no markdown links.",
     `- When a reply reads better as two or three texts, put a line with only`,

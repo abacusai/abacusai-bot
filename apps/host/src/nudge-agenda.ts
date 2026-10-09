@@ -8,6 +8,7 @@ import {
   phoneZone,
   retireNudgedLoops,
   scriptLanguage,
+  writePhoneReplyLanguage,
   writePhoneZone,
 } from "@abacus-ai/agent/phone-nudges";
 
@@ -34,7 +35,7 @@ type ChannelsCall = <T>(
 
 interface NudgeAgendaDeps {
   call: ChannelsCall;
-  /** The phone loop's directory: its loops, zone and check-in language. */
+  /** The phone loop's directory: its loops, zone and languages. */
   phoneDir: string;
   /** The phone session's waits; none before it exists. */
   waits: () => Promise<PendingWait[]>;
@@ -220,30 +221,34 @@ export class NudgeAgenda {
   }
 
   /**
-   * An inbox poll answered: the server's zone becomes the loop's clock (null
-   * forgets it; an older server says nothing and nothing changes), and the
-   * start's first posts the agenda.
+   * An inbox poll answered: the server's zone becomes the loop's clock and its
+   * language the one the loop replies in (null forgets either; an older
+   * server says nothing and nothing changes), and the start's first posts the
+   * agenda.
    */
-  polled(result: { tz?: unknown }): void {
+  polled(result: { tz?: unknown; lang?: unknown }): void {
     if (!this.running) return;
-    const tz =
-      result.tz === null
-        ? null
-        : typeof result.tz === "string" && result.tz.length > 0
-          ? result.tz
-          : undefined;
-    if (tz !== undefined) {
-      try {
-        mkdirSync(this.deps.phoneDir, { recursive: true });
-        if (writePhoneZone(this.deps.phoneDir, tz))
-          this.log(`[phone] timezone ${tz ?? "unknown"}`);
-      } catch (error) {
-        this.log(`[phone] timezone not saved: ${describe(error)}`);
-      }
-    }
+    this.save("timezone", serverValue(result.tz), writePhoneZone);
+    this.save("language", serverValue(result.lang), writePhoneReplyLanguage);
     if (this.posted) return;
     this.posted = true;
     void this.post(true).then(() => this.readEnabled());
+  }
+
+  /** One value the poll carried, saved when the server said anything about it. */
+  private save(
+    what: string,
+    value: string | null | undefined,
+    write: (dir: string, value: string | null) => boolean
+  ): void {
+    if (value === undefined) return;
+    try {
+      mkdirSync(this.deps.phoneDir, { recursive: true });
+      if (write(this.deps.phoneDir, value))
+        this.log(`[phone] ${what} ${value ?? "unknown"}`);
+    } catch (error) {
+      this.log(`[phone] ${what} not saved: ${describe(error)}`);
+    }
   }
 
   /** A phone turn ended: the agenda goes again, changed or not. */
@@ -448,6 +453,14 @@ function upgradeHintNote(hint: PhoneInboxEntry["upgrade_hint"]): string | null {
     `error, or when you just asked them something: then leave it out.`
   );
 }
+
+/** A poll field: a string is the server's value, null clears it, anything else (an older server) says nothing. */
+const serverValue = (value: unknown): string | null | undefined =>
+  value === null
+    ? null
+    : typeof value === "string" && value.length > 0
+      ? value
+      : undefined;
 
 const describe = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);

@@ -75,8 +75,12 @@ interface PhoneLaneDeps {
   pinMedia?: (ref: string, sessionId: string, pinned: boolean) => void;
   /** The server says the user just linked WhatsApp (the "linked" entry). */
   onLinked?: () => void;
-  /** Each answered inbox poll, for what it says besides messages (the user's zone, chats' step events). */
-  onPolled?: (result: { tz?: unknown; events?: unknown }) => void;
+  /** Each answered inbox poll, for what it says besides messages (the user's zone and language, chats' step events). */
+  onPolled?: (result: {
+    tz?: unknown;
+    lang?: unknown;
+    events?: unknown;
+  }) => void;
   /**
    * A step-done event's note for the loop, once: null for one already told
    * (the host's own watcher got there first), which is acknowledged and dropped.
@@ -264,6 +268,7 @@ export class PhoneLane {
         const result = await this.deps.call<{
           messages?: PhoneInboxEntry[];
           tz?: unknown;
+          lang?: unknown;
           events?: unknown;
         }>(
           {

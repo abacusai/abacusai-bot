@@ -113,16 +113,28 @@ const roleOf = (message: unknown): string | undefined =>
   (message as { role?: unknown } | undefined)?.role as string | undefined;
 
 /**
+ * A user turn without the app's tagged paragraphs ("[linked] ...", "[check-ins
+ * sent] ..."): the app writes those, in English, ahead of the user's words.
+ */
+const withoutAppNotes = (text: string): string =>
+  text
+    .split(/\n\s*\n/)
+    .filter((part) => !/^\s*\[[a-z][a-z -]*\](?!\()/.test(part))
+    .join("\n\n");
+
+/**
  * The user's script, read off their turns newest first until there is enough
  * text to judge. A guard that gives up on a short question is off for most of
  * them, so earlier turns settle it; a lone short first message is judged on
- * whatever letters it has.
+ * whatever letters it has. A turn that is only the app's notes says nothing.
  */
 export const userScript = (messages: readonly unknown[]): Script | null => {
   const total: ScriptTally = { counts: new Map(), letters: 0 };
   for (let index = messages.length - 1; index >= 0; index--) {
     if (roleOf(messages[index]) !== "user") continue;
-    const { counts, letters } = scriptCounts(textOf(messages[index]));
+    const { counts, letters } = scriptCounts(
+      withoutAppNotes(textOf(messages[index]))
+    );
     total.letters += letters;
     for (const [script, count] of counts) {
       total.counts.set(script, (total.counts.get(script) ?? 0) + count);
