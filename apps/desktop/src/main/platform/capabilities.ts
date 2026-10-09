@@ -21,6 +21,7 @@ export const WEB_HOST_DENIED = [
   "auth.openRouter.cancel",
   "system.loginItem",
   "system.restart",
+  "system.deleteAllData",
   "system.openPath",
   "system.showItemInFolder",
   "system.openPrivacyPane",

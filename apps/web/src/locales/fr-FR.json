@@ -2715,6 +2715,12 @@
       "text": "Texte de la licence de {{name}}",
       "empty": "Aucun paquet correspondant.",
       "more": "Charger plus de paquets"
+    },
+    "deleteAllData": {
+      "title": "Delete all data",
+      "detail": "Remove all local app data and restart with a fresh setup.",
+      "confirmation": "This permanently deletes every local profile, API key, chat, routine, memory, installed skill, browser session, downloaded model, and files in the app’s default bot and session folders. This cannot be undone. Files outside the app data folder and your online Abacus.AI account are unchanged.",
+      "confirm": "Delete all data and restart"
     }
   },
   "onboardingFlow": {
@@ -4158,7 +4164,13 @@
       "rowDetail": "Chat with AbacusAI Bot on WhatsApp",
       "doneTitle": "C'est prêt",
       "doneBody": "Votre bot est sur WhatsApp. Écrivez-lui quand vous voulez.",
-      "useDifferentNumber": "Utiliser un autre numéro"
+      "useDifferentNumber": "Utiliser un autre numéro",
+      "skipDownload": "Passer et télécharger l'application",
+      "desktopDoneBody": "Votre bot est sur WhatsApp. Installez l'application de bureau pour l'utiliser aussi sur cet ordinateur.",
+      "download": "Télécharger l'application de bureau",
+      "downloadingTitle": "Votre téléchargement a commencé",
+      "downloadingBody": "Installez AbacusAI Bot pour l'utiliser sur cet ordinateur.",
+      "connectInstead": "Connecter WhatsApp plutôt"
     },
     "signOutDetail": "This ends your website session and clears this browser's bot data.",
     "routines": {

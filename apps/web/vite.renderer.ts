@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -7,7 +8,12 @@ import react from "@vitejs/plugin-react";
 import { loadEnv, type Plugin, type PluginOption } from "vite";
 
 import { releaseBuildPlugin } from "./scripts/release-build-plugin.mjs";
-import { loadWebOverlay, overlayCsp, overlayTags } from "./vite.overlay.ts";
+import {
+  loadWebOverlay,
+  mergeCsp,
+  overlayCsp,
+  overlayTags,
+} from "./vite.overlay.ts";
 export type { WebOverlay } from "./vite.overlay.ts";
 import {
   RENDERER_MODULES,
@@ -143,12 +149,19 @@ export const platformPlugin = async (
           env
         )
       : undefined;
-  const base = rendererCsp(platform, env);
+  // Vite's React refresh preamble is inline. Authorize only the dev server's
+  // generated scripts, using the same nonce Vite adds to its HTML tags.
+  const nonce = command === "serve" ? randomBytes(18).toString("base64") : null;
+  const policy = rendererCsp(platform, env);
+  const base = nonce
+    ? mergeCsp(policy, { "script-src": [`'nonce-${nonce}'`] })
+    : policy;
   const csp = overlay ? overlayCsp(base, overlay) : base;
   const plugins: Plugin[] = [
     {
       name: "abacus:platform",
       config: () => ({
+        ...(nonce ? { html: { cspNonce: nonce } } : {}),
         define: {
           __ABACUS_PLATFORM__: JSON.stringify(platform),
           ...overlay?.define,

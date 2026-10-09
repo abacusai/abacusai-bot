@@ -98,6 +98,9 @@ export const system = {
       .output(type<{ openAtLogin: boolean }>()),
   },
   restart: mutation.input(NoInput).output(type<void>()),
+  deleteAllData: mutation
+    .input(v.strictObject({ confirmation: v.literal("DELETE_ALL_LOCAL_DATA") }))
+    .output(type<void>()),
   /** First-run milestones; fire-and-forget. */
   funnelStep: mutation
     .input(

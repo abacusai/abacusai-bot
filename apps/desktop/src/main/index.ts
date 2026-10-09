@@ -65,6 +65,7 @@ import { wireMainNotchEvents } from "./notch/main-events";
 import { NotchNotificationPolicy } from "./notch/notifications";
 import { abacusBotHome, userTempDir, WORKSPACE_DIR_NAME } from "./paths";
 import { profileBaseDir } from "./profile-home";
+import { resetUserDataDirectories } from "./profile-home-init";
 import { mainWindowLifecycle } from "./recreate-main-window";
 import { rendererCspHeaders } from "./renderer-csp";
 import {
@@ -95,6 +96,10 @@ import { publishToWindowViews } from "./rpc/window-events";
 import { ServiceHost } from "./service-host";
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import type { BrowserRuntimeWindow } from "./services/browser/electron-browser-runtime";
+import {
+  isDataResetPending,
+  requestDataReset,
+} from "./services/config/delete-all-data";
 import {
   importLegacyPrefsAtStartup,
   importLegacySoundOptOut,
@@ -1233,6 +1238,10 @@ const appOperations: AppOperations = {
     app.quit();
   },
 
+  deleteAllData() {
+    requestDataReset(app, resetUserDataDirectories);
+  },
+
   // First-run milestones; see services/debug-sync/funnel-beacon.ts.
   reportFunnelStep(step, detail, once) {
     if (!isFunnelStep(step)) return;
@@ -1830,6 +1839,7 @@ let quitGracefulInProgress = false;
 let quitUpdateChecked = false;
 app.on("before-quit", (event) => {
   if (
+    !isDataResetPending() &&
     !quitUpdateChecked &&
     updateService.getStatus().downloaded &&
     !updateService.getStatus().installing

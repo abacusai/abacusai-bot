@@ -28,6 +28,8 @@ import {
 } from "#renderer/data/transport/websocket";
 import { followWriteAuthorization } from "#renderer/features/onboarding/gate";
 import {
+  DESKTOP_INSTALLER_URL,
+  DesktopWhatsAppApp,
   PhoneErrorScreen,
   PhoneWhatsAppApp,
   stashWhatsAppClaim,
@@ -61,6 +63,7 @@ import { importLegacyDrafts } from "#renderer/lib/continuity/composer-drafts";
 import { changeLanguage, fixedT, resolveLanguage } from "#renderer/lib/i18n";
 import { installLogRing } from "#renderer/lib/log-ring";
 import { installTransitionTypes } from "#renderer/lib/navigation/transition-types";
+import { webSignUpHref } from "#renderer/lib/navigation/web-sign-in";
 import { isPhone } from "#renderer/lib/phone";
 import {
   applyBootLook,
@@ -130,13 +133,17 @@ const loadSystem = async (
 const PHONE_CHAT_ATTEMPTS = 4;
 
 /**
- * A phone where the server offers the bot's WhatsApp number: the bot is
- * WhatsApp there, so only its two screens mount and the host is started and
- * warmed in the background (the server signs it in and wakes it for each
- * message). `false` (the server offers no number) leaves the boot to the
- * full app; a check that cannot complete gets the phone's own error page.
+ * The bot in a browser is WhatsApp: a phone gets its two screens, a computer
+ * connects WhatsApp and then downloads the desktop app. The host is started
+ * and warmed in the background (the server signs it in and wakes it for each
+ * message). Where the server offers no number, a computer goes straight to
+ * the download and a phone (`false`) to the full app; a check that cannot
+ * complete gets the error page.
  */
-const mountPhoneApp = async (root: Root): Promise<boolean> => {
+const mountWhatsAppApp = async (
+  root: Root,
+  phone: boolean
+): Promise<boolean> => {
   const queryClient = createQueryClient({ showError });
   let chat;
   let failure: unknown;
@@ -153,15 +160,19 @@ const mountPhoneApp = async (root: Root): Promise<boolean> => {
         throw error;
       const refused = error instanceof ConnectError && error.kind === "refused";
       if (refused || attempt >= PHONE_CHAT_ATTEMPTS) {
-        console.warn("[phone] WhatsApp chat unavailable", error);
+        console.warn("[whatsapp] chat unavailable", error);
         failure = error;
         break;
       }
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   }
-  if (chat && !chat.available) return false;
-  // For the page's life: the phone app is light only.
+  if (chat && !chat.available) {
+    if (phone) return false;
+    location.replace(DESKTOP_INSTALLER_URL);
+    return true;
+  }
+  // For the page's life: these screens are light only.
   holdTheme("light");
   applyTheme(
     document,
@@ -192,14 +203,37 @@ const mountPhoneApp = async (root: Root): Promise<boolean> => {
   void identifyHost()
     .then((identity) => readyHost(identity, () => {}))
     .catch((error: unknown) =>
-      console.warn("[phone] host warm-up failed", error)
+      console.warn("[whatsapp] host warm-up failed", error)
     );
   root.render(
     <QueryClientProvider client={queryClient}>
-      <PhoneWhatsAppApp callApps={callApps} />
+      {phone ? (
+        <PhoneWhatsAppApp callApps={callApps} />
+      ) : (
+        <DesktopWhatsAppApp callApps={callApps} />
+      )}
     </QueryClientProvider>
   );
   return true;
+};
+
+const SIGN_UP_HOP_KEY = "abacusai-bot:sign-up-hop";
+const SIGN_UP_HOP_MS = 2 * 60_000;
+
+/**
+ * Whether a signed-out visit may go straight to the sign-up page: once per
+ * tab in a while, so a session that page still takes for signed in cannot
+ * bounce between the two (the sign-in screen shows instead).
+ */
+const takeSignUpHop = (): boolean => {
+  try {
+    const last = Number(sessionStorage.getItem(SIGN_UP_HOP_KEY) ?? 0);
+    if (Date.now() - last < SIGN_UP_HOP_MS) return false;
+    sessionStorage.setItem(SIGN_UP_HOP_KEY, String(Date.now()));
+    return true;
+  } catch {
+    return false;
+  }
 };
 
 const renderConnectError = (root: Root, error: unknown): void =>
@@ -219,9 +253,17 @@ export const mountPlatformApp = async (root: Root): Promise<boolean> => {
   let identity;
   try {
     await setUpBotAccount();
-    if (isPhone() && (await mountPhoneApp(root))) return true;
+    if (await mountWhatsAppApp(root, isPhone())) return true;
     identity = await identifyHost();
   } catch (error) {
+    if (
+      error instanceof ConnectError &&
+      error.kind === "signin" &&
+      takeSignUpHop()
+    ) {
+      location.replace(webSignUpHref());
+      return true;
+    }
     renderConnectError(root, error);
     return true;
   }
