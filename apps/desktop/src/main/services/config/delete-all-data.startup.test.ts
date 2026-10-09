@@ -13,6 +13,7 @@ let browser: string;
 let legacy: string;
 beforeEach(() => {
   vi.resetModules();
+  native.isPackaged = false;
   scratch = fs.mkdtempSync(path.join(os.tmpdir(), "reset-startup-"));
   base = path.join(scratch, "profile");
   browser = path.join(scratch, "browser");
@@ -104,3 +105,24 @@ it("keeps profile initialization as index's first local side-effect import", () 
   expect(firstLocal?.source?.value).toBe("./profile-home-init");
   expect(firstLocal?.specifiers).toEqual([]);
 });
+
+for (const packaged of [false, true]) {
+  it(`preserves shared Electron data in development and clears app-owned packaged data (${packaged})`, async () => {
+    fs.rmSync(`${base}.delete-pending`);
+    base = path.join(scratch, ".abacusai-bot");
+    fs.mkdirSync(base);
+    fs.writeFileSync(path.join(base, "secret"), "private");
+    fs.writeFileSync(
+      `${base}.delete-pending`,
+      JSON.stringify({ ownerPid: 123456 })
+    );
+    vi.spyOn(os, "homedir").mockReturnValue(scratch);
+    vi.stubEnv("ABACUSAI_BOT_BASE", base);
+    vi.stubEnv("ABACUSAI_BOT_HOME", base);
+    vi.stubEnv("ABACUSAI_BOT_USERDATA", "");
+    native.isPackaged = packaged;
+    await import("../../profile-home-init");
+    expect(fs.existsSync(base)).toBe(false);
+    expect(fs.existsSync(legacy)).toBe(!packaged);
+  });
+}

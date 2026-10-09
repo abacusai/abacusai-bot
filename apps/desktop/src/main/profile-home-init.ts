@@ -11,11 +11,14 @@ import { initProfileHome, profileBaseDir } from "./profile-home";
 import { finishPendingErase } from "./services/config/delete-all-data";
 
 // A developer's isolated profile must never erase the real installation's
-// legacy Chromium data. Only the normal installation owns that old directory.
+// legacy Chromium data. Development Electron may share its default directory
+// with other apps; only a packaged normal installation owns the legacy path.
 const isolated = !app.isPackaged && process.env.ABACUSAI_BOT_USERDATA;
 export const resetUserDataDirectories = isolated
   ? [isolated]
-  : path.resolve(profileBaseDir()) === path.join(os.homedir(), ".abacusai-bot")
+  : app.isPackaged &&
+      path.resolve(profileBaseDir()) ===
+        path.join(os.homedir(), ".abacusai-bot")
     ? [app.getPath("userData")]
     : [];
 finishPendingErase(resetUserDataDirectories);
