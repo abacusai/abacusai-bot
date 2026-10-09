@@ -3054,6 +3054,7 @@ export class McpBrowserServer extends McpHttpServer {
       session,
       approval,
       state: {
+        vault: this.vault != null,
         knownPaymentStep: origins.some((origin) =>
           session.isPaymentStep(origin)
         ),

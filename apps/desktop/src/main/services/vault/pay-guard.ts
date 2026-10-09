@@ -400,6 +400,13 @@ export const UPI_REFUSAL =
 export const SAVED_CARD_REFUSAL =
   "Refused: a card the site saved is never used here, approved or not. Choose to enter a new card and fill the " +
   "vault card with browser_vault_fill.";
+/** Where there is no vault, the browser never pays: the user does, in the Browser pane. */
+export const UPI_REFUSAL_NO_VAULT =
+  "Refused: UPI and wallet apps are never used here. Stop at the payment step with " +
+  'browser_pause need:"payment"; the user pays themselves in the Browser pane.';
+export const SAVED_CARD_REFUSAL_NO_VAULT =
+  "Refused: a card the site saved is never used here. Stop at the payment step with " +
+  'browser_pause need:"payment"; the user pays themselves in the Browser pane.';
 export const SAVE_CARD_REFUSAL =
   "Refused: the site is not asked to keep the card. Leave that box unchecked.";
 export const PAY_REFUSAL =
@@ -431,6 +438,8 @@ export const totalMismatchRefusal = (
 
 /** Where the checkout and its approval stand, for one activation. */
 export interface GuardState {
+  /** The user's vault is here (the hosted bot): it fills approved cards. */
+  vault: boolean;
   /** The origin was a payment step earlier in this checkout. */
   knownPaymentStep: boolean;
   /** The checkout is at or past the payment approval. */
@@ -503,7 +512,14 @@ export function activationVerdict(
   if (activation.action === "uncheck") return allow;
 
   const words = `${facts.label} ${facts.attrs}`;
-  if (UPI.test(words)) return { kind: "refuse", reason: UPI_REFUSAL };
+  const savedCardRefusal = state.vault
+    ? SAVED_CARD_REFUSAL
+    : SAVED_CARD_REFUSAL_NO_VAULT;
+  if (UPI.test(words))
+    return {
+      kind: "refuse",
+      reason: state.vault ? UPI_REFUSAL : UPI_REFUSAL_NO_VAULT,
+    };
   const ticking =
     activation.action === "check" ||
     (!facts.checked &&
@@ -521,7 +537,7 @@ export function activationVerdict(
     SAVED_CARD.test(facts.label) ||
     (choosing && MASKED_CARD.test(facts.label))
   )
-    return { kind: "refuse", reason: SAVED_CARD_REFUSAL };
+    return { kind: "refuse", reason: savedCardRefusal };
 
   const strict =
     state.pastReview || state.knownPaymentStep || looksLikePaymentStep(facts);
@@ -564,7 +580,7 @@ export function activationVerdict(
 
   // A saved card on the page is never what pays, approved or not.
   if (facts.savedCardSelected)
-    return { kind: "refuse", reason: SAVED_CARD_REFUSAL };
+    return { kind: "refuse", reason: savedCardRefusal };
   if (
     state.bankStep &&
     state.approval.live &&

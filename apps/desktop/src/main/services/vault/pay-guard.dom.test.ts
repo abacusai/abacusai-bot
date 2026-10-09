@@ -109,6 +109,7 @@ describe("what the guard reads of a page", () => {
 describe("what makes a page a payment step", () => {
   /** A checkout under way, no payment approved, the page not remembered as a payment step. */
   const fresh: GuardState = {
+    vault: true,
     knownPaymentStep: false,
     pastReview: false,
     bankStep: false,
