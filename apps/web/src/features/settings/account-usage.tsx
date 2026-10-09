@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { LocalDataReset } from "#platform/data-reset";
 import { signInAbacus } from "#platform/sign-in";
 import { signOutAbacus } from "#platform/sign-out";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
@@ -129,6 +130,7 @@ export const AccountPage = () => {
           </Button>
         </div>
         {error && <p role="alert">{error}</p>}
+        <LocalDataReset />
       </AreaPage>
     );
   return (
@@ -310,6 +312,7 @@ export const AccountPage = () => {
           </SettingRow>
         </GroupCard>
       )}
+      <LocalDataReset />
     </AreaPage>
   );
 };

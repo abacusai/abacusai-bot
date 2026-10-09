@@ -64,6 +64,7 @@ export interface AppOperations {
   /** Where the app keeps its own files. */
   botHome(): string;
   restartApp(): void;
+  deleteAllData(): void;
   /** `once`: the persisted first-time report (`reportFunnelStepOnce`). */
   reportFunnelStep(step: unknown, detail: unknown, once?: boolean): void;
   account: {

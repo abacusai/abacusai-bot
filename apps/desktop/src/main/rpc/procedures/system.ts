@@ -8,8 +8,8 @@ import {
   pendingLegacyDrafts,
   acknowledgeLegacyDrafts,
 } from "../../services/config/legacy-drafts";
-import { conflict } from "../errors";
-import { impl, onChannel, stream } from "./impl";
+import { conflict, forbidden } from "../errors";
+import { impl, onChannel, stream, requireMainRenderer } from "./impl";
 
 export const systemRouter = impl.system.router({
   activity: impl.system.activity.handler(({ context }) => {
@@ -71,6 +71,12 @@ export const systemRouter = impl.system.router({
     ({ input, context }) =>
       acknowledgeLegacyDrafts(context.deps.app.botHome(), input.keys)
   ),
+  deleteAllData: impl.system.deleteAllData.handler(({ context }) => {
+    if (context.transport !== "message-port")
+      throw forbidden("Data reset requires the local desktop window.");
+    requireMainRenderer(context);
+    context.deps.app.deleteAllData();
+  }),
   restart: impl.system.restart.handler(({ context }) => {
     context.deps.app.restartApp();
   }),
