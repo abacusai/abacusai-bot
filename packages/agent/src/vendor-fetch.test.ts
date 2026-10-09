@@ -28,7 +28,7 @@ const SHA = createHash("sha256").update(BODY).digest("hex");
  */
 async function host(
   plan: Array<number | "ok" | "wrong">,
-  rejectNode = false
+  rejectUserAgent: "node" | "bot" | undefined = undefined
 ): Promise<{
   url: string;
   attempts: () => number;
@@ -36,9 +36,13 @@ async function host(
 }> {
   let served = 0;
   const server = http.createServer((request, response) => {
-    if (rejectNode && request.headers["user-agent"] === "node") {
+    const userAgent = request.headers["user-agent"] ?? "";
+    if (
+      (rejectUserAgent === "node" && userAgent === "node") ||
+      (rejectUserAgent === "bot" && /bot/i.test(userAgent))
+    ) {
       response.writeHead(403);
-      response.end("Generic Node requests are blocked");
+      response.end("User agent is blocked");
       return;
     }
     const step = plan[Math.min(served++, plan.length - 1)];
@@ -94,11 +98,25 @@ async function attempt(
 
 describe("fetching a vendored binary", () => {
   it("downloads verified bytes from a host that rejects generic Node requests", async () => {
-    const server = await host(["ok"], true);
+    const server = await host(["ok"], "node");
     try {
       const generic = await fetch(server.url);
       expect(generic.status).toBe(403);
       expect(await fetchVerified(server.url, SHA, "tool.tgz")).toEqual(BODY);
+    } finally {
+      server.close();
+    }
+  });
+
+  it("downloads verified bytes when a host blocks bot user agents", async () => {
+    const server = await host(["ok"], "bot");
+    try {
+      const blocked = await fetch(server.url, {
+        headers: { "user-agent": "abacusai-bot/vendor-download" },
+      });
+      expect(blocked.status).toBe(403);
+      expect(await fetchVerified(server.url, SHA, "tool.tgz")).toEqual(BODY);
+      expect(server.attempts()).toBe(1);
     } finally {
       server.close();
     }

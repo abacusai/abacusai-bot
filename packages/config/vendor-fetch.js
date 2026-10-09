@@ -61,8 +61,8 @@ export async function fetchVerified(url, sha256, label) {
     try {
       res = await fetch(url, {
         redirect: "follow",
-        // Some release hosts reject Node's generic default user agent.
-        headers: { "user-agent": "abacusai-bot/vendor-download" },
+        // Release hosts may reject generic Node or bot-labelled user agents.
+        headers: { "user-agent": "abacusai/vendor-download" },
       });
     } catch (err) {
       // No response at all: DNS, a reset connection, a proxy hanging up.
