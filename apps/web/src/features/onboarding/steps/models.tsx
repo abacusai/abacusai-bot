@@ -8,13 +8,7 @@ import type { Ref } from "react";
 import { ConnectorMark } from "#renderer/components/connector-mark";
 
 import type { StepContext } from "./context";
-import {
-  ConnectedMark,
-  StepBody,
-  StepButton,
-  StepLink,
-  StepTitle,
-} from "./kit";
+import { ConnectedMark, StepBody, StepButton, StepTitle } from "./kit";
 import { OnboardingProviderKey } from "./provider-key";
 
 const ROWS = [
@@ -72,11 +66,16 @@ export const ModelsStep = ({
             className="onboarding-row"
             data-connected={isConnected(row.id)}
           >
-            <ConnectorMark id={row.mark} size={36} />
+            <ConnectorMark id={row.mark} size={48} />
             <span className="onboarding-row-title min-w-0 flex-1">
-              {t(row.lead)}{" "}
-              <span className="onboarding-accent">{t(row.accent)}</span>
-              {row.tail && <> {t(row.tail)}</>}
+              <span className="mb-1 block text-sm font-semibold">
+                {t(`onboarding.pages.models.${row.id}`)}
+              </span>
+              <span className="text-muted-foreground text-[13px] font-normal">
+                {t(row.lead)}{" "}
+                <span className="onboarding-accent">{t(row.accent)}</span>
+                {row.tail && <> {t(row.tail)}</>}
+              </span>
             </span>
             {isConnected(row.id) ? (
               <ConnectedMark>
@@ -108,7 +107,7 @@ export const ModelsStep = ({
         ))}
         {props.localModel}
       </div>
-      <div className="mt-3 flex w-full max-w-[640px] items-center gap-3 text-left">
+      <div className="onboarding-existing mt-4 max-w-[640px]">
         <span className="min-w-0 flex-1">
           <span className="block font-medium">
             {t("onboarding.setupExistingTitle")}
@@ -117,9 +116,6 @@ export const ModelsStep = ({
             {t("onboarding.setupExistingBody")}
           </span>
         </span>
-        <StepLink disabled={busy} onClick={advance}>
-          {t("onboarding.setupExistingLater")}
-        </StepLink>
         <OnboardingProviderKey transport={props.transport} saved={refresh} />
       </div>
       <div className="mt-7">

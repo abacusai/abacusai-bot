@@ -29,7 +29,7 @@ export const DoneStep = ({
           ? t("onboarding.pages.done.checkIn", { name: bot.name })
           : t("onboarding.pages.done.body")}
       </StepBody>
-      <div className="mt-7 flex flex-wrap justify-end gap-2.5">
+      <div className="onboarding-actions mt-7">
         <StepButton
           disabled={busy}
           className={bot ? "onboarding-button-success" : undefined}

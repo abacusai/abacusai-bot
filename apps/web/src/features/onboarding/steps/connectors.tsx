@@ -90,7 +90,7 @@ export const ConnectorsStep = ({
             <li key={entry.id} className="min-w-0">
               <Button
                 variant="outline"
-                className="data-[connected=true]:border-primary data-[connected=true]:bg-primary/5 h-full min-h-40 w-full flex-col gap-2 rounded-xl px-3 py-4 whitespace-normal transition-colors disabled:opacity-100"
+                className="data-[connected=true]:border-primary data-[connected=true]:bg-primary/5 h-full w-full flex-col items-stretch justify-start gap-2.5 rounded-xl p-3.5 text-left whitespace-normal transition-colors disabled:opacity-100"
                 data-connector={entry.id}
                 data-connected={connected}
                 data-state={state}
@@ -121,13 +121,13 @@ export const ConnectorsStep = ({
                   })
                 }
               >
-                <span className="flex min-w-0 flex-col items-center gap-2">
+                <span className="flex min-w-0 items-center gap-3">
                   <ConnectorMark
                     id={entry.logo ?? entry.id}
                     initial={entry.name.slice(0, 1)}
-                    size={28}
+                    size={48}
                   />
-                  <span className="text-[13px] font-semibold">
+                  <span className="text-left text-sm font-semibold">
                     {entry.name}
                   </span>
                 </span>
@@ -138,7 +138,7 @@ export const ConnectorsStep = ({
                   {t(`onboarding.connectorDetails.${entry.id}`)}
                 </span>
                 <span
-                  className="text-primary mt-1 flex min-h-5 items-center justify-center gap-1.5 text-xs"
+                  className="text-primary mt-1 flex min-h-5 items-center justify-start gap-1.5 text-xs"
                   data-slot="connector-state"
                 >
                   {state === "connected" && (

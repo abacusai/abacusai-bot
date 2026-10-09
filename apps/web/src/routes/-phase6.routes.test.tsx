@@ -109,7 +109,7 @@ it.each([false, true])(
       )
     );
     await screen.findByRole("heading", {
-      name: "Connect with your tools & services.",
+      name: /Connect with your tools & services\.\s*Chat where you work\./,
     });
     const continueConnectors = await screen.findByRole("button", {
       name: "Continue",
@@ -120,7 +120,7 @@ it.each([false, true])(
     fireEvent.click(continueConnectors);
     fireEvent.click(await screen.findByRole("button", { name: "Say hello" }));
     fireEvent.click(
-      await screen.findByRole("button", { name: /Message Chief of Staff/ })
+      await screen.findByRole("button", { name: "Message Chief of Staff" })
     );
     await waitFor(() =>
       expect(harness!.router.state.location.pathname).toMatch(/^\/bots\/bot-/)

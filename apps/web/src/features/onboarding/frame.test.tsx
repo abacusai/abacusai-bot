@@ -98,3 +98,20 @@ it("moves the whole content in one direction while keeping the cast mounted", as
       ?.getAttribute("data-direction")
   ).toBe("back");
 });
+
+it("starts a new step at the top after scrolling a short window", async () => {
+  await initI18n();
+  const view = render(
+    <OnboardingFrame step="models">
+      <p>Models</p>
+    </OnboardingFrame>
+  );
+  const frame = view.container.querySelector<HTMLElement>(".onboarding-frame")!;
+  frame.scrollTop = 248;
+  view.rerender(
+    <OnboardingFrame step="connectors">
+      <p>Connectors</p>
+    </OnboardingFrame>
+  );
+  expect(frame.scrollTop).toBe(0);
+});

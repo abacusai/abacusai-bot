@@ -38,9 +38,11 @@ export const FirstBotStep = ({
       <StepTitle ref={heading}>
         {t("onboarding.pages.first-bot.title")}
       </StepTitle>
-      <StepBody className="mt-1.5 max-w-[520px]">
-        {t("onboarding.pages.first-bot.body", { name: bot?.name ?? "" })}
-      </StepBody>
+      {bot && (
+        <StepBody className="mt-1.5 max-w-[520px]">
+          {t("onboarding.pages.first-bot.body", { name: bot.name })}
+        </StepBody>
+      )}
       {first.state === "pending" && (
         <div className="mt-6">
           <Spinner />
@@ -96,7 +98,7 @@ export const FirstBotStep = ({
               {t("mcpManagement.edit")}
             </StepButton>
           </div>
-          <div className="mt-7 flex flex-wrap justify-end gap-2.5">
+          <div className="onboarding-actions mt-7">
             <StepButton
               disabled={busy}
               onClick={() =>
