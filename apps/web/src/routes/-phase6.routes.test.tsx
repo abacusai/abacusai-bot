@@ -119,9 +119,6 @@ it.each([false, true])(
     );
     fireEvent.click(continueConnectors);
     fireEvent.click(await screen.findByRole("button", { name: "Say hello" }));
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Message Chief of Staff" })
-    );
     await waitFor(() =>
       expect(harness!.router.state.location.pathname).toMatch(/^\/bots\/bot-/)
     );
@@ -167,12 +164,7 @@ it.each(["new-session", "scratch"] as const)(
     });
     fireEvent.click(
       await screen.findByRole("button", {
-        name: choice === "scratch" ? "Start from scratch" : "Say hello",
-      })
-    );
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: choice === "scratch" ? "New bot" : "New session",
+        name: choice === "scratch" ? "Start from scratch" : "New session",
       })
     );
     await waitFor(() =>
@@ -187,6 +179,48 @@ it.each(["new-session", "scratch"] as const)(
     ).toHaveLength(1);
   }
 );
+
+it("final setup retries a failed completion without duplicating its created Chief", async () => {
+  const seed = defaultSeed();
+  seed.bots = [];
+  seed.routines = [];
+  const os = implement(contract);
+  let attempts = 0;
+  let onboarded = false;
+  harness = await renderApp("/onboarding/first-bot", {
+    onboarded: false,
+    signedIn: true,
+    seed,
+    procedures: {
+      account: {
+        state: os.account.state.handler(() => ({
+          account: null,
+          apps: [],
+          onboarded,
+        })),
+        skipOnboarding: os.account.skipOnboarding.handler(() => {
+          attempts += 1;
+          if (attempts === 1) throw new Error("offline");
+          onboarded = true;
+          return { account: null, apps: [], onboarded };
+        }),
+      },
+    },
+  });
+  const hello = await screen.findByRole("button", { name: "Say hello" });
+  fireEvent.click(hello);
+  await screen.findByRole("alert");
+  expect(harness.router.state.location.pathname).toBe("/onboarding/first-bot");
+  expect(harness.collections.bots.toArray).toHaveLength(1);
+  const botId = harness.collections.bots.toArray[0]!.id;
+  fireEvent.click(hello);
+  fireEvent.click(hello);
+  await waitFor(() =>
+    expect(harness!.router.state.location.pathname).toBe(`/bots/${botId}`)
+  );
+  expect(attempts).toBe(2);
+  expect(harness.collections.bots.toArray).toHaveLength(1);
+});
 
 it("automatically completing a website signup still creates the sponsored Chief", async () => {
   const seed = defaultSeed();

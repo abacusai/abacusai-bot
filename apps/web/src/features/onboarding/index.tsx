@@ -140,21 +140,10 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
     shownBot.current = id;
     void transport.client.system.funnelStep({ step: "first_bot_shown" });
   }, [step, liveFirst, transport, props.preview]);
-  useEffect(() => {
-    if (
-      !props.preview &&
-      step === "first-bot" &&
-      liveFirst.state === "skipped"
-    ) {
-      void transport.client.system.funnelStep({
-        step: "first_bot_skipped",
-        detail: liveFirst.reason,
-      });
-      void props.navigate("done");
-    }
-  }, [step, liveFirst, transport, props]);
+  const performing = useRef(false);
   const perform = async (action: () => Promise<unknown>) => {
-    if (busy) return;
+    if (performing.current) return;
+    performing.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -162,6 +151,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
     } catch {
       setError(t("onboarding.frame.failed"));
     }
+    performing.current = false;
     setBusy(false);
   };
   const go = (event: "next" | "back") => {
@@ -212,9 +202,11 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
                 await transport.client.system.funnelStep({
                   step: "first_bot_kept",
                 });
-                await props.navigate("done");
+                await props.complete({ to: "bot", botId: bot.id });
               })
-          : null,
+          : first.state === "skipped" || first.state === "removed"
+            ? () => void perform(() => props.complete({ to: "new-bot" }))
+            : null,
         finish: () =>
           void perform(() =>
             props.complete(
@@ -295,7 +287,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
           heading={heading}
         />
       )}
-      {step === "first-bot" && (
+      {step === "first-bot" && first.state !== "skipped" && (
         <FirstBotStep
           ctx={ctx}
           first={first}
@@ -304,7 +296,8 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
           heading={heading}
         />
       )}
-      {step === "done" && (
+      {(step === "done" ||
+        (step === "first-bot" && first.state === "skipped")) && (
         <DoneStep
           ctx={ctx}
           bot={bot}

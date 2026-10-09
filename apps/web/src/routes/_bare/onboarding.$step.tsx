@@ -134,12 +134,20 @@ const OnboardingRoute = () => {
             return exit;
           try {
             const snapshot = await transport.client.db.bots.snapshot({});
-            if (snapshot.rows.some((bot) => bot.channel == null)) {
+            const existing = snapshot.rows.find((bot) => bot.channel == null);
+            if (existing) {
               await transport.client.system.funnelStep({
                 step: "first_bot_skipped",
                 detail: "has_bots",
               });
-              return exit;
+              return exit.to === "bot" || exit.to === "bot-tour"
+                ? {
+                    ...exit,
+                    botId: snapshot.rows.some((bot) => bot.id === exit.botId)
+                      ? exit.botId
+                      : existing.id,
+                  }
+                : { to: "bot", botId: existing.id };
             }
             const { bot } = await createBotFromTemplate(db, "chief-of-staff", {
               name: t("bots.templates.chief-of-staff.name"),
@@ -154,12 +162,12 @@ const OnboardingRoute = () => {
             return exit.to === "bot" || exit.to === "bot-tour"
               ? { ...exit, botId: bot.id }
               : { to: "bot", botId: bot.id };
-          } catch {
+          } catch (error) {
             await transport.client.system.funnelStep({
               step: "first_bot_skipped",
               detail: "create_failed",
             });
-            return { to: "new-bot" };
+            throw error;
           }
         },
         startTour: () =>
