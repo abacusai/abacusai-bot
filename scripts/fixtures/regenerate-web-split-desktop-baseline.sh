@@ -16,6 +16,15 @@ deps_dir=$(mktemp -d /tmp/web-split-baseline-deps.XXXXXX)
 git -C "$repo" archive "$source_commit" | tar -x -C "$baseline_dir"
 git -C "$repo" archive "$deps_commit" | tar -x -C "$deps_dir"
 printf '%s  %s\n' "$lock_sha" "$deps_dir/pnpm-lock.yaml" | sha256sum -c -
+# Archives have no .git directory; installing repository hooks cannot work here.
+# Keep dependency lifecycle scripts enabled for the native build tools.
+node --input-type=module - "$deps_dir/package.json" <<'JS'
+import { readFileSync, writeFileSync } from 'node:fs';
+const path = process.argv[2];
+const manifest = JSON.parse(readFileSync(path, 'utf8'));
+delete manifest.scripts.prepare;
+writeFileSync(path, JSON.stringify(manifest, null, 2) + '\n');
+JS
 (cd "$deps_dir" && env -u NODE_ENV -u CI pnpm install --frozen-lockfile && pnpm --filter @abacus-ai/connectors build && env -u ABACUS_RELEASE -u ABACUS_BUILD_COMMIT GIT_DIR="$git_dir" GIT_WORK_TREE="$deps_dir" pnpm --filter @abacus-ai/agent build)
 ln -s "$deps_dir/node_modules" "$baseline_dir/node_modules"
 for workspace in apps/desktop apps/web apps/updater packages/agent packages/contract packages/connectors packages/config packages/test-support; do
