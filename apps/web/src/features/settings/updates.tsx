@@ -99,9 +99,11 @@ const useUpdateFollower = (
   }, [transport, queryClient]);
 };
 
-/** While installing, an earlier failure is not shown. */
+/** Hide earlier check/download failures, but keep a new handoff error visible. */
 const presented = (status: UpdateStatus | undefined) =>
-  status?.installing && !status.installStalled
+  status?.installing &&
+  !status.installStalled &&
+  status.failedPhase !== "install"
     ? { ...status, error: null, failedPhase: null, installStalled: false }
     : status;
 
@@ -413,7 +415,9 @@ export const UpdatePillButton = ({
             className={install || retry ? "size-4" : "size-4 animate-spin"}
             aria-hidden
           />
-          <span>{t("phase5.settings.updates")}</span>
+          <span className="max-w-full truncate">
+            {t("phase5.settings.updates")}
+          </span>
         </>
       ) : (
         <>

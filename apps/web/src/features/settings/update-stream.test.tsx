@@ -283,3 +283,22 @@ it("disables every update placement while the install request is pending", async
   expect(fake.view.result.current[1].clicked).toBe(false);
   expect(fake.events).toHaveBeenCalledTimes(1);
 });
+
+it("shows a new handoff error without re-enabling install while the native watchdog runs", async () => {
+  const fake = setup([
+    async function* (signal) {
+      yield {
+        ...status("2"),
+        downloaded: true,
+        installing: true,
+        error: "signature mismatch",
+        failedPhase: "install",
+      };
+      await hold(signal);
+    },
+  ]);
+  unmount = fake.view.unmount;
+  await waitFor(() => expect(fake.version()).toBe("2"));
+  expect(fake.view.result.current[0].status?.error).toBe("signature mismatch");
+  expect(fake.view.result.current[0].phase).toBe("installing");
+});
