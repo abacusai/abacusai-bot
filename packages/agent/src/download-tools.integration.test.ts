@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { afterEach, expect, it } from "vitest";
 
@@ -78,7 +78,7 @@ function fixture(arch: keyof typeof pins) {
         process.execPath,
         [
           "--import",
-          path.join(home, "offline.mjs"),
+          pathToFileURL(path.join(home, "offline.mjs")).href,
           path.join(home, "scripts/download-tools.js"),
           "--platform=win32",
           `--arch=${arch}`,
