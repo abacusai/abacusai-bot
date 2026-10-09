@@ -86,6 +86,7 @@ const OnboardingRoute = () => {
   const auth = (intent: "signup" | "signin", profileId?: string) => {
     if (
       startSignIn(transport, intent, profileId, async (outcome) => {
+        const attemptId = onboardingStore.state.signIn?.id;
         if (step === "models") {
           void queryClient.invalidateQueries();
           return;
@@ -94,11 +95,13 @@ const OnboardingRoute = () => {
           const account = await transport.client.account.abacus({
             refresh: true,
           });
+          if (onboardingStore.state.signIn?.id !== attemptId) return;
           // Optional connector consent must not hold up a completed sign-in.
           void startFirstRunGmail(transport, account?.email ?? "").catch(
             () => {}
           );
           await queryClient.invalidateQueries();
+          if (onboardingStore.state.signIn?.id !== attemptId) return;
           await go("connected");
         } else if (outcome.cancelled) await go("welcome");
       }) &&
