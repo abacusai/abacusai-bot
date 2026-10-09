@@ -13,7 +13,7 @@ import type {
   SessionOwner,
   WorktreeListItem,
 } from "@abacus-ai/contract/contracts";
-import { deriveSessionTitle } from "@abacus-ai/contract/transcript/session-title";
+import { generateSessionTitle } from "@abacus-ai/contract/transcript/session-title";
 
 import {
   clearSessionStash,
@@ -540,7 +540,7 @@ export class AgentSessionManagerService {
       (session.label.trim() !== "" && session.label !== "Untitled")
     )
       return null;
-    const title = deriveSessionTitle(visibleUserText(message, tags));
+    const title = generateSessionTitle(visibleUserText(message, tags));
     if (!title) return null;
     this.updateLabel(session.workspaceId, sessionId, title);
     return title;

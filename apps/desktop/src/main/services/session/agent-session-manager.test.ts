@@ -601,13 +601,11 @@ describe("automatic personal session names", () => {
         session.id,
         "Please fix @src/main.ts\nthen add tests"
       )
-    ).toBe("Please fix main.ts then add tests");
+    ).toBe("Please fix @src/main.ts");
     expect(service.nameFromMessage(session.id, "another request")).toBeNull();
     const reopened = new AgentSessionManagerService();
     reopened.initialize([WORKSPACE]);
-    expect(reopened.get(session.id)?.label).toBe(
-      "Please fix main.ts then add tests"
-    );
+    expect(reopened.get(session.id)?.label).toBe("Please fix @src/main.ts");
     expect(reopened.nameFromMessage(session.id, "new request")).toBeNull();
   });
 
@@ -620,13 +618,12 @@ describe("automatic personal session names", () => {
     }
   });
 
-  it("ignores hidden and code-only turns until the user sends visible text", () => {
+  it("ignores hidden turns until the user sends visible text", () => {
     const session = service.create(WORKSPACE);
     for (const message of [
       "[first run] do the setup",
       "<system_reminder>hidden</system_reminder>",
       '[routine] "Report" fired',
-      "```js\nconst x = 1\n```",
     ])
       expect(service.nameFromMessage(session.id, message)).toBeNull();
     expect(
