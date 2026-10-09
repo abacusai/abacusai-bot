@@ -105,8 +105,8 @@ describe("R2-T11 parts", () => {
         document.querySelector('[data-slot="feature-limit"]')
       ).toBeTruthy();
       expect(
-        screen.getByRole("button", { name: /Top up|Upgrade/ })
-      ).toBeTruthy();
+        screen.queryByRole("button", { name: /Top up|Upgrade/ })
+      ).toBeNull();
     }
   );
 

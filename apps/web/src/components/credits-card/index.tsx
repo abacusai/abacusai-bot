@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 
 import { GroupCard } from "#renderer/components/form-kit/page";
 import { ABACUS_BUY_CREDITS_URL } from "#renderer/lib/abacus-links";
+import { useVisibleContextualUpsell } from "#renderer/lib/contextual-upsell";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { Button } from "#renderer/ui/button";
 import {
@@ -68,6 +69,7 @@ export const CreditsCard = ({
   note?: string;
 }) => {
   const { t } = useTranslation();
+  const promotionRef = useVisibleContextualUpsell(tier === "free");
   const [configured, setConfigured] = useState<Record<string, boolean> | null>(
     null
   );
@@ -115,7 +117,7 @@ export const CreditsCard = ({
   const field = PROVIDER_KEY_FIELDS.find((entry) => entry.provider === asking);
   return (
     <>
-      <div data-slot="credits-card">
+      <div data-slot="credits-card" ref={promotionRef}>
         <GroupCard
           title={
             title ??
@@ -147,7 +149,7 @@ export const CreditsCard = ({
               </Button>
             )}
             {paying && canTopUp ? (
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <p>{t("creditsCard.topUpCta")}</p>
                   <p className="text-muted-foreground text-xs">
@@ -169,7 +171,10 @@ export const CreditsCard = ({
               missing.map((source, index) => (
                 <div key={source}>
                   {index > 0 && <Separator className="mb-3" />}
-                  <div className="flex items-center gap-3" data-source={source}>
+                  <div
+                    className="flex flex-wrap items-center gap-3"
+                    data-source={source}
+                  >
                     <div className="min-w-0 flex-1">
                       <p>
                         {t(
