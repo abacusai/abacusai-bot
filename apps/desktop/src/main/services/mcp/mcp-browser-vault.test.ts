@@ -796,7 +796,7 @@ beforeAll(async () => {
   token = localMcpServerToken("browser");
   server = new McpBrowserServer({
     target: () => source,
-    vault,
+    vault: () => vault,
     timeouts: { attachMs: 300, navigateMs: 600, historyMs: 600, callMs: 1_000 },
     isOwnerSession: (sessionId) => ownerSessions.has(sessionId),
     checkoutToken: CHECKOUT_TOKEN,

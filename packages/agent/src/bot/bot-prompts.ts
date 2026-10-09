@@ -5,6 +5,7 @@
  */
 
 import { APP_CHANNEL, type ChannelCapabilities } from "../channel.js";
+import { vaultEnabled } from "../excluded-tools.js";
 import { serviceRoutingPrompt } from "../service-routing-prompt.js";
 import { timezonePrompt } from "./bot-time-tool.js";
 
@@ -97,16 +98,25 @@ export function botOperatingPrompt(
           "card details or a code in the chat.",
         ]),
     "",
-    "Payments: you may complete a payment or booking only after the user",
-    "approved its exact amount, merchant and site on the `payment_approval`",
-    "page: one card fill, and the CVV only if the site asks. Without that tool",
-    "or that approval, go as far as the payment step and stop. Never ask for a",
-    "password, card number, CVV or code in the chat: send a `vault_request`",
-    "link. Signing in with a saved login needs the user's tap on a",
-    "`signin_approval` link (saving the login allows the first). Never pay with a card the site saved, with UPI or with a wallet app.",
-    "You cannot delete or change saved logins or cards. When the user wants to",
-    "see, manage or delete them, send the vault page link `vault_items` gives;",
-    "they do it there. Never say you deleted or changed one.",
+    ...(vaultEnabled()
+      ? [
+          "Payments: you may complete a payment or booking only after the user",
+          "approved its exact amount, merchant and site on the `payment_approval`",
+          "page: one card fill, and the CVV only if the site asks. Without that tool",
+          "or that approval, go as far as the payment step and stop. Never ask for a",
+          "password, card number, CVV or code in the chat: send a `vault_request`",
+          "link. Signing in with a saved login needs the user's tap on a",
+          "`signin_approval` link (saving the login allows the first). Never pay with a card the site saved, with UPI or with a wallet app.",
+          "You cannot delete or change saved logins or cards. When the user wants to",
+          "see, manage or delete them, send the vault page link `vault_items` gives;",
+          "they do it there. Never say you deleted or changed one.",
+        ]
+      : [
+          "Payments: you never pay or book yourself. Go as far as the payment step",
+          "and stop; the user signs in and pays themselves" +
+            (channel.pane ? " in the Browser pane." : " on the site."),
+          "Never ask for a password, card number, CVV or code in the chat.",
+        ]),
     "Traveler details: look in `traveler` first and confirm saved ones in one",
     "line; otherwise ask once, compactly, for what the form needs. Save them",
     "only through `traveler` save, which gives the question to send and saves on",

@@ -17,6 +17,15 @@ export const TOOL_NAME_ALIASES: Record<string, string> = {
   "agent-tools_app": "app",
 };
 
+/**
+ * Whether the user's vault (saved logins and cards, payment and sign-in
+ * approvals) is here. Only the hosted bot has one; everywhere else the
+ * desktop withholds its tools, and prompts leave it out.
+ */
+export function vaultEnabled(): boolean {
+  return !excludedTools().includes("vault_request");
+}
+
 /** Names arrive as the desktop spells them; `glob` maps back to pi's `find`. */
 export function excludedTools(): string[] {
   const raw = process.env.ABACUSAI_BOT_EXCLUDED_TOOLS ?? "";

@@ -21,6 +21,7 @@ import { pauseReport, resumeNote } from "./checkout-report.js";
 import { CheckoutRun } from "./checkout-run.js";
 import { currentMode, unattendedPolicy } from "./current-mode.js";
 import { scopeEmit, tagEvent } from "./event-meta.js";
+import { vaultEnabled } from "./excluded-tools.js";
 import { AgentMode, type AgentEvent } from "./protocol.js";
 import { DeliveredMedia } from "./send-media-tool.js";
 import {
@@ -189,6 +190,8 @@ export function buildBrowserTaskTool(
   let counter = 0;
   const budget = new DispatchBudget();
   const channel = context.channel ?? APP_CHANNEL;
+  // Saved logins and payment approvals exist only where the vault does.
+  const vault = vaultEnabled();
   // The session's checkout, held by the browser: a fresh run starts it over,
   // a resume asks it whether the user's approval is live.
   const checkout = new CheckoutRun(context.checkout ?? null);
@@ -248,19 +251,33 @@ export function buildBrowserTaskTool(
       "five lookups on one site, ask for all five in a single task and have it report a row",
       "for each.",
       "",
-      "It cannot read files or run commands. It never types a password, card number, CVV or",
-      "code itself, never solves a CAPTCHA, and never pays or books without the user's approval",
-      "of that exact payment (payment_approval): the browser refuses a Pay click without one.",
-      "At a step only the user can do it stops and says what it needs (traveler details, a",
-      "login, a code, the payment approval, a CAPTCHA, a choice), with a screenshot where the",
-      "page is the question; the result says what to do next.",
+      ...(vault
+        ? [
+            "It cannot read files or run commands. It never types a password, card number, CVV or",
+            "code itself, never solves a CAPTCHA, and never pays or books without the user's approval",
+            "of that exact payment (payment_approval): the browser refuses a Pay click without one.",
+            "At a step only the user can do it stops and says what it needs (traveler details, a",
+            "login, a code, the payment approval, a CAPTCHA, a choice), with a screenshot where the",
+            "page is the question; the result says what to do next.",
+          ]
+        : [
+            "It cannot read files or run commands. It never types a password, card number, CVV or",
+            "code itself, never solves a CAPTCHA, and never pays or books: the browser refuses a",
+            "Pay click. At a step only the user can do it stops and says what it needs (traveler",
+            "details, a login, a code, the payment, a CAPTCHA, a choice), with a screenshot where",
+            "the page is the question; the result says what to do next.",
+          ]),
       browserHandoffDescription(channel),
-      "",
-      "When the user has a login saved in their vault (vault_items) for the site, pass its",
-      "item_id as login_item_id: the sub-agent signs in with it without seeing the password,",
-      "once the user allowed that sign-in (signin_approval; saving the login allows the first).",
-      "When the user saves one or allows a sign-in while a run is paused for it, pass it with",
-      "continue_from_last.",
+      ...(vault
+        ? [
+            "",
+            "When the user has a login saved in their vault (vault_items) for the site, pass its",
+            "item_id as login_item_id: the sub-agent signs in with it without seeing the password,",
+            "once the user allowed that sign-in (signin_approval; saving the login allows the first).",
+            "When the user saves one or allows a sign-in while a run is paused for it, pass it with",
+            "continue_from_last.",
+          ]
+        : []),
     ].join("\n"),
     parameters: Type.Object({
       task: Type.String({
@@ -279,12 +296,16 @@ export function buildBrowserTaskTool(
             "Resume the run that stopped for the user, on the same page with its history. task is then what the user said once done.",
         })
       ),
-      login_item_id: Type.Optional(
-        Type.String({
-          description:
-            "The saved login (its vault item_id) the sub-agent signs in with on its site. Works with continue_from_last too.",
-        })
-      ),
+      ...(vault
+        ? {
+            login_item_id: Type.Optional(
+              Type.String({
+                description:
+                  "The saved login (its vault item_id) the sub-agent signs in with on its site. Works with continue_from_last too.",
+              })
+            ),
+          }
+        : {}),
       report_fields: Type.Optional(
         Type.Array(Type.String(), {
           description:
@@ -314,7 +335,7 @@ export function buildBrowserTaskTool(
           : undefined;
       const resume = params.continue_from_last === true;
       const loginItemId =
-        typeof params.login_item_id === "string"
+        vault && typeof params.login_item_id === "string"
           ? params.login_item_id.trim()
           : "";
       const reportFields = Array.isArray(params.report_fields)

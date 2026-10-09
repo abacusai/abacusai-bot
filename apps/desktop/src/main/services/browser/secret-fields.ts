@@ -309,6 +309,10 @@ const EXECUTE_REFUSAL =
   "This page has a password, card or one-time code field, so scripts cannot run on it. To sign in with a saved login, " +
   'call browser_vault_fill with its item_id and field:"login": the browser finds the fields itself. ' +
   "For anything else on the page, use browser_snapshot and browser_interact.";
+/** The same, where there is no vault to sign in from. */
+const EXECUTE_REFUSAL_NO_VAULT =
+  "This page has a password, card or one-time code field, so scripts cannot run on it. " +
+  "Use browser_snapshot and browser_interact on it.";
 
 /**
  * One tab's secret fields. A tab's cross-origin frame is a document of its
@@ -509,12 +513,16 @@ export class SecretFields {
    * Why `browser_execute` may not run on `page`, or null when it may: the
    * page has a secret field (found now, or known from before and still in
    * the page), or holds a filled one. Refused too when the page cannot be
-   * asked.
+   * asked. `vault` is whether a saved login can be filled here.
    */
-  async executeRefusal(page: BrowserPage): Promise<string | null> {
-    if (this.filledFields > 0) return EXECUTE_REFUSAL;
+  async executeRefusal(
+    page: BrowserPage,
+    vault: boolean
+  ): Promise<string | null> {
+    const refusal = vault ? EXECUTE_REFUSAL : EXECUTE_REFUSAL_NO_VAULT;
+    if (this.filledFields > 0) return refusal;
     const present = await this.reassert(page).catch(() => null);
-    return present === 0 ? null : EXECUTE_REFUSAL;
+    return present === 0 ? null : refusal;
   }
 
   /**

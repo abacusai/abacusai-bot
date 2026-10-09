@@ -71,7 +71,7 @@ import type { CheckoutPause, RunEnd } from "../vault/checkout-run";
 import {
   BROWSER_CHECKOUT_TOOL,
   BROWSER_PAUSE_TOOL,
-  CHECKOUT_TOOL_LISTINGS,
+  checkoutToolListings,
   type CheckoutStateLine,
   checkoutStateLine,
   pageText,
@@ -673,8 +673,12 @@ export interface McpBrowserServerOptions {
   conversationKeyForSession?: (sessionId: string) => ConversationKey | null;
   /** Where screenshots are kept for `send_media`; without one they get no media id. */
   media?: () => MediaStore | null;
-  /** The user's vault: its tools are served here, beside the page they read origins from. */
-  vault?: Vault;
+  /**
+   * The user's vault: its tools are served here, beside the page they read
+   * origins from. Read per call; null (or absent) where there is none, and
+   * then no vault tool is listed.
+   */
+  vault?: () => Vault | null;
   /** What a host lane's chat can do (the phone); null for every other session. */
   channelForSession?: (sessionId: string) => ChannelCapabilities | null;
   /**
@@ -718,6 +722,10 @@ export class McpBrowserServer extends McpHttpServer {
     super.stop();
   }
 
+  private get vault(): Vault | null {
+    return this.options.vault?.() ?? null;
+  }
+
   protected listTools(): McpToolListing[] {
     return [
       ...Object.entries(TOOLS_SCHEMA).map(([name, s]) => ({
@@ -725,8 +733,8 @@ export class McpBrowserServer extends McpHttpServer {
         description: s.description,
         inputSchema: s.inputSchema,
       })),
-      ...(this.options.vault?.listings() ?? []),
-      ...CHECKOUT_TOOL_LISTINGS,
+      ...(this.vault?.listings() ?? []),
+      ...checkoutToolListings(this.vault != null),
       MEDIA_CHECK_LISTING,
     ];
   }
@@ -1650,7 +1658,7 @@ export class McpBrowserServer extends McpHttpServer {
     headline: string
   ): Promise<string> {
     const lines = [headline];
-    const tip = recipeFor(wc.getURL());
+    const tip = recipeFor(wc.getURL(), this.vault != null);
 
     try {
       await this.settle(wc, 1_500);
@@ -2002,9 +2010,9 @@ export class McpBrowserServer extends McpHttpServer {
           case "vault_request":
           case "payment_approval":
           case "signin_approval":
-            return this.options.vault == null
+            return this.vault == null
               ? Promise.resolve(this.err(VAULT_UNAVAILABLE))
-              : this.options.vault.run(name, args, sessionId, {
+              : this.vault.run(name, args, sessionId, {
                   topOrigin: async (session) => {
                     const wc = this.findView(session);
                     return wc == null ? null : this.liveOrigin(wc);
@@ -2783,7 +2791,8 @@ export class McpBrowserServer extends McpHttpServer {
         // Copy, cut or paste could carry a filled value into a field that shows it.
         if (
           isClipboardCombo(mainKey, mods) &&
-          (await this.secretsOf(wc).executeRefusal(wc)) != null
+          (await this.secretsOf(wc).executeRefusal(wc, this.vault != null)) !=
+            null
         )
           return this.err(
             "Refused: this page has a password, card or code field, so copy, cut and paste keys are not used on it."
@@ -2882,7 +2891,7 @@ export class McpBrowserServer extends McpHttpServer {
     const code = args.code as string;
     if (!code) return this.err('"code" is required.');
     const secrets = this.secretsOf(wc);
-    const refusal = await secrets.executeRefusal(wc);
+    const refusal = await secrets.executeRefusal(wc, this.vault != null);
     if (refusal != null) return this.err(refusal);
     // A checkout with a payment provider's frame is where a total could be
     // forged next to card fields no script can reach: no scripts there.
@@ -2949,9 +2958,7 @@ export class McpBrowserServer extends McpHttpServer {
   private readonly ownSessions = new VaultSessions();
 
   private vaultSession(sessionId?: string): VaultSession {
-    return (this.options.vault?.sessions ?? this.ownSessions).for(
-      sessionId ?? ""
-    );
+    return (this.vault?.sessions ?? this.ownSessions).for(sessionId ?? "");
   }
 
   /**
@@ -3029,7 +3036,7 @@ export class McpBrowserServer extends McpHttpServer {
     state: GuardState;
   }> {
     const session = this.vaultSession(sessionId);
-    const approval = this.options.vault?.approval(sessionId) ?? null;
+    const approval = this.vault?.approval(sessionId) ?? null;
     const topOrigin = originOf(top.getURL());
     const origins = [topOrigin, facts != null ? originOf(facts.url) : null];
     // The browser's own frame tree: a provider's card frame makes this a
@@ -3047,6 +3054,7 @@ export class McpBrowserServer extends McpHttpServer {
       session,
       approval,
       state: {
+        vault: this.vault != null,
         knownPaymentStep: origins.some((origin) =>
           session.isPaymentStep(origin)
         ),
@@ -3378,7 +3386,7 @@ export class McpBrowserServer extends McpHttpServer {
     if (this.vaultSession(sessionId).checkout.pastSearch())
       return EXECUTE_REFUSAL;
     // A live approval is a payment waiting to be made: no script makes it.
-    if (this.options.vault?.approval(sessionId) != null) return EXECUTE_REFUSAL;
+    if (this.vault?.approval(sessionId) != null) return EXECUTE_REFUSAL;
     if (originOf(wc.getURL()) == null) return null;
     const facts = await this.controlFacts(wc, pageFactsScript());
     if (facts == null) return EXECUTE_REFUSAL;
@@ -3558,7 +3566,7 @@ export class McpBrowserServer extends McpHttpServer {
       case "resume": {
         const paused = checkout.paused;
         const resumed = checkout.resume(
-          this.options.vault?.approval(sessionId) ?? null
+          this.vault?.approval(sessionId) ?? null
         );
         if (resumed.ok === false)
           return this.err(`${resumed.reason}\n${line()}`);
@@ -4014,7 +4022,7 @@ export class McpBrowserServer extends McpHttpServer {
     args: Record<string, unknown>,
     sessionId?: string
   ): Promise<ToolResult> {
-    const vault = this.options.vault;
+    const vault = this.vault;
     if (vault == null) return this.err(VAULT_UNAVAILABLE);
     const itemId = typeof args.item_id === "string" ? args.item_id.trim() : "";
     const field = typeof args.field === "string" ? args.field : "";
@@ -4548,7 +4556,7 @@ export class McpBrowserServer extends McpHttpServer {
     documentKey: string;
   }): Promise<LoginFieldFailure | null> {
     const { field } = input;
-    const vault = this.options.vault!;
+    const vault = this.vault!;
     const plan = planFill({
       itemId: input.itemId,
       field,
@@ -4597,7 +4605,7 @@ export class McpBrowserServer extends McpHttpServer {
       awaitingApproval: false,
     });
     const { wc, page, node, field } = input;
-    const vault = this.options.vault!;
+    const vault = this.vault!;
     const secrets = this.secretsOf(wc);
     if (!(await secrets.markFilledNode(page, node).catch(() => false)))
       return failed(
@@ -4657,7 +4665,7 @@ export class McpBrowserServer extends McpHttpServer {
     itemId: string,
     sessionId?: string
   ): Promise<string[] | null> {
-    const vault = this.options.vault;
+    const vault = this.vault;
     if (vault == null) return null;
     const login = this.vaultSession(sessionId).loginItem;
     const kept = login?.itemId === itemId ? login : null;
@@ -4684,7 +4692,7 @@ export class McpBrowserServer extends McpHttpServer {
     wc: BrowserPage,
     sessionId?: string
   ): Promise<string | null> {
-    if (this.options.vault == null || sessionId == null) return null;
+    if (this.vault == null || sessionId == null) return null;
     const login = this.vaultSession(sessionId).loginItem;
     if (login == null) return null;
     const host = httpsHost(await this.liveOrigin(wc));

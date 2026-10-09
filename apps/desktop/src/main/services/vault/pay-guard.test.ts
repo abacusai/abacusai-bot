@@ -48,6 +48,7 @@ const state = (
   over: Partial<Omit<GuardState, "approval">> = {},
   approval: Partial<GuardState["approval"]> = {}
 ): GuardState => ({
+  vault: true,
   knownPaymentStep: false,
   pastReview: false,
   bankStep: false,
