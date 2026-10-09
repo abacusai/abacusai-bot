@@ -365,13 +365,13 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
 .ui-row {
   border-radius: var(--row-radius);
   min-width: 0;
-  &:is(:hover, [data-highlighted], [data-popup-open], [cmdk-item][data-selected="true"]) {
+  &:not(.setting-row):is(:hover, [data-highlighted], [data-popup-open], [cmdk-item][data-selected="true"]) {
     background-color: var(--row-hover);
   }
   &:is([data-active], [data-selected="true"], [aria-selected="true"], [data-checked]):not([cmdk-item]) {
     background-color: var(--row-selected);
   }
-  &:active { background-color: var(--row-pressed); }
+  &:active:not(.setting-row) { background-color: var(--row-pressed); }
   &:focus-visible { outline: 2px solid var(--row-focus); outline-offset: -2px; }
 }
 :is([data-slot="dropdown-menu-content"], [data-slot="context-menu-content"], [data-slot="dropdown-menu-sub-content"], [data-slot="context-menu-sub-content"]) {
