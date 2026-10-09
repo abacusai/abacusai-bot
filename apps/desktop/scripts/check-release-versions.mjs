@@ -3,6 +3,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const LAST_SHIPPED = "1.0.85";
+/** Test installers stay below their production release in update ordering. */
+export const assertBuildVersion = (version, testBuild = false) => {
+  if (
+    testBuild &&
+    /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-test\.[1-9]\d*$/.test(version)
+  )
+    return version;
+  return assertUpgradeVersion(version);
+};
 export const assertUpgradeVersion = (version, lastShipped = LAST_SHIPPED) => {
   const parse = (value) => {
     if (!/^\d+\.\d+\.\d+$/.test(value))

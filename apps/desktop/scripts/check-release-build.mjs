@@ -2,15 +2,16 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { assertUpgradeVersion } from "./check-release-versions.mjs";
+import { assertBuildVersion } from "./check-release-versions.mjs";
 const desktop = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   ".."
 );
 export const checkReleaseBuild = (dist = path.join(desktop, "dist")) => {
-  assertUpgradeVersion(
+  assertBuildVersion(
     JSON.parse(fs.readFileSync(path.join(desktop, "package.json"), "utf8"))
-      .version
+      .version,
+    process.env.ABACUS_TEST_BUILD === "1"
   );
   for (const name of ["index.html", "notch.html"])
     if (!fs.existsSync(path.join(dist, "renderer", name)))

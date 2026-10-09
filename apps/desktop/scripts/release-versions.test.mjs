@@ -4,6 +4,29 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 
+import {
+  assertBuildVersion,
+  assertUpgradeVersion,
+} from "./check-release-versions.mjs";
+
+test("test prereleases require explicit test-build mode and cannot pass release validation", () => {
+  const version = "1.0.85-test.95";
+  assert.equal(assertBuildVersion(version, true), version);
+  assert.throws(() => assertBuildVersion(version), /Invalid foundation/);
+  assert.throws(() => assertUpgradeVersion(version), /Invalid foundation/);
+  for (const invalid of [
+    "1.0.85-beta.95",
+    "1.0.85-test.0",
+    "1.0.85-test.95+dev",
+    "01.0.85-test.95",
+  ])
+    assert.throws(
+      () => assertBuildVersion(invalid, true),
+      /Invalid foundation/
+    );
+  assert.throws(() => assertBuildVersion("1.0.85", true), /newer/);
+});
+
 const desktop = path.resolve(import.meta.dirname, "..");
 test("default foundation release is newer than shipped 1.0.85", () => {
   const version = JSON.parse(
