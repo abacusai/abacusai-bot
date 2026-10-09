@@ -2,6 +2,7 @@ import { Store } from "@tanstack/react-store";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeAll, beforeEach, expect, it, vi } from "vitest";
 
+import { useHasContextualUpsell } from "#renderer/lib/contextual-upsell";
 import { initI18n } from "#renderer/lib/i18n";
 
 import { BrowserTab } from "./browser-tab.browser";
@@ -51,6 +52,57 @@ const props = {
   },
   blocked: () => false,
 };
+it("suppresses the general promotion only for the active free browser pane", () => {
+  const Status = () => (
+    <output aria-label="promotion suppressed">
+      {String(useHasContextualUpsell())}
+    </output>
+  );
+  const tree = (visible: boolean) => (
+    <>
+      <BrowserTab {...props} visible={visible} />
+      <Status />
+    </>
+  );
+  const view = render(tree(true));
+  expect(
+    screen.getByRole("status", { name: "promotion suppressed" }).textContent
+  ).toBe("true");
+  view.rerender(tree(false));
+  expect(
+    screen.getByRole("status", { name: "promotion suppressed" }).textContent
+  ).toBe("false");
+  fixture.tier = "pro";
+  view.rerender(tree(true));
+  expect(
+    screen.getByRole("status", { name: "promotion suppressed" }).textContent
+  ).toBe("false");
+});
+
+it("updates promotion suppression when HTML preview changes to browser guidance", () => {
+  const Status = () => (
+    <output aria-label="promotion suppressed">
+      {String(useHasContextualUpsell())}
+    </output>
+  );
+  const tree = (file?: string) => (
+    <>
+      <BrowserTab {...props} file={file} />
+      <Status />
+    </>
+  );
+  const view = render(tree("index.html"));
+  const status = () =>
+    screen.getByRole("status", { name: "promotion suppressed" }).textContent;
+  expect(status()).toBe("false");
+  expect(screen.getByTestId("file-preview")).toBeTruthy();
+  view.rerender(tree());
+  expect(status()).toBe("true");
+  expect(screen.queryByTestId("file-preview")).toBeNull();
+  expect(screen.getByRole("button", { name: "Upgrade" })).toBeTruthy();
+  view.rerender(tree("index.html"));
+  expect(status()).toBe("false");
+});
 
 it("offers desktop download without opening VM localhost on the user's machine", () => {
   render(<BrowserTab {...props} url="http://localhost:3000" />);

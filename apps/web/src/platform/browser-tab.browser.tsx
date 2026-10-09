@@ -9,6 +9,7 @@ import {
   DESKTOP_DOWNLOAD_URL,
 } from "#renderer/lib/abacus-links";
 import { externalBrowserUrl } from "#renderer/lib/browser/external-browser-url";
+import { useContextualUpsell } from "#renderer/lib/contextual-upsell";
 import { creditsTier } from "#renderer/lib/credits";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { sidebarAccount } from "#renderer/lib/sidebar-account";
@@ -16,12 +17,13 @@ import { openUpgrade } from "#renderer/lib/upgrade";
 import { useAccount } from "#renderer/lib/use-account";
 import { Button } from "#renderer/ui/button";
 
-export const BrowserTab: typeof Native = ({ file, root, url }) => {
+export const BrowserTab: typeof Native = ({ file, root, url, visible }) => {
   const { t } = useTranslation();
   const { client } = useSessionsTransport();
   const account = useAccount();
   const tier = creditsTier(account.data);
   const paid = sidebarAccount(account.data).paid;
+  useContextualUpsell(!file && tier === "free" && visible === true);
   if (file)
     return (
       <FilePreview
@@ -41,8 +43,8 @@ export const BrowserTab: typeof Native = ({ file, root, url }) => {
     );
   const externalUrl = externalBrowserUrl(url);
   return (
-    <div role="status" className="flex h-full items-center justify-center p-6">
-      <div className="flex max-w-sm flex-col items-center gap-4 text-center">
+    <div role="status" className="flex h-full min-w-0 overflow-auto p-4">
+      <div className="m-auto flex w-full max-w-sm flex-col items-center gap-4 py-2 text-center">
         <div className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-xl">
           <Globe className="size-6" aria-hidden="true" />
         </div>

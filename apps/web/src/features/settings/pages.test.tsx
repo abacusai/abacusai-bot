@@ -7,6 +7,7 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import enUS from "#locales/en-US.json";
 import { updateStatusQuery } from "#renderer/features/settings/updates";
+import { ABACUS_BUY_CREDITS_URL } from "#renderer/lib/abacus-links";
 import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
 const os = implement(contract);
 /** `update.events` as main serves it: the current status first, then held open. */
@@ -36,6 +37,48 @@ const idle: UpdateStatus = {
   criticalUpdate: false,
   failedPhase: null,
 };
+it.each(["basic", "pro"])(
+  "account top-up opens the correct %s purchase destination",
+  async (tier) => {
+    const upgradeUrl = vi.fn(() => "https://example.com/account-offer");
+    const openExternal = vi.fn();
+    app = await renderApp("/settings/account", {
+      procedures: {
+        account: {
+          abacus: os.account.abacus.handler(
+            () =>
+              ({
+                name: "Alex",
+                email: "topup@example.com",
+                subscription_tier: tier,
+                org_user_count: 1,
+              }) as never
+          ),
+          upgradeUrl: os.account.upgradeUrl.handler(upgradeUrl),
+        },
+        system: { openExternal: os.system.openExternal.handler(openExternal) },
+      },
+    });
+    await screen.findByText("topup@example.com");
+    fireEvent.click(
+      within(
+        document.querySelector<HTMLElement>('[data-setting-id="credits"]')!
+      ).getByRole("button", { name: enUS.phase5.topUp })
+    );
+    await waitFor(() => expect(openExternal).toHaveBeenCalled());
+    expect(openExternal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: {
+          url:
+            tier === "basic"
+              ? "https://example.com/account-offer"
+              : ABACUS_BUY_CREDITS_URL,
+        },
+      })
+    );
+    expect(upgradeUrl).toHaveBeenCalledTimes(tier === "basic" ? 1 : 0);
+  }
+);
 it.each([
   ["free", 1, "Upgrade"],
   ["basic", 1, "Manage plan"],
