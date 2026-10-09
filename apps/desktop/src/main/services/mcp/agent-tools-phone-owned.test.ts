@@ -17,6 +17,7 @@ import type { ConnectorStatuses } from "@abacus-ai/contract/contracts";
 import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { BillingPlan } from "../providers/abacus-upgrade";
 import { McpAgentToolsServer } from "./mcp-agent-tools-server";
 import type { McpToolListing } from "./mcp-http-server";
 import { AGENT_TOOL_NAMES } from "./tools";
@@ -60,11 +61,23 @@ const NOT_YET_AT_MOST = [
   "present_deliverable",
 ];
 
+const account = vi.hoisted(() => vi.fn());
+const billingPlan = vi.hoisted(() => vi.fn());
+
+vi.mock("../providers/abacus", async (original) => ({
+  ...(await original<typeof import("../providers/abacus")>()),
+  fetchAbacusAccount: account,
+}));
+vi.mock("../providers/abacus-upgrade", async (original) => ({
+  ...(await original<typeof import("../providers/abacus-upgrade")>()),
+  fetchBillingPlan: billingPlan,
+}));
+
 let statuses: ConnectorStatuses;
 const link = vi.fn(async (connectorId: string) =>
-  connectorId === "abacus-slack"
+  connectorId.startsWith("abacus-")
     ? {
-        url: "https://apps.example/connect?service=slack&r=req",
+        url: `https://apps.example/connect?service=${connectorId.slice("abacus-".length)}&r=req`,
         connectorIds: [connectorId],
       }
     : null
@@ -196,8 +209,10 @@ describe("the phone's tool words", () => {
 
 describe("connect_connector on the phone", () => {
   it("sends a link for an account connector, with no card", async () => {
-    const { text } = await call("connect_connector", { service: "slack" });
-    expect(text).toContain("https://apps.example/connect?service=slack&r=req");
+    const { text } = await call("connect_connector", { service: "gmail" });
+    expect(text).toContain(
+      "https://apps.example/connect?service=gmailuser&r=req"
+    );
     expect(show).not.toHaveBeenCalled();
     expect(text).not.toMatch(APP_ONLY);
   });
@@ -219,11 +234,135 @@ describe("connect_connector on the phone", () => {
     expect(text).not.toMatch(/send_<platform>_message|tool list/);
   });
 
-  it("lists only what the user can connect from the chat", async () => {
+  it("lists only what the user can connect from the chat: Google and GitHub, and what is connected already", async () => {
+    statuses = {
+      "abacus-outlook": { state: "connected", account: "ada@example.com" },
+    } as never;
     const { text } = await call("connect_connector", {});
-    expect(text).toContain("Slack");
-    expect(text).not.toMatch(/telegram|discord/i);
+    for (const id of [
+      "abacus-gmailuser",
+      "abacus-googledriveuser",
+      "abacus-googlecalendar",
+      "abacus-githubbot",
+    ])
+      expect(text).toContain(`${id}  `);
+    expect(text).toContain(
+      "abacus-outlook  Outlook  connected as ada@example.com"
+    );
+    expect(text).not.toMatch(/slack|jira|dropbox|telegram|discord/i);
     expect(text).not.toMatch(APP_ONLY);
+  });
+
+  it("names only Google and GitHub to connect in its description", () => {
+    const phone = listTools(PHONE).find(
+      (tool) => tool.name === "connect_connector"
+    );
+    expect(phone?.description).toContain(
+      "Gmail, Google Drive, Google Calendar, GitHub."
+    );
+    expect(phone?.description).not.toMatch(/slack|outlook/i);
+  });
+
+  it("links GitHub", async () => {
+    const { text } = await call("connect_connector", { service: "github" });
+    expect(text).toContain(
+      "https://apps.example/connect?service=githubbot&r=req"
+    );
+  });
+});
+
+describe("a service the phone does not connect", () => {
+  const OFFER: BillingPlan = {
+    current: {
+      planName: "Free",
+      creditsRemaining: 100,
+      creditsGranted: 100,
+      freeTierExpiresAt: null,
+    },
+    plans: [
+      {
+        plan: "basic",
+        planName: "Basic",
+        priceText: "$1 the first month",
+        features: ["More credits"],
+        creditsPerMonth: 2000,
+        current: false,
+      },
+    ],
+    upgrades: [
+      {
+        plan: "basic",
+        planName: "Basic",
+        priceText: "$1 the first month",
+        features: ["More credits"],
+        url: "https://apps.example/upgrade/one-time",
+      },
+    ],
+    topUpUrl: null,
+    upgradeInMobileApp: false,
+  };
+
+  beforeEach(() => {
+    account.mockResolvedValue({ subscription_tier: "free", plan: "Free" });
+    billingPlan.mockResolvedValue(OFFER);
+  });
+
+  it.each(["slack", "Outlook", "x (twitter)", "jira"])(
+    "gets no link for %s, and on the free plan the upgrade pitch from the platform's offer",
+    async (service) => {
+      const { text } = await call("connect_connector", { service });
+      expect(link).not.toHaveBeenCalled();
+      expect(watch).not.toHaveBeenCalled();
+      expect(billingPlan).toHaveBeenCalledWith(true);
+      expect(text).toContain("no link was made for it: send none");
+      expect(text).toContain("not part of the free plan on WhatsApp");
+      expect(text).toContain("the ChatLLM\napp on their phone");
+      expect(text).toContain(
+        "Basic: $1 the first month, 2,000 credits a month, link: https://apps.example/upgrade/one-time"
+      );
+      expect(text).toContain("at most once in this conversation");
+      expect(text).toContain("in their language");
+      expect(text).not.toContain("apps.example/connect");
+    }
+  );
+
+  it("sends a paid user to the ChatLLM app, with no pitch", async () => {
+    account.mockResolvedValue({ subscription_tier: "pro", plan: "Pro" });
+    const { text } = await call("connect_connector", { service: "slack" });
+    expect(link).not.toHaveBeenCalled();
+    expect(billingPlan).not.toHaveBeenCalled();
+    expect(text).toContain("connect it in the ChatLLM app");
+    expect(text).toContain("Do not pitch an upgrade");
+    expect(text).not.toContain("free plan");
+  });
+
+  it("points to billing_plan when the offer cannot be read", async () => {
+    billingPlan.mockResolvedValue(null);
+    const { text } = await call("connect_connector", { service: "slack" });
+    expect(link).not.toHaveBeenCalled();
+    expect(text).toContain("call billing_plan with upgrade: true");
+  });
+
+  it("keeps working once the user connected it elsewhere", async () => {
+    statuses = {
+      "abacus-slack": { state: "connected", account: "ada@example.com" },
+    } as never;
+    const { text } = await call("connect_connector", { service: "slack" });
+    expect(link).not.toHaveBeenCalled();
+    expect(text).toMatch(
+      /^Slack is already connected as ada@example\.com\. Its tools are in your tool list/
+    );
+  });
+
+  it("is still linked from an app chat", async () => {
+    const { text } = await call(
+      "connect_connector",
+      { service: "slack" },
+      "ui-session"
+    );
+    expect(link).toHaveBeenCalledWith("abacus-slack", "ui-session");
+    expect(account).not.toHaveBeenCalled();
+    expect(text).toContain("https://apps.example/connect?service=slack&r=req");
   });
 });
 

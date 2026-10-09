@@ -1992,11 +1992,13 @@ export class McpAgentToolsServer extends McpHttpServer {
    * can print the model may ask for. Facts only: each chat surface words the
    * outcome (tools/connectors.ts, tools/phone/connectors.ts). `card` puts a
    * Connect card up in the app beside the link, for a surface that has one.
+   * `services` (service keys) limits which account services it links; one
+   * already connected still answers as connected.
    */
   async connectConnectorOutcome(
     args: Record<string, unknown>,
     callerSession: string | undefined,
-    options: { card: boolean }
+    options: { card: boolean; services?: readonly string[] }
   ): Promise<ConnectOutcome> {
     const connectors = this.options.connectors;
     if (connectors == null) return { code: "no_connectors" };
@@ -2050,6 +2052,13 @@ export class McpAgentToolsServer extends McpHttpServer {
           : {}),
         ...(status.botNumber === true ? { botNumber: true } : {}),
       };
+
+    if (
+      match.kind === "platform" &&
+      options.services != null &&
+      !options.services.includes(match.service)
+    )
+      return { code: "not_here", name: match.name };
 
     if (status.state === "unavailable")
       return {

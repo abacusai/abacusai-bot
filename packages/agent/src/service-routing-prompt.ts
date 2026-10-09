@@ -6,4 +6,5 @@
  */
 import { routingPrompt } from "@abacus-ai/connectors/describe";
 
-export const serviceRoutingPrompt = (): string => routingPrompt();
+export const serviceRoutingPrompt = (connectable?: readonly string[]): string =>
+  routingPrompt(connectable);
