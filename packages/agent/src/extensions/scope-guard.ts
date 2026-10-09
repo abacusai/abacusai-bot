@@ -42,15 +42,17 @@ export interface TaskScope {
   temp: string;
 }
 
-/** Absolute and `~/` paths written in the task text, trailing punctuation dropped. */
+/** Absolute, drive and `~/` paths written in the task text, trailing punctuation dropped. */
 export function pathsNamedIn(task: string): string[] {
   const found =
-    task.match(/(?<![\w.:/~])(?:~\/|\/)[^\s"'`<>()[\]{},;]+/g) ?? [];
+    task.match(
+      /(?<![\w.:/\\~])(?:~[\\/]|\/|[A-Za-z]:[\\/])[^\s"'`<>()[\]{},;]+/g
+    ) ?? [];
 
   return found
     .map((raw) => raw.replace(/[.:!?]+$/, ""))
     .filter((raw) => raw.length > 1)
-    .map((raw) => resolveInWorkspace(raw, "/"));
+    .map((raw) => resolveInWorkspace(raw.replace(/^~\\/, "~/"), "/"));
 }
 
 export function taskScope(
@@ -139,6 +141,9 @@ export function outsideScope(
   );
 }
 
+/** Absolute (POSIX or a Windows drive), home-rooted, or climbing out. */
+const LOOKS_LIKE_PATH = /^(?:\/|~(?:[\\/]|$)|[A-Za-z]:[\\/]|\.\.(?:[\\/]|$))/;
+
 /**
  * The path operands of a shell command: every word after the verb that is
  * absolute, `~`-rooted, `$HOME`-rooted or climbs with `..`, including the
@@ -164,14 +169,7 @@ export function shellPathOperands(command: string): string[] {
         ? (unredirected.split("=")[1] ?? "")
         : unredirected;
       const expanded = value.replace(/^\$\{?HOME\}?(?=\/|$)/, "~");
-      if (
-        expanded.startsWith("/") ||
-        expanded === "~" ||
-        expanded.startsWith("~/") ||
-        expanded === ".." ||
-        expanded.startsWith("../")
-      )
-        operands.push(expanded);
+      if (LOOKS_LIKE_PATH.test(expanded)) operands.push(expanded);
     }
   }
 
@@ -205,7 +203,7 @@ export function targetsOf(
       );
       const operands = new Set([
         ...shellPathOperands(input.command),
-        ...writes.filter((target) => /^(?:\/|~|\.\.)/.test(target)),
+        ...writes.filter((target) => LOOKS_LIKE_PATH.test(target)),
       ]);
       return [...operands].map((operand) => ({
         path: operand,

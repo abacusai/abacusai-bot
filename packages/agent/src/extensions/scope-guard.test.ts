@@ -146,6 +146,16 @@ describe("reading paths out of a task", () => {
     ]);
   });
 
+  it("finds Windows drive paths", () => {
+    const found = pathsNamedIn(
+      "Summarise C:\\Users\\me\\brief.pdf and D:/data/x.csv."
+    );
+
+    expect(found).toHaveLength(2);
+    if (process.platform === "win32")
+      expect(found).toEqual(["C:\\Users\\me\\brief.pdf", "D:\\data\\x.csv"]);
+  });
+
   it("ignores slashes inside words and URLs", () => {
     expect(pathsNamedIn("and/or, https://x.dev/a, 3/4")).toEqual([]);
   });
@@ -163,6 +173,12 @@ describe("reading paths out of a shell command", () => {
       "~/.zshrc",
       "../x",
     ]);
+  });
+
+  it("takes Windows drive operands", () => {
+    expect(
+      shellPathOperands("type C:\\Users\\me\\notes.txt && ls D:/x")
+    ).toEqual(["C:\\Users\\me\\notes.txt", "D:/x"]);
   });
 
   it("reads a --flag=/path value", () => {
