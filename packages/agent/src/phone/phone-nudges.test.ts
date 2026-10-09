@@ -15,10 +15,12 @@ import {
   dueWindow,
   languageCode,
   phoneLanguage,
+  phoneReplyLanguage,
   phoneZone,
   retireNudgedLoops,
   scriptLanguage,
   writePhoneLanguage,
+  writePhoneReplyLanguage,
   writePhoneZone,
   zonedWallTime,
 } from "./phone-nudges.js";
@@ -52,6 +54,17 @@ describe("the zone and language files", () => {
     expect(phoneLanguage(dir)).toBe("pt-BR");
     writePhoneLanguage(dir, null);
     expect(phoneLanguage(dir)).toBeNull();
+  });
+
+  it("keep the user's language apart from the check-in language, and forget it on null", () => {
+    expect(phoneReplyLanguage(dir)).toBeNull();
+    expect(writePhoneReplyLanguage(dir, "es")).toBe(true);
+    expect(writePhoneReplyLanguage(dir, "es")).toBe(false);
+    expect(writePhoneReplyLanguage(dir, "Spanish")).toBe(false);
+    expect(phoneReplyLanguage(dir)).toBe("es");
+    expect(phoneLanguage(dir)).toBeNull();
+    expect(writePhoneReplyLanguage(dir, null)).toBe(true);
+    expect(phoneReplyLanguage(dir)).toBeNull();
   });
 
   it("trim a model's code to the server's shape: a primary tag and one subtag", () => {

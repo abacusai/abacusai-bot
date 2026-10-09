@@ -62,6 +62,15 @@ describe("the phone loop's clock and check-ins", () => {
     expect(prompt).not.toMatch(/UTC offset|not set/);
   });
 
+  it("states the user's language by name, English when none is known, and follows a switch", () => {
+    expect(flat(phoneOperatingPrompt(null, null, "pt-BR"))).toMatch(
+      /The user's language is Brazilian Portuguese: reply in it, and if they write in another language, switch to theirs\./
+    );
+    expect(flat(phoneOperatingPrompt(null))).toMatch(
+      /not known yet: reply in English, and if they write in another language, switch to theirs\./
+    );
+  });
+
   it("asks which stop is meant before turning check-ins off", () => {
     expect(flat(phoneOperatingPrompt(null))).toMatch(
       /could mean the task you are on, ask which they mean/
