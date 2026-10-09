@@ -73,7 +73,12 @@ export const compilerReact = (
 ) =>
   react({
     include: RENDERER_MODULES,
-    exclude: RENDERER_REGISTRY_SRC,
+    // The virtualizer exposes a mutable instance; its adapter already opts out
+    // with "use no memo". Keep compilation on for the artifact UI around it.
+    exclude: [
+      RENDERER_REGISTRY_SRC,
+      /\/features\/artifacts\/use-artifact-window\.ts$/,
+    ],
     compiler,
   });
 export const assertBrowserImport = (resolved: string): void => {

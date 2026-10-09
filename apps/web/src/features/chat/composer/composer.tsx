@@ -267,8 +267,10 @@ const Attach = () => {
                 if (runtime.host.pickLocalFiles) {
                   const files = await runtime.host.pickLocalFiles();
                   if (files?.length) {
-                    if (!config.attachmentsBase && !runtime.host.uploadFile)
-                      throw new Error(t("chat.composer.pasteUnavailable"));
+                    if (!config.attachmentsBase && !runtime.host.uploadFile) {
+                      setError(t("chat.composer.pasteUnavailable"));
+                      return;
+                    }
                     await addFiles(
                       threadId,
                       files,
