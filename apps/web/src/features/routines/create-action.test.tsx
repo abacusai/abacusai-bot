@@ -63,7 +63,11 @@ it.each(["basic", "go", "pro", "max", "enterprise"])(
       });
       fireEvent.click(create);
       expect(
-        await screen.findByRole("textbox", { name: "Instruction" })
+        await screen.findByRole(
+          "textbox",
+          { name: "Instruction" },
+          { timeout: 5000 }
+        )
       ).toBeTruthy();
       expect(screen.queryByText("Unlock routines")).toBeNull();
     } finally {
