@@ -1,7 +1,12 @@
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
 import { describe, it, expect } from "vitest";
 
-import { creditMarkState, CREDITS_EXHAUSTED_TTL_MS } from "./credits";
+import {
+  creditMarkState,
+  creditsTier,
+  creditsCardState,
+  CREDITS_EXHAUSTED_TTL_MS,
+} from "./credits";
 const account = (tier: string, used = 10, granted = 10) =>
   ({
     subscription_tier: tier,
@@ -9,6 +14,15 @@ const account = (tier: string, used = 10, granted = 10) =>
     credits_granted: granted,
   }) as AbacusAccountInfo;
 describe("R5-T23 credits guards", () => {
+  it.each(["go", "max", " Go ", "MAX"])(
+    "recognizes the paying %s plan",
+    (tier) => {
+      expect(creditsTier(account(tier))).toBe("paid");
+      expect(creditMarkState(account(tier), 1, 2, false)).toBe("clear");
+      expect(creditsCardState(account(tier), null, false, 2)).toBe("exhausted");
+      expect(creditsCardState(account(tier, 1, 10), null, false, 2)).toBeNull();
+    }
+  );
   it("requires a read free account and a live mark", () => {
     expect(creditMarkState(undefined, 1, 2, false)).toBe("hide");
     expect(creditMarkState(account("free"), 1, 2, false)).toBe("show");

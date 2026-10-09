@@ -131,6 +131,11 @@ export const CreditsCard = ({
               )}
           </p>
           <div className="flex flex-col gap-3 p-3">
+            {tier === "free" && (
+              <Button size="sm" onClick={() => void host.openUpgrade()}>
+                {t("creditsCard.cta")}
+              </Button>
+            )}
             {paying ? (
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
@@ -169,6 +174,7 @@ export const CreditsCard = ({
                     </div>
                     <Button
                       size="sm"
+                      variant="secondary"
                       disabled={busy}
                       onClick={() => {
                         if (IS_ELECTRON && source === "openrouter")

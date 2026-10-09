@@ -1,4 +1,5 @@
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
+import { isPayingAbacusTier } from "@abacus-ai/contract/models";
 
 /** The plan a card should speak to. Unknown until the account is read. */
 export type CreditsTier = "free" | "basic" | "paid" | "unknown";
@@ -12,9 +13,8 @@ export const creditsTier = (
   if (tier === "free") return "free";
   if (tier === "basic") return "basic";
 
-  return ["paid", "pro", "premium", "team", "enterprise", "business"].includes(
-    tier
-  )
+  return isPayingAbacusTier(tier) ||
+    ["paid", "premium", "team", "enterprise", "business"].includes(tier)
     ? "paid"
     : "unknown";
 };

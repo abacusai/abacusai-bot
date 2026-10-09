@@ -61,7 +61,7 @@ it("connects OpenRouter and replays a dead turn once after the refreshed catalog
   );
 });
 
-it("shows top-up only on paid tiers and never sells a plan to the free tier", async () => {
+it("opens the account upgrade offer for a basic tier top-up", async () => {
   const openExternal = vi.fn(async () => {});
   const openUpgrade = vi.fn(async () => {});
   const rendered = await renderWithDb(
@@ -72,4 +72,35 @@ it("shows top-up only on paid tiers and never sells a plan to the free tier", as
   fireEvent.click(screen.getByRole("button"));
   expect(openUpgrade).toHaveBeenCalledOnce();
   expect(openExternal).not.toHaveBeenCalled();
+});
+
+it("offers upgrade for an exhausted free account while retaining free sources", async () => {
+  const openUpgrade = vi.fn(async () => {});
+  const rendered = await renderWithDb(
+    <CreditsCard
+      tier="free"
+      host={{
+        openExternal: async () => {},
+        openUpgrade,
+        configuredFreeSources: async () => ({}),
+      }}
+    />
+  );
+  cleanup = rendered.cleanup;
+  fireEvent.click(screen.getByRole("button", { name: "Upgrade" }));
+  expect(openUpgrade).toHaveBeenCalledOnce();
+  await waitFor(() =>
+    expect(document.querySelector('[data-source="gemini"]')).toBeTruthy()
+  );
+});
+
+it("does not infer an upgrade offer for an unknown account", async () => {
+  const rendered = await renderWithDb(
+    <CreditsCard
+      tier="unknown"
+      host={{ openExternal: async () => {}, openUpgrade: async () => {} }}
+    />
+  );
+  cleanup = rendered.cleanup;
+  expect(screen.queryByRole("button", { name: "Upgrade" })).toBeNull();
 });
