@@ -3,7 +3,12 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import type { RouterContext } from "#renderer/router";
 
-import { clearBotStorage, installSignOutUnmount, webSignOut } from "./sign-out";
+import {
+  clearBotStorage,
+  installSignOutUnmount,
+  signOutWithoutApp,
+  webSignOut,
+} from "./sign-out";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -102,4 +107,46 @@ it("clears only bot namespaces in both storage areas", () => {
     expect(storage.getItem("abacusai-bot:dummy")).toBeNull();
     expect(storage.getItem("website")).toBe("keep");
   }
+});
+
+it("signs out with no app mounted: the website session, other tabs, then bot data", async () => {
+  const events: string[] = [];
+  const peer = new BroadcastChannel("abacusai-bot:sign-out");
+  const told = new Promise<unknown>((resolve) => {
+    peer.onmessage = ({ data }) => resolve(data);
+  });
+  localStorage.setItem("abacusai-bot:dummy", "remove");
+  localStorage.setItem("website-preference", "keep");
+  const fetch = vi.fn(async () => {
+    events.push("logout");
+    return Response.json({ success: true, result: null });
+  });
+  vi.stubGlobal("fetch", fetch);
+  try {
+    await signOutWithoutApp(() => events.push("leave"));
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/_signOut",
+      expect.objectContaining({ method: "POST" })
+    );
+    expect(events).toEqual(["logout", "leave"]);
+    expect(await told).toBe("signed-out");
+    expect(localStorage.getItem("abacusai-bot:dummy")).toBeNull();
+    expect(localStorage.getItem("website-preference")).toBe("keep");
+  } finally {
+    peer.close();
+  }
+});
+
+it("keeps the page and its bot data when an app-less sign-out is rejected", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () =>
+      Response.json({ success: false, error: "Logout failed" }, { status: 500 })
+    )
+  );
+  const leave = vi.fn();
+  localStorage.setItem("abacusai-bot:test", "keep");
+  await expect(signOutWithoutApp(leave)).rejects.toThrow();
+  expect(leave).not.toHaveBeenCalled();
+  expect(localStorage.getItem("abacusai-bot:test")).toBe("keep");
 });

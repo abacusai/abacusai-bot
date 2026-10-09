@@ -4027,7 +4027,10 @@
       "desktopInstead": "Get the desktop app instead",
       "signedOut": "웹에서 AbacusAI Bot을 사용하려면 로그인하세요.",
       "tierRequired": "웹용 AbacusAI Bot에는 Pro 요금제가 필요합니다.",
-      "hostOutdated": "봇이 오래되었습니다. 컴퓨터를 다시 시작하여 업데이트하세요."
+      "hostOutdated": "봇이 오래되었습니다. 컴퓨터를 다시 시작하여 업데이트하세요.",
+      "accountRefused": "이 계정으로는 이 사이트에서 AbacusAI Bot을 사용할 수 없습니다. 계속하려면 다른 계정으로 전환하세요.",
+      "switchAccount": "계정 전환",
+      "signOutFailed": "로그아웃하지 못했습니다. 다시 시도하세요."
     },
     "files": {
       "download": "다운로드",
@@ -4144,6 +4147,11 @@
     "routines": {
       "download": "데스크톱 앱 다운로드",
       "desktopAlternative": "컴퓨터에서 AbacusAI Bot을 사용하세요."
+    },
+    "phoneError": {
+      "title": "문제가 발생했습니다",
+      "connection": "AbacusAI Bot에 연결할 수 없습니다. 연결을 확인한 후 다시 시도하세요.",
+      "refused": "이 계정으로는 이 사이트에서 AbacusAI Bot을 사용할 수 없습니다."
     }
   }
 }

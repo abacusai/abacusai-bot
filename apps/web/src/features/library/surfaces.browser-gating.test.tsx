@@ -11,6 +11,7 @@ import { expect, it, vi } from "vitest";
 import enUS from "#locales/en-US.json";
 import { fixturePrefs } from "#renderer/data/fixture-db/rows";
 import {
+  PhoneErrorScreen,
   PhoneWhatsAppApp,
   WhatsAppConnect,
   WhatsAppIntro,
@@ -293,6 +294,10 @@ it("one failure mapping: a reload without a loop, the loop's retry with one", ()
   expect(failureScreen(new ConnectError("tier", RAW), true)).toEqual({
     kind: "refused",
   });
+  // An account refusal is never the "didn't wake up" page.
+  expect(failureScreen(new ConnectError("refused", RAW), true)).toEqual({
+    kind: "refused",
+  });
   expect(failureScreen(null, true)).toBeNull();
 });
 
@@ -314,6 +319,7 @@ it("the host status picks failures first, then open, then the banner, setup or p
   const cases: Array<[Partial<HostConnectionState>, string | null]> = [
     [{ error: new ConnectError("signin", RAW), stage: "open" }, "status"],
     [{ error: new ConnectError("limit", RAW), stage: "open" }, "host-limit"],
+    [{ error: new ConnectError("refused", RAW), stage: "open" }, "refused"],
     [
       { error: new ConnectError("connection", RAW), stage: "open" },
       "host-failed",
@@ -332,7 +338,15 @@ it("the host status picks failures first, then open, then the banner, setup or p
       if (slot == null) expect(view.container.firstChild).toBeNull();
       else if (slot === "status")
         expect(text).toContain("Sign in to use AbacusAI Bot on the web.");
-      else
+      else if (slot === "refused") {
+        expect(text).toContain(enUS.web.connect.accountRefused);
+        expect(text).not.toContain(enUS.web.connect.failedTitle);
+        expect(
+          screen.getByRole("button", {
+            name: enUS.web.connect.switchAccount,
+          })
+        ).toBeDefined();
+      } else
         expect(
           document.querySelector(`[data-slot="${slot}"]`),
           slot
@@ -547,4 +561,75 @@ it("is only WhatsApp on a phone: connect with no Skip, then all set with the bot
   expect(
     await screen.findByRole("heading", { name: enUS.web.whatsappBot.title })
   ).toBeDefined();
+});
+
+it("a phone's passing failure stays on the phone: try again, switch account or sign out", async () => {
+  const retry = vi.fn();
+  const switchAccount = vi.fn(async () => undefined);
+  const signOut = vi.fn(async () => undefined);
+  render(
+    <PhoneErrorScreen
+      reason="connection"
+      retry={retry}
+      switchAccount={switchAccount}
+      signOut={signOut}
+    />
+  );
+  expect(
+    screen.getByRole("heading", { name: enUS.web.phoneError.title })
+  ).toBeDefined();
+  expect(screen.getByText(enUS.web.phoneError.connection)).toBeDefined();
+  expect(document.body.textContent).not.toContain(enUS.web.connect.failedTitle);
+  fireEvent.click(
+    screen.getByRole("button", { name: enUS.web.connect.tryAgain })
+  );
+  expect(retry).toHaveBeenCalledOnce();
+  await act(async () => {
+    fireEvent.click(
+      screen.getByRole("button", { name: enUS.web.connect.switchAccount })
+    );
+  });
+  expect(switchAccount).toHaveBeenCalledOnce();
+});
+
+it("a phone's refusal names the server's reason, offers no retry, and says when sign-out fails", async () => {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  const signOut = vi.fn(async () => {
+    throw new Error("offline");
+  });
+  render(
+    <PhoneErrorScreen
+      reason="refused"
+      detail="Incorrect hostname for the request"
+      switchAccount={async () => undefined}
+      signOut={signOut}
+    />
+  );
+  try {
+    expect(screen.getByText(enUS.web.phoneError.refused)).toBeDefined();
+    expect(
+      screen.getByText("Incorrect hostname for the request")
+    ).toBeDefined();
+    expect(
+      screen.queryByRole("button", { name: enUS.web.connect.tryAgain })
+    ).toBeNull();
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: enUS.userMenu.signOut })
+      );
+    });
+    expect(signOut).toHaveBeenCalledOnce();
+    expect(
+      await screen.findByText(enUS.web.connect.signOutFailed)
+    ).toBeDefined();
+    expect(
+      (
+        screen.getByRole("button", {
+          name: enUS.userMenu.signOut,
+        }) as HTMLButtonElement
+      ).disabled
+    ).toBe(false);
+  } finally {
+    warn.mockRestore();
+  }
 });

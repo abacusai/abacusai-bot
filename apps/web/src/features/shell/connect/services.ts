@@ -25,7 +25,8 @@ export type ConnectStage =
   | "open"
   | "reconnecting";
 /**
- * Why the host is out of reach, by remedy: `signin`, `tier` and `limit`
+ * Why the host is out of reach, by remedy: `signin`, `tier`, `limit` and
+ * `refused` (the apps server turned this account away for good, a 4xx)
  * replace the app; `version` (the host is older) offers a restart of the
  * user's computer, `reload` (this page is older, or the host refused it for
  * good) a reload; `connection` is retried.
@@ -36,13 +37,16 @@ export class ConnectError extends Error {
       | "signin"
       | "tier"
       | "limit"
+      | "refused"
       | "version"
       | "reload"
       | "connection",
     message: string,
     readonly network = false,
     /** The apps server's HTTP status, when it answered. */
-    readonly status?: number
+    readonly status?: number,
+    /** The server's own reason, when it is short plain text fit for the page. */
+    readonly detail?: string
   ) {
     super(message);
   }
@@ -125,6 +129,18 @@ const within = async <T>(
 };
 const timedOut = Symbol("timed out");
 
+/** 4xx answers that can pass: a timeout, a conflict, too early, too many. */
+const TRANSIENT_4XX = new Set([408, 409, 425, 429]);
+
+/** A server reason short and plain enough to show as it is. */
+const shownReason = (message: unknown): string | undefined => {
+  if (typeof message !== "string") return undefined;
+  const reason = message.trim();
+  return reason.length > 0 && reason.length <= 200 && !/[\r\n<>]/.test(reason)
+    ? reason
+    : undefined;
+};
+
 export const callApps = async (
   service: string,
   input: unknown,
@@ -173,6 +189,20 @@ export const callApps = async (
     /not.?logged.?in/i.test(`${body?.errorType ?? ""} ${message}`)
   )
     throw new ConnectError("signin", message);
+  // A definite refusal (wrong site for this account, no access): retrying
+  // cannot change it, and it is not the host failing to wake.
+  if (
+    response.status >= 400 &&
+    response.status < 500 &&
+    !TRANSIENT_4XX.has(response.status)
+  )
+    throw new ConnectError(
+      "refused",
+      message,
+      false,
+      response.status,
+      shownReason(body?.error)
+    );
   if (!response.ok || body?.success !== true)
     throw new ConnectError("connection", message, false, response.status);
   return body.result;
@@ -697,9 +727,9 @@ const watchLiveness = (
 
 /**
  * Opens every generation of `transport` until it closes for good. A
- * sign-in, tier, limit, contract or policy refusal closes it; any other
- * failure is shown and retried with backoff, and after `MAX_UNSTABLE` in a
- * row once a minute. A dropped socket first
+ * sign-in, tier, limit, account, contract or policy refusal closes it; any
+ * other failure is shown and retried with backoff, and after `MAX_UNSTABLE`
+ * in a row once a minute. A dropped socket first
  * reconnects with the current token; a failed attempt, or a token older
  * than eight minutes, starts over from bootstrap, and a hidden tab never
  * bootstraps (an idle pod is not restarted for nobody): it waits until it

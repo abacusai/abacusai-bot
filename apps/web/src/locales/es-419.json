@@ -4027,7 +4027,10 @@
       "desktopInstead": "Get the desktop app instead",
       "signedOut": "Inicia sesión para usar AbacusAI Bot en la web.",
       "tierRequired": "AbacusAI Bot en la web requiere un plan Pro.",
-      "hostOutdated": "Tu bot está desactualizado. Reinicia tu computadora para actualizarlo."
+      "hostOutdated": "Tu bot está desactualizado. Reinicia tu computadora para actualizarlo.",
+      "accountRefused": "Esta cuenta no puede usar AbacusAI Bot en este sitio. Cambia a otra cuenta para continuar.",
+      "switchAccount": "Cambiar de cuenta",
+      "signOutFailed": "No se pudo cerrar la sesión. Vuelve a intentarlo."
     },
     "files": {
       "download": "Descargar",
@@ -4144,6 +4147,11 @@
     "routines": {
       "download": "Descargar app de escritorio",
       "desktopAlternative": "Usa AbacusAI Bot en tu computadora."
+    },
+    "phoneError": {
+      "title": "Algo salió mal",
+      "connection": "No pudimos conectar con AbacusAI Bot. Revisa tu conexión y vuelve a intentarlo.",
+      "refused": "Esta cuenta no puede usar AbacusAI Bot en este sitio."
     }
   }
 }

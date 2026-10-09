@@ -4027,7 +4027,10 @@
       "desktopInstead": "Get the desktop app instead",
       "signedOut": "Masuk untuk menggunakan AbacusAI Bot di web.",
       "tierRequired": "AbacusAI Bot di web memerlukan paket Pro.",
-      "hostOutdated": "Bot Anda sudah usang. Mulai ulang komputer Anda untuk memperbaruinya."
+      "hostOutdated": "Bot Anda sudah usang. Mulai ulang komputer Anda untuk memperbaruinya.",
+      "accountRefused": "Akun ini tidak dapat menggunakan AbacusAI Bot di situs ini. Beralihlah ke akun lain untuk melanjutkan.",
+      "switchAccount": "Ganti akun",
+      "signOutFailed": "Gagal keluar. Coba lagi."
     },
     "files": {
       "download": "Unduh",
@@ -4144,6 +4147,11 @@
     "routines": {
       "download": "Unduh aplikasi desktop",
       "desktopAlternative": "Gunakan AbacusAI Bot di komputer Anda."
+    },
+    "phoneError": {
+      "title": "Terjadi kesalahan",
+      "connection": "Tidak dapat menghubungi AbacusAI Bot. Periksa koneksi Anda, lalu coba lagi.",
+      "refused": "Akun ini tidak dapat menggunakan AbacusAI Bot di situs ini."
     }
   }
 }

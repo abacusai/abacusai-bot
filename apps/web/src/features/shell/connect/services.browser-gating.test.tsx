@@ -89,15 +89,15 @@ it("uses the real envelope, bootstraps until ready, retries proxy 403, and resta
 });
 it.each([
   [403, "AbacusBotHostTierRequired", "Pro tier required", "tier"],
-  [
-    403,
-    "GenericPermissionDeniedError",
-    "DeepAgent access required",
-    "connection",
-  ],
+  [403, "GenericPermissionDeniedError", "DeepAgent access required", "refused"],
+  [403, "GenericPermissionDeniedError", "Incorrect hostname", "refused"],
+  [404, "DataNotFoundError", "Not found", "refused"],
   [401, "PermissionDenied", "Please sign in", "signin"],
   [200, "NotLoggedInError", "not logged in", "signin"],
+  [429, "TooManyRequests", "Slow down", "connection"],
+  [409, "ConflictError", "Try again shortly", "connection"],
   [500, "InvalidRequest", "Bootstrap failed. Please retry.", "connection"],
+  [503, "ServiceUnavailable", "Unavailable", "connection"],
 ])(
   "maps %s/%s by errorType and preserves the server message",
   async (status, errorType, error, kind) => {
@@ -112,6 +112,34 @@ it.each([
     await expect(
       callApps("getOrCreateAbacusBotHost", {})
     ).rejects.toMatchObject({ kind, message: error });
+  }
+);
+it.each([
+  ["Incorrect hostname for the request", "Incorrect hostname for the request"],
+  ["x".repeat(201), undefined],
+  ["Line one\nline two", undefined],
+  ["<b>markup</b>", undefined],
+])(
+  "a refusal carries the server's reason only when it is short plain text: %s",
+  async (error, detail) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        Response.json(
+          {
+            success: false,
+            errorType: "GenericPermissionDeniedError",
+            error,
+          },
+          { status: 403 }
+        )
+      )
+    );
+    const refusal = await callApps("getAbacusBotWhatsAppChat", {}).catch(
+      (e: unknown) => e
+    );
+    expect(refusal).toMatchObject({ kind: "refused", status: 403 });
+    expect((refusal as { detail?: string }).detail).toBe(detail);
   }
 );
 it("rejects malformed envelopes, bootstrap data and tokens immediately", async () => {
@@ -552,6 +580,29 @@ describe("runHostConnection", () => {
     await running;
     expect(transport.state).toBe("closed");
     expect(hostConnection.state.error).toMatchObject({ kind: "version" });
+  });
+
+  it("closes the transport for good, without retrying, when the apps server refuses the account", async () => {
+    const { fetch, transport, running } = await start();
+    FakeSocket.all[0]!.open();
+    await vi.waitFor(() => expect(transport.state).toBe("open"));
+    fetch.mockResolvedValue(
+      Response.json(
+        {
+          success: false,
+          errorType: "GenericPermissionDeniedError",
+          error: "Incorrect hostname for the request",
+        },
+        { status: 403 }
+      )
+    );
+    // Dropped at once: the re-bootstrap is refused.
+    FakeSocket.all[0]!.close();
+    await vi.advanceTimersByTimeAsync(60_000);
+    await running;
+    expect(transport.state).toBe("closed");
+    expect(hostConnection.state.error).toMatchObject({ kind: "refused" });
+    expect(bootstraps(fetch)).toHaveLength(2);
   });
 
   it("stops retrying in a hidden tab after the first failure until it is visible", async () => {
