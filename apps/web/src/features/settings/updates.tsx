@@ -1,5 +1,10 @@
 import type { UpdateStatus } from "@abacus-ai/contract/update";
-import { useQuery, type QueryClient } from "@tanstack/react-query";
+import {
+  useIsMutating,
+  useQuery,
+  type QueryClient,
+} from "@tanstack/react-query";
+import { RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -94,9 +99,11 @@ const useUpdateFollower = (
   }, [transport, queryClient]);
 };
 
-/** While installing, an earlier failure is not shown. */
+/** Hide earlier check/download failures, but keep a new handoff error visible. */
 const presented = (status: UpdateStatus | undefined) =>
-  status?.installing && !status.installStalled
+  status?.installing &&
+  !status.installStalled &&
+  status.failedPhase !== "install"
     ? { ...status, error: null, failedPhase: null, installStalled: false }
     : status;
 
@@ -106,6 +113,7 @@ export const useUpdateStatus = () => {
   const { data: incoming } = useQuery(live);
   useUpdateFollower(transport, queryClient);
   const [clicked, setClicked] = useState(false);
+  const installing = useIsMutating({ mutationKey: ["update", "install"] }) > 0;
   const [installError, setInstallError] = useState<string | null>(null);
   // An install that failed or stalled releases the pressed state, once per
   // status that says so.
@@ -124,6 +132,7 @@ export const useUpdateStatus = () => {
   const status = presented(incoming);
   const install = useMutation(
     transport.orpc.update.install.mutationOptions({
+      mutationKey: ["update", "install"],
       onMutate: () => {
         setClicked(true);
         setInstallError(null);
@@ -146,10 +155,12 @@ export const useUpdateStatus = () => {
   );
   return {
     status,
-    clicked,
+    clicked: clicked || installing,
     install: () => install.mutate({}),
     installError,
-    phase: installError ? "installFailed" : updatePhase(status, clicked),
+    phase: installError
+      ? "installFailed"
+      : updatePhase(status, clicked || installing),
     check: () => check.mutate({}),
   };
 };
@@ -284,7 +295,10 @@ export const CriticalUpdateDialog = () => {
   }, [open, remaining, paused, update]);
   if (update.status?.installStalled)
     return (
-      <div role="alert" className="bg-muted border-b px-4 py-2 text-sm">
+      <div
+        role="alert"
+        className="bg-muted fixed inset-x-0 top-(--toolbar-h) z-50 border-b px-4 py-2 text-sm"
+      >
         {t("phase5.updates.stalled")}
       </div>
     );
@@ -325,6 +339,15 @@ export const CriticalUpdateDialog = () => {
   );
 };
 
+export const updateVisible = (
+  status: UpdateStatus | undefined,
+  phase: string
+) =>
+  !!status &&
+  !status.criticalUpdate &&
+  !status.installStalled &&
+  !["loading", "latest", "checking", "checkFailed"].includes(phase);
+
 /** Public shell-end-slot consumer; shell owns placement and compact overflow. */
 
 export const UpdatePillButton = ({
@@ -333,22 +356,20 @@ export const UpdatePillButton = ({
   installError = null,
   onInstall,
   onCheck,
+  compact = false,
+  showFailureLabel = true,
 }: {
   status: UpdateStatus | undefined;
   clicked?: boolean;
   installError?: string | null;
   onInstall(): void;
   onCheck(): void;
+  compact?: boolean;
+  showFailureLabel?: boolean;
 }) => {
   const { t } = useTranslation();
   const phase = installError ? "installFailed" : updatePhase(status, clicked);
-  if (
-    !status ||
-    status.criticalUpdate ||
-    status.installStalled ||
-    ["loading", "latest", "checking", "checkFailed"].includes(phase)
-  )
-    return null;
+  if (!status || !updateVisible(status, phase)) return null;
   const retry = phase === "downloadFailed";
   const install = phase === "downloaded" || phase === "installFailed";
   const label = retry
@@ -363,20 +384,49 @@ export const UpdatePillButton = ({
       size="sm"
       variant="secondary"
       disabled={!retry && !install}
-      title={
-        install
-          ? t("phase5.updates.downloaded", {
-              version: status.updateInfo?.version,
-            })
+      className={
+        compact
+          ? "titlebar-nodrag my-1 h-11 w-12 shrink-0 flex-col gap-0.5 rounded-xl px-1 text-[10px]"
           : undefined
+      }
+      aria-label={
+        compact
+          ? t(label, { percent: Math.round(status.progress?.percent ?? 0) })
+          : undefined
+      }
+      data-slot={compact ? "rail-update" : undefined}
+      title={
+        compact
+          ? t(label, { percent: Math.round(status.progress?.percent ?? 0) })
+          : install
+            ? t("phase5.updates.downloaded", {
+                version: status.updateInfo?.version,
+              })
+            : undefined
       }
       onClick={() => {
         if (retry) onCheck();
         else if (install) onInstall();
       }}
     >
-      {retry && <span>{t("phase5.updates.downloadFailed")}</span>}
-      {t(label, { percent: Math.round(status.progress?.percent ?? 0) })}
+      {compact ? (
+        <>
+          <RefreshCw
+            className={install || retry ? "size-4" : "size-4 animate-spin"}
+            aria-hidden
+          />
+          <span className="max-w-full truncate">
+            {t("phase5.settings.updates")}
+          </span>
+        </>
+      ) : (
+        <>
+          {retry && showFailureLabel && (
+            <span>{t("phase5.updates.downloadFailed")}</span>
+          )}
+          {t(label, { percent: Math.round(status.progress?.percent ?? 0) })}
+        </>
+      )}
     </Button>
   );
 };
@@ -386,11 +436,7 @@ export const useUpdatePillAction = () => {
   const { t } = useTranslation();
   const update = useUpdateStatus();
   const phase = update.phase;
-  const visible =
-    update.status &&
-    !update.status.criticalUpdate &&
-    !update.status.installStalled &&
-    !["loading", "latest", "checking", "checkFailed"].includes(phase);
+  const visible = updateVisible(update.status, phase);
   const retry = phase === "downloadFailed";
   const install = phase === "downloaded" || phase === "installFailed";
   const label = retry
