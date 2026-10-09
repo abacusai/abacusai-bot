@@ -3,12 +3,11 @@
  * returns only its final answer. Deliberate limits: no nesting (depth is how a
  * budget gets spent in a loop); no permission gate, since the user has no
  * context for its dialogs, so the guardrails extension is the whole policy and
- * is load-bearing; and a hard turn ceiling.
+ * is load-bearing; and a turn budget (subagent-run.ts).
  */
 import {
   createAgentSession,
   DefaultResourceLoader,
-  type AgentSessionEvent,
   type ExtensionAPI,
   type InlineExtension,
   type ModelRuntime,
@@ -20,8 +19,13 @@ import { excludedTools } from "./excluded-tools.js";
 import guardrails from "./extensions/guardrails.js";
 import { windowsShellPrompt } from "./posix-shell.js";
 import type { AgentEvent } from "./protocol.js";
-import { whenAborted } from "./subagent-abort.js";
-import { forwardChildToolEvents, traceChildEvent } from "./subagent-events.js";
+import { forwardChildToolEvents } from "./subagent-events.js";
+import {
+  runSubagent,
+  SUBAGENT_TURNS,
+  type SubagentRunResult,
+  type SubagentStop,
+} from "./subagent-run.js";
 
 export interface DelegationContext {
   cwd: string;
@@ -33,32 +37,13 @@ export interface DelegationContext {
   skillPaths: string[];
 }
 
-/**
- * Provider retries tolerated before giving up. Nobody is watching a sub-agent,
- * so pi's retries would burn the parent's call until the wall-clock stop; two
- * rides out a blip, past that the parent deserves to be told.
- */
-const MAX_PROVIDER_RETRIES = 2;
-
-/**
- * The bounds the header promises. The tool-timeouts watchdog can report an
- * overrun but cannot end a call, so a sub-agent looping on a tool would spend
- * the parent's budget. Generous: a backstop, not a ration. The wall clock
- * matches the 900s tool-timeouts already gives `delegate_task`.
- */
-const MAX_TURNS = 100;
+/** Matches the 900s tool-timeouts already gives `delegate_task`. */
 const TIMEOUT_MS = 15 * 60 * 1000;
 
 export interface DelegationResult {
   text: string;
   turns: number;
-  stoppedBy:
-    | "completed"
-    | "error"
-    | "provider-error"
-    | "turn-limit"
-    | "timeout"
-    | "aborted";
+  stoppedBy: SubagentStop;
 }
 
 /**
@@ -72,15 +57,7 @@ export async function runDelegatedTask(
   signal?: AbortSignal
 ): Promise<DelegationResult> {
   const forwardTools = forwardChildToolEvents("sub", emit);
-  let turns = 0;
-  let lastText = "";
-  let retries = 0;
-  let providerError = "";
-  // On an object, not a `let`: assignments happen in callbacks control-flow
-  // analysis cannot see, so a local would be narrowed to its initial value.
-  const outcome: { stoppedBy: DelegationResult["stoppedBy"] } = {
-    stoppedBy: "completed",
-  };
+  let run: SubagentRunResult;
 
   // The sub-agent runs commands through the same shell as its parent.
   const shellPrompt = windowsShellPrompt();
@@ -141,116 +118,12 @@ export async function runDelegatedTask(
     const session = created.session;
 
     try {
-      let finish!: () => void;
-      const finished = new Promise<void>((resolve) => {
-        finish = resolve;
-        const unsubscribe = session.subscribe((event: AgentSessionEvent) => {
-          traceChildEvent("sub", event);
-
-          // The sub-agent's tool calls, so its card shows the work (subagent-
-          // events.ts).
-          if (forwardTools(event)) return;
-
-          // Provider failures arrive as an assistant message with a stopReason,
-          // not an error event. `message_end`, not `message_update`: a call
-          // that
-          // fails outright never produces an update.
-          if (event.type === "message_end") {
-            const message = (
-              event as {
-                message?: { stopReason?: unknown; errorMessage?: unknown };
-              }
-            ).message;
-
-            if (
-              message?.stopReason === "error" &&
-              typeof message.errorMessage === "string"
-            ) {
-              providerError = message.errorMessage;
-            }
-          }
-
-          // `turn_end` is the per-model-call event. `agent_end` fires once per
-          // prompt however many tools run, so a ceiling there could never trip.
-          if (event.type === "turn_end") {
-            turns += 1;
-
-            if (turns >= MAX_TURNS) {
-              outcome.stoppedBy = "turn-limit";
-              unsubscribe();
-              resolve();
-
-              return;
-            }
-          }
-
-          if (event.type === "agent_end") {
-            // A retry left alone repeats until the wall-clock stop.
-            if ((event as { willRetry?: boolean }).willRetry === true) {
-              retries += 1;
-
-              if (retries > MAX_PROVIDER_RETRIES) {
-                outcome.stoppedBy = "provider-error";
-                unsubscribe();
-                resolve();
-              }
-
-              return;
-            }
-
-            // Read at agent_end, not accumulated from deltas, so a retried turn
-            // does not glue half an abandoned message to the front.
-            const messages =
-              (
-                event as {
-                  messages?: Array<{ role?: string; content?: unknown }>;
-                }
-              ).messages ?? [];
-
-            for (const message of messages) {
-              if (message.role !== "assistant") continue;
-
-              const text = extractText(message.content);
-
-              if (text.trim().length > 0) lastText = text;
-            }
-          }
-
-          if (event.type === "agent_settled") {
-            unsubscribe();
-            resolve();
-          }
-        });
+      run = await runSubagent(session, task, {
+        tag: "sub",
+        forwardTools,
+        timeoutMs: TIMEOUT_MS,
+        ...(signal != null ? { signal } : {}),
       });
-
-      // NOT awaited: `finished` carries the last message out when the run ends.
-      void session.prompt(task).catch((error) => {
-        outcome.stoppedBy = "error";
-        providerError = error instanceof Error ? error.message : String(error);
-        finish();
-      });
-
-      let timeoutTimer: NodeJS.Timeout | undefined;
-      const timeout = new Promise<void>((resolve) => {
-        timeoutTimer = setTimeout(() => {
-          outcome.stoppedBy = "timeout";
-          resolve();
-        }, TIMEOUT_MS);
-      });
-
-      // Removed in the finally: the signal outlives this call.
-      const abort = whenAborted(signal, () => {
-        outcome.stoppedBy = "aborted";
-      });
-
-      try {
-        // Stop arrives via the abort signal and ends the run like the timeout
-        // does.
-        await Promise.race([finished, timeout, abort.aborted]);
-      } finally {
-        if (timeoutTimer != null) clearTimeout(timeoutTimer);
-        abort.dispose();
-      }
     } finally {
       // A capped run can be mid-tool; a stranded child looks cut short.
       forwardTools.settle();
@@ -259,92 +132,51 @@ export async function runDelegatedTask(
   } catch (error) {
     return {
       text: `The delegated task failed: ${error instanceof Error ? error.message : String(error)}`,
-      turns,
+      turns: 0,
       stoppedBy: "error",
     };
   }
 
-  if (outcome.stoppedBy === "error") {
-    return {
-      text: `The delegated task failed: ${providerError.length > 0 ? providerError : "the sub-agent prompt failed"}`,
-      turns,
-      stoppedBy: "error",
-    };
-  }
+  // A hard provider failure (no credit, bad key) is not a retry, so the run
+  // "completes" with nothing said; that is a provider error to the parent.
+  const silentFailure =
+    run.stoppedBy === "completed" &&
+    run.text.trim().length === 0 &&
+    run.providerError.length > 0;
 
-  if (outcome.stoppedBy === "provider-error") {
-    const detail =
-      providerError.length > 0 ? ` ${providerError.slice(0, 200)}` : "";
-
-    return {
-      text: `The model provider kept failing, so the sub-agent stopped.${detail}`,
-      turns,
-      stoppedBy: outcome.stoppedBy,
-    };
-  }
-
-  if (outcome.stoppedBy === "aborted") {
-    return {
-      text: "The delegated task was stopped before it finished.",
-      turns,
-      stoppedBy: "aborted",
-    };
-  }
-
-  if (outcome.stoppedBy === "turn-limit" || outcome.stoppedBy === "timeout") {
-    const why =
-      outcome.stoppedBy === "turn-limit"
-        ? `stopped after ${MAX_TURNS} turns`
-        : `stopped after ${TIMEOUT_MS / 60_000} minutes`;
-    const partial =
-      lastText.trim().length > 0
-        ? `\n\nIts last message was:\n${lastText}`
-        : "";
-
-    // The parent has to know the answer is partial.
-    return {
-      text: `The sub-agent did not finish (it was ${why}). Treat anything below as incomplete.${partial}`,
-      turns,
-      stoppedBy: outcome.stoppedBy,
-    };
-  }
-
-  if (lastText.trim().length === 0) {
-    // A hard provider failure (no credit, bad key) is not a retry, so the run
-    // ends normally with nothing said; the one sentence explaining it is here.
-    if (providerError.length > 0) {
-      return {
-        text: `The sub-agent could not run: ${providerError.slice(0, 300)}`,
-        turns,
-        stoppedBy: "provider-error",
-      };
-    }
-
-    return {
-      text: "The sub-agent finished without producing an answer.",
-      turns,
-      stoppedBy: outcome.stoppedBy,
-    };
-  }
-
-  return { text: lastText, turns, stoppedBy: outcome.stoppedBy };
+  return {
+    text: answerText(run),
+    turns: run.turns,
+    stoppedBy: silentFailure ? "provider-error" : run.stoppedBy,
+  };
 }
 
-/** Message content is either a string or a list of blocks, depending on the provider. */
-function extractText(content: unknown): string {
-  if (typeof content === "string") return content;
+/** What the parent reads: the answer, or plainly why there is none. */
+function answerText(run: SubagentRunResult): string {
+  const { stoppedBy, text, providerError } = run;
 
-  if (Array.isArray(content)) {
-    return content
-      .map((block) => {
-        const typed = block as { type?: string; text?: string };
-
-        return typed?.type === "text" && typeof typed.text === "string"
-          ? typed.text
-          : "";
-      })
-      .join("");
+  switch (stoppedBy) {
+    case "error":
+      return `The delegated task failed: ${providerError.length > 0 ? providerError : "the sub-agent prompt failed"}`;
+    case "provider-error":
+      return `The model provider kept failing, so the sub-agent stopped.${providerError.length > 0 ? ` ${providerError.slice(0, 200)}` : ""}`;
+    case "aborted":
+      return "The delegated task was stopped before it finished.";
+    case "turn-limit":
+    case "timeout": {
+      const why =
+        stoppedBy === "turn-limit"
+          ? `stopped after ${SUBAGENT_TURNS.max} turns`
+          : `stopped after ${TIMEOUT_MS / 60_000} minutes`;
+      // The parent has to know the answer is partial.
+      if (run.closedOut)
+        return `The sub-agent did not finish (it was ${why}). Its closing report follows; treat it as incomplete.\n\n${text}`;
+      return `The sub-agent did not finish (it was ${why}). Treat anything below as incomplete.${text.trim().length > 0 ? `\n\nIts last message was:\n${text}` : ""}`;
+    }
+    case "completed":
+      if (text.trim().length > 0) return text;
+      return providerError.length > 0
+        ? `The sub-agent could not run: ${providerError.slice(0, 300)}`
+        : "The sub-agent finished without producing an answer.";
   }
-
-  return "";
 }
