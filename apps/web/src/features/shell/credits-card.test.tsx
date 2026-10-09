@@ -112,6 +112,15 @@ it("does not show the promo for an account already on a paid tier", async () => 
   );
 });
 
+it("rounds floating point credit balances without changing progress", () => {
+  state.account.credits_used = 95.36000000000001;
+  render(<UpgradePromo />);
+  expect(screen.getByText("4.64 of 100 credits left")).toBeTruthy();
+  expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe(
+    "95.36000000000001"
+  );
+});
+
 it("removes the promo immediately on upgrade and restores it on downgrade", () => {
   const view = render(<UpgradePromo />);
   state.account = { ...state.account, subscription_tier: "pro" };

@@ -43,7 +43,7 @@ export const UpgradePromo = () => {
     element.dataset.slot = "promo-portal";
     return element;
   });
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const prefs = usePrefs();
   const minuteNow = useNow();
   const [deadlineNow, setDeadlineNow] = useState(() => Date.now());
@@ -274,8 +274,12 @@ export const UpgradePromo = () => {
               {remaining != null ? (
                 <p className="text-muted-foreground mt-1 text-xs">
                   {t("creditsCard.progress", {
-                    remaining,
-                    total: account.data?.credits_granted ?? 0,
+                    remaining: new Intl.NumberFormat(i18n.language, {
+                      maximumFractionDigits: 2,
+                    }).format(remaining),
+                    total: new Intl.NumberFormat(i18n.language, {
+                      maximumFractionDigits: 2,
+                    }).format(account.data?.credits_granted ?? 0),
                   })}
                 </p>
               ) : null}
