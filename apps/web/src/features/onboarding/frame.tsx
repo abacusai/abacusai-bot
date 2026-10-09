@@ -120,7 +120,9 @@ export const OnboardingFrame = ({
               .slice(0, 3)}
             onPoke={() => sound.play("pop")}
           />
-          <div className="text-muted-foreground mb-4 flex items-center gap-2 text-sm">
+          <div
+            className={`text-muted-foreground mb-4 flex items-center gap-2 text-sm ${step === "connectors" ? "justify-center" : ""}`}
+          >
             <BotAppMark size={20} />
             {t("shell.appName")}
           </div>
