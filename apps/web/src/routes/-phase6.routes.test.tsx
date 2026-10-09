@@ -154,6 +154,40 @@ it.each([false, true])(
   },
   15000
 );
+it.each(["new-session", "scratch"] as const)(
+  "fresh account preserves the explicit %s destination without creating a default bot",
+  async (choice) => {
+    const seed = defaultSeed();
+    seed.bots = [];
+    seed.routines = [];
+    harness = await renderApp("/onboarding/first-bot", {
+      onboarded: false,
+      signedIn: true,
+      seed,
+    });
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: choice === "scratch" ? "Start from scratch" : "Say hello",
+      })
+    );
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: choice === "scratch" ? "New bot" : "New session",
+      })
+    );
+    await waitFor(() =>
+      expect(harness!.router.state.location.pathname).toBe(
+        choice === "scratch" ? "/bots/new" : "/sessions/new"
+      )
+    );
+    expect(harness.collections.bots.toArray).toHaveLength(0);
+    expect(harness.collections.routines.toArray).toHaveLength(0);
+    expect(
+      harness.calls.filter(([name]) => name === "account.skipOnboarding")
+    ).toHaveLength(1);
+  }
+);
+
 /**
  * `settings.events` streams the test feeds (every follower's), and a host
  * whose sign-in it flips.

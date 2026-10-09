@@ -103,7 +103,7 @@ const OnboardingRoute = () => {
     )
       void go("connect");
   };
-  const finish = (exit: OnboardingExit) =>
+  const finish = (exit: OnboardingExit, createDefaultBot = false) =>
     completeOnboarding(
       {
         db,
@@ -124,6 +124,8 @@ const OnboardingRoute = () => {
             });
         },
         resolveExit: async (exit) => {
+          if (!createDefaultBot && exit.to !== "bot" && exit.to !== "bot-tour")
+            return exit;
           try {
             const snapshot = await transport.client.db.bots.snapshot({});
             if (snapshot.rows.some((bot) => bot.channel == null)) {
@@ -166,7 +168,9 @@ const OnboardingRoute = () => {
   const automaticallySignIn = useEffectEvent(() => {
     if (onboardingStore.state.signIn?.status !== "pending") auth("signin");
   });
-  const completeWebsiteSignup = useEffectEvent(() => finish({ to: "new-bot" }));
+  const completeWebsiteSignup = useEffectEvent(() =>
+    finish({ to: "new-bot" }, true)
+  );
   useEffect(() => {
     // Nothing is known yet: no sign-in starts, nothing completes.
     if (facts.provisional) return;
