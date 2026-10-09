@@ -4027,7 +4027,10 @@
       "desktopInstead": "Get the desktop app instead",
       "signedOut": "Web で AbacusAI Bot を使うにはサインインしてください。",
       "tierRequired": "Web 版 AbacusAI Bot には Pro プランが必要です。",
-      "hostOutdated": "ボットが古くなっています。コンピューターを再起動して更新してください。"
+      "hostOutdated": "ボットが古くなっています。コンピューターを再起動して更新してください。",
+      "accountRefused": "このアカウントでは、このサイトで AbacusAI Bot を使用できません。続けるには別のアカウントに切り替えてください。",
+      "switchAccount": "アカウントを切り替える",
+      "signOutFailed": "ログアウトできませんでした。もう一度お試しください。"
     },
     "files": {
       "download": "ダウンロード",
@@ -4144,6 +4147,11 @@
     "routines": {
       "download": "デスクトップ版をダウンロード",
       "desktopAlternative": "パソコンで AbacusAI Bot を使えます。"
+    },
+    "phoneError": {
+      "title": "問題が発生しました",
+      "connection": "AbacusAI Bot に接続できませんでした。接続を確認してから、もう一度お試しください。",
+      "refused": "このアカウントでは、このサイトで AbacusAI Bot を使用できません。"
     }
   }
 }

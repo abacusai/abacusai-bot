@@ -28,6 +28,7 @@ import {
 } from "#renderer/data/transport/websocket";
 import { followWriteAuthorization } from "#renderer/features/onboarding/gate";
 import {
+  PhoneErrorScreen,
   PhoneWhatsAppApp,
   stashWhatsAppClaim,
   whatsappChatQuery,
@@ -52,6 +53,8 @@ import {
 import {
   installSignOutPeers,
   installSignOutUnmount,
+  signOutWithoutApp,
+  switchAccountWithoutApp,
 } from "#renderer/lib/browser/sign-out";
 import { installUiContinuity } from "#renderer/lib/continuity";
 import { importLegacyDrafts } from "#renderer/lib/continuity/composer-drafts";
@@ -123,37 +126,41 @@ const loadSystem = async (
   return null;
 };
 
-/** Tries at reading the phone's WhatsApp chat, a second apart, before the full app. */
+/** Tries at reading the phone's WhatsApp chat, a second apart. */
 const PHONE_CHAT_ATTEMPTS = 4;
 
 /**
  * A phone where the server offers the bot's WhatsApp number: the bot is
  * WhatsApp there, so only its two screens mount and the host is started and
  * warmed in the background (the server signs it in and wakes it for each
- * message). `false` leaves the boot to the full app.
+ * message). `false` (the server offers no number) leaves the boot to the
+ * full app; a check that cannot complete gets the phone's own error page.
  */
 const mountPhoneApp = async (root: Root): Promise<boolean> => {
   const queryClient = createQueryClient({ showError });
   let chat;
+  let failure: unknown;
   for (let attempt = 1; ; attempt += 1) {
     try {
       chat = await queryClient.fetchQuery(whatsappChatQuery(callApps));
       break;
     } catch (error) {
-      // Signed out, tier, limit: the connect screen says so. Anything else
-      // (an apps server without the number) is the full app's to handle, but
-      // a passing network blip is retried first: falling through puts a
-      // phone in the full app.
-      if (error instanceof ConnectError && error.kind !== "connection")
+      // Signed out, tier, limit: the connect screen says so.
+      if (
+        error instanceof ConnectError &&
+        ["signin", "tier", "limit"].includes(error.kind)
+      )
         throw error;
-      if (attempt >= PHONE_CHAT_ATTEMPTS) {
+      const refused = error instanceof ConnectError && error.kind === "refused";
+      if (refused || attempt >= PHONE_CHAT_ATTEMPTS) {
         console.warn("[phone] WhatsApp chat unavailable", error);
-        return false;
+        failure = error;
+        break;
       }
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   }
-  if (!chat.available) return false;
+  if (chat && !chat.available) return false;
   // For the page's life: the phone app is light only.
   holdTheme("light");
   applyTheme(
@@ -166,6 +173,22 @@ const mountPhoneApp = async (root: Root): Promise<boolean> => {
   await changeLanguage(resolveLanguage("system")).catch((error: unknown) => {
     console.error("[renderer] locale failed; keeping English", error);
   });
+  if (!chat) {
+    const refusal =
+      failure instanceof ConnectError && failure.kind === "refused"
+        ? failure
+        : null;
+    root.render(
+      <PhoneErrorScreen
+        reason={refusal ? "refused" : "connection"}
+        detail={refusal?.detail}
+        retry={refusal ? undefined : () => location.reload()}
+        switchAccount={switchAccountWithoutApp}
+        signOut={() => signOutWithoutApp()}
+      />
+    );
+    return true;
+  }
   void identifyHost()
     .then((identity) => readyHost(identity, () => {}))
     .catch((error: unknown) =>

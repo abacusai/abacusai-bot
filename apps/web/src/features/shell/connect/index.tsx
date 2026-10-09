@@ -1,13 +1,20 @@
 /**
- * The host connection, as the browser shows it (spec 09 D4). Sign-in and tier
- * refusals replace the app (`ConnectScreen`), a full web host the busy page
- * (`LimitScreen`), a failed connection the retry page (`FailedScreen`). A
- * first visit shows the setup checklist (`SetupScreen`) until the host opens;
- * a returning user gets the shell at once with a small pill (`HostStatus`).
+ * The host connection, as the browser shows it (spec 09 D4). Sign-in, tier
+ * and account refusals replace the app (`ConnectScreen`), a full web host
+ * the busy page (`LimitScreen`), a failed connection the retry page
+ * (`FailedScreen`). A first visit shows the setup checklist (`SetupScreen`)
+ * until the host opens; a returning user gets the shell at once with a small
+ * pill (`HostStatus`).
  */
 import { useSelector } from "@tanstack/react-store";
 import { CheckIcon } from "lucide-react";
-import { createContext, use, useEffect, type ComponentProps } from "react";
+import {
+  createContext,
+  use,
+  useEffect,
+  useState,
+  type ComponentProps,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -19,6 +26,7 @@ import { ConnectDialog } from "#renderer/components/form-kit/connect-dialog";
 import { FlowPage, FlowHeader } from "#renderer/components/form-kit/flow-page";
 import { DESKTOP_DOWNLOAD_URL } from "#renderer/lib/abacus-links";
 import type { AvatarMood } from "#renderer/lib/bots/avatar";
+import { switchAccountWithoutApp } from "#renderer/lib/browser/sign-out";
 import { cn } from "#renderer/lib/cn";
 import { webSignInHref } from "#renderer/lib/navigation/web-sign-in";
 import { Button } from "#renderer/ui/button";
@@ -88,6 +96,7 @@ export const failureScreen = (
       return null;
     case "signin":
     case "tier":
+    case "refused":
       return { kind: "refused" };
     case "limit":
       return { kind: "limit" };
@@ -143,13 +152,46 @@ const ConnectAction = ({
         {t("web.connect.restart")}
       </Button>
     );
+  if (kind === "refused") return <SwitchAccount />;
   return null;
+};
+
+/** Another account may be allowed where this one was turned away. */
+const SwitchAccount = () => {
+  const { t } = useTranslation();
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  return (
+    <>
+      <Button
+        size="lg"
+        disabled={busy}
+        onClick={() => {
+          setBusy(true);
+          setFailed(false);
+          void switchAccountWithoutApp().catch((error: unknown) => {
+            console.warn("[connect] sign-out failed", error);
+            setFailed(true);
+            setBusy(false);
+          });
+        }}
+      >
+        {t("web.connect.switchAccount")}
+      </Button>
+      {failed && (
+        <p role="alert" className="text-destructive text-sm">
+          {t("web.connect.signOutFailed")}
+        </p>
+      )}
+    </>
+  );
 };
 
 /** The page's own words for a refusal: an error's text is for the console. */
 const REFUSAL_TEXT: Readonly<Record<string, string>> = {
   signin: "signedOut",
   tier: "tierRequired",
+  refused: "accountRefused",
   version: "hostOutdated",
 };
 
