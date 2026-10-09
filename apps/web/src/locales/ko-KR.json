@@ -1551,7 +1551,7 @@
       "unread_other": "{{count}} new results",
       "notifyDone": "A new result is in.",
       "notifyFailed": "This routine's last run did not finish.",
-      "planRequired": "무료 요금제에는 자동으로 실행되는 루틴이 1개 포함되어 있습니다. 업그레이드하면 더 많이 사용할 수 있습니다.",
+      "planRequired": "루틴은 유료 플랜에서 사용할 수 있습니다.",
       "upgrade": "Upgrade",
       "status": {
         "done": "Done",
@@ -1623,6 +1623,10 @@
       "reads": "계정 읽기 중 하나를 사용할 수 없습니다.",
       "text": "루틴에 이름과 지시를 입력하세요.",
       "other": "이대로는 루틴을 저장할 수 없습니다. 설정을 확인하고 다시 시도하세요."
+    },
+    "upgrade": {
+      "title": "루틴 이용하기",
+      "description": "업그레이드하여 작업을 예약하고 자동화하세요."
     }
   },
   "sessions": {
@@ -4138,8 +4142,8 @@
     },
     "signOutDetail": "This ends your website session and clears this browser's bot data.",
     "routines": {
-      "localAlternative": "Or run local routines on your computer with the desktop app.",
-      "download": "Download desktop"
+      "download": "데스크톱 앱 다운로드",
+      "desktopAlternative": "컴퓨터에서 AbacusAI Bot을 사용하세요."
     }
   }
 }

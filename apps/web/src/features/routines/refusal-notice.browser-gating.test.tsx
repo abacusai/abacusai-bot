@@ -20,13 +20,9 @@ const refusal = {
   upgradeUrl: null,
   field: null,
 };
-it("offers local desktop routines alongside a hosted-plan upgrade", () => {
+it("offers a desktop download alongside a hosted-plan upgrade", () => {
   render(<RoutineRefusalNotice refusal={refusal} />);
-  expect(
-    screen.getByText(
-      "Or run local routines on your computer with the desktop app."
-    )
-  ).toBeTruthy();
+  expect(screen.getByText("Use AbacusAI Bot on your computer.")).toBeTruthy();
   const download = screen.getByRole("button", { name: "Download desktop" });
   expect(download.getAttribute("href")).toBe(DESKTOP_DOWNLOAD_URL);
   fireEvent.click(screen.getByRole("button", { name: "Upgrade" }));

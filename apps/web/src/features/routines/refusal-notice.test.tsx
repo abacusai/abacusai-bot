@@ -21,9 +21,5 @@ it("keeps desktop plan refusals about hosted routines", () => {
   );
   expect(screen.getByRole("button", { name: "Upgrade" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Download desktop" })).toBeNull();
-  expect(
-    screen.queryByText(
-      "Or run local routines on your computer with the desktop app."
-    )
-  ).toBeNull();
+  expect(screen.queryByText("Use AbacusAI Bot on your computer.")).toBeNull();
 });

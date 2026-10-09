@@ -23,7 +23,7 @@ export const RoutineRefusalNotice = ({
       <p>{t(refusal.key)}</p>
       {IS_BROWSER && refusal.upgrade && (
         <p className="text-muted-foreground">
-          {t("web.routines.localAlternative")}
+          {t("web.routines.desktopAlternative")}
         </p>
       )}
       {refusal.upgrade && (

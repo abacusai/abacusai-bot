@@ -1551,7 +1551,7 @@
       "unread_other": "{{count}} new results",
       "notifyDone": "A new result is in.",
       "notifyFailed": "This routine's last run did not finish.",
-      "planRequired": "The free plan includes one routine that runs on its own. Upgrading allows more.",
+      "planRequired": "Routines are available with a paid plan.",
       "upgrade": "Upgrade",
       "status": {
         "done": "Done",
@@ -1623,6 +1623,10 @@
       "reads": "One of the account reads cannot be used.",
       "text": "Give the routine a name and an instruction.",
       "other": "The routine could not be saved as it is. Check its settings and try again."
+    },
+    "upgrade": {
+      "title": "Unlock routines",
+      "description": "Upgrade to schedule tasks and automate your work."
     }
   },
   "sessions": {
@@ -4138,8 +4142,8 @@
     },
     "signOutDetail": "This ends your website session and clears this browser's bot data.",
     "routines": {
-      "localAlternative": "Or run local routines on your computer with the desktop app.",
-      "download": "Download desktop"
+      "download": "Download desktop",
+      "desktopAlternative": "Use AbacusAI Bot on your computer."
     }
   }
 }

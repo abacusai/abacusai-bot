@@ -17,10 +17,13 @@ import {
   WEEKDAYS,
   weekdayName,
 } from "#renderer/lib/bots/schedule";
+import { useContextualUpsell } from "#renderer/lib/contextual-upsell";
+import { creditsTier } from "#renderer/lib/credits";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { ROUTINE_TEMPLATES } from "#renderer/lib/routines/templates";
 import { showError, showInfo } from "#renderer/lib/toast";
+import { useAccount } from "#renderer/lib/use-account";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import {
   AlertDialog,
@@ -46,6 +49,7 @@ import { Input } from "#renderer/ui/input";
 import { NativeSelect, NativeSelectOption } from "#renderer/ui/native-select";
 import { Switch } from "#renderer/ui/switch";
 
+import { RoutineUpgradeActions, RoutineUpgradeAvatar } from "./create-action";
 import { useRoutinesData } from "./data";
 import { browserTimeZone, isHosted } from "./hosted";
 import { readKey } from "./reach-panel";
@@ -772,6 +776,37 @@ export const RoutineDialog = ({
 };
 export const RoutineCreateDialog = () => {
   const router = useRouter();
+  const account = useAccount();
+  const { t } = useTranslation();
+  const navigate = useAppNavigate();
+  useContextualUpsell(creditsTier(account.data) === "free");
+  if (account.isPending) return null;
+  if (creditsTier(account.data) === "free")
+    return (
+      <Dialog
+        open
+        onOpenChange={(open) => {
+          if (!open)
+            void navigate({
+              to: "/routines",
+              replace: true,
+              transition: "none",
+            });
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <RoutineUpgradeAvatar />
+            <DialogTitle>{t("routines.upgrade.title")}</DialogTitle>
+            <DialogDescription>
+              {t("routines.upgrade.description")}
+            </DialogDescription>
+          </DialogHeader>
+          <RoutineUpgradeActions />
+        </DialogContent>
+      </Dialog>
+    );
+
   return (
     <RoutineDialog
       template={
