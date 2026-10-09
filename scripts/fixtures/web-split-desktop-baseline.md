@@ -8,7 +8,42 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `700190fc` (renderer as merged while the guard was not running)
+## Current: `924f48c4` (panel workspace, routines panel, split start-up)
+
+**384 / 7205714 / 2419049.** Records the renderer as merged through `924f48c4`.
+Against `700190fc`: +62 chunks (+19.25%), +705580 bytes (+10.85%), +230916
+gzip bytes (+10.55%). The 1% allowance is unchanged.
+
+Where it grew, measured per merge from clean builds (bytes / gzip bytes):
+
+- The session panel workspace: the dockable panel layout behind the title bar
+  (#223), +400415 / +95020, then the unified workspace tabs (#239), +19764 /
+  +7620 with four fewer chunks.
+- The routines panel and unattended mode (#271): +78896 / +26862, +3 chunks.
+- Start-up and onboarding (#292): React's DOM client and the start-up screens
+  load in their own chunks, +35 chunks for +10814 / +27216.
+- Selectable replies and link previews (#285): +31632 / +12520.
+- Browser attachments that name their source (#303): +26674 / +9613.
+- Shared page spacing and controls (#243): +25877 / +7613.
+- Account controls in the left rail (#286): +25755 / +9377.
+- Session drafts and compact composer attachments (#308): +20810 / +7754.
+- Model setup from the composer picker (#300): +17891 / +6004.
+- Files and workspace selection on the web (#295): +13260 / +4989.
+- The command palette's navigation (#231): +11132 / +4926.
+- Individual avatar faces (#270), with #306/#307, measured together across
+  the lockfile fix (#310) they needed to install: +7095 / +2869.
+- Removing routine approval (#299): -12770 / -3482.
+- Everything else together: +12 chunks, +28335 / +12015.
+
+Measured from clean source-archive builds of each merge (frozen-lockfile
+install, Linux x64, Node 24). The regeneration helper now gives its throwaway
+install a repository of its own, since the install's `prepare` step installs
+git hooks; it still never touches a worktree. This baseline-only commit
+changes no renderer code.
+
+## History
+
+### `700190fc` (renderer as merged while the guard was not running)
 
 **322 / 6500134 / 2188133.** Records the renderer as merged through `700190fc`.
 While the desktop build failed in CI (the notices step needed the Electron
@@ -28,8 +63,6 @@ Where it grew, measured per merge from clean builds (gzip bytes):
 
 Measured from a clean worktree build of `700190fc` (frozen-lockfile install,
 Linux x64, Node 24); this baseline-only commit changes no renderer code.
-
-## History
 
 ### `7926220a` (open-source license browser)
 

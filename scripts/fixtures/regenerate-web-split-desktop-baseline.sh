@@ -16,6 +16,8 @@ deps_dir=$(mktemp -d /tmp/web-split-baseline-deps.XXXXXX)
 git -C "$repo" archive "$source_commit" | tar -x -C "$baseline_dir"
 git -C "$repo" archive "$deps_commit" | tar -x -C "$deps_dir"
 printf '%s  %s\n' "$lock_sha" "$deps_dir/pnpm-lock.yaml" | sha256sum -c -
+# The install's `lefthook install` needs a repository: a throwaway one here.
+git init -q "$deps_dir"
 (cd "$deps_dir" && env -u NODE_ENV -u CI pnpm install --frozen-lockfile && pnpm --filter @abacus-ai/connectors build && env -u ABACUS_RELEASE -u ABACUS_BUILD_COMMIT GIT_DIR="$git_dir" GIT_WORK_TREE="$deps_dir" pnpm --filter @abacus-ai/agent build)
 ln -s "$deps_dir/node_modules" "$baseline_dir/node_modules"
 for workspace in apps/desktop apps/web apps/updater packages/agent packages/contract packages/connectors packages/config packages/test-support; do
