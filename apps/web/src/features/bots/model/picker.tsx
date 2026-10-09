@@ -12,6 +12,7 @@ import { ModelSetupPopover } from "#renderer/components/model-setup/setup-list";
 import { useModelSetup } from "#renderer/components/model-setup/use-model-setup";
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
+import { accountTier } from "#renderer/lib/credits";
 import { useMotionPreference } from "#renderer/lib/motion";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { Button } from "#renderer/ui/button";
@@ -44,9 +45,7 @@ export const useBotModelBinding = (
     models: catalog,
     favorites: prefs.models.favoriteModelIds,
     defaultModel: settings.data?.defaultModel,
-    freeTier:
-      (account.data?.subscription_tier ?? account.data?.plan)?.toLowerCase() ===
-      "free",
+    freeTier: accountTier(account.data) === "free",
     labels: {
       defaultGroup: t("bots.model.default"),
       appDefault: t("bots.form.modelDefault"),

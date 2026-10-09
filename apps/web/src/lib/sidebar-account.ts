@@ -1,12 +1,12 @@
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
 import { isPayingAbacusTier } from "@abacus-ai/contract/models";
 
-import { creditsTier } from "./credits";
+import { accountTier, creditsTier } from "./credits";
 
 export const sidebarAccount = (
   account: AbacusAccountInfo | null | undefined
 ) => {
-  const tier = account?.subscription_tier?.trim().toLowerCase();
+  const tier = accountTier(account);
   const selfServe = isPayingAbacusTier(tier);
   const paid = selfServe || creditsTier(account) === "paid";
   const free = tier === "free";

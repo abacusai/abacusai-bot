@@ -44,3 +44,15 @@ it("hides unknown and signed-out accounts, keeps organization billing conservati
 it("uses the requested Agent destination", () => {
   expect(ABACUS_AGENT_URL).toBe("https://apps.abacus.ai/chatllm");
 });
+it("recognizes exact legacy plans without guessing from display names", () => {
+  expect(sidebarAccount({ plan: " Free " } as AbacusAccountInfo).billing).toBe(
+    "upgrade"
+  );
+  expect(
+    sidebarAccount({ plan: "Max", subscription_tier: " " } as AbacusAccountInfo)
+      .billing
+  ).toBe("manage");
+  expect(
+    sidebarAccount({ plan: "ChatLLM Pro" } as AbacusAccountInfo).billing
+  ).toBeNull();
+});

@@ -36,6 +36,55 @@ const idle: UpdateStatus = {
   criticalUpdate: false,
   failedPhase: null,
 };
+it.each([
+  ["free", 1, "Upgrade"],
+  ["basic", 1, "Manage plan"],
+  ["go", 1, "Manage plan"],
+  ["pro", 1, "Manage plan"],
+  ["max", 1, "Manage plan"],
+  ["pro", 4, null],
+  ["enterprise", 1, null],
+  ["unknown", 1, null],
+])(
+  "account plan action follows billing policy for %s with %s members",
+  async (tier, members, label) => {
+    app = await renderApp("/settings/account", {
+      procedures: {
+        settings: {
+          get: os.settings.get.handler(
+            () => ({ apiKeys: { ABACUS_API_KEY: "test-key" } }) as never
+          ),
+        },
+        account: {
+          abacus: os.account.abacus.handler(
+            () =>
+              ({
+                name: "Billing account",
+                email: "billing@example.com",
+                subscription_tier: tier,
+                plan: tier,
+                org_user_count: members,
+              }) as never
+          ),
+        },
+      },
+    });
+    await screen.findByText("billing@example.com");
+    const plan = within(
+      document.querySelector<HTMLElement>('[data-setting-id="plan"]')!
+    );
+    if (label) expect(plan.getByRole("button", { name: label })).not.toBeNull();
+    else expect(plan.queryByRole("button")).toBeNull();
+    const credits = within(
+      document.querySelector<HTMLElement>('[data-setting-id="credits"]')!
+    );
+    if (label === "Manage plan")
+      expect(
+        credits.getByRole("button", { name: enUS.phase5.topUp })
+      ).not.toBeNull();
+    else expect(credits.queryByRole("button")).toBeNull();
+  }
+);
 it("R5-T27 rejected install exposes Try again while downloaded and releases the pressed state", async () => {
   const install = vi.fn(async () => {
     throw new Error("quitAndInstall rejected");
