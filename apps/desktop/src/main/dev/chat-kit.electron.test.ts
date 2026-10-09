@@ -109,6 +109,11 @@ beforeAll(async () => {
       console.error("CHAT_CONSOLE", JSON.stringify(p.args).slice(0, 3000));
   });
   app.harness("window.focus", {});
+  await app.send("Emulation.setEmulatedMedia", {
+    features: [
+      { name: "prefers-reduced-transparency", value: "no-preference" },
+    ],
+  });
   await app.evaluate(HELPERS);
 }, 600_000);
 
@@ -395,11 +400,15 @@ describe.skipIf(!ready.runnable)("chat kit gates (Electron)", () => {
           const el = (${find})();
           if (el == null) return false;
           const v = window.__chatHelpers.viewport();
-          // Just below the control: it is not the anchor, and the view is
-          // away from the end.
-          const top = el.getBoundingClientRect().bottom - v.getBoundingClientRect().top + v.scrollTop;
+          // Keep this manual-control benchmark outside the automatic pager's
+          // 400px margin, with the anchor on the side the action retains.
+          const content = v.querySelector('[data-slot="message-scroller-content"]').getBoundingClientRect();
+          const box = v.getBoundingClientRect();
+          const top = !/earlier/i.test(el.textContent || "")
+            ? content.bottom - box.top + v.scrollTop - v.clientHeight - 100
+            : content.top - box.top + v.scrollTop + 500;
           v.dispatchEvent(new WheelEvent("wheel", { deltaY: -100, bubbles: true }));
-          v.scrollTop = Math.max(0, Math.min(v.scrollHeight - v.clientHeight - 100, top + 8));
+          v.scrollTop = Math.max(0, Math.min(v.scrollHeight - v.clientHeight - 100, top));
           return true;
         })()`);
         if (!found) break;
@@ -467,15 +476,77 @@ describe.skipIf(!ready.runnable)("chat kit gates (Electron)", () => {
         "tools"
       );
     });
+
+    it("automatic history paging keeps the visible anchor without a button click", async () => {
+      await open("bench-rich");
+      await app.evaluate(`(async () => {
+        const v = window.__chatHelpers.viewport();
+        v.dispatchEvent(new WheelEvent("wheel", { deltaY: -100, bubbles: true }));
+        v.scrollTop = Math.max(0, v.scrollHeight - v.clientHeight - 200);
+        await window.__chatHelpers.settle();
+      })()`);
+      for (let page = 0; page < 40; page += 1) {
+        const more = await bench<boolean>(
+          "await b.session.loadOlder(); return b.session.hostStore.state.hasOlderMessages;"
+        );
+        if (!more) break;
+      }
+      await app.evaluate("window.__chatHelpers.settle()");
+      for (let page = 0; page < 20; page += 1) {
+        const before = await app.evaluate<{
+          first: string;
+          anchor: { offset: number } | null;
+        }>(`(() => {
+          const v = window.__chatHelpers.viewport();
+          const content = v.querySelector('[data-slot="message-scroller-content"]');
+          const first = v.querySelector('[data-message-id]').dataset.messageId;
+          v.dispatchEvent(new WheelEvent("wheel", { deltaY: -100, bubbles: true }));
+          v.scrollTop = content.getBoundingClientRect().top - v.getBoundingClientRect().top + v.scrollTop + 16;
+          return { first, anchor: window.__chatHelpers.anchor() };
+        })()`);
+        expect(
+          before.anchor,
+          `automatic page ${page}: a visible row`
+        ).not.toBeNull();
+        await app.until(
+          `window.__chatHelpers.viewport().querySelector('[data-message-id]').dataset.messageId !== ${JSON.stringify(before.first)}`,
+          5_000,
+          "automatic history expansion"
+        );
+        await app.evaluate(`(async () => {
+          for (let frame = 0; frame < 20; frame += 1)
+            await window.__chatHelpers.frame();
+        })()`);
+        const after = await app.evaluate<number | null>(
+          "window.__chatHelpers.anchorOffset()"
+        );
+        expect(
+          after,
+          `automatic page ${page}: anchor stays mounted`
+        ).not.toBeNull();
+        expect(Math.abs(after! - before.anchor!.offset)).toBeLessThanOrEqual(1);
+        expect((await rows()).total).toBeLessThanOrEqual(MAX_ROWS);
+      }
+    });
   });
 });
 
 describe.skipIf(!ready.runnable)(
   "transcript density and composer inset",
   () => {
-    it("measures tight tool rows, text-only actions and readable padding after composer growth", async () => {
-      await open("bench-stream");
-      await bench(`
+    it.each([
+      { transparency: "no-preference", padding: 96, gap: 80 },
+      { transparency: "reduce", padding: 16, gap: 16 },
+    ])(
+      "measures tool density and composer padding with transparency $transparency",
+      async ({ transparency, padding, gap }) => {
+        await app.send("Emulation.setEmulatedMedia", {
+          features: [
+            { name: "prefers-reduced-transparency", value: transparency },
+          ],
+        });
+        await open("bench-stream");
+        await bench(`
       const messages = Array.from({ length: 20 }, (_, i) => ({
         id: 'density-' + i, role: 'assistant', parts: [
           { type: 'text', content: '  ' },
@@ -487,17 +558,19 @@ describe.skipIf(!ready.runnable)(
       messages.push({ id: 'density-final', role: 'assistant', parts: [{ type: 'text', content: 'All example checks are complete.' }] });
       b.session.hostStore.setState(s => ({ ...s, messages }));
     `);
-      await app.until('document.querySelectorAll("[data-tool]").length === 20');
-      await app.evaluate("window.__chatHelpers.settle()");
-      const density = await app.evaluate<{
-        heights: number[];
-        pitch: number[];
-        actions: number;
-        position: string;
-        opacity: string;
-        hostHeight: number;
-        textHeight: number;
-      }>(`(() => {
+        await app.until(
+          'document.querySelectorAll("[data-tool]").length === 20'
+        );
+        await app.evaluate("window.__chatHelpers.settle()");
+        const density = await app.evaluate<{
+          heights: number[];
+          pitch: number[];
+          actions: number;
+          position: string;
+          opacity: string;
+          hostHeight: number;
+          textHeight: number;
+        }>(`(() => {
       const rows = [...document.querySelectorAll('[data-tool]')].map(e => e.getBoundingClientRect());
       const host = document.querySelector('[data-message-id="density-final"] [data-slot="message-actions-host"]');
       const action = host.querySelector('[data-slot="session-message-actions"]');
@@ -508,46 +581,46 @@ describe.skipIf(!ready.runnable)(
         hostHeight: host.getBoundingClientRect().height, textHeight: host.firstElementChild.getBoundingClientRect().height
       };
     })()`);
-      for (const height of density.heights) expect(height).toBeCloseTo(28, 0);
-      for (const pitch of density.pitch) expect(pitch).toBeCloseTo(30, 0);
-      expect(density.actions).toBe(0);
-      expect(density.position).toBe("absolute");
-      expect(density.opacity).toBe("0");
-      expect(density.hostHeight).toBe(density.textHeight);
-      expect(
-        await app.evaluate<string>(`(() => {
+        for (const height of density.heights) expect(height).toBeCloseTo(28, 0);
+        for (const pitch of density.pitch) expect(pitch).toBeCloseTo(30, 0);
+        expect(density.actions).toBe(0);
+        expect(density.position).toBe("absolute");
+        expect(density.opacity).toBe("0");
+        expect(density.hostHeight).toBe(density.textHeight);
+        expect(
+          await app.evaluate<string>(`(() => {
       const action = document.querySelector('[data-message-id="density-final"] [data-slot="session-message-actions"]');
       action.querySelector('button').focus();
       return getComputedStyle(action).opacity;
     })()`)
-      ).toBe("1");
-      const initial = await app.evaluate<number>(
-        `document.querySelector('[data-slot="composer-dock"]').getBoundingClientRect().height`
-      );
-      await app.evaluate(`(() => {
+        ).toBe("1");
+        const initial = await app.evaluate<number>(
+          `document.querySelector('[data-slot="composer-dock"]').getBoundingClientRect().height`
+        );
+        await app.evaluate(`(() => {
       const input = document.querySelector('textarea');
       Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(input, 'Review the example.\\nCheck accessibility.\\nSummarize the results.\\nInclude any failed checks.');
       input.dispatchEvent(new Event('input', { bubbles: true }));
       const store = window.__chatBench.session.hostStore.state.store;
       store.setState(s => ({ ...s, queue: [{ id: 'example-queue', message: 'Write a short report', waitingFor: 'turn' }] }));
     })()`);
-      await app.until(
-        `document.querySelector('[data-slot="composer-dock"]').getBoundingClientRect().height > ${initial + 20}`
-      );
-      await app.until(`(() => {
+        await app.until(
+          `document.querySelector('[data-slot="composer-dock"]').getBoundingClientRect().height > ${initial + 20}`
+        );
+        await app.until(`(() => {
       const v = window.__chatHelpers.viewport(), d = document.querySelector('[data-slot="composer-dock"]');
       return Math.abs(parseFloat(getComputedStyle(v).getPropertyValue('--transcript-bottom-inset')) - d.getBoundingClientRect().height) < 1;
     })()`);
-      await app.evaluate(`(async () => {
+        await app.evaluate(`(async () => {
       const v = window.__chatHelpers.viewport(); v.scrollTop = v.scrollHeight;
       await window.__chatHelpers.settle();
     })()`);
-      const inset = await app.evaluate<{
-        padding: number;
-        height: number;
-        gap: number;
-        mask: string;
-      }>(`(() => {
+        const inset = await app.evaluate<{
+          padding: number;
+          height: number;
+          gap: number;
+          mask: string;
+        }>(`(() => {
       const v = window.__chatHelpers.viewport(), d = document.querySelector('[data-slot="composer-dock"]').getBoundingClientRect();
       return {
         padding: parseFloat(getComputedStyle(document.querySelector('[data-slot="message-scroller-content"]')).paddingBottom),
@@ -555,9 +628,10 @@ describe.skipIf(!ready.runnable)(
         mask: getComputedStyle(v).maskImage
       };
     })()`);
-      expect(inset.padding - inset.height).toBeCloseTo(96, 0);
-      expect(inset.gap).toBeGreaterThanOrEqual(80);
-      expect(inset.mask).not.toBe("none");
-    });
+        expect(inset.padding - inset.height).toBeCloseTo(padding, 0);
+        expect(inset.gap).toBeGreaterThanOrEqual(gap);
+        expect(inset.mask).not.toBe("none");
+      }
+    );
   }
 );

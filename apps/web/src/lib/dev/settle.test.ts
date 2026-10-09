@@ -91,6 +91,48 @@ describe("navigateAndSettle", () => {
     expect(fade.playState).toBe("finished");
   });
 
+  it("settles a finished animation whose completion promise stays pending", async () => {
+    const fade = animation(Infinity);
+    fade.effect.getComputedTiming = () => ({ endTime: 150 });
+    const doc = {
+      getAnimations: () => [fade],
+      fonts: { ready: Promise.resolve() },
+    } as unknown as Document;
+    const router = fakeRouter();
+    const done = navigateAndSettle("/sessions/new", {
+      router: router as never,
+      doc,
+      frame,
+    });
+    router.resolve("/sessions/new");
+    setTimeout(() => {
+      fade.playState = "finished";
+    }, 20);
+    await done;
+    expect(fade.paused).toBe(false);
+    expect(fade.playState).toBe("finished");
+  }, 1_000);
+
+  it("rejects a finite animation that remains running", async () => {
+    const fade = animation(Infinity);
+    fade.effect.getComputedTiming = () => ({ endTime: 150 });
+    const doc = {
+      getAnimations: () => [fade],
+      fonts: { ready: Promise.resolve() },
+    } as unknown as Document;
+    const router = fakeRouter();
+    const done = navigateAndSettle("/sessions/new", {
+      router: router as never,
+      doc,
+      frame,
+      timeoutMs: 30,
+    });
+    router.resolve("/sessions/new");
+    await expect(done).rejects.toThrow("finite animations did not settle");
+    expect(fade.playState).toBe("running");
+    expect(fade.paused).toBe(false);
+  });
+
   it("does not resolve on a previous route's onResolved", async () => {
     const doc = {
       getAnimations: () => [],
