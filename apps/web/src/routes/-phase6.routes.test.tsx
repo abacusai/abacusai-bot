@@ -109,7 +109,7 @@ it.each([false, true])(
       )
     );
     await screen.findByRole("heading", {
-      name: "Connect with your tools & services.",
+      name: /Connect with your tools & services\.\s*Chat where you work\./,
     });
     const continueConnectors = await screen.findByRole("button", {
       name: "Continue",
