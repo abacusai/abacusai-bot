@@ -146,3 +146,81 @@ describe("ConnectorsStep", () => {
     }
   );
 });
+
+it.each(["connect", "refresh"] as const)(
+  "clears pending state and allows retry after a %s failure",
+  async (failure) => {
+    await initI18n();
+    const error = new Error("Connection failed");
+    const connect = vi.fn(async () => {});
+    const refresh = vi.fn(async () => {});
+    if (failure === "connect") {
+      connect.mockImplementationOnce(() => {
+        throw error;
+      });
+    } else {
+      refresh.mockRejectedValueOnce(error);
+    }
+    const context = ctx({ connect });
+    const errors: unknown[] = [];
+    context.perform = async (action) => {
+      try {
+        await action();
+      } catch (caught) {
+        errors.push(caught);
+      }
+    };
+    render(
+      <ConnectorsStep
+        ctx={context}
+        statuses={{}}
+        refresh={refresh}
+        heading={createRef()}
+      />
+    );
+    const button = screen.getByRole("button", { name: "Connect Gmail" });
+    fireEvent.click(button);
+    await vi.waitFor(() =>
+      expect(button.getAttribute("data-state")).toBe("error")
+    );
+    expect(button.getAttribute("aria-busy")).toBe("false");
+    expect(errors).toEqual([error]);
+    expect(refresh).toHaveBeenCalledTimes(failure === "connect" ? 0 : 1);
+    fireEvent.click(button);
+    await vi.waitFor(() =>
+      expect(button.getAttribute("data-state")).toBe("idle")
+    );
+    expect(connect).toHaveBeenCalledTimes(2);
+    expect(refresh).toHaveBeenCalledTimes(failure === "connect" ? 1 : 2);
+    expect(button.getAttribute("aria-busy")).toBe("false");
+  }
+);
+
+it("keeps connecting visible until the refreshed status resolves", async () => {
+  await initI18n();
+  let finishRefresh!: () => void;
+  const refresh = vi.fn(
+    () =>
+      new Promise<void>((resolve) => {
+        finishRefresh = resolve;
+      })
+  );
+  render(
+    <ConnectorsStep
+      ctx={ctx()}
+      statuses={{}}
+      refresh={refresh}
+      heading={createRef()}
+    />
+  );
+  const button = screen.getByRole("button", { name: "Connect Gmail" });
+  fireEvent.click(button);
+  await vi.waitFor(() => expect(refresh).toHaveBeenCalledOnce());
+  expect(button.getAttribute("aria-busy")).toBe("true");
+  expect(button.getAttribute("data-state")).toBe("connecting");
+  finishRefresh();
+  await vi.waitFor(() =>
+    expect(button.getAttribute("aria-busy")).toBe("false")
+  );
+  expect(button.getAttribute("data-state")).toBe("idle");
+});
