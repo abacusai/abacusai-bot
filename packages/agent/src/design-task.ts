@@ -21,6 +21,7 @@ import type { HostServiceClient } from "./host-services.js";
 import type { AgentEvent } from "./protocol.js";
 import { forwardChildToolEvents } from "./subagent-events.js";
 import {
+  makerVoice,
   runSubagent,
   type SubagentRunResult,
   type SubagentStop,
@@ -336,6 +337,7 @@ export async function runDesignTask(
         ...(signal != null ? { signal } : {}),
         // The finished file is the whole job; a model that keeps going tends
         // to render again or start editing.
+        voice: makerVoice("render_design"),
         isDone: () => done.current != null,
       });
     } finally {

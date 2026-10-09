@@ -358,6 +358,11 @@ export class AgentSessionManagerService {
     return this.sessions.get(sessionId)?.unattended ?? null;
   }
 
+  /** A bot's session (its loop, or a chat with someone it serves), not one the user started. */
+  isBotSession(sessionId: string): boolean {
+    return this.sessions.get(sessionId)?.botOwned === true;
+  }
+
   /** A session that exists to run a routine: minted by a fire, or a bot's routine chat. */
   isRoutineSession(sessionId: string): boolean {
     const record = this.sessions.get(sessionId);

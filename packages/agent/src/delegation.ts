@@ -3,8 +3,12 @@
  * returns only its final answer. Deliberate limits: no nesting (depth is how a
  * budget gets spent in a loop); no permission gate, since the user has no
  * context for its dialogs, so the guardrails extension is the whole policy and
- * is load-bearing; and a turn budget (subagent-run.ts).
+ * is load-bearing; a turn budget (subagent-run.ts); and a scope, the one
+ * folder the task is about (extensions/scope-guard.ts).
  */
+import * as fs from "node:fs";
+import * as os from "node:os";
+
 import {
   createAgentSession,
   DefaultResourceLoader,
@@ -17,6 +21,7 @@ import {
 import { confinedBashTool } from "./backends.js";
 import { excludedTools } from "./excluded-tools.js";
 import guardrails from "./extensions/guardrails.js";
+import { scopeGuard, taskScope } from "./extensions/scope-guard.js";
 import { windowsShellPrompt } from "./posix-shell.js";
 import type { AgentEvent } from "./protocol.js";
 import { forwardChildToolEvents } from "./subagent-events.js";
@@ -26,6 +31,11 @@ import {
   type SubagentRunResult,
   type SubagentStop,
 } from "./subagent-run.js";
+import {
+  isInsideDirectory,
+  realPathOf,
+  resolveInWorkspace,
+} from "./workspace-path.js";
 
 export interface DelegationContext {
   cwd: string;
@@ -47,24 +57,63 @@ export interface DelegationResult {
 }
 
 /**
+ * The folder a task is about, from the parent's `root` (absolute, `~/`, or
+ * relative to its own folder; its own folder when absent). Home itself, or
+ * anything above it, is not a folder a task is about.
+ */
+export function resolveTaskRoot(
+  raw: string | undefined,
+  cwd: string
+): { root: string } | { error: string } {
+  const root = resolveInWorkspace(raw?.trim() || ".", cwd);
+  let isDirectory = false;
+  try {
+    isDirectory = fs.statSync(root).isDirectory();
+  } catch {
+    // Missing: reported below.
+  }
+  if (!isDirectory)
+    return { error: `root ${raw} is not a folder on this machine.` };
+
+  const home = realPathOf(os.homedir()) ?? os.homedir();
+  const real = realPathOf(root) ?? root;
+  // Not for the parent's own default: a session working in home keeps it.
+  if (raw != null && raw.trim() !== "" && isInsideDirectory(home, real))
+    return {
+      error: `root ${raw} is the home folder or above it; name the project folder the task is about.`,
+    };
+
+  return { root };
+}
+
+/**
  * Run one delegated task and return what the sub-agent concluded. Never throws:
  * a failure is reported to the parent as text so it can adapt.
+ *
+ * @param root  The folder the task is about, already through resolveTaskRoot;
+ *              the parent's own folder when absent.
  */
 export async function runDelegatedTask(
   context: DelegationContext,
   task: string,
   emit: (event: AgentEvent) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  root: string = context.cwd
 ): Promise<DelegationResult> {
   const forwardTools = forwardChildToolEvents("sub", emit);
   let run: SubagentRunResult;
+  // Skills are read from where they are installed, outside any task's root.
+  const scope = taskScope(root, task, [
+    context.agentDir,
+    ...context.skillPaths,
+  ]);
 
   // The sub-agent runs commands through the same shell as its parent.
   const shellPrompt = windowsShellPrompt();
 
   try {
     const resourceLoader = new DefaultResourceLoader({
-      cwd: context.cwd,
+      cwd: root,
       agentDir: context.agentDir,
       settingsManager: context.settingsManager,
       additionalSkillPaths: context.skillPaths,
@@ -80,6 +129,11 @@ export async function runDelegatedTask(
           "Your final message is the entire answer the calling agent receives, and it will not see",
           "your intermediate steps. Make it complete and self-contained: state what you found, name",
           "the files and identifiers that matter, and say plainly if you could not determine something.",
+          "",
+          `This task is about ${root}. Work there and with any path the task names. If something`,
+          "you need is not there, report it as missing: do not search the rest of this machine for",
+          "a copy, since another checkout or version would answer a different question. Paths",
+          "elsewhere in the user's home folder are refused.",
         ].join("\n"),
         ...(shellPrompt == null ? [] : [shellPrompt]),
       ],
@@ -90,6 +144,7 @@ export async function runDelegatedTask(
           name: "abacusai-bot-guardrails",
           factory: guardrails as unknown as (pi: ExtensionAPI) => void,
         },
+        { name: "abacusai-bot-scope-guard", factory: scopeGuard(scope) },
       ] satisfies InlineExtension[],
     });
 
@@ -100,10 +155,10 @@ export async function runDelegatedTask(
     // sandbox. A custom tool replaces the built-in by name; it must NOT also
     // go in `excludeTools`, which pi applies to custom tools too; that left
     // a sub-agent with no shell at all wherever a backend was active.
-    const confinedBash = confinedBashTool(context.cwd);
+    const confinedBash = confinedBashTool(root);
 
     const created = await createAgentSession({
-      cwd: context.cwd,
+      cwd: root,
       agentDir: context.agentDir,
       modelRuntime: context.modelRuntime,
       resourceLoader,
@@ -145,7 +200,7 @@ export async function runDelegatedTask(
     run.providerError.length > 0;
 
   return {
-    text: answerText(run),
+    text: answerText(run) + scopeNote(scope.root, scope.refused),
     turns: run.turns,
     stoppedBy: silentFailure ? "provider-error" : run.stoppedBy,
   };
@@ -179,4 +234,20 @@ function answerText(run: SubagentRunResult): string {
         ? `The sub-agent could not run: ${providerError.slice(0, 300)}`
         : "The sub-agent finished without producing an answer.";
   }
+}
+
+/**
+ * What the parent learns when the run reached outside its folder: the
+ * refusals are the one sign that something the task needed is not there.
+ */
+function scopeNote(root: string, refused: string[]): string {
+  if (refused.length === 0) return "";
+  const unique = [...new Set(refused)];
+  const shown = unique.slice(0, 5).join(", ");
+  const more = unique.length > 5 ? ` and ${unique.length - 5} more` : "";
+
+  return (
+    `\n\n(Scope: the sub-agent was kept inside ${root} and refused ${unique.length} ` +
+    `path(s) outside it: ${shown}${more}. If it needed them, they are missing from ${root}.)`
+  );
 }

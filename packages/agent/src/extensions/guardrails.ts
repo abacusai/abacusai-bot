@@ -54,7 +54,7 @@ export const isProtectedPath = (absolutePath: string): boolean => {
 };
 
 /** Shell separators that end one command and start the next. */
-const SEGMENT_SPLIT = /\|\||&&|[;|\n]/;
+export const SEGMENT_SPLIT = /\|\||&&|[;|\n]/;
 
 /**
  * Commands where every operand is written to. `touch`, `chmod` and `chown`
@@ -77,7 +77,7 @@ const WRITES_EVERY_OPERAND = new Set([
 const WRITES_LAST_OPERAND = new Set(["cp", "mv", "install", "ln", "rsync"]);
 
 /** Prefixes that run another command, and are not the write themselves. */
-const WRAPPER_COMMANDS = new Set([
+export const WRAPPER_COMMANDS = new Set([
   "sudo",
   "doas",
   "env",
@@ -97,7 +97,7 @@ const REDIRECT_TARGET_RE = /(?<!>)(?:\d+|&)?>>?\s*(?!&)([^\s;|&()<>]+)/g;
 const unquote = (word: string): string => word.replace(/^["']|["']$/g, "");
 
 /** Words of one segment, with quotes stripped and quoted spaces respected. */
-function shellWords(segment: string): string[] {
+export function shellWords(segment: string): string[] {
   const words = segment.match(/"[^"]*"|'[^']*'|[^\s]+/g) ?? [];
 
   return words.map(unquote).filter((word) => word.length > 0);

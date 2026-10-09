@@ -355,6 +355,7 @@ import {
 import { FeedbackService } from "./services/debug-sync/feedback-service";
 import { LogSyncService } from "./services/debug-sync/log-sync-service";
 import { syncLogFor } from "./services/debug-sync/sync-log";
+import { createUsageReporter } from "./services/debug-sync/usage-report";
 import { DeviceMirrorService } from "./services/device/device-mirror-service";
 import { DeviceService } from "./services/device/device-service";
 import {
@@ -599,6 +600,15 @@ export class ServiceHost {
                 emittedAt: new Date().toISOString(),
               }),
           });
+    // Usage counts for the daily report; the listener never throws.
+    this.onAgentEvent(
+      createUsageReporter(platform === "web-host" ? "web" : "desktop", {
+        laneOf: (id) => this.agentSessionManagerService.laneOf(id),
+        isRoutineSession: (id) =>
+          this.agentSessionManagerService.isRoutineSession(id),
+        isBotSession: (id) => this.agentSessionManagerService.isBotSession(id),
+      })
+    );
   }
 
   /** MCP connects through the web host's own `/mcp/*` routes; null on the desktop. */
