@@ -2,6 +2,8 @@ import {
   parseUnattendedPolicy,
   type UnattendedPolicy,
 } from "@abacus-ai/agent/tool-policy";
+import { visibleUserText } from "@abacus-ai/agent/user-text";
+import type { UserTextTags } from "@abacus-ai/contract/agent-types";
 import { AgentStatus, type AgentMode } from "@abacus-ai/contract/agent-types";
 import { ConflictError } from "@abacus-ai/contract/conflict";
 import type {
@@ -11,6 +13,7 @@ import type {
   SessionOwner,
   WorktreeListItem,
 } from "@abacus-ai/contract/contracts";
+import { generateSessionTitle } from "@abacus-ai/contract/transcript/session-title";
 
 import {
   clearSessionStash,
@@ -23,6 +26,7 @@ type SessionRecord = {
   id: string;
   workspaceId: string;
   label: string;
+  titleInitialized?: boolean;
   conversationId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -518,12 +522,37 @@ export class AgentSessionManagerService {
     return true;
   }
 
+  /** Name a personal session once, from the first accepted human message. */
+  nameFromMessage(
+    sessionId: string,
+    message: string,
+    tags?: UserTextTags
+  ): string | null {
+    const session = this.sessions.get(sessionId);
+    if (
+      session == null ||
+      session.titleInitialized ||
+      session.botOwned ||
+      session.owner != null ||
+      session.routineId != null ||
+      session.editorFor != null ||
+      session.lane != null ||
+      (session.label.trim() !== "" && session.label !== "Untitled")
+    )
+      return null;
+    const title = generateSessionTitle(visibleUserText(message, tags));
+    if (!title) return null;
+    this.updateLabel(session.workspaceId, sessionId, title);
+    return title;
+  }
+
   updateLabel(workspaceId: string, sessionId: string, label: string): boolean {
     const session = this.sessions.get(sessionId);
     if (session == null || session.workspaceId !== workspaceId) {
       return false;
     }
     session.label = label;
+    session.titleInitialized = true;
     session.updatedAt = new Date().toISOString();
     this.persist();
     return true;
