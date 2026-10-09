@@ -1350,7 +1350,15 @@
       "messaging-whatsapp": "Message your bot from WhatsApp.",
       "messaging-telegram": "Message your bot from Telegram.",
       "messaging-discord": "Message your bot from Discord."
-    }
+    },
+    "connectedPromiseAgentLead": "Best-in-class,",
+    "connectedPromiseAgent": "The best-in-class open-source AI agent",
+    "connectedPromiseModelsLead": "Access",
+    "connectedPromiseModels": "Access to free models",
+    "connectedPromiseWorkLead": "Get work done",
+    "connectedPromiseWork": "Gets your work done, and connects to all your services",
+    "connectedPromiseLocalLead": "Runs locally.",
+    "connectedPromiseLocal": "Chat with it wherever you work."
   },
   "referralCard": {
     "cta": "Invite friends",

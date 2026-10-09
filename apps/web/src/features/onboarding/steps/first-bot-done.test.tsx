@@ -1,10 +1,4 @@
-/**
- * The first-bot and done slides (canvas OnboardFirstBot, OnboardDone) wired
- * to the real flow: Say hello keeps the bot and moves to done, Take the
- * tour completes with the tour, Edit completes into the editor, Start from
- * scratch discards and moves on; done messages the bot or starts a session,
- * and offers a new bot when the first one was skipped.
- */
+/** Final setup preserves each explicit product destination. */
 import { fireEvent, render, screen } from "@testing-library/react";
 import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -90,7 +84,10 @@ describe("FirstBotStep", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Say hello" }));
     await vi.waitFor(() =>
-      expect(context.props.navigate).toHaveBeenCalledWith("done")
+      expect(context.props.complete).toHaveBeenCalledWith({
+        to: "bot",
+        botId: bot.id,
+      })
     );
     expect(funnelStep).toHaveBeenCalledWith({ step: "first_bot_kept" });
 
@@ -116,7 +113,7 @@ describe("FirstBotStep", () => {
       expect(funnelStep).toHaveBeenCalledWith({ step: "first_bot_cancelled" })
     );
     expect(discard).toHaveBeenCalledWith({ db: true }, ready("routine").result);
-    expect(context.props.navigate).toHaveBeenLastCalledWith("done");
+    expect(context.props.complete).toHaveBeenLastCalledWith({ to: "new-bot" });
   });
 
   it("reads No check-ins when the routine was not created, and continues once removed", async () => {
@@ -143,7 +140,7 @@ describe("FirstBotStep", () => {
     );
     expect(screen.getByText("This bot was removed")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    expect(context.props.navigate).toHaveBeenCalledWith("done");
+    expect(context.props.complete).toHaveBeenCalledWith({ to: "new-bot" });
   });
 });
 
@@ -155,9 +152,9 @@ describe("DoneStep", () => {
       <DoneStep ctx={context} bot={bot} checkIn={true} heading={createRef()} />
     );
     expect(screen.getByRole("heading").textContent).toBe("You’re set");
-    expect(screen.getByText(/is checking your calendar/).textContent).toContain(
-      bot.name
-    );
+    expect(
+      screen.getByText(/Your weekday check-in is set up/).textContent
+    ).toContain(bot.name);
     fireEvent.click(
       screen.getByRole("button", { name: `Message ${bot.name}` })
     );
@@ -186,7 +183,7 @@ describe("DoneStep", () => {
         heading={createRef()}
       />
     );
-    expect(screen.queryByText(/is checking your calendar/)).toBeNull();
+    expect(screen.queryByText(/Your weekday check-in is set up/)).toBeNull();
     expect(
       screen.getByText("Say hello, or start a session in a folder.")
     ).toBeTruthy();

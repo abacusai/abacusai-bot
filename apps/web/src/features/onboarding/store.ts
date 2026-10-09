@@ -20,7 +20,7 @@ export const startSignIn = (
   transport: Transport,
   intent: "signup" | "signin",
   profileId: string | undefined,
-  settled: (outcome: AbacusAuthOutcome) => void
+  settled: (outcome: AbacusAuthOutcome) => void | Promise<void>
 ): boolean => {
   if (onboardingStore.state.signIn?.status === "pending") return false;
   const attempt: SignInAttempt = {
@@ -39,21 +39,27 @@ export const startSignIn = (
       ok: false,
       error: error instanceof SignInFailure ? error.message : "auth-failed",
     }))
-    .then((outcome) => {
+    .then(async (outcome) => {
+      if (onboardingStore.state.signIn?.id !== attempt.id) return;
+      let settledOutcome = outcome;
+      try {
+        await settled(outcome);
+      } catch {
+        settledOutcome = { ok: false, error: "auth-failed" };
+      }
       if (onboardingStore.state.signIn?.id !== attempt.id) return;
       onboardingStore.setState((state) => ({
         ...state,
         signIn: {
           ...attempt,
-          status: outcome.ok
+          status: settledOutcome.ok
             ? "succeeded"
-            : outcome.cancelled
+            : settledOutcome.cancelled
               ? "cancelled"
               : "failed",
-          outcome,
+          outcome: settledOutcome,
         },
       }));
-      settled(outcome);
     });
   return true;
 };

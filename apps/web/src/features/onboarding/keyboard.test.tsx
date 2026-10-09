@@ -9,7 +9,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { renderApp } from "#renderer/test-support/app-harness";
 
-import { primaryAction } from "./index";
+import * as onboarding from "./index";
+import { primaryAction, type OnboardingPageProps } from "./index";
 import { onboardingStore } from "./store";
 
 let app: Awaited<ReturnType<typeof renderApp>> | undefined;
@@ -94,27 +95,59 @@ describe("onboarding keys", () => {
       expect(app!.router.state.location.pathname).toBe("/onboarding/connectors")
     );
     await screen.findByRole("heading", {
-      name: /Connect with your tools & services/,
+      name: /Chat where you work/,
     });
     await press("Escape");
     await waitFor(() =>
       expect(app!.router.state.location.pathname).toBe("/onboarding/models")
     );
+    await screen.findByRole("heading", { name: "Hook up your AI" });
     await press("ArrowRight");
     await waitFor(() =>
       expect(app!.router.state.location.pathname).toBe("/onboarding/connectors")
     );
+    await screen.findByRole("heading", { name: /Chat where you work/ });
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
     await waitFor(() =>
       expect(app!.router.state.location.pathname).toBe("/onboarding/models")
     );
+    await screen.findByRole("heading", { name: "Hook up your AI" });
     await press("ArrowRight");
     await waitFor(() =>
       expect(app!.router.state.location.pathname).toBe("/onboarding/connectors")
     );
+    await screen.findByRole("heading", { name: /Chat where you work/ });
     await press("ArrowLeft");
     await waitFor(() =>
       expect(app!.router.state.location.pathname).toBe("/onboarding/models")
     );
+  });
+
+  it("ignores the outgoing step's action once the router has moved back", async () => {
+    const OriginalStep = onboarding.OnboardingStepPage;
+    let navigateStep!: OnboardingPageProps["navigate"];
+    const stepSpy = vi
+      .spyOn(onboarding, "OnboardingStepPage")
+      .mockImplementation((props) => {
+        navigateStep = props.navigate;
+        return <OriginalStep {...props} />;
+      });
+    app = await renderApp("/onboarding/connectors", {
+      onboarded: false,
+      signedIn: true,
+    });
+    await screen.findByRole("heading", { name: /Chat where you work/ });
+    const outgoingNavigate = navigateStep;
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    await screen.findByRole("heading", { name: "Hook up your AI" });
+    stepSpy.mockRestore();
+    // Invoke the callback retained by the outgoing connectors step.
+    await act(async () => {
+      await outgoingNavigate("done");
+    });
+    expect(app.router.state.location.pathname).toBe("/onboarding/models");
+    await press("ArrowRight");
+    await screen.findByRole("heading", { name: /Chat where you work/ });
+    expect(app.router.state.location.pathname).toBe("/onboarding/connectors");
   });
 });

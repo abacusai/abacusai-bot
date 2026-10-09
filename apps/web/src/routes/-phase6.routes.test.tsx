@@ -109,7 +109,7 @@ it.each([false, true])(
       )
     );
     await screen.findByRole("heading", {
-      name: "Connect with your tools & services.",
+      name: /Connect with your tools & services\.\s*Chat where you work\./,
     });
     const continueConnectors = await screen.findByRole("button", {
       name: "Continue",
@@ -118,6 +118,7 @@ it.each([false, true])(
       expect((continueConnectors as HTMLButtonElement).disabled).toBe(false)
     );
     fireEvent.click(continueConnectors);
+    fireEvent.click(await screen.findByRole("button", { name: "Say hello" }));
     await waitFor(() =>
       expect(harness!.router.state.location.pathname).toMatch(/^\/bots\/bot-/)
     );
@@ -150,6 +151,142 @@ it.each([false, true])(
   },
   15000
 );
+it.each(["new-session", "scratch"] as const)(
+  "fresh account preserves the explicit %s destination without creating a default bot",
+  async (choice) => {
+    const seed = defaultSeed();
+    seed.bots = [];
+    seed.routines = [];
+    harness = await renderApp("/onboarding/first-bot", {
+      onboarded: false,
+      signedIn: true,
+      seed,
+    });
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: choice === "scratch" ? "Start from scratch" : "New session",
+      })
+    );
+    await waitFor(() =>
+      expect(harness!.router.state.location.pathname).toBe(
+        choice === "scratch" ? "/bots/new" : "/sessions/new"
+      )
+    );
+    expect(harness.collections.bots.toArray).toHaveLength(0);
+    expect(harness.collections.routines.toArray).toHaveLength(0);
+    expect(
+      harness.calls.filter(([name]) => name === "account.skipOnboarding")
+    ).toHaveLength(1);
+  }
+);
+
+it("ready final setup automatically opens the Chief chat without another click", async () => {
+  const seed = defaultSeed();
+  seed.bots = [];
+  seed.routines = [];
+  harness = await renderApp("/onboarding/first-bot", {
+    onboarded: false,
+    signedIn: true,
+    seed,
+  });
+  await screen.findByRole("button", { name: "Say hello" });
+  expect(screen.queryByRole("progressbar")).toBeNull();
+  await waitFor(
+    () =>
+      expect(harness!.router.state.location.pathname).toMatch(/^\/bots\/bot-/),
+    { timeout: 5000 }
+  );
+  expect(harness.collections.bots.toArray).toHaveLength(1);
+  expect(
+    harness.calls.filter(([name]) => name === "account.skipOnboarding")
+  ).toHaveLength(1);
+  await waitFor(() =>
+    expect(
+      harness!.calls.filter(([name]) => name === "bots.openChat")
+    ).toHaveLength(1)
+  );
+});
+
+it("final setup retries a failed completion without duplicating its created Chief", async () => {
+  const seed = defaultSeed();
+  seed.bots = [];
+  seed.routines = [];
+  const os = implement(contract);
+  let attempts = 0;
+  let onboarded = false;
+  harness = await renderApp("/onboarding/first-bot", {
+    onboarded: false,
+    signedIn: true,
+    seed,
+    procedures: {
+      account: {
+        state: os.account.state.handler(() => ({
+          account: null,
+          apps: [],
+          onboarded,
+        })),
+        skipOnboarding: os.account.skipOnboarding.handler(() => {
+          attempts += 1;
+          if (attempts === 1) throw new Error("offline");
+          onboarded = true;
+          return { account: null, apps: [], onboarded };
+        }),
+      },
+    },
+  });
+  const hello = await screen.findByRole("button", { name: "Say hello" });
+  fireEvent.click(hello);
+  await screen.findByRole("alert");
+  expect(harness.router.state.location.pathname).toBe("/onboarding/first-bot");
+  expect(harness.collections.bots.toArray).toHaveLength(1);
+  const botId = harness.collections.bots.toArray[0]!.id;
+  fireEvent.click(hello);
+  fireEvent.click(hello);
+  await waitFor(() =>
+    expect(harness!.router.state.location.pathname).toBe(`/bots/${botId}`)
+  );
+  expect(attempts).toBe(2);
+  expect(harness.collections.bots.toArray).toHaveLength(1);
+});
+
+it("automatically completing a website signup still creates the sponsored Chief", async () => {
+  const seed = defaultSeed();
+  seed.bots = [];
+  seed.routines = [];
+  const os = implement(contract);
+  harness = await renderApp("/onboarding/connected", {
+    onboarded: false,
+    signedIn: true,
+    seed,
+    procedures: {
+      account: {
+        abacus: os.account.abacus.handler(() => ({
+          user_id: "fixture-user",
+          organization_id: null,
+          name: null,
+          email: null,
+          picture: null,
+          organization: null,
+          org_user_count: null,
+          plan: "Free",
+          subscription_tier: "FREE",
+          credits_used: null,
+          credits_granted: null,
+          web_signup: true,
+        })),
+      },
+    },
+  });
+  await waitFor(() =>
+    expect(harness!.router.state.location.pathname).toMatch(/^\/bots\/bot-/)
+  );
+  expect(harness.collections.bots.toArray).toHaveLength(1);
+  expect(harness.collections.bots.toArray[0]).toMatchObject({
+    sponsoredFirstRun: true,
+  });
+  expect(harness.collections.routines.toArray).toHaveLength(0);
+});
+
 /**
  * `settings.events` streams the test feeds (every follower's), and a host
  * whose sign-in it flips.
@@ -298,3 +435,89 @@ it("signing out on the account page reaches the sign-in wall without waiting for
     expect(harness!.router.state.location.pathname).toBe("/onboarding/welcome")
   );
 });
+
+it.each(["whatsapp", "telegram", "discord"] as const)(
+  "pairs %s in an onboarding overlay and returns to the same step on close",
+  async (platform) => {
+    const os = implement(contract);
+    const snapshot = {
+      gatewayEnabled: true,
+      autoApproveTools: false,
+      respondToInbound: false,
+      workspaceId: null,
+      botId: null,
+      approved: [],
+      pending: [],
+      autoReplies: [],
+      platforms: [
+        platform,
+        ...(platform === "discord" ? ["abacus_discord" as const] : []),
+      ].map((id) => ({
+        id,
+        nameKey: id,
+        enabled: false,
+        configured: true,
+        state: "needs_login" as const,
+        fields: [],
+        docsUrl: "",
+        errorMessage: null,
+        pendingCount: 0,
+        sharedLink: { status: "pending" as const },
+      })),
+    };
+    const writes: { platformId: string; enabled?: boolean }[] = [];
+    harness = await renderApp("/onboarding/connectors", {
+      onboarded: false,
+      signedIn: true,
+      procedures: {
+        messaging: {
+          snapshot: os.messaging.snapshot.handler(() => snapshot),
+          updatePlatform: os.messaging.updatePlatform.handler(({ input }) => {
+            writes.push(input);
+            return snapshot;
+          }),
+          showLogin: os.messaging.showLogin.handler(() => {}),
+          pairShared: os.messaging.pairShared.handler(() => snapshot),
+        },
+      },
+    });
+    const names = {
+      whatsapp: "WhatsApp",
+      telegram: "Telegram",
+      discord: "Discord",
+    };
+    const trigger = await screen.findByRole("button", {
+      name: `Connect ${names[platform]}`,
+    });
+    for (let attempt = 0; attempt < 2; attempt++) {
+      fireEvent.click(trigger);
+      const dialog = await screen.findByRole("dialog");
+      expect(harness.router.state.location.pathname).toBe(
+        "/onboarding/connectors"
+      );
+      expect(
+        document.querySelector('[data-onboarding-step="connectors"]')
+      ).not.toBeNull();
+      await waitFor(() =>
+        expect(
+          writes.some((write) => write.platformId === platform && write.enabled)
+        ).toBe(true)
+      );
+      fireEvent.click(within(dialog).getByRole("button", { name: "Done" }));
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      expect(harness.router.state.location.pathname).toBe(
+        "/onboarding/connectors"
+      );
+      await waitFor(() =>
+        expect(
+          writes.some(
+            (write) => write.platformId === platform && write.enabled === false
+          )
+        ).toBe(true)
+      );
+    }
+    expect(
+      harness.collections.prefs.get("app")?.onboardingPairing ?? []
+    ).toEqual([]);
+  }
+);

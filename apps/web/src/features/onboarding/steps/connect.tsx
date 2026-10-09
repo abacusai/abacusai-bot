@@ -69,7 +69,7 @@ export const ConnectStep = ({
       {waiting && (
         <div
           role="status"
-          className="onboarding-card mt-7 flex h-[52px] items-center gap-2.5 rounded-[14px] pr-[18px] pl-3.5"
+          className="onboarding-card mt-7 flex min-h-[60px] w-full max-w-[460px] items-center gap-2.5 rounded-[14px] py-3 pr-[18px] pl-3.5"
         >
           <Spinner className="text-primary size-[18px]" />
           <span className="text-left">

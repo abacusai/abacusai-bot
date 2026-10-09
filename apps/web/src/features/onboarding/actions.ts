@@ -90,15 +90,13 @@ export const completeOnboarding = (
   const existing = completing.get(deps.db);
   if (existing) return existing;
   const run = (async () => {
-    await deps.db.updatePrefs({ onboardingExit: exit });
+    const resolved = (await deps.resolveExit?.(exit)) ?? exit;
+    await deps.db.updatePrefs({ onboardingExit: resolved });
     const account = await deps.transport.client.account.skipOnboarding({});
     deps.queryClient.setQueryData(
       accountStateQuery(deps.transport).queryKey,
       account
     );
-    const resolved = (await deps.resolveExit?.(exit)) ?? exit;
-    if (resolved !== exit)
-      await deps.db.updatePrefs({ onboardingExit: resolved });
     await finishCompletion(deps, resolved);
   })();
   completing.set(deps.db, run);

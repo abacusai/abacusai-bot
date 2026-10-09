@@ -1,12 +1,15 @@
+import { connectorById } from "@abacus-ai/connectors/registry";
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 import { isPayingAbacusTier } from "@abacus-ai/contract/models";
 import { canSignOutOfAbacus } from "@abacus-ai/contract/settings";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
-import { useEffect, useEffectEvent, useRef } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
 import { OnboardingLocalModels } from "#platform/local-models";
 import { createBotFromTemplate } from "#renderer/features/bots/data/bot-actions";
+import { MessagingPlatformDialog } from "#renderer/features/library/messaging";
 import { OnboardingStepPage } from "#renderer/features/onboarding";
 import { completeOnboarding } from "#renderer/features/onboarding/actions";
 import {
@@ -44,6 +47,10 @@ const OnboardingRoute = () => {
   const step = Route.useParams().step as OnboardingStepId;
   const { facts } = Route.useLoaderData();
   const { transport, db, queryClient } = Route.useRouteContext();
+  const [pairing, setPairing] = useState<{
+    id: string;
+    platform: MessagingPlatformId;
+  } | null>(null);
   const router = useRouter();
   const navigate = useAppNavigate();
   const go = (step: OnboardingStepId) =>
@@ -53,6 +60,12 @@ const OnboardingRoute = () => {
       replace: true,
       transition: "none",
     });
+  const navigateStep = (target: OnboardingStepId) => {
+    // The URL can change before the outgoing step and its key handler unmount.
+    if (router.state.location.pathname !== `/onboarding/${step}`)
+      return Promise.resolve();
+    return go(target);
+  };
   const entered = useRef<OnboardingStepId | null>(null);
   useEffect(() => {
     if (entered.current !== step) {
@@ -73,6 +86,7 @@ const OnboardingRoute = () => {
   const auth = (intent: "signup" | "signin", profileId?: string) => {
     if (
       startSignIn(transport, intent, profileId, async (outcome) => {
+        const attemptId = onboardingStore.state.signIn?.id;
         if (step === "models") {
           void queryClient.invalidateQueries();
           return;
@@ -81,16 +95,21 @@ const OnboardingRoute = () => {
           const account = await transport.client.account.abacus({
             refresh: true,
           });
-          await startFirstRunGmail(transport, account?.email ?? "");
+          if (onboardingStore.state.signIn?.id !== attemptId) return;
+          // Optional connector consent must not hold up a completed sign-in.
+          void startFirstRunGmail(transport, account?.email ?? "").catch(
+            () => {}
+          );
           await queryClient.invalidateQueries();
-          void go("connected");
-        } else if (outcome.cancelled) void go("welcome");
+          if (onboardingStore.state.signIn?.id !== attemptId) return;
+          await go("connected");
+        } else if (outcome.cancelled) await go("welcome");
       }) &&
       step !== "models"
     )
       void go("connect");
   };
-  const finish = (exit: OnboardingExit) =>
+  const finish = (exit: OnboardingExit, createDefaultBot = false) =>
     completeOnboarding(
       {
         db,
@@ -111,14 +130,24 @@ const OnboardingRoute = () => {
             });
         },
         resolveExit: async (exit) => {
+          if (!createDefaultBot && exit.to !== "bot" && exit.to !== "bot-tour")
+            return exit;
           try {
             const snapshot = await transport.client.db.bots.snapshot({});
-            if (snapshot.rows.some((bot) => bot.channel == null)) {
+            const existing = snapshot.rows.find((bot) => bot.channel == null);
+            if (existing) {
               await transport.client.system.funnelStep({
                 step: "first_bot_skipped",
                 detail: "has_bots",
               });
-              return exit;
+              return exit.to === "bot" || exit.to === "bot-tour"
+                ? {
+                    ...exit,
+                    botId: snapshot.rows.some((bot) => bot.id === exit.botId)
+                      ? exit.botId
+                      : existing.id,
+                  }
+                : { to: "bot", botId: existing.id };
             }
             const { bot } = await createBotFromTemplate(db, "chief-of-staff", {
               name: t("bots.templates.chief-of-staff.name"),
@@ -133,12 +162,12 @@ const OnboardingRoute = () => {
             return exit.to === "bot" || exit.to === "bot-tour"
               ? { ...exit, botId: bot.id }
               : { to: "bot", botId: bot.id };
-          } catch {
+          } catch (error) {
             await transport.client.system.funnelStep({
               step: "first_bot_skipped",
               detail: "create_failed",
             });
-            return { to: "new-bot" };
+            throw error;
           }
         },
         startTour: () =>
@@ -153,7 +182,9 @@ const OnboardingRoute = () => {
   const automaticallySignIn = useEffectEvent(() => {
     if (onboardingStore.state.signIn?.status !== "pending") auth("signin");
   });
-  const completeWebsiteSignup = useEffectEvent(() => finish({ to: "new-bot" }));
+  const completeWebsiteSignup = useEffectEvent(() =>
+    finish({ to: "new-bot" }, true)
+  );
   useEffect(() => {
     // Nothing is known yet: no sign-in starts, nothing completes.
     if (facts.provisional) return;
@@ -171,25 +202,53 @@ const OnboardingRoute = () => {
     facts.webSignup,
     transport,
   ]);
-  const connect = (id: string) => connectOnboarding(db, transport, id);
+  const connect = async (id: string) => {
+    const entry = connectorById(id);
+    if (IS_ELECTRON && entry?.kind === "messaging") {
+      setPairing({ id, platform: entry.platform });
+      return;
+    }
+    return connectOnboarding(db, transport, id);
+  };
   return (
-    <OnboardingStepPage
-      step={step}
-      facts={facts}
-      transport={transport}
-      navigate={go}
-      signIn={auth}
-      cancelSignIn={() => cancelSignIn(transport)}
-      complete={finish}
-      createFirstBot={create}
-      connect={connect}
-      localModel={
-        <OnboardingLocalModels
-          transport={transport}
-          saved={() => queryClient.invalidateQueries()}
+    <>
+      <OnboardingStepPage
+        step={step}
+        facts={facts}
+        transport={transport}
+        navigate={navigateStep}
+        signIn={auth}
+        cancelSignIn={() => cancelSignIn(transport)}
+        complete={finish}
+        createFirstBot={create}
+        connect={connect}
+        localModel={
+          <OnboardingLocalModels
+            transport={transport}
+            saved={() => queryClient.invalidateQueries()}
+          />
+        }
+      />
+      {pairing && step === "connectors" && (
+        <MessagingPlatformDialog
+          key={pairing.platform}
+          platform={pairing.platform}
+          onClose={async () => {
+            setPairing(null);
+            await queryClient.invalidateQueries({
+              queryKey: transport.orpc.connectors.statuses.queryKey({
+                input: {},
+              }),
+            });
+          }}
+          finalFocus={() =>
+            document.querySelector<HTMLElement>(
+              `[data-connector="${pairing.id}"]`
+            )
+          }
         />
-      }
-    />
+      )}
+    </>
   );
 };
 /**

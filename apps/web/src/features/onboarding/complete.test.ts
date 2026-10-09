@@ -72,10 +72,10 @@ describe("R6-T6 completion persistence boundaries", () => {
       once: true,
     });
   });
-  it("creates the sponsored first bot only after onboarding, once across concurrent completion", async () => {
+  it("creates the sponsored first bot before marking onboarding complete, once across concurrent completion", async () => {
     const { deps, calls } = setup();
     deps.resolveExit = async () => {
-      expect(calls).toEqual(["exit", "account"]);
+      expect(calls).toEqual([]);
       calls.push("first-bot");
       return { to: "bot", botId: "chief" };
     };
@@ -85,6 +85,25 @@ describe("R6-T6 completion persistence boundaries", () => {
     ]);
     expect(calls.filter((call) => call === "first-bot")).toHaveLength(1);
     expect(calls.indexOf("first-bot")).toBeLessThan(calls.indexOf("commit"));
+  });
+  it("keeps setup unfinished after creation fails and allows a single successful retry", async () => {
+    const { deps, calls } = setup();
+    const resolve = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValue({ to: "bot", botId: "chief" });
+    deps.resolveExit = resolve;
+    await expect(
+      completeOnboarding(deps, { to: "bot", botId: "preview" })
+    ).rejects.toThrow("offline");
+    expect(calls).toEqual([]);
+    await Promise.all([
+      completeOnboarding(deps, { to: "bot", botId: "preview" }),
+      completeOnboarding(deps, { to: "bot", botId: "preview" }),
+    ]);
+    expect(resolve).toHaveBeenCalledTimes(2);
+    expect(calls.filter((call) => call === "account")).toHaveLength(1);
+    expect(calls.filter((call) => call === "commit")).toHaveLength(1);
   });
   it("shares the completion tail with a concurrent shell resume", async () => {
     const { deps, calls } = setup();

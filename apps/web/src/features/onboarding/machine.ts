@@ -6,7 +6,9 @@ import {
   type OnboardingStepId,
 } from "#renderer/lib/navigation/areas";
 import { IS_ELECTRON } from "#renderer/lib/platform";
-export const ONBOARDING_FLOW = ONBOARDING_STEPS;
+export const ONBOARDING_FLOW = ONBOARDING_STEPS.filter(
+  (step) => step !== "done"
+);
 export interface FlowFacts {
   signedIn: boolean;
   payingTier: boolean;
@@ -60,9 +62,7 @@ export const next = (
           : "ignore";
     case "connectors":
       return event.type === "next"
-        ? facts.ownsBot
-          ? "done"
-          : "first-bot"
+        ? "first-bot"
         : event.type === "back"
           ? facts.payingTier || !IS_ELECTRON
             ? "connected"
@@ -70,7 +70,7 @@ export const next = (
           : "ignore";
     case "first-bot":
       return event.type === "next"
-        ? "done"
+        ? "complete"
         : event.type === "tour"
           ? "complete"
           : "ignore";
@@ -82,11 +82,13 @@ export const resumeStep = (stored: {
   step: string | null;
   flow: number | null;
 }): OnboardingStepId =>
-  stored.flow === 2 &&
-  stored.step !== "connect" &&
-  ONBOARDING_FLOW.includes(stored.step as OnboardingStepId)
-    ? (stored.step as OnboardingStepId)
-    : "welcome";
+  stored.flow === 2 && stored.step === "done"
+    ? "first-bot"
+    : stored.flow === 2 &&
+        stored.step !== "connect" &&
+        ONBOARDING_FLOW.some((step) => step === stored.step)
+      ? (stored.step as OnboardingStepId)
+      : "welcome";
 export const guardStep = (
   step: OnboardingStepId,
   facts: FlowFacts,
@@ -100,7 +102,7 @@ export const guardStep = (
     return "welcome";
   if (!facts.signedIn && step !== "welcome" && step !== "connect")
     return "welcome";
-  if (step === "first-bot" && facts.ownsBot && !doc.createdBotId) return "done";
+  if (step === "done") return "first-bot";
   return step;
 };
 export const needsOnboarding = (

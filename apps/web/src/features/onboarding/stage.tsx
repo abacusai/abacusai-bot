@@ -2,10 +2,9 @@ import type { BotRow } from "@abacus-ai/contract/contract";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
-import { BootAvatar } from "#renderer/components/boot-avatar";
 import { BotAvatar } from "#renderer/components/bot-avatar";
 import {
-  AVATAR_PALETTE,
+  defaultLook,
   resolveLook,
   type AvatarMood,
   type Look,
@@ -17,7 +16,7 @@ import { Confetti } from "./confetti";
 
 export const PARADE = {
   "parade-blob": {
-    look: { shape: "blob", color: AVATAR_PALETTE[0].hex, accessory: "none" },
+    look: defaultLook("AbacusAI Bot"),
     mood: "thinking",
   },
   "parade-bunny": {
@@ -45,6 +44,8 @@ export interface StageSlot extends Keyframe {
   id: StageAvatarId;
   look: Look;
   size: number;
+  visible: boolean;
+  main: boolean;
 }
 export interface Stage {
   slots: StageSlot[];
@@ -65,42 +66,51 @@ export const CHOREOGRAPHY: Record<OnboardingStepId, readonly Keyframe[]> = {
   ],
   connect: [
     frame(0, 0, 1, "waiting"),
-    frame(-126, -30, 0.64, "thinking"),
-    frame(115, -8, 0.72, "waiting"),
-    frame(64, -64, 0.55, "idle"),
+    frame(-132, -26, 0.4, "thinking"),
+    frame(132, -8, 0.45, "waiting"),
+    frame(64, -58, 0.32, "idle"),
   ],
   connected: [
     frame(0, -8, 1, "happy"),
     frame(-126, -8, 0.8, "excited"),
     frame(123, -12, 0.8, "happy"),
-    frame(62, -64, 0.6, "wink"),
+    frame(62, -68, 0.32, "wink"),
   ],
   models: [
-    frame(-32, 0, 0.9, "focused"),
-    frame(-126, -36, 0.62, "thinking"),
-    frame(79, -8, 0.8, "thinking"),
-    frame(130, -52, 0.55, "focused"),
+    frame(0, 0, 0.68, "idle"),
+    frame(0, 0, 0.32, "thinking"),
+    frame(0, 0, 0.5, "idle"),
+    frame(0, 0, 0.32, "focused"),
   ],
   connectors: [
-    frame(-22, -6, 0.9, "thinking"),
-    frame(-128, -26, 0.7, "happy"),
-    frame(100, -12, 0.8, "wink"),
-    frame(48, -65, 0.6, "focused"),
+    frame(0, 0, 0.68, "idle"),
+    frame(0, 0, 0.32, "happy"),
+    frame(0, 0, 0.5, "idle"),
+    frame(0, 0, 0.32, "focused"),
   ],
   "first-bot": [
-    frame(-119, -28, 0.65, "happy"),
-    frame(-60, -68, 0.55, "wink"),
-    frame(116, -20, 0.7, "love"),
-    frame(0, 8, 1.15, "surprised"),
+    frame(-52, 8, 1.08, "excited"),
+    frame(-55, -65, 0.65, "happy"),
+    frame(130, -56, 0.42, "love"),
+    frame(58, 8, 1, "excited"),
   ],
   done: [
-    frame(-124, -20, 0.72, "excited"),
+    frame(-52, 8, 1.08, "excited"),
     frame(-55, -65, 0.65, "happy"),
-    frame(125, -20, 0.72, "love"),
-    frame(0, 8, 1, "excited"),
+    frame(130, -56, 0.42, "love"),
+    frame(58, 8, 1, "excited"),
   ],
 };
 const IDS = Object.keys(PARADE) as StageAvatarId[];
+const CAST: Record<OnboardingStepId, readonly StageAvatarId[]> = {
+  welcome: IDS,
+  connect: ["parade-blob"],
+  connected: ["parade-blob", "parade-bunny", "parade-cat"],
+  models: ["parade-blob", "parade-cat"],
+  connectors: ["parade-blob", "parade-cat"],
+  "first-bot": ["parade-blob", "first-bot"],
+  done: ["parade-blob", "first-bot"],
+};
 export const botLook = (bot: BotRow): Look =>
   resolveLook({
     name: bot.name,
@@ -112,12 +122,16 @@ export const stageFor = (
   bot: BotRow | null,
   phase: FirstBotPhase
 ): Stage => ({
-  height: 140,
+  height: step === "models" || step === "connectors" ? 56 : 112,
   slots: IDS.map((id, index) => ({
     id,
+    visible: (step !== "done" && step !== "first-bot") || id !== "parade-bunny",
+    main: CAST[step].includes(id),
     ...CHOREOGRAPHY[step][index]!,
+    x: CHOREOGRAPHY[step][index]!.x * 0.85,
+    y: CHOREOGRAPHY[step][index]!.y * 0.6,
     look:
-      id === "first-bot" && bot
+      id === "first-bot" && bot && (step === "first-bot" || step === "done")
         ? botLook(bot)
         : id === "first-bot" && step === "first-bot" && phase === "pending"
           ? { ...PARADE[id].look, shape: "egg" }
@@ -142,6 +156,7 @@ export const OnboardingStage = ({
 }) => {
   const root = useRef<HTMLDivElement>(null);
   const { slots, height } = stageFor(step, bot, phase);
+  const flank = step === "models" || step === "connectors";
   const looks = cast.map(botLook);
   const [reaction, setReaction] = useState<"happy" | "excited" | null>(null);
   useEffect(() => {
@@ -167,7 +182,10 @@ export const OnboardingStage = ({
       ref={root}
       className="onboarding-stage"
       data-avatar-scene
-      style={{ height }}
+      style={{
+        height: `var(${flank ? "--onboarding-dense-stage-height" : "--onboarding-stage-height"}, ${height}px)`,
+      }}
+      data-placement={flank ? "flank" : "above"}
       data-reduced-motion={reduced}
     >
       {slots.map((slot, index) => {
@@ -182,47 +200,37 @@ export const OnboardingStage = ({
             className="onboarding-stage-avatar"
             data-avatar-id={slot.id}
             data-size={slot.size}
+            data-main={slot.main}
             initial={false}
-            style={
-              slot.id === "parade-blob"
-                ? {
-                    transform: `translate(${slot.x}px, ${slot.y}px) scale(${slot.depth})`,
-                  }
-                : undefined
-            }
-            animate={
-              slot.id === "parade-blob"
-                ? undefined
-                : {
-                    transform: `translate(${slot.x}px, ${slot.y}px) scale(${slot.depth})`,
-                    opacity: 1,
-                  }
-            }
+            aria-hidden={!slot.visible}
+            style={{ pointerEvents: slot.visible ? "auto" : "none" }}
+            animate={{
+              transform: slot.visible
+                ? `translate(${slot.x}px, ${slot.y}px) scale(${slot.depth})`
+                : "translate(0px, -40px) scale(0.25)",
+              opacity: slot.visible ? (slot.main ? 1 : 0.58) : 0,
+            }}
             transition={reduced ? { duration: 0 } : springs.surface}
             onPointerDown={() => {
               setReaction("excited");
               onPoke?.();
             }}
           >
-            {slot.id === "parade-blob" ? (
-              <BootAvatar
-                mood={mood}
-                look={look}
-                size={88}
-                brand={false}
-                onPoke={onPoke}
-                locationKey={step}
-                reduce={reduced}
-              />
-            ) : (
-              <BotAvatar
-                look={look}
-                mood={mood}
-                followPointer={false}
-                size={88}
-                animate={!reduced}
-              />
-            )}
+            <BotAvatar
+              look={look}
+              mood={mood}
+              expression={
+                reaction || (!flank && slot.x === 0)
+                  ? undefined
+                  : (flank ? index < 2 : slot.x < 0)
+                    ? "curious"
+                    : "shy"
+              }
+              morph={slot.id === "first-bot" && !reduced}
+              followPointer={false}
+              size={88}
+              animate={!reduced && slot.visible && slot.main && !flank}
+            />
           </motion.div>
         );
       })}
