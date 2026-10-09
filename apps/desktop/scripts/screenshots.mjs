@@ -313,7 +313,7 @@ export const compactGeometry = () => ({
     .map(
       (row) =>
         row.getBoundingClientRect().height +
-        parseFloat(getComputedStyle(row.parentElement).rowGap)
+        parseFloat(getComputedStyle(row.closest(".ui-list")).rowGap)
     ),
 });
 

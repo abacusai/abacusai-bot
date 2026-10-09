@@ -77,7 +77,11 @@ test("a genuinely stalled finite animation rejects instead of allowing a capture
 test("compact capture measures visible row pitch including the actual list gap", () => {
   const parent = { rowGap: "2px" };
   const row = (height, visible = true) => ({
-    parentElement: parent,
+    parentElement: { rowGap: "normal" },
+    closest: (selector) => {
+      assert.equal(selector, ".ui-list");
+      return parent;
+    },
     checkVisibility: () => visible,
     getBoundingClientRect: () => ({ height }),
   });
