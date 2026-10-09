@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Fetch the binaries the agent shells out to: ripgrep and fd everywhere, and
- * on Windows busybox-w32, the POSIX shell its `bash` tool runs under.
+ * Stage the binaries the agent shells out to: download ripgrep and fd, and
+ * verify the committed Windows busybox-w32 shell before copying it.
  *
  * The agent's `grep` and `find` tools spawn `rg` and `fd` and have no JS
  * fallback. Without a shipped copy, the vendored pi agent looks on PATH and
@@ -34,7 +34,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { fetchVerified, run } from "@abacus-ai/config/vendor-fetch";
+import { digest, fetchVerified, run } from "@abacus-ai/config/vendor-fetch";
 
 const RIPGREP_VERSION = "15.2.0";
 // Not 10.4.2, the current release. fd stopped publishing an x86_64-apple-darwin
@@ -140,7 +140,6 @@ const TOOLS = {
   busybox: {
     label: "busybox-w32",
     version: BUSYBOX_VERSION,
-    url: (asset) => `https://frippery.org/files/busybox/${asset}`,
     platforms: ["win32"],
     executable: true,
     targets: {
@@ -244,16 +243,21 @@ async function fetchTool(tool, target, cached) {
   }
 
   console.log(
-    `[tools] downloading ${config.label} ${config.version} for ${target}`
+    `[tools] ${config.executable ? "verifying bundled" : "downloading"} ${config.label} ${config.version} for ${target}`
   );
-  const body = await fetchVerified(
-    config.url(spec.asset),
-    spec.sha256,
-    spec.asset
-  );
+  const body = config.executable
+    ? fs.readFileSync(path.join(ROOT, "assets", "busybox", spec.asset))
+    : await fetchVerified(config.url(spec.asset), spec.sha256, spec.asset);
 
-  // The file is the binary: nothing to extract.
+  // Frippery's download host can deny CI runners. Use the committed upstream
+  // bytes, with the same pin enforced before writing either cache or output.
   if (config.executable) {
+    const got = digest(body);
+    if (got !== spec.sha256) {
+      throw new Error(
+        `${spec.asset}: checksum mismatch\n  expected ${spec.sha256}\n  got      ${got}`
+      );
+    }
     fs.mkdirSync(path.dirname(cached), { recursive: true });
     fs.writeFileSync(cached, body);
     return;
@@ -349,7 +353,7 @@ async function main() {
       continue;
     const cached = path.join(CACHE, target, tool + binaryExt);
 
-    if (!fs.existsSync(cached)) {
+    if (TOOLS[tool].executable || !fs.existsSync(cached)) {
       await fetchTool(tool, target, cached);
     } else {
       console.log(
