@@ -14,6 +14,10 @@ const files = vi.hoisted(() => ({
 vi.mock("#renderer/lib/browser/host-files", () => ({ hostFiles: files }));
 beforeAll(initI18n);
 beforeEach(() => {
+  Object.defineProperty(navigator, "pdfViewerEnabled", {
+    configurable: true,
+    value: true,
+  });
   files.size.mockResolvedValue(1024);
   files.downloadUrl.mockResolvedValue("https://host.test/files?ticket=scoped");
   files.blob.mockResolvedValue(new Blob(["preview"]));
@@ -81,7 +85,7 @@ it("handles binary content detected in a text file", async () => {
   render(<FilePreview path="/w/a.txt" hostRoot="/w" read={read} />);
   await screen.findByText(/Binary file/);
 });
-it("shows truncated text, images, PDF and empty text without a native viewer", async () => {
+it("shows truncated text, images and empty text without a native viewer", async () => {
   const read = readers();
   read.text.mockResolvedValueOnce({ content: "", truncated: true });
   const view = render(
@@ -90,11 +94,49 @@ it("shows truncated text, images, PDF and empty text without a native viewer", a
   await screen.findByRole("note");
   view.rerender(<FilePreview path="/w/image.png" hostRoot="/w" read={read} />);
   await screen.findByRole("img", { name: "image.png" });
-  view.rerender(<FilePreview path="/w/report.pdf" hostRoot="/w" read={read} />);
-  await screen.findByTitle("report.pdf");
-  expect(document.querySelector("iframe")?.getAttribute("sandbox")).toBe(
-    "allow-same-origin"
+  expect(document.querySelector("webview")).toBeNull();
+});
+it("loads PDF bytes into the browser viewer and releases them on close", async () => {
+  const view = render(
+    <FilePreview path="/w/report.pdf" hostRoot="/w" read={readers()} />
   );
+  const frame = await screen.findByTitle("report.pdf");
+  expect(frame.tagName).toBe("IFRAME");
+  expect(frame.hasAttribute("sandbox")).toBe(false);
+  expect(frame.getAttribute("src")).toBe(
+    "blob:http://localhost/file#view=FitH"
+  );
+  expect(files.blob).toHaveBeenCalledWith(
+    { filePath: "/w/report.pdf", hostRoot: "/w" },
+    expect.any(AbortSignal)
+  );
+  const [blob] = vi.mocked(URL.createObjectURL).mock.calls[0]!;
+  expect(blob).toBeInstanceOf(Blob);
+  expect((blob as Blob).type).toBe("application/pdf");
+  view.unmount();
+  expect(URL.revokeObjectURL).toHaveBeenCalledWith(
+    "blob:http://localhost/file"
+  );
+});
+
+it("offers a download when the browser cannot display PDFs inline", async () => {
+  Object.defineProperty(navigator, "pdfViewerEnabled", {
+    configurable: true,
+    value: false,
+  });
+  render(<FilePreview path="/w/report.pdf" hostRoot="/w" read={readers()} />);
+  await screen.findByText("There is no preview for this kind of file here.");
+  expect(document.querySelector("iframe")).toBeNull();
+  expect(files.blob).not.toHaveBeenCalled();
+  const click = vi
+    .spyOn(HTMLAnchorElement.prototype, "click")
+    .mockImplementation(() => {});
+  fireEvent.click(screen.getByRole("button", { name: "Download" }));
+  await waitFor(() => expect(click).toHaveBeenCalled());
+  expect(files.downloadUrl).toHaveBeenCalledWith({
+    filePath: "/w/report.pdf",
+    hostRoot: "/w",
+  });
 });
 it("ignores an old read after selection changes and avoids refetching for inline reader objects", async () => {
   const read = readers();

@@ -115,7 +115,7 @@ export const SessionStartResources = ({
             >
               {t("sessions.dock.closeTab", { name: active.title })}
             </Button>
-            <div className="min-h-0 flex-1">
+            <div className="flex min-h-0 flex-1 flex-col">
               {active.path ? (
                 <SessionFilePreview
                   root={workspace.path}
