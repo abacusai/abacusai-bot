@@ -119,6 +119,8 @@ export class UpdateService {
     Awaited<ReturnType<typeof autoUpdater.checkForUpdates>>
   > | null = null;
   private withdrawnDownloads = new Set<string>();
+  private installRequest: Promise<{ success: boolean; error?: string }> | null =
+    null;
 
   constructor(private readonly deps: UpdateServiceDeps = {}) {
     this.setupAutoUpdater();
@@ -430,10 +432,23 @@ export class UpdateService {
     }
   }
 
-  async installUpdate(options?: {
+  installUpdate(options?: {
     /** Windows: run the NSIS installer with no UI. The auto path sets this. */
     silent?: boolean;
     /** macOS: the window was hidden at restart, so come back hidden. */
+    relaunchHidden?: boolean;
+  }): Promise<{ success: boolean; error?: string }> {
+    if (this.installRequest != null) return this.installRequest;
+    // Admission awaits the feed before setting installing. Join that whole
+    // request so another control cannot start a second ShipIt handoff.
+    this.installRequest = this.installDownloadedUpdate(options).finally(() => {
+      this.installRequest = null;
+    });
+    return this.installRequest;
+  }
+
+  private async installDownloadedUpdate(options?: {
+    silent?: boolean;
     relaunchHidden?: boolean;
   }): Promise<{ success: boolean; error?: string }> {
     try {

@@ -393,7 +393,6 @@ export const ShellLayout = ({
                       content: () => (
                         <Pane>
                           <PaneBoundary resetKey={location.pathname}>
-                            <PageUpdateNotice />
                             {children ?? <Outlet />}
                           </PaneBoundary>
                         </Pane>

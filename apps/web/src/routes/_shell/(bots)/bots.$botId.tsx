@@ -3,6 +3,7 @@ import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
+import { ComposerUpdateNotice } from "#platform/updates";
 import { useBotChatActivity } from "#renderer/features/bots/chat/activity";
 import {
   BotIdentity as BotChatIdentity,
@@ -124,6 +125,7 @@ const ComposedChat = ({
         onOpenFile={slots.openFile}
         composer={slots.composer}
         slots={{
+          composerNotice: <ComposerUpdateNotice />,
           ...slots.chat,
           wallpaper: bot.wallpaper ?? null,
           header: <BotTranscriptIdentity bot={bot} />,

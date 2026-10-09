@@ -293,7 +293,10 @@ export const CriticalUpdateDialog = () => {
   }, [open, remaining, paused, update]);
   if (update.status?.installStalled)
     return (
-      <div role="alert" className="bg-muted border-b px-4 py-2 text-sm">
+      <div
+        role="alert"
+        className="bg-muted fixed inset-x-0 top-(--toolbar-h) z-50 border-b px-4 py-2 text-sm"
+      >
         {t("phase5.updates.stalled")}
       </div>
     );
@@ -352,6 +355,7 @@ export const UpdatePillButton = ({
   onInstall,
   onCheck,
   compact = false,
+  showFailureLabel = true,
 }: {
   status: UpdateStatus | undefined;
   clicked?: boolean;
@@ -359,6 +363,7 @@ export const UpdatePillButton = ({
   onInstall(): void;
   onCheck(): void;
   compact?: boolean;
+  showFailureLabel?: boolean;
 }) => {
   const { t } = useTranslation();
   const phase = installError ? "installFailed" : updatePhase(status, clicked);
@@ -412,7 +417,9 @@ export const UpdatePillButton = ({
         </>
       ) : (
         <>
-          {retry && <span>{t("phase5.updates.downloadFailed")}</span>}
+          {retry && showFailureLabel && (
+            <span>{t("phase5.updates.downloadFailed")}</span>
+          )}
           {t(label, { percent: Math.round(status.progress?.percent ?? 0) })}
         </>
       )}

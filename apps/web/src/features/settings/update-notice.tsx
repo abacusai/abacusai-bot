@@ -73,13 +73,18 @@ export const UpdateNotice = ({
               {t("updateBanner.whatsChanged")}
             </Button>
           )}
-          <UpdatePillButton
-            status={update.status}
-            clicked={update.clicked}
-            installError={update.installError}
-            onInstall={update.install}
-            onCheck={update.check}
-          />
+          {["downloaded", "installFailed", "downloadFailed"].includes(
+            update.phase
+          ) && (
+            <UpdatePillButton
+              showFailureLabel={false}
+              status={update.status}
+              clicked={update.clicked}
+              installError={update.installError}
+              onInstall={update.install}
+              onCheck={update.check}
+            />
+          )}
           {placement === "page" && ready && (
             <Button
               variant="ghost"

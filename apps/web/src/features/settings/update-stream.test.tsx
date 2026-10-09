@@ -241,9 +241,14 @@ it("follows again after every consumer unmounted and one mounts again", async ()
 });
 
 it("disables every update placement while the install request is pending", async () => {
+  let checking!: () => void;
   const fake = setup([
     async function* (signal) {
       yield { ...status("2"), downloaded: true };
+      await new Promise<void>((resolve) => {
+        checking = resolve;
+      });
+      yield { ...status("2"), downloaded: true, checking: true };
       await hold(signal);
     },
   ]);
@@ -263,6 +268,14 @@ it("disables every update placement while the install request is pending", async
       "installing",
     ])
   );
+  act(() => checking());
+  await waitFor(() =>
+    expect(fake.view.result.current[1].status?.checking).toBe(true)
+  );
+  expect(fake.view.result.current.map((update) => update.phase)).toEqual([
+    "installing",
+    "installing",
+  ]);
   act(() => reject(new Error("Install request failed")));
   await waitFor(() =>
     expect(fake.view.result.current[0].phase).toBe("installFailed")
