@@ -155,9 +155,9 @@ describe("DoneStep", () => {
       <DoneStep ctx={context} bot={bot} checkIn={true} heading={createRef()} />
     );
     expect(screen.getByRole("heading").textContent).toBe("You’re set");
-    expect(screen.getByText(/is checking your calendar/).textContent).toContain(
-      bot.name
-    );
+    expect(
+      screen.getByText(/Your weekday check-in is set up/).textContent
+    ).toContain(bot.name);
     fireEvent.click(
       screen.getByRole("button", { name: `Message ${bot.name}` })
     );
@@ -186,7 +186,7 @@ describe("DoneStep", () => {
         heading={createRef()}
       />
     );
-    expect(screen.queryByText(/is checking your calendar/)).toBeNull();
+    expect(screen.queryByText(/Your weekday check-in is set up/)).toBeNull();
     expect(
       screen.getByText("Say hello, or start a session in a folder.")
     ).toBeTruthy();

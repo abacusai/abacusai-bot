@@ -119,6 +119,7 @@
 }
 .onboarding-accent {
   color: var(--primary);
+  font-weight: 650;
 }
 .onboarding-tagline {
   font-size: 13px;
