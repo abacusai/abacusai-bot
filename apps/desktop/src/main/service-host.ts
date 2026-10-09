@@ -654,6 +654,13 @@ export class ServiceHost {
       },
       send: (threadId, command) =>
         this.agentManagerService.sendCommandToSession(threadId, command),
+      acceptedMessage: (threadId, message, tags) => {
+        this.agentSessionManagerService.nameFromMessage(
+          threadId,
+          message,
+          tags
+        );
+      },
       markSent: (threadId) => {
         const runtime = this.agentManagerService.getRuntimeInfo(threadId);
         if (runtime != null)
@@ -3555,6 +3562,11 @@ export class ServiceHost {
       );
       return false;
     }
+    this.agentSessionManagerService.nameFromMessage(
+      request.sessionId,
+      request.message,
+      request.userText
+    );
     if (noticed) environmentNoticeService.markAnnounced(request.sessionId);
     return true;
   }

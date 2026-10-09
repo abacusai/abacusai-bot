@@ -34,7 +34,6 @@ import { EmptyState } from "#renderer/components/empty-state";
 import { MessageFeedback } from "#renderer/components/message-feedback";
 import { chatLoading } from "#renderer/features/chat/runtime/lazy-runtime";
 import { type ChatRuntime } from "#renderer/features/chat/runtime/runtime";
-import { deriveSessionTitle } from "#renderer/features/chat/runtime/send";
 import { SessionChangesCard } from "#renderer/features/sessions/changes/changes-card";
 import { SessionContextTray } from "#renderer/features/sessions/context/context-tray";
 import { SessionPermissionAction } from "#renderer/features/sessions/context/permission-terminal-action";
@@ -470,14 +469,6 @@ const SessionRoute = () => {
                 : workspace?.status === "deleted" || model.missing
                   ? { readOnly: { reason: t("sessions.missing.folder") } }
                   : {}),
-              onFirstSend: (text) => {
-                if (row.label.trim() && row.label !== "Untitled") return;
-                const label = deriveSessionTitle(text);
-                if (label)
-                  collections.sessions.update(sessionId, (d) => {
-                    d.label = label;
-                  });
-              },
             }}
           />
         }

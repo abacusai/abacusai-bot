@@ -27,6 +27,7 @@ class ScriptedAgent {
   runtimeState: { wire: AgentWire; status: AgentSessionStatus } | null = null;
   readonly commands: Command[] = [];
   readonly marks: string[] = [];
+  readonly acceptedMessage = vi.fn();
   runtime = {};
   incarnation = "inc-1";
   starts = 0;
@@ -94,6 +95,7 @@ const host = (agent: ScriptedAgent): AguiRelayHost => ({
   start: (id) => agent.start(id),
   send: (id, command) => agent.send(id, command),
   markSent: () => agent.markSent(),
+  acceptedMessage: (...args) => agent.acceptedMessage(...args),
   markStopped: () => agent.markStopped(),
 });
 
@@ -1509,4 +1511,41 @@ it("does not acknowledge a first message until its receipt persists and retries 
   expect(store.readCurrentFile("s1")?.startAdmission?.messageId).toBe(
     "saved-message"
   );
+});
+
+it("names only admitted user text, preserving its display tags through the RPC", async () => {
+  const { agent, client } = setup();
+  agent.answer = (command) => {
+    const { runId } = command.input as { runId: string };
+    return [
+      ack(
+        runId,
+        runId === "reject"
+          ? "rejected"
+          : runId === "queue"
+            ? "queued"
+            : "started",
+        runId === "queue" ? { entryId: "q" } : {}
+      ),
+    ];
+  };
+  const userText = { visibleFrom: 14 };
+  const messages = [
+    {
+      ...userMessage("user", "quoted text\n\nFix the sidebar"),
+      metadata: { abacus: { userText } },
+    },
+  ];
+  await client.ai.send({ threadId: "s1", runId: "reject", messages });
+  expect(agent.acceptedMessage).not.toHaveBeenCalled();
+  await client.ai.send({ threadId: "s1", runId: "queue", messages });
+  expect(agent.acceptedMessage).toHaveBeenCalledExactlyOnceWith(
+    "s1",
+    "quoted text\n\nFix the sidebar",
+    userText
+  );
+  await client.ai.send({ threadId: "s1", runId: "queue", messages });
+  expect(agent.acceptedMessage).toHaveBeenCalledTimes(1);
+  await client.ai.send({ threadId: "s1", runId: "start", messages });
+  expect(agent.acceptedMessage).toHaveBeenCalledTimes(2);
 });

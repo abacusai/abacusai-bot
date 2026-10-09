@@ -31,6 +31,7 @@
  */
 import * as path from "node:path";
 
+import type { UserTextTags } from "@abacus-ai/contract/agent-types";
 import type {
   AiHydration,
   AiSendAck,
@@ -102,6 +103,12 @@ export interface AguiRelayHost {
   send(threadId: string, command: object): object | null;
   /** Main's turn state: a turn was sent (legacy `sendAgentMessage` does this). */
   markSent(threadId: string): void;
+  /** A human message the agent accepted, including queued admissions. */
+  acceptedMessage?(
+    threadId: string,
+    message: string,
+    tags?: UserTextTags
+  ): void;
   /** Main's turn state: the user stopped the turn (legacy `stopAgentTurn`). */
   markStopped(threadId: string): void;
   /**
@@ -907,6 +914,21 @@ export class AguiRelayService implements AguiSource {
       if (ack.status === "rejected" && thread.activeRunId == null)
         // Nothing runs: undo markSent's pending phase and its watchdog.
         this.#host.markStopped(threadId);
+      if (ack.status === "started" || ack.status === "queued") {
+        const message = input.messages.findLast(
+          (message) => message.role === "user"
+        );
+        if (message != null) {
+          const text = message.parts
+            .flatMap((part) => (part.type === "text" ? [part.content] : []))
+            .join("\n");
+          this.#host.acceptedMessage?.(
+            threadId,
+            text,
+            message.metadata?.abacus?.userText
+          );
+        }
+      }
       return this.#answer(runId, ack, false);
     } catch (error) {
       if (!written) {

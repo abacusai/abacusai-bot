@@ -12,6 +12,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
+import { AgentMode } from "@abacus-ai/contract/agent-types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("electron", () => ({ app: { getPath: () => "/tmp" } }));
@@ -589,5 +590,73 @@ describe("the per-account session stash", () => {
     expect(service.restoreFromStash("acct-1", [])).toBe(1);
     expect(service.list(WORKSPACE)).toEqual([]);
     expect(readStored()).toHaveLength(1);
+  });
+});
+
+describe("automatic personal session names", () => {
+  it("persists the first accepted human message and keeps it after reopening", () => {
+    const session = service.create(WORKSPACE);
+    expect(
+      service.nameFromMessage(
+        session.id,
+        "Please fix @src/main.ts\nthen add tests"
+      )
+    ).toBe("Please fix main.ts then add tests");
+    expect(service.nameFromMessage(session.id, "another request")).toBeNull();
+    const reopened = new AgentSessionManagerService();
+    reopened.initialize([WORKSPACE]);
+    expect(reopened.get(session.id)?.label).toBe(
+      "Please fix main.ts then add tests"
+    );
+    expect(reopened.nameFromMessage(session.id, "new request")).toBeNull();
+  });
+
+  it("keeps custom names, including an explicit Untitled", () => {
+    for (const label of ["My release", "Untitled"]) {
+      const session = service.create(WORKSPACE);
+      service.updateLabel(WORKSPACE, session.id, label);
+      expect(service.nameFromMessage(session.id, "fix the sidebar")).toBeNull();
+      expect(service.get(session.id)?.label).toBe(label);
+    }
+  });
+
+  it("ignores hidden and code-only turns until the user sends visible text", () => {
+    const session = service.create(WORKSPACE);
+    for (const message of [
+      "[first run] do the setup",
+      "<system_reminder>hidden</system_reminder>",
+      '[routine] "Report" fired',
+      "```js\nconst x = 1\n```",
+    ])
+      expect(service.nameFromMessage(session.id, message)).toBeNull();
+    expect(
+      service.nameFromMessage(session.id, "hidden reaction", {
+        operator: { kind: "user-reaction" },
+      })
+    ).toBeNull();
+    expect(
+      service.nameFromMessage(
+        session.id,
+        "quoted text\n\nFix the web sidebar",
+        { visibleFrom: 13 }
+      )
+    ).toBe("Fix the web sidebar");
+  });
+
+  it("excludes app-owned bot, routine and lane sessions", () => {
+    const sessions = [
+      service.create(WORKSPACE, "routine"),
+      service.create(WORKSPACE, null, {
+        botId: "bot",
+        role: "chat",
+        key: null,
+      }),
+      service.editorFor("routine", WORKSPACE),
+      service.laneSession("phone", WORKSPACE, AgentMode.Normal),
+    ];
+    for (const session of sessions) {
+      expect(service.nameFromMessage(session.id, "change the name")).toBeNull();
+      expect(service.get(session.id)?.label).toBe(session.label);
+    }
   });
 });
