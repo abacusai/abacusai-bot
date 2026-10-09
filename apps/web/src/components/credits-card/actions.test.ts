@@ -2,10 +2,36 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import type { Transport } from "#renderer/data/transport";
 
-import { confirmFreePoolModel } from "./actions";
+import { confirmFreePoolModel, creditActionsFor } from "./actions";
 
 afterEach(() => vi.useRealTimers());
 const scope = { workspaceId: "workspace", sessionId: "bot-session" };
+it.each([
+  ["pro", 1, true],
+  ["basic", 1, true],
+  ["go", 1, true],
+  ["max", 1, true],
+  ["pro", 4, false],
+  ["enterprise", 1, false],
+  ["team", 1, false],
+  ["free", 1, false],
+  ["unknown", 1, false],
+])(
+  "top-up eligibility uses actual %s account with %s members",
+  async (tier, members, eligible) => {
+    const transport = {
+      client: {
+        account: {
+          abacus: async () => ({
+            subscription_tier: tier,
+            org_user_count: members,
+          }),
+        },
+      },
+    } as unknown as Transport;
+    expect(await creditActionsFor(transport).canTopUpCredits!()).toBe(eligible);
+  }
+);
 it("waits for the confirmed live model before permitting a dead-turn replay", async () => {
   vi.useFakeTimers();
   const state = vi

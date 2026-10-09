@@ -16,6 +16,7 @@ import { accountIdentity } from "#renderer/lib/account-identity";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
+import { sidebarAccount } from "#renderer/lib/sidebar-account";
 import { showInfo } from "#renderer/lib/toast";
 import { openUpgrade } from "#renderer/lib/upgrade";
 import { useAccount } from "#renderer/lib/use-account";
@@ -32,6 +33,7 @@ export const AccountPage = () => {
   const { transport, credentialsChanged } = context;
   const navigate = useAppNavigate();
   const account = useAccount();
+  const billing = sidebarAccount(account.data).billing;
   const local = useQuery(
     transport.orpc.account.state.queryOptions({ input: {} })
   );
@@ -167,9 +169,16 @@ export const AccountPage = () => {
           id="plan"
           title={account.data.plan ?? t("phase5.unknownPlan")}
         >
-          <Button size="sm" onClick={() => void openUpgrade(transport.client)}>
-            {t("phase5.managePlan")}
-          </Button>
+          {billing && (
+            <Button
+              size="sm"
+              onClick={() => void openUpgrade(transport.client)}
+            >
+              {t(
+                billing === "upgrade" ? "creditsCard.cta" : "phase5.managePlan"
+              )}
+            </Button>
+          )}
         </SettingRow>
         <SettingRow
           id="credits"
@@ -183,17 +192,19 @@ export const AccountPage = () => {
               : undefined
           }
         >
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() =>
-              void platformSystem(transport.client).openExternal({
-                url: ABACUS_BUY_CREDITS_URL,
-              })
-            }
-          >
-            {t("phase5.topUp")}
-          </Button>
+          {billing === "manage" && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() =>
+                void platformSystem(transport.client).openExternal({
+                  url: ABACUS_BUY_CREDITS_URL,
+                })
+              }
+            >
+              {t("phase5.topUp")}
+            </Button>
+          )}
         </SettingRow>
         {vaultUrl && (
           <SettingRow

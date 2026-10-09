@@ -12,17 +12,18 @@ import { Segments } from "#renderer/components/form-kit/controls";
 import { SendError } from "#renderer/components/send-error";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { isRpcError } from "#renderer/data/query-client";
-import { ABACUS_PLAN_URL } from "#renderer/lib/abacus-links";
 import {
   composeSchedule,
   WEEKDAYS,
   weekdayName,
 } from "#renderer/lib/bots/schedule";
+import { useContextualUpsell } from "#renderer/lib/contextual-upsell";
+import { creditsTier } from "#renderer/lib/credits";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { ROUTINE_TEMPLATES } from "#renderer/lib/routines/templates";
 import { showError, showInfo } from "#renderer/lib/toast";
-import { openUpgrade } from "#renderer/lib/upgrade";
+import { useAccount } from "#renderer/lib/use-account";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import {
   AlertDialog,
@@ -48,10 +49,12 @@ import { Input } from "#renderer/ui/input";
 import { NativeSelect, NativeSelectOption } from "#renderer/ui/native-select";
 import { Switch } from "#renderer/ui/switch";
 
+import { RoutineUpgradeActions, RoutineUpgradeAvatar } from "./create-action";
 import { useRoutinesData } from "./data";
 import { browserTimeZone, isHosted } from "./hosted";
 import { readKey } from "./reach-panel";
 import { routineRefusal, type RoutineRefusalText } from "./refusal";
+import { RoutineRefusalNotice } from "./refusal-notice";
 import {
   RoutineFormSchema,
   valuesForRoutine,
@@ -686,25 +689,7 @@ export const RoutineDialog = ({
               </form.Subscribe>
               {remote && <p role="status">{t("phase5.remoteChanged")}</p>}
 
-              {refusal && (
-                <div role="alert" className="flex flex-col gap-1 text-[13px]">
-                  <p>{t(refusal.key)}</p>
-                  {refusal.upgrade && (
-                    <a
-                      href={refusal.upgradeUrl ?? ABACUS_PLAN_URL}
-                      target="_blank"
-                      rel="noopener"
-                      onClick={(event) => {
-                        if (refusal.upgradeUrl != null) return;
-                        event.preventDefault();
-                        void openUpgrade(transport.client);
-                      }}
-                    >
-                      {t("routines.hosted.upgrade")}
-                    </a>
-                  )}
-                </div>
-              )}
+              {refusal && <RoutineRefusalNotice refusal={refusal} />}
               <form.Subscribe selector={(s) => s.errors}>
                 {(errors) =>
                   errors.length > 0 ? (
@@ -791,6 +776,37 @@ export const RoutineDialog = ({
 };
 export const RoutineCreateDialog = () => {
   const router = useRouter();
+  const account = useAccount();
+  const { t } = useTranslation();
+  const navigate = useAppNavigate();
+  useContextualUpsell(creditsTier(account.data) === "free");
+  if (account.isPending) return null;
+  if (creditsTier(account.data) === "free")
+    return (
+      <Dialog
+        open
+        onOpenChange={(open) => {
+          if (!open)
+            void navigate({
+              to: "/routines",
+              replace: true,
+              transition: "none",
+            });
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <RoutineUpgradeAvatar />
+            <DialogTitle>{t("routines.upgrade.title")}</DialogTitle>
+            <DialogDescription>
+              {t("routines.upgrade.description")}
+            </DialogDescription>
+          </DialogHeader>
+          <RoutineUpgradeActions />
+        </DialogContent>
+      </Dialog>
+    );
+
   return (
     <RoutineDialog
       template={
