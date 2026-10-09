@@ -4178,6 +4178,9 @@
       "desktopAlternative": "Use AbacusAI Bot on your computer."
     },
     "phoneError": {
+      "trialEndedTitle": "Your free trial has ended",
+      "trialEnded": "Upgrade to keep using AbacusAI Bot on WhatsApp.",
+      "upgrade": "Upgrade",
       "title": "Something went wrong",
       "connection": "We couldn't reach AbacusAI Bot. Check your connection, then try again.",
       "refused": "This account can't use AbacusAI Bot on this site."

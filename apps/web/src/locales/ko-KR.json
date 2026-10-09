@@ -4178,6 +4178,9 @@
       "desktopAlternative": "컴퓨터에서 AbacusAI Bot을 사용하세요."
     },
     "phoneError": {
+      "trialEndedTitle": "무료 체험이 끝났어요",
+      "trialEnded": "WhatsApp에서 AbacusAI Bot을 계속 사용하려면 업그레이드하세요.",
+      "upgrade": "업그레이드",
       "title": "문제가 발생했습니다",
       "connection": "AbacusAI Bot에 연결할 수 없습니다. 연결을 확인한 후 다시 시도하세요.",
       "refused": "이 계정으로는 이 사이트에서 AbacusAI Bot을 사용할 수 없습니다."

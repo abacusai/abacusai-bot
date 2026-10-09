@@ -434,7 +434,7 @@ export const PhoneErrorScreen = ({
   switchAccount,
   signOut,
 }: {
-  reason: "refused" | "connection";
+  reason: "refused" | "connection" | "trial_ended";
   detail?: string;
   retry?(): void;
   switchAccount(): Promise<void>;
@@ -457,15 +457,33 @@ export const PhoneErrorScreen = ({
       data-slot="phone-error"
       media={<ConnectorMark id="whatsapp" size={56} />}
     >
-      <h1 className="page-title">{t("web.phoneError.title")}</h1>
+      <h1 className="page-title">
+        {t(
+          reason === "trial_ended"
+            ? "web.phoneError.trialEndedTitle"
+            : "web.phoneError.title"
+        )}
+      </h1>
       <p role="alert" className="text-muted-foreground text-sm/relaxed">
         {t(
-          reason === "refused"
-            ? "web.phoneError.refused"
-            : "web.phoneError.connection"
+          reason === "trial_ended"
+            ? "web.phoneError.trialEnded"
+            : reason === "refused"
+              ? "web.phoneError.refused"
+              : "web.phoneError.connection"
         )}
       </p>
-      {detail && (
+      {reason === "trial_ended" && (
+        <Button
+          size="lg"
+          className="self-end max-[799px]:w-full"
+          nativeButton={false}
+          render={<a href={BOT_UPGRADE_PATH} />}
+        >
+          {t("web.phoneError.upgrade")}
+        </Button>
+      )}
+      {reason !== "trial_ended" && detail && (
         <p className="text-muted-foreground text-xs break-words">{detail}</p>
       )}
       {failed && (
@@ -484,7 +502,7 @@ export const PhoneErrorScreen = ({
         </Button>
       )}
       <Button
-        variant={retry ? "ghost" : "default"}
+        variant={retry || reason === "trial_ended" ? "ghost" : "default"}
         size="lg"
         className="self-end max-[799px]:w-full"
         disabled={busy}
@@ -576,6 +594,9 @@ export const PhoneWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
     </FlowPage>
   );
 };
+
+/** The bot's upgrade page on this host: it mints the account's own upgrade link once signed in. */
+const BOT_UPGRADE_PATH = "/bot/link/upgrade";
 
 /** The desktop installer for this computer (the download page picks the build; a Mac's chip is read there). */
 export const DESKTOP_INSTALLER_URL = `${DESKTOP_DOWNLOAD_URL}/download?platform=auto`;
