@@ -140,6 +140,20 @@ interface PhoneMedia {
 /** WhatsApp's longest caption; a longer first bubble goes as its own text. */
 const MAX_CAPTION_CHARS = 1_024;
 
+/** The pairing code the web app pre-types into the greeting; already redeemed, never shown to the model. */
+const PAIRING_CODE_RE = /\(\s*code\s+[A-Za-z0-9_-]+\s*\)/gi;
+/** Longest greeting quoted on the linked turn. */
+const LINKED_GREETING_MAX_CHARS = 500;
+
+/** The words the user linked with, without the pairing code; empty when there were none. */
+function linkedGreeting(text: string | undefined): string {
+  return (text ?? "")
+    .replace(PAIRING_CODE_RE, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, LINKED_GREETING_MAX_CHARS);
+}
+
 /** What the loop is told for one inbox entry, after `notes`, each its own tagged part. */
 function phoneTurnText(entry: PhoneInboxEntry, notes: string[] = []): string {
   // The host's own news is one tagged line, so the agent never takes it for
@@ -152,10 +166,16 @@ function phoneTurnText(entry: PhoneInboxEntry, notes: string[] = []): string {
   if (entry.kind === "event") return [entry.text ?? "", ...notes].join("\n\n");
   if (entry.kind !== "linked") return [...notes, entry.text ?? ""].join("\n\n");
   const name = entry.sender?.trim();
+  // Quoted inside the tagged line: the web app pre-types the greeting in
+  // English, so it must not set the reply language the way the user's own
+  // messages do.
+  const greeting = linkedGreeting(entry.text);
   return [
-    name
-      ? `[linked] The user just connected WhatsApp. Their WhatsApp name: ${name}.`
-      : "[linked] The user just connected WhatsApp.",
+    "[linked] The user just connected WhatsApp." +
+      (name ? ` Their WhatsApp name: ${name}.` : "") +
+      (greeting
+        ? ` Their greeting, in their own words: ${JSON.stringify(greeting)}. Reply to it.`
+        : ""),
     ...notes,
   ].join("\n\n");
 }
