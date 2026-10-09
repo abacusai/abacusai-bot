@@ -108,11 +108,12 @@ const collectionsSettled = (
   ).then(() => undefined);
 
 /** Wait for finite animations; freeze infinite ones at their start. */
-const settleAnimations = async (
-  doc: Document,
-  frame: (callback: () => void) => void,
-  fallbackMs: number,
-  timeoutMs: number
+export const settleAnimations = async (
+  doc: Document = document,
+  frame: (callback: () => void) => void = (callback) =>
+    requestAnimationFrame(() => callback()),
+  fallbackMs: number = FRAME_FALLBACK_MS,
+  timeoutMs: number = 15_000
 ): Promise<void> => {
   const deadline = Date.now() + timeoutMs;
   for (;;) {

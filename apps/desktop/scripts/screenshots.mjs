@@ -432,17 +432,9 @@ const launch = (width, scratch, home, tag = `${width}`, env = {}) => {
 const settle = (cdp, href) =>
   cdp.evaluate(`window.__abacusDev.navigateAndSettle(${JSON.stringify(href)})`);
 
-/** Every finite animation done (dialogs fade in; axe must see the end state). */
-const animationsDone = (cdp) =>
-  cdp.evaluate(`(async () => {
-    for (let round = 0; round < 10; round += 1) {
-      const running = document.getAnimations().filter((a) =>
-        a.playState === "running" && a.effect?.getComputedTiming().endTime !== Infinity);
-      if (running.length === 0) return true;
-      await Promise.all(running.map((a) => a.finished.catch(() => undefined)));
-    }
-    return true;
-  })()`);
+/** Use the same bounded animation settling as the renderer acceptance driver. */
+export const animationsDone = (cdp) =>
+  cdp.evaluate("window.__abacusDev.animationsDone()");
 
 const waitFor = async (cdp, expression, timeoutMs = 5_000) => {
   const deadline = Date.now() + timeoutMs;

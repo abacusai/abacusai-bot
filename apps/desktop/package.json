@@ -33,7 +33,7 @@
     "package:mac": "electron-builder --config electron-builder.yml --mac",
     "package:win": "electron-builder --config electron-builder.yml --win",
     "start": "electron .",
-    "test": "vitest run",
+    "test": "node --test scripts/screenshot-animations.test.mjs && vitest run",
     "test:coverage": "vitest run --coverage",
     "test:unit": "vitest run --project main --project preload",
     "test:watch": "vitest",

@@ -8,11 +8,12 @@ import type { Db } from "#renderer/data/db";
 import { transitionTypeSink } from "#renderer/lib/navigation/transition-types";
 import type { RouterContext } from "#renderer/router";
 
-import { navigateAndSettle } from "./settle";
+import { navigateAndSettle, settleAnimations } from "./settle";
 import { setAuditLayout } from "./workspace-layout";
 
 interface AbacusDev {
   navigateAndSettle(href: string): Promise<void>;
+  animationsDone(): Promise<void>;
   navigate(href: string): Promise<void>;
   /** Invoke real main procedures in dev-only acceptance builds. */
   call(path: string, input?: unknown): Promise<unknown>;
@@ -88,6 +89,7 @@ export const installDevHooks = (router: AnyRouter, db: Db): void => {
         router,
         collections: Object.values(db.collections),
       }),
+    animationsDone: () => settleAnimations(),
     workspaceLayout: setAuditLayout,
     setPinned: (pinned) => db.updatePrefs({ sidebar: { pinned } }),
     setTheme: (theme) => db.updatePrefs({ theme }),
