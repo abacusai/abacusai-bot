@@ -201,7 +201,7 @@ export const UpgradePromo = () => {
     account.data?.credits_granted != null && account.data.credits_used != null
       ? Math.max(0, account.data.credits_granted - account.data.credits_used)
       : null;
-  if (tier !== "free") return createPortal(null, target);
+  if (tier !== "free" || contextualUpsell) return createPortal(null, target);
   return createPortal(
     <AnimatePresence>
       {state ? (

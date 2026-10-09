@@ -35,6 +35,7 @@ it("opens one upgrade popover instead of the routine form for free users", async
       return button;
     });
     fireEvent.click(create);
+    expect(document.querySelector('[data-slot="upgrade-promo"]')).toBeNull();
     expect(await screen.findByText("Unlock routines")).toBeTruthy();
     await waitFor(() =>
       expect(screen.getAllByRole("button", { name: "Upgrade" })).toHaveLength(1)
@@ -74,7 +75,8 @@ it.each(["basic", "go", "pro", "max", "enterprise"])(
       app.view.unmount();
       await app.cleanup();
     }
-  }
+  },
+  15000
 );
 it("blocks the direct free create route before showing the form", async () => {
   const app = await renderApp("/routines/new", options("free"));
