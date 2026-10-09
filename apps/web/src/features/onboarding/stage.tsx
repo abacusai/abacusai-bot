@@ -76,19 +76,19 @@ export const CHOREOGRAPHY: Record<OnboardingStepId, readonly Keyframe[]> = {
     frame(62, -64, 0.6, "wink"),
   ],
   models: [
-    frame(-32, 0, 0.9, "focused"),
+    frame(0, 0, 0.68, "idle"),
     frame(-126, -36, 0.62, "thinking"),
-    frame(79, -8, 0.8, "thinking"),
+    frame(0, 0, 0.5, "idle"),
     frame(130, -52, 0.55, "focused"),
   ],
   connectors: [
-    frame(-22, -6, 0.9, "thinking"),
+    frame(0, 0, 0.68, "idle"),
     frame(-128, -26, 0.7, "happy"),
-    frame(100, -12, 0.8, "wink"),
+    frame(0, 0, 0.5, "idle"),
     frame(48, -65, 0.6, "focused"),
   ],
   "first-bot": [
-    frame(-119, -28, 0.65, "happy"),
+    frame(-119, -28, 0.85, "happy"),
     frame(-60, -68, 0.55, "wink"),
     frame(116, -20, 0.7, "love"),
     frame(0, 8, 1.15, "surprised"),
@@ -105,8 +105,8 @@ const CAST: Record<OnboardingStepId, readonly StageAvatarId[]> = {
   welcome: IDS,
   connect: ["parade-blob"],
   connected: ["parade-blob", "parade-bunny", "parade-cat"],
-  models: [],
-  connectors: [],
+  models: ["parade-blob", "parade-cat"],
+  connectors: ["parade-blob", "parade-cat"],
   "first-bot": ["parade-blob", "first-bot"],
   done: IDS,
 };
@@ -121,7 +121,7 @@ export const stageFor = (
   bot: BotRow | null,
   phase: FirstBotPhase
 ): Stage => ({
-  height: CAST[step].length ? 112 : 0,
+  height: step === "models" || step === "connectors" ? 56 : 112,
   slots: IDS.map((id, index) => ({
     id,
     visible: CAST[step].includes(id),
@@ -154,6 +154,7 @@ export const OnboardingStage = ({
 }) => {
   const root = useRef<HTMLDivElement>(null);
   const { slots, height } = stageFor(step, bot, phase);
+  const flank = step === "models" || step === "connectors";
   const looks = cast.map(botLook);
   const [reaction, setReaction] = useState<"happy" | "excited" | null>(null);
   useEffect(() => {
@@ -180,9 +181,9 @@ export const OnboardingStage = ({
       className="onboarding-stage"
       data-avatar-scene
       style={{
-        height: height ? `var(--onboarding-stage-height, ${height}px)` : 0,
+        height: `var(${flank ? "--onboarding-dense-stage-height" : "--onboarding-stage-height"}, ${height}px)`,
       }}
-      data-retreated={height === 0}
+      data-placement={flank ? "flank" : "above"}
       data-reduced-motion={reduced}
     >
       {slots.map((slot, index) => {
@@ -217,7 +218,7 @@ export const OnboardingStage = ({
               mood={mood}
               followPointer={false}
               size={88}
-              animate={!reduced && slot.visible}
+              animate={!reduced && slot.visible && !flank}
             />
           </motion.div>
         );

@@ -175,12 +175,25 @@ const useWritesSnapshot = () => {
   };
 };
 const PlatformDialog = () => {
-  const { platform } = useMessagingDialog();
-  return platform ? (
-    <PlatformDetail key={platform} platform={platform} />
+  const dialog = useMessagingDialog();
+  return dialog.platform ? (
+    <MessagingPlatformDialog
+      key={dialog.platform}
+      platform={dialog.platform}
+      onClose={dialog.close}
+      finalFocus={dialog.finalFocus}
+    />
   ) : null;
 };
-const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
+export const MessagingPlatformDialog = ({
+  platform,
+  onClose,
+  finalFocus,
+}: {
+  platform: MessagingPlatformId;
+  onClose(): Promise<void>;
+  finalFocus(): HTMLElement | null;
+}) => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
   const cache = useQueryClient();
@@ -191,7 +204,6 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
   const p = s?.platforms.find((p) => p.id === platform);
   const sharedId = SHARED_BOT_PLATFORM_OF[platform];
   const shared = s?.platforms.find((p) => p.id === sharedId);
-  const dialog = useMessagingDialog();
   const flow = useConnectFlow();
   const flowRef = useRef(flow);
   useEffect(() => {
@@ -217,7 +229,7 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
   const close = async () => {
     try {
       await flow.settlePairing(platform);
-      await dialog.close();
+      await onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("phase5.failed"));
     }
@@ -259,7 +271,7 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
     >
       <ConnectDialogContent
         className="sm:max-w-[480px]"
-        finalFocus={dialog.finalFocus}
+        finalFocus={finalFocus}
       >
         <DialogHeader>
           <DialogTitle>
