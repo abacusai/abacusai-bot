@@ -25,7 +25,6 @@ import { notifyConversationQueueCleared } from "./background-processes.js";
  * inside pi's async `tool_call` hook, so the loop is genuinely suspended while
  * the user decides; edit diffs are computed from the on-disk "before".
  */
-import { webHostPrompt } from "./web-host-prompt.js";
 import { timezonePrompt } from "./bot/bot-time-tool.js";
 import { anchorCompactions } from "./compaction-anchor.js";
 import {
@@ -154,6 +153,7 @@ import { ToolHeartbeat } from "./tool-heartbeat.js";
 import { type ToolOrigin, type UnattendedPolicy } from "./tool-policy.js";
 import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "./tools-arrived.js";
 import { turnUsage, type TurnUsage } from "./turn-usage.js";
+import { webHostPrompt } from "./web-host-prompt.js";
 import { desktopXSearchAvailable, searchAvailable } from "./web/search.js";
 import webTools from "./web/tools.js";
 import { isInsideDirectory } from "./workspace-path.js";
