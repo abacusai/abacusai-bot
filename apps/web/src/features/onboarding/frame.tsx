@@ -1,7 +1,13 @@
 import { useSelector } from "@tanstack/react-store";
 import { ChevronLeft, Volume2, VolumeX } from "lucide-react";
 import { LayoutGroup, motion } from "motion/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
@@ -70,6 +76,10 @@ export const OnboardingFrame = ({
   });
   if (transition.step !== step)
     setTransition({ step, direction: stepDirection(transition.step, step) });
+  const frame = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (frame.current) frame.current.scrollTop = 0;
+  }, [step]);
   const sound = useOnboardingSound();
   const previousStep = useRef(step);
   const db = useOptionalDb();
@@ -91,7 +101,7 @@ export const OnboardingFrame = ({
         ? "pending"
         : "none";
   return (
-    <div className="onboarding-frame" data-reduced-motion={reduce}>
+    <div ref={frame} className="onboarding-frame" data-reduced-motion={reduce}>
       <OnboardingProgress step={step} />
       <Button
         variant="ghost"
