@@ -14,6 +14,21 @@ const account = (tier: string, used = 10, granted = 10) =>
     credits_granted: granted,
   }) as AbacusAccountInfo;
 describe("R5-T23 credits guards", () => {
+  it("uses an exact legacy plan only when the subscription tier is absent", () => {
+    expect(creditsTier({ plan: " Free " } as AbacusAccountInfo)).toBe("free");
+    expect(
+      creditsTier({ plan: "Pro", subscription_tier: " " } as AbacusAccountInfo)
+    ).toBe("paid");
+    expect(creditsTier({ plan: "ChatLLM Pro" } as AbacusAccountInfo)).toBe(
+      "unknown"
+    );
+    expect(
+      creditsTier({
+        plan: "Pro",
+        subscription_tier: "future-plan",
+      } as AbacusAccountInfo)
+    ).toBe("unknown");
+  });
   it.each(["go", "max", " Go ", "MAX"])(
     "recognizes the paying %s plan",
     (tier) => {

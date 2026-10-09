@@ -59,6 +59,7 @@ it.each([
           abacus: os.account.abacus.handler(
             () =>
               ({
+                name: "Billing account",
                 email: "billing@example.com",
                 subscription_tier: tier,
                 plan: tier,
