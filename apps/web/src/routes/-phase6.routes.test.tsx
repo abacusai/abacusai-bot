@@ -188,6 +188,44 @@ it.each(["new-session", "scratch"] as const)(
   }
 );
 
+it("automatically completing a website signup still creates the sponsored Chief", async () => {
+  const seed = defaultSeed();
+  seed.bots = [];
+  seed.routines = [];
+  const os = implement(contract);
+  harness = await renderApp("/onboarding/connected", {
+    onboarded: false,
+    signedIn: true,
+    seed,
+    procedures: {
+      account: {
+        abacus: os.account.abacus.handler(() => ({
+          user_id: "fixture-user",
+          organization_id: null,
+          name: null,
+          email: null,
+          picture: null,
+          organization: null,
+          org_user_count: null,
+          plan: "Free",
+          subscription_tier: "FREE",
+          credits_used: null,
+          credits_granted: null,
+          web_signup: true,
+        })),
+      },
+    },
+  });
+  await waitFor(() =>
+    expect(harness!.router.state.location.pathname).toMatch(/^\/bots\/bot-/)
+  );
+  expect(harness.collections.bots.toArray).toHaveLength(1);
+  expect(harness.collections.bots.toArray[0]).toMatchObject({
+    sponsoredFirstRun: true,
+  });
+  expect(harness.collections.routines.toArray).toHaveLength(0);
+});
+
 /**
  * `settings.events` streams the test feeds (every follower's), and a host
  * whose sign-in it flips.
