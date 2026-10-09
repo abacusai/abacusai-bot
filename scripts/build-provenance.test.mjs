@@ -20,10 +20,16 @@ test("CI and release require a pinned checkout commit", () => {
     head
   );
 });
-test("both renderer and agent cache keys include the pinned commit and build flags", () => {
+test("renderer and agent cache keys include the pinned commit and build flags", () => {
   const config = JSON.parse(
     fs.readFileSync(new URL("../turbo.json", import.meta.url))
   );
-  for (const task of ["@abacus-ai/desktop#build", "@abacus-ai/agent#build"])
-    assert.ok(config.tasks[task].env.includes("ABACUS_BUILD_COMMIT"));
+  for (const task of [
+    "@abacus-ai/desktop#build",
+    "@abacus-ai/web#build",
+    "@abacus-ai/agent#build",
+  ]) {
+    assert.ok(config.tasks[task].env.includes("ABACUS_BUILD_COMMIT"), task);
+    assert.ok(config.tasks[task].env.includes("ABACUS_RELEASE"), task);
+  }
 });
