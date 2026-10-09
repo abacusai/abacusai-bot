@@ -8,7 +8,7 @@ import type { UpdateStatus } from "@abacus-ai/contract/update";
 import { ORPCError } from "@orpc/client";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
@@ -80,6 +80,7 @@ const setup = (opens: Open[], queryClient = createQueryClient()) => {
     queryClient,
     wrapper,
     events: transport.client.update.events,
+    install: transport.client.update.install,
     version: () => view.result.current[0].status?.updateInfo?.version,
     move: (state: string, generation = transport.generation) => {
       transport.state = state;
@@ -237,4 +238,67 @@ it("follows again after every consumer unmounted and one mounts again", async ()
     expect(again.result.current.status?.updateInfo?.version).toBe("2")
   );
   expect(fake.events).toHaveBeenCalledTimes(2);
+});
+
+it("disables every update placement while the install request is pending", async () => {
+  let checking!: () => void;
+  const fake = setup([
+    async function* (signal) {
+      yield { ...status("2"), downloaded: true };
+      await new Promise<void>((resolve) => {
+        checking = resolve;
+      });
+      yield { ...status("2"), downloaded: true, checking: true };
+      await hold(signal);
+    },
+  ]);
+  unmount = fake.view.unmount;
+  await waitFor(() => expect(fake.version()).toBe("2"));
+  let reject!: (error: Error) => void;
+  fake.install.mockImplementation(
+    () =>
+      new Promise((_resolve, fail) => {
+        reject = fail;
+      })
+  );
+  act(() => fake.view.result.current[0].install());
+  await waitFor(() =>
+    expect(fake.view.result.current.map((update) => update.phase)).toEqual([
+      "installing",
+      "installing",
+    ])
+  );
+  act(() => checking());
+  await waitFor(() =>
+    expect(fake.view.result.current[1].status?.checking).toBe(true)
+  );
+  expect(fake.view.result.current.map((update) => update.phase)).toEqual([
+    "installing",
+    "installing",
+  ]);
+  act(() => reject(new Error("Install request failed")));
+  await waitFor(() =>
+    expect(fake.view.result.current[0].phase).toBe("installFailed")
+  );
+  expect(fake.view.result.current[1].clicked).toBe(false);
+  expect(fake.events).toHaveBeenCalledTimes(1);
+});
+
+it("shows a new handoff error without re-enabling install while the native watchdog runs", async () => {
+  const fake = setup([
+    async function* (signal) {
+      yield {
+        ...status("2"),
+        downloaded: true,
+        installing: true,
+        error: "signature mismatch",
+        failedPhase: "install",
+      };
+      await hold(signal);
+    },
+  ]);
+  unmount = fake.view.unmount;
+  await waitFor(() => expect(fake.version()).toBe("2"));
+  expect(fake.view.result.current[0].status?.error).toBe("signature mismatch");
+  expect(fake.view.result.current[0].phase).toBe("installing");
 });

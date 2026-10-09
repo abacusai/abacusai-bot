@@ -2,6 +2,7 @@ import { BotId, SessionId } from "@abacus-ai/contract/contract/ids";
 import { createFileRoute } from "@tanstack/react-router";
 import * as v from "valibot";
 
+import { ComposerUpdateNotice } from "#platform/updates";
 import { useBotChatActivity } from "#renderer/features/bots/chat/activity";
 import {
   BotGone,
@@ -76,7 +77,11 @@ const Sender = ({
         runtime={chat}
         workspaceRoot={slots.workspaceRoot}
         onOpenFile={slots.openFile}
-        slots={{ ...slots.chat, wallpaper: bot.wallpaper ?? null }}
+        slots={{
+          composerNotice: <ComposerUpdateNotice />,
+          ...slots.chat,
+          wallpaper: bot.wallpaper ?? null,
+        }}
         composer={slots.composer}
       />
       <SidePanelContent kind="details">

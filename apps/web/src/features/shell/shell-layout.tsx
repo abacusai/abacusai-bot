@@ -15,6 +15,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { PageUpdateNotice } from "#platform/updates";
 import { BotTabAvatar } from "#renderer/components/bot-tab-avatar";
 import {
   PaneBoundary,
@@ -98,6 +99,7 @@ const Pane = ({ children }: { children?: ReactNode }) => (
       data-slot="pane-scroll"
       className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto"
     >
+      <PageUpdateNotice />
       {children ?? <Outlet />}
     </div>
   </main>

@@ -139,6 +139,8 @@ export interface ChatViewSlots {
   header?: ReactNode;
   /** 03-bots §24: the wallpaper id painted behind the transcript; none when unset. */
   wallpaper?: string | null;
+  /** Route-owned notice directly above the input, after send errors. */
+  composerNotice?: ReactNode;
   composerContext?: ReactNode;
   /** The route's pieces after the last run's outcome (the Changes card, phase 4). */
   runTail?: ReactNode;

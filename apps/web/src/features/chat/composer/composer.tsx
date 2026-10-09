@@ -1024,6 +1024,7 @@ export const ThreadComposer = () => {
           />
         ) : null}
         {!config.preStart && <SendError error={error} />}
+        {view.slots.composerNotice}
         <label htmlFor={fieldId} className="sr-only">
           {config.placeholder}
         </label>
