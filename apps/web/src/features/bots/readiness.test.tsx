@@ -306,7 +306,8 @@ it.each(["pdf", "html"])(
     );
     await waitFor(() =>
       expect(document.querySelector("webview")?.getAttribute("src")).toBe(
-        `file:///host/report.${extension}`
+        // A pdf opens fitted to the width.
+        `file:///host/report.${extension}${extension === "pdf" ? "#view=FitH" : ""}`
       )
     );
     expect(materializeFile).toHaveBeenCalledWith(
