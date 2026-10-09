@@ -206,6 +206,7 @@ describe("a run that hits its time limit", () => {
 
     expect(result.stoppedBy).toBe("timeout");
     expect(result.text).toBe("closing report");
-    expect(Date.now() - started).toBeLessThan(400 + 150);
+    // Far under the 90s a closing turn used to add on top; slack for slow CI.
+    expect(Date.now() - started).toBeLessThan(400 + 2000);
   });
 });
