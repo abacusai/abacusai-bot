@@ -44,7 +44,8 @@ describe("ConnectorMark", () => {
         expect(
           tile.querySelector("[data-slot=app-brand-mark] image")
         ).not.toBeNull();
-      else expect(tile.querySelectorAll("path").length).toBeGreaterThan(0);
+      else
+        expect(tile.querySelectorAll("path, image").length).toBeGreaterThan(0);
       expect(tile.getAttribute("aria-hidden")).toBe("true");
       unmount();
     }

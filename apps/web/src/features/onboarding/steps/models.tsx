@@ -66,11 +66,16 @@ export const ModelsStep = ({
             className="onboarding-row"
             data-connected={isConnected(row.id)}
           >
-            <ConnectorMark id={row.mark} size={36} />
+            <ConnectorMark id={row.mark} size={48} />
             <span className="onboarding-row-title min-w-0 flex-1">
-              {t(row.lead)}{" "}
-              <span className="onboarding-accent">{t(row.accent)}</span>
-              {row.tail && <> {t(row.tail)}</>}
+              <span className="mb-1 block text-sm font-semibold">
+                {t(`onboarding.pages.models.${row.id}`)}
+              </span>
+              <span className="text-muted-foreground text-[13px] font-normal">
+                {t(row.lead)}{" "}
+                <span className="onboarding-accent">{t(row.accent)}</span>
+                {row.tail && <> {t(row.tail)}</>}
+              </span>
             </span>
             {isConnected(row.id) ? (
               <ConnectedMark>
