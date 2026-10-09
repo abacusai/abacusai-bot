@@ -60,6 +60,12 @@ const OnboardingRoute = () => {
       replace: true,
       transition: "none",
     });
+  const navigateStep = (target: OnboardingStepId) => {
+    // The URL can change before the outgoing step and its key handler unmount.
+    if (router.state.location.pathname !== `/onboarding/${step}`)
+      return Promise.resolve();
+    return go(target);
+  };
   const entered = useRef<OnboardingStepId | null>(null);
   useEffect(() => {
     if (entered.current !== step) {
@@ -192,7 +198,7 @@ const OnboardingRoute = () => {
         step={step}
         facts={facts}
         transport={transport}
-        navigate={go}
+        navigate={navigateStep}
         signIn={auth}
         cancelSignIn={() => cancelSignIn(transport)}
         complete={finish}
