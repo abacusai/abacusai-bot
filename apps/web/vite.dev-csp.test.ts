@@ -31,7 +31,7 @@ it.each(["electron", "browser"] as const)(
       ).toBe(` script-src 'self' 'unsafe-eval' 'nonce-${nonce}'`);
       expect(html).toContain("injectIntoGlobalHook");
       const inline = [
-        ...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g),
+        ...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi),
       ].filter((match) => !/\bsrc=/.test(match[1]!) && match[2]!.trim());
       expect(inline.length).toBeGreaterThan(0);
       for (const script of inline)
