@@ -2,7 +2,6 @@ import type { Ref } from "react";
 
 import { Spinner } from "#renderer/components/spinner";
 import { IS_ELECTRON } from "#renderer/lib/platform";
-import { Button } from "#renderer/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -88,15 +87,7 @@ export const WelcomeStep = ({
         ) : sessionProfiles.length ? (
           <DropdownMenu>
             <DropdownMenuTrigger
-              render={
-                <Button
-                  size="default"
-                  variant="ghost"
-                  data-variant="secondary"
-                  className="text-muted-foreground text-[13px]"
-                  disabled={busy}
-                />
-              }
+              render={<StepButton variant="secondary" disabled={busy} />}
             >
               {t("onboarding.haveAccountCta")}
             </DropdownMenuTrigger>
