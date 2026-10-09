@@ -222,13 +222,13 @@ const oklch = (value: string, under?: number[]): number[] => {
   const alpha = m[4] ? Number(m[4]) / 100 : 1;
   return rgb.map((x, i) => x * alpha + (under?.[i] ?? 0) * (1 - alpha));
 };
-const declared = (selector: string): Record<string, string> => {
+const declared = (selector: string, source = css): Record<string, string> => {
   const out: Record<string, string> = {};
   const re = new RegExp(
     `(?:^|\\n)${selector.replace(".", "\\.")}\\s*\\{([^}]*)\\}`,
     "g"
   );
-  for (const block of css.matchAll(re))
+  for (const block of source.matchAll(re))
     for (const [, key, value] of block[1]!.matchAll(
       /--([\w-]+)\s*:\s*(oklch\([^)]*\))/g
     ))
@@ -237,6 +237,16 @@ const declared = (selector: string): Record<string, string> => {
 };
 
 describe("Default", () => {
+  it.each([":root", ".dark"])(
+    "status colors exist in global %s styles before lazy features load",
+    (selector) => {
+      const global = nodeFs.readFileSync(`${dir}/../styles/app.css`, "utf8");
+      const vars = declared(selector, global);
+      for (const status of ["running", "attention", "done", "muted"])
+        expect(vars[`chat-status-${status}`]).toBeDefined();
+    }
+  );
+
   it.each([
     ["light", ":root"],
     ["dark", ".dark"],
