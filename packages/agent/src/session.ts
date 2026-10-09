@@ -153,6 +153,7 @@ import { ToolHeartbeat } from "./tool-heartbeat.js";
 import { type ToolOrigin, type UnattendedPolicy } from "./tool-policy.js";
 import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "./tools-arrived.js";
 import { turnUsage, type TurnUsage } from "./turn-usage.js";
+import { webHostPrompt } from "./web-host-prompt.js";
 import { desktopXSearchAvailable, searchAvailable } from "./web/search.js";
 import webTools from "./web/tools.js";
 import { isInsideDirectory } from "./workspace-path.js";
@@ -832,6 +833,7 @@ export class AbacusBotSession {
         memory,
         // Timezone before anything that shows a time: connectors return UTC.
         timezonePrompt(),
+        webHostPrompt(),
         // The check at agent_end catches language drift; this prevents it.
         REPLY_LANGUAGE_PROMPT,
         // Both prompts name tools, so both read the same roster.
