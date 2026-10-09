@@ -122,7 +122,7 @@ describe("ModelsStep", () => {
     ).toBeTruthy();
   });
 
-  it("advances from Connect later and Continue", async () => {
+  it("continues without connecting optional providers", async () => {
     await initI18n();
     const { context } = ctx(true);
     render(
@@ -133,8 +133,7 @@ describe("ModelsStep", () => {
         heading={createRef()}
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: "Connect later" }));
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    expect(context.advance).toHaveBeenCalledTimes(2);
+    expect(context.advance).toHaveBeenCalledOnce();
   });
 });
