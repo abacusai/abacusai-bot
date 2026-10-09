@@ -79,9 +79,7 @@ it.each(["cancel", "escape", "close"])(
     );
     const open = async (name: string) => {
       fireEvent.click(screen.getByRole("button", { name: "Paste a key" }));
-      fireEvent.click(
-        await screen.findByRole("menuitem", { name, exact: true })
-      );
+      fireEvent.click(await screen.findByRole("menuitem", { name }));
       return screen.findByLabelText("Add API key") as Promise<HTMLInputElement>;
     };
     const input = await open("Google Gemini (AI Studio)");
@@ -123,9 +121,7 @@ it.each(PROVIDER_KEY_FIELDS.filter((entry) => entry.kind === "model"))(
       />
     );
     fireEvent.click(screen.getByRole("button", { name: "Paste a key" }));
-    fireEvent.click(
-      await screen.findByRole("menuitem", { name: label, exact: true })
-    );
+    fireEvent.click(await screen.findByRole("menuitem", { name: label }));
     fireEvent.change(await screen.findByLabelText("Add API key"), {
       target: { value: `  ${validKey}  ` },
     });
