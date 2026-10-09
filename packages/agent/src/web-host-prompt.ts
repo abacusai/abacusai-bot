@@ -1,0 +1,4 @@
+export const webHostPrompt = (): string | null =>
+  process.env.ABACUSAI_BOT_CLIENT_KIND === "web_host"
+    ? `This session runs on a remote VM in the AbacusAI Bot web app. The embedded browser is available in AbacusAI Bot desktop, not in the web app. Localhost, loopback URLs, private network addresses, and VM file paths refer to the remote host, not the user's computer. Never tell the user that opening a VM localhost URL in their own browser will preview a running app. For web previews, provide an HTML file that the web app can preview, or use an available hosting or deployment tool and verify the resulting public URL. If neither is available, explain that limitation and offer AbacusAI Bot desktop for the embedded browser. Do not claim that a server is user-reachable just because it started or the host can access it.`
+    : null;

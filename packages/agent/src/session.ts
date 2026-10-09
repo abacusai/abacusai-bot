@@ -25,6 +25,7 @@ import { notifyConversationQueueCleared } from "./background-processes.js";
  * inside pi's async `tool_call` hook, so the loop is genuinely suspended while
  * the user decides; edit diffs are computed from the on-disk "before".
  */
+import { webHostPrompt } from "./web-host-prompt.js";
 import { timezonePrompt } from "./bot/bot-time-tool.js";
 import { anchorCompactions } from "./compaction-anchor.js";
 import {
@@ -832,6 +833,7 @@ export class AbacusBotSession {
         memory,
         // Timezone before anything that shows a time: connectors return UTC.
         timezonePrompt(),
+        webHostPrompt(),
         // The check at agent_end catches language drift; this prevents it.
         REPLY_LANGUAGE_PROMPT,
         // Both prompts name tools, so both read the same roster.
