@@ -7,7 +7,6 @@
 import {
   createAgentSession,
   DefaultResourceLoader,
-  type AgentSessionEvent,
   type ExtensionAPI,
   type InlineExtension,
   type ModelRuntime,
@@ -20,17 +19,18 @@ import { excludedTools } from "./excluded-tools.js";
 import guardrails from "./extensions/guardrails.js";
 import type { HostServiceClient } from "./host-services.js";
 import type { AgentEvent } from "./protocol.js";
-import { whenAborted } from "./subagent-abort.js";
-import { forwardChildToolEvents, traceChildEvent } from "./subagent-events.js";
-
-const MAX_PROVIDER_RETRIES = 2;
+import { forwardChildToolEvents } from "./subagent-events.js";
+import {
+  runSubagent,
+  type SubagentRunResult,
+  type SubagentStop,
+} from "./subagent-run.js";
 
 /**
  * A backstop on a run nobody is watching: the tool-timeouts watchdog can report
  * an overrun but cannot end a call, so a model looping on a tool would spend
  * the parent's whole budget. The wall clock matches that watchdog's 900s.
  */
-const MAX_TURNS = 100;
 const TIMEOUT_MS = 15 * 60 * 1000;
 
 const MAX_SECTIONS = 15;
@@ -119,13 +119,7 @@ export interface DocumentContext {
 export interface DocumentResult {
   text: string;
   turns: number;
-  stoppedBy:
-    | "completed"
-    | "error"
-    | "provider-error"
-    | "turn-limit"
-    | "timeout"
-    | "aborted";
+  stoppedBy: SubagentStop;
   /** Set once `render_document` succeeds; absent means nothing was printed. */
   pdfPath?: string;
   pages?: number;
@@ -386,19 +380,6 @@ const buildDraftTools = (
   },
 ];
 
-const extractText = (content: unknown): string => {
-  if (typeof content === "string") return content;
-  if (!Array.isArray(content)) return "";
-
-  return content
-    .map((block) =>
-      typeof block === "object" && block != null && "text" in block
-        ? String((block as { text: unknown }).text ?? "")
-        : ""
-    )
-    .join("");
-};
-
 /**
  * Writes one document and returns what happened. Never throws: a failure is
  * reported to the parent as text so it can adapt.
@@ -410,13 +391,7 @@ export async function runDocumentTask(
   emit: (event: AgentEvent) => void,
   signal?: AbortSignal
 ): Promise<DocumentResult> {
-  let turns = 0;
-  let lastText = "";
-  let retries = 0;
-  let providerError = "";
-  const outcome: { stoppedBy: DocumentResult["stoppedBy"] } = {
-    stoppedBy: "completed",
-  };
+  let run: SubagentRunResult;
 
   const draft: Draft = {
     title: "",
@@ -479,121 +454,15 @@ export async function runDocumentTask(
     const session = created.session;
 
     try {
-      let finish!: () => void;
-      const finished = new Promise<void>((resolve) => {
-        finish = resolve;
-        const unsubscribe = session.subscribe((event: AgentSessionEvent) => {
-          traceChildEvent("doc", event);
-
-          // The child's tool calls, so its card shows the work (subagent-
-          // events.ts).
-          if (forwardTools(event)) return;
-
-          // `message_end`, not `message_update`: a provider call that fails
-          // outright never produces an update, the failure is stamped on the
-          // assistant message itself.
-          if (event.type === "message_end") {
-            const message = (
-              event as {
-                message?: { stopReason?: unknown; errorMessage?: unknown };
-              }
-            ).message;
-
-            if (
-              message?.stopReason === "error" &&
-              typeof message.errorMessage === "string"
-            ) {
-              providerError = message.errorMessage;
-            }
-          }
-
-          // `turn_end` is the per-model-call event. `agent_end` fires once per
-          // prompt however many tools run, so a ceiling there could never trip.
-          if (event.type === "turn_end") {
-            turns += 1;
-
-            if (turns >= MAX_TURNS) {
-              outcome.stoppedBy = "turn-limit";
-              unsubscribe();
-              resolve();
-
-              return;
-            }
-          }
-
-          if (event.type === "agent_end") {
-            if ((event as { willRetry?: boolean }).willRetry === true) {
-              retries += 1;
-
-              if (retries > MAX_PROVIDER_RETRIES) {
-                outcome.stoppedBy = "provider-error";
-                unsubscribe();
-                resolve();
-              }
-
-              return;
-            }
-
-            const messages =
-              (
-                event as {
-                  messages?: Array<{ role?: string; content?: unknown }>;
-                }
-              ).messages ?? [];
-
-            for (const message of messages) {
-              if (message.role !== "assistant") continue;
-
-              const text = extractText(message.content);
-
-              if (text.trim().length > 0) lastText = text;
-            }
-
-            // A printed document is the whole job; a model that keeps going
-            // tends to render again or start editing.
-            if (draft.printed != null) {
-              outcome.stoppedBy = "completed";
-              unsubscribe();
-              resolve();
-              return;
-            }
-          }
-
-          if (event.type === "agent_settled") {
-            unsubscribe();
-            resolve();
-          }
-        });
+      run = await runSubagent(session, brief, {
+        tag: "doc",
+        forwardTools,
+        timeoutMs: TIMEOUT_MS,
+        ...(signal != null ? { signal } : {}),
+        // The finished file is the whole job; a model that keeps going tends
+        // to render again or start editing.
+        isDone: () => draft.printed != null,
       });
-
-      // NOT awaited: `finished` carries the result out when the run ends.
-      void session.prompt(brief).catch((error: unknown) => {
-        outcome.stoppedBy = "error";
-        providerError = error instanceof Error ? error.message : String(error);
-        finish();
-      });
-
-      let timeoutTimer: NodeJS.Timeout | undefined;
-      const timeout = new Promise<void>((resolve) => {
-        timeoutTimer = setTimeout(() => {
-          outcome.stoppedBy = "timeout";
-          resolve();
-        }, TIMEOUT_MS);
-      });
-
-      // Removed in the finally: the signal outlives this call.
-      const abort = whenAborted(signal, () => {
-        outcome.stoppedBy = "aborted";
-      });
-
-      try {
-        // Stop arrives via the abort signal and ends the run like the timeout
-        // does.
-        await Promise.race([finished, timeout, abort.aborted]);
-      } finally {
-        if (timeoutTimer != null) clearTimeout(timeoutTimer);
-        abort.dispose();
-      }
     } finally {
       // A capped run can be mid-tool; a stranded child leaves the card
       // spinning.
@@ -603,7 +472,7 @@ export async function runDocumentTask(
   } catch (error) {
     return {
       text: `The document sub-agent could not start: ${error instanceof Error ? error.message : String(error)}`,
-      turns,
+      turns: 0,
       stoppedBy: "error",
     };
   }
@@ -612,13 +481,13 @@ export async function runDocumentTask(
 
   return {
     text:
-      lastText.trim().length > 0
-        ? lastText
-        : providerError.length > 0
-          ? `The document sub-agent stopped: ${providerError}`
+      run.text.trim().length > 0
+        ? run.text
+        : run.providerError.length > 0
+          ? `The document sub-agent stopped: ${run.providerError}`
           : "The document sub-agent returned nothing.",
-    turns,
-    stoppedBy: outcome.stoppedBy,
+    turns: run.turns,
+    stoppedBy: run.stoppedBy,
     ...(printed?.pdfPath != null ? { pdfPath: printed.pdfPath } : {}),
     ...(printed?.pages != null ? { pages: printed.pages } : {}),
     ...(printed?.htmlPath != null ? { htmlPath: printed.htmlPath } : {}),

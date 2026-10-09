@@ -3,21 +3,15 @@ import { describe, expect, it, vi } from "vitest";
 import {
   type BatchGate,
   BROWSER_SYSTEM_PROMPT,
-  budgetNote,
   EXECUTE_STREAK_LIMIT,
   ExecuteStreakTracker,
-  FINAL_WARNING_TURN,
-  finalWarningMessage,
   gateTools,
   loginNote,
-  MAX_TURNS,
   missingReportFields,
   needsUser,
   noteBatch,
   REPEAT_HOST_LIMIT,
   RepeatTracker,
-  WRAP_UP_TURN,
-  wrapUpMessage,
 } from "./browser-task.js";
 import { CHECKOUT_STATE_PREFIX } from "./checkout-run.js";
 import {
@@ -62,24 +56,6 @@ describe("checking a browser report against what was asked for", () => {
 
   it("is case-insensitive", () => {
     expect(missingReportFields("URL: https://a.test", ["url"])).toEqual([]);
-  });
-});
-
-describe("the run bounds", () => {
-  it("asks for the report before the hard turn ceiling", () => {
-    expect(WRAP_UP_TURN).toBeLessThan(FINAL_WARNING_TURN);
-    expect(FINAL_WARNING_TURN).toBeLessThan(MAX_TURNS);
-  });
-
-  it("tells the run how many turns it has, not that it is 'close to a limit'", () => {
-    // "close to your limit" reads as "out of budget" to a small model; it then
-    // reports at once, and a resumed run reports before it does anything.
-    expect(wrapUpMessage(40)).toMatch(/40 turns/);
-    expect(wrapUpMessage(40)).not.toMatch(/close to/i);
-    expect(finalWarningMessage(15)).toMatch(/15 turns/);
-    expect(budgetNote(MAX_TURNS)).toMatch(
-      new RegExp(`${MAX_TURNS} tool turns`)
-    );
   });
 });
 
