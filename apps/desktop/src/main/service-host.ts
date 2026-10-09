@@ -404,6 +404,7 @@ import {
   MessagingGatewayService,
   type SelfLanePlatform,
 } from "./services/messaging/messaging-gateway-service";
+import { fetchAbacusAccount } from "./services/providers/abacus";
 import {
   connectButtonLink,
   connectLinkStatus,
@@ -5012,6 +5013,10 @@ export class ServiceHost {
     /** The agent asked for it (the cronjob tool), not the user's own form. */
     options: { byAgent?: boolean; runAtText?: string | null } = {}
   ): Promise<CreatedRoutine> {
+    const account = await fetchAbacusAccount();
+    const plan = account?.subscription_tier ?? account?.plan;
+    if (plan?.trim().toLowerCase() === "free")
+      throw new HostedRoutineRefusal("plan_limit", { limit: 0 });
     // A hosted bot whose routines run on the server has no other scheduler:
     // a local one there would never fire, and would sidestep the plan.
     const runner = this.hostedOnly()
