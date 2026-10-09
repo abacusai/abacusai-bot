@@ -141,7 +141,7 @@ describe("masked pop-ups", () => {
       background: "bot-chat",
     },
     {
-      name: "connector sheet",
+      name: "connector dialog",
       to: "/library/connectors?connector=gmail",
       masked: "/library/connectors",
       background: "connectors-page",
@@ -170,7 +170,7 @@ describe("masked pop-ups", () => {
         masked
       );
       await screen.findByTestId(
-        /routine-dialog|connector-sheet|check-in-dialog/
+        /routine-dialog|connector-dialog|check-in-dialog/
       );
       // The background instance survived the pop-up opening.
       expect(screen.getAllByTestId(background)[0]).toBe(before);

@@ -213,6 +213,7 @@ const featureBoundaryHits = (
           "lib/activity.ts",
           "lib/browser/files.ts",
           "lib/browser/host-files.ts",
+          "lib/browser/upload.ts",
           "lib/browser/sign-in.ts",
           "lib/browser/sign-out.ts",
           "data/transport/index.ts",

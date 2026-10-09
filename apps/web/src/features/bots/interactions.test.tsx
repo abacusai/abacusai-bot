@@ -1,4 +1,7 @@
 /** R3-T4,T13,T14,T16,T20,T24: routed interaction checks over live collections. */
+import { contract } from "@abacus-ai/contract/contract";
+import { MODEL_CATALOG } from "@abacus-ai/contract/models";
+import { implement } from "@orpc/server";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { createElement, type ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -25,6 +28,15 @@ vi.mock("motion/react", async (original) => {
     }),
   };
 });
+const os = implement(contract);
+// The composer needs a configured model before it accepts a message.
+const models = {
+  models: {
+    list: os.models.list.handler(() => [
+      { ...MODEL_CATALOG[0]!, configured: true },
+    ]),
+  },
+};
 let app: Awaited<ReturnType<typeof renderApp>> | undefined;
 afterEach(async () => {
   app?.view.unmount();
@@ -131,7 +143,9 @@ describe("bots interactions", () => {
     }
   );
   it("the four model locations have at most one value", async () => {
-    app = await renderApp("/bots/chief-of-staff?tab=details");
+    app = await renderApp("/bots/chief-of-staff?tab=details", {
+      procedures: models,
+    });
     expect(
       document.querySelector('[data-slot="topbar-actions"]')?.textContent ?? ""
     ).not.toContain("Details");
@@ -150,7 +164,7 @@ describe("bots interactions", () => {
     expect(count()).toBe(1);
     // The chip is the picker's trigger, a combobox named "Model: …".
     expect(
-      screen.getAllByRole("combobox", { name: /App default/ })
+      screen.getAllByRole("combobox", { name: /RouteLLM - Open/ })
     ).toHaveLength(1);
     await act(async () => {
       setPanelOpen(panelScopeKey("bots", "chief-of-staff")!, false);
@@ -159,17 +173,23 @@ describe("bots interactions", () => {
     expect(count()).toBe(1);
     fireEvent.blur(input);
     await waitFor(() =>
-      expect(screen.queryByRole("combobox", { name: /App default/ })).toBeNull()
+      expect(
+        screen.queryByRole("combobox", { name: /RouteLLM - Open/ })
+      ).toBeNull()
     );
     expect(count()).toBe(0);
   });
   it("keeps the model chip mounted while its popover has focus", async () => {
-    app = await renderApp("/bots/chief-of-staff?tab=details");
+    app = await renderApp("/bots/chief-of-staff?tab=details", {
+      procedures: models,
+    });
     await screen.findByTestId("bot-chat");
     fireEvent.focus(
       screen.getByRole("textbox", { name: /Message Chief of Staff/ })
     );
-    const chip = await screen.findByRole("combobox", { name: /App default/ });
+    const chip = await screen.findByRole("combobox", {
+      name: /RouteLLM - Open/,
+    });
     fireEvent.click(chip);
     // The picker's search field, labelled "Models".
     await screen.findByRole("combobox", { name: "Models" });

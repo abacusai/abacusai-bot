@@ -40,6 +40,7 @@
       "pinned.botIds": "default",
       "pinned.sessionIds": "default",
       "recentFolders": "default",
+      "showLinkPreviews": "default",
       "sidebar.openSection": "default",
       "sidebar.pinned": "default",
       "sounds.enabled": "default",
@@ -104,6 +105,7 @@
         "sessionIds": []
       },
       "recentFolders": [],
+      "showLinkPreviews": true,
       "sidebar": {
         "openSection": null,
         "pinned": true

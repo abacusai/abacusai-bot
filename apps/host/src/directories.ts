@@ -12,6 +12,9 @@ const inside = (root: string, path: string) => {
   return part === "" || (!part.startsWith("..") && !isAbsolute(part));
 };
 const directory = async (path?: string) => {
+  // The default workspace is made on first ask, as a fresh host has none yet.
+  if (path === undefined)
+    await mkdir(botDefaultWorkspace(), { recursive: true });
   const home = await realpath(homedir());
   const botHome = await realpath(abacusBotHome());
   const root = inside(home, botHome) ? home : botHome;
