@@ -127,6 +127,6 @@ itself; the lockfile hash is checked) and prints JSON to compare with
 `web-split-desktop-baseline.json`; it never overwrites the fixture or
 touches a worktree. Reusing an existing install can change the graph (a
 nested `@tanstack/store`), which is why the script installs fresh. With no
-arguments it reproduces the current baseline: `7926220a` against its own
+arguments it reproduces the current baseline: `4f71c036` against its own
 lockfile (sha256
-`233e97a875f5f4a00a94b1de33b706fe28c3abbca8bcf14b4efe7f23b9729328`).
+`b43c9084a743b0d1ced0ba0b349a342bf694708fbcc19f27ba5a504a72fead73`).

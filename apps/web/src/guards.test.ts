@@ -310,6 +310,7 @@ describe("renderer guards", () => {
       "features/gallery/canary.tsx",
       "components/canary.tsx",
       "features/bots/canary.tsx",
+      "lib/browser/upload.ts",
     ];
     for (const path of paths) {
       const source = `import "#renderer/features/sessions/private/canary";
