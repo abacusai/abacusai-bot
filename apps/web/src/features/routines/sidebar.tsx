@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
+import { Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -72,7 +73,14 @@ export const RoutinesSidebar = () => {
     );
   return (
     <NavList.Root label={t("routines.sidebar.label")}>
-      <NavList.Header title={t("routines.sidebar.label")} />
+      <NavList.Header title={t("routines.sidebar.label")}>
+        <NavList.Action
+          label={t("routines.sidebar.new")}
+          render={<AppLink to="/routines/new" transition="none" />}
+        >
+          <Plus />
+        </NavList.Action>
+      </NavList.Header>
       <Input
         aria-label={t("phase5.searchRoutines")}
         placeholder={t("phase5.searchRoutines")}
@@ -186,14 +194,6 @@ export const RoutinesSidebar = () => {
           })}
         </NavList.Group>
       )}
-      <Button
-        nativeButton={false}
-        variant="secondary"
-        className="mt-auto"
-        render={<AppLink to="/routines/new" transition="none" />}
-      >
-        {t("routines.sidebar.new")}
-      </Button>
     </NavList.Root>
   );
 };
