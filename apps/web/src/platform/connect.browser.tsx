@@ -129,6 +129,9 @@ const loadSystem = async (
   return null;
 };
 
+/** ChatLLM on this host: where an account that ChatLLM bills settles a refusal. */
+const CHATLLM_PATH = "/chatllm/";
+
 /** Tries at reading the phone's WhatsApp chat, a second apart. */
 const PHONE_CHAT_ATTEMPTS = 4;
 
@@ -172,6 +175,8 @@ const mountWhatsAppApp = async (
     location.replace(DESKTOP_INSTALLER_URL);
     return true;
   }
+  const trialEnded = isBotTrialEnded(failure);
+  if (!trialEnded && followBillingRefusal(failure)) return true;
   // For the page's life: these screens are light only.
   holdTheme("light");
   applyTheme(
@@ -191,7 +196,7 @@ const mountWhatsAppApp = async (
         : null;
     root.render(
       <PhoneErrorScreen
-        reason={refusal ? "refused" : "connection"}
+        reason={trialEnded ? "trial_ended" : refusal ? "refused" : "connection"}
         detail={refusal?.detail}
         retry={refusal ? undefined : () => location.reload()}
         switchAccount={switchAccountWithoutApp}
@@ -236,6 +241,28 @@ const takeSignUpHop = (): boolean => {
   }
 };
 
+/** The bot's own free plan whose trial ended: it upgrades on the bot's upgrade page. */
+const isBotTrialEnded = (error: unknown): boolean =>
+  error instanceof ConnectError &&
+  error.billing?.reason === "trial_ended" &&
+  error.billing.botOnly;
+
+/**
+ * Any other billing refusal (a lapsed or unpaid plan, a ChatLLM trial) is
+ * ChatLLM's account to settle: its own page says why and how. True when it
+ * navigated.
+ */
+const followBillingRefusal = (error: unknown): boolean => {
+  if (
+    !(error instanceof ConnectError) ||
+    !error.billing ||
+    isBotTrialEnded(error)
+  )
+    return false;
+  location.replace(CHATLLM_PATH);
+  return true;
+};
+
 const renderConnectError = (root: Root, error: unknown): void =>
   root.render(
     <>
@@ -256,6 +283,7 @@ export const mountPlatformApp = async (root: Root): Promise<boolean> => {
     if (await mountWhatsAppApp(root, isPhone())) return true;
     identity = await identifyHost();
   } catch (error) {
+    if (followBillingRefusal(error)) return true;
     if (
       error instanceof ConnectError &&
       error.kind === "signin" &&

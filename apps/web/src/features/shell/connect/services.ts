@@ -46,7 +46,9 @@ export class ConnectError extends Error {
     /** The apps server's HTTP status, when it answered. */
     readonly status?: number,
     /** The server's own reason, when it is short plain text fit for the page. */
-    readonly detail?: string
+    readonly detail?: string,
+    /** A billing refusal: why (`trial_ended`, `lapsed`, `unconfirmed`) and whether the account is the bot's own free plan. */
+    readonly billing?: { reason?: string; botOnly: boolean }
   ) {
     super(message);
   }
@@ -174,6 +176,8 @@ export const callApps = async (
     result?: unknown;
     error?: string;
     errorType?: string;
+    reason?: string;
+    abacusaibotOnly?: boolean;
   } | null;
   const message =
     typeof body?.error === "string"
@@ -201,7 +205,10 @@ export const callApps = async (
       message,
       false,
       response.status,
-      shownReason(body?.error)
+      shownReason(body?.error),
+      body?.errorType === "PaymentMethodRequired"
+        ? { reason: body.reason, botOnly: body.abacusaibotOnly === true }
+        : undefined
     );
   if (!response.ok || body?.success !== true)
     throw new ConnectError("connection", message, false, response.status);

@@ -4178,6 +4178,9 @@
       "desktopAlternative": "अपने कंप्यूटर पर AbacusAI Bot इस्तेमाल करें।"
     },
     "phoneError": {
+      "trialEndedTitle": "आपका मुफ़्त ट्रायल खत्म हो गया है",
+      "trialEnded": "WhatsApp पर AbacusAI Bot का इस्तेमाल जारी रखने के लिए अपग्रेड करें।",
+      "upgrade": "अपग्रेड करें",
       "title": "Something went wrong",
       "connection": "We couldn't reach AbacusAI Bot. Check your connection, then try again.",
       "refused": "This account can't use AbacusAI Bot on this site."

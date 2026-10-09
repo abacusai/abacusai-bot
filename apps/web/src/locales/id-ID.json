@@ -4178,6 +4178,9 @@
       "desktopAlternative": "Gunakan AbacusAI Bot di komputer Anda."
     },
     "phoneError": {
+      "trialEndedTitle": "Masa uji coba gratismu sudah berakhir",
+      "trialEnded": "Upgrade untuk terus memakai AbacusAI Bot di WhatsApp.",
+      "upgrade": "Upgrade",
       "title": "Terjadi kesalahan",
       "connection": "Tidak dapat menghubungi AbacusAI Bot. Periksa koneksi Anda, lalu coba lagi.",
       "refused": "Akun ini tidak dapat menggunakan AbacusAI Bot di situs ini."

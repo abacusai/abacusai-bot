@@ -4178,6 +4178,9 @@
       "desktopAlternative": "Utilisez AbacusAI Bot sur votre ordinateur."
     },
     "phoneError": {
+      "trialEndedTitle": "Votre essai gratuit est terminé",
+      "trialEnded": "Passez à une offre payante pour continuer à utiliser AbacusAI Bot sur WhatsApp.",
+      "upgrade": "Passer à l'offre supérieure",
       "title": "Un problème est survenu",
       "connection": "Impossible de joindre AbacusAI Bot. Vérifiez votre connexion, puis réessayez.",
       "refused": "Ce compte ne peut pas utiliser AbacusAI Bot sur ce site."
