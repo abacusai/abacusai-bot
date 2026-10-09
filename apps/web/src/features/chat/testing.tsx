@@ -1,4 +1,8 @@
+import { contract } from "@abacus-ai/contract/contract";
+import { implement } from "@orpc/server";
 import { HotkeysProvider } from "@tanstack/react-hotkeys";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { RouterContextProvider } from "@tanstack/react-router";
 /**
  * Test helpers for the chat kit (tests only): render a node inside the
  * fixture DB (prefs drive the motion preference) with English copy, and
@@ -7,14 +11,10 @@ import { HotkeysProvider } from "@tanstack/react-hotkeys";
 import { act, render, type RenderResult } from "@testing-library/react";
 import type { ReactNode } from "react";
 
-import { createDb, DbProvider } from "#renderer/data/db";
-import {
-  FixtureDb,
-  fixtureTransport,
-} from "#renderer/data/fixture-db/fixture-db";
+import { DbProvider } from "#renderer/data/db";
 import { clearDraft } from "#renderer/lib/continuity/composer-drafts";
 import { i18n, initI18n } from "#renderer/lib/i18n";
-import { defaultSeed } from "#renderer/test-support/app-harness";
+import { createHarness } from "#renderer/test-support/app-harness";
 
 import {
   fixtureRuntime,
@@ -37,10 +37,12 @@ export interface Rendered {
 export const renderWithDb = async (node: ReactNode): Promise<Rendered> => {
   await initI18n();
   await i18n.changeLanguage("en-US");
-  const db = createDb(fixtureTransport(new FixtureDb(defaultSeed())), {
-    retryDelayMs: () => 5,
+  const os = implement(contract);
+  const harness = await createHarness("/", {
+    procedures: { links: { preview: os.links.preview.handler(() => null) } },
   });
-  await db.collections.prefs.preload();
+  const db = harness.appDb;
+  const queryClient = harness.router.options.context.queryClient;
   const wrap = (child: ReactNode) => (
     <HotkeysProvider
       defaultOptions={{
@@ -51,7 +53,11 @@ export const renderWithDb = async (node: ReactNode): Promise<Rendered> => {
         },
       }}
     >
-      <DbProvider value={db}>{child}</DbProvider>
+      <QueryClientProvider client={queryClient}>
+        <RouterContextProvider router={harness.router}>
+          <DbProvider value={db}>{child}</DbProvider>
+        </RouterContextProvider>
+      </QueryClientProvider>
     </HotkeysProvider>
   );
   let view!: RenderResult;
@@ -67,7 +73,7 @@ export const renderWithDb = async (node: ReactNode): Promise<Rendered> => {
     },
     cleanup: async () => {
       view.unmount();
-      db.stop();
+      await harness.cleanup();
     },
   };
 };

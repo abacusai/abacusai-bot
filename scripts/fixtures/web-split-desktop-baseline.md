@@ -8,7 +8,34 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `700190fc` (renderer as merged while the guard was not running)
+## Current: `4f71c036` (merged workspace and UI features)
+
+**383 / 7207250 / 2419182.** Records the renderer after the merged workspace,
+routines, onboarding, account, chat and file-preview changes. Against the
+previous baseline: +61 chunks (+18.94%), +707116 bytes (+10.88%), +231049 gzip
+bytes (+10.56%). The 1% allowance remains unchanged.
+
+Three isolated source archives, each with a fresh frozen-lockfile install,
+establish the growth rather than relying on an existing dependency graph:
+
+- `c252eb30` reproduces the previous **322 / 6500134 / 2188133** exactly.
+  This is the current history's baseline commit; the older `700190fc` hash
+  no longer exists after the repository history rewrite.
+- `e9e1da72` (#223, dockable session panels and title-bar tabs) produces
+  **324 / 6900549 / 2283153**: +2 chunks, +400415 bytes and +95020 gzip bytes.
+  Dockview is an intentional new dependency for that feature.
+- The remaining 37 renderer changes through `4f71c036` add 59 chunks,
+  306701 bytes and 136029 gzip bytes. They include hosted routines (#271),
+  QR linking (#302), model setup (#300), link previews (#285), session draft
+  continuity (#296/#308), onboarding (#292), and shared file previews (#324).
+
+Measured on Linux x64 with CI Node 22.19.0, Vite 8.2.1 and Rolldown 1.2.4. Reproduce
+the current baseline with source/deps `4f71c036` and lockfile SHA-256
+`b43c9084a743b0d1ced0ba0b349a342bf694708fbcc19f27ba5a504a72fead73`.
+This baseline-only change adds no renderer code. Browser import boundaries,
+mutation chunk isolation, metadata checks and the growth allowance still run.
+
+## Previous: `700190fc` (renderer as merged while the guard was not running)
 
 **322 / 6500134 / 2188133.** Records the renderer as merged through `700190fc`.
 While the desktop build failed in CI (the notices step needed the Electron
@@ -100,6 +127,6 @@ itself; the lockfile hash is checked) and prints JSON to compare with
 `web-split-desktop-baseline.json`; it never overwrites the fixture or
 touches a worktree. Reusing an existing install can change the graph (a
 nested `@tanstack/store`), which is why the script installs fresh. With no
-arguments it reproduces the current baseline: `7926220a` against its own
+arguments it reproduces the current baseline: `4f71c036` against its own
 lockfile (sha256
-`233e97a875f5f4a00a94b1de33b706fe28c3abbca8bcf14b4efe7f23b9729328`).
+`b43c9084a743b0d1ced0ba0b349a342bf694708fbcc19f27ba5a504a72fead73`).

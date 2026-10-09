@@ -19,6 +19,7 @@ import type {
   DefaultAgentMode,
   BrowserRuntimeState,
 } from "@abacus-ai/contract/contracts";
+import type { ModelAvailability } from "@abacus-ai/contract/models";
 import { implement, type Router } from "@orpc/server";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -205,7 +206,7 @@ const shellRouter = (
         close: os.browser.runtime.close.handler(() => {}),
       },
     },
-    models: { list: os.models.list.handler(() => []) },
+    models: { list: os.models.list.handler(() => options.models ?? []) },
     connectors: {
       statuses: os.connectors.statuses.handler(() => ({})),
       events: os.connectors.events.handler(quiet as never),
@@ -372,6 +373,7 @@ export interface HarnessOptions {
   history?: RouterHistory;
   /** Runs on the FixtureDb before any collection syncs. */
   beforeRender?: (db: FixtureDb) => void;
+  models?: ModelAvailability[];
   defaultMode?: () => Promise<DefaultAgentMode>;
   materializeFile?: (
     input: MaterializeBrowserRuntimeFileRequest

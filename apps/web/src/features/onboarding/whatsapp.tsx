@@ -126,6 +126,11 @@ const WaitingLine = ({ phone }: { phone: string }) => {
   );
 };
 
+const drawQr = async (deepLink: string) => {
+  const qr = await import("qrcode");
+  return qr.toString(deepLink, { type: "svg", margin: 1 });
+};
+
 /** The same wa.me link as a QR: the phone's camera opens WhatsApp with the message typed. */
 const ScanToSend = ({ deepLink }: { deepLink: string }) => {
   const { t } = useTranslation();
@@ -133,8 +138,7 @@ const ScanToSend = ({ deepLink }: { deepLink: string }) => {
   useEffect(() => {
     let live = true;
     // Loaded on demand: only a computer's waiting step draws one.
-    void import("qrcode")
-      .then((qr) => qr.toString(deepLink, { type: "svg", margin: 1 }))
+    void drawQr(deepLink)
       .then((drawn) => {
         if (live) setSvg(drawn);
       })
@@ -224,7 +228,7 @@ export const WhatsAppConnect = ({
   const start = async () => {
     setBusy(true);
     setError(null);
-    try {
+    const request = async () => {
       // Signed in from the link the bot texted back: it links at once when this
       // is the number that texted, otherwise it is the usual pre-typed code.
       const token = stashedClaim();
@@ -250,11 +254,12 @@ export const WhatsAppConnect = ({
         setExpiresAt(started.expiresAt ?? null);
         setDeepLink(started.deepLink);
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("phase5.failed"));
-    } finally {
-      setBusy(false);
-    }
+    };
+    await request()
+      .catch((e) => {
+        setError(e instanceof Error ? e.message : t("phase5.failed"));
+      })
+      .finally(() => setBusy(false));
   };
 
   const skip = onSkip && (
@@ -516,13 +521,11 @@ export const PhoneWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
   const changeNumber = async () => {
     setBusy(true);
     setError(null);
-    try {
-      await unlinkWhatsAppChat(cache, callApps);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("phase5.failed"));
-    } finally {
-      setBusy(false);
-    }
+    await unlinkWhatsAppChat(cache, callApps)
+      .catch((e) => {
+        setError(e instanceof Error ? e.message : t("phase5.failed"));
+      })
+      .finally(() => setBusy(false));
   };
   return (
     <FlowPage media={<ConnectorMark id="whatsapp" size={56} />}>

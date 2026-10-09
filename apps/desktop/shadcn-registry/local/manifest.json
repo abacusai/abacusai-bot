@@ -1,0 +1,67 @@
+{
+  "snapshot": "2026-09-30",
+  "sourceCommit": "f7ff13af",
+  "files": [
+    {
+      "name": "alert.tsx",
+      "before": null,
+      "after": "d725377067dfbaf3a465377b7180c5e3a8198c67453050ebb819b99d840dd364"
+    },
+    {
+      "name": "attachment.tsx",
+      "before": "3ddd0eefe393a986ef02deed526825017dffc15c1ff4a058c844bd3478a88fd6",
+      "after": "20f885a609bf0d01bcf308d03ca09a7c9d476184eaf24e140e1e0d2943d304b7"
+    },
+    {
+      "name": "combobox.tsx",
+      "before": "f1539c15abe0688c326013c442a9e21e4c107920be46a087d2c5614d0f24a710",
+      "after": "5c4ef2f21e682d7fc153b1d949d5c0034465a7a96534eac55ddb51002b2f5dfe"
+    },
+    {
+      "name": "command.tsx",
+      "before": "26d4421b7646990d7fb5ed8b9e808367941d61b8d905a2233db99b8d21d06048",
+      "after": "78fcd292660fcddaa584e23cfe450675539ab8b9fed1a6309b7243a5a85bcc3f"
+    },
+    {
+      "name": "context-menu.tsx",
+      "before": "b23aee1bbfe23b81274534dc6ee1cb7a2180fe40261a3eb74c33b2eb981bdf8d",
+      "after": "0a4f3d093977b97fe30f3d7a8c8d8a9d813813f4fc7a76582136ff910ee8034a"
+    },
+    {
+      "name": "dropdown-menu.tsx",
+      "before": "01487e1dd772f9155fd12da360e27fd8f9764132cd7d0cc6cc69ccaadf5304b0",
+      "after": "84b5d1b82494d917cdccf6dfcf22dc6803c995bab2c96a76baf630c47fbfae4c"
+    },
+    {
+      "name": "hover-card.tsx",
+      "before": "bbdc119f03e4a55426435d481f6f0aac955ddccd63884019a4306b23748e9bc9",
+      "after": "50a0423977382e6329559b781316f218f2a9da4e18ea7f3cdbac3e8146954fde"
+    },
+    {
+      "name": "item.tsx",
+      "before": "1631377442588f42c787817841b42cc369a889704cfc692c17e9b484350e6e46",
+      "after": "4fb08efd152b667406601d44dc6e67eacbab04732a435d7e09eff022a06a1671"
+    },
+    {
+      "name": "popover.tsx",
+      "before": "795d25fb770cdd4cf6c985882a4001fdcc7687f9f6aa438d35ae2ac09ca3b417",
+      "after": "ea3ade001c8ce2f084e83af888dee4406375f211e14bb1053dc8d01b69ed8abc"
+    },
+    {
+      "name": "popup.tsx",
+      "before": null,
+      "after": "f987d6ef6c47206aa20bf6875bef2c4129741f1fe3ae1ceafa973a374bc57636"
+    },
+    {
+      "name": "select.tsx",
+      "before": "861ca71b98b778854414bd3de294d539134b3d08881dc16f2eb3644d05ba614d",
+      "after": "5026547ceae2cc9a67060ef28a939a5738b67a0063d9c938e22bbc52878cde96"
+    },
+    {
+      "name": "tooltip.tsx",
+      "before": "2ab7ff3ddb2d44ec24b42101849407d18d94db33b5b80ba85f07f2fb6c9a61a5",
+      "after": "dafa5fbd5c73174910c70bec21817d32be486cef2ed81e6d056303cd2972cb60"
+    }
+  ],
+  "patchSha256": "dcc1f4388e2d8237601d3a90b1bfeba5fa967fbbdfcbde85548eac6c49103f5e"
+}
