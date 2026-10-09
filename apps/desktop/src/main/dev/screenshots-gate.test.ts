@@ -16,7 +16,8 @@ type Checks = {
   waitStable(
     cdp: { evaluate(expression: string): Promise<unknown> },
     expression: string,
-    timeoutMs?: number
+    timeoutMs?: number,
+    ready?: (value: unknown) => boolean
   ): Promise<{ value: unknown; stable: boolean }>;
   axeFailures(
     name: string,
@@ -48,6 +49,25 @@ describe("screenshot gate checks", () => {
       value: { left: 336 },
       stable: true,
     });
+  });
+
+  it("waits for the collapsed endpoint even if a transition temporarily holds still", async () => {
+    const { waitStable } = await load();
+    const evaluate = vi
+      .fn()
+      .mockResolvedValueOnce({ left: 57.578125 })
+      .mockResolvedValueOnce({ left: 57.578125 })
+      .mockResolvedValueOnce({ left: 57.578125 })
+      .mockResolvedValue({ left: 56 });
+    await expect(
+      waitStable(
+        { evaluate },
+        "pane",
+        1000,
+        (value) => Math.abs((value as { left: number }).left - 56) <= 1
+      )
+    ).resolves.toEqual({ value: { left: 56 }, stable: true });
+    expect(evaluate).toHaveBeenCalledTimes(6);
   });
 
   it("reports geometry that keeps moving as unsettled", async () => {

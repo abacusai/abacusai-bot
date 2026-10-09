@@ -123,7 +123,7 @@ export const ROUTES = option(
         "/bots/new",
         "/bots/chief-of-staff",
         "/sessions/new",
-        "/sessions/review-prs?tab=files",
+        "/sessions/review-prs?tab=files&view=split",
         "/__ui?fixture=sessions-terminal",
         "/routines",
         "/routines/new",
@@ -298,6 +298,25 @@ export const nativeFrameProblems = (name, probe) => {
   return problems;
 };
 
+/** Row density includes the gap between controls, not just the painted link. */
+export const compactGeometry = () => ({
+  toolbar: parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue("--toolbar-h")
+  ),
+  topbar: document.querySelector('[data-slot="topbar"]').getBoundingClientRect()
+    .height,
+  rows: [
+    ...document.querySelectorAll('[data-slot="nav-list"] a[data-slot="item"]'),
+  ]
+    .filter((row) => row.checkVisibility())
+    .slice(0, 4)
+    .map(
+      (row) =>
+        row.getBoundingClientRect().height +
+        parseFloat(getComputedStyle(row.parentElement).rowGap)
+    ),
+});
+
 /** Compact density: a 32 px bar, 24 px rows. */
 export const compactProblems = (name, compact) => {
   const problems = [];
@@ -450,7 +469,12 @@ const waitFor = async (cdp, expression, timeoutMs = 5_000) => {
  * ms apart (springs run on frames, not the Animations API). `stable: false`
  * on timeout.
  */
-export const waitStable = async (cdp, expression, timeoutMs = 4_000) => {
+export const waitStable = async (
+  cdp,
+  expression,
+  timeoutMs = 4_000,
+  ready = () => true
+) => {
   const deadline = Date.now() + timeoutMs;
   let last = "";
   let same = 0;
@@ -460,7 +484,7 @@ export const waitStable = async (cdp, expression, timeoutMs = 4_000) => {
     const now = JSON.stringify(value);
     same = now === last ? same + 1 : 0;
     last = now;
-    if (same >= 2) return { value, stable: true };
+    if (same >= 2 && ready(value)) return { value, stable: true };
     await sleep(50);
   }
   return { value, stable: false };
@@ -608,7 +632,8 @@ const main = async () => {
             cdp,
             `(() => {
             const pane = document.querySelector('[data-slot="pane"]')?.getBoundingClientRect();
-            const identity = document.querySelector('[data-slot="topbar-identity"]')?.getBoundingClientRect();
+            const identityElement = document.querySelector('[data-slot="topbar-identity"]');
+            const identity = identityElement?.checkVisibility() ? identityElement.getBoundingClientRect() : null;
             const leading = document.querySelector('[data-slot="topbar-leading"]')?.getBoundingClientRect();
             const popup = document.querySelector('[data-slot="drawer-popup"][data-side-panel]')?.getBoundingClientRect();
             const scrim = document.querySelector('[data-slot="side-panel-scrim"]')?.getBoundingClientRect();
@@ -674,8 +699,8 @@ const main = async () => {
           // The 1100 minimum with the panel in layout (Codex impl r1 #13).
           if (width === 1100 && route.includes("tab=")) {
             const split = await cdp.evaluate(`({
-              pane: ${rect('[data-slot="session-dock"][data-view="split"] [data-session-pane="chat"]')},
-              panel: ${rect('[data-slot="session-dock"][data-view="split"] [data-session-pane="tools"]')},
+              pane: ${rect('[data-slot="session-dock"][data-view="split"] [data-workspace-pane="chat"]')},
+              panel: ${rect('[data-slot="session-dock"][data-view="split"] [data-workspace-pane="tools"]')},
               innerWidth,
             })`);
             failures.push(...panelSplitProblems(name, split));
@@ -708,7 +733,15 @@ const main = async () => {
               pane: ${rect('[data-slot="pane"]')},
               rail: ${rect('[data-slot="rail"]')},
               occupied: document.querySelector('[data-slot="shell"]')?.style.getPropertyValue('--sidebar-occupied-w'),
-            })`
+            })`,
+            4_000,
+            (value) =>
+              value.slot != null &&
+              value.pane != null &&
+              value.rail != null &&
+              near(value.slot.width, 0) &&
+              near(value.pane.left, value.rail.right) &&
+              value.occupied === "0px"
           );
           const collapsedState = {
             ...settled.value,
@@ -903,11 +936,9 @@ const main = async () => {
             cdp,
             `document.documentElement.dataset.density === "compact"`
           );
-          const compact = await cdp.evaluate(`({
-            toolbar: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--toolbar-h')),
-            topbar: document.querySelector('[data-slot="topbar"]').getBoundingClientRect().height,
-            rows: [...document.querySelectorAll('[data-slot="nav-list"] a[data-slot="item"]')].slice(0, 4).map((a) => a.getBoundingClientRect().height),
-          })`);
+          const compact = await cdp.evaluate(
+            `(${compactGeometry.toString()})()`
+          );
           const name = `compact-${slug(route)}@${width}-${theme}.png`;
           failures.push(...compactProblems(name, compact));
           await capture(cdp, name, {
