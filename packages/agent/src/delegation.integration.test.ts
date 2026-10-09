@@ -23,7 +23,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { runDelegatedTask } from "./delegation.js";
+import { resolveTaskRoot, runDelegatedTask } from "./delegation.js";
 import type { AgentEvent } from "./protocol.js";
 import { createModelRuntime } from "./providers.js";
 
@@ -214,6 +214,109 @@ describe("a delegated run that runs out of turns", () => {
     expect(result.text).toMatch(/did not finish/i);
     expect(result.text).toContain("incomplete");
   }, 120_000);
+});
+
+describe("the root a parent names", () => {
+  it("defaults to the parent's own folder", () => {
+    const cwd = workspace();
+
+    expect(resolveTaskRoot(undefined, cwd)).toEqual({ root: cwd });
+  });
+
+  it("resolves a relative root against the parent's folder", () => {
+    const cwd = workspace();
+    fs.mkdirSync(path.join(cwd, "n8n"));
+
+    expect(resolveTaskRoot("n8n", cwd)).toEqual({
+      root: path.join(cwd, "n8n"),
+    });
+  });
+
+  it("refuses a folder that is not there", () => {
+    expect(resolveTaskRoot("missing", workspace())).toHaveProperty("error");
+  });
+
+  it("refuses home, or anything above it, as the folder a task is about", () => {
+    expect(resolveTaskRoot("~", workspace())).toHaveProperty("error");
+    expect(resolveTaskRoot("/", workspace())).toHaveProperty("error");
+  });
+});
+
+describe("where a delegated run may look", () => {
+  // Never created: the guard refuses before the tool runs.
+  const elsewhere = path.join(os.homedir(), ".abacusai-bot-scope-probe", "n8n");
+  const asked = () => JSON.stringify(provider.calls.at(-1)?.messages ?? []);
+
+  it("is refused a checkout elsewhere in home, and the parent hears of it", async () => {
+    provider.scriptSequence([
+      { call: { name: "read", args: { path: `${elsewhere}/package.json` } } },
+      { say: "the package is missing from my folder" },
+    ]);
+    const root = workspace();
+
+    const result = await runDelegatedTask(
+      await context(root),
+      "find the expression runtime",
+      () => undefined
+    );
+
+    expect(asked()).toMatch(/outside .*the folder this task is about/);
+    expect(result.text).toContain("refused 1 path(s)");
+    expect(result.text).toContain(elsewhere);
+  });
+
+  it("is refused a search of the whole disk", async () => {
+    provider.scriptSequence([
+      { call: { name: "bash", args: { command: "find / -name n8n" } } },
+      { say: "done" },
+    ]);
+
+    await runDelegatedTask(
+      await context(workspace()),
+      "find n8n",
+      () => undefined
+    );
+
+    expect(asked()).toMatch(/\/ is outside/);
+  });
+
+  it("may read a path the task names", async () => {
+    provider.scriptSequence([
+      { call: { name: "read", args: { path: `${elsewhere}/notes.md` } } },
+      { say: "done" },
+    ]);
+
+    const result = await runDelegatedTask(
+      await context(workspace()),
+      `summarise ${elsewhere}/notes.md`,
+      () => undefined
+    );
+
+    // The read ran (and found no file); it was not refused.
+    expect(asked()).not.toMatch(/the folder this task is about/);
+    expect(result.text).not.toContain("Scope:");
+  });
+
+  it("works in the root it is given", async () => {
+    const parent = workspace();
+    const repo = path.join(parent, "repo");
+    fs.mkdirSync(repo);
+    fs.writeFileSync(path.join(repo, "marker.txt"), "inside the repo");
+    provider.scriptSequence([
+      { call: { name: "read", args: { path: "marker.txt" } } },
+      { say: "done" },
+    ]);
+
+    await runDelegatedTask(
+      await context(parent),
+      "read the marker",
+      () => undefined,
+      undefined,
+      repo
+    );
+
+    expect(asked()).toContain("inside the repo");
+  });
 });
 
 describe("a delegated run the user stops", () => {

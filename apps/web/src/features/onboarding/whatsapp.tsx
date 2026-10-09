@@ -425,6 +425,89 @@ export const WhatsAppConnect = ({
 };
 
 /**
+ * The phone's error page, when the WhatsApp check cannot complete: the
+ * reason's kind, the server's own words for a refusal, and a way out. A
+ * refusal is final, so only a passing failure offers Try again.
+ */
+export const PhoneErrorScreen = ({
+  reason,
+  detail,
+  retry,
+  switchAccount,
+  signOut,
+}: {
+  reason: "refused" | "connection";
+  detail?: string;
+  retry?(): void;
+  switchAccount(): Promise<void>;
+  signOut(): Promise<void>;
+}) => {
+  const { t } = useTranslation();
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const leave = (action: () => Promise<void>) => {
+    setBusy(true);
+    setFailed(false);
+    void action().catch((error: unknown) => {
+      console.warn("[phone] sign-out failed", error);
+      setFailed(true);
+      setBusy(false);
+    });
+  };
+  return (
+    <FlowPage
+      data-slot="phone-error"
+      media={<ConnectorMark id="whatsapp" size={56} />}
+    >
+      <h1 className="page-title">{t("web.phoneError.title")}</h1>
+      <p role="alert" className="text-muted-foreground text-sm/relaxed">
+        {t(
+          reason === "refused"
+            ? "web.phoneError.refused"
+            : "web.phoneError.connection"
+        )}
+      </p>
+      {detail && (
+        <p className="text-muted-foreground text-xs break-words">{detail}</p>
+      )}
+      {failed && (
+        <p role="alert" className="text-destructive text-sm">
+          {t("web.connect.signOutFailed")}
+        </p>
+      )}
+      {retry && (
+        <Button
+          size="lg"
+          className="self-end max-[799px]:w-full"
+          disabled={busy}
+          onClick={retry}
+        >
+          {t("web.connect.tryAgain")}
+        </Button>
+      )}
+      <Button
+        variant={retry ? "ghost" : "default"}
+        size="lg"
+        className="self-end max-[799px]:w-full"
+        disabled={busy}
+        onClick={() => leave(switchAccount)}
+      >
+        {t("web.connect.switchAccount")}
+      </Button>
+      <Button
+        variant="ghost"
+        size="lg"
+        className="self-end max-[799px]:w-full"
+        disabled={busy}
+        onClick={() => leave(signOut)}
+      >
+        {t("userMenu.signOut")}
+      </Button>
+    </FlowPage>
+  );
+};
+
+/**
  * AbacusAI Bot on a phone is WhatsApp: connect a number, then chat there.
  * Only these two screens draw (no Skip); the bot runs on the server. The
  * caller has the chat in the cache already, and linking or unlinking flips it.
@@ -495,7 +578,7 @@ export const PhoneWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
 };
 
 /**
- * The browser's first run: "Connect your WhatsApp" over the shell, once per
+ * The browser's first run: the bot's WhatsApp chat over the shell, once per
  * account (`seen` is the account's pref), while the server offers the bot's
  * number and none is linked. Linking or skipping marks it seen; the
  * messaging page keeps the way in. A phone gets no Skip.

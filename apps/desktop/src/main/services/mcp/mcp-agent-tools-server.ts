@@ -1010,6 +1010,8 @@ export class McpAgentToolsServer extends McpHttpServer {
 
       return this.err(`Unknown action "${action}".`);
     } catch (error) {
+      if (error instanceof HostedRoutineRefusal)
+        return this.ok(hostedRefusalNote(error, action));
       return this.err(error instanceof Error ? error.message : String(error));
     }
   }

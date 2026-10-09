@@ -1551,7 +1551,7 @@
       "unread_other": "{{count}} new results",
       "notifyDone": "A new result is in.",
       "notifyFailed": "This routine's last run did not finish.",
-      "planRequired": "Paket gratis mencakup satu rutinitas yang berjalan sendiri. Tingkatkan paket untuk mendapatkan lebih banyak.",
+      "planRequired": "Rutinitas tersedia dengan paket berbayar.",
       "upgrade": "Upgrade",
       "status": {
         "done": "Done",
@@ -1623,6 +1623,10 @@
       "reads": "Salah satu akses akun tidak bisa dipakai.",
       "text": "Beri rutinitas nama dan instruksi.",
       "other": "Rutinitas tidak bisa disimpan seperti ini. Periksa pengaturannya dan coba lagi."
+    },
+    "upgrade": {
+      "title": "Buka rutinitas",
+      "description": "Upgrade untuk menjadwalkan tugas dan mengotomatiskan pekerjaan Anda."
     }
   },
   "sessions": {
@@ -4023,7 +4027,10 @@
       "desktopInstead": "Get the desktop app instead",
       "signedOut": "Masuk untuk menggunakan AbacusAI Bot di web.",
       "tierRequired": "AbacusAI Bot di web memerlukan paket Pro.",
-      "hostOutdated": "Bot Anda sudah usang. Mulai ulang komputer Anda untuk memperbaruinya."
+      "hostOutdated": "Bot Anda sudah usang. Mulai ulang komputer Anda untuk memperbaruinya.",
+      "accountRefused": "Akun ini tidak dapat menggunakan AbacusAI Bot di situs ini. Beralihlah ke akun lain untuk melanjutkan.",
+      "switchAccount": "Ganti akun",
+      "signOutFailed": "Gagal keluar. Coba lagi."
     },
     "files": {
       "download": "Unduh",
@@ -4111,10 +4118,10 @@
       "unlinkConfirm": "Your agent stops answering in WhatsApp. You can link it again any time."
     },
     "whatsappBot": {
-      "title": "Connect your WhatsApp",
-      "body": "Chat with AbacusAI Bot right from WhatsApp. Pick up anywhere you left off.",
+      "title": "Chat dengan AbacusAI Bot di WhatsApp",
+      "body": "Kirim pesan ke AbacusAI Bot dari WhatsApp, di mana pun Anda berada. Ini membuka chat dengan bot. Akun WhatsApp Anda tidak ditautkan.",
       "numberLabel": "Your WhatsApp number, with country code",
-      "connect": "Connect WhatsApp",
+      "connect": "Mulai chat WhatsApp",
       "note": "Selanjutnya, kirim satu pesan di WhatsApp. Selesai.",
       "skip": "Skip, use it in the browser",
       "waitingTitle": "Kirim pesan ini di WhatsApp",
@@ -4130,12 +4137,21 @@
       "expiredTitle": "Kode ini sudah kedaluwarsa",
       "expiredBody": "Kode berlaku 10 menit. Ambil kode baru, lalu kirim dari WhatsApp.",
       "newCode": "Ambil kode baru",
-      "connected": "WhatsApp connected",
+      "connected": "Chat WhatsApp siap",
       "rowDetail": "Chat with AbacusAI Bot on WhatsApp",
       "doneTitle": "Semua siap",
       "doneBody": "Bot Anda ada di WhatsApp. Kirim pesan kapan saja.",
       "useDifferentNumber": "Gunakan nomor lain"
     },
-    "signOutDetail": "This ends your website session and clears this browser's bot data."
+    "signOutDetail": "This ends your website session and clears this browser's bot data.",
+    "routines": {
+      "download": "Unduh aplikasi desktop",
+      "desktopAlternative": "Gunakan AbacusAI Bot di komputer Anda."
+    },
+    "phoneError": {
+      "title": "Terjadi kesalahan",
+      "connection": "Tidak dapat menghubungi AbacusAI Bot. Periksa koneksi Anda, lalu coba lagi.",
+      "refused": "Akun ini tidak dapat menggunakan AbacusAI Bot di situs ini."
+    }
   }
 }

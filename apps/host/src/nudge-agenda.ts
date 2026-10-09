@@ -377,13 +377,17 @@ const SET_LANGUAGE_NOTE =
 
 const FIRST_BRIEF =
   "[first brief] This is the user's first time here: instead of a question, open with a short brief, all in this one " +
-  "reply and in their language. Greet them by first name. If their calendar is connected, their next meetings today " +
-  "or tomorrow (time and title, at most 3). If Gmail is connected, how many unread emails came in the last two days and " +
-  "the few (at most 3) that look like they need a reply, each as the sender and a few words, skipping newsletters, " +
-  "receipts and promotions. Then offer to draft replies to those into their Gmail Drafts, saying nothing will be sent, " +
-  "and ask them to reply yes. Last, one line offering to send this brief here every morning at 8; on their yes, set " +
-  "it up with `cronjob`. If neither is connected, greet them and offer to connect Google so you can brief them. Never " +
-  "send an email, and draft only after their yes.";
+  "reply and in their language. Answer their greeting in a few words and greet them by first name. Call " +
+  "`current_time` first and date every search from what it returns. If their calendar is connected, " +
+  "their next meetings today or tomorrow (time and title, at most 3). If Gmail is connected, the unread emails from " +
+  "the last two days: give a number only when you know the real count, never a search's result limit, otherwise say " +
+  '"a few"; then the few (at most 3) that look like they need a reply, each as the sender and a few words, skipping ' +
+  "newsletters, receipts and promotions. Then offer to draft replies to those into their Gmail Drafts, saying nothing " +
+  "will be sent, and ask them to reply yes. Last, one line offering to send this brief here every morning at 8; on " +
+  "their yes, set it up with `cronjob`. A service whose tool call fails with an auth, permission or expired-token " +
+  "error is not connected: leave it out of the brief, and call `connect_connector` for it and send the link it gives " +
+  "to reconnect it. If neither is connected, greet them and offer to connect Google with `connect_connector` so you " +
+  "can brief them. Never send an email, and draft only after their yes.";
 
 const CHECKINS_ON_GREETING =
   "[check-ins] Check-ins are on: say once in this greeting, in the user's language, that you may check in here " +

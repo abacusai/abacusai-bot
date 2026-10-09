@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 
 import { usePrefs } from "#renderer/data/db/prefs";
 import { cn } from "#renderer/lib/cn";
+import { useHasContextualUpsell } from "#renderer/lib/contextual-upsell";
 import { creditsTier } from "#renderer/lib/credits";
 import {
   durations,
@@ -100,12 +101,10 @@ export const UpgradePromo = () => {
       window.removeEventListener("focus", refresh);
     };
   }, [key, savedSnooze?.until]);
-  const state = promoState(
-    account.data,
-    prefs.creditsExhaustedAt,
-    savedSnooze,
-    now
-  );
+  const contextualUpsell = useHasContextualUpsell();
+  const state = contextualUpsell
+    ? null
+    : promoState(account.data, prefs.creditsExhaustedAt, savedSnooze, now);
   const [position, setPosition] = useState<ReturnType<typeof promoPlacement>>({
     left: 72,
     bottom: 24,
@@ -202,7 +201,7 @@ export const UpgradePromo = () => {
     account.data?.credits_granted != null && account.data.credits_used != null
       ? Math.max(0, account.data.credits_granted - account.data.credits_used)
       : null;
-  if (tier !== "free") return createPortal(null, target);
+  if (tier !== "free" || contextualUpsell) return createPortal(null, target);
   return createPortal(
     <AnimatePresence>
       {state ? (

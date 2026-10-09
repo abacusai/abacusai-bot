@@ -1551,7 +1551,7 @@
       "unread_other": "{{count}} new results",
       "notifyDone": "A new result is in.",
       "notifyFailed": "This routine's last run did not finish.",
-      "planRequired": "Il piano gratuito include una routine che si avvia da sola. Con un upgrade puoi averne di più.",
+      "planRequired": "Le routine sono disponibili con un piano a pagamento.",
       "upgrade": "Upgrade",
       "status": {
         "done": "Done",
@@ -1623,6 +1623,10 @@
       "reads": "Uno degli accessi all'account non può essere usato.",
       "text": "Dai alla routine un nome e un'istruzione.",
       "other": "Non è stato possibile salvare la routine così. Controlla le impostazioni e riprova."
+    },
+    "upgrade": {
+      "title": "Sblocca le routine",
+      "description": "Passa a un piano superiore per pianificare attività e automatizzare il lavoro."
     }
   },
   "sessions": {
@@ -4023,7 +4027,10 @@
       "desktopInstead": "Get the desktop app instead",
       "signedOut": "Accedi per usare AbacusAI Bot sul web.",
       "tierRequired": "AbacusAI Bot sul web richiede un piano Pro.",
-      "hostOutdated": "Il tuo bot non è aggiornato. Riavvia il computer per aggiornarlo."
+      "hostOutdated": "Il tuo bot non è aggiornato. Riavvia il computer per aggiornarlo.",
+      "accountRefused": "Questo account non può usare AbacusAI Bot su questo sito. Passa a un altro account per continuare.",
+      "switchAccount": "Cambia account",
+      "signOutFailed": "Impossibile uscire. Riprova."
     },
     "files": {
       "download": "Scarica",
@@ -4111,10 +4118,10 @@
       "unlinkConfirm": "Your agent stops answering in WhatsApp. You can link it again any time."
     },
     "whatsappBot": {
-      "title": "Connect your WhatsApp",
-      "body": "Chat with AbacusAI Bot right from WhatsApp. Pick up anywhere you left off.",
+      "title": "Chatta con AbacusAI Bot su WhatsApp",
+      "body": "Scrivi ad AbacusAI Bot da WhatsApp, ovunque tu sia. Si apre una chat con il bot. Il tuo account WhatsApp non viene collegato.",
       "numberLabel": "Your WhatsApp number, with country code",
-      "connect": "Connect WhatsApp",
+      "connect": "Avvia la chat WhatsApp",
       "note": "Poi invii un messaggio su WhatsApp. Tutto qui.",
       "skip": "Skip, use it in the browser",
       "waitingTitle": "Invia questo messaggio su WhatsApp",
@@ -4130,12 +4137,21 @@
       "expiredTitle": "Questo codice è scaduto",
       "expiredBody": "I codici durano 10 minuti. Prendine uno nuovo e invialo da WhatsApp.",
       "newCode": "Ottieni un nuovo codice",
-      "connected": "WhatsApp connected",
+      "connected": "Chat WhatsApp pronta",
       "rowDetail": "Chat with AbacusAI Bot on WhatsApp",
       "doneTitle": "Tutto pronto",
       "doneBody": "Il tuo bot è su WhatsApp. Scrivigli quando vuoi.",
       "useDifferentNumber": "Usa un altro numero"
     },
-    "signOutDetail": "This ends your website session and clears this browser's bot data."
+    "signOutDetail": "This ends your website session and clears this browser's bot data.",
+    "routines": {
+      "download": "Scarica l’app desktop",
+      "desktopAlternative": "Usa AbacusAI Bot sul tuo computer."
+    },
+    "phoneError": {
+      "title": "Qualcosa è andato storto",
+      "connection": "Impossibile raggiungere AbacusAI Bot. Controlla la connessione e riprova.",
+      "refused": "Questo account non può usare AbacusAI Bot su questo sito."
+    }
   }
 }

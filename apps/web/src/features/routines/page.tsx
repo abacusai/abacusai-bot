@@ -29,6 +29,7 @@ import {
 } from "#renderer/ui/resizable";
 import { Switch } from "#renderer/ui/switch";
 
+import { RoutineCreateAction } from "./create-action";
 import { runsView, scheduleLabel, routineState, useRoutinesData } from "./data";
 import { isHosted } from "./hosted";
 import { HostedResults } from "./hosted-results";
@@ -49,14 +50,7 @@ export const RoutinesListBody = () => {
           routines.length ? "phase5.pickRoutine" : "routines.page.emptyTitle"
         )}
         description={t("routines.page.emptyDescription")}
-        action={
-          <Button
-            nativeButton={false}
-            render={<AppLink to="/routines/new" transition="none" />}
-          >
-            {t("routines.sidebar.new")}
-          </Button>
-        }
+        action={<RoutineCreateAction />}
       />
     </div>
   );

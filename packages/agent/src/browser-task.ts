@@ -33,6 +33,7 @@ import { isMediaId } from "./send-media.js";
 import { whenAborted } from "./subagent-abort.js";
 import { forwardChildToolEvents, traceChildEvent } from "./subagent-events.js";
 import {
+  CLOSING_TIMEOUT_MS,
   closeOut,
   extractText,
   MAX_PROVIDER_RETRIES,
@@ -896,12 +897,14 @@ export async function runBrowserTask(
               ? `Start at ${startUrl.trim()}\n\n${task}\n\n${login}${budget.note()}`
               : `${task}\n\n${login}${budget.note()}`;
 
+      // The whole run, closing turn included, fits the tool's 720s timeout.
+      const deadline = Date.now() + TIMEOUT_MS;
       let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
       const timeout = new Promise<void>((resolve) => {
         timeoutTimer = setTimeout(() => {
           outcome.stoppedBy = "timeout";
           resolve();
-        }, TIMEOUT_MS);
+        }, TIMEOUT_MS - CLOSING_TIMEOUT_MS);
       });
       const abort = whenAborted(signal, () => {
         outcome.stoppedBy = "aborted";
@@ -951,7 +954,11 @@ export async function runBrowserTask(
           outcome.stoppedBy === "turn-limit" ||
           outcome.stoppedBy === "timeout"
         ) {
-          const report = await closeOut(session, signal);
+          const report = await closeOut(
+            session,
+            signal,
+            Math.min(CLOSING_TIMEOUT_MS, deadline - Date.now())
+          );
           if (report.trim().length > 0) {
             lastText = report;
             steers.push("closing");

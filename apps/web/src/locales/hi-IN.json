@@ -1551,7 +1551,7 @@
       "unread_other": "{{count}} new results",
       "notifyDone": "A new result is in.",
       "notifyFailed": "This routine's last run did not finish.",
-      "planRequired": "The free plan includes one routine that runs on its own. Upgrading allows more.",
+      "planRequired": "रूटीन सशुल्क प्लान में उपलब्ध हैं।",
       "upgrade": "Upgrade",
       "status": {
         "done": "Done",
@@ -1623,6 +1623,10 @@
       "reads": "One of the account reads cannot be used.",
       "text": "Give the routine a name and an instruction.",
       "other": "The routine could not be saved as it is. Check its settings and try again."
+    },
+    "upgrade": {
+      "title": "रूटीन अनलॉक करें",
+      "description": "टास्क शेड्यूल करने और काम ऑटोमेट करने के लिए अपग्रेड करें।"
     }
   },
   "sessions": {
@@ -4023,7 +4027,10 @@
       "desktopInstead": "Get the desktop app instead",
       "signedOut": "वेब पर AbacusAI Bot इस्तेमाल करने के लिए साइन इन करें।",
       "tierRequired": "वेब पर AbacusAI Bot के लिए Pro प्लान चाहिए।",
-      "hostOutdated": "आपका बॉट पुराना हो गया है। इसे अपडेट करने के लिए अपना कंप्यूटर रीस्टार्ट करें।"
+      "hostOutdated": "आपका बॉट पुराना हो गया है। इसे अपडेट करने के लिए अपना कंप्यूटर रीस्टार्ट करें।",
+      "accountRefused": "This account can't use AbacusAI Bot on this site. Switch to another account to keep going.",
+      "switchAccount": "Switch account",
+      "signOutFailed": "Couldn't sign out. Try again."
     },
     "files": {
       "download": "डाउनलोड करें",
@@ -4111,10 +4118,10 @@
       "unlinkConfirm": "Your agent stops answering in WhatsApp. You can link it again any time."
     },
     "whatsappBot": {
-      "title": "Connect your WhatsApp",
-      "body": "Chat with AbacusAI Bot right from WhatsApp. Pick up anywhere you left off.",
+      "title": "Chat with AbacusAI Bot on WhatsApp",
+      "body": "Message AbacusAI Bot from WhatsApp, wherever you are. This opens a chat with the bot. It doesn't link your WhatsApp account.",
       "numberLabel": "Your WhatsApp number, with country code",
-      "connect": "Connect WhatsApp",
+      "connect": "Start WhatsApp chat",
       "note": "Next, you send one message in WhatsApp. That's it.",
       "skip": "Skip, use it in the browser",
       "waitingTitle": "Send this message in WhatsApp",
@@ -4130,12 +4137,21 @@
       "expiredTitle": "This code expired",
       "expiredBody": "Codes last 10 minutes. Get a new one, then send it from WhatsApp.",
       "newCode": "Get a new code",
-      "connected": "WhatsApp connected",
+      "connected": "WhatsApp chat ready",
       "rowDetail": "Chat with AbacusAI Bot on WhatsApp",
       "doneTitle": "You're all set",
       "doneBody": "Your bot is on WhatsApp. Message it there anytime.",
       "useDifferentNumber": "Use a different number"
     },
-    "signOutDetail": "This ends your website session and clears this browser's bot data."
+    "signOutDetail": "This ends your website session and clears this browser's bot data.",
+    "routines": {
+      "download": "डेस्कटॉप ऐप डाउनलोड करें",
+      "desktopAlternative": "अपने कंप्यूटर पर AbacusAI Bot इस्तेमाल करें।"
+    },
+    "phoneError": {
+      "title": "Something went wrong",
+      "connection": "We couldn't reach AbacusAI Bot. Check your connection, then try again.",
+      "refused": "This account can't use AbacusAI Bot on this site."
+    }
   }
 }

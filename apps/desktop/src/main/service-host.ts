@@ -355,6 +355,7 @@ import {
 import { FeedbackService } from "./services/debug-sync/feedback-service";
 import { LogSyncService } from "./services/debug-sync/log-sync-service";
 import { syncLogFor } from "./services/debug-sync/sync-log";
+import { createUsageReporter } from "./services/debug-sync/usage-report";
 import { DeviceMirrorService } from "./services/device/device-mirror-service";
 import { DeviceService } from "./services/device/device-service";
 import {
@@ -404,6 +405,7 @@ import {
   MessagingGatewayService,
   type SelfLanePlatform,
 } from "./services/messaging/messaging-gateway-service";
+import { fetchAbacusAccount } from "./services/providers/abacus";
 import {
   connectButtonLink,
   connectLinkStatus,
@@ -598,6 +600,15 @@ export class ServiceHost {
                 emittedAt: new Date().toISOString(),
               }),
           });
+    // Usage counts for the daily report; the listener never throws.
+    this.onAgentEvent(
+      createUsageReporter(platform === "web-host" ? "web" : "desktop", {
+        laneOf: (id) => this.agentSessionManagerService.laneOf(id),
+        isRoutineSession: (id) =>
+          this.agentSessionManagerService.isRoutineSession(id),
+        isBotSession: (id) => this.agentSessionManagerService.isBotSession(id),
+      })
+    );
   }
 
   /** MCP connects through the web host's own `/mcp/*` routes; null on the desktop. */
@@ -5012,6 +5023,10 @@ export class ServiceHost {
     /** The agent asked for it (the cronjob tool), not the user's own form. */
     options: { byAgent?: boolean; runAtText?: string | null } = {}
   ): Promise<CreatedRoutine> {
+    const account = await fetchAbacusAccount();
+    const plan = account?.subscription_tier?.trim() || account?.plan?.trim();
+    if (plan?.toLowerCase() === "free")
+      throw new HostedRoutineRefusal("plan_limit", { limit: 0 });
     // A hosted bot whose routines run on the server has no other scheduler:
     // a local one there would never fire, and would sidestep the plan.
     const runner = this.hostedOnly()

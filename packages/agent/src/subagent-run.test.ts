@@ -5,6 +5,8 @@ import {
   CLOSING_MESSAGE,
   closeOut,
   finalWarningMessage,
+  makerVoice,
+  runSubagent,
   SUBAGENT_TURNS,
   type SubagentSession,
   TurnBudget,
@@ -79,6 +81,35 @@ describe("the turn budget", () => {
   });
 });
 
+describe("the warnings for a run that makes a file", () => {
+  const steps = run(
+    new TurnBudget(
+      { max: 10, wrapUp: 4, finalWarning: 7 },
+      makerVoice("render_deck")
+    ),
+    10
+  ).filter((step) => step.kind === "steer");
+
+  it("ask it to finish and render, not to stop and report", () => {
+    // "Stop exploring and report" abandons a half-built deck; an unrendered
+    // draft is lost when the budget runs out.
+    for (const step of steps) {
+      expect(step).toMatchObject({
+        text: expect.stringContaining("render_deck"),
+      });
+      expect(step).not.toMatchObject({
+        text: expect.stringMatching(/stop exploring/i),
+      });
+    }
+    expect(steps[0]).toMatchObject({
+      text: expect.stringMatching(/about 6 turns left/),
+    });
+    expect(steps[1]).toMatchObject({
+      text: expect.stringMatching(/3 turns left/),
+    });
+  });
+});
+
 /** A session whose closing turn writes `reply`, recording what was done to it. */
 function fakeSession(reply: string | null) {
   const calls: string[] = [];
@@ -135,6 +166,13 @@ describe("closing out a run that is out of budget", () => {
     expect(await closeOut(session, undefined, 20)).toBe("");
   });
 
+  it("does nothing when no time is left for it", async () => {
+    const { session, calls } = fakeSession("ignored");
+
+    expect(await closeOut(session, undefined, 0)).toBe("");
+    expect(calls).toEqual([]);
+  });
+
   it("does nothing once the user has stopped the run", async () => {
     const { session, calls } = fakeSession("ignored");
     const controller = new AbortController();
@@ -142,5 +180,33 @@ describe("closing out a run that is out of budget", () => {
 
     expect(await closeOut(session, controller.signal)).toBe("");
     expect(calls).toEqual([]);
+  });
+});
+
+describe("a run that hits its time limit", () => {
+  it("closes out within the limit, not after it", async () => {
+    // Works forever until aborted, then answers the closing prompt.
+    const { session } = fakeSession("closing report");
+    const working = session.prompt;
+    let first = true;
+    session.prompt = (text: string) => {
+      if (first) {
+        first = false;
+        return new Promise<void>(() => undefined);
+      }
+      return working(text);
+    };
+
+    const started = Date.now();
+    const result = await runSubagent(session, "work", {
+      tag: "test",
+      forwardTools: Object.assign(() => false, { settle: () => undefined }),
+      timeoutMs: 400,
+    });
+
+    expect(result.stoppedBy).toBe("timeout");
+    expect(result.text).toBe("closing report");
+    // Far under the 90s a closing turn used to add on top; slack for slow CI.
+    expect(Date.now() - started).toBeLessThan(400 + 2000);
   });
 });

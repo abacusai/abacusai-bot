@@ -3,6 +3,7 @@ import { isFreePoolProvider } from "@abacus-ai/contract/free-pool";
 import type { Transport } from "#renderer/data/transport";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
+import { sidebarAccount } from "#renderer/lib/sidebar-account";
 import { openUpgrade } from "#renderer/lib/upgrade";
 
 import type { CreditActions } from "./index";
@@ -15,6 +16,8 @@ export const creditActionsFor = (
   return {
     openExternal: (url) => platformSystem(client).openExternal({ url }),
     openUpgrade: () => openUpgrade(client),
+    canTopUpCredits: async () =>
+      sidebarAccount(await client.account.abacus()).billing === "manage",
     configuredFreeSources: async () => {
       const [models, keys] = await Promise.all([
         client.models.list({}),

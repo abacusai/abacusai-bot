@@ -1551,7 +1551,7 @@
       "unread_other": "{{count}} new results",
       "notifyDone": "A new result is in.",
       "notifyFailed": "This routine's last run did not finish.",
-      "planRequired": "무료 요금제에는 자동으로 실행되는 루틴이 1개 포함되어 있습니다. 업그레이드하면 더 많이 사용할 수 있습니다.",
+      "planRequired": "루틴은 유료 플랜에서 사용할 수 있습니다.",
       "upgrade": "Upgrade",
       "status": {
         "done": "Done",
@@ -1623,6 +1623,10 @@
       "reads": "계정 읽기 중 하나를 사용할 수 없습니다.",
       "text": "루틴에 이름과 지시를 입력하세요.",
       "other": "이대로는 루틴을 저장할 수 없습니다. 설정을 확인하고 다시 시도하세요."
+    },
+    "upgrade": {
+      "title": "루틴 이용하기",
+      "description": "업그레이드하여 작업을 예약하고 자동화하세요."
     }
   },
   "sessions": {
@@ -4023,7 +4027,10 @@
       "desktopInstead": "Get the desktop app instead",
       "signedOut": "웹에서 AbacusAI Bot을 사용하려면 로그인하세요.",
       "tierRequired": "웹용 AbacusAI Bot에는 Pro 요금제가 필요합니다.",
-      "hostOutdated": "봇이 오래되었습니다. 컴퓨터를 다시 시작하여 업데이트하세요."
+      "hostOutdated": "봇이 오래되었습니다. 컴퓨터를 다시 시작하여 업데이트하세요.",
+      "accountRefused": "이 계정으로는 이 사이트에서 AbacusAI Bot을 사용할 수 없습니다. 계속하려면 다른 계정으로 전환하세요.",
+      "switchAccount": "계정 전환",
+      "signOutFailed": "로그아웃하지 못했습니다. 다시 시도하세요."
     },
     "files": {
       "download": "다운로드",
@@ -4111,10 +4118,10 @@
       "unlinkConfirm": "Your agent stops answering in WhatsApp. You can link it again any time."
     },
     "whatsappBot": {
-      "title": "Connect your WhatsApp",
-      "body": "Chat with AbacusAI Bot right from WhatsApp. Pick up anywhere you left off.",
+      "title": "WhatsApp에서 AbacusAI Bot과 채팅",
+      "body": "어디서든 WhatsApp으로 AbacusAI Bot에 메시지를 보내세요. 봇과의 채팅이 열리며, WhatsApp 계정은 연결되지 않습니다.",
       "numberLabel": "Your WhatsApp number, with country code",
-      "connect": "Connect WhatsApp",
+      "connect": "WhatsApp 채팅 시작",
       "note": "다음으로 WhatsApp에서 메시지 하나만 보내면 됩니다.",
       "skip": "Skip, use it in the browser",
       "waitingTitle": "WhatsApp에서 이 메시지를 보내세요",
@@ -4130,12 +4137,21 @@
       "expiredTitle": "이 코드는 만료되었습니다",
       "expiredBody": "코드는 10분 동안 유효합니다. 새 코드를 받아 WhatsApp에서 보내세요.",
       "newCode": "새 코드 받기",
-      "connected": "WhatsApp connected",
+      "connected": "WhatsApp 채팅 준비 완료",
       "rowDetail": "Chat with AbacusAI Bot on WhatsApp",
       "doneTitle": "모두 준비됐어요",
       "doneBody": "봇이 WhatsApp에 있어요. 언제든 메시지를 보내세요.",
       "useDifferentNumber": "다른 번호 사용"
     },
-    "signOutDetail": "This ends your website session and clears this browser's bot data."
+    "signOutDetail": "This ends your website session and clears this browser's bot data.",
+    "routines": {
+      "download": "데스크톱 앱 다운로드",
+      "desktopAlternative": "컴퓨터에서 AbacusAI Bot을 사용하세요."
+    },
+    "phoneError": {
+      "title": "문제가 발생했습니다",
+      "connection": "AbacusAI Bot에 연결할 수 없습니다. 연결을 확인한 후 다시 시도하세요.",
+      "refused": "이 계정으로는 이 사이트에서 AbacusAI Bot을 사용할 수 없습니다."
+    }
   }
 }
