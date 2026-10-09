@@ -104,7 +104,9 @@ export const OnboardingFrame = ({
         : "none";
   return (
     <div ref={frame} className="onboarding-frame" data-reduced-motion={reduce}>
-      <OnboardingProgress step={step} />
+      {step !== "first-bot" && step !== "done" && (
+        <OnboardingProgress step={step} />
+      )}
       <Button
         variant="ghost"
         size="icon"
