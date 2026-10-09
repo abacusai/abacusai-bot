@@ -164,10 +164,10 @@ it("R6-T25/T30/T42 native child viewport and disposal cycles", async () => {
       durationMs: number;
     }[];
     const bounds: Record<string, [number, number]> = {
-      sent: [60, 120],
-      received: [120, 220],
+      sent: [170, 210],
+      received: [230, 270],
       "needs-you": [200, 320],
-      done: [180, 280],
+      done: [280, 320],
       failed: [150, 250],
       "routine-fired": [120, 200],
     };
