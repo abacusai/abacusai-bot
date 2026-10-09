@@ -1,9 +1,9 @@
 import { Store, useStore } from "@tanstack/react-store";
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 
 const active = new Store(0);
 export const useContextualUpsell = (visible: boolean) => {
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!visible) return;
     active.setState((count) => count + 1);
     return () => active.setState((count) => count - 1);
