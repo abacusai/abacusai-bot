@@ -61,7 +61,11 @@ const HELPERS = `(() => {
   const viewport = () => document.querySelector('[data-slot="message-scroller-viewport"]');
   const ROW = '[data-slot="message-scroller-item"], [data-tool], [data-slot="subagent-row"]';
   const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
-  const task = () => new Promise((r) => { const c = new MessageChannel(); c.port1.onmessage = () => r(); c.port2.postMessage(0); });
+  const task = () => new Promise((r) => {
+    const c = new MessageChannel();
+    c.port1.onmessage = () => { c.port1.close(); c.port2.close(); r(); };
+    c.port2.postMessage(0);
+  });
   window.__chatHelpers = {
     viewport,
     frame,
@@ -445,7 +449,11 @@ describe.skipIf(!ready.runnable)("chat kit gates (Electron)", () => {
       };
       expect(commits.length, `${label}: activations`).toBe(20);
       for (const drift of drifts) expect(drift).toBeLessThanOrEqual(1);
-      for (const ms of commits) expect(ms).toBeLessThan(50);
+      for (const ms of commits)
+        expect(
+          ms,
+          `${label}: all commit times ${JSON.stringify(commits)}`
+        ).toBeLessThan(50);
     };
 
     it('history: "Show earlier" 20 times away from the end', async () => {
