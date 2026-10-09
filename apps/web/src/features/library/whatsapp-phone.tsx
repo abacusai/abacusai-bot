@@ -330,15 +330,15 @@ const LinkDialog = ({
                 role="status"
                 className="text-muted-foreground flex items-center justify-center gap-2 text-[13px]"
               >
-                <span className="size-2 animate-pulse rounded-full bg-amber-500" />
+                <span className="size-2 animate-pulse rounded-full bg-[var(--chat-status-attention)]" />
                 {t("web.whatsapp.waiting")}
               </p>
             </>
           ) : (
             <>
               <div className="flex flex-col items-center gap-3 py-2 text-center">
-                <span className="flex size-16 items-center justify-center rounded-full bg-emerald-500/15">
-                  <Check className="size-8 text-emerald-500" />
+                <span className="flex size-16 items-center justify-center rounded-full bg-[var(--chat-status-done)]/15">
+                  <Check className="size-8 text-[var(--chat-status-done)]" />
                 </span>
                 {phone && (
                   <p className="text-[17px] font-semibold">

@@ -53,4 +53,4 @@ html.notch, html.notch body, html.notch #root { background: transparent !importa
 .notch-reply-pill input { flex: 1 1 0; min-width: 0; width: 0; padding: 0 calc(var(--notch-content-inline) - var(--notch-control-inset)); border: 0; background: transparent; box-shadow: none; outline: none; height: 28px; }
 .notch-reply-pill input:focus-visible { box-shadow: none; outline: none; }
 
-@media (hover: hover) and (pointer: fine) { .notch-shape button[data-secondary]:hover { background: #2a2a2e; } }
+@media (hover: hover) and (pointer: fine) { .notch-shape button[data-secondary]:hover { background: var(--notch-control, #2a2a2e); } }
