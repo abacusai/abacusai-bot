@@ -26,13 +26,21 @@ const SHA = createHash("sha256").update(BODY).digest("hex");
  * A host that answers each request with the next entry in `plan`, repeating
  * the last one once it runs out.
  */
-async function host(plan: Array<number | "ok" | "wrong">): Promise<{
+async function host(
+  plan: Array<number | "ok" | "wrong">,
+  rejectNode = false
+): Promise<{
   url: string;
   attempts: () => number;
   close: () => void;
 }> {
   let served = 0;
-  const server = http.createServer((_request, response) => {
+  const server = http.createServer((request, response) => {
+    if (rejectNode && request.headers["user-agent"] === "node") {
+      response.writeHead(403);
+      response.end("Generic Node requests are blocked");
+      return;
+    }
     const step = plan[Math.min(served++, plan.length - 1)];
 
     if (step === "ok") {
@@ -85,6 +93,17 @@ async function attempt(
 }
 
 describe("fetching a vendored binary", () => {
+  it("downloads verified bytes from a host that rejects generic Node requests", async () => {
+    const server = await host(["ok"], true);
+    try {
+      const generic = await fetch(server.url);
+      expect(generic.status).toBe(403);
+      expect(await fetchVerified(server.url, SHA, "tool.tgz")).toEqual(BODY);
+    } finally {
+      server.close();
+    }
+  });
+
   it("rides out a bad moment from the host", async () => {
     expect(await attempt([504, "ok"])).toEqual({ outcome: "ok", attempts: 2 });
   }, 30_000);

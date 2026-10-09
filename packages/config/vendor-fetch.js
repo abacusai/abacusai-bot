@@ -59,7 +59,11 @@ export async function fetchVerified(url, sha256, label) {
     let res;
 
     try {
-      res = await fetch(url, { redirect: "follow" });
+      res = await fetch(url, {
+        redirect: "follow",
+        // Some release hosts reject Node's generic default user agent.
+        headers: { "user-agent": "abacusai-bot/vendor-download" },
+      });
     } catch (err) {
       // No response at all: DNS, a reset connection, a proxy hanging up.
       lastError = err instanceof Error ? err.message : String(err);
