@@ -338,7 +338,13 @@ describe("renderer guards", () => {
   });
 });
 
-const unregisteredSessionKeys = (source: string, ast: unknown): string[] => {
+// The sign-up redirect cooldown is a timestamp, not user-authored draft state.
+// Scope its exemption to its owner; every other key still needs continuity.
+const unregisteredSessionKeys = (
+  source: string,
+  ast: unknown,
+  path = ""
+): string[] => {
   const constants = new Map<string, Node>();
   walk(ast, (node) => {
     if (
@@ -379,6 +385,11 @@ const unregisteredSessionKeys = (source: string, ast: unknown): string[] => {
       return;
     const key = keyOf((node.arguments as Node[])[0]);
     if (
+      path === "platform/connect.browser.tsx" &&
+      key === "abacusai-bot:sign-up-hop"
+    )
+      return;
+    if (
       key == null ||
       !CONTINUITY_STORES.some((s) =>
         s.prefix ? key.startsWith(s.storage) : key === s.storage
@@ -398,7 +409,9 @@ it("every persisted sessionStorage draft has a continuity schema", () => {
         !f.path.startsWith("lib/continuity")
     )
     .flatMap((f) =>
-      unregisteredSessionKeys(f.source, f.ast).map((key) => `${f.path}: ${key}`)
+      unregisteredSessionKeys(f.source, f.ast, f.path).map(
+        (key) => `${f.path}: ${key}`
+      )
     );
   expect(hits).toEqual([]);
 });
@@ -411,4 +424,17 @@ it("the session-store guard catches an extra unregistered key beside a registere
       parseAst(source, { lang: "ts" }, "canary.ts")
     )
   ).toEqual(["forgotten.draft"]);
+});
+
+it("exempts the auth redirect timestamp only in its owner while guarding adjacent drafts", () => {
+  const source =
+    'sessionStorage.setItem("abacusai-bot:sign-up-hop", String(Date.now())); sessionStorage.setItem("forgotten.draft", "user text");';
+  const ast = parseAst(source, { lang: "ts" }, "canary.ts");
+  expect(
+    unregisteredSessionKeys(source, ast, "platform/connect.browser.tsx")
+  ).toEqual(["forgotten.draft"]);
+  expect(unregisteredSessionKeys(source, ast, "features/canary.tsx")).toEqual([
+    "abacusai-bot:sign-up-hop",
+    "forgotten.draft",
+  ]);
 });
