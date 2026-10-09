@@ -108,15 +108,14 @@ export const ConnectorsStep = ({
                   void perform(async () => {
                     setPending(entry.id);
                     setFailed(null);
-                    try {
-                      await props.connect?.(entry.id);
-                      await refresh();
-                    } catch (error) {
-                      setFailed(entry.id);
-                      throw error;
-                    } finally {
-                      setPending(null);
-                    }
+                    await Promise.resolve()
+                      .then(() => props.connect?.(entry.id))
+                      .then(() => refresh())
+                      .catch((error) => {
+                        setFailed(entry.id);
+                        throw error;
+                      })
+                      .finally(() => setPending(null));
                   })
                 }
               >
