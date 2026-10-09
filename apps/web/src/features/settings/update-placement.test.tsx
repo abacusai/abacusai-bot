@@ -20,7 +20,7 @@ const ready: UpdateStatus = {
   failedPhase: null,
 };
 
-it("offers an update on a new bot page and in the rail, with one pending install across controls", async () => {
+it("offers an update on a new bot page without a rail icon and disables actions while installing", async () => {
   const os = implement(contract);
   let release!: () => void;
   let installs = 0;
@@ -39,15 +39,12 @@ it("offers an update on a new bot page and in the rail, with one pending install
   });
   try {
     await screen.findByText("A new version is ready");
-    const rail = document.querySelector('[data-slot="rail-update"]')!;
-    expect(rail).not.toBeNull();
-    expect(rail.closest('[data-slot="rail"]')).not.toBeNull();
+    expect(document.querySelector('[data-slot="rail-update"]')).toBeNull();
     const page = document.querySelector('[data-slot="page-update"]')!;
     expect(page).not.toBeNull();
-    fireEvent.click(rail);
+    fireEvent.click(page.querySelector("button")!);
     await waitFor(() => expect(installs).toBe(1));
-    await waitFor(() => expect(rail.hasAttribute("disabled")).toBe(true));
-    expect(page.textContent).toContain("Restarting");
+    await waitFor(() => expect(page.textContent).toContain("Restarting"));
     expect(page.querySelector("button")).toBeNull();
     release();
   } finally {
