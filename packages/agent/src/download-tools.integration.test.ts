@@ -20,6 +20,25 @@ const pins = {
   ],
 } as const;
 
+const unsafeJsCharMap: Record<string, string> = {
+  "<": "\\u003C",
+  ">": "\\u003E",
+  "/": "\\u002F",
+  "\\": "\\\\",
+  "\b": "\\b",
+  "\f": "\\f",
+  "\n": "\\n",
+  "\r": "\\r",
+  "\t": "\\t",
+  "\0": "\\0",
+  "\u2028": "\\u2028",
+  "\u2029": "\\u2029",
+};
+
+function escapeUnsafeJsString(str: string) {
+  return str.replace(/[<>/\\\b\f\n\r\t\0\u2028\u2029]/g, (x) => unsafeJsCharMap[x]);
+}
+
 afterEach(() => {
   for (const home of homes.splice(0))
     fs.rmSync(home, { recursive: true, force: true });
@@ -62,7 +81,7 @@ function fixture(arch: keyof typeof pins) {
     write(`${cache}/${file}`, "unrelated cached tool");
   write(
     "offline.mjs",
-    `import fs from 'node:fs'; globalThis.fetch = async () => { fs.appendFileSync(${JSON.stringify(path.join(home, "requests"))}, 'request\\n'); return new Response('Forbidden', {status:403, statusText:'Forbidden'}); };`
+    `import fs from 'node:fs'; globalThis.fetch = async () => { fs.appendFileSync(${escapeUnsafeJsString(JSON.stringify(path.join(home, "requests")))}, 'request\\n'); return new Response('Forbidden', {status:403, statusText:'Forbidden'}); };`
   );
   return {
     home,
