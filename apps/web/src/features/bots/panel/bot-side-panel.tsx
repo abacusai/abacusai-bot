@@ -424,6 +424,11 @@ export const FilesTab = ({
     void db.collections.artifacts.preload();
   }, [db]);
   const preview = tab.path;
+  const viewed = sessions.find(
+    (row) => row.id === (sessionId ?? bot.sessionId)
+  );
+  // The preview loads once on mount, so desktop waits for the workspace.
+  const previewReady = !IS_ELECTRON || !!viewed?.workspaceId;
   const tree = treeOf(files, workspaceRoot);
   const links = files.filter((file) => file.kind === "link");
   const open = (relative: string, where: "here" | "tab") => {
@@ -549,55 +554,64 @@ export const FilesTab = ({
             >
               <X />
             </Button>
-            <FilePreview
-              path={preview}
-              hostRoot={containmentRootFor(preview, workspaceRoot)}
-              read={{
-                localUrl: IS_ELECTRON
-                  ? async (filePath, hostRoot) => {
-                      const viewed = sessions.find(
-                        (row) => row.id === (sessionId ?? bot.sessionId)
-                      );
-                      if (!viewed?.workspaceId)
-                        throw new Error("Session workspace unavailable");
-                      const state =
-                        await transport.client.browser.runtime.materializeFile({
-                          filePath,
-                          hostRoot,
-                          conversationKey: sessionConversationKey(
-                            viewed.workspaceId,
-                            viewed.id
-                          ),
-                          resourceId: `bot-preview:${filePath}`,
-                        });
-                      await transport.client.browser.runtime.close(state.lease);
-                      return state.url;
-                    }
-                  : undefined,
-                text: (path, hostRoot) =>
-                  transport.client.files.readText({ filePath: path, hostRoot }),
-                image: async (path, hostRoot) =>
-                  (
-                    await transport.client.files.readImageAsDataUrl({
+            {previewReady && (
+              <FilePreview
+                path={preview}
+                hostRoot={containmentRootFor(preview, workspaceRoot)}
+                read={{
+                  localUrl: IS_ELECTRON
+                    ? async (filePath, hostRoot) => {
+                        if (!viewed?.workspaceId)
+                          throw new Error("Session workspace unavailable");
+                        const state =
+                          await transport.client.browser.runtime.materializeFile(
+                            {
+                              filePath,
+                              hostRoot,
+                              conversationKey: sessionConversationKey(
+                                viewed.workspaceId,
+                                viewed.id
+                              ),
+                              resourceId: `bot-preview:${filePath}`,
+                            }
+                          );
+                        await transport.client.browser.runtime.close(
+                          state.lease
+                        );
+                        return state.url;
+                      }
+                    : undefined,
+                  text: (path, hostRoot) =>
+                    transport.client.files.readText({
                       filePath: path,
                       hostRoot,
-                    })
-                  ).dataUrl,
-                pptx: (path, hostRoot) =>
-                  transport.client.files.readPptx({ filePath: path, hostRoot }),
-              }}
-              onOpenExternally={
-                IS_ELECTRON
-                  ? (path) => void transport.client.system.openPath({ path })
-                  : undefined
-              }
-              onReveal={
-                IS_ELECTRON
-                  ? (path) =>
-                      void transport.client.system.showItemInFolder({ path })
-                  : undefined
-              }
-            />
+                    }),
+                  image: async (path, hostRoot) =>
+                    (
+                      await transport.client.files.readImageAsDataUrl({
+                        filePath: path,
+                        hostRoot,
+                      })
+                    ).dataUrl,
+                  pptx: (path, hostRoot) =>
+                    transport.client.files.readPptx({
+                      filePath: path,
+                      hostRoot,
+                    }),
+                }}
+                onOpenExternally={
+                  IS_ELECTRON
+                    ? (path) => void transport.client.system.openPath({ path })
+                    : undefined
+                }
+                onReveal={
+                  IS_ELECTRON
+                    ? (path) =>
+                        void transport.client.system.showItemInFolder({ path })
+                    : undefined
+                }
+              />
+            )}
           </div>
         )}
       </div>

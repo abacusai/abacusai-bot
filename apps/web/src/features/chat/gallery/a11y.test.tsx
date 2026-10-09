@@ -8,15 +8,20 @@ import { act, screen, waitFor } from "@testing-library/react";
 import axe from "axe-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { renderApp } from "#renderer/test-support/app-harness";
+
 import * as b from "../fixtures/builders";
 import { SCENARIOS } from "../fixtures/scenarios";
 import { renderScenario } from "../testing";
 
 let current: Awaited<ReturnType<typeof renderScenario>> | null = null;
+let app: Awaited<ReturnType<typeof renderApp>> | undefined;
 afterEach(async () => {
   vi.useRealTimers();
   await current?.cleanup();
   current = null;
+  await app?.cleanup();
+  app = undefined;
 });
 
 const audit = async () => {
@@ -34,7 +39,9 @@ describe("R2-T26 a11y", () => {
   it.each(SCENARIOS.map((scenario) => scenario.id))(
     "%s has no axe violations and named icon buttons",
     async (id) => {
-      current = await renderScenario(id);
+      // Reply links need the router, so render them through the app.
+      if (id.includes("-links")) app = await renderApp(`/__ui?fixture=${id}`);
+      else current = await renderScenario(id);
       await waitFor(() =>
         expect(document.querySelector('[data-slot="chat-layout"]')).toBeTruthy()
       );

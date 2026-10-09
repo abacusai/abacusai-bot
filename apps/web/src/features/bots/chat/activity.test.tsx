@@ -1,3 +1,6 @@
+import { contract } from "@abacus-ai/contract/contract";
+import { MODEL_CATALOG } from "@abacus-ai/contract/models";
+import { implement } from "@orpc/server";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 
@@ -6,6 +9,15 @@ import * as b from "#renderer/features/chat/fixtures/builders";
 import { FakeRelay } from "#renderer/features/chat/fixtures/relay";
 import { renderApp, defaultSeed } from "#renderer/test-support/app-harness";
 
+const os = implement(contract);
+// The composer needs a configured model before it accepts a message.
+const models = {
+  models: {
+    list: os.models.list.handler(() => [
+      { ...MODEL_CATALOG[0]!, configured: true },
+    ]),
+  },
+};
 let app: Awaited<ReturnType<typeof renderApp>> | undefined;
 afterEach(async () => {
   app?.view.unmount();
@@ -16,6 +28,7 @@ it("the routed avatar follows actual reasoning/text streams and the send reactio
   const relay = new FakeRelay({ threadId: "bot-test" });
   app = await renderApp("/bots/chief-of-staff", {
     ai: relay.ai,
+    procedures: models,
     seed: {
       ...defaultSeed(),
       sessions: [

@@ -119,6 +119,16 @@ it.each([false, true])(
     );
     fireEvent.click(continueConnectors);
     await waitFor(() =>
+      expect(harness!.router.state.location.pathname).toBe(
+        "/onboarding/first-bot"
+      )
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Say hello" }));
+    await waitFor(() =>
+      expect(harness!.router.state.location.pathname).toBe("/onboarding/done")
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /^Message / }));
+    await waitFor(() =>
       expect(harness!.router.state.location.pathname).toMatch(/^\/bots\/bot-/)
     );
     const ownBots = harness.collections.bots.toArray.filter(
