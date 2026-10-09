@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PendingWait } from "#main/services/agent-tools/pending-waits";
 
 import { NudgeAgenda, nudgeNotes, siteName, waitItem } from "./nudge-agenda";
+import type { PhoneInboxEntry } from "./phone-inbox";
 import { PhoneLane } from "./phone-lane";
 import { refusedTextRule } from "./refused-text.test-support";
 
@@ -661,5 +662,98 @@ describe("what the loop hears with a user message", () => {
       "m1"
     );
     phone.stop();
+  });
+});
+
+describe("the linked turn", () => {
+  /** What the session is handed for one linked entry. */
+  const linkedTurn = async (
+    entry: Record<string, unknown>,
+    turnNotes: (entry: PhoneInboxEntry) => string[] = () => []
+  ): Promise<string> => {
+    const send = vi.fn(async () => true);
+    let polls = 0;
+    const phone = new PhoneLane(
+      {
+        call: (async (body: Record<string, unknown>) => {
+          if (body.action !== "inbox") return { ok: true };
+          polls += 1;
+          if (polls > 1) await new Promise(() => {});
+          return { messages: [{ id: "l1", kind: "linked", ...entry }] };
+        }) as never,
+        hasKey: () => true,
+        openSession: async () => ({ workspaceId: "w", sessionId: "s" }),
+        stop: async () => {},
+        send,
+        onAgentEvent: () => () => {},
+        activity: () => {},
+        resolveMedia: () => ({ ok: false, reason: "none" }),
+        turnNotes,
+        log: () => {},
+      },
+      { batchMs: 0 }
+    );
+    phone.start();
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    phone.stop();
+    return (send.mock.calls[0] as unknown[])[2] as string;
+  };
+
+  it("quotes the user's greeting without its pairing code, inside the tagged line", async () => {
+    const text = await linkedTurn({
+      sender: "Ana Example",
+      text: "Hi AbacusAI Bot!  (code abc-1_Xy9-Zq3_Lm0P)",
+    });
+    expect(text).toBe(
+      '[linked] The user just connected WhatsApp. Their WhatsApp name: Ana Example. Their greeting, in their own words: "Hi AbacusAI Bot!". Reply to it.'
+    );
+    // One tagged part: the pre-typed English greeting never sets the reply language.
+    expect(text.split(/\n\s*\n/)).toHaveLength(1);
+  });
+
+  it("keeps words the user typed around the code, and says nothing of a greeting when there was none", async () => {
+    expect(
+      await linkedTurn({ text: "(CODE abcdefghijkl) hola, ¿qué tal?" })
+    ).toBe(
+      '[linked] The user just connected WhatsApp. Their greeting, in their own words: "hola, ¿qué tal?". Reply to it.'
+    );
+    expect(
+      await linkedTurn({ sender: "Ana", text: "(code abcdefghijkl)" })
+    ).toBe(
+      "[linked] The user just connected WhatsApp. Their WhatsApp name: Ana."
+    );
+    expect(await linkedTurn({ text: "" })).toBe(
+      "[linked] The user just connected WhatsApp."
+    );
+  });
+
+  it("puts the first brief after the greeting line", async () => {
+    const { nudges } = agenda();
+    const text = await linkedTurn(
+      { sender: "Ana", text: "Hi! (code abcdefghijkl)", first_brief: true },
+      (entry) => nudges.notes(entry)
+    );
+    const [linked, brief] = text.split("\n\n");
+    expect(linked).toMatch(
+      /Their greeting, in their own words: "Hi!"\. Reply to it\.$/
+    );
+    expect(brief).toMatch(/^\[first brief\] /);
+  });
+
+  it("has the first brief check the date, never pass a search limit off as a count, and offer to reconnect a broken service", () => {
+    const { nudges } = agenda();
+    const [brief] = nudges.notes({
+      id: "l1",
+      kind: "linked",
+      first_brief: true,
+    });
+    expect(brief).toMatch(/^\[first brief\] /);
+    expect(brief).toContain("Answer their greeting");
+    expect(brief).toContain("Call `current_time` first");
+    expect(brief).toContain("never a search's result limit");
+    expect(brief).toContain('"a few"');
+    expect(brief).toMatch(
+      /auth, permission or expired-token error is not connected: leave it out of the brief, and call `connect_connector`/
+    );
   });
 });
