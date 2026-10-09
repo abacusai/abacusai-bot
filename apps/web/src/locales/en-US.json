@@ -1272,7 +1272,7 @@
     "pages.models.abacus": "Abacus.AI",
     "pages.models.openrouter": "OpenRouter",
     "pages.models.gemini": "Google Gemini",
-    "pages.connectors.body": "Connect your email and calendar to get help with replies and meetings, or message your bot from the apps you use. You can add more later.",
+    "pages.connectors.body": "Connect your email or message your bot from the apps you use. You can add more tools later.",
     "pages.first-bot.title": "We made your first bot for you",
     "pages.first-bot.body": "{{name}} helps with email, meetings and daily tasks. Make it your own.",
     "pages.done.title": "You’re set",

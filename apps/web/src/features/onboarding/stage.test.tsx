@@ -2,6 +2,7 @@ import { fireEvent, render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { fixtureBots } from "#renderer/data/fixture-db/rows";
+import { defaultLook } from "#renderer/lib/bots/avatar";
 vi.mock("#renderer/lib/motion", async (original) => ({
   ...(await original<typeof import("#renderer/lib/motion")>()),
   useMotionPreference: () => "full",
@@ -12,13 +13,18 @@ const bot = {
   avatarShape: "squircle",
   avatarColor: "#22c55e",
 };
-it("keeps a four-character cast through every step", () => {
+it("retains the same four characters while changing the visible cast", () => {
   const ids = stageFor("welcome", null, "none").slots.map((s) => s.id);
   for (const step of Object.keys(CHOREOGRAPHY) as Array<
     keyof typeof CHOREOGRAPHY
   >) {
     expect(stageFor(step, bot, "ready").slots.map((s) => s.id)).toEqual(ids);
   }
+});
+it("uses the existing product loading avatar as the lead", () => {
+  expect(stageFor("welcome", null, "none").slots[0]?.look).toEqual(
+    defaultLook("AbacusAI Bot")
+  );
 });
 it("uses the created bot's own look", () => {
   expect(
@@ -94,4 +100,27 @@ it("never subscribes to pointer movement and keeps press reactions", () => {
     listener.mockRestore();
     vi.unstubAllGlobals();
   }
+});
+
+it("clears the avatar area on dense slides and brings the cast back for completion", () => {
+  expect(
+    stageFor("welcome", null, "none").slots.filter((s) => s.visible)
+  ).toHaveLength(4);
+  expect(
+    stageFor("connect", null, "none").slots.filter((s) => s.visible)
+  ).toHaveLength(1);
+  expect(
+    stageFor("connected", null, "none").slots.filter((s) => s.visible)
+  ).toHaveLength(3);
+  for (const step of ["models", "connectors"] as const) {
+    const stage = stageFor(step, bot, "ready");
+    expect(stage.height).toBe(0);
+    expect(stage.slots.some((s) => s.visible)).toBe(false);
+  }
+  expect(
+    stageFor("first-bot", bot, "ready").slots.filter((s) => s.visible)
+  ).toHaveLength(2);
+  expect(
+    stageFor("done", bot, "ready").slots.filter((s) => s.visible)
+  ).toHaveLength(4);
 });

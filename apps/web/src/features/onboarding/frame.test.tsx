@@ -115,3 +115,26 @@ it("starts a new step at the top after scrolling a short window", async () => {
   );
   expect(frame.scrollTop).toBe(0);
 });
+
+it("moves one product brand from welcome to the header without duplicating it", async () => {
+  await initI18n();
+  const view = render(
+    <OnboardingFrame step="welcome">
+      <p>Welcome</p>
+    </OnboardingFrame>
+  );
+  const brand = view.container.querySelector('[data-slot="onboarding-brand"]');
+  expect(brand?.getAttribute("data-welcome")).toBe("true");
+  view.rerender(
+    <OnboardingFrame step="connect">
+      <p>Connect</p>
+    </OnboardingFrame>
+  );
+  expect(
+    view.container.querySelectorAll('[data-slot="onboarding-brand"]')
+  ).toHaveLength(1);
+  expect(view.container.querySelector('[data-slot="onboarding-brand"]')).toBe(
+    brand
+  );
+  expect(brand?.getAttribute("data-welcome")).toBe("false");
+});

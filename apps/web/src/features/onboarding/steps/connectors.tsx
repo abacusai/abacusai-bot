@@ -17,8 +17,6 @@ export type ConnectorStatuses = Record<
 
 export const CURATED_IDS = [
   "abacus-gmailuser",
-  "abacus-googlecalendar",
-  "abacus-googledriveuser",
   "messaging-whatsapp",
   "messaging-telegram",
   "messaging-discord",
@@ -73,7 +71,7 @@ export const ConnectorsStep = ({
         {t("onboarding.pages.connectors.body")}
       </StepBody>
       <ul
-        className="mt-6 grid w-full grid-cols-1 gap-3 min-[360px]:grid-cols-2 min-[640px]:grid-cols-3"
+        className="mt-5 grid w-full grid-cols-1 items-start gap-2.5 min-[640px]:grid-cols-2"
         data-slot="connector-grid"
       >
         {tiles.map((entry) => {
@@ -90,7 +88,7 @@ export const ConnectorsStep = ({
             <li key={entry.id} className="min-w-0">
               <Button
                 variant="outline"
-                className="data-[connected=true]:border-primary data-[connected=true]:bg-primary/5 h-full w-full flex-col items-stretch justify-start gap-2.5 rounded-xl p-3.5 text-left whitespace-normal transition-colors disabled:opacity-100"
+                className="data-[connected=true]:border-primary data-[connected=true]:bg-primary/5 h-auto w-full items-center justify-start gap-3 rounded-xl p-3 text-left whitespace-normal transition-colors disabled:opacity-100"
                 data-connector={entry.id}
                 data-connected={connected}
                 data-state={state}
@@ -110,54 +108,55 @@ export const ConnectorsStep = ({
                   void perform(async () => {
                     setPending(entry.id);
                     setFailed(null);
-                    await Promise.resolve()
-                      .then(() => props.connect?.(entry.id))
-                      .then(() => refresh())
-                      .catch((error) => {
-                        setFailed(entry.id);
-                        throw error;
-                      })
-                      .finally(() => setPending(null));
+                    try {
+                      await props.connect?.(entry.id);
+                      await refresh();
+                    } catch (error) {
+                      setFailed(entry.id);
+                      throw error;
+                    } finally {
+                      setPending(null);
+                    }
                   })
                 }
               >
-                <span className="flex min-w-0 items-center gap-3">
-                  <ConnectorMark
-                    id={entry.logo ?? entry.id}
-                    initial={entry.name.slice(0, 1)}
-                    size={48}
-                  />
+                <ConnectorMark
+                  id={entry.logo ?? entry.id}
+                  initial={entry.name.slice(0, 1)}
+                  size={48}
+                />
+                <span className="flex min-w-0 flex-col items-start gap-1">
                   <span className="text-left text-sm font-semibold">
                     {entry.name}
                   </span>
-                </span>
-                <span
-                  id={`onboarding-${entry.id}-description`}
-                  className="text-muted-foreground flex-1 text-xs leading-4 font-normal"
-                >
-                  {t(`onboarding.connectorDetails.${entry.id}`)}
-                </span>
-                <span
-                  className="text-primary mt-1 flex min-h-5 items-center justify-start gap-1.5 text-xs"
-                  data-slot="connector-state"
-                >
-                  {state === "connected" && (
-                    <>
-                      <CheckIcon className="text-primary size-3.5" />
-                      <span>{t("onboarding.pages.connectedLabel")}</span>
-                    </>
-                  )}
-                  {state === "connecting" && (
-                    <LoaderCircleIcon className="size-3.5 animate-spin motion-reduce:animate-none" />
-                  )}
-                  {state === "idle" && t("onboarding.connectorsConnectCta")}
-                  {state === "connecting" && t("phase5.connecting")}
-                  {state === "error" && (
-                    <>
-                      <TriangleAlertIcon className="text-destructive size-3.5" />
-                      <span>{t("onboarding.pages.retry")}</span>
-                    </>
-                  )}
+                  <span
+                    id={`onboarding-${entry.id}-description`}
+                    className="text-muted-foreground text-xs leading-4 font-normal"
+                  >
+                    {t(`onboarding.connectorDetails.${entry.id}`)}
+                  </span>
+                  <span
+                    className="text-primary flex items-center justify-start gap-1.5 text-xs"
+                    data-slot="connector-state"
+                  >
+                    {state === "connected" && (
+                      <>
+                        <CheckIcon className="text-primary size-3.5" />
+                        <span>{t("onboarding.pages.connectedLabel")}</span>
+                      </>
+                    )}
+                    {state === "connecting" && (
+                      <LoaderCircleIcon className="size-3.5 animate-spin motion-reduce:animate-none" />
+                    )}
+                    {state === "idle" && t("onboarding.connectorsConnectCta")}
+                    {state === "connecting" && t("phase5.connecting")}
+                    {state === "error" && (
+                      <>
+                        <TriangleAlertIcon className="text-destructive size-3.5" />
+                        <span>{t("onboarding.pages.retry")}</span>
+                      </>
+                    )}
+                  </span>
                 </span>
               </Button>
             </li>

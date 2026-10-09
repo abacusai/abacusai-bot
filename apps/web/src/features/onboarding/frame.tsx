@@ -121,6 +121,17 @@ export const OnboardingFrame = ({
           className="onboarding-column"
           data-step-direction={transition.direction}
         >
+          <motion.div
+            layout
+            initial={false}
+            transition={reduce ? { duration: 0 } : springs.surface}
+            className="onboarding-brand titlebar-drag"
+            data-slot="onboarding-brand"
+            data-welcome={step === "welcome"}
+          >
+            <BotAppMark size={step === "welcome" ? 32 : 18} />
+            <span>{t("shell.appName")}</span>
+          </motion.div>
           <OnboardingStage
             step={step}
             bot={bot}
@@ -159,10 +170,7 @@ export const OnboardingNavigation = ({ onBack }: { onBack?: () => void }) => {
       className="onboarding-navigation titlebar-drag"
       data-slot="onboarding-navigation"
     >
-      <div className="flex min-w-0 items-center gap-2 text-[13px] font-medium">
-        <BotAppMark size={18} />
-        <span className="truncate">{t("shell.appName")}</span>
-      </div>
+      {onBack && <span className="onboarding-brand-space" aria-hidden />}
       {onBack && (
         <Button
           variant="ghost"

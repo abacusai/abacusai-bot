@@ -59,7 +59,7 @@ export const ModelsStep = ({
         </span>
       </StepTitle>
       <StepBody className="mt-1.5">{t("onboarding.setupSubtitle")}</StepBody>
-      <div className="mt-7 flex w-full max-w-[640px] flex-col gap-2">
+      <div className="mt-5 flex w-full max-w-[640px] flex-col gap-2">
         {ROWS.map((row) => (
           <div
             key={row.id}
@@ -118,7 +118,7 @@ export const ModelsStep = ({
         </span>
         <OnboardingProviderKey transport={props.transport} saved={refresh} />
       </div>
-      <div className="mt-7">
+      <div className="mt-5">
         <StepButton disabled={busy} onClick={advance}>
           {t("onboarding.setupDoneCta")}
         </StepButton>

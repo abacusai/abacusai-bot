@@ -41,7 +41,7 @@ const ctx = (overrides: Partial<StepContext["props"]> = {}): StepContext => {
 };
 
 describe("connectorTiles", () => {
-  it("offers email, calendar, files and messaging through real connector entries", () => {
+  it("offers the original email and messaging choices through real connector entries", () => {
     const ids = connectorTiles(undefined).map((entry) => entry.id);
     expect(ids).toEqual([...CURATED_IDS]);
     for (const id of ids) {
@@ -50,8 +50,6 @@ describe("connectorTiles", () => {
     }
     expect(ids).toEqual([
       "abacus-gmailuser",
-      "abacus-googlecalendar",
-      "abacus-googledriveuser",
       "messaging-whatsapp",
       "messaging-telegram",
       "messaging-discord",
@@ -107,8 +105,9 @@ describe("ConnectorsStep", () => {
 
   it.each([
     ["Gmail", "abacus-gmailuser"],
-    ["Google Calendar", "abacus-googlecalendar"],
-    ["Google Drive", "abacus-googledriveuser"],
+    ["WhatsApp", "messaging-whatsapp"],
+    ["Telegram", "messaging-telegram"],
+    ["Discord", "messaging-discord"],
   ])(
     "connects %s through the route flow and refreshes before continuing",
     async (name, id) => {
