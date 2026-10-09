@@ -11,7 +11,7 @@ import {
   PROVIDER_KEY_FIELDS,
 } from "@abacus-ai/contract/settings";
 import { useForm } from "@tanstack/react-form";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ConnectDialogContent } from "#renderer/components/form-kit/connect-dialog";
@@ -41,12 +41,14 @@ export const ProviderKeyDialog = ({
   open,
   onOpenChange,
   saved,
+  finalFocus,
 }: {
   transport: Transport;
   provider: string;
   open: boolean;
   onOpenChange(open: boolean): void;
   saved(): Promise<unknown>;
+  finalFocus?(): HTMLElement | null;
 }) => {
   const { t } = useTranslation();
   const [error, setError] = useState<"validation" | "save" | null>(null);
@@ -83,7 +85,10 @@ export const ProviderKeyDialog = ({
         onOpenChange(next);
       }}
     >
-      <ConnectDialogContent className="sm:max-w-[480px]">
+      <ConnectDialogContent
+        className="sm:max-w-[480px]"
+        finalFocus={finalFocus}
+      >
         <DialogHeader className="text-left">
           <DialogTitle className="text-sm font-semibold">
             {t("onboarding.setupKeyDialogTitle", { provider: label })}
@@ -180,15 +185,17 @@ export const OnboardingProviderKey = ({
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [provider, setProvider] = useState(fixed ?? "gemini");
+  const trigger = useRef<HTMLButtonElement>(null);
   return (
     <>
       {fixed ? (
-        <StepButton variant="small" onClick={() => setOpen(true)}>
+        <StepButton ref={trigger} variant="small" onClick={() => setOpen(true)}>
           {t("onboarding.pages.addKey")}
         </StepButton>
       ) : (
         <DropdownMenu>
           <DropdownMenuTrigger
+            ref={trigger}
             render={
               <Button
                 size="lg"
@@ -223,6 +230,7 @@ export const OnboardingProviderKey = ({
         open={open}
         onOpenChange={setOpen}
         saved={saved}
+        finalFocus={() => trigger.current}
       />
     </>
   );

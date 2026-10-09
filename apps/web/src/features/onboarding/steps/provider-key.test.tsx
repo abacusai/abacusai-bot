@@ -36,3 +36,28 @@ it.each(["save", "refresh"])(
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   }
 );
+
+it.each([true, false])(
+  "returns focus to the key trigger after cancel, direct=%s",
+  async (direct) => {
+    await initI18n();
+    render(
+      <OnboardingProviderKey
+        transport={{} as Transport}
+        saved={async () => {}}
+        provider={direct ? "gemini" : undefined}
+      />
+    );
+    const trigger = screen.getByRole("button", {
+      name: direct ? "Add API key" : "Paste a key",
+    });
+    fireEvent.click(trigger);
+    if (!direct)
+      fireEvent.click(
+        await screen.findByRole("menuitem", { name: /Google Gemini/ })
+      );
+    fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  }
+);
