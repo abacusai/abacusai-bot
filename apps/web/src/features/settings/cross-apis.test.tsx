@@ -2,7 +2,13 @@ import { contract } from "@abacus-ai/contract/contract";
 import { LOCAL_MODEL_CATALOG } from "@abacus-ai/contract/local-models";
 import type { UpdateStatus } from "@abacus-ai/contract/update";
 import { implement } from "@orpc/server";
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  screen,
+  within,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import {
@@ -51,13 +57,17 @@ it("the update action persists in the global end slot across route actions", asy
     },
   });
   expect(
-    await screen.findByRole("button", { name: "Relaunch to update" })
+    await within(screen.getByRole("banner")).findByRole("button", {
+      name: "Relaunch to update",
+    })
   ).not.toBeNull();
   await act(async () => {
     await app!.router.navigate({ to: "/settings/general" });
   });
   fireEvent.click(
-    await screen.findByRole("button", { name: "Relaunch to update" })
+    await within(screen.getByRole("banner")).findByRole("button", {
+      name: "Relaunch to update",
+    })
   );
   await waitFor(() => expect(install).toHaveBeenCalledTimes(1));
 });

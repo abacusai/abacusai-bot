@@ -156,6 +156,7 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
     "referral-link",
     "search",
     "updates",
+    "update-notice",
   ],
   shell: [
     "connect",
@@ -213,6 +214,7 @@ const featureBoundaryHits = (
           "lib/activity.ts",
           "lib/browser/files.ts",
           "lib/browser/host-files.ts",
+          "lib/browser/upload.ts",
           "lib/browser/sign-in.ts",
           "lib/browser/sign-out.ts",
           "data/transport/index.ts",
@@ -309,6 +311,7 @@ describe("renderer guards", () => {
       "features/gallery/canary.tsx",
       "components/canary.tsx",
       "features/bots/canary.tsx",
+      "lib/browser/upload.ts",
     ];
     for (const path of paths) {
       const source = `import "#renderer/features/sessions/private/canary";
