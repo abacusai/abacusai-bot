@@ -417,7 +417,6 @@ export const FilesTab = ({
   const { t, i18n } = useTranslation();
   const db = useDb();
   const transport = useBotsTransport();
-  const sessions = useBotSessions(bot.id);
   const files = useBotFiles(bot.id);
   const now = useNow();
   useEffect(() => {
@@ -555,9 +554,10 @@ export const FilesTab = ({
               read={{
                 localUrl: IS_ELECTRON
                   ? async (filePath, hostRoot) => {
-                      const viewed = sessions.find(
-                        (row) => row.id === (sessionId ?? bot.sessionId)
-                      );
+                      const viewedId = sessionId ?? bot.sessionId;
+                      const viewed = viewedId
+                        ? db.collections.sessions.get(viewedId)
+                        : undefined;
                       if (!viewed?.workspaceId)
                         throw new Error("Session workspace unavailable");
                       const state =
