@@ -13,6 +13,7 @@ import {
 } from "#renderer/components/form-kit/page";
 import { ABACUS_BUY_CREDITS_URL } from "#renderer/lib/abacus-links";
 import { accountIdentity } from "#renderer/lib/account-identity";
+import { accountTier } from "#renderer/lib/credits";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
@@ -197,9 +198,11 @@ export const AccountPage = () => {
               size="sm"
               variant="secondary"
               onClick={() =>
-                void platformSystem(transport.client).openExternal({
-                  url: ABACUS_BUY_CREDITS_URL,
-                })
+                void (accountTier(account.data) === "basic"
+                  ? openUpgrade(transport.client)
+                  : platformSystem(transport.client).openExternal({
+                      url: ABACUS_BUY_CREDITS_URL,
+                    }))
               }
             >
               {t("phase5.topUp")}
