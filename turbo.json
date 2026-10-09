@@ -94,6 +94,8 @@
       "dependsOn": ["^build", "typecheck", "//#generate:licenses"],
       "outputs": ["dist/**", "build-metadata/**"],
       "env": [
+        "ABACUS_BUILD_COMMIT",
+        "ABACUS_RELEASE",
         "ABACUS_WEB_OVERLAY",
         "VITE_CONNECT_SRC",
         "VITE_UI_GALLERY",
