@@ -2,10 +2,9 @@ import type { BotRow } from "@abacus-ai/contract/contract";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
-import { BootAvatar } from "#renderer/components/boot-avatar";
 import { BotAvatar } from "#renderer/components/bot-avatar";
 import {
-  AVATAR_PALETTE,
+  defaultLook,
   resolveLook,
   type AvatarMood,
   type Look,
@@ -17,7 +16,7 @@ import { Confetti } from "./confetti";
 
 export const PARADE = {
   "parade-blob": {
-    look: { shape: "blob", color: AVATAR_PALETTE[0].hex, accessory: "none" },
+    look: defaultLook("AbacusAI Bot"),
     mood: "thinking",
   },
   "parade-bunny": {
@@ -45,6 +44,7 @@ export interface StageSlot extends Keyframe {
   id: StageAvatarId;
   look: Look;
   size: number;
+  visible: boolean;
 }
 export interface Stage {
   slots: StageSlot[];
@@ -101,6 +101,15 @@ export const CHOREOGRAPHY: Record<OnboardingStepId, readonly Keyframe[]> = {
   ],
 };
 const IDS = Object.keys(PARADE) as StageAvatarId[];
+const CAST: Record<OnboardingStepId, readonly StageAvatarId[]> = {
+  welcome: IDS,
+  connect: ["parade-blob"],
+  connected: ["parade-blob", "parade-bunny", "parade-cat"],
+  models: [],
+  connectors: [],
+  "first-bot": ["parade-blob", "first-bot"],
+  done: IDS,
+};
 export const botLook = (bot: BotRow): Look =>
   resolveLook({
     name: bot.name,
@@ -112,10 +121,13 @@ export const stageFor = (
   bot: BotRow | null,
   phase: FirstBotPhase
 ): Stage => ({
-  height: 140,
+  height: CAST[step].length ? 112 : 0,
   slots: IDS.map((id, index) => ({
     id,
+    visible: CAST[step].includes(id),
     ...CHOREOGRAPHY[step][index]!,
+    x: CHOREOGRAPHY[step][index]!.x * 0.85,
+    y: CHOREOGRAPHY[step][index]!.y * 0.6,
     look:
       id === "first-bot" && bot
         ? botLook(bot)
@@ -167,7 +179,10 @@ export const OnboardingStage = ({
       ref={root}
       className="onboarding-stage"
       data-avatar-scene
-      style={{ height }}
+      style={{
+        height: height ? `var(--onboarding-stage-height, ${height}px)` : 0,
+      }}
+      data-retreated={height === 0}
       data-reduced-motion={reduced}
     >
       {slots.map((slot, index) => {
@@ -183,46 +198,27 @@ export const OnboardingStage = ({
             data-avatar-id={slot.id}
             data-size={slot.size}
             initial={false}
-            style={
-              slot.id === "parade-blob"
-                ? {
-                    transform: `translate(${slot.x}px, ${slot.y}px) scale(${slot.depth})`,
-                  }
-                : undefined
-            }
-            animate={
-              slot.id === "parade-blob"
-                ? undefined
-                : {
-                    transform: `translate(${slot.x}px, ${slot.y}px) scale(${slot.depth})`,
-                    opacity: 1,
-                  }
-            }
+            aria-hidden={!slot.visible}
+            style={{ pointerEvents: slot.visible ? "auto" : "none" }}
+            animate={{
+              transform: slot.visible
+                ? `translate(${slot.x}px, ${slot.y}px) scale(${slot.depth})`
+                : "translate(0px, -40px) scale(0.25)",
+              opacity: slot.visible ? 1 : 0,
+            }}
             transition={reduced ? { duration: 0 } : springs.surface}
             onPointerDown={() => {
               setReaction("excited");
               onPoke?.();
             }}
           >
-            {slot.id === "parade-blob" ? (
-              <BootAvatar
-                mood={mood}
-                look={look}
-                size={88}
-                brand={false}
-                onPoke={onPoke}
-                locationKey={step}
-                reduce={reduced}
-              />
-            ) : (
-              <BotAvatar
-                look={look}
-                mood={mood}
-                followPointer={false}
-                size={88}
-                animate={!reduced}
-              />
-            )}
+            <BotAvatar
+              look={look}
+              mood={mood}
+              followPointer={false}
+              size={88}
+              animate={!reduced && slot.visible}
+            />
           </motion.div>
         );
       })}
