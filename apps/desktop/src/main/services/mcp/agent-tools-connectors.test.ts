@@ -21,7 +21,7 @@ let statuses: ConnectorStatuses;
 const link = vi.fn(async (connectorId: string) =>
   connectorId === "abacus-googledriveuser"
     ? {
-        url: "https://apps.example/chatllm/connect-connector?service=google&r=req&autostart=1",
+        url: "https://apps.example/bot/link/connect?service=google&r=req&autostart=1",
         connectorIds: [
           "abacus-gmailuser",
           "abacus-googledriveuser",
@@ -29,7 +29,7 @@ const link = vi.fn(async (connectorId: string) =>
         ],
       }
     : {
-        url: `https://apps.example/chatllm/connect-connector?service=${connectorId}&r=req&autostart=1`,
+        url: `https://apps.example/bot/link/connect?service=${connectorId}&r=req&autostart=1`,
         connectorIds: [connectorId],
       }
 );

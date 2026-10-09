@@ -323,7 +323,7 @@ const SEEDED_REVEAL_MS = 8000;
 
 /** The connect page for this attempt, which mints the code for a live session. */
 const connectUrlFor = (signInUrl: string): string => {
-  const connect = new URL("/chatllm/connect-bot/", signInUrl);
+  const connect = new URL("/bot/link/connect-bot/", signInUrl);
   for (const key of ["botChallenge", "botPort", "botPath"]) {
     const value = new URL(signInUrl).searchParams.get(key);
     if (value != null) connect.searchParams.set(key, value);

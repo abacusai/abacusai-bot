@@ -181,7 +181,7 @@ describe("an in-app sign-in", () => {
     void startAbacusAuth();
     await settle();
 
-    expect(lastWindow?.url).toMatch(/\/chatllm\/signin/);
+    expect(lastWindow?.url).toMatch(/\/bot\/link\/signin/);
     expect(openExternal).not.toHaveBeenCalled();
   });
 

@@ -16,7 +16,7 @@ import { abacusAppHost, abacusUserAgent } from "./abacus-host";
  * key is never written into mcp-code.json.
  */
 
-const CONNECT_PATH = "/chatllm/connect-connector";
+const CONNECT_PATH = "/bot/link/connect";
 
 /** Connector keys are platform service names: lowercase, e.g. "gmailuser". */
 const SERVICE_RE = /^[a-z0-9_]{2,40}$/;

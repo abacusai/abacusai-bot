@@ -29,7 +29,7 @@ import { openSignInWindow, type SignInWindow } from "./abacus-signin-window";
  */
 
 const EXCHANGE_PATH = "/api/v1/_exchangeAbacusaibotAuthCode";
-const SIGNIN_PATH = "/chatllm/signin";
+const SIGNIN_PATH = "/bot/link/signin";
 
 // How long the loopback listener stays open. Sign-up happens inside this hop
 // and takes minutes; Cancel (cancelAbacusAuth) tears it down early.

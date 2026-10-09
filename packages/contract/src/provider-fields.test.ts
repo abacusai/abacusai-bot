@@ -66,7 +66,7 @@ describe("every connect-page card", () => {
       expect(
         url.pathname,
         `${field.provider}'s key link is the app's own sign-in page`
-      ).not.toContain("/chatllm/signin");
+      ).not.toMatch(/\/(chatllm|bot\/link)\/signin/);
     }
   });
 });

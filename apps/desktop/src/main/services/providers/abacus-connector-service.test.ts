@@ -324,7 +324,7 @@ describe("a one-tap connect link", () => {
 
     const link = await createConnectLink("slack");
     expect(link?.url).toContain(
-      "/chatllm/connect-connector?service=slack&r=req_0123456789abcdef&autostart=1"
+      "/bot/link/connect?service=slack&r=req_0123456789abcdef&autostart=1"
     );
   });
 
@@ -339,7 +339,7 @@ describe("a one-tap connect link", () => {
     });
 
     expect((await createConnectLink("slack"))?.url).toContain(
-      "/chatllm/connect-connector?"
+      "/bot/link/connect?"
     );
   });
 });

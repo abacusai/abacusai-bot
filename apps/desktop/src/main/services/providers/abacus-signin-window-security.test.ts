@@ -113,7 +113,7 @@ vi.mock("../../profile-home", () => ({
 }));
 const { openSignInWindow } = await import("./abacus-signin-window");
 const options = () => ({
-  url: "https://apps.abacus.ai/chatllm/signin?botChallenge=test&botPort=1234&botPath=callback",
+  url: "https://apps.abacus.ai/bot/link/signin?botChallenge=test&botPort=1234&botPath=callback",
   port: 1234,
   callbackPath: "callback",
   onHandOff: vi.fn(),
@@ -416,7 +416,7 @@ describe("sign-in window presentation", () => {
     const opts = options();
     await openSignInWindow(opts);
     const win = windows[0]!;
-    win.url = "https://apps.abacus.ai/chatllm/signin";
+    win.url = "https://apps.abacus.ai/bot/link/signin";
 
     win.webContents.emit("console-message", {
       message: "abacus:sign-in-cancel",
@@ -435,7 +435,7 @@ describe("sign-in window presentation", () => {
   it("puts Cancel beside the browser pill", async () => {
     await openSignInWindow(options());
     const win = windows[0]!;
-    win.url = "https://apps.abacus.ai/chatllm/signin";
+    win.url = "https://apps.abacus.ai/bot/link/signin";
     win.webContents.emit("did-finish-load");
 
     const script = win.webContents.executeJavaScript.mock.calls[0]![0];
@@ -538,7 +538,7 @@ describe("sign-in window presentation", () => {
     win.webContents.emit(
       "did-navigate",
       {},
-      "https://apps.abacus.ai/chatllm/signin"
+      "https://apps.abacus.ai/bot/link/signin"
     );
 
     expect(mocks.parent.show).toHaveBeenCalled();
