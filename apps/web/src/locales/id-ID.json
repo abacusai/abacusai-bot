@@ -4136,6 +4136,10 @@
       "doneBody": "Bot Anda ada di WhatsApp. Kirim pesan kapan saja.",
       "useDifferentNumber": "Gunakan nomor lain"
     },
-    "signOutDetail": "This ends your website session and clears this browser's bot data."
+    "signOutDetail": "This ends your website session and clears this browser's bot data.",
+    "routines": {
+      "localAlternative": "Or run local routines on your computer with the desktop app.",
+      "download": "Download desktop"
+    }
   }
 }

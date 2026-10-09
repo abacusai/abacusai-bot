@@ -4136,6 +4136,10 @@
       "doneBody": "Votre bot est sur WhatsApp. Écrivez-lui quand vous voulez.",
       "useDifferentNumber": "Utiliser un autre numéro"
     },
-    "signOutDetail": "This ends your website session and clears this browser's bot data."
+    "signOutDetail": "This ends your website session and clears this browser's bot data.",
+    "routines": {
+      "localAlternative": "Or run local routines on your computer with the desktop app.",
+      "download": "Download desktop"
+    }
   }
 }
