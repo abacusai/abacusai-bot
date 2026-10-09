@@ -45,6 +45,7 @@ type Loaded =
   | { state: "loading" }
   | { state: "failed" }
   | { state: "binary"; sizeBytes: number }
+  | { state: "unsupported" }
   | { state: "text"; content: string; truncated: boolean }
   | { state: "image"; src: string }
   | { state: "slides"; deck: PptxDeck }
@@ -90,6 +91,12 @@ export const FilePreview = ({
   const loadFile = useEffectEvent(
     async (signal: AbortSignal): Promise<Loaded> => {
       const input = { filePath: path, hostRoot };
+      if (
+        browserPreview &&
+        kind === "pdf" &&
+        navigator.pdfViewerEnabled === false
+      )
+        return { state: "unsupported" };
       if (browserPreview && kind === "external")
         return { state: "binary", sizeBytes: await previewSize(input, signal) };
       if (
@@ -215,17 +222,23 @@ export const FilePreview = ({
 
   return (
     <div
-      className="flex min-h-0 flex-1 flex-col"
+      className="flex min-h-0 min-w-0 flex-1 flex-col"
       data-slot="file-preview"
       data-kind={kind}
     >
-      <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-2">
         <span className="w-full truncate text-sm font-medium" title={path}>
           {baseName(path)}
         </span>
         {(showActions || browserPreview) && actions}
       </div>
-      <div className="min-h-0 flex-1 overflow-auto p-3 text-sm">
+      <div
+        className={
+          loaded.state === "local"
+            ? "flex min-h-0 flex-1 flex-col overflow-hidden text-sm"
+            : "min-h-0 flex-1 overflow-auto p-3 text-sm"
+        }
+      >
         {downloadError && <p role="alert">{t("web.files.downloadFailed")}</p>}
         {kind === "external" && !browserPreview ? (
           <div className="flex flex-col items-start gap-2" role="status">
@@ -272,6 +285,10 @@ export const FilePreview = ({
               </Button>
             )}
           </div>
+        ) : loaded.state === "unsupported" ? (
+          <p role="status" className="text-muted-foreground">
+            {t("bots.chat.preview.noViewer")}
+          </p>
         ) : loaded.state === "binary" ? (
           <p role="status" className="text-muted-foreground">
             {t("web.files.binary", { size: loaded.sizeBytes.toLocaleString() })}
@@ -293,13 +310,16 @@ export const FilePreview = ({
           browserPreview ? (
             <iframe
               title={baseName(path)}
-              src={loaded.url}
+              src={kind === "pdf" ? `${loaded.url}#view=FitH` : loaded.url}
               // Chromium disables its native PDF viewer in sandboxed frames.
               sandbox={kind === "pdf" ? undefined : ""}
-              className="h-full min-h-[320px] w-full bg-white"
+              className="min-h-0 w-full flex-1 border-0 bg-white"
             />
           ) : (
-            <webview src={loaded.url} className="h-[600px] w-full bg-white" />
+            <webview
+              src={kind === "pdf" ? `${loaded.url}#view=FitH` : loaded.url}
+              className="min-h-0 w-full flex-1 bg-white"
+            />
           )
         ) : (
           <>

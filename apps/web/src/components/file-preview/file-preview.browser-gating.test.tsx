@@ -14,6 +14,10 @@ const files = vi.hoisted(() => ({
 vi.mock("#renderer/lib/browser/host-files", () => ({ hostFiles: files }));
 beforeAll(initI18n);
 beforeEach(() => {
+  Object.defineProperty(navigator, "pdfViewerEnabled", {
+    configurable: true,
+    value: true,
+  });
   files.size.mockResolvedValue(1024);
   files.downloadUrl.mockResolvedValue("https://host.test/files?ticket=scoped");
   files.blob.mockResolvedValue(new Blob(["preview"]));
@@ -99,7 +103,9 @@ it("loads PDF bytes into the browser viewer and releases them on close", async (
   const frame = await screen.findByTitle("report.pdf");
   expect(frame.tagName).toBe("IFRAME");
   expect(frame.hasAttribute("sandbox")).toBe(false);
-  expect(frame.getAttribute("src")).toBe("blob:http://localhost/file");
+  expect(frame.getAttribute("src")).toBe(
+    "blob:http://localhost/file#view=FitH"
+  );
   expect(files.blob).toHaveBeenCalledWith(
     { filePath: "/w/report.pdf", hostRoot: "/w" },
     expect.any(AbortSignal)
@@ -113,6 +119,25 @@ it("loads PDF bytes into the browser viewer and releases them on close", async (
   );
 });
 
+it("offers a download when the browser cannot display PDFs inline", async () => {
+  Object.defineProperty(navigator, "pdfViewerEnabled", {
+    configurable: true,
+    value: false,
+  });
+  render(<FilePreview path="/w/report.pdf" hostRoot="/w" read={readers()} />);
+  await screen.findByText("There is no preview for this kind of file here.");
+  expect(document.querySelector("iframe")).toBeNull();
+  expect(files.blob).not.toHaveBeenCalled();
+  const click = vi
+    .spyOn(HTMLAnchorElement.prototype, "click")
+    .mockImplementation(() => {});
+  fireEvent.click(screen.getByRole("button", { name: "Download" }));
+  await waitFor(() => expect(click).toHaveBeenCalled());
+  expect(files.downloadUrl).toHaveBeenCalledWith({
+    filePath: "/w/report.pdf",
+    hostRoot: "/w",
+  });
+});
 it("ignores an old read after selection changes and avoids refetching for inline reader objects", async () => {
   const read = readers();
   let resolve!: (value: { content: string; truncated: boolean }) => void;

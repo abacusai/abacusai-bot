@@ -309,7 +309,7 @@ export const FilesTab = ({
           />
         )}
       </aside>
-      <section className="flex min-w-0 flex-1 flex-col">
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col">
         {selected ? (
           <>
             <div className="flex shrink-0 flex-wrap items-center gap-1 border-b px-3 py-2">

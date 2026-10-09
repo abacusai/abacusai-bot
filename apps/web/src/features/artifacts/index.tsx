@@ -537,7 +537,7 @@ export const ArtifactsPage = ({
                 {notice[selected.id] && (
                   <p role="status">{notice[selected.id]}</p>
                 )}
-                <div className="min-h-0 flex-1 overflow-auto p-3">
+                <div className="flex min-h-0 flex-1 flex-col overflow-auto p-3">
                   {selected.kind === "link" ? (
                     <code>{selected.location}</code>
                   ) : (

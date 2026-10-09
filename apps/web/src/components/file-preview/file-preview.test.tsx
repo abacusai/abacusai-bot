@@ -161,7 +161,9 @@ describe("FilePreview", () => {
       );
       await waitFor(() =>
         expect(container.querySelector("webview")?.getAttribute("src")).toBe(
-          "file:///host/w/report.pdf"
+          extension === "pdf"
+            ? "file:///host/w/report.pdf#view=FitH"
+            : "file:///host/w/report.pdf"
         )
       );
       expect(read.localUrl).toHaveBeenCalledWith(
