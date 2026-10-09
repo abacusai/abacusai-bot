@@ -5024,8 +5024,8 @@ export class ServiceHost {
     options: { byAgent?: boolean; runAtText?: string | null } = {}
   ): Promise<CreatedRoutine> {
     const account = await fetchAbacusAccount();
-    const plan = account?.subscription_tier ?? account?.plan;
-    if (plan?.trim().toLowerCase() === "free")
+    const plan = account?.subscription_tier?.trim() || account?.plan?.trim();
+    if (plan?.toLowerCase() === "free")
       throw new HostedRoutineRefusal("plan_limit", { limit: 0 });
     // A hosted bot whose routines run on the server has no other scheduler:
     // a local one there would never fire, and would sidestep the plan.
