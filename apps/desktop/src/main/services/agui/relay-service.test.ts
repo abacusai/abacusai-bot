@@ -1549,3 +1549,18 @@ it("names only admitted user text, preserving its display tags through the RPC",
   await client.ai.send({ threadId: "s1", runId: "start", messages });
   expect(agent.acceptedMessage).toHaveBeenCalledTimes(2);
 });
+
+it("keeps the accepted send successful when naming cannot be persisted", async () => {
+  const { agent, client } = setup();
+  agent.acceptedMessage.mockImplementation(() => {
+    throw new Error("store unavailable");
+  });
+  agent.answer = () => [ack("run", "started")];
+  await expect(
+    client.ai.send({
+      threadId: "s1",
+      runId: "run",
+      messages: [userMessage("u", "Fix the sidebar")],
+    })
+  ).resolves.toMatchObject({ status: "started" });
+});

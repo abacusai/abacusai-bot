@@ -647,8 +647,9 @@ describe("automatic personal session names", () => {
     const sessions = [
       service.create(WORKSPACE, "routine"),
       service.create(WORKSPACE, null, {
+        kind: "bot",
         botId: "bot",
-        role: "chat",
+        role: "forever",
         key: null,
       }),
       service.editorFor("routine", WORKSPACE),

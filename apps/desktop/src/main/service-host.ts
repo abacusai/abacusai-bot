@@ -3562,11 +3562,17 @@ export class ServiceHost {
       );
       return false;
     }
-    this.agentSessionManagerService.nameFromMessage(
-      request.sessionId,
-      request.message,
-      request.userText
-    );
+    try {
+      this.agentSessionManagerService.nameFromMessage(
+        request.sessionId,
+        request.message,
+        request.userText
+      );
+    } catch (error) {
+      console.warn(
+        `[sessions] naming ${request.sessionId} failed: ${String(error)}`
+      );
+    }
     if (noticed) environmentNoticeService.markAnnounced(request.sessionId);
     return true;
   }

@@ -922,11 +922,20 @@ export class AguiRelayService implements AguiSource {
           const text = message.parts
             .flatMap((part) => (part.type === "text" ? [part.content] : []))
             .join("\n");
-          this.#host.acceptedMessage?.(
-            threadId,
-            text,
-            message.metadata?.abacus?.userText
-          );
+          const metadata = message.metadata as
+            | { abacus?: { userText?: UserTextTags } }
+            | undefined;
+          try {
+            this.#host.acceptedMessage?.(
+              threadId,
+              text,
+              metadata?.abacus?.userText
+            );
+          } catch (error) {
+            this.#log(
+              `${threadId}: naming the session failed: ${String(error)}`
+            );
+          }
         }
       }
       return this.#answer(runId, ack, false);
