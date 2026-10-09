@@ -451,7 +451,7 @@ it("MCP connect: the link goes straight to the provider, and the connector is in
   const hostBase = "https://apps.abacus.ai/api/botHost/h1";
   const flow = new ConnectorFlowService({
     platform: {
-      connect: () => ({ ok: true }),
+      connect: async () => ({ ok: false, error: "unused" }),
       disconnect: async () => ({ ok: true }),
       watch: () => {},
     },

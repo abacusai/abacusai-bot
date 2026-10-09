@@ -16,6 +16,8 @@ import { connectRequest } from "#renderer/lib/connector-requests";
 import { connectTarget, platformSystem } from "#renderer/lib/platform-system";
 
 const HOST = "https://apps.example/api/botHost/h1";
+/** The connect link the host mints, as it answers it. */
+const LINK = "https://apps.example/connect/gmailuser?r=req_1";
 const signIn = vi.hoisted(() => vi.fn(async () => ({ ok: true }) as const));
 vi.mock("#platform/sign-in", () => ({ signInAbacus: signIn }));
 vi.mock("#renderer/features/shell/connect/services", async (original) => ({
@@ -45,9 +47,7 @@ const clientFor = () => {
   const streams = { open: 0 };
   const client = {
     connectors: {
-      connect: vi
-        .fn()
-        .mockResolvedValue({ ok: true, url: "https://apps.example/connect" }),
+      connect: vi.fn().mockResolvedValue({ ok: true, url: LINK }),
       statuses: vi
         .fn()
         .mockResolvedValueOnce({})
@@ -96,8 +96,17 @@ const clientFor = () => {
 const hostOf = (client: ReturnType<typeof clientFor>["client"]): Transport =>
   ({ client, state: "open" }) as unknown as Transport;
 /** `window.open` that opens: a tab whose opener the app then cuts. */
-const opening = () => vi.fn(() => ({ opener: window }) as unknown as Window);
-const GMAIL_PAGE = "/chatllm/connect-connector?service=gmailuser&autostart=1";
+const opening = () =>
+  vi.fn(
+    () =>
+      ({
+        opener: window,
+        location: { href: "about:blank" },
+        close: vi.fn(),
+      }) as unknown as Window
+  );
+/** A platform connect takes a blank tab in the click; the minted link fills it. */
+const BLANK = "about:blank";
 const flowFor = (client: ReturnType<typeof clientFor>["client"]) =>
   createConnectFlow({
     transport: {
@@ -109,7 +118,7 @@ const flowFor = (client: ReturnType<typeof clientFor>["client"]) =>
     navigate: async () => {},
   });
 
-it("onboarding opens the connect page inside the click and succeeds only once the host says connected", async () => {
+it("onboarding takes a tab inside the click, fills it with the minted link, and succeeds only once the host says connected", async () => {
   const open = opening();
   vi.stubGlobal("open", open);
   const { client, changed } = clientFor();
@@ -118,8 +127,11 @@ it("onboarding opens the connect page inside the click and succeeds only once th
     hostOf(client),
     "abacus-gmailuser"
   );
-  expect(open).toHaveBeenCalledExactlyOnceWith(GMAIL_PAGE, "_blank");
+  expect(open).toHaveBeenCalledExactlyOnceWith(BLANK, "_blank");
   expect(open.mock.results[0]!.value.opener).toBeNull();
+  await vi.waitFor(() =>
+    expect(open.mock.results[0]!.value.location.href).toBe(LINK)
+  );
   let complete = false;
   void pending.then(() => {
     complete = true;
@@ -143,7 +155,7 @@ it("agent requests open the page synchronously and answer connected only once it
     connectorId: "abacus-gmailuser",
     conversationKey: "bot:bot-id",
   } as never);
-  expect(open).toHaveBeenCalledExactlyOnceWith(GMAIL_PAGE, "_blank");
+  expect(open).toHaveBeenCalledExactlyOnceWith(BLANK, "_blank");
   await vi.waitFor(() =>
     expect(client.connectors.statuses).toHaveBeenCalledOnce()
   );
@@ -188,6 +200,26 @@ it("a blocked pop-up is reported, and nothing is asked of the host", async () =>
   expect(client.connectors.connect).not.toHaveBeenCalled();
 });
 
+it("a link the host could not mint is reported, its blank tab closed, and nothing waited on", async () => {
+  const open = opening();
+  vi.stubGlobal("open", open);
+  const { client, streams } = clientFor();
+  client.connectors.connect.mockResolvedValueOnce({
+    ok: false,
+    error: "Could not start connecting. Please try again.",
+  });
+  const attempt = new ConnectAttempt(hostOf(client), "abacus-gmailuser");
+  expect(await attempt.result).toEqual({
+    ok: false,
+    error: "Could not start connecting. Please try again.",
+  });
+  const tab = open.mock.results[0]!.value;
+  expect(tab.location.href).toBe(BLANK);
+  expect(tab.close).toHaveBeenCalledOnce();
+  expect(client.connectors.statuses).not.toHaveBeenCalled();
+  expect(streams.open).toBe(0);
+});
+
 it("one deadline: a wait gives up after three minutes, and re-reads on focus before that", async () => {
   vi.useFakeTimers();
   vi.stubGlobal("open", opening());
@@ -222,10 +254,7 @@ it("first-run Gmail waits for a click, then for the connection; dismissing cance
     "fixed"
   );
   (document.getElementById("gmail-consent") as HTMLButtonElement).click();
-  expect(open).toHaveBeenCalledExactlyOnceWith(
-    `${GMAIL_PAGE}&hint=owner%40example.com`,
-    "_blank"
-  );
+  expect(open).toHaveBeenCalledExactlyOnceWith(BLANK, "_blank");
   await vi.waitFor(() => expect(streams.open).toBe(1));
   expect(client.system.funnelStep).not.toHaveBeenCalled();
   await changed();
@@ -258,7 +287,7 @@ it("library opens the page inside the click and settles once connected", async (
     .mockResolvedValue({ "abacus-gmailuser": { state: "connected" } });
   const flow = flowFor(client);
   const pending = flow.start("abacus-gmailuser");
-  expect(open).toHaveBeenCalledExactlyOnceWith(GMAIL_PAGE, "_blank");
+  expect(open).toHaveBeenCalledExactlyOnceWith(BLANK, "_blank");
   await vi.waitFor(() => expect(flow.store.state.phase).toBe("waiting"));
   await vi.waitFor(() =>
     expect(client.connectors.statuses).toHaveBeenCalledTimes(2)
@@ -336,9 +365,9 @@ const routeBackTo = (id: string, page: string) =>
   `${HOST}/mcp/connect/${id}?${new URLSearchParams({ return: page })}`;
 
 it("decides in one place what each kind opens in the browser", () => {
-  expect(connectTarget("abacus-gmailuser", "me@example.com")).toEqual({
-    kind: "connect-page",
-    url: `${GMAIL_PAGE}&hint=me%40example.com`,
+  expect(connectTarget("abacus-gmailuser")).toEqual({
+    kind: "connect-link",
+    opens: "tab",
   });
   // The route returns the tab to the page the click came from, without a
   // `connected` it was itself sent back with.

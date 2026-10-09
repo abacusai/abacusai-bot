@@ -2,7 +2,7 @@
  * How a connector gets connected and disconnected, by kind, in one place.
  * Every surface with a Connect button (the Connectors page, onboarding, the
  * card the agent raises in a chat) calls this rather than knowing what a
- * platform connect page, a credential store or an MCP install is. The renderer's only
+ * platform connect link, a credential store or an MCP install is. The renderer's only
  * job is to collect fields when the kind needs them (registry `connectUi`).
  */
 import {
@@ -12,7 +12,6 @@ import {
   type McpConnector,
 } from "@abacus-ai/connectors/registry";
 import type {
-  ConnectorConnectOptions,
   ConnectorOutcome,
   McpServerEntry,
 } from "@abacus-ai/contract/contracts";
@@ -24,15 +23,17 @@ export type McpSignIn =
   | { kind: "failed"; error?: string; cancelled?: boolean };
 
 export interface FlowSources {
-  /** The platform's connect page URL and its inverse, by service key. */
+  /** The platform's connect link and its inverse, by service key. */
   platform: {
     connect: (
-      service: string,
-      options?: ConnectorConnectOptions
-    ) => ConnectorOutcome;
+      service: string
+    ) => Promise<
+      | { ok: true; url: string; requestId: string }
+      | { ok: false; error: string }
+    >;
     disconnect: (service: string) => Promise<ConnectorOutcome>;
-    /** Follows a connector whose page was handed out until it connects. */
-    watch: (connectorId: string) => void;
+    /** Follows a connector whose link was handed out until it connects. */
+    watch: (connectorId: string, requestId: string) => void;
   };
   mcp: {
     /** The entry installed under `name`, if any. */
@@ -151,10 +152,7 @@ export class ConnectorFlowService {
   constructor(private readonly sources: FlowSources) {}
 
   /** Connect a connector whose flow takes no fields. */
-  async connect(
-    connectorId: string,
-    options?: ConnectorConnectOptions
-  ): Promise<ConnectorOutcome> {
+  async connect(connectorId: string): Promise<ConnectorOutcome> {
     const connector = connectorById(connectorId);
     if (connector == null) return unknown(connectorId);
     const ui = connectUi(connector);
@@ -163,10 +161,11 @@ export class ConnectorFlowService {
     if (ui === "pairing")
       return failure(`${connector.name} is paired from its own dialog.`);
     if (connector.kind === "platform") {
-      // The caller opens the page; completion arrives through the watch.
-      const outcome = this.sources.platform.connect(connector.service, options);
-      if (outcome.ok) this.sources.platform.watch(connector.id);
-      return outcome;
+      // The caller opens the link; completion arrives through the watch.
+      const link = await this.sources.platform.connect(connector.service);
+      if (!link.ok) return link;
+      this.sources.platform.watch(connector.id, link.requestId);
+      return { ok: true, url: link.url };
     }
     if (connector.kind === "mcp") {
       // Web host: the browser opens the host's route, which installs only once signed in.

@@ -1,8 +1,9 @@
 /**
  * One connect of one connector, from a click to connected. The target
- * (`connectTarget`) says what opens; the attempt opens it before any await,
- * signs the host in first when a platform connect finds it signed out, tells
- * the host, and then waits for the host to report the connector connected.
+ * (`connectTarget`) says what opens; the attempt takes its tab before any
+ * await, signs the host in first when a platform connect finds it signed out,
+ * has the host mint the link and opens it, then waits for the host to report
+ * the connector connected.
  * The host follows every connect it is told of and announces the change
  * (`connectors.events` status-changed, or connect-failed); the attempt
  * re-reads on each, on window focus, and once at once. One deadline;
@@ -13,7 +14,11 @@ import type { TFunction } from "i18next";
 
 import { followNotice } from "#renderer/data/queries/notices";
 import type { Transport } from "#renderer/data/transport";
-import { openTab, type ConnectTarget } from "#renderer/lib/connect-target";
+import {
+  blankTab,
+  openTab,
+  type ConnectTarget,
+} from "#renderer/lib/connect-target";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { connectTarget } from "#renderer/lib/platform-system";
 
@@ -35,8 +40,6 @@ export const connectErrorText = (t: TFunction, error: string): string => {
 };
 
 export interface ConnectAttemptOptions {
-  /** The account to suggest on a platform's consent screen. */
-  hint?: string;
   /** Signs the host in, when a platform connect finds it signed out. */
   signIn?: () => Promise<ConnectorOutcome>;
   /** The attempt moved between signing the host in and waiting. */
@@ -54,6 +57,9 @@ export class ConnectAttempt {
   readonly target: ConnectTarget;
   readonly result: Promise<ConnectorOutcome>;
   private readonly abort = new AbortController();
+  /** The tab a browser connect link opens in, until the link fills it. */
+  private tab: Window | null = null;
+  private opened = false;
 
   /** Call inside the click: a tab opens before this returns. */
   constructor(
@@ -61,11 +67,16 @@ export class ConnectAttempt {
     private readonly connectorId: string,
     private readonly options: ConnectAttemptOptions = {}
   ) {
-    this.target = connectTarget(connectorId, options.hint);
-    const blocked =
-      (this.target.kind === "connect-page" ||
-        this.target.kind === "host-route") &&
-      !openTab(this.target.url);
+    this.target = connectTarget(connectorId);
+    let blocked = false;
+    if (this.target.kind === "host-route") blocked = !openTab(this.target.url);
+    else if (
+      this.target.kind === "connect-link" &&
+      this.target.opens === "tab"
+    ) {
+      this.tab = blankTab();
+      blocked = this.tab == null;
+    }
     const stopped = new Promise<ConnectorOutcome>((resolve) => {
       const timer = setTimeout(
         () => resolve({ ok: false, error: "timeout" }),
@@ -89,9 +100,11 @@ export class ConnectAttempt {
           ok: false,
           error: error instanceof Error ? error.message : String(error),
         }));
-    this.result = Promise.race([run, stopped]).finally(() =>
-      this.abort.abort()
-    );
+    this.result = Promise.race([run, stopped]).finally(() => {
+      this.abort.abort();
+      // A tab the link never filled is left blank: close it.
+      if (!this.opened) this.tab?.close();
+    });
   }
 
   /** Stop waiting, and have the host drop the connect: its sign-in and its watch. */
@@ -106,11 +119,7 @@ export class ConnectAttempt {
   private async run(): Promise<ConnectorOutcome> {
     const { connectorId, options, target } = this;
     const { client } = this.transport;
-    const connect = () =>
-      client.connectors.connect({
-        connectorId,
-        ...(options.hint ? { options: { hint: options.hint } } : {}),
-      });
+    const connect = () => client.connectors.connect({ connectorId });
     switch (target.kind) {
       case "fields":
       case "pairing":
@@ -120,14 +129,18 @@ export class ConnectAttempt {
       case "host-route":
         // The route tells the host itself.
         break;
-      case "connect-page":
       case "connect-link": {
         const signedIn = await this.signedIn();
         if (!signedIn.ok) return signedIn;
         const told = await connect();
         if (!told.ok) return told;
-        if (target.kind === "connect-link" && told.url)
+        // The host's link as it answered it; nothing else carries the hand-off.
+        if (!told.url) return { ok: false, error: "failed" };
+        if (this.abort.signal.aborted) return CANCELLED;
+        if (target.opens === "external")
           await client.system.openExternal({ url: told.url });
+        else if (this.tab != null) this.tab.location.href = told.url;
+        this.opened = true;
         break;
       }
     }

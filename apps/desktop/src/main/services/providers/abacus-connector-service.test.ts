@@ -7,7 +7,7 @@ vi.mock("../config/settings", () => ({
 
 const {
   buildConnectorsSnapshot,
-  connectPageUrl,
+  connectButtonLink,
   createConnectLink,
   disconnectAbacusConnector,
   listAbacusConnectors,
@@ -255,34 +255,45 @@ describe("listing connectors without a key", () => {
   });
 });
 
-describe("the connect page", () => {
-  it("starts the consent on load, with an email hint forwarded", () => {
-    const outcome = connectPageUrl("GmailUser", { hint: "someone@gmail.com" });
-    if (!outcome.ok || outcome.url == null) throw new Error("no url");
-    const url = new URL(outcome.url);
-    expect(url.pathname).toBe("/chatllm/connect-connector");
-    expect(url.searchParams.get("service")).toBe("gmailuser");
-    expect(url.searchParams.get("autostart")).toBe("1");
-    expect(url.searchParams.get("hint")).toBe("someone@gmail.com");
+describe("a Connect button's link", () => {
+  it("is the minted link exactly as the server returns it", async () => {
+    answer("_createAbacusbotConnectLink", {
+      success: true,
+      result: {
+        requestId: "req_0123456789abcdef",
+        services: ["slack"],
+        url: "https://abacus.ai/app/connect/slack?r=req_0123456789abcdef",
+      },
+    });
+
+    expect(await connectButtonLink("Slack")).toEqual({
+      ok: true,
+      url: "https://abacus.ai/app/connect/slack?r=req_0123456789abcdef",
+      requestId: "req_0123456789abcdef",
+    });
+    expect(calls).toEqual(["_createAbacusbotConnectLink"]);
   });
 
-  it("drops a hint that is not an email, and opens nothing itself", () => {
-    const outcome = connectPageUrl("slack", { hint: "not an email" });
-    if (!outcome.ok || outcome.url == null) throw new Error("no url");
-    expect(new URL(outcome.url).searchParams.has("hint")).toBe(false);
-    expect(calls).toEqual([]);
+  it("fails when no link could be minted, rather than opening the plain page", async () => {
+    answer("_createAbacusbotConnectLink", null);
+
+    expect(await connectButtonLink("slack")).toEqual({
+      ok: false,
+      error: "Could not start connecting. Please try again.",
+    });
   });
 
-  it("refuses an unknown service, and answers not-signed-in without a key", () => {
-    expect(connectPageUrl("not a service")).toEqual({
+  it("refuses an unknown service, and answers not-signed-in without a key", async () => {
+    expect(await connectButtonLink("not a service")).toEqual({
       ok: false,
       error: "Unknown connector.",
     });
     apiKey.mockReturnValue("");
-    expect(connectPageUrl("slack")).toEqual({
+    expect(await connectButtonLink("slack")).toEqual({
       ok: false,
       error: "not-signed-in",
     });
+    expect(calls).toEqual([]);
   });
 });
 

@@ -5,7 +5,6 @@ import { browserConnection } from "#renderer/features/shell/connect/services";
 import { pickHostFolder, viewHostFile } from "#renderer/lib/browser/files";
 import { browserNotify } from "#renderer/lib/browser/notifications";
 import {
-  connectPagePath,
   openTab,
   withConnectReturn,
   type ConnectTarget,
@@ -36,13 +35,12 @@ export const platformSystem = (client: AppClient): BrowserSystem => ({
   dialog: { openFolder: () => pickHostFolder(client) },
 });
 
-/** The browser's answer: a page or the host's route for everything a tab can connect. */
-export const connectTarget = (name: string, hint?: string): ConnectTarget => {
+/** The browser's answer: a connect link or the host's route, each in a tab. */
+export const connectTarget = (name: string): ConnectTarget => {
   const entry = connectorById(name);
   const ui = entry != null ? connectUi(entry) : "browser-hop";
   if (ui === "pairing" || ui === "fields") return { kind: ui };
-  if (entry?.kind === "platform")
-    return { kind: "connect-page", url: connectPagePath(entry.service, hint) };
+  if (entry?.kind === "platform") return { kind: "connect-link", opens: "tab" };
   // A registry MCP server, or the user's own by its name. The route goes
   // straight to the provider, then back to the page the click came from.
   const { base } = browserConnection();

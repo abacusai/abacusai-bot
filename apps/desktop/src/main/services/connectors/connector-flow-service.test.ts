@@ -14,7 +14,15 @@ import {
 } from "./connector-flow-service";
 
 const platformConnect = vi.fn(
-  () => ({ ok: true, url: "https://apps.example/connect" }) as const
+  async (
+    _service: string
+  ): Promise<
+    { ok: true; url: string; requestId: string } | { ok: false; error: string }
+  > => ({
+    ok: true,
+    url: "https://apps.example/connect?r=req_1",
+    requestId: "req_1",
+  })
 );
 const platformDisconnect = vi.fn(async () => ({ ok: true }) as const);
 const watch = vi.fn();
@@ -54,29 +62,21 @@ beforeEach(() => {
 });
 
 describe("a platform connector", () => {
-  it("answers with the connect page by service key and watches for the connection", async () => {
+  it("answers with the connect link by service key and watches it for the connection", async () => {
     expect(await flow().connect("abacus-gmailuser")).toEqual({
       ok: true,
-      url: "https://apps.example/connect",
+      url: "https://apps.example/connect?r=req_1",
     });
 
-    expect(platformConnect).toHaveBeenCalledWith("gmailuser", undefined);
-    expect(watch).toHaveBeenCalledWith("abacus-gmailuser");
+    expect(platformConnect).toHaveBeenCalledWith("gmailuser");
+    expect(watch).toHaveBeenCalledWith("abacus-gmailuser", "req_1");
   });
 
-  it("hands the account hint to the platform", async () => {
-    await flow().connect("abacus-gmailuser", { hint: "me@gmail.com" });
-
-    expect(platformConnect).toHaveBeenCalledWith("gmailuser", {
-      hint: "me@gmail.com",
-    });
-  });
-
-  it("watches nothing when no page could be handed out", async () => {
-    platformConnect.mockReturnValueOnce({
+  it("watches nothing when no link could be handed out", async () => {
+    platformConnect.mockResolvedValueOnce({
       ok: false,
       error: "not-signed-in",
-    } as never);
+    });
 
     const outcome = await flow().connect("abacus-gmailuser");
 

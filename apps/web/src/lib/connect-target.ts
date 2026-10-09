@@ -5,15 +5,6 @@
  * it without importing the attempt.
  */
 
-export const CONNECT_PAGE_PATH = "/chatllm/connect-connector";
-
-/** The connect page for one service, same-origin relative, starting consent on load. */
-export const connectPagePath = (service: string, hint?: string): string => {
-  const params = new URLSearchParams({ service, autostart: "1" });
-  if (hint) params.set("hint", hint);
-  return `${CONNECT_PAGE_PATH}?${params}`;
-};
-
 /** The query key the host's connect route comes back with: the connector id. */
 export const CONNECTED_PARAM = "connected";
 
@@ -40,10 +31,12 @@ export const withConnectReturn = (url: string, hostBase: string): string => {
 
 /** What connecting a connector (or an MCP server by name) takes on this platform. */
 export type ConnectTarget =
-  /** Browser: the platform's connect page, opened in the click; the host watches. */
-  | { kind: "connect-page"; url: string }
-  /** Desktop: main mints the platform's page and opens it in the default browser. */
-  | { kind: "connect-link" }
+  /**
+   * A platform connector: the host mints its connect link and watches it. The
+   * browser opens it in a tab taken inside the click; the desktop, in the
+   * default browser.
+   */
+  | { kind: "connect-link"; opens: "tab" | "external" }
   /** Browser: the host's connect route: the provider's consent, then the install. */
   | { kind: "host-route"; url: string }
   /** Desktop: main installs and signs in, and answers once done. */
@@ -52,6 +45,13 @@ export type ConnectTarget =
   | { kind: "fields" }
   /** A chat app, paired from its own dialog. */
   | { kind: "pairing" };
+
+/** A blank tab taken inside the click, for a URL the host answers later; null when blocked. */
+export const blankTab = (): Window | null => {
+  const tab = window.open("about:blank", "_blank");
+  if (tab != null) tab.opener = null;
+  return tab;
+};
 
 /**
  * A new tab, detectably: `noopener` would make `window.open` answer null

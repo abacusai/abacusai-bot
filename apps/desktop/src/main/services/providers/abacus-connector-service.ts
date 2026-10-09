@@ -3,7 +3,6 @@ import type {
   AbacusConnectorInfo,
   AbacusConnectorOutcome,
   AbacusConnectorsSnapshot,
-  ConnectorConnectOptions,
 } from "@abacus-ai/contract/contracts";
 
 import { credentialFor } from "../config/settings";
@@ -11,8 +10,8 @@ import { abacusAppHost, abacusUserAgent } from "./abacus-host";
 
 /**
  * Abacus.AI first-party connectors (Gmail, Slack, Drive, ...). The platform
- * owns the OAuth flow: connecting opens its connect page, which mints a link
- * bound to the signed-in user. Tools arrive via the `abacus-connectors` MCP
+ * owns the OAuth flow: connecting opens a connect link minted for the
+ * signed-in user. Tools arrive via the `abacus-connectors` MCP
  * entry, whose Bearer header is an env placeholder the agent resolves, so the
  * key is never written into mcp-code.json.
  */
@@ -327,26 +326,23 @@ export const connectLinkStatus = async (
   };
 };
 
-/** An account hint is forwarded to the provider only when it reads as an email. */
-const HINT_RE = /^[^\s@/?#&]{1,64}@[^\s@/?#&]{1,255}$/;
+const CONNECT_LINK_FAILED = "Could not start connecting. Please try again.";
 
 /**
- * The connect page for one service, for the caller to open. The page mints
- * its own owner-bound link for the signed-in user and starts the provider's
- * consent on load; nothing waits here.
+ * A Connect button's link: the same owner-bound link a chat sends, for the
+ * caller to open as the server returns it. Only a minted link carries the
+ * connect page's hand-off, so a failed mint is an error, not the plain page.
  */
-export const connectPageUrl = (
-  service: string,
-  options: ConnectorConnectOptions = {}
-): AbacusConnectorOutcome => {
+export const connectButtonLink = async (
+  service: string
+): Promise<
+  { ok: true; url: string; requestId: string } | { ok: false; error: string }
+> => {
   const serviceKey = service.toLowerCase();
   if (!SERVICE_RE.test(serviceKey))
     return { ok: false, error: "Unknown connector." };
   if (abacusApiKey().length === 0) return { ok: false, error: "not-signed-in" };
-  const url = new URL(CONNECT_PATH, abacusAppHost());
-  url.searchParams.set("service", serviceKey);
-  url.searchParams.set("autostart", "1");
-  const hint = (options.hint ?? "").trim();
-  if (HINT_RE.test(hint)) url.searchParams.set("hint", hint);
-  return { ok: true, url: url.toString() };
+  const link = await createConnectLink(serviceKey);
+  if (link?.requestId == null) return { ok: false, error: CONNECT_LINK_FAILED };
+  return { ok: true, url: link.url, requestId: link.requestId };
 };
