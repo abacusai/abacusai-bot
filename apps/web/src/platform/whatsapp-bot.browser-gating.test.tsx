@@ -27,7 +27,9 @@ it("restores the phone dialog from search and preserves the shell and history", 
       });
     });
     expect(
-      await screen.findByRole("dialog", { name: "Connect your WhatsApp" })
+      await screen.findByRole("dialog", {
+        name: "Chat with AbacusAI Bot on WhatsApp",
+      })
     ).toBeTruthy();
     expect(document.querySelector('[data-slot="shell"]')).not.toBeNull();
     fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
@@ -41,7 +43,9 @@ it("restores the phone dialog from search and preserves the shell and history", 
       expect(app.router.state.location.search.connect).toBe("whatsapp")
     );
     expect(
-      await screen.findByRole("dialog", { name: "Connect your WhatsApp" })
+      await screen.findByRole("dialog", {
+        name: "Chat with AbacusAI Bot on WhatsApp",
+      })
     ).toBeTruthy();
   } finally {
     app.view.unmount();

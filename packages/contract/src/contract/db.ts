@@ -178,7 +178,7 @@ export const PREFS_GROUP_ENTRIES = {
   dismissals: {
     referralCardUntil: NullableTimestamp,
     upsell: v.boolean(),
-    /** The browser's "Connect your WhatsApp" intro, seen (linked or skipped). */
+    /** The browser's WhatsApp chat intro, seen (linked or skipped). */
     whatsappIntroAt: NullableTimestamp,
   },
   motion: { reduce: v.picklist(["system", "on", "off"]) },

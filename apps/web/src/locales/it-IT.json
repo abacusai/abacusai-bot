@@ -4111,10 +4111,10 @@
       "unlinkConfirm": "Your agent stops answering in WhatsApp. You can link it again any time."
     },
     "whatsappBot": {
-      "title": "Connect your WhatsApp",
-      "body": "Chat with AbacusAI Bot right from WhatsApp. Pick up anywhere you left off.",
+      "title": "Chatta con AbacusAI Bot su WhatsApp",
+      "body": "Scrivi ad AbacusAI Bot da WhatsApp, ovunque tu sia. Si apre una chat con il bot. Il tuo account WhatsApp non viene collegato.",
       "numberLabel": "Your WhatsApp number, with country code",
-      "connect": "Connect WhatsApp",
+      "connect": "Avvia la chat WhatsApp",
       "note": "Poi invii un messaggio su WhatsApp. Tutto qui.",
       "skip": "Skip, use it in the browser",
       "waitingTitle": "Invia questo messaggio su WhatsApp",
@@ -4130,7 +4130,7 @@
       "expiredTitle": "Questo codice è scaduto",
       "expiredBody": "I codici durano 10 minuti. Prendine uno nuovo e invialo da WhatsApp.",
       "newCode": "Ottieni un nuovo codice",
-      "connected": "WhatsApp connected",
+      "connected": "Chat WhatsApp pronta",
       "rowDetail": "Chat with AbacusAI Bot on WhatsApp",
       "doneTitle": "Tutto pronto",
       "doneBody": "Il tuo bot è su WhatsApp. Scrivigli quando vuoi.",

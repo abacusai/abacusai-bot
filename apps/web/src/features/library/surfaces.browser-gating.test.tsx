@@ -509,6 +509,13 @@ it("is only WhatsApp on a phone: connect with no Skip, then all set with the bot
   expect(
     await screen.findByRole("heading", { name: enUS.web.whatsappBot.title })
   ).toBeDefined();
+  // A chat with the bot, never worded like linking the user's own account.
+  expect(screen.getByText(enUS.web.whatsappBot.body)).toBeDefined();
+  for (const linking of [
+    enUS.web.whatsapp.dialogTitle,
+    enUS.web.whatsapp.dialogBody,
+  ])
+    expect(document.body.textContent).not.toContain(linking);
   expect(
     screen.queryByRole("button", { name: enUS.web.whatsappBot.skip })
   ).toBeNull();

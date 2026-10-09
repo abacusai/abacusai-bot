@@ -4111,10 +4111,10 @@
       "unlinkConfirm": "Your agent stops answering in WhatsApp. You can link it again any time."
     },
     "whatsappBot": {
-      "title": "Connect your WhatsApp",
-      "body": "Chat with AbacusAI Bot right from WhatsApp. Pick up anywhere you left off.",
+      "title": "WhatsApp에서 AbacusAI Bot과 채팅",
+      "body": "어디서든 WhatsApp으로 AbacusAI Bot에 메시지를 보내세요. 봇과의 채팅이 열리며, WhatsApp 계정은 연결되지 않습니다.",
       "numberLabel": "Your WhatsApp number, with country code",
-      "connect": "Connect WhatsApp",
+      "connect": "WhatsApp 채팅 시작",
       "note": "다음으로 WhatsApp에서 메시지 하나만 보내면 됩니다.",
       "skip": "Skip, use it in the browser",
       "waitingTitle": "WhatsApp에서 이 메시지를 보내세요",
@@ -4130,7 +4130,7 @@
       "expiredTitle": "이 코드는 만료되었습니다",
       "expiredBody": "코드는 10분 동안 유효합니다. 새 코드를 받아 WhatsApp에서 보내세요.",
       "newCode": "새 코드 받기",
-      "connected": "WhatsApp connected",
+      "connected": "WhatsApp 채팅 준비 완료",
       "rowDetail": "Chat with AbacusAI Bot on WhatsApp",
       "doneTitle": "모두 준비됐어요",
       "doneBody": "봇이 WhatsApp에 있어요. 언제든 메시지를 보내세요.",
