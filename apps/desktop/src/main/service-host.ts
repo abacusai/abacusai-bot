@@ -4618,7 +4618,7 @@ export class ServiceHost {
       type: "local-cli-session-created",
       workspaceId: target,
       sessionId: session.id,
-      session,
+      session: this.agentSessionManagerService.get(session.id) ?? session,
       emittedAt: new Date().toISOString(),
     });
     this.updateAgentSessionLabel(
