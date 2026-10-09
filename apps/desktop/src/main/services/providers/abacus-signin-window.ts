@@ -615,6 +615,8 @@ export const openSignInWindow = async ({
         callPageApi(signInOrigin, "_googleCodeSignIn", {
           googleCode: code,
           signupSource: "AbacusAIBot",
+          // A new account's organization starts on the bot's free plan.
+          abacusaibotSignup: true,
         })
       )) as { success?: unknown; error?: unknown } | null;
       if (signedIn?.success !== true) {
