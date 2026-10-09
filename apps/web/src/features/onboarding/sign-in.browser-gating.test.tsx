@@ -53,7 +53,7 @@ it.each([
       const link = screen.getByRole("link", { name: "Sign in another way" });
       const url = new URL(link.getAttribute("href")!, location.origin);
       expect(url.origin).toBe(location.origin);
-      expect(url.pathname).toBe("/chatllm/signin");
+      expect(url.pathname).toBe("/bot/link/signin");
       // Absolute: the sign-in page ignores a relative return address.
       expect(url.searchParams.get("redirectUrl")).toBe(
         `${location.origin}/bot/onboarding/connect?from=signin`
