@@ -62,6 +62,16 @@ describe("the phone loop's clock and check-ins", () => {
     expect(prompt).not.toMatch(/UTC offset|not set/);
   });
 
+  it("offers only Google and GitHub to connect; the bot keeps the whole catalog", () => {
+    expect(flat(phoneOperatingPrompt(null))).toContain(
+      "From this chat the user can connect only Gmail, Google Drive, Google Calendar, GitHub."
+    );
+    expect(phoneOperatingPrompt(null)).not.toMatch(
+      /connectors this app can attach/
+    );
+    expect(botOperatingPrompt()).toMatch(/connectors this app can attach/);
+  });
+
   it("states the user's language by name, English when none is known, and follows a switch", () => {
     expect(flat(phoneOperatingPrompt(null, null, "pt-BR"))).toMatch(
       /The user's language is Brazilian Portuguese: reply in it, and if they write in another language, switch to theirs\./

@@ -91,17 +91,16 @@ export const OnboardingLocalModels = ({
     >
       <span
         aria-hidden="true"
-        className="bg-background/60 flex size-9 shrink-0 items-center justify-end rounded-[10px]"
+        className="bg-background/60 flex size-12 shrink-0 items-center justify-center rounded-[10px]"
       >
-        <Laptop size={18} strokeWidth={1.75} />
+        <Laptop size={24} strokeWidth={1.75} />
       </span>
-      <span className="onboarding-row-title min-w-0 flex-1">
+      <span className="onboarding-row-title min-w-0 flex-1 text-sm">
         {t("onboarding.pages.models.local")}{" "}
         <span className="onboarding-accent">
           {t("onboarding.pages.models.localAccent")}
         </span>{" "}
-        <span className="text-muted-foreground font-normal">
-          ·{" "}
+        <span className="text-muted-foreground mt-1 block text-[13px] font-normal">
           {t("onboarding.pages.models.localDetails", {
             model: model.label,
             size: gb(model.sizeBytes),

@@ -95,7 +95,7 @@ describe("onboarding keys", () => {
       expect(app!.router.state.location.pathname).toBe("/onboarding/connectors")
     );
     await screen.findByRole("heading", {
-      name: /Connect with your tools & services/,
+      name: /Chat where you work/,
     });
     await press("Escape");
     await waitFor(() =>

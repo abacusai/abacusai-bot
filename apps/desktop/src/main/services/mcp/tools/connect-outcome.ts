@@ -37,6 +37,8 @@ export type ConnectOutcome =
       name: string;
       reason: "not-signed-in" | "not-offered" | "unreachable";
     }
+  /** An account service this surface does not connect; no link was made. */
+  | { code: "not_here"; name: string }
   /** No link exists for it; `card` says whether a Connect card went up in the app. */
   | { code: "no_link"; name: string; kind: Connector["kind"]; card: boolean }
   /** Every connector the link covers is connected already; it can only reconnect them. */

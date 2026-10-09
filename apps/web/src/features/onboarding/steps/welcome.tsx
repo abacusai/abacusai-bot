@@ -1,8 +1,8 @@
+import { Brain, Puzzle, Sparkles } from "lucide-react";
 import type { Ref } from "react";
 
 import { Spinner } from "#renderer/components/spinner";
 import { IS_ELECTRON } from "#renderer/lib/platform";
-import { Button } from "#renderer/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,7 +73,23 @@ export const WelcomeStep = ({
       <p className="onboarding-tagline mt-2">
         {t("onboarding.welcomeTagline")}
       </p>
-      <div className="mt-9 flex flex-wrap justify-end gap-2.5">
+      <ul className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-3">
+        {[
+          { key: "welcomeCapabilityMemory", icon: Brain },
+          { key: "welcomeCapabilityConnectors", icon: Puzzle },
+          { key: "welcomeCapabilityModels", icon: Sparkles },
+        ].map(({ key, icon: Icon }) => (
+          <li key={key} className="flex items-center gap-2 text-sm font-medium">
+            <Icon
+              aria-hidden
+              className="text-primary size-5"
+              strokeWidth={1.75}
+            />
+            {t(`onboarding.${key}`)}
+          </li>
+        ))}
+      </ul>
+      <div className="onboarding-actions mt-9">
         <StepButton disabled={busy} onClick={() => props.signIn("signup")}>
           {t("onboarding.connectCta")}
         </StepButton>
@@ -88,15 +104,7 @@ export const WelcomeStep = ({
         ) : sessionProfiles.length ? (
           <DropdownMenu>
             <DropdownMenuTrigger
-              render={
-                <Button
-                  size="default"
-                  variant="ghost"
-                  data-variant="secondary"
-                  className="text-muted-foreground text-[13px]"
-                  disabled={busy}
-                />
-              }
+              render={<StepButton variant="secondary" disabled={busy} />}
             >
               {t("onboarding.haveAccountCta")}
             </DropdownMenuTrigger>

@@ -1,7 +1,13 @@
 import { useSelector } from "@tanstack/react-store";
 import { ChevronLeft, Volume2, VolumeX } from "lucide-react";
 import { LayoutGroup, motion } from "motion/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
@@ -70,12 +76,18 @@ export const OnboardingFrame = ({
   });
   if (transition.step !== step)
     setTransition({ step, direction: stepDirection(transition.step, step) });
+  const frame = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (frame.current) frame.current.scrollTop = 0;
+  }, [step]);
   const sound = useOnboardingSound();
   const previousStep = useRef(step);
   const db = useOptionalDb();
   useEffect(() => {
     if (previousStep.current !== step)
-      sound.play(step === "done" ? "celebrate" : "step");
+      sound.play(
+        step === "done" || step === "first-bot" ? "celebrate" : "step"
+      );
     previousStep.current = step;
   }, [step, sound]);
   const reduce = useMotionPreference() === "reduced";
@@ -91,8 +103,10 @@ export const OnboardingFrame = ({
         ? "pending"
         : "none";
   return (
-    <div className="onboarding-frame" data-reduced-motion={reduce}>
-      <OnboardingProgress step={step} />
+    <div ref={frame} className="onboarding-frame" data-reduced-motion={reduce}>
+      {step !== "first-bot" && step !== "done" && (
+        <OnboardingProgress step={step} />
+      )}
       <Button
         variant="ghost"
         size="icon"
@@ -111,6 +125,17 @@ export const OnboardingFrame = ({
           className="onboarding-column"
           data-step-direction={transition.direction}
         >
+          <motion.div
+            layout
+            initial={false}
+            transition={reduce ? { duration: 0 } : springs.surface}
+            className="onboarding-brand titlebar-drag"
+            data-slot="onboarding-brand"
+            data-welcome={step === "welcome"}
+          >
+            <BotAppMark size={step === "welcome" ? 32 : 18} />
+            <span>{t("shell.appName")}</span>
+          </motion.div>
           <OnboardingStage
             step={step}
             bot={bot}
@@ -149,10 +174,7 @@ export const OnboardingNavigation = ({ onBack }: { onBack?: () => void }) => {
       className="onboarding-navigation titlebar-drag"
       data-slot="onboarding-navigation"
     >
-      <div className="flex min-w-0 items-center gap-2 text-[13px] font-medium">
-        <BotAppMark size={18} />
-        <span className="truncate">{t("shell.appName")}</span>
-      </div>
+      {onBack && <span className="onboarding-brand-space" aria-hidden />}
       {onBack && (
         <Button
           variant="ghost"

@@ -172,6 +172,13 @@ describe("what the model is told", () => {
     expect(routingPrompt()).toContain(text);
   });
 
+  it("narrows what it offers to connect to the services given", () => {
+    const text = catalogPrompt(["gmailuser", "githubbot"]);
+    expect(text).toContain("can connect only Gmail, GitHub.");
+    expect(text).not.toMatch(/Slack|Hugging Face/);
+    expect(routingPrompt(["gmailuser", "githubbot"])).toContain(text);
+  });
+
   it("lists a connector by id and name with what to do about it", () => {
     const gmail = connectorById("abacus-gmailuser")!;
     expect(

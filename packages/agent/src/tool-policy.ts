@@ -52,6 +52,19 @@ export const PHONE_AGENT_TOOL_NAMES: readonly string[] = [
   "billing_plan",
 ];
 
+/**
+ * The account services the WhatsApp chat may offer and connect, by service
+ * key: one Google sign-in and GitHub. Other providers' sign-in return can be
+ * intercepted by another app on some phones, so they connect on a computer;
+ * once connected, their tools work on the phone like any other.
+ */
+export const PHONE_CONNECTABLE_SERVICES: readonly string[] = [
+  "gmailuser",
+  "googledriveuser",
+  "googlecalendar",
+  "githubbot",
+];
+
 /** The vault's tools, from the browser server: saved logins, approved cards and sign-ins. */
 export const PHONE_VAULT_TOOL_NAMES: readonly string[] = [
   "vault_items",

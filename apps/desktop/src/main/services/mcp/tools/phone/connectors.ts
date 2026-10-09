@@ -1,11 +1,21 @@
+import { PHONE_CONNECTABLE_SERVICES } from "@abacus-ai/agent/tool-policy";
 import { CONNECTORS } from "@abacus-ai/connectors/registry";
 
+import { fetchAbacusAccount, onFreePlan } from "../../../providers/abacus";
+import {
+  type BillingPlan,
+  fetchBillingPlan,
+} from "../../../providers/abacus-upgrade";
 import type { ConnectOutcome, DisconnectOutcome } from "../connect-outcome";
 import type { ToolHost, ToolResult } from "../definition";
 import type { PhoneToolDefinition } from "./definition";
 
-/** What a WhatsApp user can connect from their chat: the account connectors. */
-const CONNECTABLE = CONNECTORS.filter((item) => item.kind === "platform");
+/** What a WhatsApp user can connect from their chat: the phone's account services. */
+const CONNECTABLE = CONNECTORS.filter(
+  (item) =>
+    item.kind === "platform" &&
+    PHONE_CONNECTABLE_SERVICES.includes(item.service)
+);
 
 const options = (items: ReadonlyArray<{ id: string; name: string }>): string =>
   items
@@ -36,7 +46,11 @@ export function phoneConnectResult(
           "The user's services you can connect from this chat:",
           "",
           ...outcome.entries
-            .filter(({ connector }) => connector.kind === "platform")
+            .filter(
+              ({ connector, status }) =>
+                CONNECTABLE.includes(connector) ||
+                (connector.kind === "platform" && status.state === "connected")
+            )
             .map(({ connector, status }) => {
               const account =
                 status.account != null && status.account.length > 0
@@ -51,6 +65,8 @@ export function phoneConnectResult(
           "",
           "A connected one's tools are already in your tool list: use those, and do not guess a tool name. The account",
           'it is connected as is the user\'s own: it is who "me" and "myself" mean, so do not ask them for it.',
+          "Any other service cannot be connected from this chat. If the user asks for one, call this tool with it",
+          "and follow its answer.",
         ].join("\n")
       );
     case "ambiguous":
@@ -75,6 +91,11 @@ export function phoneConnectResult(
             ? ": the user's Abacus.AI account does not offer it"
             : ""
         }. Say so plainly, and do whatever part of the task does not need it.`
+      );
+    case "not_here":
+      return host.ok(
+        `${outcome.name} cannot be connected from WhatsApp. No link was made: send none, and promise no date. ` +
+          "Say so plainly in one short line, in the user's language, and do whatever part of the task does not need it."
       );
     case "no_link":
       return cannotUse(host, outcome.name);
@@ -115,6 +136,85 @@ export function phoneConnectResult(
     }
   }
 }
+
+/** The upgrades on offer, from the platform's own offer: prices, credits, features and links. */
+const offerLines = (billing: BillingPlan): string[] =>
+  billing.upgrades.flatMap((upgrade) => {
+    const credits = billing.plans.find(
+      (plan) => plan.plan === upgrade.plan
+    )?.creditsPerMonth;
+    return [
+      `${upgrade.planName}: ${upgrade.priceText}` +
+        (credits != null
+          ? `, ${Math.round(credits).toLocaleString("en-US")} credits a month`
+          : "") +
+        (upgrade.url != null ? `, link: ${upgrade.url}` : ""),
+      ...upgrade.features.map((feature) => `  - ${feature}`),
+    ];
+  });
+
+/**
+ * A service the phone does not connect. On the free plan it is the upgrade's
+ * moment, from the platform's own offer; a paid user is pointed to the
+ * ChatLLM app, where a connection made reaches the phone too.
+ */
+export function phoneNotHereResult(
+  host: Pick<ToolHost, "ok">,
+  name: string,
+  plan: { free: false } | { free: true; billing: BillingPlan | null }
+): ToolResult {
+  const noLink = `${name} cannot be connected from WhatsApp, and no link was made for it: send none, and promise no date.`;
+  if (!plan.free)
+    return host.ok(
+      [
+        noLink,
+        "Tell the user plainly in one short message, in their language: it cannot be connected from WhatsApp, and if",
+        "they connect it in the ChatLLM app, you can use it for them here too. Do not pitch an upgrade. Then do",
+        `whatever part of the task does not need ${name}.`,
+      ].join("\n")
+    );
+  const billing = plan.billing;
+  const offer =
+    billing == null || billing.upgrades.length === 0
+      ? [
+          "The upgrade offer cannot be read here: call billing_plan with upgrade: true for its prices and link, and",
+          "use those.",
+        ]
+      : [
+          "The offer, the only prices, credits and features you may give:",
+          ...offerLines(billing),
+          billing.upgradeInMobileApp
+            ? "Their plan is billed through the app store: they upgrade in the mobile app, under Settings. Say so instead of a link."
+            : "Give each link exactly as written, on its own line.",
+        ];
+  return host.ok(
+    [
+      noLink,
+      "",
+      "The user is on the free plan. Tell them, in their language and as one WhatsApp message, that connecting",
+      `${name} is not part of the free plan on WhatsApp, then pitch the upgrade. Upgrading also gives them the ChatLLM`,
+      "app on their phone, where they can:",
+      "  - connect Slack, Outlook, Jira and many more apps, which you can then use for them here on WhatsApp too;",
+      "  - build and deploy apps, mobile apps included;",
+      "  - generate images and video;",
+      "  - use the top models.",
+      "",
+      ...offer,
+      "",
+      "Never invent a price, a feature or a link. Give this full pitch at most once in this conversation: if you",
+      `already gave it, say in one short line that connecting ${name} comes with an upgrade, and point back to the`,
+      `upgrade link. Then do whatever part of the task does not need ${name}.`,
+    ].join("\n")
+  );
+}
+
+/** The user's plan, read only when a service the phone does not connect is asked for. */
+const planForUpgrade = async (): Promise<
+  { free: false } | { free: true; billing: BillingPlan | null }
+> =>
+  onFreePlan(await fetchAbacusAccount())
+    ? { free: true, billing: await fetchBillingPlan(true) }
+    : { free: false };
 
 /** What the phone's model is told about a disconnect. */
 export function phoneDisconnectResult(
@@ -164,7 +264,8 @@ export const PHONE_CONNECTORS_TOOLS: PhoneToolDefinition[] = [
     toolsets: ["connectors"],
     description: [
       "Get one of the user's services connected from this chat, without ending or holding the turn. The services:",
-      `${CONNECTABLE.map((item) => item.name).join(", ")}.`,
+      `${CONNECTABLE.map((item) => item.name).join(", ")}. Asked for any other, call it anyway with that service:`,
+      "its answer says what to tell the user. One the user already connected elsewhere works here too.",
       "",
       "Call it with no arguments to see each one, connected or not, and the account behind each connected one: that",
       'account is who the user means by "me", so read it here instead of asking. Call it with a service to ask for',
@@ -180,7 +281,7 @@ export const PHONE_CONNECTORS_TOOLS: PhoneToolDefinition[] = [
         service: {
           type: "string",
           description:
-            'The service to ask for, e.g. "slack". Omit to list them.',
+            'The service to ask for, e.g. "gmail". Omit to list them.',
         },
         reason: {
           type: "string",
@@ -188,13 +289,15 @@ export const PHONE_CONNECTORS_TOOLS: PhoneToolDefinition[] = [
         },
       },
     },
-    run: async (host, args, callerSession) =>
-      phoneConnectResult(
-        host,
-        await host.connectConnectorOutcome(args, callerSession, {
-          card: false,
-        })
-      ),
+    run: async (host, args, callerSession) => {
+      const outcome = await host.connectConnectorOutcome(args, callerSession, {
+        card: false,
+        services: PHONE_CONNECTABLE_SERVICES,
+      });
+      return outcome.code === "not_here"
+        ? phoneNotHereResult(host, outcome.name, await planForUpgrade())
+        : phoneConnectResult(host, outcome);
+    },
   },
   {
     surface: "phone",
