@@ -21,6 +21,8 @@ import {
   succeeding,
   useMutation,
 } from "#renderer/data/query-client";
+import { DESKTOP_DOWNLOAD_URL } from "#renderer/lib/abacus-links";
+import { useContextualUpsell } from "#renderer/lib/contextual-upsell";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
@@ -36,6 +38,49 @@ import {
   DialogDescription,
 } from "#renderer/ui/dialog";
 import { Input } from "#renderer/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "#renderer/ui/popover";
+
+export const BrowserSkillImport = () => {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState<"folder" | "file" | null>(null);
+  useContextualUpsell(open !== null);
+  return (
+    <div className="flex flex-wrap gap-2">
+      {(["folder", "file"] as const).map((kind) => (
+        <Popover
+          key={kind}
+          open={open === kind}
+          onOpenChange={(value) => setOpen(value ? kind : null)}
+        >
+          <PopoverTrigger render={<Button size="sm" variant="secondary" />}>
+            {t(`phase5.skillImport.${kind}`)}
+          </PopoverTrigger>
+          <PopoverContent
+            className="max-w-[calc(100vw-2rem)] space-y-3"
+            align="start"
+          >
+            <p className="text-muted-foreground text-sm">
+              {t("web.files.skillImportUnavailable")}
+            </p>
+            <Button
+              nativeButton={false}
+              className="w-full"
+              render={
+                <a
+                  href={DESKTOP_DOWNLOAD_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              }
+            >
+              {t("web.files.download")}
+            </Button>
+          </PopoverContent>
+        </Popover>
+      ))}
+    </div>
+  );
+};
 /** Device and messaging tools run only on the desktop host. */
 const VISIBLE_TOOLSETS = TOOLSETS_FOR_DISPLAY.filter(
   (s) => IS_ELECTRON || !["device", "messaging"].includes(s.id)
@@ -151,9 +196,7 @@ export const SkillsPage = () => {
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground text-xs">
-            {t("web.files.skillImportUnavailable")}
-          </p>
+          <BrowserSkillImport />
         )}
         {(workspacePath ? ["project", "global"] : ["global"]).map((source) => (
           <section key={source}>

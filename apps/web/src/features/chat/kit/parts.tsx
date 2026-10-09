@@ -5,9 +5,10 @@
  */
 import type { PartProps } from "@tanstack/ai-react/ui";
 import { Brain, ChevronRight, FileText, Globe, Layers } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { ABACUS_BUY_CREDITS_URL } from "#renderer/lib/abacus-links";
 import { cn } from "#renderer/lib/cn";
 import {
   Attachment,
@@ -25,10 +26,61 @@ import {
 import { Marker, MarkerContent, MarkerIcon } from "#renderer/ui/marker";
 
 import { Markdown } from "../markdown/markdown";
+import type { ChatHostActions } from "../runtime/host-actions";
 import { useChatView } from "./context";
 import { MessageMenu, MessageReactionPills } from "./message-actions";
 import { useMessageScope } from "./message-scope";
 import { NoticeRow } from "./status/status";
+
+export const FeatureLimitNotice = ({
+  feature,
+  host,
+}: {
+  feature: string;
+  host: ChatHostActions;
+}) => {
+  const { t } = useTranslation();
+  const [action, setAction] = useState<"upgrade" | "top-up" | null>(null);
+  useEffect(() => {
+    let live = true;
+    void Promise.all([host.accountTier(), host.canTopUpCredits?.() ?? false])
+      .then(([tier, eligible]) => {
+        if (live)
+          setAction(
+            tier === "free" || (tier === "basic" && eligible)
+              ? "upgrade"
+              : tier === "paid" && eligible
+                ? "top-up"
+                : null
+          );
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [host]);
+  return (
+    <div
+      className="flex min-w-0 flex-col items-start gap-3 rounded-xl bg-[var(--chat-surface)] p-3 text-sm"
+      data-slot="feature-limit"
+    >
+      {t("chat.part.featureLimit", { feature })}
+      {action && (
+        <Button
+          variant="secondary"
+          className="max-w-full whitespace-normal"
+          onClick={() =>
+            void (action === "upgrade"
+              ? host.openUpgrade()
+              : host.openExternal(ABACUS_BUY_CREDITS_URL))
+          }
+        >
+          {t(action === "upgrade" ? "creditsCard.cta" : "creditsCard.topUpCta")}
+        </Button>
+      )}
+    </div>
+  );
+};
 
 type Loose = Record<string, unknown>;
 
@@ -177,20 +229,10 @@ export const TextPartDispatch = ({ part }: PartProps<unknown, "text">) => {
     }
     case "feature_limit":
       return (
-        <div
-          className="rounded-xl bg-[var(--chat-surface)] p-3 text-sm"
-          data-slot="feature-limit"
-        >
-          {t("chat.part.featureLimit", {
-            feature: String(abacus.featureName ?? ""),
-          })}
-          <Button
-            variant="secondary"
-            onClick={() => void runtime.host.openUpgrade()}
-          >
-            {t("creditsCard.topUpCta")}
-          </Button>
-        </div>
+        <FeatureLimitNotice
+          feature={String(abacus.featureName ?? "")}
+          host={runtime.host}
+        />
       );
     case "compaction":
       return (

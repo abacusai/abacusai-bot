@@ -66,10 +66,15 @@ it.each(["basic", "pro"])(
       ).getByRole("button", { name: enUS.phase5.topUp })
     );
     await waitFor(() => expect(openExternal).toHaveBeenCalled());
-    expect(openExternal.mock.calls[0][0].input.url).toBe(
-      tier === "basic"
-        ? "https://example.com/account-offer"
-        : ABACUS_BUY_CREDITS_URL
+    expect(openExternal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: {
+          url:
+            tier === "basic"
+              ? "https://example.com/account-offer"
+              : ABACUS_BUY_CREDITS_URL,
+        },
+      })
     );
     expect(upgradeUrl).toHaveBeenCalledTimes(tier === "basic" ? 1 : 0);
   }
