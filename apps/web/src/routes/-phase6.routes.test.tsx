@@ -180,6 +180,33 @@ it.each(["new-session", "scratch"] as const)(
   }
 );
 
+it("ready final setup automatically opens the Chief chat without another click", async () => {
+  const seed = defaultSeed();
+  seed.bots = [];
+  seed.routines = [];
+  harness = await renderApp("/onboarding/first-bot", {
+    onboarded: false,
+    signedIn: true,
+    seed,
+  });
+  await screen.findByRole("button", { name: "Say hello" });
+  expect(screen.queryByRole("progressbar")).toBeNull();
+  await waitFor(
+    () =>
+      expect(harness!.router.state.location.pathname).toMatch(/^\/bots\/bot-/),
+    { timeout: 5000 }
+  );
+  expect(harness.collections.bots.toArray).toHaveLength(1);
+  expect(
+    harness.calls.filter(([name]) => name === "account.skipOnboarding")
+  ).toHaveLength(1);
+  await waitFor(() =>
+    expect(
+      harness!.calls.filter(([name]) => name === "bots.openChat")
+    ).toHaveLength(1)
+  );
+});
+
 it("final setup retries a failed completion without duplicating its created Chief", async () => {
   const seed = defaultSeed();
   seed.bots = [];

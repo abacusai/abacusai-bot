@@ -22,6 +22,7 @@ import { FirstBotStep } from "./steps/first-bot";
 import { ModelsStep } from "./steps/models";
 import { WelcomeStep } from "./steps/welcome";
 import { onboardingStore } from "./store";
+import { useFinalHandoff } from "./use-final-handoff";
 
 export { OnboardingFrame } from "./frame";
 export { onboardingStore } from "./store";
@@ -179,6 +180,27 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
     advance: () => go("next"),
     back: () => go("back"),
   };
+  const existingBot = bots?.find((item) => item.channel == null);
+  useFinalHandoff(
+    !props.preview &&
+      !facts.provisional &&
+      step === "first-bot" &&
+      (first.state === "ready" ||
+        (first.state === "skipped" &&
+          first.reason !== "create_failed" &&
+          bots != null)),
+    () => {
+      if (performing.current) return;
+      void perform(async () => {
+        if (bot)
+          await transport.client.system.funnelStep({ step: "first_bot_kept" });
+        const target = bot ?? existingBot;
+        await props.complete(
+          target ? { to: "bot", botId: target.id } : { to: "new-bot" }
+        );
+      });
+    }
+  );
   /** Enter continues with the step's primary action; Escape goes back where the flow allows. */
   const onKey = useEffectEvent((event: KeyboardEvent) => {
     if (
