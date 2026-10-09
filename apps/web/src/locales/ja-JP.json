@@ -1341,7 +1341,16 @@
     "pages.models.downloading": "ダウンロード中",
     "pages.models.download": "ダウンロード",
     "soundOn": "サウンドオン",
-    "soundOff": "サウンドオフ"
+    "soundOff": "サウンドオフ",
+    "connectorAction": "{{action}} {{name}}",
+    "connectorDetails": {
+      "abacus-gmailuser": "Read email and draft replies.",
+      "abacus-googlecalendar": "Check your day and schedule meetings.",
+      "abacus-googledriveuser": "Find and work with your files.",
+      "messaging-whatsapp": "Message your bot from WhatsApp.",
+      "messaging-telegram": "Message your bot from Telegram.",
+      "messaging-discord": "Message your bot from Discord."
+    }
   },
   "referralCard": {
     "cta": "Invite friends",

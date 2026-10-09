@@ -1,7 +1,8 @@
 import { useSelector } from "@tanstack/react-store";
-import { Volume2, VolumeX } from "lucide-react";
+import { ChevronLeft, Volume2, VolumeX } from "lucide-react";
 import { LayoutGroup, motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import { BotAppMark } from "#renderer/components/app-icon";
@@ -120,10 +121,6 @@ export const OnboardingFrame = ({
               .slice(0, 3)}
             onPoke={() => sound.play("pop")}
           />
-          <div className="text-muted-foreground mb-4 flex items-center gap-2 text-sm">
-            <BotAppMark size={20} />
-            {t("shell.appName")}
-          </div>
           <motion.div
             key={step}
             className="w-full"
@@ -141,5 +138,32 @@ export const OnboardingFrame = ({
         </div>
       </LayoutGroup>
     </div>
+  );
+};
+
+/** Keep window navigation outside the animated step content. */
+export const OnboardingNavigation = ({ onBack }: { onBack?: () => void }) => {
+  const { t } = useTranslation();
+  return createPortal(
+    <div
+      className="onboarding-navigation titlebar-drag"
+      data-slot="onboarding-navigation"
+    >
+      <div className="flex min-w-0 items-center gap-2 text-[13px] font-medium">
+        <BotAppMark size={18} />
+        <span className="truncate">{t("shell.appName")}</span>
+      </div>
+      {onBack && (
+        <Button
+          variant="ghost"
+          className="titlebar-nodrag text-muted-foreground shrink-0 gap-1"
+          onClick={onBack}
+        >
+          <ChevronLeft aria-hidden className="size-3.5" />
+          {t("common.back")}
+        </Button>
+      )}
+    </div>,
+    document.body
   );
 };
