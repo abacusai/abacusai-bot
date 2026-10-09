@@ -4,7 +4,11 @@
  */
 import { Type } from "typebox";
 
-import { runDelegatedTask, type DelegationContext } from "./delegation.js";
+import {
+  resolveTaskRoot,
+  runDelegatedTask,
+  type DelegationContext,
+} from "./delegation.js";
 import { scopeEmit, tagEvent } from "./event-meta.js";
 import type { AgentEvent } from "./protocol.js";
 
@@ -61,8 +65,13 @@ export function buildDelegateTool(
       "Worth it when answering would mean reading across many files and you only need the",
       "answer, not the search: the sub-agent spends the tool calls, you keep the finding.",
       "",
-      "The sub-agent is read-only and cannot ask questions or delegate further, so give it",
-      "everything it needs in the task description. It sees none of this conversation.",
+      "The sub-agent cannot ask questions or delegate further, so give it everything it needs",
+      "in the task description. It sees none of this conversation.",
+      "",
+      "It works in one folder, `root` (your working folder unless you name another), plus any",
+      "path the task names; the rest of the user's home folder is refused. Point `root` at the",
+      "folder the task is about, and make sure what it needs is there: a partial clone missing a",
+      "package means the sub-agent reports it missing.",
       "",
       "Not worth it for a single-file lookup you could do in one read.",
     ].join("\n"),
@@ -71,6 +80,12 @@ export function buildDelegateTool(
         description:
           "The complete, self-contained task. State what to find and what to report back, as if to someone who has not read this conversation.",
       }),
+      root: Type.Optional(
+        Type.String({
+          description:
+            "The folder the task is about, e.g. the repo you cloned: absolute, ~/, or relative to your working folder. Defaults to your working folder.",
+        })
+      ),
     }),
     execute: async (toolCallId, params, signal) => {
       // Stop can land before the tool starts; a sub-session would outlive the
@@ -90,6 +105,19 @@ export function buildDelegateTool(
           content: [
             { type: "text" as const, text: "A task description is required." },
           ],
+          details: {},
+          isError: true,
+        };
+      }
+
+      const scope = resolveTaskRoot(
+        typeof params.root === "string" ? params.root : undefined,
+        context.cwd
+      );
+
+      if ("error" in scope) {
+        return {
+          content: [{ type: "text" as const, text: scope.error }],
           details: {},
           isError: true,
         };
@@ -117,7 +145,13 @@ export function buildDelegateTool(
       // setting it.
       let status: "completed" | "failed" = "failed";
       try {
-        result = await runDelegatedTask(context, task, childEmit, signal);
+        result = await runDelegatedTask(
+          context,
+          task,
+          childEmit,
+          signal,
+          scope.root
+        );
         status =
           result.stoppedBy === "error" ||
           result.stoppedBy === "provider-error" ||
