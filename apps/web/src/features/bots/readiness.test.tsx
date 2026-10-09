@@ -1,7 +1,7 @@
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
-import { fixtureSessions } from "#renderer/data/fixture-db/rows";
+import { fixtureBots, fixtureSessions } from "#renderer/data/fixture-db/rows";
 import { requestBrowserOpen } from "#renderer/features/shell";
 import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
 
@@ -271,6 +271,13 @@ it.each(["pdf", "html"])(
       {
         seed: {
           ...defaultSeed(),
+          bots: [
+            {
+              ...fixtureBots()[0]!,
+              sessionId: "bot-test",
+              workspaceId: "abacusai-bot",
+            },
+          ],
           sessions: [
             {
               ...fixtureSessions()[0]!,
@@ -288,9 +295,10 @@ it.each(["pdf", "html"])(
         materializeFile,
       }
     );
+    await screen.findByTestId("bot-chat");
     await waitFor(() =>
       expect(document.querySelector("webview")?.getAttribute("src")).toBe(
-        `file:///host/report.${extension}`
+        `file:///host/report.${extension}${extension === "pdf" ? "#view=FitH" : ""}`
       )
     );
     expect(materializeFile).toHaveBeenCalledWith(
