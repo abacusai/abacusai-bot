@@ -492,7 +492,7 @@ export const PhoneWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
 };
 
 /**
- * The browser's first run: "Connect your WhatsApp" over the shell, once per
+ * The browser's first run: the bot's WhatsApp chat over the shell, once per
  * account (`seen` is the account's pref), while the server offers the bot's
  * number and none is linked. Linking or skipping marks it seen; the
  * messaging page keeps the way in. A phone gets no Skip.
