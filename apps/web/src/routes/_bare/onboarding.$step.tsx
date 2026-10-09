@@ -1,12 +1,15 @@
+import { connectorById } from "@abacus-ai/connectors/registry";
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 import { isPayingAbacusTier } from "@abacus-ai/contract/models";
 import { canSignOutOfAbacus } from "@abacus-ai/contract/settings";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
-import { useEffect, useEffectEvent, useRef } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
 import { OnboardingLocalModels } from "#platform/local-models";
 import { createBotFromTemplate } from "#renderer/features/bots/data/bot-actions";
+import { MessagingPlatformDialog } from "#renderer/features/library/messaging";
 import { OnboardingStepPage } from "#renderer/features/onboarding";
 import { completeOnboarding } from "#renderer/features/onboarding/actions";
 import {
@@ -44,6 +47,10 @@ const OnboardingRoute = () => {
   const step = Route.useParams().step as OnboardingStepId;
   const { facts } = Route.useLoaderData();
   const { transport, db, queryClient } = Route.useRouteContext();
+  const [pairing, setPairing] = useState<{
+    id: string;
+    platform: MessagingPlatformId;
+  } | null>(null);
   const router = useRouter();
   const navigate = useAppNavigate();
   const go = (step: OnboardingStepId) =>
@@ -171,25 +178,53 @@ const OnboardingRoute = () => {
     facts.webSignup,
     transport,
   ]);
-  const connect = (id: string) => connectOnboarding(db, transport, id);
+  const connect = async (id: string) => {
+    const entry = connectorById(id);
+    if (IS_ELECTRON && entry?.kind === "messaging") {
+      setPairing({ id, platform: entry.platform });
+      return;
+    }
+    return connectOnboarding(db, transport, id);
+  };
   return (
-    <OnboardingStepPage
-      step={step}
-      facts={facts}
-      transport={transport}
-      navigate={go}
-      signIn={auth}
-      cancelSignIn={() => cancelSignIn(transport)}
-      complete={finish}
-      createFirstBot={create}
-      connect={connect}
-      localModel={
-        <OnboardingLocalModels
-          transport={transport}
-          saved={() => queryClient.invalidateQueries()}
+    <>
+      <OnboardingStepPage
+        step={step}
+        facts={facts}
+        transport={transport}
+        navigate={go}
+        signIn={auth}
+        cancelSignIn={() => cancelSignIn(transport)}
+        complete={finish}
+        createFirstBot={create}
+        connect={connect}
+        localModel={
+          <OnboardingLocalModels
+            transport={transport}
+            saved={() => queryClient.invalidateQueries()}
+          />
+        }
+      />
+      {pairing && step === "connectors" && (
+        <MessagingPlatformDialog
+          key={pairing.platform}
+          platform={pairing.platform}
+          onClose={async () => {
+            setPairing(null);
+            await queryClient.invalidateQueries({
+              queryKey: transport.orpc.connectors.statuses.queryKey({
+                input: {},
+              }),
+            });
+          }}
+          finalFocus={() =>
+            document.querySelector<HTMLElement>(
+              `[data-connector="${pairing.id}"]`
+            )
+          }
         />
-      }
-    />
+      )}
+    </>
   );
 };
 /**

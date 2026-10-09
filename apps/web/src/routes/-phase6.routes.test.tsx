@@ -302,3 +302,89 @@ it("signing out on the account page reaches the sign-in wall without waiting for
     expect(harness!.router.state.location.pathname).toBe("/onboarding/welcome")
   );
 });
+
+it.each(["whatsapp", "telegram", "discord"] as const)(
+  "pairs %s in an onboarding overlay and returns to the same step on close",
+  async (platform) => {
+    const os = implement(contract);
+    const snapshot = {
+      gatewayEnabled: true,
+      autoApproveTools: false,
+      respondToInbound: false,
+      workspaceId: null,
+      botId: null,
+      approved: [],
+      pending: [],
+      autoReplies: [],
+      platforms: [
+        platform,
+        ...(platform === "discord" ? ["abacus_discord" as const] : []),
+      ].map((id) => ({
+        id,
+        nameKey: id,
+        enabled: false,
+        configured: true,
+        state: "needs_login" as const,
+        fields: [],
+        docsUrl: "",
+        errorMessage: null,
+        pendingCount: 0,
+        sharedLink: { status: "pending" as const },
+      })),
+    };
+    const writes: { platformId: string; enabled?: boolean }[] = [];
+    harness = await renderApp("/onboarding/connectors", {
+      onboarded: false,
+      signedIn: true,
+      procedures: {
+        messaging: {
+          snapshot: os.messaging.snapshot.handler(() => snapshot),
+          updatePlatform: os.messaging.updatePlatform.handler(({ input }) => {
+            writes.push(input);
+            return snapshot;
+          }),
+          showLogin: os.messaging.showLogin.handler(() => {}),
+          pairShared: os.messaging.pairShared.handler(() => snapshot),
+        },
+      },
+    });
+    const names = {
+      whatsapp: "WhatsApp",
+      telegram: "Telegram",
+      discord: "Discord",
+    };
+    const trigger = await screen.findByRole("button", {
+      name: `Connect ${names[platform]}`,
+    });
+    for (let attempt = 0; attempt < 2; attempt++) {
+      fireEvent.click(trigger);
+      const dialog = await screen.findByRole("dialog");
+      expect(harness.router.state.location.pathname).toBe(
+        "/onboarding/connectors"
+      );
+      expect(
+        document.querySelector('[data-onboarding-step="connectors"]')
+      ).not.toBeNull();
+      await waitFor(() =>
+        expect(
+          writes.some((write) => write.platformId === platform && write.enabled)
+        ).toBe(true)
+      );
+      fireEvent.click(within(dialog).getByRole("button", { name: "Done" }));
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      expect(harness.router.state.location.pathname).toBe(
+        "/onboarding/connectors"
+      );
+      await waitFor(() =>
+        expect(
+          writes.some(
+            (write) => write.platformId === platform && write.enabled === false
+          )
+        ).toBe(true)
+      );
+    }
+    expect(
+      harness.collections.prefs.get("app")?.onboardingPairing ?? []
+    ).toEqual([]);
+  }
+);

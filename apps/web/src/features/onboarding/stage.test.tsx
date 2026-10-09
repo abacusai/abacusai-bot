@@ -102,7 +102,7 @@ it("never subscribes to pointer movement and keeps press reactions", () => {
   }
 });
 
-it("clears the avatar area on dense slides and brings the cast back for completion", () => {
+it("keeps a small cloud-led cast beside dense slides and brings everyone back for completion", () => {
   expect(
     stageFor("welcome", null, "none").slots.filter((s) => s.visible)
   ).toHaveLength(4);
@@ -114,8 +114,10 @@ it("clears the avatar area on dense slides and brings the cast back for completi
   ).toHaveLength(3);
   for (const step of ["models", "connectors"] as const) {
     const stage = stageFor(step, bot, "ready");
-    expect(stage.height).toBe(0);
-    expect(stage.slots.some((s) => s.visible)).toBe(false);
+    expect(stage.height).toBe(56);
+    expect(stage.slots.filter((s) => s.visible)).toHaveLength(2);
+    expect(stage.slots[0]?.visible).toBe(true);
+    expect(stage.slots[0]?.look).toEqual(defaultLook("AbacusAI Bot"));
   }
   expect(
     stageFor("first-bot", bot, "ready").slots.filter((s) => s.visible)
