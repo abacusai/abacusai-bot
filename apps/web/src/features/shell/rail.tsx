@@ -16,6 +16,7 @@ import { useStore } from "@tanstack/react-store";
 import type { FocusEvent, PointerEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { RailUpdatePill } from "#platform/updates";
 import { AppIcon, type AppIconName } from "#renderer/components/app-icon";
 import { openStartDraft } from "#renderer/features/sessions/start/start-session";
 import { cn } from "#renderer/lib/cn";
@@ -254,6 +255,7 @@ export const Rail = ({
       <div className="flex h-9 shrink-0 items-center justify-center">
         <AgentLink />
       </div>
+      <RailUpdatePill />
       <RailTip
         label={t("shell.rail.settings")}
         shortcut={formatForDisplay(APP_HOTKEYS.settings, {

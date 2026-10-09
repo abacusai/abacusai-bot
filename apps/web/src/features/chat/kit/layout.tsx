@@ -28,6 +28,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { ComposerUpdateNotice } from "#platform/updates";
 import { Spinner } from "#renderer/components/spinner";
 import { useAppHotkey } from "#renderer/lib/hotkeys";
 import {
@@ -455,6 +456,7 @@ export const ComposerSlot = () => {
   }
   return (
     <div ref={slot}>
+      <ComposerUpdateNotice />
       <AnimatePresence mode="popLayout" initial={false}>
         {tray ? (
           <motion.div

@@ -1,0 +1,4 @@
+/* A mounted chat owns the notice directly above its composer. */
+[data-slot="pane"]:has([data-slot="composer-update-owner"]) [data-slot="page-update"] {
+  display: none;
+}
