@@ -1,5 +1,5 @@
 .onboarding-frame {
-  --ob-success: #16a34a;
+  --ob-success: var(--bots-done, var(--accent-text, var(--primary)));
   --ob-success-soft: color-mix(in oklch, var(--ob-success) 14%, transparent);
   --ob-surface: var(--card);
   display: flex;
@@ -12,9 +12,6 @@
     color-mix(in oklch, var(--primary) 18%, transparent),
     transparent 60%
   );
-}
-.dark .onboarding-frame {
-  --ob-success: #4ade80;
 }
 
 .onboarding-navigation {
@@ -118,7 +115,7 @@
   outline: none;
 }
 .onboarding-accent {
-  color: var(--primary);
+  color: var(--accent-text, var(--primary));
   font-weight: 650;
 }
 .onboarding-tagline {
@@ -244,9 +241,9 @@
   .onboarding-title { font-size: 26px; line-height: 32px; }
   .onboarding-title[data-size="hero"] { font-size: 30px; line-height: 36px; }
   .onboarding-row { flex-wrap: wrap; gap: 10px; padding: 12px; }
-  .onboarding-row-title { flex-basis: calc(100% - 48px); }
+  .onboarding-row-title { flex-basis: calc(100% - 60px); }
   .onboarding-row > button, .onboarding-row > .onboarding-connected,
-  .onboarding-row > [role="status"] { margin-left: 46px; }
+  .onboarding-row > [role="status"] { margin-left: 58px; }
 }
 
 @media (max-height: 700px) {
