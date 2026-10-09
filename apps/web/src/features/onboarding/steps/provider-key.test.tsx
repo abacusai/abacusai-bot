@@ -108,20 +108,29 @@ it.each(["cancel", "escape", "close"])(
 
 it.each(PROVIDER_KEY_FIELDS.filter((entry) => entry.kind === "model"))(
   "saves the selected $label key under its own provider",
-  async ({ provider, label }) => {
+  async ({ provider, label, signupUrl }) => {
     await initI18n();
     const save = vi.fn(async () => {}),
-      saved = vi.fn(async () => {});
+      saved = vi.fn(async () => {}),
+      openExternal = vi.fn(async () => {});
     render(
       <OnboardingProviderKey
         transport={
-          { client: { settings: { keys: { save } } } } as unknown as Transport
+          {
+            client: { settings: { keys: { save } }, system: { openExternal } },
+          } as unknown as Transport
         }
         saved={saved}
       />
     );
     fireEvent.click(screen.getByRole("button", { name: "Paste a key" }));
     fireEvent.click(await screen.findByRole("menuitem", { name: label }));
+    if (signupUrl) {
+      fireEvent.click(
+        await screen.findByRole("button", { name: `Open ${label}` })
+      );
+      expect(openExternal).toHaveBeenCalledWith({ url: signupUrl });
+    }
     fireEvent.change(await screen.findByLabelText("Add API key"), {
       target: { value: `  ${validKey}  ` },
     });
