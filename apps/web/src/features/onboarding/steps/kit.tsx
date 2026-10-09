@@ -15,7 +15,7 @@ export const StepButton = ({
     variant={variant === "primary" ? "default" : "ghost"}
     data-variant={variant}
     className={cn(
-      "text-[13px]",
+      variant === "small" ? "h-8 px-3 text-[13px]" : "h-10 px-5 text-sm",
       variant !== "primary" && "text-muted-foreground",
       className
     )}

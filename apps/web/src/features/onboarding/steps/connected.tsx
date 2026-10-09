@@ -15,7 +15,9 @@ export const ConnectedStep = ({
     <>
       <StepTitle ref={heading}>
         {t("onboarding.connectedTitleLead")}{" "}
-        {t("onboarding.connectedTitleName")}
+        <span className="onboarding-accent">
+          {t("onboarding.connectedTitleName")}
+        </span>
       </StepTitle>
       <StepBody className="mt-2">{t("onboarding.abacusConnected")}</StepBody>
       <div className="mt-7">
