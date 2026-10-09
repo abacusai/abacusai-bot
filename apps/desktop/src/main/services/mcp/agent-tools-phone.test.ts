@@ -323,7 +323,12 @@ describe("present_deliverable on the phone", () => {
     expect(text).toContain(
       "config.json: it is in a credential store and is never sent."
     );
-    expect(text).toContain("environ: only files in the workspace");
+    // Linux exposes this path; other hosts must refuse the missing file too.
+    expect(text).toContain(
+      fs.existsSync("/proc/self/environ")
+        ? "environ: only files in the workspace"
+        : "Not sent, because there is no file at these paths: /proc/self/environ"
+    );
   });
 
   it("keeps a label or path on one line, so it cannot pose as a media line", async () => {
