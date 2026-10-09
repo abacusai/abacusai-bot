@@ -1,5 +1,5 @@
 .onboarding-frame {
-  --ob-success: var(--bots-done, var(--accent-text, var(--primary)));
+  --ob-success: var(--chat-status-done, var(--accent-text, var(--primary)));
   --ob-success-soft: color-mix(in oklch, var(--ob-success) 14%, transparent);
   --ob-surface: var(--card);
   display: flex;
