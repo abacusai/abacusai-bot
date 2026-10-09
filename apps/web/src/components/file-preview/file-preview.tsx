@@ -294,7 +294,8 @@ export const FilePreview = ({
             <iframe
               title={baseName(path)}
               src={loaded.url}
-              sandbox={kind === "pdf" ? "allow-same-origin" : ""}
+              // Chromium disables its native PDF viewer in sandboxed frames.
+              sandbox={kind === "pdf" ? undefined : ""}
               className="h-full min-h-[320px] w-full bg-white"
             />
           ) : (

@@ -92,9 +92,7 @@ it("shows truncated text, images, PDF and empty text without a native viewer", a
   await screen.findByRole("img", { name: "image.png" });
   view.rerender(<FilePreview path="/w/report.pdf" hostRoot="/w" read={read} />);
   await screen.findByTitle("report.pdf");
-  expect(document.querySelector("iframe")?.getAttribute("sandbox")).toBe(
-    "allow-same-origin"
-  );
+  expect(document.querySelector("iframe")?.hasAttribute("sandbox")).toBe(false);
 });
 it("ignores an old read after selection changes and avoids refetching for inline reader objects", async () => {
   const read = readers();
