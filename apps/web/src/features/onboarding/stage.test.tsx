@@ -102,27 +102,37 @@ it("never subscribes to pointer movement and keeps press reactions", () => {
   }
 });
 
-it("keeps a small cloud-led cast beside dense slides and brings everyone back for completion", () => {
-  expect(
-    stageFor("welcome", null, "none").slots.filter((s) => s.visible)
-  ).toHaveLength(4);
-  expect(
-    stageFor("connect", null, "none").slots.filter((s) => s.visible)
-  ).toHaveLength(1);
-  expect(
-    stageFor("connected", null, "none").slots.filter((s) => s.visible)
-  ).toHaveLength(3);
-  for (const step of ["models", "connectors"] as const) {
+it("keeps companions visible while the cloud and Chief anchor completion", () => {
+  for (const step of Object.keys(CHOREOGRAPHY) as Array<
+    keyof typeof CHOREOGRAPHY
+  >) {
     const stage = stageFor(step, bot, "ready");
-    expect(stage.height).toBe(56);
-    expect(stage.slots.filter((s) => s.visible)).toHaveLength(2);
-    expect(stage.slots[0]?.visible).toBe(true);
+    expect(stage.slots.filter((slot) => slot.visible)).toHaveLength(
+      step === "done" ? 3 : 4
+    );
+    expect(stage.slots[0]?.main).toBe(true);
     expect(stage.slots[0]?.look).toEqual(defaultLook("AbacusAI Bot"));
   }
-  expect(
-    stageFor("first-bot", bot, "ready").slots.filter((s) => s.visible)
-  ).toHaveLength(2);
-  expect(
-    stageFor("done", bot, "ready").slots.filter((s) => s.visible)
-  ).toHaveLength(4);
+  for (const step of ["models", "connectors", "first-bot", "done"] as const) {
+    const stage = stageFor(step, bot, "ready");
+    expect(stage.slots.filter((slot) => slot.main)).toHaveLength(2);
+    if (step === "models" || step === "connectors")
+      expect(stage.height).toBe(56);
+    else {
+      const pair = stage.slots.filter((slot) => slot.main);
+      expect(Math.abs((pair[0]!.x + pair[1]!.x) / 2)).toBeLessThan(4);
+      expect(pair[0]!.size).toBeGreaterThan(pair[1]!.size);
+    }
+  }
+});
+
+it("turns the existing fourth character into the Chief only when introduced", () => {
+  const before = stageFor("models", bot, "ready").slots[3]!;
+  const introduced = stageFor("first-bot", bot, "ready").slots[3]!;
+  expect(introduced.id).toBe(before.id);
+  expect(before.look.shape).toBe("mochi");
+  expect(introduced.look.shape).toBe(bot.avatarShape);
+  expect(stageFor("first-bot", null, "pending").slots[3]!.look.shape).toBe(
+    "egg"
+  );
 });
