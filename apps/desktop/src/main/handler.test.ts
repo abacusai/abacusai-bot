@@ -146,6 +146,7 @@ beforeEach(() => {
     removeMcpServer,
     refreshAgentProviders,
     syncLogsNow: vi.fn(),
+    refreshBotNumber: vi.fn(),
     startDeviceStream,
   };
 
