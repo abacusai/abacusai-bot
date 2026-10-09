@@ -106,6 +106,8 @@ describe("routine creation plan admission", () => {
   it.each([
     { subscription_tier: "  FrEe  ", plan: "Pro" },
     { subscription_tier: null, plan: "Free" },
+    { subscription_tier: "", plan: "Free" },
+    { subscription_tier: "  ", plan: " Free " },
   ])("recognizes a known free plan from %j", async (value) => {
     account.mockResolvedValue(value);
     const service = host();
@@ -138,9 +140,10 @@ describe("routine creation plan admission", () => {
         { action: "create", ...input, runner },
         "session-test"
       )) as { content: Array<{ text?: string }> };
-      expect(result.content.map((part) => part.text).join("\n")).toContain(
-        "plan"
-      );
+      const note = result.content.map((part) => part.text).join("\n");
+      expect(note).toContain("Routines require a paid plan");
+      expect(note).not.toContain("includes one routine");
+      expect(note).not.toContain("already has it");
       assertNoCreation(service);
     }
   );
