@@ -166,10 +166,6 @@ it("conf preserves dotted keys, defaults, deletion and a separate userData defau
 describe("connectors connected elsewhere", () => {
   /** A composed host over a fake platform, with one running session. */
   const harness = async (lane?: string) => {
-    const host = await composeNodeHost();
-    const sh = host.serviceHost as any;
-    // What the session's agent reports to main, through main's own wiring.
-    const agent = sh.agentManagerService.options;
     const order: string[] = [];
     let active = ["gmailuser"];
     const names: Record<string, string> = {
@@ -198,6 +194,10 @@ describe("connectors connected elsewhere", () => {
         ? new Response("{}", { status: 404 })
         : Response.json({ success: true, result });
     });
+    // Composition starts background account/connector reads, so isolate fetch first.
+    const host = await composeNodeHost();
+    const sh = host.serviceHost as any;
+    const agent = sh.agentManagerService.options;
     vi.useFakeTimers({ toFake: ["Date"] });
     const session =
       lane == null
