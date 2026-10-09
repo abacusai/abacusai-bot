@@ -287,7 +287,10 @@ it.each(["pinned", "collapsed", "strip", "floating", "phone"] as const)(
           name: en.settings.pages.account,
         })
       ).toHaveLength(1);
-      fireEvent.keyDown(menu, { key: "Escape" });
+      await waitFor(() =>
+        expect(menu.contains(document.activeElement)).toBe(true)
+      );
+      fireEvent.keyDown(document.activeElement!, { key: "Escape" });
       await waitFor(() =>
         expect(document.activeElement).toBe(
           screen.getByRole("button", { name: account.name })
