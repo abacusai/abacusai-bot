@@ -147,7 +147,7 @@ export const CreditsCard = ({
               </Button>
             )}
             {paying && canTopUp ? (
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <p>{t("creditsCard.topUpCta")}</p>
                   <p className="text-muted-foreground text-xs">
@@ -169,7 +169,10 @@ export const CreditsCard = ({
               missing.map((source, index) => (
                 <div key={source}>
                   {index > 0 && <Separator className="mb-3" />}
-                  <div className="flex items-center gap-3" data-source={source}>
+                  <div
+                    className="flex flex-wrap items-center gap-3"
+                    data-source={source}
+                  >
                     <div className="min-w-0 flex-1">
                       <p>
                         {t(

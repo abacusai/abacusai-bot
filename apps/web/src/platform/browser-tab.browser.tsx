@@ -41,8 +41,8 @@ export const BrowserTab: typeof Native = ({ file, root, url }) => {
     );
   const externalUrl = externalBrowserUrl(url);
   return (
-    <div role="status" className="flex h-full items-center justify-center p-6">
-      <div className="flex max-w-sm flex-col items-center gap-4 text-center">
+    <div role="status" className="flex h-full min-w-0 overflow-auto p-4">
+      <div className="m-auto flex w-full max-w-sm flex-col items-center gap-4 py-2 text-center">
         <div className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-xl">
           <Globe className="size-6" aria-hidden="true" />
         </div>
