@@ -658,3 +658,26 @@ describe("automatic personal session names", () => {
     }
   });
 });
+
+it("projects persisted hosted run provenance without changing personal labels", () => {
+  const hosted = service.create(WORKSPACE);
+  expect(
+    service.holdUnattended(hosted.id, {
+      sources: [],
+      connectorReads: {},
+      files: false,
+    })
+  ).toBe(true);
+  const personal = service.create(WORKSPACE);
+  service.updateLabel(WORKSPACE, personal.id, "Routine: custom personal title");
+  const reopened = new AgentSessionManagerService();
+  reopened.initialize([WORKSPACE]);
+  expect(reopened.get(hosted.id)).toMatchObject({
+    routineId: null,
+    runTrigger: "hosted",
+  });
+  expect(reopened.get(personal.id)).toMatchObject({
+    label: "Routine: custom personal title",
+    runTrigger: null,
+  });
+});
