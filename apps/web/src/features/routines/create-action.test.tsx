@@ -60,6 +60,7 @@ it.each(["basic", "go", "pro", "max", "enterprise"])(
       const create = await waitFor(() => {
         const button = within(nav).getByRole("button", { name: "New routine" });
         expect(button.hasAttribute("disabled")).toBe(false);
+        expect(button.getAttribute("aria-disabled")).not.toBe("true");
         return button;
       });
       fireEvent.click(create);

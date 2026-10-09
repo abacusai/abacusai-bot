@@ -14,6 +14,10 @@ it("keeps routine creation in the visible header and opens the existing create f
     expect(
       within(nav).getAllByRole("button", { name: "New routine" })
     ).toHaveLength(1);
+    await waitFor(() => {
+      expect(create.hasAttribute("disabled")).toBe(false);
+      expect(create.getAttribute("aria-disabled")).not.toBe("true");
+    });
     fireEvent.click(create);
     await waitFor(() =>
       expect(app.router.state.location.pathname).toBe("/routines/new")
