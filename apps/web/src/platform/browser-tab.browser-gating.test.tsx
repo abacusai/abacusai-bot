@@ -79,6 +79,31 @@ it("suppresses the general promotion only for the active free browser pane", () 
   ).toBe("false");
 });
 
+it("updates promotion suppression when HTML preview changes to browser guidance", () => {
+  const Status = () => (
+    <output aria-label="promotion suppressed">
+      {String(useHasContextualUpsell())}
+    </output>
+  );
+  const tree = (file?: string) => (
+    <>
+      <BrowserTab {...props} file={file} />
+      <Status />
+    </>
+  );
+  const view = render(tree("index.html"));
+  const status = () =>
+    screen.getByRole("status", { name: "promotion suppressed" }).textContent;
+  expect(status()).toBe("false");
+  expect(screen.getByTestId("file-preview")).toBeTruthy();
+  view.rerender(tree());
+  expect(status()).toBe("true");
+  expect(screen.queryByTestId("file-preview")).toBeNull();
+  expect(screen.getByRole("button", { name: "Upgrade" })).toBeTruthy();
+  view.rerender(tree("index.html"));
+  expect(status()).toBe("false");
+});
+
 it("offers desktop download without opening VM localhost on the user's machine", () => {
   render(<BrowserTab {...props} url="http://localhost:3000" />);
   expect(screen.getByRole("heading").textContent).toContain("Preview your app");
