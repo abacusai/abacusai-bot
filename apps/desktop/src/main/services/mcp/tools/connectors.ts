@@ -175,6 +175,10 @@ export function appConnectResult(
           "part of the task does not need it."
       );
     }
+    case "not_here":
+      return host.ok(
+        `${outcome.name} cannot be connected from this chat. Say so, and offer whatever part of the task does not need it.`
+      );
     case "no_link":
       return host.ok(
         !outcome.card

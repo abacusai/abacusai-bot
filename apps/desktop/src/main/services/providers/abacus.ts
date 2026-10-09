@@ -423,3 +423,11 @@ export const fetchAbacusAccount = async (
     return accountCache?.value ?? null;
   }
 };
+
+/** Whether the account is on the free plan: its tier, else its plan, reads "free". */
+export const onFreePlan = (
+  account: Pick<AbacusAccountInfo, "plan" | "subscription_tier"> | null
+): boolean =>
+  (
+    account?.subscription_tier?.trim() || account?.plan?.trim()
+  )?.toLowerCase() === "free";

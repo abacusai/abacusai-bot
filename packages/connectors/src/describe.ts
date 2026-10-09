@@ -21,9 +21,10 @@ const destinationOf = (connector: Connector): string =>
  * One line saying which tool a kind of task belongs to. Without it github.com
  * reads as a website and a pull-request question goes to the browser, whose
  * tool text never mentions connectors. Static across a process, so it costs
- * the prompt cache nothing.
+ * the prompt cache nothing. `connectable` (service keys) narrows what it
+ * offers to connect, for a chat that may connect only those.
  */
-export const routingPrompt = (): string => {
+export const routingPrompt = (connectable?: readonly string[]): string => {
   const routes = CONNECTORS.flatMap((connector) => {
     const words = routesOf(connector);
     return words == null ? [] : [`${words} → ${destinationOf(connector)}`];
@@ -32,7 +33,7 @@ export const routingPrompt = (): string => {
     `Route by service, not by website: ${routes.join("; ")}. ` +
     "If a connector is not attached, connect it with connect_connector rather " +
     "than driving the service's website in the browser; the browser is for " +
-    `sites that have no connector. ${catalogPrompt()}`
+    `sites that have no connector. ${catalogPrompt(connectable)}`
   );
 };
 
@@ -52,7 +53,8 @@ export const catalogByKind = (): Record<Connector["kind"], string[]> => {
  * Every connector the app can attach, named, so the model never calls one
  * "not a connector": the registry is the list, so the model reads the list.
  */
-export const catalogPrompt = (): string => {
+export const catalogPrompt = (connectable?: readonly string[]): string => {
+  if (connectable != null) return connectablePrompt(connectable);
   const names = catalogByKind();
   return (
     `The connectors this app can attach are exactly: ${names.platform.join(", ")}; ` +
@@ -85,4 +87,21 @@ export const describeForListing = (
         ? `connected${account}${connector.kind === "platform" && connector.via != null ? `: use ${connector.via}` : ""}`
         : "not connected: ask for it with this tool";
   return `${connector.id}  ${connector.name}  ${how}`;
+};
+
+/**
+ * The catalog for a chat that may connect only some account services (by
+ * service key): those named, and connect_connector still asked for any other,
+ * since its answer says what to tell the user.
+ */
+const connectablePrompt = (connectable: readonly string[]): string => {
+  const names = CONNECTORS.filter(
+    (connector) =>
+      connector.kind === "platform" && connectable.includes(connector.service)
+  ).map((connector) => connector.name);
+  return (
+    `From this chat the user can connect only ${names.join(", ")}. A service they already connected ` +
+    "elsewhere works here too: its tools are in your tool list. When they ask to connect any service, call " +
+    "connect_connector with its name, and follow its answer; never send a link it did not give."
+  );
 };

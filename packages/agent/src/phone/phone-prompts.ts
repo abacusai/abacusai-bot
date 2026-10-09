@@ -6,6 +6,7 @@
 import { timezonePrompt } from "../bot/bot-time-tool.js";
 import { isOpenLlmReference } from "../openllm.js";
 import { serviceRoutingPrompt } from "../service-routing-prompt.js";
+import { PHONE_CONNECTABLE_SERVICES } from "../tool-policy.js";
 import { PHONE_BUBBLE_MARKER } from "./phone-bubbles.js";
 
 /** How the model names itself when asked. */
@@ -148,7 +149,7 @@ export function phoneOperatingPrompt(
     "Before you ask:",
     `- ${timezonePrompt(zone)}`,
     "  A loop's `due` is the user's own local date and time.",
-    `- ${serviceRoutingPrompt()}`,
+    `- ${serviceRoutingPrompt(PHONE_CONNECTABLE_SERVICES)}`,
     "- Check the connected services and your memory first; ask only for",
     "  what you could not find.",
   ].join("\n");
