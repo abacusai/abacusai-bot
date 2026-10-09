@@ -1,0 +1,38 @@
+busybox-w32
+===========
+
+This product ships an unmodified copy of the busybox-w32 executable and spawns
+it as a separate process. It is not linked into, statically or dynamically, and
+does not form a combined work with, any part of this product.
+
+  Project:    busybox-w32 (a port of BusyBox to the Win32 API)
+  Upstream:   https://frippery.org/busybox/
+  Repository: https://github.com/rmyorston/busybox-w32
+  Version:    FRP-6075-g169694ebd
+  Licence:    GNU General Public License, version 2 (see busybox-w32-GPL-2.0.txt)
+
+Binaries shipped
+----------------
+
+  x64    busybox-w64u-FRP-6075-g169694ebd.exe
+         sha256 6e263d154d8548d1eb936f65d1d8312c80df31c45974e48d6335e4dcc0f4f34c
+
+  arm64  busybox-w64a-FRP-6075-g169694ebd.exe
+         sha256 e67f873d19d58c535cc9f0c4965ffd622e19b7bab87e3da89cb2185fb54464d7
+
+Corresponding source
+--------------------
+
+The complete corresponding source for the exact binaries above:
+
+  https://frippery.org/files/busybox/busybox-w32-FRP-6075-g169694ebd.tgz
+
+Older releases and the source matching each binary are kept at
+https://frippery.org/files/busybox/. BusyBox itself is at https://busybox.net/.
+
+Build provenance
+----------------
+
+These exact payloads were copied from CodeLLM commit e3af4fbf, where they were
+already checked in. Their SHA-256 hashes match this repository's existing
+upstream pins. The build verifies the committed bytes before staging them.
