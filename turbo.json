@@ -143,6 +143,7 @@
     "@abacus-ai/desktop#dev": {
       "dependsOn": [
         "@abacus-ai/agent#build",
+        "@abacus-ai/updater#build",
         "@abacus-ai/desktop#vendor",
         "//#generate:licenses"
       ],
