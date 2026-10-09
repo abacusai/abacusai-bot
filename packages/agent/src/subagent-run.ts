@@ -28,7 +28,10 @@ export const SUBAGENT_TURNS: TurnPolicy = {
  */
 export const MAX_PROVIDER_RETRIES = 2;
 
-/** How long the tools-off closing turn may take. */
+/**
+ * How long the tools-off closing turn may take. Carved out of a run's own
+ * time limit, not added to it, so a run never outlasts its tool's timeout.
+ */
 export const CLOSING_TIMEOUT_MS = 90 * 1000;
 
 // Each message says how many turns remain: "close to your limit" reads as
@@ -44,6 +47,32 @@ export const CLOSING_MESSAGE =
   "Your budget is spent and your tools are now off. Write your final report in this message: " +
   "what you found or made, with the concrete files, identifiers and values, and plainly what is unfinished.";
 
+/** How the warnings are worded: what "wrapping up" means depends on the job. */
+export interface BudgetVoice {
+  wrapUp(turnsLeft: number): string;
+  finalWarning(turnsLeft: number): string;
+}
+
+/** For a run whose product is its report: research, a browser job. */
+export const REPORT_VOICE: BudgetVoice = {
+  wrapUp: wrapUpMessage,
+  finalWarning: finalWarningMessage,
+};
+
+/**
+ * For a run whose product is a file. "Stop and report" would abandon a half-
+ * built deck; what it must do is finish and print what it has, because an
+ * unprinted draft is lost when the budget runs out.
+ */
+export const makerVoice = (finishTool: string): BudgetVoice => ({
+  wrapUp: (turnsLeft) =>
+    `You have about ${turnsLeft} turns left. Do not start new parts: finish the ones in ` +
+    `progress, then call ${finishTool} so the file exists, and report what you made.`,
+  finalWarning: (turnsLeft) =>
+    `${turnsLeft} turns left. Call ${finishTool} now with what you have; a draft that ` +
+    "is never rendered is lost when the budget runs out.",
+});
+
 export type BudgetStep =
   | { kind: "continue" }
   | { kind: "steer"; reason: "wrap-up" | "final"; text: string }
@@ -55,7 +84,10 @@ export class TurnBudget {
   #wrappedUp = false;
   #finalWarned = false;
 
-  constructor(readonly policy: TurnPolicy = SUBAGENT_TURNS) {}
+  constructor(
+    readonly policy: TurnPolicy = SUBAGENT_TURNS,
+    readonly voice: BudgetVoice = REPORT_VOICE
+  ) {}
 
   get turns(): number {
     return this.#turns;
@@ -77,7 +109,7 @@ export class TurnBudget {
       return {
         kind: "steer",
         reason: "final",
-        text: finalWarningMessage(this.policy.max - this.#turns),
+        text: this.voice.finalWarning(this.policy.max - this.#turns),
       };
     }
     if (!this.#wrappedUp && this.#turns >= this.policy.wrapUp)
@@ -92,7 +124,7 @@ export class TurnBudget {
     return {
       kind: "steer",
       reason: "wrap-up",
-      text: wrapUpMessage(this.policy.max - this.#turns),
+      text: this.voice.wrapUp(this.policy.max - this.#turns),
     };
   }
 }
@@ -118,7 +150,7 @@ export async function closeOut(
   signal?: AbortSignal,
   timeoutMs = CLOSING_TIMEOUT_MS
 ): Promise<string> {
-  if (signal?.aborted) return "";
+  if (signal?.aborted || timeoutMs <= 0) return "";
   // abort() waits for idle; a queued warning would otherwise land after.
   await session.abort();
   session.clearQueue();
@@ -169,9 +201,11 @@ export interface SubagentRunOptions {
   /** Trace tag for the child's events. */
   tag: string;
   forwardTools: ChildToolForwarder;
+  /** The whole run, closing turn included: match the tool's own timeout. */
   timeoutMs: number;
   signal?: AbortSignal;
   policy?: TurnPolicy;
+  voice?: BudgetVoice;
   /** Checked as each prompt ends: the job is done, so stop the run there. */
   isDone?: () => boolean;
 }
@@ -195,7 +229,7 @@ export async function runSubagent(
   prompt: string,
   options: SubagentRunOptions
 ): Promise<SubagentRunResult> {
-  const budget = new TurnBudget(options.policy);
+  const budget = new TurnBudget(options.policy, options.voice);
   let lastText = "";
   let retries = 0;
   let providerError = "";
@@ -263,12 +297,17 @@ export async function runSubagent(
     stop("error");
   });
 
+  const deadline = Date.now() + options.timeoutMs;
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<void>((resolve) => {
-    timer = setTimeout(() => {
-      outcome.stoppedBy = "timeout";
-      resolve();
-    }, options.timeoutMs);
+    timer = setTimeout(
+      () => {
+        outcome.stoppedBy = "timeout";
+        resolve();
+      },
+      // The closing turn's time is held back, never more than half the run.
+      Math.max(options.timeoutMs - CLOSING_TIMEOUT_MS, options.timeoutMs / 2)
+    );
   });
   // Removed in the finally: the signal outlives this call.
   const abort = whenAborted(options.signal, () => {
@@ -285,7 +324,11 @@ export async function runSubagent(
 
   let closedOut = false;
   if (outcome.stoppedBy === "turn-limit" || outcome.stoppedBy === "timeout") {
-    const report = await closeOut(session, options.signal);
+    const report = await closeOut(
+      session,
+      options.signal,
+      Math.min(CLOSING_TIMEOUT_MS, Math.max(0, deadline - Date.now()))
+    );
     if (report.trim().length > 0) {
       lastText = report;
       closedOut = true;
