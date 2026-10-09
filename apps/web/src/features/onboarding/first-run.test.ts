@@ -88,3 +88,14 @@ it("does not restart a cancelled website-account sign-in after remount or sign-o
   await startWebsiteSignIn(transport, start);
   expect(start).toHaveBeenCalledOnce();
 });
+
+it("does not launch first-run Gmail consent when the host does not offer it", async () => {
+  const { transport, connect, openExternal, statuses } = setup();
+  statuses.mockResolvedValue({
+    "abacus-gmailuser": { state: "unavailable", reason: "not-offered" },
+  } as never);
+  await startFirstRunGmail(transport, "ada@example.com");
+  expect(connect).not.toHaveBeenCalled();
+  expect(openExternal).not.toHaveBeenCalled();
+  expect(localStorage.getItem("abacusai-bot:onboarding.gmailHop")).toBeNull();
+});

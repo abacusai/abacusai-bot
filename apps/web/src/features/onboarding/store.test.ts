@@ -55,3 +55,21 @@ describe("R6-T7 sign-in tokens", () => {
     expect(settled).toHaveBeenCalledOnce();
   });
 });
+
+it("keeps one attempt pending until account settlement finishes", async () => {
+  const account = deferred<void>();
+  const settled = vi.fn(() => account.promise);
+  const start = vi.fn(async () => ({ ok: true as const }));
+  const transport = {
+    client: { auth: { abacus: { start, cancel: async () => {} } } },
+  } as unknown as Transport;
+  startSignIn(transport, "signin", undefined, settled);
+  await vi.waitFor(() => expect(settled).toHaveBeenCalledOnce());
+  expect(onboardingStore.state.signIn?.status).toBe("pending");
+  expect(startSignIn(transport, "signin", undefined, vi.fn())).toBe(false);
+  account.resolve();
+  await vi.waitFor(() =>
+    expect(onboardingStore.state.signIn?.status).toBe("succeeded")
+  );
+  expect(start).toHaveBeenCalledOnce();
+});

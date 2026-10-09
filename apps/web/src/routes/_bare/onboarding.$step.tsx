@@ -94,10 +94,13 @@ const OnboardingRoute = () => {
           const account = await transport.client.account.abacus({
             refresh: true,
           });
-          await startFirstRunGmail(transport, account?.email ?? "");
+          // Optional connector consent must not hold up a completed sign-in.
+          void startFirstRunGmail(transport, account?.email ?? "").catch(
+            () => {}
+          );
           await queryClient.invalidateQueries();
-          void go("connected");
-        } else if (outcome.cancelled) void go("welcome");
+          await go("connected");
+        } else if (outcome.cancelled) await go("welcome");
       }) &&
       step !== "models"
     )

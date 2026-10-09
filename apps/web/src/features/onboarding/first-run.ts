@@ -37,6 +37,7 @@ export const startFirstRunGmail = async (
     const statuses = await transport.client.connectors.statuses({});
     if (
       statuses["abacus-gmailuser"]?.state === "connected" ||
+      statuses["abacus-gmailuser"]?.reason === "not-offered" ||
       document.getElementById("gmail-consent")
     )
       return;
@@ -80,6 +81,7 @@ export const startFirstRunGmail = async (
   const statuses = await transport.client.connectors.statuses({});
   if (
     statuses["abacus-gmailuser"]?.state === "connected" ||
+    statuses["abacus-gmailuser"]?.reason === "not-offered" ||
     !claim("abacusai-bot:onboarding.gmailHop")
   )
     return;
