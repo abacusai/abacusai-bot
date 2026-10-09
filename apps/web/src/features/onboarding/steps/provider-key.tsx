@@ -224,14 +224,16 @@ export const OnboardingProviderKey = ({
           </DropdownMenuContent>
         </DropdownMenu>
       )}
-      <ProviderKeyDialog
-        transport={transport}
-        provider={provider}
-        open={open}
-        onOpenChange={setOpen}
-        saved={saved}
-        finalFocus={() => trigger.current}
-      />
+      {open && (
+        <ProviderKeyDialog
+          transport={transport}
+          provider={provider}
+          open={open}
+          onOpenChange={setOpen}
+          saved={saved}
+          finalFocus={() => trigger.current}
+        />
+      )}
     </>
   );
 };
