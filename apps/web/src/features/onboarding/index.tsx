@@ -9,9 +9,9 @@ import { useTranslation } from "react-i18next";
 import { useDb } from "#renderer/data/db";
 import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
 import { IS_ELECTRON } from "#renderer/lib/platform";
-import { Button } from "#renderer/ui/button";
 
 import { ensureFirstBot, firstBotStore } from "./first-bot";
+import { OnboardingNavigation } from "./frame";
 import { next, connectedProviders } from "./machine";
 import { ConnectStep } from "./steps/connect";
 import { ConnectedStep } from "./steps/connected";
@@ -253,22 +253,20 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
     (bot != null && (bots?.some((b) => b.id === bot.id) ?? false));
   return (
     <section className="onboarding-step" data-onboarding-step={step}>
-      {step !== "welcome" && (
-        <Button
-          variant="ghost"
-          className="titlebar-nodrag mb-3 self-start"
-          onClick={() => {
-            if (step === "connect")
-              void perform(async () => {
-                await props.cancelSignIn();
-                await props.navigate("welcome");
-              });
-            else go("back");
-          }}
-        >
-          {t("common.back")}
-        </Button>
-      )}
+      <OnboardingNavigation
+        onBack={
+          step === "welcome"
+            ? undefined
+            : () => {
+                if (step === "connect")
+                  void perform(async () => {
+                    await props.cancelSignIn();
+                    await props.navigate("welcome");
+                  });
+                else go("back");
+              }
+        }
+      />
       {step === "welcome" && (
         <WelcomeStep ctx={ctx} profiles={profiles.data} heading={heading} />
       )}

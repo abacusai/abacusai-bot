@@ -66,6 +66,8 @@ export const ConnectorsStep = ({
         <span className="onboarding-accent">
           {t("onboarding.connectorsTitleAccent")}
         </span>
+        <br />
+        {t("onboarding.connectorsSubtitle")}
       </StepTitle>
       <StepBody className="mx-auto mt-2 max-w-[520px] text-center">
         {t("onboarding.pages.connectors.body")}

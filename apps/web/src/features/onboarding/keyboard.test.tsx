@@ -94,9 +94,17 @@ describe("onboarding keys", () => {
       expect(app!.router.state.location.pathname).toBe("/onboarding/connectors")
     );
     await screen.findByRole("heading", {
-      name: "Connect with your tools & services.",
+      name: /Connect with your tools & services/,
     });
     await press("Escape");
+    await waitFor(() =>
+      expect(app!.router.state.location.pathname).toBe("/onboarding/models")
+    );
+    await press("ArrowRight");
+    await waitFor(() =>
+      expect(app!.router.state.location.pathname).toBe("/onboarding/connectors")
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
     await waitFor(() =>
       expect(app!.router.state.location.pathname).toBe("/onboarding/models")
     );
