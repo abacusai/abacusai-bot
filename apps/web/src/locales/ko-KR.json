@@ -4164,7 +4164,13 @@
       "rowDetail": "Chat with AbacusAI Bot on WhatsApp",
       "doneTitle": "모두 준비됐어요",
       "doneBody": "봇이 WhatsApp에 있어요. 언제든 메시지를 보내세요.",
-      "useDifferentNumber": "다른 번호 사용"
+      "useDifferentNumber": "다른 번호 사용",
+      "skipDownload": "건너뛰고 앱 다운로드",
+      "desktopDoneBody": "봇이 WhatsApp에 있어요. 이 컴퓨터에서도 사용하려면 데스크톱 앱을 받으세요.",
+      "download": "데스크톱 앱 다운로드",
+      "downloadingTitle": "다운로드가 시작되었어요",
+      "downloadingBody": "이 컴퓨터에서 사용하려면 AbacusAI Bot을 설치하세요.",
+      "connectInstead": "대신 WhatsApp 연결"
     },
     "signOutDetail": "This ends your website session and clears this browser's bot data.",
     "routines": {

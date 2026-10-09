@@ -4164,7 +4164,13 @@
       "rowDetail": "Chat with AbacusAI Bot on WhatsApp",
       "doneTitle": "Tutto pronto",
       "doneBody": "Il tuo bot è su WhatsApp. Scrivigli quando vuoi.",
-      "useDifferentNumber": "Usa un altro numero"
+      "useDifferentNumber": "Usa un altro numero",
+      "skipDownload": "Salta e scarica l'app",
+      "desktopDoneBody": "Il tuo bot è su WhatsApp. Scarica l'app desktop per usarlo anche su questo computer.",
+      "download": "Scarica l'app desktop",
+      "downloadingTitle": "Il download è iniziato",
+      "downloadingBody": "Installa AbacusAI Bot per usarlo su questo computer.",
+      "connectInstead": "Collega WhatsApp invece"
     },
     "signOutDetail": "This ends your website session and clears this browser's bot data.",
     "routines": {

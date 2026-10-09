@@ -17,6 +17,7 @@ import { ConnectorMark } from "#renderer/components/connector-mark";
 import { ConnectDialog } from "#renderer/components/form-kit/connect-dialog";
 import { FlowPage } from "#renderer/components/form-kit/flow-page";
 import { Spinner } from "#renderer/components/spinner";
+import { DESKTOP_DOWNLOAD_URL } from "#renderer/lib/abacus-links";
 import { maskedPhone } from "#renderer/lib/format/phone";
 import { isPhone } from "#renderer/lib/phone";
 import { showInfo } from "#renderer/lib/toast";
@@ -179,11 +180,13 @@ export const WhatsAppConnect = ({
   as: Heading = "h2",
   onLinked,
   onSkip,
+  skipLabel,
 }: {
   callApps: CallApps;
   as?: "h1" | "h2";
   onLinked?(): void;
   onSkip?(): void;
+  skipLabel?: string;
 }) => {
   const { t } = useTranslation();
   const cache = useQueryClient();
@@ -264,7 +267,7 @@ export const WhatsAppConnect = ({
       className="self-end max-[799px]:w-full"
       onClick={onSkip}
     >
-      {t("web.whatsappBot.skip")}
+      {skipLabel ?? t("web.whatsappBot.skip")}
     </Button>
   );
 
@@ -570,6 +573,103 @@ export const PhoneWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
           <WhatsAppConnect callApps={callApps} />
         </ConnectDialog>
       )}
+    </FlowPage>
+  );
+};
+
+/** The desktop installer for this computer (the download page picks the build; a Mac's chip is read there). */
+export const DESKTOP_INSTALLER_URL = `${DESKTOP_DOWNLOAD_URL}/download?platform=auto`;
+
+const startDesktopDownload = () => location.assign(DESKTOP_INSTALLER_URL);
+
+/**
+ * AbacusAI Bot in a computer's browser: connect WhatsApp (the phone scans a
+ * QR), then get the desktop app. Linking starts the download, and so does
+ * Skip; there is no browser app beyond this page.
+ */
+export const DesktopWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
+  const { t } = useTranslation();
+  const cache = useQueryClient();
+  const chat = useQuery(whatsappChatQuery(callApps));
+  const [skipped, setSkipped] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const skip = () => {
+    setSkipped(true);
+    startDesktopDownload();
+  };
+  const changeNumber = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await unlinkWhatsAppChat(cache, callApps);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("phase5.failed"));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const download = (
+    <Button
+      size="lg"
+      className="self-end max-[799px]:w-full"
+      nativeButton={false}
+      render={<a href={DESKTOP_INSTALLER_URL} />}
+    >
+      {t("web.whatsappBot.download")}
+    </Button>
+  );
+  if (chat.data?.status === "linked")
+    return (
+      <FlowPage media={<ConnectorMark id="whatsapp" size={56} />}>
+        <h1 className="page-title">{t("web.whatsappBot.doneTitle")}</h1>
+        <p className="text-muted-foreground text-sm/relaxed">
+          {t("web.whatsappBot.desktopDoneBody")}
+        </p>
+        {error && (
+          <p role="alert" className="text-destructive text-sm">
+            {error}
+          </p>
+        )}
+        {download}
+        <Button
+          variant="ghost"
+          size="lg"
+          className="self-end max-[799px]:w-full"
+          disabled={busy}
+          onClick={() => void changeNumber()}
+        >
+          {t("web.whatsappBot.useDifferentNumber")}
+        </Button>
+      </FlowPage>
+    );
+  if (skipped)
+    return (
+      <FlowPage media={<ConnectorMark id="whatsapp" size={56} />}>
+        <h1 className="page-title">{t("web.whatsappBot.downloadingTitle")}</h1>
+        <p className="text-muted-foreground text-sm/relaxed">
+          {t("web.whatsappBot.downloadingBody")}
+        </p>
+        {download}
+        <Button
+          variant="ghost"
+          size="lg"
+          className="self-end max-[799px]:w-full"
+          onClick={() => setSkipped(false)}
+        >
+          {t("web.whatsappBot.connectInstead")}
+        </Button>
+      </FlowPage>
+    );
+  return (
+    <FlowPage media={<ConnectorMark id="whatsapp" size={56} />}>
+      <WhatsAppConnect
+        callApps={callApps}
+        as="h1"
+        onLinked={startDesktopDownload}
+        onSkip={skip}
+        skipLabel={t("web.whatsappBot.skipDownload")}
+      />
     </FlowPage>
   );
 };

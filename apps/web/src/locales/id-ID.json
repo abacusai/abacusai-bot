@@ -4164,7 +4164,13 @@
       "rowDetail": "Chat with AbacusAI Bot on WhatsApp",
       "doneTitle": "Semua siap",
       "doneBody": "Bot Anda ada di WhatsApp. Kirim pesan kapan saja.",
-      "useDifferentNumber": "Gunakan nomor lain"
+      "useDifferentNumber": "Gunakan nomor lain",
+      "skipDownload": "Lewati, unduh aplikasinya saja",
+      "desktopDoneBody": "Bot Anda ada di WhatsApp. Dapatkan aplikasi desktop untuk menggunakannya juga di komputer ini.",
+      "download": "Unduh aplikasi desktop",
+      "downloadingTitle": "Unduhan Anda sudah dimulai",
+      "downloadingBody": "Pasang AbacusAI Bot untuk menggunakannya di komputer ini.",
+      "connectInstead": "Hubungkan WhatsApp saja"
     },
     "signOutDetail": "This ends your website session and clears this browser's bot data.",
     "routines": {
