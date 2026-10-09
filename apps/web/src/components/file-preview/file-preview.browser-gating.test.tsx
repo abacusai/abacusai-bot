@@ -81,7 +81,7 @@ it("handles binary content detected in a text file", async () => {
   render(<FilePreview path="/w/a.txt" hostRoot="/w" read={read} />);
   await screen.findByText(/Binary file/);
 });
-it("shows truncated text, images, PDF and empty text without a native viewer", async () => {
+it("shows truncated text, images and empty text without a native viewer", async () => {
   const read = readers();
   read.text.mockResolvedValueOnce({ content: "", truncated: true });
   const view = render(
@@ -90,10 +90,29 @@ it("shows truncated text, images, PDF and empty text without a native viewer", a
   await screen.findByRole("note");
   view.rerender(<FilePreview path="/w/image.png" hostRoot="/w" read={read} />);
   await screen.findByRole("img", { name: "image.png" });
-  view.rerender(<FilePreview path="/w/report.pdf" hostRoot="/w" read={read} />);
-  await screen.findByTitle("report.pdf");
-  expect(document.querySelector("iframe")?.hasAttribute("sandbox")).toBe(false);
+  expect(document.querySelector("webview")).toBeNull();
 });
+it("loads PDF bytes into the browser viewer and releases them on close", async () => {
+  const view = render(
+    <FilePreview path="/w/report.pdf" hostRoot="/w" read={readers()} />
+  );
+  const frame = await screen.findByTitle("report.pdf");
+  expect(frame.tagName).toBe("IFRAME");
+  expect(frame.hasAttribute("sandbox")).toBe(false);
+  expect(frame.getAttribute("src")).toBe("blob:http://localhost/file");
+  expect(files.blob).toHaveBeenCalledWith(
+    { filePath: "/w/report.pdf", hostRoot: "/w" },
+    expect.any(AbortSignal)
+  );
+  const [blob] = vi.mocked(URL.createObjectURL).mock.calls[0]!;
+  expect(blob).toBeInstanceOf(Blob);
+  expect((blob as Blob).type).toBe("application/pdf");
+  view.unmount();
+  expect(URL.revokeObjectURL).toHaveBeenCalledWith(
+    "blob:http://localhost/file"
+  );
+});
+
 it("ignores an old read after selection changes and avoids refetching for inline reader objects", async () => {
   const read = readers();
   let resolve!: (value: { content: string; truncated: boolean }) => void;
