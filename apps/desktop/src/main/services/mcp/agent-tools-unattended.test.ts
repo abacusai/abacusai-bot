@@ -61,7 +61,9 @@ describe("the unattended allowlist", () => {
     } as never);
     const builtins = [
       ...AGENT_TOOL_NAMES,
-      ...listed(new McpBrowserServer({ target: () => null, vault })),
+      ...listed(
+        new McpBrowserServer({ target: () => null, vault: () => vault })
+      ),
       ...listed(new McpDeviceServer()),
     ];
     expect(builtins).toEqual(

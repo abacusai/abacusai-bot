@@ -546,25 +546,27 @@ describe("choosing an autocomplete suggestion", () => {
 
 describe("site recipes", () => {
   it("knows Google and its country domains", () => {
-    expect(recipeFor("https://www.google.com/travel/flights")).toContain(
+    expect(recipeFor("https://www.google.com/travel/flights", true)).toContain(
       "autocomplete"
     );
-    expect(recipeFor("https://www.google.co.in/search?q=x")).not.toBeNull();
+    expect(
+      recipeFor("https://www.google.co.in/search?q=x", true)
+    ).not.toBeNull();
   });
 
   it("knows Amazon's result rows", () => {
-    expect(recipeFor("https://www.amazon.in/s?k=cable")).toContain(
+    expect(recipeFor("https://www.amazon.in/s?k=cable", true)).toContain(
       "s-search-result"
     );
   });
 
   it("has nothing to say about an unknown site or a bad URL", () => {
-    expect(recipeFor("https://example.test/")).toBeNull();
-    expect(recipeFor("not a url")).toBeNull();
+    expect(recipeFor("https://example.test/", true)).toBeNull();
+    expect(recipeFor("not a url", true)).toBeNull();
   });
 
   it("does not match a lookalike host", () => {
-    expect(recipeFor("https://notgoogle.com/")).toBeNull();
-    expect(recipeFor("https://google.com.evil.test/")).toBeNull();
+    expect(recipeFor("https://notgoogle.com/", true)).toBeNull();
+    expect(recipeFor("https://google.com.evil.test/", true)).toBeNull();
   });
 });

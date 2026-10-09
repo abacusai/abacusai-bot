@@ -158,9 +158,9 @@ describe("the phone's tools", () => {
       ),
       // The browser server's own tools reach the sub-agent (`browser_*`);
       // the rest, the vault's among them, reach the loop.
-      ...listed(new McpBrowserServer({ target: () => null, vault })).filter(
-        (name) => !name.startsWith("browser_")
-      ),
+      ...listed(
+        new McpBrowserServer({ target: () => null, vault: () => vault })
+      ).filter((name) => !name.startsWith("browser_")),
       ...listed(new McpDeviceServer()),
     ];
     const allowed = new Set(PHONE_MCP_TOOLS.builtin);

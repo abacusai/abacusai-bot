@@ -578,6 +578,10 @@ const connectorIdsFor = (services: string[]): string[] =>
 
 export class ServiceHost {
   constructor(readonly platform: HostPlatform = "electron") {
+    this.vault =
+      platform === "web-host"
+        ? new Vault({ client: new VaultClient(), steps: this.stepEvents })
+        : null;
     const base = platform === "web-host" ? hostPublicBase() : null;
     this.hostedMcp =
       base == null
@@ -793,12 +797,10 @@ export class ServiceHost {
 
   /**
    * The user's vault: the browser serves its tools, and what the user does
-   * on its pages comes back as a step-done event, a turn of its own.
+   * on its pages comes back as a step-done event, a turn of its own. Only the
+   * hosted bot has one (set in the constructor); null everywhere else.
    */
-  private readonly vault = new Vault({
-    client: new VaultClient(),
-    steps: this.stepEvents,
-  });
+  private readonly vault: Vault | null;
 
   /** The agent runtime's capability for `browser_checkout`, handed over at spawn. */
   private readonly checkoutToken = randomBytes(32).toString("hex");
@@ -811,7 +813,7 @@ export class ServiceHost {
     media: () => (this.platform === "web-host" ? this.mediaStore : null),
     conversationKeyForSession: (sessionId) =>
       this.conversationKeyForSession(sessionId),
-    vault: this.vault,
+    vault: () => this.vault,
     channelForSession: (sessionId) => this.laneChannels.get(sessionId) ?? null,
     isOwnerSession: (sessionId) => this.isOwnerSession(sessionId),
     checkoutToken: this.checkoutToken,
@@ -1581,7 +1583,7 @@ export class ServiceHost {
       return this.pendingWaits.list(
         sessionId,
         new Set(),
-        this.vault.sessions.get(sessionId)
+        this.vault?.sessions.get(sessionId) ?? null
       );
     const statuses: ConnectorStatuses = await this.connectorStatuses
       .list()
@@ -1594,7 +1596,7 @@ export class ServiceHost {
     return this.pendingWaits.list(
       sessionId,
       connected,
-      this.vault.sessions.get(sessionId)
+      this.vault?.sessions.get(sessionId) ?? null
     );
   }
 
@@ -1793,7 +1795,7 @@ export class ServiceHost {
   /** The active workspace's primary checkout key (legacy tree events). */
   /** The vault page for this account (see Vault.manageUrl). */
   vaultManageUrl(): Promise<string | null> {
-    return this.vault.manageUrl();
+    return this.vault?.manageUrl() ?? Promise.resolve(null);
   }
 
   activeCheckoutKey(): string | null {
@@ -2543,7 +2545,7 @@ export class ServiceHost {
   dispose(): Promise<void> {
     this.stop();
     this.connectWatcher.stop();
-    this.vault.stop();
+    this.vault?.stop();
     this.builtinMcpLifecycle.stopBrowserServer();
     this.chromeBrowser.dispose();
     this.hostedChromium.dispose();
@@ -3605,6 +3607,7 @@ export class ServiceHost {
   private async withVaultNotes(
     request: SendAgentMessageRequest
   ): Promise<SendAgentMessageRequest> {
+    if (this.vault == null) return request;
     const notes = await this.vault
       .checkBeforeMessage(request.sessionId)
       .catch(() => []);
@@ -5391,7 +5394,8 @@ export class ServiceHost {
         // The lifecycle owns whether there is a browser: on a web host, the
         // hosted Chromium; elsewhere the desktop's own views are always there.
         this.platform !== "web-host" ||
-          this.builtinMcpLifecycle.isBrowserEnabled()
+          this.builtinMcpLifecycle.isBrowserEnabled(),
+        this.vault != null
       ),
       // A bot's chat carries the bot's identity; this process owns the registry.
       ...(sessionId != null

@@ -525,18 +525,18 @@ describe("ChromeTargetSource", () => {
       const secrets = source.secrets(100)!;
       const state = secretPage(relay);
 
-      expect(await secrets.executeRefusal(page)).toBeNull();
+      expect(await secrets.executeRefusal(page, true)).toBeNull();
 
       // An empty password field appears: no script may wait in the page for it.
       state.fields = [11];
       state.connected.add(11);
-      expect(await secrets.executeRefusal(page)).toContain("cannot run");
+      expect(await secrets.executeRefusal(page, true)).toContain("cannot run");
 
       // The page strips every mark, so the classifier no longer sees it; the
       // record is the tab's, and the mark is put back.
       state.fields = [];
       state.sent.length = 0;
-      expect(await secrets.executeRefusal(page)).toContain("cannot run");
+      expect(await secrets.executeRefusal(page, true)).toContain("cannot run");
       expect(state.sent).toContainEqual({
         method: "DOM.resolveNode",
         params: expect.objectContaining({ backendNodeId: 11 }),
@@ -544,9 +544,9 @@ describe("ChromeTargetSource", () => {
 
       // Taken out of the document, then gone from the renderer: scripts run again.
       state.connected.delete(11);
-      expect(await secrets.executeRefusal(page)).toBeNull();
+      expect(await secrets.executeRefusal(page, true)).toBeNull();
       state.gone.add(11);
-      expect(await secrets.executeRefusal(page)).toBeNull();
+      expect(await secrets.executeRefusal(page, true)).toBeNull();
     });
 
     it("refuses scripts after a fill until the main frame navigates, which also forgets the known fields", async () => {
@@ -557,7 +557,7 @@ describe("ChromeTargetSource", () => {
       const state = secretPage(relay);
       state.fields = [11];
       state.connected.add(11);
-      await secrets.executeRefusal(page);
+      await secrets.executeRefusal(page, true);
       state.fields = [];
 
       expect(await secrets.markFilled(page, "#password")).toBe(true);
@@ -569,19 +569,19 @@ describe("ChromeTargetSource", () => {
         params: expect.objectContaining({ backendNodeId: 12 }),
       });
       state.connected.delete(11);
-      expect(await secrets.executeRefusal(page)).toContain("cannot run");
+      expect(await secrets.executeRefusal(page, true)).toContain("cannot run");
       // A frame inside the page navigating is not the page leaving.
       relay.emit("cdpEvent", 100, "Page.frameNavigated", {
         frame: { id: "ad", parentId: "main", url: "https://ads.test/" },
       });
-      expect(await secrets.executeRefusal(page)).not.toBeNull();
+      expect(await secrets.executeRefusal(page, true)).not.toBeNull();
 
       relay.emit("cdpEvent", 100, "Page.frameNavigated", {
         frame: { id: "main", url: "https://shop.test/account" },
       });
       state.connected.add(11);
       state.sent.length = 0;
-      expect(await secrets.executeRefusal(page)).toBeNull();
+      expect(await secrets.executeRefusal(page, true)).toBeNull();
       expect(state.sent.map((call) => call.method)).not.toContain(
         "DOM.resolveNode"
       );
@@ -600,7 +600,9 @@ describe("ChromeTargetSource", () => {
         state.fields = [11];
 
         expect(
-          await source.secrets(100)!.executeRefusal(source.webContents(100)!)
+          await source
+            .secrets(100)!
+            .executeRefusal(source.webContents(100)!, true)
         ).toContain("cannot run");
       }
     });

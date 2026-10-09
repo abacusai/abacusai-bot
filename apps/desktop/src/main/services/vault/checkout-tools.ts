@@ -54,7 +54,8 @@ export function pageText(value: unknown, max: number): string {
     .slice(0, max);
 }
 
-export const CHECKOUT_TOOL_LISTINGS: McpToolListing[] = [
+/** The checkout's listings; `vault` is whether the user's vault serves logins here. */
+export const checkoutToolListings = (vault: boolean): McpToolListing[] => [
   {
     name: BROWSER_PAUSE_TOOL,
     description: [
@@ -64,9 +65,13 @@ export const CHECKOUT_TOOL_LISTINGS: McpToolListing[] = [
       "need:",
       "- \"details\": the form wants the traveler's or buyer's details your task did not give;",
       '  list each field the form asks for in fields (e.g. ["full name as on ID", "date of birth"]).',
-      '- "login": the site wants the user signed in and your task names no saved login for it, or',
-      '  browser_vault_fill field:"login" refused or is waiting for sign-in approval (the browser',
-      "  reports its reason with the stop).",
+      ...(vault
+        ? [
+            '- "login": the site wants the user signed in and your task names no saved login for it, or',
+            '  browser_vault_fill field:"login" refused or is waiting for sign-in approval (the browser',
+            "  reports its reason with the stop).",
+          ]
+        : ['- "login": the site wants the user signed in.']),
       '- "code": the site or the bank sent the user a one-time code.',
       '- "payment": you are on the page with the card form and the final total, before any card',
       "  is entered. Give total_ref (the ref of the element showing the order total with its",

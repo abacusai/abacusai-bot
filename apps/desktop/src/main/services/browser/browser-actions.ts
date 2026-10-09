@@ -285,8 +285,14 @@ export function chooseOption<T extends { name?: string }>(
   );
 }
 
-/** Site advice handed over when the host loads, not carried in the prompt. */
-const RECIPES: Array<{ hosts: RegExp; tip: string }> = [
+/**
+ * Site advice handed over when the host loads, not carried in the prompt. A
+ * tip that is a function is told whether a saved login can be filled here.
+ */
+const RECIPES: Array<{
+  hosts: RegExp;
+  tip: string | ((vault: boolean) => string);
+}> = [
   {
     hosts: /(^|\.)google\.(com|co\.[a-z]{2}|[a-z]{2,3})$/,
     tip:
@@ -319,13 +325,15 @@ const RECIPES: Array<{ hosts: RegExp; tip: string }> = [
   },
   {
     hosts: /(^|\.)(linkedin|x|twitter|facebook|instagram)\.com$/,
-    tip:
+    tip: (vault) =>
       "Social site: most content is behind a login wall and the feed loads as you scroll. If a sign-in page appears: " +
-      'use browser_vault_fill field:"login" when the task names a saved login; otherwise browser_pause need:"login".',
+      (vault
+        ? 'use browser_vault_fill field:"login" when the task names a saved login; otherwise browser_pause need:"login".'
+        : 'browser_pause need:"login".'),
   },
 ];
 
-export function recipeFor(url: string): string | null {
+export function recipeFor(url: string, vault: boolean): string | null {
   let host: string;
 
   try {
@@ -334,5 +342,7 @@ export function recipeFor(url: string): string | null {
     return null;
   }
 
-  return RECIPES.find((recipe) => recipe.hosts.test(host))?.tip ?? null;
+  const tip = RECIPES.find((recipe) => recipe.hosts.test(host))?.tip;
+  if (tip == null) return null;
+  return typeof tip === "string" ? tip : tip(vault);
 }

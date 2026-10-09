@@ -15,6 +15,7 @@ import { agentVendorDir } from "#main/resources";
 import { memorySnapshot } from "../agent-tools/memory-store";
 import { abacusRoutellmV1 } from "../providers/abacus-host";
 import { resolveBackend } from "../providers/exec-backend-service";
+import { VAULT_TOOL_NAMES } from "../vault/vault-tools";
 import {
   credentialEnv,
   hasCredential,
@@ -36,7 +37,8 @@ export function buildAgentAuthEnv(): Record<string, string> {
 /** Everything besides auth and the MCP config path. See the call site. */
 export function buildAgentConfigEnv(
   runtimeMcpPath: string | null,
-  browserAvailable: boolean
+  browserAvailable: boolean,
+  vaultAvailable: boolean
 ): Record<string, string> {
   const envVars: Record<string, string> = {};
   if (runtimeMcpPath != null) {
@@ -69,6 +71,9 @@ export function buildAgentConfigEnv(
       "browser_execute",
       "browser_tabs"
     );
+  // No vault (anywhere but the hosted bot): its tools are withheld, and the
+  // agent's prompts leave out what they would do.
+  if (!vaultAvailable) excluded.push(...VAULT_TOOL_NAMES);
   if (excluded.length > 0) {
     envVars.ABACUSAI_BOT_EXCLUDED_TOOLS = excluded.join(",");
   }

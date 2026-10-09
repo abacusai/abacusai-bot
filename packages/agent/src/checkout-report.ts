@@ -7,6 +7,7 @@
  */
 import { type ChannelCapabilities, browserStopNote } from "./channel.js";
 import type { CheckoutPause, CheckoutStage } from "./checkout-run.js";
+import { vaultEnabled } from "./excluded-tools.js";
 
 const STAGE_WORDS: Record<CheckoutStage, string> = {
   search: "searching",
@@ -49,6 +50,12 @@ const CURRENCY = /^[A-Z]{3}$/;
 const CONTINUE =
   "call browser_task with continue_from_last: true and their answer as the task";
 
+/** A step the user does on the page themselves, where there is no vault to do it through. */
+const byHand = (what: string, channel: ChannelCapabilities): string =>
+  channel.pane
+    ? `The user ${what} themselves in the Browser pane in this chat; once they say it is done, ${CONTINUE}.`
+    : `The user ${what} themselves on the site: tell them how far it got.`;
+
 /** What the parent does next for a stop, in what this chat can do. */
 function nextStep(pause: CheckoutPause, channel: ChannelCapabilities): string {
   const picture =
@@ -56,6 +63,15 @@ function nextStep(pause: CheckoutPause, channel: ChannelCapabilities): string {
       ? `Send the screenshot (send_media, media ${pause.mediaId}) with a short caption, then `
       : "";
   const site = pause.site != null ? quotePageText(pause.site, 253) : "the site";
+  if (!vaultEnabled())
+    switch (pause.need) {
+      case "login":
+        return `${byHand(`signs in to ${site}`, channel)} Never ask for the password in the chat.`;
+      case "code":
+        return `${byHand("enters the code", channel)} Never ask for the code in the chat.`;
+      case "payment":
+        return `${picture}tell the user the total. Nothing is paid from here. ${byHand("enters their card and pays", channel)}`;
+    }
   switch (pause.need) {
     case "details":
       return (
@@ -152,6 +168,13 @@ export function pauseReport(
  * browser said the approval of the paused total is live.
  */
 export function resumeNote(stage: CheckoutStage, approved: boolean): string {
+  // No vault, no approval: nothing is filled or paid from here.
+  if (!vaultEnabled())
+    return stage === "awaiting_approval"
+      ? "Nothing is paid from here: do not fill a card or press Pay. If the user paid on the page, " +
+          "report the confirmation (booking reference or order number); otherwise stop again with " +
+          'browser_pause need:"payment".'
+      : "";
   if (stage === "card_fill" && approved)
     return (
       "The user approved this payment. Fill every card field with browser_vault_fill (the card's " +
