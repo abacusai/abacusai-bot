@@ -63,6 +63,7 @@ import { importLegacyDrafts } from "#renderer/lib/continuity/composer-drafts";
 import { changeLanguage, fixedT, resolveLanguage } from "#renderer/lib/i18n";
 import { installLogRing } from "#renderer/lib/log-ring";
 import { installTransitionTypes } from "#renderer/lib/navigation/transition-types";
+import { webSignUpHref } from "#renderer/lib/navigation/web-sign-in";
 import { isPhone } from "#renderer/lib/phone";
 import {
   applyBootLook,
@@ -216,6 +217,25 @@ const mountWhatsAppApp = async (
   return true;
 };
 
+const SIGN_UP_HOP_KEY = "abacusai-bot:sign-up-hop";
+const SIGN_UP_HOP_MS = 2 * 60_000;
+
+/**
+ * Whether a signed-out visit may go straight to the sign-up page: once per
+ * tab in a while, so a session that page still takes for signed in cannot
+ * bounce between the two (the sign-in screen shows instead).
+ */
+const takeSignUpHop = (): boolean => {
+  try {
+    const last = Number(sessionStorage.getItem(SIGN_UP_HOP_KEY) ?? 0);
+    if (Date.now() - last < SIGN_UP_HOP_MS) return false;
+    sessionStorage.setItem(SIGN_UP_HOP_KEY, String(Date.now()));
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const renderConnectError = (root: Root, error: unknown): void =>
   root.render(
     <>
@@ -236,6 +256,14 @@ export const mountPlatformApp = async (root: Root): Promise<boolean> => {
     if (await mountWhatsAppApp(root, isPhone())) return true;
     identity = await identifyHost();
   } catch (error) {
+    if (
+      error instanceof ConnectError &&
+      error.kind === "signin" &&
+      takeSignUpHop()
+    ) {
+      location.replace(webSignUpHref());
+      return true;
+    }
     renderConnectError(root, error);
     return true;
   }

@@ -8,3 +8,9 @@ export const webSignInHref = (): string =>
   `/bot/link/signin?AbacusAIBotWeb=1&redirectUrl=${encodeURIComponent(
     location.href
   )}`;
+
+/** The same page in its sign-up form: where a signed-out visitor to the browser app goes. */
+export const webSignUpHref = (): string =>
+  `/bot/link/signin?AbacusAIBotWeb=1&isSignUp=1&redirectUrl=${encodeURIComponent(
+    location.href
+  )}`;
