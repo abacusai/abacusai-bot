@@ -1,8 +1,6 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
-import { ABACUS_BUY_CREDITS_URL } from "#renderer/lib/abacus-links";
-
 import { inertHostActions } from "../runtime/host-actions";
 import { renderWithDb } from "../testing";
 import { FeatureLimitNotice } from "./parts";
@@ -14,7 +12,7 @@ afterEach(async () => {
 it.each([
   ["free", false, "Upgrade"],
   ["basic", true, "Upgrade"],
-  ["paid", true, "Top up"],
+  ["paid", true, "Manage plan"],
   ["paid", false, null],
   ["basic", false, null],
   ["unknown", false, null],
@@ -39,8 +37,8 @@ it.each([
     cleanup = rendered.cleanup;
     if (label) {
       fireEvent.click(await screen.findByRole("button", { name: label }));
-      if (label === "Upgrade") expect(openUpgrade).toHaveBeenCalledOnce();
-      else expect(openExternal).toHaveBeenCalledWith(ABACUS_BUY_CREDITS_URL);
+      expect(openUpgrade).toHaveBeenCalledOnce();
+      expect(openExternal).not.toHaveBeenCalled();
     } else {
       await waitFor(() => expect(accountTier).toHaveBeenCalled());
       expect(screen.queryByRole("button")).toBeNull();

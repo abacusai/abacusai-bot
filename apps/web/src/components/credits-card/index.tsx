@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 
 import { GroupCard } from "#renderer/components/form-kit/page";
 import { ABACUS_BUY_CREDITS_URL } from "#renderer/lib/abacus-links";
+import { useVisibleContextualUpsell } from "#renderer/lib/contextual-upsell";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { Button } from "#renderer/ui/button";
 import {
@@ -68,6 +69,7 @@ export const CreditsCard = ({
   note?: string;
 }) => {
   const { t } = useTranslation();
+  const promotionRef = useVisibleContextualUpsell(tier === "free");
   const [configured, setConfigured] = useState<Record<string, boolean> | null>(
     null
   );
@@ -115,7 +117,7 @@ export const CreditsCard = ({
   const field = PROVIDER_KEY_FIELDS.find((entry) => entry.provider === asking);
   return (
     <>
-      <div data-slot="credits-card">
+      <div data-slot="credits-card" ref={promotionRef}>
         <GroupCard
           title={
             title ??

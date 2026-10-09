@@ -10,12 +10,12 @@ export const sidebarAccount = (
   const selfServe = isPayingAbacusTier(tier);
   const paid = selfServe || creditsTier(account) === "paid";
   const free = tier === "free";
+  const personal =
+    account?.org_user_count != null
+      ? account.org_user_count <= 1
+      : !account?.organization?.trim();
   return {
     paid,
-    billing: free
-      ? "upgrade"
-      : selfServe && (account?.org_user_count ?? 1) <= 1
-        ? "manage"
-        : null,
+    billing: free ? "upgrade" : selfServe && personal ? "manage" : null,
   } as const;
 };

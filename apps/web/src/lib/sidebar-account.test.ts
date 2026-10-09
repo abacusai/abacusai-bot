@@ -44,6 +44,18 @@ it("hides unknown and signed-out accounts, keeps organization billing conservati
 it("uses the requested Agent destination", () => {
   expect(ABACUS_AGENT_URL).toBe("https://apps.abacus.ai/chatllm");
 });
+it.each(["basic", "pro"])(
+  "does not infer personal billing for a %s organization without a member count",
+  (tier) => {
+    expect(
+      sidebarAccount({
+        ...account(tier),
+        organization: "Acme",
+        org_user_count: null,
+      }).billing
+    ).toBeNull();
+  }
+);
 it("recognizes exact legacy plans without guessing from display names", () => {
   expect(sidebarAccount({ plan: " Free " } as AbacusAccountInfo).billing).toBe(
     "upgrade"
