@@ -54,7 +54,7 @@ const withDownloadedBuild = (): InstanceType<typeof UpdateService> => {
 
 beforeEach(() => {
   autoUpdater.removeAllListeners();
-  checkForUpdates.mockClear();
+  checkForUpdates.mockReset().mockResolvedValue(null);
   // electron-updater's constructor defaults; the service toggles them.
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
@@ -250,4 +250,52 @@ it("withdrawal and re-offer start a second transfer, and an offer alone is not d
   expect(service.getStatus().downloading).toBe(true);
   checkForUpdates.mockImplementation(() => Promise.resolve(null));
   vi.unstubAllGlobals();
+});
+
+it("joins concurrent install requests while fresh feed admission is pending", async () => {
+  vi.useFakeTimers();
+  const quit = vi.fn();
+  autoUpdater.quitAndInstall = quit;
+  const service = withDownloadedBuild();
+  const offer = { isUpdateAvailable: true, updateInfo: { version: "1.0.19" } };
+  let release!: () => void;
+  checkForUpdates.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        release = () => resolve(offer as never);
+      })
+  );
+  checkForUpdates.mockResolvedValueOnce(offer as never);
+  const first = service.installUpdate();
+  const second = service.installUpdate();
+  release();
+  expect(await first).toEqual({ success: true });
+  expect(await second).toEqual({ success: true });
+  expect(quit).toHaveBeenCalledOnce();
+  expect(checkForUpdates).toHaveBeenCalledOnce();
+});
+
+it("allows retry after a joined install request fails before handoff", async () => {
+  vi.useFakeTimers();
+  const quit = vi.fn().mockImplementationOnce(() => {
+    throw new Error("handoff failed");
+  });
+  autoUpdater.quitAndInstall = quit;
+  const service = withDownloadedBuild();
+  const offer = { isUpdateAvailable: true, updateInfo: { version: "1.0.19" } };
+  checkForUpdates.mockResolvedValue(offer as never);
+  const first = service.installUpdate();
+  const second = service.installUpdate();
+  expect(await first).toMatchObject({
+    success: false,
+    error: "handoff failed",
+  });
+  expect(await second).toMatchObject({
+    success: false,
+    error: "handoff failed",
+  });
+  expect(quit).toHaveBeenCalledOnce();
+  expect(await service.installUpdate()).toEqual({ success: true });
+  expect(quit).toHaveBeenCalledTimes(2);
+  checkForUpdates.mockResolvedValue(null);
 });

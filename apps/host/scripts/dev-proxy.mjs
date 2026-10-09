@@ -103,7 +103,9 @@ const proxy = createServer(
       return;
     }
     const isApi =
-      req.url.startsWith("/api/") || req.url.startsWith("/chatllm/");
+      req.url.startsWith("/api/") ||
+      req.url.startsWith("/chatllm/") ||
+      req.url.startsWith("/bot/link/");
     const target = isHost ? upstream : isApi ? new URL(origin) : vite;
     const headers = { ...req.headers, host: target.host };
     if (isHost)

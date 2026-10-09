@@ -10,6 +10,7 @@ import { lazy, Suspense, useEffect, useEffectEvent } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
+import { ComposerUpdateNotice } from "#platform/updates";
 import { useCollections } from "#renderer/data/db";
 import { loadFixtureRuntime } from "#renderer/features/chat/fixture-runtime";
 import { ChatView } from "#renderer/features/chat/kit/lazy-view";
@@ -351,6 +352,7 @@ const SessionRoute = () => {
               })
             }
             slots={{
+              composerNotice: <ComposerUpdateNotice />,
               decorateMessage: (message, context) => {
                 if (
                   message.role !== "assistant" ||

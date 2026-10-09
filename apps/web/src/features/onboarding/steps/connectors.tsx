@@ -16,10 +16,12 @@ export type ConnectorStatuses = Record<
 >;
 
 export const CURATED_IDS = [
+  "abacus-gmailuser",
+  "abacus-googlecalendar",
+  "abacus-googledriveuser",
   "messaging-whatsapp",
   "messaging-telegram",
   "messaging-discord",
-  "abacus-gmailuser",
 ] as const;
 
 const offered = (
@@ -59,17 +61,19 @@ export const ConnectorsStep = ({
   const finish = advance;
   return (
     <>
-      <StepTitle ref={heading} size="medium">
+      <StepTitle ref={heading} size="medium" className="text-center">
         {t("onboarding.connectorsTitleLead")}{" "}
         <span className="onboarding-accent">
           {t("onboarding.connectorsTitleAccent")}
         </span>
+        <br />
+        {t("onboarding.connectorsSubtitle")}
       </StepTitle>
-      <StepBody className="mt-1.5 max-w-[640px]">
+      <StepBody className="mx-auto mt-2 max-w-[520px] text-center">
         {t("onboarding.pages.connectors.body")}
       </StepBody>
       <ul
-        className="mt-5 grid w-full grid-cols-2 gap-2 min-[900px]:grid-cols-3"
+        className="mt-6 grid w-full grid-cols-1 gap-3 min-[360px]:grid-cols-2 min-[640px]:grid-cols-3"
         data-slot="connector-grid"
       >
         {tiles.map((entry) => {
@@ -86,10 +90,19 @@ export const ConnectorsStep = ({
             <li key={entry.id} className="min-w-0">
               <Button
                 variant="outline"
-                className="data-[connected=true]:border-primary data-[connected=true]:bg-primary/5 h-9 w-full justify-between gap-2 px-3 text-[13px] transition-colors"
+                className="data-[connected=true]:border-primary data-[connected=true]:bg-primary/5 h-full min-h-40 w-full flex-col gap-2 rounded-xl px-3 py-4 whitespace-normal transition-colors disabled:opacity-100"
                 data-connector={entry.id}
                 data-connected={connected}
                 data-state={state}
+                aria-label={t("onboarding.connectorAction", {
+                  action: t(
+                    connected
+                      ? "onboarding.connectorsConnectedCta"
+                      : "onboarding.connectorsConnectCta"
+                  ),
+                  name: entry.name,
+                })}
+                aria-describedby={`onboarding-${entry.id}-description`}
                 aria-pressed={connected}
                 aria-busy={state === "connecting"}
                 disabled={busy || connected}
@@ -108,35 +121,41 @@ export const ConnectorsStep = ({
                   })
                 }
               >
-                <span className="flex min-w-0 items-center gap-2">
+                <span className="flex min-w-0 flex-col items-center gap-2">
                   <ConnectorMark
                     id={entry.logo ?? entry.id}
                     initial={entry.name.slice(0, 1)}
-                    size={20}
+                    size={28}
                   />
-                  <span className="truncate">{entry.name}</span>
+                  <span className="text-[13px] font-semibold">
+                    {entry.name}
+                  </span>
                 </span>
                 <span
-                  className="flex size-4 shrink-0 items-center justify-center"
+                  id={`onboarding-${entry.id}-description`}
+                  className="text-muted-foreground flex-1 text-xs leading-4 font-normal"
+                >
+                  {t(`onboarding.connectorDetails.${entry.id}`)}
+                </span>
+                <span
+                  className="text-primary mt-1 flex min-h-5 items-center justify-center gap-1.5 text-xs"
                   data-slot="connector-state"
                 >
                   {state === "connected" && (
                     <>
                       <CheckIcon className="text-primary size-3.5" />
-                      <span className="sr-only">
-                        {t("onboarding.pages.connectedLabel")}
-                      </span>
+                      <span>{t("onboarding.pages.connectedLabel")}</span>
                     </>
                   )}
                   {state === "connecting" && (
                     <LoaderCircleIcon className="size-3.5 animate-spin motion-reduce:animate-none" />
                   )}
+                  {state === "idle" && t("onboarding.connectorsConnectCta")}
+                  {state === "connecting" && t("phase5.connecting")}
                   {state === "error" && (
                     <>
                       <TriangleAlertIcon className="text-destructive size-3.5" />
-                      <span className="sr-only">
-                        {t("onboarding.pages.retry")}
-                      </span>
+                      <span>{t("onboarding.pages.retry")}</span>
                     </>
                   )}
                 </span>
@@ -145,7 +164,7 @@ export const ConnectorsStep = ({
           );
         })}
       </ul>
-      <div className="mt-6 flex flex-wrap justify-end gap-3">
+      <div className="mt-6 flex flex-wrap justify-center gap-3">
         <StepButton disabled={busy} onClick={finish}>
           {t("onboarding.connectorsContinue")}
         </StepButton>

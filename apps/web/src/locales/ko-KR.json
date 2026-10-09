@@ -1341,7 +1341,16 @@
     "pages.models.downloading": "다운로드 중",
     "pages.models.download": "다운로드",
     "soundOn": "소리 켜짐",
-    "soundOff": "소리 꺼짐"
+    "soundOff": "소리 꺼짐",
+    "connectorAction": "{{action}} {{name}}",
+    "connectorDetails": {
+      "abacus-gmailuser": "Read email and draft replies.",
+      "abacus-googlecalendar": "Check your day and schedule meetings.",
+      "abacus-googledriveuser": "Find and work with your files.",
+      "messaging-whatsapp": "Message your bot from WhatsApp.",
+      "messaging-telegram": "Message your bot from Telegram.",
+      "messaging-discord": "Message your bot from Discord."
+    }
   },
   "referralCard": {
     "cta": "Invite friends",

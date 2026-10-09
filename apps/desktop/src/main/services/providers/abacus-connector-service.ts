@@ -176,7 +176,14 @@ export const listAbacusConnectors =
       abacusApi("_listAbacusbotConnectors", "POST", {}),
       abacusApi("_listActiveUserLevelConnectors", "POST", {}),
     ]);
-    if (catalog == null && active == null) {
+    // A failed catalog is not an empty account policy, and a failed active
+    // listing is not proof that the user has no connected services.
+    if (
+      catalog == null ||
+      typeof catalog !== "object" ||
+      Array.isArray(catalog) ||
+      !Array.isArray(active)
+    ) {
       return {
         ok: false,
         error: "unavailable",
