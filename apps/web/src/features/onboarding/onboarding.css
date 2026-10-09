@@ -65,14 +65,14 @@
   align-items: stretch;
   width: 100%;
   max-width: 688px;
-  min-height: 640px;
   margin: auto;
-  padding: 16px var(--page-gutter) 40px;
-  text-align: left;
+  padding: 32px max(24px, var(--page-gutter)) 48px;
+  text-align: center;
 }
 
 .onboarding-stage {
   position: relative;
+  flex-shrink: 0;
   width: min(100%, 400px);
   align-self: center;
   margin-bottom: 16px;
@@ -105,13 +105,13 @@
 .onboarding-step {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  align-items: center;
   width: 100%;
   flex-shrink: 0;
 }
 .onboarding-title {
-  font-size: 24px;
-  line-height: 30px;
+  font-size: 30px;
+  line-height: 36px;
   font-weight: 600;
   letter-spacing: -0.01em;
   text-wrap: balance;
@@ -184,7 +184,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 4px;
 }
 .onboarding-links > span {
@@ -213,3 +213,42 @@
 }
 [data-reduced-motion="true"] .onboarding-progress span { transition: none; }
 [data-reduced-motion="true"] .onboarding-confetti { display: none; }
+
+.onboarding-title[data-size="hero"] {
+  font-size: 36px;
+  line-height: 42px;
+}
+
+.onboarding-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.onboarding-existing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  width: 100%;
+  text-align: left;
+}
+.onboarding-existing > span {
+  flex: 1 1 240px;
+}
+
+@media (max-width: 480px) {
+  .onboarding-column { padding-inline: 20px; }
+  .onboarding-title { font-size: 26px; line-height: 32px; }
+  .onboarding-title[data-size="hero"] { font-size: 30px; line-height: 36px; }
+  .onboarding-row { flex-wrap: wrap; gap: 10px; padding: 12px; }
+  .onboarding-row-title { flex-basis: calc(100% - 48px); }
+  .onboarding-row > button, .onboarding-row > .onboarding-connected,
+  .onboarding-row > [role="status"] { margin-left: 46px; }
+}
+
+@media (max-height: 700px) {
+  .onboarding-column { padding-top: 20px; padding-bottom: 28px; }
+  .onboarding-stage { margin-bottom: 8px; }
+}

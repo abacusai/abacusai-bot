@@ -73,7 +73,7 @@ export const WelcomeStep = ({
       <p className="onboarding-tagline mt-2">
         {t("onboarding.welcomeTagline")}
       </p>
-      <div className="mt-9 flex flex-wrap justify-end gap-2.5">
+      <div className="onboarding-actions mt-9">
         <StepButton disabled={busy} onClick={() => props.signIn("signup")}>
           {t("onboarding.connectCta")}
         </StepButton>
