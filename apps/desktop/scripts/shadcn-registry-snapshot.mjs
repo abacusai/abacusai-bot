@@ -26,6 +26,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { registryContent } from "./registry-content.mjs";
+import { applyRegistryOverrides } from "./registry-overrides.mjs";
 import { addFromSnapshot, INITIAL_ITEMS, latestSnapshot } from "./shadcn.mjs";
 
 const desktop = join(import.meta.dirname, "../../web");
@@ -77,15 +78,22 @@ const check = async () => {
       }
     );
 
+    const { rsc } = JSON.parse(
+      readFileSync(join(desktop, "components.json"), "utf8")
+    );
+    applyRegistryOverrides({
+      directory: temp,
+      snapshot: latestSnapshot(),
+      overrides: join(desktop, "../desktop/shadcn-registry/local"),
+      rsc,
+    });
+
     const committed = join(desktop, "src/ui");
     const replayed = join(temp, "src/ui");
     const names = new Set([
       ...readdirSync(committed),
       ...readdirSync(replayed),
     ]);
-    const { rsc } = JSON.parse(
-      readFileSync(join(desktop, "components.json"), "utf8")
-    );
     const diffs = [...names].filter((name) => {
       try {
         return (

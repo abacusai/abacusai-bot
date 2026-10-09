@@ -30,7 +30,7 @@ it("updates the shared rail from the account RPC rather than the host home direc
     },
   });
   try {
-    const account = await screen.findByRole("link", { name: "Ada Example" });
+    const account = await screen.findByRole("button", { name: "Ada Example" });
     await waitFor(() => expect(account.textContent).toContain("AE"));
     expect(account.textContent).not.toContain("UB");
     expect(await screen.findByText("ada@example.com")).toBeDefined();
@@ -50,7 +50,9 @@ it("updates the shared rail from the account RPC rather than the host home direc
               }
       );
     });
-    const changed = await screen.findByRole("link", { name: "Grace Example" });
+    const changed = await screen.findByRole("button", {
+      name: "Grace Example",
+    });
     await waitFor(() =>
       expect(changed.querySelector("img")?.getAttribute("src")).toBe(
         "data:image/png;base64,AQID"

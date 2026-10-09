@@ -104,8 +104,16 @@ const { build } = await import("rolldown");
 await build({
   input: entryFile,
   platform: "node",
-  // Resolved at run time from node_modules; `ws`'s native helpers are optional.
-  external: [/^@orpc\//, "ws", "bufferutil", "utf-8-validate", "valibot"],
+  // Photon resolves its WASM beside its CommonJS entry; keep that package intact.
+  // `ws`'s native helpers are optional.
+  external: [
+    /^@orpc\//,
+    "ws",
+    "bufferutil",
+    "utf-8-validate",
+    "valibot",
+    "@silvia-odwyer/photon-node",
+  ],
   resolve: {
     alias: {
       "@abacus-ai/contract": join(SRC, "../../../packages/contract/src"),

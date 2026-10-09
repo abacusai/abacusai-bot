@@ -24,7 +24,7 @@
     "build": "node scripts/generate-notices.js --graph && vite build && node scripts/generate-notices.js",
     "check:react-compiler": "node scripts/check-react-compiler.mjs",
     "check:packaged": "node scripts/check-packaged-resources.js",
-    "check:ui-registry": "node --test scripts/shadcn-registry-proxy.test.mjs && node scripts/shadcn-registry-snapshot.mjs --check",
+    "check:ui-registry": "node --test scripts/shadcn-registry-proxy.test.mjs scripts/registry-content.test.mjs scripts/registry-overrides.test.mjs && node scripts/shadcn-registry-snapshot.mjs --check",
     "dev": "node scripts/generate-notices.js --graph && vite",
     "experience": "node scripts/build-experience.js",
     "package": "electron-builder --config electron-builder.yml",

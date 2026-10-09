@@ -18,6 +18,16 @@ afterEach(async () => {
 it("waits for configured default mode before mounting a sendable composer", async () => {
   let resolve!: (mode: never) => void;
   app = await renderApp("/bots/chief-of-staff", {
+    models: [
+      {
+        id: "abacus/route-llm",
+        label: "RouteLLM",
+        provider: "abacus",
+        tier: "default",
+        configured: true,
+        recommended: true,
+      },
+    ],
     defaultMode: () =>
       new Promise((done) => {
         resolve = done;
@@ -54,7 +64,19 @@ it("recovers from a configured-mode rejection through Retry before allowing send
           resolve = done;
         })
     );
-  app = await renderApp("/bots/chief-of-staff", { defaultMode });
+  app = await renderApp("/bots/chief-of-staff", {
+    defaultMode,
+    models: [
+      {
+        id: "abacus/route-llm",
+        label: "RouteLLM",
+        provider: "abacus",
+        tier: "default",
+        configured: true,
+        recommended: true,
+      },
+    ],
+  });
   await screen.findByTestId("bot-chat");
   const retry = await screen.findByRole("button", { name: "Retry" });
   expect(screen.getByRole("alert").textContent).toContain(
