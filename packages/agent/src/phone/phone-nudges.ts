@@ -1,8 +1,9 @@
 /**
  * What the phone loop and the hosted app share for check-ins: the user's
  * timezone (the server's: from the app's inbox poll, or what `checkins` set),
- * the language check-ins go out in (as the server took it from `checkins`),
- * and the loops due soon, as agenda items. Files under ABACUSAI_BOT_PHONE_DIR.
+ * the user's language (from the inbox poll), the language check-ins go out in
+ * (as the server took it from `checkins`), and the loops due soon, as agenda
+ * items. Files under ABACUSAI_BOT_PHONE_DIR.
  */
 import path from "path";
 
@@ -22,6 +23,8 @@ export const NUDGE_SUMMARY_MAX_CHARS = 200;
 
 const zoneFile = (dir: string): string => path.join(dir, "zone.json");
 const checkinsFile = (dir: string): string => path.join(dir, "checkins.json");
+const replyLanguageFile = (dir: string): string =>
+  path.join(dir, "reply-language.json");
 
 /** An IANA zone this runtime knows. */
 export function isTimeZone(zone: string): boolean {
@@ -78,6 +81,26 @@ export function writePhoneLanguage(dir: string, code: string | null): void {
     checkinsFile(dir),
     code != null && LANGUAGE_RE.test(code) ? { language: code } : {}
   );
+}
+
+/** The language the server knows the user by ("es", "pt-BR"), or null when it has none. */
+export function phoneReplyLanguage(dir: string): string | null {
+  const code = readJson<{ language?: unknown }>(
+    replyLanguageFile(dir),
+    {}
+  ).language;
+  return typeof code === "string" && LANGUAGE_RE.test(code) ? code : null;
+}
+
+/** The server's user language, or none (null clears it); true when it changed. */
+export function writePhoneReplyLanguage(
+  dir: string,
+  code: string | null
+): boolean {
+  if (code != null && !LANGUAGE_RE.test(code)) return false;
+  if (phoneReplyLanguage(dir) === code) return false;
+  writeJson(replyLanguageFile(dir), code == null ? {} : { language: code });
+  return true;
 }
 
 /** Scripts that name one language; Latin, Cyrillic, Arabic, Han and Devanagari do not. */

@@ -2,7 +2,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { dueAgendaItems } from "@abacus-ai/agent/phone-nudges";
+import {
+  dueAgendaItems,
+  phoneReplyLanguage,
+} from "@abacus-ai/agent/phone-nudges";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PendingWait } from "#main/services/agent-tools/pending-waits";
@@ -146,6 +149,20 @@ describe("the check-in agenda", () => {
     nudges.polled({ tz: null });
     expect(readZone()).toEqual({});
     expect(logs).toContain("[phone] timezone Europe/Madrid");
+    nudges.stop();
+  });
+
+  it("keeps the server's user language, and forgets it when the server has none", () => {
+    const { nudges, logs } = agenda();
+    nudges.start();
+    nudges.polled({ lang: "es" });
+    expect(phoneReplyLanguage(dir)).toBe("es");
+    nudges.polled({ lang: "Spanish" });
+    nudges.polled({});
+    expect(phoneReplyLanguage(dir)).toBe("es");
+    nudges.polled({ lang: null });
+    expect(phoneReplyLanguage(dir)).toBeNull();
+    expect(logs).toContain("[phone] language es");
     nudges.stop();
   });
 

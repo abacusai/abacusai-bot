@@ -229,10 +229,10 @@ const Placeholder = ({
   label: string;
   onActivate(): void;
 }) => {
-  const control = useRef<HTMLButtonElement>(null);
+  const spacer = useRef<HTMLDivElement>(null);
   const away = useMessageScrollerScrollable().end;
   useEffect(() => {
-    const el = control.current;
+    const el = spacer.current;
     if (!away || el == null || typeof IntersectionObserver === "undefined")
       return;
     const observer = new IntersectionObserver(
@@ -253,11 +253,11 @@ const Placeholder = ({
   }, [onActivate, away]);
   return (
     <div
+      ref={spacer}
       style={{ minHeight: height }}
       className="flex shrink-0 items-center justify-center"
     >
       <Button
-        ref={control}
         variant="ghost"
         size="sm"
         className="self-center"

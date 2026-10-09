@@ -32,16 +32,17 @@ import { DeliveredMedia, type MediaCheck } from "./send-media-tool.js";
 import { isMediaId } from "./send-media.js";
 import { whenAborted } from "./subagent-abort.js";
 import { forwardChildToolEvents, traceChildEvent } from "./subagent-events.js";
+import {
+  closeOut,
+  extractText,
+  MAX_PROVIDER_RETRIES,
+  type SubagentSession,
+  TurnBudget,
+  type BudgetStep,
+} from "./subagent-run.js";
 
-const MAX_PROVIDER_RETRIES = 2;
-
-// Bounds, because a run holds a browser view. Wrap-up points come first: a run
-// told to report keeps its findings, a run cut off loses them. Each point says
-// how many turns remain: "close to your limit" reads as "out of budget" to a
-// small model, which then reports early (or, on a resumed run, at once).
-export const MAX_TURNS = 100;
-export const WRAP_UP_TURN = 60;
-export const FINAL_WARNING_TURN = 85;
+// Bounds, because a run holds a browser view; the turn budget is the shared
+// one (subagent-run.ts).
 /** Tool output read so far; past this the run is told to conclude. */
 export const WRAP_UP_RESULT_CHARS = 350_000;
 /**
@@ -57,11 +58,6 @@ const TIMEOUT_MS = 12 * 60 * 1000;
  */
 export const EXECUTE_STREAK_LIMIT = 6;
 
-export const wrapUpMessage = (turnsLeft: number): string =>
-  `You have about ${turnsLeft} turns left. Stop exploring now and write your final report ` +
-  "from what you have already seen: the concrete values, and plainly what you could not finish.";
-export const finalWarningMessage = (turnsLeft: number): string =>
-  `${turnsLeft} turns left. Write the final report in your next message; do not start anything new.`;
 const EXECUTE_STREAK_MESSAGE =
   "You are scraping the page by hand, one browser_execute at a time. Use the page tools " +
   'instead: browser_snapshot extract with a selector for rows of data, snapshot find:"..." ' +
@@ -72,9 +68,6 @@ export const loginNote = (itemId: string): string =>
   `Saved login: vault item ${itemId}. When you reach the sign-in form on its site, call browser_vault_fill ` +
   `with item_id "${itemId}" and field "login": the browser finds the username and password fields and types ` +
   "them. Never type them any other way.";
-/** A resumed run gets its budget back; said outright, or the old wrap-up stands. */
-export const budgetNote = (turns: number): string =>
-  `(Budget: ${turns} tool turns for this run; you will be warned as it runs low.)`;
 const REPEATING_MESSAGE =
   "You have loaded the same site many times in a row without acting on a page. More of the " +
   "same search will not change the answer. If a sign-in wall or missing page is in the way, " +
@@ -336,21 +329,6 @@ function takePausedRun(context: BrowserTaskContext): PausedRun | null {
     return null;
   }
   return paused;
-}
-
-function extractText(content: unknown): string {
-  if (typeof content === "string") return content;
-  if (!Array.isArray(content)) return "";
-
-  return content
-    .filter(
-      (part): part is { type: string; text: string } =>
-        part != null &&
-        typeof part === "object" &&
-        (part as { type?: unknown }).type === "text"
-    )
-    .map((part) => part.text)
-    .join("");
 }
 
 /** Counts uninterrupted navigations to one host; pure, for tests. */
@@ -661,13 +639,12 @@ export async function runBrowserTask(
   } = options;
   const forwardTools = forwardChildToolEvents("web", emit);
   const trace = new RunTrace(task);
-  let turns = 0;
+  // A resumed run gets its budget back: a fresh one per call.
+  const budget = new TurnBudget();
   let lastText = "";
   let retries = 0;
   let providerError = "";
   let readChars = 0;
-  let wrappedUp = false;
-  let finalWarned = false;
   let warnedRepeating = false;
   const repeats = new RepeatTracker();
   const executes = new ExecuteStreakTracker();
@@ -684,11 +661,7 @@ export async function runBrowserTask(
   let keepAlive = false;
 
   try {
-    let session: PausedRun["session"] & {
-      subscribe: (listener: (event: AgentSessionEvent) => void) => () => void;
-      steer: (text: string) => Promise<void>;
-      clearQueue: () => void;
-    };
+    let session: PausedRun["session"] & SubagentSession;
     let gate: BatchGate;
 
     if (resumed != null) {
@@ -742,8 +715,11 @@ export async function runBrowserTask(
 
     const steer = (kind: string, text: string): void => {
       steers.push(kind);
-      trace.write({ type: "nudge", reason: kind, turns });
+      trace.write({ type: "nudge", reason: kind, turns: budget.turns });
       void session.steer(text).catch(() => undefined);
+    };
+    const steerBudget = (step: BudgetStep | null): void => {
+      if (step?.kind === "steer") steer(step.reason, step.text);
     };
     midTask = context.midTask?.open((text) => session.steer(text)) ?? null;
 
@@ -824,13 +800,10 @@ export async function runBrowserTask(
         // them.
         if (forwardTools(event)) {
           if (
-            !wrappedUp &&
             event.type === "tool_execution_end" &&
             readChars >= WRAP_UP_RESULT_CHARS
-          ) {
-            wrappedUp = true;
-            steer("wrap-up", wrapUpMessage(MAX_TURNS - turns));
-          }
+          )
+            steerBudget(budget.wrapUp());
 
           return;
         }
@@ -864,18 +837,10 @@ export async function runBrowserTask(
 
         // `turn_end` is one model call, which is what the ceiling counts.
         if (event.type === "turn_end") {
-          turns += 1;
+          const step = budget.endTurn();
+          steerBudget(step);
 
-          if (!wrappedUp && turns >= WRAP_UP_TURN) {
-            wrappedUp = true;
-            steer("wrap-up", wrapUpMessage(MAX_TURNS - turns));
-          }
-          if (!finalWarned && turns >= FINAL_WARNING_TURN) {
-            finalWarned = true;
-            steer("final", finalWarningMessage(MAX_TURNS - turns));
-          }
-
-          if (turns >= MAX_TURNS) {
+          if (step.kind === "exhausted") {
             outcome.stoppedBy = "turn-limit";
             unsubscribe();
             finish();
@@ -924,12 +889,12 @@ export async function runBrowserTask(
             "from where you stopped and finish the task. Do not start over.\n\n" +
             (resumeNote.length > 0 ? `${resumeNote}\n\n` : "") +
             login +
-            `Your turn budget has been reset: any earlier note that you were near your limit no longer applies. ${budgetNote(MAX_TURNS)}`
+            `Your turn budget has been reset: any earlier note that you were near your limit no longer applies. ${budget.note()}`
           : resume
-            ? `${task}\n\n(There was no earlier browser run to continue, so this starts fresh.)\n\n${login}${budgetNote(MAX_TURNS)}`
+            ? `${task}\n\n(There was no earlier browser run to continue, so this starts fresh.)\n\n${login}${budget.note()}`
             : startUrl != null && startUrl.trim().length > 0
-              ? `Start at ${startUrl.trim()}\n\n${task}\n\n${login}${budgetNote(MAX_TURNS)}`
-              : `${task}\n\n${login}${budgetNote(MAX_TURNS)}`;
+              ? `Start at ${startUrl.trim()}\n\n${task}\n\n${login}${budget.note()}`
+              : `${task}\n\n${login}${budget.note()}`;
 
       let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
       const timeout = new Promise<void>((resolve) => {
@@ -979,6 +944,19 @@ export async function runBrowserTask(
             );
           }
         }
+
+        // Out of budget: one tools-off turn for the report, rather than
+        // handing back whatever sentence the run was cut off in.
+        if (
+          outcome.stoppedBy === "turn-limit" ||
+          outcome.stoppedBy === "timeout"
+        ) {
+          const report = await closeOut(session, signal);
+          if (report.trim().length > 0) {
+            lastText = report;
+            steers.push("closing");
+          }
+        }
       } finally {
         if (timeoutTimer != null) clearTimeout(timeoutTimer);
         abort.dispose();
@@ -1004,7 +982,7 @@ export async function runBrowserTask(
     trace.write({
       type: "outcome",
       stoppedBy: outcome.stoppedBy,
-      turns,
+      turns: budget.turns,
       readChars,
       executeCalls: executes.total,
       steers,
@@ -1012,7 +990,7 @@ export async function runBrowserTask(
       providerError,
     });
     const tally = {
-      turns,
+      turns: budget.turns,
       executeCalls: executes.total,
       steers,
       ...(midTask != null && midTask.consumedIds().length > 0
@@ -1028,7 +1006,7 @@ export async function runBrowserTask(
       return {
         // The cause goes to the log; the caller gets no raw error text.
         text:
-          turns === 0
+          budget.turns === 0
             ? "The browser task failed before the sub-agent could start working."
             : "The browser task failed partway through, before the sub-agent could report.",
         ...tally,
@@ -1086,7 +1064,7 @@ export async function runBrowserTask(
 
     return {
       text: "The browser task failed unexpectedly before it could report.",
-      turns,
+      turns: budget.turns,
       executeCalls: 0,
       steers: [],
       stoppedBy: "error",

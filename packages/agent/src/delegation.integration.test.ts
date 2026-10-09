@@ -176,6 +176,46 @@ describe("a delegated run that will not stop", () => {
   }, 120_000);
 });
 
+describe("a delegated run that runs out of turns", () => {
+  // A model that explores forever, until its tools are taken away.
+  const explorer = (call: { tools: string[] }) =>
+    call.tools.length === 0
+      ? { say: "CLOSING REPORT: found the engine in workflow-execute.ts" }
+      : { say: "still looking", call: { name: "ls", args: {} } };
+
+  it("is warned twice before the cap, with the turns it has left", async () => {
+    provider.script(explorer);
+
+    await runDelegatedTask(
+      await context(workspace()),
+      "explore",
+      () => undefined
+    );
+
+    const asked = provider.calls.at(-1)?.userText.join("\n") ?? "";
+    expect(asked).toMatch(/100 tool turns/);
+    expect(asked).toMatch(/about 40 turns left/);
+    expect(asked).toMatch(/15 turns left/);
+  }, 120_000);
+
+  it("ends with a tools-off closing report instead of a half answer", async () => {
+    provider.script(explorer);
+
+    const result = await runDelegatedTask(
+      await context(workspace()),
+      "explore",
+      () => undefined
+    );
+
+    // The closing call offers no tools, so the model can only write.
+    expect(provider.calls.at(-1)?.tools).toEqual([]);
+    expect(result.stoppedBy).toBe("turn-limit");
+    expect(result.text).toContain("CLOSING REPORT");
+    expect(result.text).toMatch(/did not finish/i);
+    expect(result.text).toContain("incomplete");
+  }, 120_000);
+});
+
 describe("a delegated run the user stops", () => {
   it("ends promptly on abort instead of running on", async () => {
     // A model that would loop forever; only the abort ends it. The tool's

@@ -152,6 +152,27 @@ describe("replyLanguageMismatch", () => {
       ])
     ).toBeNull();
   });
+
+  it("does not judge the app's tagged notes as the user's words", () => {
+    const japanese =
+      "こんにちは、太郎さん！今日の予定をお知らせします。午前十時に会議があります。";
+    expect(
+      replyLanguageMismatch([
+        user(
+          "[linked] The user just connected WhatsApp.\n\n[first brief] This is the user's first time here: open with a short brief."
+        ),
+        assistant(japanese),
+      ])
+    ).toBeNull();
+    expect(
+      replyLanguageMismatch([
+        user(
+          "[check-ins sent] Since the user's last message the app texted them: a reminder.\n\n今日の予定は？"
+        ),
+        assistant(japanese),
+      ])
+    ).toBeNull();
+  });
 });
 
 describe("a short question", () => {
