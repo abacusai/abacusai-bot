@@ -1551,7 +1551,7 @@
       "unread_other": "{{count}} new results",
       "notifyDone": "A new result is in.",
       "notifyFailed": "This routine's last run did not finish.",
-      "planRequired": "Der kostenlose Plan enthält eine Routine, die von selbst läuft. Mit einem Upgrade sind mehr möglich.",
+      "planRequired": "Routinen sind mit einem kostenpflichtigen Tarif verfügbar.",
       "upgrade": "Upgrade",
       "status": {
         "done": "Done",
@@ -1623,6 +1623,10 @@
       "reads": "Einer der Kontozugriffe kann nicht verwendet werden.",
       "text": "Gib der Routine einen Namen und eine Anweisung.",
       "other": "Die Routine konnte so nicht gespeichert werden. Prüfe ihre Einstellungen und versuche es erneut."
+    },
+    "upgrade": {
+      "title": "Routinen freischalten",
+      "description": "Mit einem Upgrade kannst du Aufgaben planen und deine Arbeit automatisieren."
     }
   },
   "sessions": {
@@ -4136,6 +4140,10 @@
       "doneBody": "Dein Bot ist auf WhatsApp. Schreib ihm jederzeit.",
       "useDifferentNumber": "Andere Nummer verwenden"
     },
-    "signOutDetail": "This ends your website session and clears this browser's bot data."
+    "signOutDetail": "This ends your website session and clears this browser's bot data.",
+    "routines": {
+      "download": "Desktop-App herunterladen",
+      "desktopAlternative": "Nutze AbacusAI Bot auf deinem Computer."
+    }
   }
 }

@@ -24,6 +24,40 @@ beforeEach(() => {
 });
 
 describe("fetchAbacusAccount", () => {
+  it("keeps the last known free tier during a transient account failure", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ subscription_tier: "free" }), {
+        status: 200,
+      })
+    );
+    await expect(fetchAbacusAccount(true)).resolves.toMatchObject({
+      subscription_tier: "free",
+    });
+    fetchMock.mockRejectedValueOnce(new Error("ETIMEDOUT"));
+    await expect(fetchAbacusAccount(true)).resolves.toMatchObject({
+      subscription_tier: "free",
+    });
+  });
+
+  it("rechecks the tier after credential adoption clears the previous account", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ subscription_tier: "free" }), {
+        status: 200,
+      })
+    );
+    await fetchAbacusAccount();
+    clearAbacusCache();
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ subscription_tier: "pro" }), {
+        status: 200,
+      })
+    );
+    await expect(fetchAbacusAccount()).resolves.toMatchObject({
+      subscription_tier: "pro",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("recognizes a valid session when the optional account endpoint is absent", async () => {
     fetchMock
       .mockResolvedValueOnce(new Response(null, { status: 404 }))

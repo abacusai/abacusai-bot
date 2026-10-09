@@ -1551,7 +1551,7 @@
       "unread_other": "{{count}} new results",
       "notifyDone": "A new result is in.",
       "notifyFailed": "This routine's last run did not finish.",
-      "planRequired": "L'offre gratuite inclut une routine qui s'exécute toute seule. Passez à une offre supérieure pour en avoir davantage.",
+      "planRequired": "Les routines sont disponibles avec une offre payante.",
       "upgrade": "Upgrade",
       "status": {
         "done": "Done",
@@ -1623,6 +1623,10 @@
       "reads": "L'un des accès au compte ne peut pas être utilisé.",
       "text": "Donnez à la routine un nom et une instruction.",
       "other": "La routine n'a pas pu être enregistrée ainsi. Vérifiez ses réglages et réessayez."
+    },
+    "upgrade": {
+      "title": "Débloquer les routines",
+      "description": "Passez à une offre supérieure pour planifier des tâches et automatiser votre travail."
     }
   },
   "sessions": {
@@ -4136,6 +4140,10 @@
       "doneBody": "Votre bot est sur WhatsApp. Écrivez-lui quand vous voulez.",
       "useDifferentNumber": "Utiliser un autre numéro"
     },
-    "signOutDetail": "This ends your website session and clears this browser's bot data."
+    "signOutDetail": "This ends your website session and clears this browser's bot data.",
+    "routines": {
+      "download": "Télécharger l’app de bureau",
+      "desktopAlternative": "Utilisez AbacusAI Bot sur votre ordinateur."
+    }
   }
 }

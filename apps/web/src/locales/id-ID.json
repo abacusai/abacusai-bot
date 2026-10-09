@@ -1551,7 +1551,7 @@
       "unread_other": "{{count}} new results",
       "notifyDone": "A new result is in.",
       "notifyFailed": "This routine's last run did not finish.",
-      "planRequired": "Paket gratis mencakup satu rutinitas yang berjalan sendiri. Tingkatkan paket untuk mendapatkan lebih banyak.",
+      "planRequired": "Rutinitas tersedia dengan paket berbayar.",
       "upgrade": "Upgrade",
       "status": {
         "done": "Done",
@@ -1623,6 +1623,10 @@
       "reads": "Salah satu akses akun tidak bisa dipakai.",
       "text": "Beri rutinitas nama dan instruksi.",
       "other": "Rutinitas tidak bisa disimpan seperti ini. Periksa pengaturannya dan coba lagi."
+    },
+    "upgrade": {
+      "title": "Buka rutinitas",
+      "description": "Upgrade untuk menjadwalkan tugas dan mengotomatiskan pekerjaan Anda."
     }
   },
   "sessions": {
@@ -4136,6 +4140,10 @@
       "doneBody": "Bot Anda ada di WhatsApp. Kirim pesan kapan saja.",
       "useDifferentNumber": "Gunakan nomor lain"
     },
-    "signOutDetail": "This ends your website session and clears this browser's bot data."
+    "signOutDetail": "This ends your website session and clears this browser's bot data.",
+    "routines": {
+      "download": "Unduh aplikasi desktop",
+      "desktopAlternative": "Gunakan AbacusAI Bot di komputer Anda."
+    }
   }
 }

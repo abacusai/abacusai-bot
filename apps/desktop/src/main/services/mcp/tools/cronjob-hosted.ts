@@ -172,6 +172,13 @@ export const hostedRefusalNote = (
     action === "create" ? "Nothing was created" : "Nothing was changed";
   switch (refusal.code) {
     case "plan_limit": {
+      if (count(details.limit) === 0)
+        return [
+          `[${nothing.toLowerCase()}: paid plan required] Routines require a paid plan.`,
+          "Tell the user once, in their language, and offer to upgrade:",
+          upgradeLine(details),
+          "Do not repeat it later in this conversation.",
+        ].join("\n");
       // The free plan's limits. Only "one routine, already used" is the
       // upgrade's moment; a kind or an interval is how the free plan works.
       const kind = text(details.kind);

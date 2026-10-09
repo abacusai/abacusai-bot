@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -16,6 +15,7 @@ import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
 
 import { useConnectorThreads } from "./attention";
+import { RoutineCreateAction } from "./create-action";
 import { stats, routineState, scheduleLabel, useRoutinesData } from "./data";
 import { useHostedOff, useHostedRefresh } from "./hosted-sync";
 import { routineOwns } from "./notify";
@@ -74,12 +74,7 @@ export const RoutinesSidebar = () => {
   return (
     <NavList.Root label={t("routines.sidebar.label")}>
       <NavList.Header title={t("routines.sidebar.label")}>
-        <NavList.Action
-          label={t("routines.sidebar.new")}
-          render={<AppLink to="/routines/new" transition="none" />}
-        >
-          <Plus />
-        </NavList.Action>
+        <RoutineCreateAction iconOnly />
       </NavList.Header>
       <Input
         aria-label={t("phase5.searchRoutines")}
