@@ -35,6 +35,9 @@ it.each(["folder", "file"] as const)(
       await screen.findByText(enUS.web.files.skillImportUnavailable)
     ).not.toBeNull();
     expect(
+      screen.getByRole("dialog", { name: enUS.phase5.skillImport[kind] })
+    ).not.toBeNull();
+    expect(
       screen
         .getByRole("button", { name: enUS.web.files.download })
         .getAttribute("href")

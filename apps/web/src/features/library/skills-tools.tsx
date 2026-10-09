@@ -58,6 +58,7 @@ export const BrowserSkillImport = () => {
           <PopoverContent
             className="max-w-[calc(100vw-2rem)] space-y-3"
             align="start"
+            aria-label={t(`phase5.skillImport.${kind}`)}
           >
             <p className="text-muted-foreground text-sm">
               {t("web.files.skillImportUnavailable")}
