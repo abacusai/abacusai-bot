@@ -664,6 +664,7 @@ it("projects persisted hosted run provenance without changing personal labels", 
   expect(
     service.holdUnattended(hosted.id, {
       sources: [],
+      watchUrl: null,
       connectorReads: {},
       files: false,
     })
