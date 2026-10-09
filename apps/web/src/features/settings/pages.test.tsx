@@ -75,6 +75,14 @@ it.each([
     );
     if (label) expect(plan.getByRole("button", { name: label })).not.toBeNull();
     else expect(plan.queryByRole("button")).toBeNull();
+    const credits = within(
+      document.querySelector<HTMLElement>('[data-setting-id="credits"]')!
+    );
+    if (label === "Manage plan")
+      expect(
+        credits.getByRole("button", { name: enUS.phase5.topUp })
+      ).not.toBeNull();
+    else expect(credits.queryByRole("button")).toBeNull();
   }
 );
 it("R5-T27 rejected install exposes Try again while downloaded and releases the pressed state", async () => {

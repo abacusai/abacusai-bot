@@ -28,6 +28,7 @@ export interface CreditActions {
   openExternal(url: string): Promise<void>;
   /** The account's own upgrade page, or the plan page without one. */
   openUpgrade(): Promise<void>;
+  canTopUpCredits?(): Promise<boolean>;
   configuredFreeSources?(): Promise<Record<string, boolean>>;
   connectFreeSource?(source: FreePoolProvider, key?: string): Promise<boolean>;
   markCreditsExhausted?(): Promise<void>;
@@ -74,8 +75,15 @@ export const CreditsCard = ({
   const [key, setKey] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [canTopUp, setCanTopUp] = useState(false);
   useEffect(() => {
     let live = true;
+    void host
+      .canTopUpCredits?.()
+      .then((value) => {
+        if (live) setCanTopUp(value);
+      })
+      .catch(() => {});
     void host
       .configuredFreeSources?.()
       .then((sources) => {
@@ -124,7 +132,9 @@ export const CreditsCard = ({
             {note ??
               t(
                 paying
-                  ? "creditsCard.paidBody"
+                  ? canTopUp
+                    ? "creditsCard.paidBody"
+                    : "workspace.premiumUpgrade.switchNote"
                   : missing.length
                     ? "workspace.premiumUpgrade.connectNote"
                     : "workspace.premiumUpgrade.switchNote"
@@ -136,7 +146,7 @@ export const CreditsCard = ({
                 {t("creditsCard.cta")}
               </Button>
             )}
-            {paying ? (
+            {paying && canTopUp ? (
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <p>{t("creditsCard.topUpCta")}</p>
@@ -155,7 +165,7 @@ export const CreditsCard = ({
                   {t("creditsCard.topUpCta")}
                 </Button>
               </div>
-            ) : (
+            ) : !paying ? (
               missing.map((source, index) => (
                 <div key={source}>
                   {index > 0 && <Separator className="mb-3" />}
@@ -191,7 +201,7 @@ export const CreditsCard = ({
                   </div>
                 </div>
               ))
-            )}
+            ) : null}
             {alternatives && (
               <>
                 <Separator />

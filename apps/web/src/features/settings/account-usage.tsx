@@ -192,17 +192,19 @@ export const AccountPage = () => {
               : undefined
           }
         >
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() =>
-              void platformSystem(transport.client).openExternal({
-                url: ABACUS_BUY_CREDITS_URL,
-              })
-            }
-          >
-            {t("phase5.topUp")}
-          </Button>
+          {billing === "manage" && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() =>
+                void platformSystem(transport.client).openExternal({
+                  url: ABACUS_BUY_CREDITS_URL,
+                })
+              }
+            >
+              {t("phase5.topUp")}
+            </Button>
+          )}
         </SettingRow>
         {vaultUrl && (
           <SettingRow

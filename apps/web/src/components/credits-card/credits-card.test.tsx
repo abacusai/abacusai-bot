@@ -65,14 +65,39 @@ it("opens the account upgrade offer for a basic tier top-up", async () => {
   const openExternal = vi.fn(async () => {});
   const openUpgrade = vi.fn(async () => {});
   const rendered = await renderWithDb(
-    <CreditsCard tier="basic" host={{ openExternal, openUpgrade }} />
+    <CreditsCard
+      tier="basic"
+      host={{ openExternal, openUpgrade, canTopUpCredits: async () => true }}
+    />
   );
   cleanup = rendered.cleanup;
   expect(document.querySelector("[data-source]")).toBeNull();
-  fireEvent.click(screen.getByRole("button"));
+  fireEvent.click(await screen.findByRole("button"));
   expect(openUpgrade).toHaveBeenCalledOnce();
   expect(openExternal).not.toHaveBeenCalled();
 });
+
+it.each([false, undefined])(
+  "does not infer a paid top-up offer without billing eligibility (%s)",
+  async (eligible) => {
+    const rendered = await renderWithDb(
+      <CreditsCard
+        tier="paid"
+        host={{
+          openExternal: async () => {},
+          openUpgrade: async () => {},
+          ...(eligible === undefined
+            ? {}
+            : { canTopUpCredits: async () => eligible }),
+        }}
+      />
+    );
+    cleanup = rendered.cleanup;
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Top up" })).toBeNull()
+    );
+  }
+);
 
 it("offers upgrade for an exhausted free account while retaining free sources", async () => {
   const openUpgrade = vi.fn(async () => {});
