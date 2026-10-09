@@ -89,10 +89,10 @@ export const CHOREOGRAPHY: Record<OnboardingStepId, readonly Keyframe[]> = {
     frame(0, 0, 0.32, "focused"),
   ],
   "first-bot": [
-    frame(-52, 4, 1.08, "happy"),
-    frame(-142, -32, 0.4, "wink"),
-    frame(142, -18, 0.4, "love"),
-    frame(58, 4, 1, "surprised"),
+    frame(-52, 8, 1.08, "excited"),
+    frame(-55, -65, 0.65, "happy"),
+    frame(130, -56, 0.42, "love"),
+    frame(58, 8, 1, "excited"),
   ],
   done: [
     frame(-52, 8, 1.08, "excited"),
@@ -125,7 +125,7 @@ export const stageFor = (
   height: step === "models" || step === "connectors" ? 56 : 112,
   slots: IDS.map((id, index) => ({
     id,
-    visible: step !== "done" || id !== "parade-bunny",
+    visible: (step !== "done" && step !== "first-bot") || id !== "parade-bunny",
     main: CAST[step].includes(id),
     ...CHOREOGRAPHY[step][index]!,
     x: CHOREOGRAPHY[step][index]!.x * 0.85,

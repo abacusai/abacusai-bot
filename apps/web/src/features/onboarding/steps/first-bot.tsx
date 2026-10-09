@@ -1,8 +1,4 @@
-/**
- * `first-bot` (canvas OnboardFirstBot): the bot row (avatar 40, name, the
- * check-in summary, Edit), "Say hello" / "Take the tour" and the quiet
- * "Start from scratch". The hatching avatar itself lives on the stage.
- */
+/** Final setup opens the chosen product destination when completion succeeds. */
 import type { BotRow } from "@abacus-ai/contract/contract";
 import type { Ref } from "react";
 
@@ -54,7 +50,9 @@ export const FirstBotStep = ({
           <div className="mt-4">
             <StepButton
               disabled={busy}
-              onClick={() => void props.navigate("done")}
+              onClick={() =>
+                void perform(() => props.complete({ to: "new-bot" }))
+              }
             >
               {t("onboarding.connectorsContinue")}
             </StepButton>
@@ -104,7 +102,7 @@ export const FirstBotStep = ({
               onClick={() =>
                 void perform(async () => {
                   await funnel("first_bot_kept");
-                  await props.navigate("done");
+                  await props.complete({ to: "bot", botId: bot.id });
                 })
               }
             >
@@ -131,7 +129,7 @@ export const FirstBotStep = ({
                   if (first.state !== "ready") return;
                   await discardFirstBot(db, first.result);
                   await funnel("first_bot_cancelled");
-                  await props.navigate("done");
+                  await props.complete({ to: "new-bot" });
                 })
               }
             >
@@ -140,6 +138,16 @@ export const FirstBotStep = ({
           </div>
         </>
       )}
+      <div className="mt-3">
+        <StepLink
+          disabled={busy}
+          onClick={() =>
+            void perform(() => props.complete({ to: "new-session" }))
+          }
+        >
+          {t("onboarding.pages.newSession")}
+        </StepLink>
+      </div>
     </>
   );
 };

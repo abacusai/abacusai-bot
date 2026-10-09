@@ -108,7 +108,7 @@ it("keeps companions visible while the cloud and Chief anchor completion", () =>
   >) {
     const stage = stageFor(step, bot, "ready");
     expect(stage.slots.filter((slot) => slot.visible)).toHaveLength(
-      step === "done" ? 3 : 4
+      step === "done" || step === "first-bot" ? 3 : 4
     );
     expect(stage.slots[0]?.main).toBe(true);
     expect(stage.slots[0]?.look).toEqual(defaultLook("AbacusAI Bot"));

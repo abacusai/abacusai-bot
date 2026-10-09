@@ -13,6 +13,27 @@ const facts: FlowFacts[] = [false, true].flatMap((signedIn) =>
   )
 );
 describe("R6-T4 step machine and R6-T5 resume", () => {
+  it("has six steps and resumes the retired done URL at final setup", () => {
+    expect(ONBOARDING_FLOW).toEqual([
+      "welcome",
+      "connect",
+      "connected",
+      "models",
+      "connectors",
+      "first-bot",
+    ]);
+    expect(resumeStep({ step: "done", flow: 2 })).toBe("first-bot");
+    expect(
+      guardStep(
+        "done",
+        { signedIn: true, payingTier: false, ownsBot: false },
+        { signIn: null, createdBotId: null }
+      )
+    ).toBe("first-bot");
+    expect(next("first-bot", { type: "next" }, facts[0]!, null)).toBe(
+      "complete"
+    );
+  });
   it.each(facts)("covers transition branches with %j", (f) => {
     expect(next("welcome", { type: "skip" }, f, null)).toBe("ignore");
     expect(next("welcome", { type: "sign-in", attempt: "a" }, f, "a")).toBe(
@@ -34,9 +55,7 @@ describe("R6-T4 step machine and R6-T5 resume", () => {
       f.signedIn ? "connected" : "welcome"
     );
     expect(next("models", { type: "next" }, f, null)).toBe("connectors");
-    expect(next("connectors", { type: "next" }, f, null)).toBe(
-      f.ownsBot ? "done" : "first-bot"
-    );
+    expect(next("connectors", { type: "next" }, f, null)).toBe("first-bot");
     expect(next("connectors", { type: "back" }, f, null)).toBe(
       f.payingTier ? "connected" : "models"
     );
@@ -59,7 +78,7 @@ describe("R6-T4 step machine and R6-T5 resume", () => {
     ).toBe("first-bot");
     expect(
       guardStep("first-bot", f, { signIn: null, createdBotId: null })
-    ).toBe("done");
+    ).toBe("first-bot");
   });
   it.each(ONBOARDING_FLOW)("resumes canonical %s only in flow 2", (step) => {
     expect(resumeStep({ step, flow: 2 })).toBe(

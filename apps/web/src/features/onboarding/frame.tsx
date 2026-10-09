@@ -85,7 +85,9 @@ export const OnboardingFrame = ({
   const db = useOptionalDb();
   useEffect(() => {
     if (previousStep.current !== step)
-      sound.play(step === "done" ? "celebrate" : "step");
+      sound.play(
+        step === "done" || step === "first-bot" ? "celebrate" : "step"
+      );
     previousStep.current = step;
   }, [step, sound]);
   const reduce = useMotionPreference() === "reduced";
