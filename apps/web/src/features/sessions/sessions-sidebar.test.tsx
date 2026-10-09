@@ -21,6 +21,37 @@ afterEach(async () => {
 const NOW = 1_800_000_000_000;
 
 describe("groupSessions", () => {
+  it("keeps personal sessions in a hosted-runs workspace while excluding recorded hosted runs, including pins", () => {
+    const seed = fixtureSessions(NOW)[0]!;
+    const personal = {
+      ...seed,
+      id: "personal",
+      workspaceId: "hosted-runs",
+      label: "Routine: my own notes",
+      routineId: null,
+      runTrigger: "user",
+    };
+    const run = {
+      ...seed,
+      id: "hosted-run",
+      workspaceId: "hosted-runs",
+      label: "Renamed run",
+      routineId: null,
+      runTrigger: "hosted",
+    };
+    const workspace = {
+      ...fixtureWorkspaces()[0]!,
+      id: "hosted-runs",
+      label: "hosted-runs",
+    };
+    const grouped = groupSessions(
+      [personal, run],
+      [workspace],
+      [run.id, personal.id]
+    );
+    expect(grouped.pinned.map((session) => session.id)).toEqual([personal.id]);
+    expect(grouped.groups).toEqual([]);
+  });
   it("drops bot chats, routine runs, routine editors and hidden workspaces; groups the rest", () => {
     const { pinned, groups } = groupSessions(
       fixtureSessions(NOW),
