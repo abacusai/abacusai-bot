@@ -2715,6 +2715,12 @@
       "text": "Teks lisensi {{name}}",
       "empty": "Tidak ada paket yang cocok.",
       "more": "Muat lebih banyak paket"
+    },
+    "deleteAllData": {
+      "title": "Delete all data",
+      "detail": "Remove all local app data and restart with a fresh setup.",
+      "confirmation": "This permanently deletes every local profile, API key, chat, routine, memory, installed skill, browser session, downloaded model, and files in the app’s default bot and session folders. This cannot be undone. Files outside the app data folder and your online Abacus.AI account are unchanged.",
+      "confirm": "Delete all data and restart"
     }
   },
   "onboardingFlow": {

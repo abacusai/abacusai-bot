@@ -40,6 +40,7 @@ export const createNodeAppOperations = (lease: HostLease): AppOperations => ({
   homeDir: homedir,
   botHome: abacusBotHome,
   restartApp: () => shutdown(75),
+  deleteAllData: refuse("system.deleteAllData"),
   reportFunnelStep: (step, detail, once) => {
     if (isFunnelStep(step))
       (once ? reportFunnelStepOnce : reportFunnelStep)(
