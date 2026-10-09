@@ -72,9 +72,6 @@ if (typeof window !== "undefined") {
   if (window.HTMLElement.prototype.getAnimations == null) {
     window.HTMLElement.prototype.getAnimations = () => [];
   }
-  if (window.Element.prototype.animate == null) {
-    window.Element.prototype.animate = () => ({ cancel() {} }) as Animation;
-  }
   if (document.getAnimations == null) {
     document.getAnimations = () => [];
   }
