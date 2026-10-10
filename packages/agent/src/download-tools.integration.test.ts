@@ -62,7 +62,7 @@ function fixture(arch: keyof typeof pins) {
     write(`${cache}/${file}`, "unrelated cached tool");
   write(
     "offline.mjs",
-    `import fs from 'node:fs'; globalThis.fetch = async () => { fs.appendFileSync(${JSON.stringify(path.join(home, "requests"))}, 'request\\n'); return new Response('Forbidden', {status:403, statusText:'Forbidden'}); };`
+    `import fs from 'node:fs'; globalThis.fetch = async () => { fs.appendFileSync(process.env.BUSYBOX_VENDOR_REQUEST_LOG, 'request\\n'); return new Response('Forbidden', {status:403, statusText:'Forbidden'}); };`
   );
   return {
     home,
@@ -83,7 +83,14 @@ function fixture(arch: keyof typeof pins) {
           "--platform=win32",
           `--arch=${arch}`,
         ],
-        { encoding: "utf8", timeout: 20_000 }
+        {
+          encoding: "utf8",
+          timeout: 20_000,
+          env: {
+            ...process.env,
+            BUSYBOX_VENDOR_REQUEST_LOG: path.join(home, "requests"),
+          },
+        }
       ),
   };
 }

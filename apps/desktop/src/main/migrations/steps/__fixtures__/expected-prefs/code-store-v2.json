@@ -40,6 +40,7 @@
       "pinned.botIds": "legacy",
       "pinned.sessionIds": "legacy",
       "recentFolders": "default",
+      "showLinkPreviews": "default",
       "sidebar.openSection": "legacy",
       "sidebar.pinned": "legacy",
       "sounds.enabled": "default",
@@ -107,6 +108,7 @@
         "sessionIds": ["s-1"]
       },
       "recentFolders": [],
+      "showLinkPreviews": true,
       "sidebar": {
         "openSection": "bots",
         "pinned": false

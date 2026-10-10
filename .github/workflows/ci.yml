@@ -13,6 +13,12 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      platforms:
+        description: Platforms to check
+        type: choice
+        options: [all, linux]
+        default: all
 
 permissions:
   contents: read
@@ -124,7 +130,7 @@ jobs:
       # reach the things that actually break there: cmd.exe quoting, whether
       # taskkill exists, how PATHEXT resolves an extensionless command.
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.platforms == 'linux' && '["ubuntu-latest"]' || '["ubuntu-latest","macos-latest","windows-latest"]') }}
     runs-on: ${{ matrix.os }}
     # Windows blocks like the other platforms. A job nobody has to look at is
     # a job nobody looks at.
@@ -291,7 +297,7 @@ jobs:
       # A failure on one platform should not hide a passing build on the others.
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.platforms == 'linux' && '["ubuntu-latest"]' || '["macos-latest","windows-latest","ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

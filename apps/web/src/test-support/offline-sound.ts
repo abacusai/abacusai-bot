@@ -54,6 +54,10 @@ export const renderSoundLevels = async (
     ],
     { stdio: ["ignore", "ignore", "pipe"] }
   );
+  // Chrome children may retain its pipes after the parent emits "exit".
+  const closed = new Promise<void>((resolve) =>
+    browserProcess.once("close", () => resolve())
+  );
   let socket: WebSocket | undefined;
   try {
     const url = await new Promise<string>((resolve, reject) => {
@@ -158,10 +162,14 @@ export const renderSoundLevels = async (
     return result;
   } finally {
     socket?.close();
-    const exited = once(browserProcess, "exit");
     browserProcess.kill();
-    await exited;
+    await closed;
     await bundle.close();
-    await rm(scratch, { recursive: true, force: true });
+    await rm(scratch, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 100,
+    });
   }
 };

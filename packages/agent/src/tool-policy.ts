@@ -297,6 +297,7 @@ export const UNATTENDED_EXCLUDED_TOOLS: Readonly<Record<string, string>> = {
   browser_interact: "types, clicks and submits",
   browser_execute: "runs code in the page, an outbound channel",
   browser_tabs: "the watch run reads one page",
+  browser_media: "media is handled by the runtime, never an unattended model",
   // Driven by the watch run's sub-agent, which the browser holds to the one
   // declared page; never the parent's to call.
   browser_navigate: "the watch run's sub-agent only (UNATTENDED_BROWSER_TOOLS)",

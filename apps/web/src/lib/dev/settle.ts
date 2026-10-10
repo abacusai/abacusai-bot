@@ -108,8 +108,15 @@ const collectionsSettled = (
   ).then(() => undefined);
 
 /** Wait for finite animations; freeze infinite ones at their start. */
-const settleAnimations = async (doc: Document): Promise<void> => {
-  for (let round = 0; round < 5; round += 1) {
+export const settleAnimations = async (
+  doc: Document = document,
+  frame: (callback: () => void) => void = (callback) =>
+    requestAnimationFrame(() => callback()),
+  fallbackMs: number = FRAME_FALLBACK_MS,
+  timeoutMs: number = 15_000
+): Promise<void> => {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
     const finite = doc
       .getAnimations()
       .filter(
@@ -119,9 +126,11 @@ const settleAnimations = async (doc: Document): Promise<void> => {
       (animation) => animation.playState === "running"
     );
     if (running.length === 0) break;
-    await Promise.all(
-      running.map((animation) => animation.finished.catch(() => undefined))
-    );
+    if (Date.now() >= deadline)
+      throw new Error("navigateAndSettle: finite animations did not settle");
+    // Chromium can leave `finished` pending after an offscreen animation
+    // reaches its end. Re-read active animations as their timelines change.
+    await oneFrame(frame, doc, fallbackMs);
   }
   for (const animation of doc.getAnimations()) {
     if (!isInfinite(animation) || isScrollDriven(animation, doc)) continue;
@@ -189,9 +198,11 @@ export const navigateAndSettle = async (
     }
   ).activeViewTransition;
   if (transition != null) await transition.finished.catch(() => undefined);
-  await settleAnimations(doc);
+  const fallbackMs = deps.frameFallbackMs ?? FRAME_FALLBACK_MS;
+  const timeoutMs = deps.timeoutMs ?? 15_000;
+  await settleAnimations(doc, frame, fallbackMs, timeoutMs);
   await doc.fonts?.ready;
   if (deps.collections != null) await collectionsSettled(deps.collections);
-  await nextFrames(frame, doc, 2, deps.frameFallbackMs ?? FRAME_FALLBACK_MS);
-  await settleAnimations(doc);
+  await nextFrames(frame, doc, 2, fallbackMs);
+  await settleAnimations(doc, frame, fallbackMs, timeoutMs);
 };

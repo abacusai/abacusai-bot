@@ -94,30 +94,29 @@ export const SessionStartPage = ({
     if (draft.stage === "draft" && draft.workspaceId === null && workspaceId)
       startDraftStore.setState((s) => ({ ...s, workspaceId }));
   }, [workspaceId, draft.workspaceId, draft.stage]);
-  const send = async (envelope?: SubmissionEnvelope) => {
-    try {
-      await startSession(
-        {
-          db,
-          client: transport.client,
-          handoff,
-          navigate: (id) =>
-            navigate({
-              to: "/sessions/$sessionId",
-              params: { sessionId: id },
-              transition: "nav-forward",
-            }),
-        },
-        envelope
-      );
-    } catch (e) {
-      setError(String(e));
-      throw e;
-    } finally {
-      inFlight.delete("submit");
-      setPending(false);
-    }
-  };
+  const send = (envelope?: SubmissionEnvelope) =>
+    startSession(
+      {
+        db,
+        client: transport.client,
+        handoff,
+        navigate: (id) =>
+          navigate({
+            to: "/sessions/$sessionId",
+            params: { sessionId: id },
+            transition: "nav-forward",
+          }),
+      },
+      envelope
+    )
+      .catch((e) => {
+        setError(String(e));
+        throw e;
+      })
+      .finally(() => {
+        inFlight.delete("submit");
+        setPending(false);
+      });
   const submit = async (envelope: SubmissionEnvelope) => {
     if (inFlight.has("submit")) return;
     inFlight.add("submit");

@@ -15,6 +15,16 @@ afterEach(async () => {
 it("the routed avatar follows actual reasoning/text streams and the send reaction", async () => {
   const relay = new FakeRelay({ threadId: "bot-test" });
   app = await renderApp("/bots/chief-of-staff", {
+    models: [
+      {
+        id: "abacus/route-llm",
+        label: "RouteLLM",
+        provider: "abacus",
+        tier: "default",
+        configured: true,
+        recommended: true,
+      },
+    ],
     ai: relay.ai,
     seed: {
       ...defaultSeed(),

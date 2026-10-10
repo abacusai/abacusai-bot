@@ -13,6 +13,7 @@ import { fixturePrefs } from "#renderer/data/fixture-db/rows";
 import {
   PhoneErrorScreen,
   PhoneWhatsAppApp,
+  DesktopWhatsAppApp,
   WhatsAppConnect,
   WhatsAppIntro,
 } from "#renderer/features/onboarding/whatsapp";
@@ -562,6 +563,70 @@ it("is only WhatsApp on a phone: connect with no Skip, then all set with the bot
     await screen.findByRole("heading", { name: enUS.web.whatsappBot.title })
   ).toBeDefined();
 });
+
+it("allows retrying WhatsApp connection after a failed request", async () => {
+  let fail = true;
+  const onLinked = vi.fn();
+  const callApps = vi.fn(async (service: string) => {
+    if (service === "getAbacusBotWhatsAppChat")
+      return { available: true, status: "unlinked", phone: null, number: null };
+    if (fail) throw new Error("Service unavailable");
+    return { status: "linked", deepLink: null, phone: "+1 415 555 0123" };
+  });
+  render(
+    withQueries(<WhatsAppConnect callApps={callApps} onLinked={onLinked} />)
+  );
+  fireEvent.change(screen.getByLabelText(enUS.web.whatsappBot.numberLabel), {
+    target: { value: "+1 415 555 0123" },
+  });
+  const connect = screen.getByRole("button", {
+    name: enUS.web.whatsappBot.connect,
+  });
+  await act(async () => connect.click());
+  expect((await screen.findByRole("alert")).textContent).toBe(
+    "Service unavailable"
+  );
+  expect((connect as HTMLButtonElement).disabled).toBe(false);
+  expect(onLinked).not.toHaveBeenCalled();
+  fail = false;
+  await act(async () => connect.click());
+  expect(onLinked).toHaveBeenCalledOnce();
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
+it.each([
+  ["phone", PhoneWhatsAppApp],
+  ["computer", DesktopWhatsAppApp],
+] as const)(
+  "keeps linked state and allows retrying after unlinking fails (%s)",
+  async (_device, App) => {
+    const callApps = vi.fn(async (service: string) => {
+      if (service === "getAbacusBotWhatsAppChat")
+        return {
+          available: true,
+          status: "linked",
+          phone: "+1 415 555 0123",
+          number: "+1 415 555 0123",
+        };
+      throw new Error("Service unavailable");
+    });
+    render(withQueries(<App callApps={callApps} />));
+    const change = await screen.findByRole("button", {
+      name: enUS.web.whatsappBot.useDifferentNumber,
+    });
+    await act(async () => change.click());
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Service unavailable"
+    );
+    expect((change as HTMLButtonElement).disabled).toBe(false);
+    expect(
+      screen.getByRole("heading", { name: enUS.web.whatsappBot.doneTitle })
+    ).toBeDefined();
+    expect(
+      screen.queryByLabelText(enUS.web.whatsappBot.numberLabel)
+    ).toBeNull();
+  }
+);
 
 it("a phone's passing failure stays on the phone: try again, switch account or sign out", async () => {
   const retry = vi.fn();

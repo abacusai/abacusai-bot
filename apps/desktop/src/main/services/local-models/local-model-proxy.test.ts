@@ -66,7 +66,8 @@ let defaultModel: string | null;
 const post = async (body: unknown, path = "/v1/chat/completions") => {
   const response = await fetch(`${proxy.baseUrl.replace(/\/v1$/, "")}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    // Each test closes its proxy; do not reuse a pooled socket from that fixture.
+    headers: { "content-type": "application/json", connection: "close" },
     body: JSON.stringify(body),
   });
   return {

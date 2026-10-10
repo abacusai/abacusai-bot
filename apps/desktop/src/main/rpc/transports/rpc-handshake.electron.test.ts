@@ -47,7 +47,7 @@ const bundle = async (options: {
   await build({
     input: options.input,
     platform: options.platform,
-    external: ["electron"],
+    external: ["electron", "@silvia-odwyer/photon-node"],
     transform: {
       define: { __ABACUS_PLATFORM__: '"electron"', "import.meta.env": "{}" },
     },
@@ -64,7 +64,17 @@ const bundle = async (options: {
       },
     },
     logLevel: "silent",
-    output: { file: options.file, format: options.format },
+    output: {
+      file: options.file,
+      format: options.format,
+      // Keep Photon's WASM beside its loader, as the shipping build does.
+      // The temporary bundle has no node_modules to resolve a bare import.
+      paths: {
+        "@silvia-odwyer/photon-node": createRequire(import.meta.url).resolve(
+          "@silvia-odwyer/photon-node"
+        ),
+      },
+    },
     write: true,
   });
 };

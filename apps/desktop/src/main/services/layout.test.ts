@@ -32,6 +32,7 @@ const GROUPS = [
   "debug-sync",
   "diagnostics",
   "device",
+  "links",
   // The models the app downloads and serves on this machine: the store, the
   // llama.cpp server, the endpoint in front of it, and what ties them together.
   "local-models",
@@ -121,6 +122,7 @@ const MAIN_ROOT_FILES = [
   "renderer-host.test.ts",
   "renderer-host.ts",
   "resources.ts",
+  "service-host.routines.test.ts",
   "service-host.ts",
   "spellcheck-dictionary.ts",
   "startup-theme.test.ts",

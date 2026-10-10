@@ -6,9 +6,9 @@ set -euo pipefail
 # Defaults are the recorded baseline (web-split-desktop-baseline.md): the
 # source commit's renderer, built against a fresh frozen-lockfile install of
 # the deps commit, whose pnpm-lock.yaml must hash to lock-sha256.
-source_commit=${1:-7926220a}
+source_commit=${1:-4f71c036}
 deps_commit=${2:-$source_commit}
-lock_sha=${3:-233e97a875f5f4a00a94b1de33b706fe28c3abbca8bcf14b4efe7f23b9729328}
+lock_sha=${3:-b43c9084a743b0d1ced0ba0b349a342bf694708fbcc19f27ba5a504a72fead73}
 repo=$(git rev-parse --show-toplevel)
 git_dir=$(git rev-parse --absolute-git-dir)
 baseline_dir=$(mktemp -d /tmp/web-split-baseline.XXXXXX)
@@ -16,6 +16,15 @@ deps_dir=$(mktemp -d /tmp/web-split-baseline-deps.XXXXXX)
 git -C "$repo" archive "$source_commit" | tar -x -C "$baseline_dir"
 git -C "$repo" archive "$deps_commit" | tar -x -C "$deps_dir"
 printf '%s  %s\n' "$lock_sha" "$deps_dir/pnpm-lock.yaml" | sha256sum -c -
+# Archives have no .git directory; installing repository hooks cannot work here.
+# Keep dependency lifecycle scripts enabled for the native build tools.
+node --input-type=module - "$deps_dir/package.json" <<'JS'
+import { readFileSync, writeFileSync } from 'node:fs';
+const path = process.argv[2];
+const manifest = JSON.parse(readFileSync(path, 'utf8'));
+delete manifest.scripts.prepare;
+writeFileSync(path, JSON.stringify(manifest, null, 2) + '\n');
+JS
 (cd "$deps_dir" && env -u NODE_ENV -u CI pnpm install --frozen-lockfile && pnpm --filter @abacus-ai/connectors build && env -u ABACUS_RELEASE -u ABACUS_BUILD_COMMIT GIT_DIR="$git_dir" GIT_WORK_TREE="$deps_dir" pnpm --filter @abacus-ai/agent build)
 ln -s "$deps_dir/node_modules" "$baseline_dir/node_modules"
 for workspace in apps/desktop apps/web apps/updater packages/agent packages/contract packages/connectors packages/config packages/test-support; do

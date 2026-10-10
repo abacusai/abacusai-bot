@@ -2,9 +2,8 @@ import type { ArtifactRow } from "@abacus-ai/contract/contract/rows";
 import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useSearch } from "@tanstack/react-router";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { Ellipsis } from "lucide-react";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "#renderer/components/empty-state";
@@ -43,10 +42,10 @@ import {
   openArtifact,
   artifactTarget,
   artifactListEntries,
-  type ArtifactListEntry,
 } from "./data";
 import { artifactStressRows } from "./gallery";
 import { ArtifactThumbnail } from "./thumbnail";
+import { useArtifactWindow } from "./use-artifact-window";
 const useArtifacts = (fixtureRows?: readonly ArtifactRow[]) => {
   const c = useCollections();
   const liveRows = useLiveQuery(c.artifacts).data ?? [];
@@ -74,48 +73,6 @@ type Search = {
   item?: string;
   view?: "grid" | "list";
   sort?: "newest" | "oldest" | "name";
-};
-// Keep the virtualizer's mutable instance outside React Compiler's cached render.
-const useArtifactWindow = (
-  entries: ArtifactListEntry[],
-  columns: number,
-  list: boolean,
-  viewport: RefObject<HTMLDivElement | null>,
-  selected?: string
-) => {
-  "use no memo";
-  // oxlint-disable-next-line incompatible-library -- This hook explicitly opts out of compiler caching.
-  const virtualizer = useVirtualizer({
-    count: Math.ceil(entries.length / columns),
-    getScrollElement: () => viewport.current,
-    estimateSize: () => (list ? 72 : 190),
-    overscan: 4,
-    initialRect: { width: 800, height: 800 },
-    getItemKey: (index) => {
-      const entry = entries[index * columns]!;
-      return "artifact" in entry ? entry.artifact.id : entry.day;
-    },
-  });
-  const virtualRows = virtualizer.getVirtualItems();
-  const firstRow = virtualRows[0];
-  const lastRow = virtualRows.at(-1);
-  const selectedIndex = selected
-    ? entries.findIndex(
-        (entry) => "artifact" in entry && entry.artifact.id === selected
-      )
-    : -1;
-  useEffect(() => {
-    if (selectedIndex >= 0)
-      virtualizer.scrollToIndex(Math.floor(selectedIndex / columns), {
-        align: "auto",
-      });
-  }, [selectedIndex, columns, virtualizer]);
-  return {
-    start: (firstRow?.index ?? 0) * columns,
-    end: ((lastRow?.index ?? -1) + 1) * columns,
-    before: firstRow?.start ?? 0,
-    after: virtualizer.getTotalSize() - (lastRow?.end ?? 0),
-  };
 };
 export const ArtifactsSidebar = () => {
   const { t } = useTranslation();
