@@ -146,6 +146,16 @@ it("runs held to the routine's reach and returns its final message", async () =>
     text: '{"deliver": true, "text": "4,800"}',
   });
   const sessionId = start.mock.calls[0]![0].sessionId;
+  expect(internals.agentSessionManagerService.get(sessionId)).toMatchObject({
+    routineId: null,
+    runTrigger: "hosted",
+  });
+  expect(internals.emitEvent).toHaveBeenCalledWith(
+    expect.objectContaining({
+      type: "local-cli-session-created",
+      session: expect.objectContaining({ runTrigger: "hosted" }),
+    })
+  );
   expect(
     internals.agentSessionManagerService.unattendedPolicy(sessionId)
   ).toEqual({

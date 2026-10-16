@@ -91,7 +91,10 @@ const toListItem = (record: SessionRecord): AgentSessionListItem => ({
   }),
   routineId: record.routineId ?? null,
   runOutcome: record.runOutcome ?? null,
-  runTrigger: record.runTrigger ?? null,
+  // Older hosted runs kept their unattended policy but no routine id.
+  runTrigger:
+    record.runTrigger ??
+    (record.routineId == null && record.unattended != null ? "hosted" : null),
   editorFor: record.editorFor ?? null,
   botOwned: record.botOwned === true || record.owner != null,
   owner: record.owner ?? null,
