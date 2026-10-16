@@ -5,6 +5,15 @@ vi.mock("../config/settings", () => ({
   credentialFor: (name: string) => (name === "ABACUS_API_KEY" ? apiKey() : ""),
 }));
 
+const cachedAccount = vi.fn(
+  (): { subscription_tier: string; upgrade_owner?: string | null } | null =>
+    null
+);
+vi.mock("./abacus", () => ({ cachedAbacusAccount: () => cachedAccount() }));
+
+const { appUpgradeUrl, fetchBillingPlan, upgradeLink } =
+  await import("./abacus-upgrade");
+
 const {
   buildConnectorsSnapshot,
   connectButtonLink,
@@ -383,6 +392,94 @@ describe("a one-tap connect link", () => {
 
     expect((await createConnectLink("slack"))?.url).toContain(
       "/chatllm/connect-connector?"
+    );
+  });
+});
+
+describe("the upgrade page", () => {
+  it("is the permanent page on the app host, by plan and surface", () => {
+    const url = new URL(upgradeLink("pro", "channel"));
+    expect(url.origin).toBe("https://apps.abacus.ai");
+    expect(url.pathname).toBe("/bot/link/upgrade");
+    expect(url.searchParams.get("plan")).toBe("pro");
+    expect(url.searchParams.get("src")).toBe("channel");
+  });
+
+  it("names the account's owner when the platform gave one", () => {
+    cachedAccount.mockReturnValue({
+      subscription_tier: "free",
+      upgrade_owner: "25f886b0.af7ad50ee3cb21be",
+    });
+    expect(new URL(upgradeLink("basic", "app")).searchParams.get("u")).toBe(
+      "25f886b0.af7ad50ee3cb21be"
+    );
+    cachedAccount.mockReturnValue({ subscription_tier: "free" });
+    expect(new URL(upgradeLink("basic", "app")).searchParams.has("u")).toBe(
+      false
+    );
+  });
+
+  it.each([
+    [null, "basic"],
+    [{ subscription_tier: "free" }, "basic"],
+    [{ subscription_tier: "basic" }, "pro"],
+  ])("the app's button for %o goes to %s, with no call", (account, plan) => {
+    cachedAccount.mockReturnValue(account);
+    expect(appUpgradeUrl()).toBe(upgradeLink(plan as "basic", "app"));
+    expect(calls).toEqual([]);
+  });
+
+  it("is none for a higher paid plan or when signed out", () => {
+    cachedAccount.mockReturnValue({ subscription_tier: "pro" });
+    expect(appUpgradeUrl()).toBeNull();
+    cachedAccount.mockReturnValue(null);
+    apiKey.mockReturnValue("");
+    expect(appUpgradeUrl()).toBeNull();
+  });
+});
+
+describe("the billing plan's upgrade links", () => {
+  const plan = (upgrades: { plan: string; url: string | null }[]) => ({
+    success: true as const,
+    result: { upgrades, upgradeInMobileApp: false },
+  });
+
+  it("keeps the server's links and gives the permanent page where it sent none", async () => {
+    answer(
+      "_getAbacusbotBillingPlan",
+      plan([
+        { plan: "basic", url: "https://abacus.ai/server-link" },
+        { plan: "pro", url: null },
+      ])
+    );
+
+    const billing = await fetchBillingPlan("phone");
+    expect(billing?.upgrades.map((upgrade) => upgrade.url)).toEqual([
+      "https://abacus.ai/server-link",
+      upgradeLink("pro", "phone"),
+    ]);
+    expect(calls).toEqual(["_getAbacusbotBillingPlan"]);
+  });
+
+  it("asks for no minted links", async () => {
+    answer("_getAbacusbotBillingPlan", plan([]));
+    const fetch = vi.mocked(globalThis.fetch);
+
+    await fetchBillingPlan("billing_plan");
+    expect(String(fetch.mock.calls[0][0])).not.toContain("includeUpgradeLinks");
+  });
+
+  it("leaves an app-store plan without a link", async () => {
+    answer("_getAbacusbotBillingPlan", {
+      success: true,
+      result: {
+        upgrades: [{ plan: "basic", url: null }],
+        upgradeInMobileApp: true,
+      },
+    });
+
+    expect((await fetchBillingPlan("billing_plan"))?.upgrades[0].url).toBe(
+      null
     );
   });
 });

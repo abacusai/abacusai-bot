@@ -14,7 +14,7 @@ export const account = {
     .output(type<AbacusAccountInfo | null>()),
   /** The vault page, where the user sees and deletes saved logins and cards; null without a vault. */
   vaultUrl: query.input(NoInput).output(type<string | null>()),
-  /** The account's own one-time upgrade page; null without an upgrade offer (or signed out). */
+  /** The permanent upgrade page, built without a network call; null on a higher paid plan (or signed out). */
   upgradeUrl: query.input(NoInput).output(type<string | null>()),
   /** The optional local account (name and email). */
   state: query.input(NoInput).output(type<AccountState>()),

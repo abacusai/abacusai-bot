@@ -147,7 +147,7 @@ const upgradeLine = (details: Record<string, unknown>): string => {
   if (link != null)
     return `${[plan, price].filter((part) => part != null).join(", ")}: ${link}`;
   return billingPlanReady()
-    ? "Call billing_plan with upgrade: true for the plan, its price and their upgrade link."
+    ? "Call billing_plan for the plan, its price and their upgrade link."
     : "Upgrading to a paid plan allows more (do not quote a price).";
 };
 

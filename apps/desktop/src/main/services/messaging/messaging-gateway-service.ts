@@ -28,7 +28,7 @@ import {
 import type { HostPlatform } from "../../platform/capabilities";
 import { readDefaultAgentMode } from "../config/settings";
 import { cachedAbacusAccount, onFreePlan } from "../providers/abacus";
-import { fetchUpgradeUrl } from "../providers/abacus-upgrade";
+import { upgradeLink } from "../providers/abacus-upgrade";
 import { environmentNoticeService } from "../providers/environment-notice-service";
 import { AbacusChannelsConnector } from "./abacus-channels-connector";
 import {
@@ -364,11 +364,6 @@ type Route = {
   senderLabel: string;
   /** Rules preamble still owed to the first dispatched prompt, then cleared. */
   pendingIntro: string | null;
-  /**
-   * A failed turn's line still being worded (the upgrade link is fetched).
-   * The turn does not finish until it has gone, so nothing overtakes it.
-   */
-  failureReply: Promise<void> | null;
 };
 
 /** How long a login probe may take before the last known state is used. */
@@ -1056,7 +1051,6 @@ export class MessagingGatewayService {
           "intro" in handle && typeof handle.intro === "string"
             ? handle.intro
             : null,
-        failureReply: null,
       };
 
       if (existing != null) this.routesBySession.delete(existing.sessionId);
@@ -1153,7 +1147,6 @@ export class MessagingGatewayService {
       owner,
       senderLabel: "",
       pendingIntro: null,
-      failureReply: null,
     };
 
     if (existing != null) {
@@ -1319,9 +1312,8 @@ export class MessagingGatewayService {
       }
 
       // What the agent produced goes as it is; what the chat hears about the
-      // failure is chatReplyForFailure's. The route stays busy until the
-      // trailing idle, and that idle waits on the line, so a queued message
-      // cannot race a turn winding down.
+      // failure is chatReplyForFailure's, sent before the trailing idle frees
+      // the route, so a queued message cannot overtake it.
       console.log(
         `[messaging] ${route.platform}:${route.chatId} turn failed: ${raw}`
       );
@@ -1330,16 +1322,14 @@ export class MessagingGatewayService {
         code: event.error?.code,
         actions: event.error?.actions ?? event.error?.segmentData?.actions,
       };
-      route.failureReply = this.replyToFailure(route, failure)
-        .catch((error: unknown) => {
-          console.error(
-            `[messaging] ${route.platform}:${route.chatId} failure reply failed:`,
-            error
-          );
-        })
-        .finally(() => {
-          route.failureReply = null;
-        });
+      try {
+        this.replyToFailure(route, failure);
+      } catch (error) {
+        console.error(
+          `[messaging] ${route.platform}:${route.chatId} failure reply failed:`,
+          error
+        );
+      }
       return;
     }
 
@@ -1442,10 +1432,7 @@ export class MessagingGatewayService {
    * own chat gets the line; someone else's chat gets nothing, and the user's
    * own chat on that platform hears who went unanswered.
    */
-  private async replyToFailure(
-    route: Route,
-    failure: TurnFailure
-  ): Promise<void> {
+  private replyToFailure(route: Route, failure: TurnFailure): void {
     const own = this.selfChatOf(route.platform);
     const isOwn =
       own != null &&
@@ -1469,7 +1456,7 @@ export class MessagingGatewayService {
 
     const account = accountKind();
     const upgradeUrl = wantsUpgradeUrl(failure, account)
-      ? await upgradeUrlWithin(UPGRADE_URL_WAIT_MS)
+      ? upgradeLink("basic", "channel")
       : null;
     // The offer is throttled per chat it lands in, always the user's own.
     const ownChatKey = isOwn
@@ -1524,12 +1511,6 @@ export class MessagingGatewayService {
   /** Flush the buffered reply, free the route, start the next queued turn. */
   private finishTurn(route: Route): void {
     if (!route.busy) return;
-
-    // A failed turn's line is still on its way; the turn ends once it has gone.
-    if (route.failureReply != null) {
-      void route.failureReply.then(() => this.finishTurn(route));
-      return;
-    }
 
     this.flushReply(route);
     route.busy = false;
@@ -2667,19 +2648,6 @@ const senderLabel = (
   `${platformLabel(platformId)} message from ${
     message.userName ?? message.userId
   }`;
-
-/**
- * How long a failure line waits on the upgrade link: the turn cannot finish
- * until the line has gone, and the plans page is a fine answer too.
- */
-const UPGRADE_URL_WAIT_MS = 5_000;
-
-/** The account's upgrade link, or null when it fails or takes too long. */
-const upgradeUrlWithin = (ms: number): Promise<string | null> =>
-  Promise.race([
-    fetchUpgradeUrl().catch(() => null),
-    new Promise<null>((resolve) => setTimeout(() => resolve(null), ms).unref()),
-  ]);
 
 /** The signed-in plan as last read; unknown words the offer like a paid one. */
 const accountKind = (): AccountKind => {

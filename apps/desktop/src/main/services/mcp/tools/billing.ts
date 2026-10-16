@@ -93,7 +93,7 @@ export function appBillingResult(
     lines.push("", "What they can upgrade to:");
     for (const upgrade of billing.upgrades)
       lines.push(
-        `${upgrade.planName}: ${priceLine(upgrade)}${upgrade.url != null ? `, link: ${upgrade.url}` : billing.upgradeInMobileApp ? "" : " (call again with upgrade: true for the link)"}`,
+        `${upgrade.planName}: ${priceLine(upgrade)}${upgrade.url != null ? `, link: ${upgrade.url}` : ""}`,
         ...bullets(upgrade.features)
       );
   } else {
@@ -137,7 +137,7 @@ const PAID_PLAN_REFUSAL = /\bpaid plans?\b/i;
  */
 export const withUpgradeNudge = (message: string): string =>
   PAID_PLAN_REFUSAL.test(message) && billingPlanReady()
-    ? `${message}\n\n[needs a paid plan] Call billing_plan with upgrade: true, then tell the user once, in their language, that this needs a paid plan, with what the plan gives and their upgrade link. Do not retry this call.`
+    ? `${message}\n\n[needs a paid plan] Call billing_plan, then tell the user once, in their language, that this needs a paid plan, with what the plan gives and their upgrade link. Do not retry this call.`
     : message;
 
 /**
@@ -156,19 +156,10 @@ export const BILLING_TOOLS: ToolDefinition[] = [
       "The user's Abacus AI plan and credits, every plan with its price, any first-month discount and what it gives,",
       "and the links to upgrade or buy credits. Call it whenever they ask about their plan, credits or balance, prices,",
       "discounts or deals, upgrading, or what a plan includes, and when they run into a plan limit or run low on",
-      "credits. Pass upgrade: true whenever they might upgrade, so the answer carries their upgrade links.",
+      "credits.",
     ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        upgrade: {
-          type: "boolean",
-          description:
-            "True when they might upgrade: the answer then carries their upgrade links.",
-        },
-      },
-    },
-    run: async (host, args) =>
-      appBillingResult(host, await fetchBillingPlan(args.upgrade === true)),
+    inputSchema: { type: "object", properties: {} },
+    run: async (host) =>
+      appBillingResult(host, await fetchBillingPlan("billing_plan")),
   },
 ];

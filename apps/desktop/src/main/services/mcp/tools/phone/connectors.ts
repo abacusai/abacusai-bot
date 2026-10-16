@@ -177,7 +177,7 @@ export function phoneNotHereResult(
   const offer =
     billing == null || billing.upgrades.length === 0
       ? [
-          "The upgrade offer cannot be read here: call billing_plan with upgrade: true for its prices and link, and",
+          "The upgrade offer cannot be read here: call billing_plan for its prices and link, and",
           "use those.",
         ]
       : [
@@ -213,7 +213,7 @@ const planForUpgrade = async (): Promise<
   { free: false } | { free: true; billing: BillingPlan | null }
 > =>
   onFreePlan(await fetchAbacusAccount())
-    ? { free: true, billing: await fetchBillingPlan(true) }
+    ? { free: true, billing: await fetchBillingPlan("phone") }
     : { free: false };
 
 /** What the phone's model is told about a disconnect. */

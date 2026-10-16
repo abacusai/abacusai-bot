@@ -85,7 +85,7 @@ export const alwaysOnNote = (plan: "free" | "paid" | null): string => {
     "if it should keep running with their laptop closed, the Basic plan runs routines 24/7 " +
     `in Abacus AI Agent on the web (${ABACUS_AGENT_ROUTINES_URL}).` +
     (billingPlanReady()
-      ? " Call billing_plan with upgrade: true and give their upgrade link with it."
+      ? " Call billing_plan and give their upgrade link with it."
       : "") +
     never
   );

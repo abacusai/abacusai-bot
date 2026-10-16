@@ -313,7 +313,7 @@ describe("a service the phone does not connect", () => {
       const { text } = await call("connect_connector", { service });
       expect(link).not.toHaveBeenCalled();
       expect(watch).not.toHaveBeenCalled();
-      expect(billingPlan).toHaveBeenCalledWith(true);
+      expect(billingPlan).toHaveBeenCalledWith("phone");
       expect(text).toContain("no link was made for it: send none");
       expect(text).toContain("not part of the free plan on WhatsApp");
       expect(text).toContain("the ChatLLM\napp on their phone");
@@ -340,7 +340,7 @@ describe("a service the phone does not connect", () => {
     billingPlan.mockResolvedValue(null);
     const { text } = await call("connect_connector", { service: "slack" });
     expect(link).not.toHaveBeenCalled();
-    expect(text).toContain("call billing_plan with upgrade: true");
+    expect(text).toContain("call billing_plan for its prices and link");
   });
 
   it("keeps working once the user connected it elsewhere", async () => {

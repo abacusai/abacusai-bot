@@ -1569,6 +1569,8 @@ export interface AbacusAccountInfo {
   google_sign_in?: boolean;
   /** Where the user mostly works, from the platform's nightly read of their turns. */
   focus?: AbacusAccountFocus | null;
+  /** The account's owner token for the upgrade page's `u`: another signed-in account is told to switch. */
+  upgrade_owner?: string | null;
 }
 
 export const ABACUS_ACCOUNT_FOCI = [

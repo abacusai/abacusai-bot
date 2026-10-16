@@ -8,8 +8,8 @@ import { openPendingLink } from "./platform-system";
 
 /** How often the account is read again while checkout is open. */
 const PLAN_POLL_MS = 5_000;
-/** The one-time checkout link lives 30 minutes; the watch stops after it. */
-const PLAN_POLL_LIMIT_MS = 30 * 60 * 1000;
+/** How long a checkout is watched before the app stops reading the account. */
+const PLAN_WATCH_LIMIT_MS = 30 * 60 * 1000;
 
 export const payingAccount = (
   account: AbacusAccountInfo | null | undefined
@@ -37,10 +37,9 @@ let watch: {
 
 /**
  * Reads the account until it is on a paid plan: every few seconds and at once
- * when the window comes back, for as long as the checkout link lives. One
- * watch at a time, however many surfaces start it. On the plan: the catalog is
- * read afresh, every listener hears it, and the promise has the account; null
- * when the link ran out first.
+ * when the window comes back, for half an hour. One watch at a time, however
+ * many surfaces start it. On the plan: the catalog is read afresh, every
+ * listener hears it, and the promise has the account; null when it gave up.
  */
 export const watchForPlan = (
   client: AppClient
@@ -74,7 +73,7 @@ export const watchForPlan = (
       finish(fresh);
       return;
     }
-    if (Date.now() - started > PLAN_POLL_LIMIT_MS) finish(null);
+    if (Date.now() - started > PLAN_WATCH_LIMIT_MS) finish(null);
   }
   watch = { done, checkNow: () => void check() };
   timer = setInterval(() => void check(), PLAN_POLL_MS);
@@ -86,10 +85,9 @@ export const watchForPlan = (
 export const checkPlanNow = (): void => watch?.checkNow();
 
 /**
- * Upgrade: the account's own upgrade page, asked for at click time (its link
- * is one-time and short-lived), or the plan page when the account has none.
- * The account is then watched until the plan is active, so the app changes
- * the moment the payment lands.
+ * Upgrade: the permanent upgrade page (main builds it from the cached plan, no
+ * network wait), or the plan page for a higher paid plan. The account is then
+ * watched until the plan is active, so the app changes the moment it lands.
  */
 export const openUpgrade = async (client: AppClient): Promise<void> => {
   await openPendingLink(

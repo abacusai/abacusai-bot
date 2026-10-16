@@ -29,7 +29,7 @@ export function phoneBillingResult(
     lines.push("", "What they can upgrade to:");
     for (const upgrade of billing.upgrades)
       lines.push(
-        `${upgrade.planName}: ${priceLine(upgrade)}${upgrade.url != null ? `, link: ${upgrade.url}` : billing.upgradeInMobileApp ? "" : " (call again with upgrade: true for the link)"}`,
+        `${upgrade.planName}: ${priceLine(upgrade)}${upgrade.url != null ? `, link: ${upgrade.url}` : ""}`,
         ...bullets(upgrade.features)
       );
   } else {
@@ -65,20 +65,10 @@ export const PHONE_BILLING_TOOLS: PhoneToolDefinition[] = [
       "The user's plan and credits, every plan with its price and what it gives, and the links to upgrade or buy",
       "credits. Call it whenever they ask about their plan, credits or balance, prices, upgrading, or what a plan",
       "includes, and when they run into a plan limit or run low on credits. It answers at once; send them what it",
-      "says, with its links as given. Pass upgrade: true whenever they might upgrade (they ask about upgrading or",
-      "prices, or hit a limit or run low), so the answer carries their upgrade links.",
+      "says, with its links as given.",
     ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        upgrade: {
-          type: "boolean",
-          description:
-            "True when they might upgrade: the answer then carries their upgrade links.",
-        },
-      },
-    },
-    run: async (host, args) =>
-      phoneBillingResult(host, await fetchBillingPlan(args.upgrade === true)),
+    inputSchema: { type: "object", properties: {} },
+    run: async (host) =>
+      phoneBillingResult(host, await fetchBillingPlan("phone")),
   },
 ];

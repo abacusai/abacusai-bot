@@ -1,40 +1,38 @@
+import { abacusPlanTier } from "@abacus-ai/contract/models";
+
 import { credentialFor } from "../config/settings";
+import { cachedAbacusAccount } from "./abacus";
 import { abacusApiCall } from "./abacus-connector-service";
+import { abacusAppHost } from "./abacus-host";
+
+export type UpgradePlan = "basic" | "pro";
+
+/** Where an upgrade link was given, for the platform's attribution. */
+export type UpgradeSource = "app" | "channel" | "billing_plan" | "phone";
 
 /**
- * The account's own upgrade page: a one-time link the platform binds to the
- * signed-in user, live for 30 minutes (asking again while it is live returns
- * the same one). Null when the account has no upgrade offer, such as a paid
- * plan, when signed out, or when the call fails.
+ * The permanent upgrade page: it signs the user in and makes their checkout
+ * itself, so opening it never waits on a call from here.
  */
+export const upgradeLink = (plan: UpgradePlan, src: UpgradeSource): string => {
+  const url = new URL("/bot/link/upgrade", abacusAppHost());
+  url.searchParams.set("plan", plan);
+  url.searchParams.set("src", src);
+  // The account's owner, so a browser signed in to another account is asked to switch rather than paying for it.
+  const owner = cachedAbacusAccount()?.upgrade_owner;
+  if (owner != null) url.searchParams.set("u", owner);
+  return url.toString();
+};
 
-/** Well inside the link's life, so a cached link is never a dead one. */
-const UPGRADE_URL_TTL_MS = 60_000;
-
-let cached: { key: string; url: string | null; at: number } | null = null;
-
-export const fetchUpgradeUrl = async (): Promise<string | null> => {
-  const key = credentialFor("ABACUS_API_KEY");
-  if (key.length === 0) return null;
-  if (
-    cached != null &&
-    cached.key === key &&
-    Date.now() - cached.at < UPGRADE_URL_TTL_MS
-  )
-    return cached.url;
-  const { ok, result } = await abacusApiCall(
-    "_createAbacusbotUpgradeLink",
-    "GET"
-  );
-  if (!ok) return null;
-  const url =
-    result != null && typeof result === "object"
-      ? (result as Record<string, unknown>).url
-      : null;
-  const link =
-    typeof url === "string" && url.startsWith("https://") ? url : null;
-  cached = { key, url: link, at: Date.now() };
-  return link;
+/**
+ * The app's Upgrade button: Basic for a free or unread account, Pro for Basic.
+ * Null when signed out or on a higher paid plan (the plans page serves those).
+ */
+export const appUpgradeUrl = (): string | null => {
+  if (credentialFor("ABACUS_API_KEY").length === 0) return null;
+  const tier = abacusPlanTier(cachedAbacusAccount());
+  if (tier === "paid") return null;
+  return upgradeLink(tier === "basic" ? "pro" : "basic", "app");
 };
 
 /** A plan the account could be on: its price, monthly credits and what it gives. */
@@ -65,19 +63,30 @@ export interface BillingPlan {
 }
 
 /**
- * The signed-in account's plan, credits and upgrade paths: with `upgrade`, a
- * free account's upgrades carry its own one-time Basic and Pro links (minted
- * only then). Null when signed out, when the platform offers none, or when
- * the call fails.
+ * The signed-in account's plan, credits and upgrade paths. An upgrade the
+ * server sends without a link (older servers mint them only on request) gets
+ * the permanent page. Null when signed out, when the platform offers none, or
+ * when the call fails.
  */
 export const fetchBillingPlan = async (
-  upgrade: boolean
+  src: "billing_plan" | "phone"
 ): Promise<BillingPlan | null> => {
-  const { ok, result } = await abacusApiCall(
-    "_getAbacusbotBillingPlan",
-    "GET",
-    upgrade ? { includeUpgradeLinks: true } : undefined
-  );
+  const { ok, result } = await abacusApiCall("_getAbacusbotBillingPlan", "GET");
   if (!ok || result == null || typeof result !== "object") return null;
-  return result as BillingPlan;
+  const billing = result as BillingPlan;
+  if (billing.upgradeInMobileApp) return billing;
+  return {
+    ...billing,
+    upgrades: billing.upgrades.map((upgrade) =>
+      upgrade.url != null
+        ? upgrade
+        : {
+            ...upgrade,
+            url: upgradeLink(
+              upgrade.plan.toLowerCase() === "pro" ? "pro" : "basic",
+              src
+            ),
+          }
+    ),
+  };
 };

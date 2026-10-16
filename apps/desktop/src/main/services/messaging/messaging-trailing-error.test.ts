@@ -25,7 +25,7 @@ import {
 
 const mocks = vi.hoisted(() => ({
   account: null as { plan?: string; subscription_tier?: string } | null,
-  fetchUpgradeUrl: null as unknown as () => Promise<string | null>,
+  upgradeLink: vi.fn((_plan: string, _src: string) => UPGRADE_URL),
 }));
 
 vi.mock("./messaging-config-service", async (importOriginal) => {
@@ -55,7 +55,7 @@ vi.mock("../providers/abacus", async (importOriginal) => {
 });
 
 vi.mock("../providers/abacus-upgrade", () => ({
-  fetchUpgradeUrl: () => mocks.fetchUpgradeUrl(),
+  upgradeLink: (plan: string, src: string) => mocks.upgradeLink(plan, src),
 }));
 
 const { MessagingGatewayService } = await import("./messaging-gateway-service");
@@ -88,7 +88,7 @@ const NO_MODEL = {
 
 beforeEach(() => {
   mocks.account = FREE;
-  mocks.fetchUpgradeUrl = async () => UPGRADE_URL;
+  mocks.upgradeLink.mockClear();
 });
 
 /**
@@ -208,29 +208,7 @@ describe("the user's own chat, on the free plan", () => {
     expect(h.sent()).toEqual([
       `I've paused because your free credits have run out. Upgrade to Basic for $7 your first month and I'll pick right back up: ${UPGRADE_URL}`,
     ]);
-  });
-
-  it("falls back to the plans page when there is no upgrade link", async () => {
-    mocks.fetchUpgradeUrl = async () => null;
-    const h = harness({ self: true });
-    await h.inbound("write the report");
-    h.fail(WALL);
-    await settle();
-
-    expect(h.sent()[0]).toContain(`pick right back up: ${PLANS_URL}`);
-  });
-
-  it("falls back to the plans page when the link fetch throws", async () => {
-    mocks.fetchUpgradeUrl = async () => {
-      throw new Error("offline");
-    };
-    const h = harness({ self: true });
-    await h.inbound("write the report");
-    h.fail(WALL);
-    await settle();
-
-    expect(h.sent()).toHaveLength(1);
-    expect(h.sent()[0]).toContain(PLANS_URL);
+    expect(mocks.upgradeLink).toHaveBeenCalledWith("basic", "channel");
   });
 
   it.each([
@@ -267,7 +245,6 @@ describe("the user's own chat, on the free plan", () => {
 describe("the user's own chat, on a paid plan", () => {
   beforeEach(() => {
     mocks.account = PAID;
-    mocks.fetchUpgradeUrl = vi.fn(async () => UPGRADE_URL);
   });
 
   it("at the credit wall, is told to add credits, no Basic offer", async () => {
@@ -279,7 +256,7 @@ describe("the user's own chat, on a paid plan", () => {
     expect(h.sent()).toEqual([
       `I've paused because this month's credits are used up. Add credits to keep going: ${PLANS_URL}`,
     ]);
-    expect(mocks.fetchUpgradeUrl).not.toHaveBeenCalled();
+    expect(mocks.upgradeLink).not.toHaveBeenCalled();
   });
 
   it("own key failed: points at AbacusAI Agent on the web", async () => {
@@ -523,12 +500,7 @@ describe("the six-hour throttle", () => {
 });
 
 describe("the failure line and the end of the turn", () => {
-  it("goes once, after the agent's words, and the turn ends only then", async () => {
-    let release: (url: string) => void = () => {};
-    mocks.fetchUpgradeUrl = () =>
-      new Promise((resolve) => {
-        release = resolve;
-      });
+  it("goes once, after the agent's words, without waiting on the network", async () => {
     const h = harness({ self: true });
     await h.inbound("write the report");
     h.say("Working on it");
@@ -536,37 +508,11 @@ describe("the failure line and the end of the turn", () => {
     h.idle();
     await settle();
 
-    // The idle came first; the route waits on the line before going free.
-    expect(h.sent()).toEqual(["Working on it"]);
-    expect(h.busy()).toBe(true);
-
-    release(UPGRADE_URL);
-    await settle();
-
     expect(h.sent()).toEqual([
       "Working on it",
       expect.stringContaining(UPGRADE_URL),
     ]);
     expect(h.busy()).toBe(false);
-  });
-});
-
-describe("an upgrade link that never comes", () => {
-  it("is given up on: the plans page goes instead and the turn ends", async () => {
-    vi.useFakeTimers();
-    try {
-      mocks.fetchUpgradeUrl = () => new Promise(() => {});
-      const h = harness({ self: true });
-      await h.inbound("write the report");
-      h.fail(WALL);
-      h.idle();
-      await vi.advanceTimersByTimeAsync(5_000);
-
-      expect(h.sent()).toEqual([expect.stringContaining(PLANS_URL)]);
-      expect(h.busy()).toBe(false);
-    } finally {
-      vi.useRealTimers();
-    }
   });
 });
 

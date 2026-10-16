@@ -386,6 +386,9 @@ const connectedAccountWithoutProfile = (): AbacusAccountInfo => ({
   credits_granted: null,
 });
 
+/** The platform's owner token: an external id and a hex signature, nothing that needs escaping. */
+const UPGRADE_OWNER_RE = /^[A-Za-z0-9]{1,40}\.[0-9a-f]{16}$/;
+
 const MAX_PROFILE_PICTURE_BYTES = 2 * 1024 * 1024;
 const PROFILE_PICTURE_TYPES = new Set([
   "image/gif",
@@ -505,6 +508,11 @@ export const fetchAbacusAccount = async (
       web_signup: body.web_signup === true,
       google_sign_in: body.google_sign_in === true,
       focus: ABACUS_ACCOUNT_FOCI.find((focus) => focus === body.focus) ?? null,
+      upgrade_owner:
+        typeof body.upgrade_owner === "string" &&
+        UPGRADE_OWNER_RE.test(body.upgrade_owner)
+          ? body.upgrade_owner
+          : null,
     };
     remember(value);
 

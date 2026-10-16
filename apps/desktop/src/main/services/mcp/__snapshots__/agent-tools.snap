@@ -201,15 +201,10 @@
     },
     {
       "name": "billing_plan",
-      "description": "The user's Abacus AI plan and credits, every plan with its price, any first-month discount and what it gives,\nand the links to upgrade or buy credits. Call it whenever they ask about their plan, credits or balance, prices,\ndiscounts or deals, upgrading, or what a plan includes, and when they run into a plan limit or run low on\ncredits. Pass upgrade: true whenever they might upgrade, so the answer carries their upgrade links.",
+      "description": "The user's Abacus AI plan and credits, every plan with its price, any first-month discount and what it gives,\nand the links to upgrade or buy credits. Call it whenever they ask about their plan, credits or balance, prices,\ndiscounts or deals, upgrading, or what a plan includes, and when they run into a plan limit or run low on\ncredits.",
       "inputSchema": {
         "type": "object",
-        "properties": {
-          "upgrade": {
-            "type": "boolean",
-            "description": "True when they might upgrade: the answer then carries their upgrade links."
-          }
-        }
+        "properties": {}
       }
     }
   ],
@@ -415,15 +410,10 @@
     },
     {
       "name": "billing_plan",
-      "description": "The user's Abacus AI plan and credits, every plan with its price, any first-month discount and what it gives,\nand the links to upgrade or buy credits. Call it whenever they ask about their plan, credits or balance, prices,\ndiscounts or deals, upgrading, or what a plan includes, and when they run into a plan limit or run low on\ncredits. Pass upgrade: true whenever they might upgrade, so the answer carries their upgrade links.",
+      "description": "The user's Abacus AI plan and credits, every plan with its price, any first-month discount and what it gives,\nand the links to upgrade or buy credits. Call it whenever they ask about their plan, credits or balance, prices,\ndiscounts or deals, upgrading, or what a plan includes, and when they run into a plan limit or run low on\ncredits.",
       "inputSchema": {
         "type": "object",
-        "properties": {
-          "upgrade": {
-            "type": "boolean",
-            "description": "True when they might upgrade: the answer then carries their upgrade links."
-          }
-        }
+        "properties": {}
       }
     },
     {

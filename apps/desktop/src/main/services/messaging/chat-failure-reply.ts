@@ -36,7 +36,7 @@ export const NO_MODEL_REPLY =
 const GENERIC_REPLY =
   "Something went wrong on my side, so I couldn't finish that. Please try again in a moment.";
 
-/** The plans page, for an account the one-time upgrade link does not cover. */
+/** The plans page, for an account the upgrade page does not cover. */
 const ABACUS_PLANS_URL = "https://apps.abacus.ai/chatllm/choose-plan/";
 
 const ABACUS_AGENT_URL = "https://apps.abacus.ai/chatllm";
@@ -54,7 +54,7 @@ export const failureKind = (error: TurnFailure): FailureKind => {
   return "generic";
 };
 
-/** Whether the line for this failure could carry the one-time upgrade link. */
+/** Whether the line for this failure carries the upgrade page. */
 export const wantsUpgradeUrl = (
   error: TurnFailure,
   account: AccountKind

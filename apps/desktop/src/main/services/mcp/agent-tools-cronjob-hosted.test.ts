@@ -250,7 +250,7 @@ describe("cronjob, hosted", () => {
       prompt: "x",
       schedule: "0 8 * * *",
     });
-    expect(text).toContain("Call billing_plan with upgrade: true");
+    expect(text).toContain("Call billing_plan for the plan");
     expect(text).not.toMatch(/\$|Basic/);
   });
 
@@ -437,7 +437,7 @@ describe("cronjob, local", () => {
     expect(free).toContain("[once]");
     expect(free).toContain("the Basic plan runs routines 24/7");
     expect(free).toContain("https://apps.abacus.ai/chatllm/agent");
-    expect(free).toContain("billing_plan with upgrade: true");
+    expect(free).toContain("Call billing_plan and give their upgrade link");
 
     const paid = await harness({ alwaysOn: "paid" }).call({
       action: "create",

@@ -238,7 +238,7 @@ export const UNATTENDED_EXCLUDED_TOOLS: Readonly<Record<string, string>> = {
     "recall only: memory is in the prompt, and fetched text never reaches it",
   session_search: "past conversations are not this run's input",
   my_activity: "past conversations are not this run's input",
-  billing_plan: "mints one-time upgrade links for a person, not a routine",
+  billing_plan: "upgrade links are for a person, not a routine",
   offer_session: "a card the user clicks in the bot's chat",
   exit_plan_mode: "never in plan mode",
   delegate_task: NO_SUBAGENT,
