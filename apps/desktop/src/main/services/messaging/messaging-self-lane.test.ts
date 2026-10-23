@@ -165,6 +165,10 @@ describe("the self lane", () => {
 
     expect(h.prompts[0]).not.toContain("[auto-reply]");
     expect(h.prompts[0]).toContain("what's on today?");
+    // The owner hears where the answer lands, and how files reach a phone.
+    expect(h.prompts[0]).toContain("on the user's phone]");
+    expect(h.prompts[0]).toContain("present_deliverable");
+    expect(h.prompts[0]).toContain("localhost");
   });
 
   it("answers nobody else while the switch is off", async () => {
