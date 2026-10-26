@@ -650,16 +650,18 @@ const CutOffError = ({
       .funnelStep({ step, ...(detail != null && { detail }) })
       .catch(() => undefined);
   const live = (outcome as RunOutcomeRecord & { live?: boolean }).live === true;
-  // Counted once per card, as it arrives; a reopened chat's card is history.
+  // Counted once per card, as it arrives (a reopened chat's card is
+  // history), once the account's plan is read so the state is the real one.
+  const known = tier !== "unknown" || state === "signed-out";
   const announce = useEffectEvent(() => {
-    if (!live || cutOffCounted.has(outcome.runId)) return;
+    if (!live || !known || cutOffCounted.has(outcome.runId)) return;
     cutOffCounted.add(outcome.runId);
     funnel(
       "cutoff_card_shown",
       `${paid && state !== "signed-out" ? "paid" : state.replace("-", "")}${canContinue ? "" : "_again"}`
     );
   });
-  useEffect(() => announce(), [live, outcome.runId]);
+  useEffect(() => announce(), [live, known, outcome.runId]);
   const canReply = latest && composer.readOnly == null && resolved == null;
   const mode = composer.fixedMode ? { mode: composer.fixedMode } : {};
   // The cut reply is picked up where it stopped, on the chat's model now.

@@ -169,7 +169,7 @@ import {
   StallWatch,
   modelStallMs,
 } from "./stall-watch.js";
-import { continueCutReply, streamCutStep } from "./stream-cut.js";
+import { continueCutReply, isStreamCut, streamCutStep } from "./stream-cut.js";
 import { readTodos } from "./todo-store.js";
 import { ToolCallStream } from "./tool-call-stream.js";
 import { ToolHeartbeat } from "./tool-heartbeat.js";
@@ -3125,6 +3125,9 @@ export class AbacusBotSession {
             `[abacusai-bot-agent] pool retry ${event.attempt}/${event.maxAttempts} on ${current ? `${current.provider}/${current.id}` : "?"} (routing=${this.openLlmActive}): ${event.errorMessage.slice(0, 120)}\n`
           );
         }
+        // Google cutting the reply off is asked again out of sight.
+        if (isStreamCut(event.errorMessage, this.session?.model?.provider))
+          return;
         this.emitAgentEvent({
           type: "retry",
           attempt: event.attempt,

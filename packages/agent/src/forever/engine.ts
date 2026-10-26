@@ -143,7 +143,7 @@ import {
   StallWatch,
   modelStallMs,
 } from "../stall-watch.js";
-import { continueCutReply, streamCutStep } from "../stream-cut.js";
+import { continueCutReply, isStreamCut, streamCutStep } from "../stream-cut.js";
 import { ToolCallStream } from "../tool-call-stream.js";
 import { ToolHeartbeat } from "../tool-heartbeat.js";
 import { mcpToolAllowed, type UnattendedPolicy } from "../tool-policy.js";
@@ -2266,6 +2266,9 @@ export class ForeverEngine {
       }
 
       case "auto_retry_start":
+        // Google cutting the reply off is asked again out of sight.
+        if (isStreamCut(event.errorMessage, this.session?.model?.provider))
+          return;
         this.emitAgentEvent({
           type: "retry",
           attempt: event.attempt,

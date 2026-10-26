@@ -554,12 +554,10 @@ export class AguiHost {
       }
       if (newest?.id != null) this.echoedUserIds.add(newest.id);
     }
-    // Only the message the cut reply answers is picked back up (a restarted
-    // agent knows none, and reads it from the transcript); any other is sent.
-    const continueCut =
-      forwarded.intent === "continue" &&
-      newest?.id != null &&
-      (this.lastPrompt == null || this.lastPrompt.messageId === newest.id);
+    // The cut-off card's Continue and Switch: the cut reply is picked up from
+    // the transcript (a bot's chat sends its own words for the ask, since its
+    // first message is hidden), never asked anew.
+    const continueCut = forwarded.intent === "continue";
     if (newest?.id != null) this.lastPrompt = { messageId: newest.id, runId };
 
     const stillAdmitted = (): boolean =>
