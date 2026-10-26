@@ -46,15 +46,13 @@ export const ConnectivityNotice = () => {
   if (reach.state === "ok") return null;
   const offline = reach.state === "offline";
   const Icon = offline ? WifiOff : CloudOff;
-  const tryNow = async (): Promise<void> => {
+  const tryNow = (): void => {
     setTrying(true);
-    try {
-      setReach(await transport.client.system.connectivity.retry({}));
-    } catch {
-      // The notice stays; the next answer from main replaces it.
-    } finally {
-      setTrying(false);
-    }
+    // A failed ask leaves the notice; the next answer from main replaces it.
+    void transport.client.system.connectivity
+      .retry({})
+      .then(setReach, () => undefined)
+      .then(() => setTrying(false));
   };
   return (
     <section
@@ -84,7 +82,7 @@ export const ConnectivityNotice = () => {
             variant="secondary"
             disabled={trying}
             aria-busy={trying}
-            onClick={() => void tryNow()}
+            onClick={tryNow}
           >
             {trying && <Spinner aria-hidden />}
             {t("connectivity.tryNow")}
