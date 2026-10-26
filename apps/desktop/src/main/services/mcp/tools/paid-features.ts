@@ -88,25 +88,31 @@ const webOnly = (feature: PaidFeature, reply: PaidFeatureReply): string =>
 const afterOffer = (question: string, again: string): string[] => [
   `Offer no other work in this reply (no script, storyboard or plan instead), and end with at most one short question: ${question}. A yes then means only that.`,
   "When they answer it:",
-  `- A yes (yes, ok, sure, sim, evet, dale or the like, in any language): one short line in their language and ${again}. Nothing else: do not start their request or any other work, and call no tool. An ok or yes right after you gave the link is a yes too: give it again.`,
+  `- A yes (yes, ok, sure, sim, evet, dale or the like, in any language): one short line in their language and ${again}. Nothing else: do not start their request or any other work, and call no tool.`,
+  `- Every later yes, ok, okay or sure, even right after you gave the link: ${again} once more. It is not a goodbye: never answer it with a thumbs-up or "let me know", and never say anything is being made or ready.`,
   "- They ask the price or what the plan gives: answer from the lines above, then the same link.",
   "- A no or not now: say that is fine in one short line and carry on. Do not offer it again in this chat unless they ask for one of these again.",
   "- Anything else: do that, as usual.",
 ];
 
+/**
+ * The link types their request into Abacus AI Agent and sends nothing: told
+ * only "open it there", the model said the video was being made.
+ */
+const PREFILL_ONLY =
+  "The link only types their request into Abacus AI Agent; it sends nothing, and nothing is made until they send it there. Never say it is being made, that they will see it there, or that you started it: say they open it there and send it.";
+
 /** The paid plan's answer: the plan already has it, on the web. */
 const webAnswer = (call: PaidFeatureCall): string[] => {
   const { feature, reply, prompt } = call;
-  const link = abacusAgentPromptUrl(prompt);
   return [
     `Their plan includes ${feature.name}. ${webOnly(feature, reply)}`,
-    reply === "card"
-      ? `The app shows them an Open in Abacus AI Agent card with your reply, with their request filled in there: point to it, and give no link in this reply.\nTheir link, which opens it too, for a yes below: ${link}`
-      : `Their link, which opens Abacus AI Agent with their request filled in: ${link}\nGive the link exactly as written, on its own line.`,
-    `Tell them so in their language, in one or two short lines. ${leadWithYes(`Your plan makes ${feature.name} in Abacus AI Agent on the web.`)} ${ATTACHED} Do not offer an upgrade for it. ${NEVER_CANNOT} ${NO_DETOURS}`,
+    `Their link, which opens Abacus AI Agent with their request typed in: ${abacusAgentPromptUrl(prompt)}`,
+    `Give the link exactly as written, on its own line.${reply === "card" ? " The app also shows an Open in Abacus AI Agent card with your reply, which opens the same." : ""}`,
+    `Tell them so in their language, in one or two short lines. ${leadWithYes(`Your plan makes ${feature.name} in Abacus AI Agent on the web; your request is ready there:`)} Then the link, then that they open it and send it there. ${ATTACHED} Do not offer an upgrade for it. ${PREFILL_ONLY} ${NEVER_CANNOT} ${NO_DETOURS}`,
     ...afterOffer(
       "whether they want to open it there",
-      "that link, exactly as written, on its own line"
+      "the link again, exactly as written, on its own line"
     ),
   ];
 };
@@ -171,8 +177,8 @@ export function paidFeatureResult(
     ? `${next.planName} includes ${feature.name} (in this app once they upgrade)`
     : `${next.planName} includes ${feature.name} on the web in Abacus AI Agent`;
   const example = feature.inApp
-    ? `${next.planName} gives you ${feature.name} right here, for ${priceLine(next)}.`
-    : `${next.planName} gives you ${feature.name} in Abacus AI Agent on the web, for ${priceLine(next)}.`;
+    ? `${next.planName} gives you ${feature.name} right here: ${priceLine(next)}.`
+    : `${next.planName} gives you ${feature.name} in Abacus AI Agent on the web: ${priceLine(next)}.`;
   lines.push(
     "",
     `Tell them in their language, in one or two short lines, that ${includes}, naming (in their language) the feature above that covers it, and its price. ${leadWithYes(example)}${feature.inApp ? "" : ` ${ATTACHED}`}`,

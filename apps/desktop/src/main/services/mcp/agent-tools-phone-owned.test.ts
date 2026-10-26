@@ -566,7 +566,7 @@ describe("paid-plan capabilities", () => {
     expect(text).not.toContain("https://upgrade.example/basic");
     expect(text).toMatch(/Give the upgrade link exactly as written/);
     expect(text).toMatch(
-      /Open your reply with the yes: .*"Basic gives you video generation in Abacus AI Agent on the web, for \$7/
+      /Open your reply with the yes: .*"Basic gives you video generation in Abacus AI Agent on the web: \$7 for the first month \(30% off the usual \$10\/mo\), then \$10\/mo\."/
     );
     expect(text).toMatch(/Never say you cannot do it/);
     expect(text).toMatch(/no Canva, Hugging Face or other connector/);
@@ -577,7 +577,7 @@ describe("paid-plan capabilities", () => {
       /A yes \(yes, ok, sure, sim, evet, dale .*: .*the upgrade link again, exactly as written, on its own line\. Nothing else: do not start their request or any other work, and call no tool\./
     );
     expect(text).toMatch(
-      /An ok or yes right after you gave the link is a yes too/
+      /Every later yes, ok, okay or sure, even right after you gave the link: the upgrade link again, exactly as written, on its own line once more\. It is not a goodbye/
     );
     expect(text).toMatch(/Never say you are making it/);
     expect(text).toMatch(
@@ -665,17 +665,23 @@ describe("paid-plan capabilities", () => {
     );
     expect(billingPlan).not.toHaveBeenCalled();
     expect(text).toMatch(/^Their plan includes image generation and editing/);
-    expect(text).toMatch(/Open in Abacus AI Agent card with your reply/);
-    expect(text).toMatch(/give no link in this reply/);
-    expect(text).toMatch(
-      /Open your reply with the yes: .*"Your plan makes image generation and editing in Abacus AI Agent on the web\."/
-    );
-    // The link is for a yes to the card, not for the reply.
+    // The link goes in the reply and the card stays.
     expect(text).toContain(
-      `Their link, which opens it too, for a yes below: ${FOX}\n`
+      `Their link, which opens Abacus AI Agent with their request typed in: ${FOX}\n`
     );
     expect(text).toMatch(
-      /A yes \(.*\): one short line in their language and that link, exactly as written, on its own line\./
+      /Give the link exactly as written, on its own line\. The app also shows an Open in Abacus AI Agent card with your reply/
+    );
+    expect(text).toMatch(
+      /Open your reply with the yes: .*"Your plan makes image generation and editing in Abacus AI Agent on the web; your request is ready there:"/
+    );
+    // The link only types the request in: never "it is being made".
+    expect(text).toMatch(/it sends nothing/);
+    expect(text).toMatch(
+      /Never say it is being made, that they will see it there, or that you started it/
+    );
+    expect(text).toMatch(
+      /A yes \(.*\): one short line in their language and the link again, exactly as written, on its own line\./
     );
     expect(text).toMatch(/Do not offer an upgrade/);
     expect(text).toMatch(/attach it there/);
@@ -690,8 +696,9 @@ describe("paid-plan capabilities", () => {
       "a fox in the snow"
     );
     expect(text).toContain(
-      `Their link, which opens Abacus AI Agent with their request filled in: ${FOX}`
+      `Their link, which opens Abacus AI Agent with their request typed in: ${FOX}`
     );
+    expect(text).not.toMatch(/card/);
     expect(text).toMatch(/Never say you cannot do it/);
   });
 
