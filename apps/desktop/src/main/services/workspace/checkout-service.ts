@@ -29,6 +29,7 @@ import {
 import type { FileSearchResult } from "@abacus-ai/contract/contract/files";
 import type { GitStateRow } from "@abacus-ai/contract/contract/rows";
 import {
+  GIT_FINGERPRINT_CHANGE_LIMIT,
   WORKSPACE_MISSING_ERROR,
   type AgentSessionListItem,
   type FileTreeNode,
@@ -52,6 +53,9 @@ import {
 } from "./workspace-runtime-service";
 
 const execFileAsync = promisify(execFile);
+
+/** The backstop re-read period of a checkout with too many changes. */
+const SLOW_POLL_MS = 60_000;
 
 export interface ResolvedCheckout {
   key: CheckoutKey;
@@ -95,6 +99,8 @@ interface WatchedCheckout {
   count: number;
   row: GitStateRow | null;
   signature: string | null;
+  /** When the last read finished (ms epoch). */
+  readAt: number;
   stop: () => void;
   timer: ReturnType<typeof setTimeout> | null;
   refreshing: Promise<void> | null;
@@ -401,6 +407,7 @@ export class CheckoutService {
         count: 0,
         row: null,
         signature: null,
+        readAt: 0,
         stop: () => undefined,
         timer: null,
         refreshing: null,
@@ -519,6 +526,7 @@ export class CheckoutService {
       checkoutRelative: true,
     });
     if (this.#watched.get(target.key) !== entry) return;
+    entry.readAt = Date.now();
     const row: GitStateRow = {
       gitChanges: status.changes,
       gitChangeSections: buildGitChangeSectionsSnapshot(status.changes),
@@ -583,7 +591,17 @@ export class CheckoutService {
     const poll =
       pollMs == null
         ? null
-        : setInterval(() => void this.refresh(entry.target.key), pollMs);
+        : setInterval(() => {
+            // A checkout past the fingerprint limit is not one anyone reviews
+            // live: its backstop slows to once a minute; watchers still fire.
+            if (
+              (entry.row?.gitChanges.length ?? 0) >
+                GIT_FINGERPRINT_CHANGE_LIMIT &&
+              Date.now() - entry.readAt < SLOW_POLL_MS
+            )
+              return;
+            void this.refresh(entry.target.key);
+          }, pollMs);
     poll?.unref?.();
     return () => {
       stopped = true;

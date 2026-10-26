@@ -9,19 +9,20 @@ import type {
   GitDiffResult,
   GitDiscardResult,
 } from "@abacus-ai/contract/contract/checkout";
-import type {
-  CreateGitBranchResult,
-  GetGitBranchesResult,
-  GetGitCurrentBranchResult,
-  GitChangeItem,
-  GitChangeStatsScope,
-  GitDiffScope,
-  InitGitResult,
-  PrInfo,
-  SwitchGitBranchResult,
-  CreateWorktreeResult,
-  ListWorktreesResult,
-  WorktreeListItem,
+import {
+  GIT_FINGERPRINT_CHANGE_LIMIT,
+  type CreateGitBranchResult,
+  type GetGitBranchesResult,
+  type GetGitCurrentBranchResult,
+  type GitChangeItem,
+  type GitChangeStatsScope,
+  type GitDiffScope,
+  type InitGitResult,
+  type PrInfo,
+  type SwitchGitBranchResult,
+  type CreateWorktreeResult,
+  type ListWorktreesResult,
+  type WorktreeListItem,
 } from "@abacus-ai/contract/contracts";
 
 import { parseNumstatZ, parseStatusZ } from "./git-porcelain";
@@ -36,15 +37,41 @@ const LITERAL_PATHSPECS = {
   maxBuffer: 64 * 1024 * 1024,
 };
 
-/** Paths per git call, well under any platform's argument limit. */
+/** Paths per git call. */
 const PATHSPEC_CHUNK = 200;
+/**
+ * Characters of paths per git call. Windows caps a whole command line at
+ * 32,767 characters, so 200 deep paths can overflow it (spawn ENAMETOOLONG).
+ */
+const PATHSPEC_CHUNK_CHARS = 8_000;
 
-const chunks = <T>(items: T[], size: number): T[][] => {
-  const out: T[][] = [];
-  for (let start = 0; start < items.length; start += size)
-    out.push(items.slice(start, start + size));
+/** Runs of `paths` within both limits; a longer path goes alone. */
+const pathspecChunks = (paths: string[]): string[][] => {
+  const out: string[][] = [];
+  let chunk: string[] = [];
+  let chars = 0;
+  for (const item of paths) {
+    if (
+      chunk.length > 0 &&
+      (chunk.length >= PATHSPEC_CHUNK ||
+        chars + item.length + 1 > PATHSPEC_CHUNK_CHARS)
+    ) {
+      out.push(chunk);
+      chunk = [];
+      chars = 0;
+    }
+    chunk.push(item);
+    chars += item.length + 1;
+  }
+  if (chunk.length > 0) out.push(chunk);
   return out;
 };
+
+/** Retry delays after a failed fingerprint read, doubling to the cap. */
+const FINGERPRINT_RETRY_BASE_MS = 10_000;
+const FINGERPRINT_RETRY_MAX_MS = 5 * 60_000;
+/** Enough of a git error to tell failures apart; its argv can be huge. */
+const LOGGED_ERROR_CHARS = 300;
 
 const fingerprint = (...parts: string[]): string =>
   createHash("sha256").update(parts.join("\0")).digest("hex").slice(0, 24);
@@ -143,6 +170,11 @@ export class GitService {
   // Workspaces are long-lived and rev-parse would run on every git op.
   // Invalidated by initRepository() and invalidateRepoCache().
   private readonly insideWorkTreeCache = new Map<string, boolean>();
+  /** Per checkout: consecutive fingerprint failures and the next try. */
+  private readonly fingerprintBackoff = new Map<
+    string,
+    { failures: number; retryAt: number }
+  >();
 
   invalidateRepoCache(workspacePath: string): void {
     this.insideWorkTreeCache.delete(workspacePath);
@@ -537,10 +569,13 @@ export class GitService {
 
     try {
       // Scoped to the workspace: one inside a larger repository (a home
-      // folder kept in git) must not scan the whole of it.
+      // folder kept in git) must not scan the whole of it. No optional
+      // locks: status otherwise takes `.git/index.lock`, which the git-dir
+      // watcher sees as a change, so each read scheduled the next.
       const statusOutput = await execFileAsync(
         "git",
         [
+          "--no-optional-locks",
           "-C",
           workspacePath,
           "status",
@@ -812,13 +847,17 @@ export class GitService {
    * bytes). A missing side hashes as "absent", so an index-only change, a new
    * HEAD and a same-size edit of the worktree each give a new value. A git
    * failure leaves the change without fingerprints rather than failing the
-   * status read.
+   * status read, and the checkout skips them until a retry delay that
+   * doubles per failure. Past GIT_FINGERPRINT_CHANGE_LIMIT changes, none.
    */
   async addFingerprints(
     checkoutPath: string,
     changes: GitChangeItem[]
   ): Promise<void> {
-    if (changes.length === 0) return;
+    if (changes.length === 0 || changes.length > GIT_FINGERPRINT_CHANGE_LIMIT)
+      return;
+    const backoff = this.fingerprintBackoff.get(checkoutPath);
+    if (backoff != null && Date.now() < backoff.retryAt) return;
     try {
       const head = await this.headCommit(checkoutPath);
       const paths = changes.map((change) => change.path);
@@ -845,9 +884,24 @@ export class GitService {
           change.fingerprints = fingerprints;
         })
       );
+      if (backoff != null) {
+        this.fingerprintBackoff.delete(checkoutPath);
+        console.warn(
+          `[git] fingerprints for ${checkoutPath} recovered after ${backoff.failures} failure(s)`
+        );
+      }
     } catch (error) {
+      const failures = (backoff?.failures ?? 0) + 1;
+      const delay = Math.min(
+        FINGERPRINT_RETRY_BASE_MS * 2 ** (failures - 1),
+        FINGERPRINT_RETRY_MAX_MS
+      );
+      this.fingerprintBackoff.set(checkoutPath, {
+        failures,
+        retryAt: Date.now() + delay,
+      });
       console.warn(
-        `[git] fingerprints for ${checkoutPath} failed: ${this.errorMessage(error)}`
+        `[git] fingerprints for ${checkoutPath} failed (${failures} in a row, next try in ${delay / 1000}s): ${this.errorMessage(error).slice(0, LOGGED_ERROR_CHARS)}`
       );
     }
   }
@@ -875,7 +929,7 @@ export class GitService {
     paths: string[]
   ): Promise<Map<string, string>> {
     const out = new Map<string, string>();
-    for (const chunk of chunks(paths, PATHSPEC_CHUNK)) {
+    for (const chunk of pathspecChunks(paths)) {
       const { stdout } = await execFileAsync(
         "git",
         ["-C", checkoutPath, "ls-files", "--stage", "-z", "--", ...chunk],
@@ -901,7 +955,7 @@ export class GitService {
     paths: string[]
   ): Promise<Map<string, string>> {
     const out = new Map<string, string>();
-    for (const chunk of chunks(paths, PATHSPEC_CHUNK)) {
+    for (const chunk of pathspecChunks(paths)) {
       const { stdout } = await execFileAsync(
         "git",
         ["-C", checkoutPath, "ls-tree", "-r", "-z", "HEAD", "--", ...chunk],
@@ -985,6 +1039,7 @@ export class GitService {
       const status = await execFileAsync(
         "git",
         [
+          "--no-optional-locks",
           "-C",
           checkoutPath,
           "status",
