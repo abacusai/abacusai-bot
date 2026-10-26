@@ -38,7 +38,12 @@ export const abacusApiCall = async (
   timeoutMs?: number,
   /** A key other than the stored one: a sign-in held until its account pays. */
   keyOverride?: string
-): Promise<{ ok: boolean; result: unknown }> => {
+): Promise<{
+  ok: boolean;
+  result: unknown;
+  /** No answer at all (offline, DNS, refused, timed out): not a refusal. */
+  unreachable?: true;
+}> => {
   const key = keyOverride ?? abacusApiKey();
   if (key.length === 0) return { ok: false, result: null };
   try {
@@ -81,7 +86,8 @@ export const abacusApiCall = async (
         error instanceof Error ? error.message : String(error)
       }`
     );
-    return { ok: false, result: null };
+    // Only the request itself throws here: the body's parse is caught above.
+    return { ok: false, result: null, unreachable: true };
   }
 };
 
@@ -265,17 +271,25 @@ export const createConnectLink = async (
   services: string[];
   connected: string[];
   requestId?: string;
+  /** Abacus did not answer: the plain page will not load either. */
+  unreachable?: true;
 } | null> => {
   const serviceKey = service.toLowerCase();
   if (!SERVICE_RE.test(serviceKey) || abacusApiKey().length === 0) return null;
   const bundled = (GOOGLE_BUNDLE_SERVICES as readonly string[]).includes(
     serviceKey
   );
-  const minted = await abacusApiCall("_createAbacusbotConnectLink", "POST", {
-    service: bundled ? "google" : serviceKey,
-    // Where the link's completion reports back (see StepEvents).
-    ...(chatOrigin != null ? { chatOrigin } : {}),
-  });
+  const minted = await abacusApiCall(
+    "_createAbacusbotConnectLink",
+    "POST",
+    {
+      service: bundled ? "google" : serviceKey,
+      // Where the link's completion reports back (see StepEvents).
+      ...(chatOrigin != null ? { chatOrigin } : {}),
+    },
+    // A Connect click waits on this: no answer by then is no answer.
+    LISTING_TIMEOUT_MS
+  );
   const request = minted.ok
     ? (minted.result as {
         requestId?: unknown;
@@ -306,7 +320,12 @@ export const createConnectLink = async (
   }
   url.searchParams.set("service", serviceKey);
   url.searchParams.set("autostart", "1");
-  return { url: url.toString(), services: [serviceKey], connected: [] };
+  return {
+    url: url.toString(),
+    services: [serviceKey],
+    connected: [],
+    ...(minted.unreachable === true ? { unreachable: true as const } : {}),
+  };
 };
 
 /**
@@ -357,6 +376,8 @@ export const connectButtonLink = async (
   if (abacusApiKey().length === 0) return { ok: false, error: "not-signed-in" };
   const link = await createConnectLink(serviceKey);
   if (link == null) return { ok: false, error: "not-signed-in" };
+  // Said now, in the app, rather than a browser page that cannot load.
+  if (link.unreachable === true) return { ok: false, error: "unreachable" };
   return {
     ok: true,
     url: link.url,

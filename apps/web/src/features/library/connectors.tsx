@@ -4,11 +4,15 @@ import {
   connectorById,
   type Connector,
 } from "@abacus-ai/connectors/registry";
+import type {
+  ConnectorStatus,
+  ConnectorStatuses,
+} from "@abacus-ai/contract/contracts";
 import { revalidateLogic } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { ExternalLinkIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
@@ -52,6 +56,19 @@ export const visibleTabsFor = (entry: Connector): string[] =>
         ? ["abacus", "featured"]
         : ["abacus"]
       : [entry.category];
+/** Abacus could not be read and nothing was known before: neither connected nor not. */
+const uncheckable = (status: ConnectorStatus | undefined): boolean =>
+  status?.state === "unavailable" && status?.reason === "unavailable";
+/** Read from Abacus last time rather than now, or not read at all. */
+const unconfirmed = (statuses: ConnectorStatuses | undefined) => {
+  const all = Object.values(statuses ?? {});
+  return {
+    stale: all.some((status) => status.stale === true),
+    unchecked: all.some(uncheckable),
+  };
+};
+/** While Abacus cannot be read, the page asks again on its own this often. */
+const UNCONFIRMED_REFETCH_MS = 15_000;
 export const ConnectorsPage = () => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
@@ -64,6 +81,11 @@ export const ConnectorsPage = () => {
   const statuses = useQuery({
     ...transport.orpc.connectors.statuses.queryOptions({ input: {} }),
     staleTime: 60000,
+    // Only while the shown state is not a fresh read: back to fresh once Abacus answers.
+    refetchInterval: (query) => {
+      const { stale, unchecked } = unconfirmed(query.state.data);
+      return stale || unchecked ? UNCONFIRMED_REFETCH_MS : false;
+    },
   });
   // Chat apps pair from the desktop; a browser has no pairing.
   const offered = CONNECTORS.filter(
@@ -85,6 +107,15 @@ export const ConnectorsPage = () => {
   );
   const connected = (id: string) =>
     ["connected", "pending"].includes(statuses.data?.[id]?.state ?? "");
+  const { stale, unchecked } = unconfirmed(statuses.data);
+  // Abacus answers again: a Connect that could not reach it is no longer the news.
+  const reachable = statuses.data != null && !stale && !unchecked;
+  useEffect(() => {
+    if (reachable)
+      flow.store.setState((state) =>
+        state.error === "unreachable" ? { ...state, error: undefined } : state
+      );
+  }, [reachable, flow.store]);
   return (
     <AreaPage
       testId="connectors-page"
@@ -124,6 +155,13 @@ export const ConnectorsPage = () => {
           }
         />
       )}
+      {(stale || unchecked) && (
+        <ConnectNote>
+          {t(
+            stale ? "phase5.connectorsLastSeen" : "phase5.connectorsUnchecked"
+          )}
+        </ConnectNote>
+      )}
       {[true, false].map((group) => {
         const rows = entries.filter((e) => connected(e.id) === group);
         if (rows.length === 0) return null;
@@ -137,67 +175,83 @@ export const ConnectorsPage = () => {
                 // Installed, but its sign-in never finished: offer the sign-in.
                 const signIn =
                   statuses.data?.[e.id]?.reason === "sign-in-required";
+                const cantCheck = uncheckable(statuses.data?.[e.id]);
                 const inFlight =
                   flow.state.connectorId === e.id &&
                   flow.state.phase !== "idle" &&
                   flow.state.phase !== "fields";
+                // The connect error sits under the row it came from.
+                const error =
+                  flow.state.connectorId === e.id
+                    ? flow.state.error
+                    : undefined;
                 return (
-                  <SettingRow
-                    key={e.id}
-                    id={e.id}
-                    title={e.name}
-                    detail={statuses.data?.[e.id]?.account ?? e.description}
-                    media={<ConnectorMark id={e.logo ?? e.id} size={40} />}
-                  >
-                    {/* The section heading already says it; a phone folds the pill. */}
-                    <span
-                      className={signIn ? "contents" : "phone:hidden contents"}
+                  <div key={e.id}>
+                    <SettingRow
+                      id={e.id}
+                      title={e.name}
+                      detail={statuses.data?.[e.id]?.account ?? e.description}
+                      media={<ConnectorMark id={e.logo ?? e.id} size={40} />}
                     >
-                      <StatePill
-                        tone={
-                          signIn ? "warning" : group ? "success" : "neutral"
+                      {/* The section heading already says it; a phone folds the pill. */}
+                      <span
+                        className={
+                          signIn ? "contents" : "phone:hidden contents"
                         }
                       >
+                        <StatePill
+                          tone={
+                            signIn ? "warning" : group ? "success" : "neutral"
+                          }
+                        >
+                          {t(
+                            signIn
+                              ? "phase5.signInNeeded"
+                              : group
+                                ? "phase5.connected"
+                                : cantCheck
+                                  ? "phase5.cantCheck"
+                                  : "phase5.available"
+                          )}
+                        </StatePill>
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={inFlight}
+                        aria-busy={inFlight}
+                        onClick={() => {
+                          if (group && !signIn && e.kind === "messaging")
+                            void navigate({
+                              to: "/library/messaging",
+                              search: { platform: e.platform },
+                              transition: "none",
+                            });
+                          else if (group && !signIn)
+                            void navigate({
+                              to: "/library/connectors",
+                              search: (p) => ({ ...p, connector: e.id }),
+                              transition: "none",
+                            });
+                          else void flow.start(e.id);
+                        }}
+                      >
+                        {inFlight && <Spinner aria-hidden />}
                         {t(
                           signIn
-                            ? "phase5.signInNeeded"
+                            ? "phase5.signIn"
                             : group
-                              ? "phase5.connected"
-                              : "phase5.available"
+                              ? "phase5.manage"
+                              : "phase5.add"
                         )}
-                      </StatePill>
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      disabled={inFlight}
-                      aria-busy={inFlight}
-                      onClick={() => {
-                        if (group && !signIn && e.kind === "messaging")
-                          void navigate({
-                            to: "/library/messaging",
-                            search: { platform: e.platform },
-                            transition: "none",
-                          });
-                        else if (group && !signIn)
-                          void navigate({
-                            to: "/library/connectors",
-                            search: (p) => ({ ...p, connector: e.id }),
-                            transition: "none",
-                          });
-                        else void flow.start(e.id);
-                      }}
-                    >
-                      {inFlight && <Spinner aria-hidden />}
-                      {t(
-                        signIn
-                          ? "phase5.signIn"
-                          : group
-                            ? "phase5.manage"
-                            : "phase5.add"
-                      )}
-                    </Button>
-                  </SettingRow>
+                      </Button>
+                    </SettingRow>
+                    {error && (
+                      <ConnectNote error className="px-3 pb-2.5">
+                        {connectErrorText(t, error)}
+                      </ConnectNote>
+                    )}
+                  </div>
                 );
               })}
             </GroupCard>
@@ -211,9 +265,6 @@ export const ConnectorsPage = () => {
             {t("phase5.cancel")}
           </Button>
         </div>
-      )}
-      {flow.state.error && (
-        <ConnectNote error>{connectErrorText(t, flow.state.error)}</ConnectNote>
       )}
     </AreaPage>
   );
@@ -230,6 +281,7 @@ export const ConnectorDialog = ({ connector }: { connector: string }) => {
   const status = statuses.data?.[connector];
   const connected = status?.state === "connected";
   const signIn = status?.reason === "sign-in-required";
+  const cantCheck = uncheckable(status);
   const waiting =
     flow.state.connectorId === connector && flow.state.phase !== "idle";
   const tools =
@@ -267,7 +319,9 @@ export const ConnectorDialog = ({ connector }: { connector: string }) => {
                   ? "phase5.connected"
                   : signIn
                     ? "phase5.signInNeeded"
-                    : "phase5.notConnected"
+                    : cantCheck
+                      ? "phase5.cantCheck"
+                      : "phase5.notConnected"
               ),
               tone: connected ? "success" : "warning",
             }
