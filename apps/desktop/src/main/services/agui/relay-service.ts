@@ -493,6 +493,22 @@ export class AguiRelayService implements AguiSource {
     return false;
   }
 
+  /**
+   * Whether one thread needs its agent now: a run open or being admitted, a
+   * permission or question waiting on the user, or messages queued behind it.
+   */
+  threadBusy(threadId: string): boolean {
+    if (this.#waiting.has(threadId) || this.#awaitingStart.has(threadId))
+      return true;
+    const thread = this.#threads.get(threadId);
+    return (
+      thread != null &&
+      (thread.activeRunId != null ||
+        thread.pendingPermissions.items.length > 0 ||
+        thread.queue.length > 0)
+    );
+  }
+
   /** Called with the new value whenever `busy` changes. Returns the removal. */
   onBusyChange(listener: (busy: boolean) => void): () => void {
     this.#busyListeners.add(listener);

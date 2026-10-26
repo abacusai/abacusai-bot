@@ -8,6 +8,10 @@
 import { writeSync } from "node:fs";
 import type { Readable } from "node:stream";
 
+import {
+  liveBackgroundJobCount,
+  onBackgroundActivity,
+} from "../background-processes.js";
 import { isBotSession } from "../bot/bot-config.js";
 import { BOT_REACTION_EMOJIS } from "../bot/bot-reaction-tool.js";
 import { BotSession } from "../bot/bot-session.js";
@@ -23,6 +27,7 @@ import {
   type UserTextTags,
 } from "../protocol.js";
 import { AbacusBotSession, approvalTimeoutMs } from "../session.js";
+import { listServed } from "../static-server.js";
 import type { UnattendedPolicy } from "../tool-policy.js";
 import { BoundedSet, RUN_IDS_KEPT } from "./bounded.js";
 import type { CompatWriter } from "./channel.js";
@@ -262,18 +267,34 @@ export class AguiHost {
   }
 
   async run(): Promise<void> {
-    await this.core.start();
-    await this.core.readCommands(
-      this.options.stdin ?? process.stdin,
-      (command) => this.dispatch(command as AgentCommand),
-      this.recordLine
-    );
-    // stdin closed and every command settled: a run still open never got its
-    // terminal from the session, so it gets one now (§3.8).
-    this.runs.emergencyClose("agent_exit", (event) =>
-      this.sink.writeAgui(event)
-    );
-    await this.core.shutdown();
+    const stopReportingActivity = this.reportBackgroundActivity();
+    try {
+      await this.core.start();
+      await this.core.readCommands(
+        this.options.stdin ?? process.stdin,
+        (command) => this.dispatch(command as AgentCommand),
+        this.recordLine
+      );
+      // stdin closed and every command settled: a run still open never got
+      // its terminal from the session, so it gets one now (§3.8).
+      this.runs.emergencyClose("agent_exit", (event) =>
+        this.sink.writeAgui(event)
+      );
+      await this.core.shutdown();
+    } finally {
+      stopReportingActivity();
+    }
+  }
+
+  /** Tells the desktop, on each change, how much outlives a turn here. */
+  private reportBackgroundActivity(): () => void {
+    let reported = 0;
+    return onBackgroundActivity(() => {
+      const live = liveBackgroundJobCount() + listServed().length;
+      if (live === reported) return;
+      reported = live;
+      this.sink.emit({ type: "background_activity", live });
+    });
   }
 
   /**

@@ -96,6 +96,17 @@ type CliRuntime = {
   startupFailed: boolean;
   /** Exactly what was executed, for a log dump reading a spawn that failed. */
   command: string;
+  /** Background jobs and served pages the agent holds; they die with it. */
+  backgroundLive: number;
+};
+
+/** A live agent process, as the idle-agent reaper sees it. */
+export type LiveAgentSession = {
+  workspaceId: string;
+  sessionId: string;
+  status: AgentSessionStatus;
+  agentStatus: AgentStatus;
+  backgroundLive: number;
 };
 
 /**
@@ -481,6 +492,17 @@ export class AgentManagerService {
         };
   }
 
+  /** Every agent process alive now, whatever its state. */
+  listLiveSessions(): LiveAgentSession[] {
+    return [...this.runtimes.values()].map((runtime) => ({
+      workspaceId: runtime.workspaceId,
+      sessionId: runtime.sessionId,
+      status: runtime.state.status,
+      agentStatus: runtime.state.agentStatus,
+      backgroundLive: runtime.backgroundLive,
+    }));
+  }
+
   getSessionState(
     workspaceId: string,
     sessionId: string
@@ -786,6 +808,7 @@ export class AgentManagerService {
       spawnResultReported: false,
       startupFailed: false,
       command,
+      backgroundLive: 0,
       state: {
         workspaceId: request.workspaceId,
         sessionId: request.sessionId,
@@ -1240,6 +1263,8 @@ export class AgentManagerService {
         return;
       }
       const desktopEvent = parsed as DesktopEvent;
+      if (desktopEvent.type === "background_activity")
+        runtime.backgroundLive = desktopEvent.live;
       this.options.emitNdjson(
         runtime.workspaceId,
         runtime.sessionId,

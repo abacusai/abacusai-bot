@@ -7,6 +7,7 @@
  */
 import path from "path";
 
+import { notifyBackgroundActivity } from "./background-processes.js";
 import { modelPath } from "./model-path.js";
 import { listServed, serveDirectory, stopDirectory } from "./static-server.js";
 
@@ -115,6 +116,9 @@ export function buildServeTool(
           `Could not serve that directory: ${(error as Error)?.message ?? "unknown error"}`,
           true
         );
+      } finally {
+        // A served page dies with this process: the desktop keeps it up.
+        if (action !== "list") notifyBackgroundActivity();
       }
     },
   };

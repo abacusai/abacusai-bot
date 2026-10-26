@@ -208,6 +208,7 @@ import {
   assertHostCapability,
   type HostPlatform,
 } from "./platform/capabilities";
+import { isLowEndMachine } from "./platform/low-end-machine";
 import type { BusChannel, BusChannels } from "./rpc/event-bus";
 import { ConnectorGate } from "./services/agent-tools/connector-gate";
 import {
@@ -477,6 +478,7 @@ import { AgentSessionManagerService } from "./services/session/agent-session-man
 import { ArtifactResolverService } from "./services/session/artifact-resolver-service";
 import { AgentCommunicationService } from "./services/session/cli-communication-service";
 import { AgentManagerService } from "./services/session/cli-manager-service";
+import { IdleAgentReaper } from "./services/session/idle-agent-reaper";
 import { deliverMessage } from "./services/session/message-delivery";
 import { ModelSwitchWaiters } from "./services/session/model-switch";
 import { PreviewTargets } from "./services/session/preview-targets";
@@ -2711,6 +2713,7 @@ export class ServiceHost {
     this.workspaceRuntimeService.scheduleRefresh(0);
     if (this.platform === "electron")
       void this.builtinMcpLifecycle.startBrowserServer();
+    this.startIdleAgentReaper();
     // Failures are per-connector and reported through the pane.
     void this.messagingGatewayService
       .syncConnectors()
@@ -2749,6 +2752,8 @@ export class ServiceHost {
 
   stop(): void {
     this.startedAt = null;
+    this.idleAgentReaper?.dispose();
+    this.idleAgentReaper = null;
     this.workspaceRuntimeService.stop();
     this.logSyncService.stop();
     this.diagnosticsSyncService.stop();
@@ -3757,6 +3762,7 @@ export class ServiceHost {
 
     // The new agent sees the environment as it stands; nothing owed until then.
     environmentNoticeService.markSessionStarted(request.sessionId);
+    this.idleAgentReaper?.touch(request.sessionId);
 
     return this.agentManagerService.startSessionReady(withModel);
   }
@@ -3801,6 +3807,7 @@ export class ServiceHost {
     // goes through untouched.
     void this.rememberIfAsked(request.message);
 
+    this.idleAgentReaper?.touch(request.sessionId);
     // Synchronously, so a refetch sees the busy state immediately.
     this.sessionTurnStateService.markSent(
       request.workspaceId,
@@ -3861,6 +3868,18 @@ export class ServiceHost {
   }> {
     const noted = await this.withVaultNotes(request);
     const delivered = await this.withEnvironmentNotice(noted);
+    // Sent while its agent is being stopped (an idle stop, say): written to
+    // the dying process it would be lost, so it waits for that one to go and
+    // starts a fresh one.
+    if (
+      this.agentManagerService.getSessionState(
+        request.workspaceId,
+        request.sessionId
+      ).status === "stopping"
+    )
+      await this.agentManagerService
+        .stopSessionAndWait(request.workspaceId, request.sessionId)
+        .catch(() => undefined);
     const outcome = await deliverMessage({
       send: () =>
         current() && this.agentCommunicationService.sendMessage(delivered),
@@ -4000,6 +4019,7 @@ export class ServiceHost {
   }
 
   setAgentMode(request: AgentSetModeRequest): void {
+    this.idleAgentReaper?.touch(request.sessionId);
     this.agentCommunicationService.setMode(request);
   }
 
@@ -4009,12 +4029,63 @@ export class ServiceHost {
    * (`ModelSwitchWaiters`).
    */
   setAgentModel(request: AgentSetModelRequest): void {
+    this.idleAgentReaper?.touch(request.sessionId);
     this.modelSwitches.post(request.sessionId, request.model, () =>
       this.agentCommunicationService.setModel(request)
     );
   }
 
   private readonly modelSwitches = new ModelSwitchWaiters();
+
+  /** Low-end machines only: idle chat agents are stopped (see the reaper). */
+  private idleAgentReaper: IdleAgentReaper | null = null;
+
+  private startIdleAgentReaper(): void {
+    if (
+      this.idleAgentReaper != null ||
+      this.platform !== "electron" ||
+      import.meta.env.ABACUS_WEB_HOST === true ||
+      !isLowEndMachine()
+    )
+      return;
+    console.log(
+      `[idle-agents] on: low-end machine (${(os.totalmem() / 1024 ** 3).toFixed(1)} GiB, ${os.cpus().length} cpus); idle chat agents are stopped`
+    );
+    this.idleAgentReaper = new IdleAgentReaper({
+      listLive: () => this.agentManagerService.listLiveSessions(),
+      hold: (workspaceId, sessionId) =>
+        this.idleStopHold(workspaceId, sessionId),
+      stop: (workspaceId, sessionId) => {
+        this.agentManagerService.stopSession(workspaceId, sessionId);
+      },
+      log: (line) => console.log(line),
+    });
+    this.idleAgentReaper.start();
+  }
+
+  /**
+   * Why a session's agent must stay up although it looks idle, or null.
+   * The rest (a turn's own status, background jobs and served pages) the
+   * reaper reads from the live process itself.
+   */
+  private idleStopHold(workspaceId: string, sessionId: string): string | null {
+    // A run open or being admitted, a permission or question waiting on the
+    // user, a queued message.
+    if (this.aguiRelay.threadBusy(sessionId)) return "run";
+    if (this.sessionTurnStateService.get(workspaceId, sessionId).isBusy)
+      return "turn";
+    const session = this.agentSessionManagerService.get(sessionId);
+    if (
+      session?.runOutcome === "running" ||
+      this.hostedRunSessions.has(sessionId)
+    )
+      return "routine";
+    // A bot answers its chats (WhatsApp, Telegram, Discord, its routines)
+    // with no one at the keyboard; so does any chat-app conversation.
+    if (session?.owner != null) return "bot";
+    if (this.messagingGatewayService.servesSession(sessionId)) return "channel";
+    return null;
+  }
 
   /**
    * `agent.setModel` (spec 04 §26.4 d): the same command, then the agent's
