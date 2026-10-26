@@ -528,10 +528,82 @@ export const PhoneErrorScreen = ({
   );
 };
 
+/** `bot.abacus.ai`, the address a user types on the laptop. */
+const DESKTOP_ADDRESS = new URL(DESKTOP_DOWNLOAD_URL).host;
+
+/**
+ * A phone cannot install the desktop app, so it hands the address to the
+ * user's computer: copied, or mailed to themselves from their own mail app.
+ */
+const LaptopCard = () => {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
+  const address = useRef<HTMLSpanElement>(null);
+  const titleId = useId();
+  const copy = () =>
+    void navigator.clipboard.writeText(DESKTOP_DOWNLOAD_URL).then(
+      () => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      },
+      () => {
+        // No clipboard (an insecure page, a refused permission): select the
+        // address so the system's own Copy is one tap away.
+        const node = address.current;
+        const selection = window.getSelection();
+        if (node == null || selection == null) return;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    );
+  const mail = `mailto:?${new URLSearchParams({
+    subject: t("web.whatsappBot.laptopEmailSubject"),
+    body: t("web.whatsappBot.laptopEmailBody", { url: DESKTOP_DOWNLOAD_URL }),
+  })
+    .toString()
+    .replace(/\+/g, "%20")}`;
+  return (
+    <section
+      data-slot="laptop-card"
+      aria-labelledby={titleId}
+      className="bg-background flex flex-col gap-2 rounded-(--pane-radius) border px-4 pt-4 pb-3 text-left"
+    >
+      <h2 id={titleId} className="text-sm font-semibold">
+        {t("web.whatsappBot.laptopTitle")}
+      </h2>
+      <p className="text-muted-foreground text-[13px]/relaxed text-pretty">
+        {t("web.whatsappBot.laptopBody")}
+      </p>
+      <span
+        ref={address}
+        className="bg-muted self-start rounded-md px-2 py-1 font-mono text-sm select-all"
+      >
+        {DESKTOP_ADDRESS}
+      </span>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="secondary" size="sm" onClick={copy}>
+          {t(copied ? "web.whatsapp.copied" : "web.whatsappBot.laptopCopy")}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          nativeButton={false}
+          render={<a href={mail} />}
+        >
+          {t("web.whatsappBot.laptopEmail")}
+        </Button>
+      </div>
+    </section>
+  );
+};
+
 /**
  * AbacusAI Bot on a phone is WhatsApp: connect a number, then chat there.
  * Only these two screens draw (no Skip); the bot runs on the server. The
  * caller has the chat in the cache already, and linking or unlinking flips it.
+ * Both carry the way to the desktop app on a laptop.
  */
 export const PhoneWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
   const { t } = useTranslation();
@@ -584,6 +656,7 @@ export const PhoneWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
           >
             {t("web.whatsappBot.useDifferentNumber")}
           </Button>
+          <LaptopCard />
         </>
       ) : (
         <ConnectDialog
@@ -592,6 +665,7 @@ export const PhoneWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
           dismissible={false}
         >
           <WhatsAppConnect callApps={callApps} />
+          <LaptopCard />
         </ConnectDialog>
       )}
     </FlowPage>

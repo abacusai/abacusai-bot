@@ -4403,7 +4403,13 @@
       "download": "Scarica l'app desktop",
       "downloadingTitle": "Il download è iniziato",
       "downloadingBody": "Installa AbacusAI Bot per usarlo su questo computer.",
-      "connectInstead": "Collega WhatsApp invece"
+      "connectInstead": "Collega WhatsApp invece",
+      "laptopTitle": "Ottieni l'app completa sul tuo laptop",
+      "laptopBody": "L'app desktop scrive codice, crea app ed esegue routine sul tuo computer, gratis. Apri questo sul tuo laptop:",
+      "laptopCopy": "Copia link",
+      "laptopEmail": "Inviamelo via email",
+      "laptopEmailSubject": "AbacusAI Bot per il tuo laptop",
+      "laptopEmailBody": "Apri questo sul tuo laptop per scaricare l'app desktop di AbacusAI Bot: {{url}}"
     },
     "signOutDetail": "This ends your website session and clears this browser's bot data.",
     "routines": {

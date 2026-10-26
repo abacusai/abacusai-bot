@@ -4403,7 +4403,13 @@
       "download": "Masaüstü uygulamasını indir",
       "downloadingTitle": "İndirmen başladı",
       "downloadingBody": "Bu bilgisayarda kullanmak için AbacusAI Bot’u yükle.",
-      "connectInstead": "Bunun yerine WhatsApp’a bağlan"
+      "connectInstead": "Bunun yerine WhatsApp’a bağlan",
+      "laptopTitle": "Tam uygulamayı dizüstü bilgisayarına al",
+      "laptopBody": "Masaüstü uygulaması kendi bilgisayarında ücretsiz olarak kod yazar, uygulama oluşturur ve rutinleri çalıştırır. Bunu dizüstü bilgisayarında aç:",
+      "laptopCopy": "Bağlantıyı kopyala",
+      "laptopEmail": "Bana e-postayla gönder",
+      "laptopEmailSubject": "Dizüstü bilgisayarın için AbacusAI Bot",
+      "laptopEmailBody": "AbacusAI Bot masaüstü uygulamasını almak için bunu dizüstü bilgisayarında aç: {{url}}"
     },
     "signOutDetail": "Bu, web sitesi oturumunu sonlandırır ve bu tarayıcıdaki bot verilerini temizler.",
     "routines": {

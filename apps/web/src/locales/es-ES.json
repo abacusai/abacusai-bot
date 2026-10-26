@@ -4403,7 +4403,13 @@
       "download": "Descargar la app de escritorio",
       "downloadingTitle": "Tu descarga ha empezado",
       "downloadingBody": "Instala AbacusAI Bot para usarlo en este ordenador.",
-      "connectInstead": "Conectar WhatsApp"
+      "connectInstead": "Conectar WhatsApp",
+      "laptopTitle": "Consigue la app completa en tu portátil",
+      "laptopBody": "La app de escritorio programa, crea apps y ejecuta rutinas en tu propio ordenador, gratis. Abre esto en tu portátil:",
+      "laptopCopy": "Copiar enlace",
+      "laptopEmail": "Enviármelo por correo",
+      "laptopEmailSubject": "AbacusAI Bot para tu portátil",
+      "laptopEmailBody": "Abre esto en tu portátil para conseguir la app de escritorio de AbacusAI Bot: {{url}}"
     },
     "signOutDetail": "This ends your website session and clears this browser's bot data.",
     "routines": {

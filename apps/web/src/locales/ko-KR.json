@@ -4403,7 +4403,13 @@
       "download": "데스크톱 앱 다운로드",
       "downloadingTitle": "다운로드가 시작되었어요",
       "downloadingBody": "이 컴퓨터에서 사용하려면 AbacusAI Bot을 설치하세요.",
-      "connectInstead": "대신 WhatsApp 연결"
+      "connectInstead": "대신 WhatsApp 연결",
+      "laptopTitle": "노트북에서 전체 앱을 사용하세요",
+      "laptopBody": "데스크톱 앱은 내 컴퓨터에서 코드를 작성하고, 앱을 만들고, 루틴을 실행합니다. 무료입니다. 노트북에서 이 주소를 여세요:",
+      "laptopCopy": "링크 복사",
+      "laptopEmail": "내 이메일로 보내기",
+      "laptopEmailSubject": "노트북용 AbacusAI Bot",
+      "laptopEmailBody": "노트북에서 이 주소를 열어 AbacusAI Bot 데스크톱 앱을 받으세요: {{url}}"
     },
     "signOutDetail": "This ends your website session and clears this browser's bot data.",
     "routines": {
