@@ -2,7 +2,7 @@
  * The success pitch: right after a free account got a good result, one card
  * under it with the plan's whole pitch. Two signals: the user's next message
  * is a short positive reaction (or a thumbs-up / positive emoji on the reply),
- * or a clean turn handed over a site or a file. Main reads both off the turn
+ * or a result handed over a site or a file. Main reads both off the turn
  * that closed (TurnLedger) and stamps an offer in the prefs row; the renderer
  * shows it and keeps the answer. Once half the free grant is used, the credit
  * milestone cards own the pitch and this one stops.
@@ -420,8 +420,6 @@ export const isPositiveReaction = (text: string): boolean => {
 export const isPositiveReactionEmoji = (emoji: string): boolean =>
   POSITIVE_EMOJI.includes(emoji);
 
-/** A finished reply this long or longer reads as a result, not a quick answer. */
-const CLEAN_REPLY_MIN_LENGTH = 150;
 /** A refusal or a failure shows in the reply's opening. */
 const CLEAN_REPLY_HEAD_LENGTH = 400;
 
@@ -454,14 +452,9 @@ const REFUSAL_WORDS = [
 const REFUSAL = wordsPattern(REFUSAL_WORDS);
 
 /**
- * The turn's final reply reads as a finished result: long enough, not
- * ending on a question back to the user, and no refusal in its opening.
+ * The turn's final reply does not say it failed: no refusal in its opening.
+ * Its length and an offer of more at the end ("Want me to add ...?") say
+ * nothing about the result.
  */
-export const isCleanReply = (reply: string): boolean => {
-  const text = normalize(reply);
-  return (
-    text.length >= CLEAN_REPLY_MIN_LENGTH &&
-    !QUESTION.test(text.slice(-1)) &&
-    !REFUSAL.test(text.slice(0, CLEAN_REPLY_HEAD_LENGTH))
-  );
-};
+export const isCleanReply = (reply: string): boolean =>
+  !REFUSAL.test(normalize(reply).slice(0, CLEAN_REPLY_HEAD_LENGTH));

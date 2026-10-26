@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  isCleanReply,
   isComplaint,
   isPositiveReaction,
   isPositiveReactionEmoji,
@@ -108,6 +109,24 @@ describe("isPositiveReactionEmoji", () => {
     expect(isPositiveReactionEmoji("🙏")).toBe(true);
     expect(isPositiveReactionEmoji("😢")).toBe(false);
     expect(isPositiveReactionEmoji("👀")).toBe(false);
+  });
+});
+
+describe("isCleanReply", () => {
+  it("a reply that ends by offering more, or a short one, is clean", () => {
+    expect(
+      isCleanReply(
+        "Your todo app is ready. Want me to add due dates, or multiple lists?"
+      )
+    ).toBe(true);
+    expect(isCleanReply("Done.")).toBe(true);
+  });
+
+  it("a reply that says it failed is not", () => {
+    expect(isCleanReply("I couldn't start the server, the port is busy.")).toBe(
+      false
+    );
+    expect(isCleanReply("Não consegui abrir o arquivo.")).toBe(false);
   });
 });
 
