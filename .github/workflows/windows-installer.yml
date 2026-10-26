@@ -1,8 +1,8 @@
 name: Windows installer
 
-# Builds both Windows installers from the branch (unsigned) and installs each
-# the way a user does, one click and not silent, against a local stand-in for
-# the Abacus host that records what the installer reports. A second job, run by
+# Builds the Windows installers from the branch (unsigned) and installs one the
+# way a user does, one click and not silent, against a local stand-in for the
+# Abacus host that records what the installer reports. A second job, run by
 # hand, installs the signed release from the CDN with reporting off.
 
 on:
@@ -52,51 +52,25 @@ jobs:
           pnpm run build
 
       # Both architectures, as a release packages them, with the release config.
-      # The debug log carries the defines makensis compiles in.
-      - name: Package both installers
+      - name: Package the installers
         working-directory: apps/desktop
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-          DEBUG: electron-builder
         run: |
           set -euo pipefail
-          pnpm exec electron-builder --config electron-builder.yml --win nsis nsis-web --x64 --arm64 --publish never 2>&1 | tee "$RUNNER_TEMP/package.log"
+          pnpm exec electron-builder --config electron-builder.yml --win nsis --x64 --arm64 --publish never
           ls -la release
 
-      - name: The web installer downloads from this version's release directory
-        working-directory: apps/desktop
-        run: |
-          set -euo pipefail
-          version=$(node -p 'require("./package.json").version')
-          expected="https://downloads.abacus.ai/abacusai-bot/releases/${version}"
-          grep -F "\"APP_PACKAGE_URL=${expected}\"" "$RUNNER_TEMP/package.log" || {
-            echo "::error::the web installer's package URL is not ${expected}"
-            grep -F APP_PACKAGE_URL "$RUNNER_TEMP/package.log" || true
-            exit 1
-          }
-          grep -qF '"APP_PACKAGE_URL_IS_INCOMPLETE"' "$RUNNER_TEMP/package.log" || {
-            echo "::error::the web installer does not append the package name to its URL"
-            exit 1
-          }
-          for arch in x64 arm64; do
-            ls release/nsis-web/*-"${version}-${arch}.nsis.7z"
-          done
-          ls "release/nsis-web/AbacusAI-Bot-${version}-web-setup.exe"
-
-      # The update feed is what every installed copy reads: the web installer
-      # and its packages must never appear in it.
-      - name: latest.yml lists only the full installers
+      # The update feed is what every installed copy reads.
+      - name: latest.yml lists only the installers
         working-directory: apps/desktop
         run: |
           set -euo pipefail
           cat release/latest.yml
-          # The web target's own directory gets no feed at all.
-          [ ! -e release/nsis-web/latest.yml ] || { echo "::error::the web installer wrote an update feed"; exit 1; }
           urls=$(sed -n -E 's/^[[:space:]-]*(url|path):[[:space:]]*//p' release/latest.yml)
           [ -n "$urls" ] || { echo "::error::latest.yml lists no files"; exit 1; }
           while IFS= read -r url; do
             case "$url" in
-              *web-setup*|*.nsis.7z) echo "::error::latest.yml lists $url"; exit 1 ;;
               *-setup.exe) ;;
               *) echo "::error::latest.yml lists an unexpected file: $url"; exit 1 ;;
             esac
@@ -107,43 +81,24 @@ jobs:
           name: latest-yml
           path: apps/desktop/release/latest.yml
 
-      # The same web installer pointed at the stand-in, so its download runs
-      # without a release on the CDN. Only the URL differs from the build above.
-      - name: Package a web installer that downloads from the stand-in
-        working-directory: apps/desktop
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-        run: >-
-          pnpm exec electron-builder --config electron-builder.yml --win nsis-web --x64 --prepackaged release/win-unpacked --publish never -c.directories.output=release/stub -c.nsisWeb.publish.url=http://127.0.0.1:${{ env.STUB_PORT }}/pkg
-
       - name: Start the stand-in host
         run: |
           set -euo pipefail
           cat > "$RUNNER_TEMP/stub.mjs" <<'JS'
           import fs from "node:fs";
           import http from "node:http";
-          import path from "node:path";
 
-          const [log, root, port] = process.argv.slice(2);
+          const [log, port] = process.argv.slice(2);
           http
             .createServer((req, res) => {
               fs.appendFileSync(log, `${req.method} ${req.url}\n`);
-              const { pathname } = new URL(req.url, "http://stub");
-              if (pathname.startsWith("/pkg/")) {
-                const file = path.join(root, path.basename(decodeURIComponent(pathname)));
-                if (fs.existsSync(file)) {
-                  res.writeHead(200, { "content-length": fs.statSync(file).size });
-                  fs.createReadStream(file).pipe(res);
-                  return;
-                }
-              }
               res.writeHead(404);
               res.end();
             })
             .listen(Number(port), "127.0.0.1");
           JS
           : > "$RUNNER_TEMP/requests.log"
-          nohup node "$RUNNER_TEMP/stub.mjs" "$RUNNER_TEMP/requests.log" "$PWD/apps/desktop/release/stub/nsis-web" "$STUB_PORT" > "$RUNNER_TEMP/stub.out" 2>&1 &
+          nohup node "$RUNNER_TEMP/stub.mjs" "$RUNNER_TEMP/requests.log" "$STUB_PORT" > "$RUNNER_TEMP/stub.out" 2>&1 &
           for _ in $(seq 1 20); do
             curl -s -o /dev/null "http://127.0.0.1:${STUB_PORT}/ready" && break
             sleep 1
@@ -160,7 +115,7 @@ jobs:
           mkdir -p "$home"
           printf '{"serverDebugSync":false}' > "$home/config.json"
 
-      - name: The full installer installs, reports and hands the app its id
+      - name: The installer installs, reports and hands the app its id
         working-directory: apps/desktop
         env:
           ABACUSAI_BOT_ABACUS_HOST: http://127.0.0.1:${{ env.STUB_PORT }}
@@ -169,20 +124,6 @@ jobs:
           version=$(node -p 'require("./package.json").version')
           bash ../../.github/scripts/windows-install-check.sh \
             "release/AbacusAI-Bot-${version}-x64-setup.exe" "$RUNNER_TEMP/requests.log" "$version"
-
-      - name: The web installer downloads its package, reports and keeps the id
-        working-directory: apps/desktop
-        env:
-          ABACUSAI_BOT_ABACUS_HOST: http://127.0.0.1:${{ env.STUB_PORT }}
-        run: |
-          set -euo pipefail
-          version=$(node -p 'require("./package.json").version')
-          # Away from the package, so the stub has to download it.
-          mkdir -p "$RUNNER_TEMP/web"
-          cp "release/stub/nsis-web/AbacusAI-Bot-${version}-web-setup.exe" "$RUNNER_TEMP/web/"
-          bash ../../.github/scripts/windows-install-check.sh \
-            "$RUNNER_TEMP/web/AbacusAI-Bot-${version}-web-setup.exe" "$RUNNER_TEMP/requests.log" "$version"
-          grep -E "^GET /pkg/[^/]*-${version}-x64\.nsis\.7z$" "$RUNNER_TEMP/requests.log"
 
       - name: What the stand-in saw
         if: always()
