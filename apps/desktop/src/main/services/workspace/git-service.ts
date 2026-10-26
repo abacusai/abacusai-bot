@@ -37,6 +37,19 @@ const LITERAL_PATHSPECS = {
   maxBuffer: 64 * 1024 * 1024,
 };
 
+/**
+ * For a status read: without optional locks, status no longer takes
+ * `.git/index.lock`, which the git-dir watcher saw as a change, so every read
+ * scheduled the next. The variable, unlike the flag, older git ignores.
+ */
+const STATUS_READ = {
+  ...LITERAL_PATHSPECS,
+  env: childProcessEnv(process.env, {
+    GIT_LITERAL_PATHSPECS: "1",
+    GIT_OPTIONAL_LOCKS: "0",
+  }),
+};
+
 /** Paths per git call. */
 const PATHSPEC_CHUNK = 200;
 /**
@@ -569,13 +582,10 @@ export class GitService {
 
     try {
       // Scoped to the workspace: one inside a larger repository (a home
-      // folder kept in git) must not scan the whole of it. No optional
-      // locks: status otherwise takes `.git/index.lock`, which the git-dir
-      // watcher sees as a change, so each read scheduled the next.
+      // folder kept in git) must not scan the whole of it.
       const statusOutput = await execFileAsync(
         "git",
         [
-          "--no-optional-locks",
           "-C",
           workspacePath,
           "status",
@@ -585,7 +595,7 @@ export class GitService {
           "--",
           ".",
         ],
-        LITERAL_PATHSPECS
+        STATUS_READ
       );
       let changes: GitChangeItem[] = parseStatusZ(statusOutput.stdout);
       if (options.checkoutRelative === true) {
@@ -1039,7 +1049,6 @@ export class GitService {
       const status = await execFileAsync(
         "git",
         [
-          "--no-optional-locks",
           "-C",
           checkoutPath,
           "status",
@@ -1049,7 +1058,7 @@ export class GitService {
           "--",
           relativePath,
         ],
-        LITERAL_PATHSPECS
+        STATUS_READ
       );
       // Status paths are top-level relative, whatever `-C` is.
       const gitPath = `${location?.prefix ?? ""}${relativePath}`;
