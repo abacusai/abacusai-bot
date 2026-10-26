@@ -1,3 +1,4 @@
+import type { BillingPlan } from "@abacus-ai/contract/billing-plan";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
@@ -29,6 +30,7 @@ const state = vi.hoisted(() => ({
     credits_used: 95,
     free_credits_held: undefined as boolean | undefined,
   },
+  billing: null as BillingPlan | null,
   exhaustedAt: null as number | null,
   refetch: vi.fn(),
   refetchQueries: vi.fn(async () => {}),
@@ -42,6 +44,10 @@ vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ refetchQueries: state.refetchQueries }),
   useQuery: (options: { queryKey?: unknown }) => {
     state.query(options);
+    if ((options.queryKey as unknown[])[0] === "billingPlan")
+      return state.billing == null
+        ? { data: undefined, status: "pending" }
+        : { data: state.billing, status: "success" };
     return {
       data: state.account,
       dataUpdatedAt: Date.now(),
@@ -62,6 +68,9 @@ vi.mock("#renderer/lib/use-app-context", () => ({
             queryOptions: () => ({ queryKey: ["account"] }),
             queryKey: () => ["account"],
             key: () => ["account"],
+          },
+          billingPlan: {
+            queryOptions: () => ({ queryKey: ["billingPlan"] }),
           },
         },
       },
@@ -98,9 +107,30 @@ const promo = () => (
     <PromoOutlet floating={false} />
   </>
 );
+const BILLING: BillingPlan = {
+  current: {
+    planName: "Free",
+    creditsRemaining: 5,
+    creditsGranted: 100,
+    freeTierExpiresAt: null,
+  },
+  plans: [],
+  upgrades: [
+    {
+      plan: "basic",
+      planName: "Basic",
+      priceText: "$10/mo",
+      features: [],
+      url: null,
+    },
+  ],
+  topUpUrl: null,
+  upgradeInMobileApp: false,
+};
 beforeEach(async () => {
   await initI18n();
   localStorage.clear();
+  state.billing = BILLING;
   state.exhaustedAt = null;
   state.query.mockClear();
   state.refetch.mockClear();
@@ -123,6 +153,25 @@ it("shows actual credit progress and reacts to CTA focus", () => {
     screen.queryByRole("button", { name: "Remind me in 10 minutes" })
   ).toBeNull();
 });
+it("lists the plan's whole pitch once the plan is read, never half a card", () => {
+  state.billing = null;
+  const view = render(promo());
+  expect(screen.queryByRole("button", { name: "Upgrade" })).toBeNull();
+  state.billing = BILLING;
+  view.rerender(promo());
+  expect(screen.getByText("Everything Basic gives you")).toBeTruthy();
+  expect(
+    [...document.querySelectorAll('[data-slot="upgrade-pitch"] li')].map(
+      (line) => line.textContent
+    )
+  ).toEqual([
+    "Build and deploy powerful apps on the web, including mobile apps",
+    "Image and video generation",
+    expect.stringMatching(/^Personal agents/),
+    expect.stringMatching(/^100\+ connectors/),
+  ]);
+});
+
 it("points an account already on a paid tier at AbacusAI Agent on the web", async () => {
   state.account.subscription_tier = "pro";
   state.open.mockClear();
@@ -228,7 +277,8 @@ it("keeps one account cache when an exhaustion notice is cleared", () => {
   state.exhaustedAt = null;
   view.rerender(promo());
   for (const [options] of state.query.mock.calls)
-    expect(options.queryKey).toEqual(["account"]);
+    if (options.queryKey[0] !== "billingPlan")
+      expect(options.queryKey).toEqual(["account"]);
 });
 
 afterEach(() => {
