@@ -1,3 +1,5 @@
+import { wallOffer } from "@abacus-ai/contract/billing-plan";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowUpRight,
   FileText,
@@ -37,6 +39,7 @@ import { useCreditsAccount } from "#renderer/lib/use-credits-account";
 import { useNow } from "#renderer/lib/use-now";
 import { Button } from "#renderer/ui/button";
 
+import { PlanPitchList } from "../upgrade-dialog/plan-pitch";
 import { PromoCharacter } from "./promo-character";
 import { usePromoHost, consumePromoRect } from "./promo-host";
 import { promoAccountKey, promoState } from "./promo-state";
@@ -135,14 +138,21 @@ export const UpgradePromo = () => {
       url: ABACUS_VERIFY_PHONE_URL,
     });
   };
-  // A free account's card names no gains of its own: Upgrade opens the
-  // dialog with the plan's whole pitch.
   const lines = web ? WEB_LINES : [];
+  // A free account's card lists the plan's whole pitch; it waits for the
+  // plan (or its failure) so the card does not grow once on screen.
+  const pitching = state != null && !held && !web && tier === "free";
+  const billing = useQuery({
+    ...transport.orpc.account.billingPlan.queryOptions({ input: {} }),
+    enabled: pitching,
+    staleTime: 60_000,
+  });
+  const offer = wallOffer(billing.data ?? null);
   if ((!held && ((tier !== "free" && !web) || contextualUpsell)) || !host)
     return createPortal(null, target);
   return createPortal(
     <AnimatePresence>
-      {state ? (
+      {state && (!pitching || billing.status !== "pending") ? (
         <motion.aside
           key={key}
           data-slot="upgrade-promo"
@@ -249,6 +259,22 @@ export const UpgradePromo = () => {
               ) : null}
             </div>
           </div>
+          {pitching && billing.data != null ? (
+            <div className="mt-3 flex min-h-0 flex-col gap-1.5">
+              {offer != null && (
+                <p className="text-muted-foreground text-xs font-medium">
+                  {t("upgradeDialog.planTitle", { plan: offer.planName })}
+                </p>
+              )}
+              {/* Whole on a tall window; on a short one it scrolls in place, so the sessions above keep their room. */}
+              <div className="scroll-fade-y max-h-[clamp(5rem,calc(100vh_-_34rem),20rem)] overflow-y-auto overscroll-contain">
+                <PlanPitchList
+                  billing={billing.data}
+                  className="gap-1.5 [&_li]:gap-2 [&_li]:text-xs/4 [&_svg]:mt-px [&_svg]:size-3.5"
+                />
+              </div>
+            </div>
+          ) : null}
           <Button
             size="sm"
             className="mt-3 h-8 rounded-lg"
