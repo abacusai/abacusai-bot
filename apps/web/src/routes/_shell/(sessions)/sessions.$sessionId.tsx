@@ -619,6 +619,7 @@ const SessionRoute = () => {
                   transition: "nav-lateral",
                 }),
               onResumeOnModel: model.onResumeOnModel,
+              onSwitchThisChat: model.onSwitchThisChat,
               availableModes: model.availableModes,
               defaultMode: row.mode ?? prefs.defaultMode,
               blocked: model.blocked,

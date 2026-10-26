@@ -88,6 +88,11 @@ export interface ComposerConfig {
   onNewChat?(): void;
   /** Move the chat onto `model` before replaying a dead turn on it. */
   onResumeOnModel?(model: string): Promise<void>;
+  /**
+   * Move only this chat onto `model`, never the app's default: a bot's chat
+   * moves its bot. Answers which of the two moved.
+   */
+  onSwitchThisChat?(model: string): Promise<"chat" | "bot">;
   /** 03-bots §24.2: sent as `forwardedProps.mode` on every admission. */
   fixedMode?: AgentMode;
   /** Sessions: `agent.setMode` for a live runtime (the route knows the workspace). */

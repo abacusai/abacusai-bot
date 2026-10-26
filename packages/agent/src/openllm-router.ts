@@ -55,6 +55,8 @@ export const OPENLLM_CONTINUATION_PROMPT =
   "The previous model's provider call failed, and you have taken over this conversation on a different model. Continue the task from the transcript above. Do not restart it or repeat work that already completed.";
 
 export class OpenLlmRouter {
+  /** Cut-off cards this session showed; see noteStreamCutCard. */
+  private streamCutCards = 0;
   private readonly rotation: OpenLlmRotation;
   /**
    * Models that failed this turn. A rotation never returns to one, so a turn
@@ -198,6 +200,14 @@ export class OpenLlmRouter {
           ? "out"
           : "credits",
     };
+  }
+
+  /**
+   * A cut-off card goes out: how many this session showed before it. From
+   * the second the card leads with the way off the model, without Continue.
+   */
+  noteStreamCutCard(): number {
+    return this.streamCutCards++;
   }
 
   /** Whether the turn now running is on the free lane the user chose. */

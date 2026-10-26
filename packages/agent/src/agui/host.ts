@@ -554,6 +554,10 @@ export class AguiHost {
       }
       if (newest?.id != null) this.echoedUserIds.add(newest.id);
     }
+    // The cut-off card's Continue and Switch: the cut reply is picked up from
+    // the transcript (a bot's chat sends its own words for the ask, since its
+    // first message is hidden), never asked anew.
+    const continueCut = forwarded.intent === "continue";
     if (newest?.id != null) this.lastPrompt = { messageId: newest.id, runId };
 
     const stillAdmitted = (): boolean =>
@@ -600,7 +604,10 @@ export class AguiHost {
 
       this.core.preparing = false;
       prompted = true;
-      await this.core.runHeld(text, "run", { token });
+      await this.core.runHeld(text, "run", {
+        token,
+        ...(continueCut && { continueCut }),
+      });
     } catch (error) {
       // Something other than the session's own reporting threw before the
       // prompt: the run is this command's own, so it ends in RUN_ERROR.

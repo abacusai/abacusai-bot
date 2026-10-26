@@ -22,6 +22,20 @@ const showing = new Store<Record<string, boolean>>({});
 const setShowing = (threadId: string, on: boolean): void =>
   showing.setState((state) => ({ ...state, [threadId]: on }));
 
+/**
+ * The latest turn ended on the cut-off card, which offers RouteLLM - Open
+ * itself: the notice stays down meanwhile, and the card is not one of its
+ * five showings.
+ */
+const endedOnCutOff = (
+  outcome: { kind: string; error?: unknown } | null
+): boolean =>
+  outcome?.kind === "error" &&
+  (
+    (outcome.error as { actions?: Array<{ type?: string }> } | undefined)
+      ?.actions ?? []
+  ).some((action) => action.type === "cut-off");
+
 type FunnelStep =
   | "routellm_nudge_shown"
   | "routellm_nudge_switched"
@@ -54,8 +68,9 @@ export const OtherProviderNotice = ({
     at: prefs.dismissals.routeLlmNudgeAt,
     switched: prefs.dismissals.routeLlmSwitched,
   };
+  const cutOff = endedOnCutOff(latest);
   const show = useEffectEvent(() => {
-    if (visible || nudgesDone(state)) return;
+    if (visible || cutOff || nudgesDone(state)) return;
     const now = Date.now();
     setShowing(threadId, true);
     funnel("routellm_nudge_shown");
@@ -64,8 +79,9 @@ export const OtherProviderNotice = ({
     }).catch(() => undefined);
   });
 
-  // Every 30 minutes since it last showed: due now the first time.
-  const dueAt = visible ? null : nudgeDueAt(state);
+  // Every 30 minutes since it last showed: due now the first time, and not
+  // behind a cut-off card (due again once the chat has moved past it).
+  const dueAt = visible || cutOff ? null : nudgeDueAt(state);
   useEffect(() => {
     if (dueAt == null) return;
     const timer = window.setTimeout(show, Math.max(0, dueAt - Date.now()));
@@ -79,7 +95,7 @@ export const OtherProviderNotice = ({
     if (latest.kind === "error") show();
   }, [latest]);
 
-  if (!visible) return null;
+  if (!visible || cutOff) return null;
   return (
     <section data-slot="other-provider-notice" className="mb-2">
       <div className="bg-card border-border overflow-hidden rounded-xl border">

@@ -23,6 +23,7 @@ import {
   phoneVerification,
 } from "./openllm.js";
 import type { NotificationAction } from "./protocol.js";
+import { isStreamCut } from "./stream-cut.js";
 
 /**
  * Why a turn did not finish. One per turn, read from the whole chain of
@@ -57,6 +58,8 @@ export type FailureCause =
   | "free_pool_spent"
   /** A real rate limit or an overloaded provider: worth waiting for. */
   | "rate_limited"
+  /** Google closed the reply's stream partway, even after asking again. */
+  | "stream_cut"
   /** The model answered with nothing after an earlier call failed. */
   | "empty"
   | "unknown";
@@ -122,6 +125,8 @@ export function classifyAttempt(
 
   if (raw === EMPTY_REPLY_FAILURE) return "empty";
 
+  if (isStreamCut(raw, provider)) return "stream_cut";
+
   if (
     ownKey(provider) &&
     (isOwnKeyOutOfCredit(raw, provider) ||
@@ -173,6 +178,7 @@ const CAUSE_PRIORITY: readonly FailureCause[] = [
   "own_key_quota",
   "model_unavailable",
   "rate_limited",
+  "stream_cut",
   "empty",
   "unknown",
 ];
@@ -259,6 +265,10 @@ export interface FailureContext {
   abacus: "credits" | "out" | null;
   /** The model the user picked, for a card about it (one outside the plan). */
   model?: { model: string; label: string };
+  /** The failed call got text or a tool call out before it ended. */
+  streamed?: boolean;
+  /** Cut-off cards this session already showed: from the second, no Continue. */
+  cutoffsBefore?: number;
 }
 
 /** The error a failed turn ends with, as the desktop receives it. */
@@ -324,6 +334,8 @@ const routedMessage = (failure: TurnFailure): string => {
       return EMPTY_REPLY_MESSAGE;
     case "unknown":
       return "The free models couldn't finish this. Try again, or switch to a different model.";
+    case "stream_cut":
+      return `${providerName(failure.provider)} cut the reply off partway, even after asking again.`;
   }
 };
 
@@ -417,6 +429,38 @@ const modelUnavailableActions = (
   ];
 };
 
+/**
+ * Google cut the reply off on a model the user picked, even after asking
+ * again: the card names it and offers the ways on, chosen by the user and
+ * never switched to. `cause` is where the Abacus credits stand (the card
+ * leads with RouteLLM - Open while some are left, with the plan once they
+ * are used up); Continue goes on the same model, and is left out from the
+ * session's second cut-off. On the pool the router already moved on.
+ */
+const cutOffActions = (
+  failure: TurnFailure,
+  context: FailureContext
+): NotificationAction[] => {
+  if (context.routed) return [{ type: "switch-model" }];
+  return [
+    {
+      type: "cut-off",
+      ...(failure.provider != null ? { provider: failure.provider } : {}),
+      ...(context.model != null
+        ? { model: context.model.model, label: context.model.label }
+        : {}),
+      cause:
+        context.abacus === "credits"
+          ? "credits"
+          : context.abacus === "out"
+            ? "out"
+            : "signed-out",
+      streamed: context.streamed === true,
+    },
+    ...((context.cutoffsBefore ?? 0) > 0 ? [] : [{ type: "continue-same" }]),
+  ];
+};
+
 /** The actions a cause offers; see NotificationAction for how each renders. */
 const failureActions = (
   failure: TurnFailure,
@@ -500,6 +544,8 @@ const failureActions = (
       return [{ type: "switch-model" }];
     case "empty":
       return [{ type: "retry" }, { type: "switch-model" }];
+    case "stream_cut":
+      return cutOffActions(failure, context);
     case "unknown": {
       const own = context.routed
         ? null
@@ -550,6 +596,7 @@ export function presentFailure(
     connection ||
     ownKeyLine ||
     failure.cause === "empty" ||
+    failure.cause === "stream_cut" ||
     failure.cause === "payment_required" ||
     failure.cause === "phone_verification";
   const unavailable = actions.find(

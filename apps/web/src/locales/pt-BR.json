@@ -4518,7 +4518,11 @@
       "appClosed": "O app foi fechado antes que eu pudesse responder. Envie de novo para retomar.",
       "stillWorking": "Ainda estou trabalhando nisso ({{minutes}} min até agora). Respondo aqui quando terminar.",
       "verifyPhone": "Verifique seu telefone para liberar {{credits}} créditos grátis: {{link}}",
-      "verifyPhoneNoCount": "Verifique seu telefone para liberar seus créditos grátis: {{link}}"
+      "verifyPhoneNoCount": "Verifique seu telefone para liberar seus créditos grátis: {{link}}",
+      "cutoff": "O Google cortou minha resposta no meio, então parei. Envie sua mensagem de novo para tentar outra vez.",
+      "cutoffSwitch": "Ou mude para o RouteLLM - Open no seletor de modelos do app para respostas mais estáveis.",
+      "cutoffVerify": "Ou verifique seu telefone para liberar seus créditos gratuitos da Abacus e depois mude para o RouteLLM - Open no app: {{link}}",
+      "cutoffTopUp": "Ou adicione créditos da Abacus e mude para o RouteLLM - Open no app: {{link}}"
     },
     "unavailable": {
       "title": {
@@ -4541,6 +4545,19 @@
       "seePlans": "Ver planos",
       "planBody": "Continue agora com um modelo gratuito, ou faça upgrade para o {{plan}} para usá-lo.",
       "planBodyAny": "Continue agora com um modelo gratuito, ou faça upgrade do seu plano para usá-lo."
+    },
+    "cutoff": {
+      "title": "O Google cortou a resposta",
+      "body": "Pedimos de novo, e o Google cortou outra vez. Sua mensagem está guardada.",
+      "bodyStreamed": "Parte da resposta chegou e continua acima. Pedimos de novo, e o Google cortou outra vez.",
+      "held": "Verifique seu telefone para liberar seus créditos gratuitos da Abacus e depois mude para o RouteLLM - Open.",
+      "continue": "Continuar no {{model}}",
+      "resolved": {
+        "continued": "Continuando no {{model}}",
+        "switchedChat": "Este chat agora usa o RouteLLM - Open",
+        "switchedBot": "Este bot agora usa o RouteLLM - Open",
+        "upgraded": "Plano atualizado. Continuando com os modelos do seu plano."
+      }
     },
     "payment": {
       "title": "Não conseguimos confirmar seu último pagamento",

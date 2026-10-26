@@ -7,14 +7,24 @@ import type { ModelAvailability } from "@abacus-ai/contract/models";
  */
 export const OWN_KEY_UNAVAILABLE_ACTION = "own-key-unavailable";
 
-/** The key's balance is spent, its rate limit hit, or its provider silent. */
-export type OwnKeyCause = "credit" | "rate_limit" | "down" | "network";
+/**
+ * The key's balance is spent, its rate limit hit, or its provider silent.
+ * `cutoff` is the cut-off card's Upgrade: Google cut the reply off, and the
+ * plan's dialog resumes the turn on an Abacus model.
+ */
+export type OwnKeyCause =
+  | "credit"
+  | "rate_limit"
+  | "down"
+  | "network"
+  | "cutoff";
 
 export interface OwnKeyFailure {
   provider: string;
   cause: OwnKeyCause;
 }
 
+// `cutoff` never arrives on an action: only the cut-off card asks with it.
 const CAUSES = new Set<string>(["credit", "rate_limit", "down", "network"]);
 
 /** The own-key failure off a failed turn's actions; or null. */
@@ -38,7 +48,9 @@ export const ownKeyHeadlineKey = (cause: OwnKeyCause): string =>
     ? "ownKey.outOfCredit"
     : cause === "rate_limit"
       ? "ownKey.rateLimited"
-      : "ownKey.notResponding";
+      : cause === "cutoff"
+        ? "outcome.cutoff.title"
+        : "ownKey.notResponding";
 
 /** The low code router: what a paid plan runs when nothing else is chosen. */
 const ABACUS_DEFAULT_MODEL_ID = "abacus/route-llm-code-low";

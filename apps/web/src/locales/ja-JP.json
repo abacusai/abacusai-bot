@@ -4518,7 +4518,11 @@
       "appClosed": "返信する前にアプリが閉じられました。もう一度送ると続きから再開します。",
       "stillWorking": "まだ作業中です(ここまで{{minutes}}分)。終わったらここで返信します。",
       "verifyPhone": "電話番号を認証すると、無料クレジット {{credits}} が使えるようになります: {{link}}",
-      "verifyPhoneNoCount": "電話番号を認証すると、無料クレジットが使えるようになります: {{link}}"
+      "verifyPhoneNoCount": "電話番号を認証すると、無料クレジットが使えるようになります: {{link}}",
+      "cutoff": "Google に返信を途中で打ち切られたため、止まりました。もう一度メッセージを送ると再試行します。",
+      "cutoffSwitch": "または、アプリのモデル選択で RouteLLM - Open に切り替えると、より安定した返信が得られます。",
+      "cutoffVerify": "または、電話番号を認証して無料の Abacus クレジットを有効にしてから、アプリで RouteLLM - Open に切り替えてください: {{link}}",
+      "cutoffTopUp": "または、Abacus クレジットを追加して、アプリで RouteLLM - Open に切り替えてください: {{link}}"
     },
     "unavailable": {
       "title": {
@@ -4541,6 +4545,19 @@
       "seePlans": "プランを見る",
       "planBody": "今は無料モデルで続けるか、{{plan}} にアップグレードしてご利用ください。",
       "planBodyAny": "今は無料モデルで続けるか、プランをアップグレードしてご利用ください。"
+    },
+    "cutoff": {
+      "title": "Google が返信を途中で打ち切りました",
+      "body": "もう一度リクエストしましたが、Google にまた打ち切られました。メッセージは保持されています。",
+      "bodyStreamed": "返信の一部は届いており、上に残っています。もう一度リクエストしましたが、Google にまた打ち切られました。",
+      "held": "電話番号を認証して無料の Abacus クレジットを有効にしてから、RouteLLM - Open に切り替えてください。",
+      "continue": "{{model}} で続ける",
+      "resolved": {
+        "continued": "{{model}} で続けています",
+        "switchedChat": "このチャットを RouteLLM - Open に切り替えました",
+        "switchedBot": "このボットを RouteLLM - Open に切り替えました",
+        "upgraded": "アップグレードしました。プランのモデルで続けています。"
+      }
     },
     "payment": {
       "title": "前回のお支払いを確認できませんでした",

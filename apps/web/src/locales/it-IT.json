@@ -4518,7 +4518,11 @@
       "appClosed": "L'app è stata chiusa prima che potessi rispondere. Rimandalo per riprendere.",
       "stillWorking": "Ci sto ancora lavorando ({{minutes}} min finora). Ti rispondo qui quando è pronto.",
       "verifyPhone": "Verifica il tuo telefono per sbloccare {{credits}} crediti gratuiti: {{link}}",
-      "verifyPhoneNoCount": "Verifica il tuo telefono per sbloccare i tuoi crediti gratuiti: {{link}}"
+      "verifyPhoneNoCount": "Verifica il tuo telefono per sbloccare i tuoi crediti gratuiti: {{link}}",
+      "cutoff": "Google ha interrotto la mia risposta a metà, quindi mi sono fermato. Invia di nuovo il messaggio per riprovare.",
+      "cutoffSwitch": "Oppure passa a RouteLLM - Open nel selettore dei modelli dell'app per risposte più stabili.",
+      "cutoffVerify": "Oppure verifica il tuo telefono per sbloccare i crediti Abacus gratuiti, poi passa a RouteLLM - Open nell'app: {{link}}",
+      "cutoffTopUp": "Oppure aggiungi crediti Abacus e passa a RouteLLM - Open nell'app: {{link}}"
     },
     "unavailable": {
       "title": {
@@ -4541,6 +4545,19 @@
       "seePlans": "Vedi i piani",
       "planBody": "Continua ora con un modello gratuito, oppure passa a {{plan}} per usarlo.",
       "planBodyAny": "Continua ora con un modello gratuito, oppure passa a un piano superiore per usarlo."
+    },
+    "cutoff": {
+      "title": "Google ha interrotto la risposta",
+      "body": "Abbiamo chiesto di nuovo e Google l'ha interrotta ancora. Il tuo messaggio è conservato.",
+      "bodyStreamed": "Una parte della risposta è arrivata e resta qui sopra. Abbiamo chiesto di nuovo e Google l'ha interrotta ancora.",
+      "held": "Verifica il tuo telefono per sbloccare i crediti Abacus gratuiti, poi passa a RouteLLM - Open.",
+      "continue": "Continua con {{model}}",
+      "resolved": {
+        "continued": "Si continua con {{model}}",
+        "switchedChat": "Questa chat ora usa RouteLLM - Open",
+        "switchedBot": "Questo bot ora usa RouteLLM - Open",
+        "upgraded": "Piano aggiornato. Si continua con i modelli del tuo piano."
+      }
     },
     "payment": {
       "title": "Non siamo riusciti a confermare il tuo ultimo pagamento",

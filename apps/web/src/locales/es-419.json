@@ -4518,7 +4518,11 @@
       "appClosed": "La app se cerró antes de que pudiera responder. Envíalo de nuevo para retomarlo.",
       "stillWorking": "Sigo trabajando en eso ({{minutes}} min hasta ahora). Te respondo aquí cuando esté listo.",
       "verifyPhone": "Verifica tu teléfono para desbloquear {{credits}} créditos gratis: {{link}}",
-      "verifyPhoneNoCount": "Verifica tu teléfono para desbloquear tus créditos gratis: {{link}}"
+      "verifyPhoneNoCount": "Verifica tu teléfono para desbloquear tus créditos gratis: {{link}}",
+      "cutoff": "Google cortó mi respuesta a la mitad, así que me detuve. Envía tu mensaje de nuevo para reintentarlo.",
+      "cutoffSwitch": "O cambia a RouteLLM - Open en el selector de modelos de la app para obtener respuestas más estables.",
+      "cutoffVerify": "O verifica tu teléfono para desbloquear tus créditos gratis de Abacus y luego cambia a RouteLLM - Open en la app: {{link}}",
+      "cutoffTopUp": "O agrega créditos de Abacus y cambia a RouteLLM - Open en la app: {{link}}"
     },
     "unavailable": {
       "title": {
@@ -4541,6 +4545,19 @@
       "seePlans": "Ver planes",
       "planBody": "Sigue ahora con un modelo gratis o mejora a {{plan}} para usarlo.",
       "planBodyAny": "Sigue ahora con un modelo gratis o mejora tu plan para usarlo."
+    },
+    "cutoff": {
+      "title": "Google cortó la respuesta",
+      "body": "Volvimos a pedirla y Google la cortó otra vez. Tu mensaje se conserva.",
+      "bodyStreamed": "Parte de la respuesta llegó y se conserva arriba. Volvimos a pedirla y Google la cortó otra vez.",
+      "held": "Verifica tu teléfono para desbloquear tus créditos gratis de Abacus y luego cambia a RouteLLM - Open.",
+      "continue": "Continuar con {{model}}",
+      "resolved": {
+        "continued": "Continuando con {{model}}",
+        "switchedChat": "Este chat ahora usa RouteLLM - Open",
+        "switchedBot": "Este bot ahora usa RouteLLM - Open",
+        "upgraded": "Plan mejorado. Continuamos con los modelos de tu plan."
+      }
     },
     "payment": {
       "title": "No pudimos confirmar tu último pago",

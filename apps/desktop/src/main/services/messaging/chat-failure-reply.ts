@@ -49,6 +49,7 @@ export interface TurnFailure {
  * sells a way out, which the throttle holds to once per window.
  */
 export type FailureKind =
+  | "cut-off"
   | "model-gone"
   | "upgrade-abacus"
   | "own-key"
@@ -71,6 +72,8 @@ export interface ChannelOffer {
   topUpUrl: string;
   /** The billing plan as just read; null when it could not be. */
   billing: BillingPlan | null;
+  /** The free credits wait on a phone check: where to verify it. */
+  verifyUrl?: string;
 }
 
 /** AbacusAI Agent on the web. */
@@ -125,6 +128,8 @@ const ownKeyAction = (error: TurnFailure) =>
 
 export const failureKind = (error: TurnFailure): FailureKind => {
   const types = new Set(error.actions?.map((action) => action.type));
+  // Google cut the reply off: its own line, whatever the credits.
+  if (types.has("cut-off")) return "cut-off";
   // The picked model cannot serve the turn: its own line, credits or not.
   if (types.has("model-unavailable")) return "model-gone";
   if (types.has("upgrade-abacus")) return "upgrade-abacus";
@@ -154,6 +159,8 @@ export const wantsUpgradeUrl = (
   const kind = failureKind(error);
   if (kind === "upgrade-abacus" || kind === "model-gone")
     return account === "free";
+  if (kind === "cut-off")
+    return account === "free" && cutOffCause(error) === "out";
   return kind === "free-pool-out" && account !== "paid";
 };
 
@@ -177,6 +184,10 @@ const offerLines = (words: ChannelWords, offer: ChannelOffer): string[] => {
     t("outcome.channel.link", { link: plan?.url ?? offer.upgradeUrl }),
   ];
 };
+
+/** Where the Abacus credits stood when Google cut the reply off. */
+const cutOffCause = (error: TurnFailure): string | undefined =>
+  error.actions?.find((action) => action.type === "cut-off")?.cause;
 
 const ownKeyLead = (words: ChannelWords, error: TurnFailure): string => {
   const action = ownKeyAction(error);
@@ -206,6 +217,21 @@ export const chatReplyForFailure = (
   const { t } = words;
   const reminder = t("outcome.channel.repeat", { link: offer.upgradeUrl });
   switch (failureKind(error)) {
+    case "cut-off": {
+      // The way on is the app's: RouteLLM - Open while Abacus credits are
+      // left (a phone check first while they are held), the plan once they
+      // are used up. Chat apps have no switch, so the line says where it is.
+      const lead = t("outcome.channel.cutoff");
+      const cause = cutOffCause(error);
+      if (offer.verifyUrl != null)
+        return `${lead} ${t("outcome.channel.cutoffVerify", { link: offer.verifyUrl })}`;
+      if (cause === "credits")
+        return `${lead} ${t("outcome.channel.cutoffSwitch")}`;
+      if (cause !== "out") return lead;
+      if (account !== "free")
+        return `${lead} ${t("outcome.channel.cutoffTopUp", { link: offer.topUpUrl })}`;
+      return repeat ? lead : [lead, ...offerLines(words, offer)].join("\n");
+    }
     case "model-gone": {
       // The picked model cannot serve the turn. With credits left the way on
       // is RouteLLM - Open, picked in the app (chat apps have no switch);

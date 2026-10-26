@@ -140,6 +140,34 @@ export function registerCustomProviders(
   }
 }
 
+const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
+
+/**
+ * `ABACUSAI_BOT_GEMINI_BASE_URL` points the Gemini provider at a stand-in
+ * server on this machine, for tests that need Google's stream to misbehave
+ * (end partway, drop the connection). Only a loopback address is taken, so
+ * the variable can never send the key anywhere but this computer; anything
+ * else is ignored and Google's own address is used.
+ */
+export const geminiBaseUrl = (
+  raw: string | undefined = process.env.ABACUSAI_BOT_GEMINI_BASE_URL
+): string => {
+  const value = (raw ?? "").trim();
+  if (value.length === 0) return GEMINI_BASE_URL;
+  try {
+    const url = new URL(value);
+    const loopback =
+      url.hostname === "127.0.0.1" ||
+      url.hostname === "localhost" ||
+      url.hostname === "[::1]";
+    return loopback && (url.protocol === "http:" || url.protocol === "https:")
+      ? value.replace(/\/+$/, "")
+      : GEMINI_BASE_URL;
+  } catch {
+    return GEMINI_BASE_URL;
+  }
+};
+
 /**
  * Gemini, on pi's native Google transport. Google's OpenAI-compatible surface
  * looks simpler but cannot carry these models: it rejects the `store` field pi
@@ -171,7 +199,7 @@ export function registerGeminiProvider(registry: ModelRegistry): void {
 
   registry.registerProvider("gemini", {
     name: "Google Gemini",
-    baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+    baseUrl: geminiBaseUrl(),
     apiKey,
     api: "google-generative-ai" as const,
     // Ids and pricing per ai.google.dev/gemini-api/docs (checked 2026-08-13).

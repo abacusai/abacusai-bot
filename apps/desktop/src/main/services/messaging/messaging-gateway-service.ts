@@ -33,6 +33,7 @@ import {
 
 import type { HostPlatform } from "../../platform/capabilities";
 import { readDefaultAgentMode } from "../config/settings";
+import { reportFunnelStep } from "../debug-sync/funnel-beacon";
 import { cachedAbacusAccount, onFreePlan } from "../providers/abacus";
 import {
   botUpgradePage,
@@ -1504,7 +1505,8 @@ export class MessagingGatewayService {
         : null,
       offering ||
       failureKind(failure) === "upgrade-abacus" ||
-      failureKind(failure) === "model-gone"
+      failureKind(failure) === "model-gone" ||
+      failureKind(failure) === "cut-off"
         ? withinMs(fetchBillingPlan(false), UPGRADE_URL_WAIT_MS)
         : null,
     ]);
@@ -1522,12 +1524,18 @@ export class MessagingGatewayService {
         upgradeUrl: upgradeUrl ?? fallback,
         topUpUrl: billing?.topUpUrl ?? upgradeUrl ?? fallback,
         billing,
+        // Held free credits are unlocked by a phone check, never a plan.
+        ...(cachedAbacusAccount()?.free_credits_held === true && {
+          verifyUrl: ABACUS_VERIFY_PHONE_URL,
+        }),
       },
       // A contact went unanswered: the user hears the whole line every time,
       // what stopped it and the way on, never the shortened reminder.
       isOwn && this.failureThrottle.repeat(ownChatKey, failureKind(failure))
     );
     if (line == null) return;
+    if (failureKind(failure) === "cut-off")
+      reportFunnelStep("cutoff_chat_told", route.platform);
     if (isOwn) this.deliver(route, line);
     // Someone else's chat hears nothing; the user's own chat hears who.
     else
@@ -3084,6 +3092,9 @@ const withinMs = <T>(call: Promise<T | null>, ms: number): Promise<T | null> =>
     call.catch(() => null),
     new Promise<null>((resolve) => setTimeout(() => resolve(null), ms).unref()),
   ]);
+
+/** Where an account whose free credits are held verifies its phone. */
+const ABACUS_VERIFY_PHONE_URL = "https://apps.abacus.ai/bot/link/verify-phone";
 
 /** The signed-in plan as last read; unknown words the offer like a paid one. */
 const accountKind = (): AccountKind => {

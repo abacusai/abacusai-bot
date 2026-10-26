@@ -93,10 +93,15 @@ export interface NotificationAction {
    * plan does not include it). Its card leads with `switch-to-abacus` when
    * credits are left, and with `upgrade-abacus` when they are used up.
    * `free-pool-out`: busy when the free models are only rate-limited.
+   * `cut-off`: Google cut the reply off on the picked `model` (its
+   * `provider`); where the Abacus credits stand: credits, out or signed-out.
    * `continue-free` (keep going on the free models at the credit wall),
-   * `new-chat`, `fix-key` and `retry` carry nothing else.
+   * `continue-same` (pick the cut reply up on the same model), `new-chat`,
+   * `fix-key` and `retry` carry nothing else.
    */
   cause?: string;
+  /** `cut-off`: part of the reply arrived before the cut and is kept. */
+  streamed?: boolean;
 }
 
 export interface StreamingNestedToolCall {

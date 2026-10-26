@@ -4518,7 +4518,11 @@
       "appClosed": "The app closed before I could reply. Send it again to pick it back up.",
       "stillWorking": "Still working on it ({{minutes}} min so far). I'll reply here when it's done.",
       "verifyPhone": "Verify your phone to unlock {{credits}} free credits: {{link}}",
-      "verifyPhoneNoCount": "Verify your phone to unlock your free credits: {{link}}"
+      "verifyPhoneNoCount": "Verify your phone to unlock your free credits: {{link}}",
+      "cutoff": "Google cut my reply off partway, so I stopped. Send your message again to retry.",
+      "cutoffSwitch": "Or switch to RouteLLM - Open in the app's model picker for steadier replies.",
+      "cutoffVerify": "Or verify your phone to unlock your free Abacus credits, then switch to RouteLLM - Open in the app: {{link}}",
+      "cutoffTopUp": "Or add Abacus credits and switch to RouteLLM - Open in the app: {{link}}"
     },
     "unavailable": {
       "title": {
@@ -4541,6 +4545,19 @@
       "seePlans": "See plans",
       "planBody": "Keep going on a free model now, or upgrade to {{plan}} to use it.",
       "planBodyAny": "Keep going on a free model now, or upgrade your plan to use it."
+    },
+    "cutoff": {
+      "title": "Google cut the reply off",
+      "body": "We asked again, and Google cut it off again. Your message is kept.",
+      "bodyStreamed": "Part of the reply came through and is kept above. We asked again, and Google cut it off again.",
+      "held": "Verify your phone to unlock your free Abacus credits, then switch to RouteLLM - Open.",
+      "continue": "Continue on {{model}}",
+      "resolved": {
+        "continued": "Continuing on {{model}}",
+        "switchedChat": "Switched this chat to RouteLLM - Open",
+        "switchedBot": "Switched this bot to RouteLLM - Open",
+        "upgraded": "Upgraded. Continuing on your plan's models."
+      }
     },
     "payment": {
       "title": "We couldn't confirm your last payment",
