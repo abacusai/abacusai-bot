@@ -32,6 +32,8 @@ export interface StatusInputs {
     accounts: Readonly<Record<string, string>>;
     /** Why there is no listing, when there is none. */
     reason?: string;
+    /** The last listing read, because the platform could not be read now. */
+    stale?: boolean;
   } | null;
   /** Credential providers with a key stored, or exported in the shell. */
   storedProviders: ReadonlySet<string>;
@@ -63,18 +65,20 @@ const statusOf = (
           state: "unavailable",
           reason: platform?.reason ?? "unavailable",
         };
+      const stale = platform.stale === true ? { stale: true } : {};
       if (platform.connected.has(connector.service)) {
         const account = platform.accounts[connector.service];
         return {
           state: "connected",
           ...(account != null && account.length > 0 ? { account } : {}),
+          ...stale,
         };
       }
       // Not in the account's catalog: the org disabled it, or it is not GA
       // for them. A card that connects to nothing is worse than none.
       return platform.available.has(connector.service)
-        ? { state: "available" }
-        : { state: "unavailable", reason: "not-offered" };
+        ? { state: "available", ...stale }
+        : { state: "unavailable", reason: "not-offered", ...stale };
     }
     case "messaging":
       if (isMessagingPlatformConnected(inputs.messaging, connector.platform))

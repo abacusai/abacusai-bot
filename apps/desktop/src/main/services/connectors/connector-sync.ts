@@ -23,6 +23,11 @@ export interface PlatformSnapshot {
   accounts: Readonly<Record<string, string>>;
   /** Why there is no listing (signed out, unreachable); nothing else is set. */
   reason?: string;
+  /**
+   * The platform could not be read just now: this is the last listing that
+   * was, kept rather than reading as nothing connected.
+   */
+  stale?: boolean;
 }
 
 export interface SessionRef {
@@ -45,6 +50,8 @@ interface ConnectorSyncDeps {
   refresh: (session: SessionRef, requestId: string) => Promise<boolean>;
   /** The listing moved: the renderer re-reads, once per change. */
   changed: () => void;
+  /** Whose listing it is (the signed-in key); a last listing is only kept for them. */
+  owner?: () => string;
   log?: (line: string) => void;
   ttlMs?: number;
   refreshWaitMs?: number;
@@ -62,6 +69,7 @@ const signatureOf = (snapshot: PlatformSnapshot): string =>
 const fingerprintOf = (snapshot: PlatformSnapshot): string =>
   JSON.stringify([
     snapshot.reason ?? null,
+    snapshot.stale === true,
     [...snapshot.available].sort(),
     signatureOf(snapshot),
     Object.entries(snapshot.accounts).sort(([a], [b]) => a.localeCompare(b)),
@@ -69,6 +77,8 @@ const fingerprintOf = (snapshot: PlatformSnapshot): string =>
 
 export class ConnectorSync {
   private cached: { snapshot: PlatformSnapshot; at: number } | null = null;
+  /** The last listing the platform answered, and whose, for when it cannot be read. */
+  private lastGood: { owner: string; snapshot: PlatformSnapshot } | null = null;
   private reading: Promise<PlatformSnapshot> | null = null;
   /** The connected set each live session's tools were built with. */
   private readonly built = new Map<string, string>();
@@ -158,6 +168,17 @@ export class ConnectorSync {
     return run;
   }
 
+  /**
+   * Abacus answers again: a listing last read while it did not is read
+   * afresh, and the renderer told once. Nothing to do otherwise.
+   */
+  reachable(): void {
+    const snapshot = this.cached?.snapshot;
+    if (snapshot == null) return;
+    if (snapshot.stale === true || snapshot.reason === "unavailable")
+      this.changed();
+  }
+
   /** In line like any send, for a path that delivers on its own right after. */
   beforeTurn(session: SessionRef): Promise<void> {
     return this.inTurnOrder(session, async () => undefined);
@@ -176,13 +197,21 @@ export class ConnectorSync {
    */
   serversReported(sessionId: string): void {
     if (this.built.has(sessionId) || this.seeding.has(sessionId)) return;
-    if (this.cached != null && this.cached.snapshot.reason == null) {
+    if (
+      this.cached != null &&
+      this.cached.snapshot.reason == null &&
+      this.cached.snapshot.stale !== true
+    ) {
       this.built.set(sessionId, signatureOf(this.cached.snapshot));
       return;
     }
     const seed = this.platform()
       .then((snapshot) => {
-        if (snapshot.reason == null && !this.built.has(sessionId))
+        if (
+          snapshot.reason == null &&
+          snapshot.stale !== true &&
+          !this.built.has(sessionId)
+        )
           this.built.set(sessionId, signatureOf(snapshot));
       })
       .catch(() => undefined)
@@ -203,7 +232,17 @@ export class ConnectorSync {
   }
 
   private async readNow(): Promise<PlatformSnapshot> {
-    const snapshot = await this.deps.read();
+    let snapshot = await this.deps.read();
+    const owner = this.deps.owner?.() ?? "";
+    if (snapshot.reason == null) this.lastGood = { owner, snapshot };
+    // Unreachable is not "nothing connected": the last answer stands, marked.
+    else if (
+      snapshot.reason === "unavailable" &&
+      this.lastGood != null &&
+      this.lastGood.owner === owner
+    )
+      snapshot = { ...this.lastGood.snapshot, stale: true };
+    else this.lastGood = null;
     const previous = this.cached?.snapshot;
     this.cached = { snapshot, at: this.now() };
     const moved =
@@ -220,7 +259,8 @@ export class ConnectorSync {
     } catch {
       return;
     }
-    if (snapshot.reason != null) return;
+    // An unread listing leaves the tools as they are.
+    if (snapshot.reason != null || snapshot.stale === true) return;
     const live = this.deps
       .liveSessions()
       .some((item) => item.sessionId === session.sessionId);

@@ -366,7 +366,10 @@ describe("connectivity", () => {
   const service = (options: { reachable?: boolean } = {}) => {
     const probe = vi.fn(async () => options.reachable ?? true);
     const changes: Array<{ state: string; resumed: boolean }> = [];
-    const connectivity = new ConnectivityService({ probe });
+    const connectivity = new ConnectivityService({
+      probe,
+      internet: async () => true,
+    });
     connectivity.onChange((change) => changes.push(change));
     return { connectivity, probe, changes };
   };
@@ -410,10 +413,10 @@ describe("connectivity", () => {
       expect(connectivity.state).toBe("degraded");
       expect(probe).toHaveBeenCalledTimes(1);
 
-      // 5s, 10s, 20s: never a hot loop.
-      await vi.advanceTimersByTimeAsync(5_000);
+      // 10s, 20s, 40s: never a hot loop.
+      await vi.advanceTimersByTimeAsync(10_000);
       expect(probe).toHaveBeenCalledTimes(2);
-      await vi.advanceTimersByTimeAsync(9_000);
+      await vi.advanceTimersByTimeAsync(19_000);
       expect(probe).toHaveBeenCalledTimes(2);
       await vi.advanceTimersByTimeAsync(1_000);
       expect(probe).toHaveBeenCalledTimes(3);

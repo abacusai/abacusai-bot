@@ -12,6 +12,12 @@ import { app } from "electron";
 
 import { abacusBotHome } from "../../paths";
 import { readSettings } from "../config/settings";
+import {
+  abacusBackgroundReady,
+  abacusCallAnswered,
+  abacusCallFailed,
+  isNetworkFailure,
+} from "../connectivity/abacus-calls";
 import { clientEnvironment } from "../diagnostics/client-environment";
 import { abacusRoutellmV1 } from "../providers/abacus-host";
 import { deviceId } from "./device-id";
@@ -78,6 +84,11 @@ export class LogSyncService {
       deviceId: () => deviceId(),
       clientVersion: () => app.getVersion(),
       environment: () => clientEnvironment(),
+      report: {
+        answered: abacusCallAnswered,
+        failed: (error, startedAt) =>
+          abacusCallFailed("log sync", error, startedAt),
+      },
     };
   }
 
@@ -92,7 +103,8 @@ export class LogSyncService {
   }
 
   private async sweep(): Promise<void> {
-    if (!this.enabled() || this.syncing) return;
+    // Abacus is not answering: a later sweep ships it all from the markers.
+    if (!this.enabled() || this.syncing || !abacusBackgroundReady()) return;
     let names: string[];
     try {
       names = fs.readdirSync(LOGS_DIR());
@@ -118,6 +130,7 @@ export class LogSyncService {
         const outcome = await syncLogBatchWithRetry(this.deps(), batch, {
           maxAttempts: MAX_ATTEMPTS,
           baseBackoffMs: BASE_BACKOFF_MS,
+          keepTrying: abacusBackgroundReady,
         });
         if (outcome.status === "ok") {
           for (const result of outcome.results)
@@ -129,7 +142,8 @@ export class LogSyncService {
             console.warn(
               `[log-sync] disabled for this run (${outcome.reason}). Best-effort, will not succeed by retrying`
             );
-          } else {
+          } else if (!isNetworkFailure(new Error(outcome.reason))) {
+            // No answer at all is the connectivity owner's to log.
             console.warn(`[log-sync] batch gave up: ${outcome.reason}`);
           }
           return; // the next sweep retries from the persisted markers

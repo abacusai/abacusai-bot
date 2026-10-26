@@ -42,6 +42,11 @@ export interface SyncDeps {
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
   log?: (message: string, extra?: unknown) => void;
+  /** Told whether each upload got an answer (the connectivity owner). */
+  report?: {
+    answered: () => void;
+    failed: (error: unknown, startedAt: number) => void;
+  };
 }
 
 /** What the server holds for a session. */
@@ -189,6 +194,7 @@ export async function syncTranscriptOnce(
     deps.timeoutMs ?? DEFAULT_TIMEOUT_MS
   );
 
+  const startedAt = Date.now();
   try {
     const resp = await doFetch(deps.syncUrl(), {
       method: "POST",
@@ -199,6 +205,7 @@ export async function syncTranscriptOnce(
       body,
       signal: controller.signal,
     });
+    deps.report?.answered();
 
     if (resp.ok) {
       deps.log?.(
@@ -221,6 +228,7 @@ export async function syncTranscriptOnce(
       retryable,
     };
   } catch (error) {
+    deps.report?.failed(error, startedAt);
     const reason = error instanceof Error ? error.message : String(error);
     return { status: "error", sessionId, reason, retryable: true };
   } finally {
@@ -233,6 +241,8 @@ export interface RetryOptions {
   baseBackoffMs?: number;
   /** Injected so tests do not wait. */
   sleep?: (ms: number) => Promise<void>;
+  /** Checked before each retry: false stops (Abacus is not answering). */
+  keepTrying?: () => boolean;
 }
 
 /** Retries only `retryable` failures with exponential backoff. */
@@ -256,7 +266,9 @@ export async function syncTranscriptWithRetry(
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     last = await syncTranscriptOnce(deps, sessionId);
     if (last.status !== "error" || !last.retryable) return last;
+    if (options.keepTrying?.() === false) return last;
     await sleep(baseBackoffMs * 2 ** attempt);
+    if (options.keepTrying?.() === false) return last;
   }
   return last;
 }

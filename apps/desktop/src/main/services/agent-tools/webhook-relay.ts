@@ -5,6 +5,12 @@
  * deliveries dead letters. Registration is idempotent and re-run on start.
  */
 import { credentialFor } from "../config/settings";
+import {
+  abacusBackgroundReady,
+  abacusCallAnswered,
+  abacusCallFailed,
+  isNetworkFailure,
+} from "../connectivity/abacus-calls";
 import { abacusRoutellmV1 } from "../providers/abacus-host";
 import { jobForWebhookToken, listJobs } from "./cron-store";
 
@@ -86,13 +92,16 @@ export class WebhookRelay {
     const key = this.apiKey();
     if (key == null) return;
     const tokens = this.webhookTokens();
-    if (tokens.length === 0) return;
+    // Abacus is not answering: deliveries wait in the relay's queue.
+    if (tokens.length === 0 || !abacusBackgroundReady()) return;
 
     try {
       await this.registerMissing(key, tokens);
       await this.drain(key);
     } catch (err) {
-      // Offline is ordinary for a laptop; the next tick retries everything.
+      // Offline is ordinary for a laptop; the next tick retries everything,
+      // and the connectivity owner has logged it.
+      if (isNetworkFailure(err)) return;
       console.warn(
         "[webhook-relay] tick failed:",
         err instanceof Error ? err.message : err
@@ -179,15 +188,23 @@ export class WebhookRelay {
     endpoint: string,
     body: object
   ): Promise<unknown> {
-    const response = await fetch(`${abacusRoutellmV1()}${endpoint}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
+    const startedAt = Date.now();
+    let response: Response;
+    try {
+      response = await fetch(`${abacusRoutellmV1()}${endpoint}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+    } catch (error) {
+      abacusCallFailed("webhooks", error, startedAt);
+      throw error;
+    }
+    abacusCallAnswered();
     if (!response.ok)
       throw new Error(`${endpoint} answered ${response.status}`);
     return response.json();

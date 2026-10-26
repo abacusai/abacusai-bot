@@ -52,6 +52,7 @@ import { usePrefs } from "#renderer/data/db/prefs";
 import { cn } from "#renderer/lib/cn";
 
 import { useShellLayout, useShellBand } from "./breakpoints";
+import { ConnectivityNotice } from "./connectivity-notice";
 import { UpgradePromo } from "./credits-card";
 import { FloatingIntentContext } from "./floating-intent";
 import { APP_HOTKEYS, useAppHotkey } from "./hotkeys";
@@ -101,6 +102,7 @@ const Pane = ({ children }: { children?: ReactNode }) => (
       data-slot="pane-scroll"
       className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto"
     >
+      <ConnectivityNotice />
       <PageUpdateNotice />
       {children ?? <Outlet />}
     </div>

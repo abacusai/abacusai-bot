@@ -852,6 +852,16 @@
     "wrongAccountApp": "{{name}} attached to a different Abacus.AI account: the app's sign-in window held another account. Sign out and back in, then connect again.",
     "wrongAccountBrowser": "{{name}} attached to a different Abacus.AI account: your browser is signed into another one. In the browser, sign into the account this app uses, then connect again."
   },
+  "connectivity": {
+    "offlineTitle": "You're offline",
+    "unreachableTitle": "Can't reach Abacus right now",
+    "detail": "Check your internet connection. Retrying…",
+    "tryNow": "Try now",
+    "connectorsStale": "Can't reach Abacus right now. Showing your connections as they were last seen.",
+    "connectorsUnknown": "Can't reach Abacus right now, so your connections can't be checked.",
+    "cantCheck": "Can't check",
+    "connectUnreachable": "Can't reach Abacus right now. Check your internet connection and try again."
+  },
   "creditsCard": {
     "paidBody": "Top up your account to keep going.",
     "paidTitle": "You've used all your Pro Abacus.AI credits",

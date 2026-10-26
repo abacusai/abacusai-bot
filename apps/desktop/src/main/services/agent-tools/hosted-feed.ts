@@ -11,6 +11,10 @@
  */
 import type { HostedRoutineRun } from "@abacus-ai/contract/routines";
 
+import {
+  abacusBackgroundReady,
+  isNetworkFailure,
+} from "../connectivity/abacus-calls";
 import type { HostedRoutines } from "./hosted-routines";
 
 /** Runs remembered as announced; far more than one poll ever returns. */
@@ -95,7 +99,8 @@ export class HostedRoutineFeed {
 
   /** Read the feed, page by page; exposed for tests. */
   async poll(): Promise<HostedRoutineRun[]> {
-    if (this.polling) return [];
+    // Abacus is not answering: the next poll after the backoff reads it all.
+    if (this.polling || !abacusBackgroundReady()) return [];
     this.polling = true;
     try {
       const fresh: HostedRoutineRun[] = [];
@@ -129,9 +134,11 @@ export class HostedRoutineFeed {
       }
       return fresh;
     } catch (error) {
-      this.log(
-        `[routines] feed read failed: ${error instanceof Error ? error.message : String(error)}`
-      );
+      // No answer at all is the connectivity owner's to log, once per step.
+      if (!isNetworkFailure(error))
+        this.log(
+          `[routines] feed read failed: ${error instanceof Error ? error.message : String(error)}`
+        );
       return [];
     } finally {
       this.polling = false;

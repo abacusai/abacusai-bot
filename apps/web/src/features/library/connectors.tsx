@@ -4,6 +4,7 @@ import {
   connectorById,
   type Connector,
 } from "@abacus-ai/connectors/registry";
+import type { ConnectorStatus } from "@abacus-ai/contract/contracts";
 import { revalidateLogic } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
@@ -52,6 +53,10 @@ export const visibleTabsFor = (entry: Connector): string[] =>
         ? ["abacus", "featured"]
         : ["abacus"]
       : [entry.category];
+/** Abacus could not be read and nothing was known before: neither connected nor not. */
+const uncheckable = (status: ConnectorStatus | undefined): boolean =>
+  status?.state === "unavailable" && status?.reason === "unavailable";
+
 export const ConnectorsPage = () => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
@@ -85,6 +90,10 @@ export const ConnectorsPage = () => {
   );
   const connected = (id: string) =>
     ["connected", "pending"].includes(statuses.data?.[id]?.state ?? "");
+  // Abacus cannot be reached: the last state read, or none to go by.
+  const all = Object.values(statuses.data ?? {});
+  const stale = all.some((status) => status.stale === true);
+  const unchecked = all.some(uncheckable);
   return (
     <AreaPage
       testId="connectors-page"
@@ -124,6 +133,15 @@ export const ConnectorsPage = () => {
           }
         />
       )}
+      {(stale || unchecked) && (
+        <ConnectNote>
+          {t(
+            stale
+              ? "connectivity.connectorsStale"
+              : "connectivity.connectorsUnknown"
+          )}
+        </ConnectNote>
+      )}
       {[true, false].map((group) => {
         const rows = entries.filter((e) => connected(e.id) === group);
         if (rows.length === 0) return null;
@@ -137,6 +155,7 @@ export const ConnectorsPage = () => {
                 // Installed, but its sign-in never finished: offer the sign-in.
                 const signIn =
                   statuses.data?.[e.id]?.reason === "sign-in-required";
+                const cantCheck = uncheckable(statuses.data?.[e.id]);
                 const inFlight =
                   flow.state.connectorId === e.id &&
                   flow.state.phase !== "idle" &&
@@ -163,7 +182,9 @@ export const ConnectorsPage = () => {
                             ? "phase5.signInNeeded"
                             : group
                               ? "phase5.connected"
-                              : "phase5.available"
+                              : cantCheck
+                                ? "connectivity.cantCheck"
+                                : "phase5.available"
                         )}
                       </StatePill>
                     </span>
@@ -230,6 +251,7 @@ export const ConnectorDialog = ({ connector }: { connector: string }) => {
   const status = statuses.data?.[connector];
   const connected = status?.state === "connected";
   const signIn = status?.reason === "sign-in-required";
+  const cantCheck = uncheckable(status);
   const waiting =
     flow.state.connectorId === connector && flow.state.phase !== "idle";
   const tools =
@@ -267,7 +289,9 @@ export const ConnectorDialog = ({ connector }: { connector: string }) => {
                   ? "phase5.connected"
                   : signIn
                     ? "phase5.signInNeeded"
-                    : "phase5.notConnected"
+                    : cantCheck
+                      ? "connectivity.cantCheck"
+                      : "phase5.notConnected"
               ),
               tone: connected ? "success" : "warning",
             }

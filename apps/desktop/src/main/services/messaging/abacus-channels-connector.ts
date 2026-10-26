@@ -10,6 +10,12 @@ import QRCode from "qrcode";
 
 import { parentWindow } from "../../bring-to-front";
 import type { HostPlatform } from "../../platform/capabilities";
+import {
+  abacusCallAnswered,
+  abacusCallFailed,
+  isNetworkFailure,
+  untilAbacusBackgroundReady,
+} from "../connectivity/abacus-calls";
 import { resolveAbacusApiKey } from "../providers/abacus";
 import { abacusRoutellmV1, abacusUserAgent } from "../providers/abacus-host";
 import {
@@ -184,6 +190,8 @@ export class AbacusChannelsConnector implements MessagingConnector {
   private botName: string | null = null;
   private pairTimer: NodeJS.Timeout | null = null;
   private abort: AbortController | null = null;
+  /** Aborted by stop: ends a wait on the shared backoff. */
+  private stopped = new AbortController();
   private linkWindow: BrowserWindow | null = null;
   /** Discord's consent parameters from the last pairing; null without them. */
   private consent: ConsentParams | null = null;
@@ -220,6 +228,7 @@ export class AbacusChannelsConnector implements MessagingConnector {
 
   async start(): Promise<void> {
     this.running = true;
+    this.stopped = new AbortController();
     lanes.set(this.channel, this);
     this.callbacks.onState("connecting");
     await this.refreshStatus();
@@ -228,6 +237,7 @@ export class AbacusChannelsConnector implements MessagingConnector {
 
   async stop(): Promise<void> {
     this.running = false;
+    this.stopped.abort();
     if (lanes.get(this.channel) === this) lanes.delete(this.channel);
     this.clearPairTimer();
     this.abort?.abort();
@@ -560,9 +570,18 @@ export class AbacusChannelsConnector implements MessagingConnector {
         if (!this.running) return;
         failures += 1;
         const message = error instanceof Error ? error.message : String(error);
-        this.callbacks.onLog(`${this.id}: inbox poll failed: ${message}`);
+        const network = isNetworkFailure(error);
+        // No answer at all: the connectivity owner logs it, once per step.
+        if (!network)
+          this.callbacks.onLog(`${this.id}: inbox poll failed: ${message}`);
         if (failures >= 3) this.callbacks.onState("error", message);
-        await this.sleep(Math.min(1000 * 2 ** failures, 60_000));
+        // Unreachable: the shared backoff says when to ask again.
+        if (network)
+          await Promise.all([
+            this.sleep(2000),
+            untilAbacusBackgroundReady(this.stopped.signal),
+          ]);
+        else await this.sleep(Math.min(1000 * 2 ** failures, 60_000));
         if (this.running && failures >= 3) await this.refreshStatus();
       }
     }
@@ -633,6 +652,7 @@ export class AbacusChannelsConnector implements MessagingConnector {
     const controller = new AbortController();
     this.abort = controller;
     const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const startedAt = Date.now();
     try {
       const response = await fetch(
         `${abacusRoutellmV1()}/abacusaibot_channels`,
@@ -647,6 +667,7 @@ export class AbacusChannelsConnector implements MessagingConnector {
           signal: controller.signal,
         }
       );
+      abacusCallAnswered();
       const payload = (await response.json().catch(() => ({}))) as T & {
         error?: string;
       };
@@ -655,6 +676,11 @@ export class AbacusChannelsConnector implements MessagingConnector {
           payload.error ?? `Abacus API returned ${response.status}`
         );
       return payload;
+    } catch (error) {
+      // A stop aborts too; only a lane still running reports an outage.
+      if (this.running && isNetworkFailure(error))
+        abacusCallFailed(`${this.channel} lane`, error, startedAt);
+      throw error;
     } finally {
       clearTimeout(timer);
       if (this.abort === controller) this.abort = null;

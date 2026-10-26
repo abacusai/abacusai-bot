@@ -16,6 +16,7 @@ import { Updater } from "tuf-js";
 
 import { resourcePath } from "#main/resources";
 
+import { abacusBackgroundReady } from "../../connectivity/abacus-calls";
 import type { ExperienceStore } from "./experience-store";
 import { checkAgentBundle } from "./health-check";
 import { verifyExperience } from "./integrity";
@@ -114,7 +115,10 @@ export class ExperienceUpdater {
     };
 
     check();
-    this.#timer = setInterval(check, this.#environment.interval);
+    // Not while Abacus is not answering: the next interval checks.
+    this.#timer = setInterval(() => {
+      if (abacusBackgroundReady()) check();
+    }, this.#environment.interval);
     this.#timer.unref();
   }
 

@@ -16,6 +16,10 @@ import type {
   RoutineListItem,
 } from "@abacus-ai/contract/routines";
 
+import {
+  abacusCallAnswered,
+  abacusCallFailed,
+} from "../connectivity/abacus-calls";
 import { cleanSources, readsFromConnectorReads } from "./routine-reach";
 
 /** Prefix that marks a hosted routine's id in the Routines table. */
@@ -144,19 +148,27 @@ export const routinesTransport =
   async (body, timeoutMs = 20_000) => {
     const key = options.key();
     if (key == null) return { ok: false, status: 401, body: {} };
-    const response = await (options.fetch ?? fetch)(
-      `${options.baseUrl()}/abacusaibot_routines`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${key}`,
-          "Content-Type": "application/json",
-          "user-agent": options.userAgent(),
-        },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(timeoutMs),
-      }
-    );
+    const startedAt = Date.now();
+    let response: Response;
+    try {
+      response = await (options.fetch ?? fetch)(
+        `${options.baseUrl()}/abacusaibot_routines`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json",
+            "user-agent": options.userAgent(),
+          },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(timeoutMs),
+        }
+      );
+    } catch (error) {
+      abacusCallFailed("routines", error, startedAt);
+      throw error;
+    }
+    abacusCallAnswered();
     const payload = (await response.json().catch(() => ({}))) as Record<
       string,
       unknown

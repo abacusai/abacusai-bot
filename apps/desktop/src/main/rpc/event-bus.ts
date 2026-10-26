@@ -1,4 +1,5 @@
 import type { SystemEvent, WindowEvent } from "@abacus-ai/contract/contract";
+import type { AbacusReachability } from "@abacus-ai/contract/contract/system";
 import type {
   DeviceStreamChunk,
   IpcEvent,
@@ -9,6 +10,8 @@ import type { UpdateStatus } from "@abacus-ai/contract/update";
 /** Pushes that never went through the `IpcEvent` catch-all. */
 export interface BusChannels {
   update: UpdateStatus;
+  /** What the "can't reach Abacus" notice shows. */
+  connectivity: AbacusReachability;
   notch: {
     webContentsId: number;
     event: import("@abacus-ai/contract/contract/notch").NotchEvent;

@@ -29,6 +29,7 @@ const CONNECT_ERRORS: Readonly<Record<string, string>> = {
   "popup-blocked": "phase5.popupBlocked",
   timeout: "phase5.connectTimedOut",
   failed: "phase5.connectFailed",
+  unreachable: "connectivity.connectUnreachable",
   // A browser has no chat-app pairing; the desktop keeps its own wording.
   ...(IS_ELECTRON ? {} : { "needs-pairing": "phase5.connectChatAppOnDesktop" }),
 };

@@ -17,6 +17,10 @@ import {
 
 import { abacusBotHome } from "../../paths";
 import { credentialFor, hasCredential } from "../config/settings";
+import {
+  abacusCallAnswered,
+  abacusCallFailed,
+} from "../connectivity/abacus-calls";
 import { abacusRoutellmV1, abacusUserAgent } from "./abacus-host";
 
 /**
@@ -579,11 +583,19 @@ type AccountRead =
 export const requestAbacusAccount = async (
   key: string
 ): Promise<AccountRead> => {
+  const startedAt = Date.now();
+  let response: Response;
   try {
-    const response = await fetch(`${abacusRoutellmV1()}/account`, {
+    response = await fetch(`${abacusRoutellmV1()}/account`, {
       headers: abacusHeaders(key),
       signal: AbortSignal.timeout(8000),
     });
+  } catch (error) {
+    abacusCallFailed("account", error, startedAt);
+    return { kind: "unavailable" };
+  }
+  abacusCallAnswered();
+  try {
     if (!response.ok) {
       console.warn(`[abacus] /account answered ${response.status}`);
       if (REJECTED_STATUSES.has(response.status)) return { kind: "rejected" };

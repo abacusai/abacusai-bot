@@ -852,6 +852,16 @@
     "wrongAccountApp": "{{name}} farklı bir Abacus.AI hesabına bağlandı: uygulamanın giriş penceresinde başka bir hesap açıktı. Çıkış yapıp yeniden giriş yap, sonra tekrar bağlan.",
     "wrongAccountBrowser": "{{name}} farklı bir Abacus.AI hesabına bağlandı: tarayıcında başka bir hesapla giriş yapılmış. Tarayıcıda bu uygulamanın kullandığı hesapla giriş yap, sonra tekrar bağlan."
   },
+  "connectivity": {
+    "offlineTitle": "Çevrimdışısınız",
+    "unreachableTitle": "Şu anda Abacus'a ulaşılamıyor",
+    "detail": "İnternet bağlantınızı kontrol edin. Yeniden deneniyor…",
+    "tryNow": "Şimdi dene",
+    "connectorsStale": "Şu anda Abacus'a ulaşılamıyor. Bağlantılarınız en son görüldükleri hâliyle gösteriliyor.",
+    "connectorsUnknown": "Şu anda Abacus'a ulaşılamıyor, bu yüzden bağlantılarınız kontrol edilemiyor.",
+    "cantCheck": "Kontrol edilemiyor",
+    "connectUnreachable": "Şu anda Abacus'a ulaşılamıyor. İnternet bağlantınızı kontrol edip tekrar deneyin."
+  },
   "creditsCard": {
     "paidBody": "Devam etmek için hesabına kredi yükle.",
     "paidTitle": "Pro Abacus.AI kredilerinin hepsini kullandın",

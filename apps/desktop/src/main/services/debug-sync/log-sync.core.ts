@@ -32,6 +32,11 @@ export interface LogSyncDeps {
   environment: () => ClientEnvironment;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
+  /** Told whether each upload got an answer (the connectivity owner). */
+  report?: {
+    answered: () => void;
+    failed: (error: unknown, startedAt: number) => void;
+  };
 }
 
 export type LogBatchOutcome =
@@ -79,6 +84,7 @@ export async function syncLogBatchOnce(
     deps.timeoutMs ?? DEFAULT_TIMEOUT_MS
   );
 
+  const startedAt = Date.now();
   try {
     const resp = await doFetch(deps.syncUrl(), {
       method: "POST",
@@ -89,6 +95,7 @@ export async function syncLogBatchOnce(
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
+    deps.report?.answered();
 
     if (resp.ok) {
       const body = (await resp.json().catch(() => ({}))) as {
@@ -103,6 +110,7 @@ export async function syncLogBatchOnce(
     const retryable = resp.status >= 500 || resp.status === 429;
     return { status: "error", reason: `http ${resp.status}`, retryable };
   } catch (error) {
+    deps.report?.failed(error, startedAt);
     const reason = error instanceof Error ? error.message : String(error);
     return { status: "error", reason, retryable: true };
   } finally {
@@ -114,6 +122,8 @@ export interface RetryOptions {
   maxAttempts?: number;
   baseBackoffMs?: number;
   sleep?: (ms: number) => Promise<void>;
+  /** Checked before each retry: false stops (Abacus is not answering). */
+  keepTrying?: () => boolean;
 }
 
 /** Retry wrapper: retries only transient failures with exponential backoff. */
@@ -136,7 +146,9 @@ export async function syncLogBatchWithRetry(
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     last = await syncLogBatchOnce(deps, files);
     if (last.status !== "error" || !last.retryable) return last;
+    if (options.keepTrying?.() === false) return last;
     await sleep(baseBackoffMs * 2 ** attempt);
+    if (options.keepTrying?.() === false) return last;
   }
   return last;
 }

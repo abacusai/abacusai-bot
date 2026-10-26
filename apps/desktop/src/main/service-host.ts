@@ -353,7 +353,10 @@ import {
   saveApiKey,
   storedKeyProviders,
 } from "./services/config/settings";
-import { ConnectivityService } from "./services/connectivity/connectivity-service";
+import {
+  ConnectivityService,
+  installConnectivity,
+} from "./services/connectivity/connectivity-service";
 import {
   ConnectWatcher,
   type ConnectedOffer,
@@ -1418,7 +1421,11 @@ export class ServiceHost {
       this.builtinToolPermissions.flushPending(decision, server),
   });
   /** Whether this machine can reach Abacus; see connectivity-service.ts. */
-  readonly connectivity = new ConnectivityService();
+  readonly connectivity = installConnectivity(new ConnectivityService());
+  /** The "can't reach Abacus" notice follows the connectivity owner. */
+  private readonly stopReachForwarding = this.connectivity.onReachability(
+    (reach) => this.busDispatcher?.("connectivity", reach)
+  );
   /** Every account read reaches the agents, so a run can wrap up before the credits end. */
   private readonly stopCreditForwarding = onAbacusAccountRead((snapshot) => {
     this.agentManagerService.broadcastCommand({
@@ -1486,6 +1493,7 @@ export class ServiceHost {
     },
     connected: (offer) => this.connectorsConnected(offer),
     expired: (connectorIds) => this.connectorGate.clearFor(connectorIds),
+    ready: () => this.connectivity.backgroundReady,
   });
 
   /** Lanes that deliver a note to their own session as a turn, by lane. */
@@ -1637,6 +1645,7 @@ export class ServiceHost {
       return this.mcpAdminService.refreshSessionMcp(session, requestId);
     },
     changed: () => this.connectorStatusChanged(),
+    owner: () => credentialFor("ABACUS_API_KEY"),
     log: (line) => console.log(line),
   });
 
@@ -1842,6 +1851,8 @@ export class ServiceHost {
   }
 
   async connectConnector(connectorId: string): Promise<ConnectorOutcome> {
+    // Someone asked: background backoff never holds this up.
+    void this.connectivity.retryNow();
     const outcome = await this.connectorFlow.connect(connectorId);
     this.connectorSync.changed();
     return outcome;
@@ -2774,6 +2785,7 @@ export class ServiceHost {
     this.turnLedger.appClosing();
     this.stop();
     this.stopCreditForwarding();
+    this.stopReachForwarding();
     this.connectWatcher.stop();
     this.vault?.stop();
     this.builtinMcpLifecycle.stopBrowserServer();
@@ -3806,6 +3818,8 @@ export class ServiceHost {
     // passes through, rather than left to the model's whim. The message still
     // goes through untouched.
     void this.rememberIfAsked(request.message);
+    // Someone asked: the shared backoff starts over (the send never waits on it).
+    void this.connectivity.retryNow();
 
     this.idleAgentReaper?.touch(request.sessionId);
     // Synchronously, so a refetch sees the busy state immediately.
@@ -4859,7 +4873,11 @@ export class ServiceHost {
         state,
         ...(resumed ? { resumed: true } : {}),
       });
-      if (state === "online") void this.cronScheduler.release();
+      if (state === "online") {
+        void this.cronScheduler.release();
+        // A listing last seen while unreachable is read again, once.
+        this.connectorSync.reachable();
+      }
     });
     this.cronScheduler.everyMinute(() => this.reapStuckRoutineRuns());
     this.cronScheduler.start();

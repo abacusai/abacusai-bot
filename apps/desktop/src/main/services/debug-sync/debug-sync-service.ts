@@ -12,6 +12,12 @@ import { app } from "electron";
 
 import { abacusBotHome } from "../../paths";
 import { readSettings } from "../config/settings";
+import {
+  abacusBackgroundReady,
+  abacusCallAnswered,
+  abacusCallFailed,
+  isNetworkFailure,
+} from "../connectivity/abacus-calls";
 import { clientEnvironment } from "../diagnostics/client-environment";
 import { abacusRoutellmV1 } from "../providers/abacus-host";
 import type { StoredTranscript } from "../session/transcript-service";
@@ -181,6 +187,11 @@ export class DebugSyncService {
         environment: clientEnvironment(),
       }),
       log: (message) => console.log(message),
+      report: {
+        answered: abacusCallAnswered,
+        failed: (error, startedAt) =>
+          abacusCallFailed("transcript sync", error, startedAt),
+      },
     };
   }
 
@@ -224,6 +235,8 @@ export class DebugSyncService {
       const outcome = await syncTranscriptWithRetry(this.deps(), sessionId, {
         maxAttempts: MAX_ATTEMPTS,
         baseBackoffMs: BASE_BACKOFF_MS,
+        // Abacus is not answering: the next upload sends everything since the marker.
+        keepTrying: abacusBackgroundReady,
       });
       if (outcome.status === "ok") {
         this.markers[sessionId] = outcome.state;
@@ -234,7 +247,7 @@ export class DebugSyncService {
           console.warn(
             `[debug-sync] disabled for this run (${outcome.reason}). Sync is best-effort and this will not succeed by retrying`
           );
-        } else {
+        } else if (!isNetworkFailure(new Error(outcome.reason))) {
           console.warn(
             `[debug-sync] gave up on ${sessionId}: ${outcome.reason}`
           );

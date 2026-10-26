@@ -31,6 +31,8 @@ export const DELIVERY = {
   "notch.openCommands": "lossless-actionable",
   "window.events": "coalescing",
   "system.events": "coalescing",
+  // A state: only the latest matters.
+  "system.connectivity.events": "coalescing",
   "settings.events": "coalescing",
   "messaging.events": "coalescing",
   "bots.events": "coalescing",

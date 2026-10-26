@@ -2,6 +2,7 @@ import {
   CONTRACT_VERSION,
   type SystemEvent,
 } from "@abacus-ai/contract/contract";
+import type { AbacusReachability } from "@abacus-ai/contract/contract/system";
 import { FOUNDATION_API } from "@abacus-ai/contract/experience";
 
 import {
@@ -133,4 +134,23 @@ export const systemRouter = impl.system.router({
       coalesceKey: () => null,
     })
   ),
+  connectivity: {
+    status: impl.system.connectivity.status.handler(
+      ({ context }) => context.deps.serviceHost.connectivity.reachability
+    ),
+    events: impl.system.connectivity.events.handler(({ context, signal }) =>
+      stream<AbacusReachability>({
+        path: "system.connectivity.events",
+        context,
+        signal,
+        attach: onChannel(context, "connectivity", (reach) => reach),
+        // The first yield is the current state.
+        initial: () => [context.deps.serviceHost.connectivity.reachability],
+        coalesceKey: () => "reach",
+      })
+    ),
+    retry: impl.system.connectivity.retry.handler(({ context }) =>
+      context.deps.serviceHost.connectivity.retryNow()
+    ),
+  },
 });

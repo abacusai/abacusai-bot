@@ -70,6 +70,7 @@ describe("delivery classes (A-T9)", () => {
       "notch.openCommands": "lossless-actionable",
       "window.events": "coalescing",
       "system.events": "coalescing",
+      "system.connectivity.events": "coalescing",
       "settings.events": "coalescing",
       "messaging.events": "coalescing",
       "bots.events": "coalescing",

@@ -852,6 +852,16 @@
     "wrongAccountApp": "{{name}} attached to a different Abacus.AI account: the app's sign-in window held another account. Sign out and back in, then connect again.",
     "wrongAccountBrowser": "{{name}} attached to a different Abacus.AI account: your browser is signed into another one. In the browser, sign into the account this app uses, then connect again."
   },
+  "connectivity": {
+    "offlineTitle": "オフラインです",
+    "unreachableTitle": "現在 Abacus に接続できません",
+    "detail": "インターネット接続を確認してください。再試行しています…",
+    "tryNow": "今すぐ再試行",
+    "connectorsStale": "現在 Abacus に接続できません。最後に確認した時点の接続状態を表示しています。",
+    "connectorsUnknown": "現在 Abacus に接続できないため、接続状態を確認できません。",
+    "cantCheck": "確認できません",
+    "connectUnreachable": "現在 Abacus に接続できません。インターネット接続を確認して、もう一度お試しください。"
+  },
   "creditsCard": {
     "paidBody": "続けるにはアカウントにチャージしてください。",
     "paidTitle": "Abacus.AI の Pro クレジットをすべて使い切りました",

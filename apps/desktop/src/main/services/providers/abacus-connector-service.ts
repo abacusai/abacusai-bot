@@ -6,6 +6,11 @@ import type {
 } from "@abacus-ai/contract/contracts";
 
 import { credentialFor } from "../config/settings";
+import {
+  abacusCallAnswered,
+  abacusCallFailed,
+  isNetworkFailure,
+} from "../connectivity/abacus-calls";
 import { abacusAppHost, abacusUserAgent } from "./abacus-host";
 
 /**
@@ -38,9 +43,15 @@ export const abacusApiCall = async (
   timeoutMs?: number,
   /** A key other than the stored one: a sign-in held until its account pays. */
   keyOverride?: string
-): Promise<{ ok: boolean; result: unknown }> => {
+): Promise<{
+  ok: boolean;
+  result: unknown;
+  /** No answer at all: the network, not the platform's refusal. */
+  unreachable?: true;
+}> => {
   const key = keyOverride ?? abacusApiKey();
   if (key.length === 0) return { ok: false, result: null };
+  const startedAt = Date.now();
   try {
     const url = apiUrl(method);
     if (httpMethod !== "POST" && body != null) {
@@ -61,6 +72,7 @@ export const abacusApiCall = async (
       ...(httpMethod === "POST" ? { body: JSON.stringify(body ?? {}) } : {}),
       ...(timeoutMs != null ? { signal: AbortSignal.timeout(timeoutMs) } : {}),
     });
+    abacusCallAnswered();
     const payload = (await response.json().catch(() => null)) as {
       success?: unknown;
       result?: unknown;
@@ -76,6 +88,11 @@ export const abacusApiCall = async (
     }
     return { ok: true, result: payload.result ?? null };
   } catch (error) {
+    // No answer at all: the connectivity owner logs it, once per backoff step.
+    if (isNetworkFailure(error)) {
+      abacusCallFailed(method, error, startedAt);
+      return { ok: false, result: null, unreachable: true };
+    }
     console.warn(
       `[abacus-connectors] ${method} error: ${
         error instanceof Error ? error.message : String(error)
@@ -265,6 +282,8 @@ export const createConnectLink = async (
   services: string[];
   connected: string[];
   requestId?: string;
+  /** Abacus did not answer: the plain page will not load either. */
+  unreachable?: true;
 } | null> => {
   const serviceKey = service.toLowerCase();
   if (!SERVICE_RE.test(serviceKey) || abacusApiKey().length === 0) return null;
@@ -306,7 +325,12 @@ export const createConnectLink = async (
   }
   url.searchParams.set("service", serviceKey);
   url.searchParams.set("autostart", "1");
-  return { url: url.toString(), services: [serviceKey], connected: [] };
+  return {
+    url: url.toString(),
+    services: [serviceKey],
+    connected: [],
+    ...(minted.unreachable === true ? { unreachable: true as const } : {}),
+  };
 };
 
 /**
@@ -357,6 +381,8 @@ export const connectButtonLink = async (
   if (abacusApiKey().length === 0) return { ok: false, error: "not-signed-in" };
   const link = await createConnectLink(serviceKey);
   if (link == null) return { ok: false, error: "not-signed-in" };
+  // Said now, in the app, rather than a browser page that cannot load.
+  if (link.unreachable === true) return { ok: false, error: "unreachable" };
   return {
     ok: true,
     url: link.url,

@@ -9,6 +9,11 @@ import { app } from "electron";
 
 import { readSettings, storedKeyProviders } from "../config/settings";
 import {
+  abacusBackgroundReady,
+  abacusCallAnswered,
+  abacusCallFailed,
+} from "../connectivity/abacus-calls";
+import {
   clientEnvironment,
   safely,
   type ClientEnvironment,
@@ -133,7 +138,8 @@ export class DiagnosticsSyncService {
   }
 
   private async capture(): Promise<void> {
-    if (!this.enabled()) return;
+    // Abacus is not answering: the next interval sends it.
+    if (!this.enabled() || !abacusBackgroundReady()) return;
     const key = readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus];
     if (key == null || key.trim().length === 0) return;
 
@@ -144,6 +150,7 @@ export class DiagnosticsSyncService {
     const doFetch = this.deps.fetchImpl ?? fetch;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const startedAt = Date.now();
     try {
       const resp = await doFetch(this.syncUrl(), {
         method: "POST",
@@ -154,6 +161,7 @@ export class DiagnosticsSyncService {
         body: JSON.stringify({ device_id: deviceId(), snapshot }),
         signal: controller.signal,
       });
+      abacusCallAnswered();
       if (resp.ok) {
         this.lastSent = json;
       } else if (resp.status >= 400 && resp.status < 500) {
@@ -163,8 +171,9 @@ export class DiagnosticsSyncService {
         );
       }
       // 5xx: lastSent stays unset so the next interval retries.
-    } catch {
+    } catch (error) {
       // Transient; the next interval retries.
+      abacusCallFailed("diagnostics sync", error, startedAt);
     } finally {
       clearTimeout(timer);
     }

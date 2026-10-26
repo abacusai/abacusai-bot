@@ -788,6 +788,11 @@ export interface ConnectorStatus {
   /** Why it is unavailable or pending, for the card and the model. */
   reason?: string;
   /**
+   * Abacus cannot be reached right now: this is the state last read from
+   * it, not a fresh one.
+   */
+  stale?: boolean;
+  /**
    * WhatsApp, connected on the web through AbacusAI Bot's own number, which
    * the user linked: the agent reaches only the user there (send_to_whatsapp).
    */

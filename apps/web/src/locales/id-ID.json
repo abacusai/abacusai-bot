@@ -852,6 +852,16 @@
     "wrongAccountApp": "{{name}} attached to a different Abacus.AI account: the app's sign-in window held another account. Sign out and back in, then connect again.",
     "wrongAccountBrowser": "{{name}} attached to a different Abacus.AI account: your browser is signed into another one. In the browser, sign into the account this app uses, then connect again."
   },
+  "connectivity": {
+    "offlineTitle": "Anda sedang offline",
+    "unreachableTitle": "Abacus tidak dapat dijangkau saat ini",
+    "detail": "Periksa koneksi internet Anda. Mencoba lagi…",
+    "tryNow": "Coba sekarang",
+    "connectorsStale": "Abacus tidak dapat dijangkau saat ini. Koneksi Anda ditampilkan seperti terakhir terlihat.",
+    "connectorsUnknown": "Abacus tidak dapat dijangkau saat ini, jadi koneksi Anda tidak dapat diperiksa.",
+    "cantCheck": "Tidak dapat diperiksa",
+    "connectUnreachable": "Abacus tidak dapat dijangkau saat ini. Periksa koneksi internet Anda dan coba lagi."
+  },
   "creditsCard": {
     "paidBody": "Isi ulang akun Anda untuk melanjutkan.",
     "paidTitle": "Anda telah menggunakan semua kredit Pro Abacus.AI Anda",

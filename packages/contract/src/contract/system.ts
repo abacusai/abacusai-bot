@@ -47,6 +47,17 @@ export type SystemEvent =
       metadata: NotificationMetadata;
     };
 
+/** Whether the app can reach Abacus, as its notice shows it. */
+export interface AbacusReachability {
+  /**
+   * `offline`: the computer has no network. `unreachable`: it has one, but
+   * Abacus does not answer. Either only once it has lasted past a blip.
+   */
+  state: "ok" | "offline" | "unreachable";
+  /** When background calls try again (epoch ms); null when nothing waits. */
+  retryAt: number | null;
+}
+
 export interface PickedFile {
   path: string;
   name: string;
@@ -156,4 +167,13 @@ export const system = {
   events: subscription
     .input(NoInput)
     .output(eventIterator(type<SystemEvent>())),
+  connectivity: {
+    status: query.input(NoInput).output(type<AbacusReachability>()),
+    /** The first yield is the current state. */
+    events: subscription
+      .input(NoInput)
+      .output(eventIterator(type<AbacusReachability>())),
+    /** Try now: the backoff starts over and Abacus is asked at once. */
+    retry: mutation.input(NoInput).output(type<AbacusReachability>()),
+  },
 };

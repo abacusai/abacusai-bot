@@ -18,6 +18,7 @@ import { emitBusChannel } from "#main/rpc/emit";
 
 import { markQuitting, clearQuitting } from "../../app-quit-state";
 import { isNotchWindow } from "../../notch/registry";
+import { abacusBackgroundReady } from "../connectivity/abacus-calls";
 import { isTestBuild } from "../providers/abacus-host";
 import {
   recordInstallAttempt,
@@ -704,7 +705,8 @@ export class UpdateService {
     if (this.checkTimer != null) return;
 
     this.checkTimer = setInterval(() => {
-      if (this.status.installing) return;
+      // Not while Abacus is not answering: the next interval checks.
+      if (this.status.installing || !abacusBackgroundReady()) return;
 
       this.checkForUpdates();
     }, UPDATE_CHECK_INTERVAL_MS);

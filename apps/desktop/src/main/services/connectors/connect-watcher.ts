@@ -43,6 +43,8 @@ interface ConnectWatcherDeps {
   connected: (offer: ConnectedOffer) => void;
   /** The offer's link expired unconnected. */
   expired: (connectorIds: string[]) => void;
+  /** Whether a background read may go out now; a tick held back waits for the next. */
+  ready?: () => boolean;
   everyMs?: number;
   /** How long a link stays good. */
   forMs?: number;
@@ -141,6 +143,12 @@ export class ConnectWatcher {
   }
 
   private async check(): Promise<void> {
+    // Abacus is not answering: the shared backoff decides when to ask again.
+    if (this.deps.ready?.() === false) {
+      this.timer = null;
+      this.arm();
+      return;
+    }
     let statuses: ConnectorStatuses | null = null;
     try {
       statuses = await this.deps.list();
