@@ -281,6 +281,17 @@ export const useBotChatSlots = (
                   model,
                 });
             },
+            // A bot's chats share its model: the switch moves the bot.
+            onSwitchThisChat: async (model: string) => {
+              await setBotModel(collections.bots, bot.id, model);
+              if (session?.workspaceId)
+                await transport.client.agent.setModel({
+                  workspaceId: session.workspaceId,
+                  sessionId,
+                  model,
+                });
+              return "bot" as const;
+            },
           }
         : {}),
       onFirstSend: () => {

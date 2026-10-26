@@ -4512,7 +4512,11 @@
       "appClosed": "답장하기 전에 앱이 닫혔습니다. 다시 보내면 이어서 진행합니다.",
       "stillWorking": "아직 작업 중입니다(지금까지 {{minutes}}분). 끝나면 여기서 답장할게요.",
       "verifyPhone": "휴대폰을 인증하면 무료 크레딧 {{credits}}을 사용할 수 있습니다: {{link}}",
-      "verifyPhoneNoCount": "휴대폰을 인증하면 무료 크레딧을 사용할 수 있습니다: {{link}}"
+      "verifyPhoneNoCount": "휴대폰을 인증하면 무료 크레딧을 사용할 수 있습니다: {{link}}",
+      "cutoff": "Google이 제 답변을 중간에 끊어서 멈췄습니다. 다시 시도하려면 메시지를 다시 보내 주세요.",
+      "cutoffSwitch": "또는 앱의 모델 선택에서 RouteLLM - Open으로 전환하면 더 안정적인 답변을 받을 수 있습니다.",
+      "cutoffVerify": "또는 전화번호를 인증해 무료 Abacus 크레딧을 잠금 해제한 다음 앱에서 RouteLLM - Open으로 전환하세요: {{link}}",
+      "cutoffTopUp": "또는 Abacus 크레딧을 충전하고 앱에서 RouteLLM - Open으로 전환하세요: {{link}}"
     },
     "unavailable": {
       "title": {
@@ -4535,6 +4539,19 @@
       "seePlans": "요금제 보기",
       "planBody": "지금은 무료 모델로 계속하거나, {{plan}}(으)로 업그레이드해서 사용하세요.",
       "planBodyAny": "지금은 무료 모델로 계속하거나, 요금제를 업그레이드해서 사용하세요."
+    },
+    "cutoff": {
+      "title": "Google이 답변을 중간에 끊었습니다",
+      "body": "다시 요청했지만 Google이 또 끊었습니다. 메시지는 그대로 보관됩니다.",
+      "bodyStreamed": "답변의 일부는 도착해 위에 그대로 있습니다. 다시 요청했지만 Google이 또 끊었습니다.",
+      "held": "전화번호를 인증해 무료 Abacus 크레딧을 잠금 해제한 다음 RouteLLM - Open으로 전환하세요.",
+      "continue": "{{model}}에서 계속",
+      "resolved": {
+        "continued": "{{model}}에서 계속하는 중",
+        "switchedChat": "이 채팅을 RouteLLM - Open으로 전환했습니다",
+        "switchedBot": "이 봇을 RouteLLM - Open으로 전환했습니다",
+        "upgraded": "업그레이드했습니다. 요금제의 모델로 계속합니다."
+      }
     },
     "payment": {
       "title": "마지막 결제를 확인할 수 없습니다",

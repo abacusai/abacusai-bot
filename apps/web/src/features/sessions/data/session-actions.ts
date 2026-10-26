@@ -31,18 +31,25 @@ export const deleteSession = async (
   }
   await db.collections.sessions.delete(row.id).isPersisted.promise;
 };
+/**
+ * Move the chat onto `model`; a pick in the model picker becomes the app's
+ * default too. `thisChatOnly` (the cut-off card's Switch) leaves the default.
+ */
 export const setSessionModel = async (
   db: Db,
   client: AppClient,
   row: SessionRow,
-  model: string
+  model: string,
+  { thisChatOnly = false }: { thisChatOnly?: boolean } = {}
 ): Promise<void> => {
   const previous = row.model ?? null;
   await db.collections.sessions.update(row.id, (d) => {
     d.model = model;
   }).isPersisted.promise;
   const results = await Promise.allSettled([
-    client.settings.setDefaultModel({ modelId: model }),
+    thisChatOnly
+      ? Promise.resolve()
+      : client.settings.setDefaultModel({ modelId: model }),
     row.status === "running"
       ? client.agent.setModel({
           workspaceId: row.workspaceId,

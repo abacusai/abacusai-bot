@@ -4512,7 +4512,11 @@
       "appClosed": "Ben yanıt veremeden uygulama kapatıldı. Kaldığı yerden devam etmek için tekrar gönder.",
       "stillWorking": "Hâlâ üzerinde çalışıyorum (şu ana kadar {{minutes}} dk). Bitince buradan yanıt vereceğim.",
       "verifyPhone": "{{credits}} ücretsiz krediyi açmak için telefonunu doğrula: {{link}}",
-      "verifyPhoneNoCount": "Ücretsiz kredilerini açmak için telefonunu doğrula: {{link}}"
+      "verifyPhoneNoCount": "Ücretsiz kredilerini açmak için telefonunu doğrula: {{link}}",
+      "cutoff": "Google yanıtımı yarıda kesti, bu yüzden durdum. Yeniden denemek için mesajını tekrar gönder.",
+      "cutoffSwitch": "Ya da daha istikrarlı yanıtlar için uygulamanın model seçicisinde RouteLLM - Open'a geç.",
+      "cutoffVerify": "Ya da ücretsiz Abacus kredilerinin kilidini açmak için telefonunu doğrula, ardından uygulamada RouteLLM - Open'a geç: {{link}}",
+      "cutoffTopUp": "Ya da Abacus kredisi ekle ve uygulamada RouteLLM - Open'a geç: {{link}}"
     },
     "unavailable": {
       "title": {
@@ -4535,6 +4539,19 @@
       "seePlans": "Planları gör",
       "planBody": "Şimdi ücretsiz bir modelle devam et ya da kullanmak için {{plan}} planına yükselt.",
       "planBodyAny": "Şimdi ücretsiz bir modelle devam et ya da kullanmak için planını yükselt."
+    },
+    "cutoff": {
+      "title": "Google yanıtı yarıda kesti",
+      "body": "Yeniden istedik ve Google yine kesti. Mesajın korunuyor.",
+      "bodyStreamed": "Yanıtın bir kısmı geldi ve yukarıda duruyor. Yeniden istedik ve Google yine kesti.",
+      "held": "Ücretsiz Abacus kredilerinin kilidini açmak için telefonunu doğrula, ardından RouteLLM - Open'a geç.",
+      "continue": "{{model}} ile devam et",
+      "resolved": {
+        "continued": "{{model}} ile devam ediliyor",
+        "switchedChat": "Bu sohbet artık RouteLLM - Open kullanıyor",
+        "switchedBot": "Bu bot artık RouteLLM - Open kullanıyor",
+        "upgraded": "Plan yükseltildi. Planındaki modellerle devam ediliyor."
+      }
     },
     "payment": {
       "title": "Son ödemenizi doğrulayamadık",

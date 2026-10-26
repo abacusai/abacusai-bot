@@ -612,6 +612,8 @@ export class HostCore {
       token?: TurnToken;
       userText?: UserTextTags;
       messageId?: string;
+      /** Pick a reply Google cut off back up, rather than send `message` again. */
+      continueCut?: boolean;
     } = {}
   ): Promise<void> {
     const turn = this.turn;
@@ -625,7 +627,8 @@ export class HostCore {
             echoed: options.echoed === true,
             userText: options.userText,
           }),
-        options.messageId
+        options.messageId,
+        options.continueCut === true
       );
       await this.drainAfter(turn);
     } finally {
@@ -683,13 +686,15 @@ export class HostCore {
   private async sendOwned(
     message: string,
     token: TurnToken | undefined,
-    messageId?: string
+    messageId?: string,
+    continueCut = false
   ): Promise<void> {
     this.hooks.sending?.(token);
     try {
       await this.session.send(message, {
         settled: () => this.hooks.settle?.(token),
         ...(messageId != null && { messageId }),
+        ...(continueCut && { continueCut }),
       });
     } catch (error) {
       // Recorded against this token's own run before the settle below

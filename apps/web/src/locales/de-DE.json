@@ -4512,7 +4512,11 @@
       "appClosed": "Die App wurde geschlossen, bevor ich antworten konnte. Schick es noch einmal, dann mache ich weiter.",
       "stillWorking": "Ich arbeite noch daran (bisher {{minutes}} Min.). Ich antworte hier, sobald es fertig ist.",
       "verifyPhone": "Bestätige deine Telefonnummer, um {{credits}} kostenlose Credits freizuschalten: {{link}}",
-      "verifyPhoneNoCount": "Bestätige deine Telefonnummer, um deine kostenlosen Credits freizuschalten: {{link}}"
+      "verifyPhoneNoCount": "Bestätige deine Telefonnummer, um deine kostenlosen Credits freizuschalten: {{link}}",
+      "cutoff": "Google hat meine Antwort mittendrin abgeschnitten, deshalb habe ich aufgehört. Sende deine Nachricht erneut, um es noch einmal zu versuchen.",
+      "cutoffSwitch": "Oder wechsle in der Modellauswahl der App zu RouteLLM - Open, um zuverlässigere Antworten zu bekommen.",
+      "cutoffVerify": "Oder bestätige deine Telefonnummer, um deine kostenlosen Abacus-Credits freizuschalten, und wechsle dann in der App zu RouteLLM - Open: {{link}}",
+      "cutoffTopUp": "Oder lade Abacus-Credits auf und wechsle in der App zu RouteLLM - Open: {{link}}"
     },
     "unavailable": {
       "title": {
@@ -4535,6 +4539,19 @@
       "seePlans": "Tarife ansehen",
       "planBody": "Mach jetzt mit einem kostenlosen Modell weiter oder wechsle zu {{plan}}, um es zu nutzen.",
       "planBodyAny": "Mach jetzt mit einem kostenlosen Modell weiter oder führe ein Upgrade durch, um es zu nutzen."
+    },
+    "cutoff": {
+      "title": "Google hat die Antwort abgeschnitten",
+      "body": "Wir haben erneut gefragt, und Google hat sie wieder abgeschnitten. Deine Nachricht bleibt erhalten.",
+      "bodyStreamed": "Ein Teil der Antwort ist angekommen und bleibt oben erhalten. Wir haben erneut gefragt, und Google hat sie wieder abgeschnitten.",
+      "held": "Bestätige deine Telefonnummer, um deine kostenlosen Abacus-Credits freizuschalten, und wechsle dann zu RouteLLM - Open.",
+      "continue": "Weiter mit {{model}}",
+      "resolved": {
+        "continued": "Weiter mit {{model}}",
+        "switchedChat": "Dieser Chat nutzt jetzt RouteLLM - Open",
+        "switchedBot": "Dieser Bot nutzt jetzt RouteLLM - Open",
+        "upgraded": "Upgrade erledigt. Es geht mit den Modellen deines Plans weiter."
+      }
     },
     "payment": {
       "title": "Wir konnten deine letzte Zahlung nicht bestätigen",

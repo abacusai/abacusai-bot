@@ -554,6 +554,12 @@ export class AguiHost {
       }
       if (newest?.id != null) this.echoedUserIds.add(newest.id);
     }
+    // Only the message the cut reply answers is picked back up (a restarted
+    // agent knows none, and reads it from the transcript); any other is sent.
+    const continueCut =
+      forwarded.intent === "continue" &&
+      newest?.id != null &&
+      (this.lastPrompt == null || this.lastPrompt.messageId === newest.id);
     if (newest?.id != null) this.lastPrompt = { messageId: newest.id, runId };
 
     const stillAdmitted = (): boolean =>
@@ -600,7 +606,10 @@ export class AguiHost {
 
       this.core.preparing = false;
       prompted = true;
-      await this.core.runHeld(text, "run", { token });
+      await this.core.runHeld(text, "run", {
+        token,
+        ...(continueCut && { continueCut }),
+      });
     } catch (error) {
       // Something other than the session's own reporting threw before the
       // prompt: the run is this command's own, so it ends in RUN_ERROR.

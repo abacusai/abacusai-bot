@@ -1710,7 +1710,11 @@
       "contactEmpty",
       "undelivered",
       "appClosed",
-      "stillWorking"
+      "stillWorking",
+      "cutoff",
+      "cutoffSwitch",
+      "cutoffVerify",
+      "cutoffTopUp"
     ],
     "sources": [
       "../../desktop/src/main/services/messaging/chat-failure-reply.ts",

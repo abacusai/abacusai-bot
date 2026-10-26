@@ -6,22 +6,31 @@
 import { OPENLLM_ID } from "@abacus-ai/contract/models";
 import { providerDisplayName } from "@abacus-ai/contract/settings";
 import type { UIMessage } from "@tanstack/ai-client";
+import { Store, useStore } from "@tanstack/react-store";
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { CreditsCard } from "#renderer/components/credits-card";
-import { ModelUnavailableCard } from "#renderer/components/credits-card/model-unavailable";
+import {
+  CutOffCard,
+  type CutOffResolution,
+  type CutOffState,
+  ModelUnavailableCard,
+} from "#renderer/components/credits-card/model-unavailable";
 import { GroupCard } from "#renderer/components/form-kit/page";
-import { usePrefs } from "#renderer/data/db/prefs";
+import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import {
   ABACUS_AGENT_URL,
   ABACUS_BILLING_URL,
+  ABACUS_BUY_CREDITS_URL,
+  ABACUS_VERIFY_PHONE_URL,
 } from "#renderer/lib/abacus-links";
 import { latestPresented } from "#renderer/lib/bot-turns/deliverables";
 import { cn } from "#renderer/lib/cn";
 import { CREDITS_EXHAUSTED_TTL_MS } from "#renderer/lib/credits";
 import {
+  freeCreditsHeld,
   freeCreditsUnlocked,
   startFreeCreditsWatch,
   useFreeCreditsVerifySurface,
@@ -38,6 +47,7 @@ import {
   requestUpgradeDialog,
 } from "#renderer/lib/upgrade-dialog";
 import { useAccount } from "#renderer/lib/use-account";
+import { useAppContext } from "#renderer/lib/use-app-context";
 import { useNow } from "#renderer/lib/use-now";
 import { Button } from "#renderer/ui/button";
 import {
@@ -80,6 +90,8 @@ interface ErrorAction {
   providers?: string[];
   /** `verify-phone`: the free credits verifying unlocks, as the server names them. */
   credits?: string;
+  /** `cut-off`: part of the reply arrived before the cut. */
+  streamed?: boolean;
 }
 
 /** Why the turn did not finish, as the agent named it (turn-outcome.ts). */
@@ -575,6 +587,177 @@ const VerifyPhoneCard = ({
   );
 };
 
+/** What each cut-off card's person chose, by run: the card shrinks to it. */
+const cutOffResolutions = new Store<Record<string, CutOffResolution>>({});
+const resolveCutOff = (runId: string, resolution: CutOffResolution): void =>
+  cutOffResolutions.setState((state) => ({ ...state, [runId]: resolution }));
+/** Cut-off cards already counted as shown, so a re-render is not another. */
+const cutOffCounted = new Set<string>();
+
+type CutOffStep =
+  | "cutoff_card_shown"
+  | "cutoff_continue"
+  | "cutoff_switch_routellm"
+  | "cutoff_upgrade"
+  | "cutoff_upgraded"
+  | "cutoff_verify";
+
+/**
+ * Google cut the reply off on the model the user picked (turn-outcome.ts),
+ * even after the agent asked once more: the cut-off card, its ways on, and
+ * what each does. Every switch is the person's click, and moves this chat
+ * (a bot's chat: its bot) only, never the app's default; a chosen way on
+ * picks the cut reply up rather than asking the question again.
+ */
+const CutOffError = ({
+  outcome,
+  action,
+  canContinue,
+  latest,
+  tier,
+}: {
+  outcome: RunOutcomeRecord;
+  action: ErrorAction;
+  /** The session's first cut: Continue on the same model is offered. */
+  canContinue: boolean;
+  latest: boolean;
+  tier: NonNullable<ErrorCardProps["tier"]>;
+}) => {
+  const { t } = useTranslation();
+  const { session, composer, runtime } = useChatView();
+  const { transport } = useAppContext();
+  const updatePrefs = useUpdatePrefs();
+  const account = useAccount();
+  const resume = useUpgradeResume();
+  const resolved = useStore(
+    cutOffResolutions,
+    (state) => state[outcome.runId] ?? null
+  );
+  const paid = tier === "paid" || tier === "basic";
+  // Held credits read as credits to the agent; only the account knows.
+  const held =
+    action.cause !== "signed-out" &&
+    freeCreditsHeld(account.data) &&
+    !freeCreditsUnlocked(account.data);
+  const state: CutOffState = held
+    ? "held"
+    : action.cause === "credits" || action.cause === "out"
+      ? action.cause
+      : "signed-out";
+  useFreeCreditsVerifySurface(state === "held");
+  const funnel = (step: CutOffStep, detail?: string) =>
+    void transport.client.system
+      .funnelStep({ step, ...(detail != null && { detail }) })
+      .catch(() => undefined);
+  const live = (outcome as RunOutcomeRecord & { live?: boolean }).live === true;
+  // Counted once per card, as it arrives; a reopened chat's card is history.
+  const announce = useEffectEvent(() => {
+    if (!live || cutOffCounted.has(outcome.runId)) return;
+    cutOffCounted.add(outcome.runId);
+    funnel(
+      "cutoff_card_shown",
+      `${paid && state !== "signed-out" ? "paid" : state.replace("-", "")}${canContinue ? "" : "_again"}`
+    );
+  });
+  useEffect(() => announce(), [live, outcome.runId]);
+  const canReply = latest && composer.readOnly == null && resolved == null;
+  const mode = composer.fixedMode ? { mode: composer.fixedMode } : {};
+  // The cut reply is picked up where it stopped, on the chat's model now.
+  const goOn = (model?: string) =>
+    session.retry(
+      { intent: "continue", ...(model != null && { model }), ...mode },
+      t("workspace.retryMessage")
+    );
+  const label = action.label ?? action.model ?? "";
+  return (
+    <div
+      role="group"
+      aria-label={t("chat.error.label")}
+      className="mx-auto w-full max-w-[calc(var(--composer-max-w)-var(--spacing)*8)]"
+      data-slot="error-card"
+      data-variant="cut-off"
+    >
+      <CutOffCard
+        host={runtime.host}
+        state={state}
+        paid={paid}
+        streamed={action.streamed === true}
+        label={label}
+        resolved={resolved}
+        {...(canReply && {
+          onSwitch: () => {
+            funnel("cutoff_switch_routellm");
+            void (async () => {
+              const moved =
+                (await composer.onSwitchThisChat?.(OPENLLM_ID)) ?? "chat";
+              resolveCutOff(
+                outcome.runId,
+                moved === "bot" ? "switched-bot" : "switched-chat"
+              );
+              // On RouteLLM now: the composer's own RouteLLM notice is done.
+              void updatePrefs({
+                dismissals: { routeLlmSwitched: true },
+              }).catch(() => undefined);
+              await goOn(OPENLLM_ID);
+            })().catch(() => {});
+          },
+          ...(canContinue && {
+            onContinue: () => {
+              funnel("cutoff_continue");
+              resolveCutOff(outcome.runId, "continued");
+              void goOn().catch(() => {});
+            },
+          }),
+          onVerify: () => {
+            funnel("cutoff_verify");
+            startFreeCreditsWatch();
+            void runtime.host.openExternal(ABACUS_VERIFY_PHONE_URL);
+          },
+          onTopUp: () => {
+            funnel("cutoff_upgrade", "topup");
+            void runtime.host.openExternal(ABACUS_BUY_CREDITS_URL);
+          },
+          // The plan's dialog, with its whole pitch and price; once the plan
+          // is active the turn goes on on an Abacus model, in this chat only.
+          onUpgrade: () => {
+            funnel("cutoff_upgrade");
+            requestUpgradeDialog(
+              {
+                kind: "own-key",
+                key: `cut-off:${outcome.runId}:${Date.now()}`,
+                threadId: session.threadId,
+                pendingText: lastUserText(session.hostStore.state.messages),
+                ownKey: {
+                  provider: action.provider ?? "gemini",
+                  cause: "cutoff",
+                },
+                resume: async (model?: string) => {
+                  funnel("cutoff_upgraded");
+                  resolveCutOff(outcome.runId, "upgraded");
+                  if (model == null) return resume();
+                  await composer.onSwitchThisChat?.(model).catch(() => {});
+                  return goOn(model);
+                },
+              },
+              true
+            );
+          },
+        })}
+        {...(canReply &&
+          composer.model != null && {
+            onPickModel: (from: HTMLElement) =>
+              from
+                .closest('[data-slot="chat-view"]')
+                ?.querySelector<HTMLButtonElement>(
+                  '[data-slot="chat-model-picker"]'
+                )
+                ?.click(),
+          })}
+      />
+    </div>
+  );
+};
+
 /** What the turn a wall cut off handed over, up to the outcome's anchor. */
 const readyBefore = (
   messages: readonly UIMessage[],
@@ -654,6 +837,17 @@ export const ErrorCard = ({
   const payment = actions.find((action) => action.type === "payment-required");
   if (payment != null)
     return <PaymentCard lapsed={payment.cause === "lapsed"} />;
+  const cutOff = actions.find((action) => action.type === "cut-off");
+  if (cutOff != null)
+    return (
+      <CutOffError
+        outcome={outcome}
+        action={cutOff}
+        canContinue={actions.some((action) => action.type === "continue-same")}
+        latest={latest}
+        tier={tier}
+      />
+    );
   // A provider that seems silent while the computer is offline is the
   // connection's fault, not the key's: the plain error says so.
   const ownKey = ownKeyFailure(actions);

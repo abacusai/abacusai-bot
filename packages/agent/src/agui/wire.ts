@@ -74,8 +74,12 @@ export type RunInput = Omit<AguiRunAgentInput, "forwardedProps"> & {
     activeSkills?: string[];
     /** Accepted and ignored; must equal threadId when present. */
     conversationId?: string;
-    /** "regenerate": an explicit request to answer the newest user message again. */
-    intent?: "send" | "regenerate";
+    /**
+     * "regenerate": an explicit request to answer the newest user message
+     * again. "continue": pick up the reply Google cut off on that message
+     * (the cut-off card's Continue and Switch), rather than ask it again.
+     */
+    intent?: "send" | "regenerate" | "continue";
   };
 };
 

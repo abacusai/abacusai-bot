@@ -169,6 +169,7 @@ import {
   StallWatch,
   modelStallMs,
 } from "./stall-watch.js";
+import { continueCutReply, streamCutStep } from "./stream-cut.js";
 import { readTodos } from "./todo-store.js";
 import { ToolCallStream } from "./tool-call-stream.js";
 import { ToolHeartbeat } from "./tool-heartbeat.js";
@@ -239,6 +240,8 @@ export interface TurnHandle {
   settled?: () => void;
   /** The sender's id for the message this turn answers. */
   messageId?: string;
+  /** Pick the reply Google cut off back up instead of sending the text again. */
+  continueCut?: boolean;
 }
 
 interface PendingPermission {
@@ -811,6 +814,11 @@ export class AbacusBotSession {
   private readonly busyWait = new BusyWait();
   /** The turn already ended on "couldn't reach Abacus"; pi's error is not a second one. */
   private networkFailureReported = false;
+  /** Google cut the reply off: it is picked up once, out of sight (stream-cut.ts). */
+  private pendingStreamCut = false;
+  private streamCutsThisTurn = 0;
+  /** Some of a cut reply arrived this turn, and is kept on screen. */
+  private cutStreamedThisTurn = false;
   /** Whether the Abacus provider was registered with the sponsored-run marker. */
   private sponsoredAtRegistration = sponsoredRunActive();
   /**
@@ -1386,6 +1394,9 @@ export class AbacusBotSession {
     this.stallRecoveriesThisTurn = 0;
     this.pendingStall = null;
     this.stallFailureReported = false;
+    this.pendingStreamCut = false;
+    this.streamCutsThisTurn = 0;
+    this.cutStreamedThisTurn = false;
     this.turnRunning = true;
     const owned = new OwnedTurn();
     this.ownedTurn = owned;
@@ -1418,7 +1429,9 @@ export class AbacusBotSession {
     });
 
     try {
-      await session.prompt(text);
+      // The cut-off card's Continue: the cut reply is picked up, never asked anew.
+      if (turn?.continueCut === true) await continueCutReply(session);
+      else await session.prompt(text);
       await this.continuePastRecoverableFailures();
       this.reportTurnFailure();
       this.closeOwnedTurn(owned);
@@ -1524,9 +1537,8 @@ export class AbacusBotSession {
     this.emitAgentEvent(
       {
         type: "error",
-        error: presentFailure(
-          failure,
-          registry != null
+        error: presentFailure(failure, {
+          ...(registry != null
             ? this.router.failureContext(
                 registry,
                 this.openLlmActive,
@@ -1538,8 +1550,13 @@ export class AbacusBotSession {
                 onFreeLane: false,
                 abacusFreeModels: [],
                 abacus: null,
-              }
-        ),
+              }),
+          ...(failure.cause === "stream_cut" &&
+            !this.openLlmActive && {
+              streamed: this.cutStreamedThisTurn,
+              cutoffsBefore: this.router.noteStreamCutCard(),
+            }),
+        }),
       },
       { origin: "turn" }
     );
@@ -1613,6 +1630,7 @@ export class AbacusBotSession {
       this.pendingToolArrival != null ||
       this.pendingStall != null ||
       this.pendingNetworkFailure != null ||
+      this.pendingStreamCut ||
       this.pendingBusyWait != null ||
       this.pendingEmptyAsk
     ) {
@@ -1620,6 +1638,7 @@ export class AbacusBotSession {
       // to go out or the session stays busy forever.
       if (this.interrupted) {
         this.pendingEmptyAsk = false;
+        this.pendingStreamCut = false;
         this.pendingNetworkFailure = null;
         this.pendingBusyWait = null;
         this.continuingPastMalformedToolCall = false;
@@ -1645,6 +1664,18 @@ export class AbacusBotSession {
         const suspect = this.pendingNetworkFailure;
         this.pendingNetworkFailure = null;
         await this.recoverFromNetworkFailure(suspect);
+
+        continue;
+      }
+
+      if (this.pendingStreamCut) {
+        this.pendingStreamCut = false;
+        this.streamCutsThisTurn += 1;
+        // Logged, not shown: the chat carries the answer, not the retry.
+        process.stderr.write(
+          `[provider] ${this.session?.model?.id ?? "the model"} cut the reply off; picking it up once.\n`
+        );
+        if (this.session != null) await continueCutReply(this.session);
 
         continue;
       }
@@ -2970,7 +3001,31 @@ export class AbacusBotSession {
                 endedOnProviderError(event.messages),
                 event.messages
               );
-        if (this.pendingNetworkFailure != null) {
+        // Google cut the reply off on a model the user picked: asked once
+        // more out of sight, or the network's while the machine is offline.
+        const cut =
+          this.pendingNetworkFailure != null ||
+          this.interrupted ||
+          event.willRetry ||
+          this.openLlmActive
+            ? null
+            : streamCutStep(
+                endedOnProviderError(event.messages),
+                this.session?.model?.provider,
+                event.messages,
+                this.streamCutsThisTurn
+              );
+        if (cut != null) {
+          this.cutStreamedThisTurn ||= cut.streamed;
+          if (cut.kind === "network")
+            this.pendingNetworkFailure = {
+              failure: cut.failure,
+              streamed: cut.streamed,
+              confirmed: true,
+            };
+          this.pendingStreamCut = cut.kind === "ask";
+        }
+        if (this.pendingNetworkFailure != null || this.pendingStreamCut) {
           this.lastTurnUsage = turnUsage(event.messages as never);
           this.continuingPastMalformedToolCall = false;
           this.pendingContextCompaction = null;

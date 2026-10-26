@@ -54,6 +54,16 @@ export const FUNNEL_STEPS = [
   "success_pitch_not_now",
   "success_pitch_withdrawn",
   "success_pitch_chat_told",
+  // Google cut a reply off on a model the user picked (the cut-off card);
+  // the card's detail is its state: credits, out, held or paid.
+  "cutoff_card_shown",
+  "cutoff_continue",
+  "cutoff_switch_routellm",
+  "cutoff_upgrade",
+  "cutoff_upgraded",
+  "cutoff_verify",
+  // The same, in the user's own chat app; the detail is the platform.
+  "cutoff_chat_told",
 ] as const;
 
 export type FunnelStep = (typeof FUNNEL_STEPS)[number];

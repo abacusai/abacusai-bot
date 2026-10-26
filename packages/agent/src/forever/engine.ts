@@ -143,6 +143,7 @@ import {
   StallWatch,
   modelStallMs,
 } from "../stall-watch.js";
+import { continueCutReply, streamCutStep } from "../stream-cut.js";
 import { ToolCallStream } from "../tool-call-stream.js";
 import { ToolHeartbeat } from "../tool-heartbeat.js";
 import { mcpToolAllowed, type UnattendedPolicy } from "../tool-policy.js";
@@ -225,6 +226,11 @@ export class ForeverEngine {
   private readonly busyWait = new BusyWait();
   /** The turn already ended on "couldn't reach Abacus"; pi's error is not a second one. */
   private networkFailureReported = false;
+  /** Google cut the reply off: it is picked up once, out of sight (stream-cut.ts). */
+  private pendingStreamCut = false;
+  private streamCutsThisTurn = 0;
+  /** Some of a cut reply arrived this turn, and is kept. */
+  private cutStreamedThisTurn = false;
   /** A model call gone silent; see stall-watch.ts. */
   private readonly stallWatch = new StallWatch({
     turnRunning: () => this.turnRunning,
@@ -742,6 +748,9 @@ export class ForeverEngine {
     this.stallRecoveriesThisTurn = 0;
     this.pendingStall = null;
     this.stallFailureReported = false;
+    this.pendingStreamCut = false;
+    this.streamCutsThisTurn = 0;
+    this.cutStreamedThisTurn = false;
     this.languageRepairsThisTurn = 0;
     this.pendingLanguageRepair = null;
     this.pendingEmptyAsk = false;
@@ -775,22 +784,30 @@ export class ForeverEngine {
     }
 
     try {
-      this.profile.noteUserWords?.(text);
-      // Only the user's own words name their language: not a sender's, not a routine's.
-      if (isOwnerAudience() && this.profile.statesReplyLanguage !== true)
-        void learnUserLanguage(text, (process.env.ABACUS_API_KEY ?? "").trim());
-      const context = await this.profile.beforeTurn(text);
-      // Rides along with the user's message, not as a turn of its own.
-      if (context.length > 0)
-        await session.sendCustomMessage(
-          {
-            customType: FOREVER_CONTEXT_TYPE,
-            content: context,
-            display: false,
-          },
-          { deliverAs: "nextTurn" }
-        );
-      await session.prompt(text);
+      // The cut-off card's Continue: the cut reply is picked up, never asked
+      // anew, and the message it answers was read when it was sent.
+      if (turn?.continueCut === true) await continueCutReply(session);
+      else {
+        this.profile.noteUserWords?.(text);
+        // Only the user's own words name their language: not a sender's, not a routine's.
+        if (isOwnerAudience() && this.profile.statesReplyLanguage !== true)
+          void learnUserLanguage(
+            text,
+            (process.env.ABACUS_API_KEY ?? "").trim()
+          );
+        const context = await this.profile.beforeTurn(text);
+        // Rides along with the user's message, not as a turn of its own.
+        if (context.length > 0)
+          await session.sendCustomMessage(
+            {
+              customType: FOREVER_CONTEXT_TYPE,
+              content: context,
+              display: false,
+            },
+            { deliverAs: "nextTurn" }
+          );
+        await session.prompt(text);
+      }
       await this.continuePastRecoverableFailures();
       this.reportTurnFailure();
       this.closeOwnedTurn(owned);
@@ -959,11 +976,13 @@ export class ForeverEngine {
       this.pendingToolArrival != null ||
       this.pendingStall != null ||
       this.pendingNetworkFailure != null ||
+      this.pendingStreamCut ||
       this.pendingBusyWait != null ||
       this.pendingEmptyAsk
     ) {
       if (this.interrupted) {
         this.pendingEmptyAsk = false;
+        this.pendingStreamCut = false;
         this.pendingNetworkFailure = null;
         this.pendingBusyWait = null;
         this.continuingPastMalformedToolCall = false;
@@ -989,6 +1008,18 @@ export class ForeverEngine {
         const suspect = this.pendingNetworkFailure;
         this.pendingNetworkFailure = null;
         await this.recoverFromNetworkFailure(suspect);
+
+        continue;
+      }
+
+      if (this.pendingStreamCut) {
+        this.pendingStreamCut = false;
+        this.streamCutsThisTurn += 1;
+        // Logged, not shown: the chat carries the answer, not the retry.
+        process.stderr.write(
+          `[provider] ${this.session?.model?.id ?? "the model"} cut the reply off; picking it up once.\n`
+        );
+        if (this.session != null) await continueCutReply(this.session);
 
         continue;
       }
@@ -1473,9 +1504,8 @@ export class ForeverEngine {
     this.emitAgentEvent(
       {
         type: "error",
-        error: presentFailure(
-          failure,
-          registry != null
+        error: presentFailure(failure, {
+          ...(registry != null
             ? this.router.failureContext(
                 registry,
                 this.openLlmActive,
@@ -1487,8 +1517,13 @@ export class ForeverEngine {
                 onFreeLane: false,
                 abacusFreeModels: [],
                 abacus: null,
-              }
-        ),
+              }),
+          ...(failure.cause === "stream_cut" &&
+            !this.openLlmActive && {
+              streamed: this.cutStreamedThisTurn,
+              cutoffsBefore: this.router.noteStreamCutCard(),
+            }),
+        }),
       },
       { origin: "turn" }
     );
@@ -2086,13 +2121,48 @@ export class ForeverEngine {
         // The network's failure is checked (and waited out) before anything
         // reads it as the model's: no cooldown, no rotation, no compaction.
         // A hidden turn has nobody waiting, so it neither waits nor blames.
-        const suspect =
+        let suspect =
           this.interrupted || event.willRetry
             ? null
             : networkSuspect(
                 endedOnProviderError(event.messages),
                 event.messages
               );
+        // Google cut the reply off on a model the user picked: asked once
+        // more out of sight, or the network's while the machine is offline.
+        const cut =
+          suspect != null ||
+          this.interrupted ||
+          event.willRetry ||
+          this.hiddenTurn ||
+          this.openLlmActive
+            ? null
+            : streamCutStep(
+                endedOnProviderError(event.messages),
+                this.session?.model?.provider,
+                event.messages,
+                this.streamCutsThisTurn
+              );
+        if (cut != null) {
+          this.cutStreamedThisTurn ||= cut.streamed;
+          if (cut.kind === "network")
+            suspect = {
+              failure: cut.failure,
+              streamed: cut.streamed,
+              confirmed: true,
+            };
+          this.pendingStreamCut = cut.kind === "ask";
+        }
+        if (this.pendingStreamCut) {
+          this.continuingPastMalformedToolCall = false;
+          this.pendingContextCompaction = null;
+          this.pendingOpenLlmRotation = null;
+          this.pendingBusyWait = null;
+          this.pendingLanguageRepair = null;
+          this.pendingToolArrival = null;
+
+          return;
+        }
         if (suspect != null && !this.hiddenTurn) {
           this.pendingNetworkFailure = suspect;
           this.continuingPastMalformedToolCall = false;

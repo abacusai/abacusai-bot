@@ -106,6 +106,19 @@ export const useSessionComposerModel = (
     onResumeOnModel: async (id: string) => {
       if (row) await setSessionModel(db, transport.client, row, id);
     },
+    onSwitchThisChat: async (id: string) => {
+      if (row) {
+        await setSessionModel(db, transport.client, row, id, {
+          thisChatOnly: true,
+        });
+        if (row.status === "running" && id === OPENLLM_ID)
+          await confirmFreePoolModel(transport, {
+            workspaceId: row.workspaceId,
+            sessionId: row.id,
+          });
+      }
+      return "chat" as const;
+    },
     missing: checkout.data?.exists === false,
     availableModes: sandbox.data?.available
       ? [

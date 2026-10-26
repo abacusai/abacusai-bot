@@ -48,7 +48,10 @@ export const NETWORK_RESUME_TYPE = "abacusai-bot:network-resume";
 /** The failed call produced nothing: it is asked again, as it was. */
 export const NETWORK_REPLAY_PROMPT =
   "The connection dropped before your reply arrived, and it is back now. Carry on with the task from the transcript above.";
-/** The failed call had started answering: the partial reply stays. */
+/** The failed call had started answering text: the partial reply stays. */
+const NETWORK_RESUME_LEAD =
+  "The connection dropped partway through your reply, and it is back now.";
+/** The failed call had started a tool call: the step is picked up again. */
 export const NETWORK_RESUME_PROMPT =
   "The connection dropped partway through your reply, and it is back now. Continue from where the transcript ends. Do not restart the task or repeat work that already completed.";
 
@@ -155,16 +158,59 @@ export function dropFailedCall(session: AgentSession): void {
     session.agent.state.messages = messages.slice(0, -1);
 }
 
+/** How much of a cut reply is quoted back: enough to find the place. */
+const PARTIAL_TAIL_CHARS = 1500;
+
+/**
+ * The text a failed call got out before it died, or null when it got none
+ * out or started a tool call (half a call is asked again, never continued).
+ */
+export function partialReplyText(messages: readonly unknown[]): string | null {
+  const last = lastAssistant(messages);
+  if (
+    last == null ||
+    (last.stopReason !== "error" && last.stopReason !== "aborted") ||
+    !Array.isArray(last.content)
+  )
+    return null;
+  const blocks = last.content as Array<{ type?: unknown; text?: unknown }>;
+  if (blocks.some((block) => block.type === "toolCall")) return null;
+  const text = blocks
+    .filter((block) => block.type === "text" && typeof block.text === "string")
+    .map((block) => block.text as string)
+    .join("");
+  return text.trim().length > 0 ? text : null;
+}
+
+/**
+ * The words that pick a reply up from where it was cut. A failed call never
+ * reaches the next request (pi drops it), so "continue" alone has the model
+ * start over: the tail of what arrived is quoted for it to go on from.
+ */
+export function continuePartialPrompt(lead: string, partial: string): string {
+  const tail =
+    partial.length > PARTIAL_TAIL_CHARS
+      ? `…${partial.slice(partial.length - PARTIAL_TAIL_CHARS)}`
+      : partial;
+  return `${lead} The user already sees what arrived, which ends with:\n\n<partial_reply>\n${tail}\n</partial_reply>\n\nContinue the reply from exactly where it stops, mid-sentence if it stops there. Do not repeat any of it, and do not mention the interruption.`;
+}
+
 /** The continuation that picks a turn up once the network is back. */
 export function networkContinuation(
   session: AgentSession,
   streamed: boolean
 ): Promise<void> {
   if (!streamed) dropFailedCall(session);
+  const partial = streamed ? partialReplyText(session.messages) : null;
   return session.sendCustomMessage(
     {
       customType: NETWORK_RESUME_TYPE,
-      content: streamed ? NETWORK_RESUME_PROMPT : NETWORK_REPLAY_PROMPT,
+      content:
+        partial != null
+          ? continuePartialPrompt(NETWORK_RESUME_LEAD, partial)
+          : streamed
+            ? NETWORK_RESUME_PROMPT
+            : NETWORK_REPLAY_PROMPT,
       display: false,
     },
     { triggerTurn: true }

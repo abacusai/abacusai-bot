@@ -4512,7 +4512,11 @@
       "appClosed": "Aplikasi ditutup sebelum saya sempat membalas. Kirim lagi untuk melanjutkan.",
       "stillWorking": "Masih saya kerjakan ({{minutes}} menit sejauh ini). Saya akan membalas di sini setelah selesai.",
       "verifyPhone": "Verifikasi ponsel Anda untuk membuka {{credits}} kredit gratis: {{link}}",
-      "verifyPhoneNoCount": "Verifikasi ponsel Anda untuk membuka kredit gratis Anda: {{link}}"
+      "verifyPhoneNoCount": "Verifikasi ponsel Anda untuk membuka kredit gratis Anda: {{link}}",
+      "cutoff": "Google memotong balasanku di tengah jalan, jadi aku berhenti. Kirim pesanmu lagi untuk mencoba ulang.",
+      "cutoffSwitch": "Atau beralih ke RouteLLM - Open di pemilih model aplikasi untuk balasan yang lebih stabil.",
+      "cutoffVerify": "Atau verifikasi nomor teleponmu untuk membuka kredit Abacus gratismu, lalu beralih ke RouteLLM - Open di aplikasi: {{link}}",
+      "cutoffTopUp": "Atau tambahkan kredit Abacus dan beralih ke RouteLLM - Open di aplikasi: {{link}}"
     },
     "unavailable": {
       "title": {
@@ -4535,6 +4539,19 @@
       "seePlans": "Lihat paket",
       "planBody": "Lanjutkan sekarang dengan model gratis, atau upgrade ke {{plan}} untuk memakainya.",
       "planBodyAny": "Lanjutkan sekarang dengan model gratis, atau upgrade paketmu untuk memakainya."
+    },
+    "cutoff": {
+      "title": "Google memotong balasannya",
+      "body": "Kami sudah meminta lagi, dan Google memotongnya lagi. Pesanmu tetap tersimpan.",
+      "bodyStreamed": "Sebagian balasan sudah masuk dan tetap ada di atas. Kami sudah meminta lagi, dan Google memotongnya lagi.",
+      "held": "Verifikasi nomor teleponmu untuk membuka kredit Abacus gratismu, lalu beralih ke RouteLLM - Open.",
+      "continue": "Lanjutkan di {{model}}",
+      "resolved": {
+        "continued": "Melanjutkan di {{model}}",
+        "switchedChat": "Chat ini sekarang memakai RouteLLM - Open",
+        "switchedBot": "Bot ini sekarang memakai RouteLLM - Open",
+        "upgraded": "Paket sudah ditingkatkan. Melanjutkan dengan model dari paketmu."
+      }
     },
     "payment": {
       "title": "Kami tidak dapat mengonfirmasi pembayaran terakhir Anda",

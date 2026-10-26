@@ -4512,7 +4512,11 @@
       "appClosed": "L'application a été fermée avant que je puisse répondre. Renvoie-le pour reprendre.",
       "stillWorking": "J'y travaille encore ({{minutes}} min pour l'instant). Je répondrai ici quand ce sera fini.",
       "verifyPhone": "Vérifiez votre téléphone pour débloquer {{credits}} crédits gratuits : {{link}}",
-      "verifyPhoneNoCount": "Vérifiez votre téléphone pour débloquer vos crédits gratuits : {{link}}"
+      "verifyPhoneNoCount": "Vérifiez votre téléphone pour débloquer vos crédits gratuits : {{link}}",
+      "cutoff": "Google a coupé ma réponse en cours de route, je me suis donc arrêté. Renvoyez votre message pour réessayer.",
+      "cutoffSwitch": "Ou passez à RouteLLM - Open dans le sélecteur de modèles de l'app pour des réponses plus fiables.",
+      "cutoffVerify": "Ou vérifiez votre téléphone pour débloquer vos crédits Abacus gratuits, puis passez à RouteLLM - Open dans l'app : {{link}}",
+      "cutoffTopUp": "Ou ajoutez des crédits Abacus et passez à RouteLLM - Open dans l'app : {{link}}"
     },
     "unavailable": {
       "title": {
@@ -4535,6 +4539,19 @@
       "seePlans": "Voir les offres",
       "planBody": "Continuez maintenant avec un modèle gratuit, ou passez à {{plan}} pour l'utiliser.",
       "planBodyAny": "Continuez maintenant avec un modèle gratuit, ou passez à une offre supérieure pour l'utiliser."
+    },
+    "cutoff": {
+      "title": "Google a coupé la réponse",
+      "body": "Nous avons redemandé, et Google l'a coupée à nouveau. Votre message est conservé.",
+      "bodyStreamed": "Une partie de la réponse est arrivée et reste affichée ci-dessus. Nous avons redemandé, et Google l'a coupée à nouveau.",
+      "held": "Vérifiez votre téléphone pour débloquer vos crédits Abacus gratuits, puis passez à RouteLLM - Open.",
+      "continue": "Continuer avec {{model}}",
+      "resolved": {
+        "continued": "Suite avec {{model}}",
+        "switchedChat": "Cette discussion utilise maintenant RouteLLM - Open",
+        "switchedBot": "Ce bot utilise maintenant RouteLLM - Open",
+        "upgraded": "Abonnement mis à niveau. La suite avec les modèles de votre offre."
+      }
     },
     "payment": {
       "title": "Nous n'avons pas pu confirmer votre dernier paiement",
