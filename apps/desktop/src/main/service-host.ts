@@ -1637,6 +1637,7 @@ export class ServiceHost {
       return this.mcpAdminService.refreshSessionMcp(session, requestId);
     },
     changed: () => this.connectorStatusChanged(),
+    owner: () => credentialFor("ABACUS_API_KEY"),
     log: (line) => console.log(line),
   });
 

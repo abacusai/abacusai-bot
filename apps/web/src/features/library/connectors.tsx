@@ -4,6 +4,10 @@ import {
   connectorById,
   type Connector,
 } from "@abacus-ai/connectors/registry";
+import type {
+  ConnectorStatus,
+  ConnectorStatuses,
+} from "@abacus-ai/contract/contracts";
 import { revalidateLogic } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
@@ -52,6 +56,19 @@ export const visibleTabsFor = (entry: Connector): string[] =>
         ? ["abacus", "featured"]
         : ["abacus"]
       : [entry.category];
+/** Abacus could not be read and nothing was known before: neither connected nor not. */
+const uncheckable = (status: ConnectorStatus | undefined): boolean =>
+  status?.state === "unavailable" && status?.reason === "unavailable";
+/** Read from Abacus last time rather than now, or not read at all. */
+const unconfirmed = (statuses: ConnectorStatuses | undefined) => {
+  const all = Object.values(statuses ?? {});
+  return {
+    stale: all.some((status) => status.stale === true),
+    unchecked: all.some(uncheckable),
+  };
+};
+/** While Abacus cannot be read, the page asks again on its own this often. */
+const UNCONFIRMED_REFETCH_MS = 15_000;
 export const ConnectorsPage = () => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
@@ -64,6 +81,11 @@ export const ConnectorsPage = () => {
   const statuses = useQuery({
     ...transport.orpc.connectors.statuses.queryOptions({ input: {} }),
     staleTime: 60000,
+    // Only while the shown state is not a fresh read: back to fresh once Abacus answers.
+    refetchInterval: (query) => {
+      const { stale, unchecked } = unconfirmed(query.state.data);
+      return stale || unchecked ? UNCONFIRMED_REFETCH_MS : false;
+    },
   });
   // Chat apps pair from the desktop; a browser has no pairing.
   const offered = CONNECTORS.filter(
@@ -85,6 +107,7 @@ export const ConnectorsPage = () => {
   );
   const connected = (id: string) =>
     ["connected", "pending"].includes(statuses.data?.[id]?.state ?? "");
+  const { stale, unchecked } = unconfirmed(statuses.data);
   return (
     <AreaPage
       testId="connectors-page"
@@ -124,6 +147,13 @@ export const ConnectorsPage = () => {
           }
         />
       )}
+      {(stale || unchecked) && (
+        <ConnectNote>
+          {t(
+            stale ? "phase5.connectorsLastSeen" : "phase5.connectorsUnchecked"
+          )}
+        </ConnectNote>
+      )}
       {[true, false].map((group) => {
         const rows = entries.filter((e) => connected(e.id) === group);
         if (rows.length === 0) return null;
@@ -137,6 +167,7 @@ export const ConnectorsPage = () => {
                 // Installed, but its sign-in never finished: offer the sign-in.
                 const signIn =
                   statuses.data?.[e.id]?.reason === "sign-in-required";
+                const cantCheck = uncheckable(statuses.data?.[e.id]);
                 const inFlight =
                   flow.state.connectorId === e.id &&
                   flow.state.phase !== "idle" &&
@@ -163,7 +194,9 @@ export const ConnectorsPage = () => {
                             ? "phase5.signInNeeded"
                             : group
                               ? "phase5.connected"
-                              : "phase5.available"
+                              : cantCheck
+                                ? "phase5.cantCheck"
+                                : "phase5.available"
                         )}
                       </StatePill>
                     </span>
@@ -230,6 +263,7 @@ export const ConnectorDialog = ({ connector }: { connector: string }) => {
   const status = statuses.data?.[connector];
   const connected = status?.state === "connected";
   const signIn = status?.reason === "sign-in-required";
+  const cantCheck = uncheckable(status);
   const waiting =
     flow.state.connectorId === connector && flow.state.phase !== "idle";
   const tools =
@@ -267,7 +301,9 @@ export const ConnectorDialog = ({ connector }: { connector: string }) => {
                   ? "phase5.connected"
                   : signIn
                     ? "phase5.signInNeeded"
-                    : "phase5.notConnected"
+                    : cantCheck
+                      ? "phase5.cantCheck"
+                      : "phase5.notConnected"
               ),
               tone: connected ? "success" : "warning",
             }
