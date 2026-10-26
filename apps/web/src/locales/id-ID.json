@@ -1774,6 +1774,7 @@
       "merged": "Digabungkan",
       "title": "Changes",
       "empty": "No changes yet",
+      "tooMany": "Too many changes to track edits live. Reopen a file to see its latest diff.",
       "diff": "File diff",
       "full": "Open full diff",
       "fullDiff": "Open full diff",

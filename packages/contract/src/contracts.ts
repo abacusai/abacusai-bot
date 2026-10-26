@@ -56,6 +56,13 @@ export interface FileTreeNode {
 export type GitDiffScope = "staged" | "unstaged";
 export type GitChangeStatsScope = GitDiffScope | "all";
 
+/**
+ * Above this many changes, `gitState` rows carry no fingerprints: hashing
+ * every changed file on each refresh is work without end in a folder that
+ * is not a project (a drive, a home folder), and no one reviews that many.
+ */
+export const GIT_FINGERPRINT_CHANGE_LIMIT = 500;
+
 export interface GitChangeItem {
   path: string;
   status: string;

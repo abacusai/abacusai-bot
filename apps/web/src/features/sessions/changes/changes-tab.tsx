@@ -1,6 +1,9 @@
 import type { CheckoutRef } from "@abacus-ai/contract/contract/checkout";
 import type { SessionRow } from "@abacus-ai/contract/contract/rows";
-import type { GitChangeItem } from "@abacus-ai/contract/contracts";
+import {
+  GIT_FINGERPRINT_CHANGE_LIMIT,
+  type GitChangeItem,
+} from "@abacus-ai/contract/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
@@ -39,6 +42,12 @@ export const changeRows = (
 ): ChangeSelection[] => {
   if (!state) return [];
   const sections = state.gitChangeSections;
+  // A Set, not a scan per change: a drive-sized workspace has tens of thousands.
+  const listed = new Set(
+    [...(sections?.staged ?? []), ...(sections?.unstaged ?? [])].map(
+      (item) => item.path
+    )
+  );
   return sections
     ? [
         ...sections.staged.map((change) => ({
@@ -52,11 +61,7 @@ export const changeRows = (
           group: "unstaged",
         })),
         ...sections.merged
-          .filter(
-            (change) =>
-              !sections.staged.some((item) => item.path === change.path) &&
-              !sections.unstaged.some((item) => item.path === change.path)
-          )
+          .filter((change) => !listed.has(change.path))
           .map((change) => ({
             change,
             scope: "unstaged" as const,
@@ -182,6 +187,11 @@ export const ChangesTab = ({
         <p className="text-muted-foreground p-2 text-xs">
           {t("sessions.changes.title")}
         </p>
+        {(state?.gitChanges.length ?? 0) > GIT_FINGERPRINT_CHANGE_LIMIT && (
+          <p className="text-muted-foreground px-2 text-xs">
+            {t("sessions.changes.tooMany")}
+          </p>
+        )}
         <div className="flex gap-1 px-2 py-2">
           <Button size="sm" variant="ghost" onClick={() => rows.forEach(keep)}>
             {t("sessions.changes.keepAll")}
