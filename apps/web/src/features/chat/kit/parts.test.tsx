@@ -229,6 +229,34 @@ it("clusters consecutive tools while dropping blank prose wrappers", async () =>
   ).toBeNull();
 });
 
+it("shows the card a reply points at outside the closed run", async () => {
+  const relay = new FakeRelay();
+  relay.emitAll([
+    ...b.sessionReady(),
+    b.runStarted("card"),
+    b.textStart("calls"),
+    ...b.toolCall("c1", "bash", "calls", { command: "npm test" }),
+    b.toolResult("c1", { text: "ok" }),
+    ...b.toolCall("c2", "paid_feature", "calls", { feature: "video_gen" }),
+    b.toolResult("c2", { text: "ok" }),
+    ...b.toolCall("c3", "bash", "calls", { command: "npm run lint" }),
+    b.toolResult("c3", { text: "ok" }),
+    b.textEnd("calls"),
+  ]);
+  current = await renderRelay(relay, "session");
+  await waitFor(() =>
+    expect(
+      document.querySelector(
+        '[data-slot="paid-feature"][data-feature="video_gen"]'
+      )
+    ).toBeTruthy()
+  );
+  const card = document.querySelector('[data-slot="paid-feature"]')!;
+  expect(card.closest('[data-slot="tool-group"]')).toBeNull();
+  // The card splits the run: a closed run before it and one after.
+  expect(document.querySelectorAll('[data-slot="tool-group"]')).toHaveLength(2);
+});
+
 it("keeps one collapsed run for every kind of tool call while streaming", async () => {
   const relay = new FakeRelay();
   relay.emitAll([

@@ -547,7 +547,7 @@ describe("paid-plan capabilities", () => {
     ]);
   });
 
-  it("answers a free account's video ask with Basic, its price and the card, never a refusal or a detour", async () => {
+  it("answers a free account's video ask with Basic first, its price, the link and the card, never a refusal or a detour", async () => {
     mediaKeys.set("ABACUS_API_KEY", "key");
     billingPlan.mockResolvedValue(BASIC_FIRST_MONTH);
     const { text, isError } = await callOn(planServer("free"), "video_gen");
@@ -556,13 +556,33 @@ describe("paid-plan capabilities", () => {
     expect(text).toMatch(/Basic, \$7 for the first month \(30% off/);
     expect(text).toContain("Image and video generation");
     expect(text).toMatch(
-      /Basic includes video generation on the web in Abacus AI Agent, not in this app/
+      /Basic includes video generation on the web in Abacus AI Agent,/
     );
-    expect(text).toMatch(/Upgrade card under your reply/);
+    expect(text).toMatch(/Upgrade card with your reply/);
+    // The reply outlives a one-time link: the bot's own upgrade page, never a minted one.
+    expect(text).toMatch(
+      /Their upgrade link: https:\/\/\S+\/bot\/link\/upgrade\?src=app\n/
+    );
     expect(text).not.toContain("https://upgrade.example/basic");
+    expect(text).toMatch(/Give the upgrade link exactly as written/);
+    expect(text).toMatch(
+      /Open your reply with the yes: .*"Basic gives you video generation in Abacus AI Agent on the web, for \$7/
+    );
     expect(text).toMatch(/Never say you cannot do it/);
     expect(text).toMatch(/no Canva, Hugging Face or other connector/);
     expect(text).toMatch(/ffmpeg, Blender, Python/);
+    // A yes reposts the link and starts nothing; a no ends the pitch.
+    expect(text).toMatch(/Offer no other work in this reply/);
+    expect(text).toMatch(
+      /A yes \(yes, ok, sure, sim, evet, dale .*: .*the upgrade link again, exactly as written, on its own line\. Nothing else: do not start their request or any other work, and call no tool\./
+    );
+    expect(text).toMatch(
+      /An ok or yes right after you gave the link is a yes too/
+    );
+    expect(text).toMatch(/Never say you are making it/);
+    expect(text).toMatch(
+      /A no or not now: .*Do not offer it again in this chat/
+    );
   });
 
   it("answers a free account's 'what's in this reel?' with Basic's video analysis, priced, never 'I can only read the title'", async () => {
@@ -576,7 +596,7 @@ describe("paid-plan capabilities", () => {
     expect(text).toMatch(/Basic, \$7 for the first month \(30% off/);
     expect(text).toMatch(/Never say you cannot do it/);
     // Served here on a paid plan: no "on the web only" line.
-    expect(text).not.toMatch(/not in this app/);
+    expect(text).not.toMatch(/This app does not make/);
   });
 
   it("gives the upgrade link where no card can show: a bot answering in a chat app", async () => {
@@ -645,9 +665,18 @@ describe("paid-plan capabilities", () => {
     );
     expect(billingPlan).not.toHaveBeenCalled();
     expect(text).toMatch(/^Their plan includes image generation and editing/);
-    expect(text).toMatch(/Open in Abacus AI Agent card under your reply/);
-    expect(text).toMatch(/give no link/);
-    expect(text).not.toContain("https://");
+    expect(text).toMatch(/Open in Abacus AI Agent card with your reply/);
+    expect(text).toMatch(/give no link in this reply/);
+    expect(text).toMatch(
+      /Open your reply with the yes: .*"Your plan makes image generation and editing in Abacus AI Agent on the web\."/
+    );
+    // The link is for a yes to the card, not for the reply.
+    expect(text).toContain(
+      `Their link, which opens it too, for a yes below: ${FOX}\n`
+    );
+    expect(text).toMatch(
+      /A yes \(.*\): one short line in their language and that link, exactly as written, on its own line\./
+    );
     expect(text).toMatch(/Do not offer an upgrade/);
     expect(text).toMatch(/attach it there/);
     expect(text).toMatch(/no Canva, Hugging Face/);
@@ -691,6 +720,9 @@ describe("paid-plan capabilities", () => {
       "Their upgrade link: https://upgrade.example/basic"
     );
     expect(upgrade.text).not.toMatch(/Settings|card/);
+    expect(upgrade.text).toMatch(
+      /A yes \(.*the upgrade link again, exactly as written, on its own line/
+    );
     const paid = await callOn(
       planServer("basic", ["image_gen"]),
       "image_gen",
@@ -716,6 +748,8 @@ describe("paid-plan capabilities", () => {
     expect(upgrade.text).toMatch(
       /Their upgrade link: https:\/\/\S+\/bot\/link\/upgrade\?src=app/
     );
+    // Nobody answers a routine's result, so it gets no follow-up rules.
+    expect(upgrade.text).not.toMatch(/When they answer it/);
     // A routine gets no media tools, so its own keys never list them there.
     mediaKeys.set("OPENAI_API_KEY", "key");
     const paid = await callOn(

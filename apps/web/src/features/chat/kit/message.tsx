@@ -42,7 +42,11 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { containmentRootFor } from "#renderer/components/file-preview/paths";
-import { botVisibleMessage } from "#renderer/lib/bot-turns/turns";
+import {
+  botVisibleMessage,
+  isBotHelpTool,
+  isPaidFeatureTool,
+} from "#renderer/lib/bot-turns/turns";
 import { cn } from "#renderer/lib/cn";
 import {
   Attachment,
@@ -774,6 +778,16 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
             !visibleUnits.has(`${scope}\0${part.part.id}`)
           )
             continue;
+          // A card the reply points at (the upgrade, a place in the app)
+          // stands on its own: folded into a closed run, nobody saw it.
+          if (
+            isPaidFeatureTool(part.part.name) ||
+            isBotHelpTool(part.part.name)
+          ) {
+            flush();
+            blocks.push({ run: false, part });
+            continue;
+          }
           const previous = blocks.at(-1);
           if (previous?.run) {
             previous.parts.push(...held, part);

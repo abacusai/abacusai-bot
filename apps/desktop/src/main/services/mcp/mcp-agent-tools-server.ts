@@ -3054,7 +3054,8 @@ export class McpAgentToolsServer extends McpHttpServer {
       callerSession
     );
     const reply = this.paidFeatureReply(callerSession);
-    // Only a person's reply mints a one-time upgrade link; the card brings its own.
+    // Only a chat app's reply mints a one-time upgrade link: the app's reply
+    // stays in the chat, so it links the bot's upgrade page, and the card brings its own.
     const plan =
       tier === "free" && !listed
         ? await fetchBillingPlan(reply === "chat")

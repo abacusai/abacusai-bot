@@ -259,8 +259,8 @@ function capabilitiesSection(facts: BotHelpFacts): string[] {
     `Off: ${off.length === 0 ? "none" : off.map((set) => set.id).join(", ")}.`,
   ];
   lines.push(
-    "Making images, video or audio happens in Abacus AI Agent on the web (or on the user's own key",
-    `for it, when one is set here), never on this app's plan: ${PAID_FEATURE_TOOL} answers it.`
+    "Making images, video or audio: the plan makes them in Abacus AI Agent on the web (and the user's",
+    `own key for it makes them here, when one is set). Asked for one, call ${PAID_FEATURE_TOOL} first and lead with that.`
   );
   if (facts.withheldFeatures.length > 0)
     lines.push(
@@ -342,8 +342,8 @@ const DESCRIPTION = [
   "It is not for building or publishing apps, websites or pages: that is the user's task, not a",
   "question about this bot. Never call it to check whether you can do a task: when the user asks",
   "you to make, build or publish something, use the tools you have for it. Plan prices and",
-  "credits are billing_plan's. Images, video and speech",
-  "are made in Abacus AI Agent on the web, not by this bot: for those, call paid_feature.",
+  "credits are billing_plan's. Asked to make an image, video or speech, call paid_feature",
+  "straight away instead: the plan makes them in Abacus AI Agent on the web.",
 ];
 
 const INPUT_SCHEMA = {
