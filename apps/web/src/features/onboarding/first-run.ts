@@ -1,5 +1,4 @@
 import type { Transport } from "#renderer/data/transport";
-import { ConnectAttempt } from "#renderer/lib/connect-page";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 
 const claim = (key: string): boolean => {
@@ -10,39 +9,6 @@ const claim = (key: string): boolean => {
   } catch {
     return false;
   }
-};
-
-/** One Google consent covers these: any of them connected means Google is. */
-const GOOGLE_CONNECTORS = [
-  "abacus-gmailuser",
-  "abacus-googlecalendar",
-  "abacus-googledriveuser",
-] as const;
-
-/**
- * Desktop, once per install: an account that signs in with Google has
- * Google's consent opened after sign-in, unless Google is connected already
- * (a website sign-up may have done it). Nobody else is asked.
- */
-export const startFirstRunGmail = async (
-  transport: Transport,
-  googleSignIn: boolean
-): Promise<void> => {
-  if (!IS_ELECTRON || !googleSignIn) return;
-  const statuses = await transport.client.connectors.statuses({});
-  if (
-    statuses["abacus-gmailuser"]?.state !== "available" ||
-    GOOGLE_CONNECTORS.some((id) => statuses[id]?.state === "connected") ||
-    !claim("abacusai-bot:onboarding.gmailHop")
-  )
-    return;
-  void new ConnectAttempt(transport, "abacus-gmailuser").result
-    .then((outcome) =>
-      transport.client.system.funnelStep({
-        step: outcome.ok ? "gmail_allowed" : "gmail_declined",
-      })
-    )
-    .catch(() => {});
 };
 
 /**

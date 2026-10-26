@@ -36,10 +36,7 @@ import {
   watchInboxPass,
   type FirstChoice,
 } from "#renderer/features/onboarding/first-bot";
-import {
-  startFirstRunGmail,
-  startWebsiteSignIn,
-} from "#renderer/features/onboarding/first-run";
+import { startWebsiteSignIn } from "#renderer/features/onboarding/first-run";
 import {
   guardStep,
   onboardingExitTarget,
@@ -114,15 +111,8 @@ const OnboardingRoute = () => {
           return;
         }
         if (outcome.ok) {
-          const account = await transport.client.account.abacus({
-            refresh: true,
-          });
+          await transport.client.account.abacus({ refresh: true });
           if (onboardingStore.state.signIn?.id !== attemptId) return;
-          // Optional connector consent must not hold up a completed sign-in.
-          void startFirstRunGmail(
-            transport,
-            account?.google_sign_in === true
-          ).catch(() => {});
           await queryClient.invalidateQueries();
           if (onboardingStore.state.signIn?.id !== attemptId) return;
           await go("connected");
@@ -260,9 +250,7 @@ const OnboardingRoute = () => {
     if (facts.provisional) return;
     if (step === "welcome" && !facts.signedIn)
       void startWebsiteSignIn(transport, automaticallySignIn).catch(() => {});
-    if (facts.signedIn && facts.googleSignIn)
-      void startFirstRunGmail(transport, true).catch(() => {});
-  }, [step, facts.provisional, facts.signedIn, facts.googleSignIn, transport]);
+  }, [step, facts.provisional, facts.signedIn, transport]);
   const connect = async (id: string) => {
     const entry = connectorById(id);
     if (IS_ELECTRON && entry?.kind === "messaging") {
@@ -334,7 +322,6 @@ const factsOf = async (
   return {
     signedIn: canSignOutOfAbacus(settings),
     payingTier: isPayingAbacusTier(account?.subscription_tier),
-    googleSignIn: account?.google_sign_in === true,
     ownsBot: context.db.collections.bots.toArray.length > 0,
   };
 };
