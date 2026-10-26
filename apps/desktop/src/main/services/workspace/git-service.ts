@@ -54,9 +54,10 @@ const STATUS_READ = {
 const PATHSPEC_CHUNK = 200;
 /**
  * Characters of paths per git call. Windows caps a whole command line at
- * 32,767 characters, so 200 deep paths can overflow it (spawn ENAMETOOLONG).
+ * 32,767 characters, so 200 deep paths can overflow it (spawn ENAMETOOLONG);
+ * half of that leaves room for git's own path and the checkout's.
  */
-const PATHSPEC_CHUNK_CHARS = 8_000;
+const PATHSPEC_CHUNK_CHARS = 16_000;
 
 /** Runs of `paths` within both limits; a longer path goes alone. */
 const pathspecChunks = (paths: string[]): string[][] => {
