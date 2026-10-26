@@ -12,7 +12,7 @@ import { revalidateLogic } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { ExternalLinkIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
@@ -108,6 +108,14 @@ export const ConnectorsPage = () => {
   const connected = (id: string) =>
     ["connected", "pending"].includes(statuses.data?.[id]?.state ?? "");
   const { stale, unchecked } = unconfirmed(statuses.data);
+  // Abacus answers again: a Connect that could not reach it is no longer the news.
+  const reachable = statuses.data != null && !stale && !unchecked;
+  useEffect(() => {
+    if (reachable)
+      flow.store.setState((state) =>
+        state.error === "unreachable" ? { ...state, error: undefined } : state
+      );
+  }, [reachable, flow.store]);
   return (
     <AreaPage
       testId="connectors-page"
@@ -172,65 +180,78 @@ export const ConnectorsPage = () => {
                   flow.state.connectorId === e.id &&
                   flow.state.phase !== "idle" &&
                   flow.state.phase !== "fields";
+                // The connect error sits under the row it came from.
+                const error =
+                  flow.state.connectorId === e.id
+                    ? flow.state.error
+                    : undefined;
                 return (
-                  <SettingRow
-                    key={e.id}
-                    id={e.id}
-                    title={e.name}
-                    detail={statuses.data?.[e.id]?.account ?? e.description}
-                    media={<ConnectorMark id={e.logo ?? e.id} size={40} />}
-                  >
-                    {/* The section heading already says it; a phone folds the pill. */}
-                    <span
-                      className={signIn ? "contents" : "phone:hidden contents"}
+                  <div key={e.id}>
+                    <SettingRow
+                      id={e.id}
+                      title={e.name}
+                      detail={statuses.data?.[e.id]?.account ?? e.description}
+                      media={<ConnectorMark id={e.logo ?? e.id} size={40} />}
                     >
-                      <StatePill
-                        tone={
-                          signIn ? "warning" : group ? "success" : "neutral"
+                      {/* The section heading already says it; a phone folds the pill. */}
+                      <span
+                        className={
+                          signIn ? "contents" : "phone:hidden contents"
                         }
                       >
+                        <StatePill
+                          tone={
+                            signIn ? "warning" : group ? "success" : "neutral"
+                          }
+                        >
+                          {t(
+                            signIn
+                              ? "phase5.signInNeeded"
+                              : group
+                                ? "phase5.connected"
+                                : cantCheck
+                                  ? "phase5.cantCheck"
+                                  : "phase5.available"
+                          )}
+                        </StatePill>
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={inFlight}
+                        aria-busy={inFlight}
+                        onClick={() => {
+                          if (group && !signIn && e.kind === "messaging")
+                            void navigate({
+                              to: "/library/messaging",
+                              search: { platform: e.platform },
+                              transition: "none",
+                            });
+                          else if (group && !signIn)
+                            void navigate({
+                              to: "/library/connectors",
+                              search: (p) => ({ ...p, connector: e.id }),
+                              transition: "none",
+                            });
+                          else void flow.start(e.id);
+                        }}
+                      >
+                        {inFlight && <Spinner aria-hidden />}
                         {t(
                           signIn
-                            ? "phase5.signInNeeded"
+                            ? "phase5.signIn"
                             : group
-                              ? "phase5.connected"
-                              : cantCheck
-                                ? "phase5.cantCheck"
-                                : "phase5.available"
+                              ? "phase5.manage"
+                              : "phase5.add"
                         )}
-                      </StatePill>
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      disabled={inFlight}
-                      aria-busy={inFlight}
-                      onClick={() => {
-                        if (group && !signIn && e.kind === "messaging")
-                          void navigate({
-                            to: "/library/messaging",
-                            search: { platform: e.platform },
-                            transition: "none",
-                          });
-                        else if (group && !signIn)
-                          void navigate({
-                            to: "/library/connectors",
-                            search: (p) => ({ ...p, connector: e.id }),
-                            transition: "none",
-                          });
-                        else void flow.start(e.id);
-                      }}
-                    >
-                      {inFlight && <Spinner aria-hidden />}
-                      {t(
-                        signIn
-                          ? "phase5.signIn"
-                          : group
-                            ? "phase5.manage"
-                            : "phase5.add"
-                      )}
-                    </Button>
-                  </SettingRow>
+                      </Button>
+                    </SettingRow>
+                    {error && (
+                      <ConnectNote error className="px-3 pb-2.5">
+                        {connectErrorText(t, error)}
+                      </ConnectNote>
+                    )}
+                  </div>
                 );
               })}
             </GroupCard>
@@ -244,9 +265,6 @@ export const ConnectorsPage = () => {
             {t("phase5.cancel")}
           </Button>
         </div>
-      )}
-      {flow.state.error && (
-        <ConnectNote error>{connectErrorText(t, flow.state.error)}</ConnectNote>
       )}
     </AreaPage>
   );
