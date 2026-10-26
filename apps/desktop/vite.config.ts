@@ -182,6 +182,10 @@ export default defineConfig(({ command, mode }) => {
                 outDir: resolve(root, "dist/main"),
                 emptyOutDir: true,
                 sourcemap,
+                // The public directory is the renderer's. Copied here and into
+                // preload, its 21 MB of license notices went into the asar
+                // twice more, and nothing in either bundle reads them.
+                copyPublicDir: false,
               },
             },
           },
@@ -195,6 +199,8 @@ export default defineConfig(({ command, mode }) => {
             options: {
               build: {
                 outDir: resolve(root, "dist/preload"),
+                // See main: the public directory belongs to the renderer.
+                copyPublicDir: false,
                 sourcemap,
                 rolldownOptions: { output: { entryFileNames: "[name].cjs" } },
               },
