@@ -29,10 +29,8 @@ it("resumes setup instead of showing signup when the account is already signed i
   expect(screen.queryByRole("button", { name: "Sign up for free" })).toBeNull();
 });
 
-it("finishes sign-in when the optional Gmail status lookup fails", async () => {
-  const statuses = vi.fn(async () => {
-    throw new Error("connector service offline");
-  });
+it("finishes a Google sign-in without opening Gmail's consent", async () => {
+  const connect = vi.fn(async () => ({ ok: true }) as never);
   app = await renderApp("/onboarding/welcome", {
     onboarded: false,
     signedIn: false,
@@ -48,7 +46,12 @@ it("finishes sign-in when the optional Gmail status lookup fails", async () => {
             }) as never
         ),
       },
-      connectors: { statuses: os.connectors.statuses.handler(statuses) },
+      connectors: {
+        statuses: os.connectors.statuses.handler(
+          async () => ({ "abacus-gmailuser": { state: "available" } }) as never
+        ),
+        connect: os.connectors.connect.handler(connect),
+      },
     },
   });
   fireEvent.click(
@@ -57,7 +60,8 @@ it("finishes sign-in when the optional Gmail status lookup fails", async () => {
   await waitFor(() =>
     expect(app!.router.state.location.pathname).toBe("/onboarding/connected")
   );
-  expect(statuses).toHaveBeenCalled();
+  // Gmail is offered on the connectors screen only, never opened unasked.
+  expect(connect).not.toHaveBeenCalled();
 });
 
 it("offers retry when refreshing the signed-in account fails", async () => {

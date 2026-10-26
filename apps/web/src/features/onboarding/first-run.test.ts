@@ -1,89 +1,21 @@
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { beforeEach, expect, it, vi } from "vitest";
 
 import type { Transport } from "#renderer/data/transport";
 
-import { startFirstRunGmail, startWebsiteSignIn } from "./first-run";
+import { startWebsiteSignIn } from "./first-run";
 
 beforeEach(() => localStorage.clear());
-afterEach(() => vi.useRealTimers());
 const setup = () => {
-  const connect = vi.fn(async () => ({
-    ok: true,
-    url: "https://apps.example/connect/google?r=req_1",
-  }));
   const funnelStep = vi.fn(async () => {});
-  const openExternal = vi.fn(async () => {});
-  const statuses = vi.fn(async () => ({
-    "abacus-gmailuser": { state: "available" },
-  }));
-  // The host's change stream: one status-changed per `changed()`.
-  let changed = (): void => {};
-  const events = vi.fn(async () =>
-    (async function* () {
-      for (;;) {
-        await new Promise<void>((wake) => {
-          changed = wake;
-        });
-        yield { type: "status-changed" as const };
-      }
-    })()
-  );
   const transport = {
     state: "open",
     client: {
-      connectors: { statuses, connect, events },
       auth: { abacus: { shouldAutoSignIn: async () => true } },
-      system: { funnelStep, openExternal },
+      system: { funnelStep },
     },
   } as unknown as Transport;
-  return {
-    transport,
-    connect,
-    funnelStep,
-    openExternal,
-    statuses,
-    changed: () => changed(),
-  };
+  return { transport, funnelStep };
 };
-
-it("opens Gmail's connect link once, as the host minted it, and reports once connected", async () => {
-  vi.useFakeTimers();
-  const { transport, connect, funnelStep, openExternal, statuses, changed } =
-    setup();
-  await Promise.all([
-    startFirstRunGmail(transport, true),
-    startFirstRunGmail(transport, true),
-  ]);
-  expect(connect).toHaveBeenCalledExactlyOnceWith({
-    connectorId: "abacus-gmailuser",
-  });
-  await vi.advanceTimersByTimeAsync(0);
-  expect(openExternal).toHaveBeenCalledExactlyOnceWith({
-    url: "https://apps.example/connect/google?r=req_1",
-  });
-  expect(funnelStep).not.toHaveBeenCalled();
-  statuses.mockResolvedValue({
-    "abacus-gmailuser": { state: "connected" },
-  } as never);
-  // The host announces the change; no polling in between.
-  await vi.advanceTimersByTimeAsync(30_000);
-  expect(funnelStep).not.toHaveBeenCalled();
-  changed();
-  await vi.advanceTimersByTimeAsync(0);
-  expect(funnelStep).toHaveBeenCalledWith({ step: "gmail_allowed" });
-});
-
-it("does not open Google for an account that does not sign in with Google, or one already connected", async () => {
-  const { transport, connect } = setup();
-  await startFirstRunGmail(transport, false);
-  transport.client.connectors.statuses = async () => ({
-    "abacus-gmailuser": { state: "available" },
-    "abacus-googledriveuser": { state: "connected" },
-  });
-  await startFirstRunGmail(transport, true);
-  expect(connect).not.toHaveBeenCalled();
-  expect(localStorage.getItem("abacusai-bot:onboarding.gmailHop")).toBeNull();
-});
 
 it("does not restart a cancelled website-account sign-in after remount or sign-out", async () => {
   const { transport } = setup();
@@ -91,15 +23,4 @@ it("does not restart a cancelled website-account sign-in after remount or sign-o
   await startWebsiteSignIn(transport, start);
   await startWebsiteSignIn(transport, start);
   expect(start).toHaveBeenCalledOnce();
-});
-
-it("does not launch first-run Gmail consent when the host does not offer it", async () => {
-  const { transport, connect, openExternal, statuses } = setup();
-  statuses.mockResolvedValue({
-    "abacus-gmailuser": { state: "unavailable", reason: "not-offered" },
-  } as never);
-  await startFirstRunGmail(transport, true);
-  expect(connect).not.toHaveBeenCalled();
-  expect(openExternal).not.toHaveBeenCalled();
-  expect(localStorage.getItem("abacusai-bot:onboarding.gmailHop")).toBeNull();
 });

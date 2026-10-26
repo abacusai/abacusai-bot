@@ -21,8 +21,6 @@ export const FUNNEL_STEPS = [
   "tour_done",
   "tour_skipped",
   // The Chief of Staff popup that follows onboarding.
-  "gmail_allowed",
-  "gmail_declined",
   "first_bot_shown",
   "first_bot_kept",
   "first_bot_cancelled",
