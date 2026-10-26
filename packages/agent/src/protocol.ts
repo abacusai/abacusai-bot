@@ -665,6 +665,11 @@ export type DesktopEvent =
   // agent. Out-of-band rather than an AgentEvent because it is liveness for the
   // host, not something the transcript should show.
   | { type: "heartbeat"; runningTools: number }
+  // How many things this process keeps running between turns (background
+  // jobs, served pages), sent when that changes. They die with the process, so
+  // the desktop never stops an idle agent that holds one. An older agent build
+  // never sends it.
+  | { type: "background_activity"; live: number }
   // A service only the desktop app can perform, requested by a tool in this
   // process and answered with `host_service_response` carrying the same
   // `requestId`: how a component reaches Chromium without living behind an MCP

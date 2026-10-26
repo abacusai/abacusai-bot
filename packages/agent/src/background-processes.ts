@@ -83,6 +83,37 @@ export function notifyConversationQueueCleared(): void {
   }
 }
 
+/**
+ * Something this process keeps running between turns started or stopped: a
+ * background job or a served page. The desktop must not stop an idle agent
+ * that still holds one, since they die with it.
+ */
+const activityListeners = new Set<() => void>();
+
+export function onBackgroundActivity(listener: () => void): () => void {
+  activityListeners.add(listener);
+
+  return () => activityListeners.delete(listener);
+}
+
+export function notifyBackgroundActivity(): void {
+  for (const listener of activityListeners) {
+    try {
+      listener();
+    } catch {
+      /* one bad listener must not stop the rest being told */
+    }
+  }
+}
+
+/** Jobs still running. */
+export function liveBackgroundJobCount(): number {
+  let live = 0;
+  for (const job of jobs.values()) if (job.exit == null) live++;
+
+  return live;
+}
+
 export function listBackgroundJobs(): BackgroundJob[] {
   return [...jobs.values()].map(snapshot);
 }
@@ -101,6 +132,7 @@ export function killBackgroundJob(id: string): boolean {
 
   job.exit = { code: null, killed: true };
   job.controller.abort();
+  notifyBackgroundActivity();
 
   return true;
 }
@@ -125,6 +157,7 @@ export function removeBackgroundJob(id: string): boolean {
 
   killBackgroundJob(id);
   jobs.delete(id);
+  notifyBackgroundActivity();
 
   return true;
 }
@@ -200,11 +233,14 @@ export function startBackgroundJob(options: {
   };
 
   jobs.set(id, job);
+  notifyBackgroundActivity();
 
   const settle = (exit: BackgroundExit): void => {
     // A kill already recorded "stopped"; its own exit code must not overwrite
     // it.
+    const wasLive = job.exit == null;
     job.exit ??= exit;
+    if (wasLive) notifyBackgroundActivity();
 
     // A job forgotten while running must not report in afterwards. By identity,
     // not id: a dropped job dies asynchronously and its last gasp can arrive

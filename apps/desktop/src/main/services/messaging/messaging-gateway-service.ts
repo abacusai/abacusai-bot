@@ -1446,6 +1446,11 @@ export class MessagingGatewayService {
     );
   }
 
+  /** Whether a chat-app conversation is bound to this session. */
+  servesSession(sessionId: string): boolean {
+    return this.routesBySession.has(sessionId);
+  }
+
   /**
    * Is this session mid-turn on a bot route? Such a turn's text is thinking
    * wrapped around a <reply> tag, addressed to nobody: the transcript shows

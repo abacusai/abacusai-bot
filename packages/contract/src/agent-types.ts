@@ -613,6 +613,11 @@ export type DesktopEvent =
   // Proof the agent is alive while a tool runs; consumed by the turn watchdog,
   // never forwarded. An older agent build never sends it.
   | { type: "heartbeat"; runningTools: number }
+  // How many things this process keeps running between turns (background
+  // jobs, served pages), sent when that changes. They die with the process, so
+  // the desktop never stops an idle agent that holds one. An older agent build
+  // never sends it.
+  | { type: "background_activity"; live: number }
   // Answered by `host_service_response` with the same `requestId`: how a tool
   // reaches Chromium without living in the desktop process behind an MCP hop.
   | {
