@@ -57,6 +57,7 @@ import type { HostOperations } from "./handler";
 import { electronHostPlatform } from "./host-operations/electron";
 import { followMainAgentBusy } from "./keep-awake";
 import { decideLocalOpen } from "./local-open-guard";
+import { throttleMainWindowWhileHidden } from "./main-window-throttle";
 import { restoreLegacyFiles } from "./migrations/restore-legacy";
 import {
   disposeMigrationProgress,
@@ -67,6 +68,7 @@ import { CueArbiter } from "./notch/cue-arbiter";
 import { wireMainNotchEvents } from "./notch/main-events";
 import { NotchNotificationPolicy } from "./notch/notifications";
 import { abacusBotHome, userTempDir, WORKSPACE_DIR_NAME } from "./paths";
+import { isLowEndMachine } from "./platform/low-end-machine";
 import { profileBaseDir } from "./profile-home";
 import { resetUserDataDirectories } from "./profile-home-init";
 import { mainWindowLifecycle } from "./recreate-main-window";
@@ -1095,6 +1097,12 @@ async function createWindow(restored?: RecreatedWindowState) {
   });
   rendererHost = host;
   setActiveRendererHost(host);
+  if (isLowEndMachine())
+    throttleMainWindowWhileHidden({
+      window: mainWindow,
+      contents: () => rendererWebContents(),
+      busy: () => workspaceServiceHost.hasActiveAgentTurn(),
+    });
   reloadRendererContent = () => {
     if (rendererHost === host) loadAppContent();
   };

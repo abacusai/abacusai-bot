@@ -94,6 +94,9 @@ const MAIN_ROOT_FILES = [
   // at sign-in, that no one service owns.
   "login-item.test.ts",
   "login-item.ts",
+  // When the main window's page may be throttled: its window's state and
+  // whether a turn is running, both process-level.
+  "main-window-throttle.ts",
   "local-open-guard.test.ts",
   "local-open-guard.ts",
   // The third process-level check, next to the other two: whether the app the
