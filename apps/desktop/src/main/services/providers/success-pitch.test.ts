@@ -213,16 +213,32 @@ describe("SuccessPitchWatch: a deliverable on a clean turn", () => {
     }
   });
 
-  it("never on a reply that asks back, refuses, or is a quick answer", async () => {
+  it("offers it when the reply is short or ends by offering more", async () => {
     for (const reply of [
-      `${LONG_REPLY} Do you want me to add a contact form?`,
-      `I couldn't publish it. ${LONG_REPLY}`,
+      "Your todo app is live. Want me to add due dates, or multiple lists?",
       "Done.",
     ]) {
       const t = setup();
-      await t.run("Build it", [presentSite, text(reply)]);
-      expect(t.offer()).toBeNull();
+      await t.run("Create a todo webapp", [
+        tool("write", { file_path: "/home/me/todo/index.html" }),
+        tool("serve", { action: "start", directory: "/home/me/todo" }),
+        presentSite,
+        text(reply),
+      ]);
+      expect(t.offer()).toMatchObject({
+        trigger: "deliverable",
+        moment: "site",
+      });
     }
+  });
+
+  it("never on a reply that says it failed", async () => {
+    const t = setup();
+    await t.run("Build it", [
+      presentSite,
+      text(`I couldn't publish it. ${LONG_REPLY}`),
+    ]);
+    expect(t.offer()).toBeNull();
   });
 
   it("never on a failed or stopped turn, a file edit, or plain browsing", async () => {
@@ -300,6 +316,27 @@ describe("SuccessPitchWatch: a positive reaction", () => {
     await chat.run("Tell me a joke", [text(LONG_REPLY)]);
     await chat.run("thanks!", [text("Anytime!")]);
     expect(chat.offer()).toBeNull();
+  });
+
+  it("a thumbs-up counts on a result that ends by offering more", async () => {
+    const t = setup();
+    await t.run("Build it", [
+      tool("write", { file_path: "/a.py" }),
+      text("Done. Want me to add tests too?"),
+    ]);
+    await t.watch.reacted("s1");
+    expect(t.offer()).toMatchObject({ trigger: "positive_reaction" });
+  });
+
+  it("never on a reply with no tools, such as a clarifying question", async () => {
+    const t = setup();
+    await t.run("Create a todo webapp", [
+      text("Sure! Should it save the todos in the browser or in a file?"),
+    ]);
+    await t.watch.reacted("s1");
+    expect(t.offer()).toBeNull();
+    await t.run("thanks!", [text("Anytime!")]);
+    expect(t.offer()).toBeNull();
   });
 
   it("a thumbs-up on the latest reply counts, between turns only", async () => {

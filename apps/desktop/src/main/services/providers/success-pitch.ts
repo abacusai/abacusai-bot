@@ -2,10 +2,10 @@
  * The success pitch (contract success-pitch.ts), main's side. It reads each
  * turn's events while it runs and acts on the turn's one ending (TurnLedger):
  *
- * - a clean turn that handed over a site or a file, or a short positive
- *   reaction to a clean reply (a message, a thumbs-up, a praise emoji), on a
- *   free account under half its free grant, stamps an offer in the prefs row
- *   for the session's latest reply; the renderer shows the card;
+ * - a result that handed over a site or a file, or a short positive reaction
+ *   to a reply that was a result (a message, a thumbs-up, a praise emoji),
+ *   on a free account under half its free grant, stamps an offer in the
+ *   prefs row for the session's latest reply; the renderer shows the card;
  * - the user's next message in that session ends the offer, and a complaint
  *   is logged as withdrawing it;
  * - a user who works mainly from their own chat app hears it there once ever,
@@ -225,13 +225,15 @@ export class SuccessPitchWatch {
       !this.deps.pitchable(record.sessionId)
     )
       return Promise.resolve();
-    const clean = !facts.troubled && isCleanReply(facts.reply);
+    // A result, for both signals: the turn did work, untroubled, and the
+    // reply does not say it failed.
+    const clean =
+      facts.tools > 0 && !facts.troubled && isCleanReply(facts.reply);
     // A site leads with apps; otherwise what the turn worked on, if anything.
     const lead = facts.delivered === "site" ? "apps" : facts.lead;
     this.lastReply.set(record.sessionId, {
       turnId: record.turnId,
-      // A reaction answers a result: a reply that did something.
-      clean: clean && facts.tools > 0,
+      clean,
       lead,
     });
     // A contact's chat is never pitched, nor counted.
