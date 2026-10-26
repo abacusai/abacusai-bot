@@ -42,6 +42,12 @@ export const changeRows = (
 ): ChangeSelection[] => {
   if (!state) return [];
   const sections = state.gitChangeSections;
+  // A Set, not a scan per change: a drive-sized workspace has tens of thousands.
+  const listed = new Set(
+    [...(sections?.staged ?? []), ...(sections?.unstaged ?? [])].map(
+      (item) => item.path
+    )
+  );
   return sections
     ? [
         ...sections.staged.map((change) => ({
@@ -55,11 +61,7 @@ export const changeRows = (
           group: "unstaged",
         })),
         ...sections.merged
-          .filter(
-            (change) =>
-              !sections.staged.some((item) => item.path === change.path) &&
-              !sections.unstaged.some((item) => item.path === change.path)
-          )
+          .filter((change) => !listed.has(change.path))
           .map((change) => ({
             change,
             scope: "unstaged" as const,
