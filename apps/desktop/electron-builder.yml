@@ -124,6 +124,8 @@ npmRebuild: false
 win:
   executableName: AbacusBot
   icon: resources/icon.ico
+# The installer also takes build/installer.nsh (electron-builder's default
+# include): its first-run milestones.
 nsis:
   artifactName: ${productName}-${version}-${arch}-setup.${ext}
   shortcutName: AbacusAI Bot

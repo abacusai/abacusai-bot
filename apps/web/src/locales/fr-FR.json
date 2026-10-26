@@ -4403,7 +4403,13 @@
       "download": "Télécharger l'application de bureau",
       "downloadingTitle": "Votre téléchargement a commencé",
       "downloadingBody": "Installez AbacusAI Bot pour l'utiliser sur cet ordinateur.",
-      "connectInstead": "Connecter WhatsApp plutôt"
+      "connectInstead": "Connecter WhatsApp plutôt",
+      "laptopTitle": "Obtenez l'application complète sur votre ordinateur portable",
+      "laptopBody": "L'application de bureau code, crée des applications et exécute des routines sur votre propre ordinateur, gratuitement. Ouvrez ceci sur votre ordinateur portable :",
+      "laptopCopy": "Copier le lien",
+      "laptopEmail": "M'envoyer par e-mail",
+      "laptopEmailSubject": "AbacusAI Bot pour votre ordinateur portable",
+      "laptopEmailBody": "Ouvrez ceci sur votre ordinateur portable pour obtenir l'application de bureau AbacusAI Bot : {{url}}"
     },
     "signOutDetail": "This ends your website session and clears this browser's bot data.",
     "routines": {

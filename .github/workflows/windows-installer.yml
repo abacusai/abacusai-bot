@@ -1,0 +1,199 @@
+name: Windows installer
+
+# Builds the Windows installers from the branch (unsigned) and installs one the
+# way a user does, one click and not silent, against a local stand-in for the
+# Abacus host that records what the installer reports. A second job, run by
+# hand, installs the signed release from the CDN with reporting off.
+
+on:
+  pull_request:
+    paths:
+      - apps/desktop/electron-builder.yml
+      - apps/desktop/build/**
+      - .github/workflows/windows-installer.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-installer-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  NODE_OPTIONS: --max-old-space-size=4096
+  TURBO_TELEMETRY_DISABLED: 1
+  ABACUS_BUILD_COMMIT: ${{ github.sha }}
+  # The stand-in host. The installers read ABACUSAI_BOT_ABACUS_HOST; a released
+  # app build ignores it, so the app's own reports are checked in its log.
+  STUB_PORT: "8787"
+
+jobs:
+  build-and-install:
+    name: Build and install
+    runs-on: windows-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: |
+          set -euo pipefail
+          (cd apps/desktop && node -e 'require("electron")')
+          pnpm run build
+
+      # Both architectures, as a release packages them, with the release config.
+      - name: Package the installers
+        working-directory: apps/desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: |
+          set -euo pipefail
+          pnpm exec electron-builder --config electron-builder.yml --win nsis --x64 --arm64 --publish never
+          ls -la release
+
+      # The update feed is what every installed copy reads.
+      - name: latest.yml lists only the installers
+        working-directory: apps/desktop
+        run: |
+          set -euo pipefail
+          cat release/latest.yml
+          urls=$(sed -n -E 's/^[[:space:]-]*(url|path):[[:space:]]*//p' release/latest.yml)
+          [ -n "$urls" ] || { echo "::error::latest.yml lists no files"; exit 1; }
+          while IFS= read -r url; do
+            case "$url" in
+              *-setup.exe) ;;
+              *) echo "::error::latest.yml lists an unexpected file: $url"; exit 1 ;;
+            esac
+          done <<< "$urls"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: latest-yml
+          path: apps/desktop/release/latest.yml
+
+      - name: Start the stand-in host
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/stub.mjs" <<'JS'
+          import fs from "node:fs";
+          import http from "node:http";
+
+          const [log, port] = process.argv.slice(2);
+          http
+            .createServer((req, res) => {
+              fs.appendFileSync(log, `${req.method} ${req.url}\n`);
+              res.writeHead(404);
+              res.end();
+            })
+            .listen(Number(port), "127.0.0.1");
+          JS
+          : > "$RUNNER_TEMP/requests.log"
+          nohup node "$RUNNER_TEMP/stub.mjs" "$RUNNER_TEMP/requests.log" "$STUB_PORT" > "$RUNNER_TEMP/stub.out" 2>&1 &
+          for _ in $(seq 1 20); do
+            curl -s -o /dev/null "http://127.0.0.1:${STUB_PORT}/ready" && break
+            sleep 1
+          done
+          grep -qF "GET /ready" "$RUNNER_TEMP/requests.log"
+
+      # The app's own reports stay off (the settings file the app reads), so a
+      # CI launch never reaches the real host; its log still names each step.
+      - name: A fresh profile with reporting off
+        run: |
+          set -euo pipefail
+          home="$(cygpath -u "$USERPROFILE")/.abacusai-bot"
+          rm -rf "$home"
+          mkdir -p "$home"
+          printf '{"serverDebugSync":false}' > "$home/config.json"
+
+      - name: The installer installs, reports and hands the app its id
+        working-directory: apps/desktop
+        env:
+          ABACUSAI_BOT_ABACUS_HOST: http://127.0.0.1:${{ env.STUB_PORT }}
+        run: |
+          set -euo pipefail
+          version=$(node -p 'require("./package.json").version')
+          bash ../../.github/scripts/windows-install-check.sh \
+            "release/AbacusAI-Bot-${version}-x64-setup.exe" "$RUNNER_TEMP/requests.log" "$version"
+
+      - name: What the stand-in saw
+        if: always()
+        run: cat "$RUNNER_TEMP/requests.log" || true
+
+  # The signed release users download, straight from the CDN: signature,
+  # install and launch, with every report off.
+  live-installer:
+    name: Live installer
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Download the x64 installer the update feed names
+        run: |
+          set -euo pipefail
+          curl -fsSL https://downloads.abacus.ai/abacusai-bot/latest/latest.yml -o "$RUNNER_TEMP/latest.yml"
+          cat "$RUNNER_TEMP/latest.yml"
+          url=$(sed -n -E 's/^[[:space:]-]*url:[[:space:]]*(.*-x64-setup\.exe)[[:space:]]*$/\1/p' "$RUNNER_TEMP/latest.yml" | head -1)
+          [ -n "$url" ] || { echo "::error::latest.yml names no x64 installer"; exit 1; }
+          case "$url" in
+            https://downloads.abacus.ai/*) ;;
+            http*) echo "::error::the installer is not on downloads.abacus.ai: $url"; exit 1 ;;
+            *) url="https://downloads.abacus.ai/abacusai-bot/latest/$url" ;;
+          esac
+          echo "Downloading $url"
+          curl -fsSL "$url" -o "$RUNNER_TEMP/setup.exe"
+          # The feed's sha512 for this file, against the bytes downloaded.
+          name=$(basename "$url")
+          want=$(awk -v name="$name" '$0 ~ "url:.*" name {found=1; next} found && /sha512:/ {print $2; exit}' "$RUNNER_TEMP/latest.yml")
+          got=$(openssl dgst -sha512 -binary "$RUNNER_TEMP/setup.exe" | openssl base64 -A)
+          [ "$want" = "$got" ] || { echo "::error::sha512 $got does not match the feed's $want"; exit 1; }
+
+      - name: Signed by Abacus.AI
+        shell: pwsh
+        run: |
+          $sig = Get-AuthenticodeSignature "$env:RUNNER_TEMP\setup.exe"
+          $sig | Format-List Status, StatusMessage, SignerCertificate
+          if ($sig.Status -ne 'Valid') { throw "signature status: $($sig.Status)" }
+          if ($sig.SignerCertificate.Subject -notmatch 'Abacus\.AI') { throw "signer: $($sig.SignerCertificate.Subject)" }
+
+      - name: Installs and starts with reporting off
+        env:
+          ABACUSAI_BOT_NO_FUNNEL: "1"
+          ABACUSAI_BOT_ABACUS_HOST: http://127.0.0.1:9
+        run: |
+          set -euo pipefail
+          home="$(cygpath -u "$USERPROFILE")/.abacusai-bot"
+          rm -rf "$home"
+          mkdir -p "$home"
+          printf '{"serverDebugSync":false}' > "$home/config.json"
+          "$RUNNER_TEMP/setup.exe"
+          shopt -s nullglob
+          installed=("$(cygpath -u "$LOCALAPPDATA")"/Programs/*/AbacusBot.exe)
+          [ "${#installed[@]}" -gt 0 ] || { echo "::error::nothing installed"; exit 1; }
+          exe=${installed[0]}
+          echo "Installed $exe"
+          running() { tasklist //FI "IMAGENAME eq AbacusBot.exe" //NH | grep -qi AbacusBot.exe; }
+          for _ in $(seq 1 60); do running && break; sleep 1; done
+          if ! running; then
+            echo "The installer did not start the app; starting it"
+            "$exe" > "$RUNNER_TEMP/app.log" 2>&1 &
+          fi
+          sleep 30
+          running || { echo "::error::the app is not running 30 seconds after install"; cat "$RUNNER_TEMP/app.log" 2>/dev/null || true; exit 1; }
+          taskkill //F //T //IM AbacusBot.exe > /dev/null
+          uninstallers=("$(dirname "$exe")"/Uninstall*.exe)
+          "${uninstallers[0]}" //S
+          for _ in $(seq 1 60); do [ -e "$exe" ] || break; sleep 1; done
+          [ ! -e "$exe" ] || { echo "::error::uninstall left $exe"; exit 1; }

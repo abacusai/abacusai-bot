@@ -4403,7 +4403,13 @@
       "download": "デスクトップアプリをダウンロード",
       "downloadingTitle": "ダウンロードを開始しました",
       "downloadingBody": "このコンピューターで使うには AbacusAI Bot をインストールしてください。",
-      "connectInstead": "代わりに WhatsApp を接続"
+      "connectInstead": "代わりに WhatsApp を接続",
+      "laptopTitle": "ノートパソコンでフル機能のアプリを",
+      "laptopBody": "デスクトップアプリは、あなた自身のコンピューター上でコードを書き、アプリを作り、ルーティンを実行します。無料です。ノートパソコンでこちらを開いてください：",
+      "laptopCopy": "リンクをコピー",
+      "laptopEmail": "自分にメールで送る",
+      "laptopEmailSubject": "ノートパソコン用の AbacusAI Bot",
+      "laptopEmailBody": "ノートパソコンでこちらを開いて AbacusAI Bot のデスクトップアプリを入手してください：{{url}}"
     },
     "signOutDetail": "This ends your website session and clears this browser's bot data.",
     "routines": {
