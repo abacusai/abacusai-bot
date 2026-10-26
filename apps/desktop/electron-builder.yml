@@ -122,30 +122,15 @@ npmRebuild: false
 # build silently overwrites the first. It shows up only later, as users on one
 # architecture download a binary that will not run.
 win:
-  target:
-    - nsis
-    - nsis-web
   executableName: AbacusBot
   icon: resources/icon.ico
-# Both installers also take build/installer.nsh (electron-builder's default
+# The installer also takes build/installer.nsh (electron-builder's default
 # include): its first-run milestones.
 nsis:
   artifactName: ${productName}-${version}-${arch}-setup.${ext}
   shortcutName: AbacusAI Bot
   uninstallDisplayName: AbacusAI Bot
   createDesktopShortcut: always
-# The small installer: a stub that downloads this version's package for the
-# machine's architecture (the <name>-<version>-<arch>.nsis.7z files beside it)
-# from the release directory. It inherits every nsis option above. One stub
-# serves both architectures, so it carries no ${arch} and is built in the run
-# that packages both. Its own publish entry, with publishAutoUpdate off, keeps
-# it out of latest.yml: updates still install the full setup.exe.
-nsisWeb:
-  artifactName: ${productName}-${version}-web-setup.${ext}
-  publish:
-    provider: generic
-    url: https://downloads.abacus.ai/abacusai-bot/releases/${version}
-    publishAutoUpdate: false
 
 mac:
   minimumSystemVersion: "13.0"

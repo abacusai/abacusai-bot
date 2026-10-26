@@ -1,4 +1,4 @@
-; First-run milestones from the Windows installers (full and web): one GET when
+; First-run milestones from the Windows installer: one GET when
 ; a fresh, interactive install starts and one when its files are in place, with
 ; the same install id the app reports under (services/debug-sync/device-id.ts).
 ; No content or account. Never blocks or fails the install: offline, it is lost.
@@ -58,21 +58,10 @@ Var abacusBaseDir
       StrCpy $abacusBeaconHost $abacusBeaconHost -1
     ${EndIf}
 
-    ; The architecture the app installs as, picked as electron-builder picks
-    ; the package: the full installer prefers arm64 on an arm64 machine; the
-    ; web one, with no 32-bit package beside them, always takes x64.
+    ; The architecture the app installs as: an installer with both packages
+    ; picks arm64 on an arm64 machine, as electron-builder does.
     StrCpy $abacusBeaconArch "x64"
-    !ifdef APP_PACKAGE_URL
-      !ifndef APP_64
-        !ifdef APP_ARM64
-          StrCpy $abacusBeaconArch "arm64"
-        !endif
-      !else ifdef APP_32 & APP_ARM64
-        ${If} ${IsNativeARM64}
-          StrCpy $abacusBeaconArch "arm64"
-        ${EndIf}
-      !endif
-    !else ifdef APP_ARM64
+    !ifdef APP_ARM64
       !ifdef APP_64
         ${If} ${IsNativeARM64}
           StrCpy $abacusBeaconArch "arm64"
