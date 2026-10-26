@@ -36,6 +36,14 @@ const SUB_AGENT_IDENTITY_PROMPT = [
 export const APP_QUESTIONS_PROMPT =
   "Questions about AbacusAI Bot itself (what it can do, its settings, models, connectors, chat apps, routines, bots, limits, or where something is) are answered from bot_help, never from memory.";
 
+/**
+ * Asked for a video, the model wrote "I can't make video here, let me check"
+ * and only then called paid_feature, so the plan came second. One fixed line
+ * too: a session without the tool skips it.
+ */
+export const MEDIA_ASKS_PROMPT =
+  "Asked to make or edit an image, a video, speech or audio (reading a text aloud too) while you have paid_feature: call it first, before you write anything, and open your reply with what it says makes it, never with what you cannot do.";
+
 /** How to use the file tools; a session without one skips its lines. */
 function toolGuidelinesPrompt(edit: EditTool): string {
   const lines = [
@@ -63,7 +71,7 @@ function toolGuidelinesPrompt(edit: EditTool): string {
 
 /** A main session's base: who the agent is, then how it uses its tools. */
 export function basePrompt(edit: EditTool): string {
-  return `${identityPrompt()}\n${APP_QUESTIONS_PROMPT}\n\n${toolGuidelinesPrompt(edit)}`;
+  return `${identityPrompt()}\n${APP_QUESTIONS_PROMPT}\n${MEDIA_ASKS_PROMPT}\n\n${toolGuidelinesPrompt(edit)}`;
 }
 
 /** A sub-agent's base; the guidelines only where it has file tools. */

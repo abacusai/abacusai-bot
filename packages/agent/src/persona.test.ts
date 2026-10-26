@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   APP_QUESTIONS_PROMPT,
+  MEDIA_ASKS_PROMPT,
   basePrompt,
   subAgentBasePrompt,
 } from "./base-prompt.js";
@@ -90,11 +91,17 @@ describe("questions about the app itself", () => {
     for (const edit of ["ours", "builtin"] as const) {
       const prompt = basePrompt(edit);
       expect(
-        prompt.startsWith(`${identityPrompt()}\n${APP_QUESTIONS_PROMPT}\n\n`)
+        prompt.startsWith(
+          `${identityPrompt()}\n${APP_QUESTIONS_PROMPT}\n${MEDIA_ASKS_PROMPT}\n\n`
+        )
       ).toBe(true);
       expect(basePrompt(edit)).toBe(prompt);
     }
     expect(APP_QUESTIONS_PROMPT).toContain("bot_help, never from memory");
+    // A media ask calls paid_feature before any words, so the reply opens with the plan.
+    expect(MEDIA_ASKS_PROMPT).toMatch(
+      /paid_feature: call it first, before you write anything/
+    );
   });
 
   it("is not a sub-agent's: it has no bot_help", () => {
