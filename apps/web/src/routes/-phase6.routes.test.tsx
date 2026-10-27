@@ -183,7 +183,7 @@ it.each([null, "telegram"] as const)(
   },
   15000
 );
-it("Start building opens a new session on the build examples and makes no bot", async () => {
+it("Start building opens a new session on the build examples, the first in the box, and makes no bot", async () => {
   const seed = defaultSeed();
   seed.bots = [];
   seed.routines = [];
@@ -209,6 +209,14 @@ it("Start building opens a new session on the build examples and makes no bot", 
   expect(
     await screen.findByRole("button", { name: /Portfolio site/ })
   ).toBeTruthy();
+  // The first example waits in the box, cursor at its end, so Enter sends it.
+  const box = document.querySelector<HTMLTextAreaElement>(
+    '[data-slot="composer"] textarea'
+  )!;
+  expect(box.value).toMatch(/^Build me a one-page portfolio website/);
+  await waitFor(() => expect(document.activeElement).toBe(box));
+  expect(box.selectionStart).toBe(box.value.length);
+  expect(harness.calls.filter(([name]) => name === "ai.send")).toHaveLength(0);
   expect(
     harness.calls.filter(([name]) => name === "account.skipOnboarding")
   ).toHaveLength(1);

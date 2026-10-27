@@ -103,14 +103,23 @@ export const takeStartPrompt = (threadId: string): string | null => {
   return text;
 };
 
-/** Onboarding's Build: a fresh draft on its examples, its first runs on the house. */
-export const startBuildDraft = (sponsored: boolean): string => {
+/**
+ * Onboarding's Build: a fresh draft on its examples, its first runs on the
+ * house. `example` waits in the box, editable, so Enter starts something.
+ */
+export const startBuildDraft = (
+  sponsored: boolean,
+  example?: string
+): string => {
   startDraftStore.setState(() => ({
     ...newStartDraft(),
     starters: "build",
     ...(sponsored ? { sponsored: true as const } : {}),
   }));
-  return startDraftStore.state.id;
+  const { id } = startDraftStore.state;
+  if (example != null)
+    updateDraft(`draft:${id}`, (draft) => ({ ...draft, text: example }));
+  return id;
 };
 
 export const optimisticSession = (draft: StartDraft): SessionRow => {
