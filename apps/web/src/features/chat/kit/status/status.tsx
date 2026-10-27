@@ -45,6 +45,7 @@ import { IS_ELECTRON } from "#renderer/lib/platform";
 import {
   lastUserText,
   requestUpgradeDialog,
+  startPaidCheckout,
 } from "#renderer/lib/upgrade-dialog";
 import { useAccount } from "#renderer/lib/use-account";
 import { useAppContext } from "#renderer/lib/use-app-context";
@@ -609,6 +610,39 @@ type CutOffStep =
  * (a bot's chat: its bot) only, never the app's default; a chosen way on
  * picks the cut reply up rather than asking the question again.
  */
+/**
+ * A paid plan's Top up and next plan from a card in this chat: the link opens
+ * at click time and the dialog waits for the credits or the plan, then sends
+ * the waiting message (`resume`).
+ */
+const usePaidCheckout = (
+  runId: string,
+  resume: (model?: string) => Promise<unknown>
+) => {
+  const { session, runtime } = useChatView();
+  const start = (open: () => Promise<void>) =>
+    startPaidCheckout(open, {
+      key: `paid-credits:${runId}:${Date.now()}`,
+      threadId: session.threadId,
+      pendingText: lastUserText(session.hostStore.state.messages),
+      resume,
+    });
+  return {
+    topUp: () =>
+      start(() =>
+        runtime.host.openTopUp != null
+          ? runtime.host.openTopUp()
+          : runtime.host.openExternal(ABACUS_BUY_CREDITS_URL)
+      ),
+    nextPlan: () =>
+      start(() =>
+        runtime.host.openNextPlan != null
+          ? runtime.host.openNextPlan()
+          : runtime.host.openExternal(ABACUS_BILLING_URL)
+      ),
+  };
+};
+
 const CutOffError = ({
   outcome,
   action,
@@ -671,6 +705,12 @@ const CutOffError = ({
       t("workspace.retryMessage")
     );
   const label = action.label ?? action.model ?? "";
+  // Credits or a plan bought: the cut reply goes on where it stopped.
+  const paidCheckout = usePaidCheckout(outcome.runId, async () => {
+    funnel("cutoff_upgraded");
+    resolveCutOff(outcome.runId, "upgraded");
+    return goOn();
+  });
   return (
     <div
       role="group"
@@ -717,7 +757,11 @@ const CutOffError = ({
           },
           onTopUp: () => {
             funnel("cutoff_upgrade", "topup");
-            void runtime.host.openExternal(ABACUS_BUY_CREDITS_URL);
+            paidCheckout.topUp();
+          },
+          onNextPlan: () => {
+            funnel("cutoff_upgrade", "next_plan");
+            paidCheckout.nextPlan();
           },
           // The plan's dialog, with its whole pitch and price; once the plan
           // is active the turn goes on on an Abacus model, in this chat only.
@@ -801,14 +845,13 @@ export const ErrorCard = ({
     };
   }, [providedTier, runtime]);
   const tier = providedTier ?? accountTier;
+  const paying = tier === "paid" || tier === "basic";
+  const paidCheckout = usePaidCheckout(outcome.runId, resume);
   const error = outcome.error ?? { message: "" };
   const actions = ((error as { actions?: ErrorAction[] }).actions ??
     []) as ErrorAction[];
   const detail = (error as { detail?: string }).detail;
-  const upgrade = wantsUpgradeCard(
-    actions,
-    tier === "paid" || tier === "basic"
-  );
+  const upgrade = wantsUpgradeCard(actions, paying);
   const cause = (error as { cause?: string }).cause;
   // A model the plan does not include: main has locked it, so the picker
   // re-reads without it.
@@ -878,6 +921,7 @@ export const ErrorCard = ({
           creditsOut={actions.some(
             (action) => action.type === "upgrade-abacus"
           )}
+          paid={paying}
           {...(latest &&
             canReply &&
             actions.some((action) => action.type === "switch-to-abacus") && {
@@ -904,6 +948,11 @@ export const ErrorCard = ({
                     '[data-slot="chat-model-picker"]'
                   )
                   ?.click(),
+            })}
+          {...(canReply &&
+            paying && {
+              onTopUp: paidCheckout.topUp,
+              onNextPlan: paidCheckout.nextPlan,
             })}
           {...(canReply && {
             onUpgrade: () =>
@@ -1058,6 +1107,11 @@ export const ErrorCard = ({
                 latest &&
                 canReply && { onContinueFree: resumeOnFreePool }),
               ...(canReply && { onUpgrade: askUpgrade }),
+              ...(canReply &&
+                paying && {
+                  onTopUp: paidCheckout.topUp,
+                  onNextPlan: paidCheckout.nextPlan,
+                }),
             },
           })}
           alternatives={alternatives()}

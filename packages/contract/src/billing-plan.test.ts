@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { type BillingPlan, PITCH_LINES, planPitch } from "./billing-plan";
+import {
+  type BillingPlan,
+  paidCreditsOffer,
+  PITCH_LINES,
+  planPitch,
+} from "./billing-plan";
 
 /** The Basic tier's feature lines, worded as the billing plan sends them. */
 const BASIC_FEATURES = [
@@ -100,5 +105,70 @@ describe("planPitch", () => {
       ["apps"]
     );
     expect(lines).toEqual(['outcome.pitch.appsProjects {"count":5}']);
+  });
+});
+
+describe("paidCreditsOffer", () => {
+  const PRO = {
+    plan: "pro",
+    planName: "Pro",
+    priceText: "$20/mo",
+    features: ["Everything in Basic"],
+    url: "https://example.com/plans",
+  };
+  const paid = (patch: Partial<BillingPlan> = {}): BillingPlan => ({
+    ...billing([]),
+    current: {
+      plan: "basic",
+      planName: "Basic",
+      creditsRemaining: 0,
+      creditsGranted: 20000,
+      freeTierExpiresAt: null,
+    },
+    upgrades: [PRO],
+    topUpUrl: "https://example.com/plans?buyCredits=true",
+    upgradeInMobileApp: false,
+    ...patch,
+  });
+
+  it("offers a paid plan its top-up and the next plan, as the server links them", () => {
+    expect(paidCreditsOffer(paid())).toEqual({
+      topUpUrl: "https://example.com/plans?buyCredits=true",
+      next: PRO,
+      inMobileApp: false,
+    });
+    // The top plan: credits only.
+    expect(paidCreditsOffer(paid({ upgrades: [] }))?.next).toBeNull();
+  });
+
+  it("a store-billed plan buys both in the mobile app: no links", () => {
+    expect(
+      paidCreditsOffer(
+        paid({
+          upgradeInMobileApp: true,
+          topUpUrl: null,
+          upgrades: [{ ...PRO, url: null }],
+        })
+      )
+    ).toEqual({
+      topUpUrl: null,
+      next: { ...PRO, url: null },
+      inMobileApp: true,
+    });
+  });
+
+  it("nothing for a free account, an unread plan, nothing on offer, or a link that is not https", () => {
+    expect(paidCreditsOffer(null)).toBeNull();
+    expect(
+      paidCreditsOffer(paid({ current: { ...paid().current, plan: "free" } }))
+    ).toBeNull();
+    expect(
+      paidCreditsOffer(
+        paid({
+          topUpUrl: "javascript:alert(1)",
+          upgrades: [{ ...PRO, url: "http://example.com" }],
+        })
+      )
+    ).toBeNull();
   });
 });

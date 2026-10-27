@@ -86,19 +86,26 @@ it("connects OpenRouter and replays a dead turn once after the refreshed catalog
   );
 });
 
-it("opens the account upgrade offer for a basic tier top-up", async () => {
+it("tops a basic plan up with credits, never the plan chooser", async () => {
   const openExternal = vi.fn(async () => {});
   const openUpgrade = vi.fn(async () => {});
+  const openTopUp = vi.fn(async () => {});
   const rendered = await renderWithDb(
     <CreditsCard
       tier="basic"
-      host={{ openExternal, openUpgrade, canTopUpCredits: async () => true }}
+      host={{
+        openExternal,
+        openUpgrade,
+        openTopUp,
+        canTopUpCredits: async () => true,
+      }}
     />
   );
   cleanup = rendered.cleanup;
   expect(document.querySelector("[data-source]")).toBeNull();
   fireEvent.click(await screen.findByRole("button"));
-  expect(openUpgrade).toHaveBeenCalledOnce();
+  expect(openTopUp).toHaveBeenCalledOnce();
+  expect(openUpgrade).not.toHaveBeenCalled();
   expect(openExternal).not.toHaveBeenCalled();
 });
 
@@ -461,18 +468,23 @@ describe("the free grant's milestone card", () => {
     );
   });
 
-  const dialog = async (request: UpgradeDialogRequest) => {
+  const dialog = async (
+    request: UpgradeDialogRequest,
+    {
+      account = { ...ACCOUNT, credits_used: 2000 } as typeof ACCOUNT,
+      billing = BILLING as BillingPlan | null,
+      openExternal = vi.fn(),
+    } = {}
+  ) => {
     const os = implement(contract);
     const harness = await createHarness("/", {
       seed: { ...defaultSeed(), sessions: [] },
       procedures: {
         account: {
-          abacus: os.account.abacus.handler(() => ({
-            ...ACCOUNT,
-            credits_used: 2000,
-          })),
-          billingPlan: os.account.billingPlan.handler(() => BILLING),
+          abacus: os.account.abacus.handler(() => account),
+          billingPlan: os.account.billingPlan.handler(() => billing),
         },
+        system: { openExternal: os.system.openExternal.handler(openExternal) },
       },
     });
     let rendered!: ReturnType<typeof render>;
@@ -535,6 +547,126 @@ describe("the free grant's milestone card", () => {
       expect(open.textContent).toContain("Finish checkout in your browser")
     );
     expect(screen.getByRole("button", { name: "I've upgraded" })).toBeTruthy();
+  });
+
+  const BASIC_OUT: BillingPlan = {
+    current: {
+      plan: "basic",
+      planName: "Basic",
+      creditsRemaining: 0,
+      creditsGranted: 20000,
+      freeTierExpiresAt: null,
+    },
+    plans: [],
+    upgrades: [
+      {
+        plan: "pro",
+        planName: "Pro",
+        priceText: "$20/mo",
+        firstMonthPriceCents: 2000,
+        priceCents: 2000,
+        features: ["Everything in Basic", "30,000 credits a month"],
+        url: "https://example.com/plans",
+      },
+    ],
+    topUpUrl: "https://example.com/plans?buyCredits=true",
+    upgradeInMobileApp: false,
+  };
+  const BASIC_ACCOUNT = {
+    ...ACCOUNT,
+    subscription_tier: "basic",
+    credits_granted: 20000,
+    credits_used: 20000,
+  };
+
+  it("a paid plan out of credits is offered a top-up and the next plan, priced by the server", async () => {
+    const openExternal = vi.fn();
+    const open = await dialog(
+      { kind: "credits", key: "paid1", threadId: "t1", pendingText: "go on" },
+      { account: BASIC_ACCOUNT, billing: BASIC_OUT, openExternal }
+    );
+    await waitFor(() =>
+      expect(open.textContent).toContain("You've used this month's credits")
+    );
+    expect(open.textContent).toContain("Or move up to Pro — $20/month");
+    expect(open.textContent).toContain("30,000 credits a month");
+    // Never the free plan's pitch.
+    expect(document.querySelector('[data-slot="upgrade-pitch"]')).toBeNull();
+    expect(screen.getByRole("button", { name: "Upgrade to Pro" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Top up" }));
+    await waitFor(() =>
+      expect(openExternal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: { url: "https://example.com/plans?buyCredits=true" },
+        })
+      )
+    );
+    await waitFor(() =>
+      expect(open.textContent).toContain("Finish in your browser")
+    );
+    expect(screen.getByRole("button", { name: "I've paid" })).toBeTruthy();
+  });
+
+  it("a store-billed paid plan is sent to the mobile app, with no link to buy here", async () => {
+    const open = await dialog(
+      { kind: "credits", key: "paid2", threadId: "t1" },
+      {
+        account: BASIC_ACCOUNT,
+        billing: {
+          ...BASIC_OUT,
+          upgrades: BASIC_OUT.upgrades.map((tier) => ({ ...tier, url: null })),
+          topUpUrl: null,
+          upgradeInMobileApp: true,
+        },
+      }
+    );
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-slot="paid-offer-mobile"]')
+      ).toBeTruthy()
+    );
+    expect(open.textContent).toContain("Abacus.AI mobile app");
+    expect(screen.queryByRole("button", { name: "Top up" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Upgrade to/ })).toBeNull();
+  });
+
+  it("a paid plan the server offers nothing to gets no dialog", async () => {
+    const os = implement(contract);
+    const harness = await createHarness("/", {
+      seed: { ...defaultSeed(), sessions: [] },
+      procedures: {
+        account: {
+          abacus: os.account.abacus.handler(() => BASIC_ACCOUNT),
+          billingPlan: os.account.billingPlan.handler(() => null),
+        },
+      },
+    });
+    let rendered!: ReturnType<typeof render>;
+    await act(async () => {
+      rendered = render(
+        <QueryClientProvider
+          client={harness.router.options.context.queryClient}
+        >
+          <RouterContextProvider router={harness.router}>
+            <DbProvider value={harness.appDb}>
+              <UpgradeDialogHost />
+            </DbProvider>
+          </RouterContextProvider>
+        </QueryClientProvider>
+      );
+    });
+    cleanup = async () => {
+      closeUpgradeDialog();
+      rendered.unmount();
+      await harness.cleanup();
+    };
+    act(() =>
+      requestUpgradeDialog({ kind: "credits", key: "paid3", threadId: "t1" })
+    );
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("an expired free tier's dialog says it expired", async () => {

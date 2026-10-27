@@ -546,17 +546,60 @@ describe("the turn's outcome card", () => {
     closeUpgradeDialog();
   });
 
-  it("a paid account at the wall is offered a top-up, not the plan", async () => {
+  it("a paid account at the wall is offered a top-up and the next plan, never the free plan's pitch", async () => {
+    const openTopUp = vi.fn(async () => {});
+    const openNextPlan = vi.fn(async () => {});
     current = await renderRelay(
       failed(WALL),
       "session",
       {},
       {},
-      host("basic", { canTopUpCredits: async () => true })
+      host("basic", {
+        canTopUpCredits: async () => true,
+        openTopUp,
+        openNextPlan,
+        billingPlan: async () => ({
+          ...BILLING,
+          current: { ...BILLING.current, plan: "basic", planName: "Basic" },
+          upgrades: [
+            {
+              plan: "pro",
+              planName: "Pro",
+              priceText: "$20/mo",
+              firstMonthPriceCents: 2000,
+              priceCents: 2000,
+              features: ["Everything in Basic", "30,000 credits a month"],
+              url: "https://example.com/plans",
+            },
+          ],
+          topUpUrl: "https://example.com/plans?buyCredits=true",
+        }),
+      })
     );
     await screen.findByText("You've used this month's credits");
-    expect(await screen.findByRole("button", { name: "Top up" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Upgrade to/ })).toBeNull();
+    expect(
+      await screen.findByText("Or move up to Pro — $20/month")
+    ).toBeTruthy();
+    expect(screen.getByText("30,000 credits a month")).toBeTruthy();
+    expect(screen.queryByText(/Basic —/)).toBeNull();
+
+    // Top up opens the link and the dialog waits for the credits, then resends.
+    fireEvent.click(screen.getByRole("button", { name: "Top up" }));
+    expect(openTopUp).toHaveBeenCalledOnce();
+    expect(upgradeDialogStore.state.request).toMatchObject({
+      kind: "credits",
+      checkout: true,
+      pendingText: "fix the bug",
+    });
+    closeUpgradeDialog();
+
+    fireEvent.click(screen.getByRole("button", { name: "Upgrade to Pro" }));
+    expect(openNextPlan).toHaveBeenCalledOnce();
+    expect(upgradeDialogStore.state.request).toMatchObject({
+      kind: "credits",
+      checkout: true,
+    });
+    closeUpgradeDialog();
   });
 
   it("free credits held for a phone check: one card, Verify phone opens the page, no plan", async () => {

@@ -13,8 +13,9 @@ import { hiddenUserMessage, userMessageText } from "#renderer/lib/user-message";
  * `own-key` when a free account's turn on its own provider key failed for
  * want of credit, a rate limit, or a provider that stopped answering.
  * `plan` when a free account asked to see the plan (a See Basic, an Upgrade
- * on a card or the model picker). Triggers ask; the shell's host confirms on
- * a fresh account read and opens.
+ * on a card or the model picker). A paid plan out of credits gets `credits`
+ * too, which offers its top-up and next plan. Triggers ask; the shell's host
+ * confirms on a fresh account read and opens.
  */
 export type UpgradeDialogKind = "credits" | "connectors" | "own-key" | "plan";
 
@@ -30,7 +31,7 @@ export interface UpgradeDialogRequest {
   ownKey?: OwnKeyFailure;
   /** `credits`: the free tier ended, rather than its credits running out. */
   expired?: boolean;
-  /** `plan`: checkout already opened (a card's Upgrade); the dialog waits for the plan. */
+  /** Checkout already opened (a card's Upgrade or Top up); the dialog waits for the plan or the credits. */
   checkout?: boolean;
   /** Sends that message again once the plan is active, on `model` if given. */
   resume?: (model?: string) => Promise<unknown>;
@@ -123,6 +124,19 @@ export const startPlanCheckout = (client: AppClient, source: string): void => {
     },
     true
   );
+};
+
+/**
+ * A paid account's Top up or next plan, from a card: its link opens (call it
+ * inside the click: the web build opens its tab there) and the dialog waits
+ * for the credits or the plan, then sends the waiting message.
+ */
+export const startPaidCheckout = (
+  open: () => Promise<void>,
+  request: Omit<UpgradeDialogRequest, "kind" | "checkout">
+): void => {
+  void open().catch(() => {});
+  requestUpgradeDialog({ ...request, kind: "credits", checkout: true }, true);
 };
 
 /** The Abacus connectors gateway's tools are named `abacus-connectors_<Tool>`. */

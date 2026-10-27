@@ -1686,6 +1686,8 @@
       "unavailablePlan",
       "unavailableOut",
       "paidOut",
+      "paidUpgrade",
+      "paidMobile",
       "ownKeyCredit",
       "ownKeyRateLimit",
       "ownKeyDown",

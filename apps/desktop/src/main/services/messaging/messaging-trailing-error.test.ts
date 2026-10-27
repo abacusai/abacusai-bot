@@ -1237,6 +1237,53 @@ describe("the credit wall's cause", () => {
   });
 });
 
+describe("a paid plan out of credits", () => {
+  const BASIC: BillingPlan = {
+    ...BILLING,
+    current: { ...BILLING.current, plan: "basic", planName: "Basic" },
+    upgrades: [
+      {
+        plan: "pro",
+        planName: "Pro",
+        priceText: "$20/mo",
+        firstMonthPriceCents: 2000,
+        priceCents: 2000,
+        features: ["Everything in Basic"],
+        url: "https://apps.example.test/plans",
+      },
+    ],
+  };
+  const paid = (billing: BillingPlan, repeat = false) =>
+    chatReplyForFailure(
+      { actions: [{ type: "upgrade-abacus", cause: "exhausted" }] },
+      "own",
+      "paid",
+      ENGLISH,
+      { ...OFFER, billing },
+      repeat
+    );
+
+  it("is told to add credits, then offered the next plan with its price and link", () => {
+    expect(paid(BASIC)).toBe(
+      `I've paused because this month's credits are used up. Add credits to keep going: ${TOP_UP_URL}\nOr move up to Pro ($20/month) for more credits every month: https://apps.example.test/plans`
+    );
+    expect(paid(BASIC, true)).toBe(`Still paused: ${TOP_UP_URL}`);
+  });
+
+  it("a plan billed by the app store is sent to the mobile app, with no link", () => {
+    const store: BillingPlan = {
+      ...BASIC,
+      upgrades: BASIC.upgrades.map((tier) => ({ ...tier, url: null })),
+      topUpUrl: null,
+      upgradeInMobileApp: true,
+    };
+    for (const repeat of [false, true])
+      expect(paid(store, repeat)).toBe(
+        "This month's credits are used up. Your plan is billed through the App Store or Google Play, so add credits or upgrade in the Abacus.AI mobile app."
+      );
+  });
+});
+
 describe("a picked model that cannot serve the turn", () => {
   const gone = (cause: string, out = false) => ({
     cause: "model_unavailable",

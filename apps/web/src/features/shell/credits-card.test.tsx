@@ -189,6 +189,21 @@ it("points an account already on a paid tier at AbacusAI Agent on the web", asyn
   });
 });
 
+it("a paid plan with its credits used up: Top up asks for the paid offer, not the web", async () => {
+  state.account.subscription_tier = "basic";
+  state.account.credits_used = 100;
+  state.open.mockClear();
+  render(promo());
+  expect(
+    await screen.findByText("You've used this month's credits")
+  ).toBeTruthy();
+  expect(screen.queryByText("Do even more on AbacusAI Agent")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Top up" }));
+  expect(upgradeDialogStore.state.request).toMatchObject({ kind: "credits" });
+  expect(state.open).not.toHaveBeenCalled();
+  closeUpgradeDialog();
+});
+
 it("held free credits: locked, not the grant, and Verify opens the page and reads the account on return", () => {
   state.account.free_credits_held = true;
   state.account.credits_granted = 2000;
