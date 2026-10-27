@@ -6,7 +6,6 @@ import { BotAvatar } from "#renderer/components/bot-avatar";
 import { NavList } from "#renderer/components/nav-list";
 import { DESKTOP_DOWNLOAD_URL } from "#renderer/lib/abacus-links";
 import { defaultLook } from "#renderer/lib/bots/avatar";
-import { useContextualUpsell } from "#renderer/lib/contextual-upsell";
 import { creditsTier } from "#renderer/lib/credits";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { IS_BROWSER } from "#renderer/lib/platform";
@@ -66,9 +65,6 @@ export const RoutineCreateAction = ({
   const { t } = useTranslation();
   const account = useAccount();
   const [open, setOpen] = useState(false);
-  useContextualUpsell(
-    open && IS_BROWSER && creditsTier(account.data) === "free"
-  );
   const label = t("routines.sidebar.new");
   const action = iconOnly ? (
     <NavList.Action label={label}>

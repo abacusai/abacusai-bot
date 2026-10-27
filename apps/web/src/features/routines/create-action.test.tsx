@@ -43,16 +43,21 @@ it.runIf(IS_BROWSER)(
         return button;
       });
       fireEvent.click(create);
-      expect(document.querySelector('[data-slot="upgrade-promo"]')).toBeNull();
-      expect(await screen.findByText("Unlock routines")).toBeTruthy();
+      const popover = await screen.findByRole("dialog", {
+        name: "Unlock routines",
+      });
       await waitFor(() =>
-        expect(screen.getAllByRole("button", { name: "Upgrade" })).toHaveLength(
-          1
-        )
+        expect(
+          within(popover).getAllByRole("button", { name: "Upgrade" })
+        ).toHaveLength(1)
       );
       expect(
-        screen.getByRole("button", { name: "Download desktop" })
+        within(popover).getByRole("button", { name: "Download desktop" })
       ).toBeTruthy();
+      // The sidebar's upgrade card stays alongside the popover.
+      expect(
+        document.querySelector('[data-slot="upgrade-promo"]')
+      ).not.toBeNull();
       expect(screen.queryByRole("textbox", { name: "Instruction" })).toBeNull();
       expect(app.router.state.location.pathname).toBe("/routines");
       expect(app.db.routines.rows.size).toBe(2);

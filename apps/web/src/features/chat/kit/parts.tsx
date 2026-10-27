@@ -9,7 +9,6 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "#renderer/lib/cn";
-import { useVisibleContextualUpsell } from "#renderer/lib/contextual-upsell";
 import {
   Attachment,
   AttachmentContent,
@@ -42,7 +41,6 @@ export const FeatureLimitNotice = ({
 }) => {
   const { t } = useTranslation();
   const [action, setAction] = useState<"upgrade" | "manage" | null>(null);
-  const promotionRef = useVisibleContextualUpsell(action === "upgrade");
   useEffect(() => {
     let live = true;
     void Promise.all([host.accountTier(), host.canTopUpCredits?.() ?? false])
@@ -65,7 +63,6 @@ export const FeatureLimitNotice = ({
     <div
       className="flex min-w-0 flex-col items-start gap-3 rounded-xl bg-[var(--chat-surface)] p-3 text-sm"
       data-slot="feature-limit"
-      ref={promotionRef}
     >
       {t("chat.part.featureLimit", { feature })}
       {action && (

@@ -17,7 +17,6 @@ import {
   WEEKDAYS,
   weekdayName,
 } from "#renderer/lib/bots/schedule";
-import { useContextualUpsell } from "#renderer/lib/contextual-upsell";
 import { creditsTier } from "#renderer/lib/credits";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_BROWSER } from "#renderer/lib/platform";
@@ -735,7 +734,6 @@ export const RoutineCreateDialog = () => {
   const account = useAccount();
   const { t } = useTranslation();
   const navigate = useAppNavigate();
-  useContextualUpsell(IS_BROWSER && creditsTier(account.data) === "free");
   if (account.isPending) return null;
   if (IS_BROWSER && creditsTier(account.data) === "free")
     return (
