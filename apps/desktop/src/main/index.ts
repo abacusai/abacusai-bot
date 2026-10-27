@@ -1997,6 +1997,8 @@ nativeAutoUpdater.on("before-quit-for-update", () => {
   markQuitting();
 });
 
+/** A quit waits at most this long for its log upload. */
+const QUIT_LOG_SYNC_MS = 2_500;
 let quitGracefulInProgress = false;
 let quitUpdateChecked = false;
 app.on("before-quit", (event) => {
@@ -2040,6 +2042,11 @@ app.on("before-quit", (event) => {
 
   // Only devices we booted, never ones the user started.
   const needDeviceShutdown = workspaceServiceHost.hasDevicesBootedByUs();
+  // The last lines of the run, or an early quit reads as a failed sign-in.
+  // Not on a data reset: those logs are being deleted.
+  const logsSent = isDataResetPending()
+    ? Promise.resolve()
+    : workspaceServiceHost.syncLogsBeforeQuit(QUIT_LOG_SYNC_MS);
 
   event.preventDefault();
   (async (): Promise<void> => {
@@ -2050,6 +2057,7 @@ app.on("before-quit", (event) => {
         cap,
         Promise.all([
           agentsStopped,
+          logsSent,
           needDeviceShutdown
             ? workspaceServiceHost.shutdownDevicesBootedByUs()
             : Promise.resolve(),
