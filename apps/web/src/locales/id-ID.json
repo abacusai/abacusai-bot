@@ -4659,6 +4659,8 @@
     "credits": "Sumber terbuka di bawah Lisensi MIT",
     "keepRunning": "Tetap jalankan di latar belakang",
     "quitAnyway": "Tetap keluar",
+    "openApp": "Buka {{app}}",
+    "stillRunningInTray": "{{app}} masih berjalan. Buka atau keluar dari sini.",
     "taskRunningTitle": "Sebuah tugas sedang berjalan",
     "taskRunningMessage": "Ada tugas yang masih berjalan.",
     "taskRunningDetail": "Tetap berjalan di latar belakang, atau berhenti dan menghentikannya?",

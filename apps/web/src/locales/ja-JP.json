@@ -4659,6 +4659,8 @@
     "credits": "MITライセンスに基づくオープンソース",
     "keepRunning": "バックグラウンドで続行",
     "quitAnyway": "終了する",
+    "openApp": "{{app}} を開く",
+    "stillRunningInTray": "{{app}} は実行中です。ここから開くか終了できます。",
     "taskRunningTitle": "タスクが実行中です",
     "taskRunningMessage": "タスクはまだ実行中です。",
     "taskRunningDetail": "バックグラウンドで実行し続けますか、それとも終了して停止しますか?",

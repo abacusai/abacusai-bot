@@ -4659,6 +4659,8 @@
     "credits": "Open source sous licence MIT",
     "keepRunning": "Continuer en arrière-plan",
     "quitAnyway": "Quitter quand même",
+    "openApp": "Ouvrir {{app}}",
+    "stillRunningInTray": "{{app}} est toujours en cours d'exécution. Ouvrez-le ou quittez-le d'ici.",
     "taskRunningTitle": "Une tâche est en cours d'exécution",
     "taskRunningMessage": "Une tâche est toujours en cours d'exécution.",
     "taskRunningDetail": "Le laisser fonctionner en arrière-plan, ou le quitter et l'arrêter ?",

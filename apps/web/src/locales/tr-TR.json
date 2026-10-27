@@ -4659,6 +4659,8 @@
     "credits": "MIT Lisansı altında açık kaynak",
     "keepRunning": "Arka planda çalışmaya devam et",
     "quitAnyway": "Yine de çık",
+    "openApp": "{{app}} uygulamasını aç",
+    "stillRunningInTray": "{{app}} hâlâ çalışıyor. Buradan açabilir veya kapatabilirsiniz.",
     "taskRunningTitle": "Bir görev çalışıyor",
     "taskRunningMessage": "Bir görev hâlâ çalışıyor.",
     "taskRunningDetail": "Arka planda çalışmaya devam etsin mi, yoksa çıkıp durdurulsun mu?",
