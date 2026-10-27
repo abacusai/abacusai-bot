@@ -4455,6 +4455,8 @@
     "pitch": {
       "credits": "Her ay {{credits}} kredi, ücretsiz planın {{times}} katı",
       "creditsOnly": "Her ay {{credits}} kredi",
+      "introCredits": "İlk ay {{first}} kredi, sonra her ay {{credits}} kredi, ücretsiz planın {{times}} katı",
+      "introCreditsOnly": "İlk ay {{first}} kredi, sonra her ay {{credits}} kredi",
       "models": "En iyi modeller: {{models}}",
       "media": "Görsel ve video oluşturma",
       "agents": "Web'deki Abacus AI Agent'ta bilgisayarın kapalıyken bile 7/24 çalışan kişisel ajanlar: WhatsApp, Discord ve Telegram otomatik yanıtları, tüm rutinlerin ve botunun yaptığı her şey",

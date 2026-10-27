@@ -2,6 +2,7 @@ import {
   type BillingPlan,
   type BillingPlanTier,
   creditsRenewMonthly,
+  firstMonthCredits,
 } from "@abacus-ai/contract/billing-plan";
 import { ABACUS_AGENT_ROUTINES_URL } from "@abacus-ai/contract/routines";
 
@@ -11,6 +12,28 @@ import type { ToolDefinition, ToolHost, ToolResult } from "./definition";
 
 export const credits = (value: number | null): string =>
   value == null ? "unknown" : Math.round(value).toLocaleString("en-US");
+
+/**
+ * "14,000 credits in the first month, then " when a promoted first month
+ * grants fewer than the monthly credits, else nothing: what leads every line
+ * that states a plan's credits, so a promotion is never read as the monthly figure.
+ */
+const firstMonthLead = (
+  tier: Parameters<typeof firstMonthCredits>[0],
+  monthly: number
+): string => {
+  const first = firstMonthCredits(tier, monthly);
+  return first == null
+    ? ""
+    : `${credits(first)} credits in the first month, then `;
+};
+
+/** A plan's credits as the model should say them: "20,000 credits a month", after a promoted first month's. */
+export const creditsLine = (
+  tier: Parameters<typeof firstMonthCredits>[0],
+  monthly: number
+): string =>
+  `${firstMonthLead(tier, monthly)}${credits(monthly)} credits a month`;
 
 const dollars = (cents: number): string =>
   cents % 100 === 0 ? `$${cents / 100}` : `$${(cents / 100).toFixed(2)}`;
@@ -81,7 +104,7 @@ export function creditStanding(billing: BillingPlan): string[] {
     `  "${where} ${next.planName} is ${priceLine(next)}, and gives you:`,
     ...next.features.map((feature) => `    - ${feature}`),
     `  <link>"`,
-    `Asked whether the free credits refill: they are a one-time grant and do not renew; ${next.planName} gives a fresh ${credits(nextCredits)} every month. Never say the free credits renew or reset, and never say the app or the agent will stop working.`,
+    `Asked whether the free credits refill: they are a one-time grant and do not renew; ${next.planName} gives ${firstMonthLead(next, nextCredits)}a fresh ${credits(nextCredits)} every month. Never say the free credits renew or reset, and never say the app or the agent will stop working.`,
   ];
 }
 
@@ -127,7 +150,7 @@ export function appBillingResult(
   lines.push("", "The plans:");
   for (const plan of billing.plans)
     lines.push(
-      `${plan.planName}: ${priceLine(plan)}, ${credits(plan.creditsPerMonth)} credits a month${plan.current ? " (their plan)" : ""}`,
+      `${plan.planName}: ${priceLine(plan)}, ${creditsLine(plan, plan.creditsPerMonth)}${plan.current ? " (their plan)" : ""}`,
       ...bullets(plan.features)
     );
   if (billing.upgrades.length > 0) {

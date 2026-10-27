@@ -4455,6 +4455,8 @@
     "pitch": {
       "credits": "{{credits}} kredit setiap bulan, {{times}}x paket gratis",
       "creditsOnly": "{{credits}} kredit setiap bulan",
+      "introCredits": "{{first}} kredit untuk bulan pertama, lalu {{credits}} setiap bulan, {{times}}x paket gratis",
+      "introCreditsOnly": "{{first}} kredit untuk bulan pertama, lalu {{credits}} setiap bulan",
       "models": "Model teratas: {{models}}",
       "media": "Pembuatan gambar dan video",
       "agents": "Agen pribadi di Abacus AI Agent di web yang berjalan 24/7, bahkan saat komputermu mati: balasan otomatis WhatsApp, Discord, dan Telegram, semua rutinitasmu, dan semua yang dilakukan bot-mu",

@@ -101,4 +101,17 @@ describe("planPitch", () => {
     );
     expect(lines).toEqual(['outcome.pitch.appsProjects {"count":5}']);
   });
+
+  it("leads with a promoted first month's credits, and keeps the monthly line without one", () => {
+    const promoted = billing(BASIC_FEATURES);
+    promoted.upgrades[0]!.firstMonthCredits = 14000;
+    expect(planPitch(t, promoted, "en-US", ["credits"])).toEqual([
+      'outcome.pitch.introCredits {"credits":"20,000","times":10,"first":"14,000"}',
+    ]);
+    const unpromoted = billing(BASIC_FEATURES);
+    unpromoted.upgrades[0]!.firstMonthCredits = 20000;
+    expect(planPitch(t, unpromoted, "en-US", ["credits"])).toEqual([
+      'outcome.pitch.credits {"credits":"20,000","times":10}',
+    ]);
+  });
 });

@@ -4455,6 +4455,8 @@
     "pitch": {
       "credits": "매달 {{credits}} 크레딧, 무료 플랜의 {{times}}배",
       "creditsOnly": "매달 {{credits}} 크레딧",
+      "introCredits": "첫 달 {{first}} 크레딧, 이후 매달 {{credits}} 크레딧, 무료 플랜의 {{times}}배",
+      "introCreditsOnly": "첫 달 {{first}} 크레딧, 이후 매달 {{credits}} 크레딧",
       "models": "최상위 모델: {{models}}",
       "media": "이미지 및 동영상 생성",
       "agents": "웹의 Abacus AI Agent에서 컴퓨터가 꺼져 있어도 24시간 돌아가는 개인 에이전트: WhatsApp, Discord, Telegram 자동 답장, 모든 루틴, 그리고 봇이 하는 모든 일",

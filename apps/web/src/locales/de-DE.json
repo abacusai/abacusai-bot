@@ -4455,6 +4455,8 @@
     "pitch": {
       "credits": "{{credits}} Credits jeden Monat, {{times}}-mal so viel wie im kostenlosen Plan",
       "creditsOnly": "{{credits}} Credits jeden Monat",
+      "introCredits": "{{first}} Credits im ersten Monat, danach {{credits}} jeden Monat, {{times}}-mal so viel wie im kostenlosen Plan",
+      "introCreditsOnly": "{{first}} Credits im ersten Monat, danach {{credits}} jeden Monat",
       "models": "Top-Modelle: {{models}}",
       "media": "Bild- und Videogenerierung",
       "agents": "Persönliche Agents in Abacus AI Agent im Web, die rund um die Uhr laufen, auch wenn dein Computer aus ist: automatische Antworten in WhatsApp, Discord und Telegram, alle deine Routinen und alles, was dein Bot tut",
