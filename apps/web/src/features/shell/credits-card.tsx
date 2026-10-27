@@ -17,7 +17,6 @@ import {
   ABACUS_AGENT_URL,
   ABACUS_VERIFY_PHONE_URL,
 } from "#renderer/lib/abacus-links";
-import { useHasContextualUpsell } from "#renderer/lib/contextual-upsell";
 import { creditsTier } from "#renderer/lib/credits";
 import {
   freeCreditsHeld,
@@ -106,15 +105,12 @@ export const UpgradePromo = () => {
   useEffect(() => () => target.remove(), [target]);
   const account = useCreditsAccount();
   const key = promoAccountKey(account.data);
-  const contextualUpsell = useHasContextualUpsell();
   // Held: the counters read as the whole grant, but none of it can be spent.
   const held = freeCreditsHeld(account.data);
   useFreeCreditsVerifySurface(held && host != null);
   const state = held
     ? "held"
-    : contextualUpsell
-      ? null
-      : promoState(account.data, prefs.creditsExhaustedAt, now);
+    : promoState(account.data, prefs.creditsExhaustedAt, now);
   const [excited, setExcited] = useState(false);
   const tier = creditsTier(account.data);
   const remaining =
@@ -148,7 +144,7 @@ export const UpgradePromo = () => {
     staleTime: 60_000,
   });
   const offer = wallOffer(billing.data ?? null);
-  if ((!held && ((tier !== "free" && !web) || contextualUpsell)) || !host)
+  if ((!held && tier !== "free" && !web) || !host)
     return createPortal(null, target);
   return createPortal(
     <AnimatePresence>

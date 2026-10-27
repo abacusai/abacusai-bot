@@ -10,7 +10,6 @@ import {
   DESKTOP_DOWNLOAD_URL,
 } from "#renderer/lib/abacus-links";
 import { externalBrowserUrl } from "#renderer/lib/browser/external-browser-url";
-import { useContextualUpsell } from "#renderer/lib/contextual-upsell";
 import { creditsTier } from "#renderer/lib/credits";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { sidebarAccount } from "#renderer/lib/sidebar-account";
@@ -41,7 +40,6 @@ export const BrowserTab: typeof Native = ({
   const account = useAccount();
   const tier = creditsTier(account.data);
   const paid = sidebarAccount(account.data).paid;
-  useContextualUpsell(!file && tier === "free" && visible === true);
   if (file)
     return (
       <FilePreview

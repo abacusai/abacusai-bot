@@ -13,7 +13,6 @@ import { ExternalLink, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { useVisibleContextualUpsell } from "#renderer/lib/contextual-upsell";
 import { requestPlanDialog } from "#renderer/lib/upgrade-dialog";
 import { Button } from "#renderer/ui/button";
 
@@ -38,7 +37,6 @@ export const PaidFeatureCard = ({
   const known = PAID_FEATURES.find((entry) => entry.feature === feature);
   const free = tier === "free";
   const web = (tier === "basic" || tier === "paid") && known?.inApp === false;
-  const promotionRef = useVisibleContextualUpsell(free && known != null);
   useEffect(() => {
     let live = true;
     void host
@@ -54,7 +52,7 @@ export const PaidFeatureCard = ({
   if (known == null) return null;
   const name = t(`capabilities.toolsets.${known.feature}.label`);
   return (
-    <div ref={promotionRef} data-slot="paid-feature" data-feature={feature}>
+    <div data-slot="paid-feature" data-feature={feature}>
       {(free || web) && (
         <div className="bg-card my-2 flex w-full max-w-[520px] flex-col gap-2 rounded-xl border p-3">
           <div className="flex items-center gap-2">

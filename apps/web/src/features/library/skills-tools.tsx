@@ -22,7 +22,6 @@ import {
   useMutation,
 } from "#renderer/data/query-client";
 import { DESKTOP_DOWNLOAD_URL } from "#renderer/lib/abacus-links";
-import { useContextualUpsell } from "#renderer/lib/contextual-upsell";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
@@ -43,7 +42,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "#renderer/ui/popover";
 export const BrowserSkillImport = () => {
   const { t } = useTranslation();
   const [open, setOpen] = useState<"folder" | "file" | null>(null);
-  useContextualUpsell(open !== null);
   return (
     <div className="flex flex-wrap gap-2">
       {(["folder", "file"] as const).map((kind) => (

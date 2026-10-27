@@ -32,7 +32,6 @@ import { useTranslation } from "react-i18next";
 import { usePaymentRequired } from "#renderer/components/payment-required";
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
-import { useVisibleContextualUpsell } from "#renderer/lib/contextual-upsell";
 import { creditsTier } from "#renderer/lib/credits";
 import {
   startPlanCheckout,
@@ -67,11 +66,9 @@ export const SuccessPitchCard = ({
 }: SuccessPitchCardProps) => {
   const { t, i18n } = useTranslation();
   const offer = wallOffer(billing);
-  const promotionRef = useVisibleContextualUpsell(true);
   if (offer == null) return null;
   return (
     <div
-      ref={promotionRef}
       data-slot="success-pitch"
       data-moment={moment}
       className="relative my-2 flex w-full max-w-[520px] gap-3 rounded-xl border border-violet-200 bg-violet-50/70 p-3.5 pr-9 text-sm dark:border-violet-900/70 dark:bg-violet-950/30"
