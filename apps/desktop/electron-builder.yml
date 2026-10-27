@@ -17,6 +17,18 @@ files:
   # Type declarations of the asar's dependencies. electron-builder's default
   # exclusions cover .d.ts but not the .d.mts/.d.cts of dual packages.
   - "!**/node_modules/**/*.d.{ts,mts,cts}"
+  - "!**/node_modules/**/*.tsbuildinfo"
+  # Browser, UMD and ESM-only copies of dependencies main loads through their
+  # Node entry (package.json main/exports), plus TS sources and test coverage.
+  # Main never reads these files; they were 9 MB of the asar.
+  - "!**/node_modules/pdf-lib/{dist,es,src}/**"
+  - "!**/node_modules/@pdf-lib/standard-fonts/{dist,es}/**"
+  - "!**/node_modules/@pdf-lib/upng/dist/**"
+  - "!**/node_modules/jszip/dist/**"
+  - "!**/node_modules/pako/dist/**"
+  - "!**/node_modules/pngjs/{browser.js,coverage/**}"
+  - "!**/node_modules/pptxgenjs/dist/pptxgen.{bundle,min}.js"
+  - "!**/node_modules/tldts/dist/{es6/**,index.*.min.js}"
   - package.json
 
 beforePack: scripts/before-pack.cjs
