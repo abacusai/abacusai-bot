@@ -227,6 +227,8 @@ describe("renewing an expired token", () => {
     expect(body.get("grant_type")).toBe("refresh_token");
     expect(body.get("refresh_token")).toBe("stored-refresh");
     expect(body.get("client_id")).toBe("client-abc");
+    // Without it an audience-checking server (Zapier) refuses the renewed token.
+    expect(body.get("resource")).toBe(SERVER);
     // A public client has no secret, and sending an empty one is a 400.
     expect(body.has("client_secret")).toBe(false);
   });

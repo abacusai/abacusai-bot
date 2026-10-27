@@ -566,6 +566,9 @@ export const exchangeCode = async (input: {
     redirect_uri: input.redirectUri,
     client_id: client.clientId,
     code_verifier: input.verifier,
+    // RFC 8707 again, as on the authorize request: a server that checks the
+    // audience (Zapier) refuses a token minted without it.
+    resource: serverUrl,
   });
   if (client.clientSecret != null)
     body.set("client_secret", client.clientSecret);
