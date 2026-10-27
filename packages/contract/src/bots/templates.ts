@@ -56,6 +56,13 @@ export interface BotTemplate {
    * for the missing ones on its first turn; a home channel is implied.
    */
   needs?: readonly string[];
+  /**
+   * What the first reply hands over when the mission's first step comes up
+   * empty. Beside the mission rather than in it: it is the app's play for a
+   * first run, not words the user rewrites, and a bot whose first pass finds
+   * nothing must still give the user something.
+   */
+  firstReply?: string;
 }
 
 /**
@@ -89,6 +96,11 @@ export const BOT_TEMPLATES: BotTemplate[] = [
     ].join("\n"),
     categories: ["featured"],
     needs: ["abacus-gmailuser"],
+    firstReply: [
+      'If no thread needs a reply, do not report zero or "nothing to draft": the pass still read the inbox, so hand over what it found.',
+      "In a few lines: a digest of what came in (receipts, security alerts, newsletters worth reading, one line each), any deadline, bill or renewal you spotted with its date, and how many promotional or bulk emails there were.",
+      'Then end with suggest_tasks for the follow-ups this inbox calls for, such as "Archive the 37 promotional emails", "Show me the newsletters I never open" or "Remind me on Friday about the electricity bill", offering only what your tools can do.',
+    ].join(" "),
     avatarColor: "#22c55e",
     avatarShape: "squircle",
     connectors: ["gmail", "calendar", "slack"],
