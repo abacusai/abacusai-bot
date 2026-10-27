@@ -106,26 +106,25 @@ it.each([null, "telegram"] as const)(
     const seed = defaultSeed();
     seed.bots = [];
     seed.routines = [];
-    harness = await renderApp("/onboarding/models", {
+    // A free account signed in with Abacus and no key of its own: no models step.
+    harness = await renderApp("/onboarding/connected", {
       onboarded: false,
       signedIn: true,
       seed,
     });
-    await waitFor(() =>
-      expect(harness!.router.state.location.pathname).toBe("/onboarding/models")
-    );
-    const continueModels = await screen.findByRole("button", {
-      name: "Continue",
-    });
-    await waitFor(() =>
-      expect((continueModels as HTMLButtonElement).disabled).toBe(false)
-    );
-    fireEvent.click(continueModels);
+    fireEvent.click(await screen.findByRole("button", { name: "Get started" }));
     await waitFor(() =>
       expect(harness!.router.state.location.pathname).toBe(
         "/onboarding/connectors"
       )
     );
+    expect(
+      harness.calls.filter(
+        ([name, input]) =>
+          name === "system.funnelStep" &&
+          (input as { step: string }).step === "screen_models"
+      )
+    ).toHaveLength(0);
     await screen.findByRole("heading", {
       name: /Connect with your tools & services\.\s*Chat where you work\./,
     });
@@ -705,26 +704,26 @@ it.each(["whatsapp", "telegram", "discord"] as const)(
 );
 it("a slow connectors read past the pending skeleton still opens the connectors step", async () => {
   const os = implement(contract);
-  // Slower than defaultPendingMs: the skeleton unmounts the models step,
-  // whose statuses observer was the query's last, while the loader waits.
+  // Slower than defaultPendingMs: the skeleton unmounts the outgoing step
+  // while the loader waits, and the connectors step's own query refetches.
   const slow = () =>
     new Promise<Record<string, never>>((resolve) =>
       setTimeout(() => resolve({}), 800)
     );
-  harness = await renderApp("/onboarding/models", {
+  harness = await renderApp("/onboarding/connected", {
     onboarded: false,
     signedIn: true,
     procedures: {
       connectors: { statuses: os.connectors.statuses.handler(slow) },
     },
   });
-  const continueModels = await screen.findByRole("button", {
-    name: "Continue",
+  const getStarted = await screen.findByRole("button", {
+    name: "Get started",
   });
   await waitFor(() =>
-    expect((continueModels as HTMLButtonElement).disabled).toBe(false)
+    expect((getStarted as HTMLButtonElement).disabled).toBe(false)
   );
-  fireEvent.click(continueModels);
+  fireEvent.click(getStarted);
   await screen.findByRole(
     "heading",
     { name: /Connect with your tools & services\./ },

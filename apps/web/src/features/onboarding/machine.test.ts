@@ -9,9 +9,18 @@ import {
 } from "./machine";
 const facts: FlowFacts[] = [false, true].flatMap((signedIn) =>
   [false, true].flatMap((payingTier) =>
-    [false, true].map((ownsBot) => ({ signedIn, payingTier, ownsBot }))
+    [false, true].flatMap((ownsBot) =>
+      [false, true].map((ownProvider) => ({
+        signedIn,
+        payingTier,
+        ownsBot,
+        ownProvider,
+      }))
+    )
   )
 );
+/** Only a free account that brought its own provider sees the models step. */
+const modelsShown = (f: FlowFacts) => !f.payingTier && f.ownProvider;
 describe("R6-T4 step machine and R6-T5 resume", () => {
   it("has six steps and resumes the retired done URL at final setup", () => {
     expect(ONBOARDING_FLOW).toEqual([
@@ -26,7 +35,12 @@ describe("R6-T4 step machine and R6-T5 resume", () => {
     expect(
       guardStep(
         "done",
-        { signedIn: true, payingTier: false, ownsBot: false },
+        {
+          signedIn: true,
+          payingTier: false,
+          ownsBot: false,
+          ownProvider: false,
+        },
         { signIn: null, createdBotId: null }
       )
     ).toBe("first-bot");
@@ -49,7 +63,7 @@ describe("R6-T4 step machine and R6-T5 resume", () => {
       "ignore"
     );
     expect(next("connected", { type: "next" }, f, null)).toBe(
-      f.payingTier ? "connectors" : "models"
+      modelsShown(f) ? "models" : "connectors"
     );
     expect(next("models", { type: "back" }, f, null)).toBe(
       f.signedIn ? "connected" : "welcome"
@@ -57,13 +71,22 @@ describe("R6-T4 step machine and R6-T5 resume", () => {
     expect(next("models", { type: "next" }, f, null)).toBe("connectors");
     expect(next("connectors", { type: "next" }, f, null)).toBe("first-bot");
     expect(next("connectors", { type: "back" }, f, null)).toBe(
-      f.payingTier ? "connected" : "models"
+      modelsShown(f) ? "models" : "connected"
+    );
+    // A stored models step (a returning person) resumes past it when skipped.
+    expect(guardStep("models", f, { signIn: null, createdBotId: null })).toBe(
+      !f.signedIn ? "welcome" : modelsShown(f) ? "models" : "connectors"
     );
     expect(next("first-bot", { type: "tour" }, f, null)).toBe("complete");
     expect(next("done", { type: "next" }, f, null)).toBe("complete");
   });
   it("keeps failed attempts and own optimistic bot creation valid", () => {
-    const f = { signedIn: true, payingTier: false, ownsBot: true };
+    const f = {
+      signedIn: true,
+      payingTier: false,
+      ownsBot: true,
+      ownProvider: false,
+    };
     expect(
       guardStep("connect", f, {
         signIn: { status: "failed" },

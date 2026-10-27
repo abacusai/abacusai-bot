@@ -1,9 +1,12 @@
 /**
  * Keyboard navigation: Enter continues with the step's primary action,
  * Escape goes back where the flow allows (connect → welcome, cancelling
- * the attempt; connectors → models), and neither fires from inside a
+ * the attempt; connectors → models for someone with a key of their own),
+ * and neither fires from inside a
  * control or while a dialog is open.
  */
+import { contract } from "@abacus-ai/contract/contract";
+import { implement } from "@orpc/server";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -19,6 +22,22 @@ afterEach(async () => {
   await app?.cleanup();
   app = undefined;
   onboardingStore.setState(() => ({ signIn: null, createdBotId: null }));
+});
+
+/** Signed in, with a provider key of the person's own: the models step shows. */
+const ownKey = () => ({
+  settings: {
+    get: implement(contract).settings.get.handler(
+      () =>
+        ({
+          defaultModel: null,
+          apiKeys: {
+            ABACUS_API_KEY: "test-credential",
+            GEMINI_API_KEY: "test-gemini",
+          },
+        }) as never
+    ),
+  },
 });
 
 const press = (key: string, target: Element | Document = document) =>
@@ -82,6 +101,7 @@ describe("onboarding keys", () => {
     app = await renderApp("/onboarding/models", {
       onboarded: false,
       signedIn: true,
+      procedures: ownKey(),
     });
     const next = await screen.findByRole("button", { name: "Continue" });
     await waitFor(() =>
@@ -135,6 +155,7 @@ describe("onboarding keys", () => {
     app = await renderApp("/onboarding/connectors", {
       onboarded: false,
       signedIn: true,
+      procedures: ownKey(),
     });
     await screen.findByRole("heading", { name: /Chat where you work/ });
     const outgoingNavigate = navigateStep;

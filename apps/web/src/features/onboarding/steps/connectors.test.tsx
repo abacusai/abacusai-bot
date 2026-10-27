@@ -19,7 +19,12 @@ const ctx = (overrides: Partial<StepContext["props"]> = {}): StepContext => {
   const props = {
     step: "connectors",
     transport: {} as never,
-    facts: { signedIn: true, payingTier: false, ownsBot: true },
+    facts: {
+      signedIn: true,
+      payingTier: false,
+      ownsBot: true,
+      ownProvider: false,
+    },
     navigate: vi.fn(async () => {}),
     signIn: vi.fn(),
     cancelSignIn: vi.fn(async () => {}),
@@ -154,7 +159,12 @@ describe("ConnectorsStep", () => {
     async (name, id) => {
       await initI18n();
       const context = ctx({
-        facts: { signedIn: true, payingTier: false, ownsBot: false },
+        facts: {
+          signedIn: true,
+          payingTier: false,
+          ownsBot: false,
+          ownProvider: false,
+        },
       });
       const refresh = vi.fn(async () => {});
       render(

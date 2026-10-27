@@ -30,7 +30,12 @@ const ctx = () => {
   const props = {
     step: "first-bot",
     transport: { client: { system: { funnelStep } } } as never,
-    facts: { signedIn: true, payingTier: false, ownsBot: false },
+    facts: {
+      signedIn: true,
+      payingTier: false,
+      ownsBot: false,
+      ownProvider: false,
+    },
     navigate: vi.fn(async () => {}),
     signIn: vi.fn(),
     cancelSignIn: vi.fn(async () => {}),

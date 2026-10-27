@@ -18,7 +18,7 @@ const ctx = (signedIn: boolean) => {
   const props = {
     step: "models",
     transport: { client: { auth: { openRouter: { start } } } } as never,
-    facts: { signedIn, payingTier: false, ownsBot: false },
+    facts: { signedIn, payingTier: false, ownsBot: false, ownProvider: true },
     navigate: vi.fn(async () => {}),
     signIn: vi.fn(),
     cancelSignIn: vi.fn(async () => {}),

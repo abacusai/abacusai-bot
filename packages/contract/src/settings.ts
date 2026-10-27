@@ -107,6 +107,21 @@ export const canSignOutOfAbacus = (
   (settings?.apiKeys?.[PROVIDER_ENV_VARS.abacus!] ?? "").trim().length > 0;
 
 /**
+ * Whether the person brought a model provider of their own: a stored key for
+ * one other than Abacus.AI, or a custom endpoint. An Abacus sign-in alone
+ * already serves models, so only this keeps onboarding's models step.
+ */
+export const hasOwnModelProvider = (
+  settings: Pick<AbacusBotSettings, "apiKeys" | "customProviders"> | null
+): boolean =>
+  Object.entries(PROVIDER_ENV_VARS).some(
+    ([provider, envVar]) =>
+      provider !== "abacus" &&
+      provider !== "github" &&
+      (settings?.apiKeys?.[envVar] ?? "").trim().length > 0
+  ) || (settings?.customProviders?.length ?? 0) > 0;
+
+/**
  * Whether a pasted string could be an API key at all. A shape check only: the
  * authoritative test is a live call. It catches pasting the wrong thing (a
  * whole `export FOO=...` line, a URL, a fragment); what passes is stored as

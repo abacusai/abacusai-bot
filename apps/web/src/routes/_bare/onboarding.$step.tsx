@@ -4,7 +4,10 @@ import {
   type MessagingPlatformId,
 } from "@abacus-ai/contract/messaging";
 import { isPayingAbacusTier } from "@abacus-ai/contract/models";
-import { canSignOutOfAbacus } from "@abacus-ai/contract/settings";
+import {
+  canSignOutOfAbacus,
+  hasOwnModelProvider,
+} from "@abacus-ai/contract/settings";
 import { abacusAgentPromptUrl } from "@abacus-ai/contract/toolsets";
 import { isCancelledError } from "@tanstack/react-query";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
@@ -323,6 +326,7 @@ const factsOf = async (
     signedIn: canSignOutOfAbacus(settings),
     payingTier: isPayingAbacusTier(account?.subscription_tier),
     ownsBot: context.db.collections.bots.toArray.length > 0,
+    ownProvider: hasOwnModelProvider(settings),
   };
 };
 /**
@@ -347,6 +351,7 @@ const UNKNOWN_FACTS: FlowFacts = {
   signedIn: false,
   payingTier: false,
   ownsBot: false,
+  ownProvider: false,
   provisional: true,
 };
 export const Route = createFileRoute("/_bare/onboarding/$step")({

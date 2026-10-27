@@ -49,6 +49,7 @@ export const OnboardingGallery = ({
           signedIn: step !== "welcome" && step !== "connect",
           payingTier: false,
           ownsBot: false,
+          ownProvider: false,
         }}
         preview={true}
         previewBot={previewBot}

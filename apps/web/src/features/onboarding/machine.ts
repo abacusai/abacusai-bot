@@ -13,9 +13,19 @@ export interface FlowFacts {
   signedIn: boolean;
   payingTier: boolean;
   ownsBot: boolean;
+  /** A model provider of the person's own: a stored key or a custom endpoint. */
+  ownProvider: boolean;
   /** Not from the host yet (spec 09 D12): render, but act on nothing. */
   provisional?: boolean;
 }
+/**
+ * The models step is for people who bring their own providers. An Abacus
+ * sign-in already serves models (a paid plan its catalog, the free plan its
+ * free lineup), so everyone else goes on to connectors; the browser has no
+ * keys to collect.
+ */
+const showsModels = (facts: FlowFacts): boolean =>
+  IS_ELECTRON && !facts.payingTier && facts.ownProvider;
 export type FlowEvent =
   | { type: "sign-up" | "sign-in" | "retry"; attempt: string }
   | { type: "auth-ok" | "auth-cancelled" | "auth-failed"; attempt: string }
@@ -46,9 +56,9 @@ export const next = (
       return "ignore";
     case "connected":
       return event.type === "next"
-        ? facts.payingTier || !IS_ELECTRON
-          ? "connectors"
-          : "models"
+        ? showsModels(facts)
+          ? "models"
+          : "connectors"
         : "ignore";
     case "models":
       return event.type === "next"
@@ -62,9 +72,9 @@ export const next = (
       return event.type === "next"
         ? "first-bot"
         : event.type === "back"
-          ? facts.payingTier || !IS_ELECTRON
-            ? "connected"
-            : "models"
+          ? showsModels(facts)
+            ? "models"
+            : "connected"
           : "ignore";
     case "first-bot":
       return event.type === "next"
@@ -92,7 +102,6 @@ export const guardStep = (
   facts: FlowFacts,
   doc: { signIn: { status: string } | null; createdBotId: string | null }
 ): OnboardingStepId => {
-  if (!IS_ELECTRON && step === "models") return "connectors";
   if (facts.signedIn && step === "welcome") return "connected";
   if (
     step === "connect" &&
@@ -101,6 +110,8 @@ export const guardStep = (
     return facts.signedIn ? "connected" : "welcome";
   if (!facts.signedIn && step !== "welcome" && step !== "connect")
     return "welcome";
+  // Also a returning person stopped on it before it was skipped for them.
+  if (step === "models" && !showsModels(facts)) return "connectors";
   if (step === "done") return "first-bot";
   return step;
 };
