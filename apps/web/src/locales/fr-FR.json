@@ -3250,6 +3250,11 @@
     },
     "botHelp": {
       "open": "Ouvrir"
+    },
+    "suggestedTasks": {
+      "label": "Touchez une tâche pour la lancer",
+      "copy": "Copier « {{text}} » pour l’envoyer depuis votre téléphone",
+      "copyFailed": "Impossible de copier"
     }
   },
   "notch": {

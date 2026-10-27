@@ -37,6 +37,10 @@ export const FUNNEL_STEPS = [
   // A bot asked to build offers a session (offer_session's card).
   "session_offer_shown",
   "session_offer_opened",
+  // A bot's reply ended with tap-to-run tasks (suggest_tasks); the detail is
+  // the bot's template, and a tap's also whether it copied.
+  "task_suggestions_shown",
+  "task_suggestion_tapped",
   // A free account's chat on another provider's model: the RouteLLM notice.
   "routellm_nudge_shown",
   "routellm_nudge_switched",

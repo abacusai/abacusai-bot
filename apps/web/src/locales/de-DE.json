@@ -3250,6 +3250,11 @@
     },
     "botHelp": {
       "open": "Öffnen"
+    },
+    "suggestedTasks": {
+      "label": "Tippe auf eine Aufgabe, um sie zu starten",
+      "copy": "„{{text}}“ kopieren, um es vom Handy zu senden",
+      "copyFailed": "Kopieren fehlgeschlagen"
     }
   },
   "notch": {

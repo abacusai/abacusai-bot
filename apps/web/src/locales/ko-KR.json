@@ -3250,6 +3250,11 @@
     },
     "botHelp": {
       "open": "열기"
+    },
+    "suggestedTasks": {
+      "label": "작업을 탭하면 바로 실행돼요",
+      "copy": "휴대폰에서 보낼 수 있게 “{{text}}” 복사",
+      "copyFailed": "복사하지 못했어요"
     }
   },
   "notch": {

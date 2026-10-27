@@ -3250,6 +3250,11 @@
     },
     "botHelp": {
       "open": "Abrir"
+    },
+    "suggestedTasks": {
+      "label": "Toca una tarea para empezarla",
+      "copy": "Copiar «{{text}}» para enviarlo desde tu móvil",
+      "copyFailed": "No se ha podido copiar"
     }
   },
   "notch": {

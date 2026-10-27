@@ -24,6 +24,8 @@ import { AGENT_TOOL_NAMES, AGENT_TOOLS, agentTool } from "./index";
  * either, and nor does `paid_feature`, which says where a plan has a capability. `offer_session` draws a card that opens a session; it does nothing
  * until the user clicks it. `bot_help` reads the app's own state to answer
  * questions about the app; switching it off would leave those to memory.
+ * `suggest_tasks` draws buttons that send their own text as the user's
+ * message; nothing runs until the user taps one.
  */
 const NOT_IN_REGISTRY = new Set([
   "my_activity",
@@ -31,6 +33,7 @@ const NOT_IN_REGISTRY = new Set([
   "paid_feature",
   "offer_session",
   "bot_help",
+  "suggest_tasks",
 ]);
 
 const registryTools = new Map<string, { toolset: string; agent: boolean }>();

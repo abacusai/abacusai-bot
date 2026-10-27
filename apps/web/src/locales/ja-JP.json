@@ -3250,6 +3250,11 @@
     },
     "botHelp": {
       "open": "開く"
+    },
+    "suggestedTasks": {
+      "label": "タスクをタップして実行",
+      "copy": "「{{text}}」をコピーしてスマホから送信",
+      "copyFailed": "コピーできませんでした"
     }
   },
   "notch": {
