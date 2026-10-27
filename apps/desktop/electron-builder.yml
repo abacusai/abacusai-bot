@@ -11,9 +11,16 @@ files:
   - "!dist/LICENSES.chromium.html"
   # Read by generate-notices.js at build time only.
   - "!**/*.map"
+  # Read by check-release-build.mjs before packaging, never by the app.
+  - "!dist/renderer/chunk-sizes.json"
+  - "!dist/renderer/release-build.json"
+  # Type declarations of the asar's dependencies. electron-builder's default
+  # exclusions cover .d.ts but not the .d.mts/.d.cts of dual packages.
+  - "!**/node_modules/**/*.d.{ts,mts,cts}"
   - package.json
 
 beforePack: scripts/before-pack.cjs
+afterPack: scripts/after-pack.cjs
 
 # Smaller installers for a slower packaging step: the app archive inside the
 # Windows installer and the AppImage are compressed harder, and the dmg uses
@@ -127,6 +134,7 @@ win:
 # The installer also takes build/installer.nsh (electron-builder's default
 # include): its first-run milestones.
 nsis:
+  buildUniversalInstaller: false
   artifactName: ${productName}-${version}-${arch}-setup.${ext}
   shortcutName: AbacusAI Bot
   uninstallDisplayName: AbacusAI Bot
@@ -164,7 +172,11 @@ linux:
       StartupWMClass=AbacusAI-Bot
 appImage:
   artifactName: ${productName}-${version}-${arch}.${ext}
+# The global maximum setting does not set fpm's xz level (default: 3).
 deb:
+  compression: xz
+  fpm:
+    - "--deb-compression-level=9"
   artifactName: ${productName}-${version}-${arch}.${ext}
   # pkexec is the graphical password prompt the updater installs a new .deb
   # through (sudo has no prompt without a terminal). A user who installs with

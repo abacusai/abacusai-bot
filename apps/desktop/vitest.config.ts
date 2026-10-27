@@ -75,6 +75,8 @@ export default defineConfig({
             "src/main/**/*.test.ts",
             "scripts/vite-resolution.test.ts",
             "scripts/renderer-csp.test.ts",
+            "scripts/package-pruning.test.ts",
+            "scripts/installer-archive.test.ts",
           ],
           exclude: [...defaultExclude, ...CONTENDS_FOR_THE_MACHINE],
         },

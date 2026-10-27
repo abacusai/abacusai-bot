@@ -92,7 +92,7 @@
     "@vitest/coverage-v8": "catalog:",
     "axe-core": "4.13.0",
     "electron": "44.9.3",
-    "electron-builder": "^26.15.3",
+    "electron-builder": "^26.18.0",
     "es-module-lexer": "2.3.2",
     "ghostty-web": "0.4.0",
     "jsdom": "^30.0.1",
