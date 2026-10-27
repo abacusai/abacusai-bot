@@ -1574,6 +1574,11 @@ export interface AbacusAccountInfo {
   free_credits_held?: boolean;
   /** Where the user mostly works, from the platform's nightly read of their turns. */
   focus?: AbacusAccountFocus | null;
+  /**
+   * Onboarding ends on the plan offer beside "Start free": the platform's
+   * experiment put this account in that arm. Absent from older servers: never.
+   */
+  onboarding_offer?: boolean;
 }
 
 /** Why the platform's payment gate refuses a signed-in account: the 402's `reason`. */

@@ -26,9 +26,9 @@ vi.mock("./sound", () => ({
 }));
 
 describe("OnboardingProgress", () => {
-  it("maps the seven steps onto five marks; paired steps share one", () => {
+  it("maps the eight steps onto five marks; paired steps share one", () => {
     expect(ONBOARDING_STEPS.map((step) => PROGRESS_MARK[step])).toEqual([
-      1, 2, 2, 3, 4, 5, 5,
+      1, 2, 2, 3, 4, 5, 5, 5,
     ]);
   });
 

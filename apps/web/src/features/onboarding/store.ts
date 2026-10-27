@@ -17,6 +17,8 @@ export const onboardingStore = new Store<{
   createdBotId: string | null;
   /** The chat app connected last in the connectors step; it picks the first bot. */
   chatApp?: HomeChannel | null;
+  /** The plan offer was answered (Upgrade or Start free): it is not shown again. */
+  offerAnswered?: boolean;
 }>({ signIn: null, createdBotId: null });
 export const startSignIn = (
   transport: Transport,

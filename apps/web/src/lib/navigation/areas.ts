@@ -65,6 +65,7 @@ export const ONBOARDING_STEPS = [
   "connected",
   "models",
   "connectors",
+  "offer",
   "first-bot",
   "done",
 ] as const;

@@ -13,13 +13,14 @@ const facts: FlowFacts[] = [false, true].flatMap((signedIn) =>
   )
 );
 describe("R6-T4 step machine and R6-T5 resume", () => {
-  it("has six steps and resumes the retired done URL at final setup", () => {
+  it("has seven steps and resumes the retired done URL at final setup", () => {
     expect(ONBOARDING_FLOW).toEqual([
       "welcome",
       "connect",
       "connected",
       "models",
       "connectors",
+      "offer",
       "first-bot",
     ]);
     expect(resumeStep({ step: "done", flow: 2 })).toBe("first-bot");
@@ -56,6 +57,15 @@ describe("R6-T4 step machine and R6-T5 resume", () => {
     );
     expect(next("models", { type: "next" }, f, null)).toBe("connectors");
     expect(next("connectors", { type: "next" }, f, null)).toBe("first-bot");
+    // Only an account in the offer's arm sees it, and either way it ends at the first-run screen.
+    expect(
+      next("connectors", { type: "next" }, { ...f, offer: true }, null)
+    ).toBe("offer");
+    expect(next("offer", { type: "next" }, f, null)).toBe("first-bot");
+    expect(next("offer", { type: "back" }, f, null)).toBe("connectors");
+    expect(guardStep("offer", f, { signIn: null, createdBotId: null })).toBe(
+      f.signedIn ? "first-bot" : "welcome"
+    );
     expect(next("connectors", { type: "back" }, f, null)).toBe(
       f.payingTier ? "connected" : "models"
     );
