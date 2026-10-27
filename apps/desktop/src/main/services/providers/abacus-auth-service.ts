@@ -22,8 +22,8 @@ import { handoffPage } from "./handoff-page";
 const EXCHANGE_PATH = "/api/v1/_exchangeAbacusaibotAuthCode";
 const SIGNIN_PATH = "/chatllm/signin";
 
-// How long the loopback listener stays open. Sign-up happens inside this hop
-// and takes minutes; Cancel (cancelAbacusAuth) tears it down early.
+// How long each press's loopback listener stays open. Sign-up happens inside
+// this hop and takes minutes; sign-out (cancelAbacusAuth) tears them down early.
 const AUTH_TIMEOUT_MS = 20 * 60 * 1000;
 
 /** Says what to do next, because the usual cause is fixed in the browser. */
@@ -48,210 +48,307 @@ type ExchangeOutcome =
 // tab to read the outcome; the app itself has already been answered.
 const RESULT_LINGER_MS = 15_000;
 
+/** Open listeners at once; past it the oldest press's is closed. */
+const MAX_OPEN_ATTEMPTS = 5;
+
 /** base64url(sha256(verifier)), which is what `code_challenge_method=S256` means. */
 const codeChallengeFor = (verifier: string): string =>
   crypto.createHash("sha256").update(verifier).digest("base64url");
 
-/** One in-flight attempt at a time, same rationale as the OpenRouter service. */
-let inFlight: { close: () => void } | null = null;
+/**
+ * One press of Sign in: its own verifier, callback path and loopback port,
+ * each single-use and open until that press's own timeout. A later press does
+ * not close it: the tab it opened may be the one the user finishes, and the
+ * first press to come back signs the app in, after which the rest close.
+ */
+interface Attempt {
+  close(): void;
+  /** Set once the browser has been sent to this attempt's listener. */
+  opened: boolean;
+}
 
-export const cancelAbacusAuth = (): void => {
-  inFlight?.close();
-  inFlight = null;
+/** The newest press, the only one whose caller still waits for a key. */
+interface Waiter {
+  attempt: Attempt;
+  settle(result: AbacusAuthResult, reason?: string, hint?: string): void;
+}
+
+const attempts = new Set<Attempt>();
+let waiter: Waiter | null = null;
+
+const CANCELLED: AbacusAuthResult = {
+  ok: false,
+  error: "Sign-in was cancelled.",
+  cancelled: true,
 };
 
 /**
- * Sign-in in the system browser, where an existing abacus.ai session finishes
- * it in one step. `signup` opens the sign-up form, `signin` the sign-in one.
+ * Stop waiting for a sign-in. Listeners the browser was already sent to stay
+ * valid for the next press (a tab from before can still finish it) unless
+ * `everyAttempt`, as on sign-out; with no press waiting, a returning tab is
+ * told to try again and nothing is exchanged.
  */
-export const startAbacusAuth = async (
-  intent: AbacusAuthIntent = "signup"
-): Promise<AbacusAuthResult> => {
-  cancelAbacusAuth();
+export const cancelAbacusAuth = (options?: {
+  everyAttempt?: boolean;
+}): void => {
+  waiter?.settle(CANCELLED);
+  for (const attempt of attempts)
+    if (options?.everyAttempt === true || !attempt.opened) attempt.close();
+};
 
+/** Open one attempt's loopback listener and send the browser to it. */
+const openAttempt = (intent: AbacusAuthIntent): Attempt => {
   const verifier = crypto.randomBytes(32).toString("base64url");
   // A random path segment stands in for an OAuth `state`, so another local
   // process cannot drive the callback by guessing the port.
   const callbackPath = crypto.randomBytes(16).toString("hex");
 
-  return new Promise<AbacusAuthResult>((resolve) => {
-    let settled = false;
-    let accepted = false;
-    let timer: NodeJS.Timeout | null = null;
-    let linger: NodeJS.Timeout | null = null;
-    let outcome: ExchangeOutcome = { state: "pending" };
-    const abort = new AbortController();
+  let closed = false;
+  let accepted = false;
+  /** The press this attempt's tab is answering, while the exchange runs. */
+  let claimedBy: Waiter | null = null;
+  let timer: NodeJS.Timeout | null = null;
+  let linger: NodeJS.Timeout | null = null;
+  let outcome: ExchangeOutcome = { state: "pending" };
+  const abort = new AbortController();
 
-    const closeServer = (): void => {
-      if (linger != null) clearTimeout(linger);
-      // Drop keep-alive sockets too: server.close() alone waits for the
-      // browser's connection to idle out and the port stays held.
-      server.closeAllConnections?.();
-      server.close();
-    };
+  const closeServer = (): void => {
+    if (linger != null) clearTimeout(linger);
+    // Drop keep-alive sockets too: server.close() alone waits for the
+    // browser's connection to idle out and the port stays held.
+    server.closeAllConnections?.();
+    server.close();
+  };
 
-    const server = http.createServer((req, res) => {
-      // GET-only with a 127.0.0.1 Host, so a DNS-rebinding page fails the
-      // check; no-store keeps the response out of caches and history.
-      const host = (req.headers.host ?? "").toLowerCase();
-      if (
-        req.method !== "GET" ||
-        !/^(127\.0\.0\.1|localhost)(:\d+)?$/.test(host)
-      ) {
-        res.writeHead(404).end();
-        return;
-      }
+  /** Fail the waiting press if it is this attempt's. */
+  const failOwn = (
+    result: AbacusAuthResult,
+    reason?: string,
+    hint?: string
+  ): void => {
+    if (waiter?.attempt === attempt) waiter.settle(result, reason, hint);
+  };
 
-      const url = new URL(req.url ?? "/", "http://127.0.0.1");
+  /** No longer accepting; a result the tab is reading stays up briefly. */
+  const retire = (): void => {
+    attempts.delete(attempt);
+    if (timer != null) clearTimeout(timer);
+    if (outcome.state === "pending") closeServer();
+    else linger = setTimeout(closeServer, RESULT_LINGER_MS);
+  };
 
-      // The tab polls this after the redirect; the path is as unguessable as
-      // the callback itself and the body never carries the key.
-      if (url.pathname === `/${callbackPath}/result`) {
-        res
-          .writeHead(200, {
-            "content-type": "application/json",
-            "cache-control": "no-store",
-          })
-          .end(JSON.stringify(outcome), () => {
-            // Close only once the answer has left the socket.
-            if (outcome.state !== "pending") closeServer();
-          });
-        return;
-      }
+  const attempt: Attempt = {
+    opened: false,
+    close: () => {
+      if (closed) return;
+      closed = true;
+      failOwn(CANCELLED);
+      claimedBy?.settle(CANCELLED);
+      abort.abort();
+      retire();
+    },
+  };
 
-      if (url.pathname !== `/${callbackPath}`) {
-        res.writeHead(404).end();
-        return;
-      }
+  /** The exchange settled: tell the tab, and the press that claimed it. */
+  const settleWith = (
+    claimed: Waiter,
+    result: AbacusAuthResult,
+    reason?: string
+  ): void => {
+    if (closed) return;
+    closed = true;
+    if (result.ok) {
+      outcome = { state: "ok" };
+      // The first attempt back wins; every other press's listener closes.
+      for (const other of attempts) if (other !== attempt) other.close();
+    } else if (reason != null) outcome = { state: "failed", reason };
+    retire();
+    claimed.settle(result, reason);
+  };
 
-      // Single-shot: the first request consumes the flow; a replay gets none.
-      if (accepted) {
-        res.writeHead(409).end();
-        return;
-      }
-      accepted = true;
-      reportFunnelStep("browser_returned");
+  const server = http.createServer((req, res) => {
+    // GET-only with a 127.0.0.1 Host, so a DNS-rebinding page fails the
+    // check; no-store keeps the response out of caches and history.
+    const host = (req.headers.host ?? "").toLowerCase();
+    if (
+      req.method !== "GET" ||
+      !/^(127\.0\.0\.1|localhost)(:\d+)?$/.test(host)
+    ) {
+      res.writeHead(404).end();
+      return;
+    }
 
-      const code = url.searchParams.get("code");
-      // Answer the browser before the exchange so the tab says "done" at once.
+    const url = new URL(req.url ?? "/", "http://127.0.0.1");
+
+    // The tab polls this after the redirect; the path is as unguessable as
+    // the callback itself and the body never carries the key.
+    if (url.pathname === `/${callbackPath}/result`) {
       res
         .writeHead(200, {
-          "content-type": "text/html; charset=utf-8",
+          "content-type": "application/json",
           "cache-control": "no-store",
-          "referrer-policy": "no-referrer",
-          "x-content-type-options": "nosniff",
         })
-        .end(responsePage());
-
-      if (code == null || code.length === 0) {
-        finish(
-          {
-            ok: false,
-            error: "Abacus.AI did not return an authorization code.",
-          },
-          "no_code"
-        );
-        return;
-      }
-
-      void exchange(code, verifier, abort.signal).then(({ result, reason }) =>
-        finish(result, reason)
-      );
-    });
-
-    /**
-     * Settle the attempt. With a `reason` (or a success) the browser tab is
-     * still waiting to hear how the exchange went, so the listener lingers
-     * for it; a cancel or timeout has no tab to inform and closes at once.
-     */
-    const finish = (
-      result: AbacusAuthResult,
-      reason?: string,
-      // For the funnel report only: a failure with no tab to tell.
-      hint?: string
-    ): void => {
-      if (settled) return;
-      settled = true;
-      let outcomeCode = "ok";
-      // `=== false`, not `!`: the main tsconfig has strictNullChecks off, and
-      // only an equality check narrows the union there.
-      if (result.ok === false) {
-        outcomeCode =
-          reason ??
-          hint ??
-          (result.cancelled
-            ? "cancelled"
-            : result.error === ABACUS_TIMEOUT
-              ? "timeout"
-              : "listener");
-      }
-      reportFunnelStep("signin_result", outcomeCode);
-      if (timer != null) clearTimeout(timer);
-      abort.abort();
-      if (inFlight?.close === close) inFlight = null;
-      if (result.ok) outcome = { state: "ok" };
-      else if (reason != null) outcome = { state: "failed", reason };
-      if (outcome.state === "pending") closeServer();
-      else linger = setTimeout(closeServer, RESULT_LINGER_MS);
-      // A browser sign-in left the user in the browser: bring them back.
-      // win.focus() alone does not activate an app in the background on
-      // macOS; stealing focus is the point here, the user just finished.
-      if (result.ok) {
-        bringToFront();
-        try {
-          if (process.platform === "darwin") app.focus({ steal: true });
-        } catch {
-          // No `app` outside electron (tests).
-        }
-      }
-      resolve(result);
-    };
-
-    const close = (): void => {
-      finish({ ok: false, error: "Sign-in was cancelled.", cancelled: true });
-    };
-
-    server.on("error", (error) => {
-      finish({ ok: false, error: error.message });
-    });
-
-    inFlight = { close };
-
-    // Port 0 lets the OS pick; loopback-only so nothing off-machine reaches it.
-    server.listen(0, "127.0.0.1", () => {
-      if (settled) return;
-      const { port } = server.address() as AddressInfo;
-
-      timer = setTimeout(() => {
-        finish({
-          ok: false,
-          error: ABACUS_TIMEOUT,
+        .end(JSON.stringify(outcome), () => {
+          // Close only once the answer has left the socket.
+          if (outcome.state !== "pending") closeServer();
         });
-      }, AUTH_TIMEOUT_MS);
+      return;
+    }
 
-      const url = new URL(SIGNIN_PATH, abacusAppHost());
-      if (intent === "signup") url.searchParams.set("isSignUp", "1");
-      url.searchParams.set("AbacusAIBot", "1");
-      url.searchParams.set("botChallenge", codeChallengeFor(verifier));
-      url.searchParams.set("botPort", String(port));
-      url.searchParams.set("botPath", callbackPath);
-      reportFunnelStep("signup_clicked", "browser");
-      console.log(`[abacus-auth] sign-in intent: ${intent}`);
+    if (url.pathname !== `/${callbackPath}`) {
+      res.writeHead(404).end();
+      return;
+    }
 
-      void shell.openExternal(url.toString()).catch((error: unknown) => {
-        finish(
-          {
-            ok: false,
-            error:
-              error instanceof Error
-                ? error.message
-                : "Could not open the browser.",
-          },
-          undefined,
-          "open_browser"
-        );
-      });
+    // Single-shot: the first request consumes the flow; a replay gets none.
+    if (accepted || closed) {
+      res.writeHead(409).end();
+      return;
+    }
+    accepted = true;
+
+    // Whichever press is waiting now is the one this tab answers; taken, so
+    // a second tab coming back at the same moment cannot answer it too.
+    const claimed = waiter;
+    waiter = null;
+    claimedBy = claimed;
+    if (claimed == null) reportFunnelStep("browser_returned", "unclaimed");
+    else reportFunnelStep("browser_returned");
+
+    const code = url.searchParams.get("code");
+    // Answer the browser before the exchange so the tab says "done" at once.
+    res
+      .writeHead(200, {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+        "referrer-policy": "no-referrer",
+        "x-content-type-options": "nosniff",
+      })
+      .end(responsePage());
+
+    if (claimed == null) {
+      // Cancelled with no press since: nothing is waiting for a key, so none
+      // is minted, and the tab says to go back and try again.
+      closed = true;
+      outcome = { state: "failed", reason: "cancelled" };
+      retire();
+      return;
+    }
+
+    if (code == null || code.length === 0) {
+      settleWith(
+        claimed,
+        {
+          ok: false,
+          error: "Abacus.AI did not return an authorization code.",
+        },
+        "no_code"
+      );
+      return;
+    }
+
+    void exchange(code, verifier, abort.signal).then(({ result, reason }) =>
+      settleWith(claimed, result, reason)
+    );
+  });
+
+  server.on("error", (error) => {
+    failOwn({ ok: false, error: error.message });
+    attempt.close();
+  });
+
+  // The oldest press's listener makes room; it is the likeliest abandoned.
+  if (attempts.size >= MAX_OPEN_ATTEMPTS)
+    attempts.values().next().value?.close();
+  attempts.add(attempt);
+
+  // Port 0 lets the OS pick; loopback-only so nothing off-machine reaches it.
+  server.listen(0, "127.0.0.1", () => {
+    if (closed) return;
+    const { port } = server.address() as AddressInfo;
+
+    timer = setTimeout(() => {
+      failOwn({ ok: false, error: ABACUS_TIMEOUT });
+      attempt.close();
+    }, AUTH_TIMEOUT_MS);
+
+    const url = new URL(SIGNIN_PATH, abacusAppHost());
+    if (intent === "signup") url.searchParams.set("isSignUp", "1");
+    url.searchParams.set("AbacusAIBot", "1");
+    url.searchParams.set("botChallenge", codeChallengeFor(verifier));
+    url.searchParams.set("botPort", String(port));
+    url.searchParams.set("botPath", callbackPath);
+    reportFunnelStep("signup_clicked", "browser");
+    console.log(`[abacus-auth] sign-in intent: ${intent}`);
+
+    attempt.opened = true;
+    void shell.openExternal(url.toString()).catch((error: unknown) => {
+      failOwn(
+        {
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Could not open the browser.",
+        },
+        undefined,
+        "open_browser"
+      );
+      attempt.close();
     });
+  });
+
+  return attempt;
+};
+
+/**
+ * Sign-in in the system browser, where an existing abacus.ai session finishes
+ * it in one step. `signup` opens the sign-up form, `signin` the sign-in one.
+ * An earlier press still waiting is answered as cancelled, but its listener
+ * stays valid: its tab can finish this press.
+ */
+export const startAbacusAuth = (
+  intent: AbacusAuthIntent = "signup"
+): Promise<AbacusAuthResult> => {
+  cancelAbacusAuth();
+
+  return new Promise<AbacusAuthResult>((resolve) => {
+    let settled = false;
+    const self: Waiter = {
+      attempt: openAttempt(intent),
+      settle: (result, reason, hint) => {
+        if (settled) return;
+        settled = true;
+        if (waiter === self) waiter = null;
+        let outcomeCode = "ok";
+        // `=== false`, not `!`: the main tsconfig has strictNullChecks off, and
+        // only an equality check narrows the union there.
+        if (result.ok === false) {
+          outcomeCode =
+            reason ??
+            hint ??
+            (result.cancelled
+              ? "cancelled"
+              : result.error === ABACUS_TIMEOUT
+                ? "timeout"
+                : "listener");
+        }
+        reportFunnelStep("signin_result", outcomeCode);
+        // A browser sign-in left the user in the browser: bring them back.
+        // win.focus() alone does not activate an app in the background on
+        // macOS; stealing focus is the point here, the user just finished.
+        if (result.ok) {
+          bringToFront();
+          try {
+            if (process.platform === "darwin") app.focus({ steal: true });
+          } catch {
+            // No `app` outside electron (tests).
+          }
+        }
+        resolve(result);
+      },
+    };
+    waiter = self;
   });
 };
 

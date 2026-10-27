@@ -35,7 +35,8 @@ const FLOWS = [
   {
     name: "Abacus.AI",
     start: startAbacusAuth,
-    cancel: cancelAbacusAuth,
+    // Every press's listener, as sign-out does: a plain cancel keeps them.
+    cancel: () => cancelAbacusAuth({ everyAttempt: true }),
     timeoutMs: 20 * 60 * 1000,
   },
   {

@@ -80,7 +80,8 @@ export interface HostPlatformOperations {
   ) => WebAuth;
   startAbacusAuth: (intent: "signin" | "signup") => Promise<any>;
   startOpenRouterAuth: () => Promise<any>;
-  cancelAbacusAuth: () => void;
+  /** Stop waiting; `everyAttempt` also closes every press's listener. */
+  cancelAbacusAuth: (options?: { everyAttempt?: boolean }) => void;
   shouldAutoSignIn: () => Promise<boolean>;
   cancelOpenRouterAuth: () => void;
   clearSignInSession: () => Promise<void>;
@@ -351,8 +352,9 @@ export const createHostOperations = (
           )
         : 0;
 
-    // A sign-in still out would mint a key for an account that is leaving.
-    cancelAbacusAuth();
+    // A sign-in still out would mint a key for an account that is leaving,
+    // and so would a tab from any earlier press.
+    cancelAbacusAuth({ everyAttempt: true });
     await clearSignInSession();
 
     const settings = saveApiKey("abacus", "");

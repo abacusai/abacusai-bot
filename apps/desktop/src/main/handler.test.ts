@@ -101,6 +101,7 @@ import {
   fetchAbacusAccount,
   requestAbacusAccount,
 } from "./services/providers/abacus";
+import { cancelAbacusAuth } from "./services/providers/abacus-auth-service";
 import { fetchUpgradeUrl } from "./services/providers/abacus-upgrade";
 import {
   adoptWebAccount,
@@ -243,6 +244,9 @@ describe("acquiring an Abacus.AI key", () => {
 
     expect(stashSessionsForAccount).toHaveBeenCalledOnce();
     expect(saveApiKey).toHaveBeenCalledWith("abacus", "");
+    // A tab from any earlier sign-in press must not sign the departing
+    // account back in: every listener closes, not just the waiting one.
+    expect(cancelAbacusAuth).toHaveBeenCalledWith({ everyAttempt: true });
   });
 
   it("leaves other providers' keys out of it", async () => {
