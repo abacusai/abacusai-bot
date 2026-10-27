@@ -72,14 +72,21 @@ const isExpired = (record: McpTokenRecord): boolean =>
 /**
  * Exchange a refresh token for a fresh access token. Null means "sign in
  * again"; the stale record stays so the sign-in flow can still see the issuer.
+ * `url` is the record's key, the resource the desktop's sign-in named.
  */
-async function refresh(record: McpTokenRecord): Promise<McpTokenRecord | null> {
+async function refresh(
+  record: McpTokenRecord,
+  url: string
+): Promise<McpTokenRecord | null> {
   if (record.refreshToken == null) return null;
 
   const body = new URLSearchParams({
     grant_type: "refresh_token",
     refresh_token: record.refreshToken,
     client_id: record.clientId,
+    // RFC 8707, as on the sign-in: without it a renewed token carries no
+    // audience, and a server that checks one refuses it.
+    resource: url,
   });
 
   if (record.clientSecret != null)
@@ -149,7 +156,7 @@ export async function authHeadersForServer(
     return { Authorization: `Bearer ${record.accessToken}` };
   }
 
-  const renewed = await refresh(record);
+  const renewed = await refresh(record, url);
 
   if (renewed == null) return {};
 

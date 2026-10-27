@@ -113,4 +113,22 @@ describe("mcpTokenState", () => {
     });
     expect(mcpTokenState(url)).toBe("valid");
   });
+
+  it("names the server as the resource on the code exchange", async () => {
+    homes.push(homeWith({}));
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(Response.json({ access_token: "b" }));
+    await exchangeCode({
+      serverUrl: url,
+      metadata: { token_endpoint: "https://t" },
+      client: { clientId: "c" },
+      code: "code",
+      redirectUri: "https://r",
+      verifier: "v",
+    });
+    const init = fetchSpy.mock.calls[0]![1]!;
+    // Without it an audience-checking server (Zapier) refuses the token.
+    expect(new URLSearchParams(init.body as string).get("resource")).toBe(url);
+  });
 });
