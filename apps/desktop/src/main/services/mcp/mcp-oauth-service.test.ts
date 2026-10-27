@@ -128,7 +128,7 @@ describe("mcpTokenState", () => {
       verifier: "v",
     });
     const init = fetchSpy.mock.calls[0]![1]!;
-    // Without it an audience-checking server (Zapier) refuses the token.
+    // RFC 8707, as the MCP auth spec requires on token requests.
     expect(new URLSearchParams(init.body as string).get("resource")).toBe(url);
   });
 });

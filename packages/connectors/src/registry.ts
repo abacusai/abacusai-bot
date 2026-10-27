@@ -365,7 +365,9 @@ export const CONNECTORS: readonly Connector[] = [
     category: "productivity",
     auth: "oauth",
     docsUrl: "https://help.zapier.com/hc/en-us/articles/36265392843917",
-    entry: remote("https://mcp.zapier.com/api/mcp/mcp"),
+    // Not the older /api/mcp/mcp: it still runs the whole OAuth flow, then
+    // refuses every token it issued with 401 "Invalid authorization token".
+    entry: remote("https://mcp.zapier.com/api/v1/connect"),
   },
 
   // ── Productivity ────────────────────────────────────────────────────────

@@ -10,6 +10,7 @@
  *   history entries in `cronjobs.json` (spec 05 §31.5 f).
  * - 6 `message-reactions`: upgrades thread v2 records to v3.
  * - 7 `retire-local-models`: stored `local/<id>` picks to the app default.
+ * - 8 `zapier-connect-url`: Zapier servers and tokens to `/api/v1/connect`.
  */
 import type { MigrationStep } from "../types";
 import { transcriptsV2 } from "./001-transcripts-v2";
@@ -17,6 +18,7 @@ import { prefsFromRendererState } from "./002-prefs-from-renderer-state";
 import { routineAttemptIds } from "./005-routine-attempt-ids";
 import { messageReactions } from "./006-message-reactions";
 import { retireLocalModels } from "./007-retire-local-models";
+import { zapierConnectUrl } from "./008-zapier-connect-url";
 
 export const MIGRATION_STEPS: readonly MigrationStep[] = [
   transcriptsV2(),
@@ -24,4 +26,5 @@ export const MIGRATION_STEPS: readonly MigrationStep[] = [
   routineAttemptIds(),
   messageReactions(),
   retireLocalModels(),
+  zapierConnectUrl(),
 ];

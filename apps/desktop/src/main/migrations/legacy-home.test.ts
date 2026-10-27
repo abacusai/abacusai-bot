@@ -85,7 +85,7 @@ describe("migrating a legacy home", () => {
     delete before[path.relative(home, path.join(leftover, "prefs.json"))];
 
     const first = await migrate();
-    expect(first).toMatchObject({ applied: [1, 2, 5, 6, 7], failed: [] });
+    expect(first).toMatchObject({ applied: [1, 2, 5, 6, 7, 8], failed: [] });
     expect(first.recovered).toEqual([
       { staging: leftover, action: "discarded" },
     ]);
@@ -173,6 +173,11 @@ describe("migrating a legacy home", () => {
         name: "retire-local-models",
         stats: expect.objectContaining({ rewritten: 0 }),
       }),
+      expect.objectContaining({
+        id: 8,
+        name: "zapier-connect-url",
+        stats: expect.objectContaining({ rewritten: 0 }),
+      }),
     ]);
 
     const settled = hashes(home);
@@ -228,16 +233,19 @@ describe("migrating a legacy home", () => {
     });
   });
 
-  it("does not record step 2 when renderer-state.json exists but cannot be read, still runs 5, 6 and 7; the next launch imports it", async () => {
+  it("does not record step 2 when renderer-state.json exists but cannot be read, still runs 5 to 8; the next launch imports it", async () => {
     const state = path.join(userData, "renderer-state.json");
     const aside = path.join(root, "state-aside.json");
     fs.renameSync(state, aside);
     fs.mkdirSync(state); // EISDIR, as EACCES or EBUSY would be
 
     const first = await migrate();
-    expect(first).toMatchObject({ applied: [1, 5, 6, 7], failed: [{ id: 2 }] });
+    expect(first).toMatchObject({
+      applied: [1, 5, 6, 7, 8],
+      failed: [{ id: 2 }],
+    });
     expect(readRecord(home).applied.map((entry) => entry.id)).toEqual([
-      1, 5, 6, 7,
+      1, 5, 6, 7, 8,
     ]);
 
     fs.rmdirSync(state);

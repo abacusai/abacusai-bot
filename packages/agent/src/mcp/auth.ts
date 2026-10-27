@@ -84,8 +84,8 @@ async function refresh(
     grant_type: "refresh_token",
     refresh_token: record.refreshToken,
     client_id: record.clientId,
-    // RFC 8707, as on the sign-in: without it a renewed token carries no
-    // audience, and a server that checks one refuses it.
+    // RFC 8707, as on the sign-in: the MCP auth spec asks for it on every
+    // token request, so the renewed token stays bound to this server.
     resource: url,
   });
 
