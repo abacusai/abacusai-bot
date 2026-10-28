@@ -12,8 +12,8 @@ import type { StepContext } from "./context";
 import { StepBody, StepTitle } from "./kit";
 
 /**
- * The plan offer at the end of onboarding, for the accounts the platform's
- * experiment put in its offer arm: the plan's price and whole pitch, read from
+ * The plan offer at the end of onboarding, for the new free accounts the
+ * platform offers it to: the plan's price and whole pitch, read from
  * the billing plan, beside an equally weighted Start free. Either answer goes
  * on to the first-run screen; an account the plan read offers nothing (or a
  * failed read) goes on by itself, so the screen never holds anyone up.

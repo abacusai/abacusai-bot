@@ -57,7 +57,7 @@ describe("R6-T4 step machine and R6-T5 resume", () => {
     );
     expect(next("models", { type: "next" }, f, null)).toBe("connectors");
     expect(next("connectors", { type: "next" }, f, null)).toBe("first-bot");
-    // Only an account in the offer's arm sees it, and either way it ends at the first-run screen.
+    // Only an account the platform offers it sees it, and either way it ends at the first-run screen.
     expect(
       next("connectors", { type: "next" }, { ...f, offer: true }, null)
     ).toBe("offer");

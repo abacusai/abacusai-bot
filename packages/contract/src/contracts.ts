@@ -1575,8 +1575,8 @@ export interface AbacusAccountInfo {
   /** Where the user mostly works, from the platform's nightly read of their turns. */
   focus?: AbacusAccountFocus | null;
   /**
-   * Onboarding ends on the plan offer beside "Start free": the platform's
-   * experiment put this account in that arm. Absent from older servers: never.
+   * Onboarding ends on the plan offer beside "Start free": the platform offers
+   * it to this new free account. Absent from older servers: never.
    */
   onboarding_offer?: boolean;
 }

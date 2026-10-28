@@ -336,7 +336,7 @@ const factsOf = async (
     signedIn: canSignOutOfAbacus(settings),
     payingTier,
     ownsBot: context.db.collections.bots.toArray.length > 0,
-    // The platform decides the arm; a paid or held account never sees it.
+    // The platform decides who gets it; a paid or held account never sees it.
     offer:
       IS_ELECTRON &&
       account?.onboarding_offer === true &&

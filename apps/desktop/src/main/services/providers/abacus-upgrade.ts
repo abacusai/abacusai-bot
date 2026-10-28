@@ -86,7 +86,7 @@ export const fetchBillingPlan = async (
 
 /**
  * Records a step of the onboarding offer on the signed-in account, which the
- * platform counts per experiment arm. Fire and forget: onboarding never waits
+ * platform counts. Fire and forget: onboarding never waits
  * on it, and a lost step is not retried.
  */
 export const reportOnboardingOffer = (

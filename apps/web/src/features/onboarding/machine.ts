@@ -13,7 +13,7 @@ export interface FlowFacts {
   signedIn: boolean;
   payingTier: boolean;
   ownsBot: boolean;
-  /** Onboarding ends on the plan offer (the account's experiment arm), not yet answered. */
+  /** Onboarding ends on the plan offer (the platform offers it to this account), not yet answered. */
   offer?: boolean;
   /** Not from the host yet (spec 09 D12): render, but act on nothing. */
   provisional?: boolean;

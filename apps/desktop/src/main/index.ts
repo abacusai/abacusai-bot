@@ -1405,7 +1405,7 @@ const appOperations: AppOperations = {
     if (once === true) reportFunnelStepOnce(step, funnelDetail(detail));
     else reportFunnelStep(step, funnelDetail(detail));
     // The offer's steps also go on the account, whatever the diagnostics toggle:
-    // the experiment is read per account, and they carry nothing but the step.
+    // the offer is counted per account, and they carry nothing but the step.
     const offerStep = onboardingOfferAccountStep(step);
     if (offerStep != null) reportOnboardingOffer(offerStep);
   },
