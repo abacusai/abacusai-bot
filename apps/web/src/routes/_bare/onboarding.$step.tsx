@@ -53,6 +53,7 @@ import {
 } from "#renderer/features/sessions/start/start-session";
 import { startTour } from "#renderer/features/tour/store";
 import { UpgradeDialogHost } from "#renderer/features/upgrade-dialog";
+import { BUILD_STARTER_IDS } from "#renderer/lib/build-starters";
 import {
   ONBOARDING_STEPS,
   type OnboardingStepId,
@@ -198,7 +199,14 @@ const OnboardingRoute = () => {
     }
     switch (choice.kind) {
       case "build": {
-        const draftId = startBuildDraft(sponsored);
+        // An example sends at once; the card itself leaves the first one in
+        // the box to edit or send, the others a tap away under it.
+        const draftId = startBuildDraft(
+          sponsored,
+          choice.prompt == null
+            ? t(`sessions.start.build.${BUILD_STARTER_IDS[0]}.prompt`)
+            : undefined
+        );
         if (choice.prompt != null) queueStartPrompt(draftId, choice.prompt);
         await finish({ to: "new-session" });
         return;

@@ -165,6 +165,17 @@ export const SessionStartPage = ({
   useEffect(() => {
     if (resume) resumeStart();
   }, [resume]);
+  // Onboarding's Build opens on an example in the box: the cursor waits at its end.
+  const build = draft.starters === "build";
+  useEffect(() => {
+    if (!build) return;
+    const frame = requestAnimationFrame(() =>
+      document
+        .querySelector<HTMLTextAreaElement>('[data-slot="composer"] textarea')
+        ?.focus()
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [build]);
   const id = `draft:${draft.id}`;
   const starters =
     draft.starters === "build"
