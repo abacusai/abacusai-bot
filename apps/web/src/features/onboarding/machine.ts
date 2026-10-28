@@ -13,6 +13,8 @@ export interface FlowFacts {
   signedIn: boolean;
   payingTier: boolean;
   ownsBot: boolean;
+  /** Onboarding ends on the plan offer (the platform offers it to this account), not yet answered. */
+  offer?: boolean;
   /** Not from the host yet (spec 09 D12): render, but act on nothing. */
   provisional?: boolean;
 }
@@ -60,11 +62,19 @@ export const next = (
           : "ignore";
     case "connectors":
       return event.type === "next"
-        ? "first-bot"
+        ? facts.offer === true
+          ? "offer"
+          : "first-bot"
         : event.type === "back"
           ? facts.payingTier || !IS_ELECTRON
             ? "connected"
             : "models"
+          : "ignore";
+    case "offer":
+      return event.type === "next"
+        ? "first-bot"
+        : event.type === "back"
+          ? "connectors"
           : "ignore";
     case "first-bot":
       return event.type === "next"
@@ -102,6 +112,7 @@ export const guardStep = (
   if (!facts.signedIn && step !== "welcome" && step !== "connect")
     return "welcome";
   if (step === "done") return "first-bot";
+  if (step === "offer" && facts.offer !== true) return "first-bot";
   return step;
 };
 export const needsOnboarding = (

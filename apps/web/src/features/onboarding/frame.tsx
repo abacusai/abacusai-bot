@@ -34,6 +34,7 @@ export const PROGRESS_MARK: Record<OnboardingStepId, number> = {
   connected: 2,
   models: 3,
   connectors: 4,
+  offer: 5,
   "first-bot": 5,
   done: 5,
 };

@@ -636,6 +636,7 @@ export const requestAbacusAccount = async (
           : {}),
         focus:
           ABACUS_ACCOUNT_FOCI.find((focus) => focus === body.focus) ?? null,
+        onboarding_offer: body.onboarding_offer === true,
       },
     };
   } catch {

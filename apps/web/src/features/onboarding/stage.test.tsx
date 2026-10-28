@@ -113,10 +113,16 @@ it("keeps companions visible while the cloud and Chief anchor completion", () =>
     expect(stage.slots[0]?.main).toBe(true);
     expect(stage.slots[0]?.look).toEqual(defaultLook("AbacusAI Bot"));
   }
-  for (const step of ["models", "connectors", "first-bot", "done"] as const) {
+  for (const step of [
+    "models",
+    "connectors",
+    "offer",
+    "first-bot",
+    "done",
+  ] as const) {
     const stage = stageFor(step, bot, "ready");
     expect(stage.slots.filter((slot) => slot.main)).toHaveLength(2);
-    if (step === "models" || step === "connectors")
+    if (step === "models" || step === "connectors" || step === "offer")
       expect(stage.height).toBe(56);
     else {
       const pair = stage.slots.filter((slot) => slot.main);

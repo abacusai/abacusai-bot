@@ -68,12 +68,35 @@ export const FUNNEL_STEPS = [
   "cutoff_verify",
   // The same, in the user's own chat app; the detail is the platform.
   "cutoff_chat_told",
+  // The Basic offer at the end of onboarding (the platform's onboarding offer).
+  "onboarding_offer_shown",
+  "onboarding_offer_upgrade",
+  "onboarding_offer_skip",
 ] as const;
 
 export type FunnelStep = (typeof FUNNEL_STEPS)[number];
 
 export const isFunnelStep = (value: unknown): value is FunnelStep =>
   FUNNEL_STEPS.includes(value as FunnelStep);
+
+/** The onboarding offer's steps the account records as well, by the platform's names for them. */
+export const ONBOARDING_OFFER_ACCOUNT_STEPS = {
+  onboarding_offer_shown: "shown",
+  onboarding_offer_upgrade: "upgrade",
+  onboarding_offer_skip: "skip",
+} as const satisfies Partial<Record<FunnelStep, string>>;
+
+export type OnboardingOfferAccountStep =
+  (typeof ONBOARDING_OFFER_ACCOUNT_STEPS)[keyof typeof ONBOARDING_OFFER_ACCOUNT_STEPS];
+
+export const onboardingOfferAccountStep = (
+  step: FunnelStep
+): OnboardingOfferAccountStep | null =>
+  step in ONBOARDING_OFFER_ACCOUNT_STEPS
+    ? ONBOARDING_OFFER_ACCOUNT_STEPS[
+        step as keyof typeof ONBOARDING_OFFER_ACCOUNT_STEPS
+      ]
+    : null;
 
 /** A detail is a short code, never free text. */
 export const funnelDetail = (value: unknown): string =>

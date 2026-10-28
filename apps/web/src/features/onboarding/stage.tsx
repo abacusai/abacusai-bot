@@ -88,6 +88,12 @@ export const CHOREOGRAPHY: Record<OnboardingStepId, readonly Keyframe[]> = {
     frame(0, 0, 0.5, "idle"),
     frame(0, 0, 0.32, "focused"),
   ],
+  offer: [
+    frame(0, 0, 0.68, "happy"),
+    frame(0, 0, 0.32, "love"),
+    frame(0, 0, 0.5, "idle"),
+    frame(0, 0, 0.32, "excited"),
+  ],
   "first-bot": [
     frame(-52, 8, 1.08, "excited"),
     frame(-55, -65, 0.65, "happy"),
@@ -108,9 +114,13 @@ const CAST: Record<OnboardingStepId, readonly StageAvatarId[]> = {
   connected: ["parade-blob", "parade-bunny", "parade-cat"],
   models: ["parade-blob", "parade-cat"],
   connectors: ["parade-blob", "parade-cat"],
+  offer: ["parade-blob", "parade-cat"],
   "first-bot": ["parade-blob", "first-bot"],
   done: ["parade-blob", "first-bot"],
 };
+// Dense steps: the pair flanks the content instead of standing above the heading.
+const flanks = (step: OnboardingStepId): boolean =>
+  step === "models" || step === "connectors" || step === "offer";
 export const botLook = (bot: BotRow): Look =>
   resolveLook({
     name: bot.name,
@@ -122,7 +132,7 @@ export const stageFor = (
   bot: BotRow | null,
   phase: FirstBotPhase
 ): Stage => ({
-  height: step === "models" || step === "connectors" ? 56 : 112,
+  height: flanks(step) ? 56 : 112,
   slots: IDS.map((id, index) => ({
     id,
     visible: (step !== "done" && step !== "first-bot") || id !== "parade-bunny",
@@ -156,7 +166,7 @@ export const OnboardingStage = ({
 }) => {
   const root = useRef<HTMLDivElement>(null);
   const { slots, height } = stageFor(step, bot, phase);
-  const flank = step === "models" || step === "connectors";
+  const flank = flanks(step);
   const looks = cast.map(botLook);
   const [reaction, setReaction] = useState<"happy" | "excited" | null>(null);
   useEffect(() => {

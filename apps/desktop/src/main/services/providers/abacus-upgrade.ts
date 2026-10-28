@@ -1,4 +1,5 @@
 import type { BillingPlan } from "@abacus-ai/contract/billing-plan";
+import type { OnboardingOfferAccountStep } from "@abacus-ai/contract/funnel";
 
 import { credentialFor } from "../config/settings";
 import { abacusApiCall } from "./abacus-connector-service";
@@ -81,4 +82,20 @@ export const fetchBillingPlan = async (
   );
   if (!ok || result == null || typeof result !== "object") return null;
   return result as BillingPlan;
+};
+
+/**
+ * Records a step of the onboarding offer on the signed-in account, which the
+ * platform counts. Fire and forget: onboarding never waits
+ * on it, and a lost step is not retried.
+ */
+export const reportOnboardingOffer = (
+  step: OnboardingOfferAccountStep
+): void => {
+  void abacusApiCall(
+    "_logAbacusbotOnboardingOffer",
+    "POST",
+    { step },
+    10_000
+  ).catch(() => {});
 };

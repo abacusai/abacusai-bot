@@ -31,6 +31,7 @@ import { DoneStep } from "./steps/done";
 import { FirstBotStep } from "./steps/first-bot";
 import { StepTitle } from "./steps/kit";
 import { ModelsStep } from "./steps/models";
+import { OfferStep } from "./steps/offer";
 import { WelcomeStep } from "./steps/welcome";
 import { onboardingStore } from "./store";
 import { useFinalHandoff } from "./use-final-handoff";
@@ -72,6 +73,9 @@ export const primaryAction = (
       return actions.advance;
     case "connectors":
       return actions.continueConnectors;
+    // Neither answer is the default: Enter picks no side of the offer.
+    case "offer":
+      return null;
     case "first-bot":
       return actions.hello;
     case "done":
@@ -350,6 +354,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
           heading={heading}
         />
       )}
+      {step === "offer" && <OfferStep ctx={ctx} heading={heading} />}
       {step === "first-bot" && first.state !== "skipped" && (
         <FirstBotStep
           ctx={ctx}

@@ -52,7 +52,10 @@ import {
   startBuildDraft,
 } from "#renderer/features/sessions/start/start-session";
 import { startTour } from "#renderer/features/tour/store";
-import { UpgradeDialogHost } from "#renderer/features/upgrade-dialog";
+import {
+  PlanPitchList,
+  UpgradeDialogHost,
+} from "#renderer/features/upgrade-dialog";
 import { BUILD_STARTER_IDS } from "#renderer/lib/build-starters";
 import {
   ONBOARDING_STEPS,
@@ -282,6 +285,7 @@ const OnboardingRoute = () => {
         createFirstBot={create}
         choose={choose}
         connect={connect}
+        planPitch={(billing) => <PlanPitchList billing={billing} />}
       />
       {pairing && step === "connectors" && (
         <MessagingPlatformDialog
@@ -327,10 +331,18 @@ const factsOf = async (
     context.transport.client.settings.get({}, { signal }),
     context.transport.client.account.abacus({}, { signal }),
   ]);
+  const payingTier = isPayingAbacusTier(account?.subscription_tier);
   return {
     signedIn: canSignOutOfAbacus(settings),
-    payingTier: isPayingAbacusTier(account?.subscription_tier),
+    payingTier,
     ownsBot: context.db.collections.bots.toArray.length > 0,
+    // The platform decides who gets it; a paid or held account never sees it.
+    offer:
+      IS_ELECTRON &&
+      account?.onboarding_offer === true &&
+      !payingTier &&
+      account.free_credits_held !== true &&
+      onboardingStore.state.offerAnswered !== true,
   };
 };
 /**
@@ -408,6 +420,14 @@ export const Route = createFileRoute("/_bare/onboarding/$step")({
       ).catch(() => undefined);
     if (params.step === "first-bot")
       await context.db.collections.routines.preload();
+    if (params.step === "offer")
+      void warm(
+        context.queryClient.ensureQueryData(
+          context.transport.orpc.account.billingPlan.queryOptions({
+            input: {},
+          })
+        )
+      ).catch(() => undefined);
     return { facts: await factsOf(context, signal) };
   },
   component: OnboardingRoute,

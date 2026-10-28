@@ -1,5 +1,7 @@
+import type { BillingPlan } from "@abacus-ai/contract/billing-plan";
 import type { HomeChannel } from "@abacus-ai/contract/bots";
 import type { TFunction } from "i18next";
+import type { ReactNode } from "react";
 
 import type { Transport } from "#renderer/data/transport";
 import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
@@ -25,6 +27,8 @@ export interface OnboardingPageProps {
   createFirstBot(id: string): Promise<FirstBotResult | null>;
   choose(choice: FirstChoice): Promise<void>;
   connect?(id: string): Promise<unknown>;
+  /** The plan's whole pitch for the offer step, composed by the route (the upgrade dialog's list). */
+  planPitch?(billing: BillingPlan | null): ReactNode;
 }
 
 /** What every step body gets from the page. */

@@ -20,7 +20,11 @@ import type {
   AbacusAccountInfo,
   UsageSnapshot,
 } from "@abacus-ai/contract/contracts";
-import { funnelDetail, isFunnelStep } from "@abacus-ai/contract/funnel";
+import {
+  funnelDetail,
+  isFunnelStep,
+  onboardingOfferAccountStep,
+} from "@abacus-ai/contract/funnel";
 import { THEME_FILE_MAX_BYTES } from "@abacus-ai/contract/look";
 import {
   canSignOutOfAbacus,
@@ -141,6 +145,7 @@ import {
 import { logStore, RETENTION_DAYS } from "./services/diagnostics/log-store";
 import { buildZip, type ZipFile } from "./services/diagnostics/zip-write";
 import { fetchAbacusAccount } from "./services/providers/abacus";
+import { reportOnboardingOffer } from "./services/providers/abacus-upgrade";
 import {
   readAccountState,
   forgetAccount,
@@ -1399,6 +1404,10 @@ const appOperations: AppOperations = {
     // `once`: the persisted first-time report (spec 06 §6.5).
     if (once === true) reportFunnelStepOnce(step, funnelDetail(detail));
     else reportFunnelStep(step, funnelDetail(detail));
+    // The offer's steps also go on the account, whatever the diagnostics toggle:
+    // the offer is counted per account, and they carry nothing but the step.
+    const offerStep = onboardingOfferAccountStep(step);
+    if (offerStep != null) reportOnboardingOffer(offerStep);
   },
 
   // The local account; see shared/account.ts for why it is optional.
