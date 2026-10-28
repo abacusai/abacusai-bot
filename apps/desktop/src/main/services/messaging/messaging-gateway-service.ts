@@ -151,6 +151,23 @@ const REPLY_REMINDER =
   'never send "hold on" or "let me check".';
 
 /**
+ * Where a relayed turn's answer lands, said on every such turn: a phone,
+ * where a path, a localhost link or the app's files card opens nothing. One
+ * fixed line per chat app and audience, so it never varies turn to turn.
+ */
+const chatReplyNote = (
+  platform: MessagingPlatformId,
+  owner: boolean
+): string =>
+  owner
+    ? `[Replying in ${platformLabel(platform)} on the user's phone] Files you made reach them only ` +
+      "through present_deliverable, which sends them into this chat. Put short code (up to about " +
+      "3,000 characters) inline in a code block. Never give a file path, a localhost or 127.0.0.1 " +
+      "link, or point to a card: none of these open on a phone."
+    : `[Replying in ${platformLabel(platform)}] Never give a file path, a localhost or 127.0.0.1 ` +
+      "link, or point to a card: none of these open on their phone, and no file is sent to them.";
+
+/**
  * How many messages may wait behind a running turn. Every queued message
  * becomes a billed agent turn, so an unbounded queue is a spending leak. Past
  * the cap the sender is told once rather than silently dropped.
@@ -1250,25 +1267,26 @@ export class MessagingGatewayService {
     const framed = route.viaBot ? `[${route.senderLabel}] ${text}` : text;
     // The rules preamble rides on the first prompt, never as a message of its
     // own, so no inbound message is seen before the rules; a one-line
-    // reminder on every later turn keeps them in front of the model.
-    const prompt =
-      route.pendingIntro != null
-        ? `${route.pendingIntro}\n\n${framed}`
+    // reminder on every later turn keeps them in front of the model. Every
+    // turn also says where its answer lands: a phone, not the app.
+    const prompt = [
+      ...(route.pendingIntro != null
+        ? [route.pendingIntro]
         : route.viaBot && !route.owner
-          ? `${REPLY_REMINDER}\n\n${framed}`
-          : framed;
-    const userText: UserTextTags | undefined =
-      prompt === framed
-        ? undefined
-        : {
-            operator: {
-              kind:
-                route.pendingIntro != null
-                  ? "auto-reply-intro"
-                  : "auto-reply-reminder",
-              visibleFrom: prompt.length - framed.length,
-            },
-          };
+          ? [REPLY_REMINDER]
+          : []),
+      chatReplyNote(route.platform, route.owner),
+      framed,
+    ].join("\n\n");
+    const userText: UserTextTags = {
+      operator: {
+        kind:
+          route.pendingIntro != null
+            ? "auto-reply-intro"
+            : "auto-reply-reminder",
+        visibleFrom: prompt.length - framed.length,
+      },
+    };
     route.pendingIntro = null;
     // Echoed at dispatch, not arrival, so a queued message lands in the
     // transcript next to the turn it started. The rules ride along to the

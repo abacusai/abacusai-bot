@@ -207,11 +207,19 @@ it("tags the sender intro and later reminder at the framed message boundary", as
   const intro = "[auto-reply] rules 😀 for this sender";
   const h = harness(intro);
   await h.inbound("C1", "U1", "Ada", "hello\n\nnext paragraph");
+  // Between the rules and the message: where the answer lands, and what
+  // never goes there.
+  const note =
+    "[Replying in Discord] Never give a file path, a localhost or 127.0.0.1 " +
+    "link, or point to a card: none of these open on their phone, and no file is sent to them.";
   expect(h.prompts[0]).toBe(
-    `${intro}\n\n[Discord message from Ada] hello\n\nnext paragraph`
+    `${intro}\n\n${note}\n\n[Discord message from Ada] hello\n\nnext paragraph`
   );
   expect(h.tags[0]).toEqual({
-    operator: { kind: "auto-reply-intro", visibleFrom: intro.length + 2 },
+    operator: {
+      kind: "auto-reply-intro",
+      visibleFrom: intro.length + note.length + 4,
+    },
   });
   expect(visibleUserText(h.prompts[0]!, h.tags[0])).toBe(
     "[Discord message from Ada] hello\n\nnext paragraph"

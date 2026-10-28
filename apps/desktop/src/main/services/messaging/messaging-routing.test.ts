@@ -115,7 +115,9 @@ describe("messages arriving while the agent is working", () => {
   it("sends follow-ups from the same chat into the running turn, in order", async () => {
     const h = harness();
     await h.inbound("first");
-    expect(h.prompts).toEqual(["first"]);
+    expect(h.prompts).toEqual([
+      expect.stringMatching(/^\[Replying in Discord\] .*\n\nfirst$/s),
+    ]);
 
     // Ten, not more: the loop breaker caps one chat's bursts on its own.
     for (let i = 0; i < 10; i += 1) await h.inbound(`follow-up ${i}`);
@@ -138,6 +140,8 @@ describe("messages arriving while the agent is working", () => {
 
     h.idle();
 
-    expect(h.prompts).toEqual(["first", "second"]);
+    // The first prompt says where the answer lands; a steered one is the
+    // message alone.
+    expect(h.prompts).toEqual([expect.stringMatching(/\n\nfirst$/), "second"]);
   });
 });
