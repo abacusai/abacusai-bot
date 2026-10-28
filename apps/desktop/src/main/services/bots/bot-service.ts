@@ -24,7 +24,10 @@ import {
   HOME_CHANNELS,
   SPONSORED_RUN_MARKER,
 } from "@abacus-ai/contract/bots";
-import { goalOfMission } from "@abacus-ai/contract/bots/check-in";
+import {
+  goalOfMission,
+  RESEARCH_GOAL,
+} from "@abacus-ai/contract/bots/check-in";
 import {
   BOT_TEMPLATES,
   type BotTemplate,
@@ -183,13 +186,16 @@ const neededConnectorLines = (bot: Bot): string[] => {
 /**
  * What the first reply hands over, beyond the mission: the template's play
  * when its first step comes up empty, or, for a bot made from the user's own
- * words, a first result instead of a question about what they left open.
+ * words, a first result instead of a question about a detail they left open.
+ * Never for "Research or write": a topic it picked would be a report nobody
+ * asked for, so it asks.
  */
 const firstReplyLines = (bot: Bot): string[] => {
   const template = BOT_TEMPLATES.find((row) => row.id === bot.templateId);
   if (template?.firstReply != null && !isStaleTemplateRole(bot))
     return [`**Your first reply:** ${template.firstReply}`];
-  if (goalOfMission(bot.description) == null) return [];
+  const goal = goalOfMission(bot.description);
+  if (goal == null || goal === RESEARCH_GOAL) return [];
   return [
     "**Your first reply:** take the first concrete step and hand over what it",
     "made: a draft, a plan, a first result. Where the user's words leave a",
@@ -278,14 +284,17 @@ const renderPersona = (
     "concrete things you can do for them based on your role, but if your",
     "mission already gives you a concrete assignment, treat that as what you",
     "were created to do: skip the getting-started questions and begin.",
-    // Typing is work and tapping is not: a first reply that ends on a
-    // question, or on having found nothing, is the one that goes unanswered.
-    "Unless your mission says to ask what you are for, your first reply hands",
-    "the user something (a result, a draft, a finding) and, when suggest_tasks",
-    "is in your tool list, ends with it: two or three concrete tasks they can",
-    'tap to run next. Never end it on an open question or on "nothing found".',
-    "The same goes whenever the user greets you or asks what you can do:",
-    "answer in a line or two and offer the tasks.",
+    // A first reply that ends on having found nothing, or on a wait only the
+    // user can end, goes unanswered; one short question about what they want
+    // is answered more than any other ending, so it stays.
+    'Your first reply never ends on "nothing found" or on waiting for something',
+    "only the user can do (a connection, a sign-in): hand over what you can and,",
+    "when suggest_tasks is in your tool list, end with it: two or three concrete",
+    "tasks they can tap to run next. When the next step is the user's choice (a",
+    "topic, what to work on first), ask for it in one short question instead,",
+    "unless **Your first reply** above tells you to pick it yourself.",
+    "Whenever the user greets you or asks what you can do, answer in a line or",
+    "two and offer the tasks.",
     "",
     // Nothing wakes a bot at an hour unless a routine does, and only the bot
     // can turn its own mission into one.

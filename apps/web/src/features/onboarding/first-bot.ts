@@ -35,17 +35,6 @@ export const chatAppTemplateId = (app: HomeChannel): string => {
     throw new Error(`No agent template for ${app}.`);
   return agent;
 };
-/**
- * The "Research or write" pick's goal, as GOAL_MISSION words. No topic is
- * named yet, and a first reply that asks for one is the one left
- * unanswered: the bot starts on a sample and the user names their own next.
- */
-export const RESEARCH_GOAL =
-  "Research or write something for me: a report, a deck or a document, " +
-  "using the web or files on this computer. I have not named a topic yet, " +
-  "and do not ask me for one first: start with a short sample (a one-page " +
-  "brief) on a topic you pick from what you know about me or the files " +
-  "here, else something timely and broadly useful, and I will name my own next";
 /** A chat app just connected in onboarding: its card leads the first-run choices. */
 export const noteConnectedChatApp = (chatApp: HomeChannel): void => {
   onboardingStore.setState((state) => ({ ...state, chatApp }));

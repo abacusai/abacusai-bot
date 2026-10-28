@@ -1,4 +1,5 @@
 import { connectorById } from "@abacus-ai/connectors/registry";
+import { RESEARCH_GOAL } from "@abacus-ai/contract/bots/check-in";
 import {
   isMessagingPlatformConnected,
   type MessagingPlatformId,
@@ -32,7 +33,6 @@ import {
   chatAppTemplateId,
   firstBotStore,
   noteConnectedChatApp,
-  RESEARCH_GOAL,
   watchInboxPass,
   type FirstChoice,
 } from "#renderer/features/onboarding/first-bot";
