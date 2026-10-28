@@ -14,6 +14,8 @@ export interface BillingPlanTier {
   firstMonthPriceCents?: number;
   priceCents?: number;
   percentOff?: number;
+  /** The credits a promoted first month grants; the monthly credits without a promotion (absent from older servers). */
+  firstMonthCredits?: number;
   features: string[];
 }
 
@@ -69,6 +71,23 @@ export function planPrice(
     });
   return tier.priceText;
 }
+
+/**
+ * The credits a plan's promoted first month grants, when they are fewer than
+ * its monthly credits; null otherwise: no promotion, an older server, or the
+ * account's own plan, whose first month is behind it. Every line that states
+ * a plan's credits reads this, so none promises the monthly figure for a first
+ * month that grants less.
+ */
+export const firstMonthCredits = (
+  tier: { firstMonthCredits?: number; current?: boolean } | null | undefined,
+  monthly: number
+): number | null => {
+  const first = tier?.firstMonthCredits;
+  return tier?.current !== true && first != null && first < monthly
+    ? first
+    : null;
+};
 
 /** The plan the wall offers: the first upgrade the account has. */
 export const wallOffer = (
@@ -155,7 +174,8 @@ export const PITCH_LINES: readonly PitchLine[] = [
 
 /**
  * Every line of the offered plan's pitch, in the reader's language and in
- * `order`: its monthly credits against the current plan's, the leading models
+ * `order`: its monthly credits against the current plan's (after a promoted
+ * first month's, when it grants fewer), the leading models
  * its feature line names, the app projects a month its apps line names, and
  * what it gives. Credits, models and projects come from billing_plan, so the
  * app names no figure or model of its own; a line it cannot read is left out
@@ -181,19 +201,28 @@ export function planPitch(
     monthly != null && free != null && free > 0
       ? Math.round(monthly / free)
       : null;
+  const first = monthly != null ? firstMonthCredits(offer, monthly) : null;
   const models = offer != null ? planTopModels(offer.features, locale) : null;
   const projects = offer != null ? planAppProjects(offer.features) : null;
   const line = (name: PitchLine): string | null => {
     switch (name) {
       case "credits":
-        return monthly == null
-          ? null
-          : t(
-              times != null && times >= 2
-                ? "outcome.pitch.credits"
-                : "outcome.pitch.creditsOnly",
-              { credits: number(monthly), times: times ?? 0 }
-            );
+        if (monthly == null) return null;
+        const against = times != null && times >= 2;
+        return t(
+          first != null
+            ? against
+              ? "outcome.pitch.introCredits"
+              : "outcome.pitch.introCreditsOnly"
+            : against
+              ? "outcome.pitch.credits"
+              : "outcome.pitch.creditsOnly",
+          {
+            credits: number(monthly),
+            times: times ?? 0,
+            ...(first != null ? { first: number(first) } : {}),
+          }
+        );
       case "models":
         return models != null ? t("outcome.pitch.models", { models }) : null;
       case "apps":

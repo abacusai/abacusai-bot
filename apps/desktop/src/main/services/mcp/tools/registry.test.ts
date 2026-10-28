@@ -220,6 +220,58 @@ describe("billing_plan's answer", () => {
       "Basic: $7 for the first month (30% off the usual $10/mo), then $10/mo, link: https://example.test/upgrade"
     );
     expect(text).toContain("  - Image and video generation");
+    expect(text).toContain(
+      "Basic: $7 for the first month (30% off the usual $10/mo), then $10/mo, 20,000 credits a month\n"
+    );
+  });
+
+  it("states a promoted first month's credits before the monthly ones, and never on the account's own plan", async () => {
+    const { appBillingResult } = await import("./billing");
+    const tier = {
+      plan: "basic",
+      planName: "Basic",
+      priceText: "$10/mo",
+      firstMonthPriceCents: 700,
+      priceCents: 1000,
+      firstMonthCredits: 14000,
+      features: [],
+    };
+    const result = appBillingResult(
+      {
+        ok: (text: string) => ({ content: [{ type: "text", text }] }),
+      } as never,
+      {
+        current: {
+          planName: "Free",
+          creditsRemaining: 0,
+          creditsGranted: 2000,
+          freeTierExpiresAt: null,
+        },
+        plans: [
+          {
+            plan: "free",
+            planName: "Free",
+            priceText: "Free",
+            features: [],
+            firstMonthCredits: 1000,
+            creditsPerMonth: 2000,
+            current: true,
+          },
+          { ...tier, creditsPerMonth: 20000, current: false },
+        ],
+        upgrades: [{ ...tier, url: "https://example.test/upgrade" }],
+        topUpUrl: null,
+        upgradeInMobileApp: false,
+      }
+    ) as unknown as { content: Array<{ text: string }> };
+    const text = result.content[0]!.text;
+    expect(text).toContain(
+      "Basic gives 14,000 credits in the first month, then a fresh 20,000 every month."
+    );
+    expect(text).toContain(
+      ", 14,000 credits in the first month, then 20,000 credits a month\n"
+    );
+    expect(text).toContain("Free: Free, 2,000 credits a month (their plan)");
   });
 });
 

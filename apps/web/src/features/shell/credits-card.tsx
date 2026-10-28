@@ -262,8 +262,8 @@ export const UpgradePromo = () => {
                   {t("upgradeDialog.planTitle", { plan: offer.planName })}
                 </p>
               )}
-              {/* Whole on a tall window; on a short one it scrolls in place, so the sessions above keep their room. */}
-              <div className="scroll-fade-y max-h-[clamp(5rem,calc(100vh_-_34rem),20rem)] overflow-y-auto overscroll-contain">
+              {/* Whole from an 800px window up, three sessions still above it; shorter, it scrolls in place. */}
+              <div className="scroll-fade-y max-h-[clamp(5rem,calc(100vh_-_28rem),24rem)] overflow-y-auto overscroll-contain">
                 <PlanPitchList
                   billing={billing.data}
                   className="gap-1.5 [&_li]:gap-2 [&_li]:text-xs/4 [&_svg]:mt-px [&_svg]:size-3.5"

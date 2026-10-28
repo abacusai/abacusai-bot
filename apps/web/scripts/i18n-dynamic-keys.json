@@ -1585,6 +1585,8 @@
     "values": [
       "credits",
       "creditsOnly",
+      "introCredits",
+      "introCreditsOnly",
       "models",
       "media",
       "agents",

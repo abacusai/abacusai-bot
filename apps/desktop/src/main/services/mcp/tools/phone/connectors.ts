@@ -4,6 +4,7 @@ import type { BillingPlan } from "@abacus-ai/contract/billing-plan";
 
 import { fetchAbacusAccount, onFreePlan } from "../../../providers/abacus";
 import { fetchBillingPlan } from "../../../providers/abacus-upgrade";
+import { creditsLine } from "../billing";
 import type { ConnectOutcome, DisconnectOutcome } from "../connect-outcome";
 import type { ToolHost, ToolResult } from "../definition";
 import type { PhoneToolDefinition } from "./definition";
@@ -143,9 +144,7 @@ const offerLines = (billing: BillingPlan): string[] =>
     )?.creditsPerMonth;
     return [
       `${upgrade.planName}: ${upgrade.priceText}` +
-        (credits != null
-          ? `, ${Math.round(credits).toLocaleString("en-US")} credits a month`
-          : "") +
+        (credits != null ? `, ${creditsLine(upgrade, credits)}` : "") +
         (upgrade.url != null ? `, link: ${upgrade.url}` : ""),
       ...upgrade.features.map((feature) => `  - ${feature}`),
     ];

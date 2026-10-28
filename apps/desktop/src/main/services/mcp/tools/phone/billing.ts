@@ -4,7 +4,7 @@ import { fetchBillingPlan } from "../../../providers/abacus-upgrade";
 import {
   alwaysOnAnswer,
   bullets,
-  credits,
+  creditsLine,
   creditStanding,
   planFacts,
   priceLine,
@@ -29,7 +29,7 @@ export function phoneBillingResult(
   lines.push("", "The plans:");
   for (const plan of billing.plans)
     lines.push(
-      `${plan.planName}: ${priceLine(plan)}, ${credits(plan.creditsPerMonth)} credits a month${plan.current ? " (their plan)" : ""}`,
+      `${plan.planName}: ${priceLine(plan)}, ${creditsLine(plan, plan.creditsPerMonth)}${plan.current ? " (their plan)" : ""}`,
       ...bullets(plan.features)
     );
   if (billing.upgrades.length > 0) {

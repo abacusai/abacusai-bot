@@ -4455,6 +4455,8 @@
     "pitch": {
       "credits": "毎月 {{credits}} クレジット（無料プランの {{times}} 倍）",
       "creditsOnly": "毎月 {{credits}} クレジット",
+      "introCredits": "初月 {{first}} クレジット、以降毎月 {{credits}} クレジット（無料プランの {{times}} 倍）",
+      "introCreditsOnly": "初月 {{first}} クレジット、以降毎月 {{credits}} クレジット",
       "models": "トップモデル: {{models}}",
       "media": "画像と動画の生成",
       "agents": "Web 版 Abacus AI Agent で 24 時間 365 日、パソコンの電源が切れていても動くパーソナルエージェント: WhatsApp・Discord・Telegram の自動返信、すべてのルーティン、そしてボットがすること全部",
