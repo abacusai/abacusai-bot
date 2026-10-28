@@ -424,7 +424,8 @@
         "connect": "{{provider}} hizmetine bağlan",
         "connecting": "Girişi tamamlaman bekleniyor",
         "decline": "Şimdi değil",
-        "stop": "Bağlanmayı durdur"
+        "stop": "Bağlanmayı durdur",
+        "homeChannel": "Bu ajanla telefonundaki {{provider}} üzerinden konuşursun. Başlamak için {{provider}} bağla."
       },
       "placeholder": "{{name}} adlı bota mesaj yaz",
       "pause": "Otomatik yanıtı duraklat",

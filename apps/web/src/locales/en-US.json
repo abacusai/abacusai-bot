@@ -424,7 +424,8 @@
         "connect": "Connect {{provider}}",
         "connecting": "Waiting for you to finish signing in",
         "decline": "Not now",
-        "stop": "Stop connecting"
+        "stop": "Stop connecting",
+        "homeChannel": "You talk to this agent from {{provider}} on your phone. Connect {{provider}} to start."
       },
       "placeholder": "Message {{name}}",
       "pause": "Pause auto-reply",

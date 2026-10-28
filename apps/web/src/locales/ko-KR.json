@@ -424,7 +424,8 @@
         "connect": "Connect {{provider}}",
         "connecting": "Connecting…",
         "decline": "Not now",
-        "stop": "연결 중단"
+        "stop": "연결 중단",
+        "homeChannel": "이 에이전트와는 휴대폰의 {{provider}}에서 대화해요. {{provider}}를 연결해 시작하세요."
       },
       "placeholder": "{{name}}에게 메시지",
       "pause": "Pause auto-reply",

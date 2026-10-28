@@ -424,7 +424,8 @@
         "connect": "Connect {{provider}}",
         "connecting": "Connecting…",
         "decline": "Not now",
-        "stop": "Hentikan koneksi"
+        "stop": "Hentikan koneksi",
+        "homeChannel": "Kamu mengobrol dengan agen ini lewat {{provider}} di ponselmu. Hubungkan {{provider}} untuk mulai."
       },
       "placeholder": "Kirim pesan ke {{name}}",
       "pause": "Pause auto-reply",

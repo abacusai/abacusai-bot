@@ -30,6 +30,10 @@ import { useBotModelBinding } from "../model/picker";
 import { useConnectorRequests } from "./connector-requests";
 import { botMessageDecorations, feedbackSender } from "./decorations";
 import {
+  HomeChannelConnect,
+  homeChannelConnectorId,
+} from "./home-channel-connect";
+import {
   openBotFile,
   usePreviewOpenBridge,
   type BotOpenTarget,
@@ -176,6 +180,17 @@ export const useBotChatSlots = (
       }) => activity.status || activity.runningToolTitle,
       banner: (
         <>
+          {!sender &&
+            !isRun &&
+            (bot.homeChannel == null ||
+              asks.current?.connectorId !==
+                homeChannelConnectorId(bot.homeChannel)) && (
+              <HomeChannelConnect
+                bot={bot}
+                transport={transport}
+                conversationKey={key}
+              />
+            )}
           {asks.current && (
             <ConnectorRequestCard
               request={asks.current}

@@ -424,7 +424,8 @@
         "connect": "Connect {{provider}}",
         "connecting": "Connecting…",
         "decline": "Not now",
-        "stop": "接続を中止"
+        "stop": "接続を中止",
+        "homeChannel": "このエージェントとはスマホの{{provider}}で話します。{{provider}}を接続して始めましょう。"
       },
       "placeholder": "{{name}}にメッセージ",
       "pause": "Pause auto-reply",
