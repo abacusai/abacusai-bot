@@ -24,7 +24,10 @@ import {
   HOME_CHANNELS,
   SPONSORED_RUN_MARKER,
 } from "@abacus-ai/contract/bots";
-import { goalOfMission } from "@abacus-ai/contract/bots/check-in";
+import {
+  goalOfMission,
+  RESEARCH_GOAL,
+} from "@abacus-ai/contract/bots/check-in";
 import {
   BOT_TEMPLATES,
   type BotTemplate,
@@ -182,13 +185,25 @@ const neededConnectorLines = (bot: Bot): string[] => {
 
 /**
  * What the first reply hands over, beyond the mission: the template's play
- * when its first step comes up empty.
+ * when its first step comes up empty, or, for a bot made from the user's own
+ * words, a first result instead of a question about a detail they left open.
+ * Never for "Research or write": a topic it picked would be a report nobody
+ * asked for, so it asks.
  */
 const firstReplyLines = (bot: Bot): string[] => {
   const template = BOT_TEMPLATES.find((row) => row.id === bot.templateId);
-  return template?.firstReply != null && !isStaleTemplateRole(bot)
-    ? [`**Your first reply:** ${template.firstReply}`]
-    : [];
+  if (template?.firstReply != null && !isStaleTemplateRole(bot))
+    return [`**Your first reply:** ${template.firstReply}`];
+  const goal = goalOfMission(bot.description);
+  if (goal == null || goal === RESEARCH_GOAL) return [];
+  return [
+    "**Your first reply:** take the first concrete step and hand over what it",
+    "made: a draft, a plan, a first result. Where the user's words leave a",
+    "detail open (a topic, a name, a date), pick the likeliest yourself from",
+    "what you know about them (memory, the files here), say in a few words",
+    "what you picked, and offer two or three alternatives with suggest_tasks",
+    "instead of asking.",
+  ];
 };
 
 /**
@@ -276,7 +291,8 @@ const renderPersona = (
     "only the user can do (a connection, a sign-in): hand over what you can and,",
     "when suggest_tasks is in your tool list, end with it: two or three concrete",
     "tasks they can tap to run next. When the next step is the user's choice (a",
-    "topic, what to work on first), ask for it in one short question instead.",
+    "topic, what to work on first), ask for it in one short question instead,",
+    "unless **Your first reply** above tells you to pick it yourself.",
     "Whenever the user greets you or asks what you can do, answer in a line or",
     "two and offer the tasks.",
     "",

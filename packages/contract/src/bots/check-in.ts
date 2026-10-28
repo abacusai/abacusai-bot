@@ -41,6 +41,16 @@ const GOAL_TAIL = [
 export const GOAL_MISSION = (goal: string): string =>
   `${GOAL_LEAD}${goal.trim()}${GOAL_TAIL}`;
 
+/**
+ * The "Research or write" pick's goal, as GOAL_MISSION words: the user names
+ * the topic next. Its bot asks for the topic; it never picks one itself.
+ */
+export const RESEARCH_GOAL =
+  "Research or write something for me: a report, a deck or a document, " +
+  "using the web or files on this computer. I have not named the topic " +
+  "yet: ask for it in one short question, and start what you can without " +
+  "it (look at the files here, set up an outline)";
+
 /** The user's words inside a GOAL_MISSION, or null for any other mission. */
 export const goalOfMission = (mission: string): string | null =>
   mission.startsWith(GOAL_LEAD) && mission.endsWith(GOAL_TAIL)
