@@ -2,6 +2,7 @@
  * The server's sign-in config for this install, fetched before the app has a
  * key. Anything short of a clean answer starts nothing by itself.
  */
+import { hasSignedInBefore } from "../../profile-home";
 import { deviceId } from "../debug-sync/device-id";
 import { abacusAppHost, abacusUserAgent } from "./abacus-host";
 
@@ -52,8 +53,11 @@ const resolveSignInConfig = async (): Promise<SignInConfig> => {
 };
 
 /**
- * Whether the server asked this install to start its sign-in by itself: the
- * account was just created on the website, where its session is waiting.
+ * Whether this install starts its sign-in by itself: only before any account
+ * has signed in here, and only when the server asks (an account was just
+ * created on the website from this network, its session waiting in the
+ * browser). After that, a sign-out is the user's choice and the next sign-in
+ * waits for their click, whatever the server's hint says.
  */
 export const shouldAutoSignIn = async (): Promise<boolean> =>
-  (await resolveSignInConfig()).autoSignIn;
+  !hasSignedInBefore() && (await resolveSignInConfig()).autoSignIn;
