@@ -63,7 +63,7 @@ const harness = (options: {
   caller?: "user" | "bot" | "sender";
   created?: RoutineListItem;
   /** The once-per-user 24/7 note's plan, as the host claims it. */
-  alwaysOn?: "free" | "paid" | null;
+  alwaysOn?: "paid" | null;
 }) => {
   const hosted = new HostedRoutines({
     call: async () => ({ ok: false, status: 404, body: {} }),
@@ -466,17 +466,7 @@ describe("cronjob, local", () => {
     expect(text).not.toContain("[once]");
   });
 
-  it("says once where routines run 24/7, by the plan", async () => {
-    const free = await harness({ alwaysOn: "free" }).call({
-      action: "create",
-      prompt: "Local digest",
-      schedule: "0 9 * * *",
-    });
-    expect(free).toContain("[once]");
-    expect(free).toContain("the Basic plan runs routines 24/7");
-    expect(free).toContain("https://apps.abacus.ai/chatllm/agent");
-    expect(free).toContain("billing_plan with upgrade: true");
-
+  it("says once where a paid plan's routines run 24/7", async () => {
     const paid = await harness({ alwaysOn: "paid" }).call({
       action: "create",
       prompt: "Local digest 2",

@@ -354,10 +354,10 @@ export interface McpAgentToolsServerOptions {
     ) => Promise<Routine>;
     hosted: HostedRoutines;
     /**
-     * The once-per-user word on 24/7 routines, claimed by this create: the
-     * plan to speak to, or null (already told, or the plan is unknown).
+     * The once-per-user word on 24/7 routines, claimed by this create: "paid",
+     * or null (already told, a free plan, or the plan is unknown).
      */
-    alwaysOnNote?: () => Promise<"free" | "paid" | null>;
+    alwaysOnNote?: () => Promise<"paid" | null>;
   };
   /** Every conversation a bot owns, with its agent log; for my_activity. */
   ownActivity?: (botId: string) => Array<{

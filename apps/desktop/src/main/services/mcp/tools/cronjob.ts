@@ -104,10 +104,10 @@ export const alwaysOnLine = (plan: "free" | "paid"): string =>
         : "");
 
 /**
- * What a local create's result adds, once per user, about routines that run with
- * the computer off.
+ * What a local create's result adds, once per paid user, about routines that
+ * run with the computer off. A free plan never gets it here.
  */
-export const alwaysOnNote = (plan: "free" | "paid" | null): string =>
+export const alwaysOnNote = (plan: "paid" | null): string =>
   plan == null
     ? ""
     : "\n\n[once] After confirming the routine, add one short line, in the user's language: " +

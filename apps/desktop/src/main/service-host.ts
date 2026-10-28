@@ -996,17 +996,19 @@ export class ServiceHost {
 
   /**
    * The desktop's once-per-user word on 24/7 routines, claimed by the agent's
-   * first local routine: the plan to speak to, or null once told, on the
-   * hosted computer, or while the account cannot be read.
+   * first local routine on a paid plan: null once told, on the free plan, on
+   * the hosted computer, or while the account cannot be read. A free account's
+   * first routine is usually its first reply, where an upgrade pitch stopped
+   * people answering; the plan is offered later, at the credit wall.
    */
-  async claimAlwaysOnNote(): Promise<"free" | "paid" | null> {
+  async claimAlwaysOnNote(): Promise<"paid" | null> {
     const prefs = this.platform === "web-host" ? null : this.prefs?.();
     if (prefs == null || prefs.get().dismissals.routinesAlwaysOnToldAt != null)
       return null;
     const tier = abacusPlanTier(await fetchAbacusAccount());
-    if (tier === "unknown") return null;
+    if (tier === "unknown" || tier === "free") return null;
     prefs.update({ dismissals: { routinesAlwaysOnToldAt: Date.now() } });
-    return tier === "free" ? "free" : "paid";
+    return "paid";
   }
 
   /** The user's WhatsApp link to AbacusAI Bot's own number: the hosted computer attaches it, the desktop never. */
