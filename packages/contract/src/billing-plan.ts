@@ -22,6 +22,8 @@ export interface BillingPlanTier {
 /** The account's plan, credits and ways up. */
 export interface BillingPlan {
   current: {
+    /** The plan's id ("free", "go", "basic", ...); absent from older servers. */
+    plan?: string;
     planName: string;
     creditsRemaining: number | null;
     creditsGranted: number | null;
@@ -94,6 +96,43 @@ export const wallOffer = (
   billing: BillingPlan | null
 ): (BillingPlanTier & { url: string | null }) | null =>
   billing?.upgrades[0] ?? null;
+
+/** A link the app may open: the server's, and only over https. */
+const httpsUrl = (url: string | null | undefined): string | null =>
+  url != null && url.startsWith("https://") ? url : null;
+
+/**
+ * A paid plan's way on once its credits are used up: buying credits, the
+ * next plan up with its price and features, or the mobile app when the plan
+ * is billed by Apple or Google (where both are bought). Null for a free
+ * account, an unread plan, or one the server offers nothing to.
+ */
+export interface PaidCreditsOffer {
+  topUpUrl: string | null;
+  next: (BillingPlanTier & { url: string | null }) | null;
+  inMobileApp: boolean;
+}
+
+export const paidCreditsOffer = (
+  billing: BillingPlan | null | undefined
+): PaidCreditsOffer | null => {
+  if (billing == null || billing.current.plan === "free") return null;
+  const next = billing.upgrades[0] ?? null;
+  if (billing.upgradeInMobileApp)
+    return {
+      topUpUrl: null,
+      next: next != null ? { ...next, url: null } : null,
+      inMobileApp: true,
+    };
+  const topUpUrl = httpsUrl(billing.topUpUrl);
+  const nextUrl = httpsUrl(next?.url);
+  if (topUpUrl == null && nextUrl == null) return null;
+  return {
+    topUpUrl,
+    next: next != null && nextUrl != null ? { ...next, url: nextUrl } : null,
+    inMobileApp: false,
+  };
+};
 
 /**
  * Whether the account's current plan renews its credits every month, as

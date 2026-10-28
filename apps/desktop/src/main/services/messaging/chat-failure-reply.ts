@@ -1,5 +1,6 @@
 import {
   type BillingPlan,
+  paidCreditsOffer,
   planPitch,
   planPrice,
   wallOffer,
@@ -78,6 +79,10 @@ export interface ChannelOffer {
 
 /** AbacusAI Agent on the web. */
 const ABACUS_AGENT_URL = "https://apps.abacus.ai/chatllm";
+
+/** Where a paid account buys credits when the billing plan could not be read. */
+export const ABACUS_BUY_CREDITS_URL =
+  "https://apps.abacus.ai/chatllm/admin/profile?buyCredits=true";
 
 /** The account's billing page, where a payment is checked or a plan renewed. */
 const ABACUS_BILLING_URL = "https://apps.abacus.ai/chatllm/admin/profile";
@@ -185,6 +190,30 @@ const offerLines = (words: ChannelWords, offer: ChannelOffer): string[] => {
   ];
 };
 
+/**
+ * A paid plan out of credits: `topUp` (the line that sends the user to buy
+ * credits), then the next plan up with its price and link when the server
+ * offers one. A plan billed by Apple or Google is bought in the mobile app,
+ * so the line says so in place of both links.
+ */
+const paidOutLines = (
+  words: ChannelWords,
+  offer: ChannelOffer,
+  topUp: string
+): string => {
+  const { t, locale } = words;
+  const paid = paidCreditsOffer(offer.billing);
+  if (paid?.inMobileApp === true) return t("outcome.channel.paidMobile");
+  const next = paid?.next;
+  return next?.url != null
+    ? `${topUp}\n${t("outcome.channel.paidUpgrade", {
+        plan: next.planName,
+        price: planPrice(t, next, locale),
+        link: next.url,
+      })}`
+    : topUp;
+};
+
 /** Where the Abacus credits stood when Google cut the reply off. */
 const cutOffCause = (error: TurnFailure): string | undefined =>
   error.actions?.find((action) => action.type === "cut-off")?.cause;
@@ -229,7 +258,7 @@ export const chatReplyForFailure = (
         return `${lead} ${t("outcome.channel.cutoffSwitch")}`;
       if (cause !== "out") return lead;
       if (account !== "free")
-        return `${lead} ${t("outcome.channel.cutoffTopUp", { link: offer.topUpUrl })}`;
+        return `${lead} ${paidOutLines(words, offer, t("outcome.channel.cutoffTopUp", { link: offer.topUpUrl }))}`;
       return repeat ? lead : [lead, ...offerLines(words, offer)].join("\n");
     }
     case "model-gone": {
@@ -251,7 +280,7 @@ export const chatReplyForFailure = (
                 t("outcome.channel.unavailableOut", { model }),
                 ...offerLines(words, offer),
               ].join("\n")
-            : `${t("outcome.channel.unavailableOut", { model })} ${t("outcome.channel.paidOut", { link: offer.topUpUrl })}`;
+            : `${t("outcome.channel.unavailableOut", { model })} ${paidOutLines(words, offer, t("outcome.channel.paidOut", { link: offer.topUpUrl }))}`;
       if (gone?.cause !== "plan")
         return t(
           gone?.cause === "down"
@@ -276,8 +305,14 @@ export const chatReplyForFailure = (
       // An account never read is worded like a paid one: no plan to sell.
       if (account !== "free")
         return repeat
-          ? t("outcome.channel.repeat", { link: offer.topUpUrl })
-          : t("outcome.channel.paidOut", { link: offer.topUpUrl });
+          ? paidCreditsOffer(offer.billing)?.inMobileApp === true
+            ? t("outcome.channel.paidMobile")
+            : t("outcome.channel.repeat", { link: offer.topUpUrl })
+          : paidOutLines(
+              words,
+              offer,
+              t("outcome.channel.paidOut", { link: offer.topUpUrl })
+            );
       if (repeat) return reminder;
       return [
         t(expired ? "outcome.channel.expired" : "outcome.channel.wall"),

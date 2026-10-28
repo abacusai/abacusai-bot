@@ -1,4 +1,8 @@
-import { planPrice, wallOffer } from "@abacus-ai/contract/billing-plan";
+import {
+  paidCreditsOffer,
+  planPrice,
+  wallOffer,
+} from "@abacus-ai/contract/billing-plan";
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
 import { providerDisplayName } from "@abacus-ai/contract/settings";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,6 +18,7 @@ import {
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { PaidOfferDetails } from "#renderer/components/credits-card/paid-offer";
 import { creditsTier } from "#renderer/lib/credits";
 import {
   ownKeyHeadlineKey,
@@ -22,7 +27,11 @@ import {
 import {
   checkPlanNow,
   onPlanActive,
+  openNextPlan,
+  openTopUp,
   openUpgrade,
+  payingAccount,
+  watchForCredits,
   watchForPlan,
 } from "#renderer/lib/upgrade";
 import {
@@ -59,6 +68,157 @@ const Tile = ({ children }: { children: ReactNode }) => (
     {children}
   </span>
 );
+
+/**
+ * A paid plan out of credits: its top-up and its next plan up (price and
+ * features from billing_plan), or the mobile app where a store-billed plan
+ * buys both. Either waits for the credits or the plan, then sends the
+ * waiting message.
+ */
+const PaidBody = ({
+  request,
+  onDone,
+}: {
+  request: UpgradeDialogRequest;
+  onDone: (dismissed: boolean) => void;
+}) => {
+  const { t } = useTranslation();
+  const { transport } = useAppContext();
+  const { data: billing } = useQuery({
+    ...transport.orpc.account.billingPlan.queryOptions({ input: {} }),
+    staleTime: 60_000,
+  });
+  const [waiting, setWaiting] = useState(request.checkout === true);
+  const offer = paidCreditsOffer(billing ?? null);
+
+  useEffect(() => {
+    if (!waiting) return;
+    let stopped = false;
+    void watchForCredits(transport.client).then((fresh) => {
+      if (stopped) return;
+      if (fresh == null) {
+        setWaiting(false);
+        return;
+      }
+      onDone(false);
+      void request.resume?.().catch(() => {});
+    });
+    return () => {
+      stopped = true;
+    };
+  }, [waiting, transport, request, onDone]);
+
+  if (waiting)
+    return (
+      <div className="flex flex-col items-center gap-3 text-center">
+        <Loader2
+          aria-hidden
+          className="text-muted-foreground size-6 animate-spin"
+        />
+        <DialogTitle className="text-lg font-semibold">
+          {t("upgradeDialog.paidWaitingTitle")}
+        </DialogTitle>
+        <p className="text-muted-foreground text-sm">
+          {t(
+            request.resume != null && request.pendingText != null
+              ? "upgradeDialog.paidWaitingBody"
+              : "upgradeDialog.paidWaitingBodyNoMessage"
+          )}
+        </p>
+        <div className="flex w-full flex-col gap-1.5 pt-1">
+          <Button className="h-10" onClick={checkPlanNow}>
+            {t("upgradeDialog.paidCheckAgain")}
+          </Button>
+          <Button
+            variant="ghost"
+            className="h-10"
+            onClick={() => onDone(false)}
+          >
+            {t("upgradeDialog.close")}
+          </Button>
+        </div>
+      </div>
+    );
+
+  return (
+    <>
+      <div className="flex flex-col items-center gap-3 text-center">
+        <span
+          aria-hidden
+          className="bg-primary text-primary-foreground flex size-12 items-center justify-center rounded-[14px]"
+        >
+          <Bot className="size-6" />
+        </span>
+        <p className="text-muted-foreground text-xs font-medium tracking-[0.02em]">
+          {t("outcome.wall.paidTitle")}
+        </p>
+        <DialogTitle className="text-[22px]/7 font-semibold tracking-[-0.01em] text-balance">
+          {t("upgradeDialog.creditsTitle")}
+        </DialogTitle>
+        <p className="text-muted-foreground text-sm/[21px]">
+          {t(
+            offer?.inMobileApp === true
+              ? "upgradeDialog.paidBodyMobile"
+              : request.pendingText != null
+                ? "upgradeDialog.paidBody"
+                : "upgradeDialog.paidBodyNoMessage"
+          )}
+        </p>
+      </div>
+      {request.pendingText != null && (
+        <div className="bg-muted flex min-w-0 items-center gap-2.5 rounded-[10px] px-3 py-2.5">
+          <Clock
+            aria-hidden
+            className="text-muted-foreground size-4 shrink-0"
+          />
+          <span className="min-w-0 flex-1 truncate text-[13px]">
+            {t("upgradeDialog.waitingToSend", { text: request.pendingText })}
+          </span>
+        </div>
+      )}
+      {offer != null && (
+        <div className="text-sm" data-slot="upgrade-paid-offer">
+          <PaidOfferDetails offer={offer} />
+        </div>
+      )}
+      <div className="flex flex-col gap-1.5 pt-1">
+        {offer?.topUpUrl != null && (
+          <Button
+            className="h-11 text-sm font-semibold"
+            data-action="top-up"
+            onClick={() => {
+              // Called inside the click: the web build opens its tab here.
+              void openTopUp(transport.client);
+              setWaiting(true);
+            }}
+          >
+            {t("creditsCard.topUpCta")}
+          </Button>
+        )}
+        {offer?.next != null && !offer.inMobileApp && (
+          <Button
+            variant={offer.topUpUrl != null ? "secondary" : "default"}
+            className="h-11 text-sm font-semibold"
+            data-action="next-plan"
+            onClick={() => {
+              void openNextPlan(transport.client);
+              setWaiting(true);
+            }}
+          >
+            {t("outcome.wall.upgradeCta", { plan: offer.next.planName })}
+          </Button>
+        )}
+        <Button
+          variant="ghost"
+          className="text-muted-foreground h-10 text-sm"
+          onClick={() => onDone(true)}
+        >
+          {t("upgradeDialog.notNow")}
+        </Button>
+      </div>
+    </>
+  );
+};
 
 const DialogBody = ({
   request,
@@ -272,13 +432,17 @@ const DialogBody = ({
  * The window-wide upgrade dialog. It opens for a request only when a fresh
  * account read shows a free account with its credits used up (any free
  * account, for a failure on its own key), so another provider's quota error
- * that reads like ours never sells this plan.
+ * that reads like ours never sells this plan. A paid plan's credits request
+ * opens only when the server offers it a top-up, a plan up or the mobile app.
  */
 export const UpgradeDialogHost = () => {
   const request = useUpgradeDialogRequest();
   const { transport } = useAppContext();
   const qc = useQueryClient();
-  const [confirmed, setConfirmed] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState<{
+    key: string;
+    paid: boolean;
+  } | null>(null);
 
   // A plan bought from any surface: the account and the catalog every card and
   // picker reads change at once, not on their next poll.
@@ -300,9 +464,20 @@ export const UpgradeDialogHost = () => {
     let live = true;
     void transport.client.account
       .abacus({ refresh: true })
-      .then((account) => {
+      .then(async (account) => {
         if (!live) return;
-        if (askedAccount(request, account)) setConfirmed(request.key);
+        if (askedAccount(request, account)) {
+          setConfirmed({ key: request.key, paid: false });
+          return;
+        }
+        const paid =
+          request.kind === "credits" &&
+          payingAccount(account) &&
+          paidCreditsOffer(
+            await transport.client.account.billingPlan({}).catch(() => null)
+          ) != null;
+        if (!live) return;
+        if (paid) setConfirmed({ key: request.key, paid: true });
         else closeUpgradeDialog();
       })
       .catch(() => {
@@ -313,7 +488,7 @@ export const UpgradeDialogHost = () => {
     };
   }, [request, transport]);
 
-  const open = request != null && confirmed === request.key;
+  const open = request != null && confirmed?.key === request.key;
   const done = (dismissed: boolean) => {
     setConfirmed(null);
     closeUpgradeDialog(dismissed);
@@ -327,7 +502,11 @@ export const UpgradeDialogHost = () => {
           data-kind={request.kind}
           className="gap-5 p-7 pb-5 text-sm sm:max-w-[440px] [&>*]:min-w-0"
         >
-          <DialogBody key={request.key} request={request} onDone={done} />
+          {confirmed?.paid === true ? (
+            <PaidBody key={request.key} request={request} onDone={done} />
+          ) : (
+            <DialogBody key={request.key} request={request} onDone={done} />
+          )}
         </DialogContent>
       )}
     </Dialog>
