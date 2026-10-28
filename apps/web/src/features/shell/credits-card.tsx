@@ -137,8 +137,9 @@ export const UpgradePromo = () => {
     });
   };
   const lines = web ? WEB_LINES : [];
-  // A free account's card lists the plan's whole pitch; it waits for the
-  // plan (or its failure) so the card does not grow once on screen.
+  // A free account's card lists the plan's whole pitch, in the same order for
+  // every account whether it uses bots or sessions; it waits for the plan (or
+  // its failure) so the card does not grow once on screen.
   const pitching = state != null && !held && !web && tier === "free";
   const billing = useQuery({
     ...transport.orpc.account.billingPlan.queryOptions({ input: {} }),
@@ -268,6 +269,7 @@ export const UpgradePromo = () => {
               <div className="scroll-fade-y max-h-[clamp(5rem,calc(100vh_-_28rem),24rem)] overflow-y-auto overscroll-contain">
                 <PlanPitchList
                   billing={billing.data}
+                  sameForEveryone
                   className="gap-1.5 [&_li]:gap-2 [&_li]:text-xs/4 [&_svg]:mt-px [&_svg]:size-3.5"
                 />
               </div>

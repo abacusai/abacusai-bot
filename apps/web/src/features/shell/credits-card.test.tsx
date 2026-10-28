@@ -123,6 +123,14 @@ const BILLING: BillingPlan = {
   topUpUrl: null,
   upgradeInMobileApp: false,
 };
+/** The sidebar's pitch: the plan's own order, whichever side the account uses. */
+const PITCH_IN_PLAN_ORDER = [
+  "Image and video generation",
+  expect.stringMatching(/^Personal agents/),
+  expect.stringMatching(/^100\+ connectors/),
+  "Build and deploy powerful apps on the web, including mobile apps",
+];
+
 beforeEach(async () => {
   await initI18n();
   localStorage.clear();
@@ -160,12 +168,25 @@ it("lists the plan's whole pitch once the plan is read, never half a card", () =
     [...document.querySelectorAll('[data-slot="upgrade-pitch"] li')].map(
       (line) => line.textContent
     )
-  ).toEqual([
-    "Build and deploy powerful apps on the web, including mobile apps",
-    "Image and video generation",
-    expect.stringMatching(/^Personal agents/),
-    expect.stringMatching(/^100\+ connectors/),
-  ]);
+  ).toEqual(PITCH_IN_PLAN_ORDER);
+});
+
+it("lists the pitch in the same order for a bots account as for a sessions one", () => {
+  const accountFocus = (state.account as { focus?: string }).focus;
+  try {
+    for (const focus of ["sessions", "bots", "mixed"]) {
+      (state.account as { focus?: string }).focus = focus;
+      const view = render(promo());
+      expect(
+        [...document.querySelectorAll('[data-slot="upgrade-pitch"] li')].map(
+          (line) => line.textContent
+        )
+      ).toEqual(PITCH_IN_PLAN_ORDER);
+      view.unmount();
+    }
+  } finally {
+    (state.account as { focus?: string }).focus = accountFocus;
+  }
 });
 
 it("points an account already on a paid tier at AbacusAI Agent on the web", async () => {
