@@ -4661,8 +4661,6 @@
     "credits": "Open Source unter der MIT-Lizenz",
     "keepRunning": "Im Hintergrund weiterlaufen lassen",
     "quitAnyway": "Trotzdem beenden",
-    "openApp": "{{app}} öffnen",
-    "stillRunningInTray": "{{app}} läuft weiter. Sie können es hier öffnen oder beenden.",
     "taskRunningTitle": "Eine Aufgabe wird ausgeführt",
     "taskRunningMessage": "Eine Aufgabe läuft noch.",
     "taskRunningDetail": "Lassen Sie es im Hintergrund laufen oder beenden Sie es und stoppen Sie es?",

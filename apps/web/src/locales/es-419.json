@@ -4661,8 +4661,6 @@
     "credits": "Código abierto bajo la licencia MIT",
     "keepRunning": "Seguir ejecutando en segundo plano",
     "quitAnyway": "Salir de todos modos",
-    "openApp": "Abrir {{app}}",
-    "stillRunningInTray": "{{app}} sigue en ejecución. Ábrelo o ciérralo desde aquí.",
     "taskRunningTitle": "Se está ejecutando una tarea",
     "taskRunningMessage": "Todavía hay una tarea en ejecución.",
     "taskRunningDetail": "¿Mantenerlo ejecutándose en segundo plano o cerrarlo y detenerlo?",

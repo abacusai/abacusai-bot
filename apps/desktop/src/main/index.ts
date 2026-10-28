@@ -49,11 +49,6 @@ import Store from "electron-store";
 
 import { nodeFileOperations } from "./app-operations/node";
 import { markQuitting, isQuitting } from "./app-quit-state";
-import {
-  disposeBackgroundTray,
-  relabelBackgroundTray,
-  showBackgroundTray,
-} from "./background-tray";
 import { setBringToFront, setMainWindow } from "./bring-to-front";
 import { composeHost } from "./compose-host";
 import { installCrashGuard } from "./crash-guard";
@@ -76,10 +71,7 @@ import { abacusBotHome, userTempDir, WORKSPACE_DIR_NAME } from "./paths";
 import { isLowEndMachine } from "./platform/low-end-machine";
 import { profileBaseDir } from "./profile-home";
 import { resetUserDataDirectories } from "./profile-home-init";
-import {
-  mainWindowCloseAction,
-  mainWindowLifecycle,
-} from "./recreate-main-window";
+import { mainWindowLifecycle } from "./recreate-main-window";
 import { rendererCspHeaders } from "./renderer-csp";
 import {
   devContentSize,
@@ -315,43 +307,6 @@ type WindowStateSchema = {
 };
 let store: InstanceType<typeof Store<WindowStateSchema>>;
 
-/**
- * First run: this launch began before the account was onboarded (it stays so
- * for the whole launch, so a user who finishes setup and closes before typing
- * is kept), or onboarding is still on a screen now. Read at the first window.
- */
-let launchedBeforeOnboarding: boolean | null = null;
-function inFirstRun(): boolean {
-  return (
-    launchedBeforeOnboarding === true || prefsStore.get().onboardingStep != null
-  );
-}
-
-/** Hide the main window to the tray (Windows/Linux), so it can come back. */
-function hideToTray(window: BaseWindow): void {
-  window.hide();
-  // A close that did not quit: without this line the log reads as a quit.
-  console.log("[window] closed to the tray");
-  showBackgroundTray({
-    iconPath: resourcePath(
-      process.platform === "win32" ? "icon.ico" : "icon2.png"
-    ),
-    tooltip: APP_DISPLAY_NAME,
-    labels: () => {
-      const named = { app: APP_DISPLAY_NAME };
-      return {
-        open: nativeT("openApp", named),
-        quit: nativeT("quitApp", named),
-        stillRunning: nativeT("stillRunningInTray", named),
-      };
-    },
-    open: () => {
-      revealMainWindow();
-    },
-    quit: () => app.quit(),
-  });
-}
-
 // Agent work is kept alive across a window close.
 function hasBackgroundAgentTask(): boolean {
   return workspaceServiceHost.hasActiveAgentTurn();
@@ -583,7 +538,6 @@ let prefsStore = new PrefsStore({ notchEnabled: notchDefault });
 workspaceServiceHost.attachPrefs(() => prefsStore);
 
 async function createWindow(restored?: RecreatedWindowState) {
-  launchedBeforeOnboarding ??= !readAccountState().onboarded;
   const Store = (await import("electron-store")).default;
   // A corrupt JSON file would otherwise brick the app on every launch.
   store = new Store<WindowStateSchema>({
@@ -761,30 +715,15 @@ async function createWindow(restored?: RecreatedWindowState) {
     store.set("windowY", y);
   });
 
-  // A Windows shutdown or sign-out skips before-quit; any close after it is a
-  // real quit and must not be held in the tray.
-  mainWindow.on("session-end", () => markQuitting());
-
   // Closing must not kill in-flight agent work, so the window hides instead.
-  // macOS always hides (dock convention); Windows/Linux hide to the tray in
-  // first run, else ask first when a task is running. A real quit sets
-  // `isQuitting` first.
+  // macOS always hides (dock convention); Windows/Linux ask first, and only
+  // when a task is running. A real quit sets `isQuitting` first.
   mainWindow.on("close", (event) => {
-    const action = mainWindowCloseAction({
-      platform: process.platform,
-      quitting: isQuitting(),
-      firstRun: inFirstRun(),
-      taskRunning: hasBackgroundAgentTask(),
-    });
-    if (action === "close") return;
+    if (isQuitting()) return;
 
-    if (action === "tray") {
-      event.preventDefault();
-      hideToTray(mainWindow);
-      return;
-    }
+    const taskRunning = hasBackgroundAgentTask();
 
-    if (action === "hide") {
+    if (process.platform === "darwin") {
       event.preventDefault();
       // Hiding a full-screen window leaves its Space behind as a black
       // screen; leave full screen first and hide after the transition.
@@ -799,6 +738,8 @@ async function createWindow(restored?: RecreatedWindowState) {
       return;
     }
 
+    if (!taskRunning) return;
+
     const choice = dialog.showMessageBoxSync(mainWindow, {
       type: "question",
       buttons: [nativeT("keepRunning"), nativeT("quitAnyway")],
@@ -811,7 +752,7 @@ async function createWindow(restored?: RecreatedWindowState) {
 
     if (choice === 0) {
       event.preventDefault();
-      hideToTray(mainWindow);
+      mainWindow.hide();
     }
   });
 
@@ -1304,10 +1245,8 @@ function updateApplicationMenu(): void {
 /** Loads the app's language for native words and relabels the menu when it changed. */
 async function applyNativeLanguage(): Promise<void> {
   try {
-    if (await setNativeLanguage(appLanguage(prefsStore.get().language).ui)) {
+    if (await setNativeLanguage(appLanguage(prefsStore.get().language).ui))
       updateApplicationMenu();
-      relabelBackgroundTray();
-    }
   } catch (error) {
     console.error(
       "[i18n] native language failed; keeping the current one",
@@ -2078,7 +2017,6 @@ app.on("before-quit", (event) => {
   }
   // So the window 'close' handler stops intercepting.
   markQuitting();
-  disposeBackgroundTray();
   notchController?.dispose();
   notchNotifications.dispose();
   // The progress window refuses to close by itself; free it before the quit.

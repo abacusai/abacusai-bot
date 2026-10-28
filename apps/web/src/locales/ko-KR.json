@@ -4661,8 +4661,6 @@
     "credits": "MIT 라이선스에 따른 오픈 소스",
     "keepRunning": "백그라운드에서 계속 실행",
     "quitAnyway": "종료하기",
-    "openApp": "{{app}} 열기",
-    "stillRunningInTray": "{{app}}이(가) 계속 실행 중입니다. 여기에서 열거나 종료하세요.",
     "taskRunningTitle": "작업이 실행 중입니다.",
     "taskRunningMessage": "작업이 아직 실행 중입니다.",
     "taskRunningDetail": "백그라운드에서 계속 실행하시겠습니까, 아니면 종료하고 중지하시겠습니까?",

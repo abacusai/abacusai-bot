@@ -82,7 +82,6 @@ export const BaseWindow = unavailable("BaseWindow");
 export const BrowserWindow = unavailable("BrowserWindow");
 export const Menu = unavailable("Menu");
 export const Notification = unavailable("Notification");
-export const Tray = unavailable("Tray");
 export const WebContentsView = unavailable("WebContentsView");
 export const autoUpdater = unavailable("autoUpdater");
 export const contextBridge = unavailable("contextBridge");

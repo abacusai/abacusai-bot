@@ -1629,8 +1629,6 @@
       "credits",
       "keepRunning",
       "quitAnyway",
-      "openApp",
-      "stillRunningInTray",
       "taskRunningTitle",
       "taskRunningMessage",
       "taskRunningDetail",
