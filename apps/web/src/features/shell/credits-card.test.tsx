@@ -4,12 +4,8 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { resetFreeCreditsWatch } from "#renderer/lib/free-credits-watch";
 import { initI18n } from "#renderer/lib/i18n";
-import { onPlanActive, openUpgrade } from "#renderer/lib/upgrade";
-import {
-  closeUpgradeDialog,
-  upgradeDialogStore,
-} from "#renderer/lib/upgrade-dialog";
-import { useAppContext } from "#renderer/lib/use-app-context";
+import { onPlanActive } from "#renderer/lib/upgrade";
+import { upgradeDialogStore } from "#renderer/lib/upgrade-dialog";
 
 import { UpgradePromo } from "./credits-card";
 import { PromoOutlet } from "./promo-host";
@@ -298,19 +294,14 @@ it("after Upgrade, reads the account until the plan is active, then tells the ap
   const stop = onPlanActive(heard);
   try {
     render(promo());
-    // The card's Upgrade opens the dialog with the plan's whole pitch; its
-    // Upgrade starts the checkout below.
+    // The card already shows the plan's whole pitch: its Upgrade opens the
+    // payment page itself, with no dialog in between.
     fireEvent.click(screen.getByRole("button", { name: "Upgrade" }));
-    expect(upgradeDialogStore.state.request).toMatchObject({ kind: "plan" });
-    closeUpgradeDialog();
-    expect(state.open).not.toHaveBeenCalled();
-    const { client } = useAppContext().transport as unknown as {
-      client: Parameters<typeof openUpgrade>[0];
-    };
-    void openUpgrade(client);
+    expect(upgradeDialogStore.state.request).toBeNull();
     // A second click while checkout is open watches nothing twice.
-    void openUpgrade(client);
+    fireEvent.click(screen.getByRole("button", { name: "Upgrade" }));
     await vi.advanceTimersByTimeAsync(0);
+    expect(upgradeDialogStore.state.request).toBeNull();
     expect(state.open).toHaveBeenCalledWith({
       url: "https://checkout.example/once",
     });
