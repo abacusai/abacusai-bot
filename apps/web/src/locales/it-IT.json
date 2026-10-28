@@ -3250,6 +3250,11 @@
     },
     "botHelp": {
       "open": "Apri"
+    },
+    "suggestedTasks": {
+      "label": "Tocca un'attività per avviarla",
+      "copy": "Copia “{{text}}” per inviarlo dal telefono",
+      "copyFailed": "Impossibile copiare"
     }
   },
   "notch": {

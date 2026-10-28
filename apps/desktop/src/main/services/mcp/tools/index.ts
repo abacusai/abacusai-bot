@@ -13,6 +13,7 @@ import { MESSAGING_TOOLS } from "./messaging";
 import { PAID_FEATURE_TOOLS } from "./paid-features";
 import { SESSIONS_TOOLS } from "./sessions";
 import { SKILLS_TOOLS } from "./skills";
+import { SUGGESTED_TASKS_TOOLS } from "./suggested-tasks";
 import { TODO_TOOLS } from "./todo";
 
 /**
@@ -38,6 +39,7 @@ export const AGENT_TOOLS: readonly ToolDefinition[] = [
   ...PAID_FEATURE_TOOLS,
   ...MESSAGING_TOOLS,
   ...SESSIONS_TOOLS,
+  ...SUGGESTED_TASKS_TOOLS,
 ];
 
 const byName = new Map<string, ToolDefinition>();

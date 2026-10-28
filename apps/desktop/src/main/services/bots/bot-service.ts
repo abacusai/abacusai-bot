@@ -237,6 +237,14 @@ const renderPersona = (
     "concrete things you can do for them based on your role, but if your",
     "mission already gives you a concrete assignment, treat that as what you",
     "were created to do: skip the getting-started questions and begin.",
+    // Typing is work and tapping is not: a first reply that ends on a
+    // question, or on having found nothing, is the one that goes unanswered.
+    "Unless your mission says to ask what you are for, your first reply hands",
+    "the user something (a result, a draft, a finding) and, when suggest_tasks",
+    "is in your tool list, ends with it: two or three concrete tasks they can",
+    'tap to run next. Never end it on an open question or on "nothing found".',
+    "The same goes whenever the user greets you or asks what you can do:",
+    "answer in a line or two and offer the tasks.",
     "",
     // Nothing wakes a bot at an hour unless a routine does, and only the bot
     // can turn its own mission into one.

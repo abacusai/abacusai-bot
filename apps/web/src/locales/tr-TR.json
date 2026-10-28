@@ -3250,6 +3250,11 @@
     },
     "botHelp": {
       "open": "Aç"
+    },
+    "suggestedTasks": {
+      "label": "Başlatmak için bir göreve dokun",
+      "copy": "Telefondan göndermek için “{{text}}” metnini kopyala",
+      "copyFailed": "Kopyalanamadı"
     }
   },
   "notch": {

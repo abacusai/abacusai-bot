@@ -3250,6 +3250,11 @@
     },
     "botHelp": {
       "open": "Buka"
+    },
+    "suggestedTasks": {
+      "label": "Ketuk tugas untuk menjalankannya",
+      "copy": "Salin “{{text}}” untuk dikirim dari ponsel",
+      "copyFailed": "Gagal menyalin"
     }
   },
   "notch": {

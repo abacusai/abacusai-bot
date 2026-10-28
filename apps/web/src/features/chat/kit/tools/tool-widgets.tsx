@@ -12,6 +12,7 @@ import {
   isBotHelpTool,
   isPaidFeatureTool,
   isSessionOfferTool,
+  isSuggestTasksTool,
 } from "#renderer/lib/bot-turns/turns";
 
 import { descriptorFor, useThreadStore } from "../../store/selectors";
@@ -21,6 +22,7 @@ import { PermissionCard } from "../permissions/permission-card";
 import { BotHelpToolCard } from "./bot-help";
 import { PaidFeatureToolCard } from "./paid-feature";
 import { SessionOfferCard } from "./session-offer";
+import { SuggestedTasksCard } from "./suggested-tasks";
 import { expanderFor, ToolLine } from "./tool-line";
 
 type Widget = ComponentType<ToolProps<unknown>>;
@@ -92,5 +94,7 @@ export const botToolWidgets = new Proxy({} as Record<string, Widget>, {
           ? PaidFeatureToolCard
           : isBotHelpTool(name)
             ? BotHelpToolCard
-            : BotToolSlot,
+            : isSuggestTasksTool(name)
+              ? SuggestedTasksCard
+              : BotToolSlot,
 }) as Record<string, Widget>;
