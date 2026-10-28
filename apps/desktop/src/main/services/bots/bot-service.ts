@@ -130,11 +130,24 @@ const agentTemplateFor = (app: HomeChannel): BotTemplate => {
   return template;
 };
 
-/** A chat-app agent's home: the app the user talks to it in. */
+/**
+ * A chat-app agent's home: the app the user talks to it in. Its chat here is
+ * not where it is used, so an intro here that hands the user nothing to send
+ * from the phone goes unanswered.
+ */
 const homeChannelLines = (bot: Bot): string[] => {
   if (bot.homeChannel == null) return [];
   const app = HOME_CHANNEL_NAMES[bot.homeChannel];
-  return ["", `**Your main connector to use is ${app}.**`];
+  return [
+    "",
+    `**Your main connector to use is ${app}.**`,
+    `The user talks to you from ${app} on their phone, not here. Your first`,
+    "reply in your own chat with the user in this app is two short lines and",
+    `ends with suggest_tasks: first one concrete message to send you from`,
+    `${app} right now, marked copy: true (for example "remind me at 6pm to call`,
+    'mom"), with a few words on where to send it (once connected, if it is',
+    "not yet); then one or two things you can do right here.",
+  ];
 };
 
 /** What the bot's mission works through, by name: its home app first. */
@@ -157,6 +170,33 @@ const neededConnectorLines = (bot: Bot): string[] => {
     "On your first turn, call connect_connector for each of these that the",
     "system reminder does not list as connected, before or with your greeting,",
     "then start on what works without them.",
+    // A Connect card nobody taps must not leave the chat waiting on it.
+    "Never wait on one that is missing or fails to connect: that same first",
+    "reply says in a line what you will do once it is connected and ends with",
+    "two or three tasks you can do without it (suggest_tasks), such as",
+    '"Research a topic and give me a report", "Write an email for me" or',
+    '"Make me a one-page website". The Connect card stays beside them; you',
+    "are told when it is connected, and take up your mission then.",
+  ];
+};
+
+/**
+ * What the first reply hands over, beyond the mission: the template's play
+ * when its first step comes up empty, or, for a bot made from the user's own
+ * words, a first result instead of a question about what they left open.
+ */
+const firstReplyLines = (bot: Bot): string[] => {
+  const template = BOT_TEMPLATES.find((row) => row.id === bot.templateId);
+  if (template?.firstReply != null && !isStaleTemplateRole(bot))
+    return [`**Your first reply:** ${template.firstReply}`];
+  if (goalOfMission(bot.description) == null) return [];
+  return [
+    "**Your first reply:** take the first concrete step and hand over what it",
+    "made: a draft, a plan, a first result. Where the user's words leave a",
+    "detail open (a topic, a name, a date), pick the likeliest yourself from",
+    "what you know about them (memory, the files here), say in a few words",
+    "what you picked, and offer two or three alternatives with suggest_tasks",
+    "instead of asking.",
   ];
 };
 
@@ -223,6 +263,7 @@ const renderPersona = (
     ...(bot.persona.length > 0
       ? [`**Your voice (how you speak, in every message):** ${bot.persona}`]
       : []),
+    ...firstReplyLines(bot),
     ...homeChannelLines(bot),
     ...neededConnectorLines(bot),
     ...homeBotLines(bot, homes),
