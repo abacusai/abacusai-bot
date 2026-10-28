@@ -32,7 +32,7 @@ import {
   useMotionPreference,
 } from "#renderer/lib/motion";
 import { platformSystem } from "#renderer/lib/platform-system";
-import { requestPlanDialog } from "#renderer/lib/upgrade-dialog";
+import { openUpgrade } from "#renderer/lib/upgrade";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { useCreditsAccount } from "#renderer/lib/use-credits-account";
 import { useNow } from "#renderer/lib/use-now";
@@ -56,7 +56,9 @@ const WEB_LINES = [
  * One portal, shown only inside the sidebar (pinned or peeked): a collapsed
  * sidebar hides it. A free account sees the upgrade card, or while its free
  * credits are held, the way to unlock them; a paid plan the card that points
- * at AbacusAI Agent on the web.
+ * at AbacusAI Agent on the web. The free card already lists the plan's whole
+ * pitch, so its Upgrade goes straight to the payment page, with no dialog
+ * repeating it; the account is watched until the plan is active.
  */
 export const UpgradePromo = () => {
   const { transport } = useAppContext();
@@ -135,8 +137,9 @@ export const UpgradePromo = () => {
     });
   };
   const lines = web ? WEB_LINES : [];
-  // A free account's card lists the plan's whole pitch; it waits for the
-  // plan (or its failure) so the card does not grow once on screen.
+  // A free account's card lists the plan's whole pitch, in the same order for
+  // every account whether it uses bots or sessions; it waits for the plan (or
+  // its failure) so the card does not grow once on screen.
   const pitching = state != null && !held && !web && tier === "free";
   const billing = useQuery({
     ...transport.orpc.account.billingPlan.queryOptions({ input: {} }),
@@ -266,6 +269,7 @@ export const UpgradePromo = () => {
               <div className="scroll-fade-y max-h-[clamp(5rem,calc(100vh_-_28rem),24rem)] overflow-y-auto overscroll-contain">
                 <PlanPitchList
                   billing={billing.data}
+                  sameForEveryone
                   className="gap-1.5 [&_li]:gap-2 [&_li]:text-xs/4 [&_svg]:mt-px [&_svg]:size-3.5"
                 />
               </div>
@@ -286,7 +290,7 @@ export const UpgradePromo = () => {
                     ? platformSystem(transport.client).openExternal({
                         url: ABACUS_AGENT_URL,
                       })
-                    : requestPlanDialog("sidebar"))
+                    : openUpgrade(transport.client))
             }
           >
             {held ? (

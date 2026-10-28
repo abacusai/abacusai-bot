@@ -4,12 +4,8 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { resetFreeCreditsWatch } from "#renderer/lib/free-credits-watch";
 import { initI18n } from "#renderer/lib/i18n";
-import { onPlanActive, openUpgrade } from "#renderer/lib/upgrade";
-import {
-  closeUpgradeDialog,
-  upgradeDialogStore,
-} from "#renderer/lib/upgrade-dialog";
-import { useAppContext } from "#renderer/lib/use-app-context";
+import { onPlanActive } from "#renderer/lib/upgrade";
+import { upgradeDialogStore } from "#renderer/lib/upgrade-dialog";
 
 import { UpgradePromo } from "./credits-card";
 import { PromoOutlet } from "./promo-host";
@@ -127,6 +123,14 @@ const BILLING: BillingPlan = {
   topUpUrl: null,
   upgradeInMobileApp: false,
 };
+/** The sidebar's pitch: the plan's own order, whichever side the account uses. */
+const PITCH_IN_PLAN_ORDER = [
+  "Image and video generation",
+  expect.stringMatching(/^Personal agents/),
+  expect.stringMatching(/^100\+ connectors/),
+  "Build and deploy powerful apps on the web, including mobile apps",
+];
+
 beforeEach(async () => {
   await initI18n();
   localStorage.clear();
@@ -164,12 +168,25 @@ it("lists the plan's whole pitch once the plan is read, never half a card", () =
     [...document.querySelectorAll('[data-slot="upgrade-pitch"] li')].map(
       (line) => line.textContent
     )
-  ).toEqual([
-    "Build and deploy powerful apps on the web, including mobile apps",
-    "Image and video generation",
-    expect.stringMatching(/^Personal agents/),
-    expect.stringMatching(/^100\+ connectors/),
-  ]);
+  ).toEqual(PITCH_IN_PLAN_ORDER);
+});
+
+it("lists the pitch in the same order for a bots account as for a sessions one", () => {
+  const accountFocus = (state.account as { focus?: string }).focus;
+  try {
+    for (const focus of ["sessions", "bots", "mixed"]) {
+      (state.account as { focus?: string }).focus = focus;
+      const view = render(promo());
+      expect(
+        [...document.querySelectorAll('[data-slot="upgrade-pitch"] li')].map(
+          (line) => line.textContent
+        )
+      ).toEqual(PITCH_IN_PLAN_ORDER);
+      view.unmount();
+    }
+  } finally {
+    (state.account as { focus?: string }).focus = accountFocus;
+  }
 });
 
 it("points an account already on a paid tier at AbacusAI Agent on the web", async () => {
@@ -298,19 +315,14 @@ it("after Upgrade, reads the account until the plan is active, then tells the ap
   const stop = onPlanActive(heard);
   try {
     render(promo());
-    // The card's Upgrade opens the dialog with the plan's whole pitch; its
-    // Upgrade starts the checkout below.
+    // The card already shows the plan's whole pitch: its Upgrade opens the
+    // payment page itself, with no dialog in between.
     fireEvent.click(screen.getByRole("button", { name: "Upgrade" }));
-    expect(upgradeDialogStore.state.request).toMatchObject({ kind: "plan" });
-    closeUpgradeDialog();
-    expect(state.open).not.toHaveBeenCalled();
-    const { client } = useAppContext().transport as unknown as {
-      client: Parameters<typeof openUpgrade>[0];
-    };
-    void openUpgrade(client);
+    expect(upgradeDialogStore.state.request).toBeNull();
     // A second click while checkout is open watches nothing twice.
-    void openUpgrade(client);
+    fireEvent.click(screen.getByRole("button", { name: "Upgrade" }));
     await vi.advanceTimersByTimeAsync(0);
+    expect(upgradeDialogStore.state.request).toBeNull();
     expect(state.open).toHaveBeenCalledWith({
       url: "https://checkout.example/once",
     });

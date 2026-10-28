@@ -36,14 +36,18 @@ export const pitchOrder = (
  * Every line of the plan's pitch, read from billing_plan: the one list the
  * upgrade dialog and every card that pitches the plan show, so no surface
  * names a shorter one. Nothing until the plan is read: never half a pitch.
+ * `sameForEveryone` keeps the plan's own order instead of leading with the
+ * person's side.
  */
 export const PlanPitchList = ({
   billing,
   lead = null,
+  sameForEveryone = false,
   className,
 }: {
   billing: BillingPlan | null;
   lead?: PitchLine | null;
+  sameForEveryone?: boolean;
   className?: string;
 }) => {
   const { t, i18n } = useTranslation();
@@ -53,7 +57,7 @@ export const PlanPitchList = ({
     t,
     billing,
     i18n.language,
-    pitchOrder(upgradePitch(account), lead)
+    pitchOrder(sameForEveryone ? null : upgradePitch(account), lead)
   );
   if (lines.length === 0) return null;
   return (
