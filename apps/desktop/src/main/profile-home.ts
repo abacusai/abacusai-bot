@@ -65,6 +65,13 @@ const readRegistry = (): ProfileRegistry => {
   }
 };
 
+/**
+ * Whether any account has ever signed in on this install: every sign-in files
+ * its account in the registry, and only deleting all data forgets it.
+ */
+export const hasSignedInBefore = (): boolean =>
+  Object.keys(readRegistry().profiles).length > 0;
+
 const writeRegistry = (registry: ProfileRegistry): void => {
   fs.mkdirSync(BASE, { recursive: true });
   const target = registryPath();
