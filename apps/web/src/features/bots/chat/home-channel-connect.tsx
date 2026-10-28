@@ -9,6 +9,8 @@ import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
 import {
   isMessagingPlatformConnected,
   type MessagingPlatformId,
+  type MessagingPlatformState,
+  type MessagingSnapshot,
 } from "@abacus-ai/contract/messaging";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
@@ -18,6 +20,31 @@ import { ConnectorRequestCard } from "#renderer/components/connector-request-car
 import type { Transport } from "#renderer/data/transport";
 import { ConnectAttempt } from "#renderer/lib/connect-page";
 import { IS_ELECTRON } from "#renderer/lib/platform";
+
+/** How often the snapshot is read again while the card is up. */
+const HOME_CHANNEL_POLL_MS = 5_000;
+
+/** A switched-on app passes through these while it signs back in, at every start. */
+const HOME_CHANNEL_RECONNECTING: ReadonlySet<MessagingPlatformState> = new Set([
+  "pending_restart",
+  "connecting",
+  "rate_limited",
+]);
+
+/**
+ * Whether the app needs connecting: not connected, and not a switched-on app
+ * still reconnecting (a connected user would see the card flash at launch).
+ */
+const homeChannelMissing = (
+  snapshot: MessagingSnapshot,
+  channel: MessagingPlatformId
+): boolean => {
+  if (isMessagingPlatformConnected(snapshot, channel)) return false;
+  const platform = snapshot.platforms.find((entry) => entry.id === channel);
+  return !(
+    platform?.enabled === true && HOME_CHANNEL_RECONNECTING.has(platform.state)
+  );
+};
 
 /** The connector a chat app connects through (the registry's `messaging-<platform>`). */
 export const homeChannelConnectorId = (channel: MessagingPlatformId): string =>
@@ -39,6 +66,13 @@ export const HomeChannelConnect = ({
   const snapshot = useQuery({
     ...transport.orpc.messaging.snapshot.queryOptions({ input: {} }),
     enabled: channel != null,
+    // Until it is connected, from here or anywhere else, so the card goes.
+    refetchInterval: (query) =>
+      channel != null &&
+      (query.state.data == null ||
+        homeChannelMissing(query.state.data, channel))
+        ? HOME_CHANNEL_POLL_MS
+        : false,
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +83,7 @@ export const HomeChannelConnect = ({
     conversationKey == null ||
     snapshot.data == null ||
     notNow ||
-    isMessagingPlatformConnected(snapshot.data, channel)
+    !homeChannelMissing(snapshot.data, channel)
   )
     return null;
   const connectorId = homeChannelConnectorId(channel);

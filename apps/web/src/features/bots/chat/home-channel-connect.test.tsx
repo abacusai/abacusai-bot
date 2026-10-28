@@ -149,6 +149,29 @@ it("shows nothing once the app is connected, or for a bot with no chat app", asy
   expect(document.querySelector('[data-slot="connector-request"]')).toBeNull();
 });
 
+it("a switched-on app reconnecting at launch shows no card; a signed-out one does", async () => {
+  const reconnecting = snapshotOf("whatsapp", false);
+  reconnecting.platforms[0] = {
+    ...reconnecting.platforms[0]!,
+    enabled: true,
+    state: "connecting",
+  };
+  const view = mount({ homeChannel: "whatsapp" }, { current: reconnecting });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(document.querySelector('[data-slot="connector-request"]')).toBeNull();
+  view.unmount();
+  const signedOut = snapshotOf("whatsapp", false);
+  signedOut.platforms[0] = {
+    ...signedOut.platforms[0]!,
+    enabled: true,
+    state: "needs_login",
+  };
+  mount({ homeChannel: "whatsapp" }, { current: signedOut });
+  expect(
+    await screen.findByRole("button", { name: "Connect WhatsApp" })
+  ).toBeTruthy();
+});
+
 it("Not now hides the card for this view", async () => {
   mount(
     { homeChannel: "whatsapp" },
