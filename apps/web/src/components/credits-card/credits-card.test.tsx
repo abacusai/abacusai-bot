@@ -649,10 +649,11 @@ describe("the free grant's milestone card", () => {
       { kind: "credits", key: "pro1", threadId: "t1", pendingText: "go on" },
       { account: PRO_ACCOUNT, billing: PRO_OUT, openExternal }
     );
+    // The title shows before the plan read lands; the offer follows it.
     await waitFor(() =>
-      expect(open.textContent).toContain("You've used this month's credits")
+      expect(open.textContent).toContain("Or move up to Max — $200/month")
     );
-    expect(open.textContent).toContain("Or move up to Max — $200/month");
+    expect(open.textContent).toContain("You've used this month's credits");
     expect(open.textContent).toContain("300,000 credits a month");
     expect(document.querySelector('[data-slot="upgrade-pitch"]')).toBeNull();
     expect(screen.getByRole("button", { name: "Upgrade to Max" })).toBeTruthy();
