@@ -7,6 +7,9 @@
 
 export const ARTIFACT_PATH_MARKER = "[artifact]";
 
+/** How `present_deliverable` opens a result that handed over nothing: no path it named exists. */
+export const NOTHING_PRESENTED = "Nothing could be presented";
+
 /** The declaration line a tool result carries for one file or URL. */
 export const artifactPathLine = (target: string): string =>
   `${ARTIFACT_PATH_MARKER} ${target}`;
@@ -77,14 +80,15 @@ const answers = (declared: string, requested: string): boolean => {
 
 /**
  * The items a `present_deliverable` call handed over: what the tool declared,
- * in its order, labelled as the call named them. A result declaring nothing
- * is from before the tool declared anything, and the arguments are then all
- * there is to go on.
+ * in its order, labelled as the call named them. A refusal handed over
+ * nothing. Any other result declaring nothing is from before the tool
+ * declared anything, and the arguments are then all there is to go on.
  */
 export function presentedDeliverables(
   input: Record<string, unknown>,
   resultText: string | undefined
 ): PresentedDeliverable[] {
+  if (resultText?.startsWith(NOTHING_PRESENTED) === true) return [];
   const requested = requestedDeliverables(input);
   const declared = declaredArtifactTargets(resultText ?? "");
 
