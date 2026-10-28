@@ -4666,8 +4666,6 @@
     "credits": "Open source sotto la licenza MIT",
     "keepRunning": "Continua in background",
     "quitAnyway": "Esci comunque",
-    "openApp": "Apri {{app}}",
-    "stillRunningInTray": "{{app}} è ancora in esecuzione. Aprilo o chiudilo da qui.",
     "taskRunningTitle": "Un'attività è in esecuzione",
     "taskRunningMessage": "Un'attività è ancora in esecuzione.",
     "taskRunningDetail": "Continuarlo a funzionare in background o chiuderlo e interromperlo?",

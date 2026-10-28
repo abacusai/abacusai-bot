@@ -4666,8 +4666,6 @@
     "credits": "Open source under the MIT License",
     "keepRunning": "Keep running in background",
     "quitAnyway": "Quit anyway",
-    "openApp": "Open {{app}}",
-    "stillRunningInTray": "{{app}} is still running. Open or quit it from here.",
     "taskRunningTitle": "A task is running",
     "taskRunningMessage": "A task is still running.",
     "taskRunningDetail": "Keep it running in the background, or quit and stop it?",

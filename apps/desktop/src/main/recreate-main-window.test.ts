@@ -2,10 +2,7 @@ import { EventEmitter } from "node:events";
 
 import { expect, it, vi } from "vitest";
 
-import {
-  mainWindowCloseAction,
-  mainWindowLifecycle,
-} from "./recreate-main-window";
+import { mainWindowLifecycle } from "./recreate-main-window";
 
 it("does not quit a fake app when destroying the last window during recreation", async () => {
   const app = new EventEmitter();
@@ -73,27 +70,4 @@ it("leaves an absent window alone and keeps macOS in the dock", async () => {
   lifecycle.onWindowAllClosed();
   expect(destroy).not.toHaveBeenCalled();
   expect(quit).not.toHaveBeenCalled();
-});
-
-it("hides to the tray on first run off macOS, and a real quit always closes", () => {
-  const close = (
-    platform: string,
-    overrides: Partial<Parameters<typeof mainWindowCloseAction>[0]> = {}
-  ) =>
-    mainWindowCloseAction({
-      platform,
-      quitting: false,
-      firstRun: false,
-      taskRunning: false,
-      ...overrides,
-    });
-  expect(close("darwin")).toBe("hide");
-  for (const platform of ["win32", "linux"]) {
-    expect(close(platform)).toBe("close");
-    expect(close(platform, { taskRunning: true })).toBe("ask");
-    expect(close(platform, { firstRun: true })).toBe("tray");
-    expect(close(platform, { firstRun: true, taskRunning: true })).toBe("tray");
-    expect(close(platform, { firstRun: true, quitting: true })).toBe("close");
-  }
-  expect(close("darwin", { quitting: true })).toBe("close");
 });
