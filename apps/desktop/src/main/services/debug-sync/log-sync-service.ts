@@ -13,6 +13,7 @@ import { app } from "electron";
 import { abacusBotHome } from "../../paths";
 import { readSettings } from "../config/settings";
 import { clientEnvironment } from "../diagnostics/client-environment";
+import { logStore } from "../diagnostics/log-store";
 import { abacusRoutellmV1 } from "../providers/abacus-host";
 import { deviceId } from "./device-id";
 import {
@@ -27,6 +28,13 @@ const MAX_ATTEMPTS = 5;
 const BASE_BACKOFF_MS = 2_000;
 const MAX_BATCH_BYTES = 40 * 1024 * 1024;
 const MAX_FILES_PER_BATCH = 50;
+
+/** How hard one sweep tries: the timed ones retry, the quit's does not. */
+interface SweepOptions {
+  maxAttempts: number;
+  timeoutMs?: number;
+}
+const TIMED_SWEEP: SweepOptions = { maxAttempts: MAX_ATTEMPTS };
 const MARKER_FILE = (): string =>
   path.join(abacusBotHome(), "log-sync-state.json");
 const LOGS_DIR = (): string => path.join(abacusBotHome(), "logs");
@@ -36,7 +44,9 @@ export class LogSyncService {
   /** `<stream>-<day>` -> bytes already synced for that file. */
   private markers: Record<string, number> = {};
   private timer: NodeJS.Timeout | null = null;
-  private syncing = false;
+  /** The sweep under way, so a second request waits for it, then runs again. */
+  private syncing: Promise<void> | null = null;
+  private again = false;
   private disabledForRun: string | null = null;
 
   constructor() {
@@ -50,10 +60,39 @@ export class LogSyncService {
     this.timer.unref?.();
   }
 
-  /** Ship what is on disk now: a key was just stored, and the lines that led
-   * up to it are only worth anything if they leave before the app is closed. */
+  /**
+   * Ship what has been logged so far: a key was just stored or a sign-in just
+   * finished, and those lines are only worth anything if they leave before
+   * the app is closed. Buffered lines are written out first; a sweep already
+   * under way is followed by another, so lines logged during it still go.
+   */
   syncNow(): void {
+    logStore().flush();
     void this.sweep();
+  }
+
+  /**
+   * The quit's upload: one attempt for what is left, abandoned after
+   * `budgetMs` (the next launch sends whatever did not make it). Resolves,
+   * never rejects, so the quit can simply await it.
+   */
+  syncBeforeQuit(budgetMs: number): Promise<void> {
+    this.stop();
+    logStore().flush();
+    let timer: NodeJS.Timeout | null = null;
+    const budget = new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, budgetMs);
+    });
+    const upload = (async () => {
+      // A sweep under way (and its follow-up) first; then what is left.
+      while (this.syncing != null) await this.syncing;
+      await this.sweep({ maxAttempts: 1, timeoutMs: budgetMs });
+    })().catch((error: unknown) =>
+      console.warn("[log-sync] quit upload failed", error)
+    );
+    return Promise.race([budget, upload]).finally(() => {
+      if (timer != null) clearTimeout(timer);
+    });
   }
 
   stop(): void {
@@ -71,8 +110,9 @@ export class LogSyncService {
     return toggle && (key ?? "").trim().length > 0;
   }
 
-  private deps(): LogSyncDeps {
+  private deps(timeoutMs?: number): LogSyncDeps {
     return {
+      ...(timeoutMs == null ? {} : { timeoutMs }),
       readKey: () => readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus],
       syncUrl: () => this.syncUrl(),
       deviceId: () => deviceId(),
@@ -91,8 +131,24 @@ export class LogSyncService {
     return `${abacusRoutellmV1()}/abacusaibot_log_sync`;
   }
 
-  private async sweep(): Promise<void> {
-    if (!this.enabled() || this.syncing) return;
+  private sweep(options: SweepOptions = TIMED_SWEEP): Promise<void> {
+    if (this.syncing != null) {
+      this.again = true;
+      return this.syncing;
+    }
+    const run = this.sweepOnce(options).finally(() => {
+      this.syncing = null;
+      if (this.again) {
+        this.again = false;
+        void this.sweep(options);
+      }
+    });
+    this.syncing = run;
+    return run;
+  }
+
+  private async sweepOnce(options: SweepOptions): Promise<void> {
+    if (!this.enabled()) return;
     let names: string[];
     try {
       names = fs.readdirSync(LOGS_DIR());
@@ -112,31 +168,27 @@ export class LogSyncService {
     }
     if (deltas.length === 0) return;
 
-    this.syncing = true;
-    try {
-      for (const batch of this.batchBySize(deltas)) {
-        const outcome = await syncLogBatchWithRetry(this.deps(), batch, {
-          maxAttempts: MAX_ATTEMPTS,
-          baseBackoffMs: BASE_BACKOFF_MS,
-        });
-        if (outcome.status === "ok") {
-          for (const result of outcome.results)
-            this.markers[`${result.stream}-${result.day}`] = result.stored;
-          this.saveMarkers();
-        } else if (outcome.status === "error") {
-          if (!outcome.retryable) {
-            this.disabledForRun = outcome.reason;
-            console.warn(
-              `[log-sync] disabled for this run (${outcome.reason}). Best-effort, will not succeed by retrying`
-            );
-          } else {
-            console.warn(`[log-sync] batch gave up: ${outcome.reason}`);
-          }
-          return; // the next sweep retries from the persisted markers
+    for (const batch of this.batchBySize(deltas)) {
+      const outcome = await syncLogBatchWithRetry(
+        this.deps(options.timeoutMs),
+        batch,
+        { maxAttempts: options.maxAttempts, baseBackoffMs: BASE_BACKOFF_MS }
+      );
+      if (outcome.status === "ok") {
+        for (const result of outcome.results)
+          this.markers[`${result.stream}-${result.day}`] = result.stored;
+        this.saveMarkers();
+      } else if (outcome.status === "error") {
+        if (!outcome.retryable) {
+          this.disabledForRun = outcome.reason;
+          console.warn(
+            `[log-sync] disabled for this run (${outcome.reason}). Best-effort, will not succeed by retrying`
+          );
+        } else {
+          console.warn(`[log-sync] batch gave up: ${outcome.reason}`);
         }
+        return; // the next sweep retries from the persisted markers
       }
-    } finally {
-      this.syncing = false;
     }
   }
 

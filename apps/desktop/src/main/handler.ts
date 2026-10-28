@@ -476,6 +476,10 @@ export const createHostOperations = (
     }
 
     const adopted = await adoptAbacusCredential(result.key);
+    // Now, not only when the key was stored: the sign-in's own result lines
+    // are written after that, and an app closed in the next two minutes would
+    // otherwise never send them.
+    serviceHost.syncLogsNow();
     if (!adopted.ok) return adopted;
 
     // Warm the catalog for same-profile sign-ins. A profile switch relaunches,

@@ -2533,6 +2533,11 @@ export class ServiceHost {
     this.logSyncService.syncNow();
   }
 
+  /** The quit's last log upload, bounded by `budgetMs`; never rejects. */
+  syncLogsBeforeQuit(budgetMs: number): Promise<void> {
+    return this.logSyncService.syncBeforeQuit(budgetMs);
+  }
+
   /** Read the WhatsApp link now: a new key can read what a keyless start could not, and a link just made shows at once. */
   refreshBotNumber(): void {
     void this.botNumber?.read({ fresh: true });

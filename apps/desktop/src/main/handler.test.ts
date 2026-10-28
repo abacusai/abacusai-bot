@@ -114,6 +114,7 @@ const ensureMcpServer = vi.fn();
 const removeMcpServer = vi.fn();
 const refreshAgentProviders = vi.fn();
 const restoreSessionsForAccount = vi.fn(() => 0);
+const syncLogsNow = vi.fn();
 const stashSessionsForAccount = vi.fn(() => 0);
 const startDeviceStream = vi.fn(
   async (_request: unknown, _sender: Electron.WebContents) => ({
@@ -144,6 +145,7 @@ beforeEach(() => {
   } as never);
 
   refreshAgentProviders.mockClear();
+  syncLogsNow.mockClear();
 
   const host = {
     createBot,
@@ -156,7 +158,7 @@ beforeEach(() => {
     ensureMcpServer,
     removeMcpServer,
     refreshAgentProviders,
-    syncLogsNow: vi.fn(),
+    syncLogsNow,
     refreshBotNumber: vi.fn(),
     startDeviceStream,
   };
@@ -199,6 +201,17 @@ describe("acquiring an Abacus.AI key", () => {
 
     expect(ensureMcpServer).toHaveBeenCalledTimes(1);
     expect(ensureMcpServer.mock.calls[0]?.[0]).toMatchObject(gateway);
+  });
+
+  it("ships the logs once the sign-in has finished, not only when the key was stored", async () => {
+    await handlers.get("auth")?.({});
+
+    // The "signed in" lines are written after the key is stored; an app
+    // closed before the next timed sweep never sent them.
+    const restored = restoreSessionsForAccount.mock.invocationCallOrder.at(-1);
+    const lastSync = syncLogsNow.mock.invocationCallOrder.at(-1);
+    expect(restored).toBeDefined();
+    expect(lastSync).toBeGreaterThan(restored!);
   });
 
   it("tells the running agents to re-read the keys", async () => {
