@@ -1,5 +1,6 @@
 import {
   paidCreditsOffer,
+  paidUpgradeOnly,
   planPrice,
   wallOffer,
 } from "@abacus-ai/contract/billing-plan";
@@ -223,10 +224,17 @@ const PaidBody = ({
 const DialogBody = ({
   request,
   onDone,
+  paidUpgrade = false,
 }: {
   request: UpgradeDialogRequest;
   /** `dismissed` when the person said no; not when they paid or are paying. */
   onDone: (dismissed: boolean) => void;
+  /**
+   * A paid plan out of credits whose way on is the next plan alone (Basic):
+   * the same dialog, its Upgrade opening the next plan's link, waiting until
+   * the plan (or its credits) change.
+   */
+  paidUpgrade?: boolean;
 }) => {
   const { t, i18n } = useTranslation();
   const { transport } = useAppContext();
@@ -246,7 +254,11 @@ const DialogBody = ({
   useEffect(() => {
     if (!waiting) return;
     let stopped = false;
-    void watchForPlan(transport.client).then(async (paid) => {
+    void (
+      paidUpgrade
+        ? watchForCredits(transport.client)
+        : watchForPlan(transport.client)
+    ).then(async (paid) => {
       if (stopped) return;
       if (paid == null) {
         setWaiting(false);
@@ -264,7 +276,7 @@ const DialogBody = ({
     return () => {
       stopped = true;
     };
-  }, [waiting, transport, request, onDone]);
+  }, [waiting, transport, request, onDone, paidUpgrade]);
 
   if (waiting)
     return (
@@ -338,7 +350,9 @@ const DialogBody = ({
                     ? "upgradeDialog.connectorsEyebrow"
                     : request.expired === true
                       ? "outcome.wall.expiredTitle"
-                      : "outcome.wall.title"
+                      : paidUpgrade
+                        ? "outcome.wall.paidTitle"
+                        : "outcome.wall.title"
                 )}
           </p>
         )}
@@ -408,7 +422,9 @@ const DialogBody = ({
           className="h-11 text-sm font-semibold"
           onClick={() => {
             // Called inside the click: the web build opens its tab here.
-            void openUpgrade(transport.client);
+            void (paidUpgrade
+              ? openNextPlan(transport.client)
+              : openUpgrade(transport.client));
             setWaiting(true);
           }}
         >
@@ -439,9 +455,11 @@ export const UpgradeDialogHost = () => {
   const request = useUpgradeDialogRequest();
   const { transport } = useAppContext();
   const qc = useQueryClient();
+  // `free`: the free plan's dialog; `upgrade`: the same dialog for a paid
+  // plan whose way on is the next plan alone (Basic); `paid`: top-up and plan.
   const [confirmed, setConfirmed] = useState<{
     key: string;
-    paid: boolean;
+    body: "free" | "upgrade" | "paid";
   } | null>(null);
 
   // A plan bought from any surface: the account and the catalog every card and
@@ -467,17 +485,22 @@ export const UpgradeDialogHost = () => {
       .then(async (account) => {
         if (!live) return;
         if (askedAccount(request, account)) {
-          setConfirmed({ key: request.key, paid: false });
+          setConfirmed({ key: request.key, body: "free" });
           return;
         }
-        const paid =
-          request.kind === "credits" &&
-          payingAccount(account) &&
-          paidCreditsOffer(
-            await transport.client.account.billingPlan({}).catch(() => null)
-          ) != null;
+        // A paid plan's credits request only: a free account never reads this.
+        const offer =
+          request.kind === "credits" && payingAccount(account)
+            ? paidCreditsOffer(
+                await transport.client.account.billingPlan({}).catch(() => null)
+              )
+            : null;
         if (!live) return;
-        if (paid) setConfirmed({ key: request.key, paid: true });
+        if (offer != null)
+          setConfirmed({
+            key: request.key,
+            body: paidUpgradeOnly(offer) ? "upgrade" : "paid",
+          });
         else closeUpgradeDialog();
       })
       .catch(() => {
@@ -502,10 +525,15 @@ export const UpgradeDialogHost = () => {
           data-kind={request.kind}
           className="gap-5 p-7 pb-5 text-sm sm:max-w-[440px] [&>*]:min-w-0"
         >
-          {confirmed?.paid === true ? (
+          {confirmed?.body === "paid" ? (
             <PaidBody key={request.key} request={request} onDone={done} />
           ) : (
-            <DialogBody key={request.key} request={request} onDone={done} />
+            <DialogBody
+              key={request.key}
+              request={request}
+              onDone={done}
+              paidUpgrade={confirmed?.body === "upgrade"}
+            />
           )}
         </DialogContent>
       )}

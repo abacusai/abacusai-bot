@@ -1,6 +1,7 @@
 import {
   type BillingPlan,
   paidCreditsOffer,
+  paidUpgradeOnly,
   planPitch,
   planPrice,
   wallOffer,
@@ -154,6 +155,13 @@ export const CreditsCard = ({
   const offer = wallOffer(billing);
   // A paid plan's way on: credits, the next plan, or the mobile app.
   const paidOffer = paying ? paidCreditsOffer(billing) : null;
+  // The next plan alone (Basic): shown as the free plan's upgrade is.
+  const upgradeOnly = paidUpgradeOnly(paidOffer);
+  const pitchesPlan = !paying || upgradeOnly;
+  const paidDetails =
+    paidOffer != null && !upgradeOnly ? (
+      <PaidOfferDetails offer={paidOffer} />
+    ) : null;
   const topUp = () =>
     wall?.onTopUp != null
       ? wall.onTopUp()
@@ -163,6 +171,25 @@ export const CreditsCard = ({
   const nextPlan =
     wall?.onNextPlan ??
     (host.openNextPlan != null ? () => void host.openNextPlan?.() : undefined);
+  const upgrade = () =>
+    wall?.onUpgrade != null
+      ? wall.onUpgrade()
+      : upgradeOnly && nextPlan != null
+        ? nextPlan()
+        : void host.openUpgrade();
+  const noteText =
+    note ??
+    t(
+      upgradeOnly
+        ? "upgradeDialog.creditsBodyNoMessage"
+        : paying
+          ? canTopUp || paidOffer != null
+            ? "creditsCard.paidBody"
+            : "workspace.premiumUpgrade.switchNote"
+          : missing.length
+            ? "workspace.premiumUpgrade.connectNote"
+            : "workspace.premiumUpgrade.switchNote"
+    );
   const balance = billing?.current;
   const connect = async (source: FreePoolProvider, value?: string) => {
     if (busy || !host.connectFreeSource) return;
@@ -240,8 +267,8 @@ export const CreditsCard = ({
                   </p>
                 </div>
               )}
-              {paidOffer != null && <PaidOfferDetails offer={paidOffer} />}
-              {!paying && offer != null && (
+              {paidDetails}
+              {pitchesPlan && offer != null && (
                 <div className="flex flex-col gap-1.5" data-slot="wall-offer">
                   <p className="font-medium">
                     {t("outcome.wall.offer", {
@@ -263,21 +290,13 @@ export const CreditsCard = ({
                 </div>
               )}
             </div>
+          ) : paidDetails == null ? (
+            <p className="text-muted-foreground p-3 text-sm">{noteText}</p>
           ) : (
+            // A paid plan's offer sits under the note.
             <div className="flex flex-col gap-3 p-3 text-sm">
-              <p className="text-muted-foreground">
-                {note ??
-                  t(
-                    paying
-                      ? canTopUp || paidOffer != null
-                        ? "creditsCard.paidBody"
-                        : "workspace.premiumUpgrade.switchNote"
-                      : missing.length
-                        ? "workspace.premiumUpgrade.connectNote"
-                        : "workspace.premiumUpgrade.switchNote"
-                  )}
-              </p>
-              {paidOffer != null && <PaidOfferDetails offer={paidOffer} />}
+              <p className="text-muted-foreground">{noteText}</p>
+              {paidDetails}
             </div>
           )}
           {ready != null && (
@@ -289,22 +308,14 @@ export const CreditsCard = ({
             </div>
           )}
           <div className="flex flex-col gap-3 p-3">
-            {tier === "free" && (
-              <Button
-                size="sm"
-                data-action="upgrade"
-                onClick={() =>
-                  wall?.onUpgrade != null
-                    ? wall.onUpgrade()
-                    : void host.openUpgrade()
-                }
-              >
+            {(tier === "free" || upgradeOnly) && (
+              <Button size="sm" data-action="upgrade" onClick={upgrade}>
                 {wall != null && offer != null
                   ? t("outcome.wall.upgradeCta", { plan: offer.planName })
                   : t("creditsCard.cta")}
               </Button>
             )}
-            {paidOffer != null ? (
+            {upgradeOnly ? null : paidOffer != null ? (
               <PaidOfferButtons
                 offer={paidOffer}
                 onTopUp={topUp}

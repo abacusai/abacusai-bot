@@ -27,6 +27,7 @@ import { renderWithDb } from "../../features/chat/testing";
 import { UpgradeDialogHost } from "../../features/upgrade-dialog";
 import { DeliverablesCard } from "../file-preview";
 import { CreditsCard, missingFreeSources } from "./index";
+import { CutOffCard } from "./model-unavailable";
 import { CreditThresholdCard, CreditThresholdHost } from "./threshold";
 
 let cleanup: (() => Promise<void>) | undefined;
@@ -86,7 +87,7 @@ it("connects OpenRouter and replays a dead turn once after the refreshed catalog
   );
 });
 
-it("tops a basic plan up with credits, never the plan chooser", async () => {
+it("a paid plan the server does not name (an older server) keeps its Top up, on the top-up link", async () => {
   const openExternal = vi.fn(async () => {});
   const openUpgrade = vi.fn(async () => {});
   const openTopUp = vi.fn(async () => {});
@@ -549,6 +550,15 @@ describe("the free grant's milestone card", () => {
     expect(screen.getByRole("button", { name: "I've upgraded" })).toBeTruthy();
   });
 
+  const PRO_TIER = {
+    plan: "pro",
+    planName: "Pro",
+    priceText: "$20/mo",
+    firstMonthPriceCents: 2000,
+    priceCents: 2000,
+    features: ["Everything in Basic", "30,000 credits a month"],
+    url: "https://example.com/upgrade/pro",
+  };
   const BASIC_OUT: BillingPlan = {
     current: {
       plan: "basic",
@@ -557,18 +567,18 @@ describe("the free grant's milestone card", () => {
       creditsGranted: 20000,
       freeTierExpiresAt: null,
     },
-    plans: [],
-    upgrades: [
+    plans: [
       {
-        plan: "pro",
-        planName: "Pro",
-        priceText: "$20/mo",
-        firstMonthPriceCents: 2000,
-        priceCents: 2000,
-        features: ["Everything in Basic", "30,000 credits a month"],
-        url: "https://example.com/plans",
+        plan: "basic",
+        planName: "Basic",
+        priceText: "$10/mo",
+        features: [],
+        creditsPerMonth: 20000,
+        current: true,
       },
+      { ...PRO_TIER, creditsPerMonth: 40000, current: false },
     ],
+    upgrades: [PRO_TIER],
     topUpUrl: "https://example.com/plans?buyCredits=true",
     upgradeInMobileApp: false,
   };
@@ -578,21 +588,74 @@ describe("the free grant's milestone card", () => {
     credits_granted: 20000,
     credits_used: 20000,
   };
+  const PRO_OUT: BillingPlan = {
+    ...BASIC_OUT,
+    current: { ...BASIC_OUT.current, plan: "pro", planName: "Pro" },
+    plans: [],
+    upgrades: [
+      {
+        plan: "max",
+        planName: "Max",
+        priceText: "$200/mo",
+        priceCents: 20000,
+        features: ["Everything in Pro", "300,000 credits a month"],
+        url: "https://example.com/upgrade/max",
+      },
+    ],
+  };
+  const PRO_ACCOUNT = { ...BASIC_ACCOUNT, subscription_tier: "pro" };
 
-  it("a paid plan out of credits is offered a top-up and the next plan, priced by the server", async () => {
+  it("Basic out of credits gets the free plan's dialog for Pro: price, whole pitch, Upgrade, no Top up", async () => {
     const openExternal = vi.fn();
     const open = await dialog(
-      { kind: "credits", key: "paid1", threadId: "t1", pendingText: "go on" },
+      { kind: "credits", key: "basic1", threadId: "t1", pendingText: "go on" },
       { account: BASIC_ACCOUNT, billing: BASIC_OUT, openExternal }
+    );
+    await waitFor(() =>
+      expect(document.querySelector('[data-slot="upgrade-pitch"]')).toBeTruthy()
+    );
+    expect(open.textContent).toContain("You've used this month's credits");
+    expect(open.textContent).toContain("Keep going with AbacusAI Bot");
+    expect(open.textContent).toContain("Upgrade and it sends right away.");
+    expect(open.textContent).toContain("$20/month");
+    expect(open.textContent).toContain("Pro plan · cancel anytime");
+    expect(
+      document.querySelector('[data-slot="upgrade-pitch"]')?.textContent
+    ).toContain("40,000 credits a month (2x your Basic plan)");
+    // Never the free plan's wording, never a top-up.
+    expect(open.textContent).not.toContain("free");
+    expect(screen.queryByRole("button", { name: "Top up" })).toBeNull();
+    expect(
+      document.querySelector('[data-slot="upgrade-paid-offer"]')
+    ).toBeNull();
+    expect(screen.getByRole("button", { name: "Not now" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Upgrade to Pro" }));
+    await waitFor(() =>
+      expect(openExternal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: { url: "https://example.com/upgrade/pro" },
+        })
+      )
+    );
+    await waitFor(() =>
+      expect(open.textContent).toContain("Finish checkout in your browser")
+    );
+    expect(screen.getByRole("button", { name: "I've upgraded" })).toBeTruthy();
+  });
+
+  it("Pro out of credits is offered a top-up and Max, priced by the server", async () => {
+    const openExternal = vi.fn();
+    const open = await dialog(
+      { kind: "credits", key: "pro1", threadId: "t1", pendingText: "go on" },
+      { account: PRO_ACCOUNT, billing: PRO_OUT, openExternal }
     );
     await waitFor(() =>
       expect(open.textContent).toContain("You've used this month's credits")
     );
-    expect(open.textContent).toContain("Or move up to Pro — $20/month");
-    expect(open.textContent).toContain("30,000 credits a month");
-    // Never the free plan's pitch.
+    expect(open.textContent).toContain("Or move up to Max — $200/month");
+    expect(open.textContent).toContain("300,000 credits a month");
     expect(document.querySelector('[data-slot="upgrade-pitch"]')).toBeNull();
-    expect(screen.getByRole("button", { name: "Upgrade to Pro" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Upgrade to Max" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Top up" }));
     await waitFor(() =>
       expect(openExternal).toHaveBeenCalledWith(
@@ -679,5 +742,95 @@ describe("the free grant's milestone card", () => {
     await waitFor(() =>
       expect(open.textContent).toContain("Your free credits have expired")
     );
+  });
+});
+
+describe("the cut-off card once the credits are used up", () => {
+  const offerFor = (plan: string, next: string, nextName: string) =>
+    ({
+      current: {
+        plan,
+        planName: plan,
+        creditsRemaining: 0,
+        creditsGranted: 20000,
+        freeTierExpiresAt: null,
+      },
+      plans: [],
+      upgrades: [
+        {
+          plan: next,
+          planName: nextName,
+          priceText: "$20/mo",
+          priceCents: 2000,
+          features: [`Everything in ${plan}`],
+          url: `https://example.com/upgrade/${next}`,
+        },
+      ],
+      topUpUrl: "https://example.com/plans?buyCredits=true",
+      upgradeInMobileApp: false,
+    }) as BillingPlan;
+  const card = async (paid: boolean, billing: BillingPlan) => {
+    const onUpgrade = vi.fn();
+    const onTopUp = vi.fn();
+    const onNextPlan = vi.fn();
+    const rendered = await renderWithDb(
+      <CutOffCard
+        host={{
+          openExternal: async () => {},
+          openUpgrade: async () => {},
+          billingPlan: async () => billing,
+        }}
+        state="out"
+        paid={paid}
+        streamed={false}
+        label="Gemini"
+        resolved={null}
+        onUpgrade={onUpgrade}
+        onTopUp={onTopUp}
+        onNextPlan={onNextPlan}
+      />
+    );
+    cleanup = rendered.cleanup;
+    return { onUpgrade, onTopUp, onNextPlan };
+  };
+
+  it("free: the plan's pitch and its Upgrade, as before", async () => {
+    const { onUpgrade } = await card(false, offerFor("free", "basic", "Basic"));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Upgrade to Basic" })
+    );
+    expect(onUpgrade).toHaveBeenCalledOnce();
+    expect(
+      screen.getByText("You've also used your free Abacus credits.")
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Top up" })).toBeNull();
+  });
+
+  it("Basic: the same pitch and Upgrade, for Pro, and no Top up", async () => {
+    const { onUpgrade, onNextPlan } = await card(
+      true,
+      offerFor("basic", "pro", "Pro")
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Upgrade to Pro" })
+    );
+    expect(onUpgrade).toHaveBeenCalledOnce();
+    expect(onNextPlan).not.toHaveBeenCalled();
+    expect(screen.getByText("You've used this month's credits")).toBeTruthy();
+    expect(screen.getByText("Pro gets you:")).toBeTruthy();
+    expect(screen.queryByText(/free Abacus credits/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Top up" })).toBeNull();
+  });
+
+  it("Pro: Top up and Upgrade to Max", async () => {
+    const { onTopUp, onNextPlan, onUpgrade } = await card(
+      true,
+      offerFor("pro", "max", "Max")
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Top up" }));
+    fireEvent.click(screen.getByRole("button", { name: "Upgrade to Max" }));
+    expect(onTopUp).toHaveBeenCalledOnce();
+    expect(onNextPlan).toHaveBeenCalledOnce();
+    expect(onUpgrade).not.toHaveBeenCalled();
   });
 });

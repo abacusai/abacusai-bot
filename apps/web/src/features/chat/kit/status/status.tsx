@@ -3,6 +3,11 @@
  * bubble, run outcome markers, the error card with its action table (and
  * the upgrade variant), and notices.
  */
+import {
+  type PaidCreditsOffer,
+  paidCreditsOffer,
+  paidUpgradeOnly,
+} from "@abacus-ai/contract/billing-plan";
 import { OPENLLM_ID } from "@abacus-ai/contract/models";
 import { providerDisplayName } from "@abacus-ai/contract/settings";
 import type { UIMessage } from "@tanstack/ai-client";
@@ -604,16 +609,10 @@ type CutOffStep =
   | "cutoff_verify";
 
 /**
- * Google cut the reply off on the model the user picked (turn-outcome.ts),
- * even after the agent asked once more: the cut-off card, its ways on, and
- * what each does. Every switch is the person's click, and moves this chat
- * (a bot's chat: its bot) only, never the app's default; a chosen way on
- * picks the cut reply up rather than asking the question again.
- */
-/**
- * A paid plan's Top up and next plan from a card in this chat: the link opens
- * at click time and the dialog waits for the credits or the plan, then sends
- * the waiting message (`resume`).
+ * A paid plan's ways on from a card in this chat. Top up and the next plan:
+ * the link opens at click time and the dialog waits for the credits or the
+ * plan. Upgrade (Basic's way on): the upgrade dialog, as a free account's
+ * card opens it. Either sends the waiting message (`resume`) once paid.
  */
 const usePaidCheckout = (
   runId: string,
@@ -640,9 +639,27 @@ const usePaidCheckout = (
           ? runtime.host.openNextPlan()
           : runtime.host.openExternal(ABACUS_BILLING_URL)
       ),
+    upgrade: () =>
+      requestUpgradeDialog(
+        {
+          kind: "credits",
+          key: `paid-upgrade:${runId}:${Date.now()}`,
+          threadId: session.threadId,
+          pendingText: lastUserText(session.hostStore.state.messages),
+          resume,
+        },
+        true
+      ),
   };
 };
 
+/**
+ * Google cut the reply off on the model the user picked (turn-outcome.ts),
+ * even after the agent asked once more: the cut-off card, its ways on, and
+ * what each does. Every switch is the person's click, and moves this chat
+ * (a bot's chat: its bot) only, never the app's default; a chosen way on
+ * picks the cut reply up rather than asking the question again.
+ */
 const CutOffError = ({
   outcome,
   action,
@@ -767,6 +784,11 @@ const CutOffError = ({
           // is active the turn goes on on an Abacus model, in this chat only.
           onUpgrade: () => {
             funnel("cutoff_upgrade");
+            // A paid plan's Upgrade (Basic's): the credits dialog for its next plan.
+            if (paid) {
+              paidCheckout.upgrade();
+              return;
+            }
             requestUpgradeDialog(
               {
                 kind: "own-key",
@@ -852,6 +874,29 @@ export const ErrorCard = ({
     []) as ErrorAction[];
   const detail = (error as { detail?: string }).detail;
   const upgrade = wantsUpgradeCard(actions, paying);
+  // A paid plan at the wall: its offer picks the card. Basic's (the next plan
+  // alone) is the free plan's one line, its dialog carrying the pitch.
+  const paidAtWall =
+    upgrade &&
+    paying &&
+    actions.some((action) => action.type === "upgrade-abacus");
+  const [paidWallOffer, setPaidWallOffer] = useState<
+    PaidCreditsOffer | null | undefined
+  >(undefined);
+  useEffect(() => {
+    if (!paidAtWall) return;
+    let live = true;
+    void Promise.resolve(runtime.host.billingPlan?.() ?? null)
+      .then((billing) => {
+        if (live) setPaidWallOffer(paidCreditsOffer(billing));
+      })
+      .catch(() => {
+        if (live) setPaidWallOffer(null);
+      });
+    return () => {
+      live = false;
+    };
+  }, [paidAtWall, runtime]);
   const cause = (error as { cause?: string }).cause;
   // A model the plan does not include: main has locked it, so the picker
   // re-reads without it.
@@ -1038,10 +1083,13 @@ export const ErrorCard = ({
           )}
         </>
       ) : undefined;
-    // A free account at the Abacus wall: the pitch is the upgrade dialog's
-    // (UpgradeTriggers opens it once per stopped run); here, one line and the
-    // way back to it, beside the free ways on.
-    if (atWall && tier === "free")
+    // Until a paid plan's offer is read, no card: it picks which one.
+    if (paidAtWall && paidWallOffer === undefined) return null;
+    // A free account at the Abacus wall (and Basic, whose way on is the next
+    // plan alone): the pitch is the upgrade dialog's (UpgradeTriggers opens
+    // it once per stopped run); here, one line and the way back to it, beside
+    // the free ways on.
+    if (atWall && (tier === "free" || paidUpgradeOnly(paidWallOffer)))
       return (
         <div
           role="group"
@@ -1055,7 +1103,9 @@ export const ErrorCard = ({
               {t(
                 creditsExpired(actions)
                   ? "outcome.wall.expiredTitle"
-                  : "outcome.wall.title"
+                  : tier === "free"
+                    ? "outcome.wall.title"
+                    : "outcome.wall.paidTitle"
               )}
             </span>
             {canReply && (

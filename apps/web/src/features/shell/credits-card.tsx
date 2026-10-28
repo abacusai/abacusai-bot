@@ -32,10 +32,7 @@ import {
   useMotionPreference,
 } from "#renderer/lib/motion";
 import { platformSystem } from "#renderer/lib/platform-system";
-import {
-  requestPlanDialog,
-  requestUpgradeDialog,
-} from "#renderer/lib/upgrade-dialog";
+import { requestPlanDialog } from "#renderer/lib/upgrade-dialog";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { useCreditsAccount } from "#renderer/lib/use-credits-account";
 import { useNow } from "#renderer/lib/use-now";
@@ -59,8 +56,7 @@ const WEB_LINES = [
  * One portal, shown only inside the sidebar (pinned or peeked): a collapsed
  * sidebar hides it. A free account sees the upgrade card, or while its free
  * credits are held, the way to unlock them; a paid plan the card that points
- * at AbacusAI Agent on the web, or once its credits are used up, its top-up
- * and next plan (the upgrade dialog's paid offer).
+ * at AbacusAI Agent on the web.
  */
 export const UpgradePromo = () => {
   const { transport } = useAppContext();
@@ -132,15 +128,13 @@ export const UpgradePromo = () => {
         ? "creditsCard.lowTitle"
         : "creditsCard.levelUpTitle";
   const web = state === "web";
-  // A paid plan with nothing left: the web card's link would spend the same credits.
-  const paidOut = web && remaining != null && remaining <= 0;
   const verifyPhone = () => {
     startFreeCreditsWatch();
     void platformSystem(transport.client).openExternal({
       url: ABACUS_VERIFY_PHONE_URL,
     });
   };
-  const lines = web && !paidOut ? WEB_LINES : [];
+  const lines = web ? WEB_LINES : [];
   // A free account's card lists the plan's whole pitch; it waits for the
   // plan (or its failure) so the card does not grow once on screen.
   const pitching = state != null && !held && !web && tier === "free";
@@ -161,11 +155,9 @@ export const UpgradePromo = () => {
           aria-label={t(
             held
               ? "creditsCard.lockedTitle"
-              : paidOut
-                ? "outcome.wall.paidTitle"
-                : web
-                  ? "creditsCard.paidWebTitle"
-                  : "creditsCard.upsellTitle"
+              : web
+                ? "creditsCard.paidWebTitle"
+                : "creditsCard.upsellTitle"
           )}
           data-state={held ? "held" : undefined}
           className="bg-background pointer-events-auto relative isolate w-full overflow-hidden rounded-(--pane-radius) border p-3"
@@ -194,11 +186,9 @@ export const UpgradePromo = () => {
                 {t(
                   held
                     ? "creditsCard.lockedTitle"
-                    : paidOut
-                      ? "outcome.wall.paidTitle"
-                      : web
-                        ? "creditsCard.paidWebTitle"
-                        : title
+                    : web
+                      ? "creditsCard.paidWebTitle"
+                      : title
                 )}
               </p>
               {lines.length > 0 && (
@@ -288,30 +278,19 @@ export const UpgradePromo = () => {
             onMouseLeave={() => setExcited(false)}
             onFocus={() => setExcited(true)}
             onBlur={() => setExcited(false)}
-            data-action={held ? "verify-phone" : paidOut ? "top-up" : undefined}
+            data-action={held ? "verify-phone" : undefined}
             onClick={() =>
               held
                 ? verifyPhone()
-                : paidOut
-                  ? requestUpgradeDialog(
-                      {
-                        kind: "credits",
-                        key: `sidebar-credits:${Date.now()}`,
-                        threadId: "sidebar",
-                      },
-                      true
-                    )
-                  : void (web
-                      ? platformSystem(transport.client).openExternal({
-                          url: ABACUS_AGENT_URL,
-                        })
-                      : requestPlanDialog("sidebar"))
+                : void (web
+                    ? platformSystem(transport.client).openExternal({
+                        url: ABACUS_AGENT_URL,
+                      })
+                    : requestPlanDialog("sidebar"))
             }
           >
             {held ? (
               t("outcome.verifyPhone.cta")
-            ) : paidOut ? (
-              t("creditsCard.topUpCta")
             ) : web ? (
               <>
                 {t("creditsCard.paidWebCta")}

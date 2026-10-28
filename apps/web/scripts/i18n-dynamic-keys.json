@@ -1592,7 +1592,9 @@
       "agents",
       "connectors",
       "apps",
-      "appsProjects"
+      "appsProjects",
+      "creditsVsPlan",
+      "introCreditsVsPlan"
     ],
     "sources": ["../../../packages/contract/src/billing-plan.ts"]
   },
@@ -1691,6 +1693,8 @@
       "unavailableOut",
       "paidOut",
       "paidUpgrade",
+      "paidUpgradeOnly",
+      "paidOutUpgrade",
       "paidMobile",
       "ownKeyCredit",
       "ownKeyRateLimit",

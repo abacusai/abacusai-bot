@@ -1,6 +1,7 @@
 import {
   type BillingPlan,
   paidCreditsOffer,
+  paidUpgradeOnly,
   planPitch,
   planPrice,
   wallOffer,
@@ -191,27 +192,32 @@ const offerLines = (words: ChannelWords, offer: ChannelOffer): string[] => {
 };
 
 /**
- * A paid plan out of credits: `topUp` (the line that sends the user to buy
- * credits), then the next plan up with its price and link when the server
- * offers one. A plan billed by Apple or Google is bought in the mobile app,
- * so the line says so in place of both links.
+ * A paid plan out of credits, by the one offer rule (paidCreditsOffer):
+ * `topUp` (the line that sends the user to buy credits), then the next plan
+ * up with its price and link when the server offers one. Basic's way on is
+ * the next plan alone, so its reply is that plan's line (`upgradeOnlyKey`)
+ * and no top-up. A plan billed by Apple or Google is bought in the mobile
+ * app, so the line says so in place of both links.
  */
 const paidOutLines = (
   words: ChannelWords,
   offer: ChannelOffer,
-  topUp: string
+  topUp: string,
+  upgradeOnlyKey: string
 ): string => {
   const { t, locale } = words;
   const paid = paidCreditsOffer(offer.billing);
   if (paid?.inMobileApp === true) return t("outcome.channel.paidMobile");
   const next = paid?.next;
-  return next?.url != null
-    ? `${topUp}\n${t("outcome.channel.paidUpgrade", {
-        plan: next.planName,
-        price: planPrice(t, next, locale),
-        link: next.url,
-      })}`
-    : topUp;
+  if (next?.url == null) return topUp;
+  const values = {
+    plan: next.planName,
+    price: planPrice(t, next, locale),
+    link: next.url,
+  };
+  return paidUpgradeOnly(paid)
+    ? t(upgradeOnlyKey, values)
+    : `${topUp}\n${t("outcome.channel.paidUpgrade", values)}`;
 };
 
 /** Where the Abacus credits stood when Google cut the reply off. */
@@ -258,7 +264,7 @@ export const chatReplyForFailure = (
         return `${lead} ${t("outcome.channel.cutoffSwitch")}`;
       if (cause !== "out") return lead;
       if (account !== "free")
-        return `${lead} ${paidOutLines(words, offer, t("outcome.channel.cutoffTopUp", { link: offer.topUpUrl }))}`;
+        return `${lead} ${paidOutLines(words, offer, t("outcome.channel.cutoffTopUp", { link: offer.topUpUrl }), "outcome.channel.paidUpgrade")}`;
       return repeat ? lead : [lead, ...offerLines(words, offer)].join("\n");
     }
     case "model-gone": {
@@ -280,7 +286,7 @@ export const chatReplyForFailure = (
                 t("outcome.channel.unavailableOut", { model }),
                 ...offerLines(words, offer),
               ].join("\n")
-            : `${t("outcome.channel.unavailableOut", { model })} ${paidOutLines(words, offer, t("outcome.channel.paidOut", { link: offer.topUpUrl }))}`;
+            : `${t("outcome.channel.unavailableOut", { model })} ${paidOutLines(words, offer, t("outcome.channel.paidOut", { link: offer.topUpUrl }), "outcome.channel.paidUpgradeOnly")}`;
       if (gone?.cause !== "plan")
         return t(
           gone?.cause === "down"
@@ -303,16 +309,22 @@ export const chatReplyForFailure = (
         error.actions?.find((action) => action.type === "upgrade-abacus")
           ?.cause === "expired";
       // An account never read is worded like a paid one: no plan to sell.
-      if (account !== "free")
+      if (account !== "free") {
+        const paid = paidCreditsOffer(offer.billing);
         return repeat
-          ? paidCreditsOffer(offer.billing)?.inMobileApp === true
+          ? paid?.inMobileApp === true
             ? t("outcome.channel.paidMobile")
-            : t("outcome.channel.repeat", { link: offer.topUpUrl })
+            : t("outcome.channel.repeat", {
+                // Basic's reminder links its next plan, never a top-up.
+                link: paidUpgradeOnly(paid) ? paid.next.url : offer.topUpUrl,
+              })
           : paidOutLines(
               words,
               offer,
-              t("outcome.channel.paidOut", { link: offer.topUpUrl })
+              t("outcome.channel.paidOut", { link: offer.topUpUrl }),
+              "outcome.channel.paidOutUpgrade"
             );
+      }
       if (repeat) return reminder;
       return [
         t(expired ? "outcome.channel.expired" : "outcome.channel.wall"),

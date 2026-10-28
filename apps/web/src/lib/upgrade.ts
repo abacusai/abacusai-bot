@@ -1,4 +1,4 @@
-import { paidCreditsOffer } from "@abacus-ai/contract/billing-plan";
+import { httpsUrl, paidCreditsOffer } from "@abacus-ai/contract/billing-plan";
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
 
 import type { AppClient } from "#renderer/data/transport/types";
@@ -150,16 +150,17 @@ export const openUpgrade = async (client: AppClient): Promise<void> => {
 };
 
 /**
- * A paid account's top-up: the server's buy-credits link, read at click time
- * (the account's page when it cannot be read), then the account is watched
- * until the credits land.
+ * A paid account's top-up (Settings, and the offer's Top up): the server's
+ * buy-credits link, read at click time (the buy-credits page when it cannot
+ * be read), then the account is watched until the credits land.
  */
 export const openTopUp = async (client: AppClient): Promise<void> => {
   await openPendingLink(
     client,
     async () =>
-      paidCreditsOffer(await client.account.billingPlan({}).catch(() => null))
-        ?.topUpUrl ?? ABACUS_BUY_CREDITS_URL
+      httpsUrl(
+        (await client.account.billingPlan({}).catch(() => null))?.topUpUrl
+      ) ?? ABACUS_BUY_CREDITS_URL
   );
   void watchForCredits(client);
 };

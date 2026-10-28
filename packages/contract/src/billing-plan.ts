@@ -98,14 +98,18 @@ export const wallOffer = (
   billing?.upgrades[0] ?? null;
 
 /** A link the app may open: the server's, and only over https. */
-const httpsUrl = (url: string | null | undefined): string | null =>
+export const httpsUrl = (url: string | null | undefined): string | null =>
   url != null && url.startsWith("https://") ? url : null;
 
 /**
- * A paid plan's way on once its credits are used up: buying credits, the
- * next plan up with its price and features, or the mobile app when the plan
- * is billed by Apple or Google (where both are bought). Null for a free
- * account, an unread plan, or one the server offers nothing to.
+ * A paid plan's way on once its credits are used up, keyed off the plan the
+ * server names: Basic moves up to the next plan only (it is never sold
+ * credits); every other paid plan gets its top-up and the next plan up with
+ * its price and features; a plan billed by Apple or Google gets the mobile
+ * app, where both are bought. Null for a free account, a plan an older server
+ * does not name, an unread plan, or one the server offers nothing to: the
+ * surface then keeps what it did before. Every out-of-credits surface reads
+ * this one rule.
  */
 export interface PaidCreditsOffer {
   topUpUrl: string | null;
@@ -116,7 +120,8 @@ export interface PaidCreditsOffer {
 export const paidCreditsOffer = (
   billing: BillingPlan | null | undefined
 ): PaidCreditsOffer | null => {
-  if (billing == null || billing.current.plan === "free") return null;
+  const plan = billing?.current.plan;
+  if (billing == null || plan == null || plan === "free") return null;
   const next = billing.upgrades[0] ?? null;
   if (billing.upgradeInMobileApp)
     return {
@@ -124,7 +129,7 @@ export const paidCreditsOffer = (
       next: next != null ? { ...next, url: null } : null,
       inMobileApp: true,
     };
-  const topUpUrl = httpsUrl(billing.topUpUrl);
+  const topUpUrl = plan === "basic" ? null : httpsUrl(billing.topUpUrl);
   const nextUrl = httpsUrl(next?.url);
   if (topUpUrl == null && nextUrl == null) return null;
   return {
@@ -133,6 +138,20 @@ export const paidCreditsOffer = (
     inMobileApp: false,
   };
 };
+
+/**
+ * The offer is the next plan alone (Basic's): every surface shows it the way
+ * it shows the free plan's upgrade, with the same dialog and cards.
+ */
+export const paidUpgradeOnly = (
+  offer: PaidCreditsOffer | null | undefined
+): offer is PaidCreditsOffer & {
+  next: BillingPlanTier & { url: string };
+} =>
+  offer != null &&
+  !offer.inMobileApp &&
+  offer.topUpUrl == null &&
+  offer.next?.url != null;
 
 /**
  * Whether the account's current plan renews its credits every month, as
@@ -232,10 +251,15 @@ export function planPitch(
   const monthly = billing?.plans.find(
     (plan) => plan.plan === offer?.plan
   )?.creditsPerMonth;
+  const current = billing?.plans.find((plan) => plan.current);
   const free =
-    billing?.plans.find((plan) => plan.current)?.creditsPerMonth ??
-    billing?.current.creditsGranted ??
-    null;
+    current?.creditsPerMonth ?? billing?.current.creditsGranted ?? null;
+  // A paid plan's credits are measured against its own plan, never "free".
+  const currentPlan = current?.plan ?? billing?.current.plan;
+  const against =
+    currentPlan != null && currentPlan !== "free"
+      ? (current?.planName ?? billing?.current.planName ?? null)
+      : null;
   const times =
     monthly != null && free != null && free > 0
       ? Math.round(monthly / free)
@@ -247,19 +271,24 @@ export function planPitch(
     switch (name) {
       case "credits":
         if (monthly == null) return null;
-        const against = times != null && times >= 2;
+        const multiple = times != null && times >= 2;
         return t(
           first != null
-            ? against
-              ? "outcome.pitch.introCredits"
+            ? multiple
+              ? against != null
+                ? "outcome.pitch.introCreditsVsPlan"
+                : "outcome.pitch.introCredits"
               : "outcome.pitch.introCreditsOnly"
-            : against
-              ? "outcome.pitch.credits"
+            : multiple
+              ? against != null
+                ? "outcome.pitch.creditsVsPlan"
+                : "outcome.pitch.credits"
               : "outcome.pitch.creditsOnly",
           {
             credits: number(monthly),
             times: times ?? 0,
             ...(first != null ? { first: number(first) } : {}),
+            ...(against != null ? { plan: against } : {}),
           }
         );
       case "models":
