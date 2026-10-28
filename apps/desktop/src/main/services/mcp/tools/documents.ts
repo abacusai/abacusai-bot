@@ -85,7 +85,7 @@ export const DOCUMENTS_TOOLS: ToolDefinition[] = [
       },
       required: ["action"],
     },
-    run: (host, args) => host.pdf(args),
+    run: (host, args, callerSession) => host.pdf(args, callerSession),
   },
   {
     name: "deck_export_pdf",
@@ -115,6 +115,6 @@ export const DOCUMENTS_TOOLS: ToolDefinition[] = [
       },
       required: ["html_path"],
     },
-    run: (host, args) => host.deckExportPdf(args),
+    run: (host, args, callerSession) => host.deckExportPdf(args, callerSession),
   },
 ];

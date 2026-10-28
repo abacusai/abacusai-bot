@@ -40,7 +40,10 @@ import type {
   ConnectorStatuses,
 } from "@abacus-ai/contract/contracts";
 import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
-import { artifactPathLine } from "@abacus-ai/contract/deliverables";
+import {
+  artifactPathLine,
+  NOTHING_PRESENTED,
+} from "@abacus-ai/contract/deliverables";
 import {
   isMessagingPlatformId,
   type MessagingPlatformId,
@@ -265,7 +268,11 @@ export interface McpAgentToolsServerOptions {
   models?: () => Promise<ModelAvailability[]>;
   /** The user's bots, for bot_help. */
   bots?: () => BotHelpBot[];
-  workspacePath: () => string | null;
+  /**
+   * The directory a session's relative paths mean: the calling session's own
+   * (its worktree or workspace, the agent's cwd), else the active workspace.
+   */
+  workspacePath: (sessionId?: string) => string | null;
   workspaceId?: () => string | null;
   /** `trigger` lets the run log tell the first fire at creation from the agent's own run. */
   runCronJob?: (
@@ -1439,15 +1446,16 @@ export class McpAgentToolsServer extends McpHttpServer {
   // ── Components ───────────────────────────────────────────────────────────
 
   /**
-   * A caller-supplied path made absolute against the workspace. Downstream
-   * `path.resolve` uses the main process's cwd, `/` in a packaged app, and
-   * the Artifacts view resolves against the workspace; only this matches both
-   * what the user meant and what the rest of the app assumes.
+   * A caller-supplied path made absolute against the caller's workspace, the
+   * directory the agent's own file tools resolve it against. Downstream
+   * `path.resolve` uses the main process's cwd, `/` in a packaged app; the
+   * active workspace is another session's when the user switched, so a file
+   * the agent just wrote would read as missing.
    */
-  private resolveOutputPath(raw: string): string {
+  private resolveOutputPath(raw: string, callerSession?: string): string {
     if (raw.length === 0) return raw;
     if (path.isAbsolute(raw)) return raw;
-    const workspacePath = this.options.workspacePath();
+    const workspacePath = this.options.workspacePath(callerSession);
     return workspacePath != null
       ? path.resolve(workspacePath, raw)
       : path.resolve(raw);
@@ -1486,7 +1494,10 @@ export class McpAgentToolsServer extends McpHttpServer {
     return this.ok(`Saved to ${modelPath(file)}\n${artifactPathLine(file)}`);
   }
 
-  async pdf(args: Record<string, unknown>): Promise<ToolResult> {
+  async pdf(
+    args: Record<string, unknown>,
+    callerSession?: string
+  ): Promise<ToolResult> {
     const action = String(args.action ?? "").trim();
     const str = (key: string): string => String(args[key] ?? "").trim();
 
@@ -1502,9 +1513,14 @@ export class McpAgentToolsServer extends McpHttpServer {
           );
 
         const printed = await reprintPdf({
-          htmlPath: this.resolveOutputPath(source),
+          htmlPath: this.resolveOutputPath(source, callerSession),
           ...(str("output_path").length > 0
-            ? { outputPath: this.resolveOutputPath(str("output_path")) }
+            ? {
+                outputPath: this.resolveOutputPath(
+                  str("output_path"),
+                  callerSession
+                ),
+              }
             : {}),
         });
 
@@ -1523,7 +1539,8 @@ export class McpAgentToolsServer extends McpHttpServer {
       // Arguments are assembled rather than passed through so the tool
       // surface stays a fixed shape; paths are made absolute first because
       // the script runs with the app's cwd.
-      const at = (key: string): string => this.resolveOutputPath(str(key));
+      const at = (key: string): string =>
+        this.resolveOutputPath(str(key), callerSession);
       const byAction: Record<string, string[]> = {
         info: [at("path")],
         read: [at("path"), ...(str("pages") ? ["--pages", str("pages")] : [])],
@@ -1535,7 +1552,7 @@ export class McpAgentToolsServer extends McpHttpServer {
           at("output_path"),
           ...(Array.isArray(args.inputs)
             ? args.inputs.map((input) =>
-                this.resolveOutputPath(String(input).trim())
+                this.resolveOutputPath(String(input).trim(), callerSession)
               )
             : []),
         ],
@@ -1667,7 +1684,9 @@ export class McpAgentToolsServer extends McpHttpServer {
 
       if (action === "stop") {
         const before = listServed();
-        const stopped = stopDirectory(this.resolveOutputPath(directory));
+        const stopped = stopDirectory(
+          this.resolveOutputPath(directory, callerSession)
+        );
         // Its port is free again: no session may screenshot whatever takes it.
         const still = new Set(listServed().map((entry) => entry.url));
         for (const entry of before) {
@@ -1682,7 +1701,9 @@ export class McpAgentToolsServer extends McpHttpServer {
       }
 
       if (action === "start") {
-        const served = await serveDirectory(this.resolveOutputPath(directory));
+        const served = await serveDirectory(
+          this.resolveOutputPath(directory, callerSession)
+        );
         if (callerSession != null) {
           const origin = loopbackOrigin(served.url);
           if (origin != null)
@@ -1760,9 +1781,9 @@ export class McpAgentToolsServer extends McpHttpServer {
       // path never reports as shown.
       const target = isUrl
         ? raw
-        : await locateHostFile(this.resolveOutputPath(raw));
+        : await locateHostFile(this.resolveOutputPath(raw, callerSession));
       if (target == null) {
-        missing.push(this.resolveOutputPath(raw));
+        missing.push(this.resolveOutputPath(raw, callerSession));
         continue;
       }
 
@@ -1778,7 +1799,7 @@ export class McpAgentToolsServer extends McpHttpServer {
     if (valid.length === 0) {
       const detail = missing.length > 0 ? `\n\n${missing.join("\n")}` : "";
       return this.err(
-        `Nothing could be presented: none of those exist. Check the paths.${detail}`
+        `${NOTHING_PRESENTED}: none of those exist. Check the paths.${detail}`
       );
     }
 
@@ -2013,7 +2034,10 @@ export class McpAgentToolsServer extends McpHttpServer {
     }
   }
 
-  async deckExportPdf(args: Record<string, unknown>): Promise<ToolResult> {
+  async deckExportPdf(
+    args: Record<string, unknown>,
+    callerSession?: string
+  ): Promise<ToolResult> {
     const htmlPath = String(args.html_path ?? "").trim();
 
     if (htmlPath.length === 0)
@@ -2026,11 +2050,11 @@ export class McpAgentToolsServer extends McpHttpServer {
 
     try {
       const result = await exportDeckPdf({
-        htmlPath: this.resolveOutputPath(htmlPath),
+        htmlPath: this.resolveOutputPath(htmlPath, callerSession),
         outputPath:
           typeof args.output_path === "string" &&
           args.output_path.trim().length > 0
-            ? this.resolveOutputPath(args.output_path.trim())
+            ? this.resolveOutputPath(args.output_path.trim(), callerSession)
             : undefined,
         widthPx: numeric(args.width_px),
         heightPx: numeric(args.height_px),

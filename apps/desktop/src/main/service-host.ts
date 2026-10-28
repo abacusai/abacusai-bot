@@ -970,14 +970,7 @@ export class ServiceHost {
     pitchable: (sessionId) =>
       this.agentSessionManagerService.laneOf(sessionId) == null &&
       !this.agentSessionManagerService.isRoutineSession(sessionId),
-    workspacePath: (sessionId) => {
-      const workspaceId =
-        this.agentSessionManagerService.get(sessionId)?.workspaceId;
-      const workspace = this.workspaceService
-        .getWorkspaces()
-        .find((entry) => entry.id === workspaceId);
-      return workspace?.isRemote === true ? null : (workspace?.path ?? null);
-    },
+    workspacePath: (sessionId) => this.sessionDirectory(sessionId),
     turnOpen: (sessionId) => this.turnLedger.isOpen(sessionId),
     tellInChat: (sessionId) =>
       this.messagingGatewayService.tellSuccessPitch(sessionId),
@@ -1191,10 +1184,11 @@ export class ServiceHost {
     models: () => listAvailableModels(),
     bots: () =>
       this.botService.list().map((bot) => ({ id: bot.id, name: bot.name })),
-    workspacePath: () => {
-      const workspace = this.workspaceService.getActiveWorkspace();
-      return workspace?.isRemote === true ? null : (workspace?.path ?? null);
-    },
+    // A caller with no session of the app's own (a bot's turn, a hosted
+    // lane) keeps the active workspace.
+    workspacePath: (sessionId) =>
+      (sessionId == null ? null : this.sessionDirectory(sessionId)) ??
+      this.resolveWorkspaceContextPath(),
     connectors: {
       list: () => this.listConnectorStatuses(),
       link: async (connectorId, sessionId) => {
@@ -4195,6 +4189,18 @@ export class ServiceHost {
     return workspace?.isRemote === false && workspace.path != null
       ? workspace.path
       : null;
+  }
+
+  /**
+   * The directory a session's agent runs in (its worktree, else its local
+   * workspace), which its relative paths mean; null for an unknown or remote one.
+   */
+  private sessionDirectory(sessionId: string): string | null {
+    const workspaceId =
+      this.agentSessionManagerService.get(sessionId)?.workspaceId;
+    return workspaceId == null
+      ? null
+      : this.resolveWorkspaceContextPath({ workspaceId, sessionId });
   }
 
   private resolveWorkspaceContextPath(
