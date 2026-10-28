@@ -39,9 +39,14 @@ const idle: UpdateStatus = {
   failedPhase: null,
   manualInstall: null,
 };
-it.each(["basic", "pro"])(
-  "account top-up opens the correct %s purchase destination",
-  async (tier) => {
+it.each([
+  ["basic", "https://example.com/buy-credits"],
+  ["pro", "https://example.com/buy-credits"],
+  // The plan unread: the account's own buy-credits page, never the plan chooser.
+  ["basic", null],
+])(
+  "account top-up on %s opens the server's buy-credits link (%s)",
+  async (tier, topUpUrl) => {
     const upgradeUrl = vi.fn(() => "https://example.com/account-offer");
     const openExternal = vi.fn();
     app = await renderApp("/settings/account", {
@@ -57,6 +62,23 @@ it.each(["basic", "pro"])(
               }) as never
           ),
           upgradeUrl: os.account.upgradeUrl.handler(upgradeUrl),
+          billingPlan: os.account.billingPlan.handler(() =>
+            topUpUrl == null
+              ? null
+              : ({
+                  current: {
+                    plan: tier,
+                    planName: tier,
+                    creditsRemaining: 0,
+                    creditsGranted: 20_000,
+                    freeTierExpiresAt: null,
+                  },
+                  plans: [],
+                  upgrades: [],
+                  topUpUrl,
+                  upgradeInMobileApp: false,
+                } as never)
+          ),
         },
         system: { openExternal: os.system.openExternal.handler(openExternal) },
       },
@@ -70,15 +92,10 @@ it.each(["basic", "pro"])(
     await waitFor(() => expect(openExternal).toHaveBeenCalled());
     expect(openExternal).toHaveBeenCalledWith(
       expect.objectContaining({
-        input: {
-          url:
-            tier === "basic"
-              ? "https://example.com/account-offer"
-              : ABACUS_BUY_CREDITS_URL,
-        },
+        input: { url: topUpUrl ?? ABACUS_BUY_CREDITS_URL },
       })
     );
-    expect(upgradeUrl).toHaveBeenCalledTimes(tier === "basic" ? 1 : 0);
+    expect(upgradeUrl).not.toHaveBeenCalled();
   }
 );
 it.each([

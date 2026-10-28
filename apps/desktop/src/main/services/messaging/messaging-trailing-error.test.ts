@@ -34,6 +34,7 @@ import {
   chatReplyForFailure,
   FAILURE_REPLY_WINDOW_MS,
   type ChannelOffer,
+  type TurnFailure,
 } from "./chat-failure-reply";
 
 const mocks = vi.hoisted(() => ({
@@ -1234,6 +1235,112 @@ describe("the credit wall's cause", () => {
   it("an empty balance keeps its words", () => {
     expect(reply(wall("exhausted"), "free")).toBe(reply(WALL, "free"));
     expect(reply(wall("exhausted"), "paid")).toBe(reply(WALL, "paid"));
+  });
+});
+
+describe("a paid plan out of credits", () => {
+  const PRO_TIER = {
+    plan: "pro",
+    planName: "Pro",
+    priceText: "$20/mo",
+    firstMonthPriceCents: 2000,
+    priceCents: 2000,
+    features: ["Everything in Basic"],
+    url: "https://apps.example.test/upgrade/pro",
+  };
+  const BASIC: BillingPlan = {
+    ...BILLING,
+    current: { ...BILLING.current, plan: "basic", planName: "Basic" },
+    upgrades: [PRO_TIER],
+  };
+  const PRO: BillingPlan = {
+    ...BILLING,
+    current: { ...BILLING.current, plan: "pro", planName: "Pro" },
+    upgrades: [
+      {
+        plan: "max",
+        planName: "Max",
+        priceText: "$200/mo",
+        priceCents: 20000,
+        features: ["Everything in Pro"],
+        url: "https://apps.example.test/upgrade/max",
+      },
+    ],
+  };
+  const reply = (
+    billing: BillingPlan,
+    actions: TurnFailure["actions"],
+    repeat = false
+  ) =>
+    chatReplyForFailure(
+      { actions },
+      "own",
+      "paid",
+      ENGLISH,
+      { ...OFFER, billing },
+      repeat
+    );
+  const WALL = [{ type: "upgrade-abacus", cause: "exhausted" }];
+  const paid = (billing: BillingPlan, repeat = false) =>
+    reply(billing, WALL, repeat);
+
+  it("Basic is offered Pro alone, with its price and link, and never told to add credits", () => {
+    expect(paid(BASIC)).toBe(
+      "I've paused because this month's credits are used up. Move up to Pro ($20/month) for more credits every month: https://apps.example.test/upgrade/pro"
+    );
+    expect(paid(BASIC, true)).toBe(
+      "Still paused: https://apps.example.test/upgrade/pro"
+    );
+    // The model-unavailable and cut-off replies follow the same rule.
+    expect(
+      reply(BASIC, [
+        {
+          type: "model-unavailable",
+          cause: "retired",
+          model: "m",
+          label: "Model",
+        },
+        { type: "upgrade-abacus", cause: "exhausted" },
+      ])
+    ).toBe(
+      "Model isn't available, and your Abacus credits are used up. Move up to Pro ($20/month) for more credits every month: https://apps.example.test/upgrade/pro"
+    );
+    expect(reply(BASIC, [{ type: "cut-off", cause: "out" }])).toBe(
+      "Google cut my reply off partway, so I stopped. Send your message again to retry. Or move up to Pro ($20/month) for more credits every month: https://apps.example.test/upgrade/pro"
+    );
+    for (const text of [
+      paid(BASIC),
+      reply(BASIC, [{ type: "cut-off", cause: "out" }]),
+    ])
+      expect(text).not.toContain(TOP_UP_URL);
+  });
+
+  it("Pro is told to add credits, then offered Max with its price and link", () => {
+    expect(paid(PRO)).toBe(
+      `I've paused because this month's credits are used up. Add credits to keep going: ${TOP_UP_URL}\nOr move up to Max ($200/month) for more credits every month: https://apps.example.test/upgrade/max`
+    );
+    expect(paid(PRO, true)).toBe(`Still paused: ${TOP_UP_URL}`);
+  });
+
+  it("a server that names no plan keeps the top-up line alone", () => {
+    expect(
+      paid({ ...BASIC, current: { ...BASIC.current, plan: undefined } })
+    ).toBe(
+      `I've paused because this month's credits are used up. Add credits to keep going: ${TOP_UP_URL}`
+    );
+  });
+
+  it("a plan billed by the app store is sent to the mobile app, with no link", () => {
+    const store: BillingPlan = {
+      ...BASIC,
+      upgrades: BASIC.upgrades.map((tier) => ({ ...tier, url: null })),
+      topUpUrl: null,
+      upgradeInMobileApp: true,
+    };
+    for (const repeat of [false, true])
+      expect(paid(store, repeat)).toBe(
+        "This month's credits are used up. Your plan is billed through the App Store or Google Play, so add credits or upgrade in the Abacus.AI mobile app."
+      );
   });
 });
 

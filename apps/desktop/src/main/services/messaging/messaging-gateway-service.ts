@@ -49,6 +49,7 @@ import {
   channelWords,
 } from "./channel-words";
 import {
+  ABACUS_BUY_CREDITS_URL,
   chatLineForCreditThreshold,
   chatLineForSuccessPitch,
   chatFailureOf,
@@ -1522,7 +1523,12 @@ export class MessagingGatewayService {
       words,
       {
         upgradeUrl: upgradeUrl ?? fallback,
-        topUpUrl: billing?.topUpUrl ?? upgradeUrl ?? fallback,
+        // A paid plan buys credits, never the free plan's upgrade page.
+        topUpUrl:
+          billing?.topUpUrl ??
+          (account === "paid"
+            ? ABACUS_BUY_CREDITS_URL
+            : (upgradeUrl ?? fallback)),
         billing,
         // Held free credits are unlocked by a phone check, never a plan.
         ...(cachedAbacusAccount()?.free_credits_held === true && {

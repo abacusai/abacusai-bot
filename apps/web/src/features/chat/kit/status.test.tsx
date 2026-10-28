@@ -471,7 +471,7 @@ describe("the turn's outcome card", () => {
     ]);
     return relay;
   };
-  const host = (tier: "free" | "basic", extra = {}) => ({
+  const host = (tier: "free" | "basic" | "paid", extra = {}) => ({
     ...inertHostActions,
     accountTier: async () => tier,
     billingPlan: async () => BILLING,
@@ -546,17 +546,106 @@ describe("the turn's outcome card", () => {
     closeUpgradeDialog();
   });
 
-  it("a paid account at the wall is offered a top-up, not the plan", async () => {
+  const PRO_TIER = {
+    plan: "pro",
+    planName: "Pro",
+    priceText: "$20/mo",
+    firstMonthPriceCents: 2000,
+    priceCents: 2000,
+    features: ["Everything in Basic", "30,000 credits a month"],
+    url: "https://example.com/upgrade/pro",
+  };
+  const BASIC_BILLING = {
+    ...BILLING,
+    current: { ...BILLING.current, plan: "basic", planName: "Basic" },
+    plans: [],
+    upgrades: [PRO_TIER],
+    topUpUrl: "https://example.com/plans?buyCredits=true",
+  };
+  const PRO_BILLING = {
+    ...BASIC_BILLING,
+    current: { ...BILLING.current, plan: "pro", planName: "Pro" },
+    upgrades: [
+      {
+        plan: "max",
+        planName: "Max",
+        priceText: "$200/mo",
+        priceCents: 20000,
+        features: ["Everything in Pro", "300,000 credits a month"],
+        url: "https://example.com/upgrade/max",
+      },
+    ],
+  };
+
+  it("Basic at the wall gets the free plan's one line: Upgrade opens the dialog for Pro, no Top up", async () => {
+    const openTopUp = vi.fn(async () => {});
+    const openNextPlan = vi.fn(async () => {});
     current = await renderRelay(
       failed(WALL),
       "session",
       {},
       {},
-      host("basic", { canTopUpCredits: async () => true })
+      host("basic", {
+        canTopUpCredits: async () => true,
+        openTopUp,
+        openNextPlan,
+        billingPlan: async () => BASIC_BILLING,
+      })
+    );
+    const line = await screen.findByText("You've used this month's credits");
+    const wall = line.closest('[data-slot="error-card"]') as HTMLElement;
+    expect(wall.getAttribute("data-variant")).toBe("upgrade-status");
+    expect(within(wall).queryByRole("button", { name: "Top up" })).toBeNull();
+    expect(within(wall).queryByText(/\$\d/)).toBeNull();
+
+    fireEvent.click(within(wall).getByRole("button", { name: "Upgrade" }));
+    expect(upgradeDialogStore.state.request).toMatchObject({
+      kind: "credits",
+      pendingText: "fix the bug",
+    });
+    expect(upgradeDialogStore.state.request?.checkout).toBeUndefined();
+    expect(openTopUp).not.toHaveBeenCalled();
+    closeUpgradeDialog();
+  });
+
+  it("Pro at the wall is offered a top-up and Max, never the free plan's pitch", async () => {
+    const openTopUp = vi.fn(async () => {});
+    const openNextPlan = vi.fn(async () => {});
+    current = await renderRelay(
+      failed(WALL),
+      "session",
+      {},
+      {},
+      host("paid", {
+        canTopUpCredits: async () => true,
+        openTopUp,
+        openNextPlan,
+        billingPlan: async () => PRO_BILLING,
+      })
     );
     await screen.findByText("You've used this month's credits");
-    expect(await screen.findByRole("button", { name: "Top up" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Upgrade to/ })).toBeNull();
+    expect(
+      await screen.findByText("Or move up to Max — $200/month")
+    ).toBeTruthy();
+    expect(screen.getByText("300,000 credits a month")).toBeTruthy();
+
+    // Top up opens the link and the dialog waits for the credits, then resends.
+    fireEvent.click(screen.getByRole("button", { name: "Top up" }));
+    expect(openTopUp).toHaveBeenCalledOnce();
+    expect(upgradeDialogStore.state.request).toMatchObject({
+      kind: "credits",
+      checkout: true,
+      pendingText: "fix the bug",
+    });
+    closeUpgradeDialog();
+
+    fireEvent.click(screen.getByRole("button", { name: "Upgrade to Max" }));
+    expect(openNextPlan).toHaveBeenCalledOnce();
+    expect(upgradeDialogStore.state.request).toMatchObject({
+      kind: "credits",
+      checkout: true,
+    });
+    closeUpgradeDialog();
   });
 
   it("free credits held for a phone check: one card, Verify phone opens the page, no plan", async () => {
@@ -898,6 +987,39 @@ describe("the turn's outcome card", () => {
     ).toBeTruthy();
     expect(within(card).getByText("0 Abacus credits left")).toBeTruthy();
     expect(within(card).queryByText("Switch to RouteLLM - Open")).toBeNull();
+  });
+
+  it("Basic with an unavailable model and its credits used up gets the free plan's card for Pro, no Top up", async () => {
+    current = await renderRelay(
+      unavailable("retired", true),
+      "session",
+      {},
+      {},
+      host("basic", {
+        canTopUpCredits: async () => true,
+        billingPlan: async () => BASIC_BILLING,
+      })
+    );
+    const title = await screen.findByText("Sonnet 5 isn't available anymore");
+    const card = title.closest('[data-slot="credits-card"]') as HTMLElement;
+    expect(
+      await within(card).findByRole("button", { name: "Upgrade · $20/month" })
+    ).toBeTruthy();
+    expect(
+      within(card).getByText("You've also used this month's Abacus credits.")
+    ).toBeTruthy();
+    expect(within(card).getByText("Pro gets you:")).toBeTruthy();
+    expect(
+      within(card).getByRole("button", { name: "See plans" })
+    ).toBeTruthy();
+    expect(within(card).queryByRole("button", { name: "Top up" })).toBeNull();
+    fireEvent.click(
+      within(card).getByRole("button", { name: "Upgrade · $20/month" })
+    );
+    expect(upgradeDialogStore.state.request).toMatchObject({
+      kind: "credits",
+    });
+    closeUpgradeDialog();
   });
 
   it("a model the plan does not include leads with RouteLLM - Open, the upgrade a link beside it", async () => {

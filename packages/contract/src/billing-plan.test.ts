@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { type BillingPlan, PITCH_LINES, planPitch } from "./billing-plan";
+import {
+  type BillingPlan,
+  paidCreditsOffer,
+  paidUpgradeOnly,
+  PITCH_LINES,
+  planPitch,
+} from "./billing-plan";
 
 /** The Basic tier's feature lines, worded as the billing plan sends them. */
 const BASIC_FEATURES = [
@@ -113,5 +119,146 @@ describe("planPitch", () => {
     expect(planPitch(t, unpromoted, "en-US", ["credits"])).toEqual([
       'outcome.pitch.credits {"credits":"20,000","times":10}',
     ]);
+  });
+
+  it("measures a paid plan's next plan against its own plan, never the free one", () => {
+    const basic = billing(BASIC_FEATURES);
+    basic.current = { ...basic.current, plan: "basic", planName: "Basic" };
+    basic.plans = [
+      { ...basic.plans[1]!, current: true },
+      {
+        plan: "pro",
+        planName: "Pro",
+        priceText: "$20/mo",
+        features: [],
+        creditsPerMonth: 40000,
+        current: false,
+      },
+    ];
+    basic.upgrades = [
+      {
+        plan: "pro",
+        planName: "Pro",
+        priceText: "$20/mo",
+        features: [],
+        url: null,
+      },
+    ];
+    expect(planPitch(t, basic, "en-US", ["credits"])).toEqual([
+      'outcome.pitch.creditsVsPlan {"credits":"40,000","times":2,"plan":"Basic"}',
+    ]);
+  });
+});
+
+describe("paidCreditsOffer", () => {
+  const TOP_UP = "https://example.com/plans?buyCredits=true";
+  const tier = (plan: string, planName: string) => ({
+    plan,
+    planName,
+    priceText: "$20/mo",
+    features: [`Everything in ${planName}`],
+    url: `https://example.com/upgrade/${plan}`,
+  });
+  const NEXT: Record<string, ReturnType<typeof tier> | undefined> = {
+    free: tier("basic", "Basic"),
+    go: tier("basic", "Basic"),
+    basic: tier("pro", "Pro"),
+    pro: tier("max", "Max"),
+    max: undefined,
+  };
+  const plan = (
+    current: string | undefined,
+    patch: Partial<BillingPlan> = {}
+  ): BillingPlan => {
+    const next = NEXT[current ?? "basic"];
+    return {
+      ...billing([]),
+      current: {
+        ...(current != null && { plan: current }),
+        planName: current ?? "Basic",
+        creditsRemaining: 0,
+        creditsGranted: 20000,
+        freeTierExpiresAt: null,
+      },
+      upgrades: next != null ? [next] : [],
+      topUpUrl: TOP_UP,
+      upgradeInMobileApp: false,
+      ...patch,
+    };
+  };
+
+  // One row per plan: what every out-of-credits surface offers it.
+  it.each([
+    [
+      "free: the free plan's own dialog, never a paid offer",
+      plan("free"),
+      null,
+    ],
+    [
+      "an older server that names no plan: the surface keeps what it did",
+      plan(undefined),
+      null,
+    ],
+    [
+      "basic: the next plan alone, never a top-up",
+      plan("basic"),
+      { topUpUrl: null, next: NEXT.basic, inMobileApp: false },
+    ],
+    [
+      "pro: top up and the next plan",
+      plan("pro"),
+      { topUpUrl: TOP_UP, next: NEXT.pro, inMobileApp: false },
+    ],
+    [
+      "max: top up only",
+      plan("max"),
+      { topUpUrl: TOP_UP, next: null, inMobileApp: false },
+    ],
+    [
+      "go: top up and the next plan the server lists",
+      plan("go"),
+      { topUpUrl: TOP_UP, next: NEXT.go, inMobileApp: false },
+    ],
+    [
+      "billed by Apple or Google: the mobile app, no links",
+      plan("pro", {
+        upgradeInMobileApp: true,
+        topUpUrl: null,
+        upgrades: [{ ...NEXT.pro!, url: null }],
+      }),
+      { topUpUrl: null, next: { ...NEXT.pro!, url: null }, inMobileApp: true },
+    ],
+    [
+      "basic with no next plan: nothing to offer",
+      plan("basic", { upgrades: [] }),
+      null,
+    ],
+    [
+      "links that are not https are never opened",
+      plan("pro", {
+        topUpUrl: "javascript:alert(1)",
+        upgrades: [{ ...NEXT.pro!, url: "http://example.com" }],
+      }),
+      null,
+    ],
+    ["an unread plan", null, null],
+  ])("%s", (_name, billingPlan, expected) => {
+    expect(paidCreditsOffer(billingPlan)).toEqual(expected);
+  });
+
+  it("only Basic's offer is the next plan alone", () => {
+    expect(paidUpgradeOnly(paidCreditsOffer(plan("basic")))).toBe(true);
+    for (const current of ["free", "go", "pro", "max"])
+      expect(paidUpgradeOnly(paidCreditsOffer(plan(current)))).toBe(false);
+    expect(
+      paidUpgradeOnly(
+        paidCreditsOffer(
+          plan("basic", {
+            upgradeInMobileApp: true,
+            upgrades: [{ ...NEXT.basic!, url: null }],
+          })
+        )
+      )
+    ).toBe(false);
   });
 });

@@ -1,5 +1,7 @@
 import {
   type BillingPlan,
+  paidCreditsOffer,
+  paidUpgradeOnly,
   planPitch,
   planPrice,
   wallOffer,
@@ -32,11 +34,17 @@ import { Field, FieldLabel, FieldError } from "#renderer/ui/field";
 import { Input } from "#renderer/ui/input";
 import { Separator } from "#renderer/ui/separator";
 
+import { PaidOfferButtons, PaidOfferDetails } from "./paid-offer";
+
 export interface CreditActions {
   openExternal(url: string): Promise<void>;
   /** The account's own upgrade page, or the plan page without one. */
   openUpgrade(): Promise<void>;
   canTopUpCredits?(): Promise<boolean>;
+  /** A paid plan's top-up, its link read at click time; the account is then watched. */
+  openTopUp?(): Promise<void>;
+  /** A paid plan's next plan up, its link read at click time; the account is then watched. */
+  openNextPlan?(): Promise<void>;
   configuredFreeSources?(): Promise<Record<string, boolean>>;
   connectFreeSource?(source: FreePoolProvider, key?: string): Promise<boolean>;
   /** The account's plan, credits and upgrades, read now; see billing-plan.ts. */
@@ -58,6 +66,9 @@ export interface CreditWallChoice {
   onContinueFree?(): Promise<unknown>;
   /** The plan's button: the upgrade dialog that resumes the turn. */
   onUpgrade?(): void;
+  /** A paid plan's Top up and next plan: the link, then the dialog that resumes the turn. */
+  onTopUp?(): void;
+  onNextPlan?(): void;
   expired?: boolean;
 }
 
@@ -142,6 +153,43 @@ export const CreditsCard = ({
       ? []
       : missingFreeSources(configured);
   const offer = wallOffer(billing);
+  // A paid plan's way on: credits, the next plan, or the mobile app.
+  const paidOffer = paying ? paidCreditsOffer(billing) : null;
+  // The next plan alone (Basic): shown as the free plan's upgrade is.
+  const upgradeOnly = paidUpgradeOnly(paidOffer);
+  const pitchesPlan = !paying || upgradeOnly;
+  const paidDetails =
+    paidOffer != null && !upgradeOnly ? (
+      <PaidOfferDetails offer={paidOffer} />
+    ) : null;
+  const topUp = () =>
+    wall?.onTopUp != null
+      ? wall.onTopUp()
+      : void (host.openTopUp != null
+          ? host.openTopUp()
+          : host.openExternal(ABACUS_BUY_CREDITS_URL));
+  const nextPlan =
+    wall?.onNextPlan ??
+    (host.openNextPlan != null ? () => void host.openNextPlan?.() : undefined);
+  const upgrade = () =>
+    wall?.onUpgrade != null
+      ? wall.onUpgrade()
+      : upgradeOnly && nextPlan != null
+        ? nextPlan()
+        : void host.openUpgrade();
+  const noteText =
+    note ??
+    t(
+      upgradeOnly
+        ? "upgradeDialog.creditsBodyNoMessage"
+        : paying
+          ? canTopUp || paidOffer != null
+            ? "creditsCard.paidBody"
+            : "workspace.premiumUpgrade.switchNote"
+          : missing.length
+            ? "workspace.premiumUpgrade.connectNote"
+            : "workspace.premiumUpgrade.switchNote"
+    );
   const balance = billing?.current;
   const connect = async (source: FreePoolProvider, value?: string) => {
     if (busy || !host.connectFreeSource) return;
@@ -175,7 +223,7 @@ export const CreditsCard = ({
               : (title ??
                 t(
                   paying
-                    ? "creditsCard.paidTitle"
+                    ? "outcome.wall.paidTitle"
                     : scope === "pool"
                       ? "workspace.premiumUpgrade.poolOutTitle"
                       : "workspace.premiumUpgrade.exhaustedTitle"
@@ -219,7 +267,8 @@ export const CreditsCard = ({
                   </p>
                 </div>
               )}
-              {!paying && offer != null && (
+              {paidDetails}
+              {pitchesPlan && offer != null && (
                 <div className="flex flex-col gap-1.5" data-slot="wall-offer">
                   <p className="font-medium">
                     {t("outcome.wall.offer", {
@@ -241,19 +290,14 @@ export const CreditsCard = ({
                 </div>
               )}
             </div>
+          ) : paidDetails == null ? (
+            <p className="text-muted-foreground p-3 text-sm">{noteText}</p>
           ) : (
-            <p className="text-muted-foreground p-3 text-sm">
-              {note ??
-                t(
-                  paying
-                    ? canTopUp
-                      ? "creditsCard.paidBody"
-                      : "workspace.premiumUpgrade.switchNote"
-                    : missing.length
-                      ? "workspace.premiumUpgrade.connectNote"
-                      : "workspace.premiumUpgrade.switchNote"
-                )}
-            </p>
+            // A paid plan's offer sits under the note.
+            <div className="flex flex-col gap-3 p-3 text-sm">
+              <p className="text-muted-foreground">{noteText}</p>
+              {paidDetails}
+            </div>
           )}
           {ready != null && (
             <div className="flex flex-col gap-2 px-3" data-slot="credits-ready">
@@ -264,22 +308,20 @@ export const CreditsCard = ({
             </div>
           )}
           <div className="flex flex-col gap-3 p-3">
-            {tier === "free" && (
-              <Button
-                size="sm"
-                data-action="upgrade"
-                onClick={() =>
-                  wall?.onUpgrade != null
-                    ? wall.onUpgrade()
-                    : void host.openUpgrade()
-                }
-              >
+            {(tier === "free" || upgradeOnly) && (
+              <Button size="sm" data-action="upgrade" onClick={upgrade}>
                 {wall != null && offer != null
                   ? t("outcome.wall.upgradeCta", { plan: offer.planName })
                   : t("creditsCard.cta")}
               </Button>
             )}
-            {paying && canTopUp ? (
+            {upgradeOnly ? null : paidOffer != null ? (
+              <PaidOfferButtons
+                offer={paidOffer}
+                onTopUp={topUp}
+                {...(nextPlan != null && { onNextPlan: nextPlan })}
+              />
+            ) : paying && canTopUp ? (
               <div className="flex flex-wrap items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <p>{t("creditsCard.topUpCta")}</p>
@@ -287,14 +329,7 @@ export const CreditsCard = ({
                     {t("workspace.premiumUpgrade.topUpMeta")}
                   </p>
                 </div>
-                <Button
-                  size="sm"
-                  onClick={() =>
-                    void (tier === "paid"
-                      ? host.openExternal(ABACUS_BUY_CREDITS_URL)
-                      : host.openUpgrade())
-                  }
-                >
+                <Button size="sm" data-action="top-up" onClick={topUp}>
                   {t("creditsCard.topUpCta")}
                 </Button>
               </div>

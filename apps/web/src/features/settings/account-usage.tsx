@@ -13,15 +13,13 @@ import {
   PageNote,
   SettingRow,
 } from "#renderer/components/form-kit/page";
-import { ABACUS_BUY_CREDITS_URL } from "#renderer/lib/abacus-links";
 import { accountIdentity } from "#renderer/lib/account-identity";
-import { accountTier } from "#renderer/lib/credits";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { sidebarAccount } from "#renderer/lib/sidebar-account";
 import { showInfo } from "#renderer/lib/toast";
-import { openUpgrade } from "#renderer/lib/upgrade";
+import { openTopUp, openUpgrade } from "#renderer/lib/upgrade";
 import { useAccount } from "#renderer/lib/use-account";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 import { forgetAccount } from "#renderer/platform/forget-account";
@@ -195,13 +193,7 @@ export const AccountPage = () => {
             <Button
               size="sm"
               variant="secondary"
-              onClick={() =>
-                void (accountTier(account.data) === "basic"
-                  ? openUpgrade(transport.client)
-                  : platformSystem(transport.client).openExternal({
-                      url: ABACUS_BUY_CREDITS_URL,
-                    }))
-              }
+              onClick={() => void openTopUp(transport.client)}
             >
               {t("phase5.topUp")}
             </Button>

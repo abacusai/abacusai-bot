@@ -5,7 +5,7 @@ import type { Transport } from "#renderer/data/transport";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { sidebarAccount } from "#renderer/lib/sidebar-account";
-import { openUpgrade } from "#renderer/lib/upgrade";
+import { openNextPlan, openTopUp, openUpgrade } from "#renderer/lib/upgrade";
 
 import type { CreditActions } from "./index";
 /** `connected`: what the document re-reads once a source connects. */
@@ -17,6 +17,8 @@ export const creditActionsFor = (
   return {
     openExternal: (url) => platformSystem(client).openExternal({ url }),
     openUpgrade: () => openUpgrade(client),
+    openTopUp: () => openTopUp(client),
+    openNextPlan: () => openNextPlan(client),
     canTopUpCredits: async () =>
       sidebarAccount(await client.account.abacus()).billing === "manage",
     configuredFreeSources: async () => {
