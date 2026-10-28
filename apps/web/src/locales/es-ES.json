@@ -424,7 +424,8 @@
         "connect": "Connect {{provider}}",
         "connecting": "Connecting…",
         "decline": "Not now",
-        "stop": "Detener conexión"
+        "stop": "Detener conexión",
+        "homeChannel": "Hablas con este agente desde {{provider}} en tu móvil. Conecta {{provider}} para empezar."
       },
       "placeholder": "Mensaje a {{name}}",
       "pause": "Pause auto-reply",
