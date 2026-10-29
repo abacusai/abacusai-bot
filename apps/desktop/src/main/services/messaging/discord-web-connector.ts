@@ -382,23 +382,31 @@ export class DiscordWebConnector implements MessagingConnector {
       {}
     );
     if (cleared?.empty !== true) {
+      // Enter left the text in the box: the page's own state (a notice, a
+      // locked composer, another page) is the only record of why.
+      await this.logSendFailure("kept the text after Enter");
       throw new Error(`The message to ${chatId} was typed but did not send.`);
     }
 
     // A cleared composer alone does not prove delivery.
     const shown = await this.waitForSentText(probe);
     if (!shown) {
-      const shape = await this.run<Record<string, unknown>>(
-        SEND_FAILURE_SHAPE_SCRIPT,
-        {}
-      );
-      this.callbacks.onLog(
-        `discord-web: send to ${chatId} vanished, page ${JSON.stringify(shape)}`
-      );
+      await this.logSendFailure("vanished");
       throw new Error(
         `The message to ${chatId} cleared the composer but never appeared in the channel.`
       );
     }
+  }
+
+  /** A failed send's page state (see SEND_FAILURE_SHAPE_SCRIPT), never its text. */
+  private async logSendFailure(what: string): Promise<void> {
+    const shape = await this.run<Record<string, unknown>>(
+      SEND_FAILURE_SHAPE_SCRIPT,
+      {}
+    );
+    this.callbacks.onLog(
+      `discord-web: a send ${what}, page ${JSON.stringify(shape)}`
+    );
   }
 
   private async waitForSentText(probe: string): Promise<boolean> {
@@ -1654,22 +1662,32 @@ const LAST_MESSAGES_HAVE_SCRIPT = pageScript`
   return { has: items.some((li) => li.textContent.indexOf(probe) !== -1) };
 `;
 
-/** Page state when a send vanished, so slow mode and wrong page log apart. */
+/**
+ * Page state when a send failed, so a locked composer, a dialog over the page
+ * and a wrong page log apart. Structural facts only: these logs are synced, so
+ * no message text, names or ids.
+ */
 const SEND_FAILURE_SHAPE_SCRIPT = pageScript`
-  const tail = [...document.querySelectorAll('li[id^="chat-messages-"]')]
-    .slice(-3)
-    .map((li) => li.textContent.trim().slice(0, 80));
-  const alerts = [...document.querySelectorAll('[role="alert"], [class*="errorMessage"], [class*="attachmentError"], [class*="toast"]')]
-    .map((el) => el.textContent.trim().slice(0, 120))
-    .filter((t) => t.length > 0)
-    .slice(0, 3);
   const box = document.querySelector('div[role="textbox"][data-slate-editor="true"], div[role="textbox"]');
+  const active = document.activeElement;
+  const text = box ? box.textContent.replace(/[\\u200B\\uFEFF]/g, '').trim() : '';
+  const submit = box && box.closest('form') ? box.closest('form').querySelector('button[type="submit"]') : null;
+  const path = location.pathname;
   return {
-    path: location.pathname,
-    tail,
-    alerts,
-    composer: box ? box.textContent.trim().slice(0, 80) : null,
-    placeholder: box && box.getAttribute('aria-label') ? box.getAttribute('aria-label').slice(0, 80) : null,
+    page: path.indexOf('/channels/@me/') === 0 ? 'dm' : path.indexOf('/channels/') === 0 ? 'channel' : 'other',
+    composer: box == null ? null : {
+      length: text.length,
+      editable: box.getAttribute('contenteditable') === 'true',
+      disabled: box.getAttribute('aria-disabled') === 'true',
+      focused: active != null && (active === box || box.contains(active)),
+    },
+    submitButton: submit == null ? null : { disabled: submit.disabled },
+    dialogs: document.querySelectorAll('[role="dialog"], [role="alertdialog"], [aria-modal="true"]').length,
+    alerts: document.querySelectorAll('[role="alert"]').length,
+    captcha: document.querySelectorAll('iframe[src*="captcha"], [data-hcaptcha-widget-id], [class*="captcha"]').length,
+    messages: document.querySelectorAll('li[id^="chat-messages-"]').length,
+    documentFocused: document.hasFocus(),
+    visibility: document.visibilityState,
   };
 `;
 
