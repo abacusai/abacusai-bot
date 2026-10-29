@@ -471,6 +471,8 @@ describe("present_deliverable on the phone", () => {
         "Tell the user plainly, once, in their language, that you can't send that type of file"
       );
       expect(text).toContain("do not try again");
+      // The file is on this computer already: where it is, nothing more.
+      expect(text).toContain("say where the file is saved on their computer");
       // No workaround: not another format, not another app or site.
       expect(text).not.toMatch(
         /PDF document|`page`|desktop app|bot\.abacus\.ai/

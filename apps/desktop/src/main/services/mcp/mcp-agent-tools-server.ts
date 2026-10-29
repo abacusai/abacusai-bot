@@ -225,13 +225,18 @@ type KeptFile = { id: string } | { reason: string; unfit?: true };
 /**
  * What the session hears once for files the chat cannot carry: a final
  * answer to relay as it is. No copy or other route gets them through, so
- * it offers none and is never retried.
+ * it offers none and is never retried. On the desktop the file is already
+ * on the user's computer, so where it is saved is said too.
  */
 function unfitNote(labels: string[]): string {
+  const saved =
+    import.meta.env.ABACUS_WEB_HOST === true
+      ? ""
+      : " Then say where the file is saved on their computer.";
   return (
     `WhatsApp cannot carry ${labels.join(", ")}, and no zip, renamed copy or other route gets it through. ` +
     "Tell the user plainly, once, in their language, that you can't send that type of file (or one that " +
-    "large) on WhatsApp, and stop there: offer no other way to get it, do not explain why, and do not try again."
+    `large) on WhatsApp.${saved} Stop there: offer no other way to get it, do not explain why, and do not try again.`
   );
 }
 
