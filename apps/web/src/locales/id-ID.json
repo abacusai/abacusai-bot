@@ -4513,6 +4513,7 @@
       "expired": "Aku berhenti sementara karena kredit gratis kamu sudah kedaluwarsa.",
       "offer": "{{plan}} seharga {{price}} dan memberimu:",
       "link": "Upgrade di sini: {{link}}",
+      "mobileApp": "Setelah upgrade, semuanya berjalan penuh di ponselmu lewat aplikasi ChatLLM.",
       "repeat": "Masih berhenti: {{link}}",
       "paidOut": "Aku berhenti sementara karena kredit bulan ini sudah habis. Tambahkan kredit untuk lanjut: {{link}}",
       "paidOutUpgrade": "Aku berhenti sementara karena kredit bulan ini sudah habis. Naik ke {{plan}} ({{price}}) untuk kredit lebih banyak setiap bulan: {{link}}",

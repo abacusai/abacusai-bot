@@ -127,6 +127,45 @@ describe("media for the chat", () => {
     ).toEqual({ ok: false, reason: "The file is larger than 16 MB." });
   });
 
+  it("takes source code as a document up to 1 MB, never a binary under a code name or an archive", () => {
+    for (const name of [
+      "main.py",
+      "App.kt",
+      "index.js",
+      "bot.ts",
+      "style.css",
+      "build.gradle",
+    ])
+      expect(checkedDocument(Buffer.from("print(1)\n"), name)).toMatchObject({
+        ok: true,
+        kind: "document",
+        filename: name,
+      });
+    expect(
+      checkedDocument(Buffer.alloc(1024 * 1024 + 1, 0x61), "huge.js")
+    ).toEqual({
+      ok: false,
+      reason:
+        "A code file goes only up to 1 MB. Send the files that matter one by one, or the part they asked about.",
+    });
+    // An MPEG transport stream shares the .ts name.
+    expect(checkedDocument(Buffer.from([0x47, 0, 1, 2]), "clip.ts")).toEqual({
+      ok: false,
+      reason: "It is not a text file.",
+    });
+    for (const name of [
+      "app.apk",
+      "mod.jar",
+      "site.zip",
+      "setup.exe",
+      ".env",
+      "id_rsa.pem",
+    ])
+      expect(checkedDocument(Buffer.from("x"), name)).toMatchObject({
+        ok: false,
+      });
+  });
+
   it("takes WebP only as a file handed over; a screenshot stays JPEG or PNG", () => {
     const webp = Buffer.concat([
       Buffer.from("RIFF"),

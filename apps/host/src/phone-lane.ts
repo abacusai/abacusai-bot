@@ -417,6 +417,16 @@ export class PhoneLane {
   }
 
   /**
+   * The app's own line to the user (a credit milestone), as one more text
+   * after whatever is on its way, against their newest message. Whether it
+   * went; false before any message this start.
+   */
+  async say(text: string): Promise<boolean> {
+    if (!this.running || this.lastInboundId == null) return false;
+    return (await this.sendInOrder(this.lastInboundId, [text])) === 1;
+  }
+
+  /**
    * The session is working on handed messages under a running clock, and
    * nothing queued is ahead of the message, so order holds.
    */

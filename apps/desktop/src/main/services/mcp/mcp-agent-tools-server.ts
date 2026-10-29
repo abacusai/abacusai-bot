@@ -60,7 +60,10 @@ import type {
   RoutineListItem,
   RoutineRunner,
 } from "@abacus-ai/contract/routines";
-import { PAID_FEATURES } from "@abacus-ai/contract/toolsets";
+import {
+  PAID_FEATURES,
+  PHONE_HANDOFF_FEATURES,
+} from "@abacus-ai/contract/toolsets";
 
 import { emitHostEvent } from "#main/rpc/emit";
 
@@ -126,7 +129,10 @@ import {
   resolveSender,
   type SenderCandidate,
 } from "../messaging/sender-resolution";
-import { fetchBillingPlan } from "../providers/abacus-upgrade";
+import {
+  fetchBillingPlan,
+  WHATSAPP_UPGRADE_SRC,
+} from "../providers/abacus-upgrade";
 import type {
   PreviewOutcome,
   PreviewTargets,
@@ -160,6 +166,7 @@ import {
   type PaidFeatureReply,
   paidFeaturePlace,
   paidFeatureResult,
+  phoneHandoffResult,
   withheldFeatures,
 } from "./tools/paid-features";
 import {
@@ -227,15 +234,23 @@ type KeptFile = { id: string } | { reason: string; unfit?: true };
  * cannot get them through, so it says what can: the content in a form the
  * chat takes, and the file itself where it lives.
  */
-function unfitNote(labels: string[]): string {
-  const where =
-    import.meta.env.ABACUS_WEB_HOST === true
-      ? "The file itself reaches them in the AbacusAI Bot desktop app (bot.abacus.ai on a computer), where you can make it again for them."
-      : "The file itself is saved on their computer: tell them where it is.";
+export function unfitNote(
+  labels: string[],
+  hosted = import.meta.env.ABACUS_WEB_HOST === true
+): string {
+  const cannot = `WhatsApp cannot carry ${labels.join(", ")}, and a zip or renamed copy is refused too, so do not try.`;
+  // The hosted computer's chat is WhatsApp alone: the file reaches the user
+  // only through the ChatLLM app, where their request is made again.
+  if (hosted)
+    return (
+      `${cannot} Never promise the file, a link to it, or another way to get it here. ` +
+      "Call paid_feature with feature project_files and their request in their words, and answer from what it says; " +
+      "readable parts can still go as documents (code, txt, md, PDF) when they ask for them."
+    );
   return (
-    `WhatsApp cannot carry ${labels.join(", ")}, and a zip or renamed copy is refused too, so do not try. ` +
-    "Tell the user once, in their language, and give them what fits this chat instead: the readable " +
-    `content as a txt, md or PDF document, a short summary, or a \`page\`. ${where}`
+    `${cannot} Tell the user once, in their language, and give them what fits this chat instead: the readable ` +
+    "content as a txt, md or PDF document, a short summary, or a `page`. " +
+    "The file itself is saved on their computer: tell them where it is."
   );
 }
 
@@ -621,11 +636,8 @@ export class McpAgentToolsServer extends McpHttpServer {
     const enabled = this.options.enabledToolsets();
     return {
       hostedRoutines: this.options.hostedRoutines?.() === true,
-      withheldFeatures: withheldFeatures(
-        this.planTier(),
-        (feature) =>
-          this.featureListed(feature.toolsets, enabled, callerSession),
-        this.isPhoneCaller(callerSession)
+      withheldFeatures: withheldFeatures(this.planTier(), (feature) =>
+        this.featureListed(feature.toolsets, enabled, callerSession)
       ),
     };
   }
@@ -976,6 +988,17 @@ export class McpAgentToolsServer extends McpHttpServer {
     // never refused, and what was read differently is said with the result.
     if (action === "create" || action === "update") {
       const timing = readRoutineTiming(args, Date.now());
+      // The WhatsApp chat's free plan sets up no reminder or routine: they
+      // come with the paid plan, here or in the ChatLLM app.
+      if (
+        action === "create" &&
+        this.isPhoneCaller(callerSession) &&
+        this.planTier() === "free"
+      )
+        return this.err(
+          "Reminders, daily briefs and routines are not set up from this chat on the free plan: nothing was created. " +
+            "Call paid_feature with feature routines, and answer from what it says."
+        );
       return withNotes(
         await this.cronjobAction(
           action,
@@ -3136,6 +3159,7 @@ export class McpAgentToolsServer extends McpHttpServer {
     args: Record<string, unknown>,
     callerSession?: string
   ): Promise<ToolResult> {
+    if (this.isPhoneCaller(callerSession)) return this.phoneHandoff(args);
     const feature = PAID_FEATURES.find(
       (entry) => entry.feature === args.feature
     );
@@ -3144,15 +3168,12 @@ export class McpAgentToolsServer extends McpHttpServer {
         `Unknown feature. One of: ${PAID_FEATURES.map((entry) => entry.feature).join(", ")}.`
       );
     const tier = this.planTier();
-    const place = paidFeaturePlace(feature, this.isPhoneCaller(callerSession));
-    // The phone is never handed what the ChatLLM app reads, whatever tool it lists.
-    const listed =
-      place !== "chatllm_app" &&
-      this.featureListed(
-        feature.toolsets,
-        this.options.enabledToolsets(),
-        callerSession
-      );
+    const place = paidFeaturePlace(feature);
+    const listed = this.featureListed(
+      feature.toolsets,
+      this.options.enabledToolsets(),
+      callerSession
+    );
     const reply = this.paidFeatureReply(callerSession);
     // Only a chat app's reply mints a one-time upgrade link: the app's reply
     // stays in the chat, so it links the bot's upgrade page, and the card brings its own.
@@ -3173,6 +3194,28 @@ export class McpAgentToolsServer extends McpHttpServer {
       plan,
       prompt,
     });
+  }
+
+  /**
+   * The phone's `paid_feature`: everything the WhatsApp chat cannot do goes
+   * to the ChatLLM app; a free (or unread) account hears the plan's pitch.
+   */
+  private async phoneHandoff(
+    args: Record<string, unknown>
+  ): Promise<ToolResult> {
+    const feature = PHONE_HANDOFF_FEATURES.find(
+      (entry) => entry.feature === args.feature
+    );
+    if (feature == null)
+      return this.err(
+        `Unknown feature. One of: ${PHONE_HANDOFF_FEATURES.map((entry) => entry.feature).join(", ")}.`
+      );
+    const tier = this.planTier();
+    const plan =
+      tier === "free" || tier === "unknown"
+        ? await fetchBillingPlan(true, undefined, WHATSAPP_UPGRADE_SRC)
+        : null;
+    return phoneHandoffResult(this, { feature, tier, plan });
   }
 
   /** A chat app, the phone or a routine has no card to show: the reply carries the link. */

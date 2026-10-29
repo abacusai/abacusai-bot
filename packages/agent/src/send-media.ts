@@ -38,9 +38,57 @@ export type SendMediaWhen = "now" | "with_answer";
 /** WhatsApp's limit for a document. */
 export const DOCUMENT_MAX_BYTES = 16 * 1024 * 1024;
 
+/** The most a source file may be: past it, it is generated or minified, not something to read in a chat. */
+export const CODE_DOCUMENT_MAX_BYTES = 1024 * 1024;
+
+/**
+ * Source code and plain-text config the chat takes as documents, sent as
+ * plain text under their own name, as html is. Never a key or env file.
+ */
+export const CODE_DOCUMENT_EXTENSIONS: readonly string[] = [
+  "py",
+  "js",
+  "mjs",
+  "cjs",
+  "ts",
+  "tsx",
+  "jsx",
+  "css",
+  "scss",
+  "java",
+  "kt",
+  "kts",
+  "swift",
+  "c",
+  "h",
+  "cpp",
+  "hpp",
+  "cc",
+  "cs",
+  "go",
+  "rs",
+  "rb",
+  "php",
+  "sh",
+  "sql",
+  "yaml",
+  "yml",
+  "toml",
+  "xml",
+  "ini",
+  "gradle",
+  "dart",
+  "lua",
+  "vue",
+  "svelte",
+  "tsv",
+  "log",
+];
+
 /**
  * The file types the chat takes as documents, by extension: what WhatsApp
- * accepts (PDF, Office, plain text). Archives, apps and videos never go.
+ * accepts (PDF, Office, plain text, which carries html and source code).
+ * Archives, apps and videos never go.
  */
 export const DOCUMENT_EXTENSIONS: readonly string[] = [
   "pdf",
@@ -52,6 +100,7 @@ export const DOCUMENT_EXTENSIONS: readonly string[] = [
   "md",
   "json",
   "html",
+  ...CODE_DOCUMENT_EXTENSIONS,
 ];
 
 export type MediaMimeType = "image/jpeg" | "image/png" | "image/webp";
@@ -197,5 +246,16 @@ export function checkedDocument(data: Buffer, filename: string): ResolvedMedia {
   if (data.length === 0) return { ok: false, reason: "The file is empty." };
   if (data.length > DOCUMENT_MAX_BYTES)
     return { ok: false, reason: "The file is larger than 16 MB." };
+  if (CODE_DOCUMENT_EXTENSIONS.includes(extensionOf(name))) {
+    if (data.length > CODE_DOCUMENT_MAX_BYTES)
+      return {
+        ok: false,
+        reason:
+          "A code file goes only up to 1 MB. Send the files that matter one by one, or the part they asked about.",
+      };
+    // Goes as plain text: a binary under a code name (a .ts video) never does.
+    if (data.includes(0))
+      return { ok: false, reason: "It is not a text file." };
+  }
   return { ok: true, kind: "document", data, filename: name };
 }

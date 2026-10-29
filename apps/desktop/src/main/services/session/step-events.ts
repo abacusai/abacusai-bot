@@ -170,11 +170,32 @@ const paymentNote = (facts: StepFacts): string =>
   `${text(facts.merchant) ?? "the merchant"} on ${text(facts.site) ?? "the checkout"} with card ${text(facts.item_id) ?? "(the approved card)"}. ` +
   `For the next 10 minutes browser_vault_fill can fill card_number${facts.cvv_required === true ? " and cvv" : ""} on that checkout, once each. ${TELL}`;
 
-const upgradedNote = (facts: StepFacts): string =>
-  `[upgraded] The user's account just moved to ${text(facts.plan) ?? "a paid plan"}. Confirm it in one short line, in their ` +
-  "language and your own words. If a task stopped on the old plan's limit, carry on with it now. Then ask them, once, " +
-  `to set up their routines in Abacus AI Agent on the web at ${text(facts.link) ?? "their Abacus.AI account"} (give the ` +
-  "link as written): there they run 24/7, even with the computer off, and so do WhatsApp, Telegram and Discord auto-replies.";
+/**
+ * A payment landed: the bot speaks first. Reminders and routines now work in
+ * the chat; the plan's full power (building apps, mobile apps too) is in the
+ * ChatLLM app, linked for each store and for a computer.
+ */
+const upgradedNote = (facts: StepFacts): string => {
+  const plan = text(facts.plan) ?? "a paid plan";
+  const ios = text(facts.ios_app);
+  const android = text(facts.android_app);
+  const web = text(facts.web) ?? text(facts.link);
+  const stores = [
+    ...(ios != null ? [`iPhone: ${ios}`] : []),
+    ...(android != null ? [`Android: ${android}`] : []),
+  ];
+  return (
+    `[upgraded] The user's account just moved to ${plan}. Text them first, in their language, as one short WhatsApp ` +
+    `message: they are on ${plan}, and reminders, routines and daily briefs now work right here in this chat. Lead with ` +
+    "the ChatLLM app on their phone as where the plan's full power is: building apps (mobile apps too) and everything " +
+    "else; this chat is not the place to build apps." +
+    (stores.length > 0
+      ? ` Give the app's links exactly as written, each on its own line (only their phone's one when the chat already shows which phone it is): ${stores.join("; ")}.`
+      : "") +
+    (web != null ? ` On a computer: ${web} (as written).` : "") +
+    " If a task stopped on the free plan's limit, carry on with it now."
+  );
+};
 
 /**
  * The one text a step-done event is told by. `known`: this run asked for

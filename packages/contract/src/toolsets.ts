@@ -563,6 +563,34 @@ export const PAID_FEATURES: readonly PaidFeature[] = READY_TOOLSETS.reduce<
 }, []);
 
 /**
+ * What the WhatsApp chat hands to the ChatLLM app: none of it is ever done
+ * in the chat itself. The paid plans' media and video features, plus builds,
+ * files the chat cannot carry and scheduled work, which a free account gets
+ * with the plan. Phone-only: no toolset delivers them here.
+ */
+export const PHONE_HANDOFF_FEATURES: readonly PaidFeature[] = [
+  ...PAID_FEATURES.map((feature) => ({ ...feature, inApp: false })),
+  {
+    feature: "app_build",
+    name: "building websites and apps",
+    inApp: false,
+    toolsets: [],
+  },
+  {
+    feature: "project_files",
+    name: "files this chat cannot carry (zip, apk, jar, whole projects)",
+    inApp: false,
+    toolsets: [],
+  },
+  {
+    feature: "routines",
+    name: "reminders, daily briefs and routines",
+    inApp: false,
+    toolsets: [],
+  },
+];
+
+/**
  * `paid`: the account is on a paid plan, which turns on what the plan serves
  * here (`paidPlan.inApp`) unless the user switched it off.
  */

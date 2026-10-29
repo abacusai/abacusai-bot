@@ -18,11 +18,14 @@ import { abacusAppHost } from "./abacus-host";
  * link could be minted (offline, a slow proxy), never the chat product's
  * plans page.
  */
-export const botUpgradePage = (src: "app" | "channel"): string => {
+export const botUpgradePage = (src: "app" | "channel" | "whatsapp"): string => {
   const url = new URL("/bot/link/upgrade", abacusAppHost());
   url.searchParams.set("src", src);
   return url.toString();
 };
+
+/** The surface AbacusAI Bot's WhatsApp number tags its upgrade links with. */
+export const WHATSAPP_UPGRADE_SRC = "whatsapp";
 
 /** Well inside the link's life, so a cached link is never a dead one. */
 const UPGRADE_URL_TTL_MS = 60_000;
@@ -71,12 +74,18 @@ export const fetchUpgradeUrl = async (
 export const fetchBillingPlan = async (
   upgrade: boolean,
   /** A held sign-in's key, in place of the stored one. */
-  heldKey?: string
+  heldKey?: string,
+  /** The surface the upgrade links are for ("whatsapp"); the server's default otherwise. */
+  src?: string
 ): Promise<BillingPlan | null> => {
+  const query = {
+    ...(upgrade ? { includeUpgradeLinks: true } : {}),
+    ...(src != null ? { src } : {}),
+  };
   const { ok, result } = await abacusApiCall(
     "_getAbacusbotBillingPlan",
     "GET",
-    upgrade ? { includeUpgradeLinks: true } : undefined,
+    Object.keys(query).length > 0 ? query : undefined,
     undefined,
     heldKey
   );

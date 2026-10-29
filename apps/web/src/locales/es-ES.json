@@ -4513,6 +4513,7 @@
       "expired": "Me he detenido porque tus créditos gratis han caducado.",
       "offer": "{{plan}} cuesta {{price}} y te da:",
       "link": "Mejora aquí: {{link}}",
+      "mobileApp": "Cuando mejores tu plan, todo funcionará por completo en tu móvil, en la app ChatLLM.",
       "repeat": "Sigo en pausa: {{link}}",
       "paidOut": "Me he detenido porque se agotaron los créditos de este mes. Añade créditos para seguir: {{link}}",
       "paidOutUpgrade": "Me he detenido porque se agotaron los créditos de este mes. Pásate a {{plan}} ({{price}}) para tener más créditos cada mes: {{link}}",

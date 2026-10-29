@@ -4513,6 +4513,7 @@
       "expired": "I've paused because your free credits have expired.",
       "offer": "{{plan}} is {{price}} and gives you:",
       "link": "Upgrade here: {{link}}",
+      "mobileApp": "Once you upgrade, everything works fully on your phone in the ChatLLM app.",
       "repeat": "Still paused: {{link}}",
       "paidOut": "I've paused because this month's credits are used up. Add credits to keep going: {{link}}",
       "paidOutUpgrade": "I've paused because this month's credits are used up. Move up to {{plan}} ({{price}}) for more credits every month: {{link}}",

@@ -706,6 +706,26 @@ describe("the phone lane", () => {
     phone.stop();
   });
 
+  it("says the app's own line after the answer, against the user's newest message, and nothing before one", async () => {
+    const { phone, send, reply, replies, handled } = lane();
+    expect(await phone.say("You've used half your free credits")).toBe(false);
+    phone.arrive({ id: "m1", text: "plan my week" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    reply(["m1"], "Here is your week.");
+    await handled([["m1"]]);
+    expect(await phone.say("You've used half your free credits")).toBe(true);
+    expect(replies()).toEqual([
+      { action: "reply", message_id: "m1", text: "Here is your week." },
+      {
+        action: "reply",
+        message_id: "m1",
+        text: "You've used half your free credits",
+      },
+    ]);
+    phone.stop();
+    expect(await phone.say("again")).toBe(false);
+  });
+
   it("sends an image at once with its caption, and keeps the turn open", async () => {
     const { phone, send, event, reply, replies, acks, calls, handled } = lane();
     phone.arrive({ id: "m1", text: "share a screenshot?" });

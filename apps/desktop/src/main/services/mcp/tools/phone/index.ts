@@ -7,7 +7,7 @@ import { PHONE_BILLING_TOOLS } from "./billing";
 import { PHONE_BOT_HELP_TOOLS } from "./bot-help";
 import { PHONE_CONNECTORS_TOOLS } from "./connectors";
 import type { PhoneToolDefinition } from "./definition";
-import { PHONE_MEDIA_TOOLS } from "./media";
+import { PHONE_HANDOFF_TOOLS } from "./handoff";
 
 /**
  * Every agent-tools tool the WhatsApp chat sees, each in its phone words.
@@ -16,7 +16,7 @@ import { PHONE_MEDIA_TOOLS } from "./media";
 export const PHONE_AGENT_TOOLS: readonly PhoneToolDefinition[] = [
   ...PHONE_CONNECTORS_TOOLS,
   ...PHONE_BILLING_TOOLS,
-  ...PHONE_MEDIA_TOOLS,
+  ...PHONE_HANDOFF_TOOLS,
   ...PHONE_BOT_HELP_TOOLS,
 ];
 

@@ -496,6 +496,20 @@ const remember = (value: AbacusAccountInfo): void => {
     for (const listener of Array.from(accountReadListeners)) listener(snapshot);
 };
 
+/**
+ * The platform says the account just moved to `plan` (a payment landed):
+ * its tier is taken at once, so what the plan unlocks (tools, routines, the
+ * pitch) reads right in the very next turn, and every account listener hears
+ * it; the model catalog is dropped and the account read afresh behind it.
+ */
+export const accountMovedPlan = (plan: string | null): void => {
+  const tier = plan?.trim().toLowerCase() ?? "";
+  if (accountCache != null && tier.length > 0)
+    remember({ ...accountCache.value, subscription_tier: tier });
+  cache = null;
+  void fetchAbacusAccount(true).catch(() => null);
+};
+
 export const clearAbacusCache = (): void => {
   cache = null;
   accountCache = null;
