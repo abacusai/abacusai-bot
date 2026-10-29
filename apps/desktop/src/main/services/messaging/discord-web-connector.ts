@@ -24,6 +24,7 @@ import {
   readPlatformSignedIn,
   savePlatformSignedIn,
 } from "./messaging-config-service";
+import { BOOT_MAX_RELOADS, pageBusy, PageBootWatch } from "./page-boot-watch";
 
 /**
  * Discord, by driving the real discord.com web app in a hidden BrowserWindow
@@ -54,15 +55,6 @@ const LOGIN_POLL_MS = 1500;
 
 /** How often to sweep the DM list for new inbound messages. */
 const INBOUND_POLL_MS = 5000;
-
-/** Login polls stuck on the boot spinner before the page is reloaded. */
-const STUCK_BOOT_POLLS = 20;
-/**
- * Reloads in a row that still find neither sign-in nor login form before the
- * checks stop until the user opens Discord. Unbounded, a page that can never
- * load (blocked network, a challenge page) reloaded every 30s for good.
- */
-const MAX_STUCK_RELOADS = 3;
 
 /** How often a lane parked offline checks whether the network is back. */
 const ONLINE_CHECK_MS = 10_000;
@@ -142,10 +134,11 @@ export class DiscordWebConnector implements MessagingConnector {
   private loggedIn = false;
   /** Consecutive signed-out polls after a login. See checkLogin. */
   private signedOutTicks = 0;
-  /** Consecutive polls stuck between login form and app. See checkLogin. */
-  private bootStuckTicks = 0;
-  /** Stuck-page reloads since the last sign-in or user retry. */
-  private stuckReloads = 0;
+  /**
+   * A page stuck between login form and app: when to reload it, and when to
+   * stop. Starts over on a sign-in, a login form, or the user opening Discord.
+   */
+  private readonly boot = new PageBootWatch();
   /**
    * No page and no checks until the user opens Discord (resume): never
    * signed in here, out of reloads, or the page could not load at all.
@@ -237,7 +230,7 @@ export class DiscordWebConnector implements MessagingConnector {
     if (this.running) return;
     this.running = true;
     this.parked = false;
-    this.stuckReloads = 0;
+    this.boot.reset();
     this.signedInRecord = readPlatformSignedIn(this.id);
 
     // Signed out last time: a hidden page has nothing to find, so none is
@@ -799,7 +792,7 @@ export class DiscordWebConnector implements MessagingConnector {
    */
   private park(state: "needs_login" | "error", message: string): void {
     this.parked = true;
-    this.bootStuckTicks = 0;
+    this.boot.reset();
     this.loginPoll.stop();
     const win = this.window;
     this.window = null;
@@ -812,8 +805,7 @@ export class DiscordWebConnector implements MessagingConnector {
    * the checks. A parked lane gets its page back via ensureWindow.
    */
   private resume(): void {
-    this.stuckReloads = 0;
-    this.bootStuckTicks = 0;
+    this.boot.reset();
     this.stopOnlineCheck();
     if (!this.running || !this.parked) return;
     this.parked = false;
@@ -892,11 +884,10 @@ export class DiscordWebConnector implements MessagingConnector {
     if (state == null || this.parked) return;
 
     if (state.loggedIn) this.signedOutTicks = 0;
-    if (state.loggedIn || state.loginVisible === true) this.bootStuckTicks = 0;
+    if (state.loggedIn || state.loginVisible === true) this.boot.reset();
 
     if (state.loggedIn && !this.loggedIn) {
       this.loggedIn = true;
-      this.stuckReloads = 0;
       this.recordSignedIn(true);
       const win = this.window;
       if (win != null && !win.isDestroyed() && win.isVisible()) {
@@ -921,7 +912,6 @@ export class DiscordWebConnector implements MessagingConnector {
     // the gateway from restarting us. Only the connect dialog shows the window.
     // Watching it reloads nothing; recorded so the next launch skips the page.
     if (!state.loggedIn && !this.loggedIn && state.loginVisible === true) {
-      this.stuckReloads = 0;
       this.recordSignedIn(false);
       this.callbacks.onState("needs_login", NOT_SIGNED_IN);
       return;
@@ -931,21 +921,21 @@ export class DiscordWebConnector implements MessagingConnector {
     // indefinitely; a reload with the session in the partition comes back in.
     // A few reloads, then the user's call: one that never loads would loop.
     if (!state.loggedIn && !this.loggedIn) {
-      this.bootStuckTicks += 1;
-      if (this.bootStuckTicks >= STUCK_BOOT_POLLS) {
-        this.bootStuckTicks = 0;
-        if (this.stuckReloads >= MAX_STUCK_RELOADS) {
-          this.callbacks.onLog(
-            `discord-web: still not loaded after ${MAX_STUCK_RELOADS} reloads, waiting for the user`
-          );
-          this.park("needs_login", STUCK_LOADING);
-          return;
-        }
-        this.stuckReloads += 1;
+      const win = this.window;
+      const busy =
+        win != null && !win.isDestroyed() && pageBusy(win.webContents);
+      const verdict = this.boot.stuck(Date.now(), busy);
+      if (verdict === "give_up") {
+        this.callbacks.onLog(
+          `discord-web: still not loaded after ${BOOT_MAX_RELOADS} reloads, waiting for the user`
+        );
+        this.park("needs_login", STUCK_LOADING);
+        return;
+      }
+      if (verdict === "reload") {
         this.callbacks.onLog(
           "discord-web: stuck on the boot spinner, reloading the page"
         );
-        const win = this.window;
         if (win != null && !win.isDestroyed())
           void win
             .loadURL(DISCORD_WEB_URL, { userAgent: userAgent() })
