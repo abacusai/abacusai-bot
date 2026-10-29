@@ -12,6 +12,8 @@
 import fs from "fs";
 import path from "path";
 
+import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
+
 import { abacusBotHome } from "../../paths";
 import type { CronJob } from "./cron-store";
 import type { HostedRoutineCreate } from "./hosted-routines";
@@ -47,10 +49,7 @@ export const writeMigrationMarker = (
   marker: MigrationMarker,
   file: string = MARKER()
 ): void => {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  const temp = `${file}.tmp`;
-  fs.writeFileSync(temp, JSON.stringify(marker), "utf8");
-  fs.renameSync(temp, file);
+  writeFileAtomicSync(file, JSON.stringify(marker));
 };
 
 /** A one-time job that already fired: it is done, and stays a local record. */

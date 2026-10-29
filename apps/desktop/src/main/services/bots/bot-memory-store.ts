@@ -7,6 +7,7 @@
 import fs from "fs";
 import path from "path";
 
+import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
 import { ConflictError } from "@abacus-ai/contract/conflict";
 
 import { botDir, listBots } from "./bot-store";
@@ -34,18 +35,12 @@ const readEntries = (id: string): string[] => {
 };
 
 const writeEntries = (id: string, entries: string[]): void => {
-  const file = memoryFile(id);
-
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-
-  const temp = `${file}.tmp`;
   const body =
     entries.length > 0
       ? `${entries.map((entry) => `- ${entry}`).join("\n")}\n`
       : "";
 
-  fs.writeFileSync(temp, body, "utf8");
-  fs.renameSync(temp, file);
+  writeFileAtomicSync(memoryFile(id), body);
 };
 
 /** The bot's core memory as prompt text: one line per entry, empty when none. */

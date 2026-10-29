@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 
+import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
 import { app } from "electron";
 import Store from "electron-store";
 
@@ -51,11 +52,8 @@ function migrateFromUserDataIfNeeded(): void {
 
 migrateFromUserDataIfNeeded();
 
-const writeFileAtomic = (file: string, text: string): void => {
-  const temp = `${file}.tmp`;
-  fs.writeFileSync(temp, text, { encoding: "utf8", mode: 0o600 });
-  fs.renameSync(temp, file);
-};
+const writeFileAtomic = (file: string, text: string): void =>
+  writeFileAtomicSync(file, text, { restrict: true });
 
 const parses = (text: string): boolean => {
   try {

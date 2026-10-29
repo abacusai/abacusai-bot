@@ -8,6 +8,7 @@
 import fs from "fs";
 import path from "path";
 
+import { writeFileAtomicSync } from "./atomic-file.js";
 import { abacusBotDir } from "./config.js";
 
 /** One model's standing with the router. */
@@ -91,15 +92,8 @@ export function fileCooldownStore(
     read,
     write(entries: CooldownEntries): void {
       try {
-        fs.mkdirSync(path.dirname(file), { recursive: true });
-
         const merged = live(merge(read(), entries), now());
-        // Write beside the target and rename, so a reader never sees a half
-        // written file and a crash mid-write leaves the old one intact.
-        const temporary = `${file}.${process.pid}.tmp`;
-
-        fs.writeFileSync(temporary, JSON.stringify(merged), "utf8");
-        fs.renameSync(temporary, file);
+        writeFileAtomicSync(file, JSON.stringify(merged));
       } catch {
         // Losing a cooldown costs one retry of one model. Not worth a message.
       }

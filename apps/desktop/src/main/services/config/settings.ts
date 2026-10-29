@@ -1,6 +1,10 @@
 import fs from "fs";
 import path from "path";
 
+import {
+  recoverFromBackupSync,
+  writeFileAtomicSync,
+} from "@abacus-ai/agent/atomic-file";
 import { AgentMode } from "@abacus-ai/contract/agent-types";
 import type {
   DefaultAgentMode,
@@ -32,39 +36,53 @@ import { abacusBotHome } from "../../paths";
 
 const configPath = (): string => path.join(abacusBotHome(), "config.json");
 
-export const readSettings = (): AbacusBotSettings => {
+/** The settings `text` holds, or null when it is not a JSON object. */
+const parseSettings = (text: string): AbacusBotSettings | null => {
   try {
-    const parsed: unknown = JSON.parse(fs.readFileSync(configPath(), "utf8"));
-
+    const parsed: unknown = JSON.parse(text);
     return parsed != null && typeof parsed === "object"
       ? (parsed as AbacusBotSettings)
-      : {};
+      : null;
   } catch {
-    return {};
+    return null;
   }
 };
 
+/**
+ * A file whose bytes do not parse (a crash can leave it NUL-filled) is put
+ * back from its last good copy rather than read as `{}`, which the next save
+ * would write over the keys it held.
+ */
+export const readSettings = (): AbacusBotSettings => {
+  let text: string;
+  try {
+    text = fs.readFileSync(configPath(), "utf8");
+  } catch {
+    return {};
+  }
+  const parsed = parseSettings(text);
+  if (parsed !== null) return parsed;
+  const restored = recoverFromBackupSync(
+    configPath(),
+    (backup) => parseSettings(backup) !== null,
+    { restrict: true }
+  );
+  if (restored === null) return {};
+  console.warn(
+    "[settings] config.json did not parse; restored it from its last good copy"
+  );
+  return parseSettings(restored) ?? {};
+};
+
 const writeSettings = (settings: AbacusBotSettings): AbacusBotSettings => {
-  const target = configPath();
-  fs.mkdirSync(path.dirname(target), { recursive: true });
   // Merged, never replaced: the file is hand-editable and holds provider
-  // definitions the UI knows nothing about. Temp file plus rename because it
-  // has several writers, and a truncated file parses as `{}` for all of them.
-  const tmp = `${target}.${process.pid}.${Date.now()}.tmp`;
-  fs.writeFileSync(tmp, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
-  // The file holds API keys. chmod the temp so rename carries the mode, then
-  // the target so an existing world-readable file does not keep its mode.
-  try {
-    fs.chmodSync(tmp, 0o600);
-  } catch {
-    // Windows and some network filesystems lack POSIX modes.
-  }
-  fs.renameSync(tmp, target);
-  try {
-    fs.chmodSync(target, 0o600);
-  } catch {
-    // Same as above.
-  }
+  // definitions the UI knows nothing about. Atomic because it has several
+  // writers, and a truncated file parses as `{}` for all of them; restricted
+  // because it holds API keys; kept twice so a torn copy can be put back.
+  writeFileAtomicSync(configPath(), `${JSON.stringify(settings, null, 2)}\n`, {
+    restrict: true,
+    keepBackup: true,
+  });
 
   return settings;
 };

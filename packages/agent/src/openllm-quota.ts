@@ -11,6 +11,7 @@
 import fs from "fs";
 import path from "path";
 
+import { writeFileAtomicSync } from "./atomic-file.js";
 import { abacusBotDir } from "./config.js";
 import { freeSource, type WindowLimits } from "./free-sources.js";
 
@@ -183,10 +184,7 @@ export function fileQuotaStore(
     read,
     update(update) {
       try {
-        fs.mkdirSync(path.dirname(file), { recursive: true });
-        const temporary = `${file}.${process.pid}.tmp`;
-        fs.writeFileSync(temporary, JSON.stringify(update(read())), "utf8");
-        fs.renameSync(temporary, file);
+        writeFileAtomicSync(file, JSON.stringify(update(read())));
       } catch {
         // Advisory: the provider's own refusal still stands behind it.
       }

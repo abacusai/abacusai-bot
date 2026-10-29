@@ -6,7 +6,10 @@
 import fs from "fs";
 import path from "path";
 
-import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
+import {
+  recoverFromBackupSync,
+  writeFileAtomicSync,
+} from "@abacus-ai/agent/atomic-file";
 import {
   MAX_BOT_DESCRIPTION,
   MAX_BOT_PERSONA,
@@ -37,14 +40,39 @@ export const botDir = (botId: string): string =>
 export const personaPath = (botId: string): string =>
   path.join(botDir(botId), "persona.md");
 
-// The stored array, or null when the file is there but unreadable.
-const readRecords = (): unknown[] | null => {
+/** The array `text` holds, or null when it is not one. */
+const parseRecords = (text: string): unknown[] | null => {
   try {
-    const parsed: unknown = JSON.parse(fs.readFileSync(FILE(), "utf8"));
+    const parsed: unknown = JSON.parse(text);
     return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * The stored array, or null when the file is there but unreadable. Bytes
+ * that do not parse (a crash can leave them NUL-filled) are put back from
+ * the last good copy first.
+ */
+const readRecords = (): unknown[] | null => {
+  let text: string;
+  try {
+    text = fs.readFileSync(FILE(), "utf8");
   } catch (error) {
     return (error as NodeJS.ErrnoException).code === "ENOENT" ? [] : null;
   }
+  const records = parseRecords(text);
+  if (records !== null) return records;
+  const restored = recoverFromBackupSync(
+    FILE(),
+    (backup) => parseRecords(backup) !== null
+  );
+  if (restored === null) return null;
+  console.warn(
+    "[bot-store] bots.json did not parse; restored it from its last good copy"
+  );
+  return parseRecords(restored);
 };
 
 const isBotRecord = (
@@ -100,7 +128,8 @@ const write = (bots: Bot[]): void => {
   const kept = records.filter((record) => !isBotRecord(record));
   writeFileAtomicSync(
     FILE(),
-    `${JSON.stringify([...bots, ...kept], null, 2)}\n`
+    `${JSON.stringify([...bots, ...kept], null, 2)}\n`,
+    { keepBackup: true }
   );
   for (const listener of Array.from(writeListeners)) {
     try {

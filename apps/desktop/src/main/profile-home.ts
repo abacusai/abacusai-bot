@@ -2,6 +2,8 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
+import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
+
 /**
  * One home folder per Abacus.AI account. A registry at the base dir maps an
  * account key to a profile folder and this module points `ABACUSAI_BOT_HOME`
@@ -73,21 +75,13 @@ export const hasSignedInBefore = (): boolean =>
   Object.keys(readRegistry().profiles).length > 0;
 
 const writeRegistry = (registry: ProfileRegistry): void => {
-  fs.mkdirSync(BASE, { recursive: true });
-  const target = registryPath();
-  const temporary = `${target}.tmp-${process.pid}`;
-  try {
-    fs.writeFileSync(temporary, `${JSON.stringify(registry, null, 2)}\n`, {
-      mode: 0o600,
-    });
-    fs.renameSync(temporary, target);
-  } finally {
-    try {
-      fs.rmSync(temporary, { force: true });
-    } catch {
-      // The rename already made the registry whole; a stray temp file is fine.
+  writeFileAtomicSync(
+    registryPath(),
+    `${JSON.stringify(registry, null, 2)}\n`,
+    {
+      restrict: true,
     }
-  }
+  );
 };
 
 const profileDir = (registry: ProfileRegistry, key: string): string =>

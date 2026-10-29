@@ -8,6 +8,7 @@
 import fs from "fs";
 import path from "path";
 
+import { writeFileAtomicSync } from "../atomic-file.js";
 import { redactIdNumbers } from "../traveler/id-numbers.js";
 import {
   botDailyNoteFile,
@@ -44,16 +45,12 @@ export function readCoreEntries(dir: string): string[] {
 }
 
 function writeCoreEntries(dir: string, entries: string[]): void {
-  fs.mkdirSync(dir, { recursive: true });
-  const file = botMemoryFile(dir);
-  const temp = `${file}.tmp`;
   const body =
     entries.length > 0
       ? `${entries.map((entry) => `- ${entry}`).join("\n")}\n`
       : "";
 
-  fs.writeFileSync(temp, body, "utf8");
-  fs.renameSync(temp, file);
+  writeFileAtomicSync(botMemoryFile(dir), body);
 }
 
 export interface BotMemoryResult {

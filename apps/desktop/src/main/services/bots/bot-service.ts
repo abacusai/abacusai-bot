@@ -4,9 +4,8 @@
  * reach no further than it needs. The persona is a file the agent re-reads
  * per turn, so editing the bot updates a running chat without a respawn.
  */
-import fs from "fs";
-import path from "path";
 
+import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
 import {
   readUserLanguage,
   resolveReplyLanguage,
@@ -977,12 +976,7 @@ export class BotService {
   }
 
   private writePersona(bot: Bot, homes = this.homes()): void {
-    const file = personaPath(bot.id);
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-
-    const temp = `${file}.tmp`;
-    fs.writeFileSync(temp, `${renderPersona(bot, homes)}\n`, "utf8");
-    fs.renameSync(temp, file);
+    writeFileAtomicSync(personaPath(bot.id), `${renderPersona(bot, homes)}\n`);
   }
 
   /** The home bots that exist, by app. */

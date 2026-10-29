@@ -19,6 +19,7 @@ import fs from "fs";
 import path from "path";
 
 import { abacusV1BaseUrl } from "./abacus-endpoint.js";
+import { writeFileAtomicSync } from "./atomic-file.js";
 import { abacusBotDir } from "./config.js";
 import {
   type ReplyLanguage,
@@ -64,11 +65,7 @@ const readStored = (): StoredUserLanguage => {
 };
 
 const writeStored = (stored: StoredUserLanguage): void => {
-  fs.mkdirSync(abacusBotDir(), { recursive: true });
-  const target = userLanguagePath();
-  const temp = `${target}.${process.pid}.tmp`;
-  fs.writeFileSync(temp, JSON.stringify(stored), "utf8");
-  fs.renameSync(temp, target);
+  writeFileAtomicSync(userLanguagePath(), JSON.stringify(stored));
 };
 
 /** A language name as the prompt may state it, or null. */

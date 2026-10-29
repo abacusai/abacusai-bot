@@ -9,6 +9,8 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
+import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
+
 import { abacusBotHome } from "../../paths";
 
 /**
@@ -71,28 +73,8 @@ export const readEntries = (target: MemoryTarget): string[] => {
   }
 };
 
-let writeCounter = 0;
-
 const writeEntries = (target: MemoryTarget, entries: string[]): void => {
-  const file = storePath(target);
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  // Temp file plus rename so a crash cannot leave a half-flushed store. The
-  // name is unique per process and write: the desktop and its agent
-  // processes share these files, and a fixed name lets two writers interleave
-  // into one temp file.
-  const temp = `${file}.${process.pid}.${++writeCounter}.tmp`;
-  try {
-    fs.writeFileSync(temp, entries.join(ENTRY_DELIMITER), "utf8");
-    fs.renameSync(temp, file);
-  } finally {
-    // On a failed write (usually a full disk) the unique name would otherwise
-    // leave one orphan per attempt.
-    try {
-      fs.rmSync(temp, { force: true });
-    } catch {
-      // Nothing left to clean up.
-    }
-  }
+  writeFileAtomicSync(storePath(target), entries.join(ENTRY_DELIMITER));
 };
 
 // Shared lock: keep byte-identical with the other copy.

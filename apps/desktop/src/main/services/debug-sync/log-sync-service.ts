@@ -7,6 +7,7 @@
 import fs from "fs";
 import path from "path";
 
+import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
 import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
 import { app } from "electron";
 
@@ -252,10 +253,7 @@ export class LogSyncService {
 
   private saveMarkers(): void {
     try {
-      const tmp = `${MARKER_FILE()}.tmp`;
-      fs.mkdirSync(path.dirname(MARKER_FILE()), { recursive: true });
-      fs.writeFileSync(tmp, JSON.stringify(this.markers), "utf-8");
-      fs.renameSync(tmp, MARKER_FILE());
+      writeFileAtomicSync(MARKER_FILE(), JSON.stringify(this.markers));
     } catch (error) {
       console.error("[log-sync] failed to persist markers", error);
     }

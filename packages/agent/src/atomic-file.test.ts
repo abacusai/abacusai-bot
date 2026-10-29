@@ -6,7 +6,12 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { writeFileAtomic, writeFileAtomicSync } from "./atomic-file.js";
+import {
+  backupPathFor,
+  recoverFromBackupSync,
+  writeFileAtomic,
+  writeFileAtomicSync,
+} from "./atomic-file.js";
 
 let dir: string;
 const target = (): string => path.join(dir, "nested", "store.json");
@@ -53,6 +58,101 @@ describe("writing a file into place", () => {
 
     expect(staged[0]).not.toBe(staged[1]);
     expect(fs.readFileSync(target(), "utf-8")).toBe("second");
+  });
+});
+
+describe("durability", () => {
+  // A rename the disk commits ahead of the data leaves a file of NUL bytes
+  // after a power loss: the bytes must be flushed first.
+  it("flushes the staged bytes before the rename", () => {
+    const calls: string[] = [];
+    const fsync = fs.fsyncSync;
+    const rename = fs.renameSync;
+    vi.spyOn(fs, "fsyncSync").mockImplementation((fd) => {
+      calls.push("fsync");
+      fsync(fd);
+    });
+    vi.spyOn(fs, "renameSync").mockImplementation((from, to) => {
+      calls.push("rename");
+      rename(from, to);
+    });
+
+    writeFileAtomicSync(target(), "durable");
+
+    expect(calls.indexOf("fsync")).toBeGreaterThanOrEqual(0);
+    expect(calls.indexOf("fsync")).toBeLessThan(calls.indexOf("rename"));
+    expect(fs.readFileSync(target(), "utf-8")).toBe("durable");
+  });
+
+  it("flushes before the rename in the async half too", async () => {
+    const calls: string[] = [];
+    const open = fsPromises.open;
+    vi.spyOn(fsPromises, "open").mockImplementation(async (...args) => {
+      const handle = await open(...args);
+      const sync = handle.sync.bind(handle);
+      handle.sync = async () => {
+        calls.push("sync");
+        await sync();
+      };
+      return handle;
+    });
+    const rename = fsPromises.rename;
+    vi.spyOn(fsPromises, "rename").mockImplementation(async (from, to) => {
+      calls.push("rename");
+      await rename(from, to);
+    });
+
+    await writeFileAtomic(target(), "durable");
+
+    expect(calls.indexOf("sync")).toBeGreaterThanOrEqual(0);
+    expect(calls.indexOf("sync")).toBeLessThan(calls.indexOf("rename"));
+  });
+});
+
+describe("keepBackup and recoverFromBackupSync", () => {
+  const isList = (text: string): boolean => {
+    try {
+      return Array.isArray(JSON.parse(text));
+    } catch {
+      return false;
+    }
+  };
+  const nulFilled = (): string => "\0".repeat(64);
+  const asideFiles = (): string[] =>
+    fs
+      .readdirSync(path.dirname(target()))
+      .filter((name) => name.includes(".corrupt-"));
+
+  it("keeps the same bytes in the backup", () => {
+    writeFileAtomicSync(target(), "[1]", { keepBackup: true });
+
+    expect(fs.readFileSync(backupPathFor(target()), "utf-8")).toBe("[1]");
+  });
+
+  it("puts the last good copy back over a NUL-filled file, keeping the bad bytes beside it", () => {
+    writeFileAtomicSync(target(), "[1,2]", { keepBackup: true });
+    fs.writeFileSync(target(), nulFilled());
+
+    expect(recoverFromBackupSync(target(), isList)).toBe("[1,2]");
+    expect(fs.readFileSync(target(), "utf-8")).toBe("[1,2]");
+    const aside = asideFiles();
+    expect(aside).toHaveLength(1);
+    expect(
+      fs.readFileSync(path.join(path.dirname(target()), aside[0]!), "utf-8")
+    ).toBe(nulFilled());
+  });
+
+  it.each([
+    ["no backup", null],
+    ["a backup that is no better", "\0\0\0"],
+  ])("leaves the file exactly as it is with %s", (_label, backup) => {
+    fs.mkdirSync(path.dirname(target()), { recursive: true });
+    fs.writeFileSync(target(), nulFilled());
+    if (backup !== null) fs.writeFileSync(backupPathFor(target()), backup);
+
+    expect(recoverFromBackupSync(target(), isList)).toBeNull();
+    expect(fs.readFileSync(target(), "utf-8")).toBe(nulFilled());
+    expect(asideFiles()).toEqual([]);
   });
 });
 

@@ -2,6 +2,10 @@ import fs from "fs";
 import path from "path";
 
 import {
+  recoverFromBackupSync,
+  writeFileAtomicSync,
+} from "@abacus-ai/agent/atomic-file";
+import {
   isMessagingPlatformId,
   messagingPlatformSpec,
   type MessagingPairedUser,
@@ -79,57 +83,63 @@ export const readStoredOutbox = (): unknown => {
 };
 
 export const writeStoredOutbox = (state: unknown): void => {
-  const target = outboxPath();
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  const tmp = `${target}.${process.pid}.${Date.now()}.tmp`;
-  fs.writeFileSync(tmp, `${JSON.stringify(state)}\n`, "utf8");
-  try {
-    fs.chmodSync(tmp, 0o600);
-  } catch {
-    // Windows and some network filesystems don't implement POSIX modes.
-  }
-  fs.renameSync(tmp, target);
+  writeFileAtomicSync(outboxPath(), `${JSON.stringify(state)}\n`, {
+    restrict: true,
+  });
 };
 
 export const writeStoredMessageLog = (entries: unknown[]): void => {
-  const target = messageLogPath();
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  // Temp file + rename, chmod before rename: same reasoning as writeConfig.
-  const tmp = `${target}.${process.pid}.${Date.now()}.tmp`;
-  fs.writeFileSync(tmp, `${JSON.stringify(entries)}\n`, "utf8");
-  try {
-    fs.chmodSync(tmp, 0o600);
-  } catch {
-    // Windows and some network filesystems don't implement POSIX modes.
-  }
-  fs.renameSync(tmp, target);
+  writeFileAtomicSync(messageLogPath(), `${JSON.stringify(entries)}\n`, {
+    restrict: true,
+  });
 };
 
-const readConfig = (): StoredConfig => {
+/** The config `text` holds, or null when it is not a JSON object. */
+const parseConfig = (text: string): StoredConfig | null => {
   try {
-    const parsed: unknown = JSON.parse(fs.readFileSync(configPath(), "utf8"));
+    const parsed: unknown = JSON.parse(text);
     return parsed != null && typeof parsed === "object"
       ? (parsed as StoredConfig)
-      : {};
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * A file whose bytes do not parse (a crash can leave it NUL-filled) is put
+ * back from its last good copy rather than read as `{}`, which the next save
+ * would write over the allowlist and tokens it held.
+ */
+const readConfig = (): StoredConfig => {
+  let text: string;
+  try {
+    text = fs.readFileSync(configPath(), "utf8");
   } catch {
     return {};
   }
+  const parsed = parseConfig(text);
+  if (parsed !== null) return parsed;
+  const restored = recoverFromBackupSync(
+    configPath(),
+    (backup) => parseConfig(backup) !== null,
+    { restrict: true }
+  );
+  if (restored === null) return {};
+  console.warn(
+    "[messaging] messaging config did not parse; restored it from its last good copy"
+  );
+  return parseConfig(restored) ?? {};
 };
 
 const writeConfig = (config: StoredConfig): StoredConfig => {
-  const target = configPath();
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  // Temp file + rename, so a torn write cannot leave a truncated file the next
-  // reader parses as `{}`, forgetting the allowlist. chmod before the rename
-  // (`mode` only applies on creation) so it is never visible with loose modes.
-  const tmp = `${target}.${process.pid}.${Date.now()}.tmp`;
-  fs.writeFileSync(tmp, `${JSON.stringify(config, null, 2)}\n`, "utf8");
-  try {
-    fs.chmodSync(tmp, 0o600);
-  } catch {
-    // Windows and some network filesystems don't implement POSIX modes.
-  }
-  fs.renameSync(tmp, target);
+  // Atomic, so a torn write cannot leave a truncated file the next reader
+  // parses as `{}`, forgetting the allowlist; kept twice so a copy a crash
+  // tore can be put back (`readConfig`).
+  writeFileAtomicSync(configPath(), `${JSON.stringify(config, null, 2)}\n`, {
+    restrict: true,
+    keepBackup: true,
+  });
   return config;
 };
 
