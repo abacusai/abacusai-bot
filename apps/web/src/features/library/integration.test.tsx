@@ -181,6 +181,13 @@ it("a connector's sign-in waits on its own row with Cancel; the other rows stay 
 
   fireEvent.click(within(gmail).getByRole("button", { name: "Cancel" }));
   await waitFor(() => expect(cancelConnect).toHaveBeenCalled());
-  await waitFor(() => expect(within(gmail).queryByRole("status")).toBeNull());
-  expect(within(gmail).getByRole("button", { name: "Add" })).toBeTruthy();
+  // The list may re-render the row after Cancel: read the live one each time.
+  const gmailRow = () =>
+    document.querySelector<HTMLElement>(
+      '[data-setting-id="abacus-gmailuser"]'
+    )!;
+  await waitFor(() =>
+    expect(within(gmailRow()).queryByRole("status")).toBeNull()
+  );
+  expect(within(gmailRow()).getByRole("button", { name: "Add" })).toBeTruthy();
 });
