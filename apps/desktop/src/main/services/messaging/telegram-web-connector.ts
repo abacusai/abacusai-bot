@@ -23,6 +23,7 @@ import {
   PollScheduler,
   runPageScript,
 } from "./connector";
+import { BOOT_MAX_RELOADS, pageBusy, PageBootWatch } from "./page-boot-watch";
 
 /**
  * Telegram, by driving the real web.telegram.org in a hidden BrowserWindow:
@@ -67,6 +68,9 @@ const LOGIN_POLL_MS = 1500;
 
 const INBOUND_POLL_MS = 5000;
 
+const STUCK_LOADING =
+  "Telegram Web did not finish loading. Click Connect to try again.";
+
 type LoginState = {
   loggedIn: boolean;
   loginVisible?: boolean;
@@ -82,6 +86,10 @@ export class TelegramWebConnector implements MessagingConnector {
   private loggedIn = false;
   /** Consecutive signed-out polls after a login. See checkLogin. */
   private signedOutTicks = 0;
+  /** A page that never booted: when to reload it, and when to stop. */
+  private readonly boot = new PageBootWatch();
+  /** No page and no checks until the user opens Telegram. See park. */
+  private parked = false;
   private readonly loginPoll = new PollScheduler(
     () => this.checkLogin(),
     LOGIN_POLL_MS,
@@ -113,6 +121,8 @@ export class TelegramWebConnector implements MessagingConnector {
   async start(): Promise<void> {
     if (this.running) return;
     this.running = true;
+    this.parked = false;
+    this.boot.reset();
     this.callbacks.onState("connecting");
     forgetLegacyBotState(this.callbacks.onLog);
 
@@ -172,6 +182,7 @@ export class TelegramWebConnector implements MessagingConnector {
 
   async stop(): Promise<void> {
     this.running = false;
+    this.parked = false;
     this.loggedIn = false;
     this.loginPoll.stop();
     this.inboundPoll.stop();
@@ -275,12 +286,59 @@ export class TelegramWebConnector implements MessagingConnector {
     );
   }
 
-  /** Consecutive login polls the page failed to answer. See checkLogin. */
-  private notReadyTicks = 0;
+  /**
+   * Stop checking and drop the page until the user opens Telegram. The state
+   * is one the gateway leaves alone, so nothing loads the page again by itself.
+   */
+  private park(message: string): void {
+    this.parked = true;
+    this.boot.reset();
+    this.loginPoll.stop();
+    const win = this.window;
+    this.window = null;
+    if (win != null && !win.isDestroyed()) win.destroy();
+    this.callbacks.onState("needs_login", message);
+  }
+
+  /** The user opened Telegram: a fresh start, and a parked lane's page back. */
+  private resume(): void {
+    this.boot.reset();
+    if (!this.running || !this.parked) return;
+    this.parked = false;
+    this.callbacks.onLog("telegram-web: opened by the user, checking again");
+    this.callbacks.onState("connecting");
+    this.pollLogin();
+  }
+
+  /**
+   * A poll that found no booted page: the script got no answer, or the page
+   * shows neither the chat UI nor the login. See PageBootWatch. A session
+   * that was signed in starts another round instead of stopping: its page
+   * coming back by itself is worth more than the quiet.
+   */
+  private notBooted(why: string): void {
+    const win = this.window;
+    const busy = win != null && !win.isDestroyed() && pageBusy(win.webContents);
+    const verdict = this.boot.stuck(Date.now(), busy);
+    if (verdict === "wait") return;
+    if (verdict === "give_up" && !this.loggedIn) {
+      this.callbacks.onLog(
+        `telegram-web: still not loaded after ${BOOT_MAX_RELOADS} reloads, waiting for the user`
+      );
+      this.park(STUCK_LOADING);
+      return;
+    }
+    if (verdict === "give_up") this.boot.reset();
+    this.callbacks.onLog(`telegram-web: ${why}, reloading it`);
+    const page = this.ensureWindow();
+    if (page != null && !page.isDestroyed())
+      void page.loadURL(TELEGRAM_WEB_URL).catch(() => {});
+  }
 
   /** See MessagingConnector.probeLive: one login check now, then the answer. */
   async probeLive(): Promise<boolean> {
-    if (!this.running) return false;
+    // A parked lane has no page, and a probe must not load one.
+    if (!this.running || this.parked) return false;
     try {
       await this.checkLogin();
     } catch {
@@ -290,39 +348,22 @@ export class TelegramWebConnector implements MessagingConnector {
   }
 
   private async checkLogin(): Promise<void> {
-    if (!this.running) return;
+    if (!this.running || this.parked) return;
     const state = await this.run<LoginState>(LOGIN_STATE_SCRIPT, {});
+    if (this.parked) return;
     if (state == null) {
       // A page that never answers is not "still loading" forever: a failed
-      // initial load leaves a dead page whose QR can never complete. Reload.
-      this.notReadyTicks += 1;
-      if (this.notReadyTicks >= 8) {
-        this.notReadyTicks = 0;
-        this.callbacks.onLog(
-          "telegram-web: the page never became ready, reloading it"
-        );
-        const win = this.ensureWindow();
-        if (win != null && !win.isDestroyed())
-          void win.loadURL(TELEGRAM_WEB_URL).catch(() => {});
-      }
+      // initial load leaves a dead page whose QR can never complete.
+      this.notBooted("the page never became ready");
       return;
     }
     // Neither login page nor chat UI: the page has not booted, and judging it
-    // would flip the card on nothing. Not-ready, so the reload above fixes it.
+    // would flip the card on nothing.
     if (!state.loggedIn && state.loginVisible !== true) {
-      this.notReadyTicks += 1;
-      if (this.notReadyTicks >= 8) {
-        this.notReadyTicks = 0;
-        this.callbacks.onLog(
-          "telegram-web: page is neither signed in nor showing a login, reloading it"
-        );
-        const win = this.ensureWindow();
-        if (win != null && !win.isDestroyed())
-          void win.loadURL(TELEGRAM_WEB_URL).catch(() => {});
-      }
+      this.notBooted("page is neither signed in nor showing a login");
       return;
     }
-    this.notReadyTicks = 0;
+    this.boot.reset();
 
     if (state.loggedIn) this.signedOutTicks = 0;
 
@@ -376,6 +417,7 @@ export class TelegramWebConnector implements MessagingConnector {
 
   /** Bring the login window back to the front (re-scan, or first login). */
   showLoginWindow(): void {
+    this.resume();
     const win = this.ensureWindow();
     if (win == null) return;
     // The whole reveal lives there, including leaving macOS full screen first.
@@ -457,7 +499,7 @@ export class TelegramWebConnector implements MessagingConnector {
 
   private ensureWindow(): BrowserWindow | null {
     if (this.window != null && !this.window.isDestroyed()) return this.window;
-    if (!this.running) return null;
+    if (!this.running || this.parked) return null;
     // Rebuilt hidden either way; whoever needs the user's eyes on it shows it.
     const win = new BrowserWindow({
       show: false,
