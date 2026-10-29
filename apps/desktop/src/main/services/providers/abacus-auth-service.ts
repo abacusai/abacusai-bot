@@ -309,14 +309,34 @@ const exchange = async (
 
     return { result: { ok: true, key } };
   } catch (error) {
+    const network = networkErrorCode(error);
     console.warn(
-      `[abacus-auth] exchange error: ${error instanceof Error ? error.message : String(error)}`
+      `[abacus-auth] exchange error: ${error instanceof Error ? error.message : String(error)}${network ? ` (${network})` : ""}`
     );
     // The error name (TypeError, AbortError, ...) says which class of failure
-    // it was without carrying the message, which can name a proxy or a host.
+    // it was without carrying the message, which can name a proxy or a host;
+    // a network failure says which one instead (DNS, refused, certificate).
     const name = error instanceof Error ? error.name : "unknown";
-    return { result: genericFailure, reason: `fetch_${reasonCode(name)}` };
+    return {
+      result: genericFailure,
+      reason: `fetch_${reasonCode(network ?? name)}`,
+    };
   }
+};
+
+/**
+ * The network stack's own code under a `TypeError("fetch failed")`: main's
+ * fetch goes through Chromium, whose cause reads `net::ERR_…`; Node's carries
+ * a `code` such as `ENOTFOUND`. Null when there is none: a bare "fetch failed"
+ * cannot tell a DNS failure from a proxy or a certificate refusal.
+ */
+const networkErrorCode = (error: unknown): string | null => {
+  const cause = error instanceof Error ? error.cause : undefined;
+  if (!(cause instanceof Error)) return null;
+  const chromium = /net::(ERR_[A-Z0-9_]+)/.exec(cause.message)?.[1];
+  if (chromium != null) return chromium;
+  const code = (cause as { code?: unknown }).code;
+  return typeof code === "string" && /^[A-Z0-9_]+$/.test(code) ? code : null;
 };
 
 /**
