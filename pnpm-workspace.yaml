@@ -67,6 +67,9 @@ overrides:
   dompurify: ^3.4.13
   deepmerge-ts: ^8.0.0
   fast-uri: ^3.1.7
+  # shadcn's dotenvx (web build tooling only): Windows command injection in
+  # services() (GHSA-3f7j-7jwc-fxfj).
+  systeminformation: ^5.33.16
   # Packaging only, through electron-builder's plist reader: injection and
   # quadratic-parsing advisories against 0.8.x (GHSA-c7q8-3ch8-vqpv and five
   # siblings).

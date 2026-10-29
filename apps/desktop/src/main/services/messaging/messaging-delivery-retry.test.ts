@@ -24,6 +24,7 @@ vi.mock("./messaging-config-service", async (importOriginal) => ({
 
 const { MessagingGatewayService } = await import("./messaging-gateway-service");
 const { ChatOutbox } = await import("./messaging-outbox");
+const { UndeliverableChatError } = await import("./connector");
 
 const service = (
   sendText: (chatId: string, text: string) => Promise<void>,
@@ -256,5 +257,71 @@ describe("a message owed more than once", () => {
     expect(sent).toEqual(["The app closed before I could reply."]);
     outbox.dispose();
     replayed.dispose();
+  });
+});
+
+describe("a message to a chat that can never take one", () => {
+  const refuseStatus =
+    (sent: string[]) => async (chatId: string, text: string) => {
+      if (chatId === "status@broadcast")
+        throw new UndeliverableChatError("not a chat");
+      sent.push(`${chatId}: ${text}`);
+    };
+
+  it("is tried once and never kept to retry", async () => {
+    let attempts = 0;
+    const sent: string[] = [];
+    const gateway = service(async (chatId, text) => {
+      attempts += 1;
+      await refuseStatus(sent)(chatId, text);
+    }, "me@self");
+
+    const done = (
+      gateway as unknown as {
+        safeSend: (p: string, c: string, t: string) => Promise<void>;
+      }
+    ).safeSend("whatsapp", "status@broadcast", "Nice photo!");
+    await vi.advanceTimersByTimeAsync(80_000);
+    await done;
+    await vi.advanceTimersByTimeAsync(5 * 60_000 + 30 * 60_000 + 1_000);
+
+    expect(attempts).toBe(1);
+    expect(stored.outbox?.pending ?? []).toEqual([]);
+    expect(sent).toEqual([]);
+    expect(loggedIn(gateway)).toEqual([]);
+  });
+
+  it("is dropped from the outbox an older build left, without telling anyone", async () => {
+    stored.outbox = {
+      pending: [
+        {
+          id: "old-1",
+          platform: "whatsapp",
+          chatId: "status@broadcast",
+          text: "Nice photo!",
+          userName: "Ana",
+          firstFailedAt: 0,
+          tries: 0,
+        },
+        {
+          id: "old-2",
+          platform: "whatsapp",
+          chatId: "Ana",
+          text: "See you at 5",
+          userName: "Ana",
+          firstFailedAt: 0,
+          tries: 0,
+        },
+      ],
+      done: [],
+    };
+    const sent: string[] = [];
+    service(refuseStatus(sent), "me@self");
+
+    await vi.advanceTimersByTimeAsync(61_000);
+
+    expect(stored.outbox?.pending).toEqual([]);
+    expect(stored.outbox?.done).toEqual(["old-1", "old-2"]);
+    expect(sent).toEqual(["Ana: See you at 5"]);
   });
 });

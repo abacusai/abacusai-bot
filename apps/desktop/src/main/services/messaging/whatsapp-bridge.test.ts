@@ -24,6 +24,7 @@ const {
   BRIDGE_PAGE_SCRIPTS,
   QueuedSendError,
   WhatsAppBridge,
+  isConversationJid,
   isServerAck,
   resolveJid,
 } = await import("./whatsapp-bridge");
@@ -101,6 +102,67 @@ describe("resolveJid", () => {
   it("says when nothing matches", () => {
     const result = resolveJid("Nobody", chats);
     expect("error" in result && result.error).toMatch(/No WhatsApp chat/);
+  });
+});
+
+describe("which ids are conversations", () => {
+  it.each([
+    ["919876543210@c.us", true, "a person, by number"],
+    ["919876543210@s.whatsapp.net", true, "a person, by the wire form"],
+    ["196083074474167@lid", true, "a person, by lid"],
+    ["120363001@g.us", true, "a group"],
+    ["Meghna", true, "a display name"],
+    ["+15550001234", true, "a number"],
+    ["status@broadcast", false, "the contacts' Status updates"],
+    ["1698765432@broadcast", false, "a broadcast list"],
+    ["120363025246125486@newsletter", false, "a channel"],
+    [" Status@Broadcast ", false, "any casing or padding"],
+  ])("%s is %s (%s)", (jid, expected) => {
+    expect(isConversationJid(jid)).toBe(expected);
+  });
+
+  it("keeps a Status, broadcast list or channel out of the drain and the chat list", async () => {
+    const message = (id: string, jid: string) => ({
+      id,
+      jid,
+      fromMe: false,
+      senderName: "Ana",
+      text: "hello",
+      t: 1,
+    });
+    const chat = (jid: string) => ({
+      jid,
+      name: jid,
+      isGroup: false,
+      isMe: false,
+      unreadCount: 1,
+    });
+    const bridge = new WhatsAppBridge({
+      run: async (script: string) =>
+        (script === BRIDGE_PAGE_SCRIPTS.DRAIN_SCRIPT
+          ? {
+              messages: [
+                message("a", "status@broadcast"),
+                message("b", "919876543210@c.us"),
+                message("c", "120363025246125486@newsletter"),
+                message("d", "1698765432@broadcast"),
+                message("e", "120363001@g.us"),
+              ],
+              loggedOut: false,
+            }
+          : [
+              chat("status@broadcast"),
+              chat("919876543210@c.us"),
+              chat("120363025246125486@newsletter"),
+            ]) as never,
+      raw: async () => undefined,
+      log: () => {},
+    });
+
+    const drained = await bridge.drain();
+    expect(drained.messages.map((row) => row.id)).toEqual(["b", "e"]);
+    const listed = await bridge.listChats({ onlyUnread: true });
+    expect(listed?.map((row) => row.jid)).toEqual(["919876543210@c.us"]);
   });
 });
 

@@ -269,6 +269,12 @@ export class PollScheduler {
   }
 }
 
+/**
+ * A send to a chat that can never take a message, such as a WhatsApp Status.
+ * Final: the send is dropped, never retried and never kept to retry.
+ */
+export class UndeliverableChatError extends Error {}
+
 /** What `boundedWait` rejects with when the page took longer than allowed. */
 export class PageStalledError extends Error {}
 

@@ -26,6 +26,7 @@ import {
   PollScheduler,
   runPageScript,
   setFileInput,
+  UndeliverableChatError,
 } from "./connector";
 import {
   readPlatformSignedIn,
@@ -35,6 +36,7 @@ import {
   type BridgeChat,
   type BridgeMessage,
   type BridgeRead,
+  isConversationJid,
   QueuedSendError,
   resolveJid,
   WhatsAppBridge,
@@ -68,6 +70,15 @@ const MAX_MESSAGE_LENGTH = 4000;
 const BOT_LABEL = "*AbacusAI Bot:*";
 const withBotLabel = (text: string): string =>
   text.trimStart().startsWith(BOT_LABEL) ? text : `${BOT_LABEL} ${text}`;
+
+/** Every send passes here first: a Status, broadcast list or channel is never
+ * a message's destination, however the id reached the send. */
+const refuseNonConversation = (chatId: string): void => {
+  if (!isConversationJid(chatId))
+    throw new UndeliverableChatError(
+      `"${chatId}" is a WhatsApp Status, broadcast list or channel, not a chat, so nothing was sent there.`
+    );
+};
 
 /** How often to check whether the user has finished logging in. */
 const LOGIN_POLL_MS = 1500;
@@ -314,6 +325,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
   }
 
   async sendText(chatId: string, text: string): Promise<void> {
+    refuseNonConversation(chatId);
     return this.userCall(() => this.sendTextNow(chatId, text), "send");
   }
 
@@ -943,6 +955,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
     filePath: string,
     caption?: string
   ): Promise<void> {
+    refuseNonConversation(chatId);
     return this.userCall(
       () => this.sendFileNow(chatId, filePath, caption),
       "send"
