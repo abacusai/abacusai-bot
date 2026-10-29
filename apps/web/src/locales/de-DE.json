@@ -4269,8 +4269,7 @@
     "tryAgain": "Erneut versuchen",
     "checking": "Wird geprüft…",
     "stillBlocked": "Für dieses Konto ist noch keine Zahlung zu sehen.",
-    "waiting": "Schließe den Kauf in deinem Browser ab. Die App macht weiter, sobald deine Zahlung eingegangen ist.",
-    "otherAccount": "Mit einem anderen Konto anmelden"
+    "waiting": "Schließe den Kauf in deinem Browser ab. Die App macht weiter, sobald deine Zahlung eingegangen ist."
   },
   "visualizer": {
     "loading": "Visualisierung wird geladen …"

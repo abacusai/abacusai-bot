@@ -2,7 +2,8 @@
  * The account signed in, but the platform will not serve it until it pays
  * (its payment gate answers 402). One screen per reason, never a silent
  * sign-out: the plan, Abacus AI Agent on the web, Try again once paid, or
- * another account.
+ * Sign out (the profile menu's sign-out: back to the first sign-in screen,
+ * where another account signs in by the user's own click).
  */
 import {
   type BillingPlan,
@@ -17,6 +18,7 @@ import { Bot, Check, Loader2 } from "lucide-react";
 import { useEffect, useEffectEvent, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { signOutAbacus } from "#platform/sign-out";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { openUpgrade } from "#renderer/lib/upgrade";
 import { useAppContext } from "#renderer/lib/use-app-context";
@@ -67,7 +69,7 @@ export const PaymentRequiredPanel = ({
   payment,
   title,
   onSignedIn,
-  onSwitchAccount,
+  onSignedOut,
   dismiss,
 }: {
   payment: AbacusPaymentRequired | null;
@@ -75,13 +77,14 @@ export const PaymentRequiredPanel = ({
   title: (text: string) => ReactNode;
   /** The account paid and is signed in. */
   onSignedIn?: () => void | Promise<void>;
-  /** After the account is let go: start the next sign-in. */
-  onSwitchAccount?: () => void;
+  /** After Sign out let the account go: the surface returns to its sign-in screen. */
+  onSignedOut?: () => void | Promise<void>;
   /** Not now, where the app still works without this account. */
   dismiss?: () => void;
 }) => {
   const { t, i18n } = useTranslation();
-  const { transport } = useAppContext();
+  const context = useAppContext();
+  const { transport } = context;
   const queryClient = useQueryClient();
   const copy = paymentCopy(payment);
   const reportText = t("paymentRequired.reportIssue");
@@ -258,21 +261,21 @@ export const PaymentRequiredPanel = ({
           <Button
             variant="ghost"
             className="text-muted-foreground h-9 text-[13px]"
-            data-action="switch-account"
+            data-action="sign-out"
             disabled={busy}
             onClick={() => {
               setBusy(true);
-              void transport.client.account
-                .releasePayment({})
+              // The sign-out also drops a sign-in held here for payment.
+              void signOutAbacus(context, true)
                 .then(async () => {
                   await queryClient.invalidateQueries();
-                  onSwitchAccount?.();
+                  await onSignedOut?.();
                 })
                 .catch(() => {})
                 .finally(() => setBusy(false));
             }}
           >
-            {t("paymentRequired.otherAccount")}
+            {t("userMenu.signOut")}
           </Button>
           {dismiss != null && (
             <Button

@@ -21,6 +21,7 @@ import { sessionDefaultWorkspace } from "./paths";
 import {
   activateProfile,
   legacyProfileKeyFor,
+  noteHeldSignIn,
   profileKeyFor,
 } from "./profile-home";
 import { emitBusChannel, emitHostEvent } from "./rpc/emit";
@@ -316,6 +317,8 @@ export const createHostOperations = (
     payment: AbacusPaymentRequired
   ): Promise<AdoptCredentialResult> => {
     saveApiKey("abacus", previousKey);
+    // A sign-in all the same: signing out of it must not start another by itself.
+    noteHeldSignIn();
     if (previousKey === key) {
       // Already this profile's key: it stays, and the app shows it must pay.
       credentialsChanged("abacus", key);

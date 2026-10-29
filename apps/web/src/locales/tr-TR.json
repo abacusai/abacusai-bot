@@ -4269,8 +4269,7 @@
     "tryAgain": "Tekrar dene",
     "checking": "Kontrol ediliyor…",
     "stillBlocked": "Bu hesapta henüz bir ödeme görünmüyor.",
-    "waiting": "Ödemeyi tarayıcınızda tamamlayın. Ödemeniz geçer geçmez uygulama devam eder.",
-    "otherAccount": "Farklı bir hesapla oturum açın"
+    "waiting": "Ödemeyi tarayıcınızda tamamlayın. Ödemeniz geçer geçmez uygulama devam eder."
   },
   "visualizer": {
     "loading": "Görselleştirme yükleniyor…"

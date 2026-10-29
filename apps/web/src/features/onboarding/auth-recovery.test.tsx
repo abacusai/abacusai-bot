@@ -248,11 +248,11 @@ it.each(paymentScreens)(
     expect(await screen.findByRole("heading", { name: title })).not.toBeNull();
     expect(screen.getByRole("button", { name: cta })).not.toBeNull();
     expect(
-      screen.getByRole("button", { name: "Go to Abacus AI Agent on the web →" })
+      screen.getByRole("button", {
+        name: "Go to Abacus AI Agent on the web →",
+      })
     ).not.toBeNull();
-    expect(
-      screen.getByRole("button", { name: "Sign in with a different account" })
-    ).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Sign out" })).not.toBeNull();
     // The plan comes from billing_plan; a lapsed plan is renewed, not sold.
     await waitFor(() =>
       expect(screen.queryByText("Upgrade to Basic — Intro offer") != null).toBe(
@@ -321,4 +321,53 @@ it("Try again after paying on the web signs in without a restart", async () => {
   expect(
     screen.queryByRole("heading", { name: "Your free trial has ended" })
   ).toBeNull();
+});
+
+it("Sign out on the payment screen lets the held account go and returns to the first sign-in screen", async () => {
+  let held = false;
+  const signOut = vi.fn(() => {
+    held = false;
+    return { stashedSessions: 0, removedProviders: [] };
+  });
+  const authStart = vi.fn(async () => {
+    held = true;
+    return { ok: false as const, error: "payment-required" };
+  });
+  app = await renderApp("/onboarding/welcome", {
+    onboarded: false,
+    signedIn: false,
+    authStart,
+    procedures: {
+      auth: { abacus: { signOut: os.auth.abacus.signOut.handler(signOut) } },
+      account: {
+        payment: os.account.payment.handler(() =>
+          held ? { reason: "trial_ended" } : null
+        ),
+        signOut: os.account.signOut.handler(() => ({
+          account: null,
+          apps: [],
+          onboarded: false,
+        })),
+      },
+    },
+  });
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Sign up for free" })
+  );
+  await screen.findByRole("heading", { name: "Your free trial has ended" });
+  await waitFor(() =>
+    expect(app!.router.state.location.pathname).toBe("/onboarding/connect")
+  );
+  fireEvent.click(await screen.findByRole("button", { name: "Sign out" }));
+
+  // The first sign-in screen, and no sign-in started on the user's behalf.
+  await screen.findByRole("button", { name: "Sign up for free" });
+  expect(signOut).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({ input: { keepOtherApiKeys: true } })
+  );
+  expect(app.router.state.location.pathname).toBe("/onboarding/welcome");
+  expect(
+    screen.queryByRole("heading", { name: "Your free trial has ended" })
+  ).toBeNull();
+  expect(authStart).toHaveBeenCalledOnce();
 });
