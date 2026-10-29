@@ -1,6 +1,5 @@
 import { connectorById } from "@abacus-ai/connectors/registry";
 import { RESEARCH_GOAL } from "@abacus-ai/contract/bots/check-in";
-import type { AbacusAuthIntent } from "@abacus-ai/contract/contracts";
 import {
   isMessagingPlatformConnected,
   type MessagingPlatformId,
@@ -107,7 +106,7 @@ const OnboardingRoute = () => {
       if (step === "connectors") releaseOnboardingConnect();
     };
   }, [db, transport, step]);
-  const auth = (intent: AbacusAuthIntent) => {
+  const auth = (intent: "signup" | "signin") => {
     if (
       startSignIn(transport, intent, async (outcome) => {
         const attemptId = onboardingStore.state.signIn?.id;

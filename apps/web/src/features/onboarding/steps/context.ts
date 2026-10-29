@@ -1,6 +1,5 @@
 import type { BillingPlan } from "@abacus-ai/contract/billing-plan";
 import type { HomeChannel } from "@abacus-ai/contract/bots";
-import type { AbacusAuthIntent } from "@abacus-ai/contract/contracts";
 import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
 
@@ -20,7 +19,7 @@ export interface OnboardingPageProps {
   transport: Transport;
   facts: FlowFacts;
   navigate(step: OnboardingStepId): Promise<void>;
-  signIn(intent: AbacusAuthIntent): void;
+  signIn(intent: "signup" | "signin"): void;
   cancelSignIn(): Promise<void>;
   /** `tour`: start the tour once the destination is open. */
   complete(exit: OnboardingExit, options?: { tour?: boolean }): Promise<void>;

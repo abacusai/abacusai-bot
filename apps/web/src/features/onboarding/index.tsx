@@ -327,7 +327,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
             </StepTitle>
           )}
           onSignedIn={() => props.navigate("connected")}
-          onSwitchAccount={() => props.signIn("switch")}
+          onSwitchAccount={() => props.signIn("signin")}
         />
       )}
       {!paymentShown && step === "welcome" && (

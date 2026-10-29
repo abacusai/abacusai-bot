@@ -31,7 +31,7 @@ export const auth = {
       .input(
         v.optional(
           v.object({
-            intent: v.optional(v.picklist(["signup", "signin", "switch"])),
+            intent: v.optional(v.picklist(["signup", "signin"])),
           })
         )
       )

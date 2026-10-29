@@ -231,9 +231,6 @@ export const startAbacusAuth = async (
 
       const url = new URL(SIGNIN_PATH, abacusAppHost());
       if (intent === "signup") url.searchParams.set("isSignUp", "1");
-      // The website finishes a hand-off with whatever session it holds, so
-      // "Use another account" asks it to sign that session out first.
-      if (intent === "switch") url.searchParams.set("botSwitchAccount", "1");
       url.searchParams.set("AbacusAIBot", "1");
       url.searchParams.set("botChallenge", codeChallengeFor(verifier));
       url.searchParams.set("botPort", String(port));
