@@ -307,6 +307,7 @@ describe("the paid-plan capabilities", () => {
         feature: "video",
         name: "video analysis",
         inApp: true,
+        chatLlmAppKind: "video",
         toolsets: ["video"],
       },
     ]);

@@ -719,7 +719,12 @@ describe("paid-plan capabilities", () => {
       (entry) => entry.name === "paid_feature"
     );
     expect(tool?.description).toMatch(/one short WhatsApp message/);
-    expect(featureEnum(tool)).toEqual(["video_gen", "image_gen", "tts"]);
+    expect(featureEnum(tool)).toEqual([
+      "video_gen",
+      "image_gen",
+      "tts",
+      "video",
+    ]);
     expect(names(free, PHONE)).not.toContain("image_generate");
     const upgrade = await callOn(free, "image_gen", PHONE);
     expect(billingPlan).toHaveBeenCalledWith(true);
@@ -740,6 +745,75 @@ describe("paid-plan capabilities", () => {
     expect(
       listed(planServer("unknown"), PHONE).map((t) => t.name)
     ).not.toContain("paid_feature");
+  });
+
+  const VIDEO_MARKER =
+    "[attachment not read: kind=video reason=in_chatllm_app]";
+  const IPHONE_APP =
+    "https://apps.apple.com/app/chatllm-ai-chat-and-agents/id6502844681";
+
+  it("reads the server's video marker on the phone as the ChatLLM app's, on every plan", () => {
+    for (const tier of ["free", "basic"] as const) {
+      const tool = listed(planServer(tier), PHONE).find(
+        (entry) => entry.name === "paid_feature"
+      );
+      expect(tool?.description).toContain(VIDEO_MARKER);
+      expect(tool?.description).toMatch(/call this with feature video/);
+      expect(featureEnum(tool)).toContain("video");
+    }
+    // The app keeps its own words: a video the user has there is read there.
+    expect(
+      listed(planServer("free")).find((entry) => entry.name === "paid_feature")
+        ?.description
+    ).not.toContain(VIDEO_MARKER);
+  });
+
+  it("answers a free account's video on the phone with Basic's whole list, its price and the upgrade link, and the ChatLLM app", async () => {
+    billingPlan.mockResolvedValue(BASIC_FIRST_MONTH);
+    const { text, isError } = await callOn(planServer("free"), "video", PHONE);
+    expect(isError).toBe(false);
+    expect(billingPlan).toHaveBeenCalledWith(true);
+    expect(text).toMatch(
+      /^Video analysis is not on this account's free plan\./
+    );
+    expect(text).toMatch(
+      /video analysis is in the ChatLLM mobile app, which every paid plan includes/
+    );
+    expect(text).toContain("  - Top models\n  - Image and video generation");
+    expect(text).toContain("Their upgrade link: https://upgrade.example/basic");
+    expect(text).toMatch(
+      /Basic includes video analysis in the ChatLLM mobile app, then everything it gives as a short list \(every line above, translated, none left out\)/
+    );
+    expect(text).toMatch(
+      /"Basic gives you video analysis in the ChatLLM app: \$7 for the first month/
+    );
+    expect(text).toContain(IPHONE_APP);
+    expect(text).toMatch(/never ask them to send it again here/);
+    expect(text).toMatch(/ffmpeg, Blender, Python/);
+    // Neither the app's "in this app" nor its Settings or card.
+    expect(text).not.toMatch(/in this app|Settings|card/);
+  });
+
+  it("sends a paid account's video on the phone to the ChatLLM app, never to checkout or a tool it was not handed", async () => {
+    mediaKeys.set("OPENAI_API_KEY", "key");
+    const { text, isError } = await callOn(
+      planServer("basic", ["video"]),
+      "video",
+      PHONE
+    );
+    expect(isError).toBe(false);
+    expect(billingPlan).not.toHaveBeenCalled();
+    expect(text).toMatch(
+      /^Their plan includes video analysis\. This chat is never handed a video to read/
+    );
+    expect(text).toContain(
+      `The ChatLLM app: iPhone ${IPHONE_APP} Android https://play.google.com/store/apps/details?id=com.abacusai.chatllm`
+    );
+    expect(text).toMatch(
+      /Open your reply with the yes: .*"Your plan does video analysis in the ChatLLM app: send it there\."/
+    );
+    expect(text).toMatch(/Do not offer an upgrade/);
+    expect(text).not.toMatch(/upgrade link|tools are listed|Settings/);
   });
 
   it("answers a routine nobody is watching with a link, never a minted one", async () => {

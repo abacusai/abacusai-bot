@@ -1,4 +1,5 @@
 import type { BillingPlan } from "@abacus-ai/contract/billing-plan";
+import { PAID_FEATURE_TOOL } from "@abacus-ai/contract/toolsets";
 
 import { fetchBillingPlan } from "../../../providers/abacus-upgrade";
 import {
@@ -74,8 +75,8 @@ export const PHONE_BILLING_TOOLS: PhoneToolDefinition[] = [
       "The user's plan and credits, every plan with its price and what it gives, and the links to upgrade or buy",
       "credits. Call it whenever they ask about their plan, credits or balance, prices or discounts, limits or",
       "resets, upgrading, or what a plan includes; whenever they ask whether something keeps working while their",
-      "app or computer is off (WhatsApp, Telegram or Discord auto-replies, routines, reminders); when they ask to",
-      "analyse a video; and when they run into a plan limit or run low on credits. Never answer these from memory.",
+      "app or computer is off (WhatsApp, Telegram or Discord auto-replies, routines, reminders); and when they run",
+      `into a plan limit or run low on credits. Never answer these from memory. A video to watch is ${PAID_FEATURE_TOOL}'s.`,
       "It answers at once; send them what it says, with every feature line as written and its links as given. Pass",
       "upgrade: true whenever they might upgrade (they ask about upgrading or prices, or hit a limit or run low), so",
       "the answer carries their upgrade links.",
