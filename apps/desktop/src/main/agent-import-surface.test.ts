@@ -57,6 +57,8 @@ const ALLOWED = new Set([
   "@abacus-ai/agent/user-text",
   // How a path is spelled for the model: no imports at all.
   "@abacus-ai/agent/model-path",
+  // Whether a presented local URL answers: no imports at all, plain fetch.
+  "@abacus-ai/agent/deliverable-url",
   // The language the user wants replies in: node's fs and path, and the
   // config leaf (node's fs, os and path); its detection call is plain fetch.
   "@abacus-ai/agent/user-language",

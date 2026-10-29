@@ -57,6 +57,7 @@ import {
   pickBrowserTarget,
   type BrowserPage,
   type BrowserTargetMemory,
+  type DidFailLoadListener,
   type BrowserTargetSource,
 } from "../browser/browser-target";
 import {
@@ -65,6 +66,12 @@ import {
   fenceGuardExpression,
   isFencedUrl,
 } from "../browser/host-fence";
+import {
+  PAGE_ERROR_COLLECTOR,
+  PAGE_ERRORS_READ,
+  pageCheckOf,
+  type ServedPageCheck,
+} from "../browser/page-errors";
 import { type CapturedImage, SecretFields } from "../browser/secret-fields";
 import type { MediaStore } from "../messaging/media-store";
 import { abacusHostFence } from "../providers/abacus-host";
@@ -189,6 +196,8 @@ const NO_BROWSER_PANELESS =
   "a form to fill) tell the user the browser could not start and ask them to try again later.";
 /** Owns the tab a chat screenshot is taken in, after the session's id. */
 const CHAT_SCREENSHOT_OWNER = ":chat-screenshot";
+/** Owns the tab `present_deliverable` checks a served page in. */
+const PAGE_CHECK_OWNER = ":page-check";
 const SERVER_NAME = "browser";
 const SERVER_VERSION = "2.1.0";
 const TEMP_DIR = path.join(abacusBotHome(), "temp");
@@ -867,11 +876,8 @@ export class McpBrowserServer extends McpHttpServer {
   /**
    * A screenshot of a page the agent served at `origin` (loopback), with
    * secret fields hidden, kept as `sessionId`'s media: how a served page
-   * reaches a chat whose user cannot open it. Taken in a tab of its own
-   * under a separate owner, opened blank, told to block Abacus.AI's hosts
-   * (or nothing is loaded), and captured only while its live origin is
-   * still `origin`. Every tab that owner has, a popup included, is closed
-   * after, so the session's own tabs stay as they were.
+   * reaches a chat whose user cannot open it. Captured only while the tab's
+   * live origin is still `origin`.
    */
   async screenshotForChat(
     url: string,
@@ -879,6 +885,107 @@ export class McpBrowserServer extends McpHttpServer {
     sessionId: string
   ): Promise<{ id: string } | { reason: string }> {
     const failed = { reason: "the page could not be captured." };
+    const unavailable = {
+      reason: "no browser is available here to take a screenshot of it.",
+    };
+    if (this.options.media?.() == null) return unavailable;
+    return this.onServedTab(
+      url,
+      origin,
+      `${sessionId}${CHAT_SCREENSHOT_OWNER}`,
+      sessionId,
+      { failed, unavailable },
+      async (wc) => {
+        await Promise.race([
+          wc.loadURL(url),
+          new Promise((resolve) => setTimeout(resolve, NAVIGATE_TIMEOUT_MS)),
+        ]).catch(() => undefined);
+        await this.settle(wc, NAVIGATE_TIMEOUT_MS);
+        // The fence's own check, on the live document: still the served page.
+        const live = await this.liveOrigin(wc);
+        if (live !== origin || this.isAbacus(live)) return failed;
+        const image = await this.captureImage(wc);
+        if (image == null) return failed;
+        const id = this.keepAsMedia(image, sessionId);
+        return id != null ? { id } : { reason: "the screenshot is too large." };
+      }
+    );
+  }
+
+  /**
+   * Loads a local page in a tab of its own and reports whether it loaded and
+   * what it threw as it did (page-errors.ts): `present_deliverable`'s proof
+   * that a served app runs, where the pages live in this server's browser
+   * (the hosted computer; the app checks in a view of its own, see
+   * `ElectronBrowserRuntime.checkServedPage`). Null when that could not be
+   * found out (no browser, the session's browser busy past the call's time,
+   * the page gone elsewhere): only the HTTP answer is known then.
+   */
+  async checkServedPage(
+    url: string,
+    sessionId: string
+  ): Promise<ServedPageCheck | null> {
+    let origin: string;
+    try {
+      origin = new URL(url).origin;
+    } catch {
+      return null;
+    }
+    return this.onServedTab<ServedPageCheck | null>(
+      url,
+      origin,
+      `${sessionId}${PAGE_CHECK_OWNER}`,
+      sessionId,
+      { failed: null, unavailable: null },
+      async (wc) => {
+        await this.cdp(wc, "Page.addScriptToEvaluateOnNewDocument", {
+          source: PAGE_ERROR_COLLECTOR,
+        });
+        // As in `navigateTo`: only did-fail-load knows a page did not load.
+        let failure: string | null = null;
+        const onFailLoad: DidFailLoadListener = (
+          _event,
+          errorCode,
+          errorDescription,
+          _failedUrl,
+          isMainFrame
+        ) => {
+          if (isMainFrame && errorCode !== -3)
+            failure = `${errorDescription} (${errorCode})`;
+        };
+        wc.on("did-fail-load", onFailLoad);
+        try {
+          await Promise.race([
+            wc.loadURL(url),
+            new Promise((resolve) => setTimeout(resolve, NAVIGATE_TIMEOUT_MS)),
+          ]).catch(() => undefined);
+          await this.settle(wc, NAVIGATE_TIMEOUT_MS);
+        } finally {
+          if (!wc.isDestroyed()) wc.off("did-fail-load", onFailLoad);
+        }
+        if (failure != null) return { loaded: false, reason: failure };
+        if ((await this.liveOrigin(wc)) !== origin) return null;
+        return pageCheckOf(await this.evalJS(wc, PAGE_ERRORS_READ));
+      }
+    );
+  }
+
+  /**
+   * Runs `work` on `url` (loopback, at `origin`) in a tab of its own under
+   * `owner`, in `sessionId`'s queue like any of its browser calls, within one
+   * call's time. The tab opens blank and is told to block Abacus.AI's hosts
+   * (or nothing is loaded); every tab `owner` has after, a popup included, is
+   * closed, so the session's own tabs stay as they were.
+   */
+  private async onServedTab<T>(
+    url: string,
+    origin: string,
+    owner: string,
+    sessionId: string,
+    outcomes: { failed: T; unavailable: T },
+    work: (wc: BrowserPage) => Promise<T>
+  ): Promise<T> {
+    const { failed, unavailable } = outcomes;
     let parsed: URL;
     try {
       parsed = new URL(url);
@@ -890,18 +997,40 @@ export class McpBrowserServer extends McpHttpServer {
       !["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname)
     )
       return failed;
-    // In the session's own queue, like any of its browser calls; a call that
-    // timed out while waiting never starts.
+    const source = this.options.target?.() ?? null;
+    if (source == null) return unavailable;
+    // A call that timed out while waiting in the queue never starts.
     const call = { cancelled: false };
     let timer: ReturnType<typeof setTimeout> | undefined;
+    const run = async (): Promise<T> => {
+      let tabId: number | null = null;
+      try {
+        tabId = await source.materialize(owner, "about:blank");
+        const wc = tabId == null ? null : source.webContents(tabId);
+        if (wc == null || wc.isDestroyed()) return unavailable;
+        if (!(await this.blockAbacus(wc))) return failed;
+        return await work(wc);
+      } catch (error) {
+        console.error(
+          `[mcp-browser] served page failed: ${error instanceof Error ? error.message : String(error)}`
+        );
+        return failed;
+      } finally {
+        const tabs = new Set(
+          (source.sessionTabs?.(owner) ?? []).map((tab) => tab.id)
+        );
+        if (tabId != null) tabs.add(tabId);
+        for (const tab of tabs)
+          await source.closeTab?.(owner, tab).catch(() => false);
+        source.releaseSession?.(owner);
+      }
+    };
     try {
       return await Promise.race([
         this.inSessionOrder(sessionId, () =>
-          call.cancelled
-            ? Promise.resolve(failed)
-            : this.captureServed(url, origin, sessionId)
+          call.cancelled ? Promise.resolve(failed) : run()
         ),
-        new Promise<{ reason: string }>((resolve) => {
+        new Promise<T>((resolve) => {
           timer = setTimeout(() => {
             call.cancelled = true;
             resolve(failed);
@@ -910,53 +1039,6 @@ export class McpBrowserServer extends McpHttpServer {
       ]);
     } finally {
       if (timer != null) clearTimeout(timer);
-    }
-  }
-
-  /** `screenshotForChat`'s work, run in the session's queue. */
-  private async captureServed(
-    url: string,
-    origin: string,
-    sessionId: string
-  ): Promise<{ id: string } | { reason: string }> {
-    const unavailable = {
-      reason: "no browser is available here to take a screenshot of it.",
-    };
-    const failed = { reason: "the page could not be captured." };
-    const source = this.options.target?.() ?? null;
-    if (source == null || this.options.media?.() == null) return unavailable;
-    const owner = `${sessionId}${CHAT_SCREENSHOT_OWNER}`;
-    let tabId: number | null = null;
-    try {
-      tabId = await source.materialize(owner, "about:blank");
-      const wc = tabId == null ? null : source.webContents(tabId);
-      if (wc == null || wc.isDestroyed()) return unavailable;
-      if (!(await this.blockAbacus(wc))) return failed;
-      await Promise.race([
-        wc.loadURL(url),
-        new Promise((resolve) => setTimeout(resolve, NAVIGATE_TIMEOUT_MS)),
-      ]).catch(() => undefined);
-      await this.settle(wc, NAVIGATE_TIMEOUT_MS);
-      // The fence's own check, on the live document: still the served page.
-      const live = await this.liveOrigin(wc);
-      if (live !== origin || this.isAbacus(live)) return failed;
-      const image = await this.captureImage(wc);
-      if (image == null) return failed;
-      const id = this.keepAsMedia(image, sessionId);
-      return id != null ? { id } : { reason: "the screenshot is too large." };
-    } catch (error) {
-      console.error(
-        `[mcp-browser] chat screenshot failed: ${error instanceof Error ? error.message : String(error)}`
-      );
-      return failed;
-    } finally {
-      const tabs = new Set(
-        (source.sessionTabs?.(owner) ?? []).map((tab) => tab.id)
-      );
-      if (tabId != null) tabs.add(tabId);
-      for (const tab of tabs)
-        await source.closeTab?.(owner, tab).catch(() => false);
-      source.releaseSession?.(owner);
     }
   }
 

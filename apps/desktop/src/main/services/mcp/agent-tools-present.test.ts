@@ -7,12 +7,24 @@
  * pane answers; the result claims the pane only when one answered in ~1 s.
  */
 import fs from "fs";
+import http from "http";
+import type { AddressInfo } from "net";
 import os from "os";
 import path from "path";
 
 import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
+import { servePreview } from "../agent-tools/served-previews";
+import { stopAllServed } from "../agent-tools/static-server";
 import { PreviewTargets } from "../session/preview-targets";
 import { McpAgentToolsServer } from "./mcp-agent-tools-server";
 
@@ -55,25 +67,54 @@ const present = async (
   return sent.mock.calls.map((call) => (call[1] as { path: string }).path);
 };
 
+/** Local apps that answer: a presented local URL is asked first. */
+const apps: http.Server[] = [];
+let APP = "";
+let APP2 = "";
+let APP3 = "";
+let API = "";
+
+const listening = async (): Promise<string> => {
+  const app = http.createServer((_request, response) => {
+    response
+      .writeHead(200, { "Content-Type": "text/html" })
+      .end("<h1>App</h1>");
+  });
+  apps.push(app);
+  await new Promise<void>((resolve) => app.listen(0, "127.0.0.1", resolve));
+  return `http://localhost:${(app.address() as AddressInfo).port}`;
+};
+
+beforeAll(async () => {
+  [APP, APP2, APP3, API] = await Promise.all([
+    listening(),
+    listening(),
+    listening(),
+    listening(),
+  ]);
+});
+
+afterAll(async () => {
+  for (const app of apps) await new Promise((resolve) => app.close(resolve));
+});
+
 beforeEach(() => {
   sent.mockReset();
 });
 
 describe("presenting URLs", () => {
   it("opens the one it was given", async () => {
-    expect(await present([{ path: "http://localhost:5173" }])).toEqual([
-      "http://localhost:5173",
-    ]);
+    expect(await present([{ path: APP }])).toEqual([APP]);
   });
 
   it("opens only the first; the rest are rows of the files card", async () => {
     const paths = await present([
-      { path: "http://localhost:5173" },
-      { path: "http://localhost:5174" },
-      { path: "http://localhost:5175" },
+      { path: APP },
+      { path: APP2 },
+      { path: APP3 },
     ]);
 
-    expect(paths).toEqual(["http://localhost:5173"]);
+    expect(paths).toEqual([APP]);
   });
 });
 
@@ -86,13 +127,13 @@ describe("presenting from a bot's chat", () => {
       }) as unknown as Executable
     ).executeTool(
       "present_deliverable",
-      { items: [{ path: "http://localhost:5173" }] },
+      { items: [{ path: APP }] },
       "bot-session"
     );
 
     expect(sent).not.toHaveBeenCalled();
     const text = result.content.map((part) => part.text ?? "").join("");
-    expect(text).toContain("http://localhost:5173");
+    expect(text).toContain(APP);
     expect(text).not.toContain("preview pane");
   });
 });
@@ -129,9 +170,9 @@ describe("what the result declares", () => {
       "present_deliverable",
       {
         items: [
-          { path: "http://localhost:5173", label: "The app" },
+          { path: APP, label: "The app" },
           { path: "/nowhere/user@a.com_user@b.com", label: "placeholder" },
-          { path: "http://localhost:4000" },
+          { path: API },
         ],
       },
       "session-1"
@@ -141,10 +182,7 @@ describe("what the result declares", () => {
     const declared = text
       .split("\n")
       .filter((line) => line.startsWith("[artifact] "));
-    expect(declared).toEqual([
-      "[artifact] http://localhost:5173",
-      "[artifact] http://localhost:4000",
-    ]);
+    expect(declared).toEqual([`[artifact] ${APP}`, `[artifact] ${API}`]);
     expect(text).toContain("Not presented, because there is no file");
   });
 });
@@ -182,7 +220,7 @@ describe("which pane it lands in", () => {
       }) as unknown as Executable
     ).executeTool(
       "present_deliverable",
-      { items: [{ path: "http://localhost:5173" }] },
+      { items: [{ path: APP }] },
       "session-1"
     );
 
@@ -190,7 +228,7 @@ describe("which pane it lands in", () => {
       expect.anything(),
       expect.objectContaining({
         type: "preview-open",
-        path: "http://localhost:5173",
+        path: APP,
         conversationKey: key,
       })
     );
@@ -199,7 +237,7 @@ describe("which pane it lands in", () => {
   it("leaves the key off when the session is not known", async () => {
     await (server() as unknown as Executable).executeTool(
       "present_deliverable",
-      { items: [{ path: "http://localhost:5173" }] },
+      { items: [{ path: APP }] },
       "session-1"
     );
 
@@ -229,7 +267,7 @@ describe("what the model is told about the pane", () => {
       }) as unknown as Executable
     ).executeTool(
       "present_deliverable",
-      { items: [{ path: "http://localhost:5173", label: "The app" }] },
+      { items: [{ path: APP, label: "The app" }] },
       "session-1"
     );
     return {
@@ -258,7 +296,7 @@ describe("what the model is told about the pane", () => {
     expect(took).toBeLessThan(1_500);
     expect(targets.pending(key)).toEqual({
       id: expect.any(String),
-      path: "http://localhost:5173",
+      path: APP,
     });
   });
 
@@ -290,6 +328,121 @@ describe("what the model is told about the pane", () => {
     expect(sent).not.toHaveBeenCalled();
     expect(took).toBeLessThan(500);
     expect(targets.pending(key)).toBeNull();
+  });
+});
+
+describe("a local app handed over as done", () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "present-home-"));
+  const savedHome = process.env.ABACUSAI_BOT_HOME;
+  beforeAll(() => {
+    process.env.ABACUSAI_BOT_HOME = home;
+  });
+  afterAll(() => {
+    stopAllServed();
+    if (savedHome == null) delete process.env.ABACUSAI_BOT_HOME;
+    else process.env.ABACUSAI_BOT_HOME = savedHome;
+    fs.rmSync(home, { recursive: true, force: true });
+  });
+
+  const presentText = async (
+    items: { path: string }[],
+    extra: Record<string, unknown> = {}
+  ): Promise<{ text: string; isError: boolean }> => {
+    const result = (await (server(extra) as unknown as Executable).executeTool(
+      "present_deliverable",
+      { items },
+      "session-1"
+    )) as {
+      content: { text?: string }[];
+      isError?: boolean;
+    };
+    return {
+      text: result.content.map((part) => part.text ?? "").join(""),
+      isError: result.isError === true,
+    };
+  };
+
+  /** A local URL nothing answers: the server of an app that is not running. */
+  const stoppedUrl = async (): Promise<string> => {
+    const app = http.createServer();
+    await new Promise<void>((resolve) => app.listen(0, "127.0.0.1", resolve));
+    const url = `http://127.0.0.1:${(app.address() as AddressInfo).port}`;
+    await new Promise((resolve) => app.close(resolve));
+    return url;
+  };
+
+  it("is refused when nothing answers there, and opens no pane", async () => {
+    const dead = await stoppedUrl();
+    const { text, isError } = await presentText([{ path: dead }]);
+
+    expect(isError).toBe(true);
+    expect(text).toContain("Nothing could be presented");
+    expect(text).toContain(`${dead}: nothing is listening there`);
+    expect(sent).not.toHaveBeenCalled();
+  });
+
+  it("says what was checked when it answers", async () => {
+    const { text } = await presentText([{ path: APP }]);
+
+    expect(text).toContain("Checked:");
+    expect(text).toContain(`${APP} answered (HTTP 200).`);
+  });
+
+  /** An update restarts the app; every served page died with it. */
+  it("is a served folder brought back on its own URL after a restart", async () => {
+    const site = fs.mkdtempSync(path.join(home, "site-"));
+    fs.writeFileSync(path.join(site, "index.html"), "<h1>Game</h1>");
+    const before = await servePreview(site);
+    stopAllServed();
+    await expect(fetch(before.url)).rejects.toThrow();
+
+    const { text, isError } = await presentText([{ path: before.url }]);
+
+    expect(isError).toBe(false);
+    expect(text).toContain(`[artifact] ${before.url}`);
+    expect(await (await fetch(before.url)).text()).toContain("Game");
+  });
+
+  it("is refused when its page throws as it loads, with what it threw", async () => {
+    const { text, isError } = await presentText([{ path: APP }], {
+      checkServedPage: async () => ({
+        loaded: true,
+        errors: ["TypeError: game is undefined"],
+      }),
+    });
+
+    expect(isError).toBe(true);
+    expect(text).toContain("its page threw as it loaded");
+    expect(text).toContain("TypeError: game is undefined");
+    expect(sent).not.toHaveBeenCalled();
+  });
+
+  it("says its page loaded without errors when the browser saw none", async () => {
+    const checked: string[] = [];
+    const { text, isError } = await presentText([{ path: APP }], {
+      checkServedPage: async (url: string) => {
+        checked.push(url);
+        return { loaded: true, errors: [] };
+      },
+    });
+
+    expect(isError).toBe(false);
+    expect(checked).toEqual([APP]);
+    expect(text).toContain(
+      `${APP} answered (HTTP 200) and its page loaded without errors.`
+    );
+  });
+
+  it("asks nothing of a remote URL: it is taken as given", async () => {
+    const checkServedPage = vi.fn();
+    const { text, isError } = await presentText(
+      [{ path: "https://example.invalid/app" }],
+      { checkServedPage }
+    );
+
+    expect(isError).toBe(false);
+    expect(text).toContain("[artifact] https://example.invalid/app");
+    expect(checkServedPage).not.toHaveBeenCalled();
   });
 });
 

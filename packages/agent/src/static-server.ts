@@ -158,9 +158,15 @@ const handle = async (
   );
 };
 
-/** Starts a server for `directory`, or returns the one already serving it. */
+/**
+ * Starts a server for `directory`, or returns the one already serving it.
+ * `preferredPort` is the port it was served on before: taking it again keeps
+ * the URL a chat already holds (and the page's saved state, which is per
+ * origin) working; when something else holds it, any free port does.
+ */
 export const serveDirectory = async (
-  directory: string
+  directory: string,
+  preferredPort?: number
 ): Promise<ServedDirectory> => {
   const root = path.resolve(directory);
   const existing = running.get(root);
@@ -172,7 +178,7 @@ export const serveDirectory = async (
 
   if (pending != null) return pending;
 
-  const start = startDirectory(root);
+  const start = startDirectory(root, preferredPort);
 
   starting.set(root, start);
 
@@ -183,7 +189,27 @@ export const serveDirectory = async (
   }
 };
 
-const startDirectory = async (root: string): Promise<ServedDirectory> => {
+/** Listening on `port`, or false when another process holds it. */
+const listenOn = async (server: http.Server, port: number): Promise<boolean> =>
+  await new Promise<boolean>((resolve, reject) => {
+    const onError = (error: NodeJS.ErrnoException): void => {
+      server.off("listening", onListening);
+      if (error.code === "EADDRINUSE") resolve(false);
+      else reject(error);
+    };
+    const onListening = (): void => {
+      server.off("error", onError);
+      resolve(true);
+    };
+    server.once("error", onError);
+    server.once("listening", onListening);
+    server.listen(port, "127.0.0.1");
+  });
+
+const startDirectory = async (
+  root: string,
+  preferredPort?: number
+): Promise<ServedDirectory> => {
   const stat = await fs.stat(root).catch(() => null);
   if (stat?.isDirectory() !== true)
     throw new Error(`${root} is not a directory.`);
@@ -192,17 +218,18 @@ const startDirectory = async (root: string): Promise<ServedDirectory> => {
   if (entries.length === 0)
     throw new Error(`${root} is empty. There is nothing to serve.`);
 
-  const port = await freePort();
   const server = http.createServer((request, response) => {
     void handle(root, request, response).catch(() => {
       send(response, 500, "Server error", "text/plain; charset=utf-8");
     });
   });
 
-  await new Promise<void>((resolve, reject) => {
-    server.on("error", reject);
-    server.listen(port, "127.0.0.1", resolve);
-  });
+  let port = preferredPort ?? 0;
+  if (port === 0 || !(await listenOn(server, port))) {
+    port = await freePort();
+    if (!(await listenOn(server, port)))
+      throw new Error(`Port ${port} was taken while starting to serve.`);
+  }
 
   const served = { directory: root, url: `http://127.0.0.1:${port}`, port };
   running.set(root, { ...served, server });

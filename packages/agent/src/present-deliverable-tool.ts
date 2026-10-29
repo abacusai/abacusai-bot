@@ -9,6 +9,8 @@ import fs from "fs";
 import path from "path";
 import { pathToFileURL } from "url";
 
+import { checkLocalUrl, isLoopbackUrl } from "./deliverable-url.js";
+
 interface PiToolDefinitionLike {
   name: string;
   label: string;
@@ -91,6 +93,9 @@ export function buildPresentDeliverableTool(
       "already made. The pane may have been closed or the app restarted since, and this is",
       "the only way to put the file back on screen: describing it, or rendering its pages",
       "into the chat, does not show it. Presenting the same file twice is cheap and safe.",
+      "",
+      "A URL on this computer is opened first: one that does not answer is not presented,",
+      "and the result says why. Get the app running (serve) before you call it done.",
     ].join("\n"),
     parameters: {
       type: "object",
@@ -106,7 +111,7 @@ export function buildPresentDeliverableTool(
                 type: "string",
                 description:
                   "Path to the file, or an http(s) URL (a served app). A relative path resolves against " +
-                  "the workspace directory. Files must exist: this reports the ones that do not.",
+                  "the workspace directory. Files must exist and URLs must answer: this reports the ones that do not.",
               },
               label: {
                 type: "string",
@@ -137,6 +142,8 @@ export function buildPresentDeliverableTool(
       const valid: Array<{ label: string; target: string; isUrl: boolean }> =
         [];
       const missing: string[] = [];
+      const dead: string[] = [];
+      const notes: string[] = [];
 
       for (const entry of rawItems) {
         const item = (
@@ -156,6 +163,16 @@ export function buildPresentDeliverableTool(
           continue;
         }
 
+        // A local URL nobody answers is a broken app, not a deliverable.
+        if (isLoopbackUrl(raw)) {
+          const check = await checkLocalUrl(raw);
+          if (!check.ok) {
+            dead.push(`${raw}: ${check.reason}`);
+            continue;
+          }
+          notes.push(`${raw} answered (HTTP ${check.status}).`);
+        }
+
         const label = String(item.label ?? "").trim();
 
         valid.push({
@@ -167,10 +184,10 @@ export function buildPresentDeliverableTool(
       }
 
       if (valid.length === 0) {
-        const detail = missing.length > 0 ? `\n\n${missing.join("\n")}` : "";
+        const detail = [...missing, ...dead];
 
         return text(
-          `Nothing could be presented: none of those exist. Check the paths.${detail}`,
+          `Nothing could be presented: none of those exist or answer. Check the paths, and get the server running.${detail.length > 0 ? `\n\n${detail.join("\n")}` : ""}`,
           true
         );
       }
@@ -193,6 +210,14 @@ export function buildPresentDeliverableTool(
           `Not presented, because there is no file at these paths: ${missing.join(", ")}`
         );
       }
+      if (dead.length > 0) {
+        lines.push(
+          "",
+          "Not presented, because nothing answered there:",
+          ...dead.map((line) => `- ${line}`)
+        );
+      }
+      if (notes.length > 0) lines.push("", "Checked:", ...notes);
       lines.push(
         "",
         ...valid.map((item) => `${ARTIFACT_PATH_MARKER} ${item.target}`)

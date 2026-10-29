@@ -61,6 +61,10 @@
       "types": "./dist/send-media.d.ts",
       "default": "./dist/send-media.js"
     },
+    "./deliverable-url": {
+      "types": "./dist/deliverable-url.d.ts",
+      "default": "./dist/deliverable-url.js"
+    },
     "./channel": {
       "types": "./dist/channel.d.ts",
       "default": "./dist/channel.js"

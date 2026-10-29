@@ -286,22 +286,27 @@ describe("present_deliverable on the phone", () => {
     const { text, isError } = await call("present_deliverable", {
       items: [{ path: url }],
     });
+    // Nothing answers there now, so it is refused before any screenshot.
     expect(isError).toBe(true);
-    expect(text).toContain("only a page you served with `serve`");
+    expect(text).toContain("connection refused");
     expect(screenshot).not.toHaveBeenCalled();
   });
 
   it("screenshots no URL it did not serve: not another host, not another loopback port", async () => {
-    for (const path of [
-      "http://169.254.169.254/latest/meta-data/",
-      "http://internal.example/",
-      "http://127.0.0.1:4321/index.html",
-    ]) {
+    for (const [path, refusal] of [
+      [
+        "http://169.254.169.254/latest/meta-data/",
+        "only a page you served with `serve`",
+      ],
+      ["http://internal.example/", "only a page you served with `serve`"],
+      // A loopback port nothing of this chat's serves does not even answer.
+      ["http://127.0.0.1:4321/index.html", "connection refused"],
+    ] as const) {
       const { text, isError } = await call("present_deliverable", {
         items: [{ path }],
       });
       expect(isError, path).toBe(true);
-      expect(text).toContain("only a page you served with `serve`");
+      expect(text, path).toContain(refusal);
     }
     expect(screenshot).not.toHaveBeenCalled();
   });
