@@ -30,7 +30,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  # By pull request number: a merged pull request's `closed` event carries the
+  # base branch as its ref, so a ref-keyed group cancelled main's run of the merge.
+  group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
