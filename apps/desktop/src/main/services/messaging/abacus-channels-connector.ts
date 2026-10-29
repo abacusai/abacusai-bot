@@ -191,6 +191,8 @@ export class AbacusChannelsConnector implements MessagingConnector {
   private consentState: string | null = null;
   /** The bot's profile, where its chat is a click away; kept once linked. */
   private botProfileUrl: string | undefined;
+  /** The tail of the link-state steps. See linkStep. */
+  private linkSteps: Promise<unknown> = Promise.resolve();
 
   constructor(
     private readonly callbacks: ConnectorCallbacks,
@@ -264,7 +266,11 @@ export class AbacusChannelsConnector implements MessagingConnector {
   // ── Pairing ───────────────────────────────────────────────────────────────
 
   /** Mint a pairing code and start watching for the user to redeem it. */
-  async pair(): Promise<SharedChannelLink> {
+  pair(): Promise<SharedChannelLink> {
+    return this.linkStep(() => this.pairNow());
+  }
+
+  private async pairNow(): Promise<SharedChannelLink> {
     const result = await this.call<PairResponse>({
       action: "pair",
       channel: this.channel,
@@ -405,15 +411,17 @@ export class AbacusChannelsConnector implements MessagingConnector {
       return;
     }
     try {
-      const result = await this.call<PairResponse>({
-        action: "link_oauth",
-        channel: this.channel,
-        code,
+      await this.linkStep(async () => {
+        const result = await this.call<PairResponse>({
+          action: "link_oauth",
+          channel: this.channel,
+          code,
+        });
+        if (result.status !== "linked")
+          throw new Error("Discord did not finish the link. Please try again.");
+        this.callbacks.onLog(`${this.channel}: linked from the consent page`);
+        this.markLinked(result.display_name ?? null);
       });
-      if (result.status !== "linked")
-        throw new Error("Discord did not finish the link. Please try again.");
-      this.callbacks.onLog(`${this.channel}: linked from the consent page`);
-      this.markLinked(result.display_name ?? null);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.callbacks.onLog(`${this.channel}: consent link failed: ${message}`);
@@ -422,16 +430,36 @@ export class AbacusChannelsConnector implements MessagingConnector {
     }
   }
 
-  async unlink(): Promise<SharedChannelLink> {
-    this.clearPairTimer();
-    await this.call({ action: "unlink", channel: this.channel });
-    this.linked = false;
-    this.setLink({ status: "unlinked" });
-    this.callbacks.onState(
-      "needs_login",
-      "Not linked to the Abacus AI bot yet."
+  unlink(): Promise<SharedChannelLink> {
+    return this.linkStep(async () => {
+      this.clearPairTimer();
+      await this.call({ action: "unlink", channel: this.channel });
+      this.linked = false;
+      this.setLink({ status: "unlinked" });
+      this.callbacks.onState(
+        "needs_login",
+        "Not linked to the Abacus AI bot yet."
+      );
+      return this.link;
+    });
+  }
+
+  /**
+   * Run one link-state step (status, pair, consent link, unlink) once the one
+   * before it has finished, its reply applied. Overlapping, they raced: a
+   * status read the server answered just before a link landed was applied
+   * after it, and put the just-linked lane back to "not linked"; and on a new
+   * account the first status and the first pair both asked the server to set
+   * up its desktop link, and whichever lost was refused as "still being set up".
+   */
+  private linkStep<T>(step: () => Promise<T>): Promise<T> {
+    const run = this.linkSteps.then(step, step);
+    // A failed step is its caller's; the next one runs regardless.
+    this.linkSteps = run.then(
+      () => undefined,
+      () => undefined
     );
-    return this.link;
+    return run;
   }
 
   private watchPairing(): void {
@@ -482,7 +510,11 @@ export class AbacusChannelsConnector implements MessagingConnector {
     this.pairTimer = null;
   }
 
-  private async refreshStatus(): Promise<void> {
+  private refreshStatus(): Promise<void> {
+    return this.linkStep(() => this.refreshStatusNow());
+  }
+
+  private async refreshStatusNow(): Promise<void> {
     let status: StatusResponse;
     try {
       status = await this.call<StatusResponse>({ action: "status" });
