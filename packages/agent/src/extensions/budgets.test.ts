@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HostCore } from "../agui/queue.js";
 import { hostCreditBalance, setCreditRefresher } from "../credit-balance.js";
-import budgets, { budgetStopReason } from "./budgets.js";
+import budgets, { budgetStopReason, createBudgets } from "./budgets.js";
 
 const withBudgets = () => {
   const pi = fakePi();
@@ -666,5 +666,99 @@ describe("credits running out", () => {
       await toolEnd(pi, on({ provider: "openrouter", id: "x" }));
       expect(refresh).not.toHaveBeenCalled();
     });
+  });
+});
+
+/**
+ * The same marks on a chat whose user waits in a messaging app: the phone
+ * loop's user cannot see a preview, and a long research or browser run
+ * writes no file, so the desktop's "built something, showed nothing" rule
+ * would never fire there. Each mark checks in whenever the user heard
+ * nothing since the last one.
+ */
+describe("check-ins in a messaging chat", () => {
+  const checkIns = (pi: ReturnType<typeof fakePi>) =>
+    pi.messages.filter((m) => m.customType === "abacusai-bot-show-work");
+  const started = async () => {
+    const pi = fakePi();
+    createBudgets({ checkIns: { tools: ["send_progress", "send_media"] } })(
+      pi.api as never
+    );
+    await pi.fire("agent_start", {});
+    return pi;
+  };
+  let id = 0;
+  /** `minutes` of work, a minute a step: a model call and a bash run. */
+  const work = async (
+    pi: ReturnType<typeof fakePi>,
+    minutes: number,
+    toolName = "bash"
+  ) => {
+    for (let i = 0; i < minutes; i++) {
+      await pi.fire("turn_start", {}, { hasUI: false, abort: () => {} });
+      vi.advanceTimersByTime(30_000);
+      await pi.fire("message_end", { message: { role: "assistant" } });
+      const toolCallId = `c${++id}`;
+      await pi.fire("tool_execution_start", { toolName, toolCallId });
+      vi.advanceTimersByTime(30_000);
+      await pi.fire("tool_execution_end", {
+        toolName,
+        toolCallId,
+        isError: false,
+      });
+    }
+    await pi.fire("turn_start", {}, { hasUI: false, abort: () => {} });
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it("checks in at 10 and 20 minutes of work, files or not, hidden from the user", async () => {
+    const pi = await started();
+    await work(pi, 9);
+    expect(checkIns(pi)).toHaveLength(0);
+
+    await work(pi, 1);
+    expect(checkIns(pi)).toHaveLength(1);
+    const first = String(checkIns(pi)[0]!.content);
+    expect(first).toContain("over 10 minutes");
+    expect(first).toContain("send_progress");
+    expect(first).toContain("present_deliverable");
+    expect(first).not.toMatch(/preview|pane/i);
+    expect(pi.messages.at(-1)?.options?.deliverAs).toBe("steer");
+
+    await work(pi, 10);
+    expect(checkIns(pi)).toHaveLength(2);
+    expect(String(checkIns(pi)[1]!.content)).toContain("over 20 minutes");
+  });
+
+  it("stays quiet at a mark when the user heard from the run since the last one", async () => {
+    const pi = await started();
+    await work(pi, 8);
+    await work(pi, 1, "send_progress");
+    await work(pi, 2);
+    expect(checkIns(pi)).toHaveLength(0);
+
+    // Nothing since the 10-minute mark: the 20-minute one checks in.
+    await work(pi, 10);
+    expect(checkIns(pi)).toHaveLength(1);
+    expect(String(checkIns(pi)[0]!.content)).toContain("over 20 minutes");
+  });
+
+  it("counts a file handed over as hearing from the run", async () => {
+    const pi = await started();
+    await work(pi, 9, "agent-tools_present_deliverable");
+    await work(pi, 2);
+    expect(checkIns(pi)).toHaveLength(0);
+  });
+
+  it("leaves the desktop's rule alone: no file written, no nudge", async () => {
+    const pi = withBudgets();
+    await pi.fire("agent_start", {});
+    await work(pi, 25);
+    expect(checkIns(pi)).toHaveLength(0);
   });
 });

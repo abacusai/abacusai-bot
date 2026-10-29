@@ -17,7 +17,10 @@
  * enough. There is no cap, only a nudge. Show your work: a run that has written
  * files but presented nothing is told, unseen by the user, to present what it
  * has after 10 minutes of working time, and again after 20; time
- * spent waiting on an approval is not working time. Credits: a session on
+ * spent waiting on an approval is not working time. A chat whose user waits
+ * in a messaging app (BudgetOptions.checkIns) checks in at the same marks
+ * instead: whenever the user has heard nothing since the last one, built
+ * files or not, the model is told to send what it has so far. Credits: a session on
  * billed Abacus credits with under a tenth left is told once, unseen, to wrap
  * up and hand over. Temperature (ABACUSAI_BOT_TEMPERATURE, default 0.3, "off"
  * to disable) when unset.
@@ -119,6 +122,16 @@ const presentNudgePrompt = (minutes: number): string =>
   `with CSS or placeholder images instead of generated art, and present that. You can keep ` +
   `improving it afterwards.`;
 
+/**
+ * The same marks for a chat whose user waits in a messaging app: what they
+ * hear is a progress line or a file in the chat, never a preview.
+ */
+const checkInPrompt = (minutes: number, tools: readonly string[]): string =>
+  `Check in: you have been working for over ${minutes} minutes and the user, waiting in the chat, has not ` +
+  `heard from you in that time. Send them what you have so far now, in their language: a short progress ` +
+  `line with ${tools[0]} saying what is done and what comes next, and any files made so far, finished or ` +
+  `not, with ${PRESENT_TOOL}. Then carry on.`;
+
 const creditsLowPrompt = (balance: CreditBalance): string =>
   `Credit check: the user's Abacus.AI account has ${Math.max(0, Math.floor(balance.remaining))} of ` +
   `${balance.granted} credits left, and the run stops mid-step when they run out. Wrap up now: ` +
@@ -160,7 +173,32 @@ function temperatureSetting(): number | undefined {
   return Number.isFinite(parsed) ? parsed : 0.3;
 }
 
-export default function (pi: ExtensionAPI) {
+export interface BudgetOptions {
+  /**
+   * A chat whose user waits in a messaging app: the tools that tell them
+   * where the work stands (the progress line first). With them, the
+   * show-your-work marks are check-ins: the model is told to send what it
+   * has whenever the user has heard nothing since the last mark.
+   */
+  checkIns?: { tools: readonly string[] };
+}
+
+/** The tool under its own name or a server's prefix. */
+const isTool = (name: string, tool: string): boolean =>
+  name === tool || name.endsWith(`_${tool}`);
+
+export const createBudgets =
+  (options: BudgetOptions = {}) =>
+  (pi: ExtensionAPI): void =>
+    budgets(pi, options);
+
+export default function budgets(
+  pi: ExtensionAPI,
+  options: BudgetOptions = {}
+): void {
+  const checkInTools = options.checkIns?.tools ?? [];
+  /** The user heard from the run since the last mark (a progress line, a file). */
+  let heard = false;
   let turns = 0;
   let connectorCalls = 0;
   const callCounts = new Map<string, number>();
@@ -213,6 +251,7 @@ export default function (pi: ExtensionAPI) {
     wroteFile = false;
     presented = false;
     presentNudges = 0;
+    heard = false;
   });
 
   pi.on("message_end", (event) => {
@@ -232,6 +271,11 @@ export default function (pi: ExtensionAPI) {
     if (event.isError) return;
     if (WRITE_TOOLS.has(event.toolName)) wroteFile = true;
     if (isPresentTool(event.toolName)) presented = true;
+    if (
+      isPresentTool(event.toolName) ||
+      checkInTools.some((tool) => isTool(event.toolName, tool))
+    )
+      heard = true;
   });
 
   pi.on("turn_end", (_event, ctx) => {
@@ -268,7 +312,22 @@ export default function (pi: ExtensionAPI) {
         { deliverAs: "steer" }
       );
     };
-    if (wroteFile && !presented) {
+    if (checkInTools.length > 0) {
+      // Each mark once; a check-in only when the user heard nothing since the last.
+      const mark =
+        workedMs >= PRESENT_AGAIN_MS ? 2 : workedMs >= PRESENT_NUDGE_MS ? 1 : 0;
+      if (mark > presentNudges) {
+        presentNudges = mark;
+        if (!heard)
+          showWork(
+            checkInPrompt(
+              (mark === 2 ? PRESENT_AGAIN_MS : PRESENT_NUDGE_MS) / 60_000,
+              checkInTools
+            )
+          );
+        heard = false;
+      }
+    } else if (wroteFile && !presented) {
       if (workedMs >= PRESENT_AGAIN_MS && presentNudges < 2) {
         presentNudges = 2;
         showWork(presentNudgePrompt(PRESENT_AGAIN_MS / 60_000));

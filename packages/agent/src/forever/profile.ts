@@ -87,6 +87,12 @@ export interface ForeverProfile {
   onMessage?(message: unknown): void;
   /** The messages a compaction is about to summarize away, before it does. */
   beforeCompaction?(messages: readonly unknown[]): void | Promise<void>;
+  /**
+   * The user waits in a messaging app: the tools that tell them where the
+   * work stands, progress line first. A long turn checks in with them at the
+   * budgets' show-your-work marks (extensions/budgets.ts).
+   */
+  checkIns?: { tools: readonly string[] };
   /** What a `browser_task` run gets beyond the browser: a way to reach the user. */
   browserTask?: Pick<
     BrowserTaskContext,
