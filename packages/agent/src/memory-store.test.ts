@@ -224,7 +224,8 @@ describe("editing what is remembered", () => {
     // The desktop and agent write these files concurrently. With one fixed
     // `.tmp` name, two writers interleave into the same temp file and the
     // rename publishes the mix.
-    const spy = vi.spyOn(fs, "writeFileSync");
+    // The atomic writer opens its staged file by name, then writes the fd.
+    const spy = vi.spyOn(fs, "openSync");
 
     try {
       await applyMemoryAction("memory", "add", { content: "First note." });

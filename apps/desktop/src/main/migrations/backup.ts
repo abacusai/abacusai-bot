@@ -17,6 +17,8 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
+import { writeFileDurableSync } from "@abacus-ai/agent/atomic-file";
+
 export const MIGRATING_DIR_NAME = ".migrating";
 
 export const migratingRoot = (home: string): string =>
@@ -138,6 +140,22 @@ const renameWithRetry = (source: string, dest: string): void => {
   }
 };
 
+/** `copyFileSync`, flushed to the disk before it returns. */
+const copyFileDurable = (source: string, dest: string): void => {
+  fs.copyFileSync(source, dest);
+  const fd = fs.openSync(dest, "r+");
+  try {
+    fs.fsyncSync(fd);
+  } finally {
+    fs.closeSync(fd);
+  }
+};
+
+/**
+ * Writes and copies are flushed before they return, so a rename after one
+ * cannot reach the disk ahead of its bytes (after a power loss that leaves a
+ * file of NUL bytes).
+ */
 export const nodeIo: MigrationIo = {
   readFileSync: (file) => fs.readFileSync(file),
   readdirSync: (dir) => fs.readdirSync(dir),
@@ -145,9 +163,9 @@ export const nodeIo: MigrationIo = {
   mkdirSync: (dir) => {
     fs.mkdirSync(dir, { recursive: true });
   },
-  writeFileSync: (file, data) => fs.writeFileSync(file, data),
+  writeFileSync: (file, data) => writeFileDurableSync(file, data),
   appendFileSync: (file, data) => fs.appendFileSync(file, data),
-  copyFileSync: (source, dest) => fs.copyFileSync(source, dest),
+  copyFileSync: copyFileDurable,
   renameSync: renameWithRetry,
   rmSync: (file, options) =>
     fs.rmSync(file, { force: true, recursive: options?.recursive === true }),

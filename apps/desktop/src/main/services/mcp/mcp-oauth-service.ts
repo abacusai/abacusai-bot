@@ -4,6 +4,7 @@ import http from "http";
 import type { AddressInfo } from "net";
 import path from "path";
 
+import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
 import {
   MCP_OAUTH_CALLBACK_PORT,
   mcpOAuthRedirectUri,
@@ -86,16 +87,9 @@ const cachedAuthFile = (): McpAuthFile =>
 const writeAuthFile = (file: McpAuthFile): void => {
   const target = authFilePath();
   cachedAuth = { path: target, file };
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  // Temp file and rename: a crash mid-write must not leave a half-flushed file.
-  const temp = `${target}.tmp`;
-  fs.writeFileSync(temp, `${JSON.stringify(file, null, 2)}\n`, "utf8");
-  try {
-    fs.chmodSync(temp, 0o600);
-  } catch {
-    // Windows and some network filesystems don't do POSIX modes. Not fatal.
-  }
-  fs.renameSync(temp, target);
+  writeFileAtomicSync(target, `${JSON.stringify(file, null, 2)}\n`, {
+    restrict: true,
+  });
 };
 
 // Discovery

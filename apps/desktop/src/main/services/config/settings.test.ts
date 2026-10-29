@@ -117,7 +117,21 @@ describe("writing without losing what was already there", () => {
 
     setDefaultModel("a-model");
 
-    expect(fs.readdirSync(home)).toEqual(["config.json"]);
+    // The backup is deliberate: the last good copy a torn file is put back from.
+    expect(fs.readdirSync(home).sort()).toEqual([
+      "config.json",
+      "config.json.bak",
+    ]);
+  });
+
+  it("puts the last good copy back over a NUL-filled file instead of reading it as empty", async () => {
+    const { readSettings, setDefaultModel } = await load();
+    setDefaultModel("kept-model");
+    const file = path.join(home, "config.json");
+    fs.writeFileSync(file, "\0".repeat(fs.statSync(file).size));
+
+    expect(readSettings().defaultModel).toBe("kept-model");
+    expect(storedConfig()).toMatchObject({ defaultModel: "kept-model" });
   });
 
   // Skipped on Windows: it has no POSIX mode bits for chmod to set.

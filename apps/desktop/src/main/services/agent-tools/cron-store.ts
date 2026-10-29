@@ -5,9 +5,12 @@
  * `shared/routines/cron.ts`: eighty lines beat a dependency.
  */
 import crypto from "crypto";
-import fs from "fs";
 import path from "path";
 
+import {
+  recoverFromBackupSync,
+  writeFileAtomicSync,
+} from "@abacus-ai/agent/atomic-file";
 import { ConflictError } from "@abacus-ai/contract/conflict";
 import { EntityNotFoundError } from "@abacus-ai/contract/not-found";
 import type {
@@ -116,11 +119,14 @@ export interface CronJob {
 
 const FILE = (): string => path.join(abacusBotHome(), "cronjobs.json");
 
-const writeFileAtomic = (file: string, text: string): void => {
-  const temp = `${file}.tmp`;
-  fs.writeFileSync(temp, text, "utf8");
-  fs.renameSync(temp, file);
-};
+/**
+ * `cronjobs.json` is kept twice (`keepBackup`), so a copy a crash tore can
+ * be put back from the other; the journal entries beside it are not.
+ */
+const writeStoreFile = (file: string, text: string): void =>
+  writeFileAtomicSync(file, text, {
+    keepBackup: path.resolve(file) === path.resolve(FILE()),
+  });
 
 /**
  * `cronjobs.json` is a migration destination (step 5): while an unresolved
@@ -132,7 +138,7 @@ const held = new HeldFiles({
   requireDurableHolding: true,
   dir: () => path.join(abacusBotHome(), "threads", ".pending"),
   isWriteBlocked: isMigrationWriteBlocked,
-  writeFile: writeFileAtomic,
+  writeFile: writeStoreFile,
   log: (message) => console.warn(`[cron-store] ${message}`),
 });
 
@@ -170,23 +176,46 @@ const withRecoveredIds = (entries: unknown[]): unknown[] => {
   });
 };
 
+/** The entries `text` holds, or null when it is not a job list. Blank is none. */
+const parseEntries = (text: string): unknown[] | null => {
+  if (text.trim().length === 0) return [];
+  try {
+    const parsed: unknown = JSON.parse(text);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * The last good copy, put back over a `cronjobs.json` whose bytes are not a
+ * job list (a crash can leave it NUL-filled; the bad bytes are kept beside
+ * it). Null when there is no such copy, or the file is held.
+ */
+const restoreFromBackup = (): unknown[] | null => {
+  if (held.isBlocked(FILE())) return null;
+  const text = recoverFromBackupSync(
+    FILE(),
+    (backup) => backup.trim() !== "" && parseEntries(backup) !== null
+  );
+  if (text === null) return null;
+  console.warn(
+    "[cron-store] cronjobs.json was not a job list; restored the routines from its last good copy"
+  );
+  return parseEntries(text);
+};
+
 /**
  * The jobs on disk (or held), or null when the file is there but cannot be
- * read as a job list. A missing or blank file is no jobs; an entry that is
- * not a job is left out (`write` keeps it).
+ * read as a job list and has no good copy to restore. A missing or blank
+ * file is no jobs; an entry that is not a job is left out (`write` keeps it).
  */
 const load = (): CronJob[] | null => {
   const file = held.read(FILE());
   if (file.status === "missing") return [];
   if (file.status !== "ok") return null;
-  if (file.text.trim().length === 0) return [];
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(file.text);
-  } catch {
-    return null;
-  }
-  if (!Array.isArray(parsed)) return null;
+  const parsed = parseEntries(file.text) ?? restoreFromBackup();
+  if (parsed === null) return null;
   const recovered = withRecoveredIds(parsed);
   if (recovered.some((entry, index) => entry !== parsed[index])) {
     try {
@@ -221,13 +250,14 @@ const read = (): CronJob[] => load() ?? [];
 
 /**
  * The jobs a write starts from. An unreadable file is never replaced by a
- * list built from nothing: the write is refused and the file kept.
+ * list built from nothing: the write is refused and the file kept. The
+ * message is read by the agent, so it says what not to do about it.
  */
 const readForWrite = (): CronJob[] => {
   const jobs = load();
   if (jobs == null)
     throw new Error(
-      "cronjobs.json cannot be read, so routines cannot be saved; the file was left as it is."
+      "cronjobs.json cannot be read and no good copy of it is kept, so routines cannot be saved; the file was left as it is. It may still hold the user's routines: do not delete, empty, or overwrite it. Tell the user routines cannot be saved until it is recovered."
     );
   return jobs;
 };

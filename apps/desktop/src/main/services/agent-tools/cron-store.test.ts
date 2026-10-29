@@ -418,6 +418,47 @@ describe("damaged history and migration recovery", () => {
     expect(fs.readFileSync(file, "utf8")).toBe("{broken");
   });
 
+  // A crash can leave the file its full length in NUL bytes.
+  it("restores the routines from the last good copy when the file is NUL-filled", () => {
+    const first = createJob({ schedule: "0 9 * * *", prompt: "morning" });
+    const second = createJob({ prompt: "on demand" });
+    const file = path.join(home, "cronjobs.json");
+    const nul = "\0".repeat(fs.statSync(file).size);
+    fs.writeFileSync(file, nul);
+
+    expect(listJobs().map((job) => job.id)).toEqual([first.id, second.id]);
+    expect(
+      (JSON.parse(fs.readFileSync(file, "utf8")) as { id: string }[]).map(
+        (job) => job.id
+      )
+    ).toEqual([first.id, second.id]);
+    const aside = fs
+      .readdirSync(home)
+      .filter((name) => name.startsWith("cronjobs.json.corrupt-"));
+    expect(aside).toHaveLength(1);
+    expect(fs.readFileSync(path.join(home, aside[0]!), "utf8")).toBe(nul);
+
+    const third = createJob({ prompt: "after" });
+    expect(listJobs().map((job) => job.id)).toEqual([
+      first.id,
+      second.id,
+      third.id,
+    ]);
+  });
+
+  it("never writes an empty list over a NUL-filled file with no good copy", () => {
+    const file = path.join(home, "cronjobs.json");
+    const nul = "\0".repeat(3000);
+    fs.writeFileSync(file, nul);
+
+    expect(listJobs()).toEqual([]);
+    expect(() => createJob({ prompt: "new" })).toThrow(
+      /cannot be read[\s\S]*do not delete, empty, or overwrite it/
+    );
+    expect(fs.readFileSync(file, "utf8")).toBe(nul);
+    expect(fs.existsSync(`${file}.bak`)).toBe(false);
+  });
+
   it.each(["EACCES", "ENOSPC"])(
     "refuses blocked edits and run history when the journal fails with %s",
     (code) => {
@@ -435,12 +476,13 @@ describe("damaged history and migration recovery", () => {
       );
       const durable = fs.readFileSync(journal, "utf8");
       const ioError = Object.assign(new Error(code), { code });
-      const writeFile = fs.writeFileSync;
+      // The atomic writer opens its staged file before writing it.
+      const openFile = fs.openSync;
       const spy = vi
-        .spyOn(fs, "writeFileSync")
+        .spyOn(fs, "openSync")
         .mockImplementation((target, ...args) => {
           if (String(target).startsWith(journalDir + path.sep)) throw ioError;
-          return writeFile(target, ...args);
+          return openFile(target, ...args);
         });
       const wrote = vi.fn();
       const started = vi.fn();

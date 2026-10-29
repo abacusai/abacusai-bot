@@ -6,6 +6,8 @@
 import fs from "fs";
 import path from "path";
 
+import { writeFileAtomicSync } from "../atomic-file.js";
+
 /** The bot's home, or null when this session is not a bot's chat. */
 export function botDir(): string | null {
   const dir = (process.env.ABACUSAI_BOT_BOT_DIR ?? "").trim();
@@ -59,10 +61,5 @@ export function readBotState(dir: string): BotLoopState {
 }
 
 export function writeBotState(dir: string, state: BotLoopState): void {
-  fs.mkdirSync(dir, { recursive: true });
-  const file = botStateFile(dir);
-  const temp = `${file}.tmp`;
-
-  fs.writeFileSync(temp, `${JSON.stringify(state, null, 2)}\n`, "utf8");
-  fs.renameSync(temp, file);
+  writeFileAtomicSync(botStateFile(dir), `${JSON.stringify(state, null, 2)}\n`);
 }

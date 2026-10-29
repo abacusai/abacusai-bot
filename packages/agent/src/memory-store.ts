@@ -11,6 +11,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
+import { writeFileAtomicSync } from "./atomic-file.js";
 import { abacusBotDir } from "./config.js";
 import { redactIdNumbers } from "./traveler/id-numbers.js";
 
@@ -107,31 +108,8 @@ export const rememberSnapshot = (): string | null => {
     .join("\n")}`;
 };
 
-/** Makes each write's temp file its own; see the comment in writeEntries. */
-let writeCounter = 0;
-
 const writeEntries = (target: MemoryTarget, entries: string[]): void => {
-  const file = storePath(target);
-
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  // Temp file plus rename so a crash mid-write cannot leave a half-flushed
-  // store. The temp name is unique per process and write: the desktop and
-  // its agent processes share these files, and a fixed name lets two writers
-  // interleave.
-  const temp = `${file}.${process.pid}.${++writeCounter}.tmp`;
-
-  try {
-    fs.writeFileSync(temp, entries.join(ENTRY_DELIMITER), "utf8");
-    fs.renameSync(temp, file);
-  } finally {
-    // On failure (usually a full disk) the unique name would otherwise leave
-    // an orphan per attempt, without limit.
-    try {
-      fs.rmSync(temp, { force: true });
-    } catch {
-      // Nothing left to clean up.
-    }
-  }
+  writeFileAtomicSync(storePath(target), entries.join(ENTRY_DELIMITER));
 };
 
 // Shared lock: keep byte-identical with the other copy.

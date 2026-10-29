@@ -7,6 +7,8 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
+import { recoverFromBackupSync, writeFileAtomicSync } from "./atomic-file.js";
+
 export interface CustomProviderModel {
   id: string;
   name?: string;
@@ -214,27 +216,46 @@ export function configPath(): string {
   return path.join(abacusBotDir(), "config.json");
 }
 
-export function loadConfig(): AbacusBotConfig {
+/** The config `text` holds, or null when it is not a JSON object. */
+const parseConfig = (text: string): AbacusBotConfig | null => {
   try {
-    const raw = fs.readFileSync(configPath(), "utf8");
-    const parsed: unknown = JSON.parse(raw);
-
+    const parsed: unknown = JSON.parse(text);
     return parsed && typeof parsed === "object"
       ? (parsed as AbacusBotConfig)
-      : {};
+      : null;
   } catch {
-    // No config, or a corrupt one: env-var keys alone are enough to run.
+    return null;
+  }
+};
+
+/**
+ * A config whose bytes do not parse (a crash can leave it NUL-filled) is put
+ * back from its last good copy, as the desktop's settings store does.
+ */
+export function loadConfig(): AbacusBotConfig {
+  let raw: string;
+  try {
+    raw = fs.readFileSync(configPath(), "utf8");
+  } catch {
+    // No config: env-var keys alone are enough to run.
     return {};
   }
+  const parsed = parseConfig(raw);
+  if (parsed !== null) return parsed;
+  const restored = recoverFromBackupSync(
+    configPath(),
+    (backup) => parseConfig(backup) !== null,
+    { restrict: true }
+  );
+  // A corrupt one with no good copy: env-var keys alone are enough to run.
+  return restored === null ? {} : (parseConfig(restored) ?? {});
 }
 
 export function saveConfig(config: AbacusBotConfig): void {
-  fs.mkdirSync(abacusBotDir(), { recursive: true });
-  fs.writeFileSync(
-    configPath(),
-    `${JSON.stringify(config, null, 2)}\n`,
-    "utf8"
-  );
+  writeFileAtomicSync(configPath(), `${JSON.stringify(config, null, 2)}\n`, {
+    restrict: true,
+    keepBackup: true,
+  });
 }
 
 export function accountPath(): string {

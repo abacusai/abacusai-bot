@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
 import {
   type AgentEvent,
   AgentStatus,
@@ -304,10 +305,7 @@ export class TurnLedger {
       ...(turn.channel != null ? { channel: turn.channel } : {}),
     }));
     try {
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      const tmp = `${file}.${process.pid}.tmp`;
-      fs.writeFileSync(tmp, JSON.stringify(entries), "utf8");
-      fs.renameSync(tmp, file);
+      writeFileAtomicSync(file, JSON.stringify(entries));
     } catch (error) {
       console.error("[turns] could not journal the open turns:", error);
     }
@@ -335,10 +333,7 @@ export class TurnLedger {
         ),
         record,
       ].slice(-RECORDS_KEPT);
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      const tmp = `${file}.${process.pid}.tmp`;
-      fs.writeFileSync(tmp, JSON.stringify(kept), "utf8");
-      fs.renameSync(tmp, file);
+      writeFileAtomicSync(file, JSON.stringify(kept));
     } catch (error) {
       console.error("[turns] could not keep a turn record:", error);
     }

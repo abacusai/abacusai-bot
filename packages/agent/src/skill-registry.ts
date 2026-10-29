@@ -8,6 +8,8 @@
 import fs from "fs";
 import path from "path";
 
+import { writeFileAtomicSync } from "./atomic-file.js";
+
 /** One search hit. `source` is the `owner/repo` the skill is published from. */
 export interface MarketplaceSkill {
   id: string;
@@ -214,20 +216,11 @@ export async function installSkill(options: {
     };
   }
 
-  // Written through a pid-scoped temp file and renamed, so a half-downloaded
-  // skill is never what the scanner picks up.
-  const tmp = `${destPath}.${process.pid}.tmp`;
+  // Staged and renamed, so a half-downloaded skill is never what the scanner
+  // picks up.
   try {
-    fs.mkdirSync(destDir, { recursive: true });
-    fs.writeFileSync(tmp, hit.body, "utf8");
-    fs.renameSync(tmp, destPath);
+    writeFileAtomicSync(destPath, hit.body);
   } catch (err) {
-    try {
-      fs.rmSync(tmp, { force: true });
-    } catch {
-      /* best-effort cleanup */
-    }
-
     return {
       ok: false,
       error: err instanceof Error ? err.message : String(err),
