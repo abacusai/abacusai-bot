@@ -217,7 +217,27 @@ export class TurnChain {
     return cause;
   }
 
-  answered(provider: string | undefined): void {
+  /**
+   * A call's reply, recorded at every message end. One that got text or a
+   * tool call out answered, whichever call it was (a same-model retry, a
+   * replay after a dropped connection), so a failure the turn recovered
+   * from is never what it ends on.
+   */
+  replied(message: unknown): void {
+    const reply = message as {
+      role?: unknown;
+      provider?: unknown;
+      stopReason?: unknown;
+    };
+    if (
+      reply?.role !== "assistant" ||
+      reply.stopReason === "error" ||
+      reply.stopReason === "aborted" ||
+      !failedCallStreamed([message])
+    )
+      return;
+    const provider =
+      typeof reply.provider === "string" ? reply.provider : undefined;
     this.attempts.push({ provider, cause: null, raw: "" });
   }
 

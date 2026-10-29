@@ -47,7 +47,12 @@ export type Reply =
    * or closes: the shape of a connection the server has finished with but
    * the client is still waiting on.
    */
-  | { stall: { say?: string } };
+  | { stall: { say?: string } }
+  /**
+   * A stream that says this much and then loses its connection before the
+   * finish frame: the whole reply arrived, the end of it never did.
+   */
+  | { cut: { say: string } };
 
 /** Text of a message whether the content is a string or a block array. */
 function textOf(content: unknown): string {
@@ -200,6 +205,13 @@ export class FakeProvider {
     };
 
     frame({ role: "assistant", content: "" });
+
+    if ("cut" in reply) {
+      frame({ content: reply.cut.say });
+      request.socket.destroy();
+
+      return;
+    }
 
     if ("stall" in reply) {
       if (reply.stall.say != null && reply.stall.say.length > 0)

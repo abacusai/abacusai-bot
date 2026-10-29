@@ -85,9 +85,11 @@ export class OpenLlmRouter {
 
   /**
    * A reply came back, pooled or from a model picked by hand: it spent the
-   * same free quota either way. A refused call spent none.
+   * same free quota either way, and it is the latest call in the turn's
+   * chain. A refused call spent none.
    */
   recordReply(message: unknown): void {
+    this.chain.replied(message);
     const reply = message as {
       role?: unknown;
       provider?: unknown;
@@ -219,7 +221,6 @@ export class OpenLlmRouter {
   succeeded(id: string): void {
     this.rotation.markSucceeded(id);
     const provider = id.split("/")[0];
-    this.chain.answered(provider);
     // Abacus answering is the credits being back.
     if (provider === "abacus") {
       noteCreditsBack();
