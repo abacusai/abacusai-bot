@@ -4,15 +4,18 @@ import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   BUSYBOX_ANSI_PAYLOAD,
   BUSYBOX_PAYLOAD,
+  commandPosixShell,
   installPosixShell,
+  posixShell,
   posixShellEnv,
   parseRegExportPath,
   registryPathEntries,
+  resetPosixShellForTesting,
   resolvePosixShell,
   selfTestPosixShell,
   type PosixShell,
@@ -133,6 +136,70 @@ describe("resolvePosixShell", () => {
         process.env
       )
     ).toMatch(/ENOENT/);
+  });
+});
+
+describe("posixShell", () => {
+  afterEach(() => resetPosixShellForTesting());
+
+  /** A stand-in payload and the options that install it, as on Windows. */
+  const staged = (selfTest: () => string | undefined) => {
+    const root = mkdtempSync(join(tmpdir(), "busybox-memo-"));
+    const stub = join(root, BUSYBOX_PAYLOAD);
+    writeFileSync(stub, "stand-in busybox");
+
+    return {
+      options: {
+        platform: "win32" as const,
+        payload: stub,
+        cacheRoot: join(root, "cache"),
+        selfTest: vi.fn(selfTest),
+      },
+      done: () => rmSync(root, { recursive: true, force: true }),
+    };
+  };
+
+  it("reinstalls a launcher removed after its self-test, then keeps it", () => {
+    const s = staged(() => undefined);
+    try {
+      const first = posixShell(s.options);
+      expect(first).toBeDefined();
+      // What a quarantine leaves: the folder and the other launchers, no sh.exe.
+      rmSync(first!.sh);
+
+      const again = posixShell(s.options);
+      expect(again?.sh).toBe(first!.sh);
+      expect(existsSync(again!.sh)).toBe(true);
+      expect(posixShell(s.options)).toBe(again);
+      expect(s.options.selfTest).toHaveBeenCalledTimes(2);
+    } finally {
+      s.done();
+    }
+  });
+
+  it("fails the command, naming the shell, when the removed one cannot be restored", () => {
+    let runs = true;
+    const s = staged(() => (runs ? undefined : "blocked"));
+    try {
+      const first = commandPosixShell(s.options);
+      expect(first).toBeDefined();
+      rmSync(first!.sh);
+      runs = false;
+
+      expect(() => commandPosixShell(s.options)).toThrow(
+        /was removed and could not be reinstalled/
+      );
+      // The 30 s recheck stands: the next command fails at once, unprobed.
+      const probes = s.options.selfTest.mock.calls.length;
+      expect(() => commandPosixShell(s.options)).toThrow(first!.sh);
+      expect(s.options.selfTest).toHaveBeenCalledTimes(probes);
+    } finally {
+      s.done();
+    }
+  });
+
+  it("leaves the no-bundled-shell path where there never was one", () => {
+    expect(commandPosixShell({ platform: "linux" })).toBeUndefined();
   });
 });
 

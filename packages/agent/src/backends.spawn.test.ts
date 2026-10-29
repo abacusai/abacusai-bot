@@ -88,6 +88,7 @@ const bundledShell = vi.hoisted(() => ({
 vi.mock("./posix-shell.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./posix-shell.js")>()),
   posixShell: () => bundledShell.value,
+  commandPosixShell: () => bundledShell.value,
 }));
 
 vi.mock("./sandbox/shell.js", async (importOriginal) => ({

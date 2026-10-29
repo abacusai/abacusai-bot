@@ -184,8 +184,8 @@ describe("terminal shells on Windows", () => {
   it("installs busybox once however often a shell is resolved", () => {
     fs.writeFileSync(path.join(vendor, "busybox.exe"), "");
     resolvePosixShell.mockReturnValue({
-      sh: "sh.exe",
-      bin: "bin",
+      sh: put("sh.exe"),
+      bin: binDir,
       overrideApplets: "",
     });
 
@@ -193,6 +193,18 @@ describe("terminal shells on Windows", () => {
     resolveTerminalShell("busybox", windows());
 
     expect(resolvePosixShell).toHaveBeenCalledOnce();
+  });
+
+  it("installs busybox again when its launcher was removed", () => {
+    fs.writeFileSync(path.join(vendor, "busybox.exe"), "");
+    const sh = put("sh.exe");
+    resolvePosixShell.mockReturnValue({ sh, bin: binDir, overrideApplets: "" });
+
+    resolveTerminalShell("busybox", windows());
+    fs.rmSync(sh);
+    resolveTerminalShell("busybox", windows());
+
+    expect(resolvePosixShell).toHaveBeenCalledTimes(2);
   });
 
   it("offers busybox only when the payload shipped", () => {

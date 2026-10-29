@@ -13,6 +13,7 @@ import { createLocalBashOperations } from "@earendil-works/pi-coding-agent";
 import { MANAGED_PYTHON_ENV } from "./child-env.js";
 import { modelPath } from "./model-path.js";
 import {
+  commandPosixShell,
   posixShell,
   posixShellEnv,
   type PosixShell,
@@ -25,6 +26,7 @@ export {
   BUSYBOX_PREFER_EXTERNAL,
   BUSYBOX_VERSION,
   busyboxOverrideApplets,
+  commandPosixShell,
   findPayload,
   installPosixShell,
   posixShell,
@@ -57,11 +59,29 @@ export interface ShellOperations {
  * environment set here (including a background job's, which arrives without
  * one), so the applet directory never has to be on this process's own PATH.
  * Null where there is no bundled shell, so the caller keeps pi's own path.
+ * Unless a shell is pinned, each command runs under the one current when it
+ * starts (`commandPosixShell`), so a launcher removed mid-session is
+ * reinstalled rather than failing every command after it.
  */
 export function posixShellOperations(
-  shell: PosixShell | undefined = posixShell()
+  pinned?: PosixShell
 ): ShellOperations | null {
-  if (shell == null) return null;
+  if (pinned != null) return shellOperations(pinned);
+  if (posixShell() == null) return null;
+
+  return {
+    exec: (command, cwd, options) => {
+      const shell = commandPosixShell();
+
+      return shell == null
+        ? createLocalBashOperations().exec(command, cwd, options)
+        : shellOperations(shell).exec(command, cwd, options);
+    },
+  };
+}
+
+/** The operations for one resolved shell. */
+function shellOperations(shell: PosixShell): ShellOperations {
   if (shell.args != null) {
     const args = shell.args;
     return {

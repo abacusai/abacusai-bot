@@ -673,24 +673,59 @@ export function resolvePosixShell(
 let resolved: PosixShell | undefined | null = null;
 let retryAt = 0;
 const RETRY_MS = 30_000;
+/** The last launcher this process handed out, named if it is lost for good. */
+let handedOut: string | undefined;
 
-/** Recheck failed installs after a short delay; keep successful installs cached. */
-export function posixShell(): PosixShell | undefined {
+/**
+ * The resolved shell, memoised but re-verified on every call: a launcher
+ * removed after its self-test (antivirus software can quarantine busybox) is
+ * reinstalled at once rather than handed out missing for the rest of the
+ * process. Failed installs are rechecked after a short delay. The
+ * options are the tests'.
+ */
+export function posixShell(
+  options: ResolveOptions = {}
+): PosixShell | undefined {
+  if (resolved != null && !exists(resolved.sh)) {
+    reportOnce(
+      `${resolved.sh} disappeared after it was installed; reinstalling`
+    );
+    resolved = null;
+  }
   if (
     resolved === null ||
     ((resolved === undefined || resolved.args != null) && Date.now() >= retryAt)
   ) {
-    resolved = resolvePosixShell();
+    resolved = resolvePosixShell(options);
     retryAt = Date.now() + RETRY_MS;
   }
+  if (resolved != null) handedOut = resolved.sh;
 
   return resolved;
+}
+
+/**
+ * posixShell() for a command about to spawn under it. Once a shell has been
+ * handed out, losing it is an error the model sees, never a silent switch to
+ * another shell; undefined only where there never was one.
+ */
+export function commandPosixShell(
+  options: ResolveOptions = {}
+): PosixShell | undefined {
+  const shell = posixShell(options);
+  if (shell == null && handedOut != null)
+    throw new Error(
+      `The bundled shell ${handedOut} was removed and could not be reinstalled; antivirus software may be quarantining it. Allow the app's posix-shell folder in it, then run the command again.`
+    );
+
+  return shell;
 }
 
 /** Test seam: forget the memoised answer. */
 export function resetPosixShellForTesting(): void {
   resolved = null;
   retryAt = 0;
+  handedOut = undefined;
   warned = false;
   reported.clear();
   registryCache.clear();
