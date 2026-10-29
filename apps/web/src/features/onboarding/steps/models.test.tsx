@@ -13,11 +13,18 @@ import { fixedT, initI18n } from "#renderer/lib/i18n";
 import type { StepContext } from "./context";
 import { ModelsStep } from "./models";
 
-const ctx = (signedIn: boolean) => {
-  const start = vi.fn(async () => ({ ok: true }));
+type HopResult = { ok: boolean; error?: string; cancelled?: boolean };
+
+const ctx = (
+  signedIn: boolean,
+  start = vi.fn(async (): Promise<HopResult> => ({ ok: true }))
+) => {
+  const cancel = vi.fn(async () => {});
   const props = {
     step: "models",
-    transport: { client: { auth: { openRouter: { start } } } } as never,
+    transport: {
+      client: { auth: { openRouter: { start, cancel } } },
+    } as never,
     facts: { signedIn, payingTier: false, ownsBot: false },
     navigate: vi.fn(async () => {}),
     signIn: vi.fn(),
@@ -36,7 +43,7 @@ const ctx = (signedIn: boolean) => {
     advance: vi.fn(),
     back: vi.fn(),
   };
-  return { context, start };
+  return { context, start, cancel };
 };
 
 describe("ModelsStep", () => {
@@ -63,6 +70,63 @@ describe("ModelsStep", () => {
     fireEvent.click(screen.getByRole("button", { name: "Connect" }));
     await vi.waitFor(() => expect(refresh).toHaveBeenCalled());
     expect(start).toHaveBeenCalledWith({});
+  });
+
+  it("waits for OpenRouter on its row, with Cancel, while Continue stays live", async () => {
+    await initI18n();
+    // A browser hop nobody finishes: the main process answers only at its timeout.
+    let answer: (result: HopResult) => void = () => {};
+    const start = vi.fn(
+      () => new Promise<HopResult>((resolve) => (answer = resolve))
+    );
+    const { context, cancel } = ctx(true, start);
+    const refresh = vi.fn(async () => {});
+    render(
+      <ModelsStep
+        ctx={context}
+        connected={new Set()}
+        refresh={refresh}
+        heading={createRef()}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Connect" }));
+    const waiting = await screen.findByRole("button", {
+      name: "Waiting for sign-in…",
+    });
+    expect((waiting as HTMLButtonElement).disabled).toBe(true);
+    const next = screen.getByRole("button", { name: "Continue" });
+    expect((next as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(next);
+    expect(context.advance).toHaveBeenCalledOnce();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(cancel).toHaveBeenCalledWith({});
+    expect(screen.getByRole("button", { name: "Connect" })).toBeTruthy();
+    // The cancelled hop's late answer changes nothing.
+    answer({ ok: false, error: "late" });
+    await Promise.resolve();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("says why an OpenRouter hop failed and offers Connect again", async () => {
+    await initI18n();
+    const start = vi.fn(async (): Promise<HopResult> => ({
+      ok: false,
+      error: "Timed out",
+    }));
+    const { context } = ctx(true, start);
+    render(
+      <ModelsStep
+        ctx={context}
+        connected={new Set()}
+        refresh={async () => {}}
+        heading={createRef()}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Connect" }));
+    expect((await screen.findByRole("alert")).textContent).toBe("Timed out");
+    expect(screen.getByRole("button", { name: "Connect" })).toBeTruthy();
   });
 
   it("counts a stored key or configured model as connected", async () => {

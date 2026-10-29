@@ -3,9 +3,10 @@
  * "Existing subscriptions · Connect later ·
  * Paste a key" and Continue (always enabled: a user may finish with nothing).
  */
-import type { Ref } from "react";
+import { useRef, useState, type Ref } from "react";
 
 import { ConnectorMark } from "#renderer/components/connector-mark";
+import { errorText } from "#renderer/lib/use-app-context";
 
 import type { StepContext } from "./context";
 import { ConnectedMark, StepBody, StepButton, StepTitle } from "./kit";
@@ -47,7 +48,8 @@ export const ModelsStep = ({
   refresh(): Promise<unknown>;
   heading: Ref<HTMLHeadingElement>;
 }) => {
-  const { t, busy, props, perform, advance } = ctx;
+  const { t, busy, props, advance } = ctx;
+  const openRouter = useOpenRouterHop(props.transport, refresh);
   const isConnected = (id: string) =>
     connected.has(id) || (id === "abacus" && props.facts.signedIn);
   return (
@@ -87,6 +89,15 @@ export const ModelsStep = ({
                 saved={refresh}
                 provider="gemini"
               />
+            ) : row.id === "openrouter" && openRouter.waiting ? (
+              <>
+                <StepButton variant="small" disabled>
+                  {t("phase5.waitingSignIn")}
+                </StepButton>
+                <StepButton variant="small" onClick={openRouter.cancel}>
+                  {t("phase5.cancel")}
+                </StepButton>
+              </>
             ) : (
               <StepButton
                 variant="small"
@@ -94,10 +105,7 @@ export const ModelsStep = ({
                 onClick={() =>
                   row.id === "abacus"
                     ? props.signIn("signin")
-                    : void perform(async () => {
-                        await props.transport.client.auth.openRouter.start({});
-                        await refresh();
-                      })
+                    : void openRouter.start()
                 }
               >
                 {t("onboarding.pages.connectLabel")}
@@ -106,6 +114,11 @@ export const ModelsStep = ({
           </div>
         ))}
       </div>
+      {openRouter.error && (
+        <p role="alert" className="onboarding-quiet mt-3 max-w-[640px]">
+          {openRouter.error}
+        </p>
+      )}
       <div className="onboarding-existing mt-4 max-w-[640px]">
         <span className="min-w-0 flex-1">
           <span className="block font-medium">
@@ -124,4 +137,40 @@ export const ModelsStep = ({
       </div>
     </>
   );
+};
+
+/**
+ * OpenRouter's browser hop, owned by its row rather than the page: the main
+ * process keeps the listener open for as long as an account can take to make,
+ * so the wait shows on the row with a Cancel, Continue stays live (leaving the
+ * step cancels the hop), and a failure says why instead of nothing.
+ */
+const useOpenRouterHop = (
+  transport: StepContext["props"]["transport"],
+  refresh: () => Promise<unknown>
+) => {
+  const [waiting, setWaiting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Bumped by Cancel and each new start, so a superseded hop's answer is dropped.
+  const attempt = useRef(0);
+  const start = async () => {
+    const id = ++attempt.current;
+    setWaiting(true);
+    setError(null);
+    try {
+      const result = await transport.client.auth.openRouter.start({});
+      if (id !== attempt.current) return;
+      if (result.ok) await refresh();
+      else if (result.cancelled !== true) setError(result.error);
+    } catch (failure) {
+      if (id === attempt.current) setError(errorText(failure));
+    }
+    if (id === attempt.current) setWaiting(false);
+  };
+  const cancel = () => {
+    attempt.current++;
+    setWaiting(false);
+    void transport.client.auth.openRouter.cancel({}).catch(() => undefined);
+  };
+  return { waiting, error, start, cancel };
 };
