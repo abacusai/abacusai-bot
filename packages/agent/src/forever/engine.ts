@@ -50,8 +50,9 @@ import { EmptyReplies } from "../empty-reply.js";
 import { tagEvent, type EventMeta } from "../event-meta.js";
 import { TOOL_NAME_ALIASES } from "../excluded-tools.js";
 import background from "../extensions/background.js";
-import budgets, { budgetStopReason } from "../extensions/budgets.js";
+import { budgetStopReason, createBudgets } from "../extensions/budgets.js";
 import compactionPruner from "../extensions/compaction-pruner.js";
+import requestSize from "../extensions/request-size.js";
 import spill from "../extensions/spill.js";
 import toolCallRepair from "../extensions/tool-call-repair.js";
 import toolTimeouts from "../extensions/tool-timeouts.js";
@@ -478,6 +479,10 @@ export class ForeverEngine {
           factory: compactionPruner as unknown as (pi: ExtensionAPI) => void,
         },
         {
+          name: "abacusai-bot-request-size",
+          factory: requestSize as unknown as (pi: ExtensionAPI) => void,
+        },
+        {
           name: "abacusai-bot-web",
           factory: webTools as unknown as (pi: ExtensionAPI) => void,
         },
@@ -487,7 +492,11 @@ export class ForeverEngine {
         },
         {
           name: "abacusai-bot-budgets",
-          factory: budgets as unknown as (pi: ExtensionAPI) => void,
+          factory: createBudgets(
+            this.profile.checkIns != null
+              ? { checkIns: this.profile.checkIns }
+              : {}
+          ) as unknown as (pi: ExtensionAPI) => void,
         },
         // Background bash: the finish notice, fetch_background_output and
         // kill_process the bot's bash tool promises.
@@ -2610,7 +2619,8 @@ export class ForeverEngine {
   }
 
   private emitAgentEvent(event: AgentEvent, meta?: EventMeta): void {
-    if (event.type === "error" && meta?.origin === "turn") this.reply.fail();
+    if (event.type === "error" && meta?.origin === "turn")
+      this.reply.fail(event.error.cause);
     if (event.type === "error" && meta?.origin !== "startup")
       this.ownedTurn?.noteError(event.error);
     if (meta != null) tagEvent(event, meta);

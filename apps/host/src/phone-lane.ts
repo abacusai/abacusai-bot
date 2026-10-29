@@ -115,6 +115,21 @@ const PRESENT_TOOL = "present_deliverable";
 const BROWSER_TOOL = "browser_task";
 /** The server's own apology for a failed turn, in the chat's language. */
 const TURN_FAILED_NOTICE = "turn_failed";
+/**
+ * The server's own words for a turn the account could not pay for: its paused
+ * notice, naming what ran out and where to pay, in the chat's language.
+ */
+const PAUSED_NOTICE = "paused";
+/**
+ * Failure causes (turn-outcome.ts) that are the account's, not the bot's:
+ * only the user can lift them, so "send that again" would fail the same way.
+ */
+const ACCOUNT_CAUSES: ReadonlySet<string> = new Set([
+  "credits_exhausted",
+  "credits_expired",
+  "payment_required",
+  "phone_verification",
+]);
 /** The app's built-in tool server: its tools may arrive under its prefix. */
 const BUILTIN_TOOLS_SERVER = "agent-tools";
 /** Media ids remembered as sent; each lives 30 minutes, so far fewer are live. */
@@ -808,10 +823,12 @@ export class PhoneLane {
       // Pinned until it went (or was dropped), never before.
       this.release(media);
     }
-    const apologized = reply.failed && (await this.apologize(replyTo));
+    const apologized =
+      reply.failed &&
+      (await this.apologize(replyTo, FAILURE_REPLY, reply.cause));
     const went = reply.failed ? apologized : bubbles.length === 0 || delivered;
     this.log(
-      `[phone] reply ids=${reply.messageIds.join(",")} bubbles=${bubbles.length} media=${media.length} delivered=${delivered ? 1 : 0} failed=${reply.failed ? 1 : 0} apology=${apologized ? 1 : 0}${went ? "" : " dropped=1"}`
+      `[phone] reply ids=${reply.messageIds.join(",")} bubbles=${bubbles.length} media=${media.length} delivered=${delivered ? 1 : 0} failed=${reply.failed ? 1 : 0}${reply.cause != null ? ` cause=${reply.cause}` : ""} apology=${apologized ? 1 : 0}${went ? "" : " dropped=1"}`
     );
     this.turnMediaHashes = new Set();
     // Acked once the answer went (or was dropped), never before: an ack ends
@@ -925,20 +942,27 @@ export class PhoneLane {
 
   /**
    * The apology for a turn that failed or was given up. A plain failure asks
-   * the server for its own words, in the chat's language; only a server that
-   * does not know that notice yet gets the English text instead. A notice
-   * that may have gone (a timeout) is never followed by a second apology.
+   * the server for its own words, in the chat's language: its paused notice
+   * when the account refused the turn (`cause`), else its apology. A server
+   * that does not know the paused notice yet gets the apology; one that knows
+   * neither gets the English text. A notice that may have gone (a timeout) is
+   * never followed by a second apology.
    */
   private async apologize(
     replyTo: string,
-    text = FAILURE_REPLY
+    text = FAILURE_REPLY,
+    cause?: string
   ): Promise<boolean> {
     if (!this.running) return false;
     if (text !== FAILURE_REPLY)
       return (await this.sendInOrder(replyTo, [text])) === 1;
     const run = this.outbox.then(async () => {
       if (!this.running) return false;
-      const notice = await this.sendNotice(replyTo, TURN_FAILED_NOTICE);
+      let notice: "sent" | "refused" | "unsupported" = "unsupported";
+      if (cause != null && ACCOUNT_CAUSES.has(cause))
+        notice = await this.sendNotice(replyTo, PAUSED_NOTICE);
+      if (notice === "unsupported")
+        notice = await this.sendNotice(replyTo, TURN_FAILED_NOTICE);
       if (notice !== "unsupported") return notice === "sent";
       return (await this.sendBubbles(replyTo, [text])) === 1;
     });

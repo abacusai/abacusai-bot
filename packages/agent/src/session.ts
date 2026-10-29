@@ -67,6 +67,7 @@ import guardrails from "./extensions/guardrails.js";
 import knowledge from "./extensions/knowledge.js";
 import orientation from "./extensions/orientation.js";
 import outputRepair from "./extensions/output-repair.js";
+import requestSize from "./extensions/request-size.js";
 import spill from "./extensions/spill.js";
 import syntaxCheck from "./extensions/syntax-check.js";
 import testRunner from "./extensions/test-runner.js";
@@ -1038,6 +1039,10 @@ export class AbacusBotSession {
               factory: compactionPruner as unknown as (
                 pi: ExtensionAPI
               ) => void,
+            },
+            {
+              name: "abacusai-bot-request-size",
+              factory: requestSize as unknown as (pi: ExtensionAPI) => void,
             },
             {
               name: "abacusai-bot-web",

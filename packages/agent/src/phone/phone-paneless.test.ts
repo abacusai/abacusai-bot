@@ -83,6 +83,13 @@ describe("what the phone loop's model reads", () => {
       expect(text, where).not.toMatch(PANE_WORDING);
   });
 
+  it("checks in on a long turn with its progress line, then its media", () => {
+    expect(createPhoneProfile({ model: null }).checkIns?.tools).toEqual([
+      "send_progress",
+      "send_media",
+    ]);
+  });
+
   it("tells the model files go into the chat with present_deliverable", () => {
     const [system] = createPhoneProfile({ model: null }).systemPrompt();
     expect(system).toContain("`present_deliverable`");

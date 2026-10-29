@@ -504,8 +504,11 @@ describe("the phone lane", () => {
       ackFailsTimes?: number;
       /** Holds the session's answer to these sends until `settleSend`. */
       holdSend?: (messageId: string) => boolean;
-      /** How the server answers a reply carrying a notice. */
-      notice?: "unknown" | "timeout";
+      /**
+       * How the server answers a reply carrying a notice: knows none, times
+       * out, or knows the apology but not the paused notice yet.
+       */
+      notice?: "unknown" | "timeout" | "no-paused";
       /** The server says another host holds these messages now. */
       superseded?: (messageId: string) => boolean;
       /** These sends throw on their way (outcome unknown). */
@@ -554,6 +557,8 @@ describe("the phone lane", () => {
               throw Object.assign(new Error("timed out"), {
                 name: "TimeoutError",
               });
+            if (options.notice === "no-paused" && body.notice === "paused")
+              throw new Error("notice must be turn_failed, on whatsapp_bot");
           }
           if (
             body.action === "reply" &&
@@ -1429,6 +1434,72 @@ describe("the phone lane", () => {
       },
     ]);
     older.phone.stop();
+  });
+
+  it("answers a turn the account could not pay for with the server's paused notice, never 'send that again'", async () => {
+    for (const cause of [
+      "credits_exhausted",
+      "credits_expired",
+      "payment_required",
+      "phone_verification",
+    ]) {
+      const { phone, send, event, replies, handled, logs } = lane();
+      phone.arrive({ id: "m1", text: "hi" });
+      await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+      event({
+        type: "turn_reply",
+        messageIds: ["m1"],
+        text: "",
+        failed: true,
+        cause,
+      });
+      await handled([["m1"]]);
+      expect(replies()).toEqual([
+        { action: "reply", message_id: "m1", notice: "paused" },
+      ]);
+      expect(logs.find((line) => line.startsWith("[phone] reply"))).toContain(
+        `cause=${cause}`
+      );
+      phone.stop();
+    }
+
+    // Any other cause is the bot's own failure: the apology, as before.
+    const other = lane();
+    other.phone.arrive({ id: "m1", text: "hi" });
+    await vi.waitFor(() => expect(other.send).toHaveBeenCalledTimes(1));
+    other.event({
+      type: "turn_reply",
+      messageIds: ["m1"],
+      text: "",
+      failed: true,
+      cause: "rate_limited",
+    });
+    await other.handled([["m1"]]);
+    expect(other.replies()).toEqual([
+      { action: "reply", message_id: "m1", notice: "turn_failed" },
+    ]);
+    other.phone.stop();
+  });
+
+  it("falls back to the apology on a server that does not know the paused notice yet", async () => {
+    const { phone, send, event, replies, handled } = lane({
+      notice: "no-paused",
+    });
+    phone.arrive({ id: "m1", text: "hi" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    event({
+      type: "turn_reply",
+      messageIds: ["m1"],
+      text: "",
+      failed: true,
+      cause: "credits_exhausted",
+    });
+    await handled([["m1"]]);
+    expect(replies()).toEqual([
+      { action: "reply", message_id: "m1", notice: "paused" },
+      { action: "reply", message_id: "m1", notice: "turn_failed" },
+    ]);
+    phone.stop();
   });
 
   it("never apologizes twice: a notice that may have gone, or one the server refused, gets no English one after it", async () => {

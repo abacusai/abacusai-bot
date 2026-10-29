@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HostCore } from "../agui/queue.js";
 import { hostCreditBalance, setCreditRefresher } from "../credit-balance.js";
-import budgets, { budgetStopReason } from "./budgets.js";
+import budgets, { budgetStopReason, createBudgets } from "./budgets.js";
 
 const withBudgets = () => {
   const pi = fakePi();
@@ -344,6 +344,50 @@ describe("a run that runs long", () => {
     }
   });
 
+  it("lets a closing run hand over what it made, and nothing else", async () => {
+    vi.useFakeTimers();
+    try {
+      const pi = withBudgets();
+      const ctx = {
+        cwd: process.cwd(),
+        hasUI: false,
+        ui: { notify() {} },
+        abort() {},
+      };
+      await pi.fire("input", { text: "build it", source: "interactive" });
+      await pi.fire("agent_start", {});
+      await pi.fire("turn_start", {}, ctx);
+      vi.advanceTimersByTime(60 * 60_000);
+      await pi.fire("turn_start", {}, ctx);
+      const closeOut = pi.messages.find(
+        (m) => m.customType === "abacusai-bot-close-out"
+      );
+      expect(String(closeOut?.content)).toContain("present_deliverable");
+
+      for (const toolName of [
+        "present_deliverable",
+        "agent-tools_present_deliverable",
+        "send_media",
+      ])
+        expect(
+          await pi.fire("tool_call", {
+            toolName,
+            toolCallId: toolName,
+            input: { path: "site/index.html" },
+          })
+        ).toBeUndefined();
+      expect(
+        await pi.fire("tool_call", {
+          toolName: "write",
+          toolCallId: "w",
+          input: { path: "site/more.html" },
+        })
+      ).toMatchObject({ block: true });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("forgets the stop when the next run starts", async () => {
     const { pi } = await run(250, 254);
     expect(budgetStopReason()).not.toBeNull();
@@ -622,5 +666,128 @@ describe("credits running out", () => {
       await toolEnd(pi, on({ provider: "openrouter", id: "x" }));
       expect(refresh).not.toHaveBeenCalled();
     });
+  });
+});
+
+/**
+ * The same marks on a chat whose user waits in a messaging app: the phone
+ * loop's user cannot see a preview, and a long research or browser run
+ * writes no file, so the desktop's "built something, showed nothing" rule
+ * would never fire there. Each mark checks in whenever the user heard
+ * nothing since the last one.
+ */
+describe("check-ins in a messaging chat", () => {
+  const checkIns = (pi: ReturnType<typeof fakePi>) =>
+    pi.messages.filter((m) => m.customType === "abacusai-bot-show-work");
+  const started = async () => {
+    const pi = fakePi();
+    createBudgets({ checkIns: { tools: ["send_progress", "send_media"] } })(
+      pi.api as never
+    );
+    await pi.fire("agent_start", {});
+    return pi;
+  };
+  let id = 0;
+  /** `minutes` of work, a minute a step: a model call and a bash run. */
+  const work = async (
+    pi: ReturnType<typeof fakePi>,
+    minutes: number,
+    toolName = "bash"
+  ) => {
+    for (let i = 0; i < minutes; i++) {
+      await pi.fire("turn_start", {}, { hasUI: false, abort: () => {} });
+      vi.advanceTimersByTime(30_000);
+      await pi.fire("message_end", { message: { role: "assistant" } });
+      const toolCallId = `c${++id}`;
+      await pi.fire("tool_execution_start", { toolName, toolCallId });
+      vi.advanceTimersByTime(30_000);
+      await pi.fire("tool_execution_end", {
+        toolName,
+        toolCallId,
+        isError: false,
+      });
+    }
+    await pi.fire("turn_start", {}, { hasUI: false, abort: () => {} });
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it("checks in at 10 and 20 minutes of work, files or not, hidden from the user", async () => {
+    const pi = await started();
+    await work(pi, 9);
+    expect(checkIns(pi)).toHaveLength(0);
+
+    await work(pi, 1);
+    expect(checkIns(pi)).toHaveLength(1);
+    const first = String(checkIns(pi)[0]!.content);
+    expect(first).toContain("over 10 minutes");
+    expect(first).toContain("send_progress");
+    expect(first).toContain("present_deliverable");
+    expect(first).not.toMatch(/preview|pane/i);
+    expect(pi.messages.at(-1)?.options?.deliverAs).toBe("steer");
+
+    await work(pi, 10);
+    expect(checkIns(pi)).toHaveLength(2);
+    expect(String(checkIns(pi)[1]!.content)).toContain("over 20 minutes");
+  });
+
+  it("stays quiet at a mark when the user heard from the run since the last one", async () => {
+    const pi = await started();
+    await work(pi, 8);
+    await work(pi, 1, "send_progress");
+    await work(pi, 2);
+    expect(checkIns(pi)).toHaveLength(0);
+
+    // Nothing since the 10-minute mark: the 20-minute one checks in.
+    await work(pi, 10);
+    expect(checkIns(pi)).toHaveLength(1);
+    expect(String(checkIns(pi)[0]!.content)).toContain("over 20 minutes");
+  });
+
+  it("counts a file handed over as hearing from the run", async () => {
+    const pi = await started();
+    await work(pi, 9, "agent-tools_present_deliverable");
+    await work(pi, 2);
+    expect(checkIns(pi)).toHaveLength(0);
+  });
+
+  it("never checks in while the run closes out: the close-out's calls are its own", async () => {
+    process.env.ABACUSAI_BOT_RUN_CAP_MS = String(15 * 60_000);
+    try {
+      const pi = await started();
+      const aborts: number[] = [];
+      const ctx = { hasUI: false, abort: () => aborts.push(1) };
+      await work(pi, 9);
+      expect(checkIns(pi)).toHaveLength(0);
+      await work(pi, 1);
+      expect(checkIns(pi)).toHaveLength(1);
+      // Past the run cap: the close-out starts on this call.
+      await work(pi, 6);
+      const closeOut = pi.messages.filter(
+        (m) => m.customType === "abacusai-bot-close-out"
+      );
+      expect(closeOut).toHaveLength(1);
+      // The 20-minute mark passes during the close-out: no check-in, and the
+      // close-out keeps both its calls (the stop comes on the third, not sooner).
+      vi.advanceTimersByTime(6 * 60_000);
+      await pi.fire("turn_start", {}, ctx);
+      expect(checkIns(pi)).toHaveLength(1);
+      expect(aborts).toEqual([]);
+      await pi.fire("turn_start", {}, ctx);
+      expect(aborts).toHaveLength(1);
+    } finally {
+      delete process.env.ABACUSAI_BOT_RUN_CAP_MS;
+    }
+  });
+
+  it("leaves the desktop's rule alone: no file written, no nudge", async () => {
+    const pi = withBudgets();
+    await pi.fire("agent_start", {});
+    await work(pi, 25);
+    expect(checkIns(pi)).toHaveLength(0);
   });
 });

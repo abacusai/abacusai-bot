@@ -250,6 +250,8 @@ export type AgentEvent =
       messageIds: string[];
       text: string;
       failed: boolean;
+      /** For `failed`: the reported error's cause (a FailureCause, turn-outcome.ts), when it named one. */
+      cause?: string;
     }
   | {
       type: "error";

@@ -144,6 +144,8 @@ export function createPhoneProfile(
       ],
       channel: WHATSAPP_CHANNEL,
     },
+    // The user waits on WhatsApp: a long turn checks in at the show-your-work marks.
+    checkIns: { tools: [PHONE_PROGRESS_TOOL_NAME, SEND_MEDIA_TOOL_NAME] },
     mcpTools: PHONE_MCP_TOOLS,
     // The phone's own `memory` replaces the desktop's global one too.
     replacesMcpTool: (name) =>
