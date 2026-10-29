@@ -32,8 +32,6 @@ export const NOT_YET_PHONE_OWNED: readonly string[] = [
   "skills_list",
   "skill_view",
   "cronjob",
-  "vision_analyze",
-  "video_analyze",
   "x_search",
   "pdf",
   "deck_export_pdf",

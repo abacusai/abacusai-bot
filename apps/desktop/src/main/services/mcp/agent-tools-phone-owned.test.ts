@@ -40,7 +40,7 @@ const APP_ONLY =
  * FROZEN: the largest the not-yet list may be. Shrink this copy with the list
  * when a phone definition lands; never grow either.
  */
-const NOT_YET_MAX_LENGTH = 10;
+const NOT_YET_MAX_LENGTH = 8;
 /** FROZEN: the vault tools still on the browser server's one wording. */
 const NOT_YET_VAULT_AT_MOST = [
   "vault_items",
@@ -52,8 +52,6 @@ const NOT_YET_AT_MOST = [
   "skills_list",
   "skill_view",
   "cronjob",
-  "vision_analyze",
-  "video_analyze",
   "x_search",
   "pdf",
   "deck_export_pdf",
