@@ -755,6 +755,35 @@ describe("check-ins in a messaging chat", () => {
     expect(checkIns(pi)).toHaveLength(0);
   });
 
+  it("never checks in while the run closes out: the close-out's calls are its own", async () => {
+    process.env.ABACUSAI_BOT_RUN_CAP_MS = String(15 * 60_000);
+    try {
+      const pi = await started();
+      const aborts: number[] = [];
+      const ctx = { hasUI: false, abort: () => aborts.push(1) };
+      await work(pi, 9);
+      expect(checkIns(pi)).toHaveLength(0);
+      await work(pi, 1);
+      expect(checkIns(pi)).toHaveLength(1);
+      // Past the run cap: the close-out starts on this call.
+      await work(pi, 6);
+      const closeOut = pi.messages.filter(
+        (m) => m.customType === "abacusai-bot-close-out"
+      );
+      expect(closeOut).toHaveLength(1);
+      // The 20-minute mark passes during the close-out: no check-in, and the
+      // close-out keeps both its calls (the stop comes on the third, not sooner).
+      vi.advanceTimersByTime(6 * 60_000);
+      await pi.fire("turn_start", {}, ctx);
+      expect(checkIns(pi)).toHaveLength(1);
+      expect(aborts).toEqual([]);
+      await pi.fire("turn_start", {}, ctx);
+      expect(aborts).toHaveLength(1);
+    } finally {
+      delete process.env.ABACUSAI_BOT_RUN_CAP_MS;
+    }
+  });
+
   it("leaves the desktop's rule alone: no file written, no nudge", async () => {
     const pi = withBudgets();
     await pi.fire("agent_start", {});

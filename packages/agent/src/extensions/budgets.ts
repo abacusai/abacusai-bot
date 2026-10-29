@@ -313,10 +313,12 @@ export default function budgets(
       );
     };
     if (checkInTools.length > 0) {
-      // Each mark once; a check-in only when the user heard nothing since the last.
+      // Each mark once; a check-in only when the user heard nothing since the
+      // last. Never while closing out: its progress line would be refused,
+      // and the closing message already says where the work stands.
       const mark =
         workedMs >= PRESENT_AGAIN_MS ? 2 : workedMs >= PRESENT_NUDGE_MS ? 1 : 0;
-      if (mark > presentNudges) {
+      if (mark > presentNudges && closingTurns == null) {
         presentNudges = mark;
         if (!heard)
           showWork(
