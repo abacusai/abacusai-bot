@@ -25,6 +25,7 @@ import {
   ConnectDialogContent,
   ConnectHeader,
   ConnectNote,
+  ConnectPending,
   ConnectStep,
   ConnectWaiting,
 } from "#renderer/components/form-kit/connect-dialog";
@@ -35,7 +36,6 @@ import {
   SettingRow,
   StatePill,
 } from "#renderer/components/form-kit/page";
-import { Spinner } from "#renderer/components/spinner";
 import { connectErrorText } from "#renderer/lib/connect-page";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
@@ -215,36 +215,39 @@ export const ConnectorsPage = () => {
                           )}
                         </StatePill>
                       </span>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        disabled={inFlight}
-                        aria-busy={inFlight}
-                        onClick={() => {
-                          if (group && !signIn && e.kind === "messaging")
-                            void navigate({
-                              to: "/library/messaging",
-                              search: { platform: e.platform },
-                              transition: "none",
-                            });
-                          else if (group && !signIn)
-                            void navigate({
-                              to: "/library/connectors",
-                              search: (p) => ({ ...p, connector: e.id }),
-                              transition: "none",
-                            });
-                          else void flow.start(e.id);
-                        }}
-                      >
-                        {inFlight && <Spinner aria-hidden />}
-                        {t(
-                          signIn
-                            ? "phase5.signIn"
-                            : group
-                              ? "phase5.manage"
-                              : "phase5.add"
-                        )}
-                      </Button>
+                      {inFlight ? (
+                        // The wait is this row's: every other row, the search
+                        // and navigation stay usable, and Cancel is beside it.
+                        <ConnectPending onCancel={() => void flow.cancel()} />
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            if (group && !signIn && e.kind === "messaging")
+                              void navigate({
+                                to: "/library/messaging",
+                                search: { platform: e.platform },
+                                transition: "none",
+                              });
+                            else if (group && !signIn)
+                              void navigate({
+                                to: "/library/connectors",
+                                search: (p) => ({ ...p, connector: e.id }),
+                                transition: "none",
+                              });
+                            else void flow.start(e.id);
+                          }}
+                        >
+                          {t(
+                            signIn
+                              ? "phase5.signIn"
+                              : group
+                                ? "phase5.manage"
+                                : "phase5.add"
+                          )}
+                        </Button>
+                      )}
                     </SettingRow>
                     {error && (
                       <ConnectNote error className="px-3 pb-2.5">
@@ -258,14 +261,6 @@ export const ConnectorsPage = () => {
           </section>
         );
       })}
-      {flow.state.phase !== "idle" && flow.state.phase !== "fields" && (
-        <div className="flex items-center gap-2">
-          <ConnectWaiting>{t("phase5.connectWaiting")}</ConnectWaiting>
-          <Button size="sm" variant="ghost" onClick={() => void flow.cancel()}>
-            {t("phase5.cancel")}
-          </Button>
-        </div>
-      )}
     </AreaPage>
   );
 };

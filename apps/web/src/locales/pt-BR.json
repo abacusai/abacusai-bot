@@ -4269,8 +4269,7 @@
     "tryAgain": "Tentar de novo",
     "checking": "Verificando…",
     "stillBlocked": "Ainda não vemos um pagamento nesta conta.",
-    "waiting": "Conclua o pagamento no navegador. O app continua assim que o pagamento for aprovado.",
-    "otherAccount": "Entrar com outra conta"
+    "waiting": "Conclua o pagamento no navegador. O app continua assim que o pagamento for aprovado."
   },
   "visualizer": {
     "loading": "Carregando visualização…"

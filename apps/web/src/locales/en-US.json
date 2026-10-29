@@ -4269,8 +4269,7 @@
     "tryAgain": "Try again",
     "checking": "Checking…",
     "stillBlocked": "We can't see a payment on this account yet.",
-    "waiting": "Finish checkout in your browser. The app continues as soon as your payment goes through.",
-    "otherAccount": "Sign in with a different account"
+    "waiting": "Finish checkout in your browser. The app continues as soon as your payment goes through."
   },
   "visualizer": {
     "loading": "Loading visualization…"

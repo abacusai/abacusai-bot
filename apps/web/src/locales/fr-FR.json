@@ -4269,8 +4269,7 @@
     "tryAgain": "Réessayer",
     "checking": "Vérification…",
     "stillBlocked": "Nous ne voyons pas encore de paiement sur ce compte.",
-    "waiting": "Terminez le paiement dans votre navigateur. L'app reprend dès que votre paiement est passé.",
-    "otherAccount": "Se connecter avec un autre compte"
+    "waiting": "Terminez le paiement dans votre navigateur. L'app reprend dès que votre paiement est passé."
   },
   "visualizer": {
     "loading": "Chargement de la visualisation…"

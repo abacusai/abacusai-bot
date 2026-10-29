@@ -91,3 +91,38 @@ describe("the browser sign-in", () => {
     expect(await result.json()).toEqual({ state: "ok" });
   });
 });
+
+describe("a failed exchange", () => {
+  /** Run one sign-in whose exchange request fails with `error`. */
+  const failedReason = async (error: Error): Promise<unknown> => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValueOnce(error));
+    const attempt = startAbacusAuth();
+    await settle();
+    const url = new URL(String(openExternal.mock.calls.at(-1)![0]));
+    const callback = `http://127.0.0.1:${url.searchParams.get("botPort")}/${url.searchParams.get("botPath")}`;
+    await (await loopbackFetch(`${callback}?code=test-code`)).text();
+    await attempt;
+    const result = await loopbackFetch(`${callback}/result`);
+    return ((await result.json()) as { reason?: unknown }).reason;
+  };
+
+  it.each([
+    [
+      "Chromium's reason",
+      new TypeError("fetch failed", {
+        cause: new Error("net::ERR_NAME_NOT_RESOLVED"),
+      }),
+      "fetch_ERR_NAME_NOT_RESOLVED",
+    ],
+    [
+      "Node's code",
+      new TypeError("fetch failed", {
+        cause: Object.assign(new Error("getaddrinfo"), { code: "ENOTFOUND" }),
+      }),
+      "fetch_ENOTFOUND",
+    ],
+    ["the error class alone", new TypeError("fetch failed"), "fetch_TypeError"],
+  ])("names %s", async (_, error, reason) => {
+    await expect(failedReason(error)).resolves.toBe(reason);
+  });
+});

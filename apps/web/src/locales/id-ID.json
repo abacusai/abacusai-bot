@@ -4269,8 +4269,7 @@
     "tryAgain": "Coba lagi",
     "checking": "Memeriksa…",
     "stillBlocked": "Kami belum melihat pembayaran di akun ini.",
-    "waiting": "Selesaikan pembayaran di browser Anda. Aplikasi akan lanjut begitu pembayaran Anda berhasil.",
-    "otherAccount": "Masuk dengan akun lain"
+    "waiting": "Selesaikan pembayaran di browser Anda. Aplikasi akan lanjut begitu pembayaran Anda berhasil."
   },
   "visualizer": {
     "loading": "Memuat visualisasi…"

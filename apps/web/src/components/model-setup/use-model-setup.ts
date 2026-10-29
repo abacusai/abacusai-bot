@@ -74,6 +74,14 @@ export const useModelSetup = ({
       await refresh(true);
       return true;
     },
+    cancelConnect: (provider) => {
+      if (!IS_ELECTRON) return;
+      const auth =
+        provider === "abacus"
+          ? transport.client.auth.abacus
+          : transport.client.auth.openRouter;
+      void auth.cancel({}).catch(() => undefined);
+    },
     save: async (provider, key) => {
       await transport.client.settings.keys.save({ provider, key });
       await refresh(true);

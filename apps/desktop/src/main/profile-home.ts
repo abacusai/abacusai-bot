@@ -17,6 +17,11 @@ interface ProfileRegistry {
   active: string | null;
   /** Account key -> profile dir, relative to the base ("." = the base itself). */
   profiles: Record<string, string>;
+  /**
+   * A sign-in finished here for an account that has no profile yet: the
+   * payment gate held it, so it was never filed under `profiles`.
+   */
+  heldSignIn?: true;
 }
 
 /**
@@ -61,7 +66,11 @@ const readRegistry = (): ProfileRegistry => {
         ? reg.active
         : null;
 
-    return { active, profiles };
+    return {
+      active,
+      profiles,
+      ...(reg.heldSignIn === true ? { heldSignIn: true } : {}),
+    };
   } catch {
     return { active: null, profiles: {} };
   }
@@ -69,10 +78,15 @@ const readRegistry = (): ProfileRegistry => {
 
 /**
  * Whether any account has ever signed in on this install: every sign-in files
- * its account in the registry, and only deleting all data forgets it.
+ * its account in the registry (one held for payment as `heldSignIn`), and only
+ * deleting all data forgets it.
  */
-export const hasSignedInBefore = (): boolean =>
-  Object.keys(readRegistry().profiles).length > 0;
+export const hasSignedInBefore = (): boolean => {
+  const registry = readRegistry();
+  return (
+    registry.heldSignIn === true || Object.keys(registry.profiles).length > 0
+  );
+};
 
 const writeRegistry = (registry: ProfileRegistry): void => {
   writeFileAtomicSync(
@@ -82,6 +96,16 @@ const writeRegistry = (registry: ProfileRegistry): void => {
       restrict: true,
     }
   );
+};
+
+/**
+ * File a sign-in the payment gate held: the account cannot be identified until
+ * it pays, but its sign-in happened, so a later sign-out stays signed out.
+ */
+export const noteHeldSignIn = (): void => {
+  const registry = readRegistry();
+  if (registry.heldSignIn === true) return;
+  writeRegistry({ ...registry, heldSignIn: true });
 };
 
 const profileDir = (registry: ProfileRegistry, key: string): string =>

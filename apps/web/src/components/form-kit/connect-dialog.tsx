@@ -1,10 +1,12 @@
 import { CheckIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 import { BootAvatar, type BootStage } from "#renderer/components/boot-avatar";
 import type { AvatarMood } from "#renderer/lib/bots/avatar";
 import { cn } from "#renderer/lib/cn";
 import { useMediaQuery } from "#renderer/lib/use-media-query";
+import { Button } from "#renderer/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -159,6 +161,45 @@ export const ConnectWaiting = ({
     {children}
   </p>
 );
+
+/**
+ * A row's connect waiting on the browser (`useRowConnects`): what it waits
+ * for and its Cancel, in the place of the row's Connect.
+ */
+export const ConnectPending = ({
+  onCancel,
+  className,
+  cancelClassName,
+}: {
+  onCancel(): void;
+  className?: string;
+  /** The surface's own button size, matched to the Connect it stands in for. */
+  cancelClassName?: string;
+}) => {
+  const { t } = useTranslation();
+  return (
+    <span
+      data-slot="connect-pending"
+      className={cn("flex shrink-0 items-center gap-1", className)}
+    >
+      <span
+        role="status"
+        className="text-muted-foreground flex items-center gap-2 text-[13px] leading-[18px] whitespace-nowrap"
+      >
+        <span className="size-2 shrink-0 animate-pulse rounded-full bg-[var(--chat-status-attention)] motion-reduce:animate-none" />
+        {t("phase5.waitingSignIn")}
+      </span>
+      <Button
+        size="sm"
+        variant="ghost"
+        className={cn("text-[13px]", cancelClassName)}
+        onClick={onCancel}
+      >
+        {t("phase5.cancel")}
+      </Button>
+    </span>
+  );
+};
 
 /** One step of a connect; numbered only when there is more than one. */
 export const ConnectStep = ({

@@ -19,9 +19,15 @@ import { AlertTriangle, Check } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import {
+  ConnectNote,
+  ConnectPending,
+} from "#renderer/components/form-kit/connect-dialog";
 import { GroupCard } from "#renderer/components/form-kit/page";
 import { ABACUS_BUY_CREDITS_URL } from "#renderer/lib/abacus-links";
+import { connectErrorText } from "#renderer/lib/connect-page";
 import { IS_ELECTRON } from "#renderer/lib/platform";
+import { useRowConnects } from "#renderer/lib/use-row-connects";
 import { Button } from "#renderer/ui/button";
 import {
   Dialog,
@@ -46,7 +52,10 @@ export interface CreditActions {
   /** A paid plan's next plan up, its link read at click time; the account is then watched. */
   openNextPlan?(): Promise<void>;
   configuredFreeSources?(): Promise<Record<string, boolean>>;
+  /** False when a sign-in was cancelled; a failed one rejects with its reason. */
   connectFreeSource?(source: FreePoolProvider, key?: string): Promise<boolean>;
+  /** Stops the sign-in `connectFreeSource` is waiting on. */
+  cancelFreeSource?(source: FreePoolProvider): void;
   /** The account's plan, credits and upgrades, read now; see billing-plan.ts. */
   billingPlan?(): Promise<BillingPlan | null>;
   /** The user chose the free models at the credit wall (main tells the agents). */
@@ -191,16 +200,31 @@ export const CreditsCard = ({
             : "workspace.premiumUpgrade.switchNote"
     );
   const balance = billing?.current;
-  const connect = async (source: FreePoolProvider, value?: string) => {
+  const connected = async () => {
+    setAsking(null);
+    setConfigured((await host.configuredFreeSources?.()) ?? {});
+    await onResume?.();
+  };
+  // A browser sign-in waits on its own row: the card's other actions stay usable.
+  const signIns = useRowConnects();
+  const signIn = (source: FreePoolProvider) => {
+    const connectSource = host.connectFreeSource;
+    if (connectSource == null) return;
+    signIns.start(source, {
+      run: async () =>
+        (await connectSource(source))
+          ? { ok: true }
+          : { ok: false, cancelled: true, error: "cancelled" },
+      cancel: () => host.cancelFreeSource?.(source),
+      connected,
+    });
+  };
+  const connect = async (source: FreePoolProvider, value: string) => {
     if (busy || !host.connectFreeSource) return;
     setBusy(true);
     setError(null);
     try {
-      if (await host.connectFreeSource(source, value)) {
-        setAsking(null);
-        setConfigured((await host.configuredFreeSources?.()) ?? {});
-        await onResume?.();
-      }
+      if (await host.connectFreeSource(source, value)) await connected();
     } catch {
       setError(t("phase5.saveFailed"));
     }
@@ -353,23 +377,32 @@ export const CreditsCard = ({
                         )}
                       </p>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      disabled={busy}
-                      onClick={() => {
-                        if (IS_ELECTRON && source === "openrouter")
-                          void connect(source);
-                        else {
-                          setAsking(source);
-                          setKey("");
-                          setError(null);
-                        }
-                      }}
-                    >
-                      {t("workspace.premiumUpgrade.connectCta")}
-                    </Button>
+                    {signIns.waiting(source) ? (
+                      <ConnectPending onCancel={() => signIns.cancel(source)} />
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={busy}
+                        onClick={() => {
+                          if (IS_ELECTRON && source === "openrouter")
+                            signIn(source);
+                          else {
+                            setAsking(source);
+                            setKey("");
+                            setError(null);
+                          }
+                        }}
+                      >
+                        {t("workspace.premiumUpgrade.connectCta")}
+                      </Button>
+                    )}
                   </div>
+                  {signIns.error(source) != null && (
+                    <ConnectNote error className="mt-1">
+                      {connectErrorText(t, signIns.error(source)!)}
+                    </ConnectNote>
+                  )}
                 </div>
               ))
             ) : null}

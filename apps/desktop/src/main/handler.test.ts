@@ -62,6 +62,7 @@ vi.mock("./profile-home", () => ({
   legacyProfileKeyFor: vi.fn(() => "ada@example.com_acme"),
   // Same profile: no switch, no relaunch (the path every test here walks).
   activateProfile: vi.fn(() => false),
+  noteHeldSignIn: vi.fn(),
   initProfileHome: vi.fn(),
 }));
 vi.mock("./services/providers/abacus-auth-service", () => ({
@@ -93,7 +94,7 @@ import { ABACUS_CONNECTORS_SERVER_NAME } from "@abacus-ai/contract/contracts";
 
 import { wireHostEvents } from "./handler";
 import { electronHostPlatform } from "./host-operations/electron";
-import { activateProfile, profileKeyFor } from "./profile-home";
+import { activateProfile, noteHeldSignIn, profileKeyFor } from "./profile-home";
 import { readSettings, saveApiKey } from "./services/config/settings";
 import {
   abacusCredentialRejected,
@@ -128,6 +129,7 @@ beforeEach(() => {
   createBot.mockReset();
   updateBot.mockReset();
   ensureMcpServer.mockClear();
+  vi.mocked(noteHeldSignIn).mockClear();
   removeMcpServer.mockClear();
   restoreSessionsForAccount.mockClear();
   stashSessionsForAccount.mockClear();
@@ -187,6 +189,7 @@ beforeEach(() => {
   // Startup reconciles the derived gateway from the stored credential. Each
   // case below asserts only the transition it triggers.
   ensureMcpServer.mockClear();
+  vi.mocked(noteHeldSignIn).mockClear();
   removeMcpServer.mockClear();
 });
 
@@ -421,6 +424,8 @@ describe("signing in to an account that must pay", () => {
 
       expect(fetchAbacusAccount).toHaveBeenCalledOnce();
       expect(activateProfile).not.toHaveBeenCalled();
+      // Still a sign-in on this install: a sign-out from here stays signed out.
+      expect(noteHeldSignIn).toHaveBeenCalled();
       await expect(handlers.get("payment")?.({})).resolves.toEqual({
         reason,
       });

@@ -40,7 +40,10 @@ export const creditActionsFor = (
     connectFreeSource: async (source, key) => {
       if (IS_ELECTRON && source === "openrouter" && key == null) {
         const result = await client.auth.openRouter.start({});
-        if (!result.ok) return false;
+        if (!result.ok) {
+          if (result.cancelled === true) return false;
+          throw new Error(result.error);
+        }
       } else {
         if (key == null) return false;
         await client.settings.keys.save({ provider: source, key });
@@ -48,6 +51,10 @@ export const creditActionsFor = (
       await client.models.list({ refresh: true });
       await connected?.();
       return true;
+    },
+    cancelFreeSource: (source) => {
+      if (IS_ELECTRON && source === "openrouter")
+        void client.auth.openRouter.cancel({}).catch(() => undefined);
     },
     refreshModels: async () => {
       await connected?.();

@@ -245,7 +245,8 @@
   .onboarding-row { flex-wrap: wrap; gap: 10px; padding: 12px; }
   .onboarding-row-title { flex-basis: calc(100% - 60px); }
   .onboarding-row > button, .onboarding-row > .onboarding-connected,
-  .onboarding-row > [role="status"] { margin-left: 58px; }
+  .onboarding-row > [role="status"],
+  .onboarding-row > [data-slot="connect-pending"] { margin-left: 58px; }
 }
 
 @media (max-height: 700px) {

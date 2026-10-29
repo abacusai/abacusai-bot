@@ -27,6 +27,7 @@ import {
 } from "#renderer/features/onboarding/actions";
 import {
   releaseOnboardingConnect,
+  cancelOnboardingConnect,
   connectOnboarding,
 } from "#renderer/features/onboarding/connect";
 import {
@@ -285,6 +286,7 @@ const OnboardingRoute = () => {
         createFirstBot={create}
         choose={choose}
         connect={connect}
+        cancelConnect={cancelOnboardingConnect}
         planPitch={(billing) => <PlanPitchList billing={billing} />}
       />
       {pairing && step === "connectors" && (

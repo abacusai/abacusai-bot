@@ -205,3 +205,45 @@ describe("the app's folders and a repository above them", () => {
     );
   });
 });
+
+describe("whether an account has signed in on this install", () => {
+  it.each([
+    ["a fresh install", () => {}, false],
+    [
+      "an account that signed in",
+      (m: typeof import("./profile-home")) => m.activateProfile("a", "key-a"),
+      true,
+    ],
+    // Held for payment: no profile, but signing out of it must not auto sign in.
+    [
+      "a sign-in held for payment",
+      (m: typeof import("./profile-home")) => m.noteHeldSignIn(),
+      true,
+    ],
+    [
+      "a held sign-in, then a paid account",
+      (m: typeof import("./profile-home")) => {
+        m.noteHeldSignIn();
+        m.activateProfile("a", "key-a");
+      },
+      true,
+    ],
+  ] as const)("%s: %s", async (_case, act, expected) => {
+    const profileHome = await import("./profile-home");
+    act(profileHome);
+    vi.resetModules();
+
+    expect((await import("./profile-home")).hasSignedInBefore()).toBe(expected);
+  });
+
+  it("keeps the held sign-in through a later profile switch", async () => {
+    const { noteHeldSignIn, activateProfile } = await import("./profile-home");
+    noteHeldSignIn();
+    activateProfile("a", "key-a");
+
+    const registry = JSON.parse(
+      fs.readFileSync(path.join(sandbox, "profiles.json"), "utf8")
+    ) as { heldSignIn?: boolean };
+    expect(registry.heldSignIn).toBe(true);
+  });
+});

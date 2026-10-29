@@ -1,11 +1,12 @@
 import { CONNECTORS, type Connector } from "@abacus-ai/connectors/registry";
 import { CheckIcon, LoaderCircleIcon, TriangleAlertIcon } from "lucide-react";
-import { useRef, useState, type Ref } from "react";
+import type { Ref } from "react";
 
 import { ConnectorMark } from "#renderer/components/connector-mark";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { connectErrorText } from "#renderer/lib/connect-page";
 import { IS_ELECTRON } from "#renderer/lib/platform";
+import { useRowConnects } from "#renderer/lib/use-row-connects";
 import { Button } from "#renderer/ui/button";
 
 import { ConnectFailed } from "../connect";
@@ -56,51 +57,30 @@ export const ConnectorsStep = ({
   const prefs = usePrefs();
   // Each tile connects on its own: the page never waits on a connector, so a
   // sign-in left open in the browser blocks neither the other tiles nor Continue.
-  const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
-  const [failed, setFailed] = useState<Readonly<Record<string, string>>>({});
-  const attempts = useRef(new Map<string, number>());
-  const settle = (id: string, token: number, error: string | null) => {
-    if (attempts.current.get(id) !== token) return;
-    setPending((current) => {
-      const next = new Set(current);
-      next.delete(id);
-      return next;
-    });
-    if (error != null) setFailed((current) => ({ ...current, [id]: error }));
-  };
-  const start = (id: string) => {
-    const token = (attempts.current.get(id) ?? 0) + 1;
-    attempts.current.set(id, token);
-    setPending((current) => new Set(current).add(id));
-    setFailed((current) => {
-      const next = { ...current };
-      delete next[id];
-      return next;
-    });
-    void Promise.resolve()
-      .then(() => props.connect?.(id))
-      .then(
-        // Connected shows from the statuses, which the host also announces.
-        () => refresh().catch(() => undefined),
-        (error: unknown) => {
+  const rows = useRowConnects();
+  const start = (id: string) =>
+    rows.start(id, {
+      run: async () => {
+        try {
+          await props.connect?.(id);
+          return { ok: true };
+        } catch (error) {
           // Backing out of the sign-in is not a failure: the tile goes back to Connect.
           if (error instanceof ConnectFailed && error.message === "timeout")
-            return;
-          throw error;
+            return { ok: false, cancelled: true, error: error.message };
+          return {
+            ok: false,
+            error:
+              error instanceof ConnectFailed
+                ? connectErrorText(t, error.message)
+                : t("onboarding.frame.failed"),
+          };
         }
-      )
-      .then(
-        () => settle(id, token, null),
-        (error: unknown) =>
-          settle(
-            id,
-            token,
-            error instanceof ConnectFailed
-              ? connectErrorText(t, error.message)
-              : t("onboarding.frame.failed")
-          )
-      );
-  };
+      },
+      cancel: () => props.cancelConnect?.(id),
+      // Connected shows from the statuses, which the host also announces.
+      connected: refresh,
+    });
   const tiles = connectorTiles(statuses);
   const connectedAny = tiles.some(
     (entry) => statuses?.[entry.id]?.state === "connected"
@@ -126,21 +106,21 @@ export const ConnectorsStep = ({
       >
         {tiles.map((entry) => {
           const connected = statuses?.[entry.id]?.state === "connected";
-          const reason = failed[entry.id];
+          const reason = rows.error(entry.id) ?? undefined;
           const state = loading
             ? "loading"
             : connected
               ? "connected"
-              : pending.has(entry.id)
+              : rows.waiting(entry.id)
                 ? "connecting"
                 : reason != null || statuses?.[entry.id]?.state === "error"
                   ? "error"
                   : "idle";
           return (
-            <li key={entry.id} className="min-w-0">
+            <li key={entry.id} className="relative min-w-0">
               <Button
                 variant="outline"
-                className="data-[connected=true]:border-primary data-[connected=true]:bg-primary/5 h-auto w-full items-center justify-start gap-3 rounded-xl p-3 text-left whitespace-normal transition-colors disabled:opacity-100"
+                className="data-[connected=true]:border-primary data-[connected=true]:bg-primary/5 h-auto w-full items-center justify-start gap-3 rounded-xl p-3 text-left whitespace-normal transition-colors disabled:opacity-100 data-[state=connecting]:pe-24"
                 data-connector={entry.id}
                 data-connected={connected}
                 data-state={state}
@@ -187,7 +167,7 @@ export const ConnectorsStep = ({
                       <LoaderCircleIcon className="size-3.5 animate-spin motion-reduce:animate-none" />
                     )}
                     {state === "idle" && t("onboarding.connectorsConnectCta")}
-                    {state === "connecting" && t("phase5.connecting")}
+                    {state === "connecting" && t("phase5.waitingSignIn")}
                     {state === "loading" && t("common.loading")}
                     {state === "error" && (
                       <>
@@ -206,6 +186,18 @@ export const ConnectorsStep = ({
                   )}
                 </span>
               </Button>
+              {state === "connecting" && (
+                // Beside the tile, not in it: a button cannot hold another.
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-muted-foreground absolute end-2 top-1/2 -translate-y-1/2 text-[13px]"
+                  data-slot="connector-cancel"
+                  onClick={() => rows.cancel(entry.id)}
+                >
+                  {t("phase5.cancel")}
+                </Button>
+              )}
             </li>
           );
         })}
