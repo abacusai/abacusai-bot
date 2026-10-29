@@ -27,6 +27,8 @@ export interface OnboardingPageProps {
   createFirstBot(id: string): Promise<FirstBotResult | null>;
   choose(choice: FirstChoice): Promise<void>;
   connect?(id: string): Promise<unknown>;
+  /** A connector tile's Cancel: stop waiting, here and on the host. */
+  cancelConnect?(id: string): void;
   /** The plan's whole pitch for the offer step, composed by the route (the upgrade dialog's list). */
   planPitch?(billing: BillingPlan | null): ReactNode;
 }

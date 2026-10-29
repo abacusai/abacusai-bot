@@ -266,3 +266,58 @@ it("keeps connecting visible until the refreshed status resolves", async () => {
   );
   expect(button.getAttribute("data-state")).toBe("idle");
 });
+
+it("waits on its tile with Cancel while Continue and the other tiles stay usable", async () => {
+  await initI18n();
+  let answer: (failure?: Error) => void = () => {};
+  const connect = vi.fn(
+    (id: string) =>
+      new Promise<void>((resolve, reject) => {
+        if (id === "abacus-gmailuser")
+          answer = (failure) => (failure ? reject(failure) : resolve());
+        else resolve();
+      })
+  );
+  const cancelConnect = vi.fn();
+  const refresh = vi.fn(async () => {});
+  const context = ctx({ connect, cancelConnect });
+  render(
+    <ConnectorsStep
+      ctx={context}
+      statuses={{}}
+      refresh={refresh}
+      heading={createRef()}
+    />
+  );
+  const gmail = screen.getByRole("button", { name: "Connect Gmail" });
+  fireEvent.click(gmail);
+  await vi.waitFor(() =>
+    expect(gmail.getAttribute("data-state")).toBe("connecting")
+  );
+  expect(gmail.textContent).toContain("Waiting for sign-in…");
+
+  // Nothing else waits on Gmail's sign-in.
+  const continueButton = screen.getByRole("button", { name: "Continue" });
+  expect((continueButton as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.click(continueButton);
+  expect(context.advance).toHaveBeenCalledOnce();
+  const telegram = screen.getByRole("button", { name: "Connect Telegram" });
+  expect((telegram as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.click(telegram);
+  expect(connect).toHaveBeenLastCalledWith("messaging-telegram");
+  // Telegram settles on its own; Gmail still waits.
+  await vi.waitFor(() =>
+    expect(screen.getAllByRole("button", { name: "Cancel" })).toHaveLength(1)
+  );
+  expect(gmail.getAttribute("data-state")).toBe("connecting");
+
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(cancelConnect).toHaveBeenCalledExactlyOnceWith("abacus-gmailuser");
+  expect(gmail.getAttribute("data-state")).toBe("idle");
+  expect(screen.queryByRole("button", { name: "Cancel" })).toBeNull();
+  // The cancelled connect's late answer changes nothing.
+  answer(new Error("late"));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(gmail.getAttribute("data-state")).toBe("idle");
+  expect(screen.queryByRole("alert")).toBeNull();
+});

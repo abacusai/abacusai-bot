@@ -7,8 +7,11 @@ import {
   ConnectorMark,
   markForProvider,
 } from "#renderer/components/connector-mark";
+import { ConnectPending } from "#renderer/components/form-kit/connect-dialog";
+import { connectErrorText } from "#renderer/lib/connect-page";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { errorText } from "#renderer/lib/use-app-context";
+import { useRowConnects } from "#renderer/lib/use-row-connects";
 import { Button } from "#renderer/ui/button";
 import { Command, CommandItem, CommandList } from "#renderer/ui/command";
 import { Field, FieldLabel } from "#renderer/ui/field";
@@ -37,6 +40,17 @@ export const ModelSetupPopover = ({
   const [key, setKey] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A sign-in waits on its own row; the other rows and a key stay usable.
+  const connects = useRowConnects();
+  const connect = (id: string) =>
+    connects.start(id, {
+      run: async () =>
+        (await setup.connect(id))
+          ? { ok: true }
+          : { ok: false, cancelled: true, error: "cancelled" },
+      cancel: () => setup.cancelConnect(id),
+      connected: async () => connected(),
+    });
   const perform = async (
     action: () => Promise<void | boolean>,
     success = false
@@ -93,39 +107,60 @@ export const ModelSetupPopover = ({
                   </CommandItem>
                 </>
               ) : (
-                setup.providers.map((row) => (
-                  <CommandItem
-                    key={row.id}
-                    value={row.id}
-                    disabled={pending}
-                    className="h-8 rounded-lg px-2 py-1 text-[13px]"
-                    onSelect={() => {
-                      setError(null);
-                      if (row.connected) setup.settings(row.id);
-                      else if (row.connect)
-                        void perform(() => setup.connect(row.id), true);
-                      else {
-                        setProvider(row.id);
-                        setKey("");
-                      }
-                    }}
-                  >
-                    <ConnectorMark
-                      id={markForProvider(row.id) ?? row.id}
-                      size={16}
-                    />
-                    <span className="min-w-0 flex-1 truncate">{row.label}</span>
-                    <span className="text-muted-foreground shrink-0 text-xs">
-                      {t(
-                        row.connected
-                          ? "phase5.connected"
-                          : row.connect
-                            ? "phase5.connect"
-                            : "phase5.addKey"
+                setup.providers.map((row) => {
+                  const waiting = connects.waiting(row.id);
+                  const failed = connects.error(row.id);
+                  return (
+                    <CommandItem
+                      key={row.id}
+                      value={row.id}
+                      disabled={pending}
+                      className="h-auto min-h-8 flex-wrap rounded-lg px-2 py-1 text-[13px]"
+                      onSelect={() => {
+                        setError(null);
+                        if (waiting) return;
+                        if (row.connected) setup.settings(row.id);
+                        else if (row.connect) connect(row.id);
+                        else {
+                          setProvider(row.id);
+                          setKey("");
+                        }
+                      }}
+                    >
+                      <ConnectorMark
+                        id={markForProvider(row.id) ?? row.id}
+                        size={16}
+                      />
+                      <span className="min-w-0 flex-1 truncate">
+                        {row.label}
+                      </span>
+                      {waiting ? (
+                        <ConnectPending
+                          cancelClassName="h-6 px-2"
+                          onCancel={() => connects.cancel(row.id)}
+                        />
+                      ) : (
+                        <span className="text-muted-foreground shrink-0 text-xs">
+                          {t(
+                            row.connected
+                              ? "phase5.connected"
+                              : row.connect
+                                ? "phase5.connect"
+                                : "phase5.addKey"
+                          )}
+                        </span>
                       )}
-                    </span>
-                  </CommandItem>
-                ))
+                      {failed != null && (
+                        <span
+                          role="alert"
+                          className="text-destructive basis-full ps-6 text-xs"
+                        >
+                          {connectErrorText(t, failed)}
+                        </span>
+                      )}
+                    </CommandItem>
+                  );
+                })
               )}
               {setup.providers.some((row) => row.connected) ? (
                 <p className="text-muted-foreground px-2 py-1.5">

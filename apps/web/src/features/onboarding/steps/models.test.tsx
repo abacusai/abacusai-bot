@@ -10,6 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { fixedT, initI18n } from "#renderer/lib/i18n";
 
+import { onboardingStore } from "../store";
 import type { StepContext } from "./context";
 import { ModelsStep } from "./models";
 
@@ -90,10 +91,11 @@ describe("ModelsStep", () => {
       />
     );
     fireEvent.click(screen.getByRole("button", { name: "Connect" }));
-    const waiting = await screen.findByRole("button", {
-      name: "Waiting for sign-in…",
-    });
-    expect((waiting as HTMLButtonElement).disabled).toBe(true);
+    const row = document.querySelector('[data-provider="openrouter"]')!;
+    expect((await screen.findByRole("status")).textContent).toBe(
+      "Waiting for sign-in…"
+    );
+    expect(row.contains(screen.getByRole("status"))).toBe(true);
     const next = screen.getByRole("button", { name: "Continue" });
     expect((next as HTMLButtonElement).disabled).toBe(false);
     fireEvent.click(next);
@@ -104,7 +106,7 @@ describe("ModelsStep", () => {
     expect(screen.getByRole("button", { name: "Connect" })).toBeTruthy();
     // The cancelled hop's late answer changes nothing.
     answer({ ok: false, error: "late" });
-    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(screen.queryByRole("alert")).toBeNull();
     expect(refresh).not.toHaveBeenCalled();
   });
@@ -125,7 +127,12 @@ describe("ModelsStep", () => {
       />
     );
     fireEvent.click(screen.getByRole("button", { name: "Connect" }));
-    expect((await screen.findByRole("alert")).textContent).toBe("Timed out");
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toBe("Timed out");
+    // On the row it came from.
+    expect(
+      document.querySelector('[data-provider="openrouter"]')!.contains(alert)
+    ).toBe(true);
     expect(screen.getByRole("button", { name: "Connect" })).toBeTruthy();
   });
 
@@ -192,5 +199,39 @@ describe("ModelsStep", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(context.advance).toHaveBeenCalledOnce();
+  });
+
+  it("shows the page's Abacus sign-in on its row, with Cancel, while Continue stays live", async () => {
+    await initI18n();
+    const { context } = ctx(false);
+    onboardingStore.setState((state) => ({
+      ...state,
+      signIn: { id: "a", intent: "signin", status: "pending", outcome: null },
+    }));
+    try {
+      render(
+        <ModelsStep
+          ctx={context}
+          connected={new Set()}
+          refresh={async () => {}}
+          heading={createRef()}
+        />
+      );
+      const row = document.querySelector('[data-provider="abacus"]')!;
+      expect(row.querySelector('[role="status"]')?.textContent).toBe(
+        "Waiting for sign-in…"
+      );
+      // OpenRouter and Continue do not wait on it.
+      expect(
+        (screen.getByRole("button", { name: "Connect" }) as HTMLButtonElement)
+          .disabled
+      ).toBe(false);
+      fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+      expect(context.advance).toHaveBeenCalledOnce();
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+      expect(context.props.cancelSignIn).toHaveBeenCalledOnce();
+    } finally {
+      onboardingStore.setState((state) => ({ ...state, signIn: null }));
+    }
   });
 });

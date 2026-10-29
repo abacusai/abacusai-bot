@@ -1,12 +1,13 @@
 import { canSignOutOfAbacus } from "@abacus-ai/contract/settings";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { LocalDataReset } from "#platform/data-reset";
 import { signInAbacus } from "#platform/sign-in";
 import { signOutAbacus } from "#platform/sign-out";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
+import { ConnectPending } from "#renderer/components/form-kit/connect-dialog";
 import {
   AreaPage,
   GroupCard,
@@ -21,7 +22,8 @@ import { sidebarAccount } from "#renderer/lib/sidebar-account";
 import { showInfo } from "#renderer/lib/toast";
 import { openTopUp, openUpgrade } from "#renderer/lib/upgrade";
 import { useAccount } from "#renderer/lib/use-account";
-import { useAppContext, errorText } from "#renderer/lib/use-app-context";
+import { useAppContext } from "#renderer/lib/use-app-context";
+import { useRowConnects } from "#renderer/lib/use-row-connects";
 import { forgetAccount } from "#renderer/platform/forget-account";
 import { Button } from "#renderer/ui/button";
 import { Checkbox } from "#renderer/ui/checkbox";
@@ -53,32 +55,21 @@ export const AccountPage = () => {
   }).data;
   const inviteLink = referrals.data?.inviteLink;
   const canSignOut = !IS_ELECTRON || canSignOutOfAbacus(settings.data ?? null);
-  const [pending, setPending] = useState(false);
   const [removeOthers, setRemoveOthers] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const attempt = useRef(0);
-  useEffect(
-    () => () => {
-      if (IS_ELECTRON && pending) {
-        attempt.current++;
-        void transport.client.auth.abacus.cancel({});
-      }
-    },
-    [pending, transport]
-  );
-  const signIn = async () => {
-    const id = ++attempt.current;
-    setPending(true);
-    try {
-      const result = await signInAbacus(transport, { intent: "signin" });
-      if (id !== attempt.current) return;
-      if (result.ok) await credentialsChanged();
-      else if (!result.cancelled) setError(result.error);
-    } catch (e) {
-      setError(errorText(e));
-    }
-    if (id === attempt.current) setPending(false);
+  // The sign-in waits on its own button; the page stays usable, and leaving it cancels.
+  const connects = useRowConnects();
+  const cancelSignIn = () => {
+    if (IS_ELECTRON)
+      void transport.client.auth.abacus.cancel({}).catch(() => undefined);
   };
+  const signIn = () =>
+    connects.start("abacus", {
+      run: () => signInAbacus(transport, { intent: "signin" }),
+      cancel: cancelSignIn,
+      leave: cancelSignIn,
+      connected: credentialsChanged,
+    });
+  const error = connects.error("abacus");
   if (!account.data)
     return (
       <AreaPage title={t("settings.pages.account")}>
@@ -87,9 +78,11 @@ export const AccountPage = () => {
           {t("phase5.signInDetail")}
         </p>
         <div className="flex gap-2">
-          <Button disabled={pending} onClick={() => void signIn()}>
-            {t(pending ? "phase5.waitingSignIn" : "phase5.signIn")}
-          </Button>
+          {connects.waiting("abacus") ? (
+            <ConnectPending onCancel={() => connects.cancel("abacus")} />
+          ) : (
+            <Button onClick={signIn}>{t("phase5.signIn")}</Button>
+          )}
           {!IS_ELECTRON && (
             <ConfirmAction
               title={t("phase5.signOut")}
@@ -97,18 +90,6 @@ export const AccountPage = () => {
               label={t("userMenu.signOut")}
               onConfirm={() => signOutAbacus(context, true)}
             />
-          )}
-          {pending && (
-            <Button
-              variant="secondary"
-              onClick={() => {
-                attempt.current++;
-                setPending(false);
-                if (IS_ELECTRON) void transport.client.auth.abacus.cancel({});
-              }}
-            >
-              {t("phase5.cancel")}
-            </Button>
           )}
           <Button
             variant="secondary"

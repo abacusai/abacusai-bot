@@ -81,10 +81,53 @@ it("connects OpenRouter and replays a dead turn once after the refreshed catalog
     )!
   );
   await waitFor(() => expect(onResume).toHaveBeenCalledOnce());
-  expect(connectFreeSource).toHaveBeenCalledExactlyOnceWith(
-    "openrouter",
-    undefined
+  expect(connectFreeSource).toHaveBeenCalledExactlyOnceWith("openrouter");
+});
+
+it("waits for OpenRouter on its row with Cancel; the card's other actions stay usable", async () => {
+  let answer: (connected: boolean) => void = () => {};
+  const connectFreeSource = vi.fn(
+    () =>
+      new Promise<boolean>((resolve) => {
+        answer = resolve;
+      })
   );
+  const cancelFreeSource = vi.fn();
+  const onResume = vi.fn(async () => {});
+  const rendered = await renderWithDb(
+    <CreditsCard
+      tier="free"
+      host={{
+        openExternal: async () => {},
+        openUpgrade: async () => {},
+        configuredFreeSources: async () => ({}),
+        connectFreeSource,
+        cancelFreeSource,
+      }}
+      onResume={onResume}
+    />
+  );
+  cleanup = rendered.cleanup;
+  const row = () =>
+    document.querySelector<HTMLElement>('[data-source="openrouter"]')!;
+  await waitFor(() => expect(row()).toBeTruthy());
+  fireEvent.click(row().querySelector("button")!);
+  await waitFor(() =>
+    expect(row().querySelector('[role="status"]')?.textContent).toBe(
+      "Waiting for sign-in…"
+    )
+  );
+  for (const button of document.querySelectorAll<HTMLButtonElement>(
+    '[data-slot="credits-card"] [data-source]:not([data-source="openrouter"]) button'
+  ))
+    expect(button.disabled).toBe(false);
+
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(cancelFreeSource).toHaveBeenCalledWith("openrouter");
+  expect(row().querySelector('[role="status"]')).toBeNull();
+  answer(true);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(onResume).not.toHaveBeenCalled();
 });
 
 it("a paid plan the server does not name (an older server) keeps its Top up, on the top-up link", async () => {

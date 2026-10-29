@@ -7,7 +7,7 @@ import { revalidateLogic } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { ChevronRightIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
@@ -19,6 +19,10 @@ import {
 import { useAppForm } from "#renderer/components/form-kit";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
 import {
+  ConnectNote,
+  ConnectPending,
+} from "#renderer/components/form-kit/connect-dialog";
+import {
   AreaPage,
   GroupCard,
   PageNote,
@@ -27,12 +31,14 @@ import {
 } from "#renderer/components/form-kit/page";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { useMutation } from "#renderer/data/query-client";
+import { connectErrorText } from "#renderer/lib/connect-page";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 import { useCreditsAccount } from "#renderer/lib/use-credits-account";
 import { useNow } from "#renderer/lib/use-now";
+import { useRowConnects } from "#renderer/lib/use-row-connects";
 import { Button } from "#renderer/ui/button";
 import {
   Collapsible,
@@ -54,6 +60,7 @@ import { creditMarkState } from "./credits";
 export const ModelsPage = () => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
+  const connects = useProviderConnects();
   const navigate = useAppNavigate();
   const prefs = usePrefs();
   const update = useUpdatePrefs();
@@ -73,51 +80,68 @@ export const ModelsPage = () => {
   const fields = PROVIDER_KEY_FIELDS.filter((p) => p.kind === "model").toSorted(
     (a, b) => Number(!!b.featured) - Number(!!a.featured)
   );
-  const row = (field: ProviderKeyField) => (
-    <SettingRow
-      id={`provider-${field.provider}`}
-      key={field.provider}
-      media={
-        <ConnectorMark
-          id={markForProvider(field.provider) ?? field.provider}
-          size={28}
-        />
-      }
-      title={field.label}
-      detail={
-        keys.data?.includes(field.provider)
-          ? t("phase5.savedUnverified")
-          : field.envVar
-      }
-    >
-      <StatePill>
-        {t(
-          keys.data?.includes(field.provider)
-            ? "phase5.saved"
-            : "phase5.notConnected"
+  const row = (field: ProviderKeyField) => {
+    const error = connects.rows.error(field.provider);
+    return (
+      <div key={field.provider}>
+        <SettingRow
+          id={`provider-${field.provider}`}
+          media={
+            <ConnectorMark
+              id={markForProvider(field.provider) ?? field.provider}
+              size={28}
+            />
+          }
+          title={field.label}
+          detail={
+            keys.data?.includes(field.provider)
+              ? t("phase5.savedUnverified")
+              : field.envVar
+          }
+        >
+          {connects.rows.waiting(field.provider) ? (
+            <ConnectPending
+              onCancel={() => connects.rows.cancel(field.provider)}
+            />
+          ) : (
+            <>
+              <StatePill>
+                {t(
+                  keys.data?.includes(field.provider)
+                    ? "phase5.saved"
+                    : "phase5.notConnected"
+                )}
+              </StatePill>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() =>
+                  void navigate({
+                    to: "/settings/models",
+                    search: (old) => ({ ...old, provider: field.provider }),
+                    transition: "none",
+                  })
+                }
+              >
+                {t(
+                  keys.data?.includes(field.provider)
+                    ? "phase5.manage"
+                    : field.connect && IS_ELECTRON
+                      ? "phase5.connect"
+                      : "phase5.addKey"
+                )}
+              </Button>
+            </>
+          )}
+        </SettingRow>
+        {error != null && (
+          <ConnectNote error className="px-3 pb-2.5">
+            {connectErrorText(t, error)}
+          </ConnectNote>
         )}
-      </StatePill>
-      <Button
-        size="sm"
-        variant="secondary"
-        onClick={() =>
-          void navigate({
-            to: "/settings/models",
-            search: (old) => ({ ...old, provider: field.provider }),
-            transition: "none",
-          })
-        }
-      >
-        {t(
-          keys.data?.includes(field.provider)
-            ? "phase5.manage"
-            : field.connect && IS_ELECTRON
-              ? "phase5.connect"
-              : "phase5.addKey"
-        )}
-      </Button>
-    </SettingRow>
-  );
+      </div>
+    );
+  };
   return (
     <>
       <AreaPage
@@ -187,24 +211,64 @@ export const ModelsPage = () => {
             key={search.provider}
             field={fields.find((f) => f.provider === search.provider)!}
             stored={keys.data?.includes(search.provider) ?? false}
+            connects={connects}
           />
         )}
     </>
   );
 };
+/**
+ * Sign-in providers' connects, owned by the page's rows: the dialog may close
+ * while the browser waits, the row shows the wait with its Cancel, and leaving
+ * the page cancels it.
+ */
+const useProviderConnects = () => {
+  const { transport, credentialsChanged } = useAppContext();
+  const navigate = useAppNavigate();
+  const rows = useRowConnects();
+  const start = (field: ProviderKeyField) => {
+    const auth =
+      field.connect === "abacus"
+        ? transport.client.auth.abacus
+        : transport.client.auth.openRouter;
+    const cancel = () => {
+      if (IS_ELECTRON) void auth.cancel({}).catch(() => undefined);
+    };
+    rows.start(field.provider, {
+      run: () => (IS_ELECTRON ? auth.start({}) : signInAbacus(transport, {})),
+      cancel,
+      leave: cancel,
+      connected: async () => {
+        await transport.client.models.list({ refresh: true });
+        await credentialsChanged();
+        // Its dialog, if still open, has nothing left to do.
+        await navigate({
+          to: "/settings/models",
+          search: (old) =>
+            old.provider === field.provider
+              ? { ...old, provider: undefined }
+              : old,
+          transition: "none",
+        });
+      },
+    });
+  };
+  return { rows, start };
+};
+
 export const ProviderDialog = ({
   field,
   stored,
+  connects,
 }: {
   field: ProviderKeyField;
   stored: boolean;
+  connects: ReturnType<typeof useProviderConnects>;
 }) => {
   const { t } = useTranslation();
   const { transport, credentialsChanged } = useAppContext();
   const navigate = useAppNavigate();
-  const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const token = useRef(0);
   const close = () =>
     void navigate({
       to: "/settings/models",
@@ -213,17 +277,8 @@ export const ProviderDialog = ({
     });
   const canConnect =
     field.connect && (IS_ELECTRON || field.connect === "abacus");
-  const auth =
-    field.connect === "abacus"
-      ? transport.client.auth.abacus
-      : transport.client.auth.openRouter;
-  useEffect(
-    () => () => {
-      token.current++;
-      if (IS_ELECTRON && field.connect) void auth.cancel({});
-    },
-    [auth, field.connect]
-  );
+  const waiting = connects.rows.waiting(field.provider);
+  const connectError = connects.rows.error(field.provider);
   const refresh = async () => {
     await transport.client.models.list({ refresh: true });
     await credentialsChanged();
@@ -256,25 +311,6 @@ export const ProviderDialog = ({
       }
     },
   });
-  const connect = async () => {
-    if (!canConnect) return;
-    const id = ++token.current;
-    setPending(true);
-    setError(null);
-    try {
-      const result = IS_ELECTRON
-        ? await auth.start({})
-        : await signInAbacus(transport, {});
-      if (id !== token.current) return;
-      if (result.ok) {
-        await refresh();
-        close();
-      } else if (!result.cancelled) setError(result.error);
-    } catch (e) {
-      if (id === token.current) setError(errorText(e));
-    }
-    if (id === token.current) setPending(false);
-  };
   return (
     <Dialog
       open
@@ -292,21 +328,24 @@ export const ProviderDialog = ({
           <DialogDescription>{t("phase5.storedHere")}</DialogDescription>
         </DialogHeader>
         {canConnect ? (
-          <div className="flex gap-2">
-            <Button disabled={pending} onClick={() => void connect()}>
-              {t(pending ? "phase5.waitingSignIn" : "phase5.connect")}
-            </Button>
-            {pending && (
+          <div className="flex flex-col gap-2">
+            {waiting ? (
+              <ConnectPending
+                className="self-start"
+                onCancel={() => connects.rows.cancel(field.provider)}
+              />
+            ) : (
               <Button
-                variant="secondary"
-                onClick={() => {
-                  token.current++;
-                  setPending(false);
-                  if (IS_ELECTRON) void auth.cancel({});
-                }}
+                className="self-start"
+                onClick={() => connects.start(field)}
               >
-                {t("phase5.cancel")}
+                {t("phase5.connect")}
               </Button>
+            )}
+            {connectError != null && (
+              <ConnectNote error>
+                {connectErrorText(t, connectError)}
+              </ConnectNote>
             )}
           </div>
         ) : (

@@ -1,7 +1,13 @@
 import { contract } from "@abacus-ai/contract/contract";
 import type { McpServerInfo } from "@abacus-ai/contract/contracts";
 import { implement } from "@orpc/server";
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
@@ -135,4 +141,46 @@ it("lists the chat apps under Featured and their own Messaging category", async 
   await waitFor(() => expect(screen.queryByText("Gmail")).toBeNull());
   for (const name of ["WhatsApp", "Telegram", "Discord"])
     expect(screen.getByText(name)).toBeTruthy();
+});
+
+it("a connector's sign-in waits on its own row with Cancel; the other rows stay usable", async () => {
+  const connect = vi.fn(() => ({
+    ok: true as const,
+    url: "https://example.test/connect",
+  }));
+  const cancelConnect = vi.fn(() => {});
+  app = await renderApp("/library/connectors", {
+    procedures: {
+      connectors: {
+        statuses: os.connectors.statuses.handler(() => ({})),
+        connect: os.connectors.connect.handler(connect),
+        cancelConnect: os.connectors.cancelConnect.handler(cancelConnect),
+      },
+      system: { openExternal: os.system.openExternal.handler(() => {}) },
+    },
+  });
+  const gmail = await waitFor(() => {
+    const element = document.querySelector<HTMLElement>(
+      '[data-setting-id="abacus-gmailuser"]'
+    );
+    expect(element).not.toBeNull();
+    return element!;
+  });
+  fireEvent.click(within(gmail).getByRole("button", { name: "Add" }));
+  expect((await within(gmail).findByRole("status")).textContent).toBe(
+    "Waiting for sign-in…"
+  );
+  // One status line, on the row: nothing page-wide waits.
+  expect(screen.getAllByRole("status")).toHaveLength(1);
+  const others = screen
+    .getAllByRole("button", { name: "Add" })
+    .filter((button) => !gmail.contains(button));
+  expect(others.length).toBeGreaterThan(0);
+  for (const button of others)
+    expect((button as HTMLButtonElement).disabled).toBe(false);
+
+  fireEvent.click(within(gmail).getByRole("button", { name: "Cancel" }));
+  await waitFor(() => expect(cancelConnect).toHaveBeenCalled());
+  await waitFor(() => expect(within(gmail).queryByRole("status")).toBeNull());
+  expect(within(gmail).getByRole("button", { name: "Add" })).toBeTruthy();
 });

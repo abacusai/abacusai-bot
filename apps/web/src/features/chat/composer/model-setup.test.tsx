@@ -60,6 +60,7 @@ const setup = (extra: Partial<ModelSetupBinding> = {}): ModelSetupBinding => ({
     { id: "gemini", label: "Google AI", connected: false, connect: false },
   ],
   connect: vi.fn(async () => true),
+  cancelConnect: vi.fn(),
   save: vi.fn(async () => {}),
   retry: vi.fn(async () => {}),
   settings: vi.fn(),
@@ -98,6 +99,54 @@ describe("model setup in the composer", () => {
     await waitFor(() =>
       expect(state.connect).toHaveBeenCalledWith("openrouter")
     );
+  });
+
+  it("waits on the signing-in row with Cancel while the other rows stay usable", async () => {
+    let answer: (connected: boolean) => void = () => {};
+    const state = setup({
+      connect: vi.fn(
+        () =>
+          new Promise<boolean>((resolve) => {
+            answer = resolve;
+          })
+      ),
+    });
+    const rendered = await renderWithDb(<ModelChip binding={binding(state)} />);
+    cleanup = rendered.cleanup;
+    await open();
+    fireEvent.click(screen.getAllByRole("option")[1]!);
+    const openRouter = screen.getAllByRole("option")[1]!;
+    expect((await within(openRouter).findByRole("status")).textContent).toBe(
+      "Waiting for sign-in…"
+    );
+    // Another provider's key is a click away while OpenRouter waits.
+    const openAi = screen.getAllByRole("option")[2]!;
+    expect(openAi.getAttribute("aria-disabled")).not.toBe("true");
+    fireEvent.click(openAi);
+    expect(await screen.findByLabelText("API key")).toBeTruthy();
+
+    fireEvent.click(within(openRouter).getByRole("button", { name: "Cancel" }));
+    expect(state.cancelConnect).toHaveBeenCalledWith("openrouter");
+    expect(within(openRouter).queryByRole("status")).toBeNull();
+    // The cancelled sign-in's late answer changes nothing.
+    answer(true);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(within(openRouter).queryByRole("status")).toBeNull();
+  });
+
+  it("says why a sign-in failed on its row", async () => {
+    const state = setup({
+      connect: vi.fn(async () => {
+        throw new Error("Timed out");
+      }),
+    });
+    const rendered = await renderWithDb(<ModelChip binding={binding(state)} />);
+    cleanup = rendered.cleanup;
+    await open();
+    fireEvent.click(screen.getAllByRole("option")[1]!);
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toBe("Timed out");
+    expect(screen.getAllByRole("option")[1]!.contains(alert)).toBe(true);
   });
 
   it.each([
