@@ -42,8 +42,9 @@ env:
 jobs:
   # What this run has to test, and which release unit the change touches.
   # Renderer and agent source are an experience release (hot-swapped over TUF,
-  # no relaunch); anything else fails toward a full signed foundation release,
-  # and only a foundation change has to package on every operating system.
+  # no relaunch); anything else fails toward a full signed foundation release.
+  # A pull request packages on every operating system only when it is a
+  # foundation change that touches what the packaged app is built from.
   plan:
     name: Plan
     if: github.event.action != 'closed'
@@ -84,14 +85,16 @@ jobs:
             exit 0
           fi
           pnpm exec turbo run build --filter=@abacus-ai/updater
-          result=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD | node apps/updater/dist/classify.mjs)
+          changed=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD)
+          result=$(echo "$changed" | node apps/updater/dist/classify.mjs)
           kind=$(echo "$result" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>console.log(JSON.parse(d).kind))')
           echo "This change is a **${kind}** release." >> "$GITHUB_STEP_SUMMARY"
           echo "$result"
-          if [ "$kind" = experience ]; then
-            echo 'package=["ubuntu-latest"]' >> "$GITHUB_OUTPUT"
-          else
+          packaging='^(\.github/workflows/ci\.yml|\.nvmrc|package\.json|pnpm-(lock|workspace)\.yaml|patches/|packages/config/|packages/agent/(package\.json|tsdown\.config\.ts|scripts/|assets/)|apps/desktop/(package\.json|vite\.config\.ts|electron-builder\.yml|build/|resources/|scripts/|src/main/resources\.ts))'
+          if [ "$kind" != experience ] && grep -qE "$packaging" <<< "$changed"; then
             echo "$everywhere" >> "$GITHUB_OUTPUT"
+          else
+            echo 'package=["ubuntu-latest"]' >> "$GITHUB_OUTPUT"
           fi
 
   check:
@@ -364,8 +367,8 @@ jobs:
         run: xvfb-run -a --server-args="-screen 0 1920x1080x24" node scripts/screenshots.mjs --require-native-frame
 
   # Linux packages whenever the desktop app is affected. macOS and Windows
-  # package a foundation change and every push to main: an experience change
-  # leaves the packaged shell as it was.
+  # package every push to main, and a pull request only when the plan job
+  # finds a packaging input in its diff.
   package:
     name: Package (${{ matrix.os }})
     needs: plan
