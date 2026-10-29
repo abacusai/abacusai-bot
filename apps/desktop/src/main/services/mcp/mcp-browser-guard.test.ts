@@ -45,7 +45,7 @@ const methodAt = (offset: number): string | null => {
   const before = SOURCE.slice(0, offset);
   const declarations = [
     ...before.matchAll(
-      /^ {2}(?:private |protected |public )?(?:static )?(?:async )?(\w+)\s*\(/gm
+      /^ {2}(?:private |protected |public )?(?:static )?(?:async )?(\w+)\s*(?:<[^>]*>)?\(/gm
     ),
   ];
   return declarations.at(-1)?.[1] ?? null;
@@ -115,11 +115,12 @@ describe("the browser server's activations", () => {
     const callers = [...SOURCE.matchAll(/this\.inSessionOrder\(/g)].map(
       (match) => methodAt(match.index)
     );
-    // Taken at the entry points only (a tool call, the chat's own screenshot),
-    // never by a primitive inside one, which would wait on itself.
+    // Taken at the entry points only (a tool call, a served page's own tab
+    // for the chat's screenshot or a deliverable's check), never by a
+    // primitive inside one, which would wait on itself.
     expect(
       callers.filter(
-        (caller) => caller !== "executeTool" && caller !== "screenshotForChat"
+        (caller) => caller !== "executeTool" && caller !== "onServedTab"
       )
     ).toEqual([]);
     expect(callers).toContain("executeTool");

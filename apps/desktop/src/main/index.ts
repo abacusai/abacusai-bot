@@ -103,6 +103,7 @@ import {
 } from "./rpc/transports/message-port";
 import { publishToWindowViews } from "./rpc/window-events";
 import { ServiceHost } from "./service-host";
+import { revivePreview } from "./services/agent-tools/served-previews";
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import type { BrowserRuntimeWindow } from "./services/browser/electron-browser-runtime";
 import {
@@ -449,6 +450,7 @@ const browserRuntime = new ElectronBrowserRuntime(browserRuntimeWindow, {
   openExternal: (url) => {
     if (isSafeExternalUrl(url)) void shell.openExternal(url);
   },
+  revivePreview,
 });
 workspaceServiceHost.attachBrowserRuntime(browserRuntime);
 

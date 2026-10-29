@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => {
   type Listener = (...args: unknown[]) => void;
   /** URLs the fake refuses to load, the way a site that rejects Chromium does. */
   const refusedUrls = new Set<string>();
+  /** What a checked page's error collector holds once it has loaded. */
+  const page = { errors: [] as string[] };
 
   class FakeWebContents {
     readonly listeners = new Map<string, Listener[]>();
@@ -23,6 +25,11 @@ const mocks = vi.hoisted(() => {
       this.zoomFactor = factor;
     });
     readonly setWindowOpenHandler = vi.fn();
+    readonly debugger = {
+      attach: vi.fn(),
+      sendCommand: vi.fn(async () => ({})),
+    };
+    readonly executeJavaScript = vi.fn(async () => page.errors);
     readonly session = {
       clearCache: vi.fn(),
       clearStorageData: vi.fn(),
@@ -158,6 +165,7 @@ const mocks = vi.hoisted(() => {
     views,
     parking,
     refusedUrls,
+    page,
     sessions,
     fromPartition,
     publish: vi.fn(),
@@ -192,6 +200,7 @@ describe("Electron browser runtime", () => {
   beforeEach(() => {
     mocks.views.length = 0;
     mocks.refusedUrls.clear();
+    mocks.page.errors = [];
     mocks.parking.created = 0;
     vi.clearAllMocks();
   });
@@ -423,6 +432,103 @@ describe("Electron browser runtime", () => {
     });
 
     expect(navigated.error).toBe("ERR_HTTP2_PROTOCOL_ERROR");
+  });
+
+  describe("checking a served page before it is handed over", () => {
+    const APP = "http://127.0.0.1:4321/";
+
+    it("installs the error collector before the page loads, reports what it threw, and closes its view", async () => {
+      const runtime = new ElectronBrowserRuntime(() => owner as never);
+      mocks.page.errors = ["Uncaught TypeError: player is undefined"];
+
+      const check = await runtime.checkServedPage(APP);
+
+      expect(check).toEqual({
+        loaded: true,
+        errors: ["Uncaught TypeError: player is undefined"],
+      });
+      const contents = mocks.views[0]!.webContents;
+      expect(contents.debugger.sendCommand).toHaveBeenCalledWith(
+        "Page.addScriptToEvaluateOnNewDocument",
+        expect.objectContaining({ source: expect.any(String) })
+      );
+      expect(contents.getURL()).toBe(APP);
+      expect(contents.close).toHaveBeenCalled();
+      expect(mocks.parking.removeChildView).toHaveBeenCalledWith(
+        mocks.views[0]
+      );
+      // Its own partition, so nothing it stores outlives the check.
+      expect(
+        (mocks.views[0]!.options as { webPreferences: { partition: string } })
+          .webPreferences.partition
+      ).toMatch(/^page-check-/);
+    });
+
+    it("says a page that did not load did not", async () => {
+      const runtime = new ElectronBrowserRuntime(() => owner as never);
+      mocks.refusedUrls.add(APP);
+
+      expect(await runtime.checkServedPage(APP)).toEqual({
+        loaded: false,
+        reason: "ERR_HTTP2_PROTOCOL_ERROR (-337)",
+      });
+      expect(mocks.views[0]!.webContents.close).toHaveBeenCalled();
+    });
+  });
+
+  describe("a served page whose server died with an earlier run", () => {
+    const DEAD = "http://127.0.0.1:40001/";
+    const MOVED = "http://127.0.0.1:40002/";
+    const conversationKey = sessionConversationKey("workspace-one", "chat-one");
+
+    it("is brought back before the pane loads it, on whichever URL it answers", async () => {
+      const revivePreview = vi.fn(async (url: string) =>
+        url === DEAD ? MOVED : url
+      );
+      const runtime = new ElectronBrowserRuntime(() => owner as never, {
+        revivePreview,
+      });
+
+      const state = await runtime.materialize({
+        conversationKey,
+        resourceId: "preview-tab",
+        url: DEAD,
+      });
+
+      expect(revivePreview).toHaveBeenCalledWith(DEAD);
+      expect(state.url).toBe(MOVED);
+    });
+
+    it("is brought back when the user retries it, instead of reloading the error", async () => {
+      const revivePreview = vi.fn(async (url: string) => url);
+      const runtime = new ElectronBrowserRuntime(() => owner as never, {
+        revivePreview,
+      });
+      const state = await runtime.materialize({
+        conversationKey,
+        resourceId: "preview-tab",
+        url: DEAD,
+      });
+      revivePreview.mockClear();
+
+      await runtime.navigate({
+        lease: state.lease,
+        navigation: { action: "reload" },
+      });
+
+      expect(revivePreview).toHaveBeenCalledWith(DEAD);
+      expect(mocks.views[0]!.webContents.reload).toHaveBeenCalled();
+
+      revivePreview.mockImplementation(async () => MOVED);
+      const moved = await runtime.navigate({
+        lease: state.lease,
+        navigation: { action: "hard-reload" },
+      });
+      expect(moved.url).toBe(MOVED);
+      expect(
+        mocks.views[0]!.webContents.reloadIgnoringCache
+      ).not.toHaveBeenCalled();
+    });
   });
 
   it("recreates a resource when its imported profile changes", async () => {

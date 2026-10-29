@@ -176,3 +176,27 @@ describe("stopping", () => {
     ).rejects.toThrow();
   });
 });
+
+describe("serving on a port it had before", () => {
+  it("takes that port again, so a URL handed out earlier still opens", async () => {
+    const root = await workspace({ "index.html": "<h1>Again</h1>" });
+    const first = await serveDirectory(root);
+    stopDirectory(root);
+
+    const again = await serveDirectory(root, first.port);
+
+    expect(again.url).toBe(first.url);
+    expect(await (await fetch(again.url)).text()).toContain("Again");
+  });
+
+  it("takes any free port when something else holds it", async () => {
+    const holder = await workspace({ "index.html": "holder" });
+    const root = await workspace({ "index.html": "mine" });
+    const held = await serveDirectory(holder);
+
+    const served = await serveDirectory(root, held.port);
+
+    expect(served.port).not.toBe(held.port);
+    expect(await (await fetch(served.url)).text()).toContain("mine");
+  });
+});

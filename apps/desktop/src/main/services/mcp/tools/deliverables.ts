@@ -11,6 +11,15 @@ import type { ToolDefinition } from "./definition";
 
 const toChat = (channel: ChannelCapabilities): boolean =>
   channel.media || channel.documents;
+
+/** What `present_deliverable` does with a URL on this computer before it presents one. */
+const LOCAL_URL_CHECK = [
+  "A URL on this computer is checked first: it must answer, and its page is loaded in a",
+  "browser and must not throw. One that fails is not presented, and the result says what",
+  "went wrong: fix it and present it again. Never tell the user an app is done or fixed",
+  "until it has been presented this way. A page `serve` handed out keeps its URL, and is",
+  "served again when it is opened after a restart.",
+].join("\n");
 export const DELIVERABLES_TOOLS: ToolDefinition[] = [
   {
     name: "serve",
@@ -79,6 +88,8 @@ export const DELIVERABLES_TOOLS: ToolDefinition[] = [
             "",
             "Call it again whenever the user asks to see or get something you already made.",
             "Sending the same file twice is cheap and safe.",
+            "",
+            LOCAL_URL_CHECK,
           ].join("\n")
         : [
             "Hand the finished work over. Call this at the end of a turn that produced files,",
@@ -97,6 +108,8 @@ export const DELIVERABLES_TOOLS: ToolDefinition[] = [
             "already made. The pane may have been closed or the app restarted since, and this is",
             "the only way to put the file back on screen. Describing it, or rendering its pages,",
             "into the chat, does not show it. Presenting the same file twice is cheap and safe.",
+            "",
+            LOCAL_URL_CHECK,
           ].join("\n"),
     inputSchema: (channel) => ({
       type: "object",
@@ -113,7 +126,8 @@ export const DELIVERABLES_TOOLS: ToolDefinition[] = [
                 type: "string",
                 description:
                   "Path to the file, or an http(s) URL (a served app). A relative path resolves against " +
-                  "the workspace directory. Files must exist; this reports the ones that do not.",
+                  "the workspace directory. Files must exist and a URL on this computer must work; this " +
+                  "reports the ones that do not.",
               },
               label: {
                 type: "string",

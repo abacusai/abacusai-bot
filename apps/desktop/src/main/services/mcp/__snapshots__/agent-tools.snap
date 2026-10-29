@@ -165,7 +165,7 @@
     },
     {
       "name": "present_deliverable",
-      "description": "Hand the finished work over. Call this at the end of a turn that produced files,\nlisting what the user asked for, most important first.\n\nThe items become a files card in the chat and are filed as artifacts; in a session\nthe first one also opens in the preview pane. Naming a path in prose does none of\nthat, and a file written with `bash` is not recorded anywhere unless it is declared\nhere. To hand a file to a person on a messaging channel, use send_chat_message with\nattachment_path as well.\n\nList the deliverables, not the workings: the report, not the six scratch files it\nwas assembled from.\n\nCall it again whenever the user asks to see, show, open, or look at something you\nalready made. The pane may have been closed or the app restarted since, and this is\nthe only way to put the file back on screen. Describing it, or rendering its pages,\ninto the chat, does not show it. Presenting the same file twice is cheap and safe.",
+      "description": "Hand the finished work over. Call this at the end of a turn that produced files,\nlisting what the user asked for, most important first.\n\nThe items become a files card in the chat and are filed as artifacts; in a session\nthe first one also opens in the preview pane. Naming a path in prose does none of\nthat, and a file written with `bash` is not recorded anywhere unless it is declared\nhere. To hand a file to a person on a messaging channel, use send_chat_message with\nattachment_path as well.\n\nList the deliverables, not the workings: the report, not the six scratch files it\nwas assembled from.\n\nCall it again whenever the user asks to see, show, open, or look at something you\nalready made. The pane may have been closed or the app restarted since, and this is\nthe only way to put the file back on screen. Describing it, or rendering its pages,\ninto the chat, does not show it. Presenting the same file twice is cheap and safe.\n\nA URL on this computer is checked first: it must answer, and its page is loaded in a\nbrowser and must not throw. One that fails is not presented, and the result says what\nwent wrong: fix it and present it again. Never tell the user an app is done or fixed\nuntil it has been presented this way. A page `serve` handed out keeps its URL, and is\nserved again when it is opened after a restart.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -177,7 +177,7 @@
               "properties": {
                 "path": {
                   "type": "string",
-                  "description": "Path to the file, or an http(s) URL (a served app). A relative path resolves against the workspace directory. Files must exist; this reports the ones that do not."
+                  "description": "Path to the file, or an http(s) URL (a served app). A relative path resolves against the workspace directory. Files must exist and a URL on this computer must work; this reports the ones that do not."
                 },
                 "label": {
                   "type": "string",
@@ -413,7 +413,7 @@
     },
     {
       "name": "present_deliverable",
-      "description": "Hand the finished work over. Call this at the end of a turn that produced files,\nlisting what the user asked for, most important first.\n\nThe items become a files card in the chat and are filed as artifacts; in a session\nthe first one also opens in the preview pane. Naming a path in prose does none of\nthat, and a file written with `bash` is not recorded anywhere unless it is declared\nhere. To hand a file to a person on a messaging channel, use send_chat_message with\nattachment_path as well.\n\nList the deliverables, not the workings: the report, not the six scratch files it\nwas assembled from.\n\nCall it again whenever the user asks to see, show, open, or look at something you\nalready made. The pane may have been closed or the app restarted since, and this is\nthe only way to put the file back on screen. Describing it, or rendering its pages,\ninto the chat, does not show it. Presenting the same file twice is cheap and safe.",
+      "description": "Hand the finished work over. Call this at the end of a turn that produced files,\nlisting what the user asked for, most important first.\n\nThe items become a files card in the chat and are filed as artifacts; in a session\nthe first one also opens in the preview pane. Naming a path in prose does none of\nthat, and a file written with `bash` is not recorded anywhere unless it is declared\nhere. To hand a file to a person on a messaging channel, use send_chat_message with\nattachment_path as well.\n\nList the deliverables, not the workings: the report, not the six scratch files it\nwas assembled from.\n\nCall it again whenever the user asks to see, show, open, or look at something you\nalready made. The pane may have been closed or the app restarted since, and this is\nthe only way to put the file back on screen. Describing it, or rendering its pages,\ninto the chat, does not show it. Presenting the same file twice is cheap and safe.\n\nA URL on this computer is checked first: it must answer, and its page is loaded in a\nbrowser and must not throw. One that fails is not presented, and the result says what\nwent wrong: fix it and present it again. Never tell the user an app is done or fixed\nuntil it has been presented this way. A page `serve` handed out keeps its URL, and is\nserved again when it is opened after a restart.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -425,7 +425,7 @@
               "properties": {
                 "path": {
                   "type": "string",
-                  "description": "Path to the file, or an http(s) URL (a served app). A relative path resolves against the workspace directory. Files must exist; this reports the ones that do not."
+                  "description": "Path to the file, or an http(s) URL (a served app). A relative path resolves against the workspace directory. Files must exist and a URL on this computer must work; this reports the ones that do not."
                 },
                 "label": {
                   "type": "string",

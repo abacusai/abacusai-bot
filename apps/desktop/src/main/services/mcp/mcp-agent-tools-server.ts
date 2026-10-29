@@ -13,6 +13,7 @@ import {
   type ChannelCapabilities,
   WHATSAPP_CHANNEL,
 } from "@abacus-ai/agent/channel";
+import { checkLocalUrl, isLoopbackUrl } from "@abacus-ai/agent/deliverable-url";
 import { modelPath } from "@abacus-ai/agent/model-path";
 import { isWithin, resolveSecretPaths } from "@abacus-ai/agent/secret-paths";
 import {
@@ -111,12 +112,13 @@ import {
   type RoutineTiming,
 } from "../agent-tools/routine-timing";
 import {
-  listServed,
-  serveDirectory,
-  stopDirectory,
-  htmlPagesIn,
-} from "../agent-tools/static-server";
+  revivePreview,
+  servePreview,
+  stopPreview,
+} from "../agent-tools/served-previews";
+import { listServed, htmlPagesIn } from "../agent-tools/static-server";
 import { renderTodos, readTodos, setTodos } from "../agent-tools/todo-store";
+import type { ServedPageCheck } from "../browser/page-errors";
 import { hasCredential } from "../config/settings";
 import type { BotNumberOutcome } from "../messaging/bot-number";
 import { MAX_ATTACHMENT_BYTES } from "../messaging/connector";
@@ -332,6 +334,14 @@ export interface McpAgentToolsServerOptions {
       sessionId: string
     ) => Promise<{ id: string } | { reason: string }>;
   } | null;
+  /**
+   * Loads a local URL in a hidden browser tab and reports what its page threw
+   * as it loaded; null where no browser is available to ask.
+   */
+  checkServedPage?: (
+    url: string,
+    sessionId: string
+  ) => Promise<ServedPageCheck | null>;
   /** Set for the turn behind a routine page's composer; it sees only cron. */
   routineEditorFor?: (sessionId: string) => string | null;
   /** A run nobody is watching: it gets only the unattended allowlist. */
@@ -1684,7 +1694,7 @@ export class McpAgentToolsServer extends McpHttpServer {
 
       if (action === "stop") {
         const before = listServed();
-        const stopped = stopDirectory(
+        const stopped = stopPreview(
           this.resolveOutputPath(directory, callerSession)
         );
         // Its port is free again: no session may screenshot whatever takes it.
@@ -1701,7 +1711,7 @@ export class McpAgentToolsServer extends McpHttpServer {
       }
 
       if (action === "start") {
-        const served = await serveDirectory(
+        const served = await servePreview(
           this.resolveOutputPath(directory, callerSession)
         );
         if (callerSession != null) {
@@ -1766,6 +1776,8 @@ export class McpAgentToolsServer extends McpHttpServer {
 
     const valid: Array<{ label: string; target: string; isUrl: boolean }> = [];
     const missing: string[] = [];
+    const unanswered: string[] = [];
+    const checked: string[] = [];
 
     for (const entry of rawItems) {
       const item = (
@@ -1776,12 +1788,23 @@ export class McpAgentToolsServer extends McpHttpServer {
       if (raw.length === 0) continue;
 
       const isUrl = /^https?:\/\//i.test(raw);
-      // A URL cannot be stat'ed; a path is located on disk, by how its name
-      // reads if need be, so the item carries the file's real name and a bad
-      // path never reports as shown.
-      const target = isUrl
-        ? raw
-        : await locateHostFile(this.resolveOutputPath(raw, callerSession));
+      // A URL is asked, so one that does not answer never reports as shown; a
+      // path is located on disk, by how its name reads if need be, so the
+      // item carries the file's real name and a bad path never reports as
+      // shown.
+      let target: string | null;
+      if (isUrl && isLoopbackUrl(raw)) {
+        const verified = await this.verifyLocalUrl(raw, callerSession);
+        if ("reason" in verified) {
+          unanswered.push(`${raw}: ${verified.reason}`);
+          continue;
+        }
+        checked.push(verified.line);
+        target = verified.url;
+      } else
+        target = isUrl
+          ? raw
+          : await locateHostFile(this.resolveOutputPath(raw, callerSession));
       if (target == null) {
         missing.push(this.resolveOutputPath(raw, callerSession));
         continue;
@@ -1797,9 +1820,9 @@ export class McpAgentToolsServer extends McpHttpServer {
     }
 
     if (valid.length === 0) {
-      const detail = missing.length > 0 ? `\n\n${missing.join("\n")}` : "";
+      const detail = [...missing, ...unanswered];
       return this.err(
-        `${NOTHING_PRESENTED}: none of those exist. Check the paths.${detail}`
+        `${NOTHING_PRESENTED}: none of those exist or answer. Check the paths, and get the app running before you present it.${detail.length > 0 ? `\n\n${detail.join("\n")}` : ""}`
       );
     }
 
@@ -1810,7 +1833,14 @@ export class McpAgentToolsServer extends McpHttpServer {
       chatMedia != null &&
       callerSession != null
     )
-      return this.sendToChat(valid, missing, args, chatMedia, callerSession);
+      return this.sendToChat(
+        valid,
+        missing,
+        unanswered,
+        args,
+        chatMedia,
+        callerSession
+      );
 
     const first = valid[0]!;
     // Only the first item goes to the preview pane; the rest are rows of the
@@ -1845,10 +1875,46 @@ export class McpAgentToolsServer extends McpHttpServer {
         `Not presented, because there is no file at these paths: ${missing.join(", ")}`
       );
     }
+    if (unanswered.length > 0)
+      lines.push(
+        "",
+        "Not presented, because it does not work yet. Fix it, then present it again:",
+        ...unanswered.map((line) => `- ${line}`)
+      );
+    if (checked.length > 0) lines.push("", "Checked:", ...checked);
     // The files card and the artifacts ledger read these, not the arguments.
     lines.push("", ...valid.map((item) => artifactPathLine(item.target)));
 
     return this.ok(lines.join("\n"));
+  }
+
+  /**
+   * A local URL as it may be presented: a served directory whose server is
+   * down is brought back up first (its URL may then name another port), then
+   * asked. It must answer, and its page must load in a browser without
+   * throwing: an app handed over as done has to run. A remote URL is not
+   * this tool's to probe and is taken as given.
+   */
+  private async verifyLocalUrl(
+    raw: string,
+    callerSession?: string
+  ): Promise<{ url: string; line: string } | { reason: string }> {
+    const url = await revivePreview(raw);
+    const check = await checkLocalUrl(url);
+    if ("reason" in check) return { reason: check.reason };
+    const answered = `${url} answered (HTTP ${check.status})`;
+    const page =
+      callerSession == null
+        ? null
+        : ((await this.options.checkServedPage?.(url, callerSession)) ?? null);
+    if (page == null) return { url, line: `${answered}.` };
+    if ("reason" in page)
+      return { reason: `its page did not load: ${page.reason}` };
+    if (page.errors.length > 0)
+      return {
+        reason: `its page threw as it loaded: ${page.errors.join(" | ")}`,
+      };
+    return { url, line: `${answered} and its page loaded without errors.` };
   }
 
   /**
@@ -1861,12 +1927,14 @@ export class McpAgentToolsServer extends McpHttpServer {
   private async sendToChat(
     valid: Array<{ label: string; target: string; isUrl: boolean }>,
     missing: string[],
+    unanswered: string[],
     args: Record<string, unknown>,
     chatMedia: ChatMedia,
     sessionId: string
   ): Promise<ToolResult> {
     const going: Array<{ line: string; id: string; target: string }> = [];
-    const refused: string[] = [];
+    // A URL that does not work yet is refused like a file the chat cannot carry.
+    const refused: string[] = unanswered.map(oneLine);
     const unfit: string[] = [];
     for (const item of valid) {
       const label = oneLine(item.label);
