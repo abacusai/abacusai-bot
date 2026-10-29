@@ -78,7 +78,12 @@ function report(failures: string[], limit = 8): string {
   return `${failures.length} failure(s):\n${failures.slice(0, limit).join("\n")}`;
 }
 
-describe(`indexing this repository (${corpus.length} files, ${corpus.reduce((n, f) => n + f.symbols.length, 0)} symbols)`, () => {
+const SUITE = `indexing this repository (${corpus.length} files, ${corpus.reduce((n, f) => n + f.symbols.length, 0)} symbols)`;
+
+// Each test walks the whole parsed corpus, and one parses 300 files twice:
+// about 1 s on a quiet machine, past the unit project's 5 s default on a
+// loaded Windows runner.
+describe(SUITE, { timeout: 30_000 }, () => {
   it("indexed a corpus big enough for these assertions to mean something", () => {
     // A guard on the guard: if the walk broke, every invariant below would pass
     // vacuously over an empty list.
