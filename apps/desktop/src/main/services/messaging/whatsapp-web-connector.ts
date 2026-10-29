@@ -202,8 +202,13 @@ export class WhatsAppWebConnector implements MessagingConnector {
   private bridgeReady = false;
   /** The account's WhatsApp id, from the bridge. */
   private selfJid: string | null = null;
+  /** The account's lid, from the bridge, once WhatsApp has assigned one:
+   * newer builds file the own chat (and every other) under it. */
+  private selfLid: string | null = null;
   /** The own chat's id when it differs from the phone jid: the lid. */
   private ownChatJid: string | null = null;
+  /** "Own chat not found" is said once per link, not per chat-list read. */
+  private ownChatMissLogged = false;
   /** The page's answers on whether a chat is the user's own, per jid. */
   private ownChatVerdicts = new Map<string, boolean>();
   /** The chat list as the bridge last saw it; names resolve against it. */
@@ -660,24 +665,25 @@ export class WhatsAppWebConnector implements MessagingConnector {
     this.chatListRead = true;
     if (chats.length === 0) return;
     this.bridgeChats = chats;
+    // WhatsApp may assign the lid after the link; until it is known, a list
+    // filed under lids has no row that reads as the own chat.
+    if (this.selfLid == null && this.selfJid != null)
+      this.selfLid = (await this.bridge.myId())?.lid ?? null;
     // The whole list, so it replaces the page scrape. The self chat is left
     // out here and added by listContacts; its title names the sweep's sender.
     const own =
       chats.find((chat) => chat.isMe) ??
-      chats.find((chat) => chat.jid === this.selfJid);
+      chats.find((chat) => this.isOwnChat(chat.jid));
     if (own != null) this.selfDisplayName = own.name;
-    else if (this.selfJid != null)
+    else if (this.selfJid != null && !this.ownChatMissLogged) {
+      this.ownChatMissLogged = true;
       this.callbacks.onLog(
-        `whatsapp-web: own chat not found in ${chats.length} chats (self ${this.selfJid}); ` +
-          `first ids: ${chats
-            .slice(0, 4)
-            .map((chat) => chat.jid)
-            .join(", ")}`
+        `whatsapp-web: own chat not found in ${chats.length} chats (self ${this.selfJid}, lid ${this.selfLid ?? "unknown"})`
       );
-    const ownJid = own?.jid ?? this.selfJid;
+    }
     const seen = new Set<string>();
     this.contacts = chats
-      .filter((chat) => chat.jid !== ownJid && !chat.isMe)
+      .filter((chat) => !this.isOwnChat(chat.jid))
       .filter((chat) => {
         if (seen.has(chat.name)) return false;
         seen.add(chat.name);
@@ -691,18 +697,20 @@ export class WhatsAppWebConnector implements MessagingConnector {
   }
 
   /**
-   * Whether a chat is the user's own. Newer WhatsApp builds file it under a
-   * "lid" id, not the phone jid; comparing the phone jid alone drops every
-   * self message as our own outgoing.
+   * Whether a chat is the user's own: the one place identity is matched.
+   * Newer WhatsApp builds file it under the account's "lid", not the phone
+   * jid; comparing the phone jid alone lists the self chat as a stranger and
+   * drops every self message as our own outgoing.
    */
   private isOwnChat(jid: string): boolean {
-    if (this.selfJid != null && jid === this.selfJid) return true;
     if (this.ownChatJid != null && jid === this.ownChatJid) return true;
     const chat = this.bridgeChats.find((row) => row.jid === jid);
     if (chat?.isMe === true) return true;
     const user = jid.split("@")[0];
-    const selfUser = this.selfJid?.split("@")[0];
-    return selfUser != null && selfUser.length > 0 && user === selfUser;
+    if (user == null || user.length === 0) return false;
+    return [this.selfJid, this.selfLid].some(
+      (own) => own != null && own.split("@")[0] === user
+    );
   }
 
   /** isOwnChat, asking the page when the chat list (minutes behind history
@@ -1171,7 +1179,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
           "WhatsApp is still syncing your chats, so unread counts are not available yet. Try again in a minute."
         );
       return chats
-        .filter((chat) => !chat.isMe && chat.jid !== this.selfJid)
+        .filter((chat) => !this.isOwnChat(chat.jid))
         .map((chat) => ({
           chatId: chat.name,
           name: chat.name,
@@ -1361,7 +1369,9 @@ export class WhatsAppWebConnector implements MessagingConnector {
     this.loggedIn = false;
     this.self = null;
     this.selfJid = null;
+    this.selfLid = null;
     this.ownChatJid = null;
+    this.ownChatMissLogged = false;
     this.ownChatVerdicts.clear();
     this.selfDisplayName = null;
     this.lastNumberOpened = null;
@@ -1668,6 +1678,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
       if (me != null) {
         this.selfLookupDone = true;
         this.selfJid = me.jid;
+        this.selfLid = me.lid;
         this.self = `+${me.digits}`;
         this.callbacks.onLog(
           `whatsapp-web: linked as +…${me.digits.slice(-4)} (own id, via bridge)`
