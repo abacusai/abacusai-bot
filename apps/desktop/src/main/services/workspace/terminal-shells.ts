@@ -99,14 +99,18 @@ let busyboxRetryAt = 0;
 /**
  * The materialised busybox, installed once per process. Verifying an install
  * digests the executable and stats every launcher, and a terminal start
- * resolves the shell twice: once for the snapshot, once to spawn.
+ * resolves the shell twice: once for the snapshot, once to spawn. A launcher
+ * removed since (antivirus software can quarantine busybox) is
+ * installed again, as the agent's `bash` does.
  */
 const busybox = (
   env: NodeJS.ProcessEnv,
   platform: NodeJS.Platform
 ): PosixShell | undefined => {
+  const vanished = installedBusybox != null && !existsSync(installedBusybox.sh);
   if (
     installedBusybox !== null &&
+    !vanished &&
     ((installedBusybox !== undefined && installedBusybox.args == null) ||
       Date.now() < busyboxRetryAt)
   )

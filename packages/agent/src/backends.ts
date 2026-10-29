@@ -19,8 +19,8 @@ import { childProcessEnv } from "./child-env.js";
 import { currentMode } from "./current-mode.js";
 import { modelPath } from "./model-path.js";
 import {
+  commandPosixShell,
   managedPythonEnv,
-  posixShell,
   posixShellEnv,
   posixShellOperations,
 } from "./posix-shell.js";
@@ -251,9 +251,10 @@ function localSandboxedOperations(
 
     const commandId = `command-${++commandCounter}`;
     // On Windows the command runs under the bundled POSIX shell, confined or
-    // not, and its children must find the applets (posix-shell.ts).
+    // not, and its children must find the applets (posix-shell.ts). Taken per
+    // command, so one removed since the last is reinstalled first.
     const bundledShell =
-      process.platform === "win32" ? posixShell() : undefined;
+      process.platform === "win32" ? commandPosixShell() : undefined;
     // What a delete may send to the trash: what the sandbox lets it write,
     // until the decision says the command runs unconfined (trash.ts).
     const trash: TrashScope = {
