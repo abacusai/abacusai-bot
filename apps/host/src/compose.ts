@@ -39,6 +39,7 @@ import { NudgeAgenda } from "./nudge-agenda";
 import { channelsTransport, PhoneLane } from "./phone-lane";
 import { RoutineEntryRunner } from "./routine-runner";
 import { shutdown } from "./shutdown";
+import { PHONE_TURN_CLOSE_OUT_MS } from "./turn-clock";
 
 const refuse = (procedure: string) => () => {
   throw unsupported(procedure);
@@ -167,10 +168,14 @@ export const composeNodeHost = async () => {
     sessionId: string;
   }> => {
     mkdirSync(phoneDir, { recursive: true });
-    // Nobody can approve a tool call over WhatsApp.
+    // Nobody can approve a tool call over WhatsApp. A long turn closes out
+    // with what it has before the lane's hard cap would cut it off.
     const session = await serviceHost.openLaneSession(
       "phone",
-      { ABACUSAI_BOT_PHONE_DIR: phoneDir },
+      {
+        ABACUSAI_BOT_PHONE_DIR: phoneDir,
+        ABACUSAI_BOT_RUN_CAP_MS: String(PHONE_TURN_CLOSE_OUT_MS),
+      },
       AgentMode.Auto,
       WHATSAPP_CHANNEL
     );

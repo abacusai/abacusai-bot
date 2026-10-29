@@ -7,7 +7,8 @@
  * 100 calls short of the cap the model is told to wrap up and present what it
  * has, at 50 short it is told again and harder. At either limit the turn
  * closes out instead of being cut mid-step: the model is
- * told, unseen, to stop working and write its closing message, every tool call
+ * told, unseen, to stop working, hand over what exists and write its closing
+ * message; every tool call but the hand-over (present_deliverable, send_media)
  * is refused from then on, and only if it still has not finished a few calls
  * later is the run stopped with a message that says so.
  * Repetition: the third identical tool call in a run is blocked (the second,
@@ -87,9 +88,10 @@ function runCapMs(): number {
 }
 
 const closeOutPrompt = (why: string): string =>
-  `${why} Stop working now: no more tool calls, they will be refused. Write your closing message to the ` +
-  `user, in their language: what is done and where it is, what is left, and that they can send a ` +
-  `message to carry on from here.`;
+  `${why} Stop working now: no more building, fixing or exploring, those tool calls will be refused. ` +
+  `If you made files the user has not been handed yet, hand them over first with ${PRESENT_TOOL}, ` +
+  `unfinished or not. Then write your closing message to the user, in their language: what is done ` +
+  `and where it is, what is left, and that they can send a message to carry on from here.`;
 
 const wrapUpPrompt = (turns: number, cap: number): string =>
   `Budget check: this run has made ${turns} of ${cap} model calls and has been going a long time. ` +
@@ -133,6 +135,11 @@ const billedAbacus = (model: unknown): boolean => {
 /** The tool that hands work over, under its own name or a server's prefix. */
 const isPresentTool = (name: string): boolean =>
   name === PRESENT_TOOL || name.endsWith(`_${PRESENT_TOOL}`);
+
+/** What a closing run may still call: handing over what exists, never new work. */
+const HANDOVER_TOOLS = [PRESENT_TOOL, "send_media"];
+const isHandoverTool = (name: string): boolean =>
+  HANDOVER_TOOLS.some((tool) => name === tool || name.endsWith(`_${tool}`));
 
 /** What the user reads when the run is stopped. */
 const stoppedMessage = (cap: number): string =>
@@ -322,13 +329,15 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on("tool_call", async (event) => {
-    // A closing run writes its closing message; it does not start more work.
-    if (closingTurns != null)
+    // A closing run hands over what exists and writes its closing message;
+    // it does not start more work.
+    if (closingTurns != null && !isHandoverTool(event.toolName))
       return {
         block: true,
         reason:
-          "The run is closing: no more tool calls. Write your closing message to the user now: what " +
-          "is done and where it is, what is left, and that they can send a message to carry on.",
+          "The run is closing: no more work. Hand over any files the user has not been given with " +
+          `${PRESENT_TOOL}, then write your closing message to the user now: what is done and where ` +
+          "it is, what is left, and that they can send a message to carry on.",
       };
     let inputKey: string;
     try {

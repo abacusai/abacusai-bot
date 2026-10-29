@@ -1,6 +1,7 @@
 /**
  * What one `send` answers, reported once as `turn_reply`: the ids of the
- * messages it answers, its final assistant message, and whether it failed.
+ * messages it answers, its final assistant message, and whether it failed
+ * (with the failure's cause, so a chat app can say the right thing).
  * The final message is the last one the main session wrote words in; a
  * sub-agent's words never reach it. Only a send or steer with an id asks.
  */
@@ -11,6 +12,7 @@ export class TurnReply {
   private final = "";
   private draft = "";
   private failed = false;
+  private cause: string | undefined;
   private open = false;
 
   /** A send starts; `messageId` is the sender's id for it. */
@@ -19,6 +21,7 @@ export class TurnReply {
     this.final = "";
     this.draft = "";
     this.failed = false;
+    this.cause = undefined;
     this.open = true;
     this.answers(messageId);
   }
@@ -46,8 +49,11 @@ export class TurnReply {
     this.open = false;
   }
 
-  fail(): void {
-    if (this.open) this.failed = true;
+  /** The turn reported an error; `cause` is its FailureCause (turn-outcome.ts), when it named one. */
+  fail(cause?: string): void {
+    if (!this.open) return;
+    this.failed = true;
+    this.cause = cause ?? this.cause;
   }
 
   /**
@@ -63,6 +69,7 @@ export class TurnReply {
       messageIds: this.ids,
       text: this.final,
       failed: this.failed,
+      ...(this.failed && this.cause != null ? { cause: this.cause } : {}),
     };
   }
 }

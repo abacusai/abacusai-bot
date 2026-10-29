@@ -630,9 +630,20 @@ export function presentFailure(
 export const isBusyCause = (raw: string, provider: string | undefined) =>
   classifyAttempt(raw, provider) === "rate_limited";
 
-/** Whether the transcript no longer fits; what compaction answers. */
-export const isContextTooLong = (raw: string): boolean =>
-  CONTEXT_LENGTH_PATTERN.test(raw.toLowerCase());
+/**
+ * Whether the transcript no longer fits; what compaction answers. A request
+ * refused for its size counts: compaction sends different, smaller bytes, so
+ * it is not the same refusal again, and without it every later turn re-sends
+ * the same transcript and is refused the same way.
+ */
+export const isContextTooLong = (raw: string): boolean => {
+  const text = raw.toLowerCase();
+  return (
+    CONTEXT_LENGTH_PATTERN.test(text) ||
+    failureStatus(raw) === "413" ||
+    REQUEST_TOO_LARGE_PATTERN.test(text)
+  );
+};
 
 /**
  * A provider saying the request did not fit. These all arrive as a plain 400,
@@ -648,7 +659,7 @@ const CONTEXT_LENGTH_PATTERN =
  * sends the same bytes again, so it is not narrated as a retry.
  */
 export const REQUEST_TOO_LARGE_PATTERN =
-  /request too large|request entity too large|payload too large|reduce your message size/;
+  /request too large|request entity too large|payload too large|reduce your message size|request body size .*exceeded|body size .*exceeded/;
 
 /** A model refusing tools: a 400 with the reason only in the prose. */
 const TOOLS_UNSUPPORTED_PATTERN =

@@ -35,6 +35,7 @@ import {
   classifyAttempt,
   classifyProviderFailure,
   isBusyCause,
+  isContextTooLong,
   presentFailure,
 } from "./turn-outcome.js";
 
@@ -938,5 +939,24 @@ describe("free credits held until the account verifies a phone", () => {
 
   it("is never waited out as a busy provider", () => {
     expect(isBusyCause(VERIFY, "abacus")).toBe(false);
+  });
+});
+
+/**
+ * What compaction answers. A request refused for its size is one of them: the
+ * transcript it carries is what makes it too big, and without a compaction
+ * every later turn sends the same bytes and is refused the same way.
+ */
+describe("a transcript that no longer fits", () => {
+  it.each([
+    ["400 This model's maximum context length is 131072 tokens.", true],
+    ['413 "Maximum request body size 67108864 exceeded."', true],
+    ["413 Request Entity Too Large", true],
+    ['{"error":{"code":413,"message":"Payload Too Large"}}', true],
+    ["429 Too Many Requests", false],
+    ["You have no remaining credits to use the LLM apis.", false],
+    ["500 Internal Server Error", false],
+  ] as const)("%s → %s", (raw, fits) => {
+    expect(isContextTooLong(raw)).toBe(fits);
   });
 });

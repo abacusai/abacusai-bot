@@ -22,6 +22,15 @@ export const PHONE_TURN_LIMITS = {
   hardCapMs: 40 * 60_000,
 };
 
+/**
+ * When the phone loop's own budget closes a long turn out (the agent's run
+ * cap, ABACUSAI_BOT_RUN_CAP_MS): well inside the hard cap, so the model stops
+ * and writes its closing message itself (what is done, the files so far, what
+ * is left) and the hard cap, which can only apologize, is a backstop.
+ */
+export const PHONE_TURN_CLOSE_OUT_MS =
+  PHONE_TURN_LIMITS.hardCapMs - 10 * 60_000;
+
 export class TurnClock {
   private idle: NodeJS.Timeout | null = null;
   private cap: NodeJS.Timeout | null = null;

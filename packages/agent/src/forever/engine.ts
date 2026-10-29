@@ -52,6 +52,7 @@ import { TOOL_NAME_ALIASES } from "../excluded-tools.js";
 import background from "../extensions/background.js";
 import budgets, { budgetStopReason } from "../extensions/budgets.js";
 import compactionPruner from "../extensions/compaction-pruner.js";
+import requestSize from "../extensions/request-size.js";
 import spill from "../extensions/spill.js";
 import toolCallRepair from "../extensions/tool-call-repair.js";
 import toolTimeouts from "../extensions/tool-timeouts.js";
@@ -476,6 +477,10 @@ export class ForeverEngine {
         {
           name: "abacusai-bot-compaction-pruner",
           factory: compactionPruner as unknown as (pi: ExtensionAPI) => void,
+        },
+        {
+          name: "abacusai-bot-request-size",
+          factory: requestSize as unknown as (pi: ExtensionAPI) => void,
         },
         {
           name: "abacusai-bot-web",
@@ -2610,7 +2615,8 @@ export class ForeverEngine {
   }
 
   private emitAgentEvent(event: AgentEvent, meta?: EventMeta): void {
-    if (event.type === "error" && meta?.origin === "turn") this.reply.fail();
+    if (event.type === "error" && meta?.origin === "turn")
+      this.reply.fail(event.error.cause);
     if (event.type === "error" && meta?.origin !== "startup")
       this.ownedTurn?.noteError(event.error);
     if (meta != null) tagEvent(event, meta);

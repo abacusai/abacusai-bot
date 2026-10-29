@@ -344,6 +344,50 @@ describe("a run that runs long", () => {
     }
   });
 
+  it("lets a closing run hand over what it made, and nothing else", async () => {
+    vi.useFakeTimers();
+    try {
+      const pi = withBudgets();
+      const ctx = {
+        cwd: process.cwd(),
+        hasUI: false,
+        ui: { notify() {} },
+        abort() {},
+      };
+      await pi.fire("input", { text: "build it", source: "interactive" });
+      await pi.fire("agent_start", {});
+      await pi.fire("turn_start", {}, ctx);
+      vi.advanceTimersByTime(60 * 60_000);
+      await pi.fire("turn_start", {}, ctx);
+      const closeOut = pi.messages.find(
+        (m) => m.customType === "abacusai-bot-close-out"
+      );
+      expect(String(closeOut?.content)).toContain("present_deliverable");
+
+      for (const toolName of [
+        "present_deliverable",
+        "agent-tools_present_deliverable",
+        "send_media",
+      ])
+        expect(
+          await pi.fire("tool_call", {
+            toolName,
+            toolCallId: toolName,
+            input: { path: "site/index.html" },
+          })
+        ).toBeUndefined();
+      expect(
+        await pi.fire("tool_call", {
+          toolName: "write",
+          toolCallId: "w",
+          input: { path: "site/more.html" },
+        })
+      ).toMatchObject({ block: true });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("forgets the stop when the next run starts", async () => {
     const { pi } = await run(250, 254);
     expect(budgetStopReason()).not.toBeNull();
