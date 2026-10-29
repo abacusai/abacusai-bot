@@ -62,7 +62,11 @@ import {
   type TurnFailure,
 } from "./chat-failure-reply";
 import { forChat } from "./chat-markdown";
-import { backoffDelayMs, looksLikeBotOutput } from "./connector";
+import {
+  backoffDelayMs,
+  looksLikeBotOutput,
+  UndeliverableChatError,
+} from "./connector";
 import type { InboundMessage, MessagingConnector } from "./connector";
 import { DiscordWebConnector } from "./discord-web-connector";
 import {
@@ -1840,6 +1844,13 @@ export class MessagingGatewayService {
         });
         return;
       } catch (error) {
+        // No retry can deliver it, so nothing is kept to retry either.
+        if (error instanceof UndeliverableChatError) {
+          console.error(
+            `[messaging] ${platformId} send dropped: ${error.message}`
+          );
+          return;
+        }
         lastError = error;
         console.error(
           `[messaging] ${platformId} send failed (will retry):`,

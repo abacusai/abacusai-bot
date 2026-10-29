@@ -17,6 +17,7 @@ vi.mock("electron", () => ({
 
 const { WhatsAppWebConnector } = await import("./whatsapp-web-connector");
 const { QueuedSendError } = await import("./whatsapp-bridge");
+const { UndeliverableChatError } = await import("./connector");
 
 type Internals = {
   loggedIn: boolean;
@@ -157,6 +158,40 @@ describe("sending through the bridge", () => {
     // One refresh of the list before giving up on the name.
     expect(refreshed).toBe(1);
   });
+});
+
+describe("a send to something that is not a chat", () => {
+  it.each([
+    "status@broadcast",
+    "1698765432@broadcast",
+    "120363025246125486@newsletter",
+  ])(
+    "is refused as final for %s, before anything reaches WhatsApp",
+    async (jid) => {
+      const { internals, domSends } = connectorWith({
+        ensure: async () => {
+          throw new Error("must not be called");
+        },
+        listChats: async () => [],
+        sendText: async () => {
+          throw new Error("must not be called");
+        },
+        ackOf: async () => -1,
+      });
+      const connector = internals as unknown as {
+        sendText: (chatId: string, text: string) => Promise<void>;
+        sendFile: (chatId: string, filePath: string) => Promise<void>;
+      };
+
+      await expect(connector.sendText(jid, "hi")).rejects.toBeInstanceOf(
+        UndeliverableChatError
+      );
+      await expect(
+        connector.sendFile(jid, "/tmp/photo.jpg")
+      ).rejects.toBeInstanceOf(UndeliverableChatError);
+      expect(domSends).toEqual([]);
+    }
+  );
 });
 
 describe("a name asked for while WhatsApp is still syncing after a link", () => {

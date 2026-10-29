@@ -1,5 +1,7 @@
 import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 
+import { UndeliverableChatError } from "./connector";
+
 /** The lines a turn the app closed under owes its chat (outcome.channel.*). */
 export type OwedLine = "appClosed" | "contactNeutral" | "contactAppClosed";
 
@@ -132,6 +134,16 @@ export class ChatOutbox {
       try {
         sent = await this.options.send(message);
       } catch (error) {
+        // Final, and nobody to tell: dropped. This is also how a message an
+        // older build kept for such a chat leaves, on the first pass after a
+        // start, before it can reach the wire.
+        if (error instanceof UndeliverableChatError) {
+          console.error(
+            `[messaging] ${message.platform} owed message dropped: ${error.message}`
+          );
+          this.finish(message);
+          continue;
+        }
         console.error(
           `[messaging] ${message.platform} retry of an undelivered message failed:`,
           error

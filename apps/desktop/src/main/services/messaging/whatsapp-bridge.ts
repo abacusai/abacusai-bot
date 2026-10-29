@@ -65,6 +65,26 @@ const READY_WAIT_MS = 30_000;
  * after a link it waits on history sync. */
 export const CHAT_LIST_WAIT_MS = 15_000;
 
+/**
+ * WhatsApp servers whose ids are not conversations: `status@broadcast` (the
+ * contacts' Status updates), `<id>@broadcast` (broadcast lists) and
+ * `<id>@newsletter` (channels). Nobody there is writing to the user, and a
+ * send there posts to an audience.
+ */
+const NON_CONVERSATION_SERVERS = new Set(["broadcast", "newsletter"]);
+
+/** Whether an app chat id can be a conversation: a name or number can, a
+ * WhatsApp id only on a person's or a group's server. */
+export const isConversationJid = (chatId: string): boolean => {
+  const at = chatId.lastIndexOf("@");
+  if (at < 0) return true;
+  const server = chatId
+    .slice(at + 1)
+    .trim()
+    .toLowerCase();
+  return !NON_CONVERSATION_SERVERS.has(server);
+};
+
 /** App ids (display names and numbers) to WhatsApp ids: a number is a user
  * chat by construction, `@` passes through, a name is looked up in the list. */
 export const resolveJid = (
@@ -200,7 +220,8 @@ export class WhatsAppBridge {
     return { jid: result.jid, digits: result.digits };
   }
 
-  /** The chats, or null while WhatsApp has not answered (it is still syncing after a link). */
+  /** The chats, or null while WhatsApp has not answered (it is still syncing
+   * after a link). Conversations only: see isConversationJid. */
   async listChats(options?: {
     onlyUnread?: boolean;
   }): Promise<BridgeChat[] | null> {
@@ -212,7 +233,9 @@ export class WhatsAppBridge {
       this.host.log(
         "whatsapp-web: the chat list did not answer in time (WhatsApp is still syncing); it will be read again"
       );
-    return Array.isArray(rows) ? rows : null;
+    return Array.isArray(rows)
+      ? rows.filter((chat) => isConversationJid(chat.jid))
+      : null;
   }
 
   /** Send and wait for the server ack. A message stuck at ack 0 IS in the
@@ -267,14 +290,17 @@ export class WhatsAppBridge {
     return result == null ? null : result.isMe === true;
   }
 
-  /** New messages since the last drain, oldest first, plus a logout flag. */
+  /** New messages since the last drain, oldest first, plus a logout flag.
+   * Conversations only: a contact's Status is not someone writing in. */
   async drain(): Promise<{ messages: BridgeMessage[]; loggedOut: boolean }> {
     const result = await this.host.run<{
       messages: BridgeMessage[];
       loggedOut: boolean;
     }>(DRAIN_SCRIPT, {});
     return {
-      messages: Array.isArray(result?.messages) ? result.messages : [],
+      messages: Array.isArray(result?.messages)
+        ? result.messages.filter((message) => isConversationJid(message.jid))
+        : [],
       loggedOut: result?.loggedOut === true,
     };
   }
