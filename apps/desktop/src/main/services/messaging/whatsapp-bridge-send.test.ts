@@ -24,6 +24,7 @@ type Internals = {
     ensure: () => Promise<boolean>;
     isLive?: () => Promise<boolean>;
     listChats: () => Promise<unknown[]>;
+    myId?: () => Promise<{ jid: string; digits: string; lid: string | null }>;
     sendText: (
       jid: string,
       text: string
@@ -244,6 +245,11 @@ describe('who "me" is', () => {
   it("lists the user's own chat first as theirs, never as a contact with their name", async () => {
     const { internals } = connectorWith({
       ensure: async () => true,
+      myId: async () => ({
+        jid: "919000000001@c.us",
+        digits: "919000000001",
+        lid: null,
+      }),
       listChats: async () => [
         {
           jid: "919000000001@c.us",
@@ -331,6 +337,11 @@ describe("who an inbound message is from", () => {
     internals.bridgeReady = true;
     internals.bridgeChats = chats;
     internals.bridge = {
+      myId: async () => ({
+        jid: "919000000001@c.us",
+        digits: "919000000001",
+        lid: null,
+      }),
       listChats: async () => chats,
       drain: async () => ({ messages: [message], loggedOut: false }),
       isOwnChat: async (jid: string) => ownChat(jid),

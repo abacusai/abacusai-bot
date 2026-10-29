@@ -190,14 +190,20 @@ export class WhatsAppBridge {
     return this.library;
   }
 
-  /** The account this page is signed in as. */
-  async myId(): Promise<{ jid: string; digits: string } | null> {
+  /** The account this page is signed in as: its phone jid and, once
+   * WhatsApp has one for it, its lid, the id newer builds file chats under. */
+  async myId(): Promise<{
+    jid: string;
+    digits: string;
+    lid: string | null;
+  } | null> {
     const result = await this.host.run<{
       jid: string | null;
       digits: string | null;
+      lid?: string | null;
     }>(MY_ID_SCRIPT, {});
     if (result?.jid == null || result.digits == null) return null;
-    return { jid: result.jid, digits: result.digits };
+    return { jid: result.jid, digits: result.digits, lid: result.lid ?? null };
   }
 
   /** The chats, or null while WhatsApp has not answered (it is still syncing after a link). */
@@ -379,7 +385,13 @@ const MY_ID_SCRIPT = pageScript`
   const me = WPP.conn.getMyUserId();
   if (!me) return { jid: null, digits: null };
   const jid = me._serialized || (me.user + "@" + me.server);
-  return { jid, digits: String(me.user || "") };
+  // Absent until WhatsApp assigns one; a later ask picks it up.
+  let lid = null;
+  try {
+    const own = WPP.whatsapp.UserPrefs.getMaybeMeLidUser();
+    if (own && own.user) lid = own.user + "@lid";
+  } catch (e) {}
+  return { jid, digits: String(me.user || ""), lid };
 `;
 
 const LIST_CHATS_SCRIPT = pageScript`
