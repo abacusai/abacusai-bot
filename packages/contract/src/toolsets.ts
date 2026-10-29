@@ -71,7 +71,26 @@ export interface PaidPlanCapability {
   name: string;
   /** False: the plan makes it in Abacus AI Agent on the web; here only on the user's own provider key. */
   inApp: boolean;
+  /**
+   * The ChatLLM mobile app serves it on the paid plans, and the phone bot
+   * never does: the server hands it no such attachment, only a marker of
+   * this kind with `CHATLLM_APP_ATTACHMENT_REASON`.
+   */
+  chatLlmAppKind?: string;
 }
+
+/**
+ * The server's reason in `[attachment not read: kind=<kind> reason=<reason>]`
+ * for what the ChatLLM mobile app reads on a paid plan and the phone bot never
+ * does (a video sent to AbacusAI Bot's WhatsApp number).
+ */
+export const CHATLLM_APP_ATTACHMENT_REASON = "in_chatllm_app";
+
+/** The ChatLLM mobile app in each store. */
+export const CHATLLM_APP_URLS = {
+  iphone: "https://apps.apple.com/app/chatllm-ai-chat-and-agents/id6502844681",
+  android: "https://play.google.com/store/apps/details?id=com.abacusai.chatllm",
+} as const;
 
 /** The tool that tells the agent about a paid-plan capability this account lacks. */
 export const PAID_FEATURE_TOOL = "paid_feature";
@@ -440,7 +459,12 @@ export const TOOLSETS: Toolset[] = [
     tools: [tool("video_analyze")],
     defaultEnabled: false,
     // Watching a reel, a Short or a forwarded video: a paid-plan model's.
-    paidPlan: { feature: "video", name: "video analysis", inApp: true },
+    paidPlan: {
+      feature: "video",
+      name: "video analysis",
+      inApp: true,
+      chatLlmAppKind: "video",
+    },
   },
   {
     id: "video_gen",

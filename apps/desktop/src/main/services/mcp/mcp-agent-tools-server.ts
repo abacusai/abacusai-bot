@@ -156,6 +156,7 @@ import type {
 } from "./tools/definition";
 import {
   type PaidFeatureReply,
+  paidFeaturePlace,
   paidFeatureResult,
   withheldFeatures,
 } from "./tools/paid-features";
@@ -610,8 +611,11 @@ export class McpAgentToolsServer extends McpHttpServer {
     const enabled = this.options.enabledToolsets();
     return {
       hostedRoutines: this.options.hostedRoutines?.() === true,
-      withheldFeatures: withheldFeatures(this.planTier(), (feature) =>
-        this.featureListed(feature.toolsets, enabled, callerSession)
+      withheldFeatures: withheldFeatures(
+        this.planTier(),
+        (feature) =>
+          this.featureListed(feature.toolsets, enabled, callerSession),
+        this.isPhoneCaller(callerSession)
       ),
     };
   }
@@ -3072,11 +3076,15 @@ export class McpAgentToolsServer extends McpHttpServer {
         `Unknown feature. One of: ${PAID_FEATURES.map((entry) => entry.feature).join(", ")}.`
       );
     const tier = this.planTier();
-    const listed = this.featureListed(
-      feature.toolsets,
-      this.options.enabledToolsets(),
-      callerSession
-    );
+    const place = paidFeaturePlace(feature, this.isPhoneCaller(callerSession));
+    // The phone is never handed what the ChatLLM app reads, whatever tool it lists.
+    const listed =
+      place !== "chatllm_app" &&
+      this.featureListed(
+        feature.toolsets,
+        this.options.enabledToolsets(),
+        callerSession
+      );
     const reply = this.paidFeatureReply(callerSession);
     // Only a chat app's reply mints a one-time upgrade link: the app's reply
     // stays in the chat, so it links the bot's upgrade page, and the card brings its own.
@@ -3091,6 +3099,7 @@ export class McpAgentToolsServer extends McpHttpServer {
     return paidFeatureResult(this, {
       feature,
       tier,
+      place,
       listed,
       reply,
       plan,

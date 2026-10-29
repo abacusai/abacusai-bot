@@ -2,6 +2,7 @@ import type { BillingPlan } from "@abacus-ai/contract/billing-plan";
 import type { AbacusPlanTier } from "@abacus-ai/contract/models";
 import {
   abacusAgentPromptUrl,
+  CHATLLM_APP_URLS,
   PAID_FEATURE_TOOL,
   PAID_FEATURES,
   type PaidFeature,
@@ -16,17 +17,38 @@ import type {
 } from "./definition";
 
 /**
+ * Where the plan serves a capability for this caller: this app, Abacus AI
+ * Agent on the web, or (for the phone, which is never handed a video) the
+ * ChatLLM mobile app.
+ */
+export type PaidFeaturePlace = "app" | "web" | "chatllm_app";
+
+export const paidFeaturePlace = (
+  feature: PaidFeature,
+  phone: boolean
+): PaidFeaturePlace =>
+  phone && feature.chatLlmAppKind != null
+    ? "chatllm_app"
+    : feature.inApp
+      ? "app"
+      : "web";
+
+/**
  * Paid-plan capabilities this account lacks: on the free plan, those whose
- * tools are not listed; on a paid one, those the plan serves only on the web.
+ * tools are not listed; on a paid one, those the plan serves elsewhere (on the
+ * web, or for the phone in the ChatLLM mobile app).
  */
 export const withheldFeatures = (
   tier: AbacusPlanTier,
-  listed: (feature: PaidFeature) => boolean
+  listed: (feature: PaidFeature) => boolean,
+  phone = false
 ): PaidFeature[] =>
   tier === "unknown"
     ? []
     : PAID_FEATURES.filter(
-        (feature) => (tier === "free" || !feature.inApp) && !listed(feature)
+        (feature) =>
+          paidFeaturePlace(feature, phone) === "chatllm_app" ||
+          ((tier === "free" || !feature.inApp) && !listed(feature))
       );
 
 const names = (features: readonly PaidFeature[]): string =>
@@ -45,6 +67,7 @@ export type PaidFeatureReply = "card" | "chat" | "routine";
 interface PaidFeatureCall {
   feature: PaidFeature;
   tier: AbacusPlanTier;
+  place: PaidFeaturePlace;
   /** Its tools are listed for this caller now. */
   listed: boolean;
   reply: PaidFeatureReply;
@@ -79,6 +102,26 @@ const OWN_KEY =
 
 const webOnly = (feature: PaidFeature, reply: PaidFeatureReply): string =>
   `This app does not make ${feature.name} on the Abacus plan: the plan makes it in Abacus AI Agent on the web.${reply === "chat" ? "" : ` ${OWN_KEY}`}`;
+
+const chatLlmAppOnly = (feature: PaidFeature): string =>
+  `This chat is never handed a ${feature.chatLlmAppKind ?? "file"} to read: ${feature.name} is in the ChatLLM mobile app, which every paid plan includes.`;
+
+const CHATLLM_APP_LINKS = `The ChatLLM app: iPhone ${CHATLLM_APP_URLS.iphone} Android ${CHATLLM_APP_URLS.android}`;
+
+/**
+ * What this chat is never handed is the ChatLLM app's: never a refusal, and
+ * never a request to send it again here, where it would not arrive either.
+ */
+const SEND_IT_THERE =
+  "Never say you cannot watch or read it, that it did not arrive or is not supported, and never ask them to send it again here: they send it in the ChatLLM app.";
+
+/** Where a plan serves it, said beside the free plan's answer; nothing when it is this app. */
+const elsewhere = (call: PaidFeatureCall): string =>
+  call.place === "web"
+    ? ` ${webOnly(call.feature, call.reply)}`
+    : call.place === "chatllm_app"
+      ? ` ${chatLlmAppOnly(call.feature)}`
+      : "";
 
 /**
  * How the next message is read. Offered a script beside the plan, users
@@ -117,6 +160,16 @@ const webAnswer = (call: PaidFeatureCall): string[] => {
   ];
 };
 
+/** The paid plan's answer for what the ChatLLM mobile app serves: that app, never an upgrade. */
+const chatLlmAppAnswer = (call: PaidFeatureCall): string[] => {
+  const { feature } = call;
+  return [
+    `Their plan includes ${feature.name}. ${chatLlmAppOnly(feature)}`,
+    CHATLLM_APP_LINKS,
+    `Tell them so in their language, in one or two short lines. ${leadWithYes(`Your plan does ${feature.name} in the ChatLLM app: send it there.`)} Then the ChatLLM app's link for their phone (both when you do not know which phone they have), exactly as written, each on its own line. Do not offer an upgrade. ${SEND_IT_THERE} ${NO_DETOURS}`,
+  ];
+};
+
 /** What the model is told when it asks for a capability this account lacks. */
 export function paidFeatureResult(
   host: { ok: (text: string) => ToolResult },
@@ -134,14 +187,16 @@ export function paidFeatureResult(
         : `Their plan cannot be read right now. Call billing_plan with upgrade: true and answer from it which plan includes ${feature.name}, leading with that plan and where it makes it. ${NEVER_CANNOT} ${NO_DETOURS}`
     );
   if (tier !== "free") {
-    if (feature.inApp)
+    if (call.place === "chatllm_app")
+      return host.ok(chatLlmAppAnswer(call).join("\n"));
+    if (call.place === "app")
       return host.ok(
         `Their plan includes ${feature.name}, but it is switched off in Settings, Capabilities. Tell them, in their language, to switch it on there and ask again.`
       );
     return host.ok(webAnswer(call).join("\n"));
   }
   const next = plan?.upgrades[0];
-  const where = feature.inApp ? "" : ` ${webOnly(feature, reply)}`;
+  const where = elsewhere(call);
   if (next == null)
     return host.ok(
       [
@@ -173,18 +228,31 @@ export function paidFeatureResult(
       : reply === "card"
         ? "Give the upgrade link exactly as written, on its own line. The app also shows an Upgrade card with your reply, which opens the same upgrade."
         : "Give the upgrade link exactly as written, on its own line.";
-  const includes = feature.inApp
-    ? `${next.planName} includes ${feature.name} (in this app once they upgrade)`
-    : `${next.planName} includes ${feature.name} on the web in Abacus AI Agent`;
-  const example = feature.inApp
-    ? `${next.planName} gives you ${feature.name} right here: ${priceLine(next)}.`
-    : `${next.planName} gives you ${feature.name} in Abacus AI Agent on the web: ${priceLine(next)}.`;
-  lines.push(
-    "",
-    `Tell them in their language, in one or two short lines, that ${includes}, naming (in their language) the feature above that covers it, and its price. ${leadWithYes(example)}${feature.inApp ? "" : ` ${ATTACHED}`}`,
-    offer,
-    `If no feature above covers ${feature.name}, do not say the plan includes it. ${NEVER_CANNOT} ${NO_DETOURS} Do not call ${PAID_FEATURE_TOOL} again for this request.`
-  );
+  if (call.place === "chatllm_app") {
+    // No feature line names the app: the plan's own words carry the pitch, whole.
+    lines.push(
+      CHATLLM_APP_LINKS,
+      "",
+      `Tell them in their language, as one short message, that ${next.planName} includes ${feature.name} in the ChatLLM mobile app, then everything it gives as a short list (every line above, translated, none left out), its price and the upgrade link. ${leadWithYes(`${next.planName} gives you ${feature.name} in the ChatLLM app: ${priceLine(next)}.`)} Give the ChatLLM app's links only when they ask where to get it, or once they upgraded.`,
+      offer,
+      `${SEND_IT_THERE} ${NO_DETOURS} Do not call ${PAID_FEATURE_TOOL} again for this request.`
+    );
+  } else {
+    const includes =
+      call.place === "app"
+        ? `${next.planName} includes ${feature.name} (in this app once they upgrade)`
+        : `${next.planName} includes ${feature.name} on the web in Abacus AI Agent`;
+    const example =
+      call.place === "app"
+        ? `${next.planName} gives you ${feature.name} right here: ${priceLine(next)}.`
+        : `${next.planName} gives you ${feature.name} in Abacus AI Agent on the web: ${priceLine(next)}.`;
+    lines.push(
+      "",
+      `Tell them in their language, in one or two short lines, that ${includes}, naming (in their language) the feature above that covers it, and its price. ${leadWithYes(example)}${call.place === "web" ? ` ${ATTACHED}` : ""}`,
+      offer,
+      `If no feature above covers ${feature.name}, do not say the plan includes it. ${NEVER_CANNOT} ${NO_DETOURS} Do not call ${PAID_FEATURE_TOOL} again for this request.`
+    );
+  }
   // Nobody answers a routine's result.
   if (reply !== "routine")
     lines.push(
