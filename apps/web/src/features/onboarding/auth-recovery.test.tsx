@@ -322,3 +322,38 @@ it("Try again after paying on the web signs in without a restart", async () => {
     screen.queryByRole("heading", { name: "Your free trial has ended" })
   ).toBeNull();
 });
+
+it("Use another account asks the website for a different account, not the one it holds", async () => {
+  let held = false;
+  const authStart = vi.fn(async () => {
+    held = true;
+    return { ok: false as const, error: "payment-required" };
+  });
+  app = await renderApp("/onboarding/welcome", {
+    onboarded: false,
+    signedIn: false,
+    authStart,
+    procedures: {
+      account: {
+        payment: os.account.payment.handler(() =>
+          held ? { reason: "unconfirmed" } : null
+        ),
+        releasePayment: os.account.releasePayment.handler(() => {
+          held = false;
+        }),
+      },
+    },
+  });
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Sign up for free" })
+  );
+  await screen.findByRole("heading", {
+    name: "Choose a plan to keep using AbacusAI Bot",
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Sign in with a different account" })
+  );
+  await waitFor(() => expect(authStart).toHaveBeenCalledTimes(2));
+  const starts = app.calls.filter(([name]) => name === "auth.abacus.start");
+  expect(starts.at(-1)?.[1]).toEqual({ intent: "switch" });
+});

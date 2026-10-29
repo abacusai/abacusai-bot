@@ -728,8 +728,11 @@ export type OpenRouterAuthOutcome =
   | { ok: true }
   | { ok: false; error: string; cancelled?: boolean };
 /** Same contract: the key never leaves main. */
-/** Which first-screen button started an Abacus.AI sign-in. */
-export type AbacusAuthIntent = "signup" | "signin";
+/**
+ * Which button started an Abacus.AI sign-in. `switch` is "Use another
+ * account": the website must not finish it with the session it already holds.
+ */
+export type AbacusAuthIntent = "signup" | "signin" | "switch";
 export type AbacusAuthOutcome =
   | { ok: true }
   | { ok: false; error: string; cancelled?: boolean };

@@ -1,5 +1,8 @@
 import type { HomeChannel } from "@abacus-ai/contract/bots";
-import type { AbacusAuthOutcome } from "@abacus-ai/contract/contracts";
+import type {
+  AbacusAuthIntent,
+  AbacusAuthOutcome,
+} from "@abacus-ai/contract/contracts";
 import { Store } from "@tanstack/react-store";
 
 import { signInAbacus } from "#platform/sign-in";
@@ -8,7 +11,7 @@ import { IS_ELECTRON } from "#renderer/lib/platform";
 import { SignInFailure } from "#renderer/lib/sign-in-failure";
 export interface SignInAttempt {
   id: string;
-  intent: "signup" | "signin";
+  intent: AbacusAuthIntent;
   status: "pending" | "failed" | "cancelled" | "succeeded";
   outcome: AbacusAuthOutcome | null;
 }
@@ -22,7 +25,7 @@ export const onboardingStore = new Store<{
 }>({ signIn: null, createdBotId: null });
 export const startSignIn = (
   transport: Transport,
-  intent: "signup" | "signin",
+  intent: AbacusAuthIntent,
   settled: (outcome: AbacusAuthOutcome) => void | Promise<void>
 ): boolean => {
   if (onboardingStore.state.signIn?.status === "pending") return false;

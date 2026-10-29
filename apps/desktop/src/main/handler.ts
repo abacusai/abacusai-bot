@@ -6,6 +6,7 @@ import type { WebAuthCompleteResult } from "@abacus-ai/contract/account";
 import type {
   IpcEvent,
   AbacusAccountInfo,
+  AbacusAuthIntent,
   AbacusAuthOutcome,
   AbacusPaymentRequired,
   AbacusSignOutResult,
@@ -78,7 +79,7 @@ export interface HostPlatformOperations {
   webAuth?: (
     adopt: (key: string, surface: "web") => Promise<AdoptCredentialResult>
   ) => WebAuth;
-  startAbacusAuth: (intent: "signin" | "signup") => Promise<any>;
+  startAbacusAuth: (intent: AbacusAuthIntent) => Promise<any>;
   startOpenRouterAuth: () => Promise<any>;
   cancelAbacusAuth: () => void;
   shouldAutoSignIn: () => Promise<boolean>;
@@ -465,7 +466,7 @@ export const createHostOperations = (
     intent: unknown
   ): Promise<AbacusAuthOutcome> => {
     const result = await startAbacusAuth(
-      intent === "signin" ? "signin" : "signup"
+      intent === "signin" || intent === "switch" ? intent : "signup"
     );
     if (result.ok !== true) {
       return {

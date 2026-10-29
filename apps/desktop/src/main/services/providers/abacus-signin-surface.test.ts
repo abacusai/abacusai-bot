@@ -54,6 +54,23 @@ describe("the browser sign-in", () => {
     expect(url.searchParams.has("isSignUp")).toBe(false);
   });
 
+  it.each([
+    ["signup", "1", null],
+    ["signin", null, null],
+    // "Use another account": the website's held session must not finish it.
+    ["switch", null, "1"],
+  ] as const)(
+    "asks the website for a %s",
+    async (intent, isSignUp, switchAccount) => {
+      void startAbacusAuth(intent);
+      await settle();
+
+      const url = new URL(String(openExternal.mock.calls.at(-1)?.[0]));
+      expect(url.searchParams.get("isSignUp")).toBe(isSignUp);
+      expect(url.searchParams.get("botSwitchAccount")).toBe(switchAccount);
+    }
+  );
+
   it("settles a cancel before the browser opens and never opens it", async () => {
     const attempt = startAbacusAuth();
     cancelAbacusAuth();
