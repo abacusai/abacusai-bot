@@ -253,10 +253,13 @@ jobs:
             if: needs.plan.outputs.desktop == 'true'
             run: pnpm --dir apps/desktop exec vitest run --project main --project preload
 
+      # renderer.electron and chat-kit.electron drive the built web renderer,
+      # which does not differ by system, and run on Linux in the test job. Here
+      # their timing budgets measure the runner rather than the system.
       - name: Desktop Electron suites
         if: needs.plan.outputs.desktop == 'true'
         run: >-
-          pnpm --dir apps/desktop exec vitest run --project main-serial ${{ needs.plan.outputs.migrations != 'true' && '--exclude src/main/migrations/runner.crash.test.ts' || '' }}
+          pnpm --dir apps/desktop exec vitest run --project main-serial --exclude src/main/dev/renderer.electron.test.ts --exclude src/main/dev/chat-kit.electron.test.ts ${{ needs.plan.outputs.migrations != 'true' && '--exclude src/main/migrations/runner.crash.test.ts' || '' }}
 
       - name: The search binaries landed beside the agent and run
         if: needs.plan.outputs.agent == 'true'
