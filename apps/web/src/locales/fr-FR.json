@@ -4513,6 +4513,7 @@
       "expired": "Je me suis mis en pause car vos crédits gratuits ont expiré.",
       "offer": "{{plan}} coûte {{price}} et vous offre :",
       "link": "Passez à l'offre supérieure ici : {{link}}",
+      "mobileApp": "Une fois votre forfait amélioré, tout fonctionne pleinement sur votre téléphone dans l'app ChatLLM.",
       "repeat": "Toujours en pause : {{link}}",
       "paidOut": "Je me suis mis en pause car les crédits de ce mois-ci sont épuisés. Ajoutez des crédits pour continuer : {{link}}",
       "paidOutUpgrade": "Je me suis mis en pause car les crédits de ce mois-ci sont épuisés. Passez à {{plan}} ({{price}}) pour plus de crédits chaque mois : {{link}}",

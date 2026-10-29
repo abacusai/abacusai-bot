@@ -4513,6 +4513,7 @@
       "expired": "Ich habe pausiert, weil deine kostenlosen Credits abgelaufen sind.",
       "offer": "{{plan}} kostet {{price}} und bietet dir:",
       "link": "Hier upgraden: {{link}}",
+      "mobileApp": "Nach dem Upgrade funktioniert alles vollständig auf deinem Handy in der ChatLLM-App.",
       "repeat": "Weiterhin pausiert: {{link}}",
       "paidOut": "Ich habe pausiert, weil die Credits dieses Monats aufgebraucht sind. Füge Credits hinzu, um weiterzumachen: {{link}}",
       "paidOutUpgrade": "Ich habe pausiert, weil die Credits dieses Monats aufgebraucht sind. Wechsle zu {{plan}} ({{price}}) für mehr Credits jeden Monat: {{link}}",

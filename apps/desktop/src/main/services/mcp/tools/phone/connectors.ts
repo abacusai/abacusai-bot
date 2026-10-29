@@ -3,7 +3,10 @@ import { CONNECTORS } from "@abacus-ai/connectors/registry";
 import type { BillingPlan } from "@abacus-ai/contract/billing-plan";
 
 import { fetchAbacusAccount, onFreePlan } from "../../../providers/abacus";
-import { fetchBillingPlan } from "../../../providers/abacus-upgrade";
+import {
+  fetchBillingPlan,
+  WHATSAPP_UPGRADE_SRC,
+} from "../../../providers/abacus-upgrade";
 import { creditsLine } from "../billing";
 import type { ConnectOutcome, DisconnectOutcome } from "../connect-outcome";
 import type { ToolHost, ToolResult } from "../definition";
@@ -210,7 +213,10 @@ const planForUpgrade = async (): Promise<
   { free: false } | { free: true; billing: BillingPlan | null }
 > =>
   onFreePlan(await fetchAbacusAccount())
-    ? { free: true, billing: await fetchBillingPlan(true) }
+    ? {
+        free: true,
+        billing: await fetchBillingPlan(true, undefined, WHATSAPP_UPGRADE_SRC),
+      }
     : { free: false };
 
 /** What the phone's model is told about a disconnect. */

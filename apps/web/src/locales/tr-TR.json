@@ -4513,6 +4513,7 @@
       "expired": "Ücretsiz kredilerinin süresi dolduğu için durakladım.",
       "offer": "{{plan}} planı {{price}} ve sana şunları sunar:",
       "link": "Buradan yükselt: {{link}}",
+      "mobileApp": "Yükselttiğinde her şey telefonundaki ChatLLM uygulamasında eksiksiz çalışır.",
       "repeat": "Hâlâ duraklatıldı: {{link}}",
       "paidOut": "Bu ayın kredileri bittiği için durakladım. Devam etmek için kredi ekle: {{link}}",
       "paidOutUpgrade": "Bu ayın kredileri bittiği için durakladım. Her ay daha fazla kredi için {{plan}} planına geç ({{price}}): {{link}}",

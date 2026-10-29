@@ -5,6 +5,7 @@
  * else reaches it, listed or called. The app's listing is untouched.
  */
 import fs from "fs";
+import os from "os";
 import path from "path";
 
 import { WHATSAPP_CHANNEL } from "@abacus-ai/agent/channel";
@@ -333,7 +334,7 @@ describe("a service the phone does not connect", () => {
       const { text } = await call("connect_connector", { service });
       expect(link).not.toHaveBeenCalled();
       expect(watch).not.toHaveBeenCalled();
-      expect(billingPlan).toHaveBeenCalledWith(true);
+      expect(billingPlan).toHaveBeenCalledWith(true, undefined, "whatsapp");
       expect(text).toContain("no link was made for it: send none");
       expect(text).toContain("not part of the free plan on WhatsApp");
       expect(text).toContain("the ChatLLM\napp on their phone");
@@ -711,40 +712,160 @@ describe("paid-plan capabilities", () => {
     ).not.toContain("paid_feature");
   });
 
-  it("answers on the phone in its own words, with the link, whatever keys the computer has", async () => {
+  const WHATSAPP_PAGE = /https:\/\/\S+\/bot\/link\/upgrade\?src=whatsapp/;
+
+  it("lists one handoff on the phone for every ask the chat cannot do, on every plan, whatever keys the computer has", () => {
     mediaKeys.set("OPENAI_API_KEY", "key");
+    for (const tier of ["free", "basic", "unknown"] as const) {
+      const server = planServer(tier, ["image_gen"]);
+      const tool = listed(server, PHONE).find(
+        (entry) => entry.name === "paid_feature"
+      );
+      expect(featureEnum(tool)).toEqual([
+        "video_gen",
+        "image_gen",
+        "tts",
+        "video",
+        "app_build",
+        "project_files",
+        "routines",
+      ]);
+      expect(names(server, PHONE)).not.toContain("image_generate");
+      expect(tool?.description).toMatch(/website, landing page, web app/);
+      expect(tool?.description).toMatch(/zip, apk, jar, exe/);
+      expect(tool?.description).toMatch(/you cannot watch videos here/);
+      expect(tool?.description).toMatch(
+        /Never for reading or describing a photo/
+      );
+      // No request is carried: the feature alone.
+      expect(tool!.inputSchema).toEqual({
+        type: "object",
+        properties: { feature: expect.anything() },
+        required: ["feature"],
+      });
+    }
+  });
+
+  it("pitches a free account the whole plan, led by the ChatLLM app, with its WhatsApp upgrade link", async () => {
+    billingPlan.mockResolvedValue({
+      ...BASIC_FIRST_MONTH,
+      upgrades: [
+        {
+          ...BASIC_FIRST_MONTH.upgrades[0],
+          url: "https://apps.example/bot/link/upgrade?plan=basic&src=whatsapp",
+        },
+      ],
+    });
+    const { text, isError } = await callOn(
+      planServer("free"),
+      "app_build",
+      PHONE
+    );
+    expect(isError).toBe(false);
+    expect(billingPlan).toHaveBeenCalledWith(true, undefined, "whatsapp");
+    expect(text).toMatch(
+      /everything works fully on their phone in the ChatLLM app, building websites and apps included/
+    );
+    expect(text).toMatch(/Do not build it here and start nothing/);
+    expect(text).toMatch(
+      /Basic, \$7 for the first month \(30% off the usual \$10\/mo\), then \$10\/mo/
+    );
+    // Every feature line, as the server words it, never tagged "on the web".
+    expect(text).toContain("  - Top models\n  - Image and video generation");
+    expect(text).not.toMatch(/not a limit on this app/);
+    expect(text).toContain(
+      "Their link: https://apps.example/bot/link/upgrade?plan=basic&src=whatsapp"
+    );
+    expect(text).toMatch(/then on to the ChatLLM app/);
+    expect(text).not.toMatch(/ready there|typed in/);
+    expect(text).toMatch(/whether they want Basic/);
+    // A no gets the free way: the desktop app on a computer.
+    expect(text).toMatch(
+      /A no or not now: .*AbacusAI Bot is free on a computer, at bot\.abacus\.ai/
+    );
+    expect(text).toMatch(/no `serve`, no `page`, no zip/);
+  });
+
+  it("says plainly what the chat cannot do before the yes: a video, a file it cannot carry", async () => {
     billingPlan.mockResolvedValue(BASIC_FIRST_MONTH);
-    const free = planServer("free", ["image_gen"]);
-    const tool = listed(free, PHONE).find(
-      (entry) => entry.name === "paid_feature"
+    const video = await callOn(planServer("free"), "video", PHONE);
+    expect(video.text).toMatch(/cannot watch or analyse videos here/);
+    expect(video.text).toMatch(
+      /for free they can tell you what is in it or send a screenshot/
     );
-    expect(tool?.description).toMatch(/one short WhatsApp message/);
-    expect(featureEnum(tool)).toEqual([
-      "video_gen",
-      "image_gen",
-      "tts",
-      "video",
-    ]);
-    expect(names(free, PHONE)).not.toContain("image_generate");
-    const upgrade = await callOn(free, "image_gen", PHONE);
-    expect(billingPlan).toHaveBeenCalledWith(true);
-    expect(upgrade.text).toContain(
-      "Their upgrade link: https://upgrade.example/basic"
+    expect(video.text).toMatch(/Never ask them to send the video again/);
+    const apk = await callOn(planServer("free"), "project_files", PHONE);
+    expect(apk.text).toMatch(/WhatsApp refuses zip, apk, jar, exe/);
+    expect(apk.text).toMatch(
+      /Never send it, a renamed or zipped copy, or a link to it/
     );
-    expect(upgrade.text).not.toMatch(/Settings|card/);
-    expect(upgrade.text).toMatch(
-      /A yes \(.*the upgrade link again, exactly as written, on its own line/
+  });
+
+  it("falls back to AbacusAI Bot's WhatsApp page when the plan cannot be read", async () => {
+    billingPlan.mockResolvedValue(null);
+    const { text } = await callOn(planServer("free"), "image_gen", PHONE);
+    expect(text).toMatch(WHATSAPP_PAGE);
+    expect(text).toMatch(/Never invent a plan, price or feature/);
+  });
+
+  it("sends a paid account to the ChatLLM app through the WhatsApp page, never an upgrade or the web prompt", async () => {
+    for (const tier of ["basic", "paid"] as const) {
+      const { text } = await callOn(
+        planServer(tier as never, ["image_gen"]),
+        "image_gen",
+        PHONE,
+        "a fox in the snow"
+      );
+      expect(text).toMatch(/works fully on their phone in the ChatLLM app/);
+      expect(text).toMatch(WHATSAPP_PAGE);
+      expect(text).not.toContain("prompt=");
+      expect(text).not.toMatch(/The upgrade:/);
+      expect(text).toMatch(/Do not offer an upgrade/);
+    }
+    expect(billingPlan).not.toHaveBeenCalled();
+  });
+
+  it("sets up no reminder or routine from the phone on the free plan, and every kind on a paid one", async () => {
+    const previousHome = process.env.ABACUSAI_BOT_HOME;
+    process.env.ABACUSAI_BOT_HOME = fs.mkdtempSync(
+      path.join(os.tmpdir(), "phone-cron-")
     );
-    const paid = await callOn(
-      planServer("basic", ["image_gen"]),
-      "image_gen",
-      PHONE,
-      "a fox in the snow"
-    );
-    expect(paid.text).toContain(FOX);
-    expect(
-      listed(planServer("unknown"), PHONE).map((t) => t.name)
-    ).not.toContain("paid_feature");
+    try {
+      const create = async (
+        tier: "free" | "basic" | "paid",
+        args: Record<string, unknown>
+      ) => {
+        const result = (await planServer(tier as never, [
+          "cronjob",
+        ]).executeTool(
+          "cronjob",
+          { action: "create", prompt: "remind me to call mom", ...args },
+          PHONE
+        )) as { content: Array<{ text?: string }>; isError?: boolean };
+        return {
+          text: result.content.map((part) => part.text ?? "").join("\n"),
+          isError: result.isError === true,
+        };
+      };
+      const KINDS = [
+        { in_minutes: 30 },
+        { run_at: "2099-01-01T08:00:00Z" },
+        { schedule: "0 8 * * *", prompt: "my daily brief" },
+      ];
+      for (const kind of KINDS) {
+        const free = await create("free", kind);
+        expect(free.isError).toBe(true);
+        expect(free.text).toMatch(/Call paid_feature with feature routines/);
+        for (const tier of ["basic", "paid"] as const) {
+          const paid = await create(tier, kind);
+          expect(paid.isError).toBe(false);
+          expect(paid.text).toMatch(/^Created/);
+        }
+      }
+    } finally {
+      if (previousHome == null) delete process.env.ABACUSAI_BOT_HOME;
+      else process.env.ABACUSAI_BOT_HOME = previousHome;
+    }
   });
 
   const VIDEO_MARKER =
@@ -772,24 +893,21 @@ describe("paid-plan capabilities", () => {
     billingPlan.mockResolvedValue(BASIC_FIRST_MONTH);
     const { text, isError } = await callOn(planServer("free"), "video", PHONE);
     expect(isError).toBe(false);
-    expect(billingPlan).toHaveBeenCalledWith(true);
+    expect(billingPlan).toHaveBeenCalledWith(true, undefined, "whatsapp");
     expect(text).toMatch(
-      /^Video analysis is not on this account's free plan\./
+      /^Video analysis is not in this chat on the free plan\./
     );
     expect(text).toMatch(
-      /video analysis is in the ChatLLM mobile app, which every paid plan includes/
+      /everything works fully on their phone in the ChatLLM app, video analysis included/
     );
     expect(text).toContain("  - Top models\n  - Image and video generation");
-    expect(text).toContain("Their upgrade link: https://upgrade.example/basic");
+    expect(text).toContain("Their link: https://upgrade.example/basic");
     expect(text).toMatch(
-      /Basic includes video analysis in the ChatLLM mobile app, then everything it gives as a short list \(every line above, translated, none left out\)/
-    );
-    expect(text).toMatch(
-      /"Basic gives you video analysis in the ChatLLM app: \$7 for the first month/
+      /"With Basic, everything works fully on your phone in the ChatLLM app, this included: \$7 for the first month/
     );
     expect(text).toContain(IPHONE_APP);
-    expect(text).toMatch(/never ask them to send it again here/);
-    expect(text).toMatch(/ffmpeg, Blender, Python/);
+    expect(text).toMatch(/Never ask them to send the video again/);
+    expect(text).toMatch(/no `serve`, no `page`, no zip/);
     // Neither the app's "in this app" nor its Settings or card.
     expect(text).not.toMatch(/in this app|Settings|card/);
   });
@@ -804,13 +922,13 @@ describe("paid-plan capabilities", () => {
     expect(isError).toBe(false);
     expect(billingPlan).not.toHaveBeenCalled();
     expect(text).toMatch(
-      /^Their plan includes video analysis\. This chat is never handed a video to read/
+      /^Their plan includes video analysis: it works fully on their phone in the ChatLLM app, not in this chat\./
     );
     expect(text).toContain(
       `The ChatLLM app: iPhone ${IPHONE_APP} Android https://play.google.com/store/apps/details?id=com.abacusai.chatllm`
     );
     expect(text).toMatch(
-      /Open your reply with the yes: .*"Your plan does video analysis in the ChatLLM app: send it there\."/
+      /lead with the yes, for example "Your plan does this fully in the ChatLLM app:"/
     );
     expect(text).toMatch(/Do not offer an upgrade/);
     expect(text).not.toMatch(/upgrade link|tools are listed|Settings/);

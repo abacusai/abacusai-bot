@@ -316,7 +316,13 @@ describe("the free grant's credit milestones", () => {
     credits_used: 0,
   };
   const KEY = "o1:u1";
-  const setup = (tellInChat = vi.fn(async () => false)) => {
+  const setup = (
+    tellInChat: (
+      sessionId: string,
+      mark: CreditThresholdMark
+    ) => Promise<boolean> = vi.fn(async () => false),
+    retriesUntold?: (sessionId: string) => boolean
+  ) => {
     let row = { id: "app", creditThresholds: {} } as unknown as PrefsRow;
     const account = { ...ACCOUNT };
     const clock = { now: new Date(2026, 9, 22, 10).getTime() };
@@ -329,6 +335,7 @@ describe("the free grant's credit milestones", () => {
       }),
       readAccount: async () => ({ ...account }) as never,
       tellInChat,
+      ...(retriesUntold != null ? { retriesUntold } : {}),
       now: () => clock.now,
     });
     const settle = async (
@@ -411,6 +418,34 @@ describe("the free grant's credit milestones", () => {
     await h.settle(1700);
     expect(tell).toHaveBeenCalledTimes(2);
     expect(h.mark()).toMatchObject({ reached: 80, told: 80 });
+  });
+
+  it("on the WhatsApp number, says a line that did not go again after the next turn, then never again", async () => {
+    const tell = vi.fn(
+      async (_sessionId: string, _mark: CreditThresholdMark) => false
+    );
+    const h = setup(tell, () => true);
+    await h.settle(1000);
+    expect(tell).toHaveBeenCalledTimes(1);
+    expect(h.mark()).toMatchObject({ reached: 50, told: null });
+    tell.mockResolvedValue(true);
+    await h.settle(1100);
+    expect(tell).toHaveBeenCalledTimes(2);
+    // Said with the account as read now, still as the half line.
+    expect(tell.mock.calls[1]![1]).toMatchObject({ reached: 50, used: 1100 });
+    expect(h.mark()).toMatchObject({ reached: 50, told: 50 });
+    await h.settle(1200);
+    expect(tell).toHaveBeenCalledTimes(2);
+  });
+
+  it("elsewhere, a line that did not go is left to the card, never said again", async () => {
+    const tell = vi.fn(async () => false);
+    const h = setup(tell);
+    await h.settle(1000);
+    tell.mockResolvedValue(true);
+    await h.settle(1100);
+    expect(tell).toHaveBeenCalledTimes(1);
+    expect(h.mark()).toMatchObject({ reached: 50, told: null });
   });
 
   it("checks only when a billed turn settles, never mid-turn", () => {

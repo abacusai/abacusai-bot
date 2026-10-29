@@ -20,7 +20,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MediaStore } from "../messaging/media-store";
 import { Vault } from "../vault/vault-tools";
-import { McpAgentToolsServer } from "./mcp-agent-tools-server";
+import { McpAgentToolsServer, unfitNote } from "./mcp-agent-tools-server";
 import { McpBrowserServer } from "./mcp-browser-server";
 import { McpDeviceServer } from "./mcp-device-server";
 import type { McpToolListing } from "./mcp-http-server";
@@ -51,6 +51,7 @@ fs.writeFileSync(path.join(workspace, "notes.docx"), "PK\u0003\u0004 notes");
 fs.writeFileSync(path.join(workspace, "chart.png"), PNG);
 fs.writeFileSync(path.join(workspace, "sky.webp"), WEBP);
 fs.writeFileSync(path.join(workspace, "clip.mp4"), "not for the chat");
+fs.writeFileSync(path.join(workspace, "main.py"), "print('hi')\n");
 fs.writeFileSync(path.join(workspace, "page.htm"), "<p>hi</p>");
 fs.writeFileSync(path.join(workspace, "empty.pdf"), "");
 // A PNG past the 5 MB a picture may be.
@@ -445,6 +446,22 @@ describe("present_deliverable on the phone", () => {
     });
     expect(none.isError).toBe(true);
     expect(declaredMedia(none.text)).toEqual([]);
+  });
+
+  it("sends source code as a document", async () => {
+    const { text, isError } = await call("present_deliverable", {
+      items: [{ path: "main.py" }],
+    });
+    expect(isError).toBe(false);
+    expect(declaredMedia(text)).toHaveLength(1);
+  });
+
+  it("on the hosted computer, never promises a file the chat cannot carry: the handoff instead", () => {
+    const text = unfitNote(["app.apk"], true);
+    expect(text).toContain("WhatsApp cannot carry app.apk");
+    expect(text).toMatch(/Never promise the file, a link to it/);
+    expect(text).toMatch(/Call paid_feature with feature project_files/);
+    expect(text).not.toMatch(/desktop app|saved on their computer/);
   });
 
   it("is unchanged in an app session: the first item goes to the preview pane", async () => {

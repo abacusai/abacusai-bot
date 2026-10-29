@@ -60,6 +60,12 @@ export interface CreditThresholdDeps {
     sessionId: string,
     mark: CreditThresholdMark
   ) => Promise<boolean>;
+  /**
+   * A chat with no card, where the line is the only telling (AbacusAI Bot's
+   * WhatsApp number): a line that did not go is said again after its next
+   * settled turn, until it goes.
+   */
+  retriesUntold?: (sessionId: string) => boolean;
   now?: () => number;
 }
 
@@ -92,9 +98,20 @@ export class CreditThresholdWatch {
     const prefs = this.deps.prefs();
     if (prefs == null) return;
     const marks = prefs.get().creditThresholds ?? {};
-    const mark = markAfterRead(marks[key], { used, granted, at }, estimate);
+    const crossed = markAfterRead(marks[key], { used, granted, at }, estimate);
+    const previous = marks[key];
+    // Nothing newly crossed: an untold line goes again where only the line tells it.
+    const untold =
+      crossed == null &&
+      previous != null &&
+      (previous.told ?? 0) < previous.reached &&
+      this.deps.retriesUntold?.(sessionId) === true
+        ? { ...previous, used, granted, at }
+        : null;
+    const mark = crossed ?? untold;
     if (mark == null) return;
-    prefs.update({ creditThresholds: { ...marks, [key]: mark } });
+    if (crossed != null)
+      prefs.update({ creditThresholds: { ...marks, [key]: crossed } });
     if (!(await this.deps.tellInChat(sessionId, mark))) return;
     const latest = prefs.get().creditThresholds ?? {};
     prefs.update({

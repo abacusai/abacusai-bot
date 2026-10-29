@@ -1,7 +1,10 @@
 import type { BillingPlan } from "@abacus-ai/contract/billing-plan";
 import { PAID_FEATURE_TOOL } from "@abacus-ai/contract/toolsets";
 
-import { fetchBillingPlan } from "../../../providers/abacus-upgrade";
+import {
+  fetchBillingPlan,
+  WHATSAPP_UPGRADE_SRC,
+} from "../../../providers/abacus-upgrade";
 import {
   alwaysOnAnswer,
   bullets,
@@ -54,6 +57,8 @@ export function phoneBillingResult(
     "are short of credits or a limit: pitch the upgrades above with every feature line as written (translated, never",
     "shortened or dropped), then the link.",
     "On the free plan, offer both: Basic, and Pro as the even better choice, saying what Pro adds on top of Basic.",
+    "Every upgrade pitch also says that once they upgrade, everything works fully on their phone in the ChatLLM app,",
+    "on top of this chat.",
     "Give each link exactly as written, on its own line. Never invent features, prices or links, and never send them",
     "to account settings or a billing page instead of these links. Never say you changed their plan: they upgrade",
     "on the page."
@@ -76,7 +81,8 @@ export const PHONE_BILLING_TOOLS: PhoneToolDefinition[] = [
       "credits. Call it whenever they ask about their plan, credits or balance, prices or discounts, limits or",
       "resets, upgrading, or what a plan includes; whenever they ask whether something keeps working while their",
       "app or computer is off (WhatsApp, Telegram or Discord auto-replies, routines, reminders); and when they run",
-      `into a plan limit or run low on credits. Never answer these from memory. A video to watch is ${PAID_FEATURE_TOOL}'s.`,
+      `into a plan limit or run low on credits. Never answer these from memory. A video to watch, or something to`,
+      `build or make, is ${PAID_FEATURE_TOOL}'s.`,
       "It answers at once; send them what it says, with every feature line as written and its links as given. Pass",
       "upgrade: true whenever they might upgrade (they ask about upgrading or prices, or hit a limit or run low), so",
       "the answer carries their upgrade links.",
@@ -92,6 +98,13 @@ export const PHONE_BILLING_TOOLS: PhoneToolDefinition[] = [
       },
     },
     run: async (host, args) =>
-      phoneBillingResult(host, await fetchBillingPlan(args.upgrade === true)),
+      phoneBillingResult(
+        host,
+        await fetchBillingPlan(
+          args.upgrade === true,
+          undefined,
+          WHATSAPP_UPGRADE_SRC
+        )
+      ),
   },
 ];

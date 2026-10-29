@@ -394,7 +394,9 @@ export const chatLineForCreditThreshold = (
   words: ChannelWords,
   mark: CreditThresholdMark,
   link: string,
-  billing: BillingPlan | null = null
+  billing: BillingPlan | null = null,
+  /** AbacusAI Bot's WhatsApp number: the plan works fully in the ChatLLM app on their phone. */
+  mobileApp = false
 ): string => {
   const left = Math.max(0, mark.granted - mark.used);
   const count = tasksLeft(left, mark.perTask);
@@ -413,6 +415,7 @@ export const chatLineForCreditThreshold = (
       0,
       -1
     ),
+    ...(mobileApp ? [words.t("outcome.channel.mobileApp")] : []),
     words.t("outcome.channel.link", { link }),
   ].join("\n");
 };

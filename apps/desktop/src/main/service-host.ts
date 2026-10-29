@@ -155,6 +155,7 @@ import {
   sessionConversationKey,
   type ConversationKey,
 } from "@abacus-ai/contract/conversation-scope";
+import type { CreditThresholdMark } from "@abacus-ai/contract/credit-thresholds";
 import type {
   BackendId,
   BackendStatus,
@@ -422,6 +423,7 @@ import {
 } from "./services/messaging/messaging-config-service";
 import { MessagingGatewayService } from "./services/messaging/messaging-gateway-service";
 import {
+  accountMovedPlan,
   cachedAbacusAccount,
   creditSnapshot,
   fetchAbacusAccount,
@@ -955,12 +957,37 @@ export class ServiceHost {
     this.prefs = prefs;
   }
 
+  /**
+   * Says a credit milestone on AbacusAI Bot's WhatsApp number, after the
+   * phone lane's reply; the hosted computer attaches it. Whether it went.
+   */
+  private phoneCreditLine:
+    | ((mark: CreditThresholdMark) => Promise<boolean>)
+    | null = null;
+
+  attachPhoneCreditLine(
+    tell: (mark: CreditThresholdMark) => Promise<boolean>
+  ): void {
+    this.phoneCreditLine = tell;
+  }
+
   /** The free grant's milestones, checked after each billed turn settles. */
   private readonly creditThresholds = new CreditThresholdWatch({
     prefs: () => this.prefs?.() ?? null,
     readAccount: () => fetchAbacusAccount(true),
-    tellInChat: (sessionId, mark) =>
-      this.messagingGatewayService.tellCreditThreshold(sessionId, mark),
+    // A chat app's turn hears it in that app; the phone lane's on WhatsApp.
+    tellInChat: async (sessionId, mark) =>
+      (await this.messagingGatewayService.tellCreditThreshold(
+        sessionId,
+        mark
+      )) ||
+      (this.agentSessionManagerService.laneOf(sessionId) === "phone" &&
+        this.phoneCreditLine != null &&
+        (await this.phoneCreditLine(mark))),
+    // The WhatsApp number has no card: its line is said until it goes.
+    retriesUntold: (sessionId) =>
+      this.phoneCreditLine != null &&
+      this.agentSessionManagerService.laneOf(sessionId) === "phone",
   });
 
   /** The success pitch, decided at each turn's close (TurnLedger). */
@@ -1578,6 +1605,15 @@ export class ServiceHost {
    * start (connectorSync).
    */
   private stepLanded(event: StepEvent): void {
+    // A payment landed: the plan's tier is read before the turn it starts.
+    if (event.event === "upgraded") {
+      const plan = event.facts.plan;
+      accountMovedPlan(typeof plan === "string" ? plan : null);
+      // The agents re-list their tools now (paid_feature, media), not on the next read.
+      this.listedPlanTier = abacusPlanTier(cachedAbacusAccount());
+      this.toolAvailabilityChanged();
+      return;
+    }
     if (event.event !== "connector_connected") return;
     const ids = (value: unknown): string[] =>
       (Array.isArray(value) ? value : []).flatMap((key: unknown) =>

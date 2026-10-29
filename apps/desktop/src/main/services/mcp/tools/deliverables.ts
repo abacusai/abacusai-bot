@@ -78,7 +78,7 @@ export const DELIVERABLES_TOOLS: ToolDefinition[] = [
             "",
             "Each item arrives in the chat with your answer: an image (png, jpg, webp) as a picture,",
             `any other file as a document under its file name (${DOCUMENT_EXTENSIONS.join(", ")}; at`,
-            "most 16 MB). Nothing else goes: not archives, apps or videos, and not a zip or renamed",
+            "most 16 MB; a code file at most 1 MB). Nothing else goes: not archives, apps or videos, and not a zip or renamed",
             "copy of one. The first text of your answer goes with the first item as its caption, so",
             "keep that short. A served page's URL arrives as a screenshot of the page: the user",
             "cannot open a live preview from their phone. Naming a path in prose sends nothing.",

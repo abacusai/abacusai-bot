@@ -36,6 +36,7 @@ import {
 } from "./hosted-routines-setup";
 import { HostLease } from "./lease";
 import { NudgeAgenda } from "./nudge-agenda";
+import { phoneCreditLine } from "./phone-credit-line";
 import { channelsTransport, PhoneLane } from "./phone-lane";
 import { RoutineEntryRunner } from "./routine-runner";
 import { shutdown } from "./shutdown";
@@ -223,6 +224,10 @@ export const composeNodeHost = async () => {
     },
     turnNotes: (entry) => nudgeAgenda.notes(entry),
   });
+  // The free grant's milestones reach the user on WhatsApp too.
+  serviceHost.attachPhoneCreditLine(
+    phoneCreditLine({ phoneDir, say: (text) => phoneLane.say(text) })
+  );
   const stopTurns = serviceHost.onAgentEvent((sessionId, payload) => {
     if (
       sessionId === phoneSessionId &&
