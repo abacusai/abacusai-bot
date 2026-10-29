@@ -585,12 +585,54 @@ describe("one cause per turn, read from the whole chain of calls", () => {
     });
   });
 
-  it("a call that answered last ends the turn with nothing to report", () => {
-    const chain = new TurnChain();
-    chain.failed("429 Too Many Requests", "openrouter");
-    chain.answered("gemini");
-    expect(chain.failure()).toBeNull();
+  const reply = (
+    stopReason: string,
+    content: unknown[]
+  ): Record<string, unknown> => ({
+    role: "assistant",
+    provider: "abacus",
+    stopReason,
+    content,
   });
+
+  // A dropped connection the turn recovered from (a same-model retry, a
+  // replay) is history once a later call answers: the closing reply after a
+  // deliverable must not end the turn on the connection card.
+  it.each([
+    [
+      "a closing text reply",
+      null,
+      reply("stop", [{ type: "text", text: "Done." }]),
+    ],
+    [
+      "a tool call",
+      null,
+      reply("toolUse", [{ type: "toolCall", id: "1", name: "bash" }]),
+    ],
+    [
+      "an empty reply",
+      "connection",
+      reply("stop", [{ type: "text", text: " " }]),
+    ],
+    [
+      "a reply cut by the connection",
+      "connection",
+      reply("error", [{ type: "text", text: "Done." }]),
+    ],
+    [
+      "a reply the user stopped",
+      "connection",
+      reply("aborted", [{ type: "text", text: "Do" }]),
+    ],
+  ] as const)(
+    "after a dropped connection, %s leaves the turn's failure at %s",
+    (_label, cause, message) => {
+      const chain = new TurnChain();
+      chain.failed("Connection error.", "abacus");
+      chain.replied(message);
+      expect(chain.failure()?.cause ?? null).toBe(cause);
+    }
+  );
 
   it("the credit wall outranks everything and offers the free lane by name", () => {
     const chain = new TurnChain();

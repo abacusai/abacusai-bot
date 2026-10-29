@@ -1584,6 +1584,28 @@ describe("OpenLLM", () => {
       fs.writeFileSync(settingsPath(), retriesDisabled, "utf8");
     });
 
+    it("a dropped connection pi's retry recovered from is not the turn's outcome", async () => {
+      fs.writeFileSync(settingsPath(), retrySettings(3), "utf8");
+
+      const harness = session({ mode: "yolo" });
+
+      // Work, a call whose connection dies after its text, its retry, more
+      // work, then the closing reply: the turn finished, nothing failed.
+      provider.scriptSequence([
+        { call: { name: "bash", args: { command: "echo built" } } },
+        { cut: { say: "Checking the build" } },
+        { call: { name: "bash", args: { command: "echo checked" } } },
+        { say: "Everything is ready." },
+      ]);
+      await harness.session.start();
+      await harness.session.send("hi");
+      await harness.until(() => harness.agent("turn_complete").length > 0);
+
+      expect(harness.agent("retry")).toHaveLength(1);
+      expect(harness.text).toContain("Everything is ready.");
+      expect(harness.agent("error")).toEqual([]);
+    });
+
     it("spends one retry on the failing model, then rotates", async () => {
       fs.writeFileSync(settingsPath(), retrySettings(3), "utf8");
 
