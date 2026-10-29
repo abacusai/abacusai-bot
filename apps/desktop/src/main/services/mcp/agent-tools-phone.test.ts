@@ -53,6 +53,13 @@ fs.writeFileSync(path.join(workspace, "sky.webp"), WEBP);
 fs.writeFileSync(path.join(workspace, "clip.mp4"), "not for the chat");
 fs.writeFileSync(path.join(workspace, "page.htm"), "<p>hi</p>");
 fs.writeFileSync(path.join(workspace, "empty.pdf"), "");
+fs.writeFileSync(path.join(workspace, "source.zip"), "PK\u0003\u0004 source");
+fs.writeFileSync(path.join(workspace, "app.apk"), "PK\u0003\u0004 app");
+// A document past the 16 MB the chat takes.
+fs.writeFileSync(
+  path.join(workspace, "big.pdf"),
+  Buffer.alloc(16 * 1024 * 1024 + 1, "%")
+);
 // A PNG past the 5 MB a picture may be.
 fs.writeFileSync(
   path.join(workspace, "huge.png"),
@@ -436,9 +443,9 @@ describe("present_deliverable on the phone", () => {
     expect(mixed.text).toMatch(
       /Not sent:\n- clip\.mp4: The chat does not carry \.mp4 files\./
     );
-    // No copy of it can go: the note says what can, never to convert it.
+    // No copy of it can go: the note is a final, plain answer.
     expect(mixed.text).toContain("WhatsApp cannot carry clip.mp4");
-    expect(mixed.text).toContain("saved on their computer");
+    expect(mixed.text).toContain("do not try again");
 
     const none = await call("present_deliverable", {
       items: [{ path: "clip.mp4" }],
@@ -446,6 +453,30 @@ describe("present_deliverable on the phone", () => {
     expect(none.isError).toBe(true);
     expect(declaredMedia(none.text)).toEqual([]);
   });
+
+  it.each([
+    ["source.zip", "The chat does not carry .zip files."],
+    ["app.apk", "The chat does not carry .apk files."],
+    ["big.pdf", "it is larger than 16 MB"],
+  ])(
+    "refuses %s before anything is uploaded, with a final plain answer to relay",
+    async (file, reason) => {
+      const { text, isError } = await call("present_deliverable", {
+        items: [{ path: file }],
+      });
+      expect(isError).toBe(true);
+      expect(declaredMedia(text)).toEqual([]);
+      expect(text).toContain(`${file}: ${reason}`);
+      expect(text).toContain(
+        "Tell the user plainly, once, in their language, that you can't send that type of file"
+      );
+      expect(text).toContain("do not try again");
+      // No workaround: not another format, not another app or site.
+      expect(text).not.toMatch(
+        /PDF document|`page`|desktop app|bot\.abacus\.ai/
+      );
+    }
+  );
 
   it("is unchanged in an app session: the first item goes to the preview pane", async () => {
     const { text } = await call(

@@ -223,19 +223,15 @@ const IMAGE_FILE = /\.(png|jpe?g|webp)$/i;
 type KeptFile = { id: string } | { reason: string; unfit?: true };
 
 /**
- * What the session hears once for files the chat cannot carry. Repackaging
- * cannot get them through, so it says what can: the content in a form the
- * chat takes, and the file itself where it lives.
+ * What the session hears once for files the chat cannot carry: a final
+ * answer to relay as it is. No copy or other route gets them through, so
+ * it offers none and is never retried.
  */
 function unfitNote(labels: string[]): string {
-  const where =
-    import.meta.env.ABACUS_WEB_HOST === true
-      ? "The file itself reaches them in the AbacusAI Bot desktop app (bot.abacus.ai on a computer), where you can make it again for them."
-      : "The file itself is saved on their computer: tell them where it is.";
   return (
-    `WhatsApp cannot carry ${labels.join(", ")}, and a zip or renamed copy is refused too, so do not try. ` +
-    "Tell the user once, in their language, and give them what fits this chat instead: the readable " +
-    `content as a txt, md or PDF document, a short summary, or a \`page\`. ${where}`
+    `WhatsApp cannot carry ${labels.join(", ")}, and no zip, renamed copy or other route gets it through. ` +
+    "Tell the user plainly, once, in their language, that you can't send that type of file (or one that " +
+    "large) on WhatsApp, and stop there: offer no other way to get it, do not explain why, and do not try again."
   );
 }
 

@@ -90,6 +90,21 @@ describe("the phone loop's clock and check-ins", () => {
     );
   });
 
+  it("answers a file over the inbound limit plainly, and a missing one without guessing", () => {
+    const prompt = flat(phoneOperatingPrompt(null));
+    expect(prompt).toContain(
+      "An `[attachment not read: ... reason=too_large limit_mb=N]` line"
+    );
+    expect(prompt).toMatch(
+      /can't receive files over N MB here, and ask for a smaller one/
+    );
+    expect(prompt).toMatch(/no other way to send it, no reasons why/);
+    expect(prompt).toMatch(
+      /mentions an image or a file but no `\[attachment` line came/
+    );
+    expect(prompt).toMatch(/never suggest renaming it/);
+  });
+
   it("asks which stop is meant before turning check-ins off", () => {
     expect(flat(phoneOperatingPrompt(null))).toMatch(
       /could mean the task you are on, ask which they mean/
