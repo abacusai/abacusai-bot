@@ -3973,6 +3973,11 @@ export class ServiceHost {
   ): Promise<SendAgentMessageRequest> {
     // Not awaited: a link that moved marks every session's note pending, for this message or the next.
     void this.botNumber?.read();
+    // The note is the user's whole setup, "all available to you". A held
+    // session (a routine run, a stranger's chat) reaches only its policy,
+    // which its own prompt states; told otherwise, a run asked to message
+    // the user hunts for a send tool it was never given.
+    if (this.isUnattendedSession(request.sessionId)) return request;
     if (!environmentNoticeService.isPending(request.sessionId)) return request;
     try {
       const message = messageWithEnvironmentNotice(

@@ -1,5 +1,9 @@
 import { ABACUS_AGENT_ROUTINES_URL } from "@abacus-ai/contract/routines";
 
+import {
+  HOSTED_RUN_CANNOT,
+  HOSTED_RUN_DELIVERED_VIA,
+} from "../../agent-tools/hosted-run";
 import { ROUTINE_READS } from "../../agent-tools/routine-reach";
 import { billingPlanReady } from "./billing";
 import type { ToolDefinition } from "./definition";
@@ -30,16 +34,24 @@ const BASE_DESCRIPTION = [
   "Never stand in for a one-time, random-time or once-within-a-window job with a frequent",
   "schedule and a prompt that skips the extra fires: every fire is a full run that can act,",
   "and a skip left to the prompt can fail. Pick one moment instead.",
-  "",
+];
+
+/** A routine in this app fires once on create: never said of a hosted one. */
+const LOCAL_FIRST_RUN = [
   "A routine with a schedule also fires once the moment it is created, whatever its",
   "schedule says, so the user sees it work instead of waiting out the first gap. Tell them",
   "so, and write the prompt so an off-schedule first run still makes sense. When this",
   "conversation has just done the routine's work itself, pass firstRun: false so it is",
   "not done twice.",
-  "",
+];
+
+const WEBHOOK_DESCRIPTION = [
   "webhook: true makes the routine firable by an outside POST; the user copies its URL",
   "from the Routines panel. The request body arrives as data in the fire prompt.",
-  "",
+];
+
+/** A run in this app reports to its own session, not this chat: never said of a hosted one. */
+const LOCAL_FIRE_SESSION = [
   "Every fire runs in a fresh session of its own, listed under Routines, and nothing",
   "from it reaches this conversation: write the prompt to stand alone, and never",
   "promise to report back here. In a bot's own chat the routine belongs to the bot",
@@ -61,8 +73,15 @@ const HOSTED_DESCRIPTION = [
   "one-time moment (ISO 8601; without an offset it is the user's wall time), notify:",
   '"relevant" to deliver only when its condition holds.',
   "",
-  "Every routine's runs are unattended: they search the web and read, and cannot send",
-  "messages, change files, pay, or make routines. Give what a run may read: sources,",
+  `Each run's answer is sent to the user as the routine's message, ${HOSTED_RUN_DELIVERED_VIA}.`,
+  'So a fixed message at set times ("send me hi every hour", "remind me to stretch at 5")',
+  "is kind reminder with reminder_text, nothing to run. A task's prompt says what to find or write",
+  'for the user ("the top 3 AI headlines today"), never how to send it ("send it on',
+  "WhatsApp\"): delivery is not the run's job. A routine cannot message anyone else; for",
+  "a message to another person or group, tell the user so instead of making one.",
+  "",
+  "Every routine's runs are unattended: they search the web and read, and cannot",
+  `${HOSTED_RUN_CANNOT}. Give what a run may read: sources,`,
   "the page addresses it may read under (https://news.example.com/tech/), and reads,",
   `the account data it may read (${quotedReads}), only`,
   "what the routine needs; nothing else is reachable.",
@@ -74,10 +93,11 @@ const HOSTED_DESCRIPTION = [
  */
 export const HOSTED_ROUTINE_FACTS = [
   "Routines here are kept on the server: they run on their own even while the user's",
-  "computer is off, and results reach the user on WhatsApp or by email. Every run is",
+  "computer is off, and each run's answer is sent to the user as the routine's message,",
+  `${HOSTED_RUN_DELIVERED_VIA}. Every run is`,
   "unattended: it searches the web and reads pages, and of the user's account data it",
-  `can read only ${ROUTINE_READS.join(", ")}. A run cannot send or read chat-app messages,`,
-  "change files, pay, or make routines.",
+  `can read only ${ROUTINE_READS.join(", ")}. A run cannot read chat-app messages or`,
+  `${HOSTED_RUN_CANNOT}.`,
 ];
 
 /** The desktop app: every routine runs here, with this conversation's reach. */
@@ -228,7 +248,30 @@ export const CRONJOB_TOOLS: ToolDefinition[] = [
       [
         ...BASE_DESCRIPTION,
         "",
-        ...(host.hostedRoutines ? HOSTED_DESCRIPTION : LOCAL_ROUTINE_FACTS),
+        ...(!host.hostedRoutines
+          ? [
+              ...LOCAL_FIRST_RUN,
+              "",
+              ...WEBHOOK_DESCRIPTION,
+              "",
+              ...LOCAL_FIRE_SESSION,
+              "",
+              ...LOCAL_ROUTINE_FACTS,
+            ]
+          : [
+              ...WEBHOOK_DESCRIPTION,
+              "",
+              ...HOSTED_DESCRIPTION,
+              ...(host.hostedOnly
+                ? []
+                : [
+                    "",
+                    'Only for runner: "local", which runs in this app:',
+                    ...LOCAL_FIRST_RUN,
+                    "",
+                    ...LOCAL_FIRE_SESSION,
+                  ]),
+            ]),
       ].join("\n"),
     inputSchema: (_channel, host) => ({
       type: "object",
