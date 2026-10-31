@@ -594,6 +594,21 @@ describe("a hosted run", () => {
     expect(prompt).toContain("only when what the instruction asks about holds");
   });
 
+  it("tells the run its answer is the user's message, so a send-to-me job is done by answering", () => {
+    const prompt = buildHostedRunPrompt({
+      ...REQUEST,
+      prompt: "Send the user hi on WhatsApp",
+    });
+    expect(prompt).toContain(
+      "The server sends your answer to the user as this routine's message, on WhatsApp"
+    );
+    expect(prompt).toContain('is done by writing that message as "text"');
+    // What it cannot do is reach anyone else; it never reads as "cannot message the user".
+    expect(prompt).toContain("It cannot message anyone but the user");
+    expect(prompt).not.toMatch(/cannot send messages/);
+    expect(prompt).toContain("never mention tools, access, settings");
+  });
+
   it("reads the answer's JSON, wherever the model put it", () => {
     expect(
       parseHostedRunAnswer(

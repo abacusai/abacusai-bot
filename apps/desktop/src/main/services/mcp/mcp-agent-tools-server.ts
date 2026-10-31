@@ -151,6 +151,7 @@ import { alwaysOnNote } from "./tools/cronjob";
 import {
   describeHostedRoutine,
   hostedCreatedNote,
+  hostedRunStartedNote,
   hostedCreateInput,
   hostedRefusalNote,
   requestedReads,
@@ -636,6 +637,7 @@ export class McpAgentToolsServer extends McpHttpServer {
     const enabled = this.options.enabledToolsets();
     return {
       hostedRoutines: this.options.hostedRoutines?.() === true,
+      hostedOnly: this.options.routines?.hostedOnly?.() === true,
       withheldFeatures: withheldFeatures(this.planTier(), (feature) =>
         this.featureListed(feature.toolsets, enabled, callerSession)
       ),
@@ -1198,7 +1200,8 @@ export class McpAgentToolsServer extends McpHttpServer {
           action,
           id,
           args,
-          this.callerBot(callerSession)
+          this.callerBot(callerSession),
+          !this.channelFor(callerSession).pane
         );
       }
 
@@ -1376,7 +1379,9 @@ export class McpAgentToolsServer extends McpHttpServer {
     id: string,
     args: Record<string, unknown>,
     /** The calling bot: the server refuses it another bot's routine too. */
-    botId: string | null
+    botId: string | null,
+    /** The WhatsApp chat (no pane), where results arrive in that chat. */
+    inPhoneChat: boolean
   ): Promise<ToolResult> {
     const hosted = this.options.routines!.hosted;
     try {
@@ -1394,9 +1399,7 @@ export class McpAgentToolsServer extends McpHttpServer {
       }
       if (action === "run") {
         await hosted.runNow(id, botId);
-        return this.ok(
-          `Started ${id} on the server; its result goes to the user the usual way, not here.`
-        );
+        return this.ok(hostedRunStartedNote(id, inPhoneChat));
       }
       if (action === "update") {
         // The user's words for a moment go as written (args are already read).

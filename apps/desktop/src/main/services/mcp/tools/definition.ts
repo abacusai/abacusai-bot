@@ -55,6 +55,8 @@ export type ToolHost = Pick<
 export interface HostCapabilities {
   /** Routines can be kept on the server (the hosted computer only). */
   hostedRoutines: boolean;
+  /** Every routine is kept on the server: a "local" ask is made hosted. */
+  hostedOnly: boolean;
   /** Paid-plan capabilities with none of their tools listed for this account. */
   withheldFeatures: readonly PaidFeature[];
 }

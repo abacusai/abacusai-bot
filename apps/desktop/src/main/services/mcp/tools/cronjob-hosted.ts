@@ -120,23 +120,37 @@ export const describeHostedRoutine = (routine: RoutineListItem): string => {
   ].join("\n");
 };
 
-/**
- * The model's note after a hosted create: confirm it, offer a test run, never
- * run it. In the WhatsApp chat (no pane) results arrive in that chat.
- */
+/** Where a hosted routine's results reach the user. In the WhatsApp chat (no pane), that chat. */
+const resultsArrive = (inPhoneChat: boolean): string =>
+  inPhoneChat
+    ? "Its results arrive in this chat, or by email when this chat cannot take them. "
+    : "Its results reach the user on WhatsApp when it is linked, else by email. ";
+
+/** The model's note after a hosted create: confirm it, offer a test run, never run it. */
 export const hostedCreatedNote = (
   routine: RoutineListItem,
   inPhoneChat: boolean
 ): string =>
   "Created on the server: it runs on its own, even while nothing is open. " +
-  (inPhoneChat
-    ? "Its results arrive in this chat, or by email when this chat cannot take them. "
-    : "Its results reach the user on WhatsApp when it is linked, else by email. ") +
+  resultsArrive(inPhoneChat) +
   "Confirm it to the user in one line, in their language: what it does, when, in " +
   "which time zone, what it may read, and where results arrive. It has NOT run yet: " +
   'offer one test run ("run" with its id) only if they want it, and do not do ' +
   "the routine's work here.\n\n" +
   describeHostedRoutine(routine);
+
+/**
+ * The model's note after a test run is started: the result comes from the
+ * run itself, as its own message, never as this reply.
+ */
+export const hostedRunStartedNote = (
+  id: string,
+  inPhoneChat: boolean
+): string =>
+  `Started ${id} on the server. ` +
+  resultsArrive(inPhoneChat) +
+  "It arrives as its own message within a few minutes, not as your reply: tell the " +
+  "user so in one line, in their language, and do not do the routine's work here.";
 
 /** The upgrade the server offered with a refusal, or a plain mention of one. */
 const upgradeLine = (details: Record<string, unknown>): string => {

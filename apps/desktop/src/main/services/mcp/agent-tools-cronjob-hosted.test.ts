@@ -567,7 +567,9 @@ describe("bot_help, routines", () => {
     const text = await guide({ runner: "hosted", tier: "paid" });
     expect(text).toContain("Routines here are kept on the server");
     expect(text).toContain("gmail.search, gmail.read, calendar.read");
-    expect(text).toContain("cannot send or read chat-app messages");
+    expect(text).toContain("sent to the user as the routine's message");
+    expect(text).toContain("cannot read chat-app messages or");
+    expect(text).toContain("message anyone but the user");
     expect(text).not.toContain("Nothing this app runs is kept on a server");
     expect(text).toContain("(1 on the server)");
   });
