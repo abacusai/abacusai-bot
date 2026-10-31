@@ -95,6 +95,11 @@ overrides:
   "brace-expansion@1": ^1.1.21
   "brace-expansion@2": ^2.1.7
   "brace-expansion@5": ^5.0.12
+  # The agent's sandbox runtime: PEM-decoding ReDoS, PKCS#12 MAC forgery, TLS
+  # record DoS and an X.509 basicConstraints bypass, all fixed in 1.4.1
+  # (GHSA-7wch-p9px-956x, GHSA-jc66-7q78-782g, GHSA-8hrf-8g6f-7xwp,
+  # GHSA-hqq3-7jhf-c5jx, GHSA-5x38-2vff-x55p).
+  node-forge: ^1.4.2
   # transformers.js runs Whisper in the renderer on onnxruntime-web; its Node
   # backend and image codec would only add native binaries the app never loads.
   onnxruntime-node: "-"
