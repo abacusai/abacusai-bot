@@ -118,6 +118,7 @@ describe("questions about the app itself", () => {
       /call billing_plan with upgrade: true before you answer/
     );
     expect(PLAN_ASKS_PROMPT).toMatch(/Say the free part first/);
+    expect(PLAN_ASKS_PROMPT).toMatch(/every feature it gives as a short list/);
     expect(PLAN_ASKS_PROMPT).toMatch(
       /never send them to another company's service for it/
     );

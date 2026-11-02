@@ -373,7 +373,7 @@ describe("billing_plan for what only a plan does", () => {
   it("a free account asking for a live link to what it built hears the free part, then Basic's deploys, never a free host", async () => {
     const text = await answer("free");
     expect(text).toContain(
-      "Asked for a live, public or shareable link for something they built (hosting, deploying or publishing a site, app or page): say first that this app builds it and runs it on this computer, and do that part. Never answer no or impossible, and never send them to another company's service for it (a host, a tunnel, a server to rent) unless they named it. Offer Basic: building apps and websites and deploying them to a live link in Abacus AI Agent on the web."
+      "Asked for a live, public or shareable link for something they built (hosting, deploying or publishing a site, app or page): say first that this app builds it and runs it on this computer, and do that part. Never answer no or impossible, and never send them to another company's service for it (a host, a tunnel, a server to rent) unless they named it. Offer Basic for it (building apps and websites and deploying them to a live link in Abacus AI Agent on the web): its price, then every feature line it has above as a short list (translated, never shortened or dropped), then their upgrade link, in their language."
     );
   });
 

@@ -146,7 +146,7 @@ const planAskAnswer = (
 ): string =>
   onPaidPlan(billing)
     ? `Asked for ${ask.ask}: their plan already includes ${ask.gives}. Set it up there: ${url} (give the link as written). Do not offer an upgrade for it.`
-    : `Asked for ${ask.ask}: ${app ? `say first that ${ask.free}, and do that part. ` : ""}Never answer no or impossible, and never send them to another company's service for it (a host, a tunnel, a server to rent) unless they named it. Offer ${billing.upgrades[0]?.planName ?? "the next plan"}: ${ask.gives}. Use its own feature line above for the wording, with its price and their upgrade link, in their language.`;
+    : `Asked for ${ask.ask}: ${app ? `say first that ${ask.free}, and do that part. ` : ""}Never answer no or impossible, and never send them to another company's service for it (a host, a tunnel, a server to rent) unless they named it. Offer ${billing.upgrades[0]?.planName ?? "the next plan"} for it (${ask.gives}): its price, then every feature line it has above as a short list (translated, never shortened or dropped), then their upgrade link, in their language.`;
 
 /** "Can it keep working with my computer off?"; `app` false for the phone. */
 export const alwaysOnAnswer = (billing: BillingPlan, app = true): string =>

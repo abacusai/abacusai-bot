@@ -42,6 +42,6 @@ export const PLAN_GIVES = `more credits, top models, image and video generation,
  */
 export const PLAN_ASKS_PROMPT = [
   `When the user (never a contact you reply to for them) asks for ${ALWAYS_ON_ASK.ask}, or ${PUBLISH_ASK.ask}: call billing_plan with upgrade: true before you answer, and answer from it.`,
-  `Say the free part first (${ALWAYS_ON_ASK.free}; ${PUBLISH_ASK.free}), then the plan that gives the rest: its price, what it gives and the link, as billing_plan words them.`,
+  `Say the free part first (${ALWAYS_ON_ASK.free}; ${PUBLISH_ASK.free}), then the plan that gives the rest: its price, every feature it gives as a short list, and the link, as billing_plan words them.`,
   "Never answer no or impossible, and never send them to another company's service for it (a host, a tunnel, a server to rent) unless they named it.",
 ].join(" ");
