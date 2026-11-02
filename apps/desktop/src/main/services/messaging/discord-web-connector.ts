@@ -8,6 +8,7 @@ import {
   presentAsDialog,
 } from "../../bring-to-front";
 import {
+  boundedWait,
   chunkMessage,
   isEphemeralPreview,
   previewMatchesSent,
@@ -24,7 +25,12 @@ import {
   readPlatformSignedIn,
   savePlatformSignedIn,
 } from "./messaging-config-service";
-import { BOOT_MAX_RELOADS, pageBusy, PageBootWatch } from "./page-boot-watch";
+import {
+  BOOT_MAX_RELOADS,
+  FIRST_LOAD_WAIT_MS,
+  pageBusy,
+  PageBootWatch,
+} from "./page-boot-watch";
 
 /**
  * Discord, by driving the real discord.com web app in a hidden BrowserWindow
@@ -246,7 +252,12 @@ export class DiscordWebConnector implements MessagingConnector {
     // Hidden: the connect dialog reveals the window when a login form is up.
     this.window = this.buildWindow(false);
     try {
-      await this.window.loadURL(DISCORD_WEB_URL, { userAgent: userAgent() });
+      // Bounded: a load that never settles must not keep the checks from
+      // starting; the boot watch takes it from there.
+      await boundedWait(
+        this.window.loadURL(DISCORD_WEB_URL, { userAgent: userAgent() }),
+        FIRST_LOAD_WAIT_MS
+      );
     } catch (error) {
       this.callbacks.onLog(
         `discord-web: initial load failed: ${String((error as Error)?.message ?? error)}`
@@ -931,7 +942,7 @@ export class DiscordWebConnector implements MessagingConnector {
     if (!state.loggedIn && !this.loggedIn) {
       const win = this.window;
       const busy =
-        win != null && !win.isDestroyed() && pageBusy(win.webContents);
+        win != null && !win.isDestroyed() ? pageBusy(win.webContents) : null;
       const verdict = this.boot.stuck(Date.now(), busy);
       if (verdict === "give_up") {
         this.callbacks.onLog(

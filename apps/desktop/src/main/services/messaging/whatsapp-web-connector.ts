@@ -33,6 +33,12 @@ import {
   savePlatformSignedIn,
 } from "./messaging-config-service";
 import {
+  BOOT_MAX_RELOADS,
+  FIRST_LOAD_WAIT_MS,
+  pageBusy,
+  PageBootWatch,
+} from "./page-boot-watch";
+import {
   type BridgeChat,
   type BridgeMessage,
   type BridgeRead,
@@ -160,6 +166,8 @@ export class WhatsAppWebConnector implements MessagingConnector {
   private qrTicks = 0;
   /** Stuck-page reloads since the page last showed the chat list or the QR. */
   private stuckReloads = 0;
+  /** Before a link, a load that never settles: when to reload, when to stop. */
+  private readonly boot = new PageBootWatch();
   /** What the last load since a reload failed on, for the parked note. */
   private loadFailure: "cert" | "network" | null = null;
   /**
@@ -271,6 +279,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
     this.parkedNote = null;
     this.stuckReloads = 0;
     this.qrTicks = 0;
+    this.boot.reset();
     this.signedInRecord = readPlatformSignedIn(this.id);
     this.bridge = new WhatsAppBridge({
       run: (script, args) => this.run(script, args),
@@ -297,7 +306,12 @@ export class WhatsAppWebConnector implements MessagingConnector {
     // face. The connect dialog reveals it when a login screen is on it.
     this.window = this.buildWindow(false);
     try {
-      await this.window.loadURL(WHATSAPP_WEB_URL, { userAgent: userAgent() });
+      // Bounded: a load that never settles must not keep the checks from
+      // starting, which left the lane on "connecting" for hours.
+      await boundedWait(
+        this.window.loadURL(WHATSAPP_WEB_URL, { userAgent: userAgent() }),
+        FIRST_LOAD_WAIT_MS
+      );
     } catch (error) {
       this.callbacks.onLog(
         `whatsapp-web: initial load failed: ${String((error as Error)?.message ?? error)}`
@@ -1292,7 +1306,23 @@ export class WhatsAppWebConnector implements MessagingConnector {
       return;
     }
     const state = await this.run<LoginState>(LOGIN_STATE_SCRIPT, {});
-    if (state == null || this.parkedNote != null) return;
+    if (this.parkedNote != null) return;
+    // Before a link nothing else watches the page. Blank can be WhatsApp
+    // syncing a fresh link, which is left alone; a load that never settles
+    // is reloaded a few times, then waits on the user.
+    if (
+      !this.loggedIn &&
+      (state == null || (!state.loggedIn && state.loginVisible !== true))
+    ) {
+      this.notBooted(
+        state == null
+          ? "the page did not answer while loading"
+          : "the page is still loading"
+      );
+      return;
+    }
+    if (state == null) return;
+    this.boot.reset();
 
     if (state.loggedIn) this.signedOutTicks = 0;
     this.qrTicks =
@@ -1356,6 +1386,24 @@ export class WhatsAppWebConnector implements MessagingConnector {
       }
       this.unlinked();
     }
+  }
+
+  /** See PageBootWatch: a page not booted yet waits, is reloaded, or parks. */
+  private notBooted(why: string): void {
+    const win = this.window;
+    const busy =
+      win != null && !win.isDestroyed() ? pageBusy(win.webContents) : null;
+    const verdict = this.boot.stuck(Date.now(), busy ?? "starting");
+    if (verdict === "wait") return;
+    if (verdict === "give_up") {
+      this.callbacks.onLog(
+        `whatsapp-web: still not loaded after ${BOOT_MAX_RELOADS} reloads, waiting for the user`
+      );
+      this.parkUnloaded(STUCK_LOADING);
+      return;
+    }
+    this.callbacks.onLog(`whatsapp-web: ${why}, reloading it`);
+    void this.serialize(() => this.reloadPage());
   }
 
   /** The phone unlinked this device: say so, and wait for a new link. */
@@ -1453,6 +1501,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
   private resume(): void {
     this.stuckReloads = 0;
     this.qrTicks = 0;
+    this.boot.reset();
     this.stopOnlineCheck();
     if (!this.running || this.parkedNote == null) return;
     this.parkedNote = null;
