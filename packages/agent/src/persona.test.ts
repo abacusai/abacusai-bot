@@ -16,6 +16,7 @@ import {
   personaPrompt,
   readPersona,
 } from "./persona.js";
+import { PLAN_ASKS_PROMPT } from "./plan-asks.js";
 
 let dir: string;
 const previousEnv = process.env.ABACUSAI_BOT_PERSONA;
@@ -92,7 +93,7 @@ describe("questions about the app itself", () => {
       const prompt = basePrompt(edit);
       expect(
         prompt.startsWith(
-          `${identityPrompt()}\n${APP_QUESTIONS_PROMPT}\n${MEDIA_ASKS_PROMPT}\n\n`
+          `${identityPrompt()}\n${APP_QUESTIONS_PROMPT}\n${MEDIA_ASKS_PROMPT}\n${PLAN_ASKS_PROMPT}\n\n`
         )
       ).toBe(true);
       expect(basePrompt(edit)).toBe(prompt);
@@ -101,6 +102,24 @@ describe("questions about the app itself", () => {
     // A media ask calls paid_feature before any words, so the reply opens with the plan.
     expect(MEDIA_ASKS_PROMPT).toMatch(
       /paid_feature: call it first, before you write anything/
+    );
+  });
+
+  /**
+   * Answered from memory, "does it run with my PC off?" got a flat no and
+   * "put it online" got free hosts and tunnels: both go to billing_plan.
+   */
+  it("send 'keep working with the computer off' and 'put it online' to billing_plan, free part first, never another company's service", () => {
+    expect(PLAN_ASKS_PROMPT).toMatch(/computer is off or asleep/);
+    expect(PLAN_ASKS_PROMPT).toMatch(
+      /a live, public or shareable link for something they built/
+    );
+    expect(PLAN_ASKS_PROMPT).toMatch(
+      /call billing_plan with upgrade: true before you answer/
+    );
+    expect(PLAN_ASKS_PROMPT).toMatch(/Say the free part first/);
+    expect(PLAN_ASKS_PROMPT).toMatch(
+      /never send them to another company's service for it/
     );
   });
 
