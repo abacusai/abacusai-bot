@@ -3657,6 +3657,7 @@
       "installFailed": "Couldn't install the update",
       "manualInstall": "업데이트 준비 완료 — 직접 설치하세요",
       "installing": "Restarting…",
+      "queued": "현재 작업이 끝나면 다시 시작합니다",
       "checking": "확인 중…",
       "downloading": "업데이트 다운로드 중… {{percent}}%",
       "downloaded": "Version {{version}} is ready to install",

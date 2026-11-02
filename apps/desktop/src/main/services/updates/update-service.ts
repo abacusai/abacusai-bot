@@ -63,6 +63,10 @@ const UPDATE_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 // Idle threshold before a downloaded update may apply itself.
 const AUTO_RESTART_IDLE_SECONDS = 10 * 60;
 const AUTO_RESTART_POLL_MS = 60_000;
+// A restart the user asked for mid-task: polled faster, and taken anyway
+// once the cap is reached.
+const REQUESTED_RESTART_POLL_MS = 2_000;
+const REQUESTED_RESTART_MAX_WAIT_MS = 10 * 60 * 1000;
 
 // After quitAndInstall() only our own exit stands between the user and the
 // update: normal quit first, then hard-exit. 15s clears the 6s cleanup cap.
@@ -112,9 +116,12 @@ const manualInstallCommand = (packagePath: string): string =>
 
 const MANUAL_INSTALL_ERROR = "Install this update from a terminal";
 
-/** Host knowledge: an agent turn or live PTY makes a restart destructive. */
+/**
+ * Host knowledge: an agent turn or live PTY makes a restart destructive.
+ * `requested`: the user asked for this restart.
+ */
 export interface UpdateServiceDeps {
-  isSafeToRestart?: () => boolean;
+  isSafeToRestart?: (context: { requested: boolean }) => boolean;
 }
 
 const initialStatus = (): UpdateStatus => ({
@@ -130,6 +137,7 @@ const initialStatus = (): UpdateStatus => ({
   criticalUpdate: false,
   failedPhase: null,
   manualInstall: null,
+  restartQueued: false,
 });
 
 /**
@@ -146,6 +154,8 @@ export class UpdateService {
 
   private checkTimer: NodeJS.Timeout | null = null;
   private autoRestartTimer: NodeJS.Timeout | null = null;
+  /** When the user asked for a restart that waits for the running task. */
+  private restartRequestedAt: number | null = null;
 
   // On disk, as opposed to the feed's last offer (`status.updateInfo`); they
   // diverge when the pending install is superseded.
@@ -322,8 +332,14 @@ export class UpdateService {
     this.downloadedVersion = null;
     this.downloadedFile = null;
     this.status.manualInstall = null;
+    this.endRestartRequest();
     this.stopAutoRestartPoll();
     this.setUpdaterHasPendingBuild(false);
+  }
+
+  private endRestartRequest(): void {
+    this.restartRequestedAt = null;
+    this.status.restartQueued = false;
   }
 
   /**
@@ -391,14 +407,17 @@ export class UpdateService {
   }
 
   // Wait for a moment when a restart destroys nothing and take it silently;
-  // the pill stays as the manual path.
+  // the pill stays as the manual path. A pill click while that moment has
+  // not come arms the same wait (installUpdate whenSafe).
   private startAutoRestartPoll(): void {
     if (this.autoRestartTimer != null || this.status.manualInstall != null)
       return;
 
     this.autoRestartTimer = setInterval(
       () => this.tryAutoRestart(),
-      AUTO_RESTART_POLL_MS
+      this.restartRequestedAt != null
+        ? REQUESTED_RESTART_POLL_MS
+        : AUTO_RESTART_POLL_MS
     );
     this.autoRestartTimer.unref();
   }
@@ -409,22 +428,46 @@ export class UpdateService {
     this.autoRestartTimer = null;
   }
 
-  private tryAutoRestart(): void {
+  /** True when it started the install. */
+  private tryAutoRestart(): boolean {
     if (
       !this.status.downloaded ||
       this.status.installing ||
       this.status.installStalled ||
       this.status.manualInstall != null
     ) {
-      return;
+      return false;
     }
+
+    // The user asked: no idle requirement, and the wait is capped.
+    const requestedAt = this.restartRequestedAt;
+    const requested = requestedAt != null;
+    const capped =
+      requested && Date.now() - requestedAt >= REQUESTED_RESTART_MAX_WAIT_MS;
 
     // Where idle time is unavailable (some Wayland setups report 0 forever)
     // this never fires and the pill carries the update.
-    if (powerMonitor.getSystemIdleTime() < AUTO_RESTART_IDLE_SECONDS) return;
+    if (
+      !requested &&
+      powerMonitor.getSystemIdleTime() < AUTO_RESTART_IDLE_SECONDS
+    )
+      return false;
 
-    if (this.deps.isSafeToRestart != null && !this.deps.isSafeToRestart()) {
-      return;
+    if (
+      !capped &&
+      this.deps.isSafeToRestart != null &&
+      !this.deps.isSafeToRestart({ requested })
+    ) {
+      return false;
+    }
+
+    if (requested) {
+      console.log(
+        `[UpdateService] restarting as asked${capped ? " (waited the maximum for the running task)" : ""}`
+      );
+      this.stopAutoRestartPoll();
+      void this.installUpdate();
+      return true;
     }
 
     // macOS can relaunch hidden through the Dock. A hidden Windows window has
@@ -435,7 +478,7 @@ export class UpdateService {
     let relaunchHidden = false;
     if (!windowVisible) {
       if (process.platform === "darwin") relaunchHidden = true;
-      else if (process.platform !== "win32") return;
+      else if (process.platform !== "win32") return false;
     }
 
     console.log(
@@ -443,6 +486,7 @@ export class UpdateService {
     );
     this.stopAutoRestartPoll();
     void this.installUpdate({ silent: true, relaunchHidden });
+    return true;
   }
 
   // Fails to "no change": metadata is an escalation channel, never a blocker.
@@ -555,8 +599,34 @@ export class UpdateService {
     silent?: boolean;
     /** macOS: the window was hidden at restart, so come back hidden. */
     relaunchHidden?: boolean;
+    /**
+     * A user's click: while a restart is not safe, wait for it through the
+     * auto-restart gate (status.restartQueued). A quit never waits.
+     */
+    whenSafe?: boolean;
   }): Promise<{ success: boolean; error?: string }> {
     if (this.installRequest != null) return this.installRequest;
+    if (
+      options?.whenSafe &&
+      this.status.downloaded &&
+      !this.status.installing &&
+      !this.status.installStalled &&
+      this.status.manualInstall == null
+    ) {
+      if (this.restartRequestedAt != null)
+        return Promise.resolve({ success: true });
+      this.restartRequestedAt = Date.now();
+      if (this.tryAutoRestart() && this.installRequest != null)
+        return this.installRequest;
+      console.log(
+        "[UpdateService] restart asked for while a task runs, restarting when it ends"
+      );
+      this.status.restartQueued = true;
+      this.emitStatusUpdate();
+      this.stopAutoRestartPoll();
+      this.startAutoRestartPoll();
+      return Promise.resolve({ success: true });
+    }
     // Admission awaits the feed before setting installing. Join that whole
     // request so another control cannot start a second ShipIt handoff.
     this.installRequest = this.installDownloadedUpdate(options).finally(() => {
@@ -580,6 +650,7 @@ export class UpdateService {
       }
       // Not a new failure: the build stays on disk for the terminal command.
       if (this.status.manualInstall != null) {
+        this.endRestartRequest();
         return { success: false, error: MANUAL_INSTALL_ERROR };
       }
       const version = this.downloadedVersion;
@@ -596,6 +667,7 @@ export class UpdateService {
           "The downloaded update is no longer offered to this client"
         );
       }
+      this.endRestartRequest();
       this.status.installing = true;
       this.emitStatusUpdate();
 
@@ -636,6 +708,7 @@ export class UpdateService {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       console.error("[UpdateService] Failed to install update:", errorMessage);
+      this.endRestartRequest();
       this.status.installing = false;
       this.status.error = errorMessage;
       this.status.failedPhase = "install";

@@ -45,6 +45,7 @@ export const updatePhase = (
   if (status.installing) return "installing";
   if (status.manualInstall) return "manualInstall";
   if (status.error && status.failedPhase === "install") return "installFailed";
+  if (status.restartQueued) return "queued";
   if (clicked || status.installing) return "installing";
   if (status.checking) return "checking";
   if (status.downloading) return "downloading";
@@ -180,8 +181,8 @@ export const useUpdateStatus = () => {
   const [clicked, setClicked] = useState(false);
   const installing = useIsMutating({ mutationKey: ["update", "install"] }) > 0;
   const [installError, setInstallError] = useState<string | null>(null);
-  // An install that failed or stalled releases the pressed state, once per
-  // status that says so.
+  // An install that failed or stalled, or a restart main queued, releases the
+  // pressed state, once per status that says so.
   const [seen, setSeen] = useState(incoming);
   if (seen !== incoming) {
     setSeen(incoming);
@@ -190,7 +191,8 @@ export const useUpdateStatus = () => {
       (!incoming.installing || incoming.installStalled) &&
       (incoming.failedPhase === "install" ||
         incoming.installStalled ||
-        incoming.manualInstall != null)
+        incoming.manualInstall != null ||
+        incoming.restartQueued)
     ) {
       setClicked(false);
       setInstallError(null);
@@ -350,7 +352,8 @@ export const CriticalUpdateDialog = () => {
     !!update.status?.error ||
     !!update.installError ||
     update.clicked ||
-    !!update.status?.installing;
+    !!update.status?.installing ||
+    !!update.status?.restartQueued;
   useEffect(() => {
     if (!open || paused) return;
     const timer = setInterval(
@@ -391,6 +394,8 @@ export const CriticalUpdateDialog = () => {
           <PageNote error>
             {update.installError ?? update.status?.error}
           </PageNote>
+        ) : update.phase === "queued" ? (
+          <p>{t("phase5.updates.queued")}</p>
         ) : (
           <p>
             {t("phase5.restartCountdown", {
@@ -400,12 +405,12 @@ export const CriticalUpdateDialog = () => {
         )}
         <AlertDialogFooter>
           <Button
-            disabled={update.phase === "installing"}
+            disabled={["installing", "queued"].includes(update.phase)}
             onClick={() => update.install()}
           >
             {t(
-              update.phase === "installing"
-                ? "phase5.updates.installing"
+              update.phase === "installing" || update.phase === "queued"
+                ? `phase5.updates.${update.phase}`
                 : update.phase === "installFailed"
                   ? "phase5.tryAgain"
                   : "phase5.restartNow"
@@ -474,7 +479,7 @@ export const UpdatePillButton = ({
       className={
         compact
           ? "titlebar-nodrag my-1 h-11 w-12 shrink-0 flex-col gap-0.5 rounded-xl px-1 text-[10px]"
-          : undefined
+          : "titlebar-nodrag min-w-0 shrink"
       }
       aria-label={
         compact
@@ -516,7 +521,9 @@ export const UpdatePillButton = ({
           {retry && showFailureLabel && (
             <span>{t("phase5.updates.downloadFailed")}</span>
           )}
-          {t(label, { percent: Math.round(status.progress?.percent ?? 0) })}
+          <span className="truncate">
+            {t(label, { percent: Math.round(status.progress?.percent ?? 0) })}
+          </span>
         </>
       )}
     </Button>

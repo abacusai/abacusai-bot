@@ -360,12 +360,12 @@ setBringToFront(() => {
 });
 
 const workspaceServiceHost = new ServiceHost();
-// A downloaded update restarts only when nothing user-visible is running.
-
+// A downloaded update restarts only when nothing user-visible is running. A
+// shell never ends by itself, so it holds only the restart nobody asked for.
 const updateService = new UpdateService({
-  isSafeToRestart: () =>
+  isSafeToRestart: ({ requested }) =>
     !workspaceServiceHost.hasActiveAgentTurn() &&
-    !workspaceServiceHost.hasLiveTerminalSessions(),
+    (requested || !workspaceServiceHost.hasLiveTerminalSessions()),
 });
 let mainWindowRef: BaseWindow | null = null;
 let rendererHost: RendererHost | null = null;
@@ -2021,6 +2021,7 @@ app.on("before-quit", (event) => {
   ) {
     event.preventDefault();
     quitUpdateChecked = true;
+    // Never waits for a running task: a quit must not hang.
     void updateService.installUpdate({ silent: true }).then((result) => {
       if (!result.success) app.quit();
     });

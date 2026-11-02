@@ -18,7 +18,7 @@ import {
   PanelLeft,
   PanelRight,
 } from "lucide-react";
-import { Fragment, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { BotAppMark } from "#renderer/components/app-icon";
@@ -253,20 +253,29 @@ const Actions = ({
       </DropdownMenu>
     );
   return (
-    <TitleBarGroup data-slot="topbar-actions" className="shrink-0">
+    // Ends before the panel controls (tokens.css) and sits above the title
+    // region's empty drag area; a long label truncates once the identity is gone.
+    <TitleBarGroup
+      data-slot="topbar-actions"
+      className="relative z-10 min-w-0 shrink"
+    >
       {actions.map((action) =>
         action.render != null ? (
-          <Fragment key={action.id}>{action.render}</Fragment>
+          // The label stays on hover even while a custom control is disabled.
+          <span key={action.id} title={action.label} className="flex min-w-0">
+            {action.render}
+          </span>
         ) : (
           <Button
             key={action.id}
             variant="ghost"
             size="sm"
-            className="titlebar-nodrag"
+            className="titlebar-nodrag min-w-0 shrink"
+            title={action.label}
             onClick={action.onSelect}
           >
             {action.icon}
-            {action.label}
+            <span className="truncate">{action.label}</span>
           </Button>
         )
       )}

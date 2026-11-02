@@ -190,7 +190,9 @@ export interface RpcDeps {
   browserRuntime: BrowserRuntimeOperations;
   update: {
     checkForUpdates(): Promise<{ success: boolean; error?: string }>;
-    installUpdate(): Promise<{ success: boolean; error?: string }>;
+    installUpdate(options: {
+      whenSafe: boolean;
+    }): Promise<{ success: boolean; error?: string }>;
     getStatus(): UpdateStatus;
   };
   windows: RpcWindows;

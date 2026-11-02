@@ -3657,6 +3657,7 @@
       "installFailed": "Couldn't install the update",
       "manualInstall": "アップデートの準備完了 — 手動でインストールしてください",
       "installing": "Restarting…",
+      "queued": "現在のタスクの完了後に再起動します",
       "checking": "確認中…",
       "downloading": "アップデートをダウンロード中… {{percent}}%",
       "downloaded": "Version {{version}} is ready to install",
