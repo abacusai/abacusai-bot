@@ -43,11 +43,17 @@ describe("bot", () => {
       l.send(runInput("r1", "hello bot"));
       await l.waitFor(hasType("RUN_FINISHED"), "user run finished");
       await l.waitFor(() => l.providerCalls() >= 2, "housekeeping turn");
-      await l.waitFor((events) => {
-        const last = events.at(-1);
-
-        return last?.type === "CUSTOM" && last.name === "agent.status";
-      }, "host idle");
+      // The hidden turn's end reaches compat as its usage only.
+      await l.waitFor(
+        () =>
+          l
+            .compat()
+            .filter(
+              (event) =>
+                event.type === "event" && event.event.type === "turn_complete"
+            ).length === 2,
+        "housekeeping done"
+      );
       await new Promise((resolve) => setTimeout(resolve, 200));
 
       const events = l.events();
@@ -77,8 +83,8 @@ describe("bot", () => {
 
       expect(reasoning).toContain("pondering");
 
-      // After the user's terminal: nothing run-scoped, and no status from
-      // inside the hidden turn; only the host's own idle at the very end.
+      // After the user's terminal: nothing at all. The hidden turn shows no
+      // status, and the user's turn already said idle.
       const after: AguiEvent[] = events.slice(
         events.findIndex((event) => event.type === "RUN_FINISHED") + 1
       );
@@ -88,7 +94,7 @@ describe("bot", () => {
         after.map((event) =>
           event.type === "CUSTOM" ? event.name : event.type
         )
-      ).toEqual(["agent.status"]);
+      ).toEqual([]);
       // Compat still carries what the bot emits during housekeeping today.
       const compatAfterUserTurn = l.compat().length;
 

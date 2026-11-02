@@ -1914,10 +1914,13 @@ export class ForeverEngine {
 
     switch (event.type) {
       case "agent_start":
-        this.emitAgentEvent({
-          type: "status_changed",
-          status: AgentStatus.Streaming,
-        });
+        // A hidden turn shows no status, as with its tools: the user's turn
+        // has already said idle, and a second one would end the next turn.
+        if (!this.hiddenTurn)
+          this.emitAgentEvent({
+            type: "status_changed",
+            status: AgentStatus.Streaming,
+          });
 
         return;
 
@@ -2338,13 +2341,18 @@ export class ForeverEngine {
           }
         : this.lastTurnUsage;
     this.lastTurnUsage = null;
+    const hidden = this.hiddenTurn;
     const end = (outcome?: TurnOutcome): void => {
       this.emitAgentEvent({
         type: "turn_complete",
         ...(outcome != null ? { outcome } : {}),
         ...(usage != null ? { usage } : {}),
       });
-      this.emitAgentEvent({ type: "status_changed", status: AgentStatus.Idle });
+      if (!hidden)
+        this.emitAgentEvent({
+          type: "status_changed",
+          status: AgentStatus.Idle,
+        });
     };
     // A send's turn ends after the send has said why (OwnedTurn); a hidden
     // turn or a run pi started on its own has no send to wait for.
