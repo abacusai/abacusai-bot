@@ -11,6 +11,7 @@ import { fakePi } from "@abacus-ai/test-support/fake-pi";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HostCore } from "../agui/queue.js";
+import { BOT_TIME_TOOL_NAME } from "../bot/bot-time-tool.js";
 import { hostCreditBalance, setCreditRefresher } from "../credit-balance.js";
 import budgets, { budgetStopReason, createBudgets } from "./budgets.js";
 
@@ -71,11 +72,108 @@ describe("repeating a call that samples live state", () => {
     ).toBeUndefined();
   });
 
-  it("never blocks polling streamed output", async () => {
+  it("never blocks polling a background job", async () => {
     const pi = withBudgets();
     expect(
-      await repeat(pi, "read_output", { id: "proc-1" }, 6)
+      await repeat(pi, "fetch_background_output", { id: "bg-1" }, 6)
     ).toBeUndefined();
+  });
+});
+
+/**
+ * A repeat is the same call against the same state. Each call runs as pi runs
+ * it, tool_call then tool_execution_end; the verdict is the last call's.
+ */
+describe("a repeat against changed state", () => {
+  type Step = [tool: string, input: Record<string, unknown>, failed?: boolean];
+  const GMAIL = "abacus-connectors_Gmail_Tool";
+  const build: Step = ["bash", { command: "npm run build" }];
+  const poll: Step = ["fetch_background_output", { id: "bg-1" }];
+  const edit: Step = ["edit", { path: "src/a.ts", edits: [] }];
+  const readA: Step = ["read", { path: "src/a.ts" }];
+  const fetchPage: Step = ["web_fetch", { url: "https://example.com/" }];
+  const search: Step = [GMAIL, { action: "search_email", query: "is:unread" }];
+  const label: Step = [GMAIL, { action: "modify_labels", ids: ["m1"] }];
+  const draft: Step = [GMAIL, { action: "create_draft", to: "a@example.com" }];
+  const rows: [name: string, steps: Step[], blocked: boolean][] = [
+    ["polling a running job", Array(6).fill(poll), false],
+    [
+      "the same build with polls between, 3rd",
+      [build, poll, build, poll, build],
+      true,
+    ],
+    [
+      "the same build with an edit between",
+      [build, edit, build, edit, build],
+      false,
+    ],
+    [
+      "re-reading a file after editing it",
+      [readA, edit, readA, edit, readA],
+      false,
+    ],
+    ["re-reading an unchanged file, 3rd", [readA, readA, readA], true],
+    [
+      "re-reading after a failed edit, 3rd",
+      [readA, [...edit, true], readA, [...edit, true], readA],
+      true,
+    ],
+    [
+      "the same echo, 3rd",
+      Array(3).fill(["bash", { command: "echo hi" }]),
+      true,
+    ],
+    [
+      "the same web_fetch with commands between, 3rd",
+      [fetchPage, build, fetchPage, build, fetchPage],
+      true,
+    ],
+    [
+      "the same mail search after a label change",
+      [search, label, search],
+      false,
+    ],
+    ["the same draft created twice", [draft, draft], true],
+    [
+      "the clock after a minute",
+      Array(4).fill([BOT_TIME_TOOL_NAME, {}]),
+      false,
+    ],
+    [
+      "a chat that said ask again",
+      Array(4).fill(["read_telegram_messages", { chat: "c1" }]),
+      false,
+    ],
+    [
+      "the same spilled output, 3rd",
+      Array(3).fill(["read_output", { id: "out-1" }]),
+      true,
+    ],
+  ];
+
+  it.each(rows)("%s", async (_name, steps, blocked) => {
+    const pi = withBudgets();
+    await pi.fire("agent_start", {});
+    const decisions: unknown[] = [];
+    for (const [i, [toolName, input, failed]] of steps.entries()) {
+      const toolCallId = `call-${i}`;
+      const decision = (await pi.fire("tool_call", {
+        toolName,
+        toolCallId,
+        input,
+      })) as { block?: boolean } | undefined;
+      decisions.push(decision);
+      await pi.fire("tool_execution_end", {
+        toolName,
+        toolCallId,
+        result: {},
+        isError: failed === true || decision?.block === true,
+      });
+    }
+    expect(decisions.slice(0, -1).every((d) => d === undefined)).toBe(true);
+    expect(
+      (decisions.at(-1) as { block?: boolean } | undefined)?.block === true
+    ).toBe(blocked);
   });
 });
 
