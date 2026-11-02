@@ -5,8 +5,14 @@
  * require, and when missing `langForFile` reports "unknown" and the check
  * does nothing. Adapted from codingagent-lite (abacusai/codingagent-lite), MIT.
  */
+import { execFile } from "node:child_process";
+import * as fs from "node:fs";
 import { createRequire } from "node:module";
 import * as path from "node:path";
+
+import { writeFileAtomicSync } from "./atomic-file.js";
+import { childProcessEnv } from "./child-env.js";
+import { agentDir } from "./config.js";
 
 export type SupportedLang = string;
 
@@ -84,17 +90,6 @@ function loadAstGrep(): AstGrepModule | null {
 
   try {
     const module = require("@ast-grep/napi") as AstGrepModule;
-
-    try {
-      // Python isn't built in; registering it is best-effort so a failure here
-      // only costs Python coverage, not every other language.
-      const python = require("@ast-grep/lang-python") as unknown;
-
-      module.registerDynamicLanguage({ python });
-    } catch {
-      /* Python support unavailable; other languages still work. */
-    }
-
     const { Lang } = module;
 
     extensionMap = {
@@ -106,7 +101,6 @@ function loadAstGrep(): AstGrepModule | null {
       ".mjs": Lang.JavaScript!,
       ".cjs": Lang.JavaScript!,
       ".jsx": Lang.Tsx!,
-      ".py": "python",
       ".html": Lang.Html!,
       ".css": Lang.Css!,
     };
@@ -116,8 +110,145 @@ function loadAstGrep(): AstGrepModule | null {
     astGrep = null;
   }
 
+  if (astGrep != null) {
+    void probeGrammars();
+    registerPython();
+  }
+
   return astGrep;
 }
+
+/**
+ * Python isn't built in: its grammar is a separate native library. One the OS
+ * refuses to load (Windows application control, a damaged file) makes ast-grep
+ * panic, which aborts the process past any try/catch. So a child process loads
+ * and parses with it first, and Python is registered only if the child lived.
+ * Until then `.py` has no grammar and its checks are skipped, as for any file.
+ */
+let pythonGrammar: unknown;
+let pythonRegistered = false;
+let grammarProbe: Promise<void> | undefined;
+
+/** Starts the probe once per process; the agent calls it at startup so it is settled before the first write. */
+export function probeGrammars(): Promise<void> {
+  grammarProbe ??= (async () => {
+    const grammar = require.resolve("@ast-grep/lang-python");
+
+    if (await probeGrammar(grammar)) {
+      pythonGrammar = require(grammar);
+      registerPython();
+    }
+  })().catch(() => {
+    /* No Python grammar here; other languages still work. */
+  });
+
+  return grammarProbe;
+}
+
+function registerPython(): void {
+  if (astGrep == null || pythonGrammar === undefined || pythonRegistered) {
+    return;
+  }
+  pythonRegistered = true;
+  try {
+    astGrep.registerDynamicLanguage({ python: pythonGrammar });
+    extensionMap[".py"] = "python";
+  } catch {
+    /* Python support unavailable; other languages still work. */
+  }
+}
+
+/** Generous: the first load of a native library can wait on the virus scanner. */
+const GRAMMAR_PROBE_TIMEOUT_MS = 20_000;
+/** A refused grammar is asked again after a day, so an allowlist change needs no app update. */
+const GRAMMAR_RETRY_MS = 24 * 60 * 60 * 1000;
+
+/** What a child concluded: true or false, or undefined when it never answered (timeout, no spawn). */
+export type GrammarProbeRun = (
+  napi: string,
+  grammar: string
+) => Promise<boolean | undefined>;
+
+interface GrammarVerdict {
+  mtimeMs: number;
+  size: number;
+  ok: boolean;
+  at: number;
+}
+
+/**
+ * Whether the grammar module at `grammar` loads and parses in a child. The
+ * answer is kept in the agent dir, keyed by the library file, so a process
+ * spawns the child only when that file is new or changed (or a refusal is a
+ * day old). No answer is not kept: the grammar is skipped for this process.
+ */
+export async function probeGrammar(
+  grammar: string,
+  run: GrammarProbeRun = runGrammarProbe,
+  cacheFile = path.join(agentDir(), "grammar-probes.json"),
+  now = Date.now()
+): Promise<boolean> {
+  const library = (require(grammar) as { libraryPath: string }).libraryPath;
+  const { mtimeMs, size } = fs.statSync(library);
+  let cache: Record<string, GrammarVerdict> = {};
+  try {
+    cache = JSON.parse(fs.readFileSync(cacheFile, "utf8")) as typeof cache;
+  } catch {
+    /* No cache yet, or an unreadable one: probe. */
+  }
+
+  const known = cache[library];
+  if (
+    known?.mtimeMs === mtimeMs &&
+    known.size === size &&
+    (known.ok || now - known.at < GRAMMAR_RETRY_MS)
+  ) {
+    return known.ok;
+  }
+
+  const ok = await run(require.resolve("@ast-grep/napi"), grammar);
+  if (ok === undefined) {
+    return false;
+  }
+  try {
+    cache[library] = { mtimeMs, size, ok, at: now };
+    writeFileAtomicSync(cacheFile, `${JSON.stringify(cache, null, 2)}\n`);
+  } catch {
+    /* Unwritable agent dir: the next process probes again. */
+  }
+
+  return ok;
+}
+
+const GRAMMAR_PROBE_SCRIPT = `
+const [napi, grammar] = process.argv.slice(1);
+const astGrep = require(napi);
+astGrep.registerDynamicLanguage({ python: require(grammar) });
+astGrep.parse("python", "x = 1\\n").root();
+process.stdout.write("ok");
+`;
+
+/** On the agent's own runtime, as the desktop launches the agent itself. */
+const runGrammarProbe: GrammarProbeRun = (napi, grammar) =>
+  new Promise((resolve) => {
+    execFile(
+      process.execPath,
+      ["-e", GRAMMAR_PROBE_SCRIPT, napi, grammar],
+      {
+        env: childProcessEnv(process.env, { ELECTRON_RUN_AS_NODE: "1" }),
+        timeout: GRAMMAR_PROBE_TIMEOUT_MS,
+        windowsHide: true,
+      },
+      (error, stdout) => {
+        // Killed on timeout, or never started (spawn errors have a string code).
+        if (error?.killed === true || typeof error?.code === "string") {
+          resolve(undefined);
+          return;
+        }
+        resolve(error == null && stdout === "ok");
+      }
+    );
+  });
 
 export function langForFile(filePath: string): SupportedLang | undefined {
   if (!loadAstGrep()) {

@@ -2,7 +2,7 @@ import { type } from "@orpc/contract";
 import * as v from "valibot";
 
 import type { AccountState } from "../account";
-import type { BillingPlan } from "../billing-plan";
+import { type BillingPlan, UPGRADE_SRCS } from "../billing-plan";
 import type {
   AbacusAccountInfo,
   AbacusPaymentRequired,
@@ -29,8 +29,13 @@ export const account = {
   releasePayment: mutation.input(NoInput).output(type<void>()),
   /** The vault page, where the user sees and deletes saved logins and cards; null without a vault. */
   vaultUrl: query.input(NoInput).output(type<string | null>()),
-  /** The account's own one-time upgrade page; null without an upgrade offer (or signed out). */
-  upgradeUrl: query.input(NoInput).output(type<string | null>()),
+  /**
+   * The account's own upgrade page, tagged with the screen it is opened from
+   * (`app` when none is given); null without an upgrade offer (or signed out).
+   */
+  upgradeUrl: query
+    .input(v.optional(v.object({ src: v.optional(v.picklist(UPGRADE_SRCS)) })))
+    .output(type<string | null>()),
   /**
    * The account's plan, credits and upgrades as the platform reads them now,
    * for the credit wall's card; null signed out or when the call fails.

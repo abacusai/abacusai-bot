@@ -9,9 +9,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const credentials = vi.hoisted(() => ({ current: new Set<string>() }));
-const groqLive = vi.hoisted(() => ({ current: null as Set<string> | null }));
+/** Each provider's public /v1/models; a missing entry does not answer. */
+const liveLists = new Map<string, string[]>();
 
 vi.mock("../config/settings", () => ({
+  credentialFor: (name: string) =>
+    credentials.current.has(name) ? "test-key" : "",
   hasCredential: (name: string) => credentials.current.has(name),
   hasOAuthCredential: () => false,
 }));
@@ -42,13 +45,17 @@ vi.mock("./openrouter", () => ({
   clearOpenRouterCache: () => {},
   fetchFreeOpenRouterModels: async () => [],
 }));
-vi.mock("./groq", () => ({
-  cachedLiveGroqModelIds: () => null,
-  clearGroqCache: () => {},
-  fetchLiveGroqModelIds: async () => groqLive.current,
-}));
 vi.mock("../../paths", () => ({ abacusBotHome: () => "/nonexistent-home" }));
 
+vi.stubGlobal("fetch", async (url: string) => {
+  const host = new URL(url).hostname;
+  const ids = [...liveLists].find(([provider]) => host.includes(provider))?.[1];
+  return ids == null
+    ? new Response("unavailable", { status: 503 })
+    : Response.json({ data: ids.map((id) => ({ id, object: "model" })) });
+});
+
+const { clearLiveModelIds } = await import("@abacus-ai/agent/model-catalog");
 const { listAvailableModels } = await import("./models");
 
 const forProvider = (
@@ -58,7 +65,8 @@ const forProvider = (
 
 beforeEach(() => {
   credentials.current = new Set();
-  groqLive.current = null;
+  liveLists.clear();
+  clearLiveModelIds();
   abacus.tier = null;
   abacus.live = [];
   abacus.refused = new Set();
@@ -136,7 +144,7 @@ describe("a Groq model the provider has retired", () => {
 
   it("is dropped when the live list does not carry it", async () => {
     credentials.current = new Set(["GROQ_API_KEY"]);
-    groqLive.current = new Set(["openai/gpt-oss-120b", "openai/gpt-oss-20b"]);
+    liveLists.set("groq", ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]);
     const groq = forProvider(await listAvailableModels(), "groq");
 
     expect(groq.map((model) => model.id)).not.toContain(retired);
@@ -146,7 +154,6 @@ describe("a Groq model the provider has retired", () => {
 
   it("stays when the live list did not answer", async () => {
     credentials.current = new Set(["GROQ_API_KEY"]);
-    groqLive.current = null;
     const groq = forProvider(await listAvailableModels(), "groq");
 
     // Offline is not evidence of retirement; the catalog stands as it is.
@@ -155,10 +162,40 @@ describe("a Groq model the provider has retired", () => {
 
   it("is not consulted for another provider's rows", async () => {
     credentials.current = new Set(["GROQ_API_KEY", "OPENAI_API_KEY"]);
-    groqLive.current = new Set(["openai/gpt-oss-120b"]);
+    liveLists.set("groq", ["openai/gpt-oss-120b"]);
     const models = await listAvailableModels();
 
     expect(forProvider(models, "openai").length).toBeGreaterThan(10);
+  });
+});
+
+describe("an NVIDIA model the provider has retired", () => {
+  // NVIDIA retired both; Kimi K3 is in pi's data, GLM-5.3 was a supplement.
+  const retired = ["nvidia/moonshotai/kimi-k3", "nvidia/z-ai/glm-5.3"];
+
+  it("is dropped when NVIDIA's public list does not carry it", async () => {
+    credentials.current = new Set(["NVIDIA_API_KEY"]);
+    liveLists.set("nvidia", [
+      "moonshotai/kimi-k2.6",
+      "deepseek-ai/deepseek-v4.1-flash",
+      "nvidia/nemotron-3-super-120b-a12b",
+    ]);
+    const ids = forProvider(await listAvailableModels(), "nvidia").map(
+      (model) => model.id
+    );
+
+    for (const id of retired) expect(ids).not.toContain(id);
+    expect(ids).toContain("nvidia/moonshotai/kimi-k2.6");
+    expect(ids).toContain("nvidia/deepseek-ai/deepseek-v4.1-flash");
+  });
+
+  it("stays when the list did not answer", async () => {
+    credentials.current = new Set(["NVIDIA_API_KEY"]);
+    const ids = forProvider(await listAvailableModels(), "nvidia").map(
+      (model) => model.id
+    );
+
+    expect(ids).toContain("nvidia/moonshotai/kimi-k3");
   });
 });
 

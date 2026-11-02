@@ -4,6 +4,7 @@ import {
   paidUpgradeOnly,
   planPitch,
   planPrice,
+  type UpgradeSrc,
   wallOffer,
 } from "@abacus-ai/contract/billing-plan";
 import {
@@ -44,8 +45,8 @@ import { PaidOfferButtons, PaidOfferDetails } from "./paid-offer";
 
 export interface CreditActions {
   openExternal(url: string): Promise<void>;
-  /** The account's own upgrade page, or the plan page without one. */
-  openUpgrade(): Promise<void>;
+  /** The account's own upgrade page, or the plan page without one, opened from `src`. */
+  openUpgrade(src: UpgradeSrc): Promise<void>;
   canTopUpCredits?(): Promise<boolean>;
   /** A paid plan's top-up, its link read at click time; the account is then watched. */
   openTopUp?(): Promise<void>;
@@ -185,7 +186,7 @@ export const CreditsCard = ({
       ? wall.onUpgrade()
       : upgradeOnly && nextPlan != null
         ? nextPlan()
-        : void host.openUpgrade();
+        : void host.openUpgrade("chat_credits");
   const noteText =
     note ??
     t(

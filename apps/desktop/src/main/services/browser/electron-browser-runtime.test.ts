@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => {
   const refusedUrls = new Set<string>();
   /** What a checked page's error collector holds once it has loaded. */
   const page = { errors: [] as string[] };
+  /** URLs whose document never arrives: the load and every read wait on. */
+  const stalledUrls = new Set<string>();
 
   class FakeWebContents {
     readonly listeners = new Map<string, Listener[]>();
@@ -25,11 +27,43 @@ const mocks = vi.hoisted(() => {
       this.zoomFactor = factor;
     });
     readonly setWindowOpenHandler = vi.fn();
+    /**
+     * As Chromium answers: never, to a view that has not navigated yet; a
+     * new-document script runs only once Page.enable was sent; a read is
+     * evaluated in the current document.
+     */
     readonly debugger = {
-      attach: vi.fn(),
-      sendCommand: vi.fn(async () => ({})),
+      isAttached: vi.fn(() => this.attached),
+      attach: vi.fn(() => {
+        this.attached = true;
+      }),
+      sendCommand: vi.fn((method: string, params?: Record<string, unknown>) => {
+        if (!this.navigated || stalledUrls.has(this.url))
+          return new Promise(() => {});
+        if (method === "Page.enable") this.pageEnabled = true;
+        if (method === "Page.addScriptToEvaluateOnNewDocument")
+          this.newDocumentScript = params?.source != null;
+        if (method === "Runtime.evaluate")
+          return Promise.resolve({
+            result: {
+              value: {
+                origin: this.url.startsWith("http")
+                  ? new URL(this.url).origin
+                  : "null",
+                caught: this.collectorRan ? page.errors : null,
+              },
+            },
+          });
+        return Promise.resolve({});
+      }),
     };
-    readonly executeJavaScript = vi.fn(async () => page.errors);
+    /** Waits for loading to stop: never, for an app holding a request open. */
+    readonly executeJavaScript = vi.fn(() => new Promise(() => {}));
+    private attached = false;
+    private navigated = false;
+    private pageEnabled = false;
+    private newDocumentScript = false;
+    private collectorRan = false;
     readonly session = {
       clearCache: vi.fn(),
       clearStorageData: vi.fn(),
@@ -51,11 +85,23 @@ const mocks = vi.hoisted(() => {
       ]);
     }
 
+    off(event: string, listener: Listener): void {
+      this.listeners.set(
+        event,
+        (this.listeners.get(event) ?? []).filter((each) => each !== listener)
+      );
+    }
+
     emit(event: string, ...args: unknown[]): void {
       for (const listener of this.listeners.get(event) ?? []) listener(...args);
     }
 
     async loadURL(url: string): Promise<void> {
+      this.navigated = true;
+      if (stalledUrls.has(url)) {
+        this.url = url;
+        return new Promise(() => {});
+      }
       if (refusedUrls.has(url)) {
         this.emit(
           "did-fail-load",
@@ -68,6 +114,7 @@ const mocks = vi.hoisted(() => {
         throw new Error(`ERR_HTTP2_PROTOCOL_ERROR (-337) loading '${url}'`);
       }
       this.url = url;
+      this.collectorRan = this.pageEnabled && this.newDocumentScript;
       this.emit("did-navigate");
     }
 
@@ -165,6 +212,7 @@ const mocks = vi.hoisted(() => {
     views,
     parking,
     refusedUrls,
+    stalledUrls,
     page,
     sessions,
     fromPartition,
@@ -200,6 +248,7 @@ describe("Electron browser runtime", () => {
   beforeEach(() => {
     mocks.views.length = 0;
     mocks.refusedUrls.clear();
+    mocks.stalledUrls.clear();
     mocks.page.errors = [];
     mocks.parking.created = 0;
     vi.clearAllMocks();
@@ -436,12 +485,13 @@ describe("Electron browser runtime", () => {
 
   describe("checking a served page before it is handed over", () => {
     const APP = "http://127.0.0.1:4321/";
+    const unlimited = (): AbortSignal => new AbortController().signal;
 
     it("installs the error collector before the page loads, reports what it threw, and closes its view", async () => {
       const runtime = new ElectronBrowserRuntime(() => owner as never);
       mocks.page.errors = ["Uncaught TypeError: player is undefined"];
 
-      const check = await runtime.checkServedPage(APP);
+      const check = await runtime.checkServedPage(APP, unlimited());
 
       expect(check).toEqual({
         loaded: true,
@@ -468,10 +518,25 @@ describe("Electron browser runtime", () => {
       const runtime = new ElectronBrowserRuntime(() => owner as never);
       mocks.refusedUrls.add(APP);
 
-      expect(await runtime.checkServedPage(APP)).toEqual({
+      expect(await runtime.checkServedPage(APP, unlimited())).toEqual({
         loaded: false,
         reason: "ERR_HTTP2_PROTOCOL_ERROR (-337)",
       });
+      expect(mocks.views[0]!.webContents.close).toHaveBeenCalled();
+    });
+
+    it("stops and closes its view when its caller's budget runs out", async () => {
+      const runtime = new ElectronBrowserRuntime(() => owner as never);
+      mocks.stalledUrls.add(APP);
+      const budget = new AbortController();
+
+      const check = runtime.checkServedPage(APP, budget.signal);
+      await vi.waitFor(() =>
+        expect(mocks.views[0]!.webContents.getURL()).toBe(APP)
+      );
+      budget.abort();
+
+      expect(await check).toBeNull();
       expect(mocks.views[0]!.webContents.close).toHaveBeenCalled();
     });
   });

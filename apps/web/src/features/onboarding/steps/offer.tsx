@@ -53,7 +53,7 @@ export const OfferStep = ({
   const answer = (upgrade: boolean) => {
     // Inside the click: the web build opens checkout's tab here. The plan
     // dialog then waits for the payment over the next screen.
-    if (upgrade) startPlanCheckout(transport.client, "onboarding-offer");
+    if (upgrade) startPlanCheckout(transport.client, "onboarding");
     onboardingStore.setState((state) => ({ ...state, offerAnswered: true }));
     void transport.client.system
       .funnelStep({

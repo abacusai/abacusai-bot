@@ -7,7 +7,6 @@
 {"type":"event","event":{"type":"text_delta","content":"Fresh.","messageId":"msg-1"}}
 {"type":"event","event":{"type":"turn_complete","outcome":{"kind":"reply"},"usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":1,"model":"fake-1"}}}
 {"type":"event","event":{"type":"status_changed","status":"idle"}}
-{"type":"event","event":{"type":"status_changed","status":"idle"}}
 {"type":"queue_updated","messages":[],"dequeued":null}
 {"type":"ready","model":"fake/fake-1","mode":"DEFAULT","agentSessionId":"<SESSION_ID_2>","agentSessionFile":"<SESSION_FILE_2>"}
 {"type":"event","event":{"type":"segments_cleared"}}
@@ -16,5 +15,4 @@
 {"type":"event","event":{"type":"status_changed","status":"streaming"}}
 {"type":"event","event":{"type":"text_delta","content":"Fresh.","messageId":"msg-2"}}
 {"type":"event","event":{"type":"turn_complete","outcome":{"kind":"reply"},"usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":1,"model":"fake-1"}}}
-{"type":"event","event":{"type":"status_changed","status":"idle"}}
 {"type":"event","event":{"type":"status_changed","status":"idle"}}

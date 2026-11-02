@@ -548,12 +548,12 @@ describe("the per-account session stash", () => {
     ).toBe("routine-1");
   });
 
-  it("marks a run the app restarted through as failed", () => {
+  it("marks a run the app restarted through as interrupted, not failed", () => {
     const run = service.create(WORKSPACE, "routine-1");
     const fresh = new AgentSessionManagerService();
     fresh.initialize([WORKSPACE]);
     expect(fresh.listByRoutine("routine-1")[0]?.id).toBe(run.id);
-    expect(fresh.listByRoutine("routine-1")[0]?.runOutcome).toBe("failed");
+    expect(fresh.listByRoutine("routine-1")[0]?.runOutcome).toBe("interrupted");
   });
 
   it("stamps bot-owned sessions, and the stamp survives a restart", () => {

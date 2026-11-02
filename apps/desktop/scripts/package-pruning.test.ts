@@ -4,10 +4,11 @@ import os from "node:os";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 
 const require = createRequire(import.meta.url);
 const afterPack = require("./after-pack.cjs");
-const { Arch } = require("electron-builder");
+const { Arch, WinPackager } = require("electron-builder");
 const roots: string[] = [];
 afterEach(() => {
   for (const root of roots.splice(0))
@@ -34,6 +35,7 @@ function fixture(platform: string, arch: string) {
         platform === "darwin" ? `${name}.lproj/locale.pak` : `${name}.pak`
       )
     );
+  const signed: string[] = [];
   const run = () =>
     afterPack({
       appOutDir: root,
@@ -42,9 +44,13 @@ function fixture(platform: string, arch: string) {
       packager: {
         getResourcesDir: () => resources,
         getMacOsElectronFrameworkResourcesDir: () => framework,
+        signIf: async (file: string) => {
+          signed.push(file);
+          return true;
+        },
       },
     });
-  return { root, resources, modules, write, locale, run };
+  return { root, resources, modules, write, locale, run, signed };
 }
 
 it.each(
@@ -162,6 +168,19 @@ it.each(
     await f.run();
     expect(keep.filter((file) => !fs.existsSync(file))).toEqual([]);
     expect(remove.filter((file) => fs.existsSync(file))).toEqual([]);
+    // Windows signs the one grammar it keeps; no other platform signs here.
+    expect(f.signed).toEqual(
+      platform === "win32"
+        ? [
+            path.join(
+              parser,
+              "prebuilds",
+              `prebuild-Windows-${arch!.toUpperCase()}`,
+              "parser.so"
+            ),
+          ]
+        : []
+    );
     await f.run(); // Idempotent if electron-builder retries packaging.
   }
 );
@@ -203,3 +222,57 @@ it.skipIf(process.platform === "win32")(
     expect(fs.existsSync(input)).toBe(true);
   }
 );
+
+it("signs every native file a Windows build ships, and nothing it cannot sign", () => {
+  const config = parseYaml(
+    fs.readFileSync(
+      path.join(import.meta.dirname, "../electron-builder.yml"),
+      "utf8"
+    )
+  ) as {
+    win: { signExts?: string[]; extraResources?: { from: string }[] };
+    mac: { extraResources?: { from: string }[] };
+    extraResources: { from: string; filter?: string[] }[];
+  };
+  // electron-builder's own rule, for its copy of extraResources and its walk
+  // of app.asar.unpacked.
+  const signs = (file: string): boolean =>
+    WinPackager.prototype.shouldSignFile.call(
+      { platformSpecificBuildOptions: config.win },
+      file
+    );
+  const agent = "resources/agent/node_modules";
+  const unpacked = "resources/app.asar.unpacked/node_modules";
+  for (const file of [
+    "AbacusBot.exe",
+    "ffmpeg.dll",
+    `${agent}/@ast-grep/napi-win32-x64-msvc/ast-grep-napi.win32-x64-msvc.node`,
+    `${agent}/@earendil-works/pi-tui/native/win32/prebuilds/win32-x64/win32-console-mode.node`,
+    `${unpacked}/@lydell/node-pty-win32-x64/prebuilds/win32-x64/pty.node`,
+    `${unpacked}/@lydell/node-pty-win32-x64/prebuilds/win32-x64/conpty/conpty.dll`,
+    `${unpacked}/@lydell/node-pty-win32-x64/prebuilds/win32-x64/conpty/OpenConsole.exe`,
+    `${unpacked}/@yuuang/ffi-rs-win32-x64-msvc/ffi-rs.win32-x64-msvc.node`,
+    `${unpacked}/@ff-labs/fff-bin-win32-x64/fff_c.dll`,
+    `${unpacked}/@mariozechner/clipboard-win32-x64-msvc/clipboard.win32-x64-msvc.node`,
+  ]) {
+    expect(signs(file), file).toBe(true);
+  }
+  // Signed at copy time, so these must not be copied there: every platform's
+  // grammar is (after-pack.cjs prunes, then signs the kept one), and pi-tui's
+  // macOS addon would be, but ships only to macOS.
+  expect(
+    signs(
+      `${agent}/@ast-grep/lang-python/prebuilds/prebuild-Linux-X64/parser.so`
+    )
+  ).toBe(false);
+  const piTui = config.extraResources.find((entry) =>
+    entry.from.includes("pi-tui")
+  );
+  expect(piTui?.filter).toContain("!native/**");
+  expect(config.win.extraResources?.map((entry) => entry.from)).toEqual([
+    "../../node_modules/@earendil-works/pi-tui/native/win32/",
+  ]);
+  expect(config.mac.extraResources?.map((entry) => entry.from)).toEqual([
+    "../../node_modules/@earendil-works/pi-tui/native/darwin/",
+  ]);
+});

@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   CircleAlert,
   CirclePlay,
+  CircleStop,
   Loader2,
   Pause,
   Pencil,
@@ -120,6 +121,9 @@ const RunsRail = ({
                     a.outcome === "skipped-offline" ? (
                     // The network's doing, not the routine's: no red.
                     <WifiOff className="text-muted-foreground size-3.5 shrink-0" />
+                  ) : a.outcome === "interrupted" ? (
+                    // The app closed under it: not the routine's doing either.
+                    <CircleStop className="text-muted-foreground size-3.5 shrink-0" />
                   ) : (
                     <CheckCircle2 className="text-muted-foreground size-3.5 shrink-0" />
                   )}
@@ -138,6 +142,7 @@ const RunsRail = ({
                           "create",
                           "schedule",
                           "catch-up",
+                          "interrupted",
                           "webhook",
                           "agent",
                         ].includes(a.trigger)

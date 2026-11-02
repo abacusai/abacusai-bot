@@ -98,7 +98,7 @@ export const ModelUnavailableCard = ({
       ? onUpgrade()
       : upgradeOnly && nextPlan != null
         ? nextPlan()
-        : void host.openUpgrade();
+        : void host.openUpgrade("model_locked");
   const plan = kind === "plan" && !creditsOut;
   const Icon = kind === "plan" ? Lock : AlertTriangle;
   const first = offer?.firstMonthPriceCents;
@@ -210,7 +210,7 @@ export const ModelUnavailableCard = ({
                 onClick={() =>
                   void (upgradeOnly && host.openNextPlan != null
                     ? host.openNextPlan()
-                    : host.openUpgrade())
+                    : host.openUpgrade("model_locked"))
                 }
               >
                 {t("outcome.unavailable.seePlans")}

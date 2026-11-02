@@ -89,6 +89,7 @@ import {
   memorySnapshot as readMemorySnapshot,
   rememberSnapshot,
 } from "./memory-store.js";
+import { refreshLiveModelIds } from "./model-catalog.js";
 import { MODEL_PATH_RESOURCES } from "./model-path.js";
 import {
   BUSY_RETRY_PROMPT,
@@ -881,6 +882,7 @@ export class AbacusBotSession {
     await Promise.all([
       registerAbacusProvider(registry),
       refreshOpenRouterLive(),
+      refreshLiveModelIds(),
     ]);
 
     // MCP servers first: pi takes the custom tool list up front.
@@ -2688,6 +2690,7 @@ export class AbacusBotSession {
     await Promise.all([
       registerAbacusProvider(registry),
       refreshOpenRouterLive(),
+      refreshLiveModelIds(),
     ]);
     // Whatever sidelined a model or a whole provider may no longer hold: the
     // account's credits, plan or keys just changed under us.

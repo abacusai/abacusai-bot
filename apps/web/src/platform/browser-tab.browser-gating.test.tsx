@@ -79,7 +79,7 @@ it("offers free accounts Upgrade and Download", () => {
   render(<BrowserTab {...props} url="http://localhost:3000" />);
   expect(screen.getAllByRole("button")).toHaveLength(2);
   fireEvent.click(screen.getByRole("button", { name: "Upgrade" }));
-  expect(fixture.upgrade).toHaveBeenCalledWith(fixture.client);
+  expect(fixture.upgrade).toHaveBeenCalledWith(fixture.client, "web_tab");
   expect(
     screen.queryByRole("button", { name: "Open AbacusAI Agent" })
   ).toBeNull();

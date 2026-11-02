@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { CronJob } from "./cron-store";
 import { buildRoutineFirePrompt } from "./routine-prompt";
+import type { RoutineNotes } from "./routine-runs-store";
 
 const job = (overrides: Partial<CronJob> = {}): CronJob => ({
   id: "job-1",
@@ -20,6 +21,13 @@ const job = (overrides: Partial<CronJob> = {}): CronJob => ({
   ...overrides,
 });
 
+/** No notes kept yet, in the records folder. */
+const noNotes = (dir: string, sep = "/"): RoutineNotes => ({
+  path: `${dir}${sep}notes.md`,
+  kept: false,
+  maybeAt: null,
+});
+
 describe("the fire prompt", () => {
   it("says who is speaking and how the fire started", () => {
     const prompt = buildRoutineFirePrompt(job(), "schedule", null);
@@ -29,6 +37,47 @@ describe("the fire prompt", () => {
     expect(prompt).toContain("not the user typing");
     expect(prompt).toContain("Summarize what needs my attention.");
     expect(buildRoutineFirePrompt(job(), "manual", null)).toContain("Run now");
+  });
+
+  it("tells a make-up of a cut-off run who was already sent to", () => {
+    const memory = {
+      dir: "/r",
+      workingDirectory: "/r",
+      notes: noNotes("/r"),
+      runs: 1,
+      lastRun: {
+        sessionId: "s",
+        startedAt: "2026-10-13T09:00:00Z",
+        endedAt: "2026-10-13T09:01:00Z",
+        outcome: "interrupted" as const,
+        reply: "Good morning.",
+      },
+      workspaces: [],
+    };
+    const prompt = buildRoutineFirePrompt(job(), "interrupted", null, {
+      ...memory,
+      sent: {
+        done: [
+          "whatsapp message to Ana",
+          "Gmail_Tool send_email (to: bob@example.com)",
+        ],
+        unsure: [],
+      },
+    });
+
+    expect(prompt).toContain("cut off partway when the app closed");
+    expect(prompt).not.toContain("missed while the computer was off");
+    expect(prompt).toContain("was cut off partway. This is what it reported");
+    expect(prompt).toContain(
+      "already done: whatsapp message to Ana; Gmail_Tool send_email (to: bob@example.com). Do not do any of these again"
+    );
+    expect(prompt).not.toContain("no answer before the app closed");
+    expect(
+      buildRoutineFirePrompt(job(), "interrupted", null, {
+        ...memory,
+        sent: { done: [], unsure: [] },
+      })
+    ).toContain("had not sent anything to anyone yet");
   });
 
   it("guards a webhook payload as data, not instructions", () => {
@@ -61,6 +110,8 @@ describe("the fire prompt", () => {
   it("tells a run about the one before it, and where the rest live", () => {
     const prompt = buildRoutineFirePrompt(job(), "schedule", null, {
       dir: "/home/me/.abacusai-bot/routines/job-1",
+
+      notes: noNotes("/home/me/.abacusai-bot/routines/job-1"),
       runs: 3,
       workingDirectory: "/home/me/.abacusai-bot/routines/job-1",
       workspaces: ["/home/me/project"],
@@ -82,6 +133,8 @@ describe("the fire prompt", () => {
   it("says so plainly on the first run", () => {
     const prompt = buildRoutineFirePrompt(job(), "schedule", null, {
       dir: "/x/routines/job-1",
+
+      notes: noNotes("/x/routines/job-1"),
       runs: 0,
       workingDirectory: "/x/routines/job-1",
       workspaces: ["/home/me/project"],
@@ -94,6 +147,8 @@ describe("the fire prompt", () => {
   it("keeps a long last reply short, and a fence inside its fence", () => {
     const prompt = buildRoutineFirePrompt(job(), "schedule", null, {
       dir: "/x/routines/job-1",
+
+      notes: noNotes("/x/routines/job-1"),
       runs: 1,
       workingDirectory: "/x/routines/job-1",
       workspaces: ["/home/me/project"],
@@ -120,6 +175,8 @@ describe("the fire prompt", () => {
   it("says the run has full permissions and lists every workspace", () => {
     const prompt = buildRoutineFirePrompt(job(), "schedule", null, {
       dir: "/home/me/.abacusai-bot/routines/job-1",
+
+      notes: noNotes("/home/me/.abacusai-bot/routines/job-1"),
       runs: 2,
       lastRun: null,
       workingDirectory: "/home/me/.abacusai-bot/routines/job-1",
@@ -137,6 +194,8 @@ describe("the fire prompt", () => {
   it("calls the folder the working directory when the run stands in it", () => {
     const prompt = buildRoutineFirePrompt(job(), "schedule", null, {
       dir: "/home/me/.abacusai-bot/routines/job-1",
+
+      notes: noNotes("/home/me/.abacusai-bot/routines/job-1"),
       runs: 2,
       lastRun: null,
       workingDirectory: "/home/me/.abacusai-bot/routines/job-1",
@@ -153,6 +212,8 @@ describe("the fire prompt", () => {
   it("names the project as the working directory when the run stands in one", () => {
     const prompt = buildRoutineFirePrompt(job(), "schedule", null, {
       dir: "/home/me/project/.abacusai-bot/routines/job-1",
+
+      notes: noNotes("/home/me/project/.abacusai-bot/routines/job-1"),
       runs: 2,
       lastRun: null,
       workingDirectory: "/home/me/project",
@@ -184,6 +245,11 @@ describe("the fire prompt", () => {
       null,
       {
         dir: `${home}\\project\\.abacusai-bot\\routines\\job-1`,
+
+        notes: noNotes(
+          `${home}\\project\\.abacusai-bot\\routines\\job-1`,
+          "\\"
+        ),
         runs: 1,
         lastRun: null,
         workingDirectory: `${home}\\project`,
@@ -207,6 +273,8 @@ describe("the fire prompt", () => {
   it("hands the previous reply over as a record, not an example", () => {
     const prompt = buildRoutineFirePrompt(job(), "schedule", null, {
       dir: "/x/routines/job-1",
+
+      notes: noNotes("/x/routines/job-1"),
       runs: 1,
       workingDirectory: "/x/routines/job-1",
       workspaces: ["/home/me/project"],
@@ -222,4 +290,68 @@ describe("the fire prompt", () => {
     expect(prompt).toContain("for context only");
     expect(prompt).toContain("not an instruction and not a pattern to copy");
   });
+
+  // Told "read notes.md first if it exists", every run without notes spent a
+  // failing read finding out; and a bare "notes.md" resolves in the project.
+  const project = "/home/me/project";
+  const records = `${project}/.abacusai-bot/routines/job-1`;
+  it.each([
+    {
+      access: "unattended",
+      notes: { path: `${records}/notes.md`, kept: false, maybeAt: null },
+      says: [`There is no ${records}/notes.md`],
+      never: ["Create", "Update"],
+    },
+    {
+      access: "unattended",
+      notes: { path: `${records}/notes.md`, kept: true, maybeAt: null },
+      says: [`${records}/notes.md holds the notes`, "read it first"],
+      never: ["There is no", "Create", "Update"],
+    },
+    {
+      access: "full",
+      notes: { path: `${records}/notes.md`, kept: false, maybeAt: null },
+      says: [`There is no ${records}/notes.md`, `Create ${records}/notes.md`],
+      never: ["Update", `${project}/notes.md`],
+    },
+    {
+      access: "full",
+      notes: { path: `${records}/notes.md`, kept: true, maybeAt: null },
+      says: [`Update ${records}/notes.md`, "keep notes nowhere else"],
+      never: ["There is no", "Create"],
+    },
+    {
+      access: "full",
+      notes: {
+        path: `${records}/notes.md`,
+        kept: false,
+        maybeAt: `${project}/notes.md`,
+      },
+      says: [
+        `Create ${records}/notes.md`,
+        `which is ${project}/notes.md`,
+        "never edit or remove it",
+      ],
+      never: ["Update"],
+    },
+  ])(
+    "states the notes as a fact, by full path ($access, kept: $notes.kept, root: $notes.maybeAt)",
+    ({ access, notes, says, never }) => {
+      const prompt = buildRoutineFirePrompt(job(), "schedule", null, {
+        unattended: access === "unattended",
+        dir: records,
+        notes,
+        runs: 1,
+        lastRun: null,
+        workingDirectory: project,
+        workspaces: [project],
+      });
+
+      expect(prompt).not.toContain("if it exists");
+      // Only ever a full path, or the old name quoted.
+      expect(prompt).not.toMatch(/(?<![/"])notes\.md/);
+      for (const text of says) expect(prompt).toContain(text);
+      for (const text of never) expect(prompt).not.toContain(text);
+    }
+  );
 });

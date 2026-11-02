@@ -6,7 +6,7 @@
 import { modelPath } from "@abacus-ai/agent/model-path";
 
 import type { CronJob, CronTrigger } from "./cron-store";
-import type { RoutineRunRecord } from "./routine-runs-store";
+import type { RoutineNotes, RoutineRunRecord } from "./routine-runs-store";
 
 /** What a fire is told about the runs before it, and where it stands. */
 export interface RoutineMemory {
@@ -23,9 +23,16 @@ export interface RoutineMemory {
    * outright, or a model told only about `dir` writes its output there.
    */
   workingDirectory: string;
+  /** Said as a fact: a run told "if it exists" can only find out by a read. */
+  notes: RoutineNotes;
   runs: number;
   lastRun: RoutineRunRecord | null;
   workspaces: string[];
+  /**
+   * For an `interrupted` fire: what the cut-off run already did outward
+   * (chat sends and connector actions), and what it started with no answer.
+   */
+  sent?: { done: string[]; unsure: string[] };
 }
 
 /** The last reply is context, not a transcript: enough to say "since then". */
@@ -35,6 +42,8 @@ const TRIGGER_LINE: Record<CronTrigger, string> = {
   schedule: "on its schedule",
   "catch-up":
     "late, to make up the latest scheduled run it missed while the computer was off or asleep",
+  interrupted:
+    "again, because its scheduled run was cut off partway when the app closed (a quit, a crash, an update or a shutdown)",
   webhook: "by an incoming webhook",
   manual: "by the user pressing Run now",
   create: "for the first time, right after it was set up",
@@ -69,7 +78,12 @@ export const buildRoutineFirePrompt = (
           ? `${memory.lastRun.reply.slice(0, LAST_REPLY_CHARS)}…`
           : memory.lastRun.reply;
       const when = new Date(memory.lastRun.startedAt).toLocaleString();
-      const went = memory.lastRun.outcome === "failed" ? "failed" : "completed";
+      const went =
+        memory.lastRun.outcome === "failed"
+          ? "failed"
+          : memory.lastRun.outcome === "interrupted"
+            ? "was cut off partway"
+            : "completed";
       lines.push(
         `Your previous run was at ${when} and ${went}.` +
           (reply.length > 0
@@ -86,31 +100,59 @@ export const buildRoutineFirePrompt = (
           "```"
         );
     }
+    // Said outright: only the app's own sends are skipped on a repeat; a
+    // connector's mail, post or invite would go out twice.
+    if (trigger === "interrupted" && memory.sent != null) {
+      const { done, unsure } = memory.sent;
+      lines.push(
+        done.length > 0
+          ? `That run had already done: ${done.join("; ")}. Do not do any of these again; do the rest, and say what had already gone out.`
+          : "That run had not sent anything to anyone yet."
+      );
+      if (unsure.length > 0)
+        lines.push(
+          `It had also started, with no answer before the app closed: ${unsure.join("; ")}. It may have gone through: check (for example the sent folder) before doing it again.`
+        );
+    }
     const inOwnFolder = memory.workingDirectory === memory.dir;
     // The model copies these into tool calls; see model-path.
     const dir = modelPath(memory.dir, platform);
     const workingDirectory = modelPath(memory.workingDirectory, platform);
+    const notes = modelPath(memory.notes.path, platform);
+    const maybeAt =
+      memory.notes.maybeAt == null
+        ? null
+        : modelPath(memory.notes.maybeAt, platform);
     lines.push(
       ...(inOwnFolder
         ? [
             `This folder is your working directory: ${dir}. Your earlier`,
             `runs (${memory.runs} on file) are in runs/, one file each, newest`,
-            "last by name, and notes.md is yours to keep notes in for your next",
-            "run. Read them if you need what happened before; skip them if you",
-            "do not.",
+            "last by name. Read them if you need what happened before; skip",
+            "them if you do not.",
           ]
         : [
             `Your working directory is ${workingDirectory}, the project`,
             "this routine was set up for: anything you create goes there unless",
             `the instruction names another place. Your own records live inside`,
             `it at ${dir}: your earlier runs (${memory.runs} on file) are`,
-            `in ${dir}/runs, one file each, newest last by name, and`,
-            `${dir}/notes.md is yours to keep notes in for your next run.`,
-            "Read them if you need what happened before; skip them if you do not.",
+            `in ${dir}/runs, one file each, newest last by name. Read them if`,
+            "you need what happened before; skip them if you do not.",
+          ]),
+      // Always the full path: a bare name resolves in the working directory,
+      // which for a project is the user's own folder.
+      memory.notes.kept
+        ? `${notes} holds the notes your earlier runs kept; read it first.`
+        : `There is no ${notes}: no earlier run kept notes there.`,
+      ...(maybeAt == null
+        ? []
+        : [
+            `Earlier runs were told only "notes.md", which is ${maybeAt}. It may`,
+            "hold their notes, or be the user's own file: read it only for notes",
+            "of yours, and never edit or remove it.",
           ]),
       ...(memory.unattended === true
         ? [
-            "Read notes.md first if it exists.",
             "This run is unattended: it can read files in its working directory,",
             "search the web, and read only the sites and account data it was",
             "given. It cannot write files, run commands, use the browser or",
@@ -118,8 +160,8 @@ export const buildRoutineFirePrompt = (
             "found in your answer.",
           ]
         : [
-            "Read notes.md first if it exists, and write it when something is worth",
-            "carrying over.",
+            `${memory.notes.kept ? "Update" : "Create"} ${notes} when something is worth carrying over`,
+            "to your next run, and keep notes nowhere else.",
             // Said outright: a model reasoning from its working directory can decide
             // its own notes are out of bounds and decline without trying.
             "You have full permissions this run. Everything above is yours to read",

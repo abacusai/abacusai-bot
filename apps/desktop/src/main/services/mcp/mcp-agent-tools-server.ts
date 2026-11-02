@@ -121,7 +121,10 @@ import {
 } from "../agent-tools/served-previews";
 import { listServed, htmlPagesIn } from "../agent-tools/static-server";
 import { renderTodos, readTodos, setTodos } from "../agent-tools/todo-store";
-import type { ServedPageCheck } from "../browser/page-errors";
+import {
+  PAGE_CHECK_BUDGET_MS,
+  type ServedPageCheck,
+} from "../browser/page-errors";
 import { hasCredential } from "../config/settings";
 import type { BotNumberOutcome } from "../messaging/bot-number";
 import { MAX_ATTACHMENT_BYTES } from "../messaging/connector";
@@ -303,6 +306,8 @@ export interface McpAgentToolsServerOptions {
    * moment), or null for any other session: its sends reach each recipient once.
    */
   routineFireForSession?: (sessionId: string) => string | null;
+  /** What those fires have sent, kept by the host across restarts; in memory without one. */
+  routineSends?: RoutineSendLedger;
   /**
    * The bot whose chat this UI session is, or null. A bot scheduling its own
    * routine gets the fires delivered back into its chat.
@@ -353,11 +358,13 @@ export interface McpAgentToolsServerOptions {
   } | null;
   /**
    * Loads a local URL in a hidden browser tab and reports what its page threw
-   * as it loaded; null where no browser is available to ask.
+   * as it loaded; null where no browser is available to ask. It stops, and
+   * closes what it opened, once `signal` aborts.
    */
   checkServedPage?: (
     url: string,
-    sessionId: string
+    sessionId: string,
+    signal: AbortSignal
   ) => Promise<ServedPageCheck | null>;
   /** Set for the turn behind a routine page's composer; it sees only cron. */
   routineEditorFor?: (sessionId: string) => string | null;
@@ -588,12 +595,13 @@ export class McpAgentToolsServer extends McpHttpServer {
     // listChanged: a platform's tools appear the moment it connects, and
     // service-host calls notifyToolListChanged when they do.
     super({ name: SERVER_NAME, version: SERVER_VERSION, listChanged: true });
+    this.routineSends = options.routineSends ?? new RoutineSendLedger();
   }
 
   /** The loopback origins `serve` returned to each session. */
   private readonly servedOrigins = new Map<string, Set<string>>();
 
-  private readonly routineSends = new RoutineSendLedger();
+  private readonly routineSends: RoutineSendLedger;
 
   /** The always-on tools guarantee this. */
   hasEnabledTools(): boolean {
@@ -1934,9 +1942,7 @@ export class McpAgentToolsServer extends McpHttpServer {
     if ("reason" in check) return { reason: check.reason };
     const answered = `${url} answered (HTTP ${check.status})`;
     const page =
-      callerSession == null
-        ? null
-        : ((await this.options.checkServedPage?.(url, callerSession)) ?? null);
+      callerSession == null ? null : await this.checkPage(url, callerSession);
     if (page == null) return { url, line: `${answered}.` };
     if ("reason" in page)
       return { reason: `its page did not load: ${page.reason}` };
@@ -1945,6 +1951,31 @@ export class McpAgentToolsServer extends McpHttpServer {
         reason: `its page threw as it loaded: ${page.errors.join(" | ")}`,
       };
     return { url, line: `${answered} and its page loaded without errors.` };
+  }
+
+  /**
+   * The browser's check of a served page, within the one budget every
+   * runtime's check gets: past it the check is told to stop, and only the
+   * HTTP answer counts, so a proof step never costs the tool its deadline.
+   */
+  private async checkPage(
+    url: string,
+    sessionId: string
+  ): Promise<ServedPageCheck | null> {
+    const check = this.options.checkServedPage;
+    if (check == null) return null;
+    const budget = new AbortController();
+    const timer = setTimeout(() => budget.abort(), PAGE_CHECK_BUDGET_MS);
+    try {
+      return await Promise.race([
+        check(url, sessionId, budget.signal).catch(() => null),
+        new Promise<null>((resolve) =>
+          budget.signal.addEventListener("abort", () => resolve(null))
+        ),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   /**

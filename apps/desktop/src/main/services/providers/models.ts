@@ -1,7 +1,11 @@
 import fs from "fs";
 import path from "path";
 
-import { listBuiltinModels } from "@abacus-ai/agent/model-catalog";
+import {
+  clearLiveModelIds,
+  listBuiltinModels,
+  refreshLiveModelIds,
+} from "@abacus-ai/agent/model-catalog";
 import { FREE_POOL_PROVIDERS } from "@abacus-ai/contract/free-pool";
 import {
   MODEL_CATALOG,
@@ -10,7 +14,11 @@ import {
 import { PROVIDER_KEY_FIELDS } from "@abacus-ai/contract/settings";
 
 import { abacusBotHome } from "../../paths";
-import { hasCredential, hasOAuthCredential } from "../config/settings";
+import {
+  credentialFor,
+  hasCredential,
+  hasOAuthCredential,
+} from "../config/settings";
 import {
   abacusPaymentRequired,
   cachedAbacusModels,
@@ -20,11 +28,6 @@ import {
   planLockedAbacusIds,
 } from "./abacus";
 import { fetchBillingPlan } from "./abacus-upgrade";
-import {
-  cachedLiveGroqModelIds,
-  clearGroqCache,
-  fetchLiveGroqModelIds,
-} from "./groq";
 import {
   cachedFreeOpenRouterModels,
   clearOpenRouterCache,
@@ -98,30 +101,27 @@ export const listAvailableModels = async (
   if (refresh) {
     clearOpenRouterCache();
     clearAbacusCache();
-    clearGroqCache();
+    clearLiveModelIds();
     unlockPlanCache = null;
   }
 
   // Live catalogs, each gated on its own key, fetched in parallel so the
   // picker does not wait for them in series.
-  const [openRouterFree, liveAbacusModels, abacusAccount, groqLive] =
-    await Promise.all([
-      refresh || cachedFreeOpenRouterModels().length === 0
-        ? fetchFreeOpenRouterModels()
-        : cachedFreeOpenRouterModels(),
-      // Abacus's catalog is per-account (org policy gates models).
-      refresh || cachedAbacusModels().length === 0
-        ? fetchAbacusModels()
-        : cachedAbacusModels(),
-      // The plan tier picks the recommended default; null (signed out, or the
-      // host unreachable) simply leaves no recommendation.
-      fetchAbacusAccount(),
-      // Groq retires models faster than pi's catalog is regenerated; the live
-      // list says which of the catalog's rows still answer.
-      refresh || cachedLiveGroqModelIds() == null
-        ? fetchLiveGroqModelIds()
-        : cachedLiveGroqModelIds(),
-    ]);
+  const [openRouterFree, liveAbacusModels, abacusAccount] = await Promise.all([
+    refresh || cachedFreeOpenRouterModels().length === 0
+      ? fetchFreeOpenRouterModels()
+      : cachedFreeOpenRouterModels(),
+    // Abacus's catalog is per-account (org policy gates models).
+    refresh || cachedAbacusModels().length === 0
+      ? fetchAbacusModels()
+      : cachedAbacusModels(),
+    // The plan tier picks the recommended default; null (signed out, or the
+    // host unreachable) simply leaves no recommendation.
+    fetchAbacusAccount(),
+    // Groq and NVIDIA retire models faster than pi's catalog is
+    // regenerated; their live lists drop the dead rows from the catalog.
+    refreshLiveModelIds(credentialFor),
+  ]);
 
   const config = readConfig();
   // An account the payment gate refuses runs nothing on Abacus: no row may
@@ -197,17 +197,6 @@ export const listAvailableModels = async (
       };
     }
   );
-  // A Groq row the live list does not carry is a retired model: pi's data
-  // still names the Llama 3.x line, and each of those 404s on the first turn.
-  // No live answer (no key, offline) leaves the catalog alone.
-  const withoutRetiredGroq =
-    groqLive == null
-      ? expanded
-      : expanded.filter(
-          (model) =>
-            model.provider !== "groq" ||
-            groqLive.has(model.id.slice("groq/".length))
-        );
   // OpenRouter is connected for its free models, and a new OpenRouter account
   // has no balance: every paid row from pi's catalog answered 402, `:batch`
   // rows cannot chat, and `:free` rows the live list no longer carries answer
@@ -217,7 +206,7 @@ export const listAvailableModels = async (
     abacusAccount?.subscription_tier != null &&
     ["basic", "go", "pro", "max"].includes(abacusAccount.subscription_tier);
   const liveOpenRouterIds = new Set(openRouterFree.map((model) => model.id));
-  const servableExpanded = withoutRetiredGroq.flatMap((model) => {
+  const servableExpanded = expanded.flatMap((model) => {
     if (model.provider !== "openrouter") return [model];
     if (!payingTier || model.id.endsWith(":batch")) return [];
     if (model.tier !== "free")

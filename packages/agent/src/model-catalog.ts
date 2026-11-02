@@ -1,6 +1,8 @@
 /**
- * The models each built-in provider carries, from pi's bundled catalog. Only
- * pi's generated data modules are imported: this is bundled into the Electron
+ * The models each built-in provider carries, from pi's bundled catalog, less
+ * what a provider's live list says it retired: the picker and RouteLLM - Open
+ * (listModels in providers.ts) both judge by `isServed`. Only pi's generated
+ * data modules are imported: this is bundled into the Electron
  * main process, which cannot load the agent's native dependencies. Providers
  * the agent registers itself (`gemini`, `abacus`, custom endpoints) are absent;
  * their lists live in providers.ts and are fetched live.
@@ -145,11 +147,9 @@ export const CATALOG_SUPPLEMENTS: Record<string, CatalogSupplement[]> = {
       compat: { forceAdaptiveThinking: true, supportsStrictTools: true },
     },
   ],
-  // Served on NVIDIA's free tier (checked 2026-10-01); pi's rows for older
+  // Served on NVIDIA's free tier (checked 2026-11-02); pi's rows for older
   // versions answer 410 Gone.
   nvidia: [
-    nvidiaModel("moonshotai/kimi-k3", "Kimi K3"),
-    nvidiaModel("z-ai/glm-5.3", "GLM-5.3"),
     nvidiaModel("deepseek-ai/deepseek-v4.1-flash", "DeepSeek V4.1 Flash"),
   ],
   // The Qwen both serve now (checked 2026-10-01), after pi's 3.6 rows.
@@ -200,6 +200,88 @@ export const missingCatalogSupplements = (): Record<
   return missing;
 };
 
+/**
+ * Providers that publish their live model list. Their catalog rows retire
+ * faster than pi's data is regenerated, and a retired id answers every call
+ * with a 404 or 410. Groq's list needs the key; NVIDIA's is public, so the
+ * key only says whether the provider is in use at all.
+ */
+const LIVE_MODEL_LISTS: Record<
+  string,
+  { url: string; keyEnv: string; sendKey: boolean }
+> = {
+  groq: {
+    url: "https://api.groq.com/openai/v1/models",
+    keyEnv: "GROQ_API_KEY",
+    sendKey: true,
+  },
+  nvidia: {
+    url: "https://integrate.api.nvidia.com/v1/models",
+    keyEnv: "NVIDIA_API_KEY",
+    sendKey: false,
+  },
+};
+
+/** The ids each provider served at its last successful fetch, this process. */
+const liveIds = new Map<string, Set<string>>();
+
+const fetchLiveIds = async (
+  url: string,
+  key: string | undefined
+): Promise<Set<string> | null> => {
+  try {
+    const response = await fetch(url, {
+      ...(key != null && { headers: { Authorization: `Bearer ${key}` } }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!response.ok) return null;
+
+    const body = (await response.json()) as {
+      data?: Array<{ id?: unknown; active?: boolean }>;
+    };
+    const ids = new Set(
+      (body.data ?? []).flatMap((model) =>
+        typeof model.id === "string" && model.active !== false ? [model.id] : []
+      )
+    );
+    // An empty answer is a shape we do not understand, not an empty catalog.
+    return ids.size === 0 ? null : ids;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Fetch the live list of every such provider with a key and no list yet. A
+ * failure keeps what was there, so no answer leaves the catalog alone.
+ */
+export const refreshLiveModelIds = async (
+  keyOf: (envVar: string) => string | undefined = (envVar) =>
+    process.env[envVar]
+): Promise<void> => {
+  await Promise.all(
+    Object.entries(LIVE_MODEL_LISTS).map(async ([provider, list]) => {
+      const key = keyOf(list.keyEnv)?.trim();
+      if (key == null || key.length === 0 || liveIds.has(provider)) return;
+
+      const ids = await fetchLiveIds(list.url, list.sendKey ? key : undefined);
+      if (ids != null) liveIds.set(provider, ids);
+    })
+  );
+};
+
+/** Forget the live lists, so the next refresh asks again. */
+export const clearLiveModelIds = (): void => {
+  liveIds.clear();
+};
+
+/**
+ * Whether the provider still serves the model: no unless its live list
+ * carries it, and yes when there is no live list to judge by.
+ */
+export const isServed = (provider: string, modelId: string): boolean =>
+  liveIds.get(provider)?.has(modelId) ?? true;
+
 /** Every provider this module can expand. */
 export const builtinCatalogProviders = (): string[] => Object.keys(CATALOGS);
 
@@ -218,7 +300,7 @@ export const listBuiltinModels = (
     }
 
     return entries.flatMap((model) => {
-      if (model.id == null) return [];
+      if (model.id == null || !isServed(provider, model.id)) return [];
 
       return [
         {

@@ -15,6 +15,10 @@ import {
   applyMessageReaction,
   type MessageReactionChange,
 } from "@abacus-ai/contract/message-reactions";
+import {
+  discardedMessageId,
+  withoutMessage,
+} from "@abacus-ai/contract/transcript/discarded-messages";
 /**
  * A fake main relay (spec 02 §11.1, §13 "main relay fake"): an `AguiSource`
  * over an in-memory event log, answering exactly the contract the kit binds
@@ -337,6 +341,12 @@ const fold = (
       processor.processChunk(restoreInboundChunk(structuredClone(event)));
     } catch {
       // As main: a chunk the processor rejects is logged and skipped.
+    }
+    const discarded = discardedMessageId(event);
+    if (discarded != null) {
+      const kept = withoutMessage(processor.getMessages(), discarded);
+      processor.setMessages(kept.messages);
+      if (run != null) run.steps -= kept.toolCalls;
     }
     if (custom?.name === "message.reactions")
       processor.setMessages(

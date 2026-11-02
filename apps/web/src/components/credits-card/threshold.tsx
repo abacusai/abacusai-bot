@@ -267,7 +267,7 @@ export const CreditThresholdHost = () => {
       billing={billing ?? null}
       onUpgrade={() => {
         // Inside the click: the web build opens its checkout tab here.
-        void openUpgrade(transport.client);
+        void openUpgrade(transport.client, "low_credits");
         answer("upgrade");
       }}
       onContinue={() => answer("continue")}

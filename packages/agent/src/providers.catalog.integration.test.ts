@@ -21,9 +21,11 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { ModelRegistry, ModelRuntime } from "@earendil-works/pi-coding-agent";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { defaultModelFor, PROVIDER_DEFAULTS } from "./config.js";
+import { clearLiveModelIds, refreshLiveModelIds } from "./model-catalog.js";
+import { openLlmCandidates } from "./openllm.js";
 import { listModels, resolveModel } from "./providers.js";
 
 /**
@@ -172,6 +174,44 @@ describe("every session-start default", () => {
         chosen === "openllm/auto" || chosen?.startsWith(`${provider}/`),
         `${envVar} starts on ${chosen ?? "nothing"}`
       ).toBe(true);
+    }
+  });
+});
+
+describe("a model its provider retired", () => {
+  // NVIDIA's public list, in its own shape, as it would read once it retires
+  // a model the pool lists (Kimi K2.6 here).
+  const nvidiaLive = [
+    "deepseek-ai/deepseek-v4.1-flash",
+    "nvidia/nemotron-3-super-120b-a12b",
+  ];
+
+  it("leaves RouteLLM - Open once the live list drops it, and only then", async () => {
+    const pooled = (): string[] =>
+      openLlmCandidates(listModels(new ModelRegistry(runtime)))
+        .map((model) => model.id)
+        .filter((id) => id.startsWith("nvidia/"));
+
+    vi.stubGlobal("fetch", async (url: string) =>
+      url.includes("nvidia")
+        ? Response.json({ data: nvidiaLive.map((id) => ({ id })) })
+        : new Response("unavailable", { status: 503 })
+    );
+    try {
+      // No answer yet: the catalog stands.
+      expect(pooled()).toContain("nvidia/moonshotai/kimi-k2.6");
+
+      await refreshLiveModelIds();
+
+      expect(pooled()).not.toContain("nvidia/moonshotai/kimi-k2.6");
+      expect(pooled()).toContain("nvidia/nvidia/nemotron-3-super-120b-a12b");
+      // A hand pick still resolves, and fails on the call like any dead model.
+      expect(
+        resolveModel(runtime, "nvidia/moonshotai/kimi-k2.6").model
+      ).toBeDefined();
+    } finally {
+      clearLiveModelIds();
+      vi.unstubAllGlobals();
     }
   });
 });

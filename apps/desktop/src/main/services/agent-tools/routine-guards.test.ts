@@ -136,17 +136,20 @@ describe("a run the network let down", () => {
     ).toBe("failed");
     expect(runOutcomeOf({ kind: "reply" })).toBe("completed");
     expect(runOutcomeOf({ kind: "timed_out" })).toBe("failed");
+    expect(runOutcomeOf({ kind: "app_closed" })).toBe("interrupted");
   });
 
   it("never counts toward the pause, nor breaks a real streak", () => {
     const offline = Array.from({ length: 5 }, () => run("offline"));
     expect(shouldPauseAfter(offline)).toBe(false);
+    const interrupted = Array.from({ length: 5 }, () => run("interrupted"));
+    expect(shouldPauseAfter(interrupted)).toBe(false);
     expect(
       consecutiveFailures([
         run("failed"),
         run("offline"),
         run("failed"),
-        run("offline"),
+        run("interrupted"),
         run("completed"),
       ])
     ).toBe(2);

@@ -51,7 +51,7 @@ const SOURCES = {
   gemini: { id: "gemini", models: ["gemini-3.6-flash"] },
   openrouter: { id: "openrouter", models: ["big:free"] },
   mistral: { id: "mistral", models: ["devstral-latest"] },
-  nvidia: { id: "nvidia", models: ["moonshotai/kimi-k3"] },
+  nvidia: { id: "nvidia", models: ["moonshotai/kimi-k2.6"] },
   cerebras: { id: "cerebras", models: ["gpt-oss-120b"] },
   groq: { id: "groq", models: ["openai/gpt-oss-120b"] },
 } as const;
@@ -290,7 +290,7 @@ describe("RouteLLM - Open from first credit to last source", () => {
     behaviour.set("devstral-latest", {
       fail: { status: 401, message: "Invalid API Key" },
     });
-    behaviour.set("moonshotai/kimi-k3", {
+    behaviour.set("moonshotai/kimi-k2.6", {
       fail: {
         status: 429,
         message: "Rate limit reached. Please try again in 5m0s.",
@@ -302,7 +302,7 @@ describe("RouteLLM - Open from first credit to last source", () => {
     turn = await chat.turn("ninth task");
     expect(turn.models).toEqual([
       "devstral-latest",
-      "moonshotai/kimi-k3",
+      "moonshotai/kimi-k2.6",
       "gpt-oss-120b",
       "openai/gpt-oss-120b",
       "openai/gpt-oss-120b",

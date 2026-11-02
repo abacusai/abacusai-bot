@@ -36,6 +36,7 @@ export default defineConfig({
         test: {
           name: "unit",
           environment: "node",
+          setupFiles: ["src/__tests__/setup.ts"],
           include: ["src/**/*.test.ts"],
           exclude: SPAWNS_SOMETHING,
         },
@@ -44,6 +45,7 @@ export default defineConfig({
         test: {
           name: "e2e",
           environment: "node",
+          setupFiles: ["src/__tests__/setup.ts"],
           include: SPAWNS_SOMETHING,
           // One at a time: thirteen agents racing for the same CPU is how these
           // time out waiting for a child that has not been scheduled yet.

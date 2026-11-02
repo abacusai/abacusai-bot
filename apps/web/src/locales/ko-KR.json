@@ -1509,6 +1509,7 @@
       "create": "On creation",
       "schedule": "예약됨",
       "catch-up": "보충 실행",
+      "interrupted": "중단 후 재실행",
       "webhook": "웹훅",
       "agent": "에이전트가 실행"
     },
@@ -3414,6 +3415,7 @@
       "skipped": "Skipped",
       "skipped-offline": "건너뜀: 오프라인",
       "offline": "Abacus에 연결할 수 없음",
+      "interrupted": "중단됨",
       "unknown": "Unknown",
       "paused": "Paused"
     },

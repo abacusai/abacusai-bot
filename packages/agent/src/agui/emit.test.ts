@@ -21,7 +21,7 @@ import { isRunScoped } from "./event.js";
 import { validateResponse } from "./permissions.js";
 import { RunController, toTokenUsage, type TurnToken } from "./runs.js";
 import { HostSink } from "./sink.js";
-import type { AguiEvent } from "./wire.js";
+import type { AguiEvent, ToolResultContent } from "./wire.js";
 
 function rig(
   incarnation = "inc-1",
@@ -325,6 +325,89 @@ describe("tools", () => {
 
     expect(resultPart.state).toBe("error");
     expect(resultPart.error).toBe("The user rejected this tool call.");
+  });
+
+  it.each([
+    ["the run asks again", true],
+    ["the run ends on the error", false],
+  ])("a failed model call's message when %s", (_case, retried) => {
+    const r = rig();
+    const token = r.open();
+
+    // The reply stream is cut just after a call began: no arguments yet.
+    r.internal({ type: "message_open", key: "msg-1", messageId: "s:1" });
+    r.agent({ type: "text_delta", content: "Checking", messageId: "msg-1" });
+    r.internal({
+      type: "tool_call_start",
+      toolCallId: "c1",
+      toolName: "cronjob",
+      rawName: "cronjob",
+    });
+    r.internal({ type: "message_close", key: "msg-1", stopReason: "error" });
+    if (retried) {
+      r.agent({
+        type: "retry",
+        attempt: 1,
+        maxAttempts: 3,
+        delayMs: 1000,
+        isNetworkError: true,
+      });
+      r.internal({ type: "message_open", key: "msg-2", messageId: "s:2" });
+      r.internal({
+        type: "tool_call_start",
+        toolCallId: "c2",
+        toolName: "cronjob",
+        rawName: "cronjob",
+        input: { action: "list" },
+      });
+      r.internal({
+        type: "message_close",
+        key: "msg-2",
+        stopReason: "toolUse",
+      });
+      r.agent({
+        type: "tool_execution_start",
+        tool: tool("c2", "cronjob", { action: "list" }),
+      });
+      r.agent({
+        type: "tool_execution_complete",
+        tool: tool("c2", "cronjob", { action: "list" }),
+        result: { id: "c2", content: "no jobs", rejected: false },
+      });
+    }
+    r.runs.settle(token);
+
+    const [failed] = r.out
+      .filter((e) => e.type === "TEXT_MESSAGE_START")
+      .map((e) => (e as unknown as { messageId: string }).messageId);
+    const discarded = r.out
+      .filter(
+        (e) =>
+          e.type === "CUSTOM" &&
+          (e as unknown as { name: string }).name === "message.discarded"
+      )
+      .map((e) => (e as unknown as { value: unknown }).value);
+    const results = r.out
+      .filter((e) => e.type === "TOOL_CALL_RESULT")
+      .map((e) => {
+        const { toolCallId, content } = e as unknown as {
+          toolCallId: string;
+          content: string;
+        };
+        return { toolCallId, ...(JSON.parse(content) as ToolResultContent) };
+      });
+
+    // Asked again: the attempt is discarded once the next message starts.
+    // Ended on it: kept with the error, its call closed as today.
+    expect(discarded).toEqual(retried ? [{ messageId: failed }] : []);
+    expect(results).toEqual(
+      retried
+        ? [
+            expect.objectContaining({ toolCallId: "c1", unfinished: true }),
+            expect.objectContaining({ toolCallId: "c2", text: "no jobs" }),
+          ]
+        : [expect.objectContaining({ toolCallId: "c1", unfinished: true })]
+    );
   });
 
   it("closes unresolved calls as cancelled when the run is stopped", () => {

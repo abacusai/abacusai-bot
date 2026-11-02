@@ -31,7 +31,7 @@ export const seen = (type: AgentType, count = 1): Step => ({
   label: `${count} × ${type}`,
 });
 
-/** Waits for the host's own idle after a turn (status idle count). */
+/** Waits until `count` turns have said idle: each turn says it once. */
 export const idle = (count = 1): Step => ({
   until: (events) =>
     events.filter(
@@ -172,7 +172,7 @@ export const SCENARIOS: GoldenScenario[] = [
   {
     name: "plain-text",
     reply: () => ({ say: "Hello there." }),
-    steps: [{ send: { type: "send", message: "hi" } }, idle(2)],
+    steps: [{ send: { type: "send", message: "hi" } }, idle(1)],
     aguiSteps: [
       {
         send: {
@@ -187,7 +187,7 @@ export const SCENARIOS: GoldenScenario[] = [
           },
         },
       },
-      idle(2),
+      idle(1),
     ],
   },
   {
@@ -200,7 +200,7 @@ export const SCENARIOS: GoldenScenario[] = [
             call: { name: "bash", args: { command: "echo golden" } },
           }
         : { say: "All good." },
-    steps: [{ send: { type: "send", message: "run it" } }, idle(2)],
+    steps: [{ send: { type: "send", message: "run it" } }, idle(1)],
   },
   {
     name: "todo-plan",
@@ -220,7 +220,7 @@ export const SCENARIOS: GoldenScenario[] = [
             },
           }
         : { say: "Planned." },
-    steps: [{ send: { type: "send", message: "plan" } }, idle(2)],
+    steps: [{ send: { type: "send", message: "plan" } }, idle(1)],
   },
   {
     name: "permission-accept",
@@ -243,14 +243,14 @@ export const SCENARIOS: GoldenScenario[] = [
           decision: "accept",
         },
       },
-      idle(2),
+      idle(1),
     ],
     // The renderer's answer: same compat bytes as the legacy response.
     aguiSteps: [
       { send: { type: "send", message: "write a file" } },
       permission(1),
       respond("perm-1", "accept"),
-      idle(2),
+      idle(1),
     ],
   },
   {
@@ -274,13 +274,13 @@ export const SCENARIOS: GoldenScenario[] = [
           decision: { type: "reject_with_message", message: "not now" },
         },
       },
-      idle(2),
+      idle(1),
     ],
     aguiSteps: [
       { send: { type: "send", message: "write b" } },
       permission(1),
       respond("perm-1", { type: "reject_with_message", message: "not now" }),
-      idle(2),
+      idle(1),
     ],
   },
   {
@@ -314,7 +314,7 @@ export const SCENARIOS: GoldenScenario[] = [
           decision: "reject",
         },
       },
-      idle(2),
+      idle(1),
     ],
     aguiSteps: [
       { send: { type: "send", message: "write two" } },
@@ -330,7 +330,7 @@ export const SCENARIOS: GoldenScenario[] = [
           decision: "reject",
         },
       },
-      idle(2),
+      idle(1),
     ],
   },
   {
@@ -342,7 +342,7 @@ export const SCENARIOS: GoldenScenario[] = [
       seen("status_changed", 2),
       assistantStarted,
       { send: { type: "stop" } },
-      idle(2),
+      idle(1),
     ],
     aguiSteps: [
       { send: { type: "send", message: "long answer" } },
@@ -350,7 +350,7 @@ export const SCENARIOS: GoldenScenario[] = [
       seen("status_changed", 2),
       assistantStarted,
       cancelOpenRun,
-      idle(2),
+      idle(1),
     ],
   },
   {
@@ -369,7 +369,7 @@ export const SCENARIOS: GoldenScenario[] = [
       { send: { type: "update_queue_item", index: 0, message: "second!" } },
       queueLines(3),
       { release: "first" },
-      idle(2),
+      idle(1),
     ],
   },
   {
@@ -390,7 +390,7 @@ export const SCENARIOS: GoldenScenario[] = [
       { send: { type: "clear_queue" } },
       queueLines(4),
       { release: "first" },
-      idle(2),
+      idle(1),
     ],
   },
   {
@@ -403,7 +403,7 @@ export const SCENARIOS: GoldenScenario[] = [
       { send: { type: "stop" } },
       { send: { type: "send", message: "again" } },
       { calls: 2 },
-      idle(3),
+      idle(2),
     ],
     aguiSteps: [
       { send: { type: "send", message: "slow" } },
@@ -412,7 +412,7 @@ export const SCENARIOS: GoldenScenario[] = [
       cancelOpenRun,
       { send: { type: "send", message: "again" } },
       { calls: 2 },
-      idle(3),
+      idle(2),
     ],
   },
   {
@@ -433,7 +433,7 @@ export const SCENARIOS: GoldenScenario[] = [
     steps: [
       { send: { type: "send", message: "fail please" } },
       seen("error", 1),
-      idle(2),
+      idle(1),
     ],
   },
   {
@@ -441,11 +441,11 @@ export const SCENARIOS: GoldenScenario[] = [
     reply: () => ({ say: "Fresh." }),
     steps: [
       { send: { type: "send", message: "hi" } },
-      idle(2),
+      idle(1),
       { send: { type: "reset_conversation" } },
       seen("segments_cleared", 1),
       { send: { type: "send", message: "again" } },
-      idle(4),
+      idle(3),
     ],
   },
   {
@@ -457,11 +457,11 @@ export const SCENARIOS: GoldenScenario[] = [
       { calls: 1 },
       assistantStarted,
       { send: { type: "stop" } },
-      idle(2),
+      idle(1),
       { send: { type: "dequeue" } },
       queueLines(2),
       { send: { type: "send", message: "next" } },
-      idle(3),
+      idle(2),
     ],
   },
   // ---------------------------------------------------------------- r1 fixes
@@ -474,7 +474,7 @@ export const SCENARIOS: GoldenScenario[] = [
       { send: "null" },
       seen("error", 1),
       { send: { type: "send", message: "after null" } },
-      idle(2),
+      idle(1),
     ],
   },
   {
@@ -486,13 +486,13 @@ export const SCENARIOS: GoldenScenario[] = [
       { send: { type: "send", message: "long answer" } },
       seen("text_delta", 1),
       { send: { type: "stop" } },
-      idle(2),
+      idle(1),
     ],
     aguiSteps: [
       { send: { type: "send", message: "long answer" } },
       seen("text_delta", 1),
       cancelOpenRun,
-      idle(2),
+      idle(1),
     ],
   },
   {
@@ -521,7 +521,7 @@ export const SCENARIOS: GoldenScenario[] = [
       index === 0
         ? { fail: { status: 429, message: "rate limited upstream" } }
         : { say: "recovered on the second model" },
-    steps: [{ send: { type: "send", message: "hi" } }, idle(2)],
+    steps: [{ send: { type: "send", message: "hi" } }, idle(1)],
   },
   {
     // §7.1 OpenLLM rotation, exhausted: a turn-origin error from rotation.
@@ -534,7 +534,7 @@ export const SCENARIOS: GoldenScenario[] = [
     steps: [
       { send: { type: "send", message: "hi" } },
       seen("error", 1),
-      idle(2),
+      idle(1),
     ],
   },
   {
@@ -547,7 +547,7 @@ export const SCENARIOS: GoldenScenario[] = [
       index === 0
         ? { stall: { say: "Starting" } }
         : { say: "finished after all" },
-    steps: [{ send: { type: "send", message: "hi" } }, idle(2)],
+    steps: [{ send: { type: "send", message: "hi" } }, idle(1)],
   },
   {
     // The continuation stalls too: the stall's turn-origin error.
@@ -558,7 +558,7 @@ export const SCENARIOS: GoldenScenario[] = [
     steps: [
       { send: { type: "send", message: "hi" } },
       seen("error", 1),
-      idle(2),
+      idle(1),
     ],
   },
   {
@@ -580,7 +580,7 @@ export const SCENARIOS: GoldenScenario[] = [
     steps: [
       { send: { type: "send", message: "hello bot" } },
       { calls: 2 },
-      idle(2),
+      idle(1),
     ],
   },
   {
@@ -633,7 +633,7 @@ export const SCENARIOS: GoldenScenario[] = [
       seen("subtask_end", 1),
       { release: "child-b" },
       seen("subtask_end", 2),
-      idle(2),
+      idle(1),
     ],
   },
 ];
