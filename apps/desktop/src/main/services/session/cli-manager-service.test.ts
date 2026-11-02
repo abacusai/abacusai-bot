@@ -317,6 +317,41 @@ describe("stopping an agent on Windows", () => {
  * runtime is deleted the moment the process closes. What it said on the way
  * out has to outlive it, or the dump taken seconds later is empty.
  */
+/**
+ * A start the machine slept through: the deadline's timer fires the moment it
+ * wakes, and the agent, frozen with it, had no time at all to get ready.
+ */
+describe("the startup deadline", () => {
+  it("is counted in awake time, and still reached by an agent that never readies", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    const manager = service();
+    const state = () =>
+      manager.getSessionState("workspace-1", "session-1").status;
+    try {
+      const ready = manager.startSessionReady({
+        workspaceId: "workspace-1",
+        sessionId: "session-1",
+        startupTimeoutMs: 60_000,
+      });
+      while (state() !== "starting")
+        await new Promise((resolve) => setImmediate(resolve));
+
+      vi.setSystemTime(Date.now() + 6 * 60 * 60_000);
+      vi.advanceTimersByTime(60_000);
+      expect(state()).toBe("starting");
+
+      vi.advanceTimersByTime(60_000);
+      await expect(ready).resolves.toMatchObject({
+        success: false,
+        timedOut: true,
+      });
+    } finally {
+      vi.useRealTimers();
+      await manager.dispose();
+    }
+  });
+});
+
 describe("diagnostics for a session that has gone", () => {
   it("keeps the dead child's stderr, exit code and command", async () => {
     const manager = service(DYING_SCRIPT);

@@ -7,6 +7,7 @@ import type {
   SessionTurnStateSnapshot,
 } from "@abacus-ai/contract/contracts";
 
+import type { DeliveryFailure } from "./message-delivery";
 import type { TurnLedger } from "./turn-ledger";
 
 type EmitChange = (snapshot: SessionTurnStateSnapshot) => void;
@@ -128,6 +129,16 @@ export class SessionTurnStateService {
     this.ledger?.end(sessionId, "agent_exited");
     this.markStopped(workspaceId, sessionId);
     this.releaseStopWaiters(sessionId);
+  }
+
+  /** The message never reached an agent: its turn fails with why. */
+  markUndelivered(
+    workspaceId: string,
+    sessionId: string,
+    cause: DeliveryFailure
+  ): void {
+    this.ledger?.end(sessionId, "failed", cause);
+    this.markClosed(workspaceId, sessionId);
   }
 
   /**

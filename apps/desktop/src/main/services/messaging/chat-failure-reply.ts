@@ -14,6 +14,10 @@ import {
 import { providerDisplayName } from "@abacus-ai/contract/settings";
 import { SUCCESS_PITCH_MOMENT_COPY } from "@abacus-ai/contract/success-pitch";
 
+import {
+  AGENT_START_TIMEOUT,
+  UNDELIVERABLE,
+} from "../session/message-delivery";
 import type { TurnRecord } from "../session/turn-ledger";
 import type { ChannelWords } from "./channel-words";
 
@@ -63,6 +67,8 @@ export type FailureKind =
   | "connection"
   | "timed-out"
   | "agent-exited"
+  | "start-timed-out"
+  | "undeliverable"
   | "empty"
   | "generic";
 
@@ -153,6 +159,9 @@ export const failureKind = (error: TurnFailure): FailureKind => {
   // Endings main decides: the inactivity watchdog, the agent going away.
   if (error.code === "timed_out") return "timed-out";
   if (error.code === "agent_exited") return "agent-exited";
+  // The message never reached an agent (message-delivery.ts).
+  if (error.cause === AGENT_START_TIMEOUT) return "start-timed-out";
+  if (error.cause === UNDELIVERABLE) return "undeliverable";
   if (error.cause === EMPTY_CAUSE) return "empty";
   return "generic";
 };
@@ -378,6 +387,10 @@ export const chatReplyForFailure = (
       return t("outcome.channel.timedOut");
     case "agent-exited":
       return t("outcome.channel.agentExited");
+    case "start-timed-out":
+      return t("outcome.channel.startTimedOut");
+    case "undeliverable":
+      return t("outcome.channel.notReceived");
     case "empty":
       return t("outcome.channel.empty");
     case "generic":
@@ -484,6 +497,8 @@ export class FailureReplyThrottle {
       kind === "verify-phone" ||
       kind === "timed-out" ||
       kind === "agent-exited" ||
+      kind === "start-timed-out" ||
+      kind === "undeliverable" ||
       kind === "empty"
     )
       return false;

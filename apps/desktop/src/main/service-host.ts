@@ -481,7 +481,10 @@ import { ArtifactResolverService } from "./services/session/artifact-resolver-se
 import { AgentCommunicationService } from "./services/session/cli-communication-service";
 import { AgentManagerService } from "./services/session/cli-manager-service";
 import { IdleAgentReaper } from "./services/session/idle-agent-reaper";
-import { deliverMessage } from "./services/session/message-delivery";
+import {
+  deliverMessage,
+  reachedAgent,
+} from "./services/session/message-delivery";
 import { ModelSwitchWaiters } from "./services/session/model-switch";
 import { PreviewTargets } from "./services/session/preview-targets";
 import { SessionArtifactsService } from "./services/session/session-artifacts-service";
@@ -2464,7 +2467,10 @@ export class ServiceHost {
       });
     },
     emitSessionClosed: (workspaceId, sessionId) => {
-      this.sessionTurnStateService.markClosed(workspaceId, sessionId);
+      // A send still delivering ends its own turn, with why: a process closing
+      // under it (an idle stop, a start that timed out) is replaced, not a crash.
+      if (!this.deliveringTo.has(sessionId))
+        this.sessionTurnStateService.markClosed(workspaceId, sessionId);
       // A tab-keeping browser keeps the session's tabs a while (a paused run,
       // a restarted agent), then lets them go.
       this.browserTargetSource()?.releaseSession?.(sessionId);
@@ -2626,6 +2632,9 @@ export class ServiceHost {
       };
     });
   }
+
+  /** Sessions a send is delivering to (sends are in order per session). */
+  private readonly deliveringTo = new Set<string>();
 
   private readonly sessionTurnStateService = new SessionTurnStateService(
     (snapshot) => {
@@ -3867,15 +3876,16 @@ export class ServiceHost {
     const { noticed, outcome } = await this.connectorSync.inTurnOrder(
       { workspaceId: request.workspaceId, sessionId: request.sessionId },
       () => this.deliverAgentMessage(request, session, current),
-      (result) => result.outcome !== "undeliverable"
+      (result) => reachedAgent(result.outcome)
     );
 
-    // No agent could take it: the turn it opened ends as the agent's going
-    // away, so a chat it came from hears so instead of waiting on nothing.
-    if (outcome === "undeliverable") {
-      this.sessionTurnStateService.markClosed(
+    // No agent could take it: the turn it opened fails with why, so a chat
+    // it came from hears so instead of waiting on nothing.
+    if (!reachedAgent(outcome)) {
+      this.sessionTurnStateService.markUndelivered(
         request.workspaceId,
-        request.sessionId
+        request.sessionId,
+        outcome
       );
       return false;
     }
@@ -3911,6 +3921,7 @@ export class ServiceHost {
   }> {
     const noted = await this.withVaultNotes(request);
     const delivered = await this.withEnvironmentNotice(noted);
+    this.deliveringTo.add(request.sessionId);
     // Sent while its agent is being stopped (an idle stop, say): written to
     // the dying process it would be lost, so it waits for that one to go and
     // starts a fresh one.
@@ -3927,7 +3938,18 @@ export class ServiceHost {
       send: () =>
         current() && this.agentCommunicationService.sendMessage(delivered),
       start: async () => {
-        if (!current()) return false;
+        if (!current()) return "failed";
+        // A start that failed is still being killed: gone before the next.
+        if (
+          this.agentManagerService.getSessionState(
+            request.workspaceId,
+            request.sessionId
+          ).status === "error"
+        )
+          await this.agentManagerService
+            .stopSessionAndWait(request.workspaceId, request.sessionId)
+            .catch(() => undefined);
+        if (!current()) return "failed";
         const result = await this.startAgentSession({
           workspaceId: request.workspaceId,
           sessionId: request.sessionId,
@@ -3935,7 +3957,8 @@ export class ServiceHost {
           ...(session?.model != null ? { model: session.model } : {}),
           ...(session?.mode != null ? { mode: session.mode } : {}),
         });
-        return result.success;
+        if (result.success) return "started";
+        return result.timedOut === true ? "timed_out" : "failed";
       },
       isRunning: () =>
         this.agentManagerService.getSessionState(
@@ -3943,7 +3966,7 @@ export class ServiceHost {
           request.sessionId
         ).status === "running",
       delay: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
-    });
+    }).finally(() => this.deliveringTo.delete(request.sessionId));
     return { noticed: delivered !== noted, outcome };
   }
 

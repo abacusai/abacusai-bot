@@ -39,6 +39,7 @@ import { agentVendorDir } from "#main/resources";
 import { describeAgentEvent } from "../diagnostics/agent-event-log";
 import { logStore } from "../diagnostics/log-store";
 import type { ResolvedAgentArtifact } from "./artifact-resolver-service";
+import { setAwakeTimeout } from "./awake-timeout";
 import { LineSplitter } from "./line-splitter";
 
 /** Max diagnostic log entries retained per server in the desktop process. */
@@ -94,6 +95,8 @@ type CliRuntime = {
   spawnResultReported: boolean;
   /** Set on startup failure so a late `ready` cannot revive the session. */
   startupFailed: boolean;
+  /** The failure was the startup deadline, not the process itself. */
+  startupTimedOut: boolean;
   /** Exactly what was executed, for a log dump reading a spawn that failed. */
   command: string;
   /** Background jobs and served pages the agent holds; they die with it. */
@@ -555,6 +558,7 @@ export class AgentManagerService {
       ...(state.status === "running"
         ? {}
         : { error: state.error ?? "Session stopped before it was ready." }),
+      ...(runtime.startupTimedOut ? { timedOut: true } : {}),
     };
   }
 
@@ -807,6 +811,7 @@ export class AgentManagerService {
       mcpLogs: new Map(),
       spawnResultReported: false,
       startupFailed: false,
+      startupTimedOut: false,
       command,
       backgroundLive: 0,
       state: {
@@ -835,7 +840,8 @@ export class AgentManagerService {
       this.runtimes.get(request.sessionId)?.process === child;
 
     let startupResolved = false;
-    const startupTimer = setTimeout(() => {
+    // Awake time: a machine that slept through the start must not fail it on waking.
+    const startupTimer = setAwakeTimeout(() => {
       if (startupResolved) {
         return;
       }
@@ -844,6 +850,7 @@ export class AgentManagerService {
         return;
       }
       runtime.startupFailed = true;
+      runtime.startupTimedOut = true;
       this.reportSpawnResultOnce(request.sessionId);
       this.updateRuntimeState(request.sessionId, {
         status: "error",
@@ -859,7 +866,7 @@ export class AgentManagerService {
         return;
       }
       startupResolved = true;
-      clearTimeout(startupTimer);
+      startupTimer.clear();
     };
 
     child.stdout.on("data", (chunk: Buffer | string) => {

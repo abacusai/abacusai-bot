@@ -521,6 +521,21 @@ describe("every turn closes once, with how it ended", () => {
     ]);
   });
 
+  it("fails a turn whose message reached no agent with why, not as an exit", () => {
+    // A start that ran out of time is killed; its close comes after.
+    ledgered.markSent(WS, SESSION);
+    ledgered.markUndelivered(WS, SESSION, "agent_start_timeout");
+    ledgered.markClosed(WS, SESSION);
+    ledgered.markSent(WS, SESSION);
+    ledgered.markUndelivered(WS, SESSION, "undeliverable");
+
+    expect(records).toEqual([
+      expect.objectContaining({ kind: "failed", cause: "agent_start_timeout" }),
+      expect.objectContaining({ kind: "failed", cause: "undeliverable" }),
+    ]);
+    expect(ledgered.get(WS, SESSION).isBusy).toBe(false);
+  });
+
   it("a message sent into a running turn does not open a second one", () => {
     ledgered.markSent(WS, SESSION);
     ledgered.markSent(WS, SESSION);

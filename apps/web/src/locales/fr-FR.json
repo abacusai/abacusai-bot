@@ -4540,6 +4540,8 @@
       "paymentLapsed": "Je suis en pause car votre abonnement Abacus.AI a pris fin. Renouvelez-le ici : {{link}}",
       "timedOut": "Cela a pris trop de temps et a été arrêté avant que je puisse répondre. Renvoie-le pour reprendre.",
       "agentExited": "L'application s'est arrêtée avant que je puisse répondre. Renvoie-le pour reprendre.",
+      "startTimedOut": "J'ai mis trop de temps à démarrer sur ton ordinateur, je n'ai donc pas pu répondre. Renvoie-le pour reprendre.",
+      "notReceived": "Ton message ne m'est pas parvenu, je n'ai donc pas pu répondre. Renvoie-le pour reprendre.",
       "empty": "Je n'ai pas pu préparer de réponse. Renvoie-le, s'il te plaît.",
       "contactNeutral": "Désolé, je ne peux pas répondre pour le moment. Je reviens vers toi bientôt.",
       "contactEmpty": "Je n'ai pas répondu à {{name}} : aucune réponse n'est revenue. Ouvre l'application pour lui répondre, ou dis-moi quoi lui écrire.",

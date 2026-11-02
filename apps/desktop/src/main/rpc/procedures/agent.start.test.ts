@@ -168,6 +168,8 @@ describe("agent.start joins readiness through the real handler", () => {
       expect(results[0].error).toMatch(
         failure === "exit" ? /exited before/ : /did not emit ready/
       );
+      // A send retries a start that ran out of time, and says so if it fails.
+      expect(results[0].timedOut === true).toBe(failure === "timeout");
       expect(config).toHaveBeenCalledOnce();
     }
   );

@@ -1552,4 +1552,24 @@ describe("what a closed turn owes its chat", () => {
       code: "agent_exited",
     });
   });
+
+  it("a message no agent took says why, never that the app stopped", () => {
+    const line = (cause: string) =>
+      chatReplyForFailure(
+        chatFailureOf({ kind: "failed", cause }, false)!,
+        "own",
+        "free",
+        ENGLISH,
+        OFFER
+      );
+
+    expect(line("agent_start_timeout")).toBe(
+      ENGLISH.t("outcome.channel.startTimedOut")
+    );
+    expect(line("undeliverable")).toBe(
+      ENGLISH.t("outcome.channel.notReceived")
+    );
+    for (const cause of ["agent_start_timeout", "undeliverable"])
+      expect(line(cause)).not.toBe(ENGLISH.t("outcome.channel.agentExited"));
+  });
 });

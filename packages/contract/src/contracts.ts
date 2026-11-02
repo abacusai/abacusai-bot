@@ -399,6 +399,8 @@ export interface StartAgentSessionResult {
   created: boolean;
   state: AgentSessionSnapshot;
   error?: string;
+  /** The agent was not ready by its startup deadline, and was stopped. */
+  timedOut?: boolean;
 }
 
 export interface StopAgentSessionResult {

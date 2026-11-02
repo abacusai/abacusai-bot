@@ -4540,6 +4540,8 @@
       "paymentLapsed": "Me detuve porque tu suscripción de Abacus.AI terminó. Renuévala aquí: {{link}}",
       "timedOut": "Tardó demasiado y se detuvo antes de que pudiera responder. Envíalo de nuevo para retomarlo.",
       "agentExited": "La app se cerró antes de que pudiera responder. Envíalo de nuevo para retomarlo.",
+      "startTimedOut": "Tardé demasiado en iniciarme en tu computadora, así que no pude responder. Envíalo de nuevo para retomarlo.",
+      "notReceived": "Tu mensaje no me llegó, así que no pude responder. Envíalo de nuevo para retomarlo.",
       "empty": "No pude armar una respuesta para eso. Envíalo de nuevo, por favor.",
       "contactNeutral": "Perdón, ahora no puedo responder. Te contesto pronto.",
       "contactEmpty": "No le respondí a {{name}}: no llegó ninguna respuesta. Abre la app para contestarle o dime qué decirle.",
