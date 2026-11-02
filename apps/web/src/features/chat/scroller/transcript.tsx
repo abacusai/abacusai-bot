@@ -84,9 +84,15 @@ const outcomeShown = (
   skin: ReturnType<typeof useChatView>["skin"]
 ): boolean => {
   if (outcome.kind === "error") {
-    // A crash is stale once a retry has started (or any later run exists).
+    // A crash or an interruption is stale once a retry has started (or any
+    // later run exists).
     const code = outcome.error?.code;
-    return latest || (code !== "agent_exit" && code !== "agent_crashed");
+    return (
+      latest ||
+      (code !== "agent_exit" &&
+        code !== "agent_crashed" &&
+        code !== "app_closed")
+    );
   }
   // The bot skin renders no RunMarker (03-bots §24.2), only a free-lane
   // reply's label.

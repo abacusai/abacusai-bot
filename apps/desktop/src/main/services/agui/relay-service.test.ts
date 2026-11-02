@@ -1581,7 +1581,7 @@ describe("a run the app closed under", () => {
       expect.objectContaining({
         runId: "app-closed-t-1",
         kind: "error",
-        error: expect.objectContaining({ code: "agent_exit" }),
+        error: expect.objectContaining({ code: "app_closed" }),
         afterMessageId: "u-1",
       }),
     ]);

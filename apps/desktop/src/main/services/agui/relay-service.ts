@@ -383,9 +383,10 @@ export class AguiRelayService implements AguiSource {
   /**
    * A run the app closed under (a quit, an update, a crash), found on the
    * next start: the thread's file gets its terminal, an error after the
-   * message it answered, so the thread shows the run ended and offers the
-   * retry an agent exit does. Once: not when a run the turn started already
-   * has its terminal (a quit that let the relay close it), nor on a replay.
+   * message it answered, so the thread shows the run was interrupted and
+   * offers the retry an agent exit does. Once: not when a run the turn
+   * started already has its terminal (a quit that let the relay close it),
+   * nor on a replay.
    */
   closeInterruptedRun(
     threadId: string,
@@ -412,7 +413,7 @@ export class AguiRelayService implements AguiSource {
           steps: 0,
           error: {
             message: "The app closed before the reply finished.",
-            code: "agent_exit",
+            code: "app_closed",
           },
           afterMessageId: file.messages.at(-1)?.id ?? null,
         },

@@ -851,6 +851,40 @@ describe("the turn's outcome card", () => {
     expect(screen.queryByText(/busy/)).toBeNull();
   });
 
+  it("a run the app closed under reads Interrupted, not a crash; a chat can retry it, a report cannot", async () => {
+    const rows: Array<
+      [string, Parameters<typeof renderRelay>[2], boolean, boolean]
+    > = [
+      // [code, composer, interrupted marker, Retry]
+      ["app_closed", undefined, true, true],
+      ["app_closed", { readOnly: { reason: "A run" } }, true, false],
+      ["agent_exit", { readOnly: { reason: "A run" } }, false, false],
+    ];
+    for (const [code, composer, interrupted, retry] of rows) {
+      current = await renderRelay(
+        failed({ message: "The app closed before the reply finished.", code }),
+        "session",
+        composer
+      );
+      await waitFor(() =>
+        expect(
+          document.querySelector(
+            "[data-slot=run-marker], [data-slot=error-card]"
+          )
+        ).not.toBeNull()
+      );
+      expect(screen.queryByText("Interrupted") != null).toBe(interrupted);
+      expect(screen.queryByText("The agent stopped unexpectedly") != null).toBe(
+        !interrupted
+      );
+      expect(screen.queryByRole("button", { name: "Retry" }) != null).toBe(
+        retry
+      );
+      await current.cleanup();
+      current = null;
+    }
+  });
+
   it("an outgrown chat offers a new chat", async () => {
     const onNewChat = vi.fn();
     current = await renderRelay(

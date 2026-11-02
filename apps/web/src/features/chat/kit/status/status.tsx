@@ -12,7 +12,14 @@ import { OPENLLM_ID } from "@abacus-ai/contract/models";
 import { providerDisplayName } from "@abacus-ai/contract/settings";
 import type { UIMessage } from "@tanstack/ai-client";
 import { Store, useStore } from "@tanstack/react-store";
-import { AlertTriangle, CheckCircle2, Info, X, XCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  CircleStop,
+  Info,
+  X,
+  XCircle,
+} from "lucide-react";
 import { useEffect, useEffectEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -916,6 +923,24 @@ export const ErrorCard = ({
         t("workspace.retryMessage")
       )
       .catch(() => {});
+  // The app closed under the run: an interruption, not the agent's failure,
+  // worded as the routine's runs list words it. A chat can still retry it.
+  if (error.code === "app_closed")
+    return (
+      <div
+        className="text-muted-foreground flex min-h-7 items-center gap-2 text-xs"
+        data-slot="run-marker"
+        data-kind="interrupted"
+      >
+        <CircleStop aria-hidden className="size-3.5 shrink-0" />
+        {t("phase5.outcomes.interrupted")}
+        {latest && canReply ? (
+          <Button variant="ghost" size="xs" onClick={retry}>
+            {t("chat.error.retry")}
+          </Button>
+        ) : null}
+      </div>
+    );
   const verify = actions.find((action) => action.type === "verify-phone");
   if (verify != null)
     return (
