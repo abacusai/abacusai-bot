@@ -11,13 +11,15 @@ import {
 
 /**
  * How a turn ended. The agent's own outcomes, plus the endings only main sees:
- * the inactivity watchdog, the agent process going away mid-turn, and the app
- * itself closing (a quit, an update, a crash) with the turn still open.
+ * the inactivity watchdog, the agent process going away mid-turn, no agent
+ * taking the message (its start failed twice), and the app itself closing
+ * (a quit, an update, a crash) with the turn still open.
  */
 export type TurnEnd =
   | TurnOutcome["kind"]
   | "timed_out"
   | "agent_exited"
+  | "not_started"
   | "app_closed";
 
 /** Where a turn's ending has to be told besides the app: a chat it answers. */

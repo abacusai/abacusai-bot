@@ -1,3 +1,4 @@
+import { describeToolCall } from "@abacus-ai/agent/tool-display";
 import {
   AgentStatus,
   type DesktopEvent,
@@ -7,9 +8,12 @@ import type {
   SessionTurnStateSnapshot,
 } from "@abacus-ai/contract/contracts";
 
+import { ConnectivityService } from "../connectivity/connectivity-service";
 import type { TurnLedger } from "./turn-ledger";
 
 type EmitChange = (snapshot: SessionTurnStateSnapshot) => void;
+/** Where the watchdog's deadline is timed: in awake time (ConnectivityService). */
+type AwakeClock = Pick<ConnectivityService, "awakeTimeout">;
 type OnInactivityTimeout = (
   workspaceId: string,
   sessionId: string,
@@ -19,33 +23,6 @@ type OnInactivityTimeout = (
 const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000;
 
 export const INACTIVITY_TIMEOUT_MINUTES = INACTIVITY_TIMEOUT_MS / 60_000;
-
-/** Longest tool summary worth carrying into a timeout message. */
-const ACTIVITY_SUMMARY_MAX = 120;
-
-/**
- * What a tool call was doing, short enough for an error banner, e.g.
- * `edit (server/app.js)`. A wedged turn is diagnosed from this line alone:
- * a tool that hangs before it starts emits no card to persist.
- */
-const describeTool = (tool: {
-  name?: unknown;
-  input?: Record<string, unknown>;
-  args?: Record<string, unknown>;
-}): string | null => {
-  const name =
-    typeof tool.name === "string" && tool.name.length > 0 ? tool.name : null;
-  if (name == null) return null;
-  const input = tool.input ?? tool.args ?? {};
-  const detail = input.command ?? input.path ?? input.url;
-  if (typeof detail !== "string" || detail.length === 0) return name;
-  const flat = detail.replace(/\s+/g, " ").trim();
-  const clipped =
-    flat.length > ACTIVITY_SUMMARY_MAX
-      ? `${flat.slice(0, ACTIVITY_SUMMARY_MAX)}…`
-      : flat;
-  return `${name} (${clipped})`;
-};
 
 const isBusyPhase = (phase: SessionTurnPhase): boolean =>
   phase === "pending" ||
@@ -60,15 +37,18 @@ const isBusyPhase = (phase: SessionTurnPhase): boolean =>
  * after every tool round. A session silent for 10 minutes while busy, or while
  * its turn is still open in the ledger, is forced idle and its turn closed as
  * timed out (not while `waiting_permission`, which waits on a person).
+ * The ten minutes are awake minutes: a laptop asleep mid-turn wakes to a
+ * whole window, in which the agent recovers or the watchdog acts.
  */
 export class SessionTurnStateService {
   private readonly states = new Map<string, SessionTurnStateSnapshot>();
   private readonly suppressedSessions = new Set<string>();
-  private readonly activityTimers = new Map<
-    string,
-    ReturnType<typeof setTimeout>
-  >();
-  /** sessionId -> what the session was last seen doing, for the timeout message. */
+  /** sessionId -> cancel of its watchdog deadline. */
+  private readonly activityTimers = new Map<string, () => void>();
+  /**
+   * sessionId -> the tool the agent last said is running, for the timeout
+   * message; none means it was waiting on the model.
+   */
   private readonly lastActivity = new Map<string, string>();
   /** Waiting on a stopped session: the agent's idle, its exit, or the next send. */
   private readonly stopWaiters = new Map<
@@ -80,7 +60,9 @@ export class SessionTurnStateService {
     private readonly emitChange: EmitChange,
     private readonly onInactivityTimeout?: OnInactivityTimeout,
     /** Told every turn's start and ending; see TurnLedger. */
-    private readonly ledger?: TurnLedger
+    private readonly ledger?: TurnLedger,
+    /** The app's own ConnectivityService, which hears sleep and wake. */
+    private readonly clock: AwakeClock = new ConnectivityService()
   ) {}
 
   get(workspaceId: string, sessionId: string): SessionTurnStateSnapshot {
@@ -123,9 +105,22 @@ export class SessionTurnStateService {
     this.set(workspaceId, sessionId, "idle");
   }
 
-  /** The agent process is gone: nothing more will settle its stop. */
-  markClosed(workspaceId: string, sessionId: string): void {
-    this.ledger?.end(sessionId, "agent_exited");
+  /**
+   * The agent process is gone: nothing more will settle its stop. One that
+   * never came up ended no turn: the start that spawned it retries, or ends
+   * the turn as not started (markNotStarted).
+   */
+  markClosed(workspaceId: string, sessionId: string, started = true): void {
+    if (started) {
+      this.ledger?.end(sessionId, "agent_exited");
+      this.markStopped(workspaceId, sessionId);
+    }
+    this.releaseStopWaiters(sessionId);
+  }
+
+  /** No agent took the message: its start failed twice, or the send was refused. */
+  markNotStarted(workspaceId: string, sessionId: string): void {
+    this.ledger?.end(sessionId, "not_started");
     this.markStopped(workspaceId, sessionId);
     this.releaseStopWaiters(sessionId);
   }
@@ -173,10 +168,14 @@ export class SessionTurnStateService {
     sessionId: string,
     message: DesktopEvent
   ): boolean {
-    // Liveness only: a quiet build is otherwise indistinguishable from a wedged
-    // agent. Resets the timer and stops; forwarding would re-render on a timer.
+    // Liveness only: a quiet build, or a model writing a long tool call, is
+    // otherwise indistinguishable from a wedged agent. Resets the timer and
+    // stops; forwarding would re-render on a timer.
     if (message.type === "heartbeat") {
       this.resetActivityTimer(workspaceId, sessionId);
+      // What the agent says is running now; none is the model writing.
+      if (message.tool != null) this.lastActivity.set(sessionId, message.tool);
+      else this.lastActivity.delete(sessionId);
 
       return false;
     }
@@ -215,7 +214,7 @@ export class SessionTurnStateService {
       event?.type === "tool_execution_start" ||
       event?.type === "tool_requested"
     ) {
-      const summary = describeTool(
+      const summary = describeToolCall(
         event.tool as {
           name?: unknown;
           input?: Record<string, unknown>;
@@ -223,6 +222,9 @@ export class SessionTurnStateService {
         }
       );
       if (summary != null) this.lastActivity.set(sessionId, summary);
+    } else if (event?.type === "tool_execution_complete") {
+      // Done: a sibling still running is named by the next heartbeat.
+      this.lastActivity.delete(sessionId);
     }
 
     if (message.type === "permission_needed") {
@@ -286,7 +288,7 @@ export class SessionTurnStateService {
     this.clearActivityTimer(sessionId);
     this.activityTimers.set(
       sessionId,
-      setTimeout(() => {
+      this.clock.awakeTimeout(INACTIVITY_TIMEOUT_MS, () => {
         this.activityTimers.delete(sessionId);
         const lastActivity = this.lastActivity.get(sessionId) ?? null;
         this.ledger?.end(sessionId, "timed_out", lastActivity ?? undefined);
@@ -294,7 +296,7 @@ export class SessionTurnStateService {
         // and make a timed-out session busy again.
         this.markStopped(workspaceId, sessionId);
         this.onInactivityTimeout?.(workspaceId, sessionId, lastActivity);
-      }, INACTIVITY_TIMEOUT_MS)
+      })
     );
   }
 
@@ -310,9 +312,9 @@ export class SessionTurnStateService {
   }
 
   private clearActivityTimer(sessionId: string): void {
-    const timer = this.activityTimers.get(sessionId);
-    if (timer != null) {
-      clearTimeout(timer);
+    const cancel = this.activityTimers.get(sessionId);
+    if (cancel != null) {
+      cancel();
       this.activityTimers.delete(sessionId);
     }
   }

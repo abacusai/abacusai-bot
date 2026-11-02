@@ -91,7 +91,11 @@ export interface AguiRelayHost {
   runtime(
     threadId: string
   ): { wire: AgentWire; status: AgentSessionStatus } | null;
-  /** Start the thread's agent (its wire comes from `unconditional AG-UI`). */
+  /**
+   * Start the thread's agent (its wire comes from `unconditional AG-UI`),
+   * true once it is ready. Owns the ready deadline and its retry, and joins a
+   * start already under way.
+   */
   start(threadId: string): Promise<boolean>;
   /**
    * One command on the live runtime's stdin. Returns the process it was
@@ -163,8 +167,6 @@ export interface AguiRelayOptions {
   host: AguiRelayHost;
   files: AguiThreadFiles;
   /** Every spawn speaks AG-UI (`unconditional AG-UI`). Defaults to false. */
-  /** How long `ai.send` waits for the runtime to be ready. */
-  startTimeoutMs?: number;
   /** How long `ai.send` waits for `run.ack` after writing `run`. */
   ackTimeoutMs?: number;
   /** Loaded threads kept in memory beyond those in use. */
@@ -213,7 +215,6 @@ const timeoutError = (ms: number, message: string): RpcError =>
 const ACKS_KEPT = 10_000;
 /** Run ids seen starting (answered `duplicate` without an ack), over every thread. */
 const STARTED_RUNS_KEPT = 10_000;
-const POLL_MS = 25;
 /** Run-finished notices kept for a `lastEventId` resume, over every thread. */
 export const NOTICES_KEPT = 1_000;
 
@@ -285,7 +286,6 @@ export class AguiRelayService implements AguiSource {
   readonly #clock = new SeqClock();
   readonly #host: AguiRelayHost;
   readonly #files: AguiThreadFiles;
-  readonly #startTimeoutMs: number;
   readonly #ackTimeoutMs: number;
   readonly #maxIdleThreads: number;
   readonly #log: (message: string) => void;
@@ -330,7 +330,6 @@ export class AguiRelayService implements AguiSource {
   constructor(options: AguiRelayOptions) {
     this.#host = options.host;
     this.#files = options.files;
-    this.#startTimeoutMs = options.startTimeoutMs ?? 60_000;
     this.#ackTimeoutMs = options.ackTimeoutMs ?? 30_000;
     this.#maxIdleThreads = options.maxIdleThreads ?? 16;
     this.#log =
@@ -1414,28 +1413,9 @@ export class AguiRelayService implements AguiSource {
   }
 
   async #ensureOnce(threadId: string): Promise<void> {
-    const deadline = Date.now() + this.#startTimeoutMs;
-    let started = false;
-
-    for (;;) {
-      const runtime = this.#host.runtime(threadId);
-      const status = runtime?.status ?? "stopped";
-      if (status === "running") return;
-      if (status === "stopped" || status === "error") {
-        if (started) throw unavailable("The agent did not start", 1_000);
-        started = true;
-        if (!(await this.#host.start(threadId)))
-          throw unavailable("The agent could not be started", 1_000);
-        continue;
-      }
-      // starting, or stopping (a respawn follows the close).
-      if (Date.now() > deadline)
-        throw timeoutError(
-          this.#startTimeoutMs,
-          "The agent did not become ready"
-        );
-      await new Promise((resolve) => setTimeout(resolve, POLL_MS));
-    }
+    if (this.#host.runtime(threadId)?.status === "running") return;
+    if (!(await this.#host.start(threadId)))
+      throw unavailable("The agent could not be started", 1_000);
   }
 
   #requireAgui(threadId: string): void {

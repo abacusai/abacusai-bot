@@ -38,8 +38,14 @@ class ScriptedAgent {
     return this.sessions.get(threadId) ?? null;
   }
 
-  /** As `AgentManagerService.startSession`: the wire comes from the relay. */
+  /**
+   * As the app's start: the wire comes from the relay, a start already under
+   * way is joined until it is ready, and true means ready.
+   */
   async start(threadId: string): Promise<boolean> {
+    while (this.runtimeState?.status === "starting")
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    if (this.runtimeState?.status === "running") return true;
     this.starts += 1;
     this.boot(threadId, this.incarnation, "agui");
     return true;
@@ -134,7 +140,6 @@ const setup = (options: { ackTimeoutMs?: number } = {}) => {
   const relay = new AguiRelayService({
     host: host(agent),
     files: store,
-    startTimeoutMs: 2_000,
     ackTimeoutMs: options.ackTimeoutMs ?? 2_000,
     log: () => undefined,
   });

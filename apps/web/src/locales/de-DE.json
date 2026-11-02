@@ -4540,6 +4540,7 @@
       "paymentLapsed": "Ich habe pausiert, weil dein Abacus.AI-Abo abgelaufen ist. Hier verlängern: {{link}}",
       "timedOut": "Das hat zu lange gedauert und wurde gestoppt, bevor ich antworten konnte. Schick es noch einmal, dann mache ich weiter.",
       "agentExited": "Die App wurde beendet, bevor ich antworten konnte. Schick es noch einmal, dann mache ich weiter.",
+      "notStarted": "Die App brauchte zu lange zum Starten, deshalb konnte ich nicht anfangen. Schick es noch einmal, dann versuche ich es erneut.",
       "empty": "Darauf konnte ich keine Antwort zusammenstellen. Bitte schick es noch einmal.",
       "contactNeutral": "Entschuldigung, ich kann gerade nicht antworten. Ich melde mich bald.",
       "contactEmpty": "Ich habe {{name}} nicht geantwortet: Es kam keine Antwort zurück. Öffne die App, um zu antworten, oder sag mir, was ich schreiben soll.",

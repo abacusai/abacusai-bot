@@ -200,11 +200,14 @@ const harness = ({
   selfId = "ME" as string | null,
   shared = false,
   clock = { now: 0 },
+  startError = null as string | null,
 }: {
   self?: boolean;
   selfId?: string | null;
   shared?: boolean;
   clock?: { now: number };
+  /** The app's start failed, retry and all, with this error. */
+  startError?: string | null;
 } = {}) => {
   /** Everything sent, as `chatId: text`. */
   const log: string[] = [];
@@ -219,7 +222,10 @@ const harness = ({
       return { id: `session-${created}` } as never;
     },
     updateSessionLabel: () => {},
-    startSession: async () => ({ success: true }) as never,
+    startSession: async () =>
+      (startError == null
+        ? { success: true }
+        : { success: false, error: startError }) as never,
     sendMessage: (_w: string, s: string) => turns.sent(s),
     emitUserMessage: () => {},
     emitChanged: () => {},
@@ -805,8 +811,42 @@ describe("a turn the app ended itself", () => {
   /** Main ends the turn (the watchdog, the agent's exit, a Stop) in the ledger. */
   const close = (
     h: ReturnType<typeof harness>,
-    kind: "timed_out" | "agent_exited" | "stopped"
+    kind: "timed_out" | "agent_exited" | "not_started" | "stopped"
   ) => h.turns.ledger.end(h.sessionOf("C1"), kind);
+
+  it("a message no agent took is said in the chat's words, and frees it", async () => {
+    const h = harness({ self: true });
+    await h.inbound("build the site");
+    close(h, "not_started");
+    await settle();
+
+    expect(h.sent()).toEqual([
+      "The app took too long to get ready, so I couldn't start on that. Send it again to try once more.",
+    ]);
+    expect(h.busy()).toBe(false);
+  });
+
+  it("a new chat whose agent cannot start hears the same line, never the raw error", async () => {
+    const h = harness({
+      self: true,
+      startError: "Local CLI did not emit ready event within 60000ms.",
+    });
+    await (
+      h.gateway as unknown as {
+        handleInbound: (id: string, m: object) => Promise<void>;
+      }
+    ).handleInbound("discord", {
+      userId: "U1",
+      userName: "Ana",
+      chatId: "C1",
+      text: "hi",
+    });
+    await settle();
+
+    expect(h.sent()).toEqual([
+      "The app took too long to get ready, so I couldn't start on that. Send it again to try once more.",
+    ]);
+  });
 
   it("the watchdog's timeout reaches the chat and frees it", async () => {
     const h = harness({ self: true });
@@ -1550,6 +1590,9 @@ describe("what a closed turn owes its chat", () => {
     });
     expect(chatFailureOf({ kind: "agent_exited" }, true)).toEqual({
       code: "agent_exited",
+    });
+    expect(chatFailureOf({ kind: "not_started" }, false)).toEqual({
+      code: "not_started",
     });
   });
 });

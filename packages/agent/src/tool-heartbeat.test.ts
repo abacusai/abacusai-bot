@@ -227,3 +227,49 @@ describe("a call that has run implausibly long", () => {
     expect(MAX_VOUCHED_RUNTIME_MS).toBeGreaterThan(900 * 1_000);
   });
 });
+
+describe("a model writing a long tool call", () => {
+  // Its arguments stream for minutes and reach only the AG-UI stream; the
+  // watchdog hears nothing but the heartbeat.
+  it.each([
+    {
+      case: "beats while the model streams, naming no tool",
+      run: () => {
+        for (let i = 0; i < 10; i += 1) {
+          heartbeat.generating();
+          vi.advanceTimersByTime(INTERVAL / 2);
+        }
+      },
+      expected: Array.from({ length: 5 }, () => ({
+        type: "heartbeat",
+        runningTools: 0,
+      })),
+    },
+    {
+      case: "goes quiet with the model, so a stalled stream is still caught",
+      run: () => {
+        heartbeat.generating();
+        vi.advanceTimersByTime(INTERVAL * 10);
+      },
+      expected: [],
+    },
+    {
+      case: "names the newest call still running",
+      run: () => {
+        heartbeat.started("a", { name: "read", input: { path: "a.txt" } });
+        heartbeat.started("b", { name: "bash", input: { command: "make" } });
+        vi.advanceTimersByTime(INTERVAL);
+        heartbeat.ended("b");
+        vi.advanceTimersByTime(INTERVAL);
+      },
+      expected: [
+        { type: "heartbeat", runningTools: 2, tool: "bash (make)" },
+        { type: "heartbeat", runningTools: 1, tool: "read (a.txt)" },
+      ],
+    },
+  ])("$case", ({ run, expected }) => {
+    run();
+
+    expect(beats()).toEqual(expected);
+  });
+});

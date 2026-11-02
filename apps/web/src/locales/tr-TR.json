@@ -4540,6 +4540,7 @@
       "paymentLapsed": "Abacus.AI aboneliğiniz sona erdiği için durakladım. Buradan yenileyin: {{link}}",
       "timedOut": "Bu çok uzun sürdü ve ben yanıt veremeden durduruldu. Kaldığı yerden devam etmek için tekrar gönder.",
       "agentExited": "Ben yanıt veremeden uygulama kapandı. Kaldığı yerden devam etmek için tekrar gönder.",
+      "notStarted": "Uygulamanın hazırlanması çok uzun sürdü, bu yüzden başlayamadım. Tekrar denemek için yeniden gönder.",
       "empty": "Buna bir yanıt hazırlayamadım. Lütfen tekrar gönder.",
       "contactNeutral": "Üzgünüm, şu anda yanıt veremiyorum. En kısa sürede döneceğim.",
       "contactEmpty": "{{name}} kişisine yanıt vermedim: hiçbir yanıt gelmedi. Yanıtlamak için uygulamayı aç veya ne söylememi istediğini bana yaz.",
