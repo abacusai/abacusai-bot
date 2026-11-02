@@ -3947,9 +3947,18 @@ export class ServiceHost {
     // the dying process it would be lost, so it waits for that one to go and
     // starts a fresh one.
     await this.waitOutStoppingAgent(request);
+    const isRunning = (): boolean =>
+      this.agentManagerService.getSessionState(
+        request.workspaceId,
+        request.sessionId
+      ).status === "running";
     const outcome = await deliverMessage({
+      // Never into an agent still starting: one that never comes up would
+      // take the message with it. Its start is joined below instead.
       send: () =>
-        current() && this.agentCommunicationService.sendMessage(delivered),
+        current() &&
+        isRunning() &&
+        this.agentCommunicationService.sendMessage(delivered),
       start: async () => {
         if (!current()) return false;
         const result = await this.startAgentSession({
@@ -3961,11 +3970,7 @@ export class ServiceHost {
         });
         return result.success;
       },
-      isRunning: () =>
-        this.agentManagerService.getSessionState(
-          request.workspaceId,
-          request.sessionId
-        ).status === "running",
+      isRunning,
       delay: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     });
     return { noticed: delivered !== noted, outcome };
