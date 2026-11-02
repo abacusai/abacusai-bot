@@ -1,7 +1,7 @@
 /**
  * A routine's own folder. Every run is a fresh session, so the memory lives
  * here: `runs/` holds one file per finished run and `notes.md` is the
- * routine's scratch space. A routine with no project of its own lives at
+ * routine's scratch space (`routineNotes` alone decides where that is). A routine with no project of its own lives at
  * `~/.abacusai-bot/routines/<id>/`, which is also its workspace; one set up
  * for a project keeps its records inside that project, so the whole routine
  * runs where the user pointed it. The host resolves the folder once and every
@@ -47,6 +47,70 @@ const selfIgnore = (home: string): void => {
   if (path.basename(dotDir) !== ".abacusai-bot") return;
   const ignore = path.join(dotDir, ".gitignore");
   if (!fs.existsSync(ignore)) fs.writeFileSync(ignore, "*\n", "utf8");
+};
+
+/** Where a routine's notes are, as the fire prompt names them. */
+export interface RoutineNotes {
+  path: string;
+  /** Earlier runs kept notes there. */
+  kept: boolean;
+  /**
+   * A notes.md at the project root that changed after the routine was made,
+   * when it kept none: runs were once told a bare "notes.md", which resolves
+   * there. It may as well be the user's own, so it is named, never moved.
+   */
+  maybeAt: string | null;
+}
+
+const NOTES_FILE = "notes.md";
+
+/** Across volumes too: a project can sit on another drive than the app. */
+const moveFile = (from: string, to: string): void => {
+  try {
+    fs.renameSync(from, to);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EXDEV") throw error;
+    fs.copyFileSync(from, to, fs.constants.COPYFILE_EXCL);
+    fs.rmSync(from);
+  }
+};
+
+/**
+ * The routine's notes live in its records folder. Notes in the app's own
+ * folder for it (its records folder before it had a project) are its alone,
+ * so they move in once; if that fails they are named where they are.
+ */
+export const routineNotes = (
+  home: string,
+  routineId: string,
+  project: { path: string; since: number } | null
+): RoutineNotes => {
+  const notes = path.join(home, NOTES_FILE);
+  if (fs.existsSync(notes)) return { path: notes, kept: true, maybeAt: null };
+  const appNotes = path.join(routineDir(routineId), NOTES_FILE);
+  if (appNotes !== notes && fs.existsSync(appNotes)) {
+    try {
+      fs.mkdirSync(home, { recursive: true });
+      selfIgnore(home);
+      moveFile(appNotes, notes);
+      return { path: notes, kept: true, maybeAt: null };
+    } catch (error) {
+      console.warn("Could not move a routine's notes", error);
+      return { path: appNotes, kept: true, maybeAt: null };
+    }
+  }
+  let maybeAt: string | null = null;
+  if (project != null) {
+    const rootNotes = path.join(project.path, NOTES_FILE);
+    try {
+      const stat = fs.statSync(rootNotes);
+      // Unchanged since before the routine existed: none of its runs wrote it.
+      if (stat.isFile() && stat.mtimeMs >= project.since) maybeAt = rootNotes;
+    } catch {
+      // No such file.
+    }
+  }
+  return { path: notes, kept: false, maybeAt };
 };
 
 /** File-name safe and sortable: the start time first, then the session. */

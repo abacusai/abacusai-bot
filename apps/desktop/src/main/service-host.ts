@@ -303,6 +303,7 @@ import {
   removeRoutineDir,
   routineDir,
   routineDirInWorkspace,
+  routineNotes,
 } from "./services/agent-tools/routine-runs-store";
 import { stopAllServed } from "./services/agent-tools/static-server";
 import { WebhookRelay } from "./services/agent-tools/webhook-relay";
@@ -5701,6 +5702,11 @@ export class ServiceHost {
         // The project when there is one; the run's cwd is that folder and its
         // records sit inside it. Otherwise the routine's own folder is both.
         workingDirectory: project?.path ?? routineDir(job.id),
+        notes: routineNotes(
+          home,
+          job.id,
+          project == null ? null : { path: project.path, since: job.createdAt }
+        ),
         runs: countRoutineRuns(home),
         lastRun: readLastRoutineRun(home),
         workspaces: workspaces
