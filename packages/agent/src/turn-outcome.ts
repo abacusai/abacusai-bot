@@ -574,6 +574,9 @@ export const movedToOpenLlmNotice = (
 /** RouteLLM - Open by the name the picker gives it. */
 export const OPENLLM_NAME = "RouteLLM - Open";
 
+/** A paying plan's code routers by the one name the picker gives both. */
+export const PLAN_ROUTER_NAME = "RouteLLM";
+
 /**
  * Google cut the reply off on a model the user picked, even after asking
  * again: the card names it and offers the ways on, chosen by the user and

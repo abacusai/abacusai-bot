@@ -583,7 +583,7 @@ describe("a model the user picked off Abacus that fails", () => {
         "abacus/route-llm-code-low"
       );
       expect(moves(chat)[0]?.actions?.[0]).toMatchObject({
-        target: "RouteLLM (Code, Low)",
+        target: "RouteLLM",
       });
     } finally {
       provider.serveModels([

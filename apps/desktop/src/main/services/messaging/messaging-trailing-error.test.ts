@@ -497,13 +497,13 @@ describe("the user's own chat, on the free plan", () => {
           type: "moved-to-abacus",
           provider: "fake",
           label: "fake-1",
-          target: "RouteLLM (Code, Low)",
+          target: "RouteLLM",
         },
       ],
     });
     await settle();
     expect(paid.sent()).toEqual([
-      "fake-1 on Fake isn't available, so I switched this chat to RouteLLM (Code, Low).",
+      "fake-1 on Fake isn't available, so I switched this chat to RouteLLM.",
     ]);
   });
 

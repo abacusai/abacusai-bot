@@ -194,6 +194,7 @@ import {
   movedToOpenLlmNotice,
   movesToOpenLlm,
   OPENLLM_NAME,
+  PLAN_ROUTER_NAME,
   stallFailure,
   type TurnFailure,
 } from "./turn-outcome.js";
@@ -1575,7 +1576,7 @@ export class AbacusBotSession {
       ...movedToOpenLlmNotice(
         failure,
         context,
-        paying ? next.label : OPENLLM_NAME
+        paying ? PLAN_ROUTER_NAME : OPENLLM_NAME
       ),
     });
     return true;
