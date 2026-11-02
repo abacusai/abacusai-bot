@@ -57,7 +57,6 @@ import {
   pickBrowserTarget,
   type BrowserPage,
   type BrowserTargetMemory,
-  type DidFailLoadListener,
   type BrowserTargetSource,
 } from "../browser/browser-target";
 import {
@@ -67,9 +66,7 @@ import {
   isFencedUrl,
 } from "../browser/host-fence";
 import {
-  PAGE_ERROR_COLLECTOR,
-  PAGE_ERRORS_READ,
-  pageCheckOf,
+  checkServedPageIn,
   type ServedPageCheck,
 } from "../browser/page-errors";
 import { type CapturedImage, SecretFields } from "../browser/secret-fields";
@@ -914,16 +911,18 @@ export class McpBrowserServer extends McpHttpServer {
 
   /**
    * Loads a local page in a tab of its own and reports whether it loaded and
-   * what it threw as it did (page-errors.ts): `present_deliverable`'s proof
-   * that a served app runs, where the pages live in this server's browser
-   * (the hosted computer; the app checks in a view of its own, see
+   * what it threw as it did (`checkServedPageIn`): `present_deliverable`'s
+   * proof that a served app runs, where the pages live in this server's
+   * browser (the hosted computer; the app checks in a view of its own, see
    * `ElectronBrowserRuntime.checkServedPage`). Null when that could not be
-   * found out (no browser, the session's browser busy past the call's time,
-   * the page gone elsewhere): only the HTTP answer is known then.
+   * found out (no browser, `signal` aborted while the session's browser was
+   * busy or the page was loading, the page gone elsewhere): only the HTTP
+   * answer is known then.
    */
   async checkServedPage(
     url: string,
-    sessionId: string
+    sessionId: string,
+    signal: AbortSignal
   ): Promise<ServedPageCheck | null> {
     let origin: string;
     try {
@@ -937,36 +936,7 @@ export class McpBrowserServer extends McpHttpServer {
       `${sessionId}${PAGE_CHECK_OWNER}`,
       sessionId,
       { failed: null, unavailable: null },
-      async (wc) => {
-        await this.cdp(wc, "Page.addScriptToEvaluateOnNewDocument", {
-          source: PAGE_ERROR_COLLECTOR,
-        });
-        // As in `navigateTo`: only did-fail-load knows a page did not load.
-        let failure: string | null = null;
-        const onFailLoad: DidFailLoadListener = (
-          _event,
-          errorCode,
-          errorDescription,
-          _failedUrl,
-          isMainFrame
-        ) => {
-          if (isMainFrame && errorCode !== -3)
-            failure = `${errorDescription} (${errorCode})`;
-        };
-        wc.on("did-fail-load", onFailLoad);
-        try {
-          await Promise.race([
-            wc.loadURL(url),
-            new Promise((resolve) => setTimeout(resolve, NAVIGATE_TIMEOUT_MS)),
-          ]).catch(() => undefined);
-          await this.settle(wc, NAVIGATE_TIMEOUT_MS);
-        } finally {
-          if (!wc.isDestroyed()) wc.off("did-fail-load", onFailLoad);
-        }
-        if (failure != null) return { loaded: false, reason: failure };
-        if ((await this.liveOrigin(wc)) !== origin) return null;
-        return pageCheckOf(await this.evalJS(wc, PAGE_ERRORS_READ));
-      }
+      (wc) => checkServedPageIn(wc, url, signal)
     );
   }
 
