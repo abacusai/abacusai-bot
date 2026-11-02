@@ -85,7 +85,7 @@ async function runAgent(
 
     if (
       sent &&
-      (compat.match(/"status":"idle"/g) ?? []).length >= 2 &&
+      (compat.match(/"status":"idle"/g) ?? []).length >= 1 &&
       !closed
     ) {
       closed = true;

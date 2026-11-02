@@ -13,17 +13,15 @@
 {"seq":13,"event":{"type":"TEXT_MESSAGE_END","messageId":"<MSG_2>"}}
 {"seq":14,"event":{"type":"CUSTOM","name":"agent.status","value":{"status":"idle"}}}
 {"seq":15,"event":{"type":"RUN_FINISHED","threadId":"t-1","runId":"srv-<1>","outcome":{"type":"cancelled"},"usage":[{"model":"fake-1","inputTokens":0,"cachedInputTokens":0,"cacheWriteInputTokens":0,"outputTokens":0,"totalTokens":0}],"metadata":{"tanstack":{"model":"fake/fake-1","finishReason":null},"abacus":{"turnUsage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":1,"model":"fake-1"},"stopReason":"aborted","serverInitiated":true}}}}
-{"seq":16,"event":{"type":"CUSTOM","name":"agent.status","value":{"status":"idle"}}}
-{"seq":17,"event":{"type":"CUSTOM","name":"queue.updated","value":{"messages":[],"dequeued":null}}}
-{"seq":18,"event":{"type":"RUN_STARTED","threadId":"t-1","runId":"srv-<3>","metadata":{"abacus":{"serverInitiated":true}}}}
-{"seq":19,"event":{"type":"TEXT_MESSAGE_START","messageId":"srv-<3>:user","role":"user"}}
-{"seq":20,"event":{"type":"TEXT_MESSAGE_CONTENT","messageId":"srv-<3>:user","delta":"next"}}
-{"seq":21,"event":{"type":"TEXT_MESSAGE_END","messageId":"srv-<3>:user"}}
-{"seq":22,"event":{"type":"CUSTOM","name":"agent.status","value":{"status":"submitted"}}}
-{"seq":23,"event":{"type":"CUSTOM","name":"agent.status","value":{"status":"streaming"}}}
-{"seq":24,"event":{"type":"TEXT_MESSAGE_START","messageId":"<MSG_4>","role":"assistant"}}
-{"seq":25,"event":{"type":"TEXT_MESSAGE_CONTENT","messageId":"<MSG_4>","delta":"Answer 1."}}
-{"seq":26,"event":{"type":"TEXT_MESSAGE_END","messageId":"<MSG_4>"}}
-{"seq":27,"event":{"type":"CUSTOM","name":"agent.status","value":{"status":"idle"}}}
-{"seq":28,"event":{"type":"RUN_FINISHED","threadId":"t-1","runId":"srv-<3>","outcome":{"type":"success"},"usage":[{"model":"fake-1","inputTokens":0,"cachedInputTokens":0,"cacheWriteInputTokens":0,"outputTokens":0,"totalTokens":0}],"metadata":{"tanstack":{"model":"fake/fake-1","finishReason":"stop"},"abacus":{"turnUsage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":1,"model":"fake-1"},"stopReason":"stop","serverInitiated":true}}}}
-{"seq":29,"event":{"type":"CUSTOM","name":"agent.status","value":{"status":"idle"}}}
+{"seq":16,"event":{"type":"CUSTOM","name":"queue.updated","value":{"messages":[],"dequeued":null}}}
+{"seq":17,"event":{"type":"RUN_STARTED","threadId":"t-1","runId":"srv-<3>","metadata":{"abacus":{"serverInitiated":true}}}}
+{"seq":18,"event":{"type":"TEXT_MESSAGE_START","messageId":"srv-<3>:user","role":"user"}}
+{"seq":19,"event":{"type":"TEXT_MESSAGE_CONTENT","messageId":"srv-<3>:user","delta":"next"}}
+{"seq":20,"event":{"type":"TEXT_MESSAGE_END","messageId":"srv-<3>:user"}}
+{"seq":21,"event":{"type":"CUSTOM","name":"agent.status","value":{"status":"submitted"}}}
+{"seq":22,"event":{"type":"CUSTOM","name":"agent.status","value":{"status":"streaming"}}}
+{"seq":23,"event":{"type":"TEXT_MESSAGE_START","messageId":"<MSG_4>","role":"assistant"}}
+{"seq":24,"event":{"type":"TEXT_MESSAGE_CONTENT","messageId":"<MSG_4>","delta":"Answer 1."}}
+{"seq":25,"event":{"type":"TEXT_MESSAGE_END","messageId":"<MSG_4>"}}
+{"seq":26,"event":{"type":"CUSTOM","name":"agent.status","value":{"status":"idle"}}}
+{"seq":27,"event":{"type":"RUN_FINISHED","threadId":"t-1","runId":"srv-<3>","outcome":{"type":"success"},"usage":[{"model":"fake-1","inputTokens":0,"cachedInputTokens":0,"cacheWriteInputTokens":0,"outputTokens":0,"totalTokens":0}],"metadata":{"tanstack":{"model":"fake/fake-1","finishReason":"stop"},"abacus":{"turnUsage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":1,"model":"fake-1"},"stopReason":"stop","serverInitiated":true}}}}

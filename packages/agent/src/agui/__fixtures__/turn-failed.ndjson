@@ -7,4 +7,3 @@
 {"type":"event","event":{"type":"error","error":{"message":"The model provider had a problem (400). Try again, or switch to a different model.","code":"turn_failed","cause":"unknown","detail":"400: bad request from fake","actions":[{"type":"switch-model"}]}}}
 {"type":"event","event":{"type":"turn_complete","outcome":{"kind":"failed","cause":"unknown"},"usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":1,"model":"fake-1"}}}
 {"type":"event","event":{"type":"status_changed","status":"idle"}}
-{"type":"event","event":{"type":"status_changed","status":"idle"}}

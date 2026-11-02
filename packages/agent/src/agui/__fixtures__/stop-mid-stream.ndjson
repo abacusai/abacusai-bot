@@ -7,4 +7,3 @@
 {"type":"queue_updated","messages":[],"dequeued":null}
 {"type":"event","event":{"type":"turn_complete","outcome":{"kind":"stopped"},"usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":1,"model":"fake-1"}}}
 {"type":"event","event":{"type":"status_changed","status":"idle"}}
-{"type":"event","event":{"type":"status_changed","status":"idle"}}

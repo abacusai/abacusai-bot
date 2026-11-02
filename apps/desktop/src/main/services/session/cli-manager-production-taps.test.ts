@@ -26,6 +26,8 @@ vi.mock("electron", () => {
         isPackaged: false,
         getPath: () => process.env.ABACUSAI_BOT_HOME,
         getVersion: () => "1.0.86",
+        getPreferredSystemLanguages: () => ["en-US"],
+        getLocale: () => "en-US",
       },
     },
     {
@@ -363,3 +365,146 @@ for (const transport of ["fd", "inline"] as const) {
     }
   }, 60000);
 }
+
+// A chat message that waited behind a turn in the app is sent the moment that
+// turn closes. A second idle for the closed turn used to close the chat's turn
+// too, before it began: the chat heard "I couldn't put a reply together".
+it("a chat message queued behind an app turn gets its own reply, and only that", async () => {
+  const root = fs.realpathSync.native(
+    fs.mkdtempSync(path.join(os.tmpdir(), "queued-chat-turn-"))
+  );
+  const home = path.join(root, "home"),
+    cwd = path.join(root, "workspace");
+  fs.mkdirSync(home);
+  fs.mkdirSync(cwd);
+  vi.stubEnv("ABACUSAI_BOT_HOME", home);
+  const provider = await FakeProvider.start();
+  const tasks = await FakeMcpServer.start([
+    { name: "suggest_tasks", reply: () => "Shown." },
+  ]);
+  fs.writeFileSync(
+    path.join(home, "config.json"),
+    fakeProviderConfig(provider)
+  );
+  fs.writeFileSync(
+    path.join(home, "mcp.json"),
+    mcpConfig({ tasks: { url: tasks.url, isBuiltin: true } })
+  );
+  let manager: AgentManagerService | undefined;
+  try {
+    const { ServiceHost } = await import("../../service-host");
+    const host = new ServiceHost();
+    const internals = host as unknown as Record<string, any>;
+    vi.spyOn(internals.workspaceService, "getWorkspaces").mockReturnValue([
+      { id: "w", path: cwd, isRemote: false },
+    ]);
+    vi.spyOn(internals, "emitEvent").mockImplementation(() => {});
+    const entry = path.resolve("../../packages/agent/dist/main.js");
+    manager = internals.agentManagerService;
+    const options = (manager as unknown as { options: Record<string, any> })
+      .options;
+    options.resolveArtifact = () => ({
+      execPath: process.execPath,
+      execArgs: [entry],
+      agentRoot: path.dirname(entry),
+    });
+    options.resolveAuthEnv = () => ({});
+    options.resolveAdditionalConfigEnv = async () => ({
+      ABACUSAI_BOT_HOME: home,
+      ABACUSAI_BOT_MCP_CONFIG: path.join(home, "mcp.json"),
+      PI_OFFLINE: "1",
+    });
+    internals.agentSessionManagerService.create("w", null, null, null, "s");
+    const closed: string[] = [];
+    internals.turnLedger.onClose((record: { kind: string }) =>
+      closed.push(record.kind)
+    );
+    // A contact the bot auto-replies to, whose message waits for the app's turn.
+    const sent = vi.fn().mockResolvedValue(undefined);
+    internals.messagingGatewayService.connectors.set("telegram", {
+      sendText: sent,
+      selfChatId: () => "own-chat",
+    });
+    const route = {
+      platform: "telegram",
+      chatId: "ana-chat",
+      sessionId: "s",
+      workspaceId: "w",
+      userId: "me",
+      userName: "Ana",
+      buffer: "",
+      bufferMessageId: null,
+      taggedReply: null,
+      busy: false,
+      busySince: 0,
+      queue: [{ text: "what's on my calendar today?" }],
+      queueFullNotified: false,
+      viaBot: false,
+      owner: false,
+      senderLabel: "",
+      pendingIntro: null,
+      failureReply: null,
+      delivered: false,
+      progressTimer: null,
+    };
+    internals.messagingGatewayService.routesBySession.set("s", route);
+    // The first-run turn: a greeting that ends on suggest_tasks.
+    provider.script((call) => {
+      if (call.userText.some((text) => text.includes("calendar")))
+        return { say: "Your calendar is clear today." };
+      return call.messages.some((m: { role: string }) => m.role === "tool")
+        ? { say: "Tap one to start." }
+        : {
+            say: "Hi! Here is what I can do.",
+            call: {
+              name: "suggest_tasks",
+              args: {
+                tasks: [{ text: "Plan my day" }, { text: "Draft an email" }],
+              },
+            },
+          };
+    });
+    expect(
+      (
+        await manager!.startSession({
+          workspaceId: "w",
+          sessionId: "s",
+          mode: AgentMode.Yolo,
+          startupTimeoutMs: 20000,
+        })
+      ).success
+    ).toBe(true);
+    await internals.sendAgentMessage({
+      workspaceId: "w",
+      sessionId: "s",
+      message: "hi",
+    });
+    // Both turns closed, and the chat's message was answered by the model.
+    await vi.waitFor(
+      () => {
+        expect(closed.length).toBeGreaterThanOrEqual(2);
+        expect(route.busy).toBe(false);
+        expect(
+          provider.calls.some((call) =>
+            call.userText.some((text) => text.includes("calendar"))
+          )
+        ).toBe(true);
+      },
+      { timeout: 30000 }
+    );
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Ana gets the answer; the user hears of no unanswered message.
+    expect(sent.mock.calls.map(([chat, text]) => `${chat}: ${text}`)).toEqual([
+      "ana-chat: Your calendar is clear today.",
+    ]);
+    expect(closed).toEqual(["reply", "reply"]);
+  } finally {
+    await manager?.dispose();
+    await tasks.close();
+    await provider.close();
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+}, 60000);

@@ -17,4 +17,3 @@
 {"type":"TEXT_MESSAGE_END","messageId":"<MSG_2>"}
 {"type":"CUSTOM","name":"agent.status","value":{"status":"idle"}}
 {"type":"RUN_FINISHED","threadId":"t-1","runId":"srv-<1>","outcome":{"type":"success"},"usage":[{"model":"fake-1","inputTokens":0,"cachedInputTokens":0,"cacheWriteInputTokens":0,"outputTokens":0,"totalTokens":0}],"metadata":{"tanstack":{"model":"fake/fake-1","finishReason":"stop"},"abacus":{"turnUsage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":1,"model":"fake-1"},"stopReason":"stop","serverInitiated":true}}}
-{"type":"CUSTOM","name":"agent.status","value":{"status":"idle"}}
