@@ -22,7 +22,7 @@ import {
   type AbacusBotConfig,
   type CustomProviderConfig,
 } from "./config.js";
-import { missingCatalogSupplements } from "./model-catalog.js";
+import { isServed, missingCatalogSupplements } from "./model-catalog.js";
 
 /** Providers AbacusAI Bot surfaces by name, in the order the UI shows them. */
 export const BUILTIN_PROVIDERS = [
@@ -627,10 +627,14 @@ export function listProviderStatus(
 
 /**
  * Every model the user can run right now: `getAvailable()` is scoped to
- * providers with working credentials.
+ * providers with working credentials, less what the provider's live list
+ * says it retired.
  */
 export function listModels(registry: ModelRegistry): ModelChoice[] {
-  return registry.getAvailable().map(toChoice);
+  return registry
+    .getAvailable()
+    .filter((model) => isServed(model.provider, model.id))
+    .map(toChoice);
 }
 
 /** The zero-cost slice of the catalog: OpenRouter's free tier and the like. */

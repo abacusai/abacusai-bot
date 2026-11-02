@@ -62,8 +62,6 @@ export const FREE_SOURCES: readonly FreeSource[] = [
   {
     provider: "nvidia",
     models: [
-      "moonshotai/kimi-k3",
-      "z-ai/glm-5.3",
       "moonshotai/kimi-k2.6",
       "deepseek-ai/deepseek-v4.1-flash",
       "nvidia/nemotron-3-super-120b-a12b",
