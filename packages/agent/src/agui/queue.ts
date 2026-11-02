@@ -135,6 +135,11 @@ export class HostCore {
    * now belong to the next turn (clearing them would show idle mid-reply).
    */
   turn = 0;
+  /**
+   * The session said idle since the current send or Stop began. Its turn end
+   * is then the turn's one idle, and the host does not say it again.
+   */
+  private idleSaid = false;
 
   constructor(
     readonly session: HostSession,
@@ -490,6 +495,7 @@ export class HostCore {
     this.emitQueue();
     this.turn += 1;
     this.stopping = true;
+    this.idleSaid = false;
     const reserved = this.reserveAbort();
 
     this.hooks.beforeAbort?.("stop");
@@ -508,10 +514,7 @@ export class HostCore {
     const owns = this.releaseAbort(reserved);
 
     this.hooks.afterAbort?.("stop");
-    this.emit({
-      type: "event",
-      event: { type: "status_changed", status: AgentStatus.Idle },
-    });
+    this.sayIdle();
     if (owns) await this.runAfterStop();
   }
 
@@ -676,6 +679,12 @@ export class HostCore {
     if (this.turn !== turn) return;
 
     this.busy = false;
+    this.sayIdle();
+  }
+
+  /** Idle, unless the session's own turn end already said it. */
+  private sayIdle(): void {
+    if (this.idleSaid) return;
     this.emit({
       type: "event",
       event: { type: "status_changed", status: AgentStatus.Idle },
@@ -690,6 +699,7 @@ export class HostCore {
     continueCut = false
   ): Promise<void> {
     this.hooks.sending?.(token);
+    this.idleSaid = false;
     try {
       await this.session.send(message, {
         settled: () => this.hooks.settle?.(token),
@@ -858,6 +868,9 @@ export class HostCore {
   }
 
   emit(event: DesktopEvent): void {
+    if (event.type === "event" && event.event.type === "status_changed") {
+      this.idleSaid = event.event.status === AgentStatus.Idle;
+    }
     this.emitEvent(event);
   }
 }

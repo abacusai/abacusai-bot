@@ -19,4 +19,3 @@
 {"type":"event","event":{"type":"text_delta","content":"Both done.","messageId":"msg-2"}}
 {"type":"event","event":{"type":"turn_complete","outcome":{"kind":"reply"},"usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":2,"model":"fake-1"}}}
 {"type":"event","event":{"type":"status_changed","status":"idle"}}
-{"type":"event","event":{"type":"status_changed","status":"idle"}}
