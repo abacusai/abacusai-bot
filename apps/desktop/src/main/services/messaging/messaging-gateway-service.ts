@@ -468,6 +468,15 @@ export class MessagingGatewayService {
     read: readStoredOutbox,
     write: writeStoredOutbox,
     send: (message) => this.sendOwed(message),
+    waitingOnLink: (platform) => {
+      const state = this.states.get(platform)?.state;
+      return (
+        state === "connecting" ||
+        state === "needs_login" ||
+        state === "rate_limited" ||
+        state === "syncing"
+      );
+    },
     giveUp: (message) => this.tellUndelivered(message),
   });
 

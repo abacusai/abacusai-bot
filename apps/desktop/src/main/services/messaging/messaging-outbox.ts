@@ -40,6 +40,11 @@ export interface ChatOutboxOptions {
   write: (state: StoredOutbox) => void;
   /** One attempt; true once the platform took it. */
   send: (message: OwedMessage) => Promise<boolean>;
+  /**
+   * The platform is down until a link comes back (re-scan, reload): an
+   * attempt now can only fail, so none is made or counted.
+   */
+  waitingOnLink?: (platform: MessagingPlatformId) => boolean;
   /** The last attempt failed too: tell the user it never went. */
   giveUp: (message: OwedMessage) => Promise<void>;
 }
@@ -47,7 +52,8 @@ export interface ChatOutboxOptions {
 /**
  * Waits between later attempts, after the immediate ones failed. A message
  * is also tried whenever its platform connects, and after a restart. Past
- * the last wait, or a day old, it is given up on.
+ * the last wait, or a day old, it is given up on. While its platform waits
+ * on a link, only the day counts.
  */
 export const OUTBOX_RETRY_MS = [5 * 60_000, 30 * 60_000];
 const OUTBOX_MAX_AGE_MS = 24 * 60 * 60_000;
@@ -130,6 +136,12 @@ export class ChatOutbox {
   private async pass(): Promise<void> {
     // A copy: messages that go, or are given up on, leave as the pass runs.
     for (const message of this.pending.slice()) {
+      // Tried when the link is back; the gateway flushes on every connect.
+      if (
+        this.options.waitingOnLink?.(message.platform) === true &&
+        this.options.now() - message.firstFailedAt <= OUTBOX_MAX_AGE_MS
+      )
+        continue;
       let sent = false;
       try {
         sent = await this.options.send(message);
