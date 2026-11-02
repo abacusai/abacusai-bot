@@ -229,6 +229,10 @@ describe("connectors connected elsewhere", () => {
     vi.spyOn(sh.agentManagerService, "getRuntimeDiagnostics").mockReturnValue([
       { workspaceId, sessionId: session.id, live: true, mcpServers: new Map() },
     ]);
+    // The same live agent: a send goes only into an agent that is running.
+    vi.spyOn(sh.agentManagerService, "getSessionState").mockReturnValue({
+      status: "running",
+    });
     // The agent reconnects: its servers are re-reported while the old
     // clients close (which must not end the wait), then it answers.
     vi.spyOn(sh.mcpAdminService, "refreshSessionMcp").mockImplementation(
