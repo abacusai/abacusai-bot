@@ -75,8 +75,13 @@ extraResources:
   # never draws a TUI, but the import is in the chunk every entry shares, so a
   # missing copy is not a missing feature: the agent fails to spawn at all.
   # agent-runtime-deps.test.ts pins this list to what the bundle imports.
+  # Its addons come per platform (win.extraResources, mac.extraResources):
+  # Windows signs every .node it copies, and cannot sign a macOS one.
   - from: ../../node_modules/@earendil-works/pi-tui/
     to: agent/node_modules/@earendil-works/pi-tui/
+    filter:
+      - "**/*"
+      - "!native/**"
   - from: ../../node_modules/marked/
     to: agent/node_modules/marked/
   - from: ../../node_modules/get-east-asian-width/
@@ -131,6 +136,13 @@ npmRebuild: false
 win:
   executableName: AbacusBot
   icon: resources/icon.ico
+  # Native addons and libraries too, not just .exe: Windows application control
+  # refuses unsigned ones. Covers extraResources and app.asar.unpacked; the
+  # Python grammar (.so) is signed in after-pack.cjs, once pruned.
+  signExts: [".node", ".dll"]
+  extraResources:
+    - from: ../../node_modules/@earendil-works/pi-tui/native/win32/
+      to: agent/node_modules/@earendil-works/pi-tui/native/win32/
 # The installer also takes build/installer.nsh (electron-builder's default
 # include): its first-run milestones.
 nsis:
@@ -150,6 +162,9 @@ mac:
   icon: resources/icon.icns
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
+  extraResources:
+    - from: ../../node_modules/@earendil-works/pi-tui/native/darwin/
+      to: agent/node_modules/@earendil-works/pi-tui/native/darwin/
   extendInfo:
     - CFBundleName: AbacusAI Bot
     - CFBundleDisplayName: AbacusAI Bot
