@@ -838,11 +838,13 @@ describe("the cut-off card once the credits are used up", () => {
     return { onUpgrade, onTopUp, onNextPlan };
   };
 
-  it("free: the plan's pitch and its Upgrade, as before", async () => {
+  it("free: the plan's whole offer, priced, with See plans", async () => {
     const { onUpgrade } = await card(false, offerFor("free", "basic", "Basic"));
     fireEvent.click(
-      await screen.findByRole("button", { name: "Upgrade to Basic" })
+      await screen.findByRole("button", { name: "Upgrade · $20/month" })
     );
+    expect(screen.getByRole("button", { name: "See plans" })).toBeTruthy();
+    expect(screen.getByText("Basic gets you:")).toBeTruthy();
     expect(onUpgrade).toHaveBeenCalledOnce();
     expect(
       screen.getByText("You've also used your free Abacus credits.")
@@ -856,7 +858,7 @@ describe("the cut-off card once the credits are used up", () => {
       offerFor("basic", "pro", "Pro")
     );
     fireEvent.click(
-      await screen.findByRole("button", { name: "Upgrade to Pro" })
+      await screen.findByRole("button", { name: "Upgrade · $20/month" })
     );
     expect(onUpgrade).toHaveBeenCalledOnce();
     expect(onNextPlan).not.toHaveBeenCalled();

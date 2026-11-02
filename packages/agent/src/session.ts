@@ -137,6 +137,7 @@ import {
 } from "./protocol.js";
 import {
   createModelRuntime,
+  payingPlanRouter,
   registerAbacusProvider,
   registerCustomProviders,
   registerGeminiProvider,
@@ -190,6 +191,10 @@ import {
   presentFailure,
   providerFailureSummary,
   readableProviderError,
+  movedToOpenLlmNotice,
+  movesToOpenLlm,
+  OPENLLM_NAME,
+  stallFailure,
   type TurnFailure,
 } from "./turn-outcome.js";
 import { turnUsage, type TurnUsage } from "./turn-usage.js";
@@ -1441,6 +1446,11 @@ export class AbacusBotSession {
       else await session.prompt(text);
       await this.continuePastRecoverableFailures();
       this.reportTurnFailure();
+      // Moved to RouteLLM - Open (moveToOpenLlm): the same message runs there.
+      if (this.pendingOpenLlmRotation != null) {
+        await this.continuePastRecoverableFailures();
+        this.reportTurnFailure();
+      }
       this.closeOwnedTurn(owned);
       turn?.settled?.();
     } catch (error) {
@@ -1448,7 +1458,7 @@ export class AbacusBotSession {
       // failure rather than the raw "429: {json}" envelope.
       const raw = describe(error);
       this.router.chain.failed(raw, this.session?.model?.provider);
-      this.reportFailure();
+      this.reportFailure(false);
       // A throw before pi's agent_end left the turn running: end it, or the
       // session stays busy with nothing left to say so.
       if (this.turnRunning) this.finishTurn();
@@ -1520,12 +1530,55 @@ export class AbacusBotSession {
    * call answered reports nothing, and an empty reply after a failure is a
    * failure, never a silent end.
    */
-  private reportFailure(): void {
+  private reportFailure(move = true): void {
     const failure = this.router.chain.failure(
       this.openLlmActive && this.isPoolShut()
     );
     if (failure == null) return;
-    this.emitFailure(failure);
+    if (!move || !this.moveToOpenLlm(failure)) this.emitFailure(failure);
+  }
+
+  /**
+   * A model off Abacus failed with Abacus credits left (movesToOpenLlm): the
+   * message goes on on RouteLLM - Open through the router's own rotation, the
+   * chat says so in one line, and the chat's model is the router from now on
+   * (model_changed). Once per message: the turn is on the router after this.
+   */
+  private moveToOpenLlm(failure: TurnFailure): boolean {
+    const registry = this.registry;
+    if (registry == null || this.interrupted) return false;
+    const context = this.router.failureContext(
+      registry,
+      this.openLlmActive,
+      this.session?.model
+    );
+    // A free plan moves onto RouteLLM - Open; a paying plan has none and runs
+    // on its own router, pinned, which the chat's model then names.
+    const planRouter = payingPlanRouter(registry);
+    const next = planRouter ?? this.router.pick(registry);
+    if (next == null || !movesToOpenLlm(failure, context)) return false;
+    // A refused key is re-read before the next turn, as when it is shown.
+    if (failure.cause === "key_invalid" || isAuthFailure(failure.raw))
+      this.providersStale = true;
+    const paying = planRouter != null;
+    this.openLlmActive = !paying;
+    // The run on the router ends on its own calls, not the failed model's.
+    this.router.chain.begin();
+    this.pendingOpenLlmRotation = { failure: failure.raw, nextId: next.id };
+    this.turnRunning = true;
+    this.stallRecoveriesThisTurn = 0;
+    this.stallFailureReported = false;
+    this.emptyReplies.begin();
+    this.emitAgentEvent({
+      type: "notification",
+      severity: "info",
+      ...movedToOpenLlmNotice(
+        failure,
+        context,
+        paying ? next.label : OPENLLM_NAME
+      ),
+    });
+    return true;
   }
 
   private emitFailure(failure: TurnFailure): void {
@@ -1801,7 +1854,7 @@ export class AbacusBotSession {
     const connectivity = hostConnectivity();
     if (connectivity === "offline" || connectivity === "degraded") {
       this.pendingNetworkFailure = {
-        failure: `no reply in ${Math.round(seconds)}s`,
+        failure: stallFailure(Math.round(seconds)),
         streamed: failedCallStreamed(this.session?.messages ?? []),
         confirmed: true,
       };
@@ -1811,7 +1864,7 @@ export class AbacusBotSession {
 
     if (this.openLlmActive && registry != null) {
       // No "." in this: the routing log line keeps the first sentence only.
-      const failure = `no reply in ${Math.round(seconds)}s`;
+      const failure = stallFailure(Math.round(seconds));
       const next = this.router.failed(registry, failure, this.session?.model);
 
       if (next != null && "nextId" in next) {
@@ -1839,18 +1892,15 @@ export class AbacusBotSession {
       return;
     }
 
+    // The stall is what the turn ends on, worded and offered like any other.
+    const stalled: TurnFailure = {
+      cause: "stalled",
+      provider: this.session?.model?.provider,
+      raw: stallFailure(seconds),
+    };
+    if (this.moveToOpenLlm(stalled)) return;
     this.stallFailureReported = true;
-    this.emitAgentEvent(
-      {
-        type: "error",
-        error: {
-          message: `The model stopped answering (no output for ${seconds}s). Try again, or switch to a different model.`,
-          code: "turn_failed",
-          actions: [{ type: "switch-model" }],
-        },
-      },
-      { origin: "turn" }
-    );
+    this.emitFailure(stalled);
     this.finishTurn();
   }
 

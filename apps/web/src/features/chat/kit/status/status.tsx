@@ -22,6 +22,7 @@ import {
   type CutOffResolution,
   type CutOffState,
   ModelUnavailableCard,
+  PlanOffer,
 } from "#renderer/components/credits-card/model-unavailable";
 import { GroupCard } from "#renderer/components/form-kit/page";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
@@ -42,8 +43,10 @@ import {
 } from "#renderer/lib/free-credits-watch";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import {
+  MOVED_TO_ABACUS_ACTION,
   ownKeyFailure,
-  ownKeyHeadlineKey,
+  ownKeyMovedLine,
+  ownKeyWords,
   type OwnKeyFailure,
 } from "#renderer/lib/own-key-unavailable";
 import { IS_ELECTRON } from "#renderer/lib/platform";
@@ -360,25 +363,60 @@ const exhaustedScope = (actions?: ErrorAction[]): "abacus" | "pool" =>
     ? "abacus"
     : "pool";
 
+/** Opens the chat's model picker, from a card's button inside the chat. */
+const openModelPicker = (from: HTMLElement): void =>
+  from
+    .closest('[data-slot="chat-view"]')
+    ?.querySelector<HTMLButtonElement>('[data-slot="chat-model-picker"]')
+    ?.click();
+
+/** The kept message goes again on RouteLLM - Open, by the person's choice. */
+const useSwitchToAbacus = () => {
+  const { t } = useTranslation();
+  const { session, composer } = useChatView();
+  return () =>
+    void (async () => {
+      await composer.onResumeOnFreePool?.();
+      await session.retry(
+        {
+          model: OPENLLM_ID,
+          ...(composer.fixedMode ? { mode: composer.fixedMode } : {}),
+        },
+        t("workspace.retryMessage")
+      );
+    })().catch(() => {});
+};
+
 /**
- * A turn on the person's own key that ran out of credit, hit its rate limit
- * or found its provider silent, in place of the provider's error. A free
- * account was offered the upgrade dialog, which this card can bring back; a
- * paid or unread one already has the top models in AbacusAI Agent on the web.
+ * A turn on a model Abacus does not serve (the person's own key, another
+ * provider's free model, their local server) that did not finish and did not
+ * move to RouteLLM - Open, in place of the provider's error: what happened,
+ * by model and provider, and why. A free account gets the model-unavailable
+ * card: RouteLLM - Open while Abacus credits are left, the plan's whole offer
+ * once they are used up. A paid or unread one already has the top models in
+ * AbacusAI Agent on the web.
  */
 const OwnKeyCard = ({
   failure,
   tier,
   runId,
+  credits,
+  latest,
 }: {
   failure: OwnKeyFailure;
   tier: NonNullable<ErrorCardProps["tier"]>;
   runId: string;
+  /** Abacus credits are left: RouteLLM - Open is the way on. */
+  credits: boolean;
+  latest: boolean;
 }) => {
   const { t } = useTranslation();
   const { session, composer, runtime } = useChatView();
   const resume = useUpgradeResume();
-  const free = tier === "free";
+  const switchToAbacus = useSwitchToAbacus();
+  const canReply = composer.readOnly == null;
+  const pickModel = canReply && composer.model != null;
+  const { title, why } = ownKeyWords(failure, t);
   return (
     <div
       role="group"
@@ -388,39 +426,38 @@ const OwnKeyCard = ({
       data-variant="own-key"
       data-cause={failure.cause}
     >
-      <GroupCard
-        title={t(ownKeyHeadlineKey(failure.cause), {
-          provider: providerDisplayName(failure.provider),
-        })}
-      >
-        <p className="text-muted-foreground p-3 text-sm">
-          {t(free ? "ownKey.freeBody" : "ownKey.paidBody")}
-        </p>
-        <div className="flex flex-col gap-3 p-3">
-          {free ? (
-            composer.readOnly == null && (
-              <Button
-                size="sm"
-                onClick={() =>
-                  requestUpgradeDialog(
-                    {
-                      kind: "own-key",
-                      key: `own-key-card:${runId}:${Date.now()}`,
-                      threadId: session.threadId,
-                      pendingText: lastUserText(
-                        session.hostStore.state.messages
-                      ),
-                      ownKey: failure,
-                      resume,
-                    },
-                    true
-                  )
-                }
-              >
-                {t("creditsCard.cta")}
-              </Button>
-            )
-          ) : (
+      {tier === "free" ? (
+        <ModelUnavailableCard
+          host={runtime.host}
+          kind="retired"
+          label={failure.label ?? ""}
+          title={title}
+          why={why}
+          creditsOut={!credits}
+          {...(credits && latest && canReply && { onSwitch: switchToAbacus })}
+          {...(pickModel && { onPickModel: openModelPicker })}
+          {...(canReply && {
+            onUpgrade: () =>
+              requestUpgradeDialog(
+                {
+                  kind: "own-key",
+                  key: `own-key-card:${runId}:${Date.now()}`,
+                  threadId: session.threadId,
+                  pendingText: lastUserText(session.hostStore.state.messages),
+                  ownKey: failure,
+                  resume,
+                },
+                true
+              ),
+          })}
+        />
+      ) : (
+        <GroupCard title={title}>
+          <div className="text-muted-foreground flex flex-col gap-1 p-3 text-sm">
+            <p data-slot="own-key-why">{why}</p>
+            <p>{t("ownKey.paidBody")}</p>
+          </div>
+          <div className="flex flex-wrap gap-2 p-3">
             <Button
               size="sm"
               data-action="open-abacus-agent"
@@ -428,9 +465,19 @@ const OwnKeyCard = ({
             >
               {t("ownKey.openAgent")}
             </Button>
-          )}
-        </div>
-      </GroupCard>
+            {pickModel && (
+              <Button
+                size="sm"
+                variant="secondary"
+                data-action="pick-model"
+                onClick={(event) => openModelPicker(event.currentTarget)}
+              >
+                {t("outcome.unavailable.pickModel")}
+              </Button>
+            )}
+          </div>
+        </GroupCard>
+      )}
     </div>
   );
 };
@@ -477,14 +524,7 @@ const PaymentCard = ({ lapsed }: { lapsed: boolean }) => {
               size="sm"
               variant="secondary"
               data-action="switch-model"
-              onClick={(event) =>
-                event.currentTarget
-                  .closest('[data-slot="chat-view"]')
-                  ?.querySelector<HTMLButtonElement>(
-                    '[data-slot="chat-model-picker"]'
-                  )
-                  ?.click()
-              }
+              onClick={(event) => openModelPicker(event.currentTarget)}
             >
               {t("chat.error.switchModel")}
             </Button>
@@ -813,13 +853,7 @@ const CutOffError = ({
         })}
         {...(canReply &&
           composer.model != null && {
-            onPickModel: (from: HTMLElement) =>
-              from
-                .closest('[data-slot="chat-view"]')
-                ?.querySelector<HTMLButtonElement>(
-                  '[data-slot="chat-model-picker"]'
-                )
-                ?.click(),
+            onPickModel: openModelPicker,
           })}
       />
     </div>
@@ -851,6 +885,7 @@ export const ErrorCard = ({
   const { t } = useTranslation();
   const { session, composer, runtime, skin, slots } = useChatView();
   const resume = useUpgradeResume();
+  const switchToAbacus = useSwitchToAbacus();
   const [accountTier, setAccountTier] =
     useState<NonNullable<ErrorCardProps["tier"]>>("unknown");
   useEffect(() => {
@@ -945,7 +980,15 @@ export const ErrorCard = ({
     ownKey != null &&
     !(ownKey.cause === "network" && globalThis.navigator?.onLine === false)
   )
-    return <OwnKeyCard failure={ownKey} tier={tier} runId={outcome.runId} />;
+    return (
+      <OwnKeyCard
+        failure={ownKey}
+        tier={tier}
+        runId={outcome.runId}
+        credits={actions.some((action) => action.type === "switch-to-abacus")}
+        latest={latest}
+      />
+    );
   if (unavailable != null)
     return (
       <div
@@ -986,13 +1029,7 @@ export const ErrorCard = ({
             })}
           {...(composer.model != null &&
             canReply && {
-              onPickModel: (from: HTMLElement) =>
-                from
-                  .closest('[data-slot="chat-view"]')
-                  ?.querySelector<HTMLButtonElement>(
-                    '[data-slot="chat-model-picker"]'
-                  )
-                  ?.click(),
+              onPickModel: openModelPicker,
             })}
           {...(canReply &&
             paying && {
@@ -1172,6 +1209,10 @@ export const ErrorCard = ({
     );
   }
   const connection = error.code === "network_unreachable";
+  // RouteLLM - Open is the switch; the picker beside it is the other way on.
+  const switchOffered = actions.some(
+    (action) => action.type === "switch-to-abacus"
+  );
   const buttons = actions.flatMap((action, index) => {
     switch (action.type) {
       case "retry":
@@ -1202,22 +1243,9 @@ export const ErrorCard = ({
                 key={index}
                 variant="secondary"
                 data-action="switch-to-abacus"
-                onClick={() =>
-                  void (async () => {
-                    await composer.onResumeOnFreePool?.();
-                    await session.retry(
-                      {
-                        model: OPENLLM_ID,
-                        ...(composer.fixedMode
-                          ? { mode: composer.fixedMode }
-                          : {}),
-                      },
-                      t("workspace.retryMessage")
-                    );
-                  })().catch(() => {})
-                }
+                onClick={switchToAbacus}
               >
-                {t("outcome.action.switchToAbacus")}
+                {t("outcome.unavailable.switch")}
               </Button>,
             ]
           : [];
@@ -1252,16 +1280,13 @@ export const ErrorCard = ({
                   key={index}
                   variant="secondary"
                   data-action="switch-model"
-                  onClick={(event) =>
-                    event.currentTarget
-                      .closest('[data-slot="chat-view"]')
-                      ?.querySelector<HTMLButtonElement>(
-                        '[data-slot="chat-model-picker"]'
-                      )
-                      ?.click()
-                  }
+                  onClick={(event) => openModelPicker(event.currentTarget)}
                 >
-                  {t("chat.error.switchModel")}
+                  {t(
+                    switchOffered
+                      ? "outcome.unavailable.pickModel"
+                      : "chat.error.switchModel"
+                  )}
                 </Button>,
               ]
             : [];
@@ -1277,13 +1302,7 @@ export const ErrorCard = ({
                   else if (action.type === "switch-model") {
                     if (action.model != null)
                       composer.model?.onChange(action.model);
-                    else
-                      event.currentTarget
-                        .closest('[data-slot="chat-view"]')
-                        ?.querySelector<HTMLButtonElement>(
-                          '[data-slot="chat-model-picker"]'
-                        )
-                        ?.click();
+                    else openModelPicker(event.currentTarget);
                   } else if (action.type === "upgrade-abacus")
                     void runtime.host.openUpgrade("chat_notice");
                   else if (action.link != null)
@@ -1368,6 +1387,30 @@ export const ErrorCard = ({
       {buttons.length > 0 ? (
         <div className="flex flex-wrap gap-2 ps-6">{buttons}</div>
       ) : null}
+      {canReply && actions.some((action) => action.type === "plan-offer") && (
+        <div className="ps-6">
+          <PlanOffer
+            host={runtime.host}
+            paid={paying}
+            onUpgrade={() =>
+              requestUpgradeDialog(
+                {
+                  kind: "credits",
+                  key: `plan-offer:${outcome.runId}:${Date.now()}`,
+                  threadId: session.threadId,
+                  pendingText: lastUserText(session.hostStore.state.messages),
+                  resume,
+                },
+                true
+              )
+            }
+            {...(paying && {
+              onTopUp: paidCheckout.topUp,
+              onNextPlan: paidCheckout.nextPlan,
+            })}
+          />
+        </div>
+      )}
     </div>
   );
 };
@@ -1410,6 +1453,10 @@ export const NoticeRow = ({
     notice.name === "abacus.notice" && notice.value.kind === "foreign";
   const historyPath =
     typeof notice.value.path === "string" ? notice.value.path : null;
+  // The agent moved the message to RouteLLM - Open: the line in the app's words.
+  const moved = actions.find(
+    (action) => action.type === MOVED_TO_ABACUS_ACTION
+  );
   const message = tooLarge
     ? t("chat.notice.historyTooLarge", {
         size: formatBytes(Number(notice.value.size ?? 0)),
@@ -1417,7 +1464,9 @@ export const NoticeRow = ({
       })
     : foreign
       ? t("chat.notice.historyForeign")
-      : String(notice.value.message ?? "");
+      : moved != null
+        ? ownKeyMovedLine(moved, t)
+        : String(notice.value.message ?? "");
   return (
     <Marker
       variant="border"
@@ -1482,13 +1531,7 @@ export const NoticeRow = ({
               else if (action.type === "switch-model") {
                 if (action.model != null)
                   composer.model?.onChange(action.model);
-                else
-                  event.currentTarget
-                    .closest('[data-slot="chat-view"]')
-                    ?.querySelector<HTMLButtonElement>(
-                      '[data-slot="chat-model-picker"]'
-                    )
-                    ?.click();
+                else openModelPicker(event.currentTarget);
               } else if (action.type === "upgrade-abacus")
                 void runtime.host.openUpgrade("chat_notice");
               else if (action.link != null)

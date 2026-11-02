@@ -322,6 +322,14 @@ const OWN_KEY_DETAIL =
   "429: You exceeded your current quota, please check your plan and billing details.";
 const OWN_KEY_LINE =
   "Your Google Gemini key hit its quota. Switch to a different model, or check the key's plan.";
+const OWN_KEY_GONE = {
+  type: "own-key-unavailable",
+  provider: "nvidia",
+  cause: "gone",
+  model: "nvidia/moonshotai/kimi-k3",
+  label: "Kimi K3",
+  free: true,
+};
 const OUTCOME_ERRORS: Record<
   string,
   {
@@ -348,6 +356,21 @@ const OUTCOME_ERRORS: Record<
       { type: "fix-key", provider: "gemini" },
       { type: "upgrade-abacus", cause: "exhausted" },
     ],
+  },
+  // Another provider's free model gone (NVIDIA's 410), credits left and not.
+  "own-key-gone": {
+    message:
+      "The model provider had a problem (410). Try again, or switch to a different model.",
+    cause: "model_unavailable",
+    detail: "410 status code (no body)",
+    actions: [OWN_KEY_GONE, { type: "switch-to-abacus" }],
+  },
+  "own-key-gone-abacus-out": {
+    message:
+      "The model provider had a problem (410). Try again, or switch to a different model.",
+    cause: "model_unavailable",
+    detail: "410 status code (no body)",
+    actions: [OWN_KEY_GONE],
   },
   "credits-exhausted": {
     message:

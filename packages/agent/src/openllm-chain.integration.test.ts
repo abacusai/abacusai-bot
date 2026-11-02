@@ -454,3 +454,233 @@ describe("the credit wall, around the pool", () => {
     ).toBe(false);
   }, 60_000);
 });
+
+describe("a model the user picked off Abacus that fails", () => {
+  const KIMI = SOURCES.nvidia.models[0];
+  const reset = (): void => {
+    behaviour.clear();
+    noteCreditsBack();
+    for (const file of ["openllm-cooldowns.json", "openllm-quota.json"])
+      fs.rmSync(path.join(home, file), { force: true });
+    fs.writeFileSync(
+      path.join(home, "config.json"),
+      JSON.stringify({ defaultModel: "openllm/auto", customProviders: [] })
+    );
+    connect("nvidia");
+  };
+  const pinned = async (): Promise<Chat> => {
+    const chat = new Chat();
+    await chat.session.start();
+    await chat.session.setModel(`nvidia/${KIMI}`);
+    return chat;
+  };
+  const moves = (chat: Chat) =>
+    chat
+      .agent("notification")
+      .filter((notice) =>
+        (notice.actions ?? []).some(
+          (action) => action.type === "moved-to-abacus"
+        )
+      );
+
+  it.each([
+    ["gone", { fail: { status: 410, message: "status code (no body)" } }],
+    ["rate limited", { fail: { status: 429, message: "Rate limit reached." } }],
+    ["down", { fail: { status: 503, message: "Service Unavailable" } }],
+    ["unclassified", { fail: { status: 400, message: "Unexpected reply" } }],
+    ["a refused key", { fail: { status: 401, message: "Invalid API Key" } }],
+    ["a spent key", { fail: { status: 402, message: "Insufficient Balance" } }],
+    ["an empty reply", { say: "" }],
+    ["a stall", { stall: {} }],
+  ] as Array<[string, Reply]>)(
+    "%s with Abacus credits left: the message runs on RouteLLM - Open, the chat moves there and says so",
+    async (_name, failure) => {
+      reset();
+      behaviour.set(KIMI, failure);
+      // The stall window, short enough for a test.
+      process.env.ABACUSAI_BOT_MODEL_STALL_MS = "700";
+      const chat = await pinned();
+
+      const turn = await chat.turn("a task");
+      delete process.env.ABACUSAI_BOT_MODEL_STALL_MS;
+      expect(turn.models[0]).toBe(KIMI);
+      expect(turn.models.slice(-2)).toEqual([ABACUS_MODEL, ABACUS_MODEL]);
+      expect(turn.reply).toContain(`answered on ${ABACUS_MODEL}`);
+      expect(turn.error).toBeUndefined();
+      expect(moves(chat)).toHaveLength(1);
+      expect(moves(chat)[0]?.actions?.[0]).toMatchObject({
+        type: "moved-to-abacus",
+        provider: "nvidia",
+        label: KIMI,
+        free: true,
+      });
+      // The chat's model is RouteLLM - Open now (main persists it).
+      expect(chat.agent("model_changed").at(-1)?.model).toBe("openllm/auto");
+      expect(moves(chat)[0]?.actions?.[0]).toMatchObject({
+        target: "RouteLLM - Open",
+      });
+      expect(chat.agent("turn_complete").at(-1)?.outcome).toEqual({
+        kind: "reply",
+      });
+    },
+    30_000
+  );
+
+  it("moves once per message: RouteLLM - Open failing too ends on its own error", async () => {
+    reset();
+    behaviour.set(KIMI, { fail: { status: 410, message: "Gone" } });
+    behaviour.set(ABACUS_MODEL, { fail: { status: 500, message: "Boom" } });
+    const chat = await pinned();
+
+    const turn = await chat.turn("a task");
+    expect(turn.models.slice(0, 2)).toEqual([KIMI, ABACUS_MODEL]);
+    // One move; after it the pool's own rotation decides, as for any turn on it.
+    expect(moves(chat)).toHaveLength(1);
+    expect(turn.error).toBeDefined();
+    // The router's ending, never the picked model's card again.
+    expect(
+      turn.error?.actions?.some(
+        (action) => action.type === "own-key-unavailable"
+      )
+    ).toBe(false);
+  }, 30_000);
+
+  it("a paying plan runs on its own low code router: the chat's model names it, never RouteLLM - Open", async () => {
+    reset();
+    behaviour.set(KIMI, { fail: { status: 410, message: "Gone" } });
+    // A paying catalog lists the standard code router.
+    provider.serveModels([
+      { id: "route-llm-open", pool: [ABACUS_MODEL] },
+      {
+        id: ABACUS_MODEL,
+        display_name: "Abacus Open",
+        model_type: "text_generation",
+        context_length: 131_072,
+      },
+      {
+        id: "route-llm-code",
+        display_name: "RouteLLM (Code)",
+        model_type: "text_generation",
+        context_length: 131_072,
+      },
+      {
+        id: "route-llm-code-low",
+        display_name: "RouteLLM (Code, Low)",
+        model_type: "text_generation",
+        context_length: 131_072,
+      },
+    ]);
+    try {
+      const chat = await pinned();
+      const turn = await chat.turn("a task");
+      // The plan's own router, which a paying plan's picker lists.
+      expect(turn.models.slice(-2)).toEqual([
+        "route-llm-code-low",
+        "route-llm-code-low",
+      ]);
+      expect(turn.error).toBeUndefined();
+      expect(chat.agent("model_changed").at(-1)?.model).toBe(
+        "abacus/route-llm-code-low"
+      );
+      expect(moves(chat)[0]?.actions?.[0]).toMatchObject({
+        target: "RouteLLM (Code, Low)",
+      });
+    } finally {
+      provider.serveModels([
+        { id: "route-llm-open", pool: [ABACUS_MODEL] },
+        {
+          id: ABACUS_MODEL,
+          display_name: "Abacus Open",
+          model_type: "text_generation",
+          context_length: 131_072,
+        },
+      ]);
+    }
+  }, 30_000);
+
+  it("out of Abacus credits: no move, the card offers the plan", async () => {
+    reset();
+    behaviour.set(KIMI, { fail: { status: 410, message: "Gone" } });
+    setHostCreditWall({ exhaustedAt: Date.now(), freeLaneChosenAt: null });
+    const chat = await pinned();
+
+    const turn = await chat.turn("a task");
+    expect(turn.models).toEqual([KIMI]);
+    expect(moves(chat)).toHaveLength(0);
+    expect(turn.error?.actions).toEqual([
+      {
+        type: "own-key-unavailable",
+        provider: "nvidia",
+        cause: "gone",
+        model: `nvidia/${KIMI}`,
+        label: KIMI,
+        free: true,
+      },
+    ]);
+    noteCreditsBack();
+  }, 30_000);
+
+  it("signed out: no move, and the card is today's", async () => {
+    reset();
+    behaviour.set(KIMI, { fail: { status: 410, message: "Gone" } });
+    delete process.env.ABACUS_API_KEY;
+    try {
+      const chat = await pinned();
+      const turn = await chat.turn("a task");
+      expect(turn.models).toEqual([KIMI]);
+      expect(moves(chat)).toHaveLength(0);
+      expect(turn.error?.actions).toEqual([{ type: "switch-model" }]);
+    } finally {
+      process.env.ABACUS_API_KEY = "test-abacus-key";
+    }
+  }, 30_000);
+
+  it("in a bot's chat too: the message runs on RouteLLM - Open and the chat is told", async () => {
+    const { BotSession } = await import("./bot/bot-session.js");
+    reset();
+    behaviour.set(KIMI, { fail: { status: 410, message: "Gone" } });
+    const botDir = path.join(home, "bots", "bot-2");
+    fs.mkdirSync(botDir, { recursive: true });
+    process.env.ABACUSAI_BOT_BOT_DIR = botDir;
+    const events: DesktopEvent[] = [];
+    const bot = new BotSession({
+      cwd: fs.mkdtempSync(path.join(os.tmpdir(), "abacusai-bot-chain-bot-")),
+      mode: "yolo",
+      emit: (event: DesktopEvent) => events.push(event),
+    } as ConstructorParameters<typeof BotSession>[0]);
+    const agent = () =>
+      events
+        .filter(
+          (event): event is Extract<DesktopEvent, { type: "event" }> =>
+            event.type === "event"
+        )
+        .map((event) => event.event);
+    try {
+      await bot.start();
+      await bot.setModel(`nvidia/${KIMI}`);
+      const before = provider.calls.length;
+      await bot.send("check my inbox");
+      const deadline = Date.now() + 15_000;
+      while (!agent().some((event) => event.type === "turn_complete")) {
+        if (Date.now() > deadline) throw new Error("turn never completed");
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      const models = provider.calls.slice(before).map((call) => call.model);
+      expect(models[0]).toBe(KIMI);
+      expect(models.at(-1)).toBe(ABACUS_MODEL);
+      expect(agent().some((event) => event.type === "error")).toBe(false);
+      expect(
+        agent().some(
+          (event) =>
+            event.type === "notification" &&
+            (event.actions ?? []).some(
+              (action) => action.type === "moved-to-abacus"
+            )
+        )
+      ).toBe(true);
+    } finally {
+      await bot.stop?.();
+      delete process.env.ABACUSAI_BOT_BOT_DIR;
+    }
+  }, 30_000);
+});

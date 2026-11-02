@@ -4447,12 +4447,19 @@
     }
   },
   "ownKey": {
-    "freeBody": "No separate API bill. Upgrade and keep going on the top models.",
     "notResponding": "{{provider}} isn't responding right now",
     "openAgent": "Open AbacusAI Agent",
     "outOfCredit": "Your {{provider}} key is out of credit",
     "paidBody": "Use it in AbacusAI Agent on the web: the top models are included in your plan.",
-    "rateLimited": "Your {{provider}} key hit its rate limit"
+    "rateLimited": "Your {{provider}} key hit its rate limit",
+    "gone": "{{model}} di {{provider}} sudah tidak tersedia",
+    "noReply": "{{model}} di {{provider}} tidak mengirim balasan",
+    "failed": "{{model}} di {{provider}} tidak dapat menyelesaikan ini",
+    "localServer": "server model lokal Anda",
+    "whyFree": "Model gratis {{provider}} bisa berhenti menjawab atau dihentikan tanpa pemberitahuan.",
+    "whyKey": "{{model}} berjalan dengan kunci {{provider}} milik Anda sendiri, dengan batas dan tagihannya.",
+    "whyLocal": "{{model}} berjalan di server model lokal Anda, yang harus aktif dan dapat dijangkau.",
+    "moved": "{{model}} di {{provider}} tidak tersedia, jadi saya mengalihkan chat ini ke {{target}}."
   },
   "outcome": {
     "wall": {
@@ -4507,8 +4514,7 @@
       "newChat": "Chat baru",
       "fixKey": "Periksa kunci",
       "viewDetails": "Lihat detail",
-      "tryAgain": "Coba lagi",
-      "switchToAbacus": "Beralih ke Abacus (RouteLLM - Open)"
+      "tryAgain": "Coba lagi"
     },
     "channel": {
       "wall": "Aku berhenti sementara karena kredit gratis kamu sudah habis.",
@@ -4532,6 +4538,14 @@
       "ownKeyRejected": "Kunci {{provider}} kamu ditolak — tidak valid atau sudah kedaluwarsa. Perbaiki di aplikasi, di Pengaturan → Model.",
       "ownKeyWeb": "Pakai di AbacusAI Agent di web: {{link}}",
       "ownKeySwitch": "Beralih ke Abacus.AI di pemilih model aplikasi untuk melanjutkan dengan kredit Abacus gratis Anda.",
+      "ownKeyGone": "{{model}} di {{provider}} sudah tidak tersedia.",
+      "ownKeyNoReply": "{{model}} di {{provider}} tidak mengirim balasan.",
+      "ownKeyFailed": "{{model}} di {{provider}} tidak dapat menyelesaikannya.",
+      "localServer": "server model lokal Anda",
+      "ownKeyWhyFree": "Model gratis {{provider}} bisa berhenti menjawab atau dihentikan tanpa pemberitahuan.",
+      "ownKeyWhyKey": "Ini berjalan dengan kunci {{provider}} milik Anda sendiri.",
+      "ownKeyWhyLocal": "Ini berjalan di server model lokal Anda, yang harus aktif dan dapat dijangkau.",
+      "ownKeyMoved": "{{model}} di {{provider}} tidak tersedia, jadi saya mengalihkan chat ini ke {{target}}.",
       "busy": "Model gratis sedang sibuk.",
       "connection": "Koneksinya terputus, jadi aku tidak bisa menyelesaikannya. Coba lagi sebentar lagi.",
       "notSignedIn": "Aplikasi desktop sedang tidak masuk ke Abacus.AI. Buka aplikasinya dan masuk, lalu kirim pesan lagi.",

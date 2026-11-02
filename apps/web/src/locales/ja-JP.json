@@ -4447,12 +4447,19 @@
     }
   },
   "ownKey": {
-    "freeBody": "No separate API bill. Upgrade and keep going on the top models.",
     "notResponding": "{{provider}} isn't responding right now",
     "openAgent": "Open AbacusAI Agent",
     "outOfCredit": "Your {{provider}} key is out of credit",
     "paidBody": "Use it in AbacusAI Agent on the web: the top models are included in your plan.",
-    "rateLimited": "Your {{provider}} key hit its rate limit"
+    "rateLimited": "Your {{provider}} key hit its rate limit",
+    "gone": "{{provider}} の {{model}} は利用できなくなりました",
+    "noReply": "{{provider}} の {{model}} から応答がありませんでした",
+    "failed": "{{provider}} の {{model}} は処理を完了できませんでした",
+    "localServer": "ローカルのモデルサーバー",
+    "whyFree": "{{provider}} の無料モデルは、予告なく応答しなくなったり提供終了になったりすることがあります。",
+    "whyKey": "{{model}} はご自身の {{provider}} キーで動いており、そのキーの上限と請求が適用されます。",
+    "whyLocal": "{{model}} はローカルのモデルサーバーで動いており、サーバーが起動していて接続できる必要があります。",
+    "moved": "{{provider}} の {{model}} が利用できないため、このチャットを {{target}} に切り替えました。"
   },
   "outcome": {
     "wall": {
@@ -4507,8 +4514,7 @@
       "newChat": "新しいチャット",
       "fixKey": "キーを確認",
       "viewDetails": "詳細を表示",
-      "tryAgain": "再試行",
-      "switchToAbacus": "Abacus に切り替える（RouteLLM - Open）"
+      "tryAgain": "再試行"
     },
     "channel": {
       "wall": "無料クレジットを使い切ったため、一時停止しました。",
@@ -4532,6 +4538,14 @@
       "ownKeyRejected": "{{provider}} のキーが拒否されました。無効か期限切れです。アプリの 設定 → モデル で修正してください。",
       "ownKeyWeb": "Web 版 AbacusAI Agent で使えます: {{link}}",
       "ownKeySwitch": "アプリのモデル選択で Abacus.AI に切り替えると、無料の Abacus クレジットで続けられます。",
+      "ownKeyGone": "{{provider}} の {{model}} は利用できなくなりました。",
+      "ownKeyNoReply": "{{provider}} の {{model}} から応答がありませんでした。",
+      "ownKeyFailed": "{{provider}} の {{model}} は処理を完了できませんでした。",
+      "localServer": "ローカルのモデルサーバー",
+      "ownKeyWhyFree": "{{provider}} の無料モデルは、予告なく応答しなくなったり提供終了になったりすることがあります。",
+      "ownKeyWhyKey": "ご自身の {{provider}} キーで動いています。",
+      "ownKeyWhyLocal": "ローカルのモデルサーバーで動いており、サーバーが起動していて接続できる必要があります。",
+      "ownKeyMoved": "{{provider}} の {{model}} が利用できないため、このチャットを {{target}} に切り替えました。",
       "busy": "無料モデルは現在混み合っています。",
       "connection": "接続が切れたため、完了できませんでした。少し待ってからもう一度お試しください。",
       "notSignedIn": "デスクトップアプリが現在 Abacus.AI にサインインしていません。アプリを開いてサインインし、もう一度メッセージを送ってください。",

@@ -902,12 +902,375 @@ describe("the turn's outcome card", () => {
     );
     expect(screen.getByText("Check the key")).toBeTruthy();
     fireEvent.click(
-      screen.getByRole("button", { name: "Switch to Abacus (RouteLLM - Open)" })
+      screen.getByRole("button", { name: "Switch to RouteLLM - Open" })
     );
     await waitFor(() => expect(relay.stats.send).toHaveLength(1));
     expect(relay.stats.send[0]!.forwardedProps).toMatchObject({
       model: OPENLLM_ID,
     });
+  });
+
+  // NVIDIA's free Kimi K3 gone (410), as the agent ends that turn.
+  const offAbacusError = (credits: boolean, provider = "nvidia") => ({
+    message: "This model couldn't take the request. Pick a different model.",
+    cause: "model_unavailable",
+    detail: "410 status code (no body)",
+    actions: [
+      {
+        type: "own-key-unavailable",
+        provider,
+        cause: "gone",
+        model: `${provider}/moonshotai/kimi-k3`,
+        label: "Kimi K3",
+        free: true,
+      },
+      ...(credits ? [{ type: "switch-to-abacus" }] : []),
+    ],
+  });
+  const offAbacus = (credits: boolean, provider = "nvidia") =>
+    failed(offAbacusError(credits, provider));
+  // The turn fails while the chat is on screen, as UpgradeTriggers sees it.
+  const failsLive = async (
+    credits: boolean,
+    error: Record<string, unknown> = offAbacusError(credits)
+  ) => {
+    const relay = new FakeRelay();
+    relay.emitAll([
+      ...b.sessionReady(),
+      b.runStarted("r1"),
+      ...b.text("u1", "user", "fix the bug"),
+    ]);
+    // A free account on NVIDIA's model: the composer's RouteLLM notice is up for it.
+    const model = {
+      value: "nvidia/moonshotai/kimi-k3",
+      label: "Kimi K3",
+      onChange: () => {},
+      groups: [],
+      otherProvider: {
+        model: "Kimi K3",
+        provider: "NVIDIA NIM",
+        free: true,
+        onSwitch: () => {},
+      },
+    };
+    current = await renderRelay(relay, "session", { model }, {}, host("free"));
+    relay.emitAll([b.runError("r1", error as never)]);
+    return screen.findByText(
+      error.cause === "model_unavailable"
+        ? "Kimi K3 on NVIDIA NIM isn't available anymore"
+        : String(error.message)
+    );
+  };
+  const notice = () =>
+    document.querySelector('[data-slot="other-provider-notice"]');
+
+  it("the RouteLLM notice stays down behind a card that offers the switch or the plan; the dialog opens only out of credits", async () => {
+    await failsLive(true);
+    expect(upgradeDialogStore.state.request).toBeNull();
+    // One offer on screen: the card's, never the composer's beside it.
+    expect(notice()).toBeNull();
+    await current?.cleanup();
+    // A turn that ended on a plain error: the notice is the way on.
+    await failsLive(true, {
+      message: "Something odd happened.",
+      code: "turn_failed",
+      actions: [{ type: "switch-model" }],
+    });
+    await waitFor(() => expect(notice()).not.toBeNull());
+    await current?.cleanup();
+    await failsLive(false);
+    await waitFor(() =>
+      expect(upgradeDialogStore.state.request).toMatchObject({
+        kind: "own-key",
+        ownKey: { provider: "nvidia", cause: "gone", label: "Kimi K3" },
+      })
+    );
+    // The full-offer card stands alone: no RouteLLM notice under it.
+    expect(notice()).toBeNull();
+    closeUpgradeDialog();
+  });
+
+  it("a failure that ends before the view catches up still opens the dialog once, naming the model", async () => {
+    // A chat of its own: the dialog is offered once per chat.
+    const relay = new FakeRelay({ threadId: "t-fast" });
+    relay.emitAll(b.sessionReady());
+    const rendered = await renderRelay(relay, "session", {}, {}, host("free"));
+    current = rendered;
+    // The person sends; the provider refuses at once, and the run's end comes
+    // in with a fresh snapshot (main restarted under it), not as a live event.
+    void rendered.runtime.session(relay.threadId).submit("hi");
+    await waitFor(() => expect(relay.stats.send).toHaveLength(1));
+    const runId = relay.stats.send[0]!.runId;
+    relay.setEpoch("epoch-2");
+    relay.faults.subscribe = () => new Error("restarting");
+    relay.dropSubscriptions();
+    relay.emitAll([
+      b.runStarted(runId),
+      ...b.text("u1", "user", "hi"),
+      b.runError(runId, offAbacusError(false) as never),
+    ]);
+    relay.faults.subscribe = undefined;
+    await screen.findByText("Kimi K3 on NVIDIA NIM isn't available anymore");
+    await waitFor(() =>
+      expect(upgradeDialogStore.state.request).toMatchObject({
+        kind: "own-key",
+        ownKey: { provider: "nvidia", cause: "gone", label: "Kimi K3" },
+      })
+    );
+    closeUpgradeDialog();
+  });
+
+  it("a new chat's first message that fails at once still opens the dialog, once its hand-off lands", async () => {
+    // The run already ended when the view loads: it comes in with the snapshot.
+    const relay = new FakeRelay({ threadId: "t-first" });
+    relay.emitAll([
+      ...b.sessionReady(),
+      b.runStarted("run-first"),
+      ...b.text("u1", "user", "hi"),
+      b.runError("run-first", offAbacusError(false) as never),
+    ]);
+    const rendered = await renderRelay(relay, "session", {}, {}, host("free"));
+    current = rendered;
+    await screen.findByText("Kimi K3 on NVIDIA NIM isn't available anymore");
+    expect(upgradeDialogStore.state.request).toBeNull();
+    // The new chat's start hand-off names the run this window sent.
+    rendered.runtime.session(relay.threadId).noteSent("run-first");
+    await waitFor(() =>
+      expect(upgradeDialogStore.state.request).toMatchObject({
+        kind: "own-key",
+        ownKey: { provider: "nvidia", cause: "gone", label: "Kimi K3" },
+      })
+    );
+    closeUpgradeDialog();
+  });
+
+  it("a free provider's model that is gone says what failed and why, and switches to RouteLLM - Open while credits are left", async () => {
+    const relay = offAbacus(true);
+    current = await renderRelay(relay, "session", {}, {}, host("free"));
+    const title = await screen.findByText(
+      "Kimi K3 on NVIDIA NIM isn't available anymore"
+    );
+    const card = title.closest('[data-slot="error-card"]') as HTMLElement;
+    expect(card.getAttribute("data-variant")).toBe("own-key");
+    expect(
+      within(card).getByText(
+        "NVIDIA NIM's free models can stop answering or be retired without notice. Your message is kept."
+      )
+    ).toBeTruthy();
+    // Plain words: never "not Abacus", never the provider's raw error.
+    expect(card.textContent).not.toMatch(/not (?:from |on )?Abacus/);
+    expect(within(card).queryByText("410 status code (no body)")).toBeNull();
+    expect(within(card).queryByRole("button", { name: /Upgrade/ })).toBeNull();
+    expect(relay.stats.send).toHaveLength(0);
+    fireEvent.click(
+      within(card).getByRole("button", { name: "Switch to RouteLLM - Open" })
+    );
+    await waitFor(() => expect(relay.stats.send).toHaveLength(1));
+    expect(relay.stats.send[0]!.forwardedProps).toMatchObject({
+      model: OPENLLM_ID,
+    });
+  });
+
+  it("the same failure with the credits used up carries the plan's whole offer, never the switch", async () => {
+    current = await renderRelay(
+      offAbacus(false),
+      "session",
+      {},
+      {},
+      host("free")
+    );
+    const title = await screen.findByText(
+      "Kimi K3 on NVIDIA NIM isn't available anymore"
+    );
+    const card = title.closest('[data-slot="error-card"]') as HTMLElement;
+    expect(
+      within(card).getByText("You've also used your free Abacus credits.")
+    ).toBeTruthy();
+    // The same offer every out-of-credits card shows: plan, price, every line.
+    expect(await within(card).findByText("Basic gets you:")).toBeTruthy();
+    expect(within(card).getByText("Image and video generation")).toBeTruthy();
+    expect(
+      within(card).getByRole("button", { name: "See plans" })
+    ).toBeTruthy();
+    expect(
+      within(card).queryByRole("button", { name: "Switch to RouteLLM - Open" })
+    ).toBeNull();
+    fireEvent.click(
+      within(card).getByRole("button", { name: "Upgrade · $7 first month" })
+    );
+    expect(upgradeDialogStore.state.request).toMatchObject({
+      kind: "own-key",
+      ownKey: { provider: "nvidia", cause: "gone" },
+    });
+    closeUpgradeDialog();
+  });
+
+  it("a paid account keeps AbacusAI Agent on the web, and a local server is named as the user's", async () => {
+    current = await renderRelay(
+      offAbacus(true, "local"),
+      "session",
+      {},
+      {},
+      host("paid")
+    );
+    const title = await screen.findByText(
+      "Kimi K3 on your local model server isn't available anymore"
+    );
+    const card = title.closest('[data-slot="error-card"]') as HTMLElement;
+    expect(
+      within(card).getByText(
+        "Kimi K3 runs on your local model server, which has to be running and reachable."
+      )
+    ).toBeTruthy();
+    expect(
+      within(card).getByRole("button", { name: "Open AbacusAI Agent" })
+    ).toBeTruthy();
+  });
+
+  // A chat that can start anew and pick its model.
+  const chatComposer = {
+    onNewChat: () => {},
+    model: {
+      value: "abacus/claude-sonnet-5",
+      label: "Sonnet 5",
+      onChange: () => {},
+      groups: [],
+    },
+  };
+  // An outgrown chat on a pinned model, as the agent ends it by credits.
+  const tooLong = (way: Array<Record<string, unknown>>) =>
+    failed({
+      message:
+        "This conversation is too long for the model (413). Start a new chat, or switch to a model with a larger context.",
+      cause: "context_too_long",
+      actions: [{ type: "new-chat" }, ...way],
+    });
+
+  it("with Abacus credits left, every card's switch is RouteLLM - Open, the picker beside it", async () => {
+    const relay = tooLong([
+      { type: "switch-to-abacus" },
+      { type: "switch-model" },
+    ]);
+    current = await renderRelay(
+      relay,
+      "session",
+      chatComposer,
+      {},
+      host("free")
+    );
+    const card = (await screen.findByText(/too long for the model/)).closest(
+      '[data-slot="error-card"]'
+    ) as HTMLElement;
+    expect(within(card).getByRole("button", { name: "New chat" })).toBeTruthy();
+    expect(
+      within(card).getByRole("button", { name: "Pick another model" })
+    ).toBeTruthy();
+    expect(
+      within(card).queryByRole("button", { name: "Switch model" })
+    ).toBeNull();
+    fireEvent.click(
+      within(card).getByRole("button", { name: "Switch to RouteLLM - Open" })
+    );
+    await waitFor(() => expect(relay.stats.send).toHaveLength(1));
+    expect(relay.stats.send[0]!.forwardedProps).toMatchObject({
+      model: OPENLLM_ID,
+    });
+  });
+
+  it("with the credits used up, no switch: the card carries the plan's whole offer, whatever failed", async () => {
+    current = await renderRelay(
+      tooLong([{ type: "plan-offer" }]),
+      "session",
+      chatComposer,
+      {},
+      host("free")
+    );
+    const card = (await screen.findByText(/too long for the model/)).closest(
+      '[data-slot="error-card"]'
+    ) as HTMLElement;
+    expect(within(card).getByRole("button", { name: "New chat" })).toBeTruthy();
+    expect(within(card).queryByRole("button", { name: /Switch/ })).toBeNull();
+    expect(await within(card).findByText("Basic gets you:")).toBeTruthy();
+    expect(within(card).getByText("Image and video generation")).toBeTruthy();
+    expect(
+      within(card).getByRole("button", { name: "See plans" })
+    ).toBeTruthy();
+    fireEvent.click(
+      within(card).getByRole("button", { name: "Upgrade · $7 first month" })
+    );
+    expect(upgradeDialogStore.state.request).toMatchObject({ kind: "credits" });
+    closeUpgradeDialog();
+  });
+
+  it("signed out or already on RouteLLM - Open, the card keeps its bare switch", async () => {
+    current = await renderRelay(
+      tooLong([{ type: "switch-model" }]),
+      "session",
+      chatComposer,
+      {},
+      host("free")
+    );
+    const card = (await screen.findByText(/too long for the model/)).closest(
+      '[data-slot="error-card"]'
+    ) as HTMLElement;
+    expect(
+      within(card).getByRole("button", { name: "Switch model" })
+    ).toBeTruthy();
+    expect(within(card).queryByText("Switch to RouteLLM - Open")).toBeNull();
+  });
+
+  it("names a model by its own id, never recased", async () => {
+    current = await renderRelay(
+      failed({
+        message: "The model returned an empty reply.",
+        cause: "empty",
+        actions: [
+          {
+            type: "own-key-unavailable",
+            provider: "fake",
+            cause: "no_reply",
+            model: "fake/fake-1",
+            label: "fake-1",
+          },
+        ],
+      }),
+      "session",
+      {},
+      {},
+      host("free")
+    );
+    expect(
+      await screen.findByText("fake-1 on Fake sent no reply")
+    ).toBeTruthy();
+  });
+
+  it("a message moved to RouteLLM - Open says so in one line, in the app's words", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll([
+      ...b.sessionReady(),
+      b.runStarted("r1"),
+      ...b.text("u1", "user", "fix the bug"),
+      b.custom("agent.notification", {
+        message:
+          "Kimi K3 on NVIDIA isn't available, so this ran on RouteLLM - Open.",
+        severity: "info",
+        actions: [
+          {
+            type: "moved-to-abacus",
+            provider: "nvidia",
+            model: "nvidia/moonshotai/kimi-k3",
+            label: "Kimi K3",
+            free: true,
+          },
+        ],
+      }),
+    ]);
+    current = await renderRelay(relay, "session", {}, {}, host("free"));
+    expect(
+      await screen.findByText(
+        "Kimi K3 on NVIDIA NIM isn't available, so I switched this chat to RouteLLM - Open."
+      )
+    ).toBeTruthy();
   });
 
   const unavailable = (cause: string, out = false) =>
@@ -1022,7 +1385,7 @@ describe("the turn's outcome card", () => {
     closeUpgradeDialog();
   });
 
-  it("a model the plan does not include leads with RouteLLM - Open, the upgrade a link beside it", async () => {
+  it("a model the plan does not include leads with RouteLLM - Open, the plan's whole offer beside it", async () => {
     current = await renderRelay(
       unavailable("plan"),
       "session",
@@ -1042,8 +1405,14 @@ describe("the turn's outcome card", () => {
     expect(
       within(card).getByRole("button", { name: "Switch to RouteLLM - Open" })
     ).toBeTruthy();
+    // The plan's whole offer beside it, priced, never a bare link.
+    expect(within(card).getByText("Basic gets you:")).toBeTruthy();
+    expect(within(card).getByText("Image and video generation")).toBeTruthy();
     expect(
-      within(card).getByRole("button", { name: "Upgrade to Basic" })
+      within(card).getByRole("button", { name: "Upgrade · $7 first month" })
+    ).toBeTruthy();
+    expect(
+      within(card).getByRole("button", { name: "See plans" })
     ).toBeTruthy();
   });
 
