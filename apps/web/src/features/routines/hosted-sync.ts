@@ -76,7 +76,7 @@ export const showSaveFailure = (
                 ? platformSystem(transport.client).openExternal({
                     url: refusal.upgradeUrl,
                   })
-                : openUpgrade(transport.client)),
+                : openUpgrade(transport.client, "app_routines")),
           },
         }
       : undefined

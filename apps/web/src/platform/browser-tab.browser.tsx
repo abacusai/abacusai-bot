@@ -79,7 +79,7 @@ export const BrowserTab: typeof Native = ({
         </div>
         <div className="flex flex-wrap justify-center gap-2">
           {tier === "free" && (
-            <Button onClick={() => void openUpgrade(client)}>
+            <Button onClick={() => void openUpgrade(client, "web_tab")}>
               {t("web.files.browserUpgrade")}
             </Button>
           )}
