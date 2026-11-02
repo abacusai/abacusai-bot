@@ -220,6 +220,11 @@ export class TurnLedger {
     this.closingApp = true;
   }
 
+  /** Whether `appClosing` was called since the last start. */
+  isAppClosing(): boolean {
+    return this.closingApp;
+  }
+
   /** A turn main ended itself; ignored once the turn has closed. */
   end(sessionId: string, kind: TurnEnd, cause?: string): void {
     this.close(sessionId, { kind, ...(cause != null ? { cause } : {}) });

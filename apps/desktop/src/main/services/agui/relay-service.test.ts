@@ -31,6 +31,8 @@ class ScriptedAgent {
   runtime = {};
   incarnation = "inc-1";
   starts = 0;
+  /** `TurnLedger.isAppClosing`: the app is quitting. */
+  appClosing = false;
   /** What the agent answers a command with. */
   answer: (command: Command) => Array<Record<string, unknown>> = () => [];
 
@@ -103,6 +105,7 @@ const host = (agent: ScriptedAgent): AguiRelayHost => ({
   markSent: () => agent.markSent(),
   acceptedMessage: (...args) => agent.acceptedMessage(...args),
   markStopped: () => agent.markStopped(),
+  appClosing: () => agent.appClosing,
 });
 
 const ack = (runId: string, status: string, extra: object = {}) => ({
@@ -1586,10 +1589,43 @@ describe("a run the app closed under", () => {
       expect.objectContaining({
         runId: "app-closed-t-1",
         kind: "error",
-        error: expect.objectContaining({ code: "agent_exit" }),
+        error: expect.objectContaining({ code: "app_closed" }),
         afterMessageId: "u-1",
       }),
     ]);
+  });
+
+  it("is closed as app_closed when its agent stops under the quit, an exit otherwise", async () => {
+    for (const [closing, code] of [
+      [true, "app_closed"],
+      [false, "agent_exit"],
+    ] as const) {
+      const runId = `run-${code}`;
+      const { agent, relay, store } = setup();
+      agent.answer = (command) =>
+        command.type === "run" ? started(runId) : [];
+      await relay.send({
+        threadId: "s1",
+        runId,
+        messages: [userMessage(`u-${code}`, "build the site")],
+      });
+      agent.appClosing = closing;
+      relay.runtimeExited("s1", {
+        origin: { wire: "agui", runtime: agent.runtime },
+        code: 0,
+        signal: null,
+        requested: true,
+      });
+      await vi.waitFor(() =>
+        expect(
+          (
+            store.readCurrentFile("s1")?.runs as
+              | Array<{ runId: string }>
+              | undefined
+          )?.find((run) => run.runId === runId)
+        ).toMatchObject({ kind: "error", error: { code } })
+      );
+    }
   });
 
   it("adds nothing when the turn's run already has its terminal", () => {

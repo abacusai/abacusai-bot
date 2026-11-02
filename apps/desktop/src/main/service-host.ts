@@ -663,6 +663,7 @@ export class ServiceHost {
   readonly aguiRelay: AguiRelayService = new AguiRelayService({
     files: this.threadStore,
     host: {
+      appClosing: () => this.turnLedger.isAppClosing(),
       workspaceOf: (threadId) => {
         const workspaceId =
           this.agentSessionManagerService.get(threadId)?.workspaceId ?? null;
