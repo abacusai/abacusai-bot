@@ -1593,6 +1593,7 @@
       "denied": "Paused: you did not allow it."
     },
     "createdByAgent": "A routine was set up: {{name}}.",
+    "frequent": "Berjalan {{times}} kali sehari, dan setiap jalannya memakai kredit: dengan laju ini, kredit sebulan bisa habis dalam beberapa hari. Jika beberapa kali berturut-turut tidak menemukan hal baru, rutinitas ini berhenti sendiri.",
     "refused": {
       "planInterval": "Di paket gratis, rutinitas yang berjalan sendiri berjalan paling banyak sekali sehari. Upgrade untuk lebih sering.",
       "planKind": "Paket gratis hanya mencakup tugas. Upgrade untuk jenis lainnya.",

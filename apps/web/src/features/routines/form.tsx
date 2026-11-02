@@ -9,6 +9,7 @@ import * as v from "valibot";
 
 import { useAppForm } from "#renderer/components/form-kit";
 import { Segments } from "#renderer/components/form-kit/controls";
+import { FrequentRoutineNote } from "#renderer/components/frequent-routine-note";
 import { SendError } from "#renderer/components/send-error";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { isRpcError } from "#renderer/data/query-client";
@@ -550,6 +551,9 @@ export const RoutineDialog = ({
                             {t("phase5.localTime")}
                           </p>
                         )}
+                        <FrequentRoutineNote
+                          schedule={composeSchedule(d).schedule}
+                        />
                         {preview && (
                           <p aria-live="polite">
                             {t("phase5.next", {

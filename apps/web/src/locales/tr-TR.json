@@ -1593,6 +1593,7 @@
       "denied": "Duraklatıldı: izin vermedin."
     },
     "createdByAgent": "Bir rutin ayarlandı: {{name}}.",
+    "frequent": "Günde {{times}} kez çalışır ve her çalışma kredi harcar: bu hızla bir aylık krediler birkaç günde bitebilir. Art arda birkaç çalışma yeni bir şey bulamazsa kendini duraklatır.",
     "refused": {
       "planInterval": "Ücretsiz planda kendi kendine çalışan bir rutin en fazla günde bir kez çalışır. Yükseltirsen daha sık çalışabilir.",
       "planKind": "Ücretsiz plan yalnızca görevleri içerir. Yükseltirsen diğer türleri de kullanabilirsin.",

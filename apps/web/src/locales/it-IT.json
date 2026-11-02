@@ -1593,6 +1593,7 @@
       "denied": "Paused: you did not allow it."
     },
     "createdByAgent": "A routine was set up: {{name}}.",
+    "frequent": "Viene eseguita {{times}} volte al giorno e ogni esecuzione usa crediti: a questo ritmo i crediti di un mese possono finire in pochi giorni. Se più esecuzioni di fila non trovano nulla di nuovo, si mette in pausa da sola.",
     "refused": {
       "planInterval": "Con il piano gratuito, una routine che si avvia da sola gira al massimo una volta al giorno. Con un upgrade, più spesso.",
       "planKind": "Il piano gratuito include solo attività. Con un upgrade, anche gli altri tipi.",

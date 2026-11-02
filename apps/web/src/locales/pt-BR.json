@@ -1593,6 +1593,7 @@
       "denied": "Paused: you did not allow it."
     },
     "createdByAgent": "A routine was set up: {{name}}.",
+    "frequent": "Executa {{times}} vezes por dia, e cada execução usa créditos: nesse ritmo, os créditos de um mês podem acabar em poucos dias. Se várias execuções seguidas não encontrarem nada novo, ela se pausa sozinha.",
     "refused": {
       "planInterval": "No plano gratuito, uma rotina que roda sozinha roda no máximo uma vez por dia. Fazendo upgrade, com mais frequência.",
       "planKind": "O plano gratuito inclui apenas tarefas. Fazendo upgrade, os outros tipos também.",

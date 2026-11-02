@@ -1593,6 +1593,7 @@
       "denied": "Paused: you did not allow it."
     },
     "createdByAgent": "A routine was set up: {{name}}.",
+    "frequent": "Läuft {{times}}-mal am Tag, und jeder Lauf verbraucht Credits: In diesem Tempo können die Credits eines Monats in wenigen Tagen aufgebraucht sein. Finden mehrere Läufe nacheinander nichts Neues, pausiert sie von selbst.",
     "refused": {
       "planInterval": "Im kostenlosen Plan läuft eine selbstständige Routine höchstens einmal am Tag. Mit einem Upgrade öfter.",
       "planKind": "Der kostenlose Plan enthält nur Aufgaben. Mit einem Upgrade auch die anderen Arten.",

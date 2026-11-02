@@ -270,6 +270,43 @@ describe("the fire prompt", () => {
 
   // One run's wrong refusal was fed to the next as the previous reply, and
   // the next copied it. The reply is a record, and is labelled as one.
+  it("ends an unasked run that finds nothing new on NO_REPLY, and says a quiet run found nothing", () => {
+    const memory = (reply: string) => ({
+      dir: "/x/routines/job-1",
+      notes: noNotes("/x/routines/job-1"),
+      runs: 4,
+      workingDirectory: "/x/routines/job-1",
+      workspaces: [],
+      lastRun: {
+        sessionId: "s",
+        startedAt: "2026-09-04T08:00:00.000Z",
+        endedAt: "2026-09-04T08:01:00.000Z",
+        outcome: "completed" as const,
+        reply,
+      },
+    });
+    const scheduled = buildRoutineFirePrompt(
+      job(),
+      "schedule",
+      null,
+      memory("Checked the inbox.\nNO_REPLY")
+    );
+    expect(scheduled).toContain("and found nothing new.");
+    expect(scheduled).not.toContain("for context only");
+    expect(scheduled).toContain("reply with exactly NO_REPLY");
+    expect(scheduled).toContain("a blocker that run already told them about");
+    // Pressed by the user, or the first run: always an answer.
+    expect(
+      buildRoutineFirePrompt(job(), "manual", null, memory("Two new mails."))
+    ).not.toContain("NO_REPLY");
+    expect(
+      buildRoutineFirePrompt(job(), "schedule", null, {
+        ...memory(""),
+        lastRun: null,
+      })
+    ).not.toContain("NO_REPLY");
+  });
+
   it("hands the previous reply over as a record, not an example", () => {
     const prompt = buildRoutineFirePrompt(job(), "schedule", null, {
       dir: "/x/routines/job-1",

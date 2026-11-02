@@ -287,11 +287,14 @@ import {
 import {
   hasRunInFlight,
   NetworkWaitClock,
+  QUIET_PAUSE_RESULT,
   ranOutOfAbacusCredits,
   ROUTINE_FAILURES_BEFORE_PAUSE,
+  ROUTINE_QUIET_RUNS_BEFORE_PAUSE,
   ROUTINE_RUN_TIMEOUT_MS,
   runOutcomeOf,
   shouldPauseAfter,
+  shouldPauseQuiet,
   stuckRuns,
 } from "./services/agent-tools/routine-guards";
 import { readMigrationMarker } from "./services/agent-tools/routine-migration";
@@ -300,6 +303,7 @@ import { cleanSources, policyFor } from "./services/agent-tools/routine-reach";
 import {
   countRoutineRuns,
   readLastRoutineRun,
+  recentRoutineRuns,
   recordRoutineRun,
   removeRoutineDir,
   routineDir,
@@ -5048,6 +5052,10 @@ export class ServiceHost {
         });
       return;
     }
+    if (outcome === "completed") {
+      this.pauseIfQuietRepeatedly(session.routineId);
+      return;
+    }
     // Offline is not the routine's failure, and a Stop is the user's: no
     // pause, no streak.
     if (outcome !== "failed" || record.kind === "stopped") return;
@@ -5239,6 +5247,24 @@ export class ServiceHost {
       routineId,
       `paused after ${ROUTINE_FAILURES_BEFORE_PAUSE} failed runs in a row`
     );
+  }
+
+  /**
+   * A routine whose runs keep finding nothing new pauses itself: each run
+   * spends credits, and the user is better told once than polled for nothing.
+   */
+  private pauseIfQuietRepeatedly(routineId: string): void {
+    const job = getJob(routineId);
+    if (job == null) return;
+    // Runs before the user last resumed it are the old streak.
+    const resumedAt = job.resumedAt ?? 0;
+    // Read past a few failed or offline runs, which the streak skips over.
+    const runs = recentRoutineRuns(
+      this.routineHome(job),
+      ROUTINE_QUIET_RUNS_BEFORE_PAUSE * 2
+    ).filter((run) => new Date(run.startedAt).getTime() > resumedAt);
+    if (shouldPauseQuiet(runs, job.runs, resumedAt))
+      this.pauseRoutine(routineId, QUIET_PAUSE_RESULT);
   }
 
   private pauseRoutine(routineId: string, reason: string): void {
