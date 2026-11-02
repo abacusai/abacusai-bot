@@ -119,6 +119,15 @@ module.exports = async function afterPack(context) {
         }
       }
       await remove(path.join(parser, "src"));
+      // The one the loader picks. Not in win.signExts: that signs
+      // extraResources as copied, before the other platforms' .so are pruned.
+      if (electronPlatformName === "win32") {
+        await packager.signIf(
+          hasParser
+            ? path.join(prebuilds, selected, "parser.so")
+            : path.join(parser, "parser.so")
+        );
+      }
     }
 
     const vendor = path.join(

@@ -22,6 +22,7 @@ import { newIncarnation } from "./agui/ids.js";
 import { useBundledTools, useScriptRuntime } from "./bundled-tools.js";
 import { applyStoredApiKeys } from "./config.js";
 import { followGithubToken } from "./github-token.js";
+import { probeGrammars } from "./lang.js";
 import { sandboxAvailability } from "./sandbox/index.js";
 import { parseUnattendedPolicy } from "./tool-policy.js";
 import { useTrashLaunchers } from "./trash.js";
@@ -84,6 +85,8 @@ async function main(): Promise<void> {
 
   // Every shell this process starts deletes to the trash (trash.ts).
   useTrashLaunchers();
+  // In the background, so the syntax check has its grammars by the first write.
+  void probeGrammars();
 
   const model = readFlag(argv, "--model");
   const mode = readFlag(argv, "--permission-mode");
