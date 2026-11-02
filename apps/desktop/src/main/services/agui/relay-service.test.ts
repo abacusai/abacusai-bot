@@ -1613,7 +1613,11 @@ describe("a run the app closed under", () => {
       });
       await vi.waitFor(() =>
         expect(
-          store.readCurrentFile("s1")?.runs?.find((run) => run.runId === runId)
+          (
+            store.readCurrentFile("s1")?.runs as
+              | Array<{ runId: string }>
+              | undefined
+          )?.find((run) => run.runId === runId)
         ).toMatchObject({ kind: "error", error: { code } })
       );
     }
