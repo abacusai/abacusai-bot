@@ -43,6 +43,7 @@ describe("the fire prompt", () => {
     const memory = {
       dir: "/r",
       workingDirectory: "/r",
+      notes: noNotes("/r"),
       runs: 1,
       lastRun: {
         sessionId: "s",
