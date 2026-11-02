@@ -314,7 +314,7 @@ describe("the sources beyond Abacus, Gemini and OpenRouter", () => {
     pool.models = [
       choice("mistral/devstral-latest"),
       choice("mistral/mistral-small-latest"),
-      choice("nvidia/z-ai/glm-5.3"),
+      choice("nvidia/moonshotai/kimi-k2.6"),
     ];
     const router = new OpenLlmRouter(
       () => 1_000,
@@ -327,7 +327,7 @@ describe("the sources beyond Abacus, Gemini and OpenRouter", () => {
         provider: "mistral",
         id: "devstral-latest",
       })
-    ).toEqual({ nextId: "nvidia/z-ai/glm-5.3" });
+    ).toEqual({ nextId: "nvidia/moonshotai/kimi-k2.6" });
   });
 
   it("skips a model whose free minute is spent, before its provider refuses it", () => {
@@ -353,8 +353,8 @@ describe("the sources beyond Abacus, Gemini and OpenRouter", () => {
 
   it("counts an account-wide limit across every model on the key", () => {
     pool.models = [
-      choice("nvidia/z-ai/glm-5.3"),
       choice("nvidia/moonshotai/kimi-k2.6"),
+      choice("nvidia/deepseek-ai/deepseek-v4.1-flash"),
       choice("openrouter/big:free"),
     ];
     const router = new OpenLlmRouter(
@@ -364,8 +364,8 @@ describe("the sources beyond Abacus, Gemini and OpenRouter", () => {
     );
 
     for (let call = 0; call < 20; call++) {
-      router.recordReply(reply("nvidia", "z-ai/glm-5.3"));
       router.recordReply(reply("nvidia", "moonshotai/kimi-k2.6"));
+      router.recordReply(reply("nvidia", "deepseek-ai/deepseek-v4.1-flash"));
     }
     expect(router.pick(registry)?.id).toBe("openrouter/big:free");
   });

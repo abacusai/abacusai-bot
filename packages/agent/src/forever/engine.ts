@@ -68,6 +68,7 @@ import {
 import { McpToolSync } from "../mcp/tool-sync.js";
 import { buildMcpToolDefinitions, mcpToolCaller } from "../mcp/tools.js";
 import { MidTaskInbox, type MidTaskMessage } from "../mid-task-inbox.js";
+import { refreshLiveModelIds } from "../model-catalog.js";
 import { MODEL_PATH_RESOURCES } from "../model-path.js";
 import {
   BUSY_RETRY_PROMPT,
@@ -406,6 +407,7 @@ export class ForeverEngine {
     await Promise.all([
       registerAbacusProvider(registry),
       refreshOpenRouterLive(),
+      refreshLiveModelIds(),
     ]);
 
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
@@ -1738,6 +1740,7 @@ export class ForeverEngine {
     await Promise.all([
       registerAbacusProvider(registry),
       refreshOpenRouterLive(),
+      refreshLiveModelIds(),
     ]);
   }
 
