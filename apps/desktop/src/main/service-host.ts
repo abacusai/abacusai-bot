@@ -223,6 +223,7 @@ import {
   nextRun,
   onCronStoreWrite,
   attemptOfSession,
+  holdInterrupted,
   onRoutineRunStarted,
   recordRun,
   type RoutineRunStarted,
@@ -303,7 +304,12 @@ import {
   removeRoutineDir,
   routineDir,
   routineDirInWorkspace,
+  routineNotes,
 } from "./services/agent-tools/routine-runs-store";
+import {
+  connectorActionsOf,
+  RoutineSendLedger,
+} from "./services/agent-tools/routine-send-ledger";
 import { stopAllServed } from "./services/agent-tools/static-server";
 import { WebhookRelay } from "./services/agent-tools/webhook-relay";
 import { WebhookService } from "./services/agent-tools/webhook-service";
@@ -1198,6 +1204,11 @@ export class ServiceHost {
   /** `present_deliverable`'s stored "show this", per conversation. */
   readonly previewTargets = new PreviewTargets();
 
+  /** What each routine fire has sent, kept across restarts: a made-up run never resends. */
+  private readonly routineSends = new RoutineSendLedger({
+    file: () => path.join(abacusBotHome(), "routine-sends.json"),
+  });
+
   private readonly mcpAgentToolsServer = new McpAgentToolsServer({
     skillsService: this.skillsService,
     previewTargets: this.previewTargets,
@@ -1269,6 +1280,7 @@ export class ServiceHost {
     runCronJob: (jobId, trigger) => this.runRoutine(jobId, trigger ?? "manual"),
     routineFireForSession: (sessionId) =>
       this.routineFires.get(sessionId) ?? null,
+    routineSends: this.routineSends,
     // A routine's run is its bot's work too: a routine made from inside one
     // belongs to the bot, and `list` shows the bot its own.
     isAppBotChat: (sessionId) => this.botService.isAppBotChat(sessionId),
@@ -1306,10 +1318,10 @@ export class ServiceHost {
     // A presented local app is loaded once to prove it runs: in a hidden
     // view of the app's own (never a tab in the user's Chrome), or on the
     // hosted computer in its Chromium, in the session's browser queue.
-    checkServedPage: async (url, sessionId) =>
+    checkServedPage: async (url, sessionId, signal) =>
       this.platform === "web-host"
-        ? await this.mcpBrowserServer.checkServedPage(url, sessionId)
-        : ((await this.browserRuntime?.checkServedPage(url)) ?? null),
+        ? await this.mcpBrowserServer.checkServedPage(url, sessionId, signal)
+        : ((await this.browserRuntime?.checkServedPage(url, signal)) ?? null),
     routineEditorFor: (sessionId) =>
       this.agentSessionManagerService.get(sessionId)?.editorFor ?? null,
     isUnattended: (sessionId) => this.isUnattendedSession(sessionId),
@@ -4972,10 +4984,17 @@ export class ServiceHost {
     if (!this.agentSessionManagerService.isRoutineSession(sessionId)) return;
     const outcome = runOutcomeOf(record);
     this.routineNetworkWaits.forget(sessionId);
-    if (!this.agentSessionManagerService.setRunOutcome(sessionId, outcome))
+    // A run the app closed under was restored as interrupted; it is filed here.
+    if (
+      !this.agentSessionManagerService.setRunOutcome(sessionId, outcome) &&
+      outcome !== "interrupted"
+    )
       return;
     const session = this.agentSessionManagerService.get(sessionId);
-    const text = this.routineRunText.get(sessionId);
+    // A restart loses what was streamed; the run's thread kept it.
+    const text =
+      this.routineRunText.get(sessionId)?.join("") ??
+      (outcome === "interrupted" ? this.threadReply(sessionId) : null);
     if (session?.routineId == null || text == null) return;
     const finishedJob = getJob(session.routineId);
     if (finishedJob == null) return;
@@ -4984,8 +5003,21 @@ export class ServiceHost {
       startedAt: session.createdAt,
       endedAt: new Date(record.endedAt).toISOString(),
       outcome,
-      reply: text.join("").trim(),
+      reply: text.trim(),
     });
+    // Not the routine's doing: a scheduled fire is made up once, never paused for.
+    if (outcome === "interrupted") {
+      const attempt = attemptOfSession(session.routineId, sessionId);
+      if (
+        attempt != null &&
+        holdInterrupted(session.routineId, attempt.id, record.startedAt)
+      )
+        this.emitEvent({
+          type: "cronjobs-updated",
+          emittedAt: new Date().toISOString(),
+        });
+      return;
+    }
     // Offline is not the routine's failure, and a Stop is the user's: no
     // pause, no streak.
     if (outcome !== "failed" || record.kind === "stopped") return;
@@ -4993,6 +5025,42 @@ export class ServiceHost {
     if (record.error != null && ranOutOfAbacusCredits(record.error))
       this.pauseRoutine(session.routineId, "paused: out of Abacus.AI credits");
     else this.pauseIfFailingRepeatedly(session.routineId);
+  }
+
+  /**
+   * What a cut-off run did outward: its chat sends (the send ledger) and the
+   * connector actions its thread records, which run past that guard.
+   */
+  private outwardSoFar(
+    fireKey: string,
+    sessionId: string | null
+  ): { done: string[]; unsure: string[] } {
+    const connector = connectorActionsOf(
+      sessionId == null
+        ? []
+        : (this.threadStore.readCurrentFile(sessionId)?.messages ?? [])
+    );
+    return {
+      done: [
+        ...this.routineSends
+          .recipients(fireKey)
+          .map((sent) => `${sent.platform} message to ${sent.to}`),
+        ...connector.done,
+      ],
+      unsure: connector.unsure,
+    };
+  }
+
+  /** The text of a session's answers as its thread kept them. */
+  private threadReply(sessionId: string): string {
+    return (this.threadStore.readCurrentFile(sessionId)?.messages ?? [])
+      .filter((message) => message.role === "assistant")
+      .flatMap((message) =>
+        message.parts.flatMap((part) =>
+          part.type === "text" ? [part.content] : []
+        )
+      )
+      .join("\n\n");
   }
 
   /**
@@ -5693,6 +5761,8 @@ export class ServiceHost {
     // Full access, as a routine on this computer always had, unless the user
     // made this one read-only.
     const unattended = job.access === "unattended";
+    const fireKey = `${jobId}@${fire?.slot ?? attemptId}`;
+    const lastRun = readLastRoutineRun(home);
     const prompt = this.withBotVoice(
       job.botId,
       buildRoutineFirePrompt(job, trigger, payload, {
@@ -5701,13 +5771,26 @@ export class ServiceHost {
         // The project when there is one; the run's cwd is that folder and its
         // records sit inside it. Otherwise the routine's own folder is both.
         workingDirectory: project?.path ?? routineDir(job.id),
+        notes: routineNotes(
+          home,
+          job.id,
+          project == null ? null : { path: project.path, since: job.createdAt }
+        ),
         runs: countRoutineRuns(home),
-        lastRun: readLastRoutineRun(home),
+        lastRun,
         workspaces: workspaces
           .filter(
             (entry) => entry.status !== "deleted" && entry.kind !== "routine"
           )
           .map((entry) => entry.path),
+        ...(trigger === "interrupted"
+          ? {
+              sent: this.outwardSoFar(
+                fireKey,
+                lastRun?.outcome === "interrupted" ? lastRun.sessionId : null
+              ),
+            }
+          : {}),
       })
     );
 
@@ -5738,7 +5821,7 @@ export class ServiceHost {
       emittedAt: new Date().toISOString(),
     });
     this.updateAgentSessionLabel(target, session.id, `Routine: ${job.name}`);
-    this.noteRoutineFire(session.id, `${jobId}@${fire?.slot ?? attemptId}`);
+    this.noteRoutineFire(session.id, fireKey);
 
     // Held to what the user confirmed it may reach; a run that cannot be held
     // does not start in any other mode.

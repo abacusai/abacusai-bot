@@ -1,4 +1,8 @@
-import { httpsUrl, paidCreditsOffer } from "@abacus-ai/contract/billing-plan";
+import {
+  httpsUrl,
+  paidCreditsOffer,
+  type UpgradeSrc,
+} from "@abacus-ai/contract/billing-plan";
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
 
 import type { AppClient } from "#renderer/data/transport/types";
@@ -137,14 +141,19 @@ export const checkPlanNow = (): void => watch?.checkNow();
 /**
  * Upgrade: the account's own upgrade page, asked for at click time (its link
  * is one-time and short-lived), or the plan page when the account has none.
- * The account is then watched until the plan is active, so the app changes
- * the moment the payment lands.
+ * `src` is the screen it is opened from, so the platform can tell which
+ * screens lead to upgrades. The account is then watched until the plan is
+ * active, so the app changes the moment the payment lands.
  */
-export const openUpgrade = async (client: AppClient): Promise<void> => {
+export const openUpgrade = async (
+  client: AppClient,
+  src: UpgradeSrc
+): Promise<void> => {
   await openPendingLink(
     client,
     async () =>
-      (await client.account.upgradeUrl({}).catch(() => null)) ?? ABACUS_PLAN_URL
+      (await client.account.upgradeUrl({ src }).catch(() => null)) ??
+      ABACUS_PLAN_URL
   );
   void watchForPlan(client);
 };

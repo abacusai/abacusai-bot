@@ -53,6 +53,8 @@ export interface ModelChipBinding {
   };
   value: string | null;
   label: string;
+  /** The chat's pinned model, which no connected provider lists now. */
+  unavailable?: boolean;
   onChange(id: string | null): void;
   groups: ModelGroup[];
   layoutId?: string;

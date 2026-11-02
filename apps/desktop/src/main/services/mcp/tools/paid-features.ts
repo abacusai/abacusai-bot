@@ -170,7 +170,7 @@ export function paidFeatureResult(
       [
         `${capitalized(feature.name)} is not on this account's free plan; it comes with the paid plans.${where}`,
         reply === "routine"
-          ? `Say so in the run's result, with this upgrade link as written: ${botUpgradePage("app")}. ${NO_DETOURS}`
+          ? `Say so in the run's result, with this upgrade link as written: ${botUpgradePage("paid_feature")}. ${NO_DETOURS}`
           : `Call billing_plan with upgrade: true, then tell them once, in their language, which plan includes it, its price and their upgrade link, leading with that plan and what it makes. ${NEVER_CANNOT} ${NO_DETOURS}`,
       ].join("\n")
     );
@@ -188,7 +188,7 @@ export function paidFeatureResult(
         (plan?.upgradeInMobileApp === true ? null : botUpgradePage("channel")))
       : plan?.upgradeInMobileApp === true
         ? null
-        : botUpgradePage("app");
+        : botUpgradePage("paid_feature");
   if (link != null) lines.push(`Their upgrade link: ${link}`);
   const offer =
     link == null

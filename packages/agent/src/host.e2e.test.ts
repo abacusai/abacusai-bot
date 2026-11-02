@@ -273,6 +273,36 @@ describe("a turn", () => {
     expect(text).toContain("THE REPLY");
   });
 
+  // Main closes a turn on its idle and sends the next queued message right
+  // then: a second idle for the same turn closed that message's turn as empty.
+  it("says it is done once per turn, also for a message sent on that word", async () => {
+    const host = start(workspace(), ["--permission-mode", "YOLO"]);
+    const statuses = () =>
+      host
+        .agentEvents("status_changed")
+        .map((event) => (event.status === "idle" ? "idle" : "busy"))
+        .filter((status, i, all) => status === "idle" || all[i - 1] !== status);
+
+    provider.script((call) =>
+      call.userText.some((text) => text.includes("second"))
+        ? { say: "SECOND" }
+        : { say: "FIRST" }
+    );
+    host.send({ type: "send", message: "first" });
+    await host.waitFor(
+      (event) =>
+        event.type === "event" &&
+        event.event.type === "status_changed" &&
+        event.event.status === "idle"
+    );
+    host.send({ type: "send", message: "second" });
+    await host.waitFor(() => statuses().length >= 4);
+    // Long enough for a late idle to arrive.
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    expect(statuses()).toEqual(["busy", "idle", "busy", "idle"]);
+  });
+
   it("ignores an empty message rather than spending a call on it", async () => {
     const host = start(workspace(), ["--permission-mode", "YOLO"]);
 

@@ -10,6 +10,7 @@ import {
   APP_DEFAULT_ITEM_ID,
   appDefaultLabel,
   botModelGroups,
+  chatModelChip,
   effectiveModelLabel,
   modelSearchText,
   toggleFavorite,
@@ -216,6 +217,36 @@ describe("the one resolver for display", () => {
     // …and an unconfigured default to the recommended one.
     expect(appDefaultLabel("anthropic/opus", catalog)).toBe("RouteLLM");
     expect(appDefaultLabel(null, [])).toBeNull();
+  });
+
+  it("names a chat's pin, the model it runs, even one no provider lists", () => {
+    const rows: Array<
+      [string | null, string | null, ReturnType<typeof chatModelChip>]
+    > = [
+      // Pinned and served: its label.
+      ["zai/glm", "zai/glm", { label: "GLM", unavailable: false }],
+      // Pinned to a model the provider retired: the pin, not RouteLLM.
+      [
+        "nvidia/moonshotai/kimi-k3",
+        "nvidia/moonshotai/kimi-k3",
+        { label: "nvidia/moonshotai/kimi-k3", unavailable: true },
+      ],
+      // Pinned to a model whose key is gone: the pin, not the default.
+      [
+        "anthropic/opus",
+        "anthropic/opus",
+        { label: "Opus", unavailable: true },
+      ],
+      // Not pinned: what the resolver picks.
+      [null, "anthropic/opus", { label: "RouteLLM", unavailable: false }],
+    ];
+    for (const [pin, requested, chip] of rows)
+      expect(chatModelChip(pin, requested, null, catalog)).toEqual(chip);
+    // No catalog yet: the pin, not judged.
+    expect(chatModelChip("zai/glm", "zai/glm", null, [])).toEqual({
+      label: "zai/glm",
+      unavailable: false,
+    });
   });
 
   it("toggles favourites", () => {

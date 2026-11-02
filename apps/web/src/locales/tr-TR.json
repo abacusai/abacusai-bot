@@ -1509,6 +1509,7 @@
       "create": "Oluşturulunca",
       "schedule": "Zamanlanmış",
       "catch-up": "Telafi",
+      "interrupted": "Kesintiden sonra",
       "webhook": "Webhook",
       "agent": "Ajan tarafından"
     },
@@ -3414,6 +3415,7 @@
       "skipped": "Atlandı",
       "skipped-offline": "Atlandı: çevrimdışı",
       "offline": "Abacus'a ulaşılamadı",
+      "interrupted": "Kesintiye uğradı",
       "unknown": "Bilinmiyor",
       "paused": "Duraklatıldı"
     },

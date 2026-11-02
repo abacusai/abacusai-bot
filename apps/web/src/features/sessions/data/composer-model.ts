@@ -9,7 +9,7 @@ import { useTranslation } from "react-i18next";
 import { confirmFreePoolModel } from "#renderer/components/credits-card/actions";
 import {
   botModelGroups,
-  effectiveModelLabel,
+  chatModelChip,
   otherProviderModel,
 } from "#renderer/components/model-groups";
 import { useModelSetup } from "#renderer/components/model-setup/use-model-setup";
@@ -86,7 +86,16 @@ export const useSessionComposerModel = (
         })
         .isPersisted.promise.catch(failed);
   };
-  const other = otherProviderModel(value, settings.data?.defaultModel, models);
+  const chip = chatModelChip(
+    row?.model,
+    value,
+    settings.data?.defaultModel,
+    models
+  );
+  // An unavailable pin runs as is: no other model to name in its place.
+  const other = chip?.unavailable
+    ? null
+    : otherProviderModel(value, settings.data?.defaultModel, models);
   const setup = useModelSetup({
     models,
     loading: catalog.isPending || settings.isPending,
@@ -147,7 +156,7 @@ export const useSessionComposerModel = (
       onConfigureProviders: () =>
         void navigate({ to: "/settings/models", transition: "settings-in" }),
       ...(creditsTier(account.data) === "free"
-        ? { onUpgrade: () => requestPlanDialog("model-picker") }
+        ? { onUpgrade: () => requestPlanDialog("model_locked") }
         : {}),
       ...(other != null && creditsTier(account.data) === "free"
         ? {
@@ -159,9 +168,8 @@ export const useSessionComposerModel = (
           }
         : {}),
       value,
-      label:
-        effectiveModelLabel(value, settings.data?.defaultModel, models) ??
-        t("sessions.model.choose"),
+      label: chip?.label ?? t("sessions.model.choose"),
+      unavailable: chip?.unavailable === true,
       groups: botModelGroups({
         models,
         favorites: prefs.models.favoriteModelIds,
@@ -180,7 +188,7 @@ export const useSessionComposerModel = (
               ? t("chat.composer.includedInPaid")
               : t("chat.composer.includedIn", { plan }),
         },
-        onUpgrade: () => requestPlanDialog("model-picker"),
+        onUpgrade: () => requestPlanDialog("model_locked"),
         onConnect: (provider) =>
           void navigate({
             to: "/settings/models",

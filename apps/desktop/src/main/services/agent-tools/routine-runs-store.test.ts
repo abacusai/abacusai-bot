@@ -11,6 +11,7 @@ import {
   removeRoutineDir,
   routineDir,
   routineDirInWorkspace,
+  routineNotes,
   routineRunsDir,
 } from "./routine-runs-store";
 
@@ -133,5 +134,100 @@ describe("a routine's folder inside a project", () => {
     // The project itself is untouched.
     expect(fs.existsSync(project)).toBe(true);
     fs.rmSync(project, { recursive: true, force: true });
+  });
+});
+
+/**
+ * Notes live in the routine's records folder, and notes kept anywhere the
+ * routine has kept them before are found, never orphaned or overwritten.
+ */
+describe("a routine's notes", () => {
+  let project: string;
+  beforeEach(() => {
+    project = fs.mkdtempSync(path.join(os.tmpdir(), "routine-notes-"));
+  });
+  afterEach(() => fs.rmSync(project, { recursive: true, force: true }));
+
+  const write = (file: string, text: string, mtimeMs?: number): void => {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, text, "utf8");
+    if (mtimeMs != null) fs.utimesSync(file, mtimeMs / 1000, mtimeMs / 1000);
+  };
+
+  it("says whether its own folder holds notes", () => {
+    const home = routineDir("job-3");
+    expect(routineNotes(home, "job-3", null)).toEqual({
+      path: path.join(home, "notes.md"),
+      kept: false,
+      maybeAt: null,
+    });
+    write(path.join(home, "notes.md"), "seen: 4");
+    expect(routineNotes(home, "job-3", null).kept).toBe(true);
+  });
+
+  // Its records were in the app's folder before it had a project: that folder
+  // is the routine's alone, so its notes move in, once.
+  it("brings in the notes it kept before it had a project", () => {
+    const home = routineDirInWorkspace(project, "job-3");
+    write(path.join(routineDir("job-3"), "notes.md"), "seen: 4");
+
+    const notes = routineNotes(home, "job-3", { path: project, since: 0 });
+
+    expect(notes).toEqual({
+      path: path.join(home, "notes.md"),
+      kept: true,
+      maybeAt: null,
+    });
+    expect(fs.readFileSync(notes.path, "utf8")).toBe("seen: 4");
+    expect(fs.existsSync(path.join(routineDir("job-3"), "notes.md"))).toBe(
+      false
+    );
+    expect(
+      fs.readFileSync(path.join(project, ".abacusai-bot", ".gitignore"), "utf8")
+    ).toBe("*\n");
+  });
+
+  it("never overwrites notes already in its records folder", () => {
+    const home = routineDirInWorkspace(project, "job-3");
+    write(path.join(home, "notes.md"), "current");
+    write(path.join(routineDir("job-3"), "notes.md"), "older");
+
+    expect(routineNotes(home, "job-3", { path: project, since: 0 }).kept).toBe(
+      true
+    );
+    expect(fs.readFileSync(path.join(home, "notes.md"), "utf8")).toBe(
+      "current"
+    );
+    expect(
+      fs.readFileSync(path.join(routineDir("job-3"), "notes.md"), "utf8")
+    ).toBe("older");
+  });
+
+  // A bare "notes.md" once resolved to the project root. That file may be the
+  // user's: it is named when a run could have written it, and never moved.
+  it("names a project-root notes.md it may have written, and leaves it", () => {
+    const home = routineDirInWorkspace(project, "job-3");
+    const rootNotes = path.join(project, "notes.md");
+    const createdAt = Date.parse("2026-10-01T00:00:00.000Z");
+
+    write(rootNotes, "the user's", createdAt - 86_400_000);
+    expect(
+      routineNotes(home, "job-3", { path: project, since: createdAt }).maybeAt
+    ).toBeNull();
+
+    write(rootNotes, "seen: 4", createdAt + 86_400_000);
+    expect(
+      routineNotes(home, "job-3", { path: project, since: createdAt })
+    ).toEqual({
+      path: path.join(home, "notes.md"),
+      kept: false,
+      maybeAt: rootNotes,
+    });
+    expect(fs.readFileSync(rootNotes, "utf8")).toBe("seen: 4");
+
+    write(path.join(home, "notes.md"), "kept");
+    expect(
+      routineNotes(home, "job-3", { path: project, since: createdAt }).maybeAt
+    ).toBeNull();
   });
 });

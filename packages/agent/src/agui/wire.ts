@@ -269,6 +269,8 @@ export type ResponseRejectedReason =
 /** Every CUSTOM name and its value. Nothing else is emitted. */
 export interface CustomValues {
   "message.reactions": { messageId: string; emoji: string; selected: boolean };
+  /** A failed model call's message, superseded by the run asking again. */
+  "message.discarded": { messageId: string };
   "session.ready": {
     model: string;
     mode: string;

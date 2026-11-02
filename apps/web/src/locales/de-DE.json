@@ -1509,6 +1509,7 @@
       "create": "On creation",
       "schedule": "Geplant",
       "catch-up": "Nachgeholt",
+      "interrupted": "Nach Unterbrechung",
       "webhook": "Webhook",
       "agent": "Vom Agenten"
     },
@@ -3414,6 +3415,7 @@
       "skipped": "Skipped",
       "skipped-offline": "Übersprungen: offline",
       "offline": "Abacus nicht erreichbar",
+      "interrupted": "Unterbrochen",
       "unknown": "Unknown",
       "paused": "Paused"
     },

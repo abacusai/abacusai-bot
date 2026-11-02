@@ -307,7 +307,7 @@ describe("a housekeeping permission (finding r2-13)", () => {
     await s.close();
 
     // Nothing from inside the hidden turn reached AG-UI but permissions and
-    // the session-scoped queue the answer updates; after it, only status.
+    // the session-scoped queue the answer updates; after it, only the idle.
     const after = s
       .events()
       .slice(
@@ -321,7 +321,7 @@ describe("a housekeeping permission (finding r2-13)", () => {
         .filter(
           (name) => !name.startsWith("permission.") && name !== "queue.updated"
         )
-    ).toEqual(["agent.status", "agent.status"]);
+    ).toEqual(["agent.status"]);
     expect(
       s
         .events()
@@ -1033,4 +1033,97 @@ describe("a turn the session started itself", () => {
     expect(s.session.sent).toEqual(["and now this"]);
     await s.close();
   });
+});
+
+describe("one idle per turn", () => {
+  // Main closes a turn on its idle and starts the next message on it: a
+  // second idle for the same turn closed that next turn before it began.
+  const statuses = (s: Scripted): string[] =>
+    s
+      .compat()
+      .split("\n")
+      .filter((line) => line.includes('"status_changed"'))
+      .map((line) => (line.includes('"status":"idle"') ? "idle" : "busy"))
+      // One turn's busy statuses as one entry: turn, idle, turn, idle...
+      .filter((status, i, all) => status === "idle" || all[i - 1] !== status);
+
+  const cases: Array<{
+    name: string;
+    turns: string[];
+    script: Parameters<typeof scripted>[0];
+    drive: (s: Scripted) => Promise<void>;
+  }> = [
+    {
+      name: "a reply",
+      turns: ["busy", "idle"],
+      script: async (api) => api.agent({ type: "text_delta", content: "hi" }),
+      drive: async (s) => s.send(run("a", "hello")),
+    },
+    {
+      name: "a message queued behind it, then run as its own turn",
+      turns: ["busy", "idle", "busy", "idle"],
+      script: async (api) => {
+        if (api.index === 1) await api.gate("first");
+        api.agent({ type: "text_delta", content: `reply ${api.index}` });
+      },
+      drive: async (s) => {
+        s.send(run("a", "first"));
+        await s.waitFor(() => s.session.sent.length === 1, "first running");
+        s.send(run("b", "second"));
+        await s.waitFor(() => s.session.steered.length === 1, "queued");
+        s.session.open("first");
+      },
+    },
+    {
+      name: "a turn the session started itself, and the message sent during it",
+      turns: ["busy", "idle", "busy", "idle"],
+      script: async (api) => api.agent({ type: "text_delta", content: "ok" }),
+      drive: async (s) => {
+        s.session.startOwnTurn(async (api) => api.gate("woken"));
+        s.send(run("a", "are you done?"));
+        await s.waitFor(() => s.session.steered.length === 1, "queued");
+        s.session.open("woken");
+      },
+    },
+    {
+      name: "a send that fails before the session says it is done",
+      turns: ["busy", "idle"],
+      script: async () => {
+        throw new Error("boom");
+      },
+      drive: async (s) => s.send(run("a", "hello")),
+    },
+    {
+      name: "a Stop",
+      turns: ["busy", "idle"],
+      script: async (api) => api.gate("never"),
+      drive: async (s) => {
+        s.send(run("a", "hello"));
+        await s.waitFor(() => s.session.sent.length === 1, "running");
+        s.send({ type: "stop" });
+      },
+    },
+  ];
+
+  for (const { name, turns, script, drive } of cases) {
+    it(name, async () => {
+      const s = await scripted(script);
+
+      try {
+        await drive(s);
+        await s.waitFor(
+          () =>
+            statuses(s).filter((status) => status === "idle").length >=
+            turns.filter((t) => t === "idle").length,
+          "every turn's idle"
+        );
+        // Long enough for a late second idle to arrive.
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        expect(statuses(s)).toEqual(turns);
+      } finally {
+        await s.close();
+      }
+    });
+  }
 });

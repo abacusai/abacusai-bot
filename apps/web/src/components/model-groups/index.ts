@@ -110,6 +110,29 @@ export const effectiveModelLabel = (
 };
 
 /**
+ * What a chat's model chip names. A pinned chat runs its pin as is (main's
+ * startAgentSession), so the chip names the pin, unavailable when no
+ * connected provider lists it now; an unpinned one, what the resolver picks.
+ */
+export const chatModelChip = (
+  pin: string | null | undefined,
+  requested: string | null,
+  defaultModel: string | null | undefined,
+  catalog: readonly ModelAvailability[]
+): { label: string; unavailable: boolean } | null => {
+  if (pin == null || pin === "") {
+    const label = effectiveModelLabel(requested, defaultModel, catalog);
+    return label == null ? null : { label, unavailable: false };
+  }
+  // An empty catalog (still loading, unreadable) cannot judge the pin.
+  const row = catalog.find((model) => model.id === pin);
+  return {
+    label: row?.label ?? pin,
+    unavailable: catalog.length > 0 && row?.configured !== true,
+  };
+};
+
+/**
  * The model a chat will run when it comes from another provider (not Abacus,
  * not RouteLLM): its label, its provider's name
  * and whether it is free. Null otherwise.

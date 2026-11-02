@@ -64,7 +64,7 @@ const alwaysOnAction = (
   plan === "free"
     ? {
         label: t("routines.hosted.upgrade"),
-        run: () => void openUpgrade(client),
+        run: () => void openUpgrade(client, "app_routines"),
       }
     : {
         label: t("routines.alwaysOn.openAgent"),

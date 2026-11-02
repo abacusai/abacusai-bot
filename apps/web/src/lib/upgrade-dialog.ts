@@ -1,3 +1,4 @@
+import type { UpgradeSrc } from "@abacus-ai/contract/billing-plan";
 import type { UIMessage } from "@tanstack/ai-client";
 import { Store, useStore } from "@tanstack/react-store";
 
@@ -35,7 +36,20 @@ export interface UpgradeDialogRequest {
   checkout?: boolean;
   /** Sends that message again once the plan is active, on `model` if given. */
   resume?: (model?: string) => Promise<unknown>;
+  /** `plan`: the screen that asked for it (a card, the model picker). */
+  src?: UpgradeSrc;
 }
+
+/** The screens the other kinds stand for: a free account's refusal in a chat. */
+const KIND_SRC: Record<Exclude<UpgradeDialogKind, "plan">, UpgradeSrc> = {
+  credits: "credit_wall",
+  connectors: "connectors",
+  "own-key": "own_key",
+};
+
+/** The screen the dialog's Upgrade is opened from. */
+export const dialogUpgradeSrc = (request: UpgradeDialogRequest): UpgradeSrc =>
+  request.src ?? (request.kind === "plan" ? "app" : KIND_SRC[request.kind]);
 
 interface UpgradeDialogState {
   request: UpgradeDialogRequest | null;
@@ -99,12 +113,12 @@ export const useUpgradeDialogRequest = () =>
   useStore(upgradeDialogStore, (state) => state.request);
 
 /**
- * The person asked to see the plan from `source` (a card, the model picker):
+ * The person asked to see the plan from `src` (a card, the model picker):
  * the dialog with its whole pitch, never a bare page.
  */
-export const requestPlanDialog = (source: string): void =>
+export const requestPlanDialog = (src: UpgradeSrc): void =>
   requestUpgradeDialog(
-    { kind: "plan", key: `plan:${source}:${Date.now()}`, threadId: source },
+    { kind: "plan", key: `plan:${src}:${Date.now()}`, threadId: src, src },
     true
   );
 
@@ -113,14 +127,15 @@ export const requestPlanDialog = (source: string): void =>
  * pitch: checkout opens (call it inside the click: the web build opens its
  * tab there) and the dialog waits for the plan, as after its own Upgrade.
  */
-export const startPlanCheckout = (client: AppClient, source: string): void => {
-  void openUpgrade(client);
+export const startPlanCheckout = (client: AppClient, src: UpgradeSrc): void => {
+  void openUpgrade(client, src);
   requestUpgradeDialog(
     {
       kind: "plan",
-      key: `plan:${source}:${Date.now()}`,
-      threadId: source,
+      key: `plan:${src}:${Date.now()}`,
+      threadId: src,
       checkout: true,
+      src,
     },
     true
   );

@@ -17,4 +17,3 @@
 {"seq":17,"event":{"type":"TEXT_MESSAGE_END","messageId":"<MSG_3>"}}
 {"seq":18,"event":{"type":"CUSTOM","name":"agent.status","value":{"status":"idle"}}}
 {"seq":19,"event":{"type":"RUN_FINISHED","threadId":"t-1","runId":"srv-<1>","outcome":{"type":"success"},"usage":[{"model":"fake-1","inputTokens":0,"cachedInputTokens":0,"cacheWriteInputTokens":0,"outputTokens":0,"totalTokens":0}],"metadata":{"tanstack":{"model":"fake/fake-1","finishReason":"stop"},"abacus":{"turnUsage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":1,"model":"fake-1"},"stopReason":"stop","serverInitiated":true}}}}
-{"seq":20,"event":{"type":"CUSTOM","name":"agent.status","value":{"status":"idle"}}}

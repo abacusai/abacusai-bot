@@ -69,7 +69,7 @@ export const FeatureLimitNotice = ({
         <Button
           variant="secondary"
           className="max-w-full whitespace-normal"
-          onClick={() => void host.openUpgrade()}
+          onClick={() => void host.openUpgrade("feature_limit")}
         >
           {t(action === "upgrade" ? "creditsCard.cta" : "phase5.managePlan")}
         </Button>

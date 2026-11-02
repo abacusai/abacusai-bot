@@ -262,7 +262,7 @@ export const FreeLaneChip = ({ provider }: { provider: string | null }) => {
         variant="link"
         size="xs"
         className="h-auto px-0"
-        onClick={() => void runtime.host.openUpgrade()}
+        onClick={() => void runtime.host.openUpgrade("free_lane")}
       >
         {t("outcome.freeChipUpgrade")}
       </Button>
@@ -466,7 +466,7 @@ const PaymentCard = ({ lapsed }: { lapsed: boolean }) => {
             data-action={lapsed ? "renew" : "open-billing"}
             onClick={() =>
               void (lapsed
-                ? runtime.host.openUpgrade()
+                ? runtime.host.openUpgrade("payment_lapsed")
                 : runtime.host.openExternal(ABACUS_BILLING_URL))
             }
           >
@@ -1285,7 +1285,7 @@ export const ErrorCard = ({
                         )
                         ?.click();
                   } else if (action.type === "upgrade-abacus")
-                    void runtime.host.openUpgrade();
+                    void runtime.host.openUpgrade("chat_notice");
                   else if (action.link != null)
                     void runtime.host.openExternal(action.link);
                 }}
@@ -1490,7 +1490,7 @@ export const NoticeRow = ({
                     )
                     ?.click();
               } else if (action.type === "upgrade-abacus")
-                void runtime.host.openUpgrade();
+                void runtime.host.openUpgrade("chat_notice");
               else if (action.link != null)
                 void runtime.host.openExternal(action.link);
             }}

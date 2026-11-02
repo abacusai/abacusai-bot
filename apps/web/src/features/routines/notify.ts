@@ -20,6 +20,7 @@ export const createFireHandler = (
     if (
       event.trigger !== "schedule" &&
       event.trigger !== "catch-up" &&
+      event.trigger !== "interrupted" &&
       event.trigger !== "webhook"
     )
       return;

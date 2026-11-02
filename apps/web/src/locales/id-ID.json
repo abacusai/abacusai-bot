@@ -1509,6 +1509,7 @@
       "create": "On creation",
       "schedule": "Terjadwal",
       "catch-up": "Susulan",
+      "interrupted": "Setelah terputus",
       "webhook": "Webhook",
       "agent": "Oleh agen"
     },
@@ -3414,6 +3415,7 @@
       "skipped": "Skipped",
       "skipped-offline": "Dilewati: offline",
       "offline": "Tidak dapat menjangkau Abacus",
+      "interrupted": "Terputus",
       "unknown": "Unknown",
       "paused": "Paused"
     },

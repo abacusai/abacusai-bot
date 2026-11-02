@@ -5,6 +5,36 @@
  * and features come from here, never from a string in the app.
  */
 
+/**
+ * Where an upgrade link was opened from, sent with the link so the platform
+ * can tell which screen leads to upgrades. `app` is any screen that does not
+ * say (and what older builds send).
+ */
+export const UPGRADE_SRCS = [
+  "app",
+  "channel",
+  "whatsapp",
+  "credit_wall",
+  "connectors",
+  "own_key",
+  "chat_credits",
+  "chat_notice",
+  "free_lane",
+  "payment_lapsed",
+  "feature_limit",
+  "model_locked",
+  "credits_card",
+  "low_credits",
+  "success_pitch",
+  "paid_feature",
+  "onboarding",
+  "app_routines",
+  "settings",
+  "web_tab",
+] as const;
+
+export type UpgradeSrc = (typeof UPGRADE_SRCS)[number];
+
 /** A plan the account could be on: its price, monthly credits and what it gives. */
 export interface BillingPlanTier {
   plan: string;

@@ -16,6 +16,10 @@ import {
   applyMessageReaction,
   type MessageReactionChange,
 } from "@abacus-ai/contract/message-reactions";
+import {
+  discardedMessageId,
+  withoutMessage,
+} from "@abacus-ai/contract/transcript/discarded-messages";
 /**
  * One thread's side of main's AG-UI relay (agent spec §5.2-§5.3, spec 02
  * §14). Every AG-UI line an agui runtime writes for the thread is applied
@@ -95,6 +99,7 @@ const EXPECTED_ECHOES_KEPT = 256;
 /** CUSTOM names that belong to a run (agent spec §2.3, *R*). */
 const RUN_SCOPED_CUSTOM = new Set([
   "agent.retry",
+  "message.discarded",
   "tool.output",
   "tool.display",
   "queue.steered",
@@ -986,6 +991,13 @@ export class ThreadRelay {
     }
     if (this.#active != null && isRunScoped(event))
       this.#track(this.#active.open, event);
+    // A failed model call the run asked again: its message leaves the transcript.
+    const discarded = discardedMessageId(event);
+    if (discarded != null) {
+      const kept = withoutMessage(this.#processor.getMessages(), discarded);
+      this.#processor.setMessages(kept.messages);
+      if (this.#active != null) this.#active.steps -= kept.toolCalls;
+    }
     if (event.type === "CUSTOM" && event.name === "message.reactions") {
       const change = event.value as MessageReactionChange;
       this.#processor.setMessages(

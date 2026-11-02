@@ -6,6 +6,10 @@ import {
   MESSAGE_REACTION_EMOJIS,
   type MessageReactionChange,
 } from "@abacus-ai/contract/message-reactions";
+import {
+  discardedMessageId,
+  withoutMessage,
+} from "@abacus-ai/contract/transcript/discarded-messages";
 /**
  * `ThreadSession` (spec 02 §3.1-§3.3): one per thread per document. It owns
  * the generations (each: a hydrate snapshot, a fresh receive-only
@@ -1001,6 +1005,12 @@ export class ThreadSession {
         applyMessageReaction(gen.client.getMessages(), change)
       );
     }
+    // As main: a failed model call the run asked again is dropped.
+    const discarded = discardedMessageId(event);
+    if (discarded != null && gen.client)
+      gen.client.setMessagesManually(
+        withoutMessage(gen.client.getMessages(), discarded).messages
+      );
     // Reset only after accepted live progress has actually been consumed.
     if (seq > gen.positions.checkpoint) {
       this.#recoveries = 0;

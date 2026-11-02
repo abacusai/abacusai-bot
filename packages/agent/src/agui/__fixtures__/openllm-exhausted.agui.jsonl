@@ -12,23 +12,26 @@
 {"type":"TEXT_MESSAGE_END","messageId":"<MSG_2>"}
 {"type":"STATE_DELTA","delta":[{"op":"replace","path":"/model","value":"openllm/auto"}]}
 {"type":"CUSTOM","name":"agent.status","value":{"status":"streaming"}}
+{"type":"CUSTOM","name":"message.discarded","value":{"messageId":"<MSG_2>"}}
 {"type":"TEXT_MESSAGE_START","messageId":"<MSG_3>","role":"assistant"}
 {"type":"TEXT_MESSAGE_END","messageId":"<MSG_3>"}
 {"type":"CUSTOM","name":"agent.retry","value":{"attempt":1,"maxAttempts":3,"delayMs":0,"isNetworkError":false}}
 {"type":"STATE_DELTA","delta":[{"op":"replace","path":"/model","value":"openllm/auto"}]}
 {"type":"CUSTOM","name":"agent.status","value":{"status":"streaming"}}
+{"type":"CUSTOM","name":"message.discarded","value":{"messageId":"<MSG_3>"}}
 {"type":"TEXT_MESSAGE_START","messageId":"<MSG_4>","role":"assistant"}
 {"type":"TEXT_MESSAGE_END","messageId":"<MSG_4>"}
 {"type":"CUSTOM","name":"agent.retry","value":{"attempt":2,"maxAttempts":3,"delayMs":0,"isNetworkError":false}}
 {"type":"STATE_DELTA","delta":[{"op":"replace","path":"/model","value":"openllm/auto"}]}
 {"type":"CUSTOM","name":"agent.status","value":{"status":"streaming"}}
+{"type":"CUSTOM","name":"message.discarded","value":{"messageId":"<MSG_4>"}}
 {"type":"TEXT_MESSAGE_START","messageId":"<MSG_5>","role":"assistant"}
 {"type":"TEXT_MESSAGE_END","messageId":"<MSG_5>"}
 {"type":"CUSTOM","name":"agent.retry","value":{"attempt":3,"maxAttempts":3,"delayMs":0,"isNetworkError":false}}
 {"type":"STATE_DELTA","delta":[{"op":"replace","path":"/model","value":"openllm/auto"}]}
 {"type":"CUSTOM","name":"agent.status","value":{"status":"streaming"}}
+{"type":"CUSTOM","name":"message.discarded","value":{"messageId":"<MSG_5>"}}
 {"type":"TEXT_MESSAGE_START","messageId":"<MSG_6>","role":"assistant"}
 {"type":"TEXT_MESSAGE_END","messageId":"<MSG_6>"}
 {"type":"CUSTOM","name":"agent.status","value":{"status":"idle"}}
 {"type":"RUN_ERROR","message":"All free models are busy right now. Try again in a few minutes, or switch to a different model.","code":"turn_failed","usage":[{"model":"big:free","inputTokens":0,"cachedInputTokens":0,"cacheWriteInputTokens":0,"outputTokens":0,"totalTokens":0}],"metadata":{"tanstack":{"threadId":"t-1","runId":"srv-<1>","model":"openllm/auto"},"abacus":{"error":{"message":"All free models are busy right now. Try again in a few minutes, or switch to a different model.","code":"turn_failed","cause":"rate_limited","actions":[{"type":"free-pool-out","cause":"busy"},{"type":"switch-model"}]},"turnUsage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":1,"model":"big:free"}}}}
-{"type":"CUSTOM","name":"agent.status","value":{"status":"idle"}}

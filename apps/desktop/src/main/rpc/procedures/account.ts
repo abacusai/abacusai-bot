@@ -16,8 +16,8 @@ export const accountRouter = impl.account.router({
   vaultUrl: impl.account.vaultUrl.handler(({ context }) =>
     context.deps.host.getVaultManageUrl()
   ),
-  upgradeUrl: impl.account.upgradeUrl.handler(({ context }) =>
-    context.deps.host.getUpgradeUrl()
+  upgradeUrl: impl.account.upgradeUrl.handler(({ input, context }) =>
+    context.deps.host.getUpgradeUrl(input?.src)
   ),
   billingPlan: impl.account.billingPlan.handler(({ context }) =>
     context.deps.host.getBillingPlan()

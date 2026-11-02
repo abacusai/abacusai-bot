@@ -115,6 +115,8 @@ export class AguiEmitter {
   private reasoningCount = 0;
   /** The open run has had a parent assistant message (see `errorAnchor`). */
   private runHadAssistant = false;
+  /** The open run's last assistant message, when its model call failed. */
+  private failedMessageId: string | null = null;
   private fallbackCount = 0;
   private steerCount = 0;
 
@@ -326,6 +328,10 @@ export class AguiEmitter {
           );
           this.assistant = null;
         }
+        // A failed model call: dropped if the run asks again (startAssistant),
+        // kept with the error if the run ends on it.
+        if (event.stopReason === "error")
+          this.failedMessageId = this.messageIds.get(event.key) ?? null;
 
         return out;
       }
@@ -465,6 +471,7 @@ export class AguiEmitter {
 
     this.children.clear();
     this.tools.clear();
+    this.failedMessageId = null;
     this.reasoningCount = 0;
 
     return out;
@@ -777,17 +784,37 @@ export class AguiEmitter {
   }
 
   private startAssistant(key: string | undefined, id: string): AguiEvent[] {
+    const out = this.discardFailedMessage();
     this.assistant = { key, id };
     this.lastAssistantId = id;
     this.reasoningCount = 0;
     this.runHadAssistant = true;
-
-    return [
+    out.push(
       aguiEvent(EventType.TEXT_MESSAGE_START, {
         messageId: id,
         role: "assistant",
-      }),
-    ];
+      })
+    );
+
+    return out;
+  }
+
+  /**
+   * The run asks the model again after a failed call: that attempt's message
+   * (text, reasoning, calls that never ran) is superseded and discarded.
+   */
+  private discardFailedMessage(): AguiEvent[] {
+    const messageId = this.failedMessageId;
+    if (messageId == null) return [];
+    this.failedMessageId = null;
+    const out: AguiEvent[] = [];
+    for (const tool of this.tools.values()) {
+      if (tool.parentMessageId === messageId && !tool.resulted)
+        out.push(...this.unfinishedResult(tool));
+    }
+    out.push(custom("message.discarded", { messageId }));
+
+    return out;
   }
 
   /** The open assistant message for `key`, opening (and closing another) as needed. */
