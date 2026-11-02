@@ -4447,12 +4447,19 @@
     }
   },
   "ownKey": {
-    "freeBody": "No separate API bill. Upgrade and keep going on the top models.",
     "notResponding": "{{provider}} isn't responding right now",
     "openAgent": "Open AbacusAI Agent",
     "outOfCredit": "Your {{provider}} key is out of credit",
     "paidBody": "Use it in AbacusAI Agent on the web: the top models are included in your plan.",
-    "rateLimited": "Your {{provider}} key hit its rate limit"
+    "rateLimited": "Your {{provider}} key hit its rate limit",
+    "gone": "{{model}} on {{provider}} isn't available anymore",
+    "noReply": "{{model}} on {{provider}} sent no reply",
+    "failed": "{{model}} on {{provider}} couldn't finish this",
+    "localServer": "your local model server",
+    "whyFree": "{{provider}}'s free models can stop answering or be retired without notice.",
+    "whyKey": "{{model}} runs on your own {{provider}} key, with that key's limits and billing.",
+    "whyLocal": "{{model}} runs on your local model server, which has to be running and reachable.",
+    "moved": "{{model}} on {{provider}} isn't available, so I switched this chat to {{target}}."
   },
   "outcome": {
     "wall": {
@@ -4507,8 +4514,7 @@
       "newChat": "New chat",
       "fixKey": "Check the key",
       "viewDetails": "View details",
-      "tryAgain": "Try again",
-      "switchToAbacus": "Switch to Abacus (RouteLLM - Open)"
+      "tryAgain": "Try again"
     },
     "channel": {
       "wall": "I've paused because your free credits are used up.",
@@ -4532,6 +4538,14 @@
       "ownKeyRejected": "Your {{provider}} key was rejected — it's invalid or expired. Fix it in the app under Settings → Models.",
       "ownKeyWeb": "Use it in AbacusAI Agent on the web: {{link}}",
       "ownKeySwitch": "Switch to Abacus.AI in the app's model picker to keep going on your free Abacus credits.",
+      "ownKeyGone": "{{model}} on {{provider}} isn't available anymore.",
+      "ownKeyNoReply": "{{model}} on {{provider}} sent no reply.",
+      "ownKeyFailed": "{{model}} on {{provider}} couldn't finish that.",
+      "localServer": "your local model server",
+      "ownKeyWhyFree": "{{provider}}'s free models can stop answering or be retired without notice.",
+      "ownKeyWhyKey": "It runs on your own {{provider}} key.",
+      "ownKeyWhyLocal": "It runs on your local model server, which has to be running and reachable.",
+      "ownKeyMoved": "{{model}} on {{provider}} isn't available, so I switched this chat to {{target}}.",
       "busy": "The free models are busy right now.",
       "connection": "The connection dropped, so I couldn't finish that. Please try again in a moment.",
       "notSignedIn": "The desktop app is not signed in to Abacus.AI right now. Open the app and sign in, then message me again.",

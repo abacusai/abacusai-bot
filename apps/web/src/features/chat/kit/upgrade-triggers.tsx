@@ -13,7 +13,7 @@ import {
   type UpgradeDialogKind,
 } from "#renderer/lib/upgrade-dialog";
 
-import { useThreadStore } from "../store/selectors";
+import { useHost, useThreadStore } from "../store/selectors";
 import type { RunOutcomeRecord } from "../store/thread-store";
 import { useChatView } from "./context";
 
@@ -84,11 +84,17 @@ export const UpgradeTriggers = ({
   const canReply = composer.readOnly == null;
   const resume = useUpgradeResume();
 
+  // This run's end, live or brought in by a snapshot when it ended before the
+  // view caught up: a fast failure is the person's moment as much as a slow one.
+  // Read off the host store: a new chat's first message is handed to the
+  // thread after its view loads, so the run can end before it is known here.
+  const sentHere = useHost(
+    session,
+    () => outcome != null && session.sentHere(outcome.runId)
+  );
+  const ended = outcome != null && (isLive(outcome) || sentHere);
   const creditsKey =
-    canReply &&
-    outcome != null &&
-    isLive(outcome) &&
-    outOfAbacusCredits(outcome)
+    canReply && outcome != null && ended && outOfAbacusCredits(outcome)
       ? `credits:${outcome.runId}`
       : null;
   // One ask per key; the messages and resume are read at that moment.
@@ -113,20 +119,23 @@ export const UpgradeTriggers = ({
   }, [creditsKey]);
 
   // The host opens it only for a free account; a paid one gets the card.
+  // With Abacus credits left the card offers RouteLLM - Open instead.
   const ownKey =
-    canReply && outcome != null && isLive(outcome)
+    canReply &&
+    outcome != null &&
+    ended &&
+    !errorActions(outcome).some((action) => action.type === "switch-to-abacus")
       ? ownKeyFailure(errorActions(outcome))
       : null;
+  // The dialog names the failure as the card does: the model by its label.
   const ownKeyKey = ownKey != null ? `own-key:${outcome?.runId ?? ""}` : null;
-  const ownKeyProvider = ownKey?.provider;
-  const ownKeyCause = ownKey?.cause;
+  // Read at that moment, as the messages and resume are.
+  const askOwnKey = useEffectEvent((key: string) => {
+    if (ownKey != null) ask("own-key", key, ownKey);
+  });
   useEffect(() => {
-    if (ownKeyKey != null && ownKeyProvider != null && ownKeyCause != null)
-      ask("own-key", ownKeyKey, {
-        provider: ownKeyProvider,
-        cause: ownKeyCause,
-      });
-  }, [ownKeyKey, ownKeyProvider, ownKeyCause]);
+    if (ownKeyKey != null) askOwnKey(ownKeyKey);
+  }, [ownKeyKey]);
 
   const refused = canReply ? connectorCreditRefusals(messages, fresh) : [];
   const connectorKey =

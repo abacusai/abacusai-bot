@@ -214,6 +214,8 @@ export class ThreadSession {
   #permissionAttempt = 0;
   #cancelTimer: ReturnType<typeof setTimeout> | null = null;
   readonly #admission: AdmissionHost;
+  /** Runs this window sent, however their end arrives (a live event or a snapshot). */
+  readonly #sentRuns = new Set<string>();
   /** Message ids confirmed by `abacus.duplicate_echo` (§14.12). */
   readonly #echoed = new Set<string>();
 
@@ -374,6 +376,22 @@ export class ThreadSession {
     this.#live = null;
     for (const timer of this.#timers) clearTimeout(timer);
     this.#timers.clear();
+  }
+
+  /**
+   * Whether this window sent the run: its outcome is the person's moment, even
+   * when the run ended before the view caught up and came in with a snapshot.
+   */
+  sentHere(runId: string): boolean {
+    return this.#sentRuns.has(runId);
+  }
+
+  /** A run this window sent outside the outbox (a new chat's start hand-off). */
+  noteSent(runId: string): void {
+    if (this.#sentRuns.has(runId)) return;
+    this.#sentRuns.add(runId);
+    // Readers of sentHere re-read on the host store.
+    this.hostStore.setState((state) => ({ ...state }));
   }
 
   /** §3.7: `ai.send` with an outbox entry; the composer reads the result. */
@@ -1276,10 +1294,11 @@ export class ThreadSession {
       token: () => ({ gen: this.#gen, rev: this.#rev, retired: this.#retired }),
       outbox: () => this.hostStore.state.outbox,
       setOutbox: (update) =>
-        this.hostStore.setState((state) => ({
-          ...state,
-          outbox: update(state.outbox),
-        })),
+        this.hostStore.setState((state) => {
+          const outbox = update(state.outbox);
+          for (const entry of outbox) this.#sentRuns.add(entry.runId);
+          return { ...state, outbox };
+        }),
       echoed: (messageId, runId) =>
         runId != null
           ? this.#echoed.has(runId)

@@ -4447,12 +4447,19 @@
     }
   },
   "ownKey": {
-    "freeBody": "No separate API bill. Upgrade and keep going on the top models.",
     "notResponding": "{{provider}} isn't responding right now",
     "openAgent": "Open AbacusAI Agent",
     "outOfCredit": "Your {{provider}} key is out of credit",
     "paidBody": "Use it in AbacusAI Agent on the web: the top models are included in your plan.",
-    "rateLimited": "Your {{provider}} key hit its rate limit"
+    "rateLimited": "Your {{provider}} key hit its rate limit",
+    "gone": "{{model}} sur {{provider}} n'est plus disponible",
+    "noReply": "{{model}} sur {{provider}} n'a envoyé aucune réponse",
+    "failed": "{{model}} sur {{provider}} n'a pas pu terminer",
+    "localServer": "votre serveur de modèles local",
+    "whyFree": "Les modèles gratuits de {{provider}} peuvent cesser de répondre ou être retirés sans préavis.",
+    "whyKey": "{{model}} passe par votre propre clé {{provider}}, avec ses limites et sa facturation.",
+    "whyLocal": "{{model}} tourne sur votre serveur de modèles local, qui doit être lancé et joignable.",
+    "moved": "{{model}} sur {{provider}} n'est pas disponible, j'ai donc passé cette discussion sur {{target}}."
   },
   "outcome": {
     "wall": {
@@ -4507,8 +4514,7 @@
       "newChat": "Nouvelle discussion",
       "fixKey": "Vérifier la clé",
       "viewDetails": "Voir les détails",
-      "tryAgain": "Réessayer",
-      "switchToAbacus": "Passer à Abacus (RouteLLM - Open)"
+      "tryAgain": "Réessayer"
     },
     "channel": {
       "wall": "Je me suis mis en pause car vos crédits gratuits sont épuisés.",
@@ -4532,6 +4538,14 @@
       "ownKeyRejected": "Votre clé {{provider}} a été refusée : elle est invalide ou a expiré. Corrigez-la dans l'application, dans Paramètres → Modèles.",
       "ownKeyWeb": "Utilisez-la dans AbacusAI Agent sur le web : {{link}}",
       "ownKeySwitch": "Passez à Abacus.AI dans le sélecteur de modèles de l'app pour continuer avec vos crédits Abacus gratuits.",
+      "ownKeyGone": "{{model}} sur {{provider}} n'est plus disponible.",
+      "ownKeyNoReply": "{{model}} sur {{provider}} n'a envoyé aucune réponse.",
+      "ownKeyFailed": "{{model}} sur {{provider}} n'a pas pu terminer.",
+      "localServer": "votre serveur de modèles local",
+      "ownKeyWhyFree": "Les modèles gratuits de {{provider}} peuvent cesser de répondre ou être retirés sans préavis.",
+      "ownKeyWhyKey": "Il passe par votre propre clé {{provider}}.",
+      "ownKeyWhyLocal": "Il tourne sur votre serveur de modèles local, qui doit être lancé et joignable.",
+      "ownKeyMoved": "{{model}} sur {{provider}} n'est pas disponible, j'ai donc passé cette discussion sur {{target}}.",
       "busy": "Les modèles gratuits sont occupés en ce moment.",
       "connection": "La connexion a été coupée, je n'ai donc pas pu terminer. Réessayez dans un instant.",
       "notSignedIn": "L'application de bureau n'est pas connectée à Abacus.AI pour le moment. Ouvrez l'application, connectez-vous, puis écrivez-moi à nouveau.",

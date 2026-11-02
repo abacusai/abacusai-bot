@@ -4447,12 +4447,19 @@
     }
   },
   "ownKey": {
-    "freeBody": "Ayrı bir API faturası yok. Yükselt ve en iyi modellerle devam et.",
     "notResponding": "{{provider}} şu anda yanıt vermiyor",
     "openAgent": "AbacusAI Agent’ı aç",
     "outOfCredit": "{{provider}} anahtarının kredisi bitti",
     "paidBody": "Web’de AbacusAI Agent’ta kullan: en iyi modeller planına dahil.",
-    "rateLimited": "{{provider}} anahtarın hız sınırına ulaştı"
+    "rateLimited": "{{provider}} anahtarın hız sınırına ulaştı",
+    "gone": "{{provider}} üzerindeki {{model}} artık kullanılamıyor",
+    "noReply": "{{provider}} üzerindeki {{model}} yanıt göndermedi",
+    "failed": "{{provider}} üzerindeki {{model}} bunu tamamlayamadı",
+    "localServer": "yerel model sunucun",
+    "whyFree": "{{provider}} ücretsiz modelleri haber vermeden yanıt vermeyi bırakabilir veya kaldırılabilir.",
+    "whyKey": "{{model}} kendi {{provider}} anahtarınla, o anahtarın limitleri ve faturalandırmasıyla çalışıyor.",
+    "whyLocal": "{{model}} yerel model sunucunda çalışıyor; sunucunun açık ve erişilebilir olması gerekir.",
+    "moved": "{{provider}} üzerindeki {{model}} kullanılamıyor, bu yüzden bu sohbeti {{target}} modeline geçirdim."
   },
   "outcome": {
     "wall": {
@@ -4507,8 +4514,7 @@
       "newChat": "Yeni sohbet",
       "fixKey": "Anahtarı kontrol et",
       "viewDetails": "Ayrıntıları göster",
-      "tryAgain": "Tekrar dene",
-      "switchToAbacus": "Abacus'a geç (RouteLLM - Open)"
+      "tryAgain": "Tekrar dene"
     },
     "channel": {
       "wall": "Ücretsiz kredilerin bittiği için durakladım.",
@@ -4532,6 +4538,14 @@
       "ownKeyRejected": "{{provider}} anahtarın reddedildi: geçersiz ya da süresi dolmuş. Uygulamada Ayarlar → Modeller bölümünden düzelt.",
       "ownKeyWeb": "Web'deki AbacusAI Agent'ta kullan: {{link}}",
       "ownKeySwitch": "Ücretsiz Abacus kredilerinle devam etmek için uygulamanın model seçicisinden Abacus.AI'ye geç.",
+      "ownKeyGone": "{{provider}} üzerindeki {{model}} artık kullanılamıyor.",
+      "ownKeyNoReply": "{{provider}} üzerindeki {{model}} yanıt göndermedi.",
+      "ownKeyFailed": "{{provider}} üzerindeki {{model}} bunu tamamlayamadı.",
+      "localServer": "yerel model sunucun",
+      "ownKeyWhyFree": "{{provider}} ücretsiz modelleri haber vermeden yanıt vermeyi bırakabilir veya kaldırılabilir.",
+      "ownKeyWhyKey": "Kendi {{provider}} anahtarınla çalışıyor.",
+      "ownKeyWhyLocal": "Yerel model sunucunda çalışıyor; sunucunun açık ve erişilebilir olması gerekir.",
+      "ownKeyMoved": "{{provider}} üzerindeki {{model}} kullanılamıyor, bu yüzden bu sohbeti {{target}} modeline geçirdim.",
       "busy": "Ücretsiz modeller şu anda yoğun.",
       "connection": "Bağlantı koptuğu için bunu bitiremedim. Lütfen birazdan tekrar dene.",
       "notSignedIn": "Masaüstü uygulaması şu anda Abacus.AI'da oturum açmış değil. Uygulamayı açıp oturum aç, sonra bana tekrar yaz.",

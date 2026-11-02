@@ -4447,12 +4447,19 @@
     }
   },
   "ownKey": {
-    "freeBody": "No separate API bill. Upgrade and keep going on the top models.",
     "notResponding": "{{provider}} isn't responding right now",
     "openAgent": "Open AbacusAI Agent",
     "outOfCredit": "Your {{provider}} key is out of credit",
     "paidBody": "Use it in AbacusAI Agent on the web: the top models are included in your plan.",
-    "rateLimited": "Your {{provider}} key hit its rate limit"
+    "rateLimited": "Your {{provider}} key hit its rate limit",
+    "gone": "{{model}} en {{provider}} ya no está disponible",
+    "noReply": "{{model}} en {{provider}} no envió respuesta",
+    "failed": "{{model}} en {{provider}} no pudo terminar esto",
+    "localServer": "tu servidor de modelos local",
+    "whyFree": "Los modelos gratuitos de {{provider}} pueden dejar de responder o retirarse sin aviso.",
+    "whyKey": "{{model}} funciona con tu propia clave de {{provider}}, con sus límites y su facturación.",
+    "whyLocal": "{{model}} funciona en tu servidor de modelos local, que tiene que estar en marcha y accesible.",
+    "moved": "{{model}} en {{provider}} no está disponible, así que he cambiado este chat a {{target}}."
   },
   "outcome": {
     "wall": {
@@ -4507,8 +4514,7 @@
       "newChat": "Chat nuevo",
       "fixKey": "Revisar la clave",
       "viewDetails": "Ver detalles",
-      "tryAgain": "Reintentar",
-      "switchToAbacus": "Cambiar a Abacus (RouteLLM - Open)"
+      "tryAgain": "Reintentar"
     },
     "channel": {
       "wall": "Me he detenido porque se te acabaron los créditos gratis.",
@@ -4532,6 +4538,14 @@
       "ownKeyRejected": "Se rechazó tu clave de {{provider}}: no es válida o ha caducado. Corrígela en la app, en Ajustes → Modelos.",
       "ownKeyWeb": "Úsala en AbacusAI Agent en la web: {{link}}",
       "ownKeySwitch": "Cambia a Abacus.AI en el selector de modelos de la app para seguir con tus créditos gratuitos de Abacus.",
+      "ownKeyGone": "{{model}} en {{provider}} ya no está disponible.",
+      "ownKeyNoReply": "{{model}} en {{provider}} no envió respuesta.",
+      "ownKeyFailed": "{{model}} en {{provider}} no pudo terminar eso.",
+      "localServer": "tu servidor de modelos local",
+      "ownKeyWhyFree": "Los modelos gratuitos de {{provider}} pueden dejar de responder o retirarse sin aviso.",
+      "ownKeyWhyKey": "Funciona con tu propia clave de {{provider}}.",
+      "ownKeyWhyLocal": "Funciona en tu servidor de modelos local, que tiene que estar en marcha y accesible.",
+      "ownKeyMoved": "{{model}} en {{provider}} no está disponible, así que he cambiado este chat a {{target}}.",
       "busy": "Los modelos gratuitos están ocupados ahora mismo.",
       "connection": "Se cortó la conexión y no pude terminar. Inténtalo de nuevo en un momento.",
       "notSignedIn": "La app de escritorio no tiene la sesión iniciada en Abacus.AI ahora mismo. Abre la app, inicia sesión y vuelve a escribirme.",

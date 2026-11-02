@@ -21,6 +21,151 @@ import { PaidOfferButtons, PaidOfferDetails } from "./paid-offer";
 export type ModelUnavailableKind = "retired" | "down" | "plan";
 
 /**
+ * The plan on offer and its whole pitch, from billing_plan: what every card
+ * for a free account out of Abacus credits shows, never a shorter list.
+ */
+const OfferPitch = ({ billing }: { billing: BillingPlan | null }) => {
+  const { t, i18n } = useTranslation();
+  const offer = wallOffer(billing);
+  if (offer == null) return null;
+  return (
+    <div className="flex flex-col gap-1.5" data-slot="wall-offer">
+      <p className="font-medium">
+        {t("outcome.unavailable.offer", { plan: offer.planName })}
+      </p>
+      <ul className="flex flex-col gap-1">
+        {planPitch(t, billing, i18n.language).map((feature) => (
+          <li key={feature} className="flex gap-1.5">
+            <Check
+              aria-hidden
+              className="text-primary mt-0.5 size-3.5 shrink-0"
+            />
+            <span>{feature}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
+/** The plan's Upgrade with its price, and See plans beside it. */
+const OfferButtons = ({
+  billing,
+  onUpgrade,
+  onSeePlans,
+}: {
+  billing: BillingPlan | null;
+  onUpgrade(): void;
+  onSeePlans(): void;
+}) => {
+  const { t, i18n } = useTranslation();
+  const offer = wallOffer(billing);
+  const first = offer?.firstMonthPriceCents;
+  const monthly = offer?.priceCents;
+  return (
+    <>
+      <Button size="sm" data-action="upgrade" onClick={onUpgrade}>
+        {first != null && monthly != null && first < monthly
+          ? t("outcome.unavailable.upgradeIntro", {
+              price: formatUsd(first, i18n.language),
+            })
+          : monthly != null
+            ? t("outcome.unavailable.upgradeMonthly", {
+                price: formatUsd(monthly, i18n.language),
+              })
+            : offer != null
+              ? t("outcome.wall.upgradeCta", { plan: offer.planName })
+              : t("creditsCard.cta")}
+      </Button>
+      <Button
+        size="sm"
+        variant="secondary"
+        data-action="see-plans"
+        onClick={onSeePlans}
+      >
+        {t("outcome.unavailable.seePlans")}
+      </Button>
+    </>
+  );
+};
+
+/**
+ * Any failure's way on once the Abacus credits are used up (the agent's
+ * `plan-offer`): the plan's whole offer, priced, with Upgrade and See plans;
+ * a paid plan's own offer (its top-up and next plan; Basic's next plan as the
+ * free plan's is shown). The same pieces the cards above show.
+ */
+export const PlanOffer = ({
+  host,
+  paid,
+  onUpgrade,
+  onTopUp,
+  onNextPlan,
+}: {
+  host: CreditActions;
+  paid: boolean;
+  onUpgrade(): void;
+  onTopUp?(): void;
+  onNextPlan?(): void;
+}) => {
+  const { t } = useTranslation();
+  const [billing, setBilling] = useState<BillingPlan | null>(null);
+  useEffect(() => {
+    let live = true;
+    void host
+      .billingPlan?.()
+      .then((plan) => {
+        if (live) setBilling(plan);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [host]);
+  const paidOffer = paid ? paidCreditsOffer(billing) : null;
+  const upgradeOnly = paidUpgradeOnly(paidOffer);
+  if (paid && !upgradeOnly)
+    return (
+      <div className="flex flex-col gap-3 text-sm" data-slot="plan-offer">
+        <p>{t("outcome.unavailable.creditsOutPaid")}</p>
+        {paidOffer != null && (
+          <>
+            <PaidOfferDetails offer={paidOffer} />
+            <PaidOfferButtons
+              offer={paidOffer}
+              {...(onTopUp != null && { onTopUp })}
+              {...(onNextPlan != null && { onNextPlan })}
+            />
+          </>
+        )}
+      </div>
+    );
+  return (
+    <div className="flex flex-col gap-3 text-sm" data-slot="plan-offer">
+      <p>
+        {t(
+          upgradeOnly
+            ? "outcome.unavailable.creditsOutPaid"
+            : "outcome.unavailable.creditsOut"
+        )}
+      </p>
+      <OfferPitch billing={billing} />
+      <div className="flex flex-col gap-3">
+        <OfferButtons
+          billing={billing}
+          onUpgrade={onUpgrade}
+          onSeePlans={() =>
+            void (upgradeOnly && host.openNextPlan != null
+              ? host.openNextPlan()
+              : host.openUpgrade("chat_credits"))
+          }
+        />
+      </div>
+    </div>
+  );
+};
+
+/**
  * The one card for a model the user picked that cannot serve the turn: what
  * failed and why, then RouteLLM - Open while Abacus credits are left (the
  * user's choice, never a silent switch) or the plan once they are used up;
@@ -31,6 +176,8 @@ export const ModelUnavailableCard = ({
   host,
   kind,
   label,
+  title,
+  why,
   creditsOut,
   paid = false,
   onSwitch,
@@ -42,6 +189,10 @@ export const ModelUnavailableCard = ({
   host: CreditActions;
   kind: ModelUnavailableKind;
   label: string;
+  /** What failed, when the caller names it (a model off Abacus): in place of the kind's title. */
+  title?: string;
+  /** Why it failed, in place of the kind's reason. */
+  why?: string;
   creditsOut: boolean;
   /** The account is on a paid plan: credits out offers its paid offer (Basic: the next plan, as free's pitch). */
   paid?: boolean;
@@ -101,20 +252,10 @@ export const ModelUnavailableCard = ({
         : void host.openUpgrade("model_locked");
   const plan = kind === "plan" && !creditsOut;
   const Icon = kind === "plan" ? Lock : AlertTriangle;
-  const first = offer?.firstMonthPriceCents;
-  const monthly = offer?.priceCents;
-  const upgradeLabel =
-    first != null && monthly != null && first < monthly
-      ? t("outcome.unavailable.upgradeIntro", {
-          price: formatUsd(first, i18n.language),
-        })
-      : monthly != null
-        ? t("outcome.unavailable.upgradeMonthly", {
-            price: formatUsd(monthly, i18n.language),
-          })
-        : offer != null
-          ? t("outcome.wall.upgradeCta", { plan: offer.planName })
-          : t("creditsCard.cta");
+  const seePlans = () =>
+    void (upgradeOnly && host.openNextPlan != null
+      ? host.openNextPlan()
+      : host.openUpgrade("model_locked"));
   return (
     <div data-slot="credits-card" data-variant="model-unavailable">
       <GroupCard>
@@ -126,7 +267,7 @@ export const ModelUnavailableCard = ({
             aria-hidden
             className="size-4 shrink-0 text-[var(--chat-status-attention)]"
           />
-          {t(`outcome.unavailable.title.${kind}`, { model: label })}
+          {title ?? t(`outcome.unavailable.title.${kind}`, { model: label })}
         </h2>
         <div
           className="flex flex-col gap-3 p-3 text-sm"
@@ -139,6 +280,7 @@ export const ModelUnavailableCard = ({
             </>
           ) : creditsOut ? (
             <>
+              {why != null && <p>{why}</p>}
               <p>
                 {t(
                   upgradeOnly
@@ -146,34 +288,20 @@ export const ModelUnavailableCard = ({
                     : "outcome.unavailable.creditsOut"
                 )}
               </p>
-              {offer != null && (
-                <div className="flex flex-col gap-1.5" data-slot="wall-offer">
-                  <p className="font-medium">
-                    {t("outcome.unavailable.offer", { plan: offer.planName })}
-                  </p>
-                  <ul className="flex flex-col gap-1">
-                    {planPitch(t, billing, i18n.language).map((feature) => (
-                      <li key={feature} className="flex gap-1.5">
-                        <Check
-                          aria-hidden
-                          className="text-primary mt-0.5 size-3.5 shrink-0"
-                        />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <OfferPitch billing={billing} />
             </>
           ) : plan ? (
-            <p>
-              {offer != null
-                ? t("outcome.unavailable.planBody", { plan: offer.planName })
-                : t("outcome.unavailable.planBodyAny")}
-            </p>
+            <>
+              <p>
+                {offer != null
+                  ? t("outcome.unavailable.planBody", { plan: offer.planName })
+                  : t("outcome.unavailable.planBodyAny")}
+              </p>
+              <OfferPitch billing={billing} />
+            </>
           ) : (
             <p>
-              {t(`outcome.unavailable.why.${kind}`)}{" "}
+              {why ?? t(`outcome.unavailable.why.${kind}`)}{" "}
               {t("outcome.unavailable.kept")}
             </p>
           )}
@@ -199,23 +327,11 @@ export const ModelUnavailableCard = ({
               )
             )
           ) : creditsOut ? (
-            <>
-              <Button size="sm" data-action="upgrade" onClick={upgrade}>
-                {upgradeLabel}
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                data-action="see-plans"
-                onClick={() =>
-                  void (upgradeOnly && host.openNextPlan != null
-                    ? host.openNextPlan()
-                    : host.openUpgrade("model_locked"))
-                }
-              >
-                {t("outcome.unavailable.seePlans")}
-              </Button>
-            </>
+            <OfferButtons
+              billing={billing}
+              onUpgrade={upgrade}
+              onSeePlans={seePlans}
+            />
           ) : (
             <>
               {onSwitch != null && (
@@ -228,17 +344,11 @@ export const ModelUnavailableCard = ({
                 </Button>
               )}
               {plan ? (
-                <Button
-                  variant="link"
-                  size="sm"
-                  data-action="upgrade"
-                  className="self-start px-0"
-                  onClick={upgrade}
-                >
-                  {offer != null
-                    ? t("outcome.wall.upgradeCta", { plan: offer.planName })
-                    : t("creditsCard.cta")}
-                </Button>
+                <OfferButtons
+                  billing={billing}
+                  onUpgrade={upgrade}
+                  onSeePlans={seePlans}
+                />
               ) : (
                 onPickModel != null && (
                   <Button
@@ -343,7 +453,6 @@ export const CutOffCard = ({
       live = false;
     };
   }, [host]);
-  const offer = wallOffer(billing);
   const remaining = billing?.current.creditsRemaining;
   const paidOffer = state === "out" && paid ? paidCreditsOffer(billing) : null;
   // The next plan alone (Basic): the free plan's pitch and Upgrade, its plan.
@@ -379,11 +488,15 @@ export const CutOffCard = ({
                   </Button>
                 )
             : onUpgrade != null && (
-                <Button size="sm" data-action="upgrade" onClick={onUpgrade}>
-                  {offer != null
-                    ? t("outcome.wall.upgradeCta", { plan: offer.planName })
-                    : t("creditsCard.cta")}
-                </Button>
+                <OfferButtons
+                  billing={billing}
+                  onUpgrade={onUpgrade}
+                  onSeePlans={() =>
+                    void (upgradeOnly && host.openNextPlan != null
+                      ? host.openNextPlan()
+                      : host.openUpgrade("chat_credits"))
+                  }
+                />
               )
           : null;
   const next =
@@ -441,24 +554,7 @@ export const CutOffCard = ({
           {resolved == null && pitch && (
             <>
               {!paid && <p>{t("outcome.unavailable.creditsOut")}</p>}
-              {offer != null && (
-                <div className="flex flex-col gap-1.5" data-slot="wall-offer">
-                  <p className="font-medium">
-                    {t("outcome.unavailable.offer", { plan: offer.planName })}
-                  </p>
-                  <ul className="flex flex-col gap-1">
-                    {planPitch(t, billing, i18n.language).map((feature) => (
-                      <li key={feature} className="flex gap-1.5">
-                        <Check
-                          aria-hidden
-                          className="text-primary mt-0.5 size-3.5 shrink-0"
-                        />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <OfferPitch billing={billing} />
             </>
           )}
         </div>
