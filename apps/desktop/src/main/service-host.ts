@@ -1306,10 +1306,10 @@ export class ServiceHost {
     // A presented local app is loaded once to prove it runs: in a hidden
     // view of the app's own (never a tab in the user's Chrome), or on the
     // hosted computer in its Chromium, in the session's browser queue.
-    checkServedPage: async (url, sessionId) =>
+    checkServedPage: async (url, sessionId, signal) =>
       this.platform === "web-host"
-        ? await this.mcpBrowserServer.checkServedPage(url, sessionId)
-        : ((await this.browserRuntime?.checkServedPage(url)) ?? null),
+        ? await this.mcpBrowserServer.checkServedPage(url, sessionId, signal)
+        : ((await this.browserRuntime?.checkServedPage(url, signal)) ?? null),
     routineEditorFor: (sessionId) =>
       this.agentSessionManagerService.get(sessionId)?.editorFor ?? null,
     isUnattended: (sessionId) => this.isUnattendedSession(sessionId),

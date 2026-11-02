@@ -25,6 +25,7 @@ import {
 
 import { servePreview } from "../agent-tools/served-previews";
 import { stopAllServed } from "../agent-tools/static-server";
+import { PAGE_CHECK_BUDGET_MS } from "../browser/page-errors";
 import { PreviewTargets } from "../session/preview-targets";
 import { McpAgentToolsServer } from "./mcp-agent-tools-server";
 
@@ -431,6 +432,35 @@ describe("a local app handed over as done", () => {
     expect(text).toContain(
       `${APP} answered (HTTP 200) and its page loaded without errors.`
     );
+  });
+
+  it("goes on the HTTP answer once its page check outlasts the budget, and stops the check", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      let asked = false;
+      let signal: AbortSignal | undefined;
+      const presented = presentText([{ path: APP }], {
+        // A browser that never answers, as a never-navigated view did.
+        checkServedPage: (
+          _url: string,
+          _session: string,
+          stop?: AbortSignal
+        ) => {
+          asked = true;
+          signal = stop;
+          return new Promise(() => {});
+        },
+      });
+      await vi.waitFor(() => expect(asked).toBe(true));
+      await vi.advanceTimersByTimeAsync(PAGE_CHECK_BUDGET_MS);
+
+      const { text, isError } = await presented;
+      expect(isError).toBe(false);
+      expect(text).toContain(`${APP} answered (HTTP 200).`);
+      expect(signal?.aborted).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("asks nothing of a remote URL: it is taken as given", async () => {

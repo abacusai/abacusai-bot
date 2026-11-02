@@ -38,12 +38,7 @@ import {
   type BrowserRuntimeLease,
 } from "./browser-runtime-registry";
 import { isInsideRoot } from "./local-preview-file";
-import {
-  PAGE_ERROR_COLLECTOR,
-  PAGE_ERRORS_READ,
-  pageCheckOf,
-  type ServedPageCheck,
-} from "./page-errors";
+import { checkServedPageIn, type ServedPageCheck } from "./page-errors";
 
 /** A local PDF/HTML file's view (spec 04 §12.8): real paths, checked. */
 type LocalFile = { file: string; root: string };
@@ -243,9 +238,6 @@ export type BrowserRuntimeWindow = Pick<
 
 /** The viewport a parked view lays out against: a common laptop window. */
 const PARKED_BOUNDS = { x: 0, y: 0, width: 1280, height: 900 };
-/** How long a checked page gets to load, then to run its start-up code. */
-const PAGE_CHECK_LOAD_MS = 15_000;
-const PAGE_CHECK_SETTLE_MS = 1_500;
 
 export class ElectronBrowserRuntime {
   private readonly attached = new WeakSet<WebContentsView>();
@@ -977,12 +969,15 @@ export class ElectronBrowserRuntime {
   /**
    * Loads a local page in a view of its own, parked and never shown, on a
    * partition nothing persists, and reports what it threw as it loaded (see
-   * page-errors.ts): `present_deliverable`'s proof that an app runs. Null
-   * when that could not be found out (the page went to another origin, the
-   * view could not be driven): the HTTP answer is all that is known then.
+   * `checkServedPageIn`): `present_deliverable`'s proof that an app runs.
+   * Null when that could not be found out (the page went to another origin,
+   * the view could not be driven, `signal` aborted): the HTTP answer is all
+   * that is known then. The view is closed either way.
    */
-  async checkServedPage(url: string): Promise<ServedPageCheck | null> {
-    const origin = new URL(checkedUrl(url)).origin;
+  async checkServedPage(
+    url: string,
+    signal: AbortSignal
+  ): Promise<ServedPageCheck | null> {
     const view = new WebContentsView({
       webPreferences: {
         partition: `page-check-${randomUUID()}`,
@@ -993,33 +988,11 @@ export class ElectronBrowserRuntime {
       },
     });
     const contents = view.webContents;
-    // Only did-fail-load knows a page did not load: Chromium shows its error
-    // page at the very URL that failed.
-    let failure: string | null = null;
-    contents.on(
-      "did-fail-load",
-      (_event, errorCode, errorDescription, _url, isMainFrame) => {
-        if (isMainFrame && errorCode !== -3)
-          failure = `${errorDescription} (${errorCode})`;
-      }
-    );
     contents.setWindowOpenHandler(() => ({ action: "deny" }));
     view.setBounds(PARKED_BOUNDS);
     this.park(view);
     try {
-      contents.debugger.attach("1.3");
-      await contents.debugger.sendCommand(
-        "Page.addScriptToEvaluateOnNewDocument",
-        { source: PAGE_ERROR_COLLECTOR }
-      );
-      await Promise.race([
-        contents.loadURL(url).catch(() => undefined),
-        new Promise((resolve) => setTimeout(resolve, PAGE_CHECK_LOAD_MS)),
-      ]);
-      if (failure != null) return { loaded: false, reason: failure };
-      await new Promise((resolve) => setTimeout(resolve, PAGE_CHECK_SETTLE_MS));
-      if (new URL(contents.getURL()).origin !== origin) return null;
-      return pageCheckOf(await contents.executeJavaScript(PAGE_ERRORS_READ));
+      return await checkServedPageIn(contents, checkedUrl(url), signal);
     } catch (error) {
       console.warn(
         `[browser-runtime] could not check a served page: ${(error as Error).message}`
