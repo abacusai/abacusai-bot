@@ -369,6 +369,7 @@ describe("a scheduled run the app closed under", () => {
             ? buildRoutineFirePrompt(getJob(jobId)!, "interrupted", null, {
                 dir: "/r",
                 workingDirectory: "/r",
+                notes: { path: "/r/notes.md", kept: false, maybeAt: null },
                 runs: 1,
                 lastRun,
                 workspaces: [],
