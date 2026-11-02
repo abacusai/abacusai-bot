@@ -46,6 +46,14 @@ vi.mock("./services/providers/models", async (original) => ({
   },
   cachedRecommendedModelId: () => "openllm/auto",
 }));
+// The sessions' records, kept across the launches a test makes.
+const sessionRecords = vi.hoisted(() => new Map<string, unknown>());
+vi.mock("./services/session/workspace-store", () => ({
+  workspaceStore: {
+    get: (key: string) => sessionRecords.get(key),
+    set: (key: string, value: unknown) => sessionRecords.set(key, value),
+  },
+}));
 const { ServiceHost } = await import("./service-host");
 const { createBot } = await import("./services/bots/bot-store");
 const { setDefaultModel } = await import("./services/config/settings");
@@ -257,6 +265,246 @@ describe("a routine run the network let down", () => {
     expect(readLastRoutineRun(dir)?.outcome).toBe("offline");
     expect(service.pauseRoutine).not.toHaveBeenCalled();
     expect(service.pauseIfFailingRepeatedly).not.toHaveBeenCalled();
+  });
+});
+
+describe("a scheduled run the app closed under", () => {
+  /** Each run's thread as the store keeps it, across launches. */
+  const threads = new Map<string, Array<{ role: string; parts: unknown[] }>>();
+  const call = (id: string, name: string, input: object) => ({
+    type: "tool-call",
+    id,
+    name: `abacus-connectors_${name}`,
+    arguments: JSON.stringify(input),
+    state: "complete",
+  });
+  const answered = (id: string) => ({
+    type: "tool-result",
+    toolCallId: id,
+    content: "ok",
+    state: "complete",
+  });
+  beforeEach(() => {
+    threads.clear();
+    sessionRecords.clear();
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date(2026, 9, 13, 8, 0) });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /**
+   * One app launch at `at`: the sessions restored, the turn journal's open
+   * turns closed into the real settle, and a scheduler whose run opens a
+   * stamped session and its turn and sends the briefing once.
+   */
+  const launch = async (at: Date) => {
+    vi.setSystemTime(at);
+    const { AgentSessionManagerService } =
+      await import("./services/session/agent-session-manager-service");
+    const { TurnLedger } = await import("./services/session/turn-ledger");
+    const { CronScheduler } =
+      await import("./services/agent-tools/cron-scheduler");
+    const { getJob, recordRun } =
+      await import("./services/agent-tools/cron-store");
+    const { buildRoutineFirePrompt } =
+      await import("./services/agent-tools/routine-prompt");
+    const { readLastRoutineRun } =
+      await import("./services/agent-tools/routine-runs-store");
+    const { NetworkWaitClock } =
+      await import("./services/agent-tools/routine-guards");
+    const { RoutineSendLedger } =
+      await import("./services/agent-tools/routine-send-ledger");
+    const sessions = new AgentSessionManagerService();
+    sessions.initialize(["ws"]);
+    const turns = new TurnLedger({
+      journal: () => path.join(home, "turns-open.json"),
+    });
+    const sends = new RoutineSendLedger({
+      file: () => path.join(home, "routine-sends.json"),
+    });
+    const service = Object.assign(Object.create(ServiceHost.prototype), {
+      agentSessionManagerService: sessions,
+      routineSends: sends,
+      routineNetworkWaits: new NetworkWaitClock(),
+      routineRunText: new Map<string, string[]>(),
+      routineHome: () => path.join(home, "routine-home"),
+      threadStore: {
+        readCurrentFile: (id: string) => ({ messages: threads.get(id) ?? [] }),
+      },
+      emitEvent: vi.fn(),
+      pauseRoutine: vi.fn(),
+      pauseIfFailingRepeatedly: vi.fn(),
+    }) as {
+      settleRoutineRun(record: unknown): void;
+      outwardSoFar(
+        fire: string,
+        sessionId: string | null
+      ): { done: string[]; unsure: string[] };
+      pauseIfFailingRepeatedly: unknown;
+    };
+    turns.onClose((record) => service.settleRoutineRun(record));
+    turns.recover();
+    const fires: Array<{
+      trigger: string;
+      resent: boolean;
+      sent: string[];
+      prompt?: string;
+    }> = [];
+    const cron = new CronScheduler(
+      async (jobId, trigger, fire) => {
+        const session = sessions.create("ws", jobId, null, trigger);
+        recordRun(jobId, `started session ${session.id}`, trigger, {
+          id: fire.attemptId,
+          kind: "started",
+          sessionId: session.id,
+        });
+        turns.begin(session.id);
+        const key = `${jobId}@${fire.slot}`;
+        const sent = sends.recipients(key).map((entry) => entry.to);
+        // A make-up is told what the cut-off run did, as startRoutineRun tells it.
+        const lastRun = readLastRoutineRun(path.join(home, "routine-home"));
+        const prompt =
+          trigger === "interrupted"
+            ? buildRoutineFirePrompt(getJob(jobId)!, "interrupted", null, {
+                dir: "/r",
+                workingDirectory: "/r",
+                runs: 1,
+                lastRun,
+                workspaces: [],
+                sent: service.outwardSoFar(
+                  key,
+                  lastRun?.outcome === "interrupted" ? lastRun.sessionId : null
+                ),
+              })
+            : undefined;
+        // The run reads mail, mails the brief, and starts a Slack post the
+        // app closes under.
+        threads.set(session.id, [
+          {
+            role: "assistant",
+            parts: [
+              { type: "text", content: "Good morning." },
+              call("c1", "Gmail_Tool", { action: "search_email", query: "x" }),
+              answered("c1"),
+              call("c2", "Gmail_Tool", {
+                action: "send_email",
+                to: "bob@example.com",
+                subject: "Brief",
+              }),
+              answered("c2"),
+              call("c3", "Slack_Tool", {
+                action: "send_message",
+                channel: "#team",
+              }),
+            ],
+          },
+        ]);
+        const repeat = sends.repeat(
+          key,
+          "whatsapp",
+          "Ana",
+          session.id,
+          "Brief"
+        );
+        if (repeat == null)
+          sends.record(key, "whatsapp", "Ana", session.id, "Brief");
+        fires.push({
+          trigger,
+          resent: repeat == null && sent.length > 0,
+          sent,
+          ...(prompt != null ? { prompt } : {}),
+        });
+      },
+      async () => true,
+      () => {},
+      async () => {}
+    );
+    const tick = async (when: Date) => {
+      vi.setSystemTime(when);
+      await cron.tick(when);
+    };
+    /** Run now, as the user's button does: no scheduled moment claimed. */
+    const runNow = (jobId: string) => {
+      const session = sessions.create("ws", jobId, null, "manual");
+      recordRun(jobId, `started session ${session.id}`, "manual", {
+        kind: "started",
+        sessionId: session.id,
+      });
+      turns.begin(session.id);
+    };
+    /** Each run's outcome, as the routine's run list shows it. */
+    const outcomes = (jobId: string) =>
+      sessions.listByRoutine(jobId).map((session) => session.runOutcome);
+    return { service, fires, tick, runNow, outcomes };
+  };
+
+  it("is made up once, sends nothing twice, is not a failure, and is not made up again", async () => {
+    const { readLastRoutineRun } =
+      await import("./services/agent-tools/routine-runs-store");
+    const job = createJob({ schedule: "0 9 * * *", prompt: "Brief me" });
+    const first = await launch(new Date(2026, 9, 13, 8, 59));
+    await first.tick(new Date(2026, 9, 13, 9, 0, 5));
+    expect(first.fires).toEqual([
+      { trigger: "schedule", resent: false, sent: [] },
+    ]);
+
+    // Quit mid-run; relaunched at 9:20.
+    const second = await launch(new Date(2026, 9, 13, 9, 20));
+    expect(readLastRoutineRun(path.join(home, "routine-home"))).toMatchObject({
+      outcome: "interrupted",
+      reply: "Good morning.",
+    });
+    await second.tick(new Date(2026, 9, 13, 9, 20));
+    await second.tick(new Date(2026, 9, 13, 9, 21));
+    expect(second.fires).toMatchObject([
+      { trigger: "interrupted", resent: false, sent: ["Ana"] },
+    ]);
+    // The connector actions it did are named, its read is not, and the post
+    // it never heard back from is flagged as maybe sent.
+    const told = second.fires[0]!.prompt!;
+    expect(told).toContain(
+      "already done: whatsapp message to Ana; Gmail_Tool send_email (to: bob@example.com; subject: Brief). Do not do any of these again"
+    );
+    expect(told).not.toContain("search_email");
+    expect(told).toContain(
+      "no answer before the app closed: Slack_Tool send_message (channel: #team). It may have gone through"
+    );
+    expect(second.service.pauseIfFailingRepeatedly).not.toHaveBeenCalled();
+
+    // The make-up is cut off too: nothing more is made up for 9:00.
+    const third = await launch(new Date(2026, 9, 13, 9, 40));
+    await third.tick(new Date(2026, 9, 13, 9, 40));
+    await third.tick(new Date(2026, 9, 13, 10, 0));
+    expect(third.fires).toEqual([]);
+    expect(third.outcomes(job.id)).toEqual(["interrupted", "interrupted"]);
+    expect(listJobs()[0]).toMatchObject({ enabled: true, heldSince: null });
+  });
+
+  it("is a scheduled one: a Run now the app closed under is not made up", async () => {
+    const job = createJob({ schedule: "0 9 * * *", prompt: "Brief me" });
+    const first = await launch(new Date(2026, 9, 13, 11, 0));
+    first.runNow(job.id);
+
+    const next = await launch(new Date(2026, 9, 13, 11, 5));
+    await next.tick(new Date(2026, 9, 13, 11, 5));
+    expect(next.fires).toEqual([]);
+    expect(next.outcomes(job.id)).toEqual(["interrupted"]);
+  });
+
+  it("is not made up on a launch close to the next morning's run", async () => {
+    createJob({ schedule: "0 9 * * *", prompt: "Brief me" });
+    const first = await launch(new Date(2026, 9, 13, 8, 59));
+    await first.tick(new Date(2026, 9, 13, 9, 0, 5));
+
+    const next = await launch(new Date(2026, 9, 14, 8, 45));
+    await next.tick(new Date(2026, 9, 14, 8, 45));
+    expect(next.fires).toEqual([]);
+    // The next morning's own run still fires.
+    await next.tick(new Date(2026, 9, 14, 9, 0));
+    expect(next.fires).toEqual([
+      { trigger: "schedule", resent: false, sent: [] },
+    ]);
   });
 });
 

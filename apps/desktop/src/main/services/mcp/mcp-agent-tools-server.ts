@@ -306,6 +306,8 @@ export interface McpAgentToolsServerOptions {
    * moment), or null for any other session: its sends reach each recipient once.
    */
   routineFireForSession?: (sessionId: string) => string | null;
+  /** What those fires have sent, kept by the host across restarts; in memory without one. */
+  routineSends?: RoutineSendLedger;
   /**
    * The bot whose chat this UI session is, or null. A bot scheduling its own
    * routine gets the fires delivered back into its chat.
@@ -593,12 +595,13 @@ export class McpAgentToolsServer extends McpHttpServer {
     // listChanged: a platform's tools appear the moment it connects, and
     // service-host calls notifyToolListChanged when they do.
     super({ name: SERVER_NAME, version: SERVER_VERSION, listChanged: true });
+    this.routineSends = options.routineSends ?? new RoutineSendLedger();
   }
 
   /** The loopback origins `serve` returned to each session. */
   private readonly servedOrigins = new Map<string, Set<string>>();
 
-  private readonly routineSends = new RoutineSendLedger();
+  private readonly routineSends: RoutineSendLedger;
 
   /** The always-on tools guarantee this. */
   hasEnabledTools(): boolean {

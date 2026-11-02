@@ -80,8 +80,13 @@ export class NetworkWaitClock {
 export const consecutiveFailures = (runs: RoutineRunItem[]): number => {
   let count = 0;
   for (const run of runs) {
-    // A run the network let down says nothing about the routine itself.
-    if (run.outcome === "running" || run.outcome === "offline") continue;
+    // A run the network or a closing app let down says nothing about the routine.
+    if (
+      run.outcome === "running" ||
+      run.outcome === "offline" ||
+      run.outcome === "interrupted"
+    )
+      continue;
     if (run.outcome !== "failed") break;
     count += 1;
   }
@@ -96,13 +101,15 @@ const NETWORK_UNREACHABLE_CODE = "network_unreachable";
 
 /**
  * How a closed turn (TurnLedger) files its run: a reply completes it, a
- * network that never came back files it `offline`, anything else fails it.
+ * network that never came back files it `offline`, the app closing under it
+ * `interrupted`, anything else fails it.
  */
 export const runOutcomeOf = (ending: {
   kind: string;
   error?: { code?: string };
 }): Exclude<RoutineRunOutcome, "running"> => {
   if (ending.kind === "reply") return "completed";
+  if (ending.kind === "app_closed") return "interrupted";
   return ending.error?.code === NETWORK_UNREACHABLE_CODE ? "offline" : "failed";
 };
 

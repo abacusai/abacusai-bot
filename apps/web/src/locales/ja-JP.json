@@ -1509,6 +1509,7 @@
       "create": "On creation",
       "schedule": "スケジュール",
       "catch-up": "補完実行",
+      "interrupted": "中断後の再実行",
       "webhook": "Webhook",
       "agent": "エージェントによる"
     },
@@ -3414,6 +3415,7 @@
       "skipped": "Skipped",
       "skipped-offline": "スキップ: オフライン",
       "offline": "Abacus に接続できませんでした",
+      "interrupted": "中断",
       "unknown": "Unknown",
       "paused": "Paused"
     },

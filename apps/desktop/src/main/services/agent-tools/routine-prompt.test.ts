@@ -31,6 +31,46 @@ describe("the fire prompt", () => {
     expect(buildRoutineFirePrompt(job(), "manual", null)).toContain("Run now");
   });
 
+  it("tells a make-up of a cut-off run who was already sent to", () => {
+    const memory = {
+      dir: "/r",
+      workingDirectory: "/r",
+      runs: 1,
+      lastRun: {
+        sessionId: "s",
+        startedAt: "2026-10-13T09:00:00Z",
+        endedAt: "2026-10-13T09:01:00Z",
+        outcome: "interrupted" as const,
+        reply: "Good morning.",
+      },
+      workspaces: [],
+    };
+    const prompt = buildRoutineFirePrompt(job(), "interrupted", null, {
+      ...memory,
+      sent: {
+        done: [
+          "whatsapp message to Ana",
+          "Gmail_Tool send_email (to: bob@example.com)",
+        ],
+        unsure: [],
+      },
+    });
+
+    expect(prompt).toContain("cut off partway when the app closed");
+    expect(prompt).not.toContain("missed while the computer was off");
+    expect(prompt).toContain("was cut off partway. This is what it reported");
+    expect(prompt).toContain(
+      "already done: whatsapp message to Ana; Gmail_Tool send_email (to: bob@example.com). Do not do any of these again"
+    );
+    expect(prompt).not.toContain("no answer before the app closed");
+    expect(
+      buildRoutineFirePrompt(job(), "interrupted", null, {
+        ...memory,
+        sent: { done: [], unsure: [] },
+      })
+    ).toContain("had not sent anything to anyone yet");
+  });
+
   it("guards a webhook payload as data, not instructions", () => {
     const prompt = buildRoutineFirePrompt(
       job(),

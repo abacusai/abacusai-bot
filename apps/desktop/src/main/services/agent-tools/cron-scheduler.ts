@@ -3,7 +3,8 @@
  * actually does (spawn a session, send the prompt) is injected by the host.
  * Each scheduled moment fires at most once: it is claimed on disk before its
  * run starts. A fire due while the network is down waits for it; one missed
- * while the computer was off is made up once, for the latest moment only.
+ * while the computer was off is made up once, for the latest moment only, and
+ * so is one whose run the app closed under (a quit, a crash, an update).
  */
 import {
   catchUpWorthIt,
@@ -28,9 +29,12 @@ export interface SlotFire {
   attemptId: string;
 }
 
+/** How a scheduler fire started: on time, or making up a missed or cut-off run. */
+type SlotTrigger = "schedule" | "catch-up" | "interrupted";
+
 type RunJob = (
   jobId: string,
-  trigger: "schedule" | "catch-up",
+  trigger: SlotTrigger,
   fire: SlotFire
 ) => Promise<void>;
 
@@ -70,9 +74,10 @@ export class CronScheduler {
     this.onMinute = callback;
   }
 
-  /** Whether this job is held until the network is back. */
+  /** Whether this job is held until the network is back (not a make-up waiting its tick). */
   isHeld(jobId: string): boolean {
-    return getJob(jobId)?.heldSince != null;
+    const job = getJob(jobId);
+    return job?.heldSince != null && (job.heldFor ?? "network") === "network";
   }
 
   /**
@@ -112,19 +117,22 @@ export class CronScheduler {
         this.onHeldChange();
         if (!job.enabled) continue;
         const slot = job.runAt ?? job.heldSlot ?? minuteOf(job.heldSince!);
-        const catchUp = job.heldFor === "catch-up";
+        const trigger: SlotTrigger =
+          job.heldFor === "catch-up" || job.heldFor === "interrupted"
+            ? job.heldFor
+            : "schedule";
         if (
           job.schedule != null &&
           !catchUpWorthIt(job.schedule, slot, Date.now())
         ) {
-          if (!catchUp)
+          if (trigger === "schedule")
             recordRun(job.id, ROUTINE_RESULTS.skippedOffline, "schedule", {
               kind: "skipped-offline",
             });
           continue;
         }
         if (fired++ > 0) await this.wait(RELEASE_SPACING_MS);
-        await this.fire(job, slot, catchUp ? "catch-up" : "schedule");
+        await this.fire(job, slot, trigger);
       }
     })();
     try {
@@ -160,9 +168,10 @@ export class CronScheduler {
     const missedIds = new Set(missed.map(({ job }) => job.id));
     for (const { job, count, latest } of missed) {
       setMissed(job.id, { count, at: now.getTime() });
+      // A later moment missed is the run to make up, over an interrupted one.
       if (
         !dueIds.has(job.id) &&
-        job.heldSince == null &&
+        (job.heldSince == null || job.heldFor === "interrupted") &&
         job.schedule != null &&
         catchUpWorthIt(job.schedule, latest, now.getTime())
       )
@@ -204,13 +213,15 @@ export class CronScheduler {
   private async fire(
     job: CronJob,
     slot: number,
-    trigger: "schedule" | "catch-up"
+    trigger: SlotTrigger
   ): Promise<void> {
     const attemptId = mintAttemptId();
     // Claimed before the run: a restart, a second tick or a run longer than
-    // a tick finds the moment taken and never fires it again.
+    // a tick finds the moment taken and never fires it again. A make-up of a
+    // cut-off run takes over that run's claim.
     try {
-      if (!claimSlot(job.id, slot, attemptId)) return;
+      if (!claimSlot(job.id, slot, attemptId, trigger === "interrupted"))
+        return;
     } catch (err) {
       // Unclaimed, it is still due next minute.
       console.error("[cron] could not claim a routine's fire:", err);

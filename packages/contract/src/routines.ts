@@ -6,11 +6,13 @@
 
 /**
  * `catch-up`: a scheduled fire made up after the computer was off or asleep;
+ * `interrupted`: a scheduled run made up once after the app closed under it;
  * `agent`: the agent ran it from a conversation, not the user's Run now.
  */
 export type RoutineTrigger =
   | "schedule"
   | "catch-up"
+  | "interrupted"
   | "webhook"
   | "manual"
   | "create"

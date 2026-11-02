@@ -26,6 +26,11 @@ export interface RoutineMemory {
   runs: number;
   lastRun: RoutineRunRecord | null;
   workspaces: string[];
+  /**
+   * For an `interrupted` fire: what the cut-off run already did outward
+   * (chat sends and connector actions), and what it started with no answer.
+   */
+  sent?: { done: string[]; unsure: string[] };
 }
 
 /** The last reply is context, not a transcript: enough to say "since then". */
@@ -35,6 +40,8 @@ const TRIGGER_LINE: Record<CronTrigger, string> = {
   schedule: "on its schedule",
   "catch-up":
     "late, to make up the latest scheduled run it missed while the computer was off or asleep",
+  interrupted:
+    "again, because its scheduled run was cut off partway when the app closed (a quit, a crash, an update or a shutdown)",
   webhook: "by an incoming webhook",
   manual: "by the user pressing Run now",
   create: "for the first time, right after it was set up",
@@ -69,7 +76,12 @@ export const buildRoutineFirePrompt = (
           ? `${memory.lastRun.reply.slice(0, LAST_REPLY_CHARS)}…`
           : memory.lastRun.reply;
       const when = new Date(memory.lastRun.startedAt).toLocaleString();
-      const went = memory.lastRun.outcome === "failed" ? "failed" : "completed";
+      const went =
+        memory.lastRun.outcome === "failed"
+          ? "failed"
+          : memory.lastRun.outcome === "interrupted"
+            ? "was cut off partway"
+            : "completed";
       lines.push(
         `Your previous run was at ${when} and ${went}.` +
           (reply.length > 0
@@ -84,6 +96,20 @@ export const buildRoutineFirePrompt = (
           "```",
           reply.replaceAll("```", "~~~"),
           "```"
+        );
+    }
+    // Said outright: only the app's own sends are skipped on a repeat; a
+    // connector's mail, post or invite would go out twice.
+    if (trigger === "interrupted" && memory.sent != null) {
+      const { done, unsure } = memory.sent;
+      lines.push(
+        done.length > 0
+          ? `That run had already done: ${done.join("; ")}. Do not do any of these again; do the rest, and say what had already gone out.`
+          : "That run had not sent anything to anyone yet."
+      );
+      if (unsure.length > 0)
+        lines.push(
+          `It had also started, with no answer before the app closed: ${unsure.join("; ")}. It may have gone through: check (for example the sent folder) before doing it again.`
         );
     }
     const inOwnFolder = memory.workingDirectory === memory.dir;
