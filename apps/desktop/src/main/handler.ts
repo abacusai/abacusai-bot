@@ -3,6 +3,7 @@ import {
   writeCustomInstructions,
 } from "@abacus-ai/agent/custom-instructions";
 import type { WebAuthCompleteResult } from "@abacus-ai/contract/account";
+import type { UpgradeSrc } from "@abacus-ai/contract/billing-plan";
 import type {
   IpcEvent,
   AbacusAccountInfo,
@@ -548,7 +549,8 @@ export const createHostOperations = (
     getUsageSnapshot: () => getUsageSnapshot(),
     getVaultManageUrl: () => serviceHost.vaultManageUrl(),
     // A held sign-in's own links: its key is the only one that can mint them.
-    getUpgradeUrl: () => fetchUpgradeUrl("app", paymentHold?.key),
+    getUpgradeUrl: (src?: UpgradeSrc) =>
+      fetchUpgradeUrl(src ?? "app", paymentHold?.key),
     getBillingPlan: () => fetchBillingPlan(false, paymentHold?.key),
     readSettings: () => readSettings(),
     readPromptHistory: (scope: string) => readPromptHistory(scope),

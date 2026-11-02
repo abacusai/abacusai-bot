@@ -227,7 +227,7 @@ export const PaymentRequiredPanel = ({
           data-action="upgrade"
           onClick={() => {
             // Called inside the click: the web build opens its tab here.
-            void openUpgrade(transport.client);
+            void openUpgrade(transport.client, "payment_lapsed");
             setCheckoutAt(Date.now());
           }}
         >

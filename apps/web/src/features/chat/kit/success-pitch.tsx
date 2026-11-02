@@ -229,7 +229,7 @@ export const SuccessPitchRow = ({ active }: { active: boolean }) => {
       billing={billing}
       onUpgrade={() => {
         // Inside the click: the web build opens its checkout tab here.
-        startPlanCheckout(transport.client, "success-pitch");
+        startPlanCheckout(transport.client, "success_pitch");
         funnel("success_pitch_upgrade", showing.trigger);
         write({ ...base(), answered: showing.id });
       }}

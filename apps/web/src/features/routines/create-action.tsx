@@ -26,7 +26,10 @@ export const RoutineUpgradeActions = () => {
   const { transport } = useAppContext();
   return (
     <div className="flex flex-wrap gap-2">
-      <Button size="sm" onClick={() => void openUpgrade(transport.client)}>
+      <Button
+        size="sm"
+        onClick={() => void openUpgrade(transport.client, "app_routines")}
+      >
         {t("routines.hosted.upgrade")}
       </Button>
       {IS_BROWSER && (

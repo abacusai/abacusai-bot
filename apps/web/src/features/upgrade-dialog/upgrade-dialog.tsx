@@ -37,6 +37,7 @@ import {
 } from "#renderer/lib/upgrade";
 import {
   closeUpgradeDialog,
+  dialogUpgradeSrc,
   useUpgradeDialogRequest,
   type UpgradeDialogRequest,
 } from "#renderer/lib/upgrade-dialog";
@@ -424,7 +425,7 @@ const DialogBody = ({
             // Called inside the click: the web build opens its tab here.
             void (paidUpgrade
               ? openNextPlan(transport.client)
-              : openUpgrade(transport.client));
+              : openUpgrade(transport.client, dialogUpgradeSrc(request)));
             setWaiting(true);
           }}
         >
