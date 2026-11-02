@@ -8,7 +8,7 @@ export const updateRouter = impl.update.router({
     unwrapResult(await context.deps.update.checkForUpdates());
   }),
   install: impl.update.install.handler(async ({ context }) => {
-    unwrapResult(await context.deps.update.installUpdate());
+    unwrapResult(await context.deps.update.installUpdate({ whenSafe: true }));
   }),
   status: impl.update.status.handler(({ context }) =>
     context.deps.update.getStatus()

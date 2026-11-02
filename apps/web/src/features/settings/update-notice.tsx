@@ -52,7 +52,7 @@ export const UpdateNotice = ({
         <div className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
           <RefreshCw
             aria-hidden
-            className={`text-muted-foreground size-4 shrink-0 ${["downloading", "installing"].includes(update.phase) ? "animate-spin" : ""}`}
+            className={`text-muted-foreground size-4 shrink-0 ${["downloading", "installing", "queued"].includes(update.phase) ? "animate-spin" : ""}`}
           />
           <div className="min-w-0 flex-1 basis-40">
             <p className="font-medium">

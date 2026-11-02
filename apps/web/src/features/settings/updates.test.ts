@@ -68,4 +68,12 @@ describe("update recovery", () => {
       })
     ).toBe("installing");
   });
+  it("a restart queued behind a running task reads as queued, then installing", () => {
+    const queued = { ...idle, downloaded: true, restartQueued: true };
+    expect(updatePhase(queued)).toBe("queued");
+    expect(updatePhase(queued, true)).toBe("queued");
+    expect(updatePhase({ ...queued, installing: true })).toBe("installing");
+    // A shell without the field: a click still reads as installing.
+    expect(updatePhase({ ...idle, downloaded: true }, true)).toBe("installing");
+  });
 });

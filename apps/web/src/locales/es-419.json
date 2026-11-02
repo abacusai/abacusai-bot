@@ -3655,6 +3655,7 @@
       "installFailed": "Couldn't install the update",
       "manualInstall": "Actualización lista: instálala manualmente",
       "installing": "Restarting…",
+      "queued": "Se reiniciará después de la tarea actual",
       "checking": "Buscando…",
       "downloading": "Descargando actualización… {{percent}} %",
       "downloaded": "Version {{version}} is ready to install",

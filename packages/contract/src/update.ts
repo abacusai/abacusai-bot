@@ -34,6 +34,11 @@ export interface UpdateStatus {
    * The app does not try that version again by itself.
    */
   manualInstall: UpdateManualInstall | null;
+  /**
+   * The user asked to restart while a task was running: the restart waits
+   * for it to end (capped). Absent from older shells.
+   */
+  restartQueued?: boolean;
 }
 
 export interface UpdateManualInstall {
