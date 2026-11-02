@@ -176,7 +176,7 @@ export const ProfileMenu = () => {
               className={row}
               onClick={() =>
                 policy.billing === "upgrade"
-                  ? void openUpgrade(transport.client)
+                  ? void openUpgrade(transport.client, "settings")
                   : go("/settings/account")
               }
             >

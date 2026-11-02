@@ -1,4 +1,4 @@
-import type { BillingPlan } from "@abacus-ai/contract/billing-plan";
+import type { BillingPlan, UpgradeSrc } from "@abacus-ai/contract/billing-plan";
 import type { OnboardingOfferAccountStep } from "@abacus-ai/contract/funnel";
 
 import { credentialFor } from "../config/settings";
@@ -18,7 +18,7 @@ import { abacusAppHost } from "./abacus-host";
  * link could be minted (offline, a slow proxy), never the chat product's
  * plans page.
  */
-export const botUpgradePage = (src: "app" | "channel" | "whatsapp"): string => {
+export const botUpgradePage = (src: UpgradeSrc): string => {
   const url = new URL("/bot/link/upgrade", abacusAppHost());
   url.searchParams.set("src", src);
   return url.toString();
@@ -30,10 +30,16 @@ export const WHATSAPP_UPGRADE_SRC = "whatsapp";
 /** Well inside the link's life, so a cached link is never a dead one. */
 const UPGRADE_URL_TTL_MS = 60_000;
 
-let cached: { key: string; url: string | null; at: number } | null = null;
+let cached: {
+  key: string;
+  src: UpgradeSrc;
+  url: string | null;
+  at: number;
+} | null = null;
 
 export const fetchUpgradeUrl = async (
-  src: "app" | "channel" = "app",
+  /** The screen the link is opened from; the platform counts upgrades by it. */
+  src: UpgradeSrc = "app",
   /** A held sign-in's key, in place of the stored one. */
   heldKey?: string
 ): Promise<string | null> => {
@@ -42,13 +48,14 @@ export const fetchUpgradeUrl = async (
   if (
     cached != null &&
     cached.key === key &&
+    cached.src === src &&
     Date.now() - cached.at < UPGRADE_URL_TTL_MS
   )
     return cached.url;
   const { ok, result } = await abacusApiCall(
     "_createAbacusbotUpgradeLink",
     "GET",
-    undefined,
+    { src },
     undefined,
     heldKey
   );
@@ -61,7 +68,7 @@ export const fetchUpgradeUrl = async (
       : null;
   const link =
     typeof url === "string" && url.startsWith("https://") ? url : null;
-  cached = { key, url: link, at: Date.now() };
+  cached = { key, src, url: link, at: Date.now() };
   return link;
 };
 

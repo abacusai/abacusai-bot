@@ -290,7 +290,7 @@ export const UpgradePromo = () => {
                     ? platformSystem(transport.client).openExternal({
                         url: ABACUS_AGENT_URL,
                       })
-                    : openUpgrade(transport.client))
+                    : openUpgrade(transport.client, "credits_card"))
             }
           >
             {held ? (
