@@ -11,10 +11,11 @@
  * message; every tool call but the hand-over (present_deliverable, send_media)
  * is refused from then on, and only if it still has not finished a few calls
  * later is the run stopped with a message that says so.
- * Repetition: the third identical tool call in a run is blocked (the second,
- * for a connector call, which is billed). Connector calls: every fifth one,
- * the model is reminded what they cost and asked whether it already has
- * enough. There is no cap, only a nudge. Show your work: a run that has written
+ * Repetition: the third identical tool call against the same state is blocked
+ * (the second, for a connector call, which is billed); a successful write,
+ * command or connector change in between makes the next one a new look.
+ * Connector calls: every fifth one, the model is reminded what they cost and
+ * asked whether it already has enough. There is no cap, only a nudge. Show your work: a run that has written
  * files but presented nothing is told, unseen by the user, to present what it
  * has after 10 minutes of working time, and again after 20; time
  * spent waiting on an approval is not working time. A chat whose user waits
@@ -27,6 +28,7 @@
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
+import { BOT_TIME_TOOL_NAME } from "../bot/bot-time-tool.js";
 import {
   hostCreditBalance,
   refreshCreditBalanceIfStale,
@@ -34,6 +36,8 @@ import {
 } from "../credit-balance.js";
 import { connectorToolMeta } from "../mcp/index.js";
 import { WRITE_TOOLS } from "../permissions.js";
+import { toToolKind } from "../tool-display.js";
+import { ownEntry, UNATTENDED_CONNECTOR_READS } from "../tool-policy.js";
 
 /** How far short of the cap each warning lands. */
 const WRAP_UP_MARGIN = 100;
@@ -71,9 +75,42 @@ const RESAMPLES_LIVE_STATE = new Set([
   "browser_execute",
   "browser_interact",
   "browser_tabs",
-  "read_output",
+  "fetch_background_output",
+  BOT_TIME_TOOL_NAME,
+  "read_whatsapp_messages",
+  "read_telegram_messages",
+  "read_discord_messages",
+  "read_chat_messages",
   "vision_analyze",
 ]);
+
+/** Tools whose answer comes from the web: nothing done here changes it. */
+const READS_THE_WEB = new Set(["web_fetch", "web_search"]);
+
+/**
+ * Whether a call may change what a repeat would see: a file write or a
+ * command, or a connector call that is not a reviewed read.
+ */
+function changesState(
+  toolName: string,
+  input: unknown,
+  connector: ReturnType<typeof connectorToolMeta>
+): boolean {
+  if (connector != null) {
+    const action = String((input as { action?: unknown })?.action ?? "");
+    return !(
+      ownEntry(UNATTENDED_CONNECTOR_READS, connector.tool) ?? []
+    ).includes(action);
+  }
+  const kind = toToolKind(toolName);
+  return (
+    WRITE_TOOLS.has(toolName) ||
+    kind === "edit" ||
+    kind === "delete" ||
+    kind === "move" ||
+    kind === "execute"
+  );
+}
 
 function turnCap(): number {
   const raw = Number(process.env.ABACUSAI_BOT_TURN_CAP);
@@ -201,7 +238,12 @@ export default function budgets(
   let heard = false;
   let turns = 0;
   let connectorCalls = 0;
-  const callCounts = new Map<string, number>();
+  // Each call's count, and the state it last ran against. A successful call
+  // that may change state moves the state on, so a repeat after it is a new
+  // look; its own effect counts as the state its repeat meets.
+  const callCounts = new Map<string, { count: number; state: number }>();
+  let state = 0;
+  const pendingCalls = new Map<string, { key: string; changes: boolean }>();
   // Working time: the model generating or a tool running. A call held for
   // approval sits between the two, so the wait is not counted.
   let workedMs = 0;
@@ -244,6 +286,7 @@ export default function budgets(
     connectorCalls = 0;
     stoppedBecause = null;
     callCounts.clear();
+    pendingCalls.clear();
     workedMs = 0;
     activeSince = null;
     generating = false;
@@ -268,7 +311,14 @@ export default function budgets(
   pi.on("tool_execution_end", (event, ctx) => {
     track(() => runningTools.delete(event.toolCallId));
     refreshCredits(ctx);
+    const pending = pendingCalls.get(event.toolCallId);
+    pendingCalls.delete(event.toolCallId);
     if (event.isError) return;
+    if (pending?.changes) {
+      state++;
+      const counted = callCounts.get(pending.key);
+      if (counted != null) counted.state = state;
+    }
     if (WRITE_TOOLS.has(event.toolName)) wroteFile = true;
     if (isPresentTool(event.toolName)) presented = true;
     if (
@@ -423,8 +473,17 @@ export default function budgets(
     }
 
     const key = `${event.toolName}:${inputKey}`;
-    const count = (callCounts.get(key) ?? 0) + 1;
-    callCounts.set(key, count);
+    const previous = callCounts.get(key);
+    const count =
+      previous != null &&
+      (previous.state === state || READS_THE_WEB.has(event.toolName))
+        ? previous.count + 1
+        : 1;
+    callCounts.set(key, { count, state });
+    pendingCalls.set(event.toolCallId, {
+      key,
+      changes: changesState(event.toolName, event.input, connector),
+    });
     if (connector != null && count >= CONNECTOR_REPEAT_LIMIT) {
       return {
         block: true,
