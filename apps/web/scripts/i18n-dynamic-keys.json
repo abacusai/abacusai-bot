@@ -810,6 +810,7 @@
       "skipped",
       "skipped-offline",
       "offline",
+      "interrupted",
       "unknown",
       "paused"
     ],

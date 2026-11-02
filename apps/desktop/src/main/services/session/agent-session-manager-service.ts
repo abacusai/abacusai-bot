@@ -150,12 +150,14 @@ export class AgentSessionManagerService {
 
     for (const record of records) {
       if (!allowed.has(record.workspaceId)) continue;
-      // Restore as stopped. A routine run caught mid-flight is over too:
-      // nothing will ever settle it, so it is a failure.
+      // Restore as stopped. A routine run caught mid-flight is over too: the
+      // app closed under it, which is not the routine's failure.
       const restored: SessionRecord = {
         ...record,
         status: "stopped",
-        ...(record.runOutcome === "running" ? { runOutcome: "failed" } : {}),
+        ...(record.runOutcome === "running"
+          ? { runOutcome: "interrupted" }
+          : {}),
       };
       this.sessions.set(record.id, restored);
       const ids = this.workspaceSessionIds.get(record.workspaceId) ?? [];

@@ -99,13 +99,13 @@ export interface CronJob {
   notMoved?: string | null;
   /**
    * When a fire came due with the network down, or was held to make up a
-   * missed one; it runs once the network is back. On disk so a restart
-   * before then still runs it.
+   * missed one or one the app closed under; it runs once the network is
+   * back. On disk so a restart before then still runs it.
    */
   heldSince?: number | null;
   /** The scheduled moment a held fire stands for, and why it is held. */
   heldSlot?: number | null;
-  heldFor?: "network" | "catch-up" | null;
+  heldFor?: HoldReason | null;
   /**
    * The newest scheduled moment fired, claimed before its session starts:
    * a slot at or before it never fires again, across restarts included.
@@ -116,6 +116,9 @@ export interface CronJob {
   /** Fires it last missed while the computer was off, until its next on-time fire. */
   missed?: RoutineMissed | null;
 }
+
+/** Why a fire waits: the network, a missed fire, or a run the app closed under. */
+export type HoldReason = "network" | "catch-up" | "interrupted";
 
 const FILE = (): string => path.join(abacusBotHome(), "cronjobs.json");
 
@@ -517,12 +520,13 @@ export const markNotMoved = (id: string, reason: string): CronJob => {
 
 /**
  * Hold a job (`at`) for the scheduled moment `slot`, or let it go (null).
- * A hold for a missed fire is a catch-up; any other waits for the network.
+ * A hold for a missed fire is a catch-up, one for a run the app closed
+ * under is made up once; any other waits for the network.
  */
 export const setHeld = (
   id: string,
   at: number | null,
-  hold: { slot: number; reason: "network" | "catch-up" } | null = null
+  hold: { slot: number; reason: HoldReason } | null = null
 ): void => {
   const jobs = readForWrite();
   const index = jobs.findIndex((job) => job.id === id);
@@ -565,18 +569,52 @@ const slotFired = (job: CronJob, slot: number, now: number): boolean => {
 /**
  * Claims the scheduled moment `slot` for one attempt, written before the
  * run starts, so no restart or second tick fires it again. False when it
- * (or a later one) was already claimed, or the job is gone.
+ * (or a later one) was already claimed, or the job is gone. `makeUp` takes
+ * over the claim of the run the app closed under, for that same moment only.
  */
 export const claimSlot = (
   id: string,
   slot: number,
-  attemptId: string
+  attemptId: string,
+  makeUp = false
 ): boolean => {
   const jobs = readForWrite();
   const index = jobs.findIndex((job) => job.id === id);
-  if (index < 0 || slotFired(jobs[index], slot, Date.now())) return false;
+  if (index < 0) return false;
+  if (
+    makeUp
+      ? firedSlotAt(jobs[index], Date.now()) !== slot
+      : slotFired(jobs[index], slot, Date.now())
+  )
+    return false;
   jobs[index] = { ...jobs[index], firedSlot: { at: slot, attemptId } };
   write(jobs);
+  return true;
+};
+
+/**
+ * The app closed under the run `attemptId` (TurnLedger's `app_closed`): when
+ * it was a scheduled fire still holding its moment's claim, and not itself a
+ * make-up, that moment is held to be made up once. True when held.
+ */
+export const holdInterrupted = (
+  id: string,
+  attemptId: string,
+  at: number
+): boolean => {
+  const job = getJob(id);
+  const run = job?.runs.find((entry) => entry.id === attemptId);
+  if (
+    job == null ||
+    run == null ||
+    !job.enabled ||
+    job.schedule == null ||
+    job.heldSince != null ||
+    job.firedSlot?.attemptId !== attemptId ||
+    (run.trigger !== "schedule" && run.trigger !== "catch-up")
+  )
+    return false;
+  setHeld(id, at, { slot: job.firedSlot.at, reason: "interrupted" });
   return true;
 };
 
