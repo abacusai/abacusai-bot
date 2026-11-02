@@ -65,6 +65,11 @@ const forgetLegacyBotState = (log: (line: string) => void): void => {
 const MAX_MESSAGE_LENGTH = 4000;
 
 const LOGIN_POLL_MS = 1500;
+/**
+ * A page that has just started loading shows web-k's auth screen for a moment
+ * while it reads the stored session; a sign-out is believed only after this.
+ */
+const SIGN_OUT_SETTLE_MS = 15_000;
 
 const INBOUND_POLL_MS = 5000;
 
@@ -86,6 +91,8 @@ export class TelegramWebConnector implements MessagingConnector {
   private loggedIn = false;
   /** Consecutive signed-out polls after a login. See checkLogin. */
   private signedOutTicks = 0;
+  /** When the page last started loading; see SIGN_OUT_SETTLE_MS. */
+  private pageLoadStartedAt = 0;
   /** A page that never booted: when to reload it, and when to stop. */
   private readonly boot = new PageBootWatch();
   /** No page and no checks until the user opens Telegram. See park. */
@@ -165,6 +172,7 @@ export class TelegramWebConnector implements MessagingConnector {
     this.window.on("closed", () => {
       this.window = null;
     });
+    this.watchLoads(this.window);
 
     try {
       await this.window.loadURL(TELEGRAM_WEB_URL);
@@ -400,8 +408,13 @@ export class TelegramWebConnector implements MessagingConnector {
     }
 
     if (!state.loggedIn && this.loggedIn) {
-      // Two consecutive polls, not one: a page mid-reload can briefly read as
-      // signed out, and a false flap tells every conversation we vanished.
+      // Two consecutive polls, not one, and never on a page still booting: a
+      // page mid-reload briefly reads as signed out, and a false flap tells
+      // every conversation we vanished.
+      if (Date.now() - this.pageLoadStartedAt < SIGN_OUT_SETTLE_MS) {
+        this.signedOutTicks = 0;
+        return;
+      }
       this.signedOutTicks += 1;
       if (this.signedOutTicks < 2) return;
       this.signedOutTicks = 0;
@@ -531,9 +544,17 @@ export class TelegramWebConnector implements MessagingConnector {
     win.on("closed", () => {
       this.window = null;
     });
+    this.watchLoads(win);
     void win.loadURL(TELEGRAM_WEB_URL);
     this.window = win;
     return win;
+  }
+
+  /** Every load, ours (a send's retry, a reload) or web-k's own. */
+  private watchLoads(win: BrowserWindow): void {
+    win.webContents.on("did-start-loading", () => {
+      this.pageLoadStartedAt = Date.now();
+    });
   }
 
   /**
