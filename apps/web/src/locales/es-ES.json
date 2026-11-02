@@ -4543,6 +4543,7 @@
       "paymentLapsed": "Me he detenido porque tu suscripción de Abacus.AI ha terminado. Renuévala aquí: {{link}}",
       "timedOut": "Ha tardado demasiado y se ha detenido antes de que pudiera responder. Envíalo de nuevo para retomarlo.",
       "agentExited": "La app se ha cerrado antes de que pudiera responder. Envíalo de nuevo para retomarlo.",
+      "notStarted": "La app ha tardado demasiado en estar lista, así que no he podido empezar. Envíalo de nuevo para intentarlo otra vez.",
       "empty": "No he podido preparar una respuesta a eso. Envíalo de nuevo, por favor.",
       "contactNeutral": "Lo siento, ahora no puedo responder. Te contesto pronto.",
       "contactEmpty": "No he respondido a {{name}}: no llegó ninguna respuesta. Abre la app para contestarle o dime qué decirle.",

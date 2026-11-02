@@ -667,11 +667,12 @@ export type DesktopEvent =
       agentSessionFile?: string;
     }
   | { type: "event"; event: AgentEvent }
-  // Proof the agent is alive while a tool runs: the desktop times a turn out
-  // when nothing arrives, and a quiet build is indistinguishable from a wedged
-  // agent. Out-of-band rather than an AgentEvent because it is liveness for the
-  // host, not something the transcript should show.
-  | { type: "heartbeat"; runningTools: number }
+  // Proof the agent is alive while a tool runs or the model writes: the
+  // desktop times a turn out when nothing arrives, and a quiet build is
+  // indistinguishable from a wedged agent. Out-of-band rather than an
+  // AgentEvent because it is liveness for the host, not something the
+  // transcript should show. `tool`: the newest call running; none is the model.
+  | { type: "heartbeat"; runningTools: number; tool?: string }
   // How many things this process keeps running between turns (background
   // jobs, served pages), sent when that changes. They die with the process, so
   // the desktop never stops an idle agent that holds one. An older agent build

@@ -1949,6 +1949,7 @@ export class ForeverEngine {
         return;
 
       case "message_update": {
+        this.heartbeat.generating();
         const stream = event.assistantMessageEvent as {
           type: string;
           delta?: string;
@@ -2062,7 +2063,7 @@ export class ForeverEngine {
         );
 
         this.toolInputs.set(event.toolCallId, tool.input);
-        this.heartbeat.started(event.toolCallId);
+        this.heartbeat.started(event.toolCallId, tool);
 
         if (!this.hiddenTurn) {
           this.emitAgentEvent({

@@ -2831,6 +2831,7 @@ export class AbacusBotSession {
         return;
 
       case "message_update": {
+        this.heartbeat.generating();
         this.onStreamEvent(event.assistantMessageEvent);
 
         return;
@@ -2911,7 +2912,7 @@ export class AbacusBotSession {
         }
 
         this.toolInputs.set(event.toolCallId, tool.input);
-        this.heartbeat.started(event.toolCallId);
+        this.heartbeat.started(event.toolCallId, tool);
 
         // A tool call is as much proof the provider answered as a token is.
         this.settleRoutingLine();

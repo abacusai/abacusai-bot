@@ -1,11 +1,14 @@
 /**
- * Proof the agent is alive while a tool runs. The desktop's watchdog ends a
- * turn that has gone quiet, and a running tool is silent by default (pi
- * reports bash output only when the command writes). The heartbeat runs only
- * while a call is outstanding and dies with the agent process, so a wedged
+ * Proof the agent is alive while a tool runs or the model writes. The
+ * desktop's watchdog ends a turn that has gone quiet, and a running tool is
+ * silent by default (pi reports bash output only when the command writes),
+ * as is a model streaming a long tool call's arguments (those reach only the
+ * AG-UI stream). The heartbeat runs only while a call is outstanding or the
+ * model's output keeps arriving, and dies with the agent process, so a wedged
  * agent is still caught while a slow one is left to finish.
  */
 import type { DesktopEvent } from "./protocol.js";
+import { describeToolCall } from "./tool-display.js";
 
 /**
  * Far below the desktop's watchdog (INACTIVITY_TIMEOUT_MS) so a scheduling
@@ -24,8 +27,13 @@ export const HEARTBEAT_INTERVAL_MS = 30_000;
 export const MAX_VOUCHED_RUNTIME_MS = 35 * 60_000;
 
 export class ToolHeartbeat {
-  /** Outstanding tool calls, by the time each started. */
-  private readonly running = new Map<string, number>();
+  /** Outstanding tool calls: when each started, and what it is (describeToolCall). */
+  private readonly running = new Map<
+    string,
+    { startedAt: number; label: string | null }
+  >();
+  /** When the model last streamed a piece of its reply. */
+  private modelSpokeAt: number | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
@@ -40,41 +48,74 @@ export class ToolHeartbeat {
   }
 
   /** Calls young enough to still be credible: what the heartbeat reports. */
-  private vouchedFor(): number {
+  private vouchedFor(): Array<string | null> {
     const now = Date.now();
-    let count = 0;
-    for (const startedAt of this.running.values()) {
-      if (now - startedAt < this.maxRuntimeMs) count += 1;
+    const labels: Array<string | null> = [];
+    for (const call of this.running.values()) {
+      if (now - call.startedAt < this.maxRuntimeMs) labels.push(call.label);
     }
 
-    return count;
+    return labels;
   }
 
-  started(toolCallId: string): void {
-    this.running.set(toolCallId, Date.now());
+  /** The model spoke within the last beat: it is writing, not wedged. */
+  private modelWriting(): boolean {
+    return (
+      this.modelSpokeAt != null &&
+      Date.now() - this.modelSpokeAt < this.intervalMs
+    );
+  }
 
+  started(
+    toolCallId: string,
+    tool?: { name?: unknown; input?: Record<string, unknown> }
+  ): void {
+    this.running.set(toolCallId, {
+      startedAt: Date.now(),
+      label: tool != null ? describeToolCall(tool) : null,
+    });
+    this.beat();
+  }
+
+  /**
+   * The model streamed a piece of its reply (text, thinking, a tool call's
+   * arguments). Only output vouches for it: a silent stream is StallWatch's.
+   */
+  generating(): void {
+    this.modelSpokeAt = Date.now();
+    this.beat();
+  }
+
+  ended(toolCallId: string): void {
+    this.running.delete(toolCallId);
+    if (this.running.size === 0 && !this.modelWriting()) this.stop();
+  }
+
+  private beat(): void {
     if (this.timer != null) return;
 
     this.timer = setInterval(() => {
       const live = this.vouchedFor();
 
-      // Every call ended or outran its vouching; let the watchdog have its say.
-      if (live === 0) {
+      // Every call ended or outran its vouching and the model is quiet; let
+      // the watchdog have its say.
+      if (live.length === 0 && !this.modelWriting()) {
         this.stop();
 
         return;
       }
 
-      this.emit({ type: "heartbeat", runningTools: live });
+      // The newest call still running names the wait; none is the model.
+      const tool = live.at(-1);
+      this.emit({
+        type: "heartbeat",
+        runningTools: live.length,
+        ...(tool != null ? { tool } : {}),
+      });
     }, this.intervalMs);
 
     // A pending heartbeat must never be the reason the process stays up.
     this.timer.unref?.();
-  }
-
-  ended(toolCallId: string): void {
-    this.running.delete(toolCallId);
-    if (this.running.size === 0) this.stop();
   }
 
   /**
@@ -83,6 +124,7 @@ export class ToolHeartbeat {
    */
   clear(): void {
     this.running.clear();
+    this.modelSpokeAt = null;
     this.stop();
   }
 

@@ -1167,25 +1167,6 @@ export class MessagingGatewayService {
     const label = `${platformLabel(platformId)} · ${message.userName ?? message.userId}`;
     this.options.updateSessionLabel(workspaceId, session.id, label);
 
-    const { autoApproveTools } = readGatewaySettings();
-    const started = await this.options.startSession(
-      workspaceId,
-      session.id,
-      // Nobody is at the keyboard to approve a tool for a remote turn; the
-      // pairing allowlist is what keeps Bypass from being an open door.
-      autoApproveTools ? readDefaultAgentMode() : AgentMode.AcceptEdits
-    );
-
-    if (!started.success) {
-      await this.safeSend(
-        platformId,
-        message.chatId,
-        `Could not start the agent: ${started.error ?? "unknown error"}`,
-        message.replyContext
-      );
-      return null;
-    }
-
     const route: Route = {
       platform: platformId,
       chatId: message.chatId,
@@ -1208,6 +1189,28 @@ export class MessagingGatewayService {
       delivered: false,
       progressTimer: null,
     };
+
+    const { autoApproveTools } = readGatewaySettings();
+    const started = await this.options.startSession(
+      workspaceId,
+      session.id,
+      // Nobody is at the keyboard to approve a tool for a remote turn; the
+      // pairing allowlist is what keeps Bypass from being an open door.
+      autoApproveTools ? readDefaultAgentMode() : AgentMode.AcceptEdits
+    );
+
+    // The start retried already: the chat hears it in its own words, as any
+    // turn no agent took, never the start's raw error.
+    if (!started.success) {
+      console.log(
+        `[messaging] ${platformId}:${message.chatId} agent did not start: ${started.error ?? "unknown"}`
+      );
+      await this.replyToFailure(
+        { ...route, replyContext: message.replyContext },
+        { code: "not_started" }
+      );
+      return null;
+    }
 
     if (existing != null) {
       this.routesBySession.delete(existing.sessionId);

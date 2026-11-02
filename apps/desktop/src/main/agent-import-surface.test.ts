@@ -62,6 +62,9 @@ const ALLOWED = new Set([
   // The language the user wants replies in: node's fs and path, and the
   // config leaf (node's fs, os and path); its detection call is plain fetch.
   "@abacus-ai/agent/user-language",
+  // Tool titles and the watchdog's tool summary: an 8 kB chunk with no imports
+  // at all (the renderer takes the same entry).
+  "@abacus-ai/agent/tool-display",
 ]);
 
 const MAIN_DIR = resolve(import.meta.dirname);

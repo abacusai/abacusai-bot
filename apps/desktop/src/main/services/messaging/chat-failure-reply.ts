@@ -63,6 +63,7 @@ export type FailureKind =
   | "connection"
   | "timed-out"
   | "agent-exited"
+  | "not-started"
   | "empty"
   | "generic";
 
@@ -121,6 +122,7 @@ export const chatFailureOf = (
     }
     case "timed_out":
     case "agent_exited":
+    case "not_started":
       return { code: record.kind };
     case "stopped":
       return null;
@@ -150,9 +152,11 @@ export const failureKind = (error: TurnFailure): FailureKind => {
   if (types.has("free-pool-out")) return "free-pool-out";
   if (error.code === "model_unavailable") return "model-unavailable";
   if (error.code === NETWORK_UNREACHABLE_CODE) return "connection";
-  // Endings main decides: the inactivity watchdog, the agent going away.
+  // Endings main decides: the inactivity watchdog, the agent going away, no
+  // agent taking the message.
   if (error.code === "timed_out") return "timed-out";
   if (error.code === "agent_exited") return "agent-exited";
+  if (error.code === "not_started") return "not-started";
   if (error.cause === EMPTY_CAUSE) return "empty";
   return "generic";
 };
@@ -378,6 +382,8 @@ export const chatReplyForFailure = (
       return t("outcome.channel.timedOut");
     case "agent-exited":
       return t("outcome.channel.agentExited");
+    case "not-started":
+      return t("outcome.channel.notStarted");
     case "empty":
       return t("outcome.channel.empty");
     case "generic":
@@ -484,6 +490,7 @@ export class FailureReplyThrottle {
       kind === "verify-phone" ||
       kind === "timed-out" ||
       kind === "agent-exited" ||
+      kind === "not-started" ||
       kind === "empty"
     )
       return false;

@@ -617,9 +617,10 @@ export type DesktopEvent =
       agentSessionFile?: string;
     }
   | { type: "event"; event: AgentEvent }
-  // Proof the agent is alive while a tool runs; consumed by the turn watchdog,
-  // never forwarded. An older agent build never sends it.
-  | { type: "heartbeat"; runningTools: number }
+  // Proof the agent is alive while a tool runs or the model writes; consumed
+  // by the turn watchdog, never forwarded. `tool`: the newest call running,
+  // none is the model. An older agent build never sends it.
+  | { type: "heartbeat"; runningTools: number; tool?: string }
   // How many things this process keeps running between turns (background
   // jobs, served pages), sent when that changes. They die with the process, so
   // the desktop never stops an idle agent that holds one. An older agent build

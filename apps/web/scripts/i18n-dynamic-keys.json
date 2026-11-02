@@ -1715,6 +1715,7 @@
       "verifyPhoneNoCount",
       "timedOut",
       "agentExited",
+      "notStarted",
       "empty",
       "contactNeutral",
       "contactEmpty",

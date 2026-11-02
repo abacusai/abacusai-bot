@@ -567,7 +567,11 @@ describe("the model a session with none of its own starts on", () => {
         },
       },
       botService: { botIdForSession: () => null },
-      agentManagerService: { startSessionReady: ready },
+      agentManagerService: {
+        startSessionReady: ready,
+        // No agent runs yet: nothing to wait out before the start.
+        getSessionState: () => ({ status: "stopped" }),
+      },
       emitEvent: vi.fn(),
     }) as InstanceType<typeof ServiceHost>;
     await host.startAgentSession({

@@ -4543,6 +4543,7 @@
       "paymentLapsed": "Mi sono fermato perché il tuo abbonamento Abacus.AI è terminato. Rinnovalo qui: {{link}}",
       "timedOut": "Ci è voluto troppo ed è stato interrotto prima che potessi rispondere. Rimandalo per riprendere.",
       "agentExited": "L'app si è chiusa prima che potessi rispondere. Rimandalo per riprendere.",
+      "notStarted": "L'app ci ha messo troppo a prepararsi, quindi non ho potuto iniziare. Rimandalo per riprovare.",
       "empty": "Non sono riuscito a preparare una risposta. Rimandalo, per favore.",
       "contactNeutral": "Scusa, ora non posso rispondere. Ti rispondo presto.",
       "contactEmpty": "Non ho risposto a {{name}}: non è arrivata nessuna risposta. Apri l'app per rispondergli, oppure dimmi cosa scrivere.",

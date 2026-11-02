@@ -4543,6 +4543,7 @@
       "paymentLapsed": "Saya berhenti sejenak karena langganan Abacus.AI Anda telah berakhir. Perpanjang di sini: {{link}}",
       "timedOut": "Itu terlalu lama dan dihentikan sebelum saya sempat membalas. Kirim lagi untuk melanjutkan.",
       "agentExited": "Aplikasi berhenti sebelum saya sempat membalas. Kirim lagi untuk melanjutkan.",
+      "notStarted": "Aplikasi terlalu lama bersiap, jadi saya belum bisa mulai. Kirim lagi untuk mencoba sekali lagi.",
       "empty": "Saya tidak bisa menyusun balasan untuk itu. Silakan kirim lagi.",
       "contactNeutral": "Maaf, saya belum bisa membalas sekarang. Saya akan segera menghubungi Anda.",
       "contactEmpty": "Saya tidak membalas {{name}}: tidak ada jawaban yang kembali. Buka aplikasi untuk membalasnya, atau beri tahu saya apa yang harus dikatakan.",
