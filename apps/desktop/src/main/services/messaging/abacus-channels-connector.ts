@@ -183,6 +183,8 @@ export class AbacusChannelsConnector implements MessagingConnector {
   private link: SharedChannelLink = { status: "unlinked" };
   private botName: string | null = null;
   private pairTimer: NodeJS.Timeout | null = null;
+  /** Server clock minus this computer's; see noteServerClock. */
+  private serverClockOffsetMs = 0;
   private abort: AbortController | null = null;
   private linkWindow: BrowserWindow | null = null;
   /** Discord's consent parameters from the last pairing; null without them. */
@@ -475,7 +477,7 @@ export class AbacusChannelsConnector implements MessagingConnector {
       // becomes a QR that silently does nothing.
       if (
         this.link.expiresAt != null &&
-        Date.now() / 1000 > this.link.expiresAt
+        this.serverNow() / 1000 > this.link.expiresAt
       ) {
         try {
           // pair() starts the watch again, so this tick is done: scheduling
@@ -679,6 +681,7 @@ export class AbacusChannelsConnector implements MessagingConnector {
           signal: controller.signal,
         }
       );
+      this.noteServerClock(response.headers.get("date"));
       const payload = (await response.json().catch(() => ({}))) as T & {
         error?: string;
       };
@@ -691,6 +694,20 @@ export class AbacusChannelsConnector implements MessagingConnector {
       clearTimeout(timer);
       if (this.abort === controller) this.abort = null;
     }
+  }
+
+  /**
+   * The server's clock, as its last answer dated it. A code's expiry is in
+   * server time, and a computer clock hours off read every fresh code as
+   * expired, minting a new one each poll so none could ever be scanned.
+   */
+  private noteServerClock(date: string | null): void {
+    const at = date != null ? Date.parse(date) : Number.NaN;
+    if (Number.isFinite(at)) this.serverClockOffsetMs = at - Date.now();
+  }
+
+  private serverNow(): number {
+    return Date.now() + this.serverClockOffsetMs;
   }
 
   private sleep(ms: number): Promise<void> {
