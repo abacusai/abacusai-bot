@@ -150,7 +150,7 @@ export const AccountPage = () => {
           {billing && (
             <Button
               size="sm"
-              onClick={() => void openUpgrade(transport.client)}
+              onClick={() => void openUpgrade(transport.client, "settings")}
             >
               {t(
                 billing === "upgrade" ? "creditsCard.cta" : "phase5.managePlan"

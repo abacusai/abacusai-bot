@@ -156,7 +156,7 @@ export const useSessionComposerModel = (
       onConfigureProviders: () =>
         void navigate({ to: "/settings/models", transition: "settings-in" }),
       ...(creditsTier(account.data) === "free"
-        ? { onUpgrade: () => requestPlanDialog("model-picker") }
+        ? { onUpgrade: () => requestPlanDialog("model_locked") }
         : {}),
       ...(other != null && creditsTier(account.data) === "free"
         ? {
@@ -188,7 +188,7 @@ export const useSessionComposerModel = (
               ? t("chat.composer.includedInPaid")
               : t("chat.composer.includedIn", { plan }),
         },
-        onUpgrade: () => requestPlanDialog("model-picker"),
+        onUpgrade: () => requestPlanDialog("model_locked"),
         onConnect: (provider) =>
           void navigate({
             to: "/settings/models",

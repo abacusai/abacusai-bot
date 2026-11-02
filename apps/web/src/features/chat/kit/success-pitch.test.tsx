@@ -345,7 +345,7 @@ describe("SuccessPitchRow", () => {
       await cleanup?.();
       cleanup = undefined;
     }
-    requestPlanDialog("elsewhere");
+    requestPlanDialog("model_locked");
     await mount();
     await settled();
     expect(document.querySelector('[data-slot="success-pitch"]')).toBeNull();

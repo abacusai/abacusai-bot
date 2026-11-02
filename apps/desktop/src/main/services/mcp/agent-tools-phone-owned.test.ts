@@ -560,7 +560,7 @@ describe("paid-plan capabilities", () => {
     expect(text).toMatch(/Upgrade card with your reply/);
     // The reply outlives a one-time link: the bot's own upgrade page, never a minted one.
     expect(text).toMatch(
-      /Their upgrade link: https:\/\/\S+\/bot\/link\/upgrade\?src=app\n/
+      /Their upgrade link: https:\/\/\S+\/bot\/link\/upgrade\?src=paid_feature\n/
     );
     expect(text).not.toContain("https://upgrade.example/basic");
     expect(text).toMatch(/Give the upgrade link exactly as written/);
@@ -943,7 +943,7 @@ describe("paid-plan capabilities", () => {
     expect(upgrade.isError).toBe(false);
     expect(billingPlan).toHaveBeenCalledWith(false);
     expect(upgrade.text).toMatch(
-      /Their upgrade link: https:\/\/\S+\/bot\/link\/upgrade\?src=app/
+      /Their upgrade link: https:\/\/\S+\/bot\/link\/upgrade\?src=paid_feature/
     );
     // Nobody answers a routine's result, so it gets no follow-up rules.
     expect(upgrade.text).not.toMatch(/When they answer it/);

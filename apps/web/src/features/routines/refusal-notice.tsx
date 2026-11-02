@@ -41,7 +41,7 @@ export const RoutineRefusalNotice = ({
             onClick={(event) => {
               if (refusal.upgradeUrl != null) return;
               event.preventDefault();
-              void openUpgrade(transport.client);
+              void openUpgrade(transport.client, "app_routines");
             }}
           >
             {t("routines.hosted.upgrade")}

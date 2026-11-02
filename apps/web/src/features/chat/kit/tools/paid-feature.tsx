@@ -95,7 +95,7 @@ export const PaidFeatureCard = ({
               <Button
                 size="sm"
                 data-action="see-plan"
-                onClick={() => requestPlanDialog("paid-feature")}
+                onClick={() => requestPlanDialog("paid_feature")}
               >
                 {t("creditsCard.cta")}
               </Button>

@@ -16,7 +16,7 @@ export const creditActionsFor = (
   const client = transport.client;
   return {
     openExternal: (url) => platformSystem(client).openExternal({ url }),
-    openUpgrade: () => openUpgrade(client),
+    openUpgrade: (src) => openUpgrade(client, src),
     openTopUp: () => openTopUp(client),
     openNextPlan: () => openNextPlan(client),
     canTopUpCredits: async () =>
