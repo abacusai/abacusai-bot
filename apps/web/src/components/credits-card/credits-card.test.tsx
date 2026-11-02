@@ -1,6 +1,6 @@
 import type { BillingPlan } from "@abacus-ai/contract/billing-plan";
 import { contract } from "@abacus-ai/contract/contract";
-import type { PrefsRow } from "@abacus-ai/contract/contract/rows";
+import type { PrefsRow, SessionRow } from "@abacus-ai/contract/contract/rows";
 import type { CreditThresholdMark } from "@abacus-ai/contract/credit-thresholds";
 import { implement } from "@orpc/server";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -15,7 +15,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DbProvider } from "#renderer/data/db";
-import { fixturePrefs } from "#renderer/data/fixture-db/rows";
+import { fixturePrefs, fixtureSessions } from "#renderer/data/fixture-db/rows";
 import {
   closeUpgradeDialog,
   requestUpgradeDialog,
@@ -388,15 +388,26 @@ describe("the free grant's milestone card", () => {
     account = ACCOUNT as typeof ACCOUNT | null,
     prefs = {} as Partial<PrefsRow>,
     busy = false,
+    mark = MARK,
+    sessions = [] as Array<Partial<SessionRow>>,
   } = {}) => {
     const os = implement(contract);
     const seed = defaultSeed();
     const harness = await createHarness("/", {
       seed: {
         ...seed,
-        sessions: busy ? seed.sessions : [],
+        sessions: busy
+          ? seed.sessions
+          : sessions.map((extra): SessionRow => ({
+              ...fixtureSessions()[0]!,
+              turn: null,
+              routineId: null,
+              editorFor: null,
+              botOwned: false,
+              ...extra,
+            })),
         prefs: fixturePrefs({
-          creditThresholds: { "o1:u1": MARK },
+          creditThresholds: { "o1:u1": mark },
           ...prefs,
         }),
       },
@@ -453,6 +464,31 @@ describe("the free grant's milestone card", () => {
       "credit_card_50_continue",
     ]);
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("at four fifths, names the chat the user worked in last, never a routine run", async () => {
+    await host({
+      account: { ...ACCOUNT, credits_used: 1640 },
+      mark: { ...MARK, reached: 80, used: 1640 },
+      sessions: [
+        {
+          id: "s1",
+          label: "Bakery website",
+          updatedAt: "2026-11-01T10:00:00Z",
+        },
+        { id: "s2", label: "Old notes", updatedAt: "2026-10-20T10:00:00Z" },
+        {
+          id: "s3",
+          label: "Daily digest",
+          routineId: "r1",
+          updatedAt: "2026-11-02T10:00:00Z",
+        },
+      ],
+    });
+    await screen.findByRole("heading", { name: "Only 360 free credits left" });
+    expect(screen.getByRole("dialog").textContent).toContain(
+      "Enough for about 3 more bot messages. Upgrade now so “Bakery website” doesn't stop halfway."
+    );
   });
 
   it("a dismissed threshold stays dismissed; the next one still shows", async () => {

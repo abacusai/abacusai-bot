@@ -4467,6 +4467,10 @@
     "wall": {
       "title": "無料クレジットを使い切りました",
       "expiredTitle": "無料クレジットの有効期限が切れました",
+      "taskTitle": "「{{task}}」は一時停止中:無料クレジットを使い切りました",
+      "taskExpiredTitle": "「{{task}}」は一時停止中:無料クレジットの有効期限が切れました",
+      "taskPaidTitle": "「{{task}}」は一時停止中:今月のクレジットを使い切りました",
+      "resumes": "アップグレードすると、止まったところから自動で再開します。",
       "paidTitle": "今月のクレジットを使い切りました",
       "paidOffer": "または {{plan}} にアップグレード — {{price}}",
       "paidMobile": "このプランは App Store または Google Play で請求されるため、クレジットの追加やアップグレードは Abacus.AI モバイルアプリで行ってください。",
@@ -4639,6 +4643,7 @@
     "low": {
       "title": "無料クレジットは残り {{left}} です",
       "urge": "作業が途中で止まらないよう、今すぐアップグレードしましょう。",
+      "urgeProject": "「{{project}}」が途中で止まらないよう、今すぐアップグレードしましょう。",
       "estimateBuilds_one": "ビルドあと約 {{count}} 回分です。",
       "estimateBuilds_other": "ビルドあと約 {{count}} 回分です。",
       "estimateMessages_one": "ボットのメッセージあと約 {{count}} 件分です。",

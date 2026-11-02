@@ -1760,6 +1760,7 @@
       "half.estimateTasks",
       "low.title",
       "low.urge",
+      "low.urgeProject",
       "low.estimateBuilds",
       "low.estimateMessages",
       "low.estimateTasks"

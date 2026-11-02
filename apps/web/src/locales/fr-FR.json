@@ -4467,6 +4467,10 @@
     "wall": {
       "title": "Vos crédits gratuits sont épuisés",
       "expiredTitle": "Vos crédits gratuits ont expiré",
+      "taskTitle": "« {{task}} » est en pause : vos crédits gratuits sont épuisés",
+      "taskExpiredTitle": "« {{task}} » est en pause : vos crédits gratuits ont expiré",
+      "taskPaidTitle": "« {{task}} » est en pause : les crédits de ce mois sont épuisés",
+      "resumes": "Passez au forfait et tout reprendra tout seul là où ça s'est arrêté.",
       "paidTitle": "Vous avez utilisé les crédits de ce mois-ci",
       "paidOffer": "Ou passez à {{plan}} — {{price}}",
       "paidMobile": "Votre forfait est facturé via l'App Store ou Google Play : ajoutez des crédits ou passez à un forfait supérieur dans l'application mobile Abacus.AI.",
@@ -4639,6 +4643,7 @@
     "low": {
       "title": "Plus que {{left}} crédits gratuits",
       "urge": "Passez au forfait maintenant pour que votre travail ne s'arrête pas en plein milieu.",
+      "urgeProject": "Passez au forfait maintenant pour que « {{project}} » ne s'arrête pas en plein milieu.",
       "estimateBuilds_one": "Assez pour environ {{count}} build de plus.",
       "estimateBuilds_other": "Assez pour environ {{count}} builds de plus.",
       "estimateMessages_one": "Assez pour environ {{count}} message du bot de plus.",

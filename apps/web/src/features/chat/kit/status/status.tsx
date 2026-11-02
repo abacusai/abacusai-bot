@@ -6,7 +6,6 @@
 import {
   type PaidCreditsOffer,
   paidCreditsOffer,
-  paidUpgradeOnly,
 } from "@abacus-ai/contract/billing-plan";
 import { OPENLLM_ID } from "@abacus-ai/contract/models";
 import { providerDisplayName } from "@abacus-ai/contract/settings";
@@ -23,7 +22,10 @@ import {
 import { useEffect, useEffectEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { CreditsCard } from "#renderer/components/credits-card";
+import {
+  CreditsCard,
+  creditWallTitle,
+} from "#renderer/components/credits-card";
 import {
   CutOffCard,
   type CutOffResolution,
@@ -60,7 +62,9 @@ import { IS_ELECTRON } from "#renderer/lib/platform";
 import {
   lastUserText,
   requestUpgradeDialog,
-  startPaidCheckout,
+  startCreditsCheckout,
+  startPlanCheckout,
+  taskText,
 } from "#renderer/lib/upgrade-dialog";
 import { useAccount } from "#renderer/lib/use-account";
 import { useAppContext } from "#renderer/lib/use-app-context";
@@ -656,24 +660,25 @@ type CutOffStep =
   | "cutoff_verify";
 
 /**
- * A paid plan's ways on from a card in this chat. Top up and the next plan:
- * the link opens at click time and the dialog waits for the credits or the
- * plan. Upgrade (Basic's way on): the upgrade dialog, as a free account's
- * card opens it. Either sends the waiting message (`resume`) once paid.
+ * The ways on from a card in this chat. Plan (a free account's Upgrade), Top
+ * up and the next plan: the link opens at click time and the dialog waits for
+ * the plan or the credits. Upgrade (Basic's way on): the upgrade dialog.
+ * Each sends the waiting message (`resume`) once paid.
  */
-const usePaidCheckout = (
+const useCreditsCheckout = (
   runId: string,
   resume: (model?: string) => Promise<unknown>
 ) => {
   const { session, runtime } = useChatView();
   const start = (open: () => Promise<void>) =>
-    startPaidCheckout(open, {
+    startCreditsCheckout(open, {
       key: `paid-credits:${runId}:${Date.now()}`,
       threadId: session.threadId,
       pendingText: lastUserText(session.hostStore.state.messages),
       resume,
     });
   return {
+    plan: () => start(() => runtime.host.openUpgrade("chat_credits")),
     topUp: () =>
       start(() =>
         runtime.host.openTopUp != null
@@ -770,7 +775,7 @@ const CutOffError = ({
     );
   const label = action.label ?? action.model ?? "";
   // Credits or a plan bought: the cut reply goes on where it stopped.
-  const paidCheckout = usePaidCheckout(outcome.runId, async () => {
+  const paidCheckout = useCreditsCheckout(outcome.runId, async () => {
     funnel("cutoff_upgraded");
     resolveCutOff(outcome.runId, "upgraded");
     return goOn();
@@ -891,6 +896,7 @@ export const ErrorCard = ({
 }: ErrorCardProps) => {
   const { t } = useTranslation();
   const { session, composer, runtime, skin, slots } = useChatView();
+  const { transport } = useAppContext();
   const resume = useUpgradeResume();
   const switchToAbacus = useSwitchToAbacus();
   const [accountTier, setAccountTier] =
@@ -910,7 +916,7 @@ export const ErrorCard = ({
   }, [providedTier, runtime]);
   const tier = providedTier ?? accountTier;
   const paying = tier === "paid" || tier === "basic";
-  const paidCheckout = usePaidCheckout(outcome.runId, resume);
+  const paidCheckout = useCreditsCheckout(outcome.runId, resume);
   const error = outcome.error ?? { message: "" };
   const actions = ((error as { actions?: ErrorAction[] }).actions ??
     []) as ErrorAction[];
@@ -1098,8 +1104,8 @@ export const ErrorCard = ({
     const continueFree = actions.find(
       (action) => action.type === "continue-free"
     );
-    // The upgrade dialog, asked for by the person: its pitch is the plan's whole list.
-    const askUpgrade = () =>
+    // See plans: the upgrade dialog, asked for by the person.
+    const seePlans = () =>
       requestUpgradeDialog(
         {
           kind: "credits",
@@ -1107,10 +1113,19 @@ export const ErrorCard = ({
           threadId: session.threadId,
           pendingText: lastUserText(session.hostStore.state.messages),
           ...(creditsExpired(actions) ? { expired: true } : {}),
-          resume,
+          ...(canReply && { resume }),
         },
         true
       );
+    // Upgrade goes to checkout; the dialog waits for the plan and, where the
+    // person can reply here, sends the stopped message again. A routine run
+    // or a channel chat has none to send: checkout alone.
+    const upgradeNow = () => {
+      if (canReply)
+        return paying ? paidCheckout.nextPlan() : paidCheckout.plan();
+      if (paying) return void runtime.host.openNextPlan?.().catch(() => {});
+      startPlanCheckout(transport.client, "credit_wall");
+    };
     // The free ways on beside the plan: a $0 model by name, the key to fix.
     const alternatives = (size?: "sm") =>
       canReply ? (
@@ -1147,50 +1162,22 @@ export const ErrorCard = ({
       ) : undefined;
     // Until a paid plan's offer is read, no card: it picks which one.
     if (paidAtWall && paidWallOffer === undefined) return null;
-    // A free account at the Abacus wall (and Basic, whose way on is the next
-    // plan alone): the pitch is the upgrade dialog's (UpgradeTriggers opens
-    // it once per stopped run); here, one line and the way back to it, beside
-    // the free ways on.
-    if (atWall && (tier === "free" || paidUpgradeOnly(paidWallOffer)))
+    const task = taskText(session.hostStore.state.messages);
+    // A wall further up the chat is history: its title alone, the offer is the latest one's.
+    if (atWall && !latest)
       return (
         <div
           role="group"
           aria-label={t("chat.error.label")}
-          className="mx-auto flex w-full max-w-[calc(var(--composer-max-w)-var(--spacing)*8)] flex-col gap-3"
+          className="bg-card mx-auto w-full max-w-[calc(var(--composer-max-w)-var(--spacing)*8)] rounded-xl border px-3 py-2.5 text-sm font-medium"
           data-slot="error-card"
-          data-variant="upgrade-status"
+          data-variant="upgrade-history"
         >
-          <div className="bg-card flex flex-wrap items-center gap-2 rounded-xl border px-3 py-2.5 text-sm">
-            <span className="me-auto font-medium">
-              {t(
-                creditsExpired(actions)
-                  ? "outcome.wall.expiredTitle"
-                  : tier === "free"
-                    ? "outcome.wall.title"
-                    : "outcome.wall.paidTitle"
-              )}
-            </span>
-            {canReply && (
-              <Button size="sm" data-action="upgrade" onClick={askUpgrade}>
-                {t("creditsCard.cta")}
-              </Button>
-            )}
-            {continueFree?.providers != null &&
-              continueFree.providers.length > 0 &&
-              latest &&
-              canReply && (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  data-action="continue-free"
-                  onClick={() => void resumeOnFreePool().catch(() => {})}
-                >
-                  {t("outcome.wall.continueFree")}
-                </Button>
-              )}
-            {alternatives("sm")}
-          </div>
-          {ready.length > 0 && slots.renderDeliverables?.(ready)}
+          {creditWallTitle(
+            t,
+            { ...(task != null && { task }), expired: creditsExpired(actions) },
+            paying
+          )}
         </div>
       );
     return (
@@ -1215,10 +1202,13 @@ export const ErrorCard = ({
             wall: {
               providers: continueFree?.providers ?? [],
               expired: creditsExpired(actions),
+              ...(task != null && { task }),
+              resumes: canReply,
               ...(continueFree != null &&
                 latest &&
                 canReply && { onContinueFree: resumeOnFreePool }),
-              ...(canReply && { onUpgrade: askUpgrade }),
+              onUpgrade: upgradeNow,
+              onSeePlans: seePlans,
               ...(canReply &&
                 paying && {
                   onTopUp: paidCheckout.topUp,
