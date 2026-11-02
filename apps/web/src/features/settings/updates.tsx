@@ -479,7 +479,7 @@ export const UpdatePillButton = ({
       className={
         compact
           ? "titlebar-nodrag my-1 h-11 w-12 shrink-0 flex-col gap-0.5 rounded-xl px-1 text-[10px]"
-          : undefined
+          : "titlebar-nodrag min-w-0 shrink"
       }
       aria-label={
         compact
@@ -521,7 +521,9 @@ export const UpdatePillButton = ({
           {retry && showFailureLabel && (
             <span>{t("phase5.updates.downloadFailed")}</span>
           )}
-          {t(label, { percent: Math.round(status.progress?.percent ?? 0) })}
+          <span className="truncate">
+            {t(label, { percent: Math.round(status.progress?.percent ?? 0) })}
+          </span>
         </>
       )}
     </Button>
