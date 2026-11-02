@@ -12,8 +12,9 @@
 {"seq":12,"event":{"type":"TEXT_MESSAGE_END","messageId":"<MSG_2>"}}
 {"seq":13,"event":{"type":"STATE_DELTA","delta":[{"op":"replace","path":"/model","value":"openllm/auto"}]}}
 {"seq":14,"event":{"type":"CUSTOM","name":"agent.status","value":{"status":"streaming"}}}
-{"seq":15,"event":{"type":"TEXT_MESSAGE_START","messageId":"<MSG_3>","role":"assistant"}}
-{"seq":16,"event":{"type":"TEXT_MESSAGE_CONTENT","messageId":"<MSG_3>","delta":"recovered on the second model"}}
-{"seq":17,"event":{"type":"TEXT_MESSAGE_END","messageId":"<MSG_3>"}}
-{"seq":18,"event":{"type":"CUSTOM","name":"agent.status","value":{"status":"idle"}}}
-{"seq":19,"event":{"type":"RUN_FINISHED","threadId":"t-1","runId":"srv-<1>","outcome":{"type":"success"},"usage":[{"model":"small:free","inputTokens":0,"cachedInputTokens":0,"cacheWriteInputTokens":0,"outputTokens":0,"totalTokens":0}],"metadata":{"tanstack":{"model":"openllm/auto","finishReason":"stop"},"abacus":{"turnUsage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":1,"model":"small:free"},"stopReason":"stop","serverInitiated":true}}}}
+{"seq":15,"event":{"type":"CUSTOM","name":"message.discarded","value":{"messageId":"<MSG_2>"}}}
+{"seq":16,"event":{"type":"TEXT_MESSAGE_START","messageId":"<MSG_3>","role":"assistant"}}
+{"seq":17,"event":{"type":"TEXT_MESSAGE_CONTENT","messageId":"<MSG_3>","delta":"recovered on the second model"}}
+{"seq":18,"event":{"type":"TEXT_MESSAGE_END","messageId":"<MSG_3>"}}
+{"seq":19,"event":{"type":"CUSTOM","name":"agent.status","value":{"status":"idle"}}}
+{"seq":20,"event":{"type":"RUN_FINISHED","threadId":"t-1","runId":"srv-<1>","outcome":{"type":"success"},"usage":[{"model":"small:free","inputTokens":0,"cachedInputTokens":0,"cacheWriteInputTokens":0,"outputTokens":0,"totalTokens":0}],"metadata":{"tanstack":{"model":"openllm/auto","finishReason":"stop"},"abacus":{"turnUsage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":1,"model":"small:free"},"stopReason":"stop","serverInitiated":true}}}}

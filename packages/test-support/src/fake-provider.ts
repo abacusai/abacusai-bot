@@ -50,9 +50,10 @@ export type Reply =
   | { stall: { say?: string } }
   /**
    * A stream that says this much and then loses its connection before the
-   * finish frame: the whole reply arrived, the end of it never did.
+   * finish frame: the whole reply arrived, the end of it never did. With
+   * `call`, it had begun that tool call (its name, no arguments yet).
    */
-  | { cut: { say: string } };
+  | { cut: { say: string; call?: string } };
 
 /** Text of a message whether the content is a string or a block array. */
 function textOf(content: unknown): string {
@@ -208,7 +209,19 @@ export class FakeProvider {
 
     if ("cut" in reply) {
       frame({ content: reply.cut.say });
-      request.socket.destroy();
+      if (reply.cut.call != null)
+        frame({
+          tool_calls: [
+            {
+              index: 0,
+              id: `call-${index}-0`,
+              type: "function",
+              function: { name: reply.cut.call, arguments: "" },
+            },
+          ],
+        });
+      // Once what was said is on the wire, as a real cut is.
+      response.write("", () => request.socket.destroy());
 
       return;
     }
