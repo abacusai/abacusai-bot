@@ -463,14 +463,24 @@ export const ModelChip = ({
   // A group's mark; none (App default while closed) is the app's own.
   const markOf = (group: ModelGroup | null): string =>
     group == null ? "abacus" : (markForProvider(group.id) ?? group.id);
-  const chipMark = (
+  // A pin no provider lists is still what the chat runs: named, and marked.
+  const chipMark = binding.unavailable ? (
+    <AlertCircle
+      aria-hidden
+      className="size-4 text-[var(--chat-status-attention)]"
+    />
+  ) : (
     <ConnectorMark
       id={markOf(chosenProvider)}
       size={16}
       className="rounded-[5px]"
     />
   );
-  const provider = compact ? null : (chosenProvider?.label ?? null);
+  const provider = compact
+    ? null
+    : binding.unavailable
+      ? t("phase5.unavailable")
+      : (chosenProvider?.label ?? null);
   const current =
     typeof rail === "string"
       ? null
@@ -563,7 +573,11 @@ export const ModelChip = ({
             size={compact ? "icon" : "sm"}
             data-slot="chat-model-picker"
             // A combobox takes no name from its content: name it always.
-            aria-label={t("chat.composer.model", { name: label })}
+            aria-label={t("chat.composer.model", {
+              name: binding.unavailable
+                ? `${label} (${t("phase5.unavailable")})`
+                : label,
+            })}
             className={cn(
               "h-[30px] rounded-full text-[13px] [&_svg:not([class*='size-'])]:size-3.5",
               !compact && "ps-2 pe-2.5",
