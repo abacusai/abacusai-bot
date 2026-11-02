@@ -60,6 +60,7 @@ const CUSTOM = new Set([
   "agent.error",
   "agent.notification",
   "agent.retry",
+  "message.discarded",
   "run.ack",
   "permission.requested",
   "permission.resolved",
