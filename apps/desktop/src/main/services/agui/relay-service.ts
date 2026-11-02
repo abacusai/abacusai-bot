@@ -129,7 +129,18 @@ export interface AguiRelayHost {
    * the host may re-pin the running agent's model. Errors are logged.
    */
   beforeRun?(threadId: string): Promise<void>;
+  /**
+   * The app is quitting (`TurnLedger.appClosing`): an agent stopping now is
+   * the quit, so its open run ends as `app_closed`, not as an agent exit.
+   */
+  appClosing?(): boolean;
 }
+
+/** The terminal of a run the app closed under, at the quit or on the next start. */
+const APP_CLOSED_ERROR = {
+  message: "The app closed before the reply finished.",
+  code: "app_closed",
+} as const;
 
 /** The thread files (`ThreadStore`). */
 export interface AguiThreadFiles {
@@ -411,10 +422,7 @@ export class AguiRelayService implements AguiSource {
           startedAt: turn.startedAt,
           endedAt: turn.endedAt,
           steps: 0,
-          error: {
-            message: "The app closed before the reply finished.",
-            code: "app_closed",
-          },
+          error: { ...APP_CLOSED_ERROR },
           afterMessageId: file.messages.at(-1)?.id ?? null,
         },
       ],
@@ -438,14 +446,21 @@ export class AguiRelayService implements AguiSource {
     const crashed =
       !exit.requested &&
       (exit.signal != null || (exit.code != null && exit.code !== 0));
+    // An agent stopped by the quit ends its run as the quit, not as an exit.
+    const [code, message]: [
+      "agent_exit" | "agent_crashed" | "app_closed",
+      string,
+    ] =
+      this.#host.appClosing?.() === true
+        ? [APP_CLOSED_ERROR.code, APP_CLOSED_ERROR.message]
+        : crashed
+          ? [
+              "agent_crashed",
+              `The agent stopped unexpectedly (${exit.signal ?? `exit code ${exit.code}`}).`,
+            ]
+          : ["agent_exit", "The agent exited before the reply finished."];
     const current =
-      thread?.runtimeExited(
-        exit.origin.runtime,
-        crashed ? "agent_crashed" : "agent_exit",
-        crashed
-          ? `The agent stopped unexpectedly (${exit.signal ?? `exit code ${exit.code}`}).`
-          : "The agent exited before the reply finished."
-      ) ?? true;
+      thread?.runtimeExited(exit.origin.runtime, code, message) ?? true;
     // A run acked `started` by this process that never opened will not.
     const awaiting = this.#awaitingStart.get(threadId);
     for (const [runId, process] of awaiting ?? [])

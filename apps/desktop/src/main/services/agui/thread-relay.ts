@@ -514,7 +514,7 @@ export class ThreadRelay {
    */
   runtimeExited(
     runtime: object,
-    code: "agent_exit" | "agent_crashed",
+    code: "agent_exit" | "agent_crashed" | "app_closed",
     message: string
   ): boolean {
     if (this.runtime != null && this.runtime !== runtime) return false;
