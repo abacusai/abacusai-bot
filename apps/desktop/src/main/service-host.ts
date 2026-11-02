@@ -179,12 +179,14 @@ import {
   WORKSPACE_NOT_FOUND,
 } from "@abacus-ai/contract/not-found";
 import { detectRememberRequest } from "@abacus-ai/contract/remember";
-import type {
-  Routine,
-  RoutineCreateInput,
-  RoutineListItem,
-  RoutineRunner,
-  RoutineUpdateInput,
+import {
+  ROUTINE_PAUSE_NOTES,
+  ROUTINE_QUIET_RUNS_BEFORE_PAUSE,
+  type Routine,
+  type RoutineCreateInput,
+  type RoutineListItem,
+  type RoutineRunner,
+  type RoutineUpdateInput,
 } from "@abacus-ai/contract/routines";
 import { InvalidInputError } from "@abacus-ai/contract/service-errors";
 import { isPositiveReactionEmoji } from "@abacus-ai/contract/success-pitch";
@@ -287,10 +289,7 @@ import {
 import {
   hasRunInFlight,
   NetworkWaitClock,
-  QUIET_PAUSE_RESULT,
   ranOutOfAbacusCredits,
-  ROUTINE_FAILURES_BEFORE_PAUSE,
-  ROUTINE_QUIET_RUNS_BEFORE_PAUSE,
   ROUTINE_RUN_TIMEOUT_MS,
   runOutcomeOf,
   shouldPauseAfter,
@@ -5061,7 +5060,7 @@ export class ServiceHost {
     if (outcome !== "failed" || record.kind === "stopped") return;
     // No credits fails every fire the same way until the user tops up.
     if (record.error != null && ranOutOfAbacusCredits(record.error))
-      this.pauseRoutine(session.routineId, "paused: out of Abacus.AI credits");
+      this.pauseRoutine(session.routineId, ROUTINE_PAUSE_NOTES.credits);
     else this.pauseIfFailingRepeatedly(session.routineId);
   }
 
@@ -5243,10 +5242,7 @@ export class ServiceHost {
       (run) => new Date(run.startedAt).getTime() > resumedAt
     );
     if (!shouldPauseAfter(runs)) return;
-    this.pauseRoutine(
-      routineId,
-      `paused after ${ROUTINE_FAILURES_BEFORE_PAUSE} failed runs in a row`
-    );
+    this.pauseRoutine(routineId, ROUTINE_PAUSE_NOTES.failures);
   }
 
   /**
@@ -5264,7 +5260,7 @@ export class ServiceHost {
       ROUTINE_QUIET_RUNS_BEFORE_PAUSE * 2
     ).filter((run) => new Date(run.startedAt).getTime() > resumedAt);
     if (shouldPauseQuiet(runs, job.runs, resumedAt))
-      this.pauseRoutine(routineId, QUIET_PAUSE_RESULT);
+      this.pauseRoutine(routineId, ROUTINE_PAUSE_NOTES.quiet);
   }
 
   private pauseRoutine(routineId: string, reason: string): void {

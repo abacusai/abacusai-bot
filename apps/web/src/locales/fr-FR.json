@@ -1590,7 +1590,8 @@
       "account": "Paused: the account is not active.",
       "failures": "Paused after failing several times.",
       "other": "Paused.",
-      "denied": "Paused: you did not allow it."
+      "denied": "Paused: you did not allow it.",
+      "quiet": "En pause : {{runs}} exécutions d'affilée n'ont rien trouvé de nouveau, elle a donc cessé d'utiliser des crédits. Reprenez-la pour qu'elle continue de vérifier."
     },
     "createdByAgent": "A routine was set up: {{name}}.",
     "frequent": "S'exécute {{times}} fois par jour, et chaque exécution consomme des crédits : à ce rythme, les crédits d'un mois peuvent être épuisés en quelques jours. Si plusieurs exécutions d'affilée ne trouvent rien de nouveau, elle se met en pause.",

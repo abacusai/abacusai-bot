@@ -1,6 +1,9 @@
 import type { UserTextTags } from "@abacus-ai/contract/agent-types";
 import type { PermissionDecision } from "@abacus-ai/contract/agent-types";
-import type { AiHydration } from "@abacus-ai/contract/contract/ai";
+import {
+  withoutNoReply,
+  type AiHydration,
+} from "@abacus-ai/contract/contract/ai";
 import {
   applyMessageReaction,
   MESSAGE_REACTION_EMOJIS,
@@ -183,6 +186,30 @@ const initialHost = (): HostState => ({
 
 const genBoundary = (start: number, total: number): number =>
   Math.max(0, Math.min(start, total));
+
+/**
+ * The transcript as every reader sees it (rows, copy, reply quotes): no
+ * assistant text ends on the silent `NO_REPLY`. Untouched messages keep
+ * their identity.
+ */
+const shownMessages = (messages: UIMessage[]): UIMessage[] => {
+  let changed = false;
+  const shown = messages.map((message) => {
+    if (message.role !== "assistant") return message;
+    let own = false;
+    const parts = message.parts.map((part) => {
+      if (part.type !== "text") return part;
+      const content = withoutNoReply(part.content);
+      if (content === part.content) return part;
+      own = true;
+      return { ...part, content };
+    });
+    if (!own) return message;
+    changed = true;
+    return { ...message, parts };
+  });
+  return changed ? shown : messages;
+};
 
 const uuid = (): string =>
   globalThis.crypto?.randomUUID?.() ??
@@ -891,7 +918,7 @@ export class ThreadSession {
     const store = createThreadStore(stateFromSnapshot(abacus));
     gen.store = store;
     gen.staged = {
-      messages: snapshot.messages,
+      messages: shownMessages(snapshot.messages),
       subagents: [],
       status: "ready",
       sessionGenerating: active != null,
@@ -1180,7 +1207,11 @@ export class ThreadSession {
     gen.client?.dispose();
   }
 
-  #fields(gen: Generation, fields: Partial<GenerationFields>): void {
+  #fields(gen: Generation, given: Partial<GenerationFields>): void {
+    const fields =
+      given.messages == null
+        ? given
+        : { ...given, messages: shownMessages(given.messages) };
     if (!gen.swapped) {
       gen.staged = { ...gen.staged, ...fields };
       return;
@@ -1214,7 +1245,11 @@ export class ThreadSession {
     });
   }
 
-  #host(patch: Partial<HostState>): void {
+  #host(given: Partial<HostState>): void {
+    const patch =
+      given.messages == null
+        ? given
+        : { ...given, messages: shownMessages(given.messages) };
     this.hostStore.setState((state) => ({ ...state, ...patch }));
   }
 

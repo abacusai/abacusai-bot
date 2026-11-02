@@ -2,7 +2,12 @@ import { AgentStatus } from "@abacus-ai/contract/agent-types";
 import type { PrefsPatch, PrefsRow } from "@abacus-ai/contract/contract/rows";
 import type { RoutineRunItem } from "@abacus-ai/contract/contracts";
 import type { CreditThresholdMark } from "@abacus-ai/contract/credit-thresholds";
-import type { RoutineRun } from "@abacus-ai/contract/routines";
+import {
+  ROUTINE_FAILURES_BEFORE_PAUSE,
+  ROUTINE_PAUSE_NOTES,
+  ROUTINE_QUIET_RUNS_BEFORE_PAUSE,
+  type RoutineRun,
+} from "@abacus-ai/contract/routines";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -23,10 +28,7 @@ import {
   hasRunInFlight,
   isQuietReply,
   NetworkWaitClock,
-  QUIET_PAUSE_RESULT,
   ranOutOfAbacusCredits,
-  ROUTINE_FAILURES_BEFORE_PAUSE,
-  ROUTINE_QUIET_RUNS_BEFORE_PAUSE,
   runOutcomeOf,
   shouldPauseAfter,
   shouldPauseQuiet,
@@ -151,7 +153,7 @@ describe("the quiet-run streak", () => {
       id: "attempt-p",
       at: pausedAt,
       trigger: "schedule",
-      result: QUIET_PAUSE_RESULT,
+      result: ROUTINE_PAUSE_NOTES.quiet,
       kind: "paused",
       sessionId: null,
       attemptId: null,

@@ -46,7 +46,7 @@ import { isHosted } from "./hosted";
 import { HostedResults } from "./hosted-results";
 import { runRoutineNow, showSaveFailure, useHostedOff } from "./hosted-sync";
 import { RoutinesLanding } from "./landing";
-import { RoutineReachPanel } from "./reach-panel";
+import { RoutinePausedReason, RoutineReachPanel } from "./reach-panel";
 import { RoutineIdentity } from "./row";
 /** No routine open: the way to make one, with the templates (landing.tsx). */
 export const RoutinesListBody = RoutinesLanding;
@@ -283,6 +283,7 @@ export const RoutinePage = ({
           </div>
         ))}
       </dl>
+      {!hosted && <RoutinePausedReason row={row} />}
       {!hosted && row.missed != null && <MissedRunsNote missed={row.missed} />}
       {row.webhookUrl && (
         <div className="flex items-center gap-2 text-xs">

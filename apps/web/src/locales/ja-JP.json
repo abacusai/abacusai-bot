@@ -1590,7 +1590,8 @@
       "account": "Paused: the account is not active.",
       "failures": "Paused after failing several times.",
       "other": "Paused.",
-      "denied": "Paused: you did not allow it."
+      "denied": "Paused: you did not allow it.",
+      "quiet": "一時停止中: {{runs}}回続けて新しいことが見つからなかったため、クレジットの使用を止めました。確認を続けるには再開してください。"
     },
     "createdByAgent": "A routine was set up: {{name}}.",
     "frequent": "1日に{{times}}回実行され、実行のたびにクレジットを使います。このペースだと1か月分のクレジットが数日でなくなることがあります。何回か続けて新しいことが見つからなければ、自動で一時停止します。",

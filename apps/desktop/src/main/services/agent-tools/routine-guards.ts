@@ -5,19 +5,20 @@
  * keeps failing or keeps finding nothing is paused, and the agent's own runs
  * and schedules are kept from multiplying what the user asked for.
  */
+import { withoutNoReply } from "@abacus-ai/contract/contract/ai";
 import type {
   RoutineRunItem,
   RoutineRunOutcome,
 } from "@abacus-ai/contract/contracts";
-import type { RoutineRun } from "@abacus-ai/contract/routines";
-
-import { NO_REPLY } from "../agui/thread-relay";
+import {
+  ROUTINE_FAILURES_BEFORE_PAUSE,
+  ROUTINE_PAUSE_NOTES,
+  ROUTINE_QUIET_RUNS_BEFORE_PAUSE,
+  type RoutineRun,
+} from "@abacus-ai/contract/routines";
 
 /** How long a run may go before it is presumed stuck. */
 export const ROUTINE_RUN_TIMEOUT_MS = 30 * 60 * 1000;
-
-/** Consecutive failed runs before a routine pauses itself. */
-export const ROUTINE_FAILURES_BEFORE_PAUSE = 3;
 
 /** True when a fire now would run beside a run that has not finished. */
 export const hasRunInFlight = (runs: RoutineRunItem[]): boolean =>
@@ -98,15 +99,9 @@ export const consecutiveFailures = (runs: RoutineRunItem[]): number => {
 export const shouldPauseAfter = (runs: RoutineRunItem[]): boolean =>
   consecutiveFailures(runs) >= ROUTINE_FAILURES_BEFORE_PAUSE;
 
-/** Completed runs in a row that found nothing new before a routine pauses itself. */
-export const ROUTINE_QUIET_RUNS_BEFORE_PAUSE = 3;
-
-/** The pause's history note; its prefix tells a quiet pause from the others. */
-export const QUIET_PAUSE_RESULT = `paused after ${ROUTINE_QUIET_RUNS_BEFORE_PAUSE} runs in a row found nothing new`;
-
 /** A run that found nothing new ends on NO_REPLY, after any narration of its checks. */
 export const isQuietReply = (reply: string): boolean =>
-  reply.trimEnd().endsWith(NO_REPLY);
+  withoutNoReply(reply) !== reply;
 
 /**
  * Newest completed runs in a row that found nothing new. A failed run is the
@@ -140,7 +135,7 @@ export const shouldPauseQuiet = (
   !history.some(
     (entry) =>
       entry.kind === "paused" &&
-      entry.result === QUIET_PAUSE_RESULT &&
+      entry.result === ROUTINE_PAUSE_NOTES.quiet &&
       entry.at <= resumedAt
   );
 
