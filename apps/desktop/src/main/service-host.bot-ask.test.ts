@@ -425,6 +425,16 @@ describe("a task the user gave, passed on", () => {
       }
     });
 
+    it("says when the user asked for a bot they do not have, and that nothing went out", () => {
+      const { h, result } = tryAsk("Ask Marketer to plan our campaign");
+      expect(result).toEqual({
+        error: expect.stringMatching(
+          /"Marketer", which is not one of their bots\. Nothing was sent/
+        ),
+      });
+      expect(h.botAskService.ask).not.toHaveBeenCalled();
+    });
+
     it("a near-miss word elsewhere does not name a bot", () => {
       const { h, result } = tryAsk(
         "I need a tagline like the ones writers use"

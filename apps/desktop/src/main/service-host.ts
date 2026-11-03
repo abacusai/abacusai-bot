@@ -602,6 +602,10 @@ const AGREEMENT =
 const unlabelled = (text: string): string =>
   text.replace(/^\[[^\]\n]*\]\s*/, "");
 
+/** "Ask Marketer", "have Designer": a capitalised name right after an asking word. */
+const ASKED_FOR =
+  /\b(?:ask|have|get|tell|message|ping|check with|(?:pass|give|hand|send) (?:it|this|that)? ?to)\s+(?:the\s+)?([a-z][\w-]+)/gi;
+
 /** Edits between two words, a swap of neighbours counting as one. */
 const editDistance = (a: string, b: string): number => {
   const d = Array.from({ length: a.length + 1 }, (_, i) =>
@@ -666,16 +670,22 @@ const handOffRefusal = (
   if (named.length > 0)
     return named.some((name) => name.toLowerCase() === target.toLowerCase())
       ? null
-      : `The user asked for ${named.join(" or ")}, not ${target}. Go to the bot they named, or ask them.`;
+      : `The user asked for ${named.join(" or ")}, not ${target}, so nothing was sent. Go to the bot they named, or ask them.`;
   if (
     /\b(someone|somebody|another bot|other bots?|your team|the team|delegate|hand (it |this )?(off|over)|pass (it|this) (on|to))\b/i.test(
       words
     )
   )
     return null;
+  // "Ask Marketer …": the user asked for a bot they do not have.
+  const unknown = [...words.matchAll(ASKED_FOR)]
+    .map((match) => match[1]!)
+    .find((word) => /^[A-Z]/.test(word));
+  if (unknown != null)
+    return `The user asked for "${unknown}", which is not one of their bots. Nothing was sent. Tell them, and offer the bot that fits best.`;
   return kind === "task"
-    ? 'The user did not ask to hand this off, so do it yourself, or offer in one line ("Planner could do this. Want me to pass it on?") and wait for their yes.'
-    : 'The user did not ask you to ask another bot, so answer yourself, or offer in one line ("Writer could draft this. Want me to ask it?") and wait for their yes.';
+    ? 'The user did not ask to hand this off, so nothing was sent. Do it yourself, or offer in one line ("Planner could do this. Want me to pass it on?") and wait for their yes.'
+    : 'The user did not ask you to ask another bot, so nothing was sent. Answer yourself, or offer in one line ("Writer could draft this. Want me to ask it?") and wait for their yes.';
 };
 
 export class ServiceHost {
