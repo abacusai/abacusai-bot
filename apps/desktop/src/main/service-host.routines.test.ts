@@ -268,6 +268,164 @@ describe("a routine run the network let down", () => {
   });
 });
 
+describe("a routine whose runs keep finding nothing", () => {
+  const proto = ServiceHost.prototype as unknown as {
+    settleRoutineRun: (record: unknown) => void;
+    pauseIfQuietRepeatedly: (routineId: string) => void;
+    pauseRoutine: (routineId: string, reason: string) => void;
+  };
+
+  /** Settles one run of the routine, saying `reply`, started just now. */
+  const runner = (routineId: string, dir: string) => {
+    const text = new Map<string, string[]>();
+    const startedAt = new Map<string, string>();
+    let count = 0;
+    const service = {
+      agentSessionManagerService: {
+        isRoutineSession: () => true,
+        setRunOutcome: () => true,
+        get: (id: string) => ({ routineId, createdAt: startedAt.get(id) }),
+      },
+      routineNetworkWaits: { forget: vi.fn() },
+      routineRunText: text,
+      routineHome: () => dir,
+      emitEvent: vi.fn(),
+      pauseIfQuietRepeatedly: proto.pauseIfQuietRepeatedly,
+      pauseRoutine: proto.pauseRoutine,
+      pauseIfFailingRepeatedly: vi.fn(),
+    };
+    return (reply: string) => {
+      count += 1;
+      const sessionId = `run-${count}`;
+      text.set(sessionId, [reply]);
+      // Apart, and after any resume made just before.
+      startedAt.set(sessionId, new Date(Date.now() + count).toISOString());
+      proto.settleRoutineRun.call(service, {
+        turnId: sessionId,
+        sessionId,
+        kind: "reply",
+        startedAt: count,
+        endedAt: Date.now() + count,
+      });
+    };
+  };
+
+  it("pauses after three quiet runs in a row, and not again once the user resumes it", async () => {
+    const { getJob, updateJob } =
+      await import("./services/agent-tools/cron-store");
+    const job = createJob({ schedule: "0 * * * *", prompt: "check my inbox" });
+    const run = runner(job.id, path.join(home, "routine-home"));
+
+    run("Checked the inbox.NO_REPLY");
+    run("NO_REPLY");
+    // Something found breaks the streak.
+    run("Two new mails from your landlord: rent is due Friday.");
+    run("NO_REPLY");
+    run("Looked again: NO_REPLY");
+    expect(getJob(job.id)?.enabled).toBe(true);
+
+    run("NO_REPLY");
+    expect(getJob(job.id)?.enabled).toBe(false);
+    expect(getJob(job.id)?.runs[0]).toMatchObject({
+      kind: "paused",
+      result: "paused after 3 runs in a row found nothing new",
+    });
+
+    // Resumed: the user wants it polling, so quiet runs no longer pause it.
+    updateJob(job.id, { enabled: true });
+    for (let i = 0; i < 4; i++) run("NO_REPLY");
+    expect(getJob(job.id)?.enabled).toBe(true);
+  });
+});
+
+describe("the note a failing routine's pause records", () => {
+  const proto = ServiceHost.prototype as unknown as {
+    settleRoutineRun: (record: unknown) => void;
+    pauseIfFailingRepeatedly: (routineId: string) => void;
+    pauseRoutine: (routineId: string, reason: string) => void;
+    listRoutineRuns: (routineId: string) => unknown[];
+  };
+
+  /** Settles one failed run of the routine with `error`. */
+  const failer = (routineId: string, dir: string) => {
+    const sessions = new Map<string, { createdAt: string; outcome: string }>();
+    const service = {
+      agentSessionManagerService: {
+        isRoutineSession: () => true,
+        setRunOutcome: (id: string, outcome: string) => {
+          sessions.get(id)!.outcome = outcome;
+          return true;
+        },
+        get: (id: string) => ({
+          routineId,
+          createdAt: sessions.get(id)?.createdAt,
+        }),
+        listByRoutine: () =>
+          [...sessions].reverse().map(([id, s]) => ({
+            id,
+            workspaceId: "ws",
+            createdAt: s.createdAt,
+            updatedAt: s.createdAt,
+            runOutcome: s.outcome,
+          })),
+      },
+      routineNetworkWaits: { forget: vi.fn() },
+      routineRunText: new Map<string, string[]>(),
+      routineHome: () => dir,
+      emitEvent: vi.fn(),
+      pauseRoutine: proto.pauseRoutine,
+      pauseIfFailingRepeatedly: proto.pauseIfFailingRepeatedly,
+      listRoutineRuns: proto.listRoutineRuns,
+    };
+    return (error: object) => {
+      const sessionId = `run-${sessions.size + 1}`;
+      sessions.set(sessionId, {
+        createdAt: new Date(Date.now() + sessions.size + 1).toISOString(),
+        outcome: "running",
+      });
+      service.routineRunText.set(sessionId, []);
+      proto.settleRoutineRun.call(service, {
+        turnId: sessionId,
+        sessionId,
+        kind: "failed",
+        error,
+        startedAt: 0,
+        endedAt: Date.now(),
+      });
+    };
+  };
+
+  it.each([
+    [
+      "credits",
+      { message: "Out of credits.", actions: [{ type: "upgrade-abacus" }] },
+      1,
+      "paused: out of Abacus.AI credits",
+    ],
+    [
+      "failures",
+      { message: "It broke." },
+      3,
+      "paused after 3 failed runs in a row",
+    ],
+  ])(
+    "%s: keeps the text already on users' disks",
+    async (_, error, runs, note) => {
+      const { getJob } = await import("./services/agent-tools/cron-store");
+      const job = createJob({ schedule: "0 9 * * *", prompt: "x" });
+      const fail = failer(job.id, path.join(home, "routine-home"));
+      for (let i = 1; i < runs; i++) fail(error);
+      expect(getJob(job.id)?.enabled).toBe(true);
+      fail(error);
+      expect(getJob(job.id)?.enabled).toBe(false);
+      expect(getJob(job.id)?.runs[0]).toMatchObject({
+        kind: "paused",
+        result: note,
+      });
+    }
+  );
+});
+
 describe("a scheduled run the app closed under", () => {
   /** Each run's thread as the store keeps it, across launches. */
   const threads = new Map<string, Array<{ role: string; parts: unknown[] }>>();

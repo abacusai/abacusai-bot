@@ -11,6 +11,7 @@ import type {
   PermissionDescriptor,
   RunOutcomeRecord,
 } from "@abacus-ai/contract/contract";
+import { withoutNoReply } from "@abacus-ai/contract/contract/ai";
 import { freeLaneOf } from "@abacus-ai/contract/contract/ai-thread";
 import {
   applyMessageReaction,
@@ -136,12 +137,10 @@ const record = (value: unknown): Record<string, unknown> =>
 const stringOr = (value: unknown): string | undefined =>
   typeof value === "string" && value.length > 0 ? value : undefined;
 
-/** What a reply the user never sees says (the bot loop's silent answer). */
-export const NO_REPLY = "NO_REPLY";
-
 /**
  * Whether `messages` (a run's own) hold an assistant text part a user sees:
- * trimmed, non-empty and not exactly `NO_REPLY` (spec 03 §24.11).
+ * not blank once a trailing `NO_REPLY` is removed (spec 03 §24.11). A
+ * narration that ends in `NO_REPLY` still counts: its narration shows.
  */
 export const hasVisibleAssistantText = (
   messages: readonly UIMessage[]
@@ -151,10 +150,8 @@ export const hasVisibleAssistantText = (
       message.role === "assistant" &&
       message.parts.some((part) => {
         if (part.type !== "text") return false;
-        const text = String(
-          (part as { content?: unknown }).content ?? ""
-        ).trim();
-        return text !== "" && text !== NO_REPLY;
+        const text = String((part as { content?: unknown }).content ?? "");
+        return withoutNoReply(text).trim() !== "";
       })
   );
 

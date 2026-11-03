@@ -103,8 +103,9 @@ export const HOSTED_ROUTINE_FACTS = [
 /** The desktop app: every routine runs here, with this conversation's reach. */
 export const LOCAL_ROUTINE_FACTS = [
   "Routines run on this computer, only while it is on and the app is open, and are",
-  "unlimited on every plan. They have full access: they read and write files, run",
-  "commands and use connectors like this conversation.",
+  "unlimited on every plan, though each run spends credits like a chat turn. They have",
+  "full access: they read and write files, run commands and use connectors like this",
+  "conversation.",
 ];
 
 /**

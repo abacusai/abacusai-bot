@@ -1590,9 +1590,11 @@
       "account": "Paused: the account is not active.",
       "failures": "Paused after failing several times.",
       "other": "Paused.",
-      "denied": "Paused: you did not allow it."
+      "denied": "Paused: you did not allow it.",
+      "quiet": "Paused: {{runs}} runs in a row found nothing new, so it stopped using credits. Resume it to keep checking."
     },
     "createdByAgent": "A routine was set up: {{name}}.",
+    "frequent": "Runs {{times}} times a day, and every run uses credits: at this rate a month's credits can be gone in a few days. If several runs in a row find nothing new, it pauses itself.",
     "refused": {
       "planInterval": "On the free plan, a routine that runs on its own runs at most once a day. Upgrading allows more often.",
       "planKind": "The free plan includes tasks only. Upgrading allows the other kinds.",

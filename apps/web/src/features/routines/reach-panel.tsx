@@ -1,4 +1,8 @@
 import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
+import {
+  ROUTINE_QUIET_RUNS_BEFORE_PAUSE,
+  routinePauseReason,
+} from "@abacus-ai/contract/routines";
 import { useTranslation } from "react-i18next";
 
 import { isHosted } from "./hosted";
@@ -11,11 +15,14 @@ export const readKey = (read: string): string =>
       ? "routines.reach.gmailRead"
       : "routines.reach.calendarRead";
 
-/** A paused routine's reason, in words, by the server's code. */
+/** A paused routine's reason, in words, by the server's code or main's (`routinePauseReason`). */
 export const pausedReasonKey = (reason: string): string => {
   switch (reason) {
     case "payment_required":
+    case "credits":
       return "routines.paused.credits";
+    case "quiet":
+      return "routines.paused.quiet";
     case "plan_limit":
     case "limit":
       return "routines.paused.planLimit";
@@ -34,6 +41,24 @@ export const pausedReasonKey = (reason: string): string => {
     default:
       return "routines.paused.other";
   }
+};
+
+/**
+ * Why a paused routine is paused, when it paused itself: the server's code
+ * for a hosted one, main's newest history note for one on this computer.
+ */
+export const RoutinePausedReason = ({ row }: { row: RoutineRow }) => {
+  const { t } = useTranslation();
+  if (row.enabled) return null;
+  const code = isHosted(row)
+    ? (row.hosted?.pausedReason ?? null)
+    : routinePauseReason(row.recentRuns);
+  if (code == null) return null;
+  return (
+    <p className="text-muted-foreground text-xs">
+      {t(pausedReasonKey(code), { runs: ROUTINE_QUIET_RUNS_BEFORE_PAUSE })}
+    </p>
+  );
 };
 
 /**
@@ -65,11 +90,7 @@ export const RoutineReachPanel = ({ row }: { row: RoutineRow }) => {
           {watchUrl}
         </p>
       )}
-      {reach.pausedReason != null && !row.enabled && (
-        <p className="text-muted-foreground text-xs">
-          {t(pausedReasonKey(reach.pausedReason))}
-        </p>
-      )}
+      <RoutinePausedReason row={row} />
     </section>
   );
 };

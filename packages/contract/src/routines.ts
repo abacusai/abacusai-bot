@@ -50,6 +50,40 @@ export interface RoutineRun {
   attemptId: string | null;
 }
 
+/** Consecutive failed runs before a local routine pauses itself. */
+export const ROUTINE_FAILURES_BEFORE_PAUSE = 3;
+
+/** Completed runs in a row that found nothing new before it pauses itself. */
+export const ROUTINE_QUIET_RUNS_BEFORE_PAUSE = 3;
+
+/**
+ * The `paused` history note main writes when it pauses a local routine, by
+ * reason. Persisted on users' disks: existing texts never change.
+ */
+export const ROUTINE_PAUSE_NOTES = {
+  credits: "paused: out of Abacus.AI credits",
+  failures: `paused after ${ROUTINE_FAILURES_BEFORE_PAUSE} failed runs in a row`,
+  quiet: `paused after ${ROUTINE_QUIET_RUNS_BEFORE_PAUSE} runs in a row found nothing new`,
+} as const;
+
+export type RoutinePauseReason = keyof typeof ROUTINE_PAUSE_NOTES;
+
+/**
+ * Why main paused a routine, when its newest history entry (newest first) is
+ * one of main's own pause notes; null for any other entry or note.
+ */
+export const routinePauseReason = (
+  history: readonly Pick<RoutineRun, "kind" | "result">[]
+): RoutinePauseReason | null => {
+  const newest = history[0];
+  if (newest?.kind !== "paused") return null;
+  const reasons = Object.keys(ROUTINE_PAUSE_NOTES) as RoutinePauseReason[];
+  return (
+    reasons.find((reason) => ROUTINE_PAUSE_NOTES[reason] === newest.result) ??
+    null
+  );
+};
+
 /**
  * Where a routine runs: `local`, on this computer's own scheduler while the
  * app runs; `hosted`, kept and timed by the server and run on the user's

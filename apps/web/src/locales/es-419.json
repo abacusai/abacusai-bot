@@ -1590,9 +1590,11 @@
       "account": "Paused: the account is not active.",
       "failures": "Paused after failing several times.",
       "other": "Paused.",
-      "denied": "Paused: you did not allow it."
+      "denied": "Paused: you did not allow it.",
+      "quiet": "En pausa: {{runs}} ejecuciones seguidas no encontraron nada nuevo, así que dejó de usar créditos. Reanúdala para que siga revisando."
     },
     "createdByAgent": "A routine was set up: {{name}}.",
+    "frequent": "Se ejecuta {{times}} veces al día y cada ejecución usa créditos: a este ritmo, los créditos de un mes pueden agotarse en pocos días. Si varias ejecuciones seguidas no encuentran nada nuevo, se pausa sola.",
     "refused": {
       "planInterval": "En el plan gratuito, una rutina que se ejecuta sola lo hace como máximo una vez al día. Con un upgrade, más seguido.",
       "planKind": "El plan gratuito incluye solo tareas. Con un upgrade, también los otros tipos.",

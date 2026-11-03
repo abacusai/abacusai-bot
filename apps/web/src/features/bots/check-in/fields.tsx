@@ -1,9 +1,11 @@
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
+import { FrequentRoutineNote } from "#renderer/components/frequent-routine-note";
 import {
   CHECK_IN_PRESETS,
   CheckInDraftSchema,
+  scheduleFromCheckIn,
   withMinute,
   type CheckInDraft,
 } from "#renderer/lib/bots/check-in";
@@ -102,6 +104,7 @@ export const CheckInFields = ({
           />
         </Field>
       )}
+      <FrequentRoutineNote schedule={scheduleFromCheckIn(value)} />
       {value.preset === "weekly" && (
         <ToggleGroup
           aria-label={t("bots.checkIn.day")}

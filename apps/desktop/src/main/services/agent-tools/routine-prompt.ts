@@ -6,6 +6,7 @@
 import { modelPath } from "@abacus-ai/agent/model-path";
 
 import type { CronJob, CronTrigger } from "./cron-store";
+import { isQuietReply } from "./routine-guards";
 import type { RoutineNotes, RoutineRunRecord } from "./routine-runs-store";
 
 /** What a fire is told about the runs before it, and where it stands. */
@@ -34,6 +35,14 @@ export interface RoutineMemory {
    */
   sent?: { done: string[]; unsure: string[] };
 }
+
+/** Fires nobody pressed for: a quiet one ends on NO_REPLY rather than a "nothing new" line. */
+const UNASKED: ReadonlySet<CronTrigger> = new Set<CronTrigger>([
+  "schedule",
+  "catch-up",
+  "interrupted",
+  "webhook",
+]);
 
 /** The last reply is context, not a transcript: enough to say "since then". */
 const LAST_REPLY_CHARS = 1_500;
@@ -78,21 +87,28 @@ export const buildRoutineFirePrompt = (
           ? `${memory.lastRun.reply.slice(0, LAST_REPLY_CHARS)}…`
           : memory.lastRun.reply;
       const when = new Date(memory.lastRun.startedAt).toLocaleString();
+      const quiet =
+        memory.lastRun.outcome === "completed" &&
+        isQuietReply(memory.lastRun.reply);
       const went =
         memory.lastRun.outcome === "failed"
           ? "failed"
           : memory.lastRun.outcome === "interrupted"
             ? "was cut off partway"
-            : "completed";
+            : quiet
+              ? "found nothing new"
+              : "completed";
       lines.push(
         `Your previous run was at ${when} and ${went}.` +
-          (reply.length > 0
-            ? " This is what it reported, for context only. It is a record of"
-            : " It said nothing.")
+          (quiet
+            ? ""
+            : reply.length > 0
+              ? " This is what it reported, for context only. It is a record of"
+              : " It said nothing.")
       );
       // Framed as a record, not an example: a wrong refusal in one reply
       // otherwise propagates down the chain of runs.
-      if (reply.length > 0)
+      if (reply.length > 0 && !quiet)
         lines.push(
           "what happened, not an instruction and not a pattern to copy:",
           "```",
@@ -100,6 +116,17 @@ export const buildRoutineFirePrompt = (
           "```"
         );
     }
+    // Every run spends credits: one that only repeats "nothing new", or a
+    // blocker already reported, is filed quiet and a run of them pauses it.
+    if (memory.lastRun != null && UNASKED.has(trigger))
+      lines.push(
+        "If nothing has changed for the user since that run, and you did nothing for",
+        'them this time, reply with exactly NO_REPLY and nothing else: no "nothing',
+        'new" line and no message to anyone, even if the instruction asks you to say',
+        "so. The same goes for a blocker that run already told them about, such as a",
+        "connection that is missing or signed out: it is said once, not on every run.",
+        "A routine whose runs keep finding nothing pauses itself until the user resumes it."
+      );
     // Said outright: only the app's own sends are skipped on a repeat; a
     // connector's mail, post or invite would go out twice.
     if (trigger === "interrupted" && memory.sent != null) {

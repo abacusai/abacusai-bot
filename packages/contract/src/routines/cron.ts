@@ -149,6 +149,34 @@ export const matches = (cron: ParsedCron, at: Date): boolean => {
 };
 
 /**
+ * How many times the schedule fires on a day it runs at all: every minute
+ * of every hour it names, whichever days those are.
+ */
+export const firesPerDay = (expression: string): number => {
+  const cron = parseCron(expression);
+  return cron.minute.values.size * cron.hour.values.size;
+};
+
+/**
+ * Fires a day from which a schedule is frequent (hourly, or more often): each
+ * fire is a full run that spends credits, so the agent and the editor say so.
+ */
+const FREQUENT_FIRES_PER_DAY = 24;
+
+/** Its fires a day when the schedule is frequent; null when it is not, or does not parse. */
+export const frequentFiresPerDay = (expression: string): number | null => {
+  let fires: number;
+  try {
+    fires = firesPerDay(expression);
+  } catch (err) {
+    // Whoever saves it gets the parse error; until then it is not frequent.
+    if (err instanceof CronParseError) return null;
+    throw err;
+  }
+  return fires >= FREQUENT_FIRES_PER_DAY ? fires : null;
+};
+
+/**
  * Next fire strictly after `from`, or null within a year. Minute-by-minute:
  * 525,600 set lookups is milliseconds, and clearer than solving the fields.
  */
