@@ -30,8 +30,7 @@ import {
   botAskIntro,
   botTaskPrompt,
   frameBotRequest,
-  MAX_ASKS_PER_DAY,
-  MAX_OPEN_ASKS,
+  MAX_REQUESTS_PER_DAY,
 } from "./bot-ask";
 
 export type BotAskStatus =
@@ -162,18 +161,28 @@ export class BotAskService {
   ): { ask: BotAskRecord; behind: number } | { error: string } {
     const now = this.now();
     const mine = this.deps.read().filter((ask) => ask.askerId === askerId);
-    if (mine.filter(isOpenAsk).length >= MAX_OPEN_ASKS)
+    const { kind = "ask", userWords, channel } = options;
+    // The same request to the same bot while it is still open: once is enough.
+    const same = (text: string): string =>
+      text.toLowerCase().replace(/\s+/g, " ").trim();
+    const duplicate = mine.find(
+      (ask) =>
+        isOpenAsk(ask) &&
+        ask.targetId === targetId &&
+        (ask.kind ?? "ask") === kind &&
+        same(ask.request) === same(request)
+    );
+    if (duplicate != null)
       return {
-        error: `You already have ${MAX_OPEN_ASKS} requests to other bots open. Wait for them (check_bot_answers shows them), or cancel one with cancel_bot_ask.`,
+        error: `You already sent that (request ${duplicate.id}), and it is still open. Its answer will come as a note; do not send it again.`,
       };
     if (
       mine.filter((ask) => now - ask.createdAt < DAY_MS).length >=
-      MAX_ASKS_PER_DAY
+      MAX_REQUESTS_PER_DAY
     )
       return {
-        error: `You have sent other bots ${MAX_ASKS_PER_DAY} requests today, the most a day allows. Do the rest yourself.`,
+        error: `You have sent other bots ${MAX_REQUESTS_PER_DAY} requests today, far more than usual, so no more go out today. Tell the user.`,
       };
-    const { kind = "ask", userWords, channel } = options;
     const ask: BotAskRecord = {
       id: this.newId(),
       ...(kind === "task" ? { kind, userWords: userWords ?? request } : {}),

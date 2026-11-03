@@ -1450,9 +1450,7 @@ export class ServiceHost {
         })),
       asks: {
         ask: (askerId, askerSession, targetId, request) =>
-          this.botAskService.ask(askerId, askerSession, targetId, request, {
-            channel: this.ownChatOfTurn(askerSession),
-          }),
+          this.askBot(askerId, askerSession, targetId, request),
         give: (askerId, askerSession, targetId, task) =>
           this.giveBotTask(askerId, askerSession, targetId, task),
         list: (askerId, limit) => this.botAskService.list(askerId, limit),
@@ -5526,23 +5524,51 @@ export class ServiceHost {
    * turn where the user spoke, carrying their words verbatim, so a bot can
    * never pass on an instruction the user did not give.
    */
+  /**
+   * The user's latest words in the session, recent, or "" when the current
+   * turn is not theirs (a bot's answer, a routine, the first-run greeting:
+   * a hidden note clears them). A plain yes ("ok, go ahead") agrees to an
+   * offer, so the message before it, which says what the work is, comes too.
+   */
+  private latestUserWords(sessionId: string): string {
+    const recent = (this.userWords.get(sessionId) ?? []).filter(
+      (entry) => Date.now() - entry.at < USER_WORDS_FRESH_MS
+    );
+    const said = recent.at(-1)?.text ?? "";
+    return AGREEMENT.test(unlabelled(said)) && recent.length > 1
+      ? `${recent[0].text}\n${said}`
+      : said;
+  }
+
+  /**
+   * A bot's question to another bot (ask_bot): only from a turn the user
+   * started. A turn a bot's answer or a routine started cannot ask again,
+   * so bots can never keep each other going without the user.
+   */
+  private askBot(
+    askerId: string,
+    askerSession: string,
+    targetId: string,
+    request: string
+  ): ReturnType<BotAskService["ask"]> {
+    if (this.latestUserWords(askerSession).length === 0)
+      return {
+        error:
+          "You can ask another bot only while answering the user: this turn was not started by them. Tell the user what you would ask, and let them decide.",
+      };
+    return this.botAskService.ask(askerId, askerSession, targetId, request, {
+      channel: this.ownChatOfTurn(askerSession),
+    });
+  }
+
   private giveBotTask(
     askerId: string,
     askerSession: string,
     targetId: string,
     task: string
   ): ReturnType<BotAskService["ask"]> {
-    // The latest message, recent; a plain yes ("ok, go ahead") agrees to an
-    // offer, and the message before it says what the work is.
-    const recent = (this.userWords.get(askerSession) ?? []).filter(
-      (entry) => Date.now() - entry.at < USER_WORDS_FRESH_MS
-    );
-    const said = recent.at(-1)?.text ?? "";
-    const words =
-      AGREEMENT.test(unlabelled(said)) && recent.length > 1
-        ? `${recent[0].text}\n${said}`
-        : said;
-    if (said.length === 0)
+    const words = this.latestUserWords(askerSession);
+    if (words.length === 0)
       return {
         error:
           "Only pass a task on when the user asked for it in this conversation just now: their message is what lets the other bot act on it. For your own question to another bot, use ask_bot.",

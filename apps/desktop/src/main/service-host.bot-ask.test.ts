@@ -352,7 +352,13 @@ describe("a task the user gave, passed on", () => {
       },
       turnLedger: { channelOf: () => null },
     };
-    for (const name of ["noteUserWords", "giveBotTask", "ownChatOfTurn"])
+    for (const name of [
+      "noteUserWords",
+      "latestUserWords",
+      "askBot",
+      "giveBotTask",
+      "ownChatOfTurn",
+    ])
       self[name] = proto[name].bind(self);
     return self as {
       noteUserWords: (
@@ -361,6 +367,7 @@ describe("a task the user gave, passed on", () => {
         tags?: unknown
       ) => void;
       giveBotTask: (...args: string[]) => unknown;
+      askBot: (...args: string[]) => unknown;
       userWords: Map<string, Array<{ text: string; at: number }>>;
       botAskService: { ask: ReturnType<typeof vi.fn> };
     };
@@ -377,6 +384,28 @@ describe("a task the user gave, passed on", () => {
     for (const message of messages) h.noteUserWords("res-chat", message);
     return { h, result: h.giveBotTask("res", "res-chat", "pla", "Draft it") };
   };
+
+  describe("a question to another bot", () => {
+    it("goes out from a turn the user started", () => {
+      const h = wordsHost();
+      h.noteUserWords("res-chat", "I need a tagline for Brewly");
+      h.askBot("res", "res-chat", "wri", "a tagline please");
+      expect(h.botAskService.ask).toHaveBeenCalledTimes(1);
+    });
+
+    it("never from a turn a bot's answer started: no loops", () => {
+      const h = wordsHost();
+      h.noteUserWords("res-chat", "I need a tagline for Brewly");
+      h.noteUserWords("res-chat", "[bot answer] Writer answered…", {
+        systemReminder: true,
+        operator: { kind: "environment-notice" },
+      });
+      expect(h.askBot("res", "res-chat", "wri", "another one")).toEqual({
+        error: expect.stringContaining("only while answering the user"),
+      });
+      expect(h.botAskService.ask).not.toHaveBeenCalled();
+    });
+  });
 
   it("is refused when the user said nothing", () => {
     expect(tryTask().result).toEqual(refused);

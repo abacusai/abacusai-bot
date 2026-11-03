@@ -38,11 +38,11 @@ export const MAX_BOT_ANSWER_CHARS = 4_000;
 /** The longest request an asker may send; longer is refused, never cut. */
 export const MAX_BOT_REQUEST_CHARS = 4_000;
 
-/** Asks one bot may have waiting or running at once. */
-export const MAX_OPEN_ASKS = 3;
-
-/** Asks one bot may start in a day; each is a billed turn on the other bot. */
-export const MAX_ASKS_PER_DAY = 20;
+/**
+ * A backstop against a bug, never a limit a person meets: requests come
+ * only from the user's own messages, so a day's count stays far below it.
+ */
+export const MAX_REQUESTS_PER_DAY = 50;
 
 type Named = Pick<Bot, "name" | "title">;
 

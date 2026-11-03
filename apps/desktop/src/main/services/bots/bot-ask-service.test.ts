@@ -6,7 +6,7 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
-import { MAX_ASKS_PER_DAY, MAX_OPEN_ASKS } from "./bot-ask";
+import { MAX_REQUESTS_PER_DAY } from "./bot-ask";
 import { type BotAskRecord, BotAskService } from "./bot-ask-service";
 
 const BOTS = {
@@ -162,31 +162,49 @@ describe("BotAskService", () => {
     expect(turns.map((turn) => turn.ask.targetId)).toEqual(["wri", "pla"]);
   });
 
-  it("refuses a request over the open cap, and over the daily cap", () => {
-    const { service, turns, later } = setup();
-    for (let i = 0; i < MAX_OPEN_ASKS; i++)
-      service.ask("res", "res-chat", "wri", `ask ${i}`);
-    const over = service.ask("res", "res-chat", "pla", "one more");
-    expect("error" in over && over.error).toMatch(
-      /requests to other bots open/
-    );
+  it("takes as many requests as the user asks for, queued per conversation", () => {
+    const { service, turns } = setup();
+    for (let i = 0; i < 5; i++)
+      expect(service.ask("res", "res-chat", "wri", `thing ${i}`)).toMatchObject(
+        {
+          behind: i,
+        }
+      );
     expect(turns).toHaveLength(1);
+  });
 
+  it("refuses the same request to the same bot while it is still open", () => {
+    const { service } = setup();
+    service.ask("res", "res-chat", "wri", "Draft a tagline");
+    expect(service.ask("res", "res-chat", "wri", "  draft a TAGLINE ")).toEqual(
+      {
+        error: expect.stringContaining("You already sent that (request q1)"),
+      }
+    );
+    // Another bot, or a task rather than a question, is a different request.
+    expect(
+      service.ask("res", "res-chat", "pla", "Draft a tagline")
+    ).toMatchObject({
+      ask: { id: "q2" },
+    });
+  });
+
+  it("stops at the backstop, which only a bug would reach", () => {
     const daily = setup(
-      Array.from({ length: MAX_ASKS_PER_DAY }, (_, i) => ({
+      Array.from({ length: MAX_REQUESTS_PER_DAY }, (_, i) => ({
         id: `old${i}`,
         askerId: "res",
         askerSession: "res-chat",
         targetId: "wri",
-        request: "x",
+        request: `x${i}`,
         status: "answered" as const,
         attempts: 1,
         createdAt: 1_000_000 - 60_000,
       }))
     );
-    const refused = daily.service.ask("res", "res-chat", "wri", "again");
-    expect("error" in refused && refused.error).toMatch(/today/);
-    later(0);
+    expect(daily.service.ask("res", "res-chat", "wri", "again")).toEqual({
+      error: expect.stringContaining("far more than usual"),
+    });
   });
 
   it("cancels: the other bot stops, and no note comes", async () => {
