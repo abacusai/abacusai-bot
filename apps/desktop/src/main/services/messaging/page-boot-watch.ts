@@ -94,7 +94,7 @@ const RETRY_CHECK_MS = 10_000;
  * a linked page then syncs its chats on top. Chromium's storage commits
  * down to a megabyte or so, so this is the page's room, not a quota reserve.
  */
-export const DISK_SPACE_BACK_BYTES = 256 * 1024 * 1024;
+const DISK_SPACE_BACK_BYTES = 256 * 1024 * 1024;
 
 /** The network is back, by the OS's own answer. */
 export const backOnline = (): boolean => net.isOnline();

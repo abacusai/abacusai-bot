@@ -1658,11 +1658,15 @@
       "skill",
       "importMcp",
       "selectTheme",
-      "themes"
+      "themes",
+      "diskFullLane"
     ],
     "sources": [
       "../../desktop/src/main/index.ts",
-      "../../desktop/src/main/services/mcp/mcp-admin-service.ts"
+      "../../desktop/src/main/services/mcp/mcp-admin-service.ts",
+      "../../desktop/src/main/services/messaging/discord-web-connector.ts",
+      "../../desktop/src/main/services/messaging/telegram-web-connector.ts",
+      "../../desktop/src/main/services/messaging/whatsapp-web-connector.ts"
     ]
   },
   {
@@ -1733,7 +1737,8 @@
       "cutoff",
       "cutoffSwitch",
       "cutoffVerify",
-      "cutoffTopUp"
+      "cutoffTopUp",
+      "diskFull"
     ],
     "sources": [
       "../../desktop/src/main/services/messaging/chat-failure-reply.ts",
