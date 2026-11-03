@@ -23,21 +23,37 @@ const page = {
   loading: false,
   online: true,
   loads: 0,
+  /** What Telegram's send script answers, in order; then success. */
+  sends: [] as Array<{ ok: boolean; error?: string }>,
+  /** Run as each load starts, as a real page boots. */
+  onLoad: null as (() => void) | null,
 };
 
 class FakeWindow {
   destroyed = false;
   visible = false;
+  private readonly listeners = new Map<string, Array<() => void>>();
   readonly webContents = {
     setAudioMuted: () => {},
     setUserAgent: () => {},
-    on: () => {},
+    on: (event: string, listener: () => void) => {
+      this.listeners.set(event, [
+        ...(this.listeners.get(event) ?? []),
+        listener,
+      ]);
+    },
     off: () => {},
     isLoading: () => page.loading,
-    executeJavaScript: async () => page.shows,
+    executeJavaScript: async (code: string) =>
+      code.includes("requirePeerId")
+        ? (page.sends.shift() ?? { ok: true })
+        : page.shows,
   };
   loadURL = async (): Promise<void> => {
     page.loads += 1;
+    for (const listener of this.listeners.get("did-start-loading") ?? [])
+      listener();
+    page.onLoad?.();
   };
   removeMenu(): void {}
   on(): void {}
@@ -83,6 +99,7 @@ type Lane = {
   start: () => Promise<void>;
   stop: () => Promise<void>;
   showLoginWindow: () => void;
+  sendText: (chatId: string, text: string) => Promise<void>;
 };
 
 const lanes: Lane[] = [];
@@ -95,6 +112,8 @@ afterEach(async () => {
     loading: false,
     online: true,
     loads: 0,
+    sends: [],
+    onLoad: null,
   });
 });
 
@@ -212,5 +231,45 @@ describe("a Discord page on a slow link", () => {
       state: "needs_login",
       message: "Discord is not signed in. Sign in to connect.",
     });
+  });
+});
+
+describe("a signed-in Telegram page reloaded to retry a send", () => {
+  // web-k shows its auth screen for a moment while a fresh page reads the
+  // stored session; read as a sign-out, the card flipped to "not connected".
+  const connected = async (): Promise<Lane> => {
+    vi.useFakeTimers();
+    page.shows = { loggedIn: true, loginVisible: false };
+    const lane = await startLane(TelegramWebConnector);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(states.at(-1)?.state).toBe("connected");
+    return lane;
+  };
+
+  it("is not reported signed out while the fresh page boots", async () => {
+    const lane = await connected();
+    page.sends = [{ ok: false, error: "Could not type into the composer." }];
+    page.onLoad = () => {
+      page.shows = { loggedIn: false, loginVisible: true };
+      setTimeout(() => {
+        page.shows = { loggedIn: true, loginVisible: false };
+      }, 4_500);
+    };
+
+    const sent = lane.sendText("-100", "hello");
+    await vi.advanceTimersByTimeAsync(10_000);
+    await sent;
+
+    expect(states.map(({ state }) => state)).not.toContain("needs_login");
+  });
+
+  it("still reports a session that really ended", async () => {
+    await connected();
+    page.shows = { loggedIn: false, loginVisible: true };
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    expect(states.map(({ message }) => message)).toContain(
+      "Telegram is signed out. The session was ended from another device or expired. Reconnect to sign in again."
+    );
   });
 });
