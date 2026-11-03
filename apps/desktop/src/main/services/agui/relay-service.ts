@@ -91,7 +91,11 @@ export interface AguiRelayHost {
   runtime(
     threadId: string
   ): { wire: AgentWire; status: AgentSessionStatus } | null;
-  /** Start the thread's agent (its wire comes from `unconditional AG-UI`). */
+  /**
+   * Start the thread's agent (its wire comes from `unconditional AG-UI`),
+   * true once it is ready. Owns the ready deadline and its retry, and joins a
+   * start already under way.
+   */
   start(threadId: string): Promise<boolean>;
   /**
    * One command on the live runtime's stdin. Returns the process it was
@@ -129,7 +133,18 @@ export interface AguiRelayHost {
    * the host may re-pin the running agent's model. Errors are logged.
    */
   beforeRun?(threadId: string): Promise<void>;
+  /**
+   * The app is quitting (`TurnLedger.appClosing`): an agent stopping now is
+   * the quit, so its open run ends as `app_closed`, not as an agent exit.
+   */
+  appClosing?(): boolean;
 }
+
+/** The terminal of a run the app closed under, at the quit or on the next start. */
+const APP_CLOSED_ERROR = {
+  message: "The app closed before the reply finished.",
+  code: "app_closed",
+} as const;
 
 /** The thread files (`ThreadStore`). */
 export interface AguiThreadFiles {
@@ -163,8 +178,6 @@ export interface AguiRelayOptions {
   host: AguiRelayHost;
   files: AguiThreadFiles;
   /** Every spawn speaks AG-UI (`unconditional AG-UI`). Defaults to false. */
-  /** How long `ai.send` waits for the runtime to be ready. */
-  startTimeoutMs?: number;
   /** How long `ai.send` waits for `run.ack` after writing `run`. */
   ackTimeoutMs?: number;
   /** Loaded threads kept in memory beyond those in use. */
@@ -213,7 +226,6 @@ const timeoutError = (ms: number, message: string): RpcError =>
 const ACKS_KEPT = 10_000;
 /** Run ids seen starting (answered `duplicate` without an ack), over every thread. */
 const STARTED_RUNS_KEPT = 10_000;
-const POLL_MS = 25;
 /** Run-finished notices kept for a `lastEventId` resume, over every thread. */
 export const NOTICES_KEPT = 1_000;
 
@@ -285,7 +297,6 @@ export class AguiRelayService implements AguiSource {
   readonly #clock = new SeqClock();
   readonly #host: AguiRelayHost;
   readonly #files: AguiThreadFiles;
-  readonly #startTimeoutMs: number;
   readonly #ackTimeoutMs: number;
   readonly #maxIdleThreads: number;
   readonly #log: (message: string) => void;
@@ -330,7 +341,6 @@ export class AguiRelayService implements AguiSource {
   constructor(options: AguiRelayOptions) {
     this.#host = options.host;
     this.#files = options.files;
-    this.#startTimeoutMs = options.startTimeoutMs ?? 60_000;
     this.#ackTimeoutMs = options.ackTimeoutMs ?? 30_000;
     this.#maxIdleThreads = options.maxIdleThreads ?? 16;
     this.#log =
@@ -383,9 +393,10 @@ export class AguiRelayService implements AguiSource {
   /**
    * A run the app closed under (a quit, an update, a crash), found on the
    * next start: the thread's file gets its terminal, an error after the
-   * message it answered, so the thread shows the run ended and offers the
-   * retry an agent exit does. Once: not when a run the turn started already
-   * has its terminal (a quit that let the relay close it), nor on a replay.
+   * message it answered, so the thread shows the run was interrupted and
+   * offers the retry an agent exit does. Once: not when a run the turn
+   * started already has its terminal (a quit that let the relay close it),
+   * nor on a replay.
    */
   closeInterruptedRun(
     threadId: string,
@@ -410,10 +421,7 @@ export class AguiRelayService implements AguiSource {
           startedAt: turn.startedAt,
           endedAt: turn.endedAt,
           steps: 0,
-          error: {
-            message: "The app closed before the reply finished.",
-            code: "agent_exit",
-          },
+          error: { ...APP_CLOSED_ERROR },
           afterMessageId: file.messages.at(-1)?.id ?? null,
         },
       ],
@@ -437,14 +445,21 @@ export class AguiRelayService implements AguiSource {
     const crashed =
       !exit.requested &&
       (exit.signal != null || (exit.code != null && exit.code !== 0));
+    // An agent stopped by the quit ends its run as the quit, not as an exit.
+    const [code, message]: [
+      "agent_exit" | "agent_crashed" | "app_closed",
+      string,
+    ] =
+      this.#host.appClosing?.() === true
+        ? [APP_CLOSED_ERROR.code, APP_CLOSED_ERROR.message]
+        : crashed
+          ? [
+              "agent_crashed",
+              `The agent stopped unexpectedly (${exit.signal ?? `exit code ${exit.code}`}).`,
+            ]
+          : ["agent_exit", "The agent exited before the reply finished."];
     const current =
-      thread?.runtimeExited(
-        exit.origin.runtime,
-        crashed ? "agent_crashed" : "agent_exit",
-        crashed
-          ? `The agent stopped unexpectedly (${exit.signal ?? `exit code ${exit.code}`}).`
-          : "The agent exited before the reply finished."
-      ) ?? true;
+      thread?.runtimeExited(exit.origin.runtime, code, message) ?? true;
     // A run acked `started` by this process that never opened will not.
     const awaiting = this.#awaitingStart.get(threadId);
     for (const [runId, process] of awaiting ?? [])
@@ -1414,28 +1429,9 @@ export class AguiRelayService implements AguiSource {
   }
 
   async #ensureOnce(threadId: string): Promise<void> {
-    const deadline = Date.now() + this.#startTimeoutMs;
-    let started = false;
-
-    for (;;) {
-      const runtime = this.#host.runtime(threadId);
-      const status = runtime?.status ?? "stopped";
-      if (status === "running") return;
-      if (status === "stopped" || status === "error") {
-        if (started) throw unavailable("The agent did not start", 1_000);
-        started = true;
-        if (!(await this.#host.start(threadId)))
-          throw unavailable("The agent could not be started", 1_000);
-        continue;
-      }
-      // starting, or stopping (a respawn follows the close).
-      if (Date.now() > deadline)
-        throw timeoutError(
-          this.#startTimeoutMs,
-          "The agent did not become ready"
-        );
-      await new Promise((resolve) => setTimeout(resolve, POLL_MS));
-    }
+    if (this.#host.runtime(threadId)?.status === "running") return;
+    if (!(await this.#host.start(threadId)))
+      throw unavailable("The agent could not be started", 1_000);
   }
 
   #requireAgui(threadId: string): void {

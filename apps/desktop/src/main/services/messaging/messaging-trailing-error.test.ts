@@ -167,9 +167,32 @@ const WALL = {
     '429: {"message":"You have no remaining credits to use the LLM apis"}',
   actions: [{ type: "upgrade-abacus" }],
 };
-const ownKey = (cause: string) => ({
+/** As the agent sends it: RouteLLM - Open beside it while Abacus credits are left. */
+const ownKey = (cause: string, credits = true) => ({
   message: '402: {"error":{"message":"Insufficient balance"}}',
-  actions: [{ type: "own-key-unavailable", provider: "deepseek", cause }],
+  actions: [
+    {
+      type: "own-key-unavailable",
+      provider: "deepseek",
+      cause,
+      label: "DeepSeek V4",
+    },
+    ...(credits ? [{ type: "switch-to-abacus" }] : []),
+  ],
+});
+/** A model off Abacus that is not a key's: another provider's free one, a local server. */
+const offAbacus = (provider: string, cause: string, extra = {}) => ({
+  message: "410 status code (no body)",
+  actions: [
+    {
+      type: "own-key-unavailable",
+      provider,
+      cause,
+      label: "Kimi K3",
+      ...extra,
+    },
+    { type: "switch-to-abacus" },
+  ],
 });
 const POOL_OUT = {
   message: "Every free model is used up for now.",
@@ -200,11 +223,14 @@ const harness = ({
   selfId = "ME" as string | null,
   shared = false,
   clock = { now: 0 },
+  startError = null as string | null,
 }: {
   self?: boolean;
   selfId?: string | null;
   shared?: boolean;
   clock?: { now: number };
+  /** The app's start failed, retry and all, with this error. */
+  startError?: string | null;
 } = {}) => {
   /** Everything sent, as `chatId: text`. */
   const log: string[] = [];
@@ -219,7 +245,10 @@ const harness = ({
       return { id: `session-${created}` } as never;
     },
     updateSessionLabel: () => {},
-    startSession: async () => ({ success: true }) as never,
+    startSession: async () =>
+      (startError == null
+        ? { success: true }
+        : { success: false, error: startError }) as never,
     sendMessage: (_w: string, s: string) => turns.sent(s),
     emitUserMessage: () => {},
     emitChanged: () => {},
@@ -277,6 +306,8 @@ const harness = ({
       );
     },
     say: (content: string) => emit(chatId, { type: "text_delta", content }),
+    /** Any agent event, as the turn streams it. */
+    emitEvent: (event: Record<string, unknown>) => emit(chatId, event),
     idle: () =>
       emit(chatId, { type: "status_changed", status: AgentStatus.Idle }),
     /** A failed turn as the agent ends one: the error, then its close. */
@@ -361,8 +392,18 @@ describe("the user's own chat, on the free plan", () => {
   it.each([
     ["credit", "Your DeepSeek key is out of credit."],
     ["rate_limit", "Your DeepSeek key hit its rate limit."],
-    ["down", "DeepSeek isn't responding right now."],
-    ["network", "DeepSeek isn't responding right now."],
+    [
+      "down",
+      "DeepSeek isn't responding right now. It runs on your own DeepSeek key.",
+    ],
+    [
+      "network",
+      "DeepSeek isn't responding right now. It runs on your own DeepSeek key.",
+    ],
+    [
+      "gone",
+      "DeepSeek V4 on DeepSeek isn't available anymore. It runs on your own DeepSeek key.",
+    ],
   ])(
     "own key failed (%s): says so and points at the Abacus credits, no half pitch",
     async (cause, lead) => {
@@ -376,6 +417,95 @@ describe("the user's own chat, on the free plan", () => {
       ]);
     }
   );
+
+  it.each([
+    [
+      "another provider's free model that is gone",
+      offAbacus("nvidia", "gone", { free: true }),
+      "Kimi K3 on NVIDIA NIM isn't available anymore. NVIDIA NIM's free models can stop answering or be retired without notice.",
+    ],
+    [
+      "a local server that sent nothing",
+      offAbacus("local", "no_reply"),
+      "Kimi K3 on your local model server sent no reply. It runs on your local model server, which has to be running and reachable.",
+    ],
+    [
+      "a failure nobody named",
+      offAbacus("groq", "failed", { free: true }),
+      "Kimi K3 on Groq couldn't finish that. Groq's free models can stop answering or be retired without notice.",
+    ],
+  ])(
+    "%s: says whose it was, never 'my side', and points at the Abacus credits",
+    async (_name, error, lead) => {
+      const h = harness({ self: true });
+      await h.inbound("hi");
+      h.fail(error);
+      await settle();
+
+      expect(h.sent()).toEqual([
+        `${lead} Switch to Abacus.AI in the app's model picker to keep going on your free Abacus credits.`,
+      ]);
+    }
+  );
+
+  it("a model off Abacus with the Abacus credits used up: the Basic offer, not the switch", async () => {
+    const h = harness({ self: true });
+    await h.inbound("hi");
+    h.fail(ownKey("gone", false));
+    await settle();
+
+    expect(h.sent()).toEqual([
+      `DeepSeek V4 on DeepSeek isn't available anymore. It runs on your own DeepSeek key.\n${offerLines(UPGRADE_URL)}`,
+    ]);
+  });
+
+  it("a message moved to RouteLLM - Open: the own chat hears why, a contact only the answer", async () => {
+    const moved = {
+      type: "notification",
+      severity: "info",
+      message: "moved",
+      actions: [
+        {
+          type: "moved-to-abacus",
+          provider: "nvidia",
+          label: "Kimi K3",
+          target: "RouteLLM - Open",
+        },
+      ],
+    };
+    const own = harness({ self: true });
+    await own.inbound("hi");
+    own.emitEvent(moved);
+    await settle();
+    expect(own.sent()).toEqual([
+      "Kimi K3 on NVIDIA NIM isn't available, so I switched this chat to RouteLLM - Open.",
+    ]);
+
+    const contact = harness();
+    await contact.inbound("hi");
+    contact.emitEvent(moved);
+    await settle();
+    expect(contact.log).toEqual([]);
+
+    // A paying plan runs on its own router, named as it ran; an id keeps its case.
+    const paid = harness({ self: true });
+    await paid.inbound("hi");
+    paid.emitEvent({
+      ...moved,
+      actions: [
+        {
+          type: "moved-to-abacus",
+          provider: "fake",
+          label: "fake-1",
+          target: "RouteLLM",
+        },
+      ],
+    });
+    await settle();
+    expect(paid.sent()).toEqual([
+      "fake-1 on Fake isn't available, so I switched this chat to RouteLLM.",
+    ]);
+  });
 
   it("free pool used up: the free models are busy, and the Basic offer", async () => {
     const h = harness({ self: true });
@@ -462,6 +592,22 @@ describe("the user's own chat, any plan", () => {
     expect(h.sent()).toEqual([
       "Starting…",
       "Something went wrong on my side, so I couldn't finish that. Please try again in a moment.",
+    ]);
+  });
+
+  it("a full disk: says so and asks for space, never 'something went wrong'", async () => {
+    const h = harness({ self: true });
+    await h.inbound("hi");
+    h.fail({
+      message: "The disk is full.",
+      code: "turn_failed",
+      cause: "disk_full",
+      actions: [{ type: "retry", bytesFree: 0 }],
+    });
+    await settle();
+
+    expect(h.sent()).toEqual([
+      "The computer I run on is out of disk space, so I couldn't finish that or save this chat. Free some space on it, then send your message again.",
     ]);
   });
 
@@ -619,7 +765,7 @@ describe("the notice in the user's own chat", () => {
 
     expect(h.log).toEqual([
       `C1: ${NEUTRAL}`,
-      "shared me: I couldn't reply to Ana just now. DeepSeek isn't responding right now. Switch to Abacus.AI in the app's model picker to keep going on your free Abacus credits.",
+      "shared me: I couldn't reply to Ana just now. DeepSeek isn't responding right now. It runs on your own DeepSeek key. Switch to Abacus.AI in the app's model picker to keep going on your free Abacus credits.",
     ]);
   });
 
@@ -790,6 +936,28 @@ describe("a turn that ends without a word", () => {
     ]);
   });
 
+  it("on a model off Abacus, the own chat hears whose it was; a contact still hears nothing", async () => {
+    const empty = {
+      ...offAbacus("groq", "no_reply", { free: true }),
+      cause: "empty",
+    };
+    const own = harness({ self: true });
+    await own.inbound("hello?");
+    own.fail(empty);
+    await settle();
+    expect(own.sent()).toEqual([
+      "Kimi K3 on Groq sent no reply. Groq's free models can stop answering or be retired without notice. Switch to Abacus.AI in the app's model picker to keep going on your free Abacus credits.",
+    ]);
+
+    const contact = harness();
+    await contact.inbound("are you there?");
+    contact.fail(empty);
+    await settle();
+    expect(contact.log).toEqual([
+      "ME: I didn't reply to Ana: no answer came back. Open the app to answer them, or tell me what to say.",
+    ]);
+  });
+
   it("a deliberate NO_REPLY is a decision, not a silent turn", async () => {
     const h = harness();
     await h.inbound("ok 👍");
@@ -805,8 +973,42 @@ describe("a turn the app ended itself", () => {
   /** Main ends the turn (the watchdog, the agent's exit, a Stop) in the ledger. */
   const close = (
     h: ReturnType<typeof harness>,
-    kind: "timed_out" | "agent_exited" | "stopped"
+    kind: "timed_out" | "agent_exited" | "not_started" | "stopped"
   ) => h.turns.ledger.end(h.sessionOf("C1"), kind);
+
+  it("a message no agent took is said in the chat's words, and frees it", async () => {
+    const h = harness({ self: true });
+    await h.inbound("build the site");
+    close(h, "not_started");
+    await settle();
+
+    expect(h.sent()).toEqual([
+      "The app took too long to get ready, so I couldn't start on that. Send it again to try once more.",
+    ]);
+    expect(h.busy()).toBe(false);
+  });
+
+  it("a new chat whose agent cannot start hears the same line, never the raw error", async () => {
+    const h = harness({
+      self: true,
+      startError: "Local CLI did not emit ready event within 60000ms.",
+    });
+    await (
+      h.gateway as unknown as {
+        handleInbound: (id: string, m: object) => Promise<void>;
+      }
+    ).handleInbound("discord", {
+      userId: "U1",
+      userName: "Ana",
+      chatId: "C1",
+      text: "hi",
+    });
+    await settle();
+
+    expect(h.sent()).toEqual([
+      "The app took too long to get ready, so I couldn't start on that. Send it again to try once more.",
+    ]);
+  });
 
   it("the watchdog's timeout reaches the chat and frees it", async () => {
     const h = harness({ self: true });
@@ -1550,6 +1752,9 @@ describe("what a closed turn owes its chat", () => {
     });
     expect(chatFailureOf({ kind: "agent_exited" }, true)).toEqual({
       code: "agent_exited",
+    });
+    expect(chatFailureOf({ kind: "not_started" }, false)).toEqual({
+      code: "not_started",
     });
   });
 });

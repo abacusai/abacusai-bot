@@ -535,8 +535,35 @@ describe("one cause per turn, read from the whole chain of calls", () => {
       "429 You have exceeded your daily request limit (requests per day).",
       "own_key_quota",
     ],
+    // The turn's own write on this machine, whoever's model it ran on.
+    ["fake", "ENOSPC: no space left on device, write", "disk_full"],
+    ["abacus", "EDQUOT: disk quota exceeded, write", "disk_full"],
+    // A provider's own quota, or its server's disk, is never this machine's.
+    [
+      "openai",
+      '429 {"error":{"type":"insufficient_quota","message":"You exceeded your current quota"}}',
+      "own_key_quota",
+    ],
+    ["openrouter", "500 no space left on device", "rate_limited"],
   ] as const)("%s: %s → %s", (provider, raw, cause) => {
     expect(classifyAttempt(raw, provider)).toBe(cause);
+  });
+
+  it("a full disk outranks everything else and offers Retry with the space left", () => {
+    const chain = new TurnChain();
+    chain.failed("429 Too Many Requests", "openrouter");
+    chain.failed("ENOSPC: no space left on device, write", "openrouter");
+    const shown = presentFailure(chain.failure()!, {
+      ...route,
+      onFreeLane: true,
+      freeBytes: 4096,
+    });
+    expect(shown).toMatchObject({
+      cause: "disk_full",
+      code: "turn_failed",
+      actions: [{ type: "retry", bytesFree: 4096 }],
+    });
+    expect(shown.message).toMatch(/disk is full/);
   });
 
   it("a connection error after a rate limit is the connection's, never busy", () => {

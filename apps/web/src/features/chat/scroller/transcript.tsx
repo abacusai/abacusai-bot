@@ -84,9 +84,15 @@ const outcomeShown = (
   skin: ReturnType<typeof useChatView>["skin"]
 ): boolean => {
   if (outcome.kind === "error") {
-    // A crash is stale once a retry has started (or any later run exists).
+    // A crash or an interruption is stale once a retry has started (or any
+    // later run exists).
     const code = outcome.error?.code;
-    return latest || (code !== "agent_exit" && code !== "agent_crashed");
+    return (
+      latest ||
+      (code !== "agent_exit" &&
+        code !== "agent_crashed" &&
+        code !== "app_closed")
+    );
   }
   // The bot skin renders no RunMarker (03-bots §24.2), only a free-lane
   // reply's label.
@@ -658,7 +664,9 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
     });
     viewport.addEventListener("scroll", settle, { passive: true });
     observer.observe(viewport);
-    observer.observe(content);
+    // Its border box: the composer dock growing (a notice, a nudge) grows
+    // only the content's bottom padding, which a content box never sees.
+    observer.observe(content, { box: "border-box" });
     return () => {
       viewport.removeEventListener("scroll", settle);
       observer.disconnect();

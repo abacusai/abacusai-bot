@@ -79,14 +79,19 @@ export interface NotificationAction {
   /** `switch-model` with a target: the card offers this model by name. */
   model?: string;
   label?: string;
-  /** `own-key-unavailable` and `fix-key`: the provider id whose key failed. */
+  /**
+   * `own-key-unavailable` and `fix-key`: the provider id whose key failed;
+   * `own-key-unavailable` also names the picked `model` by `label`.
+   */
   provider?: string;
   /** `continue-free`: the free sources the turn would go on with, in order. */
   providers?: string[];
   /** `verify-phone` (its page is `link`): the free credits it unlocks, as the server names them. */
   credits?: string;
   /**
-   * `own-key-unavailable`: credit, rate_limit, down or network.
+   * `own-key-unavailable`: a model Abacus does not serve failed: credit,
+   * rate_limit, down, network, gone, no_reply or failed. A `switch-to-abacus`
+   * beside it means Abacus credits are left.
    * `upgrade-abacus`: exhausted or expired (absent reads as exhausted).
    * `model-unavailable`: the picked `model` (named by `label`) cannot serve
    * the turn: retired, down (still failing after the retries) or plan (the
@@ -95,6 +100,9 @@ export interface NotificationAction {
    * `free-pool-out`: busy when the free models are only rate-limited.
    * `cut-off`: Google cut the reply off on the picked `model` (its
    * `provider`); where the Abacus credits stand: credits, out or signed-out.
+   * `switch-to-abacus` (RouteLLM - Open, with Abacus credits left) and
+   * `plan-offer` (the plan's whole offer, with them used up) take the place
+   * of a bare `switch-model` on a turn off RouteLLM - Open.
    * `continue-free` (keep going on the free models at the credit wall),
    * `continue-same` (pick the cut reply up on the same model), `new-chat`,
    * `fix-key` and `retry` carry nothing else.
@@ -102,6 +110,12 @@ export interface NotificationAction {
   cause?: string;
   /** `cut-off`: part of the reply arrived before the cut and is kept. */
   streamed?: boolean;
+  /** `own-key-unavailable`: the picked model is another provider's free one. */
+  free?: boolean;
+  /** `moved-to-abacus`: where the message ran instead, by name. */
+  target?: string;
+  /** `retry` on a full disk: the bytes left where the agent writes. */
+  bytesFree?: number;
 }
 
 export interface StreamingNestedToolCall {
@@ -667,11 +681,12 @@ export type DesktopEvent =
       agentSessionFile?: string;
     }
   | { type: "event"; event: AgentEvent }
-  // Proof the agent is alive while a tool runs: the desktop times a turn out
-  // when nothing arrives, and a quiet build is indistinguishable from a wedged
-  // agent. Out-of-band rather than an AgentEvent because it is liveness for the
-  // host, not something the transcript should show.
-  | { type: "heartbeat"; runningTools: number }
+  // Proof the agent is alive while a tool runs or the model writes: the
+  // desktop times a turn out when nothing arrives, and a quiet build is
+  // indistinguishable from a wedged agent. Out-of-band rather than an
+  // AgentEvent because it is liveness for the host, not something the
+  // transcript should show. `tool`: the newest call running; none is the model.
+  | { type: "heartbeat"; runningTools: number; tool?: string }
   // How many things this process keeps running between turns (background
   // jobs, served pages), sent when that changes. They die with the process, so
   // the desktop never stops an idle agent that holds one. An older agent build

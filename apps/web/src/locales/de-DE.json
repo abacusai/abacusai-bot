@@ -1590,9 +1590,11 @@
       "account": "Paused: the account is not active.",
       "failures": "Paused after failing several times.",
       "other": "Paused.",
-      "denied": "Paused: you did not allow it."
+      "denied": "Paused: you did not allow it.",
+      "quiet": "Pausiert: {{runs}} Läufe nacheinander haben nichts Neues gefunden, daher verbraucht sie keine Credits mehr. Setze sie fort, damit sie weiter prüft."
     },
     "createdByAgent": "A routine was set up: {{name}}.",
+    "frequent": "Läuft {{times}}-mal am Tag, und jeder Lauf verbraucht Credits: In diesem Tempo können die Credits eines Monats in wenigen Tagen aufgebraucht sein. Finden mehrere Läufe nacheinander nichts Neues, pausiert sie von selbst.",
     "refused": {
       "planInterval": "Im kostenlosen Plan läuft eine selbstständige Routine höchstens einmal am Tag. Mit einem Upgrade öfter.",
       "planKind": "Der kostenlose Plan enthält nur Aufgaben. Mit einem Upgrade auch die anderen Arten.",
@@ -2638,6 +2640,7 @@
   "errors": {
     "genericTitle": "Something went wrong",
     "genericDescription": "This screen hit an error it couldn't recover from.",
+    "diskFull": "Der Speicher ist voll, daher konnte das nicht gespeichert werden. Gib etwas Speicherplatz frei und versuche es erneut.",
     "reload": "Reload",
     "notFoundTitle": "Not found",
     "notFoundDescription": "This page doesn't exist.",
@@ -2944,6 +2947,7 @@
       "dismiss": "Dismiss",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
+      "unsaved": "Der Speicher ist voll, daher wird dieser Chat nicht gespeichert. Gib etwas Speicherplatz frei; mit deiner nächsten Nachricht wird er wieder gespeichert.",
       "showInFolder": "Show in folder"
     },
     "part": {
@@ -4447,17 +4451,28 @@
     }
   },
   "ownKey": {
-    "freeBody": "No separate API bill. Upgrade and keep going on the top models.",
     "notResponding": "{{provider}} isn't responding right now",
     "openAgent": "Open AbacusAI Agent",
     "outOfCredit": "Your {{provider}} key is out of credit",
     "paidBody": "Use it in AbacusAI Agent on the web: the top models are included in your plan.",
-    "rateLimited": "Your {{provider}} key hit its rate limit"
+    "rateLimited": "Your {{provider}} key hit its rate limit",
+    "gone": "{{model}} bei {{provider}} ist nicht mehr verfügbar",
+    "noReply": "{{model}} bei {{provider}} hat nicht geantwortet",
+    "failed": "{{model}} bei {{provider}} konnte das nicht abschließen",
+    "localServer": "dein lokaler Modellserver",
+    "whyFree": "Die kostenlosen Modelle von {{provider}} können ohne Vorankündigung aufhören zu antworten oder eingestellt werden.",
+    "whyKey": "{{model}} läuft über deinen eigenen {{provider}}-Schlüssel, mit dessen Limits und Abrechnung.",
+    "whyLocal": "{{model}} läuft auf deinem lokalen Modellserver, der laufen und erreichbar sein muss.",
+    "moved": "{{model}} bei {{provider}} ist nicht verfügbar, daher habe ich diesen Chat auf {{target}} umgestellt."
   },
   "outcome": {
     "wall": {
       "title": "Deine kostenlosen Credits sind aufgebraucht",
       "expiredTitle": "Deine kostenlosen Credits sind abgelaufen",
+      "taskTitle": "„{{task}}“ pausiert: Deine kostenlosen Credits sind aufgebraucht",
+      "taskExpiredTitle": "„{{task}}“ pausiert: Deine kostenlosen Credits sind abgelaufen",
+      "taskPaidTitle": "„{{task}}“ pausiert: Die Credits dieses Monats sind aufgebraucht",
+      "resumes": "Nach dem Upgrade geht es von selbst dort weiter, wo es aufgehört hat.",
       "paidTitle": "Du hast die Credits dieses Monats verbraucht",
       "paidOffer": "Oder wechsle zu {{plan}} — {{price}}",
       "paidMobile": "Dein Plan wird über den App Store oder Google Play abgerechnet. Füge Credits hinzu oder upgrade in der Abacus.AI-App auf deinem Handy.",
@@ -4501,14 +4516,15 @@
       "free_pool_spent": "Alle kostenlosen Quellen sind vorerst aufgebraucht. Verbinde eine weitere kostenlose Quelle oder wähle ein anderes Modell.",
       "rate_limited": "Die kostenlosen Modelle sind gerade ausgelastet. Versuche es in ein paar Minuten erneut oder wechsle zu einem anderen Modell.",
       "empty": "Das Modell hat eine leere Antwort geliefert. Versuche es erneut oder wechsle zu einem anderen Modell.",
+      "disk_full": "Der Speicher ist voll ({{free}} frei), daher kann dieser Chat nicht gespeichert werden und der Agent kann keine Dateien schreiben. Gib etwas Speicherplatz frei und versuche es dann erneut.",
+      "disk_fullUnmeasured": "Der Speicher ist voll, daher kann dieser Chat nicht gespeichert werden und der Agent kann keine Dateien schreiben. Gib etwas Speicherplatz frei und versuche es dann erneut.",
       "unknown": "Das Modell konnte das nicht abschließen. Versuche es erneut oder wechsle zu einem anderen Modell."
     },
     "action": {
       "newChat": "Neuer Chat",
       "fixKey": "Schlüssel prüfen",
       "viewDetails": "Details anzeigen",
-      "tryAgain": "Erneut versuchen",
-      "switchToAbacus": "Zu Abacus wechseln (RouteLLM - Open)"
+      "tryAgain": "Erneut versuchen"
     },
     "channel": {
       "wall": "Ich habe pausiert, weil deine kostenlosen Credits aufgebraucht sind.",
@@ -4532,8 +4548,17 @@
       "ownKeyRejected": "Dein {{provider}}-Schlüssel wurde abgelehnt – er ist ungültig oder abgelaufen. Korrigiere ihn in der App unter Einstellungen → Modelle.",
       "ownKeyWeb": "Nutze ihn in AbacusAI Agent im Web: {{link}}",
       "ownKeySwitch": "Wechsle in der Modellauswahl der App zu Abacus.AI, um mit deinen kostenlosen Abacus-Credits weiterzumachen.",
+      "ownKeyGone": "{{model}} bei {{provider}} ist nicht mehr verfügbar.",
+      "ownKeyNoReply": "{{model}} bei {{provider}} hat nicht geantwortet.",
+      "ownKeyFailed": "{{model}} bei {{provider}} konnte das nicht abschließen.",
+      "localServer": "dein lokaler Modellserver",
+      "ownKeyWhyFree": "Die kostenlosen Modelle von {{provider}} können ohne Vorankündigung aufhören zu antworten oder eingestellt werden.",
+      "ownKeyWhyKey": "Es läuft über deinen eigenen {{provider}}-Schlüssel.",
+      "ownKeyWhyLocal": "Es läuft auf deinem lokalen Modellserver, der laufen und erreichbar sein muss.",
+      "ownKeyMoved": "{{model}} bei {{provider}} ist nicht verfügbar, daher habe ich diesen Chat auf {{target}} umgestellt.",
       "busy": "Die kostenlosen Modelle sind gerade ausgelastet.",
       "connection": "Die Verbindung ist abgebrochen, daher konnte ich das nicht abschließen. Bitte versuche es gleich noch einmal.",
+      "diskFull": "Auf dem Computer, auf dem ich laufe, ist kein Speicherplatz mehr frei, daher konnte ich das nicht abschließen und diesen Chat nicht speichern. Gib dort etwas Speicherplatz frei und sende deine Nachricht dann erneut.",
       "notSignedIn": "Die Desktop-App ist gerade nicht bei Abacus.AI angemeldet. Öffne die App, melde dich an und schreib mir dann erneut.",
       "generic": "Bei mir ist etwas schiefgelaufen, daher konnte ich das nicht abschließen. Bitte versuche es gleich noch einmal.",
       "contactFailed": "Ich konnte {{name}} gerade nicht antworten.",
@@ -4543,6 +4568,7 @@
       "paymentLapsed": "Ich habe pausiert, weil dein Abacus.AI-Abo abgelaufen ist. Hier verlängern: {{link}}",
       "timedOut": "Das hat zu lange gedauert und wurde gestoppt, bevor ich antworten konnte. Schick es noch einmal, dann mache ich weiter.",
       "agentExited": "Die App wurde beendet, bevor ich antworten konnte. Schick es noch einmal, dann mache ich weiter.",
+      "notStarted": "Die App brauchte zu lange zum Starten, deshalb konnte ich nicht anfangen. Schick es noch einmal, dann versuche ich es erneut.",
       "empty": "Darauf konnte ich keine Antwort zusammenstellen. Bitte schick es noch einmal.",
       "contactNeutral": "Entschuldigung, ich kann gerade nicht antworten. Ich melde mich bald.",
       "contactEmpty": "Ich habe {{name}} nicht geantwortet: Es kam keine Antwort zurück. Öffne die App, um zu antworten, oder sag mir, was ich schreiben soll.",
@@ -4622,6 +4648,7 @@
     "low": {
       "title": "Nur noch {{left}} kostenlose Credits",
       "urge": "Upgrade jetzt, damit deine Arbeit nicht mittendrin stoppt.",
+      "urgeProject": "Upgrade jetzt, damit „{{project}}“ nicht mittendrin stoppt.",
       "estimateBuilds_one": "Genug für etwa {{count}} weiteren Build.",
       "estimateBuilds_other": "Genug für etwa {{count}} weitere Builds.",
       "estimateMessages_one": "Genug für etwa {{count}} weitere Bot-Nachricht.",
@@ -4714,6 +4741,7 @@
     "skill": "Fähigkeit",
     "importMcp": "Importieren Sie MCP-Server",
     "selectTheme": "Design auswählen",
-    "themes": "Designs"
+    "themes": "Designs",
+    "diskFullLane": "Der Speicher des Computers ist voll, daher kann {{platform}} seine Daten nicht speichern. Die Verbindung wird automatisch wiederhergestellt, sobald etwas Speicherplatz frei ist."
   }
 }

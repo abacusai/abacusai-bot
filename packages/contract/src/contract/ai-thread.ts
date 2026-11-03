@@ -75,7 +75,10 @@ export interface AiActiveRun {
  * A live `agent.notification`, a non-terminal `agent.error`, or main's own
  * `abacus.notice` about the thread (a history too large to read: `value`
  * `{ kind: "too-large", size, limit, path, notificationKey: "abacus.history" }`;
- * a thread file a newer build wrote: `{ kind: "foreign", notificationKey }`).
+ * a thread file a newer build wrote: `{ kind: "foreign", notificationKey }`;
+ * a save the full disk refused: `{ kind: "unsaved", notificationKey:
+ * "abacus.unsaved" }`). A keyed notice with `cleared: true` takes its key's
+ * notice back.
  */
 export interface AiNotice {
   /** The relay seq it arrived at. */

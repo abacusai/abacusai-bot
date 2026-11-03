@@ -1590,9 +1590,11 @@
       "account": "Paused: the account is not active.",
       "failures": "Paused after failing several times.",
       "other": "Paused.",
-      "denied": "Paused: you did not allow it."
+      "denied": "Paused: you did not allow it.",
+      "quiet": "一時停止中: {{runs}}回続けて新しいことが見つからなかったため、クレジットの使用を止めました。確認を続けるには再開してください。"
     },
     "createdByAgent": "A routine was set up: {{name}}.",
+    "frequent": "1日に{{times}}回実行され、実行のたびにクレジットを使います。このペースだと1か月分のクレジットが数日でなくなることがあります。何回か続けて新しいことが見つからなければ、自動で一時停止します。",
     "refused": {
       "planInterval": "無料プランでは、自動で実行されるルーチンは1日1回までです。アップグレードするとより頻繁に実行できます。",
       "planKind": "無料プランにはタスクのみが含まれます。アップグレードするとほかの種類も使えます。",
@@ -2638,6 +2640,7 @@
   "errors": {
     "genericTitle": "Something went wrong",
     "genericDescription": "This screen hit an error it couldn't recover from.",
+    "diskFull": "ディスクがいっぱいのため、保存できませんでした。空き容量を確保して、もう一度お試しください。",
     "reload": "Reload",
     "notFoundTitle": "Not found",
     "notFoundDescription": "This page doesn't exist.",
@@ -2944,6 +2947,7 @@
       "dismiss": "Dismiss",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
+      "unsaved": "ディスクがいっぱいのため、このチャットは保存されていません。空き容量を確保してください。次のメッセージで再び保存されます。",
       "showInFolder": "Show in folder"
     },
     "part": {
@@ -4447,17 +4451,28 @@
     }
   },
   "ownKey": {
-    "freeBody": "No separate API bill. Upgrade and keep going on the top models.",
     "notResponding": "{{provider}} isn't responding right now",
     "openAgent": "Open AbacusAI Agent",
     "outOfCredit": "Your {{provider}} key is out of credit",
     "paidBody": "Use it in AbacusAI Agent on the web: the top models are included in your plan.",
-    "rateLimited": "Your {{provider}} key hit its rate limit"
+    "rateLimited": "Your {{provider}} key hit its rate limit",
+    "gone": "{{provider}} の {{model}} は利用できなくなりました",
+    "noReply": "{{provider}} の {{model}} から応答がありませんでした",
+    "failed": "{{provider}} の {{model}} は処理を完了できませんでした",
+    "localServer": "ローカルのモデルサーバー",
+    "whyFree": "{{provider}} の無料モデルは、予告なく応答しなくなったり提供終了になったりすることがあります。",
+    "whyKey": "{{model}} はご自身の {{provider}} キーで動いており、そのキーの上限と請求が適用されます。",
+    "whyLocal": "{{model}} はローカルのモデルサーバーで動いており、サーバーが起動していて接続できる必要があります。",
+    "moved": "{{provider}} の {{model}} が利用できないため、このチャットを {{target}} に切り替えました。"
   },
   "outcome": {
     "wall": {
       "title": "無料クレジットを使い切りました",
       "expiredTitle": "無料クレジットの有効期限が切れました",
+      "taskTitle": "「{{task}}」は一時停止中:無料クレジットを使い切りました",
+      "taskExpiredTitle": "「{{task}}」は一時停止中:無料クレジットの有効期限が切れました",
+      "taskPaidTitle": "「{{task}}」は一時停止中:今月のクレジットを使い切りました",
+      "resumes": "アップグレードすると、止まったところから自動で再開します。",
       "paidTitle": "今月のクレジットを使い切りました",
       "paidOffer": "または {{plan}} にアップグレード — {{price}}",
       "paidMobile": "このプランは App Store または Google Play で請求されるため、クレジットの追加やアップグレードは Abacus.AI モバイルアプリで行ってください。",
@@ -4501,14 +4516,15 @@
       "free_pool_spent": "無料のソースは今のところすべて使い切りました。別の無料ソースを接続するか、別のモデルを選んでください。",
       "rate_limited": "無料モデルは現在混み合っています。数分後にもう一度試すか、別のモデルに切り替えてください。",
       "empty": "モデルから空の返信が返されました。もう一度試すか、別のモデルに切り替えてください。",
+      "disk_full": "ディスクがいっぱいです(残り {{free}})。このチャットを保存できず、エージェントはファイルを書き込めません。空き容量を確保してから、もう一度お試しください。",
+      "disk_fullUnmeasured": "ディスクがいっぱいです。このチャットを保存できず、エージェントはファイルを書き込めません。空き容量を確保してから、もう一度お試しください。",
       "unknown": "モデルはこれを完了できませんでした。もう一度試すか、別のモデルに切り替えてください。"
     },
     "action": {
       "newChat": "新しいチャット",
       "fixKey": "キーを確認",
       "viewDetails": "詳細を表示",
-      "tryAgain": "再試行",
-      "switchToAbacus": "Abacus に切り替える（RouteLLM - Open）"
+      "tryAgain": "再試行"
     },
     "channel": {
       "wall": "無料クレジットを使い切ったため、一時停止しました。",
@@ -4532,8 +4548,17 @@
       "ownKeyRejected": "{{provider}} のキーが拒否されました。無効か期限切れです。アプリの 設定 → モデル で修正してください。",
       "ownKeyWeb": "Web 版 AbacusAI Agent で使えます: {{link}}",
       "ownKeySwitch": "アプリのモデル選択で Abacus.AI に切り替えると、無料の Abacus クレジットで続けられます。",
+      "ownKeyGone": "{{provider}} の {{model}} は利用できなくなりました。",
+      "ownKeyNoReply": "{{provider}} の {{model}} から応答がありませんでした。",
+      "ownKeyFailed": "{{provider}} の {{model}} は処理を完了できませんでした。",
+      "localServer": "ローカルのモデルサーバー",
+      "ownKeyWhyFree": "{{provider}} の無料モデルは、予告なく応答しなくなったり提供終了になったりすることがあります。",
+      "ownKeyWhyKey": "ご自身の {{provider}} キーで動いています。",
+      "ownKeyWhyLocal": "ローカルのモデルサーバーで動いており、サーバーが起動していて接続できる必要があります。",
+      "ownKeyMoved": "{{provider}} の {{model}} が利用できないため、このチャットを {{target}} に切り替えました。",
       "busy": "無料モデルは現在混み合っています。",
       "connection": "接続が切れたため、完了できませんでした。少し待ってからもう一度お試しください。",
+      "diskFull": "私が動いているコンピューターのディスク容量が不足しているため、処理を完了できず、このチャットも保存できませんでした。空き容量を確保してから、もう一度メッセージを送ってください。",
       "notSignedIn": "デスクトップアプリが現在 Abacus.AI にサインインしていません。アプリを開いてサインインし、もう一度メッセージを送ってください。",
       "generic": "こちらで問題が起きたため、完了できませんでした。少し待ってからもう一度お試しください。",
       "contactFailed": "先ほど {{name}} さんに返信できませんでした。",
@@ -4543,6 +4568,7 @@
       "paymentLapsed": "Abacus.AI のサブスクリプションが終了したため、一時停止しています。こちらから更新してください: {{link}}",
       "timedOut": "時間がかかりすぎたため、返信する前に停止しました。もう一度送ると続きから再開します。",
       "agentExited": "返信する前にアプリが終了しました。もう一度送ると続きから再開します。",
+      "notStarted": "アプリの準備に時間がかかりすぎたため、開始できませんでした。もう一度送ると再試行します。",
       "empty": "これに対する返信を作成できませんでした。もう一度送ってください。",
       "contactNeutral": "申し訳ありません、今は返信できません。後ほどご連絡します。",
       "contactEmpty": "{{name}}さんに返信しませんでした: 回答が返ってきませんでした。アプリを開いて返信するか、何を伝えるか教えてください。",
@@ -4622,6 +4648,7 @@
     "low": {
       "title": "無料クレジットは残り {{left}} です",
       "urge": "作業が途中で止まらないよう、今すぐアップグレードしましょう。",
+      "urgeProject": "「{{project}}」が途中で止まらないよう、今すぐアップグレードしましょう。",
       "estimateBuilds_one": "ビルドあと約 {{count}} 回分です。",
       "estimateBuilds_other": "ビルドあと約 {{count}} 回分です。",
       "estimateMessages_one": "ボットのメッセージあと約 {{count}} 件分です。",
@@ -4714,6 +4741,7 @@
     "skill": "スキル",
     "importMcp": "MCP サーバーをインポートする",
     "selectTheme": "テーマを選択",
-    "themes": "テーマ"
+    "themes": "テーマ",
+    "diskFullLane": "コンピューターのディスクがいっぱいのため、{{platform}} はデータを保存できません。空き容量が確保されると自動的に再接続します。"
   }
 }

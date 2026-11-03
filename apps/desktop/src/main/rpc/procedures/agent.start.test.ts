@@ -5,6 +5,7 @@ import path from "node:path";
 import type { StartAgentSessionRequest } from "@abacus-ai/contract/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { ConnectivityService } from "../../services/connectivity/connectivity-service";
 import { AgentManagerService } from "../../services/session/cli-manager-service";
 import { connectInProcess, fakeDeps } from "../testing";
 
@@ -170,5 +171,76 @@ describe("agent.start joins readiness through the real handler", () => {
       );
       expect(config).toHaveBeenCalledOnce();
     }
+  );
+});
+
+describe("a start that misses the ready deadline is started once more", () => {
+  /** The app's deadline (60s) and the agent's delays, all run at 1/60 speed. */
+  const SCALE = 60;
+  const slowAgent = (log: string, delaysMs: number[]) =>
+    `const fs = require('node:fs');
+     fs.appendFileSync(${JSON.stringify(log)}, 'spawn\\n');
+     const n = fs.readFileSync(${JSON.stringify(log)}, 'utf8').split('\\n').length - 2;
+     const delays = ${JSON.stringify(delaysMs.map((ms) => ms / SCALE))};
+     setTimeout(() => fs.writeSync(3, ${JSON.stringify(READY + "\n")}), delays[Math.min(n, delays.length - 1)]);
+     setInterval(() => {}, 1000);`;
+
+  it.each([
+    {
+      case: "slow on a first launch, quick the second time",
+      delaysMs: [70_000, 1_000],
+      success: true,
+    },
+    { case: "too slow every time", delaysMs: [70_000], success: false },
+  ])(
+    "$case",
+    async ({ delaysMs, success }) => {
+      const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "agent-retry-"));
+      cleanup.push(() =>
+        fs.rmSync(workspace, { recursive: true, force: true })
+      );
+      const log = path.join(workspace, "spawns.log");
+      const awake = new ConnectivityService({ probe: async () => true });
+      const manager = new AgentManagerService({
+        resolveWorkspacePath: () => workspace,
+        resolveArtifact: () => ({
+          execPath: process.execPath,
+          execArgs: ["-e", slowAgent(log, delaysMs), "--"],
+          agentRoot: workspace,
+        }),
+        resolveAuthEnv: () => ({}),
+        resolveAdditionalConfigEnv: async () => ({}),
+        emitStateUpdated: () => {},
+        emitNdjson: () => {},
+        emitSystemReady: () => {},
+        emitSessionClosed: () => {},
+        emitMcpRuntimeServers: () => {},
+        emitMcpRuntimeStatus: () => {},
+        emitMcpRuntimeLog: () => {},
+        emitMcpRuntimeError: () => {},
+        runHostService: async () => null,
+        clock: {
+          awakeTimeout: (ms, fire) => awake.awakeTimeout(ms / SCALE, fire),
+        },
+      });
+      cleanup.push(() => manager.dispose());
+      const host = Object.assign(Object.create(ServiceHost.prototype), {
+        agentManagerService: manager,
+        agentSessionManagerService: { get: () => ({ model: "m" }) },
+        isWorkspaceDeleted: () => false,
+      }) as InstanceType<typeof ServiceHost>;
+
+      // The shipping start, with no deadline of the caller's own.
+      const result = await host.startAgentSession({
+        workspaceId: WS,
+        sessionId: ID,
+        mode: null,
+      });
+
+      expect(result.success).toBe(success);
+      if (!success) expect(result.error).toMatch(/did not emit ready/);
+      expect(fs.readFileSync(log, "utf8").trim().split("\n")).toHaveLength(2);
+    },
+    15_000
   );
 });

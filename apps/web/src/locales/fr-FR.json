@@ -1590,9 +1590,11 @@
       "account": "Paused: the account is not active.",
       "failures": "Paused after failing several times.",
       "other": "Paused.",
-      "denied": "Paused: you did not allow it."
+      "denied": "Paused: you did not allow it.",
+      "quiet": "En pause : {{runs}} exécutions d'affilée n'ont rien trouvé de nouveau, elle a donc cessé d'utiliser des crédits. Reprenez-la pour qu'elle continue de vérifier."
     },
     "createdByAgent": "A routine was set up: {{name}}.",
+    "frequent": "S'exécute {{times}} fois par jour, et chaque exécution consomme des crédits : à ce rythme, les crédits d'un mois peuvent être épuisés en quelques jours. Si plusieurs exécutions d'affilée ne trouvent rien de nouveau, elle se met en pause.",
     "refused": {
       "planInterval": "Avec l'offre gratuite, une routine qui s'exécute toute seule tourne au plus une fois par jour. Passer à une offre supérieure permet plus souvent.",
       "planKind": "L'offre gratuite inclut uniquement les tâches. Passer à une offre supérieure permet les autres types.",
@@ -2638,6 +2640,7 @@
   "errors": {
     "genericTitle": "Something went wrong",
     "genericDescription": "This screen hit an error it couldn't recover from.",
+    "diskFull": "Le disque est plein : impossible d'enregistrer. Libérez de l'espace et réessayez.",
     "reload": "Reload",
     "notFoundTitle": "Not found",
     "notFoundDescription": "This page doesn't exist.",
@@ -2944,6 +2947,7 @@
       "dismiss": "Dismiss",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
+      "unsaved": "Le disque est plein : cette conversation n'est pas enregistrée. Libérez de l'espace ; elle sera de nouveau enregistrée avec votre prochain message.",
       "showInFolder": "Show in folder"
     },
     "part": {
@@ -4447,17 +4451,28 @@
     }
   },
   "ownKey": {
-    "freeBody": "No separate API bill. Upgrade and keep going on the top models.",
     "notResponding": "{{provider}} isn't responding right now",
     "openAgent": "Open AbacusAI Agent",
     "outOfCredit": "Your {{provider}} key is out of credit",
     "paidBody": "Use it in AbacusAI Agent on the web: the top models are included in your plan.",
-    "rateLimited": "Your {{provider}} key hit its rate limit"
+    "rateLimited": "Your {{provider}} key hit its rate limit",
+    "gone": "{{model}} sur {{provider}} n'est plus disponible",
+    "noReply": "{{model}} sur {{provider}} n'a envoyé aucune réponse",
+    "failed": "{{model}} sur {{provider}} n'a pas pu terminer",
+    "localServer": "votre serveur de modèles local",
+    "whyFree": "Les modèles gratuits de {{provider}} peuvent cesser de répondre ou être retirés sans préavis.",
+    "whyKey": "{{model}} passe par votre propre clé {{provider}}, avec ses limites et sa facturation.",
+    "whyLocal": "{{model}} tourne sur votre serveur de modèles local, qui doit être lancé et joignable.",
+    "moved": "{{model}} sur {{provider}} n'est pas disponible, j'ai donc passé cette discussion sur {{target}}."
   },
   "outcome": {
     "wall": {
       "title": "Vos crédits gratuits sont épuisés",
       "expiredTitle": "Vos crédits gratuits ont expiré",
+      "taskTitle": "« {{task}} » est en pause : vos crédits gratuits sont épuisés",
+      "taskExpiredTitle": "« {{task}} » est en pause : vos crédits gratuits ont expiré",
+      "taskPaidTitle": "« {{task}} » est en pause : les crédits de ce mois sont épuisés",
+      "resumes": "Passez au forfait et tout reprendra tout seul là où ça s'est arrêté.",
       "paidTitle": "Vous avez utilisé les crédits de ce mois-ci",
       "paidOffer": "Ou passez à {{plan}} — {{price}}",
       "paidMobile": "Votre forfait est facturé via l'App Store ou Google Play : ajoutez des crédits ou passez à un forfait supérieur dans l'application mobile Abacus.AI.",
@@ -4501,14 +4516,15 @@
       "free_pool_spent": "Toutes les sources gratuites sont épuisées pour le moment. Connectez une autre source gratuite ou choisissez un autre modèle.",
       "rate_limited": "Les modèles gratuits sont occupés en ce moment. Réessayez dans quelques minutes ou passez à un autre modèle.",
       "empty": "Le modèle a renvoyé une réponse vide. Réessayez ou passez à un autre modèle.",
+      "disk_full": "Le disque est plein (il reste {{free}}) : cette conversation ne peut pas être enregistrée et l'agent ne peut pas écrire de fichiers. Libérez de l'espace, puis réessayez.",
+      "disk_fullUnmeasured": "Le disque est plein : cette conversation ne peut pas être enregistrée et l'agent ne peut pas écrire de fichiers. Libérez de l'espace, puis réessayez.",
       "unknown": "Le modèle n'a pas pu terminer. Réessayez ou passez à un autre modèle."
     },
     "action": {
       "newChat": "Nouvelle discussion",
       "fixKey": "Vérifier la clé",
       "viewDetails": "Voir les détails",
-      "tryAgain": "Réessayer",
-      "switchToAbacus": "Passer à Abacus (RouteLLM - Open)"
+      "tryAgain": "Réessayer"
     },
     "channel": {
       "wall": "Je me suis mis en pause car vos crédits gratuits sont épuisés.",
@@ -4532,8 +4548,17 @@
       "ownKeyRejected": "Votre clé {{provider}} a été refusée : elle est invalide ou a expiré. Corrigez-la dans l'application, dans Paramètres → Modèles.",
       "ownKeyWeb": "Utilisez-la dans AbacusAI Agent sur le web : {{link}}",
       "ownKeySwitch": "Passez à Abacus.AI dans le sélecteur de modèles de l'app pour continuer avec vos crédits Abacus gratuits.",
+      "ownKeyGone": "{{model}} sur {{provider}} n'est plus disponible.",
+      "ownKeyNoReply": "{{model}} sur {{provider}} n'a envoyé aucune réponse.",
+      "ownKeyFailed": "{{model}} sur {{provider}} n'a pas pu terminer.",
+      "localServer": "votre serveur de modèles local",
+      "ownKeyWhyFree": "Les modèles gratuits de {{provider}} peuvent cesser de répondre ou être retirés sans préavis.",
+      "ownKeyWhyKey": "Il passe par votre propre clé {{provider}}.",
+      "ownKeyWhyLocal": "Il tourne sur votre serveur de modèles local, qui doit être lancé et joignable.",
+      "ownKeyMoved": "{{model}} sur {{provider}} n'est pas disponible, j'ai donc passé cette discussion sur {{target}}.",
       "busy": "Les modèles gratuits sont occupés en ce moment.",
       "connection": "La connexion a été coupée, je n'ai donc pas pu terminer. Réessayez dans un instant.",
+      "diskFull": "L'ordinateur sur lequel je tourne n'a plus d'espace disque, je n'ai donc pas pu terminer ni enregistrer cette conversation. Libérez de l'espace dessus, puis renvoyez votre message.",
       "notSignedIn": "L'application de bureau n'est pas connectée à Abacus.AI pour le moment. Ouvrez l'application, connectez-vous, puis écrivez-moi à nouveau.",
       "generic": "Un problème est survenu de mon côté, je n'ai donc pas pu terminer. Réessayez dans un instant.",
       "contactFailed": "Je n'ai pas pu répondre à {{name}} tout à l'heure.",
@@ -4543,6 +4568,7 @@
       "paymentLapsed": "Je suis en pause car votre abonnement Abacus.AI a pris fin. Renouvelez-le ici : {{link}}",
       "timedOut": "Cela a pris trop de temps et a été arrêté avant que je puisse répondre. Renvoie-le pour reprendre.",
       "agentExited": "L'application s'est arrêtée avant que je puisse répondre. Renvoie-le pour reprendre.",
+      "notStarted": "L'application a mis trop de temps à démarrer, je n'ai donc pas pu commencer. Renvoie-le pour réessayer.",
       "empty": "Je n'ai pas pu préparer de réponse. Renvoie-le, s'il te plaît.",
       "contactNeutral": "Désolé, je ne peux pas répondre pour le moment. Je reviens vers toi bientôt.",
       "contactEmpty": "Je n'ai pas répondu à {{name}} : aucune réponse n'est revenue. Ouvre l'application pour lui répondre, ou dis-moi quoi lui écrire.",
@@ -4622,6 +4648,7 @@
     "low": {
       "title": "Plus que {{left}} crédits gratuits",
       "urge": "Passez au forfait maintenant pour que votre travail ne s'arrête pas en plein milieu.",
+      "urgeProject": "Passez au forfait maintenant pour que « {{project}} » ne s'arrête pas en plein milieu.",
       "estimateBuilds_one": "Assez pour environ {{count}} build de plus.",
       "estimateBuilds_other": "Assez pour environ {{count}} builds de plus.",
       "estimateMessages_one": "Assez pour environ {{count}} message du bot de plus.",
@@ -4714,6 +4741,7 @@
     "skill": "Compétence",
     "importMcp": "Importer des serveurs MCP",
     "selectTheme": "Sélectionner un thème",
-    "themes": "Thèmes"
+    "themes": "Thèmes",
+    "diskFullLane": "Le disque de l'ordinateur est plein : {{platform}} ne peut pas enregistrer ses données. La connexion reprendra d'elle-même dès qu'un peu d'espace sera libéré."
   }
 }

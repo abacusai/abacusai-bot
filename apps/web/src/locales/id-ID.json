@@ -1590,9 +1590,11 @@
       "account": "Paused: the account is not active.",
       "failures": "Paused after failing several times.",
       "other": "Paused.",
-      "denied": "Paused: you did not allow it."
+      "denied": "Paused: you did not allow it.",
+      "quiet": "Dijeda: {{runs}} kali berturut-turut tidak menemukan hal baru, jadi berhenti memakai kredit. Lanjutkan agar terus memeriksa."
     },
     "createdByAgent": "A routine was set up: {{name}}.",
+    "frequent": "Berjalan {{times}} kali sehari, dan setiap jalannya memakai kredit: dengan laju ini, kredit sebulan bisa habis dalam beberapa hari. Jika beberapa kali berturut-turut tidak menemukan hal baru, rutinitas ini berhenti sendiri.",
     "refused": {
       "planInterval": "Di paket gratis, rutinitas yang berjalan sendiri berjalan paling banyak sekali sehari. Upgrade untuk lebih sering.",
       "planKind": "Paket gratis hanya mencakup tugas. Upgrade untuk jenis lainnya.",
@@ -2638,6 +2640,7 @@
   "errors": {
     "genericTitle": "Something went wrong",
     "genericDescription": "This screen hit an error it couldn't recover from.",
+    "diskFull": "Disk penuh, jadi itu tidak bisa disimpan. Kosongkan sebagian ruang dan coba lagi.",
     "reload": "Reload",
     "notFoundTitle": "Not found",
     "notFoundDescription": "This page doesn't exist.",
@@ -2944,6 +2947,7 @@
       "dismiss": "Dismiss",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
+      "unsaved": "Disk penuh, jadi chat ini tidak sedang disimpan. Kosongkan sebagian ruang; chat akan disimpan lagi dengan pesanmu berikutnya.",
       "showInFolder": "Show in folder"
     },
     "part": {
@@ -4447,17 +4451,28 @@
     }
   },
   "ownKey": {
-    "freeBody": "No separate API bill. Upgrade and keep going on the top models.",
     "notResponding": "{{provider}} isn't responding right now",
     "openAgent": "Open AbacusAI Agent",
     "outOfCredit": "Your {{provider}} key is out of credit",
     "paidBody": "Use it in AbacusAI Agent on the web: the top models are included in your plan.",
-    "rateLimited": "Your {{provider}} key hit its rate limit"
+    "rateLimited": "Your {{provider}} key hit its rate limit",
+    "gone": "{{model}} di {{provider}} sudah tidak tersedia",
+    "noReply": "{{model}} di {{provider}} tidak mengirim balasan",
+    "failed": "{{model}} di {{provider}} tidak dapat menyelesaikan ini",
+    "localServer": "server model lokal Anda",
+    "whyFree": "Model gratis {{provider}} bisa berhenti menjawab atau dihentikan tanpa pemberitahuan.",
+    "whyKey": "{{model}} berjalan dengan kunci {{provider}} milik Anda sendiri, dengan batas dan tagihannya.",
+    "whyLocal": "{{model}} berjalan di server model lokal Anda, yang harus aktif dan dapat dijangkau.",
+    "moved": "{{model}} di {{provider}} tidak tersedia, jadi saya mengalihkan chat ini ke {{target}}."
   },
   "outcome": {
     "wall": {
       "title": "Kredit gratis kamu sudah habis",
       "expiredTitle": "Kredit gratis kamu sudah kedaluwarsa",
+      "taskTitle": "“{{task}}” dijeda: kredit gratis kamu sudah habis",
+      "taskExpiredTitle": "“{{task}}” dijeda: kredit gratis kamu sudah kedaluwarsa",
+      "taskPaidTitle": "“{{task}}” dijeda: kredit bulan ini sudah habis",
+      "resumes": "Upgrade, lalu pekerjaan ini lanjut sendiri dari titik berhentinya.",
       "paidTitle": "Kredit bulan ini sudah kamu pakai",
       "paidOffer": "Atau naik ke {{plan}} — {{price}}",
       "paidMobile": "Paket Anda ditagih melalui App Store atau Google Play, jadi tambahkan kredit atau upgrade di aplikasi seluler Abacus.AI.",
@@ -4501,14 +4516,15 @@
       "free_pool_spent": "Semua sumber gratis sudah habis untuk saat ini. Hubungkan sumber gratis lain, atau pilih model lain.",
       "rate_limited": "Model gratis sedang sibuk. Coba lagi dalam beberapa menit, atau beralih ke model lain.",
       "empty": "Model mengembalikan balasan kosong. Coba lagi, atau beralih ke model lain.",
+      "disk_full": "Disk penuh (tersisa {{free}}), jadi chat ini tidak bisa disimpan dan agen tidak bisa menulis file. Kosongkan sebagian ruang, lalu coba lagi.",
+      "disk_fullUnmeasured": "Disk penuh, jadi chat ini tidak bisa disimpan dan agen tidak bisa menulis file. Kosongkan sebagian ruang, lalu coba lagi.",
       "unknown": "Model tidak bisa menyelesaikan ini. Coba lagi, atau beralih ke model lain."
     },
     "action": {
       "newChat": "Chat baru",
       "fixKey": "Periksa kunci",
       "viewDetails": "Lihat detail",
-      "tryAgain": "Coba lagi",
-      "switchToAbacus": "Beralih ke Abacus (RouteLLM - Open)"
+      "tryAgain": "Coba lagi"
     },
     "channel": {
       "wall": "Aku berhenti sementara karena kredit gratis kamu sudah habis.",
@@ -4532,8 +4548,17 @@
       "ownKeyRejected": "Kunci {{provider}} kamu ditolak — tidak valid atau sudah kedaluwarsa. Perbaiki di aplikasi, di Pengaturan → Model.",
       "ownKeyWeb": "Pakai di AbacusAI Agent di web: {{link}}",
       "ownKeySwitch": "Beralih ke Abacus.AI di pemilih model aplikasi untuk melanjutkan dengan kredit Abacus gratis Anda.",
+      "ownKeyGone": "{{model}} di {{provider}} sudah tidak tersedia.",
+      "ownKeyNoReply": "{{model}} di {{provider}} tidak mengirim balasan.",
+      "ownKeyFailed": "{{model}} di {{provider}} tidak dapat menyelesaikannya.",
+      "localServer": "server model lokal Anda",
+      "ownKeyWhyFree": "Model gratis {{provider}} bisa berhenti menjawab atau dihentikan tanpa pemberitahuan.",
+      "ownKeyWhyKey": "Ini berjalan dengan kunci {{provider}} milik Anda sendiri.",
+      "ownKeyWhyLocal": "Ini berjalan di server model lokal Anda, yang harus aktif dan dapat dijangkau.",
+      "ownKeyMoved": "{{model}} di {{provider}} tidak tersedia, jadi saya mengalihkan chat ini ke {{target}}.",
       "busy": "Model gratis sedang sibuk.",
       "connection": "Koneksinya terputus, jadi aku tidak bisa menyelesaikannya. Coba lagi sebentar lagi.",
+      "diskFull": "Komputer tempat saya berjalan kehabisan ruang disk, jadi saya tidak bisa menyelesaikannya atau menyimpan chat ini. Kosongkan sebagian ruang di sana, lalu kirim pesanmu lagi.",
       "notSignedIn": "Aplikasi desktop sedang tidak masuk ke Abacus.AI. Buka aplikasinya dan masuk, lalu kirim pesan lagi.",
       "generic": "Ada yang salah di sisiku, jadi aku tidak bisa menyelesaikannya. Coba lagi sebentar lagi.",
       "contactFailed": "Aku tidak bisa membalas {{name}} barusan.",
@@ -4543,6 +4568,7 @@
       "paymentLapsed": "Saya berhenti sejenak karena langganan Abacus.AI Anda telah berakhir. Perpanjang di sini: {{link}}",
       "timedOut": "Itu terlalu lama dan dihentikan sebelum saya sempat membalas. Kirim lagi untuk melanjutkan.",
       "agentExited": "Aplikasi berhenti sebelum saya sempat membalas. Kirim lagi untuk melanjutkan.",
+      "notStarted": "Aplikasi terlalu lama bersiap, jadi saya belum bisa mulai. Kirim lagi untuk mencoba sekali lagi.",
       "empty": "Saya tidak bisa menyusun balasan untuk itu. Silakan kirim lagi.",
       "contactNeutral": "Maaf, saya belum bisa membalas sekarang. Saya akan segera menghubungi Anda.",
       "contactEmpty": "Saya tidak membalas {{name}}: tidak ada jawaban yang kembali. Buka aplikasi untuk membalasnya, atau beri tahu saya apa yang harus dikatakan.",
@@ -4622,6 +4648,7 @@
     "low": {
       "title": "Kredit gratis tinggal {{left}}",
       "urge": "Upgrade sekarang supaya pekerjaanmu tidak berhenti di tengah jalan.",
+      "urgeProject": "Upgrade sekarang supaya “{{project}}” tidak berhenti di tengah jalan.",
       "estimateBuilds_one": "Cukup untuk sekitar {{count}} build lagi.",
       "estimateBuilds_other": "Cukup untuk sekitar {{count}} build lagi.",
       "estimateMessages_one": "Cukup untuk sekitar {{count}} pesan bot lagi.",
@@ -4714,6 +4741,7 @@
     "skill": "Keterampilan",
     "importMcp": "Impor server MCP",
     "selectTheme": "Pilih Tema",
-    "themes": "Tema"
+    "themes": "Tema",
+    "diskFullLane": "Disk komputer penuh, jadi {{platform}} tidak bisa menyimpan datanya. Koneksi akan pulih sendiri setelah sebagian ruang dikosongkan."
   }
 }

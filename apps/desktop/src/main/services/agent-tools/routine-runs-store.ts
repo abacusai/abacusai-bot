@@ -38,6 +38,9 @@ export const routineRunsDir = (home: string): string => path.join(home, "runs");
 
 const LAST_RUN = "last-run.json";
 
+/** What a run file says in place of a reply when the run said nothing. */
+const NOTHING_SAID = "(the run said nothing)";
+
 /**
  * Records inside a project are the app's, not the project's: ignore them the
  * way the backup folder ignores itself, so they never show up in git status.
@@ -131,7 +134,7 @@ export const recordRoutineRun = (
     `- Ended: ${record.endedAt}`,
     `- Session: ${record.sessionId}`,
     "",
-    record.reply.length > 0 ? record.reply : "(the run said nothing)",
+    record.reply.length > 0 ? record.reply : NOTHING_SAID,
     "",
   ].join("\n");
   fs.writeFileSync(path.join(dir, runFileName(record)), body, "utf8");
@@ -173,6 +176,45 @@ export const readLastRoutineRun = (home: string): RoutineRunRecord | null => {
   } catch {
     return null;
   }
+};
+
+/** A run file as `recordRoutineRun` wrote it, or null when it is not one. */
+const readRunFile = (file: string): RoutineRunRecord | null => {
+  const text = fs.readFileSync(file, "utf8");
+  const head =
+    /^# Run at (\S+)\n\n- Outcome: (\w+)\n- Ended: (\S+)\n- Session: (\S*)\n\n/.exec(
+      text
+    );
+  if (head == null) return null;
+  const reply = text.slice(head[0].length).trim();
+  return {
+    startedAt: head[1]!,
+    outcome: head[2] as RoutineRunRecord["outcome"],
+    endedAt: head[3]!,
+    sessionId: head[4]!,
+    reply: reply === NOTHING_SAID ? "" : reply,
+  };
+};
+
+/** The newest runs on file, newest first, at most `limit`. */
+export const recentRoutineRuns = (
+  home: string,
+  limit: number
+): RoutineRunRecord[] => {
+  let names: string[];
+  try {
+    names = fs.readdirSync(routineRunsDir(home));
+  } catch {
+    // No run has finished yet.
+    return [];
+  }
+  return names
+    .filter((name) => name.endsWith(".md"))
+    .sort()
+    .reverse()
+    .slice(0, limit)
+    .map((name) => readRunFile(path.join(routineRunsDir(home), name)))
+    .filter((record): record is RoutineRunRecord => record != null);
 };
 
 /** How many runs are on file, for the prompt's own sense of scale. */

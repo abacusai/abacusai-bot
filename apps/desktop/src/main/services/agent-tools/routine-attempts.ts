@@ -14,7 +14,7 @@ export const ROUTINE_RESULTS = {
   skippedOffline: "skipped: no network connection before the next run",
   noWorkspace: "no workspace to run in",
   timedOut: "failed: the run was stopped after 30 minutes",
-  /** `paused: out of Abacus.AI credits`, `paused after N failed runs…`. */
+  /** Main's own pause notes (`ROUTINE_PAUSE_NOTES`) and older ones. */
   pausedPrefix: "paused",
   startFailedPrefix: "session failed to start: ",
   /** The scheduler's, when firing threw (1.0.85 recorded it without a kind). */

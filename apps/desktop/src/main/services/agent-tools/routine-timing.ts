@@ -5,6 +5,7 @@
  * back as a warning the tool result carries. One reading for a local routine
  * and a hosted one.
  */
+import { frequentFiresPerDay } from "@abacus-ai/contract/routines/cron";
 
 export interface RoutineTiming {
   /** The five-field cron, or null for a one-time or webhook routine. */
@@ -30,16 +31,6 @@ const given = (value: unknown): boolean =>
   value != null && !(typeof value === "string" && value.trim() === "");
 
 const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
-
-/** A five-field schedule that fires every minute. */
-export const firesEveryMinute = (schedule: string): boolean => {
-  const fields = schedule.trim().split(/\s+/);
-  return (
-    fields.length === 5 &&
-    (fields[0] === "*" || fields[0] === "*/1") &&
-    fields.slice(1).every((field) => field === "*")
-  );
-};
 
 /** `run_at` as a moment, or null with the reason it could not be read. */
 const readRunAt = (
@@ -105,9 +96,14 @@ export const readRoutineTiming = (
     );
     schedule = null;
   }
-  if (schedule != null && firesEveryMinute(schedule))
+  const fires = schedule == null ? null : frequentFiresPerDay(schedule);
+  if (fires != null)
     warnings.push(
-      `"${schedule}" fires every minute, a full run each time, for as long as it exists. For a one-time reminder, update it with in_minutes or run_at instead; for a repeating check, every 5 minutes or slower.`
+      (fires >= 24 * 60
+        ? `"${schedule}" fires every minute, a full run each time, for as long as it exists. For a one-time reminder, update it with in_minutes or run_at instead.`
+        : `"${schedule}" fires ${fires} times a day, a full run each time.`) +
+        " Every run spends the user's credits like a chat turn, so at this rate a free plan's monthly credits can be gone within days." +
+        " Unless the user asked for this rhythm in so many words, update it to a slower one (once a day, or a few set times); either way, tell them how often it runs and that each run uses credits."
     );
 
   return {

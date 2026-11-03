@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 
+import { isDiskFull } from "@abacus-ai/agent/atomic-file";
 import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 import { BrowserWindow } from "electron";
 
@@ -11,7 +12,9 @@ import {
   presentAsDialog,
 } from "../../bring-to-front";
 import { abacusBotHome } from "../../paths";
+import { nativeT } from "../config/native-language";
 import {
+  boundedWait,
   chunkMessage,
   isEphemeralPreview,
   previewMatchesSent,
@@ -23,7 +26,14 @@ import {
   PollScheduler,
   runPageScript,
 } from "./connector";
-import { BOOT_MAX_RELOADS, pageBusy, PageBootWatch } from "./page-boot-watch";
+import {
+  BOOT_MAX_RELOADS,
+  diskSpaceBack,
+  FIRST_LOAD_WAIT_MS,
+  pageBusy,
+  PageBootWatch,
+  retryWhen,
+} from "./page-boot-watch";
 
 /**
  * Telegram, by driving the real web.telegram.org in a hidden BrowserWindow:
@@ -65,6 +75,11 @@ const forgetLegacyBotState = (log: (line: string) => void): void => {
 const MAX_MESSAGE_LENGTH = 4000;
 
 const LOGIN_POLL_MS = 1500;
+/**
+ * A page that has just started loading shows web-k's auth screen for a moment
+ * while it reads the stored session; a sign-out is believed only after this.
+ */
+const SIGN_OUT_SETTLE_MS = 15_000;
 
 const INBOUND_POLL_MS = 5000;
 
@@ -86,10 +101,14 @@ export class TelegramWebConnector implements MessagingConnector {
   private loggedIn = false;
   /** Consecutive signed-out polls after a login. See checkLogin. */
   private signedOutTicks = 0;
+  /** When the page last started loading; see SIGN_OUT_SETTLE_MS. */
+  private pageLoadStartedAt = 0;
   /** A page that never booted: when to reload it, and when to stop. */
   private readonly boot = new PageBootWatch();
   /** No page and no checks until the user opens Telegram. See park. */
   private parked = false;
+  /** Set while a lane parked on a full disk waits for space to come back. */
+  private stopParkedWait: (() => void) | null = null;
   private readonly loginPoll = new PollScheduler(
     () => this.checkLogin(),
     LOGIN_POLL_MS,
@@ -165,9 +184,15 @@ export class TelegramWebConnector implements MessagingConnector {
     this.window.on("closed", () => {
       this.window = null;
     });
+    this.watchLoads(this.window);
 
     try {
-      await this.window.loadURL(TELEGRAM_WEB_URL);
+      // Bounded: a load that never settles must not keep the checks from
+      // starting; the boot watch takes it from there.
+      await boundedWait(
+        this.window.loadURL(TELEGRAM_WEB_URL),
+        FIRST_LOAD_WAIT_MS
+      );
     } catch (error) {
       // Worth reporting; the poll below still runs in case the page recovers.
       this.callbacks.onLog(
@@ -183,6 +208,8 @@ export class TelegramWebConnector implements MessagingConnector {
   async stop(): Promise<void> {
     this.running = false;
     this.parked = false;
+    this.stopParkedWait?.();
+    this.stopParkedWait = null;
     this.loggedIn = false;
     this.loginPoll.stop();
     this.inboundPoll.stop();
@@ -224,7 +251,10 @@ export class TelegramWebConnector implements MessagingConnector {
         );
         const win = this.recreateWindow();
         if (win != null && !win.isDestroyed()) {
-          await win.loadURL(TELEGRAM_WEB_URL).catch(() => {});
+          await boundedWait(
+            win.loadURL(TELEGRAM_WEB_URL),
+            FIRST_LOAD_WAIT_MS
+          ).catch(() => {});
           await new Promise((resolve) => setTimeout(resolve, 4_000));
         }
         result = await attempt();
@@ -288,21 +318,41 @@ export class TelegramWebConnector implements MessagingConnector {
 
   /**
    * Stop checking and drop the page until the user opens Telegram. The state
-   * is one the gateway leaves alone, so nothing loads the page again by itself.
+   * is one the gateway leaves alone (`needs_login`) or restarts only on the
+   * user's next connect (`error`), so nothing loads the page again by itself
+   * but a full disk's wait for space.
    */
-  private park(message: string): void {
+  private park(state: "needs_login" | "error", message: string): void {
     this.parked = true;
     this.boot.reset();
     this.loginPoll.stop();
     const win = this.window;
     this.window = null;
     if (win != null && !win.isDestroyed()) win.destroy();
-    this.callbacks.onState("needs_login", message);
+    this.callbacks.onState(state, message);
+  }
+
+  /** The page's storage found the disk full: parked until space is freed. */
+  private parkOnFullDisk(): void {
+    if (!this.running || this.parked) return;
+    this.callbacks.onLog("telegram-web: the disk is full, waiting for space");
+    this.park("error", nativeT("diskFullLane", { platform: "Telegram" }));
+    this.stopParkedWait = retryWhen(diskSpaceBack, () => {
+      this.stopParkedWait = null;
+      if (!this.running || !this.parked) return;
+      this.callbacks.onLog(
+        "telegram-web: disk space is back, loading the page again"
+      );
+      this.resume();
+      this.ensureWindow();
+    });
   }
 
   /** The user opened Telegram: a fresh start, and a parked lane's page back. */
   private resume(): void {
     this.boot.reset();
+    this.stopParkedWait?.();
+    this.stopParkedWait = null;
     if (!this.running || !this.parked) return;
     this.parked = false;
     this.callbacks.onLog("telegram-web: opened by the user, checking again");
@@ -318,14 +368,15 @@ export class TelegramWebConnector implements MessagingConnector {
    */
   private notBooted(why: string): void {
     const win = this.window;
-    const busy = win != null && !win.isDestroyed() && pageBusy(win.webContents);
+    const busy =
+      win != null && !win.isDestroyed() ? pageBusy(win.webContents) : null;
     const verdict = this.boot.stuck(Date.now(), busy);
     if (verdict === "wait") return;
     if (verdict === "give_up" && !this.loggedIn) {
       this.callbacks.onLog(
         `telegram-web: still not loaded after ${BOOT_MAX_RELOADS} reloads, waiting for the user`
       );
-      this.park(STUCK_LOADING);
+      this.park("needs_login", STUCK_LOADING);
       return;
     }
     if (verdict === "give_up") this.boot.reset();
@@ -400,8 +451,13 @@ export class TelegramWebConnector implements MessagingConnector {
     }
 
     if (!state.loggedIn && this.loggedIn) {
-      // Two consecutive polls, not one: a page mid-reload can briefly read as
-      // signed out, and a false flap tells every conversation we vanished.
+      // Two consecutive polls, not one, and never on a page still booting: a
+      // page mid-reload briefly reads as signed out, and a false flap tells
+      // every conversation we vanished.
+      if (Date.now() - this.pageLoadStartedAt < SIGN_OUT_SETTLE_MS) {
+        this.signedOutTicks = 0;
+        return;
+      }
       this.signedOutTicks += 1;
       if (this.signedOutTicks < 2) return;
       this.signedOutTicks = 0;
@@ -531,9 +587,17 @@ export class TelegramWebConnector implements MessagingConnector {
     win.on("closed", () => {
       this.window = null;
     });
+    this.watchLoads(win);
     void win.loadURL(TELEGRAM_WEB_URL);
     this.window = win;
     return win;
+  }
+
+  /** Every load, ours (a send's retry, a reload) or web-k's own. */
+  private watchLoads(win: BrowserWindow): void {
+    win.webContents.on("did-start-loading", () => {
+      this.pageLoadStartedAt = Date.now();
+    });
   }
 
   /**
@@ -556,6 +620,7 @@ export class TelegramWebConnector implements MessagingConnector {
       this.callbacks.onLog(
         `telegram-web: script failed: ${String((error as Error)?.message ?? error)}`
       );
+      if (isDiskFull(error)) this.parkOnFullDisk();
       return null;
     }
   }

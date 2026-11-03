@@ -20,6 +20,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("electron", async () => {
   const { EventEmitter } = await import("node:events");
   return {
+    app: {
+      getPath: () => "/user-data",
+      getPreferredSystemLanguages: () => [],
+      getLocale: () => "en-US",
+    },
     BrowserWindow: class {},
     session: { fromPartition: () => ({}) },
     shell: { openExternal: async () => undefined },
@@ -27,6 +32,13 @@ vi.mock("electron", async () => {
     net: { isOnline: () => true },
   };
 });
+
+/** The bytes free on the app's disk, as the lane measures it. */
+const disk = vi.hoisted(() => ({ free: 0 }));
+vi.mock("@abacus-ai/agent/atomic-file", async (importActual) => ({
+  ...(await importActual<typeof import("@abacus-ai/agent/atomic-file")>()),
+  freeBytes: () => disk.free,
+}));
 
 const { powerMonitor } = await import("electron");
 const { WhatsAppWebConnector } = await import("./whatsapp-web-connector");
@@ -286,5 +298,71 @@ describe("a computer that sleeps and wakes", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(c.lock.busy).toBe(false);
     await expect(c.run("ANSWER", {})).resolves.toBe(answered);
+  });
+});
+
+describe("a page whose storage finds the disk full", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("leaves connected for the full-disk error, and loads a fresh page by itself once space is back", async () => {
+    vi.useFakeTimers();
+    const states: Array<[string, string | undefined]> = [];
+    const connector = new WhatsAppWebConnector({
+      onMessage: () => {},
+      onState: (state: string, note?: string) => states.push([state, note]),
+      onLog: () => {},
+    } as never);
+    const c = connector as unknown as {
+      running: boolean;
+      loggedIn: boolean;
+      window: unknown;
+      run: (script: string, args: unknown) => Promise<unknown>;
+      ensureWindow: () => unknown;
+    };
+    c.running = true;
+    c.loggedIn = true;
+    let destroyed = false;
+    // WhatsApp Web's own IndexedDB open, as the page reports it on a full disk.
+    c.window = {
+      isDestroyed: () => destroyed,
+      destroy: () => {
+        destroyed = true;
+      },
+      webContents: {
+        executeJavaScript: () =>
+          Promise.reject(
+            new Error(
+              "QuotaExceededError Encountered full disk while opening backing store for indexedDB.open."
+            )
+          ),
+      },
+    };
+    disk.free = 0;
+
+    await expect(c.run("ANY", {})).resolves.toBeNull();
+    expect(states).toEqual([
+      [
+        "error",
+        "The computer's disk is full, so WhatsApp can't save its data. It reconnects by itself once some space is freed.",
+      ],
+    ]);
+    expect(destroyed).toBe(true);
+    // Another script failing the same way says nothing new.
+    await c.run("ANY", {});
+    expect(states).toHaveLength(1);
+
+    // Not enough yet: the lane keeps waiting.
+    const reload = vi.fn(() => null);
+    c.ensureWindow = reload;
+    disk.free = 10 * 1024 ** 2;
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(reload).not.toHaveBeenCalled();
+
+    // Space is back: a fresh page, checked again, with no click.
+    disk.free = 5 * 1024 ** 3;
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(states.at(-1)).toEqual(["connecting", undefined]);
+    expect(reload).toHaveBeenCalled();
+    await connector.stop();
   });
 });

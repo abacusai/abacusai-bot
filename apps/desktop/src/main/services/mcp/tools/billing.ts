@@ -1,10 +1,16 @@
 import {
+  ALWAYS_ON_ASK,
+  type PlanAsk,
+  PUBLISH_ASK,
+} from "@abacus-ai/agent/plan-asks";
+import {
   type BillingPlan,
   type BillingPlanTier,
   creditsRenewMonthly,
   firstMonthCredits,
 } from "@abacus-ai/contract/billing-plan";
 import { ABACUS_AGENT_ROUTINES_URL } from "@abacus-ai/contract/routines";
+import { abacusAgentPromptUrl } from "@abacus-ai/contract/toolsets";
 
 import { cachedAbacusAccount, onFreePlan } from "../../providers/abacus";
 import { fetchBillingPlan } from "../../providers/abacus-upgrade";
@@ -123,15 +129,32 @@ export const planFacts = (billing: BillingPlan): string[] => [
   "On a plan, creating and editing images, making videos and making speech or audio happen in Abacus AI Agent on the web; this app makes them only with a provider key of the user's own.",
 ];
 
+const onPaidPlan = (billing: BillingPlan): boolean =>
+  billing.plans.some((plan) => plan.current && plan.plan !== "free");
+
 /**
- * The answer to "can it keep working with my computer off?": a free account
- * is offered the plan's personal agents on the web, never a flat no; a paid
- * one is pointed at its own.
+ * The answer to an ask only a paid plan does in full (plan-asks.ts): in the
+ * app, what it does free comes first; the phone, which runs on no computer,
+ * goes straight to the plan. A free account is offered the plan, never a flat
+ * no or another company's service; a paid one is pointed at its own.
  */
-export const alwaysOnAnswer = (billing: BillingPlan): string =>
-  billing.plans.some((plan) => plan.current && plan.plan !== "free")
-    ? `Asked for anything to keep working while the app or computer is off (WhatsApp, Telegram or Discord auto-replies, routines, reminders, monitoring) or to stay online 24/7: their plan already includes personal agents in Abacus AI Agent on the web that run 24/7 with the computer off and do everything this bot does there, those auto-replies and every routine included. Set them up there: ${ABACUS_AGENT_ROUTINES_URL} (give the link as written). Do not offer an upgrade for it.`
-    : `Asked for anything to keep working while the app or computer is off (WhatsApp, Telegram or Discord auto-replies, routines, reminders, monitoring) or to stay online 24/7: never answer no or impossible. Offer ${billing.upgrades[0]?.planName ?? "the next plan"}: personal agents in Abacus AI Agent on the web that run 24/7 with the computer off and do everything this bot does, WhatsApp, Telegram and Discord auto-replies and every routine included. Use its own feature line above for the wording, with its price and their upgrade link, in their language.`;
+const planAskAnswer = (
+  billing: BillingPlan,
+  ask: PlanAsk,
+  url: string,
+  app: boolean
+): string =>
+  onPaidPlan(billing)
+    ? `Asked for ${ask.ask}: their plan already includes ${ask.gives}. Set it up there: ${url} (give the link as written). Do not offer an upgrade for it.`
+    : `Asked for ${ask.ask}: ${app ? `say first that ${ask.free}, and do that part. ` : ""}Never answer no or impossible, and never send them to another company's service for it (a host, a tunnel, a server to rent) unless they named it. Offer ${billing.upgrades[0]?.planName ?? "the next plan"} for it (${ask.gives}): its price, then every feature line it has above as a short list (translated, never shortened or dropped), then their upgrade link, in their language.`;
+
+/** "Can it keep working with my computer off?"; `app` false for the phone. */
+export const alwaysOnAnswer = (billing: BillingPlan, app = true): string =>
+  planAskAnswer(billing, ALWAYS_ON_ASK, ABACUS_AGENT_ROUTINES_URL, app);
+
+/** "Can you put it online / give me a link?" */
+export const publishAnswer = (billing: BillingPlan): string =>
+  planAskAnswer(billing, PUBLISH_ASK, abacusAgentPromptUrl(), true);
 
 /** What the app's model is told about the user's plan, and how to answer. */
 export function appBillingResult(
@@ -178,7 +201,7 @@ export function appBillingResult(
     "never send them to account settings or a billing page instead of these links, and never say you changed their",
     "plan: they upgrade on the page. Do not bring plans up unasked in the middle of a task or after a complaint."
   );
-  lines.push("", alwaysOnAnswer(billing));
+  lines.push("", alwaysOnAnswer(billing), publishAnswer(billing));
   if (billing.upgradeInMobileApp)
     lines.push(
       "Their plan is billed through the app store: they upgrade or buy credits in the mobile app, under Settings. Say so instead of sending a link."
@@ -221,9 +244,8 @@ export const BILLING_TOOLS: ToolDefinition[] = [
       "when they renew, every plan with its price, any first-month discount and what it gives, the limits, and the",
       "links to upgrade or buy credits. Call it for any question, in any wording or language, about what models or",
       "plans cost, prices, discounts or deals, credits or balance, limits, resets or renewals, upgrading, or what a",
-      "plan includes; whenever they ask whether anything keeps working while the app or computer is off (WhatsApp,",
-      "Telegram or Discord auto-replies, routines, reminders, monitoring, staying online 24/7), which a plan answers",
-      "and is never impossible; when they ask to analyse a video (a reel, a Short, a YouTube or TikTok link, a video",
+      `plan includes; whenever they ask for ${ALWAYS_ON_ASK.ask}, or ${PUBLISH_ASK.ask},`,
+      "which a plan answers and is never impossible; when they ask to analyse a video (a reel, a Short, a YouTube or TikTok link, a video",
       "file); and when they run into a plan limit or run low on credits. Pass upgrade: true whenever they might",
       "upgrade, so the answer carries their upgrade links.",
       "Never quote a price, discount, credit amount, limit or reset from memory: call this first, every time, and",

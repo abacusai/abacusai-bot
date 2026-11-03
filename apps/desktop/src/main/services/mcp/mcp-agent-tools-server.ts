@@ -1224,7 +1224,7 @@ export class McpAgentToolsServer extends McpHttpServer {
         const held = job.runner === "hosted" || job.access === "unattended";
         const where =
           " It runs on this computer, only while the computer is on and AbacusAI Bot is open;" +
-          " routines here are unlimited on every plan.";
+          " routines here are unlimited on every plan, though each run spends credits like a chat turn.";
         const reach = !held
           ? " Its runs have full access, like this conversation."
           : " Its runs are unattended: they search the web and read its own folder, but " +

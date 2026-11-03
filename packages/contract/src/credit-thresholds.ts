@@ -86,6 +86,7 @@ export const CREDIT_THRESHOLD_COPY = {
   80: {
     title: "creditThreshold.low.title",
     body: "creditThreshold.low.urge",
+    bodyProject: "creditThreshold.low.urgeProject",
     estimate: {
       builds: "creditThreshold.low.estimateBuilds",
       messages: "creditThreshold.low.estimateMessages",
@@ -97,20 +98,24 @@ export const CREDIT_THRESHOLD_COPY = {
   {
     title: string;
     body: string;
+    /** The body naming the project the user is on. */
+    bodyProject?: string;
     estimate: Record<CreditTaskKind, string>;
   }
 >;
 
 /**
  * The card's title and sentences, which the chat-app line repeats: what is
- * left of the grant, then the estimate at today's rate when there is one.
+ * left of the grant, then the estimate at today's rate when there is one;
+ * near the end, the project the user is on when it is known.
  */
 export function creditThresholdWords(
   t: PlanT,
   locale: string,
   threshold: CreditThreshold,
   balance: { left: number; total: number },
-  estimate: { count: number; kind: CreditTaskKind | null } | null
+  estimate: { count: number; kind: CreditTaskKind | null } | null,
+  project?: string
 ): { title: string; lines: string[] } {
   const number = (value: number) =>
     new Intl.NumberFormat(locale).format(Math.max(0, Math.round(value)));
@@ -132,6 +137,11 @@ export function creditThresholdWords(
     };
   return {
     title: t(copy.title, { left: number(balance.left) }),
-    lines: [...(guess != null ? [guess] : []), t(copy.body)],
+    lines: [
+      ...(guess != null ? [guess] : []),
+      project != null
+        ? t(CREDIT_THRESHOLD_COPY[80].bodyProject, { project })
+        : t(copy.body),
+    ],
   };
 }

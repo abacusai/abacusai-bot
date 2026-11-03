@@ -1590,9 +1590,11 @@
       "account": "Paused: the account is not active.",
       "failures": "Paused after failing several times.",
       "other": "Paused.",
-      "denied": "Paused: you did not allow it."
+      "denied": "Paused: you did not allow it.",
+      "quiet": "Pausada: {{runs}} execuções seguidas não encontraram nada novo, então ela parou de usar créditos. Retome para continuar verificando."
     },
     "createdByAgent": "A routine was set up: {{name}}.",
+    "frequent": "Executa {{times}} vezes por dia, e cada execução usa créditos: nesse ritmo, os créditos de um mês podem acabar em poucos dias. Se várias execuções seguidas não encontrarem nada novo, ela se pausa sozinha.",
     "refused": {
       "planInterval": "No plano gratuito, uma rotina que roda sozinha roda no máximo uma vez por dia. Fazendo upgrade, com mais frequência.",
       "planKind": "O plano gratuito inclui apenas tarefas. Fazendo upgrade, os outros tipos também.",
@@ -2638,6 +2640,7 @@
   "errors": {
     "genericTitle": "Something went wrong",
     "genericDescription": "This screen hit an error it couldn't recover from.",
+    "diskFull": "O disco está cheio, então não foi possível salvar. Libere algum espaço e tente novamente.",
     "reload": "Reload",
     "notFoundTitle": "Not found",
     "notFoundDescription": "This page doesn't exist.",
@@ -2944,6 +2947,7 @@
       "dismiss": "Dismiss",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
+      "unsaved": "O disco está cheio, então esta conversa não está sendo salva. Libere algum espaço; ela volta a ser salva com sua próxima mensagem.",
       "showInFolder": "Show in folder"
     },
     "part": {
@@ -4447,17 +4451,28 @@
     }
   },
   "ownKey": {
-    "freeBody": "No separate API bill. Upgrade and keep going on the top models.",
     "notResponding": "{{provider}} isn't responding right now",
     "openAgent": "Open AbacusAI Agent",
     "outOfCredit": "Your {{provider}} key is out of credit",
     "paidBody": "Use it in AbacusAI Agent on the web: the top models are included in your plan.",
-    "rateLimited": "Your {{provider}} key hit its rate limit"
+    "rateLimited": "Your {{provider}} key hit its rate limit",
+    "gone": "{{model}} no {{provider}} não está mais disponível",
+    "noReply": "{{model}} no {{provider}} não enviou resposta",
+    "failed": "{{model}} no {{provider}} não conseguiu concluir isso",
+    "localServer": "seu servidor de modelos local",
+    "whyFree": "Os modelos gratuitos do {{provider}} podem parar de responder ou ser retirados sem aviso.",
+    "whyKey": "{{model}} roda com sua própria chave do {{provider}}, com os limites e a cobrança dela.",
+    "whyLocal": "{{model}} roda no seu servidor de modelos local, que precisa estar ligado e acessível.",
+    "moved": "{{model}} no {{provider}} não está disponível, então mudei este chat para {{target}}."
   },
   "outcome": {
     "wall": {
       "title": "Seus créditos grátis acabaram",
       "expiredTitle": "Seus créditos grátis expiraram",
+      "taskTitle": "“{{task}}” está pausado: seus créditos grátis acabaram",
+      "taskExpiredTitle": "“{{task}}” está pausado: seus créditos grátis expiraram",
+      "taskPaidTitle": "“{{task}}” está pausado: os créditos deste mês acabaram",
+      "resumes": "Faça upgrade e ele continua sozinho de onde parou.",
       "paidTitle": "Você usou os créditos deste mês",
       "paidOffer": "Ou mude para o {{plan}} — {{price}}",
       "paidMobile": "Seu plano é cobrado pela App Store ou pelo Google Play, então adicione créditos ou faça upgrade no app Abacus.AI para celular.",
@@ -4501,14 +4516,15 @@
       "free_pool_spent": "Todas as fontes gratuitas se esgotaram por enquanto. Conecte outra fonte gratuita ou escolha outro modelo.",
       "rate_limited": "Os modelos gratuitos estão ocupados agora. Tente de novo em alguns minutos ou mude para outro modelo.",
       "empty": "O modelo devolveu uma resposta vazia. Tente de novo ou mude para outro modelo.",
+      "disk_full": "O disco está cheio (restam {{free}}), então esta conversa não pode ser salva e o agente não pode gravar arquivos. Libere algum espaço e tente novamente.",
+      "disk_fullUnmeasured": "O disco está cheio, então esta conversa não pode ser salva e o agente não pode gravar arquivos. Libere algum espaço e tente novamente.",
       "unknown": "O modelo não conseguiu terminar isso. Tente de novo ou mude para outro modelo."
     },
     "action": {
       "newChat": "Novo chat",
       "fixKey": "Conferir a chave",
       "viewDetails": "Ver detalhes",
-      "tryAgain": "Tentar de novo",
-      "switchToAbacus": "Mudar para o Abacus (RouteLLM - Open)"
+      "tryAgain": "Tentar de novo"
     },
     "channel": {
       "wall": "Pausei porque seus créditos grátis acabaram.",
@@ -4532,8 +4548,17 @@
       "ownKeyRejected": "Sua chave do {{provider}} foi recusada: ela é inválida ou expirou. Corrija no app, em Configurações → Modelos.",
       "ownKeyWeb": "Use no AbacusAI Agent na web: {{link}}",
       "ownKeySwitch": "Mude para a Abacus.AI no seletor de modelos do app para continuar com seus créditos gratuitos da Abacus.",
+      "ownKeyGone": "{{model}} no {{provider}} não está mais disponível.",
+      "ownKeyNoReply": "{{model}} no {{provider}} não enviou resposta.",
+      "ownKeyFailed": "{{model}} no {{provider}} não conseguiu concluir isso.",
+      "localServer": "seu servidor de modelos local",
+      "ownKeyWhyFree": "Os modelos gratuitos do {{provider}} podem parar de responder ou ser retirados sem aviso.",
+      "ownKeyWhyKey": "Ele roda com sua própria chave do {{provider}}.",
+      "ownKeyWhyLocal": "Ele roda no seu servidor de modelos local, que precisa estar ligado e acessível.",
+      "ownKeyMoved": "{{model}} no {{provider}} não está disponível, então mudei este chat para {{target}}.",
       "busy": "Os modelos gratuitos estão ocupados agora.",
       "connection": "A conexão caiu, então não consegui terminar. Tente de novo daqui a pouco.",
+      "diskFull": "O computador em que eu rodo ficou sem espaço em disco, então não consegui terminar isso nem salvar esta conversa. Libere algum espaço nele e envie sua mensagem de novo.",
       "notSignedIn": "O app para computador não está conectado ao Abacus.AI agora. Abra o app, entre na sua conta e me mande mensagem de novo.",
       "generic": "Algo deu errado do meu lado, então não consegui terminar. Tente de novo daqui a pouco.",
       "contactFailed": "Não consegui responder a {{name}} agora há pouco.",
@@ -4543,6 +4568,7 @@
       "paymentLapsed": "Pausei porque sua assinatura da Abacus.AI terminou. Renove aqui: {{link}}",
       "timedOut": "Demorou demais e foi interrompido antes que eu pudesse responder. Envie de novo para retomar.",
       "agentExited": "O app fechou antes que eu pudesse responder. Envie de novo para retomar.",
+      "notStarted": "O app demorou demais para ficar pronto, então não consegui começar. Envie de novo para tentar outra vez.",
       "empty": "Não consegui montar uma resposta para isso. Envie de novo, por favor.",
       "contactNeutral": "Desculpe, não consigo responder agora. Falo com você em breve.",
       "contactEmpty": "Não respondi a {{name}}: nenhuma resposta voltou. Abra o app para responder ou me diga o que dizer.",
@@ -4622,6 +4648,7 @@
     "low": {
       "title": "Restam só {{left}} créditos grátis",
       "urge": "Faça upgrade agora para o seu trabalho não parar no meio.",
+      "urgeProject": "Faça upgrade agora para “{{project}}” não parar no meio.",
       "estimateBuilds_one": "Dá para cerca de {{count}} build a mais.",
       "estimateBuilds_other": "Dá para cerca de {{count}} builds a mais.",
       "estimateMessages_one": "Dá para cerca de {{count}} mensagem do bot a mais.",
@@ -4714,6 +4741,7 @@
     "skill": "Habilidade",
     "importMcp": "Importar servidores MCP",
     "selectTheme": "Selecionar um tema",
-    "themes": "Temas"
+    "themes": "Temas",
+    "diskFullLane": "O disco do computador está cheio, então o {{platform}} não consegue salvar seus dados. Ele se reconecta sozinho assim que algum espaço for liberado."
   }
 }

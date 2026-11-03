@@ -2,7 +2,8 @@
  * A stale id is NOT_FOUND { entity, id } (spec 00 A.5; Codex impl-r1 #8), so
  * the renderer can drop a stale selection, and not a CONFLICT or an internal
  * error. The failures come from the real workspace service; the legacy IPC
- * shapes they travel in are unchanged.
+ * shapes they travel in are unchanged. A write the full disk refused is
+ * PRECONDITION_FAILED { reason: "disk-full" } the same way, whatever wrote.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -111,5 +112,30 @@ describe("NOT_FOUND for an entity that is gone", () => {
     expect(
       String(new EntityNotFoundError("routine", "r", "This routine is gone."))
     ).toBe("Error: This routine is gone.");
+  });
+});
+
+describe("PRECONDITION_FAILED for a write the full disk refused", () => {
+  it("git.worktrees.setForSession whose session record could not be saved", async () => {
+    const client = connect({
+      setSessionWorktree: async () => {
+        throw Object.assign(
+          new Error("ENOSPC: no space left on device, write"),
+          { code: "ENOSPC" }
+        );
+      },
+    });
+
+    await expect(
+      client.git.worktrees.setForSession({
+        workspaceId: "w1",
+        sessionId: "s1",
+        worktreeId: null,
+      })
+    ).rejects.toMatchObject({
+      code: "PRECONDITION_FAILED",
+      defined: true,
+      data: { reason: "disk-full" },
+    });
   });
 });

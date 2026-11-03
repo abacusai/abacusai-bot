@@ -1,3 +1,4 @@
+import { isDiskFull } from "@abacus-ai/agent/atomic-file";
 import { ConflictError } from "@abacus-ai/contract/conflict";
 import type {
   NotFoundEntity,
@@ -105,6 +106,8 @@ export const toRpcError = (error: unknown): RpcError => {
     });
   if (error instanceof UnsupportedPlatformError)
     return preconditionFailed("unsupported-platform", error.message);
+  // Whatever the write was, the way on is the same: free some space.
+  if (isDiskFull(error)) return preconditionFailed("disk-full");
 
   const message = error instanceof Error ? error.message : String(error);
   if (message.startsWith(WORKSPACE_MISSING_ERROR)) {

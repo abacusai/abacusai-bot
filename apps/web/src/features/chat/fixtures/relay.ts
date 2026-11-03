@@ -311,12 +311,12 @@ const fold = (
           typeof value.notificationKey === "string"
             ? value.notificationKey
             : null;
-        notices = [
-          ...notices.filter(
-            (notice) => key == null || notice.value.notificationKey !== key
-          ),
-          { seq, name, value },
-        ];
+        notices = notices.filter(
+          (notice) => key == null || notice.value.notificationKey !== key
+        );
+        // A keyed notice taken back, as main's relay does: gone, not replaced.
+        if (key == null || value.cleared !== true)
+          notices.push({ seq, name, value });
       }
     }
 

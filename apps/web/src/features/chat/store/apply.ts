@@ -187,6 +187,9 @@ const applyNotice = (
   const key = noticeKey({ seq, value });
   const notice: Notice = { key, seq, name, value };
   const rest = state.notices.filter((item) => item.key !== key);
+  // A keyed notice taken back (main's `cleared`): gone, not replaced.
+  if (value.cleared === true && typeof value.notificationKey === "string")
+    return { ...state, notices: rest };
   return { ...state, notices: [...rest, notice] };
 };
 

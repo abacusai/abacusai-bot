@@ -2,7 +2,8 @@
  * The one owner of "can this machine reach Abacus": the OS's own answer where
  * there is one (Electron's `net.isOnline`), sleep and wake, and a light probe
  * of the Abacus API, run only when something suggests the answer changed.
- * Agents, the routine scheduler and anything else read it from here.
+ * Agents, the routine scheduler and anything else read it from here, and
+ * deadlines that must not count the machine's sleep are timed by it.
  */
 import { abacusRoutellmV1, abacusUserAgent } from "../providers/abacus-host";
 
@@ -43,6 +44,13 @@ export const probeAbacus = async (): Promise<boolean> => {
   }
 };
 
+/** A deadline counted in awake time; see awakeTimeout. */
+interface AwakeTimer {
+  ms: number;
+  fire: () => void;
+  handle: ReturnType<typeof setTimeout> | null;
+}
+
 export class ConnectivityService {
   private current: ConnectivityState = "online";
   private readonly listeners = new Set<(change: ConnectivityChange) => void>();
@@ -53,6 +61,7 @@ export class ConnectivityService {
   private probing: Promise<void> | null = null;
   private lastProbeAt = 0;
   private asleep = false;
+  private readonly awakeTimers = new Set<AwakeTimer>();
   private readonly probe: () => Promise<boolean>;
   private readonly now: () => number;
 
@@ -95,14 +104,42 @@ export class ConnectivityService {
     this.probeTimer = null;
   }
 
+  /**
+   * `fire` after `ms` of the machine being awake: put off while it sleeps
+   * and given its whole window again on wake, so a deadline that came due in
+   * the night does not fire the moment the lid opens. Returns its cancel.
+   */
+  awakeTimeout(ms: number, fire: () => void): () => void {
+    const timer: AwakeTimer = { ms, fire, handle: null };
+    this.awakeTimers.add(timer);
+    if (!this.asleep) this.armAwake(timer);
+    return () => {
+      if (timer.handle != null) clearTimeout(timer.handle);
+      this.awakeTimers.delete(timer);
+    };
+  }
+
   suspended(): void {
     this.asleep = true;
+    for (const timer of this.awakeTimers) {
+      if (timer.handle != null) clearTimeout(timer.handle);
+      timer.handle = null;
+    }
   }
 
   /** The machine woke: the network it had may be gone, or back. */
   resumed(): void {
     this.asleep = false;
+    for (const timer of this.awakeTimers) this.armAwake(timer);
     void this.check({ resumed: true });
+  }
+
+  private armAwake(timer: AwakeTimer): void {
+    if (timer.handle != null) clearTimeout(timer.handle);
+    timer.handle = setTimeout(() => {
+      this.awakeTimers.delete(timer);
+      timer.fire();
+    }, timer.ms);
   }
 
   /** A request somewhere failed at the network level: worth a look. */

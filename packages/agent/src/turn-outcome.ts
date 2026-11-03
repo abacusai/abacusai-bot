@@ -6,6 +6,7 @@
  * card, a model switch) and the desktop words for a chat app. Nothing else
  * reads a provider's error text to decide what the user sees.
  */
+import { isDiskFull } from "./atomic-file.js";
 import {
   failedCallStreamed,
   NETWORK_UNREACHABLE_CODE,
@@ -62,6 +63,13 @@ export type FailureCause =
   | "stream_cut"
   /** The model answered with nothing after an earlier call failed. */
   | "empty"
+  /** The model went silent past the stall window, even after asking again. */
+  | "stalled"
+  /**
+   * A write on this machine failed for lack of space (the agent's session
+   * file, a tool's output): no model or plan helps until space is freed.
+   */
+  | "disk_full"
   | "unknown";
 
 /** Providers whose keys are the platform's, not the user's own. */
@@ -74,6 +82,13 @@ const PLATFORM_PROVIDERS: ReadonlySet<string> = new Set([
 const ownKey = (provider: string | undefined): provider is string =>
   provider != null && !PLATFORM_PROVIDERS.has(provider);
 
+/**
+ * A model Abacus does not serve: the user's own key, another provider's free
+ * model, or a local server. Abacus and the router are the platform's own.
+ */
+const offAbacus = (provider: string | undefined): provider is string =>
+  provider != null && provider !== "abacus" && provider !== "openllm";
+
 const KEY_REFUSED =
   /invalid[_ ]api[_ ]key|incorrect api key|api key (?:not valid|is invalid)|no api key|unauthori[sz]ed|authentication|invalid (?:token|credentials)|not allowed for this api/i;
 const MODEL_REFUSED =
@@ -85,6 +100,10 @@ const BUSY =
 
 /** The empty reply's failure text, as both loops record it. */
 export const EMPTY_REPLY_FAILURE = "model returned an empty reply";
+
+/** A stalled call's failure text, as both loops record it. */
+export const stallFailure = (seconds: number): string =>
+  `no reply in ${seconds}s`;
 
 /** The turn's last call answered with no text and no tool call. */
 export function endedEmpty(messages: readonly unknown[]): boolean {
@@ -108,6 +127,9 @@ export function classifyAttempt(
 ): FailureCause {
   const status = Number(failureStatus(raw) ?? Number.NaN);
   const text = raw.toLowerCase();
+
+  // This machine's own write, never a provider's reply: those carry a status.
+  if (Number.isNaN(status) && isDiskFull(raw)) return "disk_full";
 
   // The credit and billing gates are Abacus's, decided by who refused:
   // another provider's balance sentence is the user's own key.
@@ -164,6 +186,8 @@ export function classifyAttempt(
  * comes first; "busy" only when nothing more specific happened.
  */
 const CAUSE_PRIORITY: readonly FailureCause[] = [
+  // The machine itself: nothing else on the list can be done about it first.
+  "disk_full",
   "phone_verification",
   "credits_exhausted",
   "credits_expired",
@@ -180,6 +204,7 @@ const CAUSE_PRIORITY: readonly FailureCause[] = [
   "rate_limited",
   "stream_cut",
   "empty",
+  "stalled",
   "unknown",
 ];
 
@@ -283,12 +308,17 @@ export interface FailureContext {
    * the way on), or no Abacus account here at all.
    */
   abacus: "credits" | "out" | null;
-  /** The model the user picked, for a card about it (one outside the plan). */
-  model?: { model: string; label: string };
+  /**
+   * The model the user picked, for a card about it (one outside the plan, or
+   * off Abacus); `free` when it costs nothing on its provider.
+   */
+  model?: { model: string; label: string; free?: boolean };
   /** The failed call got text or a tool call out before it ended. */
   streamed?: boolean;
   /** Cut-off cards this session already showed: from the second, no Continue. */
   cutoffsBefore?: number;
+  /** For a full disk: the bytes left where the agent writes, when measured. */
+  freeBytes?: number;
 }
 
 /** The error a failed turn ends with, as the desktop receives it. */
@@ -352,6 +382,12 @@ const routedMessage = (failure: TurnFailure): string => {
       return OPENLLM_POOL_BUSY_MESSAGE;
     case "empty":
       return EMPTY_REPLY_MESSAGE;
+    case "stalled": {
+      const seconds = /([\d.]+)s$/.exec(failure.raw)?.[1];
+      return `The model stopped answering${seconds != null ? ` (no output for ${seconds}s)` : ""}. Try again, or switch to a different model.`;
+    }
+    case "disk_full":
+      return "The disk is full, so this chat can't be saved and the agent can't write files. Free some space, then try again.";
     case "unknown":
       return "The free models couldn't finish this. Try again, or switch to a different model.";
     case "stream_cut":
@@ -417,11 +453,12 @@ const UNAVAILABLE_KIND: Partial<Record<FailureCause, string>> = {
 };
 
 /**
- * The one card for a model the user picked that cannot serve the turn (gone,
- * outside the plan, or still failing after the retries): it names the model
- * and why. With Abacus credits left the way on is RouteLLM - Open, chosen by
- * the user, never switched to; with them used up it is the plan. The user's
- * own key keeps its own card; on the pool the router picked no model.
+ * The one card for an Abacus model the user picked that cannot serve the turn
+ * (gone, outside the plan, or still failing after the retries): it names the
+ * model and why. With Abacus credits left the way on is RouteLLM - Open,
+ * chosen by the user, never switched to; with them used up it is the plan. A
+ * model off Abacus moves by itself instead (movesToOpenLlm) or keeps its own
+ * card; on the pool the router picked no model.
  */
 const modelUnavailableActions = (
   failure: TurnFailure,
@@ -448,6 +485,112 @@ const modelUnavailableActions = (
       : { type: "upgrade-abacus", cause: "exhausted" },
   ];
 };
+
+/**
+ * The one card for a model the user picked that Abacus does not serve (their
+ * own key, another provider's free model, a local server) when its turn did
+ * not finish and did not move to RouteLLM - Open (movesToOpenLlm): what
+ * happened, by cause. With the Abacus credits used up the card offers the
+ * plan; signed out, only a key's own credit, limit or outage has the card, as
+ * before. A refused or spent key, an outgrown chat, a dropped connection and
+ * a cut-off keep their own cards.
+ */
+const offAbacusActions = (
+  failure: TurnFailure,
+  context: FailureContext
+): NotificationAction[] | null => {
+  const provider = failure.provider;
+  if (context.routed || !offAbacus(provider)) return null;
+  const busy = failure.cause === "rate_limited" || failure.cause === "unknown";
+  if (context.abacus == null) {
+    const own =
+      busy && ownKey(provider)
+        ? ownKeyFailureCause(failure.raw, provider)
+        : null;
+    return own == null
+      ? null
+      : [{ type: "own-key-unavailable", provider, cause: own }];
+  }
+  const cause: OwnKeyFailureCause | null =
+    failure.cause === "model_unavailable"
+      ? "gone"
+      : failure.cause === "empty" || failure.cause === "stalled"
+        ? "no_reply"
+        : busy
+          ? (ownKeyFailureCause(failure.raw, provider) ?? "failed")
+          : null;
+  if (cause == null) return null;
+  return [
+    { type: "own-key-unavailable", provider, cause, ...modelOf(context) },
+    ...(context.abacus === "credits" ? [{ type: "switch-to-abacus" }] : []),
+  ];
+};
+
+/** The picked model on an off-Abacus action: its id, name and free-ness. */
+const modelOf = (context: FailureContext) =>
+  context.model == null
+    ? {}
+    : {
+        model: context.model.model,
+        label: context.model.label,
+        ...(context.model.free === true && { free: true }),
+      };
+
+/** What a model off Abacus can end on that RouteLLM - Open answers. */
+const MOVES_TO_OPENLLM: ReadonlySet<FailureCause> = new Set([
+  "model_unavailable",
+  "rate_limited",
+  "empty",
+  "stalled",
+  "unknown",
+  "own_key_quota",
+  "key_invalid",
+]);
+
+/**
+ * Whether a failed turn on a model the user picked that Abacus does not serve
+ * goes on on RouteLLM - Open by itself: signed in with Abacus credits left,
+ * once per message (after the move the turn is on the router, which this never
+ * moves again). The product's call for these models: their failures are the
+ * provider's, and the credits are there to answer the message. Out of credits
+ * or signed out the turn ends on its card.
+ */
+export const movesToOpenLlm = (
+  failure: TurnFailure,
+  context: FailureContext
+): boolean =>
+  !context.routed &&
+  context.abacus === "credits" &&
+  offAbacus(failure.provider) &&
+  MOVES_TO_OPENLLM.has(failure.cause);
+
+/**
+ * The line the chat shows when the message moved: the model and its provider
+ * by name, and where it ran. The app and the chat apps show their own
+ * translation, keyed by the action.
+ */
+export const movedToOpenLlmNotice = (
+  failure: TurnFailure,
+  context: FailureContext,
+  /** Where it ran: RouteLLM - Open, or a paying plan's router by name. */
+  target: string
+): { message: string; actions: NotificationAction[] } => ({
+  message: `${context.model?.label ?? "The model"} on ${providerName(failure.provider)} isn't available, so I switched this chat to ${target}.`,
+  actions: [
+    {
+      type: "moved-to-abacus",
+      ...(failure.provider != null && { provider: failure.provider }),
+      ...modelOf(context),
+      target,
+    },
+  ],
+});
+
+/** RouteLLM - Open by the name the picker gives it. */
+export const OPENLLM_NAME = "RouteLLM - Open";
+
+/** A paying plan's code routers by the one name the picker gives both. */
+export const PLAN_ROUTER_NAME = "RouteLLM";
 
 /**
  * Google cut the reply off on a model the user picked, even after asking
@@ -487,7 +630,9 @@ const failureActions = (
   context: FailureContext
 ): NotificationAction[] => {
   const provider = failure.provider;
-  const unavailable = modelUnavailableActions(failure, context);
+  const unavailable =
+    modelUnavailableActions(failure, context) ??
+    offAbacusActions(failure, context);
   if (unavailable != null) return unavailable;
   switch (failure.cause) {
     case "credits_exhausted":
@@ -529,13 +674,21 @@ const failureActions = (
     }
     case "connection":
       return [{ type: "retry" }];
+    case "disk_full":
+      return [
+        {
+          type: "retry",
+          ...(context.freeBytes != null && { bytesFree: context.freeBytes }),
+        },
+      ];
     case "context_too_long":
       return [{ type: "new-chat" }, { type: "switch-model" }];
     case "key_invalid":
     case "own_key_quota":
       if (!ownKey(provider)) return [{ type: "switch-model" }];
       // The user's own key, picked by hand: fix it, or go on with Abacus
-      // (credits left), or the plan (credits used up). Never a silent move.
+      // (credits left; the message itself already moved, movesToOpenLlm), or
+      // the plan (credits used up).
       if (!context.routed && context.abacus != null)
         return [
           { type: "fix-key", provider },
@@ -548,30 +701,20 @@ const failureActions = (
         : [{ type: "switch-model" }, { type: "fix-key", provider }];
     case "free_pool_spent":
       return [{ type: "free-pool-out" }];
-    case "rate_limited": {
-      if (context.routed)
-        return [
-          { type: "free-pool-out", cause: "busy" },
-          { type: "switch-model" },
-        ];
-      const own = ownKeyFailureCause(failure.raw, provider);
-      return own != null && ownKey(provider)
-        ? [{ type: "own-key-unavailable", provider, cause: own }]
+    case "rate_limited":
+      return context.routed
+        ? [{ type: "free-pool-out", cause: "busy" }, { type: "switch-model" }]
         : [{ type: "switch-model" }];
-    }
     case "not_in_plan":
     case "model_unavailable":
       return [{ type: "switch-model" }];
     case "empty":
       return [{ type: "retry" }, { type: "switch-model" }];
+    case "stalled":
+      return [{ type: "switch-model" }];
     case "stream_cut":
       return cutOffActions(failure, context);
-    case "unknown": {
-      const own = context.routed
-        ? null
-        : ownKeyFailureCause(failure.raw, provider);
-      if (own != null && ownKey(provider))
-        return [{ type: "own-key-unavailable", provider, cause: own }];
+    case "unknown":
       return context.routed ||
         (isProviderFailure(failure.raw) &&
           classifyProviderFailure(failure.raw, provider).remedy.includes(
@@ -579,8 +722,53 @@ const failureActions = (
           ))
         ? [{ type: "switch-model" }]
         : [];
-    }
   }
+};
+
+/** Abacus itself refused: RouteLLM - Open runs on Abacus, so it is no way on. */
+const ABACUS_REFUSALS: ReadonlySet<FailureCause> = new Set([
+  "credits_exhausted",
+  "credits_expired",
+  "payment_required",
+  "phone_verification",
+]);
+
+const bareSwitch = (action: NotificationAction): boolean =>
+  action.type === "switch-model" && action.model == null;
+
+/**
+ * Every card's model switch, by where the Abacus credits stand, for a turn on
+ * a model other than RouteLLM - Open: with credits left the switch is to
+ * RouteLLM - Open (the picker stays beside it); with them used up there is
+ * no switch, and the card carries the plan's offer (`plan-offer`). On
+ * RouteLLM - Open, signed out, or when Abacus itself refused, as it was.
+ */
+const abacusWayOn = (
+  actions: NotificationAction[],
+  failure: TurnFailure,
+  context: FailureContext
+): NotificationAction[] => {
+  if (
+    context.routed ||
+    context.abacus == null ||
+    ABACUS_REFUSALS.has(failure.cause) ||
+    !actions.some(bareSwitch)
+  )
+    return actions;
+  if (context.abacus === "out") {
+    const rest = actions.filter((action) => !bareSwitch(action));
+    return rest.some((action) => action.type === "upgrade-abacus")
+      ? rest
+      : [...rest, { type: "plan-offer" }];
+  }
+  if (actions.some((action) => action.type === "switch-to-abacus"))
+    return actions;
+  const at = actions.findIndex(bareSwitch);
+  return [
+    ...actions.slice(0, at),
+    { type: "switch-to-abacus" },
+    ...actions.slice(at),
+  ];
 };
 
 /**
@@ -599,13 +787,18 @@ export function presentFailure(
   const wallAgain =
     context.onFreeLane &&
     failure.cause !== "connection" &&
+    failure.cause !== "disk_full" &&
     failure.cause !== "context_too_long" &&
     failure.cause !== "payment_required" &&
     failure.cause !== "phone_verification" &&
     !isCredits(failure.cause);
-  const actions = wallAgain
-    ? failureActions({ ...failure, cause: "credits_exhausted" }, context)
-    : failureActions(failure, context);
+  const actions = abacusWayOn(
+    wallAgain
+      ? failureActions({ ...failure, cause: "credits_exhausted" }, context)
+      : failureActions(failure, context),
+    failure,
+    context
+  );
   const connection = failure.cause === "connection";
   // A pinned key that was refused or ran dry says whose key, not the status.
   const ownKeyLine =
@@ -615,7 +808,9 @@ export function presentFailure(
     context.routed ||
     connection ||
     ownKeyLine ||
+    failure.cause === "disk_full" ||
     failure.cause === "empty" ||
+    failure.cause === "stalled" ||
     failure.cause === "stream_cut" ||
     failure.cause === "payment_required" ||
     failure.cause === "phone_verification";
@@ -712,15 +907,25 @@ export function isAuthFailure(raw: string): boolean {
 }
 
 /**
- * Why a turn on the user's own key (any provider but Abacus and the router)
- * failed, when an Abacus plan answers it: the key's balance is spent, its rate
- * limit is hit, or its provider is down, overloaded or not answering. Read
- * only off a terminal error, after the app's own retries. Null for what no
- * plan fixes (a model without tools, a conversation or request too big, a
- * rejected key) and for Abacus-served turns, which have their own card.
+ * Why a turn on a model Abacus does not serve failed: the key's balance is
+ * spent, its rate limit is hit, or its provider is down, overloaded or not
+ * answering (ownKeyFailureCause reads these off the error); the model is gone
+ * or refuses the request, it sent no reply, or it failed some other way.
  */
-export type OwnKeyFailureCause = "credit" | "rate_limit" | "down" | "network";
+export type OwnKeyFailureCause =
+  | "credit"
+  | "rate_limit"
+  | "down"
+  | "network"
+  | "gone"
+  | "no_reply"
+  | "failed";
 
+/**
+ * Of those, the ones read off a terminal error, after the app's own retries.
+ * Null for what the error does not say (a model without tools, a conversation
+ * or request too big, a rejected key) and for Abacus-served turns.
+ */
 export function ownKeyFailureCause(
   raw: string,
   provider: string | undefined

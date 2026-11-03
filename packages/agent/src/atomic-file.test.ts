@@ -8,6 +8,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   backupPathFor,
+  freeBytes,
+  isDiskFull,
   recoverFromBackupSync,
   writeFileAtomic,
   writeFileAtomicSync,
@@ -242,4 +244,36 @@ describe("restrict", () => {
       expect(fs.statSync(target()).mode & 0o777).toBe(0o600);
     }
   );
+});
+
+describe("a full disk", () => {
+  // As each writer reports it; a provider's spent quota is never the disk.
+  it.each([
+    [Object.assign(new Error("write failed"), { code: "ENOSPC" }), true],
+    [Object.assign(new Error("write failed"), { code: "EDQUOT" }), true],
+    ["ENOSPC: no space left on device, write", true],
+    ["failed to write file: No space left on device (os error 28)", true],
+    ["Disk quota exceeded (os error 122)", true],
+    ["There is not enough space on the disk. (os error 112)", true],
+    [
+      "QuotaExceededError Encountered full disk while opening backing store for indexedDB.open.",
+      true,
+    ],
+    ["QuotaExceededError: localStorage quota exceeded", false],
+    ['429 {"error":{"type":"insufficient_quota"}}', false],
+    ["You exceeded your current quota, please check your plan", false],
+    ["disk full", false],
+    [
+      Object.assign(new Error("EACCES: permission denied"), { code: "EACCES" }),
+      false,
+    ],
+    [null, false],
+  ] as const)("%s → %s", (error, full) => {
+    expect(isDiskFull(error)).toBe(full);
+  });
+
+  it("measures the space left, and says nothing for a path it cannot read", () => {
+    expect(freeBytes(dir)).toBeGreaterThan(0);
+    expect(freeBytes(path.join(dir, "missing"))).toBeUndefined();
+  });
 });

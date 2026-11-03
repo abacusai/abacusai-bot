@@ -64,7 +64,6 @@ const setup = () => {
         owners.get(threadId) ?? { owner: null, routineId: null },
     },
     files: new ThreadStore({ home: () => home, log: () => undefined }),
-    startTimeoutMs: 1_000,
     ackTimeoutMs: 1_000,
     log: () => undefined,
   });

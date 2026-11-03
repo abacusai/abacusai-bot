@@ -43,6 +43,7 @@ export interface TurnFailure {
     label?: string;
     link?: string;
     credits?: string;
+    free?: boolean;
   }>;
 }
 
@@ -61,8 +62,10 @@ export type FailureKind =
   | "free-pool-out"
   | "model-unavailable"
   | "connection"
+  | "disk-full"
   | "timed-out"
   | "agent-exited"
+  | "not-started"
   | "empty"
   | "generic";
 
@@ -93,6 +96,9 @@ const NETWORK_UNREACHABLE_CODE = "network_unreachable";
 /** The empty-reply failure's cause (the agent's turn-outcome.ts): one, whoever saw it. */
 const EMPTY_CAUSE = "empty";
 
+/** A write on the computer failed for lack of space (turn-outcome.ts). */
+const DISK_FULL_CAUSE = "disk_full";
+
 /**
  * What the chat is told about a closed turn (TurnLedger), or null when the
  * turn answered. `delivered`: something already reached the chat (the reply,
@@ -121,6 +127,7 @@ export const chatFailureOf = (
     }
     case "timed_out":
     case "agent_exited":
+    case "not_started":
       return { code: record.kind };
     case "stopped":
       return null;
@@ -132,8 +139,14 @@ const ownKeyAction = (error: TurnFailure) =>
   error.actions?.find((action) => action.type === "own-key-unavailable") ??
   error.actions?.find((action) => action.type === "fix-key");
 
+/** Abacus credits are left: the way on is RouteLLM - Open, not the plan. */
+const offersSwitch = (error: TurnFailure): boolean =>
+  error.actions?.some((action) => action.type === "switch-to-abacus") === true;
+
 export const failureKind = (error: TurnFailure): FailureKind => {
   const types = new Set(error.actions?.map((action) => action.type));
+  // The machine's disk is full: nothing about the account or model helps.
+  if (error.cause === DISK_FULL_CAUSE) return "disk-full";
   // Google cut the reply off: its own line, whatever the credits.
   if (types.has("cut-off")) return "cut-off";
   // The picked model cannot serve the turn: its own line, credits or not.
@@ -145,15 +158,19 @@ export const failureKind = (error: TurnFailure): FailureKind => {
   if (types.has("payment-required")) return "payment";
   if (error.cause === "key_invalid" && types.has("fix-key"))
     return "key-rejected";
+  // Before the own-key line: a turn that sent nothing keeps its own handling
+  // (no neutral line to someone else's chat), whoever's model it was.
+  if (error.cause === EMPTY_CAUSE) return "empty";
   if (ownKeyAction(error)?.provider != null) return "own-key";
   // Before the sign-in line: a shut free pool reports model_unavailable too.
   if (types.has("free-pool-out")) return "free-pool-out";
   if (error.code === "model_unavailable") return "model-unavailable";
   if (error.code === NETWORK_UNREACHABLE_CODE) return "connection";
-  // Endings main decides: the inactivity watchdog, the agent going away.
+  // Endings main decides: the inactivity watchdog, the agent going away, no
+  // agent taking the message.
   if (error.code === "timed_out") return "timed-out";
   if (error.code === "agent_exited") return "agent-exited";
-  if (error.cause === EMPTY_CAUSE) return "empty";
+  if (error.code === "not_started") return "not-started";
   return "generic";
 };
 
@@ -167,6 +184,9 @@ export const wantsUpgradeUrl = (
     return account === "free";
   if (kind === "cut-off")
     return account === "free" && cutOffCause(error) === "out";
+  // A model off Abacus with the Abacus credits used up: the plan is the way on.
+  if (kind === "own-key" || (kind === "empty" && ownKeyAction(error) != null))
+    return account === "free" && !offersSwitch(error);
   return kind === "free-pool-out" && account !== "paid";
 };
 
@@ -224,14 +244,100 @@ const paidOutLines = (
 const cutOffCause = (error: TurnFailure): string | undefined =>
   error.actions?.find((action) => action.type === "cut-off")?.cause;
 
+/** What happened on a model off Abacus, by cause. */
+const OWN_KEY_LEADS: Record<string, string> = {
+  credit: "outcome.channel.ownKeyCredit",
+  rate_limit: "outcome.channel.ownKeyRateLimit",
+  gone: "outcome.channel.ownKeyGone",
+  no_reply: "outcome.channel.ownKeyNoReply",
+  failed: "outcome.channel.ownKeyFailed",
+};
+
+/** The local server provider: it has no key and no company. */
+const LOCAL_PROVIDER = "local";
+
+/** The model and who serves it, as the lines name them. */
+const ownKeyValues = (
+  words: ChannelWords,
+  action: { provider?: string; label?: string } | undefined
+): { provider: string; model: string } => {
+  const provider =
+    action?.provider === LOCAL_PROVIDER
+      ? words.t("outcome.channel.localServer")
+      : providerDisplayName(action?.provider ?? "");
+  return { provider, model: action?.label ?? provider };
+};
+
+/** A line that starts with `lead` ("your local model server") is capitalised; a model id never is. */
+const sentence = (text: string, lead: string | null): string =>
+  lead != null && text.startsWith(lead)
+    ? text.charAt(0).toLocaleUpperCase() + text.slice(1)
+    : text;
+
 const ownKeyLead = (words: ChannelWords, error: TurnFailure): string => {
   const action = ownKeyAction(error);
-  const provider = providerDisplayName(action?.provider ?? "");
-  if (action?.cause === "credit" || error.cause === "own_key_quota")
-    return words.t("outcome.channel.ownKeyCredit", { provider });
-  if (action?.cause === "rate_limit")
-    return words.t("outcome.channel.ownKeyRateLimit", { provider });
-  return words.t("outcome.channel.ownKeyDown", { provider });
+  const local = action?.provider === LOCAL_PROVIDER;
+  const values = ownKeyValues(words, action);
+  const credit = error.cause === "own_key_quota";
+  const lead = sentence(
+    words.t(
+      credit
+        ? "outcome.channel.ownKeyCredit"
+        : (OWN_KEY_LEADS[action?.cause ?? ""] ?? "outcome.channel.ownKeyDown"),
+      values
+    ),
+    local ? values.provider : null
+  );
+  // "Your X key ..." already says whose it was.
+  if (
+    !local &&
+    action?.free !== true &&
+    (credit || action?.cause === "credit" || action?.cause === "rate_limit")
+  )
+    return lead;
+  const why = words.t(
+    local
+      ? "outcome.channel.ownKeyWhyLocal"
+      : action?.free === true
+        ? "outcome.channel.ownKeyWhyFree"
+        : "outcome.channel.ownKeyWhyKey",
+    values
+  );
+  return `${lead} ${why}`;
+};
+
+/**
+ * The agent moved a message off a failed model to RouteLLM - Open: the line
+ * the user's own chat hears before the answer.
+ */
+export const chatLineForMove = (
+  words: ChannelWords,
+  action: { provider?: string; label?: string; target?: string }
+): string =>
+  words.t("outcome.channel.ownKeyMoved", {
+    ...ownKeyValues(words, action),
+    target: action.target ?? "RouteLLM - Open",
+  });
+
+/**
+ * A model off Abacus did not finish: what happened and why such a model
+ * fails, then the way on. Free: RouteLLM - Open while Abacus credits are left, the
+ * plan once they are used up. Paid: AbacusAI Agent on the web.
+ */
+const ownKeyReply = (
+  words: ChannelWords,
+  error: TurnFailure,
+  account: AccountKind,
+  offer: ChannelOffer,
+  repeat: boolean
+): string => {
+  const lead = ownKeyLead(words, error);
+  if (repeat) return lead;
+  if (account !== "free")
+    return `${lead} ${words.t("outcome.channel.ownKeyWeb", { link: ABACUS_AGENT_URL })}`;
+  return offersSwitch(error)
+    ? `${lead} ${words.t("outcome.channel.ownKeySwitch")}`
+    : [lead, ...offerLines(words, offer)].join("\n");
 };
 
 /**
@@ -332,15 +438,7 @@ export const chatReplyForFailure = (
       ].join("\n");
     }
     case "own-key":
-      // Free: the Abacus credits still run (a spent account is the wall's
-      // line), so the way on is switching to them, not half a pitch.
-      if (account === "free")
-        return repeat
-          ? ownKeyLead(words, error)
-          : `${ownKeyLead(words, error)} ${t("outcome.channel.ownKeySwitch")}`;
-      return repeat
-        ? ownKeyLead(words, error)
-        : `${ownKeyLead(words, error)} ${t("outcome.channel.ownKeyWeb", { link: ABACUS_AGENT_URL })}`;
+      return ownKeyReply(words, error, account, offer, repeat);
     case "payment":
       return t(
         error.actions?.find((action) => action.type === "payment-required")
@@ -374,12 +472,19 @@ export const chatReplyForFailure = (
       return t("outcome.channel.notSignedIn");
     case "connection":
       return t("outcome.channel.connection");
+    case "disk-full":
+      return t("outcome.channel.diskFull");
     case "timed-out":
       return t("outcome.channel.timedOut");
     case "agent-exited":
       return t("outcome.channel.agentExited");
+    case "not-started":
+      return t("outcome.channel.notStarted");
     case "empty":
-      return t("outcome.channel.empty");
+      // A model off Abacus that sent nothing: whose it was and the way on.
+      return ownKeyAction(error) != null
+        ? ownKeyReply(words, error, account, offer, false)
+        : t("outcome.channel.empty");
     case "generic":
       return t("outcome.channel.generic");
   }
@@ -484,6 +589,7 @@ export class FailureReplyThrottle {
       kind === "verify-phone" ||
       kind === "timed-out" ||
       kind === "agent-exited" ||
+      kind === "not-started" ||
       kind === "empty"
     )
       return false;

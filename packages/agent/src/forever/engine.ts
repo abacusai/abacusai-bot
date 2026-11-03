@@ -19,6 +19,7 @@ import {
 
 import { sponsoredRunActive } from "../abacus-endpoint.js";
 import { Allowances } from "../allowances.js";
+import { freeBytes } from "../atomic-file.js";
 import { PYTHON_SETUP_TIMEOUT_MS, setPythonProvisioner } from "../backends.js";
 import { notifyConversationQueueCleared } from "../background-processes.js";
 import { basePrompt } from "../base-prompt.js";
@@ -116,6 +117,7 @@ import {
 } from "../protocol.js";
 import {
   createModelRuntime,
+  payingPlanRouter,
   registerAbacusProvider,
   registerCustomProviders,
   registerGeminiProvider,
@@ -157,6 +159,11 @@ import {
   isBusyCause,
   isContextTooLong,
   presentFailure,
+  movedToOpenLlmNotice,
+  movesToOpenLlm,
+  OPENLLM_NAME,
+  PLAN_ROUTER_NAME,
+  stallFailure,
   type TurnFailure,
 } from "../turn-outcome.js";
 import { turnUsage, type TurnUsage } from "../turn-usage.js";
@@ -821,6 +828,11 @@ export class ForeverEngine {
       }
       await this.continuePastRecoverableFailures();
       this.reportTurnFailure();
+      // Moved to RouteLLM - Open (moveToOpenLlm): the same message runs there.
+      if (this.pendingOpenLlmRotation != null) {
+        await this.continuePastRecoverableFailures();
+        this.reportTurnFailure();
+      }
       this.closeOwnedTurn(owned);
       this.emitReply();
       // Steers pi has not delivered yet are still queued at the host.
@@ -836,7 +848,7 @@ export class ForeverEngine {
       // properly: a bot left "running" here answered nobody.
       const raw = describe(error);
       this.router.chain.failed(raw, this.session?.model?.provider);
-      this.reportFailure();
+      this.reportFailure(false);
       if (this.turnRunning) this.finishTurn();
       this.closeOwnedTurn(owned);
       this.emitReply();
@@ -1352,7 +1364,7 @@ export class ForeverEngine {
     const connectivity = hostConnectivity();
     if (connectivity === "offline" || connectivity === "degraded") {
       this.pendingNetworkFailure = {
-        failure: `no reply in ${Math.round(seconds)}s`,
+        failure: stallFailure(Math.round(seconds)),
         streamed: failedCallStreamed(this.session?.messages ?? []),
         confirmed: true,
       };
@@ -1360,7 +1372,7 @@ export class ForeverEngine {
     }
 
     if (this.openLlmActive && registry != null) {
-      const failure = `no reply in ${Math.round(seconds)}s`;
+      const failure = stallFailure(Math.round(seconds));
       const next = this.router.failed(registry, failure, this.session?.model);
       if (next != null && "nextId" in next) {
         this.pendingOpenLlmRotation = { failure, nextId: next.nextId };
@@ -1384,18 +1396,15 @@ export class ForeverEngine {
       return;
     }
 
+    // The stall is what the turn ends on, worded and offered like any other.
+    const stalled: TurnFailure = {
+      cause: "stalled",
+      provider: this.session?.model?.provider,
+      raw: stallFailure(seconds),
+    };
+    if (this.moveToOpenLlm(stalled)) return;
     this.stallFailureReported = true;
-    this.emitAgentEvent(
-      {
-        type: "error",
-        error: {
-          message: `The model stopped answering (no output for ${seconds}s). Try again, or switch to a different model.`,
-          code: "turn_failed",
-          actions: [{ type: "switch-model" }],
-        },
-      },
-      { origin: "turn" }
-    );
+    this.emitFailure(stalled);
     this.finishTurn();
   }
 
@@ -1507,12 +1516,53 @@ export class ForeverEngine {
    * call did not answer (turn-outcome.ts). The gateway words it for the
    * chat app; an empty reply after a failure is a failure, never silence.
    */
-  private reportFailure(): void {
+  private reportFailure(move = true): void {
     const registry = this.registry;
     const failure = this.router.chain.failure(
       this.openLlmActive && registry != null && this.router.poolShut(registry)
     );
-    if (failure != null) this.emitFailure(failure);
+    if (failure != null && (!move || !this.moveToOpenLlm(failure)))
+      this.emitFailure(failure);
+  }
+
+  /**
+   * A model off Abacus failed with Abacus credits left (movesToOpenLlm): the
+   * message goes on on RouteLLM - Open through the router's own rotation, the
+   * chat says so in one line, and the chat's model is the router from now on
+   * (model_changed). Once per message: the turn is on the router after this.
+   */
+  private moveToOpenLlm(failure: TurnFailure): boolean {
+    const registry = this.registry;
+    if (registry == null || this.interrupted) return false;
+    const context = this.router.failureContext(
+      registry,
+      this.openLlmActive,
+      this.session?.model
+    );
+    // A free plan moves onto RouteLLM - Open; a paying plan has none and runs
+    // on its own router, pinned, which the chat's model then names.
+    const planRouter = payingPlanRouter(registry);
+    const next = planRouter ?? this.router.pick(registry);
+    if (next == null || !movesToOpenLlm(failure, context)) return false;
+    const paying = planRouter != null;
+    this.openLlmActive = !paying;
+    // The run on the router ends on its own calls, not the failed model's.
+    this.router.chain.begin();
+    this.pendingOpenLlmRotation = { failure: failure.raw, nextId: next.id };
+    this.turnRunning = true;
+    this.stallRecoveriesThisTurn = 0;
+    this.stallFailureReported = false;
+    this.emptyReplies.begin();
+    this.emitAgentEvent({
+      type: "notification",
+      severity: "info",
+      ...movedToOpenLlmNotice(
+        failure,
+        context,
+        paying ? PLAN_ROUTER_NAME : OPENLLM_NAME
+      ),
+    });
+    return true;
   }
 
   private emitFailure(failure: TurnFailure): void {
@@ -1539,6 +1589,12 @@ export class ForeverEngine {
               streamed: this.cutStreamedThisTurn,
               cutoffsBefore: this.router.noteStreamCutCard(),
             }),
+          // The disk the session file is written to: what the turn failed on.
+          ...(failure.cause === "disk_full" && {
+            freeBytes: freeBytes(
+              this.session?.sessionManager.getSessionDir() ?? this.options.cwd
+            ),
+          }),
         }),
       },
       { origin: "turn" }
@@ -1954,6 +2010,7 @@ export class ForeverEngine {
         return;
 
       case "message_update": {
+        this.heartbeat.generating();
         const stream = event.assistantMessageEvent as {
           type: string;
           delta?: string;
@@ -2067,7 +2124,7 @@ export class ForeverEngine {
         );
 
         this.toolInputs.set(event.toolCallId, tool.input);
-        this.heartbeat.started(event.toolCallId);
+        this.heartbeat.started(event.toolCallId, tool);
 
         if (!this.hiddenTurn) {
           this.emitAgentEvent({

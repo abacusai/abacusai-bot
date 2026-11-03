@@ -1,4 +1,5 @@
-import { net, type WebContents } from "electron";
+import { freeBytes } from "@abacus-ai/agent/atomic-file";
+import { app, net, type WebContents } from "electron";
 
 /**
  * When a hidden chat-app page (Discord, Telegram Web) shows neither its app
@@ -10,19 +11,35 @@ import { net, type WebContents } from "electron";
  * any fixed window, and a reload on a timer threw away a boot that was getting
  * there, every time. Each reload doubles the wait before the next, and after
  * the last the verdict is "give_up" until reset, so a page that can never load
- * is not reloaded on a timer for as long as the app runs.
+ * is not reloaded on a timer for as long as the app runs. A load still running
+ * after BOOT_BUSY_CAP_MS is wedged rather than slow, and counts as idle;
+ * time offline never does.
  */
 export type BootVerdict = "wait" | "reload" | "give_up";
+/**
+ * Why a page may still come up by itself: still loading, no network, or
+ * starting up in a way its connector cannot see from outside (WhatsApp's
+ * chat sync), which only a load that never settles overrides.
+ */
+export type PageBusy = "loading" | "offline" | "starting" | null;
 
 /** Idle time on a page that has not booted before its first reload. */
 export const BOOT_FIRST_WAIT_MS = 30_000;
 /** Reloads before the lane stops and waits for the user. */
 export const BOOT_MAX_RELOADS = 3;
+/**
+ * How long one load may keep the page busy before it stops counting as
+ * fetching: loads that never settled left a lane on "connecting" for hours.
+ */
+export const BOOT_BUSY_CAP_MS = 5 * 60_000;
+/** How long a lane's start waits on its first load before checking the page. */
+export const FIRST_LOAD_WAIT_MS = 45_000;
 
 export class PageBootWatch {
   private idleMs = 0;
   private lastAt: number | null = null;
   private reloads = 0;
+  private loadingSince: number | null = null;
 
   constructor(
     private readonly firstWaitMs = BOOT_FIRST_WAIT_MS,
@@ -34,6 +51,7 @@ export class PageBootWatch {
     this.idleMs = 0;
     this.lastAt = null;
     this.reloads = 0;
+    this.loadingSince = null;
   }
 
   /** Reloads since the last reset. */
@@ -45,20 +63,58 @@ export class PageBootWatch {
    * One poll that found the page neither signed in nor at its login. `busy`:
    * it is still loading, or there is no network for it to load over.
    */
-  stuck(now: number, busy: boolean): BootVerdict {
+  stuck(now: number, busy: PageBusy): BootVerdict {
     const since = this.lastAt;
     this.lastAt = now;
-    if (busy || since == null) return "wait";
+    this.loadingSince = busy === "loading" ? (this.loadingSince ?? now) : null;
+    const wedged =
+      this.loadingSince != null && now - this.loadingSince >= BOOT_BUSY_CAP_MS;
+    if ((busy != null && !wedged) || since == null) return "wait";
     this.idleMs += now - since;
     if (this.idleMs < this.firstWaitMs * 2 ** this.reloads) return "wait";
     if (this.reloads >= this.maxReloads) return "give_up";
     this.reloads += 1;
     this.idleMs = 0;
     this.lastAt = null;
+    this.loadingSince = null;
     return "reload";
   }
 }
 
 /** See PageBootWatch.stuck: whether the page may still come up by itself. */
-export const pageBusy = (contents: WebContents): boolean =>
-  contents.isLoading() || !net.isOnline();
+export const pageBusy = (contents: WebContents): PageBusy =>
+  !net.isOnline() ? "offline" : contents.isLoading() ? "loading" : null;
+
+/** How often a parked lane checks whether what parked it has cleared. */
+const RETRY_CHECK_MS = 10_000;
+
+/**
+ * Free space a parked lane waits for before it loads its page again. A cold
+ * WhatsApp Web boot alone writes about 30 MB (its service worker and cache);
+ * a linked page then syncs its chats on top. Chromium's storage commits
+ * down to a megabyte or so, so this is the page's room, not a quota reserve.
+ */
+const DISK_SPACE_BACK_BYTES = 256 * 1024 * 1024;
+
+/** The network is back, by the OS's own answer. */
+export const backOnline = (): boolean => net.isOnline();
+
+/** The disk holding the app's pages has room for one to load again. */
+export const diskSpaceBack = (): boolean =>
+  (freeBytes(app.getPath("userData")) ?? 0) >= DISK_SPACE_BACK_BYTES;
+
+/**
+ * A parked lane's way back by itself: `retry` runs once, as soon as `ready`.
+ * Returns the stop; a lane keeps one wait at a time.
+ */
+export const retryWhen = (
+  ready: () => boolean,
+  retry: () => void
+): (() => void) => {
+  const timer = setInterval(() => {
+    if (!ready()) return;
+    clearInterval(timer);
+    retry();
+  }, RETRY_CHECK_MS);
+  return () => clearInterval(timer);
+};

@@ -42,6 +42,39 @@ const RENAME_BACKOFF_MS = 5;
 
 let writeCounter = 0;
 
+/**
+ * A write refused because the disk (or the user's disk quota) is full, as
+ * Node, a child's stderr (Rust's os error) or Chromium's storage says it.
+ * Never a bare "quota": a provider's spent quota is not the disk.
+ */
+const DISK_FULL_CODES: ReadonlySet<string> = new Set(["ENOSPC", "EDQUOT"]);
+const DISK_FULL_TEXT =
+  /\bENOSPC\b|\bEDQUOT\b|no space left on device|disk quota exceeded|not enough space on the disk|os error (?:28|112|122)\b|encountered full disk/i;
+
+/** Whether a thrown error or a failure's text means the disk is full. */
+export const isDiskFull = (error: unknown): boolean => {
+  if (error == null) return false;
+  const code = (error as { code?: unknown }).code;
+  if (typeof code === "string" && DISK_FULL_CODES.has(code)) return true;
+  const text =
+    typeof error === "string"
+      ? error
+      : typeof (error as { message?: unknown }).message === "string"
+        ? (error as { message: string }).message
+        : String(error);
+  return DISK_FULL_TEXT.test(text);
+};
+
+/** Bytes free to this user on the disk holding `dir`; undefined when unknown. */
+export const freeBytes = (dir: string): number | undefined => {
+  try {
+    const stats = fs.statfsSync(dir);
+    return stats.bavail * stats.bsize;
+  } catch {
+    return undefined;
+  }
+};
+
 /** Unique per write, so overlapping writers never share a temp file. */
 const tempPathFor = (filePath: string): string =>
   `${filePath}.${process.pid}.${++writeCounter}.tmp`;

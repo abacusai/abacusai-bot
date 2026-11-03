@@ -57,6 +57,10 @@
       "types": "./dist/phone/phone-nudges.d.ts",
       "default": "./dist/phone/phone-nudges.js"
     },
+    "./plan-asks": {
+      "types": "./dist/plan-asks.d.ts",
+      "default": "./dist/plan-asks.js"
+    },
     "./send-media": {
       "types": "./dist/send-media.d.ts",
       "default": "./dist/send-media.js"

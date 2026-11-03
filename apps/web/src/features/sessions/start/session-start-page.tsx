@@ -27,6 +27,7 @@ import { SendError } from "#renderer/components/send-error";
 import { useDb } from "#renderer/data/db";
 import { isListedSession } from "#renderer/data/db/filters";
 import { usePrefs } from "#renderer/data/db/prefs";
+import { isDiskFullError } from "#renderer/data/query-client";
 import { defaultLook } from "#renderer/lib/bots/avatar";
 import { BUILD_STARTER_IDS } from "#renderer/lib/build-starters";
 import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
@@ -143,7 +144,7 @@ export const SessionStartPage = ({
       envelope
     )
       .catch((e) => {
-        setError(String(e));
+        setError(isDiskFullError(e) ? t("errors.diskFull") : String(e));
         throw e;
       })
       .finally(() => {

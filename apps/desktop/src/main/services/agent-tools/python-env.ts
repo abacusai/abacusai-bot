@@ -15,6 +15,7 @@ import fs from "fs/promises";
 import path from "path";
 import { promisify } from "util";
 
+import { isDiskFull } from "@abacus-ai/agent/atomic-file";
 import { childProcessEnv } from "@abacus-ai/agent/child-env";
 import extract from "extract-zip";
 
@@ -256,7 +257,7 @@ const setupError = (what: string, error: unknown): Error => {
     (error as { stderr?: string })?.stderr ?? "",
   ].join("\n");
   console.warn(`[python-env] ${what}:`, detail);
-  if (/ENOSPC|No space left|disk (is )?full|quota/i.test(detail))
+  if (isDiskFull(error) || isDiskFull(detail))
     return new Error(
       `${what}: the disk is full. Free some space and try again.`
     );
