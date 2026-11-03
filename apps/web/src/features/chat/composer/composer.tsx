@@ -21,6 +21,7 @@ import {
   type CSSProperties,
   type DragEvent,
   type KeyboardEvent,
+  type MouseEventHandler,
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
@@ -105,12 +106,19 @@ const Still = ({
   layout,
   className,
   children,
+  onMouseDown,
 }: {
   layout: "position" | false;
   className?: string;
   children: ReactNode;
+  onMouseDown?: MouseEventHandler<HTMLDivElement>;
 }) => (
-  <motion.div layout={layout} data-layout="position" className={className}>
+  <motion.div
+    layout={layout}
+    data-layout="position"
+    className={className}
+    onMouseDown={onMouseDown}
+  >
     {children}
   </motion.div>
 );
@@ -1225,6 +1233,10 @@ export const ThreadComposer = () => {
                 <Still
                   layout={still}
                   className="flex shrink-0 items-center gap-2"
+                  // A press here must not focus the pill: focus expands it,
+                  // which renders these buttons anew elsewhere, so the press
+                  // would end on nothing and Stop would do nothing.
+                  onMouseDown={(event) => event.preventDefault()}
                 >
                   <Dictate />
                   <SendOrStop />
