@@ -10,9 +10,11 @@ export const BOTS_TOOLS: ToolDefinition[] = [
     botAlways: true,
     description: [
       "Your own recent activity, across YOUR other conversations: your main",
-      "chat with the user, your auto-reply chats, and your routine runs.",
+      "chat with the user, your auto-reply chats, your routine runs, and the",
+      "chats where other bots asked you questions.",
       'Call it when the user asks what you have done, or when "so far"',
-      "plainly reaches beyond this conversation. This chat's context does",
+      "plainly reaches beyond this conversation, and before saying what",
+      "another bot asked you (or that none did). This chat's context does",
       "not follow you between conversations, but your work does.",
     ].join("\n"),
     inputSchema: { type: "object", properties: {} },

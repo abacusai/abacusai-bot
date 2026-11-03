@@ -381,7 +381,11 @@ describe("a task the user gave, passed on", () => {
       botAskService: { ask: ReturnType<typeof vi.fn> };
     };
   };
-  const refused = { error: expect.stringContaining("Only pass a task on") };
+  const refused = {
+    error: expect.stringContaining(
+      "pass a task on only while answering the user"
+    ),
+  };
   const handOffRefused = {
     error: expect.stringContaining("did not ask to hand this off"),
   };
@@ -412,6 +416,23 @@ describe("a task the user gave, passed on", () => {
         const { h } = tryAsk(words);
         expect(h.botAskService.ask).toHaveBeenCalledTimes(1);
       }
+    });
+
+    it("goes out when the user misspells the bot they ask for", () => {
+      for (const words of ["Ask Wrtier for a tagline", "ping writr please"]) {
+        const { h } = tryAsk(words);
+        expect(h.botAskService.ask).toHaveBeenCalledTimes(1);
+      }
+    });
+
+    it("a near-miss word elsewhere does not name a bot", () => {
+      const { h, result } = tryAsk(
+        "I need a tagline like the ones writers use"
+      );
+      expect(result).toEqual({
+        error: expect.stringContaining("did not ask you to ask another bot"),
+      });
+      expect(h.botAskService.ask).not.toHaveBeenCalled();
     });
 
     it("goes out when the user says yes to the bot's offer", () => {
@@ -487,6 +508,15 @@ describe("a task the user gave, passed on", () => {
     expect(
       tryTask("have Writer or Planner sort the schedule").result
     ).not.toEqual(expect.objectContaining({ error: expect.anything() }));
+  });
+
+  it("is refused when a word only looks like a bot's name", () => {
+    expect(
+      tryTask("we planned the launch, make me a checklist").result
+    ).toEqual(handOffRefused);
+    expect(tryTask("have Plannr draft the checklist").result).not.toEqual(
+      handOffRefused
+    );
   });
 
   it("judges the latest message only: an earlier hand-off does not cover a new request", () => {

@@ -201,7 +201,7 @@
     },
     {
       "name": "my_activity",
-      "description": "Your own recent activity, across YOUR other conversations: your main\nchat with the user, your auto-reply chats, and your routine runs.\nCall it when the user asks what you have done, or when \"so far\"\nplainly reaches beyond this conversation. This chat's context does\nnot follow you between conversations, but your work does.",
+      "description": "Your own recent activity, across YOUR other conversations: your main\nchat with the user, your auto-reply chats, your routine runs, and the\nchats where other bots asked you questions.\nCall it when the user asks what you have done, or when \"so far\"\nplainly reaches beyond this conversation, and before saying what\nanother bot asked you (or that none did). This chat's context does\nnot follow you between conversations, but your work does.",
       "inputSchema": {
         "type": "object",
         "properties": {}
@@ -449,7 +449,7 @@
     },
     {
       "name": "my_activity",
-      "description": "Your own recent activity, across YOUR other conversations: your main\nchat with the user, your auto-reply chats, and your routine runs.\nCall it when the user asks what you have done, or when \"so far\"\nplainly reaches beyond this conversation. This chat's context does\nnot follow you between conversations, but your work does.",
+      "description": "Your own recent activity, across YOUR other conversations: your main\nchat with the user, your auto-reply chats, your routine runs, and the\nchats where other bots asked you questions.\nCall it when the user asks what you have done, or when \"so far\"\nplainly reaches beyond this conversation, and before saying what\nanother bot asked you (or that none did). This chat's context does\nnot follow you between conversations, but your work does.",
       "inputSchema": {
         "type": "object",
         "properties": {}

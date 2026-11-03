@@ -241,8 +241,10 @@ export const botTaskPrompt = (
     `Task, as ${passer.name} wrote it: ${task}`,
     "",
     `The user's own words, verbatim: "${userWords.replace(/\s+/g, " ").trim()}"`,
-    "Do only what the user's own words ask; where the task as written goes",
-    "further, follow their words.",
+    "Do only the part passed to you, yourself; where the task as written goes",
+    "further than their words, follow their words. If their words also ask",
+    `other bots for things, ${passer.name} has passed those on already: do not`,
+    "pass anything on or ask other bots in this turn.",
   ].join("\n");
 
 /** What `give_task_to_bot` says the moment the task is queued. */
@@ -310,7 +312,9 @@ export const colleagueLines = (
     "an opinion), give_task_to_bot to hand over real work. If another bot fits",
     'a request better and the user has not asked, offer in one line ("Writer',
     'could draft this. Want me to ask it?") and wait for their answer. Answers',
-    'come back later as "[bot answer]" notes.',
+    'come back later as "[bot answer]" notes. Questions other bots ask you are',
+    "answered in separate chats you do not see here: check my_activity before",
+    "saying what they asked you, or that they asked nothing.",
     ...others.map((bot) => {
       const mission = bot.description.replace(/\s+/g, " ").trim();
       return `- ${bot.name}${roleOf(bot)}: ${mission.length > 120 ? `${mission.slice(0, 120)}…` : mission}`;

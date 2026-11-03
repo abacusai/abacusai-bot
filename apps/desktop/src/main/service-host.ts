@@ -602,6 +602,41 @@ const AGREEMENT =
 const unlabelled = (text: string): string =>
   text.replace(/^\[[^\]\n]*\]\s*/, "");
 
+/** Edits between two words, a swap of neighbours counting as one. */
+const editDistance = (a: string, b: string): number => {
+  const d = Array.from({ length: a.length + 1 }, (_, i) =>
+    Array.from({ length: b.length + 1 }, (_, j) =>
+      i === 0 ? j : j === 0 ? i : 0
+    )
+  );
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++) {
+      d[i]![j] = Math.min(
+        d[i - 1]![j]! + 1,
+        d[i]![j - 1]! + 1,
+        d[i - 1]![j - 1]! + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1])
+        d[i]![j] = Math.min(d[i]![j]!, d[i - 2]![j - 2]! + 1);
+    }
+  return d[a.length]![b.length]!;
+};
+
+/**
+ * "Ask Desginer …": a one-word bot name typed one edit off, right after a
+ * word that asks for someone. Only there: anywhere else "we planned it" would
+ * name Planner and "she writes" Writer.
+ */
+const misspeltAfterAsk = (words: string, name: string): boolean => {
+  if (name.length < 5 || /\s/.test(name)) return false;
+  const lower = name.toLowerCase();
+  return [
+    ...words.matchAll(
+      /\b(?:ask|have|get|tell|let|message|ping|check with|(?:pass|give|hand|send) (?:it|this|that)? ?to)\s+(?:the\s+)?([a-z][\w-]*)/gi
+    ),
+  ].some((match) => editDistance(match[1]!.toLowerCase(), lower) === 1);
+};
+
 /**
  * Why the user's words do not let this task go to `target`, or null when
  * they do: they named it, said someone else should do it, or agreed to the
@@ -621,10 +656,11 @@ const handOffRefusal = (
   const named = others.filter(
     (name) =>
       name.trim().length > 0 &&
-      new RegExp(
+      (new RegExp(
         `\\b${name.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
         "i"
-      ).test(words)
+      ).test(words) ||
+        misspeltAfterAsk(words, name.trim()))
   );
   // The user named the bot(s) to hand it to: only those.
   if (named.length > 0)
@@ -5654,7 +5690,7 @@ export class ServiceHost {
     if (words.length === 0)
       return {
         error:
-          "Only pass a task on when the user asked for it in this conversation just now: their message is what lets the other bot act on it. For your own question to another bot, use ask_bot.",
+          "You can pass a task on only while answering the user's own message: this turn was not started by them (it is a passed-on task, a note or a routine). Do your part yourself, and tell the user what you would pass on so they can decide.",
       };
     // Real work moves to another bot only when the user asked for a hand-off
     // (to the bot they named, if they named one) or agreed to one; "make me
