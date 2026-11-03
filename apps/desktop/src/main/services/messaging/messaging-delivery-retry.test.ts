@@ -184,6 +184,40 @@ describe("a message that still could not go", () => {
   });
 });
 
+describe("a message owed while its platform is unlinked", () => {
+  it("waits for the link to come back instead of spending its tries", async () => {
+    let down = true;
+    const sent: string[] = [];
+    const gateway = service(async (chatId, text) => {
+      if (down && chatId !== "me@self")
+        throw new Error("WhatsApp needs to be linked again");
+      sent.push(text);
+    }, "me@self");
+    const setState = (
+      gateway as unknown as {
+        setState: (id: string, state: string) => void;
+      }
+    ).setState.bind(gateway);
+
+    const done = send(gateway);
+    await vi.advanceTimersByTimeAsync(80_000);
+    await done;
+    // The phone dropped the link overnight: it waits on a fresh scan.
+    setState("whatsapp", "needs_login");
+    await vi.advanceTimersByTimeAsync(8 * 60 * 60_000);
+
+    expect(stored.outbox?.pending).toHaveLength(1);
+    expect(sent).toEqual([]);
+
+    down = false;
+    setState("whatsapp", "connected");
+    await vi.advanceTimersByTimeAsync(10);
+
+    expect(sent).toEqual(["Hey! How's it going?"]);
+    expect(stored.outbox?.pending).toEqual([]);
+  });
+});
+
 describe("a message owed more than once", () => {
   it("goes once when its platform connects while a retry is on its way", async () => {
     let down = true;
