@@ -410,6 +410,15 @@ describe("a task the user gave, passed on", () => {
     );
   });
 
+  it("goes only to the bot the user named", () => {
+    expect(tryTask("ask Writer to draft the launch post").result).toEqual({
+      error: expect.stringContaining("asked for Writer, not Planner"),
+    });
+    expect(
+      tryTask("have Writer or Planner sort the schedule").result
+    ).not.toEqual(expect.objectContaining({ error: expect.anything() }));
+  });
+
   it("judges the latest message only: an earlier hand-off does not cover a new request", () => {
     expect(
       tryTask("have Planner draft the checklist", "now make me a launch post")

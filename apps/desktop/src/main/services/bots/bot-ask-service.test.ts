@@ -231,6 +231,27 @@ describe("BotAskService", () => {
     expect(notes[0].note).toContain("the app closed twice");
   });
 
+  it("never re-runs a task the app closed on: it may be half done", () => {
+    const { service, turns, notes, records } = setup([
+      {
+        id: "t1",
+        kind: "task",
+        userWords: "have Writer post it",
+        askerId: "res",
+        askerSession: "res-chat",
+        targetId: "wri",
+        request: "post it",
+        status: "running",
+        attempts: 1,
+        createdAt: 1,
+      },
+    ]);
+    service.recover();
+    expect(turns).toEqual([]);
+    expect(records()[0].status).toBe("failed");
+    expect(notes[0].note).toContain("may be half done");
+  });
+
   it("cancels a deleted bot's open requests, either side, without a note", () => {
     const { service, stopTurn, notes, records } = setup();
     service.ask("res", "res-chat", "wri", "draft");

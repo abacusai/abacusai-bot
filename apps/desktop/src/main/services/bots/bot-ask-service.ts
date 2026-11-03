@@ -227,13 +227,21 @@ export class BotAskService {
 
   /**
    * At start: an ask the app closed on runs once more (its turn died with
-   * the app), one that already did fails and says so, and queued asks start.
+   * the app), one that already did fails and says so; a task the app closed
+   * on fails and says so (it may be half done); queued requests start.
    */
   recover(): void {
     for (const ask of this.deps
       .read()
       .filter((ask) => ask.status === "running")) {
-      if (ask.attempts >= 2)
+      // A task may have done part of its work (sent, posted, booked): never
+      // run twice on its own; the asker checks the other bot's chat first.
+      if (ask.kind === "task")
+        this.finish(ask.id, {
+          error:
+            "the app closed while it was working on it, so it may be half done. Ask the user to check its chat before passing it on again.",
+        });
+      else if (ask.attempts >= 2)
         this.finish(ask.id, {
           error: "the app closed twice before it answered.",
         });

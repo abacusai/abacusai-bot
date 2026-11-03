@@ -599,18 +599,21 @@ const unlabelled = (text: string): string =>
   text.replace(/^\[[^\]\n]*\]\s*/, "");
 
 /**
- * Whether the user's words ask for work to go to another bot: they name one,
- * or say someone else should do it, or agree to an offer (a plain yes, with
- * the message before it). Not a request to the bot itself ("make me X").
+ * Why the user's words do not let this task go to `target`, or null when
+ * they do: they named it, said someone else should do it, or agreed to the
+ * bot's offer (a plain yes, with the message before it). Not a request to
+ * the bot itself ("make me X"), nor a bot other than the one they named.
  */
-const asksForHandOff = (
+const handOffRefusal = (
   words: string,
-  botNames: readonly string[]
-): boolean => {
+  others: readonly string[],
+  target: string
+): string | null => {
   const lines = words.split("\n");
+  // A yes to the bot's own offer, which named the bot.
   if (lines.length > 1 && AGREEMENT.test(unlabelled(lines.at(-1) ?? "")))
-    return true;
-  const named = botNames.some(
+    return null;
+  const named = others.filter(
     (name) =>
       name.trim().length > 0 &&
       new RegExp(
@@ -618,12 +621,16 @@ const asksForHandOff = (
         "i"
       ).test(words)
   );
-  return (
-    named ||
-    /\b(someone|somebody|another bot|other bots?|your team|the team|delegate|hand (it |this )?(off|over)|pass (it|this) (on|to))\b/i.test(
-      words
-    )
-  );
+  // The user named the bot(s) to hand it to: only those.
+  if (named.length > 0)
+    return named.some((name) => name.toLowerCase() === target.toLowerCase())
+      ? null
+      : `The user asked for ${named.join(" or ")}, not ${target}. Pass it to the bot they named, or ask them.`;
+  return /\b(someone|somebody|another bot|other bots?|your team|the team|delegate|hand (it |this )?(off|over)|pass (it|this) (on|to))\b/i.test(
+    words
+  )
+    ? null
+    : 'The user did not ask to hand this off, so do it yourself, or offer in one line ("Planner could do this. Want me to pass it on?") and wait for their yes. For a quick question to another bot, use ask_bot.';
 };
 
 export class ServiceHost {
@@ -5541,13 +5548,15 @@ export class ServiceHost {
           "Only pass a task on when the user asked for it in this conversation just now: their message is what lets the other bot act on it. For your own question to another bot, use ask_bot.",
       };
     // Real work moves to another bot only when the user asked for a hand-off
-    // or agreed to one; "make me a checklist" is a request to this bot.
-    const names = this.botService.list().map((bot) => bot.name);
-    if (!asksForHandOff(words, names))
-      return {
-        error:
-          'The user did not ask to hand this off, so do it yourself, or offer in one line ("Planner could do this. Want me to pass it on?") and wait for their yes. For a quick question to another bot, use ask_bot.',
-      };
+    // (to the bot they named, if they named one) or agreed to one; "make me
+    // a checklist" is a request to this bot.
+    const bots = this.botService.list();
+    const refusal = handOffRefusal(
+      words,
+      bots.filter((bot) => bot.id !== askerId).map((bot) => bot.name),
+      bots.find((bot) => bot.id === targetId)?.name ?? ""
+    );
+    if (refusal != null) return { error: refusal };
     return this.botAskService.ask(askerId, askerSession, targetId, task, {
       kind: "task",
       userWords: words,
