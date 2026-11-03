@@ -1,3 +1,4 @@
+import { isDiskFull } from "@abacus-ai/agent/atomic-file";
 import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 import { BrowserWindow, net } from "electron";
 
@@ -7,6 +8,7 @@ import {
   parentWindow,
   presentAsDialog,
 } from "../../bring-to-front";
+import { nativeT } from "../config/native-language";
 import {
   boundedWait,
   chunkMessage,
@@ -26,10 +28,13 @@ import {
   savePlatformSignedIn,
 } from "./messaging-config-service";
 import {
+  backOnline,
   BOOT_MAX_RELOADS,
+  diskSpaceBack,
   FIRST_LOAD_WAIT_MS,
   pageBusy,
   PageBootWatch,
+  retryWhen,
 } from "./page-boot-watch";
 
 /**
@@ -61,9 +66,6 @@ const LOGIN_POLL_MS = 1500;
 
 /** How often to sweep the DM list for new inbound messages. */
 const INBOUND_POLL_MS = 5000;
-
-/** How often a lane parked offline checks whether the network is back. */
-const ONLINE_CHECK_MS = 10_000;
 
 /** Chromium's net error for a navigation we replaced or refused ourselves. */
 const NET_ERR_ABORTED = -3;
@@ -152,8 +154,8 @@ export class DiscordWebConnector implements MessagingConnector {
   private parked = false;
   /** The stored sign-in verdict, so a poll writes it on change only. */
   private signedInRecord: boolean | null = null;
-  /** Set while a lane parked offline waits to try once more on reconnect. */
-  private onlineCheck: ReturnType<typeof setInterval> | null = null;
+  /** Set while a parked lane waits for the network or disk space to come back. */
+  private stopParkedWait: (() => void) | null = null;
   private readonly loginPoll = new PollScheduler(
     () => this.checkLogin(),
     LOGIN_POLL_MS,
@@ -273,7 +275,8 @@ export class DiscordWebConnector implements MessagingConnector {
   async stop(): Promise<void> {
     this.running = false;
     this.parked = false;
-    this.stopOnlineCheck();
+    this.stopParkedWait?.();
+    this.stopParkedWait = null;
     this.loggedIn = false;
     this.railReads = 0;
     this.contactsRead = false;
@@ -825,7 +828,8 @@ export class DiscordWebConnector implements MessagingConnector {
    */
   private resume(): void {
     this.boot.reset();
-    this.stopOnlineCheck();
+    this.stopParkedWait?.();
+    this.stopParkedWait = null;
     if (!this.running || !this.parked) return;
     this.parked = false;
     this.callbacks.onLog("discord-web: opened by the user, checking again");
@@ -856,25 +860,27 @@ export class DiscordWebConnector implements MessagingConnector {
     this.park("error", UNREACHABLE);
     // Started before the network was up (a login item at boot): one more try
     // once it is. Online already means the site itself is unreachable.
-    if (!net.isOnline()) this.retryWhenOnline();
+    if (!net.isOnline()) this.retryWhenClear(backOnline, "back online");
   }
 
-  private retryWhenOnline(): void {
-    this.stopOnlineCheck();
-    this.onlineCheck = setInterval(() => {
-      if (!net.isOnline()) return;
-      this.stopOnlineCheck();
+  /** Parked by the machine (no network, a full disk): back by itself once it clears. */
+  private retryWhenClear(ready: () => boolean, what: string): void {
+    this.stopParkedWait?.();
+    this.stopParkedWait = retryWhen(ready, () => {
+      this.stopParkedWait = null;
       if (!this.running || !this.parked) return;
-      this.callbacks.onLog("discord-web: back online, loading the page again");
+      this.callbacks.onLog(`discord-web: ${what}, loading the page again`);
       this.resume();
       this.ensureWindow();
-    }, ONLINE_CHECK_MS);
+    });
   }
 
-  private stopOnlineCheck(): void {
-    if (this.onlineCheck == null) return;
-    clearInterval(this.onlineCheck);
-    this.onlineCheck = null;
+  /** The page's storage found the disk full: parked until space is freed. */
+  private parkOnFullDisk(): void {
+    if (!this.running || this.parked) return;
+    this.callbacks.onLog("discord-web: the disk is full, waiting for space");
+    this.park("error", nativeT("diskFullLane", { platform: "Discord" }));
+    this.retryWhenClear(diskSpaceBack, "disk space is back");
   }
 
   private logFailure(what: string, error: unknown): void {
@@ -1423,6 +1429,7 @@ export class DiscordWebConnector implements MessagingConnector {
       this.callbacks.onLog(
         `discord-web: script failed: ${String((error as Error)?.message ?? error)}`
       );
+      if (isDiskFull(error)) this.parkOnFullDisk();
       return null;
     }
   }

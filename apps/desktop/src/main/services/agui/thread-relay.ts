@@ -1,3 +1,4 @@
+import { isDiskFull } from "@abacus-ai/agent/atomic-file";
 import {
   AgentStatus,
   type QueueEntry,
@@ -211,6 +212,12 @@ export type ThreadHistoryNotice =
 /** The notice key of a thread-history notice. */
 export const HISTORY_NOTICE_KEY = "abacus.history";
 
+/**
+ * The notice key of "this chat is not being saved": the disk is full. Shown
+ * once, and cleared (`cleared: true`) by the next save that lands.
+ */
+export const UNSAVED_NOTICE_KEY = "abacus.unsaved";
+
 export interface ThreadHistory {
   messages: UIMessage[];
   runs: RunOutcomeRecord[];
@@ -358,6 +365,8 @@ export class ThreadRelay {
     runningTools: 0,
   };
   #notices: AiNotice[] = [];
+  /** The unsaved notice is up: the last save found the disk full. */
+  #unsaved = false;
   /** The answerable set last reported (`#checkPending`); "" for none. */
   #pendingKey = "";
 
@@ -1001,14 +1010,7 @@ export class ThreadRelay {
         applyMessageReaction(this.#processor.getMessages(), change)
       );
       this.#transcript = applyMessageReaction(this.#transcript, change);
-      try {
-        this.#persist({ messages: this.#transcript, runs: this.#runs });
-        this.#v1Derived = false;
-      } catch (error) {
-        this.#log(
-          `${this.threadId}: persisting reactions failed: ${String(error)}`
-        );
-      }
+      this.#save({ messages: this.#transcript, runs: this.#runs }, "reactions");
     }
     this.#applySessionState(event, chunk.seq);
     this.#checkPending(event);
@@ -1124,16 +1126,52 @@ export class ThreadRelay {
   #checkpoint(): void {
     const active = this.#active;
     if (active == null || active.historyEpoch !== this.#historyEpoch) return;
-    try {
-      this.#persist({
+    this.#save(
+      {
         messages: structuredClone(this.#processor.getMessages()),
         runs: this.#runs,
         ...(this.#migratedFrom != null && { migratedFrom: this.#migratedFrom }),
-      });
+      },
+      "the transcript"
+    );
+  }
+
+  /**
+   * Write the thread's file. A failure is logged; one on a full disk also
+   * tells the chat once that it is not being saved, and the next save that
+   * lands takes that back. Deferred: a save runs inside `#apply`, whose own
+   * chunk must reach the listeners first.
+   */
+  #save(history: ThreadHistory, what: string): void {
+    try {
+      this.#persist(history);
+      // The file is now the relay's: no v1 refresh from here on.
       this.#v1Derived = false;
+      if (this.#unsaved) {
+        this.#unsaved = false;
+        queueMicrotask(() =>
+          this.#apply(
+            this.#custom("abacus.notice", {
+              kind: "unsaved",
+              notificationKey: UNSAVED_NOTICE_KEY,
+              cleared: true,
+            })
+          )
+        );
+      }
     } catch (error) {
       this.#log(
-        `${this.threadId}: persisting the transcript failed: ${String(error)}`
+        `${this.threadId}: persisting ${what} failed: ${String(error)}`
+      );
+      if (this.#unsaved || !isDiskFull(error)) return;
+      this.#unsaved = true;
+      queueMicrotask(() =>
+        this.#apply(
+          this.#custom("abacus.notice", {
+            kind: "unsaved",
+            notificationKey: UNSAVED_NOTICE_KEY,
+          })
+        )
       );
     }
   }
@@ -1164,19 +1202,14 @@ export class ThreadRelay {
     if (this.#runs.length > RUN_OUTCOMES_KEPT)
       this.#runs.splice(0, this.#runs.length - RUN_OUTCOMES_KEPT);
 
-    try {
-      this.#persist({
+    this.#save(
+      {
         messages: this.#transcript,
         runs: this.#runs,
         ...(this.#migratedFrom != null && { migratedFrom: this.#migratedFrom }),
-      });
-      // The file is now the relay's: no v1 refresh from here on.
-      this.#v1Derived = false;
-    } catch (error) {
-      this.#log(
-        `${this.threadId}: persisting the transcript failed: ${String(error)}`
-      );
-    }
+      },
+      "the transcript"
+    );
   }
 
   /** The run's one notice, from the messages it added to the processor. */
@@ -1384,6 +1417,8 @@ export class ThreadRelay {
           this.#notices = this.#notices.filter(
             (notice) => notice.value.notificationKey !== key
           );
+        // A keyed notice taken back: gone, not replaced.
+        if (key != null && value.cleared === true) return;
         this.#notices.push({ seq, name: event.name, value });
         if (this.#notices.length > NOTICES_KEPT)
           this.#notices.splice(0, this.#notices.length - NOTICES_KEPT);

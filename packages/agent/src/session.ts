@@ -16,6 +16,7 @@ import {
 import { sponsoredRunActive } from "./abacus-endpoint.js";
 import { Allowances } from "./allowances.js";
 import { allowedPathsFromEnv } from "./allowed-paths.js";
+import { freeBytes } from "./atomic-file.js";
 import {
   agentShellOperations,
   PYTHON_SETUP_TIMEOUT_MS,
@@ -1617,6 +1618,12 @@ export class AbacusBotSession {
               streamed: this.cutStreamedThisTurn,
               cutoffsBefore: this.router.noteStreamCutCard(),
             }),
+          // The disk the session file is written to: what the turn failed on.
+          ...(failure.cause === "disk_full" && {
+            freeBytes: freeBytes(
+              this.session?.sessionManager.getSessionDir() ?? this.options.cwd
+            ),
+          }),
         }),
       },
       { origin: "turn" }

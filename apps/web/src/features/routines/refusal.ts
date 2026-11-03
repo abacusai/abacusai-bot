@@ -25,6 +25,7 @@ const REASON_KEYS: Record<string, string> = {
   "queue-full": "routines.refused.queueFull",
   "wrong-bot": "routines.refused.wrongBot",
   "routines-off": "routines.refused.off",
+  "disk-full": "errors.diskFull",
 };
 
 const VALUE_KEYS: Record<string, string> = {

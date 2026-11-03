@@ -2640,6 +2640,7 @@
   "errors": {
     "genericTitle": "Something went wrong",
     "genericDescription": "This screen hit an error it couldn't recover from.",
+    "diskFull": "Disk penuh, jadi itu tidak bisa disimpan. Kosongkan sebagian ruang dan coba lagi.",
     "reload": "Reload",
     "notFoundTitle": "Not found",
     "notFoundDescription": "This page doesn't exist.",
@@ -2946,6 +2947,7 @@
       "dismiss": "Dismiss",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
+      "unsaved": "Disk penuh, jadi chat ini tidak sedang disimpan. Kosongkan sebagian ruang; chat akan disimpan lagi dengan pesanmu berikutnya.",
       "showInFolder": "Show in folder"
     },
     "part": {
@@ -4514,6 +4516,8 @@
       "free_pool_spent": "Semua sumber gratis sudah habis untuk saat ini. Hubungkan sumber gratis lain, atau pilih model lain.",
       "rate_limited": "Model gratis sedang sibuk. Coba lagi dalam beberapa menit, atau beralih ke model lain.",
       "empty": "Model mengembalikan balasan kosong. Coba lagi, atau beralih ke model lain.",
+      "disk_full": "Disk penuh (tersisa {{free}}), jadi chat ini tidak bisa disimpan dan agen tidak bisa menulis file. Kosongkan sebagian ruang, lalu coba lagi.",
+      "disk_fullUnmeasured": "Disk penuh, jadi chat ini tidak bisa disimpan dan agen tidak bisa menulis file. Kosongkan sebagian ruang, lalu coba lagi.",
       "unknown": "Model tidak bisa menyelesaikan ini. Coba lagi, atau beralih ke model lain."
     },
     "action": {
@@ -4554,6 +4558,7 @@
       "ownKeyMoved": "{{model}} di {{provider}} tidak tersedia, jadi saya mengalihkan chat ini ke {{target}}.",
       "busy": "Model gratis sedang sibuk.",
       "connection": "Koneksinya terputus, jadi aku tidak bisa menyelesaikannya. Coba lagi sebentar lagi.",
+      "diskFull": "Komputer tempat saya berjalan kehabisan ruang disk, jadi saya tidak bisa menyelesaikannya atau menyimpan chat ini. Kosongkan sebagian ruang di sana, lalu kirim pesanmu lagi.",
       "notSignedIn": "Aplikasi desktop sedang tidak masuk ke Abacus.AI. Buka aplikasinya dan masuk, lalu kirim pesan lagi.",
       "generic": "Ada yang salah di sisiku, jadi aku tidak bisa menyelesaikannya. Coba lagi sebentar lagi.",
       "contactFailed": "Aku tidak bisa membalas {{name}} barusan.",
@@ -4736,6 +4741,7 @@
     "skill": "Keterampilan",
     "importMcp": "Impor server MCP",
     "selectTheme": "Pilih Tema",
-    "themes": "Tema"
+    "themes": "Tema",
+    "diskFullLane": "Disk komputer penuh, jadi {{platform}} tidak bisa menyimpan datanya. Koneksi akan pulih sendiri setelah sebagian ruang dikosongkan."
   }
 }

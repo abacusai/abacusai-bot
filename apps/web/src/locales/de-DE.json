@@ -2640,6 +2640,7 @@
   "errors": {
     "genericTitle": "Something went wrong",
     "genericDescription": "This screen hit an error it couldn't recover from.",
+    "diskFull": "Der Speicher ist voll, daher konnte das nicht gespeichert werden. Gib etwas Speicherplatz frei und versuche es erneut.",
     "reload": "Reload",
     "notFoundTitle": "Not found",
     "notFoundDescription": "This page doesn't exist.",
@@ -2946,6 +2947,7 @@
       "dismiss": "Dismiss",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
+      "unsaved": "Der Speicher ist voll, daher wird dieser Chat nicht gespeichert. Gib etwas Speicherplatz frei; mit deiner nächsten Nachricht wird er wieder gespeichert.",
       "showInFolder": "Show in folder"
     },
     "part": {
@@ -4514,6 +4516,8 @@
       "free_pool_spent": "Alle kostenlosen Quellen sind vorerst aufgebraucht. Verbinde eine weitere kostenlose Quelle oder wähle ein anderes Modell.",
       "rate_limited": "Die kostenlosen Modelle sind gerade ausgelastet. Versuche es in ein paar Minuten erneut oder wechsle zu einem anderen Modell.",
       "empty": "Das Modell hat eine leere Antwort geliefert. Versuche es erneut oder wechsle zu einem anderen Modell.",
+      "disk_full": "Der Speicher ist voll ({{free}} frei), daher kann dieser Chat nicht gespeichert werden und der Agent kann keine Dateien schreiben. Gib etwas Speicherplatz frei und versuche es dann erneut.",
+      "disk_fullUnmeasured": "Der Speicher ist voll, daher kann dieser Chat nicht gespeichert werden und der Agent kann keine Dateien schreiben. Gib etwas Speicherplatz frei und versuche es dann erneut.",
       "unknown": "Das Modell konnte das nicht abschließen. Versuche es erneut oder wechsle zu einem anderen Modell."
     },
     "action": {
@@ -4554,6 +4558,7 @@
       "ownKeyMoved": "{{model}} bei {{provider}} ist nicht verfügbar, daher habe ich diesen Chat auf {{target}} umgestellt.",
       "busy": "Die kostenlosen Modelle sind gerade ausgelastet.",
       "connection": "Die Verbindung ist abgebrochen, daher konnte ich das nicht abschließen. Bitte versuche es gleich noch einmal.",
+      "diskFull": "Auf dem Computer, auf dem ich laufe, ist kein Speicherplatz mehr frei, daher konnte ich das nicht abschließen und diesen Chat nicht speichern. Gib dort etwas Speicherplatz frei und sende deine Nachricht dann erneut.",
       "notSignedIn": "Die Desktop-App ist gerade nicht bei Abacus.AI angemeldet. Öffne die App, melde dich an und schreib mir dann erneut.",
       "generic": "Bei mir ist etwas schiefgelaufen, daher konnte ich das nicht abschließen. Bitte versuche es gleich noch einmal.",
       "contactFailed": "Ich konnte {{name}} gerade nicht antworten.",
@@ -4736,6 +4741,7 @@
     "skill": "Fähigkeit",
     "importMcp": "Importieren Sie MCP-Server",
     "selectTheme": "Design auswählen",
-    "themes": "Designs"
+    "themes": "Designs",
+    "diskFullLane": "Der Speicher des Computers ist voll, daher kann {{platform}} seine Daten nicht speichern. Die Verbindung wird automatisch wiederhergestellt, sobald etwas Speicherplatz frei ist."
   }
 }

@@ -2640,6 +2640,7 @@
   "errors": {
     "genericTitle": "Bir şeyler ters gitti",
     "genericDescription": "Bu ekranda düzeltilemeyen bir hata oluştu.",
+    "diskFull": "Disk dolu, bu yüzden kaydedilemedi. Biraz yer açın ve tekrar deneyin.",
     "reload": "Yeniden yükle",
     "notFoundTitle": "Bulunamadı",
     "notFoundDescription": "Bu sayfa yok.",
@@ -2946,6 +2947,7 @@
       "dismiss": "Kapat",
       "historyForeign": "Bu konuşma uygulamanın daha yeni bir sürümüyle kaydedildi, bu yüzden bir kısmı burada görünmeyebilir.",
       "historyTooLarge": "Önceki geçmiş burada gösterilemeyecek kadar büyük ({{size}}, sınır {{limit}}).",
+      "unsaved": "Disk dolu, bu yüzden bu sohbet kaydedilmiyor. Biraz yer açın; bir sonraki mesajınızla yeniden kaydedilir.",
       "showInFolder": "Klasörde göster"
     },
     "part": {
@@ -4514,6 +4516,8 @@
       "free_pool_spent": "Şimdilik tüm ücretsiz kaynaklar tükendi. Başka bir ücretsiz kaynak bağla veya başka bir model seç.",
       "rate_limited": "Ücretsiz modeller şu anda yoğun. Birkaç dakika sonra tekrar dene veya başka bir modele geç.",
       "empty": "Model boş bir yanıt döndürdü. Tekrar dene veya başka bir modele geç.",
+      "disk_full": "Disk dolu ({{free}} kaldı), bu yüzden bu sohbet kaydedilemiyor ve ajan dosya yazamıyor. Biraz yer açın, ardından tekrar deneyin.",
+      "disk_fullUnmeasured": "Disk dolu, bu yüzden bu sohbet kaydedilemiyor ve ajan dosya yazamıyor. Biraz yer açın, ardından tekrar deneyin.",
       "unknown": "Model bunu tamamlayamadı. Tekrar dene veya başka bir modele geç."
     },
     "action": {
@@ -4554,6 +4558,7 @@
       "ownKeyMoved": "{{provider}} üzerindeki {{model}} kullanılamıyor, bu yüzden bu sohbeti {{target}} modeline geçirdim.",
       "busy": "Ücretsiz modeller şu anda yoğun.",
       "connection": "Bağlantı koptuğu için bunu bitiremedim. Lütfen birazdan tekrar dene.",
+      "diskFull": "Çalıştığım bilgisayarda disk alanı kalmadı, bu yüzden bunu bitiremedim ve bu sohbeti kaydedemedim. Orada biraz yer açın, ardından mesajınızı yeniden gönderin.",
       "notSignedIn": "Masaüstü uygulaması şu anda Abacus.AI'da oturum açmış değil. Uygulamayı açıp oturum aç, sonra bana tekrar yaz.",
       "generic": "Benim tarafımda bir sorun oldu, bu yüzden bunu bitiremedim. Lütfen birazdan tekrar dene.",
       "contactFailed": "Az önce {{name}} kişisine yanıt veremedim.",
@@ -4736,6 +4741,7 @@
     "skill": "Beceri",
     "importMcp": "MCP sunucularını içe aktar",
     "selectTheme": "Tema Seç",
-    "themes": "Temalar"
+    "themes": "Temalar",
+    "diskFullLane": "Bilgisayarın diski dolu, bu yüzden {{platform}} verilerini kaydedemiyor. Biraz yer açıldığında kendiliğinden yeniden bağlanır."
   }
 }

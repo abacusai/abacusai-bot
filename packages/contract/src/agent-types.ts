@@ -105,6 +105,8 @@ interface NotificationAction {
   free?: boolean;
   /** `moved-to-abacus`: where the message ran instead, by name. */
   target?: string;
+  /** `retry` on a full disk: the bytes left where the agent writes. */
+  bytesFree?: number;
 }
 
 export interface StreamingNestedToolCall {

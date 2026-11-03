@@ -2640,6 +2640,7 @@
   "errors": {
     "genericTitle": "Something went wrong",
     "genericDescription": "This screen hit an error it couldn't recover from.",
+    "diskFull": "O disco está cheio, então não foi possível salvar. Libere algum espaço e tente novamente.",
     "reload": "Reload",
     "notFoundTitle": "Not found",
     "notFoundDescription": "This page doesn't exist.",
@@ -2946,6 +2947,7 @@
       "dismiss": "Dismiss",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
+      "unsaved": "O disco está cheio, então esta conversa não está sendo salva. Libere algum espaço; ela volta a ser salva com sua próxima mensagem.",
       "showInFolder": "Show in folder"
     },
     "part": {
@@ -4514,6 +4516,8 @@
       "free_pool_spent": "Todas as fontes gratuitas se esgotaram por enquanto. Conecte outra fonte gratuita ou escolha outro modelo.",
       "rate_limited": "Os modelos gratuitos estão ocupados agora. Tente de novo em alguns minutos ou mude para outro modelo.",
       "empty": "O modelo devolveu uma resposta vazia. Tente de novo ou mude para outro modelo.",
+      "disk_full": "O disco está cheio (restam {{free}}), então esta conversa não pode ser salva e o agente não pode gravar arquivos. Libere algum espaço e tente novamente.",
+      "disk_fullUnmeasured": "O disco está cheio, então esta conversa não pode ser salva e o agente não pode gravar arquivos. Libere algum espaço e tente novamente.",
       "unknown": "O modelo não conseguiu terminar isso. Tente de novo ou mude para outro modelo."
     },
     "action": {
@@ -4554,6 +4558,7 @@
       "ownKeyMoved": "{{model}} no {{provider}} não está disponível, então mudei este chat para {{target}}.",
       "busy": "Os modelos gratuitos estão ocupados agora.",
       "connection": "A conexão caiu, então não consegui terminar. Tente de novo daqui a pouco.",
+      "diskFull": "O computador em que eu rodo ficou sem espaço em disco, então não consegui terminar isso nem salvar esta conversa. Libere algum espaço nele e envie sua mensagem de novo.",
       "notSignedIn": "O app para computador não está conectado ao Abacus.AI agora. Abra o app, entre na sua conta e me mande mensagem de novo.",
       "generic": "Algo deu errado do meu lado, então não consegui terminar. Tente de novo daqui a pouco.",
       "contactFailed": "Não consegui responder a {{name}} agora há pouco.",
@@ -4736,6 +4741,7 @@
     "skill": "Habilidade",
     "importMcp": "Importar servidores MCP",
     "selectTheme": "Selecionar um tema",
-    "themes": "Temas"
+    "themes": "Temas",
+    "diskFullLane": "O disco do computador está cheio, então o {{platform}} não consegue salvar seus dados. Ele se reconecta sozinho assim que algum espaço for liberado."
   }
 }

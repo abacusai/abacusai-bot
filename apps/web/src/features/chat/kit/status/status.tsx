@@ -112,6 +112,8 @@ interface ErrorAction {
   credits?: string;
   /** `cut-off`: part of the reply arrived before the cut. */
   streamed?: boolean;
+  /** `retry` on a full disk: the bytes left where the agent writes. */
+  bytesFree?: number;
 }
 
 /** Why the turn did not finish, as the agent named it (turn-outcome.ts). */
@@ -1359,15 +1361,17 @@ export const ErrorCard = ({
               ? t("chat.error.crashed")
               : connection
                 ? t("outcome.connection.title")
-                : cause != null && OUTCOME_CAUSES.has(cause)
-                  ? t(`outcome.cause.${cause}`, {
-                      provider: providerDisplayName(
-                        actions.find((action) => action.provider != null)
-                          ?.provider ?? ""
-                      ),
-                    })
-                  : providerMessage(error.message) ||
-                    t("errors.genericDescription")}
+                : cause === "disk_full"
+                  ? diskFullLine(actions, t)
+                  : cause != null && OUTCOME_CAUSES.has(cause)
+                    ? t(`outcome.cause.${cause}`, {
+                        provider: providerDisplayName(
+                          actions.find((action) => action.provider != null)
+                            ?.provider ?? ""
+                        ),
+                      })
+                    : providerMessage(error.message) ||
+                      t("errors.genericDescription")}
           </div>
           {connection ? (
             <p className="text-muted-foreground text-xs">
@@ -1435,6 +1439,17 @@ const formatBytes = (bytes: number): string =>
     ? `${(bytes / 1024 ** 3).toFixed(1)} GB`
     : `${Math.round(bytes / 1024 ** 2)} MB`;
 
+/** The full-disk card's line, with what is left when the agent measured it. */
+const diskFullLine = (
+  actions: ErrorAction[],
+  t: (key: string, values?: Record<string, string>) => string
+): string => {
+  const free = actions.find((action) => action.type === "retry")?.bytesFree;
+  return free != null
+    ? t("outcome.cause.disk_full", { free: formatBytes(free) })
+    : t("outcome.cause.disk_fullUnmeasured");
+};
+
 const SEVERITY_ICON = {
   info: Info,
   success: CheckCircle2,
@@ -1460,12 +1475,14 @@ export const NoticeRow = ({
   ) as keyof typeof SEVERITY_ICON;
   const Icon = SEVERITY_ICON[severity] ?? Info;
   const actions = (notice.value.actions as ErrorAction[] | undefined) ?? [];
-  // Main's own notice about the thread (a v1 history too large to read, or
-  // a thread file a newer build wrote).
+  // Main's own notice about the thread (a v1 history too large to read, a
+  // thread file a newer build wrote, or a save the full disk refused).
   const tooLarge =
     notice.name === "abacus.notice" && notice.value.kind === "too-large";
   const foreign =
     notice.name === "abacus.notice" && notice.value.kind === "foreign";
+  const unsaved =
+    notice.name === "abacus.notice" && notice.value.kind === "unsaved";
   const historyPath =
     typeof notice.value.path === "string" ? notice.value.path : null;
   // The agent moved the message to RouteLLM - Open: the line in the app's words.
@@ -1479,9 +1496,11 @@ export const NoticeRow = ({
       })
     : foreign
       ? t("chat.notice.historyForeign")
-      : moved != null
-        ? ownKeyMovedLine(moved, t)
-        : String(notice.value.message ?? "");
+      : unsaved
+        ? t("chat.notice.unsaved")
+        : moved != null
+          ? ownKeyMovedLine(moved, t)
+          : String(notice.value.message ?? "");
   return (
     <Marker
       variant="border"
