@@ -11,6 +11,7 @@
 import * as readline from "node:readline";
 import type { Readable } from "node:stream";
 
+import { isBotTask } from "../bot-task.js";
 import type { BotSession } from "../bot/bot-session.js";
 import {
   hostAttached,
@@ -120,6 +121,12 @@ export class HostCore {
   preparing = false;
   /** True while a reset is landing (reserved admission only). */
   resetting = false;
+  /**
+   * True while the running turn is a task another bot passed on for the
+   * user: their messages then wait for it to finish rather than steer it,
+   * so its report holds the task alone.
+   */
+  inBotTask = false;
   /** Bumped by every Stop and reset; the newest one owns the release. */
   private aborts = 0;
   /** Errors a turn's own run already reported (see TurnHooks.failed). */
@@ -620,6 +627,7 @@ export class HostCore {
     } = {}
   ): Promise<void> {
     const turn = this.turn;
+    this.inBotTask = isBotTask(message);
 
     try {
       await this.sendOwned(
@@ -659,6 +667,7 @@ export class HostCore {
       // pi may still hold the leftovers as steers and would inject them on
       // top of the send below, so its copy goes first.
       this.session.dropSteers();
+      this.inBotTask = isBotTask(next.message);
       this.emitQueue(next.message);
       const echoed = this.echoed.delete(next.id);
       if (!echoed) this.emitDequeued(next);
@@ -679,6 +688,7 @@ export class HostCore {
     if (this.turn !== turn) return;
 
     this.busy = false;
+    this.inBotTask = false;
     this.sayIdle();
   }
 
@@ -750,7 +760,7 @@ export class HostCore {
       ...(messageId != null && { messageId }),
       message,
       waitingFor:
-        this.stopping || this.preparing || this.resetting
+        this.stopping || this.preparing || this.resetting || this.inBotTask
           ? "turn"
           : this.awaitingPermission
             ? "permission"

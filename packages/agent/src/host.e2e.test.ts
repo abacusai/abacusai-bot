@@ -24,6 +24,7 @@ import {
 } from "@abacus-ai/test-support/fake-provider";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
+import { BOT_TASK_PREFIX } from "./bot-task.js";
 import type { DesktopCommand, DesktopEvent } from "./protocol.js";
 
 const PACKAGE_ROOT = path.resolve(
@@ -565,6 +566,53 @@ describe("a message sent mid-turn", () => {
     ).toBe(true);
     expect(host.agentEvents("user_message_dequeued")).toHaveLength(0);
     expect(queueEvents(host).at(-1)?.messages).toEqual([]);
+  }, 90_000);
+
+  it("waits for a task another bot passed on, then runs as its own turn", async () => {
+    const host = start(workspace(), ["--permission-mode", "YOLO"]);
+
+    provider.script(driveDocumentTask());
+
+    host.send({
+      type: "send",
+      message: `${BOT_TASK_PREFIX}Researcher] The user asked Researcher to pass you this task. Task: write me a report`,
+    });
+
+    const request = (await host.waitFor(
+      (event) => event.type === "host_service_request",
+      45_000
+    )) as Extract<DesktopEvent, { type: "host_service_request" }>;
+
+    // The user writes to this bot while it does the task: it must not be
+    // steered in, or its answer would land in the task's report.
+    host.send({ type: "send", message: "quick question for you" });
+
+    await host.waitFor(
+      (event) =>
+        event.type === "queue_updated" &&
+        event.messages.some(
+          (entry) =>
+            entry.message === "quick question for you" &&
+            entry.waitingFor === "turn"
+        )
+    );
+
+    host.send({
+      type: "host_service_response",
+      requestId: request.requestId,
+      ok: false,
+      error: "no renderer in this test",
+    });
+
+    // Run as a turn of its own once the task's turn is over.
+    await host.waitFor(
+      (event) =>
+        event.type === "event" &&
+        event.event.type === "user_message_dequeued" &&
+        event.event.content === "quick question for you",
+      45_000
+    );
+    expect(host.agentEvents("user_message_steered")).toHaveLength(0);
   }, 90_000);
 
   it("waits behind a permission prompt, then steers once it is answered", async () => {

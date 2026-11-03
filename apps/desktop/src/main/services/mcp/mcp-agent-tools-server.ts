@@ -428,7 +428,12 @@ export interface McpAgentToolsServerOptions {
    */
   botAsks?: {
     /** The user's bots as asking needs them. */
-    bots: () => Array<{ id: string; name: string; title: string }>;
+    bots: () => Array<{
+      id: string;
+      name: string;
+      title: string;
+      model?: string | null;
+    }>;
     asks: Pick<BotAskService, "list" | "get" | "cancel"> & {
       /** The bot's own question to another bot. */
       ask: (
@@ -2799,7 +2804,8 @@ export class McpAgentToolsServer extends McpHttpServer {
       (kind === "task" ? taskStartedText : askStartedText)(
         found.bot,
         started.ask.id,
-        started.behind
+        started.behind,
+        found.bot.model
       )
     );
   }

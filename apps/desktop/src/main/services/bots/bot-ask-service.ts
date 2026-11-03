@@ -30,6 +30,7 @@ import {
   botAskIntro,
   botTaskPrompt,
   frameBotRequest,
+  ownChatContext,
   MAX_REQUESTS_PER_DAY,
 } from "./bot-ask";
 
@@ -93,6 +94,10 @@ export interface BotAskDeps {
   write: (records: BotAskRecord[]) => void;
   /** A request was made: the asker's follow-up tools appear (re-list). */
   changed?: () => void;
+  /** The user's latest lines in a bot's own chat, for an ask's context. */
+  ownChatLines?: (botId: string) => string[];
+  /** One line per request event, no message text: for the app's log. */
+  log?: (line: string) => void;
   now?: () => number;
   newId?: () => string;
 }
@@ -201,6 +206,7 @@ export class BotAskService {
       .read()
       .filter((each) => isOpenAsk(each) && laneOf(each) === laneOf(ask)).length;
     this.save([...this.deps.read(), ask]);
+    this.logLine(ask, "queued");
     this.deps.changed?.();
     this.pump(laneOf(ask));
     return { ask, behind };
@@ -230,6 +236,7 @@ export class BotAskService {
     if (!isOpenAsk(ask))
       return { error: `Request ${ask.id} is already ${ask.status}.` };
     this.patch(ask.id, { status: "cancelled", endedAt: this.now() });
+    this.logLine(ask, "cancelled");
     if (ask.status === "running") this.deps.stopTurn(ask);
     return { ok: `Cancelled request ${ask.id}. No answer will come for it.` };
   }
@@ -290,6 +297,7 @@ export class BotAskService {
       attempts: next.attempts + 1,
     };
     this.patch(next.id, { status: "running", attempts: started.attempts });
+    this.logLine(started, "running");
     let prompt: string;
     let visibleFrom: number | null;
     if (next.kind === "task") {
@@ -301,7 +309,10 @@ export class BotAskService {
       visibleFrom = null;
     } else {
       const framed = frameBotRequest(asker, next.request);
-      prompt = `${botAskIntro(asker)}\n\n${framed}`;
+      const context = ownChatContext(
+        this.deps.ownChatLines?.(next.targetId) ?? []
+      );
+      prompt = `${botAskIntro(asker)}\n\n${context.length > 0 ? `${context}\n\n` : ""}${framed}`;
       visibleFrom = prompt.length - framed.length;
     }
     void this.deps
@@ -333,6 +344,7 @@ export class BotAskService {
         : { status: "failed" as const, error: outcome.error }),
       endedAt: this.now(),
     });
+    this.logLine(ask, "answer" in outcome ? "answered" : "failed");
     const answerer = this.deps.bot(ask.targetId) ?? {
       name: "The other bot",
       title: "",
@@ -343,6 +355,14 @@ export class BotAskService {
         { id: ask.id, request: ask.request, kind: ask.kind, ...outcome },
         answerer
       )
+    );
+  }
+
+  /** e.g. `[bot-ask] q1 task res->pla answered 42s attempt 1`; never the text. */
+  private logLine(ask: BotAskRecord, event: string): void {
+    const seconds = Math.round((this.now() - ask.createdAt) / 1000);
+    this.deps.log?.(
+      `[bot-ask] ${ask.id} ${ask.kind ?? "ask"} ${ask.askerId}->${ask.targetId} ${event} ${seconds}s attempt ${ask.attempts}`
     );
   }
 

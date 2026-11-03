@@ -36,6 +36,7 @@ const setup = (stored: BotAskRecord[] = []) => {
   }> = [];
   const stopTurn = vi.fn();
   const changed = vi.fn();
+  const logs: string[] = [];
   const service = new BotAskService({
     bot: (id) =>
       (BOTS as Record<string, { id: string; name: string; title: string }>)[
@@ -61,6 +62,11 @@ const setup = (stored: BotAskRecord[] = []) => {
     now: () => now,
     newId: () => `q${++ids}`,
     changed,
+    ownChatLines: (botId) =>
+      botId === "wri"
+        ? ["our brand voice is cheeky", "always say pre-order"]
+        : [],
+    log: (line) => logs.push(line),
   });
   return {
     service,
@@ -68,6 +74,7 @@ const setup = (stored: BotAskRecord[] = []) => {
     notes,
     stopTurn,
     changed,
+    logs,
     records: () => records,
     later: (ms: number) => {
       now += ms;
@@ -89,6 +96,32 @@ describe("BotAskService", () => {
     expect(turns[0].prompt).toContain(
       "[from bot Researcher (Research Scout)] Draft a post"
     );
+  });
+
+  it("gives the asked bot what the user told it in its own chat, as context", () => {
+    const { service, turns } = setup();
+    service.ask("res", "res-chat", "wri", "Draft a tagline");
+    service.ask("res", "res-chat", "pla", "Plan the week");
+    expect(turns[0].prompt).toContain(
+      "What the user told you recently in your own chat"
+    );
+    expect(turns[0].prompt).toContain("- always say pre-order");
+    // The request still comes last, after the context.
+    expect(turns[0].prompt.trimEnd().endsWith("Draft a tagline")).toBe(true);
+    expect(turns[1].prompt).not.toContain("What the user told you recently");
+  });
+
+  it("logs each request's steps without its text", async () => {
+    const { service, turns, logs } = setup();
+    service.ask("res", "res-chat", "wri", "a secret plan");
+    turns[0].answer("<reply>ok</reply>");
+    await settle();
+    expect(logs).toEqual([
+      "[bot-ask] q1 ask res->wri queued 0s attempt 0",
+      "[bot-ask] q1 ask res->wri running 0s attempt 1",
+      "[bot-ask] q1 ask res->wri answered 0s attempt 1",
+    ]);
+    expect(logs.join(" ")).not.toContain("secret");
   });
 
   it("says a request was made, so the asker's follow-up tools appear", () => {

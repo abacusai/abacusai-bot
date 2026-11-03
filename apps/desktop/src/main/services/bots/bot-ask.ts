@@ -10,6 +10,7 @@
  * conversation with the asker (a sender chat on the "bot" platform), so its
  * main chat with the user is never touched.
  */
+import { BOT_TASK_PREFIX } from "@abacus-ai/agent/bot-task";
 import type { Bot } from "@abacus-ai/contract/bots";
 import {
   lastTaggedReply,
@@ -28,9 +29,10 @@ export const BOT_TASK_TURN_TIMEOUT_MS = 30 * 60_000;
 /**
  * How a task from the user opens in the other bot's chat. Written only by
  * the app; a turn opened by it never counts as the user's words, so the bot
- * doing the task cannot pass it on again with the user's authority.
+ * doing the task cannot pass it on again with the user's authority, and the
+ * agent holds the user's own messages until it is done.
  */
-export const BOT_TASK_PREFIX = "[task from the user, passed on by ";
+export { BOT_TASK_PREFIX };
 
 /** The most of an answer that reaches the asker: a small model does better with less. */
 export const MAX_BOT_ANSWER_CHARS = 4_000;
@@ -91,6 +93,19 @@ export const botAskIntro = (asker: Named): string =>
  * last part is its answer; everything before is narration.
  */
 export const BOT_ANSWER_SEGMENT = "\n␞\n";
+
+/**
+ * What the user recently told the asked bot in its own chat, as context for
+ * an ask (that chat is not this conversation). Empty when there is none.
+ */
+export const ownChatContext = (lines: readonly string[]): string =>
+  lines.length === 0
+    ? ""
+    : [
+        "What the user told you recently in your own chat with them, for",
+        "context (not part of this request):",
+        ...lines.map((line) => `- ${line}`),
+      ].join("\n");
 
 /** The request as the asked bot sees it: who is asking, then what. */
 export const frameBotRequest = (asker: Named, request: string): string =>
@@ -231,13 +246,21 @@ export const botTaskPrompt = (
   ].join("\n");
 
 /** What `give_task_to_bot` says the moment the task is queued. */
+/** "It runs on <model>." when known: each request is a paid turn on it. */
+const runsOn = (model: string | null | undefined): string[] =>
+  model != null && model.length > 0
+    ? [`It runs on ${model.replace(/^abacus\//, "")}, one turn per request.`]
+    : [];
+
 export const taskStartedText = (
   doer: Named,
   id: string,
-  behind: number
+  behind: number,
+  model?: string | null
 ): string =>
   [
     `Passed the task to ${doer.name} (task ${id}).`,
+    ...runsOn(model),
     behind > 0
       ? `It first finishes ${behind === 1 ? "an earlier task" : `${behind} earlier tasks`}, then this one.`
       : "It is working on it in its own chat now.",
@@ -250,10 +273,12 @@ export const taskStartedText = (
 export const askStartedText = (
   answerer: Named,
   id: string,
-  behind: number
+  behind: number,
+  model?: string | null
 ): string =>
   [
     `Asked ${answerer.name} (request ${id}).`,
+    ...runsOn(model),
     behind > 0
       ? `It first finishes ${behind === 1 ? "an earlier ask" : `${behind} earlier asks`} from you, then this one.`
       : "It is working on it now.",

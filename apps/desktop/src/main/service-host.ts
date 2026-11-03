@@ -432,6 +432,7 @@ import {
   signInToMcpServer,
 } from "./services/mcp/mcp-oauth-service";
 import { retirePlaywrightEntries } from "./services/mcp/playwright-migration";
+import { readTranscriptTail } from "./services/mcp/transcript-tail";
 import { watchPort } from "./services/mcp/unattended-browser";
 import {
   BOT_NUMBER_FOR_AGENT,
@@ -1447,6 +1448,7 @@ export class ServiceHost {
           id: bot.id,
           name: bot.name,
           title: bot.title,
+          model: bot.model,
         })),
       asks: {
         ask: (askerId, askerSession, targetId, request) =>
@@ -5388,6 +5390,8 @@ export class ServiceHost {
       text: string[];
       /** Why it failed when the turn names no error. */
       failed: string;
+      /** Why, when the user stopped the turn. */
+      stopped?: string;
       /** Mark each new message and tool call with this, so the last part can be told apart. */
       segment?: string;
       /** The message the last text belonged to. */
@@ -5421,13 +5425,20 @@ export class ServiceHost {
     if (waiter == null) return;
     this.turnWaiters.delete(record.sessionId);
     if (record.kind === "reply") waiter.resolve(waiter.text.join("").trim());
+    else if (record.kind === "stopped" && waiter.stopped != null)
+      waiter.reject(new Error(waiter.stopped));
     else waiter.reject(new Error(record.error?.message ?? waiter.failed));
   }
 
   private waitForTurn(
     sessionId: string,
     timeoutMs: number,
-    messages: { timeout: string; failed: string; segment?: string } = {
+    messages: {
+      timeout: string;
+      failed: string;
+      stopped?: string;
+      segment?: string;
+    } = {
       timeout: "The routine did not answer in time.",
       failed: "The editor did not answer.",
     }
@@ -5440,6 +5451,7 @@ export class ServiceHost {
       this.turnWaiters.set(sessionId, {
         text: [],
         failed: messages.failed,
+        ...(messages.stopped != null ? { stopped: messages.stopped } : {}),
         ...(messages.segment != null
           ? { segment: messages.segment, messageId: null }
           : {}),
@@ -5483,6 +5495,8 @@ export class ServiceHost {
     // The app's one way to refresh running chats' tools (as when a chat app
     // connects): the asker's follow-up tools appear.
     changed: () => this.toolAvailabilityChanged(),
+    ownChatLines: (botId) => this.recentUserLines(botId),
+    log: (line) => console.log(line),
     ...fileAskStore(),
   });
 
@@ -5636,6 +5650,24 @@ export class ServiceHost {
       : null;
   }
 
+  /**
+   * The user's last few messages in a bot's own (forever) chat, short: the
+   * context an asked bot answers with, since an ask runs in another chat.
+   */
+  private recentUserLines(botId: string): string[] {
+    const sessionId = this.botService
+      .list()
+      .find((bot) => bot.id === botId)?.sessionId;
+    if (sessionId == null) return [];
+    const file =
+      this.agentSessionManagerService.getDiagnosticInfo(sessionId)
+        ?.agentSessionFile ?? null;
+    return readTranscriptTail(file, 12)
+      .filter((turn) => turn.role === "user")
+      .slice(-5)
+      .map((turn) => turn.text);
+  }
+
   /** The asked bot's conversation for each ask whose turn is running. */
   private readonly botAskTurns = new Map<string, BotChatHandle>();
 
@@ -5681,6 +5713,9 @@ export class ServiceHost {
         {
           timeout: `it took more than ${task ? 30 : 10} minutes, so it was stopped.`,
           failed: "its turn ended without an answer.",
+          stopped: task
+            ? "the user stopped it partway through, so it may be half done."
+            : "it was stopped before it answered.",
           segment: BOT_ANSWER_SEGMENT,
         }
       );

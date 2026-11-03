@@ -197,7 +197,7 @@ describe("runBotAskTurn", () => {
   });
 
   it("names why when the turn ends without answering", async () => {
-    const { run } = fakeHost((turn) => turn.close("stopped"));
+    const { run } = fakeHost((turn) => turn.close("failed"));
     await expect(run()).rejects.toThrow(/ended without an answer/);
   });
 });
@@ -263,7 +263,7 @@ describe("where a request's answer goes", () => {
 describe("a task the user gave, passed on", () => {
   const TASK: BotAskRecord = { ...ASK, id: "q8", kind: "task" };
 
-  const taskHost = (openTurn: boolean) => {
+  const taskHost = (openTurn: boolean, ends = "reply") => {
     const closers: Array<(record: { sessionId: string }) => void> = [];
     let open = openTurn;
     const self: Record<string, unknown> = {
@@ -304,7 +304,7 @@ describe("a task the user gave, passed on", () => {
           type: "event",
           event: { type: "text_delta", content: "Posted.", messageId: "m1" },
         });
-        (self.settleTurnWaiter as Method)({ sessionId, kind: "reply" });
+        (self.settleTurnWaiter as Method)({ sessionId, kind: ends });
         return true;
       }
     );
@@ -314,6 +314,15 @@ describe("a task the user gave, passed on", () => {
     };
     return { self, endUserTurn };
   };
+
+  it("tells the bot that passed it on when the user stopped it partway", async () => {
+    const { self } = taskHost(false, "stopped");
+    await expect(
+      (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null)
+    ).rejects.toThrow(
+      "the user stopped it partway through, so it may be half done."
+    );
+  });
 
   it("runs in the doing bot's own chat, shown as it arrived", async () => {
     const { self } = taskHost(false);

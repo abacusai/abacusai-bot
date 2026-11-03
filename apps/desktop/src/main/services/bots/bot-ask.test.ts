@@ -173,6 +173,13 @@ describe("what the asker hears", () => {
     expect(text).toContain('"[bot answer]" note');
   });
 
+  it("is told which model the other bot runs on, since each request is a turn on it", () => {
+    expect(
+      askStartedText(bots[1], "x", 0, "abacus/deepseek-v4.1-flash")
+    ).toContain("It runs on deepseek-v4.1-flash, one turn per request.");
+    expect(askStartedText(bots[1], "x", 0, null)).not.toContain("runs on");
+  });
+
   it("is told when its request waits behind earlier ones", () => {
     expect(askStartedText(bots[1], "x", 2)).toContain("2 earlier asks");
   });
