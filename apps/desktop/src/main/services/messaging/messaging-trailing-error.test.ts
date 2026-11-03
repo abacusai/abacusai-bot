@@ -595,6 +595,22 @@ describe("the user's own chat, any plan", () => {
     ]);
   });
 
+  it("a full disk: says so and asks for space, never 'something went wrong'", async () => {
+    const h = harness({ self: true });
+    await h.inbound("hi");
+    h.fail({
+      message: "The disk is full.",
+      code: "turn_failed",
+      cause: "disk_full",
+      actions: [{ type: "retry", bytesFree: 0 }],
+    });
+    await settle();
+
+    expect(h.sent()).toEqual([
+      "The computer I run on is out of disk space, so I couldn't finish that or save this chat. Free some space on it, then send your message again.",
+    ]);
+  });
+
   it("Abacus's billing gate: support and the billing page, never a purchase", async () => {
     mocks.fetchUpgradeUrl = vi.fn(async () => UPGRADE_URL);
     const h = harness({ self: true });

@@ -62,6 +62,7 @@ export type FailureKind =
   | "free-pool-out"
   | "model-unavailable"
   | "connection"
+  | "disk-full"
   | "timed-out"
   | "agent-exited"
   | "not-started"
@@ -94,6 +95,9 @@ const NETWORK_UNREACHABLE_CODE = "network_unreachable";
 
 /** The empty-reply failure's cause (the agent's turn-outcome.ts): one, whoever saw it. */
 const EMPTY_CAUSE = "empty";
+
+/** A write on the computer failed for lack of space (turn-outcome.ts). */
+const DISK_FULL_CAUSE = "disk_full";
 
 /**
  * What the chat is told about a closed turn (TurnLedger), or null when the
@@ -141,6 +145,8 @@ const offersSwitch = (error: TurnFailure): boolean =>
 
 export const failureKind = (error: TurnFailure): FailureKind => {
   const types = new Set(error.actions?.map((action) => action.type));
+  // The machine's disk is full: nothing about the account or model helps.
+  if (error.cause === DISK_FULL_CAUSE) return "disk-full";
   // Google cut the reply off: its own line, whatever the credits.
   if (types.has("cut-off")) return "cut-off";
   // The picked model cannot serve the turn: its own line, credits or not.
@@ -466,6 +472,8 @@ export const chatReplyForFailure = (
       return t("outcome.channel.notSignedIn");
     case "connection":
       return t("outcome.channel.connection");
+    case "disk-full":
+      return t("outcome.channel.diskFull");
     case "timed-out":
       return t("outcome.channel.timedOut");
     case "agent-exited":

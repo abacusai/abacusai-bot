@@ -5,6 +5,7 @@
  * pending writes applied over a baseline, rolls back only a failed one and
  * refetches once after the last.
  */
+import { ORPCError } from "@orpc/client";
 import {
   CancelledError,
   MutationObserver,
@@ -84,6 +85,33 @@ it("refetches the keys a mutation names once it succeeds, not when it fails", as
   );
   expect(readA).not.toHaveBeenCalled();
   for (const stop of stops) stop();
+});
+
+it("a full disk is said as such, whatever copy the site chose", async () => {
+  const client = createClient();
+  const full = () =>
+    Promise.reject(
+      new ORPCError("PRECONDITION_FAILED", {
+        defined: true,
+        status: 412,
+        data: { reason: "disk-full" },
+      })
+    );
+  await run(
+    client,
+    { mutationFn: full, meta: { errorToast: "phase5.saveFailed" } },
+    undefined
+  );
+  await tick();
+  await run(
+    client,
+    { mutationFn: full, meta: { errorToast: true } },
+    undefined
+  );
+  expect(showError.mock.calls).toEqual([
+    [enUS.errors.diskFull],
+    [enUS.errors.diskFull],
+  ]);
 });
 
 it("toasts by the site's policy: a copy key, the error's message, main's reason or nothing", async () => {

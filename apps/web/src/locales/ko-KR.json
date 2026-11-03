@@ -2640,6 +2640,7 @@
   "errors": {
     "genericTitle": "Something went wrong",
     "genericDescription": "This screen hit an error it couldn't recover from.",
+    "diskFull": "디스크가 가득 차서 저장하지 못했습니다. 공간을 확보한 뒤 다시 시도하세요.",
     "reload": "Reload",
     "notFoundTitle": "Not found",
     "notFoundDescription": "This page doesn't exist.",
@@ -2946,6 +2947,7 @@
       "dismiss": "Dismiss",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
+      "unsaved": "디스크가 가득 차서 이 채팅이 저장되지 않고 있습니다. 공간을 확보하세요. 다음 메시지를 보낼 때 다시 저장됩니다.",
       "showInFolder": "Show in folder"
     },
     "part": {
@@ -4514,6 +4516,8 @@
       "free_pool_spent": "현재 모든 무료 소스를 다 사용했어요. 다른 무료 소스를 연결하거나 다른 모델을 선택하세요.",
       "rate_limited": "무료 모델이 지금 혼잡해요. 몇 분 후 다시 시도하거나 다른 모델로 전환하세요.",
       "empty": "모델이 빈 답변을 보냈어요. 다시 시도하거나 다른 모델로 전환하세요.",
+      "disk_full": "디스크가 가득 찼습니다({{free}} 남음). 이 채팅을 저장할 수 없고 에이전트가 파일을 쓸 수 없습니다. 공간을 확보한 뒤 다시 시도하세요.",
+      "disk_fullUnmeasured": "디스크가 가득 찼습니다. 이 채팅을 저장할 수 없고 에이전트가 파일을 쓸 수 없습니다. 공간을 확보한 뒤 다시 시도하세요.",
       "unknown": "모델이 이 작업을 끝내지 못했어요. 다시 시도하거나 다른 모델로 전환하세요."
     },
     "action": {
@@ -4554,6 +4558,7 @@
       "ownKeyMoved": "{{provider}}의 {{model}}을(를) 사용할 수 없어 이 채팅을 {{target}}(으)로 전환했습니다.",
       "busy": "무료 모델이 지금 혼잡해요.",
       "connection": "연결이 끊겨서 끝내지 못했어요. 잠시 후 다시 시도해 주세요.",
+      "diskFull": "제가 실행 중인 컴퓨터의 디스크 공간이 부족해서 작업을 마치지 못했고 이 채팅도 저장하지 못했습니다. 공간을 확보한 뒤 메시지를 다시 보내 주세요.",
       "notSignedIn": "데스크톱 앱이 지금 Abacus.AI에 로그인되어 있지 않아요. 앱을 열어 로그인한 뒤 다시 메시지를 보내 주세요.",
       "generic": "제 쪽에서 문제가 생겨 끝내지 못했어요. 잠시 후 다시 시도해 주세요.",
       "contactFailed": "방금 {{name}}님에게 답장하지 못했어요.",
@@ -4736,6 +4741,7 @@
     "skill": "스킬",
     "importMcp": "MCP 서버 가져오기",
     "selectTheme": "테마 선택",
-    "themes": "테마"
+    "themes": "테마",
+    "diskFullLane": "컴퓨터의 디스크가 가득 차서 {{platform}}에서 데이터를 저장할 수 없습니다. 공간이 확보되면 자동으로 다시 연결됩니다."
   }
 }

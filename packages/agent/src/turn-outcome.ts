@@ -6,6 +6,7 @@
  * card, a model switch) and the desktop words for a chat app. Nothing else
  * reads a provider's error text to decide what the user sees.
  */
+import { isDiskFull } from "./atomic-file.js";
 import {
   failedCallStreamed,
   NETWORK_UNREACHABLE_CODE,
@@ -64,6 +65,11 @@ export type FailureCause =
   | "empty"
   /** The model went silent past the stall window, even after asking again. */
   | "stalled"
+  /**
+   * A write on this machine failed for lack of space (the agent's session
+   * file, a tool's output): no model or plan helps until space is freed.
+   */
+  | "disk_full"
   | "unknown";
 
 /** Providers whose keys are the platform's, not the user's own. */
@@ -122,6 +128,9 @@ export function classifyAttempt(
   const status = Number(failureStatus(raw) ?? Number.NaN);
   const text = raw.toLowerCase();
 
+  // This machine's own write, never a provider's reply: those carry a status.
+  if (Number.isNaN(status) && isDiskFull(raw)) return "disk_full";
+
   // The credit and billing gates are Abacus's, decided by who refused:
   // another provider's balance sentence is the user's own key.
   const refusal = abacusRefusal(raw, provider);
@@ -177,6 +186,8 @@ export function classifyAttempt(
  * comes first; "busy" only when nothing more specific happened.
  */
 const CAUSE_PRIORITY: readonly FailureCause[] = [
+  // The machine itself: nothing else on the list can be done about it first.
+  "disk_full",
   "phone_verification",
   "credits_exhausted",
   "credits_expired",
@@ -306,6 +317,8 @@ export interface FailureContext {
   streamed?: boolean;
   /** Cut-off cards this session already showed: from the second, no Continue. */
   cutoffsBefore?: number;
+  /** For a full disk: the bytes left where the agent writes, when measured. */
+  freeBytes?: number;
 }
 
 /** The error a failed turn ends with, as the desktop receives it. */
@@ -373,6 +386,8 @@ const routedMessage = (failure: TurnFailure): string => {
       const seconds = /([\d.]+)s$/.exec(failure.raw)?.[1];
       return `The model stopped answering${seconds != null ? ` (no output for ${seconds}s)` : ""}. Try again, or switch to a different model.`;
     }
+    case "disk_full":
+      return "The disk is full, so this chat can't be saved and the agent can't write files. Free some space, then try again.";
     case "unknown":
       return "The free models couldn't finish this. Try again, or switch to a different model.";
     case "stream_cut":
@@ -659,6 +674,13 @@ const failureActions = (
     }
     case "connection":
       return [{ type: "retry" }];
+    case "disk_full":
+      return [
+        {
+          type: "retry",
+          ...(context.freeBytes != null && { bytesFree: context.freeBytes }),
+        },
+      ];
     case "context_too_long":
       return [{ type: "new-chat" }, { type: "switch-model" }];
     case "key_invalid":
@@ -765,6 +787,7 @@ export function presentFailure(
   const wallAgain =
     context.onFreeLane &&
     failure.cause !== "connection" &&
+    failure.cause !== "disk_full" &&
     failure.cause !== "context_too_long" &&
     failure.cause !== "payment_required" &&
     failure.cause !== "phone_verification" &&
@@ -785,6 +808,7 @@ export function presentFailure(
     context.routed ||
     connection ||
     ownKeyLine ||
+    failure.cause === "disk_full" ||
     failure.cause === "empty" ||
     failure.cause === "stalled" ||
     failure.cause === "stream_cut" ||

@@ -105,6 +105,35 @@ describe("the main-process crash guard", () => {
     expect(logged).not.toHaveBeenCalled();
   });
 
+  it("logs a full disk's first failure and folds the repeats into one count", async () => {
+    vi.useFakeTimers();
+    try {
+      const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+      await install();
+      const enospc = () =>
+        Object.assign(new Error("ENOSPC: no space left on device, write"), {
+          code: "ENOSPC",
+        });
+
+      for (let i = 0; i < 50; i += 1)
+        process.emit("uncaughtException", enospc());
+      process.emit("unhandledRejection", enospc(), Promise.resolve());
+      expect(logged).toHaveBeenCalledTimes(1);
+      // Anything else is still logged each time.
+      process.emit("uncaughtException", new Error("Socket timeout"));
+      expect(logged).toHaveBeenCalledTimes(2);
+
+      vi.advanceTimersByTime(10 * 60_000);
+      process.emit("uncaughtException", enospc());
+      expect(logged.mock.calls.at(-2)?.join(" ")).toContain(
+        "50 more write failures"
+      );
+      expect(logged.mock.calls.at(-1)?.join(" ")).toContain("ENOSPC");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("installs once, however many times it is called", async () => {
     await install();
     const afterFirst = listenersOf("uncaughtException").length;

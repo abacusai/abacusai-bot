@@ -19,6 +19,7 @@ import {
 
 import { sponsoredRunActive } from "../abacus-endpoint.js";
 import { Allowances } from "../allowances.js";
+import { freeBytes } from "../atomic-file.js";
 import { PYTHON_SETUP_TIMEOUT_MS, setPythonProvisioner } from "../backends.js";
 import { notifyConversationQueueCleared } from "../background-processes.js";
 import { basePrompt } from "../base-prompt.js";
@@ -1583,6 +1584,12 @@ export class ForeverEngine {
               streamed: this.cutStreamedThisTurn,
               cutoffsBefore: this.router.noteStreamCutCard(),
             }),
+          // The disk the session file is written to: what the turn failed on.
+          ...(failure.cause === "disk_full" && {
+            freeBytes: freeBytes(
+              this.session?.sessionManager.getSessionDir() ?? this.options.cwd
+            ),
+          }),
         }),
       },
       { origin: "turn" }

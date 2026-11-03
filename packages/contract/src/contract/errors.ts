@@ -45,7 +45,9 @@ export type PreconditionReason =
   /** Another of the user's bots made the hosted routine. */
   | "wrong-bot"
   /** Hosted routines are switched off for the account for now. */
-  | "routines-off";
+  | "routines-off"
+  /** The computer's disk is full: nothing can be saved until space is freed. */
+  | "disk-full";
 
 /** Why the server would not take a hosted routine's values. */
 export type RoutineRefusal =

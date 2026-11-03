@@ -1,3 +1,4 @@
+import { isDiskFull } from "@abacus-ai/agent/atomic-file";
 import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 import { BrowserWindow, net, powerMonitor } from "electron";
 
@@ -7,6 +8,7 @@ import {
   parentWindow,
   presentAsDialog,
 } from "../../bring-to-front";
+import { nativeT } from "../config/native-language";
 import {
   backoffDelayMs,
   BOT_SIGNATURE,
@@ -33,10 +35,13 @@ import {
   savePlatformSignedIn,
 } from "./messaging-config-service";
 import {
+  backOnline,
   BOOT_MAX_RELOADS,
+  diskSpaceBack,
   FIRST_LOAD_WAIT_MS,
   pageBusy,
   PageBootWatch,
+  retryWhen,
 } from "./page-boot-watch";
 import {
   type BridgeChat,
@@ -115,9 +120,6 @@ const BRIDGE_RETRY_MS = 10 * 60_000;
 const MAX_STUCK_RELOADS = 3;
 /** QR polls in a row before the page is believed signed out (as after a link). */
 const QR_BELIEVED_POLLS = 4;
-/** How often a lane parked offline checks whether the network is back. */
-const ONLINE_CHECK_MS = 10_000;
-
 /** Chromium's net error for a navigation we replaced or refused ourselves. */
 const NET_ERR_ABORTED = -3;
 /** Chromium's certificate errors: -200 to -299. */
@@ -178,8 +180,8 @@ export class WhatsAppWebConnector implements MessagingConnector {
   private parkedNote: string | null = null;
   /** The stored sign-in verdict, so a poll writes it on change only. */
   private signedInRecord: boolean | null = null;
-  /** Set while a lane parked offline waits to try once more on reconnect. */
-  private onlineCheck: ReturnType<typeof setInterval> | null = null;
+  /** Set while a parked lane waits for the network or disk space to come back. */
+  private stopParkedWait: (() => void) | null = null;
   private readonly loginPoll = new PollScheduler(
     () => this.checkLogin(),
     LOGIN_POLL_MS,
@@ -327,7 +329,8 @@ export class WhatsAppWebConnector implements MessagingConnector {
   async stop(): Promise<void> {
     this.running = false;
     this.parkedNote = null;
-    this.stopOnlineCheck();
+    this.stopParkedWait?.();
+    this.stopParkedWait = null;
     this.loggedIn = false;
     this.bridgeReady = false;
     this.bridge = null;
@@ -1494,7 +1497,8 @@ export class WhatsAppWebConnector implements MessagingConnector {
     this.park("error", failure === "network" ? UNREACHABLE : fallback);
     // Started before the network was up (a login item at boot), or dropped
     // since: one more try once it is back. Online means the site itself.
-    if (failure === "network" && !net.isOnline()) this.retryWhenOnline();
+    if (failure === "network" && !net.isOnline())
+      this.retryWhenClear(backOnline, "back online");
   }
 
   /** The user clicked Connect: a fresh start for the checks and the page. */
@@ -1502,7 +1506,8 @@ export class WhatsAppWebConnector implements MessagingConnector {
     this.stuckReloads = 0;
     this.qrTicks = 0;
     this.boot.reset();
-    this.stopOnlineCheck();
+    this.stopParkedWait?.();
+    this.stopParkedWait = null;
     if (!this.running || this.parkedNote == null) return;
     this.parkedNote = null;
     this.callbacks.onLog("whatsapp-web: opened by the user, checking again");
@@ -1532,22 +1537,28 @@ export class WhatsAppWebConnector implements MessagingConnector {
     this.parkUnloaded(UNREACHABLE);
   }
 
-  private retryWhenOnline(): void {
-    this.stopOnlineCheck();
-    this.onlineCheck = setInterval(() => {
-      if (!net.isOnline()) return;
-      this.stopOnlineCheck();
+  /** Parked by the machine (no network, a full disk): back by itself once it clears. */
+  private retryWhenClear(ready: () => boolean, what: string): void {
+    this.stopParkedWait?.();
+    this.stopParkedWait = retryWhen(ready, () => {
+      this.stopParkedWait = null;
       if (!this.running || this.parkedNote == null) return;
-      this.callbacks.onLog("whatsapp-web: back online, loading the page again");
+      this.callbacks.onLog(`whatsapp-web: ${what}, loading the page again`);
       this.resume();
       this.ensureWindow();
-    }, ONLINE_CHECK_MS);
+    });
   }
 
-  private stopOnlineCheck(): void {
-    if (this.onlineCheck == null) return;
-    clearInterval(this.onlineCheck);
-    this.onlineCheck = null;
+  /**
+   * The page's own storage found the disk full: every check fails the same
+   * way, and a page that met it does not come back by itself, so the lane
+   * parks with the reason and loads a fresh page once space is freed.
+   */
+  private parkOnFullDisk(): void {
+    if (!this.running || this.parkedNote != null) return;
+    this.callbacks.onLog("whatsapp-web: the disk is full, waiting for space");
+    this.park("error", nativeT("diskFullLane", { platform: "WhatsApp" }));
+    this.retryWhenClear(diskSpaceBack, "disk space is back");
   }
 
   // ── Inbound + contacts ─────────────────────────────────────────────────
@@ -1887,6 +1898,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
       this.callbacks.onLog(
         `whatsapp-web: script failed: ${String((error as Error)?.message ?? error)}`
       );
+      if (isDiskFull(error)) this.parkOnFullDisk();
       return null;
     }
   }

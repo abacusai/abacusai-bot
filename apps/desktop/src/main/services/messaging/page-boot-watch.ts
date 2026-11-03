@@ -1,4 +1,5 @@
-import { net, type WebContents } from "electron";
+import { freeBytes } from "@abacus-ai/agent/atomic-file";
+import { app, net, type WebContents } from "electron";
 
 /**
  * When a hidden chat-app page (Discord, Telegram Web) shows neither its app
@@ -83,3 +84,37 @@ export class PageBootWatch {
 /** See PageBootWatch.stuck: whether the page may still come up by itself. */
 export const pageBusy = (contents: WebContents): PageBusy =>
   !net.isOnline() ? "offline" : contents.isLoading() ? "loading" : null;
+
+/** How often a parked lane checks whether what parked it has cleared. */
+const RETRY_CHECK_MS = 10_000;
+
+/**
+ * Free space a parked lane waits for before it loads its page again. A cold
+ * WhatsApp Web boot alone writes about 30 MB (its service worker and cache);
+ * a linked page then syncs its chats on top. Chromium's storage commits
+ * down to a megabyte or so, so this is the page's room, not a quota reserve.
+ */
+const DISK_SPACE_BACK_BYTES = 256 * 1024 * 1024;
+
+/** The network is back, by the OS's own answer. */
+export const backOnline = (): boolean => net.isOnline();
+
+/** The disk holding the app's pages has room for one to load again. */
+export const diskSpaceBack = (): boolean =>
+  (freeBytes(app.getPath("userData")) ?? 0) >= DISK_SPACE_BACK_BYTES;
+
+/**
+ * A parked lane's way back by itself: `retry` runs once, as soon as `ready`.
+ * Returns the stop; a lane keeps one wait at a time.
+ */
+export const retryWhen = (
+  ready: () => boolean,
+  retry: () => void
+): (() => void) => {
+  const timer = setInterval(() => {
+    if (!ready()) return;
+    clearInterval(timer);
+    retry();
+  }, RETRY_CHECK_MS);
+  return () => clearInterval(timer);
+};

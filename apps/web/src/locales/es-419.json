@@ -2640,6 +2640,7 @@
   "errors": {
     "genericTitle": "Something went wrong",
     "genericDescription": "This screen hit an error it couldn't recover from.",
+    "diskFull": "El disco está lleno, así que no se pudo guardar. Libera algo de espacio y vuelve a intentarlo.",
     "reload": "Reload",
     "notFoundTitle": "Not found",
     "notFoundDescription": "This page doesn't exist.",
@@ -2946,6 +2947,7 @@
       "dismiss": "Dismiss",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
+      "unsaved": "El disco está lleno, así que este chat no se está guardando. Libera algo de espacio; se volverá a guardar con tu próximo mensaje.",
       "showInFolder": "Show in folder"
     },
     "part": {
@@ -4514,6 +4516,8 @@
       "free_pool_spent": "Todas las fuentes gratuitas están agotadas por ahora. Conecta otra fuente gratuita o elige otro modelo.",
       "rate_limited": "Los modelos gratuitos están ocupados ahora mismo. Vuelve a intentarlo en unos minutos o cambia a otro modelo.",
       "empty": "El modelo devolvió una respuesta vacía. Vuelve a intentarlo o cambia a otro modelo.",
+      "disk_full": "El disco está lleno (quedan {{free}}), así que este chat no se puede guardar y el agente no puede escribir archivos. Libera algo de espacio y vuelve a intentarlo.",
+      "disk_fullUnmeasured": "El disco está lleno, así que este chat no se puede guardar y el agente no puede escribir archivos. Libera algo de espacio y vuelve a intentarlo.",
       "unknown": "El modelo no pudo terminar esto. Vuelve a intentarlo o cambia a otro modelo."
     },
     "action": {
@@ -4554,6 +4558,7 @@
       "ownKeyMoved": "{{model}} en {{provider}} no está disponible, así que cambié este chat a {{target}}.",
       "busy": "Los modelos gratuitos están ocupados ahora mismo.",
       "connection": "Se cortó la conexión y no pude terminar. Inténtalo de nuevo en un momento.",
+      "diskFull": "La computadora en la que funciono se quedó sin espacio en disco, así que no pude terminar eso ni guardar este chat. Libera algo de espacio en ella y vuelve a enviar tu mensaje.",
       "notSignedIn": "La app de escritorio no tiene la sesión iniciada en Abacus.AI ahora. Abre la app, inicia sesión y vuelve a escribirme.",
       "generic": "Algo falló de mi lado y no pude terminar. Inténtalo de nuevo en un momento.",
       "contactFailed": "No pude responderle a {{name}} hace un momento.",
@@ -4736,6 +4741,7 @@
     "skill": "Habilidad",
     "importMcp": "Importar servidores MCP",
     "selectTheme": "Seleccionar un tema",
-    "themes": "Temas"
+    "themes": "Temas",
+    "diskFullLane": "El disco de la computadora está lleno, así que {{platform}} no puede guardar sus datos. Se volverá a conectar solo en cuanto se libere algo de espacio."
   }
 }

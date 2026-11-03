@@ -2640,6 +2640,7 @@
   "errors": {
     "genericTitle": "Something went wrong",
     "genericDescription": "This screen hit an error it couldn't recover from.",
+    "diskFull": "ディスクがいっぱいのため、保存できませんでした。空き容量を確保して、もう一度お試しください。",
     "reload": "Reload",
     "notFoundTitle": "Not found",
     "notFoundDescription": "This page doesn't exist.",
@@ -2946,6 +2947,7 @@
       "dismiss": "Dismiss",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
+      "unsaved": "ディスクがいっぱいのため、このチャットは保存されていません。空き容量を確保してください。次のメッセージで再び保存されます。",
       "showInFolder": "Show in folder"
     },
     "part": {
@@ -4514,6 +4516,8 @@
       "free_pool_spent": "無料のソースは今のところすべて使い切りました。別の無料ソースを接続するか、別のモデルを選んでください。",
       "rate_limited": "無料モデルは現在混み合っています。数分後にもう一度試すか、別のモデルに切り替えてください。",
       "empty": "モデルから空の返信が返されました。もう一度試すか、別のモデルに切り替えてください。",
+      "disk_full": "ディスクがいっぱいです(残り {{free}})。このチャットを保存できず、エージェントはファイルを書き込めません。空き容量を確保してから、もう一度お試しください。",
+      "disk_fullUnmeasured": "ディスクがいっぱいです。このチャットを保存できず、エージェントはファイルを書き込めません。空き容量を確保してから、もう一度お試しください。",
       "unknown": "モデルはこれを完了できませんでした。もう一度試すか、別のモデルに切り替えてください。"
     },
     "action": {
@@ -4554,6 +4558,7 @@
       "ownKeyMoved": "{{provider}} の {{model}} が利用できないため、このチャットを {{target}} に切り替えました。",
       "busy": "無料モデルは現在混み合っています。",
       "connection": "接続が切れたため、完了できませんでした。少し待ってからもう一度お試しください。",
+      "diskFull": "私が動いているコンピューターのディスク容量が不足しているため、処理を完了できず、このチャットも保存できませんでした。空き容量を確保してから、もう一度メッセージを送ってください。",
       "notSignedIn": "デスクトップアプリが現在 Abacus.AI にサインインしていません。アプリを開いてサインインし、もう一度メッセージを送ってください。",
       "generic": "こちらで問題が起きたため、完了できませんでした。少し待ってからもう一度お試しください。",
       "contactFailed": "先ほど {{name}} さんに返信できませんでした。",
@@ -4736,6 +4741,7 @@
     "skill": "スキル",
     "importMcp": "MCP サーバーをインポートする",
     "selectTheme": "テーマを選択",
-    "themes": "テーマ"
+    "themes": "テーマ",
+    "diskFullLane": "コンピューターのディスクがいっぱいのため、{{platform}} はデータを保存できません。空き容量が確保されると自動的に再接続します。"
   }
 }

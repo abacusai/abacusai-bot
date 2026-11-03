@@ -76,6 +76,12 @@ export type RpcError = {
 export const isRpcError = (error: unknown): error is RpcError =>
   isDefinedError(error);
 
+/** Main could not save anything: the computer's disk is full. */
+export const isDiskFullError = (error: unknown): boolean =>
+  isRpcError(error) &&
+  error.code === "PRECONDITION_FAILED" &&
+  error.data?.reason === "disk-full";
+
 /** Only a transient UNAVAILABLE is worth retrying (spec 00 A.5). */
 const shouldRetry = (failureCount: number, error: unknown): boolean =>
   isRpcError(error) && error.code === "UNAVAILABLE" && failureCount < 3;
@@ -103,6 +109,8 @@ const toastText = (error: unknown, toast: ErrorToast): string | null => {
   if ((error as { name?: unknown } | null)?.name === "AbortError") return null;
   // Never reached the host: one "not sent", whichever write it was.
   if (isHostUnavailable(error)) return i18n.t("chat.message.notSent");
+  // Every write fails the same way, so the cause outranks the site's copy.
+  if (isDiskFullError(error)) return i18n.t("errors.diskFull");
   if (toast === true)
     return error instanceof Error ? error.message : String(error);
   if (typeof toast === "string") return i18n.t(toast);

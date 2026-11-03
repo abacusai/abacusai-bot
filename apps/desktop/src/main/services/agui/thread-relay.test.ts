@@ -24,6 +24,7 @@ import {
   type RelayEvent,
   type ThreadHistory,
   type ThreadRelayOptions,
+  UNSAVED_NOTICE_KEY,
 } from "./thread-relay";
 
 const FIXTURES = path.join(
@@ -615,6 +616,82 @@ describe("a thread's relay", () => {
       "b",
       "c",
     ]);
+  });
+
+  it("a full disk says once that the chat is not being saved, and the next save that lands takes it back", async () => {
+    let full = true;
+    const saved: ThreadHistory[] = [];
+    const { relay } = make(undefined, undefined, {
+      persist: (next) => {
+        if (full)
+          throw Object.assign(
+            new Error("ENOSPC: no space left on device, write"),
+            { code: "ENOSPC" }
+          );
+        saved.push(next);
+      },
+    });
+    const live: RelayChunk[] = [];
+    relay.subscribe(null, (chunk) => live.push(chunk));
+    const unsaved = () =>
+      relay
+        .checkpoint()
+        .snapshot.notices.filter(
+          (notice) => notice.value.notificationKey === UNSAVED_NOTICE_KEY
+        );
+    const shown = () =>
+      live.filter(
+        (chunk) => (chunk.event as { name?: string }).name === "abacus.notice"
+      ).length;
+
+    const first = run("r-1", "one");
+    feed(relay, [hello("inc-1"), ...first.start, ...first.reply("a-1", "x")]);
+    feed(relay, [first.finished]);
+    await Promise.resolve();
+    const second = run("r-2", "two");
+    feed(relay, [...second.start, second.finished]);
+    await Promise.resolve();
+    // Four failed saves, one notice.
+    expect(unsaved()).toEqual([
+      expect.objectContaining({
+        name: "abacus.notice",
+        value: { kind: "unsaved", notificationKey: UNSAVED_NOTICE_KEY },
+      }),
+    ]);
+    expect(shown()).toBe(1);
+
+    full = false;
+    const third = run("r-3", "three");
+    feed(relay, [...third.start, third.finished]);
+    await Promise.resolve();
+    expect(saved.length).toBeGreaterThan(0);
+    // The whole transcript, the turns the full disk refused included.
+    expect(textOf(saved.at(-1)!.messages).map((m) => m.text)).toEqual([
+      "one",
+      "x",
+      "two",
+      "three",
+    ]);
+    expect(unsaved()).toEqual([]);
+    expect(live.at(-1)?.event).toMatchObject({
+      name: "abacus.notice",
+      value: { notificationKey: UNSAVED_NOTICE_KEY, cleared: true },
+    });
+  });
+
+  it("a save that fails for another reason is only logged", async () => {
+    const lines: string[] = [];
+    const { relay } = make(undefined, undefined, {
+      persist: () => {
+        throw new Error("EACCES: permission denied");
+      },
+      log: (line) => lines.push(line),
+    });
+    const one = run("r-1", "one");
+    feed(relay, [hello("inc-1"), ...one.start, one.finished]);
+    await Promise.resolve();
+    expect(lines.some((line) => line.includes("EACCES"))).toBe(true);
+    expect(relay.checkpoint().snapshot.notices).toEqual([]);
   });
 });
 

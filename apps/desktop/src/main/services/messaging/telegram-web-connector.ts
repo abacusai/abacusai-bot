@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 
+import { isDiskFull } from "@abacus-ai/agent/atomic-file";
 import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 import { BrowserWindow } from "electron";
 
@@ -11,6 +12,7 @@ import {
   presentAsDialog,
 } from "../../bring-to-front";
 import { abacusBotHome } from "../../paths";
+import { nativeT } from "../config/native-language";
 import {
   boundedWait,
   chunkMessage,
@@ -26,9 +28,11 @@ import {
 } from "./connector";
 import {
   BOOT_MAX_RELOADS,
+  diskSpaceBack,
   FIRST_LOAD_WAIT_MS,
   pageBusy,
   PageBootWatch,
+  retryWhen,
 } from "./page-boot-watch";
 
 /**
@@ -103,6 +107,8 @@ export class TelegramWebConnector implements MessagingConnector {
   private readonly boot = new PageBootWatch();
   /** No page and no checks until the user opens Telegram. See park. */
   private parked = false;
+  /** Set while a lane parked on a full disk waits for space to come back. */
+  private stopParkedWait: (() => void) | null = null;
   private readonly loginPoll = new PollScheduler(
     () => this.checkLogin(),
     LOGIN_POLL_MS,
@@ -202,6 +208,8 @@ export class TelegramWebConnector implements MessagingConnector {
   async stop(): Promise<void> {
     this.running = false;
     this.parked = false;
+    this.stopParkedWait?.();
+    this.stopParkedWait = null;
     this.loggedIn = false;
     this.loginPoll.stop();
     this.inboundPoll.stop();
@@ -310,21 +318,41 @@ export class TelegramWebConnector implements MessagingConnector {
 
   /**
    * Stop checking and drop the page until the user opens Telegram. The state
-   * is one the gateway leaves alone, so nothing loads the page again by itself.
+   * is one the gateway leaves alone (`needs_login`) or restarts only on the
+   * user's next connect (`error`), so nothing loads the page again by itself
+   * but a full disk's wait for space.
    */
-  private park(message: string): void {
+  private park(state: "needs_login" | "error", message: string): void {
     this.parked = true;
     this.boot.reset();
     this.loginPoll.stop();
     const win = this.window;
     this.window = null;
     if (win != null && !win.isDestroyed()) win.destroy();
-    this.callbacks.onState("needs_login", message);
+    this.callbacks.onState(state, message);
+  }
+
+  /** The page's storage found the disk full: parked until space is freed. */
+  private parkOnFullDisk(): void {
+    if (!this.running || this.parked) return;
+    this.callbacks.onLog("telegram-web: the disk is full, waiting for space");
+    this.park("error", nativeT("diskFullLane", { platform: "Telegram" }));
+    this.stopParkedWait = retryWhen(diskSpaceBack, () => {
+      this.stopParkedWait = null;
+      if (!this.running || !this.parked) return;
+      this.callbacks.onLog(
+        "telegram-web: disk space is back, loading the page again"
+      );
+      this.resume();
+      this.ensureWindow();
+    });
   }
 
   /** The user opened Telegram: a fresh start, and a parked lane's page back. */
   private resume(): void {
     this.boot.reset();
+    this.stopParkedWait?.();
+    this.stopParkedWait = null;
     if (!this.running || !this.parked) return;
     this.parked = false;
     this.callbacks.onLog("telegram-web: opened by the user, checking again");
@@ -348,7 +376,7 @@ export class TelegramWebConnector implements MessagingConnector {
       this.callbacks.onLog(
         `telegram-web: still not loaded after ${BOOT_MAX_RELOADS} reloads, waiting for the user`
       );
-      this.park(STUCK_LOADING);
+      this.park("needs_login", STUCK_LOADING);
       return;
     }
     if (verdict === "give_up") this.boot.reset();
@@ -592,6 +620,7 @@ export class TelegramWebConnector implements MessagingConnector {
       this.callbacks.onLog(
         `telegram-web: script failed: ${String((error as Error)?.message ?? error)}`
       );
+      if (isDiskFull(error)) this.parkOnFullDisk();
       return null;
     }
   }

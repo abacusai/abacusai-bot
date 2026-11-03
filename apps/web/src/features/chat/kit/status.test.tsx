@@ -228,6 +228,29 @@ describe("abacus.notice (main's own history notice)", () => {
     );
   });
 
+  it("says the chat is not being saved on a full disk, and drops the line once main takes it back", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll([
+      ...b.sessionReady(),
+      b.custom("abacus.notice", {
+        kind: "unsaved",
+        notificationKey: "abacus.unsaved",
+      }),
+    ]);
+    current = await renderRelay(relay, "session");
+    const line =
+      "The disk is full, so this chat isn't being saved. Free some space; it's saved again with your next message.";
+    expect(await screen.findByText(line)).toBeTruthy();
+    relay.emit(
+      b.custom("abacus.notice", {
+        kind: "unsaved",
+        notificationKey: "abacus.unsaved",
+        cleared: true,
+      })
+    );
+    await waitFor(() => expect(screen.queryByText(line)).toBeNull());
+  });
+
   it("renders the foreign history notice, with no Show in folder", async () => {
     const relay = new FakeRelay();
     relay.emitAll([
@@ -958,6 +981,23 @@ describe("the turn's outcome card", () => {
     expect(screen.getByText("View details")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
     expect(screen.queryByText(/busy/)).toBeNull();
+  });
+
+  it("a full disk says so, with the space left, and offers Retry rather than another model", async () => {
+    current = await renderRelay(
+      failed({
+        message: "The disk is full.",
+        code: "turn_failed",
+        cause: "disk_full",
+        actions: [{ type: "retry", bytesFree: 12 * 1024 ** 2 }],
+      }),
+      "session"
+    );
+    await screen.findByText(
+      "The disk is full (12 MB left), so this chat can't be saved and the agent can't write files. Free some space, then try again."
+    );
+    expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
+    expect(screen.queryByText(/different model/)).toBeNull();
   });
 
   it("a run the app closed under reads Interrupted, not a crash; a chat can retry it, a report cannot", async () => {

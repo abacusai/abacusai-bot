@@ -10,6 +10,7 @@
  * names; Abacus reads its catalog from it too.
  */
 import * as fs from "node:fs";
+import { createRequire, syncBuiltinESMExports } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
 
@@ -543,6 +544,42 @@ describe("a model the user picked off Abacus that fails", () => {
         (action) => action.type === "own-key-unavailable"
       )
     ).toBe(false);
+  }, 30_000);
+
+  it("the disk fills between turns: the next ends on the full-disk card with Retry, not on the model, and does not move", async () => {
+    reset();
+    const chat = await pinned();
+    // A first turn with room: the session file exists, later turns append.
+    behaviour.set(KIMI, { say: "first answer" });
+    expect((await chat.turn("a first task")).error).toBeUndefined();
+    behaviour.delete(KIMI);
+    // Every write from here fails as Node fails it on a full disk; pi's own
+    // session file (named imports of fs) sees it through the synced exports.
+    const enospc = (): never => {
+      throw Object.assign(new Error("ENOSPC: no space left on device, write"), {
+        errno: -28,
+        code: "ENOSPC",
+        syscall: "write",
+      });
+    };
+    const nodeFs = createRequire(import.meta.url)("node:fs") as typeof fs;
+    const writes = [
+      vi.spyOn(nodeFs, "writeFileSync").mockImplementation(enospc),
+      vi.spyOn(nodeFs, "appendFileSync").mockImplementation(enospc),
+    ];
+    syncBuiltinESMExports();
+    try {
+      const turn = await chat.turn("a task");
+      expect(turn.error).toMatchObject({
+        cause: "disk_full",
+        code: "turn_failed",
+        actions: [{ type: "retry", bytesFree: expect.any(Number) }],
+      });
+      expect(moves(chat)).toHaveLength(0);
+    } finally {
+      for (const write of writes) write.mockRestore();
+      syncBuiltinESMExports();
+    }
   }, 30_000);
 
   it("a paying plan runs on its own low code router: the chat's model names it, never RouteLLM - Open", async () => {

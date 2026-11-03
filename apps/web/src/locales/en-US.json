@@ -2640,6 +2640,7 @@
   "errors": {
     "genericTitle": "Something went wrong",
     "genericDescription": "This screen hit an error it couldn't recover from.",
+    "diskFull": "The disk is full, so that couldn't be saved. Free some space and try again.",
     "reload": "Reload",
     "notFoundTitle": "Not found",
     "notFoundDescription": "This page doesn't exist.",
@@ -2946,6 +2947,7 @@
       "dismiss": "Dismiss",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
+      "unsaved": "The disk is full, so this chat isn't being saved. Free some space; it's saved again with your next message.",
       "showInFolder": "Show in folder"
     },
     "part": {
@@ -4514,6 +4516,8 @@
       "free_pool_spent": "Every free source is used up for now. Connect another free source, or pick a different model.",
       "rate_limited": "The free models are busy right now. Try again in a few minutes, or switch to a different model.",
       "empty": "The model returned an empty reply. Try again, or switch to a different model.",
+      "disk_full": "The disk is full ({{free}} left), so this chat can't be saved and the agent can't write files. Free some space, then try again.",
+      "disk_fullUnmeasured": "The disk is full, so this chat can't be saved and the agent can't write files. Free some space, then try again.",
       "unknown": "The model couldn't finish this. Try again, or switch to a different model."
     },
     "action": {
@@ -4554,6 +4558,7 @@
       "ownKeyMoved": "{{model}} on {{provider}} isn't available, so I switched this chat to {{target}}.",
       "busy": "The free models are busy right now.",
       "connection": "The connection dropped, so I couldn't finish that. Please try again in a moment.",
+      "diskFull": "The computer I run on is out of disk space, so I couldn't finish that or save this chat. Free some space on it, then send your message again.",
       "notSignedIn": "The desktop app is not signed in to Abacus.AI right now. Open the app and sign in, then message me again.",
       "generic": "Something went wrong on my side, so I couldn't finish that. Please try again in a moment.",
       "contactFailed": "I couldn't reply to {{name}} just now.",
@@ -4736,6 +4741,7 @@
     "skill": "Skill",
     "importMcp": "Import MCP servers",
     "selectTheme": "Select a Theme",
-    "themes": "Themes"
+    "themes": "Themes",
+    "diskFullLane": "The computer's disk is full, so {{platform}} can't save its data. It reconnects by itself once some space is freed."
   }
 }
