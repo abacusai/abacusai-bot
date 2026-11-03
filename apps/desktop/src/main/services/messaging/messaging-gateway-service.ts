@@ -186,6 +186,7 @@ const STOP_DEADLINE_MS = 5_000;
  * How long a login may still land after its connect dialog closed unlinked.
  * The phone is ahead of the app (people close on the phone's "linked"), so the
  * dialog only releases its login; past this, an unfinished one is turned off.
+ * One still loading has shown nobody a login yet, so it is given more time.
  */
 export const RELEASED_LOGIN_MS = 180_000;
 
@@ -2127,6 +2128,10 @@ export class MessagingGatewayService {
       connector instanceof WhatsAppWebConnector
     )
       connector.hideLoginWindow();
+    this.armReleasedLogin(platformId);
+  }
+
+  private armReleasedLogin(platformId: MessagingPlatformId): void {
     this.clearReleasedLogin(platformId);
     const timer = setTimeout(() => {
       this.releasedLogins.delete(platformId);
@@ -2147,6 +2152,12 @@ export class MessagingGatewayService {
 
   private async abandonLogin(platformId: MessagingPlatformId): Promise<void> {
     const state = this.states.get(platformId)?.state;
+    // Still loading (a stored link signing back in, or a slow page): nobody
+    // has been shown a login to finish, so it is asked again later.
+    if (state === "connecting") {
+      this.armReleasedLogin(platformId);
+      return;
+    }
     if (state === "connected" || state === "syncing") return;
     console.log(
       `[messaging] ${platformId}: login not finished ${RELEASED_LOGIN_MS / 1000}s after its dialog closed; turning it off`
