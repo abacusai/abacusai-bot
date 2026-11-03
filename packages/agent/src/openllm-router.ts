@@ -181,22 +181,24 @@ export class OpenLlmRouter {
     model: { provider: string; id: string; name?: string } | undefined
   ): FailureContext {
     const provider = model?.provider;
+    const choices = listModels(registry);
+    const id = model != null ? `${model.provider}/${model.id}` : undefined;
     return {
       routed,
       ...(model != null && {
         model: {
           model: `${model.provider}/${model.id}`,
           label: model.name ?? model.id,
+          // Another provider's free model, as the picker lists it.
+          free: choices.find((choice) => choice.id === id)?.free === true,
         },
       }),
       freeLaneProviders: this.freeLaneProviders(registry),
       onFreeLane: routed && this.onFreeLane(provider),
-      abacusFreeModels: listModels(registry)
+      abacusFreeModels: choices
         .filter((choice) => choice.provider === "abacus" && choice.free)
         .map((choice) => ({ model: choice.id, label: choice.label })),
-      abacus: !listModels(registry).some(
-        (choice) => choice.provider === "abacus"
-      )
+      abacus: !choices.some((choice) => choice.provider === "abacus")
         ? null
         : creditWallActive(this.now()) || hostCreditBalance()?.remaining === 0
           ? "out"

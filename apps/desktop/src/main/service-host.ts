@@ -179,12 +179,14 @@ import {
   WORKSPACE_NOT_FOUND,
 } from "@abacus-ai/contract/not-found";
 import { detectRememberRequest } from "@abacus-ai/contract/remember";
-import type {
-  Routine,
-  RoutineCreateInput,
-  RoutineListItem,
-  RoutineRunner,
-  RoutineUpdateInput,
+import {
+  ROUTINE_PAUSE_NOTES,
+  ROUTINE_QUIET_RUNS_BEFORE_PAUSE,
+  type Routine,
+  type RoutineCreateInput,
+  type RoutineListItem,
+  type RoutineRunner,
+  type RoutineUpdateInput,
 } from "@abacus-ai/contract/routines";
 import { InvalidInputError } from "@abacus-ai/contract/service-errors";
 import { isPositiveReactionEmoji } from "@abacus-ai/contract/success-pitch";
@@ -288,10 +290,10 @@ import {
   hasRunInFlight,
   NetworkWaitClock,
   ranOutOfAbacusCredits,
-  ROUTINE_FAILURES_BEFORE_PAUSE,
   ROUTINE_RUN_TIMEOUT_MS,
   runOutcomeOf,
   shouldPauseAfter,
+  shouldPauseQuiet,
   stuckRuns,
 } from "./services/agent-tools/routine-guards";
 import { readMigrationMarker } from "./services/agent-tools/routine-migration";
@@ -300,6 +302,7 @@ import { cleanSources, policyFor } from "./services/agent-tools/routine-reach";
 import {
   countRoutineRuns,
   readLastRoutineRun,
+  recentRoutineRuns,
   recordRoutineRun,
   removeRoutineDir,
   routineDir,
@@ -663,6 +666,7 @@ export class ServiceHost {
   readonly aguiRelay: AguiRelayService = new AguiRelayService({
     files: this.threadStore,
     host: {
+      appClosing: () => this.turnLedger.isAppClosing(),
       workspaceOf: (threadId) => {
         const workspaceId =
           this.agentSessionManagerService.get(threadId)?.workspaceId ?? null;
@@ -2329,6 +2333,7 @@ export class ServiceHost {
     },
   });
   private readonly agentManagerService = new AgentManagerService({
+    clock: this.connectivity,
     resolveWorkspacePath: (workspaceId, sessionId) => {
       const session = this.agentSessionManagerService.get(sessionId);
       if (
@@ -2475,8 +2480,8 @@ export class ServiceHost {
         emittedAt: new Date().toISOString(),
       });
     },
-    emitSessionClosed: (workspaceId, sessionId) => {
-      this.sessionTurnStateService.markClosed(workspaceId, sessionId);
+    emitSessionClosed: (workspaceId, sessionId, started) => {
+      this.sessionTurnStateService.markClosed(workspaceId, sessionId, started);
       // A tab-keeping browser keeps the session's tabs a while (a paused run,
       // a restarted agent), then lets them go.
       this.browserTargetSource()?.releaseSession?.(sessionId);
@@ -2658,9 +2663,11 @@ export class ServiceHost {
     },
     (workspaceId, sessionId, lastActivity) => {
       // Name what it was doing: a tool that hangs before it starts never
-      // emitted a card for the transcript to keep.
+      // emitted a card for the transcript to keep. No tool: the model.
       const doing =
-        lastActivity != null ? ` while running ${lastActivity}` : "";
+        lastActivity != null
+          ? ` while running ${lastActivity}`
+          : " while waiting on the model";
       // The renderer's run ends with main's own terminal, ahead of the
       // cancelled one the agent writes for the stop (first terminal wins).
       this.aguiRelay.failActiveRun(
@@ -2672,7 +2679,8 @@ export class ServiceHost {
       // when it finally lands and the session would go busy again.
       this.stopAgentTurn({ workspaceId, sessionId });
     },
-    this.turnLedger
+    this.turnLedger,
+    this.connectivity
   );
 
   private readonly turnAbandoner = new TurnAbandoner({
@@ -3819,7 +3827,35 @@ export class ServiceHost {
     environmentNoticeService.markSessionStarted(request.sessionId);
     this.idleAgentReaper?.touch(request.sessionId);
 
+    // Every start comes through here (a send, a chat app, a routine, the
+    // relay): an agent still going away is waited out rather than refused.
+    await this.waitOutStoppingAgent(request);
+    const first = await this.agentManagerService.startSessionReady(withModel);
+    // A slow machine (a first launch, a scan after wake) can miss the ready
+    // deadline once; the start it lost has warmed the disk, so one more. A
+    // caller with its own startup budget has spent it.
+    if (first.success || !first.created || request.startupTimeoutMs != null)
+      return first;
+    console.warn(
+      `[agent] ${request.sessionId} did not start (${first.error ?? "unknown"}); starting it once more`
+    );
+    await this.waitOutStoppingAgent(request, true);
     return this.agentManagerService.startSessionReady(withModel);
+  }
+
+  /** The session's last agent, gone; `failed`: the one a failed start left behind. */
+  private async waitOutStoppingAgent(
+    request: { workspaceId: string; sessionId: string },
+    failed = false
+  ): Promise<void> {
+    const { status } = this.agentManagerService.getSessionState(
+      request.workspaceId,
+      request.sessionId
+    );
+    if (status !== "stopping" && !(failed && status === "error")) return;
+    await this.agentManagerService
+      .stopSessionAndWait(request.workspaceId, request.sessionId)
+      .catch(() => undefined);
   }
 
   /** A session started with no model: resolved for it, and kept on it. */
@@ -3882,10 +3918,10 @@ export class ServiceHost {
       (result) => result.outcome !== "undeliverable"
     );
 
-    // No agent could take it: the turn it opened ends as the agent's going
-    // away, so a chat it came from hears so instead of waiting on nothing.
+    // No agent could take it: the turn it opened ends as not started, so a
+    // chat it came from hears so instead of waiting on nothing.
     if (outcome === "undeliverable") {
-      this.sessionTurnStateService.markClosed(
+      this.sessionTurnStateService.markNotStarted(
         request.workspaceId,
         request.sessionId
       );
@@ -3926,18 +3962,19 @@ export class ServiceHost {
     // Sent while its agent is being stopped (an idle stop, say): written to
     // the dying process it would be lost, so it waits for that one to go and
     // starts a fresh one.
-    if (
+    await this.waitOutStoppingAgent(request);
+    const isRunning = (): boolean =>
       this.agentManagerService.getSessionState(
         request.workspaceId,
         request.sessionId
-      ).status === "stopping"
-    )
-      await this.agentManagerService
-        .stopSessionAndWait(request.workspaceId, request.sessionId)
-        .catch(() => undefined);
+      ).status === "running";
     const outcome = await deliverMessage({
+      // Never into an agent still starting: one that never comes up would
+      // take the message with it. Its start is joined below instead.
       send: () =>
-        current() && this.agentCommunicationService.sendMessage(delivered),
+        current() &&
+        isRunning() &&
+        this.agentCommunicationService.sendMessage(delivered),
       start: async () => {
         if (!current()) return false;
         const result = await this.startAgentSession({
@@ -3949,11 +3986,7 @@ export class ServiceHost {
         });
         return result.success;
       },
-      isRunning: () =>
-        this.agentManagerService.getSessionState(
-          request.workspaceId,
-          request.sessionId
-        ).status === "running",
+      isRunning,
       delay: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     });
     return { noticed: delivered !== noted, outcome };
@@ -5018,12 +5051,16 @@ export class ServiceHost {
         });
       return;
     }
+    if (outcome === "completed") {
+      this.pauseIfQuietRepeatedly(session.routineId);
+      return;
+    }
     // Offline is not the routine's failure, and a Stop is the user's: no
     // pause, no streak.
     if (outcome !== "failed" || record.kind === "stopped") return;
     // No credits fails every fire the same way until the user tops up.
     if (record.error != null && ranOutOfAbacusCredits(record.error))
-      this.pauseRoutine(session.routineId, "paused: out of Abacus.AI credits");
+      this.pauseRoutine(session.routineId, ROUTINE_PAUSE_NOTES.credits);
     else this.pauseIfFailingRepeatedly(session.routineId);
   }
 
@@ -5205,10 +5242,25 @@ export class ServiceHost {
       (run) => new Date(run.startedAt).getTime() > resumedAt
     );
     if (!shouldPauseAfter(runs)) return;
-    this.pauseRoutine(
-      routineId,
-      `paused after ${ROUTINE_FAILURES_BEFORE_PAUSE} failed runs in a row`
-    );
+    this.pauseRoutine(routineId, ROUTINE_PAUSE_NOTES.failures);
+  }
+
+  /**
+   * A routine whose runs keep finding nothing new pauses itself: each run
+   * spends credits, and the user is better told once than polled for nothing.
+   */
+  private pauseIfQuietRepeatedly(routineId: string): void {
+    const job = getJob(routineId);
+    if (job == null) return;
+    // Runs before the user last resumed it are the old streak.
+    const resumedAt = job.resumedAt ?? 0;
+    // Read past a few failed or offline runs, which the streak skips over.
+    const runs = recentRoutineRuns(
+      this.routineHome(job),
+      ROUTINE_QUIET_RUNS_BEFORE_PAUSE * 2
+    ).filter((run) => new Date(run.startedAt).getTime() > resumedAt);
+    if (shouldPauseQuiet(runs, job.runs, resumedAt))
+      this.pauseRoutine(routineId, ROUTINE_PAUSE_NOTES.quiet);
   }
 
   private pauseRoutine(routineId: string, reason: string): void {

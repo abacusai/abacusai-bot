@@ -150,6 +150,8 @@ export class ConnectAttempt {
         break;
       }
     }
+    // Cancelled while the link opened: a late phase would bring the wait back.
+    if (this.abort.signal.aborted) return CANCELLED;
     options.onPhase?.("waiting");
     return this.connected();
   }

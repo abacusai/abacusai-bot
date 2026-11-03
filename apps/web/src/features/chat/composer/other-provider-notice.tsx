@@ -23,18 +23,25 @@ const setShowing = (threadId: string, on: boolean): void =>
   showing.setState((state) => ({ ...state, [threadId]: on }));
 
 /**
- * The latest turn ended on the cut-off card, which offers RouteLLM - Open
- * itself: the notice stays down meanwhile, and the card is not one of its
- * five showings.
+ * The latest turn ended on a card that offers a way on itself: RouteLLM - Open
+ * (the cut-off card, any card with Abacus credits left to switch to) or the
+ * plan (the credit wall, a failed model off Abacus out of credits). The notice
+ * stays down meanwhile, and the card is not one of its five showings.
  */
-const endedOnCutOff = (
+const endedOnSwitchOffer = (
   outcome: { kind: string; error?: unknown } | null
 ): boolean =>
   outcome?.kind === "error" &&
   (
     (outcome.error as { actions?: Array<{ type?: string }> } | undefined)
       ?.actions ?? []
-  ).some((action) => action.type === "cut-off");
+  ).some(
+    (action) =>
+      action.type === "cut-off" ||
+      action.type === "switch-to-abacus" ||
+      action.type === "upgrade-abacus" ||
+      action.type === "own-key-unavailable"
+  );
 
 type FunnelStep =
   | "routellm_nudge_shown"
@@ -68,9 +75,9 @@ export const OtherProviderNotice = ({
     at: prefs.dismissals.routeLlmNudgeAt,
     switched: prefs.dismissals.routeLlmSwitched,
   };
-  const cutOff = endedOnCutOff(latest);
+  const offered = endedOnSwitchOffer(latest);
   const show = useEffectEvent(() => {
-    if (visible || cutOff || nudgesDone(state)) return;
+    if (visible || offered || nudgesDone(state)) return;
     const now = Date.now();
     setShowing(threadId, true);
     funnel("routellm_nudge_shown");
@@ -80,8 +87,8 @@ export const OtherProviderNotice = ({
   });
 
   // Every 30 minutes since it last showed: due now the first time, and not
-  // behind a cut-off card (due again once the chat has moved past it).
-  const dueAt = visible || cutOff ? null : nudgeDueAt(state);
+  // behind a card offering the switch (due again once the chat moves past it).
+  const dueAt = visible || offered ? null : nudgeDueAt(state);
   useEffect(() => {
     if (dueAt == null) return;
     const timer = window.setTimeout(show, Math.max(0, dueAt - Date.now()));
@@ -95,7 +102,7 @@ export const OtherProviderNotice = ({
     if (latest.kind === "error") show();
   }, [latest]);
 
-  if (!visible || cutOff) return null;
+  if (!visible || offered) return null;
   return (
     <section data-slot="other-provider-notice" className="mb-2">
       <div className="bg-card border-border overflow-hidden rounded-xl border">

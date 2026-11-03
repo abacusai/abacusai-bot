@@ -1,6 +1,9 @@
 import type { UserTextTags } from "@abacus-ai/contract/agent-types";
 import type { PermissionDecision } from "@abacus-ai/contract/agent-types";
-import type { AiHydration } from "@abacus-ai/contract/contract/ai";
+import {
+  withoutNoReply,
+  type AiHydration,
+} from "@abacus-ai/contract/contract/ai";
 import {
   applyMessageReaction,
   MESSAGE_REACTION_EMOJIS,
@@ -184,6 +187,30 @@ const initialHost = (): HostState => ({
 const genBoundary = (start: number, total: number): number =>
   Math.max(0, Math.min(start, total));
 
+/**
+ * The transcript as every reader sees it (rows, copy, reply quotes): no
+ * assistant text ends on the silent `NO_REPLY`. Untouched messages keep
+ * their identity.
+ */
+const shownMessages = (messages: UIMessage[]): UIMessage[] => {
+  let changed = false;
+  const shown = messages.map((message) => {
+    if (message.role !== "assistant") return message;
+    let own = false;
+    const parts = message.parts.map((part) => {
+      if (part.type !== "text") return part;
+      const content = withoutNoReply(part.content);
+      if (content === part.content) return part;
+      own = true;
+      return { ...part, content };
+    });
+    if (!own) return message;
+    changed = true;
+    return { ...message, parts };
+  });
+  return changed ? shown : messages;
+};
+
 const uuid = (): string =>
   globalThis.crypto?.randomUUID?.() ??
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
@@ -214,6 +241,8 @@ export class ThreadSession {
   #permissionAttempt = 0;
   #cancelTimer: ReturnType<typeof setTimeout> | null = null;
   readonly #admission: AdmissionHost;
+  /** Runs this window sent, however their end arrives (a live event or a snapshot). */
+  readonly #sentRuns = new Set<string>();
   /** Message ids confirmed by `abacus.duplicate_echo` (§14.12). */
   readonly #echoed = new Set<string>();
 
@@ -374,6 +403,22 @@ export class ThreadSession {
     this.#live = null;
     for (const timer of this.#timers) clearTimeout(timer);
     this.#timers.clear();
+  }
+
+  /**
+   * Whether this window sent the run: its outcome is the person's moment, even
+   * when the run ended before the view caught up and came in with a snapshot.
+   */
+  sentHere(runId: string): boolean {
+    return this.#sentRuns.has(runId);
+  }
+
+  /** A run this window sent outside the outbox (a new chat's start hand-off). */
+  noteSent(runId: string): void {
+    if (this.#sentRuns.has(runId)) return;
+    this.#sentRuns.add(runId);
+    // Readers of sentHere re-read on the host store.
+    this.hostStore.setState((state) => ({ ...state }));
   }
 
   /** §3.7: `ai.send` with an outbox entry; the composer reads the result. */
@@ -873,7 +918,7 @@ export class ThreadSession {
     const store = createThreadStore(stateFromSnapshot(abacus));
     gen.store = store;
     gen.staged = {
-      messages: snapshot.messages,
+      messages: shownMessages(snapshot.messages),
       subagents: [],
       status: "ready",
       sessionGenerating: active != null,
@@ -1162,7 +1207,11 @@ export class ThreadSession {
     gen.client?.dispose();
   }
 
-  #fields(gen: Generation, fields: Partial<GenerationFields>): void {
+  #fields(gen: Generation, given: Partial<GenerationFields>): void {
+    const fields =
+      given.messages == null
+        ? given
+        : { ...given, messages: shownMessages(given.messages) };
     if (!gen.swapped) {
       gen.staged = { ...gen.staged, ...fields };
       return;
@@ -1196,7 +1245,11 @@ export class ThreadSession {
     });
   }
 
-  #host(patch: Partial<HostState>): void {
+  #host(given: Partial<HostState>): void {
+    const patch =
+      given.messages == null
+        ? given
+        : { ...given, messages: shownMessages(given.messages) };
     this.hostStore.setState((state) => ({ ...state, ...patch }));
   }
 
@@ -1276,10 +1329,11 @@ export class ThreadSession {
       token: () => ({ gen: this.#gen, rev: this.#rev, retired: this.#retired }),
       outbox: () => this.hostStore.state.outbox,
       setOutbox: (update) =>
-        this.hostStore.setState((state) => ({
-          ...state,
-          outbox: update(state.outbox),
-        })),
+        this.hostStore.setState((state) => {
+          const outbox = update(state.outbox);
+          for (const entry of outbox) this.#sentRuns.add(entry.runId);
+          return { ...state, outbox };
+        }),
       echoed: (messageId, runId) =>
         runId != null
           ? this.#echoed.has(runId)

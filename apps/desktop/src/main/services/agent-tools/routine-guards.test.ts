@@ -2,7 +2,12 @@ import { AgentStatus } from "@abacus-ai/contract/agent-types";
 import type { PrefsPatch, PrefsRow } from "@abacus-ai/contract/contract/rows";
 import type { RoutineRunItem } from "@abacus-ai/contract/contracts";
 import type { CreditThresholdMark } from "@abacus-ai/contract/credit-thresholds";
-import type { RoutineRun } from "@abacus-ai/contract/routines";
+import {
+  ROUTINE_FAILURES_BEFORE_PAUSE,
+  ROUTINE_PAUSE_NOTES,
+  ROUTINE_QUIET_RUNS_BEFORE_PAUSE,
+  type RoutineRun,
+} from "@abacus-ai/contract/routines";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -19,12 +24,14 @@ import {
 import {
   agentRunWarning,
   consecutiveFailures,
+  consecutiveQuietRuns,
   hasRunInFlight,
+  isQuietReply,
   NetworkWaitClock,
   ranOutOfAbacusCredits,
-  ROUTINE_FAILURES_BEFORE_PAUSE,
   runOutcomeOf,
   shouldPauseAfter,
+  shouldPauseQuiet,
   stuckRuns,
 } from "./routine-guards";
 import { readRoutineTiming } from "./routine-timing";
@@ -109,6 +116,57 @@ describe("the failure streak", () => {
     );
     expect(shouldPauseAfter(failures)).toBe(true);
     expect(shouldPauseAfter(failures.slice(1))).toBe(false);
+  });
+});
+
+describe("the quiet-run streak", () => {
+  const done = (reply: string) => ({ outcome: "completed", reply });
+  const quiet = done("Checked the inbox and the calendar.\nNO_REPLY");
+
+  it("counts runs that ended on NO_REPLY from the newest back", () => {
+    expect(isQuietReply("NO_REPLY")).toBe(true);
+    expect(isQuietReply("Looked at both feeds. NO_REPLY \n")).toBe(true);
+    expect(isQuietReply("Nothing new since 19:33.")).toBe(false);
+    expect(isQuietReply("")).toBe(false);
+    expect(consecutiveQuietRuns([quiet, quiet, done("A reply came.")])).toBe(2);
+    // A failed or offline run neither breaks nor extends it.
+    expect(
+      consecutiveQuietRuns([
+        quiet,
+        { outcome: "failed", reply: "" },
+        quiet,
+        { outcome: "offline", reply: "NO_REPLY" },
+        quiet,
+      ])
+    ).toBe(3);
+  });
+
+  it("pauses at the threshold, and never again once the user resumed a quiet pause", () => {
+    const runs = Array.from(
+      { length: ROUTINE_QUIET_RUNS_BEFORE_PAUSE },
+      () => quiet
+    );
+    expect(shouldPauseQuiet(runs, [], 0)).toBe(true);
+    expect(shouldPauseQuiet(runs.slice(1), [], 0)).toBe(false);
+    const pausedAt = 1_000;
+    const pause: RoutineRun = {
+      id: "attempt-p",
+      at: pausedAt,
+      trigger: "schedule",
+      result: ROUTINE_PAUSE_NOTES.quiet,
+      kind: "paused",
+      sessionId: null,
+      attemptId: null,
+    };
+    expect(shouldPauseQuiet(runs, [pause], pausedAt + 1)).toBe(false);
+    // A pause for failures, resumed, does not exempt it.
+    expect(
+      shouldPauseQuiet(
+        runs,
+        [{ ...pause, result: "paused after 3 failed runs in a row" }],
+        pausedAt + 1
+      )
+    ).toBe(true);
   });
 });
 
@@ -243,7 +301,27 @@ describe("when a routine the agent asks for fires", () => {
     expect(timing.warnings.join(" ")).toContain("fires every minute");
     expect(timing.warnings.join(" ")).toContain("in_minutes");
     expect(read({ schedule: " */1 * * * * " }).warnings).toHaveLength(1);
-    for (const slower of ["*/5 * * * *", "* 9 * * *", "0 9 14 2 *"])
+  });
+
+  it("keeps an hourly or faster schedule, and says how many runs a day it spends credits on", () => {
+    for (const [schedule, fires] of [
+      ["*/5 * * * *", 288],
+      ["*/15 * * * *", 96],
+      ["*/30 9-17 * * 1-5", 18],
+      ["0 * * * *", 24],
+      ["* 9 * * *", 60],
+    ] as const) {
+      const timing = read({ schedule });
+      expect(timing.schedule).toBe(schedule);
+      if (fires < 24) {
+        expect(timing.warnings).toEqual([]);
+        continue;
+      }
+      expect(timing.warnings).toHaveLength(1);
+      expect(timing.warnings[0]).toContain(`fires ${fires} times a day`);
+      expect(timing.warnings[0]).toContain("spends the user's credits");
+    }
+    for (const slower of ["0 9 * * *", "0 8,13,18 * * *", "0 9 14 2 *", "bad"])
       expect(read({ schedule: slower }).warnings).toEqual([]);
   });
 
