@@ -6,3 +6,8 @@ updates:
       interval: "weekly"
     labels:
       - "dependencies"
+    groups:
+      # init and analyze must run the same version, so they move together.
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
