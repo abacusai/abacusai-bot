@@ -381,7 +381,12 @@ type Route = {
   /** When the current turn was dispatched, for stuck-turn recovery. */
   busySince: number;
   /** Messages that arrived mid-turn, sent in order once the turn finishes. */
-  queue: Array<{ text: string; replyContext?: Record<string, string> }>;
+  queue: Array<{
+    text: string;
+    replyContext?: Record<string, string>;
+    /** The app's own hidden note (relayNote), not the chat's words. */
+    note?: true;
+  }>;
   /** Whether this turn has already said the queue is full. */
   queueFullNotified: boolean;
   /**
@@ -1234,7 +1239,8 @@ export class MessagingGatewayService {
   private dispatch(
     route: Route,
     text: string,
-    replyContext?: Record<string, string>
+    replyContext?: Record<string, string>,
+    note = false
   ): void {
     route.busy = true;
     route.busySince = Date.now();
@@ -1250,6 +1256,21 @@ export class MessagingGatewayService {
     // Bot routes share one session, so the dispatching route claims the event
     // stream for its turn. A no-op for ordinary routes.
     this.routesBySession.set(route.sessionId, route);
+    // The app's own note: hidden, unframed, and never echoed as the chat's.
+    if (note) {
+      this.options.noteChannelTurn?.(route.sessionId, {
+        platform: route.platform,
+        chatId: route.chatId,
+        owner: route.owner,
+        userName: route.userName,
+      });
+      this.watchProgress(route);
+      this.options.sendMessage(route.workspaceId, route.sessionId, text, {
+        systemReminder: true,
+        operator: { kind: "environment-notice" },
+      });
+      return;
+    }
     // A bot answers many chats from one conversation, so the prompt says
     // which one is talking.
     const framed = route.viaBot ? `[${route.senderLabel}] ${text}` : text;
@@ -1450,6 +1471,35 @@ export class MessagingGatewayService {
       route.sessionId,
       `${RESPONSE_LABEL} ${words}`
     );
+  }
+
+  /**
+   * The app's hidden note (a bot's answer to its request) for a turn the
+   * user started in their own chat on an app: it runs as a turn on that
+   * chat's route, so the bot's reply goes back to that chat, not the app.
+   * Waits behind a running turn like any message. Only the user's own chat,
+   * never a contact's; false when that chat has no route here (the caller
+   * then tells the app's chat).
+   */
+  relayNote(
+    sessionId: string,
+    channel: { platform: string; chatId: string },
+    note: string
+  ): boolean {
+    const route = this.routes.get(`${channel.platform}:${channel.chatId}`);
+    if (route == null || route.sessionId !== sessionId || !route.owner)
+      return false;
+    const active = this.routesBySession.get(route.sessionId);
+    const appTurn =
+      active?.busy !== true &&
+      this.options.isSessionBusy?.(route.workspaceId, route.sessionId) === true;
+    if (appTurn && active == null)
+      this.routesBySession.set(route.sessionId, route);
+    // Never dropped for a full queue: it is the answer the user is owed.
+    if ((active != null && active.busy) || appTurn)
+      route.queue.push({ text: note, note: true });
+    else this.dispatch(route, note, undefined, true);
+    return true;
   }
 
   /** Whether a chat-app conversation is bound to this session. */
@@ -1789,7 +1839,7 @@ export class MessagingGatewayService {
   private startQueued(route: Route): void {
     const next = route.queue.shift();
     if (next != null) {
-      this.dispatch(route, next.text, next.replyContext);
+      this.dispatch(route, next.text, next.replyContext, next.note === true);
       return;
     }
 
@@ -1800,7 +1850,12 @@ export class MessagingGatewayService {
       if (sibling.sessionId !== route.sessionId || sibling === route) continue;
       const queued = sibling.queue.shift();
       if (queued != null) {
-        this.dispatch(sibling, queued.text, queued.replyContext);
+        this.dispatch(
+          sibling,
+          queued.text,
+          queued.replyContext,
+          queued.note === true
+        );
         return;
       }
     }

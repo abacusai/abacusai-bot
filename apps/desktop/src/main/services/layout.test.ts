@@ -124,6 +124,7 @@ const MAIN_ROOT_FILES = [
   "renderer-host.test.ts",
   "renderer-host.ts",
   "resources.ts",
+  "service-host.bot-ask.test.ts",
   "service-host.routines.test.ts",
   "service-host.ts",
   "spellcheck-dictionary.ts",

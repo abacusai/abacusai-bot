@@ -10,11 +10,16 @@ import path from "path";
 
 import type { ChannelCapabilities } from "@abacus-ai/agent/channel";
 import type { UnattendedPolicy } from "@abacus-ai/agent/tool-policy";
+import { visibleUserText } from "@abacus-ai/agent/user-text";
 import {
   connectorById,
   connectorForService,
 } from "@abacus-ai/connectors/registry";
-import type { AgentMode, DesktopEvent } from "@abacus-ai/contract/agent-types";
+import type {
+  AgentMode,
+  DesktopEvent,
+  UserTextTags,
+} from "@abacus-ai/contract/agent-types";
 import type {
   BotChangeNotice,
   Bot,
@@ -314,6 +319,18 @@ import { stopAllServed } from "./services/agent-tools/static-server";
 import { WebhookRelay } from "./services/agent-tools/webhook-relay";
 import { WebhookService } from "./services/agent-tools/webhook-service";
 import { AguiRelayService } from "./services/agui/relay-service";
+import {
+  BOT_ANSWER_SEGMENT,
+  BOT_ASK_PLATFORM,
+  BOT_ASK_TURN_TIMEOUT_MS,
+  BOT_TASK_PREFIX,
+  BOT_TASK_TURN_TIMEOUT_MS,
+} from "./services/bots/bot-ask";
+import {
+  type BotAskRecord,
+  BotAskService,
+  fileAskStore,
+} from "./services/bots/bot-ask-service";
 import { botChatPreview } from "./services/bots/bot-chat-preview";
 import {
   clearBotMemory,
@@ -567,6 +584,48 @@ const STEP_REFS_FILE = "step-chat-refs.json";
 const connectorIdsFor = (services: string[]): string[] =>
   services.flatMap((key) => connectorForService(key)?.id ?? []);
 
+/**
+ * A reply that only agrees ("yes", "ok go ahead", "sure, do it"): to a bot's
+ * offer to pass work on, so the message before it says what the work is.
+ */
+/** How long the user's latest words count for passing a task on. */
+const USER_WORDS_FRESH_MS = 15 * 60_000;
+
+const AGREEMENT =
+  /^(?:yes|yeah|yep|yup|ok|okay|sure|go ahead|please|do it|sounds good|y)\b[\s\w,.!']{0,30}$/i;
+
+/** A chat app's message without its "[WhatsApp message from …]" label. */
+const unlabelled = (text: string): string =>
+  text.replace(/^\[[^\]\n]*\]\s*/, "");
+
+/**
+ * Whether the user's words ask for work to go to another bot: they name one,
+ * or say someone else should do it, or agree to an offer (a plain yes, with
+ * the message before it). Not a request to the bot itself ("make me X").
+ */
+const asksForHandOff = (
+  words: string,
+  botNames: readonly string[]
+): boolean => {
+  const lines = words.split("\n");
+  if (lines.length > 1 && AGREEMENT.test(unlabelled(lines.at(-1) ?? "")))
+    return true;
+  const named = botNames.some(
+    (name) =>
+      name.trim().length > 0 &&
+      new RegExp(
+        `\\b${name.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+        "i"
+      ).test(words)
+  );
+  return (
+    named ||
+    /\b(someone|somebody|another bot|other bots?|your team|the team|delegate|hand (it |this )?(off|over)|pass (it|this) (on|to))\b/i.test(
+      words
+    )
+  );
+};
+
 export class ServiceHost {
   constructor(readonly platform: HostPlatform = "electron") {
     this.vault =
@@ -700,6 +759,7 @@ export class ServiceHost {
         this.agentManagerService.sendCommandToSession(threadId, command),
       acceptedMessage: (threadId, message, tags) => {
         this.successPitch.userSaid(threadId, message, tags);
+        this.noteUserWords(threadId, message, tags);
         this.agentSessionManagerService.nameFromMessage(
           threadId,
           message,
@@ -1000,9 +1060,12 @@ export class ServiceHost {
   private readonly successPitch = new SuccessPitchWatch({
     prefs: () => this.prefs?.() ?? null,
     account: () => cachedAbacusAccount(),
+    // Never a bot answering another bot: nobody is reading that conversation,
+    // and an offer stamped there is one the user never sees.
     pitchable: (sessionId) =>
       this.agentSessionManagerService.laneOf(sessionId) == null &&
-      !this.agentSessionManagerService.isRoutineSession(sessionId),
+      !this.agentSessionManagerService.isRoutineSession(sessionId) &&
+      !this.isBotAskSession(sessionId),
     workspacePath: (sessionId) => this.sessionDirectory(sessionId),
     turnOpen: (sessionId) => this.turnLedger.isOpen(sessionId),
     tellInChat: (sessionId) =>
@@ -1349,6 +1412,10 @@ export class ServiceHost {
         sessionId: session.id,
         label: session.label,
         role: session.owner?.role ?? ("sender" as const),
+        // Its answers to another bot: that bot's words are labelled as its.
+        ...(session.owner?.platform === BOT_ASK_PLATFORM
+          ? { askedBy: session.owner.senderName ?? "another bot" }
+          : {}),
       }));
       if (forever != null && !owned.some((session) => session.id === forever)) {
         const item = this.agentSessionManagerService.get(forever);
@@ -1365,6 +1432,26 @@ export class ServiceHost {
           this.agentSessionManagerService.getDiagnosticInfo(row.sessionId)
             ?.agentSessionFile ?? null,
       }));
+    },
+    // Deferred through arrows: botService initializes after this field.
+    botAsks: {
+      bots: () =>
+        this.botService.list().map((bot) => ({
+          id: bot.id,
+          name: bot.name,
+          title: bot.title,
+        })),
+      asks: {
+        ask: (askerId, askerSession, targetId, request) =>
+          this.botAskService.ask(askerId, askerSession, targetId, request, {
+            channel: this.ownChatOfTurn(askerSession),
+          }),
+        give: (askerId, askerSession, targetId, task) =>
+          this.giveBotTask(askerId, askerSession, targetId, task),
+        list: (askerId, limit) => this.botAskService.list(askerId, limit),
+        get: (askerId, id) => this.botAskService.get(askerId, id),
+        cancel: (askerId, id) => this.botAskService.cancel(askerId, id),
+      },
     },
     onCronChanged: () => {
       this.emitEvent({
@@ -2276,6 +2363,8 @@ export class ServiceHost {
       });
     },
     onBotRemoved: (botId) => {
+      // Its open requests to other bots, and theirs to it, end here.
+      this.botAskService.forgetBot(botId);
       // Its routines stay, paused: they were the bot's work, and without it
       // they would keep firing, spending credits, in nobody's voice. The
       // user resumes or deletes them from the Routines panel.
@@ -2769,6 +2858,8 @@ export class ServiceHost {
     if (this.platform === "electron")
       void this.builtinMcpLifecycle.startBrowserServer();
     this.startIdleAgentReaper();
+    // Requests between bots the app closed on run again; queued ones start.
+    this.botAskService.recover();
     // Failures are per-connector and reported through the pane.
     void this.messagingGatewayService
       .syncConnectors()
@@ -3536,7 +3627,11 @@ export class ServiceHost {
       .listAll()
       .filter(
         (session) =>
-          session.owner?.kind === "bot" && session.owner.role === "sender"
+          session.owner?.kind === "bot" &&
+          session.owner.role === "sender" &&
+          // A bot answering another bot is not an auto-reply chat: the pane
+          // would show it under an unknown app as "Paused".
+          session.owner.platform !== BOT_ASK_PLATFORM
       )
       .map((session) => {
         const owner = session.owner!;
@@ -3861,6 +3956,7 @@ export class ServiceHost {
     // passes through, rather than left to the model's whim. The message still
     // goes through untouched.
     void this.rememberIfAsked(request.message);
+    this.noteUserWords(request.sessionId, request.message, request.userText);
 
     this.idleAgentReaper?.touch(request.sessionId);
     // Synchronously, so a refetch sees the busy state immediately.
@@ -5280,11 +5376,17 @@ export class ServiceHost {
     return `${voice}\n\n${prompt}`;
   }
 
-  /** Callers (the routine editor) waiting for a turn's text as a value. */
+  /** Callers (the routine editor, a bot's ask) waiting for a turn's text as a value. */
   private readonly turnWaiters = new Map<
     string,
     {
       text: string[];
+      /** Why it failed when the turn names no error. */
+      failed: string;
+      /** Mark each new message and tool call with this, so the last part can be told apart. */
+      segment?: string;
+      /** The message the last text belonged to. */
+      messageId?: string | null;
       resolve: (text: string) => void;
       reject: (e: Error) => void;
     }
@@ -5293,8 +5395,19 @@ export class ServiceHost {
   private feedTurnWaiter(sessionId: string, payload: DesktopEvent): void {
     const waiter = this.turnWaiters.get(sessionId);
     if (waiter == null || payload.type !== "event") return;
-    if (payload.event.type === "text_delta")
-      waiter.text.push(payload.event.content);
+    const event = payload.event;
+    if (event.type === "text_delta") {
+      if (
+        waiter.segment != null &&
+        event.messageId != null &&
+        waiter.messageId != null &&
+        event.messageId !== waiter.messageId
+      )
+        waiter.text.push(waiter.segment);
+      if (event.messageId != null) waiter.messageId = event.messageId;
+      waiter.text.push(event.content);
+    } else if (event.type === "tool_call_start" && waiter.segment != null)
+      waiter.text.push(waiter.segment);
   }
 
   /** The waited-on turn closed: its text if it answered, else why not. */
@@ -5303,22 +5416,28 @@ export class ServiceHost {
     if (waiter == null) return;
     this.turnWaiters.delete(record.sessionId);
     if (record.kind === "reply") waiter.resolve(waiter.text.join("").trim());
-    else
-      waiter.reject(
-        new Error(record.error?.message ?? "The editor did not answer.")
-      );
+    else waiter.reject(new Error(record.error?.message ?? waiter.failed));
   }
 
-  private waitForTurn(sessionId: string, timeoutMs: number): Promise<string> {
+  private waitForTurn(
+    sessionId: string,
+    timeoutMs: number,
+    messages: { timeout: string; failed: string; segment?: string } = {
+      timeout: "The routine did not answer in time.",
+      failed: "The editor did not answer.",
+    }
+  ): Promise<string> {
     return new Promise<string>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.turnWaiters.delete(sessionId);
-        reject(
-          new TimeoutError("The routine did not answer in time.", timeoutMs)
-        );
+        reject(new TimeoutError(messages.timeout, timeoutMs));
       }, timeoutMs);
       this.turnWaiters.set(sessionId, {
         text: [],
+        failed: messages.failed,
+        ...(messages.segment != null
+          ? { segment: messages.segment, messageId: null }
+          : {}),
         resolve: (text) => {
           clearTimeout(timer);
           resolve(text);
@@ -5329,6 +5448,243 @@ export class ServiceHost {
         },
       });
     });
+  }
+
+  /**
+   * Bot asks as background work (ask_bot): recorded, answered by the asked
+   * bot in its own conversation with the asker, and told to the asker as a
+   * hidden note between the user's turns (deliverSessionNote holds it while
+   * the asker is mid-turn). Deferred through arrows: botService initializes
+   * after this field.
+   */
+  private readonly botAskService = new BotAskService({
+    bot: (id) => {
+      const bot = this.botService.list().find((each) => each.id === id);
+      return bot == null
+        ? null
+        : { id: bot.id, name: bot.name, title: bot.title };
+    },
+    runTurn: (ask, prompt, visibleFrom) =>
+      this.runBotAskTurn(ask, prompt, visibleFrom),
+    stopTurn: (ask) => {
+      const handle = this.botAskTurns.get(ask.id);
+      if (handle != null)
+        this.agentManagerService.stopSession(
+          handle.workspaceId,
+          handle.sessionId
+        );
+    },
+    tell: (ask, note) => this.tellBotAsk(ask, note),
+    // The app's one way to refresh running chats' tools (as when a chat app
+    // connects): the asker's follow-up tools appear.
+    changed: () => this.toolAvailabilityChanged(),
+    ...fileAskStore(),
+  });
+
+  /**
+   * The user's latest messages in each session, in their own words: the
+   * authority a task passed to another bot carries. Recorded from both ways
+   * a message arrives (the app's chat, acceptedMessage; a chat app or
+   * anything else, sendAgentMessage). Never the app's own messages: a hidden
+   * note clears them, so a turn the app started cannot pass work on; an
+   * ask's rules and a passed-on task are never counted.
+   */
+  private readonly userWords = new Map<
+    string,
+    Array<{ text: string; at: number }>
+  >();
+
+  private noteUserWords(
+    sessionId: string,
+    message: string,
+    tags: UserTextTags | undefined
+  ): void {
+    if (message.startsWith(BOT_TASK_PREFIX)) return;
+    const words = visibleUserText(message, tags).trim();
+    if (words.length === 0) {
+      this.userWords.delete(sessionId);
+      return;
+    }
+    const recent = this.userWords.get(sessionId) ?? [];
+    // The same message can arrive by both paths; it counts once.
+    if (recent.at(-1)?.text === words) return;
+    this.userWords.set(sessionId, [
+      ...recent.slice(-1),
+      { text: words, at: Date.now() },
+    ]);
+  }
+
+  /**
+   * A task the user gave a bot for another bot (give_task_to_bot): only in a
+   * turn where the user spoke, carrying their words verbatim, so a bot can
+   * never pass on an instruction the user did not give.
+   */
+  private giveBotTask(
+    askerId: string,
+    askerSession: string,
+    targetId: string,
+    task: string
+  ): ReturnType<BotAskService["ask"]> {
+    // The latest message, recent; a plain yes ("ok, go ahead") agrees to an
+    // offer, and the message before it says what the work is.
+    const recent = (this.userWords.get(askerSession) ?? []).filter(
+      (entry) => Date.now() - entry.at < USER_WORDS_FRESH_MS
+    );
+    const said = recent.at(-1)?.text ?? "";
+    const words =
+      AGREEMENT.test(unlabelled(said)) && recent.length > 1
+        ? `${recent[0].text}\n${said}`
+        : said;
+    if (said.length === 0)
+      return {
+        error:
+          "Only pass a task on when the user asked for it in this conversation just now: their message is what lets the other bot act on it. For your own question to another bot, use ask_bot.",
+      };
+    // Real work moves to another bot only when the user asked for a hand-off
+    // or agreed to one; "make me a checklist" is a request to this bot.
+    const names = this.botService.list().map((bot) => bot.name);
+    if (!asksForHandOff(words, names))
+      return {
+        error:
+          'The user did not ask to hand this off, so do it yourself, or offer in one line ("Planner could do this. Want me to pass it on?") and wait for their yes. For a quick question to another bot, use ask_bot.',
+      };
+    return this.botAskService.ask(askerId, askerSession, targetId, task, {
+      kind: "task",
+      userWords: words,
+      channel: this.ownChatOfTurn(askerSession),
+    });
+  }
+
+  /** Resolves true once the session has no turn open, false after `ms`. */
+  private turnClosed(sessionId: string, ms: number): Promise<boolean> {
+    if (!this.turnLedger.isOpen(sessionId)) return Promise.resolve(true);
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        stop();
+        resolve(false);
+      }, ms);
+      const stop = this.turnLedger.onClose((record) => {
+        if (record.sessionId !== sessionId) return;
+        clearTimeout(timer);
+        stop();
+        resolve(true);
+      });
+    });
+  }
+
+  /**
+   * A request's outcome note, back to the user's own chat on the app it came
+   * from while that chat is still routed here; otherwise in the app's chat.
+   */
+  private tellBotAsk(ask: BotAskRecord, note: string): void {
+    if (
+      ask.channel == null ||
+      !this.messagingGatewayService.relayNote(
+        ask.askerSession,
+        ask.channel,
+        note
+      )
+    )
+      this.deliverSessionNote(ask.askerSession, note);
+  }
+
+  /**
+   * The user's own chat on an app whose message the session's open turn is
+   * answering, or null (the app's chat, or a contact's).
+   */
+  private ownChatOfTurn(
+    sessionId: string
+  ): { platform: string; chatId: string } | null {
+    const channel = this.turnLedger.channelOf(sessionId);
+    return channel?.owner === true
+      ? { platform: channel.platform, chatId: channel.chatId }
+      : null;
+  }
+
+  /** The asked bot's conversation for each ask whose turn is running. */
+  private readonly botAskTurns = new Map<string, BotChatHandle>();
+
+  /**
+   * One turn of the asked bot in its conversation with the asker, a sender
+   * chat on the "bot" platform, so its main chat with the user is never
+   * written to. Resolves with the turn's raw text, in parts (see
+   * BOT_ANSWER_SEGMENT); a turn that runs too long is stopped.
+   */
+  private async runBotAskTurn(
+    ask: BotAskRecord,
+    prompt: string,
+    visibleFrom: number | null
+  ): Promise<string> {
+    const task = ask.kind === "task";
+    const asker = this.botService.list().find((bot) => bot.id === ask.askerId);
+    const handle = task
+      ? await this.botService.openChat(ask.targetId)
+      : await this.botService.openSenderChat(
+          ask.targetId,
+          BOT_ASK_PLATFORM,
+          ask.askerId,
+          asker?.name ?? "another bot"
+        );
+    this.botAskTurns.set(ask.id, handle);
+    try {
+      if (task) {
+        // The user may be talking to that bot in its chat: the task waits
+        // for that turn to end rather than steering into it.
+        if (
+          !(await this.turnClosed(handle.sessionId, BOT_TASK_TURN_TIMEOUT_MS))
+        )
+          throw new Error("it stayed busy in its own chat for 30 minutes.");
+      } else if (this.turnLedger.isOpen(handle.sessionId))
+        // A turn left open there (one stopped or cut off) would take this
+        // request into it; asks of one pair never overlap otherwise.
+        await this.agentManagerService
+          .stopSessionAndWait(handle.workspaceId, handle.sessionId)
+          .catch(() => undefined);
+      const answer = this.waitForTurn(
+        handle.sessionId,
+        task ? BOT_TASK_TURN_TIMEOUT_MS : BOT_ASK_TURN_TIMEOUT_MS,
+        {
+          timeout: `it took more than ${task ? 30 : 10} minutes, so it was stopped.`,
+          failed: "its turn ended without an answer.",
+          segment: BOT_ANSWER_SEGMENT,
+        }
+      );
+      // A message no agent took closes its turn too: `answer` then rejects.
+      const sent = await this.sendAgentMessage({
+        workspaceId: handle.workspaceId,
+        sessionId: handle.sessionId,
+        message: prompt,
+        // A task shows in that bot's chat as it arrived; an ask's rules don't.
+        ...(visibleFrom != null
+          ? {
+              userText: { operator: { kind: "auto-reply-intro", visibleFrom } },
+            }
+          : {}),
+      });
+      // Refused before any turn opened (its workspace is gone): nothing will
+      // close a turn, so the waiter is ended here rather than at the timeout.
+      if (!sent) {
+        const waiter = this.turnWaiters.get(handle.sessionId);
+        this.turnWaiters.delete(handle.sessionId);
+        waiter?.reject(new Error("it could not be started."));
+      }
+      return await answer;
+    } catch (error) {
+      if (error instanceof TimeoutError)
+        this.agentManagerService.stopSession(
+          handle.workspaceId,
+          handle.sessionId
+        );
+      throw error;
+    } finally {
+      this.botAskTurns.delete(ask.id);
+    }
+  }
+
+  /** A session that is a bot answering another bot's ask. */
+  private isBotAskSession(sessionId: string): boolean {
+    const owner = this.agentSessionManagerService.get(sessionId)?.owner;
+    return owner?.role === "sender" && owner.platform === BOT_ASK_PLATFORM;
   }
 
   /**

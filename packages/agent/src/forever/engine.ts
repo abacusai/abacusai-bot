@@ -887,6 +887,11 @@ export class ForeverEngine {
     const session = this.session;
 
     if (session == null || this.interrupted) return;
+    // A held chat (a stranger's, another bot's ask, a routine run) cannot
+    // write memory: a flush there only spends credits, and a consolidation
+    // claimed there fails yet counts as the day's, so the user's own chat
+    // would skip it.
+    if (this.mode === AgentMode.Unattended) return;
 
     const memory = this.profile.memory;
     const window = session.model?.contextWindow;
