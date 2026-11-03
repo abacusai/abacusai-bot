@@ -38,10 +38,18 @@ type Connector = {
 const codes: string[] = [];
 const pairs: number[] = [];
 
+/** How far the server's clock is behind this computer's; null: no clock sent. */
+let serverBehindMs: number | null = null;
+
 const respond = (body: unknown): Response =>
   new Response(JSON.stringify(body), {
     status: 200,
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      ...(serverBehindMs != null
+        ? { date: new Date(Date.now() - serverBehindMs).toUTCString() }
+        : {}),
+    },
   });
 
 globalThis.fetch = vi.fn(async (_url: unknown, init?: RequestInit) => {
@@ -57,8 +65,12 @@ globalThis.fetch = vi.fn(async (_url: unknown, init?: RequestInit) => {
       status: "pending",
       qr_data: `https://t.me/bot?start=${code}`,
       deep_link: `https://t.me/bot?start=${code}`,
-      // Already past: the next tick has to decide what to do about it.
-      expires_at: Date.now() / 1000 - 1,
+      // Already past: the next tick has to decide what to do about it. With
+      // a server clock, ten minutes ahead of it, as the server mints them.
+      expires_at:
+        serverBehindMs != null
+          ? (Date.now() - serverBehindMs) / 1000 + 600
+          : Date.now() / 1000 - 1,
     });
   }
 
@@ -71,6 +83,7 @@ afterEach(async () => {
   for (const connector of started.splice(0)) await connector.stop();
   codes.length = 0;
   pairs.length = 0;
+  serverBehindMs = null;
 });
 
 const telegram = async (logs: string[]): Promise<Connector> => {
@@ -106,6 +119,29 @@ describe("a pairing code that has run out", () => {
       expect(connector.link.status).toBe("pending");
       expect(connector.link.qrDataUrl).toBeTruthy();
       expect(logs.join("\n")).toContain("showing a fresh one");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("a fresh pairing code on a computer whose clock is off", () => {
+  it.each([
+    ["5 hours ahead", 5 * 60 * 60_000],
+    ["13 hours ahead", 13 * 60 * 60_000],
+    ["right", 0],
+  ])("is kept on screen when the clock is %s", async (_label, behindMs) => {
+    vi.useFakeTimers();
+    try {
+      serverBehindMs = behindMs;
+      const connector = await telegram([]);
+
+      await connector.pair();
+      // A minute of the card's polls: well inside the code's ten minutes.
+      await vi.advanceTimersByTimeAsync(60_000);
+
+      expect(pairs).toHaveLength(1);
+      expect(connector.link.status).toBe("pending");
     } finally {
       vi.useRealTimers();
     }
