@@ -54,6 +54,7 @@ import {
   chatLineForSuccessPitch,
   chatFailureOf,
   chatReplyForFailure,
+  chatLineForMove,
   contactFailureNotice,
   FailureReplyThrottle,
   failureKind,
@@ -1168,25 +1169,6 @@ export class MessagingGatewayService {
     const label = `${platformLabel(platformId)} · ${message.userName ?? message.userId}`;
     this.options.updateSessionLabel(workspaceId, session.id, label);
 
-    const { autoApproveTools } = readGatewaySettings();
-    const started = await this.options.startSession(
-      workspaceId,
-      session.id,
-      // Nobody is at the keyboard to approve a tool for a remote turn; the
-      // pairing allowlist is what keeps Bypass from being an open door.
-      autoApproveTools ? readDefaultAgentMode() : AgentMode.AcceptEdits
-    );
-
-    if (!started.success) {
-      await this.safeSend(
-        platformId,
-        message.chatId,
-        `Could not start the agent: ${started.error ?? "unknown error"}`,
-        message.replyContext
-      );
-      return null;
-    }
-
     const route: Route = {
       platform: platformId,
       chatId: message.chatId,
@@ -1209,6 +1191,28 @@ export class MessagingGatewayService {
       delivered: false,
       progressTimer: null,
     };
+
+    const { autoApproveTools } = readGatewaySettings();
+    const started = await this.options.startSession(
+      workspaceId,
+      session.id,
+      // Nobody is at the keyboard to approve a tool for a remote turn; the
+      // pairing allowlist is what keeps Bypass from being an open door.
+      autoApproveTools ? readDefaultAgentMode() : AgentMode.AcceptEdits
+    );
+
+    // The start retried already: the chat hears it in its own words, as any
+    // turn no agent took, never the start's raw error.
+    if (!started.success) {
+      console.log(
+        `[messaging] ${platformId}:${message.chatId} agent did not start: ${started.error ?? "unknown"}`
+      );
+      await this.replyToFailure(
+        { ...route, replyContext: message.replyContext },
+        { code: "not_started" }
+      );
+      return null;
+    }
 
     if (existing != null) {
       this.routesBySession.delete(existing.sessionId);
@@ -1353,6 +1357,16 @@ export class MessagingGatewayService {
       return;
     }
 
+    // The message moved off a failed model to RouteLLM - Open: the user's own
+    // chat hears why before the answer; someone else's chat gets the answer.
+    if (event.type === "notification") {
+      const moved = event.actions?.find(
+        (action) => action.type === "moved-to-abacus"
+      );
+      if (moved != null) void this.tellMove(route, moved);
+      return;
+    }
+
     // Text before a tool call is narration, not the reply, except a reply the
     // model already wrapped, which a later tool call must not throw away.
     if (event.type === "tool_call_start") {
@@ -1467,6 +1481,27 @@ export class MessagingGatewayService {
   relayingSession(sessionId: string): boolean {
     const route = this.routesBySession.get(sessionId);
     return route != null && route.viaBot && route.busy;
+  }
+
+  /** The move's line, in the user's own chat only. */
+  private async tellMove(
+    route: Route,
+    action: { provider?: string; label?: string; target?: string }
+  ): Promise<void> {
+    const own = this.selfChatOf(route.platform);
+    if (
+      own == null ||
+      own.platform !== route.platform ||
+      own.chatId !== route.userId
+    )
+      return;
+    const words = await channelWords(
+      channelLocale(
+        readUserLanguage()?.name ?? null,
+        this.options.appLanguage?.() ?? null
+      )
+    );
+    this.deliver(route, chatLineForMove(words, action));
   }
 
   /**

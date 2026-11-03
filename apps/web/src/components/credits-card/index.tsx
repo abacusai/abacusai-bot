@@ -2,10 +2,7 @@ import {
   type BillingPlan,
   paidCreditsOffer,
   paidUpgradeOnly,
-  planPitch,
-  planPrice,
   type UpgradeSrc,
-  wallOffer,
 } from "@abacus-ai/contract/billing-plan";
 import {
   FREE_POOL_PROVIDERS,
@@ -16,7 +13,8 @@ import {
   PROVIDER_KEY_FIELDS,
   providerDisplayName,
 } from "@abacus-ai/contract/settings";
-import { AlertTriangle, Check } from "lucide-react";
+import type { TFunction } from "i18next";
+import { AlertTriangle } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -41,6 +39,7 @@ import { Field, FieldLabel, FieldError } from "#renderer/ui/field";
 import { Input } from "#renderer/ui/input";
 import { Separator } from "#renderer/ui/separator";
 
+import { OfferButtons, OfferPitch } from "./model-unavailable";
 import { PaidOfferButtons, PaidOfferDetails } from "./paid-offer";
 
 export interface CreditActions {
@@ -74,13 +73,40 @@ export interface CreditWallChoice {
   providers: readonly string[];
   /** Keep going on the free models; absent when none is connected. */
   onContinueFree?(): Promise<unknown>;
-  /** The plan's button: the upgrade dialog that resumes the turn. */
+  /** The plan's Upgrade: checkout, then the dialog that waits for the plan and resumes the turn. */
   onUpgrade?(): void;
+  /** See plans: the upgrade dialog with every plan. */
+  onSeePlans?(): void;
+  /** What stopped, in the user's own words (the chat's task). */
+  task?: string;
+  /** The stopped message is sent again by itself once the plan is active. */
+  resumes?: boolean;
   /** A paid plan's Top up and next plan: the link, then the dialog that resumes the turn. */
   onTopUp?(): void;
   onNextPlan?(): void;
   expired?: boolean;
 }
+
+/** The wall's title: what stopped, by the chat's task when it has one, and why. */
+export const creditWallTitle = (
+  t: TFunction,
+  wall: Pick<CreditWallChoice, "task" | "expired">,
+  paying: boolean
+): string =>
+  t(
+    wall.task != null
+      ? wall.expired === true
+        ? "outcome.wall.taskExpiredTitle"
+        : paying
+          ? "outcome.wall.taskPaidTitle"
+          : "outcome.wall.taskTitle"
+      : wall.expired === true
+        ? "outcome.wall.expiredTitle"
+        : paying
+          ? "outcome.wall.paidTitle"
+          : "outcome.wall.title",
+    { task: wall.task }
+  );
 
 export const missingFreeSources = (configured: Record<string, boolean>) =>
   FREE_POOL_PROVIDERS.filter((source) => configured[source] !== true).slice(
@@ -162,7 +188,6 @@ export const CreditsCard = ({
     paying || configured == null || wall?.onContinueFree != null
       ? []
       : missingFreeSources(configured);
-  const offer = wallOffer(billing);
   // A paid plan's way on: credits, the next plan, or the mobile app.
   const paidOffer = paying ? paidCreditsOffer(billing) : null;
   // The next plan alone (Basic): shown as the free plan's upgrade is.
@@ -238,13 +263,7 @@ export const CreditsCard = ({
         <GroupCard
           title={
             wall != null
-              ? t(
-                  wall.expired === true
-                    ? "outcome.wall.expiredTitle"
-                    : paying
-                      ? "outcome.wall.paidTitle"
-                      : "outcome.wall.title"
-                )
+              ? creditWallTitle(t, wall, paying)
               : (title ??
                 t(
                   paying
@@ -293,26 +312,11 @@ export const CreditsCard = ({
                 </div>
               )}
               {paidDetails}
-              {pitchesPlan && offer != null && (
-                <div className="flex flex-col gap-1.5" data-slot="wall-offer">
-                  <p className="font-medium">
-                    {t("outcome.wall.offer", {
-                      plan: offer.planName,
-                      price: planPrice(t, offer, i18n.language),
-                    })}
-                  </p>
-                  <ul className="flex flex-col gap-1">
-                    {planPitch(t, billing, i18n.language).map((feature) => (
-                      <li key={feature} className="flex gap-1.5">
-                        <Check
-                          aria-hidden
-                          className="text-primary mt-0.5 size-3.5 shrink-0"
-                        />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              {pitchesPlan && <OfferPitch billing={billing} />}
+              {pitchesPlan && wall.resumes === true && (
+                <p className="text-muted-foreground" data-slot="wall-resumes">
+                  {t("outcome.wall.resumes")}
+                </p>
               )}
             </div>
           ) : paidDetails == null ? (
@@ -333,12 +337,21 @@ export const CreditsCard = ({
             </div>
           )}
           <div className="flex flex-col gap-3 p-3">
-            {(tier === "free" || upgradeOnly) && (
-              <Button size="sm" data-action="upgrade" onClick={upgrade}>
-                {wall != null && offer != null
-                  ? t("outcome.wall.upgradeCta", { plan: offer.planName })
-                  : t("creditsCard.cta")}
-              </Button>
+            {wall != null && pitchesPlan ? (
+              // The wall's offer: the price on Upgrade, which goes to checkout.
+              <div className="flex flex-wrap gap-2">
+                <OfferButtons
+                  billing={billing}
+                  onUpgrade={upgrade}
+                  onSeePlans={wall.onSeePlans ?? upgrade}
+                />
+              </div>
+            ) : (
+              (tier === "free" || upgradeOnly) && (
+                <Button size="sm" data-action="upgrade" onClick={upgrade}>
+                  {t("creditsCard.cta")}
+                </Button>
+              )
             )}
             {upgradeOnly ? null : paidOffer != null ? (
               <PaidOfferButtons

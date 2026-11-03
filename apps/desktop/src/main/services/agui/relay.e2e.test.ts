@@ -157,15 +157,15 @@ const build = (_options: { unused?: boolean } = {}): Stack => {
   });
   relay = new AguiRelayService({
     files: store,
-    startTimeoutMs: 45_000,
     ackTimeoutMs: 20_000,
     log: () => undefined,
     host: {
       workspaceOf: (threadId) => (threadId === THREAD ? "w1" : null),
       runtime: (threadId) => manager.getRuntimeInfo(threadId),
       start: async (threadId) =>
+        // As the app's start: true once the agent is ready.
         (
-          await manager.startSession({
+          await manager.startSessionReady({
             workspaceId: "w1",
             sessionId: threadId,
             mode: AgentMode.Normal,

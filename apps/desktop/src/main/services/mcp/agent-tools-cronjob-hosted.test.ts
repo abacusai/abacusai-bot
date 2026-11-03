@@ -473,7 +473,9 @@ describe("cronjob, local", () => {
       schedule: "0 9 * * *",
     });
     expect(free).toContain("[once]");
-    expect(free).toContain("the Basic plan runs routines 24/7");
+    expect(free).toContain(
+      "the Basic plan gives personal agents in Abacus AI Agent on the web that run 24/7 with the computer off"
+    );
     expect(free).toContain("https://apps.abacus.ai/chatllm/agent");
     expect(free).toContain("billing_plan with upgrade: true");
 
@@ -482,7 +484,9 @@ describe("cronjob, local", () => {
       prompt: "Local digest 2",
       schedule: "0 9 * * *",
     });
-    expect(paid).toContain("their plan already includes routines");
+    expect(paid).toContain(
+      "their plan already includes personal agents in Abacus AI Agent on the web that run 24/7"
+    );
     expect(paid).not.toContain("billing_plan");
   });
 
@@ -547,11 +551,13 @@ describe("bot_help, routines", () => {
 
   it("hands a free plan to billing_plan for 24/7, and gives a paid plan the link itself", async () => {
     const free = await guide({ runner: "local", tier: "free" });
-    expect(free).toContain("the Basic plan runs routines 24/7");
+    expect(free).toContain(
+      "the Basic plan gives personal agents in Abacus AI Agent on the web that run 24/7 with the computer off"
+    );
     expect(free).toContain("Call billing_plan with upgrade: true");
     const paid = await guide({ runner: "local", tier: "paid" });
     expect(paid).toContain(
-      "their plan already includes routines that run 24/7"
+      "their plan already includes personal agents in Abacus AI Agent on the web that run 24/7"
     );
     expect(paid).toContain("https://apps.abacus.ai/chatllm/agent");
   });

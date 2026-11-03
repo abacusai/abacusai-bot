@@ -637,6 +637,24 @@ export function listModels(registry: ModelRegistry): ModelChoice[] {
     .map(toChoice);
 }
 
+/**
+ * A paying plan's own router, the low code router every paying catalog lists
+ * (else the code router); null on a free plan, whose catalog never lists the
+ * code router. A paying plan runs on it and has no RouteLLM - Open.
+ */
+export const payingPlanRouter = (
+  registry: ModelRegistry
+): ModelChoice | null => {
+  const models = listModels(registry);
+  if (!models.some((model) => model.id === `abacus/${CODE_ROUTER_ID}`))
+    return null;
+  return (
+    models.find((model) => model.id === `abacus/${CODE_ROUTER_LOW_ID}`) ??
+    models.find((model) => model.id === `abacus/${CODE_ROUTER_ID}`) ??
+    null
+  );
+};
+
 /** The zero-cost slice of the catalog: OpenRouter's free tier and the like. */
 export function listFreeModels(registry: ModelRegistry): ModelChoice[] {
   return listModels(registry).filter((model) => model.free);

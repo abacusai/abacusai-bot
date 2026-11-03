@@ -86,6 +86,9 @@ const SessionsNewRoute = () => {
           key={draft.id}
           workspaceId={workspaceId}
           handoff={async (id, envelope) => {
+            // This window sent it: a run that fails before the chat's view
+            // loads is still this person's moment (UpgradeTriggers).
+            chat.session(id).noteSent(envelope.runId);
             const ack = await transport.client.ai.send({
               threadId: id,
               startId: id,

@@ -11,6 +11,7 @@ import {
   writePhoneReplyLanguage,
   writePhoneZone,
 } from "@abacus-ai/agent/phone-nudges";
+import { PLAN_GIVES } from "@abacus-ai/agent/plan-asks";
 
 import type { PendingWait } from "#main/services/agent-tools/pending-waits";
 
@@ -452,7 +453,7 @@ function upgradeHintNote(hint: PhoneInboxEntry["upgrade_hint"]): string | null {
   return (
     `[upgrade hint] The user is on the free plan${messages}. Only if this reply finishes a task for them or answers ` +
     `their thanks, end it with one short, friendly line in their language: what you have done for them so far, that ` +
-    `${plan} adds more credits, more routines and top models for ${priceText} (write ${firstMonth} exactly), and ask ` +
+    `${plan} adds ${PLAN_GIVES} for ${priceText} (write ${firstMonth} exactly), and ask ` +
     `whether they want the link. On their yes, send it with \`billing_plan\`. Never mid-task, after a complaint or an ` +
     `error, or when you just asked them something: then leave it out.`
   );

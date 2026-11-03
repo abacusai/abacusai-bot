@@ -63,7 +63,7 @@ export function phoneBillingResult(
     "to account settings or a billing page instead of these links. Never say you changed their plan: they upgrade",
     "on the page."
   );
-  lines.push("", alwaysOnAnswer(billing));
+  lines.push("", alwaysOnAnswer(billing, false));
   if (billing.upgradeInMobileApp)
     lines.push(
       "Their plan is billed through the app store: they upgrade or buy credits in the mobile app, under Settings. Say so instead of sending a link."

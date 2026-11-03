@@ -1590,9 +1590,11 @@
       "account": "Paused: the account is not active.",
       "failures": "Paused after failing several times.",
       "other": "Paused.",
-      "denied": "Paused: you did not allow it."
+      "denied": "Paused: you did not allow it.",
+      "quiet": "Paused: {{runs}} runs in a row found nothing new, so it stopped using credits. Resume it to keep checking."
     },
     "createdByAgent": "A routine was set up: {{name}}.",
+    "frequent": "Runs {{times}} times a day, and every run uses credits: at this rate a month's credits can be gone in a few days. If several runs in a row find nothing new, it pauses itself.",
     "refused": {
       "planInterval": "On the free plan, a routine that runs on its own runs at most once a day. Upgrading allows more often.",
       "planKind": "The free plan includes tasks only. Upgrading allows the other kinds.",
@@ -4447,17 +4449,28 @@
     }
   },
   "ownKey": {
-    "freeBody": "No separate API bill. Upgrade and keep going on the top models.",
     "notResponding": "{{provider}} isn't responding right now",
     "openAgent": "Open AbacusAI Agent",
     "outOfCredit": "Your {{provider}} key is out of credit",
     "paidBody": "Use it in AbacusAI Agent on the web: the top models are included in your plan.",
-    "rateLimited": "Your {{provider}} key hit its rate limit"
+    "rateLimited": "Your {{provider}} key hit its rate limit",
+    "gone": "{{model}} on {{provider}} isn't available anymore",
+    "noReply": "{{model}} on {{provider}} sent no reply",
+    "failed": "{{model}} on {{provider}} couldn't finish this",
+    "localServer": "your local model server",
+    "whyFree": "{{provider}}'s free models can stop answering or be retired without notice.",
+    "whyKey": "{{model}} runs on your own {{provider}} key, with that key's limits and billing.",
+    "whyLocal": "{{model}} runs on your local model server, which has to be running and reachable.",
+    "moved": "{{model}} on {{provider}} isn't available, so I switched this chat to {{target}}."
   },
   "outcome": {
     "wall": {
       "title": "Your free credits are used up",
       "expiredTitle": "Your free credits have expired",
+      "taskTitle": "“{{task}}” is paused: your free credits are used up",
+      "taskExpiredTitle": "“{{task}}” is paused: your free credits have expired",
+      "taskPaidTitle": "“{{task}}” is paused: this month's credits are used up",
+      "resumes": "Upgrade and it picks up where it stopped, by itself.",
       "paidTitle": "You've used this month's credits",
       "paidOffer": "Or move up to {{plan}} — {{price}}",
       "paidMobile": "Your plan is billed through the App Store or Google Play, so add credits or upgrade in the Abacus.AI mobile app.",
@@ -4507,8 +4520,7 @@
       "newChat": "New chat",
       "fixKey": "Check the key",
       "viewDetails": "View details",
-      "tryAgain": "Try again",
-      "switchToAbacus": "Switch to Abacus (RouteLLM - Open)"
+      "tryAgain": "Try again"
     },
     "channel": {
       "wall": "I've paused because your free credits are used up.",
@@ -4532,6 +4544,14 @@
       "ownKeyRejected": "Your {{provider}} key was rejected — it's invalid or expired. Fix it in the app under Settings → Models.",
       "ownKeyWeb": "Use it in AbacusAI Agent on the web: {{link}}",
       "ownKeySwitch": "Switch to Abacus.AI in the app's model picker to keep going on your free Abacus credits.",
+      "ownKeyGone": "{{model}} on {{provider}} isn't available anymore.",
+      "ownKeyNoReply": "{{model}} on {{provider}} sent no reply.",
+      "ownKeyFailed": "{{model}} on {{provider}} couldn't finish that.",
+      "localServer": "your local model server",
+      "ownKeyWhyFree": "{{provider}}'s free models can stop answering or be retired without notice.",
+      "ownKeyWhyKey": "It runs on your own {{provider}} key.",
+      "ownKeyWhyLocal": "It runs on your local model server, which has to be running and reachable.",
+      "ownKeyMoved": "{{model}} on {{provider}} isn't available, so I switched this chat to {{target}}.",
       "busy": "The free models are busy right now.",
       "connection": "The connection dropped, so I couldn't finish that. Please try again in a moment.",
       "notSignedIn": "The desktop app is not signed in to Abacus.AI right now. Open the app and sign in, then message me again.",
@@ -4543,6 +4563,7 @@
       "paymentLapsed": "I've paused because your Abacus.AI subscription has ended. Renew it here: {{link}}",
       "timedOut": "That took too long and was stopped before I could reply. Send it again to pick it back up.",
       "agentExited": "The app stopped before I could reply. Send it again to pick it back up.",
+      "notStarted": "The app took too long to get ready, so I couldn't start on that. Send it again to try once more.",
       "empty": "I couldn't put a reply together for that. Please send it again.",
       "contactNeutral": "Sorry, I can't reply right now. I'll get back to you soon.",
       "contactEmpty": "I didn't reply to {{name}}: no answer came back. Open the app to answer them, or tell me what to say.",
@@ -4622,6 +4643,7 @@
     "low": {
       "title": "Only {{left}} free credits left",
       "urge": "Upgrade now so your work doesn't stop halfway.",
+      "urgeProject": "Upgrade now so “{{project}}” doesn't stop halfway.",
       "estimateBuilds_one": "Enough for about {{count}} more build.",
       "estimateBuilds_other": "Enough for about {{count}} more builds.",
       "estimateMessages_one": "Enough for about {{count}} more bot message.",
