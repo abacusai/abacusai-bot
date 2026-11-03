@@ -12,6 +12,7 @@ import {
 } from "../../bring-to-front";
 import { abacusBotHome } from "../../paths";
 import {
+  boundedWait,
   chunkMessage,
   isEphemeralPreview,
   previewMatchesSent,
@@ -23,7 +24,12 @@ import {
   PollScheduler,
   runPageScript,
 } from "./connector";
-import { BOOT_MAX_RELOADS, pageBusy, PageBootWatch } from "./page-boot-watch";
+import {
+  BOOT_MAX_RELOADS,
+  FIRST_LOAD_WAIT_MS,
+  pageBusy,
+  PageBootWatch,
+} from "./page-boot-watch";
 
 /**
  * Telegram, by driving the real web.telegram.org in a hidden BrowserWindow:
@@ -175,7 +181,12 @@ export class TelegramWebConnector implements MessagingConnector {
     this.watchLoads(this.window);
 
     try {
-      await this.window.loadURL(TELEGRAM_WEB_URL);
+      // Bounded: a load that never settles must not keep the checks from
+      // starting; the boot watch takes it from there.
+      await boundedWait(
+        this.window.loadURL(TELEGRAM_WEB_URL),
+        FIRST_LOAD_WAIT_MS
+      );
     } catch (error) {
       // Worth reporting; the poll below still runs in case the page recovers.
       this.callbacks.onLog(
@@ -232,7 +243,10 @@ export class TelegramWebConnector implements MessagingConnector {
         );
         const win = this.recreateWindow();
         if (win != null && !win.isDestroyed()) {
-          await win.loadURL(TELEGRAM_WEB_URL).catch(() => {});
+          await boundedWait(
+            win.loadURL(TELEGRAM_WEB_URL),
+            FIRST_LOAD_WAIT_MS
+          ).catch(() => {});
           await new Promise((resolve) => setTimeout(resolve, 4_000));
         }
         result = await attempt();
@@ -326,7 +340,8 @@ export class TelegramWebConnector implements MessagingConnector {
    */
   private notBooted(why: string): void {
     const win = this.window;
-    const busy = win != null && !win.isDestroyed() && pageBusy(win.webContents);
+    const busy =
+      win != null && !win.isDestroyed() ? pageBusy(win.webContents) : null;
     const verdict = this.boot.stuck(Date.now(), busy);
     if (verdict === "wait") return;
     if (verdict === "give_up" && !this.loggedIn) {
