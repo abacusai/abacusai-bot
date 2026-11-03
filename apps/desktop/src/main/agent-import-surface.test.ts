@@ -65,6 +65,9 @@ const ALLOWED = new Set([
   // Tool titles and the watchdog's tool summary: an 8 kB chunk with no imports
   // at all (the renderer takes the same entry).
   "@abacus-ai/agent/tool-display",
+  // How a plan-only ask is worded (billing_plan, routines): a 2 kB chunk with
+  // no imports at all.
+  "@abacus-ai/agent/plan-asks",
 ]);
 
 const MAIN_DIR = resolve(import.meta.dirname);
