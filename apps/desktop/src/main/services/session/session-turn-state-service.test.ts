@@ -17,6 +17,7 @@ import {
 } from "@abacus-ai/contract/agent-types";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
+import { ConnectivityService } from "../connectivity/connectivity-service";
 import {
   SessionTurnStateService,
   INACTIVITY_TIMEOUT_MINUTES,
@@ -46,8 +47,13 @@ const statusChange = (status: AgentStatus): DesktopEvent =>
     event: { type: "status_changed", status },
   }) as DesktopEvent;
 
-const heartbeat = (runningTools = 1): DesktopEvent =>
-  ({ type: "heartbeat", runningTools }) as DesktopEvent;
+/** As the agent beats: the tool it is running, or none while the model writes. */
+const heartbeat = (runningTools = 1, tool?: string): DesktopEvent =>
+  ({
+    type: "heartbeat",
+    runningTools,
+    ...(tool != null ? { tool } : {}),
+  }) as DesktopEvent;
 
 let onTimeout: ReturnType<
   typeof vi.fn<
@@ -137,6 +143,93 @@ describe("reporting a wedged turn", () => {
   });
 });
 
+describe("the timeout names what was running when the agent went quiet", () => {
+  const toolEnd = (name: string): DesktopEvent =>
+    ({
+      type: "event",
+      event: {
+        type: "tool_execution_complete",
+        tool: { id: "call-1", name, type: name, input: {}, args: {} },
+        result: { id: "call-1", content: "" },
+      },
+    }) as DesktopEvent;
+
+  it.each([
+    {
+      case: "a tool that finished long ago is not named",
+      events: [toolStart("read", { path: "a.txt" }), toolEnd("read")],
+      named: null,
+    },
+    {
+      case: "the model writing a tool call, after a tool ended",
+      events: [toolStart("ls", { path: "." }), toolEnd("ls"), heartbeat(0)],
+      named: null,
+    },
+    {
+      case: "the tool the last heartbeat said is running",
+      events: [
+        toolStart("bash", { command: "a" }),
+        toolEnd("bash"),
+        heartbeat(1, "bash (node build.js)"),
+      ],
+      named: "bash (node build.js)",
+    },
+  ])("$case", ({ events, named }) => {
+    service.markSent(WS, SESSION);
+    for (const event of events) service.filterDesktopEvent(WS, SESSION, event);
+
+    vi.advanceTimersByTime(TIMEOUT_MS);
+
+    expect(onTimeout).toHaveBeenCalledWith(WS, SESSION, named);
+  });
+});
+
+describe("a machine asleep mid-turn wakes to a whole window", () => {
+  // The app's own sleep owner, as index.ts tells it of powerMonitor events.
+  let connectivity: ConnectivityService;
+  beforeEach(() => {
+    connectivity = new ConnectivityService({ probe: async () => true });
+    service = new SessionTurnStateService(
+      () => {},
+      onTimeout,
+      undefined,
+      connectivity
+    );
+  });
+
+  it.each([
+    { case: "asleep before the deadline", awakeBefore: TIMEOUT_MS / 2 },
+    { case: "asleep a moment before it", awakeBefore: TIMEOUT_MS - 1_000 },
+  ])("$case: the wake is not a timeout", ({ awakeBefore }) => {
+    service.markSent(WS, SESSION);
+    vi.advanceTimersByTime(awakeBefore);
+    connectivity.suspended();
+    // The lid stays shut all night.
+    vi.advanceTimersByTime(8 * 60 * 60_000);
+    connectivity.resumed();
+
+    expect(onTimeout).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(TIMEOUT_MS - 1);
+    expect(onTimeout).not.toHaveBeenCalled();
+    expect(service.get(WS, SESSION).isBusy).toBe(true);
+
+    // A whole silent window after the wake is still a wedged agent.
+    vi.advanceTimersByTime(1);
+    expect(onTimeout).toHaveBeenCalledTimes(1);
+  });
+
+  it("a turn that ended while asleep has no deadline to wake to", () => {
+    service.markSent(WS, SESSION);
+    connectivity.suspended();
+    service.filterDesktopEvent(WS, SESSION, statusChange(AgentStatus.Idle));
+    connectivity.resumed();
+
+    vi.advanceTimersByTime(TIMEOUT_MS * 2);
+
+    expect(onTimeout).not.toHaveBeenCalled();
+  });
+});
+
 describe("waiting on a person is not a wedged agent", () => {
   it("does not time out a session parked on an approval prompt", () => {
     service.markSent(WS, SESSION);
@@ -206,7 +299,11 @@ describe("a tool that runs quietly is not a wedged agent", () => {
       toolStart("bash", { command: "node crawl.js" })
     );
     vi.advanceTimersByTime(TIMEOUT_MS / 2);
-    service.filterDesktopEvent(WS, SESSION, heartbeat());
+    service.filterDesktopEvent(
+      WS,
+      SESSION,
+      heartbeat(1, "bash (node crawl.js)")
+    );
 
     vi.advanceTimersByTime(TIMEOUT_MS);
 
@@ -519,6 +616,19 @@ describe("every turn closes once, with how it ended", () => {
       "stopped",
       "agent_exited",
     ]);
+  });
+
+  it("an agent that never came up ends no turn; the start's failure does", () => {
+    // A slow start killed at its deadline: its start retries, so the turn
+    // stays open for the second agent, and only its failure closes it.
+    ledgered.markSent(WS, SESSION);
+    ledgered.markClosed(WS, SESSION, false);
+    expect(records).toEqual([]);
+    expect(ledgered.get(WS, SESSION).isBusy).toBe(true);
+
+    ledgered.markNotStarted(WS, SESSION);
+    expect(records.map((record) => record.kind)).toEqual(["not_started"]);
+    expect(ledgered.get(WS, SESSION).isBusy).toBe(false);
   });
 
   it("a message sent into a running turn does not open a second one", () => {

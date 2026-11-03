@@ -197,7 +197,7 @@ describe("the agent and the watchdog, wired together", () => {
         },
       },
     } as DesktopEvent);
-    heartbeat.started("call-1");
+    heartbeat.started("call-1", { name: "bash", input: { command } });
   };
 
   it("carries a silent bash call past the watchdog that used to kill it", () => {
@@ -257,5 +257,66 @@ describe("the agent and the watchdog, wired together", () => {
     vi.advanceTimersByTime(WATCHDOG_MS);
 
     expect(onTimeout).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("a model writing a tool call longer than the watchdog", () => {
+  type OnTimeout = (
+    workspaceId: string,
+    sessionId: string,
+    lastActivity: string | null
+  ) => void;
+  let service: SessionTurnStateService;
+  let onTimeout: ReturnType<typeof vi.fn<OnTimeout>>;
+  let heartbeat: ToolHeartbeat;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    onTimeout = vi.fn<OnTimeout>();
+    service = new SessionTurnStateService(() => {}, onTimeout);
+    heartbeat = new ToolHeartbeat((event) => {
+      service.filterDesktopEvent(WS, SESSION, event as DesktopEvent);
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    heartbeat.clear();
+  });
+
+  it("is not killed while its arguments keep streaming", () => {
+    // A large `write`: fifteen minutes of `toolcall_delta`, none of which the
+    // watchdog sees.
+    service.markSent(WS, SESSION);
+    for (let elapsed = 0; elapsed < 15 * 60_000; elapsed += 2_000) {
+      heartbeat.generating();
+      vi.advanceTimersByTime(2_000);
+    }
+
+    expect(onTimeout).not.toHaveBeenCalled();
+  });
+
+  it("is caught once the stream stops, naming the model rather than a tool", () => {
+    service.markSent(WS, SESSION);
+    service.filterDesktopEvent(WS, SESSION, {
+      type: "event",
+      event: {
+        type: "tool_execution_start",
+        tool: { id: "c1", name: "read", type: "read", input: { path: "a" } },
+      },
+    } as DesktopEvent);
+    service.filterDesktopEvent(WS, SESSION, {
+      type: "event",
+      event: {
+        type: "tool_execution_complete",
+        tool: { id: "c1", name: "read", type: "read", input: { path: "a" } },
+        result: { id: "c1", content: "" },
+      },
+    } as DesktopEvent);
+    heartbeat.generating();
+
+    vi.advanceTimersByTime(WATCHDOG_MS + HEARTBEAT_INTERVAL_MS);
+
+    expect(onTimeout).toHaveBeenCalledWith(WS, SESSION, null);
   });
 });

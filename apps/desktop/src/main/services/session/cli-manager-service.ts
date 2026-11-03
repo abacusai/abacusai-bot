@@ -36,6 +36,7 @@ import { WORKSPACE_MISSING_ERROR } from "@abacus-ai/contract/contracts";
 
 import { agentVendorDir } from "#main/resources";
 
+import { ConnectivityService } from "../connectivity/connectivity-service";
 import { describeAgentEvent } from "../diagnostics/agent-event-log";
 import { logStore } from "../diagnostics/log-store";
 import type { ResolvedAgentArtifact } from "./artifact-resolver-service";
@@ -185,7 +186,12 @@ type AgentManagerServiceOptions = {
     }
   ) => void;
   emitSystemReady: (workspaceId: string, sessionId: string) => void;
-  emitSessionClosed: (workspaceId: string, sessionId: string) => void;
+  /** `started`: the process had come up; one that never did ended no turn. */
+  emitSessionClosed: (
+    workspaceId: string,
+    sessionId: string,
+    started: boolean
+  ) => void;
   /** Full MCP runtime snapshot for a session. Broadcast on update. */
   emitMcpRuntimeServers: (
     workspaceId: string,
@@ -233,6 +239,11 @@ type AgentManagerServiceOptions = {
    * rejection is reported to the agent as a failed service, not a dead session.
    */
   runHostService: (service: HostService, payload: unknown) => Promise<unknown>;
+  /**
+   * Times the ready deadline in awake time: the app's ConnectivityService,
+   * so a machine asleep mid-start does not kill the agent on wake.
+   */
+  clock?: Pick<ConnectivityService, "awakeTimeout">;
 };
 
 const DEFAULT_STARTUP_TIMEOUT_MS = 60_000;
@@ -835,7 +846,9 @@ export class AgentManagerService {
       this.runtimes.get(request.sessionId)?.process === child;
 
     let startupResolved = false;
-    const startupTimer = setTimeout(() => {
+    const cancelStartup = (
+      this.options.clock ?? new ConnectivityService()
+    ).awakeTimeout(startupTimeoutMs, () => {
       if (startupResolved) {
         return;
       }
@@ -852,14 +865,14 @@ export class AgentManagerService {
       // Reap the child, or a late `ready` arrives for a failed session and
       // the process lingers forever.
       killWithEscalation(child);
-    }, startupTimeoutMs);
+    });
 
     const resolveStartup = (): void => {
       if (startupResolved) {
         return;
       }
       startupResolved = true;
-      clearTimeout(startupTimer);
+      cancelStartup();
     };
 
     child.stdout.on("data", (chunk: Buffer | string) => {
@@ -996,7 +1009,11 @@ export class AgentManagerService {
       this.options.emitStateUpdated(current.workspaceId, current.sessionId, {
         ...current.state,
       });
-      this.options.emitSessionClosed(current.workspaceId, current.sessionId);
+      this.options.emitSessionClosed(
+        current.workspaceId,
+        current.sessionId,
+        !current.startupFailed && !exitedBeforeReady
+      );
       logStore().append(
         "agent",
         `[${current.sessionId.slice(0, 8)}] exited code=${code ?? "-"} signal=${signal ?? "-"} status=${current.state.status}`

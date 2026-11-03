@@ -480,6 +480,22 @@ describe("what the loop hears with a user message", () => {
     for (const note of notes) expect(note).toMatch(/^\[[a-z][a-z -]*\] /);
   });
 
+  it("an upgrade hint names what the plan adds beyond credits: image and video, 24/7 agents with the computer off, deployed apps", () => {
+    const [hint] = nudgeNotes({
+      id: "m1",
+      text: "thanks",
+      upgrade_hint: {
+        plan: "Basic",
+        first_month: "$7",
+        price_text: "$7 for your first month, then $10/mo",
+        messages: 6,
+      },
+    });
+    expect(hint).toContain(
+      "Basic adds more credits, top models, image and video generation, personal agents that run 24/7 with the computer off, apps deployed to a live link and 100+ connectors for $7 for your first month, then $10/mo"
+    );
+  });
+
   it("nothing extra for a plain message", () => {
     expect(nudgeNotes({ id: "m1", text: "hi" })).toEqual([]);
   });

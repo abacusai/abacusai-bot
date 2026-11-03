@@ -4,6 +4,7 @@ import {
   planPitch,
   wallOffer,
 } from "@abacus-ai/contract/billing-plan";
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 import {
   creditAccountKey,
   type CreditTaskKind,
@@ -45,6 +46,8 @@ export interface CreditThresholdCardProps {
   total: number;
   estimate: { count: number; kind: CreditTaskKind | null } | null;
   billing: BillingPlan | null;
+  /** The chat the user is on, by its name: what running out would stop. */
+  project?: string;
   onUpgrade(): void;
   onContinue(): void;
 }
@@ -55,6 +58,7 @@ export const CreditThresholdCard = ({
   total,
   estimate,
   billing,
+  project,
   onUpgrade,
   onContinue,
 }: CreditThresholdCardProps) => {
@@ -68,7 +72,8 @@ export const CreditThresholdCard = ({
     locale,
     threshold,
     { left, total },
-    estimate
+    estimate,
+    project
   );
   const offer = wallOffer(billing);
   const first = offer?.firstMonthPriceCents;
@@ -197,6 +202,23 @@ export const CreditThresholdHost = () => {
   const turnRunning = (sessions ?? []).some(
     (session) => session.turn?.isBusy === true
   );
+  // The chat the user worked in last, by its name; not a routine run's or a bot's.
+  const project = (sessions ?? [])
+    .filter(
+      (session) =>
+        session.routineId == null &&
+        session.editorFor == null &&
+        !session.botOwned &&
+        session.label.trim().length > 0
+    )
+    .reduce<SessionRow | null>(
+      (latest, session) =>
+        latest == null || session.updatedAt > latest.updatedAt
+          ? session
+          : latest,
+      null
+    )
+    ?.label.trim();
   const key = creditAccountKey(account);
   const mark = key != null ? prefs.creditThresholds?.[key] : undefined;
   const cards = prefs.dismissals.creditThresholdCards ?? {};
@@ -265,6 +287,7 @@ export const CreditThresholdHost = () => {
       total={total}
       estimate={count != null ? { count, kind: mark?.kind ?? null } : null}
       billing={billing ?? null}
+      {...(project != null && { project })}
       onUpgrade={() => {
         // Inside the click: the web build opens its checkout tab here.
         void openUpgrade(transport.client, "low_credits");

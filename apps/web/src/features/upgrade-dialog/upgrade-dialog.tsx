@@ -5,7 +5,6 @@ import {
   wallOffer,
 } from "@abacus-ai/contract/billing-plan";
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
-import { providerDisplayName } from "@abacus-ai/contract/settings";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bot,
@@ -22,8 +21,8 @@ import { useTranslation } from "react-i18next";
 import { PaidOfferDetails } from "#renderer/components/credits-card/paid-offer";
 import { creditsTier } from "#renderer/lib/credits";
 import {
-  ownKeyHeadlineKey,
   ownKeyResumeModel,
+  ownKeyWords,
 } from "#renderer/lib/own-key-unavailable";
 import {
   checkPlanNow,
@@ -343,9 +342,7 @@ const DialogBody = ({
         {!plan && (
           <p className="text-muted-foreground text-xs font-medium tracking-[0.02em]">
             {request.ownKey != null
-              ? t(ownKeyHeadlineKey(request.ownKey.cause), {
-                  provider: providerDisplayName(request.ownKey.provider),
-                })
+              ? ownKeyWords(request.ownKey, t).title
               : t(
                   connectors
                     ? "upgradeDialog.connectorsEyebrow"

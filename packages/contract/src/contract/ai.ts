@@ -104,6 +104,20 @@ export interface AiHydration extends ChatHydrationResult {
   abacus: AiThreadSnapshot;
 }
 
+/** The agent's silent answer: a reply the user never sees (the bot loop's). */
+export const NO_REPLY = "NO_REPLY";
+
+/**
+ * Assistant text as the user sees it: a trailing `NO_REPLY` and the
+ * whitespace around it removed, so exactly `NO_REPLY` reads as "".
+ */
+export const withoutNoReply = (text: string): string => {
+  const trimmed = text.trimEnd();
+  return trimmed.endsWith(NO_REPLY)
+    ? trimmed.slice(0, -NO_REPLY.length).trimEnd()
+    : text;
+};
+
 /**
  * A run's end, once per run id, from the relay's authoritative terminal
  * (spec 03 §24.11): the first terminal of the run, main's own
@@ -118,8 +132,8 @@ export interface RunFinishedNotice {
   /** `outcome: "error"`: the terminal's code, when it has one. */
   errorCode?: string;
   /**
-   * The run's assistant messages hold a text part whose trimmed content is
-   * non-empty and not exactly `NO_REPLY`.
+   * The run's assistant messages hold a text part that is not blank once
+   * `withoutNoReply` has removed a trailing `NO_REPLY`.
    */
   hasVisibleAssistantText: boolean;
   owner: SessionOwner | null;

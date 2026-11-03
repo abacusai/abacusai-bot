@@ -225,6 +225,29 @@ describe("a login whose connect dialog closed unlinked", () => {
     ]);
   });
 
+  it("is not turned off while its page is still loading", async () => {
+    // A stored link signing back in (or a slow first load) shows no login yet.
+    const { gateway, captured, off } = await released();
+    captured[0]!.onState("connecting");
+    await vi.advanceTimersByTimeAsync(RELEASED_LOGIN_MS * 3);
+    expect(off).not.toHaveBeenCalled();
+
+    captured[0]!.onState("connected");
+    expect(platformState(gateway)).toBe("connected");
+  });
+
+  it("is turned off once a page that was loading lands on its login", async () => {
+    const { captured, off } = await released();
+    captured[0]!.onState("connecting");
+    await vi.advanceTimersByTimeAsync(RELEASED_LOGIN_MS);
+    captured[0]!.onState("needs_login", "Scan the QR to connect.");
+    await vi.advanceTimersByTimeAsync(RELEASED_LOGIN_MS);
+    expect(off).toHaveBeenCalledWith({
+      platformId: "discord",
+      enabled: false,
+    });
+  });
+
   it("is not abandoned once its login is shown again", async () => {
     const { gateway, off } = await released();
     gateway.showMessagingLogin("discord");

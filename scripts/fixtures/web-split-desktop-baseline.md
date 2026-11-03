@@ -8,7 +8,25 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `0ba0d4315` (the first-run screen)
+## Current: `de9cd7eba` (the failure card for a model off Abacus, #630)
+
+**420 / 7984199 / 2670107.** Records the renderer with #630's handling of a
+failed model off Abacus: the line that says the chat moved to RouteLLM - Open,
+and the card that names the failed model with the plan's full offer when the
+credits are used up. Against `0ba0d4315`: -2 chunks, +87597 bytes (+1.11%),
++19931 gzip bytes (+0.75%). Main at `f208fea31` (#620, before #630) stood at
+420 / 7965493 / 2665540 (+0.87% bytes, under the 1% allowance); #630 adds
++18706 bytes (+0.24%) and +4567 gzip bytes on top of it: about 4.8 kB in the
+shared `ui` chunk for the card and the notice, the rest its new strings in each
+locale chunk. No dependency or chunk split. The 1% allowance is unchanged.
+
+Measured from a frozen-lockfile build of `de9cd7eba` and of `f208fea31`
+(Linux x64), summed the same way as `check-desktop-parity.mjs`. This
+baseline-only change touches no renderer code.
+
+## History
+
+### `0ba0d4315` (the first-run screen)
 
 **422 / 7896602 / 2650176.** Records the renderer with onboarding's first-run
 screen (what to do first, and the inbox pass after a Gmail sign-in). Against
@@ -24,8 +42,6 @@ unchanged.
 Measured from a frozen-lockfile build of `0ba0d4315` and of main at
 `fb0c2714a` (Linux x64), summed the same way as `check-desktop-parity.mjs`.
 This baseline-only change touches no renderer code.
-
-## History
 
 ### `49eb0f84` (GitHub PR review, #517)
 
