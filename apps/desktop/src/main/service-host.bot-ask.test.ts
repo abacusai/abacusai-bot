@@ -520,6 +520,24 @@ describe("a task the user gave, passed on", () => {
     ).not.toEqual(expect.objectContaining({ error: expect.anything() }));
   });
 
+  it("is refused when the user only mentions a team or someone", () => {
+    for (const words of [
+      "Budget is 50,000 rupees; the team is me plus two ambassadors.",
+      "Someone told me cafés open at 8, plan the stall around that",
+    ])
+      expect(tryTask(words).result).toEqual(handOffRefused);
+  });
+
+  it("is allowed when the user asks for help from someone or the team", () => {
+    for (const words of [
+      "Get the team on the launch plan",
+      "Can someone check the landing page copy?",
+      "we need someone to draft the checklist",
+      "loop in another bot for the schedule",
+    ])
+      expect(tryTask(words).result).not.toEqual(handOffRefused);
+  });
+
   it("is refused when a word only looks like a bot's name", () => {
     expect(
       tryTask("we planned the launch, make me a checklist").result

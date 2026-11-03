@@ -602,6 +602,18 @@ const AGREEMENT =
 const unlabelled = (text: string): string =>
   text.replace(/^\[[^\]\n]*\]\s*/, "");
 
+/** "Delegate it", "hand this off", "pass it on": a hand-off wherever it is said. */
+const HAND_OFF =
+  /\b(?:delegate|hand (?:it |this |that )?(?:off|over)|pass (?:it|this|that) (?:on|to))\b/i;
+
+/**
+ * "Have someone…", "can the team…", "check with another bot": help asked
+ * for. The same words merely mentioned ("the team is me and two
+ * ambassadors") ask for nothing.
+ */
+const ASK_FOR_HELP =
+  /\b(?:(?:ask|have|get|let|need|want|find|use|involve|check with|loop in|bring in)\b[^.?!\n]{0,12}|(?:can|could|would|will|should) )(?:someone|somebody|another bot|other bots?|your team|the team|a colleague)\b/i;
+
 /** "Ask Marketer", "have Designer": a capitalised name right after an asking word. */
 const ASKED_FOR =
   /\b(?:ask|have|get|tell|message|ping|check with|(?:pass|give|hand|send) (?:it|this|that)? ?to)\s+(?:the\s+)?([a-z][\w-]+)/gi;
@@ -671,12 +683,7 @@ const handOffRefusal = (
     return named.some((name) => name.toLowerCase() === target.toLowerCase())
       ? null
       : `The user asked for ${named.join(" or ")}, not ${target}, so nothing was sent. Go to the bot they named, or ask them.`;
-  if (
-    /\b(someone|somebody|another bot|other bots?|your team|the team|delegate|hand (it |this )?(off|over)|pass (it|this) (on|to))\b/i.test(
-      words
-    )
-  )
-    return null;
+  if (HAND_OFF.test(words) || ASK_FOR_HELP.test(words)) return null;
   // "Ask Marketer …": the user asked for a bot they do not have.
   const unknown = [...words.matchAll(ASKED_FOR)]
     .map((match) => match[1]!)
