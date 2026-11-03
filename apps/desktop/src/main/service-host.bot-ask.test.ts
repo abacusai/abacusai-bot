@@ -395,16 +395,48 @@ describe("a task the user gave, passed on", () => {
   };
 
   describe("a question to another bot", () => {
-    it("goes out from a turn the user started", () => {
+    const tryAsk = (...messages: string[]) => {
       const h = wordsHost();
-      h.noteUserWords("res-chat", "I need a tagline for Brewly");
-      h.askBot("res", "res-chat", "wri", "a tagline please");
+      for (const message of messages) h.noteUserWords("res-chat", message);
+      return {
+        h,
+        result: h.askBot("res", "res-chat", "wri", "a tagline please"),
+      };
+    };
+
+    it("goes out when the user asks for it, naming the bot or not", () => {
+      for (const words of [
+        "ask Writer for a tagline",
+        "check with someone for a tagline",
+      ]) {
+        const { h } = tryAsk(words);
+        expect(h.botAskService.ask).toHaveBeenCalledTimes(1);
+      }
+    });
+
+    it("goes out when the user says yes to the bot's offer", () => {
+      const { h } = tryAsk("I need a tagline for Brewly", "yes please");
       expect(h.botAskService.ask).toHaveBeenCalledTimes(1);
+    });
+
+    it("never on the bot's own initiative: it answers itself or offers", () => {
+      const { h, result } = tryAsk("I need a tagline for Brewly");
+      expect(result).toEqual({
+        error: expect.stringContaining("did not ask you to ask another bot"),
+      });
+      expect(h.botAskService.ask).not.toHaveBeenCalled();
+    });
+
+    it("only the bot the user named", () => {
+      const { result } = tryAsk("ask Planner what day works");
+      expect(result).toEqual({
+        error: expect.stringContaining("asked for Planner, not Writer"),
+      });
     });
 
     it("never from a turn a bot's answer started: no loops", () => {
       const h = wordsHost();
-      h.noteUserWords("res-chat", "I need a tagline for Brewly");
+      h.noteUserWords("res-chat", "ask Writer for a tagline");
       h.noteUserWords("res-chat", "[bot answer] Writer answered…", {
         systemReminder: true,
         operator: { kind: "environment-notice" },

@@ -269,9 +269,12 @@ describe("a bot's fellow bots, in its standing prompt", () => {
   it("does the work itself by default, offers before handing real work over", () => {
     const lines = colleagueLines(all[0], all).join(" ");
     expect(lines).toContain("Do the user's work yourself by default");
-    expect(lines).toContain("quick question with ask_bot");
-    expect(lines).toContain("only when the user asked you to hand it off");
-    expect(lines).toContain("need not name the bot");
+    expect(lines).toContain(
+      "Involve another bot only when the user asks you to"
+    );
+    expect(lines).toContain("need not name it");
+    expect(lines).toContain("ask_bot for a quick question");
+    expect(lines).toContain("give_task_to_bot to hand over real work");
     expect(lines).toContain("offer in one line");
   });
 

@@ -608,7 +608,8 @@ const unlabelled = (text: string): string =>
 const handOffRefusal = (
   words: string,
   others: readonly string[],
-  target: string
+  target: string,
+  kind: "ask" | "task"
 ): string | null => {
   const lines = words.split("\n");
   // A yes to the bot's own offer, which named the bot.
@@ -626,12 +627,16 @@ const handOffRefusal = (
   if (named.length > 0)
     return named.some((name) => name.toLowerCase() === target.toLowerCase())
       ? null
-      : `The user asked for ${named.join(" or ")}, not ${target}. Pass it to the bot they named, or ask them.`;
-  return /\b(someone|somebody|another bot|other bots?|your team|the team|delegate|hand (it |this )?(off|over)|pass (it|this) (on|to))\b/i.test(
-    words
+      : `The user asked for ${named.join(" or ")}, not ${target}. Go to the bot they named, or ask them.`;
+  if (
+    /\b(someone|somebody|another bot|other bots?|your team|the team|delegate|hand (it |this )?(off|over)|pass (it|this) (on|to))\b/i.test(
+      words
+    )
   )
-    ? null
-    : 'The user did not ask to hand this off, so do it yourself, or offer in one line ("Planner could do this. Want me to pass it on?") and wait for their yes. For a quick question to another bot, use ask_bot.';
+    return null;
+  return kind === "task"
+    ? 'The user did not ask to hand this off, so do it yourself, or offer in one line ("Planner could do this. Want me to pass it on?") and wait for their yes.'
+    : 'The user did not ask you to ask another bot, so answer yourself, or offer in one line ("Writer could draft this. Want me to ask it?") and wait for their yes.';
 };
 
 export class ServiceHost {
@@ -5565,11 +5570,23 @@ export class ServiceHost {
     targetId: string,
     request: string
   ): ReturnType<BotAskService["ask"]> {
-    if (this.latestUserWords(askerSession).length === 0)
+    const words = this.latestUserWords(askerSession);
+    if (words.length === 0)
       return {
         error:
           "You can ask another bot only while answering the user: this turn was not started by them. Tell the user what you would ask, and let them decide.",
       };
+    // Only when the user asked for it (naming the bot, or someone) or said
+    // yes to the bot's offer: a weak model asked on its own for work it
+    // had already done, spending credits nobody asked to spend.
+    const bots = this.botService.list();
+    const refusal = handOffRefusal(
+      words,
+      bots.filter((bot) => bot.id !== askerId).map((bot) => bot.name),
+      bots.find((bot) => bot.id === targetId)?.name ?? "",
+      "ask"
+    );
+    if (refusal != null) return { error: refusal };
     return this.botAskService.ask(askerId, askerSession, targetId, request, {
       channel: this.ownChatOfTurn(askerSession),
     });
@@ -5594,7 +5611,8 @@ export class ServiceHost {
     const refusal = handOffRefusal(
       words,
       bots.filter((bot) => bot.id !== askerId).map((bot) => bot.name),
-      bots.find((bot) => bot.id === targetId)?.name ?? ""
+      bots.find((bot) => bot.id === targetId)?.name ?? "",
+      "task"
     );
     if (refusal != null) return { error: refusal };
     return this.botAskService.ask(askerId, askerSession, targetId, task, {

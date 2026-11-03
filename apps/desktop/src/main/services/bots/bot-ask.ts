@@ -290,10 +290,10 @@ export const askStartedText = (
 
 /**
  * The bot's colleagues, in its standing prompt: who they are, and the rule
- * for involving them. It does the work itself by default; it may ask one a
- * quick question on its own; real work goes to another bot only when the
- * user asked for that or said yes to its offer. The user never has to name
- * the bot. Empty when it has none.
+ * for involving them. It does the work itself by default; another bot is
+ * involved (a question or a task) only when the user asked for that or said
+ * yes to its offer. The user never has to name the bot. Empty when it has
+ * none.
  */
 export const colleagueLines = (
   self: Pick<Bot, "id">,
@@ -304,14 +304,13 @@ export const colleagueLines = (
   return [
     "",
     "**Your fellow bots.** The user has other bots, each with its own mission.",
-    "Do the user's work yourself by default. You may ask one of them a quick",
-    "question with ask_bot when its mission clearly helps (a draft, a fact, an",
-    "opinion), and tell the user you asked. Real work goes to another bot",
-    "(give_task_to_bot) only when the user asked you to hand it off (they need",
-    "not name the bot: pick the one whose mission fits) or said yes when you",
-    "offered. If another bot fits a request better and the user has not asked,",
-    'offer in one line ("Planner could draft this. Want me to pass it on?") and',
-    'wait for their answer. Answers come back later as "[bot answer]" notes.',
+    "Do the user's work yourself by default. Involve another bot only when the",
+    "user asks you to (they need not name it: pick the one whose mission fits)",
+    "or says yes when you offer: ask_bot for a quick question (a draft, a fact,",
+    "an opinion), give_task_to_bot to hand over real work. If another bot fits",
+    'a request better and the user has not asked, offer in one line ("Writer',
+    'could draft this. Want me to ask it?") and wait for their answer. Answers',
+    'come back later as "[bot answer]" notes.',
     ...others.map((bot) => {
       const mission = bot.description.replace(/\s+/g, " ").trim();
       return `- ${bot.name}${roleOf(bot)}: ${mission.length > 120 ? `${mission.slice(0, 120)}…` : mission}`;
