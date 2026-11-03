@@ -7,6 +7,6 @@
 {"type":"event","event":{"type":"text_delta","content":"Starting","messageId":"msg-1"}}
 {"type":"event","event":{"type":"status_changed","status":"streaming"}}
 {"type":"event","event":{"type":"text_delta","content":"Starting","messageId":"msg-2"}}
-{"type":"event","event":{"type":"error","error":{"message":"The model stopped answering (no output for 0.7s). Try again, or switch to a different model.","code":"turn_failed","actions":[{"type":"switch-model"}]}}}
-{"type":"event","event":{"type":"turn_complete","outcome":{"kind":"failed","cause":"turn_failed"},"usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":1,"model":"fake-1"}}}
+{"type":"event","event":{"type":"error","error":{"message":"The model stopped answering (no output for 0.7s). Try again, or switch to a different model.","code":"turn_failed","cause":"stalled","actions":[{"type":"switch-model"}]}}}
+{"type":"event","event":{"type":"turn_complete","outcome":{"kind":"failed","cause":"stalled"},"usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":1,"model":"fake-1"}}}
 {"type":"event","event":{"type":"status_changed","status":"idle"}}

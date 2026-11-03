@@ -2,20 +2,23 @@
  * The rules that keep a routine from running away with itself, as pure
  * functions over its runs so they can be tested without a scheduler: an
  * overlapping fire is skipped, an overlong run is failed, a routine that
- * keeps failing is paused, and the agent's own runs and schedules are kept
- * from multiplying what the user asked for.
+ * keeps failing or keeps finding nothing is paused, and the agent's own runs
+ * and schedules are kept from multiplying what the user asked for.
  */
+import { withoutNoReply } from "@abacus-ai/contract/contract/ai";
 import type {
   RoutineRunItem,
   RoutineRunOutcome,
 } from "@abacus-ai/contract/contracts";
-import type { RoutineRun } from "@abacus-ai/contract/routines";
+import {
+  ROUTINE_FAILURES_BEFORE_PAUSE,
+  ROUTINE_PAUSE_NOTES,
+  ROUTINE_QUIET_RUNS_BEFORE_PAUSE,
+  type RoutineRun,
+} from "@abacus-ai/contract/routines";
 
 /** How long a run may go before it is presumed stuck. */
 export const ROUTINE_RUN_TIMEOUT_MS = 30 * 60 * 1000;
-
-/** Consecutive failed runs before a routine pauses itself. */
-export const ROUTINE_FAILURES_BEFORE_PAUSE = 3;
 
 /** True when a fire now would run beside a run that has not finished. */
 export const hasRunInFlight = (runs: RoutineRunItem[]): boolean =>
@@ -95,6 +98,46 @@ export const consecutiveFailures = (runs: RoutineRunItem[]): number => {
 
 export const shouldPauseAfter = (runs: RoutineRunItem[]): boolean =>
   consecutiveFailures(runs) >= ROUTINE_FAILURES_BEFORE_PAUSE;
+
+/** A run that found nothing new ends on NO_REPLY, after any narration of its checks. */
+export const isQuietReply = (reply: string): boolean =>
+  withoutNoReply(reply) !== reply;
+
+/**
+ * Newest completed runs in a row that found nothing new. A failed run is the
+ * failure streak's, and one the network or a closing app cut off says
+ * nothing either way: neither breaks nor extends it.
+ */
+export const consecutiveQuietRuns = (
+  runs: ReadonlyArray<{ outcome: string; reply: string }>
+): number => {
+  let count = 0;
+  for (const run of runs) {
+    if (run.outcome !== "completed") continue;
+    if (!isQuietReply(run.reply)) break;
+    count += 1;
+  }
+  return count;
+};
+
+/**
+ * Whether a routine's runs since the user last resumed it (newest first) have
+ * found nothing often enough to pause it. Once the user resumes a routine
+ * paused this way they have chosen to keep it polling, so it is not paused
+ * for that again.
+ */
+export const shouldPauseQuiet = (
+  runs: ReadonlyArray<{ outcome: string; reply: string }>,
+  history: readonly RoutineRun[],
+  resumedAt: number
+): boolean =>
+  consecutiveQuietRuns(runs) >= ROUTINE_QUIET_RUNS_BEFORE_PAUSE &&
+  !history.some(
+    (entry) =>
+      entry.kind === "paused" &&
+      entry.result === ROUTINE_PAUSE_NOTES.quiet &&
+      entry.at <= resumedAt
+  );
 
 /** The agent's code for a turn that waited out its budget for the network. */
 const NETWORK_UNREACHABLE_CODE = "network_unreachable";

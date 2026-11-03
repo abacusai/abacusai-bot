@@ -35,7 +35,10 @@ import {
 import {
   classifyAttempt,
   classifyProviderFailure,
+  type FailureCause,
+  EMPTY_REPLY_FAILURE,
   isProviderFailure,
+  movesToOpenLlm,
   presentFailure,
   providerDetail,
   readableFailure,
@@ -894,14 +897,231 @@ describe("a picked model that cannot serve the turn", () => {
       { type: "fix-key", provider: "openai" },
       { type: "switch-to-abacus" },
     ]);
+    // A model off Abacus says it is that provider's, with Abacus beside it.
     expect(shown(GONE, "credits", "openai").actions).toEqual([
-      { type: "switch-model" },
+      {
+        type: "own-key-unavailable",
+        provider: "openai",
+        cause: "gone",
+        ...SONNET,
+      },
+      { type: "switch-to-abacus" },
     ]);
     expect(
       shown(GONE, "credits", "abacus", true).actions?.some(
         (action) => action.type === "model-unavailable"
       )
     ).toBe(false);
+  });
+});
+
+describe("a model the user picked that Abacus does not serve", () => {
+  const KIMI = {
+    model: "nvidia/moonshotai/kimi-k3",
+    label: "Kimi K3",
+    free: true,
+  };
+  const GEMINI_QUOTA =
+    '429: {"error":{"code":429,"message":"Quota exceeded for metric: generate_content_free_tier_requests","status":"RESOURCE_EXHAUSTED"}}';
+  const shown = (
+    provider: string,
+    raw: string,
+    abacus: "credits" | "out" | null,
+    cause = classifyAttempt(raw, provider),
+    routed = false
+  ) =>
+    presentFailure(
+      { cause, provider, raw },
+      {
+        routed,
+        freeLaneProviders: [],
+        onFreeLane: false,
+        abacusFreeModels: [],
+        abacus,
+        model: { ...KIMI, model: `${provider}/m` },
+      }
+    );
+  const own = (provider: string, cause: string) => ({
+    type: "own-key-unavailable",
+    provider,
+    cause,
+    model: `${provider}/m`,
+    label: "Kimi K3",
+    free: true,
+  });
+
+  it.each([
+    ["nvidia", "410 status code (no body)", "gone"],
+    ["groq", "failed to template request", "gone"],
+    [
+      "openrouter",
+      "404 No endpoints found for moonshotai/kimi-k3:free.",
+      "gone",
+    ],
+    [
+      "openrouter",
+      "429 Rate limit exceeded: limit_rpm/moonshotai/kimi-k3:free",
+      "rate_limit",
+    ],
+    ["openrouter", "502 Bad Gateway", "down"],
+    ["nvidia", "Unexpected response from the model", "failed"],
+    ["groq", EMPTY_REPLY_FAILURE, "no_reply"],
+    ["local", '404 model "llama3" not found', "gone"],
+    ["local", "500 Internal Server Error", "down"],
+  ])("%s: %s → the provider's card, %s", (provider, raw, cause) => {
+    expect(shown(provider, raw, "credits").actions).toEqual([
+      own(provider, cause),
+      { type: "switch-to-abacus" },
+    ]);
+    // Credits used up: the card offers the plan, with no switch beside it.
+    expect(shown(provider, raw, "out").actions).toEqual([own(provider, cause)]);
+  });
+
+  it.each([
+    ["nvidia", "410 status code (no body)"],
+    [
+      "openrouter",
+      "429 Rate limit exceeded: limit_rpm/moonshotai/kimi-k3:free",
+    ],
+    ["openrouter", "502 Bad Gateway"],
+    ["groq", EMPTY_REPLY_FAILURE],
+    ["nvidia", "Unexpected response from the model"],
+    ["gemini", GEMINI_QUOTA],
+    ["openai", "401 Incorrect API key provided"],
+    ["local", "500 Internal Server Error"],
+  ])(
+    "%s: %s moves to RouteLLM - Open only signed in with credits",
+    (provider, raw) => {
+      const failure = { cause: classifyAttempt(raw, provider), provider, raw };
+      const context = (abacus: "credits" | "out" | null, routed = false) => ({
+        routed,
+        freeLaneProviders: [],
+        onFreeLane: false,
+        abacusFreeModels: [],
+        abacus,
+        model: { ...KIMI, model: `${provider}/m` },
+      });
+      expect(movesToOpenLlm(failure, context("credits"))).toBe(true);
+      expect(movesToOpenLlm(failure, context("out"))).toBe(false);
+      expect(movesToOpenLlm(failure, context(null))).toBe(false);
+      // Once per message: on the router it never moves again.
+      expect(movesToOpenLlm(failure, context("credits", true))).toBe(false);
+      // Signed out: today's card, whatever it was.
+      expect(
+        (shown(provider, raw, null).actions ?? []).some(
+          (action) => action.type === "switch-to-abacus" || "model" in action
+        )
+      ).toBe(false);
+    }
+  );
+
+  it("never moves an Abacus model, a dropped connection, an outgrown chat or a cut-off", () => {
+    const context = {
+      routed: false,
+      freeLaneProviders: [],
+      onFreeLane: false,
+      abacusFreeModels: [],
+      abacus: "credits" as const,
+    };
+    for (const failure of [
+      { cause: "model_unavailable" as const, provider: "abacus", raw: "410" },
+      { cause: "connection" as const, provider: "nvidia", raw: "fetch failed" },
+      { cause: "context_too_long" as const, provider: "nvidia", raw: "413" },
+      { cause: "stream_cut" as const, provider: "gemini", raw: "cut" },
+    ])
+      expect(movesToOpenLlm(failure, context)).toBe(false);
+  });
+
+  it("a stall ends on the same card off Abacus, and on its own line on Abacus", () => {
+    const raw = "no reply in 120s";
+    const off = shown("nvidia", raw, "credits", "stalled");
+    expect(off.cause).toBe("stalled");
+    expect(off.actions).toEqual([
+      own("nvidia", "no_reply"),
+      { type: "switch-to-abacus" },
+    ]);
+    const on = shown("abacus", raw, "credits", "stalled");
+    expect(on.message).toBe(
+      "The model stopped answering (no output for 120s). Try again, or switch to a different model."
+    );
+    // A pinned Abacus model with credits left: the switch is RouteLLM - Open.
+    expect(on.actions).toEqual([
+      { type: "switch-to-abacus" },
+      { type: "switch-model" },
+    ]);
+  });
+
+  it("keeps the key's own card, and leaves Abacus and the pool alone", () => {
+    // A refused or spent key: fix it, or Abacus.
+    expect(shown("gemini", GEMINI_QUOTA, "credits").actions).toEqual([
+      { type: "fix-key", provider: "gemini" },
+      { type: "switch-to-abacus" },
+    ]);
+    // On the pool the router picked no model.
+    expect(
+      shown("nvidia", "410 status code (no body)", "credits", undefined, true)
+        .actions
+    ).toEqual([{ type: "switch-model" }]);
+    // Abacus's own model: its own card, as before.
+    expect(
+      shown("abacus", "410 status code (no body)", "credits").actions?.[0]?.type
+    ).toBe("model-unavailable");
+  });
+});
+
+describe("every card's model switch, by where the Abacus credits stand", () => {
+  const at = (
+    failure: { cause: FailureCause; provider: string; raw: string },
+    abacus: "credits" | "out" | null,
+    routed = false
+  ) =>
+    presentFailure(failure, {
+      routed,
+      freeLaneProviders: [],
+      onFreeLane: false,
+      abacusFreeModels: [],
+      abacus,
+    }).actions ?? [];
+  it.each([
+    [
+      "an outgrown chat",
+      "context_too_long",
+      "413 Request Entity Too Large",
+      [{ type: "new-chat" }],
+    ],
+    ["an empty reply", "empty", EMPTY_REPLY_FAILURE, [{ type: "retry" }]],
+    ["a stall", "stalled", "no reply in 120s", []],
+    ["a provider error", "unknown", "400 Bad Request: something odd", []],
+  ] as const)(
+    "%s on Abacus: RouteLLM - Open with credits left, the plan's offer without, today's card signed out or on RouteLLM - Open",
+    (_name, cause, raw, kept) => {
+      const failure = { cause: cause as FailureCause, provider: "abacus", raw };
+      expect(at(failure, "credits")).toEqual([
+        ...kept,
+        { type: "switch-to-abacus" },
+        { type: "switch-model" },
+      ]);
+      expect(at(failure, "out")).toEqual([...kept, { type: "plan-offer" }]);
+      expect(at(failure, null)).toEqual([...kept, { type: "switch-model" }]);
+      expect(at(failure, "credits", true)).not.toContainEqual({
+        type: "switch-to-abacus",
+      });
+    }
+  );
+
+  it("leaves Abacus's own refusals alone: RouteLLM - Open runs on Abacus", () => {
+    const payment = at(
+      {
+        cause: "payment_required",
+        provider: "abacus",
+        raw: '402 "We could not confirm the last payment on this subscription."',
+      },
+      "credits"
+    );
+    expect(payment.map((action) => action.type)).toEqual([
+      "payment-required",
+      "switch-model",
+    ]);
   });
 });
 

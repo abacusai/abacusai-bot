@@ -119,3 +119,26 @@ it("successful create with whitespace navigates without a discard blocker", asyn
     await app.cleanup();
   }
 });
+
+it("says what an hourly or faster schedule costs where it is picked, and nothing for a daily one", async () => {
+  const app = await renderApp("/routines/new");
+  try {
+    await screen.findByRole("textbox", { name: "Instruction" });
+    // The form starts on a daily schedule.
+    expect(screen.queryByTestId("routine-frequent")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Hourly" }));
+    expect((await screen.findByTestId("routine-frequent")).textContent).toBe(
+      "Runs 24 times a day, and every run uses credits: at this rate a month's credits can be gone in a few days. If several runs in a row find nothing new, it pauses itself."
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Custom" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Cron expression" }), {
+      target: { value: "*/15 * * * *" },
+    });
+    expect(
+      (await screen.findByTestId("routine-frequent")).textContent
+    ).toContain("Runs 96 times a day");
+  } finally {
+    app.view.unmount();
+    await app.cleanup();
+  }
+});

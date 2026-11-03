@@ -142,11 +142,11 @@ export const startPlanCheckout = (client: AppClient, src: UpgradeSrc): void => {
 };
 
 /**
- * A paid account's Top up or next plan, from a card: its link opens (call it
- * inside the click: the web build opens its tab there) and the dialog waits
- * for the credits or the plan, then sends the waiting message.
+ * A card's Upgrade, Top up or next plan at the credit wall: its checkout link
+ * opens (call it inside the click: the web build opens its tab there) and the
+ * dialog waits for the plan or the credits, then sends the waiting message.
  */
-export const startPaidCheckout = (
+export const startCreditsCheckout = (
   open: () => Promise<void>,
   request: Omit<UpgradeDialogRequest, "kind" | "checkout">
 ): void => {
@@ -161,6 +161,29 @@ const CONNECTOR_CREDIT_REFUSAL = /needs abacus ai credits/i;
 
 const text = (value: unknown): string =>
   typeof value === "string" ? value : JSON.stringify(value ?? "");
+
+/** Longest task name a card title carries. */
+const TASK_MAX = 60;
+
+/**
+ * What the chat is working on, in the user's own words: the newest visible
+ * message longer than a few words, so a "continue" names the task it goes on
+ * with. Cut to a title's length.
+ */
+export const taskText = (
+  messages: readonly UIMessage[]
+): string | undefined => {
+  const texts = messages
+    .filter((message) => message.role === "user" && !hiddenUserMessage(message))
+    .map((message) => userMessageText(message).replace(/\s+/g, " ").trim())
+    .filter((value) => value.length > 0);
+  const text =
+    texts.findLast((value) => value.split(" ").length > 3) ?? texts.at(-1);
+  if (text == null) return undefined;
+  return text.length <= TASK_MAX
+    ? text
+    : `${text.slice(0, TASK_MAX).replace(/\s+\S*$/, "")}…`;
+};
 
 /** The newest visible user message: what waits for the upgrade. */
 export const lastUserText = (
