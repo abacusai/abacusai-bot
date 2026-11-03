@@ -24,7 +24,7 @@ export type ModelUnavailableKind = "retired" | "down" | "plan";
  * The plan on offer and its whole pitch, from billing_plan: what every card
  * for a free account out of Abacus credits shows, never a shorter list.
  */
-const OfferPitch = ({ billing }: { billing: BillingPlan | null }) => {
+export const OfferPitch = ({ billing }: { billing: BillingPlan | null }) => {
   const { t, i18n } = useTranslation();
   const offer = wallOffer(billing);
   if (offer == null) return null;
@@ -49,7 +49,7 @@ const OfferPitch = ({ billing }: { billing: BillingPlan | null }) => {
 };
 
 /** The plan's Upgrade with its price, and See plans beside it. */
-const OfferButtons = ({
+export const OfferButtons = ({
   billing,
   onUpgrade,
   onSeePlans,

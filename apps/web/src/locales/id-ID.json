@@ -4467,6 +4467,10 @@
     "wall": {
       "title": "Kredit gratis kamu sudah habis",
       "expiredTitle": "Kredit gratis kamu sudah kedaluwarsa",
+      "taskTitle": "“{{task}}” dijeda: kredit gratis kamu sudah habis",
+      "taskExpiredTitle": "“{{task}}” dijeda: kredit gratis kamu sudah kedaluwarsa",
+      "taskPaidTitle": "“{{task}}” dijeda: kredit bulan ini sudah habis",
+      "resumes": "Upgrade, lalu pekerjaan ini lanjut sendiri dari titik berhentinya.",
       "paidTitle": "Kredit bulan ini sudah kamu pakai",
       "paidOffer": "Atau naik ke {{plan}} — {{price}}",
       "paidMobile": "Paket Anda ditagih melalui App Store atau Google Play, jadi tambahkan kredit atau upgrade di aplikasi seluler Abacus.AI.",
@@ -4639,6 +4643,7 @@
     "low": {
       "title": "Kredit gratis tinggal {{left}}",
       "urge": "Upgrade sekarang supaya pekerjaanmu tidak berhenti di tengah jalan.",
+      "urgeProject": "Upgrade sekarang supaya “{{project}}” tidak berhenti di tengah jalan.",
       "estimateBuilds_one": "Cukup untuk sekitar {{count}} build lagi.",
       "estimateBuilds_other": "Cukup untuk sekitar {{count}} build lagi.",
       "estimateMessages_one": "Cukup untuk sekitar {{count}} pesan bot lagi.",

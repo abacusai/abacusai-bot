@@ -4467,6 +4467,10 @@
     "wall": {
       "title": "Hai esaurito i crediti gratuiti",
       "expiredTitle": "I tuoi crediti gratuiti sono scaduti",
+      "taskTitle": "«{{task}}» è in pausa: hai esaurito i crediti gratuiti",
+      "taskExpiredTitle": "«{{task}}» è in pausa: i crediti gratuiti sono scaduti",
+      "taskPaidTitle": "«{{task}}» è in pausa: hai esaurito i crediti di questo mese",
+      "resumes": "Fai l'upgrade e riprenderà da solo da dove si è fermato.",
       "paidTitle": "Hai usato i crediti di questo mese",
       "paidOffer": "Oppure passa a {{plan}} — {{price}}",
       "paidMobile": "Il tuo piano è fatturato tramite App Store o Google Play: aggiungi crediti o passa a un piano superiore nell'app mobile di Abacus.AI.",
@@ -4639,6 +4643,7 @@
     "low": {
       "title": "Solo {{left}} crediti gratuiti rimasti",
       "urge": "Fai l'upgrade ora così il tuo lavoro non si ferma a metà.",
+      "urgeProject": "Fai l'upgrade ora così «{{project}}» non si ferma a metà.",
       "estimateBuilds_one": "Bastano per circa {{count}} altra build.",
       "estimateBuilds_other": "Bastano per circa {{count}} altre build.",
       "estimateMessages_one": "Bastano per circa {{count}} altro messaggio del bot.",

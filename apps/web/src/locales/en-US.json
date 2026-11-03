@@ -4467,6 +4467,10 @@
     "wall": {
       "title": "Your free credits are used up",
       "expiredTitle": "Your free credits have expired",
+      "taskTitle": "“{{task}}” is paused: your free credits are used up",
+      "taskExpiredTitle": "“{{task}}” is paused: your free credits have expired",
+      "taskPaidTitle": "“{{task}}” is paused: this month's credits are used up",
+      "resumes": "Upgrade and it picks up where it stopped, by itself.",
       "paidTitle": "You've used this month's credits",
       "paidOffer": "Or move up to {{plan}} — {{price}}",
       "paidMobile": "Your plan is billed through the App Store or Google Play, so add credits or upgrade in the Abacus.AI mobile app.",
@@ -4639,6 +4643,7 @@
     "low": {
       "title": "Only {{left}} free credits left",
       "urge": "Upgrade now so your work doesn't stop halfway.",
+      "urgeProject": "Upgrade now so “{{project}}” doesn't stop halfway.",
       "estimateBuilds_one": "Enough for about {{count}} more build.",
       "estimateBuilds_other": "Enough for about {{count}} more builds.",
       "estimateMessages_one": "Enough for about {{count}} more bot message.",

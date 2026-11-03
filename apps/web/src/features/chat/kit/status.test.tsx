@@ -487,7 +487,59 @@ describe("the turn's outcome card", () => {
     ],
   };
 
-  it("a free account at the wall gets one line: Upgrade reopens the dialog, the free models an explicit choice", async () => {
+  it("a free account at the wall: the stopped task by name, the plan's whole offer, Upgrade to checkout, then the message goes again", async () => {
+    const openUpgrade = vi.fn(async () => {});
+    const relay = failed(WALL);
+    current = await renderRelay(
+      relay,
+      "session",
+      {},
+      {},
+      host("free", { openUpgrade })
+    );
+
+    const title = await screen.findByText(
+      "“fix the bug” is paused: your free credits are used up"
+    );
+    const wall = title.closest('[data-slot="error-card"]') as HTMLElement;
+    expect(wall.getAttribute("data-variant")).toBe("upgrade");
+    // The plan's whole offer, never a lone button.
+    expect(await within(wall).findByText("Basic gets you:")).toBeTruthy();
+    expect(within(wall).getByText("Image and video generation")).toBeTruthy();
+    expect(
+      within(wall).getByText(
+        "Upgrade and it picks up where it stopped, by itself."
+      )
+    ).toBeTruthy();
+    // Nothing ran on a free model before the choice.
+    expect(relay.stats.send).toHaveLength(0);
+
+    // Upgrade opens checkout itself; the dialog waits for the plan.
+    fireEvent.click(
+      within(wall).getByRole("button", { name: "Upgrade · $7 first month" })
+    );
+    expect(openUpgrade).toHaveBeenCalledOnce();
+    const request = upgradeDialogStore.state.request;
+    expect(request).toMatchObject({
+      kind: "credits",
+      checkout: true,
+      pendingText: "fix the bug",
+    });
+    // Once the plan is active the stopped message goes again.
+    await request?.resume?.();
+    await waitFor(() => expect(relay.stats.send).toHaveLength(1));
+    closeUpgradeDialog();
+
+    // See plans: the dialog with every plan, no checkout yet.
+    fireEvent.click(within(wall).getByRole("button", { name: "See plans" }));
+    expect(upgradeDialogStore.state.request).toMatchObject({
+      kind: "credits",
+    });
+    expect(upgradeDialogStore.state.request?.checkout).toBeUndefined();
+    closeUpgradeDialog();
+  });
+
+  it("the free models at the wall stay an explicit choice beside the offer", async () => {
     const chooseFreeLane = vi.fn(async () => {});
     const relay = failed(WALL);
     current = await renderRelay(
@@ -497,24 +549,8 @@ describe("the turn's outcome card", () => {
       {},
       host("free", { chooseFreeLane })
     );
-
-    const line = await screen.findByText("Your free credits are used up");
-    const wall = line.closest('[data-slot="error-card"]') as HTMLElement;
-    expect(wall.getAttribute("data-variant")).toBe("upgrade-status");
-    // The pitch is the upgrade dialog's, never the inline row's.
-    expect(within(wall).queryByText(/\$\d/)).toBeNull();
-    expect(within(wall).queryByText(/renew/i)).toBeNull();
-    // Nothing ran on a free model before the choice.
-    expect(relay.stats.send).toHaveLength(0);
-
-    fireEvent.click(within(wall).getByRole("button", { name: "Upgrade" }));
-    expect(upgradeDialogStore.state.request).toMatchObject({
-      kind: "credits",
-    });
-    closeUpgradeDialog();
-
     fireEvent.click(
-      within(wall).getByRole("button", {
+      await screen.findByRole("button", {
         name: "Continue with free models (lower quality)",
       })
     );
@@ -525,7 +561,74 @@ describe("the turn's outcome card", () => {
     });
   });
 
-  it("an expired free tier says so, and its Upgrade asks for the expired dialog", async () => {
+  it("a wall after a short follow-up names the task it was going on with; the wall above it is history", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll([
+      ...b.sessionReady(),
+      b.runStarted("r0"),
+      ...b.text(
+        "u0",
+        "user",
+        "Build my bakery website with an online order form"
+      ),
+      ...b.text("r0:error", "assistant", ""),
+      b.runError("r0", WALL as never),
+      b.runStarted("r1"),
+      ...b.text("u1", "user", "continue"),
+      ...b.text("r1:error", "assistant", ""),
+      b.runError("r1", WALL as never),
+    ]);
+    current = await renderRelay(relay, "session", {}, {}, host("free"));
+    const title =
+      "“Build my bakery website with an online order form” is paused: your free credits are used up";
+    await screen.findByRole("button", { name: "Upgrade · $7 first month" });
+    const cards = [
+      ...document.querySelectorAll('[data-slot="error-card"]'),
+    ] as HTMLElement[];
+    expect(cards.map((card) => card.getAttribute("data-variant"))).toEqual([
+      "upgrade-history",
+      "upgrade",
+    ]);
+    expect(cards[0]!.textContent).toBe(title);
+    expect(within(cards[1]!).getByText(title)).toBeTruthy();
+    expect(
+      screen.getAllByRole("button", { name: "Upgrade · $7 first month" })
+    ).toHaveLength(1);
+  });
+
+  it("a routine run at the wall (read-only) still carries the offer: Upgrade goes to checkout, nothing is resent", async () => {
+    const relay = failed(WALL);
+    current = await renderRelay(
+      relay,
+      "bot",
+      { readOnly: { reason: "Read only" } },
+      {},
+      host("free")
+    );
+    const title = await screen.findByText(
+      "“fix the bug” is paused: your free credits are used up"
+    );
+    const wall = title.closest('[data-slot="error-card"]') as HTMLElement;
+    expect(
+      await within(wall).findByText("Image and video generation")
+    ).toBeTruthy();
+    expect(within(wall).queryByText(/picks up where it stopped/)).toBeNull();
+    expect(
+      within(wall).queryByRole("button", { name: /Continue with free/ })
+    ).toBeNull();
+    fireEvent.click(
+      within(wall).getByRole("button", { name: "Upgrade · $7 first month" })
+    );
+    expect(upgradeDialogStore.state.request).toMatchObject({
+      kind: "plan",
+      checkout: true,
+    });
+    expect(upgradeDialogStore.state.request?.resume).toBeUndefined();
+    closeUpgradeDialog();
+    expect(relay.stats.send).toHaveLength(0);
+  });
+
+  it("an expired free tier says so, and its See plans asks for the expired dialog", async () => {
     current = await renderRelay(
       failed({
         message: "Your free credits have expired.",
@@ -537,8 +640,10 @@ describe("the turn's outcome card", () => {
       {},
       host("free")
     );
-    await screen.findByText("Your free credits have expired");
-    fireEvent.click(screen.getByRole("button", { name: "Upgrade" }));
+    await screen.findByText(
+      "“fix the bug” is paused: your free credits have expired"
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "See plans" }));
     expect(upgradeDialogStore.state.request).toMatchObject({
       kind: "credits",
       expired: true,
@@ -577,7 +682,7 @@ describe("the turn's outcome card", () => {
     ],
   };
 
-  it("Basic at the wall gets the free plan's one line: Upgrade opens the dialog for Pro, no Top up", async () => {
+  it("Basic at the wall gets the free plan's offer for Pro: Upgrade goes to Pro's checkout, no Top up", async () => {
     const openTopUp = vi.fn(async () => {});
     const openNextPlan = vi.fn(async () => {});
     current = await renderRelay(
@@ -592,18 +697,20 @@ describe("the turn's outcome card", () => {
         billingPlan: async () => BASIC_BILLING,
       })
     );
-    const line = await screen.findByText("You've used this month's credits");
-    const wall = line.closest('[data-slot="error-card"]') as HTMLElement;
-    expect(wall.getAttribute("data-variant")).toBe("upgrade-status");
+    const title = await screen.findByText(
+      "“fix the bug” is paused: this month's credits are used up"
+    );
+    const wall = title.closest('[data-slot="error-card"]') as HTMLElement;
     expect(within(wall).queryByRole("button", { name: "Top up" })).toBeNull();
-    expect(within(wall).queryByText(/\$\d/)).toBeNull();
+    expect(await within(wall).findByText("Pro gets you:")).toBeTruthy();
 
-    fireEvent.click(within(wall).getByRole("button", { name: "Upgrade" }));
+    fireEvent.click(within(wall).getByRole("button", { name: /^Upgrade/ }));
+    expect(openNextPlan).toHaveBeenCalledOnce();
     expect(upgradeDialogStore.state.request).toMatchObject({
       kind: "credits",
+      checkout: true,
       pendingText: "fix the bug",
     });
-    expect(upgradeDialogStore.state.request?.checkout).toBeUndefined();
     expect(openTopUp).not.toHaveBeenCalled();
     closeUpgradeDialog();
   });
@@ -623,7 +730,9 @@ describe("the turn's outcome card", () => {
         billingPlan: async () => PRO_BILLING,
       })
     );
-    await screen.findByText("You've used this month's credits");
+    await screen.findByText(
+      "“fix the bug” is paused: this month's credits are used up"
+    );
     expect(
       await screen.findByText("Or move up to Max — $200/month")
     ).toBeTruthy();
@@ -1465,8 +1574,12 @@ describe("the turn's outcome card", () => {
       {},
       host("free")
     );
-    await screen.findByText("Your free credits are used up");
-    expect(await screen.findByRole("button", { name: "Upgrade" })).toBeTruthy();
+    await screen.findByText(
+      "“fix the bug” is paused: your free credits are used up"
+    );
+    expect(
+      await screen.findByRole("button", { name: "Upgrade · $7 first month" })
+    ).toBeTruthy();
     expect(screen.getByText("Check the key")).toBeTruthy();
     expect(screen.queryByText(/Switch to Abacus/)).toBeNull();
   });

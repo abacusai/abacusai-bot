@@ -4467,6 +4467,10 @@
     "wall": {
       "title": "Ücretsiz kredilerin bitti",
       "expiredTitle": "Ücretsiz kredilerinin süresi doldu",
+      "taskTitle": "“{{task}}” duraklatıldı: ücretsiz kredilerin bitti",
+      "taskExpiredTitle": "“{{task}}” duraklatıldı: ücretsiz kredilerinin süresi doldu",
+      "taskPaidTitle": "“{{task}}” duraklatıldı: bu ayın kredileri bitti",
+      "resumes": "Yükselttiğinde kaldığı yerden kendiliğinden devam eder.",
       "paidTitle": "Bu ayın kredilerini kullandın",
       "paidOffer": "Ya da {{plan}} planına geç — {{price}}",
       "paidMobile": "Planın App Store veya Google Play üzerinden faturalandırılıyor; kredi eklemek ya da yükseltmek için Abacus.AI mobil uygulamasını kullan.",
@@ -4639,6 +4643,7 @@
     "low": {
       "title": "Yalnızca {{left}} ücretsiz kredi kaldı",
       "urge": "İşin yarıda kalmasın diye şimdi yükselt.",
+      "urgeProject": "“{{project}}” yarıda kalmasın diye şimdi yükselt.",
       "estimateBuilds_one": "Yaklaşık {{count}} derleme daha yapmaya yeter.",
       "estimateBuilds_other": "Yaklaşık {{count}} derleme daha yapmaya yeter.",
       "estimateMessages_one": "Yaklaşık {{count}} bot mesajına daha yeter.",
