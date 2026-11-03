@@ -664,7 +664,9 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
     });
     viewport.addEventListener("scroll", settle, { passive: true });
     observer.observe(viewport);
-    observer.observe(content);
+    // Its border box: the composer dock growing (a notice, a nudge) grows
+    // only the content's bottom padding, which a content box never sees.
+    observer.observe(content, { box: "border-box" });
     return () => {
       viewport.removeEventListener("scroll", settle);
       observer.disconnect();

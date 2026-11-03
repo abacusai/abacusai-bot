@@ -298,6 +298,66 @@ describe("R2-T16 transcript", () => {
     }
   });
 
+  it("holds the end when the composer dock grows under it after the turn", async () => {
+    // As browsers do: a padding-only change reaches only an observer of the
+    // border box.
+    const observers: {
+      callback: ResizeObserverCallback;
+      borderBox: Element[];
+    }[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        entry: (typeof observers)[number];
+        constructor(callback: ResizeObserverCallback) {
+          this.entry = { callback, borderBox: [] };
+          observers.push(this.entry);
+        }
+        observe(target: Element, options?: ResizeObserverOptions) {
+          if (options?.box === "border-box") this.entry.borderBox.push(target);
+        }
+        unobserve() {}
+        disconnect() {}
+      }
+    );
+    try {
+      const relay = new FakeRelay();
+      relay.emitAll([...b.sessionReady(), ...turns(3)]);
+      current = await renderRelay(relay, "session");
+      await screen.findByText("answer 2");
+      const viewport = document.querySelector<HTMLElement>(
+        '[data-slot="message-scroller-viewport"]'
+      )!;
+      const content = viewport.querySelector<HTMLElement>(
+        '[data-slot="message-scroller-content"]'
+      )!;
+      const geometry = { height: 1000, client: 400, top: 600 };
+      Object.defineProperties(viewport, {
+        scrollHeight: { configurable: true, get: () => geometry.height },
+        clientHeight: { configurable: true, get: () => geometry.client },
+        scrollTop: {
+          configurable: true,
+          get: () => geometry.top,
+          set: (value: number) => {
+            geometry.top = Math.min(value, geometry.height - geometry.client);
+          },
+        },
+      });
+      fireEvent.scroll(viewport);
+      // A notice joins the composer: the dock's height lands in the
+      // content's bottom padding, 129 px more to scroll.
+      content.style.paddingBottom = "329px";
+      geometry.height = 1129;
+      for (const entry of observers.filter((o) =>
+        o.borderBox.includes(content)
+      ))
+        entry.callback([], {} as ResizeObserver);
+      expect(geometry.top).toBe(729);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("a turn the reader sends takes them to the end; history on open does not", async () => {
     const scrollToEnd = vi.fn(() => true);
     const spy = vi.spyOn(scroller, "useMessageScroller").mockReturnValue({
