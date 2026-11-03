@@ -1,3 +1,4 @@
+import { ALWAYS_ON_ASK } from "@abacus-ai/agent/plan-asks";
 import { ABACUS_AGENT_ROUTINES_URL } from "@abacus-ai/contract/routines";
 
 import {
@@ -115,11 +116,10 @@ export const LOCAL_ROUTINE_FACTS = [
  */
 export const alwaysOnLine = (plan: "free" | "paid"): string =>
   plan === "paid"
-    ? "if it needs to run while their computer is off, their plan already includes routines " +
-      "that run 24/7 in Abacus AI Agent on the web, set up there as a scheduled task: " +
-      `${ABACUS_AGENT_ROUTINES_URL} (give the link as written).`
-    : "if it should keep running with their laptop closed, the Basic plan runs routines 24/7 " +
-      `in Abacus AI Agent on the web (${ABACUS_AGENT_ROUTINES_URL}).` +
+    ? `if it needs to run while their computer is off, their plan already includes ${ALWAYS_ON_ASK.gives}, ` +
+      `set up there as a scheduled task: ${ABACUS_AGENT_ROUTINES_URL} (give the link as written).`
+    : `if it should keep running with their computer off, the Basic plan gives ${ALWAYS_ON_ASK.gives} ` +
+      `(${ABACUS_AGENT_ROUTINES_URL}).` +
       (billingPlanReady()
         ? " Call billing_plan with upgrade: true and give their upgrade link with it."
         : "");

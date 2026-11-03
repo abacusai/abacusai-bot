@@ -12,6 +12,7 @@ import {
   EDIT_SHARED_GUIDELINES,
 } from "./extensions/edit-tool.js";
 import { identityPrompt } from "./persona.js";
+import { PLAN_ASKS_PROMPT } from "./plan-asks.js";
 
 /** Which `edit` a session has: ours (with batch_edit and batch_file_read) or pi's built-in. */
 export type EditTool = "ours" | "builtin";
@@ -71,7 +72,7 @@ function toolGuidelinesPrompt(edit: EditTool): string {
 
 /** A main session's base: who the agent is, then how it uses its tools. */
 export function basePrompt(edit: EditTool): string {
-  return `${identityPrompt()}\n${APP_QUESTIONS_PROMPT}\n${MEDIA_ASKS_PROMPT}\n\n${toolGuidelinesPrompt(edit)}`;
+  return `${identityPrompt()}\n${APP_QUESTIONS_PROMPT}\n${MEDIA_ASKS_PROMPT}\n${PLAN_ASKS_PROMPT}\n\n${toolGuidelinesPrompt(edit)}`;
 }
 
 /** A sub-agent's base; the guidelines only where it has file tools. */
