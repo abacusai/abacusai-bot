@@ -119,6 +119,9 @@ html:not(.dark):is(:not([data-palette]), [data-palette="default"]) [data-bot-row
 html[data-density="compact"] { --bots-row-h: 24px; }
 html[data-density="compact"] [data-bot-row] [data-slot="item"] > :first-child { width: 20px; height: 20px; }
 html[data-density="compact"] [data-bot-row] [data-slot="item"] > span > span:last-child { display: none; }
+/* Channel rows match: a 20 px face (the stacked faces scaled down), one line. */
+html[data-density="compact"] :is([data-channel-row], [data-channel-new]) > :first-child { transform: scale(0.56); margin-inline: -8px; }
+html[data-density="compact"] [data-channel-row] > span > span:last-child { display: none; }
 
 /* Template hover surfaces need the same readable muted text as selected rows. */
 html:not(.dark):is(:not([data-palette]), [data-palette="default"]) [data-slot="bot-template"] .text-muted-foreground { color: oklch(0.50 0 0); }

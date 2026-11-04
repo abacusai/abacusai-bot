@@ -18,7 +18,7 @@ import {
   LoaderCircle,
   Pin,
   Play,
-  Reply,
+  CornerUpLeft,
   Square,
   UserPlus,
 } from "lucide-react";
@@ -60,42 +60,6 @@ export const ChannelMarkdown = createContext<ChannelMarkdownView>(PlainText);
 /** The chat's prose styles, for the bubbles (chat.css loads with the chat view only). */
 const PROSE =
   "[&_ol]:list-decimal [&_ol]:ps-5 [&_ul]:list-disc [&_ul]:ps-5 [&_li+li]:mt-1 [&_p+*]:mt-2 [&_ul+*]:mt-2 [&_ol+*]:mt-2 [&_a]:underline";
-
-/** Up to three members' faces, overlapping. */
-export const GroupFace = ({
-  bots,
-  size,
-}: {
-  bots: readonly BotRow[];
-  size: number;
-}) => {
-  const shown = bots.slice(0, 3);
-  const small = Math.round(size * 0.62);
-  if (shown.length === 0) return <span style={{ width: size, height: size }} />;
-  return (
-    <span
-      aria-hidden
-      className="relative inline-block shrink-0"
-      style={{ width: size, height: size }}
-    >
-      {shown.map((bot, index) => (
-        <span
-          key={bot.id}
-          className="ring-sidebar absolute rounded-full ring-2"
-          style={{
-            left:
-              index === 1 ? size - small : index === 2 ? (size - small) / 2 : 0,
-            top:
-              index === 1 ? 0 : index === 2 ? size - small : (size - small) / 3,
-            zIndex: 3 - index,
-          }}
-        >
-          <BotFace bot={bot} size={small} interactive={false} />
-        </span>
-      ))}
-    </span>
-  );
-};
 
 const time = (at: number, language: string): string =>
   new Date(at).toLocaleTimeString(language, {
@@ -467,7 +431,7 @@ const MessageActions = ({
             onClick={() => onReply(message)}
             className="hover:text-foreground rounded p-0.5"
           >
-            <Reply className="size-3.5" />
+            <CornerUpLeft className="size-3.5" />
           </button>
         )}
         <button
@@ -613,7 +577,7 @@ export const GroupComposer = ({
       )}
       {replyingTo != null && (
         <div className="text-muted-foreground flex items-center gap-2 px-3 pb-1 text-xs">
-          <Reply className="size-3.5" />
+          <CornerUpLeft className="size-3.5" />
           <span className="truncate">
             {t("channels.composer.replyingTo", { name: replyingTo })}
           </span>

@@ -31,7 +31,8 @@ import { BotFace } from "../avatar";
 import { useBots } from "../data/queries";
 import { useBotsTransport } from "../data/transport";
 import { groupTitle, useChannelThread, useChannelsLive } from "./data";
-import { GroupComposer, GroupFace, GroupMessages } from "./parts";
+import { GroupFace } from "./group-rows";
+import { GroupComposer, GroupMessages } from "./parts";
 
 export { ChannelMarkdown, type ChannelMarkdownView } from "./parts";
 
@@ -80,6 +81,9 @@ const BotPicker = ({
     })}
   </div>
 );
+
+/** The channel id that means "a new channel" (real ids are random hex). */
+export const NEW_CHANNEL = "new";
 
 /** The title bar's slot, from the route (the shell is another feature). */
 export type TopBarView = ComponentType<{ children: ReactNode }>;

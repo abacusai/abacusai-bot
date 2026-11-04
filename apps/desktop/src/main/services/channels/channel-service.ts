@@ -24,6 +24,8 @@ import {
   type ChannelSummary,
   type ChannelThread,
 } from "@abacus-ai/contract/channels";
+import { EntityNotFoundError } from "@abacus-ai/contract/not-found";
+import { InvalidInputError } from "@abacus-ai/contract/service-errors";
 
 import { abacusBotHome } from "../../paths";
 import { answerWords } from "../bots/bot-ask";
@@ -309,7 +311,7 @@ export class ChannelService {
       input.text?.trim() ??
       messages.find((message) => message.id === input.messageId)?.text.trim();
     if (text == null || text.length === 0)
-      throw new Error("There is nothing to pin.");
+      throw new InvalidInputError("There is nothing to pin.");
     this.addDecision(channelId, text, input.messageId);
     this.deps.changed(channelId);
   }
@@ -335,19 +337,22 @@ export class ChannelService {
     const message = messages.find((entry) => entry.id === messageId);
     const proposal = message?.proposal;
     if (message == null || proposal == null || proposal.status !== "proposed")
-      throw new Error("That proposal was already decided.");
+      throw new InvalidInputError("That proposal was already decided.");
     let botId = proposal.botId;
     if (create) {
       if (channel.memberBotIds.length >= MAX_CHANNEL_MEMBERS)
-        throw new Error(
+        throw new InvalidInputError(
           `This channel already has ${MAX_CHANNEL_MEMBERS} bots: remove one first.`
         );
       if (proposal.invite === true) {
         if (botId == null || this.deps.bot(botId) == null)
-          throw new Error(`${proposal.name} is no longer one of your bots.`);
+          throw new InvalidInputError(
+            `${proposal.name} is no longer one of your bots.`
+          );
       } else {
         const createBot = this.deps.createBot;
-        if (createBot == null) throw new Error("Bots cannot be created here.");
+        if (createBot == null)
+          throw new InvalidInputError("Bots cannot be created here.");
         botId = createBot({
           name: proposal.name,
           title: proposal.title,
@@ -391,17 +396,19 @@ export class ChannelService {
    */
   startAgreed(channelId: string, messageId: string): void {
     if (this.deps.runWork == null)
-      throw new Error("Work cannot be started here.");
+      throw new InvalidInputError("Work cannot be started here.");
     const channel = this.channel(channelId);
     const messages = this.deps.store.readMessages(channelId);
     const conclusion = messages.find((entry) => entry.id === messageId);
     if (conclusion?.conclusion !== true)
-      throw new Error("Only a discussion's agreed points can be started.");
+      throw new InvalidInputError(
+        "Only a discussion's agreed points can be started."
+      );
     if (conclusion.planStarted === true)
-      throw new Error("This plan was already started.");
+      throw new InvalidInputError("This plan was already started.");
     const members = this.members(channel);
     const lead = members[0];
-    if (lead == null) throw new Error("This channel has no bots.");
+    if (lead == null) throw new InvalidInputError("This channel has no bots.");
     const items = agreedItems(conclusion.text);
     const userWords = `Start the team's agreed plan: ${items.map((item, index) => `${index + 1}. ${item}`).join(" ")}`;
     this.deps.store.writeMessages(
@@ -895,9 +902,11 @@ export class ChannelService {
   private validMembers(botIds: readonly string[]): string[] {
     const ids = [...new Set(botIds)].filter((id) => this.deps.bot(id) != null);
     if (ids.length < MIN_CHANNEL_MEMBERS)
-      throw new Error(`A channel needs at least ${MIN_CHANNEL_MEMBERS} bots.`);
+      throw new InvalidInputError(
+        `A channel needs at least ${MIN_CHANNEL_MEMBERS} bots.`
+      );
     if (ids.length > MAX_CHANNEL_MEMBERS)
-      throw new Error(
+      throw new InvalidInputError(
         `A channel can have at most ${MAX_CHANNEL_MEMBERS} bots.`
       );
     return ids;
@@ -935,7 +944,12 @@ export class ChannelService {
 
   private channel(channelId: string): StoredChannel {
     const channel = this.maybeChannel(channelId);
-    if (channel == null) throw new Error("This channel is gone.");
+    if (channel == null)
+      throw new EntityNotFoundError(
+        "channel",
+        channelId,
+        "This channel is gone."
+      );
     return channel;
   }
 

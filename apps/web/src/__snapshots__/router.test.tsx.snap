@@ -75,10 +75,6 @@ exports[`the route tree > matches the snapshot of ids and full paths 1`] = `
     "id": "/_shell/(bots)/bots/channels/$channelId",
   },
   {
-    "fullPath": "/bots/channels/new",
-    "id": "/_shell/(bots)/bots/channels/new",
-  },
-  {
     "fullPath": "/bots/new",
     "id": "/_shell/(bots)/bots/new",
   },

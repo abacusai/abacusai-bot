@@ -140,8 +140,12 @@ export const addressedIn = (
   return unique(found.sort((a, b) => a.at - b.at).map((entry) => entry.id));
 };
 
-const ACK =
-  /^(?:(?:thanks?|thank you|thx|ty|ok(?:ay)?|k|cool|great|nice|perfect|awesome|got it|sounds good|good|lol|haha|yes|yep|noted|done|love it|great work|good job|well done|cheers)[\s,.!]*(?:all|everyone|team|guys|you guys|you all|y'all)?[\s,.!]*)+$/i;
+/** Words a plain acknowledgement is made of ("thanks all", "ok cool", "great work everyone"). */
+const ACK_WORDS = new Set(
+  "thanks thank you thx ty ok okay k cool great nice perfect awesome got it sounds good lol haha yes yep noted done love work job well cheers all everyone team guys y'all".split(
+    " "
+  )
+);
 const EMOJI_ONLY = /^[\p{Extended_Pictographic}\p{Emoji_Component}\s]+$/u;
 const NOTE_TO_SELF = /^note to self\b/i;
 
@@ -166,7 +170,12 @@ export const wantsNoAnswer = (
     .replace(/[\p{Extended_Pictographic}\p{Emoji_Component}]/gu, " ")
     .trim();
   if (rest.length === 0) return EMOJI_ONLY.test(text.trim());
-  return ACK.test(rest);
+  // Word by word, not one big pattern: nothing to backtrack on.
+  return rest
+    .toLowerCase()
+    .split(/[\s,.!]+/)
+    .filter((word) => word.length > 0)
+    .every((word) => ACK_WORDS.has(word));
 };
 
 /**

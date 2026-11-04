@@ -110,8 +110,10 @@ export const channelTitle = (
 export const agreedItems = (text: string): string[] => {
   const items = text
     .split("\n")
+    // The line trimmed, then "1." or "1)" and one space: no two parts of the
+    // pattern compete for the same characters.
     .map((line) =>
-      /^\s*\d+[.)]\s+(.+)$/.exec(line)?.[1]?.replace(/\*\*/g, "").trim()
+      /^\d+[.)] (.*)$/.exec(line.trim())?.[1]?.replace(/\*\*/g, "").trim()
     )
     .filter((line): line is string => line != null && line.length > 0);
   return items.length > 0 ? items : [text.trim()];
