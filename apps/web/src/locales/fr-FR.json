@@ -4764,5 +4764,95 @@
     "selectTheme": "Sélectionner un thème",
     "themes": "Thèmes",
     "diskFullLane": "Le disque de l'ordinateur est plein : {{platform}} ne peut pas enregistrer ses données. La connexion reprendra d'elle-même dès qu'un peu d'espace sera libéré."
+  },
+  "channels": {
+    "sidebar": {
+      "title": "Canaux",
+      "new": "Nouveau canal",
+      "untitled": "Canal",
+      "you": "Vous",
+      "members_one": "{{count}} bot",
+      "members_other": "{{count}} bots"
+    },
+    "new": {
+      "title": "Nouveau canal",
+      "name": "Nom du canal",
+      "namePlaceholder": "Nom du canal (facultatif, p. ex. Lancement Brewly)",
+      "about": "À quoi sert ce canal",
+      "aboutPlaceholder": "À quoi sert ce canal ? Tous les bots qui en font partie en sont informés (facultatif)",
+      "to": "Bots :",
+      "search": "Ajouter des bots…",
+      "add": "Ajouter au canal",
+      "remove": "Retirer {{name}}",
+      "pick_one": "Choisissez au moins {{count}} bot pour commencer.",
+      "pick_other": "Choisissez au moins {{count}} bots pour commencer.",
+      "pickFirst": "Choisissez d'abord les bots",
+      "placeholder": "Écrivez le premier message…",
+      "hint": "Les bots répondent quand vous les @mention ou les nommez. Sinon, le dernier bot qui a parlé (ou le premier que vous avez ajouté) répond, et il peut faire intervenir les autres.",
+      "needBots": "Un canal doit comporter au moins deux bots. Créez d'abord un autre bot."
+    },
+    "thread": {
+      "label": "Messages du canal",
+      "goneBot": "Bot supprimé",
+      "working_one": "{{names}} est en train de répondre…",
+      "working_other": "{{names}} sont en train de répondre…",
+      "queued_one": "{{count}} message attend son tour",
+      "queued_other": "{{count}} messages attendent leur tour",
+      "reply": "Répondre",
+      "pin": "Épingler comme décision",
+      "empty": "Dites bonjour à {{names}}. Utilisez @mention pour choisir quel bot répond, ou @everyone pour avoir la réponse de tous.",
+      "gone": "Ce canal n'existe plus.",
+      "pinAgreed": "Épingler les points convenus comme décisions"
+    },
+    "composer": {
+      "label": "Écrire au canal",
+      "placeholder": "Écrire à {{names}}",
+      "mentions": "Mentionner un bot",
+      "send": "Envoyer",
+      "stop": "Arrêter la réponse de tous les bots",
+      "replyingTo": "Réponse à {{name}}",
+      "cancelReply": "Annuler"
+    },
+    "decisions": {
+      "title": "Décisions (tous les bots les voient)",
+      "unpin": "Désépingler"
+    },
+    "menu": {
+      "label": "Options du canal",
+      "members": "Membres",
+      "rename": "Modifier le nom et l'objet",
+      "delete": "Supprimer le canal"
+    },
+    "members": {
+      "title": "Membres",
+      "body": "Choisissez de {{min}} à {{max}} bots. Un bot que vous retirez cesse de répondre ici."
+    },
+    "rename": {
+      "title": "Modifier le canal",
+      "body": "Laissez le nom vide pour afficher les noms des membres."
+    },
+    "delete": {
+      "title": "Supprimer « {{name}} » ?",
+      "body": "Les messages de ce canal sont supprimés. Les bots et leurs propres discussions restent.",
+      "confirm": "Supprimer"
+    },
+    "dialog": {
+      "cancel": "Annuler",
+      "save": "Enregistrer"
+    },
+    "work": {
+      "running": "En cours dans le chat propre à {{name}}…",
+      "done": "Terminé dans le chat de {{name}} : le rapport se trouve ci-dessous",
+      "failed": "{{name}} n'a pas terminé",
+      "stopped": "Arrêté",
+      "open": "Ouvrir le chat de {{name}}"
+    },
+    "proposal": {
+      "title": "Nouveau bot suggéré : {{name}}",
+      "create": "Créer et ajouter au canal",
+      "dismiss": "Ignorer",
+      "created": "{{name}} a été créé et a rejoint le canal : ouvrir son chat",
+      "dismissed": "Ignoré"
+    }
   }
 }

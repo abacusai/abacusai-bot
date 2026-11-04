@@ -696,6 +696,7 @@ export type IpcEvent =
   // Coarse on purpose: the pane refetches its whole snapshot; none are hot paths.
   | ({ type: "messaging-updated" } & IpcEventBase)
   | ({ type: "bots-updated" } & IpcEventBase)
+  | ({ type: "channels-updated"; channelId: string | null } & IpcEventBase)
   | ({ type: "cronjobs-updated" } & IpcEventBase)
   // The composer echoes the user's own messages; a turn driven from main has
   // nothing to render it, so this is that echo.

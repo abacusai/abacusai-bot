@@ -24,6 +24,9 @@ const GROUPS = [
   "agui",
   "bots",
   "browser",
+  // Channels: the user and several bots in one thread (who answers, the
+  // rounds, the stores). Bots are its members; the bots group stays theirs.
+  "channels",
   "config",
   // The connector registry's status table and connect flow. One answer to
   // "is it connected?" and one way to connect, for every kind.

@@ -4764,5 +4764,95 @@
     "selectTheme": "Pilih Tema",
     "themes": "Tema",
     "diskFullLane": "Disk komputer penuh, jadi {{platform}} tidak bisa menyimpan datanya. Koneksi akan pulih sendiri setelah sebagian ruang dikosongkan."
+  },
+  "channels": {
+    "sidebar": {
+      "title": "Kanal",
+      "new": "Kanal baru",
+      "untitled": "Kanal",
+      "you": "Anda",
+      "members_one": "{{count}} bot",
+      "members_other": "{{count}} bot"
+    },
+    "new": {
+      "title": "Kanal baru",
+      "name": "Nama kanal",
+      "namePlaceholder": "Nama kanal (opsional, mis. Peluncuran Brewly)",
+      "about": "Tujuan kanal ini",
+      "aboutPlaceholder": "Untuk apa kanal ini? Semua bot di dalamnya akan diberi tahu (opsional)",
+      "to": "Bot:",
+      "search": "Tambah bot…",
+      "add": "Tambahkan ke kanal",
+      "remove": "Hapus {{name}}",
+      "pick_one": "Pilih minimal {{count}} bot untuk memulai.",
+      "pick_other": "Pilih minimal {{count}} bot untuk memulai.",
+      "pickFirst": "Pilih bot terlebih dahulu",
+      "placeholder": "Tulis pesan pertama…",
+      "hint": "Bot menjawab saat Anda @mention atau menyebut namanya. Jika tidak, bot yang terakhir berbicara (atau yang pertama Anda tambahkan) yang menjawab, dan bot itu bisa mengajak bot lainnya.",
+      "needBots": "Kanal membutuhkan minimal dua bot. Buat bot lain terlebih dahulu."
+    },
+    "thread": {
+      "label": "Pesan kanal",
+      "goneBot": "Bot yang dihapus",
+      "working_one": "{{names}} sedang menjawab…",
+      "working_other": "{{names}} sedang menjawab…",
+      "queued_one": "{{count}} pesan menunggu giliran",
+      "queued_other": "{{count}} pesan menunggu giliran",
+      "reply": "Balas",
+      "pin": "Sematkan sebagai keputusan",
+      "empty": "Sapa {{names}}. @mention sebuah bot untuk memilih siapa yang menjawab, atau @everyone untuk mendengar dari semuanya.",
+      "gone": "Kanal ini sudah tidak ada.",
+      "pinAgreed": "Sematkan poin-poin yang disepakati sebagai keputusan"
+    },
+    "composer": {
+      "label": "Kirim pesan ke kanal",
+      "placeholder": "Kirim pesan ke {{names}}",
+      "mentions": "Sebut bot",
+      "send": "Kirim",
+      "stop": "Hentikan semua bot yang menjawab",
+      "replyingTo": "Membalas {{name}}",
+      "cancelReply": "Batal"
+    },
+    "decisions": {
+      "title": "Keputusan (dilihat semua bot)",
+      "unpin": "Lepas sematan"
+    },
+    "menu": {
+      "label": "Opsi kanal",
+      "members": "Anggota",
+      "rename": "Edit nama dan tujuan",
+      "delete": "Hapus kanal"
+    },
+    "members": {
+      "title": "Anggota",
+      "body": "Pilih {{min}} sampai {{max}} bot. Bot yang Anda keluarkan berhenti menjawab di sini."
+    },
+    "rename": {
+      "title": "Edit kanal",
+      "body": "Kosongkan nama untuk menampilkan nama para anggota."
+    },
+    "delete": {
+      "title": "Hapus “{{name}}”?",
+      "body": "Pesan di kanal ini akan dihapus. Bot dan obrolan pribadinya tetap ada.",
+      "confirm": "Hapus"
+    },
+    "dialog": {
+      "cancel": "Batal",
+      "save": "Simpan"
+    },
+    "work": {
+      "running": "Sedang dikerjakan di chat {{name}} sendiri…",
+      "done": "Selesai di chat {{name}}: laporannya ada di bawah",
+      "failed": "{{name}} tidak menyelesaikannya",
+      "stopped": "Dihentikan",
+      "open": "Buka chat {{name}}"
+    },
+    "proposal": {
+      "title": "Bot baru disarankan: {{name}}",
+      "create": "Buat dan tambahkan ke kanal",
+      "dismiss": "Abaikan",
+      "created": "{{name}} telah dibuat dan bergabung: buka obrolannya",
+      "dismissed": "Diabaikan"
+    }
   }
 }

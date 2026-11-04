@@ -4764,5 +4764,95 @@
     "selectTheme": "Select a Theme",
     "themes": "Themes",
     "diskFullLane": "The computer's disk is full, so {{platform}} can't save its data. It reconnects by itself once some space is freed."
+  },
+  "channels": {
+    "sidebar": {
+      "title": "Channels",
+      "new": "New channel",
+      "untitled": "Channel",
+      "you": "You",
+      "members_one": "{{count}} bot",
+      "members_other": "{{count}} bots"
+    },
+    "new": {
+      "title": "New channel",
+      "name": "Channel name",
+      "namePlaceholder": "Channel name (optional, e.g. Brewly launch)",
+      "about": "What this channel is for",
+      "aboutPlaceholder": "What is this channel for? Every bot in it is told (optional)",
+      "to": "Bots:",
+      "search": "Add bots…",
+      "add": "Add to channel",
+      "remove": "Remove {{name}}",
+      "pick_one": "Pick at least {{count}} bot to start.",
+      "pick_other": "Pick at least {{count}} bots to start.",
+      "pickFirst": "Pick the bots first",
+      "placeholder": "Write the first message…",
+      "hint": "Bots answer when you @mention or name them. Otherwise the bot that spoke last (or the first you added) answers, and it can bring the others in.",
+      "needBots": "A channel needs at least two bots. Make another bot first."
+    },
+    "thread": {
+      "label": "Channel messages",
+      "goneBot": "Deleted bot",
+      "working_one": "{{names}} is answering…",
+      "working_other": "{{names}} are answering…",
+      "queued_one": "{{count}} message waiting for its turn",
+      "queued_other": "{{count}} messages waiting for their turn",
+      "reply": "Reply",
+      "pin": "Pin as a decision",
+      "empty": "Say hello to {{names}}. @mention a bot to pick who answers, or @everyone to hear from all of them.",
+      "gone": "This channel is gone.",
+      "pinAgreed": "Pin the agreed points as decisions"
+    },
+    "composer": {
+      "label": "Message the channel",
+      "placeholder": "Message {{names}}",
+      "mentions": "Mention a bot",
+      "send": "Send",
+      "stop": "Stop every bot answering",
+      "replyingTo": "Replying to {{name}}",
+      "cancelReply": "Cancel"
+    },
+    "decisions": {
+      "title": "Decisions (every bot sees these)",
+      "unpin": "Unpin"
+    },
+    "menu": {
+      "label": "Channel options",
+      "members": "Members",
+      "rename": "Edit name and purpose",
+      "delete": "Delete channel"
+    },
+    "members": {
+      "title": "Members",
+      "body": "Pick {{min}} to {{max}} bots. A bot you remove stops answering here."
+    },
+    "rename": {
+      "title": "Edit channel",
+      "body": "Leave the name empty to show the members' names."
+    },
+    "delete": {
+      "title": "Delete “{{name}}”?",
+      "body": "The messages in this channel are deleted. The bots and their own chats stay.",
+      "confirm": "Delete"
+    },
+    "dialog": {
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "work": {
+      "running": "Working on it in {{name}}'s own chat…",
+      "done": "Done in {{name}}'s chat: the report is below",
+      "failed": "{{name}} didn't finish",
+      "stopped": "Stopped",
+      "open": "Open {{name}}'s chat"
+    },
+    "proposal": {
+      "title": "New bot suggested: {{name}}",
+      "create": "Create and add to channel",
+      "dismiss": "Dismiss",
+      "created": "{{name}} was created and joined: open its chat",
+      "dismissed": "Dismissed"
+    }
   }
 }

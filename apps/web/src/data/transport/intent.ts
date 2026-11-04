@@ -24,6 +24,7 @@ const READS: Record<string, string> = {
   ai: "attention hydrate joinRun runFinished subscribe",
   auth: "abacus.shouldAutoSignIn",
   bots: "chatPreviews events senderChats",
+  channels: "events list thread",
   browser: "events permissions.list profiles.list status",
   connectors: "events requests statuses",
   db: [

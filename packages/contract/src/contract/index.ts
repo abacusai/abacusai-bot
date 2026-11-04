@@ -10,6 +10,7 @@ import { ai } from "./ai";
 import { auth } from "./auth";
 import { bots } from "./bots";
 import { browser } from "./browser";
+import { channels } from "./channels";
 import { connectors } from "./connectors";
 import { db } from "./db";
 import { devices } from "./devices";
@@ -43,6 +44,7 @@ export const contract = {
   agent,
   ai,
   bots,
+  channels,
   routines,
   notch,
   settings,
@@ -81,6 +83,7 @@ export type {
 } from "./ai";
 export type * from "./ai-thread";
 export type { BotsEvent } from "./bots";
+export type { ChannelsEvent } from "../channels";
 export type { RoutinesEvent } from "./routines";
 export type { BrowserEvent } from "./browser";
 export type { ConnectorsEvent } from "./connectors";
