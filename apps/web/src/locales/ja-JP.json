@@ -1181,7 +1181,7 @@
     "pages.models.abacus": "Abacus.AI",
     "pages.models.openrouter": "OpenRouter",
     "pages.models.gemini": "Google Gemini",
-    "pages.connectors.body": "メールやコードを接続するか、普段使っているチャットアプリからボットにメッセージを送りましょう。Google カレンダー、ドライブ、Slack などは、必要なときにいつでもコネクタから追加できます。",
+    "pages.connectors.body": "メールとコードを接続するか、チャットアプリからボットにメッセージを送りましょう。Google カレンダー、ドライブ、Slack などはコネクタにあります。",
     "pages.done.title": "準備完了",
     "pages.done.body": "あいさつするか、フォルダーでセッションを始めましょう。",
     "pages.deferred": "設定後に完了する",
@@ -1243,7 +1243,7 @@
     "connectorAction": "{{action}} {{name}}",
     "connectorDetails": {
       "abacus-gmailuser": "メールを読み、返信の下書きを作成。",
-      "abacus-githubbot": "リポジトリ、Issue、プルリクエストを操作。",
+      "abacus-githubbot": "リポジトリとプルリクエストを操作。",
       "messaging-telegram": "Telegram からボットにメッセージ。",
       "messaging-discord": "Discord からボットにメッセージ。"
     },

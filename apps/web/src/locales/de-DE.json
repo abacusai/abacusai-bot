@@ -1181,7 +1181,7 @@
     "pages.models.abacus": "Abacus.AI",
     "pages.models.openrouter": "OpenRouter",
     "pages.models.gemini": "Google Gemini",
-    "pages.connectors.body": "Verbinde deine E-Mails und deinen Code oder schreib deinem Bot aus den Chat-Apps, die du nutzt. Google Kalender, Drive, Slack und mehr findest du jederzeit unter Konnektoren.",
+    "pages.connectors.body": "Verbinde E-Mail und Code oder schreib deinem Bot aus deinen Chat-Apps. Google Kalender, Drive, Slack und mehr findest du unter Konnektoren.",
     "pages.done.title": "Alles bereit",
     "pages.done.body": "Sag Hallo oder starte eine Sitzung in einem Ordner.",
     "pages.deferred": "Nach der Einrichtung abschließen",
@@ -1243,7 +1243,7 @@
     "connectorAction": "{{action}} {{name}}",
     "connectorDetails": {
       "abacus-gmailuser": "E-Mails lesen und Antworten entwerfen.",
-      "abacus-githubbot": "Arbeite an deinen Repos, Issues und Pull Requests.",
+      "abacus-githubbot": "Arbeite an Repos und Pull Requests.",
       "messaging-telegram": "Schreib deinem Bot über Telegram.",
       "messaging-discord": "Schreib deinem Bot über Discord."
     },

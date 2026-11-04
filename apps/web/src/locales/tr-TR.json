@@ -1181,7 +1181,7 @@
     "pages.models.abacus": "Abacus.AI",
     "pages.models.openrouter": "OpenRouter",
     "pages.models.gemini": "Google Gemini",
-    "pages.connectors.body": "E-postanı ve kodunu bağla ya da kullandığın sohbet uygulamalarından botuna mesaj at. Google Takvim, Drive, Slack ve daha fazlası, ihtiyaç duyduğunda Bağlayıcılar'da.",
+    "pages.connectors.body": "E-postanı ve kodunu bağla ya da sohbet uygulamalarından botuna yaz. Google Takvim, Drive, Slack ve fazlası Bağlayıcılar'da.",
     "pages.done.title": "Her şey hazır",
     "pages.done.body": "Merhaba de veya bir klasörde oturum başlat.",
     "pages.deferred": "Kurulumdan sonra tamamla",
@@ -1243,7 +1243,7 @@
     "connectorAction": "{{action}}: {{name}}",
     "connectorDetails": {
       "abacus-gmailuser": "E-postaları oku ve yanıt taslakları hazırla.",
-      "abacus-githubbot": "Depolarında, issue'larında ve pull request'lerinde çalış.",
+      "abacus-githubbot": "Depolar ve pull request'ler üzerinde çalış.",
       "messaging-telegram": "Botuna Telegram'dan mesaj at.",
       "messaging-discord": "Botuna Discord'dan mesaj at."
     },

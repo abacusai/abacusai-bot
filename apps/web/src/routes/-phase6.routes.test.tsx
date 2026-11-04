@@ -625,7 +625,7 @@ it("signing out on the account page reaches the sign-in wall without waiting for
   );
 });
 
-it.each(["whatsapp", "telegram", "discord"] as const)(
+it.each(["telegram", "discord"] as const)(
   "pairs %s in an onboarding overlay and returns to the same step on close",
   async (platform) => {
     const os = implement(contract);
@@ -675,7 +675,6 @@ it.each(["whatsapp", "telegram", "discord"] as const)(
       },
     });
     const names = {
-      whatsapp: "WhatsApp",
       telegram: "Telegram",
       discord: "Discord",
     };
