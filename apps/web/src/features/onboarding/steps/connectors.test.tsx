@@ -42,7 +42,7 @@ const ctx = (overrides: Partial<StepContext["props"]> = {}): StepContext => {
 };
 
 describe("connectorTiles", () => {
-  it("offers the original email and messaging choices through real connector entries", () => {
+  it("offers Gmail, GitHub and the chat apps through real connector entries", () => {
     const ids = connectorTiles(undefined).map((entry) => entry.id);
     expect(ids).toEqual([...CURATED_IDS]);
     for (const id of ids) {
@@ -51,7 +51,7 @@ describe("connectorTiles", () => {
     }
     expect(ids).toEqual([
       "abacus-gmailuser",
-      "messaging-whatsapp",
+      "abacus-githubbot",
       "messaging-telegram",
       "messaging-discord",
     ]);
@@ -86,13 +86,13 @@ describe("ConnectorsStep", () => {
     expect(tile("abacus-gmailuser").textContent).toContain("Connected");
     expect(tile("abacus-gmailuser").tagName).toBe("BUTTON");
     expect(tile("abacus-gmailuser").getAttribute("aria-pressed")).toBe("true");
-    expect(tile("messaging-whatsapp").querySelectorAll("button")).toHaveLength(
+    expect(tile("messaging-telegram").querySelectorAll("button")).toHaveLength(
       0
     );
     expect(
-      tile("messaging-whatsapp").querySelector('[data-slot="connector-state"]')
+      tile("messaging-telegram").querySelector('[data-slot="connector-state"]')
     ).not.toBeNull();
-    expect(tile("messaging-whatsapp").getAttribute("data-state")).toBe("idle");
+    expect(tile("messaging-telegram").getAttribute("data-state")).toBe("idle");
 
     expect(view.container.querySelectorAll("[data-connector]")).toHaveLength(
       CURATED_IDS.length
@@ -139,14 +139,14 @@ describe("ConnectorsStep", () => {
     expect(gmail.getAttribute("data-state")).toBe("connected");
     expect(
       view.container
-        .querySelector('[data-connector="messaging-whatsapp"]')!
+        .querySelector('[data-connector="messaging-telegram"]')!
         .getAttribute("data-state")
     ).toBe("idle");
   });
 
   it.each([
     ["Gmail", "abacus-gmailuser"],
-    ["WhatsApp", "messaging-whatsapp"],
+    ["GitHub", "abacus-githubbot"],
     ["Telegram", "messaging-telegram"],
     ["Discord", "messaging-discord"],
   ])(
