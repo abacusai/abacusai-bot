@@ -42,18 +42,20 @@ const KEY_SHAPES: readonly RegExp[] = [
 
 const PRIVATE_KEY_MARKER = /-----(BEGIN|END) [A-Z0-9 ]{0,40}PRIVATE KEY-----/g;
 
-/** The rest of a key begun in an earlier flush: its lines, then its END line. */
-const LOG_PREFIX = String.raw`(?:\[[^\]\n]{1,40}\][ \t]*){0,3}`;
+/**
+ * The rest of a key begun in an earlier flush. A key line is one whose last
+ * word is base64, whatever a log put before it.
+ */
+const LOG_PREFIX = String.raw`(?:[^\n]*[ \t\]])?`;
 const KEY_BODY_LINES = new RegExp(
   String.raw`^(?:${LOG_PREFIX}[A-Za-z0-9+/=]{16,}[ \t]*(?:\r?\n|$))*`
 );
-/** A key's last line can be short: next to its END, or at a flush's end. */
+/** A key's last line can be short: next to its END, or alone at a flush's end. */
 const KEY_SHORT_LINE = new RegExp(
   String.raw`^${LOG_PREFIX}[A-Za-z0-9+/=]{1,15}[ \t]*(?:\r?\n|$)`
 );
-const KEY_END_LINE = new RegExp(
-  String.raw`^${LOG_PREFIX}-----END [A-Z0-9 ]{0,40}PRIVATE KEY-----`
-);
+const LOG_BRACKETS = /\[[^\]\n]*\]/g;
+const KEY_END_LINE = /^[^\n]*-----END [A-Z0-9 ]{0,40}PRIVATE KEY-----/;
 
 /** A URL that is itself the credential: its last part is the secret. */
 const WEBHOOK =
@@ -116,31 +118,15 @@ const JSON_PAIR = /["']\s{0,3}:\s{0,3}\\?["']$/;
 /** A pasted image or file, when that is all the string is: no typed key in it. */
 const DATA_URI = /^data:[a-z]+\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]*$/;
 
-/** A cookie header holds several secrets: the whole line goes. */
-const COOKIE_HEADER =
-  /(\bcookie\\?["']?\s{0,3}[:=]\s{0,3})((?:\\?["'])?)((?:(?!\\[nr])[^\r\n])*)/gi;
-
-/** Where a quoted value ends: its first quote not escaped a level further in. */
-const closingQuote = (value: string, quote: string): number => {
-  let index = value.indexOf(quote);
-
-  while (index > 0 && value[index - 1] === "\\")
-    index = value.indexOf(quote, index + 1);
-
-  return index;
-};
-
-const maskCookieHeader = (
-  whole: string,
-  name: string,
-  quote: string,
-  value: string
-): string => {
-  if (!value.includes("=")) return whole;
-  const closing = quote === "" ? -1 : closingQuote(value, quote);
-
-  return `${name}${quote}${MASKED_VALUE}${closing < 0 ? "" : value.slice(closing)}`;
-};
+/**
+ * A cookie header holds several secrets, so every name=value pair goes, by the
+ * header's own grammar: it ends where the pairs do, and what follows is kept.
+ */
+const COOKIE_PAIR = String.raw`[A-Za-z0-9_.%-]{1,128}=(?:\\*["'][^"'\r\n\\]*\\*["']|[^;\s"'\\]*)`;
+const COOKIE_HEADER = new RegExp(
+  String.raw`(\bcookie\\?["']?\s{0,3}[:=]\s{0,3}(?:\\*["'])?)${COOKIE_PAIR}(?:;\s{0,3}${COOKIE_PAIR})*`,
+  "gi"
+);
 
 const looksRandom = (part: string): boolean =>
   part.length >= SK_KEY_MIN_PART_LENGTH &&
@@ -181,7 +167,7 @@ export function scrubKeys(text: string): string {
       /\d/.test(token) ? `${prefix}${MASKED_VALUE}` : whole
     )
     .replace(AUTH_HEADER, `$1${MASKED_VALUE}`)
-    .replace(COOKIE_HEADER, maskCookieHeader)
+    .replace(COOKIE_HEADER, `$1${MASKED_VALUE}`)
     .replace(NAMED_SECRET, (whole, name: string, value: string) =>
       STAND_IN.test(value) || (WORDS.test(value) && !JSON_PAIR.test(name))
         ? whole
@@ -283,7 +269,11 @@ export function scrubLogFlush(
     if (short != null) {
       const after = rest.slice(short.length);
 
-      if (after.length === 0 || KEY_END_LINE.test(after)) {
+      const endsFlush =
+        after.length === 0 &&
+        short.replace(LOG_BRACKETS, "").trim().split(/\s+/).length === 1;
+
+      if (endsFlush || KEY_END_LINE.test(after)) {
         body += short;
         rest = after;
       }

@@ -139,6 +139,27 @@ describe("writing", () => {
     expect(text).toContain("after");
   });
 
+  it("follows a key behind a log prefix with a bare word in it", () => {
+    const store = new LogStore(dir, at("2026-08-21T10:00:00"));
+    const prefix = "[a1b2c3d4] stderr ";
+    const line = `Mi0${"a1B2c3D4".repeat(8)}`;
+
+    store.start();
+    store.append("agent", `${prefix}-----BEGIN ${"PRIVATE"} KEY-----`);
+    store.flush();
+    store.append("agent", `${prefix}${line}`);
+    store.flush();
+    store.append("agent", `${prefix}${line}x`);
+    store.append("agent", `${prefix}-----END ${"PRIVATE"} KEY-----`);
+    store.append("agent", `${prefix}all done`);
+    store.flush();
+
+    const text = read("agent-2026-08-21.log");
+
+    expect(text).not.toContain(line);
+    expect(text).toContain("all done");
+  });
+
   it("does not lose the log after a key cut short", () => {
     const store = new LogStore(dir, at("2026-08-21T10:00:00"));
 

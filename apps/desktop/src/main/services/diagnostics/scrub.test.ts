@@ -184,6 +184,38 @@ describe("what is uploaded or logged", () => {
     expect(scrub(once)).toBe(once);
   });
 
+  it("holds every cookie header, and keeps what follows each", () => {
+    const [one, two, three] = [body(12), body(14), body(13)];
+    const name = parts("Coo", "kie");
+    const both = scrub(
+      JSON.stringify({
+        one: { [name]: parts("sid=", one) },
+        two: { [name]: parts("x=", two, "; y=", three) },
+        next: 1,
+      })
+    );
+    const command = scrub(
+      JSON.stringify({
+        command: parts(
+          'curl -H "',
+          name,
+          ": sid=",
+          one,
+          "; auth=",
+          two,
+          '" https://x.example/a'
+        ),
+        timeout: 30,
+      })
+    );
+
+    for (const text of [both, command])
+      for (const value of [one, two, three]) expect(text).not.toContain(value);
+    expect(JSON.parse(both).next).toBe(1);
+    expect(JSON.parse(command).timeout).toBe(30);
+    expect(command).toContain("https://x.example/a");
+  });
+
   it("holds no private key, whole or cut off", () => {
     const pem = `-----BEGIN RSA ${"PRIVATE"} KEY-----\n${body(64)}\n${body(64)}`;
 
