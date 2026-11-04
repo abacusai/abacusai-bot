@@ -47,6 +47,8 @@ const agenda = (
     failTimes?: number;
     dropped?: Array<{ item_id: string; reason: string }>;
     enabled?: boolean;
+    /** Whether Calendar or Gmail is connected; throws when an Error. */
+    google?: boolean | Error;
   } = {}
 ) => {
   const calls: Array<Record<string, unknown>> = [];
@@ -67,6 +69,14 @@ const agenda = (
       }) as never,
       phoneDir: dir,
       waits: async () => options.waits ?? [],
+      ...(options.google !== undefined
+        ? {
+            googleConnected: async () => {
+              if (options.google instanceof Error) throw options.google;
+              return options.google === true;
+            },
+          }
+        : {}),
       now: () => NOW,
       log: (line) => logs.push(line),
     },
@@ -771,5 +781,96 @@ describe("the linked turn", () => {
     expect(brief).toMatch(
       /auth, permission or expired-token error is not connected: leave it out of the brief, and call `connect_connector`/
     );
+  });
+
+  /** The first brief a linked entry gets once a poll carried it. */
+  const firstBrief = async (google?: boolean | Error): Promise<string> => {
+    const { nudges, logs } = agenda({ google });
+    const linked: PhoneInboxEntry = {
+      id: "l1",
+      kind: "linked",
+      first_brief: true,
+    };
+    nudges.start();
+    nudges.polled({ messages: [linked] });
+    if (google instanceof Error)
+      await vi.waitFor(() =>
+        expect(logs).toContain("[phone] connectors not read: offline")
+      );
+    else await new Promise((resolve) => setTimeout(resolve, 0));
+    const [brief] = nudges.notes(linked);
+    nudges.stop();
+    return brief!;
+  };
+
+  it("keeps the connected brief when Calendar or Gmail is connected, and when that could not be read", async () => {
+    const connected = await firstBrief(true);
+    // A first brief no poll carried was never read: the connected brief too.
+    const { nudges } = agenda({ google: false });
+    const unpolled = nudges.notes({
+      id: "l1",
+      kind: "linked",
+      first_brief: true,
+    })[0];
+    expect(connected).toContain(
+      "If their calendar is connected, their next meetings today or tomorrow"
+    );
+    expect(connected).toContain(
+      "Then offer to draft replies to those into their Gmail Drafts"
+    );
+    expect(connected).toContain(
+      "one line offering to send this brief here every morning at 8"
+    );
+    for (const brief of [
+      await firstBrief(),
+      await firstBrief(new Error("offline")),
+      unpolled,
+    ])
+      expect(brief).toBe(connected);
+  });
+
+  it("with nothing connected, offers three things it makes with nothing from them as pages, the trip plan first, and leaves Google optional", async () => {
+    const brief = await firstBrief(false);
+    expect(brief).toMatch(
+      /^\[first brief\] This is the user's first time here and nothing is connected yet/
+    );
+    expect(brief).toContain("in their language");
+    expect(brief).toContain("greet them by first name");
+    expect(brief).toContain(
+      "a numbered list of 3 things you can make with nothing from them, each ending in a `page`"
+    );
+    expect(brief).toContain("a sensible default you state openly");
+    expect(brief).toContain(
+      "The first is always a 3-day trip plan for a city they pick, or one you suggest."
+    );
+    for (const starter of [
+      "meal plan",
+      "buyer's guide",
+      "today's news",
+      "workout plan",
+    ])
+      expect(brief).toContain(starter);
+    expect(brief).toContain(
+      "Never invent anything about them (their city, a route"
+    );
+    expect(brief).toContain(
+      "(a link, a file, a voice note, an account) or a reminder or routine"
+    );
+    expect(brief).toContain(
+      "never an image, a video, a website or anything else that goes to `paid_feature`"
+    );
+    expect(brief).not.toMatch(/flights/);
+    expect(brief).toContain("Make none of them in this reply.");
+    expect(brief).toContain(
+      "call `connect_connector` for Google: its link goes on your last line."
+    );
+    expect(brief).toContain("an option, never a step they must take first");
+    expect(brief).not.toContain("every morning");
+    expect(brief).toContain(
+      "When they answer with a number, make that one with its default at once, without asking first"
+    );
+    expect(brief).toContain("publish it with `page`, and send its link");
+    // The model writes every line itself: the note quotes nothing for it to send.
+    expect(brief).not.toMatch(/"/);
   });
 });
