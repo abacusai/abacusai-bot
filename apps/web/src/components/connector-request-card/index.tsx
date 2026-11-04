@@ -59,10 +59,8 @@ export const ConnectorRequestCard = ({
       ? Object.entries(connectFields(connector))
       : [];
   const [values, setValues] = useState<Record<string, string>>({});
-  // On the web, WhatsApp is AbacusAI Bot's own number, never the desktop's pairing.
-  const botNumber = useBotNumberConnect(
-    request.connectorId === "whatsapp" ? onConnected : undefined
-  );
+  // A chat app connects in its own dialog: AbacusAI Bot's number on the web, the desktop's pairing (QR) in the app.
+  const botNumber = useBotNumberConnect(onConnected, request.connectorId);
   const hopsToBrowser = ui === "browser-hop";
   const provider = request.label;
   const fieldsReady = fields.every(
