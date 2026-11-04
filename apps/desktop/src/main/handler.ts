@@ -304,9 +304,7 @@ export const createHostOperations = (
     const restored = serviceHost.restoreSessionsForAccount(
       accountStashKey(account.email, key)
     );
-    console.log(
-      `[account] signed in as ${account.email ?? "?"}: restored ${restored} session(s)`
-    );
+    console.log(`[account] signed in: restored ${restored} session(s)`);
     registerLoginItem();
     return { ok: true };
   };
@@ -364,9 +362,7 @@ export const createHostOperations = (
     credentialsChanged("abacus", "");
     // The one event that takes every session down at once; without this line
     // the log showed five SIGTERMs and no reason.
-    console.log(
-      `[account] signed out${account?.email ? ` (${account.email})` : ""}: stashed ${stashedSessions} session(s)`
-    );
+    console.log(`[account] signed out: stashed ${stashedSessions} session(s)`);
     return { stashedSessions, settings };
   };
 

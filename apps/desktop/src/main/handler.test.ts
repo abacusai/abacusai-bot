@@ -261,6 +261,19 @@ describe("acquiring an Abacus.AI key", () => {
     expect(saveApiKey).toHaveBeenCalledWith("abacus", "");
   });
 
+  it("keeps the account's email out of the synced log, signing in and out", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    await handlers.get("auth")?.({});
+    vi.mocked(readSettings).mockReturnValue({
+      apiKeys: { ABACUS_API_KEY: ["departing", "value"].join("-") },
+    } as never);
+    await handlers.get("save")?.({}, "abacus", "");
+
+    const lines = log.mock.calls.flat().map(String);
+    expect(lines.some((line) => line.startsWith("[account]"))).toBe(true);
+    expect(lines.join("\n")).not.toContain("@example.com");
+  });
+
   it("leaves other providers' keys out of it", async () => {
     await handlers.get("save")?.({}, "groq", "gsk_key");
 
