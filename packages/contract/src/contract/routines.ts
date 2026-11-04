@@ -48,7 +48,12 @@ export const routines = {
   /** Plain-words edit; long-running, resolves to the routine's reply. */
   editByChat: mutation
     .input(
-      v.object({ routineId: RoutineId, text: v.pipe(v.string(), v.nonEmpty()) })
+      v.object({
+        routineId: RoutineId,
+        text: v.pipe(v.string(), v.nonEmpty()),
+        /** The run on the user's screen, which their words may answer. */
+        runId: v.optional(v.string()),
+      })
     )
     .output(type<{ reply: string }>()),
   /** `create` marks the run as the test run after setup. */
