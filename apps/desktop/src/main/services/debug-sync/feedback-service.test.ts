@@ -46,6 +46,19 @@ const reply = (status: number, body: unknown = {}): Response =>
   });
 
 describe("reporting a turn's thumbs", () => {
+  it("does not send a key the user pasted into the comment", () => {
+    const key = `s${"k-"}${"a1B2c3D4".repeat(6)}`;
+
+    expect(
+      sanitizeFeedback({
+        sessionId: "sess",
+        segmentId: "text:0:9",
+        rating: "down",
+        comment: `it broke with ${key}`,
+      })?.comment
+    ).toBe("it broke with <redacted-key>");
+  });
+
   beforeEach(() => {
     apiKey = "abacus-key";
   });

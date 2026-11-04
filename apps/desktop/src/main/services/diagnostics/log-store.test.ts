@@ -84,6 +84,17 @@ describe("writing", () => {
     expect(read("main-2026-08-21.log")).not.toContain("sk-or-v1-abcdef123456");
   });
 
+  it("scrubs a Discord token, which has no prefix to go by", () => {
+    const store = new LogStore(dir, at("2026-08-21T10:00:00"));
+    const token = `M${"a1B2c".repeat(5)}.${"a1B2c3"}.${"a1B2c3D4".repeat(5)}`;
+
+    store.start();
+    store.append("main", `[discord] gateway login failed for ${token}`);
+    store.flush();
+
+    expect(read("main-2026-08-21.log")).not.toContain(token);
+  });
+
   it("survives a directory it cannot write to", () => {
     const store = new LogStore(
       path.join(dir, "file-not-a-dir", "deeper"),

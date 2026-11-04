@@ -9,6 +9,7 @@ import { app } from "electron";
 
 import { readSettings } from "../config/settings";
 import { clientEnvironment } from "../diagnostics/client-environment";
+import { scrubKeys } from "../diagnostics/scrub";
 import { abacusRoutellmV1 } from "../providers/abacus-host";
 import type { DebugSyncService } from "./debug-sync-service";
 
@@ -61,7 +62,7 @@ export const sanitizeFeedback = (input: unknown): TurnFeedback | null => {
     return null;
   const comment =
     typeof raw.comment === "string"
-      ? raw.comment.trim().slice(0, MAX_COMMENT_LENGTH)
+      ? scrubKeys(raw.comment.trim().slice(0, MAX_COMMENT_LENGTH))
       : "";
   const model =
     typeof raw.model === "string" && raw.model.length > 0

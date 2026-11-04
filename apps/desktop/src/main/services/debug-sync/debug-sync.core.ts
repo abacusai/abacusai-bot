@@ -7,6 +7,7 @@
  */
 
 import type { ClientEnvironment } from "../diagnostics/client-environment";
+import { scrubValue } from "../diagnostics/scrub";
 import type { StoredTranscript } from "../session/transcript-service";
 
 export interface SyncClientMeta {
@@ -127,7 +128,11 @@ export function shouldSync(
   return unsyncedSegments(transcript, state).length > 0;
 }
 
-/** The upload, and the state the server is in once it lands. */
+/**
+ * The upload, and the state the server is in once it lands. Segments are
+ * scrubbed here, on their way out: the local transcript stays as the user
+ * wrote it.
+ */
 export function buildSyncPayload(
   transcript: StoredTranscript,
   meta: SyncClientMeta,
@@ -138,7 +143,7 @@ export function buildSyncPayload(
   const events: SyncEvent[] = [];
   for (const { key, segment } of unsyncedSegments(transcript, state)) {
     sequences[key] = next;
-    events.push({ event_sequence_number: next, segment });
+    events.push({ event_sequence_number: next, segment: scrubValue(segment) });
     next += 1;
   }
   return {

@@ -22,10 +22,13 @@ It includes information about your app, device, settings, and connected services
 Conversation transcripts include messages and tool activity, which can contain
 code, file contents, and personal information.
 
-The app redacts recognized secrets from application logs. This redaction does
-not apply to conversation transcripts. File reads are not filtered for secrets:
-if the agent opens a `.env` file, its contents may reach the model provider and
-appear in an uploaded transcript.
+The app redacts recognized secrets from everything it uploads: application logs,
+diagnostics, feedback comments, and conversation transcripts, including tool
+arguments and results. Secrets are recognized by their shape or by the name
+they are stored under, so one with neither can still get through. Your own
+transcript on this computer is not changed. File reads are not filtered for
+secrets on their way to the model: if the agent opens a `.env` file, its
+contents reach the model provider.
 
 ## Accounts and keys
 

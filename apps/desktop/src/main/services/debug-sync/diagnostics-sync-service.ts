@@ -13,6 +13,7 @@ import {
   safely,
   type ClientEnvironment,
 } from "../diagnostics/client-environment";
+import { scrubValue } from "../diagnostics/scrub";
 import { abacusRoutellmV1 } from "../providers/abacus-host";
 import { deviceId } from "./device-id";
 
@@ -137,7 +138,8 @@ export class DiagnosticsSyncService {
     const key = readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus];
     if (key == null || key.trim().length === 0) return;
 
-    const snapshot = this.snapshot();
+    // An MCP server's error is free text, and can quote its own URL or header.
+    const snapshot = scrubValue(this.snapshot());
     const json = JSON.stringify(snapshot);
     if (json === this.lastSent) return; // unchanged since the last successful send
 
