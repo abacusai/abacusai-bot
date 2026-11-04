@@ -19,9 +19,11 @@ const KEY_SHAPES: readonly RegExp[] = [
   /\b[rs]k_(?:live|test)_[A-Za-z0-9]{16,}/g, // Stripe
   /\bs2_[A-Za-z0-9]{16,}/g, // Abacus
   /\bgh[pousr]_[A-Za-z0-9]{16,}/g,
+  /gh[pousr]_[A-Za-z0-9]{36,}/g, // at full length, also run on from a word
   /\bgithub_pat_[A-Za-z0-9_]{22,}/g,
   /\bglpat-[A-Za-z0-9_-]{20,}/g,
   /\bAIza[A-Za-z0-9_-]{20,}/g,
+  /AIza[A-Za-z0-9_-]{35}/g, // the same
   /\bAQ\.[A-Za-z0-9_-]{40,}/g, // Google's newer API key format
   /\bya29\.[A-Za-z0-9_-]{20,}/g,
   /\bGOCSPX-[A-Za-z0-9_-]{20,}/g,
@@ -43,8 +45,19 @@ const WEBHOOK =
  * sk- is also how plenty of ordinary names start (sk-learn,
  * sk-button-primary), so a part of it must look random.
  */
-const SK_KEY = /\b(?:sk|rk)-[A-Za-z0-9_-]{12,}/g;
+const SK_KEY = /(?:sk|rk)-[A-Za-z0-9_-]{12,}/g;
 const SK_KEY_MIN_PART_LENGTH = 12;
+
+/** Run on from a word it is `task-…`: only a long, mixed-case part counts. */
+const SK_KEY_RUN_ON_MIN_PART_LENGTH = 32;
+
+/**
+ * Text inside a JSON string spells a newline as backslash-n, whose n would
+ * join the key after it into one word. This goes between them while the
+ * rules run; a private-use character, so no text has it.
+ */
+const ESCAPE_BREAK = "\uE000";
+const ESCAPED_WHITESPACE = /(\\[nrt])(?=[A-Za-z0-9])/g;
 
 /** Not `Bearer authentication`: a token has a digit, a word does not. */
 const BEARER = /(\bbearer\s+)([A-Za-z0-9._~+/-]{12,}=*)/gi;
@@ -90,6 +103,12 @@ const looksRandom = (part: string): boolean =>
   /\d/.test(part) &&
   /[A-Za-z]/.test(part);
 
+const looksRandomRunOn = (part: string): boolean =>
+  part.length >= SK_KEY_RUN_ON_MIN_PART_LENGTH &&
+  /\d/.test(part) &&
+  part.toLowerCase() !== part &&
+  part.toUpperCase() !== part;
+
 /**
  * Credentials out of one text, nothing else. The server runs the same rules
  * over what reaches it (older versions upload unscrubbed); keep the two lists
@@ -100,14 +119,18 @@ const looksRandom = (part: string): boolean =>
 export function scrubKeys(text: string): string {
   if (DATA_URI.test(text)) return text;
 
-  let out = text;
+  let out = text.replace(ESCAPED_WHITESPACE, `$1${ESCAPE_BREAK}`);
 
   for (const shape of KEY_SHAPES) out = out.replace(shape, MASKED_KEY);
 
   return out
-    .replace(SK_KEY, (key) =>
-      key.split(/[-_]/).some(looksRandom) ? MASKED_KEY : key
-    )
+    .replace(SK_KEY, (key: string, offset: number, whole: string) => {
+      const runsOn = offset > 0 && /[A-Za-z0-9_]/.test(whole[offset - 1]!);
+
+      return key.split(/[-_]/).some(runsOn ? looksRandomRunOn : looksRandom)
+        ? MASKED_KEY
+        : key;
+    })
     .replace(WEBHOOK, `$1${MASKED_KEY}`)
     .replace(URL_CREDENTIAL, `$1${MASKED_VALUE}$3`)
     .replace(BEARER, (whole, prefix: string, token: string) =>
@@ -118,7 +141,8 @@ export function scrubKeys(text: string): string {
       STAND_IN.test(value) || (WORDS.test(value) && !JSON_PAIR.test(name))
         ? whole
         : `${name}${MASKED_VALUE}`
-    );
+    )
+    .replaceAll(ESCAPE_BREAK, "");
 }
 
 /** A string under a secret's own key: only a stand-in or a sentence stays. */

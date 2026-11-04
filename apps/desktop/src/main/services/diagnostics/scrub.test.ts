@@ -111,6 +111,8 @@ const ORDINARY = [
   "https://example.com:8443/path?page=2",
   parts("git", "@github.com:abacusai/abacusai-bot.git"),
   "see section 1.2.3 of the agreement.",
+  parts("task-", "abcdef0123456789".repeat(3)),
+  "a\\nb\\tc",
   "Montreal.is.lovely.this.time.of.the.year.and.so.on.and.on",
 ];
 
@@ -149,6 +151,19 @@ describe("what is uploaded or logged", () => {
   it.each(NAMED)("holds no secret named in a %s", (_kind, text, secret) => {
     expect(scrub(text)).not.toContain(secret);
     expect(uploaded({ id: "1", content: text })).not.toContain(secret);
+  });
+
+  it.each(KEYS)("holds no %s key after an escaped newline", (_kind, key) => {
+    expect(scrub(parts("line\\n", key, "\\nnext"))).not.toContain(key);
+  });
+
+  it("holds no key run on from the word before it", () => {
+    for (const key of [
+      KEYS.find(([kind]) => kind === "GitHub")![1],
+      KEYS.find(([kind]) => kind === "Google")![1],
+      parts("s", "k-", "aB3".repeat(16)),
+    ])
+      expect(scrub(parts("word", key))).not.toContain(key);
   });
 
   it("holds no private key, whole or cut off", () => {
