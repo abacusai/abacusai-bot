@@ -3263,6 +3263,17 @@
       "label": "Başlatmak için bir göreve dokun",
       "copy": "Telefondan göndermek için “{{text}}” metnini kopyala",
       "copyFailed": "Kopyalanamadı"
+    },
+    "deliverableOffer": {
+      "label": "Bu yanıtı belge olarak sakla",
+      "doc": "Belgeye dönüştür",
+      "report": "Rapora dönüştür",
+      "hint": "Saklayıp paylaşabileceğin bir PDF",
+      "dismiss": "Şimdi değil",
+      "request": {
+        "doc": "Son yanıtını saklayıp paylaşabileceğim düzenli bir belgeye dönüştür ve çalışma alanına PDF olarak kaydet.",
+        "report": "Son yanıtını saklayıp paylaşabileceğim düzenli bir rapora dönüştür ve çalışma alanına PDF olarak kaydet."
+      }
     }
   },
   "notch": {

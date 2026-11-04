@@ -3263,6 +3263,17 @@
       "label": "Ketuk tugas untuk menjalankannya",
       "copy": "Salin “{{text}}” untuk dikirim dari ponsel",
       "copyFailed": "Gagal menyalin"
+    },
+    "deliverableOffer": {
+      "label": "Simpan jawaban ini sebagai dokumen",
+      "doc": "Jadikan dokumen",
+      "report": "Jadikan laporan",
+      "hint": "PDF untuk disimpan dan dibagikan",
+      "dismiss": "Nanti saja",
+      "request": {
+        "doc": "Ubah jawaban terakhirmu menjadi dokumen rapi yang bisa saya simpan dan bagikan, disimpan sebagai PDF di ruang kerja.",
+        "report": "Ubah jawaban terakhirmu menjadi laporan rapi yang bisa saya simpan dan bagikan, disimpan sebagai PDF di ruang kerja."
+      }
     }
   },
   "notch": {

@@ -35,6 +35,10 @@ export interface Scenario {
     openPicker?: "mode" | "model";
     /** The success pitch offered under the latest reply. */
     successPitch?: Pick<SuccessPitchOffer, "trigger" | "moment" | "lead">;
+    /** The deliverable offer judged without its caps. */
+    deliverableOffer?: boolean;
+    /** The turns' files on the deliverables card, as the sessions route shows them. */
+    deliverables?: boolean;
   };
   /** Canned answer to a send in the gallery (echo + reply). */
   reply?: string;
@@ -471,6 +475,161 @@ const successThanks =
       b.runFinished("r2", "success", { timestamp: at(1) }),
     ]);
 
+// ─── the deliverable offer ─────────────────────────────────────────────
+
+interface OfferWords {
+  ask: string;
+  answer: string;
+  request: string;
+  brief: string;
+  path: string;
+  label: string;
+  done: string;
+  quick: string;
+  quickAnswer: string;
+}
+
+const OFFER_EN: OfferWords = {
+  ask: "Compare Notion, Obsidian and Logseq for a five-person team that keeps shared meeting notes and a small wiki.",
+  answer: [
+    "Short version: **Notion** if the team wants one shared space with the least setup, **Obsidian** if people care most about owning plain files, and **Logseq** if your notes are mostly daily meeting logs.",
+    "",
+    "## At a glance",
+    "",
+    "| | Notion | Obsidian | Logseq |",
+    "| --- | --- | --- | --- |",
+    "| Real-time collaboration | Built in | Paid Sync, not live | Limited |",
+    "| Where notes live | Notion's cloud | Local Markdown files | Local Markdown files |",
+    "| Wiki structure | Pages and databases | Folders and links | Outline and links |",
+    "| Cost for 5 people | About $50/month | Free, Sync $4/user | Free |",
+    "| Offline | Partial | Full | Full |",
+    "",
+    "## Meeting notes",
+    "",
+    "Notion's templates and database views make recurring meetings easy: one database, a template per meeting type, filters by owner. Logseq's daily journal is the fastest place to type during a call, and its block references pull action items into one page. Obsidian needs a community plugin to match either.",
+    "",
+    "## The wiki",
+    "",
+    "For a small wiki that several people edit, Notion wins: permissions, comments and page history work without setup. Obsidian's graph and backlinks are excellent for one person's knowledge, but shared editing depends on syncing files, which leads to conflicts when two people edit at once.",
+    "",
+    "## Recommendation",
+    "",
+    "- Start with Notion for the shared wiki and meeting database.",
+    "- Let anyone who prefers local files keep a personal Obsidian vault.",
+    "- Revisit in three months: if most notes are daily logs, try Logseq for those.",
+  ].join("\n"),
+  request:
+    "Turn your last answer into a polished report I can keep and share, saved as a PDF in the workspace.",
+  brief:
+    "A comparison of Notion, Obsidian and Logseq for a five-person team's shared meeting notes and wiki",
+  path: "/Users/me/Documents/notes-tools-comparison.pdf",
+  label: "Notes tools comparison",
+  done: "Here's the report: the comparison table, a section each on meeting notes and the wiki, and the recommendation, on four pages.",
+  quick: "What's the capital of Portugal?",
+  quickAnswer: "Lisbon.",
+};
+
+const OFFER_PT: OfferWords = {
+  ask: "Compare Notion, Obsidian e Logseq para uma equipe de cinco pessoas que mantém atas de reunião e uma pequena wiki.",
+  answer: [
+    "Resumindo: **Notion** se a equipe quer um espaço compartilhado com o mínimo de configuração, **Obsidian** se o mais importante é ter os arquivos em texto puro, e **Logseq** se as notas são principalmente registros diários de reuniões.",
+    "",
+    "## Visão geral",
+    "",
+    "| | Notion | Obsidian | Logseq |",
+    "| --- | --- | --- | --- |",
+    "| Colaboração em tempo real | Nativa | Sync pago, não ao vivo | Limitada |",
+    "| Onde ficam as notas | Nuvem do Notion | Arquivos Markdown locais | Arquivos Markdown locais |",
+    "| Estrutura de wiki | Páginas e bancos de dados | Pastas e links | Tópicos e links |",
+    "| Custo para 5 pessoas | Cerca de US$ 50/mês | Grátis, Sync US$ 4/usuário | Grátis |",
+    "| Offline | Parcial | Completo | Completo |",
+    "",
+    "## Atas de reunião",
+    "",
+    "Os modelos e as visualizações de banco de dados do Notion facilitam reuniões recorrentes: um banco de dados, um modelo por tipo de reunião e filtros por responsável. O diário do Logseq é o lugar mais rápido para digitar durante uma chamada, e as referências de bloco reúnem as tarefas numa só página. O Obsidian precisa de um plugin da comunidade para chegar perto.",
+    "",
+    "## A wiki",
+    "",
+    "Para uma wiki pequena editada por várias pessoas, o Notion vence: permissões, comentários e histórico de páginas funcionam sem configuração. O grafo e os backlinks do Obsidian são ótimos para o conhecimento de uma pessoa, mas a edição compartilhada depende de sincronizar arquivos, o que gera conflitos quando duas pessoas editam ao mesmo tempo.",
+    "",
+    "## Recomendação",
+    "",
+    "- Comece com o Notion para a wiki e o banco de atas.",
+    "- Quem preferir arquivos locais pode manter um cofre pessoal no Obsidian.",
+    "- Reavalie em três meses: se a maioria das notas forem registros diários, teste o Logseq para eles.",
+  ].join("\n"),
+  request:
+    "Transforme sua última resposta em um relatório bem acabado que eu possa guardar e compartilhar, salvo como PDF no espaço de trabalho.",
+  brief:
+    "Comparação entre Notion, Obsidian e Logseq para as atas e a wiki de uma equipe de cinco pessoas",
+  path: "/Users/me/Documents/comparacao-ferramentas-de-notas.pdf",
+  label: "Comparação de ferramentas de notas",
+  done: "Aqui está o relatório: a tabela comparativa, uma seção sobre atas e outra sobre a wiki, e a recomendação, em quatro páginas.",
+  quick: "Qual é a capital de Portugal?",
+  quickAnswer: "Lisboa.",
+};
+
+const offerAnswered = (words: OfferWords): StreamChunk[] => [
+  ...b.sessionReady("inc-1", "YOLO"),
+  ...userTurn("r1", "u1", words.ask, at(9)),
+  b.textStart("a1"),
+  ...b.toolCall("c0", "web_search", "a1", {
+    query: "Notion Obsidian Logseq team pricing collaboration",
+  }),
+  b.toolResult("c0", { text: "10 results" }),
+  b.textDelta("a1", words.answer),
+  b.textEnd("a1"),
+  b.runFinished("r1", "success", { timestamp: at(8) }),
+];
+
+/** The document tool at work on the request the offer sent. */
+const offerWorking = (words: OfferWords): StreamChunk[] => [
+  ...offerAnswered(words),
+  ...userTurn("r2", "u2", words.request, at(1)),
+  b.textStart("a2"),
+  ...b.toolCall("c1", "document", "a2", {
+    brief: words.brief,
+    output_path: words.path,
+  }),
+  b.subagentStarted("doc-1", "delegate", words.brief, "c1", "a2"),
+];
+
+const offerDelivered = (words: OfferWords): StreamChunk[] => [
+  ...offerWorking(words),
+  b.subagentFinished("doc-1", `Printed ${words.path}`),
+  b.toolResult("c1", { text: `Printed ${words.path}` }),
+  ...b.toolCall("c2", "agent-tools_present_deliverable", "a2", {
+    items: [{ path: words.path, label: words.label }],
+  }),
+  b.toolResult("c2", { text: `[artifact] ${words.path}` }),
+  b.textDelta("a2", words.done),
+  b.textEnd("a2"),
+  b.runFinished("r2", "success", { timestamp: at(0) }),
+];
+
+const offerShort = (words: OfferWords): StreamChunk[] => [
+  ...b.sessionReady("inc-1", "YOLO"),
+  ...userTurn("r1", "u1", words.quick, at(2)),
+  ...b.text("a1", "assistant", words.quickAnswer),
+  b.runFinished("r1", "success", { timestamp: at(1) }),
+];
+
+const offerScenarios = (locale: string, words: OfferWords): Scenario[] =>
+  (
+    [
+      ["shown", offerAnswered, {}],
+      ["working", offerWorking, {}],
+      ["delivered", offerDelivered, { deliverables: true }],
+      ["short", offerShort, {}],
+    ] as const
+  ).map(([state, events, view]) => ({
+    id: `deliverable-offer-${state}-${locale.slice(0, 2)}`,
+    canvas: ["DeliverableOffer", state, locale],
+    skin: "session",
+    events: () => seqd(events(words)),
+    view: { deliverableOffer: true, ...view },
+  }));
+
 const sessionOutcome = (kind: string) => (): RelayEvent[] =>
   seqd([
     ...b.sessionReady("inc-1", "DEFAULT"),
@@ -677,6 +836,8 @@ const migratedHistory = (): UIMessage[] => {
 };
 
 export const SCENARIOS: Scenario[] = [
+  ...offerScenarios("en", OFFER_EN),
+  ...offerScenarios("pt-BR", OFFER_PT),
   {
     id: "success-site",
     canvas: ["SuccessPitchCard", "site"],

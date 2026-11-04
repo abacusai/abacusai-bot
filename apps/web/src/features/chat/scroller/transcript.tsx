@@ -34,6 +34,7 @@ import {
 } from "#renderer/ui/message-scroller";
 
 import { useChatView } from "../kit/context";
+import { DeliverableOfferRow } from "../kit/deliverable-offer";
 import { userView } from "../kit/message";
 import {
   BusyLine,
@@ -893,6 +894,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
           ))}
           {rows}
           <RunTail messages={messages} />
+          <DeliverableOfferRow messages={messages} active={active} />
           <SuccessPitchRow active={active} />
           <UpgradeTriggers
             messages={messages}

@@ -141,6 +141,18 @@ export function spokenParts(message: UIMessage): SpokenPart[] {
   return out;
 }
 
+/** The text a turn spoke since its last tool call: its final reply. */
+export function turnReplyText(assistantMessages: readonly UIMessage[]): string {
+  let reply = "";
+  for (const message of assistantMessages)
+    for (const part of message.parts) {
+      if (part.type === "tool-call") reply = "";
+      else if (part.type === "text" && kindOf(part) === null)
+        reply += (part as { content: string }).content;
+    }
+  return reply;
+}
+
 /** A turn that said nothing and made nothing. */
 export function turnIsSilent(
   assistantMessages: readonly UIMessage[],

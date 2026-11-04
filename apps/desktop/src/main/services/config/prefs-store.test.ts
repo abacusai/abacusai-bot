@@ -263,6 +263,7 @@ describe("PrefsStore", () => {
       routinesMissedSeenAt: null,
       creditThresholdCards: {},
       successPitchCards: {},
+      deliverableOffer: null,
       freePlanSeenAt: null,
       upgradeRoutinesSeenAt: null,
     });

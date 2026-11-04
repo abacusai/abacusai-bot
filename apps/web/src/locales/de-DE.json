@@ -3263,6 +3263,17 @@
       "label": "Tippe auf eine Aufgabe, um sie zu starten",
       "copy": "„{{text}}“ kopieren, um es vom Handy zu senden",
       "copyFailed": "Kopieren fehlgeschlagen"
+    },
+    "deliverableOffer": {
+      "label": "Diese Antwort als Dokument behalten",
+      "doc": "Als Dokument speichern",
+      "report": "Als Bericht aufbereiten",
+      "hint": "Ein PDF zum Behalten und Teilen",
+      "dismiss": "Jetzt nicht",
+      "request": {
+        "doc": "Mach aus deiner letzten Antwort ein ansprechendes Dokument, das ich behalten und teilen kann, und speichere es als PDF im Arbeitsbereich.",
+        "report": "Mach aus deiner letzten Antwort einen ansprechenden Bericht, den ich behalten und teilen kann, und speichere ihn als PDF im Arbeitsbereich."
+      }
     }
   },
   "notch": {

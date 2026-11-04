@@ -1,8 +1,7 @@
 /**
  * `suggest_tasks`' buttons in a bot's chat: the tasks a reply ends with,
  * tapped instead of typed. A tap sends the button's own text as the user's
- * message, through the same routing the composer submits with (sent, or
- * queued behind a run); a copy button puts its text on the clipboard for the
+ * message (send-as-user.ts); a copy button puts its text on the clipboard for the
  * user to send from their phone. The buttons show once the reply is done
  * and only on the latest offer, until the user writes anything.
  */
@@ -21,14 +20,9 @@ import { useAppContext } from "#renderer/lib/use-app-context";
 import { hiddenUserMessage } from "#renderer/lib/user-message";
 import { Button } from "#renderer/ui/button";
 
-import { routeSubmit } from "../../runtime/send";
-import {
-  questionPending,
-  useBusy,
-  useHost,
-  useThreadStore,
-} from "../../store/selectors";
+import { useHost, useThreadStore } from "../../store/selectors";
 import { useChatView } from "../context";
+import { useSendAsUser } from "../send-as-user";
 import { toolInput } from "./normalize";
 
 /** Calls already counted as shown, so a re-render or a scroll back counts nothing. */
@@ -76,12 +70,10 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
   const db = useOptionalDb();
-  const { session, runtime, threadId, composer } = useChatView();
+  const { session, composer } = useChatView();
+  const sendAsUser = useSendAsUser();
   const messages = useHost(session, (state) => state.messages);
-  const hydrated = useHost(session, (state) => state.ready);
-  const busy = useBusy(session, composer.turnBusy === true);
   const running = useThreadStore(session, (state) => state.runs.active != null);
-  const question = useThreadStore(session, questionPending);
   const [copied, setCopied] = useState<string | null>(null);
   // A tap answers the offer at once: a second tap must not send again.
   const [sent, setSent] = useState(false);
@@ -125,41 +117,14 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
         detail: funnelDetail(`${copy ? "copy_" : ""}${detail}`),
       })
       .catch(() => undefined);
-  const send = (text: string) => {
-    const route = routeSubmit({
-      text,
-      attachments: [],
-      busy,
-      readOnly: false,
-      questionPending: question,
-      preStart: composer.preStart === true,
-      hydrated,
-      ...(composer.fixedMode != null ? { fixedMode: composer.fixedMode } : {}),
+  const send = (text: string) =>
+    sendAsUser(text, {
+      accepted: () => {
+        setSent(true);
+        tapped(false);
+      },
+      failed: () => setSent(false),
     });
-    if (route.kind === "enqueue") {
-      setSent(true);
-      tapped(false);
-      void runtime.queue.enqueue(threadId, route.text).catch(() => {
-        setSent(false);
-        showError(t("chat.composer.queueFailed"));
-      });
-      return;
-    }
-    if (route.kind !== "send") return;
-    setSent(true);
-    tapped(false);
-    void session
-      .submit(route.text, route.forwardedProps)
-      .then((admission) => {
-        if (admission.kind !== "rejected") return;
-        setSent(false);
-        showError(t("chat.composer.rejected"));
-      })
-      .catch(() => {
-        setSent(false);
-        showError(t("chat.composer.notReady"));
-      });
-  };
   const copy = (text: string) =>
     void navigator.clipboard.writeText(text).then(
       () => {

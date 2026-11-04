@@ -3263,6 +3263,17 @@
       "label": "Toca una tarea para empezarla",
       "copy": "Copiar «{{text}}» para enviarlo desde tu móvil",
       "copyFailed": "No se ha podido copiar"
+    },
+    "deliverableOffer": {
+      "label": "Guardar esta respuesta como documento",
+      "doc": "Convertir en documento",
+      "report": "Convertir en informe",
+      "hint": "Un PDF para guardar y compartir",
+      "dismiss": "Ahora no",
+      "request": {
+        "doc": "Convierte tu última respuesta en un documento bien presentado que pueda guardar y compartir, como PDF en el espacio de trabajo.",
+        "report": "Convierte tu última respuesta en un informe bien presentado que pueda guardar y compartir, como PDF en el espacio de trabajo."
+      }
     }
   },
   "notch": {

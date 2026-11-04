@@ -19,6 +19,7 @@
       "creditsExhaustedAt": "legacy",
       "defaultMode": "legacy",
       "dismissals.creditThresholdCards": "legacy",
+      "dismissals.deliverableOffer": "legacy",
       "dismissals.freePlanSeenAt": "legacy",
       "dismissals.newLookSeenAt": "legacy",
       "dismissals.referralCardUntil": "legacy",
@@ -89,6 +90,7 @@
       "defaultMode": "PLAN",
       "dismissals": {
         "creditThresholdCards": {},
+        "deliverableOffer": null,
         "freePlanSeenAt": null,
         "newLookSeenAt": null,
         "referralCardUntil": 1790604800000,

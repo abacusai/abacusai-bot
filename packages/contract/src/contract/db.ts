@@ -245,6 +245,17 @@ export const PREFS_GROUP_ENTRIES = {
         answered: v.nullable(v.string()),
       })
     ),
+    /** The offer to turn a long answer into a document, shown and answered. */
+    deliverableOffer: v.nullable(
+      v.strictObject({
+        shownOffer: v.nullable(v.string()),
+        shownThread: v.nullable(v.string()),
+        shownTurn: v.nullable(v.pipe(v.number(), v.integer(), v.minValue(1))),
+        answered: v.nullable(v.string()),
+        misses: v.pipe(v.number(), v.integer(), v.minValue(0)),
+        dismissed: v.pipe(v.number(), v.integer(), v.minValue(0)),
+      })
+    ),
     /** The account first read on the free plan here, so a paid read after it is an upgrade. */
     freePlanSeenAt: NullableTimestamp,
     /** The after-upgrade card sending routines to Abacus AI Agent on the web, seen. */

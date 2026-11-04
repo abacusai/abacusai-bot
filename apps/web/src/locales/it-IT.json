@@ -3263,6 +3263,17 @@
       "label": "Tocca un'attività per avviarla",
       "copy": "Copia “{{text}}” per inviarlo dal telefono",
       "copyFailed": "Impossibile copiare"
+    },
+    "deliverableOffer": {
+      "label": "Conserva questa risposta come documento",
+      "doc": "Trasforma in documento",
+      "report": "Trasforma in report",
+      "hint": "Un PDF da conservare e condividere",
+      "dismiss": "Non ora",
+      "request": {
+        "doc": "Trasforma la tua ultima risposta in un documento curato che posso conservare e condividere, salvato come PDF nell’area di lavoro.",
+        "report": "Trasforma la tua ultima risposta in un report curato che posso conservare e condividere, salvato come PDF nell’area di lavoro."
+      }
     }
   },
   "notch": {

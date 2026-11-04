@@ -3263,6 +3263,17 @@
       "label": "Touchez une tâche pour la lancer",
       "copy": "Copier « {{text}} » pour l’envoyer depuis votre téléphone",
       "copyFailed": "Impossible de copier"
+    },
+    "deliverableOffer": {
+      "label": "Garder cette réponse comme document",
+      "doc": "En faire un document",
+      "report": "En faire un rapport",
+      "hint": "Un PDF à garder et partager",
+      "dismiss": "Pas maintenant",
+      "request": {
+        "doc": "Transforme ta dernière réponse en un document soigné que je peux garder et partager, enregistré en PDF dans l’espace de travail.",
+        "report": "Transforme ta dernière réponse en un rapport soigné que je peux garder et partager, enregistré en PDF dans l’espace de travail."
+      }
     }
   },
   "notch": {

@@ -46,6 +46,7 @@ export const DEFAULT_PREFS: Required<PrefsRow> & {
     routinesMissedSeenAt: null,
     creditThresholdCards: {},
     successPitchCards: {},
+    deliverableOffer: null,
     freePlanSeenAt: null,
     upgradeRoutinesSeenAt: null,
   },
