@@ -1623,9 +1623,10 @@
     },
     "model": {
       "label": "Modello",
-      "followsDefault": "Segue il predefinito dell’app: {{model}}.",
+      "planDefault": "Predefinito del piano",
+      "followsDefault": "Segue il predefinito del tuo piano: {{model}}.",
       "costly": "Ogni esecuzione usa {{model}}, un modello più costoso, quindi consuma più crediti.",
-      "hosted": "Le routine ospitate usano il predefinito dell’app."
+      "hosted": "Le routine ospitate usano il predefinito del tuo piano."
     }
   },
   "sessions": {
@@ -3470,8 +3471,6 @@
     "creditsAlternatives": "Connect a free source to keep going. No card needed.",
     "connectFree": "Connect a free source",
     "dismiss": "Dismiss",
-    "defaultModel": "Modello predefinito",
-    "defaultModelDetail": "Le nuove chat partono con questo modello, così come i bot e le routine impostati sul predefinito dell’app. Una scelta in una chat cambia solo quella chat.",
     "providers": "Providers",
     "otherProviders": "Other providers",
     "searchProviders": "Search model providers…",

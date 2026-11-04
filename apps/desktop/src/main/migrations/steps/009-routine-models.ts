@@ -3,7 +3,7 @@
  * saved before routines had one is stamped with what it runs on now, so its
  * next run does not jump: its bot's model, else the stored default. With
  * neither it runs on the plan's model, which this step cannot know offline,
- * so it gets null: the app default, which follows the plan. Idempotent: a
+ * so it gets null, the plan's default. Idempotent: a
  * stamped routine, null included, is left alone.
  */
 import fs from "node:fs";

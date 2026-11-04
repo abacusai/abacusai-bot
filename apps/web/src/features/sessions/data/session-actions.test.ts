@@ -46,9 +46,3 @@ it("a confirmed switch keeps the new model", async () => {
   await setSessionModel(h.db, h.client as never, h.row as never, "b/new");
   expect(h.models).toEqual(["b/new"]);
 });
-
-it("a pick in a chat leaves the app default alone", async () => {
-  const h = harness(async () => {});
-  await setSessionModel(h.db, h.client as never, h.row as never, "b/new");
-  expect(h.client.settings.setDefaultModel).not.toHaveBeenCalled();
-});

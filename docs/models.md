@@ -17,17 +17,13 @@ as vLLM.
 
 ## Which model runs
 
-A pick in a chat's composer changes that chat only. The default model, set at
-the top of Settings, then Models, is what new chats start on, and what bots and
-routines set to App default run on. Without one, your plan's model is used.
-
 A routine keeps its own model. It starts on the model of the chat that created
-it, its bot's model for a bot's routine, or the default model for one made in
-the Routines form. The routine's page shows the model, warns when it is a
-costly one, and has the picker to change it. A later pick in a chat, or a new
-model for its bot, leaves it where it is. When your plan changes, a routine on
-a model the plan no longer serves moves to the plan's model. Hosted routines
-run on the default model.
+it, or its bot's model for a bot's routine. With neither, it runs on your plan's
+default: RouteLLM Open on Free, RouteLLM Code Low on Go and Basic, RouteLLM Code
+on Pro and Max. The routine's page shows the model, warns when it is a costly
+one, and has the picker to change it. A later pick in a chat, or a new model for
+its bot, leaves it where it is. A routine on your plan's default moves with your
+plan. Hosted routines run on your plan's default.
 
 ## Key precedence
 

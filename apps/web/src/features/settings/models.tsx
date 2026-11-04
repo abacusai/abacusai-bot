@@ -1,11 +1,10 @@
-import { resolveConfiguredModel } from "@abacus-ai/contract/models";
 import {
   PROVIDER_KEY_FIELDS,
   isPlausibleApiKey,
   type ProviderKeyField,
 } from "@abacus-ai/contract/settings";
 import { revalidateLogic } from "@tanstack/react-form";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { ChevronRightIcon } from "lucide-react";
 import { useState } from "react";
@@ -36,7 +35,6 @@ import { connectErrorText } from "#renderer/lib/connect-page";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
-import { showError } from "#renderer/lib/toast";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 import { useCreditsAccount } from "#renderer/lib/use-credits-account";
 import { useNow } from "#renderer/lib/use-now";
@@ -58,52 +56,7 @@ import {
 import { Field, FieldLabel, FieldError } from "#renderer/ui/field";
 import { Input } from "#renderer/ui/input";
 
-import { ModelPicker, useBotModelBinding } from "../bots/model/picker";
 import { creditMarkState } from "./credits";
-/** The app default: the one place it is set. A pick in a chat stays in that chat. */
-const DefaultModelRow = () => {
-  const { t } = useTranslation();
-  const { transport } = useAppContext();
-  const cache = useQueryClient();
-  const models = useQuery(
-    transport.orpc.models.list.queryOptions({ input: {} })
-  );
-  const settings = useQuery(
-    transport.orpc.settings.get.queryOptions({ input: {} })
-  );
-  const value = resolveConfiguredModel({
-    requested: null,
-    defaultModel: settings.data?.defaultModel,
-    catalog: models.data ?? [],
-  });
-  const save = useMutation(
-    transport.orpc.settings.setDefaultModel.mutationOptions({
-      onSuccess: () =>
-        cache.invalidateQueries({
-          queryKey: transport.orpc.settings.get.queryKey({ input: {} }),
-        }),
-      onError: () => showError(t("phase5.failed")),
-    })
-  );
-  const binding = useBotModelBinding(value, (modelId) => {
-    if (modelId != null) save.mutate({ modelId });
-  });
-  return (
-    <SettingRow
-      id="defaultModel"
-      title={t("phase5.defaultModel")}
-      detail={t("phase5.defaultModelDetail")}
-    >
-      <ModelPicker
-        binding={{
-          ...binding,
-          // "App default" means nothing here: this row is what it names.
-          groups: binding.groups.filter((group) => group.id !== "default"),
-        }}
-      />
-    </SettingRow>
-  );
-};
 export const ModelsPage = () => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
@@ -219,9 +172,6 @@ export const ModelsPage = () => {
             </div>
           </GroupCard>
         )}
-        <GroupCard>
-          <DefaultModelRow />
-        </GroupCard>
         <GroupCard title={t("phase5.providers")}>
           {fields.filter((p) => p.featured).map(row)}
         </GroupCard>

@@ -1623,9 +1623,10 @@
     },
     "model": {
       "label": "Model",
-      "followsDefault": "Follows the app default: {{model}}.",
+      "planDefault": "Plan default",
+      "followsDefault": "Follows your plan's default: {{model}}.",
       "costly": "Every run uses {{model}}, a costlier model, so each one spends more credits.",
-      "hosted": "Hosted routines run on the app default."
+      "hosted": "Hosted routines run on your plan's default."
     }
   },
   "sessions": {
@@ -3470,8 +3471,6 @@
     "creditsAlternatives": "Connect a free source to keep going. No card needed.",
     "connectFree": "Connect a free source",
     "dismiss": "Dismiss",
-    "defaultModel": "Default model",
-    "defaultModelDetail": "New chats start on this model, and so do bots and routines set to App default. A pick in a chat changes only that chat.",
     "providers": "Providers",
     "otherProviders": "Other providers",
     "searchProviders": "Search model providers…",

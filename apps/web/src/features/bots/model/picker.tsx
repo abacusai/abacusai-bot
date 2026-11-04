@@ -33,7 +33,9 @@ import {
 export const useBotModelBinding = (
   value: string | null,
   onChange: (value: string | null) => void,
-  layoutId?: string
+  layoutId?: string,
+  /** Null is the plan's default, not the stored one: a routine's model. */
+  { planDefault = false }: { planDefault?: boolean } = {}
 ) => {
   const { t } = useTranslation();
   const motion = useMotionPreference();
@@ -44,15 +46,19 @@ export const useBotModelBinding = (
   const models = useQuery(queries.models());
   const settings = useQuery(queries.settings());
   const catalog = models.data ?? [];
+  const defaultModel = planDefault ? undefined : settings.data?.defaultModel;
+  const defaultLabel = t(
+    planDefault ? "routines.model.planDefault" : "bots.form.modelDefault"
+  );
   const account = useAccount();
   const groups = botModelGroups({
     models: catalog,
     favorites: prefs.models.favoriteModelIds,
-    defaultModel: settings.data?.defaultModel,
+    defaultModel,
     freeTier: accountTier(account.data) === "free",
     labels: {
       defaultGroup: t("bots.model.default"),
-      appDefault: t("bots.form.modelDefault"),
+      appDefault: defaultLabel,
       favorites: t("bots.model.favorites"),
       connectOpenRouter: t("bots.model.connectOpenRouter"),
       connectSource: (provider) =>
@@ -72,7 +78,7 @@ export const useBotModelBinding = (
         search: (previous) => ({ ...previous, provider }),
       }),
   });
-  const other = otherProviderModel(value, settings.data?.defaultModel, catalog);
+  const other = otherProviderModel(value, defaultModel, catalog);
   const setup = useModelSetup({
     models: catalog,
     loading: models.isPending || settings.isPending,
@@ -81,7 +87,7 @@ export const useBotModelBinding = (
   });
   const effectiveId = resolveConfiguredModel({
     requested: value,
-    defaultModel: settings.data?.defaultModel,
+    defaultModel,
     catalog,
   });
   return {
@@ -103,9 +109,7 @@ export const useBotModelBinding = (
           },
         }
       : {}),
-    label:
-      effectiveModelLabel(value, settings.data?.defaultModel, catalog) ??
-      t("bots.form.modelDefault"),
+    label: effectiveModelLabel(value, defaultModel, catalog) ?? defaultLabel,
     onChange,
     groups,
     ...(layoutId && motion === "full" ? { layoutId } : {}),

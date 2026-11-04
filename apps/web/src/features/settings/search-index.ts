@@ -150,7 +150,6 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
       labelKey: labelKeys[id] ?? `phase5.settings.${id}`,
     }))
   ),
-  { id: "defaultModel", page: "models", labelKey: "phase5.defaultModel" },
   ...PROVIDER_KEY_FIELDS.filter((p) => p.kind === "model").map((p) => ({
     id: `provider-${p.provider}`,
     page: "models" as const,

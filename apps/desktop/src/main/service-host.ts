@@ -503,6 +503,7 @@ import { listAvailableModels, modelForTier } from "./services/providers/models";
 import {
   currentTier,
   newRoutineModel,
+  resolveRoutineModel,
   resolveSessionModel,
 } from "./services/providers/session-model";
 import {
@@ -702,6 +703,18 @@ const handOffRefusal = (
     ? 'The user did not ask to hand this off, so nothing was sent. Do it yourself, or offer in one line ("Planner could do this. Want me to pass it on?") and wait for their yes.'
     : 'The user did not ask you to ask another bot, so nothing was sent. Answer yourself, or offer in one line ("Writer could draft this. Want me to ask it?") and wait for their yes.';
 };
+
+/**
+ * What a routine asks to run on: its own model, null for its plan's default.
+ * One migration step 9 has not reached runs as it did: its bot's, else the
+ * stored default.
+ */
+const routineAsk = (job: CronJob): string | null =>
+  job.model !== undefined
+    ? job.model
+    : ((job.botId == null ? null : getBot(job.botId)?.model) ??
+      readSettings().defaultModel ??
+      null);
 
 export class ServiceHost {
   constructor(readonly platform: HostPlatform = "electron") {
@@ -1190,9 +1203,7 @@ export class ServiceHost {
 
   /** Whether the model this routine runs on bills Abacus credits. */
   private async routineSpendsCredits(job?: CronJob): Promise<boolean> {
-    const bot = job?.botId == null ? null : getBot(job.botId);
-    const own = job?.model !== undefined ? job.model : bot?.model;
-    const model = own ?? readSettings().defaultModel ?? OPENLLM_ID;
+    const model = (job == null ? null : routineAsk(job)) ?? OPENLLM_ID;
     if (model === OPENLLM_ID) return true;
     if (!model.startsWith("abacus/")) return false;
     const models = await listAvailableModels();
@@ -4063,9 +4074,9 @@ export class ServiceHost {
     // session before its list has loaded, and the agent would then report the
     // wrong model back over the record that should have chosen it. With
     // neither (a routine's run, a bot's chat brought back), the one resolver:
-    // the routine's own model or the session's bot's, else the stored default,
-    // else the plan tier's. Not the agent's own fallback, which is the free
-    // pool whatever the tier. The pick is kept on the session, so it lists
+    // a routine's own model, else its plan's; a chat's bot's, else the stored
+    // default, else the plan tier's. Not the agent's own fallback, which is the
+    // free pool whatever the tier. The pick is kept on the session, so it lists
     // what runs.
     // A pin the plan no longer serves moves first (moveModelPinsToTier).
     this.moveSessionPinToTier(request.workspaceId, request.sessionId);
@@ -4127,12 +4138,15 @@ export class ServiceHost {
   ): Promise<string | null> {
     const routineId =
       this.agentSessionManagerService.get(request.sessionId)?.routineId ?? null;
-    const own = routineId == null ? undefined : getJob(routineId)?.model;
+    const job = routineId == null ? null : getJob(routineId);
     const botId = this.botOfSession(request.sessionId);
     const bot = botId == null ? null : getBot(botId);
-    const model = await resolveSessionModel(
-      own !== undefined ? own : (bot?.model ?? null)
-    );
+    const model =
+      job != null
+        ? await resolveRoutineModel(routineAsk(job))
+        : this.hostedRunSessions.has(request.sessionId)
+          ? await resolveRoutineModel(null)
+          : await resolveSessionModel(bot?.model ?? null);
     if (model != null)
       this.setAgentSessionModel(request.workspaceId, request.sessionId, model);
     return model;
@@ -5388,7 +5402,7 @@ export class ServiceHost {
     creditsOut?: boolean;
   }> {
     // Told to the server as out of credits, which pauses it and says so.
-    if (await this.routineAtCreditWall(job))
+    if (await this.routineAtCreditWall())
       return { outcome: "failed", text: "", creditsOut: true };
     const target = await this.ensureRoutineWorkspace(HOSTED_RUNS_FOLDER);
     if (target == null) return { outcome: "not-started", text: "" };
@@ -6244,7 +6258,7 @@ export class ServiceHost {
       );
     const reach =
       sources.length > 0 || reads.length > 0 ? { sources, reads } : null;
-    const model = await newRoutineModel(
+    const model = newRoutineModel(
       input.botId == null ? null : getBot(input.botId)?.model,
       options.chatModel
     );

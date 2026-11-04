@@ -64,6 +64,7 @@ vi.mock("./services/session/workspace-store", () => ({
 const { ServiceHost } = await import("./service-host");
 const { createBot } = await import("./services/bots/bot-store");
 const { setDefaultModel } = await import("./services/config/settings");
+const { newRoutineModel } = await import("./services/providers/session-model");
 let home: string;
 const previousHome = process.env.ABACUSAI_BOT_HOME;
 beforeEach(() => {
@@ -816,19 +817,29 @@ describe("a routine's own model", () => {
   });
 
   it("a chat's pick reaching the default leaves routines where they are", async () => {
-    setDefaultModel("a/kept");
-    const first = await local().createRoutine(input);
-    const second = await local().createRoutine(input);
+    tier.current = "pro";
+    catalog.rows = [
+      row("a/kept"),
+      row("b/picked"),
+      { ...row("r/plan"), recommended: true },
+    ];
+    const own = createJob({ ...input, model: "a/kept" });
+    const plans = await local().createRoutine(input);
     setDefaultModel("b/picked");
-    expect(await runModel(first.id)).toBe("a/kept");
-    expect(await runModel(second.id)).toBe("a/kept");
+    expect(await runModel(own.id)).toBe("a/kept");
+    expect(await runModel(plans.id)).toBe("r/plan");
   });
 
   it.each([
-    ["the creating chat's", { chatModel: "b/picked" }, null, "b/picked"],
-    ["its bot's, over the chat's", { chatModel: "b/picked" }, "c/bot", "c/bot"],
-    ["the app default's", {}, null, "a/kept"],
-  ])("a new routine stores %s model", async (_, options, botModel, stored) => {
+    ["the creating chat's model", { chatModel: "b/picked" }, null, "b/picked"],
+    [
+      "its bot's model, over the chat's",
+      { chatModel: "b/picked" },
+      "c/bot",
+      "c/bot",
+    ],
+    ["no model, whatever the stored default,", {}, null, null],
+  ])("a new routine stores %s", async (_, options, botModel, stored) => {
     setDefaultModel("a/kept");
     const botId =
       botModel == null ? null : createBot({ ...scout, model: botModel }).id;
@@ -858,13 +869,27 @@ describe("a routine's own model", () => {
     expect(await runModel(created.id)).toBe("b/picked");
   });
 
-  it("a routine set to App default follows it, and an old one its bot", async () => {
+  it("a routine with no model of its own needs a plan to skip the stored default, and an old one keeps its bot", async () => {
     const created = createJob({ ...input, model: null });
     const bot = createBot({ ...scout, model: "c/bot" });
     const old = createJob({ ...input, botId: bot.id });
     setDefaultModel("a/kept");
     expect(await runModel(created.id)).toBe("a/kept");
     expect(await runModel(old.id)).toBe("c/bot");
+    tier.current = "pro";
+    catalog.rows = [row("a/kept"), { ...row("r/plan"), recommended: true }];
+    expect(await runModel(created.id)).toBe("r/plan");
+  });
+
+  it("a chat on the plan's default makes a routine that moves with the plan", () => {
+    const sources = {
+      readDefault: () => null,
+      listCatalog: async () => [],
+      cachedRecommended: () => "r/plan",
+    };
+    expect(newRoutineModel(null, "r/plan", sources)).toBeNull();
+    expect(newRoutineModel(null, "b/picked", sources)).toBe("b/picked");
+    expect(newRoutineModel("r/plan", "b/picked", sources)).toBe("r/plan");
   });
 
   it("a plan change moves a routine off OpenLLM and leaves other models", async () => {

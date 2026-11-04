@@ -77,11 +77,11 @@ it.each([
   }
 });
 
-it("names what App default runs on", async () => {
+it("names what the plan's default runs on", async () => {
   const app = await openRoutine({ model: null });
   try {
     expect(
-      await screen.findByText("Follows the app default: Router.")
+      await screen.findByText("Follows your plan's default: Router.")
     ).not.toBeNull();
   } finally {
     app.view.unmount();
@@ -110,39 +110,10 @@ it("a hosted routine names its model and offers no picker", async () => {
     const section = await screen.findByRole("region", { name: "Model" });
     expect(
       await within(section).findByText(
-        "Hosted routines run on the app default."
+        "Hosted routines run on your plan's default."
       )
     ).not.toBeNull();
     expect(within(section).queryByRole("button")).toBeNull();
-  } finally {
-    app.view.unmount();
-    await app.cleanup();
-  }
-});
-
-it("Settings > Models is where the app default is set", async () => {
-  const save = vi.fn(async () => ({}) as never);
-  const app = await renderApp("/settings/models", {
-    models,
-    procedures: {
-      settings: { setDefaultModel: os.settings.setDefaultModel.handler(save) },
-    },
-  });
-  try {
-    const row = await waitFor(() => {
-      const found = document.querySelector<HTMLElement>(
-        '[data-setting-id="defaultModel"]'
-      );
-      expect(found).not.toBeNull();
-      return found!;
-    });
-    fireEvent.click(await within(row).findByRole("button", { name: "Router" }));
-    expect(screen.queryByRole("button", { name: /^App default/ })).toBeNull();
-    fireEvent.click(await screen.findByRole("button", { name: /^Pricey/ }));
-    await waitFor(() => expect(save).toHaveBeenCalled());
-    expect(save.mock.calls[0]).toMatchObject([
-      { input: { modelId: "a/pricey" } },
-    ]);
   } finally {
     app.view.unmount();
     await app.cleanup();

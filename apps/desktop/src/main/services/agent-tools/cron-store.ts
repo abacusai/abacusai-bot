@@ -116,9 +116,9 @@ export interface CronJob {
   /** Fires it last missed while the computer was off, until its next on-time fire. */
   missed?: RoutineMissed | null;
   /**
-   * The model it runs on, kept whatever a chat picks. Null follows the app
+   * The model it runs on, kept whatever a chat picks. Null is its plan's
    * default; absent (a routine migration step 9 has not reached) runs on its
-   * bot's model, else the app default.
+   * bot's model, else the stored default.
    */
   model?: string | null;
 }
@@ -914,7 +914,7 @@ export const describeJob = (job: CronJob): string => {
   return [
     `${job.id}  [${job.enabled ? "enabled" : "paused"}]  ${triggers}  ${job.name}`,
     `  ${job.prompt}`,
-    `  model: ${job.model ?? "app default"}`,
+    `  model: ${job.model ?? "plan default"}`,
     `  next: ${next}   last: ${last}${job.lastResult != null ? ` (${job.lastResult})` : ""}`,
   ].join("\n");
 };

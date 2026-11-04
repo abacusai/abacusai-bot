@@ -26,7 +26,9 @@ export const RoutineModel = ({ row }: { row: RoutineRow }) => {
         })
         .isPersisted.promise.catch((error: unknown) =>
           showSaveFailure(error, transport, t)
-        )
+        ),
+    undefined,
+    { planDefault: true }
   );
   if (row.hosted?.kind === "reminder") return null;
   const hosted = isHosted(row);

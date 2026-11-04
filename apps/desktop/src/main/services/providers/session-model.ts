@@ -109,12 +109,32 @@ export const resolveSessionModel = async (
 };
 
 /**
+ * The model a routine runs on: `requested`, else its plan's default. Never the
+ * stored default, which a chat's pick writes. With no plan (own keys only)
+ * there is no plan's default, so the stored one stands.
+ */
+export const resolveRoutineModel = (
+  requested: string | null,
+  sources: SessionModelSources = appModelSources
+): Promise<string | null> =>
+  resolveSessionModel(
+    requested,
+    sources.tier?.() == null ? sources : { ...sources, readDefault: () => null }
+  );
+
+/**
  * The model a new routine keeps as its own: its bot's, else the one the chat
- * that made it is on, else the app default (the plan's model when none is set).
+ * that made it is on. Null is the plan's default; a chat already on it stores
+ * null too, so the routine moves with the plan.
  */
 export const newRoutineModel = (
   botModel: string | null | undefined,
   chatModel: string | null | undefined,
   sources: SessionModelSources = appModelSources
-): Promise<string | null> =>
-  resolveSessionModel(present(botModel) ?? present(chatModel), sources);
+): string | null => {
+  const chat = present(chatModel);
+  return (
+    present(botModel) ??
+    (chat === present(sources.cachedRecommended?.()) ? null : chat)
+  );
+};

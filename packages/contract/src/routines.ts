@@ -217,7 +217,7 @@ export interface Routine {
   missed?: RoutineMissed | null;
   /**
    * The model a local routine runs on, its own: no chat's pick moves it. Null
-   * follows the app default. Absent on a routine saved before routines had one.
+   * is the plan's default. Absent on a routine saved before routines had one.
    */
   model?: string | null;
 }

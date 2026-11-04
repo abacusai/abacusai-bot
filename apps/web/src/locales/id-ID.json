@@ -1623,9 +1623,10 @@
     },
     "model": {
       "label": "Model",
-      "followsDefault": "Mengikuti default aplikasi: {{model}}.",
+      "planDefault": "Default paket",
+      "followsDefault": "Mengikuti default paket Anda: {{model}}.",
       "costly": "Setiap proses memakai {{model}}, model yang lebih mahal, jadi setiap proses memakai lebih banyak kredit.",
-      "hosted": "Rutinitas yang di-hosting memakai default aplikasi."
+      "hosted": "Rutinitas yang di-hosting memakai default paket Anda."
     }
   },
   "sessions": {
@@ -3470,8 +3471,6 @@
     "creditsAlternatives": "Connect a free source to keep going. No card needed.",
     "connectFree": "Connect a free source",
     "dismiss": "Dismiss",
-    "defaultModel": "Model default",
-    "defaultModelDetail": "Chat baru dimulai dengan model ini, begitu juga bot dan rutinitas yang disetel ke default aplikasi. Pilihan di sebuah chat hanya mengubah chat itu.",
     "providers": "Providers",
     "otherProviders": "Other providers",
     "searchProviders": "Search model providers…",

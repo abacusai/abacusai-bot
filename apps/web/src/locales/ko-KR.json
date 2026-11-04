@@ -1623,9 +1623,10 @@
     },
     "model": {
       "label": "모델",
-      "followsDefault": "앱 기본값을 따릅니다: {{model}}.",
+      "planDefault": "요금제 기본값",
+      "followsDefault": "요금제 기본값을 따릅니다: {{model}}.",
       "costly": "매 실행마다 비용이 더 높은 모델 {{model}}을(를) 사용하므로 실행할 때마다 크레딧이 더 많이 듭니다.",
-      "hosted": "호스팅 루틴은 앱 기본값으로 실행됩니다."
+      "hosted": "호스팅 루틴은 요금제 기본값으로 실행됩니다."
     }
   },
   "sessions": {
@@ -3470,8 +3471,6 @@
     "creditsAlternatives": "Connect a free source to keep going. No card needed.",
     "connectFree": "Connect a free source",
     "dismiss": "Dismiss",
-    "defaultModel": "기본 모델",
-    "defaultModelDetail": "새 채팅은 이 모델로 시작하며, 앱 기본값으로 설정된 봇과 루틴도 마찬가지입니다. 채팅에서 고른 모델은 그 채팅에만 적용됩니다.",
     "providers": "Providers",
     "otherProviders": "Other providers",
     "searchProviders": "Search model providers…",
