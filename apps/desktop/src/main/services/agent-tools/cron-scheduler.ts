@@ -4,7 +4,9 @@
  * Each scheduled moment fires at most once: it is claimed on disk before its
  * run starts. A fire due while the network is down waits for it; one missed
  * while the computer was off is made up once, for the latest moment only, and
- * so is one whose run the app closed under (a quit, a crash, an update).
+ * so is one whose run the app closed under (a quit, a crash, an update). A
+ * write the store refuses (Windows can hold `cronjobs.json` for a moment) costs
+ * that one job its turn: the rest fire, and the next tick looks again.
  */
 import {
   catchUpWorthIt,
@@ -60,6 +62,8 @@ export class CronScheduler {
   /** Last minute fired, so two ticks in one minute cannot double-fire. */
   private lastCronMinute = "";
   private lastTickAt: number | null = null;
+  /** A write was refused: the next tick reads what is unfired off the disk. */
+  private storeRefused = false;
   private releasing: Promise<void> | null = null;
 
   constructor(
@@ -88,7 +92,9 @@ export class CronScheduler {
     if (this.cronTimer != null) return;
 
     this.cronTimer = setInterval(() => {
-      void this.tick();
+      this.tick().catch((err: unknown) => {
+        console.error("[cron] tick failed:", err);
+      });
     }, 20_000);
 
     this.cronTimer.unref?.();
@@ -112,8 +118,9 @@ export class CronScheduler {
       if (!(await this.networkReady())) return;
       let fired = 0;
       for (const job of heldJobs()) {
-        // Let go one at a time: a quit midway keeps the rest held.
-        setHeld(job.id, null);
+        // Let go one at a time: a quit midway keeps the rest held, and one
+        // the store would not let go stays held for the next tick.
+        if (!this.stored(() => setHeld(job.id, null))) continue;
         this.onHeldChange();
         if (!job.enabled) continue;
         const slot = job.runAt ?? job.heldSlot ?? minuteOf(job.heldSince!);
@@ -126,9 +133,11 @@ export class CronScheduler {
           !catchUpWorthIt(job.schedule, slot, Date.now())
         ) {
           if (trigger === "schedule")
-            recordRun(job.id, ROUTINE_RESULTS.skippedOffline, "schedule", {
-              kind: "skipped-offline",
-            });
+            this.stored(() =>
+              recordRun(job.id, ROUTINE_RESULTS.skippedOffline, "schedule", {
+                kind: "skipped-offline",
+              })
+            );
           continue;
         }
         if (fired++ > 0) await this.wait(RELEASE_SPACING_MS);
@@ -150,6 +159,8 @@ export class CronScheduler {
     this.lastCronMinute = minute;
     const lastTickAt = this.lastTickAt;
     this.lastTickAt = now.getTime();
+    const lookAgain = this.storeRefused;
+    this.storeRefused = false;
 
     try {
       this.onMinute?.();
@@ -161,13 +172,18 @@ export class CronScheduler {
     // Fires slept through, or missed while the app was closed (the first
     // tick), are counted; the latest is made up once, if still worth it.
     const missed =
-      lastTickAt == null || now.getTime() - lastTickAt > MISSED_TICK_GAP_MS
-        ? missedJobs(lastTickAt == null ? null : new Date(lastTickAt), now)
+      lastTickAt == null ||
+      lookAgain ||
+      now.getTime() - lastTickAt > MISSED_TICK_GAP_MS
+        ? missedJobs(
+            lastTickAt == null || lookAgain ? null : new Date(lastTickAt),
+            now
+          )
         : [];
     const dueIds = new Set(due.map((job) => job.id));
     const missedIds = new Set(missed.map(({ job }) => job.id));
     for (const { job, count, latest } of missed) {
-      setMissed(job.id, { count, at: now.getTime() });
+      this.stored(() => setMissed(job.id, { count, at: now.getTime() }));
       // A later moment missed is the run to make up, over an interrupted one.
       if (
         !dueIds.has(job.id) &&
@@ -175,7 +191,9 @@ export class CronScheduler {
         job.schedule != null &&
         catchUpWorthIt(job.schedule, latest, now.getTime())
       )
-        setHeld(job.id, now.getTime(), { slot: latest, reason: "catch-up" });
+        this.stored(() =>
+          setHeld(job.id, now.getTime(), { slot: latest, reason: "catch-up" })
+        );
     }
 
     if (
@@ -186,14 +204,18 @@ export class CronScheduler {
         // Its next fire came with the network still down: the held one is
         // skipped, said so, and this one waits in its place.
         if (job.heldSince != null && job.runAt == null)
-          recordRun(job.id, ROUTINE_RESULTS.skippedOffline, "schedule", {
-            kind: "skipped-offline",
-          });
+          this.stored(() =>
+            recordRun(job.id, ROUTINE_RESULTS.skippedOffline, "schedule", {
+              kind: "skipped-offline",
+            })
+          );
         if (job.heldSince == null || job.runAt == null)
-          setHeld(job.id, now.getTime(), {
-            slot: slotFor(job, now),
-            reason: "network",
-          });
+          this.stored(() =>
+            setHeld(job.id, now.getTime(), {
+              slot: slotFor(job, now),
+              reason: "network",
+            })
+          );
       }
       this.onHeldChange();
       return;
@@ -201,13 +223,26 @@ export class CronScheduler {
 
     for (const job of due) {
       // A due fire is the same run a held one would have been.
-      if (job.heldSince != null) setHeld(job.id, null);
+      if (job.heldSince != null) this.stored(() => setHeld(job.id, null));
       // Back on time: what it missed before is history.
-      if (job.missed != null && !missedIds.has(job.id)) setMissed(job.id, null);
+      if (job.missed != null && !missedIds.has(job.id))
+        this.stored(() => setMissed(job.id, null));
       await this.fire(job, slotFor(job, now), "schedule");
     }
     if (missed.length > 0) this.onHeldChange();
     await this.release();
+  }
+
+  /** A store write that may be refused; whether it landed. */
+  private stored(write: () => void): boolean {
+    try {
+      write();
+      return true;
+    } catch (err) {
+      console.error("[cron] could not save a routine's state:", err);
+      this.storeRefused = true;
+      return false;
+    }
   }
 
   private async fire(
@@ -223,8 +258,9 @@ export class CronScheduler {
       if (!claimSlot(job.id, slot, attemptId, trigger === "interrupted"))
         return;
     } catch (err) {
-      // Unclaimed, it is still due next minute.
+      // Unclaimed: a one-time job is still due, a cron moment the next tick finds.
       console.error("[cron] could not claim a routine's fire:", err);
+      this.storeRefused = true;
       return;
     }
     if (job.runAt != null) {
@@ -239,11 +275,13 @@ export class CronScheduler {
       await this.runJob(job.id, trigger, { slot, attemptId });
     } catch (err) {
       // One failing job must not stop the others from firing.
-      recordRun(
-        job.id,
-        `${ROUTINE_RESULTS.fireFailedPrefix}${err instanceof Error ? err.message : String(err)}`,
-        trigger,
-        { kind: "start-failed", id: attemptId }
+      this.stored(() =>
+        recordRun(
+          job.id,
+          `${ROUTINE_RESULTS.fireFailedPrefix}${err instanceof Error ? err.message : String(err)}`,
+          trigger,
+          { kind: "start-failed", id: attemptId }
+        )
       );
     }
   }
