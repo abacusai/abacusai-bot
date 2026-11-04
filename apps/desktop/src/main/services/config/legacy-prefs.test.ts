@@ -204,6 +204,7 @@ describe("composeLegacyPrefs", () => {
       routinesMissedSeenAt: null,
       creditThresholdCards: {},
       successPitchCards: {},
+      deliverableOffer: null,
       freePlanSeenAt: null,
       upgradeRoutinesSeenAt: null,
     });
@@ -258,6 +259,7 @@ describe("composeLegacyPrefs", () => {
       routinesMissedSeenAt: null,
       creditThresholdCards: {},
       successPitchCards: {},
+      deliverableOffer: null,
       freePlanSeenAt: null,
       upgradeRoutinesSeenAt: null,
     });

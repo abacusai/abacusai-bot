@@ -3263,6 +3263,17 @@
       "label": "Tap a task to run it",
       "copy": "Copy “{{text}}” to send from your phone",
       "copyFailed": "Couldn't copy that"
+    },
+    "deliverableOffer": {
+      "label": "Keep this answer as a document",
+      "doc": "Make this a doc",
+      "report": "Turn into a report",
+      "hint": "A PDF you can keep and share",
+      "dismiss": "Not now",
+      "request": {
+        "doc": "Turn your last answer into a polished document I can keep and share, saved as a PDF in the workspace.",
+        "report": "Turn your last answer into a polished report I can keep and share, saved as a PDF in the workspace."
+      }
     }
   },
   "notch": {

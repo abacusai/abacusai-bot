@@ -10,6 +10,12 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { clearDraft } from "#renderer/lib/continuity/composer-drafts";
 import { botAccentStyle } from "#renderer/lib/theme";
 
+import {
+  deliverablesAfter,
+  rowEndIndex,
+  sessionDeliverablesCard,
+  type SessionDeliverablesOptions,
+} from "../../sessions/chat/deliverables";
 import { UpgradeDialogHost } from "../../upgrade-dialog";
 import { fixtureRuntime } from "../fixtures/player";
 import { SCENARIOS, type Scenario } from "../fixtures/scenarios";
@@ -261,17 +267,42 @@ const View = ({
   );
 };
 
-/** The scenario's success pitch, previewed under its latest reply. */
-const gallerySlots = (scenario: Scenario, threadId: string): ChatViewSlots =>
-  scenario.view?.successPitch != null
-    ? {
-        successPitchOffer: {
-          ...scenario.view.successPitch,
-          id: `gallery-${scenario.id}`,
-          sessionId: threadId,
-          at: 0,
-        },
-      }
-    : {};
+const GALLERY_DELIVERABLES: SessionDeliverablesOptions = {
+  workspaceRoot: "/Users/me/code/abacusai-bot",
+  onOpenFile: () => {},
+  onOpenUrl: () => {},
+  onOpenExternal: () => {},
+};
+
+/**
+ * The scenario's previews under its latest reply (the success pitch, the
+ * deliverable offer), and its files on the sessions route's card.
+ */
+const gallerySlots = (scenario: Scenario, threadId: string): ChatViewSlots => ({
+  ...(scenario.view?.successPitch != null && {
+    successPitchOffer: {
+      ...scenario.view.successPitch,
+      id: `gallery-${scenario.id}`,
+      sessionId: threadId,
+      at: 0,
+    },
+  }),
+  ...(scenario.view?.deliverableOffer === true && {
+    deliverableOfferPreview: true,
+  }),
+  ...(scenario.view?.deliverables === true && {
+    decorateMessage: (message, context) => {
+      if (message.role !== "assistant") return null;
+      const at = rowEndIndex(message, context);
+      const files =
+        at < 0
+          ? null
+          : deliverablesAfter(context.messages, at, context.runActive);
+      return files == null
+        ? null
+        : { after: sessionDeliverablesCard(files, GALLERY_DELIVERABLES) };
+    },
+  }),
+});
 
 export const chatGallerySections = { Nav, View };

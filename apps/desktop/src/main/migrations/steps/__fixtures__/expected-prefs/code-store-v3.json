@@ -19,6 +19,7 @@
       "creditsExhaustedAt": "default",
       "defaultMode": "legacy",
       "dismissals.creditThresholdCards": "default",
+      "dismissals.deliverableOffer": "default",
       "dismissals.freePlanSeenAt": "default",
       "dismissals.newLookSeenAt": "default",
       "dismissals.referralCardUntil": "default",
@@ -89,6 +90,7 @@
       "defaultMode": "ACCEPTEDITS",
       "dismissals": {
         "creditThresholdCards": {},
+        "deliverableOffer": null,
         "freePlanSeenAt": null,
         "newLookSeenAt": null,
         "referralCardUntil": null,

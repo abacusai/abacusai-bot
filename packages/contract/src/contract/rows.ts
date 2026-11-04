@@ -19,6 +19,7 @@ import type {
   CreditThresholdCard,
   CreditThresholdMark,
 } from "../credit-thresholds";
+import type { DeliverableOfferCard } from "../deliverable-offer";
 import type { RoutineListItem, RoutineRun } from "../routines";
 import type { SuccessPitchCard, SuccessPitchMark } from "../success-pitch";
 
@@ -190,6 +191,8 @@ export interface PrefsRow {
     creditThresholdCards?: Record<string, CreditThresholdCard>;
     /** Per account: the success pitch shown and answered. */
     successPitchCards?: Record<string, SuccessPitchCard>;
+    /** The offer to turn a long answer into a document, shown and answered. */
+    deliverableOffer?: DeliverableOfferCard | null;
     freePlanSeenAt: number | null;
     upgradeRoutinesSeenAt: number | null;
   };

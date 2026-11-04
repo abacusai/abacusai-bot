@@ -172,6 +172,8 @@ export interface ChatViewSlots {
   runTail?: ReactNode;
   /** The gallery's success pitch offer, previewed in place of the account's. */
   successPitchOffer?: SuccessPitchOffer;
+  /** The gallery shows the deliverable offer without its caps, keeping no answer. */
+  deliverableOfferPreview?: boolean;
   /** A turn's files as the route's deliverables card, opening the way it does. */
   renderDeliverables?: (items: readonly TurnDeliverable[]) => ReactNode;
   /** Route-owned actions beside the permission card (sessions §17.1). */

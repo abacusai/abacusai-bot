@@ -3263,6 +3263,17 @@
       "label": "Toque em uma tarefa para começar",
       "copy": "Copiar “{{text}}” para enviar do celular",
       "copyFailed": "Não foi possível copiar"
+    },
+    "deliverableOffer": {
+      "label": "Guardar esta resposta como documento",
+      "doc": "Transformar em documento",
+      "report": "Transformar em relatório",
+      "hint": "Um PDF para guardar e compartilhar",
+      "dismiss": "Agora não",
+      "request": {
+        "doc": "Transforme sua última resposta em um documento bem acabado que eu possa guardar e compartilhar, salvo como PDF no espaço de trabalho.",
+        "report": "Transforme sua última resposta em um relatório bem acabado que eu possa guardar e compartilhar, salvo como PDF no espaço de trabalho."
+      }
     }
   },
   "notch": {

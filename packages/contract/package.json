@@ -14,6 +14,7 @@
     "./credit-thresholds": "./src/credit-thresholds.ts",
     "./success-pitch": "./src/success-pitch.ts",
     "./conversation-scope": "./src/conversation-scope.ts",
+    "./deliverable-offer": "./src/deliverable-offer.ts",
     "./deliverables": "./src/deliverables.ts",
     "./exec-backends": "./src/exec-backends.ts",
     "./experience": "./src/experience.ts",

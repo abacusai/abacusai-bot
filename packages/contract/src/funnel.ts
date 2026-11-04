@@ -58,6 +58,11 @@ export const FUNNEL_STEPS = [
   "success_pitch_not_now",
   "success_pitch_withdrawn",
   "success_pitch_chat_told",
+  // The offer to turn a long answer into a document (deliverable-offer.ts);
+  // the detail is the button (doc or report) and the chat's skin.
+  "deliverable_offer_shown",
+  "deliverable_offer_clicked",
+  "deliverable_offer_dismissed",
   // Google cut a reply off on a model the user picked (the cut-off card);
   // the card's detail is its state: credits, out, held or paid.
   "cutoff_card_shown",

@@ -18,7 +18,7 @@ import type { RunOutcomeRecord } from "../store/thread-store";
 import { useChatView } from "./context";
 
 /** Recorded by the live post-hook, not merged from a hydrate or a page. */
-const isLive = (outcome: RunOutcomeRecord): boolean =>
+export const isLive = (outcome: RunOutcomeRecord): boolean =>
   (outcome as RunOutcomeRecord & { live?: boolean }).live === true;
 
 const errorActions = (outcome: RunOutcomeRecord) =>
