@@ -50,6 +50,7 @@ export const DEFAULT_PREFS: Required<PrefsRow> & {
     deliverableOffer: null,
     freePlanSeenAt: null,
     upgradeRoutinesSeenAt: null,
+    routineDuplicatesKept: [],
   },
   panes: {},
   motion: { reduce: "system" },

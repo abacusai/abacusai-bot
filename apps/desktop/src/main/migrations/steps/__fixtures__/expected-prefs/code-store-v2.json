@@ -31,6 +31,7 @@
       "dismissals.routinesMissedSeenAt": "default",
       "dismissals.successPitchCards": "default",
       "dismissals.upgradeRoutinesSeenAt": "default",
+      "dismissals.routineDuplicatesKept": "default",
       "dismissals.upsell": "default",
       "dismissals.whatsappIntroAt": "default",
       "freeLaneChosenAt": "default",
@@ -103,6 +104,7 @@
         "routinesMissedSeenAt": null,
         "successPitchCards": {},
         "upgradeRoutinesSeenAt": null,
+        "routineDuplicatesKept": [],
         "upsell": false,
         "whatsappIntroAt": null
       },

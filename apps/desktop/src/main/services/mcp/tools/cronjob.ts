@@ -1,5 +1,6 @@
 import { ALWAYS_ON_ASK } from "@abacus-ai/agent/plan-asks";
 import { ABACUS_AGENT_ROUTINES_URL } from "@abacus-ai/contract/routines";
+import type { RoutineMatch } from "@abacus-ai/contract/routines/same-routine";
 
 import {
   HOSTED_RUN_CANNOT,
@@ -20,6 +21,9 @@ const BASE_DESCRIPTION = [
   "When an update changes what a routine does, change its name to match in the same call.",
   'The name is what the user sees in the Routines panel and what you read back in "list";',
   "one that describes the old job is a routine both of you will misread later.",
+  "",
+  'A routine that already does the job is never made twice: "create" hands back the existing',
+  'one instead, and nothing fires. Read "list" before saying a routine does not exist.',
   "",
   'Schedules are five-field cron in local time: "minute hour day month weekday".',
   '  "0 9 * * *"    every day at 09:00',
@@ -135,6 +139,52 @@ export const alwaysOnNote = (plan: "free" | "paid" | null): string =>
       alwaysOnLine(plan) +
       " Say it only this once; never bring it up again.";
 
+/**
+ * What the model is told when a create finds its routine already there. An
+ * instruction, never text pinned onto a reply: it says this in the user's
+ * language.
+ */
+export const existingRoutineNote = (existing: {
+  id: string;
+  match: RoutineMatch;
+  checkIn: boolean;
+  enabled: boolean;
+  description: string;
+}): string =>
+  [
+    "[already set up: nothing was created] " +
+      (existing.checkIn
+        ? "This is your check-in: the app keeps it from your settings, and each run works from your mission, so it already does this job. "
+        : `You already have this routine${existing.match === "alike" ? ", or one that reads the same" : ""}. `) +
+      "It was not made again and nothing fired, so do not do its work here. " +
+      "Tell the user in one short line, in their language, that it was already set up and will not run twice, and when it next fires.",
+    ...(existing.enabled
+      ? []
+      : ['It is paused: "resume" it if the user wants it running.']),
+    existing.checkIn
+      ? `To change when it runs, "update" its schedule (id ${existing.id}). Leave its prompt as it is: that text is how the app knows it is the check-in.`
+      : `To change it, "update" this one (id ${existing.id}) rather than making another.`,
+    ...(existing.match === "alike"
+      ? [
+          `Only if you have read it and this really is a separate job, create again with distinct_from: "${existing.id}".`,
+        ]
+      : []),
+    "",
+    existing.description,
+  ].join("\n");
+
+/** A hosted create whose answer never came: it may have gone through. */
+export const HOSTED_CREATE_UNCONFIRMED_NOTE =
+  "[not confirmed] The server did not answer in time, and the routine may have been made anyway. " +
+  "Do not tell the user it failed or that it is set. Call create once more with the same arguments: " +
+  "that cannot make a second routine, and its answer says which it was.";
+
+/** Why a check-in's text stays: the settings find the routine by it. */
+export const CHECK_IN_PROMPT_NOTE =
+  "[not done] That routine is your check-in, and its prompt is how the app knows it: leave the prompt as it is. " +
+  "Each run already works from your mission. Change its schedule or name if needed, " +
+  "or make a separate routine for a job the mission does not cover.";
+
 const BASE_PROPERTIES = {
   action: {
     type: "string",
@@ -176,6 +226,11 @@ const BASE_PROPERTIES = {
     type: "boolean",
     description:
       "create: false skips the fire on creation, for a routine whose first pass this conversation has just done.",
+  },
+  distinct_from: {
+    type: "string",
+    description:
+      "create: the id of an existing routine you have read and this one is a separate job from. Only after create named it.",
   },
 };
 

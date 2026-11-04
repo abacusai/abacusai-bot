@@ -1376,6 +1376,14 @@
     "deleteBody": "Dies löscht „{{name}}“ und den Verlauf ihrer Läufe.",
     "deleteError": "Die Routine konnte nicht gelöscht werden.",
     "deleteTitle": "Routine löschen",
+    "duplicate": {
+      "badge": "Mögliches Duplikat",
+      "delete": "Diese löschen",
+      "description": "Gleicher Zeitplan, gleiche Aufgabe: Die Arbeit passiert doppelt, und jeder Lauf kostet Credits. Wähle aus, welche Routine bleibt.",
+      "keepBoth": "Beide behalten",
+      "pause": "Diese pausieren",
+      "title": "Sieht aus wie eine Kopie von"
+    },
     "edit": "Bearbeiten",
     "editTitle": "Routine bearbeiten",
     "editorPlaceholder": "Sagen Sie der Routine, wie sie sich ändern soll: „Stattdessen jeden Morgen um 9“, „Stopp“",

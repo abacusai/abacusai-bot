@@ -1376,6 +1376,14 @@
     "deleteBody": "This deletes “{{name}}” and its run history.",
     "deleteError": "Could not delete the routine.",
     "deleteTitle": "Delete routine",
+    "duplicate": {
+      "badge": "Possible duplicate",
+      "delete": "Delete this one",
+      "description": "Same schedule, same job: the work happens twice and each run costs credits. Choose which one to keep.",
+      "keepBoth": "Keep both",
+      "pause": "Pause this one",
+      "title": "Looks like a copy of"
+    },
     "edit": "Edit",
     "editTitle": "Edit routine",
     "editorPlaceholder": "Tell the routine how to change: \"every morning at 9 instead\", \"stop\"",

@@ -43,6 +43,7 @@ import {
   useRoutinesData,
   type RunView,
 } from "./data";
+import { RoutineDuplicateNotice, useRoutineDuplicates } from "./duplicates";
 import { isHosted } from "./hosted";
 import { HostedResults } from "./hosted-results";
 import { runRoutineNow, showSaveFailure, useHostedOff } from "./hosted-sync";
@@ -227,6 +228,7 @@ export const RoutinePage = ({
   const row = routines.find((r) => r.id === routineId);
   const hostedOff = useHostedOff();
   const [deleting, setDeleting] = useState(false);
+  const duplicates = useRoutineDuplicates(routines);
   if (!row) return <RoutineGone />;
   const state = routineState(row, runs, sessions, undefined, hostedOff);
   const subtitle = [
@@ -259,6 +261,15 @@ export const RoutinePage = ({
       transition: "none",
     });
   const runNow = () => runRoutineNow(row, transport, t);
+  const toggleEnabled = () =>
+    void db.collections.routines
+      .update(row.id, (d) => {
+        d.enabled = !row.enabled;
+      })
+      .isPersisted.promise.catch((error: unknown) =>
+        showSaveFailure(error, transport, t)
+      );
+  const twins = duplicates.get(row.id);
   const showReport = !hosted && selected != null;
   const facts = [
     [
@@ -400,14 +411,7 @@ export const RoutinePage = ({
             id: "toggle",
             label: t(row.enabled ? "phase5.pause" : "phase5.resume"),
             icon: row.enabled ? <Pause /> : <CirclePlay />,
-            onSelect: () =>
-              void db.collections.routines
-                .update(row.id, (d) => {
-                  d.enabled = !row.enabled;
-                })
-                .isPersisted.promise.catch((error: unknown) =>
-                  showSaveFailure(error, transport, t)
-                ),
+            onSelect: toggleEnabled,
           },
           {
             id: "edit",
@@ -445,6 +449,14 @@ export const RoutinePage = ({
           }
         }}
       />
+      {twins != null && (
+        <RoutineDuplicateNotice
+          row={row}
+          twins={twins}
+          onPause={toggleEnabled}
+          onDelete={() => setDeleting(true)}
+        />
+      )}
       {!wide && selected != null && (
         <div className="border-b px-2 py-1.5">
           <Button size="sm" variant="ghost" onClick={() => pick(undefined)}>

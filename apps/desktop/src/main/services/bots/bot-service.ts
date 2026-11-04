@@ -126,7 +126,21 @@ export interface BotServiceCallbacks {
   saveHomeBot?: (app: HomeChannel, botId: string) => void;
   /** The app's language tag (en-US, pt-BR); a first run writes in it. */
   appLanguage?: () => string;
+  /** The bot's routines right now, for the note an edit sends it. */
+  botRoutines?: (botId: string) => BotRoutineLine[];
 }
+
+/** One routine of a bot, as its chat is told of it. */
+export interface BotRoutineLine {
+  id: string;
+  name: string;
+  /** The cron, or how it fires when it has none. */
+  when: string;
+  checkIn: boolean;
+}
+
+/** How long after an edit a routine the bot makes counts as following from it. */
+const MISSION_EDIT_WINDOW_MS = 10 * 60_000;
 
 /** The app's agent template (Telegram Agent and the like). */
 const agentTemplateFor = (app: HomeChannel): BotTemplate => {
@@ -349,7 +363,10 @@ const renderPersona = (
  * acknowledges and adjusts; redoing the mission could re-send a message the
  * user already has.
  */
-const changeNotice = (notice: BotChangeNotice): string => {
+const changeNotice = (
+  notice: BotChangeNotice,
+  routines: readonly BotRoutineLine[]
+): string => {
   const changed: string[] = [];
   if (notice.mission) changed.push("your mission");
   if (notice.persona) changed.push("your persona");
@@ -361,7 +378,19 @@ const changeNotice = (notice: BotChangeNotice): string => {
     "what changed and say what you will do differently from now on; if the " +
     "check-in schedule changed, say when the next check-in is. Do not " +
     "introduce yourself again, and do not carry out your mission now: " +
-    "wait to be asked, or for the next check-in."
+    "wait to be asked, or for the next check-in." +
+    (routines.length === 0
+      ? ""
+      : "\n\nThese routines of yours already exist, and the app has saved the " +
+        "check-in schedule itself. If the edit changes the time or the job of " +
+        'one of them, use cronjob "update" with its id. Use "create" only for ' +
+        "a job none of them does.\n" +
+        routines
+          .map(
+            (routine) =>
+              `- ${routine.id}  ${routine.when}  ${routine.name}${routine.checkIn ? " (your check-in; each run works from your mission)" : ""}`
+          )
+          .join("\n"))
   );
 };
 
@@ -578,12 +607,24 @@ export class BotService {
       bot.sessionId
     );
     if (!started.success) return;
+    // What it now does about the edit, it does knowing what is already set.
+    if (notice.mission || notice.checkIn != null)
+      this.missionEdits.set(id, Date.now());
     this.callbacks.sendMessage(
       bot.workspaceId,
       bot.sessionId,
-      changeNotice(notice),
+      changeNotice(notice, this.callbacks.botRoutines?.(id) ?? []),
       { operator: { kind: "mission-updated" } }
     );
+  }
+
+  /** When each bot's mission or check-in was last edited, this launch. */
+  private readonly missionEdits = new Map<string, number>();
+
+  /** The bot's mission or check-in was edited just now. */
+  missionJustEdited(botId: string): boolean {
+    const at = this.missionEdits.get(botId);
+    return at != null && Date.now() - at < MISSION_EDIT_WINDOW_MS;
   }
 
   update(id: string, changes: BotUpdateInput): Bot {

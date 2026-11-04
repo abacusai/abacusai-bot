@@ -1376,6 +1376,14 @@
     "deleteBody": "“{{name}}”와 실행 기록이 삭제됩니다.",
     "deleteError": "루틴을 삭제하지 못했습니다.",
     "deleteTitle": "루틴 삭제",
+    "duplicate": {
+      "badge": "중복 가능성",
+      "delete": "이 항목 삭제",
+      "description": "일정과 작업이 같아서 작업이 두 번 실행되고 실행할 때마다 크레딧이 사용됩니다. 유지할 항목을 선택하세요.",
+      "keepBoth": "둘 다 유지",
+      "pause": "이 항목 일시 중지",
+      "title": "다음의 복사본으로 보입니다:"
+    },
     "edit": "편집",
     "editTitle": "루틴 편집",
     "editorPlaceholder": "루틴에 변경 방법을 알려주세요. \"대신 매일 아침 9시에\", \"중지\"",

@@ -8,6 +8,7 @@ import {
   NAME_ONLY_MISSION,
   describeCheckIn,
   goalOfMission,
+  missionForCheckIn,
   type CheckInPreset,
 } from "./check-in";
 import type { Weekday } from "./schedule";
@@ -56,5 +57,16 @@ describe("a mission in the user's own words", () => {
     );
     expect(goalOfMission(NAME_ONLY_MISSION)).toBeNull();
     expect(goalOfMission("Watch the news.")).toBeNull();
+  });
+});
+
+describe("missionForCheckIn", () => {
+  it("is the mission a run works from: the user's own words, or nothing yet", () => {
+    expect(missionForCheckIn("Watch the shop.")).toBe("Watch the shop.");
+    expect(missionForCheckIn(GOAL_MISSION("Watch the shop"))).toBe(
+      "Watch the shop"
+    );
+    expect(missionForCheckIn(NAME_ONLY_MISSION)).toBeNull();
+    expect(missionForCheckIn("  ")).toBeNull();
   });
 });

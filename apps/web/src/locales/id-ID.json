@@ -1376,6 +1376,14 @@
     "deleteBody": "Ini menghapus “{{name}}” beserta riwayat eksekusinya.",
     "deleteError": "Tidak dapat menghapus rutinitas.",
     "deleteTitle": "Hapus rutinitas",
+    "duplicate": {
+      "badge": "Kemungkinan duplikat",
+      "delete": "Hapus yang ini",
+      "description": "Jadwal sama, tugas sama: pekerjaan dilakukan dua kali dan setiap jalannya memakai kredit. Pilih mana yang disimpan.",
+      "keepBoth": "Simpan keduanya",
+      "pause": "Jeda yang ini",
+      "title": "Tampak seperti salinan dari"
+    },
     "edit": "Edit",
     "editTitle": "Edit rutinitas",
     "editorPlaceholder": "Beri tahu rutinitas cara mengubahnya: \"setiap pagi jam 9\", \"berhenti\"",
