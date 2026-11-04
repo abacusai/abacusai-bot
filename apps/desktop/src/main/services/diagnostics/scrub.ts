@@ -40,6 +40,9 @@ const KEY_SHAPES: readonly RegExp[] = [
   /-----BEGIN [A-Z0-9 ]{0,40}PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z0-9 ]{0,40}PRIVATE KEY-----|$)/g,
 ];
 
+/** The end of a key whose start was in earlier text: whole keys are gone by now. */
+const PRIVATE_KEY_END = /^[\s\S]*-----END [A-Z0-9 ]{0,40}PRIVATE KEY-----/;
+
 /** A URL that is itself the credential: its last part is the secret. */
 const WEBHOOK =
   /\b((?:discord(?:app)?\.com\/api\/webhooks\/\d+\/|hooks\.slack\.com\/services\/[A-Za-z0-9]+\/[A-Za-z0-9]+\/))[A-Za-z0-9_-]{16,}/g;
@@ -190,9 +193,14 @@ export function scrubValue<T>(value: T, key = ""): T {
   ) as T;
 }
 
-/** Scrub one text: key shapes, named secrets, and the user's own name. */
+/**
+ * Scrub one text: key shapes, named secrets, and the user's own name. Log text
+ * goes to disk a flush at a time, so a key can start in one and end in the
+ * next: the first masks to its end, and this masks the second up to the key's
+ * last line.
+ */
 export function scrub(text: string, homeDir?: string): string {
-  let out = scrubKeys(text);
+  let out = scrubKeys(text).replace(PRIVATE_KEY_END, MASKED_KEY);
 
   // The user's name is the parent of `~/.abacusai-bot`; the OS's answer is
   // read too, because either can be the one that appears in the paths.
