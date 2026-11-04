@@ -135,6 +135,25 @@ describe("the app's routines file", () => {
     expect(gate(tool, { path: store })).toBe("refuse");
   });
 
+  it("is refused to a write through a link to the app's folder", () => {
+    const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "rs-")));
+    const real = path.join(root, "real");
+    fs.mkdirSync(real);
+    const link = path.join(root, "link");
+    fs.symlinkSync(real, link);
+    vi.stubEnv("ABACUSAI_BOT_HOME", link);
+    try {
+      expect(gate("write", { path: path.join(real, "cronjobs.json") })).toBe(
+        "refuse"
+      );
+      expect(gate("write", { path: path.join(link, "cronjobs.json") })).toBe(
+        "refuse"
+      );
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("says what to do instead", () => {
     const decision = gateToolCall(
       call("bash", { command: `cat ${store}` }),

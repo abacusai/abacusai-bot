@@ -336,8 +336,10 @@ function reachesRoutineStore(tool: ToolRequest, cwd: string): boolean {
   if (!WRITE_TOOLS.has(tool.name)) return false;
   const target = toolPath(String(tool.input.path ?? ""), cwd);
   if (target == null) return false;
+  // Real paths on both sides: the home may sit behind a link (macOS's /tmp).
+  const realHome = foldedPath(realPathOf(abacusBotDir()) ?? abacusBotDir());
   return foldedPath(realPathOf(target) ?? target).startsWith(
-    `${home}/${ROUTINE_STORE_FILE}`
+    `${realHome}/${ROUTINE_STORE_FILE}`
   );
 }
 
