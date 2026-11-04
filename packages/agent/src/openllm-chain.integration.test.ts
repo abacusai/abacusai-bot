@@ -30,6 +30,7 @@ const { AgentMode } = await import("./protocol.js");
 type DesktopEvent = import("./protocol.js").DesktopEvent;
 type AgentEvent = import("./protocol.js").AgentEvent;
 const { AbacusBotSession } = await import("./session.js");
+const { BotSession } = await import("./bot/bot-session.js");
 const { OPENLLM_POOL_SHUT_MESSAGE } = await import("./turn-outcome.js");
 const { creditWallState, noteCreditsBack, setHostCreditWall } =
   await import("./credit-wall.js");
@@ -98,11 +99,17 @@ const OPENROUTER_DAY_SPENT: Reply = {
 
 class Chat {
   readonly events: DesktopEvent[] = [];
-  readonly session = new AbacusBotSession({
-    cwd: fs.mkdtempSync(path.join(os.tmpdir(), "abacusai-bot-chain-")),
-    mode: AgentMode.Yolo,
-    emit: (event: DesktopEvent) => this.events.push(event),
-  } as ConstructorParameters<typeof AbacusBotSession>[0]);
+  readonly session: InstanceType<typeof AbacusBotSession | typeof BotSession>;
+
+  constructor(
+    Session: typeof AbacusBotSession | typeof BotSession = AbacusBotSession
+  ) {
+    this.session = new Session({
+      cwd: fs.mkdtempSync(path.join(os.tmpdir(), "abacusai-bot-chain-")),
+      mode: AgentMode.Yolo,
+      emit: (event: DesktopEvent) => this.events.push(event),
+    } as ConstructorParameters<typeof AbacusBotSession>[0]);
+  }
 
   agent<T extends AgentEvent["type"]>(
     type: T
@@ -195,6 +202,7 @@ afterAll(async () => {
   fs.rmSync(home, { recursive: true, force: true });
   delete process.env.ABACUSAI_BOT_HOME;
   delete process.env.ABACUS_API_KEY;
+  delete process.env.ABACUSAI_BOT_BOT_DIR;
 });
 
 describe("RouteLLM - Open from first credit to last source", () => {
@@ -453,6 +461,67 @@ describe("the credit wall, around the pool", () => {
     expect(
       turn.error?.actions?.some((action) => action.type === "continue-free")
     ).toBe(false);
+  }, 60_000);
+});
+
+describe("a new chat at the credit wall, with a key of the user's own", () => {
+  const atTheWall = async (): Promise<void> => {
+    behaviour.clear();
+    noteCreditsBack();
+    for (const file of ["openllm-cooldowns.json", "openllm-quota.json"])
+      fs.rmSync(path.join(home, file), { force: true });
+    fs.writeFileSync(
+      path.join(home, "config.json"),
+      JSON.stringify({ defaultModel: "openllm/auto", customProviders: [] })
+    );
+    connect("gemini");
+    behaviour.set(ABACUS_MODEL, OUT_OF_ABACUS_CREDITS);
+    behaviour.set("gemini-3.6-flash", GEMINI_QUOTA_SPENT);
+    const first = new Chat();
+    await first.session.start();
+    expect((await first.turn("a task")).error?.cause).toBe("credits_exhausted");
+    first.session.dispose();
+  };
+
+  it.each([
+    ["a chat or routine run", AbacusBotSession],
+    ["a bot", BotSession],
+  ])(
+    "%s stops on the wall's card, and the key is never asked",
+    async (_name, Session) => {
+      await atTheWall();
+      process.env.ABACUSAI_BOT_BOT_DIR = path.join(home, "bot");
+      const chat = new Chat(Session);
+      await chat.session.start();
+
+      const turn = await chat.turn("hello");
+
+      expect(turn.models).toEqual([]);
+      expect(turn.error?.cause).toBe("credits_exhausted");
+      expect(turn.error?.actions?.[0]).toMatchObject({
+        type: "upgrade-abacus",
+      });
+      expect(
+        chat
+          .agent("notification")
+          .filter((notice) => notice.message.includes("gemini"))
+      ).toEqual([]);
+    },
+    60_000
+  );
+
+  it("past the wall the key is still the way on when Abacus is only sitting out", async () => {
+    await atTheWall();
+    noteCreditsBack();
+    behaviour.clear();
+    const chat = new Chat();
+    await chat.session.start();
+
+    const turn = await chat.turn("hello");
+
+    expect(turn.models.length).toBeGreaterThan(0);
+    expect(turn.models.every((model) => model !== ABACUS_MODEL)).toBe(true);
+    expect(turn.error).toBeUndefined();
   }, 60_000);
 });
 

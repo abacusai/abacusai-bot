@@ -664,6 +664,9 @@ export class ForeverEngine {
     // upgrade card and all.
     const fallBack = (model: ReturnType<typeof resolveModel>["model"]) => {
       if (this.openLlmActive && model != null) {
+        // At the credit wall the session opens on it, and the turn stops on
+        // the wall's card before any call: still the pool's, as the user chose.
+        if (this.router.wallStops(registry) != null) return model;
         this.openLlmActive = false;
         this.emitAgentEvent({
           type: "notification",

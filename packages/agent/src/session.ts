@@ -1150,7 +1150,11 @@ export class AbacusBotSession {
     let startupNotice: string | undefined;
 
     if (model == null) {
-      this.openLlmActive = false;
+      // At the credit wall the session opens on the fallback, and the turn
+      // stops on the wall's card before any call: still the pool's.
+      this.openLlmActive =
+        isOpenLlmReference(requested) &&
+        this.router.wallStops(registry) != null;
       const fallback = registry.getAvailable()[0];
 
       if (fallback != null) {
@@ -1159,11 +1163,12 @@ export class AbacusBotSession {
         // something beats one that will not open. Announced, never silent: a
         // turn answered by a model nobody chose is the whole confusion here.
         model = fallback;
-        startupNotice = `${requested} is not usable (${
-          resolved.model != null
-            ? "no key configured"
-            : (resolved.error ?? "unavailable")
-        }), so this session is running ${fallback.provider}/${fallback.id}.`;
+        if (!this.openLlmActive)
+          startupNotice = `${requested} is not usable (${
+            resolved.model != null
+              ? "no key configured"
+              : (resolved.error ?? "unavailable")
+          }), so this session is running ${fallback.provider}/${fallback.id}.`;
       } else {
         // No model at all: saying which key to set beats a resolution failure
         // the user cannot act on.
