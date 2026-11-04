@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   countRoutineRuns,
   readLastRoutineRun,
+  reclaimRoutineRecords,
   recordRoutineRun,
   removeRoutineDir,
   routineDir,
@@ -229,5 +230,46 @@ describe("a routine's notes", () => {
     expect(
       routineNotes(home, "job-3", { path: project, since: createdAt }).maybeAt
     ).toBeNull();
+  });
+});
+
+describe("records written into another of the app's folders", () => {
+  const run = (startedAt: string) => ({
+    sessionId: `s-${startedAt}`,
+    startedAt,
+    endedAt: startedAt,
+    outcome: "completed" as const,
+    reply: "done",
+  });
+
+  it("come home whole, with both sets of notes", () => {
+    const own = routineDir("job-1");
+    const stray = routineDirInWorkspace(routineDir("other"), "job-1");
+    recordRoutineRun(own, run("2026-11-01T10:00:00.000Z"));
+    recordRoutineRun(stray, run("2026-11-02T10:00:00.000Z"));
+    fs.writeFileSync(path.join(own, "notes.md"), "before\n");
+    fs.writeFileSync(path.join(stray, "notes.md"), "after\n");
+
+    reclaimRoutineRecords(stray, own);
+
+    expect(countRoutineRuns(own)).toBe(2);
+    expect(readLastRoutineRun(own)?.startedAt).toBe("2026-11-02T10:00:00.000Z");
+    expect(fs.readFileSync(path.join(own, "notes.md"), "utf8")).toBe(
+      "before\n\nafter\n"
+    );
+    expect(fs.existsSync(stray)).toBe(false);
+  });
+
+  it("leaves a newer last run alone, and does nothing with no stray folder", () => {
+    const own = routineDir("job-1");
+    const stray = routineDirInWorkspace(routineDir("other"), "job-1");
+    recordRoutineRun(own, run("2026-11-03T10:00:00.000Z"));
+
+    reclaimRoutineRecords(stray, own);
+    recordRoutineRun(stray, run("2026-11-02T10:00:00.000Z"));
+    reclaimRoutineRecords(stray, own);
+
+    expect(readLastRoutineRun(own)?.startedAt).toBe("2026-11-03T10:00:00.000Z");
+    expect(countRoutineRuns(own)).toBe(2);
   });
 });
