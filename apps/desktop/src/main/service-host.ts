@@ -1174,7 +1174,7 @@ export class ServiceHost {
    * anything starts. The wall is the server's own refusal, so it is the only
    * threshold; the account is re-read so a top-up starts the run at once.
    */
-  private async routineAtCreditWall(): Promise<boolean> {
+  private async routineAtCreditWall(job?: CronJob): Promise<boolean> {
     const prefs = this.prefs?.();
     if (prefs == null) return false;
     const stops = (): boolean =>
@@ -1183,14 +1183,16 @@ export class ServiceHost {
         creditSnapshot(),
         Date.now()
       );
-    if (!stops() || !(await this.routinesSpendCredits())) return false;
+    if (!stops() || !(await this.routineSpendsCredits(job))) return false;
     await fetchAbacusAccount(true).catch(() => null);
     return stops();
   }
 
-  /** Whether the model routines run on bills Abacus credits. */
-  private async routinesSpendCredits(): Promise<boolean> {
-    const model = readSettings().defaultModel ?? OPENLLM_ID;
+  /** Whether the model this routine runs on bills Abacus credits. */
+  private async routineSpendsCredits(job?: CronJob): Promise<boolean> {
+    const bot = job?.botId == null ? null : getBot(job.botId);
+    const own = job?.model !== undefined ? job.model : bot?.model;
+    const model = own ?? readSettings().defaultModel ?? OPENLLM_ID;
     if (model === OPENLLM_ID) return true;
     if (!model.startsWith("abacus/")) return false;
     const models = await listAvailableModels();
@@ -5386,7 +5388,7 @@ export class ServiceHost {
     creditsOut?: boolean;
   }> {
     // Told to the server as out of credits, which pauses it and says so.
-    if (await this.routineAtCreditWall())
+    if (await this.routineAtCreditWall(job))
       return { outcome: "failed", text: "", creditsOut: true };
     const target = await this.ensureRoutineWorkspace(HOSTED_RUNS_FOLDER);
     if (target == null) return { outcome: "not-started", text: "" };
@@ -6414,7 +6416,7 @@ export class ServiceHost {
     if (
       trigger !== "manual" &&
       trigger !== "create" &&
-      (await this.routineAtCreditWall())
+      (await this.routineAtCreditWall(job))
     ) {
       recordRun(jobId, ROUTINE_RESULTS.skippedCredits, trigger, {
         id: attemptId,
