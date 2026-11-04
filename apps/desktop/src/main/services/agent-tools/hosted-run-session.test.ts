@@ -172,7 +172,7 @@ it("runs held to the routine's reach and returns its final message", async () =>
         "get_calendars",
         "get_free_busy",
         "get_event",
-        "search_event",
+        "search_events",
       ],
     },
     files: false,

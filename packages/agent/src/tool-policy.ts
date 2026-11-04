@@ -358,7 +358,7 @@ export const UNATTENDED_CONNECTOR_READS: Readonly<
     "get_calendars",
     "get_free_busy",
     "get_event",
-    "search_event",
+    "search_events",
   ],
 };
 
