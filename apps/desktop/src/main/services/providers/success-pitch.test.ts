@@ -105,6 +105,7 @@ const setup = (
     funnel,
     tellInChat,
     mark: () => row.successPitch?.[KEY],
+    sites: () => row.siteReady,
     offer: () => row.successPitch?.[KEY]?.offer ?? null,
     setCard: (card: object) => {
       row = {
@@ -479,5 +480,39 @@ describe("SuccessPitchWatch: chat apps", () => {
     await praised(t);
     expect(t.mark()?.chatToldAt).toBeNull();
     expect(t.funnel).not.toHaveBeenCalled();
+  });
+});
+
+describe("SuccessPitchWatch: the chat's latest site, on any plan", () => {
+  const PRO = { ...FREE, subscription_tier: "pro" } as AbacusAccountInfo;
+
+  it("marks a served site with its folder, and a clean result without one clears it", async () => {
+    const t = setup({ account: PRO });
+    await t.run("Build my bakery site", [
+      tool("serve", { action: "start", directory: "bakery" }),
+      text(LONG_REPLY),
+    ]);
+    expect(t.sites()?.s1).toMatchObject({
+      turnId: "turn-1",
+      siteDir: "/home/me/bakery",
+    });
+    // A turn that failed leaves the site as the latest result.
+    await t.run("Add a menu page", [event({ type: "error" }), text("x")]);
+    expect(t.sites()?.s1?.turnId).toBe("turn-1");
+    await t.run("Write the report", [presentFile, text(LONG_REPLY)]);
+    expect(t.sites()?.s1).toBeUndefined();
+  });
+
+  it("a presented page marks its own folder", async () => {
+    const t = setup({ account: PRO });
+    await t.run("Build it", [
+      tool(
+        "agent-tools_present_deliverable",
+        { items: [{ path: "/home/me/shop/index.html" }] },
+        "[artifact] /home/me/shop/index.html"
+      ),
+      text(LONG_REPLY),
+    ]);
+    expect(t.sites()?.s1?.siteDir).toBe("/home/me/shop");
   });
 });

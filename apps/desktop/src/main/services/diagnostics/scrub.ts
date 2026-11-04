@@ -7,20 +7,27 @@
 import os from "node:os";
 import path from "node:path";
 
+/** Key shapes and named secrets, redacted. */
+export function scrubKeys(text: string): string {
+  return (
+    text
+      .replace(/(bearer\s+)[A-Za-z0-9._~+/-]{12,}=*/gi, "$1<redacted>")
+      // The common key shapes: sk-…, ghp_…, AIza…, xox….
+      .replace(/\b(sk|rk)-[A-Za-z0-9_-]{8,}/g, "<redacted-key>")
+      .replace(/\bgh[pousr]_[A-Za-z0-9]{16,}/g, "<redacted-key>")
+      .replace(/\bAIza[A-Za-z0-9_-]{20,}/g, "<redacted-key>")
+      .replace(/\bxox[abposr]-[A-Za-z0-9-]{10,}/g, "<redacted-key>")
+      // Anything that names itself: api_key=…, "token": "…".
+      .replace(
+        /((?:api[_-]?key|access[_-]?token|refresh[_-]?token|secret|password|authorization)["'\s]*[:=]["'\s]*)([^\s"',}]{6,})/gi,
+        "$1<redacted>"
+      )
+  );
+}
+
 /** Scrub one text: key shapes, named secrets, and the user's own name. */
 export function scrub(text: string, homeDir?: string): string {
-  let out = text
-    .replace(/(bearer\s+)[A-Za-z0-9._~+/-]{12,}=*/gi, "$1<redacted>")
-    // The common key shapes: sk-…, ghp_…, AIza…, xox….
-    .replace(/\b(sk|rk)-[A-Za-z0-9_-]{8,}/g, "<redacted-key>")
-    .replace(/\bgh[pousr]_[A-Za-z0-9]{16,}/g, "<redacted-key>")
-    .replace(/\bAIza[A-Za-z0-9_-]{20,}/g, "<redacted-key>")
-    .replace(/\bxox[abposr]-[A-Za-z0-9-]{10,}/g, "<redacted-key>")
-    // Anything that names itself: api_key=…, "token": "…".
-    .replace(
-      /((?:api[_-]?key|access[_-]?token|refresh[_-]?token|secret|password|authorization)["'\s]*[:=]["'\s]*)([^\s"',}]{6,})/gi,
-      "$1<redacted>"
-    );
+  let out = scrubKeys(text);
 
   // The user's name is the parent of `~/.abacusai-bot`; the OS's answer is
   // read too, because either can be the one that appears in the paths.

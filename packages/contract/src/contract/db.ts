@@ -259,10 +259,14 @@ export const PREFS_GROUP_ENTRIES = {
     ),
     /** The account first read on the free plan here, so a paid read after it is an upgrade. */
     freePlanSeenAt: NullableTimestamp,
-    /** The after-upgrade card sending routines to Abacus AI Agent on the web, seen. */
+    /** An older build's after-upgrade card, seen: that upgrade counts as welcomed. */
     upgradeRoutinesSeenAt: NullableTimestamp,
     /** Pairs of routines flagged as copies that the user chose to keep. */
     routineDuplicatesKept: v.array(v.string()),
+    /** The plan tier the last paid welcome was shown for; null since the last free read. */
+    paidWelcomeTier: v.nullable(v.string()),
+    /** Per session: the site turn whose deploy card was closed. */
+    siteDeployCards: v.record(v.string(), v.string()),
   },
   motion: { reduce: v.picklist(["system", "on", "off"]) },
   sounds: {
@@ -339,6 +343,15 @@ export const PREFS_SCALAR_ENTRIES = {
   ),
   creditThresholds: v.record(v.string(), CreditThresholdMarkSchema),
   successPitch: v.record(v.string(), SuccessPitchMarkSchema),
+  /** Per session: its latest finished turn that built a site, stamped by main. */
+  siteReady: v.record(
+    v.string(),
+    v.strictObject({
+      turnId: v.string(),
+      siteDir: v.nullable(v.string()),
+      at: v.number(),
+    })
+  ),
   browserHomepage: v.nullable(v.string()),
   showLinkPreviews: v.boolean(),
   /** Off: no `gh` call, no PR chip, tab or review anywhere. */
@@ -382,6 +395,7 @@ export const PrefsPatchSchema = v.strictObject({
   routineCreditHold: v.optional(S.routineCreditHold),
   creditThresholds: v.optional(S.creditThresholds),
   successPitch: v.optional(S.successPitch),
+  siteReady: v.optional(S.siteReady),
   browserHomepage: v.optional(S.browserHomepage),
   showLinkPreviews: v.optional(S.showLinkPreviews),
   githubIntegration: v.optional(S.githubIntegration),

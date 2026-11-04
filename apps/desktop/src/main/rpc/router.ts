@@ -21,6 +21,7 @@ import { referralsRouter } from "./procedures/referrals";
 import { routinesRouter } from "./procedures/routines";
 import { sessionsRouter } from "./procedures/sessions";
 import { settingsRouter } from "./procedures/settings";
+import { sitesRouter } from "./procedures/sites";
 import { skillsRouter } from "./procedures/skills";
 import { systemRouter } from "./procedures/system";
 import { terminalRouter } from "./procedures/terminal";
@@ -46,6 +47,7 @@ const routes: {
   routines: typeof routinesRouter;
   notch: typeof notchRouter;
   settings: typeof settingsRouter;
+  sites: typeof sitesRouter;
   models: typeof modelsRouter;
   links: typeof linksRouter;
   account: typeof accountRouter;
@@ -76,6 +78,7 @@ const routes: {
   routines: routinesRouter,
   notch: notchRouter,
   settings: settingsRouter,
+  sites: sitesRouter,
   models: modelsRouter,
   links: linksRouter,
   account: accountRouter,

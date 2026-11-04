@@ -195,7 +195,7 @@ it("opens a referral dialog, copies the real link, selects it on clipboard failu
 it("swaps the paid link and web card for the free promo from the shared account cache", async () => {
   let current = account;
   const open = vi.fn();
-  // The after-upgrade routines card is its own test (routines); seen here.
+  // The paid welcome is its own test (upgrade-dialog); seen here.
   const seed = defaultSeed();
   seed.prefs!.dismissals.upgradeRoutinesSeenAt = 1;
   const app = await renderApp("/sessions/new", {
@@ -234,6 +234,10 @@ it("swaps the paid link and web card for the free promo from the shared account 
     expect(screen.queryByRole("link", { name: en.profile.agent })).toBeNull();
     current = account;
     await refresh();
+    // Paid again after a free read is an upgrade: its welcome opens first.
+    fireEvent.click(
+      await screen.findByRole("button", { name: en.paidWelcome.back })
+    );
     await screen.findByRole("link", { name: en.profile.agent });
     // A paid plan's promo points at the web instead of selling the upgrade.
     await screen.findByRole("button", { name: en.creditsCard.paidWebCta });

@@ -24,6 +24,7 @@ import {
   ownKeyResumeModel,
   ownKeyWords,
 } from "#renderer/lib/own-key-unavailable";
+import { welcomeLandedPlan, type PausedTurn } from "#renderer/lib/paid-welcome";
 import {
   checkPlanNow,
   onPlanActive,
@@ -66,6 +67,18 @@ const askedAccount = (
     ? creditsTier(account) === "free"
     : spentFreeAccount(account);
 
+/** The waiting message and how to send it, for the welcome to offer. */
+const pausedTurn = (
+  request: UpgradeDialogRequest,
+  resume: () => Promise<unknown>
+): PausedTurn | null =>
+  request.resume == null
+    ? null
+    : {
+        resume,
+        ...(request.pendingText != null && { text: request.pendingText }),
+      };
+
 const Tile = ({ children }: { children: ReactNode }) => (
   <span className="bg-muted text-foreground flex size-10 items-center justify-center rounded-[11px]">
     {children}
@@ -80,9 +93,12 @@ const Tile = ({ children }: { children: ReactNode }) => (
  */
 const PaidBody = ({
   request,
+  from,
   onDone,
 }: {
   request: UpgradeDialogRequest;
+  /** The account the dialog opened for. */
+  from: AbacusAccountInfo | null;
   onDone: (dismissed: boolean) => void;
 }) => {
   const { t } = useTranslation();
@@ -104,12 +120,15 @@ const PaidBody = ({
         return;
       }
       onDone(false);
-      void request.resume?.().catch(() => {});
+      welcomeLandedPlan(fresh, from, {
+        threadId: request.threadId,
+        paused: pausedTurn(request, () => request.resume!()),
+      });
     });
     return () => {
       stopped = true;
     };
-  }, [waiting, transport, request, onDone]);
+  }, [waiting, transport, request, from, onDone]);
 
   if (waiting)
     return (
@@ -227,10 +246,13 @@ const PaidBody = ({
 
 const DialogBody = ({
   request,
+  from,
   onDone,
   paidUpgrade = false,
 }: {
   request: UpgradeDialogRequest;
+  /** The account the dialog opened for. */
+  from: AbacusAccountInfo | null;
   /** `dismissed` when the person said no; not when they paid or are paying. */
   onDone: (dismissed: boolean) => void;
   /**
@@ -263,25 +285,27 @@ const DialogBody = ({
       paidUpgrade
         ? watchForCredits(transport.client)
         : watchForPlan(transport.client)
-    ).then(async (paid) => {
+    ).then((paid) => {
       if (stopped) return;
       if (paid == null) {
         setWaiting(false);
         return;
       }
       onDone(false);
-      if (request.kind !== "own-key") {
-        void request.resume?.().catch(() => {});
-        return;
-      }
-      // The plan's catalog, which the watch has just read afresh.
-      const models = await transport.client.models.list({}).catch(() => []);
-      void request.resume?.(ownKeyResumeModel(models)).catch(() => {});
+      welcomeLandedPlan(paid, from, {
+        threadId: request.threadId,
+        paused: pausedTurn(request, async () => {
+          if (request.kind !== "own-key") return request.resume!();
+          // The plan's catalog, which the watch has just read afresh.
+          const models = await transport.client.models.list({}).catch(() => []);
+          return request.resume!(ownKeyResumeModel(models));
+        }),
+      });
     });
     return () => {
       stopped = true;
     };
-  }, [waiting, transport, request, onDone, paidUpgrade]);
+  }, [waiting, transport, request, from, onDone, paidUpgrade]);
 
   if (waiting)
     return (
@@ -463,6 +487,7 @@ export const UpgradeDialogHost = () => {
   const [confirmed, setConfirmed] = useState<{
     key: string;
     body: "free" | "upgrade" | "paid";
+    account: AbacusAccountInfo | null;
   } | null>(null);
 
   // A plan bought from any surface: the account and the catalog every card and
@@ -488,7 +513,7 @@ export const UpgradeDialogHost = () => {
       .then(async (account) => {
         if (!live) return;
         if (askedAccount(request, account)) {
-          setConfirmed({ key: request.key, body: "free" });
+          setConfirmed({ key: request.key, body: "free", account });
           return;
         }
         // A paid plan's credits or balance request only: a free account never reads this.
@@ -504,6 +529,7 @@ export const UpgradeDialogHost = () => {
           setConfirmed({
             key: request.key,
             body: paidUpgradeOnly(offer) ? "upgrade" : "paid",
+            account,
           });
         else closeUpgradeDialog();
       })
@@ -530,11 +556,17 @@ export const UpgradeDialogHost = () => {
           className="gap-5 p-7 pb-5 text-sm sm:max-w-[440px] [&>*]:min-w-0"
         >
           {confirmed?.body === "paid" ? (
-            <PaidBody key={request.key} request={request} onDone={done} />
+            <PaidBody
+              key={request.key}
+              request={request}
+              from={confirmed.account}
+              onDone={done}
+            />
           ) : (
             <DialogBody
               key={request.key}
               request={request}
+              from={confirmed?.account ?? null}
               onDone={done}
               paidUpgrade={confirmed?.body === "upgrade"}
             />

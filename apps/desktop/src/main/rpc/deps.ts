@@ -59,6 +59,8 @@ export interface AppOperations {
   openExternal(url: string): Promise<void>;
   openFilePath(filePath: string): Promise<OpenFilePathResult>;
   showItemInFolder(filePath: string): void;
+  /** Drags a project zip the app made (site-pack.ts) out of the window; anything else is refused. */
+  startFileDrag?(webContentsId: number, filePath: string): void;
   appVersion(): string;
   /** The OS's preferred languages, in order; see contract/languages.ts. */
   systemLanguages(): string[];

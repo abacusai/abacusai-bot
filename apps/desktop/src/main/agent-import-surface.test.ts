@@ -57,6 +57,8 @@ const ALLOWED = new Set([
   "@abacus-ai/agent/traveler-store",
   // The user's own words in a tagged message: a type import only.
   "@abacus-ai/agent/user-text",
+  // Names of files that hold keys: no imports at all.
+  "@abacus-ai/agent/secret-files",
   // How a path is spelled for the model: no imports at all.
   "@abacus-ai/agent/model-path",
   // Whether a presented local URL answers: no imports at all, plain fetch.

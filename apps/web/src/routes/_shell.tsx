@@ -25,7 +25,6 @@ import {
   onboardingExitTarget,
 } from "#renderer/features/onboarding/machine";
 import { PairingQueueBanner } from "#renderer/features/onboarding/pairing-banner";
-import { UpgradeRoutinesCard } from "#renderer/features/routines/always-on";
 import { SessionsGlobals } from "#renderer/features/sessions/globals";
 import { dispatchPreview } from "#renderer/features/shell/preview-consumers";
 import {
@@ -35,7 +34,10 @@ import {
 } from "#renderer/features/shell/shell-layout";
 import { NewLookNotice } from "#renderer/features/tour/new-look";
 import { startTour, useTourState } from "#renderer/features/tour/store";
-import { UpgradeDialogHost } from "#renderer/features/upgrade-dialog";
+import {
+  PaidWelcomeHost,
+  UpgradeDialogHost,
+} from "#renderer/features/upgrade-dialog";
 const TourHost = lazy(() =>
   import("#renderer/features/tour").then((m) => ({ default: m.TourHost }))
 );
@@ -97,7 +99,7 @@ const ShellRoute = () => {
       <SessionsGlobals preview={dispatchPreview} />
       <UpgradeDialogHost />
       {!provisional && tour == null && <CreditThresholdHost />}
-      {!provisional && tour == null && <UpgradeRoutinesCard />}
+      {!provisional && tour == null && <PaidWelcomeHost />}
       {!provisional && <PaymentRequiredDialog />}
     </>
   );

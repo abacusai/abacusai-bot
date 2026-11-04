@@ -1,6 +1,11 @@
 import { createFileRoute, notFound, Link } from "@tanstack/react-router";
 
 import { CreditThresholdGallery } from "#renderer/components/credits-card/threshold-gallery";
+import {
+  SITE_DEPLOY_GALLERY_STATES,
+  SiteDeployCardGallery,
+  type SiteDeployGalleryState,
+} from "#renderer/components/site-deploy/gallery";
 import { SoundSynthesisProbe } from "#renderer/components/sound-preview/probe";
 import {
   ArtifactsPage,
@@ -34,7 +39,6 @@ import {
   Phase5GalleryNav,
   phase5FixtureIds,
   RoutineSidebarGallery,
-  UpgradeRoutinesGallery,
 } from "#renderer/features/routines/gallery";
 import {
   sessionsGallerySections,
@@ -48,6 +52,10 @@ import {
 } from "#renderer/features/settings/personal";
 import { TourGallery } from "#renderer/features/tour/gallery";
 import { NewLookCard } from "#renderer/features/tour/new-look";
+import {
+  PAID_WELCOME_GALLERY_VARIANTS,
+  PaidWelcomeGallery,
+} from "#renderer/features/upgrade-dialog";
 import {
   ONBOARDING_STEPS,
   type OnboardingStepId,
@@ -112,6 +120,10 @@ const extension = {
         "new-look",
         "credit-card-50",
         "credit-card-80",
+        ...PAID_WELCOME_GALLERY_VARIANTS.map(
+          (variant) => `paid-welcome-${variant}`
+        ),
+        ...SITE_DEPLOY_GALLERY_STATES.map((state) => `site-deploy-${state}`),
         ...[
           "idle",
           "working",
@@ -157,6 +169,18 @@ const extension = {
       <CreditThresholdGallery
         threshold={props.fixture === "credit-card-80" ? 80 : 50}
       />
+    ) : props.fixture.startsWith("paid-welcome-") ? (
+      <PaidWelcomeGallery
+        variant={
+          props.fixture.slice(
+            13
+          ) as (typeof PAID_WELCOME_GALLERY_VARIANTS)[number]
+        }
+      />
+    ) : props.fixture.startsWith("site-deploy-") ? (
+      <SiteDeployCardGallery
+        state={props.fixture.slice(12) as SiteDeployGalleryState}
+      />
     ) : props.fixture === "new-look" ? (
       <div className="relative h-40 transform-gpu">
         <NewLookCard onTour={() => undefined} onDismiss={() => undefined} />
@@ -198,7 +222,6 @@ function Phase5View({ fixture }: { fixture: string }) {
     "artifacts-grid": <ArtifactsPage fixtureRows={artifactGalleryRows} />,
     "artifacts-stress": <ArtifactsStressGallery />,
     "sound-synthesis": <SoundSynthesisProbe />,
-    "upgrade-routines": <UpgradeRoutinesGallery />,
     "routines-always-on-paid": <AlwaysOnGallery plan="paid" />,
     "routines-always-on-free": <AlwaysOnGallery plan="free" />,
     "library-connectors": <ConnectorsPage />,

@@ -36,7 +36,7 @@ function table(): Uint32Array {
   return built;
 }
 
-function crc32(buf: Buffer): number {
+export function crc32(buf: Buffer): number {
   const lookup = table();
   let crc = 0xffffffff;
 
@@ -69,6 +69,8 @@ export interface ZipFile {
   content: Buffer;
   /** Defaults to now. */
   modified?: Date;
+  /** `content` deflated already, with its CRC, so a large archive can deflate off the main thread. */
+  deflated?: { data: Buffer; crc: number };
 }
 
 /** Every entry is deflated: log text compresses to a fraction of its size. */
@@ -79,9 +81,9 @@ export function buildZip(files: ZipFile[]): Buffer {
 
   for (const file of files) {
     const name = Buffer.from(file.name, "utf8");
-    const compressed = zlib.deflateRawSync(file.content);
+    const compressed = file.deflated?.data ?? zlib.deflateRawSync(file.content);
     const stamp = dosStamp(file.modified ?? new Date());
-    const crc = crc32(file.content);
+    const crc = file.deflated?.crc ?? crc32(file.content);
 
     const local = Buffer.alloc(30 + name.length);
 
