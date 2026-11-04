@@ -143,7 +143,7 @@ const KINDS: Array<Record<string, unknown>> = [
     schedule: "0 8 * * *",
     timezone: "Asia/Kolkata",
   },
-];
+].map((kind) => ({ reads: [], ...kind }));
 
 /** The server times the routine and hands a fire to this computer's routine lane; its answer goes back for delivery. */
 const fire = async (input: RoutineCreateInput, answer: string) => {
