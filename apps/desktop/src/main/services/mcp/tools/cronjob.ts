@@ -282,7 +282,8 @@ const HOSTED_PROPERTIES = {
       type: "string",
       enum: ROUTINE_READS,
     },
-    description: "The account data a run may read; none unless given.",
+    description:
+      "The account data a run may read. Required to create a hosted routine: [] for none.",
   },
   watch_url: {
     type: "string",

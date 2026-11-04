@@ -17,6 +17,7 @@ import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
 import { abacusBotHome } from "../../paths";
 import type { CronJob } from "./cron-store";
 import type { HostedRoutineCreate } from "./hosted-routines";
+import { ROUTINE_READS } from "./routine-reach";
 
 const MARKER = (): string =>
   path.join(abacusBotHome(), "routines-migration.json");
@@ -71,9 +72,10 @@ export const isMovable = (job: CronJob): boolean =>
   (job.schedule != null || job.runAt != null || job.webhookToken != null);
 
 /**
- * What the server is asked to create for one local job. It may read only
- * what the user already confirmed for it here; nothing is read off its
- * instruction, and it keeps its bot.
+ * What the server is asked to create for one local job. It keeps its reach:
+ * what was confirmed for it, else, for a full-access job, which could read
+ * the user's account here, the reviewed reads.
+ * Nothing is read off its instruction, and it keeps its bot.
  */
 export const migrationRequest = (job: CronJob): HostedRoutineCreate => {
   const webhookOnly =
@@ -88,7 +90,8 @@ export const migrationRequest = (job: CronJob): HostedRoutineCreate => {
     timezone: webhookOnly ? null : "UTC",
     delivery: "default",
     sources: job.reach?.sources ?? [],
-    reads: job.reach?.reads ?? [],
+    reads:
+      job.reach?.reads ?? (job.access === "unattended" ? [] : ROUTINE_READS),
     ownerBotId: job.botId,
     migrated: true,
     ...(job.webhookToken != null

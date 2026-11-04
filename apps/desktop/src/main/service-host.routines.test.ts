@@ -171,7 +171,7 @@ describe("routine creation plan admission", () => {
       } as never);
       const result = (await server.executeTool(
         "cronjob",
-        { action: "create", ...input, runner },
+        { action: "create", reads: [], ...input, runner },
         "session-test"
       )) as { content: Array<{ text?: string }> };
       const note = result.content.map((part) => part.text).join("\n");

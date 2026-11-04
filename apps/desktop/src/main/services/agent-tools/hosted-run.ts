@@ -153,7 +153,9 @@ export const buildHostedRunPrompt = (
     'anywhere else, is done by writing that message as "text"; it needs no tool. A',
     "message for anyone else (another person, a group) cannot be sent: say so instead.",
     "If part of the instruction cannot be done, say plainly what you could not do, in the",
-    "user's terms; never mention tools, access, settings or how this run is set up.",
+    "user's terms; never mention tools, access, settings or how this run is set up. The one",
+    "exception: if it needs the user's mail or calendar and this run may not read them, say",
+    "in one line that they can allow it under Reads on this routine's page.",
   ];
   if (request.payload != null)
     lines.push(

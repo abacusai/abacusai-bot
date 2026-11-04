@@ -2,14 +2,24 @@ import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
 import {
   ROUTINE_QUIET_RUNS_BEFORE_PAUSE,
   routinePauseReason,
+  type RoutineRead,
 } from "@abacus-ai/contract/routines";
 import { useTranslation } from "react-i18next";
 
 import { usePrefs } from "#renderer/data/db/prefs";
 import { requestUpgradeDialog } from "#renderer/lib/upgrade-dialog";
+import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
+import { Checkbox } from "#renderer/ui/checkbox";
 
 import { isHosted } from "./hosted";
+import { showSaveFailure } from "./hosted-sync";
+
+const READS: readonly RoutineRead[] = [
+  "gmail.search",
+  "gmail.read",
+  "calendar.read",
+];
 
 /** A connector read, in words. */
 export const readKey = (read: string): string =>
@@ -98,26 +108,43 @@ export const RoutineCreditHoldNote = ({ row }: { row: RoutineRow }) => {
 };
 
 /**
- * What a hosted routine's runs may reach. A routine on this computer always
- * runs with full access, so it has nothing to show here.
+ * What a hosted routine's runs may reach, and the user's way to change what
+ * they read of the account. A routine on this computer always runs with full
+ * access, so it has nothing to show here.
  */
 export const RoutineReachPanel = ({ row }: { row: RoutineRow }) => {
   const { t } = useTranslation();
+  const { db, transport } = useAppContext();
   if (!isHosted(row) || row.hosted == null) return null;
   const reach = row.hosted;
   const watchUrl = reach.watchUrl ?? null;
-  const items = [
-    ...reach.reads.map((read) => t(readKey(read))),
-    ...reach.sources,
-  ];
+  const setRead = (read: RoutineRead, allowed: boolean) => {
+    const reads = READS.filter((item) =>
+      item === read ? allowed : reach.reads.includes(item)
+    );
+    void db.collections.routines
+      .update(row.id, (draft) => {
+        draft.reach = { sources: reach.sources, reads };
+      })
+      .isPersisted.promise.catch((error: unknown) =>
+        showSaveFailure(error, transport, t)
+      );
+  };
   return (
     <section className="flex flex-col gap-2 text-[13px]">
-      <p>
-        <span className="text-muted-foreground">
-          {t("routines.reach.reads")}{" "}
-        </span>
-        {items.length > 0 ? items.join(", ") : t("routines.reach.searchOnly")}
-      </p>
+      <p className="text-muted-foreground">{t("routines.reach.reads")}</p>
+      {READS.map((read) => (
+        <label key={read} className="flex items-center gap-2">
+          <Checkbox
+            checked={reach.reads.includes(read)}
+            onCheckedChange={(checked) => setRead(read, checked === true)}
+          />
+          {t(readKey(read))}
+        </label>
+      ))}
+      {reach.sources.length > 0 && (
+        <p className="min-w-0 break-all">{reach.sources.join(", ")}</p>
+      )}
       {watchUrl != null && (
         <p className="min-w-0 break-all">
           <span className="text-muted-foreground">

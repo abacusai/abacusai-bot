@@ -1587,7 +1587,6 @@
       "gmailRead": "Read Gmail messages",
       "calendarRead": "Read Google Calendar",
       "reads": "Reads:",
-      "searchOnly": "web search only",
       "watches": "Memantau:",
       "dropped": "Dilewati karena rutinitas tidak bisa membacanya: {{items}}"
     },

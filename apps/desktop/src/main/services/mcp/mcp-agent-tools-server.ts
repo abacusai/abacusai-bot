@@ -182,6 +182,7 @@ import {
   describeHostedRoutine,
   hostedCreatedNote,
   hostedRunStartedNote,
+  HOSTED_READS_REQUIRED,
   hostedCreateInput,
   hostedRefusalNote,
   requestedInstruction,
@@ -1584,6 +1585,9 @@ export class McpAgentToolsServer extends McpHttpServer {
       return this.err(
         "A prompt (or reminder_text), and a schedule, run_at or webhook: true, are required."
       );
+    // Left out, the routine reads nothing and every run says it has no access.
+    if (input.kind !== "reminder" && !Array.isArray(args.reads))
+      return this.err(HOSTED_READS_REQUIRED);
     try {
       const routine = await this.options.routines!.create(input, {
         byAgent: true,
@@ -1642,6 +1646,7 @@ export class McpAgentToolsServer extends McpHttpServer {
             : null;
         const sources = requestedSources(args);
         const reads = requestedReads(args);
+        const reach = hosted.find(id)?.hosted;
         const changes = {
           ...(typeof args.name === "string" && args.name.trim().length > 0
             ? { name: args.name.trim() }
@@ -1654,8 +1659,13 @@ export class McpAgentToolsServer extends McpHttpServer {
             ? { cron: args.schedule.trim() }
             : {}),
           ...(runAt != null ? { at: runAt } : {}),
-          ...(sources.length > 0 ? { sources } : {}),
-          ...(reads.length > 0 ? { reads } : {}),
+          // The server replaces both together: the one not named stays.
+          ...(sources.length > 0 || reads.length > 0
+            ? {
+                sources: sources.length > 0 ? sources : (reach?.sources ?? []),
+                reads: reads.length > 0 ? reads : (reach?.reads ?? []),
+              }
+            : {}),
           ...(typeof args.watch_url === "string" &&
           args.watch_url.trim().length > 0
             ? { watchUrl: args.watch_url.trim() }

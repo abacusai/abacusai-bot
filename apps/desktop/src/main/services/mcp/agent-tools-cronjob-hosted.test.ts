@@ -99,16 +99,78 @@ const harness = (options: {
       alwaysOnNote: async () => options.alwaysOn ?? null,
     },
   } as never);
-  const call = async (args: Record<string, unknown>): Promise<string> => {
+  const send = async (args: Record<string, unknown>): Promise<string> => {
     const result = (await server.executeTool("cronjob", args, "s1")) as {
       content: Array<{ text?: string }>;
     };
     return result.content.map((part) => part.text ?? "").join("\n");
   };
-  return { call, create, runCronJob, hosted };
+  /** A create names its reads; `send` is the call exactly as given. */
+  const call = (args: Record<string, unknown>): Promise<string> =>
+    send(args.action === "create" ? { reads: [], ...args } : args);
+  return { call, send, create, runCronJob, hosted };
 };
 
 describe("cronjob, hosted", () => {
+  it("makes no routine until it is told what the runs read", async () => {
+    const { send, create } = harness({ defaultRunner: "hosted" });
+    const text = await send({
+      action: "create",
+      prompt: "My calendar and top emails",
+      schedule: "0 8 * * *",
+    });
+
+    expect(create).not.toHaveBeenCalled();
+    expect(text).toContain("Nothing was created");
+    expect(text).toContain("gmail.search");
+  });
+
+  it("takes an empty list as an answer, and asks nothing of a reminder", async () => {
+    const { send, create } = harness({ defaultRunner: "hosted" });
+    await send({
+      action: "create",
+      prompt: "The top AI headlines",
+      schedule: "0 8 * * *",
+      reads: [],
+    });
+    await send({
+      action: "create",
+      reminder_text: "Stretch",
+      schedule: "0 17 * * *",
+    });
+
+    expect(create).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the sources when only the reads change, and the reverse", async () => {
+    const { call, hosted } = harness({ defaultRunner: "hosted" });
+    vi.spyOn(hosted, "find").mockReturnValue({
+      ...ROW,
+      hosted: {
+        ...ROW.hosted!,
+        sources: ["https://news.example/"],
+        reads: ["calendar.read"],
+      },
+    });
+    const update = vi.spyOn(hosted, "update").mockResolvedValue(ROW);
+
+    await call({ action: "update", id: "hosted-r1", reads: ["gmail.search"] });
+    await call({
+      action: "update",
+      id: "hosted-r1",
+      sources: ["https://a.example/"],
+    });
+
+    expect(update.mock.calls[0]?.[1]).toMatchObject({
+      sources: ["https://news.example/"],
+      reads: ["gmail.search"],
+    });
+    expect(update.mock.calls[1]?.[1]).toMatchObject({
+      sources: ["https://a.example/"],
+      reads: ["calendar.read"],
+    });
+  });
+
   it("creates on the server with what was asked, and never fires it", async () => {
     const { call, create, runCronJob } = harness({ defaultRunner: "hosted" });
     const text = await call({

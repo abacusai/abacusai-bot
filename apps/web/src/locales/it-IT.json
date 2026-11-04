@@ -1587,7 +1587,6 @@
       "gmailRead": "Read Gmail messages",
       "calendarRead": "Read Google Calendar",
       "reads": "Reads:",
-      "searchOnly": "web search only",
       "watches": "Controlla:",
       "dropped": "Escluse, perché una routine non può leggerle: {{items}}"
     },

@@ -1587,7 +1587,6 @@
       "gmailRead": "Gmail mesajlarını oku",
       "calendarRead": "Google Calendar'ı oku",
       "reads": "Okuduğu:",
-      "searchOnly": "yalnızca web araması",
       "watches": "İzlediği:",
       "dropped": "Bir rutin bunları okuyamadığı için dışarıda bırakıldı: {{items}}"
     },

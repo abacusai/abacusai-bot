@@ -15,7 +15,7 @@ import type {
 } from "@abacus-ai/contract/routines";
 
 import type { HostedRoutineRefusal } from "../../agent-tools/hosted-routines";
-import { isRoutineRead } from "../../agent-tools/routine-reach";
+import { isRoutineRead, ROUTINE_READS } from "../../agent-tools/routine-reach";
 import { billingPlanReady } from "./billing";
 
 const KINDS: readonly HostedRoutineKind[] = [
@@ -54,6 +54,11 @@ export const requestedReads = (args: Record<string, unknown>): RoutineRead[] =>
   Array.isArray(args.reads)
     ? [...new Set(args.reads.filter(isRoutineRead))]
     : [];
+
+/** A hosted create that did not say what its runs read: nothing was made. */
+export const HOSTED_READS_REQUIRED =
+  `Nothing was created. Pass "reads": the account data its runs need (${ROUTINE_READS.join(", ")}), or [] for none. ` +
+  "A run reads nothing that is not listed, so a routine about the user's mail or calendar needs them here.";
 
 /**
  * A hosted create's input from the tool's arguments, and a one-time moment

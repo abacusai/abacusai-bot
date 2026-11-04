@@ -550,6 +550,13 @@ const REQUEST: HostedRunRequest = {
 };
 
 describe("a hosted run", () => {
+  it("says where to allow mail or the calendar, and nothing else about access", () => {
+    const prompt = buildHostedRunPrompt(REQUEST);
+
+    expect(prompt).toContain("under Reads on this routine's page");
+    expect(prompt).toContain("never mention tools, access, settings");
+  });
+
   it("reads a lane entry's routine, and refuses what is not one", () => {
     expect(
       parseHostedRunRequest({
@@ -693,6 +700,20 @@ describe("moving a host's routines", () => {
     ).toBe(false);
   });
 
+  it("keeps what a full-access job could read, and only that for one held to less", () => {
+    const moved = (overrides: Parameters<typeof job>[0]) =>
+      migrationRequest(job({ schedule: "0 8 * * *", ...overrides })).reads;
+
+    expect(moved({})).toEqual(["gmail.search", "gmail.read", "calendar.read"]);
+    expect(moved({ access: "unattended" })).toEqual([]);
+    expect(
+      moved({
+        access: "unattended",
+        reach: { sources: [], reads: ["gmail.search"] },
+      })
+    ).toEqual(["gmail.search"]);
+  });
+
   it("reads nothing off the instruction: only what the user confirmed here, and keeps its bot", () => {
     const request = migrationRequest(
       job({
@@ -702,7 +723,6 @@ describe("moving a host's routines", () => {
       })
     );
     expect(request.sources).toEqual([]);
-    expect(request.reads).toEqual([]);
     expect(request.ownerBotId).toBe("bot-1");
     expect(request.migrated).toBe(true);
     expect(
