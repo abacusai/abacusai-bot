@@ -331,6 +331,7 @@ describe("routines.events (spec 05 §31.5 j)", () => {
           // No hosted results in this test; the stream only attaches to them.
           onHostedRun: () => () => {},
           onRoutineCreatedByAgent: () => () => {},
+          onRoutineLinkLost: () => () => {},
         },
       });
       const events = await client.routines.events();
