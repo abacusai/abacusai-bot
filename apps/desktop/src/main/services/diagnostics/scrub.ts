@@ -106,7 +106,19 @@ const DATA_URI = /^data:[a-z]+\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]*$/;
 
 /** A cookie header holds several secrets: the whole line goes. */
 const COOKIE_HEADER =
-  /(\bcookie\\?["']?\s{0,3}[:=]\s{0,3}\\?["']?)[^\r\n"'\\=]*=[^\r\n"'\\]*/gi;
+  /(\bcookie\\?["']?\s{0,3}[:=]\s{0,3})((?:\\?["'])?)([^\r\n\\]*)/gi;
+
+const maskCookieHeader = (
+  whole: string,
+  name: string,
+  quote: string,
+  value: string
+): string => {
+  if (!value.includes("=")) return whole;
+  const closing = quote === "" ? -1 : value.indexOf(quote.slice(-1));
+
+  return `${name}${quote}${MASKED_VALUE}${closing < 0 ? "" : value.slice(closing)}`;
+};
 
 const looksRandom = (part: string): boolean =>
   part.length >= SK_KEY_MIN_PART_LENGTH &&
@@ -147,7 +159,7 @@ export function scrubKeys(text: string): string {
       /\d/.test(token) ? `${prefix}${MASKED_VALUE}` : whole
     )
     .replace(AUTH_HEADER, `$1${MASKED_VALUE}`)
-    .replace(COOKIE_HEADER, `$1${MASKED_VALUE}`)
+    .replace(COOKIE_HEADER, maskCookieHeader)
     .replace(NAMED_SECRET, (whole, name: string, value: string) =>
       STAND_IN.test(value) || (WORDS.test(value) && !JSON_PAIR.test(name))
         ? whole

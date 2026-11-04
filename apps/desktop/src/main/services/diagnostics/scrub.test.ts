@@ -195,6 +195,24 @@ describe("what is uploaded or logged", () => {
     }
   });
 
+  it("holds no quoted cookie, and keeps what follows a JSON value", () => {
+    const sid = body(12);
+    const csrf = body(14);
+    const name = parts("Coo", "kie");
+
+    const header = scrub(parts(name, ': sid="', sid, '"; csrf=', csrf));
+    const json = scrub(
+      parts('{"', name, '": "a=', sid, "; b=", csrf, '", "next": 1}')
+    );
+
+    for (const text of [header, json]) {
+      expect(text).not.toContain(sid);
+      expect(text).not.toContain(csrf);
+      expect(scrub(text)).toBe(text);
+    }
+    expect(json).toContain('"next": 1');
+  });
+
   it("holds no private key split across two flushes", () => {
     const end = `-----END ${"PRIVATE"} KEY-----`;
 
@@ -310,6 +328,7 @@ describe("scrubbing", () => {
     const started = Date.now();
 
     scrub("key: ".repeat(2_000_000));
+    scrub(parts("coo", "kie: unset; ").repeat(40_000));
     scrub("a".repeat(10_000_000));
     scrub(`${"token".repeat(1_000_000)}=`);
     scrub(`-----BEGIN ${"PRIVATE"} KEY-----${"x".repeat(5_000_000)}`);
