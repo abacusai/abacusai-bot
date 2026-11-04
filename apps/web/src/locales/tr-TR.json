@@ -4802,7 +4802,8 @@
       "pin": "Karar olarak sabitle",
       "empty": "{{names}} için bir merhaba de. Kimin yanıt vereceğini seçmek için bir botu @mention ile etiketle ya da hepsinden yanıt almak için @everyone yaz.",
       "gone": "Bu kanal artık yok.",
-      "pinAgreed": "Üzerinde anlaşılan noktaları karar olarak sabitle"
+      "pinAgreed": "Üzerinde anlaşılan noktaları karar olarak sabitle",
+      "startAgreed": "Üzerinde anlaşılan işi başlat (her sahip kendi sohbetinde)"
     },
     "composer": {
       "label": "Kanala mesaj yaz",

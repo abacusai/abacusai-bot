@@ -28,6 +28,8 @@ import {
 import { abacusBotHome } from "../../paths";
 import { answerWords } from "../bots/bot-ask";
 import {
+  agreedItemsOf,
+  ownerOf,
   MAX_DISCUSSION_ROUNDS,
   channelTitle,
   channelWorkPrompt,
@@ -375,6 +377,68 @@ export class ChannelService {
     this.deps.changed(null);
   }
 
+  /**
+   * The user starts a discussion's agreed plan: each agreed item goes to the
+   * member it names (else the lead) as work in that bot's own chat, one card
+   * per item in the channel. The user's click is the authority; the items
+   * are the team's words the user just approved.
+   */
+  startAgreed(channelId: string, messageId: string): void {
+    if (this.deps.runWork == null)
+      throw new Error("Work cannot be started here.");
+    const channel = this.channel(channelId);
+    const messages = this.deps.store.readMessages(channelId);
+    const conclusion = messages.find((entry) => entry.id === messageId);
+    if (conclusion?.conclusion !== true)
+      throw new Error("Only a discussion's agreed points can be started.");
+    if (conclusion.planStarted === true)
+      throw new Error("This plan was already started.");
+    const members = this.members(channel);
+    const lead = members[0];
+    if (lead == null) throw new Error("This channel has no bots.");
+    const items = agreedItemsOf(conclusion.text);
+    const userWords = `Start the team's agreed plan: ${items.map((item, index) => `${index + 1}. ${item}`).join(" ")}`;
+    this.deps.store.writeMessages(
+      channelId,
+      messages.map((entry) =>
+        entry.id === messageId ? { ...entry, planStarted: true } : entry
+      )
+    );
+    const userMessage: ChannelMessage = {
+      id: this.newId(),
+      author: { kind: "user" },
+      text: userWords,
+      at: this.now(),
+    };
+    this.append(channelId, userMessage);
+    // One card per owner, with all its items: its own chat runs one turn at a time.
+    const byOwner = new Map<string, string[]>();
+    for (const item of items) {
+      const owner = ownerOf(item, members) ?? lead.id;
+      byOwner.set(owner, [...(byOwner.get(owner) ?? []), item]);
+    }
+    for (const [owner, own] of byOwner) {
+      const task =
+        own.length === 1
+          ? own[0]!
+          : own.map((item, index) => `${index + 1}. ${item}`).join("\n");
+      const card: ChannelMessage = {
+        id: this.newId(),
+        author: { kind: "bot", botId: owner },
+        text:
+          own.length === 1
+            ? `On it: ${own[0]}`
+            : `On it (${own.length} items):\n${task}`,
+        at: this.now(),
+        replyTo: userMessage.id,
+        work: { task, status: "running", startedAt: this.now() },
+      };
+      this.append(channelId, card);
+      this.startWork(channelId, owner, card.id, task, userMessage.id, true);
+    }
+    this.log(`started ${items.length} agreed item(s) in ${channelId}`);
+  }
+
   /** Every bot answering stops; messages waiting are not answered. */
   stop(channelId: string): void {
     const round = this.running.get(channelId);
@@ -580,7 +644,7 @@ export class ChannelService {
       const raw = await this.deps.runTurn(botId, channel, prompt);
       const last = visible.at(-1);
       if (last != null) this.markSeen(channelId, botId, last.id);
-      if (round.cancelled) return "";
+      if (round.cancelled || !this.isMember(channelId, botId)) return "";
       const proposed = proposalIn(postedWords(answerWords(raw), me));
       // A bot answering the user, or the lead summing up, may propose a bot.
       const proposal =
@@ -620,7 +684,8 @@ export class ChannelService {
         this.startWork(channelId, botId, message.id, task, userMessageId);
       return words;
     } catch (error) {
-      if (round.cancelled) return "";
+      // Stopped, or it left the channel (or the channel is gone) meanwhile.
+      if (round.cancelled || !this.isMember(channelId, botId)) return "";
       const why = error instanceof Error ? error.message : String(error);
       this.log(`${botId} could not answer in ${channelId}: ${why}`);
       this.append(channelId, {
@@ -688,7 +753,8 @@ export class ChannelService {
     botId: string,
     messageId: string,
     task: string,
-    userMessageId: string
+    userMessageId: string,
+    fromPlan = false
   ): void {
     const channel = this.maybeChannel(channelId);
     const runWork = this.deps.runWork;
@@ -705,6 +771,8 @@ export class ChannelService {
       ),
       task,
       userWords,
+      decisions: channel.decisions,
+      fromPlan,
     });
     this.works.set(messageId, { channelId, botId });
     this.log(`work started by ${botId} in ${channelId}`);
@@ -756,6 +824,10 @@ export class ChannelService {
       )
     );
     this.deps.changed(channelId);
+  }
+
+  private isMember(channelId: string, botId: string): boolean {
+    return this.maybeChannel(channelId)?.memberBotIds.includes(botId) ?? false;
   }
 
   private markSeen(channelId: string, botId: string, messageId: string): void {

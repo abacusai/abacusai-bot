@@ -16,6 +16,7 @@ import {
   CircleStop,
   LoaderCircle,
   Pin,
+  Play,
   Reply,
   Square,
   UserPlus,
@@ -109,6 +110,7 @@ export const GroupMessages = ({
   onPin,
   onPinAll,
   onProposal,
+  onStartAgreed,
 }: {
   messages: readonly ChannelMessage[];
   bots: ReadonlyMap<string, BotRow>;
@@ -117,6 +119,8 @@ export const GroupMessages = ({
   onPin(message: ChannelMessage): void;
   /** Pin several lines at once (a discussion's agreed points). */
   onPinAll?(lines: string[]): void;
+  /** The user starts a discussion's agreed items as work. */
+  onStartAgreed?(message: ChannelMessage): void;
   /** The user creates or dismisses a bot a message proposed. */
   onProposal?(message: ChannelMessage, create: boolean): void;
 }) => {
@@ -212,6 +216,19 @@ export const GroupMessages = ({
                 bots={bots}
                 self={message.author.botId}
               />
+              {message.conclusion === true &&
+                message.planStarted !== true &&
+                onStartAgreed != null && (
+                  <button
+                    type="button"
+                    data-testid="start-agreed"
+                    onClick={() => onStartAgreed(message)}
+                    className="flex w-fit items-center gap-1 text-xs font-medium text-(--bot-accent,var(--primary)) hover:underline"
+                  >
+                    <Play className="size-3.5" />
+                    {t("channels.thread.startAgreed")}
+                  </button>
+                )}
               {message.conclusion === true && onPinAll != null && (
                 <button
                   type="button"

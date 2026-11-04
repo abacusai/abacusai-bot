@@ -177,12 +177,13 @@ export const wantsNoAnswer = (
  * code, "> " lines) is someone else's, and must not pick who answers.
  */
 export const ownWords = (text: string): string =>
+  // A quote ends like a sentence: "…" Chief, how… addresses Chief.
   text
-    .replace(/```[\s\S]*?(?:```|$)/g, " ")
-    .replace(/^\s*>.*$/gm, " ")
-    .replace(/"[^"\n]*(?:"|$)/g, " ")
-    .replace(/“[^”\n]*(?:”|$)/g, " ")
-    .replace(/«[^»\n]*(?:»|$)/g, " ");
+    .replace(/```[\s\S]*?(?:```|$)/g, ". ")
+    .replace(/^\s*>.*$/gm, ". ")
+    .replace(/"[^"\n]*(?:"|$)/g, ". ")
+    .replace(/“[^”\n]*(?:”|$)/g, ". ")
+    .replace(/«[^»\n]*(?:»|$)/g, ". ");
 
 export const speakersFor = (
   message: string,
@@ -423,15 +424,29 @@ export const channelWorkPrompt = (input: {
   channelTitle: string;
   task: string;
   userWords: string;
+  /** The channel's pinned decisions: the work follows them. */
+  decisions?: readonly ChannelDecision[];
+  /** It comes from the team's agreed plan the user started, not one request. */
+  fromPlan?: boolean;
 }): string =>
   [
-    `${input.prefix}channel "${attr(input.channelTitle)}"] In the channel, the user asked you for this and you took it on.`,
+    input.fromPlan === true
+      ? `${input.prefix}channel "${attr(input.channelTitle)}"] The team agreed a plan in the channel and the user started it; this item is yours.`
+      : `${input.prefix}channel "${attr(input.channelTitle)}"] In the channel, the user asked you for this and you took it on.`,
     "Do it now with your normal tools. When you are done, end with a short report for the channel:",
     "what you did, and where the results are (file paths, links). It is posted there as your message.",
     "",
-    `Task, as you wrote it in the channel: ${input.task}`,
+    `Task: ${input.task}`,
     "",
     `The user's own words, verbatim: "${input.userWords.replace(/\s+/g, " ").trim()}"`,
+    ...((input.decisions ?? []).length > 0
+      ? [
+          "",
+          "Decisions pinned in the channel (follow them):",
+          ...(input.decisions ?? []).map((d) => `- ${d.text}`),
+        ]
+      : []),
+    "",
     "Where the task as written goes further than their words, follow their words. Do only your part:",
     "do not pass anything on or ask other bots in this turn.",
   ].join("\n");
@@ -459,4 +474,52 @@ export const proposalIn = (
       .replace(/\n{3,}/g, "\n\n")
       .trim(),
   };
+};
+
+/** The agreed points of a discussion's summing-up: its numbered lines (else all of it). */
+export const agreedItemsOf = (text: string): string[] => {
+  const items = text
+    .split("\n")
+    .map((line) =>
+      /^\s*\d+[.)]\s+(.+)$/.exec(line)?.[1]?.replace(/\*\*/g, "").trim()
+    )
+    .filter((line): line is string => line != null && line.length > 0);
+  return items.length > 0 ? items : [text.trim()];
+};
+
+/**
+ * The member an agreed item is for: the first @mentioned, else the first
+ * named as its owner ("Owner: Writer", "Writer owns…", "— Writer"), else the
+ * first member named at all.
+ */
+export const ownerOf = (
+  item: string,
+  members: readonly Member[]
+): string | null => {
+  const mentioned = mentionedIn(item, members)[0];
+  if (mentioned != null) return mentioned;
+  for (const member of byLength(members)) {
+    const name = escape(member.name);
+    if (
+      new RegExp(
+        `\\b(?:owner|owned by|lead|led by|assigned to)\\s*:?\\s*${name}(?![\\p{L}\\p{N}_-])|(?<![\\p{L}\\p{N}_-])${name}(?:'s)?\\s+(?:owns|leads|takes|handles|will|to)\\b`,
+        "iu"
+      ).test(item)
+    )
+      return member.id;
+  }
+  const lower = item.toLowerCase();
+  const first = members
+    .map((member) => ({
+      id: member.id,
+      at: lower.search(
+        new RegExp(
+          `(?<![\\p{L}\\p{N}_-])${escape(member.name.toLowerCase())}(?![\\p{L}\\p{N}_-])`,
+          "u"
+        )
+      ),
+    }))
+    .filter((entry) => entry.at >= 0)
+    .sort((a, b) => a.at - b.at)[0];
+  return first?.id ?? null;
 };

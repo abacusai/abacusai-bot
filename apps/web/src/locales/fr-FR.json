@@ -4802,7 +4802,8 @@
       "pin": "Épingler comme décision",
       "empty": "Dites bonjour à {{names}}. Utilisez @mention pour choisir quel bot répond, ou @everyone pour avoir la réponse de tous.",
       "gone": "Ce canal n'existe plus.",
-      "pinAgreed": "Épingler les points convenus comme décisions"
+      "pinAgreed": "Épingler les points convenus comme décisions",
+      "startAgreed": "Lancer le travail convenu (chaque propriétaire dans son propre chat)"
     },
     "composer": {
       "label": "Écrire au canal",

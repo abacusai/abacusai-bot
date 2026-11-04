@@ -4802,7 +4802,8 @@
       "pin": "Sematkan sebagai keputusan",
       "empty": "Sapa {{names}}. @mention sebuah bot untuk memilih siapa yang menjawab, atau @everyone untuk mendengar dari semuanya.",
       "gone": "Kanal ini sudah tidak ada.",
-      "pinAgreed": "Sematkan poin-poin yang disepakati sebagai keputusan"
+      "pinAgreed": "Sematkan poin-poin yang disepakati sebagai keputusan",
+      "startAgreed": "Mulai pekerjaan yang telah disepakati (setiap pemilik di obrolannya masing-masing)"
     },
     "composer": {
       "label": "Kirim pesan ke kanal",

@@ -113,6 +113,7 @@ export const WEB_HOST_ALLOWED = [
   "channels.unpin",
   "channels.stopAll",
   "channels.decideProposal",
+  "channels.startAgreed",
   "channels.events",
   "routines.editByChat",
   "routines.run",

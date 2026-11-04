@@ -4802,7 +4802,8 @@
       "pin": "Fixar como decisão",
       "empty": "Diga olá para {{names}}. Use @mention em um bot para escolher quem responde, ou @everyone para ouvir todos eles.",
       "gone": "Este canal não existe mais.",
-      "pinAgreed": "Fixar os pontos acordados como decisões"
+      "pinAgreed": "Fixar os pontos acordados como decisões",
+      "startAgreed": "Iniciar o trabalho combinado (cada responsável em seu próprio chat)"
     },
     "composer": {
       "label": "Enviar mensagem ao canal",

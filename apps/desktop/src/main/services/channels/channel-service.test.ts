@@ -471,3 +471,205 @@ describe("bots proposing a new bot", () => {
     expect(store.threads.get(id)![1]!.text).toBe("Here.");
   });
 });
+
+describe("starting the agreed work", () => {
+  it("one card per owner, with all its items, in its own chat; once", async () => {
+    const { service, works, flush, store } = setup();
+    const { id } = service.create({ botIds: ["chief", "res", "wri"] });
+    store.writeMessages(id, [
+      {
+        id: "c2",
+        author: { kind: "bot", botId: "chief" },
+        text: "Agreed:\n1. @Writer the DM\n2. Researcher the list\n3. @Writer the poster",
+        at: 1,
+        conclusion: true,
+      },
+    ]);
+    service.startAgreed(id, "c2");
+    await flush();
+    expect(works.map((w) => w.botId)).toEqual(["wri", "res"]);
+    expect(works[0]!.prompt).toContain(
+      "1. @Writer the DM\n2. @Writer the poster"
+    );
+    expect(store.readMessages(id).filter((m) => m.work != null)).toHaveLength(
+      2
+    );
+  });
+
+  it("sends each agreed item to its owner's own chat as work, with a card each; once", async () => {
+    const { service, turns, works, flush, store } = setup();
+    const { id } = service.create({ botIds: ["chief", "res", "wri"] });
+    service.post(id, "Decided: launch Dec 19");
+    await flush();
+    turns[0]!.resolve("<reply>Noted.</reply>");
+    await flush();
+    store.writeMessages(id, [
+      ...store.readMessages(id),
+      {
+        id: "c1",
+        author: { kind: "bot", botId: "chief" },
+        text: "Agreed:\n1. Researcher owns the hostel list\n2. @Writer writes the DM\n3. Book the stall",
+        at: 5,
+        conclusion: true,
+      },
+    ]);
+    service.startAgreed(id, "c1");
+    await flush();
+    expect(works.map((w) => w.botId)).toEqual(["res", "wri", "chief"]);
+    expect(works[0]!.prompt).toContain(
+      "The team agreed a plan in the channel and the user started it"
+    );
+    expect(works[0]!.prompt).toContain("Task: Researcher owns the hostel list");
+    expect(works[0]!.prompt).toContain("- launch Dec 19");
+    const cards = store.readMessages(id).filter((m) => m.work != null);
+    expect(cards.map((m) => m.work!.status)).toEqual([
+      "running",
+      "running",
+      "running",
+    ]);
+    expect(store.readMessages(id).find((m) => m.id === "c1")!.planStarted).toBe(
+      true
+    );
+    expect(() => service.startAgreed(id, "c1")).toThrow(/already started/);
+    works[1]!.resolve("<reply>DM written: dm.md</reply>");
+    await flush();
+    expect(store.readMessages(id).at(-1)).toMatchObject({
+      author: { kind: "bot", botId: "wri" },
+      text: "DM written: dm.md",
+    });
+  });
+});
+
+describe("edge cases", () => {
+  it("two channels run at the same time, independently", async () => {
+    const { service, turns, flush, texts } = setup();
+    const a = service.create({ botIds: ["chief", "res"] }).id;
+    const b = service.create({ botIds: ["chief", "wri"] }).id;
+    service.post(a, "Chief, A?");
+    service.post(b, "Chief, B?");
+    await flush();
+    expect(turns).toHaveLength(2);
+    turns[1]!.resolve("<reply>for B</reply>");
+    turns[0]!.resolve("<reply>for A</reply>");
+    await flush();
+    expect(texts(a)).toEqual(["user: Chief, A?", "chief: for A"]);
+    expect(texts(b)).toEqual(["user: Chief, B?", "chief: for B"]);
+  });
+
+  it("a bot removed from the channel mid-answer is stopped and posts nothing", async () => {
+    const { service, turns, flush, texts } = setup();
+    const { id } = service.create({ botIds: ["chief", "res", "wri"] });
+    service.post(id, "Writer, a tagline");
+    await flush();
+    service.update(id, { botIds: ["chief", "res"] });
+    await flush();
+    expect(texts(id)).toEqual(["user: Writer, a tagline"]);
+    expect(service.list()[0]?.working).toEqual([]);
+    expect(turns).toHaveLength(1);
+  });
+
+  it("a channel deleted mid-round leaves nothing behind and does not throw", async () => {
+    const { service, turns, flush, store } = setup();
+    const { id } = service.create({ botIds: ["chief", "res"] });
+    service.post(id, "Chief and Researcher: go");
+    await flush();
+    service.remove(id);
+    turns[0]?.resolve("<reply>late</reply>");
+    await flush();
+    expect(service.list()).toEqual([]);
+    expect(store.threads.has(id)).toBe(false);
+    expect(() => service.post(id, "hello?")).toThrow(/gone/);
+  });
+
+  it("NO_REPLY and an empty answer post nothing", async () => {
+    const { service, turns, flush, texts } = setup();
+    const { id } = service.create({ botIds: ["chief", "res"] });
+    service.post(id, "Chief, anything?");
+    await flush();
+    turns[0]!.resolve("<reply>NO_REPLY</reply>");
+    await flush();
+    service.post(id, "Chief, and now?");
+    await flush();
+    turns[1]!.resolve("");
+    await flush();
+    expect(texts(id)).toEqual([
+      "user: Chief, anything?",
+      "user: Chief, and now?",
+    ]);
+  });
+
+  it("a turn that throws at once is reported as failed; the next message still runs", async () => {
+    const store = memoryStore();
+    let calls = 0;
+    const service = new ChannelService({
+      store,
+      bot: (id) => BOTS[id] ?? null,
+      runTurn: () => {
+        calls++;
+        if (calls === 1) throw new Error("no workspace");
+        return Promise.resolve("<reply>ok</reply>");
+      },
+      stopTurn: () => {},
+      changed: () => {},
+    });
+    const { id } = service.create({ botIds: ["chief", "res"] });
+    service.post(id, "Chief, one");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    service.post(id, "Chief, two");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const thread = store.readMessages(id);
+    expect(thread[1]).toMatchObject({ failed: true });
+    expect(thread.at(-1)).toMatchObject({ text: "ok" });
+  });
+
+  it("a long thread: a bot's first turn sees the last 30, later turns only what is new", async () => {
+    const { service, turns, flush, store } = setup();
+    const { id } = service.create({ botIds: ["chief", "res"] });
+    store.writeMessages(
+      id,
+      Array.from({ length: 60 }, (_, index) => ({
+        id: `old${index}`,
+        author: { kind: "user" as const },
+        text: `note ${index}`,
+        at: index,
+      }))
+    );
+    service.post(id, "Researcher, what now?");
+    await flush();
+    expect(turns[0]!.prompt).toContain("earlier ones not shown");
+    expect(turns[0]!.prompt).not.toContain(">\nnote 0\n<");
+    expect(turns[0]!.prompt).toContain(">\nnote 59\n<");
+  });
+
+  it("more than 6 bots, or fewer than 2, are refused", () => {
+    const { service } = setup();
+    const extras = ["x", "y", "z", "q"];
+    for (const extra of extras)
+      BOTS[extra] = { id: extra, name: extra.toUpperCase(), title: "" };
+    expect(() =>
+      service.create({ botIds: ["chief", "res", "wri", ...extras] })
+    ).toThrow(/at most 6/);
+    for (const extra of extras) delete BOTS[extra];
+    expect(() =>
+      service.update(service.create({ botIds: ["chief", "res"] }).id, {
+        botIds: ["chief"],
+      })
+    ).toThrow(/at least 2/);
+  });
+
+  it("a user message right after Stop is answered", async () => {
+    const { service, turns, flush, texts } = setup();
+    const { id } = service.create({ botIds: ["chief", "res"] });
+    service.post(id, "Chief, long thing");
+    await flush();
+    service.stop(id);
+    await flush();
+    service.post(id, "Chief, short thing");
+    await flush();
+    expect(turns.at(-1)!.prompt).toContain("short thing");
+    turns.at(-1)!.resolve("<reply>done</reply>");
+    await flush();
+    expect(texts(id).at(-1)).toBe("chief: done");
+  });
+});

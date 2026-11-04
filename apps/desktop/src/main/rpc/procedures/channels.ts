@@ -38,6 +38,12 @@ export const channelsRouter = impl.channels.router({
   unpin: impl.channels.unpin.handler(({ input, context }) =>
     context.deps.serviceHost.unpinInChannel(input.channelId, input.decisionId)
   ),
+  startAgreed: impl.channels.startAgreed.handler(({ input, context }) =>
+    context.deps.serviceHost.startAgreedInChannel(
+      input.channelId,
+      input.messageId
+    )
+  ),
   decideProposal: impl.channels.decideProposal.handler(({ input, context }) =>
     context.deps.serviceHost.decideChannelProposal(
       input.channelId,

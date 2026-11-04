@@ -4802,7 +4802,8 @@
       "pin": "Pin as a decision",
       "empty": "Say hello to {{names}}. @mention a bot to pick who answers, or @everyone to hear from all of them.",
       "gone": "This channel is gone.",
-      "pinAgreed": "Pin the agreed points as decisions"
+      "pinAgreed": "Pin the agreed points as decisions",
+      "startAgreed": "Start the agreed work (each owner in their own chat)"
     },
     "composer": {
       "label": "Message the channel",

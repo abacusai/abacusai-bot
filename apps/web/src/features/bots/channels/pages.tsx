@@ -418,6 +418,14 @@ export const GroupPage = ({
               bots={byId}
               working={channel.working}
               onReply={setReplyTo}
+              onStartAgreed={(message) =>
+                act(
+                  transport.client.channels.startAgreed({
+                    channelId,
+                    messageId: message.id,
+                  })
+                )
+              }
               onProposal={(message, create) =>
                 act(
                   transport.client.channels.decideProposal({

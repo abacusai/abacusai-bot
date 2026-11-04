@@ -87,6 +87,10 @@ export const channels = {
   unpin: mutation
     .input(v.object({ channelId: ChannelId, decisionId: v.string() }))
     .output(type<void>()),
+  /** Start a discussion's agreed items as work, each in its owner's own chat. */
+  startAgreed: mutation
+    .input(v.object({ channelId: ChannelId, messageId: v.string() }))
+    .output(type<void>()),
   /** Create the bot a message proposed (and add it here), or dismiss it. */
   decideProposal: mutation
     .input(

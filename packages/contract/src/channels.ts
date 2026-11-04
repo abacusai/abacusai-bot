@@ -48,6 +48,8 @@ export interface ChannelMessage {
   work?: ChannelWork;
   /** The lead's summing-up of a team discussion: offered for pinning. */
   conclusion?: boolean;
+  /** The user started its agreed items as work. */
+  planStarted?: boolean;
   /** A new bot this bot proposed; created only when the user says so. */
   proposal?: ChannelBotProposal;
 }

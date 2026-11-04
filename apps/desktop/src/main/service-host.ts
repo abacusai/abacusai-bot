@@ -5864,7 +5864,28 @@ export class ServiceHost {
    * tools, the way a passed-on task runs: after any turn the user has open
    * there, shown in that chat as it arrived. Resolves with the raw text.
    */
-  private async runChannelWork(
+  /** Channel work per bot: one at a time in its own chat (one turn waiter per chat). */
+  private readonly channelWorkLanes = new Map<string, Promise<unknown>>();
+
+  private runChannelWork(
+    botId: string,
+    channelId: string,
+    prompt: string
+  ): Promise<string> {
+    const before = this.channelWorkLanes.get(botId) ?? Promise.resolve();
+    const run = before
+      .catch(() => undefined)
+      .then(() => this.runChannelWorkNow(botId, channelId, prompt));
+    const lane = run.catch(() => undefined);
+    this.channelWorkLanes.set(botId, lane);
+    void lane.then(() => {
+      if (this.channelWorkLanes.get(botId) === lane)
+        this.channelWorkLanes.delete(botId);
+    });
+    return run;
+  }
+
+  private async runChannelWorkNow(
     botId: string,
     channelId: string,
     prompt: string
@@ -5949,6 +5970,10 @@ export class ServiceHost {
 
   unpinInChannel(channelId: string, decisionId: string): void {
     this.channelService.unpin(channelId, decisionId);
+  }
+
+  startAgreedInChannel(channelId: string, messageId: string): void {
+    this.channelService.startAgreed(channelId, messageId);
   }
 
   decideChannelProposal(

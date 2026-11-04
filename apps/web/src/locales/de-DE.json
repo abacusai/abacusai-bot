@@ -4802,7 +4802,8 @@
       "pin": "Als Entscheidung anheften",
       "empty": "Sag Hallo zu {{names}}. Erwähne einen Bot mit @mention, um zu bestimmen, wer antwortet, oder @everyone, um von allen zu hören.",
       "gone": "Dieser Kanal existiert nicht mehr.",
-      "pinAgreed": "Vereinbarte Punkte als Entscheidungen anheften"
+      "pinAgreed": "Vereinbarte Punkte als Entscheidungen anheften",
+      "startAgreed": "Vereinbarte Arbeit starten (jeder Besitzer in seinem eigenen Chat)"
     },
     "composer": {
       "label": "Nachricht an den Kanal",
