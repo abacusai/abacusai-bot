@@ -17,7 +17,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { modelPath } from "./model-path.js";
 import {
@@ -88,6 +88,72 @@ describe("bypass mode", () => {
       }
     }
   );
+});
+
+describe("the app's routines file", () => {
+  const home = path.resolve("/tmp/abacus-home");
+  const store = path.join(home, "cronjobs.json");
+  const gate = (
+    name: string,
+    input: Record<string, unknown>,
+    cwd = WORKSPACE
+  ) =>
+    gateToolCall(call(name, input), options({ mode: AgentMode.Yolo, cwd }))
+      .kind;
+
+  beforeEach(() => {
+    vi.stubEnv("ABACUSAI_BOT_HOME", home);
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it.each([
+    [`python -c "import json; p=r'${store}'; json.dump([], open(p,'w'))"`],
+    [`python -c "p='C:/Users/me/.abacusai-bot/cronjobs.json'"`],
+    [`python -c "p='C:\\\\Users\\\\me\\\\.ABACUSAI-BOT\\\\cronjobs.json'"`],
+    [
+      `python -c "os.path.join(os.path.expanduser('~'), '.abacusai-bot', 'cronjobs.json')"`,
+    ],
+    [`sed -i 's/true/false/' ${store}`],
+    [`cp /tmp/edited.json ${store}.bak`],
+  ])("is refused through the shell, in full access: %s", (command) => {
+    expect(gate("bash", { command })).toBe("refuse");
+  });
+
+  it("is refused by a relative name from inside the app's folder", () => {
+    expect(
+      gate(
+        "bash",
+        { command: "jq . ../../cronjobs.json" },
+        path.join(home, "routines", "job-1")
+      )
+    ).toBe("refuse");
+  });
+
+  it.each([["write"], ["edit"], ["batch_edit"]])("is refused to %s", (tool) => {
+    expect(gate(tool, { path: store })).toBe("refuse");
+  });
+
+  it("says what to do instead", () => {
+    const decision = gateToolCall(
+      call("bash", { command: `cat ${store}` }),
+      options({ mode: AgentMode.Yolo })
+    );
+    expect(decision).toMatchObject({
+      kind: "refuse",
+      reason: expect.stringContaining("Routines"),
+    });
+  });
+
+  it("leaves a project's own file of that name alone", () => {
+    expect(gate("bash", { command: "cat config/cronjobs.json" })).toBe("allow");
+    expect(gate("write", { path: "config/cronjobs.json" })).toBe("allow");
+  });
+
+  it("leaves the app's other files alone", () => {
+    expect(gate("bash", { command: `ls ${home}` })).toBe("allow");
+  });
 });
 
 describe("plan mode", () => {

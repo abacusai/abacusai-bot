@@ -209,6 +209,10 @@ import {
 import type { PhoneToolDefinition } from "./tools/phone/definition";
 import { readTranscriptTail } from "./transcript-tail";
 
+/** After a refused routine: it stays refused, and the way on is the user's. */
+const NOT_YOUR_ROUTINE =
+  "That stays as it is: tell the user it is theirs to change, on that routine's page under Routines.";
+
 const SERVER_NAME = "agent-tools";
 const SERVER_VERSION = "1.0.0";
 
@@ -1424,7 +1428,7 @@ export class McpAgentToolsServer extends McpHttpServer {
           )
         )
           return this.err(
-            `Routine ${id} is not yours to ${action}, or does not exist.`
+            `Routine ${id} is not yours to ${action}, or does not exist. ${NOT_YOUR_ROUTINE}`
           );
         return await this.hostedRoutineAction(
           action,
@@ -1447,7 +1451,7 @@ export class McpAgentToolsServer extends McpHttpServer {
         if (job == null) return this.err(`No job with id "${id}".`);
         if (job.botId !== callerBot)
           return this.err(
-            `Routine ${id} is not yours to ${action}; it belongs to the user or another bot.`
+            `Routine ${id} is not yours to ${action}; it belongs to the user or another bot. ${NOT_YOUR_ROUTINE}`
           );
       }
 

@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 
 import { GATEWAY_SERVER_NAME } from "@abacus-ai/connectors/registry";
 
+import { abacusBotDir } from "./config.js";
 import { prepareEditContent } from "./edit-content.js";
 import { resolveEdit, spliceRanges } from "./edit-resolve.js";
 import { EXIT_PLAN_TOOL_NAME } from "./exit-plan-tool.js";
@@ -307,6 +308,39 @@ export function isMutatingCall(tool: ToolRequest): boolean {
   return isMutatingTool(tool.name);
 }
 
+const ROUTINE_STORE_FILE = "cronjobs.json";
+
+const ROUTINE_STORE_REFUSAL =
+  `${ROUTINE_STORE_FILE} is the app's own record of the routines: only the cronjob tool changes it. ` +
+  "What that tool refused stays refused: tell the user it is theirs to change, on that routine's page under Routines.";
+
+const foldedPath = (text: string): string =>
+  text.replace(/\\+/g, "/").toLowerCase();
+
+/**
+ * A command that names the app's routines file, or a file tool writing it. A
+ * script's reads and writes cannot be told apart, so any command naming it
+ * counts; one that builds the name out of sight is not caught.
+ */
+function reachesRoutineStore(tool: ToolRequest, cwd: string): boolean {
+  const home = foldedPath(abacusBotDir());
+  if (tool.name === "bash") {
+    const command = foldedPath(String(tool.input.command ?? ""));
+    return (
+      command.includes(ROUTINE_STORE_FILE) &&
+      (command.includes(home) ||
+        command.includes(".abacusai-bot") ||
+        isInsideDirectory(cwd, abacusBotDir()))
+    );
+  }
+  if (!WRITE_TOOLS.has(tool.name)) return false;
+  const target = toolPath(String(tool.input.path ?? ""), cwd);
+  if (target == null) return false;
+  return foldedPath(realPathOf(target) ?? target).startsWith(
+    `${home}/${ROUTINE_STORE_FILE}`
+  );
+}
+
 export function gateToolCall(tool: ToolRequest, options: GateOptions): Gate {
   const { mode } = options;
 
@@ -314,7 +348,12 @@ export function gateToolCall(tool: ToolRequest, options: GateOptions): Gate {
   // session allowed earlier widens a routine's fixed reach.
   if (mode === AgentMode.Unattended) return gateUnattended(tool, options);
 
-  // Full access means exactly that: no prompts and no sandbox.
+  // Refused in every mode: `cronjob` is the one way a routine changes, and
+  // the file is how a refusal of it was got round.
+  if (reachesRoutineStore(tool, options.cwd))
+    return { kind: "refuse", reason: ROUTINE_STORE_REFUSAL };
+
+  // Otherwise full access means exactly that: no prompts and no sandbox.
   if (mode === AgentMode.Yolo) return { kind: "allow" };
 
   // Auto skips the approval prompts, not the sandbox: a hidden credential
