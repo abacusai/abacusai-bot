@@ -508,6 +508,7 @@
       "filesTitle": "Dosyalar",
       "checkIns": "Yoklamalar",
       "senderChats": "Senin adına sohbetler",
+      "botChats": "Diğer botlarınla sohbetler",
       "on": "Açık",
       "reachable": "Şuradan da ulaşılabilir",
       "connected": "Bağlı",
@@ -523,8 +524,7 @@
         "notes": "Ayrıca {{count}} günlük not tutuyor",
         "clear": "Her şeyi unut",
         "clearConfirm": "Buradaki her şey unutulsun mu?"
-      },
-      "botChats": "Diğer botlarınla sohbetler"
+      }
     },
     "gone": {
       "chat": "Bu sohbet artık yok",

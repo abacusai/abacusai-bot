@@ -508,6 +508,7 @@
       "filesTitle": "Files",
       "checkIns": "Check-ins",
       "senderChats": "Chats on your behalf",
+      "botChats": "Percakapan dengan bot Anda yang lain",
       "on": "On",
       "reachable": "Also reachable on",
       "connected": "Connected",
@@ -523,8 +524,7 @@
         "notes": "{{count}} day(s) of working notes on disk.",
         "clear": "Clear all",
         "clearConfirm": "Forget everything here?"
-      },
-      "botChats": "Percakapan dengan bot Anda yang lain"
+      }
     },
     "gone": {
       "chat": "This chat is gone",
