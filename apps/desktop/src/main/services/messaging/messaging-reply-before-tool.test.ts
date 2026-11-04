@@ -84,7 +84,7 @@ const harness = () => {
       }),
     say: (content: string, messageId?: string) =>
       emit({ type: "text_delta", content, messageId }),
-    tool: () => emit({ type: "tool_call_start", toolName: "memory" }),
+    tool: (toolName = "memory") => emit({ type: "tool_call_start", toolName }),
     idle: () => emit({ type: "status_changed", status: AgentStatus.Idle }),
   };
 };
@@ -122,6 +122,27 @@ describe("a reply wrapped before a tool call", () => {
     h.idle();
     await tick();
     expect(h.sent).toEqual(["Sunny, 24°."]);
+  });
+
+  it("is the reply when that call is suggest_tasks, which can end the turn", async () => {
+    const h = harness();
+    await h.inbound("hi");
+    h.say("Hi! What should we start with?", "m1");
+    h.tool("suggest_tasks");
+    h.idle();
+    await tick();
+    expect(h.sent).toEqual(["Hi! What should we start with?"]);
+  });
+
+  it("gives way to the next message when suggest_tasks did not end the turn", async () => {
+    const h = harness();
+    await h.inbound("hi");
+    h.say("Hi!", "m1");
+    h.tool("suggest_tasks");
+    h.say("Hi! What should we start with?", "m2");
+    h.idle();
+    await tick();
+    expect(h.sent).toEqual(["Hi! What should we start with?"]);
   });
 
   it("does not carry a reply into the next turn", async () => {

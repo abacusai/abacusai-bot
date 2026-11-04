@@ -6,6 +6,7 @@ import type { UserTextTags } from "@abacus-ai/contract/agent-types";
 import { AgentMode, AgentStatus } from "@abacus-ai/contract/agent-types";
 import type { DesktopEvent } from "@abacus-ai/contract/agent-types";
 import type { BillingPlan } from "@abacus-ai/contract/billing-plan";
+import { isSuggestTasksTool } from "@abacus-ai/contract/bots/suggested-tasks";
 import type {
   AgentSessionListItem,
   StartAgentSessionResult,
@@ -1399,8 +1400,10 @@ export class MessagingGatewayService {
     }
 
     // Text before a tool call is narration, not the reply, except a reply the
-    // model already wrapped, which a later tool call must not throw away.
+    // model already wrapped, which a later tool call must not throw away. The
+    // text before suggest_tasks is the reply: that call can end the turn.
     if (event.type === "tool_call_start") {
+      if (isSuggestTasksTool(event.toolName)) return;
       route.taggedReply = lastTaggedReply(route.buffer) ?? route.taggedReply;
       route.buffer = "";
       route.bufferMessageId = null;

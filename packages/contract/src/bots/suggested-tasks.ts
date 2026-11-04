@@ -9,6 +9,10 @@
 
 export const SUGGEST_TASKS_TOOL = "suggest_tasks";
 
+/** `suggest_tasks`, under its MCP server's prefix or bare. */
+export const isSuggestTasksTool = (name: string): boolean =>
+  name === SUGGEST_TASKS_TOOL || name.endsWith(`_${SUGGEST_TASKS_TOOL}`);
+
 /** A reply offers two or three: one is a question, four is a menu. */
 export const SUGGESTED_TASKS_MAX = 3;
 

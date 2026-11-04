@@ -36,7 +36,8 @@ export const SUGGESTED_TASKS_TOOLS: ToolDefinition[] = [
       '"Make me a one-page website for my bakery", not "Email help" or "Something else". Never a task that needs a',
       "connector that is not connected; never a task that sends, pays or deletes anything without saying so plainly.",
       "Mark a task copy: true when it is a message for the user to send you from their phone (WhatsApp, Telegram or",
-      "Discord): the button copies it instead. Do not repeat the tasks in your text, and write nothing after this call.",
+      "Discord): the button copies it instead. Do not repeat the tasks in your text. This call ends your turn, so write",
+      "everything you have to say before it.",
       "Never call it in a reply to a message that came from a chat app: only this app's chat shows the buttons.",
     ].join("\n"),
     inputSchema: {
@@ -78,7 +79,7 @@ export const SUGGESTED_TASKS_TOOLS: ToolDefinition[] = [
           : "";
       return host.ok(
         `The user sees ${tasks.length} button${tasks.length === 1 ? "" : "s"} under your reply.${dropped} ` +
-          "Your reply is complete: write nothing more in this turn."
+          "If you have not written your reply yet, write it now; never repeat what you already wrote."
       );
     },
   },
