@@ -283,6 +283,8 @@ export default function (pi: ExtensionAPI) {
 
     const entry = running.get(event.toolCallId);
     if (!entry) return;
+    // tool_result comes before tool_execution_end, which then finds nothing.
+    clearTimeout(entry.timer);
     running.delete(event.toolCallId);
     if (!entry.overran) return;
 

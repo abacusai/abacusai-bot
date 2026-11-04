@@ -2964,6 +2964,11 @@
         "YOLO": "No approvals"
       }
     },
+    "appLine": {
+      "testRepair": "I test non sono riusciti dopo la mia modifica, li sto correggendo.",
+      "testRepairLimit": "Ho smesso di correggere i test: questa riparazione automatica ha raggiunto il limite. Non verrà eseguito altro finché non invii un messaggio.",
+      "testsLeftAlone": "Alcuni test non riescono, ma non ho potuto stabilire se la causa sia la mia modifica, quindi non li ho toccati."
+    },
     "notice": {
       "dismiss": "Dismiss",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",

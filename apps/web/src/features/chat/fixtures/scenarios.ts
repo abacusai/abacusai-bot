@@ -143,6 +143,47 @@ const botQueue = (): RelayEvent[] =>
     }),
   ]);
 
+/** The verify loop's line, as the agent writes it: a tagged user-role message. */
+const appLine = (
+  id: string,
+  kind: "test-repair" | "test-repair-limit",
+  text: string
+): StreamChunk[] =>
+  b.text(id, "user", text, {
+    metadata: { abacus: { userText: { operator: { kind } } } },
+  });
+
+const testRepair = (limit: boolean): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn("r1", "u1", "Make add() take a third argument.", at(2)),
+    ...b.text(
+      "a1",
+      "assistant",
+      "Done: `add` now takes a third argument, defaulting to 0."
+    ),
+    ...appLine(
+      "l1",
+      "test-repair",
+      "Tests failed after my change, fixing them."
+    ),
+    ...b.text(
+      "a2",
+      "assistant",
+      limit
+        ? "I couldn't finish the fix: `test_add_negative` still fails. The change to `add` is in `calc.py`."
+        : "My change broke `test_add_negative`: the default swallowed the sign. Fixed in `calc.py`, and the tests pass."
+    ),
+    ...(limit
+      ? appLine(
+          "l2",
+          "test-repair-limit",
+          "I stopped fixing the tests: this automatic repair reached its limit. Nothing else runs until you send a message."
+        )
+      : []),
+    b.runFinished("r1"),
+  ]);
+
 const botBanners = (): RelayEvent[] =>
   seqd([
     ...b.sessionReady("inc-1", "YOLO"),
@@ -1008,6 +1049,18 @@ export const SCENARIOS: Scenario[] = [
     events: botUnread,
   },
   { id: "bot-banners", canvas: ["BotStates"], skin: "bot", events: botBanners },
+  {
+    id: "session-test-repair",
+    canvas: [],
+    skin: "session",
+    events: () => testRepair(false),
+  },
+  {
+    id: "session-test-repair-limit",
+    canvas: [],
+    skin: "session",
+    events: () => testRepair(true),
+  },
   {
     id: "bot-model-chip",
     canvas: ["BotDetails"],

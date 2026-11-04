@@ -2964,6 +2964,11 @@
         "YOLO": "Onay yok"
       }
     },
+    "appLine": {
+      "testRepair": "Değişikliğimden sonra testler başarısız oldu, düzeltiyorum.",
+      "testRepairLimit": "Testleri düzeltmeyi bıraktım: bu otomatik onarım sınırına ulaştı. Siz mesaj gönderene kadar başka bir şey çalışmayacak.",
+      "testsLeftAlone": "Testler başarısız oluyor, ancak nedeninin değişikliğim olup olmadığını anlayamadım, bu yüzden dokunmadım."
+    },
     "notice": {
       "dismiss": "Kapat",
       "historyForeign": "Bu konuşma uygulamanın daha yeni bir sürümüyle kaydedildi, bu yüzden bir kısmı burada görünmeyebilir.",

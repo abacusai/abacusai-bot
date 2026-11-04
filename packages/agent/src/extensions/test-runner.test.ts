@@ -226,3 +226,106 @@ describe("the command it builds for Windows", () => {
     expect(command()).toContain(`&& ./build/${target}`);
   });
 });
+
+describe("reading which tests failed", () => {
+  const frameworkFor = (files: Record<string, string>) => {
+    for (const [file, contents] of Object.entries(files)) write(file, contents);
+
+    return detectFramework(cwd, "linux", "posix");
+  };
+  const vitest = { "package.json": '{"devDependencies":{"vitest":"*"}}' };
+  const jest = { "package.json": '{"devDependencies":{"jest":"*"}}' };
+
+  // Output as each runner really prints it, cut to the lines that matter.
+  it.each([
+    [
+      "pytest: tests, and a module that would not import",
+      { "pytest.ini": "" },
+      "FAILED test_a.py::test_bad - assert 1 == 2\nFAILED test_a.py::test_p[a b] - x\nERROR test_b.py\n2 failed, 1 passed in 0.1s",
+      ["test_a.py::test_bad", "test_a.py::test_p[a", "test_b.py"],
+    ],
+    [
+      "pytest: no pytest installed names nothing",
+      { "pytest.ini": "" },
+      "/usr/bin/python3: No module named pytest",
+      [],
+    ],
+    [
+      "pytest: a bad flag names nothing",
+      { "pytest.ini": "" },
+      "ERROR: usage: pytest [options]\nERROR: file or directory not found: x",
+      [],
+    ],
+    [
+      "vitest: a test, and a file that would not load",
+      vitest,
+      " FAIL  src/b.test.js [ src/b.test.js ]\nError: Cannot find module\n FAIL  src/a.test.js > math > adds\nAssertionError: x\n Tests  1 failed | 1 passed (2)",
+      ["src/b.test.js [ src/b.test.js ]", "src/a.test.js > math > adds"],
+    ],
+    [
+      "vitest: a broken config names nothing",
+      vitest,
+      "failed to load config from vitest.config.ts\nError: Cannot find package 'x'",
+      [],
+    ],
+    [
+      "jest: a file's timing varies, its tests do not",
+      jest,
+      "FAIL ./a.test.js (5.2 s)\n  ● math › adds\n\n  ● Console\nFAIL ./b.test.js\n  ● Test suite failed to run\n\nTests: 1 failed, 1 passed, 2 total",
+      [
+        "./a.test.js",
+        "./a.test.js › math › adds",
+        "./b.test.js",
+        "./b.test.js › Test suite failed to run",
+      ],
+    ],
+    [
+      "jest: a bad config names nothing",
+      jest,
+      "  ● Validation Error:\n\n  Module x in the setupFiles option was not found.",
+      [],
+    ],
+    [
+      "go: tests, subtests, and a package that did not build",
+      { "go.mod": "" },
+      "--- FAIL: TestA (0.00s)\n    --- FAIL: TestB/sub (0.00s)\nFAIL\nFAIL\tex\t0.003s\nFAIL\tex/bad [build failed]\nFAIL",
+      ["TestA", "TestB/sub", "FAIL\tex/bad [build failed]"],
+    ],
+    [
+      "go: no module names nothing",
+      { "go.mod": "" },
+      "go: cannot find main module, but found .git/config",
+      [],
+    ],
+    [
+      "cargo: tests, and a crate that did not build",
+      { "Cargo.toml": "" },
+      "test tests::adds ... FAILED\ntest tests::ok ... ok\nerror: could not compile `ex` (lib test) due to 1 previous error",
+      ["tests::adds", "error: could not compile `ex`"],
+    ],
+    [
+      "gradle: a test, never a task",
+      { gradlew: "" },
+      "> Task :test FAILED\nCalcTest > adds() FAILED\n    org.opentest4j.AssertionFailedError",
+      ["CalcTest > adds()"],
+    ],
+  ])("%s", (_name, files, output, expected) => {
+    expect(frameworkFor(files)?.failingTests?.(output)).toEqual(expected);
+  });
+
+  it("cannot read a Catch2 run per test", () => {
+    const catch2 = frameworkFor({ "CMakeLists.txt": "" });
+
+    expect(catch2?.failingTests).toBeUndefined();
+  });
+
+  it("knows a pytest run that gave up early", () => {
+    const pytest = frameworkFor({ "pytest.ini": "" });
+
+    expect(pytest?.stoppedEarly?.("stopping after 25 failures")).toBe(true);
+    expect(
+      pytest?.stoppedEarly?.("Interrupted: 1 error during collection")
+    ).toBe(true);
+    expect(pytest?.stoppedEarly?.("1 failed, 2 passed")).toBe(false);
+  });
+});

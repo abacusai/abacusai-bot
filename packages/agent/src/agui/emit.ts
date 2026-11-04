@@ -28,6 +28,7 @@ import {
   reasoningMessageId,
   resultMessageId,
   steerMessageId,
+  appLineMessageId,
   nativeId,
   toolKey,
   userMessageId,
@@ -119,6 +120,7 @@ export class AguiEmitter {
   private failedMessageId: string | null = null;
   private fallbackCount = 0;
   private steerCount = 0;
+  private appLineCount = 0;
 
   // -------------------------------------------------------------- tool state
   private readonly tools = new Map<string, ToolState>();
@@ -308,6 +310,18 @@ export class AguiEmitter {
     if (!this.runActive()) return [];
 
     switch (event.type) {
+      case "app_line":
+        this.appLineCount += 1;
+
+        return [
+          ...this.closeAssistant(),
+          ...this.userMessage(
+            appLineMessageId(this.ctx.incarnation, this.appLineCount),
+            event.text,
+            { operator: { kind: event.kind } }
+          ),
+        ];
+
       case "message_open":
         return this.messageOpen(
           event.key,
@@ -583,16 +597,8 @@ export class AguiEmitter {
 
       case "user_message_steered": {
         if (!this.runActive()) return [];
-        const out = [...this.closeReasoning()];
+        const out = this.closeAssistant();
 
-        if (this.assistant != null) {
-          out.push(
-            aguiEvent(EventType.TEXT_MESSAGE_END, {
-              messageId: this.assistant.id,
-            })
-          );
-          this.assistant = null;
-        }
         out.push(custom("queue.steered", { content: event.content }));
         this.steerCount += 1;
         out.push(
@@ -898,6 +904,20 @@ export class AguiEmitter {
       aguiEvent(EventType.REASONING_MESSAGE_END, { messageId: id }),
       aguiEvent(EventType.REASONING_END, { messageId: id }),
     ];
+  }
+
+  /** Whatever the assistant has open, closed so another message can start. */
+  private closeAssistant(): AguiEvent[] {
+    const out = [...this.closeReasoning()];
+
+    if (this.assistant != null) {
+      out.push(
+        aguiEvent(EventType.TEXT_MESSAGE_END, { messageId: this.assistant.id })
+      );
+      this.assistant = null;
+    }
+
+    return out;
   }
 
   private userMessage(

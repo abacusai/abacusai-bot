@@ -2437,8 +2437,11 @@ export class ServiceHost {
     updateSessionLabel: (workspaceId, sessionId, label) => {
       this.updateAgentSessionLabel(workspaceId, sessionId, label);
     },
-    startSession: (workspaceId, sessionId, mode) =>
-      this.startAgentSession({ workspaceId, sessionId, mode }),
+    startSession: (workspaceId, sessionId, mode) => {
+      // A chat app can't show the test repair's line, nor Stop it.
+      this.laneEnv.set(sessionId, { ABACUSAI_BOT_VERIFY_RETRIES: "0" });
+      return this.startAgentSession({ workspaceId, sessionId, mode });
+    },
     sendMessage: (workspaceId, sessionId, message, userText) => {
       void this.sendAgentMessage({ workspaceId, sessionId, message, userText });
     },

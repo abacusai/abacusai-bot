@@ -2964,6 +2964,11 @@
         "YOLO": "No approvals"
       }
     },
+    "appLine": {
+      "testRepair": "Tes gagal setelah perubahan saya, sedang saya perbaiki.",
+      "testRepairLimit": "Saya berhenti memperbaiki tes: perbaikan otomatis ini mencapai batasnya. Tidak ada yang berjalan lagi sampai Anda mengirim pesan.",
+      "testsLeftAlone": "Tes gagal, tetapi saya tidak bisa memastikan apakah perubahan saya penyebabnya, jadi saya membiarkannya."
+    },
     "notice": {
       "dismiss": "Dismiss",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",

@@ -2964,6 +2964,11 @@
         "YOLO": "No approvals"
       }
     },
+    "appLine": {
+      "testRepair": "変更後にテストが失敗したため、修正しています。",
+      "testRepairLimit": "テストの修正を停止しました。この自動修正は上限に達しました。メッセージを送るまで、これ以上は実行されません。",
+      "testsLeftAlone": "テストが失敗していますが、私の変更が原因か判断できなかったため、そのままにしました。"
+    },
     "notice": {
       "dismiss": "Dismiss",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",

@@ -23,7 +23,10 @@ export interface UserTextTags {
       | "auto-reply-reminder"
       | "environment-notice"
       | "routine-editor"
-      | "user-reaction";
+      | "user-reaction"
+      | "test-repair"
+      | "test-repair-limit"
+      | "tests-left-alone";
     /** UTF-16 offset of the human text; absent means the whole turn is hidden. */
     visibleFrom?: number;
   };

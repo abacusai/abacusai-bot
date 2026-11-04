@@ -2964,6 +2964,11 @@
         "YOLO": "No approvals"
       }
     },
+    "appLine": {
+      "testRepair": "Tests failed after my change, fixing them.",
+      "testRepairLimit": "I stopped fixing the tests: this automatic repair reached its limit. Nothing else runs until you send a message.",
+      "testsLeftAlone": "Tests are failing, but I couldn't tell whether my change caused it, so I left them alone."
+    },
     "notice": {
       "dismiss": "Dismiss",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
