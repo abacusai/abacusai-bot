@@ -234,19 +234,18 @@ export const ModeChip = ({
 /** Groups whose label names a collection, not the model's provider. */
 const COLLECTION_GROUPS = new Set(["default", "favorites", "favourites"]);
 
-/** The provider group listing the chosen model (or, for App default, the resolved one). */
-const providerGroupOf = (binding: ModelChipBinding): ModelGroup | null => {
-  const id = binding.value ?? "";
-  const providers = binding.groups.filter((g) => !COLLECTION_GROUPS.has(g.id));
-  return (
-    providers.find((group) => group.items.some((item) => item.id === id)) ??
-    (binding.value == null
-      ? (providers.find((group) =>
-          group.items.some((item) => item.label === binding.label)
-        ) ?? null)
-      : null)
-  );
-};
+/** The provider group listing a model. Ids only: a closed chip reads no labels. */
+const providerGroupOf = (
+  groups: readonly ModelGroup[],
+  id: string | null | undefined
+): ModelGroup | null =>
+  id == null
+    ? null
+    : (groups.find(
+        (group) =>
+          !COLLECTION_GROUPS.has(group.id) &&
+          group.items.some((item) => item.id === id)
+      ) ?? null);
 
 /**
  * The provider group behind a row: its own group, or for a favourite (listed
@@ -257,16 +256,10 @@ const providerGroupForItem = (
   binding: ModelChipBinding,
   group: ModelGroup,
   item: ModelGroup["items"][number]
-): ModelGroup | null => {
-  if (!COLLECTION_GROUPS.has(group.id)) return group;
-  if (item.id === "")
-    return providerGroupOf({
-      ...binding,
-      value: null,
-      label: item.description ?? binding.label,
-    });
-  return providerGroupOf({ ...binding, value: item.id });
-};
+): ModelGroup | null =>
+  COLLECTION_GROUPS.has(group.id)
+    ? providerGroupOf(binding.groups, item.resolves ?? item.id)
+    : group;
 
 /** A row of the picker's list (the Combobox's item value). */
 type ModelRow =
@@ -406,15 +399,10 @@ export const ModelChip = ({
   const label = binding.label;
   // The catalogue's rows are read only while the picker is open: a closed
   // chip touches ids, never the (lazily materialised) labels.
-  const chosenProvider = open
-    ? providerGroupOf(binding)
-    : binding.value == null
-      ? null
-      : (binding.groups.find(
-          (g) =>
-            !COLLECTION_GROUPS.has(g.id) &&
-            g.items.some((item) => item.id === binding.value)
-        ) ?? null);
+  const chosenProvider = providerGroupOf(
+    binding.groups,
+    binding.value ?? binding.resolved
+  );
   const providers = binding.groups.filter((g) => !COLLECTION_GROUPS.has(g.id));
   // The rail opens on the chosen model's provider (App default's resolved
   // one); otherwise on the favourites when there are any, else the first
@@ -460,7 +448,7 @@ export const ModelChip = ({
     setQuery("");
     setRailChoice(next);
   };
-  // A group's mark; none (App default while closed) is the app's own.
+  // A group's mark; none (nothing resolved yet) is the app's own.
   const markOf = (group: ModelGroup | null): string =>
     group == null ? "abacus" : (markForProvider(group.id) ?? group.id);
   // A pin no provider lists is still what the chat runs: named, and marked.

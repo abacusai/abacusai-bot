@@ -72,7 +72,12 @@ describe("botModelGroups", () => {
       id: "default",
       label: "Default",
       items: [
-        { id: APP_DEFAULT_ITEM_ID, label: "App default", description: "GLM" },
+        {
+          id: APP_DEFAULT_ITEM_ID,
+          label: "App default",
+          description: "GLM",
+          resolves: "zai/glm",
+        },
       ],
     });
   });

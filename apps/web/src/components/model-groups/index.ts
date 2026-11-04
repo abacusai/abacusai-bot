@@ -29,6 +29,8 @@ export interface BotModelGroup {
     id: string;
     label: string;
     description?: string;
+    /** App default's row: the model it resolves to, by id. */
+    resolves?: string;
     /** Not in the account's plan: shown greyed, and choosing it upgrades. */
     locked?: { label: string; onSelect(): void };
   }>;
@@ -234,6 +236,11 @@ export const botModelGroups = (input: BotModelGroupsInput): BotModelGroup[] => {
 
   const groups: BotModelGroup[] = [];
   const defaultSub = appDefaultLabel(input.defaultModel, input.models);
+  const defaultId = resolveConfiguredModel({
+    requested: null,
+    defaultModel: input.defaultModel,
+    catalog: input.models,
+  });
   if (query === "" || labels.appDefault.toLowerCase().includes(query))
     groups.push({
       id: "default",
@@ -245,6 +252,7 @@ export const botModelGroups = (input: BotModelGroupsInput): BotModelGroup[] => {
               id: APP_DEFAULT_ITEM_ID,
               label: labels.appDefault,
               description: defaultSub,
+              ...(defaultId == null ? {} : { resolves: defaultId }),
             },
       ],
     });
