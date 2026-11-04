@@ -77,6 +77,10 @@
       "types": "./dist/sandbox/secrets.d.ts",
       "default": "./dist/sandbox/secrets.js"
     },
+    "./secret-files": {
+      "types": "./dist/secret-files.d.ts",
+      "default": "./dist/secret-files.js"
+    },
     "./tool-policy": {
       "types": "./dist/tool-policy.d.ts",
       "default": "./dist/tool-policy.js"

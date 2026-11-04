@@ -1359,6 +1359,37 @@
       "unavailable": "Could not send the invites right now. Try again in a moment."
     }
   },
+  "share": {
+    "action": "Share",
+    "title": "Share {{title}}",
+    "preparing": "Getting the preview ready…",
+    "previewLabel": "Preview of the public page",
+    "notice": "Anyone with the link can see this.",
+    "cleaned": "File paths and any keys we find are taken out first. This is exactly what people will see.",
+    "cancel": "Cancel",
+    "create": "Create public link",
+    "creating": "Creating link…",
+    "ready": "Your link is ready",
+    "linkLabel": "Public link",
+    "copy": "Copy",
+    "copied": "Copied",
+    "open": "Open",
+    "stop": "Stop sharing",
+    "stopTitle": "Stop sharing?",
+    "stopBody": "The link stops working, within a day at most. People who already opened it may have kept a copy.",
+    "stopped": "Link removed",
+    "expires": "This link ends if nobody opens it for 90 days.",
+    "links": "Shared links",
+    "linksEmpty": "Nothing shared yet. Use Share on a file the bot made.",
+    "errors": {
+      "TOO_LARGE": "This file is over the 5 MB limit for links.",
+      "TOO_MANY": "You have 50 shared links. Stop sharing one to make another.",
+      "RATE_LIMITED": "You've reached today's limit for links. Try again tomorrow.",
+      "SENSITIVE": "This file looks like it holds keys or passwords, so it can't be shared.",
+      "UNSUPPORTED": "This file can't be shared as a link.",
+      "FAILED": "Couldn't do that. Check your connection and try again."
+    }
+  },
   "routines": {
     "atLabel": "At",
     "autoRepliesLeadSidebar": "Each chat a bot answers on its own is listed under Routines in the sidebar, with its conversation. Pause keeps the grant and stops the answers.",

@@ -1359,6 +1359,37 @@
       "unavailable": "Impossible d’envoyer les invitations pour le moment. Réessayez dans un instant."
     }
   },
+  "share": {
+    "action": "Partager",
+    "title": "Partager {{title}}",
+    "preparing": "Préparation de l’aperçu…",
+    "previewLabel": "Aperçu de la page publique",
+    "notice": "Toute personne disposant du lien peut voir ceci.",
+    "cleaned": "Les chemins de fichiers et les clés détectées sont retirés au préalable. Voici exactement ce que les gens verront.",
+    "cancel": "Annuler",
+    "create": "Créer un lien public",
+    "creating": "Création du lien…",
+    "ready": "Votre lien est prêt",
+    "linkLabel": "Lien public",
+    "copy": "Copier",
+    "copied": "Copié",
+    "open": "Ouvrir",
+    "stop": "Arrêter le partage",
+    "stopTitle": "Arrêter le partage ?",
+    "stopBody": "Le lien cesse de fonctionner sous un jour au plus. Les personnes qui l’ont déjà ouvert ont pu garder une copie.",
+    "stopped": "Lien supprimé",
+    "expires": "Ce lien prend fin si personne ne l’ouvre pendant 90 jours.",
+    "links": "Liens partagés",
+    "linksEmpty": "Rien de partagé pour l’instant. Utilisez Partager sur un fichier créé par le bot.",
+    "errors": {
+      "TOO_LARGE": "Ce fichier dépasse la limite de 5 Mo pour les liens.",
+      "TOO_MANY": "Vous avez 50 liens partagés. Arrêtez d’en partager un pour en créer un autre.",
+      "RATE_LIMITED": "Vous avez atteint la limite de liens du jour. Réessayez demain.",
+      "SENSITIVE": "Ce fichier semble contenir des clés ou des mots de passe : il ne peut pas être partagé.",
+      "UNSUPPORTED": "Ce fichier ne peut pas être partagé par lien.",
+      "FAILED": "Impossible de le faire. Vérifiez votre connexion et réessayez."
+    }
+  },
   "routines": {
     "atLabel": "À",
     "autoRepliesLeadSidebar": "Chaque discussion à laquelle un bot répond automatiquement apparaît sous Routines dans la barre latérale. La pause conserve l’autorisation mais suspend les réponses.",

@@ -53,6 +53,12 @@ import {
   sendReferralWhatsappInvites,
 } from "./services/providers/abacus-referral-service";
 import {
+  createShare,
+  listShares,
+  previewShare,
+  removeShare,
+} from "./services/providers/abacus-share-service";
+import {
   fetchBillingPlan,
   fetchUpgradeUrl,
 } from "./services/providers/abacus-upgrade";
@@ -562,6 +568,10 @@ export const createHostOperations = (
     cancelAbacusAuth: () => cancelAbacusAuth(),
     cancelOpenRouterAuth: () => cancelOpenRouterAuth(),
     fetchReferralSummary: () => fetchReferralSummary(),
+    previewShare: (path: string, lang: string) => previewShare(path, lang),
+    createShare: (path: string, lang: string) => createShare(path, lang),
+    listShares: () => listShares(),
+    removeShare: (shareId: string) => removeShare(shareId),
     listReferralGmailContacts: () => listReferralGmailContacts(),
     sendReferralEmailInvites: (emails: unknown, message: unknown) =>
       sendReferralEmailInvites(emails, message),

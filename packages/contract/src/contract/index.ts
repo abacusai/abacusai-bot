@@ -26,6 +26,7 @@ import { referrals } from "./referrals";
 import { routines } from "./routines";
 import { sessions } from "./sessions";
 import { settings } from "./settings";
+import { shares } from "./shares";
 import { sites } from "./sites";
 import { skills } from "./skills";
 import { system } from "./system";
@@ -53,6 +54,7 @@ export const contract = {
   account,
   auth,
   referrals,
+  shares,
   connectors,
   mcp,
   browser,

@@ -11,6 +11,7 @@ import {
   DeliverablesCard,
   resolveWorkspacePath,
 } from "#renderer/components/file-preview";
+import { ShareRowButton } from "#renderer/components/share/share-row-button";
 import {
   turnDeliverables,
   type TurnDeliverable,
@@ -87,6 +88,9 @@ export const sessionDeliverablesCard = (
           : undefined
       }
       onOpenUrl={(item) => options.onOpenExternal(item.path)}
+      rowAction={(item) =>
+        item.isUrl ? null : <ShareRowButton path={resolve(item.path)} />
+      }
     />
   );
 };
