@@ -2,7 +2,8 @@
  * What the provider charged for the turn's LAST request, for the log. A prompt
  * cache that stops hitting is invisible otherwise; cached tokens falling to
  * zero mid-conversation means the prefix changed. The request count rides
- * along because a turn with tool rounds makes several requests.
+ * along because a turn with tool rounds makes several requests. Credits are
+ * the exception: they sum every request (the session adds them per run).
  */
 export type TurnUsage = {
   input: number;
@@ -15,6 +16,11 @@ export type TurnUsage = {
   lane?: "free";
   /** The free lane's provider that answered. */
   provider?: string;
+  /**
+   * The Abacus credits every request of the turn billed (abacus-credits.ts):
+   * absent with no Abacus request, null when one's charge is unknown.
+   */
+  credits?: number | null;
 };
 
 type UsageLike = {

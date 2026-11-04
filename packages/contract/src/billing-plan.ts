@@ -26,6 +26,7 @@ export const UPGRADE_SRCS = [
   "credits_card",
   "low_credits",
   "success_pitch",
+  "turn_credits",
   "paid_feature",
   "onboarding",
   "app_routines",

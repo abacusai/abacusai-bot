@@ -13,6 +13,7 @@ import {
   SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 
+import { addCredits, type TurnCredits, turnCredits } from "./abacus-credits.js";
 import { sponsoredRunActive } from "./abacus-endpoint.js";
 import { Allowances } from "./allowances.js";
 import { allowedPathsFromEnv } from "./allowed-paths.js";
@@ -779,6 +780,8 @@ export class AbacusBotSession {
   private malformedContinuations = 0;
   /** The provider's usage for the turn's last request, set at `agent_end`. */
   private lastTurnUsage: TurnUsage | null = null;
+  /** The Abacus credits of every run in the turn so far, added at each `agent_end`. */
+  private turnCreditsSoFar: TurnCredits;
   /** The context failure to compact around, with the turn it ended, set at `agent_end`. */
   private pendingContextCompaction: {
     failure: string;
@@ -2446,12 +2449,16 @@ export class AbacusBotSession {
               : {}),
           }
         : this.lastTurnUsage;
+    const credits = this.turnCreditsSoFar;
     this.lastTurnUsage = null;
+    this.turnCreditsSoFar = undefined;
     const end = (outcome?: TurnOutcome): void => {
       this.emitAgentEvent({
         type: "turn_complete",
         ...(outcome != null ? { outcome } : {}),
-        ...(usage != null ? { usage } : {}),
+        ...(usage != null
+          ? { usage: credits !== undefined ? { ...usage, credits } : usage }
+          : {}),
       });
       this.emitAgentEvent({
         type: "status_changed",
@@ -2470,6 +2477,15 @@ export class AbacusBotSession {
       return;
     }
     end();
+  }
+
+  /** One run's end: its last request's usage, and its credits added to the turn's. */
+  private noteRunUsage(messages: ReadonlyArray<unknown>): void {
+    this.lastTurnUsage = turnUsage(messages as never);
+    this.turnCreditsSoFar = addCredits(
+      this.turnCreditsSoFar,
+      turnCredits(messages as never)
+    );
   }
 
   /**
@@ -3116,7 +3132,7 @@ export class AbacusBotSession {
         // The end of a call this session aborted for going silent; the loop
         // in `send` decides what runs next, and the idle event waits for it.
         if (this.pendingStall != null) {
-          this.lastTurnUsage = turnUsage(event.messages as never);
+          this.noteRunUsage(event.messages);
 
           return;
         }
@@ -3160,7 +3176,7 @@ export class AbacusBotSession {
           this.pendingStreamCut = cut.kind === "ask";
         }
         if (this.pendingNetworkFailure != null || this.pendingStreamCut) {
-          this.lastTurnUsage = turnUsage(event.messages as never);
+          this.noteRunUsage(event.messages);
           this.continuingPastMalformedToolCall = false;
           this.pendingContextCompaction = null;
           this.pendingOpenLlmRotation = null;
@@ -3174,7 +3190,7 @@ export class AbacusBotSession {
         // Decided here: a continuation must suppress the idle event emitted below.
         this.continuingPastMalformedToolCall =
           this.shouldContinuePastMalformedToolCall(event.messages);
-        this.lastTurnUsage = turnUsage(event.messages as never);
+        this.noteRunUsage(event.messages);
         // A malformed call is retried on the same model, not rotated. Compaction
         // comes before rotation too: an outgrown transcript does not fit the
         // next model either, and the pool is not ordered by context window.

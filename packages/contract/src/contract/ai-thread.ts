@@ -36,6 +36,8 @@ export interface RunOutcomeRecord {
   usage?: RunTokenUsage;
   /** The run answered on the free models chosen at the credit wall. */
   freeLane?: { provider: string | null };
+  /** The Abacus credits the run's requests billed; absent when none went to Abacus or a charge is unknown. */
+  credits?: number;
   error?: AgentErrorPayload & { code?: string };
   /** The last transcript message at the terminal; null for an empty thread. */
   afterMessageId: string | null;
@@ -59,6 +61,22 @@ export const freeLaneOf = (
   return {
     provider: typeof usage.provider === "string" ? usage.provider : null,
   };
+};
+
+/**
+ * The Abacus credits a finished run billed, read off its terminal's
+ * `metadata.abacus.turnUsage.credits`; undefined when it has no known sum.
+ */
+export const creditsOf = (metadata: unknown): number | undefined => {
+  const credits = (
+    metadata as
+      | { abacus?: { turnUsage?: { credits?: unknown } } }
+      | null
+      | undefined
+  )?.abacus?.turnUsage?.credits;
+  return typeof credits === "number" && Number.isFinite(credits) && credits >= 0
+    ? credits
+    : undefined;
 };
 
 /** The run in flight at the checkpoint. */

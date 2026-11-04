@@ -3091,7 +3091,12 @@
       "done_other": "Done in {{duration}}, {{count}} steps",
       "stopped": "Stopped",
       "usage": "In {{input}} ({{cached}} cached) · Out {{output}}",
-      "done_zero": "{{duration}} 만에 완료"
+      "done_zero": "{{duration}} 만에 완료",
+      "credits_one": "{{credits}} 크레딧",
+      "credits_other": "{{credits}} 크레딧",
+      "creditsLeft_one": "{{credits}} 크레딧 · {{left}} 남음",
+      "creditsLeft_other": "{{credits}} 크레딧 · {{left}} 남음",
+      "creditsAction": "{{credits}}. 플랜과 크레딧 보기"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",

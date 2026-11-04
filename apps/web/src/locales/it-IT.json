@@ -3091,7 +3091,12 @@
       "done_other": "Done in {{duration}}, {{count}} steps",
       "stopped": "Stopped",
       "usage": "In {{input}} ({{cached}} cached) · Out {{output}}",
-      "done_zero": "Completato in {{duration}}"
+      "done_zero": "Completato in {{duration}}",
+      "credits_one": "{{credits}} credito",
+      "credits_other": "{{credits}} crediti",
+      "creditsLeft_one": "{{credits}} credito · {{left}} rimasti",
+      "creditsLeft_other": "{{credits}} crediti · {{left}} rimasti",
+      "creditsAction": "{{credits}}. Vedi il tuo piano e i crediti"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",

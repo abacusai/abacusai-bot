@@ -76,6 +76,8 @@ export const FUNNEL_STEPS = [
   "cutoff_verify",
   // The same, in the user's own chat app; the detail is the platform.
   "cutoff_chat_told",
+  // The credits line under a finished turn, clicked; the detail is the plan tier.
+  "turn_credits_clicked",
   // The Basic offer at the end of onboarding (the platform's onboarding offer).
   "onboarding_offer_shown",
   "onboarding_offer_upgrade",

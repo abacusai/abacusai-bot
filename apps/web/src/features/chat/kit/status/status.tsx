@@ -86,6 +86,7 @@ import { formatElapsed, useSeconds } from "../clock";
 import { useChatView } from "../context";
 import { toolTitle } from "../tools/tool-line";
 import { creditsExpired, useUpgradeResume } from "../upgrade-triggers";
+import { TurnCredits } from "./turn-credits";
 
 export const providerMessage = (raw = ""): string => {
   const start = raw.indexOf("{");
@@ -286,8 +287,21 @@ export const FreeLaneChip = ({ provider }: { provider: string | null }) => {
   );
 };
 
-export const RunMarker = ({ outcome }: { outcome: RunOutcomeRecord }) => {
-  const marker = <RunMarkerLine outcome={outcome} />;
+export const RunMarker = ({
+  outcome,
+  latest = false,
+}: {
+  outcome: RunOutcomeRecord;
+  latest?: boolean;
+}) => {
+  const marker = (
+    <div className="flex flex-wrap items-center gap-x-2">
+      <RunMarkerLine outcome={outcome} />
+      {outcome.kind === "success" && (
+        <TurnCredits outcome={outcome} latest={latest} />
+      )}
+    </div>
+  );
   if (outcome.kind !== "success" || outcome.freeLane == null) return marker;
   return (
     <div className="flex flex-col gap-1">

@@ -3091,7 +3091,12 @@
       "done_other": "{{duration}} içinde bitti, {{count}} adım",
       "stopped": "Durduruldu",
       "usage": "Giriş {{input}} ({{cached}} önbellekte) · Çıkış {{output}}",
-      "done_zero": "{{duration}} içinde bitti"
+      "done_zero": "{{duration}} içinde bitti",
+      "credits_one": "{{credits}} kredi",
+      "credits_other": "{{credits}} kredi",
+      "creditsLeft_one": "{{credits}} kredi · {{left}} kaldı",
+      "creditsLeft_other": "{{credits}} kredi · {{left}} kaldı",
+      "creditsAction": "{{credits}}. Planını ve kredilerini gör"
     },
     "subagent": {
       "done_one": "Bitti, {{count}} adım, {{duration}}",

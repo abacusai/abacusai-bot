@@ -3091,7 +3091,12 @@
       "done_other": "Done in {{duration}}, {{count}} steps",
       "stopped": "Stopped",
       "usage": "In {{input}} ({{cached}} cached) · Out {{output}}",
-      "done_zero": "{{duration}}で完了"
+      "done_zero": "{{duration}}で完了",
+      "credits_one": "{{credits}} クレジット",
+      "credits_other": "{{credits}} クレジット",
+      "creditsLeft_one": "{{credits}} クレジット · 残り {{left}}",
+      "creditsLeft_other": "{{credits}} クレジット · 残り {{left}}",
+      "creditsAction": "{{credits}}。プランとクレジットを見る"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",

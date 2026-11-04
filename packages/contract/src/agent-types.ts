@@ -243,6 +243,8 @@ export type AgentEvent =
         lane?: "free";
         /** The free lane's provider that answered. */
         provider?: string;
+        /** The Abacus credits the turn's requests billed; null when one's charge is unknown. */
+        credits?: number | null;
       };
     }
   // Authorship boundary: text between these belongs to the sub-agent's card,
