@@ -23,7 +23,7 @@
  * instead: whenever the user has heard nothing since the last one, built
  * files or not, the model is told to send what it has so far. Credits: a session on
  * billed Abacus credits with under a tenth left is told once, unseen, to wrap
- * up and hand over. Temperature (ABACUSAI_BOT_TEMPERATURE, default 0.3, "off"
+ * up and hand over; only with someone in the chat (nobodyPresent). Temperature (ABACUSAI_BOT_TEMPERATURE, default 0.3, "off"
  * to disable) when unset.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -181,6 +181,13 @@ const billedAbacus = (model: unknown): boolean => {
   const choice = model as { provider?: string; free?: boolean } | undefined;
   return choice?.provider === "abacus" && choice.free !== true;
 };
+
+/**
+ * A turn nobody is in the chat for (a routine's run, a bot answering a bot):
+ * there is no one to wrap up for, and a run told to wrap up skips its job.
+ */
+const nobodyPresent = (): boolean =>
+  process.env.ABACUSAI_BOT_NOBODY_PRESENT === "1";
 
 /** The tool that hands work over, under its own name or a server's prefix. */
 const isPresentTool = (name: string): boolean =>
@@ -340,6 +347,7 @@ export default function budgets(
     const balance = hostCreditBalance();
     if (
       !creditsNudged &&
+      !nobodyPresent() &&
       billedAbacus(ctx.model) &&
       balance != null &&
       balance.remaining < balance.granted * CREDITS_LOW_SHARE

@@ -860,6 +860,7 @@
     "upsellTitle": "Unlock the full potential on desktop and web",
     "levelUpTitle": "Prêt pour le niveau suivant ?",
     "progress": "{{remaining}} crédits restants sur {{total}}",
+    "routinesHeld": "Vos routines attendent des crédits.",
     "used": "Crédits utilisés",
     "lowTitle": "Vos crédits s'épuisent",
     "outTitle": "Vous avez utilisé vos crédits gratuits",
@@ -1590,6 +1591,12 @@
       "other": "Paused.",
       "denied": "Paused: you did not allow it.",
       "quiet": "En pause : {{runs}} exécutions d'affilée n'ont rien trouvé de nouveau, elle a donc cessé d'utiliser des crédits. Reprenez-la pour qu'elle continue de vérifier."
+    },
+    "creditHold": {
+      "title": "Vos routines attendent des crédits",
+      "notify": "Vous n'avez plus de crédits, vos routines ne s'exécuteront donc pas. Les exécutions ignorées ne coûtent rien, et elles reprennent toutes seules dès que vous avez des crédits.",
+      "note": "En attente de crédits : les exécutions sont ignorées sans frais et reprennent toutes seules dès que vous avez des crédits.",
+      "cta": "Obtenir des crédits"
     },
     "createdByAgent": "A routine was set up: {{name}}.",
     "frequent": "S'exécute {{times}} fois par jour, et chaque exécution consomme des crédits : à ce rythme, les crédits d'un mois peuvent être épuisés en quelques jours. Si plusieurs exécutions d'affilée ne trouvent rien de nouveau, elle se met en pause.",
@@ -3419,7 +3426,8 @@
       "webhook": "Webhook",
       "manual": "On demand",
       "scheduled": "Scheduled",
-      "waiting": "En attente de connexion"
+      "waiting": "En attente de connexion",
+      "waiting-credits": "En attente de crédits"
     },
     "outcomes": {
       "running": "Running",
@@ -3427,6 +3435,7 @@
       "failed": "Failed",
       "skipped": "Skipped",
       "skipped-offline": "Ignorée : hors ligne",
+      "skipped-credits": "Ignorée : plus de crédits",
       "offline": "Abacus injoignable",
       "interrupted": "Interrompue",
       "unknown": "Unknown",
@@ -4542,6 +4551,8 @@
       "link": "Passez à l'offre supérieure ici : {{link}}",
       "mobileApp": "Une fois votre forfait amélioré, tout fonctionne pleinement sur votre téléphone dans l'app ChatLLM.",
       "repeat": "Toujours en pause : {{link}}",
+      "routinesOnHold": "Vos routines se sont arrêtées car vos crédits sont épuisés. Les exécutions ignorées ne coûtent rien, et elles reprennent toutes seules dès que vous avez des crédits.",
+      "routinesTopUp": "Ajoutez des crédits pour les relancer : {{link}}",
       "paidOut": "Je me suis mis en pause car les crédits de ce mois-ci sont épuisés. Ajoutez des crédits pour continuer : {{link}}",
       "paidOutUpgrade": "Je me suis mis en pause car les crédits de ce mois-ci sont épuisés. Passez à {{plan}} ({{price}}) pour plus de crédits chaque mois : {{link}}",
       "paidUpgrade": "Ou passez à {{plan}} ({{price}}) pour plus de crédits chaque mois : {{link}}",

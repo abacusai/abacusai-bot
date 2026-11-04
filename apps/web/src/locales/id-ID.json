@@ -860,6 +860,7 @@
     "upsellTitle": "Unlock the full potential on desktop and web",
     "levelUpTitle": "Siap naik level?",
     "progress": "Tersisa {{remaining}} dari {{total}} kredit",
+    "routinesHeld": "Rutinitas Anda menunggu kredit.",
     "used": "Kredit terpakai",
     "lowTitle": "Kredit Anda hampir habis",
     "outTitle": "Kredit gratis Anda sudah terpakai",
@@ -1590,6 +1591,12 @@
       "other": "Paused.",
       "denied": "Paused: you did not allow it.",
       "quiet": "Dijeda: {{runs}} kali berturut-turut tidak menemukan hal baru, jadi berhenti memakai kredit. Lanjutkan agar terus memeriksa."
+    },
+    "creditHold": {
+      "title": "Rutinitas Anda menunggu kredit",
+      "notify": "Kredit Anda habis, jadi rutinitas Anda tidak akan berjalan. Proses yang dilewati tidak dikenai biaya, dan akan berjalan lagi dengan sendirinya saat Anda punya kredit.",
+      "note": "Menunggu kredit: proses dilewati tanpa biaya dan berjalan lagi dengan sendirinya saat Anda punya kredit.",
+      "cta": "Dapatkan kredit"
     },
     "createdByAgent": "A routine was set up: {{name}}.",
     "frequent": "Berjalan {{times}} kali sehari, dan setiap jalannya memakai kredit: dengan laju ini, kredit sebulan bisa habis dalam beberapa hari. Jika beberapa kali berturut-turut tidak menemukan hal baru, rutinitas ini berhenti sendiri.",
@@ -3419,7 +3426,8 @@
       "webhook": "Webhook",
       "manual": "On demand",
       "scheduled": "Scheduled",
-      "waiting": "Menunggu koneksi"
+      "waiting": "Menunggu koneksi",
+      "waiting-credits": "Menunggu kredit"
     },
     "outcomes": {
       "running": "Running",
@@ -3427,6 +3435,7 @@
       "failed": "Failed",
       "skipped": "Skipped",
       "skipped-offline": "Dilewati: offline",
+      "skipped-credits": "Dilewati: kredit habis",
       "offline": "Tidak dapat menjangkau Abacus",
       "interrupted": "Terputus",
       "unknown": "Unknown",
@@ -4542,6 +4551,8 @@
       "link": "Upgrade di sini: {{link}}",
       "mobileApp": "Setelah upgrade, semuanya berjalan penuh di ponselmu lewat aplikasi ChatLLM.",
       "repeat": "Masih berhenti: {{link}}",
+      "routinesOnHold": "Rutinitas Anda berhenti karena kredit Anda habis. Proses yang dilewati tidak dikenai biaya, dan akan berjalan lagi dengan sendirinya saat Anda punya kredit.",
+      "routinesTopUp": "Tambahkan kredit untuk menjalankannya lagi: {{link}}",
       "paidOut": "Aku berhenti sementara karena kredit bulan ini sudah habis. Tambahkan kredit untuk lanjut: {{link}}",
       "paidOutUpgrade": "Aku berhenti sementara karena kredit bulan ini sudah habis. Naik ke {{plan}} ({{price}}) untuk kredit lebih banyak setiap bulan: {{link}}",
       "paidUpgrade": "Atau naik ke {{plan}} ({{price}}) untuk kredit lebih banyak setiap bulan: {{link}}",

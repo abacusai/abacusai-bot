@@ -17,6 +17,7 @@ import {
 } from "../providers/credit-thresholds";
 import {
   creditWallOf,
+  routineStopsAtWall,
   wallAfterAccountRead,
   wallAfterError,
   wallMoved,
@@ -245,6 +246,24 @@ describe("the credit wall a routine meets", () => {
         1_000 + DAY
       )
     ).toEqual({ creditsExhaustedAt: 1_000 + DAY, freeLaneChosenAt: null });
+  });
+
+  it("stops a fire only while the wall stands and the free models were not chosen", () => {
+    const empty = { remaining: 0, granted: 100, at: 1_000 };
+    const funded = { ...empty, remaining: 40 };
+    const stale = 1_000 + DAY + 1;
+    const wall = { exhaustedAt: 1_000, freeLaneChosenAt: null };
+    expect(routineStopsAtWall(wall, null, 2_000)).toBe(true);
+    expect(
+      routineStopsAtWall({ ...wall, exhaustedAt: null }, empty, 2_000)
+    ).toBe(false);
+    expect(
+      routineStopsAtWall({ ...wall, freeLaneChosenAt: 1_500 }, null, 2_000)
+    ).toBe(false);
+    // Past its day the wall is only as good as the account.
+    expect(routineStopsAtWall(wall, empty, stale)).toBe(true);
+    expect(routineStopsAtWall(wall, funded, stale)).toBe(false);
+    expect(routineStopsAtWall(wall, null, stale)).toBe(false);
   });
 
   it("lifts once a fresh account read shows credits again", () => {

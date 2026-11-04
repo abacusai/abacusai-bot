@@ -19,6 +19,8 @@ export interface RoutineRunRecord {
   outcome: "completed" | "failed" | "offline" | "interrupted";
   /** Everything the run said, assistant text only. */
   reply: string;
+  /** Why it stopped partway, when something outside the run stopped it. */
+  stopped?: string;
 }
 
 /** The app's own folder for a routine, used when it has no project. */
@@ -131,6 +133,7 @@ export const recordRoutineRun = (
     `# Run at ${record.startedAt}`,
     "",
     `- Outcome: ${record.outcome}`,
+    ...(record.stopped != null ? [`- Stopped: ${record.stopped}`] : []),
     `- Ended: ${record.endedAt}`,
     `- Session: ${record.sessionId}`,
     "",

@@ -132,6 +132,25 @@ describe("R5-T10 attempt history", () => {
       sessionId: null,
     });
   });
+  it("shows a fire the credits kept from running as its own", () => {
+    const row = fixtureRoutines()[0]!;
+    row.recentRuns = [
+      {
+        id: "held",
+        kind: "skipped-credits",
+        at: 2,
+        trigger: "schedule",
+        result: "skipped: out of Abacus.AI credits",
+        sessionId: null,
+        attemptId: null,
+      },
+    ];
+    expect(runsView(row, [])[0]).toMatchObject({
+      outcome: "skipped-credits",
+      sessionId: null,
+    });
+    expect(routineState(row, [], [])).toBe("waiting-credits");
+  });
   it("shows a fire the network kept from running, and a run it cut short, as their own", () => {
     const row = fixtureRoutines()[0]!;
     row.recentRuns = [

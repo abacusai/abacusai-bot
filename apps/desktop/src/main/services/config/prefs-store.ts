@@ -62,6 +62,7 @@ const DEFAULTS: PrefsValues = {
   recentFolders: [],
   creditsExhaustedAt: null,
   freeLaneChosenAt: null,
+  routineCreditHold: null,
   creditThresholds: {},
   successPitch: {},
   browserHomepage: null,

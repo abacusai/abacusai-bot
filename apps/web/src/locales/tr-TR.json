@@ -860,6 +860,7 @@
     "upsellTitle": "Pro ile daha fazlasını yap",
     "levelUpTitle": "Bir sonraki seviyeye hazır mısın?",
     "progress": "{{remaining}} / {{total}} kredi kaldı",
+    "routinesHeld": "Rutinleriniz kredi bekliyor.",
     "used": "Kullanılan krediler",
     "lowTitle": "Kredilerin azalıyor",
     "outTitle": "Ücretsiz kredilerini kullandın",
@@ -1590,6 +1591,12 @@
       "other": "Duraklatıldı.",
       "denied": "Duraklatıldı: izin vermedin.",
       "quiet": "Duraklatıldı: art arda {{runs}} çalıştırmada yeni bir şey bulunamadı, bu yüzden kredi kullanmayı bıraktı. Kontrol etmeye devam etmesi için sürdürün."
+    },
+    "creditHold": {
+      "title": "Rutinleriniz kredi bekliyor",
+      "notify": "Krediniz bitti, bu yüzden rutinleriniz çalışmayacak. Atlanan çalıştırmalar ücretsizdir ve krediniz olduğunda kendiliğinden yeniden başlar.",
+      "note": "Kredi bekleniyor: çalıştırmalar ücretsiz atlanır ve krediniz olduğunda kendiliğinden yeniden başlar.",
+      "cta": "Kredi al"
     },
     "createdByAgent": "Bir rutin ayarlandı: {{name}}.",
     "frequent": "Günde {{times}} kez çalışır ve her çalışma kredi harcar: bu hızla bir aylık krediler birkaç günde bitebilir. Art arda birkaç çalışma yeni bir şey bulamazsa kendini duraklatır.",
@@ -3419,7 +3426,8 @@
       "webhook": "Webhook",
       "manual": "İsteğe bağlı",
       "scheduled": "Zamanlandı",
-      "waiting": "Bağlantı bekleniyor"
+      "waiting": "Bağlantı bekleniyor",
+      "waiting-credits": "Kredi bekleniyor"
     },
     "outcomes": {
       "running": "Çalışıyor",
@@ -3427,6 +3435,7 @@
       "failed": "Başarısız",
       "skipped": "Atlandı",
       "skipped-offline": "Atlandı: çevrimdışı",
+      "skipped-credits": "Atlandı: kredi kalmadı",
       "offline": "Abacus'a ulaşılamadı",
       "interrupted": "Kesintiye uğradı",
       "unknown": "Bilinmiyor",
@@ -4542,6 +4551,8 @@
       "link": "Buradan yükselt: {{link}}",
       "mobileApp": "Yükselttiğinde her şey telefonundaki ChatLLM uygulamasında eksiksiz çalışır.",
       "repeat": "Hâlâ duraklatıldı: {{link}}",
+      "routinesOnHold": "Krediniz bittiği için rutinleriniz durdu. Atlanan çalıştırmalar ücretsizdir ve krediniz olduğunda kendiliğinden yeniden başlar.",
+      "routinesTopUp": "Yeniden başlatmak için kredi ekleyin: {{link}}",
       "paidOut": "Bu ayın kredileri bittiği için durakladım. Devam etmek için kredi ekle: {{link}}",
       "paidOutUpgrade": "Bu ayın kredileri bittiği için durakladım. Her ay daha fazla kredi için {{plan}} planına geç ({{price}}): {{link}}",
       "paidUpgrade": "Ya da her ay daha fazla kredi için {{plan}} planına geç ({{price}}): {{link}}",

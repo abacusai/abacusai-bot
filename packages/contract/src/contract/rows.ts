@@ -20,7 +20,11 @@ import type {
   CreditThresholdMark,
 } from "../credit-thresholds";
 import type { DeliverableOfferCard } from "../deliverable-offer";
-import type { RoutineListItem, RoutineRun } from "../routines";
+import type {
+  RoutineCreditHold,
+  RoutineListItem,
+  RoutineRun,
+} from "../routines";
 import type { SuccessPitchCard, SuccessPitchMark } from "../success-pitch";
 
 /** Random per main-process start; seqs compare only within one epoch. */
@@ -167,6 +171,8 @@ export interface PrefsRow {
   creditsExhaustedAt: number | null;
   /** When the user chose the free models at the credit wall; see credit-wall.ts. */
   freeLaneChosenAt?: number | null;
+  /** Routines waiting for credits; see RoutineCreditHold. */
+  routineCreditHold?: RoutineCreditHold | null;
   /** Per account (creditAccountKey): the free grant's latest milestone, stamped by main. */
   creditThresholds?: Record<string, CreditThresholdMark>;
   /** Per account (creditAccountKey): the success pitch owed, stamped by main. */

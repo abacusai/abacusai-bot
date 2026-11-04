@@ -242,6 +242,7 @@ export const fixturePrefs = (overrides: Partial<PrefsRow> = {}): PrefsRow => ({
   recentFolders: [],
   creditsExhaustedAt: null,
   freeLaneChosenAt: null,
+  routineCreditHold: null,
   creditThresholds: {},
   successPitch: {},
   browserHomepage: null,

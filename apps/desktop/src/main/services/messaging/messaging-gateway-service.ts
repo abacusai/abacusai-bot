@@ -51,6 +51,7 @@ import {
 import {
   ABACUS_BUY_CREDITS_URL,
   chatLineForCreditThreshold,
+  chatLineForRoutinesOnHold,
   chatLineForSuccessPitch,
   chatFailureOf,
   chatReplyForFailure,
@@ -1830,6 +1831,20 @@ export class MessagingGatewayService {
   }
 
   /**
+   * Routines are waiting for credits: one line in the user's own chat, on
+   * the first app linked. No turn to answer, so no route is needed. Whether
+   * it went; false with no chat app linked.
+   */
+  async tellRoutinesOnHold(): Promise<boolean> {
+    const own = [...this.connectors.keys()]
+      .map((platform) => this.selfChatOf(platform))
+      .find((chat) => chat != null);
+    if (own == null) return false;
+    this.deliverToSelf(own, await this.accountLine(chatLineForRoutinesOnHold));
+    return true;
+  }
+
+  /**
    * The success pitch, once ever, in the user's own chat on the app whose
    * turn in `sessionId` just ended. Whether it went.
    */
@@ -1860,6 +1875,20 @@ export class MessagingGatewayService {
     if (own == null) return false;
     const isOwn =
       own.platform === route.platform && own.chatId === route.userId;
+    const text = await this.accountLine(line);
+    if (isOwn) this.deliver(route, text);
+    else this.deliverToSelf(own, text);
+    return true;
+  }
+
+  /** A line about the account, in the user's language, with the plan and its link. */
+  private async accountLine(
+    line: (
+      words: ChannelWords,
+      link: string,
+      billing: BillingPlan | null
+    ) => string
+  ): Promise<string> {
     const [upgradeUrl, billing] = await Promise.all([
       withinMs(fetchUpgradeUrl("channel"), UPGRADE_URL_WAIT_MS),
       withinMs(fetchBillingPlan(false), UPGRADE_URL_WAIT_MS),
@@ -1870,14 +1899,11 @@ export class MessagingGatewayService {
         this.options.appLanguage?.() ?? null
       )
     );
-    const text = line(
+    return line(
       words,
       billing?.upgrades[0]?.url ?? upgradeUrl ?? botUpgradePage("channel"),
       billing
     );
-    if (isOwn) this.deliver(route, text);
-    else this.deliverToSelf(own, text);
-    return true;
   }
 
   /** Start the next message waiting on the route's session, its own first. */

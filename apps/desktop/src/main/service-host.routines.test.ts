@@ -397,12 +397,6 @@ describe("the note a failing routine's pause records", () => {
 
   it.each([
     [
-      "credits",
-      { message: "Out of credits.", actions: [{ type: "upgrade-abacus" }] },
-      1,
-      "paused: out of Abacus.AI credits",
-    ],
-    [
       "failures",
       { message: "It broke." },
       3,

@@ -5,6 +5,10 @@ import {
 } from "@abacus-ai/contract/routines";
 import { useTranslation } from "react-i18next";
 
+import { usePrefs } from "#renderer/data/db/prefs";
+import { requestUpgradeDialog } from "#renderer/lib/upgrade-dialog";
+import { Button } from "#renderer/ui/button";
+
 import { isHosted } from "./hosted";
 
 /** A connector read, in words. */
@@ -58,6 +62,38 @@ export const RoutinePausedReason = ({ row }: { row: RoutineRow }) => {
     <p className="text-muted-foreground text-xs">
       {t(pausedReasonKey(code), { runs: ROUTINE_QUIET_RUNS_BEFORE_PAUSE })}
     </p>
+  );
+};
+
+/**
+ * A routine on this computer that keeps its schedule but skips its runs while
+ * the account is out of credits, with the way on: the upgrade dialog.
+ */
+export const RoutineCreditHoldNote = ({ row }: { row: RoutineRow }) => {
+  const { t } = useTranslation();
+  const hold = usePrefs().routineCreditHold;
+  if (hold == null || !row.enabled) return null;
+  return (
+    <div className="flex items-center justify-between gap-3 text-xs">
+      <p className="text-muted-foreground">{t("routines.creditHold.note")}</p>
+      <Button
+        size="sm"
+        variant="outline"
+        className="shrink-0"
+        onClick={() =>
+          requestUpgradeDialog(
+            {
+              kind: "credits",
+              key: `routine-credits:${hold.at}:${Date.now()}`,
+              threadId: row.id,
+            },
+            true
+          )
+        }
+      >
+        {t("routines.creditHold.cta")}
+      </Button>
+    </div>
   );
 };
 

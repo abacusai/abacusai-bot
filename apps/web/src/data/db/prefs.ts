@@ -27,6 +27,7 @@ export const DEFAULT_PREFS: Required<PrefsRow> & {
   recentFolders: [],
   creditsExhaustedAt: null,
   freeLaneChosenAt: null,
+  routineCreditHold: null,
   creditThresholds: {},
   successPitch: {},
   browserHomepage: null,

@@ -809,6 +809,7 @@
       "failed",
       "skipped",
       "skipped-offline",
+      "skipped-credits",
       "offline",
       "interrupted",
       "unknown",
@@ -860,7 +861,8 @@
       "webhook",
       "manual",
       "scheduled",
-      "waiting"
+      "waiting",
+      "waiting-credits"
     ],
     "sources": ["features/routines/sidebar.tsx"]
   },
@@ -1686,6 +1688,8 @@
     "prefix": "outcome.channel.",
     "values": [
       "wall",
+      "routinesOnHold",
+      "routinesTopUp",
       "expired",
       "offer",
       "link",

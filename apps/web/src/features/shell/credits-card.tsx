@@ -204,6 +204,11 @@ export const UpgradePromo = () => {
                   ))}
                 </ul>
               )}
+              {!held && !web && prefs.routineCreditHold != null && (
+                <p className="text-muted-foreground mt-1 text-xs">
+                  {t("creditsCard.routinesHeld")}
+                </p>
+              )}
               {held ? (
                 <p className="text-muted-foreground mt-1 text-xs">
                   {t("creditsCard.lockedBody")}

@@ -860,6 +860,7 @@
     "upsellTitle": "Unlock the full potential on desktop and web",
     "levelUpTitle": "Bereit für dein nächstes Level?",
     "progress": "Noch {{remaining}} von {{total}} Credits",
+    "routinesHeld": "Deine Routinen warten auf Credits.",
     "used": "Verbrauchte Credits",
     "lowTitle": "Deine Credits werden knapp",
     "outTitle": "Du hast deine kostenlosen Credits aufgebraucht",
@@ -1590,6 +1591,12 @@
       "other": "Paused.",
       "denied": "Paused: you did not allow it.",
       "quiet": "Pausiert: {{runs}} Läufe nacheinander haben nichts Neues gefunden, daher verbraucht sie keine Credits mehr. Setze sie fort, damit sie weiter prüft."
+    },
+    "creditHold": {
+      "title": "Deine Routinen warten auf Credits",
+      "notify": "Du hast keine Credits mehr, deshalb laufen deine Routinen nicht. Übersprungene Läufe kosten nichts, und sie starten von selbst wieder, sobald du Credits hast.",
+      "note": "Wartet auf Credits: Läufe werden kostenlos übersprungen und starten von selbst wieder, sobald du Credits hast.",
+      "cta": "Credits holen"
     },
     "createdByAgent": "A routine was set up: {{name}}.",
     "frequent": "Läuft {{times}}-mal am Tag, und jeder Lauf verbraucht Credits: In diesem Tempo können die Credits eines Monats in wenigen Tagen aufgebraucht sein. Finden mehrere Läufe nacheinander nichts Neues, pausiert sie von selbst.",
@@ -3419,7 +3426,8 @@
       "webhook": "Webhook",
       "manual": "On demand",
       "scheduled": "Scheduled",
-      "waiting": "Wartet auf Verbindung"
+      "waiting": "Wartet auf Verbindung",
+      "waiting-credits": "Wartet auf Credits"
     },
     "outcomes": {
       "running": "Running",
@@ -3427,6 +3435,7 @@
       "failed": "Failed",
       "skipped": "Skipped",
       "skipped-offline": "Übersprungen: offline",
+      "skipped-credits": "Übersprungen: keine Credits",
       "offline": "Abacus nicht erreichbar",
       "interrupted": "Unterbrochen",
       "unknown": "Unknown",
@@ -4542,6 +4551,8 @@
       "link": "Hier upgraden: {{link}}",
       "mobileApp": "Nach dem Upgrade funktioniert alles vollständig auf deinem Handy in der ChatLLM-App.",
       "repeat": "Weiterhin pausiert: {{link}}",
+      "routinesOnHold": "Deine Routinen wurden angehalten, weil deine Credits aufgebraucht sind. Übersprungene Läufe kosten nichts, und sie starten von selbst wieder, sobald du Credits hast.",
+      "routinesTopUp": "Füge Credits hinzu, um sie wieder zu starten: {{link}}",
       "paidOut": "Ich habe pausiert, weil die Credits dieses Monats aufgebraucht sind. Füge Credits hinzu, um weiterzumachen: {{link}}",
       "paidOutUpgrade": "Ich habe pausiert, weil die Credits dieses Monats aufgebraucht sind. Wechsle zu {{plan}} ({{price}}) für mehr Credits jeden Monat: {{link}}",
       "paidUpgrade": "Oder wechsle zu {{plan}} ({{price}}) für mehr Credits jeden Monat: {{link}}",

@@ -1248,6 +1248,25 @@ const reply = (
   repeat = false
 ) => chatReplyForFailure(error, "own", account, ENGLISH, OFFER, repeat);
 
+describe("routines waiting for credits", () => {
+  it("says so in the user's own chat with no turn to answer, and the plan's way on", async () => {
+    const h = harness({ self: true });
+    expect(await h.gateway.tellRoutinesOnHold()).toBe(true);
+    expect(h.sent()).toEqual([
+      [
+        "Your routines have stopped because your credits are used up. Skipped runs cost nothing, and they start again on their own when you have credits.",
+        offerLines(UPGRADE_URL),
+      ].join("\n"),
+    ]);
+  });
+
+  it("stays silent with no chat of the user's to say it in", async () => {
+    const h = harness({ selfId: null });
+    expect(await h.gateway.tellRoutinesOnHold()).toBe(false);
+    expect(h.sent()).toEqual([]);
+  });
+});
+
 describe("a credit milestone crossed in a chat-app turn", () => {
   const mark = (patch: Partial<CreditThresholdMark> = {}) =>
     ({

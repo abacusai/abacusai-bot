@@ -178,7 +178,7 @@ import {
   type UpdateMessagingPlatformRequest,
   type UpdateMessagingSettingsRequest,
 } from "@abacus-ai/contract/messaging";
-import { abacusPlanTier } from "@abacus-ai/contract/models";
+import { abacusPlanTier, OPENLLM_ID } from "@abacus-ai/contract/models";
 import {
   EntityNotFoundError,
   WORKSPACE_NOT_FOUND,
@@ -481,6 +481,8 @@ import {
 } from "./services/providers/credit-thresholds";
 import {
   creditWallOf,
+  holdLifted,
+  routineStopsAtWall,
   wallAfterAccountRead,
   wallAfterError,
   wallMoved,
@@ -1162,6 +1164,52 @@ export class ServiceHost {
       type: "credit_wall",
       ...creditWallOf(row),
     });
+    if (holdLifted(row)) this.prefs?.()?.update({ routineCreditHold: null });
+  }
+
+  /**
+   * Whether a routine's run would stop at the credit wall, read before
+   * anything starts. The wall is the server's own refusal, so it is the only
+   * threshold; the account is re-read so a top-up starts the run at once.
+   */
+  private async routineAtCreditWall(): Promise<boolean> {
+    const prefs = this.prefs?.();
+    if (prefs == null) return false;
+    const stops = (): boolean =>
+      routineStopsAtWall(
+        creditWallOf(prefs.get()),
+        creditSnapshot(),
+        Date.now()
+      );
+    if (!stops() || !(await this.routinesSpendCredits())) return false;
+    await fetchAbacusAccount(true).catch(() => null);
+    return stops();
+  }
+
+  /** Whether the model routines run on bills Abacus credits. */
+  private async routinesSpendCredits(): Promise<boolean> {
+    const model = readSettings().defaultModel ?? OPENLLM_ID;
+    if (model === OPENLLM_ID) return true;
+    if (!model.startsWith("abacus/")) return false;
+    const models = await listAvailableModels();
+    return models.find((entry) => entry.id === model)?.tier !== "free";
+  }
+
+  /**
+   * Routines are waiting for credits: said once until the credits are back,
+   * here in the user's own chat app and in the app by the prefs row.
+   */
+  private holdRoutinesForCredits(routineId: string): void {
+    const prefs = this.prefs?.();
+    if (prefs == null || prefs.get().routineCreditHold != null) return;
+    prefs.update({
+      routineCreditHold: { at: Date.now(), routineId, noticed: false },
+    });
+    void this.messagingGatewayService
+      .tellRoutinesOnHold()
+      .catch((error: unknown) => {
+        console.warn(`[routines] credit notice failed: ${String(error)}`);
+      });
   }
 
   /**
@@ -5232,12 +5280,17 @@ export class ServiceHost {
     if (session?.routineId == null || text == null) return;
     const finishedJob = getJob(session.routineId);
     if (finishedJob == null) return;
+    const creditsOut =
+      outcome === "failed" &&
+      record.error != null &&
+      ranOutOfAbacusCredits(record.error);
     recordRoutineRun(this.routineHome(finishedJob), {
       sessionId,
       startedAt: session.createdAt,
       endedAt: new Date(record.endedAt).toISOString(),
       outcome,
       reply: text.trim(),
+      ...(creditsOut ? { stopped: "out of Abacus.AI credits" } : {}),
     });
     // Not the routine's doing: a scheduled fire is made up once, never paused for.
     if (outcome === "interrupted") {
@@ -5259,9 +5312,8 @@ export class ServiceHost {
     // Offline is not the routine's failure, and a Stop is the user's: no
     // pause, no streak.
     if (outcome !== "failed" || record.kind === "stopped") return;
-    // No credits fails every fire the same way until the user tops up.
-    if (record.error != null && ranOutOfAbacusCredits(record.error))
-      this.pauseRoutine(session.routineId, ROUTINE_PAUSE_NOTES.credits);
+    // Not the routine's failure: its next fires skip until the credits are back.
+    if (creditsOut) this.holdRoutinesForCredits(session.routineId);
     else this.pauseIfFailingRepeatedly(session.routineId);
   }
 
@@ -5313,6 +5365,9 @@ export class ServiceHost {
     /** It failed for want of credits. */
     creditsOut?: boolean;
   }> {
+    // Told to the server as out of credits, which pauses it and says so.
+    if (await this.routineAtCreditWall())
+      return { outcome: "failed", text: "", creditsOut: true };
     const target = await this.ensureRoutineWorkspace(HOSTED_RUNS_FOLDER);
     if (target == null) return { outcome: "not-started", text: "" };
     const session = this.agentSessionManagerService.create(target);
@@ -6325,6 +6380,25 @@ export class ServiceHost {
       return "skipped";
     }
 
+    // Out of credits the fire skips before any session or model call. A
+    // person who pressed Run gets the wall's own card, in the run they opened.
+    if (
+      trigger !== "manual" &&
+      trigger !== "create" &&
+      (await this.routineAtCreditWall())
+    ) {
+      recordRun(jobId, ROUTINE_RESULTS.skippedCredits, trigger, {
+        id: attemptId,
+        kind: "skipped-credits",
+      });
+      this.holdRoutinesForCredits(jobId);
+      this.emitEvent({
+        type: "cronjobs-updated",
+        emittedAt: new Date().toISOString(),
+      });
+      return "skipped";
+    }
+
     // One run at a time, or a five-minute routine whose runs take eight stacks.
     if (hasRunInFlight(this.listRoutineRuns(jobId))) {
       recordRun(jobId, ROUTINE_RESULTS.skipped, trigger, {
@@ -6586,6 +6660,13 @@ export class ServiceHost {
       (this.agentSessionManagerService.isRoutineSession(sessionId) ||
         this.hostedRunSessions.has(sessionId))
         ? { ABACUSAI_BOT_ROUTINE_RUN: "1" }
+        : {}),
+      // Nobody is in this chat: a routine's run, a bot answering a bot.
+      ...(sessionId != null &&
+      (this.agentSessionManagerService.isRoutineSession(sessionId) ||
+        this.hostedRunSessions.has(sessionId) ||
+        this.isBotAskSession(sessionId))
+        ? { ABACUSAI_BOT_NOBODY_PRESENT: "1" }
         : {}),
       // Routine chats compact early; see ROUTINE_CONTEXT_CAP_TOKENS.
       ...(sessionId != null &&
