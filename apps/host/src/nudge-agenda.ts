@@ -12,6 +12,7 @@ import {
   writePhoneZone,
 } from "@abacus-ai/agent/phone-nudges";
 import { PLAN_GIVES } from "@abacus-ai/agent/plan-asks";
+import type { AbacusPlanTier } from "@abacus-ai/contract/models";
 
 import type { PendingWait } from "#main/services/agent-tools/pending-waits";
 
@@ -42,6 +43,8 @@ interface NudgeAgendaDeps {
   waits: () => Promise<PendingWait[]>;
   /** Whether Calendar or Gmail is connected, for the first brief. */
   googleConnected?: () => Promise<boolean>;
+  /** The account's plan, for the first brief's routine offer. */
+  planTier?: () => Promise<AbacusPlanTier>;
   now?: () => number;
   log?: (line: string) => void;
 }
@@ -187,6 +190,8 @@ export class NudgeAgenda {
   private scriptLang: string | null = null;
   /** Whether Calendar or Gmail is connected, read when a first brief arrives; null until read. */
   private google: boolean | null = null;
+  /** The plan is read and comes with routines; until then the first brief offers none. */
+  private routinesOnPlan = false;
   /** A pending post goes even when nothing changed. */
   private forceNext = false;
   private posting: Promise<void> = Promise.resolve();
@@ -235,7 +240,10 @@ export class NudgeAgenda {
     if (!this.running) return;
     this.save("timezone", serverValue(result.tz), writePhoneZone);
     this.save("language", serverValue(result.lang), writePhoneReplyLanguage);
-    if (carriesFirstBrief(result.messages)) void this.readGoogle();
+    if (carriesFirstBrief(result.messages)) {
+      void this.readGoogle();
+      void this.readPlan();
+    }
     if (this.posted) return;
     this.posted = true;
     void this.post(true).then(() => this.readEnabled());
@@ -276,7 +284,9 @@ export class NudgeAgenda {
       if (entry.first_brief !== true) return greeting;
       // Unread in time, the brief is the one that checks the tool list itself.
       return [
-        this.google === false ? NO_GOOGLE_BRIEF : FIRST_BRIEF,
+        this.google === false
+          ? NO_GOOGLE_BRIEF
+          : connectedBrief(this.routinesOnPlan),
         ...greeting,
       ];
     }
@@ -373,6 +383,17 @@ export class NudgeAgenda {
     }
   }
 
+  /** Whether the plan comes with routines, for the first brief; an unknown plan does not. */
+  private async readPlan(): Promise<void> {
+    if (this.deps.planTier == null) return;
+    try {
+      const tier = await this.deps.planTier();
+      this.routinesOnPlan = tier === "basic" || tier === "paid";
+    } catch (error) {
+      this.log(`[phone] plan not read: ${describe(error)}`);
+    }
+  }
+
   /** Whether the server has check-ins on, for the linked greeting. */
   private async readEnabled(): Promise<void> {
     if (!this.supported) return;
@@ -396,7 +417,13 @@ const SET_LANGUAGE_NOTE =
   "[check-ins language] No check-in language is set. Call `checkins` with op language and the code of the " +
   "language the user writes in, without mentioning it, then answer them as usual.";
 
-const FIRST_BRIEF =
+/** The first brief with Calendar or Gmail; the morning offer only on a plan with routines (`cronjob` refuses the free one). */
+const connectedBrief = (routinesOnPlan: boolean): string =>
+  FIRST_BRIEF_OPENING +
+  (routinesOnPlan ? DAILY_BRIEF_OFFER : "") +
+  FIRST_BRIEF_CLOSING;
+
+const FIRST_BRIEF_OPENING =
   "[first brief] This is the user's first time here: instead of a question, open with a short brief, all in this one " +
   "reply and in their language. Answer their greeting in a few words and greet them by first name. Call " +
   "`current_time` first and date every search from what it returns. If their calendar is connected, " +
@@ -404,10 +431,14 @@ const FIRST_BRIEF =
   "the last two days: give a number only when you know the real count, never a search's result limit, otherwise say " +
   '"a few"; then the few (at most 3) that look like they need a reply, each as the sender and a few words, skipping ' +
   "newsletters, receipts and promotions. Then offer to draft replies to those into their Gmail Drafts, saying nothing " +
-  "will be sent, and ask them to reply yes. Last, one line offering to send this brief here every morning at 8; on " +
-  "their yes, set it up with `cronjob`. A service whose tool call fails with an auth, permission or expired-token " +
-  "error is not connected: leave it out of the brief, and call `connect_connector` for it and send the link it gives " +
-  "to reconnect it. If neither is connected, greet them and call `connect_connector` for Google, sending the link it gives, " +
+  "will be sent, and ask them to reply yes. ";
+
+const DAILY_BRIEF_OFFER =
+  "Last, one line offering to send this brief here every morning at 8; on their yes, set it up with `cronjob`. ";
+
+const FIRST_BRIEF_CLOSING =
+  "A service whose tool call fails with an auth, permission or expired-token error is not connected: leave it out " +
+  "of the brief, and call `connect_connector` for it and send the link it gives to reconnect it. If neither is connected, greet them and call `connect_connector` for Google, sending the link it gives, " +
   "so you can brief them. Never send an email, and draft only after their yes.";
 
 /**
