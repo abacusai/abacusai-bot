@@ -4819,18 +4819,10 @@
       "unpin": "Sblocca"
     },
     "menu": {
-      "label": "Opzioni del canale",
-      "members": "Membri",
-      "rename": "Modifica nome e scopo",
       "delete": "Elimina canale"
     },
     "members": {
-      "title": "Membri",
       "body": "Scegli da {{min}} a {{max}} bot. Un bot che rimuovi smette di rispondere qui."
-    },
-    "rename": {
-      "title": "Modifica canale",
-      "body": "Lascia il nome vuoto per mostrare i nomi dei membri."
     },
     "delete": {
       "title": "Eliminare “{{name}}”?",
@@ -4853,7 +4845,14 @@
       "create": "Crea e aggiungi al canale",
       "dismiss": "Ignora",
       "created": "{{name}} è stato creato e si è unito al canale: apri la sua chat",
-      "dismissed": "Ignorato"
+      "dismissed": "Ignorato",
+      "inviteTitle": "Aggiungere {{name}} a questo canale?",
+      "add": "Aggiungi al canale",
+      "added": "{{name}} si è unito al canale: apri la sua chat"
+    },
+    "details": {
+      "open": "Dettagli del canale: {{name}}",
+      "title": "Dettagli del canale"
     }
   }
 }

@@ -57,14 +57,4 @@ export const useChannelThread = (channelId: string) => {
   return useQuery(channelsQueries(transport.orpc).thread(channelId));
 };
 
-/** The name a group shows: its own, else its members'. */
-export const groupTitle = (
-  channel: Pick<ChannelSummary, "name" | "memberBotIds">,
-  nameOf: (botId: string) => string | null
-): string => {
-  if (channel.name.trim().length > 0) return channel.name.trim();
-  const names = channel.memberBotIds
-    .map(nameOf)
-    .filter((name): name is string => name != null);
-  return names.join(", ");
-};
+export { channelTitle as groupTitle } from "@abacus-ai/contract/channels";

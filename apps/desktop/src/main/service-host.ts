@@ -5758,7 +5758,10 @@ export class ServiceHost {
       });
       return { id: bot.id, name: bot.name, title: bot.title };
     },
-    botNames: () => this.botService.list().map((bot) => bot.name),
+    allBots: () =>
+      this.botService
+        .list()
+        .map((bot) => ({ id: bot.id, name: bot.name, title: bot.title })),
     stopWork: (botId, channelId) => {
       const handle = this.channelTurns.get(`${channelId}|work|${botId}`);
       if (handle != null)

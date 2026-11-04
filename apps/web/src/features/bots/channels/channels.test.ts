@@ -1,8 +1,9 @@
+import { agreedItems } from "@abacus-ai/contract/channels";
 /** The channel screens' helpers: the @-mention being typed, and a channel's title. */
 import { describe, expect, it } from "vitest";
 
 import { groupTitle } from "./data";
-import { agreedItems, mentionAt } from "./parts";
+import { mentionAt } from "./parts";
 
 describe("mentionAt", () => {
   it("finds the @word at the caret", () => {

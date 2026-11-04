@@ -28,8 +28,8 @@ import {
 import { abacusBotHome } from "../../paths";
 import { answerWords } from "../bots/bot-ask";
 import {
-  agreedItemsOf,
   ownerOf,
+  agreedItems,
   MAX_DISCUSSION_ROUNDS,
   channelTitle,
   channelWorkPrompt,
@@ -98,8 +98,8 @@ export interface ChannelDeps {
     description: string;
     likeBotId: string;
   }) => Member;
-  /** Names of all the user's bots, to refuse a proposal that repeats one. */
-  botNames?: () => string[];
+  /** All the user's bots: who may be invited, and names a new bot cannot take. */
+  allBots?: () => Member[];
   /** The channel is gone, or these bots left it: their chats for it can go. */
   forgetChats?: (channelId: string, botIds: readonly string[]) => void;
   /** Something in the channel (null: the list) changed. */
@@ -336,27 +336,33 @@ export class ChannelService {
     const proposal = message?.proposal;
     if (message == null || proposal == null || proposal.status !== "proposed")
       throw new Error("That proposal was already decided.");
-    let botId: string | undefined;
+    let botId = proposal.botId;
     if (create) {
-      const createBot = this.deps.createBot;
-      if (createBot == null) throw new Error("Bots cannot be created here.");
       if (channel.memberBotIds.length >= MAX_CHANNEL_MEMBERS)
         throw new Error(
           `This channel already has ${MAX_CHANNEL_MEMBERS} bots: remove one first.`
         );
-      const made = createBot({
-        name: proposal.name,
-        title: proposal.title,
-        description: proposal.mission,
-        likeBotId: message.author.kind === "bot" ? message.author.botId : "",
-      });
-      botId = made.id;
+      if (proposal.invite === true) {
+        if (botId == null || this.deps.bot(botId) == null)
+          throw new Error(`${proposal.name} is no longer one of your bots.`);
+      } else {
+        const createBot = this.deps.createBot;
+        if (createBot == null) throw new Error("Bots cannot be created here.");
+        botId = createBot({
+          name: proposal.name,
+          title: proposal.title,
+          description: proposal.mission,
+          likeBotId: message.author.kind === "bot" ? message.author.botId : "",
+        }).id;
+      }
       this.save({
         ...this.channel(channelId),
-        memberBotIds: [...this.channel(channelId).memberBotIds, made.id],
+        memberBotIds: [...this.channel(channelId).memberBotIds, botId],
         updatedAt: this.now(),
       });
-      this.log(`created bot ${made.id} from a proposal in ${channelId}`);
+      this.log(
+        `${proposal.invite === true ? "added" : "created"} bot ${botId} from a proposal in ${channelId}`
+      );
     }
     this.deps.store.writeMessages(
       channelId,
@@ -396,7 +402,7 @@ export class ChannelService {
     const members = this.members(channel);
     const lead = members[0];
     if (lead == null) throw new Error("This channel has no bots.");
-    const items = agreedItemsOf(conclusion.text);
+    const items = agreedItems(conclusion.text);
     const userWords = `Start the team's agreed plan: ${items.map((item, index) => `${index + 1}. ${item}`).join(" ")}`;
     this.deps.store.writeMessages(
       channelId,
@@ -472,11 +478,6 @@ export class ChannelService {
       });
       this.deps.changed(channel.id);
     }
-  }
-
-  /** Whether a bot's turn in this channel is running now (for the host). */
-  isWorking(channelId: string, botId: string): boolean {
-    return this.working.get(channelId)?.has(botId) ?? false;
   }
 
   private pump(channelId: string): void {
@@ -628,6 +629,9 @@ export class ChannelService {
       me,
       members,
       decisions: channel.decisions,
+      outsiders: (this.deps.allBots?.() ?? []).filter(
+        (bot) => !channel.memberBotIds.includes(bot.id)
+      ),
       unseen,
       skipped: fresh.length - unseen.length,
       kind,
@@ -646,16 +650,22 @@ export class ChannelService {
       if (last != null) this.markSeen(channelId, botId, last.id);
       if (round.cancelled || !this.isMember(channelId, botId)) return "";
       const proposed = proposalIn(postedWords(answerWords(raw), me));
-      // A bot answering the user, or the lead summing up, may propose a bot.
+      // A bot answering the user, or the lead summing up, may suggest a bot:
+      // one of the user's not here (invite), or a new one (create).
+      const suggested = proposed.proposal;
+      const existing = (this.deps.allBots?.() ?? []).find(
+        (bot) => bot.name.toLowerCase() === suggested?.name.toLowerCase()
+      );
       const proposal =
-        (kind === "answer" || kind === "conclude") &&
-        this.deps.createBot != null &&
-        proposed.proposal != null &&
-        !(this.deps.botNames?.() ?? []).some(
-          (name) => name.toLowerCase() === proposed.proposal!.name.toLowerCase()
-        )
-          ? proposed.proposal
-          : null;
+        suggested == null || (kind !== "answer" && kind !== "conclude")
+          ? null
+          : suggested.invite
+            ? existing != null && !channel.memberBotIds.includes(existing.id)
+              ? { ...suggested, title: existing.title, botId: existing.id }
+              : null
+            : existing == null && this.deps.createBot != null
+              ? suggested
+              : null;
       const taken = workIn(proposed.words);
       // Only a bot answering the user's own message may take work on.
       const task =
@@ -676,7 +686,17 @@ export class ChannelService {
           : {}),
         ...(extra.conclusion === true ? { conclusion: true } : {}),
         ...(proposal != null
-          ? { proposal: { ...proposal, status: "proposed" as const } }
+          ? {
+              proposal: {
+                name: proposal.name,
+                title: proposal.title,
+                mission: proposal.mission,
+                status: "proposed" as const,
+                ...("botId" in proposal
+                  ? { invite: true, botId: proposal.botId }
+                  : {}),
+              },
+            }
           : {}),
       };
       this.append(channelId, message);

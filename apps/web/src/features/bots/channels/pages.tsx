@@ -9,7 +9,7 @@ import {
   MIN_CHANNEL_MEMBERS,
 } from "@abacus-ai/contract/channels";
 import type { BotRow } from "@abacus-ai/contract/contract/rows";
-import { ChevronDown, MoreHorizontal, Pin, X } from "lucide-react";
+import { ChevronDown, Pin, X } from "lucide-react";
 import { useState, type ComponentType, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -24,13 +24,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "#renderer/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "#renderer/ui/dropdown-menu";
 import { Input } from "#renderer/ui/input";
 import { Textarea } from "#renderer/ui/textarea";
 
@@ -271,9 +264,7 @@ export const GroupPage = ({
   const { bots } = useBots();
   const [replyTo, setReplyTo] = useState<ChannelMessage | null>(null);
   const [decisionsOpen, setDecisionsOpen] = useState(false);
-  const [editing, setEditing] = useState<
-    "members" | "rename" | "delete" | null
-  >(null);
+  const [editing, setEditing] = useState<"details" | "delete" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const byId = new Map<string, BotRow>(bots.map((bot) => [bot.id, bot]));
   const nameOf = (id: string): string | null => byId.get(id)?.name ?? null;
@@ -311,7 +302,14 @@ export const GroupPage = ({
   return (
     <div data-testid="channel-page" className="flex size-full flex-col">
       <TopBar>
-        <span className="flex min-w-0 items-center gap-2">
+        <button
+          type="button"
+          data-testid="channel-details-open"
+          aria-label={t("channels.details.open", { name: title })}
+          title={t("channels.details.open", { name: title })}
+          onClick={() => setEditing("details")}
+          className="hover:bg-muted flex min-w-0 items-center gap-2 rounded-lg px-1.5 py-0.5 text-start"
+        >
           <GroupFace bots={members} size={24} />
           <span className="flex min-w-0 flex-col leading-tight">
             <span
@@ -326,36 +324,7 @@ export const GroupPage = ({
               </span>
             )}
           </span>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={t("channels.menu.label")}
-                  className="size-7"
-                />
-              }
-            >
-              <MoreHorizontal className="size-4" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={() => setEditing("members")}>
-                {t("channels.menu.members")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setEditing("rename")}>
-                {t("channels.menu.rename")}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => setEditing("delete")}
-              >
-                {t("channels.menu.delete")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </span>
+        </button>
       </TopBar>
       {channel.decisions.length > 0 && (
         <div className="border-b px-4 py-2" data-testid="group-decisions">
@@ -484,30 +453,19 @@ export const GroupPage = ({
           autoFocus
         />
       </div>
-      {editing === "members" && (
-        <MembersDialog
-          open
+      {editing === "details" && (
+        <DetailsDialog
           bots={bots}
-          initial={channel.memberBotIds}
-          onClose={() => setEditing(null)}
-          onSave={(botIds) =>
-            act(transport.client.channels.update({ channelId, botIds }))
-          }
-        />
-      )}
-      {editing === "rename" && (
-        <RenameDialog
-          open
-          initial={channel.name}
-          initialAbout={channel.about ?? ""}
+          channel={channel}
           placeholder={groupTitle(
             { name: "", memberBotIds: channel.memberBotIds },
             nameOf
           )}
           onClose={() => setEditing(null)}
-          onSave={(name, about) =>
-            act(transport.client.channels.update({ channelId, name, about }))
+          onSave={(change) =>
+            act(transport.client.channels.update({ channelId, ...change }))
           }
+          onDelete={() => setEditing("delete")}
         />
       )}
       <Dialog
@@ -544,87 +502,31 @@ export const GroupPage = ({
   );
 };
 
-const MembersDialog = ({
-  open,
+/** A channel's details: its name, purpose and members, and Delete. */
+const DetailsDialog = ({
   bots,
-  initial,
-  onClose,
-  onSave,
-}: {
-  open: boolean;
-  bots: readonly BotRow[];
-  initial: readonly string[];
-  onClose(): void;
-  onSave(botIds: string[]): void;
-}) => {
-  const { t } = useTranslation();
-  const [selected, setSelected] = useState<string[]>([...initial]);
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
-    >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("channels.members.title")}</DialogTitle>
-          <DialogDescription>
-            {t("channels.members.body", {
-              min: MIN_CHANNEL_MEMBERS,
-              max: MAX_CHANNEL_MEMBERS,
-            })}
-          </DialogDescription>
-        </DialogHeader>
-        <BotPicker bots={bots} selected={selected} onChange={setSelected} />
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            {t("channels.dialog.cancel")}
-          </Button>
-          <Button
-            disabled={selected.length < MIN_CHANNEL_MEMBERS}
-            onClick={() => {
-              onSave(selected);
-              onClose();
-            }}
-          >
-            {t("channels.dialog.save")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-const RenameDialog = ({
-  open,
-  initial,
-  initialAbout,
+  channel,
   placeholder,
   onClose,
   onSave,
+  onDelete,
 }: {
-  open: boolean;
-  initial: string;
-  initialAbout: string;
+  bots: readonly BotRow[];
+  channel: { name: string; about?: string; memberBotIds: string[] };
   placeholder: string;
   onClose(): void;
-  onSave(name: string, about: string): void;
+  onSave(change: { name: string; about: string; botIds: string[] }): void;
+  onDelete(): void;
 }) => {
   const { t } = useTranslation();
-  const [name, setName] = useState(initial);
-  const [about, setAbout] = useState(initialAbout);
+  const [name, setName] = useState(channel.name);
+  const [about, setAbout] = useState(channel.about ?? "");
+  const [selected, setSelected] = useState<string[]>([...channel.memberBotIds]);
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
-    >
-      <DialogContent>
+    <Dialog open onOpenChange={(next) => !next && onClose()}>
+      <DialogContent data-testid="channel-details">
         <DialogHeader>
-          <DialogTitle>{t("channels.rename.title")}</DialogTitle>
-          <DialogDescription>{t("channels.rename.body")}</DialogDescription>
+          <DialogTitle>{t("channels.details.title")}</DialogTitle>
         </DialogHeader>
         <Input
           aria-label={t("channels.new.name")}
@@ -640,18 +542,35 @@ const RenameDialog = ({
           maxLength={500}
           onChange={(event) => setAbout(event.target.value)}
         />
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            {t("channels.dialog.cancel")}
-          </Button>
+        <p className="text-muted-foreground text-xs">
+          {t("channels.members.body", {
+            min: MIN_CHANNEL_MEMBERS,
+            max: MAX_CHANNEL_MEMBERS,
+          })}
+        </p>
+        <BotPicker bots={bots} selected={selected} onChange={setSelected} />
+        <DialogFooter className="sm:justify-between">
           <Button
-            onClick={() => {
-              onSave(name, about);
-              onClose();
-            }}
+            variant="ghost"
+            className="text-destructive"
+            onClick={onDelete}
           >
-            {t("channels.dialog.save")}
+            {t("channels.menu.delete")}
           </Button>
+          <span className="flex gap-2">
+            <Button variant="outline" onClick={onClose}>
+              {t("channels.dialog.cancel")}
+            </Button>
+            <Button
+              disabled={selected.length < MIN_CHANNEL_MEMBERS}
+              onClick={() => {
+                onSave({ name, about, botIds: selected });
+                onClose();
+              }}
+            >
+              {t("channels.dialog.save")}
+            </Button>
+          </span>
         </DialogFooter>
       </DialogContent>
     </Dialog>

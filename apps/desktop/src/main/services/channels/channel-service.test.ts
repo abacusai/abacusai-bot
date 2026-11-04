@@ -67,7 +67,7 @@ const setup = (extra: Partial<ChannelDeps> = {}) => {
       BOTS[id] = { id, name, title };
       return BOTS[id]!;
     },
-    botNames: () => Object.values(BOTS).map((bot) => bot.name),
+    allBots: () => Object.values(BOTS),
     stopTurn: vi.fn((botId: string) => {
       const turn = turns.find((entry) => entry.botId === botId);
       turn?.reject(new Error("stopped"));
@@ -671,5 +671,50 @@ describe("edge cases", () => {
     turns.at(-1)!.resolve("<reply>done</reply>");
     await flush();
     expect(texts(id).at(-1)).toBe("chief: done");
+  });
+});
+
+describe("inviting a bot not in the channel", () => {
+  it("a bot suggests one of the user's other bots; Add puts it in", async () => {
+    const { service, turns, flush, store } = setup();
+    const { id } = service.create({ botIds: ["chief", "res"] });
+    service.post(id, "Chief, we need copy for the poster");
+    await flush();
+    expect(turns[0]!.prompt).toContain(
+      "The user's other bots, not in this channel: Writer"
+    );
+    turns[0]!.resolve(
+      '<reply>Writer should do this. <invite name="Writer">Copy is their job.</invite></reply>'
+    );
+    await flush();
+    const card = store.readMessages(id)[1]!;
+    expect(card).toMatchObject({
+      text: "Writer should do this.",
+      proposal: { invite: true, botId: "wri", status: "proposed" },
+    });
+    service.decideProposal(id, card.id, true);
+    expect(service.thread(id).channel.memberBotIds).toEqual([
+      "chief",
+      "res",
+      "wri",
+    ]);
+  });
+
+  it("an invite for a member or an unknown name is dropped", async () => {
+    const { service, turns, flush, store } = setup();
+    const { id } = service.create({ botIds: ["chief", "res"] });
+    service.post(id, "Chief, go");
+    await flush();
+    turns[0]!.resolve(
+      '<reply>Sure <invite name="Researcher">x</invite></reply>'
+    );
+    await flush();
+    service.post(id, "Chief, again");
+    await flush();
+    turns[1]!.resolve('<reply>Ok <invite name="Nobody">y</invite></reply>');
+    await flush();
+    expect(
+      store.readMessages(id).filter((m) => m.proposal != null)
+    ).toHaveLength(0);
   });
 });

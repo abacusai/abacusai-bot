@@ -4819,18 +4819,10 @@
       "unpin": "Lösen"
     },
     "menu": {
-      "label": "Kanaloptionen",
-      "members": "Mitglieder",
-      "rename": "Name und Zweck bearbeiten",
       "delete": "Kanal löschen"
     },
     "members": {
-      "title": "Mitglieder",
       "body": "Wähle {{min}} bis {{max}} Bots. Ein entfernter Bot antwortet hier nicht mehr."
-    },
-    "rename": {
-      "title": "Kanal bearbeiten",
-      "body": "Lass den Namen leer, um die Namen der Mitglieder anzuzeigen."
     },
     "delete": {
       "title": "„{{name}}“ löschen?",
@@ -4853,7 +4845,14 @@
       "create": "Erstellen und zum Kanal hinzufügen",
       "dismiss": "Verwerfen",
       "created": "{{name}} wurde erstellt und ist beigetreten: Chat öffnen",
-      "dismissed": "Verworfen"
+      "dismissed": "Verworfen",
+      "inviteTitle": "{{name}} zu diesem Kanal hinzufügen?",
+      "add": "Zum Kanal hinzufügen",
+      "added": "{{name}} ist dem Kanal beigetreten: Chat öffnen"
+    },
+    "details": {
+      "open": "Kanaldetails: {{name}}",
+      "title": "Kanaldetails"
     }
   }
 }

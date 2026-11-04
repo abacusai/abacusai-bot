@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   addressedIn,
-  agreedItemsOf,
+  agreedItems,
   ownerOf,
   workIn,
   channelTitle,
@@ -280,7 +280,7 @@ describe("wantsDiscussion", () => {
 
 describe("agreed items and their owners", () => {
   it("reads the numbered points and who owns each", () => {
-    const items = agreedItemsOf(
+    const items = agreedItems(
       "Agreed:\n1. **Hostel groups** — owner: Researcher, 25 groups\n2. @Writer writes the DM\n3. Planner owns cafe sign-off\n4. Budget check\nStill open: price"
     );
     expect(items).toHaveLength(4);

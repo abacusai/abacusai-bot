@@ -4819,18 +4819,10 @@
       "unpin": "Unpin"
     },
     "menu": {
-      "label": "Channel options",
-      "members": "Members",
-      "rename": "Edit name and purpose",
       "delete": "Delete channel"
     },
     "members": {
-      "title": "Members",
       "body": "Pick {{min}} to {{max}} bots. A bot you remove stops answering here."
-    },
-    "rename": {
-      "title": "Edit channel",
-      "body": "Leave the name empty to show the members' names."
     },
     "delete": {
       "title": "Delete “{{name}}”?",
@@ -4853,7 +4845,14 @@
       "create": "Create and add to channel",
       "dismiss": "Dismiss",
       "created": "{{name}} was created and joined: open its chat",
-      "dismissed": "Dismissed"
+      "dismissed": "Dismissed",
+      "inviteTitle": "Add {{name}} to this channel?",
+      "add": "Add to channel",
+      "added": "{{name}} joined the channel: open its chat"
+    },
+    "details": {
+      "open": "Channel details: {{name}}",
+      "title": "Channel details"
     }
   }
 }

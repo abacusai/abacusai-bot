@@ -4819,18 +4819,10 @@
       "unpin": "Lepas sematan"
     },
     "menu": {
-      "label": "Opsi kanal",
-      "members": "Anggota",
-      "rename": "Edit nama dan tujuan",
       "delete": "Hapus kanal"
     },
     "members": {
-      "title": "Anggota",
       "body": "Pilih {{min}} sampai {{max}} bot. Bot yang Anda keluarkan berhenti menjawab di sini."
-    },
-    "rename": {
-      "title": "Edit kanal",
-      "body": "Kosongkan nama untuk menampilkan nama para anggota."
     },
     "delete": {
       "title": "Hapus “{{name}}”?",
@@ -4853,7 +4845,14 @@
       "create": "Buat dan tambahkan ke kanal",
       "dismiss": "Abaikan",
       "created": "{{name}} telah dibuat dan bergabung: buka obrolannya",
-      "dismissed": "Diabaikan"
+      "dismissed": "Diabaikan",
+      "inviteTitle": "Tambahkan {{name}} ke kanal ini?",
+      "add": "Tambahkan ke kanal",
+      "added": "{{name}} bergabung ke kanal: buka obrolannya"
+    },
+    "details": {
+      "open": "Detail kanal: {{name}}",
+      "title": "Detail kanal"
     }
   }
 }

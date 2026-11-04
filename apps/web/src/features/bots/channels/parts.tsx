@@ -3,10 +3,11 @@
  * (each bot's face, name and colour), the "working" faces and the composer
  * with @-mentions of the members.
  */
-import type {
-  ChannelBotProposal,
-  ChannelMessage,
-  ChannelWork,
+import {
+  agreedItems,
+  type ChannelBotProposal,
+  type ChannelMessage,
+  type ChannelWork,
 } from "@abacus-ai/contract/channels";
 import type { BotRow } from "@abacus-ai/contract/contract/rows";
 import {
@@ -292,17 +293,6 @@ export const GroupMessages = ({
   );
 };
 
-/** The agreed points of a discussion's summing-up: its numbered lines. */
-export const agreedItems = (text: string): string[] => {
-  const items = text
-    .split("\n")
-    .map((line) =>
-      /^\s*\d+[.)]\s+(.+)$/.exec(line)?.[1]?.replace(/\*\*/g, "").trim()
-    )
-    .filter((line): line is string => line != null && line.length > 0);
-  return items.length > 0 ? items : [text.trim()];
-};
-
 /** The members a message @mentions, as faces that open their own chat. */
 const Mentioned = ({
   text,
@@ -356,7 +346,12 @@ const ProposalCard = ({
     >
       <div className="flex items-center gap-1.5 font-medium">
         <UserPlus className="size-3.5" />
-        {t("channels.proposal.title", { name: proposal.name })}
+        {t(
+          proposal.invite === true
+            ? "channels.proposal.inviteTitle"
+            : "channels.proposal.title",
+          { name: proposal.name }
+        )}
         {proposal.title.length > 0 && (
           <span className="text-muted-foreground font-normal">
             · {proposal.title}
@@ -371,7 +366,11 @@ const ProposalCard = ({
             data-testid="proposal-create"
             onClick={() => onDecide(true)}
           >
-            {t("channels.proposal.create")}
+            {t(
+              proposal.invite === true
+                ? "channels.proposal.add"
+                : "channels.proposal.create"
+            )}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => onDecide(false)}>
             {t("channels.proposal.dismiss")}
@@ -383,7 +382,12 @@ const ProposalCard = ({
           params={{ botId: proposal.botId }}
           className="w-fit text-(--bot-accent,var(--primary)) hover:underline"
         >
-          {t("channels.proposal.created", { name: proposal.name })}
+          {t(
+            proposal.invite === true
+              ? "channels.proposal.added"
+              : "channels.proposal.created",
+            { name: proposal.name }
+          )}
         </AppLink>
       ) : (
         <span className="text-muted-foreground italic">

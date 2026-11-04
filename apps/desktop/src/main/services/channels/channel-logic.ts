@@ -18,10 +18,11 @@
  * by rule rather than by a count.
  */
 import type {
-  Channel,
   ChannelDecision,
   ChannelMessage,
 } from "@abacus-ai/contract/channels";
+
+export { agreedItems, channelTitle } from "@abacus-ai/contract/channels";
 
 export interface Member {
   id: string;
@@ -236,18 +237,6 @@ const mergeByPosition = (
   ]).sort((a, b) => at(a) - at(b));
 };
 
-/** The name a channel shows: its own, else its members'. */
-export const channelTitle = (
-  channel: Pick<Channel, "name" | "memberBotIds">,
-  nameOf: (botId: string) => string | null
-): string => {
-  if (channel.name.trim().length > 0) return channel.name.trim();
-  const names = channel.memberBotIds
-    .map(nameOf)
-    .filter((name): name is string => name != null);
-  return names.length === 0 ? "Channel" : names.join(", ");
-};
-
 /** Most recent messages a bot is shown when it has not spoken here before. */
 export const FIRST_TURN_MESSAGES = 30;
 /** At most this many new messages ride on one turn; older ones are summarised by count. */
@@ -290,6 +279,8 @@ export const turnPrompt = (input: {
   kind: TurnKind;
   /** For brought-in: who brought it in. For follow-up: who answered. */
   others?: readonly string[];
+  /** The user's bots not in the channel, which this bot may suggest inviting. */
+  outsiders?: readonly Member[];
   /** For discuss: which round, of how many at most. */
   round?: { at: number; of: number };
   nameOf: (botId: string) => string;
@@ -331,7 +322,10 @@ export const turnPrompt = (input: {
         colleagues.length > 0
           ? `If another member is better placed for part of it, bring them in by writing @Name and what you need from them (e.g. @${colleagues[0]?.name} …); they answer after you and you then finish. Only when it really helps.`
           : "",
-        'If the work clearly needs a specialist nobody here is (for the long run, not one question), you may propose a new bot: <new_bot name="Short name" title="Role">What it would do, in one or two sentences</new_bot> inside your reply. The user decides; never more than one.',
+        (input.outsiders ?? []).length > 0
+          ? `The user's other bots, not in this channel: ${(input.outsiders ?? []).map((bot) => `${bot.name}${roleOf(bot)}`).join(", ")}. If one of them is needed here, write <invite name="Name">why, in one line</invite> inside your reply; the user decides.`
+          : "",
+        'If the work needs a specialist none of the user\'s bots is (for the long run, not one question), you may propose a new bot: <new_bot name="Short name" title="Role">What it would do, in one or two sentences</new_bot> inside your reply. The user decides; never more than one suggestion.',
         "If the user asks YOU for real work that needs files, code, a browser or their accounts (build a page, write a document, check their email…), don't refuse: say in a line what you will do, and add <work>the task, complete on its own: what to make or do, and where</work> inside your reply. The app runs it in your own chat with all your tools and posts your report here when it is done. One <work> at most, only for what the user asked you."
       );
       break;
@@ -453,38 +447,51 @@ export const channelWorkPrompt = (input: {
 
 const NEW_BOT =
   /<new_bot\s+name="([^"]{1,40})"(?:\s+title="([^"]{0,60})")?\s*>([\s\S]*?)<\/new_bot>/i;
+const INVITE = /<invite\s+name="([^"]{1,40})"\s*>([\s\S]*?)<\/invite>/i;
 
-/** A new bot a bot proposed (`<new_bot name=… title=…>mission</new_bot>`), and its words without the tag. */
+/**
+ * A bot a bot suggested: an existing one to invite (`<invite name>why</invite>`)
+ * or a new one (`<new_bot name title>mission</new_bot>`); and its words
+ * without the tags. The user decides either way.
+ */
 export const proposalIn = (
   words: string
 ): {
-  proposal: { name: string; title: string; mission: string } | null;
+  proposal: {
+    name: string;
+    title: string;
+    mission: string;
+    invite: boolean;
+  } | null;
   words: string;
 } => {
-  const match = NEW_BOT.exec(words);
-  const name = match?.[1]?.trim() ?? "";
-  const mission = match?.[3]?.replace(/\s+/g, " ").trim() ?? "";
+  const invite = INVITE.exec(words);
+  const made = NEW_BOT.exec(words);
+  const clean = (text: string | undefined) =>
+    text?.replace(/\s+/g, " ").trim() ?? "";
+  const proposal =
+    invite != null && clean(invite[1]).length > 0
+      ? {
+          name: clean(invite[1]),
+          title: "",
+          mission: clean(invite[2]),
+          invite: true,
+        }
+      : made != null && clean(made[1]).length > 0 && clean(made[3]).length > 0
+        ? {
+            name: clean(made[1]),
+            title: clean(made[2]),
+            mission: clean(made[3]),
+            invite: false,
+          }
+        : null;
   return {
-    proposal:
-      name.length > 0 && mission.length > 0
-        ? { name, title: match?.[2]?.trim() ?? "", mission }
-        : null,
+    proposal,
     words: words
-      .replace(/<new_bot\b[\s\S]*?<\/new_bot>/gi, "")
+      .replace(/<(new_bot|invite)\b[\s\S]*?<\/\1>/gi, "")
       .replace(/\n{3,}/g, "\n\n")
       .trim(),
   };
-};
-
-/** The agreed points of a discussion's summing-up: its numbered lines (else all of it). */
-export const agreedItemsOf = (text: string): string[] => {
-  const items = text
-    .split("\n")
-    .map((line) =>
-      /^\s*\d+[.)]\s+(.+)$/.exec(line)?.[1]?.replace(/\*\*/g, "").trim()
-    )
-    .filter((line): line is string => line != null && line.length > 0);
-  return items.length > 0 ? items : [text.trim()];
 };
 
 /**

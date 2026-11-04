@@ -4819,18 +4819,10 @@
       "unpin": "Sabitlemeyi kaldır"
     },
     "menu": {
-      "label": "Kanal seçenekleri",
-      "members": "Üyeler",
-      "rename": "Adı ve amacı düzenle",
       "delete": "Kanalı sil"
     },
     "members": {
-      "title": "Üyeler",
       "body": "{{min}} ile {{max}} arasında bot seç. Çıkardığın bot burada yanıt vermeyi bırakır."
-    },
-    "rename": {
-      "title": "Kanalı düzenle",
-      "body": "Üyelerin adlarının görünmesi için adı boş bırak."
     },
     "delete": {
       "title": "“{{name}}” silinsin mi?",
@@ -4853,7 +4845,14 @@
       "create": "Oluştur ve kanala ekle",
       "dismiss": "Reddet",
       "created": "{{name}} oluşturuldu ve katıldı: sohbetini aç",
-      "dismissed": "Reddedildi"
+      "dismissed": "Reddedildi",
+      "inviteTitle": "{{name}} bu kanala eklensin mi?",
+      "add": "Kanala ekle",
+      "added": "{{name}} kanala katıldı: sohbetini aç"
+    },
+    "details": {
+      "open": "Kanal ayrıntıları: {{name}}",
+      "title": "Kanal ayrıntıları"
     }
   }
 }

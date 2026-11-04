@@ -50,7 +50,7 @@ export interface ChannelMessage {
   conclusion?: boolean;
   /** The user started its agreed items as work. */
   planStarted?: boolean;
-  /** A new bot this bot proposed; created only when the user says so. */
+  /** A bot proposed to the user: a new one, or one of theirs to invite. */
   proposal?: ChannelBotProposal;
 }
 
@@ -60,8 +60,10 @@ export interface ChannelBotProposal {
   /** What it would do: becomes its mission. */
   mission: string;
   status: "proposed" | "created" | "dismissed";
-  /** The bot made from it, once created. */
+  /** An existing bot to add (an invite); else the bot made from it, once created. */
   botId?: string;
+  /** An existing bot of the user's, not in the channel: Add puts it in. */
+  invite?: boolean;
 }
 
 export type ChannelWorkStatus = "running" | "done" | "failed" | "stopped";
@@ -91,3 +93,26 @@ export interface ChannelThread {
 }
 
 export type ChannelsEvent = { type: "changed"; channelId: string | null };
+
+/** The name a channel shows: its own, else its members' names. */
+export const channelTitle = (
+  channel: Pick<Channel, "name" | "memberBotIds">,
+  nameOf: (botId: string) => string | null
+): string => {
+  if (channel.name.trim().length > 0) return channel.name.trim();
+  return channel.memberBotIds
+    .map(nameOf)
+    .filter((name): name is string => name != null)
+    .join(", ");
+};
+
+/** The agreed points of a discussion's summing-up: its numbered lines, else all of it. */
+export const agreedItems = (text: string): string[] => {
+  const items = text
+    .split("\n")
+    .map((line) =>
+      /^\s*\d+[.)]\s+(.+)$/.exec(line)?.[1]?.replace(/\*\*/g, "").trim()
+    )
+    .filter((line): line is string => line != null && line.length > 0);
+  return items.length > 0 ? items : [text.trim()];
+};

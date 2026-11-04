@@ -4819,18 +4819,10 @@
       "unpin": "Desfijar"
     },
     "menu": {
-      "label": "Opciones del canal",
-      "members": "Miembros",
-      "rename": "Editar nombre y propósito",
       "delete": "Eliminar canal"
     },
     "members": {
-      "title": "Miembros",
       "body": "Elige de {{min}} a {{max}} bots. Un bot que quites deja de responder aquí."
-    },
-    "rename": {
-      "title": "Editar canal",
-      "body": "Deja el nombre vacío para mostrar los nombres de los miembros."
     },
     "delete": {
       "title": "¿Eliminar “{{name}}”?",
@@ -4853,7 +4845,14 @@
       "create": "Crear y agregar al canal",
       "dismiss": "Descartar",
       "created": "{{name}} se creó y se unió: abrir su chat",
-      "dismissed": "Descartada"
+      "dismissed": "Descartada",
+      "inviteTitle": "¿Agregar a {{name}} a este canal?",
+      "add": "Agregar al canal",
+      "added": "{{name}} se unió al canal: abre su chat"
+    },
+    "details": {
+      "open": "Detalles del canal: {{name}}",
+      "title": "Detalles del canal"
     }
   }
 }
