@@ -56,6 +56,7 @@ import {
   chatLineForSuccessPitch,
   chatFailureOf,
   chatReplyForFailure,
+  chatLineForBackgroundJob,
   chatLineForMove,
   contactFailureNotice,
   FailureReplyThrottle,
@@ -1409,6 +1410,10 @@ export class MessagingGatewayService {
         (action) => action.type === "moved-to-abacus"
       );
       if (moved != null) void this.tellMove(route, moved);
+      const job = event.actions?.find(
+        (action) => action.type === "background-job"
+      );
+      if (job != null) void this.tellBackgroundJob(route, job.cause);
       return;
     }
 
@@ -1578,6 +1583,27 @@ export class MessagingGatewayService {
       )
     );
     this.deliver(route, chatLineForMove(words, action));
+  }
+
+  /** A job this chat's agent started finished after its reply went. */
+  private async tellBackgroundJob(
+    route: Route,
+    cause: string | undefined
+  ): Promise<void> {
+    const own = this.selfChatOf(route.platform);
+    if (
+      own == null ||
+      own.platform !== route.platform ||
+      own.chatId !== route.userId
+    )
+      return;
+    const words = await channelWords(
+      channelLocale(
+        readUserLanguage()?.name ?? null,
+        this.options.appLanguage?.() ?? null
+      )
+    );
+    this.deliver(route, chatLineForBackgroundJob(words, cause));
   }
 
   /**

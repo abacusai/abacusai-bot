@@ -1464,6 +1464,28 @@ const diskFullLine = (
     : t("outcome.cause.disk_fullUnmeasured");
 };
 
+/** The action on a job that finished with no turn running. */
+const BACKGROUND_JOB_ACTION = "background-job";
+
+/** A command as long as a one-line notice can carry. */
+const BACKGROUND_COMMAND_CHARS = 100;
+
+const backgroundJobLine = (
+  action: ErrorAction,
+  t: (key: string, values?: Record<string, string>) => string
+): string => {
+  const whole = action.label ?? "";
+  const command =
+    whole.length > BACKGROUND_COMMAND_CHARS
+      ? `${whole.slice(0, BACKGROUND_COMMAND_CHARS)}…`
+      : whole;
+  if (action.cause === "timed-out")
+    return t("chat.notice.backgroundTimedOut", { command });
+  return action.cause === "failed"
+    ? t("chat.notice.backgroundFailed", { command })
+    : t("chat.notice.backgroundFinished", { command });
+};
+
 const SEVERITY_ICON = {
   info: Info,
   success: CheckCircle2,
@@ -1503,6 +1525,10 @@ export const NoticeRow = ({
   const moved = actions.find(
     (action) => action.type === MOVED_TO_ABACUS_ACTION
   );
+  // A job that finished with no turn running: the line in the app's words.
+  const backgroundJob = actions.find(
+    (action) => action.type === BACKGROUND_JOB_ACTION
+  );
   const message = tooLarge
     ? t("chat.notice.historyTooLarge", {
         size: formatBytes(Number(notice.value.size ?? 0)),
@@ -1514,7 +1540,9 @@ export const NoticeRow = ({
         ? t("chat.notice.unsaved")
         : moved != null
           ? ownKeyMovedLine(moved, t)
-          : String(notice.value.message ?? "");
+          : backgroundJob != null
+            ? backgroundJobLine(backgroundJob, t)
+            : String(notice.value.message ?? "");
   return (
     <Marker
       variant="border"

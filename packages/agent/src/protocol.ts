@@ -109,6 +109,8 @@ export interface NotificationAction {
    * `continue-free` (keep going on the free models at the credit wall),
    * `continue-same` (pick the cut reply up on the same model), `new-chat`,
    * `fix-key` and `retry` carry nothing else.
+   * `background-job`: a job that finished with no turn running: finished,
+   * failed or timed-out, with its command as `label`.
    */
   cause?: string;
   /** `cut-off`: part of the reply arrived before the cut and is kept. */
