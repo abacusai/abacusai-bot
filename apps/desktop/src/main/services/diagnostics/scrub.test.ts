@@ -184,6 +184,19 @@ describe("what is uploaded or logged", () => {
     expect(scrub(once)).toBe(once);
   });
 
+  it("holds cookies with any legal character", () => {
+    const [one, two] = [body(12), body(14)];
+    const name = parts("Coo", "kie");
+
+    for (const header of [
+      parts(name, ": sid=abc'", one, "; other=", two),
+      parts(name, ": a=ok; !sid=", one, "; other=", two),
+    ]) {
+      expect(scrub(header)).not.toContain(one);
+      expect(scrub(header)).not.toContain(two);
+    }
+  });
+
   it("holds every cookie header, and keeps what follows each", () => {
     const [one, two, three] = [body(12), body(14), body(13)];
     const name = parts("Coo", "kie");

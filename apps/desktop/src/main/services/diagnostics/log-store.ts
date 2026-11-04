@@ -41,8 +41,8 @@ export const dayOfFile = (name: string): string | null => {
 export class LogStore {
   private readonly pending = new Map<LogStream, string[]>();
   private readonly written = new Map<string, number>();
-  /** Streams whose last flush ended inside a private key. */
-  private readonly insideKey = new Map<LogStream, boolean>();
+  /** Per stream: what is left of the window of a key with no END yet. */
+  private readonly keyCharsLeft = new Map<LogStream, number>();
   private timer: NodeJS.Timeout | null = null;
   private day = dayKey();
   /**
@@ -103,11 +103,11 @@ export class LogStore {
       const target = path.join(this.dir, fileName(stream, this.day));
       const scrubbed = scrubLogFlush(
         lines.join("\n"),
-        this.insideKey.get(stream) ?? false
+        this.keyCharsLeft.get(stream) ?? 0
       );
       const payload = `${scrubbed.text}\n`;
 
-      this.insideKey.set(stream, scrubbed.insideKey);
+      this.keyCharsLeft.set(stream, scrubbed.keyCharsLeft);
       const already = this.written.get(target) ?? this.sizeOf(target);
 
       if (already >= MAX_FILE_BYTES) continue;

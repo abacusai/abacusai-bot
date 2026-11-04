@@ -42,20 +42,15 @@ const KEY_SHAPES: readonly RegExp[] = [
 
 const PRIVATE_KEY_MARKER = /-----(BEGIN|END) [A-Z0-9 ]{0,40}PRIVATE KEY-----/g;
 
+const PRIVATE_KEY_END = /-----END [A-Z0-9 ]{0,40}PRIVATE KEY-----/;
+
 /**
- * The rest of a key begun in an earlier flush. A key line is one whose last
- * word is base64, whatever a log put before it.
+ * How far past a BEGIN a log's text counts as the key when its END has not
+ * come. A window, not a test of each line: log prefixes vary and a key's last
+ * line can be any length. Larger than any PEM key with a prefix on each line,
+ * so a key cut short costs this much of the log and no more.
  */
-const LOG_PREFIX = String.raw`(?:[^\n]*[ \t\]])?`;
-const KEY_BODY_LINES = new RegExp(
-  String.raw`^(?:${LOG_PREFIX}[A-Za-z0-9+/=]{16,}[ \t]*(?:\r?\n|$))*`
-);
-/** A key's last line can be short: next to its END, or alone at a flush's end. */
-const KEY_SHORT_LINE = new RegExp(
-  String.raw`^${LOG_PREFIX}[A-Za-z0-9+/=]{1,15}[ \t]*(?:\r?\n|$)`
-);
-const LOG_BRACKETS = /\[[^\]\n]*\]/g;
-const KEY_END_LINE = /^[^\n]*-----END [A-Z0-9 ]{0,40}PRIVATE KEY-----/;
+export const PRIVATE_KEY_WINDOW_CHARS = 16 * 1024;
 
 /** A URL that is itself the credential: its last part is the secret. */
 const WEBHOOK =
@@ -122,7 +117,7 @@ const DATA_URI = /^data:[a-z]+\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]*$/;
  * A cookie header holds several secrets, so every name=value pair goes, by the
  * header's own grammar: it ends where the pairs do, and what follows is kept.
  */
-const COOKIE_PAIR = String.raw`[A-Za-z0-9_.%-]{1,128}=(?:\\*["'][^"'\r\n\\]*\\*["']|[^;\s"'\\]*)`;
+const COOKIE_PAIR = String.raw`[^=;\s"\\]{1,128}=(?:\\*"[^"\r\n\\]*\\*"|[^;\s"\\]*)`;
 const COOKIE_HEADER = new RegExp(
   String.raw`(\bcookie\\?["']?\s{0,3}[:=]\s{0,3}(?:\\*["'])?)${COOKIE_PAIR}(?:;\s{0,3}${COOKIE_PAIR})*`,
   "gi"
@@ -249,51 +244,46 @@ function safely(read: () => string): string {
 
 /**
  * `scrub` for text written a flush at a time: a key can run over any number of
- * flushes. `insideKey` says the flush before ended inside one. The key is
- * followed by its lines, not just its END, so one cut short ends at the first
- * ordinary line, not with the day's log.
+ * flushes. `keyCharsLeft` is what the flush before left of the window of a key
+ * whose END has not come.
  */
 export function scrubLogFlush(
   text: string,
-  insideKey: boolean
-): { text: string; insideKey: boolean } {
+  keyCharsLeft: number
+): { text: string; keyCharsLeft: number } {
   let head = "";
   let rest = text;
 
-  if (insideKey) {
-    let body = KEY_BODY_LINES.exec(rest)?.[0] ?? "";
+  if (keyCharsLeft > 0) {
+    const end = PRIVATE_KEY_END.exec(text);
 
-    rest = rest.slice(body.length);
-    const short = KEY_SHORT_LINE.exec(rest)?.[0];
-
-    if (short != null) {
-      const after = rest.slice(short.length);
-
-      const endsFlush =
-        after.length === 0 &&
-        short.replace(LOG_BRACKETS, "").trim().split(/\s+/).length === 1;
-
-      if (endsFlush || KEY_END_LINE.test(after)) {
-        body += short;
-        rest = after;
-      }
-    }
-    const end = KEY_END_LINE.exec(rest)?.[0];
-
-    if (end != null) {
+    if (end != null && end.index <= keyCharsLeft) {
       head = MASKED_KEY;
-      rest = rest.slice(end.length);
-    } else if (rest.length === 0) {
-      return { text: MASKED_KEY, insideKey: true };
-    } else if (body.length > 0) {
+      rest = text.slice(end.index + end[0].length);
+    } else if (text.length < keyCharsLeft) {
+      return {
+        text: MASKED_KEY,
+        keyCharsLeft: keyCharsLeft - text.length - 1,
+      };
+    } else {
+      const lineEnd = text.indexOf("\n", keyCharsLeft);
+
       head = `${MASKED_KEY}\n`;
+      rest = lineEnd < 0 ? "" : text.slice(lineEnd + 1);
     }
   }
 
-  const markers = [...rest.matchAll(PRIVATE_KEY_MARKER)];
+  const last = [...rest.matchAll(PRIVATE_KEY_MARKER)].at(-1);
 
   return {
     text: `${head}${scrub(rest)}`,
-    insideKey: markers.at(-1)?.[1] === "BEGIN",
+    keyCharsLeft:
+      last?.[1] === "BEGIN"
+        ? Math.max(
+            0,
+            PRIVATE_KEY_WINDOW_CHARS -
+              (rest.length - last.index - last[0].length)
+          )
+        : 0,
   };
 }

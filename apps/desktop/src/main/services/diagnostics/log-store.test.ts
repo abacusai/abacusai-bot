@@ -14,6 +14,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { dayKey, dayOfFile, LogStore, RETENTION_DAYS } from "./log-store";
+import { PRIVATE_KEY_WINDOW_CHARS } from "./scrub";
 
 let dir: string;
 
@@ -160,16 +161,27 @@ describe("writing", () => {
     expect(text).toContain("all done");
   });
 
-  it("does not lose the log after a key cut short", () => {
+  it("loses no more than the window after a key cut short", () => {
     const store = new LogStore(dir, at("2026-08-21T10:00:00"));
 
     store.start();
     store.append("main", `-----BEGIN ${"PRIVATE"} KEY-----`);
     store.flush();
+    store.append("main", "x".repeat(PRIVATE_KEY_WINDOW_CHARS + 100));
     store.append("main", "an ordinary line");
     store.flush();
 
     expect(read("main-2026-08-21.log")).toContain("an ordinary line");
+  });
+
+  it("masks nothing when there is no key", () => {
+    const store = new LogStore(dir, at("2026-08-21T10:00:00"));
+
+    store.start();
+    store.append("main", "Request completed transaction123456");
+    store.flush();
+
+    expect(read("main-2026-08-21.log")).toContain("transaction123456");
   });
 
   it("survives a directory it cannot write to", () => {
