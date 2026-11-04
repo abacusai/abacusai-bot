@@ -4,13 +4,19 @@
  * (with the failure's cause, so a chat app can say the right thing).
  * The final message is the last one the main session wrote words in; a
  * sub-agent's words never reach it. Only a send or steer with an id asks.
+ * An answer the turn had already finished when a steer reopened it goes out
+ * at once as `turn_answer`, since the next message would replace it.
  */
 import type { AgentEvent } from "../protocol.js";
+
+type TurnAnswer = Extract<AgentEvent, { type: "turn_answer" }>;
 
 export class TurnReply {
   private ids: string[] = [];
   private final = "";
   private draft = "";
+  /** `final` ended its step with no tool call: the turn's answer, not narration. */
+  private finished = false;
   private failed = false;
   private cause: string | undefined;
   private open = false;
@@ -20,15 +26,32 @@ export class TurnReply {
     this.ids = [];
     this.final = "";
     this.draft = "";
+    this.finished = false;
     this.failed = false;
     this.cause = undefined;
     this.open = true;
     this.answers(messageId);
   }
 
-  /** A message steered into this turn: its answer is this turn's. */
-  answers(messageId?: string): void {
+  /**
+   * A message steered into this turn: its answer is this turn's. Returns the
+   * finished answer it reopened the turn behind, for the messages before it.
+   */
+  answers(messageId?: string): TurnAnswer | null {
+    const answered =
+      this.open && this.finished && this.ids.length > 0
+        ? {
+            type: "turn_answer" as const,
+            messageIds: [...this.ids],
+            text: this.final,
+          }
+        : null;
+    if (answered != null) {
+      this.final = "";
+      this.finished = false;
+    }
     if (this.open && messageId != null) this.ids.push(messageId);
+    return answered;
   }
 
   messageStarted(): void {
@@ -39,8 +62,12 @@ export class TurnReply {
     this.draft += text;
   }
 
-  messageEnded(): void {
-    if (this.draft.trim().length > 0) this.final = this.draft;
+  /** `calledTool`: the turn works on, so words before it are narration. */
+  messageEnded(calledTool: boolean): void {
+    if (this.draft.trim().length > 0) {
+      this.final = this.draft;
+      this.finished = !calledTool;
+    } else if (calledTool) this.finished = false;
     this.draft = "";
   }
 
