@@ -93,6 +93,7 @@ export const useBotModelBinding = (
   return {
     setup,
     value,
+    defaultLabel,
     /** The catalog row `value` runs on now, if any. */
     effective: catalog.find((model) => model.id === effectiveId) ?? null,
     onConfigureProviders: () =>
@@ -164,7 +165,7 @@ export const ModelPicker = ({
           title={binding.label}
           layoutId={pref === "full" ? binding.layoutId : undefined}
         >
-          {binding.value === null ? t("bots.form.modelDefault") : binding.label}
+          {binding.value === null ? binding.defaultLabel : binding.label}
         </motion.span>
       </PopoverTrigger>
       <PopoverContent className="w-[min(360px,var(--available-width))] rounded-[14px] p-1.5 [&_button]:h-8">

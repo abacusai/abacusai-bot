@@ -1,13 +1,10 @@
-import { contract } from "@abacus-ai/contract/contract";
 import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
 import type { ModelAvailability } from "@abacus-ai/contract/models";
-import { implement } from "@orpc/server";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { expect, it, vi } from "vitest";
+import { expect, it } from "vitest";
 
 import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
 
-const os = implement(contract);
 const models: ModelAvailability[] = [
   {
     id: "a/router",
@@ -83,6 +80,7 @@ it("names what the plan's default runs on", async () => {
     expect(
       await screen.findByText("Follows your plan's default: Router.")
     ).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Plan default" })).not.toBeNull();
   } finally {
     app.view.unmount();
     await app.cleanup();
