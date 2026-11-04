@@ -1699,7 +1699,7 @@ export class McpBrowserServer extends McpHttpServer {
     }
 
     if (lines.length === 0)
-      return "Nothing visible changed yet. If results were expected, use interact wait with text or url_pattern.";
+      return 'Nothing visible changed yet. If results were expected, use browser_interact action:"wait" with text or url_pattern.';
 
     return `Changes:\n${lines.join("\n")}`;
   }
@@ -1734,7 +1734,7 @@ export class McpBrowserServer extends McpHttpServer {
         );
       } else {
         lines.push(
-          "No interactive elements yet. The page may still be loading. Use interact wait, then snapshot."
+          'No interactive elements yet. The page may still be loading. Use browser_interact action:"wait", then browser_snapshot.'
         );
       }
     } catch {
@@ -2256,7 +2256,7 @@ export class McpBrowserServer extends McpHttpServer {
               (tabs != null ? `${tabs}\n` : "") +
               "\n" +
               "(no interactive elements found)\n" +
-              'The page may still be loading. interact action:"wait" with text or url_pattern, then snapshot again.\n' +
+              'The page may still be loading. browser_interact action:"wait" with text or url_pattern, then snapshot again.\n' +
               "If it stays empty the content is likely inside a shadow root or an iframe, which this snapshot " +
               "and plain document.querySelector both see through: reach it with browser_execute using " +
               "element.shadowRoot or the frame's contentDocument, or navigate straight to the frame URL."
@@ -2605,7 +2605,7 @@ export class McpBrowserServer extends McpHttpServer {
         if (result?.status === "rejected") {
           return this.err(
             `Filled ${this.label(args)}, but the page reset its value; it is likely controlled by a framework ` +
-              'that ignores programmatic input. Try interact action:"type", or press keys into it.'
+              'that ignores programmatic input. Try browser_interact action:"type", or press keys into it.'
           );
         }
         const preview = text.length > 30 ? text.slice(0, 27) + "..." : text;
