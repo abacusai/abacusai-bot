@@ -132,6 +132,9 @@ const fromLoopEvent = (event: AgentEvent, sessionId: string): string | null => {
     case "turn_complete":
       return describeTurnComplete(sessionId, event.usage);
 
+    case "promised_work_recovery":
+      return `promised work: asked ${event.model} to do it`;
+
     case "turn_reply":
       // Which messages a turn answered; the words stay in the transcript.
       return `turn reply ids=${event.messageIds.join(",")} chars=${event.text.length}${event.failed ? " FAILED" : ""}`;

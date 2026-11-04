@@ -2752,6 +2752,11 @@ export class ServiceHost {
         );
         // Same reason: the remote user must not receive a cancelled tail.
         this.messagingGatewayService.handleAgentEvent(sessionId, payload);
+        if (
+          payload.type === "event" &&
+          payload.event.type === "promised_work_recovery"
+        )
+          reportFunnelStep("promised_work_recovery", payload.event.model);
         for (const listener of this.agentEventListeners)
           listener(sessionId, payload);
         this.noteRoutineEvent(sessionId, payload);

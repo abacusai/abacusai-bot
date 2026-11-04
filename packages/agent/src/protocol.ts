@@ -291,6 +291,14 @@ export type AgentEvent =
       messageId?: string;
     }
   /**
+   * A reply ended on a promise of more work with no tool call, and the model
+   * was told to do it (promised-work.ts). `model` is what it ran on.
+   */
+  | {
+      type: "promised_work_recovery";
+      model: string;
+    }
+  /**
    * The user-visible end of one turn whose `send` or steers carried an id,
    * after any error it reported: its final assistant message (empty when it wrote none), and
    * the ids of the messages it answers (the send's own and those steered in).

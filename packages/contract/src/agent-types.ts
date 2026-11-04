@@ -261,6 +261,11 @@ export type AgentEvent =
       userText?: UserTextTags;
       messageId?: string;
     }
+  /** A reply ended on a promise of work and the model was told to do it. */
+  | {
+      type: "promised_work_recovery";
+      model: string;
+    }
   /**
    * The user-visible end of one turn whose `send` or steers carried an id,
    * after any error it reported: its final assistant message (empty when it wrote none), and

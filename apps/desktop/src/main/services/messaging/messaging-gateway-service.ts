@@ -117,6 +117,16 @@ import { WhatsAppWebConnector } from "./whatsapp-web-connector";
 /** Replies longer than this are almost always the agent dumping a file. */
 const MAX_REPLY_LENGTH = 12_000;
 
+/** Words this short that promised more are the promise and nothing else. */
+const PROMISE_ONLY_CHARS = 300;
+
+/** The one message a turn sends when the model was told to go on from `held`. */
+const joinHeld = (held: string | null, reply: string): string => {
+  if (held == null || reply === held) return reply;
+  if (reply.length === 0) return held;
+  return held.length > PROMISE_ONLY_CHARS ? `${held}\n\n${reply}` : reply;
+};
+
 /**
  * Phrases that only appear once a reply is addressed to the user instead of
  * the contact. Few and machine-shaped: a false positive replaces a real
@@ -388,6 +398,12 @@ type Route = {
    * note ends its turn with an empty buffer.
    */
   taggedReply: string | null;
+  /**
+   * Words the model was told to go on from (promised_work_recovery). The chat
+   * gets one message a turn: these stand in if nothing follows, and a report
+   * in them leads what does.
+   */
+  heldWords: string | null;
   /** True between sending a prompt and the turn reaching idle or error. */
   busy: boolean;
   /** When the current turn was dispatched, for stuck-turn recovery. */
@@ -1126,6 +1142,7 @@ export class MessagingGatewayService {
         buffer: "",
         bufferMessageId: null,
         taggedReply: null,
+        heldWords: null,
         busy: false,
         busySince: 0,
         queue: [],
@@ -1209,6 +1226,7 @@ export class MessagingGatewayService {
       buffer: "",
       bufferMessageId: null,
       taggedReply: null,
+      heldWords: null,
       busy: false,
       busySince: 0,
       queue: [],
@@ -1277,6 +1295,7 @@ export class MessagingGatewayService {
     route.buffer = "";
     route.bufferMessageId = null;
     route.taggedReply = null;
+    route.heldWords = null;
     // A fresh turn may fill the queue again, and deserves to say so again.
     route.queueFullNotified = false;
     route.delivered = false;
@@ -1417,6 +1436,15 @@ export class MessagingGatewayService {
       return;
     }
 
+    // The turn goes on past these words, so nothing is sent yet.
+    if (event.type === "promised_work_recovery") {
+      route.heldWords = outgoingWords(route.buffer);
+      route.buffer = "";
+      route.bufferMessageId = null;
+      route.taggedReply = null;
+      return;
+    }
+
     // Text before a tool call is narration, not the reply, except a reply the
     // model already wrapped, which a later tool call must not throw away. The
     // text before suggest_tasks is the reply: that call can end the turn.
@@ -1467,12 +1495,15 @@ export class MessagingGatewayService {
       lastTaggedReply(route.buffer) == null && route.taggedReply != null
         ? route.taggedReply
         : outgoingWords(route.buffer);
+    const held = route.heldWords;
     route.buffer = "";
     route.taggedReply = null;
+    route.heldWords = null;
 
     // The agent's way of sending nothing; the sentinel must never reach a chat.
     if (reply === "NO_REPLY") {
       route.delivered = true;
+      if (held != null) this.deliver(route, held);
       return;
     }
 
@@ -1492,12 +1523,13 @@ export class MessagingGatewayService {
       return;
     }
 
-    if (reply.length > 0) {
+    const words = joinHeld(held, reply);
+    if (words.length > 0) {
       this.deliver(
         route,
-        reply.length > MAX_REPLY_LENGTH
-          ? `${reply.slice(0, MAX_REPLY_LENGTH)}\n\n[truncated]`
-          : reply
+        words.length > MAX_REPLY_LENGTH
+          ? `${words.slice(0, MAX_REPLY_LENGTH)}\n\n[truncated]`
+          : words
       );
     }
   }

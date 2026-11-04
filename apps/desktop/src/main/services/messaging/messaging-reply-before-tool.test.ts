@@ -85,6 +85,7 @@ const harness = () => {
     say: (content: string, messageId?: string) =>
       emit({ type: "text_delta", content, messageId }),
     tool: (toolName = "memory") => emit({ type: "tool_call_start", toolName }),
+    recovery: () => emit({ type: "promised_work_recovery", model: "m" }),
     idle: () => emit({ type: "status_changed", status: AgentStatus.Idle }),
   };
 };
@@ -157,5 +158,60 @@ describe("a reply wrapped before a tool call", () => {
     h.idle();
     await tick();
     expect(h.sent).toEqual(["Love you too", "Noted."]);
+  });
+});
+
+describe("a turn the model was told to go on with", () => {
+  const report = `Here is the full report. ${"Row by row. ".repeat(40)}Reading the rest now.`;
+
+  it.each([
+    [
+      "sends only the last words after a bare promise",
+      "Reading them now.",
+      "All 3 are done.",
+      ["All 3 are done."],
+    ],
+    [
+      "sends a report and the last words as one message",
+      report,
+      "All 3 are done.",
+      [`${report}\n\nAll 3 are done.`],
+    ],
+    [
+      "keeps the promise when nothing follows it",
+      "Reading them now.",
+      "",
+      ["Reading them now."],
+    ],
+    [
+      "treats a wrapped promise like a bare one",
+      "<reply>One sec</reply>",
+      "All 3 are done.",
+      ["All 3 are done."],
+    ],
+  ])("%s", async (_name, promise, last, sent) => {
+    const h = harness();
+    await h.inbound("read them");
+    h.say(promise, "m1");
+    h.recovery();
+    h.tool();
+    if (last.length > 0) h.say(last, "m2");
+    h.idle();
+    await tick();
+    expect(h.sent).toEqual(sent);
+  });
+
+  it("does not carry held words into the next turn", async () => {
+    const h = harness();
+    await h.inbound("read them");
+    h.say(report, "m1");
+    h.recovery();
+    h.idle();
+    await tick();
+    await h.inbound("ok");
+    h.say("Noted.", "m2");
+    h.idle();
+    await tick();
+    expect(h.sent).toEqual([report, "Noted."]);
   });
 });
