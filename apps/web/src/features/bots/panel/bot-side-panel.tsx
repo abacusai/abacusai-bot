@@ -1,7 +1,7 @@
 import type { ArtifactRow, BotRow } from "@abacus-ai/contract/contract/rows";
 import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { useQuery } from "@tanstack/react-query";
-import { X } from "lucide-react";
+import { ChevronRight, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -85,6 +85,7 @@ export const DetailsTab = ({
   const check = checkInFromRoutine(routine);
   const pinned = prefs.pinned.botIds.includes(bot.id);
   const { bots } = useBots();
+  const now = useNow();
   const mine = (senders.data ?? []).filter((row) => row.botId === bot.id);
   // Its answers to the user's other bots (ask_bot) live in their own chats.
   const senderRows = mine.filter((row) => row.platform !== BOT_ASK_PLATFORM);
@@ -181,28 +182,35 @@ export const DetailsTab = ({
         </Button>
       </GroupCard>
       {botRows.length > 0 && (
-        <section>
-          <h3 className="text-muted-foreground text-xs">
-            {t("bots.panel.botChats")}
-          </h3>
+        <GroupCard title={t("bots.panel.botChats")} className="px-0">
           {botRows.map((row) => {
             const asker = bots.find((other) => other.name === row.senderName);
+            const at = db.collections.sessions.get(row.sessionId)?.updatedAt;
             return (
               <AppLink
                 key={row.sessionId}
                 to="/bots/$botId/chats/$sessionId"
                 params={{ botId: bot.id, sessionId: row.sessionId }}
-                className="flex h-11 items-center gap-2 text-xs"
+                className="flex h-(--setting-row-min) items-center gap-2 px-3 text-xs"
                 data-bot-ask-chat
               >
-                {asker && <BotFace bot={asker} size={20} />}
+                {asker && <BotFace bot={asker} size={24} />}
                 <span className="min-w-0 flex-1 truncate">
                   {row.senderName}
                 </span>
+                {at && (
+                  <span className="text-muted-foreground shrink-0">
+                    {formatWhen(at, now, i18n.language)}
+                  </span>
+                )}
+                <ChevronRight
+                  aria-hidden
+                  className="text-muted-foreground size-4 shrink-0"
+                />
               </AppLink>
             );
           })}
-        </section>
+        </GroupCard>
       )}
       <WallpaperPicker
         value={bot.wallpaper}
