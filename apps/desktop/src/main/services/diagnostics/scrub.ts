@@ -101,8 +101,12 @@ const WORDS = /^[a-z_]+(?:\??[.-][a-z_]+)*[?!.:]*$/i;
  */
 const JSON_PAIR = /["']\s{0,3}:\s{0,3}\\?["']$/;
 
-/** A pasted image or file is the longest string there is, and holds no typed key. */
-const DATA_URI = /^data:[a-z]+\/[a-z0-9.+-]+;base64,/;
+/** A pasted image or file, when that is all the string is: no typed key in it. */
+const DATA_URI = /^data:[a-z]+\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]*$/;
+
+/** A cookie header holds several secrets: the whole line goes. */
+const COOKIE_HEADER =
+  /(\bcookie\\?["']?\s{0,3}[:=]\s{0,3}\\?["']?)[^\r\n"'\\=]*=[^\r\n"'\\]*/gi;
 
 const looksRandom = (part: string): boolean =>
   part.length >= SK_KEY_MIN_PART_LENGTH &&
@@ -143,6 +147,7 @@ export function scrubKeys(text: string): string {
       /\d/.test(token) ? `${prefix}${MASKED_VALUE}` : whole
     )
     .replace(AUTH_HEADER, `$1${MASKED_VALUE}`)
+    .replace(COOKIE_HEADER, `$1${MASKED_VALUE}`)
     .replace(NAMED_SECRET, (whole, name: string, value: string) =>
       STAND_IN.test(value) || (WORDS.test(value) && !JSON_PAIR.test(name))
         ? whole

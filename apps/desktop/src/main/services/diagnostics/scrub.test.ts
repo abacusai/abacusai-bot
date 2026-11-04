@@ -111,6 +111,7 @@ const ORDINARY = [
   "https://example.com:8443/path?page=2",
   parts("git", "@github.com:abacusai/abacusai-bot.git"),
   "see section 1.2.3 of the agreement.",
+  "cookie: chocolate chip is the best",
   parts("task-", "abcdef0123456789".repeat(3)),
   "a\\nb\\tc",
   "Montreal.is.lovely.this.time.of.the.year.and.so.on.and.on",
@@ -173,6 +174,25 @@ describe("what is uploaded or logged", () => {
       "<redacted-key>\nafter"
     );
     expect(scrub(pem)).toBe("<redacted-key>");
+  });
+
+  it("holds no key after a data URI at the start of a string", () => {
+    const key = KEYS[0]![1];
+
+    expect(
+      scrub(parts("data:text/plain;base64,SGVsbG8=", "\n", key))
+    ).not.toContain(key);
+  });
+
+  it("holds no cookie after the first in a header", () => {
+    const sid = body(30);
+
+    for (const name of [parts("Coo", "kie"), parts("Set-Coo", "kie")]) {
+      const once = scrub(parts(name, ": theme=dark; sid=", sid, "; Path=/"));
+
+      expect(once).not.toContain(sid);
+      expect(scrub(once)).toBe(once);
+    }
   });
 
   it("holds no private key split across two flushes", () => {
