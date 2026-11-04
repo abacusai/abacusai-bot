@@ -21,9 +21,10 @@ export type RoutineTrigger =
 /**
  * One entry of a routine's history (spec 05 §31.5 f). **Attempt kinds** are
  * one per fire: `started` and `start-failed` (a session exists), `skipped`,
- * `skipped-offline` (held for the network, and its next fire came first)
- * and `no-workspace` (none), and `unknown` (a legacy entry main could not
- * classify). **Follow-up kinds** are not fires: `timed-out` (the reaper
+ * `skipped-offline` (held for the network, and its next fire came first),
+ * `skipped-credits` (the account is out of credits: nothing ran, nothing was
+ * billed) and `no-workspace` (none), and `unknown` (a legacy entry main could
+ * not classify). **Follow-up kinds** are not fires: `timed-out` (the reaper
  * stopped a started run; it names that attempt) and `paused` (an
  * administrative note, no session).
  */
@@ -32,6 +33,7 @@ export type RoutineRunKind =
   | "start-failed"
   | "skipped"
   | "skipped-offline"
+  | "skipped-credits"
   | "no-workspace"
   | "unknown"
   | "timed-out"
@@ -57,8 +59,21 @@ export const ROUTINE_FAILURES_BEFORE_PAUSE = 3;
 export const ROUTINE_QUIET_RUNS_BEFORE_PAUSE = 3;
 
 /**
+ * Local routines are waiting for credits: their fires skip, unbilled, until
+ * the credits are back, and the user is told once. Main stamps it and clears
+ * it when the wall goes; the app marks it `noticed` once it has said so.
+ */
+export interface RoutineCreditHold {
+  at: number;
+  /** The routine that first skipped: where the notice opens. */
+  routineId: string;
+  noticed: boolean;
+}
+
+/**
  * The `paused` history note main writes when it pauses a local routine, by
- * reason. Persisted on users' disks: existing texts never change.
+ * reason. Persisted on users' disks: existing texts never change. `credits`
+ * is history: out of credits a routine now skips, it no longer pauses.
  */
 export const ROUTINE_PAUSE_NOTES = {
   credits: "paused: out of Abacus.AI credits",

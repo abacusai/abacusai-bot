@@ -342,6 +342,7 @@ const PREFS_WRITABLE = [
   "recentFolders",
   "creditsExhaustedAt",
   "freeLaneChosenAt",
+  "routineCreditHold",
   "browserHomepage",
   "onboardingStep",
   "dismissals",

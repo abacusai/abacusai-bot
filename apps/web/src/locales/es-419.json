@@ -860,6 +860,7 @@
     "upsellTitle": "Unlock the full potential on desktop and web",
     "levelUpTitle": "¿Listo para tu siguiente nivel?",
     "progress": "Te quedan {{remaining}} de {{total}} créditos",
+    "routinesHeld": "Tus rutinas están esperando créditos.",
     "used": "Créditos usados",
     "lowTitle": "Te quedan pocos créditos",
     "outTitle": "Usaste tus créditos gratis",
@@ -1590,6 +1591,12 @@
       "other": "Paused.",
       "denied": "Paused: you did not allow it.",
       "quiet": "En pausa: {{runs}} ejecuciones seguidas no encontraron nada nuevo, así que dejó de usar créditos. Reanúdala para que siga revisando."
+    },
+    "creditHold": {
+      "title": "Tus rutinas están esperando créditos",
+      "notify": "Te quedaste sin créditos, así que tus rutinas no se ejecutarán. Las ejecuciones omitidas no cuestan nada y vuelven solas cuando tengas créditos.",
+      "note": "Esperando créditos: las ejecuciones se omiten sin costo y vuelven solas cuando tengas créditos.",
+      "cta": "Obtener créditos"
     },
     "createdByAgent": "A routine was set up: {{name}}.",
     "frequent": "Se ejecuta {{times}} veces al día y cada ejecución usa créditos: a este ritmo, los créditos de un mes pueden agotarse en pocos días. Si varias ejecuciones seguidas no encuentran nada nuevo, se pausa sola.",
@@ -3419,7 +3426,8 @@
       "webhook": "Webhook",
       "manual": "On demand",
       "scheduled": "Scheduled",
-      "waiting": "Esperando conexión"
+      "waiting": "Esperando conexión",
+      "waiting-credits": "Esperando créditos"
     },
     "outcomes": {
       "running": "Running",
@@ -3427,6 +3435,7 @@
       "failed": "Failed",
       "skipped": "Skipped",
       "skipped-offline": "Omitida: sin conexión",
+      "skipped-credits": "Omitida: sin créditos",
       "offline": "No se pudo conectar con Abacus",
       "interrupted": "Interrumpida",
       "unknown": "Unknown",
@@ -4542,6 +4551,8 @@
       "link": "Mejora aquí: {{link}}",
       "mobileApp": "Cuando mejores tu plan, todo funcionará por completo en tu celular, en la app ChatLLM.",
       "repeat": "Sigo en pausa: {{link}}",
+      "routinesOnHold": "Tus rutinas se detuvieron porque se agotaron tus créditos. Las ejecuciones omitidas no cuestan nada y vuelven solas cuando tengas créditos.",
+      "routinesTopUp": "Agrega créditos para reanudarlas: {{link}}",
       "paidOut": "Me detuve porque se acabaron los créditos de este mes. Agrega créditos para seguir: {{link}}",
       "paidOutUpgrade": "Me detuve porque se acabaron los créditos de este mes. Pásate a {{plan}} ({{price}}) para tener más créditos cada mes: {{link}}",
       "paidUpgrade": "O pásate a {{plan}} ({{price}}) para tener más créditos cada mes: {{link}}",

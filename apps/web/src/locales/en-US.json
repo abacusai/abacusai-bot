@@ -860,6 +860,7 @@
     "upsellTitle": "Go further with Pro",
     "levelUpTitle": "Ready for your next level?",
     "progress": "{{remaining}} of {{total}} credits left",
+    "routinesHeld": "Your routines are waiting for credits.",
     "used": "Credits used",
     "lowTitle": "Running low on credits",
     "outTitle": "You've used your free credits",
@@ -1590,6 +1591,12 @@
       "other": "Paused.",
       "denied": "Paused: you did not allow it.",
       "quiet": "Paused: {{runs}} runs in a row found nothing new, so it stopped using credits. Resume it to keep checking."
+    },
+    "creditHold": {
+      "title": "Your routines are waiting for credits",
+      "notify": "You're out of credits, so your routines won't run. Skipped runs cost nothing, and they start again on their own when you have credits.",
+      "note": "Waiting for credits: runs are skipped at no cost and start again on their own when you have credits.",
+      "cta": "Get credits"
     },
     "createdByAgent": "A routine was set up: {{name}}.",
     "frequent": "Runs {{times}} times a day, and every run uses credits: at this rate a month's credits can be gone in a few days. If several runs in a row find nothing new, it pauses itself.",
@@ -3419,7 +3426,8 @@
       "webhook": "Webhook",
       "manual": "On demand",
       "scheduled": "Scheduled",
-      "waiting": "Waiting for connection"
+      "waiting": "Waiting for connection",
+      "waiting-credits": "Waiting for credits"
     },
     "outcomes": {
       "running": "Running",
@@ -3427,6 +3435,7 @@
       "failed": "Failed",
       "skipped": "Skipped",
       "skipped-offline": "Skipped: offline",
+      "skipped-credits": "Skipped: out of credits",
       "offline": "Couldn't reach Abacus",
       "interrupted": "Interrupted",
       "unknown": "Unknown",
@@ -4542,6 +4551,8 @@
       "link": "Upgrade here: {{link}}",
       "mobileApp": "Once you upgrade, everything works fully on your phone in the ChatLLM app.",
       "repeat": "Still paused: {{link}}",
+      "routinesOnHold": "Your routines have stopped because your credits are used up. Skipped runs cost nothing, and they start again on their own when you have credits.",
+      "routinesTopUp": "Add credits to start them again: {{link}}",
       "paidOut": "I've paused because this month's credits are used up. Add credits to keep going: {{link}}",
       "paidOutUpgrade": "I've paused because this month's credits are used up. Move up to {{plan}} ({{price}}) for more credits every month: {{link}}",
       "paidUpgrade": "Or move up to {{plan}} ({{price}}) for more credits every month: {{link}}",

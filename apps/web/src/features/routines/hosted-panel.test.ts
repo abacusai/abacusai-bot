@@ -41,6 +41,7 @@ const row = (overrides: Partial<RoutineRow> = {}): RoutineRow =>
     schedule: "0 8 * * *",
     runAt: null,
     enabled: true,
+    recentRuns: [],
     botId: null,
     runner: "hosted",
     hosted: {

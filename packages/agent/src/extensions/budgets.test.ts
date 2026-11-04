@@ -687,6 +687,18 @@ describe("credits running out", () => {
     expect(nudge!.options?.deliverAs).toBe("steer");
   });
 
+  it("tells nobody to wrap up when nobody is in the chat", async () => {
+    await balance(150);
+    vi.stubEnv("ABACUSAI_BOT_NOBODY_PRESENT", "1");
+    try {
+      const pi = await started();
+      await pi.fire("turn_start", {}, billed);
+      expect(nudges(pi)).toHaveLength(0);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("stays quiet above the threshold, and speaks once a lower balance arrives", async () => {
     await balance(250);
     const pi = await started();

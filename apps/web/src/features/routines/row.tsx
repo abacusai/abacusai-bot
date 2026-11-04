@@ -37,6 +37,7 @@ type State = ReturnType<typeof routineState>;
 const moods: Partial<Record<State, AvatarMood>> = {
   "needs-you": "waiting",
   waiting: "waiting",
+  "waiting-credits": "waiting",
   running: "working",
   failed: "blocked",
   paused: "asleep",

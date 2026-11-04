@@ -76,6 +76,9 @@ export const routineState = (
   if (own.some((a) => a.outcome === "running")) return "running";
   // Held for the network: it runs once the connection is back.
   if (r.waitingForConnection === true && r.enabled) return "waiting";
+  // Out of credits: the run that met the wall is not the routine's state.
+  if (r.recentRuns[0]?.kind === "skipped-credits" && r.enabled)
+    return "waiting-credits";
   if (own[0]?.outcome === "failed" && r.enabled) return "failed";
   if (!r.enabled) return "paused";
   if (r.runAt != null && r.schedule == null) return "once";
@@ -122,6 +125,7 @@ export const runsView = (
             "start-failed": "failed",
             skipped: "skipped",
             "skipped-offline": "skipped-offline",
+            "skipped-credits": "skipped-credits",
             "no-workspace": "failed",
             unknown: "unknown",
             paused: "paused",

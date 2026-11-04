@@ -20,6 +20,7 @@ import { useAppContext } from "#renderer/lib/use-app-context";
 import { hostedRunFailed, hostedUnread } from "./hosted";
 import {
   completionNotice,
+  creditHoldToTell,
   createFireHandler,
   hostedAwayNotice,
   hostedRunNotice,
@@ -177,6 +178,35 @@ export const RoutinesGlobals = () => {
         },
       });
     };
+    // Routines waiting for credits, told once: the row outlives a closed window.
+    const creditHold = () => {
+      const hold = creditHoldToTell(
+        db.collections.prefs.get("app")?.routineCreditHold,
+        seenFor(seenHosted, transport)
+      );
+      if (!hold) return;
+      const body = t("routines.creditHold.notify");
+      showInfo(body);
+      notifyAttention(notifier, {
+        kind: "failed",
+        dedupeKey: `credit-hold:${hold.at}`,
+        botId: null,
+        title: t("routines.creditHold.title"),
+        body,
+        metadata: {
+          kind: "routine",
+          routineId: hold.routineId,
+          sessionId: "",
+        },
+      });
+      void transport.client.db.prefs.update({
+        patch: { routineCreditHold: { ...hold, noticed: true } },
+      });
+    };
+    const prefs = db.collections.prefs.subscribeChanges(() =>
+      readiness.run(creditHold)
+    );
+    readiness.run(creditHold);
     followNotice(
       "routines",
       transport,
@@ -275,6 +305,7 @@ export const RoutinesGlobals = () => {
       abort.abort();
       routines.unsubscribe();
       sessions.unsubscribe();
+      prefs.unsubscribe();
       unsubscribe();
       document.removeEventListener("pointerdown", unlock);
       player.dispose();

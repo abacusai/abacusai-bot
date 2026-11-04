@@ -6,6 +6,7 @@ import {
   CircleAlert,
   CirclePlay,
   CircleStop,
+  Coins,
   Loader2,
   Pause,
   Pencil,
@@ -46,7 +47,11 @@ import { isHosted } from "./hosted";
 import { HostedResults } from "./hosted-results";
 import { runRoutineNow, showSaveFailure, useHostedOff } from "./hosted-sync";
 import { RoutinesLanding } from "./landing";
-import { RoutinePausedReason, RoutineReachPanel } from "./reach-panel";
+import {
+  RoutineCreditHoldNote,
+  RoutinePausedReason,
+  RoutineReachPanel,
+} from "./reach-panel";
 import { RoutineIdentity } from "./row";
 /** No routine open: the way to make one, with the templates (landing.tsx). */
 export const RoutinesListBody = RoutinesLanding;
@@ -121,6 +126,9 @@ const RunsRail = ({
                     a.outcome === "skipped-offline" ? (
                     // The network's doing, not the routine's: no red.
                     <WifiOff className="text-muted-foreground size-3.5 shrink-0" />
+                  ) : a.outcome === "skipped-credits" ? (
+                    // Nothing ran and nothing was billed: no red either.
+                    <Coins className="text-muted-foreground size-3.5 shrink-0" />
                   ) : a.outcome === "interrupted" ? (
                     // The app closed under it: not the routine's doing either.
                     <CircleStop className="text-muted-foreground size-3.5 shrink-0" />
@@ -284,6 +292,7 @@ export const RoutinePage = ({
         ))}
       </dl>
       {!hosted && <RoutinePausedReason row={row} />}
+      {!hosted && <RoutineCreditHoldNote row={row} />}
       {!hosted && row.missed != null && <MissedRunsNote missed={row.missed} />}
       {row.webhookUrl && (
         <div className="flex items-center gap-2 text-xs">

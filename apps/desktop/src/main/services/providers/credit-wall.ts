@@ -59,6 +59,25 @@ export const wallAfterAccountRead = (
   return { creditsExhaustedAt: null, freeLaneChosenAt: null };
 };
 
+/**
+ * A routine fired now would stop at the wall: the credits are out and the
+ * free models were not chosen. A wall past its day stands while the account
+ * still reads empty; agents only ask Abacus again, and hear the same no.
+ */
+export const routineStopsAtWall = (
+  wall: CreditWall,
+  snapshot: CreditSnapshot | null,
+  now: number
+): boolean =>
+  wall.exhaustedAt != null &&
+  !live(wall.freeLaneChosenAt, now) &&
+  (live(wall.exhaustedAt, now) || snapshot?.remaining === 0);
+
+/** The wall went, or the free models were chosen: routines run again. */
+export const holdLifted = (row: PrefsRow): boolean =>
+  row.routineCreditHold != null &&
+  (row.creditsExhaustedAt == null || row.freeLaneChosenAt != null);
+
 /** Whether a prefs write moved the wall, which every agent must hear. */
 export const wallMoved = (row: PrefsRow, previous: PrefsRow): boolean => {
   const next = creditWallOf(row);

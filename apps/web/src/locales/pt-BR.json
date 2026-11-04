@@ -860,6 +860,7 @@
     "upsellTitle": "Unlock the full potential on desktop and web",
     "levelUpTitle": "Pronto para o próximo nível?",
     "progress": "Restam {{remaining}} de {{total}} créditos",
+    "routinesHeld": "Suas rotinas estão aguardando créditos.",
     "used": "Créditos usados",
     "lowTitle": "Seus créditos estão acabando",
     "outTitle": "Você usou seus créditos grátis",
@@ -1590,6 +1591,12 @@
       "other": "Paused.",
       "denied": "Paused: you did not allow it.",
       "quiet": "Pausada: {{runs}} execuções seguidas não encontraram nada novo, então ela parou de usar créditos. Retome para continuar verificando."
+    },
+    "creditHold": {
+      "title": "Suas rotinas estão aguardando créditos",
+      "notify": "Seus créditos acabaram, então suas rotinas não vão rodar. Execuções ignoradas não custam nada, e elas voltam sozinhas quando você tiver créditos.",
+      "note": "Aguardando créditos: as execuções são ignoradas sem custo e voltam sozinhas quando você tiver créditos.",
+      "cta": "Obter créditos"
     },
     "createdByAgent": "A routine was set up: {{name}}.",
     "frequent": "Executa {{times}} vezes por dia, e cada execução usa créditos: nesse ritmo, os créditos de um mês podem acabar em poucos dias. Se várias execuções seguidas não encontrarem nada novo, ela se pausa sozinha.",
@@ -3419,7 +3426,8 @@
       "webhook": "Webhook",
       "manual": "On demand",
       "scheduled": "Scheduled",
-      "waiting": "Aguardando conexão"
+      "waiting": "Aguardando conexão",
+      "waiting-credits": "Aguardando créditos"
     },
     "outcomes": {
       "running": "Running",
@@ -3427,6 +3435,7 @@
       "failed": "Failed",
       "skipped": "Skipped",
       "skipped-offline": "Ignorada: offline",
+      "skipped-credits": "Ignorada: sem créditos",
       "offline": "Não foi possível acessar o Abacus",
       "interrupted": "Interrompida",
       "unknown": "Unknown",
@@ -4542,6 +4551,8 @@
       "link": "Faça upgrade aqui: {{link}}",
       "mobileApp": "Depois do upgrade, tudo funciona por completo no seu celular, no app ChatLLM.",
       "repeat": "Ainda pausado: {{link}}",
+      "routinesOnHold": "Suas rotinas pararam porque seus créditos acabaram. Execuções ignoradas não custam nada, e elas voltam sozinhas quando você tiver créditos.",
+      "routinesTopUp": "Adicione créditos para retomá-las: {{link}}",
       "paidOut": "Pausei porque os créditos deste mês acabaram. Adicione créditos para continuar: {{link}}",
       "paidOutUpgrade": "Pausei porque os créditos deste mês acabaram. Mude para o {{plan}} ({{price}}) para ter mais créditos todo mês: {{link}}",
       "paidUpgrade": "Ou mude para o {{plan}} ({{price}}) para ter mais créditos todo mês: {{link}}",

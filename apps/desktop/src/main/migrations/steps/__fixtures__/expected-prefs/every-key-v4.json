@@ -55,6 +55,7 @@
       "pinned.botIds": "legacy",
       "pinned.sessionIds": "legacy",
       "recentFolders": "legacy",
+      "routineCreditHold": "default",
       "showLinkPreviews": "default",
       "sidebar.openSection": "legacy",
       "sidebar.pinned": "legacy",
@@ -138,6 +139,7 @@
         "sessionIds": ["s-1", "s-2"]
       },
       "recentFolders": ["/Users/fixture/project", "/Users/fixture/other"],
+      "routineCreditHold": null,
       "showLinkPreviews": true,
       "sidebar": {
         "openSection": "routines",

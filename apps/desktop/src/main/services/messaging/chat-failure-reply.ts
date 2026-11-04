@@ -526,6 +526,34 @@ export const chatLineForCreditThreshold = (
 };
 
 /**
+ * Routines stopped for want of credits, said once in the user's own chat:
+ * that they wait and cost nothing, then the way on, as the wall's own lines.
+ */
+export const chatLineForRoutinesOnHold = (
+  words: ChannelWords,
+  link: string,
+  billing: BillingPlan | null
+): string => {
+  const offer = { upgradeUrl: link, topUpUrl: link, billing };
+  const paid = paidCreditsOffer(billing);
+  return [
+    words.t("outcome.channel.routinesOnHold"),
+    ...(paid != null
+      ? [
+          paidOutLines(
+            words,
+            offer,
+            words.t("outcome.channel.routinesTopUp", {
+              link: paid.topUpUrl ?? link,
+            }),
+            "outcome.channel.paidUpgradeOnly"
+          ),
+        ]
+      : offerLines(words, offer)),
+  ].join("\n");
+};
+
+/**
  * The success pitch in the user's own chat app, once ever after they praised
  * a result: glad it worked, the plan's whole pitch with its price, the link,
  * and that it will not be said there again.

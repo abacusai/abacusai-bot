@@ -55,6 +55,7 @@
       "pinned.botIds": "default",
       "pinned.sessionIds": "default",
       "recentFolders": "default",
+      "routineCreditHold": "default",
       "showLinkPreviews": "default",
       "sidebar.openSection": "default",
       "sidebar.pinned": "default",
@@ -136,6 +137,7 @@
         "sessionIds": []
       },
       "recentFolders": [],
+      "routineCreditHold": null,
       "showLinkPreviews": true,
       "sidebar": {
         "openSection": null,

@@ -860,6 +860,7 @@
     "upsellTitle": "Unlock the full potential on desktop and web",
     "levelUpTitle": "次のレベルへ進みませんか？",
     "progress": "{{total}} クレジット中 残り {{remaining}}",
+    "routinesHeld": "ルーティンはクレジットを待っています。",
     "used": "使用済みクレジット",
     "lowTitle": "クレジットが残りわずかです",
     "outTitle": "無料クレジットを使い切りました",
@@ -1590,6 +1591,12 @@
       "other": "Paused.",
       "denied": "Paused: you did not allow it.",
       "quiet": "一時停止中: {{runs}}回続けて新しいことが見つからなかったため、クレジットの使用を止めました。確認を続けるには再開してください。"
+    },
+    "creditHold": {
+      "title": "ルーティンはクレジットを待っています",
+      "notify": "クレジットがなくなったため、ルーティンは実行されません。スキップされた実行に費用はかからず、クレジットが入ると自動で再開します。",
+      "note": "クレジット待ち: 実行は費用なしでスキップされ、クレジットが入ると自動で再開します。",
+      "cta": "クレジットを入手"
     },
     "createdByAgent": "A routine was set up: {{name}}.",
     "frequent": "1日に{{times}}回実行され、実行のたびにクレジットを使います。このペースだと1か月分のクレジットが数日でなくなることがあります。何回か続けて新しいことが見つからなければ、自動で一時停止します。",
@@ -3419,7 +3426,8 @@
       "webhook": "Webhook",
       "manual": "On demand",
       "scheduled": "Scheduled",
-      "waiting": "接続待ち"
+      "waiting": "接続待ち",
+      "waiting-credits": "クレジット待ち"
     },
     "outcomes": {
       "running": "Running",
@@ -3427,6 +3435,7 @@
       "failed": "Failed",
       "skipped": "Skipped",
       "skipped-offline": "スキップ: オフライン",
+      "skipped-credits": "スキップ: クレジット切れ",
       "offline": "Abacus に接続できませんでした",
       "interrupted": "中断",
       "unknown": "Unknown",
@@ -4542,6 +4551,8 @@
       "link": "アップグレードはこちら: {{link}}",
       "mobileApp": "アップグレードすると、スマホの ChatLLM アプリですべてをフルに使えます。",
       "repeat": "一時停止中です: {{link}}",
+      "routinesOnHold": "クレジットを使い切ったため、ルーティンが停止しました。スキップされた実行に費用はかからず、クレジットが入ると自動で再開します。",
+      "routinesTopUp": "クレジットを追加して再開: {{link}}",
       "paidOut": "今月のクレジットを使い切ったため、一時停止しました。続けるにはクレジットを追加してください: {{link}}",
       "paidOutUpgrade": "今月のクレジットを使い切ったため、一時停止しました。{{plan}}（{{price}}）にアップグレードすると、毎月より多くのクレジットが使えます: {{link}}",
       "paidUpgrade": "または {{plan}}（{{price}}）にアップグレードすると、毎月より多くのクレジットが使えます: {{link}}",
