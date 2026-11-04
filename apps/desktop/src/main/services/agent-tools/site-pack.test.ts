@@ -68,7 +68,6 @@ describe("packSite", () => {
       "config.js": `const key = '${["sk", "x".repeat(20)].join("-")}';`,
       "node_modules/x/index.js": "x",
       ".git/HEAD": "ref",
-      ".abacus.donotdelete": "",
     });
     const result = await pack(root);
     expect(result).toMatchObject({

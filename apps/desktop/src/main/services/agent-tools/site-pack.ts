@@ -42,12 +42,8 @@ const LEFT_OUT_DIRS = new Set([
   ".svelte-kit",
 ]);
 
-/** Files never sent: OS litter, and the platform's own project marker. */
-const LEFT_OUT_FILES = new Set([
-  ".DS_Store",
-  "Thumbs.db",
-  ".abacus.donotdelete",
-]);
+/** Files never sent: OS litter. */
+const LEFT_OUT_FILES = new Set([".DS_Store", "Thumbs.db"]);
 
 /** Text files read whole for key shapes; larger ones are sent as they are. */
 const KEY_SCAN_BYTES = 1024 * 1024;
