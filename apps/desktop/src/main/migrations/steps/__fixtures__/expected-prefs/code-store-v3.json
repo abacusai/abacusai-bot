@@ -55,6 +55,7 @@
       "pinned.botIds": "legacy",
       "pinned.sessionIds": "legacy",
       "recentFolders": "default",
+      "routineCreditHold": "default",
       "showLinkPreviews": "default",
       "sidebar.openSection": "legacy",
       "sidebar.pinned": "legacy",
@@ -136,6 +137,7 @@
         "sessionIds": []
       },
       "recentFolders": [],
+      "routineCreditHold": null,
       "showLinkPreviews": true,
       "sidebar": {
         "openSection": null,
