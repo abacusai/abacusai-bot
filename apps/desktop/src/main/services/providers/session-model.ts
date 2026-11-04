@@ -13,15 +13,25 @@
  * keeps the stored pin; a brand-new session (no pin yet) then takes the
  * synchronous default it always had: the wanted model, else the tier's
  * cached recommendation.
+ *
+ * The plan is authoritative too: on a paying tier a pin or default to an
+ * OpenLLM model (the free plan's) is read as the tier's router
+ * (`modelForTier`), whether or not the catalog could be read.
  */
 import {
   modelAccess,
   resolveConfiguredModel,
   type ModelAvailability,
 } from "@abacus-ai/contract/models";
+import { abacusAccountTier } from "@abacus-ai/contract/models";
 
 import { readSettings } from "../config/settings";
-import { cachedRecommendedModelId, listAvailableModels } from "./models";
+import { cachedAbacusAccount } from "./abacus";
+import {
+  cachedRecommendedModelId,
+  listAvailableModels,
+  modelForTier,
+} from "./models";
 
 export interface SessionModelSources {
   /** `config.json`'s `defaultModel` (the user's last pick), if any. */
@@ -30,6 +40,8 @@ export interface SessionModelSources {
   listCatalog(): Promise<readonly ModelAvailability[]>;
   /** The tier's recommendation as of the last catalog read, if any. */
   cachedRecommended?(): string | null;
+  /** The account's plan tier as last read (`subscription_tier`), if known. */
+  tier?(): string | null | undefined;
 }
 
 /** The app's own sources: the stored default and the live catalog. */
@@ -37,7 +49,12 @@ const appModelSources: SessionModelSources = {
   readDefault: () => readSettings().defaultModel,
   listCatalog: () => listAvailableModels(),
   cachedRecommended: () => cachedRecommendedModelId(),
+  tier: () => currentTier(),
 };
+
+/** The plan tier as of the last account read: what `modelForTier` judges by. */
+export const currentTier = (): string | undefined =>
+  abacusAccountTier(cachedAbacusAccount());
 
 const present = (id: string | null | undefined): string | null =>
   id == null || id.length === 0 ? null : id;
@@ -52,9 +69,12 @@ export const resolveSessionModel = async (
   sources: SessionModelSources = appModelSources,
   pin: string | null = null
 ): Promise<string | null> => {
+  const tier = sources.tier?.();
+  const onTier = (id: string | null): string | null =>
+    id == null ? null : modelForTier(tier, id);
   const defaultModel = present(sources.readDefault());
-  const wanted = present(requested) ?? defaultModel;
-  const pinned = present(pin);
+  const wanted = onTier(present(requested) ?? defaultModel);
+  const pinned = onTier(present(pin));
   const syncDefault = (): string | null =>
     wanted ?? present(sources.cachedRecommended?.());
 

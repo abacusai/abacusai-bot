@@ -378,6 +378,7 @@ import {
   readSettings,
   credentialFor,
   saveApiKey,
+  setDefaultModel,
   storedKeyProviders,
 } from "./services/config/settings";
 import { ConnectivityService } from "./services/connectivity/connectivity-service";
@@ -495,8 +496,11 @@ import {
   clearBackendProbeCache,
   resolveBackend,
 } from "./services/providers/exec-backend-service";
-import { listAvailableModels } from "./services/providers/models";
-import { resolveSessionModel } from "./services/providers/session-model";
+import { listAvailableModels, modelForTier } from "./services/providers/models";
+import {
+  currentTier,
+  resolveSessionModel,
+} from "./services/providers/session-model";
 import {
   successPitchListener,
   SuccessPitchWatch,
@@ -1626,6 +1630,7 @@ export class ServiceHost {
     if (tier !== this.listedPlanTier) {
       this.listedPlanTier = tier;
       this.toolAvailabilityChanged();
+      this.moveModelPinsToTier();
     }
     // Credits back after a wall: the wall goes, and every agent hears it.
     const prefs = this.prefs?.();
@@ -1780,6 +1785,7 @@ export class ServiceHost {
       // The agents re-list their tools now (paid_feature, media), not on the next read.
       this.listedPlanTier = abacusPlanTier(cachedAbacusAccount());
       this.toolAvailabilityChanged();
+      this.moveModelPinsToTier();
       return;
     }
     if (event.event !== "connector_connected") return;
@@ -1990,6 +1996,36 @@ export class ServiceHost {
       connected,
       this.vault?.sessions.get(sessionId) ?? null
     );
+  }
+
+  /**
+   * The plan changed: the app default and every chat pinned to a model the
+   * new plan does not serve (the free plan's OpenLLM, on a paid one) move to
+   * the plan's model now, running agents included, so the chip and the next
+   * turn (a resent one too) are on it. Pins the plan still serves stay.
+   */
+  private moveModelPinsToTier(): void {
+    const tier = currentTier();
+    const stored = readSettings().defaultModel;
+    if (stored != null && stored.length > 0) {
+      const moved = modelForTier(tier, stored);
+      if (moved !== stored) setDefaultModel(moved);
+    }
+    for (const session of this.agentSessionManagerService.listAll())
+      this.moveSessionPinToTier(session.workspaceId, session.id);
+  }
+
+  /** One chat's pin onto the plan's model, if the plan does not serve it. */
+  private moveSessionPinToTier(workspaceId: string, sessionId: string): void {
+    const pin = this.agentSessionManagerService.get(sessionId)?.model;
+    if (pin == null || pin.length === 0) return;
+    const moved = modelForTier(currentTier(), pin);
+    if (moved === pin) return;
+    console.log(`[models] ${sessionId.slice(0, 8)} ${pin} -> ${moved} (plan)`);
+    this.setAgentSessionModel(workspaceId, sessionId, moved);
+    const runtime = this.agentManagerService.getRuntimeInfo(sessionId);
+    if (runtime != null && runtime.status === "running")
+      this.setAgentModel({ workspaceId, sessionId, model: moved });
   }
 
   /** So a platform linked mid-chat surfaces its tools without a new chat. */
@@ -3966,6 +4002,8 @@ export class ServiceHost {
     // the session's bot's model, else the stored default, else the plan
     // tier's. Not the agent's own fallback, which is the free pool whatever
     // the tier. The pick is kept on the session, so it lists what runs.
+    // A pin the plan no longer serves moves first (moveModelPinsToTier).
+    this.moveSessionPinToTier(request.workspaceId, request.sessionId);
     const remembered = this.agentSessionManagerService.get(
       request.sessionId
     )?.model;
@@ -4118,6 +4156,8 @@ export class ServiceHost {
     noticed: boolean;
     outcome: Awaited<ReturnType<typeof deliverMessage>>;
   }> {
+    // Into a running agent too: the turn runs on the plan's model.
+    this.moveSessionPinToTier(request.workspaceId, request.sessionId);
     const noted = await this.withVaultNotes(request);
     const delivered = await this.withEnvironmentNotice(noted);
     // Sent while its agent is being stopped (an idle stop, say): written to
