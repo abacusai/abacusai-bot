@@ -523,7 +523,8 @@
         "notes": "{{count}} day(s) of working notes on disk.",
         "clear": "Clear all",
         "clearConfirm": "Forget everything here?"
-      }
+      },
+      "botChats": "내 다른 봇과의 대화"
     },
     "gone": {
       "chat": "This chat is gone",

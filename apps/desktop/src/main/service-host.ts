@@ -671,7 +671,13 @@ const handOffRefusal = (
 ): string | null => {
   const lines = words.split("\n");
   // A yes to the bot's own offer, which named the bot.
-  if (lines.length > 1 && AGREEMENT.test(unlabelled(lines.at(-1) ?? "")))
+  // A plain yes alone is enough for a question: the bot offered to ask
+  // (say on its first-run turn, which is not the user's). A task carries the
+  // user's words, so it needs the message before the yes that says what.
+  if (
+    (lines.length > 1 || kind === "ask") &&
+    AGREEMENT.test(unlabelled(lines.at(-1) ?? ""))
+  )
     return null;
   const named = others.filter(
     (name) =>
@@ -3727,7 +3733,11 @@ export class ServiceHost {
     }
   }
 
-  /** Auto-reply conversations, for the Bots pane to nest under their bots. */
+  /**
+   * Auto-reply conversations, and a bot's chats with the bots that asked it
+   * something (platform "bot", chatId the asker), for the Bots pane to nest
+   * under their bots.
+   */
   listBotSenderChats(): BotSenderChat[] {
     // Off the owner stamps, not the registry: the session records are the
     // source of truth for parentage.
@@ -3736,11 +3746,7 @@ export class ServiceHost {
       .listAll()
       .filter(
         (session) =>
-          session.owner?.kind === "bot" &&
-          session.owner.role === "sender" &&
-          // A bot answering another bot is not an auto-reply chat: the pane
-          // would show it under an unknown app as "Paused".
-          session.owner.platform !== BOT_ASK_PLATFORM
+          session.owner?.kind === "bot" && session.owner.role === "sender"
       )
       .map((session) => {
         const owner = session.owner!;

@@ -523,7 +523,8 @@
         "notes": "Ayrıca {{count}} günlük not tutuyor",
         "clear": "Her şeyi unut",
         "clearConfirm": "Buradaki her şey unutulsun mu?"
-      }
+      },
+      "botChats": "Diğer botlarınla sohbetler"
     },
     "gone": {
       "chat": "Bu sohbet artık yok",

@@ -450,6 +450,17 @@ describe("a task the user gave, passed on", () => {
       expect(h.botAskService.ask).toHaveBeenCalledTimes(1);
     });
 
+    it("goes out on a plain yes alone: the bot offered on a turn that was not the user's", () => {
+      const h = wordsHost();
+      h.noteUserWords("res-chat", "[first run] Introduce yourself…", {
+        systemReminder: true,
+        operator: { kind: "environment-notice" },
+      });
+      h.noteUserWords("res-chat", "yes");
+      h.askBot("res", "res-chat", "wri", "a tagline please");
+      expect(h.botAskService.ask).toHaveBeenCalledTimes(1);
+    });
+
     it("never on the bot's own initiative: it answers itself or offers", () => {
       const { h, result } = tryAsk("I need a tagline for Brewly");
       expect(result).toEqual({
@@ -563,6 +574,10 @@ describe("a task the user gave, passed on", () => {
     expect(wordsGiven(h)).toBe(
       "have Planner draft the launch checklist for Nov 20"
     );
+  });
+
+  it("a task needs more than a plain yes: its words say what the work is", () => {
+    expect(tryTask("yes").result).toEqual(handOffRefused);
   });
 
   it("a plain yes to the bot's offer carries the message before it", () => {

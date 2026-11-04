@@ -127,7 +127,10 @@ export const TextPartDispatch = ({ part }: PartProps<unknown, "text">) => {
       if (content === "") return null;
       const text = (
         <Markdown
-          content={content}
+          // A bot's answer to another bot is wrapped in <reply> tags.
+          content={
+            skin === "bot" ? content.replace(/<\/?reply>/gi, "") : content
+          }
           role={scope.role}
           reply={scope.role === "assistant"}
           selectable
