@@ -50,6 +50,8 @@ const ALLOWED = new Set([
   // What a chat can do: no imports at all.
   "@abacus-ai/agent/channel",
   // Which tools a chat gets: no imports at all.
+  // The list of key-file names: no imports at all.
+  "@abacus-ai/agent/secret-files",
   "@abacus-ai/agent/tool-policy",
   // The credential stores: node's fs, os and path only.
   "@abacus-ai/agent/secret-paths",

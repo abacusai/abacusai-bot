@@ -38,14 +38,20 @@ type Step =
   | "share_unshared"
   | "share_failed";
 
+type Client = ReturnType<typeof useAppContext>["transport"]["client"];
+
+const reportStep = (client: Client, step: Step, detail?: string): void => {
+  client.system
+    .funnelStep({ step, ...(detail != null ? { detail } : {}) })
+    .catch(() => {});
+};
+
 const useShareActions = () => {
-  const { transport } = useAppContext();
-  const funnel = (step: Step, detail?: string): void => {
-    transport.client.system
-      .funnelStep({ step, ...(detail != null ? { detail } : {}) })
-      .catch(() => {});
+  const { client } = useAppContext().transport;
+  return {
+    client,
+    funnel: (step: Step, detail?: string) => reportStep(client, step, detail),
   };
-  return { client: transport.client, funnel };
 };
 
 const LinkActions = ({
@@ -135,7 +141,7 @@ const FileShare = ({ path }: { path: string }) => {
 
   useEffect(() => {
     let live = true;
-    funnel("share_opened");
+    reportStep(client, "share_opened");
     client.shares
       .preview({ path, lang })
       .catch((): SharePreview => ({ ok: false, code: "FAILED" }))
@@ -144,14 +150,12 @@ const FileShare = ({ path }: { path: string }) => {
         setPreview(result);
         if (result.ok === false) {
           setFailure(result.code);
-          funnel("share_failed", result.code);
+          reportStep(client, "share_failed", result.code);
         } else if (result.existing != null) setLink(result.existing);
       });
     return () => {
       live = false;
     };
-    // One preview per file and language; funnel is a fresh closure each render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client, lang, path]);
 
   const create = async () => {
