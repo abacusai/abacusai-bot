@@ -40,6 +40,8 @@ interface NudgeAgendaDeps {
   phoneDir: string;
   /** The phone session's waits; none before it exists. */
   waits: () => Promise<PendingWait[]>;
+  /** Whether Calendar or Gmail is connected, for the first brief. */
+  googleConnected?: () => Promise<boolean>;
   now?: () => number;
   log?: (line: string) => void;
 }
@@ -183,6 +185,8 @@ export class NudgeAgenda {
   private languageRefusals = 0;
   /** The user's language as their script names it, while none was set. */
   private scriptLang: string | null = null;
+  /** Whether Calendar or Gmail is connected, read when a first brief arrives; null until read. */
+  private google: boolean | null = null;
   /** A pending post goes even when nothing changed. */
   private forceNext = false;
   private posting: Promise<void> = Promise.resolve();
@@ -227,10 +231,11 @@ export class NudgeAgenda {
    * server says nothing and nothing changes), and the start's first posts the
    * agenda.
    */
-  polled(result: { tz?: unknown; lang?: unknown }): void {
+  polled(result: { tz?: unknown; lang?: unknown; messages?: unknown }): void {
     if (!this.running) return;
     this.save("timezone", serverValue(result.tz), writePhoneZone);
     this.save("language", serverValue(result.lang), writePhoneReplyLanguage);
+    if (carriesFirstBrief(result.messages)) void this.readGoogle();
     if (this.posted) return;
     this.posted = true;
     void this.post(true).then(() => this.readEnabled());
@@ -268,7 +273,12 @@ export class NudgeAgenda {
     const dir = this.deps.phoneDir;
     if (entry.kind === "linked") {
       const greeting = this.enabled === true ? [CHECKINS_ON_GREETING] : [];
-      return entry.first_brief === true ? [FIRST_BRIEF, ...greeting] : greeting;
+      if (entry.first_brief !== true) return greeting;
+      // Unread in time, the brief is the one that checks the tool list itself.
+      return [
+        this.google === false ? NO_GOOGLE_BRIEF : FIRST_BRIEF,
+        ...greeting,
+      ];
     }
     const notes = nudgeNotes(entry);
     const sentAts = (
@@ -353,6 +363,16 @@ export class NudgeAgenda {
     return run;
   }
 
+  /** Whether Calendar or Gmail is connected, for the first brief. */
+  private async readGoogle(): Promise<void> {
+    if (this.deps.googleConnected == null) return;
+    try {
+      this.google = await this.deps.googleConnected();
+    } catch (error) {
+      this.log(`[phone] connectors not read: ${describe(error)}`);
+    }
+  }
+
   /** Whether the server has check-ins on, for the linked greeting. */
   private async readEnabled(): Promise<void> {
     if (!this.supported) return;
@@ -389,6 +409,28 @@ const FIRST_BRIEF =
   "error is not connected: leave it out of the brief, and call `connect_connector` for it and send the link it gives " +
   "to reconnect it. If neither is connected, greet them and call `connect_connector` for Google, sending the link it gives, " +
   "so you can brief them. Never send an email, and draft only after their yes.";
+
+/**
+ * The first brief with neither Calendar nor Gmail: tasks the bot runs with no
+ * connections, numbered so a bare "1" picks one (the chat sends text only),
+ * and Google as an option. Offered, not run: a guessed demo spends the free
+ * window on a search nobody asked for.
+ */
+const NO_GOOGLE_BRIEF =
+  "[first brief] This is the user's first time here and nothing is connected yet: instead of a question, open " +
+  "with what you can do for them right now, all in this one reply and in their language. Before you write, call " +
+  "`current_time` and date every task from it, and call `connect_connector` for Google: its link goes on your " +
+  "last line. Answer their greeting in a few words and greet them by first name. Then a numbered list of 3 " +
+  "tasks, never more, suited to a phone and to where they seem to be, each written as the one-line request they " +
+  "would send you, its details filled in (which products, which route and month, which city), never a bare " +
+  "category or a choice left to them: a bare number must be enough to start it. Pick from comparing or " +
+  "researching something, finding flights or prices, writing or translating a message, planning a trip, summing " +
+  "up a link they paste or a voice note they send. Never offer an image, a video or anything else that goes to " +
+  "`paid_feature`. Then say they can reply with a number or ask for anything else. Run none of them in this " +
+  "reply (no search, no browsing) unless their greeting already asked for something: then do that first and list " +
+  "fewer. Last, one line: if they connect Google, you can brief them on their meetings and emails every morning, " +
+  "with the link `connect_connector` gave. It is an option, never a step they must take first. When they answer " +
+  "with a number, run that task from your list as written, without asking first.";
 
 const CHECKINS_ON_GREETING =
   "[check-ins] Check-ins are on: say once in this greeting, in the user's language, that you may check in here " +
@@ -458,6 +500,14 @@ function upgradeHintNote(hint: PhoneInboxEntry["upgrade_hint"]): string | null {
     `error, or when you just asked them something: then leave it out.`
   );
 }
+
+/** A poll's messages include the user's first linked one. */
+const carriesFirstBrief = (messages: unknown): boolean =>
+  Array.isArray(messages) &&
+  messages.some(
+    (entry: PhoneInboxEntry | null) =>
+      entry?.kind === "linked" && entry.first_brief === true
+  );
 
 /** A poll field: a string is the server's value, null clears it, anything else (an older server) says nothing. */
 const serverValue = (value: unknown): string | null | undefined =>

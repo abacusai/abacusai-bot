@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { WHATSAPP_CHANNEL } from "@abacus-ai/agent/channel";
+import { connectorForService } from "@abacus-ai/connectors/registry";
 import { AgentMode } from "@abacus-ai/contract/agent-types";
 
 import { composeHost } from "#main/compose-host";
@@ -59,6 +60,9 @@ const nodeHostPlatform: HostPlatformOperations = {
   relaunch: () => shutdown(75),
   requestMicrophoneAccess: async () => true,
 };
+
+/** The services the phone's first brief is built from. */
+const FIRST_BRIEF_SERVICES = ["googlecalendar", "gmailuser"];
 
 const IDLE_UPDATE = {
   checking: false,
@@ -195,6 +199,13 @@ export const composeNodeHost = async () => {
     phoneDir,
     waits: async () =>
       phoneSessionId == null ? [] : serviceHost.waitsFor(phoneSessionId),
+    googleConnected: async () => {
+      const statuses = await serviceHost.listConnectorStatuses();
+      return FIRST_BRIEF_SERVICES.some((service) => {
+        const id = connectorForService(service)?.id;
+        return id != null && statuses[id]?.state === "connected";
+      });
+    },
   });
   const phoneLane = new PhoneLane({
     call: channels,
