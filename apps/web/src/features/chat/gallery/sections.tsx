@@ -7,6 +7,7 @@ import { BOT_AVATAR_COLORS } from "@abacus-ai/contract/bots";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type CSSProperties } from "react";
 
+import { ShareDialogHost } from "#renderer/components/share/share-dialog";
 import { clearDraft } from "#renderer/lib/continuity/composer-drafts";
 import { botAccentStyle } from "#renderer/lib/theme";
 
@@ -264,6 +265,7 @@ const View = ({
       {/* The success pitch's Upgrade and the turn's credits open the upgrade dialog, as in the shell. */}
       {(scenario.view?.successPitch != null ||
         scenario.view?.upgradeDialog === true) && <UpgradeDialogHost />}
+      {scenario.view?.deliverables === true && <ShareDialogHost />}
     </div>
   );
 };
