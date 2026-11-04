@@ -124,6 +124,7 @@ export const RoutineUpdateInputSchema = v.object({
       })
     )
   ),
+  model: v.optional(v.nullable(v.string())),
 });
 
 const NullableTimestamp = v.nullable(v.number());

@@ -1,4 +1,4 @@
-import { OPENLLM_ID } from "@abacus-ai/contract/models";
+import { OPENLLM_ID, resolveConfiguredModel } from "@abacus-ai/contract/models";
 import { useQuery } from "@tanstack/react-query";
 import { Lock, Settings2 } from "lucide-react";
 import { motion } from "motion/react";
@@ -17,6 +17,7 @@ import { accountTier } from "#renderer/lib/credits";
 import { useMotionPreference } from "#renderer/lib/motion";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { requestPlanDialog } from "#renderer/lib/upgrade-dialog";
+import { useAccount } from "#renderer/lib/use-account";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
 import { Popover, PopoverTrigger, PopoverContent } from "#renderer/ui/popover";
@@ -43,7 +44,7 @@ export const useBotModelBinding = (
   const models = useQuery(queries.models());
   const settings = useQuery(queries.settings());
   const catalog = models.data ?? [];
-  const account = useQuery(queries.account());
+  const account = useAccount();
   const groups = botModelGroups({
     models: catalog,
     favorites: prefs.models.favoriteModelIds,
@@ -78,9 +79,16 @@ export const useBotModelBinding = (
     failed: models.isError || settings.isError,
     select: onChange,
   });
+  const effectiveId = resolveConfiguredModel({
+    requested: value,
+    defaultModel: settings.data?.defaultModel,
+    catalog,
+  });
   return {
     setup,
     value,
+    /** The catalog row `value` runs on now, if any. */
+    effective: catalog.find((model) => model.id === effectiveId) ?? null,
     onConfigureProviders: () =>
       void navigate({ to: "/settings/models", transition: "settings-in" }),
     ...(accountTier(account.data) === "free"

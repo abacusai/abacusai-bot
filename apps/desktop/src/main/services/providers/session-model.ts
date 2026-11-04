@@ -34,7 +34,7 @@ import {
 } from "./models";
 
 export interface SessionModelSources {
-  /** `config.json`'s `defaultModel` (the user's last pick), if any. */
+  /** `config.json`'s `defaultModel` (set in Settings > Models), if any. */
   readDefault(): string | null | undefined;
   /** The catalog with `configured` and `recommended` (`listAvailableModels`). */
   listCatalog(): Promise<readonly ModelAvailability[]>;
@@ -60,9 +60,9 @@ const present = (id: string | null | undefined): string | null =>
   id == null || id.length === 0 ? null : id;
 
 /**
- * `requested` is the session's own ask: a bot's model, the bot a routine
- * speaks as, or null for the app default. `pin` is the session's stored
- * model (null for a session not yet pinned).
+ * `requested` is the session's own ask: a bot's model, a routine's own, or
+ * null for the app default. `pin` is the session's stored model (null for a
+ * session not yet pinned).
  */
 export const resolveSessionModel = async (
   requested: string | null,
@@ -107,3 +107,14 @@ export const resolveSessionModel = async (
     ? present(sources.cachedRecommended?.())
     : syncDefault();
 };
+
+/**
+ * The model a new routine keeps as its own: its bot's, else the one the chat
+ * that made it is on, else the app default (the plan's model when none is set).
+ */
+export const newRoutineModel = (
+  botModel: string | null | undefined,
+  chatModel: string | null | undefined,
+  sources: SessionModelSources = appModelSources
+): Promise<string | null> =>
+  resolveSessionModel(present(botModel) ?? present(chatModel), sources);

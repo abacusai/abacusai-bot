@@ -15,6 +15,20 @@ to each provider's key page. The app supports direct providers, model gateways,
 AWS Bedrock, Google Vertex, Azure OpenAI, and OpenAI-compatible endpoints such
 as vLLM.
 
+## Which model runs
+
+A pick in a chat's composer changes that chat only. The default model, set at
+the top of Settings, then Models, is what new chats start on, and what bots and
+routines set to App default run on. Without one, your plan's model is used.
+
+A routine keeps its own model. It starts on the model of the chat that created
+it, its bot's model for a bot's routine, or the default model for one made in
+the Routines form. The routine's page shows the model, warns when it is a
+costly one, and has the picker to change it. A later pick in a chat, or a new
+model for its bot, leaves it where it is. When your plan changes, a routine on
+a model the plan no longer serves moves to the plan's model. Hosted routines
+run on the default model.
+
 ## Key precedence
 
 The app stores pasted keys in `~/.abacusai-bot/config.json`. A non-empty

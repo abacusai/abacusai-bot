@@ -47,6 +47,7 @@ import { isHosted } from "./hosted";
 import { HostedResults } from "./hosted-results";
 import { runRoutineNow, showSaveFailure, useHostedOff } from "./hosted-sync";
 import { RoutinesLanding } from "./landing";
+import { RoutineModel } from "./model";
 import {
   RoutineCreditHoldNote,
   RoutinePausedReason,
@@ -291,6 +292,7 @@ export const RoutinePage = ({
           </div>
         ))}
       </dl>
+      <RoutineModel row={row} />
       {!hosted && <RoutinePausedReason row={row} />}
       {!hosted && <RoutineCreditHoldNote row={row} />}
       {!hosted && row.missed != null && <MissedRunsNote missed={row.missed} />}

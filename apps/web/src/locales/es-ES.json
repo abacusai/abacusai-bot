@@ -1620,6 +1620,12 @@
     "upgrade": {
       "title": "Desbloquea las rutinas",
       "description": "Mejora tu plan para programar tareas y automatizar tu trabajo."
+    },
+    "model": {
+      "label": "Modelo",
+      "followsDefault": "Sigue el predeterminado de la app: {{model}}.",
+      "costly": "Cada ejecución usa {{model}}, un modelo más caro, así que cada una gasta más créditos.",
+      "hosted": "Las rutinas alojadas usan el predeterminado de la app."
     }
   },
   "sessions": {
@@ -3464,6 +3470,8 @@
     "creditsAlternatives": "Connect a free source to keep going. No card needed.",
     "connectFree": "Connect a free source",
     "dismiss": "Dismiss",
+    "defaultModel": "Modelo predeterminado",
+    "defaultModelDetail": "Los chats nuevos empiezan con este modelo, igual que los bots y las rutinas configurados con el predeterminado de la app. Elegir un modelo en un chat cambia solo ese chat.",
     "providers": "Providers",
     "otherProviders": "Other providers",
     "searchProviders": "Search model providers…",

@@ -1620,6 +1620,12 @@
     "upgrade": {
       "title": "Libere as rotinas",
       "description": "Faça upgrade para agendar tarefas e automatizar seu trabalho."
+    },
+    "model": {
+      "label": "Modelo",
+      "followsDefault": "Segue o padrão do app: {{model}}.",
+      "costly": "Cada execução usa {{model}}, um modelo mais caro, por isso cada uma gasta mais créditos.",
+      "hosted": "Rotinas hospedadas usam o padrão do app."
     }
   },
   "sessions": {
@@ -3464,6 +3470,8 @@
     "creditsAlternatives": "Connect a free source to keep going. No card needed.",
     "connectFree": "Connect a free source",
     "dismiss": "Dismiss",
+    "defaultModel": "Modelo padrão",
+    "defaultModelDetail": "Novos chats começam neste modelo, assim como bots e rotinas definidos como padrão do app. Escolher um modelo em um chat muda só esse chat.",
     "providers": "Providers",
     "otherProviders": "Other providers",
     "searchProviders": "Search model providers…",

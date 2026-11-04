@@ -1620,6 +1620,12 @@
     "upgrade": {
       "title": "ルーティンを有効にする",
       "description": "アップグレードしてタスクをスケジュールし、作業を自動化しましょう。"
+    },
+    "model": {
+      "label": "モデル",
+      "followsDefault": "アプリのデフォルトに従います: {{model}}。",
+      "costly": "毎回の実行で高コストのモデル {{model}} を使うため、実行ごとの消費クレジットが増えます。",
+      "hosted": "ホスト型ルーティンはアプリのデフォルトで実行されます。"
     }
   },
   "sessions": {
@@ -3464,6 +3470,8 @@
     "creditsAlternatives": "Connect a free source to keep going. No card needed.",
     "connectFree": "Connect a free source",
     "dismiss": "Dismiss",
+    "defaultModel": "デフォルトモデル",
+    "defaultModelDetail": "新しいチャットはこのモデルで始まります。アプリのデフォルトに設定したボットとルーティンも同様です。チャットでの選択はそのチャットだけを変更します。",
     "providers": "Providers",
     "otherProviders": "Other providers",
     "searchProviders": "Search model providers…",

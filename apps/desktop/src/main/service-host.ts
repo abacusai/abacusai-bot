@@ -227,6 +227,7 @@ import {
   createJob,
   getJob,
   listJobs,
+  moveJobModels,
   nextRun,
   onCronStoreWrite,
   attemptOfSession,
@@ -501,6 +502,7 @@ import {
 import { listAvailableModels, modelForTier } from "./services/providers/models";
 import {
   currentTier,
+  newRoutineModel,
   resolveSessionModel,
 } from "./services/providers/session-model";
 import {
@@ -1515,8 +1517,14 @@ export class ServiceHost {
     routines: {
       defaultRunner: () => this.defaultRoutineRunner(),
       hostedOnly: () => this.hostedOnly(),
-      create: async (input, options) => {
-        const routine = await this.createRoutine(input, undefined, options);
+      create: async (input, { fromSession, ...options } = {}) => {
+        const routine = await this.createRoutine(input, undefined, {
+          ...options,
+          chatModel:
+            fromSession == null
+              ? null
+              : this.agentSessionManagerService.get(fromSession)?.model,
+        });
         // The user hears of every routine the agent sets up.
         if (options?.byAgent === true) this.routineCreatedByAgent(routine);
         return routine;
@@ -2047,10 +2055,11 @@ export class ServiceHost {
   }
 
   /**
-   * The plan changed: the app default and every chat pinned to a model the
-   * new plan does not serve (the free plan's OpenLLM, on a paid one) move to
-   * the plan's model now, running agents included, so the chip and the next
-   * turn (a resent one too) are on it. Pins the plan still serves stay.
+   * The plan changed: the app default, every routine and every chat pinned
+   * to a model the new plan does not serve (the free plan's OpenLLM, on a paid
+   * one) move to the plan's model now, running agents included, so the chip
+   * and the next turn (a resent one too) are on it. Pins the plan still serves
+   * stay.
    */
   private moveModelPinsToTier(): void {
     const tier = currentTier();
@@ -2059,6 +2068,11 @@ export class ServiceHost {
       const moved = modelForTier(tier, stored);
       if (moved !== stored) setDefaultModel(moved);
     }
+    if (moveJobModels((model) => modelForTier(tier, model)))
+      this.emitEvent({
+        type: "cronjobs-updated",
+        emittedAt: new Date().toISOString(),
+      });
     for (const session of this.agentSessionManagerService.listAll())
       this.moveSessionPinToTier(session.workspaceId, session.id);
   }
@@ -4047,9 +4061,10 @@ export class ServiceHost {
     // session before its list has loaded, and the agent would then report the
     // wrong model back over the record that should have chosen it. With
     // neither (a routine's run, a bot's chat brought back), the one resolver:
-    // the session's bot's model, else the stored default, else the plan
-    // tier's. Not the agent's own fallback, which is the free pool whatever
-    // the tier. The pick is kept on the session, so it lists what runs.
+    // the routine's own model or the session's bot's, else the stored default,
+    // else the plan tier's. Not the agent's own fallback, which is the free
+    // pool whatever the tier. The pick is kept on the session, so it lists
+    // what runs.
     // A pin the plan no longer serves moves first (moveModelPinsToTier).
     this.moveSessionPinToTier(request.workspaceId, request.sessionId);
     const remembered = this.agentSessionManagerService.get(
@@ -4108,9 +4123,14 @@ export class ServiceHost {
   private async resolveUnpinnedModel(
     request: StartAgentSessionRequest
   ): Promise<string | null> {
+    const routineId =
+      this.agentSessionManagerService.get(request.sessionId)?.routineId ?? null;
+    const own = routineId == null ? undefined : getJob(routineId)?.model;
     const botId = this.botOfSession(request.sessionId);
     const bot = botId == null ? null : getBot(botId);
-    const model = await resolveSessionModel(bot?.model ?? null);
+    const model = await resolveSessionModel(
+      own !== undefined ? own : (bot?.model ?? null)
+    );
     if (model != null)
       this.setAgentSessionModel(request.workspaceId, request.sessionId, model);
     return model;
@@ -6151,8 +6171,13 @@ export class ServiceHost {
   async createRoutine(
     input: RoutineCreateInput,
     id?: string,
-    /** The agent asked for it (the cronjob tool), not the user's own form. */
-    options: { byAgent?: boolean; runAtText?: string | null } = {}
+    options: {
+      /** The agent asked for it (the cronjob tool), not the user's own form. */
+      byAgent?: boolean;
+      runAtText?: string | null;
+      /** The model of the chat that asked for it. */
+      chatModel?: string | null;
+    } = {}
   ): Promise<CreatedRoutine> {
     if (this.platform === "web-host" && onFreePlan(await fetchAbacusAccount()))
       throw new HostedRoutineRefusal("plan_limit", { limit: 0 });
@@ -6217,8 +6242,12 @@ export class ServiceHost {
       );
     const reach =
       sources.length > 0 || reads.length > 0 ? { sources, reads } : null;
+    const model = await newRoutineModel(
+      input.botId == null ? null : getBot(input.botId)?.model,
+      options.chatModel
+    );
     const job = createJob(
-      { ...input, ...(reach != null ? { reach } : {}) },
+      { ...input, model, ...(reach != null ? { reach } : {}) },
       id
     );
     this.emitEvent({

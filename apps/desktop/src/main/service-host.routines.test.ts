@@ -6,7 +6,11 @@ import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { connectInProcess, fakeDeps } from "./rpc/testing";
-import { createJob, listJobs } from "./services/agent-tools/cron-store";
+import {
+  createJob,
+  listJobs,
+  updateJob,
+} from "./services/agent-tools/cron-store";
 import { HostedRoutineRefusal } from "./services/agent-tools/hosted-routines";
 import { McpAgentToolsServer } from "./services/mcp/mcp-agent-tools-server";
 
@@ -30,9 +34,12 @@ vi.mock("electron", () => {
   );
 });
 const account = vi.hoisted(() => vi.fn());
+const tier = vi.hoisted(() => ({ current: null as string | null }));
 vi.mock("./services/providers/abacus", async (original) => ({
   ...(await original<typeof import("./services/providers/abacus")>()),
   fetchAbacusAccount: account,
+  cachedAbacusAccount: () =>
+    tier.current == null ? null : { subscription_tier: tier.current },
 }));
 const catalog = vi.hoisted(() => ({
   rows: [] as Array<Record<string, unknown>>,
@@ -64,6 +71,7 @@ beforeEach(() => {
   process.env.ABACUSAI_BOT_HOME = home;
   account.mockReset();
   account.mockResolvedValue({ subscription_tier: "free", plan: null });
+  tier.current = null;
 });
 afterEach(() => {
   vi.restoreAllMocks();
@@ -773,5 +781,141 @@ describe("the model a session with none of its own starts on", () => {
     const job = createJob({ prompt: "p", schedule: "0 9 * * *" });
     const run = await start({ routineId: job.id, model: null });
     expect(run.model).toBe("openllm/auto");
+  });
+});
+
+describe("a routine's own model", () => {
+  const proto = ServiceHost.prototype as unknown as {
+    resolveUnpinnedModel: (request: {
+      workspaceId: string;
+      sessionId: string;
+    }) => Promise<string | null>;
+    moveModelPinsToTier: () => void;
+    botOfSession: (sessionId: string) => string | null;
+  };
+  /** The model a fresh run of `routineId` starts on. */
+  const runModel = async (routineId: string): Promise<string | null> => {
+    const pins: string[] = [];
+    await proto.resolveUnpinnedModel.call(
+      {
+        agentSessionManagerService: { get: () => ({ routineId }) },
+        botService: { botIdForSession: () => null },
+        botOfSession: proto.botOfSession,
+        setAgentSessionModel: (_w: string, _s: string, model: string) =>
+          pins.push(model),
+      },
+      { workspaceId: "w", sessionId: "run" }
+    );
+    return pins[0] ?? null;
+  };
+  const row = (id: string) => ({ id, configured: true, tier: "default" });
+  const local = () => host(false, "electron");
+  const scout = { name: "Scout", description: "Watches the news." };
+  beforeEach(() => {
+    catalog.rows = [row("a/kept"), row("b/picked"), row("c/bot")];
+  });
+
+  it("a chat's pick reaching the default leaves routines where they are", async () => {
+    setDefaultModel("a/kept");
+    const first = await local().createRoutine(input);
+    const second = await local().createRoutine(input);
+    setDefaultModel("b/picked");
+    expect(await runModel(first.id)).toBe("a/kept");
+    expect(await runModel(second.id)).toBe("a/kept");
+  });
+
+  it.each([
+    ["the creating chat's", { chatModel: "b/picked" }, null, "b/picked"],
+    ["its bot's, over the chat's", { chatModel: "b/picked" }, "c/bot", "c/bot"],
+    ["the app default's", {}, null, "a/kept"],
+  ])("a new routine stores %s model", async (_, options, botModel, stored) => {
+    setDefaultModel("a/kept");
+    const botId =
+      botModel == null ? null : createBot({ ...scout, model: botModel }).id;
+    const created = await local().createRoutine(
+      { ...input, botId },
+      undefined,
+      options
+    );
+    expect(listJobs().find((job) => job.id === created.id)?.model).toBe(stored);
+  });
+
+  it("a bot's later model change leaves its routine on the stored one", async () => {
+    const { updateBot } = await import("./services/bots/bot-store");
+    const bot = createBot({ ...scout, model: "c/bot" });
+    const created = await local().createRoutine({ ...input, botId: bot.id });
+    updateBot(bot.id, { model: "b/picked" });
+    expect(await runModel(created.id)).toBe("c/bot");
+  });
+
+  it("a change to a routine's model is what its runs use, read back from disk", async () => {
+    const created = await local().createRoutine(input);
+    updateJob(created.id, { model: "b/picked" });
+    const onDisk = JSON.parse(
+      fs.readFileSync(path.join(home, "cronjobs.json"), "utf8")
+    ) as Array<{ id: string; model: string }>;
+    expect(onDisk.find((job) => job.id === created.id)?.model).toBe("b/picked");
+    expect(await runModel(created.id)).toBe("b/picked");
+  });
+
+  it("a routine set to App default follows it, and an old one its bot", async () => {
+    const created = createJob({ ...input, model: null });
+    const bot = createBot({ ...scout, model: "c/bot" });
+    const old = createJob({ ...input, botId: bot.id });
+    setDefaultModel("a/kept");
+    expect(await runModel(created.id)).toBe("a/kept");
+    expect(await runModel(old.id)).toBe("c/bot");
+  });
+
+  it("a plan change moves a routine off OpenLLM and leaves other models", async () => {
+    tier.current = "pro";
+    const free = createJob({ ...input, model: "openllm/auto" });
+    const pinned = createJob({ ...input, model: "a/kept" });
+    const following = createJob({ ...input, model: null });
+    const emitEvent = vi.fn();
+    proto.moveModelPinsToTier.call({
+      agentSessionManagerService: { listAll: () => [] },
+      emitEvent,
+    });
+    const model = (id: string) =>
+      listJobs().find((job) => job.id === id)?.model;
+    expect(model(free.id)).toBe("abacus/route-llm-code");
+    expect(model(pinned.id)).toBe("a/kept");
+    expect(model(following.id)).toBeNull();
+    expect(emitEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "cronjobs-updated" })
+    );
+  });
+
+  it("a costly model is said when the agent makes the routine", async () => {
+    catalog.rows = [{ ...row("a/kept"), label: "Pricey", tier: "strong" }];
+    const service = local();
+    const server = new McpAgentToolsServer({
+      skillsService: {} as never,
+      enabledToolsets: () => new Set(["cronjob"]),
+      workspacePath: () => null,
+      workspaceId: () => null,
+      botIdForSession: () => null,
+      sessionRole: () => null,
+      models: async () => catalog.rows,
+      routines: {
+        defaultRunner: () => "local",
+        hostedOnly: () => false,
+        create: (request, options) =>
+          service.createRoutine(request, undefined, {
+            chatModel: "a/kept",
+            ...options,
+          }),
+        hosted: service.hostedRoutines,
+      },
+    } as never);
+    const result = (await server.executeTool(
+      "cronjob",
+      { action: "create", ...input, firstRun: false },
+      "session-test"
+    )) as { content: Array<{ text?: string }> };
+    const note = result.content.map((part) => part.text).join("\n");
+    expect(note).toContain("Every run uses Pricey");
+    expect(note).toContain("model: a/kept");
   });
 });

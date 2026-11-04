@@ -1620,6 +1620,12 @@
     "upgrade": {
       "title": "Débloquer les routines",
       "description": "Passez à une offre supérieure pour planifier des tâches et automatiser votre travail."
+    },
+    "model": {
+      "label": "Modèle",
+      "followsDefault": "Suit le modèle par défaut de l’app : {{model}}.",
+      "costly": "Chaque exécution utilise {{model}}, un modèle plus coûteux, et consomme donc plus de crédits.",
+      "hosted": "Les routines hébergées utilisent le modèle par défaut de l’app."
     }
   },
   "sessions": {
@@ -3464,6 +3470,8 @@
     "creditsAlternatives": "Connect a free source to keep going. No card needed.",
     "connectFree": "Connect a free source",
     "dismiss": "Dismiss",
+    "defaultModel": "Modèle par défaut",
+    "defaultModelDetail": "Les nouveaux chats démarrent sur ce modèle, comme les bots et les routines réglés sur le défaut de l’app. Un choix dans un chat ne change que ce chat.",
     "providers": "Providers",
     "otherProviders": "Other providers",
     "searchProviders": "Search model providers…",

@@ -643,7 +643,7 @@ export const SESSION_PARITY = [
   {
     id: "S44",
     requirement:
-      "`sessionsCollection.update({model})` + `agent.setModel` when running + `settings.setDefaultModel` (§9.3); same toast",
+      "`sessionsCollection.update({model})` + `agent.setModel` when running (§9.3); same toast",
     decision: "Parity",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",

@@ -1620,6 +1620,12 @@
     "upgrade": {
       "title": "Routinen freischalten",
       "description": "Mit einem Upgrade kannst du Aufgaben planen und deine Arbeit automatisieren."
+    },
+    "model": {
+      "label": "Modell",
+      "followsDefault": "Folgt dem App-Standard: {{model}}.",
+      "costly": "Jeder Lauf nutzt {{model}}, ein teureres Modell, und verbraucht deshalb mehr Credits.",
+      "hosted": "Gehostete Routinen laufen mit dem App-Standard."
     }
   },
   "sessions": {
@@ -3464,6 +3470,8 @@
     "creditsAlternatives": "Connect a free source to keep going. No card needed.",
     "connectFree": "Connect a free source",
     "dismiss": "Dismiss",
+    "defaultModel": "Standardmodell",
+    "defaultModelDetail": "Neue Chats starten mit diesem Modell, ebenso Bots und Routinen, die auf App-Standard stehen. Eine Auswahl in einem Chat ändert nur diesen Chat.",
     "providers": "Providers",
     "otherProviders": "Other providers",
     "searchProviders": "Search model providers…",

@@ -117,9 +117,7 @@ export const useSessionComposerModel = (
     },
     onSwitchThisChat: async (id: string) => {
       if (row) {
-        await setSessionModel(db, transport.client, row, id, {
-          thisChatOnly: true,
-        });
+        await setSessionModel(db, transport.client, row, id);
         if (row.status === "running" && id === OPENLLM_ID)
           await confirmFreePoolModel(transport, {
             workspaceId: row.workspaceId,

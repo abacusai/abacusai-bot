@@ -32,40 +32,34 @@ export const deleteSession = async (
   await db.collections.sessions.delete(row.id).isPersisted.promise;
 };
 /**
- * Move the chat onto `model`; a pick in the model picker becomes the app's
- * default too. `thisChatOnly` (the cut-off card's Switch) leaves the default.
+ * Move this chat, and only this chat, onto `model`. The app default is set in
+ * Settings > Models; a routine keeps its own model.
  */
 export const setSessionModel = async (
   db: Db,
   client: AppClient,
   row: SessionRow,
-  model: string,
-  { thisChatOnly = false }: { thisChatOnly?: boolean } = {}
+  model: string
 ): Promise<void> => {
   const previous = row.model ?? null;
   await db.collections.sessions.update(row.id, (d) => {
     d.model = model;
   }).isPersisted.promise;
-  const results = await Promise.allSettled([
-    thisChatOnly
-      ? Promise.resolve()
-      : client.settings.setDefaultModel({ modelId: model }),
-    row.status === "running"
-      ? client.agent.setModel({
-          workspaceId: row.workspaceId,
-          sessionId: row.id,
-          model,
-        })
-      : Promise.resolve(),
-  ]);
-  // The running agent refused the pick: the picker must show the model the
-  // chat is still on, not the one it was told no to.
-  if (results[1].status === "rejected")
+  if (row.status !== "running") return;
+  try {
+    await client.agent.setModel({
+      workspaceId: row.workspaceId,
+      sessionId: row.id,
+      model,
+    });
+  } catch (error) {
+    // The running agent refused the pick: the picker must show the model the
+    // chat is still on, not the one it was told no to.
     await db.collections.sessions
       .update(row.id, (d) => {
         d.model = previous;
       })
       .isPersisted.promise.catch(() => undefined);
-  const refused = results.find((r) => r.status === "rejected");
-  if (refused?.status === "rejected") throw refused.reason;
+    throw error;
+  }
 };

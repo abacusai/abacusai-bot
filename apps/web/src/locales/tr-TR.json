@@ -1620,6 +1620,12 @@
     "upgrade": {
       "title": "Rutinlerin kilidini aç",
       "description": "Görevleri zamanlamak ve işini otomatikleştirmek için yükselt."
+    },
+    "model": {
+      "label": "Model",
+      "followsDefault": "Uygulama varsayılanını izler: {{model}}.",
+      "costly": "Her çalıştırma daha pahalı bir model olan {{model}} kullanır, bu yüzden her biri daha fazla kredi harcar.",
+      "hosted": "Barındırılan rutinler uygulama varsayılanıyla çalışır."
     }
   },
   "sessions": {
@@ -3464,6 +3470,8 @@
     "creditsAlternatives": "Devam etmek için ücretsiz bir kaynak bağla. Kart gerekmez.",
     "connectFree": "Ücretsiz bir kaynak bağla",
     "dismiss": "Kapat",
+    "defaultModel": "Varsayılan model",
+    "defaultModelDetail": "Yeni sohbetler bu modelle başlar; uygulama varsayılanına ayarlı botlar ve rutinler de öyle. Bir sohbetteki seçim yalnızca o sohbeti değiştirir.",
     "providers": "Sağlayıcılar",
     "otherProviders": "Diğer sağlayıcılar",
     "searchProviders": "Model sağlayıcılarında ara…",
