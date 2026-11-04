@@ -196,6 +196,26 @@ describe("what is uploaded or logged", () => {
   });
 });
 
+describe("an auth header held as a field", () => {
+  it.each([parts("Ba", "sic"), parts("Tok", "en"), parts("Bea", "rer")])(
+    "holds no %s credential",
+    (scheme) => {
+      const sent = uploaded({
+        id: "1",
+        headers: { [AUTHORIZATION]: parts(scheme, " ", body(24)) },
+      });
+
+      expect(sent).not.toContain(body(24));
+    }
+  );
+
+  it("leaves a sentence under a secret's name", () => {
+    const value = { secret: "the value lives in the vault" };
+
+    expect(scrubValue(value)).toEqual(value);
+  });
+});
+
 describe("ordinary text", () => {
   it.each(ORDINARY)("stays as it is: %s", (text) => {
     expect(scrub(text)).toBe(text);

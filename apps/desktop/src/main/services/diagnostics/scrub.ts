@@ -14,6 +14,9 @@ const MASKED_VALUE = "<redacted>";
 /** Shorter than this under a secret's key is a flag or a label. */
 const MIN_SECRET_LENGTH = 6;
 
+/** Two words under a secret's key are a scheme and its credential. */
+const MIN_SENTENCE_WORDS = 3;
+
 /** Self-identifying shapes: the prefix says what it is. */
 const KEY_SHAPES: readonly RegExp[] = [
   /\b[rs]k_(?:live|test)_[A-Za-z0-9]{16,}/g, // Stripe
@@ -153,7 +156,9 @@ const scrubNamedValue = (value: string): string => {
     STAND_IN.test(value)
   )
     return scrubKeys(value);
-  const isSentence = /\s/.test(value.trim()) && !value.includes("=");
+  const isSentence =
+    value.trim().split(/\s+/).length >= MIN_SENTENCE_WORDS &&
+    !value.includes("=");
 
   return isSentence ? scrubKeys(value) : MASKED_VALUE;
 };
