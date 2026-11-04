@@ -10,7 +10,9 @@ const MAX_TEXT = 240;
 
 export const readTranscriptTail = (
   file: string | null,
-  turns: number
+  turns: number,
+  /** Rewrites or drops (null) a line before the preamble filter; for logs whose lines need reading. */
+  read?: (role: "user" | "assistant", text: string) => string | null
 ): Array<{ role: "user" | "assistant"; text: string }> => {
   if (file == null) return [];
   let raw: string;
@@ -55,6 +57,11 @@ export const readTranscriptTail = (
         )
         .map((block) => block.text)
         .join(" ");
+    }
+    if (read != null) {
+      const kept = read(role, text);
+      if (kept == null) continue;
+      text = kept;
     }
     // Preambles and system riders are the harness talking, not the chat.
     text = text.replace(/\s+/g, " ").trim();

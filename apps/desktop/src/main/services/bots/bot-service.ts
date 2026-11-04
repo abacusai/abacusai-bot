@@ -39,6 +39,7 @@ import {
   channelWords,
   type ChannelWords,
 } from "../messaging/channel-words";
+import { BOT_ASK_PLATFORM, colleagueLines } from "./bot-ask";
 import {
   botDir,
   botForSession,
@@ -46,11 +47,13 @@ import {
   getBot,
   getSenderSession,
   listBots,
+  listSenderSessionEntries,
   listSenderSessions,
   personaPath,
   recordBotSession,
   recordSenderSession,
   removeBot,
+  removeSenderSession,
   removeSenderSessionsForBot,
   senderSessionKey,
   updateBot,
@@ -255,7 +258,8 @@ const isStaleTemplateRole = (bot: Bot): boolean => {
  */
 const renderPersona = (
   bot: Bot,
-  homes: Partial<Record<HomeChannel, Bot>>
+  homes: Partial<Record<HomeChannel, Bot>>,
+  bots: readonly Bot[] = []
 ): string => {
   const role = bot.title.length > 0 ? bot.title : "assistant";
 
@@ -272,6 +276,13 @@ const renderPersona = (
     ...homeChannelLines(bot),
     ...neededConnectorLines(bot),
     ...homeBotLines(bot, homes),
+    // A colleague's stale template role is dropped, as for the bot's own.
+    ...colleagueLines(
+      bot,
+      bots.map((each) =>
+        isStaleTemplateRole(each) ? { ...each, title: "" } : each
+      )
+    ),
     "",
     `You are ${bot.name}, a persistent named agent. This conversation is your`,
     "single ongoing chat with your user: it keeps its history across restarts,",
@@ -737,6 +748,9 @@ export class BotService {
     // Sender sessions keep their transcripts (words already sent under the
     // user's name) but lose their routing entries.
     removeSenderSessionsForBot(id);
+    // Other bots' conversations with this one (it asked them) lose theirs too.
+    for (const [key] of listSenderSessionEntries())
+      if (key.endsWith(`|${BOT_ASK_PLATFORM}:${id}`)) removeSenderSession(key);
     this.callbacks.onBotRemoved?.(id);
     this.rewriteAllPersonas();
     this.callbacks.emitChanged();
@@ -976,7 +990,10 @@ export class BotService {
   }
 
   private writePersona(bot: Bot, homes = this.homes()): void {
-    writeFileAtomicSync(personaPath(bot.id), `${renderPersona(bot, homes)}\n`);
+    writeFileAtomicSync(
+      personaPath(bot.id),
+      `${renderPersona(bot, homes, listBots())}\n`
+    );
   }
 
   /** The home bots that exist, by app. */

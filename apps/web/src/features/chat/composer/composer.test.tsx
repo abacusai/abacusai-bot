@@ -744,6 +744,20 @@ describe("R2-T25 composer", () => {
       )
     ).toHaveLength(1);
   });
+  it("mini: pressing Stop on the collapsed pill stops, not just expands it", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll([...b.sessionReady(), b.runStarted("r"), b.textStart("a")]);
+    current = await renderRelay(relay, "session", { mode: "mini" });
+    expect(composer().hasAttribute("data-expanded")).toBe(false);
+    const stop = await screen.findByRole("button", { name: "Stop" });
+    // The press must not take focus: focus would expand the pill and render
+    // the button anew, so the click would land on nothing.
+    expect(fireEvent.mouseDown(stop)).toBe(false);
+    expect(composer().hasAttribute("data-expanded")).toBe(false);
+    fireEvent.click(stop);
+    await waitFor(() => expect(relay.stats.cancel).toHaveLength(1));
+  });
+
   it.each([true, false])(
     "Mod+. stops only the focused view (%s)",
     async (focused) => {

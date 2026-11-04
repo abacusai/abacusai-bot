@@ -185,6 +185,11 @@ export class TurnLedger {
     return this.open.has(sessionId);
   }
 
+  /** The chat app the open turn answers, or null (none open, or the app's own). */
+  channelOf(sessionId: string): TurnChannel | null {
+    return this.open.get(sessionId)?.channel ?? null;
+  }
+
   /** Feed the session's agent events; its idle closes the open turn. */
   observe(sessionId: string, message: DesktopEvent): void {
     const turn = this.open.get(sessionId);

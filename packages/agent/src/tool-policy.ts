@@ -97,6 +97,14 @@ export const PHONE_EXCLUDED_MCP_TOOLS: Readonly<Record<string, string>> = {
   todo: "one list for every session, lost on restart: the phone's memory tracks follow-ups",
   skill_manage: "writes skill files the user never sees",
   my_activity: "a bot's own chat only",
+  ask_bot:
+    "the phone's chat is one lifelong assistant, not one of the user's bots",
+  give_task_to_bot:
+    "the phone's chat is one lifelong assistant, not one of the user's bots",
+  check_bot_answers:
+    "the phone's chat is one lifelong assistant, not one of the user's bots",
+  cancel_bot_ask:
+    "the phone's chat is one lifelong assistant, not one of the user's bots",
   offer_session: "a card in the app's bot chat: the phone's chat is WhatsApp",
   suggest_tasks: "buttons in the app's bot chat: the phone's chat is WhatsApp",
   image_generate: MEDIA_OFF,
@@ -245,6 +253,13 @@ export const UNATTENDED_EXCLUDED_TOOLS: Readonly<Record<string, string>> = {
     "recall only: memory is in the prompt, and fetched text never reaches it",
   session_search: "past conversations are not this run's input",
   my_activity: "past conversations are not this run's input",
+  ask_bot:
+    "each ask is a billed turn on another bot, and fetched text must not start one",
+  give_task_to_bot:
+    "passes on the user's instruction, and nobody is instructing this run",
+  check_bot_answers:
+    "only for requests to other bots, which this run cannot make",
+  cancel_bot_ask: "only for requests to other bots, which this run cannot make",
   billing_plan: "mints one-time upgrade links for a person, not a routine",
   bot_help: "answers a person's questions about the app, not a routine's",
   offer_session: "a card the user clicks in the bot's chat",

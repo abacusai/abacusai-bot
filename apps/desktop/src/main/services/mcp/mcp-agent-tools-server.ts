@@ -122,6 +122,20 @@ import {
 import { listServed, htmlPagesIn } from "../agent-tools/static-server";
 import { renderTodos, readTodos, setTodos } from "../agent-tools/todo-store";
 import {
+  askLogLine,
+  askStartedText,
+  taskStartedText,
+  MAX_BOT_REQUEST_CHARS,
+  requestGist,
+  resolveBotByName,
+  wrapBotAnswer,
+} from "../bots/bot-ask";
+import {
+  type BotAskRecord,
+  type BotAskService,
+  isOpenAsk,
+} from "../bots/bot-ask-service";
+import {
   PAGE_CHECK_BUDGET_MS,
   type ServedPageCheck,
 } from "../browser/page-errors";
@@ -276,6 +290,9 @@ const isToolEnabled = (definition: ListedTool, enabled: Set<string>): boolean =>
 const fileUrl = (absolutePath: string): string =>
   pathToFileURL(absolutePath).href;
 
+/** Follow-up tools offered only once a bot has made a request to another bot. */
+const BOT_REQUEST_FOLLOW_UPS = new Set(["check_bot_answers", "cancel_bot_ask"]);
+
 export interface McpAgentToolsServerOptions {
   skillsService: SkillsService;
   /** Routines can be kept on the server (the hosted computer): the cronjob tool offers it. */
@@ -399,7 +416,41 @@ export interface McpAgentToolsServerOptions {
     label: string;
     role: "forever" | "sender" | "routine";
     file: string | null;
+    /** A conversation answering this bot's name: the other bot's requests. */
+    askedBy?: string;
   }>;
+  /**
+   * One bot asking another, or passing it the user's task (ask_bot,
+   * give_task_to_bot, check_bot_answers, cancel_bot_ask). Absent, the tools
+   * say the app cannot do it here. No chains: the asked bot answers in a
+   * sender chat, which is held to UNATTENDED_TOOLS, so it is never offered
+   * ask_bot.
+   */
+  botAsks?: {
+    /** The user's bots as asking needs them. */
+    bots: () => Array<{
+      id: string;
+      name: string;
+      title: string;
+      model?: string | null;
+    }>;
+    asks: Pick<BotAskService, "list" | "get" | "cancel"> & {
+      /** The bot's own question to another bot. */
+      ask: (
+        askerId: string,
+        askerSession: string,
+        targetId: string,
+        request: string
+      ) => ReturnType<BotAskService["ask"]>;
+      /** A task the user gave, passed on; refused without the user's words. */
+      give: (
+        askerId: string,
+        askerSession: string,
+        targetId: string,
+        task: string
+      ) => ReturnType<BotAskService["ask"]>;
+    };
+  };
   onCronChanged?: () => void;
   /** Optional: a headless construction has none, and the tools withhold. */
   messaging?: {
@@ -626,7 +677,11 @@ export class McpAgentToolsServer extends McpHttpServer {
           : forEditor
             ? definition.name === "cronjob"
             : this.isListedTool(definition, enabled, forBot, callerSession) &&
-              this.reachesCaller(definition, callerSession)
+              this.reachesCaller(definition, callerSession) &&
+              // Only a bot with requests to follow up gets the follow-up
+              // tools: every listed tool costs every turn.
+              (!BOT_REQUEST_FOLLOW_UPS.has(definition.name) ||
+                this.hasRecentBotRequests(callerSession))
       )
       .map((definition) => ({
         name: definition.name,
@@ -2692,6 +2747,131 @@ export class McpAgentToolsServer extends McpHttpServer {
     );
   }
 
+  /** A bot with a request to another bot open, or made in the last day. */
+  private hasRecentBotRequests(callerSession?: string): boolean {
+    const askerId = this.callerBot(callerSession);
+    const asks = this.options.botAsks?.asks;
+    if (askerId == null || asks == null) return false;
+    const latest = asks.list(askerId, 1)[0];
+    return (
+      latest != null &&
+      (isOpenAsk(latest) || Date.now() - latest.createdAt < 24 * 60 * 60_000)
+    );
+  }
+
+  /** Starts the ask and returns at once; the answer comes later as a note. */
+  askBot(botName: string, request: string, callerSession?: string): ToolResult {
+    return this.sendToBot("ask", botName, request, callerSession);
+  }
+
+  /** Passes the user's task on and returns at once; the report comes later. */
+  giveTaskToBot(
+    botName: string,
+    task: string,
+    callerSession?: string
+  ): ToolResult {
+    return this.sendToBot("task", botName, task, callerSession);
+  }
+
+  private sendToBot(
+    kind: "ask" | "task",
+    botName: string,
+    text: string,
+    callerSession?: string
+  ): ToolResult {
+    const askerId = this.callerBot(callerSession);
+    if (askerId == null || callerSession == null)
+      return this.err("Only a bot can send another bot a request.");
+    const host = this.options.botAsks;
+    if (host == null) return this.err("Bots cannot ask each other here.");
+    const field = kind === "task" ? "task" : "request";
+    if (text.trim().length === 0)
+      return this.err(`Say what the other bot should do in \`${field}\`.`);
+    if (text.length > MAX_BOT_REQUEST_CHARS)
+      return this.err(
+        `Keep the ${field} under ${MAX_BOT_REQUEST_CHARS} characters: the brief, not the whole conversation.`
+      );
+    const found = resolveBotByName(host.bots(), botName, askerId);
+    if ("error" in found) return this.err(found.error);
+    const started = (kind === "task" ? host.asks.give : host.asks.ask)(
+      askerId,
+      callerSession,
+      found.bot.id,
+      text.trim()
+    );
+    if ("error" in started) return this.err(started.error);
+    return this.ok(
+      (kind === "task" ? taskStartedText : askStartedText)(
+        found.bot,
+        started.ask.id,
+        started.behind,
+        found.bot.model
+      )
+    );
+  }
+
+  /** The caller's requests and where each stands, or one's full answer. */
+  checkBotAnswers(id: string, callerSession?: string): ToolResult {
+    const askerId = this.callerBot(callerSession);
+    if (askerId == null) return this.err("Only a bot sends requests to bots.");
+    const host = this.options.botAsks;
+    if (host == null) return this.err("Bots cannot ask each other here.");
+    const nameOf = (ask: BotAskRecord): { name: string; title: string } =>
+      host.bots().find((bot) => bot.id === ask.targetId) ?? {
+        name: "a deleted bot",
+        title: "",
+      };
+    if (id.trim().length > 0) {
+      const ask = host.asks.get(askerId, id);
+      if (ask == null) return this.err(`You have no request ${id.trim()}.`);
+      if (ask.status === "answered")
+        return this.ok(wrapBotAnswer(nameOf(ask), ask.answer ?? ""));
+      return this.ok(
+        ask.status === "failed"
+          ? `Request ${ask.id} failed: ${ask.error ?? "no reason given"}`
+          : ask.status === "cancelled"
+            ? `Request ${ask.id} was cancelled.`
+            : `Request ${ask.id} is not answered yet; its answer will come as a note.`
+      );
+    }
+    const asks = host.asks.list(askerId);
+    if (asks.length === 0) return this.ok("You have not asked any bot yet.");
+    const ago = (at: number): string => {
+      const minutes = Math.max(0, Math.round((Date.now() - at) / 60_000));
+      return minutes < 60
+        ? `${minutes} min ago`
+        : `${Math.round(minutes / 60)} h ago`;
+    };
+    const where = (ask: BotAskRecord): string =>
+      ask.status === "queued"
+        ? "waiting its turn"
+        : ask.status === "running"
+          ? "being answered now"
+          : ask.status === "answered"
+            ? "answered: pass its id to read the answer"
+            : ask.status === "failed"
+              ? `failed: ${ask.error ?? "no reason given"}`
+              : "cancelled";
+    return this.ok(
+      asks
+        .map(
+          (ask) =>
+            `- ${ask.kind === "task" ? "task" : "request"} ${ask.id} to ${nameOf(ask).name}, ${ago(ask.createdAt)}: "${requestGist(ask.request)}" (${where(ask)})`
+        )
+        .join("\n")
+    );
+  }
+
+  cancelBotAsk(id: string, callerSession?: string): ToolResult {
+    const askerId = this.callerBot(callerSession);
+    if (askerId == null) return this.err("Only a bot sends requests to bots.");
+    const host = this.options.botAsks;
+    if (host == null) return this.err("Bots cannot ask each other here.");
+    if (id.trim().length === 0) return this.err("Give the request's id.");
+    const result = host.asks.cancel(askerId, id);
+    return "error" in result ? this.err(result.error) : this.ok(result.ok);
+  }
+
   /**
    * What this bot has been doing in its other conversations, from the tail of
    * each owned agent log; the calling conversation is already in context.
@@ -2713,12 +2893,23 @@ export class McpAgentToolsServer extends McpHttpServer {
 
     const sections: string[] = [];
     for (const chat of chats.slice(0, 6)) {
-      const turns = readTranscriptTail(chat.file, 8);
+      const asker = chat.askedBy;
+      // Another bot's requests: never shown as the user's lines.
+      const turns =
+        asker == null
+          ? readTranscriptTail(chat.file, 8)
+          : readTranscriptTail(chat.file, 8, askLogLine);
       if (turns.length === 0) continue;
       sections.push(
         [
-          `## ${chat.label}`,
-          ...turns.map((turn) => `${turn.role}: ${turn.text}`),
+          asker == null
+            ? `## ${chat.label}`
+            : `## Your conversation with ${asker}, another of the user's bots (its requests, not the user's)`,
+          ...turns.map((turn) =>
+            asker == null
+              ? `${turn.role}: ${turn.text}`
+              : `${turn.role === "user" ? `${asker} (bot) asked` : "You answered"}: ${turn.text}`
+          ),
         ].join("\n")
       );
     }

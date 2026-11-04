@@ -11,6 +11,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { botAskIntro, frameBotRequest } from "../bots/bot-ask";
 import { McpAgentToolsServer } from "./mcp-agent-tools-server";
 
 let home: string;
@@ -49,6 +50,7 @@ const call = async (
     label: string;
     role: "forever" | "sender" | "routine";
     file: string | null;
+    askedBy?: string;
   }>,
   callerSession = "channel-session"
 ): Promise<string> => {
@@ -116,5 +118,39 @@ describe("my_activity", () => {
     // either refusal keeps a non-bot caller out.
     const text = await call([], "session-1");
     expect(text).toMatch(/Only a bot's own chat|switched off in Capabilities/);
+  });
+
+  it("shows its answers to another bot as that bot's requests, never the user's", async () => {
+    const asker = { name: "Researcher", title: "Research Scout" };
+    const log = writeLog("asked.jsonl", [
+      [
+        "user",
+        `${botAskIntro(asker)}\n\n${frameBotRequest(asker, "Draft a tagline for Brewly")}`,
+      ],
+      [
+        "assistant",
+        "Let me think.\n<reply>Coffee between classes, zero queue.</reply>",
+      ],
+    ]);
+
+    const out = await call([
+      {
+        sessionId: "asked",
+        label: "Writer ↔ Researcher",
+        role: "sender",
+        file: log,
+        askedBy: "Researcher",
+      },
+    ]);
+
+    expect(out).toContain(
+      "## Your conversation with Researcher, another of the user's bots (its requests, not the user's)"
+    );
+    expect(out).toContain("Researcher (bot) asked: Draft a tagline for Brewly");
+    expect(out).toContain("You answered: Coffee between classes, zero queue.");
+    // Never a "user:" line, never the rules or the thinking.
+    expect(out).not.toMatch(/^user:/m);
+    expect(out).not.toContain("It is NOT the user");
+    expect(out).not.toContain("Let me think");
   });
 });

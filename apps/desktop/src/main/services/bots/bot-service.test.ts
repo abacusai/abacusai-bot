@@ -163,9 +163,14 @@ describe("creating a bot", () => {
       "**Role:** Chief of Staff"
     );
     for (const bot of [renamed, older]) {
-      const persona = fs.readFileSync(personaPath(bot.id), "utf8");
+      // Its own part; the colleague list below names the bot called "Chief of Staff".
+      const [persona, colleagues] = fs
+        .readFileSync(personaPath(bot.id), "utf8")
+        .split("**Your fellow bots.**");
       expect(persona).not.toContain("Chief of Staff");
       expect(persona).not.toContain("**Role:**");
+      // Nor does a colleague keep a stale template role.
+      expect(colleagues).not.toMatch(/(Site Pal|Coder) \(Chief of Staff\)/);
     }
   });
 

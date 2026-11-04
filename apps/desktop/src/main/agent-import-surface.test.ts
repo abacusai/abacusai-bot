@@ -43,6 +43,8 @@ const ALLOWED = new Set([
   "@abacus-ai/agent/atomic-file",
   // A child process's environment: no imports at all.
   "@abacus-ai/agent/child-env",
+  // How a task one bot passed to another opens: no imports at all.
+  "@abacus-ai/agent/bot-task",
   // Media checks for the chat: no imports at all.
   "@abacus-ai/agent/send-media",
   // What a chat can do: no imports at all.
