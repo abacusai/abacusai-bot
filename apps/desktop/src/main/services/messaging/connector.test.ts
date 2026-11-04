@@ -6,6 +6,9 @@
  * a badge left by an earlier real message keeps the row in the sweep, and
  * the preview then shows whatever was said LAST, direction unknown.
  */
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import vm from "node:vm";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -18,7 +21,30 @@ import {
   PollScheduler,
   previewMatchesSent,
   runPageScript,
+  saveInboundMedia,
 } from "./connector";
+
+describe("saveInboundMedia", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+  });
+
+  it("keeps every file of an album saved in one millisecond under one name", () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "inbound-media-"));
+    vi.stubEnv("ABACUSAI_BOT_HOME", home);
+    vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+
+    const pages = ["page one", "page two", "page three"];
+    const saved = pages.map((page) =>
+      saveInboundMedia("whatsapp", "phone", "image.jpg", Buffer.from(page))
+    );
+
+    expect(new Set(saved).size).toBe(pages.length);
+    expect(saved.map((file) => fs.readFileSync(file, "utf8"))).toEqual(pages);
+    fs.rmSync(home, { recursive: true });
+  });
+});
 
 describe("isEphemeralPreview", () => {
   it("catches presence strings, with or without the ellipsis", () => {
