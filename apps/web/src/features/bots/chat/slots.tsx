@@ -110,29 +110,32 @@ export const useBotChatSlots = (
   const readOnlyReason = senderLabel
     ? t("bots.chat.senderReadOnly", { bot: bot.name, sender: senderLabel })
     : t("bots.chat.senderReadOnlyFallback", { bot: bot.name });
-  const pairing = sender ? (
-    <Button
-      variant="secondary"
-      size="sm"
-      disabled={!senderInfo?.userId}
-      title={!senderInfo?.userId ? readOnlyReason : undefined}
-      onClick={() =>
-        void transport.client.messaging
-          .decidePairing({
-            platformId: senderInfo!.platform as MessagingPlatformId,
-            userId: senderInfo!.userId!,
-            decision: senderInfo?.autoReply === "approved" ? "pause" : "resume",
-          })
-          .catch(() => showError(t("bots.form.saveError")))
-      }
-    >
-      {t(
-        senderInfo?.autoReply === "approved"
-          ? "bots.chat.pause"
-          : "bots.chat.resume"
-      )}
-    </Button>
-  ) : undefined;
+  // A chat with another bot has no auto-reply to pause.
+  const pairing =
+    sender && senderInfo?.platform !== "bot" ? (
+      <Button
+        variant="secondary"
+        size="sm"
+        disabled={!senderInfo?.userId}
+        title={!senderInfo?.userId ? readOnlyReason : undefined}
+        onClick={() =>
+          void transport.client.messaging
+            .decidePairing({
+              platformId: senderInfo!.platform as MessagingPlatformId,
+              userId: senderInfo!.userId!,
+              decision:
+                senderInfo?.autoReply === "approved" ? "pause" : "resume",
+            })
+            .catch(() => showError(t("bots.form.saveError")))
+        }
+      >
+        {t(
+          senderInfo?.autoReply === "approved"
+            ? "bots.chat.pause"
+            : "bots.chat.resume"
+        )}
+      </Button>
+    ) : undefined;
   const workspaceDeleted =
     workspaces != null &&
     session?.workspaceId != null &&

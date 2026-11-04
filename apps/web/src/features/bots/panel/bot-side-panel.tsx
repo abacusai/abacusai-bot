@@ -1,7 +1,7 @@
 import type { ArtifactRow, BotRow } from "@abacus-ai/contract/contract/rows";
 import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { useQuery } from "@tanstack/react-query";
-import { X } from "lucide-react";
+import { ChevronRight, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -47,6 +47,7 @@ import {
   useBotMemories,
   useBotFiles,
   useBotSessions,
+  useBots,
   useCheckIn,
   botsQueries,
 } from "../data/queries";
@@ -55,6 +56,9 @@ import { useBotsTransport } from "../data/transport";
 import { ModelPicker, type useBotModelBinding } from "../model/picker";
 import { DeleteBotDialog } from "../sidebar/delete-dialog";
 import { WallpaperPicker } from "./wallpaper-picker";
+/** The sender-chat platform of a bot's answers to another bot (ask_bot). */
+const BOT_ASK_PLATFORM = "bot";
+
 export const DetailsTab = ({
   bot,
   binding,
@@ -80,7 +84,12 @@ export const DetailsTab = ({
   const [deleting, setDeleting] = useState(false);
   const check = checkInFromRoutine(routine);
   const pinned = prefs.pinned.botIds.includes(bot.id);
-  const senderRows = (senders.data ?? []).filter((row) => row.botId === bot.id);
+  const { bots } = useBots();
+  const now = useNow();
+  const mine = (senders.data ?? []).filter((row) => row.botId === bot.id);
+  // Its answers to the user's other bots (ask_bot) live in their own chats.
+  const senderRows = mine.filter((row) => row.platform !== BOT_ASK_PLATFORM);
+  const botRows = mine.filter((row) => row.platform === BOT_ASK_PLATFORM);
   const reachable =
     messaging.data?.platforms.filter(
       (platform) =>
@@ -172,6 +181,37 @@ export const DetailsTab = ({
           <span className="text-muted-foreground text-xs">{files.length}</span>
         </Button>
       </GroupCard>
+      {botRows.length > 0 && (
+        <GroupCard title={t("bots.panel.botChats")} className="px-0">
+          {botRows.map((row) => {
+            const asker = bots.find((other) => other.name === row.senderName);
+            const at = db.collections.sessions.get(row.sessionId)?.updatedAt;
+            return (
+              <AppLink
+                key={row.sessionId}
+                to="/bots/$botId/chats/$sessionId"
+                params={{ botId: bot.id, sessionId: row.sessionId }}
+                className="flex h-(--setting-row-min) items-center gap-2 px-3 text-xs"
+                data-bot-ask-chat
+              >
+                {asker && <BotFace bot={asker} size={24} />}
+                <span className="min-w-0 flex-1 truncate">
+                  {row.senderName}
+                </span>
+                {at && (
+                  <span className="text-muted-foreground shrink-0">
+                    {formatWhen(at, now, i18n.language)}
+                  </span>
+                )}
+                <ChevronRight
+                  aria-hidden
+                  className="text-muted-foreground size-4 shrink-0"
+                />
+              </AppLink>
+            );
+          })}
+        </GroupCard>
+      )}
       <WallpaperPicker
         value={bot.wallpaper}
         onChange={(wallpaper) =>
