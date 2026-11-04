@@ -411,26 +411,28 @@ const FIRST_BRIEF =
   "so you can brief them. Never send an email, and draft only after their yes.";
 
 /**
- * The first brief with neither Calendar nor Gmail: tasks the bot runs with no
- * connections, numbered so a bare "1" picks one (the chat sends text only),
- * and Google as an option. Offered, not run: a guessed demo spends the free
- * window on a search nobody asked for.
+ * The first brief with neither Calendar nor Gmail: three things the bot makes
+ * with nothing from the user, each a `page` (the hosted bot cannot print a PDF),
+ * numbered so a bare "1" picks one (the chat sends text only), and Google as an
+ * option. Offered, not made: a guessed demo spends the free window unasked.
  */
 const NO_GOOGLE_BRIEF =
   "[first brief] This is the user's first time here and nothing is connected yet: instead of a question, open " +
-  "with what you can do for them right now, all in this one reply and in their language. Before you write, call " +
-  "`current_time` and date every task from it, and call `connect_connector` for Google: its link goes on your " +
-  "last line. Answer their greeting in a few words and greet them by first name. Then a numbered list of 3 " +
-  "tasks, never more, suited to a phone and to where they seem to be, each written as the one-line request they " +
-  "would send you, its details filled in (which products, which route and month, which city), never a bare " +
-  "category or a choice left to them: a bare number must be enough to start it. Pick from comparing or " +
-  "researching something, finding flights or prices, writing or translating a message, planning a trip, summing " +
-  "up a link they paste or a voice note they send. Never offer an image, a video or anything else that goes to " +
-  "`paid_feature`. Then say they can reply with a number or ask for anything else. Run none of them in this " +
-  "reply (no search, no browsing) unless their greeting already asked for something: then do that first and list " +
-  "fewer. Last, one line: if they connect Google, you can brief them on their meetings and emails every morning, " +
-  "with the link `connect_connector` gave. It is an option, never a step they must take first. When they answer " +
-  "with a number, run that task from your list as written, without asking first.";
+  "with what you can make for them right now, all in this one reply and in their language. Before you write, " +
+  "call `connect_connector` for Google: its link goes on your last line. Answer their greeting in a few words " +
+  "and greet them by first name. Then a numbered list of 3 things you can make with nothing from them, each " +
+  "ending in a `page` you send here, and each with a sensible default you state openly that they may change. The " +
+  "first is always a 3-day trip plan for a city they pick, or one you suggest. Pick the other two from: a week's " +
+  "meal plan with its shopping list, a buyer's guide comparing the best options in a product category you name, " +
+  "a one-page report on a topic in today's news, a week's beginner workout plan. Never invent anything about " +
+  "them (their city, a route, their plans), never offer anything that needs something from them first (a link, a " +
+  "file, a voice note, an account) or a reminder or routine, and never an image, a video, a website or anything " +
+  "else that goes to `paid_feature`. Then say they can reply with a number or ask for anything else. Make none " +
+  "of them in this reply. Last, one line: if they connect Google, you can also go through their meetings and " +
+  "emails with them, with the link `connect_connector` gave. It is an option, never a step they must take first. " +
+  "When they answer with a number, make that one with its default at once, without asking first: write it from " +
+  "what you know, searching only for what changes (prices, dates, news), publish it with `page`, and send its " +
+  "link with one line on the default you used and that they can ask for changes.";
 
 const CHECKINS_ON_GREETING =
   "[check-ins] Check-ins are on: say once in this greeting, in the user's language, that you may check in here " +

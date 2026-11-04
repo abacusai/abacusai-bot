@@ -829,39 +829,47 @@ describe("the linked turn", () => {
       expect(brief).toBe(connected);
   });
 
-  it("with nothing connected, offers three ready tasks a bare number starts, runs none unasked, and leaves Google optional", async () => {
+  it("with nothing connected, offers three things it makes with nothing from them as pages, the trip plan first, and leaves Google optional", async () => {
     const brief = await firstBrief(false);
     expect(brief).toMatch(
       /^\[first brief\] This is the user's first time here and nothing is connected yet/
     );
     expect(brief).toContain("in their language");
     expect(brief).toContain("greet them by first name");
-    expect(brief).toContain("a numbered list of 3 tasks, never more");
     expect(brief).toContain(
-      "never a bare category or a choice left to them: a bare number must be enough to start it"
+      "a numbered list of 3 things you can make with nothing from them, each ending in a `page`"
+    );
+    expect(brief).toContain("a sensible default you state openly");
+    expect(brief).toContain(
+      "The first is always a 3-day trip plan for a city they pick, or one you suggest."
     );
     for (const starter of [
-      "comparing",
-      "flights or prices",
-      "translating a message",
-      "planning a trip",
-      "voice note",
+      "meal plan",
+      "buyer's guide",
+      "today's news",
+      "workout plan",
     ])
       expect(brief).toContain(starter);
     expect(brief).toContain(
-      "Never offer an image, a video or anything else that goes to `paid_feature`"
+      "Never invent anything about them (their city, a route"
     );
     expect(brief).toContain(
-      "Run none of them in this reply (no search, no browsing)"
+      "(a link, a file, a voice note, an account) or a reminder or routine"
     );
     expect(brief).toContain(
-      "call `current_time` and date every task from it, and call `connect_connector` for Google: its link goes on your last line."
+      "never an image, a video, a website or anything else that goes to `paid_feature`"
+    );
+    expect(brief).not.toMatch(/flights/);
+    expect(brief).toContain("Make none of them in this reply.");
+    expect(brief).toContain(
+      "call `connect_connector` for Google: its link goes on your last line."
     );
     expect(brief).toContain("an option, never a step they must take first");
+    expect(brief).not.toContain("every morning");
     expect(brief).toContain(
-      "When they answer with a number, run that task from your list as written"
+      "When they answer with a number, make that one with its default at once, without asking first"
     );
-    expect(brief).not.toContain("Gmail Drafts");
+    expect(brief).toContain("publish it with `page`, and send its link");
     // The model writes every line itself: the note quotes nothing for it to send.
     expect(brief).not.toMatch(/"/);
   });
