@@ -235,7 +235,7 @@ describe("a routine's notes", () => {
 
 describe("records written into another of the app's folders", () => {
   const run = (startedAt: string) => ({
-    sessionId: `s-${startedAt}`,
+    sessionId: `s${startedAt.slice(8, 10)}`,
     startedAt,
     endedAt: startedAt,
     outcome: "completed" as const,
