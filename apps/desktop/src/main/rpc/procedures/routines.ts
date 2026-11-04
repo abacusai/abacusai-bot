@@ -64,10 +64,19 @@ export const routinesRouter = impl.routines.router({
               name: routine.name,
             })
         );
+        const linkLost = context.deps.serviceHost.onRoutineLinkLost((routine) =>
+          push({
+            type: "chat-link-lost",
+            routineId: routine.id,
+            name: routine.name,
+            platform: routine.platform,
+          })
+        );
         return () => {
           started();
           hosted();
           created();
+          linkLost();
         };
       },
     })

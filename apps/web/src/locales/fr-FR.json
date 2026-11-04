@@ -1607,6 +1607,7 @@
       "note": "En attente de crédits : les exécutions sont ignorées sans frais et reprennent toutes seules dès que vous avez des crédits.",
       "cta": "Obtenir des crédits"
     },
+    "chatLinkLost": "{{name}} est ignorée jusqu'à ce que {{platform}} soit de nouveau liée, sans consommer de crédits. Elle s'exécutera une fois le lien rétabli.",
     "createdByAgent": "A routine was set up: {{name}}.",
     "frequent": "S'exécute {{times}} fois par jour, et chaque exécution consomme des crédits : à ce rythme, les crédits d'un mois peuvent être épuisés en quelques jours. Si plusieurs exécutions d'affilée ne trouvent rien de nouveau, elle se met en pause.",
     "refused": {
@@ -3463,6 +3464,7 @@
       "completed": "Completed",
       "failed": "Failed",
       "skipped": "Skipped",
+      "skipped-link": "Ignorée : application de chat non liée",
       "skipped-offline": "Ignorée : hors ligne",
       "skipped-credits": "Ignorée : plus de crédits",
       "offline": "Abacus injoignable",

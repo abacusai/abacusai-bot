@@ -1607,6 +1607,7 @@
       "note": "Waiting for credits: runs are skipped at no cost and start again on their own when you have credits.",
       "cta": "Get credits"
     },
+    "chatLinkLost": "{{name}} is skipped until {{platform}} is linked again, so it spends no credits. It runs once when the link is back.",
     "createdByAgent": "A routine was set up: {{name}}.",
     "frequent": "Runs {{times}} times a day, and every run uses credits: at this rate a month's credits can be gone in a few days. If several runs in a row find nothing new, it pauses itself.",
     "refused": {
@@ -3463,6 +3464,7 @@
       "completed": "Completed",
       "failed": "Failed",
       "skipped": "Skipped",
+      "skipped-link": "Skipped: chat app not linked",
       "skipped-offline": "Skipped: offline",
       "skipped-credits": "Skipped: out of credits",
       "offline": "Couldn't reach Abacus",

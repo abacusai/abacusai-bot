@@ -207,12 +207,34 @@ export const RoutinesGlobals = () => {
       readiness.run(creditHold)
     );
     readiness.run(creditHold);
+    // Its fires stop until the link is back, and that is the user's to fix.
+    const linkLost = (event: Parameters<typeof fire>[0]) => {
+      if (event.type !== "chat-link-lost") return;
+      const body = t("routines.chatLinkLost", {
+        name: event.name,
+        platform: t(`messaging.platforms.${event.platform}`),
+      });
+      showInfo(body);
+      notifyAttention(notifier, {
+        kind: "failed",
+        dedupeKey: `link-lost:${event.routineId}:${String(Date.now())}`,
+        botId: null,
+        title: event.name,
+        body,
+        metadata: {
+          kind: "routine",
+          routineId: event.routineId,
+          sessionId: "",
+        },
+      });
+    };
     followNotice(
       "routines",
       transport,
       (event) =>
         readiness.run(() => {
           fire(event);
+          linkLost(event);
           hosted(event);
           away(event);
           created(event);

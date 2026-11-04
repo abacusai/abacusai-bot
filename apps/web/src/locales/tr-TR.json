@@ -1607,6 +1607,7 @@
       "note": "Kredi bekleniyor: çalıştırmalar ücretsiz atlanır ve krediniz olduğunda kendiliğinden yeniden başlar.",
       "cta": "Kredi al"
     },
+    "chatLinkLost": "{{platform}} yeniden bağlanana kadar {{name}} atlanır ve kredi harcanmaz. Bağlantı dönünce bir kez çalışır.",
     "createdByAgent": "Bir rutin ayarlandı: {{name}}.",
     "frequent": "Günde {{times}} kez çalışır ve her çalışma kredi harcar: bu hızla bir aylık krediler birkaç günde bitebilir. Art arda birkaç çalışma yeni bir şey bulamazsa kendini duraklatır.",
     "refused": {
@@ -3463,6 +3464,7 @@
       "completed": "Tamamlandı",
       "failed": "Başarısız",
       "skipped": "Atlandı",
+      "skipped-link": "Atlandı: sohbet uygulaması bağlı değil",
       "skipped-offline": "Atlandı: çevrimdışı",
       "skipped-credits": "Atlandı: kredi kalmadı",
       "offline": "Abacus'a ulaşılamadı",

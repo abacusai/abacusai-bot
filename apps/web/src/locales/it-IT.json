@@ -1607,6 +1607,7 @@
       "note": "In attesa di crediti: le esecuzioni vengono saltate senza costi e riprendono da sole quando avrai crediti.",
       "cta": "Ottieni crediti"
     },
+    "chatLinkLost": "{{name}} viene saltata finché {{platform}} non è di nuovo collegata, così non consuma crediti. Verrà eseguita una volta al ritorno del collegamento.",
     "createdByAgent": "A routine was set up: {{name}}.",
     "frequent": "Viene eseguita {{times}} volte al giorno e ogni esecuzione usa crediti: a questo ritmo i crediti di un mese possono finire in pochi giorni. Se più esecuzioni di fila non trovano nulla di nuovo, si mette in pausa da sola.",
     "refused": {
@@ -3463,6 +3464,7 @@
       "completed": "Completed",
       "failed": "Failed",
       "skipped": "Skipped",
+      "skipped-link": "Saltata: app di chat non collegata",
       "skipped-offline": "Saltata: offline",
       "skipped-credits": "Saltata: crediti esauriti",
       "offline": "Impossibile raggiungere Abacus",

@@ -232,12 +232,16 @@ import {
   getJob,
   listJobs,
   moveJobModels,
+  minuteOf,
+  noteChatPlatform,
   nextRun,
   onCronStoreWrite,
   attemptOfSession,
   holdInterrupted,
   onRoutineRunStarted,
   recordRun,
+  setChatLinkLost,
+  setHeld,
   type RoutineRunStarted,
   removeJob,
   updateJob,
@@ -1385,11 +1389,23 @@ export class ServiceHost {
   });
 
   /** Routines the agent set up, for the app to tell the user about. */
+  private readonly routineLinkLostListeners = new Set<
+    (routine: { id: string; name: string; platform: string }) => void
+  >();
   private readonly routineCreatedListeners = new Set<
     (routine: CreatedRoutine) => void
   >();
 
   /** Hear of each routine the agent sets up (never one the user's form makes). */
+  onRoutineLinkLost(
+    listener: (routine: { id: string; name: string; platform: string }) => void
+  ): () => void {
+    this.routineLinkLostListeners.add(listener);
+    return () => {
+      this.routineLinkLostListeners.delete(listener);
+    };
+  }
+
   onRoutineCreatedByAgent(
     listener: (routine: CreatedRoutine) => void
   ): () => void {
@@ -1504,6 +1520,10 @@ export class ServiceHost {
     runCronJob: (jobId, trigger) => this.runRoutine(jobId, trigger ?? "manual"),
     routineFireForSession: (sessionId) =>
       this.routineFires.get(sessionId) ?? null,
+    noteRoutinePlatform: (sessionId, platform) => {
+      const fire = this.routineFires.get(sessionId);
+      if (fire != null) noteChatPlatform(fire.split("@")[0]!, platform);
+    },
     routineSends: this.routineSends,
     // A routine's run is its bot's work too: a routine made from inside one
     // belongs to the bot, and `list` shows the bot its own.
@@ -2504,6 +2524,7 @@ export class ServiceHost {
         emittedAt: new Date().toISOString(),
       });
     },
+    onPlatformConnected: (platform) => this.routineLinkBack(platform),
     emitChanged: () => {
       this.emitEvent({
         type: "messaging-updated",
@@ -5631,6 +5652,42 @@ export class ServiceHost {
       this.pauseRoutine(routineId, ROUTINE_PAUSE_NOTES.quiet);
   }
 
+  /** Every chat app this routine sends through has lost its link. */
+  private routineLinkDown(job: CronJob): boolean {
+    const used = job.chatPlatforms ?? [];
+    const unlinked: string[] = this.messagingGatewayService.unlinkedPlatforms();
+    return used.length > 0 && used.every((id) => unlinked.includes(id));
+  }
+
+  /** Said once per loss: the first skipped fire, until the link is back. */
+  private tellRoutineLinkLost(job: CronJob): void {
+    if (job.chatLinkLostAt != null) return;
+    setChatLinkLost(job.id, Date.now());
+    for (const listener of this.routineLinkLostListeners) {
+      try {
+        listener({
+          id: job.id,
+          name: job.name,
+          platform: job.chatPlatforms?.[0] ?? "",
+        });
+      } catch (error) {
+        console.error("A routine link listener failed", error);
+      }
+    }
+  }
+
+  /** The link is back: each routine it held makes up one run. */
+  private routineLinkBack(platform: string): void {
+    const now = Date.now();
+    for (const job of listJobs()) {
+      if (job.chatLinkLostAt == null || !job.chatPlatforms?.includes(platform))
+        continue;
+      setChatLinkLost(job.id, null);
+      if (job.enabled && job.heldSince == null)
+        setHeld(job.id, now, { slot: minuteOf(now), reason: "catch-up" });
+    }
+  }
+
   private pauseRoutine(routineId: string, reason: string): void {
     const job = getJob(routineId);
     if (job == null || !job.enabled) return;
@@ -6520,6 +6577,21 @@ export class ServiceHost {
         kind: "skipped-credits",
       });
       this.holdRoutinesForCredits(jobId);
+      this.emitEvent({
+        type: "cronjobs-updated",
+        emittedAt: new Date().toISOString(),
+      });
+      return "skipped";
+    }
+
+    // Its results have nowhere to go: a run would bill for nothing. Someone
+    // pressing Run asked for it, so that one goes.
+    if (trigger !== "manual" && this.routineLinkDown(job)) {
+      recordRun(jobId, ROUTINE_RESULTS.skippedLink, trigger, {
+        id: attemptId,
+        kind: "skipped-link",
+      });
+      this.tellRoutineLinkLost(job);
       this.emitEvent({
         type: "cronjobs-updated",
         emittedAt: new Date().toISOString(),

@@ -125,7 +125,8 @@ const RunsRail = ({
                   ) : a.outcome === "failed" ? (
                     <CircleAlert className="text-destructive size-3.5 shrink-0" />
                   ) : a.outcome === "offline" ||
-                    a.outcome === "skipped-offline" ? (
+                    a.outcome === "skipped-offline" ||
+                    a.outcome === "skipped-link" ? (
                     // The network's doing, not the routine's: no red.
                     <WifiOff className="text-muted-foreground size-3.5 shrink-0" />
                   ) : a.outcome === "skipped-credits" ? (

@@ -1607,6 +1607,7 @@
       "note": "Wartet auf Credits: Läufe werden kostenlos übersprungen und starten von selbst wieder, sobald du Credits hast.",
       "cta": "Credits holen"
     },
+    "chatLinkLost": "{{name}} wird übersprungen, bis {{platform}} wieder verbunden ist, und verbraucht so keine Credits. Danach läuft es einmal.",
     "createdByAgent": "A routine was set up: {{name}}.",
     "frequent": "Läuft {{times}}-mal am Tag, und jeder Lauf verbraucht Credits: In diesem Tempo können die Credits eines Monats in wenigen Tagen aufgebraucht sein. Finden mehrere Läufe nacheinander nichts Neues, pausiert sie von selbst.",
     "refused": {
@@ -3463,6 +3464,7 @@
       "completed": "Completed",
       "failed": "Failed",
       "skipped": "Skipped",
+      "skipped-link": "Übersprungen: Chat-App nicht verbunden",
       "skipped-offline": "Übersprungen: offline",
       "skipped-credits": "Übersprungen: keine Credits",
       "offline": "Abacus nicht erreichbar",

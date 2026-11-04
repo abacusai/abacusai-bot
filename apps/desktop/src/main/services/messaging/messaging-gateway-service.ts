@@ -253,6 +253,8 @@ type GatewayOptions = {
     title: string,
     body: string
   ) => void;
+  /** A platform came up: what waited on its link can go. */
+  onPlatformConnected?: (platform: MessagingPlatformId) => void;
   /** The failure-reply throttle's clock; tests pass a fake one. */
   now?: () => number;
   /** The app's language (a BCP 47 tag), for lines the bot itself words. */
@@ -814,6 +816,7 @@ export class MessagingGatewayService {
       this.restartBackoff.delete(platformId);
       this.linkLossTold.delete(platformId);
       if (this.outbox.owes(platformId)) this.outbox.schedule(0);
+      this.options.onPlatformConnected?.(platformId);
     }
     if (state === "needs_login" && readPlatformLinkLost(platformId))
       void this.tellLinkLost(platformId);
@@ -2458,6 +2461,16 @@ export class MessagingGatewayService {
    * `runningPlatforms` says whether a tool exists; this says whether it will
    * work. An unlinked phone leaves the connector in place, waiting on a QR.
    */
+  /**
+   * Platforms that lost their login and need the user to link them again.
+   * Not `connecting`: that is a launch or a blip, and it settles by itself.
+   */
+  unlinkedPlatforms(): MessagingPlatformId[] {
+    return [...this.connectors.keys()].filter(
+      (id) => this.states.get(id)?.state === "needs_login"
+    );
+  }
+
   livePlatforms(): MessagingPlatformId[] {
     return [...this.connectors.keys()].filter(
       (id) => this.states.get(id)?.state === "connected"

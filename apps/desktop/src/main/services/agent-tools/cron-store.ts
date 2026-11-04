@@ -113,6 +113,10 @@ export interface CronJob {
   firedSlot?: { at: number; attemptId: string } | null;
   /** When its schedule last changed: fires before then were never its to miss. */
   scheduledAt?: number | null;
+  /** The chat apps its runs have sent through: where its results go. */
+  chatPlatforms?: string[];
+  /** When a fire was first skipped for a chat app that lost its link. */
+  chatLinkLostAt?: number | null;
   /** Fires it last missed while the computer was off, until its next on-time fire. */
   missed?: RoutineMissed | null;
   /**
@@ -447,6 +451,9 @@ export const updateJob = (
 
   const { webhook, ...rest } = changes;
   const updated: CronJob = { ...jobs[index], ...rest };
+  // New instructions may send somewhere else; its next run says where.
+  if (rest.prompt != null && rest.prompt !== jobs[index].prompt)
+    updated.chatPlatforms = [];
   // A one-time routine that already fired stays done: resumed as it stands
   // it would fire again on the next tick. A new time re-arms it.
   if (
@@ -565,6 +572,27 @@ export const setHeld = (
   )
     return;
   jobs[index] = { ...job, heldSince: at, heldSlot: slot, heldFor: reason };
+  write(jobs);
+};
+
+/** A run sent, or tried to send, through this chat app. */
+export const noteChatPlatform = (id: string, platform: string): void => {
+  const jobs = readForWrite();
+  const index = jobs.findIndex((job) => job.id === id);
+  if (index < 0 || jobs[index].chatPlatforms?.includes(platform)) return;
+  jobs[index] = {
+    ...jobs[index],
+    chatPlatforms: [...(jobs[index].chatPlatforms ?? []), platform],
+  };
+  write(jobs);
+};
+
+/** Marks a job as skipped for a lost chat link, or clears it (null). */
+export const setChatLinkLost = (id: string, at: number | null): void => {
+  const jobs = readForWrite();
+  const index = jobs.findIndex((job) => job.id === id);
+  if (index < 0 || (jobs[index].chatLinkLostAt ?? null) === at) return;
+  jobs[index] = { ...jobs[index], chatLinkLostAt: at };
   write(jobs);
 };
 
