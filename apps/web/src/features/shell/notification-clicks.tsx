@@ -12,6 +12,8 @@ import { platformSystem } from "#renderer/lib/platform-system";
 export const notificationOptions = (metadata: NotificationMetadata) => {
   const sessionId = metadata.sessionId;
   switch (metadata.kind) {
+    case "messaging":
+      return { to: "/library/messaging" } as const;
     case "bot":
       return metadata.botId == null
         ? null

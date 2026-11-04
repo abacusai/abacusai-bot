@@ -84,6 +84,7 @@ import {
   readFieldValue,
   readGatewaySettings,
   readStoredMessageLog,
+  readPlatformLinkLost,
   readStoredOutbox,
   recordPairingRequest,
   revokePairing,
@@ -235,6 +236,12 @@ type GatewayOptions = {
   ) => void;
   /** Broadcast so the Messaging pane re-reads its snapshot. */
   emitChanged: () => void;
+  /** Tells the user outside any chat, for what no chat can carry: a lost link. */
+  notifyUser?: (
+    platform: MessagingPlatformId,
+    title: string,
+    body: string
+  ) => void;
   /** The failure-reply throttle's clock; tests pass a fake one. */
   now?: () => number;
   /** The app's language (a BCP 47 tag), for lines the bot itself words. */
@@ -507,6 +514,9 @@ export class MessagingGatewayService {
     SelfLanePlatform,
     { botId: string; at: number }
   >();
+
+  /** Platforms whose lost link the user heard of this run: once each launch, until it is back. */
+  private readonly linkLossTold = new Set<MessagingPlatformId>();
 
   /** What each chat was already told about failed turns; see FailureReplyThrottle. */
   private readonly failureThrottle: FailureReplyThrottle;
@@ -785,8 +795,11 @@ export class MessagingGatewayService {
     // and what it still owes a chat goes now.
     if (state === "connected") {
       this.restartBackoff.delete(platformId);
+      this.linkLossTold.delete(platformId);
       if (this.outbox.owes(platformId)) this.outbox.schedule(0);
     }
+    if (state === "needs_login" && readPlatformLinkLost(platformId))
+      void this.tellLinkLost(platformId);
     // Every transition to the main log, so an export says what the card showed.
     console.log(
       `[messaging] ${platformId}: ${previous?.state ?? "(new)"} -> ${state}` +
@@ -2110,6 +2123,26 @@ export class MessagingGatewayService {
           words.t("outcome.channel.appClosed")
         );
     }
+  }
+
+  /** A link that ended can't say so in its own chat, so the computer does. */
+  private async tellLinkLost(platformId: MessagingPlatformId): Promise<void> {
+    if (this.linkLossTold.has(platformId)) return;
+    this.linkLossTold.add(platformId);
+    const words = await channelWords(
+      channelLocale(
+        readUserLanguage()?.name ?? null,
+        this.options.appLanguage?.() ?? null
+      )
+    );
+    const platform = words.t(
+      `messaging.platforms.${messagingPlatformSpec(platformId)?.nameKey ?? platformId}`
+    );
+    this.options.notifyUser?.(
+      platformId,
+      words.t("native.linkLostTitle", { platform }),
+      words.t("native.linkLostLane", { platform })
+    );
   }
 
   /** The user's own chat hears which message never went, unless it was theirs. */

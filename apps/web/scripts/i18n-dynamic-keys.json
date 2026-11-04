@@ -1661,7 +1661,9 @@
       "importMcp",
       "selectTheme",
       "themes",
-      "diskFullLane"
+      "diskFullLane",
+      "linkLostLane",
+      "linkLostTitle"
     ],
     "sources": [
       "../../desktop/src/main/index.ts",

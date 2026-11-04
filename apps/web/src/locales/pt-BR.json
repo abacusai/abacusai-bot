@@ -4788,6 +4788,8 @@
     "importMcp": "Importar servidores MCP",
     "selectTheme": "Selecionar um tema",
     "themes": "Temas",
-    "diskFullLane": "O disco do computador está cheio, então o {{platform}} não consegue salvar seus dados. Ele se reconecta sozinho assim que algum espaço for liberado."
+    "diskFullLane": "O disco do computador está cheio, então o {{platform}} não consegue salvar seus dados. Ele se reconecta sozinho assim que algum espaço for liberado.",
+    "linkLostTitle": "{{platform}} está desconectado",
+    "linkLostLane": "O {{platform}} não está mais vinculado, então mensagens e rotinas não podem ser enviadas por ele. Clique em Conectar e escaneie o QR code novamente."
   }
 }

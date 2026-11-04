@@ -27,6 +27,8 @@ type StoredPlatform = {
   values?: Record<string, string>;
   /** A web-login platform's last sign-in verdict; absent until first seen. */
   signedIn?: boolean;
+  /** The link it had ended, and no new one replaced it yet. */
+  linkLost?: boolean;
 };
 
 type StoredConfig = {
@@ -209,7 +211,24 @@ export const savePlatformSignedIn = (
 ): void => {
   const config = readConfig();
   const platforms = { ...config.platforms };
-  platforms[platformId] = { ...platforms[platformId], signedIn };
+  platforms[platformId] = {
+    ...platforms[platformId],
+    signedIn,
+    // Signed in again: whatever was lost is back.
+    ...(signedIn ? { linkLost: false } : {}),
+  };
+  writeConfig({ ...config, platforms });
+};
+
+export const readPlatformLinkLost = (
+  platformId: MessagingPlatformId
+): boolean => readConfig().platforms?.[platformId]?.linkLost === true;
+
+/** A link that worked has ended; signing in again clears it. */
+export const savePlatformLinkLost = (platformId: MessagingPlatformId): void => {
+  const config = readConfig();
+  const platforms = { ...config.platforms };
+  platforms[platformId] = { ...platforms[platformId], linkLost: true };
   writeConfig({ ...config, platforms });
 };
 

@@ -1406,6 +1406,17 @@ export class ServiceHost {
     }
   }
 
+  /** How a notice reaches the user outside any chat; the app shell owns it. */
+  private userNotifier:
+    | ((platform: MessagingPlatformId, title: string, body: string) => void)
+    | null = null;
+
+  attachUserNotifier(
+    notify: (platform: MessagingPlatformId, title: string, body: string) => void
+  ): void {
+    this.userNotifier = notify;
+  }
+
   /** Hear each finished hosted run once (the Routines notifications). */
   onHostedRun(listener: (event: HostedFeedEvent) => void): () => void {
     return this.hostedFeed.listen(listener);
@@ -2425,6 +2436,8 @@ export class ServiceHost {
   /** Given callbacks, not this host, so it cannot reach further than needed. */
   private readonly messagingGatewayService = new MessagingGatewayService({
     platform: () => this.platform,
+    notifyUser: (platform, title, body) =>
+      this.userNotifier?.(platform, title, body),
     appLanguage: () => this.appLanguage(),
     resolveWorkspaceId: () => {
       const workspaces = this.workspaceService.getWorkspaces();

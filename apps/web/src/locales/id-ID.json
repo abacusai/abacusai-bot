@@ -4788,6 +4788,8 @@
     "importMcp": "Impor server MCP",
     "selectTheme": "Pilih Tema",
     "themes": "Tema",
-    "diskFullLane": "Disk komputer penuh, jadi {{platform}} tidak bisa menyimpan datanya. Koneksi akan pulih sendiri setelah sebagian ruang dikosongkan."
+    "diskFullLane": "Disk komputer penuh, jadi {{platform}} tidak bisa menyimpan datanya. Koneksi akan pulih sendiri setelah sebagian ruang dikosongkan.",
+    "linkLostTitle": "{{platform}} terputus",
+    "linkLostLane": "{{platform}} tidak lagi tertaut, jadi pesan dan rutinitas tidak bisa dikirim lewat sana. Klik Hubungkan lalu pindai kode QR lagi."
   }
 }

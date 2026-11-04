@@ -91,7 +91,9 @@ vi.mock("../../bring-to-front", () => ({
 }));
 vi.mock("../../paths", () => ({ abacusBotHome: () => "/nonexistent" }));
 vi.mock("./messaging-config-service", () => ({
+  readPlatformLinkLost: () => false,
   readPlatformSignedIn: () => null,
+  savePlatformLinkLost: () => {},
   savePlatformSignedIn: () => {},
 }));
 
