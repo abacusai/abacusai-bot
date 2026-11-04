@@ -929,6 +929,32 @@ describe("who refused: Abacus's wall, its billing gate, or the user's own key", 
   });
 });
 
+describe("out of credits on a paying plan", () => {
+  const RAW = "429: You have no remaining credits to use the LLM apis.";
+  const context = {
+    routed: false,
+    freeLaneProviders: [],
+    onFreeLane: false,
+    abacusFreeModels: [],
+    abacus: "out" as const,
+  };
+  const failure = {
+    cause: "credits_exhausted" as const,
+    provider: "abacus",
+    raw: RAW,
+  };
+
+  it("never tells someone who paid to upgrade their plan as if they had not", () => {
+    const paid = presentFailure(failure, { ...context, paying: true });
+    expect(paid.message).not.toMatch(/upgrade your plan/i);
+    expect(paid.message).toContain("this month's credits");
+    expect(paid.actions?.[0]).toMatchObject({ type: "upgrade-abacus" });
+    expect(presentFailure(failure, context).message).toMatch(
+      /upgrade your plan/i
+    );
+  });
+});
+
 describe("free credits held until the account verifies a phone", () => {
   const VERIFY =
     '429: {"message":"Verify your phone to unlock 2,000 free credits: https://apps.abacus.ai/bot/link/verify-phone","type":"insufficient_quota","param":null,"code":"insufficient_quota","abacus_error_code":"abacus_credits_not_activated"}';

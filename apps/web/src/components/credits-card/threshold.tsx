@@ -262,6 +262,7 @@ export const CreditThresholdHost = () => {
       .catch(() => undefined);
   const shown = useEffectEvent((threshold: CreditThreshold) => {
     if (card?.shown === threshold) return;
+    console.info(`[credits] threshold card ${threshold} shown`);
     void transport.client.system
       .funnelStep({ step: `credit_card_${threshold}_shown` })
       .catch(() => undefined);
@@ -275,6 +276,7 @@ export const CreditThresholdHost = () => {
   if (showing == null || used == null || total == null) return null;
   const count = tasksLeft(Math.max(0, total - used), mark?.perTask ?? null);
   const answer = (choice: "upgrade" | "continue") => {
+    console.info(`[credits] threshold card ${showing} answered: ${choice}`);
     void transport.client.system
       .funnelStep({ step: `credit_card_${showing}_${choice}` })
       .catch(() => undefined);

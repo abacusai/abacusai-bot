@@ -241,6 +241,13 @@ export type AgentEvent =
         cacheWrite: number;
         requests: number;
         model: string | null;
+        /** Every request of the turn added up: what it billed. */
+        total?: {
+          input: number;
+          output: number;
+          cacheRead: number;
+          cacheWrite: number;
+        };
         /** The turn ran on the free models the user chose at the credit wall. */
         lane?: "free";
         /** The free lane's provider that answered. */

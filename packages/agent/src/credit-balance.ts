@@ -9,7 +9,19 @@ export interface CreditBalance {
   granted: number;
   /** When the host read the account, in epoch milliseconds. */
   at: number;
+  /** The plan's monthly credits, when the server says; absent on a free plan. */
+  planCredits?: number;
 }
+
+/**
+ * What "running low" is measured against: the plan's own credits, never what
+ * was bought on top. Someone who bought 300,000 is not low at 30,000. A promoted
+ * first month grants less than the plan, so the smaller of the two.
+ */
+export const lowCreditBase = (balance: CreditBalance): number =>
+  balance.planCredits != null
+    ? Math.min(balance.planCredits, balance.granted)
+    : balance.granted;
 
 const finite = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
@@ -21,7 +33,14 @@ const parse = (raw: unknown): CreditBalance | null => {
     finite(value.granted) &&
     finite(value.at) &&
     value.granted > 0
-    ? { remaining: value.remaining, granted: value.granted, at: value.at }
+    ? {
+        remaining: value.remaining,
+        granted: value.granted,
+        at: value.at,
+        ...(finite(value.planCredits) && value.planCredits > 0
+          ? { planCredits: value.planCredits }
+          : {}),
+      }
     : null;
 };
 
@@ -65,7 +84,7 @@ export function setCreditRefresher(
 export function refreshCreditBalanceIfStale(now = Date.now()): void {
   if (refresher == null) return;
   const ttl =
-    balance != null && balance.remaining < balance.granted * LOW_SHARE
+    balance != null && balance.remaining < lowCreditBase(balance) * LOW_SHARE
       ? STALE_LOW_MS
       : STALE_MS;
   // Spaced by our own asks too: an account that reports no balance never freshens.

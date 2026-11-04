@@ -59,16 +59,18 @@ export interface RunControllerDeps {
 
 /** `TurnUsage` as @ag-ui/core accounts it: input includes the cache (§3.3.8). */
 export function toTokenUsage(usage: TurnUsage) {
-  const inputTokens = usage.input + usage.cacheRead + usage.cacheWrite;
+  // What the turn billed, every request of it; the last one alone reads low.
+  const { input, output, cacheRead, cacheWrite } = usage.total ?? usage;
+  const inputTokens = input + cacheRead + cacheWrite;
 
   return [
     {
       ...(usage.model != null ? { model: usage.model } : {}),
       inputTokens,
-      cachedInputTokens: usage.cacheRead,
-      cacheWriteInputTokens: usage.cacheWrite,
-      outputTokens: usage.output,
-      totalTokens: inputTokens + usage.output,
+      cachedInputTokens: cacheRead,
+      cacheWriteInputTokens: cacheWrite,
+      outputTokens: output,
+      totalTokens: inputTokens + output,
     },
   ];
 }

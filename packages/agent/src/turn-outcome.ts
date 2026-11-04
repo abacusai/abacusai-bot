@@ -308,6 +308,8 @@ export interface FailureContext {
    * the way on), or no Abacus account here at all.
    */
   abacus: "credits" | "out" | null;
+  /** The account is on a paying plan: its catalog lists the plan's router. */
+  paying?: boolean;
   /**
    * The model the user picked, for a card about it (one outside the plan, or
    * off Abacus); `free` when it costs nothing on its provider.
@@ -434,6 +436,10 @@ const unavailableMessage = (action: NotificationAction): string => {
       return `${model} isn't available anymore. Your message is kept.`;
   }
 };
+
+/** A paying plan out of credits: it paid, so never the free plan's "upgrade your plan". */
+const PAID_CREDITS_OUT_MESSAGE =
+  "You've used this month's credits. Your plan's way to keep going is on the card.";
 
 /** The one line that says "busy": every failed call was a real rate limit. */
 export const OPENLLM_POOL_BUSY_MESSAGE =
@@ -820,11 +826,13 @@ export function presentFailure(
   const message =
     unavailable != null
       ? unavailableMessage(unavailable)
-      : pooledLine
-        ? routedMessage(failure)
-        : isProviderFailure(failure.raw)
-          ? terminalProviderMessage(failure.raw, undefined, failure.provider)
-          : readableFailure(failure.raw, failure.provider);
+      : failure.cause === "credits_exhausted" && context.paying === true
+        ? PAID_CREDITS_OUT_MESSAGE
+        : pooledLine
+          ? routedMessage(failure)
+          : isProviderFailure(failure.raw)
+            ? terminalProviderMessage(failure.raw, undefined, failure.provider)
+            : readableFailure(failure.raw, failure.provider);
   // The connection card's details say what failed; on the pool the user
   // picked no model, so no provider's sentence is shown.
   const detail = connection

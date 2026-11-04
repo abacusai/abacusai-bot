@@ -26,7 +26,7 @@ import {
   type QuotaStore,
 } from "./openllm-quota.js";
 import { OpenLlmRotation, openLlmCandidates } from "./openllm.js";
-import { listModels, type ModelChoice } from "./providers.js";
+import { listModels, type ModelChoice, payingPlanRouter } from "./providers.js";
 import {
   TurnChain,
   type FailureContext,
@@ -203,6 +203,7 @@ export class OpenLlmRouter {
         : creditWallActive(this.now()) || hostCreditBalance()?.remaining === 0
           ? "out"
           : "credits",
+      paying: payingPlanRouter(registry) != null,
     };
   }
 

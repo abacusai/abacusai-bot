@@ -263,7 +263,7 @@ export const CreditsCard = ({
         <GroupCard
           title={
             wall != null
-              ? creditWallTitle(t, wall, paying)
+              ? creditWallTitle(t, wall, paying || tier === "unknown")
               : (title ??
                 t(
                   paying

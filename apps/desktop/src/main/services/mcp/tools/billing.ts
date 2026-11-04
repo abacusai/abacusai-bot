@@ -104,8 +104,16 @@ export function creditStanding(billing: BillingPlan): string[] {
     current.freeTierExpiresAt != null
       ? `You have ${left} of your ${granted} free credits, until ${day(current.freeTierExpiresAt)}.`
       : `You have ${left} of your ${granted} credits this month.`;
+  const currentMonthly = billing.plans.find(
+    (plan) => plan.current && plan.plan !== "free"
+  )?.creditsPerMonth;
   return [
     standing,
+    ...(currentMonthly != null
+      ? [
+          `Moving up to ${next.planName} now adds the difference between the two plans, ${credits(nextCredits - currentMonthly)} credits at most and less the further into the period they are; its full ${credits(nextCredits)} starts at the next renewal. Say so whenever you say what ${next.planName} gives.`,
+        ]
+      : []),
     `When credits come up, say where they stand, then offer ${next.planName} in their language: its price, everything it gives as a short list, then the link. For example:`,
     `  "${where} ${next.planName} is ${priceLine(next)}, and gives you:`,
     ...next.features.map((feature) => `    - ${feature}`),
@@ -122,7 +130,8 @@ export function creditStanding(billing: BillingPlan): string[] {
 export const planFacts = (billing: BillingPlan): string[] => [
   ...(creditsRenewMonthly(billing)
     ? [
-        `Their plan's credits renew every month: ${credits(billing.plans.find((plan) => plan.current)?.creditsPerMonth ?? null)} a month. Never call them a one-time grant.`,
+        `Their plan's credits renew every month: ${credits(billing.plans.find((plan) => plan.current)?.creditsPerMonth ?? null)} at each renewal. Never call them a one-time grant.`,
+        "That is the renewal's figure, not this period's: what this period gave is the balance above, which a move up in the middle of a period and bought credits both change. Never say this period gave the monthly figure.",
       ]
     : []),
   "In this app, bots, chats and routines have no task or project cap: a plan gives them its monthly credits and its models. Items marked as on the web are Abacus AI Agent's, not limits here.",

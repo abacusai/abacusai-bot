@@ -255,6 +255,13 @@ export type AgentEvent =
         cacheWrite: number;
         requests: number;
         model: string | null;
+        /** Every request of the turn added up: what it billed. */
+        total?: {
+          input: number;
+          output: number;
+          cacheRead: number;
+          cacheWrite: number;
+        };
         /** The turn ran on the free models the user chose at the credit wall. */
         lane?: "free";
         /** The free lane's provider that answered. */
@@ -579,7 +586,13 @@ export type DesktopCommand =
   /** The desktop's connectivity owner changed its mind, or the machine woke. */
   | { type: "connectivity"; state: string; resumed?: boolean }
   /** The Abacus balance as the desktop last read it; see credit-balance.ts. */
-  | { type: "credit_balance"; remaining: number; granted: number; at: number }
+  | {
+      type: "credit_balance";
+      remaining: number;
+      granted: number;
+      at: number;
+      planCredits?: number;
+    }
   /** The account's credit wall as the desktop holds it; see credit-wall.ts. */
   | {
       type: "credit_wall";

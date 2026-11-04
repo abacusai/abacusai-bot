@@ -73,7 +73,11 @@ const describeTurnComplete = (
     `turn complete · cache read ${usage.cacheRead} write ${usage.cacheWrite} ` +
     `input ${usage.input} output ${usage.output}` +
     (usage.requests > 1 ? ` (${usage.requests} requests)` : "") +
-    (usage.model != null ? ` ${usage.model}` : "");
+    (usage.model != null ? ` ${usage.model}` : "") +
+    // The figures above are the last request; this is what the turn billed.
+    (usage.total != null
+      ? ` · turn cache read ${usage.total.cacheRead} input ${usage.total.input} output ${usage.total.output}`
+      : "");
   if (usage.cacheRead > 0) {
     cacheHitsSeen.add(sessionId);
     return line;
