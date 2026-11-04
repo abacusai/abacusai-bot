@@ -8,7 +8,26 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `de9cd7eba` (the failure card for a model off Abacus, #630)
+## Current: `99d74c2f` (Channels, #678)
+
+**426 / 8099879 / 2710830.** Records the renderer with Channels: a named
+space where the user and several bots work in one thread (the Channels rows in
+the Bots sidebar, the channel page, its composer and cards, and the strings in
+every locale). Against main at `3f3db4fb` (422 / 8020015 / 2681876): +4 chunks
+(+0.95%), +79864 bytes (+1.00%), +28954 gzip bytes (+1.08%). The four chunks
+are the channel route (TanStack splits a route in two) and two shared modules
+the route now shares with the Bots sidebar (the bot avatar and the channel
+rows). The new-channel page shares the route, and the faces live with the rows,
+which kept three more chunks out. No dependency added. The 1% allowance is
+unchanged.
+
+Measured from a frozen-lockfile build of `99d74c2f` and of `3f3db4fb` (Linux
+x64), summed the same way as `check-desktop-parity.mjs`. This baseline-only
+change touches no renderer code.
+
+## History
+
+### `de9cd7eba` (the failure card for a model off Abacus, #630)
 
 **420 / 7984199 / 2670107.** Records the renderer with #630's handling of a
 failed model off Abacus: the line that says the chat moved to RouteLLM - Open,
@@ -23,8 +42,6 @@ locale chunk. No dependency or chunk split. The 1% allowance is unchanged.
 Measured from a frozen-lockfile build of `de9cd7eba` and of `f208fea31`
 (Linux x64), summed the same way as `check-desktop-parity.mjs`. This
 baseline-only change touches no renderer code.
-
-## History
 
 ### `0ba0d4315` (the first-run screen)
 
