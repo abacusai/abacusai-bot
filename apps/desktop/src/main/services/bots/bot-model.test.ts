@@ -494,6 +494,45 @@ describe("the effective bot model in main (spec 03 §24.10)", () => {
     expect(main.sessions.get(handle.sessionId)!.model).toBe("abacus/route-llm");
   });
 
+  it("a chat on the free plan's OpenLLM runs on the paid tier's router once the plan is paid", async () => {
+    const sources = (
+      catalog: ModelAvailability[],
+      tier: string | null = "basic"
+    ) => ({
+      readDefault: () => null,
+      listCatalog: async () => catalog,
+      cachedRecommended: () => null,
+      tier: () => tier,
+    });
+    // The paid catalog has no OpenLLM row at all: the pin is not kept as is.
+    const paid = [
+      model("abacus/route-llm-code-low", true, { recommended: true }),
+      model("deepseek/deepseek-v4-flash", true),
+    ];
+    expect(await resolveSessionModel(null, sources(paid), "openllm/auto")).toBe(
+      "abacus/route-llm-code-low"
+    );
+    // Before the catalog answers, too: the plan alone decides.
+    expect(await resolveSessionModel(null, sources([]), "openllm/auto")).toBe(
+      "abacus/route-llm-code-low"
+    );
+    expect(
+      await resolveSessionModel(null, sources([], "pro"), "openllm/auto")
+    ).toBe("abacus/route-llm-code");
+    // A model the paid plan still serves stays exactly as it is.
+    expect(
+      await resolveSessionModel(
+        "deepseek/deepseek-v4-flash",
+        sources(paid),
+        "deepseek/deepseek-v4-flash"
+      )
+    ).toBe("deepseek/deepseek-v4-flash");
+    // Still on the free plan: OpenLLM is its own model.
+    expect(
+      await resolveSessionModel(null, sources([], "free"), "openllm/auto")
+    ).toBe("openllm/auto");
+  });
+
   it("a model the plan does not include moves a pinned session off it, as a gone credential does", async () => {
     const sources = (
       catalog: ModelAvailability[],

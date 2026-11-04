@@ -56,7 +56,7 @@ vi.stubGlobal("fetch", async (url: string) => {
 });
 
 const { clearLiveModelIds } = await import("@abacus-ai/agent/model-catalog");
-const { listAvailableModels } = await import("./models");
+const { listAvailableModels, modelForTier } = await import("./models");
 
 const forProvider = (
   models: Awaited<ReturnType<typeof listAvailableModels>>,
@@ -301,5 +301,41 @@ describe("what a free Abacus.AI plan can run", () => {
     const models = await listAvailableModels(true);
 
     expect(models.some((m) => m.access === "locked")).toBe(false);
+  });
+});
+
+describe("a pin once the plan is paid", () => {
+  it.each([
+    // The free plan's default moves to the paid tier's router.
+    ["basic", "openllm/auto", "abacus/route-llm-code-low"],
+    ["go", "openllm/auto", "abacus/route-llm-code-low"],
+    ["pro", "openllm/auto", "abacus/route-llm-code"],
+    ["max", "openllm/auto", "abacus/route-llm-code"],
+    // Nothing else moves: a model the user chose, or the free plan itself.
+    ["basic", "deepseek/deepseek-v4-flash", "deepseek/deepseek-v4-flash"],
+    ["pro", "abacus/route-llm-code-low", "abacus/route-llm-code-low"],
+    ["free", "openllm/auto", "openllm/auto"],
+    [null, "openllm/auto", "openllm/auto"],
+  ])("on %s, %s runs as %s", (tier, pin, expected) => {
+    expect(modelForTier(tier, pin)).toBe(expected);
+  });
+
+  it("is never on a model the paid catalog drops", async () => {
+    credentials.current = new Set(["ABACUS_API_KEY"]);
+    abacus.tier = "basic";
+    abacus.live = [
+      {
+        id: "abacus/route-llm-code-low",
+        label: "RouteLLM",
+        provider: "abacus",
+        tier: "default",
+        requiresEnv: "ABACUS_API_KEY",
+        configured: true,
+      },
+    ];
+    const ids = (await listAvailableModels(true)).map((m) => m.id);
+
+    expect(ids).not.toContain("openllm/auto");
+    expect(ids).toContain(modelForTier("basic", "openllm/auto"));
   });
 });

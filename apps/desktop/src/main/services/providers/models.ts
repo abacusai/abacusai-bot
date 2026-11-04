@@ -8,6 +8,7 @@ import {
 } from "@abacus-ai/agent/model-catalog";
 import { FREE_POOL_PROVIDERS } from "@abacus-ai/contract/free-pool";
 import {
+  isPayingAbacusTier,
   MODEL_CATALOG,
   type ModelAvailability,
 } from "@abacus-ai/contract/models";
@@ -90,6 +91,32 @@ const unlockPlanName = async (): Promise<string | null> => {
   const name = plan?.upgrades[0]?.planName ?? null;
   unlockPlanCache = { name, at: Date.now() };
   return name;
+};
+
+/**
+ * Each plan's own model: what is auto-selected when nothing valid is chosen,
+ * and where a pin the plan does not serve moves (`modelForTier`).
+ */
+const RECOMMENDED_BY_TIER: Record<string, string> = {
+  free: "openllm/auto",
+  go: "abacus/route-llm-code-low",
+  basic: "abacus/route-llm-code-low",
+  pro: "abacus/route-llm-code",
+  max: "abacus/route-llm-code",
+};
+
+/**
+ * The model a pin to `id` runs on under `tier`: a paying tier has no OpenLLM
+ * (the catalog drops it), so a pin to any OpenLLM model, the free plan's
+ * default, moves to the tier's router. Every other pin, and every pin on
+ * another or unknown tier, is kept as it is.
+ */
+export const modelForTier = (
+  tier: string | null | undefined,
+  id: string
+): string => {
+  if (!isPayingAbacusTier(tier) || !id.startsWith("openllm/")) return id;
+  return RECOMMENDED_BY_TIER[tier ?? ""] ?? id;
 };
 
 /** What a refused id is called when no catalog row names it. */
@@ -202,9 +229,7 @@ export const listAvailableModels = async (
   // rows cannot chat, and `:free` rows the live list no longer carries answer
   // 404. Off a paying tier only the live free list is offered; a paying tier
   // keeps the paid rows, marked, for users with credits on OpenRouter.
-  const payingTier =
-    abacusAccount?.subscription_tier != null &&
-    ["basic", "go", "pro", "max"].includes(abacusAccount.subscription_tier);
+  const payingTier = isPayingAbacusTier(abacusAccount?.subscription_tier);
   const liveOpenRouterIds = new Set(openRouterFree.map((model) => model.id));
   const servableExpanded = expanded.flatMap((model) => {
     if (model.provider !== "openrouter") return [model];
@@ -308,13 +333,6 @@ export const listAvailableModels = async (
   // Auto-select by plan when nothing valid is chosen. At most one entry is
   // marked, and only a runnable one: a tier whose router is missing from this
   // account's catalog recommends nothing.
-  const RECOMMENDED_BY_TIER: Record<string, string> = {
-    free: "openllm/auto",
-    go: "abacus/route-llm-code-low",
-    basic: "abacus/route-llm-code-low",
-    pro: "abacus/route-llm-code",
-    max: "abacus/route-llm-code",
-  };
   const recommendedId =
     abacusAccount?.subscription_tier != null
       ? RECOMMENDED_BY_TIER[abacusAccount.subscription_tier]
