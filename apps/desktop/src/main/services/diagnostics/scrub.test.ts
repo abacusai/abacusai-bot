@@ -167,6 +167,23 @@ describe("what is uploaded or logged", () => {
       expect(scrub(parts("word", key))).not.toContain(key);
   });
 
+  it("holds no quoted cookie inside tool arguments", () => {
+    const sid = body(12);
+    const other = body(14);
+    const args = JSON.stringify({
+      headers: JSON.stringify({
+        [parts("Coo", "kie")]: parts('sid="', sid, '"; other=', other),
+      }),
+      next: 1,
+    });
+    const once = scrub(args);
+
+    expect(once).not.toContain(sid);
+    expect(once).not.toContain(other);
+    expect(once).toContain('"next":1');
+    expect(scrub(once)).toBe(once);
+  });
+
   it("holds no private key, whole or cut off", () => {
     const pem = `-----BEGIN RSA ${"PRIVATE"} KEY-----\n${body(64)}\n${body(64)}`;
 

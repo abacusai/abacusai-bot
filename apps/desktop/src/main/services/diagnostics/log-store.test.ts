@@ -120,6 +120,25 @@ describe("writing", () => {
     expect(text).toContain("after");
   });
 
+  it("scrubs a key's short last line, alone at a flush's edge", () => {
+    const store = new LogStore(dir, at("2026-08-21T10:00:00"));
+    const last = "aB3dE==";
+
+    store.start();
+    store.append("main", `-----BEGIN ${"PRIVATE"} KEY-----`);
+    store.flush();
+    store.append("main", last);
+    store.flush();
+    store.append("main", `-----END ${"PRIVATE"} KEY-----`);
+    store.append("main", "after");
+    store.flush();
+
+    const text = read("main-2026-08-21.log");
+
+    expect(text).not.toContain(last);
+    expect(text).toContain("after");
+  });
+
   it("does not lose the log after a key cut short", () => {
     const store = new LogStore(dir, at("2026-08-21T10:00:00"));
 

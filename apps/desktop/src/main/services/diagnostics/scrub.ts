@@ -47,6 +47,10 @@ const LOG_PREFIX = String.raw`(?:\[[^\]\n]{1,40}\][ \t]*){0,3}`;
 const KEY_BODY_LINES = new RegExp(
   String.raw`^(?:${LOG_PREFIX}[A-Za-z0-9+/=]{16,}[ \t]*(?:\r?\n|$))*`
 );
+/** A key's last line can be short: next to its END, or at a flush's end. */
+const KEY_SHORT_LINE = new RegExp(
+  String.raw`^${LOG_PREFIX}[A-Za-z0-9+/=]{1,15}[ \t]*(?:\r?\n|$)`
+);
 const KEY_END_LINE = new RegExp(
   String.raw`^${LOG_PREFIX}-----END [A-Z0-9 ]{0,40}PRIVATE KEY-----`
 );
@@ -114,7 +118,17 @@ const DATA_URI = /^data:[a-z]+\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]*$/;
 
 /** A cookie header holds several secrets: the whole line goes. */
 const COOKIE_HEADER =
-  /(\bcookie\\?["']?\s{0,3}[:=]\s{0,3})((?:\\?["'])?)([^\r\n\\]*)/gi;
+  /(\bcookie\\?["']?\s{0,3}[:=]\s{0,3})((?:\\?["'])?)((?:(?!\\[nr])[^\r\n])*)/gi;
+
+/** Where a quoted value ends: its first quote not escaped a level further in. */
+const closingQuote = (value: string, quote: string): number => {
+  let index = value.indexOf(quote);
+
+  while (index > 0 && value[index - 1] === "\\")
+    index = value.indexOf(quote, index + 1);
+
+  return index;
+};
 
 const maskCookieHeader = (
   whole: string,
@@ -123,7 +137,7 @@ const maskCookieHeader = (
   value: string
 ): string => {
   if (!value.includes("=")) return whole;
-  const closing = quote === "" ? -1 : value.indexOf(quote.slice(-1));
+  const closing = quote === "" ? -1 : closingQuote(value, quote);
 
   return `${name}${quote}${MASKED_VALUE}${closing < 0 ? "" : value.slice(closing)}`;
 };
@@ -261,9 +275,19 @@ export function scrubLogFlush(
   let rest = text;
 
   if (insideKey) {
-    const body = KEY_BODY_LINES.exec(rest)?.[0] ?? "";
+    let body = KEY_BODY_LINES.exec(rest)?.[0] ?? "";
 
     rest = rest.slice(body.length);
+    const short = KEY_SHORT_LINE.exec(rest)?.[0];
+
+    if (short != null) {
+      const after = rest.slice(short.length);
+
+      if (after.length === 0 || KEY_END_LINE.test(after)) {
+        body += short;
+        rest = after;
+      }
+    }
     const end = KEY_END_LINE.exec(rest)?.[0];
 
     if (end != null) {
