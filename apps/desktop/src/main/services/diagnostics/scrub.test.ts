@@ -213,14 +213,6 @@ describe("what is uploaded or logged", () => {
     expect(json).toContain('"next": 1');
   });
 
-  it("holds no private key split across two flushes", () => {
-    const end = `-----END ${"PRIVATE"} KEY-----`;
-
-    expect(scrub(parts(body(64), "\n", body(64), "\n", end, "\nafter"))).toBe(
-      "<redacted-key>\nafter"
-    );
-  });
-
   it("holds no value under a secret's own key, whatever it looks like", () => {
     const apiKeyValue = parts("plain", "word", "key");
     const cookie = parts("sid", "=", "abc");

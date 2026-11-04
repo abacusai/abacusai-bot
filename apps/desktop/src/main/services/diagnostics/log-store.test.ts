@@ -95,6 +95,43 @@ describe("writing", () => {
     expect(read("main-2026-08-21.log")).not.toContain(token);
   });
 
+  it.each([2, 3, 5])("scrubs a key split over %i flushes", (flushes) => {
+    const store = new LogStore(dir, at("2026-08-21T10:00:00"));
+    const body = [0, 1, 2, 3, 4, 5].map((n) => `Mi${n}${"a1B2c3D4".repeat(8)}`);
+    const key = [
+      `-----BEGIN ${"PRIVATE"} KEY-----`,
+      ...body,
+      `-----END ${"PRIVATE"} KEY-----`,
+    ];
+
+    store.start();
+    store.append("main", "before");
+    key.forEach((line, index) => {
+      store.append("main", line);
+      if ((index + 1) % Math.ceil(key.length / flushes) === 0) store.flush();
+    });
+    store.append("main", "after");
+    store.flush();
+
+    const text = read("main-2026-08-21.log");
+
+    for (const line of body) expect(text).not.toContain(line);
+    expect(text).toContain("before");
+    expect(text).toContain("after");
+  });
+
+  it("does not lose the log after a key cut short", () => {
+    const store = new LogStore(dir, at("2026-08-21T10:00:00"));
+
+    store.start();
+    store.append("main", `-----BEGIN ${"PRIVATE"} KEY-----`);
+    store.flush();
+    store.append("main", "an ordinary line");
+    store.flush();
+
+    expect(read("main-2026-08-21.log")).toContain("an ordinary line");
+  });
+
   it("survives a directory it cannot write to", () => {
     const store = new LogStore(
       path.join(dir, "file-not-a-dir", "deeper"),

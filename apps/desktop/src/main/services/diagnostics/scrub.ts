@@ -40,8 +40,16 @@ const KEY_SHAPES: readonly RegExp[] = [
   /-----BEGIN [A-Z0-9 ]{0,40}PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z0-9 ]{0,40}PRIVATE KEY-----|$)/g,
 ];
 
-/** The end of a key whose start was in earlier text: whole keys are gone by now. */
-const PRIVATE_KEY_END = /^[\s\S]*-----END [A-Z0-9 ]{0,40}PRIVATE KEY-----/;
+const PRIVATE_KEY_MARKER = /-----(BEGIN|END) [A-Z0-9 ]{0,40}PRIVATE KEY-----/g;
+
+/** The rest of a key begun in an earlier flush: its lines, then its END line. */
+const LOG_PREFIX = String.raw`(?:\[[^\]\n]{1,40}\][ \t]*){0,3}`;
+const KEY_BODY_LINES = new RegExp(
+  String.raw`^(?:${LOG_PREFIX}[A-Za-z0-9+/=]{16,}[ \t]*(?:\r?\n|$))*`
+);
+const KEY_END_LINE = new RegExp(
+  String.raw`^${LOG_PREFIX}-----END [A-Z0-9 ]{0,40}PRIVATE KEY-----`
+);
 
 /** A URL that is itself the credential: its last part is the secret. */
 const WEBHOOK =
@@ -210,14 +218,9 @@ export function scrubValue<T>(value: T, key = ""): T {
   ) as T;
 }
 
-/**
- * Scrub one text: key shapes, named secrets, and the user's own name. Log text
- * goes to disk a flush at a time, so a key can start in one and end in the
- * next: the first masks to its end, and this masks the second up to the key's
- * last line.
- */
+/** Scrub one text: key shapes, named secrets, and the user's own name. */
 export function scrub(text: string, homeDir?: string): string {
-  let out = scrubKeys(text).replace(PRIVATE_KEY_END, MASKED_KEY);
+  let out = scrubKeys(text);
 
   // The user's name is the parent of `~/.abacusai-bot`; the OS's answer is
   // read too, because either can be the one that appears in the paths.
@@ -242,4 +245,41 @@ function safely(read: () => string): string {
   } catch {
     return "unknown";
   }
+}
+
+/**
+ * `scrub` for text written a flush at a time: a key can run over any number of
+ * flushes. `insideKey` says the flush before ended inside one. The key is
+ * followed by its lines, not just its END, so one cut short ends at the first
+ * ordinary line, not with the day's log.
+ */
+export function scrubLogFlush(
+  text: string,
+  insideKey: boolean
+): { text: string; insideKey: boolean } {
+  let head = "";
+  let rest = text;
+
+  if (insideKey) {
+    const body = KEY_BODY_LINES.exec(rest)?.[0] ?? "";
+
+    rest = rest.slice(body.length);
+    const end = KEY_END_LINE.exec(rest)?.[0];
+
+    if (end != null) {
+      head = MASKED_KEY;
+      rest = rest.slice(end.length);
+    } else if (rest.length === 0) {
+      return { text: MASKED_KEY, insideKey: true };
+    } else if (body.length > 0) {
+      head = `${MASKED_KEY}\n`;
+    }
+  }
+
+  const markers = [...rest.matchAll(PRIVATE_KEY_MARKER)];
+
+  return {
+    text: `${head}${scrub(rest)}`,
+    insideKey: markers.at(-1)?.[1] === "BEGIN",
+  };
 }

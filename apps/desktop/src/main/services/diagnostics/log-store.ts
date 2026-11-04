@@ -9,7 +9,7 @@ import path from "node:path";
 
 import { abacusBotHome } from "#main/paths";
 
-import { scrub } from "./scrub";
+import { scrubLogFlush } from "./scrub";
 
 /** Today inclusive. */
 export const RETENTION_DAYS = 5;
@@ -41,6 +41,8 @@ export const dayOfFile = (name: string): string | null => {
 export class LogStore {
   private readonly pending = new Map<LogStream, string[]>();
   private readonly written = new Map<string, number>();
+  /** Streams whose last flush ended inside a private key. */
+  private readonly insideKey = new Map<LogStream, boolean>();
   private timer: NodeJS.Timeout | null = null;
   private day = dayKey();
   /**
@@ -99,7 +101,13 @@ export class LogStore {
       if (lines.length === 0) continue;
 
       const target = path.join(this.dir, fileName(stream, this.day));
-      const payload = `${scrub(lines.join("\n"))}\n`;
+      const scrubbed = scrubLogFlush(
+        lines.join("\n"),
+        this.insideKey.get(stream) ?? false
+      );
+      const payload = `${scrubbed.text}\n`;
+
+      this.insideKey.set(stream, scrubbed.insideKey);
       const already = this.written.get(target) ?? this.sizeOf(target);
 
       if (already >= MAX_FILE_BYTES) continue;
