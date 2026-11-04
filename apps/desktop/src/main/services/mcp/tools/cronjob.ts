@@ -108,6 +108,16 @@ const HOSTED_FULL_DESCRIPTION = [
 ];
 
 /**
+ * The WhatsApp chat's free plan sets up no reminder or routine: said by the
+ * refusal, a `cronjob` list and `bot_help`, so the bot never offers one first.
+ */
+export const FREE_PHONE_ROUTINES =
+  "Reminders, daily briefs and routines are not set up from this chat on the free plan";
+export const FREE_PHONE_ROUTINES_NEXT =
+  "Call paid_feature with feature routines, and answer from what it says.";
+export const FREE_PHONE_ROUTINES_NOTE = `${FREE_PHONE_ROUTINES}: never say they are included or offer one. ${FREE_PHONE_ROUTINES_NEXT}`;
+
+/**
  * Where a hosted routine runs and what its runs reach, as `bot_help` says
  * it: the same facts as the hosted lines above, without the tool's options.
  */

@@ -29,6 +29,7 @@ import {
 
 import {
   alwaysOnLine,
+  FREE_PHONE_ROUTINES_NOTE,
   HOSTED_ROUTINE_FACTS,
   HOSTED_ROUTINE_FULL_FACTS,
   LOCAL_ROUTINE_FACTS,
@@ -93,6 +94,9 @@ const RUNS_WITH_THE_APP: ReadonlySet<BotHelpTopic | null> = new Set([
   "capabilities",
 ]);
 
+const phoneFreePlan = (facts: BotHelpFacts): boolean =>
+  facts.phone && facts.tier === "free";
+
 function routinesSection(facts: BotHelpFacts): string[] {
   const lines = ["Routines:"];
   if (facts.runner === "hosted")
@@ -109,7 +113,8 @@ function routinesSection(facts: BotHelpFacts): string[] {
       alwaysOn(facts)
     );
   }
-  if (facts.hosted && facts.tier === "free")
+  if (phoneFreePlan(facts)) lines.push(FREE_PHONE_ROUTINES_NOTE);
+  else if (facts.hosted && facts.tier === "free")
     lines.push(
       "Routines here come with the paid plans: this account's free plan cannot make one." +
         " Call billing_plan with upgrade: true for the plan and link."
@@ -255,8 +260,11 @@ function botsSection(facts: BotHelpFacts): string[] {
 }
 
 function capabilitiesSection(facts: BotHelpFacts): string[] {
-  const on = TOOLSETS_FOR_DISPLAY.filter((set) =>
-    facts.enabledToolsets.has(set.id)
+  // `cronjob` stays on for the list, but makes nothing on this plan.
+  const on = TOOLSETS_FOR_DISPLAY.filter(
+    (set) =>
+      facts.enabledToolsets.has(set.id) &&
+      !(set.id === "cronjob" && phoneFreePlan(facts))
   );
   const off = TOOLSETS_FOR_DISPLAY.filter(
     (set) => !facts.enabledToolsets.has(set.id)
@@ -275,6 +283,7 @@ function capabilitiesSection(facts: BotHelpFacts): string[] {
       `Not on this account here: ${facts.withheldFeatures.map((feature) => feature.name).join(", ")}. ` +
         `For any of these, call ${PAID_FEATURE_TOOL}: it says which plan has it and where.`
     );
+  if (phoneFreePlan(facts)) lines.push(FREE_PHONE_ROUTINES_NOTE);
   lines.push(where(facts, "capabilities"));
   return lines;
 }
