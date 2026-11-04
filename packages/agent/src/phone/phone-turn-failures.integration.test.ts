@@ -41,6 +41,7 @@ vi.mock("../abacus-endpoint.js", async (importActual) => ({
   abacusV1BaseUrl: () => fake.baseUrl,
 }));
 
+const { noteCreditsBack } = await import("../credit-wall.js");
 const { AgentMode } = await import("../protocol.js");
 type DesktopEvent = import("../protocol.js").DesktopEvent;
 type AgentEvent = import("../protocol.js").AgentEvent;
@@ -190,6 +191,9 @@ afterAll(async () => {
 
 beforeEach(() => {
   provider.calls.splice(0);
+  // A refused turn leaves the wall up, and a new chat stops there.
+  noteCreditsBack();
+  fs.rmSync(path.join(home, "openllm-cooldowns.json"), { force: true });
 });
 
 describe("a long build that keeps looking at screenshots", () => {
