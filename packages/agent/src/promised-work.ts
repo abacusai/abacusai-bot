@@ -58,8 +58,8 @@ const EN_ACTIVE =
 const PROMISE_PATTERNS: readonly RegExp[] = [
   // English.
   new RegExp(
-    `^(?:(?:ok(?:ay)?|alright|right|good|great|now|next|first|then|so|and)[,:]?\\s+)*` +
-      `(?:i'?ll|i will|i'?m going to|i am going to|let me|let's|about to|going to)\\s+` +
+    `^(?:(?:ok(?:ay)?|alright|right|good|great|now|next|first|so|and)[,:]?\\s+)*` +
+      `(?:i'?ll|i will|i'?m going to|i am going to|let me|about to|going to)\\s+` +
       `(?:\\w+\\s+){0,2}?(?:re-?)?(?:${EN_ACTIONS})\\b`
   ),
   new RegExp(`^(?:(?:and|now|so)\\s+)?(?:${EN_ACTIVE})\\b.*\\bnow$`),
@@ -67,7 +67,7 @@ const PROMISE_PATTERNS: readonly RegExp[] = [
   /^(?:(?:and|now|so)\s+)?(?:continuing|carrying on|moving on|proceeding|on it|on them|starting now)\b/,
   /^i'?m on (?:it|them|that|this)\b/,
   /^(?:one|just a) (?:sec|second|moment|minute)\b/,
-  /\bis next\b/,
+  /^(?:\S+\s+){1,4}is next\b/,
   // Spanish. Present tense announces here; object pronouns glue to the verb.
   /^(?:(?:y|ahora|ya|luego|primero|vale|ok|bien)[,:]?\s+)*(?:sigo|contin[uú]o|empiezo|comienzo|arranco|ejecuto|procedo|voy a (?:\S+\s+){0,1}?(?:ver|leer|revisar|abrir|crear|escribir|editar|corregir|ejecutar|empezar|comenzar|continuar|seguir|analizar|probar|buscar|actualizar|implementar|generar|instalar|construir|validar|hacer|aplicar|ajustar|preparar|montar|compilar|mirar|comprobar|guardar|enviar|descargar|terminar|acabar)|voy con|voy por|paso a|paso al|me pongo|lo hago|los? leo|las? leo|busco|reviso|compruebo)\b/,
   /^\p{L}+(?:ando|iendo)\b.*\b(?:ya|ahora)$/u,
@@ -90,7 +90,7 @@ const PROMISE_PATTERNS: readonly RegExp[] = [
   // Indonesian.
   /^(?:(?:oke|baik|sekarang)[,:]?\s+)*(?:saya|aku|kita)?\s*(?:lanjut|lanjutkan|akan|mulai|kerjakan|cek|periksa)\b/,
   // Russian: the verb carries it; the lookahead drops the polite imperative.
-  /^(?:сейчас|теперь|далее|итак)?\s*(?:начина|начну|приступ|прочита|посмотр|провер|откро|созда|напиш|испра|запущ|запуска|продолж|обнов|перехож|перейд)(?!\S*(?:ите|йте|ьте)$)/,
+  /^(?:сейчас|теперь|далее|итак)?\s*(?:начина|начну|приступ|прочита|посмотр|провер|откро|созда|напиш|испра|запущ|запуска|продолж|обнов|перехож|перейд)(?!\p{L}*(?:ите|йте|ьте|ить|ать)(?:\P{L}|$))/u,
   // Chinese: needs a forward-looking lead-in, "我更新了首页" is a report.
   /(?:^|[，,])\s*(?:(?:继续|繼續|好的|接下来|接下來|现在|現在)[，,]?\s*)?(?:(?:让我|讓我)\s*(?:先|来|來)?|(?:我|我们|我們)\s*(?:先|会|會|将|將|要|来|來|马上|馬上|立刻|现在|現在|接着|接著)|(?:先|接着|接著|马上|馬上|立刻))\s*(?:看|查|检查|檢查|确认|確認|读取|讀取|打开|打開|创建|創建|修改|更新|修复|修復|运行|執行|开始|開始|分析|测试|測試|搜索|搜尋|处理|處理|继续|繼續)/,
   // Japanese and Korean: the polite verb ending closes the sentence.
@@ -107,28 +107,36 @@ const PROMISE_PATTERNS: readonly RegExp[] = [
 const NOT_NOW_MARKERS: readonly string[] = [
   // English.
   "let me know",
-  "if you",
+  "you",
   "if that",
-  "when you",
-  "once you",
-  "after you",
+  "send me",
+  "approve",
+  "every ",
+  "each ",
+  "from now on",
+  "the moment",
+  "either way",
+  "exactly that",
+  "these",
+  "ways to",
+  "as he",
+  "as she",
+  "shortly",
+  "unless",
+  "until",
+  "first thing",
+  "only after",
   "as soon as",
   "say go",
   "say the word",
-  "your call",
   "tell me",
   "message me",
   "text me",
   "want me",
-  "would you",
   "shall i",
   "should i",
-  "do you",
-  "up to you",
   "whenever",
   "feel free",
-  "your go-ahead",
-  "your ok",
   "please",
   "confirm and",
   "confirm that",
@@ -150,11 +158,6 @@ const NOT_NOW_MARKERS: readonly string[] = [
   "next scheduled",
   "later",
   "in the morning",
-  "you can",
-  "you'll",
-  "you will",
-  "you should",
-  "you need",
   "paste",
   "stand by",
   "tap ",
@@ -177,6 +180,10 @@ const NOT_NOW_MARKERS: readonly string[] = [
   "tú decides",
   // Portuguese.
   "se quiser",
+  "se você",
+  "se voce",
+  "se estiver",
+  "enquanto",
   "se preferir",
   "me diga",
   "me avise",
@@ -329,7 +336,15 @@ interface RunMessage {
   content?: unknown;
 }
 
-const blocksOf = (message: RunMessage): { type?: string; text?: string }[] =>
+/** Cards the user answers: work has not begun, whatever words follow them. */
+const OFFER_TOOLS: ReadonlySet<string> = new Set([
+  "suggest_tasks",
+  "connect_connector",
+]);
+
+const blocksOf = (
+  message: RunMessage
+): { type?: string; text?: string; name?: string }[] =>
   Array.isArray(message.content) ? message.content : [];
 
 /**
@@ -349,7 +364,9 @@ export function endedOnPromise(messages: readonly unknown[]): boolean {
     .map((block) => (block.type === "text" ? (block.text ?? "") : ""))
     .join("");
   const ranTools = said.some((message) =>
-    blocksOf(message).some((block) => block.type === "toolCall")
+    blocksOf(message).some(
+      (block) => block.type === "toolCall" && !OFFER_TOOLS.has(block.name ?? "")
+    )
   );
   return promisesMoreWork(text, ranTools);
 }

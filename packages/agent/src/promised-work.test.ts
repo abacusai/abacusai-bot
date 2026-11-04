@@ -13,6 +13,7 @@ describe("promisesMoreWork", () => {
     ["en", "I'll read the config to find it."],
     ["en", "**Remaining:** two tabs. I'm on them now."],
     ["en", "Next: the visual pass. Carrying on."],
+    ["en", "Page 2 is clean. Next: page-03."],
     ["en", "The sync is done. Continuing with page 2 onward."],
     ["en", "Let me get that ready, one sec!"],
     ["es", "**Sigo con el fichero 2.**"],
@@ -71,6 +72,10 @@ describe("promisesMoreWork", () => {
     "Dosya hazır.",
     "Te lo he dejado en la carpeta.",
     "Bu düzen iyi çalışıyor, devam edelim.",
+    // The user is part of the next step, or it runs on its own.
+    "I'll draft them, you send.",
+    "I'll run this pass every morning at 8:00 from now on.",
+    "Обновите страницу и попробуйте.",
     // Refusals and small talk.
     "I will not run that command.",
     "No voy a borrar nada.",
