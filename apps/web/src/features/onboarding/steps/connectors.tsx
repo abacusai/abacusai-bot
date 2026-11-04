@@ -18,9 +18,11 @@ export type ConnectorStatuses = Record<
   { state?: string; reason?: string } | undefined
 >;
 
+// Accounts first, then the chat apps. Gmail's Google sign-in attaches Calendar
+// and Drive too, so they need no tile; the rest wait on the Connectors page.
 export const CURATED_IDS = [
   "abacus-gmailuser",
-  "messaging-whatsapp",
+  "abacus-githubbot",
   "messaging-telegram",
   "messaging-discord",
 ] as const;
