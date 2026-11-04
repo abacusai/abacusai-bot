@@ -44,6 +44,8 @@ const server = (): McpAgentToolsServer =>
     workspacePath: () => null,
     botIdForSession: (sessionId) =>
       sessionId === "bot-session" ? "bot-prices" : null,
+    routineFireForSession: (sessionId) =>
+      sessionId === "routine-run" ? "job-1@1" : null,
     conversationKeyForSession: (sessionId) =>
       sessionId === "nowhere"
         ? null
@@ -96,6 +98,32 @@ beforeEach(() => {
     "messaging-telegram": { state: "available" },
     "messaging-discord": { state: "available" },
   };
+});
+
+describe("asking from a routine's run, with nobody there", () => {
+  it("never says a card is in front of the user", async () => {
+    statuses["messaging-whatsapp"] = { state: "available" };
+    const text = await call({ service: "whatsapp" }, "routine-run");
+
+    expect(text).not.toContain("in front of the user");
+    expect(text).toContain("Nobody is in front of this run");
+    expect(text).toContain("never promise");
+    expect(show).toHaveBeenCalled();
+  });
+
+  it("does not promise to tell a run that has ended", async () => {
+    const text = await call({ service: "slack" }, "routine-run");
+
+    expect(text).toContain("connect-connector");
+    expect(text).not.toContain("you will be told");
+  });
+
+  it("still tells a chat the card is there", async () => {
+    statuses["messaging-whatsapp"] = { state: "available" };
+    expect(await call({ service: "whatsapp" })).toContain(
+      "in front of the user"
+    );
+  });
 });
 
 describe("listing what exists", () => {

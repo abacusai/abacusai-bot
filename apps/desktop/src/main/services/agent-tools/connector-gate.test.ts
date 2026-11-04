@@ -1,11 +1,15 @@
-import type { IpcEvent } from "@abacus-ai/contract/contracts";
-import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 /**
  * The Connect card: shown without holding anything, one per connector per
  * conversation, gone once its connector connects or the user answers it, and
  * only the conversation that asked can see or answer it.
  */
-import { describe, expect, it } from "vitest";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { ConnectorGate } from "./connector-gate";
 
@@ -101,5 +105,103 @@ describe("the conversation a card belongs to", () => {
     });
     expect(cleared(events)).toEqual([]);
     expect(gate.listPending(botThread)).toHaveLength(1);
+  });
+});
+
+describe("a routine's card", () => {
+  const dirs: string[] = [];
+  const runA = sessionConversationKey("ws-1", "run-a");
+  const runB = sessionConversationKey("ws-1", "run-b");
+  const chat = sessionConversationKey("ws-1", "chat");
+  const record = (dir = fs.mkdtempSync(path.join(os.tmpdir(), "gate-"))) => {
+    dirs.push(dir);
+    return {
+      dir,
+      file: () => path.join(dir, "connector-asks.json"),
+      routineOf: (key: string) =>
+        key === runA || key === runB ? "routine-1" : null,
+    };
+  };
+  afterEach(() => {
+    for (const dir of dirs.splice(0))
+      fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("is still there after a relaunch, with its id and conversation", () => {
+    const kept = record();
+    const before = new ConnectorGate(() => {}, kept);
+    before.show({
+      connectorId: "messaging-whatsapp",
+      label: "WhatsApp",
+      reason: "To send the report",
+      conversationKey: runA,
+    });
+
+    const events: IpcEvent[] = [];
+    const after = new ConnectorGate((event) => events.push(event), kept);
+    after.restore();
+
+    expect(after.listPending(runA)).toEqual(before.listPending(runA));
+    expect(events.map((event) => event.type)).toEqual(["connector-request"]);
+  });
+
+  it("leaves a chat's card out of the file", () => {
+    const kept = record();
+    new ConnectorGate(() => {}, kept).show({
+      connectorId: "abacus-slack",
+      label: "Slack",
+      conversationKey: chat,
+    });
+
+    const after = new ConnectorGate(() => {}, kept);
+    after.restore();
+
+    expect(after.listPending()).toEqual([]);
+  });
+
+  it("is one per connector per routine, whichever run asked last", () => {
+    const gate = new ConnectorGate(() => {}, record());
+    for (const conversationKey of [runA, runB])
+      gate.show({
+        connectorId: "messaging-whatsapp",
+        label: "WhatsApp",
+        conversationKey,
+      });
+
+    expect(gate.listPending().map((card) => card.conversationKey)).toEqual([
+      runB,
+    ]);
+  });
+
+  it("stays gone once answered, connected or pruned", () => {
+    const kept = record();
+    const gate = new ConnectorGate(() => {}, kept);
+    const ask = (connectorId: string) =>
+      gate.show({ connectorId, label: connectorId, conversationKey: runA });
+    ask("one");
+    ask("two");
+    ask("three");
+    const [one] = gate.listPending();
+    gate.respond({
+      requestId: one!.requestId,
+      conversationKey: runA,
+      outcome: "declined",
+    });
+    gate.clearFor(["two"]);
+    gate.prune((connectorId) => connectorId === "three");
+
+    expect(gate.hasKept()).toBe(false);
+    const after = new ConnectorGate(() => {}, kept);
+    after.restore();
+    expect(after.listPending()).toEqual([]);
+  });
+
+  it("treats an unreadable file as no cards", () => {
+    const kept = record();
+    fs.writeFileSync(kept.file(), "not json");
+    const gate = new ConnectorGate(() => {}, kept);
+
+    expect(() => gate.restore()).not.toThrow();
+    expect(gate.listPending()).toEqual([]);
   });
 });

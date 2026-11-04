@@ -55,16 +55,11 @@ export const RunRequests = ({
       try {
         const result = await connect(request.connectorId, values);
         if (result.ok) {
-          const refreshed = await transport.client.mcp.refresh({
-            workspaceId,
-            sessionId,
-          });
-          if (!refreshed.success) {
-            const error = refreshed.error ?? "Refresh failed";
-            setError(error);
-            await respond(request, "failed", error);
-            return;
-          }
+          // Connected whatever this says: the run is usually over, and the
+          // next one starts with the tools.
+          await transport.client.mcp
+            .refresh({ workspaceId, sessionId })
+            .catch(() => undefined);
           await respond(request, "connected");
         } else if (result.cancelled) await respond(request, "declined");
         else {

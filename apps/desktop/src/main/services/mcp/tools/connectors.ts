@@ -183,7 +183,9 @@ export function appConnectResult(
       return host.ok(
         !outcome.card
           ? `${outcome.name} is connected from Connectors in the AbacusAI Bot app. Tell the user so, and offer whatever part of the task does not need it.`
-          : `A Connect card for ${outcome.name} is in front of the user in the app. Say in one short line that it needs connecting there, ` +
+          : outcome.routine
+            ? `${ROUTINE_RUN_ALONE} A Connect card for ${outcome.name} now waits on this routine's page in the app, and stays there until it is connected. ${ROUTINE_RUN_REPORTS}`
+            : `A Connect card for ${outcome.name} is in front of the user in the app. Say in one short line that it needs connecting there, ` +
               "then carry on with whatever does not need it: this call does not wait, and you will be told when it is connected."
       );
     case "reconnect":
@@ -204,9 +206,16 @@ export function appConnectResult(
   }
 }
 
+/** Told to a routine's run, whose asks nobody is reading as it runs. */
+const ROUTINE_RUN_ALONE =
+  "Nobody is in front of this run: it is a routine, running on its own, and the user may not see anything for hours.";
+const ROUTINE_RUN_REPORTS =
+  "Do what does not need it, and say in your report what was left undone and why, without saying they have seen anything. " +
+  "Nothing is redone or sent later by itself: never promise that. The next run has it once it is connected.";
+
 /** The app's words for a link to send the user. */
 function linkText(outcome: Extract<ConnectOutcome, { code: "link" }>): string {
-  const { asking, already, url } = outcome;
+  const { asking, already, url, routine } = outcome;
   const covered = asking.join(", ");
   const connected = already.join(", ");
   return [
@@ -224,9 +233,11 @@ function linkText(outcome: Extract<ConnectOutcome, { code: "link" }>): string {
       (asking.length > 1
         ? " The sign-in screen may show a checkbox for each; whatever is left unticked is not connected."
         : ""),
-    "This call does not wait. Carry on with whatever does not need it. When it lands you will be told exactly what " +
-      "connected and anything that was not allowed, and its tools appear in your tool list then. Until then do not " +
-      "send it again unless the user asks for it, and never offer to flag or report anything: there is no such process.",
+    routine
+      ? `${ROUTINE_RUN_ALONE} ${ROUTINE_RUN_REPORTS}`
+      : "This call does not wait. Carry on with whatever does not need it. When it lands you will be told exactly what " +
+        "connected and anything that was not allowed, and its tools appear in your tool list then. Until then do not " +
+        "send it again unless the user asks for it, and never offer to flag or report anything: there is no such process.",
   ].join("\n");
 }
 

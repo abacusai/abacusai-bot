@@ -46,15 +46,37 @@ vi.mock("#renderer/components/connector-request-card", () => ({
     <button onClick={() => onConnect()}>Connect</button>
   ),
 }));
-it.each(["hop", "refresh", "throw"])(
+it("calls a connect that landed connected, whether or not the run is still there to refresh", async () => {
+  mocks.respond.mockClear();
+  mocks.refresh.mockResolvedValue({
+    success: false,
+    error: "CLI session is not running.",
+  });
+  const view = render(
+    <RunRequests
+      sessionIds={new Set(["s"])}
+      connect={async () => ({ ok: true as const })}
+      cancel={async () => {}}
+    />
+  );
+  try {
+    fireEvent.click(screen.getByRole("button", { name: "Connect" }));
+    await waitFor(() =>
+      expect(mocks.respond).toHaveBeenCalledExactlyOnceWith({
+        requestId: "ask",
+        conversationKey: sessionConversationKey("w", "s"),
+        outcome: "connected",
+      })
+    );
+  } finally {
+    view.unmount();
+  }
+});
+it.each(["hop", "throw"])(
   "settles a failed %s as a failed tool response",
   async (stage) => {
     mocks.respond.mockClear();
-    mocks.refresh.mockResolvedValue(
-      stage === "refresh"
-        ? { success: false, error: "refresh failed" }
-        : { success: true }
-    );
+    mocks.refresh.mockResolvedValue({ success: true });
     const connect = vi.fn(async () => {
       if (stage === "throw") throw new Error("hop threw");
       return stage === "hop"
