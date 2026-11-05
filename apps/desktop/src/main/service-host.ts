@@ -611,6 +611,13 @@ const connectorIdsFor = (services: string[]): string[] =>
  * offer to pass work on, so the message before it says what the work is.
  */
 /** How long the user's latest words count for passing a task on. */
+/** A piece of channel work from queued to ended: a stop may come before its turn starts. */
+interface ChannelWorkRun {
+  stopped: boolean;
+  /** Where to stop it, once its prompt is in the bot's chat. */
+  handle?: BotChatHandle;
+}
+
 const USER_WORDS_FRESH_MS = 15 * 60_000;
 
 const AGREEMENT =
@@ -5870,10 +5877,7 @@ export class ServiceHost {
    * (it may come before the work's turn starts) and, once its prompt is in
    * the bot's chat, where to stop it.
    */
-  private readonly channelWorks = new Map<
-    string,
-    { stopped: boolean; handle?: BotChatHandle }
-  >();
+  private readonly channelWorks = new Map<string, ChannelWorkRun>();
 
   private runChannelWork(
     botId: string,
@@ -5881,9 +5885,7 @@ export class ServiceHost {
     prompt: string,
     workId: string
   ): Promise<string> {
-    const work: { stopped: boolean; handle?: BotChatHandle } = {
-      stopped: false,
-    };
+    const work: ChannelWorkRun = { stopped: false };
     this.channelWorks.set(workId, work);
     const before = this.channelWorkLanes.get(botId) ?? Promise.resolve();
     const run = before
@@ -5902,7 +5904,7 @@ export class ServiceHost {
   private async runChannelWorkNow(
     botId: string,
     prompt: string,
-    work: { stopped: boolean; handle?: BotChatHandle }
+    work: ChannelWorkRun
   ): Promise<string> {
     const stoppedFirst = (): Error =>
       new Error("it was stopped before it began.");

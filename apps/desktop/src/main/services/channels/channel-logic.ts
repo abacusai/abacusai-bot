@@ -217,24 +217,20 @@ export const plainStop = (
       )
       .replace(/@(?:everyone|all)\b/gi, " ")
       .trim();
-  const parts = ownWords(text).split(/[,.!;:\n]/);
-  // The first clause with more than names and fillers ("no, stop!").
-  let at = -1;
-  let words: string[] = [];
-  for (const [index, part] of parts.entries()) {
-    words = withoutNames(part)
+  const clauseWords = (part: string): string[] => {
+    const words = withoutNames(part)
       .toLowerCase()
       .replace(/[’']/g, "'")
       .split(/\s+/)
       .filter((word) => word.length > 0);
-    while (words.length > 0 && STOP_LEAD.has(words[0]!)) words.shift();
-    if (words.length > 0) {
-      at = index;
-      break;
-    }
-  }
+    while (STOP_LEAD.has(words[0] ?? "")) words.shift();
+    return words;
+  };
+  const parts = ownWords(text).split(/[,.!;:\n]/);
+  // The first clause with more than names and fillers ("no, stop!").
+  const at = parts.findIndex((part) => clauseWords(part).length > 0);
   if (at < 0) return null;
-  const [verb, ...after] = words;
+  const [verb, ...after] = clauseWords(parts[at]!);
   if (verb == null || !STOP_VERBS.has(verb)) return null;
   // "forget the announcement", "cancel the checklist": a thing, by name.
   const the = after.indexOf("the");
@@ -501,10 +497,12 @@ const workState = (work: ChannelWork): string =>
 const STOP_WORK = /<stop_work\s*\/?>(?:\s*<\/stop_work>)?/gi;
 
 /** Whether the bot stopped its running work (`<stop_work/>`), and its words without the tag. */
-export const stopWorkIn = (words: string): { stop: boolean; words: string } => {
-  const stop = new RegExp(STOP_WORK.source, "i").test(words);
-  return { stop, words: words.replace(STOP_WORK, "").trim() };
-};
+export const stopWorkIn = (
+  words: string
+): { stop: boolean; words: string } => ({
+  stop: words.search(STOP_WORK) >= 0,
+  words: words.replace(STOP_WORK, "").trim(),
+});
 
 const WORK = /<work>([\s\S]*?)<\/work>/i;
 
