@@ -15,6 +15,7 @@ import {
 } from "@abacus-ai/contract/free-pool";
 import {
   modelAccess,
+  OPENLLM_ID,
   resolveConfiguredModel,
   type ModelAvailability,
 } from "@abacus-ai/contract/models";
@@ -126,6 +127,10 @@ export const chatModelChip = (
   }
   // An empty catalog (still loading, unreadable) cannot judge the pin.
   const row = catalog.find((model) => model.id === pin);
+  // A paid plan's catalog drops the free pool: the plan's router serves it.
+  const router = catalog.find((model) => model.recommended === true);
+  if (pin === OPENLLM_ID && row == null && router != null)
+    return { label: router.label, unavailable: false };
   return {
     label: row?.label ?? pin,
     unavailable: catalog.length > 0 && row?.configured !== true,
