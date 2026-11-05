@@ -2813,12 +2813,16 @@ export class McpAgentToolsServer extends McpHttpServer {
       ...(link?.requestId != null ? { requestId: link.requestId } : {}),
       ...(reconnect ? { byLinkOnly: true } : {}),
     });
+    const routine =
+      callerSession != null &&
+      this.options.routineFireForSession?.(callerSession) != null;
     if (link == null)
       return {
         code: "no_link",
         name: match.name,
         kind: match.kind,
         card: conversationKey != null,
+        routine,
       };
     const nameOf = (id: string): string =>
       CONNECTORS.find((item) => item.id === id)?.name ?? id;
@@ -2833,6 +2837,7 @@ export class McpAgentToolsServer extends McpHttpServer {
       asking: asking.map(nameOf),
       already: [...already].map(nameOf),
       url: link.url,
+      routine,
     };
   }
 

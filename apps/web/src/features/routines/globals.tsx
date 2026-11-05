@@ -220,6 +220,7 @@ export const RoutinesGlobals = () => {
       abort.signal
     );
     const waiting = new Set<string>();
+    const told = new Set<string>();
     const attention = (threadId: string, key: string) => {
       const session = db.collections.sessions.get(threadId);
       const routine = db.collections.routines.get(session?.routineId ?? "");
@@ -262,12 +263,21 @@ export const RoutinesGlobals = () => {
       "connectors",
       transport,
       (event) => {
-        if (event.type !== "request") return;
-        const ref = conversationRefFromKey(event.request.conversationKey);
+        // A snapshot holds what a routine asked before this launch: one
+        // reminder for them all, the list under Needs you has the rest.
+        const asked =
+          event.type === "request"
+            ? event.request
+            : event.type === "snapshot"
+              ? event.requests.find((request) => !told.has(request.requestId))
+              : undefined;
+        if (asked == null) return;
+        if (event.type === "snapshot")
+          for (const request of event.requests) told.add(request.requestId);
+        else told.add(asked.requestId);
+        const ref = conversationRefFromKey(asked.conversationKey);
         if (ref?.kind === "session")
-          readiness.run(() =>
-            attention(ref.sessionId, event.request.requestId)
-          );
+          readiness.run(() => attention(ref.sessionId, asked.requestId));
       },
       abort.signal
     );

@@ -1746,8 +1746,18 @@ export class ServiceHost {
         emittedAt: new Date().toISOString(),
       })
   );
-  private readonly connectorGate = new ConnectorGate((event) =>
-    this.emitEvent(event)
+  private readonly connectorGate = new ConnectorGate(
+    (event) => this.emitEvent(event),
+    {
+      file: () => path.join(abacusBotHome(), "connector-asks.json"),
+      routineOf: (key) => {
+        const ref = conversationRefFromKey(key);
+        return ref?.kind === "session"
+          ? (this.agentSessionManagerService.get(ref.sessionId)?.routineId ??
+              null)
+          : null;
+      },
+    }
   );
   /** What each session waits on the user for; read by the hosted phone lane's agenda. */
   private readonly pendingWaits = new PendingWaits();
@@ -2135,6 +2145,21 @@ export class ServiceHost {
       type: "connector-status-changed",
       emittedAt: new Date().toISOString(),
     });
+    void this.pruneKeptConnectorCards();
+  }
+
+  /**
+   * A kept card outlives the watch behind it: read here whether its connector
+   * is connected by now, or its routine gone.
+   */
+  private async pruneKeptConnectorCards(): Promise<void> {
+    if (!this.connectorGate.hasKept()) return;
+    const statuses = await this.connectorStatuses.list();
+    this.connectorGate.prune(
+      (connectorId, routineId) =>
+        statuses[connectorId]?.state === "connected" ||
+        getJob(routineId) == null
+    );
   }
 
   private connectorStatusTimer: NodeJS.Timeout | null = null;
@@ -5281,6 +5306,8 @@ export class ServiceHost {
     });
     this.cronScheduler.everyMinute(() => this.reapStuckRoutineRuns());
     this.cronScheduler.start();
+    this.connectorGate.restore();
+    void this.pruneKeptConnectorCards();
     void this.webhookService.start().catch((err: unknown) => {
       console.error("[webhooks] failed to start listener:", err);
     });
