@@ -75,7 +75,7 @@ export interface CronJob {
   webhookToken: string | null;
   /** What to ask the agent when it fires. */
   prompt: string;
-  /** Workspace the run happens in. Null means the active one at fire time. */
+  /** The project the run happens in. Null: the routine's own folder. */
   workspaceId: string | null;
   /** Bot that made this routine. Provenance, not ownership: it outlives the bot. */
   botId: string | null;
