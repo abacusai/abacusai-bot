@@ -606,6 +606,8 @@ type CreatedRoutine = Routine & Pick<RoutineListItem, "hosted">;
 const ROUTINE_CONTEXT_CAP_TOKENS = 80_000;
 
 /** Routine runs whose fire is kept for their sends; far more than run at once. */
+/** How far back a routine's runs show what it reaches besides a chat app. */
+const ROUTINE_RUNS_FOR_REACH = 5;
 const ROUTINE_FIRES_KEPT = 200;
 
 /** The longest an unattended run's agent may take to start. */
@@ -5730,11 +5732,30 @@ export class ServiceHost {
       this.pauseRoutine(routineId, ROUTINE_PAUSE_NOTES.quiet);
   }
 
-  /** Every chat app this routine sends through has lost its link. */
+  /**
+   * Every chat app this routine sends through has lost its link, and those
+   * are its only road: a routine that also mails or posts still has work to do.
+   */
   private routineLinkDown(job: CronJob): boolean {
     const used = job.chatPlatforms ?? [];
     const unlinked: string[] = this.messagingGatewayService.unlinkedPlatforms();
-    return used.length > 0 && used.every((id) => unlinked.includes(id));
+    return (
+      used.length > 0 &&
+      used.every((id) => unlinked.includes(id)) &&
+      !this.routineActsElsewhere(job)
+    );
+  }
+
+  /** A recent run reached someone through a connector: mail, a post, an invite. */
+  private routineActsElsewhere(job: CronJob): boolean {
+    return this.listRoutineRuns(job.id)
+      .slice(0, ROUTINE_RUNS_FOR_REACH)
+      .some(
+        (run) =>
+          connectorActionsOf(
+            this.threadStore.readCurrentFile(run.sessionId)?.messages ?? []
+          ).done.length > 0
+      );
   }
 
   /** Marked at the first skipped fire, for the make-up run when the link is back. */
