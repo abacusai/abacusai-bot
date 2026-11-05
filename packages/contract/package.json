@@ -33,6 +33,7 @@
     "./routines": "./src/routines.ts",
     "./service-errors": "./src/service-errors.ts",
     "./settings": "./src/settings.ts",
+    "./site-deploy": "./src/site-deploy.ts",
     "./skills-types": "./src/skills-types.ts",
     "./terminal-shells": "./src/terminal-shells.ts",
     "./timeout-error": "./src/timeout-error.ts",

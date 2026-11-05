@@ -198,6 +198,10 @@ import {
   type RoutineUpdateInput,
 } from "@abacus-ai/contract/routines";
 import { InvalidInputError } from "@abacus-ai/contract/service-errors";
+import type {
+  SitePack,
+  SitePackProgress,
+} from "@abacus-ai/contract/site-deploy";
 import { isPositiveReactionEmoji } from "@abacus-ai/contract/success-pitch";
 import type {
   TerminalShellId,
@@ -330,6 +334,11 @@ import {
   connectorActionsOf,
   RoutineSendLedger,
 } from "./services/agent-tools/routine-send-ledger";
+import {
+  SitePacker,
+  siteDirTooBroad,
+  siteExportDir,
+} from "./services/agent-tools/site-pack";
 import { stopAllServed } from "./services/agent-tools/static-server";
 import { WebhookRelay } from "./services/agent-tools/webhook-relay";
 import { WebhookService } from "./services/agent-tools/webhook-service";
@@ -1242,6 +1251,38 @@ export class ServiceHost {
       .catch((error: unknown) => {
         console.warn(`[routines] credit notice failed: ${String(error)}`);
       });
+  }
+
+  private readonly sitePacker = new SitePacker();
+
+  /**
+   * The chat's latest site as a zip for Abacus AI Agent on the web. A site
+   * whose folder is unknown or not its own (siteDirTooBroad) is refused.
+   */
+  async packSite(sessionId: string, packId: string): Promise<SitePack> {
+    const mark = this.prefs?.()?.get().siteReady?.[sessionId];
+    if (mark == null) return { state: "none" };
+    if (
+      mark.siteDir == null ||
+      siteDirTooBroad(mark.siteDir, this.sessionDirectory(sessionId))
+    )
+      return { state: "too-broad" };
+    const messages = await this.threadStore
+      .readCurrent(sessionId)
+      .catch(() => []);
+    return this.sitePacker.pack(packId, {
+      siteDir: mark.siteDir,
+      messages,
+      outDir: siteExportDir(sessionId),
+    });
+  }
+
+  sitePackProgress(packId: string): SitePackProgress | null {
+    return this.sitePacker.progress(packId);
+  }
+
+  cancelSitePack(packId: string): void {
+    this.sitePacker.cancel(packId);
   }
 
   /**

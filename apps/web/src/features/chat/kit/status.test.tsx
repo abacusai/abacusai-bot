@@ -639,6 +639,32 @@ describe("the turn's outcome card", () => {
     ).toHaveLength(1);
   });
 
+  it.each([
+    ["while it runs", [b.runStarted("r1")]],
+    [
+      "once it answered",
+      [
+        b.runStarted("r1"),
+        ...b.text("a1", "assistant", "Here is the bakery site."),
+        b.runFinished("r1", "success"),
+      ],
+    ],
+  ])("a resumed turn clears the wall it answers %s", async (_name, events) => {
+    const relay = new FakeRelay();
+    relay.emitAll([
+      ...b.sessionReady(),
+      b.runStarted("r0"),
+      ...b.text("u0", "user", "Build my bakery website"),
+      ...b.text("r0:error", "assistant", ""),
+      b.runError("r0", WALL as never),
+      ...events,
+    ]);
+    current = await renderRelay(relay, "session", {}, {}, host("free"));
+    await screen.findByText("Build my bakery website");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(document.querySelector('[data-slot="error-card"]')).toBeNull();
+  });
+
   it("a routine run at the wall (read-only) still carries the offer: Upgrade goes to checkout, nothing is resent", async () => {
     const relay = failed(WALL);
     current = await renderRelay(

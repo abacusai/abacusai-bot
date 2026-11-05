@@ -25,6 +25,7 @@ import type {
   RoutineListItem,
   RoutineRun,
 } from "../routines";
+import type { SiteReadyMark } from "../site-deploy";
 import type { SuccessPitchCard, SuccessPitchMark } from "../success-pitch";
 
 /** Random per main-process start; seqs compare only within one epoch. */
@@ -177,6 +178,8 @@ export interface PrefsRow {
   creditThresholds?: Record<string, CreditThresholdMark>;
   /** Per account (creditAccountKey): the success pitch owed, stamped by main. */
   successPitch?: Record<string, SuccessPitchMark>;
+  /** Per session: its latest site, stamped by main (site-deploy.ts). */
+  siteReady?: Record<string, SiteReadyMark>;
   browserHomepage: string | null;
   showLinkPreviews?: boolean;
   /** Absent reads as on. */
@@ -202,6 +205,9 @@ export interface PrefsRow {
     freePlanSeenAt: number | null;
     upgradeRoutinesSeenAt: number | null;
     routineDuplicatesKept: string[];
+    paidWelcomeTier: string | null;
+    /** Per session: the site turn whose deploy card was closed. */
+    siteDeployCards?: Record<string, string>;
   };
   /** Panel widths. */
   panes: Record<string, number>;

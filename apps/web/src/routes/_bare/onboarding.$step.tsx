@@ -54,6 +54,7 @@ import {
 } from "#renderer/features/sessions/start/start-session";
 import { startTour } from "#renderer/features/tour/store";
 import {
+  PaidWelcomeHost,
   PlanPitchList,
   UpgradeDialogHost,
 } from "#renderer/features/upgrade-dialog";
@@ -275,6 +276,7 @@ const OnboardingRoute = () => {
     <>
       {/* Outside the shell, which hosts the dialog everywhere else. */}
       <UpgradeDialogHost />
+      {facts.signedIn && !facts.provisional && <PaidWelcomeHost />}
       <OnboardingStepPage
         step={step}
         facts={facts}

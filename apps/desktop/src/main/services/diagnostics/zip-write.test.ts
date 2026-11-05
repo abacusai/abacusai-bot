@@ -6,15 +6,25 @@
  * archive and reads it back through services/pptx/zip.ts, which is a separate
  * implementation of the same spec.
  */
-import { describe, expect, it } from "vitest";
+import zlib from "node:zlib";
+
+import { describe, expect, it, vi } from "vitest";
 
 import { ZipArchive } from "../pptx/zip";
-import { buildZip } from "./zip-write";
+import { buildZip, crc32 } from "./zip-write";
 
 const roundTrip = (name: string, content: Buffer): Buffer | null =>
   ZipArchive.open(buildZip([{ name, content }])).read(name);
 
 describe("building a zip", () => {
+  it("takes the checksum from zlib, so a large file never holds the main thread", () => {
+    const native = vi.spyOn(zlib, "crc32");
+
+    expect(crc32(Buffer.from("123456789"))).toBe(0xcbf43926);
+    expect(native).toHaveBeenCalledOnce();
+    native.mockRestore();
+  });
+
   it("round-trips a file through the reader", () => {
     const content = Buffer.from("spawn npx ENOENT\n", "utf8");
 

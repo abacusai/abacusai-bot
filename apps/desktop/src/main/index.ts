@@ -104,6 +104,7 @@ import {
 import { publishToWindowViews } from "./rpc/window-events";
 import { ServiceHost } from "./service-host";
 import { revivePreview } from "./services/agent-tools/served-previews";
+import { isSiteExport } from "./services/agent-tools/site-pack";
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import type { BrowserRuntimeWindow } from "./services/browser/electron-browser-runtime";
 import {
@@ -1382,6 +1383,16 @@ const appOperations: AppOperations = {
 
   showItemInFolder(filePath) {
     shell.showItemInFolder(filePath);
+  },
+
+  startFileDrag(webContentsId, filePath) {
+    const contents = electronWebContents.fromId(webContentsId);
+    if (contents == null || !isSiteExport(filePath)) return;
+    const icon = nativeImage.createFromPath(resourcePath("icon2.png"));
+    contents.startDrag({
+      file: filePath,
+      icon: icon.isEmpty() ? icon : icon.resize({ width: 32, height: 32 }),
+    });
   },
 
   appVersion: () => app.getVersion(),

@@ -132,3 +132,14 @@ export const revivePreview = async (url: string): Promise<string> => {
   parsed.port = String(served.port);
   return parsed.href;
 };
+
+/** The directory a loopback `url` was served from, if `serve` handed it out. */
+export const previewDirectory = (url: string): string | null => {
+  if (!isLoopbackUrl(url)) return null;
+  const port = Number(new URL(url).port);
+  return (
+    listServed().find((served) => served.port === port)?.directory ??
+    readPreviews().find((entry) => entry.port === port)?.directory ??
+    null
+  );
+};

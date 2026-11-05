@@ -245,6 +245,7 @@ export const fixturePrefs = (overrides: Partial<PrefsRow> = {}): PrefsRow => ({
   routineCreditHold: null,
   creditThresholds: {},
   successPitch: {},
+  siteReady: {},
   browserHomepage: null,
   onboardingStep: null,
   dismissals: {
@@ -264,6 +265,8 @@ export const fixturePrefs = (overrides: Partial<PrefsRow> = {}): PrefsRow => ({
     freePlanSeenAt: null,
     upgradeRoutinesSeenAt: null,
     routineDuplicatesKept: [],
+    paidWelcomeTier: null,
+    siteDeployCards: {},
   },
   panes: {},
   motion: { reduce: "system" },

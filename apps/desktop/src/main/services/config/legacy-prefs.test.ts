@@ -208,6 +208,8 @@ describe("composeLegacyPrefs", () => {
       freePlanSeenAt: null,
       upgradeRoutinesSeenAt: null,
       routineDuplicatesKept: [],
+      paidWelcomeTier: null,
+      siteDeployCards: {},
     });
     expect(legacy.patch.models).toEqual(PREFS_DEFAULTS.models);
     expect(legacy.absent).toContain("theme");
@@ -264,6 +266,8 @@ describe("composeLegacyPrefs", () => {
       freePlanSeenAt: null,
       upgradeRoutinesSeenAt: null,
       routineDuplicatesKept: [],
+      paidWelcomeTier: null,
+      siteDeployCards: {},
     });
     // A corrupt code store reads as its defaults there; the accordion holds.
     expect(legacy.patch.sidebar).toEqual({

@@ -1,9 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
 
 import { Button } from "#renderer/ui/button";
 
-import { RoutinesAlwaysOnCardView, UpgradeRoutinesDialog } from "./always-on";
+import { RoutinesAlwaysOnCardView } from "./always-on";
 import { RoutinesListBody } from "./page";
 import { RoutinesSidebar } from "./sidebar";
 export const phase5FixtureIds = [
@@ -17,7 +16,6 @@ export const phase5FixtureIds = [
   "settings-notifications",
   "settings-keyboard",
   "sound-synthesis",
-  "upgrade-routines",
   "routines-always-on-paid",
   "routines-always-on-free",
 ] as const;
@@ -54,19 +52,6 @@ export const RoutineSidebarGallery = () => (
     <RoutinesListBody />
   </div>
 );
-
-/** The after-upgrade card, open on Basic; either button closes it. */
-export const UpgradeRoutinesGallery = () => {
-  const [open, setOpen] = useState(true);
-  return (
-    <UpgradeRoutinesDialog
-      open={open}
-      planName="Basic"
-      onSetUp={() => setOpen(false)}
-      onBack={() => setOpen(false)}
-    />
-  );
-};
 
 /** The Routines page's "Run around the clock" card as `plan` sees it. */
 export const AlwaysOnGallery = ({ plan }: { plan: "free" | "paid" }) => (

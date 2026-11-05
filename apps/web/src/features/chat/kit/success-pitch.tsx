@@ -33,6 +33,7 @@ import { usePaymentRequired } from "#renderer/components/payment-required";
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { creditsTier } from "#renderer/lib/credits";
+import { payingAccount } from "#renderer/lib/upgrade";
 import {
   startPlanCheckout,
   useUpgradeDialogRequest,
@@ -47,6 +48,7 @@ import {
   upgradeCtaLabel,
 } from "../../upgrade-dialog/plan-pitch";
 import { useChatView } from "./context";
+import { SiteDeployCard } from "./site-deploy-card";
 
 export interface SuccessPitchCardProps {
   moment: SuccessPitchMoment;
@@ -221,6 +223,8 @@ export const SuccessPitchRow = ({ active }: { active: boolean }) => {
     if (showing != null) shown(showing);
   }, [showing]);
 
+  // A paid plan is never pitched: its slot holds the deploy steps after a site.
+  if (payingAccount(account)) return <SiteDeployCard active={active} />;
   if (showing == null || billing == null) return null;
   return (
     <SuccessPitchCard
