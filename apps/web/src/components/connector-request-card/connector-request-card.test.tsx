@@ -10,7 +10,8 @@ import {
   type McpConnector,
 } from "@abacus-ai/connectors/registry";
 import type { ConnectorRequest } from "@abacus-ai/contract/contracts";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { i18n, initI18n } from "#renderer/lib/i18n";
@@ -46,6 +47,34 @@ vi.mock("@abacus-ai/connectors/registry", async (importOriginal) => {
       connectors.find((connector) => connector.id === id),
   };
 });
+
+const { statuses } = vi.hoisted(() => ({
+  statuses: vi.fn(async () => ({}) as Record<string, { state: string }>),
+}));
+vi.mock("#renderer/lib/use-app-context", () => ({
+  useAppContext: () => ({
+    transport: {
+      client: { connectors: { statuses } },
+      orpc: { connectors: { statuses: { queryKey: () => ["statuses"] } } },
+    },
+  }),
+}));
+// The desktop's pairing dialog (QR): a stand-in that closes as pairing would.
+vi.mock("#renderer/features/library/messaging", () => ({
+  MessagingPlatformDialog: ({
+    platform,
+    onClose,
+  }: {
+    platform: string;
+    onClose(): Promise<void>;
+  }) => (
+    <div role="dialog" aria-label={`pair ${platform}`}>
+      <button type="button" onClick={() => void onClose()}>
+        Done pairing
+      </button>
+    </div>
+  ),
+}));
 
 beforeAll(async () => {
   await initI18n();
@@ -134,5 +163,53 @@ describe("ConnectorRequestCard", () => {
       />
     );
     expect(screen.getByRole("alert").textContent).toBe("Nope");
+  });
+
+  it("a chat app's Connect opens the desktop's pairing, never the connect page, and answers once paired", async () => {
+    const connect = vi.fn();
+    const connected = vi.fn();
+    statuses.mockResolvedValueOnce({
+      "messaging-whatsapp": { state: "connected" },
+    });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ConnectorRequestCard
+          request={ask("whatsapp", "WhatsApp")}
+          busy={false}
+          error={null}
+          onConnect={connect}
+          onConnected={connected}
+          onDecline={vi.fn()}
+        />
+      </QueryClientProvider>
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Connect WhatsApp/ }));
+    expect(screen.getByRole("dialog", { name: "pair whatsapp" })).toBeTruthy();
+    expect(connect).not.toHaveBeenCalled();
+    expect(screen.queryByText("needs-pairing")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Done pairing" }));
+    await waitFor(() => expect(connected).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("closing the pairing without a link leaves the ask open", async () => {
+    const connected = vi.fn();
+    statuses.mockResolvedValueOnce({});
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ConnectorRequestCard
+          request={ask("messaging-telegram", "Telegram")}
+          busy={false}
+          error={null}
+          onConnect={vi.fn()}
+          onConnected={connected}
+          onDecline={vi.fn()}
+        />
+      </QueryClientProvider>
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Connect Telegram/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Done pairing" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(connected).not.toHaveBeenCalled();
   });
 });
