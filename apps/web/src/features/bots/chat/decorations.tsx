@@ -83,6 +83,71 @@ export interface BotDecorationOptions {
   bots?: readonly BotRow[];
 }
 
+/** A request to another bot in an assistant message: the tool call's bot and words. */
+const requestsOf = (
+  message: UIMessage
+): Array<{ kind: "ask" | "task"; bot: string; what: string }> =>
+  message.role !== "assistant"
+    ? []
+    : message.parts.flatMap((part) => {
+        if (part.type !== "tool-call") return [];
+        const name = (part as { name?: string }).name;
+        if (name !== "ask_bot" && name !== "give_task_to_bot") return [];
+        const input = ((part as { input?: unknown }).input ?? {}) as Record<
+          string,
+          unknown
+        >;
+        const raw = name === "ask_bot" ? input.request : input.task;
+        const what = (typeof raw === "string" ? raw : "")
+          .replace(/\s+/g, " ")
+          .trim();
+        return [
+          {
+            kind: name === "ask_bot" ? ("ask" as const) : ("task" as const),
+            bot: typeof input.bot === "string" ? input.bot : "",
+            what: what.length > 90 ? `${what.slice(0, 89)}…` : what,
+          },
+        ];
+      });
+
+/** "Asked Planner: …" / "Passed a task to Planner: …", where the bot made the request. */
+const RequestRows = ({
+  requests,
+  bots,
+}: {
+  requests: ReadonlyArray<{ kind: "ask" | "task"; bot: string; what: string }>;
+  bots: readonly BotRow[];
+}) => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col gap-1 py-1" data-slot="bot-requests">
+      {requests.map((request, index) => {
+        const other = bots.find(
+          (bot) => bot.name.toLowerCase() === request.bot.toLowerCase()
+        );
+        return (
+          <div
+            key={index}
+            className="text-muted-foreground flex items-center gap-2 text-xs"
+            data-slot="bot-request"
+            data-kind={request.kind}
+          >
+            {other != null && <BotFace bot={other} size={20} />}
+            <span className="truncate">
+              {t(
+                request.kind === "ask"
+                  ? "chat.tool.askBot"
+                  : "chat.tool.giveTask",
+                { bot: other?.name ?? request.bot, what: request.what }
+              )}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 /** The bot-to-bot exchange a hidden note carries, if it is one. */
 export const exchangeOf = (message: UIMessage): BotExchangeTag | null => {
   if (message.role !== "user") return null;
@@ -290,23 +355,42 @@ export const botMessageDecorations = (
     if (context.messages[index]?.id !== message.id)
       index = context.messages.findIndex((row) => row.id === message.id);
     if (index < 0) return null;
-    const exchange = exchangeOf(message);
+    // The skin hands over a copy with its parts stripped; the stored message
+    // still has the words.
+    const stored = context.messages[index] ?? message;
+    const exchange = exchangeOf(stored);
     // The note itself draws nothing (hidden user text); the row stands in.
     if (exchange != null)
       return {
         before: (
           <ExchangeRow
-            message={message}
+            message={stored}
             exchange={exchange}
             bots={options.bots ?? []}
           />
         ),
       };
     const view = viewsFor(context.messages, context.runActive)[index]!;
-    if (view.hidden) return { hidden: true };
+    const requests = requestsOf(stored);
+    if (view.hidden)
+      return requests.length > 0
+        ? {
+            hidden: true,
+            before: (
+              <RequestRows requests={requests} bots={options.bots ?? []} />
+            ),
+          }
+        : { hidden: true };
     const decoration: MessageDecoration = {};
-    if (view.stampBefore != null)
-      decoration.before = <GapStamp at={view.stampBefore} />;
+    if (view.stampBefore != null || requests.length > 0)
+      decoration.before = (
+        <>
+          {view.stampBefore != null && <GapStamp at={view.stampBefore} />}
+          {requests.length > 0 && (
+            <RequestRows requests={requests} bots={options.bots ?? []} />
+          )}
+        </>
+      );
     if (view.reaction != null)
       decoration.badge = <ReactionBadge emoji={view.reaction} />;
     // One rating per turn: the turn's last spoken reply carries it.
@@ -362,8 +446,13 @@ export const botMessageDecorations = (
         context.messages[context.index]?.id === message.id
           ? context.index
           : context.messages.findIndex((row) => row.id === message.id);
+      // A note the chat draws as a row, or a turn that only asked another
+      // bot, stays: its row is the decoration.
+      const stored =
+        index >= 0 ? (context.messages[index] ?? message) : message;
       return (
-        exchangeOf(message) == null &&
+        exchangeOf(stored) == null &&
+        requestsOf(stored).length === 0 &&
         index >= 0 &&
         viewsFor(context.messages, context.runActive)[index]?.hidden === true
       );
