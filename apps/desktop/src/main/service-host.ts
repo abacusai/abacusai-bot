@@ -1568,7 +1568,16 @@ export class ServiceHost {
         return result.error.length > 0 ? result.error : "Could not disconnect.";
       },
     },
-    workspaceId: () => this.workspaceService.getActiveWorkspace()?.id ?? null,
+    // The chat that makes a routine decides its folder, never what the app has open.
+    workspaceId: (sessionId) => {
+      const session =
+        sessionId == null
+          ? null
+          : this.agentSessionManagerService.get(sessionId);
+      return session == null
+        ? null
+        : (this.realProject(session.workspaceId)?.id ?? null);
+    },
     runCronJob: (jobId, trigger) => this.runRoutine(jobId, trigger ?? "manual"),
     routineFireForSession: (sessionId) =>
       this.routineFires.get(sessionId) ?? null,
@@ -4072,11 +4081,15 @@ export class ServiceHost {
    * of the app's own home folders, which are not a project anyone chose.
    */
   private routineProject(job: CronJob): { id: string; path: string } | null {
+    return this.realProject(job.workspaceId);
+  }
+
+  private realProject(
+    workspaceId: string | null
+  ): { id: string; path: string } | null {
     const named = this.workspaceService
       .getWorkspaces()
-      .find(
-        (entry) => entry.id === job.workspaceId && entry.status !== "deleted"
-      );
+      .find((entry) => entry.id === workspaceId && entry.status !== "deleted");
     return named != null &&
       named.kind !== "auto" &&
       named.kind !== "routine" &&

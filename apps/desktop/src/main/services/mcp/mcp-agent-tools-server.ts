@@ -338,7 +338,8 @@ export interface McpAgentToolsServerOptions {
    * (its worktree or workspace, the agent's cwd), else the active workspace.
    */
   workspacePath: (sessionId?: string) => string | null;
-  workspaceId?: () => string | null;
+  /** The project a chat is in, for a routine it makes: null when it is in none. */
+  workspaceId?: (sessionId?: string) => string | null;
   /** `trigger` lets the run log tell the first fire at creation from the agent's own run. */
   runCronJob?: (
     jobId: string,
@@ -1330,7 +1331,7 @@ export class McpAgentToolsServer extends McpHttpServer {
           webhook,
           prompt,
           name: typeof args.name === "string" ? args.name : undefined,
-          workspaceId: this.options.workspaceId?.() ?? null,
+          workspaceId: this.options.workspaceId?.(callerSession) ?? null,
           botId,
         };
         // What it may read, as asked: held until the user allows it.
