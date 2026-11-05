@@ -334,7 +334,7 @@ import {
   BOT_TASK_PREFIX,
   BOT_TASK_TURN_TIMEOUT_MS,
   steppedInError,
-  taskChangedNote,
+  taskFollowUpNote,
 } from "./services/bots/bot-ask";
 import {
   type BotAskRecord,
@@ -608,6 +608,8 @@ const connectorIdsFor = (services: string[]): string[] =>
  * offer to pass work on, so the message before it says what the work is.
  */
 /** How long the user's latest words count for passing a task on. */
+/** How long after a passed-on task ends the user's next words there still go back to the passer. */
+const TASK_FOLLOW_UP_MS = 60 * 60_000;
 const USER_WORDS_FRESH_MS = 15 * 60_000;
 
 const AGREEMENT =
@@ -1607,9 +1609,6 @@ export class ServiceHost {
         list: (askerId, limit) => this.botAskService.list(askerId, limit),
         get: (askerId, id) => this.botAskService.get(askerId, id),
         cancel: (askerId, id) => this.botAskService.cancel(askerId, id),
-        tasksFor: (doerId) => this.botAskService.tasksFor(doerId),
-        tellGiver: (doerId, doerSession, task, message) =>
-          this.tellTaskGiver(doerId, doerSession, task, message),
       },
     },
     onCronChanged: () => {
@@ -5813,6 +5812,8 @@ export class ServiceHost {
       { text: words, at: Date.now() },
     ]);
     this.userSteppedIn(sessionId, words);
+    const followUp = this.taskFollowUps.get(sessionId);
+    if (followUp != null && followUp.words == null) followUp.words = words;
   }
 
   /**
@@ -5915,40 +5916,68 @@ export class ServiceHost {
     });
   }
 
+  /** Doing bot's chat → the passed-on task that ended there, and the user's next words in it. */
+  private readonly taskFollowUps = new Map<
+    string,
+    { ask: BotAskRecord; words: string | null }
+  >();
+
   /**
-   * The bot another bot passed a task to tells that bot what the user
-   * changed about it, in the doing bot's own chat: only in a turn the user
-   * started there (never in the task's own turn), with their words attached,
-   * so it carries the user's change and nothing the bot made up.
+   * After a passed-on task ends, the user's next message in the doing bot's
+   * chat (the one that stopped it, if they wrote over it) and that bot's
+   * answer go to the bot that passed it on (taskFollowUpNote), once, within
+   * the hour. The app sends it rather than the doing bot, so the passer
+   * learns that the user dropped, changed or resumed the task there whether
+   * or not that bot thinks to say so.
    */
-  private tellTaskGiver(
-    doerId: string,
-    doerSession: string,
-    task: BotAskRecord,
-    message: string
-  ): { ok: string } | { error: string } {
-    const doer = this.botService.list().find((bot) => bot.id === doerId);
-    const giver = this.botService.list().find((bot) => bot.id === task.askerId);
-    if (doer == null || giver == null)
-      return { error: "That bot is no longer here." };
-    const inTask = [...this.botAskTurns.values()].some(
-      (handle) => handle.sessionId === doerSession
-    );
-    const words = inTask ? "" : this.latestUserWords(doerSession);
-    if (words.length === 0) {
-      console.log(
-        `[bot-ask] ${doerId} could not tell ${task.askerId} about ${task.id}: ${inTask ? "inside the task's turn" : "no user words in this turn"}`
-      );
-      return {
-        error:
-          "Only in a turn where the user, here, changed or dropped the task: this one was not started by them.",
-      };
-    }
-    this.tellBotAsk(task, taskChangedNote(task, doer, message.trim(), words));
-    console.log(`[bot-ask] ${doerId} told ${task.askerId} about ${task.id}`);
-    return {
-      ok: `Told ${giver.name}. Carry on with what the user asked here.`,
+  private watchTaskFollowUp(
+    sessionId: string,
+    ask: BotAskRecord,
+    words: string | null
+  ): void {
+    const entry = { ask, words };
+    this.taskFollowUps.set(sessionId, entry);
+    const end = (): void => {
+      clearTimeout(timer);
+      stopListening();
+      if (this.taskFollowUps.get(sessionId) === entry)
+        this.taskFollowUps.delete(sessionId);
     };
+    const timer = setTimeout(end, TASK_FOLLOW_UP_MS);
+    const stopListening = this.turnLedger.onClose((record) => {
+      if (record.sessionId !== sessionId) return;
+      if (this.taskFollowUps.get(sessionId) !== entry) return end();
+      if (entry.words == null) return;
+      const reply = this.replyTo(sessionId, entry.words);
+      // A turn before theirs closed: theirs is still to come.
+      if (reply == null) return;
+      end();
+      const doer = this.botService
+        .list()
+        .find((bot) => bot.id === ask.targetId);
+      if (doer != null)
+        this.tellBotAsk(ask, taskFollowUpNote(ask, doer, entry.words, reply));
+    });
+  }
+
+  /** The bot's answer in its chat to the user's message `words`, or null before there is one. */
+  private replyTo(sessionId: string, words: string): string | null {
+    const file =
+      this.agentSessionManagerService.getDiagnosticInfo(sessionId)
+        ?.agentSessionFile ?? null;
+    const turns = readTranscriptTail(file, 30, undefined, 3000);
+    const key = words.replace(/\s+/g, " ").trim().slice(0, 60);
+    const at = turns.findLastIndex(
+      (turn) => turn.role === "user" && turn.text.includes(key)
+    );
+    if (at < 0) return null;
+    const reply = turns
+      .slice(at + 1)
+      .filter((turn) => turn.role === "assistant")
+      .map((turn) => turn.text)
+      .join("\n\n")
+      .trim();
+    return reply.length > 0 ? reply : null;
   }
 
   /** Resolves true once the session has no turn open, false after `ms`. */
@@ -6105,6 +6134,16 @@ export class ServiceHost {
       if (words != null) throw new Error(steppedInError(words));
       throw error;
     } finally {
+      if (
+        task &&
+        !this.cancelledTasks.has(ask.id) &&
+        this.botAskService.get(ask.askerId, ask.id)?.status !== "cancelled"
+      )
+        this.watchTaskFollowUp(
+          handle.sessionId,
+          ask,
+          this.steppedIn.get(ask.id) ?? null
+        );
       this.botAskTurns.delete(ask.id);
       this.taskTurnsSent.delete(ask.id);
       this.steppedIn.delete(ask.id);

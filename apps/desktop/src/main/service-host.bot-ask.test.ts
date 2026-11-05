@@ -283,7 +283,10 @@ describe("a task the user gave, passed on", () => {
         },
       },
       botService: {
-        list: () => [{ id: "res", name: "Researcher", title: "" }],
+        list: () => [
+          { id: "res", name: "Researcher", title: "" },
+          { id: "wri", name: "Writer", title: "" },
+        ],
         openChat: vi.fn(async () => ({
           botId: "wri",
           workspaceId: "ws",
@@ -295,6 +298,16 @@ describe("a task the user gave, passed on", () => {
         stopSession: vi.fn(),
         stopSessionAndWait: vi.fn(),
       },
+      // The task's status as the service holds it; tests set "cancelled".
+      botAskService: { get: vi.fn(() => null) },
+      userWords: new Map(),
+      taskFollowUps: new Map(),
+      agentSessionManagerService: {
+        getDiagnosticInfo: () => ({
+          agentSessionFile: path.join(home, "wri-main.jsonl"),
+        }),
+      },
+      tellBotAsk: vi.fn(),
     };
     for (const name of [
       "runBotAskTurn",
@@ -303,6 +316,9 @@ describe("a task the user gave, passed on", () => {
       "feedTurnWaiter",
       "settleTurnWaiter",
       "userSteppedIn",
+      "noteUserWords",
+      "watchTaskFollowUp",
+      "replyTo",
     ])
       self[name] = proto[name].bind(self);
     // As the user's Stop: the turn ends stopped.
@@ -326,6 +342,85 @@ describe("a task the user gave, passed on", () => {
     };
     return { self, endUserTurn };
   };
+
+  /** Writer's chat log as the transcript reader finds it. */
+  const chatLog = (...turns: Array<[string, string]>) =>
+    fs.writeFileSync(
+      path.join(home, "wri-main.jsonl"),
+      turns
+        .map(([role, content]) =>
+          JSON.stringify({ message: { role, content } })
+        )
+        .join("\n")
+    );
+
+  it("after it ends, the user's next words there and the answer go to the bot that passed it on, once", async () => {
+    const { self, endUserTurn } = taskHost(false);
+    await (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null);
+    (self.noteUserWords as Method)(
+      "wri-main",
+      "forget that, we launch in January"
+    );
+    chatLog(
+      ["user", "forget that, we launch in January"],
+      ["assistant", "Dropped the post. Ping me in January."]
+    );
+    endUserTurn();
+    const tell = self.tellBotAsk as ReturnType<typeof vi.fn>;
+    expect(tell).toHaveBeenCalledTimes(1);
+    const [ask, note] = tell.mock.calls[0] as [BotAskRecord, string];
+    expect(ask.id).toBe("q8");
+    expect(note).toContain(
+      'the user wrote to Writer in its chat: "forget that, we launch in January"'
+    );
+    expect(note).toContain("Dropped the post. Ping me in January.");
+    expect(note).toContain("reply exactly NO_REPLY");
+    (self.noteUserWords as Method)("wri-main", "and a tagline please");
+    endUserTurn();
+    expect(tell).toHaveBeenCalledTimes(1);
+  });
+
+  it("waits for the turn that answers the user, not one that closes before it", async () => {
+    const { self, endUserTurn } = taskHost(false);
+    await (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null);
+    (self.noteUserWords as Method)("wri-main", "make it shorter");
+    chatLog(["user", "something earlier"], ["assistant", "Earlier answer."]);
+    endUserTurn();
+    expect(self.tellBotAsk).not.toHaveBeenCalled();
+    chatLog(["user", "make it shorter"], ["assistant", "Shorter version."]);
+    endUserTurn();
+    expect(self.tellBotAsk).toHaveBeenCalledTimes(1);
+  });
+
+  it("the user who stepped in: their words and the answer that follows go on too", async () => {
+    const { self, endUserTurn } = taskHost(false, null);
+    const pending = (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null);
+    await vi.waitFor(() =>
+      expect((self.taskTurnsSent as Set<string>).has("q8")).toBe(true)
+    );
+    (self.noteUserWords as Method)("wri-main", "make it 3 days, not 7");
+    await expect(pending).rejects.toThrow(/partway through/);
+    chatLog(
+      ["user", "make it 3 days, not 7"],
+      ["assistant", "Shortened to 3 days."]
+    );
+    endUserTurn();
+    expect(
+      (self.tellBotAsk as ReturnType<typeof vi.fn>).mock.calls[0]?.[1]
+    ).toContain("Shortened to 3 days.");
+  });
+
+  it("a cancelled task has no follow-up", async () => {
+    const { self, endUserTurn } = taskHost(false);
+    (
+      self.botAskService as { get: ReturnType<typeof vi.fn> }
+    ).get.mockReturnValue({ ...TASK, status: "cancelled" });
+    await (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null);
+    (self.noteUserWords as Method)("wri-main", "anything");
+    chatLog(["user", "anything"], ["assistant", "Sure."]);
+    endUserTurn();
+    expect(self.tellBotAsk).not.toHaveBeenCalled();
+  });
 
   it("tells the bot that passed it on when the user stopped it partway", async () => {
     const { self } = taskHost(false, "stopped");
@@ -402,6 +497,7 @@ describe("a task the user gave, passed on", () => {
   const wordsHost = () => {
     const self: Record<string, unknown> = {
       userWords: new Map(),
+      taskFollowUps: new Map(),
       botAskService: { ask: vi.fn(() => ({ ask: TASK, behind: 0 })) },
       botService: {
         list: () => [
@@ -675,78 +771,5 @@ describe("a task the user gave, passed on", () => {
       "[task from the user, passed on by Researcher] The user asked…"
     );
     expect(h.userWords.has("wri-main")).toBe(false);
-  });
-});
-
-describe("tell_task_giver: the user changed a task another bot passed on", () => {
-  const TASK: BotAskRecord = {
-    ...ASK,
-    id: "q8",
-    kind: "task",
-    askerId: "wri",
-    askerSession: "wri-chat",
-    targetId: "pla",
-    request: "Make a 7-day launch calendar",
-    status: "answered",
-  };
-  const tellHost = () => {
-    const self: Record<string, unknown> = {
-      userWords: new Map(),
-      botAskTurns: new Map(),
-      taskTurnsSent: new Set(),
-      steppedIn: new Map(),
-      cancelledTasks: new Set(),
-      botService: {
-        list: () => [
-          { id: "wri", name: "Writer", title: "" },
-          { id: "pla", name: "Planner", title: "" },
-        ],
-      },
-      tellBotAsk: vi.fn(),
-    };
-    for (const name of [
-      "userSteppedIn",
-      "noteUserWords",
-      "latestUserWords",
-      "tellTaskGiver",
-    ])
-      self[name] = proto[name].bind(self);
-    return self as Record<string, Method> & {
-      tellBotAsk: ReturnType<typeof vi.fn>;
-      botAskTurns: Map<string, unknown>;
-    };
-  };
-
-  it("tells the bot that passed it, with the user's own words", () => {
-    const h = tellHost();
-    h.noteUserWords("pla-main", "forget that calendar, we launch in January");
-    expect(
-      h.tellTaskGiver("pla", "pla-main", TASK, "The calendar is dropped.")
-    ).toEqual({ ok: expect.stringContaining("Told Writer") });
-    const [ask, note] = h.tellBotAsk.mock.calls[0] as [BotAskRecord, string];
-    expect(ask.askerSession).toBe("wri-chat");
-    expect(note).toContain("Planner has news about the task q8");
-    expect(note).toContain("The calendar is dropped.");
-    expect(note).toContain(
-      'What the user wrote to Planner, in its chat: "forget that calendar, we launch in January"'
-    );
-    expect(note).toContain("don't go on with it as it was");
-  });
-
-  it("is refused in a turn the user did not start", () => {
-    const h = tellHost();
-    expect(h.tellTaskGiver("pla", "pla-main", TASK, "Dropped.")).toEqual({
-      error: expect.stringContaining("not started by them"),
-    });
-    expect(h.tellBotAsk).not.toHaveBeenCalled();
-  });
-
-  it("is refused inside the task's own turn, whatever the user said before", () => {
-    const h = tellHost();
-    h.noteUserWords("pla-main", "make me a checklist");
-    h.botAskTurns.set("q8", { sessionId: "pla-main" });
-    expect(h.tellTaskGiver("pla", "pla-main", TASK, "Dropped.")).toEqual({
-      error: expect.stringContaining("not started by them"),
-    });
   });
 });

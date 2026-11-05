@@ -39,7 +39,6 @@ export type ToolHost = Pick<
   | "giveTaskToBot"
   | "checkBotAnswers"
   | "cancelBotAsk"
-  | "tellTaskGiver"
   | "listChats"
   | "readChatMessages"
   | "autoReply"

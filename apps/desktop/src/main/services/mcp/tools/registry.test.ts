@@ -26,8 +26,8 @@ import { AGENT_TOOL_NAMES, AGENT_TOOLS, agentTool } from "./index";
  * questions about the app; switching it off would leave those to memory.
  * `suggest_tasks` draws buttons that send their own text as the user's
  * message; nothing runs until the user taps one.
- * `ask_bot`, `give_task_to_bot`, `check_bot_answers`, `cancel_bot_ask` and
- * `tell_task_giver` reach
+ * `ask_bot`, `give_task_to_bot`, `check_bot_answers` and `cancel_bot_ask`
+ * reach
  * only the user's own bots, the way
  * `delegate_task` reaches a sub-agent; whether asking deserves its own off
  * switch is an open question for this first version.
@@ -38,7 +38,6 @@ const NOT_IN_REGISTRY = new Set([
   "give_task_to_bot",
   "check_bot_answers",
   "cancel_bot_ask",
-  "tell_task_giver",
   "billing_plan",
   "paid_feature",
   "offer_session",
