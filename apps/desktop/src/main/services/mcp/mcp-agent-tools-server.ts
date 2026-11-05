@@ -177,6 +177,9 @@ import {
   CHECK_IN_PROMPT_NOTE,
   existingRoutineNote,
   HOSTED_CREATE_UNCONFIRMED_NOTE,
+  FREE_PHONE_ROUTINES,
+  FREE_PHONE_ROUTINES_NEXT,
+  FREE_PHONE_ROUTINES_NOTE,
 } from "./tools/cronjob";
 import {
   describeHostedRoutine,
@@ -746,6 +749,10 @@ export class McpAgentToolsServer extends McpHttpServer {
     return this.options.planTier?.() ?? "unknown";
   }
 
+  private isPhoneFreePlan(callerSession?: string): boolean {
+    return this.isPhoneCaller(callerSession) && this.planTier() === "free";
+  }
+
   /**
    * Whether any tool of these toolsets reaches this caller: switched on, with
    * what it needs set, and served to its lane (the phone and a routine nobody
@@ -1103,14 +1110,9 @@ export class McpAgentToolsServer extends McpHttpServer {
       const timing = readRoutineTiming(args, Date.now());
       // The WhatsApp chat's free plan sets up no reminder or routine: they
       // come with the paid plan, here or in the ChatLLM app.
-      if (
-        action === "create" &&
-        this.isPhoneCaller(callerSession) &&
-        this.planTier() === "free"
-      )
+      if (action === "create" && this.isPhoneFreePlan(callerSession))
         return this.err(
-          "Reminders, daily briefs and routines are not set up from this chat on the free plan: nothing was created. " +
-            "Call paid_feature with feature routines, and answer from what it says."
+          `${FREE_PHONE_ROUTINES}: nothing was created. ${FREE_PHONE_ROUTINES_NEXT}`
         );
       const act = (): Promise<ToolResult> =>
         this.cronjobAction(
@@ -1125,7 +1127,16 @@ export class McpAgentToolsServer extends McpHttpServer {
         timing.warnings
       );
     }
-    return this.cronjobAction(action, id, args, null, callerSession);
+    const result = await this.cronjobAction(
+      action,
+      id,
+      args,
+      null,
+      callerSession
+    );
+    return action === "list" && this.isPhoneFreePlan(callerSession)
+      ? withNotes(result, [FREE_PHONE_ROUTINES_NOTE])
+      : result;
   }
 
   /** The create before this one, finished or not. */
