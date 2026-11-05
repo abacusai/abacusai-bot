@@ -31,6 +31,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { BOT_TIME_TOOL_NAME } from "../bot/bot-time-tool.js";
 import {
   hostCreditBalance,
+  lowCreditBase,
   refreshCreditBalanceIfStale,
   type CreditBalance,
 } from "../credit-balance.js";
@@ -50,7 +51,7 @@ const CONNECTOR_REMINDER_EVERY = 5;
 const PRESENT_NUDGE_MS = 10 * 60_000;
 const PRESENT_AGAIN_MS = 20 * 60_000;
 const PRESENT_TOOL = "present_deliverable";
-/** The share of granted credits below which a billed run is told to wrap up. */
+/** The share of the plan's credits below which a billed run is told to wrap up. */
 const CREDITS_LOW_SHARE = 0.1;
 /** Model calls a closing run gets to write its closing message. */
 const CLOSE_OUT_TURNS = 2;
@@ -363,7 +364,7 @@ export default function budgets(
       !nobodyPresent() &&
       billedAbacus(ctx.model) &&
       balance != null &&
-      balance.remaining < balance.granted * CREDITS_LOW_SHARE
+      balance.remaining < lowCreditBase(balance) * CREDITS_LOW_SHARE
     ) {
       creditsNudged = true;
       // Hidden: what the user reads is the model's own wrap-up.

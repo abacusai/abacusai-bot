@@ -510,6 +510,26 @@ describe("the turn's outcome card", () => {
     ],
   };
 
+  it("shows a paying account nothing of the free plan's wall while its plan is still being read", async () => {
+    let answer: ((tier: "basic") => void) | null = null;
+    const accountTier = () =>
+      new Promise<"basic">((resolve) => {
+        answer = resolve;
+      });
+    current = await renderRelay(
+      failed(WALL),
+      "session",
+      {},
+      {},
+      { ...host("basic"), accountTier }
+    );
+    await waitFor(() => expect(answer).not.toBeNull());
+    expect(screen.queryByText(/free credits are used up/)).toBeNull();
+    answer!("basic");
+    expect(await screen.findByText(/this month's credits/)).toBeTruthy();
+    expect(screen.queryByText(/free credits/)).toBeNull();
+  });
+
   it("a free account at the wall: the stopped task by name, the plan's whole offer, Upgrade to checkout, then the message goes again", async () => {
     const openUpgrade = vi.fn(async () => {});
     const relay = failed(WALL);

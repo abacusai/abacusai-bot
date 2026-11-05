@@ -1571,6 +1571,8 @@ export interface AbacusAccountInfo {
   subscription_tier: string | null;
   credits_used: number | null;
   credits_granted: number | null;
+  /** The plan's monthly credits, without what was bought on top; absent on a free plan and from older servers. */
+  plan_credits?: number;
   /** The account was created on the website, before the app was installed. */
   web_signup?: boolean;
   /** The account signs in with Google: the app opens Google's consent after sign-in. */

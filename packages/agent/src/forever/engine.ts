@@ -166,7 +166,7 @@ import {
   stallFailure,
   type TurnFailure,
 } from "../turn-outcome.js";
-import { turnUsage, type TurnUsage } from "../turn-usage.js";
+import { addRunUsage, turnUsage, type TurnUsage } from "../turn-usage.js";
 import {
   accountReplyLanguagePrompt,
   learnUserLanguage,
@@ -2191,7 +2191,10 @@ export class ForeverEngine {
             ? (this.session?.messages ?? event.messages)
             : event.messages
         );
-        this.lastTurnUsage = turnUsage(event.messages as never);
+        this.lastTurnUsage = addRunUsage(
+          this.lastTurnUsage,
+          turnUsage(event.messages as never)
+        );
 
         // A call that answered ends any outage this turn was riding out.
         if (runMadeProgress(event.messages)) this.networkWait.reset();

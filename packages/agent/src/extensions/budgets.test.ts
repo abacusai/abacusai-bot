@@ -641,12 +641,13 @@ describe("credits running out", () => {
   const core = new HostCore({} as never, () => {});
   // Each read is newer than the last, as the host's are.
   let stamp = Date.now();
-  const balance = (remaining: number, granted = 2000) =>
+  const balance = (remaining: number, granted = 2000, planCredits?: number) =>
     core.handle({
       type: "credit_balance",
       remaining,
       granted,
       at: ++stamp,
+      ...(planCredits != null ? { planCredits } : {}),
     });
   const on = (model: Record<string, unknown>) => ({
     hasUI: false,
@@ -697,6 +698,25 @@ describe("credits running out", () => {
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+
+  it("measures low against the plan's credits, never what was bought on top", async () => {
+    // A 30,000 plan with 300,000 bought: 20,000 left is not low.
+    await balance(20_000, 330_000, 30_000);
+    const pi = await started();
+    await pi.fire("turn_start", {}, billed);
+    expect(nudges(pi)).toHaveLength(0);
+
+    await balance(2_900, 330_000, 30_000);
+    await pi.fire("turn_start", {}, billed);
+    expect(nudges(pi)).toHaveLength(1);
+  });
+
+  it("measures a promoted first month against what it granted", async () => {
+    await balance(1_500, 14_000, 20_000);
+    const pi = await started();
+    await pi.fire("turn_start", {}, billed);
+    expect(nudges(pi)).toHaveLength(0);
   });
 
   it("stays quiet above the threshold, and speaks once a lower balance arrives", async () => {

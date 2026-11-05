@@ -462,15 +462,26 @@ export interface CreditSnapshot {
   remaining: number;
   granted: number;
   at: number;
+  /** The plan's monthly credits, without what was bought on top. */
+  planCredits?: number;
 }
 
 const snapshotOf = (
   cached: { value: AbacusAccountInfo; at: number } | null
 ): CreditSnapshot | null => {
   if (cached == null) return null;
-  const { credits_used: used, credits_granted: granted } = cached.value;
+  const {
+    credits_used: used,
+    credits_granted: granted,
+    plan_credits: planCredits,
+  } = cached.value;
   if (used == null || granted == null || granted <= 0) return null;
-  return { remaining: Math.max(0, granted - used), granted, at: cached.at };
+  return {
+    remaining: Math.max(0, granted - used),
+    granted,
+    at: cached.at,
+    ...(planCredits != null ? { planCredits } : {}),
+  };
 };
 
 /** The credit balance as of the last account read; null without one. */
@@ -642,6 +653,10 @@ export const requestAbacusAccount = async (
         subscription_tier: body.subscription_tier ?? null,
         credits_used: body.credits_used ?? null,
         credits_granted: body.credits_granted ?? null,
+        // Only a server that says so: an older one sends nothing.
+        ...(typeof body.plan_credits === "number"
+          ? { plan_credits: body.plan_credits }
+          : {}),
         web_signup: body.web_signup === true,
         google_sign_in: body.google_sign_in === true,
         // Only a server that says so: an older one sends nothing.

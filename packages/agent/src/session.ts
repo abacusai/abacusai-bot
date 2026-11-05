@@ -200,7 +200,7 @@ import {
   stallFailure,
   type TurnFailure,
 } from "./turn-outcome.js";
-import { turnUsage, type TurnUsage } from "./turn-usage.js";
+import { addRunUsage, turnUsage, type TurnUsage } from "./turn-usage.js";
 import {
   accountReplyLanguagePrompt,
   learnUserLanguage,
@@ -778,7 +778,7 @@ export class AbacusBotSession {
   private interrupted = false;
   /** Continuations spent on a malformed tool call this turn. */
   private malformedContinuations = 0;
-  /** The provider's usage for the turn's last request, set at `agent_end`. */
+  /** The provider's usage for the turn so far, added to at each `agent_end`. */
   private lastTurnUsage: TurnUsage | null = null;
   /** The Abacus credits of every run in the turn so far, added at each `agent_end`. */
   private turnCreditsSoFar: TurnCredits;
@@ -2479,9 +2479,12 @@ export class AbacusBotSession {
     end();
   }
 
-  /** One run's end: its last request's usage, and its credits added to the turn's. */
+  /** One run's end: its last request stands, and what it billed and its credits add to the turn's. */
   private noteRunUsage(messages: ReadonlyArray<unknown>): void {
-    this.lastTurnUsage = turnUsage(messages as never);
+    this.lastTurnUsage = addRunUsage(
+      this.lastTurnUsage,
+      turnUsage(messages as never)
+    );
     this.turnCreditsSoFar = addCredits(
       this.turnCreditsSoFar,
       turnCredits(messages as never)

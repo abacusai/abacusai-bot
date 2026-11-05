@@ -287,6 +287,50 @@ describe("billing_plan's answer", () => {
   });
 });
 
+describe("billing_plan on a paid plan's credits", () => {
+  const tier = (plan: string, planName: string, creditsPerMonth: number) => ({
+    plan,
+    planName,
+    priceText: "$",
+    features: [],
+    creditsPerMonth,
+  });
+  const billing = {
+    current: {
+      plan: "basic",
+      planName: "Basic",
+      creditsRemaining: 100,
+      creditsGranted: 14_000,
+      freeTierExpiresAt: null,
+    },
+    plans: [
+      { ...tier("basic", "Basic", 20_000), current: true },
+      { ...tier("pro", "Pro", 30_000), current: false },
+    ],
+    upgrades: [
+      { ...tier("pro", "Pro", 30_000), url: "https://example.test/p" },
+    ],
+    topUpUrl: null,
+    upgradeInMobileApp: false,
+  };
+
+  it("keeps the renewal's figure apart from what a move up adds now", async () => {
+    const { appBillingResult } = await import("./billing");
+    const result = appBillingResult(
+      {
+        ok: (text: string) => ({ content: [{ type: "text", text }] }),
+      } as never,
+      billing
+    ) as unknown as { content: Array<{ text: string }> };
+    const text = result.content[0]!.text;
+    expect(text).toContain("20,000 at each renewal");
+    expect(text).toContain("Never say this period gave the monthly figure");
+    expect(text).toContain("Moving up to Pro now adds");
+    expect(text).toContain("10,000 credits at most");
+    expect(text).toContain("its full 30,000 starts at the next renewal");
+  });
+});
+
 describe("billing_plan for what only a plan does", () => {
   const plan = (current: "free" | "basic") => ({
     current: {

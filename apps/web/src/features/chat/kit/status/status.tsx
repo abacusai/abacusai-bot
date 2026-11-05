@@ -917,6 +917,7 @@ export const ErrorCard = ({
   const switchToAbacus = useSwitchToAbacus();
   const [accountTier, setAccountTier] =
     useState<NonNullable<ErrorCardProps["tier"]>>("unknown");
+  const [tierRead, setTierRead] = useState(false);
   useEffect(() => {
     if (providedTier != null) return;
     let live = true;
@@ -925,7 +926,10 @@ export const ErrorCard = ({
       .then((value) => {
         if (live) setAccountTier(value);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (live) setTierRead(true);
+      });
     return () => {
       live = false;
     };
@@ -1176,7 +1180,9 @@ export const ErrorCard = ({
           )}
         </>
       ) : undefined;
-    // Until a paid plan's offer is read, no card: it picks which one.
+    // Until the plan and a paid plan's offer are read, no card: they pick which
+    // one, and someone who paid must never first read the free plan's words.
+    if (atWall && providedTier == null && !tierRead) return null;
     if (paidAtWall && paidWallOffer === undefined) return null;
     const task = taskText(session.hostStore.state.messages);
     // A wall further up the chat is history: its title alone, the offer is the latest one's.
