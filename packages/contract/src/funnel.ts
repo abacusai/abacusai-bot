@@ -93,6 +93,7 @@ export const FUNNEL_STEPS = [
   // where they showed (welcome or card).
   "site_deploy_shown",
   "site_deploy_open_agent",
+  "site_deploy_pack",
   "site_deploy_show_folder",
   "site_deploy_drag",
   "site_deploy_copy",

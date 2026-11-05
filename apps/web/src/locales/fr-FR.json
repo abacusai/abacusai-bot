@@ -4319,6 +4319,8 @@
     "cardBody": "Abacus AI Agent sur le web peut l'héberger et lui donner un lien public.",
     "stepOpen": "Ouvrez Abacus AI Agent sur le web",
     "openAgent": "Ouvrir Abacus AI Agent",
+    "stepPack": "Préparez votre projet pour l'envoi",
+    "pack": "Préparer le zip",
     "stepZip": "Votre projet est prêt à être envoyé",
     "stepZipBlocked": "Votre projet n'est pas encore prêt à être envoyé",
     "packing_one": "Préparation du projet… {{count}} fichier",

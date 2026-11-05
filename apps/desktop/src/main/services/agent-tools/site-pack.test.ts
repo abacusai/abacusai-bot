@@ -197,7 +197,7 @@ describe("packSite", () => {
     const root = tree({ "home/Desktop/report.html": "x" });
     const home = path.join(root, "bakery", "home");
     const link = path.join(home, "work");
-    fs.symlinkSync(path.join(home, "Desktop"), link, "dir");
+    fs.symlinkSync(path.join(home, "Desktop"), link, "junction");
     expect(siteDirTooBroad(link, null, home, path.join(home, ".bot"))).toBe(
       true
     );

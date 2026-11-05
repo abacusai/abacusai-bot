@@ -4319,6 +4319,8 @@
     "cardBody": "Web'deki Abacus AI Agent siteni barındırıp ona herkese açık bir bağlantı verebilir.",
     "stepOpen": "Web'de Abacus AI Agent'ı aç",
     "openAgent": "Abacus AI Agent'ı aç",
+    "stepPack": "Projeni yüklemeye hazırla",
+    "pack": "Zip hazırla",
     "stepZip": "Projen yüklemeye hazır",
     "stepZipBlocked": "Projen henüz yüklemeye hazır değil",
     "packing_one": "Projen hazırlanıyor… {{count}} dosya",

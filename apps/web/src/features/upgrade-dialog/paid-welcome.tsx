@@ -1,7 +1,8 @@
 /**
  * The welcome right after a payment lands: the plan and its credits, what
  * changed, and up to three next steps. It replaces the after-upgrade routines
- * card and takes over the turn the upgrade paused (lib/paid-welcome.ts).
+ * card and takes over the turn the upgrade paused (lib/paid-welcome.ts): every
+ * way of closing it sends that turn, once. It waits behind an upgrade dialog.
  */
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
 import { funnelDetail, type FunnelStep } from "@abacus-ai/contract/funnel";
@@ -45,6 +46,7 @@ import {
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { payingAccount } from "#renderer/lib/upgrade";
+import { useUpgradeDialogRequest } from "#renderer/lib/upgrade-dialog";
 import { useAccount } from "#renderer/lib/use-account";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
@@ -331,6 +333,7 @@ export const PaidWelcomeHost = () => {
   const prefs = useLiveQuery(collections.prefs).data?.[0];
   const update = useUpdatePrefs();
   const live = useAccount().data;
+  const upgradeAsked = useUpgradeDialogRequest() != null;
   const navigate = useAppNavigate();
   // The chat on screen, for a payment that landed without the upgrade dialog.
   const onScreen =
@@ -423,9 +426,16 @@ export const PaidWelcomeHost = () => {
   );
   useEffect(() => {
     if (!IS_ELECTRON) return;
-    return registerPaidWelcome((fresh, from, landing) =>
+    const unregister = registerPaidWelcome((fresh, from, landing) =>
       offer(fresh, from, landing)
     );
+    return () => {
+      unregister();
+      // The host going away closes the welcome too.
+      const open = showingRef.current;
+      showingRef.current = null;
+      void open?.paused?.resume().catch(() => {});
+    };
   }, []);
 
   // A payment that landed elsewhere (the web, another surface): the next account read.
@@ -460,15 +470,15 @@ export const PaidWelcomeHost = () => {
     showingRef.current = null;
     setShowing(null);
     if (open == null) return;
+    // Every way out: `open` is taken above, so this runs once.
+    void open.paused?.resume().catch(() => {});
     if (step == null) {
       funnel("paid_welcome_closed");
       return;
     }
     const unlock = welcomeUnlock(open.account);
-    if (step === "resume") {
-      funnel("paid_welcome_resume");
-      void open.paused?.resume().catch(() => {});
-    } else if (step === "routines") {
+    if (step === "resume") funnel("paid_welcome_resume");
+    else if (step === "routines") {
       funnel("paid_welcome_routines");
       void platformSystem(transport.client).openExternal({
         url: ABACUS_AGENT_URL,
@@ -488,7 +498,7 @@ export const PaidWelcomeHost = () => {
     showing != null && payingAccount(live) ? live : showing?.account;
   return (
     <PaidWelcomeDialog
-      open={showing != null}
+      open={showing != null && !upgradeAsked}
       planName={account?.plan ?? null}
       credits={welcomeCredits(account)}
       model={model}

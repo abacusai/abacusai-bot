@@ -4319,6 +4319,8 @@
     "cardBody": "ウェブ版の Abacus AI Agent でホストして、公開リンクを付けられます。",
     "stepOpen": "ウェブ版の Abacus AI Agent を開く",
     "openAgent": "Abacus AI Agent を開く",
+    "stepPack": "プロジェクトをアップロード用に準備する",
+    "pack": "zip を準備",
     "stepZip": "プロジェクトをアップロードする準備ができました",
     "stepZipBlocked": "プロジェクトはまだアップロードできません",
     "packing_one": "プロジェクトを準備中… {{count}} ファイル",

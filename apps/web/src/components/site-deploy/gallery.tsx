@@ -4,6 +4,7 @@ import { SiteDeployCardView } from "./deploy-card";
 import { DeployStepsView } from "./deploy-steps";
 
 export const SITE_DEPLOY_GALLERY_STATES = [
+  "idle",
   "ready",
   "held-back",
   "packing",
@@ -30,7 +31,7 @@ export const galleryPack = (state: SiteDeployGalleryState): SitePack | null =>
     ? READY
     : state === "held-back"
       ? { ...READY, heldBack: [".env", "config/secrets.json"] }
-      : state === "packing"
+      : state === "packing" || state === "idle"
         ? null
         : state === "too-big"
           ? { state: "too-big", name: "bakery-site" }
@@ -43,10 +44,12 @@ export const GalleryDeploySteps = ({
   state: SiteDeployGalleryState;
 }) => (
   <DeployStepsView
+    idle={state === "idle"}
     pack={galleryPack(state)}
     progress={state === "packing" ? { files: 14, bytes: 640_000 } : null}
     copied={false}
     onOpenAgent={() => undefined}
+    onPack={() => undefined}
     onReveal={() => undefined}
     onDragOut={() => undefined}
     onCopy={() => undefined}

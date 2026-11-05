@@ -4319,6 +4319,8 @@
     "cardBody": "Abacus AI Agent di web bisa meng-host-nya dan memberinya tautan publik.",
     "stepOpen": "Buka Abacus AI Agent di web",
     "openAgent": "Buka Abacus AI Agent",
+    "stepPack": "Siapkan proyekmu untuk diunggah",
+    "pack": "Siapkan zip",
     "stepZip": "Proyekmu siap diunggah",
     "stepZipBlocked": "Proyekmu belum siap diunggah",
     "packing_one": "Menyiapkan proyekmu… {{count}} file",

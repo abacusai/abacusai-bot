@@ -1,7 +1,8 @@
 /**
  * "Deploy your site": the three steps that move a site the agent built to
  * Abacus AI Agent on the web, which hosts and deploys it. Main zips the
- * project (sites.pack); this shows the steps, the zip and its progress.
+ * project (sites.pack) on the person's click; this shows the steps, the zip
+ * and its progress.
  * The paid welcome and the paid site card both show it.
  */
 import type { FunnelStep } from "@abacus-ai/contract/funnel";
@@ -74,11 +75,14 @@ const Step = ({
 );
 
 export interface DeployStepsViewProps {
-  /** Null while the zip is made. */
+  /** Nothing is zipped until the person asks. */
+  idle: boolean;
+  /** Null until the zip is made. */
   pack: SitePack | null;
   progress: SitePackProgress | null;
   copied: boolean;
   onOpenAgent(): void;
+  onPack(): void;
   onReveal(): void;
   onDragOut(event: DragEvent<HTMLElement>): void;
   onCopy(): void;
@@ -88,10 +92,12 @@ export interface DeployStepsViewProps {
 
 /** The steps as drawn, for any state of the zip. */
 export const DeployStepsView = ({
+  idle,
   pack,
   progress,
   copied,
   onOpenAgent,
+  onPack,
   onReveal,
   onDragOut,
   onCopy,
@@ -196,12 +202,21 @@ export const DeployStepsView = ({
       <Step
         number={2}
         title={t(
-          pack == null || pack.state === "ready"
-            ? "siteDeploy.stepZip"
-            : "siteDeploy.stepZipBlocked"
+          idle
+            ? "siteDeploy.stepPack"
+            : pack == null || pack.state === "ready"
+              ? "siteDeploy.stepZip"
+              : "siteDeploy.stepZipBlocked"
         )}
+        action={
+          idle ? (
+            <Button size="sm" data-step="pack" onClick={onPack}>
+              {t("siteDeploy.pack")}
+            </Button>
+          ) : null
+        }
       >
-        {zip}
+        {idle ? null : zip}
       </Step>
       <Step
         number={3}
@@ -227,8 +242,8 @@ export const DeployStepsView = ({
 };
 
 /**
- * The steps for `sessionId`'s latest site (`turnId`): the zip is made when
- * they first show, once per site turn, and every button reports its step.
+ * The steps for `sessionId`'s latest site (`turnId`): the zip is made on the
+ * person's click, once per site turn, and every button reports its step.
  */
 export const DeploySteps = ({
   sessionId,
@@ -242,6 +257,7 @@ export const DeploySteps = ({
   const { t } = useTranslation();
   const { transport } = useAppContext();
   const client = transport.client;
+  const [asked, setAsked] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [copied, setCopied] = useState(false);
   const packId = `${sessionId}:${turnId}:${attempt}`;
@@ -251,27 +267,36 @@ export const DeploySteps = ({
       client.sites
         .pack({ sessionId, packId })
         .catch((): SitePack => ({ state: "failed" })),
+    enabled: asked,
     staleTime: Infinity,
     gcTime: 10 * 60_000,
     retry: false,
   });
+  // Asked on an earlier showing, the zip or its run is still here.
+  const idle = !asked && pack.data == null && !pack.isFetching;
+  const packing = !idle && pack.data == null;
   const progress = useQuery({
     queryKey: ["site-pack-progress", packId],
     queryFn: () => client.sites.progress({ packId }).catch(() => null),
-    enabled: pack.data == null,
-    refetchInterval: pack.data == null ? 400 : false,
+    enabled: packing,
+    refetchInterval: packing ? 400 : false,
   });
   const funnel = (step: FunnelStep) =>
     void client.system.funnelStep({ step, detail: surface }).catch(() => {});
   const ready = pack.data?.state === "ready" ? pack.data : null;
   return (
     <DeployStepsView
+      idle={idle}
       pack={pack.data ?? null}
       progress={progress.data ?? null}
       copied={copied}
       onOpenAgent={() => {
         funnel("site_deploy_open_agent");
         void platformSystem(client).openExternal({ url: ABACUS_AGENT_URL });
+      }}
+      onPack={() => {
+        funnel("site_deploy_pack");
+        setAsked(true);
       }}
       onReveal={() => {
         if (ready == null) return;
@@ -300,6 +325,7 @@ export const DeploySteps = ({
       }}
       onRetry={() => {
         funnel("site_deploy_retry");
+        setAsked(true);
         setAttempt((value) => value + 1);
       }}
     />
