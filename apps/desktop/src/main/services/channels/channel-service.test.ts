@@ -203,7 +203,7 @@ describe("ChannelService", () => {
     expect(turns[1]!.prompt).not.toContain(">\none\n<");
   });
 
-  it("Stop ends the round, drops the queue and posts nothing", async () => {
+  it("Stop ends the round and drops the queue; only the cut-off bot's trace is posted", async () => {
     const { service, turns, flush, texts } = setup();
     const { id } = service.create({ botIds: ["chief", "res"] });
     service.post(id, "first");
@@ -212,7 +212,11 @@ describe("ChannelService", () => {
     service.stop(id);
     await flush();
     expect(turns).toHaveLength(1);
-    expect(texts(id)).toEqual(["user: first", "user: second"]);
+    expect(texts(id)).toEqual([
+      "user: first",
+      "user: second",
+      "chief: Chief was stopped before answering.",
+    ]);
     expect(service.list()[0]).toMatchObject({ working: [], queued: 0 });
   });
 
@@ -343,6 +347,27 @@ describe("work taken on in a channel", () => {
     turns[4]!.resolve("<reply>Ok</reply>");
     await flush();
     expect(works.map((work) => work.botId)).toEqual(["chief"]);
+  });
+
+  it("Stop leaves a trace for each bot cut off before answering", async () => {
+    const { service, turns, flush, texts } = setup();
+    const { id } = service.create({ botIds: ["chief", "wri"] });
+    service.post(id, "Chief, get Writer to draft it");
+    await flush();
+    turns[0]!.resolve("<reply>@Writer draft it</reply>");
+    await flush();
+    expect(turns[1]!.botId).toBe("wri");
+    service.stop(id);
+    turns[1]!.reject(new Error("stopped"));
+    await flush();
+    expect(texts(id).slice(-1)).toEqual([
+      "wri: Writer was stopped before answering.",
+    ]);
+    expect(texts(id)).toHaveLength(3);
+    // The next turn reads it as the bot's failed answer.
+    service.post(id, "Chief, where are we?");
+    await flush();
+    expect(turns[2]!.prompt).toContain("Writer was stopped before answering.");
   });
 
   it("Stop stops the work; it is marked stopped and no report is posted", async () => {

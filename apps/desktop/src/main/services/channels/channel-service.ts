@@ -470,8 +470,19 @@ export class ChannelService {
       waiting.cancelled = true;
     this.queues.set(channelId, []);
     this.setPending(channelId, () => []);
-    for (const botId of this.working.get(channelId) ?? [])
+    for (const botId of this.working.get(channelId) ?? []) {
       this.deps.stopTurn(botId, channelId);
+      // A trace, for the user and the bots: an answer that never came is
+      // otherwise invisible, and a bot waiting on it may assume it did.
+      this.append(channelId, {
+        id: this.newId(),
+        author: { kind: "bot", botId },
+        text: `${this.deps.bot(botId)?.name ?? "A bot"} was stopped before answering.`,
+        at: this.now(),
+        ...(round != null ? { replyTo: round.userMessageId } : {}),
+        failed: true,
+      });
+    }
     this.stopWorks(channelId);
     this.log(`stopped ${channelId}`);
     this.deps.changed(channelId);
