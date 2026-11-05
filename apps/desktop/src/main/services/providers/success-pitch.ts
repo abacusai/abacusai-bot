@@ -19,6 +19,7 @@ import type {
   DesktopEvent,
   UserTextTags,
 } from "@abacus-ai/contract/agent-types";
+import { isSuggestTasksTool } from "@abacus-ai/contract/bots/suggested-tasks";
 import type { PrefsPatch, PrefsRow } from "@abacus-ai/contract/contract/rows";
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
 import { creditAccountKey } from "@abacus-ai/contract/credit-thresholds";
@@ -152,7 +153,8 @@ export class SuccessPitchWatch {
         this.facts(sessionId).reply += event.content;
         return;
       case "tool_call_start":
-        this.facts(sessionId).reply = "";
+        if (!isSuggestTasksTool(event.toolName))
+          this.facts(sessionId).reply = "";
         return;
       case "error":
         this.facts(sessionId).troubled = true;
@@ -185,8 +187,9 @@ export class SuccessPitchWatch {
     >
   ): void {
     const facts = this.facts(sessionId);
-    facts.reply = "";
     const name = event.tool.name;
+    // The reply stands: suggest_tasks comes after it and can end the turn.
+    if (!isSuggestTasksTool(name)) facts.reply = "";
     if (event.result.rejected === true) {
       facts.troubled = true;
       return;

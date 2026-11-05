@@ -241,6 +241,28 @@ describe("SuccessPitchWatch: a deliverable on a clean turn", () => {
     expect(t.offer()).toBeNull();
   });
 
+  it("reads the reply a suggest_tasks call closed, which is the last thing the turn did", async () => {
+    const buttons = (): DesktopEvent[] => [
+      event({
+        type: "tool_call_start",
+        toolCallId: "t",
+        toolName: "suggest_tasks",
+      }),
+      tool("suggest_tasks", {}),
+    ];
+    const failed = setup();
+    await failed.run("Build it", [
+      presentSite,
+      text(`I couldn't publish it. ${LONG_REPLY}`),
+      ...buttons(),
+    ]);
+    expect(failed.offer()).toBeNull();
+
+    const worked = setup();
+    await worked.run("Build it", [presentSite, text(LONG_REPLY), ...buttons()]);
+    expect(worked.offer()).toMatchObject({ trigger: "deliverable" });
+  });
+
   it("never on a failed or stopped turn, a file edit, or plain browsing", async () => {
     const failed = setup();
     await failed.run("Build it", [presentSite, text(LONG_REPLY)], {

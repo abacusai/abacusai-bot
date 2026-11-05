@@ -5,6 +5,7 @@
  * rows, only an approval card at the tool's position when a descriptor
  * joins it (§5.4 bot skin, §6.2).
  */
+import { isSuggestTasksTool } from "@abacus-ai/contract/bots/suggested-tasks";
 import type { ToolProps } from "@tanstack/ai-react/ui";
 import { useEffect, type ComponentType } from "react";
 
@@ -12,7 +13,6 @@ import {
   isBotHelpTool,
   isPaidFeatureTool,
   isSessionOfferTool,
-  isSuggestTasksTool,
 } from "#renderer/lib/bot-turns/turns";
 
 import { descriptorFor, useThreadStore } from "../../store/selectors";

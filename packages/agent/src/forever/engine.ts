@@ -173,6 +173,7 @@ import {
 } from "../user-language.js";
 import webTools from "../web/tools.js";
 import type { ForeverProfile, HiddenTurnPrompt } from "./profile.js";
+import { endTurnOnClosedReply } from "./reply-end.js";
 import { TurnReply } from "./turn-reply.js";
 
 export interface ForeverEngineOptions {
@@ -612,6 +613,7 @@ export class ForeverEngine {
 
     this.session = created.session;
     this.pi = this.loadedPi;
+    endTurnOnClosedReply(this.session.agent);
     // A degenerate summary from a cheap model must not erase the history.
     anchorCompactions(this.session.sessionManager, {
       anchorRequest: this.profile.anchorCompaction !== false,
@@ -1902,6 +1904,7 @@ export class ForeverEngine {
 
       this.session = created.session;
       this.pi = this.loadedPi;
+      endTurnOnClosedReply(this.session.agent);
       // A fresh session has only the tools it was built with.
       this.mcpTools.rebind(
         new Set(this.session.getAllTools().map((tool) => tool.name))

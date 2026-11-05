@@ -11,7 +11,7 @@
  * message, and the turn's deliverables after its last shown message.
  */
 import { BOT_HELP_TOOL } from "@abacus-ai/contract/bot-help";
-import { SUGGEST_TASKS_TOOL } from "@abacus-ai/contract/bots/suggested-tasks";
+import { isSuggestTasksTool } from "@abacus-ai/contract/bots/suggested-tasks";
 import { PAID_FEATURE_TOOL } from "@abacus-ai/contract/toolsets";
 import type { UIMessage } from "@tanstack/ai-client";
 
@@ -76,10 +76,6 @@ export const isPaidFeatureTool = (name: string): boolean =>
 /** `bot_help`, under its MCP server's prefix or bare. */
 export const isBotHelpTool = (name: string): boolean =>
   name === BOT_HELP_TOOL || name.endsWith(`_${BOT_HELP_TOOL}`);
-
-/** `suggest_tasks`, under its MCP server's prefix or bare. */
-export const isSuggestTasksTool = (name: string): boolean =>
-  name === SUGGEST_TASKS_TOOL || name.endsWith(`_${SUGGEST_TASKS_TOOL}`);
 
 const indexes = new WeakMap<readonly UIMessage[], Map<string, number>>();
 

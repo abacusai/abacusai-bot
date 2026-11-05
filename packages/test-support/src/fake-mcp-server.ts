@@ -12,6 +12,8 @@ export interface FakeMcpTool {
   inputSchema?: Record<string, unknown>;
   /** What `tools/call` answers with. Defaults to the tool's own name. */
   reply?: (args: Record<string, unknown>) => string;
+  /** Whether `tools/call` answers as a refusal. */
+  refuses?: (args: Record<string, unknown>) => boolean;
 }
 
 export class FakeMcpServer {
@@ -114,7 +116,7 @@ export class FakeMcpServer {
           content: [
             { type: "text", text: tool?.reply?.(args) ?? `${name} ran` },
           ],
-          isError: false,
+          isError: tool?.refuses?.(args) === true,
         });
 
         return;
