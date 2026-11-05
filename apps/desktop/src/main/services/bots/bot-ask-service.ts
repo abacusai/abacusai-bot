@@ -267,13 +267,24 @@ export class BotAskService {
       this.pump(laneOf(ask));
   }
 
-  /** A deleted bot's open asks, either side, are cancelled without a note. */
+  /**
+   * A deleted bot's open asks end: ones it made are cancelled without a
+   * note (nobody is left to tell); ones made to it fail, and the asker
+   * hears why, so it does not wait on an answer that cannot come.
+   */
   forgetBot(botId: string): void {
-    for (const ask of this.deps.read())
-      if (isOpenAsk(ask) && (ask.askerId === botId || ask.targetId === botId)) {
+    for (const ask of this.deps.read()) {
+      if (!isOpenAsk(ask)) continue;
+      if (ask.askerId === botId) {
         this.patch(ask.id, { status: "cancelled", endedAt: this.now() });
         if (ask.status === "running") this.deps.stopTurn(ask);
+      } else if (ask.targetId === botId) {
+        if (ask.status === "running") this.deps.stopTurn(ask);
+        this.finish(ask.id, {
+          error: "the user deleted that bot, so it ended there.",
+        });
       }
+    }
   }
 
   /** Start the conversation's oldest queued request, unless one is running there. */

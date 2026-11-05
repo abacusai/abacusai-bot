@@ -303,17 +303,16 @@ describe("BotAskService", () => {
     expect(notes[0].note).toContain("may be half done");
   });
 
-  it("cancels a deleted bot's open requests, either side, without a note", () => {
+  it("a deleted bot's own requests are cancelled quietly; ones made to it fail, and the asker hears", () => {
     const { service, stopTurn, notes, records } = setup();
     service.ask("res", "res-chat", "wri", "draft");
     service.ask("pla", "pla-chat", "res", "plan");
     service.forgetBot("res");
-    expect(records().map((ask) => ask.status)).toEqual([
-      "cancelled",
-      "cancelled",
-    ]);
+    expect(records().map((ask) => ask.status)).toEqual(["cancelled", "failed"]);
     expect(stopTurn).toHaveBeenCalledTimes(2);
-    expect(notes).toEqual([]);
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toMatchObject({ session: "pla-chat" });
+    expect(notes[0]!.note).toContain("the user deleted that bot");
   });
 
   it("fails a queued request whose bot is gone, and says so", () => {
