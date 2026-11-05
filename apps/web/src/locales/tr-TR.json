@@ -1259,7 +1259,7 @@
     "connectedPromiseLocal": "Nerede çalışıyorsan orada sohbet et.",
     "firstRun": {
       "title": "Önce ne yapmak istersin?",
-      "subtitle": "Birini seç. Botun hemen işe koyulur. Bağlanacak bir şey yok.",
+      "subtitle": "Birini seç. Botun hemen işe koyulur.",
       "build": {
         "title": "Bir şey oluştur",
         "body": "Bir web sitesi, uygulama ya da oyun. Anlat, gözünün önünde ortaya çıksın.",
@@ -1268,8 +1268,14 @@
       "chatApp": {
         "title": "Bana {{app}} üzerinden cevap ver",
         "body": "Botuna istediğin zaman telefonundan yaz.",
-        "setUp": "Kur",
         "open": "Aç"
+      },
+      "github": {
+        "title": "Kodum üzerinde çalış",
+        "body": "GitHub deponda bir hatayı düzelt veya özellik ekle.",
+        "connect": "GitHub’ı bağla",
+        "start": "Başla",
+        "botName": "Kod Asistanı"
       },
       "research": {
         "title": "Araştır veya yaz",

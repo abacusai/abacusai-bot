@@ -6,6 +6,11 @@ import { describe, expect, it, vi } from "vitest";
 import { fixtureBots, fixturePrefs } from "#renderer/data/fixture-db/rows";
 import { fixedT, initI18n } from "#renderer/lib/i18n";
 
+import {
+  GITHUB_CONNECTOR_ID,
+  githubChoice,
+  type GithubChoice,
+} from "../first-bot";
 import type { StepContext } from "./context";
 import { DoneStep } from "./done";
 import { FirstBotStep } from "./first-bot";
@@ -72,17 +77,16 @@ describe("FirstBotStep: what to do first", () => {
         heading={createRef()}
         inbox={{ state: "reading" }}
         chatApp={null}
+        github="connect"
       />
     );
     expect(screen.getByRole("heading").textContent).toBe(
       "What do you want to do first?"
     );
     expect(
-      screen.getByText(
-        "Pick one. Your bot starts on it right away. Nothing to connect."
-      )
+      screen.getByText("Pick one. Your bot starts on it right away.")
     ).toBeTruthy();
-    expect(cards()).toEqual(["build", "chat-app", "research", "images"]);
+    expect(cards()).toEqual(["build", "github", "research", "images"]);
     expect(
       document
         .querySelector('[data-first-choice="build"]')
@@ -113,17 +117,6 @@ describe("FirstBotStep: what to do first", () => {
         prompt: null,
       })
     );
-    fireEvent.click(screen.getByRole("button", { name: "Set up" }));
-    await vi.waitFor(() =>
-      expect(context.props.choose).toHaveBeenCalledWith({
-        kind: "chat-app",
-        app: "whatsapp",
-      })
-    );
-    expect(funnelStep).toHaveBeenCalledWith({
-      step: "first_choice_whatsapp",
-      detail: "whatsapp",
-    });
     fireEvent.click(screen.getByRole("button", { name: "Start" }));
     await vi.waitFor(() =>
       expect(context.props.choose).toHaveBeenCalledWith({ kind: "research" })
@@ -172,9 +165,16 @@ describe("FirstBotStep: what to do first", () => {
         heading={createRef()}
         inbox={{ state: "reading" }}
         chatApp="telegram"
+        github="connect"
       />
     );
-    expect(cards()).toEqual(["chat-app", "build", "research", "images"]);
+    expect(cards()).toEqual([
+      "chat-app",
+      "build",
+      "github",
+      "research",
+      "images",
+    ]);
     expect(screen.getByText("Answer me on Telegram")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Open" }));
     await vi.waitFor(() =>
@@ -183,6 +183,82 @@ describe("FirstBotStep: what to do first", () => {
         app: "telegram",
       })
     );
+  });
+
+  const renderGithub = (context: StepContext, github: GithubChoice) =>
+    render(
+      <FirstBotStep
+        ctx={context}
+        first={{ state: "choose" }}
+        bot={null}
+        present={false}
+        heading={createRef()}
+        inbox={{ state: "reading" }}
+        chatApp={null}
+        github={github}
+      />
+    );
+
+  it("connects GitHub from its card, then starts on the code", async () => {
+    await initI18n();
+    const { context, funnelStep } = ctx();
+    context.props.connect = vi.fn(async () => ({ ok: true }));
+    renderGithub(context, "connect");
+    expect(screen.getByText("Work on my code")).toBeTruthy();
+    expect(screen.queryByText(/WhatsApp/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Connect GitHub" }));
+    expect(context.props.connect).toHaveBeenCalledWith(GITHUB_CONNECTOR_ID);
+    await vi.waitFor(() =>
+      expect(context.props.choose).toHaveBeenCalledWith({ kind: "github" })
+    );
+    expect(funnelStep).toHaveBeenCalledWith({ step: "first_choice_github" });
+  });
+
+  it("stays on the screen when the GitHub sign-in is cancelled", async () => {
+    await initI18n();
+    const { context } = ctx();
+    let finish!: (outcome: { ok: boolean }) => void;
+    context.props.connect = vi.fn(
+      () => new Promise<{ ok: boolean }>((resolve) => (finish = resolve))
+    );
+    context.props.cancelConnect = vi.fn(() => finish({ ok: false }));
+    renderGithub(context, "connect");
+    fireEvent.click(screen.getByRole("button", { name: "Connect GitHub" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+    expect(context.props.cancelConnect).toHaveBeenCalledWith(
+      GITHUB_CONNECTOR_ID
+    );
+    await screen.findByRole("button", { name: "Connect GitHub" });
+    expect(context.props.choose).not.toHaveBeenCalled();
+  });
+
+  it("leads with GitHub once it is connected, with no second sign-in", async () => {
+    await initI18n();
+    const { context } = ctx();
+    context.props.connect = vi.fn(async () => ({ ok: true }));
+    renderGithub(context, "start");
+    expect(cards()).toEqual(["github", "build", "research", "images"]);
+    const card = document.querySelector('[data-first-choice="github"]')!;
+    fireEvent.click(card.querySelector("button")!);
+    await vi.waitFor(() =>
+      expect(context.props.choose).toHaveBeenCalledWith({ kind: "github" })
+    );
+    expect(context.props.connect).not.toHaveBeenCalled();
+  });
+
+  it("leaves the GitHub card out where it can't be connected", async () => {
+    await initI18n();
+    renderGithub(ctx().context, null);
+    expect(cards()).toEqual(["build", "research", "images"]);
+  });
+
+  it.each([
+    [undefined, "connect"],
+    [{ state: "disconnected" }, "connect"],
+    [{ state: "connected" }, "start"],
+    [{ state: "disconnected", reason: "not-offered" }, null],
+  ])("reads GitHub status %j as %s", (status, expected) => {
+    expect(githubChoice(status)).toBe(expected);
   });
 
   it("continues once the bot was removed", async () => {
@@ -197,6 +273,7 @@ describe("FirstBotStep: what to do first", () => {
         heading={createRef()}
         inbox={{ state: "reading" }}
         chatApp={null}
+        github="connect"
       />
     );
     expect(screen.getByText("This bot was removed")).toBeTruthy();
@@ -219,6 +296,7 @@ describe("FirstBotStep: after a Gmail sign-in", () => {
         heading={createRef()}
         inbox={inbox}
         chatApp={null}
+        github="connect"
       />
     );
 
@@ -239,6 +317,7 @@ describe("FirstBotStep: after a Gmail sign-in", () => {
         heading={createRef()}
         inbox={{ state: "done", drafts: 3 }}
         chatApp={null}
+        github="connect"
       />
     );
     expect(screen.getByRole("heading").textContent).toBe(

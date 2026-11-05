@@ -7,14 +7,23 @@ import type { Transport } from "#renderer/data/transport";
 import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
 
 import type { OnboardingExit } from "../actions";
-import type { FirstBotResult, FirstChoice, InboxPass } from "../first-bot";
+import type {
+  FirstBotResult,
+  FirstChoice,
+  GithubChoice,
+  InboxPass,
+} from "../first-bot";
 import type { FlowFacts } from "../machine";
 
 export interface OnboardingPageProps {
   preview?: boolean;
   previewBot?: FirstBotResult;
   /** The gallery's first-run screen: the inbox pass to show, or the choices. */
-  previewFirstRun?: { inbox?: InboxPass; chatApp?: HomeChannel };
+  previewFirstRun?: {
+    inbox?: InboxPass;
+    chatApp?: HomeChannel;
+    github?: GithubChoice;
+  };
   step: OnboardingStepId;
   transport: Transport;
   facts: FlowFacts;
@@ -26,7 +35,7 @@ export interface OnboardingPageProps {
   /** The Chief of Staff after a Gmail sign-in, else null: the choices show. */
   createFirstBot(id: string): Promise<FirstBotResult | null>;
   choose(choice: FirstChoice): Promise<void>;
-  connect?(id: string): Promise<unknown>;
+  connect?(id: string): Promise<{ ok: boolean } | void>;
   /** A connector tile's Cancel: stop waiting, here and on the host. */
   cancelConnect?(id: string): void;
   /** The plan's whole pitch for the offer step, composed by the route (the upgrade dialog's list). */

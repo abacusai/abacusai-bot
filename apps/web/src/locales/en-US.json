@@ -1259,7 +1259,7 @@
     "connectedPromiseLocal": "Chat with it wherever you work.",
     "firstRun": {
       "title": "What do you want to do first?",
-      "subtitle": "Pick one. Your bot starts on it right away. Nothing to connect.",
+      "subtitle": "Pick one. Your bot starts on it right away.",
       "build": {
         "title": "Build something",
         "body": "A website, app or game. Describe it and watch it appear.",
@@ -1268,8 +1268,14 @@
       "chatApp": {
         "title": "Answer me on {{app}}",
         "body": "Message your bot from your phone anytime.",
-        "setUp": "Set up",
         "open": "Open"
+      },
+      "github": {
+        "title": "Work on my code",
+        "body": "Fix a bug or add a feature in your GitHub repo.",
+        "connect": "Connect GitHub",
+        "start": "Start",
+        "botName": "Code Assistant"
       },
       "research": {
         "title": "Research or write",
