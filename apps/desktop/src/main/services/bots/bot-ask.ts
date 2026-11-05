@@ -346,7 +346,8 @@ export const taskStartedText = (
       : "It is working on it in its own chat now.",
     'Its report will come to you in this chat as a "[bot answer]" note.',
     "Tell the user you passed it on and carry on: do not wait for it, and do",
-    "not pass it again. check_bot_answers shows where it is.",
+    "not pass it again. check_bot_answers shows where it is. If the user no",
+    `longer wants it, cancel_bot_ask ${id} stops it.`,
   ].join(" ");
 
 /** What `ask_bot` says the moment the ask is queued. */
@@ -365,7 +366,8 @@ export const askStartedText = (
     'Its answer will come to you in this chat as a "[bot answer]" note, usually',
     "within a few minutes. Tell the user you asked it and carry on with",
     "anything else: do not wait for it, and do not ask again.",
-    "check_bot_answers shows where it is.",
+    "check_bot_answers shows where it is. If the user no longer wants it,",
+    `cancel_bot_ask ${id} stops it.`,
   ].join(" ");
 
 /**
