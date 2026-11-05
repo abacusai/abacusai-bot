@@ -1,10 +1,12 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 /**
  * Shell commands that outlive the tool call, and the telling when they land.
- * A dev server is meant to stay up and is never waited on; a build run with
- * `bash background: true` does finish, and the agent should be interrupted
- * rather than poll. This extension holds pi's `sendMessage`, which the tool
- * cannot reach, and hands the finished job back as a follow-up.
+ * The agent should not have to poll, so a job that lands while a turn is
+ * running goes into that turn. One that lands with no turn running starts
+ * nothing: a run nobody asked for bills them, and pi runs it outside any open
+ * chat run, so nothing it does reaches the chat. The person is told directly
+ * and the output waits in the conversation for their next message. This
+ * extension holds pi's `sendMessage`, which the tool cannot reach.
  */
 import { Type } from "typebox";
 
@@ -15,7 +17,9 @@ import {
   listBackgroundJobs,
   onBackgroundJobSettled,
   onConversationQueueCleared,
+  reportBackgroundJob,
   type BackgroundJob,
+  type BackgroundReport,
 } from "../background-processes.js";
 
 /** Trimmed before it goes into the conversation: the tail is where the verdict is. */
@@ -44,76 +48,78 @@ export default function (pi: ExtensionAPI) {
   /**
    * Finished jobs the agent has not been told about yet. Held here rather than
    * in pi's queue because Stop clears that queue, and a build that finished as
-   * the user pressed Stop would never be mentioned. A notice leaves only once
-   * a turn starting proves it was consumed.
+   * the user pressed Stop would never be mentioned. A notice handed to a
+   * running turn leaves only once the next step starting proves it was taken.
    */
-  const pending: Array<{ id: string; text: string; sent: boolean }> = [];
-  /** Something has been handed over and it is not yet known whether it landed. */
-  let awaitingTurn = false;
+  const pending: Array<{
+    id: string;
+    text: string;
+    sent: boolean;
+    report: BackgroundReport;
+  }> = [];
   let busy = false;
 
-  /**
-   * Hands the notices over: as a turn of their own, or, when a prompt is
-   * already starting one, riding along with it.
-   */
-  const flush = (delivery: "own-turn" | "with-prompt"): void => {
-    // Not mid-turn, and not while an earlier handover is unaccounted for, or
-    // the same finished build gets announced twice.
-    if (pending.length === 0 || busy || awaitingTurn) return;
+  /** Nothing running will mention these, so the person hears from the app. */
+  const tellThePerson = (): void => {
+    for (const notice of pending.splice(0)) reportBackgroundJob(notice.report);
+  };
 
+  /** Hands over what has not gone yet: into the running turn, or onto the record. */
+  const flush = (): void => {
     // Marked rather than counted: `fetch_background_output` can drop a notice
     // from the middle of this list, so "the first n" would be wrong.
-    for (const notice of pending) notice.sent = true;
-    awaitingTurn = true;
-    pi.sendMessage(
-      {
-        customType: "abacusai-bot-background-finished",
-        content: pending.map((notice) => notice.text).join("\n\n"),
-        display: true,
-      },
-      delivery === "with-prompt"
-        ? { deliverAs: "nextTurn" }
-        : { deliverAs: "followUp", triggerTurn: true }
-    );
+    const unsent = pending.filter((notice) => !notice.sent);
+    if (unsent.length === 0) return;
+
+    for (const notice of unsent) notice.sent = true;
+    const message = {
+      customType: "abacusai-bot-background-finished",
+      content: unsent.map((notice) => notice.text).join("\n\n"),
+      display: true,
+    };
+
+    if (busy) {
+      pi.sendMessage(message, { deliverAs: "steer" });
+      return;
+    }
+
+    // No turn to take it: written into the conversation, so the next prompt
+    // carries it and it outlives this process, and no model is called.
+    pi.sendMessage(message);
+    tellThePerson();
   };
 
   pi.on("turn_start", async () => {
     busy = true;
 
-    // A turn started, so the handover was taken. Only sent notices are
-    // dropped; one that landed in between still waits.
-    if (awaitingTurn) {
-      for (let index = pending.length - 1; index >= 0; index--) {
-        if (pending[index]?.sent === true) pending.splice(index, 1);
-      }
-
-      awaitingTurn = false;
+    // pi polls its queue just before a step starts, so what was sent is taken.
+    // One that landed in between still waits.
+    for (let index = pending.length - 1; index >= 0; index--) {
+      if (pending[index]?.sent === true) pending.splice(index, 1);
     }
   });
 
   pi.on("agent_settled", async () => {
     busy = false;
-    flush("own-turn");
+    flush();
+    // Steered after pi last looked: its next run takes it, but this one's
+    // reply was written without it.
+    tellThePerson();
   });
 
-  // A Stop empties the queue: the handover is gone, the notices are not, so
-  // everything counts as unsent and goes again.
+  // A Stop empties the queue: the handover is gone, the notices are not.
   const stopWatching = onConversationQueueCleared(() => {
     for (const notice of pending) notice.sent = false;
-
-    awaitingTurn = false;
   });
 
-  // Recovery after a Stop: the user typing is the first safe moment. The
-  // prompt is about to start a turn, so the notices join it: a turn of their
-  // own started here would have pi refuse the user's message as busy.
+  // A notice a Stop handed back after the turn had already settled.
   pi.on("input", async () => {
-    flush("with-prompt");
+    flush();
   });
 
   const unsubscribe = onBackgroundJobSettled((job) => {
     // Only jobs whose caller asked to be told, and not ones the agent killed
-    // on purpose: waking a turn to say so is noise the user pays for.
+    // on purpose: it knows, it asked.
     if (!job.notifyOnExit) return;
     if (job.exit?.killed === true) return;
 
@@ -122,24 +128,34 @@ export default function (pi: ExtensionAPI) {
       Math.round((Date.now() - job.startedAt) / 1_000)
     );
     const code = job.exit?.code;
-    const outcome = code === 0 ? "finished" : `failed (exit ${String(code)})`;
+    const timedOut = job.exit?.timedOut === true;
+    const outcome = timedOut
+      ? "was stopped by the timeout you gave it"
+      : code === 0
+        ? "finished"
+        : `failed (exit ${String(code)})`;
     const output = tail(job.output);
 
     pending.push({
       id: job.id,
       sent: false,
+      report: {
+        id: job.id,
+        command: job.command,
+        outcome: timedOut ? "timed-out" : code === 0 ? "finished" : "failed",
+      },
       text: [
         `Background command ${job.id} ${outcome} after ${seconds}s: ${job.command}`,
         "",
         output.length > 0 ? output : "(no output)",
         "",
-        "You started this and carried on. Pick it up now: if it was what you were waiting for,",
-        "continue the work it was for; if it failed, deal with the failure. Do not re-run it just",
-        "to see the output again: this is the output.",
+        "You started this and carried on. If the work you are doing needs it, use it; if it failed",
+        "and that matters to what was asked, deal with that. It is not a request: do not start",
+        "anything new because of it. Do not re-run it just to see the output: this is the output.",
       ].join("\n"),
     });
 
-    flush("own-turn");
+    flush();
   });
 
   // Nothing this process started should outlive it: a stray server keeps its
@@ -164,8 +180,9 @@ export default function (pi: ExtensionAPI) {
       "background: true. Works while it is still running and after it has finished, so it answers " +
       'both "how far has it got" and "what did it say".\n\n' +
       "Pass an id, or leave it off to see everything that is running and what became of it.\n\n" +
-      "You do not need this to find out that a backgrounded command finished: you are told, with " +
-      "its output. Reach for it when you want to look before then, or to read something again.",
+      "You do not need this to find out that a backgrounded command finished while you are " +
+      "working: you are told, with its output. Reach for it when you want to look before then, " +
+      "or to read something again.",
     parameters: Type.Object({
       id: Type.Optional(
         Type.String({

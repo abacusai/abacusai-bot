@@ -1689,6 +1689,9 @@
   {
     "prefix": "outcome.channel.",
     "values": [
+      "backgroundFinished",
+      "backgroundFailed",
+      "backgroundTimedOut",
       "wall",
       "routinesOnHold",
       "routinesTopUp",

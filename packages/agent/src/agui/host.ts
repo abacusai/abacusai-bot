@@ -11,6 +11,7 @@ import type { Readable } from "node:stream";
 import {
   liveBackgroundJobCount,
   onBackgroundActivity,
+  onBackgroundReport,
 } from "../background-processes.js";
 import { isBotSession } from "../bot/bot-config.js";
 import { BOT_REACTION_EMOJIS } from "../bot/bot-reaction-tool.js";
@@ -268,6 +269,7 @@ export class AguiHost {
 
   async run(): Promise<void> {
     const stopReportingActivity = this.reportBackgroundActivity();
+    const stopReportingJobs = this.reportBackgroundJobs();
     try {
       await this.core.start();
       await this.core.readCommands(
@@ -283,7 +285,30 @@ export class AguiHost {
       await this.core.shutdown();
     } finally {
       stopReportingActivity();
+      stopReportingJobs();
     }
+  }
+
+  /** A job that finished with no turn running: said in the chat, outside any run. */
+  private reportBackgroundJobs(): () => void {
+    return onBackgroundReport((report) => {
+      this.sink.emit({
+        type: "event",
+        event: {
+          type: "notification",
+          severity: report.outcome === "finished" ? "info" : "warning",
+          message: `Background command ${report.outcome}: ${report.command}`,
+          notificationKey: `background-job:${report.id}`,
+          actions: [
+            {
+              type: "background-job",
+              cause: report.outcome,
+              label: report.command,
+            },
+          ],
+        },
+      });
+    });
   }
 
   /** Tells the desktop, on each change, how much outlives a turn here. */

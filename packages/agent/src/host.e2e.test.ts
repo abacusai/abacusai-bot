@@ -793,29 +793,18 @@ describe("a message sent mid-turn", () => {
     expect(queueEvents(host).at(-1)?.messages).toEqual([]);
   }, 90_000);
 
-  // The report: a background build finished after the turn ended, the agent
-  // woke to pick it up, and every message sent while it worked came back as
-  // "Agent is already processing" and never reached it.
-  it("steers a turn the agent started itself, never refusing the message", async () => {
+  // A job the turn outlived: nobody asked for a run, and pi's own run reaches
+  // no chat. The user is told, and the output waits for their next message.
+  it("starts no run for a job that finishes after the reply", async () => {
     const host = start(workspace(), ["--permission-mode", "YOLO"]);
     // The job's output, which the command text does not contain.
     const finished = "DONE-MARK";
-    let release = (): void => undefined;
-    const held = new Promise<void>((resolve) => (release = resolve));
-    let woke = false;
 
     provider.script(async (call) => {
       const seen = JSON.stringify(call.messages);
 
-      if (seen.includes("are you done")) return { say: "almost" };
-      if (seen.includes(finished)) {
-        // The wake-up turn's first call: held while the user writes.
-        if (!woke) {
-          woke = true;
-          await held;
-        }
-
-        return { say: "the build is done" };
+      if (seen.includes("are you done")) {
+        return { say: seen.includes(finished) ? "it passed" : "no idea" };
       }
       if (!seen.includes("in the background")) {
         return {
@@ -833,38 +822,61 @@ describe("a message sent mid-turn", () => {
     });
 
     host.send({ type: "send", message: "build it" });
-    await host.waitFor(() => woke, 45_000);
-
-    host.send({ type: "send", message: "are you done?" });
-    await host.waitFor(
-      (event) =>
-        (event.type === "queue_updated" &&
-          event.messages.some((entry) => entry.message === "are you done?")) ||
-        (event.type === "event" && event.event.type === "error"),
-      45_000
-    );
-    release();
-
     await host.waitFor(
       (event) =>
         event.type === "event" &&
-        event.event.type === "user_message_steered" &&
-        event.event.content === "are you done?",
+        event.event.type === "notification" &&
+        event.event.notificationKey === "background-job:bg-1",
       45_000
     );
-    await host.waitFor(
-      () =>
-        provider.calls.some((call) => call.userText.includes("are you done?")),
-      45_000
-    );
-    await host.waitFor(
-      () => queueEvents(host).at(-1)?.messages.length === 0,
-      45_000
-    );
+    await new Promise((resolve) => setTimeout(resolve, 1_500));
+    const callsBefore = provider.calls.length;
 
+    expect(callsBefore).toBe(2);
+
+    host.send({ type: "send", message: "are you done?" });
+    await host.waitFor(() => provider.calls.length > callsBefore, 45_000);
+
+    // Their next message carries the output, once.
+    expect(JSON.stringify(provider.calls.at(-1)?.messages)).toContain(finished);
     expect(host.agentEvents("error")).toEqual([]);
-    // Delivered into the woken turn, not run again as a turn of its own.
-    expect(host.agentEvents("user_message_dequeued")).toHaveLength(0);
+  }, 90_000);
+
+  // The reported shape: the job died while the turn was still working, and the
+  // agent then ran on after its own reply.
+  it("gives a job that lands mid-turn to that turn, with nothing after it", async () => {
+    const host = start(workspace(), ["--permission-mode", "YOLO"]);
+    const finished = "DONE-MARK";
+
+    provider.script(async (call) => {
+      const seen = JSON.stringify(call.messages);
+
+      if (seen.includes(finished)) return { say: "that worked, all done" };
+      if (!seen.includes("in the background")) {
+        return {
+          call: {
+            name: "bash",
+            args: { command: "printf 'DONE%s' -MARK", background: true },
+          },
+        };
+      }
+
+      return { call: { name: "bash", args: { command: "sleep 2" } } };
+    });
+
+    host.send({ type: "send", message: "build it" });
+    await host.waitFor(
+      (event) => event.type === "event" && event.event.type === "text_delta",
+      45_000
+    );
+    await new Promise((resolve) => setTimeout(resolve, 1_500));
+
+    expect(provider.calls).toHaveLength(3);
+    expect(
+      host.events.filter(
+        (event) => event.type === "event" && event.event.type === "notification"
+      )
+    ).toEqual([]);
   }, 90_000);
 
   it("clears the queue on request", async () => {
