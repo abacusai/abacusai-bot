@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import zlib from "node:zlib";
 
 import { SITE_ZIP_CONVERSATION } from "@abacus-ai/contract/site-deploy";
 import { afterEach, describe, expect, it } from "vitest";
@@ -23,14 +24,18 @@ afterEach(() => {
     fs.rmSync(root, { recursive: true, force: true });
 });
 
-const pack = (root: string, signal = new AbortController().signal) =>
+const pack = (
+  root: string,
+  signal = new AbortController().signal,
+  asked = "Build my bakery site"
+) =>
   packSite({
     siteDir: path.join(root, "bakery"),
     messages: [
       {
         id: "1",
         role: "user",
-        parts: [{ type: "text", content: "Build my bakery site" }],
+        parts: [{ type: "text", content: asked }],
       },
       {
         id: "2",
@@ -57,6 +62,14 @@ const entries = (zip: Buffer): string[] => {
   return names;
 };
 
+/** One entry's text, inflated off its local header. */
+const entry = (zip: Buffer, name: string): string => {
+  const at = zip.indexOf(name);
+  const size = zip.readUInt32LE(at - 30 + 18);
+  const start = at + name.length;
+  return zlib.inflateRawSync(zip.subarray(start, start + size)).toString();
+};
+
 describe("packSite", () => {
   it("sends the project and the conversation, never dependencies, history or keys", async () => {
     const root = tree({
@@ -65,7 +78,8 @@ describe("packSite", () => {
       ".env": "API_KEY=abc",
       ".env.example": "API_KEY=",
       // A key's shape, built here so no scanner reads it as a real one.
-      "config.js": `const key = '${["sk", "x".repeat(20)].join("-")}';`,
+      "config.js": `const key = '${["sk", "a1".repeat(12)].join("-")}';`,
+      "login.ts": 'const password = form.get("password");',
       "node_modules/x/index.js": "x",
       ".git/HEAD": "ref",
     });
@@ -73,7 +87,7 @@ describe("packSite", () => {
     expect(result).toMatchObject({
       state: "ready",
       name: "bakery",
-      files: 3,
+      files: 4,
       leftOut: [".git", "node_modules"],
       heldBack: [".env", "config.js"],
     });
@@ -84,9 +98,20 @@ describe("packSite", () => {
         "bakery/.env.example",
         "bakery/css/site.css",
         "bakery/index.html",
+        "bakery/login.ts",
         SITE_ZIP_CONVERSATION,
       ].sort()
     );
+  });
+
+  it("takes keys out of the conversation it writes in", async () => {
+    const key = ["sk", "a1".repeat(12)].join("-");
+    const root = tree({ "index.html": "<h1>Bakery</h1>" });
+    const result = await pack(root, undefined, `Use this key: ${key}`);
+    if (result.state !== "ready") throw new Error(result.state);
+    const written = entry(fs.readFileSync(result.path), SITE_ZIP_CONVERSATION);
+    expect(written).toContain("Use this key");
+    expect(written).not.toContain(key);
   });
 
   it("says a project over the limits is too big, and a cancel is a cancel", async () => {

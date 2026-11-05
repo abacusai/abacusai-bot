@@ -21,7 +21,7 @@ import {
 } from "@abacus-ai/contract/site-deploy";
 
 import { abacusBotHome, sessionDefaultWorkspace } from "../../paths";
-import { scrubKeys } from "../diagnostics/scrub";
+import { hasKey, scrubKeys } from "../diagnostics/scrub";
 import { buildZip, crc32, type ZipFile } from "../diagnostics/zip-write";
 
 const deflateRaw = promisify(zlib.deflateRaw);
@@ -154,12 +154,11 @@ const walk = async (
   return out;
 };
 
-/** A key-shaped string in a small text file: the file is held back whole, never edited. */
-const holdsKey = (content: Buffer): boolean => {
-  if (content.length > KEY_SCAN_BYTES || content.includes(0)) return false;
-  const text = content.toString("utf8");
-  return scrubKeys(text) !== text;
-};
+/** A real key in a small text file: the file is held back whole, never edited. */
+const holdsKey = (content: Buffer): boolean =>
+  content.length <= KEY_SCAN_BYTES &&
+  !content.includes(0) &&
+  hasKey(content.toString("utf8"));
 
 /** A file name from the folder's: letters, digits and dashes. */
 const zipName = (name: string): string =>
@@ -210,7 +209,7 @@ export const packSite = async (options: PackSiteOptions): Promise<SitePack> => {
     }
     if (entries.length === 0) return { state: "none" };
     const conversation = Buffer.from(
-      conversationMarkdown(name, options.messages)
+      scrubKeys(conversationMarkdown(name, options.messages))
     );
     entries.push({ name: SITE_ZIP_CONVERSATION, content: conversation });
     signal.throwIfAborted();
