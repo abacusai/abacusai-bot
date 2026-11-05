@@ -34,6 +34,7 @@ export type RoutineRunKind =
   | "skipped"
   | "skipped-offline"
   | "skipped-credits"
+  | "skipped-link"
   | "no-workspace"
   | "unknown"
   | "timed-out"

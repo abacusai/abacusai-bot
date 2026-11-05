@@ -3463,6 +3463,7 @@
       "completed": "Completed",
       "failed": "Failed",
       "skipped": "Skipped",
+      "skipped-link": "スキップ: チャットアプリ未接続",
       "skipped-offline": "スキップ: オフライン",
       "skipped-credits": "スキップ: クレジット切れ",
       "offline": "Abacus に接続できませんでした",

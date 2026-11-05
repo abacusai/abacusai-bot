@@ -344,6 +344,8 @@ export interface McpAgentToolsServerOptions {
    * moment), or null for any other session: its sends reach each recipient once.
    */
   routineFireForSession?: (sessionId: string) => string | null;
+  /** A routine's run sent, or tried to send, through this chat app. */
+  noteRoutinePlatform?: (sessionId: string, platform: string) => void;
   /** What those fires have sent, kept by the host across restarts; in memory without one. */
   routineSends?: RoutineSendLedger;
   /**
@@ -2578,6 +2580,8 @@ export class McpAgentToolsServer extends McpHttpServer {
 
     if (!isMessagingPlatformId(platform))
       return this.err(`Unknown platform "${platform}".`);
+    if (callerSession != null)
+      this.options.noteRoutinePlatform?.(callerSession, platform);
     // The platform being addressed, not "some platform is up".
     const unavailable = this.notLinked(platform);
     if (unavailable != null) return unavailable;

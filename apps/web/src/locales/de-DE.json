@@ -3463,6 +3463,7 @@
       "completed": "Completed",
       "failed": "Failed",
       "skipped": "Skipped",
+      "skipped-link": "Übersprungen: Chat-App nicht verbunden",
       "skipped-offline": "Übersprungen: offline",
       "skipped-credits": "Übersprungen: keine Credits",
       "offline": "Abacus nicht erreichbar",

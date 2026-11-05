@@ -3463,6 +3463,7 @@
       "completed": "Completed",
       "failed": "Failed",
       "skipped": "Skipped",
+      "skipped-link": "건너뜀: 채팅 앱 연결 안 됨",
       "skipped-offline": "건너뜀: 오프라인",
       "skipped-credits": "건너뜀: 크레딧 없음",
       "offline": "Abacus에 연결할 수 없음",

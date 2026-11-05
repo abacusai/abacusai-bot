@@ -3463,6 +3463,7 @@
       "completed": "Completed",
       "failed": "Failed",
       "skipped": "Skipped",
+      "skipped-link": "Omitida: app de chat sin vincular",
       "skipped-offline": "Omitida: sin conexión",
       "skipped-credits": "Omitida: sin créditos",
       "offline": "No se pudo conectar con Abacus",

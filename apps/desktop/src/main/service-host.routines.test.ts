@@ -672,6 +672,112 @@ describe("a scheduled run the app closed under", () => {
   });
 });
 
+describe("a routine whose chat app lost its link", () => {
+  const proto = ServiceHost.prototype as unknown as {
+    startRoutineRun: (id: string, trigger: string) => Promise<string>;
+    routineLinkDown: (job: unknown) => boolean;
+    markRoutineLinkLost: (job: unknown) => void;
+    routineLinkBack: (platform: string) => void;
+  };
+  const withLink = (unlinked: string[]) => {
+    const service = {
+      messagingGatewayService: { unlinkedPlatforms: () => unlinked },
+      routineLinkDown: proto.routineLinkDown,
+      markRoutineLinkLost: proto.markRoutineLinkLost,
+      routineAtCreditWall: async () => false,
+      emitEvent: () => undefined,
+      listRoutineRuns: () => [],
+      startedAnyway: 0,
+      get ensureRoutineWorkspace() {
+        service.startedAnyway += 1;
+        throw new Error("got past the link check");
+      },
+    };
+    return { service };
+  };
+  // Signed in: a run is stopped earlier otherwise.
+  beforeEach(() => {
+    fs.writeFileSync(
+      path.join(home, "config.json"),
+      JSON.stringify({ apiKeys: { ABACUS_API_KEY: "x" } })
+    );
+  });
+  const fire = (service: unknown, id: string, trigger: string) =>
+    proto.startRoutineRun.call(service, id, trigger).catch(() => "ran");
+
+  it.each([
+    ["every app it uses is unlinked", ["whatsapp"], ["whatsapp"], "skipped"],
+    [
+      "one of its apps still works",
+      ["whatsapp", "telegram"],
+      ["whatsapp"],
+      "ran",
+    ],
+    ["it never sent through a chat app", [], ["whatsapp"], "ran"],
+    ["another app is the unlinked one", ["telegram"], ["whatsapp"], "ran"],
+    ["the link is only reconnecting", ["whatsapp"], [], "ran"],
+  ])("%s", async (_name, used, unlinked, expected) => {
+    const { noteChatPlatform } =
+      await import("./services/agent-tools/cron-store");
+    const job = createJob({ schedule: "0 * * * *", prompt: "tell me" });
+    for (const platform of used) noteChatPlatform(job.id, platform);
+
+    expect(await fire(withLink(unlinked).service, job.id, "schedule")).toBe(
+      expected
+    );
+  });
+
+  it("is marked at the first skip, and a person pressing Run still gets a run", async () => {
+    const { getJob, noteChatPlatform } =
+      await import("./services/agent-tools/cron-store");
+    const job = createJob({
+      schedule: "0 * * * *",
+      prompt: "tell me",
+      name: "Rain",
+    });
+    noteChatPlatform(job.id, "whatsapp");
+    const { service } = withLink(["whatsapp"]);
+
+    await fire(service, job.id, "schedule");
+    const markedAt = getJob(job.id)?.chatLinkLostAt;
+    await fire(service, job.id, "schedule");
+
+    expect(markedAt).toEqual(expect.any(Number));
+    expect(getJob(job.id)?.chatLinkLostAt).toBe(markedAt);
+    expect(getJob(job.id)?.runs[0]?.kind).toBe("skipped-link");
+    expect(await fire(service, job.id, "manual")).toBe("ran");
+  });
+
+  it("makes up one run when the link is back", async () => {
+    const { getJob, noteChatPlatform, setChatLinkLost } =
+      await import("./services/agent-tools/cron-store");
+    const job = createJob({ schedule: "0 * * * *", prompt: "tell me" });
+    const other = createJob({ schedule: "0 * * * *", prompt: "not this" });
+    noteChatPlatform(job.id, "whatsapp");
+    noteChatPlatform(other.id, "whatsapp");
+    setChatLinkLost(job.id, Date.now());
+
+    proto.routineLinkBack.call({}, "whatsapp");
+
+    expect(getJob(job.id)).toMatchObject({
+      chatLinkLostAt: null,
+      heldFor: "catch-up",
+    });
+    expect(getJob(other.id)?.heldSince ?? null).toBeNull();
+  });
+
+  it("forgets where it sends when its instructions change", async () => {
+    const { getJob, noteChatPlatform, updateJob } =
+      await import("./services/agent-tools/cron-store");
+    const job = createJob({ schedule: "0 * * * *", prompt: "tell me" });
+    noteChatPlatform(job.id, "whatsapp");
+
+    updateJob(job.id, { prompt: "write it to a file" });
+
+    expect(getJob(job.id)?.chatPlatforms).toEqual([]);
+  });
+});
+
 describe("a routine fired while signed out", () => {
   it("records the run as skipped", async () => {
     const job = createJob({ prompt: "p", schedule: "0 9 * * *" });
