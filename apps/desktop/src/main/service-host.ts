@@ -637,6 +637,16 @@ const USER_WORDS_FRESH_MS = 15 * 60_000;
 /** How long after a passed-on task ends the user's next words there still go back to the passer. */
 const TASK_FOLLOW_UP_MS = 60 * 60_000;
 
+/** A running task in the doing bot's chat; see `taskTurns`. */
+interface TaskTurnState {
+  sent: boolean;
+  /** The chat log's size just before the task's prompt went in. */
+  from: number;
+  cancelled: boolean;
+  /** A message the user sent there while the task ran; it waits behind it. */
+  queued: { words: string; from: number } | null;
+}
+
 /**
  * A short yes, in the app's languages, not taken back in the same breath
  * ("ok but actually no", "okay never mind" are not a yes).
@@ -6050,7 +6060,14 @@ export class ServiceHost {
       this.userWords.delete(sessionId);
       return;
     }
-    // The follow-up is idempotent, so it comes before the dedupe.
+    // The follow-up is idempotent, so it comes before the dedupe. A message
+    // sent while a task runs in this chat waits behind it: it is kept on the
+    // task, and the follow-up starts with it once the task ends.
+    for (const [askId, handle] of this.botAskTurns) {
+      const state = this.taskTurns.get(askId);
+      if (handle.sessionId === sessionId && state?.sent === true)
+        state.queued = { words, from: state.from };
+    }
     const followUp = this.taskFollowUps.get(sessionId);
     if (followUp != null && followUp.words == null) followUp.words = words;
     const recent = this.userWords.get(sessionId) ?? [];
@@ -6160,13 +6177,19 @@ export class ServiceHost {
    * learns that the user dropped, changed or resumed the task there whether
    * or not that bot thinks to say so.
    */
-  private watchTaskFollowUp(sessionId: string, ask: BotAskRecord): void {
+  private watchTaskFollowUp(
+    sessionId: string,
+    ask: BotAskRecord,
+    queued: TaskTurnState["queued"]
+  ): void {
     // The user's message and the reply come after this point in the log,
-    // so only what follows it is read, however long the log before it.
+    // so only what follows it is read, however long the log before it. A
+    // message that waited behind the task is already in the log, after the
+    // task's prompt: the read starts from before that.
     const entry = {
       ask,
-      words: null as string | null,
-      from: this.transcriptSize(sessionId),
+      words: queued?.words ?? null,
+      from: queued?.from ?? this.transcriptSize(sessionId),
     };
     this.taskFollowUps.set(sessionId, entry);
     console.log(
@@ -6372,15 +6395,14 @@ export class ServiceHost {
   /** The asked bot's conversation for each ask whose turn is running. */
   private readonly botAskTurns = new Map<string, BotChatHandle>();
   /**
-   * Each running task: whether its prompt is in the doing bot's chat, and
-   * whether it was cancelled before that (it is then never sent). A message
-   * the user sends there meanwhile waits its turn, as any message does
-   * behind a running one; Stop is the way to interrupt.
+   * Each running task: whether its prompt is in the doing bot's chat (and
+   * the chat log's size just before it went in), and whether it was
+   * cancelled before that (it is then never sent). A message the user sends
+   * there meanwhile waits its turn, as any message does behind a running
+   * one (Stop is the way to interrupt); it is kept here so the follow-up
+   * can start from it.
    */
-  private readonly taskTurns = new Map<
-    string,
-    { sent: boolean; cancelled: boolean }
-  >();
+  private readonly taskTurns = new Map<string, TaskTurnState>();
 
   /**
    * One turn of the asked bot in its conversation with the asker, a sender
@@ -6394,7 +6416,12 @@ export class ServiceHost {
     visibleFrom: number | null
   ): Promise<string> {
     const task = ask.kind === "task";
-    const state = { sent: false, cancelled: false };
+    const state: TaskTurnState = {
+      sent: false,
+      from: 0,
+      cancelled: false,
+      queued: null,
+    };
     const asker = this.botService.list().find((bot) => bot.id === ask.askerId);
     const handle = task
       ? await this.botService.openChat(ask.targetId)
@@ -6446,6 +6473,8 @@ export class ServiceHost {
           segment: BOT_ANSWER_SEGMENT,
         }
       );
+      // Where a message that waits behind a task would land in the log.
+      if (task) state.from = this.transcriptSize(handle.sessionId);
       // A message no agent took closes its turn too: `answer` then rejects.
       const sent = await this.sendAgentMessage({
         workspaceId: handle.workspaceId,
@@ -6483,7 +6512,7 @@ export class ServiceHost {
         this.botAskService.get(ask.askerId, ask.id)?.status !== "cancelled" &&
         this.botService.list().some((bot) => bot.id === ask.targetId)
       )
-        this.watchTaskFollowUp(handle.sessionId, ask);
+        this.watchTaskFollowUp(handle.sessionId, ask, state.queued);
       this.botAskTurns.delete(ask.id);
       this.taskTurns.delete(ask.id);
     }

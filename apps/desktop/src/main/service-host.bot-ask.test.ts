@@ -505,6 +505,30 @@ describe("a task the user gave, passed on", () => {
     expect(self.tellBotAsk).toHaveBeenCalledTimes(1);
   });
 
+  it("a message that waited behind the task: it and the answer go on once the task ends", async () => {
+    const { self, endUserTurn } = taskHost(false, null);
+    const pending = (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null);
+    await vi.waitFor(() =>
+      expect(
+        (self.taskTurns as Map<string, { sent: boolean }>).get("q8")?.sent
+      ).toBe(true)
+    );
+    // Sent while the task runs: it is queued, not a step-in.
+    (self.noteUserWords as Method)("wri-main", "make it 3 days, not 7");
+    expect(self.stopAgentTurn).not.toHaveBeenCalled();
+    (self.settleTurnWaiter as Method)({ sessionId: "wri-main", kind: "reply" });
+    await expect(pending).resolves.toBe("Posted.");
+    chatLog(
+      ["user", "make it 3 days, not 7"],
+      ["assistant", "Shortened to 3 days."]
+    );
+    endUserTurn();
+    expect(self.tellBotAsk).toHaveBeenCalledTimes(1);
+    expect(
+      (self.tellBotAsk as ReturnType<typeof vi.fn>).mock.calls[0]?.[1]
+    ).toContain("Shortened to 3 days.");
+  });
+
   it("a cancelled task has no follow-up", async () => {
     const { self, endUserTurn } = taskHost(false);
     (
