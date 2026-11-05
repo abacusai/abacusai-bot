@@ -6065,8 +6065,10 @@ export class ServiceHost {
     // task, and the follow-up starts with it once the task ends.
     for (const [askId, handle] of this.botAskTurns) {
       const state = this.taskTurns.get(askId);
-      if (handle.sessionId === sessionId && state?.sent === true)
+      if (handle.sessionId === sessionId && state?.sent === true) {
         state.queued = { words, from: state.from };
+        console.log(`[bot-ask] ${askId} a message waits behind the task`);
+      }
     }
     const followUp = this.taskFollowUps.get(sessionId);
     if (followUp != null && followUp.words == null) followUp.words = words;
@@ -6193,7 +6195,7 @@ export class ServiceHost {
     };
     this.taskFollowUps.set(sessionId, entry);
     console.log(
-      `[bot-ask] ${ask.id} follow-up armed in ${ask.targetId}'s chat`
+      `[bot-ask] ${ask.id} follow-up armed in ${ask.targetId}'s chat${queued == null ? "" : " with the message that waited"}`
     );
     const end = (): void => {
       clearTimeout(timer);

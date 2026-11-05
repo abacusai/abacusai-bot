@@ -231,7 +231,16 @@ export class SessionTurnStateService {
       this.set(workspaceId, sessionId, "waiting_permission");
     } else if (event?.type === "status_changed") {
       const phase = this.statusToPhase(event.status);
-      if (phase != null) this.set(workspaceId, sessionId, phase);
+      if (phase != null) {
+        // A run the agent started on its own (a message it took from its
+        // queue once the one before ended) had no send to open its turn:
+        // it opens here, so its ending is told like any other's.
+        if (isBusyPhase(phase) && this.ledger?.isOpen(sessionId) === false) {
+          this.ledger.begin(sessionId);
+          this.startActivityTimer(workspaceId, sessionId);
+        }
+        this.set(workspaceId, sessionId, phase);
+      }
     } else if (event?.type === "error") {
       this.set(workspaceId, sessionId, "error");
     }
