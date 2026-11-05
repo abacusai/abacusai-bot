@@ -99,7 +99,9 @@ export const siteDirTooBroad = (
   if (within(home, dir) || within(botHome, dir)) return true;
   const fromHome = path.relative(home, dir);
   if (HOME_FOLDER.test(fromHome) || HOME_APP_FOLDER.test(fromHome)) return true;
-  const temps = [os.tmpdir(), ...SYSTEM_TEMP_DIRS].map(realDir);
+  // Both spellings: macOS's /tmp is really /private/tmp, and a folder not made yet has no real path.
+  const named = [os.tmpdir(), ...SYSTEM_TEMP_DIRS];
+  const temps = [...named, ...named.map(realDir)];
   if (temps.some((temp) => within(temp, dir))) return true;
   if (!within(dir, home) && temps.some((temp) => within(dir, temp)))
     return true;
