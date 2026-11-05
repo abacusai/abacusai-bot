@@ -14,38 +14,8 @@ const DEFLATED = 8;
 /** The format cannot express a date before 1980. */
 const DOS_EPOCH_YEAR = 1980;
 
-let crcTable: Uint32Array | null = null;
-
-function table(): Uint32Array {
-  if (crcTable != null) return crcTable;
-
-  const built = new Uint32Array(256);
-
-  for (let index = 0; index < 256; index += 1) {
-    let value = index;
-
-    for (let bit = 0; bit < 8; bit += 1) {
-      value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
-    }
-
-    built[index] = value >>> 0;
-  }
-
-  crcTable = built;
-
-  return built;
-}
-
-export function crc32(buf: Buffer): number {
-  const lookup = table();
-  let crc = 0xffffffff;
-
-  for (const byte of buf) {
-    crc = (crc >>> 8) ^ (lookup[(crc ^ byte) & 0xff] ?? 0);
-  }
-
-  return (crc ^ 0xffffffff) >>> 0;
-}
+/** Native, unlike a byte loop: a large file must not hold the main thread. */
+export const crc32 = (buf: Buffer): number => zlib.crc32(buf);
 
 /** The two 16-bit MS-DOS fields ZIP still uses. */
 function dosStamp(date: Date): { time: number; date: number } {

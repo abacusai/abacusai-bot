@@ -4,6 +4,8 @@
  * key), plus the conversation that built it. Made off the main thread's
  * critical path, with progress and a cancel.
  */
+import { createHash } from "node:crypto";
+import { realpathSync } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -48,6 +50,16 @@ const LEFT_OUT_FILES = new Set([".DS_Store", "Thumbs.db"]);
 /** Text files read whole for key shapes; larger ones are sent as they are. */
 const KEY_SCAN_BYTES = 1024 * 1024;
 
+/** Folders in home that hold a person's things rather than one project, as paths from home. */
+const HOME_FOLDER =
+  /^(?:onedrive[^/\\]*[/\\])?(?:desktop|documents|downloads|pictures|photos|movies|videos|music|public|favorites|contacts|links|searches|saved games|3d objects|onedrive[^/\\]*|dropbox|google drive|icloud drive)$/i;
+
+/** Apps' own folders in home: nothing under them is a project. */
+const HOME_APP_FOLDER = /^(?:library|appdata)(?:[/\\]|$)/i;
+
+/** Temp folders beside os.tmpdir(), which is per-user on macOS and Windows. */
+const SYSTEM_TEMP_DIRS = ["/tmp", "/var/tmp", "/dev/shm"];
+
 export class SiteTooBigError extends Error {}
 
 const within = (child: string, parent: string): boolean => {
@@ -58,26 +70,43 @@ const within = (child: string, parent: string): boolean => {
   );
 };
 
+/** Where a path really is, so a link cannot stand in for a refused folder. */
+const realDir = (dir: string): string => {
+  try {
+    return realpathSync.native(dir);
+  } catch {
+    return path.resolve(dir);
+  }
+};
+
 /**
  * Not a site's own folder: the file system root, the home folder or above
- * it, the app's own folder, or the root of a workspace the app made for
- * itself (the auto workspace, a bot's), which holds other chats' files too.
+ * it, home's standard folders, a temp folder, the app's own folder, or the
+ * root of a workspace the app made for itself (the auto workspace, a bot's),
+ * which holds other chats' files too. A file left in any of these has no
+ * folder of its own.
  */
 export const siteDirTooBroad = (
   siteDir: string,
   workspaceRoot: string | null,
-  home = os.homedir(),
-  botHome = abacusBotHome()
+  homeDir = os.homedir(),
+  botHomeDir = abacusBotHome()
 ): boolean => {
-  const dir = path.resolve(siteDir);
+  const dir = realDir(siteDir);
+  const home = realDir(homeDir);
+  const botHome = realDir(botHomeDir);
   if (dir === path.parse(dir).root) return true;
   if (within(home, dir) || within(botHome, dir)) return true;
-  if (dir === path.resolve(sessionDefaultWorkspace())) return true;
-  return (
-    workspaceRoot != null &&
-    within(path.resolve(workspaceRoot), botHome) &&
-    path.resolve(workspaceRoot) === dir
-  );
+  const fromHome = path.relative(home, dir);
+  if (HOME_FOLDER.test(fromHome) || HOME_APP_FOLDER.test(fromHome)) return true;
+  const temps = [os.tmpdir(), ...SYSTEM_TEMP_DIRS].map(realDir);
+  if (temps.some((temp) => within(temp, dir))) return true;
+  if (!within(dir, home) && temps.some((temp) => within(dir, temp)))
+    return true;
+  if (dir === realDir(sessionDefaultWorkspace())) return true;
+  if (workspaceRoot == null) return false;
+  const workspace = realDir(workspaceRoot);
+  return within(workspace, botHome) && workspace === dir;
 };
 
 /** The chat as a readable file: what was asked and answered, in order. */
@@ -241,6 +270,13 @@ export const packSite = async (options: PackSiteOptions): Promise<SitePack> => {
 /** Where project zips are written; a drag or a reveal may only name a file in here. */
 export const siteExportsDir = (): string =>
   path.join(abacusBotHome(), "exports");
+
+/** One chat's zips: two chats' sites can share a folder name, never a zip. */
+export const siteExportDir = (sessionId: string): string =>
+  path.join(
+    siteExportsDir(),
+    createHash("sha256").update(sessionId).digest("hex").slice(0, 16)
+  );
 
 export const isSiteExport = (file: string): boolean =>
   within(path.resolve(file), siteExportsDir()) &&

@@ -333,7 +333,7 @@ import {
 import {
   SitePacker,
   siteDirTooBroad,
-  siteExportsDir,
+  siteExportDir,
 } from "./services/agent-tools/site-pack";
 import { stopAllServed } from "./services/agent-tools/static-server";
 import { WebhookRelay } from "./services/agent-tools/webhook-relay";
@@ -1269,7 +1269,7 @@ export class ServiceHost {
     return this.sitePacker.pack(packId, {
       siteDir: mark.siteDir,
       messages,
-      outDir: siteExportsDir(),
+      outDir: siteExportDir(sessionId),
     });
   }
 

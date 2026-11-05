@@ -6,7 +6,13 @@ import zlib from "node:zlib";
 import { SITE_ZIP_CONVERSATION } from "@abacus-ai/contract/site-deploy";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { packSite, siteDirTooBroad } from "./site-pack";
+import {
+  isSiteExport,
+  packSite,
+  siteDirTooBroad,
+  siteExportDir,
+  siteExportsDir,
+} from "./site-pack";
 
 const roots: string[] = [];
 const tree = (files: Record<string, string>): string => {
@@ -69,6 +75,16 @@ const entry = (zip: Buffer, name: string): string => {
   const start = at + name.length;
   return zlib.inflateRawSync(zip.subarray(start, start + size)).toString();
 };
+
+describe("siteExportDir", () => {
+  it("gives each chat its own folder, inside the exports", () => {
+    expect(siteExportDir("chat-1")).not.toBe(siteExportDir("chat-2"));
+    for (const id of ["chat-1", "../../outside", "a/b:c"]) {
+      expect(path.dirname(siteExportDir(id))).toBe(siteExportsDir());
+      expect(isSiteExport(path.join(siteExportDir(id), "site.zip"))).toBe(true);
+    }
+  });
+});
 
 describe("packSite", () => {
   it("sends the project and the conversation, never dependencies, history or keys", async () => {
@@ -149,5 +165,41 @@ describe("packSite", () => {
         bot
       )
     ).toBe(false);
+  });
+
+  it.each([
+    ["the desktop", "/home/me/Desktop"],
+    ["documents", "/home/me/Documents"],
+    ["downloads", "/home/me/Downloads"],
+    ["a lower-case name", "/home/me/downloads"],
+    ["pictures", "/home/me/Pictures"],
+    ["a synced desktop", "/home/me/OneDrive/Desktop"],
+    ["app data", "/home/me/Library/Caches"],
+    ["the temp folder", os.tmpdir()],
+    ["shared temp", "/tmp"],
+    ["a folder in temp", "/tmp/report"],
+  ])("refuses %s", (_name, dir) => {
+    expect(siteDirTooBroad(dir, null, "/home/me", "/home/me/.bot")).toBe(true);
+  });
+
+  it("takes a project folder inside a standard one", () => {
+    expect(
+      siteDirTooBroad(
+        "/home/me/Desktop/bakery",
+        null,
+        "/home/me",
+        "/home/me/.bot"
+      )
+    ).toBe(false);
+  });
+
+  it("follows a link to the folder it names", () => {
+    const root = tree({ "home/Desktop/report.html": "x" });
+    const home = path.join(root, "bakery", "home");
+    const link = path.join(home, "work");
+    fs.symlinkSync(path.join(home, "Desktop"), link, "dir");
+    expect(siteDirTooBroad(link, null, home, path.join(home, ".bot"))).toBe(
+      true
+    );
   });
 });
