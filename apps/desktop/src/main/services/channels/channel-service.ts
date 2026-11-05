@@ -30,6 +30,7 @@ import { InvalidInputError } from "@abacus-ai/contract/service-errors";
 import { abacusBotHome } from "../../paths";
 import { answerWords } from "../bots/bot-ask";
 import {
+  asksFirst,
   ownerOf,
   agreedItems,
   MAX_DISCUSSION_ROUNDS,
@@ -714,8 +715,13 @@ export class ChannelService {
               : null;
       const taken = workIn(proposed.words);
       // Only a bot answering the user's own message may take work on.
+      // Work starts only when the bot is not asking whether to start it.
       const task =
-        kind === "answer" && this.deps.runWork != null ? taken.task : null;
+        kind === "answer" &&
+        this.deps.runWork != null &&
+        !asksFirst(taken.words)
+          ? taken.task
+          : null;
       const words =
         taken.words.length > 0 || task == null ? taken.words : `On it: ${task}`;
       if (words.length === 0) return "";

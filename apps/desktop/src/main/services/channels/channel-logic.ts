@@ -424,7 +424,7 @@ export const turnPrompt = (input: {
           ? `The user's other bots, not in this channel: ${(input.outsiders ?? []).map((bot) => `${bot.name}${roleOf(bot)}`).join(", ")}. If one of them is needed here, write <invite name="Name">why, in one line</invite> inside your reply; the user decides.`
           : "",
         'If the work needs a specialist none of the user\'s bots is (for the long run, not one question), you may propose a new bot: <new_bot name="Short name" title="Role">What it would do, in one or two sentences</new_bot> inside your reply. The user decides; never more than one suggestion.',
-        "If the user asks YOU for real work that needs files, code, a browser or their accounts (build a page, write a document, check their email…), don't refuse: say in a line what you will do, and add <work>the task, complete on its own: what to make or do, and where</work> inside your reply. The app runs it in your own chat with all your tools and posts your report here when it is done. One <work> at most, only for what the user asked you."
+        "If the user asks YOU for real work that needs files, code, a browser or their accounts (build a page, write a document, check their email…), don't refuse: say in a line what you will do, and add <work>the task, complete on its own: what to make or do, and where</work> inside your reply. The app runs it in your own chat with all your tools and posts your report here when it is done. One <work> at most, only for what the user asked you, and only to start it now: if you ask them whether to, leave it out and wait for their yes."
       );
       break;
     case "everyone":
@@ -507,6 +507,15 @@ export const stopWorkIn = (words: string): { stop: boolean; words: string } => {
 };
 
 const WORK = /<work>([\s\S]*?)<\/work>/i;
+
+const ASKS_FIRST =
+  /\b(?:want me to|should i|shall i|do you want me to|would you like me to|like me to)\b[^?]*\?\s*$/i;
+
+/**
+ * Words that end by asking the user whether to do something ("Want me to
+ * run it again?"): work in the same reply waits for their yes.
+ */
+export const asksFirst = (words: string): boolean => ASKS_FIRST.test(words);
 
 /** The work a bot took on in its answer (`<work>…</work>`), and its words without the tag. */
 export const workIn = (

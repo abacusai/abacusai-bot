@@ -438,6 +438,22 @@ describe("work taken on in a channel", () => {
     );
   });
 
+  it("work waits when the bot asks the user whether to start it", async () => {
+    const { service, turns, works, flush, store } = setup();
+    const { id } = service.create({ botIds: ["chief", "wri"] });
+    service.post(id, "Writer, did you finish the announcement?");
+    await flush();
+    turns[0]!.resolve(
+      "<reply>Not finished: it was stopped. Want me to run it again?<work>Write the announcement</work></reply>"
+    );
+    await flush();
+    expect(works).toHaveLength(0);
+    expect(store.threads.get(id)![1]).toMatchObject({
+      text: "Not finished: it was stopped. Want me to run it again?",
+    });
+    expect(store.threads.get(id)![1]!.work).toBeUndefined();
+  });
+
   it("a bot cannot stop another bot's work", async () => {
     const { service, turns, flush, store } = setup();
     const { id } = service.create({ botIds: ["chief", "wri"] });
