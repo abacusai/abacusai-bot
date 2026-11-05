@@ -45,6 +45,10 @@ const ALLOWED = new Set([
   "@abacus-ai/agent/child-env",
   // How a task one bot passed to another opens: no imports at all.
   "@abacus-ai/agent/bot-task",
+  // A bot's daily notes, which main writes: node's fs and path, the
+  // atomic-file leaf above, and two leaf modules of this package (the bot's
+  // file layout, id-number redaction) that import nothing else.
+  "@abacus-ai/agent/bot-memory",
   // Media checks for the chat: no imports at all.
   "@abacus-ai/agent/send-media",
   // What a chat can do: no imports at all.
