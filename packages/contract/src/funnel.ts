@@ -78,6 +78,9 @@ export const FUNNEL_STEPS = [
   "cutoff_chat_told",
   // The credits line under a finished turn, clicked; the detail is the plan tier.
   "turn_credits_clicked",
+  // A reply ended on a promise of more work and the model was told to do it
+  // (promised-work.ts); the detail is the model.
+  "promised_work_recovery",
   // The Basic offer at the end of onboarding (the platform's onboarding offer).
   "onboarding_offer_shown",
   "onboarding_offer_upgrade",

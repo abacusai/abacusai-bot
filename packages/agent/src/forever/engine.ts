@@ -106,6 +106,13 @@ import {
 import { personaPrompt, readPersona } from "../persona.js";
 import { scriptRuntimesPrompt, windowsShellPrompt } from "../posix-shell.js";
 import {
+  endedOnPromise,
+  mayAskForPromisedWork,
+  PROMISED_WORK_PROMPT,
+  PROMISED_WORK_TYPE,
+  PromisedWork,
+} from "../promised-work.js";
+import {
   AgentMode,
   AgentStatus,
   type AgentEvent,
@@ -349,6 +356,9 @@ export class ForeverEngine {
   private languageRepairsThisTurn = 0;
   /** The turn's recoveries from an empty reply (empty-reply.ts). */
   private readonly emptyReplies = new EmptyReplies();
+  /** The turn's ask after a reply that ended on a promise (promised-work.ts). */
+  private readonly promisedWork = new PromisedWork();
+  private pendingPromisedWork = false;
   /** The same model is to be asked again, out of sight, for its answer. */
   private pendingEmptyAsk = false;
   /** Whether a user turn is in flight: a refresh landing now is mid-turn. */
@@ -775,6 +785,8 @@ export class ForeverEngine {
     this.pendingLanguageRepair = null;
     this.pendingEmptyAsk = false;
     this.emptyReplies.begin();
+    this.promisedWork.begin();
+    this.pendingPromisedWork = false;
     this.mcpTools.atTurnStart();
     this.pendingToolArrival = null;
     this.toolArrivalsThisTurn = 0;
@@ -1008,10 +1020,12 @@ export class ForeverEngine {
       this.pendingNetworkFailure != null ||
       this.pendingStreamCut ||
       this.pendingBusyWait != null ||
-      this.pendingEmptyAsk
+      this.pendingEmptyAsk ||
+      this.pendingPromisedWork
     ) {
       if (this.interrupted) {
         this.pendingEmptyAsk = false;
+        this.pendingPromisedWork = false;
         this.pendingStreamCut = false;
         this.pendingNetworkFailure = null;
         this.pendingBusyWait = null;
@@ -1091,6 +1105,25 @@ export class ForeverEngine {
       if (this.pendingEmptyAsk) {
         this.pendingEmptyAsk = false;
         await this.askAfterEmptyReply();
+
+        continue;
+      }
+
+      if (this.pendingPromisedWork) {
+        this.pendingPromisedWork = false;
+        this.emitAgentEvent({
+          type: "promised_work_recovery",
+          model: this.session?.model?.id ?? "",
+        });
+
+        await this.session?.sendCustomMessage(
+          {
+            customType: PROMISED_WORK_TYPE,
+            content: PROMISED_WORK_PROMPT,
+            display: false,
+          },
+          { triggerTurn: true }
+        );
 
         continue;
       }
@@ -2331,7 +2364,7 @@ export class ForeverEngine {
         // With no other model to move to, the same one is asked.
         this.pendingEmptyAsk =
           emptyStep != null && this.pendingOpenLlmRotation == null;
-        if (
+        const ending =
           !event.willRetry &&
           !this.continuingPastMalformedToolCall &&
           this.pendingContextCompaction == null &&
@@ -2340,8 +2373,18 @@ export class ForeverEngine {
           this.pendingLanguageRepair == null &&
           this.pendingToolArrival == null &&
           this.pendingStall == null &&
-          !this.pendingEmptyAsk
-        ) {
+          !this.pendingEmptyAsk;
+        // Words that promise more, and nothing else on the way: told once to
+        // do it, inside this send so the run stays open (PromisedWork).
+        this.pendingPromisedWork =
+          ending &&
+          !this.hiddenTurn &&
+          !this.interrupted &&
+          this.ownedTurn != null &&
+          mayAskForPromisedWork(this.mode) &&
+          endedOnPromise(event.messages) &&
+          this.promisedWork.claim();
+        if (ending && !this.pendingPromisedWork) {
           this.finishTurn();
         }
 

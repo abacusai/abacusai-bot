@@ -14,6 +14,7 @@ project adds deterministic checks around that loop.
 | Syntax checks | Parse supported files after an edit and report the failing line. |
 | Output repair | Recover malformed or fenced tool calls when the intent is unambiguous. |
 | Verification | Run the project's tests after a turn that changed code, and have the model fix only what that turn broke, in view in the chat. |
+| Promised work | Tell the model once to do it when a reply ends on a promise of more work and no tool call. |
 | Run budgets | Limit model and tool use for one run. |
 
 These checks reduce common agent failures. They do not prove that a change is
