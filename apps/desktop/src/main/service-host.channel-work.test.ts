@@ -43,6 +43,7 @@ const workHost = (ends: string | null = null) => {
       })),
     },
     agentManagerService: { stopSession: vi.fn() },
+    sessionTurnStateService: { stopSettled: vi.fn(async () => true) },
   };
   for (const name of [
     "runChannelWork",

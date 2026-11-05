@@ -5924,6 +5924,10 @@ export class ServiceHost {
       if (work.stopped) throw stoppedFirst();
       if (!closed)
         throw new Error("it stayed busy in its own chat for 30 minutes.");
+      // A turn there just stopped (the work before this one, say) closes a
+      // moment after the stop: not on this work's waiter.
+      await this.sessionTurnStateService.stopSettled(handle.sessionId, 15_000);
+      if (work.stopped) throw stoppedFirst();
       const answer = this.waitForTurn(
         handle.sessionId,
         BOT_TASK_TURN_TIMEOUT_MS,
