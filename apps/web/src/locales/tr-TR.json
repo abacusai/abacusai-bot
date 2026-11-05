@@ -1385,7 +1385,7 @@
       "TOO_LARGE": "Bu dosya bağlantılar için 5 MB sınırını aşıyor.",
       "TOO_MANY": "50 paylaşılan bağlantınız var. Yenisini oluşturmak için birini durdurun.",
       "RATE_LIMITED": "Bugünkü bağlantı sınırına ulaştınız. Yarın tekrar deneyin.",
-      "SENSITIVE": "Bu dosya anahtar veya parola içeriyor gibi görünüyor, bu yüzden paylaşılamaz.",
+      "SENSITIVE": "Bu dosya anahtar, parola veya bilgisayarınızdaki dosya yolları içeriyor gibi görünüyor, bu yüzden paylaşılamaz.",
       "UNSUPPORTED": "Bu dosya bağlantı olarak paylaşılamaz.",
       "FAILED": "Bu yapılamadı. Bağlantınızı kontrol edip tekrar deneyin."
     }

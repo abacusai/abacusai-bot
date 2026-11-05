@@ -31,6 +31,7 @@ export const SHARE_REFUSALS = [
   "TOO_LARGE",
   "TOO_MANY",
   "RATE_LIMITED",
+  /** Keys or passwords in the file, or a local path in a PDF, which cannot be masked. */
   "SENSITIVE",
   "UNSUPPORTED",
   "FAILED",

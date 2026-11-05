@@ -1385,7 +1385,7 @@
       "TOO_LARGE": "This file is over the 5 MB limit for links.",
       "TOO_MANY": "You have 50 shared links. Stop sharing one to make another.",
       "RATE_LIMITED": "You've reached today's limit for links. Try again tomorrow.",
-      "SENSITIVE": "This file looks like it holds keys or passwords, so it can't be shared.",
+      "SENSITIVE": "This file looks like it holds keys, passwords or file paths from your computer, so it can't be shared.",
       "UNSUPPORTED": "This file can't be shared as a link.",
       "FAILED": "Couldn't do that. Check your connection and try again."
     }

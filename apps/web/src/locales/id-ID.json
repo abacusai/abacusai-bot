@@ -1385,7 +1385,7 @@
       "TOO_LARGE": "File ini melebihi batas 5 MB untuk tautan.",
       "TOO_MANY": "Anda memiliki 50 tautan. Hentikan salah satu untuk membuat yang baru.",
       "RATE_LIMITED": "Anda mencapai batas tautan hari ini. Coba lagi besok.",
-      "SENSITIVE": "File ini tampaknya berisi kunci atau kata sandi, jadi tidak dapat dibagikan.",
+      "SENSITIVE": "File ini tampaknya berisi kunci, kata sandi, atau jalur file dari komputer Anda, jadi tidak dapat dibagikan.",
       "UNSUPPORTED": "File ini tidak dapat dibagikan sebagai tautan.",
       "FAILED": "Tidak bisa dilakukan. Periksa koneksi Anda dan coba lagi."
     }

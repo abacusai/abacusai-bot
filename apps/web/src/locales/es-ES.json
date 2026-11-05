@@ -1385,7 +1385,7 @@
       "TOO_LARGE": "Este archivo supera el límite de 5 MB para enlaces.",
       "TOO_MANY": "Tienes 50 enlaces compartidos. Deja de compartir uno para crear otro.",
       "RATE_LIMITED": "Has alcanzado el límite de enlaces de hoy. Vuelve a intentarlo mañana.",
-      "SENSITIVE": "Parece que este archivo contiene claves o contraseñas, así que no se puede compartir.",
+      "SENSITIVE": "Parece que este archivo contiene claves, contraseñas o rutas de archivos de tu ordenador, así que no se puede compartir.",
       "UNSUPPORTED": "Este archivo no se puede compartir como enlace.",
       "FAILED": "No se ha podido hacer. Revisa tu conexión e inténtalo de nuevo."
     }

@@ -1385,7 +1385,7 @@
       "TOO_LARGE": "Diese Datei überschreitet das Limit von 5 MB für Links.",
       "TOO_MANY": "Du hast 50 geteilte Links. Beende einen, um einen neuen zu erstellen.",
       "RATE_LIMITED": "Du hast das heutige Limit für Links erreicht. Versuche es morgen erneut.",
-      "SENSITIVE": "Diese Datei scheint Schlüssel oder Passwörter zu enthalten und kann nicht geteilt werden.",
+      "SENSITIVE": "Diese Datei scheint Schlüssel, Passwörter oder Dateipfade von deinem Computer zu enthalten und kann nicht geteilt werden.",
       "UNSUPPORTED": "Diese Datei kann nicht als Link geteilt werden.",
       "FAILED": "Das hat nicht geklappt. Prüfe deine Verbindung und versuche es erneut."
     }
