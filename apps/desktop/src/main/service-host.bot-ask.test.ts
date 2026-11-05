@@ -81,9 +81,7 @@ const fakeHost = (
   const self: Record<string, unknown> = {
     turnWaiters: new Map(),
     botAskTurns: new Map(),
-    taskTurnsSent: new Set(),
-    steppedIn: new Map(),
-    cancelledTasks: new Set(),
+    taskTurns: new Map(),
     turnLedger: { isOpen: () => options.leftOpen === true },
     botService: {
       list: () => [{ id: "res", name: "Researcher", title: "" }],
@@ -272,9 +270,7 @@ describe("a task the user gave, passed on", () => {
     const self: Record<string, unknown> = {
       turnWaiters: new Map(),
       botAskTurns: new Map(),
-      taskTurnsSent: new Set(),
-      steppedIn: new Map(),
-      cancelledTasks: new Set(),
+      taskTurns: new Map(),
       turnLedger: {
         isOpen: () => open,
         onClose: (listener: (record: { sessionId: string }) => void) => {
@@ -396,7 +392,9 @@ describe("a task the user gave, passed on", () => {
     const { self, endUserTurn } = taskHost(false, null);
     const pending = (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null);
     await vi.waitFor(() =>
-      expect((self.taskTurnsSent as Set<string>).has("q8")).toBe(true)
+      expect(
+        (self.taskTurns as Map<string, { sent: boolean }>).get("q8")?.sent
+      ).toBe(true)
     );
     (self.noteUserWords as Method)("wri-main", "make it 3 days, not 7");
     await expect(pending).rejects.toThrow(/partway through/);
@@ -459,7 +457,9 @@ describe("a task the user gave, passed on", () => {
     const { self } = taskHost(false, null);
     const pending = (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null);
     await vi.waitFor(() =>
-      expect((self.taskTurnsSent as Set<string>).has("q8")).toBe(true)
+      expect(
+        (self.taskTurns as Map<string, { sent: boolean }>).get("q8")?.sent
+      ).toBe(true)
     );
     (self.userSteppedIn as Method)("wri-main", "stop that, do the menu");
     await expect(pending).rejects.toThrow(
@@ -470,7 +470,7 @@ describe("a task the user gave, passed on", () => {
       workspaceId: "ws",
       sessionId: "wri-main",
     });
-    expect((self.steppedIn as Map<string, string>).size).toBe(0);
+    expect((self.taskTurns as Map<string, unknown>).size).toBe(0);
   });
 
   it("is not stopped by the user's message while it only waits for their turn to end", async () => {
@@ -487,7 +487,9 @@ describe("a task the user gave, passed on", () => {
     const { self, endUserTurn } = taskHost(true);
     const pending = (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null);
     await new Promise((resolve) => setTimeout(resolve, 10));
-    (self.cancelledTasks as Set<string>).add("q8");
+    (self.taskTurns as Map<string, { cancelled: boolean }>).get(
+      "q8"
+    )!.cancelled = true;
     endUserTurn();
     await expect(pending).rejects.toThrow(/cancelled before it began/);
     expect(self.sendAgentMessage).not.toHaveBeenCalled();
@@ -508,9 +510,7 @@ describe("a task the user gave, passed on", () => {
       },
       turnLedger: { channelOf: () => null },
       botAskTurns: new Map(),
-      taskTurnsSent: new Set(),
-      steppedIn: new Map(),
-      cancelledTasks: new Set(),
+      taskTurns: new Map(),
     };
     for (const name of [
       "userSteppedIn",

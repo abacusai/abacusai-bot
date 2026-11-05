@@ -221,6 +221,12 @@ export const askOutcomeNote = (
       ].join("\n");
 };
 
+/** The user's words, quoted in a note: one line, cut at 300 characters. */
+const quoted = (words: string): string => {
+  const flat = words.replace(/\s+/g, " ").trim();
+  return `"${flat.length > 300 ? `${flat.slice(0, 300)}…` : flat}"`;
+};
+
 /**
  * After a passed-on task ended, the user wrote to the bot that did it, in
  * its chat: what they wrote and its answer, for the bot that passed it on.
@@ -233,27 +239,23 @@ export const taskFollowUpNote = (
   doer: Named,
   userWords: string,
   reply: string
-): string => {
-  const said = userWords.replace(/\s+/g, " ").trim();
-  return [
-    `[bot answer] After the task ${ask.id} ("${requestGist(ask.request)}") you passed ${doer.name} ended, the user wrote to ${doer.name} in its chat: "${said.length > 300 ? `${said.slice(0, 300)}…` : said}". Its answer:`,
+): string =>
+  [
+    `[bot answer] After the task ${ask.id} ("${requestGist(ask.request)}") you passed ${doer.name} ended, the user wrote to ${doer.name} in its chat: ${quoted(userWords)}. Its answer:`,
     wrapBotAnswer(doer, reply),
     "This is not a message from the user to you. If it changes what you know about that task (they dropped it, changed it, or had it finished after all), go by it from now on and tell the user in one line what it means for you. If it has nothing to do with the task, reply exactly NO_REPLY.",
   ].join("\n");
-};
 
 /**
  * Why a task ended when the user wrote in the doing bot's chat while it ran
  * (see the host's userSteppedIn): what they wrote, which now decides.
  */
-export const steppedInError = (words: string): string => {
-  const said = words.replace(/\s+/g, " ").trim();
-  return [
+export const steppedInError = (words: string): string =>
+  [
     "the user wrote to it in its own chat partway through, so it stopped there and may be half done.",
-    `What they wrote: "${said.length > 300 ? `${said.slice(0, 300)}…` : said}".`,
+    `What they wrote: ${quoted(words)}.`,
     "Go by that: don't do the task yourself, pass it on again or keep offering it unless they ask.",
   ].join(" ");
-};
 
 /**
  * A task from the user, as the other bot reads it in its own chat: who

@@ -608,9 +608,9 @@ const connectorIdsFor = (services: string[]): string[] =>
  * offer to pass work on, so the message before it says what the work is.
  */
 /** How long the user's latest words count for passing a task on. */
+const USER_WORDS_FRESH_MS = 15 * 60_000;
 /** How long after a passed-on task ends the user's next words there still go back to the passer. */
 const TASK_FOLLOW_UP_MS = 60 * 60_000;
-const USER_WORDS_FRESH_MS = 15 * 60_000;
 
 const AGREEMENT =
   /^(?:yes|yeah|yep|yup|ok|okay|sure|go ahead|please|do it|sounds good|y)\b[\s\w,.!']{0,30}$/i;
@@ -5767,8 +5767,8 @@ export class ServiceHost {
       const handle = this.botAskTurns.get(ask.id);
       // A task still waiting for the user's own turn there is not sent at
       // all; that turn is theirs and goes on.
-      if (ask.kind === "task" && !this.taskTurnsSent.has(ask.id))
-        this.cancelledTasks.add(ask.id);
+      const state = this.taskTurns.get(ask.id);
+      if (state != null && !state.sent) state.cancelled = true;
       else if (handle != null) this.stopAgentTurn(handle);
     },
     tell: (ask, note) => this.tellBotAsk(ask, note),
@@ -5825,11 +5825,13 @@ export class ServiceHost {
    * passed it on is told what they said.
    */
   private userSteppedIn(sessionId: string, words: string): void {
-    for (const [askId, handle] of this.botAskTurns)
-      if (handle.sessionId === sessionId && this.taskTurnsSent.has(askId)) {
-        this.steppedIn.set(askId, words);
+    for (const [askId, handle] of this.botAskTurns) {
+      const state = this.taskTurns.get(askId);
+      if (handle.sessionId === sessionId && state?.sent === true) {
+        state.steppedIn = words;
         this.stopAgentTurn(handle);
       }
+    }
   }
 
   /**
@@ -6046,12 +6048,15 @@ export class ServiceHost {
 
   /** The asked bot's conversation for each ask whose turn is running. */
   private readonly botAskTurns = new Map<string, BotChatHandle>();
-  /** Tasks whose prompt is in the doing bot's chat: the user writing there steps in. */
-  private readonly taskTurnsSent = new Set<string>();
-  /** Task id → what the user wrote when they stepped in. */
-  private readonly steppedIn = new Map<string, string>();
-  /** Tasks cancelled before their prompt went in: they never go in. */
-  private readonly cancelledTasks = new Set<string>();
+  /**
+   * Each running task: whether its prompt is in the doing bot's chat (the
+   * user writing there then steps in, and what they wrote is kept), and
+   * whether it was cancelled before that (it is then never sent).
+   */
+  private readonly taskTurns = new Map<
+    string,
+    { sent: boolean; cancelled: boolean; steppedIn: string | null }
+  >();
 
   /**
    * One turn of the asked bot in its conversation with the asker, a sender
@@ -6065,6 +6070,12 @@ export class ServiceHost {
     visibleFrom: number | null
   ): Promise<string> {
     const task = ask.kind === "task";
+    const state = {
+      sent: false,
+      cancelled: false,
+      steppedIn: null as string | null,
+    };
+    if (task) this.taskTurns.set(ask.id, state);
     const asker = this.botService.list().find((bot) => bot.id === ask.askerId);
     const handle = task
       ? await this.botService.openChat(ask.targetId)
@@ -6083,7 +6094,7 @@ export class ServiceHost {
           !(await this.turnClosed(handle.sessionId, BOT_TASK_TURN_TIMEOUT_MS))
         )
           throw new Error("it stayed busy in its own chat for 30 minutes.");
-        if (this.cancelledTasks.has(ask.id))
+        if (state.cancelled)
           throw new Error("it was cancelled before it began.");
       } else if (this.turnLedger.isOpen(handle.sessionId))
         // A turn left open there (one stopped or cut off) would take this
@@ -6115,7 +6126,7 @@ export class ServiceHost {
             }
           : {}),
       });
-      if (task) this.taskTurnsSent.add(ask.id);
+      state.sent = true;
       // Refused before any turn opened (its workspace is gone): nothing will
       // close a turn, so the waiter is ended here rather than at the timeout.
       if (!sent) {
@@ -6130,24 +6141,18 @@ export class ServiceHost {
           handle.workspaceId,
           handle.sessionId
         );
-      const words = this.steppedIn.get(ask.id);
-      if (words != null) throw new Error(steppedInError(words));
+      if (state.steppedIn != null)
+        throw new Error(steppedInError(state.steppedIn));
       throw error;
     } finally {
       if (
         task &&
-        !this.cancelledTasks.has(ask.id) &&
+        !state.cancelled &&
         this.botAskService.get(ask.askerId, ask.id)?.status !== "cancelled"
       )
-        this.watchTaskFollowUp(
-          handle.sessionId,
-          ask,
-          this.steppedIn.get(ask.id) ?? null
-        );
+        this.watchTaskFollowUp(handle.sessionId, ask, state.steppedIn);
       this.botAskTurns.delete(ask.id);
-      this.taskTurnsSent.delete(ask.id);
-      this.steppedIn.delete(ask.id);
-      this.cancelledTasks.delete(ask.id);
+      this.taskTurns.delete(ask.id);
     }
   }
 
