@@ -278,7 +278,7 @@ export const botTaskPrompt = (
     "further than their words, follow their words. If their words also ask",
     `other bots for things, ${passer.name} has passed those on already: do not`,
     "pass anything on or ask other bots in this turn. If the user later",
-    `changes or drops this task here, tell ${passer.name} with tell_task_giver.`,
+    `changes, drops or resumes this task here, tell ${passer.name} with tell_task_giver.`,
   ].join("\n");
 
 /** What `give_task_to_bot` says the moment the task is queued. */

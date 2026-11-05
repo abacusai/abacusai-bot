@@ -221,7 +221,10 @@ export class BotAskService {
       .slice(0, limit);
   }
 
-  /** Tasks other bots passed this bot in the last day, newest first. */
+  /**
+   * Tasks other bots passed this bot that ended in the last day, newest
+   * first: one still queued or running is changed by the user stepping in.
+   */
   tasksFor(doerId: string): BotAskRecord[] {
     const since = this.now() - DAY_MS;
     return this.deps
@@ -230,6 +233,7 @@ export class BotAskService {
         (ask) =>
           ask.kind === "task" &&
           ask.targetId === doerId &&
+          (ask.status === "answered" || ask.status === "failed") &&
           ask.createdAt >= since
       )
       .sort((a, b) => b.createdAt - a.createdAt);

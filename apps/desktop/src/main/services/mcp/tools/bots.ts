@@ -130,9 +130,10 @@ export const BOTS_TOOLS: ToolDefinition[] = [
     botsOnly: true,
     description: [
       "Another bot passed you a task for the user, and now the user, here,",
-      'changed or dropped it ("forget that calendar", "make it 3 days"): tell',
-      "that bot, so it does not go on as if the task stands. Only for that,",
-      "in the turn the user said it; your message and their words go to it.",
+      "changed it, dropped it, or had you finish it after it was stopped",
+      '("forget that calendar", "make it 3 days", "go ahead and finish it"):',
+      "tell that bot, so what it believes matches what happened. Only for",
+      "that, in the turn the user said it; your message and their words go to it.",
     ].join("\n"),
     inputSchema: {
       type: "object",

@@ -401,3 +401,31 @@ describe("BotAskService", () => {
     });
   });
 });
+
+describe("tasksFor", () => {
+  const task = (patch: Partial<BotAskRecord>): BotAskRecord => ({
+    id: "q1",
+    askerId: "res",
+    askerSession: "res-chat",
+    targetId: "wri",
+    kind: "task",
+    request: "Draft it",
+    status: "answered",
+    attempts: 1,
+    createdAt: 1_000_000,
+    ...patch,
+  });
+
+  it("lists only ended tasks other bots passed this bot, from the last day, newest first", () => {
+    const { service } = setup([
+      task({ id: "q1", createdAt: 999_000 }),
+      task({ id: "q2", status: "failed", createdAt: 999_500 }),
+      task({ id: "q3", status: "running" }),
+      task({ id: "q4", status: "cancelled" }),
+      task({ id: "q5", kind: "ask" }),
+      task({ id: "q6", targetId: "res" }),
+      task({ id: "q7", createdAt: 1_000_000 - 2 * 24 * 60 * 60_000 }),
+    ]);
+    expect(service.tasksFor("wri").map((ask) => ask.id)).toEqual(["q2", "q1"]);
+  });
+});
