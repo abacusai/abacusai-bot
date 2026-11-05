@@ -376,6 +376,24 @@ describe("a task the user gave, passed on", () => {
     expect(tell).toHaveBeenCalledTimes(1);
   });
 
+  it("matches the user's whole message, and drops a NO_REPLY from the answer", async () => {
+    const { self, endUserTurn } = taskHost(false);
+    await (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null);
+    (self.noteUserWords as Method)("wri-main", "ok");
+    chatLog(
+      ["user", "ok, make it shorter"],
+      ["assistant", "Shorter."],
+      ["user", "ok"],
+      ["assistant", "NO_REPLY Noted, nothing to add."]
+    );
+    endUserTurn();
+    const note = (self.tellBotAsk as ReturnType<typeof vi.fn>).mock
+      .calls[0]?.[1] as string;
+    expect(note).toContain("Noted, nothing to add.");
+    expect(note).not.toContain("Shorter.");
+    expect(note).not.toContain("NO_REPLY\n");
+  });
+
   it("waits for the turn that answers the user, not one that closes before it", async () => {
     const { self, endUserTurn } = taskHost(false);
     await (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null);
@@ -761,6 +779,53 @@ describe("a task the user gave, passed on", () => {
     h.userWords.get("res-chat")![0].at -= 16 * 60_000;
     expect(h.giveBotTask("res", "res-chat", "pla", "Draft it")).toEqual(
       refused
+    );
+  });
+
+  it("a yes taken back in the same breath is not a yes", () => {
+    for (const said of [
+      "ok but actually no, you do it",
+      "okay never mind",
+      "sure, forget it",
+      "yes, wait",
+    ]) {
+      const h = wordsHost();
+      h.noteUserWords("res-chat", said);
+      expect(h.askBot("res", "res-chat", "wri", "Draft it")).toEqual(
+        expect.objectContaining({ error: expect.any(String) })
+      );
+    }
+  });
+
+  it("a yes in the app's other languages counts", () => {
+    for (const said of [
+      "sí, adelante",
+      "ja, mach das",
+      "oui",
+      "はい、お願いします",
+      "네",
+      "evet tamam",
+    ]) {
+      const h = wordsHost();
+      h.noteUserWords("res-chat", "Writer could draft it. Want me to ask?");
+      h.noteUserWords("res-chat", said);
+      expect(h.askBot("res", "res-chat", "wri", "Draft it")).not.toHaveProperty(
+        "error"
+      );
+    }
+  });
+
+  it("a passed-on task clears the user's earlier words there: nothing in its turn can pass work on", () => {
+    const h = wordsHost();
+    h.noteUserWords("res-chat", "ask Writer for a tagline");
+    h.noteUserWords(
+      "res-chat",
+      "[task from the user, passed on by Planner] Make a list"
+    );
+    expect(h.askBot("res", "res-chat", "wri", "Draft it")).toEqual(
+      expect.objectContaining({
+        error: expect.stringContaining("not started by them"),
+      })
     );
   });
 

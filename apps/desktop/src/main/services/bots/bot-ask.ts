@@ -208,7 +208,9 @@ export const askOutcomeNote = (
         task
           ? `[bot answer] ${answerer.name} finished the ${label} you passed it for the user. Its report:`
           : `[bot answer] ${answerer.name} answered your ${label}.`,
-        "This is not a message from the user, and the user has not seen it yet.",
+        task
+          ? `This is not a message from the user; the report is also in ${answerer.name}'s own chat.`
+          : "This is not a message from the user, and the user has not seen it yet.",
         wrapBotAnswer(answerer, ask.answer),
         task
           ? "Tell the user what it did, briefly and in your own words."

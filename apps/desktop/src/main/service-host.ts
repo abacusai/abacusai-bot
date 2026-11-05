@@ -612,8 +612,18 @@ const USER_WORDS_FRESH_MS = 15 * 60_000;
 /** How long after a passed-on task ends the user's next words there still go back to the passer. */
 const TASK_FOLLOW_UP_MS = 60 * 60_000;
 
-const AGREEMENT =
-  /^(?:yes|yeah|yep|yup|ok|okay|sure|go ahead|please|do it|sounds good|y)\b[\s\w,.!']{0,30}$/i;
+/**
+ * A short yes, in the app's languages, not taken back in the same breath
+ * ("ok but actually no", "okay never mind" are not a yes).
+ */
+const YES =
+  "yes|yeah|yep|yup|ok|okay|sure|go ahead|please|do it|sounds good|y|sí|si|claro|dale|vale|adelante|oui|ouais|d'accord|vas-y|allez-y|ja|jawohl|klar|gerne|sim|pode|certo|va bene|ya|iya|boleh|silakan|evet|tamam|olur|はい|うん|どうぞ|お願いします|네|예|응|좋아|👍";
+const TAKEN_BACK =
+  "but|no|not|don'?t|never|nah|forget|cancel|instead|actually|wait|hold|nein|non|pero|mais|aber|não|nao|hayır|tidak|jangan|いや|やめ|아니";
+const AGREEMENT = new RegExp(
+  `^(?:${YES})(?=[\\s,.!'’、。]|$)(?![\\p{L}\\p{N}\\s,.!'’、。]{0,30}(?<![\\p{L}\\p{N}])(?:${TAKEN_BACK})(?![\\p{L}\\p{N}]))[\\p{L}\\p{N}\\s,.!'’、。]{0,30}$`,
+  "iu"
+);
 
 /** A chat app's message without its "[WhatsApp message from …]" label. */
 const unlabelled = (text: string): string =>
@@ -5798,7 +5808,13 @@ export class ServiceHost {
     message: string,
     tags: UserTextTags | undefined
   ): void {
-    if (message.startsWith(BOT_TASK_PREFIX)) return;
+    // A task another bot passed on is not the user speaking here: nothing
+    // in that turn may pass work on, so their earlier words here no longer
+    // count either (else a doer could hand work back with their authority).
+    if (message.startsWith(BOT_TASK_PREFIX)) {
+      this.userWords.delete(sessionId);
+      return;
+    }
     const words = visibleUserText(message, tags).trim();
     if (words.length === 0) {
       this.userWords.delete(sessionId);
@@ -5968,17 +5984,19 @@ export class ServiceHost {
       this.agentSessionManagerService.getDiagnosticInfo(sessionId)
         ?.agentSessionFile ?? null;
     const turns = readTranscriptTail(file, 30, undefined, 3000);
-    const key = words.replace(/\s+/g, " ").trim().slice(0, 60);
+    // The whole message, as the tail keeps it (cut at 3000 with an ellipsis).
+    const key = words.replace(/\s+/g, " ").trim().slice(0, 3000);
     const at = turns.findLastIndex(
-      (turn) => turn.role === "user" && turn.text.includes(key)
+      (turn) =>
+        turn.role === "user" && (turn.text === key || turn.text === `${key}…`)
     );
     if (at < 0) return null;
     const reply = turns
       .slice(at + 1)
       .filter((turn) => turn.role === "assistant")
-      .map((turn) => turn.text)
-      .join("\n\n")
-      .trim();
+      .map((turn) => turn.text.replace(/\bNO_REPLY\b/g, "").trim())
+      .filter((text) => text.length > 0)
+      .join("\n\n");
     return reply.length > 0 ? reply : null;
   }
 
