@@ -8,7 +8,22 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `de9cd7eba` (the failure card for a model off Abacus, #630)
+## Current: `bd66921c9` (the features merged since #630)
+
+**423 / 8060519 / 2695336.** Records the renderer after the work merged since
+#630, the last of it #661's turn credits line. Against `de9cd7eba`: +3 chunks
+(+0.71%), +76320 bytes (+0.96%), +25229 gzip bytes (+0.94%). That left 3522
+bytes of the 1% allowance, so the next feature's strings would fail the check.
+The growth is not split by change here; `apps/web`'s dependencies did not
+change. The 1% allowance is unchanged.
+
+Measured from a frozen-lockfile build of `bd66921c9` (Linux x64), summed the
+same way as `check-desktop-parity.mjs`. This baseline-only change touches no
+renderer code.
+
+## History
+
+### `de9cd7eba` (the failure card for a model off Abacus, #630)
 
 **420 / 7984199 / 2670107.** Records the renderer with #630's handling of a
 failed model off Abacus: the line that says the chat moved to RouteLLM - Open,
@@ -23,8 +38,6 @@ locale chunk. No dependency or chunk split. The 1% allowance is unchanged.
 Measured from a frozen-lockfile build of `de9cd7eba` and of `f208fea31`
 (Linux x64), summed the same way as `check-desktop-parity.mjs`. This
 baseline-only change touches no renderer code.
-
-## History
 
 ### `0ba0d4315` (the first-run screen)
 
