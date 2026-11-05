@@ -1621,6 +1621,13 @@
     "upgrade": {
       "title": "Sblocca le routine",
       "description": "Passa a un piano superiore per pianificare attività e automatizzare il lavoro."
+    },
+    "model": {
+      "label": "Modello",
+      "planDefault": "Predefinito del piano",
+      "followsDefault": "Segue il predefinito del tuo piano: {{model}}.",
+      "costly": "Ogni esecuzione usa {{model}}, un modello più costoso, quindi consuma più crediti.",
+      "hosted": "Le routine ospitate usano il predefinito del tuo piano."
     }
   },
   "sessions": {

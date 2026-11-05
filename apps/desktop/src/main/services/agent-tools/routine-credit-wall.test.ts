@@ -109,7 +109,10 @@ afterEach(() => {
   fs.rmSync(home, { recursive: true, force: true });
 });
 
-const harness = async (seed: Partial<PrefsRow> = {}) => {
+const harness = async (
+  seed: Partial<PrefsRow> = {},
+  jobModel?: string | null
+) => {
   const host = new ServiceHost();
   const internals = host as unknown as Record<string, any>;
   let row = {
@@ -139,7 +142,12 @@ const harness = async (seed: Partial<PrefsRow> = {}) => {
   const chatLine = vi
     .spyOn(internals.messagingGatewayService, "tellRoutinesOnHold")
     .mockResolvedValue(true);
-  const job = createJob({ schedule: "0 * * * *", prompt: "check", name: "R" });
+  const job = createJob({
+    schedule: "0 * * * *",
+    prompt: "check",
+    name: "R",
+    ...(jobModel !== undefined ? { model: jobModel } : {}),
+  });
   const fire = (trigger: "schedule" | "manual" | "webhook" = "schedule") =>
     host.runRoutine(job.id, trigger);
   const history = () =>
@@ -219,6 +227,16 @@ it.each([
 
   expect(start).toHaveBeenCalledTimes(1);
   expect(row().routineCreditHold).toBeNull();
+});
+
+it("reads the routine's own model, not the default, at the wall", async () => {
+  settings.defaultModel = "openai/gpt-5.6-luna";
+  const billed = await harness({}, "abacus/route-llm-code");
+  await expect(billed.fire()).resolves.toBe("skipped");
+
+  settings.defaultModel = undefined;
+  const ownKey = await harness({}, "openai/gpt-5.6-luna");
+  await expect(ownKey.fire()).resolves.toBe("started");
 });
 
 it("lets a person's Run through: the wall's own card answers them", async () => {

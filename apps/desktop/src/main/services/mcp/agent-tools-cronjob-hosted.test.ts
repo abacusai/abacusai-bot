@@ -453,7 +453,7 @@ describe("cronjob, local", () => {
         prompt: "Local digest",
         sources: ["https://news.example/"],
       }),
-      { byAgent: true }
+      expect.objectContaining({ byAgent: true })
     );
     expect(runCronJob).toHaveBeenCalledWith(listJobs()[0]!.id, "create");
     expect(text).toMatch(/^Created\./);

@@ -1621,6 +1621,13 @@
     "upgrade": {
       "title": "Unlock routines",
       "description": "Upgrade to schedule tasks and automate your work."
+    },
+    "model": {
+      "label": "Model",
+      "planDefault": "Plan default",
+      "followsDefault": "Follows your plan's default: {{model}}.",
+      "costly": "Every run uses {{model}}, a costlier model, so each one spends more credits.",
+      "hosted": "Hosted routines run on your plan's default."
     }
   },
   "sessions": {

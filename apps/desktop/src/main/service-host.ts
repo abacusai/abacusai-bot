@@ -227,6 +227,7 @@ import {
   createJob,
   getJob,
   listJobs,
+  moveJobModels,
   nextRun,
   onCronStoreWrite,
   attemptOfSession,
@@ -501,6 +502,8 @@ import {
 import { listAvailableModels, modelForTier } from "./services/providers/models";
 import {
   currentTier,
+  newRoutineModel,
+  resolveRoutineModel,
   resolveSessionModel,
 } from "./services/providers/session-model";
 import {
@@ -706,6 +709,18 @@ const handOffRefusal = (
     ? 'The user did not ask to hand this off, so nothing was sent. Do it yourself, or offer in one line ("Planner could do this. Want me to pass it on?") and wait for their yes.'
     : 'The user did not ask you to ask another bot, so nothing was sent. Answer yourself, or offer in one line ("Writer could draft this. Want me to ask it?") and wait for their yes.';
 };
+
+/**
+ * What a routine asks to run on: its own model, null for its plan's default.
+ * One migration step 9 has not reached runs as it did: its bot's, else the
+ * stored default.
+ */
+const routineAsk = (job: CronJob): string | null =>
+  job.model !== undefined
+    ? job.model
+    : ((job.botId == null ? null : getBot(job.botId)?.model) ??
+      readSettings().defaultModel ??
+      null);
 
 export class ServiceHost {
   constructor(readonly platform: HostPlatform = "electron") {
@@ -1178,7 +1193,7 @@ export class ServiceHost {
    * anything starts. The wall is the server's own refusal, so it is the only
    * threshold; the account is re-read so a top-up starts the run at once.
    */
-  private async routineAtCreditWall(): Promise<boolean> {
+  private async routineAtCreditWall(job?: CronJob): Promise<boolean> {
     const prefs = this.prefs?.();
     if (prefs == null) return false;
     const stops = (): boolean =>
@@ -1187,14 +1202,14 @@ export class ServiceHost {
         creditSnapshot(),
         Date.now()
       );
-    if (!stops() || !(await this.routinesSpendCredits())) return false;
+    if (!stops() || !(await this.routineSpendsCredits(job))) return false;
     await fetchAbacusAccount(true).catch(() => null);
     return stops();
   }
 
-  /** Whether the model routines run on bills Abacus credits. */
-  private async routinesSpendCredits(): Promise<boolean> {
-    const model = readSettings().defaultModel ?? OPENLLM_ID;
+  /** Whether the model this routine runs on bills Abacus credits. */
+  private async routineSpendsCredits(job?: CronJob): Promise<boolean> {
+    const model = (job == null ? null : routineAsk(job)) ?? OPENLLM_ID;
     if (model === OPENLLM_ID) return true;
     if (!model.startsWith("abacus/")) return false;
     const models = await listAvailableModels();
@@ -1521,8 +1536,14 @@ export class ServiceHost {
     routines: {
       defaultRunner: () => this.defaultRoutineRunner(),
       hostedOnly: () => this.hostedOnly(),
-      create: async (input, options) => {
-        const routine = await this.createRoutine(input, undefined, options);
+      create: async (input, { fromSession, ...options } = {}) => {
+        const routine = await this.createRoutine(input, undefined, {
+          ...options,
+          chatModel:
+            fromSession == null
+              ? null
+              : this.agentSessionManagerService.get(fromSession)?.model,
+        });
         // The user hears of every routine the agent sets up.
         if (options?.byAgent === true) this.routineCreatedByAgent(routine);
         return routine;
@@ -2053,10 +2074,11 @@ export class ServiceHost {
   }
 
   /**
-   * The plan changed: the app default and every chat pinned to a model the
-   * new plan does not serve (the free plan's OpenLLM, on a paid one) move to
-   * the plan's model now, running agents included, so the chip and the next
-   * turn (a resent one too) are on it. Pins the plan still serves stay.
+   * The plan changed: the app default, every routine and every chat pinned
+   * to a model the new plan does not serve (the free plan's OpenLLM, on a paid
+   * one) move to the plan's model now, running agents included, so the chip
+   * and the next turn (a resent one too) are on it. Pins the plan still serves
+   * stay.
    */
   private moveModelPinsToTier(): void {
     const tier = currentTier();
@@ -2065,6 +2087,11 @@ export class ServiceHost {
       const moved = modelForTier(tier, stored);
       if (moved !== stored) setDefaultModel(moved);
     }
+    if (moveJobModels((model) => modelForTier(tier, model)))
+      this.emitEvent({
+        type: "cronjobs-updated",
+        emittedAt: new Date().toISOString(),
+      });
     for (const session of this.agentSessionManagerService.listAll())
       this.moveSessionPinToTier(session.workspaceId, session.id);
   }
@@ -4053,9 +4080,10 @@ export class ServiceHost {
     // session before its list has loaded, and the agent would then report the
     // wrong model back over the record that should have chosen it. With
     // neither (a routine's run, a bot's chat brought back), the one resolver:
-    // the session's bot's model, else the stored default, else the plan
-    // tier's. Not the agent's own fallback, which is the free pool whatever
-    // the tier. The pick is kept on the session, so it lists what runs.
+    // a routine's own model, else its plan's; a chat's bot's, else the stored
+    // default, else the plan tier's. Not the agent's own fallback, which is the
+    // free pool whatever the tier. The pick is kept on the session, so it lists
+    // what runs.
     // A pin the plan no longer serves moves first (moveModelPinsToTier).
     this.moveSessionPinToTier(request.workspaceId, request.sessionId);
     const remembered = this.agentSessionManagerService.get(
@@ -4114,9 +4142,17 @@ export class ServiceHost {
   private async resolveUnpinnedModel(
     request: StartAgentSessionRequest
   ): Promise<string | null> {
+    const routineId =
+      this.agentSessionManagerService.get(request.sessionId)?.routineId ?? null;
+    const job = routineId == null ? null : getJob(routineId);
     const botId = this.botOfSession(request.sessionId);
     const bot = botId == null ? null : getBot(botId);
-    const model = await resolveSessionModel(bot?.model ?? null);
+    const model =
+      job != null
+        ? await resolveRoutineModel(routineAsk(job))
+        : this.hostedRunSessions.has(request.sessionId)
+          ? await resolveRoutineModel(null)
+          : await resolveSessionModel(bot?.model ?? null);
     if (model != null)
       this.setAgentSessionModel(request.workspaceId, request.sessionId, model);
     return model;
@@ -6157,8 +6193,13 @@ export class ServiceHost {
   async createRoutine(
     input: RoutineCreateInput,
     id?: string,
-    /** The agent asked for it (the cronjob tool), not the user's own form. */
-    options: { byAgent?: boolean; runAtText?: string | null } = {}
+    options: {
+      /** The agent asked for it (the cronjob tool), not the user's own form. */
+      byAgent?: boolean;
+      runAtText?: string | null;
+      /** The model of the chat that asked for it. */
+      chatModel?: string | null;
+    } = {}
   ): Promise<CreatedRoutine> {
     if (this.platform === "web-host" && onFreePlan(await fetchAbacusAccount()))
       throw new HostedRoutineRefusal("plan_limit", { limit: 0 });
@@ -6223,8 +6264,12 @@ export class ServiceHost {
       );
     const reach =
       sources.length > 0 || reads.length > 0 ? { sources, reads } : null;
+    const model = newRoutineModel(
+      input.botId == null ? null : getBot(input.botId)?.model,
+      options.chatModel
+    );
     const job = createJob(
-      { ...input, ...(reach != null ? { reach } : {}) },
+      { ...input, model, ...(reach != null ? { reach } : {}) },
       id
     );
     this.emitEvent({
@@ -6391,7 +6436,7 @@ export class ServiceHost {
     if (
       trigger !== "manual" &&
       trigger !== "create" &&
-      (await this.routineAtCreditWall())
+      (await this.routineAtCreditWall(job))
     ) {
       recordRun(jobId, ROUTINE_RESULTS.skippedCredits, trigger, {
         id: attemptId,

@@ -369,6 +369,10 @@ export interface ModelAvailability extends AbacusBotModel {
   recommended?: boolean;
 }
 
+/** A model priced well above the routers: what a routine's page warns about. */
+export const isCostlyModel = (model: Pick<AbacusBotModel, "tier">): boolean =>
+  model.tier === "strong";
+
 export const modelAccess = (
   model: Pick<ModelAvailability, "configured" | "access">
 ): ModelAccess =>

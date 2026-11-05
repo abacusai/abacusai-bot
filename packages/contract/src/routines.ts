@@ -215,6 +215,11 @@ export interface Routine {
   reach?: RoutineReach | null;
   /** The fires it last missed while the computer was off; cleared by its next on-time fire. */
   missed?: RoutineMissed | null;
+  /**
+   * The model a local routine runs on, its own: no chat's pick moves it. Null
+   * is the plan's default. Absent on a routine saved before routines had one.
+   */
+  model?: string | null;
 }
 
 export interface RoutineListItem extends Routine {
@@ -269,6 +274,7 @@ export type RoutineUpdateInput = Partial<
     | "workspaceId"
     | "access"
     | "reach"
+    | "model"
   >
 > & {
   webhook?: boolean;

@@ -1621,6 +1621,13 @@
     "upgrade": {
       "title": "Rutinlerin kilidini aç",
       "description": "Görevleri zamanlamak ve işini otomatikleştirmek için yükselt."
+    },
+    "model": {
+      "label": "Model",
+      "planDefault": "Plan varsayılanı",
+      "followsDefault": "Planınızın varsayılanını izler: {{model}}.",
+      "costly": "Her çalıştırma daha pahalı bir model olan {{model}} kullanır, bu yüzden her biri daha fazla kredi harcar.",
+      "hosted": "Barındırılan rutinler planınızın varsayılanıyla çalışır."
     }
   },
   "sessions": {

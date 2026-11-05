@@ -115,6 +115,12 @@ export interface CronJob {
   scheduledAt?: number | null;
   /** Fires it last missed while the computer was off, until its next on-time fire. */
   missed?: RoutineMissed | null;
+  /**
+   * The model it runs on, kept whatever a chat picks. Null is its plan's
+   * default; absent (a routine migration step 9 has not reached) runs on its
+   * bot's model, else the stored default.
+   */
+  model?: string | null;
 }
 
 /** Why a fire waits: the network, a missed fire, or a run the app closed under. */
@@ -359,6 +365,7 @@ export const createJob = (
     workspaceId?: string | null;
     botId?: string | null;
     reach?: RoutineReach | null;
+    model?: string | null;
   },
   id?: string
 ): CronJob => {
@@ -403,6 +410,7 @@ export const createJob = (
     lastResult: null,
     runs: [],
     ...(input.reach != null ? { reach: input.reach } : {}),
+    ...(input.model !== undefined ? { model: input.model } : {}),
   };
 
   write([...existing, job]);
@@ -424,6 +432,7 @@ export const updateJob = (
       | "workspaceId"
       | "access"
       | "reach"
+      | "model"
     >
   > & { webhook?: boolean }
 ): CronJob => {
@@ -481,6 +490,21 @@ export const updateJob = (
   write(jobs);
 
   return updated;
+};
+
+/** Every stored routine model through `move`, in one write; true if any moved. */
+export const moveJobModels = (move: (model: string) => string): boolean => {
+  const jobs = readForWrite();
+  let moved = false;
+  const next = jobs.map((job) => {
+    if (job.model == null || job.model.length === 0) return job;
+    const model = move(job.model);
+    if (model === job.model) return job;
+    moved = true;
+    return { ...job, model };
+  });
+  if (moved) write(next);
+  return moved;
 };
 
 /**
@@ -890,6 +914,7 @@ export const describeJob = (job: CronJob): string => {
   return [
     `${job.id}  [${job.enabled ? "enabled" : "paused"}]  ${triggers}  ${job.name}`,
     `  ${job.prompt}`,
+    `  model: ${job.model ?? "plan default"}`,
     `  next: ${next}   last: ${last}${job.lastResult != null ? ` (${job.lastResult})` : ""}`,
   ].join("\n");
 };

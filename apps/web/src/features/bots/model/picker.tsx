@@ -1,4 +1,4 @@
-import { OPENLLM_ID } from "@abacus-ai/contract/models";
+import { OPENLLM_ID, resolveConfiguredModel } from "@abacus-ai/contract/models";
 import { useQuery } from "@tanstack/react-query";
 import { Lock, Settings2 } from "lucide-react";
 import { motion } from "motion/react";
@@ -17,6 +17,7 @@ import { accountTier } from "#renderer/lib/credits";
 import { useMotionPreference } from "#renderer/lib/motion";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { requestPlanDialog } from "#renderer/lib/upgrade-dialog";
+import { useAccount } from "#renderer/lib/use-account";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
 import { Popover, PopoverTrigger, PopoverContent } from "#renderer/ui/popover";
@@ -32,7 +33,9 @@ import {
 export const useBotModelBinding = (
   value: string | null,
   onChange: (value: string | null) => void,
-  layoutId?: string
+  layoutId?: string,
+  /** Null is the plan's default, not the stored one: a routine's model. */
+  { planDefault = false }: { planDefault?: boolean } = {}
 ) => {
   const { t } = useTranslation();
   const motion = useMotionPreference();
@@ -43,15 +46,19 @@ export const useBotModelBinding = (
   const models = useQuery(queries.models());
   const settings = useQuery(queries.settings());
   const catalog = models.data ?? [];
-  const account = useQuery(queries.account());
+  const defaultModel = planDefault ? undefined : settings.data?.defaultModel;
+  const defaultLabel = t(
+    planDefault ? "routines.model.planDefault" : "bots.form.modelDefault"
+  );
+  const account = useAccount();
   const groups = botModelGroups({
     models: catalog,
     favorites: prefs.models.favoriteModelIds,
-    defaultModel: settings.data?.defaultModel,
+    defaultModel,
     freeTier: accountTier(account.data) === "free",
     labels: {
       defaultGroup: t("bots.model.default"),
-      appDefault: t("bots.form.modelDefault"),
+      appDefault: defaultLabel,
       favorites: t("bots.model.favorites"),
       connectOpenRouter: t("bots.model.connectOpenRouter"),
       connectSource: (provider) =>
@@ -71,16 +78,24 @@ export const useBotModelBinding = (
         search: (previous) => ({ ...previous, provider }),
       }),
   });
-  const other = otherProviderModel(value, settings.data?.defaultModel, catalog);
+  const other = otherProviderModel(value, defaultModel, catalog);
   const setup = useModelSetup({
     models: catalog,
     loading: models.isPending || settings.isPending,
     failed: models.isError || settings.isError,
     select: onChange,
   });
+  const effectiveId = resolveConfiguredModel({
+    requested: value,
+    defaultModel,
+    catalog,
+  });
   return {
     setup,
     value,
+    defaultLabel,
+    /** The catalog row `value` runs on now, if any. */
+    effective: catalog.find((model) => model.id === effectiveId) ?? null,
     onConfigureProviders: () =>
       void navigate({ to: "/settings/models", transition: "settings-in" }),
     ...(accountTier(account.data) === "free"
@@ -95,9 +110,7 @@ export const useBotModelBinding = (
           },
         }
       : {}),
-    label:
-      effectiveModelLabel(value, settings.data?.defaultModel, catalog) ??
-      t("bots.form.modelDefault"),
+    label: effectiveModelLabel(value, defaultModel, catalog) ?? defaultLabel,
     onChange,
     groups,
     ...(layoutId && motion === "full" ? { layoutId } : {}),
@@ -152,7 +165,7 @@ export const ModelPicker = ({
           title={binding.label}
           layoutId={pref === "full" ? binding.layoutId : undefined}
         >
-          {binding.value === null ? t("bots.form.modelDefault") : binding.label}
+          {binding.value === null ? binding.defaultLabel : binding.label}
         </motion.span>
       </PopoverTrigger>
       <PopoverContent className="w-[min(360px,var(--available-width))] rounded-[14px] p-1.5 [&_button]:h-8">

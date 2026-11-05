@@ -1621,6 +1621,13 @@
     "upgrade": {
       "title": "Libere as rotinas",
       "description": "Faça upgrade para agendar tarefas e automatizar seu trabalho."
+    },
+    "model": {
+      "label": "Modelo",
+      "planDefault": "Padrão do plano",
+      "followsDefault": "Segue o padrão do seu plano: {{model}}.",
+      "costly": "Cada execução usa {{model}}, um modelo mais caro, por isso cada uma gasta mais créditos.",
+      "hosted": "Rotinas hospedadas usam o padrão do seu plano."
     }
   },
   "sessions": {

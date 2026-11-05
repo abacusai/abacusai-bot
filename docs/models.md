@@ -15,6 +15,16 @@ to each provider's key page. The app supports direct providers, model gateways,
 AWS Bedrock, Google Vertex, Azure OpenAI, and OpenAI-compatible endpoints such
 as vLLM.
 
+## Which model runs
+
+A routine keeps its own model. It starts on the model of the chat that created
+it, or its bot's model for a bot's routine. With neither, it runs on your plan's
+default: RouteLLM Open on Free, RouteLLM Code Low on Go and Basic, RouteLLM Code
+on Pro and Max. The routine's page shows the model, warns when it is a costly
+one, and has the picker to change it. A later pick in a chat, or a new model for
+its bot, leaves it where it is. A routine on your plan's default moves with your
+plan. Hosted routines run on your plan's default.
+
 ## Key precedence
 
 The app stores pasted keys in `~/.abacusai-bot/config.json`. A non-empty

@@ -50,9 +50,10 @@ import {
   type MessagingPlatformId,
   describePlatformForAgent,
 } from "@abacus-ai/contract/messaging";
-import type {
-  AbacusPlanTier,
-  ModelAvailability,
+import {
+  isCostlyModel,
+  type AbacusPlanTier,
+  type ModelAvailability,
 } from "@abacus-ai/contract/models";
 import type {
   Routine,
@@ -401,7 +402,12 @@ export interface McpAgentToolsServerOptions {
     /** ServiceHost.createRoutine: local or hosted by `input.runner`. */
     create: (
       input: RoutineCreateInput,
-      options?: { byAgent?: boolean; runAtText?: string | null }
+      options?: {
+        byAgent?: boolean;
+        runAtText?: string | null;
+        /** The chat asking: a local routine starts on its model. */
+        fromSession?: string;
+      }
     ) => Promise<Routine>;
     hosted: HostedRoutines;
     /**
@@ -1022,6 +1028,19 @@ export class McpAgentToolsServer extends McpHttpServer {
 
   // ── Cron jobs ────────────────────────────────────────────────────────────
 
+  /** What a create adds when every run will be on a costly model: said, never silent. */
+  private async costlyModelNote(
+    id: string | null | undefined
+  ): Promise<string> {
+    if (id == null) return "";
+    const model = (await this.options.models?.().catch(() => []))?.find(
+      (entry) => entry.id === id
+    );
+    return model != null && isCostlyModel(model)
+      ? ` Every run uses ${model.label}, a costly model, so each spends far more credits than a run on the plan's router: tell the user so in your confirmation, and that they can change the model on the routine's page.`
+      : "";
+  }
+
   /**
    * The first fire of a freshly created interval routine. Failure is
    * swallowed: the routine is saved, so this is a missed run, not a failed
@@ -1171,7 +1190,7 @@ export class McpAgentToolsServer extends McpHttpServer {
           this.options.routines != null
             ? await this.options.routines.create(
                 { ...input, runner: "local", sources, reads },
-                { byAgent: true }
+                { byAgent: true, fromSession: callerSession }
               )
             : createJob(input);
         this.options.onCronChanged?.();
@@ -1194,6 +1213,7 @@ export class McpAgentToolsServer extends McpHttpServer {
 
         const delivery =
           "It lives under Routines in the sidebar; each fire runs in a fresh session of its own, listed there with its outcome." +
+          " It keeps its own model, named below: a pick in any chat does not move it, and the user changes it on the routine's page." +
           (botId != null
             ? " It speaks in your voice and counts as one of yours."
             : "");
@@ -1238,8 +1258,9 @@ export class McpAgentToolsServer extends McpHttpServer {
         const note = alwaysOnNote(
           (await this.options.routines?.alwaysOnNote?.()) ?? null
         );
+        const costly = await this.costlyModelNote(job.model);
         return this.ok(
-          `Created. ${delivery}${once}${where}${reach}${first}${hook}${note}\n\n${describeJob(job)}`
+          `Created. ${delivery}${once}${where}${reach}${first}${hook}${costly}${note}\n\n${describeJob(job)}`
         );
       }
 

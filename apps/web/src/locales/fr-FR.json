@@ -1621,6 +1621,13 @@
     "upgrade": {
       "title": "Débloquer les routines",
       "description": "Passez à une offre supérieure pour planifier des tâches et automatiser votre travail."
+    },
+    "model": {
+      "label": "Modèle",
+      "planDefault": "Par défaut du forfait",
+      "followsDefault": "Suit le modèle par défaut de votre forfait : {{model}}.",
+      "costly": "Chaque exécution utilise {{model}}, un modèle plus coûteux, et consomme donc plus de crédits.",
+      "hosted": "Les routines hébergées utilisent le modèle par défaut de votre forfait."
     }
   },
   "sessions": {

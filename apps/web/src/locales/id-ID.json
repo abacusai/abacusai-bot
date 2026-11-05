@@ -1621,6 +1621,13 @@
     "upgrade": {
       "title": "Buka rutinitas",
       "description": "Upgrade untuk menjadwalkan tugas dan mengotomatiskan pekerjaan Anda."
+    },
+    "model": {
+      "label": "Model",
+      "planDefault": "Default paket",
+      "followsDefault": "Mengikuti default paket Anda: {{model}}.",
+      "costly": "Setiap proses memakai {{model}}, model yang lebih mahal, jadi setiap proses memakai lebih banyak kredit.",
+      "hosted": "Rutinitas yang di-hosting memakai default paket Anda."
     }
   },
   "sessions": {

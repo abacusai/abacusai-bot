@@ -85,7 +85,7 @@ describe("migrating a legacy home", () => {
     delete before[path.relative(home, path.join(leftover, "prefs.json"))];
 
     const first = await migrate();
-    expect(first).toMatchObject({ applied: [1, 2, 5, 6, 7, 8], failed: [] });
+    expect(first).toMatchObject({ applied: [1, 2, 5, 6, 7, 8, 9], failed: [] });
     expect(first.recovered).toEqual([
       { staging: leftover, action: "discarded" },
     ]);
@@ -178,12 +178,38 @@ describe("migrating a legacy home", () => {
         name: "zapier-connect-url",
         stats: expect.objectContaining({ rewritten: 0 }),
       }),
+      expect.objectContaining({
+        id: 9,
+        name: "routine-models",
+        stats: expect.objectContaining({ routines: 0 }),
+      }),
     ]);
 
     const settled = hashes(home);
     const second = await migrate();
     expect(second).toMatchObject({ applied: [], failed: [], recovered: [] });
     expect(hashes(home)).toEqual(settled);
+  });
+
+  it("a legacy routine keeps the model it runs on, through a restart and a later default", async () => {
+    const config = path.join(home, "config.json");
+    fs.writeFileSync(
+      config,
+      JSON.stringify({ defaultModel: "abacus/route-llm-code" })
+    );
+    const jobs = path.join(home, "cronjobs.json");
+    fs.writeFileSync(
+      jobs,
+      JSON.stringify([{ id: "job-1", name: "n", prompt: "p", runs: [] }])
+    );
+    await migrate();
+    const stored = () =>
+      (JSON.parse(fs.readFileSync(jobs, "utf8")) as { model?: string }[])[0]
+        ?.model;
+    expect(stored()).toBe("abacus/route-llm-code");
+    fs.writeFileSync(config, JSON.stringify({ defaultModel: "openllm/auto" }));
+    await migrate();
+    expect(stored()).toBe("abacus/route-llm-code");
   });
 
   it("imports drift on startup after a downgrade", async () => {
@@ -233,7 +259,7 @@ describe("migrating a legacy home", () => {
     });
   });
 
-  it("does not record step 2 when renderer-state.json exists but cannot be read, still runs 5 to 8; the next launch imports it", async () => {
+  it("does not record step 2 when renderer-state.json exists but cannot be read, still runs 5 to 9; the next launch imports it", async () => {
     const state = path.join(userData, "renderer-state.json");
     const aside = path.join(root, "state-aside.json");
     fs.renameSync(state, aside);
@@ -241,11 +267,11 @@ describe("migrating a legacy home", () => {
 
     const first = await migrate();
     expect(first).toMatchObject({
-      applied: [1, 5, 6, 7, 8],
+      applied: [1, 5, 6, 7, 8, 9],
       failed: [{ id: 2 }],
     });
     expect(readRecord(home).applied.map((entry) => entry.id)).toEqual([
-      1, 5, 6, 7, 8,
+      1, 5, 6, 7, 8, 9,
     ]);
 
     fs.rmdirSync(state);

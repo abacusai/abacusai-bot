@@ -1621,6 +1621,13 @@
     "upgrade": {
       "title": "Routinen freischalten",
       "description": "Mit einem Upgrade kannst du Aufgaben planen und deine Arbeit automatisieren."
+    },
+    "model": {
+      "label": "Modell",
+      "planDefault": "Tarif-Standard",
+      "followsDefault": "Folgt dem Standard deines Tarifs: {{model}}.",
+      "costly": "Jeder Lauf nutzt {{model}}, ein teureres Modell, und verbraucht deshalb mehr Credits.",
+      "hosted": "Gehostete Routinen laufen mit dem Standard deines Tarifs."
     }
   },
   "sessions": {
