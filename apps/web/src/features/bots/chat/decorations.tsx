@@ -2,6 +2,16 @@ import type {
   TurnFeedbackInput,
   TurnFeedbackOutcome,
 } from "@abacus-ai/contract/contracts";
+import { feedbackSegmentId } from "@abacus-ai/contract/transcript/feedback-target";
+import type { UIMessage } from "@tanstack/ai-client";
+import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
+
+import {
+  DeliverablesCard,
+  resolveWorkspacePath,
+  type DeliverableItem,
+} from "#renderer/components/file-preview";
 /**
  * The bot skin's message decorations (spec 03 §11.3, §11.3a), handed to the
  * chat kit's `slots.decorateMessage`: silent turns and suppressed or held
@@ -13,16 +23,7 @@ import type {
  * Features do not import each other, so the slot's types are declared here
  * structurally (identical to the kit's).
  */
-import { feedbackSegmentId } from "@abacus-ai/contract/transcript/feedback-target";
-import type { UIMessage } from "@tanstack/ai-client";
-import type { ReactNode } from "react";
-import { useTranslation } from "react-i18next";
-
-import {
-  DeliverablesCard,
-  resolveWorkspacePath,
-  type DeliverableItem,
-} from "#renderer/components/file-preview";
+import { ShareRowButton } from "#renderer/components/share/share-row-button";
 import type { Transport } from "#renderer/data/transport";
 import { stampLabel } from "#renderer/lib/bot-turns/gap-stamp";
 import {
@@ -139,6 +140,9 @@ export const botMessageDecorations = (
           : undefined
       }
       onOpenUrl={(item) => options.onOpenExternal(item.path)}
+      rowAction={(item) =>
+        item.isUrl ? null : <ShareRowButton path={resolve(item.path)} />
+      }
     />
   );
 

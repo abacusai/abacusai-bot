@@ -1589,6 +1589,8 @@ export interface AbacusAccountInfo {
    * it to this new free account. Absent from older servers: never.
    */
   onboarding_offer?: boolean;
+  /** Share on the files card: the platform takes public links. Absent from older servers: never. */
+  share_artifact?: boolean;
 }
 
 /** Why the platform's payment gate refuses a signed-in account: the 402's `reason`. */

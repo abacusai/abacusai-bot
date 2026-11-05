@@ -14,7 +14,7 @@ import {
   Presentation,
   Sheet,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "#renderer/ui/button";
@@ -33,6 +33,8 @@ export interface DeliverablesCardProps {
   onOpen(item: DeliverableItem): void;
   onReveal?(item: DeliverableItem): void;
   onOpenUrl(item: DeliverableItem): void;
+  /** A further action on a row, beside its folder button. */
+  rowAction?(item: DeliverableItem): ReactNode;
 }
 
 const VISIBLE_ROWS = 3;
@@ -64,6 +66,7 @@ export const DeliverablesCard = ({
   onOpen,
   onReveal,
   onOpenUrl,
+  rowAction,
 }: DeliverablesCardProps) => {
   const { t } = useTranslation();
   const [showAll, setShowAll] = useState(false);
@@ -111,6 +114,7 @@ export const DeliverablesCard = ({
                 </TooltipTrigger>
                 <TooltipContent>{item.path}</TooltipContent>
               </Tooltip>
+              {rowAction?.(item)}
               {(item.isUrl || onReveal) && (
                 <Button
                   variant="ghost"

@@ -1359,6 +1359,36 @@
       "unavailable": "No se pudieron enviar las invitaciones en este momento. Inténtalo de nuevo en un momento."
     }
   },
+  "share": {
+    "action": "Compartir",
+    "title": "Compartir {{title}}",
+    "preparing": "Preparando la vista previa…",
+    "previewLabel": "Vista previa de la página pública",
+    "notice": "Cualquier persona con el enlace puede ver esto.",
+    "cleaned": "Primero se quitan las rutas de archivos y las claves que encontremos. Esto es exactamente lo que verán.",
+    "cancel": "Cancelar",
+    "create": "Crear enlace público",
+    "creating": "Creando el enlace…",
+    "ready": "Tu enlace está listo",
+    "linkLabel": "Enlace público",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "open": "Abrir",
+    "stop": "Dejar de compartir",
+    "stopTitle": "¿Dejar de compartir?",
+    "stopBody": "El enlace deja de funcionar de inmediato. Quienes ya lo abrieron pueden haber guardado una copia.",
+    "stopped": "Enlace eliminado",
+    "links": "Enlaces compartidos",
+    "linksEmpty": "Aún no compartiste nada. Usa Compartir en un archivo que haya hecho el bot.",
+    "errors": {
+      "TOO_LARGE": "Este archivo supera el límite de 5 MB para enlaces.",
+      "TOO_MANY": "Tienes 50 enlaces compartidos. Deja de compartir uno para crear otro.",
+      "RATE_LIMITED": "Alcanzaste el límite de enlaces de hoy. Vuelve a intentarlo mañana.",
+      "SENSITIVE": "Parece que este archivo contiene claves, contraseñas o rutas de archivos de tu computadora, así que no se puede compartir.",
+      "UNSUPPORTED": "Este archivo no se puede compartir como enlace.",
+      "FAILED": "No se pudo hacer. Revisa tu conexión e inténtalo de nuevo."
+    }
+  },
   "routines": {
     "atLabel": "en",
     "autoRepliesLeadSidebar": "Cada chat que un bot responde por sí solo aparece en Rutinas en la barra lateral, con su conversación. La pausa mantiene la concesión y detiene las respuestas.",

@@ -27,6 +27,8 @@ export const WEB_HOST_DENIED = [
   "sites",
   "skills.openFile",
   "voice.whisper.fetch",
+  // Reads the user's own files and shows them to the world: desktop only for now.
+  "shares",
 ] as const;
 // Exact paths: a new contract procedure requires an explicit platform decision.
 export const WEB_HOST_ALLOWED = [

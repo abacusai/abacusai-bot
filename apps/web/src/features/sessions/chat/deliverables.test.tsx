@@ -11,6 +11,11 @@ import {
   sessionDeliverablesCard,
 } from "./deliverables";
 
+// Share reads the account, which these cards are not mounted under here.
+vi.mock("#renderer/components/share/share-row-button", () => ({
+  ShareRowButton: () => null,
+}));
+
 beforeAll(async () => {
   await initI18n();
   await i18n.changeLanguage("en-US");

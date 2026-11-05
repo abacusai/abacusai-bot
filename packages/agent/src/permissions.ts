@@ -26,7 +26,7 @@ import {
   secretEntries,
 } from "./sandbox/secrets.js";
 import { zoneContext, zoneOf } from "./sandbox/zones.js";
-import { isSecretFileName } from "./secret-files.js";
+import { namesSecretFile } from "./secret-files.js";
 import {
   ownEntry,
   sourceAllows,
@@ -505,8 +505,6 @@ function readsSecretFile(tool: ToolRequest, cwd: string): boolean {
   const root = path.resolve(cwd);
   const realRoot = realPathOf(root) ?? root;
   // Names below the workspace only: the folder's own path is not the file's.
-  const namesSecret = (relative: string): boolean =>
-    relative.split(/[\\/]/).some(isSecretFileName);
   return requested.some((raw) => {
     const lexical = toolPath(raw, cwd);
     if (lexical == null) return true;
@@ -515,8 +513,8 @@ function readsSecretFile(tool: ToolRequest, cwd: string): boolean {
       [lexical, real].some((candidate) =>
         stores.some((store) => isWithin(candidate, store))
       ) ||
-      namesSecret(path.relative(root, lexical)) ||
-      namesSecret(path.relative(realRoot, real))
+      namesSecretFile(path.relative(root, lexical)) ||
+      namesSecretFile(path.relative(realRoot, real))
     );
   });
 }

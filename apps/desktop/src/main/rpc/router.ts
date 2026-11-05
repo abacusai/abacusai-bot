@@ -21,6 +21,7 @@ import { referralsRouter } from "./procedures/referrals";
 import { routinesRouter } from "./procedures/routines";
 import { sessionsRouter } from "./procedures/sessions";
 import { settingsRouter } from "./procedures/settings";
+import { sharesRouter } from "./procedures/shares";
 import { sitesRouter } from "./procedures/sites";
 import { skillsRouter } from "./procedures/skills";
 import { systemRouter } from "./procedures/system";
@@ -53,6 +54,7 @@ const routes: {
   account: typeof accountRouter;
   auth: typeof authRouter;
   referrals: typeof referralsRouter;
+  shares: typeof sharesRouter;
   connectors: typeof connectorsRouter;
   mcp: typeof mcpRouter;
   browser: typeof browserRouter;
@@ -84,6 +86,7 @@ const routes: {
   account: accountRouter,
   auth: authRouter,
   referrals: referralsRouter,
+  shares: sharesRouter,
   connectors: connectorsRouter,
   mcp: mcpRouter,
   browser: browserRouter,

@@ -1359,6 +1359,36 @@
       "unavailable": "Davetler şu anda gönderilemedi. Biraz sonra yeniden dene."
     }
   },
+  "share": {
+    "action": "Paylaş",
+    "title": "{{title}} paylaş",
+    "preparing": "Önizleme hazırlanıyor…",
+    "previewLabel": "Herkese açık sayfanın önizlemesi",
+    "notice": "Bağlantıya sahip olan herkes bunu görebilir.",
+    "cleaned": "Dosya yolları ve bulunan anahtarlar önce kaldırılır. İnsanların göreceği tam olarak budur.",
+    "cancel": "İptal",
+    "create": "Herkese açık bağlantı oluştur",
+    "creating": "Bağlantı oluşturuluyor…",
+    "ready": "Bağlantınız hazır",
+    "linkLabel": "Herkese açık bağlantı",
+    "copy": "Kopyala",
+    "copied": "Kopyalandı",
+    "open": "Aç",
+    "stop": "Paylaşmayı durdur",
+    "stopTitle": "Paylaşım durdurulsun mu?",
+    "stopBody": "Bağlantı hemen çalışmayı bırakır. Daha önce açanlar bir kopya saklamış olabilir.",
+    "stopped": "Bağlantı kaldırıldı",
+    "links": "Paylaşılan bağlantılar",
+    "linksEmpty": "Henüz bir şey paylaşılmadı. Botun yaptığı bir dosyada Paylaş'ı kullanın.",
+    "errors": {
+      "TOO_LARGE": "Bu dosya bağlantılar için 5 MB sınırını aşıyor.",
+      "TOO_MANY": "50 paylaşılan bağlantınız var. Yenisini oluşturmak için birini durdurun.",
+      "RATE_LIMITED": "Bugünkü bağlantı sınırına ulaştınız. Yarın tekrar deneyin.",
+      "SENSITIVE": "Bu dosya anahtar, parola veya bilgisayarınızdaki dosya yolları içeriyor gibi görünüyor, bu yüzden paylaşılamaz.",
+      "UNSUPPORTED": "Bu dosya bağlantı olarak paylaşılamaz.",
+      "FAILED": "Bu yapılamadı. Bağlantınızı kontrol edip tekrar deneyin."
+    }
+  },
   "routines": {
     "atLabel": "Saat",
     "autoRepliesLeadSidebar": "Bir botun kendi kendine yanıtladığı her sohbet, konuşmasıyla birlikte kenar çubuğunda Rutinler altında listelenir. Duraklatmak izni korur ve yanıtları durdurur.",

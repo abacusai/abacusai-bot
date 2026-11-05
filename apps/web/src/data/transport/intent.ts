@@ -53,6 +53,7 @@ const READS: Record<string, string> = {
   referrals: "gmailContacts summary whatsappContacts",
   routines: "events hostedRuns runners",
   sessions: "turnState",
+  shares: "list",
   settings:
     "defaultMode.get events execBackend.get get keys.listProviders notifications.get promptHistory.list sandboxSupport toolsets.get",
   sites: "progress",

@@ -1359,6 +1359,36 @@
       "unavailable": "Impossibile inviare gli inviti in questo momento. Riprova tra un attimo."
     }
   },
+  "share": {
+    "action": "Condividi",
+    "title": "Condividi {{title}}",
+    "preparing": "Preparazione dell’anteprima…",
+    "previewLabel": "Anteprima della pagina pubblica",
+    "notice": "Chiunque abbia il link può vedere questo contenuto.",
+    "cleaned": "I percorsi dei file e le chiavi trovate vengono rimossi prima. È esattamente ciò che le persone vedranno.",
+    "cancel": "Annulla",
+    "create": "Crea link pubblico",
+    "creating": "Creazione del link…",
+    "ready": "Il tuo link è pronto",
+    "linkLabel": "Link pubblico",
+    "copy": "Copia",
+    "copied": "Copiato",
+    "open": "Apri",
+    "stop": "Interrompi condivisione",
+    "stopTitle": "Interrompere la condivisione?",
+    "stopBody": "Il link smette di funzionare subito. Chi l’ha già aperto potrebbe averne una copia.",
+    "stopped": "Link rimosso",
+    "links": "Link condivisi",
+    "linksEmpty": "Ancora nulla di condiviso. Usa Condividi su un file creato dal bot.",
+    "errors": {
+      "TOO_LARGE": "Questo file supera il limite di 5 MB per i link.",
+      "TOO_MANY": "Hai 50 link condivisi. Interrompine uno per crearne un altro.",
+      "RATE_LIMITED": "Hai raggiunto il limite di link di oggi. Riprova domani.",
+      "SENSITIVE": "Questo file sembra contenere chiavi, password o percorsi di file del tuo computer, quindi non può essere condiviso.",
+      "UNSUPPORTED": "Questo file non può essere condiviso come link.",
+      "FAILED": "Operazione non riuscita. Controlla la connessione e riprova."
+    }
+  },
   "routines": {
     "atLabel": "A",
     "autoRepliesLeadSidebar": "Ogni chat a cui un bot risponde autonomamente è elencata sotto Routine nella barra laterale, con la relativa conversazione. La pausa mantiene la concessione e interrompe le risposte.",
