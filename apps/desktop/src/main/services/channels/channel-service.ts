@@ -565,17 +565,20 @@ export class ChannelService {
         repliedTo?.author.kind === "bot" ? repliedTo.author.botId : null,
       lastSpeaker:
         lastSpeaker?.author.kind === "bot" ? lastSpeaker.author.botId : null,
-      lastSpeakerAsked: /\?\s*$/.test(lastSpeaker?.text ?? ""),
+      // A question anywhere in it: bots ask, then add a line or two.
+      lastSpeakerAsked: (lastSpeaker?.text ?? "").includes("?"),
     });
     this.log(
       `round in ${channelId}: ${speakers.everyone ? "everyone" : speakers.botIds.length} speaker(s)`
     );
     // "Stop", "cancel that": the bots it is for stop their work now, before
     // they answer, rather than each deciding whether to.
+    // Naming nobody ("stop", "@everyone stop"), it stops all the channel's work.
     const stopped = plainStop(userMessage.text, members);
-    if (stopped != null)
-      for (const botId of stopped.length > 0 ? stopped : speakers.botIds)
-        this.stopWorks(channelId, botId);
+    if (stopped != null) {
+      if (stopped.length === 0) this.stopWorks(channelId);
+      else for (const botId of stopped) this.stopWorks(channelId, botId);
+    }
 
     if (speakers.discussion === true) {
       await this.discuss(channelId, round, speakers.botIds);

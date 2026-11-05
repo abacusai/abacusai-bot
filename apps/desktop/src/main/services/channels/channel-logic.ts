@@ -296,7 +296,7 @@ export const speakersFor = (
   options: {
     replyToBot?: string | null;
     lastSpeaker?: string | null;
-    /** The last bot message ended with a question: a plain "yes"/"ok" answers it. */
+    /** The last bot message asked something: a plain "yes"/"ok" answers it. */
     lastSpeakerAsked?: boolean;
   } = {}
 ): Speakers => {

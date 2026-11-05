@@ -468,6 +468,12 @@ describe("work taken on in a channel", () => {
         )!.work!.status;
     expect(status("chief")).toBe("stopped");
     expect(status("wri")).toBe("running");
+    // Naming nobody stops everything still running (once Chief has answered).
+    turns[2]!.resolve("<reply>Stopped.</reply>");
+    await flush();
+    service.post(id, "stop");
+    await flush();
+    expect(status("wri")).toBe("stopped");
     // Chief is told at once that its work stopped.
     expect(turns[2]!.botId).toBe("chief");
     expect(turns[2]!.prompt).toContain(
