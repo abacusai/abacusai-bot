@@ -5742,8 +5742,8 @@ export class ServiceHost {
     },
     runTurn: (botId, channel, prompt) =>
       this.runChannelTurn(botId, channel, prompt),
-    runWork: (botId, channel, prompt) =>
-      this.runChannelWork(botId, channel.id, prompt),
+    runWork: (botId, channel, prompt, workId) =>
+      this.runChannelWork(botId, channel.id, prompt, workId),
     createBot: ({ name, title, description, likeBotId }) => {
       const like = this.botService.list().find((bot) => bot.id === likeBotId);
       const bot = this.createBot({
@@ -5762,21 +5762,17 @@ export class ServiceHost {
       this.botService
         .list()
         .map((bot) => ({ id: bot.id, name: bot.name, title: bot.title })),
-    stopWork: (botId, channelId) => {
-      const handle = this.channelTurns.get(`${channelId}|work|${botId}`);
-      if (handle != null)
-        this.agentManagerService.stopSession(
-          handle.workspaceId,
-          handle.sessionId
-        );
+    // Stopped as the user's Stop does, never by closing the agent: a closed
+    // agent is started again by the next send and the work runs on.
+    stopWork: (workId) => {
+      const work = this.channelWorks.get(workId);
+      if (work == null) return;
+      work.stopped = true;
+      if (work.handle != null) this.stopAgentTurn(work.handle);
     },
     stopTurn: (botId, channelId) => {
       const handle = this.channelTurns.get(`${channelId}|${botId}`);
-      if (handle != null)
-        this.agentManagerService.stopSession(
-          handle.workspaceId,
-          handle.sessionId
-        );
+      if (handle != null) this.stopAgentTurn(handle);
     },
     forgetChats: (channelId, botIds) => {
       const keys = new Set(
@@ -5869,16 +5865,31 @@ export class ServiceHost {
    */
   /** Channel work per bot: one at a time in its own chat (one turn waiter per chat). */
   private readonly channelWorkLanes = new Map<string, Promise<unknown>>();
+  /**
+   * Channel work by its card's id, from queued to ended: whether a stop came
+   * (it may come before the work's turn starts) and, once its prompt is in
+   * the bot's chat, where to stop it.
+   */
+  private readonly channelWorks = new Map<
+    string,
+    { stopped: boolean; handle?: BotChatHandle }
+  >();
 
   private runChannelWork(
     botId: string,
     channelId: string,
-    prompt: string
+    prompt: string,
+    workId: string
   ): Promise<string> {
+    const work: { stopped: boolean; handle?: BotChatHandle } = {
+      stopped: false,
+    };
+    this.channelWorks.set(workId, work);
     const before = this.channelWorkLanes.get(botId) ?? Promise.resolve();
     const run = before
       .catch(() => undefined)
-      .then(() => this.runChannelWorkNow(botId, channelId, prompt));
+      .then(() => this.runChannelWorkNow(botId, prompt, work))
+      .finally(() => this.channelWorks.delete(workId));
     const lane = run.catch(() => undefined);
     this.channelWorkLanes.set(botId, lane);
     void lane.then(() => {
@@ -5890,15 +5901,17 @@ export class ServiceHost {
 
   private async runChannelWorkNow(
     botId: string,
-    channelId: string,
-    prompt: string
+    prompt: string,
+    work: { stopped: boolean; handle?: BotChatHandle }
   ): Promise<string> {
+    const stoppedFirst = (): Error =>
+      new Error("it was stopped before it began.");
+    if (work.stopped) throw stoppedFirst();
     const handle = await this.botService.openChat(botId);
-    const key = `${channelId}|work|${botId}`;
-    this.channelTurns.set(key, handle);
     try {
       if (!(await this.turnClosed(handle.sessionId, BOT_TASK_TURN_TIMEOUT_MS)))
         throw new Error("it stayed busy in its own chat for 30 minutes.");
+      if (work.stopped) throw stoppedFirst();
       const answer = this.waitForTurn(
         handle.sessionId,
         BOT_TASK_TURN_TIMEOUT_MS,
@@ -5914,6 +5927,9 @@ export class ServiceHost {
         sessionId: handle.sessionId,
         message: prompt,
       });
+      work.handle = handle;
+      // Stopped while the prompt was on its way: it stops now.
+      if (work.stopped) this.stopAgentTurn(handle);
       if (!sent) {
         const waiter = this.turnWaiters.get(handle.sessionId);
         this.turnWaiters.delete(handle.sessionId);
@@ -5928,7 +5944,7 @@ export class ServiceHost {
         );
       throw error;
     } finally {
-      this.channelTurns.delete(key);
+      delete work.handle;
     }
   }
 

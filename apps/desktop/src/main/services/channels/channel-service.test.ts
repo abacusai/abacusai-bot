@@ -44,7 +44,7 @@ const setup = (extra: Partial<ChannelDeps> = {}) => {
     resolve: (raw: string) => void;
     reject: (e: Error) => void;
   }> = [];
-  const works: typeof turns = [];
+  const works: Array<(typeof turns)[number] & { workId: string }> = [];
   let n = 0;
   const service = new ChannelService({
     store,
@@ -53,13 +53,13 @@ const setup = (extra: Partial<ChannelDeps> = {}) => {
       new Promise((resolve, reject) =>
         turns.push({ botId, prompt, resolve, reject })
       ),
-    runWork: (botId, _channel, prompt) =>
+    runWork: (botId, _channel, prompt, workId) =>
       new Promise((resolve, reject) =>
-        works.push({ botId, prompt, resolve, reject })
+        works.push({ botId, prompt, resolve, reject, workId })
       ),
-    stopWork: vi.fn((botId: string) => {
+    stopWork: vi.fn((workId: string) => {
       works
-        .find((entry) => entry.botId === botId)
+        .find((entry) => entry.workId === workId)
         ?.reject(new Error("stopped"));
     }),
     createBot: ({ name, title }) => {
@@ -348,6 +348,76 @@ describe("work taken on in a channel", () => {
       status: "stopped",
     });
     expect(store.threads.get(id)).toHaveLength(2);
+  });
+
+  it("the bot sees what became of its work, and can stop it when the user cancels", async () => {
+    const { service, turns, works, flush, store, texts } = setup();
+    const { id } = service.create({ botIds: ["chief", "wri"] });
+    service.post(id, "Writer, write the announcement to announcement.md");
+    await flush();
+    turns[0]!.resolve(
+      "<reply>On it.<work>Write the announcement to announcement.md</work></reply>"
+    );
+    await flush();
+    service.post(id, "Writer, cancel that, I don't want it anymore");
+    await flush();
+    expect(turns[1]!.prompt).toContain(
+      '- "Write the announcement to announcement.md": running now'
+    );
+    expect(turns[1]!.prompt).toContain("<stop_work/>");
+    turns[1]!.resolve("<reply>Stopped it.<stop_work/></reply>");
+    await flush();
+    expect(store.threads.get(id)![1]!.work?.status).toBe("stopped");
+    expect(texts(id).at(-1)).toBe("wri: Stopped it.");
+    // Next time it is told the work was stopped, not that it is running.
+    service.post(id, "Writer, did you finish it?");
+    await flush();
+    expect(turns[2]!.prompt).toContain(
+      "the user stopped it partway, so it may be half done"
+    );
+    expect(turns[2]!.prompt).not.toContain("<stop_work/>");
+    expect(works).toHaveLength(1);
+  });
+
+  it("a changed task stops the old work first and starts the new one", async () => {
+    const { service, turns, works, flush, store } = setup();
+    const { id } = service.create({ botIds: ["chief", "wri"] });
+    service.post(id, "Writer, write the announcement");
+    await flush();
+    turns[0]!.resolve("<reply><work>Write the announcement</work></reply>");
+    await flush();
+    service.post(id, "Writer, make it under 50 words");
+    await flush();
+    turns[1]!.resolve(
+      "<reply>Shorter, then.<stop_work/><work>Write the announcement in under 50 words</work></reply>"
+    );
+    await flush();
+    const cards = store.threads
+      .get(id)!
+      .filter((message) => message.work != null);
+    expect(cards.map((card) => card.work!.status)).toEqual([
+      "stopped",
+      "running",
+    ]);
+    expect(works.map((work) => work.workId)).toEqual([
+      cards[0]!.id,
+      cards[1]!.id,
+    ]);
+  });
+
+  it("a bot cannot stop another bot's work", async () => {
+    const { service, turns, flush, store } = setup();
+    const { id } = service.create({ botIds: ["chief", "wri"] });
+    service.post(id, "Writer, write the announcement");
+    await flush();
+    turns[0]!.resolve("<reply><work>Write the announcement</work></reply>");
+    await flush();
+    service.post(id, "Chief, what do you think?");
+    await flush();
+    expect(turns[1]!.prompt).not.toContain("Work you took on here");
+    turns[1]!.resolve("<reply>Looks fine.<stop_work/></reply>");
+    await flush();
+    expect(store.threads.get(id)![1]!.work?.status).toBe("running");
   });
 
   it("work the app closed on is marked failed after a restart", async () => {

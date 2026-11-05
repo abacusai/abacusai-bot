@@ -43,6 +43,7 @@ import {
   type Member,
   postedWords,
   speakersFor,
+  stopWorkIn,
   turnPrompt,
   type TurnKind,
 } from "./channel-logic";
@@ -86,10 +87,12 @@ export interface ChannelDeps {
   runWork?: (
     botId: string,
     channel: Channel,
-    prompt: string
+    prompt: string,
+    /** Its card's message id: what stopWork names. */
+    workId: string
   ) => Promise<string>;
-  /** Stop that work, if it is running. */
-  stopWork?: (botId: string, channelId: string) => void;
+  /** Stop that work: now if it is running, before it starts if it waits. */
+  stopWork?: (workId: string) => void;
   /**
    * Make a bot the user approved from a proposal; the proposer's model is
    * its default. Absent: bots cannot propose new bots here.
@@ -462,13 +465,21 @@ export class ChannelService {
     this.setPending(channelId, () => []);
     for (const botId of this.working.get(channelId) ?? [])
       this.deps.stopTurn(botId, channelId);
-    for (const [messageId, work] of this.works)
-      if (work.channelId === channelId) {
-        this.stoppedWorks.add(messageId);
-        this.deps.stopWork?.(work.botId, channelId);
-      }
+    this.stopWorks(channelId);
     this.log(`stopped ${channelId}`);
     this.deps.changed(channelId);
+  }
+
+  /** The channel's running work stops; only this bot's, when one is named. */
+  private stopWorks(channelId: string, botId?: string): void {
+    for (const [messageId, work] of this.works)
+      if (
+        work.channelId === channelId &&
+        (botId == null || work.botId === botId)
+      ) {
+        this.stoppedWorks.add(messageId);
+        this.deps.stopWork?.(messageId);
+      }
   }
 
   /** A bot was deleted: it leaves every channel. */
@@ -644,6 +655,13 @@ export class ChannelService {
       kind,
       others,
       nameOf,
+      myWork: all.flatMap((message) =>
+        message.work != null &&
+        message.author.kind === "bot" &&
+        message.author.botId === botId
+          ? [message.work]
+          : []
+      ),
       ...(extra.round != null ? { round: extra.round } : {}),
     });
     const userMessageId = round.userMessageId;
@@ -656,7 +674,14 @@ export class ChannelService {
       const last = visible.at(-1);
       if (last != null) this.markSeen(channelId, botId, last.id);
       if (round.cancelled || !this.isMember(channelId, botId)) return "";
-      const proposed = proposalIn(postedWords(answerWords(raw), me));
+      // The user cancelled or changed its running work: it stops first, so
+      // a changed task (a new <work>) does not wait behind the old one.
+      const stopped = stopWorkIn(postedWords(answerWords(raw), me));
+      if (stopped.stop && (kind === "answer" || kind === "everyone")) {
+        this.stopWorks(channelId, botId);
+        this.log(`${botId} stopped its work in ${channelId}`);
+      }
+      const proposed = proposalIn(stopped.words);
       // A bot answering the user, or the lead summing up, may suggest a bot:
       // one of the user's not here (invite), or a new one (create).
       const suggested = proposed.proposal;
@@ -803,7 +828,7 @@ export class ChannelService {
     });
     this.works.set(messageId, { channelId, botId });
     this.log(`work started by ${botId} in ${channelId}`);
-    void runWork(botId, channel, prompt)
+    void runWork(botId, channel, prompt, messageId)
       .then((raw) => {
         const report = answerWords(raw).trim();
         this.setWork(channelId, messageId, { status: "done" });
@@ -827,6 +852,7 @@ export class ChannelService {
       })
       .finally(() => {
         this.works.delete(messageId);
+        this.stoppedWorks.delete(messageId);
         this.deps.changed(channelId);
       });
   }

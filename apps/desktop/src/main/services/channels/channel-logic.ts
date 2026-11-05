@@ -20,6 +20,7 @@
 import type {
   ChannelDecision,
   ChannelMessage,
+  ChannelWork,
 } from "@abacus-ai/contract/channels";
 
 export { agreedItems, channelTitle } from "@abacus-ai/contract/channels";
@@ -292,6 +293,8 @@ export const turnPrompt = (input: {
   outsiders?: readonly Member[];
   /** For discuss: which round, of how many at most. */
   round?: { at: number; of: number };
+  /** Work this bot took on here, oldest first: what became of it. */
+  myWork?: readonly ChannelWork[];
   nameOf: (botId: string) => string;
 }): string => {
   const { me } = input;
@@ -323,6 +326,21 @@ export const turnPrompt = (input: {
   );
   lines.push(...input.unseen.map((message) => envelope(message, input.nameOf)));
   lines.push("");
+  const myWork =
+    input.kind === "answer" || input.kind === "everyone"
+      ? (input.myWork ?? []).slice(-3)
+      : [];
+  if (myWork.length > 0) {
+    lines.push(
+      "Work you took on here (it runs in your own chat), as it stands now:",
+      ...myWork.map((work) => `- "${attr(work.task)}": ${workState(work)}`)
+    );
+    if (myWork.some((work) => work.status === "running"))
+      lines.push(
+        "If the user's latest message cancels or changes your running work, add <stop_work/> inside your reply: it stops now. For a change, also add a new <work> with the changed task. Never say it stopped without <stop_work/>."
+      );
+    lines.push("");
+  }
   const others = (input.others ?? []).join(", ");
   switch (input.kind) {
     case "answer":
@@ -397,6 +415,24 @@ export const postedWords = (words: string, me: Member): string => {
   if (cut === 0) return "";
   if (cut > 0) text = text.slice(0, cut);
   return text.trim();
+};
+
+/** A work card's state, as the bot that took it on reads it. */
+const workState = (work: ChannelWork): string =>
+  work.status === "running"
+    ? "running now"
+    : work.status === "done"
+      ? "done; its report is in the channel"
+      : work.status === "stopped"
+        ? "the user stopped it partway, so it may be half done"
+        : `failed: ${work.error ?? "no reason given"}`;
+
+const STOP_WORK = /<stop_work\s*\/?>(?:\s*<\/stop_work>)?/gi;
+
+/** Whether the bot stopped its running work (`<stop_work/>`), and its words without the tag. */
+export const stopWorkIn = (words: string): { stop: boolean; words: string } => {
+  const stop = new RegExp(STOP_WORK.source, "i").test(words);
+  return { stop, words: words.replace(STOP_WORK, "").trim() };
 };
 
 const WORK = /<work>([\s\S]*?)<\/work>/i;
