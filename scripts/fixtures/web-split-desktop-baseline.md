@@ -8,7 +8,21 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `bd66921c9` (the features merged since #630)
+## Current: `ce39b54f5` with Share (#664)
+
+**426 / 8145050 / 2725004.** Records the renderer with the paid welcome (#662)
+and Share (#664), which took it 3926 bytes past the 1% allowance. Against
+`bd66921c9`: +3 chunks (+0.71%), +84531 bytes (+1.05%), +29668 gzip bytes
+(+1.10%). The growth is not split by change here; `apps/web`'s dependencies did
+not change. The 1% allowance is unchanged.
+
+Measured from a frozen-lockfile build of `ce39b54f5` with #664 (Linux x64),
+summed the same way as `check-desktop-parity.mjs`. This baseline-only change
+touches no renderer code.
+
+## History
+
+### `bd66921c9` (the features merged since #630)
 
 **423 / 8060519 / 2695336.** Records the renderer after the work merged since
 #630, the last of it #661's turn credits line. Against `de9cd7eba`: +3 chunks
@@ -20,8 +34,6 @@ change. The 1% allowance is unchanged.
 Measured from a frozen-lockfile build of `bd66921c9` (Linux x64), summed the
 same way as `check-desktop-parity.mjs`. This baseline-only change touches no
 renderer code.
-
-## History
 
 ### `de9cd7eba` (the failure card for a model off Abacus, #630)
 

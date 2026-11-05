@@ -1359,6 +1359,36 @@
       "unavailable": "Tidak dapat mengirimkan undangan saat ini. Coba lagi sebentar lagi."
     }
   },
+  "share": {
+    "action": "Bagikan",
+    "title": "Bagikan {{title}}",
+    "preparing": "Menyiapkan pratinjau…",
+    "previewLabel": "Pratinjau halaman publik",
+    "notice": "Siapa pun yang memiliki tautan dapat melihat ini.",
+    "cleaned": "Jalur file dan kunci yang ditemukan dihapus lebih dulu. Inilah yang akan dilihat orang.",
+    "cancel": "Batal",
+    "create": "Buat tautan publik",
+    "creating": "Membuat tautan…",
+    "ready": "Tautan Anda siap",
+    "linkLabel": "Tautan publik",
+    "copy": "Salin",
+    "copied": "Disalin",
+    "open": "Buka",
+    "stop": "Berhenti membagikan",
+    "stopTitle": "Berhenti membagikan?",
+    "stopBody": "Tautan langsung berhenti berfungsi. Orang yang sudah membukanya mungkin menyimpan salinan.",
+    "stopped": "Tautan dihapus",
+    "links": "Tautan yang dibagikan",
+    "linksEmpty": "Belum ada yang dibagikan. Gunakan Bagikan pada file buatan bot.",
+    "errors": {
+      "TOO_LARGE": "File ini melebihi batas 5 MB untuk tautan.",
+      "TOO_MANY": "Anda memiliki 50 tautan. Hentikan salah satu untuk membuat yang baru.",
+      "RATE_LIMITED": "Anda mencapai batas tautan hari ini. Coba lagi besok.",
+      "SENSITIVE": "File ini tampaknya berisi kunci, kata sandi, atau jalur file dari komputer Anda, jadi tidak dapat dibagikan.",
+      "UNSUPPORTED": "File ini tidak dapat dibagikan sebagai tautan.",
+      "FAILED": "Tidak bisa dilakukan. Periksa koneksi Anda dan coba lagi."
+    }
+  },
   "routines": {
     "atLabel": "Di",
     "autoRepliesLeadSidebar": "Setiap obrolan yang dijawab bot sendiri tercantum di bawah Rutinitas di bar samping, beserta percakapannya. Jeda mempertahankan hibah dan menghentikan jawabannya.",

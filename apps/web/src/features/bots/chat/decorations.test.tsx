@@ -19,6 +19,11 @@ import {
   type BotDecorationOptions,
 } from "./decorations";
 
+// Share reads the account, which these cards are not mounted under here.
+vi.mock("#renderer/components/share/share-row-button", () => ({
+  ShareRowButton: () => null,
+}));
+
 vi.mock("#renderer/lib/bot-turns/turns", async (importOriginal) => {
   const actual = await importOriginal<typeof turns>();
   return { ...actual, botThreadView: vi.fn(actual.botThreadView) };

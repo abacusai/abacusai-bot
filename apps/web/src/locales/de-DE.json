@@ -1359,6 +1359,36 @@
       "unavailable": "Die Einladungen konnten momentan nicht gesendet werden. Versuchen Sie es gleich noch einmal."
     }
   },
+  "share": {
+    "action": "Teilen",
+    "title": "{{title}} teilen",
+    "preparing": "Vorschau wird vorbereitet…",
+    "previewLabel": "Vorschau der öffentlichen Seite",
+    "notice": "Jeder mit dem Link kann das sehen.",
+    "cleaned": "Dateipfade und gefundene Schlüssel werden vorher entfernt. Genau das werden andere sehen.",
+    "cancel": "Abbrechen",
+    "create": "Öffentlichen Link erstellen",
+    "creating": "Link wird erstellt…",
+    "ready": "Dein Link ist fertig",
+    "linkLabel": "Öffentlicher Link",
+    "copy": "Kopieren",
+    "copied": "Kopiert",
+    "open": "Öffnen",
+    "stop": "Nicht mehr teilen",
+    "stopTitle": "Nicht mehr teilen?",
+    "stopBody": "Der Link funktioniert sofort nicht mehr. Wer ihn schon geöffnet hat, hat vielleicht eine Kopie.",
+    "stopped": "Link entfernt",
+    "links": "Geteilte Links",
+    "linksEmpty": "Noch nichts geteilt. Nutze Teilen bei einer Datei, die der Bot erstellt hat.",
+    "errors": {
+      "TOO_LARGE": "Diese Datei überschreitet das Limit von 5 MB für Links.",
+      "TOO_MANY": "Du hast 50 geteilte Links. Beende einen, um einen neuen zu erstellen.",
+      "RATE_LIMITED": "Du hast das heutige Limit für Links erreicht. Versuche es morgen erneut.",
+      "SENSITIVE": "Diese Datei scheint Schlüssel, Passwörter oder Dateipfade von deinem Computer zu enthalten und kann nicht geteilt werden.",
+      "UNSUPPORTED": "Diese Datei kann nicht als Link geteilt werden.",
+      "FAILED": "Das hat nicht geklappt. Prüfe deine Verbindung und versuche es erneut."
+    }
+  },
   "routines": {
     "atLabel": "Bei",
     "autoRepliesLeadSidebar": "Jeder Chat, auf den ein Bot allein antwortet, wird zusammen mit der Konversation unter „Routinen“ in der Seitenleiste aufgeführt. Pause behält den Zuschuss bei und stoppt die Antworten.",

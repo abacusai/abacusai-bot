@@ -66,6 +66,7 @@ export default defineConfig({
     "src/deliverable-url.ts",
     // What a chat can do, and which tools it gets: main and its tests read them.
     "src/channel.ts",
+    "src/secret-files.ts",
     "src/tool-policy.ts",
     // The credential stores no deliverable may be read from.
     "src/sandbox/secrets.ts",

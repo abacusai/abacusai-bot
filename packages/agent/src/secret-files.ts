@@ -22,3 +22,7 @@ export const SECRET_FILE_NAMES: readonly RegExp[] = [
 /** A file or folder name that holds keys or tokens (SECRET_FILE_NAMES). */
 export const isSecretFileName = (name: string): boolean =>
   SECRET_FILE_NAMES.some((pattern) => pattern.test(name));
+
+/** Whether any segment of `path` is a file or folder that holds keys. */
+export const namesSecretFile = (path: string): boolean =>
+  path.split(/[\\/]/).some(isSecretFileName);

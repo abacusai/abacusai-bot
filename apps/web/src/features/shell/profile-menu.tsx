@@ -4,6 +4,7 @@ import {
   CreditCard,
   Gift,
   HelpCircle,
+  Link2,
   LogOut,
   Monitor,
   Moon,
@@ -19,6 +20,7 @@ import { useTranslation } from "react-i18next";
 
 import { signOutAbacus } from "#platform/sign-out";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
+import { openSharedLinks } from "#renderer/components/share/share-store";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { ReferralLink } from "#renderer/features/settings/referral-link";
 import { accountIdentity } from "#renderer/lib/account-identity";
@@ -252,6 +254,12 @@ export const ProfileMenu = () => {
             >
               <Gift aria-hidden />
               <span className="truncate">{t("referrals.title")}</span>
+            </DropdownMenuItem>
+          )}
+          {IS_ELECTRON && account.data?.share_artifact === true && (
+            <DropdownMenuItem className={row} onClick={openSharedLinks}>
+              <Link2 aria-hidden />
+              <span className="truncate">{t("share.links")}</span>
             </DropdownMenuItem>
           )}
           {(!IS_ELECTRON || canSignOutOfAbacus(settings.data ?? null)) && (
