@@ -353,6 +353,7 @@ import {
   BOT_ASK_TURN_TIMEOUT_MS,
   BOT_TASK_PREFIX,
   BOT_TASK_TURN_TIMEOUT_MS,
+  requestGist,
   steppedInError,
   taskFollowUpNote,
 } from "./services/bots/bot-ask";
@@ -372,11 +373,13 @@ import { BotService, sponsoredRunEnvUntil } from "./services/bots/bot-service";
 import { botDir } from "./services/bots/bot-store";
 import {
   getBot,
+  getSenderSession,
   listSenderSessionEntries,
   onBotStoreWrite,
   recordBotSession,
   recordSenderSession,
   removeSenderSession,
+  senderSessionKey,
 } from "./services/bots/bot-store";
 import { BrowserProfilesService } from "./services/browser/browser-profiles-service";
 import type { BrowserTargetSource } from "./services/browser/browser-target";
@@ -1883,8 +1886,11 @@ export class ServiceHost {
 
   /** Lanes that deliver a note to their own session as a turn, by lane. */
   private readonly laneNotes = new Map<string, (note: string) => void>();
-  /** Connected notes for sessions whose turn is running, sent at its end. */
-  private readonly heldNotes = new Map<string, string[]>();
+  /** Notes for sessions whose turn is running, sent at its end; a tagged one goes on its own. */
+  private readonly heldNotes = new Map<
+    string,
+    Array<{ note: string; tags?: UserTextTags }>
+  >();
 
   /**
    * A host lane (the hosted phone loop) delivers the connected note to its
@@ -1905,7 +1911,12 @@ export class ServiceHost {
    * that turn ends, so it starts a turn of its own, and that turn's start
    * brings the session's tools to the new connectors first (connectorSync).
    */
-  private deliverSessionNote(sessionId: string | null, note: string): void {
+  private deliverSessionNote(
+    sessionId: string | null,
+    note: string,
+    /** Display tags for the chat (a bot exchange); absent, the note is hidden. */
+    tags?: UserTextTags
+  ): void {
     if (sessionId == null) return;
     const lane = this.agentSessionManagerService.laneOf(sessionId);
     const laneDeliver = lane != null ? this.laneNotes.get(lane) : undefined;
@@ -1917,7 +1928,7 @@ export class ServiceHost {
     if (session == null) return;
     this.heldNotes.set(sessionId, [
       ...(this.heldNotes.get(sessionId) ?? []),
-      note,
+      { note, ...(tags != null ? { tags } : {}) },
     ]);
     this.releaseConnectedNotes(sessionId);
   }
@@ -1930,13 +1941,21 @@ export class ServiceHost {
     // Another send got in first: the notes wait for its turn to end.
     if (this.sessionTurnStateService.get(session.workspaceId, sessionId).isBusy)
       return;
-    this.heldNotes.delete(sessionId);
+    // Plain notes go together as one hidden turn; a tagged note (a bot
+    // exchange the chat draws as a row) goes as a turn of its own, so its
+    // tags name it alone. The rest wait for that turn's end.
+    let count = 0;
+    while (count < notes.length && notes[count]!.tags == null) count++;
+    const batch = count === 0 ? notes.slice(0, 1) : notes.slice(0, count);
+    const rest = notes.slice(batch.length);
+    if (rest.length > 0) this.heldNotes.set(sessionId, rest);
+    else this.heldNotes.delete(sessionId);
     void this.sendAgentMessage({
       workspaceId: session.workspaceId,
       sessionId,
-      message: notes.join("\n\n"),
+      message: batch.map((entry) => entry.note).join("\n\n"),
       // Hidden: the model reads it, the transcript shows its answer only.
-      userText: {
+      userText: batch[0]!.tags ?? {
         systemReminder: true,
         operator: { kind: "environment-notice" },
       },
@@ -6197,7 +6216,9 @@ export class ServiceHost {
         .list()
         .find((bot) => bot.id === ask.targetId);
       if (doer != null)
-        this.tellBotAsk(ask, taskFollowUpNote(ask, doer, entry.words, reply));
+        this.tellBotAsk(ask, taskFollowUpNote(ask, doer, entry.words, reply), {
+          userWords: entry.words,
+        });
     });
   }
 
@@ -6273,7 +6294,11 @@ export class ServiceHost {
    * A request's outcome note, back to the user's own chat on the app it came
    * from while that chat is still routed here; otherwise in the app's chat.
    */
-  private tellBotAsk(ask: BotAskRecord, note: string): void {
+  private tellBotAsk(
+    ask: BotAskRecord,
+    note: string,
+    extra: { userWords?: string } = {}
+  ): void {
     if (
       ask.channel == null ||
       !this.messagingGatewayService.relayNote(
@@ -6282,7 +6307,56 @@ export class ServiceHost {
         note
       )
     )
-      this.deliverSessionNote(ask.askerSession, note);
+      this.deliverSessionNote(
+        ask.askerSession,
+        note,
+        this.exchangeTags(ask, note, extra.userWords)
+      );
+  }
+
+  /**
+   * The tags that let the asker's chat draw a bot-to-bot note as a row
+   * ("Planner finished the task", expanding to the exchange) rather than
+   * hide it: who, what, how it ended, and where the exchange lives.
+   */
+  private exchangeTags(
+    ask: BotAskRecord,
+    note: string,
+    userWords?: string
+  ): UserTextTags {
+    const target = this.botService
+      .list()
+      .find((bot) => bot.id === ask.targetId);
+    const record = this.botAskService.get(ask.askerId, ask.id) ?? ask;
+    const outcome =
+      userWords != null
+        ? ("follow-up" as const)
+        : record.status === "failed"
+          ? ("failed" as const)
+          : ("answered" as const);
+    const pair =
+      ask.kind === "task"
+        ? null
+        : getSenderSession(
+            senderSessionKey(ask.targetId, BOT_ASK_PLATFORM, ask.askerId)
+          );
+    void note;
+    return {
+      systemReminder: true,
+      operator: {
+        kind: "bot-exchange",
+        exchange: {
+          askId: ask.id,
+          botId: ask.targetId,
+          bot: target?.name ?? "a bot",
+          kind: ask.kind === "task" ? "task" : "ask",
+          request: requestGist(ask.request),
+          outcome,
+          ...(pair?.sessionId != null ? { chatSessionId: pair.sessionId } : {}),
+          ...(userWords != null ? { userWords } : {}),
+        },
+      },
+    };
   }
 
   /**

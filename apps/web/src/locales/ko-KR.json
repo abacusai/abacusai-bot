@@ -436,7 +436,18 @@
       "senderReadOnlyFallback": "{{bot}}이(가) 이 대화에서 답장합니다.",
       "sessionOfferHeading": "세션에서 만들기",
       "sessionOfferOpen": "세션 열기",
-      "sessionOfferDismiss": "여기서 계속 대화"
+      "sessionOfferDismiss": "여기서 계속 대화",
+      "exchange": {
+        "answered": "{{bot}} answered",
+        "taskDone": "{{bot}} finished the task",
+        "askFailed": "{{bot}} couldn't answer",
+        "taskFailed": "{{bot}} couldn't finish the task",
+        "followUp": "{{bot}} replied to you",
+        "asked": "Asked:",
+        "task": "Task:",
+        "userWrote": "You wrote to {{bot}}:",
+        "open": "Open the chat with {{bot}}"
+      }
     },
     "deleteDialog": {
       "checkIn": "Its check-in keeps running as an ordinary routine.",
@@ -3254,7 +3265,9 @@
       "componentServeDone": "Served",
       "showMoreOutput": "Show {{count}} more characters",
       "askWaiting": "Waiting for a response…",
-      "askSkipped": "Skipped"
+      "askSkipped": "Skipped",
+      "askBot": "{{bot}}에게 질문함: {{what}}",
+      "giveTask": "{{bot}}에게 작업을 전달함: {{what}}"
     },
     "transcript": {
       "jump": "Jump to the end",

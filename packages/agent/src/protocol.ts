@@ -26,10 +26,32 @@ export interface UserTextTags {
       | "user-reaction"
       | "test-repair"
       | "test-repair-limit"
-      | "tests-left-alone";
+      | "tests-left-alone"
+      | "bot-exchange";
     /** UTF-16 offset of the human text; absent means the whole turn is hidden. */
     visibleFrom?: number;
+    /** For "bot-exchange": what passed between this bot and another. */
+    exchange?: BotExchangeTag;
   };
+}
+
+/**
+ * What passed between this bot and another (a "bot-exchange" note): the
+ * chat draws it as a row instead of hiding the note.
+ */
+export interface BotExchangeTag {
+  askId: string;
+  /** The other bot. */
+  botId: string;
+  bot: string;
+  kind: "ask" | "task";
+  /** What was asked or passed on, in a line. */
+  request: string;
+  outcome: "answered" | "failed" | "follow-up";
+  /** Where the exchange lives: the pair chat for an ask; absent for a task (the other bot's own chat). */
+  chatSessionId?: string;
+  /** For a follow-up: what the user wrote to the other bot. */
+  userWords?: string;
 }
 
 export enum AgentMode {

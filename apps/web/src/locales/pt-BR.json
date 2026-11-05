@@ -436,7 +436,18 @@
       "senderReadOnlyFallback": "{{bot}} responde nesta conversa.",
       "sessionOfferHeading": "Crie isso em uma sessão",
       "sessionOfferOpen": "Abrir sessão",
-      "sessionOfferDismiss": "Continuar conversando aqui"
+      "sessionOfferDismiss": "Continuar conversando aqui",
+      "exchange": {
+        "answered": "{{bot}} answered",
+        "taskDone": "{{bot}} finished the task",
+        "askFailed": "{{bot}} couldn't answer",
+        "taskFailed": "{{bot}} couldn't finish the task",
+        "followUp": "{{bot}} replied to you",
+        "asked": "Asked:",
+        "task": "Task:",
+        "userWrote": "You wrote to {{bot}}:",
+        "open": "Open the chat with {{bot}}"
+      }
     },
     "deleteDialog": {
       "checkIn": "Its check-in keeps running as an ordinary routine.",
@@ -3254,7 +3265,9 @@
       "componentServeDone": "Served",
       "showMoreOutput": "Show {{count}} more characters",
       "askWaiting": "Waiting for a response…",
-      "askSkipped": "Skipped"
+      "askSkipped": "Skipped",
+      "askBot": "Perguntou a {{bot}}: {{what}}",
+      "giveTask": "Passou uma tarefa para {{bot}}: {{what}}"
     },
     "transcript": {
       "jump": "Jump to the end",

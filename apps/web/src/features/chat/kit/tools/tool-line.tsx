@@ -193,6 +193,23 @@ const useNormalizedTool = (
   return { tool: shown, input, needsYou: live.needsYou };
 };
 
+/** A request to another bot reads as what it was ("Asked Planner: …"). */
+export const exchangeToolTitle = (
+  name: string,
+  input: Record<string, unknown>,
+  t: (key: string, values: Record<string, string>) => string
+): string | null => {
+  if (name !== "ask_bot" && name !== "give_task_to_bot") return null;
+  const bot = typeof input.bot === "string" ? input.bot : "";
+  const raw = name === "ask_bot" ? input.request : input.task;
+  const what = (typeof raw === "string" ? raw : "").replace(/\s+/g, " ").trim();
+  const gist = what.length > 90 ? `${what.slice(0, 89)}…` : what;
+  return t(name === "ask_bot" ? "chat.tool.askBot" : "chat.tool.giveTask", {
+    bot,
+    what: gist,
+  });
+};
+
 export const toolTitle = (
   name: string,
   input: Record<string, unknown>
@@ -822,7 +839,8 @@ const MountedToolLine = ({ part, result, expander: fixed }: ToolLineProps) => {
   const { tool, input, needsYou } = useNormalizedTool(part, result);
   const expander = fixed ?? expanderFor(part.name);
   const Icon = KIND_ICONS[kindOf(part.name)] ?? Wrench;
-  const title = toolTitle(part.name, input);
+  const title =
+    exchangeToolTitle(part.name, input, t) ?? toolTitle(part.name, input);
   // A failed, stopped or refused call must not claim "Built"/"Opened": it
   // falls back to the generic row, whose body carries the error.
   const component =

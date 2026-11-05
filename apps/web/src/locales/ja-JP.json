@@ -436,7 +436,18 @@
       "senderReadOnlyFallback": "{{bot}} はこの会話で返信します。",
       "sessionOfferHeading": "セッションで作る",
       "sessionOfferOpen": "セッションを開く",
-      "sessionOfferDismiss": "ここで続ける"
+      "sessionOfferDismiss": "ここで続ける",
+      "exchange": {
+        "answered": "{{bot}} answered",
+        "taskDone": "{{bot}} finished the task",
+        "askFailed": "{{bot}} couldn't answer",
+        "taskFailed": "{{bot}} couldn't finish the task",
+        "followUp": "{{bot}} replied to you",
+        "asked": "Asked:",
+        "task": "Task:",
+        "userWrote": "You wrote to {{bot}}:",
+        "open": "Open the chat with {{bot}}"
+      }
     },
     "deleteDialog": {
       "checkIn": "Its check-in keeps running as an ordinary routine.",
@@ -3254,7 +3265,9 @@
       "componentServeDone": "Served",
       "showMoreOutput": "Show {{count}} more characters",
       "askWaiting": "Waiting for a response…",
-      "askSkipped": "Skipped"
+      "askSkipped": "Skipped",
+      "askBot": "{{bot}}に質問しました: {{what}}",
+      "giveTask": "{{bot}}にタスクを渡しました: {{what}}"
     },
     "transcript": {
       "jump": "Jump to the end",

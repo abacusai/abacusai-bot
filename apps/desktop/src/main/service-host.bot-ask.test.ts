@@ -209,8 +209,14 @@ describe("where a request's answer goes", () => {
       messagingGatewayService: { relayNote: vi.fn(() => relayed) },
       deliverSessionNote: vi.fn(),
       turnLedger: { channelOf: () => channel },
+      botService: {
+        list: () => [
+          { id: "wri", name: "Writer", title: "", sessionId: "wri-main" },
+        ],
+      },
+      botAskService: { get: () => null },
     };
-    for (const name of ["tellBotAsk", "ownChatOfTurn"])
+    for (const name of ["tellBotAsk", "ownChatOfTurn", "exchangeTags"])
       self[name] = proto[name].bind(self);
     return self as {
       tellBotAsk: (ask: BotAskRecord, note: string) => void;
@@ -235,14 +241,32 @@ describe("where a request's answer goes", () => {
   it("falls back to the app's chat when that chat is not routed here any more", () => {
     const h = host(false);
     h.tellBotAsk({ ...ASK, channel: WA }, "NOTE");
-    expect(h.deliverSessionNote).toHaveBeenCalledWith("res-chat", "NOTE");
+    expect(h.deliverSessionNote).toHaveBeenCalledWith(
+      "res-chat",
+      "NOTE",
+      expect.objectContaining({
+        operator: expect.objectContaining({ kind: "bot-exchange" }),
+      })
+    );
   });
 
   it("goes to the app's chat for a request made in the app", () => {
     const h = host(true);
     h.tellBotAsk(ASK, "NOTE");
     expect(h.messagingGatewayService.relayNote).not.toHaveBeenCalled();
-    expect(h.deliverSessionNote).toHaveBeenCalledWith("res-chat", "NOTE");
+    const tags = h.deliverSessionNote.mock.calls[0]?.[2] as {
+      operator: { kind: string; exchange: Record<string, unknown> };
+    };
+    expect(tags.operator.kind).toBe("bot-exchange");
+    // Who, what and how it ended, for the chat's row.
+    expect(tags.operator.exchange).toMatchObject({
+      askId: "q1",
+      botId: "wri",
+      bot: "Writer",
+      kind: "ask",
+      request: "Draft a post",
+      outcome: "answered",
+    });
   });
 
   it("remembers only the user's own chat as where a request came from, never a contact's", () => {

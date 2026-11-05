@@ -436,7 +436,18 @@
       "senderReadOnlyFallback": "{{bot}} bu sohbette yanıt veriyor.",
       "sessionOfferHeading": "Bunu bir oturumda oluştur",
       "sessionOfferOpen": "Oturumu aç",
-      "sessionOfferDismiss": "Burada sohbete devam et"
+      "sessionOfferDismiss": "Burada sohbete devam et",
+      "exchange": {
+        "answered": "{{bot}} answered",
+        "taskDone": "{{bot}} finished the task",
+        "askFailed": "{{bot}} couldn't answer",
+        "taskFailed": "{{bot}} couldn't finish the task",
+        "followUp": "{{bot}} replied to you",
+        "asked": "Asked:",
+        "task": "Task:",
+        "userWrote": "You wrote to {{bot}}:",
+        "open": "Open the chat with {{bot}}"
+      }
     },
     "deleteDialog": {
       "checkIn": "Yoklaması sıradan bir rutin olarak çalışmaya devam eder.",
@@ -3254,7 +3265,9 @@
       "componentServeDone": "Yayınlandı",
       "showMoreOutput": "{{count}} karakter daha göster",
       "askWaiting": "Yanıt bekleniyor…",
-      "askSkipped": "Atlandı"
+      "askSkipped": "Atlandı",
+      "askBot": "{{bot}} botuna soruldu: {{what}}",
+      "giveTask": "{{bot}} botuna görev verildi: {{what}}"
     },
     "transcript": {
       "jump": "Sona git",
