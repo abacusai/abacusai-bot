@@ -676,18 +676,15 @@ describe("a routine whose chat app lost its link", () => {
   const proto = ServiceHost.prototype as unknown as {
     startRoutineRun: (id: string, trigger: string) => Promise<string>;
     routineLinkDown: (job: unknown) => boolean;
-    tellRoutineLinkLost: (job: unknown) => void;
+    markRoutineLinkLost: (job: unknown) => void;
     routineLinkBack: (platform: string) => void;
   };
   const withLink = (unlinked: string[]) => {
-    const told: string[] = [];
     const service = {
       messagingGatewayService: { unlinkedPlatforms: () => unlinked },
-      routineLinkLostListeners: new Set([
-        (routine: { name: string }) => told.push(routine.name),
-      ]),
       routineLinkDown: proto.routineLinkDown,
-      tellRoutineLinkLost: proto.tellRoutineLinkLost,
+      markRoutineLinkLost: proto.markRoutineLinkLost,
+      routineAtCreditWall: async () => false,
       emitEvent: () => undefined,
       listRoutineRuns: () => [],
       startedAnyway: 0,
@@ -696,7 +693,7 @@ describe("a routine whose chat app lost its link", () => {
         throw new Error("got past the link check");
       },
     };
-    return { service, told };
+    return { service };
   };
   // Signed in: a run is stopped earlier otherwise.
   beforeEach(() => {
@@ -730,7 +727,7 @@ describe("a routine whose chat app lost its link", () => {
     );
   });
 
-  it("is told once, and a person pressing Run still gets a run", async () => {
+  it("is marked at the first skip, and a person pressing Run still gets a run", async () => {
     const { getJob, noteChatPlatform } =
       await import("./services/agent-tools/cron-store");
     const job = createJob({
@@ -739,17 +736,19 @@ describe("a routine whose chat app lost its link", () => {
       name: "Rain",
     });
     noteChatPlatform(job.id, "whatsapp");
-    const { service, told } = withLink(["whatsapp"]);
+    const { service } = withLink(["whatsapp"]);
 
     await fire(service, job.id, "schedule");
+    const markedAt = getJob(job.id)?.chatLinkLostAt;
     await fire(service, job.id, "schedule");
 
-    expect(told).toEqual(["Rain"]);
+    expect(markedAt).toEqual(expect.any(Number));
+    expect(getJob(job.id)?.chatLinkLostAt).toBe(markedAt);
     expect(getJob(job.id)?.runs[0]?.kind).toBe("skipped-link");
     expect(await fire(service, job.id, "manual")).toBe("ran");
   });
 
-  it("makes up one run when the link is back, and can be told again", async () => {
+  it("makes up one run when the link is back", async () => {
     const { getJob, noteChatPlatform, setChatLinkLost } =
       await import("./services/agent-tools/cron-store");
     const job = createJob({ schedule: "0 * * * *", prompt: "tell me" });

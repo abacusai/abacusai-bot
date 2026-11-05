@@ -1607,7 +1607,6 @@
       "note": "Menunggu kredit: proses dilewati tanpa biaya dan berjalan lagi dengan sendirinya saat Anda punya kredit.",
       "cta": "Dapatkan kredit"
     },
-    "chatLinkLost": "{{name}} dilewati sampai {{platform}} tertaut lagi, jadi tidak memakai kredit. Rutinitas berjalan sekali saat tautan kembali.",
     "createdByAgent": "A routine was set up: {{name}}.",
     "frequent": "Berjalan {{times}} kali sehari, dan setiap jalannya memakai kredit: dengan laju ini, kredit sebulan bisa habis dalam beberapa hari. Jika beberapa kali berturut-turut tidak menemukan hal baru, rutinitas ini berhenti sendiri.",
     "refused": {

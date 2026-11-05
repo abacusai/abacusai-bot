@@ -33,13 +33,6 @@ export type RoutinesEvent =
    * as one summary, not one notice each.
    */
   | { type: "hosted-away"; runs: HostedRoutineRun[] }
-  /** A routine's chat app lost its link, so its fires are skipped until it is back. */
-  | {
-      type: "chat-link-lost";
-      routineId: string;
-      name: string;
-      platform: string;
-    }
   /** The agent set up a routine; the user hears of every one. */
   | {
       type: "created";

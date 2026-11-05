@@ -1607,7 +1607,6 @@
       "note": "Esperando créditos: las ejecuciones se omiten sin coste y vuelven solas cuando tengas créditos.",
       "cta": "Obtener créditos"
     },
-    "chatLinkLost": "{{name}} se omite hasta que {{platform}} se vuelva a vincular, así no gasta créditos. Se ejecuta una vez al volver el vínculo.",
     "createdByAgent": "A routine was set up: {{name}}.",
     "frequent": "Se ejecuta {{times}} veces al día y cada ejecución usa créditos: a este ritmo, los créditos de un mes pueden agotarse en pocos días. Si varias ejecuciones seguidas no encuentran nada nuevo, se pausa sola.",
     "refused": {

@@ -1389,23 +1389,11 @@ export class ServiceHost {
   });
 
   /** Routines the agent set up, for the app to tell the user about. */
-  private readonly routineLinkLostListeners = new Set<
-    (routine: { id: string; name: string; platform: string }) => void
-  >();
   private readonly routineCreatedListeners = new Set<
     (routine: CreatedRoutine) => void
   >();
 
   /** Hear of each routine the agent sets up (never one the user's form makes). */
-  onRoutineLinkLost(
-    listener: (routine: { id: string; name: string; platform: string }) => void
-  ): () => void {
-    this.routineLinkLostListeners.add(listener);
-    return () => {
-      this.routineLinkLostListeners.delete(listener);
-    };
-  }
-
   onRoutineCreatedByAgent(
     listener: (routine: CreatedRoutine) => void
   ): () => void {
@@ -5659,21 +5647,9 @@ export class ServiceHost {
     return used.length > 0 && used.every((id) => unlinked.includes(id));
   }
 
-  /** Said once per loss: the first skipped fire, until the link is back. */
-  private tellRoutineLinkLost(job: CronJob): void {
-    if (job.chatLinkLostAt != null) return;
-    setChatLinkLost(job.id, Date.now());
-    for (const listener of this.routineLinkLostListeners) {
-      try {
-        listener({
-          id: job.id,
-          name: job.name,
-          platform: job.chatPlatforms?.[0] ?? "",
-        });
-      } catch (error) {
-        console.error("A routine link listener failed", error);
-      }
-    }
+  /** Marked at the first skipped fire, for the make-up run when the link is back. */
+  private markRoutineLinkLost(job: CronJob): void {
+    if (job.chatLinkLostAt == null) setChatLinkLost(job.id, Date.now());
   }
 
   /** The link is back: each routine it held makes up one run. */
@@ -6591,7 +6567,7 @@ export class ServiceHost {
         id: attemptId,
         kind: "skipped-link",
       });
-      this.tellRoutineLinkLost(job);
+      this.markRoutineLinkLost(job);
       this.emitEvent({
         type: "cronjobs-updated",
         emittedAt: new Date().toISOString(),
