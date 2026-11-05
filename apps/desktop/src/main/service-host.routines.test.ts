@@ -819,6 +819,59 @@ describe("a routine whose chat app lost its link", () => {
   });
 });
 
+describe("a routine's records when its folder changes", () => {
+  const proto = ServiceHost.prototype as unknown as {
+    updateLocalRoutine: (id: string, changes: unknown) => unknown;
+    routineHome: (job: unknown) => string;
+    routineProject: (job: unknown) => unknown;
+    realProject: (id: string | null) => unknown;
+    strayRoutineHome: (job: unknown) => string | null;
+  };
+  const service = (workspaces: unknown[]) => ({
+    workspaceService: { getWorkspaces: () => workspaces },
+    routineHome: proto.routineHome,
+    routineProject: proto.routineProject,
+    realProject: proto.realProject,
+    emitEvent: () => undefined,
+  });
+  const live = (id: string, dir: string) => ({
+    id,
+    path: dir,
+    status: "active",
+  });
+
+  it("go with it to a new project", () => {
+    const project = path.join(home, "digest");
+    const job = createJob({ schedule: "0 9 * * *", prompt: "digest" });
+    const own = path.join(home, "routines", job.id);
+    fs.mkdirSync(path.join(own, "runs"), { recursive: true });
+    fs.writeFileSync(path.join(own, "runs", "one.md"), "first");
+
+    proto.updateLocalRoutine.call(service([live("p", project)]), job.id, {
+      workspaceId: "p",
+    });
+
+    expect(
+      fs.readdirSync(
+        path.join(project, ".abacusai-bot", "routines", job.id, "runs")
+      )
+    ).toEqual(["one.md"]);
+  });
+
+  it.each([
+    ["a live project", "active", undefined, false],
+    ["a removed project", "deleted", undefined, true],
+    ["one of the app's own folders", "active", "routine", true],
+  ])("are looked for in %s", (_name, status, kind, stray) => {
+    const job = { id: "job-1", workspaceId: "w" };
+    const found = proto.strayRoutineHome.call(
+      service([{ id: "w", path: "/somewhere", status, kind }]),
+      job
+    );
+    expect(found != null).toBe(stray);
+  });
+});
+
 describe("a routine fired while signed out", () => {
   it("records the run as skipped", async () => {
     const job = createJob({ prompt: "p", schedule: "0 9 * * *" });

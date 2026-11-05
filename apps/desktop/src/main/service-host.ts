@@ -4101,14 +4101,15 @@ export class ServiceHost {
   }
 
   /**
-   * Where a routine's records went while one of the app's own folders was
-   * taken for its project, or null when its workspace is its own or a project.
+   * Where a routine's records are when that is not its home: one of the app's
+   * own folders taken for its project, or a project the user removed. Null when
+   * its workspace is its own or a live project.
    */
   private strayRoutineHome(job: CronJob): string | null {
     const named = this.workspaceService
       .getWorkspaces()
       .find((entry) => entry.id === job.workspaceId);
-    return named?.kind == null
+    return named == null || (named.kind == null && named.status !== "deleted")
       ? null
       : routineDirInWorkspace(named.path, job.id);
   }
@@ -6701,7 +6702,11 @@ export class ServiceHost {
   }
 
   private updateLocalRoutine(id: string, changes: RoutineUpdateInput): Routine {
+    const before = getJob(id);
+    const was = before == null ? null : this.routineHome(before);
     const job = updateJob(id, changes);
+    // Its runs and notes are its memory: they go where the routine goes.
+    if (was != null) reclaimRoutineRecords(was, this.routineHome(job));
     this.emitEvent({
       type: "cronjobs-updated",
       emittedAt: new Date().toISOString(),
