@@ -307,7 +307,10 @@ import {
   stuckRuns,
 } from "./services/agent-tools/routine-guards";
 import { readMigrationMarker } from "./services/agent-tools/routine-migration";
-import { buildRoutineFirePrompt } from "./services/agent-tools/routine-prompt";
+import {
+  buildRoutineEditorPrompt,
+  buildRoutineFirePrompt,
+} from "./services/agent-tools/routine-prompt";
 import { cleanSources, policyFor } from "./services/agent-tools/routine-reach";
 import {
   countRoutineRuns,
@@ -5697,6 +5700,9 @@ export class ServiceHost {
     return `${voice}\n\n${prompt}`;
   }
 
+  /** What the user wrote in a routine's chat box, while its editor's turn runs. */
+  private readonly routineEditorWords = new Map<string, string>();
+
   /** Callers (the routine editor, a bot's ask) waiting for a turn's text as a value. */
   private readonly turnWaiters = new Map<
     string,
@@ -6088,7 +6094,12 @@ export class ServiceHost {
    * "Every morning at 9 instead": a short turn in a session holding only the
    * cron tool applies the change and answers in a line.
    */
-  async editRoutineByChat(routineId: string, text: string): Promise<string> {
+  async editRoutineByChat(
+    routineId: string,
+    text: string,
+    /** The run on the user's screen; the newest when none is. */
+    runId?: string
+  ): Promise<string> {
     const job = getJob(routineId);
     if (job == null)
       throw new EntityNotFoundError(
@@ -6119,43 +6130,37 @@ export class ServiceHost {
     if (!started.success)
       throw new Error(started.error ?? "The editor could not start.");
 
-    const schedule =
-      job.schedule ??
-      (job.runAt != null
-        ? `once at ${new Date(job.runAt).toLocaleString()}`
-        : "manual");
-    const prompt = [
-      `You are the editor for the routine "${job.name}" (id ${job.id}).`,
-      "The user is telling you how it should change. Apply the change with",
-      `the cronjob tool on exactly this routine (id ${job.id}): action`,
-      '"update" for the schedule (five-field cron, local time), prompt or',
-      'name; "pause" or "resume"; "run" to fire it now. Do not touch any',
-      "other routine and do not do the routine's own task yourself.",
-      "Then answer in one short line saying what is now the case, in the",
-      "user's words, no preamble. If the request is not about this routine,",
-      "say so in one line and change nothing.",
-      "",
-      `Current schedule: ${schedule}`,
-      `Enabled: ${job.enabled ? "yes" : "no"}`,
-      `Instructions: ${job.prompt}`,
-      "",
-      `The user says: ${text}`,
-    ].join("\n");
+    // Only this routine's own runs: the id comes from the page.
+    const runs = this.listRoutineRuns(routineId);
+    const run = runs.find((item) => item.sessionId === runId) ?? runs[0];
+    const prompt = buildRoutineEditorPrompt(
+      job,
+      text,
+      run == null
+        ? null
+        : { at: run.startedAt, text: this.threadReply(run.sessionId) }
+    );
 
     const answer = this.waitForTurn(editor.id, 90_000);
-    // A message no agent took closes its turn too: `answer` then rejects.
-    await this.sendAgentMessage({
-      workspaceId,
-      sessionId: editor.id,
-      message: prompt,
-      userText: {
-        operator: {
-          kind: "routine-editor",
-          visibleFrom: prompt.length - text.length,
+    this.routineEditorWords.set(routineId, text);
+    let reply: string;
+    try {
+      // A message no agent took closes its turn too: `answer` then rejects.
+      await this.sendAgentMessage({
+        workspaceId,
+        sessionId: editor.id,
+        message: prompt,
+        userText: {
+          operator: {
+            kind: "routine-editor",
+            visibleFrom: prompt.length - text.length,
+          },
         },
-      },
-    });
-    const reply = await answer;
+      });
+      reply = await answer;
+    } finally {
+      this.routineEditorWords.delete(routineId);
+    }
     this.emitEvent({
       type: "cronjobs-updated",
       emittedAt: new Date().toISOString(),
@@ -6559,6 +6564,9 @@ export class ServiceHost {
         ),
         runs: countRoutineRuns(home),
         lastRun,
+        ...(trigger === "agent" && this.routineEditorWords.has(jobId)
+          ? { userWords: this.routineEditorWords.get(jobId) }
+          : {}),
         workspaces: workspaces
           .filter(
             (entry) => entry.status !== "deleted" && entry.kind !== "routine"

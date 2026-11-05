@@ -525,12 +525,21 @@ export const RoutinePage = ({
           )}
         </div>
       )}
-      {!hosted && <EditorChat key={row.id} routineId={row.id} />}
+      {!hosted && (
+        <EditorChat key={row.id} routineId={row.id} runId={selected} />
+      )}
     </div>
   );
 };
 type Exchange = { user: string; reply: string };
-export const EditorChat = ({ routineId }: { routineId: string }) => {
+export const EditorChat = ({
+  routineId,
+  runId,
+}: {
+  routineId: string;
+  /** The run on screen, whose question the user may be answering. */
+  runId?: string;
+}) => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
   const [text, setText] = useState("");
@@ -556,6 +565,7 @@ export const EditorChat = ({ routineId }: { routineId: string }) => {
       const result = await transport.client.routines.editByChat({
         routineId,
         text: user,
+        ...(runId != null ? { runId } : {}),
       });
       store.setState((log) =>
         [...log, { user, reply: result.reply }].slice(-10)
