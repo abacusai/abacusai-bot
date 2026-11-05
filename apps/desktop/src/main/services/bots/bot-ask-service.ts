@@ -31,6 +31,7 @@ import {
   botTaskPrompt,
   frameBotRequest,
   ownChatContext,
+  requestNotes,
   MAX_REQUESTS_PER_DAY,
 } from "./bot-ask";
 
@@ -94,6 +95,8 @@ export interface BotAskDeps {
   write: (records: BotAskRecord[]) => void;
   /** A request was made: the asker's follow-up tools appear (re-list). */
   changed?: () => void;
+  /** A line for a bot's daily notes: what it asked, passed on, answered or did. */
+  note?: (botId: string, line: string) => void;
   /** The user's latest lines in a bot's own chat, for an ask's context. */
   ownChatLines?: (botId: string) => string[];
   /** One line per request event, no message text: for the app's log. */
@@ -367,6 +370,17 @@ export class BotAskService {
         answerer
       )
     );
+    const asker = this.deps.bot(ask.askerId) ?? {
+      name: "Another bot",
+      title: "",
+    };
+    const notes = requestNotes(
+      { request: ask.request, kind: ask.kind, ...outcome },
+      asker,
+      answerer
+    );
+    this.deps.note?.(ask.askerId, notes.asker);
+    if (notes.answerer != null) this.deps.note?.(ask.targetId, notes.answerer);
   }
 
   /** e.g. `[bot-ask] q1 task res->pla answered 42s attempt 1`; never the text. */

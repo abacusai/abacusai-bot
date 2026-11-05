@@ -51,6 +51,46 @@ type Named = Pick<Bot, "name" | "title">;
 const roleOf = (bot: Pick<Bot, "title">): string =>
   bot.title.trim().length > 0 ? ` (${bot.title.trim()})` : "";
 
+/** One line of a text, cut for a daily note; markdown emphasis dropped. */
+export const noteGist = (text: string, max: number): string => {
+  const flat = text
+    .replace(/[*_`#>]+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
+};
+
+/**
+ * What each side keeps in its daily notes once a request ends: the asker,
+ * what it asked (or passed on) and what came back; the asked bot, what it
+ * was asked and what it answered. Short, with the other bot named.
+ */
+export const requestNotes = (
+  ask: { request: string; kind?: BotAskKind } & (
+    | { answer: string }
+    | { error: string }
+  ),
+  asker: Named,
+  answerer: Named
+): { asker: string; answerer: string | null } => {
+  const task = ask.kind === "task";
+  const what = noteGist(ask.request, 120);
+  if ("error" in ask)
+    return {
+      asker: `${task ? `Passed the user's task to ${answerer.name}` : `Asked ${answerer.name}`}: "${what}"; it ended: ${noteGist(ask.error, 200)}`,
+      answerer: null,
+    };
+  const got = noteGist(ask.answer, 300);
+  return {
+    asker: task
+      ? `Passed the user's task to ${answerer.name}: "${what}"; it reported: ${got}`
+      : `Asked ${answerer.name}: "${what}"; it answered: ${got}`,
+    answerer: task
+      ? `Did a task ${asker.name} passed on from the user: "${what}"; I reported: ${got}`
+      : `${asker.name} asked me: "${what}"; I answered: ${got}`,
+  };
+};
+
 /** A request's first words, for lists and notes. */
 export const requestGist = (request: string): string => {
   const flat = request.replace(/\s+/g, " ").trim();
