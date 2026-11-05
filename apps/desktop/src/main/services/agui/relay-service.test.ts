@@ -1266,7 +1266,10 @@ it("invalid native ids and mismatched conversation ids do not claim the thread's
 });
 
 it("run-finished cursors older than retention require resync, including a cursor in a seq gap", () => {
-  const { agent, relay } = setup();
+  const { agent, relay, store } = setup();
+  // Retention is the relay's memory, not the file's: 1002 flushed thread-file
+  // writes alone outlast the 30s budget on a slow Windows runner.
+  vi.spyOn(store, "writeAgui").mockImplementation(() => undefined);
   agent.boot();
   for (let i = 0; i < 1002; i++) {
     agent.emit("s1", { type: "RUN_STARTED", threadId: "s1", runId: `r${i}` });
