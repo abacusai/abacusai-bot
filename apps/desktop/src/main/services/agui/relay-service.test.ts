@@ -456,9 +456,9 @@ describe("ai.cancel, ai.respondPermission, ai.queue.*", () => {
       { type: "clear_queue" },
       { type: "dequeue" },
     ]);
-    // Queued or edited in the queue, it is the user's message: main hears it.
+    // Queued, it is the user's message: main hears it once; an edit is not
+    // a new message.
     expect(agent.acceptedMessage.mock.calls).toEqual([
-      ["s1", "edited", undefined],
       ["s1", "later", undefined],
     ]);
     expect(

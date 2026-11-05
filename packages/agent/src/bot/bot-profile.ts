@@ -95,7 +95,7 @@ export function createBotProfile(): ForeverProfile {
     alwaysAllowedTools: [BOT_REACTION_TOOL_NAME],
     canAskForApproval: true,
     memory: {
-      sessionStartPrompt: () => recentNotesPrompt(home),
+      recentPrompt: () => recentNotesPrompt(home),
       standingPrompt: () => coreMemoryPrompt(home),
       fingerprint: () => memoryFingerprint(home),
       flushAtWindowShare: FLUSH_AT_WINDOW_SHARE,

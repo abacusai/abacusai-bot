@@ -1173,7 +1173,6 @@ export class AguiRelayService implements AguiSource {
           entryId,
           message,
         });
-        this.#accepted(threadId, message);
       }
     },
     remove: async ({ threadId, incarnation, entryId }) => {

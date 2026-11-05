@@ -464,7 +464,7 @@ export class ForeverEngine {
       appendSystemPromptOverride: (base: string[]): string[] => {
         const persona = personaPrompt();
         const memory = this.profile.memory.standingPrompt();
-        const recentMemory = this.profile.memory.sessionStartPrompt();
+        const recentMemory = this.profile.memory.recentPrompt();
         // Live on every rebuild: a connector added mid-conversation must show.
         const mcp = mcpPrompt(this.mcp.statuses);
         this.promptMcpRoster = mcpRosterFingerprint(this.mcp.statuses);

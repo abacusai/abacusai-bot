@@ -641,10 +641,14 @@ const TASK_FOLLOW_UP_MS = 60 * 60_000;
  */
 const YES =
   "yes|yeah|yep|yup|ok|okay|sure|go ahead|please|do it|sounds good|y|sí|si|claro|dale|vale|adelante|oui|ouais|d'accord|vas-y|allez-y|ja|jawohl|klar|gerne|sim|pode|certo|va bene|ya|iya|boleh|silakan|evet|tamam|olur|はい|うん|どうぞ|お願いします|네|예|응|좋아|👍";
-const TAKEN_BACK =
-  "but|no|not|don'?t|never|nah|forget|cancel|instead|actually|wait|hold|nein|non|pero|mais|aber|não|nao|hayır|tidak|jangan|いや|やめ|아니";
+// Words that take the yes back. "no" and "wait" are not among them: "ok no
+// problem" and "sure, hold on" are yeses. The CJK ones have no word
+// boundary to look for.
+const TAKEN_BACK_WORDS =
+  "but|don'?t|never|nah|forget|cancel|instead|actually|nein|non|pero|mais|aber|não|nao|hayır|tidak|jangan";
+const TAKEN_BACK_CJK = "いや|やめ|아니";
 const AGREEMENT = new RegExp(
-  `^(?:${YES})(?=[\\s,.!'’、。]|$)(?![\\p{L}\\p{N}\\s,.!'’、。]{0,30}(?<![\\p{L}\\p{N}])(?:${TAKEN_BACK})(?![\\p{L}\\p{N}]))[\\p{L}\\p{N}\\s,.!'’、。]{0,30}$`,
+  `^(?:${YES})(?=[\\s,.!'’、。]|$)(?![\\p{L}\\p{N}\\s,.!'’、。]{0,30}(?:(?<![\\p{L}\\p{N}])(?:${TAKEN_BACK_WORDS})(?![\\p{L}\\p{N}])|(?:${TAKEN_BACK_CJK})))[\\p{L}\\p{N}\\s,.!'’、。]{0,30}$`,
   "iu"
 );
 
@@ -6028,6 +6032,11 @@ export class ServiceHost {
       this.userWords.delete(sessionId);
       return;
     }
+    // Stepping in and the follow-up are idempotent, so they come before the
+    // dedupe: "stop" sent twice stops the task on either copy.
+    this.userSteppedIn(sessionId, words);
+    const followUp = this.taskFollowUps.get(sessionId);
+    if (followUp != null && followUp.words == null) followUp.words = words;
     const recent = this.userWords.get(sessionId) ?? [];
     // The same message can arrive by both paths; it counts once.
     if (recent.at(-1)?.text === words) return;
@@ -6035,9 +6044,6 @@ export class ServiceHost {
       ...recent.slice(-1),
       { text: words, at: Date.now() },
     ]);
-    this.userSteppedIn(sessionId, words);
-    const followUp = this.taskFollowUps.get(sessionId);
-    if (followUp != null && followUp.words == null) followUp.words = words;
   }
 
   /**
@@ -6145,7 +6151,7 @@ export class ServiceHost {
   /** Doing bot's chat → the passed-on task that ended there, and the user's next words in it. */
   private readonly taskFollowUps = new Map<
     string,
-    { ask: BotAskRecord; words: string | null }
+    { ask: BotAskRecord; words: string | null; from: number }
   >();
 
   /**
@@ -6161,7 +6167,9 @@ export class ServiceHost {
     ask: BotAskRecord,
     words: string | null
   ): void {
-    const entry = { ask, words };
+    // The user's message and the reply come after this point in the log,
+    // so only what follows it is read, however long the log before it.
+    const entry = { ask, words, from: this.transcriptSize(sessionId) };
     this.taskFollowUps.set(sessionId, entry);
     console.log(
       `[bot-ask] ${ask.id} follow-up armed in ${ask.targetId}'s chat${words == null ? "" : " with the user's words"}`
@@ -6177,7 +6185,7 @@ export class ServiceHost {
       if (record.sessionId !== sessionId) return;
       if (this.taskFollowUps.get(sessionId) !== entry) return end();
       if (entry.words == null) return;
-      const reply = this.replyTo(sessionId, entry.words);
+      const reply = this.replyTo(sessionId, entry.words, entry.from);
       // A turn before theirs closed: theirs is still to come.
       if (reply == null) {
         console.log(`[bot-ask] ${ask.id} follow-up: no reply yet`);
@@ -6193,22 +6201,43 @@ export class ServiceHost {
     });
   }
 
-  /** The bot's answer in its chat to the user's message `words`, or null before there is one. */
-  private replyTo(sessionId: string, words: string): string | null {
-    const file =
+  private transcriptFile(sessionId: string): string | null {
+    return (
       this.agentSessionManagerService.getDiagnosticInfo(sessionId)
-        ?.agentSessionFile ?? null;
-    // A long reply (many tool calls) can run to megabytes after the user's
-    // message, so the whole log is read, not its last stretch.
+        ?.agentSessionFile ?? null
+    );
+  }
+
+  private transcriptSize(sessionId: string): number {
+    const file = this.transcriptFile(sessionId);
+    try {
+      return file == null ? 0 : fs.statSync(file).size;
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
+   * The bot's answer in its chat to the user's message `words`, or null
+   * before there is one. Read from byte `from` of the log: a long reply
+   * (many tool calls) can run to megabytes, and the whole of it follows.
+   * A chat-app message carries its "[WhatsApp message from …]" label in
+   * both places; it is matched without it.
+   */
+  private replyTo(
+    sessionId: string,
+    words: string,
+    from: number
+  ): string | null {
     const turns = readTranscriptTail(
-      file,
+      this.transcriptFile(sessionId),
       5000,
-      undefined,
+      (role, text) => (role === "user" ? unlabelled(text) : text),
       3000,
-      64 * 1024 * 1024
+      from
     );
     // The whole message, as the tail keeps it (cut at 3000 with an ellipsis).
-    const key = words.replace(/\s+/g, " ").trim().slice(0, 3000);
+    const key = unlabelled(words).replace(/\s+/g, " ").trim().slice(0, 3000);
     const at = turns.findLastIndex(
       (turn) =>
         turn.role === "user" && (turn.text === key || turn.text === `${key}…`)
@@ -6316,7 +6345,6 @@ export class ServiceHost {
       cancelled: false,
       steppedIn: null as string | null,
     };
-    if (task) this.taskTurns.set(ask.id, state);
     const asker = this.botService.list().find((bot) => bot.id === ask.askerId);
     const handle = task
       ? await this.botService.openChat(ask.targetId)
@@ -6327,22 +6355,29 @@ export class ServiceHost {
           asker?.name ?? "another bot"
         );
     this.botAskTurns.set(ask.id, handle);
+    if (task) this.taskTurns.set(ask.id, state);
     try {
       if (task) {
+        const cancelled = (): Error =>
+          new Error("it was cancelled before it began.");
         // The user may be talking to that bot in its chat: the task waits
-        // for that turn to end rather than steering into it.
-        if (
-          !(await this.turnClosed(handle.sessionId, BOT_TASK_TURN_TIMEOUT_MS))
-        )
-          throw new Error("it stayed busy in its own chat for 30 minutes.");
-        if (state.cancelled)
-          throw new Error("it was cancelled before it began.");
-        // A turn there just stopped (the task before this one, say) closes
-        // a moment after the stop: not on this task's waiter.
-        await this.sessionTurnStateService.stopSettled(
-          handle.sessionId,
-          15_000
-        );
+        // for that turn to end rather than steering into it. A turn there
+        // that just stopped closes a moment after the stop, not on this
+        // task's waiter; and a turn the user opens during that wait is
+        // waited out in its turn. A cancel at any of these points holds.
+        for (;;) {
+          if (
+            !(await this.turnClosed(handle.sessionId, BOT_TASK_TURN_TIMEOUT_MS))
+          )
+            throw new Error("it stayed busy in its own chat for 30 minutes.");
+          if (state.cancelled) throw cancelled();
+          await this.sessionTurnStateService.stopSettled(
+            handle.sessionId,
+            15_000
+          );
+          if (state.cancelled) throw cancelled();
+          if (!this.turnLedger.isOpen(handle.sessionId)) break;
+        }
       } else if (this.turnLedger.isOpen(handle.sessionId))
         // A turn left open there (one stopped or cut off) would take this
         // request into it; asks of one pair never overlap otherwise.
@@ -6374,6 +6409,8 @@ export class ServiceHost {
           : {}),
       });
       state.sent = true;
+      // Cancelled while the prompt was on its way: the turn it opened stops.
+      if (state.cancelled) this.stopAgentTurn(handle);
       // Refused before any turn opened (its workspace is gone): nothing will
       // close a turn, so the waiter is ended here rather than at the timeout.
       if (!sent) {
@@ -6395,7 +6432,8 @@ export class ServiceHost {
       if (
         task &&
         !state.cancelled &&
-        this.botAskService.get(ask.askerId, ask.id)?.status !== "cancelled"
+        this.botAskService.get(ask.askerId, ask.id)?.status !== "cancelled" &&
+        this.botService.list().some((bot) => bot.id === ask.targetId)
       )
         this.watchTaskFollowUp(handle.sessionId, ask, state.steppedIn);
       this.botAskTurns.delete(ask.id);

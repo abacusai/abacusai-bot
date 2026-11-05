@@ -15,8 +15,8 @@ export const readTranscriptTail = (
   read?: (role: "user" | "assistant", text: string) => string | null,
   /** Each line is cut to this many characters. */
   maxText = MAX_TEXT,
-  /** Only this much of the end of the file is read. */
-  maxBytes = MAX_BYTES
+  /** Read from this byte on; absent, the last stretch of the file. */
+  fromByte?: number
 ): Array<{ role: "user" | "assistant"; text: string }> => {
   if (file == null) return [];
   let raw: string;
@@ -24,7 +24,7 @@ export const readTranscriptTail = (
     const size = fs.statSync(file).size;
     const fd = fs.openSync(file, "r");
     try {
-      const start = Math.max(0, size - maxBytes);
+      const start = Math.max(0, Math.min(size, fromByte ?? size - MAX_BYTES));
       const buffer = Buffer.alloc(size - start);
       fs.readSync(fd, buffer, 0, buffer.length, start);
       raw = buffer.toString("utf8");
