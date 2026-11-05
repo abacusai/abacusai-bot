@@ -359,7 +359,10 @@ describe("work taken on in a channel", () => {
       "<reply>On it.<work>Write the announcement to announcement.md</work></reply>"
     );
     await flush();
-    service.post(id, "Writer, cancel that, I don't want it anymore");
+    service.post(
+      id,
+      "Writer, I changed my mind, I don't need the announcement anymore"
+    );
     await flush();
     expect(turns[1]!.prompt).toContain(
       '- "Write the announcement to announcement.md": running now'
@@ -403,6 +406,36 @@ describe("work taken on in a channel", () => {
       cards[0]!.id,
       cards[1]!.id,
     ]);
+  });
+
+  it("a plain stop stops the work of the bots it names before they answer", async () => {
+    const { service, turns, works, flush, store } = setup();
+    const { id } = service.create({ botIds: ["chief", "wri"] });
+    service.post(id, "Writer, write the announcement and Chief, the checklist");
+    await flush();
+    turns[0]!.resolve("<reply><work>Write the announcement</work></reply>");
+    await flush();
+    turns[1]!.resolve("<reply><work>Make the checklist</work></reply>");
+    await flush();
+    expect(works.map((work) => work.botId)).toEqual(["wri", "chief"]);
+    service.post(id, "Chief stop, Writer carry on");
+    await flush();
+    const status = (botId: string) =>
+      store.threads
+        .get(id)!
+        .find(
+          (m) =>
+            m.work != null &&
+            m.author.kind === "bot" &&
+            m.author.botId === botId
+        )!.work!.status;
+    expect(status("chief")).toBe("stopped");
+    expect(status("wri")).toBe("running");
+    // Chief is told at once that its work stopped.
+    expect(turns[2]!.botId).toBe("chief");
+    expect(turns[2]!.prompt).toContain(
+      "the user stopped it partway, so it may be half done"
+    );
   });
 
   it("a bot cannot stop another bot's work", async () => {

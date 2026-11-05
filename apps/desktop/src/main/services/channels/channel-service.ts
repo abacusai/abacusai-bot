@@ -42,6 +42,7 @@ import {
   mentionedIn,
   type Member,
   postedWords,
+  plainStop,
   speakersFor,
   stopWorkIn,
   turnPrompt,
@@ -114,6 +115,8 @@ export interface ChannelDeps {
   now?: () => number;
   newId?: () => string;
 }
+
+const STOPPED_PARTWAY = "You stopped it partway, so it may be half done.";
 
 /** Messages kept per thread; older ones are dropped. */
 const KEPT_MESSAGES = 1000;
@@ -479,6 +482,11 @@ export class ChannelService {
       ) {
         this.stoppedWorks.add(messageId);
         this.deps.stopWork?.(messageId);
+        // Shown at once, and so the bots' next turns read it as stopped.
+        this.setWork(channelId, messageId, {
+          status: "stopped",
+          error: STOPPED_PARTWAY,
+        });
       }
   }
 
@@ -544,6 +552,12 @@ export class ChannelService {
     this.log(
       `round in ${channelId}: ${speakers.everyone ? "everyone" : speakers.botIds.length} speaker(s)`
     );
+    // "Stop", "cancel that": the bots it is for stop their work now, before
+    // they answer, rather than each deciding whether to.
+    const stopped = plainStop(userMessage.text, members);
+    if (stopped != null)
+      for (const botId of stopped.length > 0 ? stopped : speakers.botIds)
+        this.stopWorks(channelId, botId);
 
     if (speakers.discussion === true) {
       await this.discuss(channelId, round, speakers.botIds);
@@ -845,9 +859,7 @@ export class ChannelService {
         const why = error instanceof Error ? error.message : String(error);
         this.setWork(channelId, messageId, {
           status: stopped ? "stopped" : "failed",
-          error: stopped
-            ? "You stopped it partway, so it may be half done."
-            : why,
+          error: stopped ? STOPPED_PARTWAY : why,
         });
       })
       .finally(() => {

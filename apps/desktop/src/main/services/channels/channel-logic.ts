@@ -179,6 +179,74 @@ export const wantsNoAnswer = (
     .every((word) => ACK_WORDS.has(word));
 };
 
+const STOP_VERBS = new Set(["stop", "cancel", "halt", "abort", "forget"]);
+/** What may follow the verb in a plain stop ("stop what you're doing", "cancel that"). */
+const STOP_OBJECTS = new Set(
+  "it that this everything all now please what you you're youre are doing working there already your work task job".split(
+    " "
+  )
+);
+const STOP_LEAD = new Set(
+  "ok okay please pls hey hi wait no nah actually just guys all everyone team".split(
+    " "
+  )
+);
+
+/**
+ * A plain stop from the user ("stop", "@everyone stop what you're doing",
+ * "Writer, cancel that", "forget the announcement"): a clause that is a stop
+ * and nothing else. Returns the members named up to that clause ("Planner
+ * stop, Writer carry on" stops Planner only; none named: whoever the message
+ * is for), or null when it is not a stop. The app stops their work itself
+ * rather than leave it to each bot. "Stop using emojis" is an instruction.
+ */
+export const plainStop = (
+  text: string,
+  members: readonly Member[]
+): string[] | null => {
+  if (text.includes("?")) return null;
+  const withoutNames = (part: string): string =>
+    members
+      .reduce(
+        (rest, member) =>
+          rest.replace(
+            new RegExp(`@?${escape(member.name)}(?![\\p{L}\\p{N}_-])`, "giu"),
+            " "
+          ),
+        part
+      )
+      .replace(/@(?:everyone|all)\b/gi, " ")
+      .trim();
+  const parts = ownWords(text).split(/[,.!;:\n]/);
+  // The first clause with more than names and fillers ("no, stop!").
+  let at = -1;
+  let words: string[] = [];
+  for (const [index, part] of parts.entries()) {
+    words = withoutNames(part)
+      .toLowerCase()
+      .replace(/[’']/g, "'")
+      .split(/\s+/)
+      .filter((word) => word.length > 0);
+    while (words.length > 0 && STOP_LEAD.has(words[0]!)) words.shift();
+    if (words.length > 0) {
+      at = index;
+      break;
+    }
+  }
+  if (at < 0) return null;
+  const [verb, ...after] = words;
+  if (verb == null || !STOP_VERBS.has(verb)) return null;
+  // "forget the announcement", "cancel the checklist": a thing, by name.
+  const the = after.indexOf("the");
+  const before = the < 0 ? after : after.slice(0, the);
+  if (
+    !before.every((word) => STOP_OBJECTS.has(word)) ||
+    (the >= 0 && after.length - the - 1 > 3)
+  )
+    return null;
+  return mergeByPosition(parts.slice(0, at + 1).join(","), members);
+};
+
 /**
  * Who answers the user's message. `replyToBot` is the author of the message
  * it replies to; `lastSpeaker` the bot that spoke last in the channel.
@@ -335,6 +403,9 @@ export const turnPrompt = (input: {
       "Work you took on here (it runs in your own chat), as it stands now:",
       ...myWork.map((work) => `- "${attr(work.task)}": ${workState(work)}`)
     );
+    lines.push(
+      "A question about this work is answered from where it stands above: don't take it on again unless the user asks you to."
+    );
     if (myWork.some((work) => work.status === "running"))
       lines.push(
         "If the user's latest message cancels or changes your running work, add <stop_work/> inside your reply: it stops now. For a change, also add a new <work> with the changed task. Never say it stopped without <stop_work/>."
@@ -347,7 +418,7 @@ export const turnPrompt = (input: {
       lines.push(
         "Answer the user's latest message.",
         colleagues.length > 0
-          ? `If another member is better placed for part of it, bring them in by writing @Name and what you need from them (e.g. @${colleagues[0]?.name} …); they answer after you and you then finish. Only when it really helps.`
+          ? `If another member is better placed for part of it, bring them in by writing @Name and what you need from them (e.g. @${colleagues[0]?.name} …); they answer after you and you then finish. Only when it really helps: @Name always brings them in, so to only mention someone, write their name without @.`
           : "",
         (input.outsiders ?? []).length > 0
           ? `The user's other bots, not in this channel: ${(input.outsiders ?? []).map((bot) => `${bot.name}${roleOf(bot)}`).join(", ")}. If one of them is needed here, write <invite name="Name">why, in one line</invite> inside your reply; the user decides.`

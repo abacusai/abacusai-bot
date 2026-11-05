@@ -13,8 +13,10 @@ import {
   channelTitle,
   envelope,
   mentionedIn,
+  plainStop,
   postedWords,
   speakersFor,
+  stopWorkIn,
   turnPrompt,
   wantsNoAnswer,
 } from "./channel-logic";
@@ -291,5 +293,45 @@ describe("agreed items and their owners", () => {
       null,
     ]);
     expect(ownerOf("Writer drafts it, Planner reviews", M)).toBe("wri");
+  });
+});
+
+describe("plainStop", () => {
+  it.each([
+    ["stop", []],
+    ["@everyone stop what you're doing", []],
+    ["Writer, cancel that, I don't want the announcement anymore", ["wri"]],
+    ["forget the announcement", []],
+    ["no, stop!", []],
+    ["ok stop it", []],
+    ["Planner stop, Writer carry on", ["pla"]],
+    ["@Writer @Planner stop everything", ["wri", "pla"]],
+  ])("%s is a stop for %j", (text, ids) => {
+    expect(plainStop(text, M)).toEqual(ids);
+  });
+
+  it.each([
+    "stop using emojis",
+    "don't stop",
+    "can you stop?",
+    "Writer, make it shorter",
+    "forget the long intro and lead with the price instead",
+    "cancel culture is a good topic for a post",
+  ])("%s is not", (text) => {
+    expect(plainStop(text, M)).toBeNull();
+  });
+});
+
+describe("stopWorkIn", () => {
+  it("finds the tag in any spelling and drops it from the words", () => {
+    expect(stopWorkIn("Stopped. <stop_work/>")).toEqual({
+      stop: true,
+      words: "Stopped.",
+    });
+    expect(stopWorkIn("<stop_work></stop_work> ok").stop).toBe(true);
+    expect(stopWorkIn("Still on it.")).toEqual({
+      stop: false,
+      words: "Still on it.",
+    });
   });
 });
