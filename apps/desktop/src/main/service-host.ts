@@ -19,6 +19,7 @@ import {
 import {
   AgentMode,
   type DesktopEvent,
+  type BotTaskTag,
   type UserTextTags,
 } from "@abacus-ai/contract/agent-types";
 import type {
@@ -6318,6 +6319,18 @@ export class ServiceHost {
       );
   }
 
+  /** What the doing bot's chat draws in place of a passed-on task's prompt. */
+  private taskTag(ask: BotAskRecord): BotTaskTag {
+    const passer = this.botService.list().find((bot) => bot.id === ask.askerId);
+    return {
+      askId: ask.id,
+      passerId: ask.askerId,
+      passer: passer?.name ?? "a bot",
+      task: ask.request,
+      userWords: ask.userWords ?? ask.request,
+    };
+  }
+
   /**
    * The tags that let the asker's chat draw a bot-to-bot note as a row
    * ("Planner finished the task", expanding to the exchange) rather than
@@ -6482,12 +6495,21 @@ export class ServiceHost {
         workspaceId: handle.workspaceId,
         sessionId: handle.sessionId,
         message: prompt,
-        // A task shows in that bot's chat as it arrived; an ask's rules don't.
-        ...(visibleFrom != null
+        // A task shows in that bot's chat as a card (who passed it on, the
+        // user's words); an ask's rules don't show at all.
+        ...(task
           ? {
-              userText: { operator: { kind: "auto-reply-intro", visibleFrom } },
+              userText: {
+                operator: { kind: "bot-task", task: this.taskTag(ask) },
+              },
             }
-          : {}),
+          : visibleFrom != null
+            ? {
+                userText: {
+                  operator: { kind: "auto-reply-intro", visibleFrom },
+                },
+              }
+            : {}),
       });
       state.sent = true;
       // Cancelled while the prompt was on its way: the turn it opened stops.

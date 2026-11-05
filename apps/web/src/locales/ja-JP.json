@@ -451,8 +451,15 @@
         "foldMessages_one": "{{count}}件のメッセージ:",
         "foldMessages_other": "{{count}}件のメッセージ:",
         "foldBots_one": "{{count}}個のボット",
-        "foldBots_other": "{{count}}個のボット"
-      }
+        "foldBots_other": "{{count}}個のボット",
+        "messagedList": "{{bots}}にメッセージを送信しました"
+      },
+      "task": {
+        "from": "あなたから({{bot}}経由)",
+        "asWritten": "{{bot}}が伝えた内容:"
+      },
+      "pairWith": "{{bot}}と",
+      "pairReadOnly": "読み取り専用"
     },
     "deleteDialog": {
       "checkIn": "Its check-in keeps running as an ordinary routine.",

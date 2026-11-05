@@ -1,4 +1,7 @@
-import type { BotExchangeTag } from "@abacus-ai/contract/agent-types";
+import type {
+  BotExchangeTag,
+  BotTaskTag,
+} from "@abacus-ai/contract/agent-types";
 import type { BotRow } from "@abacus-ai/contract/contract/rows";
 import type {
   TurnFeedbackInput,
@@ -6,7 +9,7 @@ import type {
 } from "@abacus-ai/contract/contracts";
 import { feedbackSegmentId } from "@abacus-ai/contract/transcript/feedback-target";
 import type { UIMessage } from "@tanstack/ai-client";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -115,7 +118,42 @@ const ROW_TRIGGER =
 const ROW_BODY =
   "bg-muted/40 mx-auto mt-2 flex w-full max-w-[min(640px,90%)] flex-col gap-2 rounded-md p-3 text-sm";
 
-/** "Messaged {face} Planner", where the bot made a request; opens to what it asked. */
+/** The bots named in a list, in the reader's language ("Planner and Researcher"), each with its face. */
+const BotList = ({
+  names,
+  bots,
+  language,
+}: {
+  names: readonly string[];
+  bots: readonly BotRow[];
+  language: string;
+}) => {
+  const parts = new Intl.ListFormat(language, {
+    type: "conjunction",
+  }).formatToParts([...names]);
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (part.type === "literal")
+          return <Fragment key={index}>{part.value}</Fragment>;
+        const bot = bots.find(
+          (row) => row.name.toLowerCase() === part.value.toLowerCase()
+        );
+        return (
+          <span key={index} className="inline-flex items-center gap-1">
+            {bot != null && <BotFace bot={bot} size={18} />}
+            <span className="truncate">{bot?.name ?? part.value}</span>
+          </span>
+        );
+      })}
+    </>
+  );
+};
+
+/**
+ * "Messaged {face} Planner and {face} Researcher": one row for the turn's
+ * requests to other bots, opening to what each was asked.
+ */
 const RequestRows = ({
   requests,
   bots,
@@ -123,26 +161,36 @@ const RequestRows = ({
   requests: ReadonlyArray<{ kind: "ask" | "task"; bot: string; what: string }>;
   bots: readonly BotRow[];
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const names = [...new Set(requests.map((request) => request.bot))];
   return (
-    <div className="flex flex-col gap-1 py-1" data-slot="bot-requests">
-      {requests.map((request, index) => {
-        const other = bots.find(
-          (bot) => bot.name.toLowerCase() === request.bot.toLowerCase()
-        );
-        return (
-          <Collapsible
-            key={index}
-            className="flex flex-col"
-            data-slot="bot-request"
-            data-kind={request.kind}
-          >
-            <CollapsibleTrigger className={ROW_TRIGGER}>
-              <span>{t("bots.chat.exchange.messaged")}</span>
-              {other != null && <BotFace bot={other} size={18} />}
-              <span className="truncate">{other?.name ?? request.bot}</span>
-            </CollapsibleTrigger>
-            <CollapsibleContent className={ROW_BODY}>
+    <Collapsible
+      className="flex flex-col py-1"
+      data-slot="bot-requests"
+      data-count={requests.length}
+    >
+      <CollapsibleTrigger className={ROW_TRIGGER}>
+        <span>{t("bots.chat.exchange.messaged")}</span>
+        <BotList names={names} bots={bots} language={i18n.language} />
+      </CollapsibleTrigger>
+      <CollapsibleContent className={ROW_BODY}>
+        {requests.map((request, index) => {
+          const other = bots.find(
+            (bot) => bot.name.toLowerCase() === request.bot.toLowerCase()
+          );
+          return (
+            <div
+              key={index}
+              className="flex flex-col gap-1"
+              data-slot="bot-request"
+              data-kind={request.kind}
+            >
+              {names.length > 1 && (
+                <div className="flex items-center gap-1.5 font-medium">
+                  {other != null && <BotFace bot={other} size={16} />}
+                  {other?.name ?? request.bot}
+                </div>
+              )}
               <div>
                 <span className="text-muted-foreground">
                   {t(
@@ -153,10 +201,70 @@ const RequestRows = ({
                 </span>
                 <span className="whitespace-pre-wrap">{request.what}</span>
               </div>
-            </CollapsibleContent>
-          </Collapsible>
-        );
-      })}
+            </div>
+          );
+        })}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+};
+
+/** The task another bot passed on, if the prompt is one. */
+const taskOf = (message: UIMessage): BotTaskTag | null => {
+  if (message.role !== "user") return null;
+  const operator = (
+    message.metadata as
+      | {
+          abacus?: {
+            userText?: { operator?: { kind?: string; task?: BotTaskTag } };
+          };
+        }
+      | undefined
+  )?.abacus?.userText?.operator;
+  return operator?.kind === "bot-task" && operator.task != null
+    ? operator.task
+    : null;
+};
+
+/**
+ * A task passed on by another bot, where its prompt sits: the user's own
+ * words as their message, headed by who passed it on, and the task as that
+ * bot wrote it underneath.
+ */
+const TaskCard = ({
+  task,
+  bots,
+}: {
+  task: BotTaskTag;
+  bots: readonly BotRow[];
+}) => {
+  const { t } = useTranslation();
+  const passer = bots.find((bot) => bot.id === task.passerId);
+  const name = passer?.name ?? task.passer;
+  const same = task.userWords.trim() === task.task.trim();
+  return (
+    <div
+      className="flex flex-col items-end gap-1 py-1"
+      data-slot="bot-task"
+      data-ask={task.askId}
+    >
+      <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+        {passer != null && <BotFace bot={passer} size={16} />}
+        <span>{t("bots.chat.task.from", { bot: name })}</span>
+      </div>
+      <div className="w-fit max-w-[min(640px,85%)] rounded-[20px] rounded-br-md bg-[var(--bot-accent,var(--primary))] px-3 py-2 text-sm whitespace-pre-wrap text-[var(--bot-accent-foreground,var(--primary-foreground))]">
+        {task.userWords}
+      </div>
+      {!same && (
+        <Collapsible className="flex flex-col items-end">
+          <CollapsibleTrigger className={ROW_TRIGGER}>
+            {t("bots.chat.task.asWritten", { bot: name })}
+          </CollapsibleTrigger>
+          <CollapsibleContent className="text-muted-foreground mt-1 max-w-[min(640px,85%)] text-xs whitespace-pre-wrap">
+            {task.task}
+          </CollapsibleContent>
+        </Collapsible>
+      )}
     </div>
   );
 };
@@ -443,6 +551,9 @@ export const botMessageDecorations = (
     // The skin hands over a copy with its parts stripped; the stored message
     // still has the words.
     const stored = context.messages[index] ?? message;
+    const task = taskOf(stored);
+    if (task != null)
+      return { before: <TaskCard task={task} bots={options.bots ?? []} /> };
     const exchange = exchangeOf(stored);
     // The note itself draws nothing (hidden user text); the row stands in.
     // Notes that follow one another fold into one row at the run's end.
@@ -551,6 +662,7 @@ export const botMessageDecorations = (
         index >= 0 ? (context.messages[index] ?? message) : message;
       return (
         exchangeOf(stored) == null &&
+        taskOf(stored) == null &&
         requestsOf(stored).length === 0 &&
         index >= 0 &&
         viewsFor(context.messages, context.runActive)[index]?.hidden === true

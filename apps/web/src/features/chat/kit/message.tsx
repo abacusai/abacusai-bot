@@ -268,14 +268,15 @@ export const userView = (
  * as user text everywhere, and drawn here in the reader's language.
  */
 /**
- * A hidden note the route draws as a row of its own (a bot-to-bot exchange):
- * kept in the transcript like an app line, drawn by `decorateMessage`.
+ * A hidden note the route draws as a row of its own (a bot-to-bot exchange,
+ * a task another bot passed on): kept in the transcript like an app line,
+ * drawn by `decorateMessage`.
  */
 export const routeRowOf = (message: UIMessage): string | null => {
   const kind = (
     message.metadata as { abacus?: { userText?: UserTextMeta } } | undefined
   )?.abacus?.userText?.operator?.kind;
-  return kind === "bot-exchange" ? kind : null;
+  return kind === "bot-exchange" || kind === "bot-task" ? kind : null;
 };
 
 export const appLineOf = (message: UIMessage): AppLineKind | null => {

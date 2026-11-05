@@ -451,8 +451,15 @@
         "foldMessages_one": "{{count}} pesan dengan",
         "foldMessages_other": "{{count}} pesan dengan",
         "foldBots_one": "{{count}} bot",
-        "foldBots_other": "{{count}} bot"
-      }
+        "foldBots_other": "{{count}} bot",
+        "messagedList": "Mengirim pesan ke {{bots}}"
+      },
+      "task": {
+        "from": "Dari Anda, melalui {{bot}}",
+        "asWritten": "Seperti yang diteruskan {{bot}}:"
+      },
+      "pairWith": "dengan {{bot}}",
+      "pairReadOnly": "hanya-baca"
     },
     "deleteDialog": {
       "checkIn": "Its check-in keeps running as an ordinary routine.",

@@ -1,8 +1,11 @@
 import { BotId, SessionId } from "@abacus-ai/contract/contract/ids";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
 import { ComposerUpdateNotice } from "#platform/updates";
+import { BotFace } from "#renderer/features/bots/avatar";
 import { useBotChatActivity } from "#renderer/features/bots/chat/activity";
 import {
   BotGone,
@@ -11,7 +14,12 @@ import {
 } from "#renderer/features/bots/chat/identity";
 import { useBotChatSlots } from "#renderer/features/bots/chat/slots";
 import { loadSenderChat } from "#renderer/features/bots/data/loaders";
-import { useBot } from "#renderer/features/bots/data/queries";
+import {
+  botsQueries,
+  useBot,
+  useBots,
+} from "#renderer/features/bots/data/queries";
+import { useBotsTransport } from "#renderer/features/bots/data/transport";
 import {
   DetailsTab,
   MemoryTab,
@@ -47,8 +55,19 @@ const Sender = ({
   sessionId: string;
 }) => {
   const { chat } = Route.useRouteContext();
+  const { t } = useTranslation();
   const host = useThreadHost(chat.session(sessionId));
   useBotChatActivity(bot.id, host.messages, host.sessionGenerating);
+  // A chat with another of the user's bots (ask_bot) says so in the title
+  // bar, the way a group chat names who is in it; it is read-only.
+  const transport = useBotsTransport();
+  const senders = useQuery(botsQueries(transport.orpc).senderChats());
+  const info = senders.data?.find((row) => row.sessionId === sessionId);
+  const { bots } = useBots();
+  const asker =
+    info?.platform === "bot"
+      ? (bots.find((row) => row.name === info.senderName) ?? null)
+      : null;
   const slots = useBotChatSlots(bot, sessionId, false, true, (url) =>
     requestBrowserOpen({ sessionId, url })
   );
@@ -69,6 +88,22 @@ const Sender = ({
           detailsOpen={detailsOpen}
           onToggle={toggle}
         />
+        {info?.platform === "bot" && (
+          <span
+            data-slot="pair-with"
+            className="text-muted-foreground flex min-w-0 shrink items-center gap-1.5 text-xs"
+          >
+            {asker != null && (
+              <BotFace bot={asker} size={16} interactive={false} />
+            )}
+            <span className="truncate">
+              {t("bots.chat.pairWith", { bot: info.senderName })}
+            </span>
+            <span className="bg-muted shrink-0 rounded-full px-1.5 py-0.5 text-[10px]">
+              {t("bots.chat.pairReadOnly")}
+            </span>
+          </span>
+        )}
       </TopBarSlot>
       <ChatView
         threadId={sessionId}

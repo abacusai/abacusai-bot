@@ -451,8 +451,15 @@
         "foldMessages_one": "{{count}} messaggio con",
         "foldMessages_other": "{{count}} messaggi con",
         "foldBots_one": "{{count}} bot",
-        "foldBots_other": "{{count}} bot"
-      }
+        "foldBots_other": "{{count}} bot",
+        "messagedList": "Messaggio inviato a {{bots}}"
+      },
+      "task": {
+        "from": "Da te, tramite {{bot}}",
+        "asWritten": "Come l'ha inoltrato {{bot}}:"
+      },
+      "pairWith": "con {{bot}}",
+      "pairReadOnly": "sola lettura"
     },
     "deleteDialog": {
       "checkIn": "Its check-in keeps running as an ordinary routine.",

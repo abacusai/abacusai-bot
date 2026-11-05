@@ -98,6 +98,7 @@ const fakeHost = (
   };
   for (const name of [
     "runBotAskTurn",
+    "taskTag",
     "waitForTurn",
     "feedTurnWaiter",
     "settleTurnWaiter",
@@ -340,6 +341,7 @@ describe("a task the user gave, passed on", () => {
     };
     for (const name of [
       "runBotAskTurn",
+      "taskTag",
       "turnClosed",
       "waitForTurn",
       "feedTurnWaiter",
@@ -383,6 +385,37 @@ describe("a task the user gave, passed on", () => {
         )
         .join("\n")
     );
+
+  it("goes into the doing bot's chat tagged as a passed-on task, for the card that stands in for its prompt", async () => {
+    const { self } = taskHost(false);
+    await (self.runBotAskTurn as Method)(
+      {
+        ...TASK,
+        request: "Make the checklist",
+        userWords: "have Planner make a checklist",
+      },
+      "TASK PROMPT",
+      null
+    );
+    expect(self.sendAgentMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: "wri-main",
+        message: "TASK PROMPT",
+        userText: {
+          operator: {
+            kind: "bot-task",
+            task: {
+              askId: "q8",
+              passerId: "res",
+              passer: "Researcher",
+              task: "Make the checklist",
+              userWords: "have Planner make a checklist",
+            },
+          },
+        },
+      })
+    );
+  });
 
   it("after it ends, the user's next words there and the answer go to the bot that passed it on, once", async () => {
     const { self, endUserTurn } = taskHost(false);
@@ -562,6 +595,12 @@ describe("a task the user gave, passed on", () => {
       workspaceId: "ws",
       sessionId: "wri-main",
       message: "TASK PROMPT",
+      userText: {
+        operator: {
+          kind: "bot-task",
+          task: expect.objectContaining({ askId: "q8" }),
+        },
+      },
     });
   });
 

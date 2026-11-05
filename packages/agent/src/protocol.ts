@@ -27,12 +27,30 @@ export interface UserTextTags {
       | "test-repair"
       | "test-repair-limit"
       | "tests-left-alone"
-      | "bot-exchange";
+      | "bot-exchange"
+      | "bot-task";
     /** UTF-16 offset of the human text; absent means the whole turn is hidden. */
     visibleFrom?: number;
     /** For "bot-exchange": what passed between this bot and another. */
     exchange?: BotExchangeTag;
+    /** For "bot-task": a task another bot passed on, drawn as a card. */
+    task?: BotTaskTag;
   };
+}
+
+/**
+ * A task the user gave another bot, passed on to this one (a "bot-task"
+ * prompt): the chat draws it as a card in place of the prompt's words.
+ */
+export interface BotTaskTag {
+  askId: string;
+  /** The bot that passed it on. */
+  passerId: string;
+  passer: string;
+  /** The task as that bot wrote it. */
+  task: string;
+  /** The user's own words, verbatim. */
+  userWords: string;
 }
 
 /**

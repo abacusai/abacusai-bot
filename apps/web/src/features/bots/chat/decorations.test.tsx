@@ -387,6 +387,88 @@ describe("a bot-to-bot note", () => {
     );
   });
 
+  it("a turn's requests to several bots read as one 'Messaged X and Y' row, opening to each task", async () => {
+    const decorate = botMessageDecorations({ ...options(), bots: [] });
+    const message = {
+      id: "a1",
+      role: "assistant",
+      parts: [
+        {
+          type: "tool-call",
+          id: "t1",
+          name: "give_task_to_bot",
+          input: { bot: "Planner", task: "Make the checklist" },
+        },
+        {
+          type: "tool-call",
+          id: "t2",
+          name: "ask_bot",
+          input: { bot: "Researcher", request: "When do cafes open?" },
+        },
+      ],
+    } as unknown as UIMessage;
+    const decoration = decorate(message, {
+      messages: [message],
+      index: 0,
+      runActive: false,
+    });
+    show(decoration?.before);
+    const row = screen.getByText("Messaged").closest("button")!;
+    expect(row.textContent?.replace(/\s+/g, " ")).toBe(
+      "MessagedPlanner and Researcher"
+    );
+    fireEvent.click(row);
+    await waitFor(() => {
+      expect(screen.getByText("Make the checklist")).toBeTruthy();
+      expect(screen.getByText("When do cafes open?")).toBeTruthy();
+    });
+  });
+
+  it("a task another bot passed on reads as the user's words, headed by who passed it on", async () => {
+    const decorate = botMessageDecorations({ ...options(), bots: [] });
+    const message = {
+      id: "u1",
+      role: "user",
+      parts: [
+        {
+          type: "text",
+          content: "[task from the user, passed on by Writer] …",
+        },
+      ],
+      metadata: {
+        abacus: {
+          userText: {
+            operator: {
+              kind: "bot-task",
+              task: {
+                askId: "q8",
+                passerId: "wri",
+                passer: "Writer",
+                task: "Make a 5-step opening-day checklist for Brewly.",
+                userWords: "have Planner make a 5-step opening-day checklist",
+              },
+            },
+          },
+        },
+      },
+    } as unknown as UIMessage;
+    const context = { messages: [message], index: 0, runActive: false };
+    expect(decorate.isMessageHidden(message, context)).toBe(false);
+    const decoration = decorate(message, context);
+    expect(decoration?.hidden).not.toBe(true);
+    show(decoration?.before);
+    expect(screen.getByText("From you, via Writer")).toBeTruthy();
+    expect(
+      screen.getByText("have Planner make a 5-step opening-day checklist")
+    ).toBeTruthy();
+    fireEvent.click(screen.getByText("As Writer passed it on:"));
+    await waitFor(() =>
+      expect(
+        screen.getByText("Make a 5-step opening-day checklist for Brewly.")
+      ).toBeTruthy()
+    );
+  });
+
   it("notes that follow one another fold into one row, opening to each", async () => {
     const decorate = botMessageDecorations({ ...options(), bots: [] });
     const first = exchangeMessage();
