@@ -1237,20 +1237,25 @@ export class McpAgentToolsServer extends McpHttpServer {
         const jobs = listJobs();
         // A bot sees its own routines, not the machine's, or it adopts the
         // user's unrelated schedules as its own backlog. The count says
-        // others exist.
-        const callerBot =
-          callerSession != null
-            ? (this.options.botIdForSession?.(callerSession) ?? null)
-            : null;
+        // others exist. In its owner's chat it sees them all, said to be
+        // theirs: the owner may ask it to change any of them.
+        const callerBot = this.routineScope(callerSession);
+        const ownBot = this.callerBot(callerSession);
         const visible =
           callerBot == null
             ? jobs
             : jobs.filter((job) => job.botId === callerBot);
         const others = jobs.length - visible.length;
+        const notOwn =
+          ownBot == null
+            ? 0
+            : jobs.filter((job) => job.botId !== ownBot).length;
         const suffix =
           callerBot != null && others > 0
             ? `\n\n(${others} other routine${others === 1 ? "" : "s"} belong to the user or other bots, not yours to run.)`
-            : "";
+            : callerBot == null && notOwn > 0
+              ? `\n\n(${notOwn} of these belong to the user or other bots: change them only when the user asks.)`
+              : "";
 
         const none =
           callerBot == null ? "No routines yet." : "No routines of yours yet.";
@@ -1421,8 +1426,8 @@ export class McpAgentToolsServer extends McpHttpServer {
         return this.ok(CHECK_IN_PROMPT_NOTE);
 
       if (isHostedRoutineId(id) && this.options.routines != null) {
-        // Only what this caller may see may be touched: a bot its own, a
-        // chat with someone else nothing.
+        // Only what this caller may see may be touched: a bot its own, or
+        // any in its owner's chat; a chat with someone else nothing.
         if (
           !this.visibleHosted(callerSession).some(
             (routine) => routine.id === id
@@ -1435,18 +1440,15 @@ export class McpAgentToolsServer extends McpHttpServer {
           action,
           id,
           args,
-          this.callerBot(callerSession),
+          this.routineScope(callerSession),
           !this.channelFor(callerSession).pane
         );
       }
 
-      // A bot may change or fire only its own routines: `list` hides the
-      // rest, but an id read off the Routines panel or an earlier turn must
-      // not reach them either.
-      const callerBot =
-        callerSession != null
-          ? (this.options.botIdForSession?.(callerSession) ?? null)
-          : null;
+      // A bot may change or fire only its own routines, outside its owner's
+      // chat: `list` hides the rest, but an id read off the Routines panel or
+      // an earlier turn must not reach them either.
+      const callerBot = this.routineScope(callerSession);
       if (callerBot != null) {
         const job = listJobs().find((entry) => entry.id === id);
         if (job == null) return this.err(`No job with id "${id}".`);
@@ -1551,6 +1553,17 @@ export class McpAgentToolsServer extends McpHttpServer {
       : null;
   }
 
+  /**
+   * The bot whose routines alone this caller may touch, or null for all of
+   * them: the owner's own chat with a bot is the owner asking.
+   */
+  private routineScope(callerSession?: string): string | null {
+    return callerSession != null &&
+      this.options.sessionRole?.(callerSession) === "forever"
+      ? null
+      : this.callerBot(callerSession);
+  }
+
   /** A bot's chat with someone other than the user: never near the user's routines. */
   private isSenderChat(callerSession?: string): boolean {
     return (
@@ -1559,10 +1572,10 @@ export class McpAgentToolsServer extends McpHttpServer {
     );
   }
 
-  /** The hosted routines a caller may see: a bot its own, the user all. */
+  /** The hosted routines a caller may see: a bot its own, the user all, in any chat of theirs. */
   private visibleHosted(callerSession?: string): RoutineListItem[] {
     if (this.isSenderChat(callerSession)) return [];
-    const bot = this.callerBot(callerSession);
+    const bot = this.routineScope(callerSession);
     const all = this.options.routines?.hosted.list() ?? [];
     return bot == null ? all : all.filter((routine) => routine.botId === bot);
   }
