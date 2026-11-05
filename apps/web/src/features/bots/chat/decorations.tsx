@@ -167,6 +167,14 @@ export const exchangeOf = (message: UIMessage): BotExchangeTag | null => {
     : null;
 };
 
+/** Markdown marks dropped: the row is plain text, not a Markdown surface. */
+const plainWords = (text: string): string =>
+  text
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .trim();
+
 /** The other bot's words inside the note, and why it failed if it did. */
 const exchangeBody = (
   message: UIMessage,
@@ -177,7 +185,7 @@ const exchangeBody = (
     .map((part) => part.content)
     .join("");
   const quoted = /<bot_reply[^>]*>([\s\S]*?)<\/bot_reply>/.exec(text)?.[1];
-  if (quoted != null) return quoted.trim();
+  if (quoted != null) return plainWords(quoted);
   if (outcome === "failed")
     return (
       /could not (?:finish|answer)[^:]*: ([^\n]*)/.exec(text)?.[1]?.trim() ?? ""
