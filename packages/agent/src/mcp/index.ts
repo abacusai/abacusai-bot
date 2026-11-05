@@ -30,6 +30,7 @@ import {
   type McpToolInfo,
   type McpTransport,
 } from "./client.js";
+import { sanitizeMcpSchema, sanitizeMcpText } from "./sanitize.js";
 
 export interface McpServerConfig {
   url?: string;
@@ -511,8 +512,14 @@ export async function connectMcpServers(
       if (advertise && !HOST_INTERNAL_TOOLS.has(tool.name))
         result.tools.push({
           name: qualified,
-          description: tool.description ?? `${tool.name} (via ${name})`,
-          schema: tool.inputSchema ?? { type: "object", properties: {} },
+          description: sanitizeMcpText(
+            tool.description ?? `${tool.name} (via ${name})`,
+            `${qualified} description`
+          ),
+          schema: sanitizeMcpSchema(
+            tool.inputSchema ?? { type: "object", properties: {} },
+            qualified
+          ),
         });
     }
   };
