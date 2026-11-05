@@ -1,5 +1,6 @@
 /**
- * ask_bot, give_task_to_bot, check_bot_answers and cancel_bot_ask: one bot asking
+ * ask_bot, give_task_to_bot, check_bot_answers, cancel_bot_ask and
+ * tell_task_giver: one bot asking
  * another of the user's bots. ask_bot returns at once (the answer comes later
  * as a note), a bot answering an ask can never ask again (it answers in a
  * sender chat, held to the unattended allowlist), and nobody but a bot can
@@ -59,8 +60,10 @@ type Exposed = {
   listTools: (session?: string) => Array<{ name: string }>;
 };
 
-const setup = (asks: BotAskRecord[] = []) => {
+const setup = (asks: BotAskRecord[] = [], tasks: BotAskRecord[] = []) => {
   const service = {
+    tasksFor: vi.fn(() => tasks),
+    tellGiver: vi.fn(() => ({ ok: "Told Writer." })),
     ask: vi.fn(() => ({ ask: record({ id: "q7" }), behind: 0 })),
     give: vi.fn(() => ({
       ask: record({ id: "q8", kind: "task" }),
@@ -273,5 +276,75 @@ describe("who gets these tools", () => {
     );
     expect(out).toMatch(/not available/);
     expect(service.ask).not.toHaveBeenCalled();
+  });
+});
+
+describe("tell_task_giver", () => {
+  // Writer passed Researcher a task; Researcher's chat is res-chat.
+  const task = (patch: Partial<BotAskRecord> = {}) =>
+    record({
+      id: "q8",
+      kind: "task",
+      askerId: "wri",
+      askerSession: "wri-chat",
+      targetId: "res",
+      status: "answered",
+      ...patch,
+    });
+
+  it("is listed only to a bot another bot passed a task to lately", () => {
+    expect(
+      setup([], [task()])
+        .server.listTools("res-chat")
+        .map((tool) => tool.name)
+    ).toContain("tell_task_giver");
+    expect(
+      setup()
+        .server.listTools("res-chat")
+        .map((tool) => tool.name)
+    ).not.toContain("tell_task_giver");
+  });
+
+  it("is never offered to a bot answering another bot", () => {
+    expect(
+      setup([], [task()])
+        .server.listTools("wri-asked")
+        .map((tool) => tool.name)
+    ).not.toContain("tell_task_giver");
+  });
+
+  it("tells the bot behind the newest task, or the one named", async () => {
+    const older = task({ id: "q5", askerId: "wri" });
+    const { server, service } = setup(
+      [],
+      [task({ id: "q9", askerId: "res" }), older]
+    );
+    const out = text(
+      await server.executeTool(
+        "tell_task_giver",
+        { message: " The user dropped it. ", bot: "Writer" },
+        "res-chat"
+      )
+    );
+    expect(out).toContain("Told Writer.");
+    expect(service.tellGiver).toHaveBeenCalledWith(
+      "res",
+      "res-chat",
+      older,
+      " The user dropped it. "
+    );
+  });
+
+  it("says so when no bot passed it a task", async () => {
+    const { server, service } = setup();
+    const out = text(
+      await server.executeTool(
+        "tell_task_giver",
+        { message: "Dropped." },
+        "res-chat"
+      )
+    );
+    expect(out).toContain("No bot has passed you a task in the last day.");
+    expect(service.tellGiver).not.toHaveBeenCalled();
   });
 });

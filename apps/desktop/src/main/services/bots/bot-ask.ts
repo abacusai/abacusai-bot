@@ -222,6 +222,39 @@ export const askOutcomeNote = (
 };
 
 /**
+ * The doing bot tells the bot that passed it a task what the user changed
+ * about it later, in the doing bot's chat (tell_task_giver): its words,
+ * labelled as its, and the user's own, which win.
+ */
+export const taskChangedNote = (
+  ask: { id: string; request: string },
+  doer: Named,
+  message: string,
+  userWords: string
+): string => {
+  const said = userWords.replace(/\s+/g, " ").trim();
+  return [
+    `[bot answer] ${doer.name} has news about the task ${ask.id} ("${requestGist(ask.request)}") you passed it for the user.`,
+    wrapBotAnswer(doer, message),
+    `What the user wrote to ${doer.name}, in its chat: "${said.length > 300 ? `${said.slice(0, 300)}…` : said}"`,
+    "This is not a message from the user to you. Their words win over the task as you passed it: don't go on with it as it was or offer it again. Tell the user in one line what this changes for you.",
+  ].join("\n");
+};
+
+/**
+ * Why a task ended when the user wrote in the doing bot's chat while it ran
+ * (see the host's userSteppedIn): what they wrote, which now decides.
+ */
+export const steppedInError = (words: string): string => {
+  const said = words.replace(/\s+/g, " ").trim();
+  return [
+    "the user wrote to it in its own chat partway through, so it stopped there and may be half done.",
+    `What they wrote: "${said.length > 300 ? `${said.slice(0, 300)}…` : said}".`,
+    "Go by that: if it changes or drops the task, don't pass it on again or keep offering it.",
+  ].join(" ");
+};
+
+/**
  * A task from the user, as the other bot reads it in its own chat: who
  * passed it on, the task as that bot wrote it, and the user's own words,
  * which win where the two differ. It is the user's instruction, so the bot
@@ -244,7 +277,8 @@ export const botTaskPrompt = (
     "Do only the part passed to you, yourself; where the task as written goes",
     "further than their words, follow their words. If their words also ask",
     `other bots for things, ${passer.name} has passed those on already: do not`,
-    "pass anything on or ask other bots in this turn.",
+    "pass anything on or ask other bots in this turn. If the user later",
+    `changes or drops this task here, tell ${passer.name} with tell_task_giver.`,
   ].join("\n");
 
 /** What `give_task_to_bot` says the moment the task is queued. */

@@ -333,6 +333,8 @@ import {
   BOT_ASK_TURN_TIMEOUT_MS,
   BOT_TASK_PREFIX,
   BOT_TASK_TURN_TIMEOUT_MS,
+  steppedInError,
+  taskChangedNote,
 } from "./services/bots/bot-ask";
 import {
   type BotAskRecord,
@@ -1605,6 +1607,9 @@ export class ServiceHost {
         list: (askerId, limit) => this.botAskService.list(askerId, limit),
         get: (askerId, id) => this.botAskService.get(askerId, id),
         cancel: (askerId, id) => this.botAskService.cancel(askerId, id),
+        tasksFor: (doerId) => this.botAskService.tasksFor(doerId),
+        tellGiver: (doerId, doerSession, task, message) =>
+          this.tellTaskGiver(doerId, doerSession, task, message),
       },
     },
     onCronChanged: () => {
@@ -5757,13 +5762,11 @@ export class ServiceHost {
     },
     runTurn: (ask, prompt, visibleFrom) =>
       this.runBotAskTurn(ask, prompt, visibleFrom),
+    // Stopped as the user's Stop does: the chat shows a stopped turn, not
+    // a crashed agent with a Retry that would run the request again.
     stopTurn: (ask) => {
       const handle = this.botAskTurns.get(ask.id);
-      if (handle != null)
-        this.agentManagerService.stopSession(
-          handle.workspaceId,
-          handle.sessionId
-        );
+      if (handle != null) this.stopAgentTurn(handle);
     },
     tell: (ask, note) => this.tellBotAsk(ask, note),
     // The app's one way to refresh running chats' tools (as when a chat app
@@ -5805,6 +5808,23 @@ export class ServiceHost {
       ...recent.slice(-1),
       { text: words, at: Date.now() },
     ]);
+    this.userSteppedIn(sessionId, words);
+  }
+
+  /**
+   * The user wrote in a bot's chat while a task another bot passed on runs
+   * there. Their message would wait for the task to end (it is never mixed
+   * into the task's report), so the task would finish and be reported as
+   * wanted even when they wrote "stop, do this instead". They are taking
+   * over: the task stops now, their message runs next, and the bot that
+   * passed it on is told what they said.
+   */
+  private userSteppedIn(sessionId: string, words: string): void {
+    for (const [askId, handle] of this.botAskTurns)
+      if (handle.sessionId === sessionId && this.taskTurnsSent.has(askId)) {
+        this.steppedIn.set(askId, words);
+        this.stopAgentTurn(handle);
+      }
   }
 
   /**
@@ -5891,6 +5911,38 @@ export class ServiceHost {
     });
   }
 
+  /**
+   * The bot another bot passed a task to tells that bot what the user
+   * changed about it, in the doing bot's own chat: only in a turn the user
+   * started there (never in the task's own turn), with their words attached,
+   * so it carries the user's change and nothing the bot made up.
+   */
+  private tellTaskGiver(
+    doerId: string,
+    doerSession: string,
+    task: BotAskRecord,
+    message: string
+  ): { ok: string } | { error: string } {
+    const doer = this.botService.list().find((bot) => bot.id === doerId);
+    const giver = this.botService.list().find((bot) => bot.id === task.askerId);
+    if (doer == null || giver == null)
+      return { error: "That bot is no longer here." };
+    const inTask = [...this.botAskTurns.values()].some(
+      (handle) => handle.sessionId === doerSession
+    );
+    const words = inTask ? "" : this.latestUserWords(doerSession);
+    if (words.length === 0)
+      return {
+        error:
+          "Only in a turn where the user, here, changed or dropped the task: this one was not started by them.",
+      };
+    this.tellBotAsk(task, taskChangedNote(task, doer, message.trim(), words));
+    console.log(`[bot-ask] ${doerId} told ${task.askerId} about ${task.id}`);
+    return {
+      ok: `Told ${giver.name}. Carry on with what the user asked here.`,
+    };
+  }
+
   /** Resolves true once the session has no turn open, false after `ms`. */
   private turnClosed(sessionId: string, ms: number): Promise<boolean> {
     if (!this.turnLedger.isOpen(sessionId)) return Promise.resolve(true);
@@ -5957,6 +6009,10 @@ export class ServiceHost {
 
   /** The asked bot's conversation for each ask whose turn is running. */
   private readonly botAskTurns = new Map<string, BotChatHandle>();
+  /** Tasks whose prompt is in the doing bot's chat: the user writing there steps in. */
+  private readonly taskTurnsSent = new Set<string>();
+  /** Task id → what the user wrote when they stepped in. */
+  private readonly steppedIn = new Map<string, string>();
 
   /**
    * One turn of the asked bot in its conversation with the asker, a sender
@@ -6018,6 +6074,7 @@ export class ServiceHost {
             }
           : {}),
       });
+      if (task) this.taskTurnsSent.add(ask.id);
       // Refused before any turn opened (its workspace is gone): nothing will
       // close a turn, so the waiter is ended here rather than at the timeout.
       if (!sent) {
@@ -6032,9 +6089,13 @@ export class ServiceHost {
           handle.workspaceId,
           handle.sessionId
         );
+      const words = this.steppedIn.get(ask.id);
+      if (words != null) throw new Error(steppedInError(words));
       throw error;
     } finally {
       this.botAskTurns.delete(ask.id);
+      this.taskTurnsSent.delete(ask.id);
+      this.steppedIn.delete(ask.id);
     }
   }
 

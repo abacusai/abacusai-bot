@@ -81,6 +81,8 @@ const fakeHost = (
   const self: Record<string, unknown> = {
     turnWaiters: new Map(),
     botAskTurns: new Map(),
+    taskTurnsSent: new Set(),
+    steppedIn: new Map(),
     turnLedger: { isOpen: () => options.leftOpen === true },
     botService: {
       list: () => [{ id: "res", name: "Researcher", title: "" }],
@@ -263,12 +265,14 @@ describe("where a request's answer goes", () => {
 describe("a task the user gave, passed on", () => {
   const TASK: BotAskRecord = { ...ASK, id: "q8", kind: "task" };
 
-  const taskHost = (openTurn: boolean, ends = "reply") => {
+  const taskHost = (openTurn: boolean, ends: string | null = "reply") => {
     const closers: Array<(record: { sessionId: string }) => void> = [];
     let open = openTurn;
     const self: Record<string, unknown> = {
       turnWaiters: new Map(),
       botAskTurns: new Map(),
+      taskTurnsSent: new Set(),
+      steppedIn: new Map(),
       turnLedger: {
         isOpen: () => open,
         onClose: (listener: (record: { sessionId: string }) => void) => {
@@ -296,15 +300,21 @@ describe("a task the user gave, passed on", () => {
       "waitForTurn",
       "feedTurnWaiter",
       "settleTurnWaiter",
+      "userSteppedIn",
     ])
       self[name] = proto[name].bind(self);
+    // As the user's Stop: the turn ends stopped.
+    self.stopAgentTurn = vi.fn(({ sessionId }: { sessionId: string }) =>
+      (self.settleTurnWaiter as Method)({ sessionId, kind: "stopped" })
+    );
     self.sendAgentMessage = vi.fn(
       async ({ sessionId }: { sessionId: string }) => {
         (self.feedTurnWaiter as Method)(sessionId, {
           type: "event",
           event: { type: "text_delta", content: "Posted.", messageId: "m1" },
         });
-        (self.settleTurnWaiter as Method)({ sessionId, kind: ends });
+        if (ends != null)
+          (self.settleTurnWaiter as Method)({ sessionId, kind: ends });
         return true;
       }
     );
@@ -348,6 +358,34 @@ describe("a task the user gave, passed on", () => {
     await expect(pending).resolves.toBe("Posted.");
   });
 
+  it("stops when the user writes in that chat partway, and tells the passer what they wrote", async () => {
+    const { self } = taskHost(false, null);
+    const pending = (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null);
+    await vi.waitFor(() =>
+      expect((self.taskTurnsSent as Set<string>).has("q8")).toBe(true)
+    );
+    (self.userSteppedIn as Method)("wri-main", "stop that, do the menu");
+    await expect(pending).rejects.toThrow(
+      /wrote to it in its own chat partway through.*What they wrote: "stop that, do the menu"/
+    );
+    expect(self.stopAgentTurn).toHaveBeenCalledWith({
+      botId: "wri",
+      workspaceId: "ws",
+      sessionId: "wri-main",
+    });
+    expect((self.steppedIn as Map<string, string>).size).toBe(0);
+  });
+
+  it("is not stopped by the user's message while it only waits for their turn to end", async () => {
+    const { self, endUserTurn } = taskHost(true);
+    const pending = (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    (self.userSteppedIn as Method)("wri-main", "and one more thing");
+    expect(self.stopAgentTurn).not.toHaveBeenCalled();
+    endUserTurn();
+    await expect(pending).resolves.toBe("Posted.");
+  });
+
   const wordsHost = () => {
     const self: Record<string, unknown> = {
       userWords: new Map(),
@@ -360,8 +398,12 @@ describe("a task the user gave, passed on", () => {
         ],
       },
       turnLedger: { channelOf: () => null },
+      botAskTurns: new Map(),
+      taskTurnsSent: new Set(),
+      steppedIn: new Map(),
     };
     for (const name of [
+      "userSteppedIn",
       "noteUserWords",
       "latestUserWords",
       "askBot",
@@ -619,5 +661,77 @@ describe("a task the user gave, passed on", () => {
       "[task from the user, passed on by Researcher] The user asked…"
     );
     expect(h.userWords.has("wri-main")).toBe(false);
+  });
+});
+
+describe("tell_task_giver: the user changed a task another bot passed on", () => {
+  const TASK: BotAskRecord = {
+    ...ASK,
+    id: "q8",
+    kind: "task",
+    askerId: "wri",
+    askerSession: "wri-chat",
+    targetId: "pla",
+    request: "Make a 7-day launch calendar",
+    status: "answered",
+  };
+  const tellHost = () => {
+    const self: Record<string, unknown> = {
+      userWords: new Map(),
+      botAskTurns: new Map(),
+      taskTurnsSent: new Set(),
+      steppedIn: new Map(),
+      botService: {
+        list: () => [
+          { id: "wri", name: "Writer", title: "" },
+          { id: "pla", name: "Planner", title: "" },
+        ],
+      },
+      tellBotAsk: vi.fn(),
+    };
+    for (const name of [
+      "userSteppedIn",
+      "noteUserWords",
+      "latestUserWords",
+      "tellTaskGiver",
+    ])
+      self[name] = proto[name].bind(self);
+    return self as Record<string, Method> & {
+      tellBotAsk: ReturnType<typeof vi.fn>;
+      botAskTurns: Map<string, unknown>;
+    };
+  };
+
+  it("tells the bot that passed it, with the user's own words", () => {
+    const h = tellHost();
+    h.noteUserWords("pla-main", "forget that calendar, we launch in January");
+    expect(
+      h.tellTaskGiver("pla", "pla-main", TASK, "The calendar is dropped.")
+    ).toEqual({ ok: expect.stringContaining("Told Writer") });
+    const [ask, note] = h.tellBotAsk.mock.calls[0] as [BotAskRecord, string];
+    expect(ask.askerSession).toBe("wri-chat");
+    expect(note).toContain("Planner has news about the task q8");
+    expect(note).toContain("The calendar is dropped.");
+    expect(note).toContain(
+      'What the user wrote to Planner, in its chat: "forget that calendar, we launch in January"'
+    );
+    expect(note).toContain("don't go on with it as it was");
+  });
+
+  it("is refused in a turn the user did not start", () => {
+    const h = tellHost();
+    expect(h.tellTaskGiver("pla", "pla-main", TASK, "Dropped.")).toEqual({
+      error: expect.stringContaining("not started by them"),
+    });
+    expect(h.tellBotAsk).not.toHaveBeenCalled();
+  });
+
+  it("is refused inside the task's own turn, whatever the user said before", () => {
+    const h = tellHost();
+    h.noteUserWords("pla-main", "make me a checklist");
+    h.botAskTurns.set("q8", { sessionId: "pla-main" });
+    expect(h.tellTaskGiver("pla", "pla-main", TASK, "Dropped.")).toEqual({
+      error: expect.stringContaining("not started by them"),
+    });
   });
 });

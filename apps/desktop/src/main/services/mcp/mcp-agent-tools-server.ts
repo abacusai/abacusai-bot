@@ -306,6 +306,8 @@ const fileUrl = (absolutePath: string): string =>
 
 /** Follow-up tools offered only once a bot has made a request to another bot. */
 const BOT_REQUEST_FOLLOW_UPS = new Set(["check_bot_answers", "cancel_bot_ask"]);
+/** Offered only to a bot another bot passed a task to lately. */
+const BOT_TASK_FOLLOW_UPS = new Set(["tell_task_giver"]);
 
 /** A routine as `create` compares it, and how `list` would show it. */
 type RoutineOnFile = RoutineFacts & {
@@ -472,6 +474,18 @@ export interface McpAgentToolsServerOptions {
         targetId: string,
         request: string
       ) => ReturnType<BotAskService["ask"]>;
+      /** Tasks other bots passed this bot lately, newest first. */
+      tasksFor?: (doerId: string) => BotAskRecord[];
+      /**
+       * The doing bot tells the bot that passed it a task what the user
+       * changed; refused without the user's words in this turn.
+       */
+      tellGiver?: (
+        doerId: string,
+        doerSession: string,
+        task: BotAskRecord,
+        message: string
+      ) => { ok: string } | { error: string };
       /** A task the user gave, passed on; refused without the user's words. */
       give: (
         askerId: string,
@@ -711,7 +725,9 @@ export class McpAgentToolsServer extends McpHttpServer {
               // Only a bot with requests to follow up gets the follow-up
               // tools: every listed tool costs every turn.
               (!BOT_REQUEST_FOLLOW_UPS.has(definition.name) ||
-                this.hasRecentBotRequests(callerSession))
+                this.hasRecentBotRequests(callerSession)) &&
+              (!BOT_TASK_FOLLOW_UPS.has(definition.name) ||
+                this.hasRecentTasksDone(callerSession))
       )
       .map((definition) => ({
         name: definition.name,
@@ -2926,6 +2942,49 @@ export class McpAgentToolsServer extends McpHttpServer {
       latest != null &&
       (isOpenAsk(latest) || Date.now() - latest.createdAt < 24 * 60 * 60_000)
     );
+  }
+
+  /** A bot another bot passed a task to in the last day. */
+  private hasRecentTasksDone(callerSession?: string): boolean {
+    const doerId = this.callerBot(callerSession);
+    return (
+      doerId != null &&
+      (this.options.botAsks?.asks.tasksFor?.(doerId) ?? []).length > 0
+    );
+  }
+
+  /** The user changed a task another bot passed this one: that bot hears so. */
+  tellTaskGiver(
+    message: string,
+    botName: string,
+    callerSession?: string
+  ): ToolResult {
+    const doerId = this.callerBot(callerSession);
+    const host = this.options.botAsks;
+    if (doerId == null || callerSession == null || host == null)
+      return this.err("Only a bot can tell another bot about a task.");
+    if (message.trim().length === 0)
+      return this.err("Say in `message` what the user changed.");
+    if (message.length > MAX_BOT_REQUEST_CHARS)
+      return this.err(
+        `Keep the message under ${MAX_BOT_REQUEST_CHARS} characters.`
+      );
+    let tasks = host.asks.tasksFor?.(doerId) ?? [];
+    if (botName.trim().length > 0) {
+      const found = resolveBotByName(host.bots(), botName, doerId);
+      if ("error" in found) return this.err(found.error);
+      tasks = tasks.filter((task) => task.askerId === found.bot.id);
+    }
+    const task = tasks[0];
+    if (task == null)
+      return this.err(
+        botName.trim().length > 0
+          ? `${botName.trim()} has not passed you a task in the last day.`
+          : "No bot has passed you a task in the last day."
+      );
+    const told = host.asks.tellGiver?.(doerId, callerSession, task, message);
+    if (told == null) return this.err("Bots cannot tell each other here.");
+    return "error" in told ? this.err(told.error) : this.ok(told.ok);
   }
 
   /** Starts the ask and returns at once; the answer comes later as a note. */

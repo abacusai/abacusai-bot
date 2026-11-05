@@ -123,4 +123,38 @@ export const BOTS_TOOLS: ToolDefinition[] = [
         callerSession
       ),
   },
+  {
+    name: "tell_task_giver",
+    toolsets: "always",
+    botAlways: true,
+    botsOnly: true,
+    description: [
+      "Another bot passed you a task for the user, and now the user, here,",
+      'changed or dropped it ("forget that calendar", "make it 3 days"): tell',
+      "that bot, so it does not go on as if the task stands. Only for that,",
+      "in the turn the user said it; your message and their words go to it.",
+    ].join("\n"),
+    inputSchema: {
+      type: "object",
+      properties: {
+        message: {
+          type: "string",
+          description:
+            'What changed, in a line or two (e.g. "The user dropped the calendar: the launch moves to January.").',
+        },
+        bot: {
+          type: "string",
+          description:
+            "The bot that passed you the task; only needed when several did.",
+        },
+      },
+      required: ["message"],
+    },
+    run: (host, args, callerSession) =>
+      host.tellTaskGiver(
+        typeof args.message === "string" ? args.message : "",
+        typeof args.bot === "string" ? args.bot : "",
+        callerSession
+      ),
+  },
 ];
