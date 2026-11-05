@@ -676,17 +676,24 @@ describe("a routine whose chat app lost its link", () => {
   const proto = ServiceHost.prototype as unknown as {
     startRoutineRun: (id: string, trigger: string) => Promise<string>;
     routineLinkDown: (job: unknown) => boolean;
+    routineActsElsewhere: (job: unknown) => boolean;
     markRoutineLinkLost: (job: unknown) => void;
     routineLinkBack: (platform: string) => void;
   };
-  const withLink = (unlinked: string[]) => {
+  const withLink = (
+    unlinked: string[],
+    threads: Record<string, { messages: unknown[] }> = {}
+  ) => {
     const service = {
       messagingGatewayService: { unlinkedPlatforms: () => unlinked },
       routineLinkDown: proto.routineLinkDown,
       markRoutineLinkLost: proto.markRoutineLinkLost,
       routineAtCreditWall: async () => false,
+      routineActsElsewhere: proto.routineActsElsewhere,
+      threadStore: { readCurrentFile: (id: string) => threads[id] },
       emitEvent: () => undefined,
-      listRoutineRuns: () => [],
+      listRoutineRuns: () =>
+        Object.keys(threads).map((sessionId) => ({ sessionId })),
       startedAnyway: 0,
       get ensureRoutineWorkspace() {
         service.startedAnyway += 1;
@@ -725,6 +732,40 @@ describe("a routine whose chat app lost its link", () => {
     expect(await fire(withLink(unlinked).service, job.id, "schedule")).toBe(
       expected
     );
+  });
+
+  it("still runs when a recent run also reached someone another way", async () => {
+    const { noteChatPlatform } =
+      await import("./services/agent-tools/cron-store");
+    const job = createJob({
+      schedule: "0 * * * *",
+      prompt: "mail and ping me",
+    });
+    noteChatPlatform(job.id, "whatsapp");
+    const mail = (action: string) => ({
+      messages: [
+        {
+          parts: [
+            {
+              type: "tool-call",
+              id: "c1",
+              name: "abacus-connectors_Gmail_Tool",
+              arguments: JSON.stringify({ action }),
+            },
+            {
+              type: "tool-result",
+              toolCallId: "c1",
+              state: "complete",
+            },
+          ],
+        },
+      ],
+    });
+    const fired = (thread: { messages: unknown[] }) =>
+      fire(withLink(["whatsapp"], { run: thread }).service, job.id, "schedule");
+
+    expect(await fired(mail("search_email"))).toBe("skipped");
+    expect(await fired(mail("send_email"))).toBe("ran");
   });
 
   it("is marked at the first skip, and a person pressing Run still gets a run", async () => {
@@ -775,6 +816,59 @@ describe("a routine whose chat app lost its link", () => {
     updateJob(job.id, { prompt: "write it to a file" });
 
     expect(getJob(job.id)?.chatPlatforms).toEqual([]);
+  });
+});
+
+describe("a routine's records when its folder changes", () => {
+  const proto = ServiceHost.prototype as unknown as {
+    updateLocalRoutine: (id: string, changes: unknown) => unknown;
+    routineHome: (job: unknown) => string;
+    routineProject: (job: unknown) => unknown;
+    realProject: (id: string | null) => unknown;
+    strayRoutineHome: (job: unknown) => string | null;
+  };
+  const service = (workspaces: unknown[]) => ({
+    workspaceService: { getWorkspaces: () => workspaces },
+    routineHome: proto.routineHome,
+    routineProject: proto.routineProject,
+    realProject: proto.realProject,
+    emitEvent: () => undefined,
+  });
+  const live = (id: string, dir: string) => ({
+    id,
+    path: dir,
+    status: "active",
+  });
+
+  it("go with it to a new project", () => {
+    const project = path.join(home, "digest");
+    const job = createJob({ schedule: "0 9 * * *", prompt: "digest" });
+    const own = path.join(home, "routines", job.id);
+    fs.mkdirSync(path.join(own, "runs"), { recursive: true });
+    fs.writeFileSync(path.join(own, "runs", "one.md"), "first");
+
+    proto.updateLocalRoutine.call(service([live("p", project)]), job.id, {
+      workspaceId: "p",
+    });
+
+    expect(
+      fs.readdirSync(
+        path.join(project, ".abacusai-bot", "routines", job.id, "runs")
+      )
+    ).toEqual(["one.md"]);
+  });
+
+  it.each([
+    ["a live project", "active", undefined, false],
+    ["a removed project", "deleted", undefined, true],
+    ["one of the app's own folders", "active", "routine", true],
+  ])("are looked for in %s", (_name, status, kind, stray) => {
+    const job = { id: "job-1", workspaceId: "w" };
+    const found = proto.strayRoutineHome.call(
+      service([{ id: "w", path: "/somewhere", status, kind }]),
+      job
+    );
+    expect(found != null).toBe(stray);
   });
 });
 

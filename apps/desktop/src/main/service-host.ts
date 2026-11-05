@@ -8,7 +8,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "path";
 
-import { appendDailyNote } from "@abacus-ai/agent/bot-memory";
 import type { ChannelCapabilities } from "@abacus-ai/agent/channel";
 import type { UnattendedPolicy } from "@abacus-ai/agent/tool-policy";
 import { visibleUserText } from "@abacus-ai/agent/user-text";
@@ -358,8 +357,6 @@ import {
   BOT_ASK_TURN_TIMEOUT_MS,
   BOT_TASK_PREFIX,
   BOT_TASK_TURN_TIMEOUT_MS,
-  steppedInError,
-  taskFollowUpNote,
 } from "./services/bots/bot-ask";
 import {
   type BotAskRecord,
@@ -374,7 +371,6 @@ import {
   readBotMemoryText,
 } from "./services/bots/bot-memory-store";
 import { BotService, sponsoredRunEnvUntil } from "./services/bots/bot-service";
-import { botDir } from "./services/bots/bot-store";
 import {
   getBot,
   listSenderSessionEntries,
@@ -618,6 +614,8 @@ type CreatedRoutine = Routine & Pick<RoutineListItem, "hosted">;
 const ROUTINE_CONTEXT_CAP_TOKENS = 80_000;
 
 /** Routine runs whose fire is kept for their sends; far more than run at once. */
+/** How far back a routine's runs show what it reaches besides a chat app. */
+const ROUTINE_RUNS_FOR_REACH = 5;
 const ROUTINE_FIRES_KEPT = 200;
 
 /** The longest an unattended run's agent may take to start. */
@@ -651,21 +649,9 @@ interface ChannelWorkRun {
 }
 
 const USER_WORDS_FRESH_MS = 15 * 60_000;
-/** How long after a passed-on task ends the user's next words there still go back to the passer. */
-const TASK_FOLLOW_UP_MS = 60 * 60_000;
 
-/**
- * A short yes, in the app's languages, not taken back in the same breath
- * ("ok but actually no", "okay never mind" are not a yes).
- */
-const YES =
-  "yes|yeah|yep|yup|ok|okay|sure|go ahead|please|do it|sounds good|y|sí|si|claro|dale|vale|adelante|oui|ouais|d'accord|vas-y|allez-y|ja|jawohl|klar|gerne|sim|pode|certo|va bene|ya|iya|boleh|silakan|evet|tamam|olur|はい|うん|どうぞ|お願いします|네|예|응|좋아|👍";
-const TAKEN_BACK =
-  "but|no|not|don'?t|never|nah|forget|cancel|instead|actually|wait|hold|nein|non|pero|mais|aber|não|nao|hayır|tidak|jangan|いや|やめ|아니";
-const AGREEMENT = new RegExp(
-  `^(?:${YES})(?=[\\s,.!'’、。]|$)(?![\\p{L}\\p{N}\\s,.!'’、。]{0,30}(?<![\\p{L}\\p{N}])(?:${TAKEN_BACK})(?![\\p{L}\\p{N}]))[\\p{L}\\p{N}\\s,.!'’、。]{0,30}$`,
-  "iu"
-);
+const AGREEMENT =
+  /^(?:yes|yeah|yep|yup|ok|okay|sure|go ahead|please|do it|sounds good|y)\b[\s\w,.!']{0,30}$/i;
 
 /** A chat app's message without its "[WhatsApp message from …]" label. */
 const unlabelled = (text: string): string =>
@@ -1589,7 +1575,16 @@ export class ServiceHost {
         return result.error.length > 0 ? result.error : "Could not disconnect.";
       },
     },
-    workspaceId: () => this.workspaceService.getActiveWorkspace()?.id ?? null,
+    // The chat that makes a routine decides its folder, never what the app has open.
+    workspaceId: (sessionId) => {
+      const session =
+        sessionId == null
+          ? null
+          : this.agentSessionManagerService.get(sessionId);
+      return session == null
+        ? null
+        : (this.realProject(session.workspaceId)?.id ?? null);
+    },
     runCronJob: (jobId, trigger) => this.runRoutine(jobId, trigger ?? "manual"),
     routineFireForSession: (sessionId) =>
       this.routineFires.get(sessionId) ?? null,
@@ -4098,11 +4093,15 @@ export class ServiceHost {
    * of the app's own home folders, which are not a project anyone chose.
    */
   private routineProject(job: CronJob): { id: string; path: string } | null {
+    return this.realProject(job.workspaceId);
+  }
+
+  private realProject(
+    workspaceId: string | null
+  ): { id: string; path: string } | null {
     const named = this.workspaceService
       .getWorkspaces()
-      .find(
-        (entry) => entry.id === job.workspaceId && entry.status !== "deleted"
-      );
+      .find((entry) => entry.id === workspaceId && entry.status !== "deleted");
     return named != null &&
       named.kind !== "auto" &&
       named.kind !== "routine" &&
@@ -4112,14 +4111,15 @@ export class ServiceHost {
   }
 
   /**
-   * Where a routine's records went while one of the app's own folders was
-   * taken for its project, or null when its workspace is its own or a project.
+   * Where a routine's records are when that is not its home: one of the app's
+   * own folders taken for its project, or a project the user removed. Null when
+   * its workspace is its own or a live project.
    */
   private strayRoutineHome(job: CronJob): string | null {
     const named = this.workspaceService
       .getWorkspaces()
       .find((entry) => entry.id === job.workspaceId);
-    return named?.kind == null
+    return named == null || (named.kind == null && named.status !== "deleted")
       ? null
       : routineDirInWorkspace(named.path, job.id);
   }
@@ -5756,11 +5756,30 @@ export class ServiceHost {
       this.pauseRoutine(routineId, ROUTINE_PAUSE_NOTES.quiet);
   }
 
-  /** Every chat app this routine sends through has lost its link. */
+  /**
+   * Every chat app this routine sends through has lost its link, and those
+   * are its only road: a routine that also mails or posts still has work to do.
+   */
   private routineLinkDown(job: CronJob): boolean {
     const used = job.chatPlatforms ?? [];
     const unlinked: string[] = this.messagingGatewayService.unlinkedPlatforms();
-    return used.length > 0 && used.every((id) => unlinked.includes(id));
+    return (
+      used.length > 0 &&
+      used.every((id) => unlinked.includes(id)) &&
+      !this.routineActsElsewhere(job)
+    );
+  }
+
+  /** A recent run reached someone through a connector: mail, a post, an invite. */
+  private routineActsElsewhere(job: CronJob): boolean {
+    return this.listRoutineRuns(job.id)
+      .slice(0, ROUTINE_RUNS_FOR_REACH)
+      .some(
+        (run) =>
+          connectorActionsOf(
+            this.threadStore.readCurrentFile(run.sessionId)?.messages ?? []
+          ).done.length > 0
+      );
   }
 
   /** Marked at the first skipped fire, for the make-up run when the link is back. */
@@ -5948,20 +5967,7 @@ export class ServiceHost {
    * the asker is mid-turn). Deferred through arrows: botService initializes
    * after this field.
    */
-  /**
-   * The app writes into a bot's daily notes what it settled, did or learned
-   * outside its own chat (work for another bot, a channel's decisions), each
-   * with its source: the bot carries it into every chat, and its memory
-   * search finds it later. Never another bot's mere words.
-   */
-  private noteToBot(botId: string, line: string): void {
-    const result = appendDailyNote(botDir(botId), line);
-    if (!result.ok)
-      console.warn(`[memory] note for ${botId} dropped: ${result.message}`);
-  }
-
   private readonly botAskService = new BotAskService({
-    note: (botId, line) => this.noteToBot(botId, line),
     bot: (id) => {
       const bot = this.botService.list().find((each) => each.id === id);
       return bot == null
@@ -5970,15 +5976,13 @@ export class ServiceHost {
     },
     runTurn: (ask, prompt, visibleFrom) =>
       this.runBotAskTurn(ask, prompt, visibleFrom),
-    // Stopped as the user's Stop does: the chat shows a stopped turn, not
-    // a crashed agent with a Retry that would run the request again.
     stopTurn: (ask) => {
       const handle = this.botAskTurns.get(ask.id);
-      // A task still waiting for the user's own turn there is not sent at
-      // all; that turn is theirs and goes on.
-      const state = this.taskTurns.get(ask.id);
-      if (state != null && !state.sent) state.cancelled = true;
-      else if (handle != null) this.stopAgentTurn(handle);
+      if (handle != null)
+        this.agentManagerService.stopSession(
+          handle.workspaceId,
+          handle.sessionId
+        );
     },
     tell: (ask, note) => this.tellBotAsk(ask, note),
     // The app's one way to refresh running chats' tools (as when a chat app
@@ -6314,27 +6318,6 @@ export class ServiceHost {
       ...recent.slice(-1),
       { text: words, at: Date.now() },
     ]);
-    this.userSteppedIn(sessionId, words);
-    const followUp = this.taskFollowUps.get(sessionId);
-    if (followUp != null && followUp.words == null) followUp.words = words;
-  }
-
-  /**
-   * The user wrote in a bot's chat while a task another bot passed on runs
-   * there. Their message would wait for the task to end (it is never mixed
-   * into the task's report), so the task would finish and be reported as
-   * wanted even when they wrote "stop, do this instead". They are taking
-   * over: the task stops now, their message runs next, and the bot that
-   * passed it on is told what they said.
-   */
-  private userSteppedIn(sessionId: string, words: string): void {
-    for (const [askId, handle] of this.botAskTurns) {
-      const state = this.taskTurns.get(askId);
-      if (handle.sessionId === sessionId && state?.sent === true) {
-        state.steppedIn = words;
-        this.stopAgentTurn(handle);
-      }
-    }
   }
 
   /**
@@ -6421,87 +6404,6 @@ export class ServiceHost {
     });
   }
 
-  /** Doing bot's chat → the passed-on task that ended there, and the user's next words in it. */
-  private readonly taskFollowUps = new Map<
-    string,
-    { ask: BotAskRecord; words: string | null }
-  >();
-
-  /**
-   * After a passed-on task ends, the user's next message in the doing bot's
-   * chat (the one that stopped it, if they wrote over it) and that bot's
-   * answer go to the bot that passed it on (taskFollowUpNote), once, within
-   * the hour. The app sends it rather than the doing bot, so the passer
-   * learns that the user dropped, changed or resumed the task there whether
-   * or not that bot thinks to say so.
-   */
-  private watchTaskFollowUp(
-    sessionId: string,
-    ask: BotAskRecord,
-    words: string | null
-  ): void {
-    const entry = { ask, words };
-    this.taskFollowUps.set(sessionId, entry);
-    console.log(
-      `[bot-ask] ${ask.id} follow-up armed in ${ask.targetId}'s chat${words == null ? "" : " with the user's words"}`
-    );
-    const end = (): void => {
-      clearTimeout(timer);
-      stopListening();
-      if (this.taskFollowUps.get(sessionId) === entry)
-        this.taskFollowUps.delete(sessionId);
-    };
-    const timer = setTimeout(end, TASK_FOLLOW_UP_MS);
-    const stopListening = this.turnLedger.onClose((record) => {
-      if (record.sessionId !== sessionId) return;
-      if (this.taskFollowUps.get(sessionId) !== entry) return end();
-      if (entry.words == null) return;
-      const reply = this.replyTo(sessionId, entry.words);
-      // A turn before theirs closed: theirs is still to come.
-      if (reply == null) {
-        console.log(`[bot-ask] ${ask.id} follow-up: no reply yet`);
-        return;
-      }
-      end();
-      console.log(`[bot-ask] ${ask.id} follow-up sent to ${ask.askerId}`);
-      const doer = this.botService
-        .list()
-        .find((bot) => bot.id === ask.targetId);
-      if (doer != null)
-        this.tellBotAsk(ask, taskFollowUpNote(ask, doer, entry.words, reply));
-    });
-  }
-
-  /** The bot's answer in its chat to the user's message `words`, or null before there is one. */
-  private replyTo(sessionId: string, words: string): string | null {
-    const file =
-      this.agentSessionManagerService.getDiagnosticInfo(sessionId)
-        ?.agentSessionFile ?? null;
-    // A long reply (many tool calls) can run to megabytes after the user's
-    // message, so the whole log is read, not its last stretch.
-    const turns = readTranscriptTail(
-      file,
-      5000,
-      undefined,
-      3000,
-      64 * 1024 * 1024
-    );
-    // The whole message, as the tail keeps it (cut at 3000 with an ellipsis).
-    const key = words.replace(/\s+/g, " ").trim().slice(0, 3000);
-    const at = turns.findLastIndex(
-      (turn) =>
-        turn.role === "user" && (turn.text === key || turn.text === `${key}…`)
-    );
-    if (at < 0) return null;
-    const reply = turns
-      .slice(at + 1)
-      .filter((turn) => turn.role === "assistant")
-      .map((turn) => turn.text.replace(/\bNO_REPLY\b/g, "").trim())
-      .filter((text) => text.length > 0)
-      .join("\n\n");
-    return reply.length > 0 ? reply : null;
-  }
-
   /** Resolves true once the session has no turn open, false after `ms`. */
   private turnClosed(sessionId: string, ms: number): Promise<boolean> {
     if (!this.turnLedger.isOpen(sessionId)) return Promise.resolve(true);
@@ -6568,15 +6470,6 @@ export class ServiceHost {
 
   /** The asked bot's conversation for each ask whose turn is running. */
   private readonly botAskTurns = new Map<string, BotChatHandle>();
-  /**
-   * Each running task: whether its prompt is in the doing bot's chat (the
-   * user writing there then steps in, and what they wrote is kept), and
-   * whether it was cancelled before that (it is then never sent).
-   */
-  private readonly taskTurns = new Map<
-    string,
-    { sent: boolean; cancelled: boolean; steppedIn: string | null }
-  >();
 
   /**
    * One turn of the asked bot in its conversation with the asker, a sender
@@ -6590,12 +6483,6 @@ export class ServiceHost {
     visibleFrom: number | null
   ): Promise<string> {
     const task = ask.kind === "task";
-    const state = {
-      sent: false,
-      cancelled: false,
-      steppedIn: null as string | null,
-    };
-    if (task) this.taskTurns.set(ask.id, state);
     const asker = this.botService.list().find((bot) => bot.id === ask.askerId);
     const handle = task
       ? await this.botService.openChat(ask.targetId)
@@ -6614,14 +6501,6 @@ export class ServiceHost {
           !(await this.turnClosed(handle.sessionId, BOT_TASK_TURN_TIMEOUT_MS))
         )
           throw new Error("it stayed busy in its own chat for 30 minutes.");
-        if (state.cancelled)
-          throw new Error("it was cancelled before it began.");
-        // A turn there just stopped (the task before this one, say) closes
-        // a moment after the stop: not on this task's waiter.
-        await this.sessionTurnStateService.stopSettled(
-          handle.sessionId,
-          15_000
-        );
       } else if (this.turnLedger.isOpen(handle.sessionId))
         // A turn left open there (one stopped or cut off) would take this
         // request into it; asks of one pair never overlap otherwise.
@@ -6635,7 +6514,7 @@ export class ServiceHost {
           timeout: `it took more than ${task ? 30 : 10} minutes, so it was stopped.`,
           failed: "its turn ended without an answer.",
           stopped: task
-            ? "the user stopped it partway through, so it may be half done. Don't do it yourself or pass it on again unless they ask."
+            ? "the user stopped it partway through, so it may be half done."
             : "it was stopped before it answered.",
           segment: BOT_ANSWER_SEGMENT,
         }
@@ -6652,7 +6531,6 @@ export class ServiceHost {
             }
           : {}),
       });
-      state.sent = true;
       // Refused before any turn opened (its workspace is gone): nothing will
       // close a turn, so the waiter is ended here rather than at the timeout.
       if (!sent) {
@@ -6667,18 +6545,9 @@ export class ServiceHost {
           handle.workspaceId,
           handle.sessionId
         );
-      if (state.steppedIn != null)
-        throw new Error(steppedInError(state.steppedIn));
       throw error;
     } finally {
-      if (
-        task &&
-        !state.cancelled &&
-        this.botAskService.get(ask.askerId, ask.id)?.status !== "cancelled"
-      )
-        this.watchTaskFollowUp(handle.sessionId, ask, state.steppedIn);
       this.botAskTurns.delete(ask.id);
-      this.taskTurns.delete(ask.id);
     }
   }
 
@@ -6985,7 +6854,11 @@ export class ServiceHost {
   }
 
   private updateLocalRoutine(id: string, changes: RoutineUpdateInput): Routine {
+    const before = getJob(id);
+    const was = before == null ? null : this.routineHome(before);
     const job = updateJob(id, changes);
+    // Its runs and notes are its memory: they go where the routine goes.
+    if (was != null) reclaimRoutineRecords(was, this.routineHome(job));
     this.emitEvent({
       type: "cronjobs-updated",
       emittedAt: new Date().toISOString(),

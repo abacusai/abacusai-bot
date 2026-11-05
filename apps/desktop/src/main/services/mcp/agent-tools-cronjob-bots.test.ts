@@ -135,6 +135,33 @@ describe("with the cronjob toolset switched on", () => {
  * user's unrelated schedules as its own mission backlog, greeting the user
  * with plans to run them.
  */
+describe("the folder of a routine a chat makes", () => {
+  it("is the project of that chat, whatever the app has open", async () => {
+    const asked: (string | undefined)[] = [];
+    const instance = server(["cronjob"], {
+      workspaceId: (sessionId?: string) => {
+        asked.push(sessionId);
+        return sessionId === "chat-in-project" ? "project-1" : null;
+      },
+    });
+    const make = (name: string, schedule: string, session: string) =>
+      call(
+        instance,
+        { action: "create", schedule, prompt: name, name, firstRun: false },
+        session
+      );
+
+    await make("Sales digest", "0 9 * * 1", "chat-in-project");
+    await make("Rain alert", "0 7 * * *", "plain-chat");
+
+    expect(asked).toEqual(["chat-in-project", "plain-chat"]);
+    expect(listJobs().map((job) => [job.name, job.workspaceId])).toEqual([
+      ["Sales digest", "project-1"],
+      ["Rain alert", null],
+    ]);
+  });
+});
+
 describe("what a bot sees in the routine list", () => {
   it("lists only its own routines, and counts the rest", async () => {
     const instance = server(["cronjob"]);
