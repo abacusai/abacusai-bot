@@ -13,6 +13,7 @@ import {
   channelTitle,
   envelope,
   mentionedIn,
+  goesAhead,
   plainStop,
   postedWords,
   speakersFor,
@@ -385,4 +386,28 @@ describe("an unclosed <work> tag", () => {
       words: "On it",
     });
   });
+});
+
+describe("goesAhead", () => {
+  it.each([
+    "yes, go ahead",
+    "go ahead",
+    "start",
+    "ok do it",
+    "yes",
+    "Planner, start the plan",
+    "let's go",
+    "proceed with all of it",
+  ])("%s starts the agreed work", (text) =>
+    expect(goesAhead(text, M)).toBe(true)
+  );
+  it.each([
+    "yes but change item 2",
+    "go ahead with 1 and 3 only",
+    "thanks",
+    "not yet",
+    "can we start?",
+    "start over",
+    "do it tomorrow",
+  ])("%s does not", (text) => expect(goesAhead(text, M)).toBe(false));
 });

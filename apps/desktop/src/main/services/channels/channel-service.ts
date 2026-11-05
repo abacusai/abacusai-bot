@@ -39,6 +39,7 @@ import {
   proposalIn,
   workIn,
   FIRST_TURN_MESSAGES,
+  goesAhead,
   MAX_NEW_MESSAGES,
   mentionedIn,
   type Member,
@@ -565,6 +566,18 @@ export class ChannelService {
     const lastSpeaker = [...before]
       .reverse()
       .find((message) => message.author.kind === "bot" && !message.failed);
+    // "Yes, go ahead" after the team's Agreed: the agreed work starts, as
+    // the Start button would; the cards and reports are the answer.
+    if (
+      lastSpeaker?.conclusion === true &&
+      lastSpeaker.planStarted !== true &&
+      this.deps.runWork != null &&
+      goesAhead(userMessage.text, members)
+    ) {
+      this.startAgreed(channelId, lastSpeaker.id);
+      this.log(`agreed work started by the user's words in ${channelId}`);
+      return;
+    }
     const repliedTo = messages.find(
       (message) => message.id === userMessage.replyTo
     );

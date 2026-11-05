@@ -780,6 +780,42 @@ describe("what the channel settles goes into the members' daily notes", () => {
   });
 });
 
+describe("the user's go-ahead in words", () => {
+  it("after the team's Agreed:, 'yes, go ahead' starts the work as the button would, and nobody answers it", async () => {
+    const { service, turns, works, flush, store } = setup();
+    const { id } = service.create({
+      botIds: ["chief", "res", "wri"],
+      text: "discuss and agree on two tasks",
+    });
+    await flush();
+    for (let i = 0; i < 3; i++) {
+      turns[i]!.resolve("<reply>A task each.</reply>");
+      await flush();
+    }
+    for (let i = 3; i < 6; i++) {
+      turns[i]!.resolve("<reply>NO_REPLY</reply>");
+      await flush();
+    }
+    turns[6]!.resolve(
+      "<reply>Agreed:\n1. Researcher lists the suppliers.\n2. Writer drafts the sign.</reply>"
+    );
+    await flush();
+    service.post(id, "yes, go ahead");
+    await flush();
+    expect(works.map((work) => work.botId)).toEqual(["res", "wri"]);
+    expect(store.readMessages(id).find((m) => m.conclusion)?.planStarted).toBe(
+      true
+    );
+    expect(turns).toHaveLength(7);
+    // Once started, a second yes is an ordinary message (here: a plain
+    // acknowledgement nobody answers), and starts nothing again.
+    service.post(id, "yes");
+    await flush();
+    expect(works).toHaveLength(2);
+    expect(turns).toHaveLength(7);
+  });
+});
+
 describe("starting the agreed work", () => {
   it("one card per owner, with all its items, in its own chat; once", async () => {
     const { service, works, flush, store } = setup();

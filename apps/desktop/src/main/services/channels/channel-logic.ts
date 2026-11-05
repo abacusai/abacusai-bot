@@ -273,6 +273,52 @@ const namedIn = (text: string, members: readonly Member[]): string[] =>
     .sort((a, b) => a.at - b.at)
     .map((entry) => entry.id);
 
+const GO_WORDS = new Set(
+  "yes yeah yep ok okay sure go ahead start begin proceed do it let's lets go do that please now all of with everything the plan work this them those run kick off".split(
+    " "
+  )
+);
+const GO_STRONG = new Set([
+  "yes",
+  "yeah",
+  "yep",
+  "go",
+  "start",
+  "begin",
+  "proceed",
+  "do",
+  "run",
+  "kick",
+]);
+
+/**
+ * The user's go-ahead after the team's "Agreed:" ("yes, go ahead", "start",
+ * "ok do it"): the agreed work starts, as the Start button would. Only a
+ * message made of nothing but a yes; "yes but change 2" is a message.
+ */
+export const goesAhead = (
+  text: string,
+  members: readonly Member[]
+): boolean => {
+  if (text.includes("?")) return false;
+  let rest = ownWords(text);
+  for (const member of members)
+    rest = rest.replace(
+      new RegExp(`@?${escape(member.name)}(?![\\p{L}\\p{N}_-])`, "giu"),
+      " "
+    );
+  const words = rest
+    .toLowerCase()
+    .replace(/[’]/g, "'")
+    .split(/[\s,.!]+/)
+    .filter((word) => word.length > 0);
+  return (
+    words.length > 0 &&
+    words.every((word) => GO_WORDS.has(word)) &&
+    words.some((word) => GO_STRONG.has(word))
+  );
+};
+
 /**
  * Who answers the user's message. `replyToBot` is the author of the message
  * it replies to; `lastSpeaker` the bot that spoke last in the channel.
