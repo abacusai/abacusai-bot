@@ -320,7 +320,12 @@ describe("cronjob create, after a mission edit", () => {
 });
 
 describe("cronjob create, a hosted create that timed out", () => {
-  const create = { ...BRIEF, runner: "hosted", timezone: "Asia/Kolkata" };
+  const create = {
+    ...BRIEF,
+    runner: "hosted",
+    timezone: "Asia/Kolkata",
+    reads: [],
+  };
 
   it("is one routine when the retry repeats it word for word", async () => {
     const server = fakeServer();
