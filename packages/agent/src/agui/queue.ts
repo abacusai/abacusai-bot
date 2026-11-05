@@ -759,14 +759,8 @@ export class HostCore {
       ...(userText != null && { userText }),
       ...(messageId != null && { messageId }),
       message,
-      // A passed-on task is never steered into a running turn (the user's,
-      // say): it waits and runs as its own, so its report holds it alone.
       waitingFor:
-        this.stopping ||
-        this.preparing ||
-        this.resetting ||
-        this.inBotTask ||
-        isBotTask(message)
+        this.stopping || this.preparing || this.resetting || this.inBotTask
           ? "turn"
           : this.awaitingPermission
             ? "permission"
