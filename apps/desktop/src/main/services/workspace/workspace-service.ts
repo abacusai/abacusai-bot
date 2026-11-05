@@ -11,6 +11,11 @@ import type {
 } from "@abacus-ai/contract/contracts";
 import { WORKSPACE_NOT_FOUND } from "@abacus-ai/contract/not-found";
 
+import {
+  abacusBotHome,
+  botDefaultWorkspace,
+  sessionDefaultWorkspace,
+} from "../../paths";
 import { workspaceStore } from "../session/workspace-store";
 
 const WORKSPACE_STORAGE_KEY = "localCode.workspaces";
@@ -23,6 +28,35 @@ const ACTIVE_WORKSPACE_STORAGE_KEY = "localCode.activeWorkspaceId";
 const normalizeWorkspacePath = (workspacePath: string): string => {
   const trimmed = workspacePath.trim();
   return trimmed.length === 0 ? "" : path.resolve(trimmed);
+};
+
+type WorkspaceKind = "auto" | "routine" | "bot";
+
+const isWorkspaceKind = (value: unknown): value is WorkspaceKind =>
+  value === "auto" || value === "routine" || value === "bot";
+
+/**
+ * Folders the app makes for itself. They open in the background, for a
+ * routine firing or a bot starting, and the user never picked them, so they
+ * never become the workspace the next thing lands in.
+ */
+const isBackgroundKind = (kind: WorkspaceKind | undefined): boolean =>
+  kind === "routine" || kind === "bot";
+
+const isBackgroundHome = (workspace: WorkspaceListItem): boolean =>
+  isBackgroundKind(workspace.kind);
+
+/**
+ * The kind of one of the app's own folders, from where it is. Earlier builds
+ * dropped "routine" and "bot" at every launch and saved the list that way, so
+ * a stored entry alone cannot say.
+ */
+const appHomeKind = (workspacePath: string): WorkspaceKind | undefined => {
+  if (workspacePath === botDefaultWorkspace()) return "bot";
+  if (workspacePath === sessionDefaultWorkspace()) return "auto";
+  return path.dirname(workspacePath) === path.join(abacusBotHome(), "routines")
+    ? "routine"
+    : undefined;
 };
 
 export class WorkspaceService {
@@ -68,12 +102,15 @@ export class WorkspaceService {
 
     // Prefer a live workspace: a launch must not land the composer on a tombstone.
     const firstLive = this.workspaces.find(
-      (workspace) => workspace.status !== "deleted"
+      (workspace) =>
+        workspace.status !== "deleted" && !isBackgroundHome(workspace)
     );
     if (
       this.activeWorkspaceId != null &&
       !this.workspaces.some(
-        (workspace) => workspace.id === this.activeWorkspaceId
+        (workspace) =>
+          workspace.id === this.activeWorkspaceId &&
+          !isBackgroundHome(workspace)
       )
     ) {
       this.activeWorkspaceId = firstLive?.id ?? null;
@@ -128,7 +165,7 @@ export class WorkspaceService {
   async addWorkspace(
     workspacePath: string,
     isRemote = false,
-    kind?: "auto" | "routine" | "bot"
+    kind?: WorkspaceKind
   ): Promise<AddWorkspaceResult> {
     if (isRemote) {
       return { success: false, error: "Remote workspaces are not supported." };
@@ -171,7 +208,7 @@ export class WorkspaceService {
             : workspace
         );
       }
-      this.setActiveWorkspace(existing.id);
+      if (!isBackgroundKind(kind)) this.setActiveWorkspace(existing.id);
       this.persist();
       return { success: true, workspaceId: existing.id };
     }
@@ -187,7 +224,7 @@ export class WorkspaceService {
       isRemote: false,
       ...(kind != null ? { kind } : {}),
     });
-    this.setActiveWorkspace(workspaceId);
+    if (!isBackgroundKind(kind)) this.setActiveWorkspace(workspaceId);
     this.persist();
 
     return { success: true, workspaceId };
@@ -376,6 +413,9 @@ export class WorkspaceService {
         ? candidate.path
         : candidate.description
     );
+    const kind = isWorkspaceKind(candidate.kind)
+      ? candidate.kind
+      : appHomeKind(workspacePath);
     return {
       id: candidate.id,
       label:
@@ -383,7 +423,7 @@ export class WorkspaceService {
           ? candidate.label
           : this.workspaceLabelFromPath(workspacePath),
       description: workspacePath,
-      ...(candidate.kind === "auto" ? { kind: "auto" as const } : {}),
+      ...(kind != null ? { kind } : {}),
       // Tombstones survive restarts; everything else re-derives active/idle.
       status: candidate.status === "deleted" ? "deleted" : "idle",
       path: workspacePath,

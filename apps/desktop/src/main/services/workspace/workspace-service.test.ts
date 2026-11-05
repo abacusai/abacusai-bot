@@ -6,6 +6,8 @@
  * choosing it. The renderer holds the app behind its workspace setup page
  * instead, and this is the half that has to stay empty for that to happen.
  */
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -20,6 +22,7 @@ vi.mock("../session/workspace-store", () => ({
 }));
 
 const { WorkspaceService } = await import("./workspace-service");
+const { abacusBotHome, botDefaultWorkspace } = await import("../../paths");
 
 beforeEach(() => {
   stored.clear();
@@ -72,5 +75,74 @@ describe("workspace service initialize", () => {
         .getWorkspaces()
         .every((workspace) => workspace.status === "deleted")
     ).toBe(true);
+  });
+});
+
+describe("the app's own folders across a launch", () => {
+  const routineFolder = (): string =>
+    path.join(abacusBotHome(), "routines", "job-1");
+  const entry = (id: string, where: string, kind?: string) => ({
+    id,
+    label: id,
+    description: where,
+    path: where,
+    status: "idle",
+    isRemote: false,
+    ...(kind != null ? { kind } : {}),
+  });
+
+  it.each([
+    ["a stored routine kind", () => routineFolder(), "routine", "routine"],
+    ["a stored bot kind", () => botDefaultWorkspace(), "bot", "bot"],
+    [
+      "a routine folder an earlier build stripped",
+      () => routineFolder(),
+      undefined,
+      "routine",
+    ],
+    [
+      "bot-home an earlier build stripped",
+      () => botDefaultWorkspace(),
+      undefined,
+      "bot",
+    ],
+    ["a project", () => "/work/project", undefined, undefined],
+  ])("%s", (_name, where, kind, expected) => {
+    stored.set("localCode.workspaces", [entry("w", where(), kind)]);
+
+    const service = new WorkspaceService();
+    service.initialize();
+
+    expect(service.getWorkspaces()[0]?.kind).toBe(expected);
+    // Saved as read: the next launch does not start from less.
+    expect(
+      (stored.get("localCode.workspaces") as Array<{ kind?: string }>)[0]?.kind
+    ).toBe(expected);
+  });
+
+  it("does not land on a routine's folder left active by an earlier build", () => {
+    stored.set("localCode.workspaces", [
+      entry("routine", routineFolder()),
+      entry("project", "/work/project"),
+    ]);
+    stored.set("localCode.activeWorkspaceId", "routine");
+
+    const service = new WorkspaceService();
+    service.initialize();
+
+    expect(service.getActiveWorkspaceId()).toBe("project");
+  });
+
+  it("does not take the active spot when a routine or bot folder opens", async () => {
+    const folder = fs.mkdtempSync(path.join(os.tmpdir(), "workspace-kind-"));
+    stored.set("localCode.workspaces", [entry("project", "/work/project")]);
+
+    const service = new WorkspaceService();
+    service.initialize();
+    await service.addWorkspace(folder, false, "routine");
+    await service.addWorkspace(folder, false, "bot");
+
+    expect(service.getActiveWorkspaceId()).toBe("project");
+    fs.rmSync(folder, { recursive: true, force: true });
   });
 });

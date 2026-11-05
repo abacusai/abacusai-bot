@@ -329,6 +329,7 @@ import {
   removeRoutineDir,
   routineDir,
   routineDirInWorkspace,
+  reclaimRoutineRecords,
   routineNotes,
 } from "./services/agent-tools/routine-runs-store";
 import {
@@ -4084,6 +4085,19 @@ export class ServiceHost {
       : null;
   }
 
+  /**
+   * Where a routine's records went while one of the app's own folders was
+   * taken for its project, or null when its workspace is its own or a project.
+   */
+  private strayRoutineHome(job: CronJob): string | null {
+    const named = this.workspaceService
+      .getWorkspaces()
+      .find((entry) => entry.id === job.workspaceId);
+    return named?.kind == null
+      ? null
+      : routineDirInWorkspace(named.path, job.id);
+  }
+
   /** Where a routine keeps its records: inside its project, else its own folder. */
   private routineHome(job: CronJob): string {
     const project = this.routineProject(job);
@@ -6828,6 +6842,8 @@ export class ServiceHost {
     // A deletion may have happened while the routine workspace was opening.
     if (getJob(jobId) == null) return "skipped";
     const home = this.routineHome(job);
+    const stray = this.strayRoutineHome(job);
+    if (stray != null) reclaimRoutineRecords(stray, home);
 
     // Full access, as a routine on this computer always had, unless the user
     // made this one read-only.

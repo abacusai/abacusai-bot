@@ -118,6 +118,43 @@ export const routineNotes = (
   return { path: notes, kept: false, maybeAt };
 };
 
+/**
+ * Records a routine wrote into another of the app's folders, when that folder
+ * was taken for its project, come home. Run files keep their names; the newest
+ * last run wins; notes on both sides are joined, the stray ones after, since
+ * either may hold the only copy of something.
+ */
+export const reclaimRoutineRecords = (stray: string, home: string): void => {
+  if (stray === home || !fs.existsSync(stray)) return;
+  try {
+    const runs = routineRunsDir(stray);
+    fs.mkdirSync(routineRunsDir(home), { recursive: true });
+    for (const name of fs.existsSync(runs) ? fs.readdirSync(runs) : []) {
+      const target = path.join(routineRunsDir(home), name);
+      if (!fs.existsSync(target)) moveFile(path.join(runs, name), target);
+    }
+    const strayNotes = path.join(stray, NOTES_FILE);
+    if (fs.existsSync(strayNotes)) {
+      const notes = path.join(home, NOTES_FILE);
+      if (fs.existsSync(notes)) {
+        fs.appendFileSync(notes, `\n${fs.readFileSync(strayNotes, "utf8")}`);
+        fs.rmSync(strayNotes);
+      } else moveFile(strayNotes, notes);
+    }
+    const strayLast = readLastRoutineRun(stray);
+    const last = readLastRoutineRun(home);
+    if (
+      strayLast != null &&
+      (last == null || last.startedAt < strayLast.startedAt)
+    )
+      fs.copyFileSync(path.join(stray, LAST_RUN), path.join(home, LAST_RUN));
+    fs.rmSync(stray, { recursive: true, force: true });
+  } catch (error) {
+    // The fire goes on from its own folder; the next one tries again.
+    console.warn("Could not bring a routine's records home", error);
+  }
+};
+
 /** File-name safe and sortable: the start time first, then the session. */
 const runFileName = (record: RoutineRunRecord): string =>
   `${record.startedAt.replaceAll(":", "-")}-${record.sessionId}.md`;
