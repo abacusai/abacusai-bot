@@ -352,6 +352,19 @@ describe("a plain yes after the bot asked", () => {
   });
 });
 
+describe("the bot a stop names answers it", () => {
+  it("even after a comma, where addressing would not see it", () => {
+    expect(speakersFor("stop, Writer", M, { lastSpeaker: "pla" })).toEqual({
+      botIds: ["wri"],
+      everyone: false,
+    });
+    expect(speakersFor("stop", M, { lastSpeaker: "pla" })).toEqual({
+      botIds: ["pla"],
+      everyone: false,
+    });
+  });
+});
+
 describe("two bots asked as a group", () => {
   it("each answers, since two cannot discuss", () => {
     const two = M.slice(0, 2);

@@ -45,6 +45,7 @@ const setup = (extra: Partial<ChannelDeps> = {}) => {
     reject: (e: Error) => void;
   }> = [];
   const works: Array<(typeof turns)[number] & { workId: string }> = [];
+  const noted: string[] = [];
   let n = 0;
   const service = new ChannelService({
     store,
@@ -73,6 +74,9 @@ const setup = (extra: Partial<ChannelDeps> = {}) => {
       turn?.reject(new Error("stopped"));
     }),
     changed: vi.fn(),
+    note: vi.fn((botId: string, line: string) =>
+      noted.push(`${botId}: ${line}`)
+    ),
     newId: () => `id${++n}`,
     now: () => 1000 + n,
     ...extra,
@@ -82,7 +86,7 @@ const setup = (extra: Partial<ChannelDeps> = {}) => {
     (store.threads.get(channelId) ?? []).map(
       (m) => `${m.author.kind === "user" ? "user" : m.author.botId}: ${m.text}`
     );
-  return { service, store, turns, works, flush, texts };
+  return { service, store, turns, works, flush, texts, noted };
 };
 
 describe("ChannelService", () => {
@@ -715,6 +719,64 @@ describe("the user speaks during a discussion", () => {
       "Agreed: 1. ₹120–150.",
       "Under ₹100 then.",
     ]);
+  });
+});
+
+describe("what the channel settles goes into the members' daily notes", () => {
+  it("a pin, an unpin, and finished work, each tagged with the channel", async () => {
+    const { service, turns, works, flush, noted } = setup();
+    const { id } = service.create({ botIds: ["chief", "wri"], name: "Launch" });
+    service.post(id, "Decided: launch on Dec 19");
+    await flush();
+    expect(noted).toEqual([
+      'chief: [channel "Launch"] Decided: launch on Dec 19',
+      'wri: [channel "Launch"] Decided: launch on Dec 19',
+    ]);
+    turns[0]!.resolve("<reply>Noted.</reply>");
+    await flush();
+    const pin = service.list()[0]!.decisions[0]!;
+    service.unpin(id, pin.id);
+    expect(noted.at(-1)).toBe(
+      'wri: [channel "Launch"] No longer settled: launch on Dec 19'
+    );
+    service.post(id, "Writer, write the announcement");
+    await flush();
+    turns[1]!.resolve(
+      "<reply>On it.<work>Write the announcement</work></reply>"
+    );
+    await flush();
+    works[0]!.resolve("<reply>Wrote announcement.md: 120 words.</reply>");
+    await flush();
+    expect(noted.at(-1)).toBe(
+      'wri: [channel "Launch"] I did: Write the announcement — Wrote announcement.md: 120 words.'
+    );
+    expect(noted.filter((line) => line.includes("I did"))).toHaveLength(1);
+  });
+
+  it("the lead's summary of a discussion, to every member", async () => {
+    const { service, turns, flush, noted } = setup();
+    const { id } = service.create({
+      botIds: ["chief", "res", "wri"],
+      name: "Launch",
+      text: "discuss and agree on a price",
+    });
+    await flush();
+    for (let i = 0; i < 3; i++) {
+      turns[i]!.resolve("<reply>₹99.</reply>");
+      await flush();
+    }
+    for (let i = 3; i < 6; i++) {
+      turns[i]!.resolve("<reply>NO_REPLY</reply>");
+      await flush();
+    }
+    turns[6]!.resolve("<reply>**Agreed:** 1. ₹99 (Chief)</reply>");
+    await flush();
+    expect(noted).toEqual([
+      'chief: [channel "Launch"] The team agreed, summed up by Chief: Agreed: 1. ₹99 (Chief)',
+      'res: [channel "Launch"] The team agreed, summed up by Chief: Agreed: 1. ₹99 (Chief)',
+      'wri: [channel "Launch"] The team agreed, summed up by Chief: Agreed: 1. ₹99 (Chief)',
+    ]);
+    expect(service.list()[0]!.id).toBe(id);
   });
 });
 

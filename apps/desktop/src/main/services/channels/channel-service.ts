@@ -28,7 +28,7 @@ import { EntityNotFoundError } from "@abacus-ai/contract/not-found";
 import { InvalidInputError } from "@abacus-ai/contract/service-errors";
 
 import { abacusBotHome } from "../../paths";
-import { answerWords } from "../bots/bot-ask";
+import { answerWords, noteGist } from "../bots/bot-ask";
 import {
   asksFirst,
   ownerOf,
@@ -111,6 +111,8 @@ export interface ChannelDeps {
   forgetChats?: (channelId: string, botIds: readonly string[]) => void;
   /** Something in the channel (null: the list) changed. */
   changed: (channelId: string | null) => void;
+  /** A line for the bot's own daily notes: what the channel settled, what it did here. */
+  note?: (botId: string, line: string) => void;
   /** One line per event, no message text: for the app's log. */
   log?: (line: string) => void;
   now?: () => number;
@@ -328,6 +330,12 @@ export class ChannelService {
 
   unpin(channelId: string, decisionId: string): void {
     const channel = this.channel(channelId);
+    const gone = channel.decisions.find((entry) => entry.id === decisionId);
+    if (gone != null)
+      this.noteMembers(
+        channel,
+        `No longer settled: ${noteGist(gone.text, 300)}`
+      );
     this.save({
       ...channel,
       decisions: channel.decisions.filter((entry) => entry.id !== decisionId),
@@ -792,6 +800,11 @@ export class ChannelService {
           : {}),
       };
       this.append(channelId, message);
+      if (extra.conclusion === true)
+        this.noteMembers(
+          channel,
+          `The team agreed, summed up by ${me.name}: ${noteGist(words, 600)}`
+        );
       if (task != null)
         this.startWork(channelId, botId, message.id, task, userMessageId);
       return words;
@@ -898,6 +911,11 @@ export class ChannelService {
         if (this.stoppedWorks.has(messageId)) return;
         const report = answerWords(raw).trim();
         this.setWork(channelId, messageId, { status: "done" });
+        this.noteMembers(
+          channel,
+          `I did: ${noteGist(task, 120)} — ${noteGist(report, 300)}`,
+          botId
+        );
         this.append(channelId, {
           id: this.newId(),
           author: { kind: "bot", botId },
@@ -974,6 +992,19 @@ export class ChannelService {
       ],
       updatedAt: this.now(),
     });
+    this.noteMembers(channel, `Decided: ${noteGist(text, 300)}`);
+  }
+
+  /** The members' daily notes hear what the channel settled or did, tagged with the channel. */
+  private noteMembers(channel: Channel, line: string, only?: string): void {
+    const title = channelTitle(
+      channel,
+      (id) => this.deps.bot(id)?.name ?? null
+    );
+    const tag = `[channel "${title.replace(/["\n]/g, "'")}"]`;
+    for (const botId of channel.memberBotIds)
+      if (only == null || botId === only)
+        this.deps.note?.(botId, `${tag} ${line}`);
   }
 
   private append(channelId: string, message: ChannelMessage): void {

@@ -51,6 +51,15 @@ type Named = Pick<Bot, "name" | "title">;
 const roleOf = (bot: Pick<Bot, "title">): string =>
   bot.title.trim().length > 0 ? ` (${bot.title.trim()})` : "";
 
+/** One line of a text, cut for a daily note; markdown emphasis dropped. */
+export const noteGist = (text: string, max: number): string => {
+  const flat = text
+    .replace(/[*_`#>]+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
+};
+
 /** A request's first words, for lists and notes. */
 export const requestGist = (request: string): string => {
   const flat = request.replace(/\s+/g, " ").trim();

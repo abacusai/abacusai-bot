@@ -324,6 +324,10 @@ export const speakersFor = (
       discussion: true,
     };
   if (named.length > 0) return { botIds: named, everyone: false };
+  // "stop, Writer": the bot a stop names answers it, however it is placed.
+  const stopNamed = plainStop(message, members);
+  if (stopNamed != null && stopNamed.length > 0)
+    return { botIds: stopNamed, everyone: false };
   if (noAnswer) return { botIds: [], everyone: false };
   const fallback =
     options.lastSpeaker != null && ids.has(options.lastSpeaker)

@@ -8,6 +8,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "path";
 
+import { appendDailyNote } from "@abacus-ai/agent/bot-memory";
 import type { ChannelCapabilities } from "@abacus-ai/agent/channel";
 import type { UnattendedPolicy } from "@abacus-ai/agent/tool-policy";
 import { visibleUserText } from "@abacus-ai/agent/user-text";
@@ -347,6 +348,7 @@ import {
   readBotMemoryText,
 } from "./services/bots/bot-memory-store";
 import { BotService, sponsoredRunEnvUntil } from "./services/bots/bot-service";
+import { botDir } from "./services/bots/bot-store";
 import {
   getBot,
   listSenderSessionEntries,
@@ -5741,8 +5743,21 @@ export class ServiceHost {
   private readonly channelTurns = new Map<string, BotChatHandle>();
 
   /** Group chats of the user and several bots (services/channels). */
+  /**
+   * The app writes into a bot's daily notes what it settled, did or learned
+   * outside its own chat (a channel's decisions, work for another bot), each
+   * with its source: the bot carries it into every chat, and its memory
+   * search finds it later. Never another bot's mere words.
+   */
+  private noteToBot(botId: string, line: string): void {
+    const result = appendDailyNote(botDir(botId), line);
+    if (!result.ok)
+      console.warn(`[memory] note for ${botId} dropped: ${result.message}`);
+  }
+
   private readonly channelService = new ChannelService({
     store: fileChannelStore(),
+    note: (botId, line) => this.noteToBot(botId, line),
     bot: (id) => {
       const bot = this.botService.list().find((each) => each.id === id);
       return bot == null
