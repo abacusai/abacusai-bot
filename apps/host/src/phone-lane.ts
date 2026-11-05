@@ -143,6 +143,7 @@ const CONTINUING_REPLY =
   "Sorry, that took too long and I had to stop it. I'm on your latest message now.";
 
 type TurnReply = Extract<AgentEvent, { type: "turn_reply" }>;
+type TurnAnswer = Extract<AgentEvent, { type: "turn_answer" }>;
 
 /** An image or document for the chat and the words under it. */
 interface PhoneMedia {
@@ -221,6 +222,8 @@ export class PhoneLane {
   private sending: Promise<void> = Promise.resolve();
   /** Everything said to the user goes out in order: progress, answers, apologies. */
   private outbox: Promise<unknown> = Promise.resolve();
+  /** A `turn_answer` on its way out; the turn's reply goes after it. */
+  private answered: Promise<void> = Promise.resolve();
   /** Media for the turn's final answer: `send_media` with_answer, and `present_deliverable`'s. */
   private heldMedia: PhoneMedia[] = [];
   /** Handled message ids the server has not taken an ack for yet. */
@@ -561,6 +564,9 @@ export class PhoneLane {
       return;
     const event = payload.event;
     switch (event.type) {
+      case "turn_answer":
+        this.answered = this.answered.then(() => this.sayAnswer(event));
+        return;
       case "turn_reply":
         void this.finish(event);
         return;
@@ -819,6 +825,7 @@ export class PhoneLane {
     const messages = this.inbox.close(this.inbox.handedUnder(reply.messageIds));
     if (messages.length === 0) return;
     this.clock.touch();
+    await this.answered;
     const replyTo = this.replyTarget(messages)!;
     const bubbles = splitPhoneBubbles(reply.text);
     // A failed turn's media is not an answer; it goes with nothing.
@@ -846,6 +853,35 @@ export class PhoneLane {
     // still holds it, so this host's answer is refused rather than doubled.
     await this.ack(messages);
     this.done(messages);
+  }
+
+  /**
+   * An answer the session finished before a message steered in reopened the
+   * turn: it goes now, with what it held, however long the rest takes or if
+   * the rest never ends. Its messages stay held until the turn's reply.
+   */
+  private async sayAnswer(answer: TurnAnswer): Promise<void> {
+    const replyTo = this.replyTarget(this.inbox.handedUnder(answer.messageIds));
+    if (replyTo == null) return;
+    this.clock.touch();
+    const bubbles = splitPhoneBubbles(answer.text);
+    const media = this.heldMedia.splice(0);
+    let delivered: boolean;
+    try {
+      delivered =
+        media.length > 0
+          ? await this.deliverWithMedia(replyTo, bubbles, media)
+          : await this.deliverAnswer(replyTo, bubbles);
+    } finally {
+      this.release(media);
+    }
+    this.log(
+      `[phone] answer ids=${answer.messageIds.join(",")} bubbles=${bubbles.length} media=${media.length} delivered=${delivered ? 1 : 0}`
+    );
+    this.deps.activity();
+    // A sent message clears WhatsApp's "typing…"; the session is still working.
+    if (delivered && this.busy)
+      void this.channel("typing", { message_id: replyTo });
   }
 
   /** Every bubble out, with one more try for what did not go; true when all went. */

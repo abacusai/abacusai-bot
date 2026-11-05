@@ -138,6 +138,8 @@ const fromLoopEvent = (event: AgentEvent, sessionId: string): string | null => {
 
     case "promised_work_recovery":
       return `promised work: asked ${event.model} to do it`;
+    case "turn_answer":
+      return `turn answer ids=${event.messageIds.join(",")} chars=${event.text.length}`;
 
     case "turn_reply":
       // Which messages a turn answered; the words stay in the transcript.

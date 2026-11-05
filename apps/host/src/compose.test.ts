@@ -730,6 +730,59 @@ describe("the phone lane", () => {
     expect(await phone.say("again")).toBe(false);
   });
 
+  it("sends an answer a steer lands behind at once, with what it held, and the turn's reply after it", async () => {
+    const answer = (messageIds: string[]) => ({
+      type: "turn_answer",
+      messageIds,
+      text: "Your calendar is empty.",
+    });
+
+    const { phone, send, event, reply, replies, acks, handled } = lane();
+    phone.arrive({ id: "m1", text: "my calendar?" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    phone.arrive({ id: "m2", text: "and reply to my mail" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    event(answer(["m1"]));
+    await vi.waitFor(() =>
+      expect(replies()).toContainEqual({
+        action: "reply",
+        message_id: "m1",
+        text: "Your calendar is empty.",
+      })
+    );
+    // Said, not done: the turn still holds both messages.
+    expect(acks()).toEqual([]);
+    expect(phone.busy).toBe(true);
+    reply(["m1", "m2"], "Mail answered.");
+    await handled([["m1", "m2"]]);
+    expect(replies().map((body) => [body.message_id, body.text])).toEqual([
+      ["m1", "Your calendar is empty."],
+      ["m2", "Mail answered."],
+    ]);
+    phone.stop();
+
+    // The reply waits for an answer still going out, and the answer takes its media.
+    const slow = lane({ holdReplies: true });
+    slow.phone.arrive({ id: "m1", text: "my calendar?" });
+    await vi.waitFor(() => expect(slow.send).toHaveBeenCalledTimes(1));
+    slow.event(presented([PDF]));
+    slow.event(answer(["m1"]));
+    slow.reply(["m1"], "And your mail.");
+    for (const went of [1, 2]) {
+      await vi.waitFor(() =>
+        expect(slow.replies().length).toBeGreaterThanOrEqual(went)
+      );
+      slow.release();
+    }
+    await slow.handled([["m1"]]);
+    expect(slow.replies().map((body) => body.text)).toEqual([
+      "Your calendar is empty.",
+      "And your mail.",
+    ]);
+    expect(slow.replies()[0]).toHaveProperty("document_b64");
+    slow.phone.stop();
+  });
+
   it("sends an image at once with its caption, and keeps the turn open", async () => {
     const { phone, send, event, reply, replies, acks, calls, handled } = lane();
     phone.arrive({ id: "m1", text: "share a screenshot?" });

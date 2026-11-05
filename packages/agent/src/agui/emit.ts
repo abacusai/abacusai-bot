@@ -591,6 +591,7 @@ export class AguiEmitter {
         // Carried by the run the host opens for it (§3.1.3).
         return [];
 
+      case "turn_answer":
       case "turn_reply":
         // For a host that relays replies itself; the run already streamed it.
         return [];

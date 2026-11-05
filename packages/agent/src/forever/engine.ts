@@ -1697,7 +1697,8 @@ export class ForeverEngine {
   }
 
   private noteSteered(steer: PendingSteer): void {
-    this.reply.answers(steer.messageId);
+    const answered = this.reply.answers(steer.messageId);
+    if (answered != null) this.emitAgentEvent(answered);
     this.emitAgentEvent({
       type: "user_message_steered",
       content: steer.text,
@@ -2144,7 +2145,7 @@ export class ForeverEngine {
           });
         }
 
-        if (!this.hiddenTurn) this.reply.messageEnded();
+        if (!this.hiddenTurn) this.reply.messageEnded(callsTool(event.message));
         this.rawStreamed = "";
         this.sanitizer.reset();
         this.currentMessageId = null;
@@ -2810,6 +2811,14 @@ const NO_MODEL_CONFIGURED =
 
 function isAssistantMessage(message: unknown): boolean {
   return (message as { role?: unknown } | undefined)?.role === "assistant";
+}
+
+function callsTool(message: unknown): boolean {
+  const content = (message as { content?: unknown } | undefined)?.content;
+  return (
+    Array.isArray(content) &&
+    content.some((part) => (part as { type?: unknown }).type === "toolCall")
+  );
 }
 
 function messageText(message: unknown): string {

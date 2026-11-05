@@ -318,6 +318,11 @@ export type AgentEvent =
       /** For `failed`: the reported error's cause (a FailureCause, turn-outcome.ts), when it named one. */
       cause?: string;
     }
+  /**
+   * An answer a turn finished before a steered message reopened it, for the
+   * messages named: `turn_reply` says only what the turn wrote after it.
+   */
+  | { type: "turn_answer"; messageIds: string[]; text: string }
   | {
       type: "error";
       // The error payload is inconsistent across models: text may be at
