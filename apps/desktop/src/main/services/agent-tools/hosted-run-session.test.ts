@@ -198,19 +198,27 @@ it("runs with full access only when the server says so, and never with the vault
         content: '{"deliver": true, "text": "done"}',
         messageId: "m1",
       });
+      for (const [name, input] of [
+        ["bash", { command: "ls" }],
+        ["agent-tools_bash", { command: "pwd" }],
+        ["read", { path: "a" }],
+        ["abacus-connectors_Gmail_Tool", { action: "search_email" }],
+        [
+          "abacus-connectors_Gmail_Tool",
+          { action: "send_email", to: "a@example.com" },
+        ],
+      ] as const)
+        emit(request.sessionId, {
+          type: "tool_execution_complete",
+          tool: { name, input },
+          result: {},
+        });
       emit(request.sessionId, {
         type: "status_changed",
         status: AgentStatus.Idle,
       });
     });
   }) as never);
-  vi.spyOn(internals.threadStore, "readCurrentFile").mockReturnValue({
-    messages: [
-      { parts: [{ type: "tool-call", name: "bash", id: "1" }] },
-      { parts: [{ type: "tool-call", name: "x_bash", id: "2" }] },
-    ],
-  } as never);
-
   // A run the server did not mark, a downgraded account's included, stays held.
   await host.runUnattended(REQUEST);
   const held = start.mock.calls[0]![0];
@@ -226,7 +234,10 @@ it("runs with full access only when the server says so, and never with the vault
     internals.agentSessionManagerService.unattendedPolicy(full.sessionId)
   ).toBeNull();
   expect(internals.heldPolicy(full.sessionId)).toBeNull();
-  expect(result.actions).toEqual(["bash ×2"]);
+  expect(result.actions).toEqual([
+    "bash ×2",
+    "Gmail_Tool send_email (to: a@example.com)",
+  ]);
   // Nobody is there to approve: not the owner's conversation, and no vault.
   expect(internals.isOwnerSession(full.sessionId)).toBe(false);
   expect(internals.mcpBrowserServer.options.noVault(full.sessionId)).toBe(true);

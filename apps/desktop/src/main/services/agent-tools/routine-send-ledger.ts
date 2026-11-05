@@ -160,24 +160,36 @@ const describeCall = (tool: string, input: Record<string, unknown>): string => {
 const OUTWARD_TOOLS: readonly string[] = ["bash", "browser_task", "cronjob"];
 
 /**
- * How often a run called each of those tools, as "bash ×3": a thread records
- * no more than the call, and a shell command is too long to show.
+ * A finished tool call as a run's report names it, or null when it reached
+ * nothing outside the run: a connector call that is not a reviewed read, or a
+ * tool that acts by other means, whose input is too long to show.
  */
-export const outwardToolsOf = (
-  messages: ReadonlyArray<{ parts: readonly unknown[] }>
-): string[] => {
-  const counts = new Map<string, number>();
-  for (const part of messages.flatMap((message) => message.parts) as Array<
-    Record<string, unknown>
-  >) {
-    if (part.type !== "tool-call" || typeof part.name !== "string") continue;
-    const { name } = part;
-    const tool = OUTWARD_TOOLS.find(
+export const outwardActionOf = (
+  name: string,
+  input: Record<string, unknown>
+): string | null => {
+  const meta = connectorToolMetaByName(name);
+  if (meta != null)
+    return (UNATTENDED_CONNECTOR_READS[meta.tool] ?? []).includes(
+      String(input.action ?? "")
+    )
+      ? null
+      : describeCall(meta.tool, input);
+  return (
+    OUTWARD_TOOLS.find(
       (entry) => name === entry || name.endsWith(`_${entry}`)
-    );
-    if (tool != null) counts.set(tool, (counts.get(tool) ?? 0) + 1);
-  }
-  return [...counts].map(([tool, count]) => `${tool} ×${count}`);
+    ) ?? null
+  );
+};
+
+/** Each action once, in the order first made, counted when repeated. */
+export const countedActions = (actions: readonly string[]): string[] => {
+  const counts = new Map<string, number>();
+  for (const action of actions)
+    counts.set(action, (counts.get(action) ?? 0) + 1);
+  return [...counts].map(([action, count]) =>
+    count > 1 ? `${action} ×${count}` : action
+  );
 };
 
 /**

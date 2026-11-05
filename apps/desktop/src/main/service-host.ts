@@ -324,7 +324,8 @@ import {
 } from "./services/agent-tools/routine-runs-store";
 import {
   connectorActionsOf,
-  outwardToolsOf,
+  countedActions,
+  outwardActionOf,
   RoutineSendLedger,
 } from "./services/agent-tools/routine-send-ledger";
 import { stopAllServed } from "./services/agent-tools/static-server";
@@ -5458,14 +5459,6 @@ export class ServiceHost {
     };
   }
 
-  /** What a hosted run did outward, from its thread. */
-  private hostedRunActions(sessionId: string): string[] {
-    const messages =
-      this.threadStore.readCurrentFile(sessionId)?.messages ?? [];
-    const { done, unsure } = connectorActionsOf(messages);
-    return [...done, ...unsure, ...outwardToolsOf(messages)];
-  }
-
   /** The text of a session's answers as its thread kept them. */
   private threadReply(sessionId: string): string {
     return (this.threadStore.readCurrentFile(sessionId)?.messages ?? [])
@@ -5551,9 +5544,14 @@ export class ServiceHost {
     }>((resolve) => {
       settle = resolve;
     });
+    const actions: string[] = [];
     const stopListening = this.onAgentEvent((sessionId, payload) => {
       if (sessionId !== session.id || payload.type !== "event" || !sent) return;
       const event = payload.event;
+      if (event.type === "tool_execution_complete") {
+        const action = outwardActionOf(event.tool.name, event.tool.input);
+        if (action != null) actions.push(action);
+      }
       if (event.type !== "text_delta") return;
       const id = event.messageId ?? "message";
       lastMessage = id;
@@ -5615,7 +5613,7 @@ export class ServiceHost {
         outcome: ended.outcome,
         text,
         ...(ended.creditsOut === true ? { creditsOut: true } : {}),
-        ...(full ? { actions: this.hostedRunActions(session.id) } : {}),
+        ...(full ? { actions: countedActions(actions) } : {}),
       };
     } finally {
       if (timer != null) clearTimeout(timer);
