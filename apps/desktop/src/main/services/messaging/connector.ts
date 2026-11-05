@@ -1,4 +1,5 @@
 import fs from "fs";
+import { randomBytes } from "node:crypto";
 import path from "path";
 
 import type {
@@ -133,8 +134,9 @@ export const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 /**
  * Save inbound media under `messaging-media/<platform>/<chat>/<stamp>-<name>`
  * in the app home. Chat ids are display names on the web platforms, so they
- * are sanitized rather than trusted; the stamp keeps a chat's fifth photo.jpg
- * from overwriting its first.
+ * are sanitized rather than trusted. An album arrives in one burst under one
+ * name (WhatsApp's are all image.jpg), so the stamp alone can repeat: the random
+ * part keeps every file, and `wx` fails rather than overwrite one.
  */
 export const saveInboundMedia = (
   platform: MessagingPlatformId,
@@ -154,8 +156,9 @@ export const saveInboundMedia = (
       .slice(0, 80) || "file";
   const dir = path.join(abacusBotHome(), "messaging-media", platform, safeChat);
   fs.mkdirSync(dir, { recursive: true });
-  const file = path.join(dir, `${Date.now()}-${safeName}`);
-  fs.writeFileSync(file, data);
+  const stamp = `${Date.now()}-${randomBytes(4).toString("hex")}`;
+  const file = path.join(dir, `${stamp}-${safeName}`);
+  fs.writeFileSync(file, data, { flag: "wx" });
   return file;
 };
 
