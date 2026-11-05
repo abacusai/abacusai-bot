@@ -676,17 +676,24 @@ describe("a routine whose chat app lost its link", () => {
   const proto = ServiceHost.prototype as unknown as {
     startRoutineRun: (id: string, trigger: string) => Promise<string>;
     routineLinkDown: (job: unknown) => boolean;
+    routineActsElsewhere: (job: unknown) => boolean;
     markRoutineLinkLost: (job: unknown) => void;
     routineLinkBack: (platform: string) => void;
   };
-  const withLink = (unlinked: string[]) => {
+  const withLink = (
+    unlinked: string[],
+    threads: Record<string, { messages: unknown[] }> = {}
+  ) => {
     const service = {
       messagingGatewayService: { unlinkedPlatforms: () => unlinked },
       routineLinkDown: proto.routineLinkDown,
       markRoutineLinkLost: proto.markRoutineLinkLost,
       routineAtCreditWall: async () => false,
+      routineActsElsewhere: proto.routineActsElsewhere,
+      threadStore: { readCurrentFile: (id: string) => threads[id] },
       emitEvent: () => undefined,
-      listRoutineRuns: () => [],
+      listRoutineRuns: () =>
+        Object.keys(threads).map((sessionId) => ({ sessionId })),
       startedAnyway: 0,
       get ensureRoutineWorkspace() {
         service.startedAnyway += 1;
@@ -725,6 +732,40 @@ describe("a routine whose chat app lost its link", () => {
     expect(await fire(withLink(unlinked).service, job.id, "schedule")).toBe(
       expected
     );
+  });
+
+  it("still runs when a recent run also reached someone another way", async () => {
+    const { noteChatPlatform } =
+      await import("./services/agent-tools/cron-store");
+    const job = createJob({
+      schedule: "0 * * * *",
+      prompt: "mail and ping me",
+    });
+    noteChatPlatform(job.id, "whatsapp");
+    const mail = (action: string) => ({
+      messages: [
+        {
+          parts: [
+            {
+              type: "tool-call",
+              id: "c1",
+              name: "abacus-connectors_Gmail_Tool",
+              arguments: JSON.stringify({ action }),
+            },
+            {
+              type: "tool-result",
+              toolCallId: "c1",
+              state: "complete",
+            },
+          ],
+        },
+      ],
+    });
+    const fired = (thread: { messages: unknown[] }) =>
+      fire(withLink(["whatsapp"], { run: thread }).service, job.id, "schedule");
+
+    expect(await fired(mail("search_email"))).toBe("skipped");
+    expect(await fired(mail("send_email"))).toBe("ran");
   });
 
   it("is marked at the first skip, and a person pressing Run still gets a run", async () => {
