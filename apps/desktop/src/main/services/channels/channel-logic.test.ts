@@ -305,6 +305,10 @@ describe("plainStop", () => {
     ["no, stop!", []],
     ["ok stop it", []],
     ["Planner stop, Writer carry on", ["pla"]],
+    ["stop, Writer", ["wri"]],
+    ["stop Writer", ["wri"]],
+    ["never mind, scrap it", []],
+    ["drop it Planner", ["pla"]],
     ["@Writer @Planner stop everything", ["wri", "pla"]],
   ])("%s is a stop for %j", (text, ids) => {
     expect(plainStop(text, M)).toEqual(ids);
@@ -332,6 +336,40 @@ describe("stopWorkIn", () => {
     expect(stopWorkIn("Still on it.")).toEqual({
       stop: false,
       words: "Still on it.",
+    });
+  });
+});
+
+describe("a plain yes after the bot asked", () => {
+  it("answers the bot that asked, not nobody", () => {
+    expect(
+      speakersFor("yes", M, { lastSpeaker: "wri", lastSpeakerAsked: true })
+    ).toEqual({ botIds: ["wri"], everyone: false });
+    expect(speakersFor("yes", M, { lastSpeaker: "wri" })).toEqual({
+      botIds: [],
+      everyone: false,
+    });
+  });
+});
+
+describe("two bots asked as a group", () => {
+  it("each answers, since two cannot discuss", () => {
+    const two = M.slice(0, 2);
+    expect(speakersFor("both of you, introduce yourselves", two)).toEqual({
+      botIds: ["chief", "res"],
+      everyone: true,
+    });
+    expect(speakersFor("discuss the launch date together", two).everyone).toBe(
+      true
+    );
+  });
+});
+
+describe("an unclosed <work> tag", () => {
+  it("never shows, and starts nothing", () => {
+    expect(workIn("On it <work>Build it")).toEqual({
+      task: null,
+      words: "On it",
     });
   });
 });

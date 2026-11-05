@@ -614,6 +614,8 @@ const connectorIdsFor = (services: string[]): string[] =>
 /** A piece of channel work from queued to ended: a stop may come before its turn starts. */
 interface ChannelWorkRun {
   stopped: boolean;
+  /** Ends its wait for the user's own turn in that chat, if it is waiting. */
+  wake?: () => void;
   /** Where to stop it, once its prompt is in the bot's chat. */
   handle?: BotChatHandle;
 }
@@ -5775,6 +5777,7 @@ export class ServiceHost {
       const work = this.channelWorks.get(workId);
       if (work == null) return;
       work.stopped = true;
+      work.wake?.();
       if (work.handle != null) this.stopAgentTurn(work.handle);
     },
     stopTurn: (botId, channelId) => {
@@ -5911,9 +5914,16 @@ export class ServiceHost {
     if (work.stopped) throw stoppedFirst();
     const handle = await this.botService.openChat(botId);
     try {
-      if (!(await this.turnClosed(handle.sessionId, BOT_TASK_TURN_TIMEOUT_MS)))
-        throw new Error("it stayed busy in its own chat for 30 minutes.");
+      // A stop while it waits for the user's own turn there ends the wait.
+      const closed = await Promise.race([
+        this.turnClosed(handle.sessionId, BOT_TASK_TURN_TIMEOUT_MS),
+        new Promise<false>((resolve) => {
+          work.wake = () => resolve(false);
+        }),
+      ]);
       if (work.stopped) throw stoppedFirst();
+      if (!closed)
+        throw new Error("it stayed busy in its own chat for 30 minutes.");
       const answer = this.waitForTurn(
         handle.sessionId,
         BOT_TASK_TURN_TIMEOUT_MS,

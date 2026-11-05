@@ -207,7 +207,10 @@ export class ChannelService {
         (id) => !next.memberBotIds.includes(id)
       );
       if (left.length > 0) {
-        for (const botId of left) this.deps.stopTurn(botId, channelId);
+        for (const botId of left) {
+          this.deps.stopTurn(botId, channelId);
+          this.stopWorks(channelId, botId);
+        }
         const seen = { ...channel.seen };
         for (const botId of left) delete seen[botId];
         next.seen = seen;
@@ -482,6 +485,7 @@ export class ChannelService {
         (botId == null || work.botId === botId)
       ) {
         this.stoppedWorks.add(messageId);
+        this.works.delete(messageId);
         this.deps.stopWork?.(messageId);
         // Shown at once, and so the bots' next turns read it as stopped.
         this.setWork(channelId, messageId, {
@@ -496,6 +500,7 @@ export class ChannelService {
     for (const channel of this.deps.store.readChannels()) {
       if (!channel.memberBotIds.includes(botId)) continue;
       this.deps.stopTurn(botId, channel.id);
+      this.stopWorks(channel.id, botId);
       const seen = { ...channel.seen };
       delete seen[botId];
       this.save({
@@ -549,6 +554,7 @@ export class ChannelService {
         repliedTo?.author.kind === "bot" ? repliedTo.author.botId : null,
       lastSpeaker:
         lastSpeaker?.author.kind === "bot" ? lastSpeaker.author.botId : null,
+      lastSpeakerAsked: /\?\s*$/.test(lastSpeaker?.text ?? ""),
     });
     this.log(
       `round in ${channelId}: ${speakers.everyone ? "everyone" : speakers.botIds.length} speaker(s)`
@@ -632,7 +638,19 @@ export class ChannelService {
       upTo == null
         ? all.length
         : all.findIndex((message) => message.id === upTo) + 1;
-    const visible = all.slice(0, end > 0 ? end : all.length);
+    const trigger = all.findIndex(
+      (message) => message.id === round.userMessageId
+    );
+    const visible = all
+      .slice(0, end > 0 ? end : all.length)
+      // A discussion is about the message that started it: what the user
+      // writes meanwhile ends it (see discuss) and is answered after.
+      .filter(
+        (message, index) =>
+          (kind !== "discuss" && kind !== "conclude") ||
+          index <= trigger ||
+          message.author.kind !== "user"
+      );
     const seenId = channel.seen?.[botId];
     const seenAt =
       seenId == null
@@ -686,7 +704,15 @@ export class ChannelService {
     this.deps.changed(channelId);
     try {
       const raw = await this.deps.runTurn(botId, channel, prompt);
-      const last = visible.at(-1);
+      // Seen up to the last message shown; a user message kept from a
+      // discussion turn, and everything after it, is still new next time.
+      const hiddenAt = all.findIndex(
+        (message, index) =>
+          !visible.includes(message) &&
+          index > trigger &&
+          index < (end > 0 ? end : all.length)
+      );
+      const last = hiddenAt > 0 ? all[hiddenAt - 1] : visible.at(-1);
       if (last != null) this.markSeen(channelId, botId, last.id);
       if (round.cancelled || !this.isMember(channelId, botId)) return "";
       // The user cancelled or changed its running work: it stops first, so
@@ -714,10 +740,10 @@ export class ChannelService {
               ? suggested
               : null;
       const taken = workIn(proposed.words);
-      // Only a bot answering the user's own message may take work on.
-      // Work starts only when the bot is not asking whether to start it.
+      // Only a bot answering the user's own message (alone or as one of
+      // everyone) may take work on, and only when it is not asking whether to.
       const task =
-        kind === "answer" &&
+        (kind === "answer" || kind === "everyone") &&
         this.deps.runWork != null &&
         !asksFirst(taken.words)
           ? taken.task
@@ -792,6 +818,12 @@ export class ChannelService {
       let added = 0;
       for (const botId of botIds) {
         if (round.cancelled) return;
+        // The user spoke: the team stops debating and the lead sums up;
+        // their message is answered next, with the discussion in view.
+        if ((this.queues.get(channelId) ?? []).length > 0) {
+          at = MAX_DISCUSSION_ROUNDS;
+          break;
+        }
         const words = await this.turn(
           channelId,
           round,
@@ -799,9 +831,7 @@ export class ChannelService {
           "discuss",
           [],
           undefined,
-          {
-            round: { at, of: MAX_DISCUSSION_ROUNDS },
-          }
+          { round: { at, of: MAX_DISCUSSION_ROUNDS } }
         );
         if (words.length > 0) added++;
       }
@@ -850,6 +880,8 @@ export class ChannelService {
     this.log(`work started by ${botId} in ${channelId}`);
     void runWork(botId, channel, prompt, messageId)
       .then((raw) => {
+        // Stopped as it ended: it stays stopped, and its report is not posted.
+        if (this.stoppedWorks.has(messageId)) return;
         const report = answerWords(raw).trim();
         this.setWork(channelId, messageId, { status: "done" });
         this.append(channelId, {
@@ -882,6 +914,7 @@ export class ChannelService {
     messageId: string,
     change: Partial<NonNullable<ChannelMessage["work"]>>
   ): void {
+    if (this.maybeChannel(channelId) == null) return;
     const messages = this.deps.store.readMessages(channelId);
     this.deps.store.writeMessages(
       channelId,
@@ -930,10 +963,12 @@ export class ChannelService {
   }
 
   private append(channelId: string, message: ChannelMessage): void {
+    // A channel removed meanwhile (a late report): nothing is written back.
+    const channel = this.maybeChannel(channelId);
+    if (channel == null) return;
     const messages = [...this.deps.store.readMessages(channelId), message];
     this.deps.store.writeMessages(channelId, messages.slice(-KEPT_MESSAGES));
-    const channel = this.maybeChannel(channelId);
-    if (channel != null) this.save({ ...channel, updatedAt: message.at });
+    this.save({ ...channel, updatedAt: message.at });
     this.deps.changed(channelId);
   }
 

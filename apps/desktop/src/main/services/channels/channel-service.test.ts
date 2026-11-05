@@ -320,17 +320,29 @@ describe("work taken on in a channel", () => {
     expect(service.list()[0]?.working).toEqual([]);
   });
 
-  it("a bot brought in, or answering @everyone, cannot take work on", async () => {
+  it("a bot brought in cannot take work on; one answering @everyone can", async () => {
     const { service, turns, works, flush, store } = setup();
     const { id } = service.create({ botIds: ["chief", "wri"] });
-    service.post(id, "@everyone go");
+    service.post(id, "Chief, get Writer to save the email");
     await flush();
-    turns[0]!.resolve("<reply>Sure <work>build a site</work></reply>");
-    turns[1]!.resolve("<reply>Ok</reply>");
+    turns[0]!.resolve("<reply>@Writer save it</reply>");
+    await flush();
+    expect(turns[1]!.prompt).toContain("You can't take work");
+    turns[1]!.resolve("<reply>I would <work>save the email</work></reply>");
+    await flush();
+    turns[2]!.resolve("<reply>Done.</reply>");
     await flush();
     expect(works).toHaveLength(0);
-    expect(store.threads.get(id)![1]).toMatchObject({ text: "Sure" });
-    expect(store.threads.get(id)![1]!.work).toBeUndefined();
+    expect(store.threads.get(id)![2]).toMatchObject({ text: "I would" });
+    expect(store.threads.get(id)![2]!.work).toBeUndefined();
+    service.post(id, "@everyone write your part to notes.md");
+    await flush();
+    turns[3]!.resolve(
+      "<reply>Sure <work>write my part to notes.md</work></reply>"
+    );
+    turns[4]!.resolve("<reply>Ok</reply>");
+    await flush();
+    expect(works.map((work) => work.botId)).toEqual(["chief"]);
   });
 
   it("Stop stops the work; it is marked stopped and no report is posted", async () => {
@@ -452,6 +464,55 @@ describe("work taken on in a channel", () => {
       text: "Not finished: it was stopped. Want me to run it again?",
     });
     expect(store.threads.get(id)![1]!.work).toBeUndefined();
+  });
+
+  it("Stop while the work still waits to start: nothing shows as working", async () => {
+    const { service, turns, works, flush, store } = setup();
+    const { id } = service.create({ botIds: ["chief", "wri"] });
+    service.post(id, "Writer, make the deck");
+    await flush();
+    turns[0]!.resolve("<reply><work>Make the deck</work></reply>");
+    await flush();
+    expect(service.list()[0]?.working).toEqual(["wri"]);
+    service.stop(id);
+    await flush();
+    expect(service.list()[0]?.working).toEqual([]);
+    // A report arriving after the stop changes nothing.
+    works[0]!.resolve("<reply>Deck done.</reply>");
+    await flush();
+    expect(store.threads.get(id)![1]!.work?.status).toBe("stopped");
+    expect(store.threads.get(id)).toHaveLength(2);
+  });
+
+  it("a member removed, or a bot deleted, has its work stopped", async () => {
+    const { service, turns, flush, store } = setup();
+    const { id } = service.create({ botIds: ["chief", "wri", "res"] });
+    service.post(id, "Writer, make the deck");
+    await flush();
+    turns[0]!.resolve("<reply><work>Make the deck</work></reply>");
+    await flush();
+    service.update(id, { botIds: ["chief", "res"] });
+    await flush();
+    expect(store.threads.get(id)![1]!.work?.status).toBe("stopped");
+    service.post(id, "Researcher, find prices");
+    await flush();
+    turns[1]!.resolve("<reply><work>Find prices</work></reply>");
+    await flush();
+    service.forgetBot("res");
+    expect(store.threads.get(id)![3]!.work?.status).toBe("stopped");
+  });
+
+  it("a channel removed mid-work is not written back by the late report", async () => {
+    const { service, turns, works, flush, store } = setup();
+    const { id } = service.create({ botIds: ["chief", "wri"] });
+    service.post(id, "Writer, make the deck");
+    await flush();
+    turns[0]!.resolve("<reply><work>Make the deck</work></reply>");
+    await flush();
+    service.remove(id);
+    works[0]!.resolve("<reply>Deck done.</reply>");
+    await flush();
+    expect(store.threads.has(id)).toBe(false);
   });
 
   it("a bot cannot stop another bot's work", async () => {
@@ -588,6 +649,41 @@ describe("bots proposing a new bot", () => {
     await flush();
     expect(store.threads.get(id)![1]!.proposal).toBeUndefined();
     expect(store.threads.get(id)![1]!.text).toBe("Here.");
+  });
+});
+
+describe("the user speaks during a discussion", () => {
+  it("ends the debate after the current turn; the lead sums up; then the message is answered once", async () => {
+    const { service, turns, flush, store } = setup();
+    const { id } = service.create({
+      botIds: ["chief", "res", "wri"],
+      text: "discuss and agree on a launch price",
+    });
+    await flush();
+    turns[0]!.resolve("<reply>₹120.</reply>");
+    await flush();
+    service.post(id, "must be under ₹100");
+    turns[1]!.resolve("<reply>₹150.</reply>");
+    await flush();
+    // Nobody else debates; the lead concludes, shown nothing past the trigger.
+    expect(turns[2]!.botId).toBe("chief");
+    expect(turns[2]!.prompt).toContain("discussion above is over");
+    expect(turns[2]!.prompt).not.toContain("under ₹100");
+    turns[2]!.resolve("<reply>Agreed: 1. ₹120–150.</reply>");
+    await flush();
+    // Then the user's message, once, by the last speaker, with everything in view.
+    expect(turns[3]!.botId).toBe("chief");
+    expect(turns[3]!.prompt).toContain("under ₹100");
+    turns[3]!.resolve("<reply>Under ₹100 then.</reply>");
+    await flush();
+    expect(turns).toHaveLength(4);
+    const bots = store.threads.get(id)!.filter((m) => m.author.kind === "bot");
+    expect(bots.map((m) => m.text)).toEqual([
+      "₹120.",
+      "₹150.",
+      "Agreed: 1. ₹120–150.",
+      "Under ₹100 then.",
+    ]);
   });
 });
 

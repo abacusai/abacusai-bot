@@ -57,7 +57,7 @@ export interface Speakers {
 export const MAX_DISCUSSION_ROUNDS = 3;
 
 const DISCUSS =
-  /\b(?:discuss|debate|ideate|brainstorm|deliberate|hash (?:it|this) out|(?:work|think|figure|talk|plan|decide|ideate)(?: (?:it|this|that))?(?: out| over| through)? together|together as a team|as a team|all of you|you all|you guys|agree on|align on|come to (?:an )?agreement|reach (?:a )?consensus|all agree|weigh in|talk (?:it|this) (?:over|through))\b/i;
+  /\b(?:discuss|debate|ideate|brainstorm|deliberate|hash (?:it|this) out|(?:work|think|figure|talk|plan|decide|ideate)(?: (?:it|this|that))?(?: out| over| through)? together|together as a team|as a team|all of you|you all|you guys|agree on|align on|come to (?:an )?agreement|reach (?:a )?consensus|all agree|weigh in|talk (?:it|this) (?:over|through)|both of you|you two|you both)\b/i;
 
 /**
  * The user asks the team to work something out together ("ideate together",
@@ -179,7 +179,16 @@ export const wantsNoAnswer = (
     .every((word) => ACK_WORDS.has(word));
 };
 
-const STOP_VERBS = new Set(["stop", "cancel", "halt", "abort", "forget"]);
+const STOP_VERBS = new Set([
+  "stop",
+  "cancel",
+  "halt",
+  "abort",
+  "forget",
+  "scrap",
+  "drop",
+  "nevermind",
+]);
 /** What may follow the verb in a plain stop ("stop what you're doing", "cancel that"). */
 const STOP_OBJECTS = new Set(
   "it that this everything all now please what you you're youre are doing working there already your work task job".split(
@@ -221,6 +230,7 @@ export const plainStop = (
     const words = withoutNames(part)
       .toLowerCase()
       .replace(/[’']/g, "'")
+      .replace(/\bnever mind\b/g, "nevermind")
       .split(/\s+/)
       .filter((word) => word.length > 0);
     while (STOP_LEAD.has(words[0] ?? "")) words.shift();
@@ -240,8 +250,28 @@ export const plainStop = (
     (the >= 0 && after.length - the - 1 > 3)
   )
     return null;
-  return mergeByPosition(parts.slice(0, at + 1).join(","), members);
+  // The bots named up to the stop, and in clauses after it that only name
+  // someone ("stop, Writer"); "Planner stop, Writer carry on" names Planner.
+  let end = at + 1;
+  while (end < parts.length && clauseWords(parts[end]!).length === 0) end++;
+  return namedIn(parts.slice(0, end).join(","), members);
 };
+
+/** Members named anywhere in the text, in order of first appearance. */
+const namedIn = (text: string, members: readonly Member[]): string[] =>
+  members
+    .map((member) => ({
+      id: member.id,
+      at: text.search(
+        new RegExp(
+          `(?<![\\p{L}\\p{N}_-])@?${escape(member.name)}(?![\\p{L}\\p{N}_'’-])`,
+          "iu"
+        )
+      ),
+    }))
+    .filter((entry) => entry.at >= 0)
+    .sort((a, b) => a.at - b.at)
+    .map((entry) => entry.id);
 
 /**
  * Who answers the user's message. `replyToBot` is the author of the message
@@ -263,13 +293,21 @@ export const ownWords = (text: string): string =>
 export const speakersFor = (
   message: string,
   members: readonly Member[],
-  options: { replyToBot?: string | null; lastSpeaker?: string | null } = {}
+  options: {
+    replyToBot?: string | null;
+    lastSpeaker?: string | null;
+    /** The last bot message ended with a question: a plain "yes"/"ok" answers it. */
+    lastSpeakerAsked?: boolean;
+  } = {}
 ): Speakers => {
   const text = ownWords(message);
   const ids = new Set(members.map((member) => member.id));
-  const together =
-    wantsDiscussion(message, members) && !wantsNoAnswer(message, members);
-  if (EVERYONE.test(text) && !together)
+  const noAnswer =
+    wantsNoAnswer(message, members) && options.lastSpeakerAsked !== true;
+  const asksTeam = DISCUSS.test(text) && !noAnswer;
+  const together = asksTeam && members.length >= 3;
+  // "Both of you, say hi": two bots cannot discuss, but each answers.
+  if ((EVERYONE.test(text) && !together) || (asksTeam && !together))
     return { botIds: members.map((member) => member.id), everyone: true };
   const named = unique([
     ...(options.replyToBot != null && ids.has(options.replyToBot)
@@ -286,7 +324,7 @@ export const speakersFor = (
       discussion: true,
     };
   if (named.length > 0) return { botIds: named, everyone: false };
-  if (wantsNoAnswer(message, members)) return { botIds: [], everyone: false };
+  if (noAnswer) return { botIds: [], everyone: false };
   const fallback =
     options.lastSpeaker != null && ids.has(options.lastSpeaker)
       ? options.lastSpeaker
@@ -420,17 +458,19 @@ export const turnPrompt = (input: {
           ? `The user's other bots, not in this channel: ${(input.outsiders ?? []).map((bot) => `${bot.name}${roleOf(bot)}`).join(", ")}. If one of them is needed here, write <invite name="Name">why, in one line</invite> inside your reply; the user decides.`
           : "",
         'If the work needs a specialist none of the user\'s bots is (for the long run, not one question), you may propose a new bot: <new_bot name="Short name" title="Role">What it would do, in one or two sentences</new_bot> inside your reply. The user decides; never more than one suggestion.',
-        "If the user asks YOU for real work that needs files, code, a browser or their accounts (build a page, write a document, check their email…), don't refuse: say in a line what you will do, and add <work>the task, complete on its own: what to make or do, and where</work> inside your reply. The app runs it in your own chat with all your tools and posts your report here when it is done. One <work> at most, only for what the user asked you, and only to start it now: if you ask them whether to, leave it out and wait for their yes."
+        WORK_RULE
       );
       break;
     case "everyone":
       lines.push(
-        "The user asked everyone. Give your own answer from your role; the others answer separately, so don't wait for them or speak for them. Don't @mention anyone."
+        "The user asked everyone. Give your own answer from your role; the others answer separately, so don't wait for them or speak for them. Don't @mention anyone.",
+        WORK_RULE
       );
       break;
     case "brought-in":
       lines.push(
-        `${others} brought you in above. Answer what they need, for the user, in the group. Don't @mention anyone: nobody else will be called in.`
+        `${others} brought you in above. Answer what they need, for the user, in the group. Don't @mention anyone: nobody else will be called in.`,
+        "You can't take work that needs files, code, a browser or the user's accounts on from here: say what you would do, and that the user can ask you for it directly."
       );
       break;
     case "follow-up":
@@ -449,7 +489,7 @@ export const turnPrompt = (input: {
       break;
     case "conclude":
       lines.push(
-        "The team's discussion above is over. As the lead, post the outcome for the user: start with \"Agreed:\" and a numbered list of what the team agreed (with owners where there are any), then any point still open, in one line each. Only what was actually said above; don't add new ideas."
+        "The team's discussion above is over. As the lead, post the outcome for the user: start with \"Agreed:\" and a numbered list of what the team agreed (with owners where there are any), then any point still open, in one line each, not numbered (numbered lines are the agreed work). Only what was actually said above; don't add new ideas."
       );
       break;
   }
@@ -483,6 +523,9 @@ export const postedWords = (words: string, me: Member): string => {
   if (cut > 0) text = text.slice(0, cut);
   return text.trim();
 };
+
+const WORK_RULE =
+  "If the user asks YOU for real work that needs files, code, a browser or their accounts (build a page, write a document, check their email…), don't refuse: say in a line what you will do, and add <work>the task, complete on its own: what to make or do, and where</work> inside your reply. The app runs it in your own chat with all your tools and posts your report here when it is done. One <work> at most, only for what the user asked you, and only to start it now: if you ask them whether to, leave it out and wait for their yes.";
 
 /** A work card's state, as the bot that took it on reads it. */
 const workState = (work: ChannelWork): string =>
@@ -524,7 +567,7 @@ export const workIn = (
   return {
     task: task.length > 0 ? task : null,
     words: words
-      .replace(/<work>[\s\S]*?<\/work>/gi, "")
+      .replace(/<work>[\s\S]*?(?:<\/work>|$)/gi, "")
       .replace(/\n{3,}/g, "\n\n")
       .trim(),
   };
