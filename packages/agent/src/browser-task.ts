@@ -116,10 +116,11 @@ const browserSystemPrompt = (vault: boolean): string =>
     "have the values from.",
     "",
     "Rules that save the most trouble:",
-    "- City, airport, product and address boxes are autocompletes: use interact pick, never fill.",
-    "  Check the field really shows the value afterwards.",
-    "- If the result mentions something on top of the page, interact dismiss first.",
-    "- Results load after the page says it has loaded: interact wait with text or url_pattern.",
+    '- City, airport, product and address boxes are autocompletes: use browser_interact action:"pick",',
+    "  never fill. Check the field really shows the value afterwards.",
+    '- If the result mentions something on top of the page, browser_interact action:"dismiss" first.',
+    '- Results load after the page says it has loaded: browser_interact action:"wait" with text or',
+    "  url_pattern.",
     "  Do not repeat a click because nothing happened yet; the same call twice books twice.",
     "- Three failed tries at one element means the approach is wrong: screenshot, read where",
     "  you actually are, and change approach.",
@@ -645,6 +646,8 @@ export async function runBrowserTask(
   // A resumed run gets its budget back: a fresh one per call.
   const budget = new TurnBudget();
   let lastText = "";
+  /** The report a missing-field nudge followed; what comes after adds to it. */
+  let nudgedReport = "";
   let retries = 0;
   let providerError = "";
   let readChars = 0;
@@ -930,28 +933,45 @@ export async function runBrowserTask(
       };
 
       try {
-        await prompt(opening);
-
         // A `browser_pause` is the run's stop, whatever it wrote after.
-        if (gate.pause != null && outcome.stoppedBy === "completed") {
-          checkout?.note(gate.pause);
+        const noteUserStop = (): void => {
+          if (outcome.stoppedBy !== "completed") return;
+          if (gate.pause != null) checkout?.note(gate.pause);
+          else if (!needsUser(lastText)) return;
           outcome.stoppedBy = "needs-user";
           keepAlive = true;
-        } else if (outcome.stoppedBy === "completed" && needsUser(lastText)) {
-          outcome.stoppedBy = "needs-user";
-          keepAlive = true;
-        }
+        };
+
+        await prompt(opening);
+        noteUserStop();
 
         // One nudge for a report that skipped what the caller asked for.
         if (outcome.stoppedBy === "completed" && reportFields.length > 0) {
           const missing = missingReportFields(lastText, reportFields);
           if (missing.length > 0) {
             trace.write({ type: "nudge", missing });
+            // Asked for one field, a model writes that field alone, so its
+            // reply is an addition to the report and never the report.
+            nudgedReport = lastText;
+            lastText = "";
             await prompt(
-              `Your report does not mention: ${missing.join(", ")}. Add them from what you saw ` +
-                "on the page (take one more look if you must), or say explicitly that you could not find each one."
+              `Your report does not mention: ${missing.join(", ")}. Your report is kept as you wrote it, so ` +
+                "do not repeat it: reply with only these, from what you saw on the page (take one more look " +
+                "if you must), or say explicitly that you could not find each one."
             );
+            noteUserStop();
           }
+        }
+
+        // The report was finished; failing at the extra does not undo it.
+        if (
+          nudgedReport.length > 0 &&
+          (outcome.stoppedBy === "error" ||
+            outcome.stoppedBy === "provider-error")
+        ) {
+          logRunFailure("the report nudge failed", providerError);
+          outcome.stoppedBy = "completed";
+          lastText = "";
         }
 
         // Out of budget: one tools-off turn for the report, rather than
@@ -991,6 +1011,12 @@ export async function runBrowserTask(
         session.dispose();
       }
     }
+
+    if (nudgedReport.length > 0)
+      lastText =
+        lastText.trim().length > 0
+          ? `${nudgedReport}\n\n${lastText}`
+          : nudgedReport;
 
     trace.write({
       type: "outcome",

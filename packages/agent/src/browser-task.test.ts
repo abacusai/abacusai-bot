@@ -59,6 +59,13 @@ describe("checking a browser report against what was asked for", () => {
   });
 });
 
+describe("the run's prompt", () => {
+  it("names the interact tool as the run has it", () => {
+    expect(BROWSER_SYSTEM_PROMPT).toMatch(/browser_interact action:"pick"/);
+    expect(BROWSER_SYSTEM_PROMPT).not.toMatch(/(?<![_\w])interact\b/);
+  });
+});
+
 describe("noticing a run scraping by hand", () => {
   it("fires when browser_execute runs the limit times in a row", () => {
     const tracker = new ExecuteStreakTracker(3);
