@@ -34,6 +34,10 @@ export const requestedRunner = (
 ): RoutineRunner | null =>
   args.runner === "hosted" || args.runner === "local" ? args.runner : null;
 
+/** What the routine is asked to do: its prompt, or a reminder's text. */
+export const requestedInstruction = (args: Record<string, unknown>): string =>
+  text(args.prompt) ?? text(args.reminder_text) ?? "";
+
 /** The sources the model named: `sources`, or the older `source_hosts`. */
 export const requestedSources = (args: Record<string, unknown>): string[] =>
   [args.sources, args.source_hosts].flatMap((value) =>
@@ -115,7 +119,11 @@ export const describeHostedRoutine = (routine: RoutineListItem): string => {
   return [
     `${routine.id}  [${routine.enabled ? "enabled" : `paused${info?.pausedReason != null ? `: ${info.pausedReason}` : ""}`}]  hosted ${info?.kind ?? "task"}  ${when} (${info?.timezone ?? "UTC"})  ${routine.name}`,
     `  ${routine.prompt}`,
-    `  reads: ${[...(info?.reads ?? []), ...(info?.sources ?? [])].join(", ") || "search only"}`,
+    ...(info?.fullAccess === true
+      ? []
+      : [
+          `  reads: ${[...(info?.reads ?? []), ...(info?.sources ?? [])].join(", ") || "search only"}`,
+        ]),
     `  next: ${next}   last: ${last?.at != null ? `${new Date(last.at).toISOString()} ${last.status}${last.deliveredVia != null ? ` via ${last.deliveredVia}` : ""}` : "never"}`,
   ].join("\n");
 };

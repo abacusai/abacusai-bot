@@ -31,7 +31,9 @@ import {
   UndeliverableChatError,
 } from "./connector";
 import {
+  readPlatformLinkLost,
   readPlatformSignedIn,
+  savePlatformLinkLost,
   savePlatformSignedIn,
 } from "./messaging-config-service";
 import {
@@ -48,6 +50,7 @@ import {
   type BridgeMessage,
   type BridgeRead,
   isConversationJid,
+  logoutNote,
   QueuedSendError,
   resolveJid,
   WhatsAppBridge,
@@ -180,6 +183,8 @@ export class WhatsAppWebConnector implements MessagingConnector {
   private parkedNote: string | null = null;
   /** The stored sign-in verdict, so a poll writes it on change only. */
   private signedInRecord: boolean | null = null;
+  /** The stored link ended and none replaced it: a lost link, not a first scan. */
+  private linkLost = false;
   /** Set while a parked lane waits for the network or disk space to come back. */
   private stopParkedWait: (() => void) | null = null;
   private readonly loginPoll = new PollScheduler(
@@ -283,6 +288,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
     this.qrTicks = 0;
     this.boot.reset();
     this.signedInRecord = readPlatformSignedIn(this.id);
+    this.linkLost = readPlatformLinkLost(this.id);
     this.bridge = new WhatsAppBridge({
       run: (script, args) => this.run(script, args),
       raw: async (code) => {
@@ -299,7 +305,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
     // before the record) loads as it always did.
     if (this.signedInRecord === false) {
       this.callbacks.onLog("whatsapp-web: not linked, waiting for the user");
-      this.park("needs_login", NOT_LINKED);
+      this.park("needs_login", this.linkLost ? this.lostNote() : NOT_LINKED);
       return;
     }
 
@@ -1336,6 +1342,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
       this.link = "connected";
       this.linkReported = false;
       this.stuckReloads = 0;
+      this.linkLost = false;
       this.recordSignedIn(true);
       const win = this.window;
       if (win != null && !win.isDestroyed() && win.isVisible()) {
@@ -1367,10 +1374,19 @@ export class WhatsAppWebConnector implements MessagingConnector {
     // from the connect dialog, never from a background restart.
     // Believed after a few polls, it is recorded so the next launch loads no page.
     if (!state.loggedIn && !this.loggedIn && state.loginVisible === true) {
-      if (this.qrTicks >= QR_BELIEVED_POLLS) this.recordSignedIn(false);
+      if (this.qrTicks >= QR_BELIEVED_POLLS) {
+        // A QR where a link was recorded: it ended while the app was closed.
+        if (this.signedInRecord === true) {
+          this.unlinked();
+          return;
+        }
+        this.recordSignedIn(false);
+      }
       this.callbacks.onState(
         "needs_login",
-        "WhatsApp is not linked. Scan the QR from your phone (Settings → Linked devices) to connect."
+        this.linkLost
+          ? this.lostNote()
+          : "WhatsApp is not linked. Scan the QR from your phone (Settings → Linked devices) to connect."
       );
       return;
     }
@@ -1409,6 +1425,10 @@ export class WhatsAppWebConnector implements MessagingConnector {
     void this.serialize(() => this.reloadPage());
   }
 
+  private lostNote(): string {
+    return nativeT("linkLostLane", { platform: "WhatsApp" });
+  }
+
   /** The phone unlinked this device: say so, and wait for a new link. */
   private unlinked(): void {
     if (this.relinkTimer != null) clearTimeout(this.relinkTimer);
@@ -1432,10 +1452,9 @@ export class WhatsAppWebConnector implements MessagingConnector {
     this.selfLookupDone = false;
     this.selfLinkedAnnounced = false;
     this.recordSignedIn(false);
-    this.callbacks.onState(
-      "needs_login",
-      "WhatsApp is no longer linked. The phone unlinked this device or the session expired. Reconnect and scan the QR again."
-    );
+    this.linkLost = true;
+    savePlatformLinkLost(this.id);
+    this.callbacks.onState("needs_login", this.lostNote());
     this.pollLogin();
   }
 
@@ -1839,6 +1858,10 @@ export class WhatsAppWebConnector implements MessagingConnector {
     // the handle and let the next send or sweep rebuild it via ensureWindow.
     win.on("closed", () => {
       if (this.window === win) this.window = null;
+    });
+    win.webContents.on("console-message", (event) => {
+      const note = logoutNote(event.message);
+      if (note != null) this.callbacks.onLog(`whatsapp-web: page ${note}`);
     });
     // Every load is a fresh page; whatever the bridge injected is gone, and
     // the relink puts it back.

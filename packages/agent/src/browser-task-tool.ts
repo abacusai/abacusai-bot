@@ -73,10 +73,11 @@ interface PiToolDefinitionLike {
 const LOGIN_ITEM_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
 /**
- * Runs one parent session may start in a window before it is told to stop and
- * ask. A parent that keeps re-dispatching the same site (three runs on one
- * question, each re-reading a 40k context per turn) is the most expensive
- * thing this tool can do, and it never improves the answer.
+ * Runs one parent session may start in a window before it is refused. A parent
+ * that keeps re-dispatching the same site (three runs on one question, each
+ * re-reading a 40k context per turn) is the most expensive thing this tool can
+ * do, and it never improves the answer. The limit is on a parent going on
+ * alone: where the tool hears the user, their answer to it opens a new window.
  */
 export const DISPATCH_LIMIT = 3;
 export const DISPATCH_WINDOW_MS = 15 * 60 * 1000;
@@ -105,12 +106,31 @@ export class DispatchBudget {
     return Math.max(0, this.limit - this.starts.length);
   }
 
+  /** How long until the window allows a run; 0 while it does. */
+  waitMs(now = Date.now()): number {
+    this.expire(now);
+    return this.starts.length < this.limit
+      ? 0
+      : this.starts[0]! + this.windowMs - now;
+  }
+
+  /** Empties the window. */
+  renew(): void {
+    this.starts.length = 0;
+  }
+
   private expire(now: number): void {
     while (this.starts.length > 0 && now - this.starts[0]! > this.windowMs) {
       this.starts.shift();
     }
   }
 }
+
+/** A wait as the caller repeats it to the user, rounded up. */
+const inMinutes = (ms: number): string => {
+  const minutes = Math.max(1, Math.ceil(ms / 60_000));
+  return `${minutes} minute${minutes === 1 ? "" : "s"}`;
+};
 
 /**
  * The one task an unattended watch run may give the browser, built from what
@@ -197,6 +217,17 @@ export function buildBrowserTaskTool(
   const checkout = new CheckoutRun(context.checkout ?? null);
   /** The details stop just reported, and the user's last message then. */
   let detailsAsked: { afterSeq: number } | null = null;
+  /** The user's last message when the budget refused a run; their next opens it. */
+  let budgetRefusedAtSeq: number | null = null;
+  const lastUserSeq = (): number => context.userWords?.().at(-1)?.seq ?? 0;
+  const budgetRefusal = (): string => {
+    const used =
+      `Browser budget used: ${DISPATCH_LIMIT} runs in the last ${DISPATCH_WINDOW_MS / 60_000} minutes. ` +
+      `The next run can start in ${inMinutes(budget.waitMs())}. Answer from what those runs reported`;
+    return context.userWords != null
+      ? `${used}. To go on sooner, ask the user: after they say yes, call browser_task again and it will run.`
+      : `${used}, and tell the user when the next run can start.`;
+  };
   const nothingPaused = (stage: string) => ({
     content: [
       {
@@ -230,8 +261,8 @@ export function buildBrowserTaskTool(
       'conversation, so "compare prices on two sites and get flight numbers and links" is',
       "three runs, not one: give each run a single site and exactly what to report. When a",
       "run comes back partial, use what it found; sending it back to the same site for the",
-      "rest costs as much again and rarely adds more. You may start a few runs per",
-      "conversation before being told to stop and ask the user.",
+      "rest costs as much again and rarely adds more. You may start a few runs in a short",
+      "time; past that the result says when the next can start.",
       "",
       "Use it when the page will not give up its content to a fetch: a web app the user is",
       "signed in to, a multi-step form, a flow that needs clicking through, results that only",
@@ -382,19 +413,18 @@ export function buildBrowserTaskTool(
       }
 
       // A resumed run is the same run continuing, not a new dispatch.
-      if (!resume && !budget.take()) {
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text:
-                `Browser budget used: ${DISPATCH_LIMIT} runs in the last ${DISPATCH_WINDOW_MS / 60_000} minutes. ` +
-                "Answer from what those runs reported, and ask the user before browsing further.",
-            },
-          ],
-          details: { stoppedBy: "budget", outcome: "budget" },
-          isError: false,
-        };
+      if (!resume) {
+        if (budgetRefusedAtSeq != null && lastUserSeq() > budgetRefusedAtSeq)
+          budget.renew();
+        if (!budget.take()) {
+          budgetRefusedAtSeq = lastUserSeq();
+          return {
+            content: [{ type: "text" as const, text: budgetRefusal() }],
+            details: { stoppedBy: "budget", outcome: "budget" },
+            isError: false,
+          };
+        }
+        budgetRefusedAtSeq = null;
       }
 
       // Held from here until the checkout has heard how the run ended: those
@@ -572,7 +602,7 @@ export function buildBrowserTaskTool(
       result.stoppedBy === "needs-user" ? checkout.state.paused : null;
     detailsAsked =
       pause?.need === "details" && pause.site != null
-        ? { afterSeq: context.userWords?.().at(-1)?.seq ?? 0 }
+        ? { afterSeq: lastUserSeq() }
         : null;
 
     // A capped run's answer is partial; saying so makes the caller weigh it.
@@ -594,7 +624,7 @@ export function buildBrowserTaskTool(
     const left = budget.left();
     const budgetNote =
       left <= 1
-        ? `\n\n(${left === 1 ? "1 more new browser run" : "No more new browser runs"} can start until one of the last ${DISPATCH_LIMIT} is ${DISPATCH_WINDOW_MS / 60_000} minutes old; continuing this one does not count.)`
+        ? `\n\n(${left === 1 ? `1 more new browser run can start until one of the last ${DISPATCH_LIMIT} is ${DISPATCH_WINDOW_MS / 60_000} minutes old` : `No more new browser runs can start for ${inMinutes(budget.waitMs())}`}; continuing this one does not count.)`
         : "";
 
     // What the run asked to send: the chat sends each id once, so the loop

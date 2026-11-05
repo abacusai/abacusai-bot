@@ -26,6 +26,7 @@ On first launch, Updating your data may appear while conversations are converted
 - Setup no longer resets an open tour.
 - Opening a routine run keeps your current workspace.
 - Open scheduled tasks and run reports from Routines in the rail.
+- Each routine keeps its own model, shown on its page, where you can change it. A model you pick in a chat no longer moves your routines; a routine with no model of its own runs on your plan's default.
 
 
 A smaller download and install: the package no longer carries a second copy

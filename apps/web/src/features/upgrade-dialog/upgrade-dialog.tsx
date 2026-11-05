@@ -24,6 +24,7 @@ import {
   ownKeyResumeModel,
   ownKeyWords,
 } from "#renderer/lib/own-key-unavailable";
+import { welcomeLandedPlan, type PausedTurn } from "#renderer/lib/paid-welcome";
 import {
   checkPlanNow,
   onPlanActive,
@@ -55,14 +56,28 @@ export const spentFreeAccount = (
   account.credits_used != null &&
   account.credits_used >= account.credits_granted;
 
-/** Who a request is for: own-key and plan ask any free account, spent or not. */
+/** Who a request is for: own-key, plan and balance ask any free account, spent or not. */
 const askedAccount = (
   request: UpgradeDialogRequest,
   account: AbacusAccountInfo | null | undefined
 ): boolean =>
-  request.kind === "own-key" || request.kind === "plan"
+  request.kind === "own-key" ||
+  request.kind === "plan" ||
+  request.kind === "balance"
     ? creditsTier(account) === "free"
     : spentFreeAccount(account);
+
+/** The waiting message and how to send it, for the welcome to offer. */
+const pausedTurn = (
+  request: UpgradeDialogRequest,
+  resume: () => Promise<unknown>
+): PausedTurn | null =>
+  request.resume == null
+    ? null
+    : {
+        resume,
+        ...(request.pendingText != null && { text: request.pendingText }),
+      };
 
 const Tile = ({ children }: { children: ReactNode }) => (
   <span className="bg-muted text-foreground flex size-10 items-center justify-center rounded-[11px]">
@@ -78,9 +93,12 @@ const Tile = ({ children }: { children: ReactNode }) => (
  */
 const PaidBody = ({
   request,
+  from,
   onDone,
 }: {
   request: UpgradeDialogRequest;
+  /** The account the dialog opened for. */
+  from: AbacusAccountInfo | null;
   onDone: (dismissed: boolean) => void;
 }) => {
   const { t } = useTranslation();
@@ -102,12 +120,15 @@ const PaidBody = ({
         return;
       }
       onDone(false);
-      void request.resume?.().catch(() => {});
+      welcomeLandedPlan(fresh, from, {
+        threadId: request.threadId,
+        paused: pausedTurn(request, () => request.resume!()),
+      });
     });
     return () => {
       stopped = true;
     };
-  }, [waiting, transport, request, onDone]);
+  }, [waiting, transport, request, from, onDone]);
 
   if (waiting)
     return (
@@ -150,9 +171,11 @@ const PaidBody = ({
         >
           <Bot className="size-6" />
         </span>
-        <p className="text-muted-foreground text-xs font-medium tracking-[0.02em]">
-          {t("outcome.wall.paidTitle")}
-        </p>
+        {request.kind !== "balance" && (
+          <p className="text-muted-foreground text-xs font-medium tracking-[0.02em]">
+            {t("outcome.wall.paidTitle")}
+          </p>
+        )}
         <DialogTitle className="text-[22px]/7 font-semibold tracking-[-0.01em] text-balance">
           {t("upgradeDialog.creditsTitle")}
         </DialogTitle>
@@ -223,10 +246,13 @@ const PaidBody = ({
 
 const DialogBody = ({
   request,
+  from,
   onDone,
   paidUpgrade = false,
 }: {
   request: UpgradeDialogRequest;
+  /** The account the dialog opened for. */
+  from: AbacusAccountInfo | null;
   /** `dismissed` when the person said no; not when they paid or are paying. */
   onDone: (dismissed: boolean) => void;
   /**
@@ -246,7 +272,8 @@ const DialogBody = ({
   const [waiting, setWaiting] = useState(request.checkout === true);
   const connectors = request.kind === "connectors";
   const ownKey = request.kind === "own-key";
-  const plan = request.kind === "plan";
+  // A free account's balance ask is the plan, its whole pitch.
+  const plan = request.kind === "plan" || request.kind === "balance";
   const offer = wallOffer(billing ?? null);
 
   // Checkout runs in the browser: once the plan is active (lib/upgrade.ts
@@ -258,25 +285,27 @@ const DialogBody = ({
       paidUpgrade
         ? watchForCredits(transport.client)
         : watchForPlan(transport.client)
-    ).then(async (paid) => {
+    ).then((paid) => {
       if (stopped) return;
       if (paid == null) {
         setWaiting(false);
         return;
       }
       onDone(false);
-      if (request.kind !== "own-key") {
-        void request.resume?.().catch(() => {});
-        return;
-      }
-      // The plan's catalog, which the watch has just read afresh.
-      const models = await transport.client.models.list({}).catch(() => []);
-      void request.resume?.(ownKeyResumeModel(models)).catch(() => {});
+      welcomeLandedPlan(paid, from, {
+        threadId: request.threadId,
+        paused: pausedTurn(request, async () => {
+          if (request.kind !== "own-key") return request.resume!();
+          // The plan's catalog, which the watch has just read afresh.
+          const models = await transport.client.models.list({}).catch(() => []);
+          return request.resume!(ownKeyResumeModel(models));
+        }),
+      });
     });
     return () => {
       stopped = true;
     };
-  }, [waiting, transport, request, onDone, paidUpgrade]);
+  }, [waiting, transport, request, from, onDone, paidUpgrade]);
 
   if (waiting)
     return (
@@ -458,6 +487,7 @@ export const UpgradeDialogHost = () => {
   const [confirmed, setConfirmed] = useState<{
     key: string;
     body: "free" | "upgrade" | "paid";
+    account: AbacusAccountInfo | null;
   } | null>(null);
 
   // A plan bought from any surface: the account and the catalog every card and
@@ -483,12 +513,13 @@ export const UpgradeDialogHost = () => {
       .then(async (account) => {
         if (!live) return;
         if (askedAccount(request, account)) {
-          setConfirmed({ key: request.key, body: "free" });
+          setConfirmed({ key: request.key, body: "free", account });
           return;
         }
-        // A paid plan's credits request only: a free account never reads this.
+        // A paid plan's credits or balance request only: a free account never reads this.
         const offer =
-          request.kind === "credits" && payingAccount(account)
+          (request.kind === "credits" || request.kind === "balance") &&
+          payingAccount(account)
             ? paidCreditsOffer(
                 await transport.client.account.billingPlan({}).catch(() => null)
               )
@@ -498,6 +529,7 @@ export const UpgradeDialogHost = () => {
           setConfirmed({
             key: request.key,
             body: paidUpgradeOnly(offer) ? "upgrade" : "paid",
+            account,
           });
         else closeUpgradeDialog();
       })
@@ -524,11 +556,17 @@ export const UpgradeDialogHost = () => {
           className="gap-5 p-7 pb-5 text-sm sm:max-w-[440px] [&>*]:min-w-0"
         >
           {confirmed?.body === "paid" ? (
-            <PaidBody key={request.key} request={request} onDone={done} />
+            <PaidBody
+              key={request.key}
+              request={request}
+              from={confirmed.account}
+              onDone={done}
+            />
           ) : (
             <DialogBody
               key={request.key}
               request={request}
+              from={confirmed?.account ?? null}
               onDone={done}
               paidUpgrade={confirmed?.body === "upgrade"}
             />

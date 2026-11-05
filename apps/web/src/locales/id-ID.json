@@ -1376,6 +1376,14 @@
     "deleteBody": "Ini menghapus “{{name}}” beserta riwayat eksekusinya.",
     "deleteError": "Tidak dapat menghapus rutinitas.",
     "deleteTitle": "Hapus rutinitas",
+    "duplicate": {
+      "badge": "Kemungkinan duplikat",
+      "delete": "Hapus yang ini",
+      "description": "Jadwal sama, tugas sama: pekerjaan dilakukan dua kali dan setiap jalannya memakai kredit. Pilih mana yang disimpan.",
+      "keepBoth": "Simpan keduanya",
+      "pause": "Jeda yang ini",
+      "title": "Tampak seperti salinan dari"
+    },
     "edit": "Edit",
     "editTitle": "Edit rutinitas",
     "editorPlaceholder": "Beri tahu rutinitas cara mengubahnya: \"setiap pagi jam 9\", \"berhenti\"",
@@ -1565,15 +1573,6 @@
       "missedNoticeFree": "{{names}}. On the Basic plan, Abacus AI Agent on the web runs routines 24/7, even with your computer off.",
       "missedNoticePaid": "{{names}}. Atur rutinitasmu di Abacus AI Agent di web, tempat rutinitas berjalan 24/7, bahkan saat komputermu mati."
     },
-    "upgraded": {
-      "title": "Kamu sekarang di {{plan}}",
-      "titleNoPlan": "Kamu sekarang di paket berbayar",
-      "body": "Selanjutnya, atur rutinitasmu di Abacus AI Agent di web. Di sana rutinitas berjalan 24/7, bahkan saat komputermu mati.",
-      "autoReplies": "Balasan otomatis WhatsApp, Telegram, dan Discord",
-      "allRoutines": "Semua rutinitasmu, tepat waktu",
-      "setUp": "Atur rutinitas 24/7",
-      "back": "Kembali ke AbacusAI Bot"
-    },
     "reach": {
       "gmailSearch": "Search Gmail",
       "gmailRead": "Read Gmail messages",
@@ -1621,6 +1620,13 @@
     "upgrade": {
       "title": "Buka rutinitas",
       "description": "Upgrade untuk menjadwalkan tugas dan mengotomatiskan pekerjaan Anda."
+    },
+    "model": {
+      "label": "Model",
+      "planDefault": "Default paket",
+      "followsDefault": "Mengikuti default paket Anda: {{model}}.",
+      "costly": "Setiap proses memakai {{model}}, model yang lebih mahal, jadi setiap proses memakai lebih banyak kredit.",
+      "hosted": "Rutinitas yang di-hosting memakai default paket Anda."
     }
   },
   "sessions": {
@@ -2949,8 +2955,16 @@
         "YOLO": "No approvals"
       }
     },
+    "appLine": {
+      "testRepair": "Tes gagal setelah perubahan saya, sedang saya perbaiki.",
+      "testRepairLimit": "Saya berhenti memperbaiki tes: perbaikan otomatis ini mencapai batasnya. Tidak ada yang berjalan lagi sampai Anda mengirim pesan.",
+      "testsLeftAlone": "Tes gagal, tetapi saya tidak bisa memastikan apakah perubahan saya penyebabnya, jadi saya membiarkannya."
+    },
     "notice": {
       "dismiss": "Dismiss",
+      "backgroundFinished": "Tugas latar belakang selesai: {{command}}. Kirim pesan untuk melanjutkan dari sini.",
+      "backgroundFailed": "Tugas latar belakang gagal: {{command}}. Kirim pesan untuk melihat apa yang terjadi.",
+      "backgroundTimedOut": "Tugas latar belakang dihentikan pada batas waktunya: {{command}}. Kirim pesan untuk melihat apa yang terjadi.",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
       "unsaved": "Disk penuh, jadi chat ini tidak sedang disimpan. Kosongkan sebagian ruang; chat akan disimpan lagi dengan pesanmu berikutnya.",
@@ -3071,7 +3085,12 @@
       "done_other": "Done in {{duration}}, {{count}} steps",
       "stopped": "Stopped",
       "usage": "In {{input}} ({{cached}} cached) · Out {{output}}",
-      "done_zero": "Selesai dalam {{duration}}"
+      "done_zero": "Selesai dalam {{duration}}",
+      "credits_one": "{{credits}} kredit",
+      "credits_other": "{{credits}} kredit",
+      "creditsLeft_one": "{{credits}} kredit · sisa {{left}}",
+      "creditsLeft_other": "{{credits}} kredit · sisa {{left}}",
+      "creditsAction": "{{credits}}. Lihat paket dan kredit Anda"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",
@@ -3435,6 +3454,7 @@
       "completed": "Completed",
       "failed": "Failed",
       "skipped": "Skipped",
+      "skipped-link": "Dilewati: aplikasi chat tidak tertaut",
       "skipped-offline": "Dilewati: offline",
       "skipped-credits": "Dilewati: kredit habis",
       "offline": "Tidak dapat menjangkau Abacus",
@@ -4280,6 +4300,51 @@
     "waitingTitle": "Selesaikan pembayaran di browser Anda",
     "waitingToSend": "Menunggu dikirim: “{{text}}”"
   },
+  "paidWelcome": {
+    "title": "Kamu sekarang di {{plan}}",
+    "titleNoPlan": "Kamu sekarang di paket berbayar",
+    "credits": "{{credits}} kredit siap dipakai",
+    "model": "{{model}} sekarang jadi model default kamu",
+    "agents": "Agen pribadi dan rutinitas yang berjalan 24/7 di web, bahkan saat komputermu mati",
+    "nextSteps": "Mulai dari sini",
+    "resume": "Lanjutkan yang tadi kamu kerjakan",
+    "resumeDetail": "“{{text}}”",
+    "routines": "Atur rutinitas 24/7 di web",
+    "unlockApps": "Bangun dan rilis aplikasi di web",
+    "unlockMedia": "Buat gambar dan video di web",
+    "unlockConnectors": "Hubungkan Gmail, Kalender, dan lainnya",
+    "back": "Kembali ke chat"
+  },
+  "siteDeploy": {
+    "title": "Online-kan situsmu",
+    "cardBody": "Abacus AI Agent di web bisa meng-host-nya dan memberinya tautan publik.",
+    "stepOpen": "Buka Abacus AI Agent di web",
+    "openAgent": "Buka Abacus AI Agent",
+    "stepPack": "Siapkan proyekmu untuk diunggah",
+    "pack": "Siapkan zip",
+    "stepZip": "Proyekmu siap diunggah",
+    "stepZipBlocked": "Proyekmu belum siap diunggah",
+    "packing_one": "Menyiapkan proyekmu… {{count}} file",
+    "packing_other": "Menyiapkan proyekmu… {{count}} file",
+    "cancel": "Batal",
+    "zipMeta_one": "{{size}} · {{count}} file",
+    "zipMeta_other": "{{size}} · {{count}} file",
+    "showInFolder": "Tampilkan di folder",
+    "dragHint": "Seret zip ke chat di web, atau temukan lewat Tampilkan di folder.",
+    "leftOut": "Tidak disertakan: {{names}}",
+    "heldBack": "Ditahan karena mungkin berisi kunci: {{names}}",
+    "tooBig": "{{name}} terlalu besar untuk diunggah: lebih dari 50 MB, meski tanpa node_modules dan file build.",
+    "tooBroad": "Situs ini tidak berada di foldernya sendiri. Minta bot memindahkannya ke satu folder, lalu coba lagi.",
+    "none": "Folder situs ini sudah tidak ada.",
+    "cancelled": "Persiapan zip dihentikan.",
+    "failed": "Zip tidak bisa disiapkan.",
+    "retry": "Coba lagi",
+    "stepUpload": "Unggah zip di sana dan minta agen men-deploy-nya",
+    "prompt": "Deploy aplikasi ini dari zip yang saya unggah. Percakapan yang membuatnya ada di abacusai-bot-conversation.md di dalam zip.",
+    "copy": "Salin pesan",
+    "copied": "Disalin",
+    "close": "Tutup"
+  },
   "paymentRequired": {
     "unconfirmedTitle": "Pilih paket untuk terus menggunakan AbacusAI Bot",
     "unconfirmedBody": "Anda sudah masuk, tetapi akun Anda memerlukan paket agar AbacusAI Bot dapat bekerja.",
@@ -4593,6 +4658,9 @@
       "empty": "Saya tidak bisa menyusun balasan untuk itu. Silakan kirim lagi.",
       "contactNeutral": "Maaf, saya belum bisa membalas sekarang. Saya akan segera menghubungi Anda.",
       "contactEmpty": "Saya tidak membalas {{name}}: tidak ada jawaban yang kembali. Buka aplikasi untuk membalasnya, atau beri tahu saya apa yang harus dikatakan.",
+      "backgroundFinished": "Tugas latar belakang selesai. Kirim pesan untuk melanjutkan dari sini.",
+      "backgroundFailed": "Tugas latar belakang gagal. Kirim pesan untuk melihat apa yang terjadi.",
+      "backgroundTimedOut": "Tugas latar belakang dihentikan pada batas waktunya. Kirim pesan untuk melihat apa yang terjadi.",
       "undelivered": "Pesan untuk {{name}} tidak dapat dikirim.",
       "appClosed": "Aplikasi ditutup sebelum saya sempat membalas. Kirim lagi untuk melanjutkan.",
       "stillWorking": "Masih saya kerjakan ({{minutes}} menit sejauh ini). Saya akan membalas di sini setelah selesai.",
@@ -4763,7 +4831,9 @@
     "importMcp": "Impor server MCP",
     "selectTheme": "Pilih Tema",
     "themes": "Tema",
-    "diskFullLane": "Disk komputer penuh, jadi {{platform}} tidak bisa menyimpan datanya. Koneksi akan pulih sendiri setelah sebagian ruang dikosongkan."
+    "diskFullLane": "Disk komputer penuh, jadi {{platform}} tidak bisa menyimpan datanya. Koneksi akan pulih sendiri setelah sebagian ruang dikosongkan.",
+    "linkLostTitle": "{{platform}} terputus",
+    "linkLostLane": "{{platform}} tidak lagi tertaut, jadi pesan dan rutinitas tidak bisa dikirim lewat sana. Klik Hubungkan lalu pindai kode QR lagi."
   },
   "channels": {
     "sidebar": {

@@ -156,6 +156,42 @@ const describeCall = (tool: string, input: Record<string, unknown>): string => {
   );
 };
 
+/** Tools that reach past the run's answer without a connector, by bare name. */
+const OUTWARD_TOOLS: readonly string[] = ["bash", "browser_task", "cronjob"];
+
+/**
+ * A finished tool call as a run's report names it, or null when it reached
+ * nothing outside the run: a connector call that is not a reviewed read, or a
+ * tool that acts by other means, whose input is too long to show.
+ */
+export const outwardActionOf = (
+  name: string,
+  input: Record<string, unknown>
+): string | null => {
+  const meta = connectorToolMetaByName(name);
+  if (meta != null)
+    return (UNATTENDED_CONNECTOR_READS[meta.tool] ?? []).includes(
+      String(input.action ?? "")
+    )
+      ? null
+      : describeCall(meta.tool, input);
+  return (
+    OUTWARD_TOOLS.find(
+      (entry) => name === entry || name.endsWith(`_${entry}`)
+    ) ?? null
+  );
+};
+
+/** Each action once, in the order first made, counted when repeated. */
+export const countedActions = (actions: readonly string[]): string[] => {
+  const counts = new Map<string, number>();
+  for (const action of actions)
+    counts.set(action, (counts.get(action) ?? 0) + 1);
+  return [...counts].map(([action, count]) =>
+    count > 1 ? `${action} ×${count}` : action
+  );
+};
+
 /**
  * The connector calls a run's thread records that are not reviewed reads
  * (UNATTENDED_CONNECTOR_READS): `done` came back without an error, `unsure`

@@ -46,6 +46,7 @@ export default defineConfig({
     // no node or pi anywhere in its closure (tool-display.test.ts).
     "src/tool-display.ts",
     "src/user-text.ts",
+    "src/secret-files.ts",
     "src/bot-task.ts",
     // A bot's daily notes: main writes what a bot did or learned in a channel or for another bot.
     "src/bot/bot-memory.ts",

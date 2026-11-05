@@ -23,7 +23,10 @@ export interface UserTextTags {
       | "auto-reply-reminder"
       | "environment-notice"
       | "routine-editor"
-      | "user-reaction";
+      | "user-reaction"
+      | "test-repair"
+      | "test-repair-limit"
+      | "tests-left-alone";
     /** UTF-16 offset of the human text; absent means the whole turn is hidden. */
     visibleFrom?: number;
   };
@@ -106,6 +109,8 @@ export interface NotificationAction {
    * `continue-free` (keep going on the free models at the credit wall),
    * `continue-same` (pick the cut reply up on the same model), `new-chat`,
    * `fix-key` and `retry` carry nothing else.
+   * `background-job`: a job that finished with no turn running: finished,
+   * failed or timed-out, with its command as `label`.
    */
   cause?: string;
   /** `cut-off`: part of the reply arrived before the cut and is kept. */
@@ -250,10 +255,19 @@ export type AgentEvent =
         cacheWrite: number;
         requests: number;
         model: string | null;
+        /** Every request of the turn added up: what it billed. */
+        total?: {
+          input: number;
+          output: number;
+          cacheRead: number;
+          cacheWrite: number;
+        };
         /** The turn ran on the free models the user chose at the credit wall. */
         lane?: "free";
         /** The free lane's provider that answered. */
         provider?: string;
+        /** The Abacus credits the turn's requests billed; null when one's charge is unknown. */
+        credits?: number | null;
       };
     }
   // Brackets around a delegated sub-agent's work: text between them belongs to
@@ -284,6 +298,14 @@ export type AgentEvent =
       messageId?: string;
     }
   /**
+   * A reply ended on a promise of more work with no tool call, and the model
+   * was told to do it (promised-work.ts). `model` is what it ran on.
+   */
+  | {
+      type: "promised_work_recovery";
+      model: string;
+    }
+  /**
    * The user-visible end of one turn whose `send` or steers carried an id,
    * after any error it reported: its final assistant message (empty when it wrote none), and
    * the ids of the messages it answers (the send's own and those steered in).
@@ -296,6 +318,11 @@ export type AgentEvent =
       /** For `failed`: the reported error's cause (a FailureCause, turn-outcome.ts), when it named one. */
       cause?: string;
     }
+  /**
+   * An answer a turn finished before a steered message reopened it, for the
+   * messages named: `turn_reply` says only what the turn wrote after it.
+   */
+  | { type: "turn_answer"; messageIds: string[]; text: string }
   | {
       type: "error";
       // The error payload is inconsistent across models: text may be at
@@ -572,7 +599,13 @@ export type DesktopCommand =
   /** The desktop's connectivity owner changed its mind, or the machine woke. */
   | { type: "connectivity"; state: string; resumed?: boolean }
   /** The Abacus balance as the desktop last read it; see credit-balance.ts. */
-  | { type: "credit_balance"; remaining: number; granted: number; at: number }
+  | {
+      type: "credit_balance";
+      remaining: number;
+      granted: number;
+      at: number;
+      planCredits?: number;
+    }
   /** The account's credit wall as the desktop holds it; see credit-wall.ts. */
   | {
       type: "credit_wall";

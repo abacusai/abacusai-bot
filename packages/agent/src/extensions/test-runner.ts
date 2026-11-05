@@ -20,7 +20,48 @@ export interface Framework {
   parse: (
     output: string
   ) => { passed?: number; failed?: number; errors?: number } | undefined;
+  /**
+   * The tests this output names as failed, each by an id stable across runs,
+   * so two runs can be compared. Empty when it names none; absent when the
+   * framework's output cannot be read per test.
+   */
+  failingTests?: (output: string) => string[];
+  /** The run gave up before trying every test, so a test not named may fail. */
+  stoppedEarly?: (output: string) => boolean;
 }
+
+/** Every first capture group of `pattern` in `output`, once each. */
+const captured = (output: string, pattern: RegExp): string[] => [
+  ...new Set(
+    [...output.matchAll(pattern)].map((match) => match[1] ?? "").filter(Boolean)
+  ),
+];
+
+/**
+ * Jest's and Vitest's failures. Vitest puts the test on its `FAIL` line; Jest
+ * lists the file there, with a timing that varies, and each test under it.
+ */
+const jestLikeFailures = (output: string): string[] => {
+  const failed = new Set<string>();
+  let file: string | null = null;
+
+  for (const line of output.split("\n")) {
+    const fail = line.match(/^\s*FAIL\s+(.+?)(?:\s+\(\d[\d.]*\s*m?s\))?\s*$/);
+
+    if (fail?.[1] != null) {
+      file = fail[1];
+      failed.add(file);
+      continue;
+    }
+
+    const test = line.match(/^\s*●\s+(.+?)\s*$/);
+
+    if (test?.[1] != null && file != null && test[1] !== "Console")
+      failed.add(`${file} › ${test[1]}`);
+  }
+
+  return [...failed];
+};
 
 /** Single-quote a value for `bash -c`, so a filter can never inject shell syntax. */
 function posixQuote(value: string): string {
@@ -129,6 +170,10 @@ export function detectFramework(
           errors: errors ? Number(errors[1]) : 0,
         };
       },
+      failingTests: (out) => captured(out, /^(?:FAILED|ERROR) (\S+)/gm),
+      // Past --maxfail or a collection error the rest never ran.
+      stoppedEarly: (out) =>
+        /stopping after \d+ failure|Interrupted: /.test(out),
     };
   }
 
@@ -160,6 +205,7 @@ export function detectFramework(
         name: "vitest",
         command: (f) => `npx vitest run${f ? ` -t ${quote(f)}` : ""}`,
         parse: parseJestLike,
+        failingTests: jestLikeFailures,
       };
     }
     if (allDeps.jest) {
@@ -167,6 +213,7 @@ export function detectFramework(
         name: "jest",
         command: (f) => `npx jest${f ? ` -t ${quote(f)}` : ""}`,
         parse: parseJestLike,
+        failingTests: jestLikeFailures,
       };
     }
     if (pkg.scripts?.test && !pkg.scripts.test.includes("no test specified")) {
@@ -174,6 +221,7 @@ export function detectFramework(
         name: "npm test",
         command: () => "npm test --silent",
         parse: parseJestLike,
+        failingTests: jestLikeFailures,
       };
     }
   }
@@ -192,6 +240,10 @@ export function detectFramework(
         if (failed === 0 && passed === 0) return undefined;
         return { passed, failed };
       },
+      failingTests: (out) => [
+        ...captured(out, /^\s*--- FAIL: (\S+)/gm),
+        ...captured(out, /^(FAIL\s+\S+\s+\[(?:build|setup) failed\])/gm),
+      ],
     };
   }
 
@@ -214,6 +266,10 @@ export function detectFramework(
         }
         return found ? { passed, failed } : undefined;
       },
+      failingTests: (out) => [
+        ...captured(out, /^test (\S+) \.\.\. FAILED/gm),
+        ...captured(out, /^(error: could not compile \S+)/gm),
+      ],
     };
   }
 
@@ -232,6 +288,7 @@ export function detectFramework(
         const failed = m[2] ? Number(m[2]) : 0;
         return { passed: Number(m[1]) - failed, failed };
       },
+      failingTests: (out) => captured(out, /^(?!>)(\S.* > \S.*) FAILED$/gm),
     };
   }
 

@@ -1376,6 +1376,14 @@
     "deleteBody": "Isso exclui “{{name}}” e seu histórico de execuções.",
     "deleteError": "Não foi possível excluir a rotina.",
     "deleteTitle": "Excluir rotina",
+    "duplicate": {
+      "badge": "Possível duplicata",
+      "delete": "Excluir esta",
+      "description": "Mesmo horário, mesmo trabalho: a tarefa acontece duas vezes e cada execução gasta créditos. Escolha qual manter.",
+      "keepBoth": "Manter as duas",
+      "pause": "Pausar esta",
+      "title": "Parece uma cópia de"
+    },
     "edit": "Editar",
     "editTitle": "Editar rotina",
     "editorPlaceholder": "Diga à rotina como mudar: \"todas as manhãs às 9\", \"parar\"",
@@ -1565,15 +1573,6 @@
       "missedNoticeFree": "{{names}}. On the Basic plan, Abacus AI Agent on the web runs routines 24/7, even with your computer off.",
       "missedNoticePaid": "{{names}}. Configure suas rotinas no Abacus AI Agent na web, onde elas funcionam 24/7, mesmo com o computador desligado."
     },
-    "upgraded": {
-      "title": "Agora você está no {{plan}}",
-      "titleNoPlan": "Agora você está em um plano pago",
-      "body": "Agora configure suas rotinas no Abacus AI Agent na web. Lá elas funcionam 24/7, mesmo com o computador desligado.",
-      "autoReplies": "Respostas automáticas do WhatsApp, Telegram e Discord",
-      "allRoutines": "Todas as suas rotinas, no horário",
-      "setUp": "Configurar rotinas 24/7",
-      "back": "Voltar ao AbacusAI Bot"
-    },
     "reach": {
       "gmailSearch": "Search Gmail",
       "gmailRead": "Read Gmail messages",
@@ -1621,6 +1620,13 @@
     "upgrade": {
       "title": "Libere as rotinas",
       "description": "Faça upgrade para agendar tarefas e automatizar seu trabalho."
+    },
+    "model": {
+      "label": "Modelo",
+      "planDefault": "Padrão do plano",
+      "followsDefault": "Segue o padrão do seu plano: {{model}}.",
+      "costly": "Cada execução usa {{model}}, um modelo mais caro, por isso cada uma gasta mais créditos.",
+      "hosted": "Rotinas hospedadas usam o padrão do seu plano."
     }
   },
   "sessions": {
@@ -2949,8 +2955,16 @@
         "YOLO": "No approvals"
       }
     },
+    "appLine": {
+      "testRepair": "Os testes falharam depois da minha alteração, estou corrigindo.",
+      "testRepairLimit": "Parei de corrigir os testes: esta correção automática atingiu o limite. Nada mais será executado até você enviar uma mensagem.",
+      "testsLeftAlone": "Os testes estão falhando, mas não consegui saber se foi por causa da minha alteração, então não mexi neles."
+    },
     "notice": {
       "dismiss": "Dismiss",
+      "backgroundFinished": "Uma tarefa em segundo plano terminou: {{command}}. Envie uma mensagem para continuar daqui.",
+      "backgroundFailed": "Uma tarefa em segundo plano falhou: {{command}}. Envie uma mensagem para ver o que aconteceu.",
+      "backgroundTimedOut": "Uma tarefa em segundo plano foi interrompida no limite de tempo: {{command}}. Envie uma mensagem para ver o que aconteceu.",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
       "unsaved": "O disco está cheio, então esta conversa não está sendo salva. Libere algum espaço; ela volta a ser salva com sua próxima mensagem.",
@@ -3071,7 +3085,12 @@
       "done_other": "Done in {{duration}}, {{count}} steps",
       "stopped": "Stopped",
       "usage": "In {{input}} ({{cached}} cached) · Out {{output}}",
-      "done_zero": "Concluído em {{duration}}"
+      "done_zero": "Concluído em {{duration}}",
+      "credits_one": "{{credits}} crédito",
+      "credits_other": "{{credits}} créditos",
+      "creditsLeft_one": "{{credits}} crédito · restam {{left}}",
+      "creditsLeft_other": "{{credits}} créditos · restam {{left}}",
+      "creditsAction": "{{credits}}. Ver seu plano e créditos"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",
@@ -3435,6 +3454,7 @@
       "completed": "Completed",
       "failed": "Failed",
       "skipped": "Skipped",
+      "skipped-link": "Ignorada: app de chat não vinculado",
       "skipped-offline": "Ignorada: offline",
       "skipped-credits": "Ignorada: sem créditos",
       "offline": "Não foi possível acessar o Abacus",
@@ -4280,6 +4300,51 @@
     "waitingTitle": "Conclua o pagamento no seu navegador",
     "waitingToSend": "Aguardando envio: “{{text}}”"
   },
+  "paidWelcome": {
+    "title": "Agora você está no {{plan}}",
+    "titleNoPlan": "Agora você está em um plano pago",
+    "credits": "{{credits}} créditos prontos para usar",
+    "model": "{{model}} agora é seu modelo padrão",
+    "agents": "Agentes pessoais e rotinas que rodam 24/7 na web, mesmo com o computador desligado",
+    "nextSteps": "Comece por aqui",
+    "resume": "Terminar o que você estava fazendo",
+    "resumeDetail": "“{{text}}”",
+    "routines": "Configurar uma rotina 24/7 na web",
+    "unlockApps": "Criar e publicar um app na web",
+    "unlockMedia": "Criar imagens e vídeos na web",
+    "unlockConnectors": "Conectar Gmail, Agenda e mais",
+    "back": "Voltar ao chat"
+  },
+  "siteDeploy": {
+    "title": "Publique seu site",
+    "cardBody": "O Abacus AI Agent na web pode hospedá-lo e dar a ele um link público.",
+    "stepOpen": "Abra o Abacus AI Agent na web",
+    "openAgent": "Abrir o Abacus AI Agent",
+    "stepPack": "Prepare seu projeto para enviar",
+    "pack": "Preparar zip",
+    "stepZip": "Seu projeto está pronto para enviar",
+    "stepZipBlocked": "Seu projeto ainda não está pronto para enviar",
+    "packing_one": "Preparando seu projeto… {{count}} arquivo",
+    "packing_other": "Preparando seu projeto… {{count}} arquivos",
+    "cancel": "Cancelar",
+    "zipMeta_one": "{{size}} · {{count}} arquivo",
+    "zipMeta_other": "{{size}} · {{count}} arquivos",
+    "showInFolder": "Mostrar na pasta",
+    "dragHint": "Arraste o zip para o chat na web ou encontre-o com Mostrar na pasta.",
+    "leftOut": "Deixados de fora: {{names}}",
+    "heldBack": "Retidos porque podem conter chaves: {{names}}",
+    "tooBig": "{{name}} é grande demais para enviar: mais de 50 MB, mesmo sem node_modules e arquivos de build.",
+    "tooBroad": "Este site não está em uma pasta própria. Peça ao bot para movê-lo para uma e tente de novo.",
+    "none": "A pasta deste site não existe mais.",
+    "cancelled": "A preparação do zip foi interrompida.",
+    "failed": "Não foi possível preparar o zip.",
+    "retry": "Tentar de novo",
+    "stepUpload": "Envie o zip lá e peça para publicar",
+    "prompt": "Publique este app a partir do zip que eu enviei. A conversa que o criou está em abacusai-bot-conversation.md dentro do zip.",
+    "copy": "Copiar mensagem",
+    "copied": "Copiado",
+    "close": "Fechar"
+  },
   "paymentRequired": {
     "unconfirmedTitle": "Escolha um plano para continuar usando o AbacusAI Bot",
     "unconfirmedBody": "Você entrou, mas sua conta precisa de um plano para o AbacusAI Bot funcionar.",
@@ -4593,6 +4658,9 @@
       "empty": "Não consegui montar uma resposta para isso. Envie de novo, por favor.",
       "contactNeutral": "Desculpe, não consigo responder agora. Falo com você em breve.",
       "contactEmpty": "Não respondi a {{name}}: nenhuma resposta voltou. Abra o app para responder ou me diga o que dizer.",
+      "backgroundFinished": "A tarefa em segundo plano terminou. Envie uma mensagem para continuar daqui.",
+      "backgroundFailed": "A tarefa em segundo plano falhou. Envie uma mensagem para ver o que aconteceu.",
+      "backgroundTimedOut": "A tarefa em segundo plano foi interrompida no limite de tempo. Envie uma mensagem para ver o que aconteceu.",
       "undelivered": "Não foi possível entregar uma mensagem para {{name}}.",
       "appClosed": "O app foi fechado antes que eu pudesse responder. Envie de novo para retomar.",
       "stillWorking": "Ainda estou trabalhando nisso ({{minutes}} min até agora). Respondo aqui quando terminar.",
@@ -4763,7 +4831,9 @@
     "importMcp": "Importar servidores MCP",
     "selectTheme": "Selecionar um tema",
     "themes": "Temas",
-    "diskFullLane": "O disco do computador está cheio, então o {{platform}} não consegue salvar seus dados. Ele se reconecta sozinho assim que algum espaço for liberado."
+    "diskFullLane": "O disco do computador está cheio, então o {{platform}} não consegue salvar seus dados. Ele se reconecta sozinho assim que algum espaço for liberado.",
+    "linkLostTitle": "{{platform}} está desconectado",
+    "linkLostLane": "O {{platform}} não está mais vinculado, então mensagens e rotinas não podem ser enviadas por ele. Clique em Conectar e escaneie o QR code novamente."
   },
   "channels": {
     "sidebar": {

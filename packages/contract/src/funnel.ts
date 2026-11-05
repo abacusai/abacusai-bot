@@ -41,6 +41,9 @@ export const FUNNEL_STEPS = [
   // the bot's template, and a tap's also whether it copied.
   "task_suggestions_shown",
   "task_suggestion_tapped",
+  // The agent asked for a routine that already exists, and got that one back;
+  // the detail is how it compared (same, alike or check-in) and where it lives.
+  "routine_duplicate_avoided",
   // A free account's chat on another provider's model: the RouteLLM notice.
   "routellm_nudge_shown",
   "routellm_nudge_switched",
@@ -73,10 +76,33 @@ export const FUNNEL_STEPS = [
   "cutoff_verify",
   // The same, in the user's own chat app; the detail is the platform.
   "cutoff_chat_told",
+  // The credits line under a finished turn, clicked; the detail is the plan tier.
+  "turn_credits_clicked",
+  // A reply ended on a promise of more work and the model was told to do it
+  // (promised-work.ts); the detail is the model.
+  "promised_work_recovery",
   // The Basic offer at the end of onboarding (the platform's onboarding offer).
   "onboarding_offer_shown",
   "onboarding_offer_upgrade",
   "onboarding_offer_skip",
+  // The welcome right after a payment lands; shown's detail is the tier and
+  // whether a paused turn waits, the unlock's is what it opens.
+  "paid_welcome_shown",
+  "paid_welcome_resume",
+  "paid_welcome_routines",
+  "paid_welcome_unlock",
+  "paid_welcome_closed",
+  // A paid plan's deploy steps for a site the agent built; the detail is
+  // where they showed (welcome or card).
+  "site_deploy_shown",
+  "site_deploy_open_agent",
+  "site_deploy_pack",
+  "site_deploy_show_folder",
+  "site_deploy_drag",
+  "site_deploy_copy",
+  "site_deploy_cancel",
+  "site_deploy_retry",
+  "site_deploy_dismissed",
 ] as const;
 
 export type FunnelStep = (typeof FUNNEL_STEPS)[number];

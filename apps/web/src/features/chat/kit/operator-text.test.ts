@@ -8,7 +8,7 @@ import {
 } from "#renderer/lib/bot-turns/turns";
 import { hiddenUserMessage, userMessageText } from "#renderer/lib/user-message";
 
-import { userView } from "./message";
+import { appLineOf, userView } from "./message";
 
 const user = (content: string, userText?: UserTextTags): UIMessage => ({
   id: "u",
@@ -45,6 +45,18 @@ describe("operator bubbles and previews", () => {
       expect(userView(projected).body).toBe("[Ada] hello\n\nsecond paragraph");
       // BotMessage re-enters with the projected message. It must settle.
       expect(botVisibleMessage(projected, [message], false)).toBe(projected);
+    }
+  );
+  it.each(["test-repair", "test-repair-limit", "tests-left-alone"] as const)(
+    "draws %s as the app's line, never as the user's words",
+    (kind) => {
+      const message = user("Tests failed after my change, fixing them.", {
+        operator: { kind },
+      });
+      expect(appLineOf(message)).toBe(kind);
+      expect(userView(message).hidden).toBe(true);
+      expect(hiddenUserMessage(message)).toBe(true);
+      expect(userMessageText(message)).toBe("");
     }
   );
   it("cleans legacy bubbles, environment notices and routine fires", () => {

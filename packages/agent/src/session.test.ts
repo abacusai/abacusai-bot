@@ -1242,20 +1242,89 @@ describe("a turn's reply", () => {
     reply.begin("m1");
     reply.messageStarted();
     reply.textStreamed("Let me look.");
-    reply.messageEnded();
-    reply.answers("m2");
+    reply.messageEnded(true);
+    expect(reply.answers("m2")).toBeNull();
     reply.messageStarted();
-    reply.messageEnded();
+    reply.messageEnded(true);
     reply.messageStarted();
     reply.textStreamed("Found ");
     reply.textStreamed("it.");
-    reply.messageEnded();
+    reply.messageEnded(false);
     expect(reply.take()).toEqual({
       type: "turn_reply",
       messageIds: ["m1", "m2"],
       text: "Found it.",
       failed: false,
     });
+  });
+
+  it("hands over a finished answer a steer lands behind, and only that", () => {
+    const steeredBehind = (
+      messages: Array<[words: string, calledTool: boolean]>
+    ) => {
+      const reply = new TurnReply();
+      reply.begin("m1");
+      for (const [words, calledTool] of messages) {
+        reply.messageStarted();
+        reply.textStreamed(words);
+        reply.messageEnded(calledTool);
+      }
+      return { reply, answered: reply.answers("m2") };
+    };
+    const answer = {
+      type: "turn_answer",
+      messageIds: ["m1"],
+      text: "Your calendar is empty.",
+    };
+    for (const [messages, expected] of [
+      [[["Your calendar is empty.", false]], answer],
+      [
+        [
+          ["", true],
+          ["Your calendar is empty.", false],
+        ],
+        answer,
+      ],
+      [
+        [
+          ["Your calendar is empty.", false],
+          ["", false],
+        ],
+        answer,
+      ],
+      [[["Let me check.", true]], null],
+      [
+        [
+          ["Let me check.", false],
+          ["", true],
+        ],
+        null,
+      ],
+      [[["", false]], null],
+    ] as const)
+      expect(
+        steeredBehind(messages as never).answered,
+        JSON.stringify(messages)
+      ).toEqual(expected);
+
+    // Said once: the reply is what came after it, for every message.
+    const { reply } = steeredBehind([["Your calendar is empty.", false]]);
+    expect(reply.answers("m3")).toBeNull();
+    reply.messageStarted();
+    reply.textStreamed("4");
+    reply.messageEnded(false);
+    expect(reply.take()).toMatchObject({
+      messageIds: ["m1", "m2", "m3"],
+      text: "4",
+    });
+
+    // A sender that never gave an id hears nothing new.
+    const silent = new TurnReply();
+    silent.begin();
+    silent.messageStarted();
+    silent.textStreamed("Hello.");
+    silent.messageEnded(false);
+    expect(silent.answers()).toBeNull();
   });
 
   it("is taken once; a steer after that belongs to no reply and runs as its own send", () => {

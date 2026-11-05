@@ -73,7 +73,11 @@ const describeTurnComplete = (
     `turn complete · cache read ${usage.cacheRead} write ${usage.cacheWrite} ` +
     `input ${usage.input} output ${usage.output}` +
     (usage.requests > 1 ? ` (${usage.requests} requests)` : "") +
-    (usage.model != null ? ` ${usage.model}` : "");
+    (usage.model != null ? ` ${usage.model}` : "") +
+    // The figures above are the last request; this is what the turn billed.
+    (usage.total != null
+      ? ` · turn cache read ${usage.total.cacheRead} input ${usage.total.input} output ${usage.total.output}`
+      : "");
   if (usage.cacheRead > 0) {
     cacheHitsSeen.add(sessionId);
     return line;
@@ -131,6 +135,11 @@ const fromLoopEvent = (event: AgentEvent, sessionId: string): string | null => {
 
     case "turn_complete":
       return describeTurnComplete(sessionId, event.usage);
+
+    case "promised_work_recovery":
+      return `promised work: asked ${event.model} to do it`;
+    case "turn_answer":
+      return `turn answer ids=${event.messageIds.join(",")} chars=${event.text.length}`;
 
     case "turn_reply":
       // Which messages a turn answered; the words stay in the transcript.

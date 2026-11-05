@@ -510,6 +510,26 @@ describe("the turn's outcome card", () => {
     ],
   };
 
+  it("shows a paying account nothing of the free plan's wall while its plan is still being read", async () => {
+    let answer: ((tier: "basic") => void) | null = null;
+    const accountTier = () =>
+      new Promise<"basic">((resolve) => {
+        answer = resolve;
+      });
+    current = await renderRelay(
+      failed(WALL),
+      "session",
+      {},
+      {},
+      { ...host("basic"), accountTier }
+    );
+    await waitFor(() => expect(answer).not.toBeNull());
+    expect(screen.queryByText(/free credits are used up/)).toBeNull();
+    answer!("basic");
+    expect(await screen.findByText(/this month's credits/)).toBeTruthy();
+    expect(screen.queryByText(/free credits/)).toBeNull();
+  });
+
   it("a free account at the wall: the stopped task by name, the plan's whole offer, Upgrade to checkout, then the message goes again", async () => {
     const openUpgrade = vi.fn(async () => {});
     const relay = failed(WALL);
@@ -617,6 +637,32 @@ describe("the turn's outcome card", () => {
     expect(
       screen.getAllByRole("button", { name: "Upgrade · $7 first month" })
     ).toHaveLength(1);
+  });
+
+  it.each([
+    ["while it runs", [b.runStarted("r1")]],
+    [
+      "once it answered",
+      [
+        b.runStarted("r1"),
+        ...b.text("a1", "assistant", "Here is the bakery site."),
+        b.runFinished("r1", "success"),
+      ],
+    ],
+  ])("a resumed turn clears the wall it answers %s", async (_name, events) => {
+    const relay = new FakeRelay();
+    relay.emitAll([
+      ...b.sessionReady(),
+      b.runStarted("r0"),
+      ...b.text("u0", "user", "Build my bakery website"),
+      ...b.text("r0:error", "assistant", ""),
+      b.runError("r0", WALL as never),
+      ...events,
+    ]);
+    current = await renderRelay(relay, "session", {}, {}, host("free"));
+    await screen.findByText("Build my bakery website");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(document.querySelector('[data-slot="error-card"]')).toBeNull();
   });
 
   it("a routine run at the wall (read-only) still carries the offer: Upgrade goes to checkout, nothing is resent", async () => {
@@ -1694,5 +1740,130 @@ describe("the turn's outcome card", () => {
       current as unknown as { db: { updatePrefs(p: object): Promise<void> } }
     ).db.updatePrefs({ creditsExhaustedAt: Date.now() });
     await screen.findByText("Free model · Google Gemini");
+  });
+});
+
+describe("the turn's credits", () => {
+  const ACCOUNT = {
+    user_id: "u1",
+    organization_id: "o1",
+    name: null,
+    email: null,
+    picture: null,
+    organization: null,
+    org_user_count: null,
+    plan: "Free",
+    subscription_tier: "free",
+    credits_used: 618,
+    credits_granted: 2000,
+  };
+  const turn = (credits: unknown) => {
+    const relay = new FakeRelay();
+    relay.emitAll([
+      ...b.sessionReady(),
+      b.runStarted("r1", { timestamp: 1_000 }),
+      ...b.text("u1", "user", "go"),
+      ...b.text("a1", "assistant", "done"),
+      b.runFinished("r1", "success", {
+        timestamp: 13_000,
+        ...(credits !== undefined && {
+          metadata: { abacus: { turnUsage: { credits } } },
+        }),
+      }),
+    ]);
+    return relay;
+  };
+  const served = (
+    account: Record<string, unknown> | null,
+    funnel = vi.fn()
+  ) => {
+    const os = implement(contract);
+    return {
+      account: {
+        abacus: os.account.abacus.handler(() => account as never),
+        payment: os.account.payment.handler(() => null),
+      },
+      system: {
+        funnelStep: os.system.funnelStep.handler(({ input }) => {
+          funnel(input);
+        }),
+      },
+    };
+  };
+  afterEach(() => closeUpgradeDialog());
+
+  it.each([
+    [
+      "a free turn, with what is left",
+      ACCOUNT,
+      18.4,
+      "18 credits · 1,382 left",
+    ],
+    ["a tiny turn", ACCOUNT, 0.3, "<1 credit · 1,382 left"],
+    [
+      "a paid turn",
+      { ...ACCOUNT, plan: "Basic", subscription_tier: "basic" },
+      1240.6,
+      "1,241 credits · 1,382 left",
+    ],
+  ])("%s", async (_name, account, credits, label) => {
+    current = await renderRelay(
+      turn(credits),
+      "session",
+      {},
+      {},
+      undefined,
+      served(account)
+    );
+    const line = await screen.findByRole("button", {
+      name: `${label}. See your plan and credits`,
+    });
+    expect(line.textContent).toBe(label);
+  });
+
+  it.each([
+    ["an own-key turn (no Abacus request)", ACCOUNT, undefined],
+    ["a turn whose charge is unknown", ACCOUNT, null],
+    ["a free-model turn", ACCOUNT, 0],
+    [
+      "an account with no plan to offer",
+      { ...ACCOUNT, plan: null, subscription_tier: null },
+      18,
+    ],
+  ])("shows nothing for %s", async (_name, account, credits) => {
+    current = await renderRelay(
+      turn(credits),
+      "session",
+      {},
+      {},
+      undefined,
+      served(account)
+    );
+    await screen.findByText(/^Done in 12/);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(document.querySelector('[data-slot="turn-credits"]')).toBeNull();
+  });
+
+  it("opens the plan dialog and records the click", async () => {
+    const funnel = vi.fn();
+    current = await renderRelay(
+      turn(18),
+      "session",
+      {},
+      {},
+      undefined,
+      served(ACCOUNT, funnel)
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /^18 credits/ }));
+    expect(upgradeDialogStore.state.request).toMatchObject({
+      kind: "balance",
+      src: "turn_credits",
+    });
+    await waitFor(() =>
+      expect(funnel).toHaveBeenCalledWith({
+        step: "turn_credits_clicked",
+        detail: "free",
+      })
+    );
   });
 });

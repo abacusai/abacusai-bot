@@ -11,6 +11,7 @@ it.each<[NotificationMetadata, string | null]>([
   [{ kind: "bot", botId: "b", sessionId: "s" }, "/bots/b/chats/s"],
   [{ kind: "bot", botId: "b" }, "/bots/b"],
   [{ kind: "routine", routineId: "r", sessionId: "s" }, "/routines/r?run=s"],
+  [{ kind: "messaging" }, "/library/messaging"],
   [{ kind: "routine", sessionId: "s" }, null],
   [{ kind: "bot", sessionId: "s" }, null],
   [{}, null],

@@ -39,11 +39,26 @@ export type ConnectOutcome =
     }
   /** An account service this surface does not connect; no link was made. */
   | { code: "not_here"; name: string }
-  /** No link exists for it; `card` says whether a Connect card went up in the app. */
-  | { code: "no_link"; name: string; kind: Connector["kind"]; card: boolean }
+  /**
+   * No link exists for it; `card` says whether a Connect card went up in the
+   * app, and `routine` that this is a routine's run, with nobody in front of it.
+   */
+  | {
+      code: "no_link";
+      name: string;
+      kind: Connector["kind"];
+      card: boolean;
+      routine: boolean;
+    }
   /** Every connector the link covers is connected already; it can only reconnect them. */
   | { code: "reconnect"; names: string[]; url: string }
-  | { code: "link"; asking: string[]; already: string[]; url: string };
+  | {
+      code: "link";
+      asking: string[];
+      already: string[];
+      url: string;
+      routine: boolean;
+    };
 
 export type DisconnectOutcome =
   | { code: "required" }

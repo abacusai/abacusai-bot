@@ -27,6 +27,7 @@ import { referrals } from "./referrals";
 import { routines } from "./routines";
 import { sessions } from "./sessions";
 import { settings } from "./settings";
+import { sites } from "./sites";
 import { skills } from "./skills";
 import { system } from "./system";
 import { terminal } from "./terminal";
@@ -48,6 +49,7 @@ export const contract = {
   routines,
   notch,
   settings,
+  sites,
   models,
   links,
   account,

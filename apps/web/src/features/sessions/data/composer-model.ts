@@ -168,6 +168,7 @@ export const useSessionComposerModel = (
           }
         : {}),
       value,
+      resolved: selected,
       label: chip?.label ?? t("sessions.model.choose"),
       unavailable: chip?.unavailable === true,
       groups: botModelGroups({

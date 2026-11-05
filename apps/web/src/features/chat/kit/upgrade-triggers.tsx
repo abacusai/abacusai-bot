@@ -30,7 +30,7 @@ const errorActions = (outcome: RunOutcomeRecord) =>
       | undefined
   )?.actions ?? [];
 
-const outOfAbacusCredits = (outcome: RunOutcomeRecord): boolean =>
+export const outOfAbacusCredits = (outcome: RunOutcomeRecord): boolean =>
   errorActions(outcome).some((action) => action.type === "upgrade-abacus");
 
 /** The Abacus wall is a free tier that ended, rather than its credits running out. */

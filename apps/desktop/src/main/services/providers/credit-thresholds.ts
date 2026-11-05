@@ -110,8 +110,10 @@ export class CreditThresholdWatch {
         : null;
     const mark = crossed ?? untold;
     if (mark == null) return;
-    if (crossed != null)
+    if (crossed != null) {
+      console.log(`[credits] threshold ${crossed.reached} reached`);
       prefs.update({ creditThresholds: { ...marks, [key]: crossed } });
+    }
     if (!(await this.deps.tellInChat(sessionId, mark))) return;
     const latest = prefs.get().creditThresholds ?? {};
     prefs.update({
@@ -174,6 +176,7 @@ export const settledTurnListener = (
   facts: { onFreePlan(): boolean; kindOf(sessionId: string): SettledTurnKind }
 ): ((sessionId: string, payload: DesktopEvent) => void) => {
   const billed = new Set<string>();
+  let toldPaid = false;
   return (sessionId, payload) => {
     if (payload.type !== "event") return;
     const event = payload.event;
@@ -185,7 +188,13 @@ export const settledTurnListener = (
     }
     if (event.type !== "status_changed" || event.status !== AgentStatus.Idle)
       return;
-    if (!billed.delete(sessionId) || !facts.onFreePlan()) return;
+    if (!billed.delete(sessionId)) return;
+    if (!facts.onFreePlan()) {
+      // The cards are the free plan's: a log that shows none is not a miss.
+      if (!toldPaid) console.log("[credits] threshold cards: not a free plan");
+      toldPaid = true;
+      return;
+    }
     void watch.turnSettled(sessionId, facts.kindOf(sessionId));
   };
 };

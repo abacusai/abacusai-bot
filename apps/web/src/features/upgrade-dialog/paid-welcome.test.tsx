@@ -1,0 +1,428 @@
+import { contract } from "@abacus-ai/contract/contract";
+import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
+import { implement } from "@orpc/server";
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import { expect, it, vi } from "vitest";
+
+import { welcomeLandedPlan } from "#renderer/lib/paid-welcome";
+import { IS_BROWSER } from "#renderer/lib/platform";
+import {
+  closeUpgradeDialog,
+  requestPlanDialog,
+} from "#renderer/lib/upgrade-dialog";
+import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
+
+const os = implement(contract);
+const account = (
+  tier: string,
+  credits: { granted: number | null; used: number | null } = {
+    granted: 20000,
+    used: 1500,
+  }
+): AbacusAccountInfo => ({
+  user_id: "test",
+  organization_id: "test-org",
+  name: "Test",
+  email: null,
+  picture: null,
+  organization: null,
+  org_user_count: 1,
+  plan: tier,
+  subscription_tier: tier,
+  credits_granted: credits.granted,
+  credits_used: credits.used,
+});
+
+const render = async (
+  read: () => AbacusAccountInfo,
+  seed = defaultSeed(),
+  route = "/routines",
+  flow: { onboarded?: boolean; signedIn?: boolean } = {}
+) => {
+  const open = vi.fn();
+  const steps: string[] = [];
+  const app = await renderApp(route, {
+    ...flow,
+    seed,
+    procedures: {
+      account: { abacus: os.account.abacus.handler(read) },
+      system: {
+        openExternal: os.system.openExternal.handler(({ input }) =>
+          open(input)
+        ),
+        funnelStep: os.system.funnelStep.handler(({ input }) => {
+          steps.push(input.step);
+        }),
+      },
+    },
+  });
+  const dismissals = () => app.collections.prefs.get("app")?.dismissals;
+  const refresh = () =>
+    act(async () => {
+      await app.router.options.context.queryClient.invalidateQueries({
+        queryKey: app.transport.orpc.account.abacus.queryKey(),
+      });
+    });
+  return { app, open, steps, dismissals, refresh };
+};
+
+it.runIf(!IS_BROWSER)(
+  "welcomes a paid read after a free one, once, with its balance, and sends routines to the web",
+  async () => {
+    let tier = "free";
+    const { app, open, steps, dismissals, refresh } = await render(() =>
+      account(tier)
+    );
+    try {
+      await waitFor(() => expect(dismissals()?.freePlanSeenAt).not.toBeNull());
+      expect(screen.queryByRole("dialog")).toBeNull();
+      tier = "basic";
+      await refresh();
+      const dialog = await screen.findByRole("dialog", {
+        name: "You're on basic",
+      });
+      expect(
+        within(dialog).getByText("18,500 credits ready to use")
+      ).toBeTruthy();
+      expect(
+        within(dialog).queryByRole("button", {
+          name: /Finish what you were doing/,
+        })
+      ).toBeNull();
+      fireEvent.click(
+        within(dialog).getByRole("button", {
+          name: "Set up a 24/7 routine on the web",
+        })
+      );
+      await waitFor(() =>
+        expect(open).toHaveBeenCalledWith({
+          url: "https://apps.abacus.ai/chatllm",
+        })
+      );
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      expect(dismissals()?.paidWelcomeTier).toBe("basic");
+      expect(steps).toEqual(["paid_welcome_shown", "paid_welcome_routines"]);
+      await refresh();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(screen.queryByRole("dialog")).toBeNull();
+    } finally {
+      app.view.unmount();
+      await app.cleanup();
+    }
+  },
+  15000
+);
+
+it.runIf(!IS_BROWSER)(
+  "never tells an account first read as paid that it just upgraded",
+  async () => {
+    const { app, dismissals } = await render(() => account("basic"));
+    try {
+      await screen.findByRole("navigation", { name: "Routines" });
+      await waitFor(() => expect(dismissals()?.paidWelcomeTier).toBe("basic"));
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(dismissals()?.freePlanSeenAt).toBeNull();
+    } finally {
+      app.view.unmount();
+      await app.cleanup();
+    }
+  }
+);
+
+it.runIf(!IS_BROWSER)(
+  "welcomes a move up from Basic to Pro, and shows no balance it cannot read",
+  async () => {
+    const seed = defaultSeed();
+    seed.prefs!.dismissals.freePlanSeenAt = 1;
+    seed.prefs!.dismissals.paidWelcomeTier = "basic";
+    const { app, steps } = await render(
+      () => account("pro", { granted: null, used: null }),
+      seed
+    );
+    try {
+      const dialog = await screen.findByRole("dialog", {
+        name: "You're on pro",
+      });
+      expect(
+        dialog.querySelector('[data-slot="paid-welcome-credits"]')
+      ).toBeNull();
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Back to chat" })
+      );
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      expect(steps).toEqual(["paid_welcome_shown", "paid_welcome_closed"]);
+    } finally {
+      app.view.unmount();
+      await app.cleanup();
+    }
+  }
+);
+
+const WAYS_OUT: [string, string, (dialog: HTMLElement) => void][] = [
+  [
+    "Finish what you were doing",
+    "paid_welcome_resume",
+    (dialog) =>
+      fireEvent.click(
+        within(dialog).getByRole("button", {
+          name: /Finish what you were doing/,
+        })
+      ),
+  ],
+  [
+    "Back to chat",
+    "paid_welcome_closed",
+    (dialog) =>
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Back to chat" })
+      ),
+  ],
+  [
+    "Esc",
+    "paid_welcome_closed",
+    (dialog) => fireEvent.keyDown(dialog, { key: "Escape" }),
+  ],
+  [
+    "a click outside",
+    "paid_welcome_closed",
+    () => {
+      const backdrop = document.querySelector('[data-slot="dialog-overlay"]')!;
+      fireEvent.pointerDown(backdrop);
+      fireEvent.mouseDown(backdrop);
+      fireEvent.pointerUp(backdrop);
+      fireEvent.mouseUp(backdrop);
+      fireEvent.click(backdrop);
+    },
+  ],
+  [
+    "the routines step",
+    "paid_welcome_routines",
+    (dialog) =>
+      fireEvent.click(dialog.querySelector('[data-step="routines"]')!),
+  ],
+  [
+    "the unlock step",
+    "paid_welcome_unlock",
+    (dialog) => fireEvent.click(dialog.querySelector('[data-step="unlock"]')!),
+  ],
+];
+
+it.runIf(!IS_BROWSER).each(WAYS_OUT)(
+  "sends the paused turn once on closing by %s",
+  async (_name, step, leave) => {
+    let tier = "free";
+    const { app, steps, dismissals } = await render(() => account(tier));
+    try {
+      await waitFor(() => expect(dismissals()?.freePlanSeenAt).not.toBeNull());
+      tier = "basic";
+      const resume = vi.fn(async () => undefined);
+      act(() =>
+        welcomeLandedPlan(account("basic"), account("free"), {
+          threadId: "chat-1",
+          paused: { text: "Build my bakery website", resume },
+        })
+      );
+      const dialog = await screen.findByRole("dialog", {
+        name: "You're on basic",
+      });
+      expect(resume).not.toHaveBeenCalled();
+      expect(
+        within(dialog).getByRole("button", {
+          name: /Finish what you were doing/,
+        }).textContent
+      ).toContain("Build my bakery website");
+      act(() => leave(dialog));
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      await waitFor(() => expect(resume).toHaveBeenCalledOnce());
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(resume).toHaveBeenCalledOnce();
+      expect(steps).toEqual(["paid_welcome_shown", step]);
+    } finally {
+      app.view.unmount();
+      await app.cleanup();
+    }
+  },
+  15000
+);
+
+it.runIf(!IS_BROWSER)(
+  "sends the paused turn when the welcome goes away with its host",
+  async () => {
+    let tier = "free";
+    const { app, dismissals } = await render(() => account(tier));
+    const resume = vi.fn(async () => undefined);
+    try {
+      await waitFor(() => expect(dismissals()?.freePlanSeenAt).not.toBeNull());
+      tier = "basic";
+      act(() =>
+        welcomeLandedPlan(account("basic"), account("free"), {
+          threadId: "chat-1",
+          paused: { resume },
+        })
+      );
+      await screen.findByRole("dialog", { name: "You're on basic" });
+    } finally {
+      app.view.unmount();
+      await app.cleanup();
+    }
+    expect(resume).toHaveBeenCalledOnce();
+  },
+  15000
+);
+
+it.runIf(!IS_BROWSER)(
+  "waits for an open upgrade dialog, and opens after it",
+  async () => {
+    let tier = "free";
+    const { app, dismissals, refresh } = await render(() => account(tier));
+    try {
+      await waitFor(() => expect(dismissals()?.freePlanSeenAt).not.toBeNull());
+      act(() => requestPlanDialog("onboarding"));
+      await waitFor(() =>
+        expect(
+          document.querySelector('[data-slot="upgrade-dialog"]')
+        ).not.toBeNull()
+      );
+      tier = "basic";
+      await refresh();
+      await waitFor(() => expect(dismissals()?.paidWelcomeTier).toBe("basic"));
+      expect(document.querySelector('[data-slot="paid-welcome"]')).toBeNull();
+      act(() => closeUpgradeDialog());
+      await screen.findByRole("dialog", { name: "You're on basic" });
+      expect(document.querySelector('[data-slot="upgrade-dialog"]')).toBeNull();
+    } finally {
+      closeUpgradeDialog();
+      app.view.unmount();
+      await app.cleanup();
+    }
+  },
+  15000
+);
+
+it.runIf(!IS_BROWSER)(
+  "welcomes a payment made during onboarding",
+  async () => {
+    const { app } = await render(
+      () => account("free"),
+      defaultSeed(),
+      "/onboarding/welcome",
+      { onboarded: false, signedIn: true }
+    );
+    try {
+      await waitFor(() =>
+        expect(app.router.state.location.pathname).toContain("/onboarding/")
+      );
+      const resume = vi.fn(async () => undefined);
+      await waitFor(() => {
+        act(() =>
+          welcomeLandedPlan(account("basic"), account("free"), {
+            threadId: "onboarding",
+            paused: { resume },
+          })
+        );
+        expect(
+          document.querySelector('[data-slot="paid-welcome"]')
+        ).not.toBeNull();
+      });
+      expect(resume).not.toHaveBeenCalled();
+    } finally {
+      app.view.unmount();
+      await app.cleanup();
+    }
+  },
+  15000
+);
+
+it.runIf(!IS_BROWSER)(
+  "leads with the deploy steps when the chat's latest result is a site",
+  async () => {
+    const seed = defaultSeed();
+    seed.prefs!.dismissals.freePlanSeenAt = 1;
+    seed.prefs!.siteReady = {
+      "chat-1": { turnId: "turn-1", siteDir: "/work/bakery", at: 1 },
+    };
+    const packed = vi.fn();
+    const open = vi.fn();
+    const steps: string[] = [];
+    const app = await renderApp("/routines", {
+      seed,
+      procedures: {
+        account: { abacus: os.account.abacus.handler(() => account("free")) },
+        sites: {
+          pack: os.sites.pack.handler(({ input }) => {
+            packed(input.sessionId);
+            return {
+              state: "ready" as const,
+              path: "/exports/bakery.zip",
+              name: "bakery",
+              files: 23,
+              bytes: 1_240_000,
+              leftOut: ["node_modules"],
+              heldBack: [],
+            };
+          }),
+          progress: os.sites.progress.handler(() => null),
+        },
+        system: {
+          openExternal: os.system.openExternal.handler(({ input }) =>
+            open(input)
+          ),
+          funnelStep: os.system.funnelStep.handler(({ input }) => {
+            steps.push(`${input.step}:${input.detail ?? ""}`);
+          }),
+        },
+      },
+    });
+    try {
+      await screen.findByRole("navigation", { name: "Routines" });
+      act(() =>
+        welcomeLandedPlan(account("basic"), account("free"), {
+          threadId: "chat-1",
+          paused: null,
+        })
+      );
+      const dialog = await screen.findByRole("dialog", {
+        name: "You're on basic",
+      });
+      expect(within(dialog).getByText("Deploy your site")).toBeTruthy();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(packed).not.toHaveBeenCalled();
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Prepare zip" })
+      );
+      expect(await within(dialog).findByText("bakery.zip")).toBeTruthy();
+      expect(packed).toHaveBeenCalledOnce();
+      expect(packed).toHaveBeenCalledWith("chat-1");
+      expect(
+        within(dialog).queryByRole("button", {
+          name: "Set up a 24/7 routine on the web",
+        })
+      ).toBeNull();
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: /Open Abacus AI Agent/ })
+      );
+      await waitFor(() =>
+        expect(open).toHaveBeenCalledWith({
+          url: "https://apps.abacus.ai/chatllm",
+        })
+      );
+      expect(steps).toEqual(
+        expect.arrayContaining([
+          "site_deploy_shown:welcome",
+          "site_deploy_pack:welcome",
+          "site_deploy_open_agent:welcome",
+        ])
+      );
+    } finally {
+      app.view.unmount();
+      await app.cleanup();
+    }
+  },
+  15000
+);

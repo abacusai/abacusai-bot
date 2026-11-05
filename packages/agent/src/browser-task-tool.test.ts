@@ -171,8 +171,38 @@ describe("how many runs a conversation may start", () => {
     const refused = await tool.execute("call-x", { task: "look again" });
     expect(stubs.run).toHaveBeenCalledTimes(DISPATCH_LIMIT);
     expect(refused.isError).toBe(false);
-    expect(refused.content[0]?.text).toMatch(/ask the user/);
+    expect(refused.content[0]?.text).toMatch(
+      /next run can start in 15 minutes/
+    );
+    // Nothing here can hear a yes, so the result must not offer one.
+    expect(refused.content[0]?.text).not.toMatch(/ask the user/);
     expect((refused.details as { outcome?: string }).outcome).toBe("budget");
+  });
+
+  it("offers the user's yes only where it opens the budget, and only a new message does", async () => {
+    stubs.run.mockClear();
+    stubs.run.mockResolvedValue(finished("completed"));
+    const words = [{ seq: 1, text: "look it up" }];
+    const tool = buildBrowserTaskTool(
+      { cwd: process.cwd(), userWords: () => words } as never,
+      () => undefined
+    );
+    for (let i = 0; i < DISPATCH_LIMIT; i++)
+      await tool.execute(`call-${i}`, { task: "look" });
+
+    const refused = await tool.execute("call-x", { task: "look again" });
+    expect(refused.content[0]?.text).toMatch(/ask the user/);
+    await tool.execute("call-y", { task: "and again" });
+    expect(stubs.run).toHaveBeenCalledTimes(DISPATCH_LIMIT);
+
+    words.push({ seq: 2, text: "yes, go on" });
+    for (let i = 0; i < DISPATCH_LIMIT; i++)
+      await tool.execute(`call-z${i}`, { task: "look" });
+    expect(stubs.run).toHaveBeenCalledTimes(DISPATCH_LIMIT * 2);
+
+    // That yes is spent: the next run needs another.
+    await tool.execute("call-over", { task: "one more" });
+    expect(stubs.run).toHaveBeenCalledTimes(DISPATCH_LIMIT * 2);
   });
 
   it("lets a resume of a run waiting on the user through the budget, and refuses one with nothing paused", async () => {

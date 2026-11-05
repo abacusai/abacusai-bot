@@ -39,6 +39,8 @@ export interface Scenario {
     deliverableOffer?: boolean;
     /** The turns' files on the deliverables card, as the sessions route shows them. */
     deliverables?: boolean;
+    /** The shell's upgrade dialog, for a line or card in the chat that opens it. */
+    upgradeDialog?: boolean;
   };
   /** Canned answer to a send in the gallery (echo + reply). */
   reply?: string;
@@ -141,6 +143,47 @@ const botQueue = (): RelayEvent[] =>
       ],
       dequeued: null,
     }),
+  ]);
+
+/** The verify loop's line, as the agent writes it: a tagged user-role message. */
+const appLine = (
+  id: string,
+  kind: "test-repair" | "test-repair-limit",
+  text: string
+): StreamChunk[] =>
+  b.text(id, "user", text, {
+    metadata: { abacus: { userText: { operator: { kind } } } },
+  });
+
+const testRepair = (limit: boolean): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn("r1", "u1", "Make add() take a third argument.", at(2)),
+    ...b.text(
+      "a1",
+      "assistant",
+      "Done: `add` now takes a third argument, defaulting to 0."
+    ),
+    ...appLine(
+      "l1",
+      "test-repair",
+      "Tests failed after my change, fixing them."
+    ),
+    ...b.text(
+      "a2",
+      "assistant",
+      limit
+        ? "I couldn't finish the fix: `test_add_negative` still fails. The change to `add` is in `calc.py`."
+        : "My change broke `test_add_negative`: the default swallowed the sign. Fixed in `calc.py`, and the tests pass."
+    ),
+    ...(limit
+      ? appLine(
+          "l2",
+          "test-repair-limit",
+          "I stopped fixing the tests: this automatic repair reached its limit. Nothing else runs until you send a message."
+        )
+      : []),
+    b.runFinished("r1"),
   ]);
 
 const botBanners = (): RelayEvent[] =>
@@ -630,6 +673,52 @@ const offerScenarios = (locale: string, words: OfferWords): Scenario[] =>
     view: { deliverableOffer: true, ...view },
   }));
 
+interface CreditWords {
+  ask: string;
+  answer: string;
+}
+
+const CREDITS_EN: CreditWords = {
+  ask: "Find the three cheapest direct flights from Lisbon to Berlin next Friday.",
+  answer:
+    "The cheapest direct flights next Friday are TAP at 07:05 (€89), easyJet at 13:40 (€94) and Lufthansa at 18:20 (€131). TAP's fare includes a cabin bag; the other two charge for one.",
+};
+
+const CREDITS_PT: CreditWords = {
+  ask: "Encontre os três voos diretos mais baratos de Lisboa para Berlim na próxima sexta-feira.",
+  answer:
+    "Os voos diretos mais baratos na próxima sexta são TAP às 07:05 (€89), easyJet às 13:40 (€94) e Lufthansa às 18:20 (€131). A tarifa da TAP inclui bagagem de mão; as outras duas cobram à parte.",
+};
+
+/**
+ * A finished turn and what it billed: `credits` on its terminal as the agent
+ * sends it (absent for a turn on the user's own key). The account read the
+ * line's "left" comes from is the app's own.
+ */
+const creditsTurn =
+  (words: CreditWords, credits?: number) => (): RelayEvent[] =>
+    seqd([
+      ...b.sessionReady("inc-1", "YOLO"),
+      ...userTurn("r1", "u1", words.ask, at(3)),
+      b.textStart("a1"),
+      ...b.toolCall("c1", "web_search", "a1", {
+        query: "Lisbon Berlin direct flights Friday",
+      }),
+      b.toolResult("c1", { text: "10 results" }),
+      ...b.toolCall("c2", "web_fetch", "a1", {
+        url: "https://www.example.com/flights/lis-ber",
+      }),
+      b.toolResult("c2", { text: "Fares loaded" }),
+      b.textDelta("a1", words.answer),
+      b.textEnd("a1"),
+      b.runFinished("r1", "success", {
+        timestamp: at(2),
+        ...(credits != null && {
+          metadata: { abacus: { turnUsage: { credits } } },
+        }),
+      }),
+    ]);
+
 const sessionOutcome = (kind: string) => (): RelayEvent[] =>
   seqd([
     ...b.sessionReady("inc-1", "DEFAULT"),
@@ -836,6 +925,26 @@ const migratedHistory = (): UIMessage[] => {
 };
 
 export const SCENARIOS: Scenario[] = [
+  {
+    id: "turn-credits-en",
+    canvas: ["TurnCredits", "Abacus turn"],
+    skin: "session",
+    events: creditsTurn(CREDITS_EN, 18.4),
+    view: { upgradeDialog: true },
+  },
+  {
+    id: "turn-credits-pt",
+    canvas: ["TurnCredits", "Abacus turn", "pt-BR"],
+    skin: "session",
+    events: creditsTurn(CREDITS_PT, 18.4),
+    view: { upgradeDialog: true },
+  },
+  {
+    id: "turn-credits-own-key-en",
+    canvas: ["TurnCredits", "own key"],
+    skin: "session",
+    events: creditsTurn(CREDITS_EN),
+  },
   ...offerScenarios("en", OFFER_EN),
   ...offerScenarios("pt-BR", OFFER_PT),
   {
@@ -1008,6 +1117,18 @@ export const SCENARIOS: Scenario[] = [
     events: botUnread,
   },
   { id: "bot-banners", canvas: ["BotStates"], skin: "bot", events: botBanners },
+  {
+    id: "session-test-repair",
+    canvas: [],
+    skin: "session",
+    events: () => testRepair(false),
+  },
+  {
+    id: "session-test-repair-limit",
+    canvas: [],
+    skin: "session",
+    events: () => testRepair(true),
+  },
   {
     id: "bot-model-chip",
     canvas: ["BotDetails"],

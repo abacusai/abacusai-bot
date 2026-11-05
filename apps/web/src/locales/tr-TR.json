@@ -1376,6 +1376,14 @@
     "deleteBody": "Bu işlem “{{name}}” rutinini ve çalışma geçmişini siler.",
     "deleteError": "Rutin silinemedi.",
     "deleteTitle": "Rutini sil",
+    "duplicate": {
+      "badge": "Olası kopya",
+      "delete": "Bunu sil",
+      "description": "Aynı zamanlama, aynı iş: iş iki kez yapılır ve her çalıştırma kredi harcar. Hangisini tutacağını seç.",
+      "keepBoth": "İkisini de tut",
+      "pause": "Bunu duraklat",
+      "title": "Şunun kopyası gibi görünüyor:"
+    },
     "edit": "Düzenle",
     "editTitle": "Rutini düzenle",
     "editorPlaceholder": "Rutine nasıl değişeceğini söyle: \"bunun yerine her sabah 9'da\", \"dur\"",
@@ -1565,15 +1573,6 @@
       "missedNoticeFree": "{{names}}. Basic planda, web'deki Abacus AI Agent rutinleri bilgisayarın kapalıyken bile 7/24 çalıştırır.",
       "missedNoticePaid": "{{names}}. Rutinlerini web'deki Abacus AI Agent'ta kur; orada bilgisayarın kapalıyken bile 7/24 çalışırlar."
     },
-    "upgraded": {
-      "title": "Artık {{plan}} planındasın",
-      "titleNoPlan": "Artık ücretli bir plandasın",
-      "body": "Sırada rutinlerini web'deki Abacus AI Agent'ta kurmak var. Orada bilgisayarın kapalıyken bile 7/24 çalışırlar.",
-      "autoReplies": "WhatsApp, Telegram ve Discord otomatik yanıtları",
-      "allRoutines": "Tüm rutinlerin, zamanında",
-      "setUp": "7/24 rutinleri kur",
-      "back": "AbacusAI Bot'a dön"
-    },
     "reach": {
       "gmailSearch": "Gmail'de ara",
       "gmailRead": "Gmail mesajlarını oku",
@@ -1621,6 +1620,13 @@
     "upgrade": {
       "title": "Rutinlerin kilidini aç",
       "description": "Görevleri zamanlamak ve işini otomatikleştirmek için yükselt."
+    },
+    "model": {
+      "label": "Model",
+      "planDefault": "Plan varsayılanı",
+      "followsDefault": "Planınızın varsayılanını izler: {{model}}.",
+      "costly": "Her çalıştırma daha pahalı bir model olan {{model}} kullanır, bu yüzden her biri daha fazla kredi harcar.",
+      "hosted": "Barındırılan rutinler planınızın varsayılanıyla çalışır."
     }
   },
   "sessions": {
@@ -2949,8 +2955,16 @@
         "YOLO": "Onay yok"
       }
     },
+    "appLine": {
+      "testRepair": "Değişikliğimden sonra testler başarısız oldu, düzeltiyorum.",
+      "testRepairLimit": "Testleri düzeltmeyi bıraktım: bu otomatik onarım sınırına ulaştı. Siz mesaj gönderene kadar başka bir şey çalışmayacak.",
+      "testsLeftAlone": "Testler başarısız oluyor, ancak nedeninin değişikliğim olup olmadığını anlayamadım, bu yüzden dokunmadım."
+    },
     "notice": {
       "dismiss": "Kapat",
+      "backgroundFinished": "Bir arka plan işi bitti: {{command}}. Buradan devam etmek için mesaj gönderin.",
+      "backgroundFailed": "Bir arka plan işi başarısız oldu: {{command}}. Ne olduğuna bakmak için mesaj gönderin.",
+      "backgroundTimedOut": "Bir arka plan işi süre sınırında durduruldu: {{command}}. Ne olduğuna bakmak için mesaj gönderin.",
       "historyForeign": "Bu konuşma uygulamanın daha yeni bir sürümüyle kaydedildi, bu yüzden bir kısmı burada görünmeyebilir.",
       "historyTooLarge": "Önceki geçmiş burada gösterilemeyecek kadar büyük ({{size}}, sınır {{limit}}).",
       "unsaved": "Disk dolu, bu yüzden bu sohbet kaydedilmiyor. Biraz yer açın; bir sonraki mesajınızla yeniden kaydedilir.",
@@ -3071,7 +3085,12 @@
       "done_other": "{{duration}} içinde bitti, {{count}} adım",
       "stopped": "Durduruldu",
       "usage": "Giriş {{input}} ({{cached}} önbellekte) · Çıkış {{output}}",
-      "done_zero": "{{duration}} içinde bitti"
+      "done_zero": "{{duration}} içinde bitti",
+      "credits_one": "{{credits}} kredi",
+      "credits_other": "{{credits}} kredi",
+      "creditsLeft_one": "{{credits}} kredi · {{left}} kaldı",
+      "creditsLeft_other": "{{credits}} kredi · {{left}} kaldı",
+      "creditsAction": "{{credits}}. Planını ve kredilerini gör"
     },
     "subagent": {
       "done_one": "Bitti, {{count}} adım, {{duration}}",
@@ -3435,6 +3454,7 @@
       "completed": "Tamamlandı",
       "failed": "Başarısız",
       "skipped": "Atlandı",
+      "skipped-link": "Atlandı: sohbet uygulaması bağlı değil",
       "skipped-offline": "Atlandı: çevrimdışı",
       "skipped-credits": "Atlandı: kredi kalmadı",
       "offline": "Abacus'a ulaşılamadı",
@@ -4280,6 +4300,51 @@
     "waitingTitle": "Ödemeyi tarayıcında tamamla",
     "waitingToSend": "Gönderilmeyi bekliyor: “{{text}}”"
   },
+  "paidWelcome": {
+    "title": "Artık {{plan}} planındasın",
+    "titleNoPlan": "Artık ücretli bir plandasın",
+    "credits": "Kullanıma hazır {{credits}} kredi",
+    "model": "{{model}} artık varsayılan modelin",
+    "agents": "Bilgisayarın kapalıyken bile web'de 7/24 çalışan kişisel ajanlar ve rutinler",
+    "nextSteps": "Buradan başla",
+    "resume": "Yaptığın işi bitir",
+    "resumeDetail": "“{{text}}”",
+    "routines": "Web'de 7/24 bir rutin kur",
+    "unlockApps": "Web'de bir uygulama oluştur ve yayınla",
+    "unlockMedia": "Web'de görsel ve video oluştur",
+    "unlockConnectors": "Gmail, Takvim ve daha fazlasını bağla",
+    "back": "Sohbete dön"
+  },
+  "siteDeploy": {
+    "title": "Siteni yayınla",
+    "cardBody": "Web'deki Abacus AI Agent siteni barındırıp ona herkese açık bir bağlantı verebilir.",
+    "stepOpen": "Web'de Abacus AI Agent'ı aç",
+    "openAgent": "Abacus AI Agent'ı aç",
+    "stepPack": "Projeni yüklemeye hazırla",
+    "pack": "Zip hazırla",
+    "stepZip": "Projen yüklemeye hazır",
+    "stepZipBlocked": "Projen henüz yüklemeye hazır değil",
+    "packing_one": "Projen hazırlanıyor… {{count}} dosya",
+    "packing_other": "Projen hazırlanıyor… {{count}} dosya",
+    "cancel": "İptal",
+    "zipMeta_one": "{{size}} · {{count}} dosya",
+    "zipMeta_other": "{{size}} · {{count}} dosya",
+    "showInFolder": "Klasörde göster",
+    "dragHint": "Zip'i web'deki sohbete sürükle ya da Klasörde göster ile bul.",
+    "leftOut": "Dışarıda bırakılanlar: {{names}}",
+    "heldBack": "Anahtar içerebileceği için tutulanlar: {{names}}",
+    "tooBig": "{{name}} yüklemek için çok büyük: node_modules ve derleme dosyaları çıkarılsa bile 50 MB'tan fazla.",
+    "tooBroad": "Bu site kendi klasöründe değil. Bot'tan onu bir klasöre taşımasını iste, sonra tekrar dene.",
+    "none": "Bu sitenin klasörü artık yok.",
+    "cancelled": "Zip hazırlığı durduruldu.",
+    "failed": "Zip hazırlanamadı.",
+    "retry": "Tekrar dene",
+    "stepUpload": "Zip'i oraya yükle ve yayınlamasını iste",
+    "prompt": "Yüklediğim zip'ten bu uygulamayı yayınla. Onu oluşturan sohbet zip'in içindeki abacusai-bot-conversation.md dosyasında.",
+    "copy": "Mesajı kopyala",
+    "copied": "Kopyalandı",
+    "close": "Kapat"
+  },
   "paymentRequired": {
     "unconfirmedTitle": "AbacusAI Bot'u kullanmaya devam etmek için bir plan seçin",
     "unconfirmedBody": "Oturum açtınız, ancak AbacusAI Bot'un çalışması için hesabınızın bir plana ihtiyacı var.",
@@ -4593,6 +4658,9 @@
       "empty": "Buna bir yanıt hazırlayamadım. Lütfen tekrar gönder.",
       "contactNeutral": "Üzgünüm, şu anda yanıt veremiyorum. En kısa sürede döneceğim.",
       "contactEmpty": "{{name}} kişisine yanıt vermedim: hiçbir yanıt gelmedi. Yanıtlamak için uygulamayı aç veya ne söylememi istediğini bana yaz.",
+      "backgroundFinished": "Arka plan işi bitti. Buradan devam etmek için mesaj gönderin.",
+      "backgroundFailed": "Arka plan işi başarısız oldu. Ne olduğuna bakmak için mesaj gönderin.",
+      "backgroundTimedOut": "Arka plan işi süre sınırında durduruldu. Ne olduğuna bakmak için mesaj gönderin.",
       "undelivered": "{{name}} kişisine gönderilen bir mesaj iletilemedi.",
       "appClosed": "Ben yanıt veremeden uygulama kapatıldı. Kaldığı yerden devam etmek için tekrar gönder.",
       "stillWorking": "Hâlâ üzerinde çalışıyorum (şu ana kadar {{minutes}} dk). Bitince buradan yanıt vereceğim.",
@@ -4763,7 +4831,9 @@
     "importMcp": "MCP sunucularını içe aktar",
     "selectTheme": "Tema Seç",
     "themes": "Temalar",
-    "diskFullLane": "Bilgisayarın diski dolu, bu yüzden {{platform}} verilerini kaydedemiyor. Biraz yer açıldığında kendiliğinden yeniden bağlanır."
+    "diskFullLane": "Bilgisayarın diski dolu, bu yüzden {{platform}} verilerini kaydedemiyor. Biraz yer açıldığında kendiliğinden yeniden bağlanır.",
+    "linkLostTitle": "{{platform}} bağlantısı kesildi",
+    "linkLostLane": "{{platform}} artık bağlı değil, bu yüzden mesajlar ve rutinler oradan gönderilemiyor. Bağlan'a tıklayın ve QR kodunu yeniden tarayın."
   },
   "channels": {
     "sidebar": {

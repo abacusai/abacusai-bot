@@ -1,4 +1,4 @@
-import type { ModelAvailability } from "@abacus-ai/contract/models";
+import { OPENLLM_ID, type ModelAvailability } from "@abacus-ai/contract/models";
 /**
  * R3-T24 (pure half): the bot model picker's groups keep the old composer
  * picker's order and rules, App default leads with the resolved default's
@@ -72,7 +72,12 @@ describe("botModelGroups", () => {
       id: "default",
       label: "Default",
       items: [
-        { id: APP_DEFAULT_ITEM_ID, label: "App default", description: "GLM" },
+        {
+          id: APP_DEFAULT_ITEM_ID,
+          label: "App default",
+          description: "GLM",
+          resolves: "zai/glm",
+        },
       ],
     });
   });
@@ -246,6 +251,20 @@ describe("the one resolver for display", () => {
     expect(chatModelChip("zai/glm", "zai/glm", null, [])).toEqual({
       label: "zai/glm",
       unavailable: false,
+    });
+  });
+
+  it("names a paid plan's router for a chat on the pool its catalog drops", () => {
+    const paid = catalog.filter((model) => model.id !== OPENLLM_ID);
+    expect(chatModelChip(OPENLLM_ID, OPENLLM_ID, null, paid)).toEqual({
+      label: "RouteLLM",
+      unavailable: false,
+    });
+    // No plan's router to name: the pin, as for any model no provider lists.
+    const noRouter = paid.filter((model) => model.recommended !== true);
+    expect(chatModelChip(OPENLLM_ID, OPENLLM_ID, null, noRouter)).toEqual({
+      label: OPENLLM_ID,
+      unavailable: true,
     });
   });
 

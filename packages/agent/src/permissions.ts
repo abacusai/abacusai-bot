@@ -26,6 +26,7 @@ import {
   secretEntries,
 } from "./sandbox/secrets.js";
 import { zoneContext, zoneOf } from "./sandbox/zones.js";
+import { isSecretFileName } from "./secret-files.js";
 import {
   ownEntry,
   sourceAllows,
@@ -492,21 +493,6 @@ function gateUnattended(tool: ToolRequest, options: GateOptions): Gate {
 }
 
 /**
- * Files that hold keys or tokens wherever they sit, matched on any segment
- * of the path. Templates (`.env.example`) are not secrets.
- */
-const SECRET_FILE_NAMES: readonly RegExp[] = [
-  /^\.env(?!\.(?:example|sample|template|dist)$)(?:\..+)?$/i,
-  /^\.envrc$/i,
-  /\.(?:pem|key|p12|pfx|jks|keystore|kdbx|ppk|gpg|asc|der)$/i,
-  /^id_(?:rsa|dsa|ecdsa|ed25519)(?:_sk)?$/i,
-  /^\.(?:netrc|npmrc|pypirc|pgpass|git-credentials|htpasswd)$/i,
-  /^\.(?:ssh|gnupg|aws|azure|kube|docker|password-store)$/i,
-  /^(?:credentials|secrets?)(?:\.(?:json|ya?ml|toml|ini|txt))?$/i,
-  /^(?:service[-_]?account|client[-_]?secret)[^/\\]*\.json$/i,
-];
-
-/**
  * Whether a read names a secret: by file name anywhere in the path, or a
  * credential store the sandbox hides (secretEntries). Both the spelled and
  * the real path are checked, so a link cannot rename one.
@@ -520,9 +506,7 @@ function readsSecretFile(tool: ToolRequest, cwd: string): boolean {
   const realRoot = realPathOf(root) ?? root;
   // Names below the workspace only: the folder's own path is not the file's.
   const namesSecret = (relative: string): boolean =>
-    relative
-      .split(/[\\/]/)
-      .some((segment) => SECRET_FILE_NAMES.some((re) => re.test(segment)));
+    relative.split(/[\\/]/).some(isSecretFileName);
   return requested.some((raw) => {
     const lexical = toolPath(raw, cwd);
     if (lexical == null) return true;

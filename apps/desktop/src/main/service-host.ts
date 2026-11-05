@@ -16,10 +16,10 @@ import {
   connectorById,
   connectorForService,
 } from "@abacus-ai/connectors/registry";
-import type {
+import {
   AgentMode,
-  DesktopEvent,
-  UserTextTags,
+  type DesktopEvent,
+  type UserTextTags,
 } from "@abacus-ai/contract/agent-types";
 import type {
   BotChangeNotice,
@@ -28,6 +28,10 @@ import type {
   BotCreateInput,
   BotUpdateInput,
 } from "@abacus-ai/contract/bots";
+import {
+  CHECK_IN_PROMPT,
+  missionForCheckIn,
+} from "@abacus-ai/contract/bots/check-in";
 import type {
   Channel,
   ChannelSummary,
@@ -200,6 +204,10 @@ import {
   type RoutineUpdateInput,
 } from "@abacus-ai/contract/routines";
 import { InvalidInputError } from "@abacus-ai/contract/service-errors";
+import type {
+  SitePack,
+  SitePackProgress,
+} from "@abacus-ai/contract/site-deploy";
 import { isPositiveReactionEmoji } from "@abacus-ai/contract/success-pitch";
 import type {
   TerminalShellId,
@@ -233,12 +241,17 @@ import {
   createJob,
   getJob,
   listJobs,
+  moveJobModels,
+  minuteOf,
+  noteChatPlatform,
   nextRun,
   onCronStoreWrite,
   attemptOfSession,
   holdInterrupted,
   onRoutineRunStarted,
   recordRun,
+  setChatLinkLost,
+  setHeld,
   type RoutineRunStarted,
   removeJob,
   updateJob,
@@ -308,7 +321,10 @@ import {
   stuckRuns,
 } from "./services/agent-tools/routine-guards";
 import { readMigrationMarker } from "./services/agent-tools/routine-migration";
-import { buildRoutineFirePrompt } from "./services/agent-tools/routine-prompt";
+import {
+  buildRoutineEditorPrompt,
+  buildRoutineFirePrompt,
+} from "./services/agent-tools/routine-prompt";
 import { cleanSources, policyFor } from "./services/agent-tools/routine-reach";
 import {
   countRoutineRuns,
@@ -322,8 +338,15 @@ import {
 } from "./services/agent-tools/routine-runs-store";
 import {
   connectorActionsOf,
+  countedActions,
+  outwardActionOf,
   RoutineSendLedger,
 } from "./services/agent-tools/routine-send-ledger";
+import {
+  SitePacker,
+  siteDirTooBroad,
+  siteExportDir,
+} from "./services/agent-tools/site-pack";
 import { stopAllServed } from "./services/agent-tools/static-server";
 import { WebhookRelay } from "./services/agent-tools/webhook-relay";
 import { WebhookService } from "./services/agent-tools/webhook-service";
@@ -334,6 +357,8 @@ import {
   BOT_ASK_TURN_TIMEOUT_MS,
   BOT_TASK_PREFIX,
   BOT_TASK_TURN_TIMEOUT_MS,
+  steppedInError,
+  taskFollowUpNote,
 } from "./services/bots/bot-ask";
 import {
   type BotAskRecord,
@@ -515,6 +540,8 @@ import {
 import { listAvailableModels, modelForTier } from "./services/providers/models";
 import {
   currentTier,
+  newRoutineModel,
+  resolveRoutineModel,
   resolveSessionModel,
 } from "./services/providers/session-model";
 import {
@@ -623,9 +650,21 @@ interface ChannelWorkRun {
 }
 
 const USER_WORDS_FRESH_MS = 15 * 60_000;
+/** How long after a passed-on task ends the user's next words there still go back to the passer. */
+const TASK_FOLLOW_UP_MS = 60 * 60_000;
 
-const AGREEMENT =
-  /^(?:yes|yeah|yep|yup|ok|okay|sure|go ahead|please|do it|sounds good|y)\b[\s\w,.!']{0,30}$/i;
+/**
+ * A short yes, in the app's languages, not taken back in the same breath
+ * ("ok but actually no", "okay never mind" are not a yes).
+ */
+const YES =
+  "yes|yeah|yep|yup|ok|okay|sure|go ahead|please|do it|sounds good|y|sí|si|claro|dale|vale|adelante|oui|ouais|d'accord|vas-y|allez-y|ja|jawohl|klar|gerne|sim|pode|certo|va bene|ya|iya|boleh|silakan|evet|tamam|olur|はい|うん|どうぞ|お願いします|네|예|응|좋아|👍";
+const TAKEN_BACK =
+  "but|no|not|don'?t|never|nah|forget|cancel|instead|actually|wait|hold|nein|non|pero|mais|aber|não|nao|hayır|tidak|jangan|いや|やめ|아니";
+const AGREEMENT = new RegExp(
+  `^(?:${YES})(?=[\\s,.!'’、。]|$)(?![\\p{L}\\p{N}\\s,.!'’、。]{0,30}(?<![\\p{L}\\p{N}])(?:${TAKEN_BACK})(?![\\p{L}\\p{N}]))[\\p{L}\\p{N}\\s,.!'’、。]{0,30}$`,
+  "iu"
+);
 
 /** A chat app's message without its "[WhatsApp message from …]" label. */
 const unlabelled = (text: string): string =>
@@ -729,6 +768,18 @@ const handOffRefusal = (
     ? 'The user did not ask to hand this off, so nothing was sent. Do it yourself, or offer in one line ("Planner could do this. Want me to pass it on?") and wait for their yes.'
     : 'The user did not ask you to ask another bot, so nothing was sent. Answer yourself, or offer in one line ("Writer could draft this. Want me to ask it?") and wait for their yes.';
 };
+
+/**
+ * What a routine asks to run on: its own model, null for its plan's default.
+ * One migration step 9 has not reached runs as it did: its bot's, else the
+ * stored default.
+ */
+const routineAsk = (job: CronJob): string | null =>
+  job.model !== undefined
+    ? job.model
+    : ((job.botId == null ? null : getBot(job.botId)?.model) ??
+      readSettings().defaultModel ??
+      null);
 
 export class ServiceHost {
   constructor(readonly platform: HostPlatform = "electron") {
@@ -1000,6 +1051,7 @@ export class ServiceHost {
       if (
         sessions.get(sessionId) == null ||
         sessions.isRoutineSession(sessionId) ||
+        this.hostedRunSessions.has(sessionId) ||
         sessions.unattendedPolicy(sessionId) != null
       )
         return null;
@@ -1048,6 +1100,7 @@ export class ServiceHost {
     channelForSession: (sessionId) => this.laneChannels.get(sessionId) ?? null,
     isOwnerSession: (sessionId) => this.isOwnerSession(sessionId),
     checkoutToken: this.checkoutToken,
+    noVault: (sessionId) => this.hostedRunSessions.has(sessionId),
     heldSession: (sessionId) => {
       const policy = this.heldPolicy(sessionId);
       if (policy == null) return null;
@@ -1089,6 +1142,7 @@ export class ServiceHost {
     if (
       session == null ||
       this.agentSessionManagerService.isRoutineSession(sessionId) ||
+      this.hostedRunSessions.has(sessionId) ||
       this.isUnattendedSession(sessionId)
     )
       return false;
@@ -1201,7 +1255,7 @@ export class ServiceHost {
    * anything starts. The wall is the server's own refusal, so it is the only
    * threshold; the account is re-read so a top-up starts the run at once.
    */
-  private async routineAtCreditWall(): Promise<boolean> {
+  private async routineAtCreditWall(job?: CronJob): Promise<boolean> {
     const prefs = this.prefs?.();
     if (prefs == null) return false;
     const stops = (): boolean =>
@@ -1210,14 +1264,14 @@ export class ServiceHost {
         creditSnapshot(),
         Date.now()
       );
-    if (!stops() || !(await this.routinesSpendCredits())) return false;
+    if (!stops() || !(await this.routineSpendsCredits(job))) return false;
     await fetchAbacusAccount(true).catch(() => null);
     return stops();
   }
 
-  /** Whether the model routines run on bills Abacus credits. */
-  private async routinesSpendCredits(): Promise<boolean> {
-    const model = readSettings().defaultModel ?? OPENLLM_ID;
+  /** Whether the model this routine runs on bills Abacus credits. */
+  private async routineSpendsCredits(job?: CronJob): Promise<boolean> {
+    const model = (job == null ? null : routineAsk(job)) ?? OPENLLM_ID;
     if (model === OPENLLM_ID) return true;
     if (!model.startsWith("abacus/")) return false;
     const models = await listAvailableModels();
@@ -1239,6 +1293,38 @@ export class ServiceHost {
       .catch((error: unknown) => {
         console.warn(`[routines] credit notice failed: ${String(error)}`);
       });
+  }
+
+  private readonly sitePacker = new SitePacker();
+
+  /**
+   * The chat's latest site as a zip for Abacus AI Agent on the web. A site
+   * whose folder is unknown or not its own (siteDirTooBroad) is refused.
+   */
+  async packSite(sessionId: string, packId: string): Promise<SitePack> {
+    const mark = this.prefs?.()?.get().siteReady?.[sessionId];
+    if (mark == null) return { state: "none" };
+    if (
+      mark.siteDir == null ||
+      siteDirTooBroad(mark.siteDir, this.sessionDirectory(sessionId))
+    )
+      return { state: "too-broad" };
+    const messages = await this.threadStore
+      .readCurrent(sessionId)
+      .catch(() => []);
+    return this.sitePacker.pack(packId, {
+      siteDir: mark.siteDir,
+      messages,
+      outDir: siteExportDir(sessionId),
+    });
+  }
+
+  sitePackProgress(packId: string): SitePackProgress | null {
+    return this.sitePacker.progress(packId);
+  }
+
+  cancelSitePack(packId: string): void {
+    this.sitePacker.cancel(packId);
   }
 
   /**
@@ -1410,6 +1496,17 @@ export class ServiceHost {
     }
   }
 
+  /** How a notice reaches the user outside any chat; the app shell owns it. */
+  private userNotifier:
+    | ((platform: MessagingPlatformId, title: string, body: string) => void)
+    | null = null;
+
+  attachUserNotifier(
+    notify: (platform: MessagingPlatformId, title: string, body: string) => void
+  ): void {
+    this.userNotifier = notify;
+  }
+
   /** Hear each finished hosted run once (the Routines notifications). */
   onHostedRun(listener: (event: HostedFeedEvent) => void): () => void {
     return this.hostedFeed.listen(listener);
@@ -1427,6 +1524,7 @@ export class ServiceHost {
     skillsService: this.skillsService,
     previewTargets: this.previewTargets,
     hostedRoutines: () => this.hostedRoutinesOffered(),
+    routinesFullAccess: () => this.hostedRoutines.fullAccessNow(),
     enabledToolsets: () => {
       const states = this.getToolsetStates();
       return new Set(Object.keys(states).filter((id) => states[id]));
@@ -1494,11 +1592,17 @@ export class ServiceHost {
     runCronJob: (jobId, trigger) => this.runRoutine(jobId, trigger ?? "manual"),
     routineFireForSession: (sessionId) =>
       this.routineFires.get(sessionId) ?? null,
+    noteRoutinePlatform: (sessionId, platform) => {
+      const fire = this.routineFires.get(sessionId);
+      if (fire != null) noteChatPlatform(fire.split("@")[0]!, platform);
+    },
     routineSends: this.routineSends,
     // A routine's run is its bot's work too: a routine made from inside one
     // belongs to the bot, and `list` shows the bot its own.
     isAppBotChat: (sessionId) => this.botService.isAppBotChat(sessionId),
     botIdForSession: (sessionId) => this.botOfSession(sessionId),
+    missionJustEdited: (botId) => this.botService.missionJustEdited(botId),
+    funnel: (step, detail) => reportFunnelStep(step, detail),
     conversationKeyForSession: (sessionId) =>
       this.conversationKeyForSession(sessionId),
     channelForSession: (sessionId) => this.laneChannels.get(sessionId) ?? null,
@@ -1544,8 +1648,14 @@ export class ServiceHost {
     routines: {
       defaultRunner: () => this.defaultRoutineRunner(),
       hostedOnly: () => this.hostedOnly(),
-      create: async (input, options) => {
-        const routine = await this.createRoutine(input, undefined, options);
+      create: async (input, { fromSession, ...options } = {}) => {
+        const routine = await this.createRoutine(input, undefined, {
+          ...options,
+          chatModel:
+            fromSession == null
+              ? null
+              : this.agentSessionManagerService.get(fromSession)?.model,
+        });
         // The user hears of every routine the agent sets up.
         if (options?.byAgent === true) this.routineCreatedByAgent(routine);
         return routine;
@@ -1742,8 +1852,18 @@ export class ServiceHost {
         emittedAt: new Date().toISOString(),
       })
   );
-  private readonly connectorGate = new ConnectorGate((event) =>
-    this.emitEvent(event)
+  private readonly connectorGate = new ConnectorGate(
+    (event) => this.emitEvent(event),
+    {
+      file: () => path.join(abacusBotHome(), "connector-asks.json"),
+      routineOf: (key) => {
+        const ref = conversationRefFromKey(key);
+        return ref?.kind === "session"
+          ? (this.agentSessionManagerService.get(ref.sessionId)?.routineId ??
+              null)
+          : null;
+      },
+    }
   );
   /** What each session waits on the user for; read by the hosted phone lane's agenda. */
   private readonly pendingWaits = new PendingWaits();
@@ -2076,10 +2196,11 @@ export class ServiceHost {
   }
 
   /**
-   * The plan changed: the app default and every chat pinned to a model the
-   * new plan does not serve (the free plan's OpenLLM, on a paid one) move to
-   * the plan's model now, running agents included, so the chip and the next
-   * turn (a resent one too) are on it. Pins the plan still serves stay.
+   * The plan changed: the app default, every routine and every chat pinned
+   * to a model the new plan does not serve (the free plan's OpenLLM, on a paid
+   * one) move to the plan's model now, running agents included, so the chip
+   * and the next turn (a resent one too) are on it. Pins the plan still serves
+   * stay.
    */
   private moveModelPinsToTier(): void {
     const tier = currentTier();
@@ -2088,6 +2209,11 @@ export class ServiceHost {
       const moved = modelForTier(tier, stored);
       if (moved !== stored) setDefaultModel(moved);
     }
+    if (moveJobModels((model) => modelForTier(tier, model)))
+      this.emitEvent({
+        type: "cronjobs-updated",
+        emittedAt: new Date().toISOString(),
+      });
     for (const session of this.agentSessionManagerService.listAll())
       this.moveSessionPinToTier(session.workspaceId, session.id);
   }
@@ -2125,6 +2251,21 @@ export class ServiceHost {
       type: "connector-status-changed",
       emittedAt: new Date().toISOString(),
     });
+    void this.pruneKeptConnectorCards();
+  }
+
+  /**
+   * A kept card outlives the watch behind it: read here whether its connector
+   * is connected by now, or its routine gone.
+   */
+  private async pruneKeptConnectorCards(): Promise<void> {
+    if (!this.connectorGate.hasKept()) return;
+    const statuses = await this.connectorStatuses.list();
+    this.connectorGate.prune(
+      (connectorId, routineId) =>
+        statuses[connectorId]?.state === "connected" ||
+        getJob(routineId) == null
+    );
   }
 
   private connectorStatusTimer: NodeJS.Timeout | null = null;
@@ -2390,6 +2531,8 @@ export class ServiceHost {
   /** Given callbacks, not this host, so it cannot reach further than needed. */
   private readonly messagingGatewayService = new MessagingGatewayService({
     platform: () => this.platform,
+    notifyUser: (platform, title, body) =>
+      this.userNotifier?.(platform, title, body),
     appLanguage: () => this.appLanguage(),
     resolveWorkspaceId: () => {
       const workspaces = this.workspaceService.getWorkspaces();
@@ -2427,8 +2570,11 @@ export class ServiceHost {
     updateSessionLabel: (workspaceId, sessionId, label) => {
       this.updateAgentSessionLabel(workspaceId, sessionId, label);
     },
-    startSession: (workspaceId, sessionId, mode) =>
-      this.startAgentSession({ workspaceId, sessionId, mode }),
+    startSession: (workspaceId, sessionId, mode) => {
+      // A chat app can't show the test repair's line, nor Stop it.
+      this.laneEnv.set(sessionId, { ABACUSAI_BOT_VERIFY_RETRIES: "0" });
+      return this.startAgentSession({ workspaceId, sessionId, mode });
+    },
     sendMessage: (workspaceId, sessionId, message, userText) => {
       void this.sendAgentMessage({ workspaceId, sessionId, message, userText });
     },
@@ -2450,6 +2596,7 @@ export class ServiceHost {
         emittedAt: new Date().toISOString(),
       });
     },
+    onPlatformConnected: (platform) => this.routineLinkBack(platform),
     emitChanged: () => {
       this.emitEvent({
         type: "messaging-updated",
@@ -2488,6 +2635,19 @@ export class ServiceHost {
       workspaceId,
     createSession: (workspaceId, owner) =>
       this.createAgentSession(workspaceId, null, owner),
+    botRoutines: (botId) =>
+      [
+        ...listJobs().filter((job) => job.serverId == null),
+        ...this.hostedRoutines.list(),
+      ]
+        .filter((routine) => routine.botId === botId)
+        .map((routine) => ({
+          id: routine.id,
+          name: routine.name,
+          when:
+            routine.schedule ?? (routine.runAt != null ? "once" : "on webhook"),
+          checkIn: routine.prompt === CHECK_IN_PROMPT,
+        })),
     findOwnedSession: (botId, role, key) => {
       const found = this.agentSessionManagerService.findOwned(botId, role, key);
       return found == null
@@ -2686,6 +2846,11 @@ export class ServiceHost {
         );
         // Same reason: the remote user must not receive a cancelled tail.
         this.messagingGatewayService.handleAgentEvent(sessionId, payload);
+        if (
+          payload.type === "event" &&
+          payload.event.type === "promised_work_recovery"
+        )
+          reportFunnelStep("promised_work_recovery", payload.event.model);
         for (const listener of this.agentEventListeners)
           listener(sessionId, payload);
         this.noteRoutineEvent(sessionId, payload);
@@ -4081,9 +4246,10 @@ export class ServiceHost {
     // session before its list has loaded, and the agent would then report the
     // wrong model back over the record that should have chosen it. With
     // neither (a routine's run, a bot's chat brought back), the one resolver:
-    // the session's bot's model, else the stored default, else the plan
-    // tier's. Not the agent's own fallback, which is the free pool whatever
-    // the tier. The pick is kept on the session, so it lists what runs.
+    // a routine's own model, else its plan's; a chat's bot's, else the stored
+    // default, else the plan tier's. Not the agent's own fallback, which is the
+    // free pool whatever the tier. The pick is kept on the session, so it lists
+    // what runs.
     // A pin the plan no longer serves moves first (moveModelPinsToTier).
     this.moveSessionPinToTier(request.workspaceId, request.sessionId);
     const remembered = this.agentSessionManagerService.get(
@@ -4142,9 +4308,17 @@ export class ServiceHost {
   private async resolveUnpinnedModel(
     request: StartAgentSessionRequest
   ): Promise<string | null> {
+    const routineId =
+      this.agentSessionManagerService.get(request.sessionId)?.routineId ?? null;
+    const job = routineId == null ? null : getJob(routineId);
     const botId = this.botOfSession(request.sessionId);
     const bot = botId == null ? null : getBot(botId);
-    const model = await resolveSessionModel(bot?.model ?? null);
+    const model =
+      job != null
+        ? await resolveRoutineModel(routineAsk(job))
+        : this.hostedRunSessions.has(request.sessionId)
+          ? await resolveRoutineModel(null)
+          : await resolveSessionModel(bot?.model ?? null);
     if (model != null)
       this.setAgentSessionModel(request.workspaceId, request.sessionId, model);
     return model;
@@ -5251,6 +5425,8 @@ export class ServiceHost {
     });
     this.cronScheduler.everyMinute(() => this.reapStuckRoutineRuns());
     this.cronScheduler.start();
+    this.connectorGate.restore();
+    void this.pruneKeptConnectorCards();
     void this.webhookService.start().catch((err: unknown) => {
       console.error("[webhooks] failed to start listener:", err);
     });
@@ -5389,15 +5565,19 @@ export class ServiceHost {
 
   /**
    * One hosted routine run on this computer, from the server's routine lane:
-   * a fresh session held to the unattended mode and the routine's declared
-   * reach, given the run's prompt, and stopped at its deadline. Resolves
-   * with how it ended and its final answer's text; never retried.
+   * a fresh session given the run's prompt and stopped at its deadline. With
+   * full access (only the server says so) it has what a chat has, the vault
+   * aside; any other is held to the unattended mode and the routine's
+   * declared reach. Resolves with how it ended, its final answer's text and,
+   * at full access, what it did outward; never retried.
    */
   async runUnattended(request: HostedRunRequest): Promise<{
     outcome: "completed" | "failed" | "timeout" | "not-started";
     text: string;
     /** It failed for want of credits. */
     creditsOut?: boolean;
+    /** A full-access run's outward actions, shown with its answer. */
+    actions?: string[];
   }> {
     // Told to the server as out of credits, which pauses it and says so.
     if (await this.routineAtCreditWall())
@@ -5406,8 +5586,10 @@ export class ServiceHost {
     if (target == null) return { outcome: "not-started", text: "" };
     const session = this.agentSessionManagerService.create(target);
     this.hostedRunSessions.add(session.id);
+    const full = request.access === "full";
     // Held before it can start; a session that cannot be held never runs.
     if (
+      !full &&
       !this.agentSessionManagerService.holdUnattended(
         session.id,
         policyFor(
@@ -5454,9 +5636,14 @@ export class ServiceHost {
     }>((resolve) => {
       settle = resolve;
     });
+    const actions: string[] = [];
     const stopListening = this.onAgentEvent((sessionId, payload) => {
       if (sessionId !== session.id || payload.type !== "event" || !sent) return;
       const event = payload.event;
+      if (event.type === "tool_execution_complete") {
+        const action = outwardActionOf(event.tool.name, event.tool.input);
+        if (action != null) actions.push(action);
+      }
       if (event.type !== "text_delta") return;
       const id = event.messageId ?? "message";
       lastMessage = id;
@@ -5486,6 +5673,7 @@ export class ServiceHost {
     const started = await this.startAgentSession({
       workspaceId: target,
       sessionId: session.id,
+      ...(full ? { mode: AgentMode.Yolo } : {}),
       // Startup comes out of the run's own time.
       startupTimeoutMs: Math.min(
         UNATTENDED_STARTUP_TIMEOUT_MS,
@@ -5517,6 +5705,7 @@ export class ServiceHost {
         outcome: ended.outcome,
         text,
         ...(ended.creditsOut === true ? { creditsOut: true } : {}),
+        ...(full ? { actions: countedActions(actions) } : {}),
       };
     } finally {
       if (timer != null) clearTimeout(timer);
@@ -5551,6 +5740,30 @@ export class ServiceHost {
     ).filter((run) => new Date(run.startedAt).getTime() > resumedAt);
     if (shouldPauseQuiet(runs, job.runs, resumedAt))
       this.pauseRoutine(routineId, ROUTINE_PAUSE_NOTES.quiet);
+  }
+
+  /** Every chat app this routine sends through has lost its link. */
+  private routineLinkDown(job: CronJob): boolean {
+    const used = job.chatPlatforms ?? [];
+    const unlinked: string[] = this.messagingGatewayService.unlinkedPlatforms();
+    return used.length > 0 && used.every((id) => unlinked.includes(id));
+  }
+
+  /** Marked at the first skipped fire, for the make-up run when the link is back. */
+  private markRoutineLinkLost(job: CronJob): void {
+    if (job.chatLinkLostAt == null) setChatLinkLost(job.id, Date.now());
+  }
+
+  /** The link is back: each routine it held makes up one run. */
+  private routineLinkBack(platform: string): void {
+    const now = Date.now();
+    for (const job of listJobs()) {
+      if (job.chatLinkLostAt == null || !job.chatPlatforms?.includes(platform))
+        continue;
+      setChatLinkLost(job.id, null);
+      if (job.enabled && job.heldSince == null)
+        setHeld(job.id, now, { slot: minuteOf(now), reason: "catch-up" });
+    }
   }
 
   private pauseRoutine(routineId: string, reason: string): void {
@@ -5606,13 +5819,18 @@ export class ServiceHost {
    * bot's work; without its memory it drafted for the very people the user
    * had told it to leave alone.
    */
-  private withBotVoice(botId: string | null, prompt: string): string {
-    const bot = botId == null ? null : getBot(botId);
+  private withBotVoice(job: CronJob, prompt: string): string {
+    const bot = job.botId == null ? null : getBot(job.botId);
     if (bot == null) return prompt;
     const memory = readBotMemoryText(bot.id);
+    const mission =
+      job.prompt === CHECK_IN_PROMPT
+        ? missionForCheckIn(bot.description)
+        : null;
     const voice = [
       `You are ${bot.name}, running a routine you set up for the user.`,
       bot.persona.length > 0 ? `Your voice, every message: ${bot.persona}` : "",
+      mission != null ? `Your mission:\n${mission}` : "",
       memory.length > 0
         ? `What you remember about the user and this work:\n${memory}`
         : "",
@@ -5621,6 +5839,9 @@ export class ServiceHost {
       .join("\n");
     return `${voice}\n\n${prompt}`;
   }
+
+  /** What the user wrote in a routine's chat box, while its editor's turn runs. */
+  private readonly routineEditorWords = new Map<string, string>();
 
   /** Callers (the routine editor, a bot's ask) waiting for a turn's text as a value. */
   private readonly turnWaiters = new Map<
@@ -5713,7 +5934,20 @@ export class ServiceHost {
    * the asker is mid-turn). Deferred through arrows: botService initializes
    * after this field.
    */
+  /**
+   * The app writes into a bot's daily notes what it settled, did or learned
+   * outside its own chat (work for another bot, a channel's decisions), each
+   * with its source: the bot carries it into every chat, and its memory
+   * search finds it later. Never another bot's mere words.
+   */
+  private noteToBot(botId: string, line: string): void {
+    const result = appendDailyNote(botDir(botId), line);
+    if (!result.ok)
+      console.warn(`[memory] note for ${botId} dropped: ${result.message}`);
+  }
+
   private readonly botAskService = new BotAskService({
+    note: (botId, line) => this.noteToBot(botId, line),
     bot: (id) => {
       const bot = this.botService.list().find((each) => each.id === id);
       return bot == null
@@ -5722,13 +5956,15 @@ export class ServiceHost {
     },
     runTurn: (ask, prompt, visibleFrom) =>
       this.runBotAskTurn(ask, prompt, visibleFrom),
+    // Stopped as the user's Stop does: the chat shows a stopped turn, not
+    // a crashed agent with a Retry that would run the request again.
     stopTurn: (ask) => {
       const handle = this.botAskTurns.get(ask.id);
-      if (handle != null)
-        this.agentManagerService.stopSession(
-          handle.workspaceId,
-          handle.sessionId
-        );
+      // A task still waiting for the user's own turn there is not sent at
+      // all; that turn is theirs and goes on.
+      const state = this.taskTurns.get(ask.id);
+      if (state != null && !state.sent) state.cancelled = true;
+      else if (handle != null) this.stopAgentTurn(handle);
     },
     tell: (ask, note) => this.tellBotAsk(ask, note),
     // The app's one way to refresh running chats' tools (as when a chat app
@@ -5743,18 +5979,6 @@ export class ServiceHost {
   private readonly channelTurns = new Map<string, BotChatHandle>();
 
   /** Group chats of the user and several bots (services/channels). */
-  /**
-   * The app writes into a bot's daily notes what it settled, did or learned
-   * outside its own chat (a channel's decisions, work for another bot), each
-   * with its source: the bot carries it into every chat, and its memory
-   * search finds it later. Never another bot's mere words.
-   */
-  private noteToBot(botId: string, line: string): void {
-    const result = appendDailyNote(botDir(botId), line);
-    if (!result.ok)
-      console.warn(`[memory] note for ${botId} dropped: ${result.message}`);
-  }
-
   private readonly channelService = new ChannelService({
     store: fileChannelStore(),
     note: (botId, line) => this.noteToBot(botId, line),
@@ -6058,7 +6282,8 @@ export class ServiceHost {
   ): void {
     // A task another bot passed on, or work taken on in a channel, is not
     // the user speaking here: nothing in that turn may pass work on, so
-    // the user's earlier words here no longer count either.
+    // their earlier words here no longer count either (else a doer could
+    // hand work back with their authority).
     if (message.startsWith(BOT_TASK_PREFIX)) {
       this.userWords.delete(sessionId);
       return;
@@ -6075,6 +6300,27 @@ export class ServiceHost {
       ...recent.slice(-1),
       { text: words, at: Date.now() },
     ]);
+    this.userSteppedIn(sessionId, words);
+    const followUp = this.taskFollowUps.get(sessionId);
+    if (followUp != null && followUp.words == null) followUp.words = words;
+  }
+
+  /**
+   * The user wrote in a bot's chat while a task another bot passed on runs
+   * there. Their message would wait for the task to end (it is never mixed
+   * into the task's report), so the task would finish and be reported as
+   * wanted even when they wrote "stop, do this instead". They are taking
+   * over: the task stops now, their message runs next, and the bot that
+   * passed it on is told what they said.
+   */
+  private userSteppedIn(sessionId: string, words: string): void {
+    for (const [askId, handle] of this.botAskTurns) {
+      const state = this.taskTurns.get(askId);
+      if (handle.sessionId === sessionId && state?.sent === true) {
+        state.steppedIn = words;
+        this.stopAgentTurn(handle);
+      }
+    }
   }
 
   /**
@@ -6161,6 +6407,87 @@ export class ServiceHost {
     });
   }
 
+  /** Doing bot's chat → the passed-on task that ended there, and the user's next words in it. */
+  private readonly taskFollowUps = new Map<
+    string,
+    { ask: BotAskRecord; words: string | null }
+  >();
+
+  /**
+   * After a passed-on task ends, the user's next message in the doing bot's
+   * chat (the one that stopped it, if they wrote over it) and that bot's
+   * answer go to the bot that passed it on (taskFollowUpNote), once, within
+   * the hour. The app sends it rather than the doing bot, so the passer
+   * learns that the user dropped, changed or resumed the task there whether
+   * or not that bot thinks to say so.
+   */
+  private watchTaskFollowUp(
+    sessionId: string,
+    ask: BotAskRecord,
+    words: string | null
+  ): void {
+    const entry = { ask, words };
+    this.taskFollowUps.set(sessionId, entry);
+    console.log(
+      `[bot-ask] ${ask.id} follow-up armed in ${ask.targetId}'s chat${words == null ? "" : " with the user's words"}`
+    );
+    const end = (): void => {
+      clearTimeout(timer);
+      stopListening();
+      if (this.taskFollowUps.get(sessionId) === entry)
+        this.taskFollowUps.delete(sessionId);
+    };
+    const timer = setTimeout(end, TASK_FOLLOW_UP_MS);
+    const stopListening = this.turnLedger.onClose((record) => {
+      if (record.sessionId !== sessionId) return;
+      if (this.taskFollowUps.get(sessionId) !== entry) return end();
+      if (entry.words == null) return;
+      const reply = this.replyTo(sessionId, entry.words);
+      // A turn before theirs closed: theirs is still to come.
+      if (reply == null) {
+        console.log(`[bot-ask] ${ask.id} follow-up: no reply yet`);
+        return;
+      }
+      end();
+      console.log(`[bot-ask] ${ask.id} follow-up sent to ${ask.askerId}`);
+      const doer = this.botService
+        .list()
+        .find((bot) => bot.id === ask.targetId);
+      if (doer != null)
+        this.tellBotAsk(ask, taskFollowUpNote(ask, doer, entry.words, reply));
+    });
+  }
+
+  /** The bot's answer in its chat to the user's message `words`, or null before there is one. */
+  private replyTo(sessionId: string, words: string): string | null {
+    const file =
+      this.agentSessionManagerService.getDiagnosticInfo(sessionId)
+        ?.agentSessionFile ?? null;
+    // A long reply (many tool calls) can run to megabytes after the user's
+    // message, so the whole log is read, not its last stretch.
+    const turns = readTranscriptTail(
+      file,
+      5000,
+      undefined,
+      3000,
+      64 * 1024 * 1024
+    );
+    // The whole message, as the tail keeps it (cut at 3000 with an ellipsis).
+    const key = words.replace(/\s+/g, " ").trim().slice(0, 3000);
+    const at = turns.findLastIndex(
+      (turn) =>
+        turn.role === "user" && (turn.text === key || turn.text === `${key}…`)
+    );
+    if (at < 0) return null;
+    const reply = turns
+      .slice(at + 1)
+      .filter((turn) => turn.role === "assistant")
+      .map((turn) => turn.text.replace(/\bNO_REPLY\b/g, "").trim())
+      .filter((text) => text.length > 0)
+      .join("\n\n");
+    return reply.length > 0 ? reply : null;
+  }
+
   /** Resolves true once the session has no turn open, false after `ms`. */
   private turnClosed(sessionId: string, ms: number): Promise<boolean> {
     if (!this.turnLedger.isOpen(sessionId)) return Promise.resolve(true);
@@ -6227,6 +6554,15 @@ export class ServiceHost {
 
   /** The asked bot's conversation for each ask whose turn is running. */
   private readonly botAskTurns = new Map<string, BotChatHandle>();
+  /**
+   * Each running task: whether its prompt is in the doing bot's chat (the
+   * user writing there then steps in, and what they wrote is kept), and
+   * whether it was cancelled before that (it is then never sent).
+   */
+  private readonly taskTurns = new Map<
+    string,
+    { sent: boolean; cancelled: boolean; steppedIn: string | null }
+  >();
 
   /**
    * One turn of the asked bot in its conversation with the asker, a sender
@@ -6240,6 +6576,12 @@ export class ServiceHost {
     visibleFrom: number | null
   ): Promise<string> {
     const task = ask.kind === "task";
+    const state = {
+      sent: false,
+      cancelled: false,
+      steppedIn: null as string | null,
+    };
+    if (task) this.taskTurns.set(ask.id, state);
     const asker = this.botService.list().find((bot) => bot.id === ask.askerId);
     const handle = task
       ? await this.botService.openChat(ask.targetId)
@@ -6258,6 +6600,14 @@ export class ServiceHost {
           !(await this.turnClosed(handle.sessionId, BOT_TASK_TURN_TIMEOUT_MS))
         )
           throw new Error("it stayed busy in its own chat for 30 minutes.");
+        if (state.cancelled)
+          throw new Error("it was cancelled before it began.");
+        // A turn there just stopped (the task before this one, say) closes
+        // a moment after the stop: not on this task's waiter.
+        await this.sessionTurnStateService.stopSettled(
+          handle.sessionId,
+          15_000
+        );
       } else if (this.turnLedger.isOpen(handle.sessionId))
         // A turn left open there (one stopped or cut off) would take this
         // request into it; asks of one pair never overlap otherwise.
@@ -6271,7 +6621,7 @@ export class ServiceHost {
           timeout: `it took more than ${task ? 30 : 10} minutes, so it was stopped.`,
           failed: "its turn ended without an answer.",
           stopped: task
-            ? "the user stopped it partway through, so it may be half done."
+            ? "the user stopped it partway through, so it may be half done. Don't do it yourself or pass it on again unless they ask."
             : "it was stopped before it answered.",
           segment: BOT_ANSWER_SEGMENT,
         }
@@ -6288,6 +6638,7 @@ export class ServiceHost {
             }
           : {}),
       });
+      state.sent = true;
       // Refused before any turn opened (its workspace is gone): nothing will
       // close a turn, so the waiter is ended here rather than at the timeout.
       if (!sent) {
@@ -6302,9 +6653,18 @@ export class ServiceHost {
           handle.workspaceId,
           handle.sessionId
         );
+      if (state.steppedIn != null)
+        throw new Error(steppedInError(state.steppedIn));
       throw error;
     } finally {
+      if (
+        task &&
+        !state.cancelled &&
+        this.botAskService.get(ask.askerId, ask.id)?.status !== "cancelled"
+      )
+        this.watchTaskFollowUp(handle.sessionId, ask, state.steppedIn);
       this.botAskTurns.delete(ask.id);
+      this.taskTurns.delete(ask.id);
     }
   }
 
@@ -6322,7 +6682,12 @@ export class ServiceHost {
    * "Every morning at 9 instead": a short turn in a session holding only the
    * cron tool applies the change and answers in a line.
    */
-  async editRoutineByChat(routineId: string, text: string): Promise<string> {
+  async editRoutineByChat(
+    routineId: string,
+    text: string,
+    /** The run on the user's screen; the newest when none is. */
+    runId?: string
+  ): Promise<string> {
     const job = getJob(routineId);
     if (job == null)
       throw new EntityNotFoundError(
@@ -6353,43 +6718,37 @@ export class ServiceHost {
     if (!started.success)
       throw new Error(started.error ?? "The editor could not start.");
 
-    const schedule =
-      job.schedule ??
-      (job.runAt != null
-        ? `once at ${new Date(job.runAt).toLocaleString()}`
-        : "manual");
-    const prompt = [
-      `You are the editor for the routine "${job.name}" (id ${job.id}).`,
-      "The user is telling you how it should change. Apply the change with",
-      `the cronjob tool on exactly this routine (id ${job.id}): action`,
-      '"update" for the schedule (five-field cron, local time), prompt or',
-      'name; "pause" or "resume"; "run" to fire it now. Do not touch any',
-      "other routine and do not do the routine's own task yourself.",
-      "Then answer in one short line saying what is now the case, in the",
-      "user's words, no preamble. If the request is not about this routine,",
-      "say so in one line and change nothing.",
-      "",
-      `Current schedule: ${schedule}`,
-      `Enabled: ${job.enabled ? "yes" : "no"}`,
-      `Instructions: ${job.prompt}`,
-      "",
-      `The user says: ${text}`,
-    ].join("\n");
+    // Only this routine's own runs: the id comes from the page.
+    const runs = this.listRoutineRuns(routineId);
+    const run = runs.find((item) => item.sessionId === runId) ?? runs[0];
+    const prompt = buildRoutineEditorPrompt(
+      job,
+      text,
+      run == null
+        ? null
+        : { at: run.startedAt, text: this.threadReply(run.sessionId) }
+    );
 
     const answer = this.waitForTurn(editor.id, 90_000);
-    // A message no agent took closes its turn too: `answer` then rejects.
-    await this.sendAgentMessage({
-      workspaceId,
-      sessionId: editor.id,
-      message: prompt,
-      userText: {
-        operator: {
-          kind: "routine-editor",
-          visibleFrom: prompt.length - text.length,
+    this.routineEditorWords.set(routineId, text);
+    let reply: string;
+    try {
+      // A message no agent took closes its turn too: `answer` then rejects.
+      await this.sendAgentMessage({
+        workspaceId,
+        sessionId: editor.id,
+        message: prompt,
+        userText: {
+          operator: {
+            kind: "routine-editor",
+            visibleFrom: prompt.length - text.length,
+          },
         },
-      },
-    });
-    const reply = await answer;
+      });
+      reply = await answer;
+    } finally {
+      this.routineEditorWords.delete(routineId);
+    }
     this.emitEvent({
       type: "cronjobs-updated",
       emittedAt: new Date().toISOString(),
@@ -6494,8 +6853,13 @@ export class ServiceHost {
   async createRoutine(
     input: RoutineCreateInput,
     id?: string,
-    /** The agent asked for it (the cronjob tool), not the user's own form. */
-    options: { byAgent?: boolean; runAtText?: string | null } = {}
+    options: {
+      /** The agent asked for it (the cronjob tool), not the user's own form. */
+      byAgent?: boolean;
+      runAtText?: string | null;
+      /** The model of the chat that asked for it. */
+      chatModel?: string | null;
+    } = {}
   ): Promise<CreatedRoutine> {
     if (this.platform === "web-host" && onFreePlan(await fetchAbacusAccount()))
       throw new HostedRoutineRefusal("plan_limit", { limit: 0 });
@@ -6560,8 +6924,12 @@ export class ServiceHost {
       );
     const reach =
       sources.length > 0 || reads.length > 0 ? { sources, reads } : null;
+    const model = newRoutineModel(
+      input.botId == null ? null : getBot(input.botId)?.model,
+      options.chatModel
+    );
     const job = createJob(
-      { ...input, ...(reach != null ? { reach } : {}) },
+      { ...input, model, ...(reach != null ? { reach } : {}) },
       id
     );
     this.emitEvent({
@@ -6728,13 +7096,28 @@ export class ServiceHost {
     if (
       trigger !== "manual" &&
       trigger !== "create" &&
-      (await this.routineAtCreditWall())
+      (await this.routineAtCreditWall(job))
     ) {
       recordRun(jobId, ROUTINE_RESULTS.skippedCredits, trigger, {
         id: attemptId,
         kind: "skipped-credits",
       });
       this.holdRoutinesForCredits(jobId);
+      this.emitEvent({
+        type: "cronjobs-updated",
+        emittedAt: new Date().toISOString(),
+      });
+      return "skipped";
+    }
+
+    // Its results have nowhere to go: a run would bill for nothing. Someone
+    // pressing Run asked for it, so that one goes.
+    if (trigger !== "manual" && this.routineLinkDown(job)) {
+      recordRun(jobId, ROUTINE_RESULTS.skippedLink, trigger, {
+        id: attemptId,
+        kind: "skipped-link",
+      });
+      this.markRoutineLinkLost(job);
       this.emitEvent({
         type: "cronjobs-updated",
         emittedAt: new Date().toISOString(),
@@ -6770,7 +7153,7 @@ export class ServiceHost {
     const fireKey = `${jobId}@${fire?.slot ?? attemptId}`;
     const lastRun = readLastRoutineRun(home);
     const prompt = this.withBotVoice(
-      job.botId,
+      job,
       buildRoutineFirePrompt(job, trigger, payload, {
         unattended,
         dir: home,
@@ -6784,6 +7167,9 @@ export class ServiceHost {
         ),
         runs: countRoutineRuns(home),
         lastRun,
+        ...(trigger === "agent" && this.routineEditorWords.has(jobId)
+          ? { userWords: this.routineEditorWords.get(jobId) }
+          : {}),
         workspaces: workspaces
           .filter(
             (entry) => entry.status !== "deleted" && entry.kind !== "routine"
@@ -6964,7 +7350,9 @@ export class ServiceHost {
         // hosted Chromium; elsewhere the desktop's own views are always there.
         this.platform !== "web-host" ||
           this.builtinMcpLifecycle.isBrowserEnabled(),
-        this.vault != null
+        // Nobody is at a hosted run to give the yes the vault needs.
+        this.vault != null &&
+          !(sessionId != null && this.hostedRunSessions.has(sessionId))
       ),
       // A bot's chat carries the bot's identity; this process owns the registry.
       ...(sessionId != null

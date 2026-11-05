@@ -182,10 +182,24 @@ describe("the unattended gate", () => {
     expect(
       decide(
         "Google_Calendar_Tool",
-        { action: "search_event" },
+        { action: "search_events" },
         { origin: connector }
       )
     ).toBe("refuse");
+    // Given, and the action the connector really has.
+    expect(
+      decide(
+        "Google_Calendar_Tool",
+        { action: "search_events" },
+        {
+          origin: connector,
+          policy: {
+            ...POLICY,
+            connectorReads: { Google_Calendar_Tool: ["search_events"] },
+          },
+        }
+      )
+    ).toBe("allow");
     // Given, but not a read: still refused.
     expect(
       gmail("send_email", {

@@ -320,6 +320,21 @@ export const chatLineForMove = (
   });
 
 /**
+ * A job finished with no turn running: the line the user's own chat hears.
+ * No command: a path or a localhost address means nothing on a phone.
+ */
+export const chatLineForBackgroundJob = (
+  words: ChannelWords,
+  cause: string | undefined
+): string => {
+  if (cause === "timed-out")
+    return words.t("outcome.channel.backgroundTimedOut");
+  return cause === "failed"
+    ? words.t("outcome.channel.backgroundFailed")
+    : words.t("outcome.channel.backgroundFinished");
+};
+
+/**
  * A model off Abacus did not finish: what happened and why such a model
  * fails, then the way on. Free: RouteLLM - Open while Abacus credits are left, the
  * plan once they are used up. Paid: AbacusAI Agent on the web.

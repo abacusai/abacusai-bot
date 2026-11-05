@@ -1376,6 +1376,14 @@
     "deleteBody": "This deletes “{{name}}” and its run history.",
     "deleteError": "Could not delete the routine.",
     "deleteTitle": "Delete routine",
+    "duplicate": {
+      "badge": "Possible duplicate",
+      "delete": "Delete this one",
+      "description": "Same schedule, same job: the work happens twice and each run costs credits. Choose which one to keep.",
+      "keepBoth": "Keep both",
+      "pause": "Pause this one",
+      "title": "Looks like a copy of"
+    },
     "edit": "Edit",
     "editTitle": "Edit routine",
     "editorPlaceholder": "Tell the routine how to change: \"every morning at 9 instead\", \"stop\"",
@@ -1565,15 +1573,6 @@
       "missedNoticeFree": "{{names}}. On the Basic plan, Abacus AI Agent on the web runs routines 24/7, even with your computer off.",
       "missedNoticePaid": "{{names}}. Set up your routines in Abacus AI Agent on the web, where they run 24/7, even with your computer off."
     },
-    "upgraded": {
-      "title": "You're on {{plan}}",
-      "titleNoPlan": "You're on a paid plan",
-      "body": "Next, set up your routines in Abacus AI Agent on the web. They run 24/7 there, even when your computer is off.",
-      "autoReplies": "WhatsApp, Telegram and Discord auto-replies",
-      "allRoutines": "All your routines, on schedule",
-      "setUp": "Set up 24/7 routines",
-      "back": "Back to AbacusAI Bot"
-    },
     "reach": {
       "gmailSearch": "Search Gmail",
       "gmailRead": "Read Gmail messages",
@@ -1621,6 +1620,13 @@
     "upgrade": {
       "title": "Unlock routines",
       "description": "Upgrade to schedule tasks and automate your work."
+    },
+    "model": {
+      "label": "Model",
+      "planDefault": "Plan default",
+      "followsDefault": "Follows your plan's default: {{model}}.",
+      "costly": "Every run uses {{model}}, a costlier model, so each one spends more credits.",
+      "hosted": "Hosted routines run on your plan's default."
     }
   },
   "sessions": {
@@ -2949,8 +2955,16 @@
         "YOLO": "No approvals"
       }
     },
+    "appLine": {
+      "testRepair": "Tests failed after my change, fixing them.",
+      "testRepairLimit": "I stopped fixing the tests: this automatic repair reached its limit. Nothing else runs until you send a message.",
+      "testsLeftAlone": "Tests are failing, but I couldn't tell whether my change caused it, so I left them alone."
+    },
     "notice": {
       "dismiss": "Dismiss",
+      "backgroundFinished": "A background job finished: {{command}}. Send a message to pick up from here.",
+      "backgroundFailed": "A background job failed: {{command}}. Send a message to look at what happened.",
+      "backgroundTimedOut": "A background job was stopped at its time limit: {{command}}. Send a message to look at what happened.",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
       "unsaved": "The disk is full, so this chat isn't being saved. Free some space; it's saved again with your next message.",
@@ -3071,7 +3085,12 @@
       "done_other": "Done in {{duration}}, {{count}} steps",
       "stopped": "Stopped",
       "usage": "In {{input}} ({{cached}} cached) · Out {{output}}",
-      "done_zero": "Done in {{duration}}"
+      "done_zero": "Done in {{duration}}",
+      "credits_one": "{{credits}} credit",
+      "credits_other": "{{credits}} credits",
+      "creditsLeft_one": "{{credits}} credit · {{left}} left",
+      "creditsLeft_other": "{{credits}} credits · {{left}} left",
+      "creditsAction": "{{credits}}. See your plan and credits"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",
@@ -3435,6 +3454,7 @@
       "completed": "Completed",
       "failed": "Failed",
       "skipped": "Skipped",
+      "skipped-link": "Skipped: chat app not linked",
       "skipped-offline": "Skipped: offline",
       "skipped-credits": "Skipped: out of credits",
       "offline": "Couldn't reach Abacus",
@@ -4280,6 +4300,51 @@
     "waitingTitle": "Finish checkout in your browser",
     "waitingToSend": "Waiting to send: “{{text}}”"
   },
+  "paidWelcome": {
+    "title": "You're on {{plan}}",
+    "titleNoPlan": "You're on a paid plan",
+    "credits": "{{credits}} credits ready to use",
+    "model": "{{model}} is now your default model",
+    "agents": "Personal agents and routines that run 24/7 on the web, even with your computer off",
+    "nextSteps": "Start here",
+    "resume": "Finish what you were doing",
+    "resumeDetail": "“{{text}}”",
+    "routines": "Set up a 24/7 routine on the web",
+    "unlockApps": "Build and deploy an app on the web",
+    "unlockMedia": "Make images and videos on the web",
+    "unlockConnectors": "Connect Gmail, Calendar and more",
+    "back": "Back to chat"
+  },
+  "siteDeploy": {
+    "title": "Deploy your site",
+    "cardBody": "Abacus AI Agent on the web can host it and give it a public link.",
+    "stepOpen": "Open Abacus AI Agent on the web",
+    "openAgent": "Open Abacus AI Agent",
+    "stepPack": "Prepare your project to upload",
+    "pack": "Prepare zip",
+    "stepZip": "Your project is ready to upload",
+    "stepZipBlocked": "Your project isn't ready to upload yet",
+    "packing_one": "Preparing your project… {{count}} file",
+    "packing_other": "Preparing your project… {{count}} files",
+    "cancel": "Cancel",
+    "zipMeta_one": "{{size}} · {{count}} file",
+    "zipMeta_other": "{{size}} · {{count}} files",
+    "showInFolder": "Show in folder",
+    "dragHint": "Drag the zip into the chat on the web, or find it with Show in folder.",
+    "leftOut": "Left out: {{names}}",
+    "heldBack": "Held back because they may hold keys: {{names}}",
+    "tooBig": "{{name}} is too big to upload: over 50 MB, even with node_modules and build files left out.",
+    "tooBroad": "This site isn't in a folder of its own. Ask the bot to move it into one, then try again.",
+    "none": "This site's folder isn't there anymore.",
+    "cancelled": "Stopped preparing the zip.",
+    "failed": "Couldn't prepare the zip.",
+    "retry": "Try again",
+    "stepUpload": "Upload the zip there and ask it to deploy",
+    "prompt": "Deploy this app from the zip I uploaded. The conversation that built it is in abacusai-bot-conversation.md inside the zip.",
+    "copy": "Copy message",
+    "copied": "Copied",
+    "close": "Close"
+  },
   "paymentRequired": {
     "unconfirmedTitle": "Choose a plan to keep using AbacusAI Bot",
     "unconfirmedBody": "You're signed in, but your account needs a plan before AbacusAI Bot can work.",
@@ -4593,6 +4658,9 @@
       "empty": "I couldn't put a reply together for that. Please send it again.",
       "contactNeutral": "Sorry, I can't reply right now. I'll get back to you soon.",
       "contactEmpty": "I didn't reply to {{name}}: no answer came back. Open the app to answer them, or tell me what to say.",
+      "backgroundFinished": "The background job finished. Send a message to pick up from here.",
+      "backgroundFailed": "The background job failed. Send a message to look at what happened.",
+      "backgroundTimedOut": "The background job was stopped at its time limit. Send a message to look at what happened.",
       "undelivered": "A message to {{name}} could not be delivered.",
       "appClosed": "The app closed before I could reply. Send it again to pick it back up.",
       "stillWorking": "Still working on it ({{minutes}} min so far). I'll reply here when it's done.",
@@ -4763,7 +4831,9 @@
     "importMcp": "Import MCP servers",
     "selectTheme": "Select a Theme",
     "themes": "Themes",
-    "diskFullLane": "The computer's disk is full, so {{platform}} can't save its data. It reconnects by itself once some space is freed."
+    "diskFullLane": "The computer's disk is full, so {{platform}} can't save its data. It reconnects by itself once some space is freed.",
+    "linkLostTitle": "{{platform}} is disconnected",
+    "linkLostLane": "{{platform}} is no longer linked, so messages and routines can't go through it. Click Connect and scan the QR again."
   },
   "channels": {
     "sidebar": {

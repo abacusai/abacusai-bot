@@ -698,9 +698,18 @@ export interface McpBrowserServerOptions {
    * `browser_checkout`, handed to it at spawn. Absent, the tool refuses.
    */
   checkoutToken?: string;
+  /** A session with nobody to approve anything: it gets no vault. */
+  noVault?: (sessionId: string) => boolean;
   /** A session that runs unattended, held to its one page; null for any other. */
   heldSession?: (sessionId: string) => HeldBrowserSession | null;
 }
+
+/** The tools a run with nobody to approve anything never reaches. */
+const NO_VAULT_RUN_TOOLS: readonly string[] = [
+  ...VAULT_TOOL_NAMES,
+  VAULT_FILL_TOOL,
+  TRAVELER_FILL_TOOL,
+];
 
 /** A read refused because the page's secret fields could not be checked first. */
 class UnreadablePageError extends Error {
@@ -1699,7 +1708,7 @@ export class McpBrowserServer extends McpHttpServer {
     }
 
     if (lines.length === 0)
-      return "Nothing visible changed yet. If results were expected, use interact wait with text or url_pattern.";
+      return 'Nothing visible changed yet. If results were expected, use browser_interact action:"wait" with text or url_pattern.';
 
     return `Changes:\n${lines.join("\n")}`;
   }
@@ -1734,7 +1743,7 @@ export class McpBrowserServer extends McpHttpServer {
         );
       } else {
         lines.push(
-          "No interactive elements yet. The page may still be loading. Use interact wait, then snapshot."
+          'No interactive elements yet. The page may still be loading. Use browser_interact action:"wait", then browser_snapshot.'
         );
       }
     } catch {
@@ -2021,6 +2030,14 @@ export class McpBrowserServer extends McpHttpServer {
         )
           return this.err("The routine's page is not on a public address.");
       }
+      if (
+        sessionId != null &&
+        NO_VAULT_RUN_TOOLS.includes(name) &&
+        this.options.noVault?.(sessionId) === true
+      )
+        return this.err(
+          "Nobody is here to approve this: stop and say in your answer what needs the user's yes."
+        );
       // Pure-read tools skip the prompt; navigate/interact/execute stay gated.
       if (
         held == null &&
@@ -2256,7 +2273,7 @@ export class McpBrowserServer extends McpHttpServer {
               (tabs != null ? `${tabs}\n` : "") +
               "\n" +
               "(no interactive elements found)\n" +
-              'The page may still be loading. interact action:"wait" with text or url_pattern, then snapshot again.\n' +
+              'The page may still be loading. browser_interact action:"wait" with text or url_pattern, then snapshot again.\n' +
               "If it stays empty the content is likely inside a shadow root or an iframe, which this snapshot " +
               "and plain document.querySelector both see through: reach it with browser_execute using " +
               "element.shadowRoot or the frame's contentDocument, or navigate straight to the frame URL."
@@ -2605,7 +2622,7 @@ export class McpBrowserServer extends McpHttpServer {
         if (result?.status === "rejected") {
           return this.err(
             `Filled ${this.label(args)}, but the page reset its value; it is likely controlled by a framework ` +
-              'that ignores programmatic input. Try interact action:"type", or press keys into it.'
+              'that ignores programmatic input. Try browser_interact action:"type", or press keys into it.'
           );
         }
         const preview = text.length > 30 ? text.slice(0, 27) + "..." : text;

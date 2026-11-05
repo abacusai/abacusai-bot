@@ -426,6 +426,27 @@ describe("what a bot may do to routines that are not its own", () => {
     );
   });
 
+  it("changes the user's routine in the user's own chat with it, and nowhere else", async () => {
+    const roles: Record<string, string> = { "bot-session": "forever" };
+    const instance = server(["cronjob"], {
+      sessionRole: (sessionId: string) => roles[sessionId] ?? null,
+    });
+    const id = await userJobId(instance);
+
+    const listed = await call(instance, { action: "list" }, "bot-session");
+    expect(listed).toContain("Pickup lines");
+    expect(listed).toContain("only when the user asks");
+    expect(
+      await call(instance, { action: "pause", id }, "bot-session")
+    ).not.toContain("not yours");
+
+    // Someone else's chat with the bot reaches no routine at all.
+    roles["bot-session"] = "sender";
+    expect(
+      await call(instance, { action: "resume", id }, "bot-session")
+    ).toContain("not from a chat with someone else");
+  });
+
   it("may still run its own", async () => {
     const runner = { runCronJob: vi.fn(async () => undefined) };
     const instance = server(["cronjob"], runner);

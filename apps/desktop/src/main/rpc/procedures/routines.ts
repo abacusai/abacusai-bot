@@ -8,7 +8,8 @@ export const routinesRouter = impl.routines.router({
   editByChat: impl.routines.editByChat.handler(async ({ input, context }) => ({
     reply: await context.deps.serviceHost.editRoutineByChat(
       input.routineId,
-      input.text
+      input.text,
+      input.runId
     ),
   })),
   run: impl.routines.run.handler(({ input, context }) =>

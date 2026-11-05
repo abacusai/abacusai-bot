@@ -15,10 +15,17 @@ import { hiddenUserMessage, userMessageText } from "#renderer/lib/user-message";
  * want of credit, a rate limit, or a provider that stopped answering.
  * `plan` when a free account asked to see the plan (a See Basic, an Upgrade
  * on a card or the model picker). A paid plan out of credits gets `credits`
- * too, which offers its top-up and next plan. Triggers ask; the shell's host
- * confirms on a fresh account read and opens.
+ * too, which offers its top-up and next plan. `balance` when the person
+ * clicked what a turn cost: the plan for a free account, the top-up and next
+ * plan for a paid one, neither saying the credits ran out. Triggers ask; the
+ * shell's host confirms on a fresh account read and opens.
  */
-export type UpgradeDialogKind = "credits" | "connectors" | "own-key" | "plan";
+export type UpgradeDialogKind =
+  | "credits"
+  | "connectors"
+  | "own-key"
+  | "plan"
+  | "balance";
 
 export interface UpgradeDialogRequest {
   kind: UpgradeDialogKind;
@@ -41,7 +48,10 @@ export interface UpgradeDialogRequest {
 }
 
 /** The screens the other kinds stand for: a free account's refusal in a chat. */
-const KIND_SRC: Record<Exclude<UpgradeDialogKind, "plan">, UpgradeSrc> = {
+const KIND_SRC: Record<
+  Exclude<UpgradeDialogKind, "plan" | "balance">,
+  UpgradeSrc
+> = {
   credits: "credit_wall",
   connectors: "connectors",
   "own-key": "own_key",
@@ -49,7 +59,10 @@ const KIND_SRC: Record<Exclude<UpgradeDialogKind, "plan">, UpgradeSrc> = {
 
 /** The screen the dialog's Upgrade is opened from. */
 export const dialogUpgradeSrc = (request: UpgradeDialogRequest): UpgradeSrc =>
-  request.src ?? (request.kind === "plan" ? "app" : KIND_SRC[request.kind]);
+  request.src ??
+  (request.kind === "plan" || request.kind === "balance"
+    ? "app"
+    : KIND_SRC[request.kind]);
 
 interface UpgradeDialogState {
   request: UpgradeDialogRequest | null;

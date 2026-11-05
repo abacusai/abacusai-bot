@@ -113,8 +113,18 @@ export interface CronJob {
   firedSlot?: { at: number; attemptId: string } | null;
   /** When its schedule last changed: fires before then were never its to miss. */
   scheduledAt?: number | null;
+  /** The chat apps its runs have sent through: where its results go. */
+  chatPlatforms?: string[];
+  /** When a fire was first skipped for a chat app that lost its link. */
+  chatLinkLostAt?: number | null;
   /** Fires it last missed while the computer was off, until its next on-time fire. */
   missed?: RoutineMissed | null;
+  /**
+   * The model it runs on, kept whatever a chat picks. Null is its plan's
+   * default; absent (a routine migration step 9 has not reached) runs on its
+   * bot's model, else the stored default.
+   */
+  model?: string | null;
 }
 
 /** Why a fire waits: the network, a missed fire, or a run the app closed under. */
@@ -359,6 +369,7 @@ export const createJob = (
     workspaceId?: string | null;
     botId?: string | null;
     reach?: RoutineReach | null;
+    model?: string | null;
   },
   id?: string
 ): CronJob => {
@@ -403,6 +414,7 @@ export const createJob = (
     lastResult: null,
     runs: [],
     ...(input.reach != null ? { reach: input.reach } : {}),
+    ...(input.model !== undefined ? { model: input.model } : {}),
   };
 
   write([...existing, job]);
@@ -424,6 +436,7 @@ export const updateJob = (
       | "workspaceId"
       | "access"
       | "reach"
+      | "model"
     >
   > & { webhook?: boolean }
 ): CronJob => {
@@ -438,6 +451,9 @@ export const updateJob = (
 
   const { webhook, ...rest } = changes;
   const updated: CronJob = { ...jobs[index], ...rest };
+  // New instructions may send somewhere else; its next run says where.
+  if (rest.prompt != null && rest.prompt !== jobs[index].prompt)
+    updated.chatPlatforms = [];
   // A one-time routine that already fired stays done: resumed as it stands
   // it would fire again on the next tick. A new time re-arms it.
   if (
@@ -481,6 +497,21 @@ export const updateJob = (
   write(jobs);
 
   return updated;
+};
+
+/** Every stored routine model through `move`, in one write; true if any moved. */
+export const moveJobModels = (move: (model: string) => string): boolean => {
+  const jobs = readForWrite();
+  let moved = false;
+  const next = jobs.map((job) => {
+    if (job.model == null || job.model.length === 0) return job;
+    const model = move(job.model);
+    if (model === job.model) return job;
+    moved = true;
+    return { ...job, model };
+  });
+  if (moved) write(next);
+  return moved;
 };
 
 /**
@@ -541,6 +572,27 @@ export const setHeld = (
   )
     return;
   jobs[index] = { ...job, heldSince: at, heldSlot: slot, heldFor: reason };
+  write(jobs);
+};
+
+/** A run sent, or tried to send, through this chat app. */
+export const noteChatPlatform = (id: string, platform: string): void => {
+  const jobs = readForWrite();
+  const index = jobs.findIndex((job) => job.id === id);
+  if (index < 0 || jobs[index].chatPlatforms?.includes(platform)) return;
+  jobs[index] = {
+    ...jobs[index],
+    chatPlatforms: [...(jobs[index].chatPlatforms ?? []), platform],
+  };
+  write(jobs);
+};
+
+/** Marks a job as skipped for a lost chat link, or clears it (null). */
+export const setChatLinkLost = (id: string, at: number | null): void => {
+  const jobs = readForWrite();
+  const index = jobs.findIndex((job) => job.id === id);
+  if (index < 0 || (jobs[index].chatLinkLostAt ?? null) === at) return;
+  jobs[index] = { ...jobs[index], chatLinkLostAt: at };
   write(jobs);
 };
 
@@ -890,6 +942,7 @@ export const describeJob = (job: CronJob): string => {
   return [
     `${job.id}  [${job.enabled ? "enabled" : "paused"}]  ${triggers}  ${job.name}`,
     `  ${job.prompt}`,
+    `  model: ${job.model ?? "plan default"}`,
     `  next: ${next}   last: ${last}${job.lastResult != null ? ` (${job.lastResult})` : ""}`,
   ].join("\n");
 };

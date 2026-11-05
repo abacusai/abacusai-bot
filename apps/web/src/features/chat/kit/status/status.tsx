@@ -86,6 +86,7 @@ import { formatElapsed, useSeconds } from "../clock";
 import { useChatView } from "../context";
 import { toolTitle } from "../tools/tool-line";
 import { creditsExpired, useUpgradeResume } from "../upgrade-triggers";
+import { TurnCredits } from "./turn-credits";
 
 export const providerMessage = (raw = ""): string => {
   const start = raw.indexOf("{");
@@ -286,8 +287,21 @@ export const FreeLaneChip = ({ provider }: { provider: string | null }) => {
   );
 };
 
-export const RunMarker = ({ outcome }: { outcome: RunOutcomeRecord }) => {
-  const marker = <RunMarkerLine outcome={outcome} />;
+export const RunMarker = ({
+  outcome,
+  latest = false,
+}: {
+  outcome: RunOutcomeRecord;
+  latest?: boolean;
+}) => {
+  const marker = (
+    <div className="flex flex-wrap items-center gap-x-2">
+      <RunMarkerLine outcome={outcome} />
+      {outcome.kind === "success" && (
+        <TurnCredits outcome={outcome} latest={latest} />
+      )}
+    </div>
+  );
   if (outcome.kind !== "success" || outcome.freeLane == null) return marker;
   return (
     <div className="flex flex-col gap-1">
@@ -903,6 +917,7 @@ export const ErrorCard = ({
   const switchToAbacus = useSwitchToAbacus();
   const [accountTier, setAccountTier] =
     useState<NonNullable<ErrorCardProps["tier"]>>("unknown");
+  const [tierRead, setTierRead] = useState(false);
   useEffect(() => {
     if (providedTier != null) return;
     let live = true;
@@ -911,7 +926,10 @@ export const ErrorCard = ({
       .then((value) => {
         if (live) setAccountTier(value);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (live) setTierRead(true);
+      });
     return () => {
       live = false;
     };
@@ -1162,7 +1180,9 @@ export const ErrorCard = ({
           )}
         </>
       ) : undefined;
-    // Until a paid plan's offer is read, no card: it picks which one.
+    // Until the plan and a paid plan's offer are read, no card: they pick which
+    // one, and someone who paid must never first read the free plan's words.
+    if (atWall && providedTier == null && !tierRead) return null;
     if (paidAtWall && paidWallOffer === undefined) return null;
     const task = taskText(session.hostStore.state.messages);
     // A wall further up the chat is history: its title alone, the offer is the latest one's.
@@ -1450,6 +1470,28 @@ const diskFullLine = (
     : t("outcome.cause.disk_fullUnmeasured");
 };
 
+/** The action on a job that finished with no turn running. */
+const BACKGROUND_JOB_ACTION = "background-job";
+
+/** A command as long as a one-line notice can carry. */
+const BACKGROUND_COMMAND_CHARS = 100;
+
+const backgroundJobLine = (
+  action: ErrorAction,
+  t: (key: string, values?: Record<string, string>) => string
+): string => {
+  const whole = action.label ?? "";
+  const command =
+    whole.length > BACKGROUND_COMMAND_CHARS
+      ? `${whole.slice(0, BACKGROUND_COMMAND_CHARS)}…`
+      : whole;
+  if (action.cause === "timed-out")
+    return t("chat.notice.backgroundTimedOut", { command });
+  return action.cause === "failed"
+    ? t("chat.notice.backgroundFailed", { command })
+    : t("chat.notice.backgroundFinished", { command });
+};
+
 const SEVERITY_ICON = {
   info: Info,
   success: CheckCircle2,
@@ -1489,6 +1531,10 @@ export const NoticeRow = ({
   const moved = actions.find(
     (action) => action.type === MOVED_TO_ABACUS_ACTION
   );
+  // A job that finished with no turn running: the line in the app's words.
+  const backgroundJob = actions.find(
+    (action) => action.type === BACKGROUND_JOB_ACTION
+  );
   const message = tooLarge
     ? t("chat.notice.historyTooLarge", {
         size: formatBytes(Number(notice.value.size ?? 0)),
@@ -1500,7 +1546,9 @@ export const NoticeRow = ({
         ? t("chat.notice.unsaved")
         : moved != null
           ? ownKeyMovedLine(moved, t)
-          : String(notice.value.message ?? "");
+          : backgroundJob != null
+            ? backgroundJobLine(backgroundJob, t)
+            : String(notice.value.message ?? "");
   return (
     <Marker
       variant="border"

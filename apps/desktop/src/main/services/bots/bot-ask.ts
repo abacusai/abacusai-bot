@@ -60,6 +60,37 @@ export const noteGist = (text: string, max: number): string => {
   return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
 };
 
+/**
+ * What each side keeps in its daily notes once a request ends: the asker,
+ * what it asked (or passed on) and what came back; the asked bot, what it
+ * was asked and what it answered. Short, with the other bot named.
+ */
+export const requestNotes = (
+  ask: { request: string; kind?: BotAskKind } & (
+    | { answer: string }
+    | { error: string }
+  ),
+  asker: Named,
+  answerer: Named
+): { asker: string; answerer: string | null } => {
+  const task = ask.kind === "task";
+  const what = noteGist(ask.request, 120);
+  if ("error" in ask)
+    return {
+      asker: `${task ? `Passed the user's task to ${answerer.name}` : `Asked ${answerer.name}`}: "${what}"; it ended: ${noteGist(ask.error, 200)}`,
+      answerer: null,
+    };
+  const got = noteGist(ask.answer, 300);
+  return {
+    asker: task
+      ? `Passed the user's task to ${answerer.name}: "${what}"; it reported: ${got}`
+      : `Asked ${answerer.name}: "${what}"; it answered: ${got}`,
+    answerer: task
+      ? `Did a task ${asker.name} passed on from the user: "${what}"; I reported: ${got}`
+      : `${asker.name} asked me: "${what}"; I answered: ${got}`,
+  };
+};
+
 /** A request's first words, for lists and notes. */
 export const requestGist = (request: string): string => {
   const flat = request.replace(/\s+/g, " ").trim();
@@ -217,7 +248,9 @@ export const askOutcomeNote = (
         task
           ? `[bot answer] ${answerer.name} finished the ${label} you passed it for the user. Its report:`
           : `[bot answer] ${answerer.name} answered your ${label}.`,
-        "This is not a message from the user, and the user has not seen it yet.",
+        task
+          ? `This is not a message from the user; the report is also in ${answerer.name}'s own chat.`
+          : "This is not a message from the user, and the user has not seen it yet.",
         wrapBotAnswer(answerer, ask.answer),
         task
           ? "Tell the user what it did, briefly and in your own words."
@@ -229,6 +262,42 @@ export const askOutcomeNote = (
         "carry on without it.",
       ].join("\n");
 };
+
+/** The user's words, quoted in a note: one line, cut at 300 characters. */
+const quoted = (words: string): string => {
+  const flat = words.replace(/\s+/g, " ").trim();
+  return `"${flat.length > 300 ? `${flat.slice(0, 300)}…` : flat}"`;
+};
+
+/**
+ * After a passed-on task ended, the user wrote to the bot that did it, in
+ * its chat: what they wrote and its answer, for the bot that passed it on.
+ * The app sends it, once per task, so the passer always learns when the
+ * user dropped, changed or resumed the task there; when it was about
+ * something else, the passer stays silent.
+ */
+export const taskFollowUpNote = (
+  ask: { id: string; request: string },
+  doer: Named,
+  userWords: string,
+  reply: string
+): string =>
+  [
+    `[bot answer] After the task ${ask.id} ("${requestGist(ask.request)}") you passed ${doer.name} ended, the user wrote to ${doer.name} in its chat: ${quoted(userWords)}. Its answer:`,
+    wrapBotAnswer(doer, reply),
+    "This is not a message from the user to you. If it changes what you know about that task (they dropped it, changed it, or had it finished after all), go by it from now on and tell the user in one line what it means for you. If it has nothing to do with the task, reply exactly NO_REPLY.",
+  ].join("\n");
+
+/**
+ * Why a task ended when the user wrote in the doing bot's chat while it ran
+ * (see the host's userSteppedIn): what they wrote, which now decides.
+ */
+export const steppedInError = (words: string): string =>
+  [
+    "the user wrote to it in its own chat partway through, so it stopped there and may be half done.",
+    `What they wrote: ${quoted(words)}.`,
+    "Go by that: don't do the task yourself, pass it on again or keep offering it unless they ask.",
+  ].join(" ");
 
 /**
  * A task from the user, as the other bot reads it in its own chat: who

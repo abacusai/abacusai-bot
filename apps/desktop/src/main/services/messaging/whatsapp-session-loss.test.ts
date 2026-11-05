@@ -15,6 +15,10 @@
  * re-armed the self lookup, whose navigation caused the next slow boot: a
  * connected↔needs_login flap that read as "chats never sync".
  */
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("electron", async () => {
@@ -42,6 +46,8 @@ vi.mock("@abacus-ai/agent/atomic-file", async (importActual) => ({
 
 const { powerMonitor } = await import("electron");
 const { WhatsAppWebConnector } = await import("./whatsapp-web-connector");
+const { readPlatformLinkLost, readPlatformSignedIn, savePlatformSignedIn } =
+  await import("./messaging-config-service");
 
 /** The connector with the page's login answers scripted; no Electron. */
 const connectorSeeing = (
@@ -84,6 +90,77 @@ const connectorSeeing = (
     states,
   };
 };
+
+describe("a link that ended while the app was closed", () => {
+  const QR = { loggedIn: false, loginVisible: true };
+  const LOST = /no longer linked/;
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("is said to be lost, also on the launch after, until a new link", async () => {
+    vi.stubEnv(
+      "ABACUSAI_BOT_HOME",
+      fs.mkdtempSync(path.join(os.tmpdir(), "whatsapp-link-"))
+    );
+    savePlatformSignedIn("whatsapp", true);
+
+    // This launch: the stored link meets a QR, and the fourth poll believes it.
+    const notes: Array<string | undefined> = [];
+    const connector = new WhatsAppWebConnector({
+      onMessage: () => {},
+      onState: (_state: string, note?: string) => notes.push(note),
+      onLog: () => {},
+    } as never);
+    const internals = connector as unknown as {
+      running: boolean;
+      signedInRecord: boolean | null;
+      run: (script: string, args: unknown) => Promise<unknown>;
+      checkLogin: () => Promise<void>;
+      window: unknown;
+    };
+    internals.running = true;
+    internals.signedInRecord = true;
+    internals.run = async () => QR;
+    for (let poll = 0; poll < 3; poll += 1) await internals.checkLogin();
+    expect(readPlatformLinkLost("whatsapp")).toBe(false);
+    await internals.checkLogin();
+    expect(notes.at(-1)).toMatch(LOST);
+    expect(readPlatformSignedIn("whatsapp")).toBe(false);
+    expect(readPlatformLinkLost("whatsapp")).toBe(true);
+    // The polls after it keep saying so.
+    await internals.checkLogin();
+    expect(notes.at(-1)).toMatch(LOST);
+    await connector.stop();
+
+    // The next launch parks, and a send says why.
+    const parked: Array<string | undefined> = [];
+    const next = new WhatsAppWebConnector({
+      onMessage: () => {},
+      onState: (_state: string, note?: string) => parked.push(note),
+      onLog: () => {},
+    } as never);
+    await next.start();
+    expect(parked.at(-1)).toMatch(LOST);
+    await expect(next.sendText("Ana", "hi")).rejects.toThrow(LOST);
+    await next.stop();
+
+    // A new link clears it.
+    savePlatformSignedIn("whatsapp", true);
+    expect(readPlatformLinkLost("whatsapp")).toBe(false);
+  });
+
+  it("is not a lost link when nothing was ever linked", async () => {
+    vi.stubEnv(
+      "ABACUSAI_BOT_HOME",
+      fs.mkdtempSync(path.join(os.tmpdir(), "whatsapp-link-"))
+    );
+    const { poll } = connectorSeeing(Array.from({ length: 5 }, () => QR));
+    for (let i = 0; i < 5; i += 1) await poll();
+    expect(readPlatformLinkLost("whatsapp")).toBe(false);
+  });
+});
 
 describe("a login that goes away after connect", () => {
   it("is reported as needs_login by the ongoing poll", async () => {

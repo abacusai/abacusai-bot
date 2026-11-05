@@ -1376,6 +1376,14 @@
     "deleteBody": "“{{name}}”와 실행 기록이 삭제됩니다.",
     "deleteError": "루틴을 삭제하지 못했습니다.",
     "deleteTitle": "루틴 삭제",
+    "duplicate": {
+      "badge": "중복 가능성",
+      "delete": "이 항목 삭제",
+      "description": "일정과 작업이 같아서 작업이 두 번 실행되고 실행할 때마다 크레딧이 사용됩니다. 유지할 항목을 선택하세요.",
+      "keepBoth": "둘 다 유지",
+      "pause": "이 항목 일시 중지",
+      "title": "다음의 복사본으로 보입니다:"
+    },
     "edit": "편집",
     "editTitle": "루틴 편집",
     "editorPlaceholder": "루틴에 변경 방법을 알려주세요. \"대신 매일 아침 9시에\", \"중지\"",
@@ -1565,15 +1573,6 @@
       "missedNoticeFree": "{{names}}. On the Basic plan, Abacus AI Agent on the web runs routines 24/7, even with your computer off.",
       "missedNoticePaid": "{{names}}. 웹의 Abacus AI Agent에서 루틴을 설정하면 컴퓨터가 꺼져 있어도 24시간 내내 실행돼요."
     },
-    "upgraded": {
-      "title": "이제 {{plan}} 플랜이에요",
-      "titleNoPlan": "이제 유료 플랜이에요",
-      "body": "다음으로 웹의 Abacus AI Agent에서 루틴을 설정하세요. 컴퓨터가 꺼져 있어도 24시간 내내 실행돼요.",
-      "autoReplies": "WhatsApp, Telegram, Discord 자동 답장",
-      "allRoutines": "모든 루틴을 제시간에",
-      "setUp": "24시간 루틴 설정",
-      "back": "AbacusAI Bot으로 돌아가기"
-    },
     "reach": {
       "gmailSearch": "Search Gmail",
       "gmailRead": "Read Gmail messages",
@@ -1621,6 +1620,13 @@
     "upgrade": {
       "title": "루틴 이용하기",
       "description": "업그레이드하여 작업을 예약하고 자동화하세요."
+    },
+    "model": {
+      "label": "모델",
+      "planDefault": "요금제 기본값",
+      "followsDefault": "요금제 기본값을 따릅니다: {{model}}.",
+      "costly": "매 실행마다 비용이 더 높은 모델 {{model}}을(를) 사용하므로 실행할 때마다 크레딧이 더 많이 듭니다.",
+      "hosted": "호스팅 루틴은 요금제 기본값으로 실행됩니다."
     }
   },
   "sessions": {
@@ -2949,8 +2955,16 @@
         "YOLO": "No approvals"
       }
     },
+    "appLine": {
+      "testRepair": "변경 후 테스트가 실패하여 수정하고 있습니다.",
+      "testRepairLimit": "테스트 수정을 중단했습니다. 이 자동 수정이 한도에 도달했습니다. 메시지를 보낼 때까지 더 이상 실행되지 않습니다.",
+      "testsLeftAlone": "테스트가 실패하고 있지만 제 변경이 원인인지 알 수 없어 그대로 두었습니다."
+    },
     "notice": {
       "dismiss": "Dismiss",
+      "backgroundFinished": "백그라운드 작업이 완료되었습니다: {{command}}. 이어서 진행하려면 메시지를 보내세요.",
+      "backgroundFailed": "백그라운드 작업이 실패했습니다: {{command}}. 무슨 일이 있었는지 보려면 메시지를 보내세요.",
+      "backgroundTimedOut": "백그라운드 작업이 시간 제한으로 중지되었습니다: {{command}}. 무슨 일이 있었는지 보려면 메시지를 보내세요.",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
       "unsaved": "디스크가 가득 차서 이 채팅이 저장되지 않고 있습니다. 공간을 확보하세요. 다음 메시지를 보낼 때 다시 저장됩니다.",
@@ -3071,7 +3085,12 @@
       "done_other": "Done in {{duration}}, {{count}} steps",
       "stopped": "Stopped",
       "usage": "In {{input}} ({{cached}} cached) · Out {{output}}",
-      "done_zero": "{{duration}} 만에 완료"
+      "done_zero": "{{duration}} 만에 완료",
+      "credits_one": "{{credits}} 크레딧",
+      "credits_other": "{{credits}} 크레딧",
+      "creditsLeft_one": "{{credits}} 크레딧 · {{left}} 남음",
+      "creditsLeft_other": "{{credits}} 크레딧 · {{left}} 남음",
+      "creditsAction": "{{credits}}. 플랜과 크레딧 보기"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",
@@ -3435,6 +3454,7 @@
       "completed": "Completed",
       "failed": "Failed",
       "skipped": "Skipped",
+      "skipped-link": "건너뜀: 채팅 앱 연결 안 됨",
       "skipped-offline": "건너뜀: 오프라인",
       "skipped-credits": "건너뜀: 크레딧 없음",
       "offline": "Abacus에 연결할 수 없음",
@@ -4280,6 +4300,51 @@
     "waitingTitle": "브라우저에서 결제를 완료하세요",
     "waitingToSend": "전송 대기 중: “{{text}}”"
   },
+  "paidWelcome": {
+    "title": "이제 {{plan}} 플랜이에요",
+    "titleNoPlan": "이제 유료 플랜이에요",
+    "credits": "바로 쓸 수 있는 크레딧 {{credits}}",
+    "model": "이제 {{model}}이(가) 기본 모델이에요",
+    "agents": "컴퓨터가 꺼져 있어도 웹에서 24시간 실행되는 개인 에이전트와 루틴",
+    "nextSteps": "여기서 시작하세요",
+    "resume": "하던 작업 마저 하기",
+    "resumeDetail": "“{{text}}”",
+    "routines": "웹에서 24시간 루틴 설정하기",
+    "unlockApps": "웹에서 앱 만들고 배포하기",
+    "unlockMedia": "웹에서 이미지와 동영상 만들기",
+    "unlockConnectors": "Gmail, 캘린더 등 연결하기",
+    "back": "채팅으로 돌아가기"
+  },
+  "siteDeploy": {
+    "title": "사이트 배포하기",
+    "cardBody": "웹의 Abacus AI Agent가 사이트를 호스팅하고 공개 링크를 만들어 줘요.",
+    "stepOpen": "웹에서 Abacus AI Agent 열기",
+    "openAgent": "Abacus AI Agent 열기",
+    "stepPack": "프로젝트를 업로드할 수 있게 준비하기",
+    "pack": "zip 준비",
+    "stepZip": "프로젝트를 업로드할 준비가 됐어요",
+    "stepZipBlocked": "프로젝트를 아직 업로드할 수 없어요",
+    "packing_one": "프로젝트 준비 중… 파일 {{count}}개",
+    "packing_other": "프로젝트 준비 중… 파일 {{count}}개",
+    "cancel": "취소",
+    "zipMeta_one": "{{size}} · 파일 {{count}}개",
+    "zipMeta_other": "{{size}} · 파일 {{count}}개",
+    "showInFolder": "폴더에서 보기",
+    "dragHint": "zip 파일을 웹 채팅으로 끌어다 놓거나 '폴더에서 보기'로 찾으세요.",
+    "leftOut": "제외됨: {{names}}",
+    "heldBack": "키가 들어 있을 수 있어 보류됨: {{names}}",
+    "tooBig": "{{name}}은(는) 너무 커서 업로드할 수 없어요. node_modules와 빌드 파일을 빼도 50MB가 넘어요.",
+    "tooBroad": "이 사이트는 전용 폴더에 있지 않아요. 봇에게 폴더로 옮겨 달라고 한 뒤 다시 시도하세요.",
+    "none": "이 사이트의 폴더가 더 이상 없어요.",
+    "cancelled": "zip 준비를 멈췄어요.",
+    "failed": "zip을 준비하지 못했어요.",
+    "retry": "다시 시도",
+    "stepUpload": "그곳에 zip을 업로드하고 배포를 요청하기",
+    "prompt": "업로드한 zip으로 이 앱을 배포해 줘. 앱을 만든 대화는 zip 안의 abacusai-bot-conversation.md에 있어.",
+    "copy": "메시지 복사",
+    "copied": "복사됨",
+    "close": "닫기"
+  },
   "paymentRequired": {
     "unconfirmedTitle": "AbacusAI Bot을 계속 사용하려면 요금제를 선택하세요",
     "unconfirmedBody": "로그인되었지만 AbacusAI Bot을 사용하려면 계정에 요금제가 필요합니다.",
@@ -4593,6 +4658,9 @@
       "empty": "이에 대한 답장을 만들지 못했습니다. 다시 보내 주세요.",
       "contactNeutral": "죄송합니다. 지금은 답장할 수 없어요. 곧 연락드릴게요.",
       "contactEmpty": "{{name}}님에게 답장하지 않았습니다: 돌아온 답이 없습니다. 앱을 열어 직접 답장하거나 무엇이라고 할지 알려 주세요.",
+      "backgroundFinished": "백그라운드 작업이 완료되었습니다. 이어서 진행하려면 메시지를 보내세요.",
+      "backgroundFailed": "백그라운드 작업이 실패했습니다. 무슨 일이 있었는지 보려면 메시지를 보내세요.",
+      "backgroundTimedOut": "백그라운드 작업이 시간 제한으로 중지되었습니다. 무슨 일이 있었는지 보려면 메시지를 보내세요.",
       "undelivered": "{{name}}님에게 보낸 메시지를 전달하지 못했습니다.",
       "appClosed": "답장하기 전에 앱이 닫혔습니다. 다시 보내면 이어서 진행합니다.",
       "stillWorking": "아직 작업 중입니다(지금까지 {{minutes}}분). 끝나면 여기서 답장할게요.",
@@ -4763,7 +4831,9 @@
     "importMcp": "MCP 서버 가져오기",
     "selectTheme": "테마 선택",
     "themes": "테마",
-    "diskFullLane": "컴퓨터의 디스크가 가득 차서 {{platform}}에서 데이터를 저장할 수 없습니다. 공간이 확보되면 자동으로 다시 연결됩니다."
+    "diskFullLane": "컴퓨터의 디스크가 가득 차서 {{platform}}에서 데이터를 저장할 수 없습니다. 공간이 확보되면 자동으로 다시 연결됩니다.",
+    "linkLostTitle": "{{platform}} 연결이 끊어졌습니다",
+    "linkLostLane": "{{platform}} 연결이 해제되어 메시지와 루틴을 보낼 수 없습니다. 연결을 클릭하고 QR 코드를 다시 스캔하세요."
   },
   "channels": {
     "sidebar": {

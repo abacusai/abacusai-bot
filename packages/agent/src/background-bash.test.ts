@@ -20,6 +20,8 @@ import {
   listBackgroundJobs,
   notifyConversationQueueCleared,
   resetBackgroundJobs,
+  onBackgroundReport,
+  type BackgroundReport,
 } from "./background-processes.js";
 import { default as backgroundExtension } from "./extensions/background.js";
 
@@ -171,9 +173,19 @@ describe("the background path", () => {
 function withExtension(): FakePi {
   const pi = fakePi();
   backgroundExtension(pi.api as never);
+  loaded.push(pi);
 
   return pi;
 }
+
+/** Each one listens to the shared registry until its session ends. */
+const loaded: FakePi[] = [];
+
+afterEach(async () => {
+  for (const pi of loaded.splice(0)) {
+    await pi.fire("session_shutdown", { type: "session_shutdown" });
+  }
+});
 
 const getFirstJobOutput = (): string | undefined =>
   listBackgroundJobs()[0]?.output;
@@ -187,22 +199,74 @@ const waitFor = async (predicate: () => boolean, ms = 5_000): Promise<void> => {
 };
 
 describe("being told it finished", () => {
-  it("wakes the agent with the output when the job lands", async () => {
+  it("starts no turn for a job that lands with nothing running", async () => {
     const pi = withExtension();
     const { tool } = bashTool();
+    const reports: BackgroundReport[] = [];
+    const stop = onBackgroundReport((report) => reports.push(report));
 
     await run(tool, { command: "echo build complete", background: true });
     await waitFor(() => pi.messages.length > 0);
+    stop();
 
     const [message] = pi.messages;
 
     expect(String(message?.content)).toContain("build complete");
-    // Queued as a follow-up that starts a turn: filing it without this would
-    // leave the result sitting unread until the user happened to type again.
-    expect(message?.options).toEqual({
-      deliverAs: "followUp",
-      triggerTurn: true,
-    });
+    // A run nobody asked for bills them and reaches no chat: it goes on the
+    // record for their next message, and the app tells them.
+    expect(message?.options).toBeUndefined();
+    expect(reports).toEqual([
+      { id: "bg-1", command: "echo build complete", outcome: "finished" },
+    ]);
+  });
+
+  it("hands a job that lands mid-turn to that turn, and tells nobody else", async () => {
+    const pi = withExtension();
+    const { tool } = bashTool();
+    const reports: BackgroundReport[] = [];
+    const stop = onBackgroundReport((report) => reports.push(report));
+
+    await pi.fire("turn_start", { type: "turn_start" });
+    await run(tool, { command: "echo landed", background: true });
+    await waitFor(() => pi.messages.length > 0);
+    await pi.fire("turn_start", { type: "turn_start" });
+    await pi.fire("agent_settled", { type: "agent_settled" });
+    stop();
+
+    expect(String(pi.messages[0]?.content)).toContain("landed");
+    expect(pi.messages[0]?.options).toEqual({ deliverAs: "steer" });
+    expect(pi.messages).toHaveLength(1);
+    expect(reports).toEqual([]);
+  });
+
+  it("tells the person of one steered too late for the reply to carry it", async () => {
+    const pi = withExtension();
+    const { tool } = bashTool();
+    const reports: BackgroundReport[] = [];
+    const stop = onBackgroundReport((report) => reports.push(report));
+
+    await pi.fire("turn_start", { type: "turn_start" });
+    await run(tool, { command: "echo late", background: true });
+    await waitFor(() => pi.messages.length > 0);
+    await pi.fire("agent_settled", { type: "agent_settled" });
+    stop();
+
+    expect(pi.messages).toHaveLength(1);
+    expect(reports.map((report) => report.outcome)).toEqual(["finished"]);
+  });
+
+  it("names a run its own timeout stopped, rather than a failure", async () => {
+    const pi = withExtension();
+    const { tool } = bashTool();
+    const reports: BackgroundReport[] = [];
+    const stop = onBackgroundReport((report) => reports.push(report));
+
+    await run(tool, { command: "sleep 30", timeout: 1, background: true });
+    await waitFor(() => pi.messages.length > 0, 15_000);
+    stop();
+
+    expect(String(pi.messages[0]?.content)).toContain("timeout you gave it");
+    expect(reports.map((report) => report.outcome)).toEqual(["timed-out"]);
   });
 
   it("says so when the command failed, with its exit code", async () => {
@@ -239,69 +303,34 @@ describe("surviving a stop", () => {
    * moment must not be swept up with it, so the news is held here until
    * something actually picks it up.
    */
-  it("holds the news while the agent is mid-turn", async () => {
-    const pi = withExtension();
-    const { tool } = bashTool();
-
-    await pi.fire("turn_start", { type: "turn_start" });
-    await run(tool, { command: "true", background: true });
-    await new Promise((resolve) => setTimeout(resolve, 400));
-
-    // Nothing queued: the queue is not a safe place to leave it yet.
-    expect(pi.messages).toEqual([]);
-  });
-
-  it("delivers it the moment the turn is over", async () => {
-    const pi = withExtension();
-    const { tool } = bashTool();
-
-    await pi.fire("turn_start", { type: "turn_start" });
-    await run(tool, { command: "echo landed", background: true });
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    await pi.fire("agent_settled", { type: "agent_settled" });
-
-    expect(String(pi.messages[0]?.content)).toContain("landed");
-  });
-
   it("says it again after a stop swallowed the first attempt", async () => {
     const pi = withExtension();
     const { tool } = bashTool();
 
+    await pi.fire("turn_start", { type: "turn_start" });
     await run(tool, { command: "echo survived", background: true });
     await waitFor(() => pi.messages.length > 0);
 
     // What `stop()` does: empty the queue, and say so. The handover no longer
-    // counts, so the next safe moment says it again.
+    // counts, so it goes on the record when the turn has settled.
     notifyConversationQueueCleared();
-    await pi.fire("input", { type: "input" });
+    await pi.fire("agent_settled", { type: "agent_settled" });
 
     expect(pi.messages).toHaveLength(2);
     expect(String(pi.messages[1]?.content)).toContain("survived");
-    // With the prompt that is starting, not a turn of its own: pi would
-    // refuse the user's message as busy over a turn started here.
-    expect(pi.messages[1]?.options).toEqual({ deliverAs: "nextTurn" });
-  });
-
-  it("does not repeat itself for a user message that never stopped anything", async () => {
-    // Typing while a notice is still queued is not a reason to queue it twice.
-    const pi = withExtension();
-    const { tool } = bashTool();
-
-    await run(tool, { command: "echo once only", background: true });
-    await waitFor(() => pi.messages.length > 0);
-    await pi.fire("input", { type: "input" });
-
-    expect(pi.messages).toHaveLength(1);
+    // Never a turn of its own: that would be a Stop that starts the agent.
+    expect(pi.messages[1]?.options).toBeUndefined();
   });
 
   it("does not say it twice once a turn has taken it", async () => {
     const pi = withExtension();
     const { tool } = bashTool();
 
+    await pi.fire("turn_start", { type: "turn_start" });
     await run(tool, { command: "echo once", background: true });
     await waitFor(() => pi.messages.length > 0);
 
-    // A turn starting is the proof it was consumed.
+    // A step starting is the proof it was taken.
     await pi.fire("turn_start", { type: "turn_start" });
     await pi.fire("agent_settled", { type: "agent_settled" });
     await pi.fire("input", { type: "input" });
@@ -315,15 +344,11 @@ describe("surviving a stop", () => {
     const pi = withExtension();
     const { tool } = bashTool();
 
+    await pi.fire("turn_start", { type: "turn_start" });
     await run(tool, { command: "echo first", background: true });
     await waitFor(() => pi.messages.length > 0);
     await run(tool, { command: "echo second", background: true });
-    await waitFor(
-      () => listBackgroundJobs().filter((job) => job.exit != null).length === 2
-    );
-
-    await pi.fire("turn_start", { type: "turn_start" });
-    await pi.fire("agent_settled", { type: "agent_settled" });
+    await waitFor(() => pi.messages.length > 1);
 
     expect(String(pi.messages.at(-1)?.content)).toContain("second");
     expect(String(pi.messages.at(-1)?.content)).not.toContain("first");
@@ -406,15 +431,14 @@ describe("fetch_background_output", () => {
 
     await pi.fire("turn_start", { type: "turn_start" });
     await run(tool, { command: "echo read by hand", background: true });
-    await waitFor(() => listBackgroundJobs()[0]?.exit != null);
+    await waitFor(() => pi.messages.length > 0);
 
-    // Mid-turn, so the notice is still held rather than queued.
-    expect(pi.messages).toEqual([]);
-
+    // A Stop handed it back, so it is waiting again.
+    notifyConversationQueueCleared();
     await fetchTool.execute("call-2", { id: "bg-1" });
     await pi.fire("agent_settled", { type: "agent_settled" });
 
-    expect(pi.messages).toEqual([]);
+    expect(pi.messages).toHaveLength(1);
   });
 
   it("does not swallow an unsent notice when an earlier one is read", async () => {
@@ -426,42 +450,19 @@ describe("fetch_background_output", () => {
     const { tool } = bashTool();
     const fetchTool = pi.tools.get("fetch_background_output") as FakeTool;
 
-    // First job finishes while idle, so its notice is handed over.
+    await pi.fire("turn_start", { type: "turn_start" });
     await run(tool, { command: "echo alpha", background: true });
     await waitFor(() => pi.messages.length > 0);
-
-    // Second finishes before a turn took the first, so it is held back.
     await run(tool, { command: "echo beta", background: true });
-    await waitFor(
-      () => listBackgroundJobs().filter((job) => job.exit != null).length === 2
-    );
+    await waitFor(() => pi.messages.length > 1);
 
-    // Reading the first removes it from the middle of the list.
+    // A Stop hands both back; reading the first takes it from the list.
+    notifyConversationQueueCleared();
     await fetchTool.execute("call-2", { id: "bg-1" });
-
-    await pi.fire("turn_start", { type: "turn_start" });
     await pi.fire("agent_settled", { type: "agent_settled" });
 
     expect(String(pi.messages.at(-1)?.content)).toContain("beta");
-  });
-
-  it("still announces a job the agent did not read", async () => {
-    const pi = withExtension();
-    const { tool } = bashTool();
-    const fetchTool = pi.tools.get("fetch_background_output") as FakeTool;
-
-    await pi.fire("turn_start", { type: "turn_start" });
-    await run(tool, { command: "echo one", background: true });
-    await run(tool, { command: "echo two", background: true });
-    await waitFor(
-      () => listBackgroundJobs().filter((job) => job.exit != null).length === 2
-    );
-
-    await fetchTool.execute("call-2", { id: "bg-1" });
-    await pi.fire("agent_settled", { type: "agent_settled" });
-
-    expect(String(pi.messages[0]?.content)).toContain("two");
-    expect(String(pi.messages[0]?.content)).not.toContain("one");
+    expect(String(pi.messages.at(-1)?.content)).not.toContain("alpha");
   });
 });
 

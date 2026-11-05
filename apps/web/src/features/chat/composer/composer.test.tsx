@@ -330,6 +330,53 @@ describe("R2-T25 composer", () => {
     await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
   });
 
+  it("App default shows the provider of the model it resolves to, closed and open, even when two providers share a name", async () => {
+    current = await renderWithDb(
+      <ModelChip
+        binding={{
+          value: null,
+          resolved: "openai/gpt-5-mini",
+          label: "GPT-5 Mini",
+          onChange: vi.fn(),
+          groups: [
+            {
+              id: "default",
+              label: "Default",
+              items: [
+                {
+                  id: "",
+                  label: "App default",
+                  description: "GPT-5 Mini",
+                  resolves: "openai/gpt-5-mini",
+                },
+              ],
+            },
+            {
+              id: "abacus",
+              label: "Abacus.AI",
+              items: [{ id: "abacus/gpt-5-mini", label: "GPT-5 Mini" }],
+            },
+            {
+              id: "openai",
+              label: "OpenAI / Codex",
+              items: [{ id: "openai/gpt-5-mini", label: "GPT-5 Mini" }],
+            },
+          ],
+        }}
+      />
+    );
+    const chip = screen.getByRole("combobox", { name: /GPT-5 Mini/ });
+    const mark = () =>
+      chip.querySelector<HTMLElement>('[data-slot="connector-mark"]')?.dataset
+        .mark;
+    expect(chip.textContent).toContain("OpenAI / Codex");
+    expect(mark()).toBe("openai");
+    fireEvent.click(chip);
+    await screen.findByRole("listbox");
+    expect(chip.textContent).toContain("OpenAI / Codex");
+    expect(mark()).toBe("openai");
+  });
+
   it("the model picker: a provider rail with marks, search on top, dense rows with the chosen one checked, keyboard navigable", async () => {
     const onChange = vi.fn();
     const connect = vi.fn();

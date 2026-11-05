@@ -53,13 +53,15 @@ const TIMEOUT_GUIDANCE = [
 const BACKGROUND_GUIDANCE = [
   "",
   "Set background: true for work that takes longer than you are willing to sit on: a build, a",
-  "test suite, a long install, a training run. The call returns as soon as the command is",
-  "running, you keep working, and you are told automatically when it finishes; you do not have",
-  "to poll for it. timeout does not apply to a background run, and stop one early with",
-  "kill_process.",
+  "test suite, a long install, a training run, or a server to leave up. The call returns as",
+  "soon as the command is running and you keep working. If it finishes while you are still",
+  "working you are told, with its output, without polling. Once your reply is done you do not",
+  "get another turn for it: the user is told it finished, and you get its output with their",
+  "next message. So do not end your reply on work that needs the result; wait for it, or say",
+  "plainly that it is still running and what they should expect.",
   "",
-  "Not for a server you want to stay up. Use the background tool for that, which is built to",
-  "be left running and read from.",
+  "A background run has no deadline unless you set timeout, and a timeout stops it: never set",
+  "one on a server. Stop one early with kill_process. For a static page use serve instead.",
 ].join("\n");
 
 /**
@@ -89,8 +91,9 @@ export function withBackgroundOption<T extends BashLikeDefinition>(
       background: Type.Optional(
         Type.Boolean({
           description:
-            "Run it in the background and return straight away. You are told when it finishes. " +
-            "Use for long work; leave unset for anything you need the output of now.",
+            "Run it in the background and return straight away. If it finishes before your reply " +
+            "is done you are told. Use for long work; leave unset for anything you need the " +
+            "output of now.",
         })
       ),
     }),
@@ -132,7 +135,8 @@ export function withBackgroundOption<T extends BashLikeDefinition>(
             text: [
               `Started ${job.id} in the background: ${command}`,
               "",
-              "Carry on with something else; you will be told when it finishes, with its output.",
+              "Carry on with something else. If it finishes while you work you are told, with its",
+              "output; after your reply the user is told, and you hear with their next message.",
               `Stop it early with kill_process id:"${job.id}".`,
             ].join("\n"),
           },

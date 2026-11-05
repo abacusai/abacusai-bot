@@ -261,8 +261,9 @@ const View = ({
           notchEnabled={scenario.skin === "bot"}
         />
       </div>
-      {/* The success pitch's Upgrade opens the upgrade dialog, as in the shell. */}
-      {scenario.view?.successPitch != null && <UpgradeDialogHost />}
+      {/* The success pitch's Upgrade and the turn's credits open the upgrade dialog, as in the shell. */}
+      {(scenario.view?.successPitch != null ||
+        scenario.view?.upgradeDialog === true) && <UpgradeDialogHost />}
     </div>
   );
 };

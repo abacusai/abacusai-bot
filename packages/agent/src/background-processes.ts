@@ -14,6 +14,8 @@ export interface BackgroundExit {
   code: number | null;
   /** Set when the job was stopped by us rather than finishing on its own. */
   killed: boolean;
+  /** Set when the deadline its caller asked for ran out. */
+  timedOut?: boolean;
 }
 
 export interface BackgroundJob {
@@ -23,11 +25,15 @@ export interface BackgroundJob {
   startedAt: number;
   output: string;
   exit: BackgroundExit | null;
-  /**
-   * Whether finishing wakes the agent: true for `bash background`, false for a
-   * dev server.
-   */
+  /** Whether finishing is reported at all: a job may be started to be left alone. */
   notifyOnExit: boolean;
+}
+
+/** A finished job, as the person in the chat hears of it. */
+export interface BackgroundReport {
+  id: string;
+  command: string;
+  outcome: "finished" | "failed" | "timed-out";
 }
 
 interface Tracked extends BackgroundJob {
@@ -51,13 +57,39 @@ const snapshot = (job: Tracked): BackgroundJob => ({
 });
 
 /**
- * Be told when a job finishes. Waking the agent needs pi's `sendMessage`, which
- * only an extension holds, so the registry owns processes and this is the seam.
+ * Be told when a job finishes. Reaching the agent needs pi's `sendMessage`,
+ * which only an extension holds, so the registry owns processes and this is
+ * the seam.
  */
 export function onBackgroundJobSettled(listener: SettledListener): () => void {
   listeners.add(listener);
 
   return () => listeners.delete(listener);
+}
+
+/**
+ * A job finished with no turn running, so no reply will mention it. The
+ * extension knows that and the host owns the chat, so this is how the one
+ * reaches the other.
+ */
+const reportListeners = new Set<(report: BackgroundReport) => void>();
+
+export function onBackgroundReport(
+  listener: (report: BackgroundReport) => void
+): () => void {
+  reportListeners.add(listener);
+
+  return () => reportListeners.delete(listener);
+}
+
+export function reportBackgroundJob(report: BackgroundReport): void {
+  for (const listener of reportListeners) {
+    try {
+      listener(report);
+    } catch {
+      /* one bad listener must not stop the rest being told */
+    }
+  }
 }
 
 /**
@@ -274,7 +306,16 @@ export function startBackgroundJob(options: {
         job.output = `${job.output}\n${error instanceof Error ? error.message : String(error)}`;
       }
 
-      settle({ code: null, killed: aborted });
+      settle({
+        code: null,
+        killed: aborted,
+        // pi's backends reject with this exact shape when the deadline runs out.
+        ...(!aborted &&
+        error instanceof Error &&
+        error.message.startsWith("timeout:")
+          ? { timedOut: true }
+          : {}),
+      });
     });
 
   return snapshot(job);

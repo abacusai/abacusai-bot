@@ -90,6 +90,19 @@ describe("the routine lane", () => {
     expect(activity).toHaveBeenCalled();
   });
 
+  it("hands back a full-access run's answer with what it did", async () => {
+    const { lane, calls } = runner({
+      result: {
+        outcome: "completed",
+        text: '{"deliver": true, "text": "Sent"}',
+        actions: ["bash ×2"],
+      },
+    });
+    lane.take(ENTRY);
+    await lane.idle();
+    expect(calls[1]).toMatchObject({ text: "Sent\n\n→ bash ×2" });
+  });
+
   it("drops a run the server says already started", async () => {
     const { lane, calls, run } = runner({ start: "duplicate" });
     lane.take(ENTRY);

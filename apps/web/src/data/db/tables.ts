@@ -198,6 +198,7 @@ const ROUTINE_UPDATE_FIELDS = [
   "workspaceId",
   "access",
   "reach",
+  "model",
 ] as const;
 
 export const routinesCollectionOptions = (

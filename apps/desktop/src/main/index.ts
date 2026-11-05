@@ -104,6 +104,7 @@ import {
 import { publishToWindowViews } from "./rpc/window-events";
 import { ServiceHost } from "./service-host";
 import { revivePreview } from "./services/agent-tools/served-previews";
+import { isSiteExport } from "./services/agent-tools/site-pack";
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import type { BrowserRuntimeWindow } from "./services/browser/electron-browser-runtime";
 import {
@@ -1384,6 +1385,16 @@ const appOperations: AppOperations = {
     shell.showItemInFolder(filePath);
   },
 
+  startFileDrag(webContentsId, filePath) {
+    const contents = electronWebContents.fromId(webContentsId);
+    if (contents == null || !isSiteExport(filePath)) return;
+    const icon = nativeImage.createFromPath(resourcePath("icon2.png"));
+    contents.startDrag({
+      file: filePath,
+      icon: icon.isEmpty() ? icon : icon.resize({ width: 32, height: 32 }),
+    });
+  },
+
   appVersion: () => app.getVersion(),
   systemLanguages: () => osLanguages(),
   homeDir: () => os.homedir(),
@@ -1586,6 +1597,15 @@ function publishChromeState(): void {
 /** Null until whenReady has registered the IPC handlers. */
 let rpcTransport: MessagePortTransport | null = null;
 let notchController: NotchController | null = null;
+workspaceServiceHost.attachUserNotifier((platform, title, body) =>
+  appOperations.showNotification(
+    title,
+    body,
+    { kind: "messaging" },
+    { kind: "needs-you", dedupeKey: `link-lost:${platform}` }
+  )
+);
+
 const notchNotifications = new NotchNotificationPolicy({
   enabled: () => prefsStore.get().notch?.showInNotch === true,
   presented: (key) => notchController?.hasPresented(key) ?? false,

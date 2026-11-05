@@ -810,6 +810,7 @@
       "skipped",
       "skipped-offline",
       "skipped-credits",
+      "skipped-link",
       "offline",
       "interrupted",
       "unknown",
@@ -1661,7 +1662,9 @@
       "importMcp",
       "selectTheme",
       "themes",
-      "diskFullLane"
+      "diskFullLane",
+      "linkLostLane",
+      "linkLostTitle"
     ],
     "sources": [
       "../../desktop/src/main/index.ts",
@@ -1687,6 +1690,9 @@
   {
     "prefix": "outcome.channel.",
     "values": [
+      "backgroundFinished",
+      "backgroundFailed",
+      "backgroundTimedOut",
       "wall",
       "routinesOnHold",
       "routinesTopUp",

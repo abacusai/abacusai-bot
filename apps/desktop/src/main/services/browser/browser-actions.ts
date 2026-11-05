@@ -297,7 +297,7 @@ const RECIPES: Array<{
     hosts: /(^|\.)google\.(com|co\.[a-z]{2}|[a-z]{2,3})$/,
     tip:
       "Google: search pages take the query in the URL. /search?q=..., /travel/flights?q=Flights from BLR to DEL on 2026-09-20 one way, " +
-      '/maps/search/coffee+near+Indiranagar. On Flights, airport boxes are autocompletes: use interact action:"pick". ' +
+      '/maps/search/coffee+near+Indiranagar. On Flights, airport boxes are autocompletes: use browser_interact action:"pick". ' +
       'Prices sit in the results list; extract with selector "li" or read the text.',
   },
   {
@@ -320,7 +320,7 @@ const RECIPES: Array<{
     hosts:
       /(^|\.)(booking|agoda|expedia|makemytrip|goibibo|skyscanner|kayak)\.(com|co\.[a-z]{2}|[a-z]{2,3})$/,
     tip:
-      'Travel site: destination boxes are autocompletes (interact action:"pick"), date fields open a calendar. Click the day ' +
+      'Travel site: destination boxes are autocompletes (browser_interact action:"pick"), date fields open a calendar. Click the day ' +
       "cell by ref and check which month is showing. Results load after the page says it has loaded: wait for text or a URL pattern.",
   },
   {

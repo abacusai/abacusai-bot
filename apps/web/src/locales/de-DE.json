@@ -1376,6 +1376,14 @@
     "deleteBody": "Dies löscht „{{name}}“ und den Verlauf ihrer Läufe.",
     "deleteError": "Die Routine konnte nicht gelöscht werden.",
     "deleteTitle": "Routine löschen",
+    "duplicate": {
+      "badge": "Mögliches Duplikat",
+      "delete": "Diese löschen",
+      "description": "Gleicher Zeitplan, gleiche Aufgabe: Die Arbeit passiert doppelt, und jeder Lauf kostet Credits. Wähle aus, welche Routine bleibt.",
+      "keepBoth": "Beide behalten",
+      "pause": "Diese pausieren",
+      "title": "Sieht aus wie eine Kopie von"
+    },
     "edit": "Bearbeiten",
     "editTitle": "Routine bearbeiten",
     "editorPlaceholder": "Sagen Sie der Routine, wie sie sich ändern soll: „Stattdessen jeden Morgen um 9“, „Stopp“",
@@ -1565,15 +1573,6 @@
       "missedNoticeFree": "{{names}}. On the Basic plan, Abacus AI Agent on the web runs routines 24/7, even with your computer off.",
       "missedNoticePaid": "{{names}}. Richte deine Routinen in Abacus AI Agent im Web ein, wo sie rund um die Uhr laufen, auch wenn dein Computer aus ist."
     },
-    "upgraded": {
-      "title": "Du hast jetzt {{plan}}",
-      "titleNoPlan": "Du hast jetzt einen bezahlten Plan",
-      "body": "Richte als Nächstes deine Routinen in Abacus AI Agent im Web ein. Dort laufen sie rund um die Uhr, auch wenn dein Computer aus ist.",
-      "autoReplies": "Automatische Antworten auf WhatsApp, Telegram und Discord",
-      "allRoutines": "Alle deine Routinen, pünktlich",
-      "setUp": "24/7-Routinen einrichten",
-      "back": "Zurück zu AbacusAI Bot"
-    },
     "reach": {
       "gmailSearch": "Search Gmail",
       "gmailRead": "Read Gmail messages",
@@ -1621,6 +1620,13 @@
     "upgrade": {
       "title": "Routinen freischalten",
       "description": "Mit einem Upgrade kannst du Aufgaben planen und deine Arbeit automatisieren."
+    },
+    "model": {
+      "label": "Modell",
+      "planDefault": "Tarif-Standard",
+      "followsDefault": "Folgt dem Standard deines Tarifs: {{model}}.",
+      "costly": "Jeder Lauf nutzt {{model}}, ein teureres Modell, und verbraucht deshalb mehr Credits.",
+      "hosted": "Gehostete Routinen laufen mit dem Standard deines Tarifs."
     }
   },
   "sessions": {
@@ -2949,8 +2955,16 @@
         "YOLO": "No approvals"
       }
     },
+    "appLine": {
+      "testRepair": "Tests sind nach meiner Änderung fehlgeschlagen, ich behebe das.",
+      "testRepairLimit": "Ich habe die Testreparatur beendet: Diese automatische Korrektur hat ihr Limit erreicht. Es läuft nichts weiter, bis du eine Nachricht sendest.",
+      "testsLeftAlone": "Tests schlagen fehl, aber ich konnte nicht feststellen, ob meine Änderung die Ursache ist, also habe ich sie nicht angefasst."
+    },
     "notice": {
       "dismiss": "Dismiss",
+      "backgroundFinished": "Eine Hintergrundaufgabe ist fertig: {{command}}. Sende eine Nachricht, um hier weiterzumachen.",
+      "backgroundFailed": "Eine Hintergrundaufgabe ist fehlgeschlagen: {{command}}. Sende eine Nachricht, um dir anzusehen, was passiert ist.",
+      "backgroundTimedOut": "Eine Hintergrundaufgabe wurde am Zeitlimit gestoppt: {{command}}. Sende eine Nachricht, um dir anzusehen, was passiert ist.",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
       "unsaved": "Der Speicher ist voll, daher wird dieser Chat nicht gespeichert. Gib etwas Speicherplatz frei; mit deiner nächsten Nachricht wird er wieder gespeichert.",
@@ -3071,7 +3085,12 @@
       "done_other": "Done in {{duration}}, {{count}} steps",
       "stopped": "Stopped",
       "usage": "In {{input}} ({{cached}} cached) · Out {{output}}",
-      "done_zero": "Fertig in {{duration}}"
+      "done_zero": "Fertig in {{duration}}",
+      "credits_one": "{{credits}} Credit",
+      "credits_other": "{{credits}} Credits",
+      "creditsLeft_one": "{{credits}} Credit · {{left}} übrig",
+      "creditsLeft_other": "{{credits}} Credits · {{left}} übrig",
+      "creditsAction": "{{credits}}. Tarif und Credits ansehen"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",
@@ -3435,6 +3454,7 @@
       "completed": "Completed",
       "failed": "Failed",
       "skipped": "Skipped",
+      "skipped-link": "Übersprungen: Chat-App nicht verbunden",
       "skipped-offline": "Übersprungen: offline",
       "skipped-credits": "Übersprungen: keine Credits",
       "offline": "Abacus nicht erreichbar",
@@ -4280,6 +4300,51 @@
     "waitingTitle": "Schließe den Checkout in deinem Browser ab",
     "waitingToSend": "Wartet auf Senden: „{{text}}“"
   },
+  "paidWelcome": {
+    "title": "Du hast jetzt {{plan}}",
+    "titleNoPlan": "Du hast jetzt einen bezahlten Plan",
+    "credits": "{{credits}} Credits einsatzbereit",
+    "model": "{{model}} ist jetzt dein Standardmodell",
+    "agents": "Persönliche Agenten und Routinen, die rund um die Uhr im Web laufen, auch wenn dein Computer aus ist",
+    "nextSteps": "Hier starten",
+    "resume": "Mach weiter, wo du warst",
+    "resumeDetail": "„{{text}}“",
+    "routines": "Richte im Web eine 24/7-Routine ein",
+    "unlockApps": "Baue und veröffentliche eine App im Web",
+    "unlockMedia": "Erstelle Bilder und Videos im Web",
+    "unlockConnectors": "Verbinde Gmail, Kalender und mehr",
+    "back": "Zurück zum Chat"
+  },
+  "siteDeploy": {
+    "title": "Veröffentliche deine Website",
+    "cardBody": "Abacus AI Agent im Web kann sie hosten und ihr einen öffentlichen Link geben.",
+    "stepOpen": "Öffne Abacus AI Agent im Web",
+    "openAgent": "Abacus AI Agent öffnen",
+    "stepPack": "Bereite dein Projekt für den Upload vor",
+    "pack": "ZIP-Datei erstellen",
+    "stepZip": "Dein Projekt ist bereit zum Hochladen",
+    "stepZipBlocked": "Dein Projekt ist noch nicht bereit zum Hochladen",
+    "packing_one": "Projekt wird vorbereitet … {{count}} Datei",
+    "packing_other": "Projekt wird vorbereitet … {{count}} Dateien",
+    "cancel": "Abbrechen",
+    "zipMeta_one": "{{size}} · {{count}} Datei",
+    "zipMeta_other": "{{size}} · {{count}} Dateien",
+    "showInFolder": "Im Ordner zeigen",
+    "dragHint": "Zieh die ZIP-Datei in den Chat im Web oder finde sie mit „Im Ordner zeigen“.",
+    "leftOut": "Weggelassen: {{names}}",
+    "heldBack": "Zurückgehalten, weil sie Schlüssel enthalten könnten: {{names}}",
+    "tooBig": "{{name}} ist zu groß zum Hochladen: über 50 MB, selbst ohne node_modules und Build-Dateien.",
+    "tooBroad": "Diese Website liegt nicht in einem eigenen Ordner. Bitte den Bot, sie in einen zu verschieben, und versuch es dann noch einmal.",
+    "none": "Der Ordner dieser Website ist nicht mehr da.",
+    "cancelled": "ZIP-Vorbereitung gestoppt.",
+    "failed": "Die ZIP-Datei konnte nicht vorbereitet werden.",
+    "retry": "Erneut versuchen",
+    "stepUpload": "Lade die ZIP-Datei dort hoch und bitte um die Veröffentlichung",
+    "prompt": "Veröffentliche diese App aus der hochgeladenen ZIP-Datei. Die Unterhaltung, in der sie entstanden ist, steht in abacusai-bot-conversation.md in der ZIP-Datei.",
+    "copy": "Nachricht kopieren",
+    "copied": "Kopiert",
+    "close": "Schließen"
+  },
   "paymentRequired": {
     "unconfirmedTitle": "Wähle einen Plan, um AbacusAI Bot weiter zu nutzen",
     "unconfirmedBody": "Du bist angemeldet, aber dein Konto braucht einen Plan, damit AbacusAI Bot funktioniert.",
@@ -4593,6 +4658,9 @@
       "empty": "Darauf konnte ich keine Antwort zusammenstellen. Bitte schick es noch einmal.",
       "contactNeutral": "Entschuldigung, ich kann gerade nicht antworten. Ich melde mich bald.",
       "contactEmpty": "Ich habe {{name}} nicht geantwortet: Es kam keine Antwort zurück. Öffne die App, um zu antworten, oder sag mir, was ich schreiben soll.",
+      "backgroundFinished": "Die Hintergrundaufgabe ist fertig. Sende eine Nachricht, um hier weiterzumachen.",
+      "backgroundFailed": "Die Hintergrundaufgabe ist fehlgeschlagen. Sende eine Nachricht, um dir anzusehen, was passiert ist.",
+      "backgroundTimedOut": "Die Hintergrundaufgabe wurde am Zeitlimit gestoppt. Sende eine Nachricht, um dir anzusehen, was passiert ist.",
       "undelivered": "Eine Nachricht an {{name}} konnte nicht zugestellt werden.",
       "appClosed": "Die App wurde geschlossen, bevor ich antworten konnte. Schick es noch einmal, dann mache ich weiter.",
       "stillWorking": "Ich arbeite noch daran (bisher {{minutes}} Min.). Ich antworte hier, sobald es fertig ist.",
@@ -4763,7 +4831,9 @@
     "importMcp": "Importieren Sie MCP-Server",
     "selectTheme": "Design auswählen",
     "themes": "Designs",
-    "diskFullLane": "Der Speicher des Computers ist voll, daher kann {{platform}} seine Daten nicht speichern. Die Verbindung wird automatisch wiederhergestellt, sobald etwas Speicherplatz frei ist."
+    "diskFullLane": "Der Speicher des Computers ist voll, daher kann {{platform}} seine Daten nicht speichern. Die Verbindung wird automatisch wiederhergestellt, sobald etwas Speicherplatz frei ist.",
+    "linkLostTitle": "{{platform}} ist getrennt",
+    "linkLostLane": "{{platform}} ist nicht mehr verknüpft, daher können Nachrichten und Routinen nicht darüber gesendet werden. Klicke auf „Verbinden“ und scanne den QR-Code erneut."
   },
   "channels": {
     "sidebar": {

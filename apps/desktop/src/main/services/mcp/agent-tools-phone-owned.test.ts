@@ -526,6 +526,51 @@ describe("paid-plan capabilities", () => {
 
   const FOX = "https://apps.abacus.ai/chatllm/agent?prompt=a+fox+in+the+snow";
 
+  describe("routines the WhatsApp chat's free plan cannot make", () => {
+    const read = async (
+      server: McpAgentToolsServer,
+      tool: string,
+      args: Record<string, unknown>,
+      session: string
+    ) => {
+      const result = (await server.executeTool(tool, args, session)) as {
+        content: Array<{ text?: string }>;
+      };
+      return result.content.map((part) => part.text ?? "").join("\n");
+    };
+
+    it.each([
+      ["a free phone chat", "free", PHONE, false],
+      ["a Basic phone chat", "basic", PHONE, true],
+      ["an unread phone plan", "unknown", PHONE, true],
+      ["a free app chat", "free", "ui-session", true],
+    ] as const)("%s", async (_name, tier, session, offered) => {
+      const server = planServer(tier, ["cronjob", "todo"]);
+      const help = await read(
+        server,
+        "bot_help",
+        { topic: "capabilities" },
+        session
+      );
+      const list = await read(server, "cronjob", { action: "list" }, session);
+      const on = /^On: (.*)$/m.exec(help)?.[1] ?? "";
+      expect(on.includes("cronjob")).toBe(offered);
+      for (const text of [help, list])
+        expect(/never say they are included/.test(text)).toBe(!offered);
+    });
+
+    it("says so when the routines topic is asked", async () => {
+      const help = await read(
+        planServer("free", ["cronjob"]),
+        "bot_help",
+        { topic: "routines" },
+        PHONE
+      );
+      expect(help).toMatch(/not set up from this chat on the free plan/);
+      expect(help).toMatch(/paid_feature with feature routines/);
+    });
+  });
+
   it("tells a free account's model that video, image and speech come with the paid plans", () => {
     mediaKeys.set("ABACUS_API_KEY", "key");
     const tools = listed(planServer("free"));
@@ -855,6 +900,10 @@ describe("paid-plan capabilities", () => {
         expect(free.isError).toBe(true);
         expect(free.text).toMatch(/Call paid_feature with feature routines/);
         for (const tier of ["basic", "paid"] as const) {
+          // A store of its own: the same routine twice is one routine.
+          process.env.ABACUSAI_BOT_HOME = fs.mkdtempSync(
+            path.join(os.tmpdir(), "phone-cron-")
+          );
           const paid = await create(tier, kind);
           expect(paid.isError).toBe(false);
           expect(paid.text).toMatch(/^Created/);

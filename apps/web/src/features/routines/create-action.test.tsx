@@ -1,14 +1,8 @@
 import { contract } from "@abacus-ai/contract/contract";
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
 import { implement } from "@orpc/server";
-import {
-  act,
-  fireEvent,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
-import { expect, it, vi } from "vitest";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { expect, it } from "vitest";
 
 import { IS_BROWSER } from "#renderer/lib/platform";
 import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
@@ -111,69 +105,6 @@ it.runIf(IS_BROWSER)(
         await screen.findByRole("dialog", { name: "Unlock routines" })
       ).toBeTruthy();
       expect(screen.queryByRole("textbox", { name: "Instruction" })).toBeNull();
-    } finally {
-      app.view.unmount();
-      await app.cleanup();
-    }
-  }
-);
-it.runIf(!IS_BROWSER)(
-  "once the plan turns paid, sends routines to Abacus AI Agent on the web, once",
-  async () => {
-    let tier = "free";
-    const open = vi.fn();
-    const app = await renderApp("/routines", {
-      procedures: {
-        account: { abacus: os.account.abacus.handler(() => account(tier)) },
-        system: {
-          openExternal: os.system.openExternal.handler(({ input }) =>
-            open(input)
-          ),
-        },
-      },
-    });
-    const dismissals = () => app.collections.prefs.get("app")?.dismissals;
-    try {
-      // Read as free first: that read is what makes a later paid one an upgrade.
-      await waitFor(() => expect(dismissals()?.freePlanSeenAt).not.toBeNull());
-      expect(screen.queryByRole("dialog")).toBeNull();
-      tier = "basic";
-      await act(async () => {
-        await app.router.options.context.queryClient.invalidateQueries({
-          queryKey: app.transport.orpc.account.abacus.queryKey(),
-        });
-      });
-      const dialog = await screen.findByRole("dialog", {
-        name: "You're on basic",
-      });
-      fireEvent.click(
-        within(dialog).getByRole("button", { name: "Set up 24/7 routines" })
-      );
-      await waitFor(() =>
-        expect(open).toHaveBeenCalledWith({
-          url: "https://apps.abacus.ai/chatllm",
-        })
-      );
-      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-      expect(dismissals()?.upgradeRoutinesSeenAt).not.toBeNull();
-    } finally {
-      app.view.unmount();
-      await app.cleanup();
-    }
-  },
-  15000
-);
-it.runIf(!IS_BROWSER)(
-  "never tells an account first read as paid that it just upgraded",
-  async () => {
-    const app = await renderApp("/routines", options("basic"));
-    try {
-      await screen.findByRole("navigation", { name: "Routines" });
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      expect(screen.queryByRole("dialog")).toBeNull();
-      expect(
-        app.collections.prefs.get("app")?.dismissals.freePlanSeenAt
-      ).toBeNull();
     } finally {
       app.view.unmount();
       await app.cleanup();

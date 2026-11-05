@@ -98,12 +98,13 @@ export const RoutineCreditHoldNote = ({ row }: { row: RoutineRow }) => {
 };
 
 /**
- * What a hosted routine's runs may reach. A routine on this computer always
- * runs with full access, so it has nothing to show here.
+ * What a hosted routine's runs may reach. A routine with full access, as one
+ * on this computer always has, has nothing to show here.
  */
 export const RoutineReachPanel = ({ row }: { row: RoutineRow }) => {
   const { t } = useTranslation();
-  if (!isHosted(row) || row.hosted == null) return null;
+  if (!isHosted(row) || row.hosted == null || row.hosted.fullAccess === true)
+    return null;
   const reach = row.hosted;
   const watchUrl = reach.watchUrl ?? null;
   const items = [

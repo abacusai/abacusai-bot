@@ -43,10 +43,12 @@ import {
   useRoutinesData,
   type RunView,
 } from "./data";
+import { RoutineDuplicateNotice, useRoutineDuplicates } from "./duplicates";
 import { isHosted } from "./hosted";
 import { HostedResults } from "./hosted-results";
 import { runRoutineNow, showSaveFailure, useHostedOff } from "./hosted-sync";
 import { RoutinesLanding } from "./landing";
+import { RoutineModel } from "./model";
 import {
   RoutineCreditHoldNote,
   RoutinePausedReason,
@@ -123,7 +125,8 @@ const RunsRail = ({
                   ) : a.outcome === "failed" ? (
                     <CircleAlert className="text-destructive size-3.5 shrink-0" />
                   ) : a.outcome === "offline" ||
-                    a.outcome === "skipped-offline" ? (
+                    a.outcome === "skipped-offline" ||
+                    a.outcome === "skipped-link" ? (
                     // The network's doing, not the routine's: no red.
                     <WifiOff className="text-muted-foreground size-3.5 shrink-0" />
                   ) : a.outcome === "skipped-credits" ? (
@@ -226,6 +229,7 @@ export const RoutinePage = ({
   const row = routines.find((r) => r.id === routineId);
   const hostedOff = useHostedOff();
   const [deleting, setDeleting] = useState(false);
+  const duplicates = useRoutineDuplicates(routines);
   if (!row) return <RoutineGone />;
   const state = routineState(row, runs, sessions, undefined, hostedOff);
   const subtitle = [
@@ -258,6 +262,15 @@ export const RoutinePage = ({
       transition: "none",
     });
   const runNow = () => runRoutineNow(row, transport, t);
+  const toggleEnabled = () =>
+    void db.collections.routines
+      .update(row.id, (d) => {
+        d.enabled = !row.enabled;
+      })
+      .isPersisted.promise.catch((error: unknown) =>
+        showSaveFailure(error, transport, t)
+      );
+  const twins = duplicates.get(row.id);
   const showReport = !hosted && selected != null;
   const facts = [
     [
@@ -291,6 +304,7 @@ export const RoutinePage = ({
           </div>
         ))}
       </dl>
+      <RoutineModel row={row} />
       {!hosted && <RoutinePausedReason row={row} />}
       {!hosted && <RoutineCreditHoldNote row={row} />}
       {!hosted && row.missed != null && <MissedRunsNote missed={row.missed} />}
@@ -398,14 +412,7 @@ export const RoutinePage = ({
             id: "toggle",
             label: t(row.enabled ? "phase5.pause" : "phase5.resume"),
             icon: row.enabled ? <Pause /> : <CirclePlay />,
-            onSelect: () =>
-              void db.collections.routines
-                .update(row.id, (d) => {
-                  d.enabled = !row.enabled;
-                })
-                .isPersisted.promise.catch((error: unknown) =>
-                  showSaveFailure(error, transport, t)
-                ),
+            onSelect: toggleEnabled,
           },
           {
             id: "edit",
@@ -443,6 +450,14 @@ export const RoutinePage = ({
           }
         }}
       />
+      {twins != null && (
+        <RoutineDuplicateNotice
+          row={row}
+          twins={twins}
+          onPause={toggleEnabled}
+          onDelete={() => setDeleting(true)}
+        />
+      )}
       {!wide && selected != null && (
         <div className="border-b px-2 py-1.5">
           <Button size="sm" variant="ghost" onClick={() => pick(undefined)}>
@@ -511,12 +526,21 @@ export const RoutinePage = ({
           )}
         </div>
       )}
-      {!hosted && <EditorChat key={row.id} routineId={row.id} />}
+      {!hosted && (
+        <EditorChat key={row.id} routineId={row.id} runId={selected} />
+      )}
     </div>
   );
 };
 type Exchange = { user: string; reply: string };
-export const EditorChat = ({ routineId }: { routineId: string }) => {
+export const EditorChat = ({
+  routineId,
+  runId,
+}: {
+  routineId: string;
+  /** The run on screen, whose question the user may be answering. */
+  runId?: string;
+}) => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
   const [text, setText] = useState("");
@@ -542,6 +566,7 @@ export const EditorChat = ({ routineId }: { routineId: string }) => {
       const result = await transport.client.routines.editByChat({
         routineId,
         text: user,
+        ...(runId != null ? { runId } : {}),
       });
       store.setState((log) =>
         [...log, { user, reply: result.reply }].slice(-10)

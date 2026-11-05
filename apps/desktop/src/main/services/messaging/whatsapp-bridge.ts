@@ -341,6 +341,25 @@ const PRESENCE_SCRIPT = pageScript`
   return { present, ready };
 `;
 
+/**
+ * Starts a page console line that reports a logout. WhatsApp Web reloads
+ * seconds after one, wiping the mailbox before a poll can read it, so the
+ * console is what reaches main in time.
+ */
+const LOGOUT_NOTE_PREFIX = "__abacus_wa_logout__ ";
+/** Page side of the same line, so scripts stay free of interpolated strings. */
+const LOGOUT_NOTE_SCRIPT = pageScript`(note) => console.info("__abacus_wa_logout__ " + note)`;
+/** The note is a word and a reason code. Anything else is not ours to log. */
+const LOGOUT_NOTE_SHAPE =
+  /^(?:logout|reason [\w.:-]{1,64}|previous [\w.:-]{1,64})$/;
+
+/** What a page console line says about a logout, or null if it is not one. */
+export const logoutNote = (line: string): string | null => {
+  if (!line.startsWith(LOGOUT_NOTE_PREFIX)) return null;
+  const note = line.slice(LOGOUT_NOTE_PREFIX.length);
+  return LOGOUT_NOTE_SHAPE.test(note) ? note : null;
+};
+
 /** The mailbox WAIT_READY_SCRIPT fills; the page cannot call into main. */
 const INIT_SCRIPT = pageScript`
   window.__abacusWa = window.__abacusWa || {
@@ -394,7 +413,14 @@ const WAIT_READY_SCRIPT = pageScript`
       } catch (e) {}
     };
     WPP.on("chat.new_message", push);
-    WPP.on("conn.logout", () => { state.loggedOut = true; });
+    const logoutNote = ${LOGOUT_NOTE_SCRIPT};
+    WPP.on("conn.logout", () => { state.loggedOut = true; logoutNote("logout"); });
+    WPP.on("conn.logout_reason", (reason) => logoutNote("reason " + reason));
+    // WhatsApp keeps the last logout's code across the reload that follows it.
+    try {
+      const previous = WPP.whatsapp.functions.getPrevLogoutReasonCode();
+      if (previous != null) logoutNote("previous " + previous);
+    } catch (e) {}
   };
   const deadline = Date.now() + (args.timeoutMs || 30000);
   while (Date.now() < deadline) {

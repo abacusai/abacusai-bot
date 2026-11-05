@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { WHATSAPP_CHANNEL } from "@abacus-ai/agent/channel";
 import { connectorForService } from "@abacus-ai/connectors/registry";
 import { AgentMode } from "@abacus-ai/contract/agent-types";
+import { abacusPlanTier } from "@abacus-ai/contract/models";
 
 import { composeHost } from "#main/compose-host";
 import type { HostPlatformOperations } from "#main/handler";
@@ -21,7 +22,10 @@ import {
   markNotMoved,
 } from "#main/services/agent-tools/cron-store";
 import { PrefsStore } from "#main/services/config/prefs-store";
-import { resolveAbacusApiKey } from "#main/services/providers/abacus";
+import {
+  fetchAbacusAccount,
+  resolveAbacusApiKey,
+} from "#main/services/providers/abacus";
 import {
   abacusRoutellmV1,
   abacusUserAgent,
@@ -206,6 +210,7 @@ export const composeNodeHost = async () => {
         return id != null && statuses[id]?.state === "connected";
       });
     },
+    planTier: async () => abacusPlanTier(await fetchAbacusAccount()),
   });
   const phoneLane = new PhoneLane({
     call: channels,

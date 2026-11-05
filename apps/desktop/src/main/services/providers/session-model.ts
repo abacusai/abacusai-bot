@@ -34,7 +34,7 @@ import {
 } from "./models";
 
 export interface SessionModelSources {
-  /** `config.json`'s `defaultModel` (the user's last pick), if any. */
+  /** `config.json`'s `defaultModel` (set in Settings > Models), if any. */
   readDefault(): string | null | undefined;
   /** The catalog with `configured` and `recommended` (`listAvailableModels`). */
   listCatalog(): Promise<readonly ModelAvailability[]>;
@@ -60,9 +60,9 @@ const present = (id: string | null | undefined): string | null =>
   id == null || id.length === 0 ? null : id;
 
 /**
- * `requested` is the session's own ask: a bot's model, the bot a routine
- * speaks as, or null for the app default. `pin` is the session's stored
- * model (null for a session not yet pinned).
+ * `requested` is the session's own ask: a bot's model, a routine's own, or
+ * null for the app default. `pin` is the session's stored model (null for a
+ * session not yet pinned).
  */
 export const resolveSessionModel = async (
   requested: string | null,
@@ -106,4 +106,35 @@ export const resolveSessionModel = async (
   return row != null && modelAccess(row) === "locked"
     ? present(sources.cachedRecommended?.())
     : syncDefault();
+};
+
+/**
+ * The model a routine runs on: `requested`, else its plan's default. Never the
+ * stored default, which a chat's pick writes. With no plan (own keys only)
+ * there is no plan's default, so the stored one stands.
+ */
+export const resolveRoutineModel = (
+  requested: string | null,
+  sources: SessionModelSources = appModelSources
+): Promise<string | null> =>
+  resolveSessionModel(
+    requested,
+    sources.tier?.() == null ? sources : { ...sources, readDefault: () => null }
+  );
+
+/**
+ * The model a new routine keeps as its own: its bot's, else the one the chat
+ * that made it is on. Null is the plan's default; a chat already on it stores
+ * null too, so the routine moves with the plan.
+ */
+export const newRoutineModel = (
+  botModel: string | null | undefined,
+  chatModel: string | null | undefined,
+  sources: SessionModelSources = appModelSources
+): string | null => {
+  const chat = present(chatModel);
+  return (
+    present(botModel) ??
+    (chat === present(sources.cachedRecommended?.()) ? null : chat)
+  );
 };

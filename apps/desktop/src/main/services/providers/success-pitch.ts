@@ -13,18 +13,24 @@
  *
  * Never on a routine, a host lane, a turn the app opened itself (a bot's
  * first-run note, a routine's fire), or a turn that showed another card.
+ * On every plan, a clean turn also marks whether the chat's latest result
+ * is a site, for its deploy steps (site-deploy.ts).
  */
+import path from "node:path";
+
 import { visibleUserText } from "@abacus-ai/agent/user-text";
 import type {
   DesktopEvent,
   UserTextTags,
 } from "@abacus-ai/contract/agent-types";
+import { isSuggestTasksTool } from "@abacus-ai/contract/bots/suggested-tasks";
 import type { PrefsPatch, PrefsRow } from "@abacus-ai/contract/contract/rows";
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
 import { creditAccountKey } from "@abacus-ai/contract/credit-thresholds";
 import { isDeliverableUrl } from "@abacus-ai/contract/deliverables";
 import type { FunnelStep } from "@abacus-ai/contract/funnel";
 import { abacusPlanTier } from "@abacus-ai/contract/models";
+import { keepSiteMarks } from "@abacus-ai/contract/site-deploy";
 import {
   EMPTY_SUCCESS_PITCH_MARK,
   isCleanReply,
@@ -40,6 +46,7 @@ import {
   underHalfOfFreeCredits,
 } from "@abacus-ai/contract/success-pitch";
 
+import { previewDirectory } from "../agent-tools/served-previews";
 import { handedOverArtifacts } from "../session/session-artifacts.utils";
 import type { TurnRecord } from "../session/turn-ledger";
 
@@ -51,6 +58,8 @@ interface TurnFacts {
   messages: number;
   praise: boolean;
   delivered: Exclude<SuccessPitchMoment, "reaction"> | null;
+  /** The folder of the site it built, when known. */
+  siteDir: string | null;
   lead: SuccessPitchLead | null;
   /** Settled tool calls that went through. */
   tools: number;
@@ -118,6 +127,7 @@ export class SuccessPitchWatch {
         messages: 0,
         praise: false,
         delivered: null,
+        siteDir: null,
         lead: null,
         tools: 0,
         troubled: false,
@@ -152,7 +162,8 @@ export class SuccessPitchWatch {
         this.facts(sessionId).reply += event.content;
         return;
       case "tool_call_start":
-        this.facts(sessionId).reply = "";
+        if (!isSuggestTasksTool(event.toolName))
+          this.facts(sessionId).reply = "";
         return;
       case "error":
         this.facts(sessionId).troubled = true;
@@ -185,8 +196,9 @@ export class SuccessPitchWatch {
     >
   ): void {
     const facts = this.facts(sessionId);
-    facts.reply = "";
     const name = event.tool.name;
+    // The reply stands: suggest_tasks comes after it and can end the turn.
+    if (!isSuggestTasksTool(name)) facts.reply = "";
     if (event.result.rejected === true) {
       facts.troubled = true;
       return;
@@ -197,6 +209,14 @@ export class SuccessPitchWatch {
     if (MEDIA_TOOL.test(name)) facts.lead = "media";
     if (isTool(name, "serve") && event.tool.input.action === "start") {
       facts.delivered = "site";
+      const directory = String(event.tool.input.directory ?? "").trim();
+      const workspace = this.deps.workspacePath(sessionId);
+      if (directory.length > 0)
+        facts.siteDir = path.isAbsolute(directory)
+          ? directory
+          : workspace != null
+            ? path.resolve(workspace, directory)
+            : null;
       return;
     }
     for (const draft of handedOverArtifacts(
@@ -206,8 +226,13 @@ export class SuccessPitchWatch {
       const site =
         (draft.kind === "link" && isDeliverableUrl(draft.location)) ||
         HTML_FILE.test(draft.location);
-      if (site) facts.delivered = "site";
-      else facts.delivered ??= "file";
+      if (site) {
+        facts.delivered = "site";
+        facts.siteDir ??=
+          draft.kind === "link"
+            ? previewDirectory(draft.location)
+            : path.dirname(draft.location);
+      } else facts.delivered ??= "file";
       if (draft.kind === "image") facts.lead = "media";
     }
   }
@@ -240,6 +265,7 @@ export class SuccessPitchWatch {
     const where =
       record.channel == null ? "app" : record.channel.owner ? "chat" : null;
     if (where == null) return Promise.resolve();
+    if (clean) this.markSite(record.sessionId, record.turnId, facts);
     const signal: {
       trigger: SuccessPitchTrigger;
       moment: SuccessPitchMoment;
@@ -255,6 +281,26 @@ export class SuccessPitchWatch {
             }
           : null;
     return this.decide(record.sessionId, where, signal, record.turnId);
+  }
+
+  /**
+   * The session's latest finished turn, for the deploy steps on any plan: a
+   * site keeps its mark; any other clean result clears it.
+   */
+  private markSite(sessionId: string, turnId: string, facts: TurnFacts): void {
+    const prefs = this.deps.prefs();
+    if (prefs == null) return;
+    const { [sessionId]: had, ...others } = prefs.get().siteReady ?? {};
+    if (facts.delivered !== "site") {
+      if (had != null) prefs.update({ siteReady: others });
+      return;
+    }
+    prefs.update({
+      siteReady: keepSiteMarks({
+        ...others,
+        [sessionId]: { turnId, siteDir: facts.siteDir, at: this.now() },
+      }),
+    });
   }
 
   /**

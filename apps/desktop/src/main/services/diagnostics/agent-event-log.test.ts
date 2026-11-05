@@ -31,6 +31,21 @@ const tool = (name: string, input: Record<string, unknown> = {}) => ({
 });
 
 describe("what gets written", () => {
+  it("says what a turn billed in all, beside its last request", () => {
+    const usage = {
+      input: 86_206,
+      output: 1_311,
+      cacheRead: 0,
+      cacheWrite: 0,
+      requests: 19,
+      model: "m",
+      total: { input: 1_400_000, output: 9_000, cacheRead: 0, cacheWrite: 0 },
+    };
+    expect(line({ type: "turn_complete", usage })).toContain(
+      "turn cache read 0 input 1400000 output 9000"
+    );
+  });
+
   it("names the model the session started on", () => {
     expect(
       describeAgentEvent(SESSION, {

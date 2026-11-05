@@ -34,6 +34,7 @@ export type RoutineRunKind =
   | "skipped"
   | "skipped-offline"
   | "skipped-credits"
+  | "skipped-link"
   | "no-workspace"
   | "unknown"
   | "timed-out"
@@ -160,6 +161,8 @@ export interface HostedRoutineInfo {
   /** Account data its runs may read. */
   reads: RoutineRead[];
   watchUrl: string | null;
+  /** Its runs have full access: `sources` and `reads` no longer apply. */
+  fullAccess?: boolean;
   /** Why the server paused it, when it did. */
   pausedReason: string | null;
   lastRun: HostedRoutineRun | null;
@@ -215,6 +218,11 @@ export interface Routine {
   reach?: RoutineReach | null;
   /** The fires it last missed while the computer was off; cleared by its next on-time fire. */
   missed?: RoutineMissed | null;
+  /**
+   * The model a local routine runs on, its own: no chat's pick moves it. Null
+   * is the plan's default. Absent on a routine saved before routines had one.
+   */
+  model?: string | null;
 }
 
 export interface RoutineListItem extends Routine {
@@ -269,6 +277,7 @@ export type RoutineUpdateInput = Partial<
     | "workspaceId"
     | "access"
     | "reach"
+    | "model"
   >
 > & {
   webhook?: boolean;

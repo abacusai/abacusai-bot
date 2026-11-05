@@ -5,7 +5,10 @@
  * user to send from their phone. The buttons show once the reply is done
  * and only on the latest offer, until the user writes anything.
  */
-import { suggestedTasks } from "@abacus-ai/contract/bots/suggested-tasks";
+import {
+  isSuggestTasksTool,
+  suggestedTasks,
+} from "@abacus-ai/contract/bots/suggested-tasks";
 import { funnelDetail } from "@abacus-ai/contract/funnel";
 import { parsePartialJSON, type UIMessage } from "@tanstack/ai-client";
 import type { ToolProps } from "@tanstack/ai-react/ui";
@@ -14,7 +17,6 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useOptionalDb } from "#renderer/data/db";
-import { isSuggestTasksTool } from "#renderer/lib/bot-turns/turns";
 import { showError } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { hiddenUserMessage } from "#renderer/lib/user-message";

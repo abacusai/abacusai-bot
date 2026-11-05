@@ -35,7 +35,7 @@ import {
 
 import { useChatView } from "../kit/context";
 import { DeliverableOfferRow } from "../kit/deliverable-offer";
-import { userView } from "../kit/message";
+import { appLineOf, userView } from "../kit/message";
 import {
   BusyLine,
   busyLabel,
@@ -46,7 +46,7 @@ import {
   Typing,
 } from "../kit/status/status";
 import { SuccessPitchRow } from "../kit/success-pitch";
-import { UpgradeTriggers } from "../kit/upgrade-triggers";
+import { outOfAbacusCredits, UpgradeTriggers } from "../kit/upgrade-triggers";
 import { useHost, useThreadStore } from "../store/selectors";
 import type { RunOutcomeRecord } from "../store/thread-store";
 import { coalesceToolRuns, isToolOnly } from "./coalesce";
@@ -115,7 +115,7 @@ const Outcome = ({
     return <ErrorCard outcome={outcome} latest={latest} />;
   if (skin === "bot" && outcome.freeLane != null)
     return <FreeLaneChip provider={outcome.freeLane.provider} />;
-  return <RunMarker outcome={outcome} />;
+  return <RunMarker outcome={outcome} latest={latest} />;
 };
 
 const OutcomeRow = ({
@@ -399,7 +399,7 @@ const visibleMessages = (
   messages.filter((message, index) => {
     if (
       message.role === "user"
-        ? userView(message).hidden
+        ? userView(message).hidden && appLineOf(message) == null
         : message.parts.length === 0 ||
           (skin !== "bot" && drawsNothing(message))
     )
@@ -441,6 +441,17 @@ const toolGapBefore = (previous: UIMessage | undefined, message: UIMessage) => {
     last.name === first.name
     ? ("same" as const)
     : ("different" as const);
+};
+
+/** A wall the next run answered (a resume after paying): none of the person's messages came between. */
+const wallAnswered = (
+  outcome: RunOutcomeRecord,
+  latest: boolean,
+  messages: UIMessage[]
+): boolean => {
+  if (latest || !outOfAbacusCredits(outcome)) return false;
+  const at = messages.findIndex(({ id }) => id === outcome.afterMessageId);
+  return at >= 0 && messages[at + 1]?.role !== "user";
 };
 
 const outcomesByAnchor = (
@@ -748,8 +759,14 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
       setWindow(next);
   }
 
-  const { byAnchor, orphans } = outcomesByAnchor(messages, visible, outcomes);
   const latest = active ? null : outcomes.at(-1)?.runId;
+  const { byAnchor, orphans } = outcomesByAnchor(
+    messages,
+    visible,
+    outcomes.filter(
+      (outcome) => !wallAnswered(outcome, outcome.runId === latest, messages)
+    )
+  );
   // Keep the mounted selection window until selection is released. Moving
   // paging boundaries can then load rows without destroying the native range.
 

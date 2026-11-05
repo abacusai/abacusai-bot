@@ -643,6 +643,38 @@ describe("an edit the bot should hear about", () => {
     expect(text).toContain("do not carry out your mission now");
   });
 
+  it("tells the bot what is already scheduled, and that an edit moves it", async () => {
+    const sendMessage = vi.fn();
+    const service = new BotService(
+      makeCallbacks({
+        sendMessage,
+        botRoutines: () => [
+          {
+            id: "routine-1",
+            name: "Scout check-in",
+            when: "0 * * * *",
+            checkIn: true,
+          },
+          { id: "job-1", name: "Inbox", when: "0 8 * * *", checkIn: false },
+        ],
+      })
+    );
+    const bot = service.create({ name: "Scout", description: "Watch." });
+    await service.openChat(bot.id);
+    sendMessage.mockClear();
+    expect(service.missionJustEdited(bot.id)).toBe(false);
+
+    await service.announceChange(bot.id, { checkIn: "every hour" });
+
+    const text = String(sendMessage.mock.calls[0]?.[2]);
+    expect(text).toContain("the app has saved the check-in schedule itself");
+    expect(text).toContain(
+      "routine-1  0 * * * *  Scout check-in (your check-in"
+    );
+    expect(text).toContain('use cronjob "update" with its id');
+    expect(service.missionJustEdited(bot.id)).toBe(true);
+  });
+
   it("says nothing to a bot that has never had a chat, or about nothing", async () => {
     const sendMessage = vi.fn();
     const service = new BotService(makeCallbacks({ sendMessage }));

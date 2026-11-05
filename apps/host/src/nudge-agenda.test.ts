@@ -6,6 +6,7 @@ import {
   dueAgendaItems,
   phoneReplyLanguage,
 } from "@abacus-ai/agent/phone-nudges";
+import type { AbacusPlanTier } from "@abacus-ai/contract/models";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PendingWait } from "#main/services/agent-tools/pending-waits";
@@ -49,6 +50,8 @@ const agenda = (
     enabled?: boolean;
     /** Whether Calendar or Gmail is connected; throws when an Error. */
     google?: boolean | Error;
+    /** The account's plan; throws when an Error. */
+    plan?: AbacusPlanTier | Error;
   } = {}
 ) => {
   const calls: Array<Record<string, unknown>> = [];
@@ -74,6 +77,14 @@ const agenda = (
             googleConnected: async () => {
               if (options.google instanceof Error) throw options.google;
               return options.google === true;
+            },
+          }
+        : {}),
+      ...(options.plan !== undefined
+        ? {
+            planTier: async () => {
+              if (options.plan instanceof Error) throw options.plan;
+              return options.plan!;
             },
           }
         : {}),
@@ -784,8 +795,11 @@ describe("the linked turn", () => {
   });
 
   /** The first brief a linked entry gets once a poll carried it. */
-  const firstBrief = async (google?: boolean | Error): Promise<string> => {
-    const { nudges, logs } = agenda({ google });
+  const firstBrief = async (
+    google?: boolean | Error,
+    plan?: AbacusPlanTier | Error
+  ): Promise<string> => {
+    const { nudges, logs } = agenda({ google, plan });
     const linked: PhoneInboxEntry = {
       id: "l1",
       kind: "linked",
@@ -818,15 +832,36 @@ describe("the linked turn", () => {
     expect(connected).toContain(
       "Then offer to draft replies to those into their Gmail Drafts"
     );
-    expect(connected).toContain(
-      "one line offering to send this brief here every morning at 8"
-    );
     for (const brief of [
       await firstBrief(),
       await firstBrief(new Error("offline")),
       unpolled,
     ])
       expect(brief).toBe(connected);
+  });
+
+  it("offers the morning brief on a paid plan only, and changes nothing else", async () => {
+    const offer =
+      "Last, one line offering to send this brief here every morning at 8; on their yes, set it up with `cronjob`. ";
+    const paid = await firstBrief(true, "paid");
+    expect(paid).toContain(offer);
+    expect(await firstBrief(true, "basic")).toBe(paid);
+    // The connectors unread is the same connected brief: only the plan decides.
+    expect(await firstBrief(undefined, "paid")).toBe(paid);
+    const { nudges } = agenda({ plan: "paid" });
+    const unpolled = nudges.notes({
+      id: "l1",
+      kind: "linked",
+      first_brief: true,
+    })[0];
+    for (const brief of [
+      await firstBrief(true, "free"),
+      await firstBrief(true, "unknown"),
+      await firstBrief(true, new Error("offline")),
+      await firstBrief(true),
+      unpolled,
+    ])
+      expect(brief).toBe(paid.replace(offer, ""));
   });
 
   it("with nothing connected, offers three things it makes with nothing from them as pages, the trip plan first, and leaves Google optional", async () => {

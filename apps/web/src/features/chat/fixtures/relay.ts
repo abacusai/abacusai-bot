@@ -7,6 +7,7 @@ import type {
   PermissionDescriptor,
 } from "@abacus-ai/contract/contract";
 import {
+  creditsOf,
   freeLaneOf,
   type AiNotice,
   type RunOutcomeRecord,
@@ -384,6 +385,7 @@ const fold = (
       } else {
         const usage = Array.isArray(value.usage) ? value.usage[0] : undefined;
         const freeLane = freeLaneOf(value.metadata);
+        const credits = creditsOf(value.metadata);
         outcomes = [
           ...outcomes,
           {
@@ -396,6 +398,7 @@ const fold = (
               ? { usage: usage as RunOutcomeRecord["usage"] }
               : {}),
             ...(freeLane != null ? { freeLane } : {}),
+            ...(credits != null ? { credits } : {}),
           },
         ];
       }

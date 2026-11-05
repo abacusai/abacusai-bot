@@ -106,6 +106,13 @@ import {
 import { personaPrompt, readPersona } from "../persona.js";
 import { scriptRuntimesPrompt, windowsShellPrompt } from "../posix-shell.js";
 import {
+  endedOnPromise,
+  mayAskForPromisedWork,
+  PROMISED_WORK_PROMPT,
+  PROMISED_WORK_TYPE,
+  PromisedWork,
+} from "../promised-work.js";
+import {
   AgentMode,
   AgentStatus,
   type AgentEvent,
@@ -166,13 +173,14 @@ import {
   stallFailure,
   type TurnFailure,
 } from "../turn-outcome.js";
-import { turnUsage, type TurnUsage } from "../turn-usage.js";
+import { addRunUsage, turnUsage, type TurnUsage } from "../turn-usage.js";
 import {
   accountReplyLanguagePrompt,
   learnUserLanguage,
 } from "../user-language.js";
 import webTools from "../web/tools.js";
 import type { ForeverProfile, HiddenTurnPrompt } from "./profile.js";
+import { endTurnOnClosedReply } from "./reply-end.js";
 import { TurnReply } from "./turn-reply.js";
 
 export interface ForeverEngineOptions {
@@ -348,6 +356,9 @@ export class ForeverEngine {
   private languageRepairsThisTurn = 0;
   /** The turn's recoveries from an empty reply (empty-reply.ts). */
   private readonly emptyReplies = new EmptyReplies();
+  /** The turn's ask after a reply that ended on a promise (promised-work.ts). */
+  private readonly promisedWork = new PromisedWork();
+  private pendingPromisedWork = false;
   /** The same model is to be asked again, out of sight, for its answer. */
   private pendingEmptyAsk = false;
   /** Whether a user turn is in flight: a refresh landing now is mid-turn. */
@@ -613,6 +624,7 @@ export class ForeverEngine {
 
     this.session = created.session;
     this.pi = this.loadedPi;
+    endTurnOnClosedReply(this.session.agent);
     // A degenerate summary from a cheap model must not erase the history.
     anchorCompactions(this.session.sessionManager, {
       anchorRequest: this.profile.anchorCompaction !== false,
@@ -774,6 +786,8 @@ export class ForeverEngine {
     this.pendingLanguageRepair = null;
     this.pendingEmptyAsk = false;
     this.emptyReplies.begin();
+    this.promisedWork.begin();
+    this.pendingPromisedWork = false;
     this.mcpTools.atTurnStart();
     this.pendingToolArrival = null;
     this.toolArrivalsThisTurn = 0;
@@ -1007,10 +1021,12 @@ export class ForeverEngine {
       this.pendingNetworkFailure != null ||
       this.pendingStreamCut ||
       this.pendingBusyWait != null ||
-      this.pendingEmptyAsk
+      this.pendingEmptyAsk ||
+      this.pendingPromisedWork
     ) {
       if (this.interrupted) {
         this.pendingEmptyAsk = false;
+        this.pendingPromisedWork = false;
         this.pendingStreamCut = false;
         this.pendingNetworkFailure = null;
         this.pendingBusyWait = null;
@@ -1090,6 +1106,25 @@ export class ForeverEngine {
       if (this.pendingEmptyAsk) {
         this.pendingEmptyAsk = false;
         await this.askAfterEmptyReply();
+
+        continue;
+      }
+
+      if (this.pendingPromisedWork) {
+        this.pendingPromisedWork = false;
+        this.emitAgentEvent({
+          type: "promised_work_recovery",
+          model: this.session?.model?.id ?? "",
+        });
+
+        await this.session?.sendCustomMessage(
+          {
+            customType: PROMISED_WORK_TYPE,
+            content: PROMISED_WORK_PROMPT,
+            display: false,
+          },
+          { triggerTurn: true }
+        );
 
         continue;
       }
@@ -1663,7 +1698,8 @@ export class ForeverEngine {
   }
 
   private noteSteered(steer: PendingSteer): void {
-    this.reply.answers(steer.messageId);
+    const answered = this.reply.answers(steer.messageId);
+    if (answered != null) this.emitAgentEvent(answered);
     this.emitAgentEvent({
       type: "user_message_steered",
       content: steer.text,
@@ -1903,6 +1939,7 @@ export class ForeverEngine {
 
       this.session = created.session;
       this.pi = this.loadedPi;
+      endTurnOnClosedReply(this.session.agent);
       // A fresh session has only the tools it was built with.
       this.mcpTools.rebind(
         new Set(this.session.getAllTools().map((tool) => tool.name))
@@ -2109,7 +2146,7 @@ export class ForeverEngine {
           });
         }
 
-        if (!this.hiddenTurn) this.reply.messageEnded();
+        if (!this.hiddenTurn) this.reply.messageEnded(callsTool(event.message));
         this.rawStreamed = "";
         this.sanitizer.reset();
         this.currentMessageId = null;
@@ -2189,7 +2226,10 @@ export class ForeverEngine {
             ? (this.session?.messages ?? event.messages)
             : event.messages
         );
-        this.lastTurnUsage = turnUsage(event.messages as never);
+        this.lastTurnUsage = addRunUsage(
+          this.lastTurnUsage,
+          turnUsage(event.messages as never)
+        );
 
         // A call that answered ends any outage this turn was riding out.
         if (runMadeProgress(event.messages)) this.networkWait.reset();
@@ -2326,7 +2366,7 @@ export class ForeverEngine {
         // With no other model to move to, the same one is asked.
         this.pendingEmptyAsk =
           emptyStep != null && this.pendingOpenLlmRotation == null;
-        if (
+        const ending =
           !event.willRetry &&
           !this.continuingPastMalformedToolCall &&
           this.pendingContextCompaction == null &&
@@ -2335,8 +2375,18 @@ export class ForeverEngine {
           this.pendingLanguageRepair == null &&
           this.pendingToolArrival == null &&
           this.pendingStall == null &&
-          !this.pendingEmptyAsk
-        ) {
+          !this.pendingEmptyAsk;
+        // Words that promise more, and nothing else on the way: told once to
+        // do it, inside this send so the run stays open (PromisedWork).
+        this.pendingPromisedWork =
+          ending &&
+          !this.hiddenTurn &&
+          !this.interrupted &&
+          this.ownedTurn != null &&
+          mayAskForPromisedWork(this.mode) &&
+          endedOnPromise(event.messages) &&
+          this.promisedWork.claim();
+        if (ending && !this.pendingPromisedWork) {
           this.finishTurn();
         }
 
@@ -2762,6 +2812,14 @@ const NO_MODEL_CONFIGURED =
 
 function isAssistantMessage(message: unknown): boolean {
   return (message as { role?: unknown } | undefined)?.role === "assistant";
+}
+
+function callsTool(message: unknown): boolean {
+  const content = (message as { content?: unknown } | undefined)?.content;
+  return (
+    Array.isArray(content) &&
+    content.some((part) => (part as { type?: unknown }).type === "toolCall")
+  );
 }
 
 function messageText(message: unknown): string {

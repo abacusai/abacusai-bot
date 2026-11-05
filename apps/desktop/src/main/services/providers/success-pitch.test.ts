@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import type { DesktopEvent } from "@abacus-ai/contract/agent-types";
 import type { PrefsPatch, PrefsRow } from "@abacus-ai/contract/contract/rows";
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
@@ -105,6 +107,7 @@ const setup = (
     funnel,
     tellInChat,
     mark: () => row.successPitch?.[KEY],
+    sites: () => row.siteReady,
     offer: () => row.successPitch?.[KEY]?.offer ?? null,
     setCard: (card: object) => {
       row = {
@@ -239,6 +242,28 @@ describe("SuccessPitchWatch: a deliverable on a clean turn", () => {
       text(`I couldn't publish it. ${LONG_REPLY}`),
     ]);
     expect(t.offer()).toBeNull();
+  });
+
+  it("reads the reply a suggest_tasks call closed, which is the last thing the turn did", async () => {
+    const buttons = (): DesktopEvent[] => [
+      event({
+        type: "tool_call_start",
+        toolCallId: "t",
+        toolName: "suggest_tasks",
+      }),
+      tool("suggest_tasks", {}),
+    ];
+    const failed = setup();
+    await failed.run("Build it", [
+      presentSite,
+      text(`I couldn't publish it. ${LONG_REPLY}`),
+      ...buttons(),
+    ]);
+    expect(failed.offer()).toBeNull();
+
+    const worked = setup();
+    await worked.run("Build it", [presentSite, text(LONG_REPLY), ...buttons()]);
+    expect(worked.offer()).toMatchObject({ trigger: "deliverable" });
   });
 
   it("never on a failed or stopped turn, a file edit, or plain browsing", async () => {
@@ -457,5 +482,39 @@ describe("SuccessPitchWatch: chat apps", () => {
     await praised(t);
     expect(t.mark()?.chatToldAt).toBeNull();
     expect(t.funnel).not.toHaveBeenCalled();
+  });
+});
+
+describe("SuccessPitchWatch: the chat's latest site, on any plan", () => {
+  const PRO = { ...FREE, subscription_tier: "pro" } as AbacusAccountInfo;
+
+  it("marks a served site with its folder, and a clean result without one clears it", async () => {
+    const t = setup({ account: PRO });
+    await t.run("Build my bakery site", [
+      tool("serve", { action: "start", directory: "bakery" }),
+      text(LONG_REPLY),
+    ]);
+    expect(t.sites()?.s1).toMatchObject({
+      turnId: "turn-1",
+      siteDir: path.resolve("/home/me", "bakery"),
+    });
+    // A turn that failed leaves the site as the latest result.
+    await t.run("Add a menu page", [event({ type: "error" }), text("x")]);
+    expect(t.sites()?.s1?.turnId).toBe("turn-1");
+    await t.run("Write the report", [presentFile, text(LONG_REPLY)]);
+    expect(t.sites()?.s1).toBeUndefined();
+  });
+
+  it("a presented page marks its own folder", async () => {
+    const t = setup({ account: PRO });
+    await t.run("Build it", [
+      tool(
+        "agent-tools_present_deliverable",
+        { items: [{ path: "/home/me/shop/index.html" }] },
+        "[artifact] /home/me/shop/index.html"
+      ),
+      text(LONG_REPLY),
+    ]);
+    expect(t.sites()?.s1?.siteDir).toBe("/home/me/shop");
   });
 });

@@ -6,6 +6,7 @@ import type { UserTextTags } from "@abacus-ai/contract/agent-types";
 import { AgentMode, AgentStatus } from "@abacus-ai/contract/agent-types";
 import type { DesktopEvent } from "@abacus-ai/contract/agent-types";
 import type { BillingPlan } from "@abacus-ai/contract/billing-plan";
+import { isSuggestTasksTool } from "@abacus-ai/contract/bots/suggested-tasks";
 import type {
   AgentSessionListItem,
   StartAgentSessionResult,
@@ -55,6 +56,7 @@ import {
   chatLineForSuccessPitch,
   chatFailureOf,
   chatReplyForFailure,
+  chatLineForBackgroundJob,
   chatLineForMove,
   contactFailureNotice,
   FailureReplyThrottle,
@@ -83,6 +85,7 @@ import {
   readFieldValue,
   readGatewaySettings,
   readStoredMessageLog,
+  readPlatformLinkLost,
   readStoredOutbox,
   recordPairingRequest,
   revokePairing,
@@ -113,6 +116,16 @@ import { WhatsAppWebConnector } from "./whatsapp-web-connector";
 
 /** Replies longer than this are almost always the agent dumping a file. */
 const MAX_REPLY_LENGTH = 12_000;
+
+/** Words this short that promised more are the promise and nothing else. */
+const PROMISE_ONLY_CHARS = 300;
+
+/** The one message a turn sends when the model was told to go on from `held`. */
+const joinHeld = (held: string | null, reply: string): string => {
+  if (held == null || reply === held) return reply;
+  if (reply.length === 0) return held;
+  return held.length > PROMISE_ONLY_CHARS ? `${held}\n\n${reply}` : reply;
+};
 
 /**
  * Phrases that only appear once a reply is addressed to the user instead of
@@ -234,6 +247,14 @@ type GatewayOptions = {
   ) => void;
   /** Broadcast so the Messaging pane re-reads its snapshot. */
   emitChanged: () => void;
+  /** Tells the user outside any chat, for what no chat can carry: a lost link. */
+  notifyUser?: (
+    platform: MessagingPlatformId,
+    title: string,
+    body: string
+  ) => void;
+  /** A platform came up: what waited on its link can go. */
+  onPlatformConnected?: (platform: MessagingPlatformId) => void;
   /** The failure-reply throttle's clock; tests pass a fake one. */
   now?: () => number;
   /** The app's language (a BCP 47 tag), for lines the bot itself words. */
@@ -379,6 +400,12 @@ type Route = {
    * note ends its turn with an empty buffer.
    */
   taggedReply: string | null;
+  /**
+   * Words the model was told to go on from (promised_work_recovery). The chat
+   * gets one message a turn: these stand in if nothing follows, and a report
+   * in them leads what does.
+   */
+  heldWords: string | null;
   /** True between sending a prompt and the turn reaching idle or error. */
   busy: boolean;
   /** When the current turn was dispatched, for stuck-turn recovery. */
@@ -506,6 +533,9 @@ export class MessagingGatewayService {
     SelfLanePlatform,
     { botId: string; at: number }
   >();
+
+  /** Platforms whose lost link the user heard of this run: once each launch, until it is back. */
+  private readonly linkLossTold = new Set<MessagingPlatformId>();
 
   /** What each chat was already told about failed turns; see FailureReplyThrottle. */
   private readonly failureThrottle: FailureReplyThrottle;
@@ -784,8 +814,12 @@ export class MessagingGatewayService {
     // and what it still owes a chat goes now.
     if (state === "connected") {
       this.restartBackoff.delete(platformId);
+      this.linkLossTold.delete(platformId);
       if (this.outbox.owes(platformId)) this.outbox.schedule(0);
+      this.options.onPlatformConnected?.(platformId);
     }
+    if (state === "needs_login" && readPlatformLinkLost(platformId))
+      void this.tellLinkLost(platformId);
     // Every transition to the main log, so an export says what the card showed.
     console.log(
       `[messaging] ${platformId}: ${previous?.state ?? "(new)"} -> ${state}` +
@@ -1111,6 +1145,7 @@ export class MessagingGatewayService {
         buffer: "",
         bufferMessageId: null,
         taggedReply: null,
+        heldWords: null,
         busy: false,
         busySince: 0,
         queue: [],
@@ -1194,6 +1229,7 @@ export class MessagingGatewayService {
       buffer: "",
       bufferMessageId: null,
       taggedReply: null,
+      heldWords: null,
       busy: false,
       busySince: 0,
       queue: [],
@@ -1262,6 +1298,7 @@ export class MessagingGatewayService {
     route.buffer = "";
     route.bufferMessageId = null;
     route.taggedReply = null;
+    route.heldWords = null;
     // A fresh turn may fill the queue again, and deserves to say so again.
     route.queueFullNotified = false;
     route.delivered = false;
@@ -1395,12 +1432,27 @@ export class MessagingGatewayService {
         (action) => action.type === "moved-to-abacus"
       );
       if (moved != null) void this.tellMove(route, moved);
+      const job = event.actions?.find(
+        (action) => action.type === "background-job"
+      );
+      if (job != null) void this.tellBackgroundJob(route, job.cause);
+      return;
+    }
+
+    // The turn goes on past these words, so nothing is sent yet.
+    if (event.type === "promised_work_recovery") {
+      route.heldWords = outgoingWords(route.buffer);
+      route.buffer = "";
+      route.bufferMessageId = null;
+      route.taggedReply = null;
       return;
     }
 
     // Text before a tool call is narration, not the reply, except a reply the
-    // model already wrapped, which a later tool call must not throw away.
+    // model already wrapped, which a later tool call must not throw away. The
+    // text before suggest_tasks is the reply: that call can end the turn.
     if (event.type === "tool_call_start") {
+      if (isSuggestTasksTool(event.toolName)) return;
       route.taggedReply = lastTaggedReply(route.buffer) ?? route.taggedReply;
       route.buffer = "";
       route.bufferMessageId = null;
@@ -1446,12 +1498,15 @@ export class MessagingGatewayService {
       lastTaggedReply(route.buffer) == null && route.taggedReply != null
         ? route.taggedReply
         : outgoingWords(route.buffer);
+    const held = route.heldWords;
     route.buffer = "";
     route.taggedReply = null;
+    route.heldWords = null;
 
     // The agent's way of sending nothing; the sentinel must never reach a chat.
     if (reply === "NO_REPLY") {
       route.delivered = true;
+      if (held != null) this.deliver(route, held);
       return;
     }
 
@@ -1471,12 +1526,13 @@ export class MessagingGatewayService {
       return;
     }
 
-    if (reply.length > 0) {
+    const words = joinHeld(held, reply);
+    if (words.length > 0) {
       this.deliver(
         route,
-        reply.length > MAX_REPLY_LENGTH
-          ? `${reply.slice(0, MAX_REPLY_LENGTH)}\n\n[truncated]`
-          : reply
+        words.length > MAX_REPLY_LENGTH
+          ? `${words.slice(0, MAX_REPLY_LENGTH)}\n\n[truncated]`
+          : words
       );
     }
   }
@@ -1562,6 +1618,27 @@ export class MessagingGatewayService {
       )
     );
     this.deliver(route, chatLineForMove(words, action));
+  }
+
+  /** A job this chat's agent started finished after its reply went. */
+  private async tellBackgroundJob(
+    route: Route,
+    cause: string | undefined
+  ): Promise<void> {
+    const own = this.selfChatOf(route.platform);
+    if (
+      own == null ||
+      own.platform !== route.platform ||
+      own.chatId !== route.userId
+    )
+      return;
+    const words = await channelWords(
+      channelLocale(
+        readUserLanguage()?.name ?? null,
+        this.options.appLanguage?.() ?? null
+      )
+    );
+    this.deliver(route, chatLineForBackgroundJob(words, cause));
   }
 
   /**
@@ -2109,6 +2186,26 @@ export class MessagingGatewayService {
     }
   }
 
+  /** A link that ended can't say so in its own chat, so the computer does. */
+  private async tellLinkLost(platformId: MessagingPlatformId): Promise<void> {
+    if (this.linkLossTold.has(platformId)) return;
+    this.linkLossTold.add(platformId);
+    const words = await channelWords(
+      channelLocale(
+        readUserLanguage()?.name ?? null,
+        this.options.appLanguage?.() ?? null
+      )
+    );
+    const platform = words.t(
+      `messaging.platforms.${messagingPlatformSpec(platformId)?.nameKey ?? platformId}`
+    );
+    this.options.notifyUser?.(
+      platformId,
+      words.t("native.linkLostTitle", { platform }),
+      words.t("native.linkLostLane", { platform })
+    );
+  }
+
   /** The user's own chat hears which message never went, unless it was theirs. */
   private async tellUndelivered(entry: OwedMessage): Promise<void> {
     console.error(
@@ -2364,6 +2461,16 @@ export class MessagingGatewayService {
    * `runningPlatforms` says whether a tool exists; this says whether it will
    * work. An unlinked phone leaves the connector in place, waiting on a QR.
    */
+  /**
+   * Platforms that lost their login and need the user to link them again.
+   * Not `connecting`: that is a launch or a blip, and it settles by itself.
+   */
+  unlinkedPlatforms(): MessagingPlatformId[] {
+    return [...this.connectors.keys()].filter(
+      (id) => this.states.get(id)?.state === "needs_login"
+    );
+  }
+
   livePlatforms(): MessagingPlatformId[] {
     return [...this.connectors.keys()].filter(
       (id) => this.states.get(id)?.state === "connected"

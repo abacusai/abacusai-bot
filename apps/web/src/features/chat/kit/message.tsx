@@ -14,6 +14,7 @@ import {
 import { parsePartialJSON, type UIMessage } from "@tanstack/ai-client";
 import type { MessageProps } from "@tanstack/ai-react/ui";
 import {
+  AlertTriangle,
   Bot,
   ChevronRight,
   CircleAlert,
@@ -63,6 +64,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "#renderer/ui/collapsible";
+import { Marker, MarkerContent, MarkerIcon } from "#renderer/ui/marker";
 
 import { Markdown } from "../markdown/markdown";
 import { coalescedIds, isBlankText, isThinking } from "../scroller/coalesce";
@@ -233,6 +235,7 @@ const PendingState = ({ message }: { message: UIMessage }) => {
 };
 
 type UserTextMeta = import("@abacus-ai/contract/agent-types").UserTextTags;
+type AppLineKind = "test-repair" | "test-repair-limit" | "tests-left-alone";
 
 /**
  * What the bubble shows (C.3 r1 fixes, `shared/transcript/user-text.ts`):
@@ -259,6 +262,48 @@ export const userView = (
   return { hidden: false, body, paths };
 };
 
+/**
+ * The app's own line in a transcript (the verify loop's). A user-role message
+ * so the transcript keeps it in place, but never the user's words: it is hidden
+ * as user text everywhere, and drawn here in the reader's language.
+ */
+export const appLineOf = (message: UIMessage): AppLineKind | null => {
+  const kind = (
+    message.metadata as { abacus?: { userText?: UserTextMeta } } | undefined
+  )?.abacus?.userText?.operator?.kind;
+  return kind === "test-repair" ||
+    kind === "test-repair-limit" ||
+    kind === "tests-left-alone"
+    ? kind
+    : null;
+};
+
+const AppLine = ({ kind }: { kind: AppLineKind }) => {
+  const { t } = useTranslation();
+  const warning = kind !== "test-repair";
+  return (
+    <Marker variant="border" data-slot="app-line" data-kind={kind}>
+      <MarkerIcon>
+        {warning ? (
+          <AlertTriangle
+            aria-hidden
+            className="text-[var(--chat-status-attention)]"
+          />
+        ) : (
+          <Wrench aria-hidden />
+        )}
+      </MarkerIcon>
+      <MarkerContent>
+        {kind === "test-repair"
+          ? t("chat.appLine.testRepair")
+          : kind === "test-repair-limit"
+            ? t("chat.appLine.testRepairLimit")
+            : t("chat.appLine.testsLeftAlone")}
+      </MarkerContent>
+    </Marker>
+  );
+};
+
 const UserMessage = ({
   message,
   tint,
@@ -270,6 +315,8 @@ const UserMessage = ({
 }) => {
   const { workspaceRoot, threadId, skin } = useChatView();
   const { hidden, body, paths } = userView(message);
+  const appLine = appLineOf(message);
+  if (appLine != null) return <AppLine kind={appLine} />;
   if (hidden) return null;
   const reacted = (message.metadata?.abacus?.reactions?.length ?? 0) > 0;
   return (

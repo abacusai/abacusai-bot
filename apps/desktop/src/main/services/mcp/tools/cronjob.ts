@@ -1,9 +1,12 @@
 import { ALWAYS_ON_ASK } from "@abacus-ai/agent/plan-asks";
 import { ABACUS_AGENT_ROUTINES_URL } from "@abacus-ai/contract/routines";
+import type { RoutineMatch } from "@abacus-ai/contract/routines/same-routine";
 
 import {
   HOSTED_RUN_CANNOT,
   HOSTED_RUN_DELIVERED_VIA,
+  HOSTED_RUN_FULL_ACCESS,
+  HOSTED_RUN_NO_VAULT,
 } from "../../agent-tools/hosted-run";
 import { ROUTINE_READS } from "../../agent-tools/routine-reach";
 import { billingPlanReady } from "./billing";
@@ -20,6 +23,9 @@ const BASE_DESCRIPTION = [
   "When an update changes what a routine does, change its name to match in the same call.",
   'The name is what the user sees in the Routines panel and what you read back in "list";',
   "one that describes the old job is a routine both of you will misread later.",
+  "",
+  'A routine that already does the job is never made twice: "create" hands back the existing',
+  'one instead, and nothing fires. Read "list" before saying a routine does not exist.',
   "",
   'Schedules are five-field cron in local time: "minute hour day month weekday".',
   '  "0 9 * * *"    every day at 09:00',
@@ -63,7 +69,7 @@ const LOCAL_FIRE_SESSION = [
 /** The account reads a hosted routine may be given, quoted. */
 const quotedReads = ROUTINE_READS.map((read) => `"${read}"`).join(", ");
 
-const HOSTED_DESCRIPTION = [
+const HOSTED_OPTIONS = [
   'runner: "hosted" keeps the routine on the server: it runs on its own even while this',
   "computer is off, and results reach the user on WhatsApp or by email.",
   '"local" runs it in this app, only while it is open. Leave it out and the app picks.',
@@ -78,6 +84,11 @@ const HOSTED_DESCRIPTION = [
   'So a fixed message at set times ("send me hi every hour", "remind me to stretch at 5")',
   "is kind reminder with reminder_text, nothing to run. A task's prompt says what to find or write",
   'for the user ("the top 3 AI headlines today"), never how to send it ("send it on',
+  "WhatsApp\"): delivery is not the run's job.",
+];
+
+const HOSTED_DESCRIPTION = [
+  ...HOSTED_OPTIONS.slice(0, -1),
   "WhatsApp\"): delivery is not the run's job. A routine cannot message anyone else; for",
   "a message to another person or group, tell the user so instead of making one.",
   "",
@@ -87,6 +98,24 @@ const HOSTED_DESCRIPTION = [
   `the account data it may read (${quotedReads}), only`,
   "what the routine needs; nothing else is reachable.",
 ];
+
+/** The same, where the server runs routines with full access. */
+const HOSTED_FULL_DESCRIPTION = [
+  ...HOSTED_OPTIONS,
+  "",
+  `Every routine's runs have full access, with nobody watching: ${HOSTED_RUN_FULL_ACCESS}.`,
+  `A run cannot ${HOSTED_RUN_NO_VAULT}: it stops and tells the user. Give no sources or reads.`,
+];
+
+/**
+ * The WhatsApp chat's free plan sets up no reminder or routine: said by the
+ * refusal, a `cronjob` list and `bot_help`, so the bot never offers one first.
+ */
+export const FREE_PHONE_ROUTINES =
+  "Reminders, daily briefs and routines are not set up from this chat on the free plan";
+export const FREE_PHONE_ROUTINES_NEXT =
+  "Call paid_feature with feature routines, and answer from what it says.";
+export const FREE_PHONE_ROUTINES_NOTE = `${FREE_PHONE_ROUTINES}: never say they are included or offer one. ${FREE_PHONE_ROUTINES_NEXT}`;
 
 /**
  * Where a hosted routine runs and what its runs reach, as `bot_help` says
@@ -99,6 +128,14 @@ export const HOSTED_ROUTINE_FACTS = [
   "unattended: it searches the web and reads pages, and of the user's account data it",
   `can read only ${ROUTINE_READS.join(", ")}. A run cannot read chat-app messages or`,
   `${HOSTED_RUN_CANNOT}.`,
+];
+
+/** The same, where the server runs routines with full access. */
+export const HOSTED_ROUTINE_FULL_FACTS = [
+  "Routines here are kept on the server: they run on their own even while the user's",
+  "computer is off, and each run's answer is sent to the user as the routine's message,",
+  `${HOSTED_RUN_DELIVERED_VIA}. Every run has full access, with nobody watching:`,
+  `${HOSTED_RUN_FULL_ACCESS}. A run cannot ${HOSTED_RUN_NO_VAULT}: it stops and tells the user.`,
 ];
 
 /** The desktop app: every routine runs here, with this conversation's reach. */
@@ -134,6 +171,52 @@ export const alwaysOnNote = (plan: "free" | "paid" | null): string =>
     : "\n\n[once] After confirming the routine, add one short line, in the user's language: " +
       alwaysOnLine(plan) +
       " Say it only this once; never bring it up again.";
+
+/**
+ * What the model is told when a create finds its routine already there. An
+ * instruction, never text pinned onto a reply: it says this in the user's
+ * language.
+ */
+export const existingRoutineNote = (existing: {
+  id: string;
+  match: RoutineMatch;
+  checkIn: boolean;
+  enabled: boolean;
+  description: string;
+}): string =>
+  [
+    "[already set up: nothing was created] " +
+      (existing.checkIn
+        ? "This is your check-in: the app keeps it from your settings, and each run works from your mission, so it already does this job. "
+        : `You already have this routine${existing.match === "alike" ? ", or one that reads the same" : ""}. `) +
+      "It was not made again and nothing fired, so do not do its work here. " +
+      "Tell the user in one short line, in their language, that it was already set up and will not run twice, and when it next fires.",
+    ...(existing.enabled
+      ? []
+      : ['It is paused: "resume" it if the user wants it running.']),
+    existing.checkIn
+      ? `To change when it runs, "update" its schedule (id ${existing.id}). Leave its prompt as it is: that text is how the app knows it is the check-in.`
+      : `To change it, "update" this one (id ${existing.id}) rather than making another.`,
+    ...(existing.match === "alike"
+      ? [
+          `Only if you have read it and this really is a separate job, create again with distinct_from: "${existing.id}".`,
+        ]
+      : []),
+    "",
+    existing.description,
+  ].join("\n");
+
+/** A hosted create whose answer never came: it may have gone through. */
+export const HOSTED_CREATE_UNCONFIRMED_NOTE =
+  "[not confirmed] The server did not answer in time, and the routine may have been made anyway. " +
+  "Do not tell the user it failed or that it is set. Call create once more with the same arguments: " +
+  "that cannot make a second routine, and its answer says which it was.";
+
+/** Why a check-in's text stays: the settings find the routine by it. */
+export const CHECK_IN_PROMPT_NOTE =
+  "[not done] That routine is your check-in, and its prompt is how the app knows it: leave the prompt as it is. " +
+  "Each run already works from your mission. Change its schedule or name if needed, " +
+  "or make a separate routine for a job the mission does not cover.";
 
 const BASE_PROPERTIES = {
   action: {
@@ -176,6 +259,11 @@ const BASE_PROPERTIES = {
     type: "boolean",
     description:
       "create: false skips the fire on creation, for a routine whose first pass this conversation has just done.",
+  },
+  distinct_from: {
+    type: "string",
+    description:
+      "create: the id of an existing routine you have read and this one is a separate job from. Only after create named it.",
   },
 };
 
@@ -235,6 +323,13 @@ const HOSTED_PROPERTIES = {
   },
 };
 
+/** With full access a routine names no reach: `sources` and `reads` are gone. */
+const {
+  sources: _sources,
+  reads: _reads,
+  ...HOSTED_PROPERTIES_FULL
+} = HOSTED_PROPERTIES;
+
 /**
  * Scheduled work: routines a session or bot creates for itself. Only the
  * hosted computer offers keeping one on the server; on the desktop app every
@@ -262,7 +357,9 @@ export const CRONJOB_TOOLS: ToolDefinition[] = [
           : [
               ...WEBHOOK_DESCRIPTION,
               "",
-              ...HOSTED_DESCRIPTION,
+              ...(host.routinesFullAccess
+                ? HOSTED_FULL_DESCRIPTION
+                : HOSTED_DESCRIPTION),
               ...(host.hostedOnly
                 ? []
                 : [
@@ -276,9 +373,11 @@ export const CRONJOB_TOOLS: ToolDefinition[] = [
       ].join("\n"),
     inputSchema: (_channel, host) => ({
       type: "object",
-      properties: host.hostedRoutines
-        ? { ...BASE_PROPERTIES, ...HOSTED_PROPERTIES }
-        : BASE_PROPERTIES,
+      properties: !host.hostedRoutines
+        ? BASE_PROPERTIES
+        : host.routinesFullAccess
+          ? { ...BASE_PROPERTIES, ...HOSTED_PROPERTIES_FULL }
+          : { ...BASE_PROPERTIES, ...HOSTED_PROPERTIES },
       required: ["action"],
     }),
     run: (host, args, callerSession) => host.cronjob(args, callerSession),

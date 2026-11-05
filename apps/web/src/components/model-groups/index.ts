@@ -15,6 +15,7 @@ import {
 } from "@abacus-ai/contract/free-pool";
 import {
   modelAccess,
+  OPENLLM_ID,
   resolveConfiguredModel,
   type ModelAvailability,
 } from "@abacus-ai/contract/models";
@@ -28,6 +29,8 @@ export interface BotModelGroup {
     id: string;
     label: string;
     description?: string;
+    /** App default's row: the model it resolves to, by id. */
+    resolves?: string;
     /** Not in the account's plan: shown greyed, and choosing it upgrades. */
     locked?: { label: string; onSelect(): void };
   }>;
@@ -126,6 +129,10 @@ export const chatModelChip = (
   }
   // An empty catalog (still loading, unreadable) cannot judge the pin.
   const row = catalog.find((model) => model.id === pin);
+  // A paid plan's catalog drops the free pool: the plan's router serves it.
+  const router = catalog.find((model) => model.recommended === true);
+  if (pin === OPENLLM_ID && row == null && router != null)
+    return { label: router.label, unavailable: false };
   return {
     label: row?.label ?? pin,
     unavailable: catalog.length > 0 && row?.configured !== true,
@@ -229,6 +236,11 @@ export const botModelGroups = (input: BotModelGroupsInput): BotModelGroup[] => {
 
   const groups: BotModelGroup[] = [];
   const defaultSub = appDefaultLabel(input.defaultModel, input.models);
+  const defaultId = resolveConfiguredModel({
+    requested: null,
+    defaultModel: input.defaultModel,
+    catalog: input.models,
+  });
   if (query === "" || labels.appDefault.toLowerCase().includes(query))
     groups.push({
       id: "default",
@@ -240,6 +252,7 @@ export const botModelGroups = (input: BotModelGroupsInput): BotModelGroup[] => {
               id: APP_DEFAULT_ITEM_ID,
               label: labels.appDefault,
               description: defaultSub,
+              ...(defaultId == null ? {} : { resolves: defaultId }),
             },
       ],
     });

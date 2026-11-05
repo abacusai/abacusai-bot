@@ -10,7 +10,13 @@ import { describe, expect, it } from "vitest";
 import { turnDeliverables } from "./deliverables";
 import { gapStamp, QUIET_GAP_MS, stampLabel } from "./gap-stamp";
 import { turnReaction } from "./reactions";
-import { botThreadView, spokenParts, turnIsSilent, turnsOf } from "./turns";
+import {
+  botThreadView,
+  botVisibleMessage,
+  spokenParts,
+  turnIsSilent,
+  turnsOf,
+} from "./turns";
 
 type Part = UIMessage["parts"][number];
 let seq = 0;
@@ -450,5 +456,36 @@ describe("gap stamps", () => {
     expect(
       stampLabel(new Date("2026-10-02T09:41:00"), now, "en-US", "Y")
     ).toMatch(/^9:41/);
+  });
+});
+
+describe("a turn relayed to a chat app", () => {
+  const shown = (content: string, runActive = false) => {
+    const message = assistant([text(content)]);
+    const visible = botVisibleMessage(message, [user(), message], runActive);
+    return visible.parts
+      .filter((part) => part.type === "text")
+      .map((part) => (part as { content: string }).content)
+      .join("");
+  };
+
+  it("shows the words it sent, not the <reply> envelope or the notes around it", () => {
+    expect(shown("<reply>Hey! What's up?</reply>")).toBe("Hey! What's up?");
+    expect(
+      shown("Short greeting back.\n<reply>What's on your mind?\n</reply>")
+    ).toBe("What's on your mind?");
+    // Only the last block is sent, so only it shows.
+    expect(shown("<reply>draft</reply> better: <reply>final</reply>")).toBe(
+      "final"
+    );
+  });
+
+  it("never flashes the open tag while the reply streams in", () => {
+    expect(shown("<reply>Hey! Wha", true)).toBe("Hey! Wha");
+  });
+
+  it("leaves an ordinary answer as it is", () => {
+    const message = assistant([text("Here is the summary.")]);
+    expect(botVisibleMessage(message, [user(), message], false)).toBe(message);
   });
 });

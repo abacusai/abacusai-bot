@@ -11,7 +11,8 @@
  * message, and the turn's deliverables after its last shown message.
  */
 import { BOT_HELP_TOOL } from "@abacus-ai/contract/bot-help";
-import { SUGGEST_TASKS_TOOL } from "@abacus-ai/contract/bots/suggested-tasks";
+import { isSuggestTasksTool } from "@abacus-ai/contract/bots/suggested-tasks";
+import { lastTaggedReply } from "@abacus-ai/contract/reply-envelope";
 import { PAID_FEATURE_TOOL } from "@abacus-ai/contract/toolsets";
 import type { UIMessage } from "@tanstack/ai-client";
 
@@ -76,10 +77,6 @@ export const isPaidFeatureTool = (name: string): boolean =>
 /** `bot_help`, under its MCP server's prefix or bare. */
 export const isBotHelpTool = (name: string): boolean =>
   name === BOT_HELP_TOOL || name.endsWith(`_${BOT_HELP_TOOL}`);
-
-/** `suggest_tasks`, under its MCP server's prefix or bare. */
-export const isSuggestTasksTool = (name: string): boolean =>
-  name === SUGGEST_TASKS_TOOL || name.endsWith(`_${SUGGEST_TASKS_TOOL}`);
 
 const indexes = new WeakMap<readonly UIMessage[], Map<string, number>>();
 
@@ -302,7 +299,12 @@ export function botVisibleMessage(
     ? turnReaction(turn.assistantIndices.map((i) => messages[i]!))
     : null;
   const trailing = runActive && index === messages.length - 1;
-  const parts = message.parts.filter((part, partIndex) => {
+  const spoken = message.parts.map((part) => {
+    if (part.type !== "text" || kindOf(part) !== null) return part;
+    const words = relayedWords(part.content);
+    return words == null ? part : { ...part, content: words };
+  });
+  const parts = spoken.filter((part, partIndex) => {
     if (
       part.type === "tool-call" ||
       part.type === "tool-result" ||
@@ -319,7 +321,23 @@ export function botVisibleMessage(
       !(trailing && partIndex === message.parts.length - 1)
     );
   });
-  return parts.length === message.parts.length
+  return parts.length === message.parts.length &&
+    parts.every((part, i) => part === message.parts[i])
     ? message
     : { ...message, parts };
 }
+
+const REPLY_OPEN = /<reply>/i;
+
+/**
+ * A turn relayed to a chat app writes its notes around a <reply> block and
+ * only the block is sent (contract/reply-envelope): the chat shows those same
+ * words. While the block is still streaming, the words after its open tag.
+ * Null for text with no <reply> at all.
+ */
+const relayedWords = (content: string): string | null => {
+  const sent = lastTaggedReply(content);
+  if (sent != null) return sent;
+  const open = REPLY_OPEN.exec(content);
+  return open == null ? null : content.slice(open.index + open[0].length);
+};

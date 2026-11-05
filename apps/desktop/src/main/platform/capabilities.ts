@@ -24,6 +24,7 @@ export const WEB_HOST_DENIED = [
   "system.openPath",
   "system.showItemInFolder",
   "system.openPrivacyPane",
+  "sites",
   "skills.openFile",
   "voice.whisper.fetch",
 ] as const;

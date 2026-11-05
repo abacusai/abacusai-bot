@@ -59,8 +59,8 @@ const harness = (options: {
   phone?: boolean;
   defaultRunner?: "local" | "hosted";
   create?: (input: RoutineCreateInput) => Promise<Routine>;
-  /** The caller: the user, a bot's own chat, or a bot's chat with someone else. */
-  caller?: "user" | "bot" | "sender";
+  /** The caller: the user, a bot's own chat, its routine's run, or its chat with someone else. */
+  caller?: "user" | "bot" | "bot-run" | "sender";
   created?: RoutineListItem;
   /** The once-per-user 24/7 note's plan, as the host claims it. */
   alwaysOn?: "free" | "paid" | null;
@@ -87,7 +87,13 @@ const harness = (options: {
     workspaceId: () => null,
     botIdForSession: () => (caller === "user" ? null : "bot-1"),
     sessionRole: () =>
-      caller === "user" ? null : caller === "bot" ? "forever" : "sender",
+      caller === "user"
+        ? null
+        : caller === "bot"
+          ? "forever"
+          : caller === "bot-run"
+            ? "routine"
+            : "sender",
     runCronJob,
     ...(options.phone === true
       ? { channelForSession: () => WHATSAPP_CHANNEL }
@@ -344,15 +350,15 @@ describe("cronjob, hosted", () => {
     const { call } = harness({ defaultRunner: "hosted" });
     const text = await call({
       action: "create",
-      prompt: "My calendar",
-      schedule: "0 8 * * *",
+      prompt: "My evening calendar",
+      schedule: "0 18 * * *",
     });
     expect(text).not.toContain("Routines panel");
     expect(text).toContain("on WhatsApp when it is linked");
     const phone = await harness({ defaultRunner: "hosted", phone: true }).call({
       action: "create",
-      prompt: "My calendar",
-      schedule: "0 8 * * *",
+      prompt: "My evening calendar",
+      schedule: "0 18 * * *",
     });
     expect(phone).toContain("Its results arrive in this chat");
     expect(phone).not.toContain("Routines panel");
@@ -381,8 +387,18 @@ describe("cronjob, hosted", () => {
 });
 
 describe("cronjob, hosted, and who is asking", () => {
-  it("lets a bot see and change only its own", async () => {
+  it("lets a bot change any of the owner's routines in the owner's chat, naming no bot", async () => {
     const { call, hosted } = harness({ caller: "bot" });
+    const listed = await call({ action: "list" });
+    expect(listed).toContain("hosted-r1");
+    expect(listed).toContain("hosted-r2");
+    const remove = vi.spyOn(hosted, "remove").mockResolvedValue();
+    await call({ action: "remove", id: "hosted-r1" });
+    expect(remove).toHaveBeenCalledWith("hosted-r1", null);
+  });
+
+  it("lets a bot's routine run see and change only its own", async () => {
+    const { call, hosted } = harness({ caller: "bot-run" });
     const listed = await call({ action: "list" });
     expect(listed).toContain("hosted-r2");
     expect(listed).not.toContain("hosted-r1");
@@ -453,7 +469,7 @@ describe("cronjob, local", () => {
         prompt: "Local digest",
         sources: ["https://news.example/"],
       }),
-      { byAgent: true }
+      expect.objectContaining({ byAgent: true })
     );
     expect(runCronJob).toHaveBeenCalledWith(listJobs()[0]!.id, "create");
     expect(text).toMatch(/^Created\./);
@@ -482,7 +498,7 @@ describe("cronjob, local", () => {
     const paid = await harness({ alwaysOn: "paid" }).call({
       action: "create",
       prompt: "Local digest 2",
-      schedule: "0 9 * * *",
+      schedule: "0 10 * * *",
     });
     expect(paid).toContain(
       "their plan already includes personal agents in Abacus AI Agent on the web that run 24/7"

@@ -266,6 +266,9 @@ describe("PrefsStore", () => {
       deliverableOffer: null,
       freePlanSeenAt: null,
       upgradeRoutinesSeenAt: null,
+      routineDuplicatesKept: [],
+      paidWelcomeTier: null,
+      siteDeployCards: {},
     });
     expect(store.provenance()).toMatchObject({
       "dismissals.upsell": "legacy",

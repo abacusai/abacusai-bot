@@ -13,6 +13,7 @@ import {
   SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 
+import { addCredits, type TurnCredits, turnCredits } from "./abacus-credits.js";
 import { sponsoredRunActive } from "./abacus-endpoint.js";
 import { Allowances } from "./allowances.js";
 import { allowedPathsFromEnv } from "./allowed-paths.js";
@@ -60,7 +61,7 @@ import { EXIT_PLAN_TOOL_NAME } from "./exit-plan-tool.js";
 import astTools from "./extensions/ast-tools.js";
 import background from "./extensions/background.js";
 import batchReadTool from "./extensions/batch-read-tool.js";
-import budgets, { budgetStopReason } from "./extensions/budgets.js";
+import { budgetStopReason, createBudgets } from "./extensions/budgets.js";
 import compactionPruner from "./extensions/compaction-pruner.js";
 import editTool from "./extensions/edit-tool.js";
 import emailFormat from "./extensions/email-format.js";
@@ -74,11 +75,11 @@ import syntaxCheck from "./extensions/syntax-check.js";
 import testRunner from "./extensions/test-runner.js";
 import toolCallRepair from "./extensions/tool-call-repair.js";
 import toolTimeouts from "./extensions/tool-timeouts.js";
-import verifyLoop from "./extensions/verify-loop.js";
+import { VerifyLoop } from "./extensions/verify-loop.js";
 import { githubPrompt } from "./github-prompt.js";
 import { refreshGithubToken } from "./github-token.js";
 import { HostServiceClient } from "./host-services.js";
-import type { InternalAgentEvent } from "./internal-events.js";
+import type { AppLine, InternalAgentEvent } from "./internal-events.js";
 import {
   connectMcpServers,
   type ConnectedMcp,
@@ -125,6 +126,13 @@ import {
 } from "./permissions.js";
 import { personaPrompt, readPersona } from "./persona.js";
 import { scriptRuntimesPrompt, windowsShellPrompt } from "./posix-shell.js";
+import {
+  endedOnPromise,
+  mayAskForPromisedWork,
+  PROMISED_WORK_PROMPT,
+  PROMISED_WORK_TYPE,
+  PromisedWork,
+} from "./promised-work.js";
 import {
   AgentMode,
   AgentStatus,
@@ -199,7 +207,7 @@ import {
   stallFailure,
   type TurnFailure,
 } from "./turn-outcome.js";
-import { turnUsage, type TurnUsage } from "./turn-usage.js";
+import { addRunUsage, turnUsage, type TurnUsage } from "./turn-usage.js";
 import {
   accountReplyLanguagePrompt,
   learnUserLanguage,
@@ -777,8 +785,10 @@ export class AbacusBotSession {
   private interrupted = false;
   /** Continuations spent on a malformed tool call this turn. */
   private malformedContinuations = 0;
-  /** The provider's usage for the turn's last request, set at `agent_end`. */
+  /** The provider's usage for the turn so far, added to at each `agent_end`. */
   private lastTurnUsage: TurnUsage | null = null;
+  /** The Abacus credits of every run in the turn so far, added at each `agent_end`. */
+  private turnCreditsSoFar: TurnCredits;
   /** The context failure to compact around, with the turn it ended, set at `agent_end`. */
   private pendingContextCompaction: {
     failure: string;
@@ -804,6 +814,7 @@ export class AbacusBotSession {
     toolsRunning: () => this.heartbeat.size,
     onStall: () => void this.onModelStall(),
   });
+  private readonly verifyLoop = new VerifyLoop();
   private pendingStall: { modelId: string } | null = null;
   private stallRecoveriesThisTurn = 0;
   /** The turn already ended on the stall error; pi's aborted state is not a second one. */
@@ -838,6 +849,9 @@ export class AbacusBotSession {
   private languageRepairsThisTurn = 0;
   /** The turn's recoveries from an empty reply (empty-reply.ts). */
   private readonly emptyReplies = new EmptyReplies();
+  /** The turn's ask after a reply that ended on a promise (promised-work.ts). */
+  private readonly promisedWork = new PromisedWork();
+  private pendingPromisedWork = false;
   /** The same model is to be asked again, out of sight, for its answer. */
   private pendingEmptyAsk = false;
   /**
@@ -1097,11 +1111,13 @@ export class AbacusBotSession {
             },
             {
               name: "abacusai-bot-verify-loop",
-              factory: verifyLoop as unknown as (pi: ExtensionAPI) => void,
+              factory: this.verifyLoop.extension,
             },
             {
               name: "abacusai-bot-budgets",
-              factory: budgets as unknown as (pi: ExtensionAPI) => void,
+              factory: createBudgets({
+                runLimit: this.verifyLoop.runLimit,
+              }) as unknown as (pi: ExtensionAPI) => void,
             },
           ]) satisfies InlineExtension[],
     });
@@ -1402,6 +1418,8 @@ export class AbacusBotSession {
     this.pendingLanguageRepair = null;
     this.emptyReplies.begin();
     this.pendingEmptyAsk = false;
+    this.promisedWork.begin();
+    this.pendingPromisedWork = false;
     this.mcpTools.atTurnStart();
     this.pendingToolArrival = null;
     this.toolArrivalsThisTurn = 0;
@@ -1446,13 +1464,8 @@ export class AbacusBotSession {
       // The cut-off card's Continue: the cut reply is picked up, never asked anew.
       if (turn?.continueCut === true) await continueCutReply(session);
       else await session.prompt(text);
-      await this.continuePastRecoverableFailures();
-      this.reportTurnFailure();
-      // Moved to RouteLLM - Open (moveToOpenLlm): the same message runs there.
-      if (this.pendingOpenLlmRotation != null) {
-        await this.continuePastRecoverableFailures();
-        this.reportTurnFailure();
-      }
+      await this.settleRun();
+      await this.verifyTurn(owned);
       this.closeOwnedTurn(owned);
       turn?.settled?.();
     } catch (error) {
@@ -1467,6 +1480,71 @@ export class AbacusBotSession {
       this.closeOwnedTurn(owned);
       turn?.settled?.();
     }
+  }
+
+  /** See a run through its recoveries and report how it ended. */
+  private async settleRun(): Promise<void> {
+    await this.continuePastRecoverableFailures();
+    this.reportTurnFailure();
+    // Moved to RouteLLM - Open (moveToOpenLlm): the same message runs there.
+    if (this.pendingOpenLlmRotation != null) {
+      await this.continuePastRecoverableFailures();
+      this.reportTurnFailure();
+    }
+  }
+
+  /**
+   * Before the turn closes: run the project's tests, and give what this turn
+   * broke back to the model (verify-loop.ts). Inside the send, so the follow-up
+   * is this turn: its run stays open for the chat, the transcript and Stop, and
+   * the held end goes out once, after it. The prompt is a custom message, so
+   * the user never sees it as their own; what they see is the app's line.
+   */
+  private async verifyTurn(owned: OwnedTurn): Promise<void> {
+    const session = this.session;
+    const endedWell = (): boolean =>
+      !this.interrupted &&
+      !owned.isClosed() &&
+      owned.failure == null &&
+      !owned.endedEmpty &&
+      budgetStopReason() == null;
+
+    while (session != null && endedWell() && !creditWallActive()) {
+      const verdict = await this.verifyLoop.check(this.options.cwd);
+
+      if (!endedWell()) return;
+      if (verdict.kind === "left-alone") this.appLine("tests-left-alone");
+      if (verdict.kind !== "repair") return;
+      // A background job's notice may have started a run as the last one ended.
+      await session.waitForIdle();
+      if (!endedWell()) return;
+
+      this.appLine("test-repair");
+      this.turnRunning = true;
+      this.verifyLoop.beginRepair();
+      let stoppedAtLimit = false;
+      try {
+        await session.sendCustomMessage(
+          {
+            customType: VERIFY_FOLLOW_UP_TYPE,
+            content: verdict.prompt,
+            display: false,
+          },
+          { triggerTurn: true }
+        );
+        await this.settleRun();
+      } finally {
+        stoppedAtLimit = this.verifyLoop.endRepair();
+      }
+      if (stoppedAtLimit) {
+        this.appLine("test-repair-limit");
+        return;
+      }
+    }
+  }
+
+  private appLine(kind: AppLine): void {
+    this.emitInternal({ type: "app_line", kind, text: APP_LINE_TEXT[kind] });
   }
 
   /** Emit the owned turn's held end with its outcome; see OwnedTurn. */
@@ -1700,12 +1778,14 @@ export class AbacusBotSession {
       this.pendingNetworkFailure != null ||
       this.pendingStreamCut ||
       this.pendingBusyWait != null ||
-      this.pendingEmptyAsk
+      this.pendingEmptyAsk ||
+      this.pendingPromisedWork
     ) {
       // Stop cancels the continuation, but the withheld idle event still has
       // to go out or the session stays busy forever.
       if (this.interrupted) {
         this.pendingEmptyAsk = false;
+        this.pendingPromisedWork = false;
         this.pendingStreamCut = false;
         this.pendingNetworkFailure = null;
         this.pendingBusyWait = null;
@@ -1783,6 +1863,25 @@ export class AbacusBotSession {
           {
             customType: EMPTY_REPLY_TYPE,
             content: EMPTY_REPLY_PROMPT,
+            display: false,
+          },
+          { triggerTurn: true }
+        );
+
+        continue;
+      }
+
+      if (this.pendingPromisedWork) {
+        this.pendingPromisedWork = false;
+        this.emitAgentEvent({
+          type: "promised_work_recovery",
+          model: this.session?.model?.id ?? "",
+        });
+
+        await this.session?.sendCustomMessage(
+          {
+            customType: PROMISED_WORK_TYPE,
+            content: PROMISED_WORK_PROMPT,
             display: false,
           },
           { triggerTurn: true }
@@ -2383,12 +2482,16 @@ export class AbacusBotSession {
               : {}),
           }
         : this.lastTurnUsage;
+    const credits = this.turnCreditsSoFar;
     this.lastTurnUsage = null;
+    this.turnCreditsSoFar = undefined;
     const end = (outcome?: TurnOutcome): void => {
       this.emitAgentEvent({
         type: "turn_complete",
         ...(outcome != null ? { outcome } : {}),
-        ...(usage != null ? { usage } : {}),
+        ...(usage != null
+          ? { usage: credits !== undefined ? { ...usage, credits } : usage }
+          : {}),
       });
       this.emitAgentEvent({
         type: "status_changed",
@@ -2407,6 +2510,18 @@ export class AbacusBotSession {
       return;
     }
     end();
+  }
+
+  /** One run's end: its last request stands, and what it billed and its credits add to the turn's. */
+  private noteRunUsage(messages: ReadonlyArray<unknown>): void {
+    this.lastTurnUsage = addRunUsage(
+      this.lastTurnUsage,
+      turnUsage(messages as never)
+    );
+    this.turnCreditsSoFar = addCredits(
+      this.turnCreditsSoFar,
+      turnCredits(messages as never)
+    );
   }
 
   /**
@@ -2428,6 +2543,8 @@ export class AbacusBotSession {
    */
   async steer(text: string, messageId?: string): Promise<void> {
     this.pendingSteers.add(text, messageId);
+    // The user spoke: they go first, not a test run nobody asked for.
+    this.verifyLoop.cancel();
     await this.requireSession().steer(text);
   }
 
@@ -2458,6 +2575,7 @@ export class AbacusBotSession {
     // A turn waiting for the network or a busy pool ends now, not after the wait.
     this.networkWait.cancel();
     this.busyWait.cancel();
+    this.verifyLoop.cancel();
 
     // An unanswered approval would keep the tool hook parked forever.
     this.rejectAllPending("Interrupted.");
@@ -2802,6 +2920,7 @@ export class AbacusBotSession {
     this.interrupted = true;
     this.networkWait.cancel();
     this.busyWait.cancel();
+    this.verifyLoop.cancel();
     this.rejectAllPending("Conversation reset.");
     // As in `stop`: a queued message must not land in the fresh conversation.
     this.pendingSteers.clear();
@@ -3049,7 +3168,7 @@ export class AbacusBotSession {
         // The end of a call this session aborted for going silent; the loop
         // in `send` decides what runs next, and the idle event waits for it.
         if (this.pendingStall != null) {
-          this.lastTurnUsage = turnUsage(event.messages as never);
+          this.noteRunUsage(event.messages);
 
           return;
         }
@@ -3093,7 +3212,7 @@ export class AbacusBotSession {
           this.pendingStreamCut = cut.kind === "ask";
         }
         if (this.pendingNetworkFailure != null || this.pendingStreamCut) {
-          this.lastTurnUsage = turnUsage(event.messages as never);
+          this.noteRunUsage(event.messages);
           this.continuingPastMalformedToolCall = false;
           this.pendingContextCompaction = null;
           this.pendingOpenLlmRotation = null;
@@ -3107,7 +3226,7 @@ export class AbacusBotSession {
         // Decided here: a continuation must suppress the idle event emitted below.
         this.continuingPastMalformedToolCall =
           this.shouldContinuePastMalformedToolCall(event.messages);
-        this.lastTurnUsage = turnUsage(event.messages as never);
+        this.noteRunUsage(event.messages);
         // A malformed call is retried on the same model, not rotated. Compaction
         // comes before rotation too: an outgrown transcript does not fit the
         // next model either, and the pool is not ordered by context window.
@@ -3166,7 +3285,7 @@ export class AbacusBotSession {
         // With no other model to move to, the same one is asked.
         this.pendingEmptyAsk =
           emptyStep != null && this.pendingOpenLlmRotation == null;
-        if (
+        const ending =
           !event.willRetry &&
           !this.continuingPastMalformedToolCall &&
           this.pendingContextCompaction == null &&
@@ -3174,8 +3293,17 @@ export class AbacusBotSession {
           this.pendingBusyWait == null &&
           this.pendingLanguageRepair == null &&
           this.pendingToolArrival == null &&
-          !this.pendingEmptyAsk
-        ) {
+          !this.pendingEmptyAsk;
+        // Words that promise more, and nothing else on the way: told once to
+        // do it, inside this send so the run stays open (PromisedWork).
+        this.pendingPromisedWork =
+          ending &&
+          !this.interrupted &&
+          this.ownedTurn != null &&
+          mayAskForPromisedWork(this.mode) &&
+          endedOnPromise(event.messages) &&
+          this.promisedWork.claim();
+        if (ending && !this.pendingPromisedWork) {
           this.finishTurn();
         }
 
@@ -3970,6 +4098,21 @@ const MAX_MALFORMED_CONTINUATIONS = 1;
 
 /** Marks the continuation in the session log as ours rather than the user's. */
 const MALFORMED_CONTINUATION_TYPE = "abacusai-bot:malformed-tool-call";
+
+/** What the verify loop sends the model; see verifyTurn. */
+const VERIFY_FOLLOW_UP_TYPE = "abacusai-bot:verify-follow-up";
+
+/**
+ * The verify loop's lines as the transcript keeps them. The chat words each in
+ * the user's language from its kind (chat.appLine.* in the app's locales).
+ */
+const APP_LINE_TEXT: Record<AppLine, string> = {
+  "test-repair": "Tests failed after my change, fixing them.",
+  "test-repair-limit":
+    "I stopped fixing the tests: this automatic repair reached its limit. Nothing else runs until you send a message.",
+  "tests-left-alone":
+    "Tests are failing, but I couldn't tell whether my change caused it, so I left them alone.",
+};
 
 /** Marks a wrong-language repair in the session log as ours. */
 const LANGUAGE_REPAIR_TYPE = "abacusai-bot:reply-language";

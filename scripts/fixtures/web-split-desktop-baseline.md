@@ -8,22 +8,18 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `99d74c2f` (Channels, #678)
+## Current: `bd66921c9` (the features merged since #630)
 
-**426 / 8099879 / 2710830.** Records the renderer with Channels: a named
-space where the user and several bots work in one thread (the Channels rows in
-the Bots sidebar, the channel page, its composer and cards, and the strings in
-every locale). Against main at `3f3db4fb` (422 / 8020015 / 2681876): +4 chunks
-(+0.95%), +79864 bytes (+1.00%), +28954 gzip bytes (+1.08%). The four chunks
-are the channel route (TanStack splits a route in two) and two shared modules
-the route now shares with the Bots sidebar (the bot avatar and the channel
-rows). The new-channel page shares the route, and the faces live with the rows,
-which kept three more chunks out. No dependency added. The 1% allowance is
-unchanged.
+**423 / 8060519 / 2695336.** Records the renderer after the work merged since
+#630, the last of it #661's turn credits line. Against `de9cd7eba`: +3 chunks
+(+0.71%), +76320 bytes (+0.96%), +25229 gzip bytes (+0.94%). That left 3522
+bytes of the 1% allowance, so the next feature's strings would fail the check.
+The growth is not split by change here; `apps/web`'s dependencies did not
+change. The 1% allowance is unchanged.
 
-Measured from a frozen-lockfile build of `99d74c2f` and of `3f3db4fb` (Linux
-x64), summed the same way as `check-desktop-parity.mjs`. This baseline-only
-change touches no renderer code.
+Measured from a frozen-lockfile build of `bd66921c9` (Linux x64), summed the
+same way as `check-desktop-parity.mjs`. This baseline-only change touches no
+renderer code.
 
 ## History
 

@@ -19,6 +19,7 @@ import { HomeChannelConnect } from "./home-channel-connect";
 
 const state = vi.hoisted(() => ({
   attempts: [] as string[],
+  paired: null as string | null,
   resolve: null as null | ((outcome: { ok: boolean }) => void),
 }));
 
@@ -39,12 +40,41 @@ vi.mock("#renderer/lib/connect-page", () => ({
   },
 }));
 
+// The real dialog opens the pairing window; only that it opens matters here.
+vi.mock("#renderer/features/library/messaging", () => ({
+  MessagingPlatformDialog: ({
+    platform,
+    onClose,
+  }: {
+    platform: string;
+    onClose(): void;
+  }) => {
+    state.paired = platform;
+    return <button onClick={onClose}>Close pairing</button>;
+  },
+}));
+vi.mock("#renderer/lib/use-app-context", () => ({
+  useAppContext: () => ({
+    transport: {
+      client: {
+        connectors: {
+          statuses: async () => ({
+            [`messaging-${String(state.paired)}`]: { state: "connected" },
+          }),
+        },
+      },
+      orpc: { connectors: { statuses: { queryKey: () => ["statuses"] } } },
+    },
+  }),
+}));
+
 beforeAll(async () => {
   await initI18n();
   await i18n.changeLanguage("en-US");
 });
 beforeEach(() => {
   state.attempts = [];
+  state.paired = null;
   state.resolve = null;
 });
 
@@ -124,10 +154,12 @@ it.each([
       )
     ).toBeTruthy();
     fireEvent.click(connect);
-    expect(state.attempts).toEqual([`messaging-${channel}`]);
+    // Its own pairing dialog: a connect attempt has nothing to open for it.
+    expect(state.attempts).toEqual([]);
+    await waitFor(() => expect(state.paired).toBe(channel));
     // Connected: the card goes once the app reports it.
     snapshot.current = snapshotOf(channel, true);
-    state.resolve?.({ ok: true });
+    fireEvent.click(screen.getByRole("button", { name: "Close pairing" }));
     await waitFor(() =>
       expect(
         document.querySelector('[data-slot="connector-request"]')
