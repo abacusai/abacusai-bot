@@ -354,7 +354,6 @@ import {
   BOT_TASK_PREFIX,
   BOT_TASK_TURN_TIMEOUT_MS,
   requestGist,
-  steppedInError,
   taskFollowUpNote,
 } from "./services/bots/bot-ask";
 import {
@@ -6051,9 +6050,7 @@ export class ServiceHost {
       this.userWords.delete(sessionId);
       return;
     }
-    // Stepping in and the follow-up are idempotent, so they come before the
-    // dedupe: "stop" sent twice stops the task on either copy.
-    this.userSteppedIn(sessionId, words);
+    // The follow-up is idempotent, so it comes before the dedupe.
     const followUp = this.taskFollowUps.get(sessionId);
     if (followUp != null && followUp.words == null) followUp.words = words;
     const recent = this.userWords.get(sessionId) ?? [];
@@ -6063,24 +6060,6 @@ export class ServiceHost {
       ...recent.slice(-1),
       { text: words, at: Date.now() },
     ]);
-  }
-
-  /**
-   * The user wrote in a bot's chat while a task another bot passed on runs
-   * there. Their message would wait for the task to end (it is never mixed
-   * into the task's report), so the task would finish and be reported as
-   * wanted even when they wrote "stop, do this instead". They are taking
-   * over: the task stops now, their message runs next, and the bot that
-   * passed it on is told what they said.
-   */
-  private userSteppedIn(sessionId: string, words: string): void {
-    for (const [askId, handle] of this.botAskTurns) {
-      const state = this.taskTurns.get(askId);
-      if (handle.sessionId === sessionId && state?.sent === true) {
-        state.steppedIn = words;
-        this.stopAgentTurn(handle);
-      }
-    }
   }
 
   /**
@@ -6181,17 +6160,17 @@ export class ServiceHost {
    * learns that the user dropped, changed or resumed the task there whether
    * or not that bot thinks to say so.
    */
-  private watchTaskFollowUp(
-    sessionId: string,
-    ask: BotAskRecord,
-    words: string | null
-  ): void {
+  private watchTaskFollowUp(sessionId: string, ask: BotAskRecord): void {
     // The user's message and the reply come after this point in the log,
     // so only what follows it is read, however long the log before it.
-    const entry = { ask, words, from: this.transcriptSize(sessionId) };
+    const entry = {
+      ask,
+      words: null as string | null,
+      from: this.transcriptSize(sessionId),
+    };
     this.taskFollowUps.set(sessionId, entry);
     console.log(
-      `[bot-ask] ${ask.id} follow-up armed in ${ask.targetId}'s chat${words == null ? "" : " with the user's words"}`
+      `[bot-ask] ${ask.id} follow-up armed in ${ask.targetId}'s chat`
     );
     const end = (): void => {
       clearTimeout(timer);
@@ -6393,13 +6372,14 @@ export class ServiceHost {
   /** The asked bot's conversation for each ask whose turn is running. */
   private readonly botAskTurns = new Map<string, BotChatHandle>();
   /**
-   * Each running task: whether its prompt is in the doing bot's chat (the
-   * user writing there then steps in, and what they wrote is kept), and
-   * whether it was cancelled before that (it is then never sent).
+   * Each running task: whether its prompt is in the doing bot's chat, and
+   * whether it was cancelled before that (it is then never sent). A message
+   * the user sends there meanwhile waits its turn, as any message does
+   * behind a running one; Stop is the way to interrupt.
    */
   private readonly taskTurns = new Map<
     string,
-    { sent: boolean; cancelled: boolean; steppedIn: string | null }
+    { sent: boolean; cancelled: boolean }
   >();
 
   /**
@@ -6414,11 +6394,7 @@ export class ServiceHost {
     visibleFrom: number | null
   ): Promise<string> {
     const task = ask.kind === "task";
-    const state = {
-      sent: false,
-      cancelled: false,
-      steppedIn: null as string | null,
-    };
+    const state = { sent: false, cancelled: false };
     const asker = this.botService.list().find((bot) => bot.id === ask.askerId);
     const handle = task
       ? await this.botService.openChat(ask.targetId)
@@ -6499,8 +6475,6 @@ export class ServiceHost {
           handle.workspaceId,
           handle.sessionId
         );
-      if (state.steppedIn != null)
-        throw new Error(steppedInError(state.steppedIn));
       throw error;
     } finally {
       if (
@@ -6509,7 +6483,7 @@ export class ServiceHost {
         this.botAskService.get(ask.askerId, ask.id)?.status !== "cancelled" &&
         this.botService.list().some((bot) => bot.id === ask.targetId)
       )
-        this.watchTaskFollowUp(handle.sessionId, ask, state.steppedIn);
+        this.watchTaskFollowUp(handle.sessionId, ask);
       this.botAskTurns.delete(ask.id);
       this.taskTurns.delete(ask.id);
     }

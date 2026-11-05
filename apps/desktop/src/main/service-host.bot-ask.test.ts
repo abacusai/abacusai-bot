@@ -344,7 +344,6 @@ describe("a task the user gave, passed on", () => {
       "waitForTurn",
       "feedTurnWaiter",
       "settleTurnWaiter",
-      "userSteppedIn",
       "noteUserWords",
       "watchTaskFollowUp",
       "replyTo",
@@ -494,31 +493,6 @@ describe("a task the user gave, passed on", () => {
     expect((self.taskFollowUps as Map<string, unknown>).size).toBe(0);
   });
 
-  it("the same words sent twice step in on either copy", async () => {
-    const { self } = taskHost(false, null);
-    const pending = (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null);
-    await vi.waitFor(() =>
-      expect(
-        (self.taskTurns as Map<string, { sent: boolean }>).get("q8")?.sent
-      ).toBe(true)
-    );
-    (self.noteUserWords as Method)("wri-main", "stop");
-    await expect(pending).rejects.toThrow(/partway through/);
-    const again = (self.runBotAskTurn as Method)(
-      { ...TASK, id: "q9" },
-      "TASK PROMPT",
-      null
-    );
-    await vi.waitFor(() =>
-      expect(
-        (self.taskTurns as Map<string, { sent: boolean }>).get("q9")?.sent
-      ).toBe(true)
-    );
-    // The identical text again: deduped as words, still a step-in.
-    (self.noteUserWords as Method)("wri-main", "stop");
-    await expect(again).rejects.toThrow(/partway through/);
-  });
-
   it("waits for the turn that answers the user, not one that closes before it", async () => {
     const { self, endUserTurn } = taskHost(false);
     await (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null);
@@ -529,26 +503,6 @@ describe("a task the user gave, passed on", () => {
     chatLog(["user", "make it shorter"], ["assistant", "Shorter version."]);
     endUserTurn();
     expect(self.tellBotAsk).toHaveBeenCalledTimes(1);
-  });
-
-  it("the user who stepped in: their words and the answer that follows go on too", async () => {
-    const { self, endUserTurn } = taskHost(false, null);
-    const pending = (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null);
-    await vi.waitFor(() =>
-      expect(
-        (self.taskTurns as Map<string, { sent: boolean }>).get("q8")?.sent
-      ).toBe(true)
-    );
-    (self.noteUserWords as Method)("wri-main", "make it 3 days, not 7");
-    await expect(pending).rejects.toThrow(/partway through/);
-    chatLog(
-      ["user", "make it 3 days, not 7"],
-      ["assistant", "Shortened to 3 days."]
-    );
-    endUserTurn();
-    expect(
-      (self.tellBotAsk as ReturnType<typeof vi.fn>).mock.calls[0]?.[1]
-    ).toContain("Shortened to 3 days.");
   });
 
   it("a cancelled task has no follow-up", async () => {
@@ -596,36 +550,6 @@ describe("a task the user gave, passed on", () => {
     await expect(pending).resolves.toBe("Posted.");
   });
 
-  it("stops when the user writes in that chat partway, and tells the passer what they wrote", async () => {
-    const { self } = taskHost(false, null);
-    const pending = (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null);
-    await vi.waitFor(() =>
-      expect(
-        (self.taskTurns as Map<string, { sent: boolean }>).get("q8")?.sent
-      ).toBe(true)
-    );
-    (self.userSteppedIn as Method)("wri-main", "stop that, do the menu");
-    await expect(pending).rejects.toThrow(
-      /wrote to it in its own chat partway through.*What they wrote: "stop that, do the menu"/
-    );
-    expect(self.stopAgentTurn).toHaveBeenCalledWith({
-      botId: "wri",
-      workspaceId: "ws",
-      sessionId: "wri-main",
-    });
-    expect((self.taskTurns as Map<string, unknown>).size).toBe(0);
-  });
-
-  it("is not stopped by the user's message while it only waits for their turn to end", async () => {
-    const { self, endUserTurn } = taskHost(true);
-    const pending = (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null);
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    (self.userSteppedIn as Method)("wri-main", "and one more thing");
-    expect(self.stopAgentTurn).not.toHaveBeenCalled();
-    endUserTurn();
-    await expect(pending).resolves.toBe("Posted.");
-  });
-
   it("cancelled while it waits for the user's own turn: that turn goes on, and the task never goes in", async () => {
     const { self, endUserTurn } = taskHost(true);
     const pending = (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null);
@@ -656,7 +580,6 @@ describe("a task the user gave, passed on", () => {
       taskTurns: new Map(),
     };
     for (const name of [
-      "userSteppedIn",
       "noteUserWords",
       "latestUserWords",
       "askBot",

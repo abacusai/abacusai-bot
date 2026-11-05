@@ -289,17 +289,6 @@ export const taskFollowUpNote = (
   ].join("\n");
 
 /**
- * Why a task ended when the user wrote in the doing bot's chat while it ran
- * (see the host's userSteppedIn): what they wrote, which now decides.
- */
-export const steppedInError = (words: string): string =>
-  [
-    "the user wrote to it in its own chat partway through, so it stopped there and may be half done.",
-    `What they wrote: ${quoted(words)}.`,
-    "Go by that: don't do the task yourself, pass it on again or keep offering it unless they ask.",
-  ].join(" ");
-
-/**
  * A task from the user, as the other bot reads it in its own chat: who
  * passed it on, the task as that bot wrote it, and the user's own words,
  * which win where the two differ. It is the user's instruction, so the bot
