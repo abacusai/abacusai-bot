@@ -30,6 +30,7 @@ import {
 import {
   alwaysOnLine,
   HOSTED_ROUTINE_FACTS,
+  HOSTED_ROUTINE_FULL_FACTS,
   LOCAL_ROUTINE_FACTS,
 } from "./cronjob";
 import type { ToolDefinition, ToolHost, ToolResult } from "./definition";
@@ -50,6 +51,8 @@ export interface BotHelpFacts {
   planName: string | null;
   /** Where this app's routines run. */
   runner: "local" | "hosted";
+  /** The server runs routines with full access. */
+  routinesFullAccess: boolean;
   /** How many routines the user has, when routines were asked about. */
   routines: { local: number; hosted: number } | null;
   connectors: Array<{ connector: Connector; status: ConnectorStatus }> | null;
@@ -92,7 +95,12 @@ const RUNS_WITH_THE_APP: ReadonlySet<BotHelpTopic | null> = new Set([
 
 function routinesSection(facts: BotHelpFacts): string[] {
   const lines = ["Routines:"];
-  if (facts.runner === "hosted") lines.push(...HOSTED_ROUTINE_FACTS);
+  if (facts.runner === "hosted")
+    lines.push(
+      ...(facts.routinesFullAccess
+        ? HOSTED_ROUTINE_FULL_FACTS
+        : HOSTED_ROUTINE_FACTS)
+    );
   else {
     lines.push(...LOCAL_ROUTINE_FACTS);
     lines.push(

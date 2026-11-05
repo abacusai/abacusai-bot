@@ -300,8 +300,12 @@ const createIdentity = (input: HostedRoutineCreate): string =>
 
 export class HostedRoutines {
   /** `answered`: the server knows the endpoint, even with routines switched off. */
-  private capable: { value: boolean; answered: boolean; at: number } | null =
-    null;
+  private capable: {
+    value: boolean;
+    answered: boolean;
+    fullAccess: boolean;
+    at: number;
+  } | null = null;
   private asking: Promise<boolean> | null = null;
   private cached: RoutineListItem[] = [];
 
@@ -339,14 +343,16 @@ export class HostedRoutines {
     this.asking ??= (async () => {
       let value = false;
       let answered = false;
+      let fullAccess = false;
       try {
         const result = await this.options.call({ action: "capabilities" });
         answered = result.ok;
         value = result.ok && result.body.hosted_routines === true;
+        fullAccess = result.ok && result.body.run_access === "full";
       } catch (error) {
         this.log(`[routines] capabilities failed: ${describe(error)}`);
       }
-      this.capable = { value, answered, at: this.now() };
+      this.capable = { value, answered, fullAccess, at: this.now() };
       return value;
     })().finally(() => {
       this.asking = null;
@@ -368,6 +374,11 @@ export class HostedRoutines {
     return this.capable?.value === true;
   }
 
+  /** The server runs this account's routines with full access, as last said. */
+  fullAccessNow(): boolean {
+    return this.capable?.value === true && this.capable.fullAccess;
+  }
+
   /** Each row created here, by the id its creator gave it; the newest few. */
   private readonly createdAs = new Map<string, string>();
 
@@ -383,11 +394,19 @@ export class HostedRoutines {
 
   /** The cached rows, for the Routines table. */
   list(): RoutineListItem[] {
+    const fullAccess = this.fullAccessNow();
     return this.cached.map((routine) => {
       const createdAs = this.createdAs.get(routine.id);
-      return createdAs == null || routine.hosted == null
+      return (createdAs == null && !fullAccess) || routine.hosted == null
         ? routine
-        : { ...routine, hosted: { ...routine.hosted, createdAs } };
+        : {
+            ...routine,
+            hosted: {
+              ...routine.hosted,
+              ...(createdAs != null ? { createdAs } : {}),
+              ...(fullAccess ? { fullAccess } : {}),
+            },
+          };
     });
   }
 

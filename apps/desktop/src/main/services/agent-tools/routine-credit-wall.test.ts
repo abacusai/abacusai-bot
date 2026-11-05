@@ -305,6 +305,7 @@ it("a hosted run at the wall reports no credits without a session", async () => 
       reads: [],
       watchUrl: null,
       timezone: "UTC",
+      access: null,
     })
   ).resolves.toEqual({ outcome: "failed", text: "", creditsOut: true });
 

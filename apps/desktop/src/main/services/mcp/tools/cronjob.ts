@@ -5,6 +5,8 @@ import type { RoutineMatch } from "@abacus-ai/contract/routines/same-routine";
 import {
   HOSTED_RUN_CANNOT,
   HOSTED_RUN_DELIVERED_VIA,
+  HOSTED_RUN_FULL_ACCESS,
+  HOSTED_RUN_NO_VAULT,
 } from "../../agent-tools/hosted-run";
 import { ROUTINE_READS } from "../../agent-tools/routine-reach";
 import { billingPlanReady } from "./billing";
@@ -67,7 +69,7 @@ const LOCAL_FIRE_SESSION = [
 /** The account reads a hosted routine may be given, quoted. */
 const quotedReads = ROUTINE_READS.map((read) => `"${read}"`).join(", ");
 
-const HOSTED_DESCRIPTION = [
+const HOSTED_OPTIONS = [
   'runner: "hosted" keeps the routine on the server: it runs on its own even while this',
   "computer is off, and results reach the user on WhatsApp or by email.",
   '"local" runs it in this app, only while it is open. Leave it out and the app picks.',
@@ -82,6 +84,11 @@ const HOSTED_DESCRIPTION = [
   'So a fixed message at set times ("send me hi every hour", "remind me to stretch at 5")',
   "is kind reminder with reminder_text, nothing to run. A task's prompt says what to find or write",
   'for the user ("the top 3 AI headlines today"), never how to send it ("send it on',
+  "WhatsApp\"): delivery is not the run's job.",
+];
+
+const HOSTED_DESCRIPTION = [
+  ...HOSTED_OPTIONS.slice(0, -1),
   "WhatsApp\"): delivery is not the run's job. A routine cannot message anyone else; for",
   "a message to another person or group, tell the user so instead of making one.",
   "",
@@ -90,6 +97,14 @@ const HOSTED_DESCRIPTION = [
   "the page addresses it may read under (https://news.example.com/tech/), and reads,",
   `the account data it may read (${quotedReads}), only`,
   "what the routine needs; nothing else is reachable.",
+];
+
+/** The same, where the server runs routines with full access. */
+const HOSTED_FULL_DESCRIPTION = [
+  ...HOSTED_OPTIONS,
+  "",
+  `Every routine's runs have full access, with nobody watching: ${HOSTED_RUN_FULL_ACCESS}.`,
+  `A run cannot ${HOSTED_RUN_NO_VAULT}: it stops and tells the user. Give no sources or reads.`,
 ];
 
 /**
@@ -103,6 +118,14 @@ export const HOSTED_ROUTINE_FACTS = [
   "unattended: it searches the web and reads pages, and of the user's account data it",
   `can read only ${ROUTINE_READS.join(", ")}. A run cannot read chat-app messages or`,
   `${HOSTED_RUN_CANNOT}.`,
+];
+
+/** The same, where the server runs routines with full access. */
+export const HOSTED_ROUTINE_FULL_FACTS = [
+  "Routines here are kept on the server: they run on their own even while the user's",
+  "computer is off, and each run's answer is sent to the user as the routine's message,",
+  `${HOSTED_RUN_DELIVERED_VIA}. Every run has full access, with nobody watching:`,
+  `${HOSTED_RUN_FULL_ACCESS}. A run cannot ${HOSTED_RUN_NO_VAULT}: it stops and tells the user.`,
 ];
 
 /** The desktop app: every routine runs here, with this conversation's reach. */
@@ -290,6 +313,13 @@ const HOSTED_PROPERTIES = {
   },
 };
 
+/** With full access a routine names no reach: `sources` and `reads` are gone. */
+const {
+  sources: _sources,
+  reads: _reads,
+  ...HOSTED_PROPERTIES_FULL
+} = HOSTED_PROPERTIES;
+
 /**
  * Scheduled work: routines a session or bot creates for itself. Only the
  * hosted computer offers keeping one on the server; on the desktop app every
@@ -317,7 +347,9 @@ export const CRONJOB_TOOLS: ToolDefinition[] = [
           : [
               ...WEBHOOK_DESCRIPTION,
               "",
-              ...HOSTED_DESCRIPTION,
+              ...(host.routinesFullAccess
+                ? HOSTED_FULL_DESCRIPTION
+                : HOSTED_DESCRIPTION),
               ...(host.hostedOnly
                 ? []
                 : [
@@ -331,9 +363,11 @@ export const CRONJOB_TOOLS: ToolDefinition[] = [
       ].join("\n"),
     inputSchema: (_channel, host) => ({
       type: "object",
-      properties: host.hostedRoutines
-        ? { ...BASE_PROPERTIES, ...HOSTED_PROPERTIES }
-        : BASE_PROPERTIES,
+      properties: !host.hostedRoutines
+        ? BASE_PROPERTIES
+        : host.routinesFullAccess
+          ? { ...BASE_PROPERTIES, ...HOSTED_PROPERTIES_FULL }
+          : { ...BASE_PROPERTIES, ...HOSTED_PROPERTIES },
       required: ["action"],
     }),
     run: (host, args, callerSession) => host.cronjob(args, callerSession),

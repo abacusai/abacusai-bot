@@ -318,6 +318,8 @@ export interface McpAgentToolsServerOptions {
   skillsService: SkillsService;
   /** Routines can be kept on the server (the hosted computer): the cronjob tool offers it. */
   hostedRoutines?: () => boolean;
+  /** The server runs routines with full access. */
+  routinesFullAccess?: () => boolean;
   /** Re-read per request so toggles take effect live. */
   enabledToolsets: () => Set<string>;
   /** The account's plan as last read; absent or unknown, no plan-locked capability is offered. */
@@ -732,6 +734,7 @@ export class McpAgentToolsServer extends McpHttpServer {
     const enabled = this.options.enabledToolsets();
     return {
       hostedRoutines: this.options.hostedRoutines?.() === true,
+      routinesFullAccess: this.options.routinesFullAccess?.() === true,
       hostedOnly: this.options.routines?.hostedOnly?.() === true,
       withheldFeatures: withheldFeatures(this.planTier(), (feature) =>
         this.featureListed(feature.toolsets, enabled, callerSession)
@@ -3679,6 +3682,7 @@ export class McpAgentToolsServer extends McpHttpServer {
       phone,
       planName: this.options.planName?.() ?? null,
       runner: hostedRunner ? "hosted" : "local",
+      routinesFullAccess: this.options.routinesFullAccess?.() === true,
       routines: needs("routines")
         ? {
             local: listJobs().length,

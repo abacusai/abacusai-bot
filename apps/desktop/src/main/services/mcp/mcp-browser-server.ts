@@ -698,9 +698,18 @@ export interface McpBrowserServerOptions {
    * `browser_checkout`, handed to it at spawn. Absent, the tool refuses.
    */
   checkoutToken?: string;
+  /** A session with nobody to approve anything: it gets no vault. */
+  noVault?: (sessionId: string) => boolean;
   /** A session that runs unattended, held to its one page; null for any other. */
   heldSession?: (sessionId: string) => HeldBrowserSession | null;
 }
+
+/** The tools a run with nobody to approve anything never reaches. */
+const NO_VAULT_RUN_TOOLS: readonly string[] = [
+  ...VAULT_TOOL_NAMES,
+  VAULT_FILL_TOOL,
+  TRAVELER_FILL_TOOL,
+];
 
 /** A read refused because the page's secret fields could not be checked first. */
 class UnreadablePageError extends Error {
@@ -2021,6 +2030,14 @@ export class McpBrowserServer extends McpHttpServer {
         )
           return this.err("The routine's page is not on a public address.");
       }
+      if (
+        sessionId != null &&
+        NO_VAULT_RUN_TOOLS.includes(name) &&
+        this.options.noVault?.(sessionId) === true
+      )
+        return this.err(
+          "Nobody is here to approve this: stop and say in your answer what needs the user's yes."
+        );
       // Pure-read tools skip the prompt; navigate/interact/execute stay gated.
       if (
         held == null &&
