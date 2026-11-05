@@ -151,6 +151,7 @@ import {
   registerCustomProviders,
   registerGeminiProvider,
   resolveModel,
+  settleProviderRegistrations,
   DEFAULT_MAX_OUTPUT_TOKENS,
 } from "./providers.js";
 import {
@@ -905,6 +906,7 @@ export class AbacusBotSession {
       refreshOpenRouterLive(),
       refreshLiveModelIds(),
     ]);
+    await settleProviderRegistrations(registry);
 
     // MCP servers first: pi takes the custom tool list up front.
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
@@ -2868,6 +2870,7 @@ export class AbacusBotSession {
       refreshOpenRouterLive(),
       refreshLiveModelIds(),
     ]);
+    await settleProviderRegistrations(registry);
     // Whatever sidelined a model or a whole provider may no longer hold: the
     // account's credits, plan or keys just changed under us.
     this.router.clearCooldowns();

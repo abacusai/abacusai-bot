@@ -586,6 +586,18 @@ export async function registerAbacusProvider(
   });
 }
 
+/**
+ * After the registrations above, before anything reads the registry. Each
+ * one has pi re-check the providers' keys in the background, unawaited, and
+ * a check that started before the last registration can land after it and
+ * drop that provider from `getAvailable()` until the newer check lands: the
+ * pool picks without a source connected a moment ago, and a card leaves
+ * Abacus out. An awaited refresh lands a check that saw them all.
+ */
+export const settleProviderRegistrations = (
+  registry: ModelRegistry
+): Promise<unknown> => registry.refresh({ allowNetwork: false });
+
 function toProviderConfig(provider: CustomProviderConfig) {
   return {
     name: provider.name ?? provider.id,
