@@ -6129,6 +6129,12 @@ export class ServiceHost {
           throw new Error("it stayed busy in its own chat for 30 minutes.");
         if (state.cancelled)
           throw new Error("it was cancelled before it began.");
+        // A turn there just stopped (the task before this one, say) closes
+        // a moment after the stop: not on this task's waiter.
+        await this.sessionTurnStateService.stopSettled(
+          handle.sessionId,
+          15_000
+        );
       } else if (this.turnLedger.isOpen(handle.sessionId))
         // A turn left open there (one stopped or cut off) would take this
         // request into it; asks of one pair never overlap otherwise.

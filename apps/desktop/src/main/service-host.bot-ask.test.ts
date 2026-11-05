@@ -296,6 +296,7 @@ describe("a task the user gave, passed on", () => {
       },
       // The task's status as the service holds it; tests set "cancelled".
       botAskService: { get: vi.fn(() => null) },
+      sessionTurnStateService: { stopSettled: vi.fn(async () => true) },
       userWords: new Map(),
       taskFollowUps: new Map(),
       agentSessionManagerService: {
