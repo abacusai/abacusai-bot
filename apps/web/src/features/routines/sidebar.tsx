@@ -19,6 +19,7 @@ import { RoutinesWhereLine } from "./always-on";
 import { useConnectorThreads } from "./attention";
 import { RoutineCreateAction } from "./create-action";
 import { stats, routineState, scheduleLabel, useRoutinesData } from "./data";
+import { useRoutineDuplicates } from "./duplicates";
 import { useHostedOff, useHostedRefresh } from "./hosted-sync";
 import { routineOwns } from "./notify";
 import { RoutineSidebarRow } from "./row";
@@ -35,6 +36,7 @@ export const RoutinesSidebar = () => {
   // The Routines panel is open while its sidebar is: keep hosted rows fresh.
   useHostedRefresh();
   const counts = stats(routines, new Date(now));
+  const duplicates = useRoutineDuplicates(routines);
   const snapshot = useQuery(
     transport.orpc.messaging.snapshot.queryOptions({ input: {} })
   );
@@ -122,6 +124,7 @@ export const RoutinesSidebar = () => {
                 bot={bots.find((b) => b.id === r.botId)}
                 state={state}
                 active={routineId === r.id}
+                duplicate={duplicates.has(r.id)}
                 label={
                   state === "scheduled"
                     ? scheduleLabel(r, t, i18n.language)

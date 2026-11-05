@@ -1376,6 +1376,14 @@
     "deleteBody": "Cela supprime « {{name}} » et l'historique de ses exécutions.",
     "deleteError": "Impossible de supprimer la routine.",
     "deleteTitle": "Supprimer la routine",
+    "duplicate": {
+      "badge": "Doublon possible",
+      "delete": "Supprimer celle-ci",
+      "description": "Même horaire, même tâche : le travail est fait deux fois et chaque exécution consomme des crédits. Choisissez laquelle garder.",
+      "keepBoth": "Garder les deux",
+      "pause": "Mettre celle-ci en pause",
+      "title": "Ressemble à une copie de"
+    },
     "edit": "Modifier",
     "editTitle": "Modifier la routine",
     "editorPlaceholder": "Dites à la routine comment changer : \"tous les matins à 9 heures\", \"stop\"",

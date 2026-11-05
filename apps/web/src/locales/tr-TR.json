@@ -1376,6 +1376,14 @@
     "deleteBody": "Bu işlem “{{name}}” rutinini ve çalışma geçmişini siler.",
     "deleteError": "Rutin silinemedi.",
     "deleteTitle": "Rutini sil",
+    "duplicate": {
+      "badge": "Olası kopya",
+      "delete": "Bunu sil",
+      "description": "Aynı zamanlama, aynı iş: iş iki kez yapılır ve her çalıştırma kredi harcar. Hangisini tutacağını seç.",
+      "keepBoth": "İkisini de tut",
+      "pause": "Bunu duraklat",
+      "title": "Şunun kopyası gibi görünüyor:"
+    },
     "edit": "Düzenle",
     "editTitle": "Rutini düzenle",
     "editorPlaceholder": "Rutine nasıl değişeceğini söyle: \"bunun yerine her sabah 9'da\", \"dur\"",

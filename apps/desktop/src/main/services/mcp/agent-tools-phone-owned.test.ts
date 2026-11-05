@@ -855,6 +855,10 @@ describe("paid-plan capabilities", () => {
         expect(free.isError).toBe(true);
         expect(free.text).toMatch(/Call paid_feature with feature routines/);
         for (const tier of ["basic", "paid"] as const) {
+          // A store of its own: the same routine twice is one routine.
+          process.env.ABACUSAI_BOT_HOME = fs.mkdtempSync(
+            path.join(os.tmpdir(), "phone-cron-")
+          );
           const paid = await create(tier, kind);
           expect(paid.isError).toBe(false);
           expect(paid.text).toMatch(/^Created/);

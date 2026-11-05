@@ -36,6 +36,7 @@ import {
   HOME_CHANNELS,
   type HomeChannel,
 } from "@abacus-ai/contract/bots";
+import { CHECK_IN_PROMPT } from "@abacus-ai/contract/bots/check-in";
 import type {
   ConnectorStatus,
   ConnectorStatuses,
@@ -45,6 +46,7 @@ import {
   artifactPathLine,
   NOTHING_PRESENTED,
 } from "@abacus-ai/contract/deliverables";
+import type { FunnelStep } from "@abacus-ai/contract/funnel";
 import {
   isMessagingPlatformId,
   type MessagingPlatformId,
@@ -61,6 +63,10 @@ import type {
   RoutineListItem,
   RoutineRunner,
 } from "@abacus-ai/contract/routines";
+import {
+  findSameRoutine,
+  type RoutineFacts,
+} from "@abacus-ai/contract/routines/same-routine";
 import {
   PAID_FEATURES,
   PHONE_HANDOFF_FEATURES,
@@ -81,6 +87,7 @@ import {
 import { exportDeckPdf } from "../agent-tools/deck-pdf";
 import {
   HostedRoutineRefusal,
+  HostedRoutineUnconfirmed,
   isHostedRoutineId,
   type HostedRoutines,
 } from "../agent-tools/hosted-routines";
@@ -165,13 +172,19 @@ import type {
   ConnectOutcome,
   DisconnectOutcome,
 } from "./tools/connect-outcome";
-import { alwaysOnNote } from "./tools/cronjob";
+import {
+  alwaysOnNote,
+  CHECK_IN_PROMPT_NOTE,
+  existingRoutineNote,
+  HOSTED_CREATE_UNCONFIRMED_NOTE,
+} from "./tools/cronjob";
 import {
   describeHostedRoutine,
   hostedCreatedNote,
   hostedRunStartedNote,
   hostedCreateInput,
   hostedRefusalNote,
+  requestedInstruction,
   requestedReads,
   requestedRunner,
   requestedSources,
@@ -294,6 +307,13 @@ const fileUrl = (absolutePath: string): string =>
 /** Follow-up tools offered only once a bot has made a request to another bot. */
 const BOT_REQUEST_FOLLOW_UPS = new Set(["check_bot_answers", "cancel_bot_ask"]);
 
+/** A routine as `create` compares it, and how `list` would show it. */
+type RoutineOnFile = RoutineFacts & {
+  id: string;
+  enabled: boolean;
+  description: string;
+};
+
 export interface McpAgentToolsServerOptions {
   skillsService: SkillsService;
   /** Routines can be kept on the server (the hosted computer): the cronjob tool offers it. */
@@ -331,6 +351,10 @@ export interface McpAgentToolsServerOptions {
    * routine gets the fires delivered back into its chat.
    */
   botIdForSession?: (sessionId: string) => string | null;
+  /** This bot's mission or check-in was edited just now. */
+  missionJustEdited?: (botId: string) => boolean;
+  /** Count something that happened (see `FUNNEL_STEPS`). */
+  funnel?: (step: FunnelStep, detail?: string) => void;
   /** The session is a bot's own chat in the app (no chat app behind it), where a card can be clicked. */
   isAppBotChat?: (sessionId: string) => boolean;
   /**
@@ -1083,18 +1107,117 @@ export class McpAgentToolsServer extends McpHttpServer {
           "Reminders, daily briefs and routines are not set up from this chat on the free plan: nothing was created. " +
             "Call paid_feature with feature routines, and answer from what it says."
         );
-      return withNotes(
-        await this.cronjobAction(
+      const act = (): Promise<ToolResult> =>
+        this.cronjobAction(
           action,
           id,
           timedArgs(args, timing),
           timing,
           callerSession
-        ),
+        );
+      return withNotes(
+        await (action === "create" ? this.oneCreateAtATime(act) : act()),
         timing.warnings
       );
     }
     return this.cronjobAction(action, id, args, null, callerSession);
+  }
+
+  /** The create before this one, finished or not. */
+  private lastCreate: Promise<unknown> = Promise.resolve();
+
+  /**
+   * Creates run in turn: two calls in one model step would otherwise each
+   * look before either saved, and both find nothing.
+   */
+  private oneCreateAtATime(
+    act: () => Promise<ToolResult>
+  ): Promise<ToolResult> {
+    const turn = this.lastCreate.then(act, act);
+    this.lastCreate = turn.catch(() => undefined);
+    return turn;
+  }
+
+  /** Every routine a create by this caller is compared with, in its own words. */
+  private async ownRoutines(
+    hostedCreate: boolean,
+    callerSession?: string
+  ): Promise<RoutineOnFile[]> {
+    // A create that timed out can land after the list was read.
+    if (hostedCreate) await this.options.routines?.hosted.refresh();
+    return [
+      ...listJobs()
+        .filter((job) => job.serverId == null)
+        .map((job) => ({
+          ...job,
+          webhook: job.webhookToken != null,
+          timezone: null,
+          watchUrl: null,
+          description: describeJob(job),
+        })),
+      ...this.visibleHosted(callerSession).map((routine) => ({
+        ...routine,
+        webhook: routine.webhookUrl != null,
+        timezone: routine.hosted?.timezone ?? null,
+        watchUrl: routine.hosted?.watchUrl ?? null,
+        description: describeHostedRoutine(routine),
+      })),
+      // A one-time routine that has run is a record, not a job still to do.
+    ].filter((routine) => routine.enabled || routine.runAt == null);
+  }
+
+  /** The note for a create whose routine already exists; null when it is new. */
+  private async alreadyThere(
+    args: Record<string, unknown>,
+    timing: RoutineTiming | null,
+    hostedCreate: boolean,
+    callerSession?: string
+  ): Promise<ToolResult | null> {
+    const botId = this.callerBot(callerSession);
+    const distinctFrom =
+      typeof args.distinct_from === "string" ? args.distinct_from.trim() : "";
+    const routines = await this.ownRoutines(hostedCreate, callerSession);
+    const found = findSameRoutine(
+      {
+        name: typeof args.name === "string" ? args.name : "",
+        prompt: requestedInstruction(args),
+        schedule:
+          typeof args.schedule === "string" && args.schedule.trim().length > 0
+            ? args.schedule
+            : null,
+        runAt: timing?.runAt ?? null,
+        botId,
+        webhook: args.webhook === true,
+        timezone: typeof args.timezone === "string" ? args.timezone : null,
+        watchUrl: typeof args.watch_url === "string" ? args.watch_url : null,
+      },
+      routines,
+      {
+        missionEdited:
+          botId != null && this.options.missionJustEdited?.(botId) === true,
+      }
+    );
+    // The maker read this one and says the new job is another: only words
+    // that differ can be, and the same words are never a separate job.
+    if (
+      found == null ||
+      (found.match === "alike" && found.routine.id === distinctFrom)
+    )
+      return null;
+    const checkIn = found.routine.prompt === CHECK_IN_PROMPT;
+    this.options.funnel?.(
+      "routine_duplicate_avoided",
+      `${checkIn ? "check-in" : found.match}-${hostedCreate ? "hosted" : "local"}`
+    );
+    return this.ok(
+      existingRoutineNote({
+        id: found.routine.id,
+        match: found.match,
+        checkIn,
+        enabled: found.routine.enabled,
+        description: found.routine.description,
+      })
+    );
   }
 
   private async cronjobAction(
@@ -1149,11 +1272,18 @@ export class McpAgentToolsServer extends McpHttpServer {
           "local";
         // On a hosted-only bot a "local" ask is made hosted too, through the
         // same input (time zone, kind, reminder text), never a bare local one.
-        if (
+        const hostedCreate =
           (runner === "hosted" ||
             this.options.routines?.hostedOnly?.() === true) &&
-          this.options.routines != null
-        )
+          this.options.routines != null;
+        const existing = await this.alreadyThere(
+          args,
+          timing,
+          hostedCreate,
+          callerSession
+        );
+        if (existing != null) return existing;
+        if (hostedCreate)
           return await this.createHostedRoutine(args, callerSession);
 
         const schedule = typeof args.schedule === "string" ? args.schedule : "";
@@ -1268,6 +1398,22 @@ export class McpAgentToolsServer extends McpHttpServer {
         return this.err(
           `"${action}" needs an id. Use action "list" to see them.`
         );
+
+      // The bot's form finds its check-in by this text: rewritten, the next
+      // edit there would make a second one.
+      if (
+        action === "update" &&
+        typeof args.prompt === "string" &&
+        args.prompt.trim() !== CHECK_IN_PROMPT &&
+        (await this.ownRoutines(false, callerSession)).some(
+          (routine) =>
+            routine.id === id &&
+            routine.botId != null &&
+            routine.botId === this.callerBot(callerSession) &&
+            routine.prompt === CHECK_IN_PROMPT
+        )
+      )
+        return this.ok(CHECK_IN_PROMPT_NOTE);
 
       if (isHostedRoutineId(id) && this.options.routines != null) {
         // Only what this caller may see may be touched: a bot its own, a
@@ -1453,6 +1599,8 @@ export class McpAgentToolsServer extends McpHttpServer {
     } catch (error) {
       if (error instanceof HostedRoutineRefusal)
         return this.ok(hostedRefusalNote(error));
+      if (error instanceof HostedRoutineUnconfirmed)
+        return this.ok(HOSTED_CREATE_UNCONFIRMED_NOTE);
       throw error;
     }
   }

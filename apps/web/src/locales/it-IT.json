@@ -1376,6 +1376,14 @@
     "deleteBody": "Questo elimina “{{name}}” e la cronologia delle sue esecuzioni.",
     "deleteError": "Impossibile eliminare la routine.",
     "deleteTitle": "Elimina routine",
+    "duplicate": {
+      "badge": "Possibile duplicato",
+      "delete": "Elimina questa",
+      "description": "Stessa pianificazione, stesso compito: il lavoro viene svolto due volte e ogni esecuzione consuma crediti. Scegli quale tenere.",
+      "keepBoth": "Tieni entrambe",
+      "pause": "Metti in pausa questa",
+      "title": "Sembra una copia di"
+    },
     "edit": "Modifica",
     "editTitle": "Modifica routine",
     "editorPlaceholder": "Di' alla routine come cambiare: \"tutte le mattine invece alle 9\", \"stop\"",

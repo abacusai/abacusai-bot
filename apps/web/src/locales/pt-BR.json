@@ -1376,6 +1376,14 @@
     "deleteBody": "Isso exclui “{{name}}” e seu histórico de execuções.",
     "deleteError": "Não foi possível excluir a rotina.",
     "deleteTitle": "Excluir rotina",
+    "duplicate": {
+      "badge": "Possível duplicata",
+      "delete": "Excluir esta",
+      "description": "Mesmo horário, mesmo trabalho: a tarefa acontece duas vezes e cada execução gasta créditos. Escolha qual manter.",
+      "keepBoth": "Manter as duas",
+      "pause": "Pausar esta",
+      "title": "Parece uma cópia de"
+    },
     "edit": "Editar",
     "editTitle": "Editar rotina",
     "editorPlaceholder": "Diga à rotina como mudar: \"todas as manhãs às 9\", \"parar\"",

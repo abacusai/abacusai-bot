@@ -1376,6 +1376,14 @@
     "deleteBody": "Esto elimina “{{name}}” y su historial de ejecuciones.",
     "deleteError": "No se ha podido eliminar la rutina.",
     "deleteTitle": "Eliminar rutina",
+    "duplicate": {
+      "badge": "Posible duplicado",
+      "delete": "Eliminar esta",
+      "description": "Mismo horario, misma tarea: el trabajo se hace dos veces y cada ejecución gasta créditos. Elige cuál conservar.",
+      "keepBoth": "Conservar ambas",
+      "pause": "Pausar esta",
+      "title": "Parece una copia de"
+    },
     "edit": "Editar",
     "editTitle": "Editar rutina",
     "editorPlaceholder": "Dile a la rutina cómo cambiar: \"todas las mañanas a las 9\", \"parar\"",

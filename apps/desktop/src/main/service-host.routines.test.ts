@@ -90,6 +90,8 @@ const host = (hostedOnly = false, platform = "web-host") =>
       hostedRoutines: {
         capability: vi.fn(async () => true),
         create: vi.fn(async () => ({ id: "server-routine" })),
+        list: () => [],
+        refresh: async () => [],
       },
       emitEvent: vi.fn(),
       webhookRelay: { refreshNow: vi.fn() },

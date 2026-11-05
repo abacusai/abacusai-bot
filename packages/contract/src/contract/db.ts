@@ -261,6 +261,8 @@ export const PREFS_GROUP_ENTRIES = {
     freePlanSeenAt: NullableTimestamp,
     /** The after-upgrade card sending routines to Abacus AI Agent on the web, seen. */
     upgradeRoutinesSeenAt: NullableTimestamp,
+    /** Pairs of routines flagged as copies that the user chose to keep. */
+    routineDuplicatesKept: v.array(v.string()),
   },
   motion: { reduce: v.picklist(["system", "on", "off"]) },
   sounds: {

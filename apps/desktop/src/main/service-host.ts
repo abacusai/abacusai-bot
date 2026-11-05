@@ -27,6 +27,10 @@ import type {
   BotCreateInput,
   BotUpdateInput,
 } from "@abacus-ai/contract/bots";
+import {
+  CHECK_IN_PROMPT,
+  missionForCheckIn,
+} from "@abacus-ai/contract/bots/check-in";
 import { ConflictError } from "@abacus-ai/contract/conflict";
 import {
   checkoutKey,
@@ -1491,6 +1495,8 @@ export class ServiceHost {
     // belongs to the bot, and `list` shows the bot its own.
     isAppBotChat: (sessionId) => this.botService.isAppBotChat(sessionId),
     botIdForSession: (sessionId) => this.botOfSession(sessionId),
+    missionJustEdited: (botId) => this.botService.missionJustEdited(botId),
+    funnel: (step, detail) => reportFunnelStep(step, detail),
     conversationKeyForSession: (sessionId) =>
       this.conversationKeyForSession(sessionId),
     channelForSession: (sessionId) => this.laneChannels.get(sessionId) ?? null,
@@ -2492,6 +2498,19 @@ export class ServiceHost {
       workspaceId,
     createSession: (workspaceId, owner) =>
       this.createAgentSession(workspaceId, null, owner),
+    botRoutines: (botId) =>
+      [
+        ...listJobs().filter((job) => job.serverId == null),
+        ...this.hostedRoutines.list(),
+      ]
+        .filter((routine) => routine.botId === botId)
+        .map((routine) => ({
+          id: routine.id,
+          name: routine.name,
+          when:
+            routine.schedule ?? (routine.runAt != null ? "once" : "on webhook"),
+          checkIn: routine.prompt === CHECK_IN_PROMPT,
+        })),
     findOwnedSession: (botId, role, key) => {
       const found = this.agentSessionManagerService.findOwned(botId, role, key);
       return found == null
@@ -5614,13 +5633,18 @@ export class ServiceHost {
    * bot's work; without its memory it drafted for the very people the user
    * had told it to leave alone.
    */
-  private withBotVoice(botId: string | null, prompt: string): string {
-    const bot = botId == null ? null : getBot(botId);
+  private withBotVoice(job: CronJob, prompt: string): string {
+    const bot = job.botId == null ? null : getBot(job.botId);
     if (bot == null) return prompt;
     const memory = readBotMemoryText(bot.id);
+    const mission =
+      job.prompt === CHECK_IN_PROMPT
+        ? missionForCheckIn(bot.description)
+        : null;
     const voice = [
       `You are ${bot.name}, running a routine you set up for the user.`,
       bot.persona.length > 0 ? `Your voice, every message: ${bot.persona}` : "",
+      mission != null ? `Your mission:\n${mission}` : "",
       memory.length > 0
         ? `What you remember about the user and this work:\n${memory}`
         : "",
@@ -6478,7 +6502,7 @@ export class ServiceHost {
     const fireKey = `${jobId}@${fire?.slot ?? attemptId}`;
     const lastRun = readLastRoutineRun(home);
     const prompt = this.withBotVoice(
-      job.botId,
+      job,
       buildRoutineFirePrompt(job, trigger, payload, {
         unattended,
         dir: home,

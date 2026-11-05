@@ -73,12 +73,15 @@ export const RoutineSidebarRow = ({
   state,
   label,
   active,
+  duplicate = false,
 }: {
   row: Row;
   bot?: BotRow;
   state: State;
   label: string;
   active: boolean;
+  /** It looks like a copy of another routine. */
+  duplicate?: boolean;
 }) => {
   const { t } = useTranslation();
   const { db, transport } = useAppContext();
@@ -138,6 +141,12 @@ export const RoutineSidebarRow = ({
                 )}
               </span>
               <span className="text-sidebar-foreground/80 block truncate text-[11px]">
+                {duplicate && (
+                  <span className="font-medium text-(--bots-attention)">
+                    {t("routines.duplicate.badge")}
+                    {" · "}
+                  </span>
+                )}
                 {label}
               </span>
             </span>

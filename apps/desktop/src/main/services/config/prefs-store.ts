@@ -85,6 +85,7 @@ const DEFAULTS: PrefsValues = {
     deliverableOffer: null,
     freePlanSeenAt: null,
     upgradeRoutinesSeenAt: null,
+    routineDuplicatesKept: [],
   },
   panes: {},
   motion: { reduce: "system" },

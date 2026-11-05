@@ -41,6 +41,9 @@ export const FUNNEL_STEPS = [
   // the bot's template, and a tap's also whether it copied.
   "task_suggestions_shown",
   "task_suggestion_tapped",
+  // The agent asked for a routine that already exists, and got that one back;
+  // the detail is how it compared (same, alike or check-in) and where it lives.
+  "routine_duplicate_avoided",
   // A free account's chat on another provider's model: the RouteLLM notice.
   "routellm_nudge_shown",
   "routellm_nudge_switched",

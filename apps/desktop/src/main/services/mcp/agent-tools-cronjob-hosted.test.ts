@@ -344,15 +344,15 @@ describe("cronjob, hosted", () => {
     const { call } = harness({ defaultRunner: "hosted" });
     const text = await call({
       action: "create",
-      prompt: "My calendar",
-      schedule: "0 8 * * *",
+      prompt: "My evening calendar",
+      schedule: "0 18 * * *",
     });
     expect(text).not.toContain("Routines panel");
     expect(text).toContain("on WhatsApp when it is linked");
     const phone = await harness({ defaultRunner: "hosted", phone: true }).call({
       action: "create",
-      prompt: "My calendar",
-      schedule: "0 8 * * *",
+      prompt: "My evening calendar",
+      schedule: "0 18 * * *",
     });
     expect(phone).toContain("Its results arrive in this chat");
     expect(phone).not.toContain("Routines panel");
@@ -482,7 +482,7 @@ describe("cronjob, local", () => {
     const paid = await harness({ alwaysOn: "paid" }).call({
       action: "create",
       prompt: "Local digest 2",
-      schedule: "0 9 * * *",
+      schedule: "0 10 * * *",
     });
     expect(paid).toContain(
       "their plan already includes personal agents in Abacus AI Agent on the web that run 24/7"

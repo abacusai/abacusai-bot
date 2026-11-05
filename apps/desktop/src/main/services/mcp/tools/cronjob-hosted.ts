@@ -34,6 +34,10 @@ export const requestedRunner = (
 ): RoutineRunner | null =>
   args.runner === "hosted" || args.runner === "local" ? args.runner : null;
 
+/** What the routine is asked to do: its prompt, or a reminder's text. */
+export const requestedInstruction = (args: Record<string, unknown>): string =>
+  text(args.prompt) ?? text(args.reminder_text) ?? "";
+
 /** The sources the model named: `sources`, or the older `source_hosts`. */
 export const requestedSources = (args: Record<string, unknown>): string[] =>
   [args.sources, args.source_hosts].flatMap((value) =>

@@ -68,6 +68,17 @@ export const CHECK_IN_PROMPT = [
   "is nothing new, say so in one line rather than inventing an update.",
 ].join(" ");
 
+/**
+ * The mission as a check-in's run needs it: a run starts fresh and has no
+ * standing prompt, so "anything your mission tracks" names nothing without
+ * this. Null while the bot has none; a goal is the user's own words, without
+ * its first-turn instructions.
+ */
+export const missionForCheckIn = (mission: string): string | null =>
+  mission === NAME_ONLY_MISSION || mission.trim().length === 0
+    ? null
+    : (goalOfMission(mission) ?? mission);
+
 export type CheckInPreset = "off" | "hourly" | "daily" | "weekdays" | "weekly";
 
 /** The segmented control's order (P34). */

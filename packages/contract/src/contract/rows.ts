@@ -201,6 +201,7 @@ export interface PrefsRow {
     deliverableOffer?: DeliverableOfferCard | null;
     freePlanSeenAt: number | null;
     upgradeRoutinesSeenAt: number | null;
+    routineDuplicatesKept: string[];
   };
   /** Panel widths. */
   panes: Record<string, number>;

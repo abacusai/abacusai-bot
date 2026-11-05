@@ -125,6 +125,17 @@ export class HostedRoutineRefusal extends Error {
   }
 }
 
+/**
+ * A create with no answer: the request may have reached the server, which can
+ * finish it after the wait here ends. Not a refusal; nothing is known yet.
+ */
+export class HostedRoutineUnconfirmed extends Error {
+  constructor(cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause));
+    this.name = "HostedRoutineUnconfirmed";
+  }
+}
+
 export type RoutinesCall = (
   body: Record<string, unknown>,
   timeoutMs?: number
@@ -273,6 +284,20 @@ export const toRoutineListItem = (wire: HostedRoutineWire): RoutineListItem => {
 /** How many created rows keep the id their creator gave them. */
 const CREATED_AS_MAX = 50;
 
+/** How long a create with no answer can still be the one a retry repeats. */
+const UNCONFIRMED_CREATE_MS = 60 * 60_000;
+
+/** What makes a retry the same create, however the model reworded its prompt. */
+const createIdentity = (input: HostedRoutineCreate): string =>
+  JSON.stringify([
+    input.ownerBotId ?? null,
+    input.kind,
+    input.name.trim().toLowerCase(),
+    input.cron ?? null,
+    input.at ?? null,
+    input.timezone ?? null,
+  ]);
+
 export class HostedRoutines {
   /** `answered`: the server knows the endpoint, even with routines switched off. */
   private capable: { value: boolean; answered: boolean; at: number } | null =
@@ -389,8 +414,32 @@ export class HostedRoutines {
     return this.cached;
   }
 
-  /** Create on the server; a refusal throws HostedRoutineRefusal. */
+  /**
+   * Creates that got no answer, by what they asked for, with the key they
+   * went out under: the server answers a repeated key with the routine it
+   * already made. Kept only for these, as a key lives on after its routine.
+   */
+  private readonly unconfirmedCreates = new Map<
+    string,
+    { key: string; at: number }
+  >();
+
+  /** The key a create goes out under: the unanswered one it repeats, or its own. */
+  private createKey(identity: string, key: string): string {
+    const unanswered = this.unconfirmedCreates.get(identity);
+    return unanswered != null &&
+      this.now() - unanswered.at < UNCONFIRMED_CREATE_MS
+      ? unanswered.key
+      : key;
+  }
+
+  /**
+   * Create on the server; a refusal throws HostedRoutineRefusal, and no
+   * answer at all throws HostedRoutineUnconfirmed.
+   */
   async create(input: HostedRoutineCreate): Promise<RoutineListItem> {
+    const identity = createIdentity(input);
+    const idempotencyKey = this.createKey(identity, input.idempotencyKey);
     const body: Record<string, unknown> = {
       action: "create",
       kind: input.kind,
@@ -429,9 +478,23 @@ export class HostedRoutines {
             },
           }
         : {}),
-      idempotency_key: input.idempotencyKey,
+      idempotency_key: idempotencyKey,
     };
-    const routine = await this.write(body, input.idempotencyKey);
+    let routine: RoutineListItem | null;
+    try {
+      routine = await this.write(body, idempotencyKey);
+    } catch (error) {
+      if (error instanceof HostedRoutineRefusal) {
+        this.unconfirmedCreates.delete(identity);
+        throw error;
+      }
+      this.unconfirmedCreates.set(identity, {
+        key: idempotencyKey,
+        at: this.now(),
+      });
+      throw new HostedRoutineUnconfirmed(error);
+    }
+    this.unconfirmedCreates.delete(identity);
     if (routine == null) throw new HostedRoutineRefusal("unavailable");
     return this.find(routine.id) ?? routine;
   }
