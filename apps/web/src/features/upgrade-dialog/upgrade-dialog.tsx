@@ -55,12 +55,14 @@ export const spentFreeAccount = (
   account.credits_used != null &&
   account.credits_used >= account.credits_granted;
 
-/** Who a request is for: own-key and plan ask any free account, spent or not. */
+/** Who a request is for: own-key, plan and balance ask any free account, spent or not. */
 const askedAccount = (
   request: UpgradeDialogRequest,
   account: AbacusAccountInfo | null | undefined
 ): boolean =>
-  request.kind === "own-key" || request.kind === "plan"
+  request.kind === "own-key" ||
+  request.kind === "plan" ||
+  request.kind === "balance"
     ? creditsTier(account) === "free"
     : spentFreeAccount(account);
 
@@ -150,9 +152,11 @@ const PaidBody = ({
         >
           <Bot className="size-6" />
         </span>
-        <p className="text-muted-foreground text-xs font-medium tracking-[0.02em]">
-          {t("outcome.wall.paidTitle")}
-        </p>
+        {request.kind !== "balance" && (
+          <p className="text-muted-foreground text-xs font-medium tracking-[0.02em]">
+            {t("outcome.wall.paidTitle")}
+          </p>
+        )}
         <DialogTitle className="text-[22px]/7 font-semibold tracking-[-0.01em] text-balance">
           {t("upgradeDialog.creditsTitle")}
         </DialogTitle>
@@ -246,7 +250,8 @@ const DialogBody = ({
   const [waiting, setWaiting] = useState(request.checkout === true);
   const connectors = request.kind === "connectors";
   const ownKey = request.kind === "own-key";
-  const plan = request.kind === "plan";
+  // A free account's balance ask is the plan, its whole pitch.
+  const plan = request.kind === "plan" || request.kind === "balance";
   const offer = wallOffer(billing ?? null);
 
   // Checkout runs in the browser: once the plan is active (lib/upgrade.ts
@@ -486,9 +491,10 @@ export const UpgradeDialogHost = () => {
           setConfirmed({ key: request.key, body: "free" });
           return;
         }
-        // A paid plan's credits request only: a free account never reads this.
+        // A paid plan's credits or balance request only: a free account never reads this.
         const offer =
-          request.kind === "credits" && payingAccount(account)
+          (request.kind === "credits" || request.kind === "balance") &&
+          payingAccount(account)
             ? paidCreditsOffer(
                 await transport.client.account.billingPlan({}).catch(() => null)
               )

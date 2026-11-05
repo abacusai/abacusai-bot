@@ -1696,3 +1696,128 @@ describe("the turn's outcome card", () => {
     await screen.findByText("Free model · Google Gemini");
   });
 });
+
+describe("the turn's credits", () => {
+  const ACCOUNT = {
+    user_id: "u1",
+    organization_id: "o1",
+    name: null,
+    email: null,
+    picture: null,
+    organization: null,
+    org_user_count: null,
+    plan: "Free",
+    subscription_tier: "free",
+    credits_used: 618,
+    credits_granted: 2000,
+  };
+  const turn = (credits: unknown) => {
+    const relay = new FakeRelay();
+    relay.emitAll([
+      ...b.sessionReady(),
+      b.runStarted("r1", { timestamp: 1_000 }),
+      ...b.text("u1", "user", "go"),
+      ...b.text("a1", "assistant", "done"),
+      b.runFinished("r1", "success", {
+        timestamp: 13_000,
+        ...(credits !== undefined && {
+          metadata: { abacus: { turnUsage: { credits } } },
+        }),
+      }),
+    ]);
+    return relay;
+  };
+  const served = (
+    account: Record<string, unknown> | null,
+    funnel = vi.fn()
+  ) => {
+    const os = implement(contract);
+    return {
+      account: {
+        abacus: os.account.abacus.handler(() => account as never),
+        payment: os.account.payment.handler(() => null),
+      },
+      system: {
+        funnelStep: os.system.funnelStep.handler(({ input }) => {
+          funnel(input);
+        }),
+      },
+    };
+  };
+  afterEach(() => closeUpgradeDialog());
+
+  it.each([
+    [
+      "a free turn, with what is left",
+      ACCOUNT,
+      18.4,
+      "18 credits · 1,382 left",
+    ],
+    ["a tiny turn", ACCOUNT, 0.3, "<1 credit · 1,382 left"],
+    [
+      "a paid turn",
+      { ...ACCOUNT, plan: "Basic", subscription_tier: "basic" },
+      1240.6,
+      "1,241 credits · 1,382 left",
+    ],
+  ])("%s", async (_name, account, credits, label) => {
+    current = await renderRelay(
+      turn(credits),
+      "session",
+      {},
+      {},
+      undefined,
+      served(account)
+    );
+    const line = await screen.findByRole("button", {
+      name: `${label}. See your plan and credits`,
+    });
+    expect(line.textContent).toBe(label);
+  });
+
+  it.each([
+    ["an own-key turn (no Abacus request)", ACCOUNT, undefined],
+    ["a turn whose charge is unknown", ACCOUNT, null],
+    ["a free-model turn", ACCOUNT, 0],
+    [
+      "an account with no plan to offer",
+      { ...ACCOUNT, plan: null, subscription_tier: null },
+      18,
+    ],
+  ])("shows nothing for %s", async (_name, account, credits) => {
+    current = await renderRelay(
+      turn(credits),
+      "session",
+      {},
+      {},
+      undefined,
+      served(account)
+    );
+    await screen.findByText(/^Done in 12/);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(document.querySelector('[data-slot="turn-credits"]')).toBeNull();
+  });
+
+  it("opens the plan dialog and records the click", async () => {
+    const funnel = vi.fn();
+    current = await renderRelay(
+      turn(18),
+      "session",
+      {},
+      {},
+      undefined,
+      served(ACCOUNT, funnel)
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /^18 credits/ }));
+    expect(upgradeDialogStore.state.request).toMatchObject({
+      kind: "balance",
+      src: "turn_credits",
+    });
+    await waitFor(() =>
+      expect(funnel).toHaveBeenCalledWith({
+        step: "turn_credits_clicked",
+        detail: "free",
+      })
+    );
+  });
+});

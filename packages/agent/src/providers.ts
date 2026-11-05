@@ -15,6 +15,7 @@ import {
   resolveCliModel,
 } from "@earendil-works/pi-coding-agent";
 
+import { abacusStreamSimple } from "./abacus-credits.js";
 import { abacusV1BaseUrl, sponsoredRunHeaders } from "./abacus-endpoint.js";
 import { writeFileAtomicSync } from "./atomic-file.js";
 import {
@@ -573,6 +574,8 @@ export async function registerAbacusProvider(
     baseUrl: abacusBaseUrl(),
     apiKey,
     api: "openai-completions" as const,
+    // Pi's own stream, reading what each request billed off its last chunk.
+    streamSimple: abacusStreamSimple,
     models:
       live.length > 0
         ? live

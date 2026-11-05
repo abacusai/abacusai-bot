@@ -3091,7 +3091,12 @@
       "done_other": "Done in {{duration}}, {{count}} steps",
       "stopped": "Stopped",
       "usage": "In {{input}} ({{cached}} cached) · Out {{output}}",
-      "done_zero": "Terminado en {{duration}}"
+      "done_zero": "Terminado en {{duration}}",
+      "credits_one": "{{credits}} crédito",
+      "credits_other": "{{credits}} créditos",
+      "creditsLeft_one": "{{credits}} crédito · quedan {{left}}",
+      "creditsLeft_other": "{{credits}} créditos · quedan {{left}}",
+      "creditsAction": "{{credits}}. Ver tu plan y tus créditos"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",

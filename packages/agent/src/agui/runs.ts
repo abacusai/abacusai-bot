@@ -5,6 +5,7 @@
  */
 import { EventType } from "@ag-ui/core";
 
+import { addCredits } from "../abacus-credits.js";
 import type { TurnUsage } from "../turn-usage.js";
 import {
   BoundedMap,
@@ -199,8 +200,11 @@ export class RunController {
     return this.recordFailure(error);
   }
 
+  /** The latest turn's tokens; its credits added to the run's earlier turns'. */
   recordUsage(usage: TurnUsage): void {
-    if (this.run != null) this.run.usage = usage;
+    if (this.run == null) return;
+    const credits = addCredits(this.run.usage?.credits, usage.credits);
+    this.run.usage = credits !== undefined ? { ...usage, credits } : usage;
   }
 
   recordStopReason(stopReason: string | undefined): void {

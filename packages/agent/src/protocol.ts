@@ -257,6 +257,8 @@ export type AgentEvent =
         lane?: "free";
         /** The free lane's provider that answered. */
         provider?: string;
+        /** The Abacus credits the turn's requests billed; null when one's charge is unknown. */
+        credits?: number | null;
       };
     }
   // Brackets around a delegated sub-agent's work: text between them belongs to

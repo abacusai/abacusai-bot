@@ -115,7 +115,7 @@ const Outcome = ({
     return <ErrorCard outcome={outcome} latest={latest} />;
   if (skin === "bot" && outcome.freeLane != null)
     return <FreeLaneChip provider={outcome.freeLane.provider} />;
-  return <RunMarker outcome={outcome} />;
+  return <RunMarker outcome={outcome} latest={latest} />;
 };
 
 const OutcomeRow = ({
