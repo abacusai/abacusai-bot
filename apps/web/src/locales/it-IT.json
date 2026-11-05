@@ -446,7 +446,12 @@
         "asked": "Asked:",
         "task": "Task:",
         "userWrote": "You wrote to {{bot}}:",
-        "open": "Open the chat with {{bot}}"
+        "open": "Open the chat with {{bot}}",
+        "messaged": "Ha scritto a",
+        "foldMessages_one": "{{count}} messaggio con",
+        "foldMessages_other": "{{count}} messaggi con",
+        "foldBots_one": "{{count}} bot",
+        "foldBots_other": "{{count}} bot"
       }
     },
     "deleteDialog": {
@@ -519,7 +524,6 @@
       "filesTitle": "Files",
       "checkIns": "Check-ins",
       "senderChats": "Chats on your behalf",
-      "botChats": "Chat con altri bot",
       "on": "On",
       "reachable": "Also reachable on",
       "connected": "Connected",

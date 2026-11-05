@@ -446,7 +446,12 @@
         "asked": "Asked:",
         "task": "Task:",
         "userWrote": "You wrote to {{bot}}:",
-        "open": "Open the chat with {{bot}}"
+        "open": "Open the chat with {{bot}}",
+        "messaged": "Mesaj gönderildi",
+        "foldMessages_one": "{{count}} mesaj şu kişiyle:",
+        "foldMessages_other": "{{count}} mesaj şu kişilerle:",
+        "foldBots_one": "{{count}} bot",
+        "foldBots_other": "{{count}} bot"
       }
     },
     "deleteDialog": {
@@ -519,7 +524,6 @@
       "filesTitle": "Dosyalar",
       "checkIns": "Yoklamalar",
       "senderChats": "Senin adına sohbetler",
-      "botChats": "Diğer botlarla sohbetler",
       "on": "Açık",
       "reachable": "Şuradan da ulaşılabilir",
       "connected": "Bağlı",

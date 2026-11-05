@@ -446,7 +446,12 @@
         "asked": "Asked:",
         "task": "Task:",
         "userWrote": "You wrote to {{bot}}:",
-        "open": "Open the chat with {{bot}}"
+        "open": "Open the chat with {{bot}}",
+        "messaged": "메시지 보냄",
+        "foldMessages_one": "{{count}}개의 메시지 대화 상대:",
+        "foldMessages_other": "{{count}}개의 메시지 대화 상대:",
+        "foldBots_one": "봇 {{count}}개",
+        "foldBots_other": "봇 {{count}}개"
       }
     },
     "deleteDialog": {
@@ -519,7 +524,6 @@
       "filesTitle": "Files",
       "checkIns": "Check-ins",
       "senderChats": "Chats on your behalf",
-      "botChats": "다른 봇과의 대화",
       "on": "On",
       "reachable": "Also reachable on",
       "connected": "Connected",

@@ -6,7 +6,6 @@ import type {
 } from "@abacus-ai/contract/contracts";
 import { feedbackSegmentId } from "@abacus-ai/contract/transcript/feedback-target";
 import type { UIMessage } from "@tanstack/ai-client";
-import { ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -110,7 +109,13 @@ const requestsOf = (
         ];
       });
 
-/** "Asked Planner: …" / "Passed a task to Planner: …", where the bot made the request. */
+/** A small centred line between messages, the way a group chat notes "messaged X". */
+const ROW_TRIGGER =
+  "text-muted-foreground hover:text-foreground mx-auto flex items-center gap-1.5 text-xs";
+const ROW_BODY =
+  "bg-muted/40 mx-auto mt-2 flex w-full max-w-[min(640px,90%)] flex-col gap-2 rounded-md p-3 text-sm";
+
+/** "Messaged {face} Planner", where the bot made a request; opens to what it asked. */
 const RequestRows = ({
   requests,
   bots,
@@ -126,22 +131,30 @@ const RequestRows = ({
           (bot) => bot.name.toLowerCase() === request.bot.toLowerCase()
         );
         return (
-          <div
+          <Collapsible
             key={index}
-            className="text-muted-foreground flex items-center gap-2 text-xs"
+            className="flex flex-col"
             data-slot="bot-request"
             data-kind={request.kind}
           >
-            {other != null && <BotFace bot={other} size={20} />}
-            <span className="truncate">
-              {t(
-                request.kind === "ask"
-                  ? "chat.tool.askBot"
-                  : "chat.tool.giveTask",
-                { bot: other?.name ?? request.bot, what: request.what }
-              )}
-            </span>
-          </div>
+            <CollapsibleTrigger className={ROW_TRIGGER}>
+              <span>{t("bots.chat.exchange.messaged")}</span>
+              {other != null && <BotFace bot={other} size={18} />}
+              <span className="truncate">{other?.name ?? request.bot}</span>
+            </CollapsibleTrigger>
+            <CollapsibleContent className={ROW_BODY}>
+              <div>
+                <span className="text-muted-foreground">
+                  {t(
+                    request.kind === "task"
+                      ? "bots.chat.exchange.task"
+                      : "bots.chat.exchange.asked"
+                  )}{" "}
+                </span>
+                <span className="whitespace-pre-wrap">{request.what}</span>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         );
       })}
     </div>
@@ -193,93 +206,157 @@ const exchangeBody = (
   return "";
 };
 
+interface Exchange {
+  message: UIMessage;
+  exchange: BotExchangeTag;
+}
+
+const exchangeTitle = (
+  exchange: BotExchangeTag,
+  name: string,
+  t: (key: string, values: Record<string, string>) => string
+): string =>
+  exchange.outcome === "follow-up"
+    ? t("bots.chat.exchange.followUp", { bot: name })
+    : exchange.outcome === "failed"
+      ? t(
+          exchange.kind === "task"
+            ? "bots.chat.exchange.taskFailed"
+            : "bots.chat.exchange.askFailed",
+          { bot: name }
+        )
+      : t(
+          exchange.kind === "task"
+            ? "bots.chat.exchange.taskDone"
+            : "bots.chat.exchange.answered",
+          { bot: name }
+        );
+
+/** What passed in one exchange: the request, the user's words, the reply, the chat. */
+const ExchangeDetails = ({
+  message,
+  exchange,
+  name,
+  title,
+}: Exchange & { name: string; title?: string }) => {
+  const { t } = useTranslation();
+  const body = exchangeBody(message, exchange.outcome);
+  return (
+    <div className="flex flex-col gap-2" data-slot="bot-exchange-details">
+      {title != null && <div className="font-medium">{title}</div>}
+      <div>
+        <span className="text-muted-foreground">
+          {t(
+            exchange.kind === "task"
+              ? "bots.chat.exchange.task"
+              : "bots.chat.exchange.asked"
+          )}{" "}
+        </span>
+        <span className="whitespace-pre-wrap">{exchange.request}</span>
+      </div>
+      {exchange.userWords != null && (
+        <div>
+          <span className="text-muted-foreground">
+            {t("bots.chat.exchange.userWrote", { bot: name })}{" "}
+          </span>
+          <span className="whitespace-pre-wrap">{exchange.userWords}</span>
+        </div>
+      )}
+      {body !== "" && (
+        <div className="whitespace-pre-wrap" data-slot="bot-exchange-body">
+          {body}
+        </div>
+      )}
+      {exchange.chatSessionId != null && (
+        <AppLink
+          to="/bots/$botId/chats/$sessionId"
+          params={{
+            botId: exchange.botId,
+            sessionId: exchange.chatSessionId,
+          }}
+          className="text-xs underline"
+        >
+          {t("bots.chat.exchange.open", { bot: name })}
+        </AppLink>
+      )}
+    </div>
+  );
+};
+
 /**
- * A bot-to-bot note as a row (the way a group chat shows "messaged X"):
- * the other bot's face and what happened, opening to the exchange.
+ * A bot-to-bot note as a small centred row (the way a group chat shows
+ * "messaged X"): the other bot's face and what happened, opening to the
+ * exchange.
  */
 const ExchangeRow = ({
   message,
   exchange,
   bots,
-}: {
-  message: UIMessage;
-  exchange: BotExchangeTag;
-  bots: readonly BotRow[];
-}) => {
+}: Exchange & { bots: readonly BotRow[] }) => {
   const { t } = useTranslation();
   const other = bots.find((bot) => bot.id === exchange.botId);
   const name = other?.name ?? exchange.bot;
-  const title =
-    exchange.outcome === "follow-up"
-      ? t("bots.chat.exchange.followUp", { bot: name })
-      : exchange.outcome === "failed"
-        ? t(
-            exchange.kind === "task"
-              ? "bots.chat.exchange.taskFailed"
-              : "bots.chat.exchange.askFailed",
-            { bot: name }
-          )
-        : t(
-            exchange.kind === "task"
-              ? "bots.chat.exchange.taskDone"
-              : "bots.chat.exchange.answered",
-            { bot: name }
-          );
-  const body = exchangeBody(message, exchange.outcome);
   return (
-    <div
+    <Collapsible
       data-slot="bot-exchange"
       data-outcome={exchange.outcome}
-      className="py-1"
+      className="flex flex-col py-1"
     >
-      <Collapsible>
-        <CollapsibleTrigger className="group/x text-muted-foreground hover:text-foreground flex items-center gap-2 text-xs">
-          <ChevronRight
-            aria-hidden
-            className="size-3.5 shrink-0 transition-transform group-data-[panel-open]/x:rotate-90"
+      <CollapsibleTrigger className={ROW_TRIGGER}>
+        {other != null && <BotFace bot={other} size={18} />}
+        <span className="truncate">{exchangeTitle(exchange, name, t)}</span>
+      </CollapsibleTrigger>
+      <CollapsibleContent className={ROW_BODY}>
+        <ExchangeDetails message={message} exchange={exchange} name={name} />
+      </CollapsibleContent>
+    </Collapsible>
+  );
+};
+
+/** Several exchanges in a row: "3 messages with {faces} 2 bots", opening to each. */
+const FoldRow = ({
+  items,
+  bots,
+}: {
+  items: readonly Exchange[];
+  bots: readonly BotRow[];
+}) => {
+  const { t } = useTranslation();
+  const nameOf = (exchange: BotExchangeTag): string =>
+    bots.find((bot) => bot.id === exchange.botId)?.name ?? exchange.bot;
+  const ids = [...new Set(items.map((item) => item.exchange.botId))];
+  const others = ids
+    .map((id) => bots.find((bot) => bot.id === id))
+    .filter((bot) => bot != null);
+  return (
+    <Collapsible
+      data-slot="bot-exchange"
+      data-fold={items.length}
+      className="flex flex-col py-1"
+    >
+      <CollapsibleTrigger className={ROW_TRIGGER}>
+        <span>
+          {t("bots.chat.exchange.foldMessages", { count: items.length })}
+        </span>
+        <span className="flex items-center -space-x-1">
+          {others.map((bot) => (
+            <BotFace key={bot.id} bot={bot} size={18} />
+          ))}
+        </span>
+        <span>{t("bots.chat.exchange.foldBots", { count: ids.length })}</span>
+      </CollapsibleTrigger>
+      <CollapsibleContent className={ROW_BODY}>
+        {items.map((item) => (
+          <ExchangeDetails
+            key={item.message.id}
+            message={item.message}
+            exchange={item.exchange}
+            name={nameOf(item.exchange)}
+            title={exchangeTitle(item.exchange, nameOf(item.exchange), t)}
           />
-          {other != null && <BotFace bot={other} size={20} />}
-          <span className="truncate">{title}</span>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="mt-2 ml-5 flex max-w-[min(640px,85%)] flex-col gap-2 text-sm">
-          <div>
-            <span className="text-muted-foreground">
-              {t(
-                exchange.kind === "task"
-                  ? "bots.chat.exchange.task"
-                  : "bots.chat.exchange.asked"
-              )}{" "}
-            </span>
-            <span className="whitespace-pre-wrap">{exchange.request}</span>
-          </div>
-          {exchange.userWords != null && (
-            <div>
-              <span className="text-muted-foreground">
-                {t("bots.chat.exchange.userWrote", { bot: name })}{" "}
-              </span>
-              <span className="whitespace-pre-wrap">{exchange.userWords}</span>
-            </div>
-          )}
-          {body !== "" && (
-            <div className="whitespace-pre-wrap" data-slot="bot-exchange-body">
-              {body}
-            </div>
-          )}
-          {exchange.chatSessionId != null && (
-            <AppLink
-              to="/bots/$botId/chats/$sessionId"
-              params={{
-                botId: exchange.botId,
-                sessionId: exchange.chatSessionId,
-              }}
-              className="text-xs underline"
-            >
-              {t("bots.chat.exchange.open", { bot: name })}
-            </AppLink>
-          )}
-        </CollapsibleContent>
-      </Collapsible>
-    </div>
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
   );
 };
 
@@ -368,16 +445,30 @@ export const botMessageDecorations = (
     const stored = context.messages[index] ?? message;
     const exchange = exchangeOf(stored);
     // The note itself draws nothing (hidden user text); the row stands in.
-    if (exchange != null)
+    // Notes that follow one another fold into one row at the run's end.
+    if (exchange != null) {
+      const next = context.messages[index + 1];
+      if (next != null && exchangeOf(next) != null) return { hidden: true };
+      let start = index;
+      while (start > 0 && exchangeOf(context.messages[start - 1]!) != null)
+        start--;
+      const run = context.messages.slice(start, index + 1).flatMap((row) => {
+        const tag = exchangeOf(row);
+        return tag == null ? [] : [{ message: row, exchange: tag }];
+      });
       return {
-        before: (
-          <ExchangeRow
-            message={stored}
-            exchange={exchange}
-            bots={options.bots ?? []}
-          />
-        ),
+        before:
+          run.length > 1 ? (
+            <FoldRow items={run} bots={options.bots ?? []} />
+          ) : (
+            <ExchangeRow
+              message={stored}
+              exchange={exchange}
+              bots={options.bots ?? []}
+            />
+          ),
       };
+    }
     const view = viewsFor(context.messages, context.runActive)[index]!;
     const requests = requestsOf(stored);
     if (view.hidden)

@@ -357,7 +357,7 @@ describe("a bot-to-bot note", () => {
     );
   });
 
-  it("a turn that only asked another bot shows as 'Asked X: …' and is not dropped", () => {
+  it("a turn that only asked another bot shows as 'Messaged X', opening to the task, and is not dropped", async () => {
     const decorate = botMessageDecorations({ ...options(), bots: [] });
     const message = {
       id: "a1",
@@ -378,10 +378,63 @@ describe("a bot-to-bot note", () => {
     expect(decorate.isMessageHidden(message, context)).toBe(false);
     const decoration = decorate(message, context);
     show(decoration?.before);
+    expect(screen.getByText("Messaged")).toBeTruthy();
+    fireEvent.click(screen.getByText("Planner"));
+    await waitFor(() =>
+      expect(
+        screen.getByText("Make a 5-step opening-day checklist")
+      ).toBeTruthy()
+    );
+  });
+
+  it("notes that follow one another fold into one row, opening to each", async () => {
+    const decorate = botMessageDecorations({ ...options(), bots: [] });
+    const first = exchangeMessage();
+    const second = {
+      ...exchangeMessage(),
+      id: "x2",
+      parts: [
+        {
+          type: "text",
+          content:
+            '[bot answer] Researcher answered q9 ("When do cafes open?"). Its answer:\n<bot_reply from="Researcher">\nMost open at 8.\n</bot_reply>',
+        },
+      ],
+      metadata: {
+        abacus: {
+          userText: {
+            systemReminder: true,
+            operator: {
+              kind: "bot-exchange",
+              exchange: {
+                askId: "q9",
+                botId: "res",
+                bot: "Researcher",
+                kind: "ask",
+                request: "When do cafes open?",
+                outcome: "answered",
+              },
+            },
+          },
+        },
+      },
+    } as unknown as UIMessage;
+    const messages = [first, second];
     expect(
-      screen.getByText(
-        "Passed a task to Planner: Make a 5-step opening-day checklist"
-      )
-    ).toBeTruthy();
+      decorate(first, { messages, index: 0, runActive: false })?.hidden
+    ).toBe(true);
+    const decoration = decorate(second, {
+      messages,
+      index: 1,
+      runActive: false,
+    });
+    show(decoration?.before);
+    expect(screen.getByText("2 messages with")).toBeTruthy();
+    expect(screen.getByText("2 bots")).toBeTruthy();
+    fireEvent.click(screen.getByText("2 bots"));
+    await waitFor(() => {
+      expect(screen.getByText("Planner finished the task")).toBeTruthy();
+      expect(screen.getByText("Most open at 8.")).toBeTruthy();
+    });
   });
 });
