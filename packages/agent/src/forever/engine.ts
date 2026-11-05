@@ -129,6 +129,7 @@ import {
   registerCustomProviders,
   registerGeminiProvider,
   resolveModel,
+  settleProviderRegistrations,
   DEFAULT_MAX_OUTPUT_TOKENS,
 } from "../providers.js";
 import {
@@ -427,6 +428,7 @@ export class ForeverEngine {
       refreshOpenRouterLive(),
       refreshLiveModelIds(),
     ]);
+    await settleProviderRegistrations(registry);
 
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
     this.mcp.onToolsAdded = () => this.mcpTools.changed();
@@ -1839,6 +1841,7 @@ export class ForeverEngine {
       refreshOpenRouterLive(),
       refreshLiveModelIds(),
     ]);
+    await settleProviderRegistrations(registry);
   }
 
   async setModel(reference: string): Promise<void> {
