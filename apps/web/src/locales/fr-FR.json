@@ -2964,6 +2964,11 @@
         "YOLO": "No approvals"
       }
     },
+    "appLine": {
+      "testRepair": "Les tests ont échoué après ma modification, je les corrige.",
+      "testRepairLimit": "J'ai arrêté de corriger les tests : cette réparation automatique a atteint sa limite. Rien d'autre ne s'exécutera tant que vous n'aurez pas envoyé de message.",
+      "testsLeftAlone": "Des tests échouent, mais je n'ai pas pu déterminer si ma modification en est la cause, je n'y ai donc pas touché."
+    },
     "notice": {
       "dismiss": "Dismiss",
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",

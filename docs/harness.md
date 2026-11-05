@@ -13,7 +13,7 @@ project adds deterministic checks around that loop.
 | Edit recovery | Match small whitespace drift but reject an over-broad match. |
 | Syntax checks | Parse supported files after an edit and report the failing line. |
 | Output repair | Recover malformed or fenced tool calls when the intent is unambiguous. |
-| Verification | Run configured checks again after code changes settle. |
+| Verification | Run the project's tests after a turn that changed code, and have the model fix only what that turn broke, in view in the chat. |
 | Run budgets | Limit model and tool use for one run. |
 
 These checks reduce common agent failures. They do not prove that a change is

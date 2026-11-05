@@ -509,6 +509,9 @@ const MessageAbacus = v.strictObject({
             "environment-notice",
             "routine-editor",
             "user-reaction",
+            "test-repair",
+            "test-repair-limit",
+            "tests-left-alone",
           ]),
           visibleFrom: v.optional(
             v.pipe(v.number(), v.integer(), v.minValue(0))

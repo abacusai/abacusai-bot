@@ -36,6 +36,9 @@ export const userMessageId = (runId: string): string =>
 export const steerMessageId = (incarnation: string, n: number): string =>
   `steer-${incarnation}-${n}`;
 
+export const appLineMessageId = (incarnation: string, n: number): string =>
+  `line-${incarnation}-${n}`;
+
 export const resultMessageId = (toolCallId: string): string =>
   `${toolCallId}:result`;
 

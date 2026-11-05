@@ -6,6 +6,13 @@
  */
 
 /**
+ * What the verify loop tells the chat, kept in the transcript as a message of
+ * its own. The renderer words it in the user's language from the kind; `text`
+ * is the same line in English, for anything that reads the transcript.
+ */
+export type AppLine = "test-repair" | "test-repair-limit" | "tests-left-alone";
+
+/**
  * Facts the NDJSON wire never carried, for the AG-UI emitter only. They go
  * through `emitInternal`, never through `emit`, so no legacy line is ever
  * written for them: `messaging-gateway-service` resets its reply buffer on a
@@ -49,5 +56,7 @@ export type InternalAgentEvent =
         status: "pending" | "in_progress" | "completed";
       }>;
     }
+  /** A line in the chat that the app wrote: see `AppLine`. */
+  | { type: "app_line"; kind: AppLine; text: string }
   /** A bot housekeeping turn: nothing inside it reaches AG-UI but permissions. */
   | { type: "hidden_turn"; phase: "start" | "end"; customType: string };

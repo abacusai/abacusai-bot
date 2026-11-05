@@ -2,7 +2,10 @@
  * A live in-process AguiHost against the fake provider, for tests that need
  * more than a command script: ChatClient round trips, lineage checks, races.
  */
-import type { Reply } from "@abacus-ai/test-support/fake-provider";
+import type {
+  RecordedCall,
+  Reply,
+} from "@abacus-ai/test-support/fake-provider";
 
 import type { DesktopEvent } from "../../protocol.js";
 import { AbacusBotSession } from "../../session.js";
@@ -27,6 +30,8 @@ export interface Live {
   ): Promise<void>;
   custom<T = unknown>(name: string): T[];
   providerCalls(): number;
+  /** Every request the model got, as sent. */
+  calls(): RecordedCall[];
   close(): Promise<void>;
 }
 
@@ -40,7 +45,7 @@ export async function live(options: {
   /** Wraps the real session (e.g. to delay setModel). */
   wrap?: (session: AbacusBotSession) => AbacusBotSession;
   /** Runs after the fixed directories exist, before the host is built. */
-  setup?: () => void;
+  setup?: (cwd: string) => void;
   /** Let the host pick the session from the env (a bot when BOT_DIR is set). */
   realSessionChoice?: boolean;
 }): Promise<Live> {
@@ -61,7 +66,7 @@ export async function live(options: {
     },
     root
   );
-  options.setup?.();
+  options.setup?.(context.cwd);
   const stdin = new PassThrough();
   let stdout = "";
   let compat = "";
@@ -148,6 +153,7 @@ export async function live(options: {
         .filter((event) => event.type === "CUSTOM" && event.name === name)
         .map((event) => (event as { value: T }).value),
     providerCalls: () => provider.calls.length,
+    calls: () => provider.calls,
     close: async () => {
       stdin.end();
       await done;

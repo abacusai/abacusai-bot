@@ -217,6 +217,17 @@ function temperatureSetting(): number | undefined {
   return Number.isFinite(parsed) ? parsed : 0.3;
 }
 
+/**
+ * A tighter limit on work nobody asked for: while `calls` is set, every model
+ * call counts against it, across any continuation of that work, and going
+ * over closes the run out the way the turn cap does. `reached` says it did.
+ */
+export interface RunLimit {
+  calls: number | null;
+  used: number;
+  reached: boolean;
+}
+
 export interface BudgetOptions {
   /**
    * A chat whose user waits in a messaging app: the tools that tell them
@@ -225,6 +236,7 @@ export interface BudgetOptions {
    * has whenever the user has heard nothing since the last mark.
    */
   checkIns?: { tools: readonly string[] };
+  runLimit?: RunLimit;
 }
 
 /** The tool under its own name or a server's prefix. */
@@ -241,6 +253,7 @@ export default function budgets(
   options: BudgetOptions = {}
 ): void {
   const checkInTools = options.checkIns?.tools ?? [];
+  const runLimit = options.runLimit;
   /** The user heard from the run since the last mark (a progress line, a file). */
   let heard = false;
   let turns = 0;
@@ -425,19 +438,28 @@ export default function budgets(
       return;
     }
 
+    const limit = runLimit?.calls ?? null;
+    if (runLimit != null && limit != null) {
+      runLimit.used += 1;
+      runLimit.reached = runLimit.used >= limit;
+    }
+    const overLimit = runLimit?.reached === true;
     const elapsed = Date.now() - turnStartedAt;
-    const overCap = turns > cap;
+    const overCap = turns > cap || overLimit;
     if (overCap || elapsed >= runCapMs()) {
       const minutes = Math.round(runCapMs() / 60_000);
+      const calls = overLimit && limit != null ? limit : cap;
       closingTurns = 0;
-      closingStop = overCap ? stoppedMessage(cap) : timeStoppedMessage(minutes);
+      closingStop = overCap
+        ? stoppedMessage(calls)
+        : timeStoppedMessage(minutes);
       // Hidden: what the user reads is the model's own closing message.
       pi.sendMessage(
         {
           customType: "abacusai-bot-close-out",
           content: closeOutPrompt(
             overCap
-              ? `This run has reached its limit of ${cap} model calls.`
+              ? `This run has reached its limit of ${calls} model calls.`
               : `This run has been working for ${minutes} minutes, its limit.`
           ),
           display: false,
