@@ -48,6 +48,8 @@ export default defineConfig({
     "src/user-text.ts",
     "src/secret-files.ts",
     "src/bot-task.ts",
+    // A bot's daily notes: main writes what a bot did or learned in a channel or for another bot.
+    "src/bot/bot-memory.ts",
     // How a path is spelled for the model; main and the renderer show it paths.
     "src/model-path.ts",
     // The language the user wants replies in, for the chat apps' fixed lines.

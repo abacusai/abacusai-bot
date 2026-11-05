@@ -442,9 +442,9 @@ export class ForeverEngine {
       () => this.session?.model?.contextWindow
     );
 
-    // Frozen at session start on purpose: the bridge from the previous
-    // session, not a live feed. Standing memory is re-read on prompt rebuilds.
-    const sessionStartMemory = this.profile.memory.sessionStartPrompt();
+    // Re-read on prompt rebuilds, like standing memory: a note the app
+    // writes mid-session (what the bot settled in a channel, did for another
+    // bot) is in its next turn, not its next session.
 
     const resourceLoader = new DefaultResourceLoader({
       // Skill and AGENTS.md paths as the model should copy them.
@@ -464,6 +464,7 @@ export class ForeverEngine {
       appendSystemPromptOverride: (base: string[]): string[] => {
         const persona = personaPrompt();
         const memory = this.profile.memory.standingPrompt();
+        const recentMemory = this.profile.memory.sessionStartPrompt();
         // Live on every rebuild: a connector added mid-conversation must show.
         const mcp = mcpPrompt(this.mcp.statuses);
         this.promptMcpRoster = mcpRosterFingerprint(this.mcp.statuses);
@@ -476,7 +477,7 @@ export class ForeverEngine {
           ...base,
           ...(mcp == null ? [] : [mcp]),
           ...(memory == null ? [] : [memory]),
-          ...(sessionStartMemory == null ? [] : [sessionStartMemory]),
+          ...(recentMemory == null ? [] : [recentMemory]),
           // Last of all, so it outweighs a kickstart or routine written in English.
           ...(language == null ? [] : [language]),
         ];

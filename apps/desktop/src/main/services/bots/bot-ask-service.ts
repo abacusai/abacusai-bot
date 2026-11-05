@@ -31,6 +31,7 @@ import {
   botTaskPrompt,
   frameBotRequest,
   ownChatContext,
+  requestNotes,
   MAX_REQUESTS_PER_DAY,
 } from "./bot-ask";
 
@@ -94,6 +95,8 @@ export interface BotAskDeps {
   write: (records: BotAskRecord[]) => void;
   /** A request was made: the asker's follow-up tools appear (re-list). */
   changed?: () => void;
+  /** A line for a bot's daily notes: what it asked, passed on, answered or did. */
+  note?: (botId: string, line: string) => void;
   /** The user's latest lines in a bot's own chat, for an ask's context. */
   ownChatLines?: (botId: string) => string[];
   /** One line per request event, no message text: for the app's log. */
@@ -267,13 +270,24 @@ export class BotAskService {
       this.pump(laneOf(ask));
   }
 
-  /** A deleted bot's open asks, either side, are cancelled without a note. */
+  /**
+   * A deleted bot's open asks end: ones it made are cancelled without a
+   * note (nobody is left to tell); ones made to it fail, and the asker
+   * hears why, so it does not wait on an answer that cannot come.
+   */
   forgetBot(botId: string): void {
-    for (const ask of this.deps.read())
-      if (isOpenAsk(ask) && (ask.askerId === botId || ask.targetId === botId)) {
+    for (const ask of this.deps.read()) {
+      if (!isOpenAsk(ask)) continue;
+      if (ask.askerId === botId) {
         this.patch(ask.id, { status: "cancelled", endedAt: this.now() });
         if (ask.status === "running") this.deps.stopTurn(ask);
+      } else if (ask.targetId === botId) {
+        if (ask.status === "running") this.deps.stopTurn(ask);
+        this.finish(ask.id, {
+          error: "the user deleted that bot, so it ended there.",
+        });
       }
+    }
   }
 
   /** Start the conversation's oldest queued request, unless one is running there. */
@@ -356,6 +370,17 @@ export class BotAskService {
         answerer
       )
     );
+    const asker = this.deps.bot(ask.askerId) ?? {
+      name: "Another bot",
+      title: "",
+    };
+    const notes = requestNotes(
+      { request: ask.request, kind: ask.kind, ...outcome },
+      asker,
+      answerer
+    );
+    this.deps.note?.(ask.askerId, notes.asker);
+    if (notes.answerer != null) this.deps.note?.(ask.targetId, notes.answerer);
   }
 
   /** e.g. `[bot-ask] q1 task res->pla answered 42s attempt 1`; never the text. */
