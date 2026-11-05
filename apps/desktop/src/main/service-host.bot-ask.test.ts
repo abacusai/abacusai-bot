@@ -394,6 +394,24 @@ describe("a task the user gave, passed on", () => {
     expect(note).not.toContain("NO_REPLY\n");
   });
 
+  it("finds the user's message under a long reply, past the usual tail", async () => {
+    const { self, endUserTurn } = taskHost(false);
+    await (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null);
+    (self.noteUserWords as Method)("wri-main", "go ahead and finish it");
+    chatLog(
+      ["user", "go ahead and finish it"],
+      ...Array.from({ length: 40 }, (): [string, string] => [
+        "assistant",
+        "x".repeat(10_000),
+      ]),
+      ["assistant", "Done, saved."]
+    );
+    endUserTurn();
+    const note = (self.tellBotAsk as ReturnType<typeof vi.fn>).mock
+      .calls[0]?.[1] as string;
+    expect(note).toContain("Done, saved.");
+  });
+
   it("waits for the turn that answers the user, not one that closes before it", async () => {
     const { self, endUserTurn } = taskHost(false);
     await (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null);

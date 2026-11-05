@@ -5955,6 +5955,9 @@ export class ServiceHost {
   ): void {
     const entry = { ask, words };
     this.taskFollowUps.set(sessionId, entry);
+    console.log(
+      `[bot-ask] ${ask.id} follow-up armed in ${ask.targetId}'s chat${words == null ? "" : " with the user's words"}`
+    );
     const end = (): void => {
       clearTimeout(timer);
       stopListening();
@@ -5968,8 +5971,12 @@ export class ServiceHost {
       if (entry.words == null) return;
       const reply = this.replyTo(sessionId, entry.words);
       // A turn before theirs closed: theirs is still to come.
-      if (reply == null) return;
+      if (reply == null) {
+        console.log(`[bot-ask] ${ask.id} follow-up: no reply yet`);
+        return;
+      }
       end();
+      console.log(`[bot-ask] ${ask.id} follow-up sent to ${ask.askerId}`);
       const doer = this.botService
         .list()
         .find((bot) => bot.id === ask.targetId);
@@ -5983,7 +5990,15 @@ export class ServiceHost {
     const file =
       this.agentSessionManagerService.getDiagnosticInfo(sessionId)
         ?.agentSessionFile ?? null;
-    const turns = readTranscriptTail(file, 30, undefined, 3000);
+    // A long reply (many tool calls) can run to megabytes after the user's
+    // message, so the whole log is read, not its last stretch.
+    const turns = readTranscriptTail(
+      file,
+      5000,
+      undefined,
+      3000,
+      64 * 1024 * 1024
+    );
     // The whole message, as the tail keeps it (cut at 3000 with an ellipsis).
     const key = words.replace(/\s+/g, " ").trim().slice(0, 3000);
     const at = turns.findLastIndex(
