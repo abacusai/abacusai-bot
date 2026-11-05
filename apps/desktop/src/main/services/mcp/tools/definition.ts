@@ -61,6 +61,8 @@ export interface HostCapabilities {
   hostedRoutines: boolean;
   /** Every routine is kept on the server: a "local" ask is made hosted. */
   hostedOnly: boolean;
+  /** The server runs routines with full access: they name no reach. */
+  routinesFullAccess: boolean;
   /** Paid-plan capabilities with none of their tools listed for this account. */
   withheldFeatures: readonly PaidFeature[];
 }

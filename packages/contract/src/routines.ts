@@ -160,6 +160,8 @@ export interface HostedRoutineInfo {
   /** Account data its runs may read. */
   reads: RoutineRead[];
   watchUrl: string | null;
+  /** Its runs have full access: `sources` and `reads` no longer apply. */
+  fullAccess?: boolean;
   /** Why the server paused it, when it did. */
   pausedReason: string | null;
   lastRun: HostedRoutineRun | null;

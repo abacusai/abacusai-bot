@@ -7,7 +7,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { AgentStatus } from "@abacus-ai/contract/agent-types";
+import { AgentMode, AgentStatus } from "@abacus-ai/contract/agent-types";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import type { HostedRunRequest } from "./hosted-run";
@@ -82,6 +82,7 @@ const REQUEST: HostedRunRequest = {
   reads: ["calendar.read"],
   watchUrl: "https://shop.example/f/1",
   timezone: "UTC",
+  access: null,
 };
 
 const harness = async () => {
@@ -179,6 +180,57 @@ it("runs held to the routine's reach and returns its final message", async () =>
   });
   expect(sent[0]).toContain("Is it under 5000?");
   expect(stop).toHaveBeenCalledWith("w", sessionId);
+});
+
+it("runs with full access only when the server says so, and never with the vault", async () => {
+  const { host, internals, start, emit, sent: opened } = await harness();
+  vi.spyOn(host, "sendAgentMessage").mockImplementation(((request: {
+    sessionId: string;
+  }) => {
+    opened(request.sessionId);
+    queueMicrotask(() => {
+      emit(request.sessionId, {
+        type: "status_changed",
+        status: AgentStatus.Streaming,
+      });
+      emit(request.sessionId, {
+        type: "text_delta",
+        content: '{"deliver": true, "text": "done"}',
+        messageId: "m1",
+      });
+      emit(request.sessionId, {
+        type: "status_changed",
+        status: AgentStatus.Idle,
+      });
+    });
+  }) as never);
+  vi.spyOn(internals.threadStore, "readCurrentFile").mockReturnValue({
+    messages: [
+      { parts: [{ type: "tool-call", name: "bash", id: "1" }] },
+      { parts: [{ type: "tool-call", name: "x_bash", id: "2" }] },
+    ],
+  } as never);
+
+  // A run the server did not mark, a downgraded account's included, stays held.
+  await host.runUnattended(REQUEST);
+  const held = start.mock.calls[0]![0];
+  expect(held.mode).toBeUndefined();
+  expect(
+    internals.agentSessionManagerService.unattendedPolicy(held.sessionId)
+  ).not.toBeNull();
+
+  const result = await host.runUnattended({ ...REQUEST, access: "full" });
+  const full = start.mock.calls[1]![0];
+  expect(full.mode).toBe(AgentMode.Yolo);
+  expect(
+    internals.agentSessionManagerService.unattendedPolicy(full.sessionId)
+  ).toBeNull();
+  expect(internals.heldPolicy(full.sessionId)).toBeNull();
+  expect(result.actions).toEqual(["bash ×2"]);
+  // Nobody is there to approve: not the owner's conversation, and no vault.
+  expect(internals.isOwnerSession(full.sessionId)).toBe(false);
+  expect(internals.mcpBrowserServer.options.noVault(full.sessionId)).toBe(true);
+  expect(internals.mcpBrowserServer.options.noVault("a-chat")).toBe(false);
 });
 
 it("does not take startup's own statuses for the run's end", async () => {

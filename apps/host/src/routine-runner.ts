@@ -15,6 +15,7 @@ import { randomUUID } from "node:crypto";
 import {
   parseHostedRunAnswer,
   parseHostedRunRequest,
+  withActionsLine,
   type HostedRunRequest,
 } from "#main/services/agent-tools/hosted-run";
 import { backoffDelayMs } from "#main/services/messaging/connector";
@@ -30,6 +31,8 @@ export interface UnattendedRunResult {
   outcome: "completed" | "failed" | "timeout" | "not-started";
   text: string;
   creditsOut?: boolean;
+  /** What a full-access run did outward. */
+  actions?: readonly string[];
 }
 
 interface RoutineEntryRunnerDeps {
@@ -184,7 +187,10 @@ export class RoutineEntryRunner {
         ? {
             action: "routine_result",
             handle,
-            ...parseHostedRunAnswer(result.text, request.notify),
+            ...withActionsLine(
+              parseHostedRunAnswer(result.text, request.notify),
+              result.actions ?? []
+            ),
           }
         : {
             action: "routine_result",

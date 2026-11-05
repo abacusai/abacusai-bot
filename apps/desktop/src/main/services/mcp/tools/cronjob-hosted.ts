@@ -119,7 +119,11 @@ export const describeHostedRoutine = (routine: RoutineListItem): string => {
   return [
     `${routine.id}  [${routine.enabled ? "enabled" : `paused${info?.pausedReason != null ? `: ${info.pausedReason}` : ""}`}]  hosted ${info?.kind ?? "task"}  ${when} (${info?.timezone ?? "UTC"})  ${routine.name}`,
     `  ${routine.prompt}`,
-    `  reads: ${[...(info?.reads ?? []), ...(info?.sources ?? [])].join(", ") || "search only"}`,
+    ...(info?.fullAccess === true
+      ? []
+      : [
+          `  reads: ${[...(info?.reads ?? []), ...(info?.sources ?? [])].join(", ") || "search only"}`,
+        ]),
     `  next: ${next}   last: ${last?.at != null ? `${new Date(last.at).toISOString()} ${last.status}${last.deliveredVia != null ? ` via ${last.deliveredVia}` : ""}` : "never"}`,
   ].join("\n");
 };

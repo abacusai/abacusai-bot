@@ -156,6 +156,30 @@ const describeCall = (tool: string, input: Record<string, unknown>): string => {
   );
 };
 
+/** Tools that reach past the run's answer without a connector, by bare name. */
+const OUTWARD_TOOLS: readonly string[] = ["bash", "browser_task", "cronjob"];
+
+/**
+ * How often a run called each of those tools, as "bash ×3": a thread records
+ * no more than the call, and a shell command is too long to show.
+ */
+export const outwardToolsOf = (
+  messages: ReadonlyArray<{ parts: readonly unknown[] }>
+): string[] => {
+  const counts = new Map<string, number>();
+  for (const part of messages.flatMap((message) => message.parts) as Array<
+    Record<string, unknown>
+  >) {
+    if (part.type !== "tool-call" || typeof part.name !== "string") continue;
+    const { name } = part;
+    const tool = OUTWARD_TOOLS.find(
+      (entry) => name === entry || name.endsWith(`_${entry}`)
+    );
+    if (tool != null) counts.set(tool, (counts.get(tool) ?? 0) + 1);
+  }
+  return [...counts].map(([tool, count]) => `${tool} ×${count}`);
+};
+
 /**
  * The connector calls a run's thread records that are not reviewed reads
  * (UNATTENDED_CONNECTOR_READS): `done` came back without an error, `unsure`

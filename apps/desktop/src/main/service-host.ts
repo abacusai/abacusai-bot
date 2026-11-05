@@ -15,10 +15,10 @@ import {
   connectorById,
   connectorForService,
 } from "@abacus-ai/connectors/registry";
-import type {
+import {
   AgentMode,
-  DesktopEvent,
-  UserTextTags,
+  type DesktopEvent,
+  type UserTextTags,
 } from "@abacus-ai/contract/agent-types";
 import type {
   BotChangeNotice,
@@ -324,6 +324,7 @@ import {
 } from "./services/agent-tools/routine-runs-store";
 import {
   connectorActionsOf,
+  outwardToolsOf,
   RoutineSendLedger,
 } from "./services/agent-tools/routine-send-ledger";
 import { stopAllServed } from "./services/agent-tools/static-server";
@@ -999,6 +1000,7 @@ export class ServiceHost {
       if (
         sessions.get(sessionId) == null ||
         sessions.isRoutineSession(sessionId) ||
+        this.hostedRunSessions.has(sessionId) ||
         sessions.unattendedPolicy(sessionId) != null
       )
         return null;
@@ -1047,6 +1049,7 @@ export class ServiceHost {
     channelForSession: (sessionId) => this.laneChannels.get(sessionId) ?? null,
     isOwnerSession: (sessionId) => this.isOwnerSession(sessionId),
     checkoutToken: this.checkoutToken,
+    noVault: (sessionId) => this.hostedRunSessions.has(sessionId),
     heldSession: (sessionId) => {
       const policy = this.heldPolicy(sessionId);
       if (policy == null) return null;
@@ -1088,6 +1091,7 @@ export class ServiceHost {
     if (
       session == null ||
       this.agentSessionManagerService.isRoutineSession(sessionId) ||
+      this.hostedRunSessions.has(sessionId) ||
       this.isUnattendedSession(sessionId)
     )
       return false;
@@ -1437,6 +1441,7 @@ export class ServiceHost {
     skillsService: this.skillsService,
     previewTargets: this.previewTargets,
     hostedRoutines: () => this.hostedRoutinesOffered(),
+    routinesFullAccess: () => this.hostedRoutines.fullAccessNow(),
     enabledToolsets: () => {
       const states = this.getToolsetStates();
       return new Set(Object.keys(states).filter((id) => states[id]));
@@ -5453,6 +5458,14 @@ export class ServiceHost {
     };
   }
 
+  /** What a hosted run did outward, from its thread. */
+  private hostedRunActions(sessionId: string): string[] {
+    const messages =
+      this.threadStore.readCurrentFile(sessionId)?.messages ?? [];
+    const { done, unsure } = connectorActionsOf(messages);
+    return [...done, ...unsure, ...outwardToolsOf(messages)];
+  }
+
   /** The text of a session's answers as its thread kept them. */
   private threadReply(sessionId: string): string {
     return (this.threadStore.readCurrentFile(sessionId)?.messages ?? [])
@@ -5467,15 +5480,19 @@ export class ServiceHost {
 
   /**
    * One hosted routine run on this computer, from the server's routine lane:
-   * a fresh session held to the unattended mode and the routine's declared
-   * reach, given the run's prompt, and stopped at its deadline. Resolves
-   * with how it ended and its final answer's text; never retried.
+   * a fresh session given the run's prompt and stopped at its deadline. With
+   * full access (only the server says so) it has what a chat has, the vault
+   * aside; any other is held to the unattended mode and the routine's
+   * declared reach. Resolves with how it ended, its final answer's text and,
+   * at full access, what it did outward; never retried.
    */
   async runUnattended(request: HostedRunRequest): Promise<{
     outcome: "completed" | "failed" | "timeout" | "not-started";
     text: string;
     /** It failed for want of credits. */
     creditsOut?: boolean;
+    /** A full-access run's outward actions, shown with its answer. */
+    actions?: string[];
   }> {
     // Told to the server as out of credits, which pauses it and says so.
     if (await this.routineAtCreditWall())
@@ -5484,8 +5501,10 @@ export class ServiceHost {
     if (target == null) return { outcome: "not-started", text: "" };
     const session = this.agentSessionManagerService.create(target);
     this.hostedRunSessions.add(session.id);
+    const full = request.access === "full";
     // Held before it can start; a session that cannot be held never runs.
     if (
+      !full &&
       !this.agentSessionManagerService.holdUnattended(
         session.id,
         policyFor(
@@ -5564,6 +5583,7 @@ export class ServiceHost {
     const started = await this.startAgentSession({
       workspaceId: target,
       sessionId: session.id,
+      ...(full ? { mode: AgentMode.Yolo } : {}),
       // Startup comes out of the run's own time.
       startupTimeoutMs: Math.min(
         UNATTENDED_STARTUP_TIMEOUT_MS,
@@ -5595,6 +5615,7 @@ export class ServiceHost {
         outcome: ended.outcome,
         text,
         ...(ended.creditsOut === true ? { creditsOut: true } : {}),
+        ...(full ? { actions: this.hostedRunActions(session.id) } : {}),
       };
     } finally {
       if (timer != null) clearTimeout(timer);
@@ -6752,7 +6773,9 @@ export class ServiceHost {
         // hosted Chromium; elsewhere the desktop's own views are always there.
         this.platform !== "web-host" ||
           this.builtinMcpLifecycle.isBrowserEnabled(),
-        this.vault != null
+        // Nobody is at a hosted run to give the yes the vault needs.
+        this.vault != null &&
+          !(sessionId != null && this.hostedRunSessions.has(sessionId))
       ),
       // A bot's chat carries the bot's identity; this process owns the registry.
       ...(sessionId != null
