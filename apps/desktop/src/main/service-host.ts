@@ -5766,7 +5766,11 @@ export class ServiceHost {
     // a crashed agent with a Retry that would run the request again.
     stopTurn: (ask) => {
       const handle = this.botAskTurns.get(ask.id);
-      if (handle != null) this.stopAgentTurn(handle);
+      // A task still waiting for the user's own turn there is not sent at
+      // all; that turn is theirs and goes on.
+      if (ask.kind === "task" && !this.taskTurnsSent.has(ask.id))
+        this.cancelledTasks.add(ask.id);
+      else if (handle != null) this.stopAgentTurn(handle);
     },
     tell: (ask, note) => this.tellBotAsk(ask, note),
     // The app's one way to refresh running chats' tools (as when a chat app
@@ -5931,11 +5935,15 @@ export class ServiceHost {
       (handle) => handle.sessionId === doerSession
     );
     const words = inTask ? "" : this.latestUserWords(doerSession);
-    if (words.length === 0)
+    if (words.length === 0) {
+      console.log(
+        `[bot-ask] ${doerId} could not tell ${task.askerId} about ${task.id}: ${inTask ? "inside the task's turn" : "no user words in this turn"}`
+      );
       return {
         error:
           "Only in a turn where the user, here, changed or dropped the task: this one was not started by them.",
       };
+    }
     this.tellBotAsk(task, taskChangedNote(task, doer, message.trim(), words));
     console.log(`[bot-ask] ${doerId} told ${task.askerId} about ${task.id}`);
     return {
@@ -6013,6 +6021,8 @@ export class ServiceHost {
   private readonly taskTurnsSent = new Set<string>();
   /** Task id → what the user wrote when they stepped in. */
   private readonly steppedIn = new Map<string, string>();
+  /** Tasks cancelled before their prompt went in: they never go in. */
+  private readonly cancelledTasks = new Set<string>();
 
   /**
    * One turn of the asked bot in its conversation with the asker, a sender
@@ -6044,6 +6054,8 @@ export class ServiceHost {
           !(await this.turnClosed(handle.sessionId, BOT_TASK_TURN_TIMEOUT_MS))
         )
           throw new Error("it stayed busy in its own chat for 30 minutes.");
+        if (this.cancelledTasks.has(ask.id))
+          throw new Error("it was cancelled before it began.");
       } else if (this.turnLedger.isOpen(handle.sessionId))
         // A turn left open there (one stopped or cut off) would take this
         // request into it; asks of one pair never overlap otherwise.
@@ -6057,7 +6069,7 @@ export class ServiceHost {
           timeout: `it took more than ${task ? 30 : 10} minutes, so it was stopped.`,
           failed: "its turn ended without an answer.",
           stopped: task
-            ? "the user stopped it partway through, so it may be half done."
+            ? "the user stopped it partway through, so it may be half done. Don't do it yourself or pass it on again unless they ask."
             : "it was stopped before it answered.",
           segment: BOT_ANSWER_SEGMENT,
         }
@@ -6096,6 +6108,7 @@ export class ServiceHost {
       this.botAskTurns.delete(ask.id);
       this.taskTurnsSent.delete(ask.id);
       this.steppedIn.delete(ask.id);
+      this.cancelledTasks.delete(ask.id);
     }
   }
 

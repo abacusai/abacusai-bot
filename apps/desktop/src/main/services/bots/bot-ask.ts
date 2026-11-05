@@ -250,7 +250,7 @@ export const steppedInError = (words: string): string => {
   return [
     "the user wrote to it in its own chat partway through, so it stopped there and may be half done.",
     `What they wrote: "${said.length > 300 ? `${said.slice(0, 300)}…` : said}".`,
-    "Go by that: if it changes or drops the task, don't pass it on again or keep offering it.",
+    "Go by that: don't do the task yourself, pass it on again or keep offering it unless they ask.",
   ].join(" ");
 };
 

@@ -83,6 +83,7 @@ const fakeHost = (
     botAskTurns: new Map(),
     taskTurnsSent: new Set(),
     steppedIn: new Map(),
+    cancelledTasks: new Set(),
     turnLedger: { isOpen: () => options.leftOpen === true },
     botService: {
       list: () => [{ id: "res", name: "Researcher", title: "" }],
@@ -273,6 +274,7 @@ describe("a task the user gave, passed on", () => {
       botAskTurns: new Map(),
       taskTurnsSent: new Set(),
       steppedIn: new Map(),
+      cancelledTasks: new Set(),
       turnLedger: {
         isOpen: () => open,
         onClose: (listener: (record: { sessionId: string }) => void) => {
@@ -330,7 +332,7 @@ describe("a task the user gave, passed on", () => {
     await expect(
       (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null)
     ).rejects.toThrow(
-      "the user stopped it partway through, so it may be half done."
+      /the user stopped it partway through, so it may be half done/
     );
   });
 
@@ -386,6 +388,17 @@ describe("a task the user gave, passed on", () => {
     await expect(pending).resolves.toBe("Posted.");
   });
 
+  it("cancelled while it waits for the user's own turn: that turn goes on, and the task never goes in", async () => {
+    const { self, endUserTurn } = taskHost(true);
+    const pending = (self.runBotAskTurn as Method)(TASK, "TASK PROMPT", null);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    (self.cancelledTasks as Set<string>).add("q8");
+    endUserTurn();
+    await expect(pending).rejects.toThrow(/cancelled before it began/);
+    expect(self.sendAgentMessage).not.toHaveBeenCalled();
+    expect(self.stopAgentTurn).not.toHaveBeenCalled();
+  });
+
   const wordsHost = () => {
     const self: Record<string, unknown> = {
       userWords: new Map(),
@@ -401,6 +414,7 @@ describe("a task the user gave, passed on", () => {
       botAskTurns: new Map(),
       taskTurnsSent: new Set(),
       steppedIn: new Map(),
+      cancelledTasks: new Set(),
     };
     for (const name of [
       "userSteppedIn",
@@ -681,6 +695,7 @@ describe("tell_task_giver: the user changed a task another bot passed on", () =>
       botAskTurns: new Map(),
       taskTurnsSent: new Set(),
       steppedIn: new Map(),
+      cancelledTasks: new Set(),
       botService: {
         list: () => [
           { id: "wri", name: "Writer", title: "" },
