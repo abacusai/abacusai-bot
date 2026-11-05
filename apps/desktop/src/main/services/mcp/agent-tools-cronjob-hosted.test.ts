@@ -59,8 +59,8 @@ const harness = (options: {
   phone?: boolean;
   defaultRunner?: "local" | "hosted";
   create?: (input: RoutineCreateInput) => Promise<Routine>;
-  /** The caller: the user, a bot's own chat, or a bot's chat with someone else. */
-  caller?: "user" | "bot" | "sender";
+  /** The caller: the user, a bot's own chat, its routine's run, or its chat with someone else. */
+  caller?: "user" | "bot" | "bot-run" | "sender";
   created?: RoutineListItem;
   /** The once-per-user 24/7 note's plan, as the host claims it. */
   alwaysOn?: "free" | "paid" | null;
@@ -87,7 +87,13 @@ const harness = (options: {
     workspaceId: () => null,
     botIdForSession: () => (caller === "user" ? null : "bot-1"),
     sessionRole: () =>
-      caller === "user" ? null : caller === "bot" ? "forever" : "sender",
+      caller === "user"
+        ? null
+        : caller === "bot"
+          ? "forever"
+          : caller === "bot-run"
+            ? "routine"
+            : "sender",
     runCronJob,
     ...(options.phone === true
       ? { channelForSession: () => WHATSAPP_CHANNEL }
@@ -381,8 +387,18 @@ describe("cronjob, hosted", () => {
 });
 
 describe("cronjob, hosted, and who is asking", () => {
-  it("lets a bot see and change only its own", async () => {
+  it("lets a bot change any of the owner's routines in the owner's chat, naming no bot", async () => {
     const { call, hosted } = harness({ caller: "bot" });
+    const listed = await call({ action: "list" });
+    expect(listed).toContain("hosted-r1");
+    expect(listed).toContain("hosted-r2");
+    const remove = vi.spyOn(hosted, "remove").mockResolvedValue();
+    await call({ action: "remove", id: "hosted-r1" });
+    expect(remove).toHaveBeenCalledWith("hosted-r1", null);
+  });
+
+  it("lets a bot's routine run see and change only its own", async () => {
+    const { call, hosted } = harness({ caller: "bot-run" });
     const listed = await call({ action: "list" });
     expect(listed).toContain("hosted-r2");
     expect(listed).not.toContain("hosted-r1");
