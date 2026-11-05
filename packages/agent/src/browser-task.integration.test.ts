@@ -178,6 +178,18 @@ describe("a run whose report is sent back for a missing field", () => {
   }, 60_000);
 });
 
+describe("a run that stops for the user on the follow-up", () => {
+  it("keeps the report and says the user is needed, for a NEEDS USER line", async () => {
+    scriptNudged({ say: "NEEDS USER: sign in to see the invoice total." });
+    await (await startBot()).send("run the export");
+
+    const [result] = toolResults();
+    expect(result).toContain(REPORT);
+    expect(result).toContain("NEEDS USER: sign in to see the invoice total.");
+    expect(result).toContain("continue_from_last: true");
+  }, 60_000);
+});
+
 describe("a run that spends its budget on the follow-up", () => {
   it("keeps the report, with the closing note after it", async () => {
     let looks = 0;

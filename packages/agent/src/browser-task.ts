@@ -933,17 +933,17 @@ export async function runBrowserTask(
       };
 
       try {
-        await prompt(opening);
-
         // A `browser_pause` is the run's stop, whatever it wrote after.
-        if (gate.pause != null && outcome.stoppedBy === "completed") {
-          checkout?.note(gate.pause);
+        const noteUserStop = (): void => {
+          if (outcome.stoppedBy !== "completed") return;
+          if (gate.pause != null) checkout?.note(gate.pause);
+          else if (!needsUser(lastText)) return;
           outcome.stoppedBy = "needs-user";
           keepAlive = true;
-        } else if (outcome.stoppedBy === "completed" && needsUser(lastText)) {
-          outcome.stoppedBy = "needs-user";
-          keepAlive = true;
-        }
+        };
+
+        await prompt(opening);
+        noteUserStop();
 
         // One nudge for a report that skipped what the caller asked for.
         if (outcome.stoppedBy === "completed" && reportFields.length > 0) {
@@ -959,6 +959,7 @@ export async function runBrowserTask(
                 "do not repeat it: reply with only these, from what you saw on the page (take one more look " +
                 "if you must), or say explicitly that you could not find each one."
             );
+            noteUserStop();
           }
         }
 
