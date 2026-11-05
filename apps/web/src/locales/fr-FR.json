@@ -1376,9 +1376,8 @@
     "open": "Ouvrir",
     "stop": "Arrêter le partage",
     "stopTitle": "Arrêter le partage ?",
-    "stopBody": "Le lien cesse de fonctionner sous un jour au plus. Les personnes qui l’ont déjà ouvert ont pu garder une copie.",
+    "stopBody": "Le lien cesse de fonctionner immédiatement. Les personnes qui l’ont déjà ouvert ont pu garder une copie.",
     "stopped": "Lien supprimé",
-    "expires": "Ce lien prend fin si personne ne l’ouvre pendant 90 jours.",
     "links": "Liens partagés",
     "linksEmpty": "Rien de partagé pour l’instant. Utilisez Partager sur un fichier créé par le bot.",
     "errors": {

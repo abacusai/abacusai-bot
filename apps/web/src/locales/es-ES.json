@@ -1376,9 +1376,8 @@
     "open": "Abrir",
     "stop": "Dejar de compartir",
     "stopTitle": "¿Dejar de compartir?",
-    "stopBody": "El enlace deja de funcionar en un día como máximo. Quienes ya lo han abierto pueden haber guardado una copia.",
+    "stopBody": "El enlace deja de funcionar de inmediato. Quienes ya lo han abierto pueden haber guardado una copia.",
     "stopped": "Enlace eliminado",
-    "expires": "Este enlace termina si nadie lo abre durante 90 días.",
     "links": "Enlaces compartidos",
     "linksEmpty": "Aún no has compartido nada. Usa Compartir en un archivo que haya hecho el bot.",
     "errors": {

@@ -1376,9 +1376,8 @@
     "open": "Aç",
     "stop": "Paylaşmayı durdur",
     "stopTitle": "Paylaşım durdurulsun mu?",
-    "stopBody": "Bağlantı en geç bir gün içinde çalışmayı bırakır. Daha önce açanlar bir kopya saklamış olabilir.",
+    "stopBody": "Bağlantı hemen çalışmayı bırakır. Daha önce açanlar bir kopya saklamış olabilir.",
     "stopped": "Bağlantı kaldırıldı",
-    "expires": "Bu bağlantı 90 gün boyunca kimse açmazsa sona erer.",
     "links": "Paylaşılan bağlantılar",
     "linksEmpty": "Henüz bir şey paylaşılmadı. Botun yaptığı bir dosyada Paylaş'ı kullanın.",
     "errors": {

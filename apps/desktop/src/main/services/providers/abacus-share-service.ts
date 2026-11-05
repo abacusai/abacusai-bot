@@ -91,7 +91,6 @@ const asLink = (value: unknown): SharedLink | null => {
     title: typeof row.title === "string" ? row.title : "",
     sourceKey: typeof row.sourceKey === "string" ? row.sourceKey : "",
     createdAt: typeof row.createdAt === "string" ? row.createdAt : "",
-    canExpire: row.canExpire === true,
   };
 };
 

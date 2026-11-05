@@ -1376,9 +1376,8 @@
     "open": "Open",
     "stop": "Stop sharing",
     "stopTitle": "Stop sharing?",
-    "stopBody": "The link stops working, within a day at most. People who already opened it may have kept a copy.",
+    "stopBody": "The link stops working right away. People who already opened it may have kept a copy.",
     "stopped": "Link removed",
-    "expires": "This link ends if nobody opens it for 90 days.",
     "links": "Shared links",
     "linksEmpty": "Nothing shared yet. Use Share on a file the bot made.",
     "errors": {

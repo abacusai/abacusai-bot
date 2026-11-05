@@ -1376,9 +1376,8 @@
     "open": "Buka",
     "stop": "Berhenti membagikan",
     "stopTitle": "Berhenti membagikan?",
-    "stopBody": "Tautan berhenti berfungsi paling lama dalam sehari. Orang yang sudah membukanya mungkin menyimpan salinan.",
+    "stopBody": "Tautan langsung berhenti berfungsi. Orang yang sudah membukanya mungkin menyimpan salinan.",
     "stopped": "Tautan dihapus",
-    "expires": "Tautan ini berakhir jika tidak ada yang membukanya selama 90 hari.",
     "links": "Tautan yang dibagikan",
     "linksEmpty": "Belum ada yang dibagikan. Gunakan Bagikan pada file buatan bot.",
     "errors": {

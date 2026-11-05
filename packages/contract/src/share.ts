@@ -45,8 +45,6 @@ export interface SharedLink {
   /** Hash of the local path: the same file finds its link again. */
   sourceKey: string;
   createdAt: string;
-  /** Ends after 90 days without a view. */
-  canExpire: boolean;
 }
 
 export type SharePreview =

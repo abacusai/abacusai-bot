@@ -1376,9 +1376,8 @@
     "open": "Öffnen",
     "stop": "Nicht mehr teilen",
     "stopTitle": "Nicht mehr teilen?",
-    "stopBody": "Der Link funktioniert spätestens nach einem Tag nicht mehr. Wer ihn schon geöffnet hat, hat vielleicht eine Kopie.",
+    "stopBody": "Der Link funktioniert sofort nicht mehr. Wer ihn schon geöffnet hat, hat vielleicht eine Kopie.",
     "stopped": "Link entfernt",
-    "expires": "Dieser Link endet, wenn ihn 90 Tage lang niemand öffnet.",
     "links": "Geteilte Links",
     "linksEmpty": "Noch nichts geteilt. Nutze Teilen bei einer Datei, die der Bot erstellt hat.",
     "errors": {

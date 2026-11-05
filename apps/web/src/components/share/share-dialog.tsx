@@ -183,9 +183,6 @@ const FileShare = ({ path }: { path: string }) => {
           <DialogDescription>{t("share.notice")}</DialogDescription>
         </DialogHeader>
         <LinkActions link={link} onStopped={closeShareDialog} />
-        {link.canExpire && (
-          <p className="text-muted-foreground text-xs">{t("share.expires")}</p>
-        )}
       </>
     );
   return (
