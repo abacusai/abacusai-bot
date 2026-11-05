@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import type { DesktopEvent } from "@abacus-ai/contract/agent-types";
 import type { PrefsPatch, PrefsRow } from "@abacus-ai/contract/contract/rows";
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
@@ -494,7 +496,7 @@ describe("SuccessPitchWatch: the chat's latest site, on any plan", () => {
     ]);
     expect(t.sites()?.s1).toMatchObject({
       turnId: "turn-1",
-      siteDir: "/home/me/bakery",
+      siteDir: path.resolve("/home/me", "bakery"),
     });
     // A turn that failed leaves the site as the latest result.
     await t.run("Add a menu page", [event({ type: "error" }), text("x")]);
