@@ -1259,7 +1259,7 @@
     "connectedPromiseLocal": "어디서 일하든 채팅하세요.",
     "firstRun": {
       "title": "무엇부터 해 볼까요?",
-      "subtitle": "하나를 고르세요. 봇이 바로 시작합니다. 연결할 것은 없습니다.",
+      "subtitle": "하나를 고르세요. 봇이 바로 시작합니다.",
       "build": {
         "title": "무언가 만들기",
         "body": "웹사이트, 앱, 게임. 설명하면 눈앞에서 만들어집니다.",
@@ -1268,8 +1268,14 @@
       "chatApp": {
         "title": "{{app}}에서 답해 줘",
         "body": "언제든 휴대폰에서 봇에게 메시지를 보내세요.",
-        "setUp": "설정",
         "open": "열기"
+      },
+      "github": {
+        "title": "내 코드 작업하기",
+        "body": "GitHub 저장소의 버그를 고치거나 기능을 추가합니다.",
+        "connect": "GitHub 연결",
+        "start": "시작",
+        "botName": "코드 어시스턴트"
       },
       "research": {
         "title": "조사하거나 글쓰기",

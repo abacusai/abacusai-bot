@@ -18,6 +18,8 @@ import { ConnectFailed } from "./connect";
 import {
   ensureFirstBot,
   firstBotStore,
+  GITHUB_CONNECTOR_ID,
+  githubChoice,
   inboxPassStore,
   type FirstBotState,
 } from "./first-bot";
@@ -125,7 +127,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
   });
   const statuses = useQuery({
     ...transport.orpc.connectors.statuses.queryOptions({ input: {} }),
-    enabled: step === "connectors",
+    enabled: step === "connectors" || step === "first-bot",
   });
   const { data: bots } = useLiveQuery(db.collections.bots);
   const connected = connectedProviders(
@@ -367,6 +369,10 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
           heading={heading}
           inbox={inbox}
           chatApp={chatApp}
+          github={
+            preview?.github ??
+            githubChoice(statuses.data?.[GITHUB_CONNECTOR_ID])
+          }
         />
       )}
       {(step === "done" ||

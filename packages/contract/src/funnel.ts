@@ -30,6 +30,7 @@ export const FUNNEL_STEPS = [
   // The first-run screen: the card picked, and the inbox result after a Gmail sign-in.
   "first_choice_build",
   "first_choice_whatsapp",
+  "first_choice_github",
   "first_choice_research",
   "first_choice_images",
   "first_choice_freetext",

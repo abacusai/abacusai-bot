@@ -18,6 +18,7 @@ import { onboardingStore } from "./store";
 export type FirstChoice =
   | { kind: "build"; prompt: string | null }
   | { kind: "chat-app"; app: HomeChannel }
+  | { kind: "github" }
   | { kind: "research" }
   | { kind: "goal"; goal: string }
   | { kind: "images" }
@@ -28,6 +29,20 @@ export type FirstBotResult = {
   checkInRoutineId: string | null;
   preview?: boolean;
 };
+export const GITHUB_CONNECTOR_ID = "abacus-githubbot";
+
+/** What the GitHub card offers: `null` where this account can't connect it. */
+export type GithubChoice = "connect" | "start" | null;
+
+export const githubChoice = (
+  status: { state?: string; reason?: string } | undefined
+): GithubChoice =>
+  status?.reason === "not-offered"
+    ? null
+    : status?.state === "connected"
+      ? "start"
+      : "connect";
+
 /** A chat app's own agent template (WhatsApp Agent and the like). */
 export const chatAppTemplateId = (app: HomeChannel): string => {
   const agent = TEMPLATE_FOR_CONNECTOR[`messaging-${app}`];

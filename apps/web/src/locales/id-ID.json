@@ -1259,7 +1259,7 @@
     "connectedPromiseLocal": "Ngobrol dengannya di mana pun Anda bekerja.",
     "firstRun": {
       "title": "Apa yang ingin Anda lakukan dulu?",
-      "subtitle": "Pilih satu. Bot Anda langsung mengerjakannya. Tidak ada yang perlu dihubungkan.",
+      "subtitle": "Pilih satu. Bot Anda langsung mengerjakannya.",
       "build": {
         "title": "Buat sesuatu",
         "body": "Situs web, aplikasi, atau game. Jelaskan dan lihat hasilnya muncul.",
@@ -1268,8 +1268,14 @@
       "chatApp": {
         "title": "Balas saya di {{app}}",
         "body": "Kirim pesan ke bot Anda dari ponsel kapan saja.",
-        "setUp": "Siapkan",
         "open": "Buka"
+      },
+      "github": {
+        "title": "Kerjakan kode saya",
+        "body": "Perbaiki bug atau tambahkan fitur di repo GitHub Anda.",
+        "connect": "Hubungkan GitHub",
+        "start": "Mulai",
+        "botName": "Asisten Kode"
       },
       "research": {
         "title": "Riset atau menulis",

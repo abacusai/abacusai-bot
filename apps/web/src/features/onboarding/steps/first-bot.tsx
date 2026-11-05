@@ -9,6 +9,7 @@ import {
   ArrowUp,
   Code2,
   FileText,
+  GitBranch,
   ImageIcon,
   MessageCircle,
 } from "lucide-react";
@@ -23,7 +24,13 @@ import { Badge } from "#renderer/ui/badge";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
 
-import type { FirstBotState, FirstChoice, InboxPass } from "../first-bot";
+import {
+  GITHUB_CONNECTOR_ID,
+  type FirstBotState,
+  type FirstChoice,
+  type GithubChoice,
+  type InboxPass,
+} from "../first-bot";
 import type { StepContext } from "./context";
 import { StepBody, StepButton, StepLink, StepLinks, StepTitle } from "./kit";
 
@@ -97,6 +104,7 @@ export const FirstBotStep = ({
   heading,
   inbox,
   chatApp,
+  github,
 }: {
   ctx: StepContext;
   first: FirstBotState;
@@ -107,6 +115,7 @@ export const FirstBotStep = ({
   inbox: InboxPass;
   /** The chat app linked during onboarding: its card leads. */
   chatApp: HomeChannel | null;
+  github: GithubChoice;
 }) => {
   const { t, busy, props, perform } = ctx;
   const [goal, setGoal] = useState("");
@@ -114,6 +123,19 @@ export const FirstBotStep = ({
     props.transport.client.system.funnelStep({
       step,
       ...(detail != null ? { detail } : {}),
+    });
+  const [connecting, setConnecting] = useState(false);
+  // The sign-in starts inside the click, or the browser blocks its tab.
+  const startGithub = () =>
+    void perform(async () => {
+      const signIn =
+        github === "connect" ? props.connect?.(GITHUB_CONNECTOR_ID) : null;
+      setConnecting(signIn != null);
+      const signedIn = signIn?.finally(() => setConnecting(false));
+      await funnel("first_choice_github");
+      // Backing out of the sign-in leaves the screen to pick again.
+      if (signedIn != null && (await signedIn)?.ok !== true) return;
+      await props.choose({ kind: "github" });
     });
   const pick = (step: FunnelStep, choice: FirstChoice, detail?: string) =>
     void perform(async () => {
@@ -290,28 +312,62 @@ export const FirstBotStep = ({
       </>
     );
   }
-  const app = chatApp ?? "whatsapp";
-  const appName = HOME_CHANNEL_NAMES[app];
-  const chatAppCard = (
+  const chatAppCard = chatApp != null && (
     <ChoiceCard
       slot="chat-app"
+      primary
       icon={<MessageCircle aria-hidden className="size-5" />}
-      title={t("onboarding.firstRun.chatApp.title", { app: appName })}
+      title={t("onboarding.firstRun.chatApp.title", {
+        app: HOME_CHANNEL_NAMES[chatApp],
+      })}
       body={t("onboarding.firstRun.chatApp.body")}
       action={
         <CardAction
-          primary={chatApp != null}
+          primary
           disabled={busy}
           onClick={() =>
-            pick("first_choice_whatsapp", { kind: "chat-app", app }, app)
+            pick(
+              "first_choice_whatsapp",
+              { kind: "chat-app", app: chatApp },
+              chatApp
+            )
           }
         >
-          {t(
-            chatApp != null
-              ? "onboarding.firstRun.chatApp.open"
-              : "onboarding.firstRun.chatApp.setUp"
-          )}
+          {t("onboarding.firstRun.chatApp.open")}
         </CardAction>
+      }
+    />
+  );
+  // GitHub connected on the step before leads, as a linked chat app does.
+  const githubLeads = chatApp == null && github === "start";
+  const githubCard = github != null && (
+    <ChoiceCard
+      slot="github"
+      primary={githubLeads}
+      icon={<GitBranch aria-hidden className="size-5" />}
+      title={t("onboarding.firstRun.github.title")}
+      body={t("onboarding.firstRun.github.body")}
+      action={
+        connecting ? (
+          <CardAction
+            primary={false}
+            onClick={() => props.cancelConnect?.(GITHUB_CONNECTOR_ID)}
+          >
+            {t("phase5.cancel")}
+          </CardAction>
+        ) : (
+          <CardAction
+            primary={githubLeads}
+            disabled={busy}
+            onClick={startGithub}
+          >
+            {t(
+              github === "start"
+                ? "onboarding.firstRun.github.start"
+                : "onboarding.firstRun.github.connect"
+            )}
+          </CardAction>
+        )
       }
     />
   );
@@ -327,9 +383,13 @@ export const FirstBotStep = ({
         {t("onboarding.firstRun.subtitle")}
       </StepBody>
       <div className="mt-6 flex w-full max-w-[560px] flex-col gap-2.5">
-        {chatApp != null && chatAppCard}
-        {buildCard(chatApp == null, t("onboarding.firstRun.build.title"))}
-        {chatApp == null && chatAppCard}
+        {chatAppCard}
+        {githubLeads && githubCard}
+        {buildCard(
+          chatApp == null && !githubLeads,
+          t("onboarding.firstRun.build.title")
+        )}
+        {!githubLeads && githubCard}
         <ChoiceCard
           slot="research"
           icon={<FileText aria-hidden className="size-5" />}

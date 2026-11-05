@@ -1,5 +1,5 @@
 import { connectorById } from "@abacus-ai/connectors/registry";
-import { RESEARCH_GOAL } from "@abacus-ai/contract/bots/check-in";
+import { CODE_GOAL, RESEARCH_GOAL } from "@abacus-ai/contract/bots/check-in";
 import {
   isMessagingPlatformConnected,
   type MessagingPlatformId,
@@ -202,6 +202,15 @@ const OnboardingRoute = () => {
       await open(made.id);
       return;
     }
+    const startGoal = async (name: string, goal: string) => {
+      const bot = await createGoalBot(db, {
+        ...(id != null ? { id } : {}),
+        name,
+        goal,
+        sponsoredFirstRun: sponsored,
+      });
+      await open(bot.id);
+    };
     switch (choice.kind) {
       case "build": {
         // An example sends at once; the card itself leaves the first one in
@@ -226,21 +235,18 @@ const OnboardingRoute = () => {
         await open(bot.id);
         return;
       }
-      case "research":
-      case "goal": {
-        const bot = await createGoalBot(db, {
-          ...(id != null ? { id } : {}),
-          name: t(
-            choice.kind === "research"
-              ? "onboarding.firstRun.research.botName"
-              : "onboarding.firstRun.goal.botName"
-          ),
-          goal: choice.kind === "research" ? RESEARCH_GOAL : choice.goal,
-          sponsoredFirstRun: sponsored,
-        });
-        await open(bot.id);
+      case "github":
+        await startGoal(t("onboarding.firstRun.github.botName"), CODE_GOAL);
         return;
-      }
+      case "research":
+        await startGoal(
+          t("onboarding.firstRun.research.botName"),
+          RESEARCH_GOAL
+        );
+        return;
+      case "goal":
+        await startGoal(t("onboarding.firstRun.goal.botName"), choice.goal);
+        return;
       case "images":
         // The upgrade dialog with the plan's whole pitch on a free account;
         // Abacus AI Agent on a paid one, as the media card does.
