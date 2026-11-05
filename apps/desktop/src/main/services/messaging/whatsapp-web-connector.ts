@@ -48,6 +48,7 @@ import {
   type BridgeMessage,
   type BridgeRead,
   isConversationJid,
+  logoutNote,
   QueuedSendError,
   resolveJid,
   WhatsAppBridge,
@@ -1839,6 +1840,10 @@ export class WhatsAppWebConnector implements MessagingConnector {
     // the handle and let the next send or sweep rebuild it via ensureWindow.
     win.on("closed", () => {
       if (this.window === win) this.window = null;
+    });
+    win.webContents.on("console-message", (event) => {
+      const note = logoutNote(event.message);
+      if (note != null) this.callbacks.onLog(`whatsapp-web: page ${note}`);
     });
     // Every load is a fresh page; whatever the bridge injected is gone, and
     // the relink puts it back.
