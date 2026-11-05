@@ -23,6 +23,8 @@ interface ModelGroupItem {
   id: string;
   label: string;
   description?: string;
+  /** App default's row: the model it resolves to, by id. */
+  resolves?: string;
   /** Not in the account's plan: greyed, and choosing it upgrades instead. */
   locked?: { label: string; onSelect(): void };
 }
@@ -53,6 +55,8 @@ export interface ModelChipBinding {
   };
   value: string | null;
   label: string;
+  /** App default's model by id, while `value` is null: whose mark and provider the chip shows. */
+  resolved?: string | null;
   /** The chat's pinned model, which no connected provider lists now. */
   unavailable?: boolean;
   onChange(id: string | null): void;
