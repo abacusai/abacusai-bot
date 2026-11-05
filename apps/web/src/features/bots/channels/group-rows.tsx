@@ -14,6 +14,7 @@ import { AppLink } from "#renderer/lib/navigation/app-link";
 import { BotFace } from "../avatar";
 import { useBots } from "../data/queries";
 import { groupTitle, useChannels, useChannelsLive } from "./data";
+import { useUnreadChannels } from "./seen";
 
 const plain = (text: string): string =>
   text
@@ -27,6 +28,7 @@ export const GroupChatRows = () => {
   const { t } = useTranslation();
   useChannelsLive();
   const channels = useChannels();
+  const unread = useUnreadChannels(channels);
   const { bots } = useBots();
   const params = useParams({ strict: false }) as { channelId?: string };
   const byId = new Map<string, BotRow>(bots.map((bot) => [bot.id, bot]));
@@ -60,6 +62,7 @@ export const GroupChatRows = () => {
               ? `${channel.last.author.kind === "user" ? t("channels.sidebar.you") : (nameOf(channel.last.author.botId) ?? "")}: ${plain(channel.last.text)}`
               : t("channels.sidebar.members", { count: members.length });
         const active = params.channelId === channel.id;
+        const fresh = !active && unread.has(channel.id);
         return (
           <AppLink
             key={channel.id}
@@ -70,11 +73,20 @@ export const GroupChatRows = () => {
             data-slot="item"
             data-active={active || undefined}
             data-channel-row={channel.id}
+            data-unread={fresh || undefined}
             className="ui-row text-sidebar-foreground flex h-[calc(var(--bots-row-h,56px)-2px)] items-center gap-2.5 rounded-[10px] px-2 outline-none"
           >
             <GroupFace bots={members} size={36} />
             <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="truncate text-[13px] font-medium">{title}</span>
+              <span
+                className={
+                  fresh
+                    ? "truncate text-[13px] font-semibold"
+                    : "truncate text-[13px] font-medium"
+                }
+              >
+                {title}
+              </span>
               <span
                 className={
                   channel.working.length > 0
@@ -85,6 +97,11 @@ export const GroupChatRows = () => {
                 {line}
               </span>
             </span>
+            {fresh && (
+              <span className="bots-pop ml-auto size-2 shrink-0 rounded-full bg-(--bots-attention)">
+                <span className="sr-only">{t("channels.sidebar.unread")}</span>
+              </span>
+            )}
           </AppLink>
         );
       })}

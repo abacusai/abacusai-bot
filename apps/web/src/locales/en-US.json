@@ -4872,7 +4872,8 @@
       "untitled": "Channel",
       "you": "You",
       "members_one": "{{count}} bot",
-      "members_other": "{{count}} bots"
+      "members_other": "{{count}} bots",
+      "unread": "Unread"
     },
     "new": {
       "title": "New channel",
@@ -4903,7 +4904,8 @@
       "empty": "Say hello to {{names}}. @mention a bot to pick who answers, or @everyone to hear from all of them.",
       "gone": "This channel is gone.",
       "pinAgreed": "Pin the agreed points as decisions",
-      "startAgreed": "Start the agreed work (each owner in their own chat)"
+      "startAgreed": "Start the agreed work (each owner in their own chat)",
+      "today": "Today"
     },
     "composer": {
       "label": "Message the channel",
@@ -4953,6 +4955,16 @@
     "details": {
       "open": "Channel details: {{name}}",
       "title": "Channel details"
+    },
+    "panel": {
+      "edit": "Edit channel",
+      "members_one": "{{count}} member",
+      "members_other": "{{count}} members",
+      "lead": "Lead",
+      "answering": "Answering…",
+      "addMember": "Add or remove bots",
+      "decisions": "Decisions",
+      "noDecisions": "Nothing pinned yet. Pin a message, or ask the bots to agree on something."
     }
   }
 }

@@ -4872,7 +4872,8 @@
       "untitled": "Kanal",
       "you": "Du",
       "members_one": "{{count}} Bot",
-      "members_other": "{{count}} Bots"
+      "members_other": "{{count}} Bots",
+      "unread": "Ungelesen"
     },
     "new": {
       "title": "Neuer Kanal",
@@ -4903,7 +4904,8 @@
       "empty": "Sag Hallo zu {{names}}. Erwähne einen Bot mit @mention, um zu bestimmen, wer antwortet, oder @everyone, um von allen zu hören.",
       "gone": "Dieser Kanal existiert nicht mehr.",
       "pinAgreed": "Vereinbarte Punkte als Entscheidungen anheften",
-      "startAgreed": "Vereinbarte Arbeit starten (jeder Besitzer in seinem eigenen Chat)"
+      "startAgreed": "Vereinbarte Arbeit starten (jeder Besitzer in seinem eigenen Chat)",
+      "today": "Heute"
     },
     "composer": {
       "label": "Nachricht an den Kanal",
@@ -4953,6 +4955,16 @@
     "details": {
       "open": "Kanaldetails: {{name}}",
       "title": "Kanaldetails"
+    },
+    "panel": {
+      "edit": "Kanal bearbeiten",
+      "members_one": "{{count}} Mitglied",
+      "members_other": "{{count}} Mitglieder",
+      "lead": "Leitung",
+      "answering": "Antwortet …",
+      "addMember": "Bots hinzufügen oder entfernen",
+      "decisions": "Entscheidungen",
+      "noDecisions": "Noch nichts angepinnt. Pinne eine Nachricht an oder bitte die Bots, sich auf etwas zu einigen."
     }
   }
 }

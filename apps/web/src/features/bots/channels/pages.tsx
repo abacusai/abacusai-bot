@@ -10,7 +10,7 @@ import {
 } from "@abacus-ai/contract/channels";
 import type { BotRow } from "@abacus-ai/contract/contract/rows";
 import { ChevronDown, Pin, X } from "lucide-react";
-import { useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
@@ -32,7 +32,9 @@ import { useBots } from "../data/queries";
 import { useBotsTransport } from "../data/transport";
 import { groupTitle, useChannelThread, useChannelsLive } from "./data";
 import { GroupFace } from "./group-rows";
+import { ChannelPanel } from "./panel";
 import { GroupComposer, GroupMessages } from "./parts";
+import { markChannelSeen } from "./seen";
 
 export { ChannelMarkdown, type ChannelMarkdownView } from "./parts";
 
@@ -256,9 +258,15 @@ export const NewGroupPage = ({ TopBar }: { TopBar: TopBarView }) => {
 export const GroupPage = ({
   channelId,
   TopBar,
+  details,
+  SidePanel,
 }: {
   channelId: string;
   TopBar: TopBarView;
+  /** The shell's side panel for this channel: open, and the toggle. */
+  details?: { open: boolean; toggle(): void };
+  /** Where the panel's contents go (the shell's slot). */
+  SidePanel?: ComponentType<{ children: ReactNode }>;
 }) => {
   const { t } = useTranslation();
   const transport = useBotsTransport();
@@ -272,6 +280,11 @@ export const GroupPage = ({
   const [error, setError] = useState<string | null>(null);
   const byId = new Map<string, BotRow>(bots.map((bot) => [bot.id, bot]));
   const nameOf = (id: string): string | null => byId.get(id)?.name ?? null;
+  const lastAt = thread.data?.channel.last?.at;
+  // Looking at the thread reads it: the sidebar's unread dot goes.
+  useEffect(() => {
+    if (lastAt != null) markChannelSeen(channelId, lastAt);
+  }, [channelId, lastAt]);
   if (thread.isError)
     return (
       <div
@@ -311,8 +324,11 @@ export const GroupPage = ({
           data-testid="channel-details-open"
           aria-label={t("channels.details.open", { name: title })}
           title={t("channels.details.open", { name: title })}
-          onClick={() => setEditing("details")}
-          className="hover:bg-muted flex min-w-0 items-center gap-2 rounded-lg px-1.5 py-0.5 text-start"
+          aria-expanded={details?.open}
+          onClick={() =>
+            details != null ? details.toggle() : setEditing("details")
+          }
+          className="titlebar-nodrag hover:bg-muted relative z-10 flex min-w-0 items-center gap-2 rounded-lg px-1.5 py-0.5 text-start"
         >
           <GroupFace bots={members} size={24} />
           <span className="flex min-w-0 flex-col leading-tight">
@@ -457,6 +473,20 @@ export const GroupPage = ({
           autoFocus
         />
       </div>
+      {SidePanel != null && (
+        <SidePanel>
+          <ChannelPanel
+            channel={channel}
+            members={members}
+            title={title}
+            onEdit={() => setEditing("details")}
+            onUnpin={(decisionId) =>
+              act(transport.client.channels.unpin({ channelId, decisionId }))
+            }
+            onDelete={() => setEditing("delete")}
+          />
+        </SidePanel>
+      )}
       {editing === "details" && (
         <DetailsDialog
           bots={bots}

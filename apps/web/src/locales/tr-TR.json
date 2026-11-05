@@ -4872,7 +4872,8 @@
       "untitled": "Kanal",
       "you": "Sen",
       "members_one": "{{count}} bot",
-      "members_other": "{{count}} bot"
+      "members_other": "{{count}} bot",
+      "unread": "Okunmamış"
     },
     "new": {
       "title": "Yeni kanal",
@@ -4903,7 +4904,8 @@
       "empty": "{{names}} için bir merhaba de. Kimin yanıt vereceğini seçmek için bir botu @mention ile etiketle ya da hepsinden yanıt almak için @everyone yaz.",
       "gone": "Bu kanal artık yok.",
       "pinAgreed": "Üzerinde anlaşılan noktaları karar olarak sabitle",
-      "startAgreed": "Üzerinde anlaşılan işi başlat (her sahip kendi sohbetinde)"
+      "startAgreed": "Üzerinde anlaşılan işi başlat (her sahip kendi sohbetinde)",
+      "today": "Bugün"
     },
     "composer": {
       "label": "Kanala mesaj yaz",
@@ -4953,6 +4955,16 @@
     "details": {
       "open": "Kanal ayrıntıları: {{name}}",
       "title": "Kanal ayrıntıları"
+    },
+    "panel": {
+      "edit": "Kanalı düzenle",
+      "members_one": "{{count}} üye",
+      "members_other": "{{count}} üye",
+      "lead": "Lider",
+      "answering": "Yanıtlıyor…",
+      "addMember": "Bot ekle veya çıkar",
+      "decisions": "Kararlar",
+      "noDecisions": "Henüz sabitlenen bir şey yok. Bir mesajı sabitle ya da botlardan bir konuda anlaşmalarını iste."
     }
   }
 }

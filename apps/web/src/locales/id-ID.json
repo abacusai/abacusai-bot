@@ -4872,7 +4872,8 @@
       "untitled": "Kanal",
       "you": "Anda",
       "members_one": "{{count}} bot",
-      "members_other": "{{count}} bot"
+      "members_other": "{{count}} bot",
+      "unread": "Belum dibaca"
     },
     "new": {
       "title": "Kanal baru",
@@ -4903,7 +4904,8 @@
       "empty": "Sapa {{names}}. @mention sebuah bot untuk memilih siapa yang menjawab, atau @everyone untuk mendengar dari semuanya.",
       "gone": "Kanal ini sudah tidak ada.",
       "pinAgreed": "Sematkan poin-poin yang disepakati sebagai keputusan",
-      "startAgreed": "Mulai pekerjaan yang telah disepakati (setiap pemilik di obrolannya masing-masing)"
+      "startAgreed": "Mulai pekerjaan yang telah disepakati (setiap pemilik di obrolannya masing-masing)",
+      "today": "Hari ini"
     },
     "composer": {
       "label": "Kirim pesan ke kanal",
@@ -4953,6 +4955,16 @@
     "details": {
       "open": "Detail kanal: {{name}}",
       "title": "Detail kanal"
+    },
+    "panel": {
+      "edit": "Edit kanal",
+      "members_one": "{{count}} anggota",
+      "members_other": "{{count}} anggota",
+      "lead": "Ketua",
+      "answering": "Sedang menjawab…",
+      "addMember": "Tambah atau hapus bot",
+      "decisions": "Keputusan",
+      "noDecisions": "Belum ada yang disematkan. Sematkan pesan, atau minta para bot menyepakati sesuatu."
     }
   }
 }

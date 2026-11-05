@@ -3,7 +3,7 @@ import { agreedItems } from "@abacus-ai/contract/channels";
 import { describe, expect, it } from "vitest";
 
 import { groupTitle } from "./data";
-import { mentionAt } from "./parts";
+import { mentionAt, mentionLinks, stampKind } from "./parts";
 
 describe("mentionAt", () => {
   it("finds the @word at the caret", () => {
@@ -38,5 +38,33 @@ describe("agreedItems", () => {
       )
     ).toEqual(["No new units in Q4", "Spend on ops"]);
     expect(agreedItems("We agree on Dec 19.")).toEqual(["We agree on Dec 19."]);
+  });
+});
+
+describe("mentionLinks", () => {
+  const members = [
+    { id: "w1", name: "Writer" },
+    { id: "w2", name: "Writer Two" },
+  ];
+  it("turns a member's @mention into a link to that bot, longest name first", () => {
+    expect(mentionLinks("ask @Writer and @writer two", members)).toBe(
+      "ask [@Writer](#bot-w1) and [@Writer Two](#bot-w2)"
+    );
+  });
+  it("leaves code, emails and unknown names alone", () => {
+    expect(mentionLinks("mail me@Writer `@Writer` @Nobody", members)).toBe(
+      "mail me@Writer `@Writer` @Nobody"
+    );
+    expect(mentionLinks("@Writers", members)).toBe("@Writers");
+  });
+});
+
+describe("stampKind", () => {
+  const noon = new Date(2026, 10, 5, 12, 0).getTime();
+  it("stamps the first message of a day, then quiet gaps", () => {
+    expect(stampKind(null, noon)).toBe("day");
+    expect(stampKind(noon - 24 * 60 * 60 * 1000, noon)).toBe("day");
+    expect(stampKind(noon - 16 * 60 * 1000, noon)).toBe("gap");
+    expect(stampKind(noon - 2 * 60 * 1000, noon)).toBeNull();
   });
 });

@@ -4872,7 +4872,8 @@
       "untitled": "채널",
       "you": "나",
       "members_one": "봇 {{count}}개",
-      "members_other": "봇 {{count}}개"
+      "members_other": "봇 {{count}}개",
+      "unread": "읽지 않음"
     },
     "new": {
       "title": "새 채널",
@@ -4903,7 +4904,8 @@
       "empty": "{{names}} 봇에게 인사해 보세요. @mention 으로 답할 봇을 고르거나, @everyone 으로 모든 봇의 답변을 들어 보세요.",
       "gone": "이 채널은 더 이상 없습니다.",
       "pinAgreed": "합의된 내용을 결정 사항으로 고정",
-      "startAgreed": "합의된 작업 시작 (각 담당자가 각자의 채팅에서)"
+      "startAgreed": "합의된 작업 시작 (각 담당자가 각자의 채팅에서)",
+      "today": "오늘"
     },
     "composer": {
       "label": "채널에 메시지 보내기",
@@ -4953,6 +4955,16 @@
     "details": {
       "open": "채널 세부 정보: {{name}}",
       "title": "채널 세부 정보"
+    },
+    "panel": {
+      "edit": "채널 편집",
+      "members_one": "멤버 {{count}}명",
+      "members_other": "멤버 {{count}}명",
+      "lead": "리더",
+      "answering": "답변 중…",
+      "addMember": "봇 추가 또는 제거",
+      "decisions": "결정 사항",
+      "noDecisions": "고정된 항목이 없습니다. 메시지를 고정하거나, 봇들에게 어떤 사안에 대해 합의해 달라고 요청해 보세요."
     }
   }
 }

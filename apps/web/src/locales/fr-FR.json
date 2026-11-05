@@ -4872,7 +4872,8 @@
       "untitled": "Canal",
       "you": "Vous",
       "members_one": "{{count}} bot",
-      "members_other": "{{count}} bots"
+      "members_other": "{{count}} bots",
+      "unread": "Non lus"
     },
     "new": {
       "title": "Nouveau canal",
@@ -4903,7 +4904,8 @@
       "empty": "Dites bonjour à {{names}}. Utilisez @mention pour choisir quel bot répond, ou @everyone pour avoir la réponse de tous.",
       "gone": "Ce canal n'existe plus.",
       "pinAgreed": "Épingler les points convenus comme décisions",
-      "startAgreed": "Lancer le travail convenu (chaque propriétaire dans son propre chat)"
+      "startAgreed": "Lancer le travail convenu (chaque propriétaire dans son propre chat)",
+      "today": "Aujourd'hui"
     },
     "composer": {
       "label": "Écrire au canal",
@@ -4953,6 +4955,16 @@
     "details": {
       "open": "Détails du canal : {{name}}",
       "title": "Détails du canal"
+    },
+    "panel": {
+      "edit": "Modifier le canal",
+      "members_one": "{{count}} membre",
+      "members_other": "{{count}} membres",
+      "lead": "Responsable",
+      "answering": "Réponse en cours…",
+      "addMember": "Ajouter ou retirer des bots",
+      "decisions": "Décisions",
+      "noDecisions": "Rien d'épinglé pour l'instant. Épinglez un message ou demandez aux bots de se mettre d'accord sur un point."
     }
   }
 }

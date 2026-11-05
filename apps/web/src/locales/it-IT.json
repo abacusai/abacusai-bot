@@ -4872,7 +4872,8 @@
       "untitled": "Canale",
       "you": "Tu",
       "members_one": "{{count}} bot",
-      "members_other": "{{count}} bot"
+      "members_other": "{{count}} bot",
+      "unread": "Non letti"
     },
     "new": {
       "title": "Nuovo canale",
@@ -4903,7 +4904,8 @@
       "empty": "Saluta {{names}}. Usa @mention su un bot per scegliere chi risponde, o @everyone per sentirli tutti.",
       "gone": "Questo canale non esiste più.",
       "pinAgreed": "Fissa i punti concordati come decisioni",
-      "startAgreed": "Avvia il lavoro concordato (ogni responsabile nella propria chat)"
+      "startAgreed": "Avvia il lavoro concordato (ogni responsabile nella propria chat)",
+      "today": "Oggi"
     },
     "composer": {
       "label": "Scrivi al canale",
@@ -4953,6 +4955,16 @@
     "details": {
       "open": "Dettagli del canale: {{name}}",
       "title": "Dettagli del canale"
+    },
+    "panel": {
+      "edit": "Modifica canale",
+      "members_one": "{{count}} membro",
+      "members_other": "{{count}} membri",
+      "lead": "Responsabile",
+      "answering": "Sta rispondendo…",
+      "addMember": "Aggiungi o rimuovi bot",
+      "decisions": "Decisioni",
+      "noDecisions": "Ancora nulla di fissato. Fissa un messaggio oppure chiedi ai bot di accordarsi su qualcosa."
     }
   }
 }
