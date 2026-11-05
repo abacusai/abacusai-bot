@@ -253,7 +253,7 @@ describe("workIn", () => {
   });
 });
 
-describe("wantsDiscussion", () => {
+describe("a discussion", () => {
   it.each([
     "Ideate together on how we grow next quarter",
     "I want you guys to agree on five recommendations",

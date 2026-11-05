@@ -49,7 +49,7 @@ export type TurnKind =
 export interface Speakers {
   botIds: string[];
   everyone: boolean;
-  /** The user asked the team to work it out together (see wantsDiscussion). */
+  /** The user asked the team to work it out together (3+ members, see DISCUSS). */
   discussion?: boolean;
 }
 
@@ -58,16 +58,6 @@ export const MAX_DISCUSSION_ROUNDS = 3;
 
 const DISCUSS =
   /\b(?:discuss|debate|ideate|brainstorm|deliberate|hash (?:it|this) out|(?:work|think|figure|talk|plan|decide|ideate)(?: (?:it|this|that))?(?: out| over| through)? together|together as a team|as a team|all of you|you all|you guys|agree on|align on|come to (?:an )?agreement|reach (?:a )?consensus|all agree|weigh in|talk (?:it|this) (?:over|through)|both of you|you two|you both)\b/i;
-
-/**
- * The user asks the team to work something out together ("ideate together",
- * "agree on five recommendations", "discuss and decide"), rather than for one
- * answer. Not when they named a bot to answer, and only with 3+ members.
- */
-export const wantsDiscussion = (
-  text: string,
-  members: readonly Member[]
-): boolean => members.length >= 3 && DISCUSS.test(ownWords(text));
 
 const escape = (text: string): string =>
   text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
