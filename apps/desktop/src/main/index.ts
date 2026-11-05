@@ -1586,6 +1586,15 @@ function publishChromeState(): void {
 /** Null until whenReady has registered the IPC handlers. */
 let rpcTransport: MessagePortTransport | null = null;
 let notchController: NotchController | null = null;
+workspaceServiceHost.attachUserNotifier((platform, title, body) =>
+  appOperations.showNotification(
+    title,
+    body,
+    { kind: "messaging" },
+    { kind: "needs-you", dedupeKey: `link-lost:${platform}` }
+  )
+);
+
 const notchNotifications = new NotchNotificationPolicy({
   enabled: () => prefsStore.get().notch?.showInNotch === true,
   presented: (key) => notchController?.hasPresented(key) ?? false,

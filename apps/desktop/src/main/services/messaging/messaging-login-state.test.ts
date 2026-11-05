@@ -15,8 +15,12 @@ import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+/** Whether the stored link is recorded as lost. */
+const stored = vi.hoisted(() => ({ linkLost: false }));
+
 vi.mock("./messaging-config-service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./messaging-config-service")>()),
+  readPlatformLinkLost: () => stored.linkLost,
   readGatewaySettings: () => ({
     gatewayEnabled: true,
     autoApproveTools: true,
@@ -40,7 +44,9 @@ type Callbacks = {
 };
 
 /** Builds a gateway whose connectors are stubs that hand their callbacks back. */
-const service = (): {
+const service = (
+  notifyUser?: (platform: string, title: string, body: string) => void
+): {
   gateway: InstanceType<typeof MessagingGatewayService>;
   captured: Callbacks[];
 } => {
@@ -54,6 +60,7 @@ const service = (): {
     sendMessage: () => {},
     emitUserMessage: () => {},
     emitChanged: () => {},
+    notifyUser,
   } as never);
 
   const build = (
@@ -102,6 +109,40 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+});
+
+describe("a lost link", () => {
+  afterEach(() => {
+    stored.linkLost = false;
+  });
+
+  it("is told outside the chats, once a launch, and again if it is lost after coming back", async () => {
+    const told: string[] = [];
+    const { gateway, captured } = service((_platform, title) =>
+      told.push(title)
+    );
+    await gateway.syncConnectors();
+    const settled = async (count: number) => {
+      await vi.waitFor(() => expect(told).toHaveLength(count));
+    };
+
+    // Waiting on a first login is nothing to announce.
+    captured[0]!.onState("needs_login", "Scan to connect.");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(told).toEqual([]);
+
+    stored.linkLost = true;
+    captured[0]!.onState("needs_login", "No longer linked.");
+    await settled(1);
+    expect(told[0]).toContain("Discord");
+    captured[0]!.onState("needs_login", "No longer linked, still.");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(told).toHaveLength(1);
+
+    captured[0]!.onState("connected");
+    captured[0]!.onState("needs_login", "No longer linked.");
+    await settled(2);
+  });
 });
 
 describe("a connector waiting on a login", () => {

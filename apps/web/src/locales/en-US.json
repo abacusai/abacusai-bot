@@ -4788,6 +4788,8 @@
     "importMcp": "Import MCP servers",
     "selectTheme": "Select a Theme",
     "themes": "Themes",
-    "diskFullLane": "The computer's disk is full, so {{platform}} can't save its data. It reconnects by itself once some space is freed."
+    "diskFullLane": "The computer's disk is full, so {{platform}} can't save its data. It reconnects by itself once some space is freed.",
+    "linkLostTitle": "{{platform}} is disconnected",
+    "linkLostLane": "{{platform}} is no longer linked, so messages and routines can't go through it. Click Connect and scan the QR again."
   }
 }

@@ -4788,6 +4788,8 @@
     "importMcp": "Importar servidores MCP",
     "selectTheme": "Seleccionar un tema",
     "themes": "Temas",
-    "diskFullLane": "El disco del ordenador está lleno, así que {{platform}} no puede guardar sus datos. Se volverá a conectar solo en cuanto se libere algo de espacio."
+    "diskFullLane": "El disco del ordenador está lleno, así que {{platform}} no puede guardar sus datos. Se volverá a conectar solo en cuanto se libere algo de espacio.",
+    "linkLostTitle": "{{platform}} está desconectado",
+    "linkLostLane": "{{platform}} ya no está vinculado, así que los mensajes y las rutinas no pueden enviarse por ahí. Haz clic en Conectar y vuelve a escanear el código QR."
   }
 }

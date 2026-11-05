@@ -4788,6 +4788,8 @@
     "importMcp": "Importer des serveurs MCP",
     "selectTheme": "Sélectionner un thème",
     "themes": "Thèmes",
-    "diskFullLane": "Le disque de l'ordinateur est plein : {{platform}} ne peut pas enregistrer ses données. La connexion reprendra d'elle-même dès qu'un peu d'espace sera libéré."
+    "diskFullLane": "Le disque de l'ordinateur est plein : {{platform}} ne peut pas enregistrer ses données. La connexion reprendra d'elle-même dès qu'un peu d'espace sera libéré.",
+    "linkLostTitle": "{{platform}} est déconnecté",
+    "linkLostLane": "{{platform}} n'est plus associé : les messages et les routines ne peuvent plus passer par là. Cliquez sur Connecter et scannez à nouveau le QR code."
   }
 }

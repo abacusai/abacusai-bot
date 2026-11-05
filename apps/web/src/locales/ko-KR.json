@@ -4788,6 +4788,8 @@
     "importMcp": "MCP 서버 가져오기",
     "selectTheme": "테마 선택",
     "themes": "테마",
-    "diskFullLane": "컴퓨터의 디스크가 가득 차서 {{platform}}에서 데이터를 저장할 수 없습니다. 공간이 확보되면 자동으로 다시 연결됩니다."
+    "diskFullLane": "컴퓨터의 디스크가 가득 차서 {{platform}}에서 데이터를 저장할 수 없습니다. 공간이 확보되면 자동으로 다시 연결됩니다.",
+    "linkLostTitle": "{{platform}} 연결이 끊어졌습니다",
+    "linkLostLane": "{{platform}} 연결이 해제되어 메시지와 루틴을 보낼 수 없습니다. 연결을 클릭하고 QR 코드를 다시 스캔하세요."
   }
 }

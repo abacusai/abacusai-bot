@@ -4788,6 +4788,8 @@
     "importMcp": "Importieren Sie MCP-Server",
     "selectTheme": "Design auswählen",
     "themes": "Designs",
-    "diskFullLane": "Der Speicher des Computers ist voll, daher kann {{platform}} seine Daten nicht speichern. Die Verbindung wird automatisch wiederhergestellt, sobald etwas Speicherplatz frei ist."
+    "diskFullLane": "Der Speicher des Computers ist voll, daher kann {{platform}} seine Daten nicht speichern. Die Verbindung wird automatisch wiederhergestellt, sobald etwas Speicherplatz frei ist.",
+    "linkLostTitle": "{{platform}} ist getrennt",
+    "linkLostLane": "{{platform}} ist nicht mehr verknüpft, daher können Nachrichten und Routinen nicht darüber gesendet werden. Klicke auf „Verbinden“ und scanne den QR-Code erneut."
   }
 }
