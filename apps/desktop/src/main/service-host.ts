@@ -358,6 +358,7 @@ import {
   BOT_ASK_TURN_TIMEOUT_MS,
   BOT_TASK_PREFIX,
   BOT_TASK_TURN_TIMEOUT_MS,
+  noteGist,
 } from "./services/bots/bot-ask";
 import {
   type BotAskRecord,
@@ -6019,6 +6020,16 @@ export class ServiceHost {
       return bot == null
         ? null
         : { id: bot.id, name: bot.name, title: bot.title };
+    },
+    ownChat: (botId) => {
+      const sessionId = this.botService
+        .list()
+        .find((bot) => bot.id === botId)?.sessionId;
+      const asked = this.recentUserLines(botId).at(-1);
+      return {
+        busy: sessionId != null && this.turnLedger.isOpen(sessionId),
+        asked: asked == null ? null : noteGist(asked, 200),
+      };
     },
     runTurn: (botId, channel, prompt) =>
       this.runChannelTurn(botId, channel, prompt),

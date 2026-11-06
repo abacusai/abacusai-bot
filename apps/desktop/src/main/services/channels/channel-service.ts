@@ -76,6 +76,11 @@ export interface ChannelDeps {
   /** The bot, while it exists. */
   bot: (botId: string) => Member | null;
   /**
+   * The bot's own chat with the user as it stands: whether a turn runs
+   * there now, and the user's last message to it. Absent: not told.
+   */
+  ownChat?: (botId: string) => { busy: boolean; asked: string | null };
+  /**
    * Run one turn of the bot in its chat for this channel and resolve with
    * the turn's raw text; reject when it fails, is stopped or runs too long.
    */
@@ -731,6 +736,9 @@ export class ChannelService {
           : []
       ),
       ...(extra.round != null ? { round: extra.round } : {}),
+      ...(this.deps.ownChat != null
+        ? { ownChat: this.deps.ownChat(botId) }
+        : {}),
     });
     const userMessageId = round.userMessageId;
     const set = this.working.get(channelId) ?? new Set<string>();

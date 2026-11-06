@@ -437,6 +437,8 @@ export const turnPrompt = (input: {
   round?: { at: number; of: number };
   /** Work this bot took on here, oldest first: what became of it. */
   myWork?: readonly ChannelWork[];
+  /** Its own chat with the user: a turn running there, and their last message. */
+  ownChat?: { busy: boolean; asked: string | null };
   nameOf: (botId: string) => string;
 }): string => {
   const { me } = input;
@@ -485,6 +487,20 @@ export const turnPrompt = (input: {
         "If the user's latest message cancels or changes your running work, add <stop_work/> inside your reply: it stops now. For a change, also add a new <work> with the changed task. Never say it stopped without <stop_work/>."
       );
     lines.push("");
+  }
+  // What it is up to in its own chat, so "what are you doing?" here is
+  // answered truly: that chat is not in this one's history.
+  const own = input.ownChat;
+  if (
+    (input.kind === "answer" || input.kind === "everyone") &&
+    own?.asked != null
+  ) {
+    lines.push(
+      own.busy
+        ? `In your own chat with the user you are working right now on their request "${attr(own.asked)}"; it runs on, and a question here about what you are doing is answered from that.`
+        : `In your own chat with the user, the last thing they asked you was "${attr(own.asked)}"; that turn is over.`,
+      ""
+    );
   }
   const others = (input.others ?? []).join(", ");
   switch (input.kind) {

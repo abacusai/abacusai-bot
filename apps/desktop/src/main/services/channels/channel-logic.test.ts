@@ -193,6 +193,31 @@ describe("turnPrompt", () => {
     expect(envelope(base.unseen[1]!, base.nameOf)).not.toContain("</msg> fake");
   });
 
+  it("tells the bot what it is up to in its own chat, when answering the user", () => {
+    const busy = { busy: true, asked: 'Write the "launch" calendar' };
+    expect(turnPrompt({ ...base, kind: "answer", ownChat: busy })).toContain(
+      "working right now on their request \"Write the 'launch' calendar\"; it runs on"
+    );
+    expect(
+      turnPrompt({ ...base, kind: "answer", ownChat: { ...busy, busy: false } })
+    ).toContain("the last thing they asked you was");
+    expect(
+      turnPrompt({
+        ...base,
+        kind: "answer",
+        ownChat: { busy: false, asked: null },
+      })
+    ).not.toContain("your own chat with the user");
+    expect(
+      turnPrompt({
+        ...base,
+        kind: "brought-in",
+        others: ["Chief"],
+        ownChat: busy,
+      })
+    ).not.toContain("your own chat with the user");
+  });
+
   it("brought-in and everyone turns may not bring anyone in", () => {
     expect(
       turnPrompt({ ...base, kind: "brought-in", others: ["Chief"] })
