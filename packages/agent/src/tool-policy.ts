@@ -89,6 +89,7 @@ const MEDIA_OFF =
 
 /** The built-in tools the phone does not get, each with why. */
 export const PHONE_EXCLUDED_MCP_TOOLS: Readonly<Record<string, string>> = {
+  artifact: "a page that opens beside the chat; a phone has no pane",
   vision_analyze:
     "the chat's model sees a photo itself when it reads the file; a second model call only adds a way to fail",
   video_analyze:
@@ -271,6 +272,7 @@ export const UNATTENDED_EXCLUDED_TOOLS: Readonly<Record<string, string>> = {
   design: NO_SUBAGENT,
   serve: "puts a directory on a port, an outbound channel",
   present_deliverable: NO_OUTPUT,
+  artifact: "a page for someone to open beside the chat",
   send_to_whatsapp: NO_OUTPUT,
   connect_connector: "changes the account's connections",
   disconnect_connector: "changes the account's connections",

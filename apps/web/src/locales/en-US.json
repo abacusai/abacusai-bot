@@ -622,6 +622,7 @@
       "memory": "Save and recall notes that outlive the session.",
       "pdf": "Read, merge, split, watermark, fill or reprint a PDF.",
       "ppt": "Build a presentation and print it as a PDF.",
+      "artifact": "Build a page beside the chat: a report, dashboard, diagram or small working tool.",
       "present_deliverable": "Present the finished files, most important first, and open the top one.",
       "read": "Read a file from disk.",
       "read_discord_messages": "Read recent Discord messages, on request.",
@@ -1413,6 +1414,16 @@
       "SENSITIVE": "This file looks like it holds keys, passwords or file paths from your computer, so it can't be shared.",
       "UNSUPPORTED": "This file can't be shared as a link.",
       "FAILED": "Couldn't do that. Check your connection and try again."
+    },
+    "artifact": {
+      "title": "Share this page",
+      "body": "It stays live: buttons and sliders keep working for whoever opens it.",
+      "private": "Only me",
+      "privateHint": "You can open it when signed in.",
+      "public": "Anyone with the link",
+      "publicHint": "Works without signing in.",
+      "publish": "Create link",
+      "update": "Update link"
     }
   },
   "routines": {
