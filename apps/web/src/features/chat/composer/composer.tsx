@@ -8,7 +8,7 @@ import { detectRememberRequest } from "@abacus-ai/contract/remember";
  * element-level, except Stop (`Mod+.`), the one global shortcut.
  */
 import { Store, useSelector } from "@tanstack/react-store";
-import { ArrowUp, FileText, Folder, Mic, Plus } from "lucide-react";
+import { ArrowUp, FileText, Folder, Mic, Plug, Plus } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   createContext,
@@ -53,8 +53,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "#renderer/ui/dropdown-menu";
+import { Popover, PopoverContent } from "#renderer/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 
 import { useChatView } from "../kit/context";
@@ -250,6 +252,9 @@ const Attach = () => {
   const { runtime, composer: config } = useChatView();
   const { threadId } = useComposer();
   const [error, setError] = useState<string | null>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  // null until first opened: nothing of the panel loads before it is asked for.
+  const [connectors, setConnectors] = useState<boolean | null>(null);
   return (
     <>
       {error && <p role="alert">{error}</p>}
@@ -257,6 +262,7 @@ const Attach = () => {
         <DropdownMenuTrigger
           render={
             <Button
+              ref={button}
               variant="secondary"
               size="icon-lg"
               aria-label={t("chat.composer.attach")}
@@ -363,8 +369,32 @@ const Attach = () => {
               {t("web.files.vmFiles")}
             </DropdownMenuItem>
           )}
+          {config.connectors && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setConnectors(true)}>
+                <Plug aria-hidden />
+                {t("chat.composer.addConnectors")}
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
+      {config.connectors && connectors != null && (
+        <>
+          <Popover open={connectors} onOpenChange={setConnectors}>
+            <PopoverContent
+              anchor={button}
+              side="top"
+              align="start"
+              className="w-80 gap-1 p-1.5"
+            >
+              {config.connectors.panel}
+            </PopoverContent>
+          </Popover>
+          {config.connectors.overlay}
+        </>
+      )}
     </>
   );
 };

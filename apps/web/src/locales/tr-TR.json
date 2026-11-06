@@ -2943,6 +2943,7 @@
       "showMore_other": "{{count}} satır daha göster"
     },
     "composer": {
+      "addConnectors": "Bağlayıcı ekle",
       "attach": "Ekle",
       "attachFailed": "Bu dosya eklenemedi",
       "attachFiles": "Dosyalar veya görseller",
@@ -2954,7 +2955,9 @@
       "files": "Dosyalar",
       "gone": "Bu konuşma artık yok.",
       "mini": "Yanıtla ya da çalışmayı yönlendir",
+      "manageConnectors": "Bağlayıcıları yönet",
       "modeFailed": "Mod değiştirilemedi",
+      "noConnectors": "Bağlayıcı bulunamadı",
       "model": "Model: {{name}}",
       "models": "Modeller",
       "notReady": "Ajan hazır değil. Tekrar dene.",

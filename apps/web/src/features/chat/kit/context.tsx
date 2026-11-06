@@ -86,6 +86,11 @@ export interface ComposerConfig {
   showModeChip: boolean;
   model: ModelChipBinding | null;
   mentions?: MentionSource;
+  /**
+   * The + menu's Add connectors: `panel` opens beside the button, `overlay`
+   * stays mounted past it (a token form's dialog closes the panel).
+   */
+  connectors?: { panel: ReactNode; overlay: ReactNode };
   /** Query-backed disk skills, used until a nonempty live list arrives. */
   skillsBaseline?: readonly SkillMetadata[];
   /** Apply the free router before replaying a dead turn. */

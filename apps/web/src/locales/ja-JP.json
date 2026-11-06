@@ -2943,6 +2943,7 @@
       "showMore_other": "Show {{count}} more lines"
     },
     "composer": {
+      "addConnectors": "コネクタを追加",
       "attach": "添付",
       "attachFailed": "Couldn't attach this file",
       "attachFiles": "Files or images",
@@ -2954,7 +2955,9 @@
       "files": "Files",
       "gone": "This conversation no longer exists.",
       "mini": "Reply, or steer the run",
+      "manageConnectors": "コネクタを管理",
       "modeFailed": "Couldn't change the mode",
+      "noConnectors": "コネクタが見つかりません",
       "model": "Model: {{name}}",
       "models": "Models",
       "notReady": "The agent isn't ready. Try again.",

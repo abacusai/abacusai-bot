@@ -2943,6 +2943,7 @@
       "showMore_other": "Show {{count}} more lines"
     },
     "composer": {
+      "addConnectors": "Ajouter des connecteurs",
       "attach": "Joindre",
       "attachFailed": "Couldn't attach this file",
       "attachFiles": "Files or images",
@@ -2954,7 +2955,9 @@
       "files": "Files",
       "gone": "This conversation no longer exists.",
       "mini": "Reply, or steer the run",
+      "manageConnectors": "Gérer les connecteurs",
       "modeFailed": "Couldn't change the mode",
+      "noConnectors": "Aucun connecteur trouvé",
       "model": "Model: {{name}}",
       "models": "Models",
       "notReady": "The agent isn't ready. Try again.",

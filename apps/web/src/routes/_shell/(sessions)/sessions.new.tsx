@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { usePrefs } from "#renderer/data/db/prefs";
 import { StartComposer } from "#renderer/features/chat/composer/start-composer";
+import { COMPOSER_CONNECTORS } from "#renderer/features/library/composer-connectors";
 import { useSessionComposerModel } from "#renderer/features/sessions/data/composer-model";
 import { restoreSessionDraft } from "#renderer/features/sessions/start/session-drafts";
 import {
@@ -136,6 +137,7 @@ const SessionsNewRoute = () => {
                   attachmentsBase: binding.root,
                   attachmentContext: binding.attachmentContext,
                   showModeChip: true,
+                  connectors: COMPOSER_CONNECTORS,
                   model: model.model,
                   availableModes: model.availableModes,
                   defaultMode: prefs.defaultMode,
