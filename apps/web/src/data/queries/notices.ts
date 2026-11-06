@@ -191,6 +191,7 @@ const SOURCES = {
     foldAttention
   ),
   bots: source((client, signal) => client.bots.events({}, { signal })),
+  channels: source((client, signal) => client.channels.events({}, { signal })),
   browser: source(
     (client, signal) => client.browser.events({}, { signal }),
     foldBrowser

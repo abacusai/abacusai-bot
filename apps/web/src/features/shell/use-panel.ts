@@ -51,6 +51,7 @@ export const useSessionPanelTabs = (key: string | null) =>
 export const usePanel = (area: ShellArea | undefined) => {
   const params = useParams({ strict: false }) as {
     botId?: string;
+    channelId?: string;
     sessionId?: string;
   };
   const db = useDb();
@@ -62,7 +63,14 @@ export const usePanel = (area: ShellArea | undefined) => {
       ? sessionConversationKey(row.workspaceId, row.id)
       : null;
   const sessionTabs = useSessionPanelTabs(sessionKey);
-  const key = panelScopeKey(area, params.botId);
+  // A channel keeps a strip of its own, as a bot does (its details tab).
+  const key = panelScopeKey(
+    area,
+    params.botId ??
+      (params.channelId != null && params.channelId !== "new"
+        ? `channel:${params.channelId}`
+        : undefined)
+  );
   const scope = usePanelScope(key);
   const search = useSearch({ strict: false }) as {
     tab?: string;
@@ -129,8 +137,8 @@ export const usePanel = (area: ShellArea | undefined) => {
         });
         return;
       }
-      if (key != null && params.botId && params.botId !== "new")
-        togglePanel(key, area);
+      const owner = params.botId ?? params.channelId;
+      if (key != null && owner && owner !== "new") togglePanel(key, area);
     },
   };
 };

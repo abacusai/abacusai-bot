@@ -4870,5 +4870,107 @@
     "diskFullLane": "Der Speicher des Computers ist voll, daher kann {{platform}} seine Daten nicht speichern. Die Verbindung wird automatisch wiederhergestellt, sobald etwas Speicherplatz frei ist.",
     "linkLostTitle": "{{platform}} ist getrennt",
     "linkLostLane": "{{platform}} ist nicht mehr verknüpft, daher können Nachrichten und Routinen nicht darüber gesendet werden. Klicke auf „Verbinden“ und scanne den QR-Code erneut."
+  },
+  "channels": {
+    "sidebar": {
+      "title": "Kanäle",
+      "new": "Neuer Kanal",
+      "untitled": "Kanal",
+      "you": "Du",
+      "members_one": "{{count}} Bot",
+      "members_other": "{{count}} Bots",
+      "unread": "Ungelesen"
+    },
+    "new": {
+      "title": "Neuer Kanal",
+      "name": "Kanalname",
+      "namePlaceholder": "Kanalname (optional, z. B. Brewly-Launch)",
+      "about": "Wofür dieser Kanal da ist",
+      "aboutPlaceholder": "Wofür ist dieser Kanal? Alle Bots darin erfahren es (optional)",
+      "to": "Bots:",
+      "search": "Bots hinzufügen…",
+      "add": "Zum Kanal hinzufügen",
+      "remove": "{{name}} entfernen",
+      "pick_one": "Wähle mindestens {{count}} Bot, um zu starten.",
+      "pick_other": "Wähle mindestens {{count}} Bots, um zu starten.",
+      "pickFirst": "Wähle zuerst die Bots aus",
+      "placeholder": "Schreibe die erste Nachricht…",
+      "hint": "Bots antworten, wenn du sie mit @mention erwähnst oder beim Namen nennst. Sonst antwortet der Bot, der zuletzt geschrieben hat (oder der, den du zuerst hinzugefügt hast), und kann die anderen dazuholen.",
+      "needBots": "Ein Kanal braucht mindestens zwei Bots. Erstelle zuerst einen weiteren Bot."
+    },
+    "thread": {
+      "label": "Kanalnachrichten",
+      "goneBot": "Gelöschter Bot",
+      "working_one": "{{names}} antwortet…",
+      "working_other": "{{names}} antworten…",
+      "queued_one": "{{count}} Nachricht wartet auf ihre Antwort",
+      "queued_other": "{{count}} Nachrichten warten auf ihre Antwort",
+      "reply": "Antworten",
+      "pin": "Als Entscheidung anheften",
+      "empty": "Sag Hallo zu {{names}}. Erwähne einen Bot mit @mention, um zu bestimmen, wer antwortet, oder @everyone, um von allen zu hören.",
+      "gone": "Dieser Kanal existiert nicht mehr.",
+      "pinAgreed": "Vereinbarte Punkte als Entscheidungen anheften",
+      "startAgreed": "Vereinbarte Arbeit starten (jeder Besitzer in seinem eigenen Chat)",
+      "today": "Heute"
+    },
+    "composer": {
+      "label": "Nachricht an den Kanal",
+      "placeholder": "Nachricht an {{names}}",
+      "mentions": "Bot erwähnen",
+      "send": "Senden",
+      "stop": "Antworten aller Bots stoppen",
+      "replyingTo": "Antwort an {{name}}",
+      "cancelReply": "Abbrechen"
+    },
+    "decisions": {
+      "title": "Entscheidungen (alle Bots sehen diese)",
+      "unpin": "Lösen"
+    },
+    "menu": {
+      "delete": "Kanal löschen"
+    },
+    "members": {
+      "body": "Wähle {{min}} bis {{max}} Bots. Ein entfernter Bot antwortet hier nicht mehr."
+    },
+    "delete": {
+      "title": "„{{name}}“ löschen?",
+      "body": "Die Nachrichten in diesem Kanal werden gelöscht. Die Bots und ihre eigenen Chats bleiben erhalten.",
+      "confirm": "Löschen"
+    },
+    "dialog": {
+      "cancel": "Abbrechen",
+      "save": "Speichern"
+    },
+    "work": {
+      "running": "Arbeitet im eigenen Chat von {{name}} daran…",
+      "done": "Im Chat von {{name}} erledigt: Der Bericht steht unten",
+      "failed": "{{name}} wurde nicht fertig",
+      "stopped": "Gestoppt",
+      "open": "Chat von {{name}} öffnen"
+    },
+    "proposal": {
+      "title": "Neuer Bot vorgeschlagen: {{name}}",
+      "create": "Erstellen und zum Kanal hinzufügen",
+      "dismiss": "Verwerfen",
+      "created": "{{name}} wurde erstellt und ist beigetreten: Chat öffnen",
+      "dismissed": "Verworfen",
+      "inviteTitle": "{{name}} zu diesem Kanal hinzufügen?",
+      "add": "Zum Kanal hinzufügen",
+      "added": "{{name}} ist dem Kanal beigetreten: Chat öffnen"
+    },
+    "details": {
+      "open": "Kanaldetails: {{name}}",
+      "title": "Kanaldetails"
+    },
+    "panel": {
+      "edit": "Kanal bearbeiten",
+      "members_one": "{{count}} Mitglied",
+      "members_other": "{{count}} Mitglieder",
+      "lead": "Leitung",
+      "answering": "Antwortet …",
+      "addMember": "Bots hinzufügen oder entfernen",
+      "decisions": "Entscheidungen",
+      "noDecisions": "Noch nichts angepinnt. Pinne eine Nachricht an oder bitte die Bots, sich auf etwas zu einigen."
+    }
   }
 }
