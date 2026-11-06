@@ -217,11 +217,13 @@ const planTopModels = (
       .map((name) => name.trim())
       .filter((name) => name.length > 0)
       .slice(0, TOP_MODEL_COUNT);
-    return names.length > 0
-      ? new Intl.ListFormat(locale, { style: "short", type: "unit" }).format(
+    if (names.length === 0) return null;
+    // Chinese's unit list has no separator at all: names would run together.
+    return locale.startsWith("zh")
+      ? names.join("、")
+      : new Intl.ListFormat(locale, { style: "short", type: "unit" }).format(
           names
-        )
-      : null;
+        );
   }
   return null;
 };

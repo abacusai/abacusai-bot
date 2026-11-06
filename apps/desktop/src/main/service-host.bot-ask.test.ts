@@ -900,6 +900,10 @@ describe("a task the user gave, passed on", () => {
       "sure, forget it",
       "yeah, cancel that",
       "はい、やめてください",
+      "好的，算了",
+      "可以，但是先别做",
+      "好，不用了",
+      "行，別做了",
     ]) {
       const h = wordsHost();
       h.noteUserWords("res-chat", said);
@@ -932,6 +936,11 @@ describe("a task the user gave, passed on", () => {
       "はい、お願いします",
       "네",
       "evet tamam",
+      "好的",
+      "好的，麻烦了",
+      "可以！",
+      "沒問題，請幫我問",
+      "嗯",
     ]) {
       const h = wordsHost();
       h.noteUserWords("res-chat", "Writer could draft it. Want me to ask?");

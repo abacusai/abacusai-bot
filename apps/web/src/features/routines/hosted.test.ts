@@ -164,7 +164,7 @@ describe("the hosted routine copy, in every language", () => {
     const path = await import("node:path");
     const dir = path.resolve(import.meta.dirname, "../../locales");
     const desktop =
-      /desktop|escritorio|bureau|Arbeitsfläche|área de trabalho|デスクトップ|데스크톱|डेस्कटॉप|bot\.abacus\.ai/i;
+      /desktop|escritorio|bureau|Arbeitsfläche|área de trabalho|デスクトップ|데스크톱|桌面|डेस्कटॉप|bot\.abacus\.ai/i;
     const files = fs.readdirSync(dir).filter((file) => file.endsWith(".json"));
     expect(files.length).toBeGreaterThan(5);
     for (const file of files) {

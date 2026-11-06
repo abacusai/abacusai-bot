@@ -654,15 +654,15 @@ interface TaskTurnState {
  * ("ok but actually no", "okay never mind" are not a yes).
  */
 const YES =
-  "yes|yeah|yep|yup|ok|okay|sure|go ahead|please|do it|sounds good|y|sí|si|claro|dale|vale|adelante|oui|ouais|d'accord|vas-y|allez-y|ja|jawohl|klar|gerne|sim|pode|certo|va bene|ya|iya|boleh|silakan|evet|tamam|olur|はい|うん|どうぞ|お願いします|네|예|응|좋아|👍";
+  "yes|yeah|yep|yup|ok|okay|sure|go ahead|please|do it|sounds good|y|sí|si|claro|dale|vale|adelante|oui|ouais|d'accord|vas-y|allez-y|ja|jawohl|klar|gerne|sim|pode|certo|va bene|ya|iya|boleh|silakan|evet|tamam|olur|はい|うん|どうぞ|お願いします|네|예|응|좋아|好|好的|好吧|好啊|行|可以|是|是的|对|對|嗯|当然|當然|没问题|沒問題|请|請|👍";
 // Words that take the yes back. "no" and "wait" are not among them: "ok no
 // problem" and "sure, hold on" are yeses. The CJK ones have no word
 // boundary to look for.
 const TAKEN_BACK_WORDS =
   "but|don'?t|never|nah|forget|cancel|instead|actually|nein|non|pero|mais|aber|não|nao|hayır|tidak|jangan";
-const TAKEN_BACK_CJK = "いや|やめ|아니";
+const TAKEN_BACK_CJK = "いや|やめ|아니|不|别|別|算了|但是|可是|取消";
 const AGREEMENT = new RegExp(
-  `^(?:${YES})(?=[\\s,.!'’、。]|$)(?![\\p{L}\\p{N}\\s,.!'’、。]{0,30}(?:(?<![\\p{L}\\p{N}])(?:${TAKEN_BACK_WORDS})(?![\\p{L}\\p{N}])|(?:${TAKEN_BACK_CJK})))[\\p{L}\\p{N}\\s,.!'’、。]{0,30}$`,
+  `^(?:${YES})(?=[\\s,.!'’、。，！]|$)(?![\\p{L}\\p{N}\\s,.!'’、。，！]{0,30}(?:(?<![\\p{L}\\p{N}])(?:${TAKEN_BACK_WORDS})(?![\\p{L}\\p{N}])|(?:${TAKEN_BACK_CJK})))[\\p{L}\\p{N}\\s,.!'’、。，！]{0,30}$`,
   "iu"
 );
 
