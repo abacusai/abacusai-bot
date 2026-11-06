@@ -399,6 +399,148 @@ export const CONNECTORS: readonly Connector[] = [
     ["GCP_Tool"],
     { logo: "gcp" }
   ),
+  platform(
+    "azurecloud",
+    "Microsoft Azure",
+    "Resources, storage and costs in your Azure subscriptions, through an app registration.",
+    ["Azure_Tool"],
+    { logo: "azure" }
+  ),
+  platform(
+    "gitlabuser",
+    "GitLab",
+    "Projects, issues, merge requests and pipelines in your GitLab account.",
+    ["Gitlab_Tool"],
+    { logo: "gitlab", routes: ["GitLab projects and merge requests"] }
+  ),
+  platform(
+    "teams",
+    "Microsoft Teams",
+    "Read and post in your Teams chats and channels.",
+    ["Teams_Tool"],
+    { logo: "teams" }
+  ),
+  platform(
+    "sharepoint",
+    "SharePoint",
+    "Find and read files and pages on your SharePoint sites.",
+    ["Sharepoint_Tool"],
+    { logo: "sharepoint" }
+  ),
+  platform(
+    "onenote",
+    "OneNote",
+    "Read and write notebooks, sections and pages in OneNote.",
+    ["OneNote_Tool"],
+    { logo: "onenote" }
+  ),
+  platform(
+    "box",
+    "Box",
+    "Browse, read and manage files in your Box account.",
+    ["Box_Tool"],
+    { logo: "box" }
+  ),
+  platform(
+    "monday",
+    "Monday.com",
+    "Read and update boards, items and updates in monday.com.",
+    ["Monday_Tool"],
+    { logo: "monday" }
+  ),
+  platform(
+    "smartsheet",
+    "Smartsheet",
+    "Read and update your sheets, rows and reports in Smartsheet.",
+    ["Smartsheet_Tool"],
+    { logo: "smartsheet" }
+  ),
+  platform(
+    "autodesk",
+    "Autodesk",
+    "Projects, documents and issues in Autodesk Construction Cloud.",
+    ["Autodesk_Tool"],
+    { logo: "autodesk" }
+  ),
+
+  // ── Marketing and sales ─────────────────────────────────────────────────
+  platform(
+    "googleads",
+    "Google Ads",
+    "Campaign performance, keywords and budgets, and changes when you ask for them.",
+    ["Google_Ads_Tool"],
+    { logo: "google-ads", routes: ["Google Ads campaigns"] }
+  ),
+  platform(
+    "metaads",
+    "Meta Ads",
+    "Campaigns, ad sets and results across Facebook and Instagram ads.",
+    ["Meta_Ads_Tool"],
+    { logo: "meta", routes: ["Facebook and Instagram ads"] }
+  ),
+  platform(
+    "googleanalyticsuser",
+    "Google Analytics",
+    "Traffic, conversions and audience reports from your GA4 properties.",
+    ["Google_Analytics_Tool"],
+    { logo: "google-analytics", routes: ["website traffic"] }
+  ),
+  platform(
+    "googlesearchconsole",
+    "Google Search Console",
+    "Search queries, rankings and indexing for your sites.",
+    ["Google_Search_Console_Tool"],
+    { logo: "search-console", routes: ["search rankings"] }
+  ),
+  platform(
+    "youtube",
+    "YouTube",
+    "Your channel, videos, playlists and comments.",
+    ["Youtube_Tool"],
+    { logo: "youtube", routes: ["YouTube channels and videos"] }
+  ),
+  platform(
+    "instagram",
+    "Instagram",
+    "Posts, comments and insights on your Instagram business account.",
+    ["Instagram_Tool"],
+    { logo: "instagram" }
+  ),
+  platform(
+    "messenger",
+    "Facebook Messenger",
+    "Read and answer messages to your Facebook Pages.",
+    ["Messenger_Tool"],
+    { logo: "messenger" }
+  ),
+  platform(
+    "whatsappbusiness",
+    "WhatsApp Business",
+    "Send messages and templates from your WhatsApp Business number.",
+    ["WhatsApp_Tool"],
+    { logo: "whatsapp" }
+  ),
+  platform(
+    "hubspot",
+    "HubSpot",
+    "Contacts, companies and deals in your HubSpot CRM.",
+    ["Hubspot_Tool"],
+    { logo: "hubspot", routes: ["CRM contacts and deals"] }
+  ),
+  platform(
+    "dynamics365",
+    "Dynamics 365",
+    "Sales, service and Dataverse records in Microsoft Dynamics 365.",
+    ["Dynamics_365_Tool"],
+    { logo: "dynamics365" }
+  ),
+  platform(
+    "quickbooks",
+    "QuickBooks",
+    "Invoices, customers, expenses and reports in QuickBooks Online.",
+    ["Quickbooks_Tool"],
+    { logo: "quickbooks", routes: ["invoices and bookkeeping"] }
+  ),
   {
     kind: "mcp",
     id: "notion",

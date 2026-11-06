@@ -71,7 +71,7 @@ describe("buildConnectorsSnapshot", () => {
         GMAILUSER: { name: "Gmail" },
         SLACK: { name: "Slack" },
         // Not in the registry: the platform offers it, this app does not.
-        YOUTUBE: {},
+        GOOGLECHAT: {},
         // A link-only connector the bot's catalog carries.
         GITHUBBOT: { name: "GitHub" },
       },
@@ -80,7 +80,7 @@ describe("buildConnectorsSnapshot", () => {
         { service: "gmailuser", applicationConnectorId: "4d5e6f" },
         // Not in the registry: attached on the account, still not reported.
         { service: "GITHUBUSER", applicationConnectorId: "7g8h9i" },
-        { service: "youtube", applicationConnectorId: "0j1k2l" },
+        { service: "googlechat", applicationConnectorId: "0j1k2l" },
         // Rows without an id (or service) are ignored rather than guessed at.
         { service: "JIRA" },
         { applicationConnectorId: "orphan" },
