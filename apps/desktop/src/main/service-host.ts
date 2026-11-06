@@ -481,6 +481,7 @@ import {
   fetchAbacusAccount,
   lockAbacusModelForPlan,
   onAbacusAccountRead,
+  onAbacusPlanChange,
   onFreePlan,
   planRefusedModel,
 } from "./services/providers/abacus";
@@ -1787,20 +1788,17 @@ export class ServiceHost {
       type: "credit_balance",
       ...snapshot,
     });
-    // The plan decides which paid-plan capabilities are on or offered.
-    const tier = abacusPlanTier(cachedAbacusAccount());
-    if (tier !== this.listedPlanTier) {
-      this.listedPlanTier = tier;
-      this.toolAvailabilityChanged();
-      this.moveModelPinsToTier();
-    }
     // Credits back after a wall: the wall goes, and every agent hears it.
     const prefs = this.prefs?.();
     const patch =
       prefs != null ? wallAfterAccountRead(prefs.get(), snapshot) : null;
     if (patch != null) prefs?.update(patch);
   });
-  private listedPlanTier = abacusPlanTier(cachedAbacusAccount());
+  /** The plan decides which paid-plan capabilities are on or offered, and which models it serves. */
+  private readonly stopPlanForwarding = onAbacusPlanChange(() => {
+    this.toolAvailabilityChanged();
+    this.moveModelPinsToTier();
+  });
   private readonly cronScheduler = new CronScheduler(
     async (jobId, trigger, fire) => {
       await this.runRoutine(jobId, trigger, null, fire);
@@ -1954,10 +1952,6 @@ export class ServiceHost {
     if (event.event === "upgraded") {
       const plan = event.facts.plan;
       accountMovedPlan(typeof plan === "string" ? plan : null);
-      // The agents re-list their tools now (paid_feature, media), not on the next read.
-      this.listedPlanTier = abacusPlanTier(cachedAbacusAccount());
-      this.toolAvailabilityChanged();
-      this.moveModelPinsToTier();
       return;
     }
     if (event.event !== "connector_connected") return;
@@ -3246,6 +3240,7 @@ export class ServiceHost {
     this.turnLedger.appClosing();
     this.stop();
     this.stopCreditForwarding();
+    this.stopPlanForwarding();
     this.connectWatcher.stop();
     this.vault?.stop();
     this.builtinMcpLifecycle.stopBrowserServer();

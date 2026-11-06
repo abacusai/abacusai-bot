@@ -26,7 +26,9 @@ const {
   clearAbacusCache,
   fetchAbacusAccount,
   fetchAbacusModels,
+  accountMovedPlan,
   onAbacusPaymentChange,
+  onAbacusPlanChange,
 } = await import("./abacus");
 const { ConnectivityService } =
   await import("../connectivity/connectivity-service");
@@ -236,6 +238,77 @@ describe("whether the key has been refused outright", () => {
  * The payment gate's 402: the key is good, the account has to pay. It is
  * neither a refused key (no sign-out) nor a blip (no stale profile).
  */
+describe("the plan changing", () => {
+  const account = (tier: string): Response =>
+    new Response(JSON.stringify({ subscription_tier: tier }), { status: 200 });
+  const catalog = (ids: string[]): Response =>
+    new Response(
+      JSON.stringify({
+        data: ids.map((id) => ({
+          id,
+          model_type: "text_generation",
+          agentic: true,
+        })),
+      }),
+      { status: 200 }
+    );
+
+  it.each([
+    ["a payment landing", () => accountMovedPlan("basic")],
+    [
+      "an account read",
+      async () => {
+        fetchMock.mockResolvedValueOnce(account("basic"));
+        await fetchAbacusAccount(true);
+      },
+    ],
+  ])("is announced once, on %s", async (_name, move) => {
+    fetchMock.mockResolvedValueOnce(account("free"));
+    await fetchAbacusAccount(true);
+    const heard = vi.fn();
+    const stop = onAbacusPlanChange(heard);
+    fetchMock.mockImplementation(async () => account("basic"));
+
+    await move();
+    await vi.waitFor(() => expect(heard).toHaveBeenCalledTimes(1));
+    await fetchAbacusAccount(true);
+
+    expect(heard).toHaveBeenCalledTimes(1);
+    stop();
+  });
+
+  it("stays quiet when a read finds the same plan", async () => {
+    fetchMock.mockResolvedValueOnce(account("pro"));
+    await fetchAbacusAccount(true);
+    const heard = vi.fn();
+    const stop = onAbacusPlanChange(heard);
+    fetchMock.mockResolvedValueOnce(account("pro"));
+
+    await fetchAbacusAccount(true);
+
+    expect(heard).not.toHaveBeenCalled();
+    stop();
+  });
+
+  it("has dropped the old plan's catalog by the time it is announced", async () => {
+    fetchMock.mockResolvedValueOnce(account("free"));
+    await fetchAbacusAccount(true);
+    fetchMock.mockResolvedValueOnce(catalog(["route-llm-code-low"]));
+    await fetchAbacusModels();
+    expect(cachedAbacusModels().length).toBeGreaterThan(0);
+    const seen: number[] = [];
+    const stop = onAbacusPlanChange(() =>
+      seen.push(cachedAbacusModels().length)
+    );
+    fetchMock.mockResolvedValueOnce(account("basic"));
+
+    await fetchAbacusAccount(true);
+
+    expect(seen).toEqual([0]);
+    stop();
+  });
+});
+
 describe("an account the payment gate refuses", () => {
   const refusal = (reason?: string) =>
     new Response(
