@@ -8,7 +8,22 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `ce39b54f5` with Share (#664)
+## Current: `f5a587da` with slash commands
+
+**428 / 8233686 / 2756234.** Records the renderer with the work merged since
+#664, the + menu's connectors and slash commands, which took it 7186 bytes past
+the 1% allowance. Most of the growth is the strings, carried once per language.
+Against `ce39b54f5`: +2 chunks (+0.47%), +88636 bytes (+1.09%), +31230 gzip
+bytes (+1.15%). `apps/web`'s dependencies did not change. The 1% allowance is
+unchanged.
+
+Measured from a frozen-lockfile build of `f5a587da` (Linux x64), summed the
+same way as `check-desktop-parity.mjs`. This baseline-only change touches no
+renderer code.
+
+## History
+
+### `ce39b54f5` with Share (#664)
 
 **426 / 8145050 / 2725004.** Records the renderer with the paid welcome (#662)
 and Share (#664), which took it 3926 bytes past the 1% allowance. Against
@@ -19,8 +34,6 @@ not change. The 1% allowance is unchanged.
 Measured from a frozen-lockfile build of `ce39b54f5` with #664 (Linux x64),
 summed the same way as `check-desktop-parity.mjs`. This baseline-only change
 touches no renderer code.
-
-## History
 
 ### `bd66921c9` (the features merged since #630)
 

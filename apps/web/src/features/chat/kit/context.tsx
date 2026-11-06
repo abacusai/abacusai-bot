@@ -10,6 +10,7 @@ import type { UIMessage } from "@tanstack/ai-client";
 import { createContext, use, type ReactNode } from "react";
 
 import type { TurnDeliverable } from "#renderer/lib/bot-turns/deliverables";
+import type { ComposerCommand } from "#renderer/lib/chat-commands";
 
 import type { SubmissionEnvelope } from "../runtime/admission";
 import type { ChatRuntime } from "../runtime/runtime";
@@ -91,6 +92,8 @@ export interface ComposerConfig {
    * stays mounted past it (a token form's dialog closes the panel).
    */
   connectors?: { panel: ReactNode; overlay: ReactNode };
+  /** The surface's `/` commands, beside the composer's own. */
+  commands?: readonly ComposerCommand[];
   /** Query-backed disk skills, used until a nonempty live list arrives. */
   skillsBaseline?: readonly SkillMetadata[];
   /** Apply the free router before replaying a dead turn. */

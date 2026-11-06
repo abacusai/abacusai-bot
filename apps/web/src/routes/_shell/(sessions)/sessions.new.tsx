@@ -27,12 +27,14 @@ import {
   shellStore,
 } from "#renderer/features/shell/shell-store";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
+import { useChatCommands } from "#renderer/lib/chat-commands";
 import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
 import { NewSessionSearch } from "#renderer/lib/navigation/search";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 /** Offers already turned into a draft: a reload or a revisit never starts another. */
 const offersTaken = new Set<string>();
 const SessionsNewRoute = () => {
+  const commands = useChatCommands(null);
   const { t } = useTranslation();
   const { transport, chat } = Route.useRouteContext();
   const { workspaceId, draftId } = Route.useLoaderData();
@@ -138,6 +140,7 @@ const SessionsNewRoute = () => {
                   attachmentContext: binding.attachmentContext,
                   showModeChip: true,
                   connectors: COMPOSER_CONNECTORS,
+                  commands,
                   model: model.model,
                   availableModes: model.availableModes,
                   defaultMode: prefs.defaultMode,

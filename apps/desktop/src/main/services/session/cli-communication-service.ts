@@ -14,6 +14,7 @@ import type {
   AgentSetModeRequest,
   AgentSetModelRequest,
   AgentSessionSnapshot,
+  AgentActionRequest,
   AgentSwitchConversationRequest,
   SendAgentMessageRequest,
 } from "@abacus-ai/contract/contracts";
@@ -88,6 +89,15 @@ export class AgentCommunicationService {
     const target = toCommandRequest(request);
     this.dispatch(target.workspaceId, target.sessionId, {
       type: "reset_conversation",
+    });
+  }
+
+  runAction(request: AgentActionRequest, requestId: string): boolean {
+    return this.dispatch(request.workspaceId, request.sessionId, {
+      type: "session_action",
+      requestId,
+      action: request.action,
+      ...(request.value != null && { value: request.value }),
     });
   }
 

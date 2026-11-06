@@ -53,6 +53,9 @@ export const agentRouter = impl.agent.router({
   reset: impl.agent.reset.handler(({ input, context }) => {
     context.deps.serviceHost.resetAgentConversation(input);
   }),
+  action: impl.agent.action.handler(({ input, context }) =>
+    context.deps.serviceHost.runAgentAction(input)
+  ),
   switchConversation: impl.agent.switchConversation.handler(
     ({ input, context }) => {
       context.deps.serviceHost.switchAgentConversation(input);

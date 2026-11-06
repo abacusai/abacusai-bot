@@ -334,6 +334,7 @@ const rowsFor = (
 
 export interface ModelChipHandle {
   requestModel(): void;
+  openMenu(): void;
 }
 
 export const ModelChip = ({
@@ -359,6 +360,10 @@ export const ModelChip = ({
   const [railChoice, setRailChoice] = useState<Rail | null>(null);
   const pref = useMotionPreference();
   useImperativeHandle(ref, () => ({
+    openMenu() {
+      setOpen(true);
+      onOpenChange?.(true);
+    },
     requestModel() {
       setAttempt((value) => value + 1);
       chip.current?.focus({ preventScroll: true });

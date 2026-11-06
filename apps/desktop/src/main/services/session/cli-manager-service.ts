@@ -21,6 +21,7 @@ import {
   type DesktopCommand,
   type DesktopEvent,
   type HostService,
+  type SessionActionResult,
 } from "@abacus-ai/contract/agent-types";
 import type {
   AgentMcpLogEntry,
@@ -233,6 +234,11 @@ type AgentManagerServiceOptions = {
     sessionId: string,
     requestId: string,
     ok: boolean
+  ) => void;
+  /** The agent's answer to a `session_action`. */
+  emitSessionActionDone?: (
+    requestId: string,
+    result: SessionActionResult
   ) => void;
   /**
    * A service only this process can perform, asked for by an agent tool. A
@@ -1338,6 +1344,11 @@ export class AgentManagerService {
             desktopEvent.requestId,
             true
           );
+      } else if (desktopEvent.type === "session_action_done") {
+        this.options.emitSessionActionDone?.(
+          desktopEvent.requestId,
+          desktopEvent.result
+        );
       } else if (desktopEvent.type === "mcp_refresh_failed") {
         if (desktopEvent.requestId != null)
           this.options.emitMcpRefreshed?.(

@@ -1,4 +1,4 @@
-import type { AgentMode } from "@abacus-ai/contract/agent-types";
+import { AgentMode } from "@abacus-ai/contract/agent-types";
 import { detectRememberRequest } from "@abacus-ai/contract/remember";
 /**
  * The composer (spec 02 §8): a compound around the draft store. The bot pill
@@ -30,6 +30,7 @@ import { SendError } from "#renderer/components/send-error";
 import { Spinner } from "#renderer/components/spinner";
 import { isNotFound } from "#renderer/data/ai";
 import { isRpcError } from "#renderer/data/query-client";
+import type { ComposerCommand } from "#renderer/lib/chat-commands";
 import { cn } from "#renderer/lib/cn";
 import {
   clearDraft,
@@ -60,6 +61,7 @@ import { Popover, PopoverContent } from "#renderer/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 
 import { useChatView } from "../kit/context";
+import { messageMarkdown } from "../kit/message-actions";
 import { composeReply, ReplyQuote } from "../kit/reply";
 import {
   composerChildren,
@@ -83,9 +85,15 @@ import {
   retryAttachment,
 } from "./attachments";
 import { ModeChip, ModelChip, type ModelChipHandle } from "./chips";
+import { composerCommands } from "./commands";
 import { OtherProviderNotice } from "./other-provider-notice";
 import { setQueueEditing } from "./queue-editing";
-import { TriggerMenu, triggerAt, type TriggerState } from "./triggers";
+import {
+  matchCommand,
+  TriggerMenu,
+  triggerAt,
+  type TriggerState,
+} from "./triggers";
 
 /** The composer's max height before it scrolls (today's `COMPOSER_MAX_HEIGHT`). */
 const COMPOSER_MAX_HEIGHT = 200;
@@ -638,7 +646,7 @@ export const ThreadComposer = () => {
   const [trigger, setTrigger] = useState<TriggerState | null>(() =>
     triggerAt(draft.text, draft.text.length, {
       mentions: config.mentions != null,
-      skills: skills.length > 0,
+      skills: true,
     })
   );
   const field = useRef<HTMLTextAreaElement>(null);
@@ -691,15 +699,71 @@ export const ThreadComposer = () => {
               ? "focused"
               : "resting";
 
+  const [modePicks, setModePicks] = useState(0);
+  const [modelPicks, setModelPicks] = useState(0);
+  useEffect(() => {
+    if (modelPicks > 0) modelChip.current?.openMenu();
+  }, [modelPicks]);
+  const commands = [
+    ...composerCommands(t, {
+      ...(config.onNewChat != null ? { newChat: config.onNewChat } : {}),
+      ...(config.model != null
+        ? { chooseModel: () => setModelPicks((picks) => picks + 1) }
+        : {}),
+      ...(config.showModeChip
+        ? {
+            plan: () => {
+              if (config.setMode != null)
+                return config.setMode(AgentMode.PlanMode);
+              updateDraft(threadId, (current) => ({
+                ...current,
+                mode: AgentMode.PlanMode,
+              }));
+            },
+            chooseMode: () => setModePicks((picks) => picks + 1),
+          }
+        : {}),
+      copyLast: () => {
+        const last = session.hostStore.state.messages.findLast(
+          (message) => message.role === "assistant"
+        );
+        if (last == null) return;
+        return navigator.clipboard.writeText(messageMarkdown(last));
+      },
+      help: () => {
+        setText("/", 1);
+        field.current?.focus();
+      },
+    }),
+    ...(config.commands ?? []),
+  ];
+  const runCommand = (command: ComposerCommand, value: string): void => {
+    setError(null);
+    setTrigger(null);
+    updateDraft(threadId, (current) => ({ ...current, text: "" }));
+    void Promise.resolve()
+      .then(() => command.run?.(value))
+      .catch(() => setError(t("chat.composer.commandFailed")));
+  };
+
   const submit = (): void => {
     if (submitting.current || config.pending) return;
+    const typed =
+      config.readOnly == null && draft.attachments.length === 0
+        ? matchCommand(draft.text, commands)
+        : null;
+    if (typed?.command.valueRequired === true && typed.value === "") return;
+    if (typed?.command.run != null) {
+      runCommand(typed.command, typed.value);
+      return;
+    }
     if (config.blocked) {
       if (config.model != null) modelChip.current?.requestModel();
       else config.onBlocked?.();
       return;
     }
     const route = routeSubmit({
-      text: draft.text,
+      text: typed?.command.expand?.(typed.value) ?? draft.text,
       attachments: draft.attachments,
       busy,
       readOnly: config.readOnly != null || gone,
@@ -820,7 +884,7 @@ export const ThreadComposer = () => {
         ? null
         : triggerAt(text, caret, {
             mentions: config.mentions != null,
-            skills: skills.length > 0,
+            skills: true,
           })
     );
   };
@@ -1008,6 +1072,8 @@ export const ThreadComposer = () => {
   };
   const mode = config.showModeChip ? (
     <ModeChip
+      key={modePicks}
+      defaultOpen={modePicks > 0}
       availableModes={config.availableModes}
       value={liveMode}
       draft={draft.mode ?? config.defaultMode}
@@ -1070,8 +1136,16 @@ export const ThreadComposer = () => {
           <TriggerMenu
             trigger={trigger}
             field={field}
+            commands={config.readOnly == null ? commands : []}
             skills={skills}
             mentions={config.mentions}
+            onCommand={(command) => {
+              if (command.run != null) runCommand(command, "");
+              else {
+                setText(`/${command.name}`, null);
+                field.current?.focus();
+              }
+            }}
             onPick={(insert) => {
               const next =
                 draft.text.slice(0, trigger.start) +

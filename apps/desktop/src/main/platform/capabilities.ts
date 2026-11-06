@@ -78,6 +78,7 @@ export const WEB_HOST_ALLOWED = [
   "agent.setMode",
   "agent.setModel",
   "agent.reset",
+  "agent.action",
   "agent.switchConversation",
   "agent.respondPermission",
   "agent.skills",

@@ -1,6 +1,7 @@
 import { type } from "@orpc/contract";
 import * as v from "valibot";
 
+import type { SessionActionResult } from "../agent-types";
 import type {
   AgentSessionSnapshot,
   StartAgentSessionResult,
@@ -29,6 +30,19 @@ export const StartAgentSessionRequestSchema = v.object({
 const commandEntries = { workspaceId: WorkspaceId, sessionId: SessionId };
 
 export const AgentSessionCommandRequestSchema = v.object(commandEntries);
+
+export const AgentActionRequestSchema = v.object({
+  ...commandEntries,
+  action: v.picklist([
+    "compact",
+    "context",
+    "effort",
+    "autocompact",
+    "export",
+    "tasks",
+  ]),
+  value: v.optional(v.string()),
+});
 
 export const AgentSetModeRequestSchema = v.object({
   ...commandEntries,
@@ -97,6 +111,10 @@ export const agent = {
    */
   setModel: mutation.input(AgentSetModelRequestSchema).output(type<void>()),
   reset: mutation.input(AgentSessionCommandRequestSchema).output(type<void>()),
+  /** A slash command run on the agent itself; it never starts a turn. */
+  action: mutation
+    .input(AgentActionRequestSchema)
+    .output(type<SessionActionResult>()),
   switchConversation: mutation
     .input(AgentSwitchConversationRequestSchema)
     .output(type<void>()),
