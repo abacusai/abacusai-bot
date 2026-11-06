@@ -455,7 +455,9 @@
       },
       "task": {
         "from": "Senden, {{bot}} aracılığıyla",
-        "asWritten": "{{bot}} bunu şöyle iletti:"
+        "asWritten": "{{bot}} bunu şöyle iletti:",
+        "fromChannel": "Senden, {{channel}} içinde",
+        "asTakenOn": "Kanalda üstlenildiği şekliyle:"
       },
       "pairWith": "{{bot}} ile",
       "pairReadOnly": "salt okunur"

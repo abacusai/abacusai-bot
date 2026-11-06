@@ -455,7 +455,9 @@
       },
       "task": {
         "from": "Dari Anda, melalui {{bot}}",
-        "asWritten": "Seperti yang diteruskan {{bot}}:"
+        "asWritten": "Seperti yang diteruskan {{bot}}:",
+        "fromChannel": "Dari Anda, di {{channel}}",
+        "asTakenOn": "Seperti yang diambil di kanal:"
       },
       "pairWith": "dengan {{bot}}",
       "pairReadOnly": "hanya-baca"

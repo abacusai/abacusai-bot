@@ -455,7 +455,9 @@
       },
       "task": {
         "from": "あなたから({{bot}}経由)",
-        "asWritten": "{{bot}}が伝えた内容:"
+        "asWritten": "{{bot}}が伝えた内容:",
+        "fromChannel": "あなたから({{channel}}にて)",
+        "asTakenOn": "チャンネルで引き受けた内容:"
       },
       "pairWith": "{{bot}}と",
       "pairReadOnly": "読み取り専用"

@@ -455,7 +455,9 @@
       },
       "task": {
         "from": "Da te, tramite {{bot}}",
-        "asWritten": "Come l'ha inoltrato {{bot}}:"
+        "asWritten": "Come l'ha inoltrato {{bot}}:",
+        "fromChannel": "Da te, in {{channel}}",
+        "asTakenOn": "Come preso in carico nel canale:"
       },
       "pairWith": "con {{bot}}",
       "pairReadOnly": "sola lettura"

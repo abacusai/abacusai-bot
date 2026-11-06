@@ -16,6 +16,7 @@ import path from "node:path";
 
 import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
 import { BOT_TASK_PREFIX } from "@abacus-ai/agent/bot-task";
+import type { BotTaskTag } from "@abacus-ai/contract/agent-types";
 import {
   MAX_CHANNEL_MEMBERS,
   MIN_CHANNEL_MEMBERS,
@@ -97,7 +98,9 @@ export interface ChannelDeps {
     channel: Channel,
     prompt: string,
     /** Its card's message id: what stopWork names. */
-    workId: string
+    workId: string,
+    /** What the bot's own chat draws in place of the prompt. */
+    card: BotTaskTag
   ) => Promise<string>;
   /** Stop that work: now if it is running, before it starts if it waits. */
   stopWork?: (workId: string) => void;
@@ -913,20 +916,30 @@ export class ChannelService {
       this.deps.store
         .readMessages(channelId)
         .find((message) => message.id === userMessageId)?.text ?? "";
+    const title = channelTitle(
+      channel,
+      (id) => this.deps.bot(id)?.name ?? null
+    );
     const prompt = channelWorkPrompt({
       prefix: BOT_TASK_PREFIX,
-      channelTitle: channelTitle(
-        channel,
-        (id) => this.deps.bot(id)?.name ?? null
-      ),
+      channelTitle: title,
       task,
       userWords,
       decisions: channel.decisions,
       fromPlan,
     });
+    // The bot's own chat shows the card a passed-on task gets, from the channel.
+    const card: BotTaskTag = {
+      askId: messageId,
+      passerId: channelId,
+      passer: title,
+      channelId,
+      task,
+      userWords,
+    };
     this.works.set(messageId, { channelId, botId });
     this.log(`work started by ${botId} in ${channelId}`);
-    void runWork(botId, channel, prompt, messageId)
+    void runWork(botId, channel, prompt, messageId, card)
       .then((raw) => {
         // Stopped as it ended: it stays stopped, and its report is not posted.
         if (this.stoppedWorks.has(messageId)) return;

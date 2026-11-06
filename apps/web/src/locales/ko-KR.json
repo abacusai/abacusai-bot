@@ -455,7 +455,9 @@
       },
       "task": {
         "from": "나에게서, {{bot}}을(를) 통해",
-        "asWritten": "{{bot}}이(가) 전달한 내용:"
+        "asWritten": "{{bot}}이(가) 전달한 내용:",
+        "fromChannel": "나에게서, {{channel}}에서",
+        "asTakenOn": "채널에서 맡은 내용:"
       },
       "pairWith": "{{bot}}와(과) 함께",
       "pairReadOnly": "읽기 전용"

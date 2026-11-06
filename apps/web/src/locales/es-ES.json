@@ -455,7 +455,9 @@
       },
       "task": {
         "from": "De ti, a través de {{bot}}",
-        "asWritten": "Tal como lo transmitió {{bot}}:"
+        "asWritten": "Tal como lo transmitió {{bot}}:",
+        "fromChannel": "De ti, en {{channel}}",
+        "asTakenOn": "Tal como se asumió en el canal:"
       },
       "pairWith": "con {{bot}}",
       "pairReadOnly": "solo lectura"

@@ -455,7 +455,9 @@
       },
       "task": {
         "from": "De votre part, via {{bot}}",
-        "asWritten": "Tel que {{bot}} l'a transmis :"
+        "asWritten": "Tel que {{bot}} l'a transmis :",
+        "fromChannel": "De votre part, dans {{channel}}",
+        "asTakenOn": "Tel que pris en charge dans le canal :"
       },
       "pairWith": "avec {{bot}}",
       "pairReadOnly": "lecture seule"

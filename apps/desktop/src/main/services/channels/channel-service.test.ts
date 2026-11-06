@@ -4,6 +4,7 @@
  * brings another member in once and the first bot then finishes; @everyone
  * answers each on its own; Stop ends the round and drops what waits.
  */
+import type { BotTaskTag } from "@abacus-ai/contract/agent-types";
 import type { ChannelMessage } from "@abacus-ai/contract/channels";
 import { describe, expect, it, vi } from "vitest";
 
@@ -44,7 +45,9 @@ const setup = (extra: Partial<ChannelDeps> = {}) => {
     resolve: (raw: string) => void;
     reject: (e: Error) => void;
   }> = [];
-  const works: Array<(typeof turns)[number] & { workId: string }> = [];
+  const works: Array<
+    (typeof turns)[number] & { workId: string; card: BotTaskTag }
+  > = [];
   const noted: string[] = [];
   let n = 0;
   const service = new ChannelService({
@@ -54,9 +57,9 @@ const setup = (extra: Partial<ChannelDeps> = {}) => {
       new Promise((resolve, reject) =>
         turns.push({ botId, prompt, resolve, reject })
       ),
-    runWork: (botId, _channel, prompt, workId) =>
+    runWork: (botId, _channel, prompt, workId, card) =>
       new Promise((resolve, reject) =>
-        works.push({ botId, prompt, resolve, reject, workId })
+        works.push({ botId, prompt, resolve, reject, workId, card })
       ),
     stopWork: vi.fn((workId: string) => {
       works
@@ -311,6 +314,15 @@ describe("work taken on in a channel", () => {
     expect(works[0]!.prompt).toContain(
       'The user\'s own words, verbatim: "Writer, write the launch email as a doc"'
     );
+    // Its own chat draws the work as a card from the channel.
+    expect(works[0]!.card).toEqual({
+      askId: card.id,
+      passerId: id,
+      passer: "Launch",
+      channelId: id,
+      task: "Write the launch email as launch-email.md",
+      userWords: "Writer, write the launch email as a doc",
+    });
     expect(service.list()[0]?.working).toEqual(["wri"]);
     // The channel goes on meanwhile.
     service.post(id, "Chief, anything else?");

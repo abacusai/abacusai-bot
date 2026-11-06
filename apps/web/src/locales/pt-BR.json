@@ -455,7 +455,9 @@
       },
       "task": {
         "from": "De você, via {{bot}}",
-        "asWritten": "Como {{bot}} repassou:"
+        "asWritten": "Como {{bot}} repassou:",
+        "fromChannel": "De você, em {{channel}}",
+        "asTakenOn": "Como assumido no canal:"
       },
       "pairWith": "com {{bot}}",
       "pairReadOnly": "somente leitura"

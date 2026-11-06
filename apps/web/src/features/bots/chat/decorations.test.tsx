@@ -5,6 +5,7 @@
  * callbacks, and feedback only with an Abacus account, never on the live
  * run, `clear` on a re-click, keyed by the reply's text part.
  */
+import type { ChannelSummary } from "@abacus-ai/contract/channels";
 import { feedbackSegmentId } from "@abacus-ai/contract/transcript/feedback-target";
 import type { UIMessage } from "@tanstack/ai-client";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -22,6 +23,10 @@ import {
 // Share reads the account, which these cards are not mounted under here.
 vi.mock("#renderer/components/share/share-row-button", () => ({
   ShareRowButton: () => null,
+}));
+// No router here: a link is its words.
+vi.mock("#renderer/lib/navigation/app-link", () => ({
+  AppLink: ({ children }: { children: ReactNode }) => <a>{children}</a>,
 }));
 
 vi.mock("#renderer/lib/bot-turns/turns", async (importOriginal) => {
@@ -465,6 +470,65 @@ describe("a bot-to-bot note", () => {
     await waitFor(() =>
       expect(
         screen.getByText("Make a 5-step opening-day checklist for Brewly.")
+      ).toBeTruthy()
+    );
+  });
+
+  it("work taken on in a channel reads as the user's words, headed by the channel", async () => {
+    const decorate = botMessageDecorations({
+      ...options(),
+      bots: [],
+      channels: [
+        {
+          id: "ch1",
+          name: "Launch",
+          memberBotIds: ["wri", "pla"],
+          decisions: [],
+          createdAt: 0,
+          updatedAt: 0,
+          working: [],
+          queued: 0,
+        } satisfies ChannelSummary,
+      ],
+    });
+    const message = {
+      id: "u2",
+      role: "user",
+      parts: [
+        {
+          type: "text",
+          content: '[task from the user, passed on by channel "Launch"] …',
+        },
+      ],
+      metadata: {
+        abacus: {
+          userText: {
+            operator: {
+              kind: "bot-task",
+              task: {
+                askId: "m9",
+                passerId: "ch1",
+                passer: "Launch",
+                channelId: "ch1",
+                task: "Write the launch email as launch-email.md",
+                userWords: "Writer, write the launch email as a doc",
+              },
+            },
+          },
+        },
+      },
+    } as unknown as UIMessage;
+    const context = { messages: [message], index: 0, runActive: false };
+    const decoration = decorate(message, context);
+    show(decoration?.before);
+    expect(screen.getByText("From you, in Launch")).toBeTruthy();
+    expect(
+      screen.getByText("Writer, write the launch email as a doc")
+    ).toBeTruthy();
+    fireEvent.click(screen.getByText("As taken on in the channel:"));
+    await waitFor(() =>
+      expect(
+        screen.getByText("Write the launch email as launch-email.md")
       ).toBeTruthy()
     );
   });

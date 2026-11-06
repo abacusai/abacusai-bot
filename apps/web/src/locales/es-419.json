@@ -455,7 +455,9 @@
       },
       "task": {
         "from": "De tu parte, a través de {{bot}}",
-        "asWritten": "Como lo transmitió {{bot}}:"
+        "asWritten": "Como lo transmitió {{bot}}:",
+        "fromChannel": "De tu parte, en {{channel}}",
+        "asTakenOn": "Como se asumió en el canal:"
       },
       "pairWith": "con {{bot}}",
       "pairReadOnly": "solo lectura"

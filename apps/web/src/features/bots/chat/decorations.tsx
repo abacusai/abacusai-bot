@@ -2,6 +2,10 @@ import type {
   BotExchangeTag,
   BotTaskTag,
 } from "@abacus-ai/contract/agent-types";
+import {
+  channelTitle,
+  type ChannelSummary,
+} from "@abacus-ai/contract/channels";
 import type { BotRow } from "@abacus-ai/contract/contract/rows";
 import type {
   TurnFeedbackInput,
@@ -43,6 +47,7 @@ import {
 } from "#renderer/ui/collapsible";
 
 import { BotFace } from "../avatar";
+import { GroupFace } from "../channels/group-rows";
 import { MessageFeedback } from "./feedback";
 
 export interface MessageDecorationContext {
@@ -83,6 +88,8 @@ export interface BotDecorationOptions {
   onReveal?(absPath: string): void;
   /** The user's bots, for the face on a bot-to-bot row. */
   bots?: readonly BotRow[];
+  /** The user's channels, for the faces on a card of work from one. */
+  channels?: readonly ChannelSummary[];
 }
 
 /** A request to another bot in an assistant message: the tool call's bot and words. */
@@ -227,38 +234,91 @@ const taskOf = (message: UIMessage): BotTaskTag | null => {
 };
 
 /**
- * A task passed on by another bot, where its prompt sits: the user's own
- * words as their message, headed by who passed it on, and the task as that
- * bot wrote it underneath.
+ * A task passed on by another bot, or taken on in a channel, where its
+ * prompt sits: the user's own words as their message, headed by who passed
+ * it on (a channel's head opens the channel), and the task as it was
+ * written underneath.
  */
 const TaskCard = ({
   task,
   bots,
+  channels,
 }: {
   task: BotTaskTag;
   bots: readonly BotRow[];
+  channels: readonly ChannelSummary[];
 }) => {
   const { t } = useTranslation();
-  const passer = bots.find((bot) => bot.id === task.passerId);
-  const name = passer?.name ?? task.passer;
+  const channel =
+    task.channelId == null
+      ? null
+      : (channels.find((row) => row.id === task.channelId) ?? null);
+  const passer =
+    task.channelId == null
+      ? bots.find((bot) => bot.id === task.passerId)
+      : undefined;
+  const name =
+    passer?.name ??
+    (channel == null
+      ? task.passer
+      : channelTitle(
+          channel,
+          (id) => bots.find((bot) => bot.id === id)?.name ?? null
+        ) || task.passer);
   const same = task.userWords.trim() === task.task.trim();
+  const head = (
+    <>
+      {channel != null && (
+        <GroupFace
+          bots={channel.memberBotIds.flatMap(
+            (id) => bots.find((bot) => bot.id === id) ?? []
+          )}
+          size={16}
+        />
+      )}
+      {passer != null && <BotFace bot={passer} size={16} />}
+      <span>
+        {t(
+          task.channelId == null
+            ? "bots.chat.task.from"
+            : "bots.chat.task.fromChannel",
+          { bot: name, channel: name }
+        )}
+      </span>
+    </>
+  );
   return (
     <div
       className="flex flex-col items-end gap-1 py-1"
       data-slot="bot-task"
       data-ask={task.askId}
+      data-channel={task.channelId}
     >
-      <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-        {passer != null && <BotFace bot={passer} size={16} />}
-        <span>{t("bots.chat.task.from", { bot: name })}</span>
-      </div>
+      {channel != null ? (
+        <AppLink
+          to="/bots/channels/$channelId"
+          params={{ channelId: channel.id }}
+          className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-xs"
+        >
+          {head}
+        </AppLink>
+      ) : (
+        <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+          {head}
+        </div>
+      )}
       <div className="w-fit max-w-[min(640px,85%)] rounded-[20px] rounded-br-md bg-[var(--bot-accent,var(--primary))] px-3 py-2 text-sm whitespace-pre-wrap text-[var(--bot-accent-foreground,var(--primary-foreground))]">
         {task.userWords}
       </div>
       {!same && (
         <Collapsible className="flex flex-col items-end">
           <CollapsibleTrigger className={ROW_TRIGGER}>
-            {t("bots.chat.task.asWritten", { bot: name })}
+            {t(
+              task.channelId == null
+                ? "bots.chat.task.asWritten"
+                : "bots.chat.task.asTakenOn",
+              { bot: name }
+            )}
           </CollapsibleTrigger>
           <CollapsibleContent className="text-muted-foreground mt-1 max-w-[min(640px,85%)] text-xs whitespace-pre-wrap">
             {task.task}
@@ -553,7 +613,15 @@ export const botMessageDecorations = (
     const stored = context.messages[index] ?? message;
     const task = taskOf(stored);
     if (task != null)
-      return { before: <TaskCard task={task} bots={options.bots ?? []} /> };
+      return {
+        before: (
+          <TaskCard
+            task={task}
+            bots={options.bots ?? []}
+            channels={options.channels ?? []}
+          />
+        ),
+      };
     const exchange = exchangeOf(stored);
     // The note itself draws nothing (hidden user text); the row stands in.
     // Notes that follow one another fold into one row at the run's end.

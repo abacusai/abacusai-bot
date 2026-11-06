@@ -455,7 +455,9 @@
       },
       "task": {
         "from": "From you, via {{bot}}",
-        "asWritten": "As {{bot}} passed it on:"
+        "asWritten": "As {{bot}} passed it on:",
+        "fromChannel": "From you, in {{channel}}",
+        "asTakenOn": "As taken on in the channel:"
       },
       "pairWith": "with {{bot}}",
       "pairReadOnly": "read-only"

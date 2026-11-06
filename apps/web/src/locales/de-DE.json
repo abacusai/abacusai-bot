@@ -455,7 +455,9 @@
       },
       "task": {
         "from": "Von dir, über {{bot}}",
-        "asWritten": "So hat {{bot}} es weitergegeben:"
+        "asWritten": "So hat {{bot}} es weitergegeben:",
+        "fromChannel": "Von dir, in {{channel}}",
+        "asTakenOn": "So im Kanal übernommen:"
       },
       "pairWith": "mit {{bot}}",
       "pairReadOnly": "schreibgeschützt"

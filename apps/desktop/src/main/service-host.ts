@@ -6079,8 +6079,8 @@ export class ServiceHost {
     },
     runTurn: (botId, channel, prompt) =>
       this.runChannelTurn(botId, channel, prompt),
-    runWork: (botId, channel, prompt, workId) =>
-      this.runChannelWork(botId, channel.id, prompt, workId),
+    runWork: (botId, _channel, prompt, workId, card) =>
+      this.runChannelWork(botId, prompt, workId, card),
     createBot: ({ name, title, description, likeBotId }) => {
       const like = this.botService.list().find((bot) => bot.id === likeBotId);
       const bot = this.createBot({
@@ -6212,16 +6212,16 @@ export class ServiceHost {
 
   private runChannelWork(
     botId: string,
-    channelId: string,
     prompt: string,
-    workId: string
+    workId: string,
+    card: BotTaskTag
   ): Promise<string> {
     const work: ChannelWorkRun = { stopped: false };
     this.channelWorks.set(workId, work);
     const before = this.channelWorkLanes.get(botId) ?? Promise.resolve();
     const run = before
       .catch(() => undefined)
-      .then(() => this.runChannelWorkNow(botId, prompt, work))
+      .then(() => this.runChannelWorkNow(botId, prompt, work, card))
       .finally(() => this.channelWorks.delete(workId));
     const lane = run.catch(() => undefined);
     this.channelWorkLanes.set(botId, lane);
@@ -6235,7 +6235,8 @@ export class ServiceHost {
   private async runChannelWorkNow(
     botId: string,
     prompt: string,
-    work: ChannelWorkRun
+    work: ChannelWorkRun,
+    card: BotTaskTag
   ): Promise<string> {
     const stoppedFirst = (): Error =>
       new Error("it was stopped before it began.");
@@ -6270,6 +6271,8 @@ export class ServiceHost {
         workspaceId: handle.workspaceId,
         sessionId: handle.sessionId,
         message: prompt,
+        // Its chat shows the work as a card from the channel, not the prompt.
+        userText: { operator: { kind: "bot-task", task: card } },
       });
       work.handle = handle;
       // Stopped while the prompt was on its way: it stops now.
