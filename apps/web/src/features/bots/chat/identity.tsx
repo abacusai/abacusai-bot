@@ -17,6 +17,7 @@
  * fade. The same live rig stays interactive in both positions.
  */
 import type { BotRow } from "@abacus-ai/contract/contract/rows";
+import { useQuery } from "@tanstack/react-query";
 import { Store, useStore } from "@tanstack/react-store";
 import { useEffect, useRef, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
@@ -27,7 +28,9 @@ import { AppLink } from "#renderer/lib/navigation/app-link";
 
 import { BotFace } from "../avatar";
 import { moodFor, type BotAttention } from "../data/attention";
+import { botsQueries, useBots } from "../data/queries";
 import { botTagline } from "../data/tagline";
+import { useBotsTransport } from "../data/transport";
 import { useBotAttention } from "../data/use-attention";
 
 export const BotGone = ({ chat = false }: { chat?: boolean }) => {
@@ -302,5 +305,34 @@ export const BotTranscriptIdentity = ({ bot }: { bot: BotRow }) => {
         <span>{statusText(bot, attention, t)}</span>
       </span>
     </div>
+  );
+};
+
+/**
+ * Beside the identity in a chat with another of the user's bots (ask_bot):
+ * who it is with and that it is read-only, the way a group chat names who
+ * is in it. Nothing for any other sender chat.
+ */
+export const PairWith = ({ sessionId }: { sessionId: string }) => {
+  const { t } = useTranslation();
+  const transport = useBotsTransport();
+  const senders = useQuery(botsQueries(transport.orpc).senderChats());
+  const info = senders.data?.find((row) => row.sessionId === sessionId);
+  const { bots } = useBots();
+  if (info?.platform !== "bot") return null;
+  const asker = bots.find((row) => row.name === info.senderName) ?? null;
+  return (
+    <span
+      data-slot="pair-with"
+      className="text-muted-foreground flex min-w-0 shrink items-center gap-1.5 text-xs"
+    >
+      {asker != null && <BotFace bot={asker} size={16} interactive={false} />}
+      <span className="truncate">
+        {t("bots.chat.pairWith", { bot: info.senderName })}
+      </span>
+      <span className="bg-muted shrink-0 rounded-full px-1.5 py-0.5 text-[10px]">
+        {t("bots.chat.pairReadOnly")}
+      </span>
+    </span>
   );
 };

@@ -451,8 +451,7 @@
         "foldMessages_one": "{{count}} mensagem com",
         "foldMessages_other": "{{count}} mensagens com",
         "foldBots_one": "{{count}} bot",
-        "foldBots_other": "{{count}} bots",
-        "messagedList": "Mensagem enviada para {{bots}}"
+        "foldBots_other": "{{count}} bots"
       },
       "task": {
         "from": "De você, via {{bot}}",

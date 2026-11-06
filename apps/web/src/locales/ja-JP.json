@@ -451,8 +451,7 @@
         "foldMessages_one": "{{count}}件のメッセージ:",
         "foldMessages_other": "{{count}}件のメッセージ:",
         "foldBots_one": "{{count}}個のボット",
-        "foldBots_other": "{{count}}個のボット",
-        "messagedList": "{{bots}}にメッセージを送信しました"
+        "foldBots_other": "{{count}}個のボット"
       },
       "task": {
         "from": "あなたから({{bot}}経由)",

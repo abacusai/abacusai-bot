@@ -451,8 +451,7 @@
         "foldMessages_one": "{{count}} mesaj şu kişiyle:",
         "foldMessages_other": "{{count}} mesaj şu kişilerle:",
         "foldBots_one": "{{count}} bot",
-        "foldBots_other": "{{count}} bot",
-        "messagedList": "{{bots}} ile mesajlaştı"
+        "foldBots_other": "{{count}} bot"
       },
       "task": {
         "from": "Senden, {{bot}} aracılığıyla",

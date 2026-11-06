@@ -451,8 +451,7 @@
         "foldMessages_one": "{{count}}개의 메시지 대화 상대:",
         "foldMessages_other": "{{count}}개의 메시지 대화 상대:",
         "foldBots_one": "봇 {{count}}개",
-        "foldBots_other": "봇 {{count}}개",
-        "messagedList": "{{bots}}에게 메시지를 보냈습니다"
+        "foldBots_other": "봇 {{count}}개"
       },
       "task": {
         "from": "나에게서, {{bot}}을(를) 통해",
