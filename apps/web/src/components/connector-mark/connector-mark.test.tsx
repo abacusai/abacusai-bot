@@ -25,8 +25,8 @@ const OTHER_PROVIDERS = [
 ];
 
 describe("ConnectorMark", () => {
-  it("draws all 55 marks with the canvas geometry on the neutral tile", () => {
-    expect(CONNECTOR_MARK_IDS).toHaveLength(55);
+  it("draws all 73 marks with the canvas geometry on the neutral tile", () => {
+    expect(CONNECTOR_MARK_IDS).toHaveLength(73);
     for (const id of CONNECTOR_MARK_IDS) {
       const { container, unmount } = render(
         <ConnectorMark id={id} size={28} />
