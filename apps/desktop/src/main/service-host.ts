@@ -1717,6 +1717,7 @@ export class ServiceHost {
         give: (askerId, askerSession, targetId, task) =>
           this.giveBotTask(askerId, askerSession, targetId, task),
         list: (askerId, limit) => this.botAskService.list(askerId, limit),
+        received: (botId, limit) => this.botAskService.received(botId, limit),
         get: (askerId, id) => this.botAskService.get(askerId, id),
         cancel: (askerId, id) => this.botAskService.cancel(askerId, id),
       },

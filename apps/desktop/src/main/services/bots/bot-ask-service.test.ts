@@ -133,6 +133,14 @@ describe("BotAskService", () => {
     expect(changed).toHaveBeenCalledTimes(1);
   });
 
+  it("says so again when it ends, so the asked bot's chats get the tool too", async () => {
+    const { service, turns, changed } = setup();
+    service.ask("res", "res-chat", "wri", "Draft");
+    turns[0]!.answer("<reply>The draft.</reply>");
+    await settle();
+    expect(changed).toHaveBeenCalledTimes(2);
+  });
+
   it("tells the asker's chat the answer as a note when it lands", async () => {
     const { service, turns, notes, records } = setup();
     service.ask("res", "res-chat", "wri", "Draft a post");
@@ -427,6 +435,23 @@ describe("daily notes when a request ends", () => {
         'Researcher asked me: "Draft a one-line post about our new blend"; I answered: Try the new blend — roasted this week.',
       ],
     ]);
+  });
+
+  it("a long answer: the note keeps a gist and says where the whole of it is", async () => {
+    const { service, turns, note } = setup();
+    const { ask } = service.ask("res", "res-chat", "wri", "Three things") as {
+      ask: { id: string };
+    };
+    turns[0]!.answer(`<reply>${"1. Do a dry run. ".repeat(40)}</reply>`);
+    await settle();
+    for (const [, line] of note.mock.calls) {
+      expect(line).toContain("1. Do a dry run.");
+      expect(line.length).toBeLessThan(500);
+      expect(line).toContain(
+        `[cut: the whole of it is under check_bot_answers, id ${ask.id}]`
+      );
+    }
+    expect(note.mock.calls).toHaveLength(2);
   });
 
   it("a task that ended early: only the bot that passed it on notes it", async () => {

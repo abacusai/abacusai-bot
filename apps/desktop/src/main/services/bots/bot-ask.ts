@@ -63,10 +63,13 @@ export const noteGist = (text: string, max: number): string => {
 /**
  * What each side keeps in its daily notes once a request ends: the asker,
  * what it asked (or passed on) and what came back; the asked bot, what it
- * was asked and what it answered. Short, with the other bot named.
+ * was asked and what it answered. Short, with the other bot named. A note
+ * that had to cut the words says so and where the whole of them is
+ * (check_bot_answers keeps every finished request, for both sides), so a
+ * bot reads them rather than fills the gap in.
  */
 export const requestNotes = (
-  ask: { request: string; kind?: BotAskKind } & (
+  ask: { id: string; request: string; kind?: BotAskKind } & (
     | { answer: string }
     | { error: string }
   ),
@@ -81,13 +84,17 @@ export const requestNotes = (
       answerer: null,
     };
   const got = noteGist(ask.answer, 300);
+  const cut =
+    what.endsWith("…") || got.endsWith("…")
+      ? ` [cut: the whole of it is under check_bot_answers, id ${ask.id}]`
+      : "";
   return {
     asker: task
-      ? `Passed the user's task to ${answerer.name}: "${what}"; it reported: ${got}`
-      : `Asked ${answerer.name}: "${what}"; it answered: ${got}`,
+      ? `Passed the user's task to ${answerer.name}: "${what}"; it reported: ${got}${cut}`
+      : `Asked ${answerer.name}: "${what}"; it answered: ${got}${cut}`,
     answerer: task
-      ? `Did a task ${asker.name} passed on from the user: "${what}"; I reported: ${got}`
-      : `${asker.name} asked me: "${what}"; I answered: ${got}`,
+      ? `Did a task ${asker.name} passed on from the user: "${what}"; I reported: ${got}${cut}`
+      : `${asker.name} asked me: "${what}"; I answered: ${got}${cut}`,
   };
 };
 

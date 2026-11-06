@@ -90,7 +90,7 @@ export const BOTS_TOOLS: ToolDefinition[] = [
     botAlways: true,
     botsOnly: true,
     description:
-      "Your requests to other bots: without an id, where each stands; with an id, its full answer.",
+      "Your requests to other bots and theirs to you: without an id, where each stands; with an id, its whole words (your notes keep only a gist).",
     inputSchema: {
       type: "object",
       properties: {

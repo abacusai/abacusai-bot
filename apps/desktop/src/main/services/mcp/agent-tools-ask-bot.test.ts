@@ -29,6 +29,7 @@ const BOTS = [
 const BOT_OF: Record<string, string> = {
   "res-chat": "res",
   "wri-asked": "wri",
+  "wri-chat": "wri",
 };
 
 const TOOLS = [
@@ -66,10 +67,20 @@ const setup = (asks: BotAskRecord[] = []) => {
       ask: record({ id: "q8", kind: "task" }),
       behind: 0,
     })),
-    list: vi.fn(() => asks),
+    list: vi.fn((askerId: string) =>
+      asks.filter((ask) => ask.askerId === askerId)
+    ),
+    received: vi.fn((targetId: string) =>
+      asks.filter(
+        (ask) => ask.targetId === targetId && ask.status === "answered"
+      )
+    ),
     get: vi.fn(
-      (_askerId: string, id: string) =>
-        asks.find((ask) => ask.id === id) ?? null
+      (botId: string, id: string) =>
+        asks.find(
+          (ask) =>
+            ask.id === id && (ask.askerId === botId || ask.targetId === botId)
+        ) ?? null
     ),
     cancel: vi.fn(() => ({ ok: "Cancelled request q1." })),
   };
@@ -209,6 +220,34 @@ describe("check_bot_answers", () => {
     expect(out).toContain("Draft: hello");
     expect(out).toContain("not a message from the user");
   });
+
+  it("the asked bot sees the requests made to it, and reads one whole", async () => {
+    const { server } = setup([
+      record({ id: "q2", status: "answered", answer: "Draft: hello" }),
+      record({ id: "q3", status: "running" }),
+    ]);
+    const listed = text(
+      await server.executeTool("check_bot_answers", {}, "wri-chat")
+    );
+    expect(listed).toContain("Requests other bots made to you:");
+    expect(listed).toContain("q2 from Researcher");
+    expect(listed).toContain("you answered: pass its id");
+    expect(listed).not.toContain("q3");
+    expect(listed).not.toContain("Your requests to other bots");
+    const one = text(
+      await server.executeTool("check_bot_answers", { id: "q2" }, "wri-chat")
+    );
+    expect(one).toContain("Researcher asked you (q2):\nDraft a one-line post");
+    expect(one).toContain("You answered:\nDraft: hello");
+    expect(one).not.toContain("<bot_reply");
+  });
+
+  it("with nothing either way, says so", async () => {
+    const out = text(
+      await setup().server.executeTool("check_bot_answers", {}, "res-chat")
+    );
+    expect(out).toBe("You have not asked any bot yet, and none has asked you.");
+  });
 });
 
 describe("cancel_bot_ask", () => {
@@ -250,7 +289,9 @@ describe("who gets these tools", () => {
     const out = text(
       await setup().server.executeTool("check_bot_answers", {}, "res-chat")
     );
-    expect(out).toContain("You have not asked any bot yet.");
+    expect(out).toContain(
+      "You have not asked any bot yet, and none has asked you."
+    );
   });
 
   it("a plain session gets none", () => {

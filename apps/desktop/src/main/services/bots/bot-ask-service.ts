@@ -224,11 +224,25 @@ export class BotAskService {
       .slice(0, limit);
   }
 
-  get(askerId: string, id: string): BotAskRecord | null {
+  /** Requests other bots made to this bot that it answered, newest first. */
+  received(targetId: string, limit = 10): BotAskRecord[] {
+    return this.deps
+      .read()
+      .filter((ask) => ask.targetId === targetId && ask.status === "answered")
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, limit);
+  }
+
+  /** A request this bot made or answered. */
+  get(botId: string, id: string): BotAskRecord | null {
     return (
       this.deps
         .read()
-        .find((ask) => ask.askerId === askerId && ask.id === id.trim()) ?? null
+        .find(
+          (ask) =>
+            (ask.askerId === botId || ask.targetId === botId) &&
+            ask.id === id.trim()
+        ) ?? null
     );
   }
 
@@ -375,12 +389,14 @@ export class BotAskService {
       title: "",
     };
     const notes = requestNotes(
-      { request: ask.request, kind: ask.kind, ...outcome },
+      { id: ask.id, request: ask.request, kind: ask.kind, ...outcome },
       asker,
       answerer
     );
     this.deps.note?.(ask.askerId, notes.asker);
     if (notes.answerer != null) this.deps.note?.(ask.targetId, notes.answerer);
+    // The asked bot now has a request to look up: its chats get the tool.
+    this.deps.changed?.();
   }
 
   /** e.g. `[bot-ask] q1 task res->pla answered 42s attempt 1`; never the text. */
