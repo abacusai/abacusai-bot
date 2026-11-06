@@ -22,6 +22,7 @@
       "dismissals.deliverableOffer": "legacy",
       "dismissals.freePlanSeenAt": "legacy",
       "dismissals.newLookSeenAt": "legacy",
+      "dismissals.nextStepOffer": "legacy",
       "dismissals.paidWelcomeTier": "legacy",
       "dismissals.referralCardUntil": "legacy",
       "dismissals.routeLlmNudgeAt": "legacy",
@@ -96,6 +97,7 @@
       "dismissals": {
         "creditThresholdCards": {},
         "deliverableOffer": null,
+        "nextStepOffer": null,
         "freePlanSeenAt": null,
         "newLookSeenAt": null,
         "paidWelcomeTier": null,

@@ -23,6 +23,8 @@ export interface SuggestedTask {
   text: string;
   /** Copied for the user to send elsewhere (their phone), not sent here. */
   copy: boolean;
+  /** Tapping it asks for a routine: the button shows a clock. */
+  routine: boolean;
 }
 
 // Control characters and the bidi and zero-width marks that make what a
@@ -48,6 +50,12 @@ const taskText = (value: unknown): string | null => {
     : null;
 };
 
+/** The call is a next step under a result (next-step.ts), not a menu. */
+export const suggestsNextStep = (input: unknown): boolean =>
+  input != null &&
+  typeof input === "object" &&
+  (input as { after_result?: unknown }).after_result === true;
+
 /**
  * The tasks a call offers, in its order: the well-formed ones, each text
  * once, at most `SUGGESTED_TASKS_MAX`. A task too long or empty is dropped
@@ -65,11 +73,15 @@ export const suggestedTasks = (input: unknown): SuggestedTask[] => {
       typeof entry === "string"
         ? { text: entry }
         : entry != null && typeof entry === "object"
-          ? (entry as { text?: unknown; copy?: unknown })
+          ? (entry as { text?: unknown; copy?: unknown; routine?: unknown })
           : null;
     const text = taskText(item?.text);
     if (text == null || out.some((task) => task.text === text)) continue;
-    out.push({ text, copy: item?.copy === true });
+    out.push({
+      text,
+      copy: item?.copy === true,
+      routine: item?.routine === true,
+    });
     if (out.length === SUGGESTED_TASKS_MAX) break;
   }
   return out;

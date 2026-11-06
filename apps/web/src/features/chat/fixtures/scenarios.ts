@@ -475,6 +475,31 @@ const OUTCOME_ERRORS: Record<
 
 const SITE_URL = "http://127.0.0.1:58702";
 
+const nextStepStore = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn("r1", "u1", "Put my store online", at(3)),
+    b.textStart("a1"),
+    ...b.toolCall("c1", "write", "a1", {
+      file_path: "/Users/me/store/index.html",
+    }),
+    b.toolResult("c1", { text: "Wrote index.html" }),
+    b.textDelta(
+      "a1",
+      "Your store is live, and orders will arrive in your Gmail. Want a summary of new orders every morning?"
+    ),
+    ...b.toolCall("c2", "suggest_tasks", "a1", {
+      after_result: true,
+      tasks: [
+        { text: "Every morning at 9, sum up my new orders", routine: true },
+        { text: "Add a contact form" },
+      ],
+    }),
+    b.toolResult("c2", { text: "The user sees 2 buttons under your reply." }),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", { timestamp: at(1) }),
+  ]);
+
 const successSite = (): RelayEvent[] =>
   seqd([
     ...b.sessionReady("inc-1", "YOLO"),
@@ -947,6 +972,19 @@ export const SCENARIOS: Scenario[] = [
   },
   ...offerScenarios("en", OFFER_EN),
   ...offerScenarios("pt-BR", OFFER_PT),
+  {
+    id: "next-step-session",
+    canvas: ["NextStep", "session"],
+    skin: "session",
+    events: nextStepStore,
+  },
+  {
+    id: "next-step-bot",
+    canvas: ["NextStep", "bot"],
+    skin: "bot",
+    events: nextStepStore,
+    view: { placeholder: "Message your bot..." },
+  },
   {
     id: "success-site",
     canvas: ["SuccessPitchCard", "site"],

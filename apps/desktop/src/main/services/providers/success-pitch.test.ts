@@ -79,6 +79,7 @@ const setup = (
     turnOpen: () => options.turnOpen ?? false,
     tellInChat,
     funnel,
+    nextStep: () => false,
     now: () => now,
   };
   const watch = new SuccessPitchWatch(deps);
@@ -402,7 +403,10 @@ describe("SuccessPitchWatch: the offer and its limits", () => {
     await moved.run("Build it", [presentSite, text(LONG_REPLY)]);
     moved.watch.userSaid("s1", "now add a contact form");
     expect(moved.offer()).toBeNull();
-    expect(moved.funnel).not.toHaveBeenCalled();
+    expect(moved.funnel).not.toHaveBeenCalledWith(
+      "success_pitch_withdrawn",
+      "deliverable"
+    );
   });
 
   it("one every three days, three ever, none after two Not nows", async () => {

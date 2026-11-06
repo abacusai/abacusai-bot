@@ -154,6 +154,7 @@ import {
   signOut,
   skipOnboarding,
 } from "./services/providers/account-service";
+import { nextStepOn } from "./services/providers/next-step";
 import { getLocalUsageSnapshot } from "./services/providers/usage";
 import { accountStashKey } from "./services/session/account-session-stash";
 import { ArtifactResolverService } from "./services/session/artifact-resolver-service";
@@ -1931,6 +1932,7 @@ app
         ? "signed_in"
         : "signed_out"
     );
+    reportFunnelStepOnce("next_step_half", nextStepOn() ? "on" : "off");
 
     // Backs the "Paste image" attach item, which has no paste event to read
     // because the click happens in a menu. Null when there is no image.
