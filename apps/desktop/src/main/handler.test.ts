@@ -50,6 +50,7 @@ vi.mock("./services/providers/abacus", () => ({
   clearAbacusCache: vi.fn(),
   fetchAbacusAccount: vi.fn(async () => null),
   onAbacusPaymentChange: vi.fn(() => () => {}),
+  onAbacusPlanChange: vi.fn(() => () => {}),
   requestAbacusAccount: vi.fn(async () => ({ kind: "unavailable" })),
 }));
 vi.mock("./services/providers/account-service", () => ({

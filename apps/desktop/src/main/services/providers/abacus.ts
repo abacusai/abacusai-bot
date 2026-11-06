@@ -10,6 +10,7 @@ import {
   type AbacusPaymentRequired,
 } from "@abacus-ai/contract/contracts";
 import {
+  abacusPlanTier,
   isPayingAbacusTier,
   type ModelAvailability,
   type ModelTier,
@@ -500,8 +501,31 @@ export function onAbacusAccountRead(
   };
 }
 
+/** The tier the last account read carried: a read that changes it is a plan change. */
+let knownPlanTier = abacusPlanTier(null);
+const planListeners = new Set<() => void>();
+
+/**
+ * Hears the plan change, however it was learned: a payment landing, a
+ * cancellation, an app opened on a plan changed elsewhere. The account and the
+ * model catalog are already the new plan's.
+ */
+export function onAbacusPlanChange(listener: () => void): () => void {
+  planListeners.add(listener);
+  return () => {
+    planListeners.delete(listener);
+  };
+}
+
 const remember = (value: AbacusAccountInfo): void => {
   accountCache = { value, at: Date.now() };
+  const tier = abacusPlanTier(value);
+  if (tier !== knownPlanTier) {
+    // The catalog is per plan; the first read of a session moved nothing.
+    if (knownPlanTier !== "unknown") cache = null;
+    knownPlanTier = tier;
+    for (const listener of Array.from(planListeners)) listener();
+  }
   const snapshot = snapshotOf(accountCache);
   if (snapshot != null)
     for (const listener of Array.from(accountReadListeners)) listener(snapshot);
@@ -510,14 +534,13 @@ const remember = (value: AbacusAccountInfo): void => {
 /**
  * The platform says the account just moved to `plan` (a payment landed):
  * its tier is taken at once, so what the plan unlocks (tools, routines, the
- * pitch) reads right in the very next turn, and every account listener hears
- * it; the model catalog is dropped and the account read afresh behind it.
+ * pitch) reads right in the very next turn, and the account is read afresh
+ * behind it. `remember` is what announces the change.
  */
 export const accountMovedPlan = (plan: string | null): void => {
   const tier = plan?.trim().toLowerCase() ?? "";
   if (accountCache != null && tier.length > 0)
     remember({ ...accountCache.value, subscription_tier: tier });
-  cache = null;
   void fetchAbacusAccount(true).catch(() => null);
 };
 
