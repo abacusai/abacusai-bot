@@ -586,17 +586,55 @@ export async function registerAbacusProvider(
   });
 }
 
+const PROVIDER_SETTLE_ATTEMPTS = 3;
+
 /**
  * After the registrations above, before anything reads the registry. Each
  * one has pi re-check the providers' keys in the background, unawaited, and
  * a check that started before the last registration can land after it and
  * drop that provider from `getAvailable()` until the newer check lands: the
  * pool picks without a source connected a moment ago, and a card leaves
- * Abacus out. An awaited refresh lands a check that saw them all.
+ * Abacus out. An awaited refresh lands a check that saw them all, except
+ * when a background check queues after it: pi drops ours, and the refresh
+ * returns before that one lands. So refresh again while a key we handed pi
+ * still reads as missing, a few times at most.
  */
-export const settleProviderRegistrations = (
+export async function settleProviderRegistrations(
   registry: ModelRegistry
-): Promise<unknown> => registry.refresh({ allowNetwork: false });
+): Promise<void> {
+  let missing: string[] = [];
+
+  for (let attempt = 0; attempt < PROVIDER_SETTLE_ATTEMPTS; attempt++) {
+    await registry.refresh({ allowNetwork: false });
+    missing = handedKeysReadAsMissing(registry);
+    if (missing.length === 0) return;
+  }
+
+  process.stderr.write(
+    `[abacusai-bot-agent] providers still read as unkeyed after ${PROVIDER_SETTLE_ATTEMPTS} refreshes: ${missing.join(", ")}\n`
+  );
+}
+
+/**
+ * Providers holding a key given as a value (a registration's apiKey or a
+ * runtime key) that the last check says have none. Only those: a key from a
+ * command, the environment or stored credentials can fail its check for good,
+ * and retrying would not change it.
+ */
+function handedKeysReadAsMissing(registry: ModelRegistry): string[] {
+  const missing = new Set<string>();
+
+  for (const model of registry.getAll()) {
+    const { source } = registry.getProviderAuthStatus(model.provider);
+    if (
+      (source === "fallback" || source === "runtime") &&
+      !registry.hasConfiguredAuth(model)
+    )
+      missing.add(model.provider);
+  }
+
+  return [...missing];
+}
 
 function toProviderConfig(provider: CustomProviderConfig) {
   return {
