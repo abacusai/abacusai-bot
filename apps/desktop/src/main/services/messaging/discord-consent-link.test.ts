@@ -280,6 +280,37 @@ describe("a link page in the Discord window", () => {
   });
 });
 
+describe("a link page while the window is busy", () => {
+  it("answers before the window has gone home, which then holds the queue", async () => {
+    const { win, navigate } = fakeWindow();
+    let home: () => void = () => {};
+    const load = win.loadURL;
+    win.loadURL = (url: string) =>
+      url.endsWith("/channels/@me")
+        ? new Promise<void>((resolve) => {
+            win.loaded.push(url);
+            home = resolve;
+          })
+        : load(url);
+    const discord = discordWith(win);
+    const answer = discord.present("https://discord.com/oauth2/x", REDIRECT);
+    await settle();
+    navigate("will-redirect", `${REDIRECT}?code=g&state=s`);
+    await expect(answer).resolves.toContain("code=g");
+    expect(win.loaded.at(-1)).toBe("https://discord.com/channels/@me");
+    const next = vi.fn();
+    const inner = discord as unknown as {
+      serialize: (task: () => Promise<void>) => Promise<void>;
+    };
+    const queued = inner.serialize(async () => next());
+    await settle();
+    expect(next).not.toHaveBeenCalled();
+    home();
+    await queued;
+    expect(next).toHaveBeenCalled();
+  });
+});
+
 describe("the Discord card in the gateway", () => {
   const gatewayWith = (discord: unknown, shared: unknown) => {
     const emitChanged = vi.fn();

@@ -181,6 +181,8 @@ export class DiscordWebConnector implements MessagingConnector {
   >();
   /** When the last channel crawl ran; the sweep retries a failed one. */
   private lastCrawlAt = 0;
+  /** Servers the crawl has yet to read. See crawlServers. */
+  private crawlLeft: GuildRow[] = [];
   /** The rail-shape diagnostic runs once per connect, and only on failure. */
   private railShapeLogged = false;
   /** The last DM-contact count logged, so the log line fires on change only. */
@@ -209,6 +211,8 @@ export class DiscordWebConnector implements MessagingConnector {
 
   /** Tasks queued for the page, the running one included. */
   private pending = 0;
+  /** `present` calls waiting for the page; the user is looking at those. */
+  private pagesWaiting = 0;
   /** See READ_DEADLINE_MS; a field so a test can shorten it. */
   private readDeadlineMs = READ_DEADLINE_MS;
 
@@ -928,7 +932,7 @@ export class DiscordWebConnector implements MessagingConnector {
       this.railShapeLogged = false;
       void this.serialize(() => this.refreshContacts());
       // A reconnect keeps the crawled channel map.
-      if (this.guildChannels.size === 0)
+      if (this.guildChannels.size === 0 || this.crawlLeft.length > 0)
         void this.serialize(() => this.crawlGuilds());
       return;
     }
@@ -1006,56 +1010,72 @@ export class DiscordWebConnector implements MessagingConnector {
    * this one over the sign-in, and linking the bot in one signed the other
    * out. Holds the page until it resolves: with the first navigation under
    * `capturePrefix` (refused, never loaded), or null once the window is put
-   * away. Then the page goes back home.
+   * away, without waiting for the page to go back home.
    */
   present(url: string, capturePrefix?: string): Promise<string | null> {
-    return this.serialize(async () => {
-      this.resume();
-      const win = this.ensureWindow();
-      if (win == null) return null;
-      const captured = await new Promise<string | null>((resolve) => {
-        const contents = win.webContents;
-        const finish = (value: string | null): void => {
-          contents.off("will-navigate", onNavigate);
-          contents.off("will-redirect", onNavigate);
-          win.off("hide", onAway);
-          win.off("closed", onAway);
-          this.presentation = null;
-          resolve(value);
-        };
-        const onNavigate = (
-          event: { preventDefault: () => void },
-          target: string
-        ): void => {
-          if (capturePrefix != null && target.startsWith(capturePrefix)) {
-            event.preventDefault();
-            finish(target);
-            return;
-          }
-          // The authorize page hands off to `discord://` when it thinks the
-          // desktop app is there; the flow stays on its web fallback.
-          if (!/^https?:/i.test(target)) event.preventDefault();
-        };
-        const onAway = (): void => finish(null);
-        contents.on("will-navigate", onNavigate);
-        contents.on("will-redirect", onNavigate);
-        win.on("hide", onAway);
-        win.on("closed", onAway);
-        this.presentation = () => finish(null);
-        void win.loadURL(url, { userAgent: userAgent() }).catch(() => {});
-        presentAsDialog(win);
-      });
-      if (!win.isDestroyed()) {
-        if (win.isVisible()) {
-          win.hide();
-          bringToFront();
-        }
-        await win
-          .loadURL(DISCORD_WEB_URL, { userAgent: userAgent() })
-          .catch(() => {});
-      }
-      return captured;
+    this.pagesWaiting += 1;
+    return new Promise((answer, fail) => {
+      this.serialize(() => {
+        this.pagesWaiting -= 1;
+        return this.presentNow(url, capturePrefix, answer);
+      }).catch(fail);
     });
+  }
+
+  private async presentNow(
+    url: string,
+    capturePrefix: string | undefined,
+    answer: (captured: string | null) => void
+  ): Promise<void> {
+    this.resume();
+    const win = this.ensureWindow();
+    if (win == null) {
+      answer(null);
+      return;
+    }
+    const captured = await new Promise<string | null>((resolve) => {
+      const contents = win.webContents;
+      const finish = (value: string | null): void => {
+        contents.off("will-navigate", onNavigate);
+        contents.off("will-redirect", onNavigate);
+        win.off("hide", onAway);
+        win.off("closed", onAway);
+        this.presentation = null;
+        resolve(value);
+      };
+      const onNavigate = (
+        event: { preventDefault: () => void },
+        target: string
+      ): void => {
+        if (capturePrefix != null && target.startsWith(capturePrefix)) {
+          event.preventDefault();
+          finish(target);
+          return;
+        }
+        // The authorize page hands off to `discord://` when it thinks the
+        // desktop app is there; the flow stays on its web fallback.
+        if (!/^https?:/i.test(target)) event.preventDefault();
+      };
+      const onAway = (): void => finish(null);
+      contents.on("will-navigate", onNavigate);
+      contents.on("will-redirect", onNavigate);
+      win.on("hide", onAway);
+      win.on("closed", onAway);
+      this.presentation = () => finish(null);
+      void win.loadURL(url, { userAgent: userAgent() }).catch(() => {});
+      presentAsDialog(win);
+    });
+    const alive = !win.isDestroyed();
+    if (alive && win.isVisible()) {
+      win.hide();
+      bringToFront();
+    }
+    answer(captured);
+    // Still holds the queue: nothing drives a page that is reloading.
+    if (alive)
+      await win
+        .loadURL(DISCORD_WEB_URL, { userAgent: userAgent() })
+        .catch(() => {});
   }
 
   /** Put away what `present` shows, e.g. once the link it was for landed. */
@@ -1089,6 +1109,7 @@ export class DiscordWebConnector implements MessagingConnector {
     if (
       this.guilds.length > 0 &&
       this.guildChannels.size === 0 &&
+      this.crawlLeft.length === 0 &&
       Date.now() - this.lastCrawlAt > 60_000
     )
       await this.crawlGuilds();
@@ -1168,12 +1189,16 @@ export class DiscordWebConnector implements MessagingConnector {
     // The guild rail renders after the chrome that flips `connected`.
     let guilds: GuildRow[] | null = null;
     const end = Date.now() + 10_000;
-    while (Date.now() < end) {
+    while (Date.now() < end && this.pagesWaiting === 0) {
       guilds = await this.run<GuildRow[]>(GUILDS_SCRIPT, {});
       if (guilds != null && guilds.length > 0) break;
       await delay(500);
     }
     if (guilds == null || guilds.length === 0) {
+      if (this.pagesWaiting > 0) {
+        void this.serialize(() => this.crawlGuilds());
+        return;
+      }
       // No servers, or stale rail selectors: the shape line tells them apart.
       if (!this.railShapeLogged) {
         this.railShapeLogged = true;
@@ -1188,11 +1213,21 @@ export class DiscordWebConnector implements MessagingConnector {
       return;
     }
     this.guilds = guilds.slice(0, MAX_GUILDS);
+    this.crawlLeft = [...this.guilds];
+    await this.crawlServers();
+  }
 
-    let channelCount = 0;
+  /**
+   * Read servers until something else wants the page, then rejoin the back of
+   * the queue. The crawl can run for minutes, so nothing waits on all of it,
+   * and a turn always reads a server, so a busy queue cannot starve it. Only a
+   * page the user asked for cuts a server short; that server stays on the list.
+   */
+  private async crawlServers(): Promise<void> {
     try {
-      for (const guild of this.guilds) {
+      while (this.crawlLeft.length > 0 && this.pagesWaiting === 0) {
         if (!this.running || !this.loggedIn) return;
+        const guild = this.crawlLeft[0];
         const pressed = await this.run<{ found: boolean }>(OPEN_GUILD_SCRIPT, {
           guildId: guild.guildId,
         });
@@ -1211,7 +1246,12 @@ export class DiscordWebConnector implements MessagingConnector {
           {}
         );
         if (expanded != null && expanded.clicked > 0) await delay(500);
-        const channels = await this.waitForGuildChannels(guild.guildId);
+        const channels = await this.waitForGuildChannels(
+          guild.guildId,
+          () => this.pagesWaiting > 0
+        );
+        if (channels.length === 0 && this.pagesWaiting > 0) break;
+        this.crawlLeft.shift();
         if (channels.length > 0) {
           this.guildChannels.set(
             guild.guildId,
@@ -1220,22 +1260,28 @@ export class DiscordWebConnector implements MessagingConnector {
               name: `#${row.name} (${guild.name})`,
             }))
           );
-          channelCount += Math.min(channels.length, MAX_CHANNELS_PER_GUILD);
         }
+        if (this.pending > 1) break;
       }
     } finally {
       await this.goHome();
     }
+    if (this.crawlLeft.length > 0) {
+      void this.serialize(() => this.crawlServers());
+      return;
+    }
+    const channelCount = [...this.guildChannels.values()].flat().length;
     this.callbacks.onLog(
       `discord-web: crawled ${this.guilds.length} server(s), ${channelCount} channel(s)`
     );
   }
 
   private async waitForGuildChannels(
-    guildId: string
+    guildId: string,
+    giveUp: () => boolean = () => false
   ): Promise<Array<{ channelId: string; name: string }>> {
     const end = Date.now() + 8000;
-    while (Date.now() < end) {
+    while (Date.now() < end && !giveUp()) {
       const rows = await this.run<Array<{ channelId: string; name: string }>>(
         GUILD_CHANNELS_SCRIPT,
         { guildId }
