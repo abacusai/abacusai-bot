@@ -17,8 +17,8 @@ export interface HiddenTurnPrompt {
 
 /** What the chat remembers, and the hidden turns that keep it. */
 export interface ForeverMemoryPolicy {
-  /** Read once at session start and frozen: the bridge from the last session. */
-  sessionStartPrompt(): string | null;
+  /** Re-read on every standing-prompt rebuild, like `standingPrompt`: recent notes. */
+  recentPrompt(): string | null;
   /** Re-read on every standing-prompt rebuild. */
   standingPrompt(): string | null;
   /** Changes when the standing prompt would; a change rebuilds it. */

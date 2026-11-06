@@ -436,7 +436,29 @@
       "senderReadOnlyFallback": "{{bot}} risponde in questa conversazione.",
       "sessionOfferHeading": "Crealo in una sessione",
       "sessionOfferOpen": "Apri sessione",
-      "sessionOfferDismiss": "Continua a chattare qui"
+      "sessionOfferDismiss": "Continua a chattare qui",
+      "exchange": {
+        "answered": "{{bot}} answered",
+        "taskDone": "{{bot}} finished the task",
+        "askFailed": "{{bot}} couldn't answer",
+        "taskFailed": "{{bot}} couldn't finish the task",
+        "followUp": "{{bot}} replied to you",
+        "asked": "Asked:",
+        "task": "Task:",
+        "userWrote": "You wrote to {{bot}}:",
+        "open": "Open the chat with {{bot}}",
+        "messaged": "Ha scritto a",
+        "foldMessages_one": "{{count}} messaggio con",
+        "foldMessages_other": "{{count}} messaggi con",
+        "foldBots_one": "{{count}} bot",
+        "foldBots_other": "{{count}} bot"
+      },
+      "task": {
+        "from": "Da te, tramite {{bot}}",
+        "asWritten": "Come l'ha inoltrato {{bot}}:"
+      },
+      "pairWith": "con {{bot}}",
+      "pairReadOnly": "sola lettura"
     },
     "deleteDialog": {
       "checkIn": "Its check-in keeps running as an ordinary routine.",
@@ -508,7 +530,6 @@
       "filesTitle": "Files",
       "checkIns": "Check-ins",
       "senderChats": "Chats on your behalf",
-      "botChats": "Chat con altri bot",
       "on": "On",
       "reachable": "Also reachable on",
       "connected": "Connected",
@@ -3260,7 +3281,9 @@
       "componentServeDone": "Served",
       "showMoreOutput": "Show {{count}} more characters",
       "askWaiting": "Waiting for a response…",
-      "askSkipped": "Skipped"
+      "askSkipped": "Skipped",
+      "askBot": "Chiesto a {{bot}}: {{what}}",
+      "giveTask": "Attività assegnata a {{bot}}: {{what}}"
     },
     "transcript": {
       "jump": "Jump to the end",

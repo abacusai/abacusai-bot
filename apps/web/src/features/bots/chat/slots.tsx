@@ -23,7 +23,7 @@ import { Button } from "#renderer/ui/button";
 import { react } from "../avatar";
 import { setBotModel, setCheckInsEnabled } from "../data/bot-actions";
 import { botsQueries } from "../data/queries";
-import { useCheckIn } from "../data/queries";
+import { useBots, useCheckIn } from "../data/queries";
 import { useBotsTransport } from "../data/transport";
 import { botsUnreadStore } from "../data/unread-store";
 import { useBotModelBinding } from "../model/picker";
@@ -49,6 +49,7 @@ export const useBotChatSlots = (
   const collections = useCollections();
   const transport = useBotsTransport();
   const routine = useCheckIn(bot.id);
+  const { bots } = useBots();
   const navigate = useAppNavigate();
   const { data: session } = useLiveQuery({
     query: (q) =>
@@ -154,6 +155,7 @@ export const useBotChatSlots = (
           }
         : undefined;
   const decorateMessage = botMessageDecorations({
+    bots,
     sessionId,
     model: session?.model,
     feedbackEnabled: account.data != null,

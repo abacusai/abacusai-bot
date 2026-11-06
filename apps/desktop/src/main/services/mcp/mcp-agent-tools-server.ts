@@ -472,7 +472,7 @@ export interface McpAgentToolsServerOptions {
       title: string;
       model?: string | null;
     }>;
-    asks: Pick<BotAskService, "list" | "get" | "cancel"> & {
+    asks: Pick<BotAskService, "list" | "received" | "get" | "cancel"> & {
       /** The bot's own question to another bot. */
       ask: (
         askerId: string,
@@ -2953,16 +2953,18 @@ export class McpAgentToolsServer extends McpHttpServer {
     );
   }
 
-  /** A bot with a request to another bot open, or made in the last day. */
+  /**
+   * A bot with a request to another bot open or made in the last day, or
+   * one from another bot answered in the last day.
+   */
   private hasRecentBotRequests(callerSession?: string): boolean {
-    const askerId = this.callerBot(callerSession);
+    const botId = this.callerBot(callerSession);
     const asks = this.options.botAsks?.asks;
-    if (askerId == null || asks == null) return false;
-    const latest = asks.list(askerId, 1)[0];
-    return (
-      latest != null &&
-      (isOpenAsk(latest) || Date.now() - latest.createdAt < 24 * 60 * 60_000)
-    );
+    if (botId == null || asks == null) return false;
+    const recent = (ask: BotAskRecord | undefined): boolean =>
+      ask != null &&
+      (isOpenAsk(ask) || Date.now() - ask.createdAt < 24 * 60 * 60_000);
+    return recent(asks.list(botId, 1)[0]) || recent(asks.received(botId, 1)[0]);
   }
 
   /** Starts the ask and returns at once; the answer comes later as a note. */
@@ -3022,14 +3024,21 @@ export class McpAgentToolsServer extends McpHttpServer {
     if (askerId == null) return this.err("Only a bot sends requests to bots.");
     const host = this.options.botAsks;
     if (host == null) return this.err("Bots cannot ask each other here.");
-    const nameOf = (ask: BotAskRecord): { name: string; title: string } =>
-      host.bots().find((bot) => bot.id === ask.targetId) ?? {
+    const botNamed = (botId: string): { name: string; title: string } =>
+      host.bots().find((bot) => bot.id === botId) ?? {
         name: "a deleted bot",
         title: "",
       };
+    const nameOf = (ask: BotAskRecord): { name: string; title: string } =>
+      botNamed(ask.targetId);
     if (id.trim().length > 0) {
       const ask = host.asks.get(askerId, id);
       if (ask == null) return this.err(`You have no request ${id.trim()}.`);
+      // One made to the caller: its own words, whole (the note is a gist).
+      if (ask.targetId === askerId)
+        return this.ok(
+          `${botNamed(ask.askerId).name} ${ask.kind === "task" ? "passed you the user's task" : "asked you"} (${ask.id}):\n${ask.request}\n\nYou ${ask.kind === "task" ? "reported" : "answered"}:\n${ask.answer ?? ""}`
+        );
       if (ask.status === "answered")
         return this.ok(wrapBotAnswer(nameOf(ask), ask.answer ?? ""));
       return this.ok(
@@ -3041,7 +3050,9 @@ export class McpAgentToolsServer extends McpHttpServer {
       );
     }
     const asks = host.asks.list(askerId);
-    if (asks.length === 0) return this.ok("You have not asked any bot yet.");
+    const received = host.asks.received(askerId);
+    if (asks.length === 0 && received.length === 0)
+      return this.ok("You have not asked any bot yet, and none has asked you.");
     const ago = (at: number): string => {
       const minutes = Math.max(0, Math.round((Date.now() - at) / 60_000));
       return minutes < 60
@@ -3058,13 +3069,22 @@ export class McpAgentToolsServer extends McpHttpServer {
             : ask.status === "failed"
               ? `failed: ${ask.error ?? "no reason given"}`
               : "cancelled";
+    const mine = asks.map(
+      (ask) =>
+        `- ${ask.kind === "task" ? "task" : "request"} ${ask.id} to ${nameOf(ask).name}, ${ago(ask.createdAt)}: "${requestGist(ask.request)}" (${where(ask)})`
+    );
+    const toMe = received.map(
+      (ask) =>
+        `- ${ask.kind === "task" ? "task" : "request"} ${ask.id} from ${botNamed(ask.askerId).name}, ${ago(ask.createdAt)}: "${requestGist(ask.request)}" (you ${ask.kind === "task" ? "reported" : "answered"}: pass its id to read both in full)`
+    );
     return this.ok(
-      asks
-        .map(
-          (ask) =>
-            `- ${ask.kind === "task" ? "task" : "request"} ${ask.id} to ${nameOf(ask).name}, ${ago(ask.createdAt)}: "${requestGist(ask.request)}" (${where(ask)})`
-        )
-        .join("\n")
+      [
+        ...(mine.length > 0 ? ["Your requests to other bots:", ...mine] : []),
+        ...(mine.length > 0 && toMe.length > 0 ? [""] : []),
+        ...(toMe.length > 0
+          ? ["Requests other bots made to you:", ...toMe]
+          : []),
+      ].join("\n")
     );
   }
 

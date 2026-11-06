@@ -512,9 +512,32 @@ const MessageAbacus = v.strictObject({
             "test-repair",
             "test-repair-limit",
             "tests-left-alone",
+            "bot-exchange",
+            "bot-task",
           ]),
           visibleFrom: v.optional(
             v.pipe(v.number(), v.integer(), v.minValue(0))
+          ),
+          task: v.optional(
+            v.strictObject({
+              askId: Str,
+              passerId: Str,
+              passer: Str,
+              task: Str,
+              userWords: Str,
+            })
+          ),
+          exchange: v.optional(
+            v.strictObject({
+              askId: Str,
+              botId: Str,
+              bot: Str,
+              kind: v.picklist(["ask", "task"]),
+              request: Str,
+              outcome: v.picklist(["answered", "failed", "follow-up"]),
+              chatSessionId: OptStr,
+              userWords: OptStr,
+            })
           ),
         })
       ),

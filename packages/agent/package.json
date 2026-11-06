@@ -49,6 +49,10 @@
       "types": "./dist/tool-display.d.ts",
       "default": "./dist/tool-display.js"
     },
+    "./bot-memory": {
+      "types": "./dist/bot/bot-memory.d.ts",
+      "default": "./dist/bot/bot-memory.js"
+    },
     "./phone-bubbles": {
       "types": "./dist/phone/phone-bubbles.d.ts",
       "default": "./dist/phone/phone-bubbles.js"

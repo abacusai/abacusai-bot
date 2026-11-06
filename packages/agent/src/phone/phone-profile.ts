@@ -157,7 +157,7 @@ export function createPhoneProfile(
     canAskForApproval: false,
     memory: {
       // The standing prompt already carries the last days; nothing to bridge.
-      sessionStartPrompt: () => null,
+      recentPrompt: () => null,
       standingPrompt: () => phoneStandingPrompt(home, new Date()),
       fingerprint: () => phoneMemoryFingerprint(home, new Date()),
       flushAtWindowShare: FLUSH_AT_WINDOW_SHARE,

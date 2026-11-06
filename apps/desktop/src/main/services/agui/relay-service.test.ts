@@ -456,6 +456,11 @@ describe("ai.cancel, ai.respondPermission, ai.queue.*", () => {
       { type: "clear_queue" },
       { type: "dequeue" },
     ]);
+    // Queued, it is the user's message: main hears it once; an edit is not
+    // a new message.
+    expect(agent.acceptedMessage.mock.calls).toEqual([
+      ["s1", "later", undefined],
+    ]);
     expect(
       agent.commands.some((command) => Object.hasOwn(command, "index"))
     ).toBe(false);

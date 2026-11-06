@@ -8,6 +8,7 @@ import {
   BotGone,
   BotPending,
   BotIdentity as BotChatIdentity,
+  PairWith,
 } from "#renderer/features/bots/chat/identity";
 import { useBotChatSlots } from "#renderer/features/bots/chat/slots";
 import { loadSenderChat } from "#renderer/features/bots/data/loaders";
@@ -69,6 +70,8 @@ const Sender = ({
           detailsOpen={detailsOpen}
           onToggle={toggle}
         />
+        {/* A chat with another of the user's bots says so; it is read-only. */}
+        <PairWith sessionId={sessionId} />
       </TopBarSlot>
       <ChatView
         threadId={sessionId}

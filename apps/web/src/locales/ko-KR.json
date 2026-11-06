@@ -436,7 +436,29 @@
       "senderReadOnlyFallback": "{{bot}}이(가) 이 대화에서 답장합니다.",
       "sessionOfferHeading": "세션에서 만들기",
       "sessionOfferOpen": "세션 열기",
-      "sessionOfferDismiss": "여기서 계속 대화"
+      "sessionOfferDismiss": "여기서 계속 대화",
+      "exchange": {
+        "answered": "{{bot}} answered",
+        "taskDone": "{{bot}} finished the task",
+        "askFailed": "{{bot}} couldn't answer",
+        "taskFailed": "{{bot}} couldn't finish the task",
+        "followUp": "{{bot}} replied to you",
+        "asked": "Asked:",
+        "task": "Task:",
+        "userWrote": "You wrote to {{bot}}:",
+        "open": "Open the chat with {{bot}}",
+        "messaged": "메시지 보냄",
+        "foldMessages_one": "{{count}}개의 메시지 대화 상대:",
+        "foldMessages_other": "{{count}}개의 메시지 대화 상대:",
+        "foldBots_one": "봇 {{count}}개",
+        "foldBots_other": "봇 {{count}}개"
+      },
+      "task": {
+        "from": "나에게서, {{bot}}을(를) 통해",
+        "asWritten": "{{bot}}이(가) 전달한 내용:"
+      },
+      "pairWith": "{{bot}}와(과) 함께",
+      "pairReadOnly": "읽기 전용"
     },
     "deleteDialog": {
       "checkIn": "Its check-in keeps running as an ordinary routine.",
@@ -508,7 +530,6 @@
       "filesTitle": "Files",
       "checkIns": "Check-ins",
       "senderChats": "Chats on your behalf",
-      "botChats": "다른 봇과의 대화",
       "on": "On",
       "reachable": "Also reachable on",
       "connected": "Connected",
@@ -3260,7 +3281,9 @@
       "componentServeDone": "Served",
       "showMoreOutput": "Show {{count}} more characters",
       "askWaiting": "Waiting for a response…",
-      "askSkipped": "Skipped"
+      "askSkipped": "Skipped",
+      "askBot": "{{bot}}에게 질문함: {{what}}",
+      "giveTask": "{{bot}}에게 작업을 전달함: {{what}}"
     },
     "transcript": {
       "jump": "Jump to the end",
