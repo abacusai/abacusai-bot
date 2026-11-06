@@ -4967,6 +4967,7 @@
       "save": "Salva"
     },
     "work": {
+      "waiting": "In attesa che la chat di {{name}} sia libera…",
       "running": "Ci sto lavorando nella chat di {{name}}…",
       "done": "Fatto nella chat di {{name}}: il report è qui sotto",
       "failed": "{{name}} non ha finito",

@@ -482,9 +482,13 @@ export const turnPrompt = (input: {
     lines.push(
       "A question about this work is answered from where it stands above: don't take it on again unless the user asks you to."
     );
-    if (myWork.some((work) => work.status === "running"))
+    if (
+      myWork.some(
+        (work) => work.status === "running" || work.status === "waiting"
+      )
+    )
       lines.push(
-        "If the user's latest message cancels or changes your running work, add <stop_work/> inside your reply: it stops now. For a change, also add a new <work> with the changed task. Never say it stopped without <stop_work/>."
+        "If the user's latest message cancels or changes your running or waiting work, add <stop_work/> inside your reply: it stops now. For a change, also add a new <work> with the changed task. Never say it stopped without <stop_work/>."
       );
     lines.push("");
   }
@@ -587,11 +591,13 @@ const WORK_RULE =
 const workState = (work: ChannelWork): string =>
   work.status === "running"
     ? "running now"
-    : work.status === "done"
-      ? "done; its report is in the channel"
-      : work.status === "stopped"
-        ? "the user stopped it partway, so it may be half done"
-        : `failed: ${work.error ?? "no reason given"}`;
+    : work.status === "waiting"
+      ? "not started yet; it waits for your own chat to be free (a turn or earlier work there)"
+      : work.status === "done"
+        ? "done; its report is in the channel"
+        : work.status === "stopped"
+          ? "the user stopped it partway, so it may be half done"
+          : `failed: ${work.error ?? "no reason given"}`;
 
 const STOP_WORK = /<stop_work\s*\/?>(?:\s*<\/stop_work>)?/gi;
 

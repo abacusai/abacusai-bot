@@ -50,6 +50,7 @@ const setup = (extra: Partial<ChannelDeps> = {}) => {
   > = [];
   const noted: string[] = [];
   let n = 0;
+  let holdWork = false;
   const service = new ChannelService({
     store,
     bot: (id) => BOTS[id] ?? null,
@@ -57,10 +58,12 @@ const setup = (extra: Partial<ChannelDeps> = {}) => {
       new Promise((resolve, reject) =>
         turns.push({ botId, prompt, resolve, reject })
       ),
+    // The prompt goes at once here unless a test holds it (`holdWork`).
     runWork: (botId, _channel, prompt, workId, card) =>
-      new Promise((resolve, reject) =>
-        works.push({ botId, prompt, resolve, reject, workId, card })
-      ),
+      new Promise((resolve, reject) => {
+        works.push({ botId, prompt, resolve, reject, workId, card });
+        if (!holdWork) queueMicrotask(() => service.workStarted(workId));
+      }),
     stopWork: vi.fn((workId: string) => {
       works
         .find((entry) => entry.workId === workId)
@@ -89,7 +92,18 @@ const setup = (extra: Partial<ChannelDeps> = {}) => {
     (store.threads.get(channelId) ?? []).map(
       (m) => `${m.author.kind === "user" ? "user" : m.author.botId}: ${m.text}`
     );
-  return { service, store, turns, works, flush, texts, noted };
+  return {
+    service,
+    hold: () => {
+      holdWork = true;
+    },
+    store,
+    turns,
+    works,
+    flush,
+    texts,
+    noted,
+  };
 };
 
 describe("ChannelService", () => {
@@ -251,6 +265,67 @@ describe("ChannelService", () => {
     ]);
     expect(turns[0]!.prompt).toContain("- price is ₹149");
     expect(turns[0]!.prompt).toMatch(/Today is \w+day,? \d+ \w+ 1970\./);
+  });
+
+  it("the card waits while the bot's own chat is busy, and the bot is told so", async () => {
+    const { service, turns, works, flush, store, hold } = setup();
+    hold();
+    const { id } = service.create({ botIds: ["chief", "wri"], name: "Launch" });
+    service.post(id, "Writer, write the launch email as a doc");
+    await flush();
+    turns[0]!.resolve(
+      "<reply>Writing it now.<work>Write the launch email as launch-email.md</work></reply>"
+    );
+    await flush();
+    const card = () => store.threads.get(id)![1]!.work;
+    expect(card()).toMatchObject({ status: "waiting" });
+    expect(card()?.endedAt).toBeUndefined();
+    expect(service.list()[0]?.working).toEqual(["wri"]);
+    service.post(id, "Writer, how is it going?");
+    await flush();
+    expect(turns[1]!.prompt).toContain(
+      '- "Write the launch email as launch-email.md": not started yet; it waits for your own chat'
+    );
+    expect(turns[1]!.prompt).toContain("<stop_work/>");
+    turns[1]!.resolve("<reply>Queued behind my current turn.</reply>");
+    await flush();
+    // The host sends the prompt once the chat is free.
+    service.workStarted(works[0]!.workId);
+    expect(card()).toMatchObject({ status: "running" });
+    expect(card()?.endedAt).toBeUndefined();
+    works[0]!.resolve("<reply>Done.</reply>");
+    await flush();
+    expect(card()).toMatchObject({ status: "done" });
+    expect(card()?.endedAt).toBeDefined();
+  });
+
+  it("stopped while waiting, the card says it never started; after a restart, that the app closed first", async () => {
+    const { service, turns, flush, store, hold } = setup();
+    hold();
+    const { id } = service.create({ botIds: ["chief", "wri"], name: "Launch" });
+    service.post(id, "Writer, write the launch email as a doc");
+    await flush();
+    turns[0]!.resolve(
+      "<reply>Writing it now.<work>Write the launch email as launch-email.md</work></reply>"
+    );
+    await flush();
+    // A copy closed while waiting: recovery names it.
+    const thread = store.readMessages(id);
+    const again = setup();
+    again.store.writeChannels(store.readChannels());
+    again.store.writeMessages(id, thread);
+    again.service.recover();
+    expect(again.store.readMessages(id)[1]!.work).toMatchObject({
+      status: "failed",
+      error: "The app closed before it started.",
+    });
+    // The live one is stopped by the user.
+    service.stop(id);
+    await flush();
+    expect(store.threads.get(id)![1]!.work).toMatchObject({
+      status: "stopped",
+      error: "You stopped it before it started.",
+    });
   });
 
   it("a deleted bot leaves its channels", () => {

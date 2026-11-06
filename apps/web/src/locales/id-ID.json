@@ -4967,6 +4967,7 @@
       "save": "Simpan"
     },
     "work": {
+      "waiting": "Menunggu obrolan {{name}} kosong…",
       "running": "Sedang dikerjakan di chat {{name}} sendiri…",
       "done": "Selesai di chat {{name}}: laporannya ada di bawah",
       "failed": "{{name}} tidak menyelesaikannya",

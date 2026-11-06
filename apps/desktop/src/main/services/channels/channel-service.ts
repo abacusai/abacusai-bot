@@ -24,6 +24,7 @@ import {
   type ChannelMessage,
   type ChannelSummary,
   type ChannelThread,
+  type ChannelWorkStatus,
 } from "@abacus-ai/contract/channels";
 import { EntityNotFoundError } from "@abacus-ai/contract/not-found";
 import { InvalidInputError } from "@abacus-ai/contract/service-errors";
@@ -129,6 +130,11 @@ export interface ChannelDeps {
 }
 
 const STOPPED_PARTWAY = "You stopped it partway, so it may be half done.";
+const STOPPED_BEFORE_START = "You stopped it before it started.";
+
+/** Work not over yet: waiting for the bot's own chat, or running there. */
+const isOpen = (status: ChannelWorkStatus | undefined): boolean =>
+  status === "waiting" || status === "running";
 
 /** Messages kept per thread; older ones are dropped. */
 const KEPT_MESSAGES = 1000;
@@ -272,18 +278,20 @@ export class ChannelService {
   recover(): void {
     for (const channel of this.deps.store.readChannels()) {
       const thread = this.deps.store.readMessages(channel.id);
-      if (thread.some((message) => message.work?.status === "running"))
+      if (thread.some((message) => isOpen(message.work?.status)))
         this.deps.store.writeMessages(
           channel.id,
           thread.map((message) =>
-            message.work?.status === "running"
+            isOpen(message.work?.status)
               ? {
                   ...message,
                   work: {
                     ...message.work,
                     status: "failed" as const,
                     error:
-                      "The app closed while it was working on it, so it may be half done.",
+                      message.work?.status === "waiting"
+                        ? "The app closed before it started."
+                        : "The app closed while it was working on it, so it may be half done.",
                     endedAt: this.now(),
                   },
                 }
@@ -471,7 +479,7 @@ export class ChannelService {
             : `On it (${own.length} items):\n${task}`,
         at: this.now(),
         replyTo: userMessage.id,
-        work: { task, status: "running", startedAt: this.now() },
+        work: { task, status: "waiting", startedAt: this.now() },
       };
       this.append(channelId, card);
       this.startWork(channelId, owner, card.id, task, userMessage.id, true);
@@ -515,12 +523,31 @@ export class ChannelService {
         this.stoppedWorks.add(messageId);
         this.works.delete(messageId);
         this.deps.stopWork?.(messageId);
+        const waiting =
+          this.deps.store
+            .readMessages(channelId)
+            .find((message) => message.id === messageId)?.work?.status ===
+          "waiting";
         // Shown at once, and so the bots' next turns read it as stopped.
         this.setWork(channelId, messageId, {
           status: "stopped",
-          error: STOPPED_PARTWAY,
+          error: waiting ? STOPPED_BEFORE_START : STOPPED_PARTWAY,
         });
       }
+  }
+
+  /**
+   * The work's prompt is on its way to the bot's own chat: the card was
+   * waiting for that chat until now.
+   */
+  workStarted(messageId: string): void {
+    const work = this.works.get(messageId);
+    if (work == null) return;
+    const status = this.deps.store
+      .readMessages(work.channelId)
+      .find((message) => message.id === messageId)?.work?.status;
+    if (status === "waiting")
+      this.setWork(work.channelId, messageId, { status: "running" });
   }
 
   /** A bot was deleted: it leaves every channel. */
@@ -805,7 +832,7 @@ export class ChannelService {
         replyTo: userMessageId,
         ...(task != null
           ? {
-              work: { task, status: "running" as const, startedAt: this.now() },
+              work: { task, status: "waiting" as const, startedAt: this.now() },
             }
           : {}),
         ...(extra.conclusion === true ? { conclusion: true } : {}),
@@ -959,12 +986,10 @@ export class ChannelService {
         });
       })
       .catch((error: unknown) => {
-        const stopped = this.stoppedWorks.delete(messageId);
+        // Stopped by the user: the card was set as it was stopped.
+        if (this.stoppedWorks.delete(messageId)) return;
         const why = error instanceof Error ? error.message : String(error);
-        this.setWork(channelId, messageId, {
-          status: stopped ? "stopped" : "failed",
-          error: stopped ? STOPPED_PARTWAY : why,
-        });
+        this.setWork(channelId, messageId, { status: "failed", error: why });
       })
       .finally(() => {
         this.works.delete(messageId);
@@ -988,7 +1013,11 @@ export class ChannelService {
         message.id === messageId && message.work != null
           ? {
               ...message,
-              work: { ...message.work, ...change, endedAt: this.now() },
+              work: {
+                ...message.work,
+                ...change,
+                ...(isOpen(change.status) ? {} : { endedAt: this.now() }),
+              },
             }
           : message
       )

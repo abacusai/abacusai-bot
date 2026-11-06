@@ -4967,6 +4967,7 @@
       "save": "Enregistrer"
     },
     "work": {
+      "waiting": "En attente que la discussion de {{name}} soit libre…",
       "running": "En cours dans le chat propre à {{name}}…",
       "done": "Terminé dans le chat de {{name}} : le rapport se trouve ci-dessous",
       "failed": "{{name}} n'a pas terminé",

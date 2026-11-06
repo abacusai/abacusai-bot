@@ -66,7 +66,13 @@ export interface ChannelBotProposal {
   invite?: boolean;
 }
 
-export type ChannelWorkStatus = "running" | "done" | "failed" | "stopped";
+/** "waiting": taken on, but the bot's own chat is busy (the user's turn, or earlier work). */
+export type ChannelWorkStatus =
+  | "waiting"
+  | "running"
+  | "done"
+  | "failed"
+  | "stopped";
 
 export interface ChannelWork {
   /** What the bot said it would do, complete on its own. */

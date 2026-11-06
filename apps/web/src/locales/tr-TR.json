@@ -4967,6 +4967,7 @@
       "save": "Kaydet"
     },
     "work": {
+      "waiting": "{{name}} sohbetinin boşalması bekleniyor…",
       "running": "{{name}} kendi sohbetinde üzerinde çalışıyor…",
       "done": "{{name}} sohbetinde tamamlandı: rapor aşağıda",
       "failed": "{{name}} işi bitiremedi",

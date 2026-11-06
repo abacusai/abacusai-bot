@@ -15,6 +15,7 @@ import {
   CircleAlert,
   CircleCheck,
   CircleStop,
+  Clock,
   LoaderCircle,
   Pin,
   Play,
@@ -481,11 +482,13 @@ const WorkCard = ({ work, bot }: { work: ChannelWork; bot: BotRow }) => {
   const Icon =
     work.status === "running"
       ? LoaderCircle
-      : work.status === "done"
-        ? CircleCheck
-        : work.status === "stopped"
-          ? CircleStop
-          : CircleAlert;
+      : work.status === "waiting"
+        ? Clock
+        : work.status === "done"
+          ? CircleCheck
+          : work.status === "stopped"
+            ? CircleStop
+            : CircleAlert;
   return (
     <div
       data-channel-work={work.status}
@@ -499,6 +502,7 @@ const WorkCard = ({ work, bot }: { work: ChannelWork; bot: BotRow }) => {
           className={cn(
             "size-3.5 shrink-0",
             work.status === "running" && "animate-spin text-(--bots-running)",
+            work.status === "waiting" && "text-muted-foreground",
             work.status === "done" && "text-(--bot-accent,var(--primary))",
             work.status === "failed" && "text-destructive"
           )}

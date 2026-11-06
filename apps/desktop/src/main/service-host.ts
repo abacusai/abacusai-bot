@@ -6221,7 +6221,7 @@ export class ServiceHost {
     const before = this.channelWorkLanes.get(botId) ?? Promise.resolve();
     const run = before
       .catch(() => undefined)
-      .then(() => this.runChannelWorkNow(botId, prompt, work, card))
+      .then(() => this.runChannelWorkNow(botId, prompt, work, workId, card))
       .finally(() => this.channelWorks.delete(workId));
     const lane = run.catch(() => undefined);
     this.channelWorkLanes.set(botId, lane);
@@ -6236,6 +6236,7 @@ export class ServiceHost {
     botId: string,
     prompt: string,
     work: ChannelWorkRun,
+    workId: string,
     card: BotTaskTag
   ): Promise<string> {
     const stoppedFirst = (): Error =>
@@ -6267,6 +6268,8 @@ export class ServiceHost {
           segment: BOT_ANSWER_SEGMENT,
         }
       );
+      // The card stops saying it waits for the chat: the prompt goes now.
+      this.channelService.workStarted(workId);
       const sent = await this.sendAgentMessage({
         workspaceId: handle.workspaceId,
         sessionId: handle.sessionId,
