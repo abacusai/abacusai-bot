@@ -9,26 +9,26 @@
  * `@abacus-ai/connectors` registry has a mark (connector-mark.test.tsx).
  */
 import azureLogo from "#renderer/assets/connectors/azure.webp";
-import boxLogo from "#renderer/assets/connectors/box.webp";
-import dynamics365Logo from "#renderer/assets/connectors/dynamics365.webp";
+import boxLogo from "#renderer/assets/connectors/box.webp?no-inline";
+import dynamics365Logo from "#renderer/assets/connectors/dynamics365.webp?no-inline";
 import geminiLogo from "#renderer/assets/connectors/gemini.svg";
-import gitlabLogo from "#renderer/assets/connectors/gitlab.webp";
+import gitlabLogo from "#renderer/assets/connectors/gitlab.webp?no-inline";
 import gmailLogo from "#renderer/assets/connectors/gmail.png";
-import googleAdsLogo from "#renderer/assets/connectors/google_ads.webp";
-import googleAnalyticsLogo from "#renderer/assets/connectors/google_analytics.webp";
+import googleAdsLogo from "#renderer/assets/connectors/google_ads.webp?no-inline";
+import googleAnalyticsLogo from "#renderer/assets/connectors/google_analytics.webp?no-inline";
 import calendarLogo from "#renderer/assets/connectors/google_calendar.webp";
 import driveLogo from "#renderer/assets/connectors/google_drive.webp";
-import searchConsoleLogo from "#renderer/assets/connectors/google_search_console.webp";
-import instagramLogo from "#renderer/assets/connectors/instagram.webp";
-import messengerLogo from "#renderer/assets/connectors/messenger.webp";
-import metaLogo from "#renderer/assets/connectors/meta.webp";
-import mondayLogo from "#renderer/assets/connectors/monday.webp";
-import onenoteLogo from "#renderer/assets/connectors/onenote.webp";
-import quickbooksLogo from "#renderer/assets/connectors/quickbooks.webp";
-import sharepointLogo from "#renderer/assets/connectors/sharepoint.webp";
-import smartsheetLogo from "#renderer/assets/connectors/smartsheet.webp";
-import teamsLogo from "#renderer/assets/connectors/teams.webp";
-import youtubeLogo from "#renderer/assets/connectors/youtube.webp";
+import searchConsoleLogo from "#renderer/assets/connectors/google_search_console.webp?no-inline";
+import instagramLogo from "#renderer/assets/connectors/instagram.webp?no-inline";
+import messengerLogo from "#renderer/assets/connectors/messenger.webp?no-inline";
+import metaLogo from "#renderer/assets/connectors/meta.webp?no-inline";
+import mondayLogo from "#renderer/assets/connectors/monday.webp?no-inline";
+import onenoteLogo from "#renderer/assets/connectors/onenote.webp?no-inline";
+import quickbooksLogo from "#renderer/assets/connectors/quickbooks.webp?no-inline";
+import sharepointLogo from "#renderer/assets/connectors/sharepoint.webp?no-inline";
+import smartsheetLogo from "#renderer/assets/connectors/smartsheet.webp?no-inline";
+import teamsLogo from "#renderer/assets/connectors/teams.webp?no-inline";
+import youtubeLogo from "#renderer/assets/connectors/youtube.webp?no-inline";
 import { AppBrandMark } from "#renderer/components/app-icon";
 import { cn } from "#renderer/lib/cn";
 
