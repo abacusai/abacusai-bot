@@ -2,11 +2,13 @@ import { useLiveQuery } from "@tanstack/react-db";
 import { useQuery } from "@tanstack/react-query";
 import { useSelector } from "@tanstack/react-store";
 import {
+  Bug,
   Gamepad2,
   GitPullRequest,
   Globe,
   PieChart,
   Plane,
+  Plus,
   ShoppingBag,
   Sparkles,
   Table2,
@@ -29,7 +31,11 @@ import { isListedSession } from "#renderer/data/db/filters";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { isDiskFullError } from "#renderer/data/query-client";
 import { defaultLook } from "#renderer/lib/bots/avatar";
-import { BUILD_STARTER_IDS } from "#renderer/lib/build-starters";
+import {
+  BUILD_STARTER_IDS,
+  CODE_STARTER_IDS,
+  GITHUB_CONNECTOR_ID,
+} from "#renderer/lib/build-starters";
 import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
 import { formatChatStamp } from "#renderer/lib/format/chat-stamp";
 import { AppLink } from "#renderer/lib/navigation/app-link";
@@ -57,7 +63,12 @@ const STARTER_ICONS: Record<string, LucideIcon> = {
   "portfolio-site": Globe,
   "shop-page": ShoppingBag,
   "simple-game": Gamepad2,
+  "fix-a-bug": Bug,
+  "add-a-feature": Plus,
+  "review-my-prs": GitPullRequest,
 };
+/** The start page's grid: three across, two rows. */
+const STARTER_SLOTS = 6;
 /** Sends a queued prompt as soon as the composer could; a failure leaves it in the box. */
 export const QueuedPrompt = ({
   threadId,
@@ -119,6 +130,9 @@ export const SessionStartPage = ({
     enabled: !!(draft.workspaceId ?? workspaceId),
     refetchOnWindowFocus: true,
   });
+  const connectors = useQuery(
+    transport.orpc.connectors.statuses.queryOptions({ input: {} })
+  );
   const [now] = useState(() => Date.now());
   const [resume] = useState(() => draft.envelope !== null);
   const [inFlight] = useState(() => new Set<string>());
@@ -166,31 +180,48 @@ export const SessionStartPage = ({
   useEffect(() => {
     if (resume) resumeStart();
   }, [resume]);
-  // Onboarding's Build opens on an example in the box: the cursor waits at its end.
-  const build = draft.starters === "build";
+  // Onboarding's picks open on an example in the box: the cursor waits at its end.
+  const opensOnExample = draft.starters != null;
   useEffect(() => {
-    if (!build) return;
+    if (!opensOnExample) return;
     const frame = requestAnimationFrame(() =>
       document
         .querySelector<HTMLTextAreaElement>('[data-slot="composer"] textarea')
         ?.focus()
     );
     return () => cancelAnimationFrame(frame);
-  }, [build]);
+  }, [opensOnExample]);
   const id = `draft:${draft.id}`;
+  const buildStarters = BUILD_STARTER_IDS.map((starterId) => ({
+    id: starterId,
+    name: t(`sessions.start.build.${starterId}.name`),
+    detail: t(`sessions.start.build.${starterId}.detail`),
+    prompt: t(`sessions.start.build.${starterId}.prompt`),
+  }));
+  const codeStarters = CODE_STARTER_IDS.map((starterId) => ({
+    id: starterId,
+    name: t(`sessions.start.code.${starterId}.name`),
+    detail: t(`sessions.start.code.${starterId}.detail`),
+    prompt: t(`sessions.start.code.${starterId}.prompt`),
+  }));
+  const sessionStarters = SESSION_STARTERS.map((starter) => ({
+    ...starter,
+    name: t(`sessions.start.starters.${starter.id}.name`),
+    detail: t(`sessions.start.starters.${starter.id}.detail`),
+  }));
+  const coding =
+    draft.starters === "code" ||
+    connectors.data?.[GITHUB_CONNECTOR_ID]?.state === "connected";
   const starters =
     draft.starters === "build"
-      ? BUILD_STARTER_IDS.map((starterId) => ({
-          id: starterId,
-          name: t(`sessions.start.build.${starterId}.name`),
-          detail: t(`sessions.start.build.${starterId}.detail`),
-          prompt: t(`sessions.start.build.${starterId}.prompt`),
-        }))
-      : SESSION_STARTERS.map((starter) => ({
-          ...starter,
-          name: t(`sessions.start.starters.${starter.id}.name`),
-          detail: t(`sessions.start.starters.${starter.id}.detail`),
-        }));
+      ? buildStarters
+      : coding
+        ? [
+            ...codeStarters,
+            // Its coding counterpart is already here, and works without a repository open.
+            ...sessionStarters.filter((s) => s.id !== "review-pull-requests"),
+          ].slice(0, STARTER_SLOTS)
+        : sessionStarters;
   const context = draft.workspaceId ? (
     <SessionContextTray
       workspaceId={draft.workspaceId}
@@ -321,6 +352,13 @@ export const SessionStartPage = ({
                   if (pending) return;
                   setError(null);
                   prefill(id, starter.prompt);
+                  if (codeStarters.some((code) => code.id === starter.id))
+                    void transport.client.system
+                      .funnelStep({
+                        step: "code_starter_tapped",
+                        detail: starter.id,
+                      })
+                      .catch(() => undefined);
                   requestAnimationFrame(() =>
                     document
                       .querySelector<HTMLTextAreaElement>(

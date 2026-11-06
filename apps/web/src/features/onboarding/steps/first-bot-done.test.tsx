@@ -4,13 +4,10 @@ import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { fixtureBots, fixturePrefs } from "#renderer/data/fixture-db/rows";
+import { GITHUB_CONNECTOR_ID } from "#renderer/lib/build-starters";
 import { fixedT, initI18n } from "#renderer/lib/i18n";
 
-import {
-  GITHUB_CONNECTOR_ID,
-  githubChoice,
-  type GithubChoice,
-} from "../first-bot";
+import { githubChoice, type GithubChoice } from "../first-bot";
 import type { StepContext } from "./context";
 import { DoneStep } from "./done";
 import { FirstBotStep } from "./first-bot";

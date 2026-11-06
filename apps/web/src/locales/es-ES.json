@@ -1295,8 +1295,7 @@
         "title": "Trabajar en mi código",
         "body": "Corrige un error o añade una función en tu repositorio de GitHub.",
         "connect": "Conectar GitHub",
-        "start": "Empezar",
-        "botName": "Asistente de código"
+        "start": "Empezar"
       },
       "research": {
         "title": "Investigar o escribir",
@@ -1775,6 +1774,23 @@
           "name": "Un juego sencillo",
           "detail": "Para jugar en tu navegador.",
           "prompt": "Crea un juego sencillo al que pueda jugar ya en el navegador: un juego de la serpiente con controles de flechas y deslizamiento, puntuación, mejor puntuación y un botón para reiniciar. Que quepa en una sola página y enséñamelo cuando esté listo."
+        }
+      },
+      "code": {
+        "fix-a-bug": {
+          "name": "Corregir un error",
+          "detail": "Encuentra la causa y abre un pull request.",
+          "prompt": "Corrige un error en mi código. Si esta carpeta es un repositorio de GitHub, trabaja en él; si no, enumera mis repositorios de GitHub y pregúntame cuál. Pregúntame qué falla, luego encuentra la causa, corrígela en una rama nueva, ejecuta las pruebas y abre un pull request."
+        },
+        "add-a-feature": {
+          "name": "Añadir una función",
+          "detail": "Créala en una rama y abre un pull request.",
+          "prompt": "Añade una función a mi código. Si esta carpeta es un repositorio de GitHub, trabaja en él; si no, enumera mis repositorios de GitHub y pregúntame cuál. Pregúntame qué añadir, luego créala en una rama nueva, ejecuta las pruebas y abre un pull request."
+        },
+        "review-my-prs": {
+          "name": "Revisar mis pull requests",
+          "detail": "Errores y pruebas que faltan, por archivo y línea.",
+          "prompt": "Revisa mis pull requests abiertos. Si esta carpeta es un repositorio de GitHub, úsalo; si no, enumera mis repositorios de GitHub y pregúntame cuál. Para cada pull request, dime qué cambia y señala errores, riesgos y pruebas que faltan, con el archivo y la línea. Dímelo solo aquí: no publiques nada en GitHub ni cambies código."
         }
       }
     },

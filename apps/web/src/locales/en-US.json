@@ -1295,8 +1295,7 @@
         "title": "Work on my code",
         "body": "Fix a bug or add a feature in your GitHub repo.",
         "connect": "Connect GitHub",
-        "start": "Start",
-        "botName": "Code Assistant"
+        "start": "Start"
       },
       "research": {
         "title": "Research or write",
@@ -1775,6 +1774,23 @@
           "name": "A simple game",
           "detail": "Playable in your browser.",
           "prompt": "Build a simple game I can play in the browser right away: a snake game with arrow-key and swipe controls, a score, a best score and a restart button. Keep it to one page and show it to me when it is ready."
+        }
+      },
+      "code": {
+        "fix-a-bug": {
+          "name": "Fix a bug",
+          "detail": "Find the cause and open a pull request.",
+          "prompt": "Fix a bug in my code. If this folder is a GitHub repository, work on it; if not, list my GitHub repositories and ask me which one. Ask me what is broken, then find the cause, fix it on a new branch, run the tests and open a pull request."
+        },
+        "add-a-feature": {
+          "name": "Add a feature",
+          "detail": "Build it on a branch and open a pull request.",
+          "prompt": "Add a feature to my code. If this folder is a GitHub repository, work on it; if not, list my GitHub repositories and ask me which one. Ask me what to add, then build it on a new branch, run the tests and open a pull request."
+        },
+        "review-my-prs": {
+          "name": "Review my pull requests",
+          "detail": "Bugs and missing tests, by file and line.",
+          "prompt": "Review my open pull requests. If this folder is a GitHub repository, use it; if not, list my GitHub repositories and ask me which one. For each pull request, tell me what it changes and call out bugs, risks and missing tests, with the file and line. Tell me here only: do not post on GitHub or change any code."
         }
       }
     },

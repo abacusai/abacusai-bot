@@ -1295,8 +1295,7 @@
         "title": "Kerjakan kode saya",
         "body": "Perbaiki bug atau tambahkan fitur di repo GitHub Anda.",
         "connect": "Hubungkan GitHub",
-        "start": "Mulai",
-        "botName": "Asisten Kode"
+        "start": "Mulai"
       },
       "research": {
         "title": "Riset atau menulis",
@@ -1775,6 +1774,23 @@
           "name": "Game sederhana",
           "detail": "Bisa dimainkan di browser.",
           "prompt": "Buat game sederhana yang bisa langsung saya mainkan di browser: game ular dengan kontrol tombol panah dan geser, skor, skor terbaik, dan tombol mulai ulang. Cukup satu halaman, dan tunjukkan kalau sudah siap."
+        }
+      },
+      "code": {
+        "fix-a-bug": {
+          "name": "Perbaiki bug",
+          "detail": "Temukan penyebabnya dan buka pull request.",
+          "prompt": "Perbaiki bug di kode saya. Jika folder ini repositori GitHub, kerjakan di sini; jika bukan, tampilkan daftar repositori GitHub saya dan tanyakan yang mana. Tanyakan apa yang bermasalah, lalu temukan penyebabnya, perbaiki di branch baru, jalankan pengujian, dan buka pull request."
+        },
+        "add-a-feature": {
+          "name": "Tambah fitur",
+          "detail": "Buat di branch dan buka pull request.",
+          "prompt": "Tambahkan fitur ke kode saya. Jika folder ini repositori GitHub, kerjakan di sini; jika bukan, tampilkan daftar repositori GitHub saya dan tanyakan yang mana. Tanyakan apa yang perlu ditambahkan, lalu buat di branch baru, jalankan pengujian, dan buka pull request."
+        },
+        "review-my-prs": {
+          "name": "Tinjau pull request saya",
+          "detail": "Bug dan pengujian yang kurang, per file dan baris.",
+          "prompt": "Tinjau pull request saya yang masih terbuka. Jika folder ini repositori GitHub, gunakan itu; jika bukan, tampilkan daftar repositori GitHub saya dan tanyakan yang mana. Untuk setiap pull request, jelaskan apa yang berubah dan sebutkan bug, risiko, serta pengujian yang kurang, dengan file dan barisnya. Sampaikan di sini saja: jangan memposting di GitHub atau mengubah kode."
         }
       }
     },

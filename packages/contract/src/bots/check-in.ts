@@ -42,15 +42,6 @@ export const GOAL_MISSION = (goal: string): string =>
   `${GOAL_LEAD}${goal.trim()}${GOAL_TAIL}`;
 
 /**
- * The GitHub pick's goal, as GOAL_MISSION words: the bot asks which repository
- * and what to change. It never picks one itself.
- */
-export const CODE_GOAL =
-  "Work on my code with me on GitHub: fix a bug or add a feature. I have not " +
-  "named the repository or the change yet: list my repositories, ask which " +
-  "one and what to change in one short question, then start on it.";
-
-/**
  * The "Research or write" pick's goal, as GOAL_MISSION words: the user names
  * the topic next. Its bot asks for the topic; it never picks one itself.
  */

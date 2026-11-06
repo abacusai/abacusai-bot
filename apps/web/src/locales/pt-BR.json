@@ -1295,8 +1295,7 @@
         "title": "Trabalhar no meu código",
         "body": "Corrija um bug ou adicione um recurso no seu repositório do GitHub.",
         "connect": "Conectar GitHub",
-        "start": "Começar",
-        "botName": "Assistente de código"
+        "start": "Começar"
       },
       "research": {
         "title": "Pesquisar ou escrever",
@@ -1775,6 +1774,23 @@
           "name": "Um jogo simples",
           "detail": "Para jogar no navegador.",
           "prompt": "Crie um jogo simples que eu possa jogar agora no navegador: um jogo da cobrinha com controles pelas setas e por deslizar, pontuação, recorde e um botão para recomeçar. Tudo em uma página só, e me mostre quando estiver pronto."
+        }
+      },
+      "code": {
+        "fix-a-bug": {
+          "name": "Corrigir um bug",
+          "detail": "Encontre a causa e abra um pull request.",
+          "prompt": "Corrija um bug no meu código. Se esta pasta for um repositório do GitHub, trabalhe nele; se não for, liste meus repositórios do GitHub e pergunte qual. Pergunte o que está com problema, depois encontre a causa, corrija em um novo branch, rode os testes e abra um pull request."
+        },
+        "add-a-feature": {
+          "name": "Adicionar um recurso",
+          "detail": "Crie em um branch e abra um pull request.",
+          "prompt": "Adicione um recurso ao meu código. Se esta pasta for um repositório do GitHub, trabalhe nele; se não for, liste meus repositórios do GitHub e pergunte qual. Pergunte o que adicionar, depois crie em um novo branch, rode os testes e abra um pull request."
+        },
+        "review-my-prs": {
+          "name": "Revisar meus pull requests",
+          "detail": "Bugs e testes faltando, por arquivo e linha.",
+          "prompt": "Revise meus pull requests abertos. Se esta pasta for um repositório do GitHub, use-o; se não for, liste meus repositórios do GitHub e pergunte qual. Para cada pull request, diga o que ele muda e aponte bugs, riscos e testes faltando, com o arquivo e a linha. Diga apenas aqui: não publique nada no GitHub nem altere código."
         }
       }
     },
