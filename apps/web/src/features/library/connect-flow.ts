@@ -53,7 +53,7 @@ export const connectPlatform = async (
   );
   return snapshot;
 };
-export const disablePlatform = async (
+export const unlinkPlatform = async (
   deps: Pick<FlowDeps, "transport" | "queryClient">,
   platformId: MessagingPlatformId
 ) => {
@@ -63,9 +63,8 @@ export const disablePlatform = async (
       platformId: shared,
       enabled: false,
     });
-  const snapshot = await deps.transport.client.messaging.updatePlatform({
+  const snapshot = await deps.transport.client.messaging.unlinkPlatform({
     platformId,
-    enabled: false,
   });
   deps.queryClient.setQueryData(
     deps.transport.orpc.messaging.snapshot.queryKey({ input: {} }),

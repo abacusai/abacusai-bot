@@ -1,6 +1,6 @@
 import { isDiskFull } from "@abacus-ai/agent/atomic-file";
 import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
-import { BrowserWindow, net, powerMonitor } from "electron";
+import { BrowserWindow, net, powerMonitor, session } from "electron";
 
 import {
   bringToFront,
@@ -35,6 +35,7 @@ import {
   readPlatformSignedIn,
   savePlatformLinkLost,
   savePlatformSignedIn,
+  savePlatformUnlinked,
 } from "./messaging-config-service";
 import {
   backOnline,
@@ -67,8 +68,11 @@ import {
 
 const WHATSAPP_WEB_URL = "https://web.whatsapp.com/";
 
-/** The partition that holds the login. Survives restarts; cleared on disconnect. */
+/** The partition that holds the login. Survives restarts; only Unlink clears it. */
 const WHATSAPP_PARTITION = "persist:whatsapp-web";
+
+/** How long Unlink waits on the page's logout before going on without it. */
+const LOG_OUT_WAIT_MS = 5_000;
 
 /**
  * web.whatsapp.com refuses Electron's default UA ("update your browser");
@@ -154,6 +158,14 @@ type LoginState = { loggedIn: boolean; loginVisible?: boolean };
 
 const delay = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
+
+/** The stored login, gone: the next Connect shows a QR, for any number. */
+export const forgetWhatsAppLogin = async (): Promise<void> => {
+  savePlatformUnlinked("whatsapp");
+  const login = session.fromPartition(WHATSAPP_PARTITION);
+  await login.clearStorageData();
+  await login.clearCache();
+};
 
 export class WhatsAppWebConnector implements MessagingConnector {
   readonly id: MessagingPlatformId = "whatsapp";
@@ -350,6 +362,25 @@ export class WhatsAppWebConnector implements MessagingConnector {
     this.window = null;
     if (win != null && !win.isDestroyed()) win.destroy();
     this.callbacks.onState("disabled");
+  }
+
+  /**
+   * The user is unlinking: end the session on WhatsApp's side while the page is
+   * still here. A page that cannot answer leaves the device listed on the phone
+   * until it lapses; the login on this computer goes either way.
+   */
+  async logOut(): Promise<void> {
+    // The logout must not read as a link the user lost.
+    this.loginPoll.stop();
+    this.inboundPoll.stop();
+    if (this.bridge == null || !this.bridgeReady) return;
+    try {
+      await boundedWait(this.bridge.logOut(), LOG_OUT_WAIT_MS);
+    } catch (error) {
+      this.callbacks.onLog(
+        `whatsapp-web: logout on unlink did not finish: ${String((error as Error)?.message ?? error)}`
+      );
+    }
   }
 
   async sendText(chatId: string, text: string): Promise<void> {
