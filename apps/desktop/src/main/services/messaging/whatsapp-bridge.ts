@@ -296,6 +296,11 @@ export class WhatsAppBridge {
     return result == null ? null : result.isMe === true;
   }
 
+  /** Ends this device's session on WhatsApp's side, so the phone drops it too. */
+  async logOut(): Promise<void> {
+    await this.host.run(LOG_OUT_SCRIPT, {});
+  }
+
   /** New messages since the last drain, oldest first, plus a logout flag.
    * Conversations only: a contact's Status is not someone writing in. */
   async drain(): Promise<{ messages: BridgeMessage[]; loggedOut: boolean }> {
@@ -333,6 +338,11 @@ export class QueuedSendError extends Error {
 // ── Page scripts ─────────────────────────────────────────────────────────
 // Each runs inside `(async function(args){ ... })(args)` in the page and
 // returns a JSON value. `WPP` is the library's global once injected.
+
+const LOG_OUT_SCRIPT = pageScript`
+  await WPP.conn.logout();
+  return true;
+`;
 
 const PRESENCE_SCRIPT = pageScript`
   const present = typeof WPP !== "undefined" && WPP != null;

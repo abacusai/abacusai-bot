@@ -53,7 +53,7 @@ import { Input } from "#renderer/ui/input";
 
 import {
   connectPlatform,
-  disablePlatform,
+  unlinkPlatform,
   useConnectFlow,
 } from "./connect-flow";
 import { useMessagingDialog } from "./messaging-dialog";
@@ -503,7 +503,7 @@ export const MessagingPlatformDialog = ({
                 onConfirm={async () => {
                   if (sharedId)
                     await unlinkShared.mutateAsync({ platformId: sharedId });
-                  await disablePlatform(
+                  await unlinkPlatform(
                     { transport, queryClient: cache },
                     platform
                   );

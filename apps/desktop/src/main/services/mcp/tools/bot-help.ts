@@ -219,6 +219,8 @@ function connectorsSection(
             : [
                 "The agent that reads and answers them runs in this app, so it answers only while",
                 "the app is running on this computer.",
+                "To link a different WhatsApp number: Unlink it there, then Connect and scan the",
+                "new QR code with the other phone.",
               ]),
           where(facts, "chat_apps"),
         ]
