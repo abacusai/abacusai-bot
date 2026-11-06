@@ -223,11 +223,13 @@ const planTopModels = (
   locale: string
 ): string | null => {
   const names = planTopModelNames(features);
-  return names.length > 0
-    ? new Intl.ListFormat(locale, { style: "short", type: "unit" }).format(
+  if (names.length === 0) return null;
+  // Chinese's unit list has no separator at all: names would run together.
+  return locale.startsWith("zh")
+    ? names.join("、")
+    : new Intl.ListFormat(locale, { style: "short", type: "unit" }).format(
         names
-      )
-    : null;
+      );
 };
 
 const APP_PROJECTS_FEATURE = " projects a month";
