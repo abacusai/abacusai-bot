@@ -622,6 +622,7 @@
       "memory": "Guarde y recupere notas que sobrevivan a la sesión.",
       "pdf": "Write, read, merge, split or fill a PDF.",
       "ppt": "Build a slide deck from a brief and save it as a PDF.",
+      "artifact": "Build a page beside the chat: a report, dashboard, diagram or small working tool.",
       "present_deliverable": "Presente los archivos terminados, los más importantes primero, y abra el de arriba.",
       "read": "Leer un archivo del disco.",
       "read_discord_messages": "Leer mensajes recientes de Discord cuando se pida.",
@@ -1421,6 +1422,16 @@
       "SENSITIVE": "Parece que este archivo contiene claves, contraseñas o rutas de archivos de tu computadora, así que no se puede compartir.",
       "UNSUPPORTED": "Este archivo no se puede compartir como enlace.",
       "FAILED": "No se pudo hacer. Revisa tu conexión e inténtalo de nuevo."
+    },
+    "artifact": {
+      "title": "Share this page",
+      "body": "It stays live: buttons and sliders keep working for whoever opens it.",
+      "private": "Only me",
+      "privateHint": "You can open it when signed in.",
+      "public": "Anyone with the link",
+      "publicHint": "Works without signing in.",
+      "publish": "Create link",
+      "update": "Update link"
     }
   },
   "routines": {

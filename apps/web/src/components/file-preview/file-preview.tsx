@@ -1,4 +1,5 @@
 import type { PptxDeck } from "@abacus-ai/contract/pptx";
+import { isArtifactPage } from "@abacus-ai/contract/share";
 /** Read-only file preview. PPTX uses authored slide geometry; local PDF/HTML
  * URLs come from the caller's host file boundary before the viewer loads. */
 import { TextPart } from "@tanstack/ai-react/ui";
@@ -450,7 +451,13 @@ export const FilePreview = ({
               title={baseName(path)}
               src={kind === "pdf" ? `${loaded.url}#view=FitH` : loaded.url}
               // Chromium disables its native PDF viewer in sandboxed frames.
-              sandbox={kind === "pdf" ? undefined : ""}
+              sandbox={
+                kind === "pdf"
+                  ? undefined
+                  : isArtifactPage(path)
+                    ? "allow-scripts"
+                    : ""
+              }
               className="min-h-0 w-full flex-1 border-0 bg-white"
             />
           ) : (

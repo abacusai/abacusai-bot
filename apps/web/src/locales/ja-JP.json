@@ -622,6 +622,7 @@
       "memory": "セッション終了後も保存されるメモを保存して呼び出します。",
       "pdf": "Write, read, merge, split or fill a PDF.",
       "ppt": "Build a slide deck from a brief and save it as a PDF.",
+      "artifact": "Build a page beside the chat: a report, dashboard, diagram or small working tool.",
       "present_deliverable": "完成したファイルを最も重要なものから先に提示し、一番上のファイルを開きます。",
       "read": "ディスク上のファイルを読み取ります。",
       "read_discord_messages": "求めに応じて最近の Discord メッセージを読みます。",
@@ -1421,6 +1422,16 @@
       "SENSITIVE": "このファイルにはキー、パスワード、またはコンピューター上のファイルパスが含まれているようなので、共有できません。",
       "UNSUPPORTED": "このファイルはリンクとして共有できません。",
       "FAILED": "実行できませんでした。接続を確認して、もう一度お試しください。"
+    },
+    "artifact": {
+      "title": "Share this page",
+      "body": "It stays live: buttons and sliders keep working for whoever opens it.",
+      "private": "Only me",
+      "privateHint": "You can open it when signed in.",
+      "public": "Anyone with the link",
+      "publicHint": "Works without signing in.",
+      "publish": "Create link",
+      "update": "Update link"
     }
   },
   "routines": {

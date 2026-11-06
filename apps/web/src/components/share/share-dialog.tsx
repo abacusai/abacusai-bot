@@ -3,10 +3,13 @@
  * public until Create public link. One host in the shell serves every files
  * card and the Shared links list in the profile menu.
  */
-import type {
-  SharedLink,
-  SharePreview,
-  ShareRefusal,
+import {
+  ARTIFACT_ACCESS,
+  isArtifactPage,
+  type ArtifactAccess,
+  type SharedLink,
+  type SharePreview,
+  type ShareRefusal,
 } from "@abacus-ai/contract/share";
 import { useStore } from "@tanstack/react-store";
 import { Check, Copy, ExternalLink, Link2 } from "lucide-react";
@@ -127,6 +130,113 @@ const LinkActions = ({
         }}
       />
     </div>
+  );
+};
+
+/** An artifact runs live, so it goes through the page itself, not a static copy. */
+const ArtifactShare = ({ path }: { path: string }) => {
+  const { t } = useTranslation();
+  const { client, funnel } = useShareActions();
+  const [access, setAccess] = useState<ArtifactAccess>("private");
+  const [busy, setBusy] = useState(false);
+  const [url, setUrl] = useState<string | null>(null);
+  const [failure, setFailure] = useState<ShareRefusal | null>(null);
+  const [copied, setCopied] = useState(false);
+  const publish = async () => {
+    setBusy(true);
+    setFailure(null);
+    const result = await client.shares
+      .publishArtifact({ path, access })
+      .catch(() => ({ ok: false as const, code: "FAILED" as const }));
+    setBusy(false);
+    if (result.ok === false) {
+      setFailure(result.code);
+      return;
+    }
+    setUrl(result.url);
+    funnel("share_created");
+  };
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>{t("share.artifact.title")}</DialogTitle>
+        <DialogDescription>{t("share.artifact.body")}</DialogDescription>
+      </DialogHeader>
+      <div role="radiogroup" className="flex flex-col gap-2">
+        {ARTIFACT_ACCESS.map((option) => (
+          <label
+            key={option}
+            className="flex items-start gap-2 rounded-lg border p-3 text-sm"
+          >
+            <input
+              type="radio"
+              name="artifact-access"
+              checked={access === option}
+              onChange={() => {
+                setAccess(option);
+                setUrl(null);
+              }}
+            />
+            <span>
+              {t(
+                option === "private"
+                  ? "share.artifact.private"
+                  : "share.artifact.public"
+              )}
+              <span className="text-muted-foreground block text-xs">
+                {t(
+                  option === "private"
+                    ? "share.artifact.privateHint"
+                    : "share.artifact.publicHint"
+                )}
+              </span>
+            </span>
+          </label>
+        ))}
+      </div>
+      {url != null && (
+        <div className="flex gap-2" data-slot="share-link">
+          <Input
+            readOnly
+            aria-label={t("share.linkLabel")}
+            value={url}
+            onFocus={(event) => event.currentTarget.select()}
+          />
+          <Button
+            data-slot="share-copy"
+            onClick={async () => {
+              await navigator.clipboard.writeText(url);
+              setCopied(true);
+              funnel("share_copied");
+            }}
+          >
+            {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
+            {t(copied ? "share.copied" : "share.copy")}
+          </Button>
+        </div>
+      )}
+      {failure != null && (
+        <p
+          role="alert"
+          className="text-destructive text-sm"
+          data-slot="share-error"
+        >
+          {t(`share.errors.${failure}`)}
+        </p>
+      )}
+      <DialogFooter>
+        <Button variant="ghost" onClick={closeShareDialog}>
+          {t("share.cancel")}
+        </Button>
+        <Button
+          data-slot="share-create"
+          disabled={busy}
+          onClick={() => void publish()}
+        >
+          {t(url == null ? "share.artifact.publish" : "share.artifact.update")}
+        </Button>
+      </DialogFooter>
+    </>
   );
 };
 
@@ -297,9 +407,12 @@ export const ShareDialogHost = () => {
       }}
     >
       <DialogContent className="sm:max-w-lg" data-slot="share-dialog">
-        {request?.kind === "file" && (
-          <FileShare key={request.path} path={request.path} />
-        )}
+        {request?.kind === "file" &&
+          (isArtifactPage(request.path) ? (
+            <ArtifactShare key={request.path} path={request.path} />
+          ) : (
+            <FileShare key={request.path} path={request.path} />
+          ))}
         {request?.kind === "links" && <SharedLinks />}
       </DialogContent>
     </Dialog>

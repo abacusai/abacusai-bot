@@ -70,3 +70,14 @@ export const shareExtension = (path: string): string => {
 
 export const isShareableFile = (path: string): boolean =>
   (SHAREABLE_EXTENSIONS as readonly string[]).includes(shareExtension(path));
+
+/** A page the `artifact` tool made: it runs live, so it shares live. */
+export const isArtifactPage = (path: string): boolean =>
+  /[\\/]artifacts[\\/][^\\/]+[\\/]index\.html$/.test(path);
+
+export const ARTIFACT_ACCESS = ["private", "public"] as const;
+export type ArtifactAccess = (typeof ARTIFACT_ACCESS)[number];
+
+export type ArtifactPublished =
+  | { ok: true; url: string; access: ArtifactAccess; updated: boolean }
+  | { ok: false; code: ShareRefusal };

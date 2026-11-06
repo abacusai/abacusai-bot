@@ -622,6 +622,7 @@
       "memory": "세션이 끝난 후에도 지속되는 메모를 저장하고 불러오세요.",
       "pdf": "Write, read, merge, split or fill a PDF.",
       "ppt": "Build a slide deck from a brief and save it as a PDF.",
+      "artifact": "Build a page beside the chat: a report, dashboard, diagram or small working tool.",
       "present_deliverable": "완성된 파일 중 가장 중요한 파일을 먼저 제시하고 맨 위 파일을 엽니다.",
       "read": "디스크에서 파일을 읽습니다.",
       "read_discord_messages": "요청 시 최근 Discord 메시지를 읽습니다.",
@@ -1421,6 +1422,16 @@
       "SENSITIVE": "이 파일에는 키, 비밀번호 또는 컴퓨터의 파일 경로가 있는 것 같아 공유할 수 없습니다.",
       "UNSUPPORTED": "이 파일은 링크로 공유할 수 없습니다.",
       "FAILED": "실행하지 못했습니다. 연결을 확인하고 다시 시도하세요."
+    },
+    "artifact": {
+      "title": "Share this page",
+      "body": "It stays live: buttons and sliders keep working for whoever opens it.",
+      "private": "Only me",
+      "privateHint": "You can open it when signed in.",
+      "public": "Anyone with the link",
+      "publicHint": "Works without signing in.",
+      "publish": "Create link",
+      "update": "Update link"
     }
   },
   "routines": {
