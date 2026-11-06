@@ -5,7 +5,6 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { usePrefs } from "#renderer/data/db/prefs";
-import { useChatCommands } from "#renderer/features/chat/commands";
 import { StartComposer } from "#renderer/features/chat/composer/start-composer";
 import { COMPOSER_CONNECTORS } from "#renderer/features/library/composer-connectors";
 import { useSessionComposerModel } from "#renderer/features/sessions/data/composer-model";
@@ -28,6 +27,7 @@ import {
   shellStore,
 } from "#renderer/features/shell/shell-store";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
+import { useChatCommands } from "#renderer/lib/chat-commands";
 import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
 import { NewSessionSearch } from "#renderer/lib/navigation/search";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";

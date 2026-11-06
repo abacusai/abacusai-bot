@@ -14,7 +14,19 @@ import { platformSystem } from "#renderer/lib/platform-system";
 import { showError, showInfo } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
 
-import type { ComposerCommand } from "./kit/context";
+/** A `/` command: runs here, and reaches the model only through `expand`. */
+export interface ComposerCommand {
+  name: string;
+  aliases?: readonly string[];
+  description: string;
+  /** Hint after the name. A command without one matches only on its own. */
+  argument?: string;
+  /** Waits for its text: picking it leaves `/name ` in the box. */
+  valueRequired?: boolean;
+  run?(value: string): void | Promise<void>;
+  /** Sent as the user's message instead, so it spends credits like one. */
+  expand?(value: string): string;
+}
 
 const REPORT_ISSUE_URL =
   "https://github.com/abacusai/abacusai-bot/issues/new?template=bug_report.yml";

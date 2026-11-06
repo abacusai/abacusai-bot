@@ -4,7 +4,7 @@
  */
 import type { TFunction } from "i18next";
 
-import type { ComposerCommand } from "../kit/context";
+import type { ComposerCommand } from "#renderer/lib/chat-commands";
 
 export const composerCommands = (
   t: TFunction,

@@ -131,6 +131,7 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
     "sidebar",
   ],
   sessions: [
+    "data/session-actions",
     "browser/browser-tab",
     "browser/ask-host",
     "device/device-tab",

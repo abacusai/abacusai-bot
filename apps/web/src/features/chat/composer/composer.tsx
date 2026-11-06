@@ -30,6 +30,7 @@ import { SendError } from "#renderer/components/send-error";
 import { Spinner } from "#renderer/components/spinner";
 import { isNotFound } from "#renderer/data/ai";
 import { isRpcError } from "#renderer/data/query-client";
+import type { ComposerCommand } from "#renderer/lib/chat-commands";
 import { cn } from "#renderer/lib/cn";
 import {
   clearDraft,
@@ -59,7 +60,7 @@ import {
 import { Popover, PopoverContent } from "#renderer/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 
-import { useChatView, type ComposerCommand } from "../kit/context";
+import { useChatView } from "../kit/context";
 import { messageMarkdown } from "../kit/message-actions";
 import { composeReply, ReplyQuote } from "../kit/reply";
 import {

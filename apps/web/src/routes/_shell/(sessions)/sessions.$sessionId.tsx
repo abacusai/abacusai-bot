@@ -19,9 +19,7 @@ import * as v from "valibot";
 import { ComposerUpdateNotice } from "#platform/updates";
 import { useCollections, useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
-import { useChatCommands } from "#renderer/features/chat/commands";
 import { loadFixtureRuntime } from "#renderer/features/chat/fixture-runtime";
-import type { ComposerCommand } from "#renderer/features/chat/kit/context";
 import { ChatView } from "#renderer/features/chat/kit/lazy-view";
 import { AgentsList } from "#renderer/features/chat/kit/subagents/agents-list";
 import { useSubagents } from "#renderer/features/chat/kit/subagents/use-subagents";
@@ -30,6 +28,10 @@ import {
   hasAgentBrowserTab,
 } from "#renderer/features/sessions/dock/agent-browser";
 import { openStartDraft } from "#renderer/features/sessions/start/start-session";
+import {
+  useChatCommands,
+  type ComposerCommand,
+} from "#renderer/lib/chat-commands";
 import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";

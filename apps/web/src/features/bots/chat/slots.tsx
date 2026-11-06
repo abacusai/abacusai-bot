@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 import { ConnectorRequestCard } from "#renderer/components/connector-request-card";
 import { confirmFreePoolModel } from "#renderer/components/credits-card/actions";
 import { useCollections } from "#renderer/data/db";
-import { useChatCommands } from "#renderer/features/chat/commands";
+import { useChatCommands } from "#renderer/lib/chat-commands";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { useVisibleThread } from "#renderer/lib/navigation/visible-thread";
 import { IS_ELECTRON } from "#renderer/lib/platform";

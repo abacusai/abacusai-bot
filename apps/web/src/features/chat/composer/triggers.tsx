@@ -14,10 +14,11 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import type { ComposerCommand } from "#renderer/lib/chat-commands";
 import { cn } from "#renderer/lib/cn";
 import { Spinner } from "#renderer/ui/spinner";
 
-import type { ComposerCommand, MentionSource } from "../kit/context";
+import type { MentionSource } from "../kit/context";
 import type { SkillMetadata } from "../store/thread-store";
 
 export interface TriggerState {
