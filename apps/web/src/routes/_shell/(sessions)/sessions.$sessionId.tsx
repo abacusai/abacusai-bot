@@ -70,6 +70,7 @@ import { hasInAppViewer, isUrl } from "#renderer/components/file-preview";
 import { MessageFeedback } from "#renderer/components/message-feedback";
 import { chatLoading } from "#renderer/features/chat/runtime/lazy-runtime";
 import { type ChatRuntime } from "#renderer/features/chat/runtime/runtime";
+import { COMPOSER_CONNECTORS } from "#renderer/features/library/composer-connectors";
 import { SessionChangesCard } from "#renderer/features/sessions/changes/changes-card";
 import {
   deliverablesAfter,
@@ -607,6 +608,7 @@ const SessionRoute = () => {
                 sessionId: row.id,
               }),
               showModeChip: true,
+              connectors: COMPOSER_CONNECTORS,
               model: model.model,
               onResumeOnFreePool: model.onResumeOnFreePool,
               onNewChat: () =>

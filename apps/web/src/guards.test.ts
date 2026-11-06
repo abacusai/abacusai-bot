@@ -96,6 +96,7 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
   ],
   gallery: ["gallery", "search"],
   library: [
+    "composer-connectors",
     "connect-flow",
     "connectors",
     "globals",
