@@ -304,3 +304,219 @@ describe("botMessageDecorations", () => {
     expect(d[1]?.after).toBeUndefined();
   });
 });
+
+describe("a bot-to-bot note", () => {
+  const exchangeMessage = (): UIMessage =>
+    ({
+      id: "x1",
+      role: "user",
+      parts: [
+        {
+          type: "text",
+          content:
+            '[bot answer] Planner finished the task q8 ("Make a checklist") you passed it for the user. Its report:\n<bot_reply from="Planner">\nDone: 5 steps, saved as checklist.md.\n</bot_reply>\nTell the user what it did.',
+        },
+      ],
+      metadata: {
+        abacus: {
+          userText: {
+            systemReminder: true,
+            operator: {
+              kind: "bot-exchange",
+              exchange: {
+                askId: "q8",
+                botId: "pla",
+                bot: "Planner",
+                kind: "task",
+                request: "Make a checklist",
+                outcome: "answered",
+              },
+            },
+          },
+        },
+      },
+    }) as unknown as UIMessage;
+
+  it("is drawn as a row that opens to the other bot's words, and is not hidden", async () => {
+    const decorate = botMessageDecorations({
+      ...options(),
+      bots: [],
+    });
+    const message = exchangeMessage();
+    const context = { messages: [message], index: 0, runActive: false };
+    expect(decorate.isMessageHidden(message, context)).toBe(false);
+    const decoration = decorate(message, context);
+    expect(decoration?.hidden).not.toBe(true);
+    show(decoration?.before);
+    expect(screen.getByText("Planner finished the task")).toBeTruthy();
+    fireEvent.click(screen.getByText("Planner finished the task"));
+    await waitFor(() =>
+      expect(
+        screen.getByText("Done: 5 steps, saved as checklist.md.")
+      ).toBeTruthy()
+    );
+  });
+
+  it("a turn that only asked another bot shows as 'Messaged X', opening to the task, and is not dropped", async () => {
+    const decorate = botMessageDecorations({ ...options(), bots: [] });
+    const message = {
+      id: "a1",
+      role: "assistant",
+      parts: [
+        {
+          type: "tool-call",
+          id: "t1",
+          name: "give_task_to_bot",
+          input: {
+            bot: "Planner",
+            task: "Make a 5-step opening-day checklist",
+          },
+        },
+      ],
+    } as unknown as UIMessage;
+    const context = { messages: [message], index: 0, runActive: false };
+    expect(decorate.isMessageHidden(message, context)).toBe(false);
+    const decoration = decorate(message, context);
+    show(decoration?.before);
+    expect(screen.getByText("Messaged")).toBeTruthy();
+    fireEvent.click(screen.getByText("Planner"));
+    await waitFor(() =>
+      expect(
+        screen.getByText("Make a 5-step opening-day checklist")
+      ).toBeTruthy()
+    );
+  });
+
+  it("a turn's requests to several bots read as one 'Messaged X and Y' row, opening to each task", async () => {
+    const decorate = botMessageDecorations({ ...options(), bots: [] });
+    const message = {
+      id: "a1",
+      role: "assistant",
+      parts: [
+        {
+          type: "tool-call",
+          id: "t1",
+          name: "give_task_to_bot",
+          input: { bot: "Planner", task: "Make the checklist" },
+        },
+        {
+          type: "tool-call",
+          id: "t2",
+          name: "ask_bot",
+          input: { bot: "Researcher", request: "When do cafes open?" },
+        },
+      ],
+    } as unknown as UIMessage;
+    const decoration = decorate(message, {
+      messages: [message],
+      index: 0,
+      runActive: false,
+    });
+    show(decoration?.before);
+    const row = screen.getByText("Messaged").closest("button")!;
+    expect(row.textContent?.replace(/\s+/g, " ")).toBe(
+      "MessagedPlanner and Researcher"
+    );
+    fireEvent.click(row);
+    await waitFor(() => {
+      expect(screen.getByText("Make the checklist")).toBeTruthy();
+      expect(screen.getByText("When do cafes open?")).toBeTruthy();
+    });
+  });
+
+  it("a task another bot passed on reads as the user's words, headed by who passed it on", async () => {
+    const decorate = botMessageDecorations({ ...options(), bots: [] });
+    const message = {
+      id: "u1",
+      role: "user",
+      parts: [
+        {
+          type: "text",
+          content: "[task from the user, passed on by Writer] …",
+        },
+      ],
+      metadata: {
+        abacus: {
+          userText: {
+            operator: {
+              kind: "bot-task",
+              task: {
+                askId: "q8",
+                passerId: "wri",
+                passer: "Writer",
+                task: "Make a 5-step opening-day checklist for Brewly.",
+                userWords: "have Planner make a 5-step opening-day checklist",
+              },
+            },
+          },
+        },
+      },
+    } as unknown as UIMessage;
+    const context = { messages: [message], index: 0, runActive: false };
+    expect(decorate.isMessageHidden(message, context)).toBe(false);
+    const decoration = decorate(message, context);
+    expect(decoration?.hidden).not.toBe(true);
+    show(decoration?.before);
+    expect(screen.getByText("From you, via Writer")).toBeTruthy();
+    expect(
+      screen.getByText("have Planner make a 5-step opening-day checklist")
+    ).toBeTruthy();
+    fireEvent.click(screen.getByText("As Writer passed it on:"));
+    await waitFor(() =>
+      expect(
+        screen.getByText("Make a 5-step opening-day checklist for Brewly.")
+      ).toBeTruthy()
+    );
+  });
+
+  it("notes that follow one another fold into one row, opening to each", async () => {
+    const decorate = botMessageDecorations({ ...options(), bots: [] });
+    const first = exchangeMessage();
+    const second = {
+      ...exchangeMessage(),
+      id: "x2",
+      parts: [
+        {
+          type: "text",
+          content:
+            '[bot answer] Researcher answered q9 ("When do cafes open?"). Its answer:\n<bot_reply from="Researcher">\nMost open at 8.\n</bot_reply>',
+        },
+      ],
+      metadata: {
+        abacus: {
+          userText: {
+            systemReminder: true,
+            operator: {
+              kind: "bot-exchange",
+              exchange: {
+                askId: "q9",
+                botId: "res",
+                bot: "Researcher",
+                kind: "ask",
+                request: "When do cafes open?",
+                outcome: "answered",
+              },
+            },
+          },
+        },
+      },
+    } as unknown as UIMessage;
+    const messages = [first, second];
+    expect(
+      decorate(first, { messages, index: 0, runActive: false })?.hidden
+    ).toBe(true);
+    const decoration = decorate(second, {
+      messages,
+      index: 1,
+      runActive: false,
+    });
+    show(decoration?.before);
+    expect(screen.getByText("2 messages with")).toBeTruthy();
+    expect(screen.getByText("2 bots")).toBeTruthy();
+    fireEvent.click(screen.getByText("2 bots"));
+    await waitFor(() => {
+      expect(screen.getByText("Planner finished the task")).toBeTruthy();
+      expect(screen.getByText("Most open at 8.")).toBeTruthy();
+    });
+  });
+});

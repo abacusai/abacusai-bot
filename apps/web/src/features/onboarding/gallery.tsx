@@ -9,13 +9,17 @@ import { OnboardingFrame, OnboardingStepPage } from "./index";
 /** The first-run screen's other states, as `onboarding-first-bot-<variant>` fixtures. */
 export const FIRST_RUN_GALLERY_VARIANTS = [
   "chat-app",
+  "github",
   "reading",
   "drafts",
   "empty",
   "stopped",
 ] as const;
 type FirstRunVariant = (typeof FIRST_RUN_GALLERY_VARIANTS)[number];
-const INBOX: Record<Exclude<FirstRunVariant, "chat-app">, InboxPass> = {
+const INBOX: Record<
+  Exclude<FirstRunVariant, "chat-app" | "github">,
+  InboxPass
+> = {
   reading: { state: "reading" },
   drafts: { state: "done", drafts: 4 },
   empty: { state: "done", drafts: 0 },
@@ -34,7 +38,9 @@ export const OnboardingGallery = ({
   const db = useDb();
   const bot = db.collections.bots.toArray[0];
   const inbox =
-    variant != null && variant !== "chat-app" ? INBOX[variant] : undefined;
+    variant != null && variant !== "chat-app" && variant !== "github"
+      ? INBOX[variant]
+      : undefined;
   // The first-run screen shows a bot only for the inbox pass.
   const previewBot =
     bot && (step !== "first-bot" || inbox != null)
@@ -57,6 +63,7 @@ export const OnboardingGallery = ({
             ? {
                 ...(inbox != null ? { inbox } : {}),
                 ...(variant === "chat-app" ? { chatApp: "whatsapp" } : {}),
+                ...(variant === "github" ? { github: "start" } : {}),
               }
             : undefined
         }

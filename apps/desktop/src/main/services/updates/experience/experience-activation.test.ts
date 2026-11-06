@@ -518,6 +518,7 @@ describe("a second release while an activation is pending", () => {
         })
     );
     const outcomes: Array<[string, string]> = [];
+    const settled: Promise<void>[] = [];
     const scheduler = new RendererSwapScheduler({
       target: (version) =>
         store.version === version ? rendererUrl(version) : null,
@@ -528,9 +529,11 @@ describe("a second release while an activation is pending", () => {
       log: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
       onOutcome: (version, outcome) => {
         outcomes.push([version, outcome]);
-        void (outcome === "gave-up"
-          ? store.abandonActivation(version)
-          : store.commitActivation(version));
+        settled.push(
+          outcome === "gave-up"
+            ? store.abandonActivation(version)
+            : store.commitActivation(version)
+        );
       },
     });
 
@@ -546,9 +549,10 @@ describe("a second release while an activation is pending", () => {
     expect(outcomes).toEqual([[VERSION(3), "swapped"]]);
     expect(scheduler.pending).toBe(false);
     expect(swap).toHaveBeenCalledTimes(2);
-    await vi.waitFor(async () =>
-      expect((await restart()).version).toBe(VERSION(3))
-    );
+    // Not polled: a restart rewrites the pointer it read, so one racing the
+    // commit's writes can put the old one back.
+    await Promise.all(settled);
+    expect((await restart()).version).toBe(VERSION(3));
   });
 });
 

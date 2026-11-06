@@ -1006,17 +1006,7 @@ export class AguiRelayService implements AguiSource {
           const metadata = message.metadata as
             | { abacus?: { userText?: UserTextTags } }
             | undefined;
-          try {
-            this.#host.acceptedMessage?.(
-              threadId,
-              text,
-              metadata?.abacus?.userText
-            );
-          } catch (error) {
-            this.#log(
-              `${threadId}: naming the session failed: ${String(error)}`
-            );
-          }
+          this.#accepted(threadId, text, metadata?.abacus?.userText);
         }
       }
       return this.#answer(runId, ack, false);
@@ -1162,6 +1152,9 @@ export class AguiRelayService implements AguiSource {
   }
 
   readonly queue: AguiSource["queue"] = {
+    // Queued behind a running turn, it is still the user's message the
+    // moment they send it: main hears it then (as for a queued send), or a
+    // bot's turn that follows cannot tell it was the user's.
     enqueue: async (threadId, message, userText) => {
       this.#requireAgui(threadId);
       this.#write(threadId, {
@@ -1170,15 +1163,17 @@ export class AguiRelayService implements AguiSource {
         hidden: false,
         ...(userText && { userText }),
       });
+      this.#accepted(threadId, message, userText);
     },
     update: async ({ threadId, incarnation, entryId, message }) => {
-      if (this.#queueTarget(threadId, incarnation, entryId, "update"))
+      if (this.#queueTarget(threadId, incarnation, entryId, "update")) {
         this.#write(threadId, {
           type: "queue.update",
           incarnation,
           entryId,
           message,
         });
+      }
     },
     remove: async ({ threadId, incarnation, entryId }) => {
       if (this.#queueTarget(threadId, incarnation, entryId, "remove"))
@@ -1195,6 +1190,15 @@ export class AguiRelayService implements AguiSource {
   };
 
   // ─── internals ────────────────────────────────────────────────────────
+
+  /** A human message the agent took (started or queued): main hears it. */
+  #accepted(threadId: string, message: string, userText?: UserTextTags): void {
+    try {
+      this.#host.acceptedMessage?.(threadId, message, userText);
+    } catch (error) {
+      this.#log(`${threadId}: naming the session failed: ${String(error)}`);
+    }
+  }
 
   /** A thread main knows (NOT_FOUND otherwise), claimed and loaded. */
   #known(threadId: string): ThreadRelay {

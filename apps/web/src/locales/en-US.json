@@ -436,7 +436,29 @@
       "senderReadOnlyFallback": "{{bot}} replies in this conversation.",
       "sessionOfferHeading": "Build this in a session",
       "sessionOfferOpen": "Open session",
-      "sessionOfferDismiss": "Keep chatting here"
+      "sessionOfferDismiss": "Keep chatting here",
+      "exchange": {
+        "answered": "{{bot}} answered",
+        "taskDone": "{{bot}} finished the task",
+        "askFailed": "{{bot}} couldn't answer",
+        "taskFailed": "{{bot}} couldn't finish the task",
+        "followUp": "{{bot}} replied to you",
+        "asked": "Asked:",
+        "task": "Task:",
+        "userWrote": "You wrote to {{bot}}:",
+        "open": "Open the chat with {{bot}}",
+        "messaged": "Messaged",
+        "foldMessages_one": "{{count}} message with",
+        "foldMessages_other": "{{count}} messages with",
+        "foldBots_one": "{{count}} bot",
+        "foldBots_other": "{{count}} bots"
+      },
+      "task": {
+        "from": "From you, via {{bot}}",
+        "asWritten": "As {{bot}} passed it on:"
+      },
+      "pairWith": "with {{bot}}",
+      "pairReadOnly": "read-only"
     },
     "deleteDialog": {
       "checkIn": "Its check-in keeps running as an ordinary routine.",
@@ -508,7 +530,6 @@
       "filesTitle": "Files",
       "checkIns": "Check-ins",
       "senderChats": "Chats on your behalf",
-      "botChats": "Chats with other bots",
       "on": "On",
       "reachable": "Also reachable on",
       "connected": "Connected",
@@ -1259,7 +1280,7 @@
     "connectedPromiseLocal": "Chat with it wherever you work.",
     "firstRun": {
       "title": "What do you want to do first?",
-      "subtitle": "Pick one. Your bot starts on it right away. Nothing to connect.",
+      "subtitle": "Pick one. Your bot starts on it right away.",
       "build": {
         "title": "Build something",
         "body": "A website, app or game. Describe it and watch it appear.",
@@ -1268,8 +1289,14 @@
       "chatApp": {
         "title": "Answer me on {{app}}",
         "body": "Message your bot from your phone anytime.",
-        "setUp": "Set up",
         "open": "Open"
+      },
+      "github": {
+        "title": "Work on my code",
+        "body": "Fix a bug or add a feature in your GitHub repo.",
+        "connect": "Connect GitHub",
+        "start": "Start",
+        "botName": "Code Assistant"
       },
       "research": {
         "title": "Research or write",
@@ -3254,7 +3281,9 @@
       "componentServeDone": "Served",
       "showMoreOutput": "Show {{count}} more characters",
       "askWaiting": "Waiting for a response…",
-      "askSkipped": "Skipped"
+      "askSkipped": "Skipped",
+      "askBot": "Asked {{bot}}: {{what}}",
+      "giveTask": "Passed a task to {{bot}}: {{what}}"
     },
     "transcript": {
       "jump": "Jump to the end",

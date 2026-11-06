@@ -43,6 +43,7 @@ import {
   clearAbacusCache,
   fetchAbacusAccount,
   onAbacusPaymentChange,
+  onAbacusPlanChange,
   requestAbacusAccount,
 } from "./services/providers/abacus";
 import { abacusRoutellmV1 } from "./services/providers/abacus-host";
@@ -176,6 +177,8 @@ export const createHostOperations = (
     });
   };
   onAbacusPaymentChange(announceAbacusAccount);
+  // Every window holds the plan's model list, so a plan change re-reads it.
+  onAbacusPlanChange(announceAbacusAccount);
 
   /** A sign-in the payment gate refused: held, never stored, as it has no identity for a profile yet. */
   let paymentHold: { key: string; payment: AbacusPaymentRequired } | null =

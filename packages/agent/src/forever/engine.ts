@@ -129,6 +129,7 @@ import {
   registerCustomProviders,
   registerGeminiProvider,
   resolveModel,
+  settleProviderRegistrations,
   DEFAULT_MAX_OUTPUT_TOKENS,
 } from "../providers.js";
 import {
@@ -427,6 +428,7 @@ export class ForeverEngine {
       refreshOpenRouterLive(),
       refreshLiveModelIds(),
     ]);
+    await settleProviderRegistrations(registry);
 
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
     this.mcp.onToolsAdded = () => this.mcpTools.changed();
@@ -464,7 +466,7 @@ export class ForeverEngine {
       appendSystemPromptOverride: (base: string[]): string[] => {
         const persona = personaPrompt();
         const memory = this.profile.memory.standingPrompt();
-        const recentMemory = this.profile.memory.sessionStartPrompt();
+        const recentMemory = this.profile.memory.recentPrompt();
         // Live on every rebuild: a connector added mid-conversation must show.
         const mcp = mcpPrompt(this.mcp.statuses);
         this.promptMcpRoster = mcpRosterFingerprint(this.mcp.statuses);
@@ -1840,6 +1842,7 @@ export class ForeverEngine {
       refreshOpenRouterLive(),
       refreshLiveModelIds(),
     ]);
+    await settleProviderRegistrations(registry);
   }
 
   async setModel(reference: string): Promise<void> {

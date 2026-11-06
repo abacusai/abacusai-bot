@@ -35,7 +35,7 @@ import {
 
 import { useChatView } from "../kit/context";
 import { DeliverableOfferRow } from "../kit/deliverable-offer";
-import { appLineOf, userView } from "../kit/message";
+import { appLineOf, userView, routeRowOf } from "../kit/message";
 import {
   BusyLine,
   busyLabel,
@@ -399,7 +399,9 @@ const visibleMessages = (
   messages.filter((message, index) => {
     if (
       message.role === "user"
-        ? userView(message).hidden && appLineOf(message) == null
+        ? userView(message).hidden &&
+          appLineOf(message) == null &&
+          routeRowOf(message) == null
         : message.parts.length === 0 ||
           (skin !== "bot" && drawsNothing(message))
     )

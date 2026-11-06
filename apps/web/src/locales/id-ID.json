@@ -436,7 +436,29 @@
       "senderReadOnlyFallback": "{{bot}} membalas dalam percakapan ini.",
       "sessionOfferHeading": "Bangun ini di sesi",
       "sessionOfferOpen": "Buka sesi",
-      "sessionOfferDismiss": "Lanjut mengobrol di sini"
+      "sessionOfferDismiss": "Lanjut mengobrol di sini",
+      "exchange": {
+        "answered": "{{bot}} answered",
+        "taskDone": "{{bot}} finished the task",
+        "askFailed": "{{bot}} couldn't answer",
+        "taskFailed": "{{bot}} couldn't finish the task",
+        "followUp": "{{bot}} replied to you",
+        "asked": "Asked:",
+        "task": "Task:",
+        "userWrote": "You wrote to {{bot}}:",
+        "open": "Open the chat with {{bot}}",
+        "messaged": "Mengirim pesan ke",
+        "foldMessages_one": "{{count}} pesan dengan",
+        "foldMessages_other": "{{count}} pesan dengan",
+        "foldBots_one": "{{count}} bot",
+        "foldBots_other": "{{count}} bot"
+      },
+      "task": {
+        "from": "Dari Anda, melalui {{bot}}",
+        "asWritten": "Seperti yang diteruskan {{bot}}:"
+      },
+      "pairWith": "dengan {{bot}}",
+      "pairReadOnly": "hanya-baca"
     },
     "deleteDialog": {
       "checkIn": "Its check-in keeps running as an ordinary routine.",
@@ -508,7 +530,6 @@
       "filesTitle": "Files",
       "checkIns": "Check-ins",
       "senderChats": "Chats on your behalf",
-      "botChats": "Obrolan dengan bot lain",
       "on": "On",
       "reachable": "Also reachable on",
       "connected": "Connected",
@@ -1259,7 +1280,7 @@
     "connectedPromiseLocal": "Ngobrol dengannya di mana pun Anda bekerja.",
     "firstRun": {
       "title": "Apa yang ingin Anda lakukan dulu?",
-      "subtitle": "Pilih satu. Bot Anda langsung mengerjakannya. Tidak ada yang perlu dihubungkan.",
+      "subtitle": "Pilih satu. Bot Anda langsung mengerjakannya.",
       "build": {
         "title": "Buat sesuatu",
         "body": "Situs web, aplikasi, atau game. Jelaskan dan lihat hasilnya muncul.",
@@ -1268,8 +1289,14 @@
       "chatApp": {
         "title": "Balas saya di {{app}}",
         "body": "Kirim pesan ke bot Anda dari ponsel kapan saja.",
-        "setUp": "Siapkan",
         "open": "Buka"
+      },
+      "github": {
+        "title": "Kerjakan kode saya",
+        "body": "Perbaiki bug atau tambahkan fitur di repo GitHub Anda.",
+        "connect": "Hubungkan GitHub",
+        "start": "Mulai",
+        "botName": "Asisten Kode"
       },
       "research": {
         "title": "Riset atau menulis",
@@ -3254,7 +3281,9 @@
       "componentServeDone": "Served",
       "showMoreOutput": "Show {{count}} more characters",
       "askWaiting": "Waiting for a response…",
-      "askSkipped": "Skipped"
+      "askSkipped": "Skipped",
+      "askBot": "Bertanya kepada {{bot}}: {{what}}",
+      "giveTask": "Memberikan tugas kepada {{bot}}: {{what}}"
     },
     "transcript": {
       "jump": "Jump to the end",

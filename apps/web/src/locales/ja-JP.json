@@ -436,7 +436,29 @@
       "senderReadOnlyFallback": "{{bot}} はこの会話で返信します。",
       "sessionOfferHeading": "セッションで作る",
       "sessionOfferOpen": "セッションを開く",
-      "sessionOfferDismiss": "ここで続ける"
+      "sessionOfferDismiss": "ここで続ける",
+      "exchange": {
+        "answered": "{{bot}} answered",
+        "taskDone": "{{bot}} finished the task",
+        "askFailed": "{{bot}} couldn't answer",
+        "taskFailed": "{{bot}} couldn't finish the task",
+        "followUp": "{{bot}} replied to you",
+        "asked": "Asked:",
+        "task": "Task:",
+        "userWrote": "You wrote to {{bot}}:",
+        "open": "Open the chat with {{bot}}",
+        "messaged": "メッセージを送信しました",
+        "foldMessages_one": "{{count}}件のメッセージ:",
+        "foldMessages_other": "{{count}}件のメッセージ:",
+        "foldBots_one": "{{count}}個のボット",
+        "foldBots_other": "{{count}}個のボット"
+      },
+      "task": {
+        "from": "あなたから({{bot}}経由)",
+        "asWritten": "{{bot}}が伝えた内容:"
+      },
+      "pairWith": "{{bot}}と",
+      "pairReadOnly": "読み取り専用"
     },
     "deleteDialog": {
       "checkIn": "Its check-in keeps running as an ordinary routine.",
@@ -508,7 +530,6 @@
       "filesTitle": "Files",
       "checkIns": "Check-ins",
       "senderChats": "Chats on your behalf",
-      "botChats": "他のボットとのチャット",
       "on": "On",
       "reachable": "Also reachable on",
       "connected": "Connected",
@@ -1259,7 +1280,7 @@
     "connectedPromiseLocal": "どこで働いていてもチャットできます。",
     "firstRun": {
       "title": "最初に何をしますか？",
-      "subtitle": "ひとつ選んでください。ボットがすぐに取りかかります。接続は不要です。",
+      "subtitle": "ひとつ選んでください。ボットがすぐに取りかかります。",
       "build": {
         "title": "何かを作る",
         "body": "Web サイト、アプリ、ゲーム。説明すると目の前で形になります。",
@@ -1268,8 +1289,14 @@
       "chatApp": {
         "title": "{{app}} で返事して",
         "body": "スマホからいつでもボットにメッセージできます。",
-        "setUp": "設定する",
         "open": "開く"
+      },
+      "github": {
+        "title": "コードに取りかかる",
+        "body": "GitHub リポジトリのバグ修正や機能追加を行います。",
+        "connect": "GitHub を接続",
+        "start": "開始",
+        "botName": "コードアシスタント"
       },
       "research": {
         "title": "調べもの・文章作成",
@@ -3254,7 +3281,9 @@
       "componentServeDone": "Served",
       "showMoreOutput": "Show {{count}} more characters",
       "askWaiting": "Waiting for a response…",
-      "askSkipped": "Skipped"
+      "askSkipped": "Skipped",
+      "askBot": "{{bot}}に質問しました: {{what}}",
+      "giveTask": "{{bot}}にタスクを渡しました: {{what}}"
     },
     "transcript": {
       "jump": "Jump to the end",

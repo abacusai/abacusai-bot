@@ -83,6 +83,32 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+describe("a run the agent starts from its queue", () => {
+  it("opens a turn when the agent goes busy with none open, and its ending is told", () => {
+    const ledger = new TurnLedger();
+    const closed: string[] = [];
+    ledger.onClose((record) => closed.push(record.kind));
+    const service = new SessionTurnStateService(() => {}, undefined, ledger);
+    expect(ledger.isOpen("s1")).toBe(false);
+    service.filterDesktopEvent("ws", "s1", {
+      type: "event",
+      event: { type: "status_changed", status: AgentStatus.Streaming },
+    } as DesktopEvent);
+    expect(ledger.isOpen("s1")).toBe(true);
+    expect(service.get("ws", "s1").isBusy).toBe(true);
+    service.filterDesktopEvent("ws", "s1", {
+      type: "event",
+      event: { type: "text_delta", content: "Done.", messageId: "m1" },
+    } as DesktopEvent);
+    service.filterDesktopEvent("ws", "s1", {
+      type: "event",
+      event: { type: "status_changed", status: AgentStatus.Idle },
+    } as DesktopEvent);
+    expect(ledger.isOpen("s1")).toBe(false);
+    expect(closed).toEqual(["reply"]);
+  });
+});
+
 describe("background turn detection", () => {
   it("does not treat an idle session as active work", () => {
     expect(service.hasBusyTurn()).toBe(false);

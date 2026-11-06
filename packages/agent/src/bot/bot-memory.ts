@@ -182,7 +182,7 @@ export function coreMemoryPrompt(dir: string): string | null {
   ].join("\n");
 }
 
-/** The last days of notes, quoted as untrusted context for a fresh session. */
+/** The last days of notes, quoted as untrusted context; re-read whenever the prompt is rebuilt. */
 export function recentNotesPrompt(dir: string): string | null {
   const blocks: string[] = [];
   let budget = RECENT_NOTES_MAX_CHARS;
