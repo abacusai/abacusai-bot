@@ -487,6 +487,7 @@ describe("a bot-to-bot note", () => {
           createdAt: 0,
           updatedAt: 0,
           working: [],
+          answering: [],
           queued: 0,
         } satisfies ChannelSummary,
       ],

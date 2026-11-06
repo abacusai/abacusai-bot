@@ -86,8 +86,10 @@ export interface ChannelWork {
 
 /** A channel as the sidebar lists it. */
 export interface ChannelSummary extends Channel {
-  /** Bots answering right now. */
+  /** Bots with something open here: answering, or work in their own chat (the Stop button). */
   working: string[];
+  /** Bots writing a channel message right now: a typing bubble each. */
+  answering: string[];
   /** Messages still waiting for their turn. */
   queued: number;
   last?: Pick<ChannelMessage, "author" | "text" | "at">;

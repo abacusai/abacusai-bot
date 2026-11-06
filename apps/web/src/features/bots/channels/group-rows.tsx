@@ -50,9 +50,9 @@ export const GroupChatRows = () => {
         const title =
           groupTitle(channel, nameOf) || t("channels.sidebar.untitled");
         const line =
-          channel.working.length > 0
+          channel.answering.length > 0
             ? t("channels.thread.working", {
-                names: channel.working
+                names: channel.answering
                   .map((id) => nameOf(id) ?? "")
                   .filter(Boolean)
                   .join(", "),
@@ -89,7 +89,7 @@ export const GroupChatRows = () => {
               </span>
               <span
                 className={
-                  channel.working.length > 0
+                  channel.answering.length > 0
                     ? "truncate text-xs text-(--bots-running)"
                     : "text-muted-foreground truncate text-xs"
                 }

@@ -280,7 +280,9 @@ describe("ChannelService", () => {
     const card = () => store.threads.get(id)![1]!.work;
     expect(card()).toMatchObject({ status: "waiting" });
     expect(card()?.endedAt).toBeUndefined();
+    // Busy (the Stop button), but not writing in the channel (no bubble).
     expect(service.list()[0]?.working).toEqual(["wri"]);
+    expect(service.list()[0]?.answering).toEqual([]);
     service.post(id, "Writer, how is it going?");
     await flush();
     expect(turns[1]!.prompt).toContain(

@@ -1107,6 +1107,7 @@ export class ChannelService {
       memberBotIds: channel.memberBotIds.filter(
         (id) => this.deps.bot(id) != null
       ),
+      answering: [...(this.working.get(channel.id) ?? [])],
       working: [
         ...new Set([
           ...(this.working.get(channel.id) ?? []),

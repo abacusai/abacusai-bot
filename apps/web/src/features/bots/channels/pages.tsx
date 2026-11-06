@@ -405,7 +405,7 @@ export const GroupPage = ({
             <GroupMessages
               messages={messages}
               bots={byId}
-              working={channel.working}
+              working={channel.answering}
               onReply={setReplyTo}
               onStartAgreed={(message) =>
                 act(
