@@ -3369,6 +3369,9 @@
       "copy": "Copia “{{text}}” per inviarlo dal telefono",
       "copyFailed": "Impossibile copiare"
     },
+    "retryOffer": {
+      "try": "Riprova con {{model}}"
+    },
     "deliverableOffer": {
       "label": "Conserva questa risposta come documento",
       "doc": "Trasforma in documento",

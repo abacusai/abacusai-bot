@@ -3369,6 +3369,9 @@
       "copy": "Telefondan göndermek için “{{text}}” metnini kopyala",
       "copyFailed": "Kopyalanamadı"
     },
+    "retryOffer": {
+      "try": "{{model}} ile tekrar dene"
+    },
     "deliverableOffer": {
       "label": "Bu yanıtı belge olarak sakla",
       "doc": "Belgeye dönüştür",

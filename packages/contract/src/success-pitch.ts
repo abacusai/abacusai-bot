@@ -358,7 +358,7 @@ const escape = (word: string): string =>
  * One pattern for a word list, on letter boundaries in any script (`\b` only
  * knows ASCII). Alternatives of literals, so matching stays linear.
  */
-const wordsPattern = (words: readonly string[]): RegExp =>
+export const wordsPattern = (words: readonly string[]): RegExp =>
   new RegExp(
     `(?<![\\p{L}\\p{N}])(?:${words
       .map((word) =>
@@ -376,7 +376,7 @@ const TURN = wordsPattern(TURN_WORDS);
 /** A question anywhere: they want something more, not to say thanks. */
 const QUESTION = /[?¿؟？]/u;
 
-const normalize = (text: string): string =>
+export const normalizedText = (text: string): string =>
   text
     .normalize("NFC")
     .toLowerCase()
@@ -393,7 +393,7 @@ const onlyPositiveEmoji = (text: string): boolean => {
 
 /** A message that names a problem with the result. */
 export const isComplaint = (text: string): boolean =>
-  COMPLAINT.test(normalize(text));
+  COMPLAINT.test(normalizedText(text));
 
 /**
  * A short positive reaction to the result: praise (a word from the lexicon
@@ -401,7 +401,7 @@ export const isComplaint = (text: string): boolean =>
  * no question anywhere in it.
  */
 export const isPositiveReaction = (text: string): boolean => {
-  const message = normalize(text);
+  const message = normalizedText(text);
   if (message.length === 0 || message.length > REACTION_MAX_LENGTH)
     return false;
   if (onlyPositiveEmoji(message)) return true;
@@ -457,4 +457,4 @@ const REFUSAL = wordsPattern(REFUSAL_WORDS);
  * nothing about the result.
  */
 export const isCleanReply = (reply: string): boolean =>
-  !REFUSAL.test(normalize(reply).slice(0, CLEAN_REPLY_HEAD_LENGTH));
+  !REFUSAL.test(normalizedText(reply).slice(0, CLEAN_REPLY_HEAD_LENGTH));

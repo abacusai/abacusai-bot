@@ -3369,6 +3369,9 @@
       "copy": "Salin “{{text}}” untuk dikirim dari ponsel",
       "copyFailed": "Gagal menyalin"
     },
+    "retryOffer": {
+      "try": "Coba lagi dengan {{model}}"
+    },
     "deliverableOffer": {
       "label": "Simpan jawaban ini sebagai dokumen",
       "doc": "Jadikan dokumen",
