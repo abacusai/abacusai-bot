@@ -327,6 +327,7 @@
   {
     "prefix": "capabilities.toolDescriptions.",
     "values": [
+      "artifact",
       "ast_edit",
       "bash",
       "batch_edit",

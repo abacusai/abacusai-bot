@@ -13,4 +13,10 @@ export const sharesRouter = impl.shares.router({
   remove: impl.shares.remove.handler(({ input, context }) =>
     context.deps.host.removeShare(input.shareId)
   ),
+  publishArtifact: impl.shares.publishArtifact.handler(({ input, context }) =>
+    context.deps.host.publishArtifact(input.path, input.access)
+  ),
+  unpublishArtifact: impl.shares.unpublishArtifact.handler(
+    ({ input, context }) => context.deps.host.unpublishArtifact(input.path)
+  ),
 });

@@ -10,6 +10,7 @@
 
 The + button in a chat can add connectors: search, connect and carry on, without leaving the chat.
 Type / in a chat for commands: start a new chat, shorten this one, check how full it is, change the model, save the chat as a file, and open any page, without sending a message.
+The bot can build artifacts: reports, dashboards, one-pagers, diagrams and small working tools that open beside the chat, keep their versions, and stay live when shared.
 
 The app has a new rail for Bots, Sessions, Routines, Artifacts and Library. Library brings together connectors, messaging, MCP servers, skills and tools. Settings has separate pages and search. The system draws the title bar, and your light, dark or system theme applies before the window appears.
 

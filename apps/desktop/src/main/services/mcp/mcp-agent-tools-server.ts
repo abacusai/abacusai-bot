@@ -166,6 +166,13 @@ import { locateHostFile } from "../workspace/host-path";
 import type { SkillsService } from "../workspace/skills-service";
 import { McpHttpServer, type McpToolListing } from "./mcp-http-server";
 import { agentTool, AGENT_TOOL_NAMES, AGENT_TOOLS } from "./tools";
+import {
+  ArtifactError,
+  createArtifact,
+  editArtifact,
+  restoreArtifact,
+  type ArtifactSaved,
+} from "./tools/artifact-files";
 import { withUpgradeNudge } from "./tools/billing";
 import { botHelpResult, modelProviders } from "./tools/bot-help";
 import type {
@@ -2074,6 +2081,39 @@ export class McpAgentToolsServer extends McpHttpServer {
       return this.err(
         `Could not serve that directory: ${(error as Error)?.message ?? "unknown error"}`
       );
+    }
+  }
+
+  async artifact(
+    args: Record<string, unknown>,
+    callerSession?: string
+  ): Promise<ToolResult> {
+    const root = this.options.workspacePath(callerSession);
+    if (root == null) return this.err("This chat has no workspace.");
+    const text = (key: string) => String(args[key] ?? "").trim();
+    try {
+      let saved: ArtifactSaved;
+      if (args.action === "create") {
+        if (text("title") === "" || text("body") === "")
+          return this.err("create needs a title and a body.");
+        saved = await createArtifact(root, text("title"), String(args.body));
+      } else if (args.action === "edit") {
+        if (!Array.isArray(args.edits) || args.edits.length === 0)
+          return this.err("edit needs edits.");
+        saved = await editArtifact(
+          root,
+          text("slug"),
+          args.edits as Array<{ old: string; new: string }>
+        );
+      } else if (args.action === "restore")
+        saved = await restoreArtifact(root, text("slug"), Number(args.version));
+      else return this.err('action must be "create", "edit" or "restore".');
+      return this.ok(
+        `Saved ${saved.slug} as version ${saved.version} at ${saved.path}. Hand this path to present_deliverable to show it.`
+      );
+    } catch (error) {
+      if (error instanceof ArtifactError) return this.err(error.message);
+      throw error;
     }
   }
 

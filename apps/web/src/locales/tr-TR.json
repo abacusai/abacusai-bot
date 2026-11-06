@@ -622,6 +622,7 @@
       "memory": "Oturumdan sonra da kalan notları kaydet ve hatırla.",
       "pdf": "Bir PDF'i oku, birleştir, böl, filigran ekle, doldur veya yeniden yazdır.",
       "ppt": "Bir sunum hazırla ve PDF olarak yazdır.",
+      "artifact": "Build a page beside the chat: a report, dashboard, diagram or small working tool.",
       "present_deliverable": "Bitmiş dosyaları en önemlisi başta olacak şekilde sun ve en üsttekini aç.",
       "read": "Diskten bir dosya oku.",
       "read_discord_messages": "İstek üzerine son Discord mesajlarını oku.",
@@ -1413,6 +1414,16 @@
       "SENSITIVE": "Bu dosya anahtar, parola veya bilgisayarınızdaki dosya yolları içeriyor gibi görünüyor, bu yüzden paylaşılamaz.",
       "UNSUPPORTED": "Bu dosya bağlantı olarak paylaşılamaz.",
       "FAILED": "Bu yapılamadı. Bağlantınızı kontrol edip tekrar deneyin."
+    },
+    "artifact": {
+      "title": "Share this page",
+      "body": "It stays live: buttons and sliders keep working for whoever opens it.",
+      "private": "Only me",
+      "privateHint": "You can open it when signed in.",
+      "public": "Anyone with the link",
+      "publicHint": "Works without signing in.",
+      "publish": "Create link",
+      "update": "Update link"
     }
   },
   "routines": {
