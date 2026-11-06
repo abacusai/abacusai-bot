@@ -8,7 +8,22 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `ce39b54f5` with Share (#664)
+## Current: `69e61650` (the app in Chinese)
+
+**429 / 8555858 / 2868448.** Records the renderer with Simplified and
+Traditional Chinese (`zh-CN`, `zh-TW`). Against `ce39b54f5`: +3 chunks
+(+0.70%), +410808 bytes (+5.04%), +143444 gzip bytes (+5.26%). The two locale
+chunks, each lazily loaded and the same shape as every other locale, are
+184.25 kB and 187.78 kB (66.01 kB and 66.44 kB gzip); the rest is what merged
+to main after `ce39b54f5`. The 1% allowance is unchanged.
+
+Bytes and gzip bytes are the totals CI reported on this branch, summed by
+`check-desktop-parity.mjs`; chunks is the count of renderer `.js` files in the
+CI build log. This baseline-only change touches no renderer code.
+
+## History
+
+### `ce39b54f5` with Share (#664)
 
 **426 / 8145050 / 2725004.** Records the renderer with the paid welcome (#662)
 and Share (#664), which took it 3926 bytes past the 1% allowance. Against
@@ -19,8 +34,6 @@ not change. The 1% allowance is unchanged.
 Measured from a frozen-lockfile build of `ce39b54f5` with #664 (Linux x64),
 summed the same way as `check-desktop-parity.mjs`. This baseline-only change
 touches no renderer code.
-
-## History
 
 ### `bd66921c9` (the features merged since #630)
 
