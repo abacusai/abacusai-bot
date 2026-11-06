@@ -341,6 +341,22 @@ describe("opening the forever chat", () => {
     expect(kickstart).not.toContain("connect_connector");
   });
 
+  it("names Chinese by its script in the first-run note", async () => {
+    const note = async (tag: string): Promise<string> => {
+      const callbacks = makeCallbacks({ appLanguage: () => tag });
+      const service = new BotService(callbacks);
+      const bot = service.create({
+        name: "My Assistant",
+        description: GOAL_MISSION("Study Buddy for my exams"),
+      });
+      await service.openChat(bot.id);
+      return vi.mocked(callbacks.sendMessage).mock.calls[0]![2];
+    };
+
+    expect(await note("zh-HK")).toContain("繁體中文");
+    expect(await note("zh-CN")).toContain("简体中文");
+  });
+
   it("kicks off a bot that needs nothing without a connect step", async () => {
     const callbacks = makeCallbacks();
     const service = new BotService(callbacks);

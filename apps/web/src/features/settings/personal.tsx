@@ -1,7 +1,9 @@
 import { AgentMode } from "@abacus-ai/contract/agent-types";
+import { languageNameTag } from "@abacus-ai/contract/contract/languages";
 import {
   SUPPORTED_LANGUAGES,
   type PrefsRow,
+  type SupportedLanguage,
 } from "@abacus-ai/contract/contract/rows";
 import { useLiveQuery } from "@tanstack/react-db";
 import { revalidateLogic } from "@tanstack/react-form";
@@ -214,12 +216,15 @@ const LanguageRow = () => {
             label: t("phase5.systemLanguage", {
               language: new Intl.DisplayNames([i18n.language], {
                 type: "language",
-              }).of(i18n.language),
+              }).of(languageNameTag(i18n.language as SupportedLanguage)),
             }),
           },
           ...SUPPORTED_LANGUAGES.map((x) => ({
             value: x,
-            label: new Intl.DisplayNames([x], { type: "language" }).of(x) ?? x,
+            label:
+              new Intl.DisplayNames([x], { type: "language" }).of(
+                languageNameTag(x)
+              ) ?? x,
           })),
         ]}
         onChange={(language) =>

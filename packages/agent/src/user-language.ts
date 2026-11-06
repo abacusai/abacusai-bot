@@ -101,15 +101,20 @@ export function writeUserLanguage(
 /**
  * A BCP 47 tag's language in English, as the prompt states it: "pt-BR" is
  * "Brazilian Portuguese", "tr-TR" is "Turkish" (a region only when the
- * language has a name for it). Null for a tag that names no language.
+ * language has a name for it). Chinese is named by the script its region
+ * reads: "zh-HK" is "Traditional Chinese", so a reply never lands in the
+ * wrong one. Null for a tag that names no language.
  */
 function localeLanguageName(tag: string): string | null {
   try {
     const names = new Intl.DisplayNames(["en"], { type: "language" });
-    const full = names.of(tag.trim().replace(/_/g, "-"));
-    const base = names.of(
-      new Intl.Locale(tag.trim().replace(/_/g, "-")).language
+    const locale = new Intl.Locale(tag.trim().replace(/_/g, "-"));
+    const full = names.of(
+      locale.language === "zh"
+        ? `zh-${locale.maximize().script}`
+        : locale.toString()
     );
+    const base = names.of(locale.language);
     const name = full != null && !full.includes("(") ? full : base;
     if (name == null || name.toLowerCase() === tag.trim().toLowerCase())
       return null;
@@ -152,6 +157,7 @@ const detectPrompt = (text: string): string =>
     "Which language is the following message written in? Answer with only the language's",
     'English name, such as "Turkish" or "English". If the message is too short or has no',
     'words that name a language (a greeting, a link, code, numbers), answer "unknown".',
+    'Chinese is "Simplified Chinese" or "Traditional Chinese", by its characters.',
     "",
     "Message:",
     text.slice(0, DETECT_MAX_CHARS),
