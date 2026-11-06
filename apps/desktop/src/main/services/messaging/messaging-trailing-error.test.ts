@@ -1639,6 +1639,21 @@ describe("the chat app's own language", () => {
     expect(channelLocale(null, null)).toBe("en-US");
   });
 
+  it("reads Chinese by its script, and plain Chinese by the app's", () => {
+    expect(channelLocale("Traditional Chinese", "en-US")).toBe("zh-TW");
+    expect(channelLocale("Simplified Chinese", "zh-TW")).toBe("zh-CN");
+    expect(channelLocale("Chinese (Traditional)", null)).toBe("zh-TW");
+    expect(channelLocale("Chinese (Taiwan)", null)).toBe("zh-TW");
+    expect(channelLocale("Cantonese", null)).toBe("zh-TW");
+    expect(channelLocale("Mandarin", null)).toBe("zh-CN");
+    expect(channelLocale("Chinese", null)).toBe("zh-CN");
+    expect(channelLocale("Chinese", "zh-HK")).toBe("zh-TW");
+    expect(channelLocale(null, "zh-Hant-TW")).toBe("zh-TW");
+    expect(channelLocale(null, "zh-HK")).toBe("zh-TW");
+    expect(channelLocale(null, "zh-SG")).toBe("zh-CN");
+    expect(channelLocale(null, "zh")).toBe("zh-CN");
+  });
+
   it("labels the native menus in the UI language, English until one loads", async () => {
     const { nativeT, setNativeLanguage } =
       await import("../config/native-language");

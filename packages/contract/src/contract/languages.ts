@@ -9,15 +9,37 @@ import { SUPPORTED_LANGUAGES, type SupportedLanguage } from "./rows";
 
 export const FALLBACK_LANGUAGE: SupportedLanguage = "en-US";
 
+/** Where Chinese is read in Traditional characters when a tag names no script. */
+const TRADITIONAL_CHINESE_REGIONS = new Set(["TW", "HK", "MO"]);
+
+/**
+ * A tag's script and region; Intl.Locale finds a region past a script subtag
+ * (`es-Latn-ES`). An invalid injected value has neither, so it still gets the
+ * deliberate default.
+ */
+const tagParts = (tag: string): { script?: string; region?: string } => {
+  try {
+    const { script, region } = new Intl.Locale(tag);
+    return { script, region };
+  } catch {
+    return {};
+  }
+};
+
 /**
  * The first tag a shipped locale serves. Spain gets `es-ES`; every other
  * Spanish region, and bare `es`, gets the Latin-American `es-419`, the
- * larger region of the two bundles shipped.
+ * larger region of the two bundles shipped. Chinese goes by its script, and
+ * a tag with none by its region: Taiwan, Hong Kong and Macau read Traditional
+ * (`zh-TW`); bare `zh` and everywhere else read Simplified (`zh-CN`). A script
+ * outranks a region, so `zh-Hans-HK` stays Simplified.
  */
 export const matchSupportedLanguage = (
   languageTags: readonly string[]
 ): SupportedLanguage | undefined => {
-  for (const tag of languageTags) {
+  for (const rawTag of languageTags) {
+    // A POSIX locale writes `zh_TW`.
+    const tag = rawTag.replace(/_/g, "-");
     const normalized = tag.toLowerCase();
     const exact = SUPPORTED_LANGUAGES.find(
       (code) => code.toLowerCase() === normalized
@@ -26,15 +48,15 @@ export const matchSupportedLanguage = (
 
     const [base] = normalized.split("-");
     if (base === "es") {
-      // Intl.Locale finds the region past a script subtag (`es-Latn-ES`); an
-      // invalid injected value still gets the deliberate default.
-      let region: string | undefined;
-      try {
-        region = new Intl.Locale(tag).region;
-      } catch {
-        region = undefined;
-      }
-      return region?.toUpperCase() === "ES" ? "es-ES" : "es-419";
+      return tagParts(tag).region === "ES" ? "es-ES" : "es-419";
+    }
+    if (base === "zh") {
+      const { script, region } = tagParts(tag);
+      const traditional =
+        script != null
+          ? script === "Hant"
+          : TRADITIONAL_CHINESE_REGIONS.has(region ?? "");
+      return traditional ? "zh-TW" : "zh-CN";
     }
 
     const related = SUPPORTED_LANGUAGES.find(
@@ -44,6 +66,13 @@ export const matchSupportedLanguage = (
   }
   return undefined;
 };
+
+/**
+ * The tag to ask Intl.DisplayNames for a locale's name. Chinese is named by
+ * its script: "繁體中文", where `zh-TW` itself would read "中文（台灣）".
+ */
+export const languageNameTag = (code: SupportedLanguage): string =>
+  code === "zh-CN" ? "zh-Hans" : code === "zh-TW" ? "zh-Hant" : code;
 
 export interface AppLanguage {
   /** The locale the UI and the native menus are shown in. */
