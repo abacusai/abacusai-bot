@@ -442,7 +442,13 @@ const DialogBody = ({
       )}
       <PlanPitchList
         billing={billing ?? null}
-        lead={ownKey ? "models" : connectors ? "connectors" : null}
+        lead={
+          ownKey || request.src === "model_locked"
+            ? "models"
+            : connectors
+              ? "connectors"
+              : null
+        }
       />
       <div className="flex flex-col gap-1.5 pt-1">
         <Button

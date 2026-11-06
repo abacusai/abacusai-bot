@@ -265,6 +265,7 @@ describe("PrefsStore", () => {
       successPitchCards: {},
       deliverableOffer: null,
       nextStepOffer: null,
+      retryOffer: null,
       freePlanSeenAt: null,
       upgradeRoutinesSeenAt: null,
       routineDuplicatesKept: [],

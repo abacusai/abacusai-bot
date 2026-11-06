@@ -51,6 +51,12 @@ export const FUNNEL_STEPS = [
   "result_delivered",
   "next_step_shown",
   "next_step_tapped",
+  // The retry on a top model (retry-offer.ts). The account's half, once (on
+  // or off); the line, by why it showed; a tap and a close.
+  "retry_offer_half",
+  "retry_offer_shown",
+  "retry_offer_tapped",
+  "retry_offer_dismissed",
   // The agent asked for a routine that already exists, and got that one back;
   // the detail is how it compared (same, alike or check-in) and where it lives.
   "routine_duplicate_avoided",

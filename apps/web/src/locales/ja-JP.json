@@ -3369,6 +3369,9 @@
       "copy": "「{{text}}」をコピーしてスマホから送信",
       "copyFailed": "コピーできませんでした"
     },
+    "retryOffer": {
+      "try": "{{model}} でもう一度試す"
+    },
     "deliverableOffer": {
       "label": "この回答をドキュメントとして残す",
       "doc": "ドキュメントにする",

@@ -186,6 +186,8 @@ export interface ChatViewSlots {
   successPitchOffer?: SuccessPitchOffer;
   /** The gallery shows the deliverable offer without its caps, keeping no answer. */
   deliverableOfferPreview?: boolean;
+  /** The gallery shows the retry offer on this model, without its caps. */
+  retryOfferPreview?: { label: string; plan: string };
   /** A turn's files as the route's deliverables card, opening the way it does. */
   renderDeliverables?: (items: readonly TurnDeliverable[]) => ReactNode;
   /** Route-owned actions beside the permission card (sessions §17.1). */

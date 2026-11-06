@@ -3369,6 +3369,9 @@
       "copy": "휴대폰에서 보낼 수 있게 “{{text}}” 복사",
       "copyFailed": "복사하지 못했어요"
     },
+    "retryOffer": {
+      "try": "{{model}}(으)로 다시 시도"
+    },
     "deliverableOffer": {
       "label": "이 답변을 문서로 남기기",
       "doc": "문서로 만들기",

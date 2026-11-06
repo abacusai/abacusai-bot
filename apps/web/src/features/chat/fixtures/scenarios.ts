@@ -37,6 +37,8 @@ export interface Scenario {
     successPitch?: Pick<SuccessPitchOffer, "trigger" | "moment" | "lead">;
     /** The deliverable offer judged without its caps. */
     deliverableOffer?: boolean;
+    /** The retry offer on this model, without its caps. */
+    retryOffer?: { label: string; plan: string };
     /** The turns' files on the deliverables card, as the sessions route shows them. */
     deliverables?: boolean;
     /** The shell's upgrade dialog, for a line or card in the chat that opens it. */
@@ -474,6 +476,28 @@ const OUTCOME_ERRORS: Record<
 // ─── the success pitch ─────────────────────────────────────────────────
 
 const SITE_URL = "http://127.0.0.1:58702";
+
+const retryAfterComplaint = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn("r1", "u1", "Fix the login page crash", at(6)),
+    b.textStart("a1"),
+    ...b.toolCall("c1", "edit", "a1", { file_path: "/Users/me/app/login.js" }),
+    b.toolResult("c1", { text: "Edited login.js" }),
+    b.textDelta("a1", "Fixed: the empty password case no longer throws."),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", { timestamp: at(5) }),
+    ...userTurn("r2", "u2", "It still doesn't work, same error", at(2)),
+    b.textStart("a2"),
+    ...b.toolCall("c2", "edit", "a2", { file_path: "/Users/me/app/login.js" }),
+    b.toolResult("c2", { text: "Edited login.js" }),
+    b.textDelta(
+      "a2",
+      "I changed how the session is read. Try signing in again."
+    ),
+    b.textEnd("a2"),
+    b.runFinished("r2", "success", { timestamp: at(1) }),
+  ]);
 
 const nextStepStore = (): RelayEvent[] =>
   seqd([
@@ -972,6 +996,23 @@ export const SCENARIOS: Scenario[] = [
   },
   ...offerScenarios("en", OFFER_EN),
   ...offerScenarios("pt-BR", OFFER_PT),
+  {
+    id: "retry-offer-session",
+    canvas: ["RetryOffer", "session"],
+    skin: "session",
+    events: retryAfterComplaint,
+    view: { retryOffer: { label: "Claude Opus 5.5", plan: "Basic" } },
+  },
+  {
+    id: "retry-offer-bot",
+    canvas: ["RetryOffer", "bot"],
+    skin: "bot",
+    events: retryAfterComplaint,
+    view: {
+      placeholder: "Message your bot...",
+      retryOffer: { label: "Claude Opus 5.5", plan: "Basic" },
+    },
+  },
   {
     id: "next-step-session",
     canvas: ["NextStep", "session"],

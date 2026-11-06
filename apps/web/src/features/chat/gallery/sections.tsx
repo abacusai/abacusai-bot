@@ -293,6 +293,9 @@ const gallerySlots = (scenario: Scenario, threadId: string): ChatViewSlots => ({
   ...(scenario.view?.deliverableOffer === true && {
     deliverableOfferPreview: true,
   }),
+  ...(scenario.view?.retryOffer != null && {
+    retryOfferPreview: scenario.view.retryOffer,
+  }),
   ...(scenario.view?.deliverables === true && {
     decorateMessage: (message, context) => {
       if (message.role !== "assistant") return null;
