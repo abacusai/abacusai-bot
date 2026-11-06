@@ -65,7 +65,9 @@ export const sessionToolWidgets = new Proxy(KNOWN_TOOL_WIDGETS, {
         ? PaidFeatureToolCard
         : isBotHelpTool(name)
           ? BotHelpToolCard
-          : (known[name] ?? GenericLine),
+          : isSuggestTasksTool(name)
+            ? SuggestedTasksCard
+            : (known[name] ?? GenericLine),
 }) as Record<string, Widget>;
 
 /** Bots: the inline approval card of the canvas BotApproval board. */

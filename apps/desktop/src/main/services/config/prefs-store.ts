@@ -84,6 +84,7 @@ const DEFAULTS: PrefsValues = {
     creditThresholdCards: {},
     successPitchCards: {},
     deliverableOffer: null,
+    nextStepOffer: null,
     freePlanSeenAt: null,
     upgradeRoutinesSeenAt: null,
     routineDuplicatesKept: [],

@@ -20,6 +20,7 @@ import type {
   CreditThresholdMark,
 } from "../credit-thresholds";
 import type { DeliverableOfferCard } from "../deliverable-offer";
+import type { NextStepCard } from "../next-step";
 import type {
   RoutineCreditHold,
   RoutineListItem,
@@ -202,6 +203,8 @@ export interface PrefsRow {
     successPitchCards?: Record<string, SuccessPitchCard>;
     /** The offer to turn a long answer into a document, shown and answered. */
     deliverableOffer?: DeliverableOfferCard | null;
+    /** The next step under a result, shown and answered. */
+    nextStepOffer?: NextStepCard | null;
     freePlanSeenAt: number | null;
     upgradeRoutinesSeenAt: number | null;
     routineDuplicatesKept: string[];

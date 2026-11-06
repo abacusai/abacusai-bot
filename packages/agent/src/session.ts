@@ -76,6 +76,7 @@ import testRunner from "./extensions/test-runner.js";
 import toolCallRepair from "./extensions/tool-call-repair.js";
 import toolTimeouts from "./extensions/tool-timeouts.js";
 import { VerifyLoop } from "./extensions/verify-loop.js";
+import { endTurnOnClosedReply } from "./forever/reply-end.js";
 import { githubPrompt } from "./github-prompt.js";
 import { refreshGithubToken } from "./github-token.js";
 import { HostServiceClient } from "./host-services.js";
@@ -107,6 +108,13 @@ import {
   runMadeProgress,
   type NetworkSuspect,
 } from "./network-wait.js";
+import {
+  endedOnResult,
+  NEXT_STEP_PROMPT,
+  NEXT_STEP_TYPE,
+  NextStepAsk,
+  nextStepAskOn,
+} from "./next-step-ask.js";
 import { endedOnLeakedToolCall, networkVerdict } from "./openllm-failures.js";
 import {
   OPENLLM_CONTINUATION_PROMPT,
@@ -852,6 +860,8 @@ export class AbacusBotSession {
   private readonly emptyReplies = new EmptyReplies();
   /** The turn's ask after a reply that ended on a promise (promised-work.ts). */
   private readonly promisedWork = new PromisedWork();
+  private readonly nextStepAsk = new NextStepAsk();
+  private pendingNextStep = false;
   private pendingPromisedWork = false;
   /** The same model is to be asked again, out of sight, for its answer. */
   private pendingEmptyAsk = false;
@@ -1260,6 +1270,7 @@ export class AbacusBotSession {
 
     this.session = created.session;
     this.pi = this.loadedPi;
+    endTurnOnClosedReply(this.session.agent);
     // The opening mode, so the log is a complete account rather than deltas.
     this.applyMode(this.mode, "startup");
     anchorCompactions(this.session.sessionManager);
@@ -1422,6 +1433,8 @@ export class AbacusBotSession {
     this.pendingEmptyAsk = false;
     this.promisedWork.begin();
     this.pendingPromisedWork = false;
+    this.nextStepAsk.begin(text);
+    this.pendingNextStep = false;
     this.mcpTools.atTurnStart();
     this.pendingToolArrival = null;
     this.toolArrivalsThisTurn = 0;
@@ -1781,13 +1794,15 @@ export class AbacusBotSession {
       this.pendingStreamCut ||
       this.pendingBusyWait != null ||
       this.pendingEmptyAsk ||
-      this.pendingPromisedWork
+      this.pendingPromisedWork ||
+      this.pendingNextStep
     ) {
       // Stop cancels the continuation, but the withheld idle event still has
       // to go out or the session stays busy forever.
       if (this.interrupted) {
         this.pendingEmptyAsk = false;
         this.pendingPromisedWork = false;
+        this.pendingNextStep = false;
         this.pendingStreamCut = false;
         this.pendingNetworkFailure = null;
         this.pendingBusyWait = null;
@@ -1884,6 +1899,20 @@ export class AbacusBotSession {
           {
             customType: PROMISED_WORK_TYPE,
             content: PROMISED_WORK_PROMPT,
+            display: false,
+          },
+          { triggerTurn: true }
+        );
+
+        continue;
+      }
+
+      if (this.pendingNextStep) {
+        this.pendingNextStep = false;
+        await this.session?.sendCustomMessage(
+          {
+            customType: NEXT_STEP_TYPE,
+            content: NEXT_STEP_PROMPT,
             display: false,
           },
           { triggerTurn: true }
@@ -2952,6 +2981,7 @@ export class AbacusBotSession {
 
       this.session = created.session;
       this.pi = this.loadedPi;
+      endTurnOnClosedReply(this.session.agent);
       // A fresh session has only the tools it was built with.
       this.mcpTools.rebind(
         new Set(this.session.getAllTools().map((tool) => tool.name))
@@ -3306,7 +3336,18 @@ export class AbacusBotSession {
           mayAskForPromisedWork(this.mode) &&
           endedOnPromise(event.messages) &&
           this.promisedWork.claim();
-        if (ending && !this.pendingPromisedWork) {
+        this.nextStepAsk.sawRun(event.messages);
+        // Finished work ends on what comes next, in this send (NextStepAsk).
+        this.pendingNextStep =
+          ending &&
+          !this.pendingPromisedWork &&
+          !this.interrupted &&
+          this.ownedTurn != null &&
+          nextStepAskOn() &&
+          mayAskForPromisedWork(this.mode) &&
+          endedOnResult(event.messages) &&
+          this.nextStepAsk.claim();
+        if (ending && !this.pendingPromisedWork && !this.pendingNextStep) {
           this.finishTurn();
         }
 

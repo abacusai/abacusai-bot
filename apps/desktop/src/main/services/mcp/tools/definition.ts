@@ -46,6 +46,7 @@ export type ToolHost = Pick<
   | "homeAssistant"
   | "paidFeature"
   | "botHelp"
+  | "routineOfferClosed"
   | "ok"
   | "err"
 >;
@@ -65,6 +66,8 @@ export interface HostCapabilities {
   routinesFullAccess: boolean;
   /** Paid-plan capabilities with none of their tools listed for this account. */
   withheldFeatures: readonly PaidFeature[];
+  /** This install gets the next step after a result (next-step.ts). */
+  nextStep: boolean;
 }
 
 export interface ToolDefinition {
@@ -103,6 +106,11 @@ export interface ToolDefinition {
    * a tool it cannot use.
    */
   botsOnly?: boolean;
+  /**
+   * Also a plain session's when this holds, past `botsOnly`, `appBotChatOnly`
+   * and the Capabilities toggles: never a run nobody is watching.
+   */
+  sessionsWhen?: (host: HostCapabilities) => boolean;
   /**
    * Only a bot's own chat in the app, where a card can be clicked: never a
    * bot that lives in a chat app, a sender's chat or a routine's run.

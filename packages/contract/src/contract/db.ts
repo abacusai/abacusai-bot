@@ -257,6 +257,17 @@ export const PREFS_GROUP_ENTRIES = {
         dismissed: v.pipe(v.number(), v.integer(), v.minValue(0)),
       })
     ),
+    /** The next step under a result, shown and answered. */
+    nextStepOffer: v.nullable(
+      v.strictObject({
+        shownOffer: v.nullable(v.string()),
+        shownThread: v.nullable(v.string()),
+        shownTurn: v.nullable(v.pipe(v.number(), v.integer(), v.minValue(1))),
+        answered: v.nullable(v.string()),
+        misses: v.pipe(v.number(), v.integer(), v.minValue(0)),
+        dismissed: v.pipe(v.number(), v.integer(), v.minValue(0)),
+      })
+    ),
     /** The account first read on the free plan here, so a paid read after it is an upgrade. */
     freePlanSeenAt: NullableTimestamp,
     /** An older build's after-upgrade card, seen: that upgrade counts as welcomed. */

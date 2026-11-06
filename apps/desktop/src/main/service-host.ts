@@ -167,6 +167,7 @@ import {
   type ConversationKey,
 } from "@abacus-ai/contract/conversation-scope";
 import type { CreditThresholdMark } from "@abacus-ai/contract/credit-thresholds";
+import { DELIVERABLE_OFFER_MAX_MISSES } from "@abacus-ai/contract/deliverable-offer";
 import type {
   BackendId,
   BackendStatus,
@@ -185,6 +186,7 @@ import {
   type UpdateMessagingSettingsRequest,
 } from "@abacus-ai/contract/messaging";
 import { abacusPlanTier, OPENLLM_ID } from "@abacus-ai/contract/models";
+import { routineOfferClosed } from "@abacus-ai/contract/next-step";
 import {
   EntityNotFoundError,
   WORKSPACE_NOT_FOUND,
@@ -531,6 +533,7 @@ import {
   resolveBackend,
 } from "./services/providers/exec-backend-service";
 import { listAvailableModels, modelForTier } from "./services/providers/models";
+import { nextStepOn } from "./services/providers/next-step";
 import {
   currentTier,
   newRoutineModel,
@@ -613,6 +616,8 @@ const ROUTINE_CONTEXT_CAP_TOKENS = 80_000;
 /** How far back a routine's runs show what it reaches besides a chat app. */
 const ROUTINE_RUNS_FOR_REACH = 5;
 const ROUTINE_FIRES_KEPT = 200;
+/** On an install with the next step, how long a routine runs before the free plan's 24/7 line. */
+const ALWAYS_ON_WAIT_MS = 24 * 60 * 60_000;
 
 /** The longest an unattended run's agent may take to start. */
 const UNATTENDED_STARTUP_TIMEOUT_MS = 90_000;
@@ -1230,6 +1235,7 @@ export class ServiceHost {
     tellInChat: (sessionId) =>
       this.messagingGatewayService.tellSuccessPitch(sessionId),
     funnel: (step, detail) => reportFunnelStep(step, detail),
+    nextStep: nextStepOn,
   });
 
   /** What a turn in `sessionId` counts as for the milestone card's estimate. */
@@ -1327,6 +1333,11 @@ export class ServiceHost {
     this.sitePacker.cancel(packId);
   }
 
+  private nextStepPassedOver(): boolean {
+    const misses = this.prefs?.().get().dismissals.nextStepOffer?.misses ?? 0;
+    return misses >= DELIVERABLE_OFFER_MAX_MISSES;
+  }
+
   /**
    * The desktop's once-per-user word on 24/7 routines, claimed by the agent's
    * first local routine: the plan to speak to, or null once told, on the
@@ -1338,6 +1349,13 @@ export class ServiceHost {
       return null;
     const tier = abacusPlanTier(await fetchAbacusAccount());
     if (tier === "unknown") return null;
+    // Next to a routine they just tapped, a pitch waits for one that has run a day.
+    if (
+      tier === "free" &&
+      nextStepOn() &&
+      !listJobs().some((job) => Date.now() - job.createdAt >= ALWAYS_ON_WAIT_MS)
+    )
+      return null;
     prefs.update({ dismissals: { routinesAlwaysOnToldAt: Date.now() } });
     return tier === "free" ? "free" : "paid";
   }
@@ -1530,6 +1548,14 @@ export class ServiceHost {
       return new Set(Object.keys(states).filter((id) => states[id]));
     },
     planTier: () => abacusPlanTier(cachedAbacusAccount()),
+    nextStep: nextStepOn,
+    routineOfferClosed: () => {
+      const account = cachedAbacusAccount();
+      return (
+        abacusPlanTier(account) === "free" &&
+        routineOfferClosed(account?.credits_used, account?.credits_granted)
+      );
+    },
     planName: () => cachedAbacusAccount()?.plan ?? null,
     models: () => listAvailableModels(),
     bots: () =>
@@ -7027,6 +7053,7 @@ export class ServiceHost {
     const prompt = this.withBotVoice(
       job,
       buildRoutineFirePrompt(job, trigger, payload, {
+        endsOnAction: nextStepOn(),
         unattended,
         dir: home,
         // The project when there is one; the run's cwd is that folder and its
@@ -7245,6 +7272,10 @@ export class ServiceHost {
       ABACUSAI_BOT_CHECKOUT_TOKEN: this.checkoutToken,
       // Kept current afterwards by the `connectivity` command.
       ABACUSAI_BOT_CONNECTIVITY: this.connectivity.state,
+      // Read at spawn: three offers passed over stop it for the next session.
+      ...(nextStepOn() && !this.nextStepPassedOver()
+        ? { ABACUSAI_BOT_NEXT_STEP_ASK: "1" }
+        : {}),
       // Kept current afterwards by the `credit_balance` command.
       ...(credits != null
         ? { ABACUSAI_BOT_CREDITS: JSON.stringify(credits) }

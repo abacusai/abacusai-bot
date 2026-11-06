@@ -11,6 +11,8 @@ import type { RoutineNotes, RoutineRunRecord } from "./routine-runs-store";
 
 /** What a fire is told about the runs before it, and where it stands. */
 export interface RoutineMemory {
+  /** A report the user can act on ends on that action (next-step.ts). */
+  endsOnAction?: boolean;
   /**
    * The run is unattended (the default): it reads, and cannot write files,
    * run commands or message anyone.
@@ -191,6 +193,11 @@ export const buildRoutineFirePrompt = (
         "so. The same goes for a blocker that run already told them about, such as a",
         "connection that is missing or signed out: it is said once, not on every run.",
         "A routine whose runs keep finding nothing pauses itself until the user resumes it."
+      );
+    if (memory.endsOnAction === true && UNASKED.has(trigger))
+      lines.push(
+        "When this run found something the user can act on, end your report with one",
+        "short question naming the one thing you could do about it next."
       );
     // Said outright: only the app's own sends are skipped on a repeat; a
     // connector's mail, post or invite would go out twice.

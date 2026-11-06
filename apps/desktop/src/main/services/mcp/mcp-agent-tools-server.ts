@@ -365,6 +365,10 @@ export interface McpAgentToolsServerOptions {
   funnel?: (step: FunnelStep, detail?: string) => void;
   /** The session is a bot's own chat in the app (no chat app behind it), where a card can be clicked. */
   isAppBotChat?: (sessionId: string) => boolean;
+  /** This install gets the next step after a result. */
+  nextStep?: () => boolean;
+  /** A free grant is nearly used: `suggest_tasks` offers no routine. */
+  routineOfferClosed?: () => boolean;
   /**
    * The conversation a deliverable from this session belongs to, so the
    * renderer opens it in that pane and no other. Null for an unknown session.
@@ -743,6 +747,7 @@ export class McpAgentToolsServer extends McpHttpServer {
       withheldFeatures: withheldFeatures(this.planTier(), (feature) =>
         this.featureListed(feature.toolsets, enabled, callerSession)
       ),
+      nextStep: this.options.nextStep?.() === true,
     };
   }
 
@@ -856,8 +861,23 @@ export class McpAgentToolsServer extends McpHttpServer {
     if (!("appBotChatOnly" in definition) || definition.appBotChatOnly !== true)
       return true;
     return (
+      this.isSessionTool(definition, callerSession) ||
+      (callerSession != null &&
+        this.options.isAppBotChat?.(callerSession) === true)
+    );
+  }
+
+  /** A tool `sessionsWhen` gives this caller: a plain session, someone watching. */
+  private isSessionTool(
+    definition: ListedTool,
+    callerSession?: string
+  ): boolean {
+    return (
+      "sessionsWhen" in definition &&
       callerSession != null &&
-      this.options.isAppBotChat?.(callerSession) === true
+      !this.isBotCaller(callerSession) &&
+      !this.isHeld(callerSession) &&
+      definition.sessionsWhen?.(this.hostCapabilities(callerSession)) === true
     );
   }
 
@@ -899,7 +919,8 @@ export class McpAgentToolsServer extends McpHttpServer {
         "botAlways" in definition &&
         definition.botAlways === true &&
         this.isBotCaller(callerSession)
-      )
+      ) &&
+      !this.isSessionTool(definition, callerSession)
     ) {
       return this.err(
         `The ${toolsetsFor(definition).join("/")} toolset is switched off in Capabilities.`
@@ -909,7 +930,8 @@ export class McpAgentToolsServer extends McpHttpServer {
     if (
       "botsOnly" in definition &&
       definition.botsOnly === true &&
-      !this.isBotCaller(callerSession)
+      !this.isBotCaller(callerSession) &&
+      !this.isSessionTool(definition, callerSession)
     ) {
       return this.err(
         `${name} is only available in a bot's chat. Carry on and use your best judgement.`
@@ -2545,11 +2567,13 @@ export class McpAgentToolsServer extends McpHttpServer {
         (definition.offered?.(this.hostCapabilities(callerSession)) ?? true)
       );
     if (definition.hidden === true) return false;
+    const forSession = this.isSessionTool(definition, callerSession);
     return (
       (isToolEnabled(definition, enabled) ||
-        (forBot && definition.botAlways === true)) &&
+        (forBot && definition.botAlways === true) ||
+        forSession) &&
       this.isToolConfigured(definition) &&
-      (forBot || definition.botsOnly !== true) &&
+      (forBot || forSession || definition.botsOnly !== true) &&
       (definition.offered?.(this.hostCapabilities(callerSession)) ?? true)
     );
   }
@@ -3798,6 +3822,10 @@ export class McpAgentToolsServer extends McpHttpServer {
   }
 
   // ── Result helpers ───────────────────────────────────────────────────────
+
+  routineOfferClosed(): boolean {
+    return this.options.routineOfferClosed?.() === true;
+  }
 
   ok(text: string): ToolResult {
     return { content: [{ type: "text", text }] };
