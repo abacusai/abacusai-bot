@@ -20,6 +20,7 @@ import {
   AgentMode,
   type DesktopEvent,
   type BotTaskTag,
+  type SessionActionResult,
   type UserTextTags,
 } from "@abacus-ai/contract/agent-types";
 import type {
@@ -115,6 +116,7 @@ import type {
   AgentSessionCommandRequest,
   AgentSessionSnapshot,
   AgentSetModeRequest,
+  AgentActionRequest,
   AgentSetModelRequest,
   AgentSwitchConversationRequest,
   IpcEvent,
@@ -621,6 +623,7 @@ const ALWAYS_ON_WAIT_MS = 24 * 60 * 60_000;
 
 /** The longest an unattended run's agent may take to start. */
 const UNATTENDED_STARTUP_TIMEOUT_MS = 90_000;
+const AGENT_ACTION_TIMEOUT_MS = 5 * 60_000;
 
 /** The folder every hosted routine run works in: one, kept out of the pickers. */
 const HOSTED_RUNS_FOLDER = "hosted-runs";
@@ -3003,6 +3006,9 @@ export class ServiceHost {
     },
     emitMcpRefreshed: (_sessionId, requestId, ok) =>
       this.connectorSync.refreshed(requestId, ok),
+    emitSessionActionDone: (requestId, result) => {
+      this.agentActions.get(requestId)?.(result);
+    },
     emitMcpRuntimeError: (workspaceId, sessionId, event) => {
       if (event.kind === "refresh") {
         this.emitEvent({
@@ -3030,6 +3036,10 @@ export class ServiceHost {
     runHostService: (service, payload) =>
       this.runAgentHostService(service, payload),
   });
+  private readonly agentActions = new Map<
+    string,
+    (result: SessionActionResult) => void
+  >();
   private readonly agentCommunicationService = new AgentCommunicationService(
     (workspaceId, sessionId, command) => {
       return this.agentManagerService.sendCommand(
@@ -4705,6 +4715,25 @@ export class ServiceHost {
     return this.modelSwitches.wait(request.sessionId, request.model, () =>
       this.agentCommunicationService.setModel(request)
     );
+  }
+
+  /** A slash command run on the agent; `compact` calls a model, so it gets minutes. */
+  runAgentAction(request: AgentActionRequest): Promise<SessionActionResult> {
+    const requestId = randomUUID();
+    return new Promise((resolve) => {
+      const settle = (result: SessionActionResult) => {
+        clearTimeout(timer);
+        this.agentActions.delete(requestId);
+        resolve(result);
+      };
+      const timer = setTimeout(
+        () => settle({ ok: false, reason: "failed" }),
+        AGENT_ACTION_TIMEOUT_MS
+      );
+      this.agentActions.set(requestId, settle);
+      if (!this.agentCommunicationService.runAction(request, requestId))
+        settle({ ok: false, reason: "not-running" });
+    });
   }
 
   stopAgentTurn(request: AgentSessionCommandRequest): void {

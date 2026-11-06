@@ -68,6 +68,20 @@ export interface MentionSource {
   search(query: string): Promise<string[]>;
 }
 
+/** A `/` command: runs here, and reaches the model only through `expand`. */
+export interface ComposerCommand {
+  name: string;
+  aliases?: readonly string[];
+  description: string;
+  /** Hint after the name. A command without one matches only on its own. */
+  argument?: string;
+  /** Waits for its text: picking it leaves `/name ` in the box. */
+  valueRequired?: boolean;
+  run?(value: string): void | Promise<void>;
+  /** Sent as the user's message instead, so it spends credits like one. */
+  expand?(value: string): string;
+}
+
 export interface ComposerConfig {
   mode: "full" | "mini";
   availableModes?: AgentMode[];
@@ -91,6 +105,8 @@ export interface ComposerConfig {
    * stays mounted past it (a token form's dialog closes the panel).
    */
   connectors?: { panel: ReactNode; overlay: ReactNode };
+  /** The surface's `/` commands, beside the composer's own. */
+  commands?: readonly ComposerCommand[];
   /** Query-backed disk skills, used until a nonempty live list arrives. */
   skillsBaseline?: readonly SkillMetadata[];
   /** Apply the free router before replaying a dead turn. */

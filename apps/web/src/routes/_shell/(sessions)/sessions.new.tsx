@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { usePrefs } from "#renderer/data/db/prefs";
+import { useChatCommands } from "#renderer/features/chat/commands";
 import { StartComposer } from "#renderer/features/chat/composer/start-composer";
 import { COMPOSER_CONNECTORS } from "#renderer/features/library/composer-connectors";
 import { useSessionComposerModel } from "#renderer/features/sessions/data/composer-model";
@@ -33,6 +34,7 @@ import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 /** Offers already turned into a draft: a reload or a revisit never starts another. */
 const offersTaken = new Set<string>();
 const SessionsNewRoute = () => {
+  const commands = useChatCommands(null);
   const { t } = useTranslation();
   const { transport, chat } = Route.useRouteContext();
   const { workspaceId, draftId } = Route.useLoaderData();
@@ -138,6 +140,7 @@ const SessionsNewRoute = () => {
                   attachmentContext: binding.attachmentContext,
                   showModeChip: true,
                   connectors: COMPOSER_CONNECTORS,
+                  commands,
                   model: model.model,
                   availableModes: model.availableModes,
                   defaultMode: prefs.defaultMode,

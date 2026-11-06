@@ -3,13 +3,21 @@
  * start of the field) menus (spec 02 §8.4). The menu owns the keyboard
  * while open: arrows move, Enter/Tab pick, Escape closes.
  */
-import { useEffect, useId, useRef, useState, type RefObject } from "react";
+import {
+  Fragment,
+  useEffect,
+  useEffectEvent,
+  useId,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "#renderer/lib/cn";
 import { Spinner } from "#renderer/ui/spinner";
 
-import type { MentionSource } from "../kit/context";
+import type { ComposerCommand, MentionSource } from "../kit/context";
 import type { SkillMetadata } from "../store/thread-store";
 
 export interface TriggerState {
@@ -44,18 +52,58 @@ export const triggerAt = (
   return null;
 };
 
+/** `/name` or `/name text`, when `name` is a command that takes that shape. */
+export const matchCommand = (
+  text: string,
+  commands: readonly ComposerCommand[]
+): { command: ComposerCommand; value: string } | null => {
+  const typed = /^\/([\w-]+)(?:\s+([\s\S]*))?$/.exec(text.trim());
+  if (typed == null) return null;
+  const name = typed[1]!.toLowerCase();
+  const value = typed[2]?.trim() ?? "";
+  const command = commands.find(
+    (entry) => entry.name === name || entry.aliases?.includes(name)
+  );
+  // "/new york is lovely" is a sentence: only a command with an argument takes text.
+  if (command == null || (value !== "" && command.argument == null))
+    return null;
+  return { command, value };
+};
+
+const commandMatches = (
+  commands: readonly ComposerCommand[],
+  query: string
+): ComposerCommand[] => {
+  const typed = query.toLowerCase();
+  const names = (entry: ComposerCommand) => [
+    entry.name,
+    ...(entry.aliases ?? []),
+  ];
+  return commands
+    .filter((entry) => names(entry).some((name) => name.includes(typed)))
+    .sort(
+      (a, b) =>
+        Number(names(b).some((name) => name.startsWith(typed))) -
+        Number(names(a).some((name) => name.startsWith(typed)))
+    );
+};
+
 export const TriggerMenu = ({
   trigger,
+  commands,
   skills,
   mentions,
   onPick,
+  onCommand,
   onClose,
   field,
 }: {
   trigger: TriggerState;
+  commands: readonly ComposerCommand[];
   skills: readonly SkillMetadata[];
   mentions: MentionSource | undefined;
   onPick(insert: string): void;
+  onCommand(command: ComposerCommand): void;
   onClose(): void;
   field: RefObject<HTMLTextAreaElement | null>;
 }) => {
@@ -88,56 +136,78 @@ export const TriggerMenu = ({
     trigger.kind === "mention" &&
     mentions != null &&
     result?.query !== trigger.query;
-  const options =
+  const matched =
+    trigger.kind === "skill" ? commandMatches(commands, trigger.query) : [];
+  const options: {
+    id: string;
+    label: string;
+    hint: string;
+    insert: string;
+    command?: ComposerCommand;
+  }[] =
     trigger.kind === "skill"
-      ? skills
-          .filter((skill) =>
-            skill.name.toLowerCase().includes(trigger.query.toLowerCase())
-          )
-          .slice(0, 8)
-          .map((skill) => ({
-            id: skill.id,
-            label: `/${skill.name}`,
-            hint: skill.description,
-            insert: `/${skill.name} `,
-          }))
+      ? [
+          ...matched.map((command) => ({
+            id: `command:${command.name}`,
+            label: `/${command.name}`,
+            hint: command.description,
+            insert: `/${command.name} `,
+            command,
+          })),
+          ...skills
+            .filter((skill) =>
+              skill.name.toLowerCase().includes(trigger.query.toLowerCase())
+            )
+            .slice(0, 8)
+            .map((skill) => ({
+              id: skill.id,
+              label: `/${skill.name}`,
+              hint: skill.description,
+              insert: `/${skill.name} `,
+            })),
+        ]
       : files.map((path) => ({
           id: path,
           label: path,
           hint: "",
           insert: `@${path} `,
         }));
+  const pick = (option: (typeof options)[number]) => {
+    if (option.command != null && option.command.valueRequired !== true)
+      onCommand(option.command);
+    else onPick(option.insert);
+  };
+  const onKey = useEffectEvent((event: KeyboardEvent) => {
+    if (
+      event.isComposing ||
+      event.target !== field.current ||
+      options.length === 0
+    )
+      return;
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      setActive(
+        (index) =>
+          (index + (event.key === "ArrowDown" ? 1 : options.length - 1)) %
+          options.length
+      );
+    } else if (
+      // Shift+Enter stays a newline; only plain Enter / Tab selects.
+      ((event.key === "Enter" && !event.shiftKey) || event.key === "Tab") &&
+      !(event.metaKey || event.ctrlKey)
+    ) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      pick(options[Math.min(active, options.length - 1)]!);
+    } else if (event.key === "Escape") {
+      onClose();
+    }
+  });
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (
-        event.isComposing ||
-        event.target !== field.current ||
-        options.length === 0
-      )
-        return;
-      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-        event.preventDefault();
-        setActive(
-          (index) =>
-            (index + (event.key === "ArrowDown" ? 1 : options.length - 1)) %
-            options.length
-        );
-      } else if (
-        // Shift+Enter stays a newline; only plain Enter / Tab selects.
-        ((event.key === "Enter" && !event.shiftKey) || event.key === "Tab") &&
-        !(event.metaKey || event.ctrlKey)
-      ) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        onPick(options[Math.min(active, options.length - 1)]!.insert);
-      } else if (event.key === "Escape") {
-        onClose();
-      }
-    };
     const element = field.current;
     element?.addEventListener("keydown", onKey, true);
     return () => element?.removeEventListener("keydown", onKey, true);
-  }, [options, active, onPick, onClose, field]);
+  }, [field]);
   const showing = options.length > 0 || (trigger.kind === "mention" && loading);
   const activeId = options.length > 0 ? `${listId}-${active}` : undefined;
   useEffect(() => {
@@ -178,31 +248,42 @@ export const TriggerMenu = ({
           : t("chat.composer.files")
       }
       className={cn(
-        "mb-1.5 flex flex-col rounded-[14px] bg-[var(--chat-surface)] p-1.5",
+        "mb-1.5 flex max-h-72 flex-col overflow-y-auto rounded-[14px] bg-[var(--chat-surface)] p-1.5",
         trigger.kind === "mention" && "chat-mono text-xs"
       )}
     >
       {options.map((option, index) => (
-        <button
-          key={option.id}
-          id={`${listId}-${index}`}
-          type="button"
-          role="option"
-          aria-selected={index === active}
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => onPick(option.insert)}
-          className={cn(
-            "flex h-8 items-center gap-2 rounded-lg px-2.5 text-start",
-            index === active && "bg-secondary"
-          )}
-        >
-          <span className="truncate">{option.label}</span>
-          {option.hint !== "" ? (
-            <span className="text-muted-foreground truncate text-xs">
-              {option.hint}
-            </span>
+        <Fragment key={option.id}>
+          {trigger.kind === "skill" &&
+          (index === 0 || index === matched.length) ? (
+            <div className="text-muted-foreground px-2.5 pt-1.5 pb-0.5 text-xs">
+              {t(
+                index < matched.length
+                  ? "chat.composer.commands"
+                  : "chat.composer.skills"
+              )}
+            </div>
           ) : null}
-        </button>
+          <button
+            id={`${listId}-${index}`}
+            type="button"
+            role="option"
+            aria-selected={index === active}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => pick(option)}
+            className={cn(
+              "flex h-8 items-center gap-2 rounded-lg px-2.5 text-start",
+              index === active && "bg-secondary"
+            )}
+          >
+            <span className="truncate">{option.label}</span>
+            {option.hint !== "" ? (
+              <span className="text-muted-foreground truncate text-xs">
+                {option.hint}
+              </span>
+            ) : null}
+          </button>
+        </Fragment>
       ))}
       {loading && trigger.kind === "mention" ? (
         <div

@@ -148,6 +148,8 @@ import {
   type DesktopEvent,
   type PermissionDecision,
   type PermissionRequest,
+  type SessionAction,
+  type SessionActionResult,
   type SkillMetadata,
   type ToolRequest,
   type TurnOutcome,
@@ -182,6 +184,7 @@ import {
   type DenialDecision,
 } from "./sandbox/index.js";
 import { serviceRoutingPrompt } from "./service-routing-prompt.js";
+import { runSessionAction } from "./session-actions.js";
 import { conversationSessionManager } from "./session-file.js";
 import {
   MAX_STALL_RECOVERIES_PER_TURN,
@@ -2945,6 +2948,13 @@ export class AbacusBotSession {
 
     this.pending.delete(permissionId);
     pending.resolve(decision);
+  }
+
+  runAction(
+    action: SessionAction,
+    value: string | undefined
+  ): Promise<SessionActionResult> {
+    return runSessionAction(this.session, this.options.cwd, action, value);
   }
 
   /** Start a fresh conversation, discarding the transcript but keeping the process. */

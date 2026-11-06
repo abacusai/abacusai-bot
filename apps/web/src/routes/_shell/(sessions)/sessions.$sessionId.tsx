@@ -17,9 +17,11 @@ import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
 import { ComposerUpdateNotice } from "#platform/updates";
-import { useCollections } from "#renderer/data/db";
+import { useCollections, useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
+import { useChatCommands } from "#renderer/features/chat/commands";
 import { loadFixtureRuntime } from "#renderer/features/chat/fixture-runtime";
+import type { ComposerCommand } from "#renderer/features/chat/kit/context";
 import { ChatView } from "#renderer/features/chat/kit/lazy-view";
 import { AgentsList } from "#renderer/features/chat/kit/subagents/agents-list";
 import { useSubagents } from "#renderer/features/chat/kit/subagents/use-subagents";
@@ -87,6 +89,7 @@ import {
   useSession,
   useWorkspace,
 } from "#renderer/features/sessions/data/queries";
+import { renameSession } from "#renderer/features/sessions/data/session-actions";
 import { openSessionOnce } from "#renderer/features/sessions/data/unread-store";
 import {
   awaitTabDraw,
@@ -343,6 +346,44 @@ const SessionRoute = () => {
     observedWorkspace ??
     (row ? collections.workspaces.get(row.workspaceId) : undefined);
   const model = useSessionComposerModel(row);
+  const db = useDb();
+  const sharedCommands = useChatCommands(
+    row ? { workspaceId: row.workspaceId, sessionId } : null
+  );
+  const commands: ComposerCommand[] = [
+    ...sharedCommands,
+    {
+      name: "rename",
+      argument: t("chat.commands.renameArgument"),
+      valueRequired: true,
+      description: t("chat.commands.rename"),
+      run: (label) => renameSession(db, sessionId, label),
+    },
+    {
+      name: "diff",
+      description: t("chat.commands.diff"),
+      run: () =>
+        navigate({
+          to: ".",
+          search: (p: Record<string, unknown>) => ({ ...p, tab: "changes" }),
+          transition: "none",
+        }),
+    },
+    ...(IS_ELECTRON
+      ? [
+          {
+            name: "add-dir",
+            description: t("chat.commands.addDir"),
+            run: async () => {
+              const path = await platformSystem(
+                transport.client
+              ).dialog.openFolder({});
+              if (path) await transport.client.workspaces.add({ path });
+            },
+          },
+        ]
+      : []),
+  ];
   const prefs = usePrefs();
   const session = runtime.session(sessionId);
   // Only the inner store handle: the host state also carries the streaming
@@ -609,6 +650,7 @@ const SessionRoute = () => {
               }),
               showModeChip: true,
               connectors: COMPOSER_CONNECTORS,
+              commands,
               model: model.model,
               onResumeOnFreePool: model.onResumeOnFreePool,
               onNewChat: () =>

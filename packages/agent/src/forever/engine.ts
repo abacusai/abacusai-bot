@@ -126,6 +126,8 @@ import {
   type DesktopEvent,
   type PermissionDecision,
   type PermissionRequest,
+  type SessionAction,
+  type SessionActionResult,
   type ToolRequest,
   type TurnOutcome,
 } from "../protocol.js";
@@ -146,6 +148,7 @@ import {
 } from "../reply-language.js";
 import { mediaCheckFrom } from "../send-media-tool.js";
 import { MEDIA_CHECK_TOOL_NAME } from "../send-media.js";
+import { runSessionAction } from "../session-actions.js";
 import { conversationSessionManager } from "../session-file.js";
 import type { TurnHandle } from "../session.js";
 import {
@@ -1936,6 +1939,13 @@ export class ForeverEngine {
 
     this.pending.delete(permissionId);
     pending.resolve(decision);
+  }
+
+  runAction(
+    action: SessionAction,
+    value: string | undefined
+  ): Promise<SessionActionResult> {
+    return runSessionAction(this.session, this.options.cwd, action, value);
   }
 
   async resetConversation(): Promise<void> {
