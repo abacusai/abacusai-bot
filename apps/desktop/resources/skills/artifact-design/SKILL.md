@@ -22,18 +22,25 @@ on. A short answer stays in the chat.
 ## What the shell gives you
 
 `artifact` wraps your markup in a shell. It sets the title, a light and dark
-palette, the type scale and phone width, and keeps the page off the network.
-Write only what goes inside `<body>`. Colors come from these tokens, so the
+palette, the type and phone width, and keeps the page off the network. Write
+only what goes inside `<body>`. The look is a serif headline, plain body text,
+and monospace for labels and numbers. Colors come from these tokens, so the
 page works in both themes: `--bg`, `--paper`, `--ink`, `--soft`, `--line`,
-`--tint`, `--accent`, `--good`, `--warn`, `--bad`.
+`--tint`, `--accent`, `--good`, `--warn`, `--bad`, and `--good-tint`,
+`--warn-tint`, `--bad-tint`.
 
-Ready-made classes: `.page` (the column), `.eyebrow`, `.lede`, `.stats` with
-`.stat` (label in `span`, number in `b`), `.card`, `.grid` (a table), `.chart`
-(an inline SVG), `.note`.
+Ready-made classes: `.page` (the column), `section`, `.eyebrow`, `.lede`,
+`.note`, `.stats` with `.stat` (number in `b`, label in `span`), `.bar` (a
+progress bar, `<i style="width:60%">` inside), `.card`, `.table` around a
+`table.grid` (`.n` on number columns), `.pill` with `.good`, `.warn` or `.bad`,
+`.chart` (an inline SVG).
+
+Open a report or dashboard the same way: eyebrow, `h1`, a short paragraph, then
+the stats. Put the number first in each `.stat`.
 
 ## Rules
 
-- Everything lives in the file. The page cannot fetch data, and images must be
+- Everything lives in the file, apart from the shell's fonts. The page cannot fetch data, and images must be
   `data:` URLs. Put the numbers in the page.
 - Draw charts as inline SVG, to scale, with every label naming a real value.
   Use a chart library only for a tool that really needs one, pinned to an exact
