@@ -11,6 +11,7 @@ import {
   usePaymentRequired,
 } from "#renderer/components/payment-required";
 import { useDb } from "#renderer/data/db";
+import { GITHUB_CONNECTOR_ID } from "#renderer/lib/build-starters";
 import { connectErrorText } from "#renderer/lib/connect-page";
 import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
 
@@ -18,7 +19,6 @@ import { ConnectFailed } from "./connect";
 import {
   ensureFirstBot,
   firstBotStore,
-  GITHUB_CONNECTOR_ID,
   githubChoice,
   inboxPassStore,
   type FirstBotState,

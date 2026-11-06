@@ -38,6 +38,8 @@ export const FUNNEL_STEPS = [
   // A bot asked to build offers a session (offer_session's card).
   "session_offer_shown",
   "session_offer_opened",
+  // A coding starter on the session start page; the detail is which.
+  "code_starter_tapped",
   // A bot's reply ended with tap-to-run tasks (suggest_tasks); the detail is
   // the bot's template, and a tap's also whether it copied.
   "task_suggestions_shown",

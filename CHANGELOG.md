@@ -21,6 +21,7 @@ On first launch, Updating your data may appear while conversations are converted
 - Start a bot chat from its bot page; the start page no longer has a composer.
 - Each rail item has its own sidebar.
 - Open connectors and messaging from Library.
+- With GitHub connected, new sessions suggest fixing a bug, adding a feature or reviewing your pull requests, and Work on my code in setup opens a session.
 - The companion shows ongoing work; the background Task still running notification is removed.
 - Finishing setup opens the saved destination without switching a workspace.
 - Setup no longer resets an open tour.

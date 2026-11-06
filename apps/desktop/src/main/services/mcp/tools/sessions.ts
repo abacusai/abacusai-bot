@@ -18,7 +18,7 @@ export const SESSIONS_TOOLS: ToolDefinition[] = [
       "code questions (a snippet, a regex, explaining an error) here instead. It shows the user a card with a button that",
       "opens the session with the task ready to send. Then say in one short line, in their language, that it is best",
       "built in a session and they can open it with the button. Do not ask them to describe the project first, and do",
-      "not start building here.",
+      "not start building here. Offer once for a request: one card, even if the work has several parts.",
     ].join("\n"),
     inputSchema: {
       type: "object",

@@ -1295,8 +1295,7 @@
         "title": "Kodum üzerinde çalış",
         "body": "GitHub deponda bir hatayı düzelt veya özellik ekle.",
         "connect": "GitHub’ı bağla",
-        "start": "Başla",
-        "botName": "Kod Asistanı"
+        "start": "Başla"
       },
       "research": {
         "title": "Araştır veya yaz",
@@ -1775,6 +1774,23 @@
           "name": "Basit bir oyun",
           "detail": "Tarayıcında hemen oynanır.",
           "prompt": "Tarayıcıda hemen oynayabileceğim basit bir oyun yap: ok tuşları ve kaydırmayla oynanan bir yılan oyunu; skor, en yüksek skor ve yeniden başlat düğmesi olsun. Tek sayfada olsun ve hazır olunca bana göster."
+        }
+      },
+      "code": {
+        "fix-a-bug": {
+          "name": "Bir hatayı düzelt",
+          "detail": "Nedenini bul ve pull request aç.",
+          "prompt": "Kodumdaki bir hatayı düzelt. Bu klasör bir GitHub deposuysa onda çalış; değilse GitHub depolarımı listele ve hangisi olduğunu sor. Neyin bozuk olduğunu bana sor, sonra nedenini bul, yeni bir dalda düzelt, testleri çalıştır ve pull request aç."
+        },
+        "add-a-feature": {
+          "name": "Özellik ekle",
+          "detail": "Bir dalda geliştir ve pull request aç.",
+          "prompt": "Koduma bir özellik ekle. Bu klasör bir GitHub deposuysa onda çalış; değilse GitHub depolarımı listele ve hangisi olduğunu sor. Neyin ekleneceğini bana sor, sonra yeni bir dalda geliştir, testleri çalıştır ve pull request aç."
+        },
+        "review-my-prs": {
+          "name": "Pull request'lerimi incele",
+          "detail": "Hatalar ve eksik testler, dosya ve satırıyla.",
+          "prompt": "Açık pull request'lerimi incele. Bu klasör bir GitHub deposuysa onu kullan; değilse GitHub depolarımı listele ve hangisi olduğunu sor. Her pull request için neyi değiştirdiğini söyle; hataları, riskleri ve eksik testleri dosya ve satırıyla belirt. Yalnızca burada söyle: GitHub'da paylaşım yapma ve kodu değiştirme."
         }
       }
     },

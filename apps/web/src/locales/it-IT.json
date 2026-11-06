@@ -1295,8 +1295,7 @@
         "title": "Lavora sul mio codice",
         "body": "Correggi un bug o aggiungi una funzione nel tuo repository GitHub.",
         "connect": "Collega GitHub",
-        "start": "Inizia",
-        "botName": "Assistente codice"
+        "start": "Inizia"
       },
       "research": {
         "title": "Ricerca o scrittura",
@@ -1775,6 +1774,23 @@
           "name": "Un gioco semplice",
           "detail": "Da giocare nel browser.",
           "prompt": "Crea un gioco semplice a cui posso giocare subito nel browser: il gioco del serpente con comandi da frecce e swipe, punteggio, record e un pulsante per ricominciare. Tutto in una sola pagina, e mostramelo quando è pronto."
+        }
+      },
+      "code": {
+        "fix-a-bug": {
+          "name": "Correggi un bug",
+          "detail": "Trova la causa e apri una pull request.",
+          "prompt": "Correggi un bug nel mio codice. Se questa cartella è un repository GitHub, lavora lì; altrimenti elenca i miei repository GitHub e chiedimi quale. Chiedimi cosa non funziona, poi trova la causa, correggila su un nuovo branch, esegui i test e apri una pull request."
+        },
+        "add-a-feature": {
+          "name": "Aggiungi una funzione",
+          "detail": "Creala su un branch e apri una pull request.",
+          "prompt": "Aggiungi una funzione al mio codice. Se questa cartella è un repository GitHub, lavora lì; altrimenti elenca i miei repository GitHub e chiedimi quale. Chiedimi cosa aggiungere, poi creala su un nuovo branch, esegui i test e apri una pull request."
+        },
+        "review-my-prs": {
+          "name": "Rivedi le mie pull request",
+          "detail": "Bug e test mancanti, per file e riga.",
+          "prompt": "Rivedi le mie pull request aperte. Se questa cartella è un repository GitHub, usalo; altrimenti elenca i miei repository GitHub e chiedimi quale. Per ogni pull request, dimmi cosa cambia e segnala bug, rischi e test mancanti, con file e riga. Dimmelo solo qui: non pubblicare nulla su GitHub e non modificare il codice."
         }
       }
     },

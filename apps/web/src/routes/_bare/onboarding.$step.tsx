@@ -1,5 +1,5 @@
 import { connectorById } from "@abacus-ai/connectors/registry";
-import { CODE_GOAL, RESEARCH_GOAL } from "@abacus-ai/contract/bots/check-in";
+import { RESEARCH_GOAL } from "@abacus-ai/contract/bots/check-in";
 import {
   isMessagingPlatformConnected,
   type MessagingPlatformId,
@@ -50,7 +50,7 @@ import {
 } from "#renderer/features/onboarding/store";
 import {
   queueStartPrompt,
-  startBuildDraft,
+  startExampleDraft,
 } from "#renderer/features/sessions/start/start-session";
 import { startTour } from "#renderer/features/tour/store";
 import {
@@ -58,7 +58,10 @@ import {
   PlanPitchList,
   UpgradeDialogHost,
 } from "#renderer/features/upgrade-dialog";
-import { BUILD_STARTER_IDS } from "#renderer/lib/build-starters";
+import {
+  BUILD_STARTER_IDS,
+  CODE_STARTER_IDS,
+} from "#renderer/lib/build-starters";
 import {
   ONBOARDING_STEPS,
   type OnboardingStepId,
@@ -215,7 +218,8 @@ const OnboardingRoute = () => {
       case "build": {
         // An example sends at once; the card itself leaves the first one in
         // the box to edit or send, the others a tap away under it.
-        const draftId = startBuildDraft(
+        const draftId = startExampleDraft(
+          "build",
           sponsored,
           choice.prompt == null
             ? t(`sessions.start.build.${BUILD_STARTER_IDS[0]}.prompt`)
@@ -236,7 +240,12 @@ const OnboardingRoute = () => {
         return;
       }
       case "github":
-        await startGoal(t("onboarding.firstRun.github.botName"), CODE_GOAL);
+        startExampleDraft(
+          "code",
+          sponsored,
+          t(`sessions.start.code.${CODE_STARTER_IDS[0]}.prompt`)
+        );
+        await finish({ to: "new-session" });
         return;
       case "research":
         await startGoal(
