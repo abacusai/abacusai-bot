@@ -1733,10 +1733,7 @@ export class ServiceHost {
     messaging: {
       runningPlatforms: () => this.messagingGatewayService.runningPlatforms(),
       disablePlatform: async (id) => {
-        await this.messagingGatewayService.updatePlatform({
-          platformId: id,
-          enabled: false,
-        });
+        await this.messagingGatewayService.unlinkPlatform(id);
       },
       listChats: (query, platform) =>
         this.messagingGatewayService.listKnownChats(query, platform),
@@ -3796,6 +3793,12 @@ export class ServiceHost {
     request: UpdateMessagingPlatformRequest
   ): Promise<MessagingSnapshot> {
     return this.messagingGatewayService.updatePlatform(request);
+  }
+
+  unlinkMessagingPlatform(
+    platformId: MessagingPlatformId
+  ): Promise<MessagingSnapshot> {
+    return this.messagingGatewayService.unlinkPlatform(platformId);
   }
 
   decideMessagingPairing(
