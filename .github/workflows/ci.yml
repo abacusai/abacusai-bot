@@ -8,8 +8,11 @@ name: CI
 # pull request from a fork runs the same checks as a push to main, and no
 # workflow in this repo can reach a signing key.
 #
-# A pull request runs what its diff reaches (scripts/ci-plan.mjs); a push to
-# main runs everything.
+# A pull request runs what its diff reaches (scripts/ci-plan.mjs) on Linux; the
+# `ci:all-os` label adds macOS and Windows. The merge queue runs the same plan
+# on all three systems before a pull request lands (`ci:skip-os` keeps it to
+# Linux). A push to main runs everything on Linux, and a scheduled run tests
+# main on all three systems twice a day.
 
 on:
   push:
@@ -18,6 +21,11 @@ on:
     # `closed` only takes the concurrency group, which cancels a run still
     # going for a pull request that has merged; no job runs on it.
     types: [opened, synchronize, reopened, closed]
+  merge_group:
+    types: [checks_requested]
+  schedule:
+    # 09:00 and 19:00 IST.
+    - cron: "30 3,13 * * *"
   workflow_dispatch:
     inputs:
       platforms:
@@ -32,7 +40,9 @@ permissions:
 concurrency:
   # By pull request number: a merged pull request's `closed` event carries the
   # base branch as its ref, so a ref-keyed group cancelled main's run of the merge.
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  # The scheduled run has its own group, so it neither holds up nor drops a push
+  # run on main.
+  group: ci-${{ github.event.pull_request.number || (github.event_name == 'schedule' && 'schedule') || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -45,12 +55,17 @@ jobs:
   # What this run has to test, and which release unit the change touches.
   # Renderer and agent source are an experience release (hot-swapped over TUF,
   # no relaunch); anything else fails toward a full signed foundation release.
-  # A pull request packages on every operating system only when it is a
-  # foundation change that touches what the packaged app is built from.
+  # A pull request or merge queue run packages on every operating system only
+  # when it is a foundation change that touches what the packaged app is built
+  # from.
   plan:
     name: Plan
     if: github.event.action != 'closed'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # The platforms step reads the pull request's labels.
+      pull-requests: read
     outputs:
       tests: ${{ steps.plan.outputs.tests }}
       any: ${{ steps.plan.outputs.any }}
@@ -69,25 +84,63 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - id: platforms
+        name: Which systems this run tests
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED: ${{ inputs.platforms }}
+          PULL_REQUEST: ${{ github.event.pull_request.number }}
+          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+        run: |
+          set -euo pipefail
+          number=""
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            number=$PULL_REQUEST
+          elif [ "$GITHUB_EVENT_NAME" = merge_group ]; then
+            # The queue's ref ends in pr-<number>-<sha>.
+            number=${QUEUE_REF##*/pr-}
+            number=${number%%-*}
+          fi
+          labels=""
+          if [ -n "$number" ]; then
+            # Read now rather than from the event, so a rerun sees a label added since.
+            labels=$(gh pr view "$number" -R "$GITHUB_REPOSITORY" --json labels --jq '.labels[].name') ||
+              echo "::warning::Could not read the labels of #$number; this run tests the default systems for its event."
+          fi
+          has() { grep -qx "$1" <<< "$labels"; }
+          case "$GITHUB_EVENT_NAME" in
+            workflow_dispatch) platforms=$REQUESTED ;;
+            schedule) platforms=all ;;
+            pull_request) if has ci:all-os; then platforms=all; else platforms=linux; fi ;;
+            merge_group) if has ci:skip-os; then platforms=linux; else platforms=all; fi ;;
+            *) platforms=linux ;;
+          esac
+          echo "platforms=$platforms" >> "$GITHUB_OUTPUT"
+          echo "Systems: **$platforms**" >> "$GITHUB_STEP_SUMMARY"
       - id: plan
         env:
-          PLATFORMS: ${{ inputs.platforms }}
+          PLATFORMS: ${{ steps.platforms.outputs.platforms }}
+          MERGE_GROUP_BASE_SHA: ${{ github.event.merge_group.base_sha }}
         run: node scripts/ci-plan.mjs
       - id: classify
         name: Classify release impact
         run: |
           set -euo pipefail
           everywhere='package=["ubuntu-latest","macos-latest","windows-latest"]'
-          if [ "${{ inputs.platforms }}" = linux ]; then
+          if [ "${{ steps.platforms.outputs.platforms }}" = linux ]; then
             echo 'package=["ubuntu-latest"]' >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if [ "${{ github.event_name }}" != "pull_request" ]; then
-            echo "$everywhere" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+          case "${{ github.event_name }}" in
+            pull_request) base="origin/${{ github.base_ref }}" ;;
+            merge_group) base="${{ github.event.merge_group.base_sha }}" ;;
+            *)
+              echo "$everywhere" >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+          esac
           pnpm exec turbo run build --filter=@abacus-ai/updater
-          changed=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD)
+          changed=$(git diff --name-only "$base"...HEAD)
           result=$(echo "$changed" | node apps/updater/dist/classify.mjs)
           kind=$(echo "$result" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>console.log(JSON.parse(d).kind))')
           echo "This change is a **${kind}** release." >> "$GITHUB_STEP_SUMMARY"
@@ -372,8 +425,9 @@ jobs:
         run: xvfb-run -a --server-args="-screen 0 1920x1080x24" node scripts/screenshots.mjs --require-native-frame
 
   # Linux packages whenever the desktop app is affected. macOS and Windows
-  # package every push to main, and a pull request only when the plan job
-  # finds a packaging input in its diff.
+  # package the scheduled run on main and a manual run on all systems, and a
+  # merge queue run or a `ci:all-os` pull request only when the plan job finds
+  # a packaging input in its diff.
   package:
     name: Package (${{ matrix.os }})
     needs: plan
@@ -480,3 +534,23 @@ jobs:
             echo "::error::the main process logged a fatal error on startup"
             exit 1
           fi
+
+  # The one required check, which the merge queue waits on. A job skipped by its
+  # `if:` is fine; a failed or cancelled one is not.
+  result:
+    name: CI result
+    needs: [plan, check, test, system, screenshots, package]
+    if: always() && github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every job passed or was skipped
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "$RESULTS"
+          for result in $RESULTS; do
+            case "$result" in
+              success | skipped) ;;
+              *) exit 1 ;;
+            esac
+          done
