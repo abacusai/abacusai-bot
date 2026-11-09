@@ -112,7 +112,7 @@ const DesktopMessagingPage = () => {
                   // What is wrong, then what the app is doing about it.
                   <>
                     {p.errorMessage}
-                    {p.errorMessage != null && <br />}
+                    {p.errorMessage ? <br /> : null}
                     {recoveryLine(
                       p.recovery,
                       t(`messaging.platforms.${p.nameKey}`),
