@@ -79,6 +79,7 @@ export const ROUTINE_PAUSE_NOTES = {
   credits: "paused: out of Abacus.AI credits",
   failures: `paused after ${ROUTINE_FAILURES_BEFORE_PAUSE} failed runs in a row`,
   quiet: `paused after ${ROUTINE_QUIET_RUNS_BEFORE_PAUSE} runs in a row found nothing new`,
+  done: "finished: what it was waiting for happened",
 } as const;
 
 export type RoutinePauseReason = keyof typeof ROUTINE_PAUSE_NOTES;
@@ -192,6 +193,11 @@ export interface Routine {
   schedule: string | null;
   /** A single fire at this instant (epoch ms) instead of a schedule. */
   runAt: number | null;
+  /**
+   * What a local routine waits for: the run that finds it holds ends the
+   * routine. Absent or null: it never ends on its own.
+   */
+  until?: string | null;
   /** Secret path segment of the webhook URL, or null when not POST-firable. */
   webhookToken: string | null;
   prompt: string;
@@ -249,6 +255,8 @@ export interface RoutineCreateInput {
   name?: string;
   schedule?: string | null;
   runAt?: number | null;
+  /** Local only: the condition that ends it (see `Routine.until`). */
+  until?: string | null;
   /** True mints a webhook token, making the routine POST-firable. */
   webhook?: boolean;
   prompt: string;
@@ -276,6 +284,7 @@ export type RoutineUpdateInput = Partial<
     Routine,
     | "schedule"
     | "runAt"
+    | "until"
     | "prompt"
     | "enabled"
     | "name"

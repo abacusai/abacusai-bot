@@ -1669,7 +1669,8 @@
       "failures": "Paused after failing several times.",
       "other": "Paused.",
       "denied": "Paused: you did not allow it.",
-      "quiet": "Pausada: {{runs}} execuções seguidas não encontraram nada novo, então ela parou de usar créditos. Retome para continuar verificando."
+      "quiet": "Pausada: {{runs}} execuções seguidas não encontraram nada novo, então ela parou de usar créditos. Retome para continuar verificando.",
+      "done": "Finished: what it was waiting for happened, so it stopped."
     },
     "creditHold": {
       "notify": "Seus créditos acabaram, então suas rotinas não vão rodar. Execuções ignoradas não custam nada, e elas voltam sozinhas quando você tiver créditos.",

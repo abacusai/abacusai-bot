@@ -1669,7 +1669,8 @@
       "failures": "Paused after failing several times.",
       "other": "Paused.",
       "denied": "Paused: you did not allow it.",
-      "quiet": "Pausiert: {{runs}} Läufe nacheinander haben nichts Neues gefunden, daher verbraucht sie keine Credits mehr. Setze sie fort, damit sie weiter prüft."
+      "quiet": "Pausiert: {{runs}} Läufe nacheinander haben nichts Neues gefunden, daher verbraucht sie keine Credits mehr. Setze sie fort, damit sie weiter prüft.",
+      "done": "Finished: what it was waiting for happened, so it stopped."
     },
     "creditHold": {
       "notify": "Du hast keine Credits mehr, deshalb laufen deine Routinen nicht. Übersprungene Läufe kosten nichts, und sie starten von selbst wieder, sobald du Credits hast.",

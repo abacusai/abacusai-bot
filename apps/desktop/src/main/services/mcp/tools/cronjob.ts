@@ -16,7 +16,7 @@ const BASE_DESCRIPTION = [
   "Schedule the agent to run a prompt on its own: on a clock, once at a moment, on an incoming webhook, or both.",
   "",
   'Actions: "create" (prompt, and schedule, run_at or in_minutes, and/or webhook: true; optional name),',
-  '"list", "update" (id, and any of name/schedule/run_at/in_minutes/prompt/enabled), "pause" (id),',
+  '"list", "update" (id, and any of name/schedule/run_at/in_minutes/until/prompt/enabled), "pause" (id),',
   '"resume" (id), "remove" (id), "run" (id, to fire it now, only when the user asks: a run',
   "repeats what the routine sends and spends credits).",
   "",
@@ -41,6 +41,12 @@ const BASE_DESCRIPTION = [
   "Never stand in for a one-time, random-time or once-within-a-window job with a frequent",
   "schedule and a prompt that skips the extra fires: every fire is a full run that can act,",
   "and a skip left to the prompt can fail. Pick one moment instead.",
+  "",
+  'For a job that waits for something ("tell me when the download finishes", "alert me',
+  'when the price drops below 50"), give a schedule to check on and until: what it waits',
+  "for, in a few words. The run that finds it has happened ends the routine, and the app",
+  "retires it, so the prompt need not say when to stop. A routine without until never",
+  'ends on its own. until is for routines in this app, not runner: "hosted".',
 ];
 
 /** A routine in this app fires once on create: never said of a hosted one. */
@@ -255,6 +261,11 @@ const BASE_PROPERTIES = {
     type: "string",
     description:
       "A one-time routine: fire once at this moment (ISO 8601; without an offset, this computer's local time), then be done.",
+  },
+  until: {
+    type: "string",
+    description:
+      'What a routine that waits for something waits for, e.g. "the model download has finished". The run that finds it holds ends the routine. update: "" clears it.',
   },
   webhook: {
     type: "boolean",

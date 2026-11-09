@@ -1669,7 +1669,8 @@
       "failures": "Paused after failing several times.",
       "other": "Paused.",
       "denied": "Paused: you did not allow it.",
-      "quiet": "In pausa: {{runs}} esecuzioni di fila non hanno trovato nulla di nuovo, quindi ha smesso di usare crediti. Riprendila per continuare a controllare."
+      "quiet": "In pausa: {{runs}} esecuzioni di fila non hanno trovato nulla di nuovo, quindi ha smesso di usare crediti. Riprendila per continuare a controllare.",
+      "done": "Finished: what it was waiting for happened, so it stopped."
     },
     "creditHold": {
       "notify": "Hai esaurito i crediti, quindi le tue routine non verranno eseguite. Le esecuzioni saltate non costano nulla e riprendono da sole quando avrai crediti.",

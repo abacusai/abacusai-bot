@@ -27,6 +27,8 @@ export const pausedReasonKey = (reason: string): string => {
       return "routines.paused.credits";
     case "quiet":
       return "routines.paused.quiet";
+    case "done":
+      return "routines.paused.done";
     case "plan_limit":
     case "limit":
       return "routines.paused.planLimit";

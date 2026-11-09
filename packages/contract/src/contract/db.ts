@@ -87,6 +87,7 @@ export const RoutineCreateInputSchema = v.object({
   name: v.optional(v.string()),
   schedule: v.optional(v.nullable(v.string())),
   runAt: v.optional(v.nullable(v.number())),
+  until: v.optional(v.nullable(v.string())),
   webhook: v.optional(v.boolean()),
   prompt: v.string(),
   workspaceId: v.optional(v.nullable(v.string())),
@@ -107,6 +108,7 @@ export const RoutineCreateInputSchema = v.object({
 export const RoutineUpdateInputSchema = v.object({
   schedule: v.optional(v.nullable(v.string())),
   runAt: v.optional(v.nullable(v.number())),
+  until: v.optional(v.nullable(v.string())),
   prompt: v.optional(v.string()),
   enabled: v.optional(v.boolean()),
   name: v.optional(v.string()),

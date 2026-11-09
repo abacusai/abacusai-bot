@@ -48,6 +48,7 @@ import type {
 } from "@abacus-ai/contract/channels";
 import { ConflictError } from "@abacus-ai/contract/conflict";
 import type { NotificationMetadata } from "@abacus-ai/contract/contract";
+import { withoutRoutineDone } from "@abacus-ai/contract/contract/ai";
 import {
   checkoutKey,
   type GitDiffResult,
@@ -338,6 +339,7 @@ import {
   NetworkWaitClock,
   ranOutOfAbacusCredits,
   ROUTINE_RUN_TIMEOUT_MS,
+  runEndsRoutine,
   runOutcomeOf,
   shouldPauseAfter,
   shouldPauseQuiet,
@@ -5892,7 +5894,7 @@ export class ServiceHost {
       startedAt: session.createdAt,
       endedAt: new Date(record.endedAt).toISOString(),
       outcome,
-      reply: text.trim(),
+      reply: withoutRoutineDone(text).trim(),
       ...(creditsOut ? { stopped: "out of Abacus.AI credits" } : {}),
     });
     // Not the routine's doing: a scheduled fire is made up once, never paused for.
@@ -5922,7 +5924,10 @@ export class ServiceHost {
             error
           );
         });
-      this.pauseIfQuietRepeatedly(session.routineId);
+      // What it waited for happened: retired here, never left to a later run.
+      if (runEndsRoutine(finishedJob, { outcome, reply: text }))
+        this.pauseRoutine(session.routineId, ROUTINE_PAUSE_NOTES.done);
+      else this.pauseIfQuietRepeatedly(session.routineId);
       return;
     }
     // Offline is not the routine's failure, and a Stop is the user's: no
@@ -5988,7 +5993,7 @@ export class ServiceHost {
       routineName: job.name,
       runSessionId,
       startedAt,
-      text: reply.trim(),
+      text: withoutRoutineDone(reply).trim(),
       runFile: modelPath(runFile),
     };
     // Nothing to say: nothing is recorded and no chat is opened for it.

@@ -1669,7 +1669,8 @@
       "failures": "Paused after failing several times.",
       "other": "Paused.",
       "denied": "Paused: you did not allow it.",
-      "quiet": "一時停止中: {{runs}}回続けて新しいことが見つからなかったため、クレジットの使用を止めました。確認を続けるには再開してください。"
+      "quiet": "一時停止中: {{runs}}回続けて新しいことが見つからなかったため、クレジットの使用を止めました。確認を続けるには再開してください。",
+      "done": "Finished: what it was waiting for happened, so it stopped."
     },
     "creditHold": {
       "notify": "クレジットがなくなったため、ルーティンは実行されません。スキップされた実行に費用はかからず、クレジットが入ると自動で再開します。",

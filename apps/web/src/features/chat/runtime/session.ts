@@ -2,6 +2,7 @@ import type { UserTextTags } from "@abacus-ai/contract/agent-types";
 import type { PermissionDecision } from "@abacus-ai/contract/agent-types";
 import {
   withoutNoReply,
+  withoutRoutineDone,
   type AiHydration,
 } from "@abacus-ai/contract/contract/ai";
 import {
@@ -189,7 +190,7 @@ const genBoundary = (start: number, total: number): number =>
 
 /**
  * The transcript as every reader sees it (rows, copy, reply quotes): no
- * assistant text ends on the silent `NO_REPLY`. Untouched messages keep
+ * assistant text ends on the silent `NO_REPLY` or a routine's `ROUTINE_DONE`. Untouched messages keep
  * their identity.
  */
 const shownMessages = (messages: UIMessage[]): UIMessage[] => {
@@ -199,7 +200,7 @@ const shownMessages = (messages: UIMessage[]): UIMessage[] => {
     let own = false;
     const parts = message.parts.map((part) => {
       if (part.type !== "text") return part;
-      const content = withoutNoReply(part.content);
+      const content = withoutRoutineDone(withoutNoReply(part.content));
       if (content === part.content) return part;
       own = true;
       return { ...part, content };

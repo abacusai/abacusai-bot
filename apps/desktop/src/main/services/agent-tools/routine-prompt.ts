@@ -9,6 +9,7 @@ import {
   ROUTINE_EDITOR_OPENING,
   ROUTINE_EDITOR_WORDS,
 } from "@abacus-ai/agent/user-text";
+import { ROUTINE_DONE } from "@abacus-ai/contract/contract/ai";
 
 import type { CronJob, CronTrigger } from "./cron-store";
 import { isQuietReply } from "./routine-guards";
@@ -147,6 +148,16 @@ export const buildRoutineFirePrompt = (
     "",
     job.prompt,
   ];
+
+  // The app retires the routine on the marker, so no run has to stop it.
+  if (job.until != null)
+    lines.push(
+      "",
+      `This routine waits for: ${job.until}.`,
+      "If that has happened, tell the user so in your report, then end your reply",
+      `with ${ROUTINE_DONE} on its own last line: the app then ends this routine and`,
+      `it never fires again. If it has not happened yet, never write ${ROUTINE_DONE}.`
+    );
 
   // Every run starts fresh, so the last run's time and reply are said here,
   // and the folder covers anything older.
@@ -294,6 +305,9 @@ export const buildRoutineFirePrompt = (
             "Nothing here is out of bounds. Do not tell the user it is, and do not",
             "skip a write for that reason. If a write genuinely fails, say what the",
             "error was.",
+            // A running server or app may be the user's own: they hear of any stop.
+            "If you stop or restart any process this run, say in your report which",
+            "one and why: one already running may be something the user started.",
           ])
     );
   }

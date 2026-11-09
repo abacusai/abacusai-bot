@@ -13,6 +13,7 @@ import {
   updateJob,
 } from "./services/agent-tools/cron-store";
 import { HostedRoutineRefusal } from "./services/agent-tools/hosted-routines";
+import { buildRoutineFirePrompt } from "./services/agent-tools/routine-prompt";
 import { McpAgentToolsServer } from "./services/mcp/mcp-agent-tools-server";
 
 vi.mock("electron", () => {
@@ -409,6 +410,21 @@ describe("what the status board hears about routines (read off the store)", () =
     expect(board.get(`routine:${quiet.id}`)).toBeNull();
   });
 
+  it("a routine that finished what it waited for is not a stop", async () => {
+    const { recordRun, updateJob } =
+      await import("./services/agent-tools/cron-store");
+    const { board, report } = await boardHost();
+    const job = createJob({
+      schedule: "*/10 * * * *",
+      prompt: "check the download",
+      until: "the download has finished",
+    });
+    updateJob(job.id, { enabled: false, pausedBy: "app" });
+    recordRun(job.id, ROUTINE_PAUSE_NOTES.done, "schedule", { kind: "paused" });
+    report();
+    expect(board.get(`routine:${job.id}`)).toBeNull();
+  });
+
   it("a pause an older build made (no pausedBy) is found by its history and told", async () => {
     const { recordRun, writeJobsForTest } =
       await import("./services/agent-tools/cron-store").then((store) => ({
@@ -454,6 +470,128 @@ describe("what the status board hears about routines (read off the store)", () =
     lanesOff.delete("whatsapp");
     report();
     expect(board.get(`routine:${job.id}`)).toBeNull();
+  });
+});
+
+describe("when a routine stops firing", () => {
+  const proto = ServiceHost.prototype as unknown as {
+    settleRoutineRun: (record: unknown) => void;
+    pauseIfQuietRepeatedly: (routineId: string) => void;
+    pauseRoutine: (routineId: string, reason: string) => void;
+  };
+
+  /**
+   * The real scheduler and store, each fire settled at once with the next
+   * reply in `replies` (a routine run's turn closing). Returns the minutes
+   * that fired, per routine.
+   */
+  const schedulerWith = async (replies: Record<string, string[]>) => {
+    const { CronScheduler } =
+      await import("./services/agent-tools/cron-scheduler");
+    const { getJob } = await import("./services/agent-tools/cron-store");
+    const fired: Record<string, number> = {};
+    const service = {
+      agentSessionManagerService: {
+        isRoutineSession: () => true,
+        setRunOutcome: () => true,
+        get: (id: string) => ({
+          routineId: id.split(":")[0],
+          createdAt: new Date().toISOString(),
+        }),
+      },
+      routineNetworkWaits: { forget: vi.fn() },
+      routineRunText: new Map<string, string[]>(),
+      routineRunLast: new Map(),
+      // Delivery has its own tests (routine-report-host.test.ts).
+      deliversRoutineReports: () => true,
+      deliverRunReport: async () => undefined,
+      routineHome: (job: { id: string }) => path.join(home, job.id),
+      emitEvent: vi.fn(),
+      pauseIfQuietRepeatedly: proto.pauseIfQuietRepeatedly,
+      pauseRoutine: proto.pauseRoutine,
+      pauseIfFailingRepeatedly: vi.fn(),
+    };
+    const scheduler = new CronScheduler(async (id) => {
+      fired[id] = (fired[id] ?? 0) + 1;
+      const sessionId = `${id}:${fired[id]}`;
+      service.routineRunText.set(sessionId, [
+        replies[id]?.[fired[id] - 1] ?? "Checked.",
+      ]);
+      proto.settleRoutineRun.call(service, {
+        turnId: sessionId,
+        sessionId,
+        kind: "reply",
+        startedAt: 0,
+        endedAt: Date.now(),
+      });
+    });
+    // Ticks a minute apart from the next whole minute, as the timer would.
+    const start = Math.ceil(Date.now() / 60_000) * 60_000;
+    const tick = (minute: number) =>
+      scheduler.tick(new Date(start + minute * 60_000 + 5_000));
+    return { fired, tick, getJob };
+  };
+
+  it("a one-time routine fires once and is then done", async () => {
+    const job = createJob({
+      runAt: Date.now(),
+      prompt: "remind me to stretch",
+    });
+    const { fired, tick, getJob } = await schedulerWith({});
+
+    for (let minute = 0; minute < 5; minute++) await tick(minute);
+
+    expect(fired[job.id]).toBe(1);
+    expect(getJob(job.id)?.enabled).toBe(false);
+  });
+
+  it("a routine waiting for something recurs until a run finds it, then is retired by the app", async () => {
+    const { readLastRoutineRun } =
+      await import("./services/agent-tools/routine-runs-store");
+    const job = createJob({
+      schedule: "* * * * *",
+      prompt: "Check the model download and tell me when it is done.",
+      until: "the model download has finished",
+    });
+    // The run is told what it waits for and how to say it happened.
+    expect(buildRoutineFirePrompt(job, "schedule", null)).toContain(
+      "This routine waits for: the model download has finished."
+    );
+    const { fired, tick, getJob } = await schedulerWith({
+      [job.id]: [
+        "Still downloading: 40%.",
+        "Still downloading: 85%.",
+        "The download finished: the model is ready to load.\nROUTINE_DONE",
+      ],
+    });
+
+    for (let minute = 0; minute < 10; minute++) await tick(minute);
+
+    expect(fired[job.id]).toBe(3);
+    expect(getJob(job.id)?.enabled).toBe(false);
+    expect(getJob(job.id)?.runs[0]).toMatchObject({
+      kind: "paused",
+      result: "finished: what it was waiting for happened",
+    });
+    // The marker is the app's: the run's record keeps the report without it.
+    expect(readLastRoutineRun(path.join(home, job.id))?.reply).toBe(
+      "The download finished: the model is ready to load."
+    );
+  });
+
+  it("a recurring routine with no end condition keeps recurring, whatever a run says", async () => {
+    const job = createJob({ schedule: "* * * * *", prompt: "daily brief" });
+    const { fired, tick, getJob } = await schedulerWith({
+      [job.id]: ["Here is your brief. ROUTINE_DONE", "Here is your brief."],
+    });
+
+    for (let minute = 0; minute < 4; minute++) await tick(minute);
+
+    expect(fired[job.id]).toBe(4);
+    expect(getJob(job.id)?.enabled).toBe(true);
+    expect(buildRoutineFirePrompt(job, "schedule", null)).not.toContain(
+      "ROUTINE_DONE"
+    );
   });
 });
 
