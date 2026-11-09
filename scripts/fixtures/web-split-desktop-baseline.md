@@ -8,7 +8,22 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `f5a587da` with slash commands
+## Current: `55aecf25`, the app in Chinese
+
+**430 / 8619560 / 2893106.** Records the renderer with Simplified and Traditional
+Chinese. Each language is one locale chunk, loaded only when that language is
+picked, so nobody downloads both. Against `5380f79e` (main before this change,
+428 / 8242828 / 2759597): +2 chunks (+0.47%), +376732 bytes (+4.57%), +133509
+gzip bytes (+4.84%). `apps/web`'s dependencies did not change. The 1% allowance
+is unchanged.
+
+Measured from a frozen-lockfile build of `55aecf25` and of `5380f79e` (Linux
+x64), summed the same way as `check-desktop-parity.mjs`. This baseline-only
+change touches no renderer code.
+
+## History
+
+### `f5a587da` with slash commands
 
 **428 / 8233686 / 2756234.** Records the renderer with the work merged since
 #664, the + menu's connectors and slash commands, which took it 7186 bytes past
@@ -20,8 +35,6 @@ unchanged.
 Measured from a frozen-lockfile build of `f5a587da` (Linux x64), summed the
 same way as `check-desktop-parity.mjs`. This baseline-only change touches no
 renderer code.
-
-## History
 
 ### `ce39b54f5` with Share (#664)
 
