@@ -46,7 +46,9 @@ export type TurnKind =
   /** The user asked the team to discuss: one round of a discussion. */
   | "discuss"
   /** The discussion is over: the lead sums up what the team agreed. */
-  | "conclude";
+  | "conclude"
+  /** A member's work report just landed: the lead keeps the user's goal moving. */
+  | "report";
 
 export interface Speakers {
   botIds: string[];
@@ -486,6 +488,8 @@ export const turnPrompt = (input: {
   myWork?: readonly ChannelWork[];
   /** Its own chat with the user: a turn running there, and its last exchanges, both sides. */
   ownChat?: OwnChat;
+  /** For brought-in: the user named this bot in the channel, so it may take work on. */
+  mayWork?: boolean;
   nameOf: (botId: string) => string;
 }): string => {
   const { me } = input;
@@ -569,7 +573,18 @@ export const turnPrompt = (input: {
     case "brought-in":
       lines.push(
         `${others} brought you in above. Answer what they need, for the user, in the group. Don't @mention anyone: nobody else will be called in.`,
-        "You can't take work that needs files, code, a browser or the user's accounts on from here: say what you would do, and that the user can ask you for it directly."
+        input.mayWork === true
+          ? `The user named you in this channel for its work, so if ${others} needs real work from you (files, code, a browser), start it now: ${WORK_RULE}`
+          : "You can't take work that needs files, code, a browser or the user's accounts on from here: say what you would do, and that the user can ask you for it directly."
+      );
+      break;
+    case "report":
+      lines.push(
+        `${others}'s work report just landed above. You are the lead: keep the user's goal in this channel moving without waiting to be asked.`,
+        "If part of what the user asked for is still not done, start the next piece now: <work> for your own part, or a <chain> of the members it needs, or @Name a member and say exactly what they should do. Use only members the user named in this channel.",
+        "If everything the user asked for is done and checked, tell the user so in a short summary of what was made and where. If nothing is needed from you, reply <reply>NO_REPLY</reply>.",
+        WORK_RULE,
+        CHAIN_RULE
       );
       break;
     case "follow-up":
@@ -624,7 +639,7 @@ export const postedWords = (words: string, me: Member): string => {
 };
 
 const WORK_RULE =
-  "If the user asks YOU for real work that needs files, code, a browser or their accounts (build a page, write a document, check their email…), don't refuse: say in a line what you will do, and add <work>the task, complete on its own: what to make or do, and where</work> inside your reply. The app runs it in your own chat with all your tools and posts your report here when it is done. One <work> at most, only for what the user asked you, and only to start it now: if you ask them whether to, leave it out and wait for their yes.";
+  "If the user asks YOU for real work that needs files, code, a browser or their accounts (build a page, write a document, check their email…), don't refuse: say in a line what you will do, and add <work>the task, complete on its own: what to make or do, and where</work> inside your reply. The app runs it in your own chat with all your tools and posts your report here when it is done. One <work> at most, only for what the user asked you, and only to start it now: if you ask them whether to, leave it out and wait for their yes. Never write that you are starting, building, fixing or testing something unless this reply has the <work> for it (or your work above shows it running): a channel message does no work by itself. If you are waiting on someone, say that you are waiting, and for what.";
 
 /** At most this many steps in one chain, rounds included. */
 export const MAX_CHAIN_STEPS = 8;
@@ -660,6 +675,26 @@ const WORK = /<work>([\s\S]*?)<\/work>/i;
 
 const ASKS_FIRST =
   /\b(?:want me to|should i|shall i|do you want me to|would you like me to|like me to)\b[^?]*\?\s*$/i;
+
+/**
+ * Words that say work is happening ("building it now", "on it", "I'm
+ * scaffolding…"): a reply like that with no <work> promises what nobody does.
+ */
+const CLAIMS_WORK =
+  /\b(?:i'?m|i am|we'?re|we are)\s+(?:now\s+)?(?:starting|building|working on|implementing|writing|producing|scaffolding|fixing|testing|coding|setting up|creating)\b|\b(?:starting|building|producing|writing|implementing|scaffolding|coding|fixing|creating|setting up)\b[^.!?\n]{0,60}\bnow\b/i;
+
+export const claimsWork = (words: string): boolean => CLAIMS_WORK.test(words);
+
+/** The user's own words across the channel (newest last): who they named, for work and chains. */
+export const channelUserWords = (
+  messages: readonly ChannelMessage[],
+  last = 30
+): string =>
+  messages
+    .filter((message) => message.author.kind === "user")
+    .slice(-last)
+    .map((message) => message.text)
+    .join("\n");
 
 /**
  * Words that end by asking the user whether to do something ("Want me to
@@ -708,7 +743,9 @@ export const channelWorkPrompt = (input: {
     input.fromPlan === true
       ? `${input.prefix}channel "${attr(input.channelTitle)}"] The team agreed a plan in the channel and the user started it; this item is yours.`
       : `${input.prefix}channel "${attr(input.channelTitle)}"] In the channel, the user asked you for this and you took it on.`,
-    "Do it now with your normal tools. When you are done, end with a short report for the channel:",
+    "Do it now with your normal tools, and finish it in this turn: do not stop to ask the user whether to go on or",
+    "which option they want. Where a choice is needed, take the sensible default, do it, and say what you chose.",
+    "When you are done, end with a short report for the channel:",
     "what you did, and where the results are (file paths, links). It is posted there as your message.",
     "Only your final message is posted: put the report itself in it, never a pointer to an earlier message.",
     "",
