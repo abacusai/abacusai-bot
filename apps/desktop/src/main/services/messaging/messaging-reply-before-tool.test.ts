@@ -65,6 +65,15 @@ const harness = () => {
       },
     }
   );
+  // Failure lines the gateway starts (an empty reply's included), counted here.
+  const failures: unknown[] = [];
+  (
+    gateway as unknown as {
+      startFailureReply: (r: unknown, f: unknown) => void;
+    }
+  ).startFailureReply = (_route, failure) => {
+    failures.push(failure);
+  };
   const internals = gateway as unknown as {
     handleInbound: (
       id: MessagingPlatformId,
@@ -75,6 +84,7 @@ const harness = () => {
     turns.emit(currentSession, event);
   return {
     sent,
+    failures,
     inbound: (text: string) =>
       internals.handleInbound("discord", {
         userId: "U1",
@@ -86,6 +96,8 @@ const harness = () => {
       emit({ type: "text_delta", content, messageId }),
     tool: (toolName = "memory") => emit({ type: "tool_call_start", toolName }),
     recovery: () => emit({ type: "promised_work_recovery", model: "m" }),
+    settled: (text: string) =>
+      emit({ type: "turn_answer", messageIds: [], text, settled: true }),
     idle: () => emit({ type: "status_changed", status: AgentStatus.Idle }),
   };
 };
@@ -213,5 +225,36 @@ describe("a turn the model was told to go on with", () => {
     h.idle();
     await tick();
     expect(h.sent).toEqual([report, "Noted."]);
+  });
+});
+
+describe("a reply sent before the turn closes (settled turn_answer)", () => {
+  const WORDS = "Section 1 is fixed. Moving into section 2 next.";
+
+  it("goes out at once, and the close owes nothing more", async () => {
+    const h = harness();
+    await h.inbound("fix both sections");
+    h.say(WORDS, "m1");
+    h.settled(WORDS);
+    await tick();
+    expect(h.sent).toEqual([WORDS]);
+    h.idle();
+    await tick();
+    expect(h.sent).toEqual([WORDS]);
+    expect(h.failures).toEqual([]);
+  });
+
+  it("is followed by what the steered work reports, once", async () => {
+    const h = harness();
+    await h.inbound("fix both sections");
+    h.say(WORDS, "m1");
+    h.settled(WORDS);
+    h.recovery();
+    h.tool("edit");
+    h.say("Both sections are fixed.", "m2");
+    h.idle();
+    await tick();
+    expect(h.sent).toEqual([WORDS, "Both sections are fixed."]);
+    expect(h.failures).toEqual([]);
   });
 });
