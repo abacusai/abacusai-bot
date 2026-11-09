@@ -123,8 +123,21 @@ export const APP_NOTE_TAGS = {
 
 /** A note another bot sent ("[from bot Name] ..."), or a task it passed on. */
 const BOT_NOTE = /^\[(?:from bot |task from the user, passed on by )/;
-/** "[WhatsApp message from Sam] ", as `frameChannelMessage` writes it. */
-const CHANNEL_LABEL = /^\[[^\]\n]* message from [^\]\n]*\]\s*/;
+/**
+ * Where the words start after a "[WhatsApp message from Sam] " label, as
+ * `frameChannelMessage` writes it; -1 without one. A scan, not a regex, so a
+ * long bracket cannot make it slow.
+ */
+const channelLabelEnd = (part: string): number => {
+  if (!part.startsWith("[")) return -1;
+  const close = part.indexOf("]");
+  const newline = part.indexOf("\n");
+  if (close < 0 || (newline >= 0 && newline < close)) return -1;
+  if (!part.slice(1, close).includes(" message from ")) return -1;
+  let end = close + 1;
+  while (end < part.length && /\s/.test(part[end]!)) end += 1;
+  return end;
+};
 /** The phone lane's line for a message read mid-task (mid-task-inbox.ts). */
 const MID_TASK = /^\[user mid-task\]\s*/;
 /** A saved or unread attachment, one line each (gateway and phone lane). */
@@ -150,7 +163,7 @@ export const frameChannelMessage = (label: string, text: string): string =>
 /** One paragraph's own words: labels, attachment and media lines dropped. */
 const ownPart = (part: string): string =>
   part
-    .replace(CHANNEL_LABEL, "")
+    .slice(Math.max(channelLabelEnd(part), 0))
     .replace(MID_TASK, "")
     .split("\n")
     .filter((line) => !ATTACHMENT_LINE.test(line) && !MEDIA_LINE.test(line))
@@ -178,7 +191,7 @@ export const ownWords = (text: string, tags?: UserTextTags): string => {
   // A bot's routine opens with its voice, then the fire.
   if (parts.some((part) => ROUTINE_FIRE.test(part.trim()))) return "";
   // A sender chat's rules ride ahead of the first message: the label starts the words.
-  const labelled = parts.findIndex((part) => CHANNEL_LABEL.test(part));
+  const labelled = parts.findIndex((part) => channelLabelEnd(part) >= 0);
   return parts
     .slice(Math.max(labelled, 0))
     .filter((part) => !PART_NOTE.test(part))
