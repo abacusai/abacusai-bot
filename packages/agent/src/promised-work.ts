@@ -13,7 +13,7 @@
 import { abacusV1BaseUrl } from "./abacus-endpoint.js";
 import { liveBackgroundJobCount } from "./background-processes.js";
 import { creditWallActive } from "./credit-wall.js";
-import { budgetStopReason } from "./extensions/budgets.js";
+import { spendStopReason } from "./extensions/spend-governor.js";
 import { isOwnerAudience } from "./owner-tools.js";
 import { AgentMode } from "./protocol.js";
 import { ownWords } from "./user-text.js";
@@ -176,7 +176,7 @@ export const mayAskForPromisedWork = (mode: AgentMode): boolean =>
   isOwnerAudience() &&
   mode !== AgentMode.PlanMode &&
   mode !== AgentMode.Unattended &&
-  budgetStopReason() == null &&
+  spendStopReason() == null &&
   !creditWallActive() &&
   liveBackgroundJobCount() === 0;
 

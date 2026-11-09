@@ -13,6 +13,8 @@ export interface CreditBalance {
   planCredits?: number;
   /** A plan the user pays for (contract creditMilestonePlan): the user is told when the run wraps up. */
   paid?: boolean;
+  /** A plan read as free (contract creditMilestonePlan): the only one with a per-turn check-in. */
+  free?: boolean;
 }
 
 /**
@@ -45,6 +47,7 @@ const parse = (raw: unknown): CreditBalance | null => {
           ? { planCredits: value.planCredits }
           : {}),
         ...(value.paid === true ? { paid: true } : {}),
+        ...(value.free === true ? { free: true } : {}),
       }
     : null;
 };

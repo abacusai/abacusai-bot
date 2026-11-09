@@ -947,6 +947,25 @@ export const missedJobs = (from: Date | null, to: Date): MissedJob[] => {
   });
 };
 
+/**
+ * The watchdog's: scheduled jobs on this computer due at least `periods`
+ * times since their fires were last accounted for, and still unfired. With
+ * the app online nothing explains that, so it is reported whatever the cause.
+ */
+export const overdueJobs = (
+  now: Date,
+  /** Since the app was last up and awake: earlier misses are the scheduler's (closed, asleep). */
+  since: Date,
+  periods = 2
+): MissedJob[] =>
+  missedJobs(since, now).filter(
+    ({ job, count }) =>
+      count >= periods &&
+      job.runner !== "hosted" &&
+      // Fires the scheduler already put down to the app closed or asleep.
+      !(job.missed != null && job.missed.at >= since.getTime())
+  );
+
 /** A once job has fired: it is done, and stays in the list as a record. */
 export const retireOnceJob = (id: string): void => {
   const job = getJob(id);

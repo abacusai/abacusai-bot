@@ -1672,7 +1672,8 @@
       "other": "Paused.",
       "denied": "Paused: you did not allow it.",
       "quiet": "Pausada: {{runs}} execuções seguidas não encontraram nada novo, então ela parou de usar créditos. Retome para continuar verificando.",
-      "done": "Finished: what it was waiting for happened, so it stopped."
+      "done": "Finished: what it was waiting for happened, so it stopped.",
+      "budget": "Paused: {{runs}} runs in a row stopped at their credit budget."
     },
     "creditHold": {
       "notify": "Seus créditos acabaram, então suas rotinas não vão rodar. Execuções ignoradas não custam nada, e elas voltam sozinhas quando você tiver créditos.",
@@ -3098,7 +3099,17 @@
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
       "unsaved": "O disco está cheio, então esta conversa não está sendo salva. Libere algum espaço; ela volta a ser salva com sua próxima mensagem.",
-      "creditsLow": "Credits are almost out, so the agent is wrapping up what it has so the work isn't cut off halfway.",
+      "creditsLow_one": "{{count}} credit left. The agent keeps going and hands over each piece as it's ready.",
+      "creditsLow_other": "{{count}} credits left. The agent keeps going and hands over each piece as it's ready.",
+      "spendCheckIn_one": "This task has used {{count}} credit so far. Send a message to keep going.",
+      "spendCheckIn_other": "This task has used {{count}} credits so far. Send a message to keep going.",
+      "spendBudget_one": "Stopped at its credit budget ({{count}} credit).",
+      "spendBudget_other": "Stopped at its credit budget ({{count}} credits).",
+      "spendCalls_one": "This task reached its limit of {{count}} step, so it's wrapping up. Send a message to keep going.",
+      "spendCalls_other": "This task reached its limit of {{count}} steps, so it's wrapping up. Send a message to keep going.",
+      "spendTime_one": "This task has worked for {{count}} minute, its limit, so it's wrapping up. Send a message to keep going.",
+      "spendTime_other": "This task has worked for {{count}} minutes, its limit, so it's wrapping up. Send a message to keep going.",
+      "compacted": "Summarized older messages to keep this chat fast and cheap.",
       "showInFolder": "Show in folder"
     },
     "part": {
@@ -4780,7 +4791,8 @@
       "warning": "Para continuar agora, o bot mudaria para modelos gratuitos de outro provedor ({{providers}}). Eles têm qualidade bem menor: mais erros, podem quebrar código que funciona e muitas vezes atingem limites de uso.",
       "offer": "Faça upgrade para o {{plan}} — {{price}}",
       "upgradeCta": "Fazer upgrade para o {{plan}}",
-      "continueFree": "Continuar com modelos gratuitos (qualidade menor)"
+      "continueFree": "Continuar com modelos gratuitos (qualidade menor)",
+      "continueOwnKey": "Continue on your own key ({{model}})"
     },
     "plan": {
       "introPrice": "{{first}} no primeiro mês, depois {{monthly}}/mês",
@@ -4809,7 +4821,7 @@
       "body": "Verifique sua conexão com a internet, VPN ou proxy e tente de novo."
     },
     "cause": {
-      "context_too_long": "Esta conversa ficou longa demais para o modelo. Comece um novo chat ou escolha um modelo com contexto maior.",
+      "context_too_long": "Esta conversa ficou longa demais para o modelo. Escolha um modelo com contexto maior.",
       "key_invalid": "Sua chave do {{provider}} foi recusada: ela é inválida ou expirou.",
       "own_key_quota": "Sua chave do {{provider}} atingiu a cota. Mude para outro modelo ou confira o plano da chave.",
       "model_unavailable": "Este modelo não conseguiu aceitar o pedido. Escolha outro modelo.",

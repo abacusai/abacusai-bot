@@ -17,6 +17,24 @@ import { streamSimple as streamCompletions } from "@earendil-works/pi-ai/api/ope
 
 const POINTS_PER_CREDIT = 100;
 
+type BilledListener = (credits: number) => void;
+const billedListeners = new Set<BilledListener>();
+
+/**
+ * Every Abacus request this process makes, as it ends, with what it billed:
+ * the turn's own calls, its sub-agents' and its memory upkeep alike. The
+ * spend governor sums them into the turn. Returns the unsubscribe.
+ */
+export const onBilledCredits = (listener: BilledListener): (() => void) => {
+  billedListeners.add(listener);
+  return () => billedListeners.delete(listener);
+};
+
+/** One Abacus request ended having billed `credits`. */
+export const noteBilledCredits = (credits: number): void => {
+  for (const listener of billedListeners) listener(credits);
+};
+
 /** An assistant message from an Abacus request, with what the server said it billed. */
 export type MeteredMessage = AssistantMessage & { abacusCredits?: number };
 
@@ -113,8 +131,11 @@ export const abacusStreamSimple = (
           : event.type === "error"
             ? event.error
             : null;
-      if (ended != null && points != null)
-        (ended as MeteredMessage).abacusCredits = points / POINTS_PER_CREDIT;
+      if (ended != null && points != null) {
+        const credits = points / POINTS_PER_CREDIT;
+        (ended as MeteredMessage).abacusCredits = credits;
+        noteBilledCredits(credits);
+      }
       outer.push(event);
     }
     outer.end();

@@ -43,6 +43,8 @@ export type StatusReason =
   | "interrupted"
   | "crashed"
   | "signed-out"
+  /** The watchdog's: due twice over with the app online, and never fired. */
+  | "unfired"
   | "ok";
 
 export interface StatusDetail {

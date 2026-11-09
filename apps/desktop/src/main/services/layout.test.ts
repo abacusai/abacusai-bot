@@ -142,6 +142,8 @@ const MAIN_ROOT_FILES = [
   "system-network-init.ts",
   "system-network.test.ts",
   "system-network.ts",
+  // The test-only signed-in home the e2e setup loads (#758).
+  "test-home.setup.ts",
   "window-chrome-options.test.ts",
   "window-chrome-options.ts",
   "window-chrome-probe.test.ts",

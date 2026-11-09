@@ -230,6 +230,8 @@ const NOT_NOTES = new Set([
   "python",
   "rpc",
   "smoke",
+  "spend",
+  "status",
   "trash",
   "vault",
   "window-chrome",

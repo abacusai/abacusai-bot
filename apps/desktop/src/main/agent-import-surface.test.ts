@@ -80,6 +80,9 @@ const ALLOWED = new Set([
   "@abacus-ai/agent/plan-asks",
   // The hosted computer's local-tools flag name: no imports at all.
   "@abacus-ai/agent/hosted-local-tools",
+  // What a turn or a routine run may spend (the routine runner's pause after
+  // budget stops): a 4 kB chunk with no imports at all.
+  "@abacus-ai/agent/spend-policy",
 ]);
 
 const MAIN_DIR = resolve(import.meta.dirname);

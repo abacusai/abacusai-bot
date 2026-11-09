@@ -10,6 +10,7 @@
 import * as fs from "node:fs";
 
 import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
+import { ROUTINE_BUDGET_STOPS_BEFORE_PAUSE } from "@abacus-ai/agent/spend-policy";
 import type { PlanT } from "@abacus-ai/contract/billing-plan";
 import {
   messagingPlatformSpec,
@@ -670,7 +671,12 @@ const bodyOf = (entry: Pending, t: PlanT): string => {
       return t("routines.paused.failures");
     case "credits":
     case "credits-out":
-      return t("routines.creditHold.notify");
+      // Paused by the app for credits: its runs kept stopping at their budget.
+      return entry.state === "paused-by-app"
+        ? t("routines.paused.budget", {
+            runs: ROUTINE_BUDGET_STOPS_BEFORE_PAUSE,
+          })
+        : t("routines.creditHold.notify");
     case "signed-out":
       return t("status.body.signedOut");
     case "link-lost":

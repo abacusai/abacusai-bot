@@ -1,16 +1,9 @@
 /**
  * Ported from codingagent-lite (abacusai/codingagent-lite), MIT.
  *
- * Budgets: bound the three ways cheap models waste money and turns. Turn cap
- * (ABACUSAI_BOT_TURN_CAP, default 250 model calls a run) and time
- * (ABACUSAI_BOT_RUN_CAP_MS, default 60 minutes from the user's message): at
- * 100 calls short of the cap the model is told to wrap up and present what it
- * has, at 50 short it is told again and harder. At either limit the turn
- * closes out instead of being cut mid-step: the model is
- * told, unseen, to stop working, hand over what exists and write its closing
- * message; every tool call but the hand-over (present_deliverable, send_media)
- * is refused from then on, and only if it still has not finished a few calls
- * later is the run stopped with a message that says so.
+ * Nudges that keep cheap models from wasting turns. What a run may spend
+ * (calls, time, credits) and its close-out are the spend governor's
+ * (spend-governor.ts); these only steer.
  * Repetition: the third identical tool call against the same state is blocked
  * (the second, for a connector call, which is billed); a successful write,
  * command or connector change in between makes the next one a new look.
@@ -22,20 +15,12 @@
  * someone in the chat, a run the user has heard nothing from for 3 working
  * minutes (or 15 tool calls) is told, unseen, to write one short line on where
  * it stands; a chat in a messaging app (BudgetOptions.checkIns) sends it with
- * its progress tool. Credits: a session on
- * billed Abacus credits with under a tenth left is told once, unseen, to wrap
- * up and hand over; only with someone in the chat (nobodyPresent). Temperature (ABACUSAI_BOT_TEMPERATURE, default 0.3, "off"
+ * its progress tool. Temperature (ABACUSAI_BOT_TEMPERATURE, default 0.3, "off"
  * to disable) when unset.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 import { BOT_TIME_TOOL_NAME } from "../bot/bot-time-tool.js";
-import {
-  hostCreditBalance,
-  lowCreditBase,
-  refreshCreditBalanceIfStale,
-  type CreditBalance,
-} from "../credit-balance.js";
 import { closesReply, hasWords } from "../forever/reply-end.js";
 import { connectorToolMeta } from "../mcp/index.js";
 import { isOwnerAudience } from "../owner-tools.js";
@@ -43,9 +28,6 @@ import { WRITE_TOOLS } from "../permissions.js";
 import { toToolKind } from "../tool-display.js";
 import { ownEntry, UNATTENDED_CONNECTOR_READS } from "../tool-policy.js";
 
-/** How far short of the cap each warning lands. */
-const WRAP_UP_MARGIN = 100;
-const FINAL_MARGIN = 50;
 const REPEAT_LIMIT = 3;
 /** A connector call costs credits; the first identical one already answered. */
 const CONNECTOR_REPEAT_LIMIT = 2;
@@ -63,16 +45,6 @@ const UPDATE_MIN_MS = 90_000;
 const UPDATE_SPACING_MS = 4 * 60_000;
 const UPDATE_MAX_PER_TURN = 5;
 const UPDATE_MAX_IGNORED = 2;
-/** The share of the plan's credits below which a billed run is told to wrap up. */
-const CREDITS_LOW_SHARE = 0.1;
-/** Model calls a closing run gets to write its closing message. */
-const CLOSE_OUT_TURNS = 2;
-
-/** Why the budget stopped the current run, or null. Cleared as the next run starts. */
-let stoppedBecause: string | null = null;
-
-/** The session reads this to say why a run ended rather than blaming the provider. */
-export const budgetStopReason = (): string | null => stoppedBecause;
 
 /**
  * Tools that sample state which changes on its own. Repeating a screenshot
@@ -125,39 +97,6 @@ function changesState(
   );
 }
 
-function turnCap(): number {
-  const raw = Number(process.env.ABACUSAI_BOT_TURN_CAP);
-  return Math.floor(Number.isFinite(raw) && raw > 0 ? raw : 250);
-}
-
-/**
- * How long one run may go before it closes out. A healthy build or install
- * runs for tens of minutes and is left to finish; past an hour the run hands
- * over what it has rather than going on unattended.
- */
-function runCapMs(): number {
-  const raw = Number(process.env.ABACUSAI_BOT_RUN_CAP_MS);
-  return Number.isFinite(raw) && raw > 0 ? raw : 60 * 60_000;
-}
-
-const closeOutPrompt = (why: string): string =>
-  `${why} Stop working now: no more building, fixing or exploring, those tool calls will be refused. ` +
-  `If you made files the user has not been handed yet, hand them over first with ${PRESENT_TOOL}, ` +
-  `unfinished or not. Then write your closing message to the user, in their language: what is done ` +
-  `and where it is, what is left, and that they can send a message to carry on from here.`;
-
-const wrapUpPrompt = (turns: number, cap: number): string =>
-  `Budget check: this run has made ${turns} of ${cap} model calls and has been going a long time. ` +
-  `Wrap up now. First present whatever deliverables exist so far with present_deliverable, even if ` +
-  `unfinished. Then look at what you have been doing: if the last several steps repeat an approach ` +
-  `that is not working, stop, state what you learned, and change approach or ask the user. Do not ` +
-  `start new explorations.`;
-
-const finalPrompt = (turns: number, cap: number): string =>
-  `Final warning: ${turns} of ${cap} model calls used. The run is stopped at ${cap}, mid-step, with ` +
-  `no chance to finish. Present what exists now with present_deliverable, then write your closing ` +
-  `message: what is done, where it is, and what is left. No more building, fixing or exploring.`;
-
 const connectorPrompt = (calls: number, credits: number): string =>
   `Cost check: this run has made ${calls} connector calls, and each one costs ` +
   `${credits} credits. Make sure you are being efficient: do not redo searches ` +
@@ -188,19 +127,6 @@ const updatePrompt = (minutes: number, tools: readonly string[]): string => {
         `${what}. ${done}`;
 };
 
-const creditsLowPrompt = (balance: CreditBalance): string =>
-  `Credit check: the user's Abacus.AI account has ${Math.max(0, Math.floor(balance.remaining))} of ` +
-  `${balance.granted} credits left, and the run stops mid-step when they run out. Wrap up now: ` +
-  `finish the smallest useful version of what you are building, hand over every deliverable with ` +
-  `${PRESENT_TOOL}, then tell the user, in their own language, what is done and what is left. Do not ` +
-  `start new work.`;
-
-/** A model that spends Abacus credits: the platform marks the ones that bill nothing. */
-const billedAbacus = (model: unknown): boolean => {
-  const choice = model as { provider?: string; free?: boolean } | undefined;
-  return choice?.provider === "abacus" && choice.free !== true;
-};
-
 /**
  * A turn nobody is in the chat for (a routine's run, a bot answering a bot):
  * there is no one to wrap up for, and a run told to wrap up skips its job.
@@ -212,39 +138,12 @@ const nobodyPresent = (): boolean =>
 const isPresentTool = (name: string): boolean =>
   name === PRESENT_TOOL || name.endsWith(`_${PRESENT_TOOL}`);
 
-/** What a closing run may still call: handing over what exists, never new work. */
-const HANDOVER_TOOLS = [PRESENT_TOOL, "send_media"];
-const isHandoverTool = (name: string): boolean =>
-  HANDOVER_TOOLS.some((tool) => name === tool || name.endsWith(`_${tool}`));
-
-/** What the user reads when the run is stopped. */
-const stoppedMessage = (cap: number): string =>
-  `This run made ${cap} model calls without finishing, so it was probably going in circles, and ` +
-  `was stopped. Whatever it built is still in the workspace. To get it back on track, send a message ` +
-  `that narrows the task: say exactly what you want next, or ask it to present what it has so far.`;
-
-/** What the user reads when a run that hit its time limit did not close out. */
-const timeStoppedMessage = (minutes: number): string =>
-  `This run worked for ${minutes} minutes without finishing and was stopped. Whatever it built is ` +
-  `still in the workspace. Send a message to carry on from here, or ask it to present what it has.`;
-
 function temperatureSetting(): number | undefined {
   const raw = process.env.ABACUSAI_BOT_TEMPERATURE;
   if (raw === "off" || raw === "0off") return undefined;
   if (raw === undefined || raw === "") return 0.3;
   const parsed = Number(raw);
   return Number.isFinite(parsed) ? parsed : 0.3;
-}
-
-/**
- * A tighter limit on work nobody asked for: while `calls` is set, every model
- * call counts against it, across any continuation of that work, and going
- * over closes the run out the way the turn cap does. `reached` says it did.
- */
-export interface RunLimit {
-  calls: number | null;
-  used: number;
-  reached: boolean;
 }
 
 export interface BudgetOptions {
@@ -255,9 +154,8 @@ export interface BudgetOptions {
    * show-your-work preview nudge is off.
    */
   checkIns?: { tools: readonly string[] };
-  runLimit?: RunLimit;
-  /** The low-credit steer went to a paid plan's model: the chat shows the user why it wraps up. */
-  onCreditsLow?: () => void;
+  /** The spend governor is closing the run out: no progress reminder then. */
+  closing?: () => boolean;
 }
 
 /** The tool under its own name or a server's prefix. */
@@ -274,7 +172,7 @@ export default function budgets(
   options: BudgetOptions = {}
 ): void {
   const checkInTools = options.checkIns?.tools ?? [];
-  const runLimit = options.runLimit;
+  const closing = options.closing ?? (() => false);
   let turns = 0;
   let connectorCalls = 0;
   // Each call's count, and the state it last ran against. A successful call
@@ -300,18 +198,6 @@ export default function budgets(
   let reminders = 0;
   let unanswered = 0;
   let showWorkTurn = -1;
-  // Once per session: a top-up between runs does not earn a second warning.
-  let creditsNudged = false;
-  // A turn past its cap or its time: told to close out, then given a few
-  // calls. Both belong to the user's turn, not to one pi run: a hidden
-  // continuation (a stall's re-ask, an empty reply's ask) starts a run of its
-  // own, and must neither restart the hour nor lift a close-out under way.
-  let turnStartedAt = Date.now();
-  let closingTurns: number | null = null;
-  let closingStop: string | null = null;
-  const refreshCredits = (ctx: { model?: unknown } | undefined): void => {
-    if (billedAbacus(ctx?.model)) refreshCreditBalanceIfStale();
-  };
   const track = (change: () => void): void => {
     const now = Date.now();
     if (activeSince != null) workedMs += now - activeSince;
@@ -339,9 +225,6 @@ export default function budgets(
   pi.on("input", (event) => {
     if ((event as { streamingBehavior?: unknown }).streamingBehavior != null)
       return;
-    turnStartedAt = Date.now();
-    closingTurns = null;
-    closingStop = null;
     reminders = 0;
     unanswered = 0;
   });
@@ -349,7 +232,6 @@ export default function budgets(
   pi.on("agent_start", async () => {
     turns = 0;
     connectorCalls = 0;
-    stoppedBecause = null;
     callCounts.clear();
     pendingCalls.clear();
     workedMs = 0;
@@ -383,9 +265,8 @@ export default function budgets(
     track(() => runningTools.add(event.toolCallId));
   });
 
-  pi.on("tool_execution_end", (event, ctx) => {
+  pi.on("tool_execution_end", (event) => {
     track(() => runningTools.delete(event.toolCallId));
-    refreshCredits(ctx);
     const pending = pendingCalls.get(event.toolCallId);
     pendingCalls.delete(event.toolCallId);
     callsUnheard++;
@@ -435,8 +316,7 @@ export default function budgets(
     );
   };
 
-  pi.on("turn_end", (event, ctx) => {
-    refreshCredits(ctx);
+  pi.on("turn_end", (event) => {
     // After a round of tools the run usually goes on, so a steer queued here
     // lands at the tail of the next request. A batch of reply-closing tools
     // can end the run instead; a steer then would reopen the finished reply.
@@ -447,39 +327,18 @@ export default function budgets(
       results != null &&
       results.length > 0 &&
       !results.every((result) => closesReply(result.toolName ?? "")) &&
-      closingTurns == null &&
+      !closing() &&
       !nobodyPresent() &&
       (checkInTools.length > 0 || isOwnerAudience())
     )
       remindIfDue();
   });
 
-  pi.on("turn_start", async (_event, ctx) => {
+  pi.on("turn_start", async () => {
     turns++;
     track(() => {
       generating = true;
     });
-    const balance = hostCreditBalance();
-    if (
-      !creditsNudged &&
-      !nobodyPresent() &&
-      billedAbacus(ctx.model) &&
-      balance != null &&
-      balance.remaining < lowCreditBase(balance) * CREDITS_LOW_SHARE
-    ) {
-      creditsNudged = true;
-      // The steer is the model's; a paid user also sees the notice.
-      pi.sendMessage(
-        {
-          customType: "abacusai-bot-credits-low",
-          content: creditsLowPrompt(balance),
-          display: false,
-        },
-        { deliverAs: "steer" }
-      );
-      // The free plan's runs wrap up as they always have, with no notice.
-      if (balance.paid === true) options.onCreditsLow?.();
-    }
     // Hidden from the user: the preview appearing is what they see.
     const mark = showWorkDue();
     if (mark != null) {
@@ -494,77 +353,9 @@ export default function budgets(
         { deliverAs: "steer" }
       );
     }
-    const cap = turnCap();
-    // Each warning fires on its own turn; a cap small enough to fold them
-    // onto one turn gets the harder of the two.
-    const wrapUpAt = Math.max(1, cap - WRAP_UP_MARGIN);
-    const finalAt = Math.max(1, cap - FINAL_MARGIN);
-    const steer = (content: string): void => {
-      pi.sendMessage(
-        { customType: "calite-budget", content, display: true },
-        { deliverAs: "steer" }
-      );
-    };
-    if (turns === finalAt) steer(finalPrompt(turns, cap));
-    else if (turns === wrapUpAt) steer(wrapUpPrompt(turns, cap));
-
-    // Closing out: a few calls to say what was done, then the stop.
-    if (closingTurns != null) {
-      closingTurns += 1;
-      if (closingTurns > CLOSE_OUT_TURNS) {
-        stoppedBecause = closingStop;
-        if (ctx.hasUI)
-          ctx.ui.notify(
-            "AbacusAI Bot: the run did not close out; stopping it",
-            "warning"
-          );
-        ctx.abort();
-      }
-      return;
-    }
-
-    const limit = runLimit?.calls ?? null;
-    if (runLimit != null && limit != null) {
-      runLimit.used += 1;
-      runLimit.reached = runLimit.used >= limit;
-    }
-    const overLimit = runLimit?.reached === true;
-    const elapsed = Date.now() - turnStartedAt;
-    const overCap = turns > cap || overLimit;
-    if (overCap || elapsed >= runCapMs()) {
-      const minutes = Math.round(runCapMs() / 60_000);
-      const calls = overLimit && limit != null ? limit : cap;
-      closingTurns = 0;
-      closingStop = overCap
-        ? stoppedMessage(calls)
-        : timeStoppedMessage(minutes);
-      // Hidden: what the user reads is the model's own closing message.
-      pi.sendMessage(
-        {
-          customType: "abacusai-bot-close-out",
-          content: closeOutPrompt(
-            overCap
-              ? `This run has reached its limit of ${calls} model calls.`
-              : `This run has been working for ${minutes} minutes, its limit.`
-          ),
-          display: false,
-        },
-        { deliverAs: "steer" }
-      );
-    }
   });
 
   pi.on("tool_call", async (event) => {
-    // A closing run hands over what exists and writes its closing message;
-    // it does not start more work.
-    if (closingTurns != null && !isHandoverTool(event.toolName))
-      return {
-        block: true,
-        reason:
-          "The run is closing: no more work. Hand over any files the user has not been given with " +
-          `${PRESENT_TOOL}, then write your closing message to the user now: what is done and where ` +
-          "it is, what is left, and that they can send a message to carry on.",
-      };
     let inputKey: string;
     try {
       inputKey = JSON.stringify(event.input);

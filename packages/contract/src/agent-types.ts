@@ -157,6 +157,14 @@ interface NotificationAction {
   target?: string;
   /** `retry` on a full disk: the bytes left where the agent writes. */
   bytesFree?: number;
+  /**
+   * `spend-limit`: the limit a close-out names (`cause`: check-in, budget,
+   * calls or time) and its size in credits, calls or minutes.
+   * `credits-low`: the credits left as reserve began.
+   */
+  amount?: number;
+  /** `switch-model` at the credit wall: the model runs on the user's own key. */
+  ownKey?: boolean;
 }
 
 export interface StreamingNestedToolCall {

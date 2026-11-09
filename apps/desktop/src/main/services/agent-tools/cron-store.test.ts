@@ -17,6 +17,8 @@ import {
   jobForWebhookToken,
   listJobs,
   missedJobs,
+  overdueJobs,
+  setMissed,
   recordRun,
   removeJob,
   updateJob,
@@ -960,5 +962,50 @@ describe("a fired moment from a clock that ran ahead", () => {
       updateJob(job.id, { runAt: new Date(2026, 9, 14, 9, 0).getTime() })
         .firedSlot
     ).toBeNull();
+  });
+});
+
+describe("the watchdog's routines", () => {
+  it("names one due twice over, while the app was up, that never fired", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date(2026, 10, 9, 4, 0));
+      const up = new Date(2026, 10, 9, 4, 0);
+      const job = createJob({
+        name: "Check-in",
+        schedule: "*/15 * * * *",
+        prompt: "x",
+      });
+      // 04:18: the 04:15 fire missed once, not yet a stop.
+      expect(overdueJobs(new Date(2026, 10, 9, 4, 18), up)).toEqual([]);
+      // 04:31: due twice and never fired, with nothing on record to say why.
+      expect(
+        overdueJobs(new Date(2026, 10, 9, 4, 31), up).map(
+          ({ job: due, count }) => [due.id, count]
+        )
+      ).toEqual([[job.id, 2]]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("leaves out fires from before the app was up or awake, and those put down to sleep", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date(2026, 10, 9, 4, 0));
+      const job = createJob({
+        name: "Check-in",
+        schedule: "*/15 * * * *",
+        prompt: "x",
+      });
+      // Woke at 04:40: the 04:15 and 04:30 fires were slept through.
+      const woke = new Date(2026, 10, 9, 4, 40);
+      expect(overdueJobs(new Date(2026, 10, 9, 4, 41), woke)).toEqual([]);
+      // The scheduler counted them missed at the wake: not the watchdog's.
+      setMissed(job.id, { count: 2, at: woke.getTime() });
+      expect(overdueJobs(new Date(2026, 10, 9, 5, 1), woke)).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

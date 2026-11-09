@@ -1672,7 +1672,8 @@
       "other": "Paused.",
       "denied": "Paused: you did not allow it.",
       "quiet": "一時停止中: {{runs}}回続けて新しいことが見つからなかったため、クレジットの使用を止めました。確認を続けるには再開してください。",
-      "done": "Finished: what it was waiting for happened, so it stopped."
+      "done": "Finished: what it was waiting for happened, so it stopped.",
+      "budget": "Paused: {{runs}} runs in a row stopped at their credit budget."
     },
     "creditHold": {
       "notify": "クレジットがなくなったため、ルーティンは実行されません。スキップされた実行に費用はかからず、クレジットが入ると自動で再開します。",
@@ -3098,7 +3099,17 @@
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
       "unsaved": "ディスクがいっぱいのため、このチャットは保存されていません。空き容量を確保してください。次のメッセージで再び保存されます。",
-      "creditsLow": "Credits are almost out, so the agent is wrapping up what it has so the work isn't cut off halfway.",
+      "creditsLow_one": "{{count}} credit left. The agent keeps going and hands over each piece as it's ready.",
+      "creditsLow_other": "{{count}} credits left. The agent keeps going and hands over each piece as it's ready.",
+      "spendCheckIn_one": "This task has used {{count}} credit so far. Send a message to keep going.",
+      "spendCheckIn_other": "This task has used {{count}} credits so far. Send a message to keep going.",
+      "spendBudget_one": "Stopped at its credit budget ({{count}} credit).",
+      "spendBudget_other": "Stopped at its credit budget ({{count}} credits).",
+      "spendCalls_one": "This task reached its limit of {{count}} step, so it's wrapping up. Send a message to keep going.",
+      "spendCalls_other": "This task reached its limit of {{count}} steps, so it's wrapping up. Send a message to keep going.",
+      "spendTime_one": "This task has worked for {{count}} minute, its limit, so it's wrapping up. Send a message to keep going.",
+      "spendTime_other": "This task has worked for {{count}} minutes, its limit, so it's wrapping up. Send a message to keep going.",
+      "compacted": "Summarized older messages to keep this chat fast and cheap.",
       "showInFolder": "Show in folder"
     },
     "part": {
@@ -4780,7 +4791,8 @@
       "warning": "このまま続けると、ボットは別のプロバイダー（{{providers}}）の無料モデルに切り替わります。品質はかなり低く、ミスが増え、動いているコードを壊すことがあり、利用制限にもよく達します。",
       "offer": "{{plan}} にアップグレード — {{price}}",
       "upgradeCta": "{{plan}} にアップグレード",
-      "continueFree": "無料モデルで続ける（品質は低め）"
+      "continueFree": "無料モデルで続ける（品質は低め）",
+      "continueOwnKey": "Continue on your own key ({{model}})"
     },
     "plan": {
       "introPrice": "初月 {{first}}、以降 {{monthly}}/月",
@@ -4809,7 +4821,7 @@
       "body": "インターネット接続、VPN、プロキシを確認して、もう一度お試しください。"
     },
     "cause": {
-      "context_too_long": "この会話はモデルには長すぎます。新しいチャットを始めるか、より大きなコンテキストのモデルを選んでください。",
+      "context_too_long": "この会話はモデルには長すぎます。より大きなコンテキストのモデルを選んでください。",
       "key_invalid": "{{provider}} のキーが拒否されました。無効か期限切れです。",
       "own_key_quota": "{{provider}} のキーが上限に達しました。別のモデルに切り替えるか、キーのプランを確認してください。",
       "model_unavailable": "このモデルはリクエストを受け付けられませんでした。別のモデルを選んでください。",

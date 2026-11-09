@@ -1672,7 +1672,8 @@
       "other": "Duraklatıldı.",
       "denied": "Duraklatıldı: izin vermedin.",
       "quiet": "Duraklatıldı: art arda {{runs}} çalıştırmada yeni bir şey bulunamadı, bu yüzden kredi kullanmayı bıraktı. Kontrol etmeye devam etmesi için sürdürün.",
-      "done": "Finished: what it was waiting for happened, so it stopped."
+      "done": "Finished: what it was waiting for happened, so it stopped.",
+      "budget": "Paused: {{runs}} runs in a row stopped at their credit budget."
     },
     "creditHold": {
       "notify": "Krediniz bitti, bu yüzden rutinleriniz çalışmayacak. Atlanan çalıştırmalar ücretsizdir ve krediniz olduğunda kendiliğinden yeniden başlar.",
@@ -3098,7 +3099,17 @@
       "historyForeign": "Bu konuşma uygulamanın daha yeni bir sürümüyle kaydedildi, bu yüzden bir kısmı burada görünmeyebilir.",
       "historyTooLarge": "Önceki geçmiş burada gösterilemeyecek kadar büyük ({{size}}, sınır {{limit}}).",
       "unsaved": "Disk dolu, bu yüzden bu sohbet kaydedilmiyor. Biraz yer açın; bir sonraki mesajınızla yeniden kaydedilir.",
-      "creditsLow": "Credits are almost out, so the agent is wrapping up what it has so the work isn't cut off halfway.",
+      "creditsLow_one": "{{count}} credit left. The agent keeps going and hands over each piece as it's ready.",
+      "creditsLow_other": "{{count}} credits left. The agent keeps going and hands over each piece as it's ready.",
+      "spendCheckIn_one": "This task has used {{count}} credit so far. Send a message to keep going.",
+      "spendCheckIn_other": "This task has used {{count}} credits so far. Send a message to keep going.",
+      "spendBudget_one": "Stopped at its credit budget ({{count}} credit).",
+      "spendBudget_other": "Stopped at its credit budget ({{count}} credits).",
+      "spendCalls_one": "This task reached its limit of {{count}} step, so it's wrapping up. Send a message to keep going.",
+      "spendCalls_other": "This task reached its limit of {{count}} steps, so it's wrapping up. Send a message to keep going.",
+      "spendTime_one": "This task has worked for {{count}} minute, its limit, so it's wrapping up. Send a message to keep going.",
+      "spendTime_other": "This task has worked for {{count}} minutes, its limit, so it's wrapping up. Send a message to keep going.",
+      "compacted": "Summarized older messages to keep this chat fast and cheap.",
       "showInFolder": "Klasörde göster"
     },
     "part": {
@@ -4780,7 +4791,8 @@
       "warning": "Şimdi devam etmek için bot, başka bir sağlayıcının ({{providers}}) ücretsiz modellerine geçer. Bunlar çok daha düşük kalitededir: daha çok hata yapar, çalışan kodu bozabilir ve sık sık kullanım sınırına takılır.",
       "offer": "{{plan}} planına geç — {{price}}",
       "upgradeCta": "{{plan}} planına geç",
-      "continueFree": "Ücretsiz modellerle devam et (daha düşük kalite)"
+      "continueFree": "Ücretsiz modellerle devam et (daha düşük kalite)",
+      "continueOwnKey": "Continue on your own key ({{model}})"
     },
     "plan": {
       "introPrice": "İlk ay {{first}}, sonra aylık {{monthly}}",
@@ -4809,7 +4821,7 @@
       "body": "İnternet bağlantını, VPN'ini veya proxy'ni kontrol edip tekrar dene."
     },
     "cause": {
-      "context_too_long": "Bu konuşma model için çok uzun. Yeni bir sohbet başlat veya daha geniş bağlamlı bir model seç.",
+      "context_too_long": "Bu konuşma model için çok uzun. Daha geniş bağlamlı bir model seç.",
       "key_invalid": "{{provider}} anahtarın reddedildi: geçersiz ya da süresi dolmuş.",
       "own_key_quota": "{{provider}} anahtarın kotasını doldurdu. Başka bir modele geç veya anahtarın planını kontrol et.",
       "model_unavailable": "Bu model isteği kabul edemedi. Başka bir model seç.",

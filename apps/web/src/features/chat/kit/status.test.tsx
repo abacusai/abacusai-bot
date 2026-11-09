@@ -1175,7 +1175,7 @@ describe("the turn's outcome card", () => {
     }
   });
 
-  it("an outgrown chat offers a new chat", async () => {
+  it("an outgrown chat offers a new chat when the agent says one fits", async () => {
     const onNewChat = vi.fn();
     current = await renderRelay(
       failed({
@@ -1187,7 +1187,7 @@ describe("the turn's outcome card", () => {
       { onNewChat }
     );
     await screen.findByText(
-      "This conversation is too long for the model. Start a new chat, or pick a model with a larger context."
+      "This conversation is too long for the model. Pick a model with a larger context."
     );
     fireEvent.click(screen.getByRole("button", { name: "New chat" }));
     expect(onNewChat).toHaveBeenCalledOnce();
