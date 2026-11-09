@@ -1,5 +1,5 @@
 /**
- * Model files for the renderer's transcriber: only the Whisper repo is
+ * Model files for the renderer's transcriber: only the Whisper repos are
  * served, a download lands on disk once, and progress is announced.
  */
 import fs from "fs";
@@ -7,11 +7,18 @@ import os from "os";
 import path from "path";
 
 import type { IpcEvent } from "@abacus-ai/contract/contracts";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  WHISPER_BASE_MODEL_ID,
+  WHISPER_MODEL_FILES,
+  WHISPER_SMALL_MODEL_ID,
+} from "@abacus-ai/contract/voice";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { modelFileFor, WhisperModelService } from "./whisper-model-service";
 
 const REPO = "https://huggingface.co/onnx-community/whisper-base/resolve/main/";
+const SMALL_REPO =
+  "https://huggingface.co/onnx-community/whisper-small/resolve/main/";
 
 let dir: string;
 let events: IpcEvent[];
@@ -22,7 +29,7 @@ const service = (
 ): WhisperModelService =>
   new WhisperModelService({
     emitEvent: (event) => events.push(event),
-    modelDir: dir,
+    modelsDir: dir,
     fetch: async (input) => {
       requests.push(String(input));
       return respond(String(input));
@@ -40,14 +47,22 @@ afterEach(() => {
 });
 
 describe("which URLs are served", () => {
-  it("maps a Whisper repo URL to its file", () => {
-    expect(modelFileFor(`${REPO}onnx/encoder_model_quantized.onnx`)).toBe(
-      "onnx/encoder_model_quantized.onnx"
-    );
+  it.each([
+    [REPO, WHISPER_BASE_MODEL_ID],
+    [SMALL_REPO, WHISPER_SMALL_MODEL_ID],
+  ])("maps %s to its model and file", (repo, model) => {
+    expect(modelFileFor(`${repo}onnx/encoder_model_quantized.onnx`)).toEqual({
+      model,
+      file: "onnx/encoder_model_quantized.onnx",
+    });
   });
 
   it.each([
     ["another repo", "https://huggingface.co/other/model/resolve/main/x.onnx"],
+    [
+      "another Whisper size",
+      "https://huggingface.co/onnx-community/whisper-large-v3/resolve/main/x",
+    ],
     [
       "another host",
       "https://example.com/onnx-community/whisper-base/resolve/main/x",
@@ -63,7 +78,10 @@ describe("which URLs are served", () => {
   it("lets the URL parser fold a backslash walk back inside the repo", () => {
     // Chromium and Node both read `\` as `/` in an https URL and resolve the
     // `..` before this code sees it, so the walk never leaves the repo.
-    expect(modelFileFor(`${REPO}onnx\\..\\secrets.json`)).toBe("secrets.json");
+    expect(modelFileFor(`${REPO}onnx\\..\\secrets.json`)).toEqual({
+      model: WHISPER_BASE_MODEL_ID,
+      file: "secrets.json",
+    });
   });
 
   it("answers 403 for anything outside the repo", async () => {
@@ -94,17 +112,32 @@ describe("downloading", () => {
     expect(new Uint8Array(first.data!)).toEqual(bytes);
     expect(new Uint8Array(second.data!)).toEqual(bytes);
     expect(requests).toHaveLength(1);
-    expect(fs.readFileSync(path.join(dir, "config.json"))).toEqual(
-      Buffer.from(bytes)
-    );
+    expect(
+      fs.readFileSync(path.join(dir, WHISPER_BASE_MODEL_ID, "config.json"))
+    ).toEqual(Buffer.from(bytes));
     const progress = events.flatMap((event) =>
       event.type === "whisper-download-progress" ? [event.progress] : []
     );
-    expect(progress[0]).toMatchObject({ file: "config.json", loadedBytes: 0 });
+    expect(progress[0]).toMatchObject({
+      model: WHISPER_BASE_MODEL_ID,
+      file: "config.json",
+      loadedBytes: 0,
+    });
     expect(progress.at(-1)).toMatchObject({
       loadedBytes: 4,
       totalBytes: 4,
       done: true,
+    });
+  });
+
+  it("announces a failed answer from Hugging Face as a failed file", async () => {
+    const result = await service(
+      () => new Response("busy", { status: 503 })
+    ).fetchFile(`${REPO}onnx/encoder_model_quantized.onnx`);
+
+    expect(result.status).toBe(502);
+    expect(events.at(-1)).toMatchObject({
+      progress: { done: true, failed: true },
     });
   });
 
@@ -114,7 +147,11 @@ describe("downloading", () => {
     ).fetchFile(`${REPO}processor_config.json`);
 
     expect(result.status).toBe(404);
-    expect(fs.existsSync(path.join(dir, "processor_config.json"))).toBe(false);
+    expect(
+      fs.existsSync(
+        path.join(dir, WHISPER_BASE_MODEL_ID, "processor_config.json")
+      )
+    ).toBe(false);
   });
 
   it("reports a network failure without leaving a file behind", async () => {
@@ -123,15 +160,46 @@ describe("downloading", () => {
     }).fetchFile(`${REPO}config.json`);
 
     expect(result).toEqual({ status: 502, error: "offline" });
+    // The renderer's download notice learns this file failed.
+    expect(
+      events.flatMap((event) =>
+        event.type === "whisper-download-progress" ? [event.progress] : []
+      )
+    ).toEqual([
+      expect.objectContaining({
+        file: "config.json",
+        done: true,
+        failed: true,
+        modelReady: false,
+      }),
+    ]);
     expect(fs.readdirSync(dir)).toEqual([]);
   });
 
-  it("knows when the weights are already on disk", async () => {
+  it("prepares a model once: downloads every file, then answers ready", async () => {
     const whisper = service(() => new Response(new Uint8Array([9])));
 
-    expect(whisper.isCached()).toBe(false);
-    await whisper.fetchFile(`${REPO}onnx/encoder_model_quantized.onnx`);
-    await whisper.fetchFile(`${REPO}onnx/decoder_model_merged_quantized.onnx`);
-    expect(whisper.isCached()).toBe(true);
+    expect(whisper.prepare(WHISPER_SMALL_MODEL_ID)).toBe(false);
+    expect(whisper.prepare(WHISPER_SMALL_MODEL_ID)).toBe(false);
+    await vi.waitFor(
+      () => {
+        expect(whisper.isCached(WHISPER_SMALL_MODEL_ID)).toBe(true);
+      },
+      { timeout: 10_000 }
+    );
+
+    expect(requests.sort()).toEqual(
+      WHISPER_MODEL_FILES.map((file) => `${SMALL_REPO}${file}`).sort()
+    );
+    const progress = events.flatMap((event) =>
+      event.type === "whisper-download-progress" ? [event.progress] : []
+    );
+    // No file says ready before the set is complete; the last one does.
+    expect(progress.find((entry) => entry.modelReady && !entry.done)).toBe(
+      undefined
+    );
+    expect(progress.at(-1)).toMatchObject({ done: true, modelReady: true });
+    expect(whisper.prepare(WHISPER_SMALL_MODEL_ID)).toBe(true);
+    expect(whisper.isCached(WHISPER_BASE_MODEL_ID)).toBe(false);
   });
 });
