@@ -85,6 +85,7 @@ import {
   connectionRetryBudgetMs,
   networkWaitBudgetMs,
   runMadeProgress,
+  runOrigin,
   type NetworkSuspect,
 } from "../network-wait.js";
 import {
@@ -162,6 +163,11 @@ import {
   mcpRosterFingerprint,
   reserveContextHeadroom,
 } from "../session.js";
+import {
+  guardDecision,
+  logGuardVerdict,
+  unattendedNote,
+} from "../shell-judge.js";
 import {
   MAX_STALL_RECOVERIES_PER_TURN,
   STALL_CONTINUATION_PROMPT,
@@ -337,6 +343,9 @@ export class ForeverEngine {
   private readonly pending = new Map<string, PendingPermission>();
   private permissionCounter = 0;
   /** What the user chose to always allow, for this process's lifetime. See allowances.ts. */
+  /** Notes for judged commands that ran unasked, by tool call (see permissionExtension). */
+  private readonly unaskedReports = new Map<string, string>();
+
   private readonly allowances = new Allowances();
 
   // Streaming state.
@@ -2655,6 +2664,16 @@ export class ForeverEngine {
     // Live only once a session is built on this load; see `pi`.
     this.loadedPi = pi;
 
+    // A judged command that ran with nobody to approve it carries a note.
+    pi.on("tool_result", async (event) => {
+      const report = this.unaskedReports.get(event.toolCallId);
+      if (report == null) return;
+      this.unaskedReports.delete(event.toolCallId);
+      return {
+        content: [...event.content, { type: "text" as const, text: report }],
+      };
+    });
+
     pi.on("tool_call", async (event, ctx) => {
       // Before the gate, so it judges the file the model meant.
       repairEscapedPaths(event.input as Record<string, unknown>, ctx.cwd);
@@ -2682,6 +2701,8 @@ export class ForeverEngine {
           tools: [...this.profile.alwaysAllowedTools],
           readPaths: this.config.allowedReadPaths,
         }),
+        // A bot's routine run, or one that cannot ask, runs it and reports.
+        noAnswerer: this.noAnswerer() || runOrigin() === "routine",
         ...(this.options.unattended != null
           ? {
               unattended: {
@@ -2693,19 +2714,30 @@ export class ForeverEngine {
           : {}),
       });
 
-      if (gate.kind === "allow") return;
+      if (gate.kind === "allow") {
+        // Nobody could approve it: it runs, and its result asks for a mention.
+        if (gate.unasked != null) {
+          logGuardVerdict("confirm", gate.unasked, "ran_unattended");
+          this.unaskedReports.set(
+            event.toolCallId,
+            unattendedNote(gate.unasked)
+          );
+        }
+        return;
+      }
 
       if (gate.kind === "refuse") {
+        if (gate.guard != null)
+          logGuardVerdict(gate.guard.verdict, gate.guard.rules, "refused");
         this.noteBlocked(event.toolCallId, "refused");
 
         return { block: true, reason: gate.reason };
       }
 
-      if (
-        !this.profile.canAskForApproval ||
-        !process.stdout.writable ||
-        process.stdout.destroyed
-      ) {
+      const guard =
+        gate.request.type === "run_terminal" ? gate.request.guard : undefined;
+
+      if (this.noAnswerer()) {
         this.noteBlocked(event.toolCallId, "rejected");
 
         return {
@@ -2766,6 +2798,12 @@ export class ForeverEngine {
 
       const verdict = this.applyDecision(decision, tool, gate.request);
 
+      if (guard != null)
+        logGuardVerdict(
+          "confirm",
+          guard.rules,
+          guardDecision(decision, verdict)
+        );
       if (verdict?.block === true) {
         this.noteBlocked(event.toolCallId, "rejected");
       }
@@ -2773,6 +2811,15 @@ export class ForeverEngine {
       return verdict;
     });
   };
+
+  /** Whether a card could reach anyone: the profile asks, and stdout is open. */
+  private noAnswerer(): boolean {
+    return (
+      !this.profile.canAskForApproval ||
+      !process.stdout.writable ||
+      process.stdout.destroyed
+    );
+  }
 
   private applyDecision(
     decision: PermissionDecision,

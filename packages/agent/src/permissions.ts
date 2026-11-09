@@ -17,6 +17,7 @@ import { resolveEdit, spliceRanges } from "./edit-resolve.js";
 import { EXIT_PLAN_TOOL_NAME } from "./exit-plan-tool.js";
 import {
   AgentMode,
+  type GuardRule,
   type PermissionRequest,
   type ToolRequest,
 } from "./protocol.js";
@@ -27,6 +28,7 @@ import {
 } from "./sandbox/secrets.js";
 import { zoneContext, zoneOf } from "./sandbox/zones.js";
 import { namesSecretFile } from "./secret-files.js";
+import { confirmRules, judgeCommand, neverMessage } from "./shell-judge.js";
 import {
   ownEntry,
   sourceAllows,
@@ -240,9 +242,19 @@ export function shellSegments(command: string): string[] {
 
 export type Gate =
   /** `credentialPaths`: hidden stores the user already approved, to unhide. */
-  | { kind: "allow"; credentialPaths?: string[] }
+  | {
+      kind: "allow";
+      credentialPaths?: string[];
+      /** Judged rules a run nobody watches ran without a card, for its report. */
+      unasked?: GuardRule[];
+    }
   /** Refused outright without asking: PLAN mode's answer to a mutation. */
-  | { kind: "refuse"; reason: string }
+  | {
+      kind: "refuse";
+      reason: string;
+      /** Set when the shell judge refused, for the verdict line. */
+      guard?: { verdict: "confirm" | "never"; rules: string[] };
+    }
   | { kind: "ask"; request: PermissionRequest };
 
 export interface GateOptions {
@@ -262,6 +274,13 @@ export interface GateOptions {
   promptableCredentialPaths?: readonly string[];
   /** Hidden stores the user chose to always allow reading, this session. */
   allowedCredentialPaths?: readonly string[];
+  /** Shell judge rules the user allowed for this chat ("administrator commands"). */
+  allowedGuardRules?: readonly GuardRule[];
+  /**
+   * Nobody can answer a card here (a routine's run, or the app not attached):
+   * a judged command runs, and the gate says which rules it skipped.
+   */
+  noAnswerer?: boolean;
   /**
    * An unattended run's declared reach, and where each tool comes from.
    * Without it an unattended session is refused everything.
@@ -315,7 +334,15 @@ export function gateToolCall(tool: ToolRequest, options: GateOptions): Gate {
   // session allowed earlier widens a routine's fixed reach.
   if (mode === AgentMode.Unattended) return gateUnattended(tool, options);
 
-  // Full access means exactly that: no prompts and no sandbox.
+  // Before any mode's shortcut: a short list of shell actions needs a yes in
+  // every mode, Full access included. Plan mode refuses the call anyway.
+  if (tool.name === "bash" && mode !== AgentMode.PlanMode) {
+    const guard = guardGate(tool, options);
+    if (guard != null) return guard;
+  }
+
+  // Full access means exactly that: no prompts and no sandbox, apart from the
+  // shell judge above.
   if (mode === AgentMode.Yolo) return { kind: "allow" };
 
   // Auto skips the approval prompts, not the sandbox: a hidden credential
@@ -781,6 +808,48 @@ function credentialGate(tool: ToolRequest, options: GateOptions): Gate | null {
       cwd: options.cwd,
       background: tool.input.background === true,
       credentialPaths: named,
+    },
+  };
+}
+
+/**
+ * The shell judge's answer, or null when it has nothing to say. `never` is
+ * refused outright; `confirm` is the run-command card with the reason, unless
+ * the user already allowed that rule for this chat. A command prefix the user
+ * always allows does not lift it: allowing `sudo apt-get` is not `sudo rm`.
+ */
+function guardGate(tool: ToolRequest, options: GateOptions): Gate | null {
+  const command = String(tool.input.command ?? "");
+  const judgement = judgeCommand(command, { cwd: options.cwd });
+  if (judgement.verdict === "never")
+    return {
+      kind: "refuse",
+      reason: neverMessage(judgement),
+      guard: {
+        verdict: "never",
+        rules: judgement.findings.map((finding) => finding.rule),
+      },
+    };
+  const allowed = options.allowedGuardRules ?? [];
+  const rules = confirmRules(judgement).filter(
+    (rule) => !allowed.includes(rule)
+  );
+  if (rules.length === 0) return null;
+  // Nobody to ask: it runs, and the run's report says so.
+  if (options.noAnswerer === true) return { kind: "allow", unasked: rules };
+
+  const { named } = namedCredentialStores(command, options);
+  return {
+    kind: "ask",
+    request: {
+      type: "run_terminal",
+      tool,
+      displayName: "Run command",
+      command,
+      cwd: options.cwd,
+      background: tool.input.background === true,
+      guard: { rules },
+      ...(named.length > 0 ? { credentialPaths: named } : {}),
     },
   };
 }

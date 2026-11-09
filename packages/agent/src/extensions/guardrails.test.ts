@@ -10,14 +10,22 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { fakePi, type FakePi } from "@abacus-ai/test-support/fake-pi";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+} from "vitest";
 
 import { ALLOWED_PATHS_ENV } from "../allowed-paths.js";
 import { setCurrentMode } from "../current-mode.js";
 import { modelPath } from "../model-path.js";
 import { AgentMode } from "../protocol.js";
+import { judgeCommand } from "../shell-judge.js";
 import { emptyTrashMessage } from "../trash.js";
-import guardrails, { bashWriteTargets, isProtectedPath } from "./guardrails.js";
+import { createGuardrails, isProtectedPath } from "./guardrails.js";
 
 let cwd: string;
 let pi: FakePi;
@@ -39,7 +47,7 @@ const backupsIn = (relativeDir = "."): string[] => {
 beforeEach(() => {
   cwd = fs.mkdtempSync(path.join(os.tmpdir(), "guardrails-test-"));
   pi = fakePi();
-  guardrails(pi.api as never);
+  createGuardrails({ confirm: "gate" })(pi.api as never);
 });
 
 afterEach(() => {
@@ -169,12 +177,26 @@ describe("replacing an existing file", () => {
 
 describe("the guards that stay", () => {
   it("still refuses a protected path", async () => {
-    fs.writeFileSync(path.join(cwd, ".env"), "SECRET=1");
-    const blocked = (await pi.fire("tool_call", writeCall(".env"), ctx())) as {
+    fs.mkdirSync(path.join(cwd, ".git"));
+    fs.writeFileSync(path.join(cwd, ".git", "config"), "[core]");
+    const blocked = (await pi.fire(
+      "tool_call",
+      writeCall(".git/config"),
+      ctx()
+    )) as {
       block: boolean;
     };
     expect(blocked?.block).toBe(true);
-    expect(backupsIn()).toHaveLength(0);
+    expect(backupsIn(".git")).toHaveLength(0);
+  });
+
+  it("lets the write tool replace a secret file, keeping one copy", async () => {
+    fs.writeFileSync(path.join(cwd, ".env"), "SECRET=1");
+    for (const content of ["SECRET=2", "SECRET=3"])
+      expect(
+        await pi.fire("tool_call", writeCall(".env", content), ctx())
+      ).toBeUndefined();
+    expect(backupsIn()).toHaveLength(1);
   });
 
   it("still requires a read before an edit", async () => {
@@ -399,6 +421,43 @@ describe("redirects into scratch space", () => {
     }
   );
 
+  it("lets only a routine's run rewrite a routine's notes", async () => {
+    const records = path.join(cwd, ".abacusai-bot", "routines", "job-1");
+    fs.mkdirSync(records, { recursive: true });
+    fs.writeFileSync(path.join(records, "notes.md"), "old");
+    const blocked = (await pi.fire(
+      "tool_call",
+      {
+        toolName: "bash",
+        input: {
+          command: "printf 'new' > .abacusai-bot/routines/job-1/notes.md",
+        },
+      },
+      ctx()
+    )) as { block?: boolean };
+    expect(blocked?.block).toBe(true);
+  });
+
+  it("lets a routine rewrite its own notes and state files", async () => {
+    process.env.ABACUSAI_BOT_ROUTINE_RUN = "1";
+    onTestFinished(() => {
+      delete process.env.ABACUSAI_BOT_ROUTINE_RUN;
+    });
+    const records = path.join(cwd, ".abacusai-bot", "routines", "job-1");
+    fs.mkdirSync(records, { recursive: true });
+    fs.writeFileSync(path.join(records, "notes.md"), "old");
+    fs.writeFileSync(path.join(cwd, "notes.md"), "the user's own");
+
+    const fire = (command: string) =>
+      pi.fire("tool_call", { toolName: "bash", input: { command } }, ctx());
+    expect(
+      await fire("printf 'new' > .abacusai-bot/routines/job-1/notes.md")
+    ).toBeUndefined();
+    expect(
+      ((await fire("printf 'new' > notes.md")) as { block?: boolean })?.block
+    ).toBe(true);
+  });
+
   it("still refuses a redirect that would clobber a file in the workspace", async () => {
     fs.writeFileSync(path.join(cwd, "server.js"), "the real thing");
     const blocked = (await pi.fire(
@@ -462,9 +521,16 @@ describe("symlinks and the workspace guard", () => {
  * test closes it.
  */
 describe("symlinks that dodge the protected-path guard", () => {
-  it("refuses a write through a link that resolves to .env", async () => {
-    fs.writeFileSync(path.join(cwd, ".env"), "SECRET=1");
-    fs.symlinkSync(path.join(cwd, ".env"), path.join(cwd, "notes.txt"));
+  it("refuses a write through a link that resolves into node_modules", async () => {
+    fs.mkdirSync(path.join(cwd, "node_modules", "pkg"), { recursive: true });
+    fs.writeFileSync(
+      path.join(cwd, "node_modules", "pkg", "index.js"),
+      "SECRET=1"
+    );
+    fs.symlinkSync(
+      path.join(cwd, "node_modules", "pkg", "index.js"),
+      path.join(cwd, "notes.txt")
+    );
 
     const blocked = (await pi.fire(
       "tool_call",
@@ -475,7 +541,9 @@ describe("symlinks that dodge the protected-path guard", () => {
     expect(blocked?.block).toBe(true);
     expect(blocked.reason).toContain("protected");
     // And the real file was left untouched.
-    expect(fs.readFileSync(path.join(cwd, ".env"), "utf8")).toBe("SECRET=1");
+    expect(
+      fs.readFileSync(path.join(cwd, "node_modules", "pkg", "index.js"), "utf8")
+    ).toBe("SECRET=1");
   });
 
   it("refuses a write into a symlinked directory that resolves into .git", async () => {
@@ -493,10 +561,11 @@ describe("symlinks that dodge the protected-path guard", () => {
   });
 
   it("refuses a write through a dangling link to a protected name", async () => {
-    // No .env.production exists yet: the write through the link would be
-    // what creates it, so the guard has to judge the link's aim, not its name.
+    // The file does not exist yet: the write through the link would be what
+    // creates it, so the guard has to judge the link's aim, not its name.
+    fs.mkdirSync(path.join(cwd, ".git"));
     fs.symlinkSync(
-      path.join(cwd, ".env.production"),
+      path.join(cwd, ".git", "hooks"),
       path.join(cwd, "notes.txt")
     );
 
@@ -508,12 +577,16 @@ describe("symlinks that dodge the protected-path guard", () => {
 
     expect(blocked?.block).toBe(true);
     expect(blocked.reason).toContain("protected");
-    expect(fs.existsSync(path.join(cwd, ".env.production"))).toBe(false);
+    expect(fs.existsSync(path.join(cwd, ".git", "hooks"))).toBe(false);
   });
 
   it("refuses an edit through such a link too", async () => {
-    fs.writeFileSync(path.join(cwd, ".env"), "SECRET=1");
-    fs.symlinkSync(path.join(cwd, ".env"), path.join(cwd, "notes.txt"));
+    fs.mkdirSync(path.join(cwd, ".git"));
+    fs.writeFileSync(path.join(cwd, ".git", "config"), "SECRET=1");
+    fs.symlinkSync(
+      path.join(cwd, ".git", "config"),
+      path.join(cwd, "notes.txt")
+    );
     // Marked read first, so the protected-path rule is what answers rather than
     // the read-before-edit one.
     await pi.fire(
@@ -558,10 +631,6 @@ describe("symlinks that dodge the protected-path guard", () => {
  */
 describe("protected paths, whichever separator the platform uses", () => {
   it.each([
-    ["posix .env", "/Users/me/proj/.env"],
-    ["windows .env", "C:\\Users\\me\\proj\\.env"],
-    ["posix .env.local", "/Users/me/proj/.env.local"],
-    ["windows .env.local", "C:\\Users\\me\\proj\\.env.local"],
     ["posix .git", "/Users/me/proj/.git/config"],
     ["windows .git", "C:\\Users\\me\\proj\\.git\\config"],
     ["posix node_modules", "/Users/me/proj/node_modules/pkg/index.js"],
@@ -582,6 +651,8 @@ describe("protected paths, whichever separator the platform uses", () => {
       "/Users/me/proj/node_modules_notes.md",
     ],
     ["a file named like git", "/Users/me/proj/.gitignore"],
+    // The write tools keep a copy before replacing a secret file.
+    ["a secret file", "/Users/me/proj/.env"],
   ])("leaves %s alone", (_label, target) => {
     expect(isProtectedPath(target)).toBe(false);
   });
@@ -610,12 +681,12 @@ describe("protected paths, reached through the shell", () => {
     fs.writeFileSync(path.join(cwd, ".git", "config"), "[core]\n");
   });
 
-  // The exact reproduction from the audit: `write` refused and bash did not.
-  it("refuses the append that the write tool already refuses", async () => {
+  // Through the shell no copy is kept, so the write tool is the way in.
+  it("sends a change to an existing secret file to the write tool", async () => {
     const blocked = await refusal('printf "API_KEY=zzz\\n" >> .env');
 
     expect(blocked?.block).toBe(true);
-    expect(blocked?.reason).toContain("protected");
+    expect(blocked?.reason).toContain("write or edit tool");
     expect(fs.readFileSync(path.join(cwd, ".env"), "utf8")).toBe(
       "SECRET_TOKEN=hunter2\n"
     );
@@ -648,7 +719,6 @@ describe("protected paths, reached through the shell", () => {
     ["truncate", "truncate -s 0 .env"],
     ["dd", "dd if=/dev/zero of=.env"],
     ["ln -s", "ln -s /etc/passwd .env"],
-    ["chmod", "chmod 600 .env"],
   ])("refuses %s", async (_name, command) => {
     expect((await refusal(command))?.block).toBe(true);
   });
@@ -680,6 +750,8 @@ describe("protected paths, reached through the shell", () => {
     ["a redirect to /dev/null", "npm test > /dev/null 2>&1"],
     ["a path that merely contains the word", "touch env-notes.txt"],
     ["a sed script mentioning it", "sed -i 's#node_modules#vendor#' Makefile"],
+    ["changing only its mode", "chmod 600 .env"],
+    ["a new secret file", "cp .env.example .env.local"],
   ])("allows %s", async (_name, command) => {
     expect(await refusal(command)).toBeUndefined();
   });
@@ -693,15 +765,18 @@ describe("protected paths, reached through the shell", () => {
     );
   });
 
-  it("still refuses the deny-listed commands first", async () => {
+  it("refuses what is never run, before any file rule", async () => {
     const blocked = await refusal("rm -rf /");
 
     expect(blocked?.block).toBe(true);
-    expect(blocked?.reason).toContain("blocked");
+    expect(blocked?.reason).toContain("never run");
   });
 });
 
-describe("bashWriteTargets", () => {
+const bashWriteTargets = (command: string): string[] =>
+  judgeCommand(command, { cwd }).localWrites.map((write) => write.target);
+
+describe("the shell judge's write targets", () => {
   it("does not read 2>&1 as a file called &1", () => {
     expect(bashWriteTargets("npm test 2>&1")).toEqual([]);
   });
@@ -779,12 +854,26 @@ describe("writing outside the workspace", () => {
     expect(blocked).toBeUndefined();
   });
 
+  it("refuses replacing a secret file outside the workspace, where no copy is kept", async () => {
+    fs.writeFileSync(path.join(outside, ".env"), "KEY=1");
+
+    const blocked = (await pi.fire(
+      "tool_call",
+      writeCall(path.join(outside, ".env")),
+      ctx()
+    )) as { block: boolean; reason: string };
+
+    expect(blocked?.block).toBe(true);
+    expect(blocked.reason).toContain("edit tool");
+    expect(fs.readFileSync(path.join(outside, ".env"), "utf8")).toBe("KEY=1");
+  });
+
   it("still refuses a protected path under Full access", async () => {
     setCurrentMode(AgentMode.Yolo);
 
     const blocked = (await pi.fire(
       "tool_call",
-      writeCall(path.join(outside, ".env")),
+      writeCall(path.join(outside, "node_modules", "x.js")),
       ctx()
     )) as { block: boolean };
 

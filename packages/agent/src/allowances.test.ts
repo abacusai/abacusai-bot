@@ -89,6 +89,7 @@ describe("what Always allow widens", () => {
       allowedReadPaths: ["/config/read", "/seed/read"],
       allowedWritePaths: ["/seed/write"],
       allowedOrigins: [],
+      allowedGuardRules: [],
     });
   });
 });

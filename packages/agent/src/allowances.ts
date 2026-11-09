@@ -10,7 +10,7 @@
  */
 import type { GateOptions } from "./permissions.js";
 import { shellSegments } from "./permissions.js";
-import type { PermissionRequest, ToolRequest } from "./protocol.js";
+import type { GuardRule, PermissionRequest, ToolRequest } from "./protocol.js";
 
 const addUnique = (store: string[], value: string): void => {
   if (value.length > 0 && !store.includes(value)) store.push(value);
@@ -27,6 +27,8 @@ export class Allowances {
   readonly readPaths: string[];
   /** Directories outside the workspace allowed for writes. */
   readonly writePaths: string[];
+  /** Shell judge rules allowed for this chat: by category, never by first word. */
+  readonly guardRules: GuardRule[] = [];
 
   constructor(seed: { readPaths?: string[]; writePaths?: string[] } = {}) {
     this.readPaths = [...(seed.readPaths ?? [])];
@@ -46,6 +48,14 @@ export class Allowances {
       case "notebook_edit_outside_directory":
         addUnique(this.writePaths, request.deducedDirectory);
         return;
+      case "run_terminal":
+        // A judged card lifts its categories, not the command's first word.
+        if (request.guard != null) {
+          for (const rule of request.guard.rules)
+            if (!this.guardRules.includes(rule)) this.guardRules.push(rule);
+          return;
+        }
+        break;
       default:
         break;
     }
@@ -65,6 +75,11 @@ export class Allowances {
     }
 
     this.allowCommand(String(tool.input.command ?? ""));
+  }
+
+  /** A new conversation starts with nothing lifted for it. */
+  forgetGuardRules(): void {
+    this.guardRules.length = 0;
   }
 
   /** Every segment of `cd repo && git pull`, or the `git` half asks again. */
@@ -101,6 +116,7 @@ export class Allowances {
     | "allowedReadPaths"
     | "allowedWritePaths"
     | "allowedOrigins"
+    | "allowedGuardRules"
   > {
     return {
       allowedCommands: [...(base.commands ?? []), ...this.commands],
@@ -108,6 +124,7 @@ export class Allowances {
       allowedReadPaths: [...(base.readPaths ?? []), ...this.readPaths],
       allowedWritePaths: [...this.writePaths],
       allowedOrigins: [...this.origins],
+      allowedGuardRules: [...this.guardRules],
     };
   }
 }

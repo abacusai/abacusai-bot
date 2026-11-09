@@ -159,6 +159,7 @@
     "tsdown": "catalog:",
     "typebox": "^1.3.16",
     "typescript": "catalog:",
+    "unbash": "4.0.12",
     "undici": "^7.29.0",
     "vitest": "catalog:"
   },

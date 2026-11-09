@@ -46,6 +46,8 @@ export interface CardModel {
   /** An orange dot before the title. */
   warning?: boolean;
   description?: string;
+  /** i18n keys under `chat.permission.title`, one line each: every reason a yes lifts. */
+  reasons?: string[];
   body: CardBody;
   paths?: string[];
   actions: CardAction[];
@@ -139,6 +141,33 @@ export const present = (request: PermissionRequest): CardModel => {
           note: true,
           chip: "runCommand",
         };
+      // The shell judge's short list: the reason on the card, and "for this
+      // chat" lifts the category (allowances.ts), never the command prefix.
+      if (request.guard != null) {
+        return {
+          title: "runCommand",
+          warning: true,
+          // Every reason, so "for this chat" never lifts one the card did not show.
+          reasons: request.guard.rules.map((rule) => `guard_${rule}`),
+          body: { kind: "command", command: request.command, cwd: request.cwd },
+          ...(request.credentialPaths != null &&
+          request.credentialPaths.length > 0
+            ? { paths: request.credentialPaths }
+            : {}),
+          actions: [
+            allowOnce(),
+            {
+              id: "allowAlways",
+              label: "allowGuardForChat",
+              decision: "allowAlways",
+              variant: "secondary",
+            },
+            deny(),
+          ],
+          note: true,
+          chip: "runCommand",
+        };
+      }
       const rule = bashRule(request.command);
       return {
         title: "runCommand",

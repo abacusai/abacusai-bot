@@ -868,6 +868,9 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
+      unbash:
+        specifier: 4.0.12
+        version: 4.0.12
       undici:
         specifier: ^7.30.1
         version: 7.30.1

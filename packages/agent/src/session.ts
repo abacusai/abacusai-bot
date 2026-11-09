@@ -67,7 +67,7 @@ import compactionPruner from "./extensions/compaction-pruner.js";
 import diskFull from "./extensions/disk-full.js";
 import editTool from "./extensions/edit-tool.js";
 import emailFormat from "./extensions/email-format.js";
-import guardrails from "./extensions/guardrails.js";
+import { createGuardrails } from "./extensions/guardrails.js";
 import knowledge from "./extensions/knowledge.js";
 import orientation from "./extensions/orientation.js";
 import outputRepair from "./extensions/output-repair.js";
@@ -109,6 +109,7 @@ import {
   connectionRetryBudgetMs,
   networkWaitBudgetMs,
   runMadeProgress,
+  runOrigin,
   type NetworkSuspect,
 } from "./network-wait.js";
 import {
@@ -191,6 +192,11 @@ import {
 import { serviceRoutingPrompt } from "./service-routing-prompt.js";
 import { runSessionAction } from "./session-actions.js";
 import { conversationSessionManager } from "./session-file.js";
+import {
+  guardDecision,
+  logGuardVerdict,
+  unattendedNote,
+} from "./shell-judge.js";
 import {
   MAX_STALL_RECOVERIES_PER_TURN,
   STALL_CONTINUATION_PROMPT,
@@ -1089,7 +1095,10 @@ export class AbacusBotSession {
             },
             {
               name: "abacusai-bot-guardrails",
-              factory: guardrails as unknown as (pi: ExtensionAPI) => void,
+              // The gate above asks about judged commands; this keeps the file rules.
+              factory: createGuardrails({
+                confirm: "gate",
+              }) as unknown as (pi: ExtensionAPI) => void,
             },
             // Spill runs before the extensions that read tool output, so they see
             // the bounded text rather than the full dump.
@@ -3159,6 +3168,8 @@ export class AbacusBotSession {
     this.busyWait.cancel();
     this.verifyLoop.cancel();
     this.rejectAllPending("Conversation reset.");
+    // "Allow for this chat" ends with the chat.
+    this.allowances.forgetGuardRules();
     // As in `stop`: a queued message must not land in the fresh conversation.
     this.pendingSteers.clear();
     this.session?.clearQueue();
@@ -3594,6 +3605,16 @@ export class AbacusBotSession {
     // to take the handle; it becomes live only when a session is built on it.
     this.loadedPi = pi;
 
+    // A judged command that ran with nobody to approve it carries a note.
+    pi.on("tool_result", async (event) => {
+      const report = this.unaskedReports.get(event.toolCallId);
+      if (report == null) return;
+      this.unaskedReports.delete(event.toolCallId);
+      return {
+        content: [...event.content, { type: "text" as const, text: report }],
+      };
+    });
+
     pi.on("tool_call", async (event, ctx) => {
       // Before the gate, so it judges the file the model meant.
       repairEscapedPaths(event.input as Record<string, unknown>, ctx.cwd);
@@ -3620,6 +3641,8 @@ export class AbacusBotSession {
         }),
         promptableCredentialPaths: this.promptableCredentialPaths(ctx.cwd),
         allowedCredentialPaths: this.sandboxApprovals.reads.sessionPaths,
+        // A routine's run has nobody at a card, even with the app attached.
+        noAnswerer: !this.canReachUser() || runOrigin() === "routine",
         ...(this.options.unattended != null
           ? {
               unattended: {
@@ -3630,7 +3653,17 @@ export class AbacusBotSession {
           : {}),
       });
 
-      if (gate.kind === "allow") return;
+      if (gate.kind === "allow") {
+        // Nobody could approve it: it runs, and its result asks for a mention.
+        if (gate.unasked != null) {
+          logGuardVerdict("confirm", gate.unasked, "ran_unattended");
+          this.unaskedReports.set(
+            event.toolCallId,
+            unattendedNote(gate.unasked)
+          );
+        }
+        return;
+      }
 
       // Asked and answered; the same card again talks over the user.
       if (tool.name === EXIT_PLAN_TOOL_NAME && this.planDeclinedThisTurn) {
@@ -3645,12 +3678,16 @@ export class AbacusBotSession {
       }
 
       if (gate.kind === "refuse") {
+        if (gate.guard != null)
+          logGuardVerdict(gate.guard.verdict, gate.guard.rules, "refused");
         this.noteBlocked(event.toolCallId, "refused");
 
         return { block: true, reason: gate.reason };
       }
 
       const permissionId = `perm-${++this.permissionCounter}`;
+      const guard =
+        gate.request.type === "run_terminal" ? gate.request.guard : undefined;
 
       // Before/after content up front, so the card shows the diff at once.
       if (gate.request.type === "edit_file") {
@@ -3713,6 +3750,12 @@ export class AbacusBotSession {
 
       const verdict = this.applyDecision(decision, tool, gate.request);
 
+      if (guard != null)
+        logGuardVerdict(
+          "confirm",
+          guard.rules,
+          guardDecision(decision, verdict)
+        );
       if (verdict?.block === true) {
         this.noteBlocked(event.toolCallId, "rejected");
       }
@@ -3952,6 +3995,9 @@ export class AbacusBotSession {
    * Set when the user declines to start this turn. One question per turn:
    * after that the refusal comes back without another card.
    */
+  /** Notes for judged commands that ran unasked, by tool call (see permissionExtension). */
+  private readonly unaskedReports = new Map<string, string>();
+
   private planDeclinedThisTurn = false;
 
   /**

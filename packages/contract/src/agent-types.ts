@@ -415,6 +415,15 @@ export type PermissionDecision =
   | { type: "allow_always_with_rule"; rule: string }
   | { type: "allow_always_with_rules"; rules: string[] };
 
+/** A shell action that needs the user's yes in every mode; lifted per chat by rule. */
+export type GuardRule =
+  | "privileged"
+  | "systemDelete"
+  | "disk"
+  | "power"
+  | "forcePush"
+  | "killAll";
+
 interface PermissionRequestBase {
   tool: ToolRequest;
   displayName: string;
@@ -449,6 +458,8 @@ export type PermissionRequest =
       unmatchedPatterns?: string[];
       /** Hidden credential stores the command names; approving unhides them. */
       credentialPaths?: string[];
+      /** What the shell judge found that needs a yes even under Full access. */
+      guard?: { rules: GuardRule[] };
     })
   | (PermissionRequestBase & {
       type: "browser_action";
