@@ -13,25 +13,32 @@ import path from "path";
 
 import type { IpcEvent } from "@abacus-ai/contract/contracts";
 import {
-  WHISPER_MODEL_ID,
+  WHISPER_MODEL_FILES,
+  WHISPER_MODEL_IDS,
   WHISPER_REMOTE_HOST,
   type WhisperFileResult,
+  type WhisperModelId,
 } from "@abacus-ai/contract/voice";
 
 import { abacusBotHome } from "../../paths";
 
-/** `https://huggingface.co/<repo>/resolve/main/<file>` → `<file>`, or null. */
-export const modelFileFor = (url: string): string | null => {
+/** `https://huggingface.co/<repo>/resolve/main/<file>` → its model and file, or null. */
+export const modelFileFor = (
+  url: string
+): { model: WhisperModelId; file: string } | null => {
   let parsed: URL;
   try {
     parsed = new URL(url);
   } catch {
     return null;
   }
-  const prefix = `${WHISPER_REMOTE_HOST}${WHISPER_MODEL_ID}/resolve/main/`;
-  if (!`${parsed.origin}${parsed.pathname}`.startsWith(prefix)) return null;
+  const href = `${parsed.origin}${parsed.pathname}`;
+  const model = WHISPER_MODEL_IDS.find((id) =>
+    href.startsWith(`${WHISPER_REMOTE_HOST}${id}/resolve/main/`)
+  );
+  if (model == null) return null;
   const file = decodeURIComponent(
-    `${parsed.origin}${parsed.pathname}`.slice(prefix.length)
+    href.slice(`${WHISPER_REMOTE_HOST}${model}/resolve/main/`.length)
   );
   // Inside the model directory only: plain relative segments, nothing that
   // starts with a dot, no backslash or drive colon (separators on Windows).
@@ -44,13 +51,13 @@ export const modelFileFor = (url: string): string | null => {
   ) {
     return null;
   }
-  return file;
+  return { model, file };
 };
 
 /** The Hugging Face URL of a validated model file: fixed origin, path only. */
-const remoteUrl = (file: string): URL => {
+const remoteUrl = (model: WhisperModelId, file: string): URL => {
   const url = new URL(WHISPER_REMOTE_HOST);
-  url.pathname = `${WHISPER_MODEL_ID}/resolve/main/${file}`;
+  url.pathname = `${model}/resolve/main/${file}`;
   return url;
 };
 
@@ -63,24 +70,34 @@ export class WhisperModelService {
   constructor(
     private readonly options: {
       emitEvent: (event: IpcEvent) => void;
-      modelDir?: string;
+      /** Holds one directory per model id. */
+      modelsDir?: string;
       fetch?: typeof fetch;
     } = { emitEvent: () => {} }
   ) {}
 
-  modelDir(): string {
-    return (
-      this.options.modelDir ??
-      path.join(abacusBotHome(), "models", "whisper", WHISPER_MODEL_ID)
+  modelDir(model: WhisperModelId): string {
+    return path.join(
+      this.options.modelsDir ?? path.join(abacusBotHome(), "models", "whisper"),
+      model
     );
   }
 
-  /** Whether the two weight files are on disk, so the UI can skip the wait. */
-  isCached(): boolean {
-    return [
-      "onnx/encoder_model_quantized.onnx",
-      "onnx/decoder_model_merged_quantized.onnx",
-    ].every((file) => fs.existsSync(path.join(this.modelDir(), file)));
+  /** Whether every file the transcriber loads is on disk. */
+  isCached(model: WhisperModelId): boolean {
+    return WHISPER_MODEL_FILES.every((file) =>
+      fs.existsSync(path.join(this.modelDir(model), file))
+    );
+  }
+
+  /** True when the model is on disk; otherwise starts its download and answers false. */
+  prepare(model: WhisperModelId): boolean {
+    if (this.isCached(model)) return true;
+    for (const file of WHISPER_MODEL_FILES) {
+      // Failures surface again when the transcriber asks for the file.
+      void this.prepareFile(remoteUrl(model, file).href);
+    }
+    return false;
   }
 
   async fetchFile(url: string): Promise<WhisperFileResult> {
@@ -94,11 +111,12 @@ export class WhisperModelService {
     url: string,
     { download = true }: { download?: boolean } = {}
   ): Promise<WhisperFileResult & { path?: string }> {
-    const file = modelFileFor(url);
-    if (file == null) {
+    const match = modelFileFor(url);
+    if (match == null) {
       return { status: 403, error: "Not a Whisper model file." };
     }
-    const root = path.resolve(this.modelDir());
+    const { model, file } = match;
+    const root = path.resolve(this.modelDir(model));
     const target = path.resolve(root, file);
     if (!target.startsWith(`${root}${path.sep}`)) {
       return { status: 403, error: "Not a Whisper model file." };
@@ -113,31 +131,33 @@ export class WhisperModelService {
     }
     if (!download) return { status: 404 };
     // One download per file, however many callers ask while it is in flight.
-    let pending = this.downloads.get(file);
+    const key = `${model}/${file}`;
+    let pending = this.downloads.get(key);
     if (pending == null) {
-      pending = this.download(file, target).finally(() => {
-        this.downloads.delete(file);
+      pending = this.download(model, file, target).finally(() => {
+        this.downloads.delete(key);
       });
-      this.downloads.set(file, pending);
+      this.downloads.set(key, pending);
     }
     return pending;
   }
 
   private async download(
+    model: WhisperModelId,
     file: string,
     target: string
   ): Promise<WhisperFileResult & { path?: string }> {
     const progress = (loaded: number, total: number, done: boolean): void => {
       this.options.emitEvent({
         type: "whisper-download-progress",
-        progress: { file, loadedBytes: loaded, totalBytes: total, done },
+        progress: { model, file, loadedBytes: loaded, totalBytes: total, done },
         emittedAt: new Date().toISOString(),
       });
     };
     const doFetch = this.options.fetch ?? fetch;
     let response: Response;
     try {
-      response = await doFetch(remoteUrl(file).href);
+      response = await doFetch(remoteUrl(model, file).href);
     } catch (error) {
       return {
         status: 502,

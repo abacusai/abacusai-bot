@@ -4,7 +4,7 @@ import { getTransport, type Transport } from "#renderer/data/transport";
 
 import { VoiceOperation, type VoiceState } from "./operation";
 import { startRecording, decodeForWhisper } from "./recorder";
-import { configureVoice, transcribe } from "./whisper";
+import { configureVoice, prepareDictation, transcribe } from "./whisper";
 export const useDictation = (
   transport: Transport | null,
   sessionId: string,
@@ -25,7 +25,10 @@ export const useDictation = (
     configureVoice(transport);
     const value = new VoiceOperation({
       permission: () => transport.client.voice.requestMicrophone({}),
-      record: (signal) => startRecording(setLevel, signal),
+      record: (signal) => {
+        void prepareDictation();
+        return startRecording(setLevel, signal);
+      },
       transcribe: async (clip) =>
         transcribe(await decodeForWhisper(clip.audio)),
       transcript: (text) => callback.current(text),
