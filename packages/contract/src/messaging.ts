@@ -166,6 +166,16 @@ export type SharedChannelLink = {
 export const SHARED_LINK_TARGETS = ["authorize", "install", "dm"] as const;
 export type SharedLinkTarget = (typeof SHARED_LINK_TARGETS)[number];
 
+/**
+ * A lane down long enough to mention: the app keeps trying on its own.
+ * `nextTryAt` (epoch ms) is null while a try is running; `stopped` after a
+ * day down, when only the user's Try now or Connect tries again.
+ */
+export type MessagingRecovery = {
+  nextTryAt: number | null;
+  stopped: boolean;
+};
+
 export type MessagingPlatformInfo = {
   id: MessagingPlatformId;
   /** i18n key under `messaging.platforms`. */
@@ -176,6 +186,8 @@ export type MessagingPlatformInfo = {
   configured: boolean;
   state: MessagingPlatformState;
   errorMessage: string | null;
+  /** Set once the lane has been down a while; see MessagingRecovery. */
+  recovery?: MessagingRecovery | null;
   fields: MessagingFieldInfo[];
   /** Senders waiting for approval, for the list-row badge. */
   pendingCount: number;

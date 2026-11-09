@@ -1666,7 +1666,9 @@
       "themes",
       "diskFullLane",
       "linkLostLane",
-      "linkLostTitle"
+      "linkLostTitle",
+      "laneDownTitle",
+      "laneDownBody"
     ],
     "sources": [
       "../../desktop/src/main/index.ts",

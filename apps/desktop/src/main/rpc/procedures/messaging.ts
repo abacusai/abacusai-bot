@@ -27,6 +27,12 @@ export const messagingRouter = impl.messaging.router({
   releaseLogin: impl.messaging.releaseLogin.handler(({ input, context }) => {
     context.deps.serviceHost.releaseMessagingLogin(input.platformId);
   }),
+  retryNow: impl.messaging.retryNow.handler(({ input, context }) =>
+    context.deps.serviceHost.retryMessagingLane(input.platformId)
+  ),
+  pageOpened: impl.messaging.pageOpened.handler(({ context }) => {
+    context.deps.serviceHost.messagingPageOpened();
+  }),
   pairShared: impl.messaging.pairShared.handler(({ input, context }) =>
     context.deps.serviceHost.pairSharedChannel(input.platformId)
   ),

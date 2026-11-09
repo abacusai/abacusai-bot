@@ -1095,6 +1095,12 @@
       "abacusTelegram": "Telegram"
     },
     "recommended": "Recomendado",
+    "recovery": {
+      "next": "{{platform}} não está conectado. Tentando de novo sozinho; próxima tentativa em {{minutes}} min.",
+      "now": "{{platform}} não está conectado. Tentando de novo agora.",
+      "stopped": "{{platform}} ficou um dia sem conectar, então parou de tentar sozinho.",
+      "tryNow": "Tentar agora"
+    },
     "reject": "Recusar",
     "required": "Obrigatório",
     "revoke": "Revogar",
@@ -4970,6 +4976,8 @@
     "themes": "Temas",
     "diskFullLane": "O disco do computador está cheio, então o {{platform}} não consegue salvar seus dados. Ele se reconecta sozinho assim que algum espaço for liberado.",
     "linkLostTitle": "{{platform}} está desconectado",
-    "linkLostLane": "O {{platform}} não está mais vinculado, então mensagens e rotinas não podem ser enviadas por ele. Clique em Conectar e escaneie o QR code novamente."
+    "linkLostLane": "O {{platform}} não está mais vinculado, então mensagens e rotinas não podem ser enviadas por ele. Clique em Conectar e escaneie o QR code novamente.",
+    "laneDownTitle": "{{platform}} não consegue conectar",
+    "laneDownBody": "{{platform}} está sem conexão há uma hora. O app continua tentando; abra Mensagens para tentar agora."
   }
 }

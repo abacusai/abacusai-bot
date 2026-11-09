@@ -3911,6 +3911,14 @@ export class ServiceHost {
     this.messagingGatewayService.releaseLogin(platformId);
   }
 
+  retryMessagingLane(platformId: MessagingPlatformId): MessagingSnapshot {
+    return this.messagingGatewayService.retryNow(platformId);
+  }
+
+  messagingPageOpened(): void {
+    this.messagingGatewayService.pageOpened();
+  }
+
   listSessionArtifacts(): SessionArtifact[] {
     return this.sessionArtifactsService.list();
   }

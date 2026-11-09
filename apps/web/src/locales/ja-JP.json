@@ -1095,6 +1095,12 @@
       "abacusTelegram": "Telegram"
     },
     "recommended": "推奨",
+    "recovery": {
+      "next": "{{platform}} に接続されていません。自動で再試行します。次の試行まで {{minutes}} 分。",
+      "now": "{{platform}} に接続されていません。再試行しています。",
+      "stopped": "{{platform}} が 1 日接続できなかったため、自動の再試行を停止しました。",
+      "tryNow": "今すぐ試す"
+    },
     "reject": "拒否",
     "required": "必須",
     "revoke": "取り消す",
@@ -4970,6 +4976,8 @@
     "themes": "テーマ",
     "diskFullLane": "コンピューターのディスクがいっぱいのため、{{platform}} はデータを保存できません。空き容量が確保されると自動的に再接続します。",
     "linkLostTitle": "{{platform}} の接続が切れました",
-    "linkLostLane": "{{platform}} のリンクが解除されたため、メッセージやルーティンを送信できません。「接続」をクリックして、QR コードをもう一度スキャンしてください。"
+    "linkLostLane": "{{platform}} のリンクが解除されたため、メッセージやルーティンを送信できません。「接続」をクリックして、QR コードをもう一度スキャンしてください。",
+    "laneDownTitle": "{{platform}} に接続できません",
+    "laneDownBody": "{{platform}} が 1 時間接続できていません。アプリは再試行を続けています。メッセージを開くと今すぐ試せます。"
   }
 }

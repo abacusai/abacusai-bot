@@ -1095,6 +1095,12 @@
       "abacusTelegram": "Telegram"
     },
     "recommended": "Recommended",
+    "recovery": {
+      "next": "{{platform}} isn't connected. Trying again by itself, next try in {{minutes}} min.",
+      "now": "{{platform}} isn't connected. Trying again now.",
+      "stopped": "{{platform}} has not connected for a day, so it stopped trying by itself.",
+      "tryNow": "Try now"
+    },
     "reject": "Reject",
     "required": "Required",
     "revoke": "Revoke",
@@ -4970,6 +4976,8 @@
     "themes": "Themes",
     "diskFullLane": "The computer's disk is full, so {{platform}} can't save its data. It reconnects by itself once some space is freed.",
     "linkLostTitle": "{{platform}} is disconnected",
-    "linkLostLane": "{{platform}} is no longer linked, so messages and routines can't go through it. Click Connect and scan the QR again."
+    "linkLostLane": "{{platform}} is no longer linked, so messages and routines can't go through it. Click Connect and scan the QR again.",
+    "laneDownTitle": "{{platform}} can't connect",
+    "laneDownBody": "{{platform}} has not connected for an hour. The app keeps trying; open Messaging to try now."
   }
 }

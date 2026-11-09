@@ -381,12 +381,13 @@ describe("a computer that sleeps and wakes", () => {
 describe("a page whose storage finds the disk full", () => {
   afterEach(() => vi.useRealTimers());
 
-  it("leaves connected for the full-disk error, and loads a fresh page by itself once space is back", async () => {
+  it("leaves connected for the full-disk error, labelled to retry once space is back", async () => {
     vi.useFakeTimers();
-    const states: Array<[string, string | undefined]> = [];
+    const states: Array<[string, string | undefined, unknown]> = [];
     const connector = new WhatsAppWebConnector({
       onMessage: () => {},
-      onState: (state: string, note?: string) => states.push([state, note]),
+      onState: (state: string, note?: string, failure?: unknown) =>
+        states.push([state, note, failure]),
       onLog: () => {},
     } as never);
     const c = connector as unknown as {
@@ -394,7 +395,6 @@ describe("a page whose storage finds the disk full", () => {
       loggedIn: boolean;
       window: unknown;
       run: (script: string, args: unknown) => Promise<unknown>;
-      ensureWindow: () => unknown;
     };
     c.running = true;
     c.loggedIn = true;
@@ -417,29 +417,18 @@ describe("a page whose storage finds the disk full", () => {
     disk.free = 0;
 
     await expect(c.run("ANY", {})).resolves.toBeNull();
+    // The gateway's supervisor starts a fresh lane once space is back.
     expect(states).toEqual([
       [
         "error",
         "The computer's disk is full, so WhatsApp can't save its data. It reconnects by itself once some space is freed.",
+        { retry: "when_disk_free" },
       ],
     ]);
     expect(destroyed).toBe(true);
     // Another script failing the same way says nothing new.
     await c.run("ANY", {});
     expect(states).toHaveLength(1);
-
-    // Not enough yet: the lane keeps waiting.
-    const reload = vi.fn(() => null);
-    c.ensureWindow = reload;
-    disk.free = 10 * 1024 ** 2;
-    await vi.advanceTimersByTimeAsync(30_000);
-    expect(reload).not.toHaveBeenCalled();
-
-    // Space is back: a fresh page, checked again, with no click.
-    disk.free = 5 * 1024 ** 3;
-    await vi.advanceTimersByTimeAsync(10_000);
-    expect(states.at(-1)).toEqual(["connecting", undefined]);
-    expect(reload).toHaveBeenCalled();
     await connector.stop();
   });
 });

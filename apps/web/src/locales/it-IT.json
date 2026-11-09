@@ -1095,6 +1095,12 @@
       "abacusTelegram": "Telegram"
     },
     "recommended": "Consigliato",
+    "recovery": {
+      "next": "{{platform}} non è connesso. Nuovo tentativo automatico, il prossimo tra {{minutes}} min.",
+      "now": "{{platform}} non è connesso. Nuovo tentativo in corso.",
+      "stopped": "{{platform}} non si connette da un giorno, quindi i tentativi automatici si sono fermati.",
+      "tryNow": "Riprova ora"
+    },
     "reject": "Rifiuta",
     "required": "Obbligatorio",
     "revoke": "Revoca",
@@ -4970,6 +4976,8 @@
     "themes": "Temi",
     "diskFullLane": "Il disco del computer è pieno, quindi {{platform}} non può salvare i suoi dati. Si riconnetterà da solo appena verrà liberato un po' di spazio.",
     "linkLostTitle": "{{platform}} è disconnesso",
-    "linkLostLane": "{{platform}} non è più collegato, quindi messaggi e routine non possono passare da lì. Fai clic su Connetti e scansiona di nuovo il codice QR."
+    "linkLostLane": "{{platform}} non è più collegato, quindi messaggi e routine non possono passare da lì. Fai clic su Connetti e scansiona di nuovo il codice QR.",
+    "laneDownTitle": "{{platform}} non riesce a connettersi",
+    "laneDownBody": "{{platform}} non è connesso da un'ora. L'app continua a provare; apri Messaggi per riprovare ora."
   }
 }

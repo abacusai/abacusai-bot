@@ -46,7 +46,9 @@ export const secondaryLine = (
   attention: BotAttention,
   bot: Pick<BotRow, "name" | "title">,
   preview: string | null,
-  t: TFunction
+  t: TFunction,
+  /** The bot's chat app has been down a while: said in place of the preview. */
+  channelNote: string | null = null
 ): { text: string; tone: "attention" | "running" | "error" | "muted" } => {
   switch (attention.kind) {
     case "needs-you":
@@ -72,6 +74,7 @@ export const secondaryLine = (
     case "paused":
       return { text: t("bots.status.paused"), tone: "muted" };
     default:
+      if (channelNote != null) return { text: channelNote, tone: "error" };
       return {
         text: preview?.trim()
           ? preview
@@ -125,6 +128,7 @@ export const BotRowView = ({
   bot,
   attention,
   preview,
+  channelNote = null,
   stamp,
   active,
   hidden,
@@ -134,6 +138,7 @@ export const BotRowView = ({
   bot: BotRow;
   attention: BotAttention;
   preview: string | null;
+  channelNote?: string | null;
   stamp: string | null;
   active: boolean;
   hidden?: boolean;
@@ -143,7 +148,7 @@ export const BotRowView = ({
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const motionPref = useMotionPreference();
-  const line = secondaryLine(attention, bot, preview, t);
+  const line = secondaryLine(attention, bot, preview, t, channelNote);
   const label = `${bot.name}, ${line.text}`;
   return (
     <motion.div

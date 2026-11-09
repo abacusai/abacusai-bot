@@ -10,8 +10,8 @@ import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
  * the connector's one-shot reveal guard, so every sync walked through it.
  *
  * Two invariants pinned here: a connector in `needs_login` is never evicted by
- * a sync, and a connector in `error` is restarted on a growing backoff rather
- * than on every sync.
+ * a sync, and a connector in `error` is restarted by a sync at most once per
+ * 30 s (a retryable one is also retried by the gateway's LaneSupervisor).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -29,6 +29,12 @@ vi.mock("./messaging-config-service", async (importOriginal) => ({
   }),
   isPlatformEnabled: (id: MessagingPlatformId) => id === "discord",
   isPlatformConfigured: (id: MessagingPlatformId) => id === "discord",
+}));
+
+// No OS events to watch here: hints have their own test (lane-supervisor.test.ts).
+vi.mock("./page-boot-watch", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./page-boot-watch")>()),
+  watchLaneHints: () => () => {},
 }));
 
 const { MessagingGatewayService, RELEASED_LOGIN_MS } =
@@ -176,42 +182,43 @@ describe("a connector waiting on a login", () => {
 });
 
 describe("a connector that failed", () => {
-  it("is restarted on a backoff, not on every sync", async () => {
+  it("is restarted by a sync (the user's Connect), at most once per 30 s", async () => {
     const { gateway, captured } = service();
     await gateway.syncConnectors();
     captured[0]!.onState("error", "boom");
 
-    // First sync after the failure restarts it (the backoff ladder starts
-    // counting from here)...
     await gateway.syncConnectors();
+    await vi.advanceTimersByTimeAsync(0);
     expect(captured).toHaveLength(2);
 
-    // ...but a failure straight after is NOT restarted by the next sync.
+    // A failure straight after is NOT restarted by the next sync...
     captured[1]!.onState("error", "boom again");
     await gateway.syncConnectors();
+    await vi.advanceTimersByTimeAsync(0);
     expect(captured).toHaveLength(2);
 
-    // Once the delay has passed, the next sync tries again. Attempt 1's
-    // delay is at most 2s (backoffDelayMs is jittered below its base).
-    vi.advanceTimersByTime(2_001);
+    // ...but is once 30 s have passed.
+    await vi.advanceTimersByTimeAsync(30_001);
     await gateway.syncConnectors();
+    await vi.advanceTimersByTimeAsync(0);
     expect(captured).toHaveLength(3);
   });
 
-  it("starts the ladder over after a successful connect", async () => {
+  it("comes back by itself when it says it may be retried, with no sync", async () => {
     const { gateway, captured } = service();
     await gateway.syncConnectors();
-    captured[0]!.onState("error", "boom");
-    await gateway.syncConnectors();
+    (
+      captured[0]!.onState as (
+        state: string,
+        error?: string,
+        failure?: unknown
+      ) => void
+    )("error", "could not be reached", { retry: "auto" });
+
+    await vi.advanceTimersByTimeAsync(16_000);
     expect(captured).toHaveLength(2);
-
-    // Recovery clears the backoff...
     captured[1]!.onState("connected");
-    captured[1]!.onState("error", "died later");
-
-    // ...so a fresh failure is restarted by the very next sync.
-    await gateway.syncConnectors();
-    expect(captured).toHaveLength(3);
+    expect(platformState(gateway)).toBe("connected");
   });
 });
 

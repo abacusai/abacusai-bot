@@ -1095,6 +1095,12 @@
       "abacusTelegram": "Telegram"
     },
     "recommended": "Direkomendasikan",
+    "recovery": {
+      "next": "{{platform}} tidak terhubung. Mencoba lagi otomatis, percobaan berikutnya dalam {{minutes}} mnt.",
+      "now": "{{platform}} tidak terhubung. Sedang mencoba lagi.",
+      "stopped": "{{platform}} tidak terhubung selama sehari, jadi percobaan otomatis dihentikan.",
+      "tryNow": "Coba sekarang"
+    },
     "reject": "Tolak",
     "required": "Wajib",
     "revoke": "Cabut",
@@ -4970,6 +4976,8 @@
     "themes": "Tema",
     "diskFullLane": "Disk komputer penuh, jadi {{platform}} tidak bisa menyimpan datanya. Koneksi akan pulih sendiri setelah sebagian ruang dikosongkan.",
     "linkLostTitle": "{{platform}} terputus",
-    "linkLostLane": "{{platform}} tidak lagi tertaut, jadi pesan dan rutinitas tidak bisa dikirim lewat sana. Klik Hubungkan lalu pindai kode QR lagi."
+    "linkLostLane": "{{platform}} tidak lagi tertaut, jadi pesan dan rutinitas tidak bisa dikirim lewat sana. Klik Hubungkan lalu pindai kode QR lagi.",
+    "laneDownTitle": "{{platform}} tidak bisa terhubung",
+    "laneDownBody": "{{platform}} tidak terhubung selama satu jam. Aplikasi terus mencoba; buka Pesan untuk mencoba sekarang."
   }
 }

@@ -1,6 +1,6 @@
 import { isDiskFull } from "@abacus-ai/agent/atomic-file";
 import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
-import { BrowserWindow, net } from "electron";
+import { BrowserWindow } from "electron";
 
 import {
   bringToFront,
@@ -23,18 +23,16 @@ import {
   runPageScript,
   setFileInput,
 } from "./connector";
+import type { LaneFailure } from "./lane-supervisor";
 import {
   readPlatformSignedIn,
   savePlatformSignedIn,
 } from "./messaging-config-service";
 import {
-  backOnline,
   BOOT_MAX_RELOADS,
-  diskSpaceBack,
   FIRST_LOAD_WAIT_MS,
   pageBusy,
   PageBootWatch,
-  retryWhen,
 } from "./page-boot-watch";
 
 /**
@@ -74,11 +72,12 @@ const isCertError = (code: number): boolean => code <= -200 && code > -300;
 
 const NOT_SIGNED_IN = "Discord is not signed in. Sign in to connect.";
 const STUCK_LOADING =
-  "Discord did not finish loading. Click Connect to try again.";
+  "Discord did not finish loading. It tries again by itself, or click Connect to try now.";
 const UNREACHABLE =
-  "Discord could not be reached. Check your connection, then click Connect.";
+  "Discord could not be reached. It tries again by itself, or click Connect to try now.";
 const CERT_BLOCKED =
-  "Discord's secure connection failed, so it may be blocked on this network. Click Connect to try again.";
+  "Discord's secure connection failed, so it may be blocked on this network. It tries again by itself.";
+const PAGE_CRASHED = "Discord stopped working. It restarts by itself.";
 
 /** How many servers the post-connect crawl visits, and channels kept each. */
 const MAX_GUILDS = 50;
@@ -148,14 +147,13 @@ export class DiscordWebConnector implements MessagingConnector {
    */
   private readonly boot = new PageBootWatch();
   /**
-   * No page and no checks until the user opens Discord (resume): never
-   * signed in here, out of reloads, or the page could not load at all.
+   * No page and no checks until the user opens Discord (resume) or the
+   * gateway restarts it: never signed in here, out of reloads, or the page
+   * could not load at all.
    */
   private parked = false;
   /** The stored sign-in verdict, so a poll writes it on change only. */
   private signedInRecord: boolean | null = null;
-  /** Set while a parked lane waits for the network or disk space to come back. */
-  private stopParkedWait: (() => void) | null = null;
   private readonly loginPoll = new PollScheduler(
     () => this.checkLogin(),
     LOGIN_POLL_MS,
@@ -279,8 +277,6 @@ export class DiscordWebConnector implements MessagingConnector {
   async stop(): Promise<void> {
     this.running = false;
     this.parked = false;
-    this.stopParkedWait?.();
-    this.stopParkedWait = null;
     this.loggedIn = false;
     this.railReads = 0;
     this.contactsRead = false;
@@ -812,18 +808,21 @@ export class DiscordWebConnector implements MessagingConnector {
   }
 
   /**
-   * Stop checking and drop the page until the user opens Discord. The state
-   * is one the gateway leaves alone (`needs_login`) or restarts only on the
-   * user's next connect (`error`), so nothing loads the page again by itself.
+   * Stop checking and drop the page. `needs_login` waits for the user; an
+   * `error` is retried by the gateway's LaneSupervisor as `failure` allows.
    */
-  private park(state: "needs_login" | "error", message: string): void {
+  private park(
+    state: "needs_login" | "error",
+    message: string,
+    failure?: LaneFailure
+  ): void {
     this.parked = true;
     this.boot.reset();
     this.loginPoll.stop();
     const win = this.window;
     this.window = null;
     if (win != null && !win.isDestroyed()) win.destroy();
-    this.callbacks.onState(state, message);
+    this.callbacks.onState(state, message, failure);
   }
 
   /**
@@ -832,8 +831,6 @@ export class DiscordWebConnector implements MessagingConnector {
    */
   private resume(): void {
     this.boot.reset();
-    this.stopParkedWait?.();
-    this.stopParkedWait = null;
     if (!this.running || !this.parked) return;
     this.parked = false;
     this.callbacks.onLog("discord-web: opened by the user, checking again");
@@ -849,33 +846,17 @@ export class DiscordWebConnector implements MessagingConnector {
 
   /**
    * The page itself could not load: a certificate or network failure that a
-   * reload would only repeat. Only before sign-in; a signed-in session keeps
-   * its own handling, where a navigation can fail mid-use and come back.
+   * reload would only repeat, so it parks for the gateway to retry. Only
+   * before sign-in; a signed-in session keeps its own handling, where a
+   * navigation can fail mid-use and come back.
    */
   private onLoadFailed(code: number, description: string): void {
     if (!this.running || this.parked || this.loggedIn) return;
     this.callbacks.onLog(
-      `discord-web: page failed to load (${code} ${description}), waiting for the user`
+      `discord-web: page failed to load (${code} ${description}), parking it`
     );
-    if (isCertError(code)) {
-      this.park("error", CERT_BLOCKED);
-      return;
-    }
-    this.park("error", UNREACHABLE);
-    // Started before the network was up (a login item at boot): one more try
-    // once it is. Online already means the site itself is unreachable.
-    if (!net.isOnline()) this.retryWhenClear(backOnline, "back online");
-  }
-
-  /** Parked by the machine (no network, a full disk): back by itself once it clears. */
-  private retryWhenClear(ready: () => boolean, what: string): void {
-    this.stopParkedWait?.();
-    this.stopParkedWait = retryWhen(ready, () => {
-      this.stopParkedWait = null;
-      if (!this.running || !this.parked) return;
-      this.callbacks.onLog(`discord-web: ${what}, loading the page again`);
-      this.resume();
-      this.ensureWindow();
+    this.park("error", isCertError(code) ? CERT_BLOCKED : UNREACHABLE, {
+      retry: "auto",
     });
   }
 
@@ -883,8 +864,9 @@ export class DiscordWebConnector implements MessagingConnector {
   private parkOnFullDisk(): void {
     if (!this.running || this.parked) return;
     this.callbacks.onLog("discord-web: the disk is full, waiting for space");
-    this.park("error", nativeT("diskFullLane", { platform: "Discord" }));
-    this.retryWhenClear(diskSpaceBack, "disk space is back");
+    this.park("error", nativeT("diskFullLane", { platform: "Discord" }), {
+      retry: "when_disk_free",
+    });
   }
 
   private logFailure(what: string, error: unknown): void {
@@ -956,9 +938,9 @@ export class DiscordWebConnector implements MessagingConnector {
       const verdict = this.boot.stuck(Date.now(), busy);
       if (verdict === "give_up") {
         this.callbacks.onLog(
-          `discord-web: still not loaded after ${BOOT_MAX_RELOADS} reloads, waiting for the user`
+          `discord-web: still not loaded after ${BOOT_MAX_RELOADS} reloads, parking it`
         );
-        this.park("needs_login", STUCK_LOADING);
+        this.park("error", STUCK_LOADING, { retry: "auto", stuckBoot: true });
         return;
       }
       if (verdict === "reload") {
@@ -1444,6 +1426,14 @@ export class DiscordWebConnector implements MessagingConnector {
     win.webContents.on("certificate-error", (_event, url, error) => {
       if (this.window !== win || !url.startsWith(`${DISCORD_ORIGIN}/`)) return;
       this.onLoadFailed(-200, error);
+    });
+    // A crashed page answers nothing: park it, and the gateway starts a fresh one.
+    win.webContents.on("render-process-gone", (_event, details) => {
+      if (this.window !== win || !this.running || this.parked) return;
+      this.callbacks.onLog(
+        `discord-web: page process gone (${details.reason})`
+      );
+      this.park("error", PAGE_CRASHED, { retry: "auto" });
     });
     return win;
   }
