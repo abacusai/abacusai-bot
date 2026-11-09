@@ -18,16 +18,17 @@ import * as fsp from "node:fs/promises";
 import * as net from "node:net";
 import * as os from "node:os";
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import type { BashOperations } from "@earendil-works/pi-coding-agent";
 
 import { childProcessEnv } from "./child-env.js";
 import {
+  entryBeside,
   execAsNode,
   launcherDir,
   selfNode,
   shellQuote,
+  withOverrides,
   writeLauncher,
 } from "./launchers.js";
 import { mergePath } from "./merge-path.js";
@@ -208,16 +209,9 @@ export function trashSocket(): string {
   return address;
 }
 
-/** The launcher this file's build sits beside: the bundle's `.js`, or the source in tests. */
-function shimEntry(): string | null {
-  const dir = path.dirname(fileURLToPath(import.meta.url));
-  for (const name of ["trash-shim.js", "trash-shim.ts"]) {
-    const candidate = path.join(dir, name);
-    if (fs.existsSync(candidate)) return candidate;
-  }
-
-  return null;
-}
+/** The launcher this file's build sits beside. */
+const shimEntry = (): string | null =>
+  entryBeside(import.meta.url, "trash-shim");
 
 /** One launcher: `#!/bin/sh`, which busybox runs too. `find` and `git` skip Node unless they delete. */
 export function launcherScript(
@@ -308,19 +302,6 @@ export function resetTrashForTesting(): void {
   mover = null;
 }
 
-/** `BB_OVERRIDE_APPLETS` with busybox's own rm and find giving way to what PATH finds first. */
-function overrideApplets(current: string | undefined): string {
-  const value = current ?? "";
-  const separator = value.includes(";") ? "," : ";";
-  const missing = TRASH_APPLETS.filter(
-    (name) => !value.split(/[;,\s]/).includes(name)
-  );
-
-  return missing.length === 0
-    ? value
-    : `${value}${separator}${missing.join(",")}`;
-}
-
 /**
  * A command's environment with the launchers first on PATH and a token for
  * `scope` (null roots: anywhere). Unchanged when the launchers could not be
@@ -348,7 +329,10 @@ export function trashShimEnv(
     ...(applets != null
       ? {
           [TRASH_ENV.applets]: applets.replaceAll("\\", "/"),
-          BB_OVERRIDE_APPLETS: overrideApplets(base.BB_OVERRIDE_APPLETS),
+          BB_OVERRIDE_APPLETS: withOverrides(
+            base.BB_OVERRIDE_APPLETS,
+            TRASH_APPLETS
+          ),
         }
       : {}),
   });
