@@ -480,6 +480,9 @@ describe("the check-in agenda", () => {
   });
 });
 
+/** A message with enough words to name its language. */
+const HOLA = "hola, ¿me ayudas con mi semana?";
+
 describe("what the loop hears with a user message", () => {
   it("the check-ins sent since, and a bare STOP, as tagged parts that are never the user's words", () => {
     const notes = nudgeNotes({
@@ -532,11 +535,37 @@ describe("what the loop hears with a user message", () => {
     expect(asked).toEqual([
       expect.stringMatching(/^\[check-ins language\] .*op language/),
     ]);
-    expect(nudges.notes({ id: "m2", text: "hello there" })).toEqual(asked);
+    expect(
+      nudges.notes({ id: "m2", text: "could you look at my week please" })
+    ).toEqual(asked);
     expect((await nudges.build()).lang).toBe("ko");
     writeLanguage("en");
-    expect(nudges.notes({ id: "m3", text: "hello" })).toEqual([]);
+    expect(
+      nudges.notes({ id: "m3", text: "could you look at my week please" })
+    ).toEqual([]);
     expect((await nudges.build()).lang).toBe("en");
+    nudges.stop();
+  });
+
+  it("asks only when the user's own words can name a language, never on a bare greeting or the app's notes", async () => {
+    const { nudges, posts } = agenda();
+    nudges.start();
+    nudges.polled({});
+    await vi.waitFor(() => expect(posts()).toHaveLength(1));
+    expect(nudges.notes({ id: "m1", text: "hi" })).toEqual([]);
+    expect(
+      nudges.notes({
+        id: "m2",
+        text: "[attachment: a.jpg saved to /tmp/a.jpg]\n(sent a photo)",
+      })
+    ).toEqual([]);
+    expect(nudges.notes({ id: "m3", text: "(voice note) Hallo" })).toEqual([]);
+    expect(
+      nudges.notes({
+        id: "m4",
+        text: "(voice note) Kannst du bitte ab jetzt auf Deutsch antworten",
+      })
+    ).toHaveLength(1);
     nudges.stop();
   });
 
@@ -546,15 +575,15 @@ describe("what the loop hears with a user message", () => {
     nudges.polled({});
     await vi.waitFor(() => expect(posts()).toHaveLength(1));
     for (let call = 0; call < 3; call += 1) {
-      expect(nudges.notes({ id: `m${call}`, text: "hola" })).toHaveLength(1);
+      expect(nudges.notes({ id: `m${call}`, text: HOLA })).toHaveLength(1);
       nudges.languageCallEnded();
     }
-    expect(nudges.notes({ id: "m9", text: "hola" })).toEqual([]);
+    expect(nudges.notes({ id: "m9", text: HOLA })).toEqual([]);
     nudges.stop();
     nudges.start();
     nudges.polled({});
     await vi.waitFor(() => expect(posts()).toHaveLength(2));
-    expect(nudges.notes({ id: "m10", text: "hola" })).toHaveLength(1);
+    expect(nudges.notes({ id: "m10", text: HOLA })).toHaveLength(1);
     nudges.stop();
   });
 
@@ -566,7 +595,7 @@ describe("what the loop hears with a user message", () => {
     writeLanguage("es");
     for (let call = 0; call < 5; call += 1) nudges.languageCallEnded();
     fs.writeFileSync(path.join(dir, "checkins.json"), "{}");
-    expect(nudges.notes({ id: "m1", text: "hola" })).toHaveLength(1);
+    expect(nudges.notes({ id: "m1", text: HOLA })).toHaveLength(1);
     nudges.stop();
   });
 

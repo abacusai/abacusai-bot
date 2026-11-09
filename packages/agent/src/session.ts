@@ -156,6 +156,7 @@ import {
   type SkillMetadata,
   type ToolRequest,
   type TurnOutcome,
+  type UserTextTags,
 } from "./protocol.js";
 import {
   createModelRuntime,
@@ -168,6 +169,7 @@ import {
   DEFAULT_MAX_OUTPUT_TOKENS,
 } from "./providers.js";
 import {
+  RecentOwnWords,
   replyLanguageMismatch,
   replyLanguageRepairPrompt,
   type ReplyLanguageMismatch,
@@ -226,8 +228,10 @@ import {
 import { addRunUsage, turnUsage, type TurnUsage } from "./turn-usage.js";
 import {
   accountReplyLanguagePrompt,
+  knownReplyLanguage,
   learnUserLanguage,
 } from "./user-language.js";
+import { ownWords } from "./user-text.js";
 import { webHostPrompt } from "./web-host-prompt.js";
 import { desktopXSearchAvailable, searchAvailable } from "./web/search.js";
 import webTools from "./web/tools.js";
@@ -271,6 +275,8 @@ export interface SessionOptions {
 /** What a host passes with a turn: told once the user-visible turn is over. */
 export interface TurnHandle {
   settled?: () => void;
+  /** The message's display tags: where the user's own words are in it. */
+  userText?: UserTextTags;
   /** The sender's id for the message this turn answers. */
   messageId?: string;
   /** Pick the reply Google cut off back up instead of sending the text again. */
@@ -865,6 +871,8 @@ export class AbacusBotSession {
    */
   private pendingLanguageRepair: ReplyLanguageMismatch | null = null;
   private languageRepairsThisTurn = 0;
+  /** The user's own words over recent turns: what a reply's language is judged by. */
+  private readonly userWords = new RecentOwnWords();
   /** The turn's recoveries from an empty reply (empty-reply.ts). */
   private readonly emptyReplies = new EmptyReplies();
   /** The turn's ask after a reply that ended on a promise (promised-work.ts). */
@@ -1301,6 +1309,8 @@ export class AbacusBotSession {
 
     this.session = created.session;
     this.pi = this.loadedPi;
+    // A resumed chat: its earlier turns tell whose words the replies follow.
+    this.userWords.seed(this.session.messages, (text) => ownWords(text));
     endTurnOnClosedReply(this.session.agent);
     // The opening mode, so the log is a complete account rather than deltas.
     this.applyMode(this.mode, "startup");
@@ -1436,8 +1446,10 @@ export class AbacusBotSession {
     // Edited instructions apply to this turn, not the next session.
     await this.refreshCustomInstructions();
     // Only the user's own words name their language; a routine's prompt does not.
+    const words = ownWords(text, turn?.userText);
+    this.userWords.beginTurn(words);
     if (this.mode !== AgentMode.Unattended)
-      void learnUserLanguage(text, (process.env.ABACUS_API_KEY ?? "").trim());
+      void learnUserLanguage(words, (process.env.ABACUS_API_KEY ?? "").trim());
     // The sponsored window closing (or opening) changes the headers the
     // Abacus provider was registered with; a run must not carry the marker
     // past its deadline, nor miss it.
@@ -2618,6 +2630,7 @@ export class AbacusBotSession {
    */
   async steer(text: string, messageId?: string): Promise<void> {
     this.pendingSteers.add(text, messageId);
+    this.userWords.add(ownWords(text));
     // The user spoke: they go first, not a test run nobody asked for.
     this.verifyLoop.cancel();
     await this.requireSession().steer(text);
@@ -3035,6 +3048,7 @@ export class AbacusBotSession {
 
       this.session = created.session;
       this.pi = this.loadedPi;
+      this.userWords.clear();
       endTurnOnClosedReply(this.session.agent);
       // A fresh session has only the tools it was built with.
       this.mcpTools.rebind(
@@ -3338,7 +3352,11 @@ export class AbacusBotSession {
           this.pendingBusyWait != null ||
           this.languageRepairsThisTurn > 0
             ? null
-            : replyLanguageMismatch(event.messages);
+            : replyLanguageMismatch(event.messages, {
+                turn: this.userWords.turn,
+                recent: this.userWords.recent,
+                known: knownReplyLanguage(),
+              });
         // Tools a change deferred under this turn adds: the turn continues
         // once with them, so the request is finished rather than declared
         // impossible. Once per turn.

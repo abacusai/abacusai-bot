@@ -4,6 +4,10 @@
  * along fenced, with a guard that outside senders do not give instructions.
  */
 import { modelPath } from "@abacus-ai/agent/model-path";
+import {
+  ROUTINE_EDITOR_OPENING,
+  ROUTINE_EDITOR_WORDS,
+} from "@abacus-ai/agent/user-text";
 
 import type { CronJob, CronTrigger } from "./cron-store";
 import { isQuietReply } from "./routine-guards";
@@ -97,7 +101,7 @@ export const buildRoutineEditorPrompt = (
       : "manual");
   const ending = run?.text.slice(-LAST_REPLY_CHARS) ?? "";
   return [
-    `You are the editor for the routine "${job.name}" (id ${job.id}).`,
+    `${ROUTINE_EDITOR_OPENING}"${job.name}" (id ${job.id}).`,
     "The user is telling you how it should change. Apply the change with",
     `the cronjob tool on exactly this routine (id ${job.id}): action`,
     '"update" for the schedule (five-field cron, local time), prompt or',
@@ -123,7 +127,7 @@ export const buildRoutineEditorPrompt = (
     `Enabled: ${job.enabled ? "yes" : "no"}`,
     `Instructions: ${job.prompt}`,
     "",
-    `The user says: ${text}`,
+    `${ROUTINE_EDITOR_WORDS}${text}`,
   ].join("\n");
 };
 

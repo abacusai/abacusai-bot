@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { modelPath } from "@abacus-ai/agent/model-path";
 import { toolActivity } from "@abacus-ai/agent/tool-display";
 import { readUserLanguage } from "@abacus-ai/agent/user-language";
+import { frameChannelMessage } from "@abacus-ai/agent/user-text";
 import type { UserTextTags } from "@abacus-ai/contract/agent-types";
 import { AgentMode, AgentStatus } from "@abacus-ai/contract/agent-types";
 import type { DesktopEvent } from "@abacus-ai/contract/agent-types";
@@ -169,7 +170,7 @@ const RESPONSE_LABEL = "[Response from AbacusAI Bot]";
 export { outgoingWords } from "@abacus-ai/contract/reply-envelope";
 
 /** The one rule, restated on every auto-reply turn. See dispatch. */
-const REPLY_REMINDER =
+export const REPLY_REMINDER =
   "[auto-reply] Everything you write here is delivered to them as if the " +
   "user typed it. Reply with only the words to send: never notes, " +
   "questions or options meant for the user, who is not in this chat. " +
@@ -1413,7 +1414,9 @@ export class MessagingGatewayService {
     }
     // A bot answers many chats from one conversation, so the prompt says
     // which one is talking.
-    const framed = route.viaBot ? `[${route.senderLabel}] ${text}` : text;
+    const framed = route.viaBot
+      ? frameChannelMessage(route.senderLabel, text)
+      : text;
     // The rules preamble rides on the first prompt, never as a message of its
     // own, so no inbound message is seen before the rules; a one-line
     // reminder on every later turn keeps them in front of the model.
@@ -1479,7 +1482,9 @@ export class MessagingGatewayService {
     replyContext?: Record<string, string>
   ): void {
     route.replyContext = replyContext ?? route.replyContext;
-    const prompt = route.viaBot ? `[${route.senderLabel}] ${text}` : text;
+    const prompt = route.viaBot
+      ? frameChannelMessage(route.senderLabel, text)
+      : text;
     this.options.emitUserMessage(route.workspaceId, route.sessionId, prompt);
     this.options.sendMessage(
       route.workspaceId,
@@ -3682,7 +3687,7 @@ const resolveState = (input: {
 };
 
 /** Who the bot is talking to, as the prompt and the transcript say it. */
-const senderLabel = (
+export const senderLabel = (
   platformId: MessagingPlatformId,
   message: Pick<InboundMessage, "userName" | "userId">
 ): string =>

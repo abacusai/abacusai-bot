@@ -411,11 +411,11 @@ const nativeLanguageName = (locale: SupportedLanguage): string => {
 /**
  * Visible first message of a fresh bot chat, so the bot speaks first. Written
  * in the user's resolved reply language (the app's own locale files, English
- * for a language the app does not ship), never Hindi: a note in English is
- * what the model answers in English. The `[first run]` tag stays as is; the
+ * for a language the app does not ship): a note in English is what the model
+ * answers in English. The `[first run]` tag stays as is; the
  * app and the agent recognise the note by it.
  */
-const kickstartMessage = (
+export const kickstartMessage = (
   bot: Bot,
   language: string | null,
   words: ChannelWords
@@ -450,7 +450,7 @@ const kickstartMessage = (
  * inbound message rather than as a message of their own: a separate kickstart
  * can race the first inbound, and the rules must never arrive second.
  */
-const senderChatIntro = (senderName: string, platform: string): string =>
+export const senderChatIntro = (senderName: string, platform: string): string =>
   [
     `[auto-reply] This conversation is your line to ${senderName} on`,
     `${platform}, answering on the user's behalf. Every visible word you`,

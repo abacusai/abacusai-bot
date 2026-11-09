@@ -145,6 +145,7 @@ import {
 } from "../providers.js";
 import { ReasoningSplitter, splitReasoning } from "../reasoning-tags.js";
 import {
+  RecentOwnWords,
   replyLanguageMismatch,
   replyLanguageRepairPrompt,
   type ReplyLanguageMismatch,
@@ -190,8 +191,11 @@ import {
 import { addRunUsage, turnUsage, type TurnUsage } from "../turn-usage.js";
 import {
   accountReplyLanguagePrompt,
+  isSenderChat,
+  knownReplyLanguage,
   learnUserLanguage,
 } from "../user-language.js";
+import { ownWords } from "../user-text.js";
 import webTools from "../web/tools.js";
 import type { ForeverProfile, HiddenTurnPrompt } from "./profile.js";
 import { endTurnOnClosedReply } from "./reply-end.js";
@@ -368,6 +372,8 @@ export class ForeverEngine {
   /** A reply in the wrong language, to be asked for again (once per turn). */
   private pendingLanguageRepair: ReplyLanguageMismatch | null = null;
   private languageRepairsThisTurn = 0;
+  /** The words of whoever writes here (the user, or a sender) over recent turns. */
+  private readonly userWords = new RecentOwnWords();
   /** The turn's recoveries from an empty reply (empty-reply.ts). */
   private readonly emptyReplies = new EmptyReplies();
   /** The turn's ask after a reply that ended on a promise (promised-work.ts). */
@@ -653,6 +659,8 @@ export class ForeverEngine {
 
     this.session = created.session;
     this.pi = this.loadedPi;
+    // A resumed chat: its earlier turns tell whose words the replies follow.
+    this.userWords.seed(this.session.messages, (text) => ownWords(text));
     endTurnOnClosedReply(this.session.agent);
     // A degenerate summary from a cheap model must not erase the history.
     anchorCompactions(this.session.sessionManager, {
@@ -853,10 +861,12 @@ export class ForeverEngine {
       if (turn?.continueCut === true) await continueCutReply(session);
       else {
         this.profile.noteUserWords?.(text);
+        const words = ownWords(text, turn?.userText);
+        this.userWords.beginTurn(words);
         // Only the user's own words name their language: not a sender's, not a routine's.
         if (isOwnerAudience() && this.profile.statesReplyLanguage !== true)
           void learnUserLanguage(
-            text,
+            words,
             (process.env.ABACUS_API_KEY ?? "").trim()
           );
         const context = await this.profile.beforeTurn(text);
@@ -1187,7 +1197,7 @@ export class ForeverEngine {
         await this.session?.sendCustomMessage(
           {
             customType: this.profile.continuations.languageRepairType,
-            content: replyLanguageRepairPrompt(mismatch),
+            content: replyLanguageRepairPrompt(mismatch, isSenderChat()),
             display: false,
           },
           { triggerTurn: true }
@@ -1708,6 +1718,7 @@ export class ForeverEngine {
     // Steered into housekeeping it would be answered where no one reads.
     if (this.upkeep || this.hiddenTurn) return;
     this.profile.noteUserWords?.(text);
+    this.userWords.add(ownWords(text));
     if (this.midTask.live) {
       try {
         await this.midTask.deliver({
@@ -1997,6 +2008,7 @@ export class ForeverEngine {
 
       this.session = created.session;
       this.pi = this.loadedPi;
+      this.userWords.clear();
       endTurnOnClosedReply(this.session.agent);
       // A fresh session has only the tools it was built with.
       this.mcpTools.rebind(
@@ -2385,7 +2397,12 @@ export class ForeverEngine {
           this.pendingBusyWait != null ||
           this.languageRepairsThisTurn > 0
             ? null
-            : replyLanguageMismatch(event.messages);
+            : replyLanguageMismatch(event.messages, {
+                turn: this.userWords.turn,
+                recent: this.userWords.recent,
+                known:
+                  this.profile.knownReplyLanguage?.() ?? knownReplyLanguage(),
+              });
         // Tools a change deferred under this turn adds: the turn continues
         // once with them, so the sender's request is finished rather than
         // declared impossible. Once per turn.

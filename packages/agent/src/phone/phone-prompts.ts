@@ -20,9 +20,16 @@ export function describeModel(reference: string | null): string {
   return reference;
 }
 
-/** The reply-language rule, falling back to the server's language for the user, else English. */
+/**
+ * The reply-language rule, falling back to the server's language for the
+ * user, else English. That language is the check-in language, so a request
+ * for another one is saved there too, and replies and check-ins stay one.
+ */
 function phoneReplyLanguageLine(language: string | null): string {
-  return replyLanguageLine(resolveReplyLanguage(null, language));
+  return (
+    `${replyLanguageLine(resolveReplyLanguage(null, language))} When they ask for ` +
+    "a reply language from now on, also save it with `checkins` op language."
+  );
 }
 
 /** `zone` and `language` are the user's, as the server knew them when the session started. */

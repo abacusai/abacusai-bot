@@ -12,6 +12,8 @@ import {
   writePhoneZone,
 } from "@abacus-ai/agent/phone-nudges";
 import { PLAN_GIVES } from "@abacus-ai/agent/plan-asks";
+import { namesItsLanguage } from "@abacus-ai/agent/reply-language";
+import { ownWords } from "@abacus-ai/agent/user-text";
 import type { AbacusPlanTier } from "@abacus-ai/contract/models";
 
 import type { PendingWait } from "#main/services/agent-tools/pending-waits";
@@ -300,9 +302,14 @@ export class NudgeAgenda {
       this.log(`[phone] nudged loops not saved: ${describe(error)}`);
     }
     if (this.supported && phoneLanguage(dir) == null) {
-      if (this.languageRefusals < MAX_LANGUAGE_REFUSALS)
+      // Their own words only, and enough of them: a bare "hi" or the app's notes name no language.
+      const words = ownWords(entry.text ?? "");
+      if (
+        this.languageRefusals < MAX_LANGUAGE_REFUSALS &&
+        namesItsLanguage(words)
+      )
         notes.push(SET_LANGUAGE_NOTE);
-      const fromScript = scriptLanguage(entry.text ?? "");
+      const fromScript = scriptLanguage(words);
       if (fromScript != null) this.scriptLang = fromScript;
     }
     return notes;

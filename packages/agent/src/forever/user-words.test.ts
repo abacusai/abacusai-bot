@@ -4,6 +4,7 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
+import { RecentOwnWords } from "../reply-language.js";
 import { ForeverEngine } from "./engine.js";
 
 describe("the user's words, mid-turn", () => {
@@ -15,10 +16,13 @@ describe("the user's words, mid-turn", () => {
       hiddenTurn: false,
       profile: { noteUserWords },
       midTask: { live: true, deliver },
+      userWords: new RecentOwnWords(),
     };
     const steer = ForeverEngine.prototype.steer;
     await steer.call(engine as never, "yes, keep the passport too", "m2");
     expect(noteUserWords).toHaveBeenCalledWith("yes, keep the passport too");
+    // The reply-language guard hears it too, as part of this turn.
+    expect(engine.userWords.turn).toBe("yes, keep the passport too");
 
     noteUserWords.mockClear();
     await steer.call({ ...engine, hiddenTurn: true } as never, "yes", "m3");

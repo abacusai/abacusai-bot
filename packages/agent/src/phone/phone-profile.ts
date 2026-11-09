@@ -12,6 +12,7 @@ import { BOT_TIME_TOOL_NAME, buildBotTimeTool } from "../bot/bot-time-tool.js";
 import { WHATSAPP_CHANNEL } from "../channel.js";
 import type { ForeverProfile } from "../forever/profile.js";
 import { buildOwnerTools, OWNER_TOOL_NAMES } from "../owner-tools.js";
+import { languageCodeScript } from "../reply-language.js";
 import { buildSendMediaTool } from "../send-media-tool.js";
 import { SEND_MEDIA_TOOL_NAME } from "../send-media.js";
 import { PHONE_MCP_TOOLS } from "../tool-policy.js";
@@ -37,7 +38,11 @@ import {
   phoneMemoryFingerprint,
   phoneStandingPrompt,
 } from "./phone-memory.js";
-import { phoneReplyLanguage, phoneZone } from "./phone-nudges.js";
+import {
+  phoneLanguage,
+  phoneReplyLanguage,
+  phoneZone,
+} from "./phone-nudges.js";
 import {
   buildPhonePageTool,
   type PagePublisher,
@@ -118,6 +123,12 @@ export function createPhoneProfile(
     // Read at session start; `current_time` reads the zone on every call.
     // The server's language for the user is the reply fallback, not the app's.
     statesReplyLanguage: true,
+    // The check-in language is set from the words the user writes in.
+    knownReplyLanguage: () => {
+      const code = phoneLanguage(home);
+      const script = code == null ? null : languageCodeScript(code);
+      return script == null ? null : { script, chosen: false };
+    },
     systemPrompt: () => [
       phoneOperatingPrompt(
         options.model,

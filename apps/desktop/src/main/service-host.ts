@@ -16,7 +16,7 @@ import {
   readUserLanguage,
   resolveReplyLanguage,
 } from "@abacus-ai/agent/user-language";
-import { visibleUserText } from "@abacus-ai/agent/user-text";
+import { ownWords, visibleUserText } from "@abacus-ai/agent/user-text";
 import {
   connectorById,
   connectorForService,
@@ -725,10 +725,6 @@ const AGREEMENT = new RegExp(
   "iu"
 );
 
-/** A chat app's message without its "[WhatsApp message from …]" label. */
-const unlabelled = (text: string): string =>
-  text.replace(/^\[[^\]\n]*\]\s*/, "");
-
 /** "Delegate it", "hand this off", "pass it on": a hand-off wherever it is said. */
 const HAND_OFF =
   /\b(?:delegate|hand (?:it |this |that )?(?:off|over)|pass (?:it|this|that) (?:on|to))\b/i;
@@ -799,7 +795,7 @@ const handOffRefusal = (
   // user's words, so it needs the message before the yes that says what.
   if (
     (lines.length > 1 || kind === "ask") &&
-    AGREEMENT.test(unlabelled(lines.at(-1) ?? ""))
+    AGREEMENT.test(ownWords(lines.at(-1) ?? ""))
   )
     return null;
   const named = others.filter(
@@ -6817,7 +6813,7 @@ export class ServiceHost {
       (entry) => Date.now() - entry.at < USER_WORDS_FRESH_MS
     );
     const said = recent.at(-1)?.text ?? "";
-    return AGREEMENT.test(unlabelled(said)) && recent.length > 1
+    return AGREEMENT.test(ownWords(said)) && recent.length > 1
       ? `${recent[0].text}\n${said}`
       : said;
   }
@@ -6977,12 +6973,13 @@ export class ServiceHost {
     const turns = readTranscriptTail(
       this.transcriptFile(sessionId),
       5000,
-      (role, text) => (role === "user" ? unlabelled(text) : text),
+      (role, text) => (role === "user" ? ownWords(text) : text),
       3000,
       from
     );
     // The whole message, as the tail keeps it (cut at 3000 with an ellipsis).
-    const key = unlabelled(words).replace(/\s+/g, " ").trim().slice(0, 3000);
+    const key = ownWords(words).replace(/\s+/g, " ").trim().slice(0, 3000);
+    if (key.length === 0) return null;
     const at = turns.findLastIndex(
       (turn) =>
         turn.role === "user" && (turn.text === key || turn.text === `${key}…`)

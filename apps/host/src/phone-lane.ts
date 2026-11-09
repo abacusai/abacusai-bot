@@ -171,7 +171,10 @@ function linkedGreeting(text: string | undefined): string {
 }
 
 /** What the loop is told for one inbox entry, after `notes`, each its own tagged part. */
-function phoneTurnText(entry: PhoneInboxEntry, notes: string[] = []): string {
+export function phoneTurnText(
+  entry: PhoneInboxEntry,
+  notes: string[] = []
+): string {
   // The host's own news is one tagged line, so the agent never takes it for
   // the user's words (a consent it checks reads only those).
   if (entry.kind === "note") {
