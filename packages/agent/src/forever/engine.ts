@@ -493,9 +493,10 @@ export class ForeverEngine {
 
         return [
           ...(persona == null ? [] : [persona]),
-          plan,
           ...base,
           ...(mcp == null ? [] : [mcp]),
+          // After the static blocks: a plan change rebuilds only from here.
+          plan,
           ...(memory == null ? [] : [memory]),
           ...(recentMemory == null ? [] : [recentMemory]),
           // Last of all, so it outweighs a kickstart or routine written in English.

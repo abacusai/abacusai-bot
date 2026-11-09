@@ -9,6 +9,7 @@ import { randomBytes } from "node:crypto";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
+import { OTHER_ABACUS_PRODUCTS } from "../base-prompt.js";
 import { fetchHold } from "../current-mode.js";
 import {
   budgetSecondsFor,
@@ -54,8 +55,7 @@ function envelope(url: string, body: string): string {
  * a how-to, the model gave another product's CLI steps as this app's. A page
  * or result there carries this note, outside the fence, pointing at bot_help.
  */
-export const OTHER_PRODUCT_NOTE =
-  "Note from AbacusAI Bot: pages on abacus.ai/help document Abacus AI's other products (Abacus AI Desktop with its CLI and VS Code extension, ChatLLM, Abacus AI Agent), not this app. Never give their steps, commands, settings or prices as AbacusAI Bot's: for this app's own settings and steps call bot_help, and for what it costs billing_plan.";
+export const OTHER_PRODUCT_NOTE = `Note from AbacusAI Bot: pages on abacus.ai/help document Abacus AI's other products (${OTHER_ABACUS_PRODUCTS}), not this app. Never give their steps, commands, settings or prices as AbacusAI Bot's: for this app's own settings and steps call bot_help, and for what it costs billing_plan.`;
 
 const isAbacusHelpPage = (url: string): boolean => {
   try {

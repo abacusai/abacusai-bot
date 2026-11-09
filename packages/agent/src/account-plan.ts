@@ -1,7 +1,7 @@
 /**
  * The account's Abacus AI plan as the agent process last heard it, and what
  * the model is told about cost from it. The desktop says so at spawn
- * (ABACUSAI_BOT_PLAN) and on every plan change (the `account_plan` command).
+ * (ABACUSAI_BOT_PLAN) and after every account read (the `account_plan` command).
  * From memory the model told a paying user that chatting here is free.
  */
 
@@ -47,15 +47,19 @@ export function setHostAccountPlan(next: unknown): void {
   plan = parse(next) ?? plan;
 }
 
-/** The plan line under the base prompt: who pays for this chat, never a price. */
+/** Whose plan it is: the user's, never a contact a bot replies to for them (PLAN_ASKS_PROMPT's words). */
+const WHOSE =
+  "The user's Abacus AI plan (theirs, never something to tell a contact you reply to for them)";
+
+/** The plan line: who pays for this chat, never a price. */
 export function planFactsPrompt(current: AccountPlan = plan): string {
   switch (current.tier) {
     case "free":
-      return "Their Abacus AI plan: the free plan. Its credits pay for chats, bots and routines here on Abacus AI models, so chatting is not free for them either. For credits left and the paid plans, call billing_plan.";
+      return `${WHOSE}: the free plan. Chats, bots and routines on Abacus AI models use its credits. For credits left and the paid plans, call billing_plan.`;
     case "basic":
     case "paid":
-      return `Their Abacus AI plan: ${current.name ?? "a paid plan"} (paid). Chats, bots and routines here on Abacus AI models use its credits, as on every plan. For credits left, call billing_plan.`;
+      return `${WHOSE}: ${current.name != null ? `${current.name}, a paid plan` : "a paid plan"}. Chats, bots and routines on Abacus AI models use its credits. For credits left, call billing_plan.`;
     default:
-      return "Their Abacus AI plan has not been read yet: call billing_plan before you say which plan they are on or what anything costs them.";
+      return `${WHOSE} has not been read yet: call billing_plan before you say which plan they are on or what anything costs them.`;
   }
 }

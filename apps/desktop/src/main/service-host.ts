@@ -492,6 +492,7 @@ import {
   creditSnapshot,
   fetchAbacusAccount,
   lockAbacusModelForPlan,
+  onAbacusAccountPlan,
   onAbacusAccountRead,
   onAbacusPlanChange,
   onFreePlan,
@@ -1855,15 +1856,17 @@ export class ServiceHost {
       prefs != null ? wallAfterAccountRead(prefs.get(), snapshot) : null;
     if (patch != null) prefs?.update(patch);
   });
+  /** What the model is told about cost follows the plan; see account-plan.ts. */
+  private readonly stopAccountPlanForwarding = onAbacusAccountPlan((plan) => {
+    this.agentManagerService.broadcastCommand({
+      type: "account_plan",
+      ...plan,
+    });
+  });
   /** The plan decides which paid-plan capabilities are on or offered, and which models it serves. */
   private readonly stopPlanForwarding = onAbacusPlanChange(() => {
     this.toolAvailabilityChanged();
     this.moveModelPinsToTier();
-    // What the model is told about cost follows the plan; see account-plan.ts.
-    this.agentManagerService.broadcastCommand({
-      type: "account_plan",
-      ...accountPlan(),
-    });
   });
   private readonly cronScheduler = new CronScheduler(
     async (jobId, trigger, fire) => {
@@ -3330,6 +3333,7 @@ export class ServiceHost {
     this.stop();
     this.stopCreditForwarding();
     this.stopPlanForwarding();
+    this.stopAccountPlanForwarding();
     this.connectWatcher.stop();
     this.vault?.stop();
     this.builtinMcpLifecycle.stopBrowserServer();

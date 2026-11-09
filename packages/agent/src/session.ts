@@ -1030,9 +1030,10 @@ export class AbacusBotSession {
 
         return [
           ...(persona == null ? [] : [persona]),
-          plan,
           ...base,
           ...(mcp == null ? [] : [mcp]),
+          // After the static blocks: a plan change rebuilds only from here.
+          plan,
           ...(remember == null ? [] : [remember]),
           ...(instructions == null ? [] : [instructions]),
           // Last of all, so it outweighs a template or routine written in English.

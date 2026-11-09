@@ -530,6 +530,8 @@ const remember = (value: AbacusAccountInfo): void => {
   const snapshot = snapshotOf(accountCache);
   if (snapshot != null)
     for (const listener of Array.from(accountReadListeners)) listener(snapshot);
+  const current = accountPlan();
+  for (const listener of Array.from(accountPlanListeners)) listener(current);
 };
 
 /**
@@ -741,14 +743,36 @@ export const cachedAbacusAccount = (): AbacusAccountInfo | null =>
   accountCache?.value ?? null;
 
 /** The plan as each agent is told it (ABACUSAI_BOT_PLAN, then the `account_plan` command). */
-export const accountPlan = (): {
+export interface AccountPlan {
   tier: AbacusPlanTier;
   name: string | null;
-} => ({
-  tier: abacusPlanTier(accountCache?.value),
-  // Optional on the server: the line then says "a paid plan".
-  name: accountCache?.value.plan?.trim() || null,
-});
+}
+
+/**
+ * The tier, and the plan's name only when it names that tier: a payment
+ * patches the tier before the read that renames the plan ("Free" on Basic).
+ */
+export const accountPlan = (): AccountPlan => {
+  const tier = abacusPlanTier(accountCache?.value);
+  const name = accountCache?.value.plan?.trim() ?? "";
+  return {
+    tier,
+    name:
+      name.length > 0 && abacusPlanTier({ plan: name }) === tier ? name : null,
+  };
+};
+
+const accountPlanListeners = new Set<(plan: AccountPlan) => void>();
+
+/** Hears the plan after every account read and every payment, for the agents. */
+export function onAbacusAccountPlan(
+  listener: (plan: AccountPlan) => void
+): () => void {
+  accountPlanListeners.add(listener);
+  return () => {
+    accountPlanListeners.delete(listener);
+  };
+}
 
 /** Whether the account is on the free plan: its tier, else its plan, reads "free". */
 export const onFreePlan = (

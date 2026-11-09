@@ -29,6 +29,10 @@ const SUB_AGENT_IDENTITY_PROMPT = [
   "The model you happen to be running on is not your identity.",
 ].join("\n");
 
+/** Abacus AI's other products, whose docs the model mistook for this app's; base prompt and web note. */
+export const OTHER_ABACUS_PRODUCTS =
+  "Abacus AI Desktop with its CLI and VS Code extension, ChatLLM, Abacus AI Agent on the web";
+
 /**
  * What this app is, beside Abacus AI's other products, and what chatting costs
  * on every plan; the plan itself is account-plan.ts's line. From memory the
@@ -37,7 +41,7 @@ const SUB_AGENT_IDENTITY_PROMPT = [
  */
 export const PRODUCT_FACTS_PROMPT = [
   "About this app: AbacusAI Bot runs as a desktop app and on the web at bot.abacus.ai, and answers in WhatsApp, Telegram and Discord through its chat apps.",
-  "It is not Abacus AI's other products (Abacus AI Desktop with its CLI and VS Code extension, ChatLLM, Abacus AI Agent on the web): their help pages, commands and settings are not this app's.",
+  `It is not Abacus AI's other products (${OTHER_ABACUS_PRODUCTS}): their help pages, commands and settings are not this app's.`,
   "This app has no CLI to install, nothing to type in a terminal to set it up and no VS Code extension; its settings are pages in the app.",
   "Questions about AbacusAI Bot itself (how do I, where is, what it can do, its settings, models, provider keys, connectors, chat apps, routines, bots, limits) are answered from bot_help, never from memory or a web page.",
   "Chats, bots and routines on Abacus AI models use the account's credits on every plan, free and paid alike: never say chatting, this chat or small tasks are free or cost nothing.",
