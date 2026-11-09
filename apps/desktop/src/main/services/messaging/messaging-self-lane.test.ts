@@ -54,6 +54,8 @@ const harness = (
   appTurn: boolean;
   inbound: (userId: string, text: string) => Promise<void>;
   delta: (content: string) => void;
+  /** A message steered into the running turn reached the model. */
+  steered: () => void;
   idle: () => void;
 } => {
   const prompts: string[] = [];
@@ -127,6 +129,8 @@ const harness = (
     },
     delta: (content: string) =>
       turns.emit("home-chat", { type: "text_delta", content }),
+    steered: () =>
+      turns.emit("home-chat", { type: "user_message_steered", content: "" }),
     idle: () =>
       turns.emit("home-chat", {
         type: "status_changed",
@@ -274,6 +278,7 @@ describe("where a home bot's answer goes", () => {
     await h.inbound("ME", "summarise my inbox");
     h.delta("Working on it");
     h.gateway.noteAppMessage("home-chat");
+    h.steered();
     h.delta("Here is your inbox summary and the reminder you asked for.");
     h.idle();
 

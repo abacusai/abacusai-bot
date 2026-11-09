@@ -101,8 +101,11 @@ const fakeAgent = (emit: (event: Record<string, unknown>) => void) => {
   };
 };
 
-const harness = () => {
+const harness = (options: { slowFirstSend?: boolean } = {}) => {
+  /** What reached the chat, and which message each send threaded against. */
   const sent: string[] = [];
+  const threads: Array<string | undefined> = [];
+  let sends = 0;
   const turns = gatewayTurns(() => gateway);
   const agents = new Map<string, ReturnType<typeof fakeAgent>>();
   const agent = (sessionId: string) => {
@@ -148,8 +151,16 @@ const harness = () => {
       id: "whatsapp",
       start: async () => {},
       stop: async () => {},
-      sendText: async (_chatId: string, text: string) => {
+      sendText: async (
+        _chatId: string,
+        text: string,
+        replyContext?: Record<string, string>
+      ) => {
+        // A long first answer, sent in parts, still sending when the next is ready.
+        if (options.slowFirstSend === true && ++sends === 1)
+          await new Promise((resolve) => setTimeout(resolve, 30));
         sent.push(text);
+        threads.push(replyContext?.quoted);
       },
       selfChatId: () => "ME",
     }
@@ -161,26 +172,30 @@ const harness = () => {
     ) => Promise<void>;
   };
   return {
+    gateway,
     sent,
+    threads,
     /** The user's own chat (home bot) or a contact's (auto-reply bot). */
     lane: (who: "owner" | "contact") => {
       const userId = who === "owner" ? "ME" : "U1";
+      const sessionId = who === "owner" ? "home-bot-chat" : "contact-bot-chat";
       return {
+        sessionId,
         inbound: (text: string) =>
           internals.handleInbound("whatsapp", {
             userId,
             userName: userId,
             chatId: userId,
             text,
+            replyContext: { quoted: text },
           }),
-        agent: () =>
-          agent(who === "owner" ? "home-bot-chat" : "contact-bot-chat"),
+        agent: () => agent(sessionId),
       };
     },
   };
 };
 
-const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+const flush = () => new Promise((resolve) => setTimeout(resolve, 50));
 
 describe("a message that lands while the bot finishes", () => {
   for (const [lane, answer, steered, expected] of [
@@ -195,7 +210,7 @@ describe("a message that lands while the bot finishes", () => {
     ],
   ] as const) {
     for (const when of ["before the answer streams", "after it streamed"]) {
-      it(`delivers both answers, once, in order (${lane}, ${when})`, async () => {
+      it(`delivers both answers, once, in order, each threaded on its message (${lane}, ${when})`, async () => {
         const h = harness();
         const chat = h.lane(lane);
         const agent = () => chat.agent();
@@ -214,6 +229,7 @@ describe("a message that lands while the bot finishes", () => {
         await flush();
 
         expect(h.sent).toEqual(expected);
+        expect(h.threads).toEqual(["first question", "second question"]);
       });
     }
   }
@@ -231,5 +247,65 @@ describe("a message that lands while the bot finishes", () => {
     await flush();
 
     expect(h.sent).toEqual(["Nothing today or tomorrow."]);
+  });
+
+  it("keeps the order while the first answer is still sending", async () => {
+    const h = harness({ slowFirstSend: true });
+    const chat = h.lane("owner");
+    await chat.inbound("what is on my calendar?");
+    await chat.inbound("2+2");
+    chat.agent().stream("Your calendar is empty.");
+    chat.agent().finish();
+    chat.agent().stream("4");
+    chat.agent().finish();
+    chat.agent().end();
+    await flush();
+
+    expect(h.sent).toEqual(["Your calendar is empty.", "4"]);
+  });
+
+  it("still tells the steered message when the rest of the turn says nothing", async () => {
+    const h = harness();
+    const chat = h.lane("owner");
+    await chat.inbound("what is on my calendar?");
+    await chat.inbound("2+2");
+    chat.agent().stream("Your calendar is empty.");
+    chat.agent().finish();
+    chat.agent().end();
+    await flush();
+
+    expect(h.sent[0]).toBe("Your calendar is empty.");
+    // The empty-reply line, threaded on the message it failed to answer.
+    expect(h.sent).toHaveLength(2);
+    expect(h.threads[1]).toBe("2+2");
+  });
+
+  it("sends the chat its answer when the user joins from the app behind it, then nothing more", async () => {
+    const h = harness();
+    const chat = h.lane("owner");
+    await chat.inbound("what is on my calendar?");
+    chat.agent().stream("Your calendar is empty.");
+    h.gateway.noteAppMessage(chat.sessionId);
+    chat.agent().received("app-1");
+    chat.agent().finish();
+    chat.agent().stream("Here is what you asked in the app.");
+    chat.agent().finish();
+    chat.agent().end();
+    await flush();
+
+    expect(h.sent).toEqual(["Your calendar is empty."]);
+  });
+
+  it("sends the whole reply when the app's message waits for the next turn", async () => {
+    const h = harness();
+    const chat = h.lane("owner");
+    await chat.inbound("what is on my calendar?");
+    h.gateway.noteAppMessage(chat.sessionId);
+    chat.agent().stream("Your calendar is empty.");
+    chat.agent().finish();
+    chat.agent().end();
+    await flush();
+
+    expect(h.sent).toEqual(["Your calendar is empty."]);
   });
 });
