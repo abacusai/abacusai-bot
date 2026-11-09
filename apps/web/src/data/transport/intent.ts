@@ -47,7 +47,7 @@ const READS: Record<string, string> = {
   github: "pr prDiff status watch",
   links: "preview",
   mcp: "list runtime.events runtime.logs runtime.servers",
-  memory: "bots customInstructions.get events",
+  memory: "chatProject customInstructions.get events history projects withheld",
   messaging: "events snapshot",
   models: "list",
   notch: "events layout openCommands status",

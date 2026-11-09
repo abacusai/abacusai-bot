@@ -4,7 +4,7 @@
 {"seq":4,"event":{"type":"CUSTOM","name":"mcp.servers","value":{"servers":[]}}}
 {"seq":5,"event":{"type":"RUN_STARTED","threadId":"t-1","runId":"srv-<1>","metadata":{"abacus":{"serverInitiated":true}}}}
 {"seq":6,"event":{"type":"TEXT_MESSAGE_START","messageId":"srv-<1>:user","role":"user"}}
-{"seq":7,"event":{"type":"TEXT_MESSAGE_CONTENT","messageId":"srv-<1>:user","delta":"hello bot"}}
+{"seq":7,"event":{"type":"TEXT_MESSAGE_CONTENT","messageId":"srv-<1>:user","delta":"remember I take my tea black"}}
 {"seq":8,"event":{"type":"TEXT_MESSAGE_END","messageId":"srv-<1>:user"}}
 {"seq":9,"event":{"type":"CUSTOM","name":"agent.status","value":{"status":"submitted"}}}
 {"seq":10,"event":{"type":"CUSTOM","name":"agent.status","value":{"status":"streaming"}}}
