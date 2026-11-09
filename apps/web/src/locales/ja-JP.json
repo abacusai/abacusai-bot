@@ -4853,7 +4853,8 @@
       "cutoffSwitch": "または、アプリのモデル選択で RouteLLM - Open に切り替えると、より安定した返信が得られます。",
       "cutoffVerify": "または、電話番号を認証して無料の Abacus クレジットを有効にしてから、アプリで RouteLLM - Open に切り替えてください: {{link}}",
       "cutoffTopUp": "または、Abacus クレジットを追加して、アプリで RouteLLM - Open に切り替えてください: {{link}}",
-      "stillWorkingOn": "まだ作業中です(ここまで{{minutes}}分)。{{activity}}… 終わったらここで返信します。"
+      "stillWorkingOn": "まだ作業中です(ここまで{{minutes}}分)。{{activity}}… 終わったらここで返信します。",
+      "routineFullRun": "完全なレポートは AbacusAI Bot の「ルーティン」→「{{name}}」にあります。"
     },
     "unavailable": {
       "title": {

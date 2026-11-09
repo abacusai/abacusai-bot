@@ -28,3 +28,19 @@ export const isQuietNow = (
     ? current >= start && current < end
     : current >= start || current < end;
 };
+
+/**
+ * When the quiet hours `now` falls in end (epoch ms), or null when it is not
+ * quiet now.
+ */
+export const quietEndsAt = (
+  quiet: QuietHours | undefined,
+  now: Date
+): number | null => {
+  if (!isQuietNow(quiet, now)) return null;
+  const end = minutesOf(quiet!.end)!;
+  const at = new Date(now);
+  at.setHours(Math.floor(end / 60), end % 60, 0, 0);
+  if (at.getTime() <= now.getTime()) at.setDate(at.getDate() + 1);
+  return at.getTime();
+};

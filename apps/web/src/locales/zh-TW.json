@@ -4853,7 +4853,8 @@
       "cutoffSwitch": "或在應用程式的模型選擇器中切換到 RouteLLM - Open，回覆會更穩定。",
       "cutoffVerify": "或驗證手機來解鎖你的免費 Abacus 點數，然後在應用程式中切換到 RouteLLM - Open：{{link}}",
       "cutoffTopUp": "或儲值 Abacus 點數，然後在應用程式中切換到 RouteLLM - Open：{{link}}",
-      "stillWorkingOn": "還在處理中（目前已花 {{minutes}} 分鐘）。{{activity}}… 完成後我會在這裡回覆。"
+      "stillWorkingOn": "還在處理中（目前已花 {{minutes}} 分鐘）。{{activity}}… 完成後我會在這裡回覆。",
+      "routineFullRun": "完整報告在 AbacusAI Bot 的「例行工作」→「{{name}}」中。"
     },
     "unavailable": {
       "title": {

@@ -4853,7 +4853,8 @@
       "cutoffSwitch": "Ya da daha istikrarlı yanıtlar için uygulamanın model seçicisinde RouteLLM - Open'a geç.",
       "cutoffVerify": "Ya da ücretsiz Abacus kredilerinin kilidini açmak için telefonunu doğrula, ardından uygulamada RouteLLM - Open'a geç: {{link}}",
       "cutoffTopUp": "Ya da Abacus kredisi ekle ve uygulamada RouteLLM - Open'a geç: {{link}}",
-      "stillWorkingOn": "Hâlâ üzerinde çalışıyorum (şu ana kadar {{minutes}} dk). {{activity}}… Bitince buradan yanıt vereceğim."
+      "stillWorkingOn": "Hâlâ üzerinde çalışıyorum (şu ana kadar {{minutes}} dk). {{activity}}… Bitince buradan yanıt vereceğim.",
+      "routineFullRun": "Raporun tamamı AbacusAI Bot'ta, Rutinler → {{name}} altında."
     },
     "unavailable": {
       "title": {

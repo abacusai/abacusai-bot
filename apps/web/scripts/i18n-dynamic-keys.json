@@ -1750,6 +1750,7 @@
       "undelivered",
       "appClosed",
       "stillWorking",
+      "routineFullRun",
       "stillWorkingOn",
       "cutoff",
       "cutoffSwitch",

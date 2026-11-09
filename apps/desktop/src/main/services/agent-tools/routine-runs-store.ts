@@ -156,8 +156,15 @@ export const reclaimRoutineRecords = (stray: string, home: string): void => {
 };
 
 /** File-name safe and sortable: the start time first, then the session. */
-const runFileName = (record: RoutineRunRecord): string =>
-  `${record.startedAt.replaceAll(":", "-")}-${record.sessionId}.md`;
+const runFileName = (
+  record: Pick<RoutineRunRecord, "startedAt" | "sessionId">
+): string => `${record.startedAt.replaceAll(":", "-")}-${record.sessionId}.md`;
+
+/** Where a run's file is (or will be) kept. */
+export const routineRunFile = (
+  home: string,
+  record: Pick<RoutineRunRecord, "startedAt" | "sessionId">
+): string => path.join(routineRunsDir(home), runFileName(record));
 
 /** Files the run; returns its file. */
 export const recordRoutineRun = (
@@ -178,7 +185,7 @@ export const recordRoutineRun = (
     record.reply.length > 0 ? record.reply : NOTHING_SAID,
     "",
   ].join("\n");
-  const file = path.join(dir, runFileName(record));
+  const file = routineRunFile(home, record);
   fs.writeFileSync(file, body, "utf8");
   // Runs finish out of order, so "last" is the run that started last, not
   // the one that wrote last.

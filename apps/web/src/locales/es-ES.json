@@ -4853,7 +4853,8 @@
       "cutoffSwitch": "O cambia a RouteLLM - Open en el selector de modelos de la app para obtener respuestas más estables.",
       "cutoffVerify": "O verifica tu teléfono para desbloquear tus créditos gratuitos de Abacus y después cambia a RouteLLM - Open en la app: {{link}}",
       "cutoffTopUp": "O añade créditos de Abacus y cambia a RouteLLM - Open en la app: {{link}}",
-      "stillWorkingOn": "Sigo con ello ({{minutes}} min hasta ahora). {{activity}}… Te respondo aquí cuando esté listo."
+      "stillWorkingOn": "Sigo con ello ({{minutes}} min hasta ahora). {{activity}}… Te respondo aquí cuando esté listo.",
+      "routineFullRun": "El informe completo está en AbacusAI Bot, en Rutinas → {{name}}."
     },
     "unavailable": {
       "title": {

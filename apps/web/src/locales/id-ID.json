@@ -4853,7 +4853,8 @@
       "cutoffSwitch": "Atau beralih ke RouteLLM - Open di pemilih model aplikasi untuk balasan yang lebih stabil.",
       "cutoffVerify": "Atau verifikasi nomor teleponmu untuk membuka kredit Abacus gratismu, lalu beralih ke RouteLLM - Open di aplikasi: {{link}}",
       "cutoffTopUp": "Atau tambahkan kredit Abacus dan beralih ke RouteLLM - Open di aplikasi: {{link}}",
-      "stillWorkingOn": "Masih saya kerjakan ({{minutes}} menit sejauh ini). {{activity}}… Saya akan membalas di sini setelah selesai."
+      "stillWorkingOn": "Masih saya kerjakan ({{minutes}} menit sejauh ini). {{activity}}… Saya akan membalas di sini setelah selesai.",
+      "routineFullRun": "Laporan lengkapnya ada di AbacusAI Bot, di Rutinitas → {{name}}."
     },
     "unavailable": {
       "title": {

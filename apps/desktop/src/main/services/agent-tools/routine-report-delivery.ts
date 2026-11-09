@@ -1,12 +1,12 @@
 /**
  * A local routine run's report is the app's to deliver, as a hosted run's is
- * the server's: the run only writes its final answer. Delivered word for word,
+ * the server's: the run only writes its final answer. It goes word for word,
  * once per fire (the send ledger), to the chat the routine belongs to (its
  * bot's chat, or the chat it was made from) and to the user's own chat app
- * whose home bot made it. A chat app that is down, or quiet hours, holds the
- * send in a small outbox until it can go, never past the routine's next
- * report or 12 hours. The chat that got a report hears it on the user's next
- * message there, as a hidden note, so their answer has the run's context.
+ * whose home bot made it, through the gateway's one own-chat send (its
+ * outbox holds it through quiet hours or a lane that is down). A delivery is
+ * recorded before it is made and replayed at launch, and the chat that got a
+ * report hears it on the user's next message there, as a hidden note.
  */
 import fs from "node:fs";
 
@@ -20,7 +20,6 @@ import {
 } from "@abacus-ai/contract/messaging";
 
 import { isQuietReply } from "./routine-guards";
-import type { RoutineSendLedger } from "./routine-send-ledger";
 
 /** The send ledger's name for the in-app chat a report was delivered to. */
 export const REPORT_CHAT_PLATFORM = "app";
@@ -28,20 +27,22 @@ export const REPORT_CHAT_PLATFORM = "app";
 /** A chat app gets the report up to this long; the app keeps all of it. */
 export const REPORT_CHAT_APP_MAX_CHARS = 1_500;
 
-/** What a chat's card and its note show of a report. */
-const REPORT_KEPT_CHARS = 8_000;
-
-/** A held send this old would land a stale "go?" a day late: dropped. */
+/** A held chat-app send this old would land a stale "go?" a day late: dropped. */
 export const REPORT_OUTBOX_KEPT_MS = 12 * 60 * 60_000;
 
-/** Reports a chat's next message is told about: the newest few, none stale. */
+/** What a note keeps of a report, and of the reports a chat has pending. */
+const NOTE_REPORT_CHARS = 1_500;
 const NOTES_SHOWN = 3;
 const NOTE_KEPT_MS = 48 * 60 * 60_000;
-const NOTE_REPORT_CHARS = 1_500;
 
-const SELF_NAMES = /^(me|myself|self)$/i;
+/** Each lane by the chat app's name, for the run and the note. */
+export const REPORT_LANE_NAMES: Record<SelfLanePlatform, string> = {
+  whatsapp: "WhatsApp",
+  abacus_telegram: "Telegram",
+  abacus_discord: "Discord",
+};
 
-/** One finished run's report, as delivered. */
+/** One finished run's report. */
 export interface RunReport {
   /** The fire it answers (`routine@slot`): what the ledger keys on. */
   fire: string;
@@ -51,39 +52,16 @@ export interface RunReport {
   /** When the run started (ISO). */
   startedAt: string;
   text: string;
-  /** The run's file, for the note (a path as the model reads it). */
+  /** The run's own file, as the model reads paths. */
   runFile: string | null;
-  /** The bot whose routine it is, named on a chat app send by another's lane. */
-  from: { botId: string; name: string } | null;
-}
-
-export interface ReportLane {
-  lane: SelfLanePlatform;
-  /** Linked and up right now. */
-  live: boolean;
 }
 
 export interface RunReportTargets {
   /** The chat session to deliver into, or null (none, or already delivered). */
   chat: string | null;
-  /** Chat apps to send to now. */
-  send: SelfLanePlatform[];
-  /** Chat apps to hold in the outbox (down, or quiet hours). */
-  hold: SelfLanePlatform[];
+  /** The user's own chat apps still owed it. */
+  lanes: SelfLanePlatform[];
 }
-
-/** A send the run (or an earlier run of the fire) already made to the user's own chat on `lane`. */
-const sentToSelf = (
-  sent: ReadonlyArray<{ platform: string; to: string }>,
-  lane: SelfLanePlatform,
-  selfChatId: string | null
-): boolean =>
-  sent.some(
-    (entry) =>
-      selfLaneOf(entry.platform as MessagingPlatformId) === lane &&
-      (SELF_NAMES.test(entry.to.trim()) ||
-        (selfChatId != null && entry.to === selfChatId))
-  );
 
 /**
  * Where a run's report goes, or null when there is nothing to deliver: a run
@@ -95,98 +73,94 @@ export const runReportTargets = (input: {
   reply: string;
   /** The routine's chat: its bot's, or the one it was made from. */
   chat: string | null;
-  lanes: readonly ReportLane[];
+  /** The self lanes whose home bot made the routine. */
+  lanes: readonly SelfLanePlatform[];
   /** What this fire's runs already sent (`ledger.recipients`). */
   sent: ReadonlyArray<{ platform: string; to: string }>;
-  selfChatId: (lane: SelfLanePlatform) => string | null;
-  quiet: boolean;
+  /** `to` on `platform` is the user's own chat (the gateway's answer). */
+  isOwnChat: (platform: string, to: string) => boolean;
 }): RunReportTargets | null => {
   if (input.outcome !== "completed") return null;
   if (isQuietReply(input.reply) || input.reply.trim().length === 0) return null;
   const delivered = input.sent.some(
     (entry) => entry.platform === REPORT_CHAT_PLATFORM
   );
-  const owed = input.lanes.filter(
-    ({ lane }) => !sentToSelf(input.sent, lane, input.selfChatId(lane))
-  );
   return {
     chat: delivered ? null : input.chat,
-    send: owed
-      .filter(({ live }) => live && !input.quiet)
-      .map(({ lane }) => lane),
-    hold: owed
-      .filter(({ live }) => !live || input.quiet)
-      .map(({ lane }) => lane),
+    lanes: input.lanes.filter(
+      (lane) =>
+        !input.sent.some(
+          (entry) =>
+            selfLaneOf(entry.platform as MessagingPlatformId) === lane &&
+            input.isOwnChat(entry.platform, entry.to)
+        )
+    ),
   };
 };
 
-/** The report as a chat app gets it: whole up to the cap, else cut at a word. */
-export const chatAppReportText = (text: string): string => {
+/**
+ * A long report cut to `max`, keeping its end: a report's question is in its
+ * last lines. The head up to the last paragraph, else only the tail.
+ */
+export const reportExcerpt = (text: string, max: number): string => {
   const trimmed = text.trim();
-  if (trimmed.length <= REPORT_CHAT_APP_MAX_CHARS) return trimmed;
-  const cut = trimmed.slice(0, REPORT_CHAT_APP_MAX_CHARS - 1);
-  const space = cut.lastIndexOf(" ");
-  return `${(space > REPORT_CHAT_APP_MAX_CHARS * 0.8 ? cut.slice(0, space) : cut).trimEnd()}…`;
+  if (trimmed.length <= max) return trimmed;
+  const last = trimmed.slice(trimmed.lastIndexOf("\n\n") + 2).trim();
+  if (last.length < max * 0.7) {
+    const room = max - last.length - 3;
+    const head = trimmed.slice(0, room);
+    const space = head.lastIndexOf(" ");
+    return `${(space > room * 0.6 ? head.slice(0, space) : head).trimEnd()}\n…\n${last}`;
+  }
+  return `…${trimmed.slice(trimmed.length - (max - 1)).trimStart()}`;
 };
 
-interface HeldSend {
-  fire: string;
-  routineId: string;
-  runSessionId: string;
-  lane: SelfLanePlatform;
-  text: string;
-  from: { botId: string; name: string } | null;
-  queuedAt: number;
-}
+/** The report as a chat app gets it: the excerpt, then where the full run is. */
+export const chatAppReportText = (text: string, fullRun: string): string =>
+  `${reportExcerpt(text, REPORT_CHAT_APP_MAX_CHARS)}\n\n${fullRun}`;
+
+/** Report text cannot close or open the note's hidden block. */
+const neutralized = (text: string): string =>
+  text.replace(/<(\/?)system_reminder/gi, "<$1system-reminder");
+
+/** A message holding words the user wrote: not a fire, a kickstart or the app's own note. */
+export const carriesUserWords = (tags: UserTextTags | undefined): boolean =>
+  tags?.routineFire !== true &&
+  (tags?.operator == null
+    ? tags?.systemReminder !== true
+    : tags.operator.visibleFrom != null &&
+      tags.operator.kind !== "routine-editor");
 
 interface PendingNote {
-  fire: string;
   routineId: string;
   routineName: string;
+  runSessionId: string;
   startedAt: string;
-  deliveredAt: number;
+  addedAt: number;
   text: string;
   runFile: string | null;
+  /** The app delivered it here (and on these apps); false: the user opened the chat to answer it. */
+  delivered: boolean;
   lanes: SelfLanePlatform[];
 }
 
 interface Stored {
-  outbox: HeldSend[];
+  /** Deliveries recorded but not yet made: replayed at launch. */
+  pending: RunReport[];
   notes: Record<string, PendingNote[]>;
 }
 
-export interface RoutineReportDeliveryOptions {
-  ledger: RoutineSendLedger;
-  /** Sends to the user's own chat on a lane; rejects when it could not go. */
-  send: (
-    lane: SelfLanePlatform,
-    text: string,
-    from: { botId: string; name: string } | null
-  ) => Promise<void>;
-  /** Lanes linked and up right now. */
-  liveLanes: () => readonly SelfLanePlatform[];
-  /** Quiet hours, now. */
-  quiet: () => boolean;
-  selfChatId: (lane: SelfLanePlatform) => string | null;
-  /** Where the outbox and notes are kept across restarts; null keeps none. */
+export interface RoutineReportStoreOptions {
+  /** Where the store is kept across restarts; null keeps none. */
   file?: (() => string) | null;
   now?: () => number;
 }
 
-/** Each lane by the chat app's name, for the run and the note. */
-export const REPORT_LANE_NAMES: Record<SelfLanePlatform, string> = {
-  whatsapp: "WhatsApp",
-  abacus_telegram: "Telegram",
-  abacus_discord: "Discord",
-};
-
-export class RoutineReportDelivery {
+/** The deliveries in flight and the notes owed to chats, kept on disk. */
+export class RoutineReportStore {
   private stored: Stored | null = null;
 
-  /** Sends in flight per held entry, so a flush and a connect never double one. */
-  private readonly sending = new Set<string>();
-
-  constructor(private readonly options: RoutineReportDeliveryOptions) {}
+  constructor(private readonly options: RoutineReportStoreOptions = {}) {}
 
   private now(): number {
     return this.options.now?.() ?? Date.now();
@@ -194,14 +168,14 @@ export class RoutineReportDelivery {
 
   private get state(): Stored {
     if (this.stored != null) return this.stored;
-    this.stored = { outbox: [], notes: {} };
+    this.stored = { pending: [], notes: {} };
     const file = this.options.file?.();
     if (file == null) return this.stored;
     try {
       const parsed = JSON.parse(
         fs.readFileSync(file, "utf8")
       ) as Partial<Stored>;
-      if (Array.isArray(parsed.outbox)) this.stored.outbox = parsed.outbox;
+      if (Array.isArray(parsed.pending)) this.stored.pending = parsed.pending;
       if (parsed.notes != null && typeof parsed.notes === "object")
         this.stored.notes = parsed.notes;
     } catch {
@@ -216,175 +190,108 @@ export class RoutineReportDelivery {
     try {
       writeFileAtomicSync(file, JSON.stringify(this.state));
     } catch (error) {
-      console.error("[routines] could not keep the report outbox:", error);
+      console.error("[routines] could not keep report deliveries:", error);
     }
   }
 
-  /** Deliver one run's report where `targets` says; the chat's card is the host's. */
-  async deliver(report: RunReport, targets: RunReportTargets): Promise<void> {
-    const at = this.now();
-    // A newer report of the same routine replaces any older one still held.
-    this.state.outbox = this.state.outbox.filter(
-      (held) => held.routineId !== report.routineId
-    );
-    if (targets.chat != null) {
-      this.options.ledger.record(
-        report.fire,
-        REPORT_CHAT_PLATFORM,
-        targets.chat,
-        report.runSessionId,
-        report.text
-      );
-      this.addNote(
-        targets.chat,
-        report,
-        [...targets.send, ...targets.hold],
-        at
-      );
-    }
-    const text = chatAppReportText(report.text);
-    const held = (lane: SelfLanePlatform): HeldSend => ({
-      fire: report.fire,
-      routineId: report.routineId,
-      runSessionId: report.runSessionId,
-      lane,
-      text,
-      from: report.from,
-      queuedAt: at,
-    });
-    this.state.outbox.push(...targets.hold.map(held));
+  /** A delivery about to be made: kept until `finish`, so a crash replays it. */
+  begin(report: RunReport): void {
+    this.state.pending = [
+      ...this.state.pending.filter((entry) => entry.fire !== report.fire),
+      report,
+    ];
     this.save();
-    await Promise.all(targets.send.map((lane) => this.trySend(held(lane))));
   }
 
-  /** Send what the outbox holds that can go now; drop what is too old. */
-  async flush(): Promise<void> {
-    const now = this.now();
-    const before = this.state.outbox.length;
-    this.state.outbox = this.state.outbox.filter(
-      (held) => now - held.queuedAt <= REPORT_OUTBOX_KEPT_MS
+  finish(fire: string): void {
+    this.state.pending = this.state.pending.filter(
+      (entry) => entry.fire !== fire
     );
-    if (this.state.outbox.length !== before) this.save();
-    if (this.state.outbox.length === 0 || this.options.quiet()) return;
-    const live = new Set(this.options.liveLanes());
-    const due = this.state.outbox.filter((held) => live.has(held.lane));
-    if (due.length === 0) return;
-    this.state.outbox = this.state.outbox.filter((held) => !due.includes(held));
     this.save();
-    await Promise.all(due.map((held) => this.trySend(held)));
   }
 
-  /** One send; a failure goes back in the outbox, a repeat is never made. */
-  private async trySend(held: HeldSend): Promise<void> {
-    const key = `${held.fire}\u0000${held.lane}`;
-    if (this.sending.has(key)) return;
-    const already = sentToSelf(
-      this.options.ledger.recipients(held.fire),
-      held.lane,
-      this.options.selfChatId(held.lane)
-    );
-    if (already) return;
-    this.sending.add(key);
-    try {
-      await this.options.send(held.lane, held.text, held.from);
-      this.options.ledger.record(
-        held.fire,
-        held.lane,
-        "me",
-        held.runSessionId,
-        held.text
-      );
-    } catch (error) {
-      console.warn(
-        `[routines] report for ${held.routineId} held for ${held.lane}: ${String(error)}`
-      );
-      // Unless a newer report of the routine came in meanwhile.
-      if (
-        !this.state.outbox.some(
-          (entry) =>
-            entry.routineId === held.routineId && entry.fire !== held.fire
-        )
-      ) {
-        this.state.outbox.push(held);
-        this.save();
-      }
-    } finally {
-      this.sending.delete(key);
-    }
+  /** Deliveries a closed app left unmade, oldest first. */
+  unfinished(): RunReport[] {
+    return [...this.state.pending];
   }
 
-  /** What the outbox holds, for tests and the log. */
-  held(): ReadonlyArray<Pick<HeldSend, "fire" | "lane" | "text">> {
-    return this.state.outbox.map(({ fire, lane, text }) => ({
-      fire,
-      lane,
-      text,
-    }));
-  }
-
-  /** Queue the report for the chat's next user message. */
+  /** Owe the chat a note of this report on the user's next message there. */
   addNote(
     sessionId: string,
-    report: RunReport,
-    lanes: SelfLanePlatform[] = [],
-    at: number = this.now()
+    report: Pick<
+      RunReport,
+      | "routineId"
+      | "routineName"
+      | "runSessionId"
+      | "startedAt"
+      | "text"
+      | "runFile"
+    >,
+    delivery: { delivered: boolean; lanes?: SelfLanePlatform[] }
   ): void {
+    this.prune();
     const notes = (this.state.notes[sessionId] ?? []).filter(
-      (note) => note.fire !== report.fire
+      (note) => note.runSessionId !== report.runSessionId
     );
     notes.push({
-      fire: report.fire,
-      routineId: report.routineId,
-      routineName: report.routineName,
-      startedAt: report.startedAt,
-      deliveredAt: at,
-      text: report.text.slice(0, REPORT_KEPT_CHARS),
-      runFile: report.runFile,
-      lanes,
+      ...report,
+      text: reportExcerpt(report.text, NOTE_REPORT_CHARS),
+      addedAt: this.now(),
+      delivered: delivery.delivered,
+      lanes: delivery.lanes ?? [],
     });
     this.state.notes[sessionId] = notes.slice(-NOTES_SHOWN);
     this.save();
   }
 
   /**
-   * The hidden note for the user's message in `sessionId`, once: the reports
-   * delivered there since they last wrote, newest last, none older than 48 h.
+   * The hidden notes owed to the user's message in `sessionId`, and `taken`
+   * to call once that message has gone to the agent: an unsent message
+   * leaves them owed.
    */
-  takeNotes(sessionId: string): string[] {
-    const pending = this.state.notes[sessionId];
-    if (pending == null) return [];
-    delete this.state.notes[sessionId];
-    this.save();
+  notesFor(sessionId: string): { notes: string[]; taken: () => void } {
+    this.prune();
+    const pending = this.state.notes[sessionId] ?? [];
+    return {
+      notes: pending.map(reportNote),
+      taken: () => {
+        const left = (this.state.notes[sessionId] ?? []).filter(
+          (note) => !pending.includes(note)
+        );
+        if (left.length > 0) this.state.notes[sessionId] = left;
+        else delete this.state.notes[sessionId];
+        this.save();
+      },
+    };
+  }
+
+  /** Notes older than two days are no longer what the user is answering. */
+  private prune(): void {
     const now = this.now();
-    return pending
-      .filter((note) => now - note.deliveredAt <= NOTE_KEPT_MS)
-      .map((note) => reportNote(note));
+    let changed = false;
+    for (const [sessionId, notes] of Object.entries(this.state.notes)) {
+      const fresh = notes.filter((note) => now - note.addedAt <= NOTE_KEPT_MS);
+      if (fresh.length === notes.length) continue;
+      changed = true;
+      if (fresh.length > 0) this.state.notes[sessionId] = fresh;
+      else delete this.state.notes[sessionId];
+    }
+    if (changed) this.save();
   }
 }
 
-/** A message holding words the user wrote: not a fire, a kickstart or the app's own note. */
-export const carriesUserWords = (tags: UserTextTags | undefined): boolean =>
-  tags?.routineFire !== true &&
-  (tags?.operator == null
-    ? tags?.systemReminder !== true
-    : tags.operator.visibleFrom != null &&
-      tags.operator.kind !== "routine-editor");
-
 /** The `[routine report sent]` line: what the user is likely answering. */
 const reportNote = (note: PendingNote): string => {
-  const where = [
-    "this chat",
-    ...note.lanes.map((lane) => REPORT_LANE_NAMES[lane]),
-  ].join(" and ");
-  const text =
-    note.text.length > NOTE_REPORT_CHARS
-      ? `${note.text.slice(0, NOTE_REPORT_CHARS)}…`
-      : note.text;
+  const when = new Date(note.startedAt).toLocaleString();
+  const head = note.delivered
+    ? `[routine report sent] Your routine "${note.routineName}" (id ${note.routineId}) ran at ${when} and the app delivered its report to the user in ${["this chat", ...note.lanes.map((lane) => REPORT_LANE_NAMES[lane])].join(" and ")}:`
+    : `[routine report] The user opened this chat to reply to the report of your routine "${note.routineName}" (id ${note.routineId}) from its run at ${when}:`;
   return (
-    `[routine report sent] Your routine "${note.routineName}" (id ${note.routineId}) ran at ` +
-    `${new Date(note.startedAt).toLocaleString()} and the app delivered its report to the user in ${where}: ` +
-    `${JSON.stringify(text)}. Their message may answer it: if they say go or answer its question, do it here ` +
-    "with your own tools; change the routine with the cronjob tool only when they ask about the routine itself." +
-    (note.runFile != null ? ` The full run is in ${note.runFile}.` : "")
+    `${head} ${neutralized(JSON.stringify(note.text))}. Their message may answer it: if they say go or ` +
+    "answer its question, do it here with your own tools; change the routine with the cronjob tool only " +
+    "when they ask about the routine itself." +
+    (note.runFile != null
+      ? ` The full run is in ${neutralized(note.runFile)}.`
+      : "")
   );
 };

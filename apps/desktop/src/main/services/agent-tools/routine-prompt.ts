@@ -203,9 +203,16 @@ export const buildRoutineFirePrompt = (
         "If nothing has changed for the user since that run, and you did nothing for",
         'them this time, reply with exactly NO_REPLY and nothing else: no "nothing',
         'new" line and no message to anyone, even if the instruction asks you to say',
-        "so. A report the instruction asks for on every run (a digest, a summary, a",
-        "brief of the day) is not that: write it, even when little changed. NO_REPLY",
-        "also goes for a blocker that run already told them about, such as a",
+        // Where the app delivers, a digest asked for on every run still goes.
+        ...(memory.deliveredTo != null
+          ? [
+              "so. A report the instruction asks for on every run (a digest, a summary, a",
+              "brief of the day) is not that: write it, even when little changed. NO_REPLY",
+              "also goes for a blocker that run already told them about, such as a",
+            ]
+          : [
+              "so. The same goes for a blocker that run already told them about, such as a",
+            ]),
         "connection that is missing or signed out: it is said once, not on every run.",
         "A routine whose runs keep finding nothing pauses itself until the user resumes it."
       );

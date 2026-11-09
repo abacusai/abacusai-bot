@@ -62,6 +62,30 @@ export const selfLaneOf = (
   return app != null ? SELF_LANE_FOR_APP[app] : null;
 };
 
+/** "me", the name no address book holds and the one the user says most. */
+export const isSelfName = (to: string): boolean =>
+  /^(me|myself|self)$/i.test(to.trim());
+
+/**
+ * A send aimed at the user's own chat: "me", its chat id, or the user's own
+ * number written any way (the id's digits before the "@").
+ */
+export const isOwnChatTarget = (
+  to: string,
+  selfChatId: string | null
+): boolean => {
+  if (isSelfName(to)) return true;
+  if (selfChatId == null || selfChatId.length === 0) return false;
+  if (to.trim() === selfChatId) return true;
+  const digits = (text: string): string => text.replace(/\D/g, "");
+  const own = digits(selfChatId.split("@")[0] ?? "");
+  return (
+    own.length >= 7 &&
+    digits(to) === own &&
+    !/[a-z]/i.test(to.split("@")[0] ?? "")
+  );
+};
+
 // A platform id as a model should read it: the bare "abacus_telegram" reads to
 // a bot as "Telegram is connected" over an unlinked Telegram.
 export const describePlatformForAgent = (id: MessagingPlatformId): string => {

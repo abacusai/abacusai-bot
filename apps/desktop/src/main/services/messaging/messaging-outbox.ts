@@ -25,6 +25,12 @@ export interface OwedMessage {
   firstFailedAt: number;
   /** Later attempts made; the immediate ones are not counted. */
   tries: number;
+  /** Not tried before this moment (quiet hours); waiting is not a try. */
+  notBefore?: number;
+  /** Dropped unsent after this moment, with no notice: it would land stale. */
+  expiresAt?: number;
+  /** A later message with the same key drops this one unsent. */
+  replaces?: string;
 }
 
 /** What the outbox file holds. */
@@ -96,10 +102,20 @@ export class ChatOutbox {
    */
   owe(message: Omit<OwedMessage, "tries">, delayMs: number): boolean {
     if (this.known(message.id)) return false;
+    if (message.replaces != null)
+      for (const older of this.pending.filter(
+        (entry) => entry.replaces === message.replaces
+      ))
+        this.finish(older);
     this.pending.push({ ...message, tries: 0 });
     this.save();
     this.schedule(delayMs);
     return true;
+  }
+
+  /** The message went, or was given up on or dropped. */
+  isDone(id: string): boolean {
+    return this.done.includes(id);
   }
 
   /** Try everything owed after `delayMs` (0: now). */
@@ -136,6 +152,12 @@ export class ChatOutbox {
   private async pass(): Promise<void> {
     // A copy: messages that go, or are given up on, leave as the pass runs.
     for (const message of this.pending.slice()) {
+      const now = this.options.now();
+      if (message.expiresAt != null && now > message.expiresAt) {
+        this.finish(message);
+        continue;
+      }
+      if (message.notBefore != null && now < message.notBefore) continue;
       // Tried when the link is back; the gateway flushes on every connect.
       if (
         this.options.waitingOnLink?.(message.platform) === true &&
@@ -176,13 +198,15 @@ export class ChatOutbox {
     }
     this.save();
     if (this.pending.length === 0) return;
+    const now = this.options.now();
     this.schedule(
       Math.min(
-        ...this.pending.map(
-          (message) =>
-            OUTBOX_RETRY_MS[
-              Math.min(message.tries, OUTBOX_RETRY_MS.length - 1)
-            ] ?? 0
+        ...this.pending.map((message) =>
+          message.notBefore != null && message.notBefore > now
+            ? message.notBefore - now
+            : (OUTBOX_RETRY_MS[
+                Math.min(message.tries, OUTBOX_RETRY_MS.length - 1)
+              ] ?? 0)
         )
       )
     );

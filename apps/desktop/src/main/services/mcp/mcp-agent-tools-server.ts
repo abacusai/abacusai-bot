@@ -51,6 +51,7 @@ import {
   isMessagingPlatformId,
   type MessagingPlatformId,
   describePlatformForAgent,
+  isOwnChatTarget,
   selfLaneOf,
 } from "@abacus-ai/contract/messaging";
 import {
@@ -2687,15 +2688,17 @@ export class McpAgentToolsServer extends McpHttpServer {
     if (!isMessagingPlatformId(platform))
       return this.err(`Unknown platform "${platform}".`);
     // The app sends the run's answer to the user's own chat: once, not twice.
+    // A file still goes: the app's delivery carries only the words.
     if (
       callerSession != null &&
+      attachmentPath.length === 0 &&
       this.options.routineDeliversToSelf?.(callerSession, platform) === true &&
-      (/^(me|myself|self)$/i.test(to) ||
-        (messaging.selfChats?.() ?? []).some(
-          (self) =>
-            self.chatId === to &&
-            selfLaneOf(self.platform) === selfLaneOf(platform)
-        ))
+      isOwnChatTarget(
+        to,
+        (messaging.selfChats?.() ?? []).find(
+          (self) => selfLaneOf(self.platform) === selfLaneOf(platform)
+        )?.chatId ?? null
+      )
     )
       return this.ok(
         "Not sent: the app delivers your final answer to the user's own chat, word for word. Put what you meant to send in your answer instead."
