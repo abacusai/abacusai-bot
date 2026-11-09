@@ -7,6 +7,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { isDiskFull } from "@abacus-ai/agent/atomic-file";
+
 import { abacusBotHome } from "#main/paths";
 
 import { scrub } from "./scrub";
@@ -18,6 +20,9 @@ export const RETENTION_DAYS = 5;
 const MAX_FILE_BYTES = 32 * 1024 * 1024;
 
 const FLUSH_INTERVAL_MS = 1000;
+
+/** Lines a full disk holds back per stream until there is room again; the oldest go first. */
+const MAX_HELD_LINES = 2000;
 
 /** Each stream is its own file so one can be read without the others. */
 export type LogStream = "main" | "renderer" | "agent";
@@ -112,8 +117,11 @@ export class LogStore {
             : payload
         );
         this.written.set(target, already + payload.length);
-      } catch {
-        // Disk full, permissions, a home that vanished: the run continues.
+      } catch (error) {
+        // A full disk keeps the lines for the next flush: what happened while it
+        // was full is what a report needs. Anything else drops them; the run continues.
+        if (isDiskFull(error))
+          this.pending.set(stream, lines.slice(-MAX_HELD_LINES));
       }
     }
   }

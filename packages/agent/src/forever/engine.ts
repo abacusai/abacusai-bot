@@ -54,6 +54,7 @@ import { TOOL_NAME_ALIASES } from "../excluded-tools.js";
 import background from "../extensions/background.js";
 import { budgetStopReason, createBudgets } from "../extensions/budgets.js";
 import compactionPruner from "../extensions/compaction-pruner.js";
+import diskFull from "../extensions/disk-full.js";
 import requestSize from "../extensions/request-size.js";
 import spill from "../extensions/spill.js";
 import toolCallRepair from "../extensions/tool-call-repair.js";
@@ -532,6 +533,12 @@ export class ForeverEngine {
         {
           name: "abacusai-bot-tool-call-repair",
           factory: toolCallRepair as unknown as (pi: ExtensionAPI) => void,
+        },
+        {
+          name: "abacusai-bot-disk-full",
+          factory: diskFull(() => this.router.chain) as unknown as (
+            pi: ExtensionAPI
+          ) => void,
         },
         {
           name: "abacusai-bot-budgets",
@@ -1051,7 +1058,8 @@ export class ForeverEngine {
       this.pendingPromisedWork ||
       this.pendingNextStep
     ) {
-      if (this.interrupted) {
+      // A full disk ends the turn as a Stop does: a continuation would only write again.
+      if (this.interrupted || this.router.chain.diskFull) {
         this.pendingEmptyAsk = false;
         this.pendingPromisedWork = false;
         this.pendingNextStep = false;
@@ -1544,7 +1552,7 @@ export class ForeverEngine {
     // The budget extension aborted the run; pi records that as an error with
     // "This operation was aborted" for text, which reads as a provider fault.
     const budgetStop = budgetStopReason();
-    if (budgetStop != null) {
+    if (budgetStop != null && !this.router.chain.diskFull) {
       this.emitAgentEvent(
         {
           type: "error",

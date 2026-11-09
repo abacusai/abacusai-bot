@@ -345,6 +345,34 @@ describe("state streaming in from a running agent", () => {
     expect(readStored()).toEqual(writes);
   });
 
+  it("on a full disk stays in memory, and the next write after it saves the list whole", () => {
+    vi.useFakeTimers();
+    const session = service.create(WORKSPACE);
+    const update = (status: "running" | "stopped"): void =>
+      service.updateFromCliState({
+        sessionId: session.id,
+        status,
+        agentStatus: "idle",
+        model: "m",
+        mode: "YOLO",
+      } as never);
+    const save = vi.spyOn(stored, "set").mockImplementationOnce(() => {
+      throw Object.assign(new Error("ENOSPC: no space left on device, open"), {
+        code: "ENOSPC",
+      });
+    });
+    update("running");
+
+    // The timer's save fails without throwing out of the timer.
+    expect(() => vi.advanceTimersByTime(500)).not.toThrow();
+    expect(service.list(WORKSPACE)[0]).toMatchObject({ model: "m" });
+
+    update("stopped");
+    vi.advanceTimersByTime(500);
+    expect(readStored()[0]).toMatchObject({ status: "stopped", model: "m" });
+    save.mockRestore();
+  });
+
   it("ignores state for a session it does not hold", () => {
     expect(() =>
       service.updateFromCliState({

@@ -1,3 +1,4 @@
+import { isDiskFull } from "@abacus-ai/agent/atomic-file";
 import {
   parseUnattendedPolicy,
   type UnattendedPolicy,
@@ -696,7 +697,12 @@ export class AgentSessionManagerService {
     if (this.persistTimer != null) return;
     this.persistTimer = setTimeout(() => {
       this.persistTimer = null;
-      this.persist();
+      // A full disk keeps the list in memory; the next change writes it whole.
+      try {
+        this.persist();
+      } catch (error) {
+        if (!isDiskFull(error)) throw error;
+      }
     }, 500);
   }
 

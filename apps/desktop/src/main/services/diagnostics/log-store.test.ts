@@ -11,7 +11,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { dayKey, dayOfFile, LogStore, RETENTION_DAYS } from "./log-store";
 
@@ -97,6 +97,26 @@ describe("writing", () => {
       store.append("main", "still running");
       store.flush();
     }).not.toThrow();
+  });
+
+  it("holds what a full disk refused and writes it once there is room", () => {
+    const store = new LogStore(dir, at("2026-08-21T10:00:00"));
+    const append = vi.spyOn(fs, "appendFileSync").mockImplementationOnce(() => {
+      throw Object.assign(new Error("ENOSPC: no space left on device, write"), {
+        code: "ENOSPC",
+      });
+    });
+
+    store.start();
+    store.append("agent", "the turn's last words");
+    store.flush();
+    append.mockRestore();
+    store.append("agent", "space is back");
+    store.flush();
+
+    expect(read("agent-2026-08-21.log")).toMatch(
+      /the turn's last words\n.*space is back/
+    );
   });
 });
 

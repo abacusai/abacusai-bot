@@ -566,6 +566,32 @@ describe("one cause per turn, read from the whole chain of calls", () => {
     expect(shown.message).toMatch(/disk is full/);
   });
 
+  it("a full disk met mid-turn ends the turn on it, even after a later answer", () => {
+    const chain = new TurnChain();
+    chain.failed(
+      "ENOSPC: no space left on device (python: write failed)",
+      undefined
+    );
+    chain.replied({
+      role: "assistant",
+      provider: "abacus",
+      stopReason: "stop",
+      content: [{ type: "text", text: "The disk is full." }],
+    });
+    expect(chain.diskFull).toBe(true);
+    expect(chain.failure()?.cause).toBe("disk_full");
+    // Anything else a later answer recovers from.
+    const busy = new TurnChain();
+    busy.failed("429 Too Many Requests", "openrouter");
+    busy.replied({
+      role: "assistant",
+      provider: "openrouter",
+      stopReason: "stop",
+      content: [{ type: "text", text: "Done." }],
+    });
+    expect(busy.failure()).toBeNull();
+  });
+
   it("a connection error after a rate limit is the connection's, never busy", () => {
     const chain = new TurnChain();
     chain.failed("429 Too Many Requests", "openrouter");
