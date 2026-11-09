@@ -129,6 +129,10 @@
     "./user-language": {
       "types": "./dist/user-language.d.ts",
       "default": "./dist/user-language.js"
+    },
+    "./language-id": {
+      "types": "./dist/language-id.d.ts",
+      "default": "./dist/language-id.js"
     }
   },
   "scripts": {
@@ -157,6 +161,7 @@
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "docx": "9.8.1",
+    "eld": "2.1.1",
     "exceljs": "4.4.0",
     "jszip": "3.10.1",
     "mammoth": "1.13.0",

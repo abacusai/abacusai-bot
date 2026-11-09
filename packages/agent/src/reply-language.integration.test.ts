@@ -25,6 +25,7 @@ import {
 
 import { resetBackgroundJobs } from "./background-processes.js";
 import { BotSession } from "./bot/bot-session.js";
+import { loadLanguageModel } from "./language-id.js";
 import { NEXT_STEP_PROMPT } from "./next-step-ask.js";
 import { AgentStatus, type DesktopEvent } from "./protocol.js";
 import { AbacusBotSession } from "./session.js";
@@ -38,6 +39,19 @@ const ENGLISH_REPLY =
 const URDU_REPLY =
   "جی ہاں، کل صبح دس بجے آپ کی ٹیم کے ساتھ میٹنگ ہے اور اس کے بعد ایک کال ہے۔";
 const REPAIR = "Write that reply again now";
+const VIETNAMESE_QUESTION =
+  "Bạn có thể giúp tôi viết một đoạn mã nhỏ để quản lý danh sách khách hàng không?";
+const VIETNAMESE_REPLY =
+  "Được, tôi đã viết một đoạn mã nhỏ lưu danh sách khách hàng vào tệp, có thể thêm, tìm và xóa từng mục.";
+const ENGLISH_CODE_REPLY =
+  "Sure, I wrote a small script that keeps your customer list in a file and lets you add, search and remove entries.";
+const ENGLISH_REQUEST =
+  "Make a short video about a city where every road disappears for five seconds.";
+const HUNGARIAN_REPLY =
+  "Szívesen, a videóhoz először kiválasztom a stílust és a hosszt, aztán megírom a jeleneteket egyenként.";
+const STEER = "You just wrote to the person in";
+const systemOf = (index: number): string =>
+  JSON.stringify(provider.calls[index]?.messages[0] ?? "");
 
 let provider: FakeProvider;
 let home: string;
@@ -121,6 +135,97 @@ const scripted = (pick: (last: string, index: number) => Reply): void => {
 };
 
 describe.each(LOOPS)("%s", (_name, Loop) => {
+  beforeEach(async () => {
+    await loadLanguageModel();
+  });
+
+  it("asks once for an English reply to Vietnamese words, one script apart from nothing", async () => {
+    scripted((last) =>
+      last.includes(REPAIR)
+        ? { say: VIETNAMESE_REPLY }
+        : { say: ENGLISH_CODE_REPLY }
+    );
+    const { loop, events } = await start(Loop);
+    await loop.send(VIETNAMESE_QUESTION);
+
+    expect(asked(REPAIR)).toBe(1);
+    expect(provider.calls).toHaveLength(2);
+    expect(ends(events)).toHaveLength(1);
+    expect(idle(events)).toBe(true);
+  });
+
+  it("names the user's language in the prompt of the turn they first wrote in, and repairs a reply in the app's", async () => {
+    process.env.ABACUSAI_BOT_LOCALE = "hu-HU";
+    scripted((last) =>
+      last.includes(REPAIR)
+        ? { say: "Sure, here is the plan for the video, scene by scene." }
+        : { say: HUNGARIAN_REPLY }
+    );
+    try {
+      const { loop, events } = await start(Loop);
+      await loop.send(ENGLISH_REQUEST);
+
+      expect(
+        JSON.parse(
+          fs.readFileSync(path.join(home, "user-language.json"), "utf8")
+        )
+      ).toMatchObject({
+        language: { name: "English", source: "detected" },
+      });
+      expect(systemOf(0)).toContain("The user's language is English");
+      expect(asked(REPAIR)).toBe(1);
+      expect(ends(events)).toHaveLength(1);
+    } finally {
+      delete process.env.ABACUSAI_BOT_LOCALE;
+    }
+  });
+
+  it("judges a first run against the language the user's goal was in", async () => {
+    fs.writeFileSync(
+      path.join(home, "user-language.json"),
+      JSON.stringify({
+        language: { name: "Vietnamese", source: "detected" },
+        version: 2,
+      })
+    );
+    scripted((last) =>
+      last.includes(REPAIR)
+        ? { say: VIETNAMESE_REPLY }
+        : { say: ENGLISH_CODE_REPLY }
+    );
+    const { loop, events } = await start(Loop);
+    await loop.send(
+      '[first run] Introduce yourself once, then take the first step toward what the user asked for: "toi muon cai tien code".'
+    );
+
+    expect(asked(REPAIR)).toBe(1);
+    expect(ends(events)).toHaveLength(1);
+  });
+
+  it("steers the run back once when a progress note drifts, and leaves a reply in their language alone", async () => {
+    scripted((_last, index) =>
+      index === 0
+        ? {
+            say: "Let me check the folder first and then write the script for your customer list.",
+            call: {
+              name: "write",
+              args: { path: "customers.py", content: "customers = []" },
+            },
+          }
+        : { say: VIETNAMESE_REPLY }
+    );
+    const { loop, events } = await start(Loop);
+    await loop.send(VIETNAMESE_QUESTION);
+
+    const steered = provider.calls.filter((call) =>
+      call.userText.some((text) => text.includes(STEER))
+    );
+    expect(steered.length).toBeGreaterThan(0);
+    expect(asked(REPAIR)).toBe(0);
+    expect(ends(events)).toHaveLength(1);
+    expect(idle(events)).toBe(true);
+  });
+
   it("asks once for a Latin reply to words in another script, and ends the turn once", async () => {
     scripted((last) =>
       last.includes(REPAIR) ? { say: URDU_REPLY } : { say: ENGLISH_REPLY }

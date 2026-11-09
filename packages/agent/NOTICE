@@ -22,3 +22,7 @@ This product depends on software from third parties:
 
   - ast-grep (https://github.com/ast-grep/ast-grep), MIT License. Structural
     search and edit, loaded as a native addon at run time.
+
+  - eld, Efficient Language Detector (https://github.com/nitotm/efficient-language-detector-js)
+    by Nito T.M., Apache License 2.0. Reads the language a message is written
+    in on the device, for the reply-language check.

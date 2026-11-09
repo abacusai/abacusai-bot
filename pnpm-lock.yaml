@@ -850,6 +850,9 @@ importers:
       docx:
         specifier: 9.8.1
         version: 9.8.1
+      eld:
+        specifier: 2.1.1
+        version: 2.1.1
       exceljs:
         specifier: 4.4.0
         version: 4.4.0
@@ -4827,6 +4830,10 @@ packages:
     resolution: {integrity: sha512-UeJmFfOrAQS8OJWPZ4qtgHyWExa088/MtK5UEyoJGFH67cDEXkZSviOiKRCZ4Xij0zxI3JECgYs3oKx+AizQBA==}
     engines: {node: '>=0.10.0'}
     hasBin: true
+
+  eld@2.1.1:
+    resolution: {integrity: sha512-+WPgDcsV5rAuZR3BTW3rnnv03YvlP2JoHnFGDMLAp13XrDt7n58TBIL9hTmFs4VBVcozGxG/GC5WQILqRqd1pw==}
+    engines: {node: '>=14.17.0'}
 
   electron-builder-squirrel-windows@26.18.0:
     resolution: {integrity: sha512-a2elgTipboXNIsxqS1HOmHMGp4Pd3LJgIZOdIFTOskBSawvxKyZWYWQ1d7KKA4CtINSchYCYEKzhxRqiKZev9Q==}
@@ -11380,6 +11387,8 @@ snapshots:
   ejs@3.1.10:
     dependencies:
       jake: 10.9.4
+
+  eld@2.1.1: {}
 
   electron-builder-squirrel-windows@26.18.0(dmg-builder@26.18.0)(supports-color@7.2.0):
     dependencies:

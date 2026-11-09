@@ -72,6 +72,10 @@ const ALLOWED = new Set([
   // The language the user wants replies in: node's fs and path, and the
   // config leaf (node's fs, os and path); its detection call is plain fetch.
   "@abacus-ai/agent/user-language",
+  // The language a text is in, for a first-run goal: the user-language leaf
+  // above, the import-free reply-language leaf, and eld's n-gram data, a
+  // dynamic import of a chunk with no imports at all.
+  "@abacus-ai/agent/language-id",
   // Tool titles and the watchdog's tool summary: an 8 kB chunk with no imports
   // at all (the renderer takes the same entry).
   "@abacus-ai/agent/tool-display",

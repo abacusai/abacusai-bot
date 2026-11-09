@@ -79,6 +79,12 @@ import { refreshGithubToken } from "../github-token.js";
 import { HostServiceClient } from "../host-services.js";
 import type { InternalAgentEvent } from "../internal-events.js";
 import {
+  identifyLanguage,
+  LanguageFollower,
+  loadLanguageModel,
+  savedLanguageCode,
+} from "../language-id.js";
+import {
   connectMcpServers,
   toolOriginOf,
   type ConnectedMcp,
@@ -160,7 +166,9 @@ import {
 } from "../providers.js";
 import { ReasoningSplitter, splitReasoning } from "../reasoning-tags.js";
 import {
+  progressLanguageSteer,
   RecentOwnWords,
+  type ReplyLanguageContext,
   replyLanguageMismatch,
   replyLanguageRepairPrompt,
   type ReplyLanguageMismatch,
@@ -216,7 +224,7 @@ import {
   learnUserLanguage,
   WordsLanguage,
 } from "../user-language.js";
-import { ownWords } from "../user-text.js";
+import { isAppTurnForPerson, ownWords } from "../user-text.js";
 import webTools from "../web/tools.js";
 import type { ForeverProfile, HiddenTurnPrompt } from "./profile.js";
 import { endTurnOnClosedReply } from "./reply-end.js";
@@ -241,6 +249,8 @@ const CHARS_PER_TOKEN = 4;
 
 /** The custom message carrying a profile's beforeTurn context. */
 const FOREVER_CONTEXT_TYPE = "abacusai-bot:forever-turn-context";
+/** The steer a drifted progress note gets: back to the person's language. */
+const LANGUAGE_STEER_TYPE = "abacusai-bot:progress-language";
 
 const MALFORMED_TOOL_CALL_PATTERN = /malformed[ _]?(function|tool)[ _]?call/i;
 
@@ -412,6 +422,12 @@ export class ForeverEngine {
   } | null = null;
   /** What language those words are, asked only when their script cannot tell. */
   private readonly wordsLanguage = new WordsLanguage();
+  /** Keeps the saved reply language with the language the user writes in. */
+  private readonly languageFollower = new LanguageFollower();
+  /** The app started this turn for the person: judged against their saved language. */
+  private appTurn = false;
+  /** A progress note between tool calls drifted and the model was told; once per turn. */
+  private languageSteeredThisTurn = false;
   /** The turn's recoveries from an empty reply (empty-reply.ts). */
   private readonly emptyReplies = new EmptyReplies();
   /** The turn's ask after a reply that ended on a promise (promised-work.ts). */
@@ -747,6 +763,8 @@ export class ForeverEngine {
     this.pi = this.loadedPi;
     // A resumed chat: its earlier turns tell whose words the replies follow.
     this.userWords.seed(this.session.messages, (text) => ownWords(text));
+    // The language model loads off the turn's path; a turn before it has is judged by script.
+    void loadLanguageModel();
     endTurnOnClosedReply(this.session.agent);
     // A degenerate summary from a cheap model must not erase the history.
     anchorCompactions(this.session.sessionManager, {
@@ -875,6 +893,9 @@ export class ForeverEngine {
       return;
     }
 
+    // Their language, read before the prompt is, so this turn's prompt names it.
+    if (turn?.continueCut !== true && this.speaksForUser())
+      this.languageFollower.follow(ownWords(text, turn?.userText));
     await this.refreshStandingPrompt();
     await this.startTurnOnBestPoolModel();
     // The sponsored window closing (or opening) changes the headers the
@@ -907,6 +928,7 @@ export class ForeverEngine {
     this.streamCutsThisTurn = 0;
     this.cutStreamedThisTurn = false;
     this.languageRepairsThisTurn = 0;
+    this.languageSteeredThisTurn = false;
     this.pendingLanguageRepair = null;
     this.languageCheckRun = null;
     this.pendingEmptyAsk = false;
@@ -961,6 +983,8 @@ export class ForeverEngine {
       else {
         this.profile.noteUserWords?.(text);
         const words = ownWords(text, turn?.userText);
+        this.appTurn =
+          words.length === 0 && isAppTurnForPerson(text, turn?.userText);
         this.userWords.beginTurn(words);
         // Only the user's own words name their language: not a sender's, not a routine's.
         if (isOwnerAudience() && this.profile.statesReplyLanguage !== true)
@@ -1125,6 +1149,45 @@ export class ForeverEngine {
       this.emitInternal({ type: "hidden_turn", phase: "end", customType });
     }
     return ok;
+  }
+
+  /** The user's own chat, whose words are theirs: not a sender's, and not a profile with its own language rule. */
+  private speaksForUser(): boolean {
+    return (
+      isOwnerAudience() &&
+      !isSenderChat() &&
+      this.profile.statesReplyLanguage !== true
+    );
+  }
+
+  /** Whom a reply is judged against: the person's words, their saved language, and the device's reading of both. */
+  private languageContext(): ReplyLanguageContext {
+    return {
+      turn: this.userWords.turn,
+      recent: this.userWords.recent,
+      known: this.profile.knownReplyLanguage?.() ?? knownReplyLanguage(),
+      identify: identifyLanguage,
+      savedLanguage: this.speaksForUser() ? savedLanguageCode() : null,
+      appTurn: this.appTurn,
+    };
+  }
+
+  /**
+   * A note written between tool calls is read by the person too. One that
+   * drifted steers the rest of the run back to their language; nothing is
+   * rewritten, and the reply it ends with is judged at agent_end as always.
+   */
+  private checkProgressLanguage(text: string): void {
+    if (this.languageSteeredThisTurn || this.session == null) return;
+    const steer = progressLanguageSteer(text, this.languageContext());
+    if (steer == null) return;
+    this.languageSteeredThisTurn = true;
+    void this.session
+      .sendCustomMessage(
+        { customType: LANGUAGE_STEER_TYPE, content: steer, display: false },
+        { deliverAs: "steer" }
+      )
+      .catch(() => undefined);
   }
 
   /** The account's reply-language block, or null when the profile's own prompt states the rule. */
@@ -2475,7 +2538,10 @@ export class ForeverEngine {
           });
         }
 
-        if (!this.hiddenTurn) this.reply.messageEnded(callsTool(event.message));
+        if (!this.hiddenTurn) {
+          this.reply.messageEnded(callsTool(event.message));
+          if (callsTool(event.message)) this.checkProgressLanguage(full);
+        }
         this.rawStreamed = "";
         this.sanitizer.reset();
         this.currentMessageId = null;
@@ -2654,12 +2720,7 @@ export class ForeverEngine {
           this.pendingBusyWait != null ||
           this.languageRepairsThisTurn > 0
             ? null
-            : replyLanguageMismatch(event.messages, {
-                turn: this.userWords.turn,
-                recent: this.userWords.recent,
-                known:
-                  this.profile.knownReplyLanguage?.() ?? knownReplyLanguage(),
-              });
+            : replyLanguageMismatch(event.messages, this.languageContext());
         // A romanized candidate is kept with its run: dismissed, the turn goes on from here.
         this.languageCheckRun =
           this.pendingLanguageRepair?.romanized === true

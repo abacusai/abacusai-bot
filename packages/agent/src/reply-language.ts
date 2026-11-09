@@ -1,11 +1,14 @@
 /**
- * The language a reply is written in, judged by script. A model can drift into
- * another language after a run of tool results; the prompt asks it not to, and
- * this check lets the turn continue with a repair when it does anyway. Script,
- * not language: telling Latin from Han needs only a code-point range, and the
- * drift that matters is always across scripts. Code and the app's reminders
- * are left out of the count, and the reply is judged against the person's
- * own words over recent turns (`RecentOwnWords`), never one run's.
+ * The language a reply is written in, judged against the person it answers.
+ * A model can drift into another language after a run of tool results; the
+ * prompt asks it not to, and this check lets the turn continue with a repair
+ * when it does anyway. Two readings, one decision: the script (a code-point
+ * range, so Latin against Han, Arabic or Cyrillic needs nothing else), and,
+ * within one script, the language itself (English against Vietnamese or
+ * Hungarian), read by the device's language model that the engine passes in
+ * (`identify`, language-id.ts). Code and the app's reminders are left out,
+ * and the reply is judged against the person's own words over recent turns
+ * (`RecentOwnWords`), never one run's. No imports: the hosted app reads it.
  */
 
 export type Script =
@@ -107,7 +110,7 @@ const USED_SHARE = 0.1;
 const RECENT_SHARE = 0.25;
 
 /** Code, links, reminders and thinking: none of it is prose in a language. */
-const prose = (text: string): string =>
+export const prose = (text: string): string =>
   text
     .replace(/```[\s\S]*?```/g, " ")
     .replace(/`[^`\n]*`/g, " ")
@@ -190,6 +193,8 @@ const LANGUAGE_ALIASES: Record<string, string> = {
  * "اردو"), with the script it is written in. Built once.
  */
 let languageNames: Map<string, Script> | null = null;
+/** The same names, to the code each names. Built with them. */
+const languageCodes = new Map<string, string>();
 const namedLanguages = (): Map<string, Script> => {
   if (languageNames != null) return languageNames;
   const english = new Intl.DisplayNames(["en"], { type: "language" });
@@ -208,8 +213,10 @@ const namedLanguages = (): Map<string, Script> => {
           code
         );
         for (const each of [name, own])
-          if (each != null && each !== code)
+          if (each != null && each !== code) {
             names.set(each.toLowerCase(), script);
+            languageCodes.set(each.toLowerCase(), code);
+          }
       } catch {
         // A code Intl does not know names no language.
       }
@@ -218,6 +225,7 @@ const namedLanguages = (): Map<string, Script> => {
   for (const [alias, code] of Object.entries(LANGUAGE_ALIASES)) {
     const script = scriptOfCode(new Intl.Locale(code).maximize().script ?? "");
     if (script != null) names.set(alias, script);
+    languageCodes.set(alias, code);
   }
   languageNames = names;
   return names;
@@ -233,6 +241,53 @@ const withoutParentheses = (name: string): string => {
     else if (depth === 0) out += char;
   }
   return out;
+};
+
+/**
+ * Languages a reader takes for one: Serbian, Croatian, Bosnian and
+ * Montenegrin; Malay and Indonesian; Norway's two written standards. A reply
+ * in one to a person writing another is not drift.
+ */
+const LANGUAGE_FAMILY: Record<string, string> = {
+  sr: "hr",
+  bs: "hr",
+  cnr: "hr",
+  sh: "hr",
+  ms: "id",
+  nb: "no",
+  nn: "no",
+};
+
+const familyOf = (code: string): string => {
+  const base = code.trim().toLowerCase().split(/[-_]/)[0] ?? "";
+  return LANGUAGE_FAMILY[base] ?? base;
+};
+
+/** Whether two language codes ("pt", "pt-BR"; "sr", "hr") name one language to its reader. */
+export const sameLanguage = (a: string, b: string): boolean =>
+  familyOf(a) === familyOf(b);
+
+/** A language code's English name, as the prompt states it: "vi" is "Vietnamese". */
+export const languageNameOfCode = (code: string): string => {
+  try {
+    return new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+};
+
+/** The code of a language named in English or its own words: "Brazilian Portuguese" is "pt", "Türkçe" is "tr". */
+export const languageCodeOfName = (name: string): string | null => {
+  namedLanguages();
+  const lower = withoutParentheses(name)
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+  return (
+    languageCodes.get(lower) ??
+    languageCodes.get(lower.split(/\s+/).at(-1) ?? "") ??
+    null
+  );
 };
 
 /** The script a language code ("bn", "pt-BR") is written in; null when unknown. */
@@ -257,7 +312,7 @@ export const languageScript = (name: string): Script | null => {
 
 let namedPattern: RegExp | null = null;
 /** The scripts of the languages a text names: "in Arabic", "به فارسی". */
-const scriptsNamedIn = (text: string): Script[] => {
+const namesIn = (text: string): string[] => {
   const names = namedLanguages();
   namedPattern ??= new RegExp(
     `(?<![\\p{L}\\p{M}])(${[...names.keys()]
@@ -266,11 +321,48 @@ const scriptsNamedIn = (text: string): Script[] => {
       .join("|")})(?![\\p{L}\\p{M}])`,
     "giu"
   );
-  return [...text.toLowerCase().matchAll(namedPattern)].flatMap((match) => {
-    const script = names.get(match[1] ?? "");
+  return [...text.toLowerCase().matchAll(namedPattern)].map(
+    (match) => match[1] ?? ""
+  );
+};
+
+const scriptsNamedIn = (text: string): Script[] => {
+  const names = namedLanguages();
+  return namesIn(text).flatMap((name) => {
+    const script = names.get(name);
     return script == null ? [] : [script];
   });
 };
+
+/**
+ * Whether a text names a language in one of the given languages: "tiếng
+ * Anh" is English to a Vietnamese writer. A substring, case aside, so a
+ * Hungarian "angolul" names "angol".
+ */
+const namesLanguageIn = (
+  text: string,
+  code: string,
+  languages: readonly string[]
+): boolean => {
+  const lower = text.toLowerCase();
+  for (const language of languages)
+    try {
+      const name = new Intl.DisplayNames([language], { type: "language" })
+        .of(code)
+        ?.toLowerCase();
+      if (name != null && name !== code && lower.includes(name)) return true;
+    } catch {
+      // A code Intl does not know names nothing.
+    }
+  return false;
+};
+
+/** The codes of the languages a text names: "translate this into English" names "en". */
+const languagesNamedIn = (text: string): string[] =>
+  namesIn(text).flatMap((name) => {
+    const code = languageCodes.get(name);
+    return code == null ? [] : [code];
+  });
 
 const textOf = (message: unknown): string => {
   const content = (message as { content?: unknown } | undefined)?.content;
@@ -373,6 +465,20 @@ export interface ReplyLanguageContext {
   recent: readonly string[];
   /** Their saved language: a reply in its script is theirs, typed in Latin or not. */
   known?: KnownLanguage | null;
+  /**
+   * The language a text is in, read on the device (language-id.ts
+   * `identifyLanguage`), or null when it cannot tell from so few letters.
+   * Without it a reply is judged on its script only.
+   */
+  identify?: (text: string, minLetters?: number) => string | null;
+  /** The code of their saved language, chosen or learnt from their words; never the app's. */
+  savedLanguage?: string | null;
+  /**
+   * The app started this turn for the person (a first run, a routine, a
+   * connector that came up): there is nothing of theirs to read, so the
+   * reply is judged against their saved language.
+   */
+  appTurn?: boolean;
 }
 
 export interface ReplyLanguageMismatch {
@@ -386,7 +492,12 @@ export interface ReplyLanguageMismatch {
    * Devanagari), so only a check of their language (`WordsLanguage`) decides.
    */
   romanized?: true;
+  /** One script, another language: codes of what they write and what came back ("vi", "en"). */
+  language?: { expected: string; got: string };
 }
+
+/** Below this many letters a reply is judged on its script only, never its language. */
+const REPLY_LANGUAGE_LETTERS = 40;
 
 /** Scripts the person uses or asked for, and the one they write in most. */
 const allowedScripts = ({
@@ -444,41 +555,83 @@ const allowedScripts = ({
 };
 
 /**
- * Whether the turn ended in a script the person neither writes in nor asked
- * for. Only the LAST assistant text with enough to judge counts: the drift
- * starts after a run of tool results, and the whole reply would let the
- * paragraphs ahead of it outvote the wrong-script tail the user is left
- * reading. `messages` is the run's, as `agent_end` gives them; the person
- * comes from `context`. No words of theirs, no judgement.
+ * A reply in the person's script but another language: English to someone
+ * writing Vietnamese, Hungarian to someone writing English. Judged only on
+ * what can be read with confidence: their words this turn (or, for a turn
+ * the app started, their saved language) and a reply long enough to read.
+ * Any language they used in recent turns, named, or saved passes, and a
+ * language they chose is the only one that does. Across scripts is the
+ * script check's, romanized typing included.
  */
-export const replyLanguageMismatch = (
-  messages: readonly unknown[],
+const languageMismatch = (
+  reply: string,
   context: ReplyLanguageContext
 ): ReplyLanguageMismatch | null => {
-  let lastUser = -1;
+  const { identify, turn, recent, known } = context;
+  if (identify == null) return null;
+  const saved = context.savedLanguage ?? null;
+  const chosen = known?.chosen === true && saved != null;
+  const now = identify(turn);
+  const appTurn = context.appTurn === true && now == null;
+  const expected = chosen ? saved : (now ?? (appTurn ? saved : null));
+  if (expected == null) return null;
+  const got = identify(reply, REPLY_LANGUAGE_LETTERS);
+  if (got == null) return null;
+  const script = dominantScript(reply);
+  const theirs =
+    now != null && !chosen
+      ? dominantScript(turn)
+      : languageCodeScript(expected);
+  if (script == null || script !== theirs) return null;
+  const named = languagesNamedIn([...recent, turn].join("\n"));
+  const allowed = chosen
+    ? [expected, ...named]
+    : [expected, saved, ...recent.map((words) => identify(words)), ...named];
+  if (allowed.some((code) => code != null && sameLanguage(code, got)))
+    return null;
+  // Asked for in their own words: "dịch sang tiếng Anh".
+  const theirLanguages = allowed.filter((code): code is string => code != null);
+  if (namesLanguageIn([...recent, turn].join("\n"), got, theirLanguages))
+    return null;
+  return { expected: script, got: script, language: { expected, got } };
+};
+
+/** The last assistant text after the run's last user message with enough letters to judge; null without one. */
+const lastReplyText = (messages: readonly unknown[]): string | null => {
   for (let index = messages.length - 1; index >= 0; index--) {
-    if (roleOf(messages[index]) === "user") {
-      lastUser = index;
-      break;
-    }
+    const role = roleOf(messages[index]);
+    if (role === "user") return null;
+    if (role !== "assistant") continue;
+    const text = textOf(messages[index]);
+    if (scriptCounts(text).letters >= MIN_LETTERS) return text;
   }
-  if (lastUser < 0) return null;
+  return null;
+};
+
+/**
+ * Whether one text written to the person is in a script or language they
+ * neither write in nor asked for. Used on the reply a turn ends with, and on
+ * the progress notes written between tool calls, which the person reads too.
+ */
+export const textLanguageMismatch = (
+  text: string,
+  context: ReplyLanguageContext
+): ReplyLanguageMismatch | null => {
   const { known } = context;
   const person = allowedScripts(context);
-  if (person == null) return null;
-  const { allowed, expected, latinTurn } = person;
-  // Latin words may be the reply's language romanized; never Han (a known
-  // model drift) or against a language they chose.
-  const mismatch = (got: Script): ReplyLanguageMismatch =>
-    latinTurn && got !== "latin" && got !== "cjk" && known?.chosen !== true
-      ? { expected, got, romanized: true }
-      : { expected, got };
-  for (let index = messages.length - 1; index > lastUser; index--) {
-    if (roleOf(messages[index]) !== "assistant") continue;
-    const reply = scriptCounts(textOf(messages[index]));
-    if (reply.letters < MIN_LETTERS) continue;
+  if (person != null) {
+    const { allowed, expected, latinTurn } = person;
+    const reply = scriptCounts(text);
     const got = dominantOf(reply);
-    if (got != null && !allowed.has(got)) return mismatch(got);
+    // Latin words may be the reply's language romanized; never Han (a known
+    // model drift) or against a language they chose.
+    if (got != null && !allowed.has(got))
+      return latinTurn &&
+        got !== "latin" &&
+        got !== "cjk" &&
+        known?.chosen !== true
+        ? { expected, got, romanized: true }
+        : { expected, got };
     const han = reply.counts.get("cjk") ?? 0;
     if (
       !allowed.has("cjk") &&
@@ -486,9 +639,25 @@ export const replyLanguageMismatch = (
       han / reply.letters >= FOREIGN_SHARE
     )
       return { expected, got: "cjk" };
-    return null;
   }
-  return null;
+  return languageMismatch(text, context);
+};
+
+/**
+ * Whether the turn ended in a script or language the person neither writes
+ * in nor asked for. Only the LAST assistant text with enough to judge
+ * counts: the drift starts after a run of tool results, and the whole reply
+ * would let the paragraphs ahead of it outvote the wrong-language tail the
+ * user is left reading. `messages` is the run's, as `agent_end` gives them;
+ * the person comes from `context`.
+ */
+export const replyLanguageMismatch = (
+  messages: readonly unknown[],
+  context: ReplyLanguageContext
+): ReplyLanguageMismatch | null => {
+  if (!messages.some((message) => roleOf(message) === "user")) return null;
+  const reply = lastReplyText(messages);
+  return reply == null ? null : textLanguageMismatch(reply, context);
 };
 
 const SCRIPT_NAMES: Record<Script, string> = {
@@ -574,13 +743,48 @@ export const replyLanguagePrompt = (
 ): string =>
   ["## Reply language", "", replyLanguageLine(language, senderChat)].join("\n");
 
+/** What was written and what they write, in the words the model is told. */
+const mismatchNames = (
+  mismatch: ReplyLanguageMismatch
+): { got: string; expected: string } =>
+  mismatch.language != null
+    ? {
+        got: languageNameOfCode(mismatch.language.got),
+        expected: languageNameOfCode(mismatch.language.expected),
+      }
+    : {
+        got: SCRIPT_NAMES[mismatch.got],
+        expected: SCRIPT_NAMES[mismatch.expected],
+      };
+
 /**
- * What the model is told when its reply came back in the wrong script. In a
- * sender chat only the <reply> block is delivered, so the rewrite keeps it.
+ * What the model is told when its reply came back in the wrong script or
+ * language. In a sender chat only the <reply> block is delivered, so the
+ * rewrite keeps it.
  */
 export const replyLanguageRepairPrompt = (
   mismatch: ReplyLanguageMismatch,
   senderChat = false
-): string =>
-  `Your last reply was written in ${SCRIPT_NAMES[mismatch.got]}, but the person you are answering writes in ${SCRIPT_NAMES[mismatch.expected]}. Write that reply again now, in full, in their language, and keep answering in it.` +
-  (senderChat ? " Put the words to send inside <reply></reply>." : "");
+): string => {
+  const { got, expected } = mismatchNames(mismatch);
+  return (
+    `Your last reply was written in ${got}, but the person you are answering writes in ${expected}. Write that reply again now, in full, in their language, and keep answering in it.` +
+    (senderChat ? " Put the words to send inside <reply></reply>." : "")
+  );
+};
+
+/**
+ * What the model is told when a note it wrote between tool calls drifted,
+ * or null when the note is in the person's language. The person reads those
+ * notes too and the work goes on, so nothing is rewritten. A romanized
+ * candidate needs the model's reading of their words; the turn's end has it.
+ */
+export const progressLanguageSteer = (
+  note: string,
+  context: ReplyLanguageContext
+): string | null => {
+  const mismatch = textLanguageMismatch(note, context);
+  if (mismatch == null || mismatch.romanized === true) return null;
+  const { got, expected } = mismatchNames(mismatch);
+  return `You just wrote to the person in ${got}, but they write in ${expected}. Write everything from here on in their language, progress notes included, and finish the work as planned.`;
+};

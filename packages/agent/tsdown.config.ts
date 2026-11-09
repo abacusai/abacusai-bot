@@ -59,6 +59,8 @@ export default defineConfig({
     "src/model-path.ts",
     // The language the user wants replies in, for the chat apps' fixed lines.
     "src/user-language.ts",
+    // The language a text is in, read on the device: main reads a first-run goal's before the bot speaks.
+    "src/language-id.ts",
     // The phone reply's bubble split, for the hosted app's WhatsApp lane.
     "src/phone/phone-bubbles.ts",
     // The phone loop's zone, check-in language and due loops, for its agenda.
