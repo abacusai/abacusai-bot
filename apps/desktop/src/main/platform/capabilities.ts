@@ -120,6 +120,7 @@ export const WEB_HOST_ALLOWED = [
   "channels.startAgreed",
   "channels.events",
   "routines.editByChat",
+  "routines.replyToRun",
   "routines.run",
   "routines.hostedRuns",
   "routines.runners",

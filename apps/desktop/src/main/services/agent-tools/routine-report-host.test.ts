@@ -4,9 +4,9 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createJob, getJob } from "./services/agent-tools/cron-store";
-import { RoutineReportDelivery } from "./services/agent-tools/routine-report-delivery";
-import { RoutineSendLedger } from "./services/agent-tools/routine-send-ledger";
+import { createJob, getJob } from "./cron-store";
+import { RoutineReportDelivery } from "./routine-report-delivery";
+import { RoutineSendLedger } from "./routine-send-ledger";
 
 vi.mock("electron", () => {
   const anything: unknown = new Proxy(function () {}, {
@@ -27,8 +27,8 @@ vi.mock("electron", () => {
     }
   );
 });
-const { ServiceHost } = await import("./service-host");
-const { createBot } = await import("./services/bots/bot-store");
+const { ServiceHost } = await import("../../service-host");
+const { createBot } = await import("../bots/bot-store");
 
 let home: string;
 beforeEach(() => {
@@ -322,8 +322,7 @@ describe("a routine made from a chat", () => {
 
 describe("a message typed in the app's chat", () => {
   it("carries the report in front, and the chat still shows only the user's words", async () => {
-    const { withUserMessageNotes } =
-      await import("./services/agui/relay-service");
+    const { withUserMessageNotes } = await import("../agui/relay-service");
     const { visibleUserText } = await import("@abacus-ai/agent/user-text");
     const messages = [
       { id: "a", role: "assistant", parts: [{ type: "text", content: "Hi" }] },
