@@ -142,7 +142,7 @@ import {
   settleProviderRegistrations,
   DEFAULT_MAX_OUTPUT_TOKENS,
 } from "../providers.js";
-import { ReasoningSplitter } from "../reasoning-tags.js";
+import { ReasoningSplitter, splitReasoning } from "../reasoning-tags.js";
 import {
   replyLanguageMismatch,
   replyLanguageRepairPrompt,
@@ -2121,10 +2121,11 @@ export class ForeverEngine {
 
           const { text, thinking } = this.sanitizer.push(stream.delta);
 
-          if (text.length > 0) this.streamText(text);
-
+          // Reasoning first: in one delta a leading block precedes its reply.
           if (thinking.length > 0)
             this.emitAgentEvent({ type: "thinking_delta", content: thinking });
+
+          if (text.length > 0) this.streamText(text);
         } else if (stream.type === "thinking_delta" && stream.delta) {
           if (!this.hiddenTurn)
             this.emitAgentEvent({
@@ -2150,10 +2151,11 @@ export class ForeverEngine {
         if (!this.hiddenTurn) {
           if (this.rawStreamed.length === 0 && full.length > 0) {
             // A non-streaming provider delivers the whole message here.
-            const { text, thinking } = this.sanitizer.push(full);
-            const tail = this.sanitizer.flush();
-            const cleaned = tidyBotText(text + tail.text).trim();
-            const reasoning = (thinking + tail.thinking).trim();
+            const split = splitReasoning(full);
+            const cleaned = tidyBotText(split.text).trim();
+            const reasoning = split.thinking.trim();
+
+            this.sanitizer.reset();
 
             if (reasoning.length > 0)
               this.emitAgentEvent({
@@ -2171,13 +2173,13 @@ export class ForeverEngine {
             const remainder = text + tail.text;
             const reasoning = thinking + tail.thinking;
 
-            if (remainder.length > 0) this.streamText(remainder);
-
             if (reasoning.length > 0)
               this.emitAgentEvent({
                 type: "thinking_delta",
                 content: reasoning,
               });
+
+            if (remainder.length > 0) this.streamText(remainder);
           } else {
             // An extension replaced the message (tool-call repair); nothing
             // new is owed.

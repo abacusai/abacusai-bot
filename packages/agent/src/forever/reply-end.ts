@@ -24,7 +24,9 @@ const hasWords = (message: AssistantMessage): boolean => {
   const raw = message.content
     .map((block) => (block.type === "text" ? block.text : ""))
     .join("");
-  return tidyBotText(splitReasoning(raw).text).trim().length > 0;
+  const split = splitReasoning(raw);
+  // An unclosed leading block is reasoning that lost its close, not a reply.
+  return !split.reclaimed && tidyBotText(split.text).trim().length > 0;
 };
 
 const ranOtherTool = (message: AssistantMessage): boolean =>

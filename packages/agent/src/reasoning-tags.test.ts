@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { parseJsonReply } from "./phone/phone-upkeep.js";
 import { ReasoningSplitter, splitReasoning } from "./reasoning-tags.js";
 
 /** Stream `input` in chunks of `size`; `live` is what showed before the end. */
@@ -25,7 +26,8 @@ const stream = (
 
 /** Every chunk size from 1 to the whole string gives the same split. */
 const everySplit = (input: string): { text: string; thinking: string } => {
-  const whole = splitReasoning(input);
+  const { text, thinking } = splitReasoning(input);
+  const whole = { text, thinking };
 
   for (let size = 1; size <= input.length; size++) {
     const out = stream(input, size);
@@ -61,7 +63,32 @@ describe("leading reasoning blocks", () => {
     expect(out.live).toBe("");
     expect(out.thinking).toBe("The answer is probably 42.");
     expect(out.text).toBe("<think>The answer is probably 42.");
-    expect(splitReasoning("<think>cut off").text).toBe("<think>cut off");
+    expect(splitReasoning("<think>cut off")).toEqual({
+      text: "<think>cut off",
+      thinking: "",
+      reclaimed: true,
+    });
+  });
+
+  it("takes several leading blocks in a row", () => {
+    expect(
+      everySplit("<think>first</think>\n<thinking>second</thinking>\nAnswer.")
+    ).toEqual({ text: "Answer.", thinking: "firstsecond" });
+  });
+
+  it("allows a byte order mark before the block", () => {
+    expect(everySplit("\uFEFF<think>plan</think>Answer.")).toEqual({
+      text: "Answer.",
+      thinking: "plan",
+    });
+  });
+
+  it("reads a JSON reply past reasoning that contains braces", () => {
+    expect(
+      parseJsonReply(
+        '<think>Shape is {"items": [...]}.</think>\n{"items": [1]}'
+      )
+    ).toEqual({ items: [1] });
   });
 });
 

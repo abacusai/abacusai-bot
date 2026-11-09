@@ -4,7 +4,7 @@
  * models that write the block inline. A block counts only before any visible
  * text, where models emit it: the same tag mid-reply or in code is the reply.
  * A streaming state machine, because the UI renders deltas as they arrive.
- * No imports: the renderer and the chat-app lanes use it too.
+ * No imports: contract/reply-envelope (chat-app lanes, renderer) imports it.
  */
 
 const OPEN_TAGS = ["<think>", "<thinking>", "<reasoning>"] as const;
@@ -17,6 +17,11 @@ const CLOSE_TAGS: Record<string, string> = {
 export interface ReasoningSplit {
   text: string;
   thinking: string;
+}
+
+/** A message's end: `reclaimed` when an unclosed leading block came back as text. */
+export interface ReasoningEnd extends ReasoningSplit {
+  reclaimed: boolean;
 }
 
 export class ReasoningSplitter {
@@ -93,13 +98,18 @@ export class ReasoningSplitter {
    * End of message. A leading block never closed was not reasoning after all
    * (or was cut off): it comes back as text rather than eat the whole reply.
    */
-  flush(): ReasoningSplit {
-    const out: ReasoningSplit =
+  flush(): ReasoningEnd {
+    const out: ReasoningEnd =
       this.phase === "block"
-        ? { text: this.openTag + this.block + this.held, thinking: "" }
+        ? {
+            text: this.openTag + this.block + this.held,
+            thinking: "",
+            reclaimed: true,
+          }
         : {
             text: this.sawBlock ? this.held.trimStart() : this.held,
             thinking: "",
+            reclaimed: false,
           };
 
     this.reset();
@@ -118,12 +128,17 @@ export class ReasoningSplitter {
 }
 
 /** A finished message split into its leading reasoning and its reply. */
-export function splitReasoning(message: string): ReasoningSplit {
+export function splitReasoning(message: string): ReasoningEnd {
   const splitter = new ReasoningSplitter();
   const head = splitter.push(message);
   const tail = splitter.flush();
 
-  return { text: head.text + tail.text, thinking: head.thinking };
+  // A reclaimed block is text only: its words are not also reasoning.
+  return {
+    text: head.text + tail.text,
+    thinking: tail.reclaimed ? "" : head.thinking,
+    reclaimed: tail.reclaimed,
+  };
 }
 
 /** How much of the tail might be the start of the close tag. */

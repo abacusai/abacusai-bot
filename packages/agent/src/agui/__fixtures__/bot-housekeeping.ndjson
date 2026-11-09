@@ -3,8 +3,8 @@
 {"type":"mcp_servers","servers":[]}
 {"type":"event","event":{"type":"status_changed","status":"submitted"}}
 {"type":"event","event":{"type":"status_changed","status":"streaming"}}
-{"type":"event","event":{"type":"text_delta","content":"<reply>Hi there</reply>","messageId":"msg-1"}}
 {"type":"event","event":{"type":"thinking_delta","content":"pondering"}}
+{"type":"event","event":{"type":"text_delta","content":"<reply>Hi there</reply>","messageId":"msg-1"}}
 {"type":"event","event":{"type":"turn_complete","outcome":{"kind":"reply"},"usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":1,"model":"fake-1"}}}
 {"type":"event","event":{"type":"status_changed","status":"idle"}}
 {"type":"event","event":{"type":"turn_complete","usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":1,"model":"fake-1"}}}
