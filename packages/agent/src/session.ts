@@ -994,29 +994,31 @@ export class AbacusBotSession {
       ...(unattended ? { noSkills: true, noContextFiles: true } : {}),
       // Every prompt pi builds starts from ours; see base-prompt.ts.
       systemPromptOverride: () => basePrompt(noExtensions ? "builtin" : "ours"),
-      // What the model cannot work out for itself about this app.
+      // What the model cannot work out for itself about this app. Ordered
+      // fixed first, then per machine, then per user: the provider caches the
+      // longest identical prefix, so text shared by every user must lead.
       appendSystemPrompt: [
-        userProfile,
-        memory,
-        // Timezone before anything that shows a time: connectors return UTC.
-        timezonePrompt(),
-        webHostPrompt(),
-        // Both prompts name tools, so both read the same roster.
         displayPrompt(),
+        planModePrompt(toolNames),
+        serviceRoutingPrompt(),
+        // Both prompts name tools, so both read the same roster.
+        componentsPrompt(toolNames),
+        handoverPrompt(qualifiedName(toolNames, "present_deliverable")),
+        webHostPrompt(),
         // Null everywhere the tool is a real bash.
         windowsShellPrompt(),
         scriptRuntimesPrompt(),
-        planModePrompt(toolNames),
         githubPrompt(),
-        serviceRoutingPrompt(),
-        componentsPrompt(toolNames),
-        handoverPrompt(qualifiedName(toolNames, "present_deliverable")),
+        // Timezone before anything that shows a time: connectors return UTC.
+        timezonePrompt(),
+        userProfile,
+        memory,
       ].filter((part): part is string => part != null),
       // Blocks that must be re-read on every loader load rather than frozen at
       // start: this hook runs on each reload, and `base` is the array above,
       // so the user's own instructions stay last.
       appendSystemPromptOverride: (base: string[]): string[] => {
-        // After who the agent is (the base prompt): a bot's own persona, then what it knows.
+        // A bot's own persona, after the shared blocks so they stay a common prefix.
         const persona = personaPrompt();
         const instructions = unattended ? null : customInstructionsPrompt();
         const remember = unattended ? null : rememberPrompt();
@@ -1031,8 +1033,8 @@ export class AbacusBotSession {
         this.promptPlan = plan;
 
         return [
-          ...(persona == null ? [] : [persona]),
           ...base,
+          ...(persona == null ? [] : [persona]),
           ...(mcp == null ? [] : [mcp]),
           // After the static blocks: a plan change rebuilds only from here.
           plan,
