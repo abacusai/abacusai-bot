@@ -7,6 +7,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { isDiskFull } from "@abacus-ai/agent/atomic-file";
+
 import { abacusBotHome } from "#main/paths";
 
 import { scrub } from "./scrub";
@@ -18,6 +20,24 @@ export const RETENTION_DAYS = 5;
 const MAX_FILE_BYTES = 32 * 1024 * 1024;
 
 const FLUSH_INTERVAL_MS = 1000;
+
+/** What a full disk holds back per stream until there is room again; the oldest goes first. */
+const MAX_HELD_BYTES = 256 * 1024;
+const MAX_HELD_LINE_CHARS = 2000;
+
+/** The newest lines of `text` that fit the hold, each cut to a readable length. */
+const holdBack = (text: string): string[] => {
+  const held: string[] = [];
+  let bytes = 0;
+  for (const line of text.split("\n").reverse()) {
+    if (line.length === 0) continue;
+    const kept = line.slice(0, MAX_HELD_LINE_CHARS);
+    bytes += Buffer.byteLength(kept) + 1;
+    if (bytes > MAX_HELD_BYTES) break;
+    held.unshift(kept);
+  }
+  return held;
+};
 
 /** Each stream is its own file so one can be read without the others. */
 export type LogStream = "main" | "renderer" | "agent";
@@ -104,6 +124,7 @@ export class LogStore {
 
       if (already >= MAX_FILE_BYTES) continue;
 
+      const before = this.sizeOf(target);
       try {
         fs.appendFileSync(
           target,
@@ -112,8 +133,16 @@ export class LogStore {
             : payload
         );
         this.written.set(target, already + payload.length);
-      } catch {
-        // Disk full, permissions, a home that vanished: the run continues.
+      } catch (error) {
+        // A full disk keeps what did not land for the next flush: what happened
+        // while it was full is what a report needs. Anything else drops it.
+        if (!isDiskFull(error)) continue;
+        const landed = Math.max(0, this.sizeOf(target) - before);
+        this.written.set(target, already + landed);
+        this.pending.set(
+          stream,
+          holdBack(Buffer.from(payload).subarray(landed).toString("utf8"))
+        );
       }
     }
   }

@@ -49,9 +49,12 @@ let writeCounter = 0;
  * Node, a child's stderr (Rust's os error) or Chromium's storage says it.
  * Never a bare "quota": a provider's spent quota is not the disk.
  */
+// EDQUOT: the user's disk quota is spent, which the user frees the same way as a full disk.
 const DISK_FULL_CODES: ReadonlySet<string> = new Set(["ENOSPC", "EDQUOT"]);
+// "The disk is full." is Windows' ERROR_HANDLE_DISK_FULL, and python-env's own disk-full error, rightly.
+// The period only keeps out the card's "The disk is full, so…".
 const DISK_FULL_TEXT =
-  /\bENOSPC\b|\bEDQUOT\b|no space left on device|disk quota exceeded|not enough space on the disk|os error (?:28|112|122)\b|encountered full disk/i;
+  /\bENOSPC\b|\bEDQUOT\b|no space left on device|disk quota exceeded|not enough space on the disk|\bthe disk is full\.|os error (?:28|112|122)\b|encountered full disk/i;
 
 /** Whether a thrown error or a failure's text means the disk is full. */
 export const isDiskFull = (error: unknown): boolean => {

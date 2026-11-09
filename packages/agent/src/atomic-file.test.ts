@@ -255,6 +255,8 @@ describe("a full disk", () => {
     ["failed to write file: No space left on device (os error 28)", true],
     ["Disk quota exceeded (os error 122)", true],
     ["There is not enough space on the disk. (os error 112)", true],
+    ["Out-File : The disk is full.", true],
+    ["The disk is full, so this chat can't be saved", false],
     [
       "QuotaExceededError Encountered full disk while opening backing store for indexedDB.open.",
       true,

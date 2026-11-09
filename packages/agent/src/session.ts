@@ -64,6 +64,7 @@ import background from "./extensions/background.js";
 import batchReadTool from "./extensions/batch-read-tool.js";
 import { budgetStopReason, createBudgets } from "./extensions/budgets.js";
 import compactionPruner from "./extensions/compaction-pruner.js";
+import diskFull from "./extensions/disk-full.js";
 import editTool from "./extensions/edit-tool.js";
 import emailFormat from "./extensions/email-format.js";
 import guardrails from "./extensions/guardrails.js";
@@ -202,6 +203,7 @@ import { type ToolOrigin, type UnattendedPolicy } from "./tool-policy.js";
 import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "./tools-arrived.js";
 import { setTrashMover, TRASH_TIMEOUT_MS } from "./trash.js";
 import {
+  classifyAttempt,
   EMPTY_REPLY_FAILURE,
   OPENLLM_POOL_EMPTY_MESSAGE,
   OPENLLM_POOL_SHUT_MESSAGE,
@@ -1136,6 +1138,12 @@ export class AbacusBotSession {
               factory: this.verifyLoop.extension,
             },
             {
+              name: "abacusai-bot-disk-full",
+              factory: diskFull(() => this.router.chain) as unknown as (
+                pi: ExtensionAPI
+              ) => void,
+            },
+            {
               name: "abacusai-bot-budgets",
               factory: createBudgets({
                 runLimit: this.verifyLoop.runLimit,
@@ -1596,7 +1604,7 @@ export class AbacusBotSession {
     // The budget extension aborted the run; pi records that as an error with
     // "This operation was aborted" for text, which reads as a provider fault.
     const budgetStop = budgetStopReason();
-    if (budgetStop != null) {
+    if (budgetStop != null && !this.router.chain.diskFull) {
       this.emitAgentEvent(
         {
           type: "error",
@@ -1808,8 +1816,9 @@ export class AbacusBotSession {
       this.pendingNextStep
     ) {
       // Stop cancels the continuation, but the withheld idle event still has
-      // to go out or the session stays busy forever.
-      if (this.interrupted) {
+      // to go out or the session stays busy forever. A full disk ends it too:
+      // a continuation would only write again.
+      if (this.interrupted || this.router.chain.diskFull) {
         this.pendingEmptyAsk = false;
         this.pendingPromisedWork = false;
         this.pendingNextStep = false;
@@ -2480,6 +2489,15 @@ export class AbacusBotSession {
       /^\s*413\b/.test(text) ||
       REQUEST_TOO_LARGE_PATTERN.test(text.toLowerCase())
     ) {
+      return;
+    }
+
+    // This machine's write (pi's session file), not the provider: nothing retries
+    // it, and the chain recorded it at the reply (TurnChain.replied).
+    if (classifyAttempt(text, this.session?.model?.provider) === "disk_full") {
+      process.stderr.write(
+        `[disk] the disk is full; this turn ends: ${text.slice(0, 200)}\n`
+      );
       return;
     }
 

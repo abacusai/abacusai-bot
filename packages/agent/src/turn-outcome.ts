@@ -236,8 +236,13 @@ export class TurnChain {
     this.attempts = [];
   }
 
-  failed(raw: string, provider: string | undefined): FailureCause {
-    const cause = classifyAttempt(raw, provider);
+  /** A failed call; `known` when the caller already knows why (a tool's full disk). */
+  failed(
+    raw: string,
+    provider: string | undefined,
+    known?: FailureCause
+  ): FailureCause {
+    const cause = known ?? classifyAttempt(raw, provider);
     this.attempts.push({ provider, cause, raw });
     return cause;
   }
@@ -253,7 +258,19 @@ export class TurnChain {
       role?: unknown;
       provider?: unknown;
       stopReason?: unknown;
+      errorMessage?: unknown;
     };
+    const provider =
+      typeof reply?.provider === "string" ? reply.provider : undefined;
+    // The chat's own save failing ends the turn now, in both loops, before any recovery runs.
+    if (
+      reply?.stopReason === "error" &&
+      typeof reply.errorMessage === "string" &&
+      classifyAttempt(reply.errorMessage, provider) === "disk_full"
+    ) {
+      this.failed(reply.errorMessage, provider, "disk_full");
+      return;
+    }
     if (
       reply?.role !== "assistant" ||
       reply.stopReason === "error" ||
@@ -261,8 +278,6 @@ export class TurnChain {
       !failedCallStreamed([message])
     )
       return;
-    const provider =
-      typeof reply.provider === "string" ? reply.provider : undefined;
     this.attempts.push({ provider, cause: null, raw: "" });
   }
 
@@ -271,14 +286,20 @@ export class TurnChain {
     return this.attempts.some((attempt) => attempt.cause != null);
   }
 
+  /** Whether this turn met a full disk: its own write, or a tool's (extensions/disk-full.ts). */
+  get diskFull(): boolean {
+    return this.attempts.some((attempt) => attempt.cause === "disk_full");
+  }
+
   /**
    * Why the turn did not finish, or null when its last call answered. With
    * `poolShut`, every free source refused the account, which says more than
-   * any one source's busy or quota line.
+   * any one source's busy or quota line. A full disk ends the turn even after
+   * a later answer: nothing the turn did could be saved.
    */
   failure(poolShut = false): TurnFailure | null {
     const last = this.attempts.at(-1);
-    if (last == null || last.cause == null) return null;
+    if (last == null || (last.cause == null && !this.diskFull)) return null;
     const failed = this.attempts.filter((attempt) => attempt.cause != null);
     const seen = new Set(failed.map((attempt) => attempt.cause));
     if (poolShut) seen.add("free_pool_spent");
