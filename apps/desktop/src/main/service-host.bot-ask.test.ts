@@ -286,6 +286,57 @@ describe("where a request's answer goes", () => {
   });
 });
 
+describe("an answer the asker already read", () => {
+  const exchange = (askId: string, outcome = "answered") => ({
+    systemReminder: true,
+    operator: {
+      kind: "bot-exchange",
+      exchange: { askId, botId: "wri", bot: "Writer", kind: "ask", outcome },
+    },
+  });
+  const host = (held: Array<{ note: string; tags?: unknown }>) => {
+    const self: Record<string, unknown> = {
+      heldNotes: new Map([["res-chat", held]]),
+    };
+    self.botAnswerRead = proto.botAnswerRead.bind(self);
+    return self as {
+      botAnswerRead: (session: string, id: string) => void;
+      heldNotes: Map<string, Array<{ note: string; tags?: unknown }>>;
+    };
+  };
+
+  it("its held note says it was read, keeping the row's tags", () => {
+    const h = host([
+      { note: "[bot answer] Writer answered q1 …", tags: exchange("q1") },
+      { note: "[bot answer] Writer answered q2 …", tags: exchange("q2") },
+      { note: "a plain note" },
+    ]);
+    h.botAnswerRead("res-chat", "q1");
+    const [first, second, plain] = h.heldNotes.get("res-chat")!;
+    expect(first!.note).toContain("already read the whole answer");
+    expect(first!.note).toContain("NO_REPLY");
+    expect(first!.tags).toEqual(exchange("q1"));
+    // Another request's note, and a plain note, are left as they were.
+    expect(second!.note).toBe("[bot answer] Writer answered q2 …");
+    expect(plain!.note).toBe("a plain note");
+  });
+
+  it("leaves a failure's note, and a chat with nothing held, alone", () => {
+    const h = host([
+      {
+        note: "[bot answer] Writer could not answer",
+        tags: exchange("q1", "failed"),
+      },
+    ]);
+    h.botAnswerRead("res-chat", "q1");
+    expect(h.heldNotes.get("res-chat")![0]!.note).toBe(
+      "[bot answer] Writer could not answer"
+    );
+    h.botAnswerRead("other-chat", "q1");
+    expect(h.heldNotes.has("other-chat")).toBe(false);
+  });
+});
+
 describe("a task the user gave, passed on", () => {
   const TASK: BotAskRecord = { ...ASK, id: "q8", kind: "task" };
 

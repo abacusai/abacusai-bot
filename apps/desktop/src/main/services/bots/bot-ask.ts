@@ -123,7 +123,9 @@ export const botAskIntro = (asker: Named): string =>
     "Answer from your mission, your memory and what you know; search the web",
     "if the answer needs current facts. Here you cannot run code, read files,",
     "or use the user's accounts: if the request needs that, say so in one",
-    "line. Put the answer inside <reply></reply>: ONLY what is inside that",
+    "line. Asked what you did or how your work stands, answer from your own",
+    "chat below and your notes, say it is as of your last look there, and",
+    "never fill a gap with a guess. Put the answer inside <reply></reply>: ONLY what is inside that",
     "tag goes back to it; think outside the tag. Keep it short and complete:",
     "the finished result, not a plan. If something is unclear, pick a",
     "sensible default and say which.",
@@ -141,17 +143,28 @@ export const botAskIntro = (asker: Named): string =>
  */
 export const BOT_ANSWER_SEGMENT = "\n␞\n";
 
+/** One line of a bot's own chat: the user's, or the bot's own reply. */
+export interface OwnChatLine {
+  role: "user" | "assistant";
+  text: string;
+}
+
 /**
- * What the user recently told the asked bot in its own chat, as context for
- * an ask (that chat is not this conversation). Empty when there is none.
+ * The last exchanges of the asked bot's own chat with the user, as context
+ * for an ask (that chat is not this conversation). Its own replies are in
+ * it: asked what it did or where something stands, the bot answers from
+ * what it last said there, not from older notes. Empty when there is none.
  */
-export const ownChatContext = (lines: readonly string[]): string =>
+export const ownChatContext = (lines: readonly OwnChatLine[]): string =>
   lines.length === 0
     ? ""
     : [
-        "What the user told you recently in your own chat with them, for",
-        "context (not part of this request):",
-        ...lines.map((line) => `- ${line}`),
+        "Your own chat with the user, its last exchanges, for context (not",
+        "part of this request). What you said there is your latest word on",
+        "your work, newer than your notes:",
+        ...lines.map(
+          (line) => `- ${line.role === "user" ? "User" : "You"}: ${line.text}`
+        ),
       ].join("\n");
 
 /** The request as the asked bot sees it: who is asking, then what. */
@@ -269,6 +282,17 @@ export const askOutcomeNote = (
         "carry on without it.",
       ].join("\n");
 };
+
+/**
+ * An answer's note when the asker already read the answer whole with
+ * check_bot_answers before the note came: it has it, so it says nothing
+ * more unless it has not yet told the user.
+ */
+export const answerAlreadyReadNote = (id: string, bot: string): string =>
+  [
+    `[bot answer] ${bot} answered your request ${id}; you already read the whole answer with check_bot_answers.`,
+    "This is not a message from the user. If you already told the user what is useful in it, reply exactly NO_REPLY. Otherwise tell them now, briefly.",
+  ].join("\n");
 
 /** The user's words, quoted in a note: one line, cut at 300 characters. */
 const quoted = (words: string): string => {

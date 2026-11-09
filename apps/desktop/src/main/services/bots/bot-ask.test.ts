@@ -13,6 +13,7 @@ import {
   askStartedText,
   BOT_ANSWER_SEGMENT,
   BOT_TASK_PREFIX,
+  answerAlreadyReadNote,
   botAskIntro,
   botTaskPrompt,
   colleagueLines,
@@ -81,6 +82,13 @@ describe("what the asked bot reads", () => {
     );
   });
 
+  it("is told to answer about its own work from its chat, as of its last look, never a guess", () => {
+    const intro = botAskIntro(bots[0]);
+    expect(intro).toContain("answer from your own chat below and your notes");
+    expect(intro).toContain("as of your last look there");
+    expect(intro).toContain("never fill a gap with a guess");
+  });
+
   it("sees the request labelled with who sent it", () => {
     expect(frameBotRequest(bots[0], "Draft a tweet")).toBe(
       "[from bot Researcher (Research Scout)] Draft a tweet"
@@ -94,6 +102,19 @@ describe("what the asked bot reads", () => {
         `${botAskIntro(bots[0])}\n\n${frameBotRequest(bots[0], request)}`
       )
     ).toBeNull();
+  });
+});
+
+describe("the note for an answer the asker already read", () => {
+  it("keeps the row's words, says it was read, and lets the bot stay silent", () => {
+    const note = answerAlreadyReadNote("q2", "Writer");
+    expect(
+      note.startsWith("[bot answer] Writer answered your request q2")
+    ).toBe(true);
+    expect(note).toContain("already read the whole answer");
+    expect(note).toContain("reply exactly NO_REPLY");
+    // The answer is not in it again: nothing to repeat.
+    expect(note).not.toContain("<bot_reply");
   });
 });
 

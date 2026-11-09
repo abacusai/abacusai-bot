@@ -358,6 +358,8 @@ import {
   BOT_ASK_TURN_TIMEOUT_MS,
   BOT_TASK_PREFIX,
   BOT_TASK_TURN_TIMEOUT_MS,
+  answerAlreadyReadNote,
+  type OwnChatLine,
   requestGist,
   taskFollowUpNote,
 } from "./services/bots/bot-ask";
@@ -1748,6 +1750,7 @@ export class ServiceHost {
           this.askBot(askerId, askerSession, targetId, request),
         give: (askerId, askerSession, targetId, task) =>
           this.giveBotTask(askerId, askerSession, targetId, task),
+        answerRead: (askerSession, id) => this.botAnswerRead(askerSession, id),
         list: (askerId, limit) => this.botAskService.list(askerId, limit),
         received: (botId, limit) => this.botAskService.received(botId, limit),
         get: (askerId, id) => this.botAskService.get(askerId, id),
@@ -6090,7 +6093,7 @@ export class ServiceHost {
     // The app's one way to refresh running chats' tools (as when a chat app
     // connects): the asker's follow-up tools appear.
     changed: () => this.toolAvailabilityChanged(),
-    ownChatLines: (botId) => this.recentUserLines(botId),
+    ownChatTail: (botId) => this.recentOwnChat(botId),
     log: (line) => console.log(line),
     ...fileAskStore(),
   });
@@ -6383,6 +6386,27 @@ export class ServiceHost {
       );
   }
 
+  /**
+   * The asker read an answer whole with check_bot_answers, mid-turn, before
+   * its note came: the note, still held for that chat, now says the bot has
+   * it already. The row it draws stays; the bot does not tell the user twice.
+   */
+  private botAnswerRead(askerSession: string, id: string): void {
+    const held = this.heldNotes.get(askerSession);
+    if (held == null) return;
+    this.heldNotes.set(
+      askerSession,
+      held.map((entry) => {
+        const operator = entry.tags?.operator;
+        const exchange =
+          operator?.kind === "bot-exchange" ? operator.exchange : null;
+        return exchange?.askId === id && exchange.outcome === "answered"
+          ? { ...entry, note: answerAlreadyReadNote(id, exchange.bot) }
+          : entry;
+      })
+    );
+  }
+
   /** What the doing bot's chat draws in place of a passed-on task's prompt. */
   private taskTag(ask: BotAskRecord): BotTaskTag {
     const passer = this.botService.list().find((bot) => bot.id === ask.askerId);
@@ -6454,10 +6478,12 @@ export class ServiceHost {
   }
 
   /**
-   * The user's last few messages in a bot's own (forever) chat, short: the
+   * The last exchanges of a bot's own (forever) chat, both sides, short: the
    * context an asked bot answers with, since an ask runs in another chat.
+   * Its own replies are in it, so "what did you do today" is answered from
+   * what it last reported there, not from notes that have since gone stale.
    */
-  private recentUserLines(botId: string): string[] {
+  private recentOwnChat(botId: string): OwnChatLine[] {
     const sessionId = this.botService
       .list()
       .find((bot) => bot.id === botId)?.sessionId;
@@ -6465,10 +6491,10 @@ export class ServiceHost {
     const file =
       this.agentSessionManagerService.getDiagnosticInfo(sessionId)
         ?.agentSessionFile ?? null;
-    return readTranscriptTail(file, 12)
-      .filter((turn) => turn.role === "user")
-      .slice(-5)
-      .map((turn) => turn.text);
+    // Long enough per line that a status said late in a long reply survives.
+    return readTranscriptTail(file, 12, undefined, 600)
+      .filter((turn) => turn.text !== "NO_REPLY")
+      .slice(-8);
   }
 
   /** The asked bot's conversation for each ask whose turn is running. */
