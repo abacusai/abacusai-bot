@@ -12,11 +12,12 @@ import type {
 } from "@abacus-ai/contract/messaging";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { BacklogChat } from "./connector";
+import { type BacklogChat, collectBacklog } from "./connector";
 
 const stored = vi.hoisted(() => ({
   seen: null as unknown,
   log: [] as unknown[],
+  approved: new Set<string>(),
 }));
 
 vi.mock("./messaging-config-service", async (importOriginal) => ({
@@ -38,7 +39,7 @@ vi.mock("./messaging-config-service", async (importOriginal) => ({
   }),
   isPlatformEnabled: () => false,
   isPlatformConfigured: () => false,
-  approvedUserIds: () => new Set(["ana", "ben", "me"]),
+  approvedUserIds: () => stored.approved,
   findPairing: () => null,
   recordPairingRequest: () => {},
   listPairing: () => [],
@@ -97,12 +98,34 @@ const lane = (
     sendText: async (chatId: string, text: string) => {
       sent.push([chatId, text]);
     },
-    backlog: async (since: number, maxChats: number) => {
+    // The lane's real reading rule over scripted chats: the gateway's `wanted`, own chat first, the cap.
+    backlog: async (
+      since: number,
+      maxChats: number,
+      wanted: Parameters<typeof collectBacklog>[4]
+    ) => {
       reads.push(since);
-      return backlog(since).map((chat, index) =>
-        index < maxChats
-          ? chat
-          : { ...chat, messages: [], unread: true as const }
+      const chats = backlog(since);
+      return collectBacklog(
+        chats.map((row) => ({
+          chatId: row.chatId,
+          userId: row.userId,
+          name: row.userName,
+          own: row.userId === "me",
+          kind: row.kind ?? "direct",
+        })),
+        async (chatId) => {
+          const row = chats.find((c) => c.chatId === chatId)!;
+          return [
+            ...row.messages.map((m) => ({ ...m, direction: "in" as const })),
+            ...(row.answered
+              ? [{ at: Date.now(), text: "ok", direction: "out" as const }]
+              : []),
+          ];
+        },
+        since,
+        maxChats,
+        wanted
       );
     },
   });
@@ -125,11 +148,13 @@ const lane = (
 const chat = (
   id: string,
   messages: Array<[string, number, string]>,
-  answered = false
+  answered = false,
+  kind: "direct" | "group" = "direct"
 ): BacklogChat => ({
   chatId: id,
   userId: id,
   userName: id,
+  kind,
   answered,
   messages: messages.map(([mid, at, text]) => ({ id: mid, at, text })),
 });
@@ -139,6 +164,7 @@ beforeEach(() => {
   vi.setSystemTime(NOW);
   stored.seen = null;
   stored.log = [];
+  stored.approved = new Set(["ana", "ben", "me"]);
 });
 afterEach(() => {
   vi.useRealTimers();
@@ -243,11 +269,57 @@ describe("catch-up after a gap", () => {
     // Asleep for two hours: no timer runs, then the first late heartbeat.
     asleepAt = Date.now();
     vi.setSystemTime(asleepAt + 2 * HOUR);
-    await vi.advanceTimersByTimeAsync(60_000);
+    // The late heartbeat, then a moment for the page to sync, then the read.
+    await vi.advanceTimersByTimeAsync(60_000 + 30_000 + 50);
     expect(h.reads.at(-1)).toBeLessThanOrEqual(asleepAt);
     expect(h.turns.map((turn) => turn.text)).toEqual([
       expect.stringMatching(/^\[late\] .+\n\nyou up\?$/),
     ]);
+  });
+
+  it("never lets chats it would not answer crowd out the user's own chat", async () => {
+    stored.seen = { whatsapp: { seenUntil: NOW - 3 * HOUR, ids: [] } };
+    // Ten busy groups nobody allowed, all newer than the user's note to self.
+    const groups = Array.from({ length: 10 }, (_, i) =>
+      chat(
+        `group${i}`,
+        [[`g${i}`, NOW - 10_000 + i, `chatter ${i}`]],
+        false,
+        "group"
+      )
+    );
+    const h = lane(() => [
+      ...groups,
+      chat("me", [["s1", NOW - 2 * HOUR, "remind me at 5"]]),
+    ]);
+    await h.connect();
+    expect(h.turns.map((turn) => turn.chatId)).toEqual(["me"]);
+    // Nothing that would not be answered is reported as missed either.
+    expect(h.sent).toEqual([]);
+  });
+
+  it("keeps the mark at what a read saw, so a store that syncs late is still caught up", async () => {
+    stored.seen = { whatsapp: { seenUntil: NOW - 30_000, ids: [] } };
+    let synced = false;
+    let asleepAt = 0;
+    const h = lane(() =>
+      synced ? [chat("ana", [["s1", asleepAt + HOUR, "you up?"]])] : []
+    );
+    await h.connect();
+    await vi.advanceTimersByTimeAsync(60_000);
+    asleepAt = Date.now();
+    vi.setSystemTime(asleepAt + 2 * HOUR);
+    // Woken: the late heartbeat, the settle, and a read of a store not yet synced.
+    await vi.advanceTimersByTimeAsync(60_000 + 30_000 + 50);
+    expect(h.turns).toEqual([]);
+    expect(
+      (stored.seen as { whatsapp: { seenUntil: number } }).whatsapp.seenUntil
+    ).toBeLessThanOrEqual(asleepAt);
+    // The store syncs; the lane relinks and reads again from the same mark.
+    synced = true;
+    h.disconnect();
+    await h.connect();
+    expect(h.turns.map((turn) => turn.chatId)).toEqual(["ana"]);
   });
 
   it("answers at most 10 chats and tells the user once about the rest and the too-old", async () => {
@@ -255,6 +327,7 @@ describe("catch-up after a gap", () => {
     const recent = Array.from({ length: 12 }, (_, i) =>
       chat(`c${i}`, [[`r${i}`, NOW - HOUR, `msg ${i}`]])
     );
+    for (let i = 0; i < 12; i += 1) stored.approved.add(`c${i}`);
     const old = chat("ana", [["o1", NOW - 8 * HOUR, "from this morning"]]);
     const h = lane(() => [...recent, old]);
     await h.connect();

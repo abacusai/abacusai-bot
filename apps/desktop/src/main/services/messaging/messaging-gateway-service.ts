@@ -78,7 +78,11 @@ import {
 } from "./chat-failure-reply";
 import { forChat } from "./chat-markdown";
 import { looksLikeBotOutput, UndeliverableChatError } from "./connector";
-import type { InboundMessage, MessagingConnector } from "./connector";
+import type {
+  BacklogCandidate,
+  InboundMessage,
+  MessagingConnector,
+} from "./connector";
 import { DiscordWebConnector } from "./discord-web-connector";
 import {
   BACKLOG_MAX_CHATS,
@@ -523,6 +527,8 @@ export type Route = {
 
 /** A catch-up whose read failed (a page still settling) is asked again this often, this many times. */
 const CATCH_UP_RETRY_MS = 30_000;
+/** After a sleep, a page gets this long to sync before its catch-up reads. */
+const WAKE_SETTLE_MS = 30_000;
 const CATCH_UP_RETRIES = 3;
 
 /** How long a login probe may take before the last known state is used. */
@@ -667,8 +673,17 @@ export class MessagingGatewayService {
     for (const id of this.connectors.keys()) {
       if (this.states.get(id)?.state !== "connected" || this.catchingUp.has(id))
         continue;
-      if (slept) void this.catchUp(id);
-      else this.seen.stamp(id, now);
+      if (!slept) {
+        this.seen.stamp(id, now);
+        continue;
+      }
+      // Held until a waking page has had a moment to sync what came in.
+      this.catchingUp.add(id);
+      const timer = setTimeout(() => {
+        this.catchingUp.delete(id);
+        if (this.states.get(id)?.state === "connected") void this.catchUp(id);
+      }, WAKE_SETTLE_MS);
+      timer.unref?.();
     }
   }
 
@@ -2544,9 +2559,14 @@ export class MessagingGatewayService {
     }
     if (attempt === 0 && this.catchingUp.has(platformId)) return;
     this.catchingUp.add(platformId);
+    // Read by the answer rule, so the cap only counts chats that would be answered.
+    const answering = readGatewaySettings().respondToInbound;
+    const wanted = (chat: BacklogCandidate): boolean =>
+      chat.own ||
+      (answering && this.answerRule(platformId, chat, false) === "answer");
     let chats: Awaited<ReturnType<NonNullable<MessagingConnector["backlog"]>>>;
     try {
-      chats = await connector.backlog(since, BACKLOG_MAX_CHATS);
+      chats = await connector.backlog(since, BACKLOG_MAX_CHATS, wanted);
     } catch (error) {
       console.error(`[messaging] ${platformId} catch-up read failed:`, error);
       // A page still settling after connect: asked again a few times, then let go.
@@ -2565,16 +2585,19 @@ export class MessagingGatewayService {
       chats = [];
     }
     this.catchingUp.delete(platformId);
-    this.seen.stamp(platformId, now);
+    // Never past what the read saw: a store still syncing may hand over more,
+    // and the next catch-up must still find it.
+    const newest = Math.max(
+      0,
+      ...chats.flatMap((chat) => chat.messages.map((message) => message.at))
+    );
+    this.seen.stamp(platformId, Math.min(now, Math.max(since, newest)));
     if (this.connectors.get(platformId) !== connector) return;
-    // Off, only the user's own chat is answered: nobody else would be.
-    const self = connector.selfChatId?.() ?? null;
-    const answering = readGatewaySettings().respondToInbound;
     const log = this.messageLog.filter(
       (entry) => entry.platform === platformId
     );
     const plan = planCatchUp({
-      chats: chats.filter((chat) => answering || chat.userId === self),
+      chats,
       now,
       known: (id) => this.seen.has(platformId, id),
       lastSentAt: (chatId) => {
@@ -2606,6 +2629,7 @@ export class MessagingGatewayService {
         userId: chat.userId,
         userName: chat.userName,
         chatId: chat.chatId,
+        ...(chat.kind != null ? { kind: chat.kind } : {}),
         text: foldLate(fresh, now),
       });
     }
@@ -3009,13 +3033,8 @@ export class MessagingGatewayService {
     message: InboundMessage,
     isSelf: boolean
   ): "answer" | "hold" | "takeBack" {
-    const approved = approvedUserIds(platformId).has(message.userId);
-    const row = findPairing(platformId, message.userId);
-    if (isSelf) {
-      if (approved) return "answer";
-      // The identity the connector proved at connect outranks the queue, but
-      // not a pause: approving on sight undid it with the next message.
-      if (row?.status === "paused") return "hold";
+    const rule = this.answerRule(platformId, message, isSelf);
+    if (rule === "approveSelf") {
       recordPairingRequest({
         platform: platformId,
         userId: message.userId,
@@ -3028,22 +3047,47 @@ export class MessagingGatewayService {
       this.options.emitChanged();
       return "answer";
     }
-    if (approved) {
-      // The kind is learned as messages arrive, for the lists and the rule below.
-      if (message.kind != null && row != null && row.kind !== message.kind)
-        recordPairingRequest({
-          platform: platformId,
-          userId: message.userId,
-          userName: message.userName,
-          chatId: message.chatId,
-          firstMessage: null,
-          kind: message.kind,
-        });
-      return row == null || answersApproved(row) ? "answer" : "takeBack";
+    const row = findPairing(platformId, message.userId);
+    // The kind is learned as messages arrive, for the lists and the rule below.
+    if (
+      approvedUserIds(platformId).has(message.userId) &&
+      message.kind != null &&
+      row != null &&
+      row.kind !== message.kind
+    )
+      recordPairingRequest({
+        platform: platformId,
+        userId: message.userId,
+        userName: message.userName,
+        chatId: message.chatId,
+        firstMessage: null,
+        kind: message.kind,
+      });
+    return rule;
+  }
+
+  /**
+   * The rule itself, with no side effects: also what a catch-up reads by, so
+   * a chat that would not be answered never takes one of its places.
+   */
+  private answerRule(
+    platformId: MessagingPlatformId,
+    sender: Pick<InboundMessage, "userId" | "kind">,
+    isSelf: boolean
+  ): "answer" | "hold" | "takeBack" | "approveSelf" {
+    const approved = approvedUserIds(platformId).has(sender.userId);
+    const row = findPairing(platformId, sender.userId);
+    if (isSelf) {
+      if (approved) return "answer";
+      // The identity the connector proved at connect outranks the queue, but
+      // not a pause: approving on sight undid it with the next message.
+      return row?.status === "paused" ? "hold" : "approveSelf";
     }
+    if (approved)
+      return row == null || answersApproved(row) ? "answer" : "takeBack";
     if (row?.status === "paused") return "hold";
     return readGatewaySettings().answerPrivateChats === true &&
-      message.kind === "direct"
+      sender.kind === "direct"
       ? "answer"
       : "hold";
   }

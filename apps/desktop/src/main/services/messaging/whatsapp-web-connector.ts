@@ -14,6 +14,7 @@ import {
 import { nativeT } from "../config/native-language";
 import {
   backoffDelayMs,
+  type BacklogCandidate,
   type BacklogChat,
   BOT_SIGNATURE,
   boundedWait,
@@ -754,7 +755,11 @@ export class WhatsAppWebConnector implements MessagingConnector {
    * the bridge (the page driver cannot date a message). Same filters as the
    * live path: the user's words count only in the self chat, never a bot's.
    */
-  async backlog(sinceMs: number, maxChats: number): Promise<BacklogChat[]> {
+  async backlog(
+    sinceMs: number,
+    maxChats: number,
+    wanted: (chat: BacklogCandidate) => boolean
+  ): Promise<BacklogChat[]> {
     return this.serialize(async () => {
       if (!(await this.useBridge()) || this.bridge == null)
         throw new Error("the WhatsApp store bridge is not attached yet");
@@ -774,6 +779,8 @@ export class WhatsAppWebConnector implements MessagingConnector {
         return {
           chatId,
           name: own ? (this.selfDisplayName ?? chatId) : chat.name,
+          own,
+          kind: own ? ("direct" as const) : whatsAppChatKind(chat.jid, chat),
         };
       });
       return collectBacklog(
@@ -798,7 +805,8 @@ export class WhatsAppWebConnector implements MessagingConnector {
           });
         },
         sinceMs,
-        maxChats
+        maxChats,
+        wanted
       );
     });
   }
