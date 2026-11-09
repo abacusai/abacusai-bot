@@ -872,12 +872,17 @@ export interface McpServerEntry {
   isBuiltin?: boolean;
 }
 
+/** Why a hosted computer won't run local MCP servers or the terminal: a free plan, or a plan it couldn't read. */
+export type HostedLocalToolsRefusal = "plan-required" | "plan-unreadable";
+
 export interface McpServerInfo {
   /** The dict key in `mcp.json`; also the CLI's runtime server id, so events join on it. */
   id: string;
   name: string;
   config: McpServerEntry;
   isBuiltin: boolean;
+  /** Set when this hosted computer won't run the server (a local command), and why. */
+  inactive?: HostedLocalToolsRefusal;
 }
 
 export type BrowserApproval = "ask" | "always";

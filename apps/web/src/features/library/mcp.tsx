@@ -315,6 +315,13 @@ export const McpPage = () => {
             ))}
           </NativeSelect>
         )}
+        {query.data?.some((server) => server.inactive != null) && (
+          <ConnectNote role="status">
+            {query.data.some((server) => server.inactive === "plan-required")
+              ? t("phase5.localPlanRequired")
+              : t("phase5.localPlanUnreadable")}
+          </ConnectNote>
+        )}
         <GroupCard>
           {query.data?.map((server) => {
             const live = runtime.find((r) => r.id === server.id);
@@ -333,17 +340,21 @@ export const McpPage = () => {
                   <StatePill>
                     {server.config.disabled
                       ? t("phase5.disabled")
-                      : t(
-                          live?.status === "connected"
-                            ? "phase5.connected"
-                            : live?.status === "connecting"
-                              ? "phase5.connecting"
-                              : live?.status === "error"
-                                ? "phase5.failed"
-                                : live?.status === "auth-required"
-                                  ? "phase5.authRequired"
-                                  : "phase5.notConnected"
-                        )}
+                      : server.inactive === "plan-required"
+                        ? t("phase5.needsPaidPlan")
+                        : server.inactive === "plan-unreadable"
+                          ? t("phase5.paused")
+                          : t(
+                              live?.status === "connected"
+                                ? "phase5.connected"
+                                : live?.status === "connecting"
+                                  ? "phase5.connecting"
+                                  : live?.status === "error"
+                                    ? "phase5.failed"
+                                    : live?.status === "auth-required"
+                                      ? "phase5.authRequired"
+                                      : "phase5.notConnected"
+                            )}
                   </StatePill>
                   <Button
                     size="sm"

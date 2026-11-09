@@ -203,6 +203,11 @@ const expectedFailures: Record<string, { code: string; message: string }> = {
     code: "20",
     message: "This operation was aborted",
   },
+  // No signed-in account in the fixture: a hosted computer that can't read the plan refuses the terminal.
+  "terminal.start": {
+    code: "PRECONDITION_FAILED",
+    message: "The plan could not be read, so the terminal is off for now.",
+  },
   "terminal.output": {
     code: "NOT_FOUND",
     message: "No terminal terminal-1",

@@ -26,6 +26,8 @@ import type { McpDeviceServer } from "./mcp-device-server";
 
 type BuiltinMcpLifecycleDeps = {
   platform?: () => HostPlatform;
+  /** Whether user servers started as local commands may run here (hosted-local-tools.ts). */
+  localCommandsAllowed: () => Promise<boolean>;
   /** Web-host's browser: always on once the host-start lookup found a Chromium. */
   hostedBrowser?: { available: () => boolean };
   mcpConfigService: McpConfigService;
@@ -199,7 +201,8 @@ export class BuiltinMcpLifecycle {
     return this.deps.mcpConfigService.writeRuntimeMcp(
       mode,
       builtins,
-      sessionId
+      sessionId,
+      { localCommands: await this.deps.localCommandsAllowed() }
     );
   }
 

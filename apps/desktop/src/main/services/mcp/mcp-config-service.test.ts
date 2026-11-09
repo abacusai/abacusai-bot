@@ -190,12 +190,15 @@ describe("a server the user added", () => {
       instance as unknown as {
         buildRuntimeConfig: (
           mode: string,
-          builtins: Record<string, unknown>
+          builtins: Record<string, unknown>,
+          options: { localCommands: boolean }
         ) => { mcpServers: Record<string, { isBuiltin?: boolean }> };
       }
-    ).buildRuntimeConfig("code", {
-      browser: { url: "http://127.0.0.1:2/mcp" },
-    });
+    ).buildRuntimeConfig(
+      "code",
+      { browser: { url: "http://127.0.0.1:2/mcp" } },
+      { localCommands: true }
+    );
     expect(config.mcpServers.mine?.isBuiltin).toBeUndefined();
     expect(config.mcpServers.browser?.isBuiltin).toBe(true);
   });

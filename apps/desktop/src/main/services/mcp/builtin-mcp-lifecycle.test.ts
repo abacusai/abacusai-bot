@@ -93,6 +93,7 @@ describe("the built-in browser on every platform", () => {
     const written: Array<Record<string, unknown>> = [];
     const lifecycle = new BuiltinMcpLifecycle({
       platform: () => platform,
+      localCommandsAllowed: async () => true,
       hostedBrowser,
       mcpConfigService: {
         isBuiltinBrowserDisabled: () => disabledByUser,

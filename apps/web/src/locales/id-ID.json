@@ -1948,7 +1948,9 @@
     "terminal": {
       "title": "Terminal",
       "exited": "Process exited ({{code}})",
-      "newShell": "New terminal · {{shell}}"
+      "newShell": "New terminal · {{shell}}",
+      "planRequired": "Terminal tidak tersedia di paket gratis untuk komputer hosting Anda. Tingkatkan paket untuk menggunakannya.",
+      "planUnreadable": "Paket Anda tidak dapat diperiksa, jadi terminal dimatikan untuk sementara. Coba lagi sebentar lagi."
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
@@ -3664,6 +3666,10 @@
     "playSound": "Play {{cue}} sound",
     "savedUnverified": "Saved, not checked",
     "notConnected": "Not connected",
+    "needsPaidPlan": "Perlu paket berbayar",
+    "paused": "Dijeda",
+    "localPlanRequired": "Di paket gratis, server yang menjalankan perintah lokal tidak dimulai di komputer hosting Anda. Server dengan URL tetap berfungsi. Tingkatkan paket untuk menggunakannya.",
+    "localPlanUnreadable": "Paket Anda tidak dapat diperiksa, jadi server yang menjalankan perintah lokal dijeda. Server akan dimulai lagi setelah paket dapat dibaca.",
     "addKey": "Add key",
     "creditsExhausted": "You’ve used all your free Abacus.AI credits",
     "creditsAlternatives": "Connect a free source to keep going. No card needed.",

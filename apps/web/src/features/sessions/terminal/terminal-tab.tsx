@@ -17,6 +17,7 @@ import {
   type TerminalAction,
 } from "#renderer/components/terminal/keys";
 import { followNotices } from "#renderer/data/queries/notices";
+import { isRpcError } from "#renderer/data/query-client";
 import { TerminalActionBindingsContext } from "#renderer/lib/keyboard/action-bindings";
 import { uiPlatform } from "#renderer/lib/platform";
 
@@ -24,6 +25,11 @@ import { useSessionsTransport } from "../data/queries";
 import { retainTerminalStart } from "../dock/panel-tabs-store";
 import { pumpOutput, type OutputView } from "./output-pump";
 import { getTerminalView, type TerminalView } from "./terminal-registry";
+/** Why a hosted computer refused the terminal on this plan, if it did. */
+const planRefusal = (error: unknown): string | null =>
+  isRpcError(error) && error.code === "PRECONDITION_FAILED"
+    ? (error.data?.reason ?? null)
+    : null;
 const outputView = (
   view: TerminalView,
   write: OutputView["write"]
@@ -245,7 +251,15 @@ export const TerminalTab = ({
       })
       .catch((e) => {
         cleanup();
-        if (!abort.signal.aborted) setError(String(e));
+        if (abort.signal.aborted) return;
+        const reason = planRefusal(e);
+        setError(
+          reason === "plan-required"
+            ? t("sessions.terminal.planRequired")
+            : reason === "plan-unreadable"
+              ? t("sessions.terminal.planUnreadable")
+              : String(e)
+        );
       })
       .finally(finishStart);
     return () => {

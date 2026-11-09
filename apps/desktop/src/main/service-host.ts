@@ -217,7 +217,10 @@ import {
   type RoutineRunner,
   type RoutineUpdateInput,
 } from "@abacus-ai/contract/routines";
-import { InvalidInputError } from "@abacus-ai/contract/service-errors";
+import {
+  InvalidInputError,
+  PreconditionError,
+} from "@abacus-ai/contract/service-errors";
 import type {
   SitePack,
   SitePackProgress,
@@ -245,6 +248,7 @@ import {
   assertHostCapability,
   type HostPlatform,
 } from "./platform/capabilities";
+import { hostedLocalToolsRefusal } from "./platform/hosted-local-tools";
 import { isLowEndMachine } from "./platform/low-end-machine";
 import type { BusChannel, BusChannels } from "./rpc/event-bus";
 import { ConnectorGate } from "./services/agent-tools/connector-gate";
@@ -495,6 +499,7 @@ import { McpAdminService } from "./services/mcp/mcp-admin-service";
 import { McpAgentToolsServer } from "./services/mcp/mcp-agent-tools-server";
 import { McpBrowserServer } from "./services/mcp/mcp-browser-server";
 import {
+  isLocalCommandServer,
   McpConfigService,
   RESERVED_USER_SERVER_NAMES,
 } from "./services/mcp/mcp-config-service";
@@ -1900,6 +1905,8 @@ export class ServiceHost {
   );
   private readonly builtinMcpLifecycle = new BuiltinMcpLifecycle({
     platform: () => this.platform,
+    localCommandsAllowed: async () =>
+      (await hostedLocalToolsRefusal(this.platform)) == null,
     hostedBrowser: this.hostedChromium,
     mcpConfigService: this.mcpConfigService,
     browserServer: this.mcpBrowserServer,
@@ -2474,9 +2481,9 @@ export class ServiceHost {
     request: McpOAuthSignInRequest
   ): Promise<{ success: boolean; error?: string; cancelled?: boolean }> {
     assertHostCapability(this.platform, "mcp.oauthSignIn");
-    const server = this.listMcpServers({ mode: request.mode }).find(
-      (entry) => entry.id === request.name
-    );
+    const server = this.mcpAdminService
+      .listMcpServers({ mode: request.mode })
+      .find((entry) => entry.id === request.name);
     if (server?.config.url == null)
       return { success: false, error: "No such HTTP server is configured." };
     if (server.config.oauth === false)
@@ -3729,9 +3736,18 @@ export class ServiceHost {
     return this.gitService.unstageFile(workspace.path, filePath);
   }
 
-  startTerminalSession(
+  /** The user's own shell; the agent's servers start theirs elsewhere. */
+  async startTerminalSession(
     request: StartTerminalSessionRequest
   ): Promise<StartTerminalSessionResult> {
+    const refusal = await hostedLocalToolsRefusal(this.platform);
+    if (refusal != null)
+      throw new PreconditionError(
+        refusal,
+        refusal === "plan-required"
+          ? "The terminal needs a paid plan on the hosted computer."
+          : "The plan could not be read, so the terminal is off for now."
+      );
     return this.terminalSessionService.startSession(request);
   }
 
@@ -5191,8 +5207,21 @@ export class ServiceHost {
     return result;
   }
 
-  listMcpServers(request: ListMcpServersRequest): McpServerInfo[] {
-    return this.mcpAdminService.listMcpServers(request);
+  /** Local-command servers a hosted computer won't run carry why, for the list to say. */
+  async listMcpServers(
+    request: ListMcpServersRequest
+  ): Promise<McpServerInfo[]> {
+    const servers = this.mcpAdminService.listMcpServers(request);
+    if (!servers.some((server) => isLocalCommandServer(server.config)))
+      return servers;
+    const refusal = await hostedLocalToolsRefusal(this.platform);
+    return refusal == null
+      ? servers
+      : servers.map((server) =>
+          isLocalCommandServer(server.config)
+            ? { ...server, inactive: refusal }
+            : server
+        );
   }
 
   /** A server the user adds: never under one of the app's own names. */

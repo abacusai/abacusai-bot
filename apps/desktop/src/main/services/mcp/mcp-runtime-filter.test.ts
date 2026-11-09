@@ -25,7 +25,8 @@ describe("the runtime config a session spawns with", () => {
     const filePath = service.writeRuntimeMcp(
       "code",
       { browser: { url: "http://localhost:9" } },
-      "session-1"
+      "session-1",
+      { localCommands: true }
     );
 
     expect(writtenServers(filePath)).toEqual([
