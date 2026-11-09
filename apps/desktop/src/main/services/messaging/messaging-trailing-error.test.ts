@@ -1166,6 +1166,93 @@ describe("a long turn", () => {
     }
   });
 
+  /**
+   * The model's update lines, which used to be dropped as narration, reach
+   * the user's own chat: at most one every five minutes, the newest winning,
+   * and the generic note only after ten minutes with nothing sent.
+   */
+  it("forwards the model's updates to the user's own chat, one every five minutes at most", async () => {
+    vi.useFakeTimers();
+    try {
+      const h = harness({ self: true });
+      await h.inbound("find my biggest files");
+      /** The minute each message went out. */
+      const at: number[] = [];
+      for (let minute = 1; minute <= 25; minute++) {
+        const before = h.sent().length;
+        await vi.advanceTimersByTimeAsync(60_000);
+        if (minute % 2 === 0) {
+          h.say(`Checked ${minute / 2} folders; on to the next.`);
+          h.emitEvent({
+            type: "tool_call_start",
+            toolName: "bash",
+            toolCallId: `c${minute}`,
+          });
+          await vi.advanceTimersByTimeAsync(0);
+        }
+        for (let i = before; i < h.sent().length; i++) at.push(minute);
+      }
+      expect(h.sent()).toEqual([
+        // Minute 5, 10, 15, 20, 25: the newest line each time.
+        "Checked 2 folders; on to the next.",
+        "Checked 4 folders; on to the next.",
+        "Checked 7 folders; on to the next.",
+        "Checked 9 folders; on to the next.",
+        "Checked 12 folders; on to the next.",
+      ]);
+      for (let k = 1; k < at.length; k++)
+        expect(at[k]! - at[k - 1]!).toBeGreaterThanOrEqual(5);
+
+      h.say("The five biggest files are in Videos.");
+      h.idle();
+      await vi.advanceTimersByTimeAsync(30 * 60_000);
+      expect(h.sent().at(-1)).toBe("The five biggest files are in Videos.");
+      expect(h.sent()).toHaveLength(6);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("names what it is doing in the note when the model has said nothing", async () => {
+    vi.useFakeTimers();
+    try {
+      const h = harness({ self: true });
+      await h.inbound("find my biggest files");
+      h.emitEvent({
+        type: "tool_call_start",
+        toolName: "bash",
+        toolCallId: "c1",
+      });
+      await vi.advanceTimersByTimeAsync(10 * 60_000);
+      expect(h.sent()).toEqual([
+        "Still working on it (10 min so far). Running a command… I'll reply here when it's done.",
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("never forwards updates into a contact's chat", async () => {
+    vi.useFakeTimers();
+    try {
+      const h = harness();
+      await h.inbound("can you send me the file?");
+      for (let minute = 1; minute <= 25; minute++) {
+        await vi.advanceTimersByTimeAsync(60_000);
+        h.say("Looking for the file the user asked about.");
+        h.emitEvent({
+          type: "tool_call_start",
+          toolName: "bash",
+          toolCallId: `c${minute}`,
+        });
+      }
+      await vi.advanceTimersByTimeAsync(0);
+      expect(h.log).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("never sends a progress note into a contact's chat", async () => {
     vi.useFakeTimers();
     try {

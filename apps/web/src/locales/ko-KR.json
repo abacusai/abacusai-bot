@@ -2941,7 +2941,18 @@
       "tools_other": "Running {{count}} tools",
       "typing": "Typing",
       "waitingForConnection": "연결 대기 중…",
-      "working": "Working"
+      "working": "Working",
+      "activity": {
+        "command": "명령 실행 중",
+        "files": "파일 읽는 중",
+        "edit": "파일 변경 중",
+        "search": "파일 검색 중",
+        "webSearch": "웹 검색 중",
+        "webPage": "웹 페이지 읽는 중",
+        "browser": "브라우저에서 작업 중",
+        "subtask": "하위 작업 진행 중"
+      },
+      "longTool": "{{activity}} · {{minutes}}분"
     },
     "code": {
       "copied": "Copied",
@@ -4819,7 +4830,8 @@
       "cutoff": "Google이 제 답변을 중간에 끊어서 멈췄습니다. 다시 시도하려면 메시지를 다시 보내 주세요.",
       "cutoffSwitch": "또는 앱의 모델 선택에서 RouteLLM - Open으로 전환하면 더 안정적인 답변을 받을 수 있습니다.",
       "cutoffVerify": "또는 전화번호를 인증해 무료 Abacus 크레딧을 잠금 해제한 다음 앱에서 RouteLLM - Open으로 전환하세요: {{link}}",
-      "cutoffTopUp": "또는 Abacus 크레딧을 충전하고 앱에서 RouteLLM - Open으로 전환하세요: {{link}}"
+      "cutoffTopUp": "또는 Abacus 크레딧을 충전하고 앱에서 RouteLLM - Open으로 전환하세요: {{link}}",
+      "stillWorkingOn": "아직 작업 중입니다(지금까지 {{minutes}}분). {{activity}}… 끝나면 여기서 답장할게요."
     },
     "unavailable": {
       "title": {

@@ -33,6 +33,7 @@ import {
   useMessageScrollerVisibility,
 } from "#renderer/ui/message-scroller";
 
+import { useSeconds } from "../kit/clock";
 import { useChatView } from "../kit/context";
 import { DeliverableOfferRow } from "../kit/deliverable-offer";
 import { appLineOf, userView, routeRowOf } from "../kit/message";
@@ -43,6 +44,9 @@ import {
   ErrorCard,
   FreeLaneChip,
   RunMarker,
+  longToolLabel,
+  noteRunningCalls,
+  runningCallKey,
   runningTools,
   Typing,
 } from "../kit/status/status";
@@ -149,9 +153,20 @@ const RunTail = ({ messages }: { messages: UIMessage[] }) => {
     (s) => s.subagents.filter((h) => h.status === "running").length
   );
   const active = state.runs.active;
+  const titles = runningTools(messages);
+  // Each running tool's own clock, ticking once a second while one runs.
+  const now = useSeconds(active != null && titles.length > 0);
+  const callKey = runningCallKey(messages);
+  const thread = session.threadId;
+  useEffect(
+    () => noteRunningCalls(thread, callKey, Date.now()),
+    [thread, callKey]
+  );
   if (active == null)
     return slots.runTail != null ? <>{slots.runTail}</> : null;
-  const running = runningTools(messages);
+  // Past a minute, one running tool reads in plain words with its own time.
+  const long = longToolLabel(t, thread, messages, now);
+  const running = long != null ? [long] : titles;
   if (skin === "bot") {
     const caption =
       slots.typingCaption?.({

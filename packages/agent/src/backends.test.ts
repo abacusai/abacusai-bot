@@ -198,12 +198,13 @@ describe("a command that leaves something running behind it", () => {
     async () => {
       const token = "20.8422";
 
-      const result = await ops!.exec(`${lingering(token)}\nsleep 30`, scratch, {
-        onData: () => {},
-        timeout: 1,
-      });
-
-      expect(result.exitCode).not.toBe(0);
+      // pi reads exactly this as "Command timed out after 1 seconds".
+      await expect(
+        ops!.exec(`${lingering(token)}\nsleep 30`, scratch, {
+          onData: () => {},
+          timeout: 1,
+        })
+      ).rejects.toThrow("timeout:1");
       // Killing only the shell would orphan the group rather than end it, which
       // is what left the original hang's deadline with nothing to reach.
       expect(survivors(token)).toBe("");

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { modelPath } from "@abacus-ai/agent/model-path";
+import { toolActivity } from "@abacus-ai/agent/tool-display";
 import { readUserLanguage } from "@abacus-ai/agent/user-language";
 import type { UserTextTags } from "@abacus-ai/contract/agent-types";
 import { AgentMode, AgentStatus } from "@abacus-ai/contract/agent-types";
@@ -377,8 +378,26 @@ const MESSAGE_LOG_SAVE_DELAY_MS = 1_000;
 
 /** After a start, the connectors get this long to come up before a retry. */
 const OUTBOX_STARTUP_DELAY_MS = 60_000;
-/** How often the user's own chat hears that a long turn is still going. */
+/**
+ * A long turn in the user's own chat: the model's latest update line goes
+ * out once the chat has heard nothing for PROGRESS_LINE_EVERY_MS, and the
+ * generic still-working note only after PROGRESS_NOTE_EVERY_MS of silence.
+ */
+const PROGRESS_LINE_EVERY_MS = 5 * 60_000;
 const PROGRESS_NOTE_EVERY_MS = 10 * 60_000;
+const PROGRESS_CHECK_MS = 30_000;
+/** Narration longer than this is the model thinking aloud, not an update. */
+const PROGRESS_LINE_MAX_CHARS = 500;
+
+/** What the user's own chat has heard during a long turn. */
+type TurnProgress = {
+  /** When the chat last heard anything: the turn's start, a line or a note. */
+  heardAt: number;
+  /** The model's latest update not yet sent; a newer one replaces it. */
+  line: string | null;
+  /** The tool the turn started last, for the note to name what it is doing. */
+  tool: string | null;
+};
 
 /** A conversation in flight: which session it owns and what it's waiting on. */
 type Route = {
@@ -452,6 +471,7 @@ type Route = {
   delivered: boolean;
   /** The user's own chat hears, now and then, that a long turn is still going. */
   progressTimer: ReturnType<typeof setInterval> | null;
+  progress: TurnProgress | null;
 };
 
 /** How long a login probe may take before the last known state is used. */
@@ -1195,6 +1215,7 @@ export class MessagingGatewayService {
         failureReply: null,
         delivered: false,
         progressTimer: null,
+        progress: null,
       };
 
       if (existing != null) this.routesBySession.delete(existing.sessionId);
@@ -1276,6 +1297,7 @@ export class MessagingGatewayService {
       failureReply: null,
       delivered: false,
       progressTimer: null,
+      progress: null,
     };
 
     const { autoApproveTools } = readGatewaySettings();
@@ -1488,7 +1510,21 @@ export class MessagingGatewayService {
     // text before suggest_tasks is the reply: that call can end the turn.
     if (event.type === "tool_call_start") {
       if (isSuggestTasksTool(event.toolName)) return;
-      route.taggedReply = lastTaggedReply(route.buffer) ?? route.taggedReply;
+      const tagged = lastTaggedReply(route.buffer);
+      // In the user's own chat, the narration is the turn's latest update.
+      if (route.progress != null) {
+        route.progress.tool = event.toolName;
+        const line = tagged == null ? outgoingWords(route.buffer).trim() : "";
+        if (
+          line !== "" &&
+          line !== "NO_REPLY" &&
+          line.length <= PROGRESS_LINE_MAX_CHARS
+        ) {
+          route.progress.line = line;
+          this.tickProgress(route);
+        }
+      }
+      route.taggedReply = tagged ?? route.taggedReply;
       route.buffer = "";
       route.bufferMessageId = null;
       return;
@@ -1851,45 +1887,80 @@ export class MessagingGatewayService {
   }
 
   /**
-   * A long turn in the user's own chat: every PROGRESS_NOTE_EVERY_MS while it
-   * is still going, the chat hears that it is still working. Never in a
-   * contact's chat, which only ever hears the reply. A note is said once, as
-   * it is due: it is not the reply, never kept to retry, and never counts as
-   * the turn having answered.
+   * A long turn in the user's own chat hears where it stands: the model's
+   * latest update line at most once every PROGRESS_LINE_EVERY_MS, and the
+   * still-working note, naming what it is doing, only when nothing went out
+   * for PROGRESS_NOTE_EVERY_MS. Never in a contact's chat, which only ever
+   * hears the reply. Each is said once, as it is due: it is not the reply,
+   * never kept to retry, and never counts as the turn having answered.
    */
   private watchProgress(route: Route): void {
     this.stopWatchingProgress(route);
     if (!route.owner) return;
-    const startedAt = route.busySince;
+    route.progress = { heardAt: route.busySince, line: null, tool: null };
     route.progressTimer = setInterval(() => {
       if (!route.busy || this.routesBySession.get(route.sessionId) !== route) {
         this.stopWatchingProgress(route);
         return;
       }
-      const minutes = Math.round((Date.now() - startedAt) / 60_000);
-      void this.sayProgress(route, minutes);
-    }, PROGRESS_NOTE_EVERY_MS);
+      this.tickProgress(route);
+    }, PROGRESS_CHECK_MS);
     route.progressTimer.unref?.();
   }
 
   private stopWatchingProgress(route: Route): void {
     if (route.progressTimer != null) clearInterval(route.progressTimer);
     route.progressTimer = null;
+    route.progress = null;
   }
 
-  private async sayProgress(route: Route, minutes: number): Promise<void> {
+  /** Sends the pending update line, or the fallback note, if one is due. */
+  private tickProgress(route: Route): void {
+    const progress = route.progress;
+    if (progress == null) return;
+    const now = Date.now();
+    const quiet = now - progress.heardAt;
+    if (progress.line != null && quiet >= PROGRESS_LINE_EVERY_MS) {
+      const line = progress.line;
+      progress.line = null;
+      progress.heardAt = now;
+      void this.sayProgress(route, forChat(line, route.platform));
+    } else if (quiet >= PROGRESS_NOTE_EVERY_MS) {
+      progress.heardAt = now;
+      const minutes = Math.round((now - route.busySince) / 60_000);
+      void this.sayStillWorking(route, minutes, progress.tool);
+    }
+  }
+
+  private async sayStillWorking(
+    route: Route,
+    minutes: number,
+    tool: string | null
+  ): Promise<void> {
     const words = await channelWords(
       channelLocale(
         readUserLanguage()?.name ?? null,
         this.options.appLanguage?.() ?? null
       )
     );
+    const activity = tool != null ? toolActivity(tool) : null;
+    await this.sayProgress(
+      route,
+      forChat(
+        activity != null
+          ? words.t("outcome.channel.stillWorkingOn", {
+              minutes,
+              activity: words.t(`chat.busy.activity.${activity}`),
+            })
+          : words.t("outcome.channel.stillWorking", { minutes }),
+        route.platform
+      )
+    );
+  }
+
+  private async sayProgress(route: Route, text: string): Promise<void> {
     const connector = this.connectors.get(route.platform);
     if (!route.busy || connector == null) return;
-    const text = forChat(
-      words.t("outcome.channel.stillWorking", { minutes }),
-      route.platform
-    );
     try {
       await connector.sendText(route.chatId, text, route.replyContext);
       this.appendLog({

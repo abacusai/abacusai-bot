@@ -445,7 +445,23 @@ describe("running a command in a container", () => {
     expect(child.kill).toHaveBeenCalledWith("SIGKILL");
 
     child.finish(null);
-    await running;
+    await expect(running).rejects.toThrow("aborted");
+  });
+
+  // pi turns exactly this rejection into "Command timed out after N seconds",
+  // which is what tells the model to try a faster way; an exit code hid it.
+  it("rejects a command stopped at its deadline the way pi reads a timeout", async () => {
+    vi.useFakeTimers();
+    try {
+      const operations = await dockerOperations();
+      const running = exec(operations, "sleep 1000", "/work", { timeout: 2 });
+      const settled = expect(running).rejects.toThrow("timeout:2");
+      await vi.advanceTimersByTimeAsync(2_000);
+      child.finish(null);
+      await settled;
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("reports a real failure code when the client died to a signal", async () => {
@@ -706,7 +722,7 @@ describe("running a command on this machine", () => {
     expect(kill).toHaveBeenCalledWith(-child.pid, "SIGKILL");
 
     child.finish(null);
-    await running;
+    await expect(running).rejects.toThrow("aborted");
     kill.mockRestore();
   });
 
@@ -726,7 +742,7 @@ describe("running a command on this machine", () => {
     expect(kill).toHaveBeenCalledWith(-child.pid, "SIGKILL");
 
     child.finish(null);
-    await running;
+    await expect(running).rejects.toThrow("aborted");
     kill.mockRestore();
   });
 
@@ -747,7 +763,7 @@ describe("running a command on this machine", () => {
     expect(child.kill).toHaveBeenCalledWith("SIGKILL");
 
     child.finish(null);
-    await running;
+    await expect(running).rejects.toThrow("aborted");
     kill.mockRestore();
   });
 });
@@ -874,7 +890,8 @@ describe("running a project command through the backend", () => {
     );
 
     child.finish(null);
-    await running;
+    // A deadline is a killed run, with the output it had, not a throw.
+    expect(await running).toMatchObject({ code: 1, killed: true });
   });
 });
 

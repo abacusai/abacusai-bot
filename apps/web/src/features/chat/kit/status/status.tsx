@@ -3,6 +3,7 @@
  * bubble, run outcome markers, the error card with its action table (and
  * the upgrade variant), and notices.
  */
+import { toolActivity } from "@abacus-ai/agent/tool-display";
 import {
   type PaidCreditsOffer,
   paidCreditsOffer,
@@ -129,11 +130,13 @@ const OUTCOME_CAUSES = new Set([
   "unknown",
 ]);
 
-/** The running tool calls of the active run (the busy line's label). */
-export const runningTools = (messages: readonly UIMessage[]): string[] => {
-  const titles: string[] = [];
+type RunningCall = { id: string; name: string; title: string };
+
+/** The tool calls of the active run still waiting on a result. */
+const runningCalls = (messages: readonly UIMessage[]): RunningCall[] => {
+  const calls: RunningCall[] = [];
   const last = messages.findLast((message) => message.role === "assistant");
-  if (last == null) return titles;
+  if (last == null) return calls;
   const results = new Set(
     last.parts
       .filter((part) => part.type === "tool-result")
@@ -145,13 +148,71 @@ export const runningTools = (messages: readonly UIMessage[]): string[] => {
       !results.has(part.id) &&
       part.output == null
     )
-      titles.push(
-        toolTitle(
+      calls.push({
+        id: part.id,
+        name: part.name,
+        title: toolTitle(
           part.name,
           (part.input as Record<string, unknown> | undefined) ?? {}
-        )
-      );
-  return titles;
+        ),
+      });
+  return calls;
+};
+
+/** The running tool calls of the active run (the busy line's label). */
+export const runningTools = (messages: readonly UIMessage[]): string[] =>
+  runningCalls(messages).map((call) => call.title);
+
+/** How long a tool runs before the busy line says what it is doing in plain words. */
+const LONG_TOOL_MS = 60_000;
+/**
+ * When each running call was first seen, per thread: its own clock, not the
+ * turn's, kept while the user looks at another chat.
+ */
+const callSeenAt = new Map<string, Map<string, number>>();
+
+/** The ids of the active run's running calls, as one dependency key. */
+export const runningCallKey = (messages: readonly UIMessage[]): string =>
+  runningCalls(messages)
+    .map((call) => call.id)
+    .join("\n");
+
+/** Starts the clock of each newly running call (from an effect: it reads the time). */
+export const noteRunningCalls = (
+  thread: string,
+  key: string,
+  now: number
+): void => {
+  const live = new Set(key === "" ? [] : key.split("\n"));
+  const seen = callSeenAt.get(thread) ?? new Map<string, number>();
+  for (const id of seen.keys()) if (!live.has(id)) seen.delete(id);
+  for (const id of live) if (!seen.has(id)) seen.set(id, now);
+  if (seen.size > 0) callSeenAt.set(thread, seen);
+  else callSeenAt.delete(thread);
+};
+
+/**
+ * One tool running past a minute, in words anyone reads, with its own time:
+ * "Running a command · 4 min" rather than a raw shell line. Null before then,
+ * or while several run. A tool with no plain phrase keeps its own title.
+ */
+export const longToolLabel = (
+  t: (key: string, values?: Record<string, unknown>) => string,
+  thread: string,
+  messages: readonly UIMessage[],
+  now: number
+): string | null => {
+  const calls = runningCalls(messages);
+  if (calls.length !== 1) return null;
+  const call = calls[0]!;
+  const seenAt = callSeenAt.get(thread)?.get(call.id);
+  if (seenAt == null || now - seenAt < LONG_TOOL_MS) return null;
+  const activity = toolActivity(call.name);
+  return t("chat.busy.longTool", {
+    activity:
+      activity == null ? call.title : t(`chat.busy.activity.${activity}`),
+    minutes: Math.floor((now - seenAt) / 60_000),
+  });
 };
 
 export const busyLabel = (

@@ -97,12 +97,19 @@ function bashBudget(command: string): { seconds: number; ceiling: number } {
     : { seconds: BUDGETS.bash!.seconds, ceiling: MAX_STAMPED_SECONDS };
 }
 
-/** What a killed command should tell the model to do about it. */
+/**
+ * What a killed command should tell the model to do about it. A bigger
+ * timeout on the same slow command keeps the user waiting in silence; a
+ * faster way, said out loud, does not.
+ */
 function timeoutRemedy(command: string, killedAt: number): string {
   const { ceiling } = bashBudget(command);
   const next =
     killedAt < ceiling
-      ? `Re-run it with a larger \`timeout\` (up to ${ceiling} seconds).`
+      ? `It ran ${killedAt} seconds without finishing. Do not run it again with a larger \`timeout\` ` +
+        `unless its output shows it was nearly done. Tell the user in one line that this is slow and what ` +
+        "you will try instead, then use a faster way: a narrower path, a depth limit, folder by folder, or " +
+        "the top level first."
       : `${ceiling} seconds is the most a command like this gets; split the work, or tell the user what did not finish.`;
 
   return (

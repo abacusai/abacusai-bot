@@ -18,10 +18,11 @@
  * asked whether it already has enough. There is no cap, only a nudge. Show your work: a run that has written
  * files but presented nothing is told, unseen by the user, to present what it
  * has after 10 minutes of working time, and again after 20; time
- * spent waiting on an approval is not working time. A chat whose user waits
- * in a messaging app (BudgetOptions.checkIns) checks in at the same marks
- * instead: whenever the user has heard nothing since the last one, built
- * files or not, the model is told to send what it has so far. Credits: a session on
+ * spent waiting on an approval is not working time. Progress updates: with
+ * someone in the chat, a run the user has heard nothing from for 3 working
+ * minutes (or 15 tool calls) is told, unseen, to write one short line on where
+ * it stands; a chat in a messaging app (BudgetOptions.checkIns) sends it with
+ * its progress tool. Credits: a session on
  * billed Abacus credits with under a tenth left is told once, unseen, to wrap
  * up and hand over; only with someone in the chat (nobodyPresent). Temperature (ABACUSAI_BOT_TEMPERATURE, default 0.3, "off"
  * to disable) when unset.
@@ -35,7 +36,9 @@ import {
   refreshCreditBalanceIfStale,
   type CreditBalance,
 } from "../credit-balance.js";
+import { closesReply, hasWords } from "../forever/reply-end.js";
 import { connectorToolMeta } from "../mcp/index.js";
+import { isOwnerAudience } from "../owner-tools.js";
 import { WRITE_TOOLS } from "../permissions.js";
 import { toToolKind } from "../tool-display.js";
 import { ownEntry, UNATTENDED_CONNECTOR_READS } from "../tool-policy.js";
@@ -51,6 +54,15 @@ const CONNECTOR_REMINDER_EVERY = 5;
 const PRESENT_NUDGE_MS = 10 * 60_000;
 const PRESENT_AGAIN_MS = 20 * 60_000;
 const PRESENT_TOOL = "present_deliverable";
+/** Working time the user may hear nothing before the model is asked for a line. */
+const UPDATE_AFTER_MS = 3 * 60_000;
+/** Or this many tool calls unheard, once at least UPDATE_MIN_MS went by. */
+const UPDATE_AFTER_CALLS = 15;
+const UPDATE_MIN_MS = 90_000;
+/** Reminders are spaced, capped per user turn, and stop once two in a row go unanswered. */
+const UPDATE_SPACING_MS = 4 * 60_000;
+const UPDATE_MAX_PER_TURN = 5;
+const UPDATE_MAX_IGNORED = 2;
 /** The share of the plan's credits below which a billed run is told to wrap up. */
 const CREDITS_LOW_SHARE = 0.1;
 /** Model calls a closing run gets to write its closing message. */
@@ -161,14 +173,20 @@ const presentNudgePrompt = (minutes: number): string =>
   `improving it afterwards.`;
 
 /**
- * The same marks for a chat whose user waits in a messaging app: what they
- * hear is a progress line or a file in the chat, never a preview.
+ * The user has heard nothing for a while: one line on where things stand.
+ * A messaging chat hears only its progress tool (`tools[0]`) and files, never
+ * a preview; elsewhere the model's own words reach the user.
  */
-const checkInPrompt = (minutes: number, tools: readonly string[]): string =>
-  `Check in: you have been working for over ${minutes} minutes and the user, waiting in the chat, has not ` +
-  `heard from you in that time. Send them what you have so far now, in their language: a short progress ` +
-  `line with ${tools[0]} saying what is done and what comes next, and any files made so far, finished or ` +
-  `not, with ${PRESENT_TOOL}. Then carry on.`;
+const updatePrompt = (minutes: number, tools: readonly string[]): string => {
+  const silence = `The user has heard nothing from you for ${minutes} ${minutes === 1 ? "minute" : "minutes"} of work.`;
+  const what = "what you found so far and what you are trying next";
+  const done = "If you are ready to give the final answer, just give it.";
+  return tools.length > 0
+    ? `${silence} Before your next step, send them one short line in their language with ${tools[0]}: ` +
+        `${what}, and any files made so far, finished or not, with ${PRESENT_TOOL}. ${done}`
+    : `${silence} In this message, before your next tool call, write one short line in their language: ` +
+        `${what}. ${done}`;
+};
 
 const creditsLowPrompt = (balance: CreditBalance): string =>
   `Credit check: the user's Abacus.AI account has ${Math.max(0, Math.floor(balance.remaining))} of ` +
@@ -232,9 +250,9 @@ export interface RunLimit {
 export interface BudgetOptions {
   /**
    * A chat whose user waits in a messaging app: the tools that tell them
-   * where the work stands (the progress line first). With them, the
-   * show-your-work marks are check-ins: the model is told to send what it
-   * has whenever the user has heard nothing since the last mark.
+   * where the work stands (the progress line first). Its progress reminders
+   * name them, only they count as the user hearing something, and the
+   * show-your-work preview nudge is off.
    */
   checkIns?: { tools: readonly string[] };
   runLimit?: RunLimit;
@@ -255,8 +273,6 @@ export default function budgets(
 ): void {
   const checkInTools = options.checkIns?.tools ?? [];
   const runLimit = options.runLimit;
-  /** The user heard from the run since the last mark (a progress line, a file). */
-  let heard = false;
   let turns = 0;
   let connectorCalls = 0;
   // Each call's count, and the state it last ran against. A successful call
@@ -274,6 +290,14 @@ export default function budgets(
   let wroteFile = false;
   let presented = false;
   let presentNudges = 0;
+  // Progress updates: working time and tool calls since the user last heard
+  // something, and this user turn's reminders (count, unanswered in a row).
+  let workedAtHeard = 0;
+  let callsUnheard = 0;
+  let lastReminderAt: number | null = null;
+  let reminders = 0;
+  let unanswered = 0;
+  let showWorkTurn = -1;
   // Once per session: a top-up between runs does not earn a second warning.
   let creditsNudged = false;
   // A turn past its cap or its time: told to close out, then given a few
@@ -292,6 +316,22 @@ export default function budgets(
     change();
     activeSince = generating || runningTools.size > 0 ? now : null;
   };
+  const hear = (): void => {
+    workedAtHeard = workedMs;
+    callsUnheard = 0;
+    unanswered = 0;
+  };
+  /** The show-your-work mark due now (10 or 20 minutes), or null. */
+  const showWorkDue = (): number | null => {
+    if (checkInTools.length > 0 || !wroteFile || presented) return null;
+    if (workedMs >= PRESENT_AGAIN_MS && presentNudges < 2) return 2;
+    if (workedMs >= PRESENT_NUDGE_MS && presentNudges < 1) return 1;
+    return null;
+  };
+  const showWorkText = (mark: number): string =>
+    presentNudgePrompt(
+      (mark === 2 ? PRESENT_AGAIN_MS : PRESENT_NUDGE_MS) / 60_000
+    );
 
   // A prompt sent while idle starts the user's turn; one sent mid-run joins it.
   pi.on("input", (event) => {
@@ -300,6 +340,8 @@ export default function budgets(
     turnStartedAt = Date.now();
     closingTurns = null;
     closingStop = null;
+    reminders = 0;
+    unanswered = 0;
   });
 
   pi.on("agent_start", async () => {
@@ -315,7 +357,10 @@ export default function budgets(
     wroteFile = false;
     presented = false;
     presentNudges = 0;
-    heard = false;
+    workedAtHeard = 0;
+    callsUnheard = 0;
+    lastReminderAt = null;
+    showWorkTurn = -1;
   });
 
   pi.on("message_end", (event) => {
@@ -323,6 +368,13 @@ export default function budgets(
     track(() => {
       generating = false;
     });
+    // On the desktop the model's own words reach the user; a messaging chat
+    // hears only what its progress tools send.
+    if (
+      checkInTools.length === 0 &&
+      hasWords(event.message as Parameters<typeof hasWords>[0])
+    )
+      hear();
   });
 
   pi.on("tool_execution_start", (event) => {
@@ -334,6 +386,7 @@ export default function budgets(
     refreshCredits(ctx);
     const pending = pendingCalls.get(event.toolCallId);
     pendingCalls.delete(event.toolCallId);
+    callsUnheard++;
     if (event.isError) return;
     if (pending?.changes) {
       state++;
@@ -346,11 +399,57 @@ export default function budgets(
       isPresentTool(event.toolName) ||
       checkInTools.some((tool) => isTool(event.toolName, tool))
     )
-      heard = true;
+      hear();
   });
 
-  pi.on("turn_end", (_event, ctx) => {
+  /** Asks for one short line when the user has heard nothing for a while. */
+  const remindIfDue = (): void => {
+    const unheard = workedMs - workedAtHeard;
+    const due =
+      unheard >= UPDATE_AFTER_MS ||
+      (callsUnheard >= UPDATE_AFTER_CALLS && unheard >= UPDATE_MIN_MS);
+    if (
+      !due ||
+      reminders >= UPDATE_MAX_PER_TURN ||
+      unanswered >= UPDATE_MAX_IGNORED ||
+      (lastReminderAt != null && workedMs - lastReminderAt < UPDATE_SPACING_MS)
+    )
+      return;
+    // A show-work nudge queued this turn goes in the same request: one steer.
+    if (showWorkTurn === turns) return;
+    reminders++;
+    unanswered++;
+    lastReminderAt = workedMs;
+    const minutes = Math.max(1, Math.floor(unheard / 60_000));
+    let content = updatePrompt(minutes, checkInTools);
+    const mark = showWorkDue();
+    if (mark != null) {
+      presentNudges = mark;
+      content += `\n\n${showWorkText(mark)}`;
+    }
+    pi.sendMessage(
+      { customType: "abacusai-bot-progress-update", content, display: false },
+      { deliverAs: "steer" }
+    );
+  };
+
+  pi.on("turn_end", (event, ctx) => {
     refreshCredits(ctx);
+    // After a round of tools the run usually goes on, so a steer queued here
+    // lands at the tail of the next request. A batch of reply-closing tools
+    // can end the run instead; a steer then would reopen the finished reply.
+    // Only the user's own chat is told: a contact never hears progress.
+    const results = (event as { toolResults?: Array<{ toolName?: string }> })
+      .toolResults;
+    if (
+      results != null &&
+      results.length > 0 &&
+      !results.every((result) => closesReply(result.toolName ?? "")) &&
+      closingTurns == null &&
+      !nobodyPresent() &&
+      (checkInTools.length > 0 || isOwnerAudience())
+    )
+      remindIfDue();
   });
 
   pi.on("turn_start", async (_event, ctx) => {
@@ -378,37 +477,18 @@ export default function budgets(
       );
     }
     // Hidden from the user: the preview appearing is what they see.
-    const showWork = (content: string): void => {
+    const mark = showWorkDue();
+    if (mark != null) {
+      presentNudges = mark;
+      showWorkTurn = turns;
       pi.sendMessage(
-        { customType: "abacusai-bot-show-work", content, display: false },
+        {
+          customType: "abacusai-bot-show-work",
+          content: showWorkText(mark),
+          display: false,
+        },
         { deliverAs: "steer" }
       );
-    };
-    if (checkInTools.length > 0) {
-      // Each mark once; a check-in only when the user heard nothing since the
-      // last. Never while closing out: its progress line would be refused,
-      // and the closing message already says where the work stands.
-      const mark =
-        workedMs >= PRESENT_AGAIN_MS ? 2 : workedMs >= PRESENT_NUDGE_MS ? 1 : 0;
-      if (mark > presentNudges && closingTurns == null) {
-        presentNudges = mark;
-        if (!heard)
-          showWork(
-            checkInPrompt(
-              (mark === 2 ? PRESENT_AGAIN_MS : PRESENT_NUDGE_MS) / 60_000,
-              checkInTools
-            )
-          );
-        heard = false;
-      }
-    } else if (wroteFile && !presented) {
-      if (workedMs >= PRESENT_AGAIN_MS && presentNudges < 2) {
-        presentNudges = 2;
-        showWork(presentNudgePrompt(PRESENT_AGAIN_MS / 60_000));
-      } else if (workedMs >= PRESENT_NUDGE_MS && presentNudges < 1) {
-        presentNudges = 1;
-        showWork(presentNudgePrompt(PRESENT_NUDGE_MS / 60_000));
-      }
     }
     const cap = turnCap();
     // Each warning fires on its own turn; a cap small enough to fold them

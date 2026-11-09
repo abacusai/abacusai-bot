@@ -2941,7 +2941,18 @@
       "tools_other": "正在執行 {{count}} 個工具",
       "typing": "正在輸入",
       "waitingForConnection": "正在等待連線…",
-      "working": "工作中"
+      "working": "工作中",
+      "activity": {
+        "command": "正在執行指令",
+        "files": "正在讀取檔案",
+        "edit": "正在修改檔案",
+        "search": "正在搜尋檔案",
+        "webSearch": "正在搜尋網路",
+        "webPage": "正在讀取網頁",
+        "browser": "正在瀏覽器中操作",
+        "subtask": "正在處理子任務"
+      },
+      "longTool": "{{activity}} · {{minutes}} 分鐘"
     },
     "code": {
       "copied": "已複製",
@@ -4819,7 +4830,8 @@
       "cutoff": "Google 中途截斷了我的回覆，所以我停下來了。重新傳送你的訊息就能重試。",
       "cutoffSwitch": "或在應用程式的模型選擇器中切換到 RouteLLM - Open，回覆會更穩定。",
       "cutoffVerify": "或驗證手機來解鎖你的免費 Abacus 點數，然後在應用程式中切換到 RouteLLM - Open：{{link}}",
-      "cutoffTopUp": "或儲值 Abacus 點數，然後在應用程式中切換到 RouteLLM - Open：{{link}}"
+      "cutoffTopUp": "或儲值 Abacus 點數，然後在應用程式中切換到 RouteLLM - Open：{{link}}",
+      "stillWorkingOn": "還在處理中（目前已花 {{minutes}} 分鐘）。{{activity}}… 完成後我會在這裡回覆。"
     },
     "unavailable": {
       "title": {
