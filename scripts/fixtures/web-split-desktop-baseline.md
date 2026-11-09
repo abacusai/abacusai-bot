@@ -8,7 +8,24 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `e6e480cd`, Channels on main
+## Current: `7406b281`, who auto-reply answers
+
+**438 / 8828912 / 2965713.** Records the renderer with the Messaging page's
+Auto-reply card (the rule, who is answered, who waits, and the confirm before
+it turns on) and its strings in 13 languages. Against `35e47706` (main before
+this change, 438 / 8793789 / 2954630): +0 chunks, +35123 bytes (+0.40%),
++11083 gzip bytes (+0.38%). Main had already grown 0.80% past `e6e480cd`
+without a new baseline, so this change crossed the 1% allowance; most of its
+own growth is strings, carried once per language. `apps/web`'s dependencies
+did not change. The 1% allowance is unchanged.
+
+Measured from frozen-lockfile builds of `7406b281` and `35e47706` (Linux
+x64, clean `dist`), summed the same way as `check-desktop-parity.mjs`. This
+baseline-only change touches no renderer code.
+
+## History
+
+### `e6e480cd`, Channels on main
 
 **435 / 8723940 / 2930941.** Records the renderer with Channels (group chats
 of the user and several bots: the channel pages, the members panel, the work
@@ -21,8 +38,6 @@ change. The 1% allowance is unchanged.
 Measured from a frozen-lockfile build of `e6e480cd` (Linux x64), summed the
 same way as `check-desktop-parity.mjs`. This baseline-only change touches no
 renderer code.
-
-## History
 
 ### `55aecf25`, the app in Chinese
 
