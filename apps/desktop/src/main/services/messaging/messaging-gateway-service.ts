@@ -51,6 +51,7 @@ import {
 } from "../providers/abacus-upgrade";
 import { environmentNoticeService } from "../providers/environment-notice-service";
 import type { TurnChannel, TurnRecord } from "../session/turn-ledger";
+import type { ChatNotice, StatusBoard } from "../status/status-board";
 import {
   AbacusChannelsConnector,
   SELF_CHAT_ID,
@@ -111,12 +112,14 @@ import {
   readFieldValue,
   readGatewaySettings,
   readStoredMessageLog,
+  readPlatformAppStopped,
   readPlatformLinkLost,
   readStoredOutbox,
   readStoredSeen,
   recordPairingRequest,
   revokePairing,
   saveGatewaySettings,
+  savePlatformAppStopped,
   savePlatformValues,
   setPlatformEnabled,
   writeStoredMessageLog,
@@ -135,7 +138,7 @@ import {
   ownChatsOn,
   pickOwnChat,
 } from "./own-chat";
-import { diskSpaceBack, userActive, watchLaneHints } from "./page-boot-watch";
+import { diskSpaceBack, watchLaneHints } from "./page-boot-watch";
 import type { SenderCandidate } from "./sender-resolution";
 import { TelegramWebConnector } from "./telegram-web-connector";
 import {
@@ -291,13 +294,21 @@ type GatewayOptions = {
   ) => void;
   /** Broadcast so the Messaging pane re-reads its snapshot. */
   emitChanged: () => void;
-  /** Tells the user outside any chat: a lost link, a sender waiting. `key` dedupes repeats. */
+  /** Tells the user outside any chat that senders wait for approval. `key` dedupes repeats. */
   notifyUser?: (
     platform: MessagingPlatformId,
     title: string,
     body: string,
     key: string
   ) => void;
+  /**
+   * The status board: every lane state that is not running is reported
+   * there, and it alone decides whether and where the user hears of it.
+   */
+  status?: Pick<
+    StatusBoard,
+    "report" | "clear" | "forget" | "visible" | "onChange"
+  >;
   /** A platform came up: what waited on its link can go. */
   onPlatformConnected?: (platform: MessagingPlatformId) => void;
   /** The failure-reply throttle's clock; tests pass a fake one. */
@@ -543,6 +554,12 @@ export type ChatSendResult = {
   queued: boolean;
 };
 
+/** A status notice the outbox still owes is dropped after this. */
+const STATUS_NOTICE_KEPT_MS = 12 * 60 * 60_000;
+
+/** The lane stops the supervisor reports; only it clears them. */
+const LANE_RETRY_REASONS = ["retrying", "needs-user", "gave-up"] as const;
+
 export class MessagingGatewayService {
   private readonly connectors = new Map<
     MessagingPlatformId,
@@ -622,9 +639,12 @@ export class MessagingGatewayService {
     shouldRun: (id) => this.shouldRun(id),
     restart: (id) => this.restartPlatform(id),
     diskSpaceBack,
-    userActive,
-    notifyDown: (id) => void this.tellLaneDown(id),
-    tellNeedsUser: (id) => void this.tellLaneBlocked(id),
+    report: (id, state, reason) =>
+      state === "running"
+        ? this.options.status?.clear(`lane:${id}`, LANE_RETRY_REASONS)
+        : this.options.status?.report(`lane:${id}`, state, reason, {
+            platform: id,
+          }),
     watchHints: watchLaneHints,
     changed: () => this.options.emitChanged(),
     log: (line) => console.log(`[messaging] ${line}`),
@@ -635,9 +655,6 @@ export class MessagingGatewayService {
     SelfLanePlatform,
     { botId: string; at: number }
   >();
-
-  /** Platforms whose lost link the user heard of this run: once each launch, until it is back. */
-  private readonly linkLossTold = new Set<MessagingPlatformId>();
 
   /** Waiting-chat notices: when the last went out, what waits for the gap, its timer. */
   private waitingToldAt = 0;
@@ -692,6 +709,8 @@ export class MessagingGatewayService {
 
   constructor(private readonly options: GatewayOptions) {
     this.failureThrottle = new FailureReplyThrottle(options.now);
+    // A lane's status line shows on the board's clock: the pane re-reads then.
+    options.status?.onChange(() => options.emitChanged());
     // Owed from the last run: tried once the connectors have had a moment.
     if (this.outbox.size > 0) this.outbox.schedule(OUTBOX_STARTUP_DELAY_MS);
     this.lastBeat = this.options.now?.() ?? Date.now();
@@ -736,12 +755,16 @@ export class MessagingGatewayService {
     this.options.emitChanged();
   }
 
-  /** Switched on, configured, and messaging itself on. */
+  /**
+   * Switched on, configured, messaging itself on, and not stopped by the app
+   * (a login left unfinished, which waits for Connect with the switch on).
+   */
   private shouldRun(platformId: MessagingPlatformId): boolean {
     return (
       readGatewaySettings().gatewayEnabled &&
       isPlatformEnabled(platformId) &&
-      isPlatformConfigured(platformId)
+      isPlatformConfigured(platformId) &&
+      readPlatformAppStopped(platformId) == null
     );
   }
 
@@ -991,14 +1014,12 @@ export class MessagingGatewayService {
       this.clearReleasedLogin(platformId);
     // What a connector that made it back up still owes a chat goes now.
     if (state === "connected") {
-      this.linkLossTold.delete(platformId);
       // The user's own chat may now be reachable through this app too.
       if (this.outbox.owes(platformId) || this.outbox.owesSelf())
         this.outbox.schedule(0);
       this.options.onPlatformConnected?.(platformId);
     }
-    if (state === "needs_login" && readPlatformLinkLost(platformId))
-      void this.tellLinkLost(platformId);
+    this.reportLane(platformId, state);
     // Every transition to the main log, so an export says what the card showed.
     console.log(
       `[messaging] ${platformId}: ${previous?.state ?? "(new)"} -> ${state}` +
@@ -2256,21 +2277,6 @@ export class MessagingGatewayService {
   }
 
   /**
-   * Routines are waiting for credits: one line in the user's own chat, on
-   * the first app linked. No turn to answer, so no route is needed. Whether
-   * it went; false with no chat app linked.
-   */
-  async tellRoutinesOnHold(): Promise<boolean> {
-    const first = [...this.connectors.keys()][0];
-    if (first == null) return false;
-    await this.tellSelf(
-      first,
-      await this.accountLine(chatLineForRoutinesOnHold)
-    );
-    return true;
-  }
-
-  /**
    * The success pitch, once ever, in the user's own chat on the app whose
    * turn in `sessionId` just ended. Whether it went.
    */
@@ -2646,83 +2652,97 @@ export class MessagingGatewayService {
     );
   }
 
-  /** A link that ended can't say so in its own chat, so the computer does. */
-  private async tellLinkLost(platformId: MessagingPlatformId): Promise<void> {
-    if (this.linkLossTold.has(platformId)) return;
-    this.linkLossTold.add(platformId);
-    const words = await channelWords(
-      channelLocale(
-        readUserLanguage()?.name ?? null,
-        this.options.appLanguage?.() ?? null
-      )
-    );
-    const platform = words.t(
-      `messaging.platforms.${messagingPlatformSpec(platformId)?.nameKey ?? platformId}`
-    );
-    this.options.notifyUser?.(
-      platformId,
-      words.t("native.linkLostTitle", { platform }),
-      words.t("native.linkLostLane", { platform }),
-      `link-lost:${platformId}`
-    );
-    this.tellInAnotherApp(
-      platformId,
-      words.t("native.linkLostLane", { platform })
-    );
-  }
-
-  /** The down app's own chat can't carry a notice about it; another connected app's can. */
-  private tellInAnotherApp(
-    platformId: MessagingPlatformId,
-    text: string
-  ): void {
-    void this.tellSelf(platformId, text, {
-      exclude: platformId,
-      label: false,
-      queue: false,
+  /**
+   * The status board's chat-app line (its `tellChat`): in the user's own chat
+   * on `platform`, else on the first live chat app that is not the lane it is
+   * about, since a dead lane cannot carry news of itself. The one seam a
+   * chat-app outbox replaces; false when no chat app could take it.
+   */
+  async tellStatus(notice: ChatNotice): Promise<boolean> {
+    // The routine's own app first, then a connected one, then any other;
+    // never the lane the notice is about (a dead lane cannot carry it).
+    const lanes = (
+      Object.values(SELF_LANE_FOR_APP) as SelfLanePlatform[]
+    ).filter((lane) => lane !== notice.avoid && this.connectors.has(lane));
+    const connected = (lane: SelfLanePlatform): boolean =>
+      this.states.get(lane)?.state === "connected";
+    const lane = [
+      ...lanes.filter((id) => id === notice.platform),
+      ...lanes.filter(connected),
+      ...lanes,
+    ][0];
+    if (lane == null) return false;
+    const text = [
+      ...(notice.credits === true
+        ? [await this.accountLine(chatLineForRoutinesOnHold)]
+        : []),
+      ...(notice.text.length > 0 ? [notice.text] : []),
+    ].join("\n");
+    const now = this.options.now?.() ?? Date.now();
+    // The routine reports' outbox: held for the link, deduped by id, dropped after 12 h.
+    const status = await this.sendToOwnChat(lane, {
+      id: `${notice.id}:${lane}`,
+      text,
+      expiresAt: now + STATUS_NOTICE_KEPT_MS,
     });
+    return status !== "dropped";
   }
 
-  /** Retrying stopped on a failure only the user can clear: OS notification and another app's chat. */
-  private async tellLaneBlocked(
-    platformId: MessagingPlatformId
-  ): Promise<void> {
-    const words = await channelWords(
-      channelLocale(
-        readUserLanguage()?.name ?? null,
-        this.options.appLanguage?.() ?? null
-      )
-    );
-    const platform = words.t(
-      `messaging.platforms.${messagingPlatformSpec(platformId)?.nameKey ?? platformId}`
-    );
-    const body = words.t("native.laneBlockedBody", { platform });
-    this.options.notifyUser?.(
-      platformId,
-      words.t("native.laneDownTitle", { platform }),
-      body,
-      `link-lost:${platformId}`
-    );
-    this.tellInAnotherApp(platformId, body);
+  /**
+   * A lane's state for the status board, from what is stored and live: the
+   * app stopped it, its link was lost (a flag an older build's loss is
+   * backfilled into), it is back, or the user turned it off.
+   */
+  private reportLane(
+    platformId: MessagingPlatformId,
+    state: MessagingPlatformState | undefined
+  ): void {
+    const status = this.options.status;
+    if (status == null) return;
+    const key = `lane:${platformId}` as const;
+    const detail = { platform: platformId };
+    const on =
+      readGatewaySettings().gatewayEnabled &&
+      isPlatformEnabled(platformId) &&
+      isPlatformConfigured(platformId);
+    if (!on) return status.forget(key);
+    if (readPlatformAppStopped(platformId) != null)
+      return status.report(
+        key,
+        "stopped-needs-user",
+        "login-not-finished",
+        detail
+      );
+    // Connect cleared the app's stop: the login is being tried again.
+    status.clear(key, ["login-not-finished"]);
+    if (state === "connected" || state === "syncing")
+      return status.clear(key, [
+        ...LANE_RETRY_REASONS,
+        "link-lost",
+        "login-not-finished",
+      ]);
+    if (
+      readPlatformLinkLost(platformId) &&
+      (state == null || state === "needs_login" || state === "connecting")
+    )
+      status.report(key, "stopped-needs-user", "link-lost", detail);
   }
 
-  /** A lane down for an hour, still retrying: one OS notification per outage. */
-  private async tellLaneDown(platformId: MessagingPlatformId): Promise<void> {
-    const words = await channelWords(
-      channelLocale(
-        readUserLanguage()?.name ?? null,
-        this.options.appLanguage?.() ?? null
-      )
+  /**
+   * A routine's chat app is switched off (messaging off, or the lane off, as
+   * an older build left a login it gave up on): its runs deliver nowhere.
+   */
+  laneOff(platform: string): boolean {
+    if (!isMessagingPlatformId(platform)) return false;
+    return (
+      !readGatewaySettings().gatewayEnabled || !isPlatformEnabled(platform)
     );
-    const platform = words.t(
-      `messaging.platforms.${messagingPlatformSpec(platformId)?.nameKey ?? platformId}`
-    );
-    this.options.notifyUser?.(
-      platformId,
-      words.t("native.laneDownTitle", { platform }),
-      words.t("native.laneDownBody", { platform }),
-      `link-lost:${platformId}`
-    );
+  }
+
+  /** Launch: every lane re-states what it knows, for the board's reconcile. */
+  reportLaneStates(): void {
+    for (const entry of MESSAGING_PLATFORM_CATALOG)
+      this.reportLane(entry.id, this.states.get(entry.id)?.state);
   }
 
   /** The user's own chat hears which message never went, unless it was theirs. */
@@ -2854,6 +2874,12 @@ export class MessagingGatewayService {
     this.releasedLogins.delete(platformId);
   }
 
+  /**
+   * A login left unfinished: the connector stops, and the lane is held by the
+   * app (`appStopped`), never by writing the user's own switch. It stays on,
+   * so routines skip and make up through it and Connect brings it back; the
+   * status board tells the user.
+   */
   private async abandonLogin(platformId: MessagingPlatformId): Promise<void> {
     const state = this.states.get(platformId)?.state;
     // Still loading (a stored link signing back in, or a slow page): nobody
@@ -2864,12 +2890,17 @@ export class MessagingGatewayService {
     }
     if (state === "connected" || state === "syncing") return;
     console.log(
-      `[messaging] ${platformId}: login not finished ${RELEASED_LOGIN_MS / 1000}s after its dialog closed; turning it off`
+      `[messaging] ${platformId}: login not finished ${RELEASED_LOGIN_MS / 1000}s after its dialog closed; stopping it until Connect`
     );
     const shared = SHARED_BOT_PLATFORM_OF[platformId];
-    if (shared != null)
-      await this.updatePlatform({ platformId: shared, enabled: false });
-    await this.updatePlatform({ platformId, enabled: false });
+    for (const id of shared != null ? [shared, platformId] : [platformId]) {
+      if (!isPlatformEnabled(id)) continue;
+      savePlatformAppStopped(id, "login-not-finished");
+      await this.stopPlatform(id);
+      this.supervisor.forget(id);
+      this.reportLane(id, this.states.get(id)?.state ?? "disabled");
+    }
+    this.options.emitChanged();
   }
 
   /** Bring a web-login platform's sign-in window back to the front. */
@@ -2983,9 +3014,19 @@ export class MessagingGatewayService {
    * Not `connecting`: that is a launch or a blip, and it settles by itself.
    */
   unlinkedPlatforms(): MessagingPlatformId[] {
-    return [...this.connectors.keys()].filter(
-      (id) => this.states.get(id)?.state === "needs_login"
+    // A lane the app stopped has no connector, but is the user's and unlinked.
+    const stopped = MESSAGING_PLATFORM_CATALOG.map((entry) => entry.id).filter(
+      (id) =>
+        !this.connectors.has(id) &&
+        isPlatformEnabled(id) &&
+        readPlatformAppStopped(id) != null
     );
+    return [
+      ...[...this.connectors.keys()].filter(
+        (id) => this.states.get(id)?.state === "needs_login"
+      ),
+      ...stopped,
+    ];
   }
 
   livePlatforms(): MessagingPlatformId[] {
@@ -4094,7 +4135,10 @@ export class MessagingGatewayService {
               ? (live?.error ?? null)
               : null,
           recovery:
-            enabled && configured && settings.gatewayEnabled
+            enabled &&
+            configured &&
+            settings.gatewayEnabled &&
+            this.options.status?.visible(`lane:${entry.id}`) !== false
               ? this.supervisor.status(entry.id)
               : null,
           fields: entry.fields.map((field) => {

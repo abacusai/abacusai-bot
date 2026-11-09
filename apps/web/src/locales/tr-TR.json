@@ -1650,9 +1650,7 @@
       "openAgent": "7/24 rutinleri kur",
       "dismiss": "Kapat",
       "missed_one": "Bilgisayarın kapalıyken {{count}} çalışma kaçırıldı",
-      "missed_other": "Bilgisayarın kapalıyken {{count}} çalışma kaçırıldı",
-      "missedNoticeFree": "{{names}}. Basic planda, web'deki Abacus AI Agent rutinleri bilgisayarın kapalıyken bile 7/24 çalıştırır.",
-      "missedNoticePaid": "{{names}}. Rutinlerini web'deki Abacus AI Agent'ta kur; orada bilgisayarın kapalıyken bile 7/24 çalışırlar."
+      "missed_other": "Bilgisayarın kapalıyken {{count}} çalışma kaçırıldı"
     },
     "reach": {
       "gmailSearch": "Gmail'de ara",
@@ -1674,7 +1672,6 @@
       "quiet": "Duraklatıldı: art arda {{runs}} çalıştırmada yeni bir şey bulunamadı, bu yüzden kredi kullanmayı bıraktı. Kontrol etmeye devam etmesi için sürdürün."
     },
     "creditHold": {
-      "title": "Rutinleriniz kredi bekliyor",
       "notify": "Krediniz bitti, bu yüzden rutinleriniz çalışmayacak. Atlanan çalıştırmalar ücretsizdir ve krediniz olduğunda kendiliğinden yeniden başlar.",
       "note": "Kredi bekleniyor: çalıştırmalar ücretsiz atlanır ve krediniz olduğunda kendiliğinden yeniden başlar.",
       "cta": "Kredi al"
@@ -5180,6 +5177,35 @@
       "addMember": "Bot ekle veya çıkar",
       "decisions": "Kararlar",
       "noDecisions": "Henüz sabitlenen bir şey yok. Bir mesajı sabitle ya da botlardan bir konuda anlaşmalarını iste."
+    }
+  },
+  "status": {
+    "aRoutine": "Bir rutin",
+    "yourChatApp": "sohbet uygulamanız",
+    "appClosed": "Bu çalışırken uygulama kapandı.",
+    "continue": "Devam et",
+    "title": {
+      "paused": "{{name}} duraklatıldı",
+      "onHold": "{{name}} beklemede",
+      "laneStopped": "{{name}} bağlı değil",
+      "missed": "{{name}} çalıştırmaları kaçırdı",
+      "missedMany": "Rutinler çalıştırmaları kaçırdı",
+      "many_one": "{{count}} şey durdu",
+      "many_other": "{{count}} şey durdu"
+    },
+    "body": {
+      "signedOut": "Oturum kapalıyken çalışamaz. Oturum açın, yeniden çalışır.",
+      "routineLinkLost": "Çalıştırmaları {{platform}} yeniden bağlanana kadar bekler. Kaçırılan çalıştırma o zaman telafi edilir.",
+      "loginNotFinished": "{{platform}} oturum açma işlemi tamamlanmadı, bu yüzden duraklatıldı. Tamamlamak için Bağlan'a tıklayın.",
+      "missedMany_one": "Bilgisayar uykudayken veya uygulama kapalıyken {{routines}} rutin {{count}} çalıştırmayı kaçırdı. {{madeUp}} telafi edildi.",
+      "missedMany_other": "Bilgisayar uykudayken veya uygulama kapalıyken {{routines}} rutin {{count}} çalıştırmayı kaçırdı. {{madeUp}} telafi edildi.",
+      "routineLaneOff": "Çalıştırmaları size ulaşamıyor: {{platform}} kapalı. Almak için yeniden bağlayın."
+    },
+    "chat": {
+      "back": "{{name}} yeniden çalışıyor."
+    },
+    "row": {
+      "waitingNetwork": "Ağ bekleniyor. Bağlantı gelir gelmez çalışır."
     }
   }
 }

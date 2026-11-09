@@ -20,7 +20,14 @@ export interface ConnectivityOptions {
   /** Whether the Abacus API answers at all. */
   probe?: () => Promise<boolean>;
   now?: () => number;
+  /** The main log; suspend and resume each get a line. */
+  log?: (line: string) => void;
 }
+
+/** Asleep this long with timers running means the resume event was lost. */
+const MISSED_RESUME_MS = 60_000;
+/** Sleeps older than this are forgotten; no deadline counts back further. */
+const SLEEP_HISTORY_MS = 24 * 60 * 60_000;
 
 /** How often the OS's own answer is read: a local call, no traffic. */
 const OS_POLL_MS = 5_000;
@@ -61,13 +68,35 @@ export class ConnectivityService {
   private probing: Promise<void> | null = null;
   private lastProbeAt = 0;
   private asleep = false;
+  /** The power clock: when the current sleep began, and the last day's sleeps. */
+  private asleepSince: number | null = null;
+  private sleeps: Array<{ from: number; to: number }> = [];
   private readonly awakeTimers = new Set<AwakeTimer>();
   private readonly probe: () => Promise<boolean>;
   private readonly now: () => number;
 
   constructor(options: ConnectivityOptions = {}) {
     this.probe = options.probe ?? probeAbacus;
-    this.now = options.now ?? Date.now;
+    this.now = options.now ?? (() => Date.now());
+    this.log = options.log ?? ((line) => console.log(line));
+  }
+
+  private readonly log: (line: string) => void;
+
+  /**
+   * Time the machine slept between `from` and `to`, the current sleep
+   * included: what a wall-clock deadline (the routine reaper) must not count.
+   */
+  asleepBetween(from: number, to: number): number {
+    const spans =
+      this.asleepSince != null
+        ? [...this.sleeps, { from: this.asleepSince, to: this.now() }]
+        : this.sleeps;
+    return spans.reduce(
+      (total, span) =>
+        total + Math.max(0, Math.min(to, span.to) - Math.max(from, span.from)),
+      0
+    );
   }
 
   get state(): ConnectivityState {
@@ -119,7 +148,24 @@ export class ConnectivityService {
     };
   }
 
+  /**
+   * Asleep by the books for over a minute while timers still run: the OS
+   * never sent its resume. The caller (a tick) resumes it.
+   */
+  missedResume(): boolean {
+    return (
+      this.asleepSince != null &&
+      this.now() - this.asleepSince > MISSED_RESUME_MS
+    );
+  }
+
   suspended(): void {
+    if (!this.asleep) {
+      this.asleepSince = this.now();
+      this.log(
+        `[power] suspend at ${new Date(this.asleepSince).toISOString()}`
+      );
+    }
     this.asleep = true;
     for (const timer of this.awakeTimers) {
       if (timer.handle != null) clearTimeout(timer.handle);
@@ -129,6 +175,17 @@ export class ConnectivityService {
 
   /** The machine woke: the network it had may be gone, or back. */
   resumed(): void {
+    const now = this.now();
+    if (this.asleepSince != null) {
+      this.sleeps = [
+        ...this.sleeps.filter((span) => now - span.to < SLEEP_HISTORY_MS),
+        { from: this.asleepSince, to: now },
+      ];
+      this.log(
+        `[power] resume at ${new Date(now).toISOString()} after ${Math.round((now - this.asleepSince) / 1000)}s asleep`
+      );
+    } else this.log(`[power] resume at ${new Date(now).toISOString()}`);
+    this.asleepSince = null;
     this.asleep = false;
     for (const timer of this.awakeTimers) this.armAwake(timer);
     void this.check({ resumed: true });

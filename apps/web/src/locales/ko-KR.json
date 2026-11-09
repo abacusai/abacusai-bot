@@ -1650,9 +1650,7 @@
       "openAgent": "24시간 루틴 설정",
       "dismiss": "Dismiss",
       "missed_one": "Missed {{count}} run while your computer was off",
-      "missed_other": "Missed {{count}} runs while your computer was off",
-      "missedNoticeFree": "{{names}}. On the Basic plan, Abacus AI Agent on the web runs routines 24/7, even with your computer off.",
-      "missedNoticePaid": "{{names}}. 웹의 Abacus AI Agent에서 루틴을 설정하면 컴퓨터가 꺼져 있어도 24시간 내내 실행돼요."
+      "missed_other": "Missed {{count}} runs while your computer was off"
     },
     "reach": {
       "gmailSearch": "Search Gmail",
@@ -1674,7 +1672,6 @@
       "quiet": "일시 중지됨: {{runs}}번 연속으로 새로운 내용이 없어 크레딧 사용을 멈췄습니다. 계속 확인하려면 다시 시작하세요."
     },
     "creditHold": {
-      "title": "루틴이 크레딧을 기다리고 있습니다",
       "notify": "크레딧이 소진되어 루틴이 실행되지 않습니다. 건너뛴 실행에는 비용이 들지 않으며, 크레딧이 생기면 자동으로 다시 시작됩니다.",
       "note": "크레딧 대기 중: 실행은 비용 없이 건너뛰며, 크레딧이 생기면 자동으로 다시 시작됩니다.",
       "cta": "크레딧 받기"
@@ -5180,6 +5177,35 @@
       "addMember": "봇 추가 또는 제거",
       "decisions": "결정 사항",
       "noDecisions": "고정된 항목이 없습니다. 메시지를 고정하거나, 봇들에게 어떤 사안에 대해 합의해 달라고 요청해 보세요."
+    }
+  },
+  "status": {
+    "aRoutine": "루틴",
+    "yourChatApp": "채팅 앱",
+    "appClosed": "실행 중에 앱이 닫혔습니다.",
+    "continue": "계속",
+    "title": {
+      "paused": "{{name}} 일시 중지됨",
+      "onHold": "{{name}} 대기 중",
+      "laneStopped": "{{name}} 연결 안 됨",
+      "missed": "{{name}} 실행을 놓침",
+      "missedMany": "루틴이 실행을 놓쳤습니다",
+      "many_one": "{{count}}개가 멈춤",
+      "many_other": "{{count}}개가 멈춤"
+    },
+    "body": {
+      "signedOut": "로그아웃 상태에서는 실행할 수 없습니다. 로그인하면 다시 실행됩니다.",
+      "routineLinkLost": "{{platform}}이(가) 다시 연결될 때까지 실행이 대기합니다. 그때 놓친 실행을 보충합니다.",
+      "loginNotFinished": "{{platform}} 로그인이 끝나지 않아 일시 중지되었습니다. 연결을 눌러 마무리하세요.",
+      "missedMany_one": "컴퓨터가 잠자기 상태이거나 앱이 닫혀 있는 동안 루틴 {{routines}}개가 실행 {{count}}회를 놓쳤습니다. {{madeUp}}회를 보충했습니다.",
+      "missedMany_other": "컴퓨터가 잠자기 상태이거나 앱이 닫혀 있는 동안 루틴 {{routines}}개가 실행 {{count}}회를 놓쳤습니다. {{madeUp}}회를 보충했습니다.",
+      "routineLaneOff": "{{platform}}이(가) 꺼져 있어 실행 결과가 전달되지 않습니다. 받으려면 다시 연결하세요."
+    },
+    "chat": {
+      "back": "{{name}}이(가) 다시 실행됩니다."
+    },
+    "row": {
+      "waitingNetwork": "네트워크를 기다리는 중입니다. 연결이 돌아오는 즉시 실행됩니다."
     }
   }
 }

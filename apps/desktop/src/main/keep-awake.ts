@@ -1,9 +1,11 @@
-import { powerSaveBlocker } from "electron";
+import { powerMonitor, powerSaveBlocker } from "electron";
 import Store from "electron-store";
 
 /**
- * Keep the machine awake while the agent is busy and the preference is on
- * (default on: a sleeping desktop silently kills long runs).
+ * Keep the machine awake while the agent is busy, or a routine is due (from
+ * just before its slot until its run settles), and the preference is on
+ * (default on: a sleeping desktop silently kills long runs). It cannot stop a
+ * lid close or a sleep the user chose; the status board reports what that missed.
  */
 
 interface PowerStoreSchema {
@@ -21,6 +23,8 @@ let blockerId: number | null = null;
  * it only from an effect cleanup that a crash never runs.
  */
 let mainBusy = false;
+/** A routine is about to run or running (ServiceHost.followRoutineDue). */
+let routineDue = false;
 
 function isEnabled(): boolean {
   return powerStore.get("keepAwakeEnabled", true) as boolean;
@@ -46,8 +50,29 @@ export function followMainAgentBusy(source: {
   return stop;
 }
 
+/** Follow the host's routine-due signal: its value now, then every change. */
+/** Power source changes re-decide a hold that is only for a due routine. */
+let watchingPower = false;
+
+export function followRoutineDue(source: {
+  followRoutineDue(listener: (due: boolean) => void): () => void;
+}): () => void {
+  if (!watchingPower) {
+    watchingPower = true;
+    powerMonitor.on("on-battery", reconcile);
+    powerMonitor.on("on-ac", reconcile);
+  }
+  return source.followRoutineDue((due) => {
+    routineDue = due;
+    reconcile();
+  });
+}
+
 function reconcile(): void {
-  const shouldBlock = isEnabled() && mainBusy;
+  // A routine that is only due does not drain a laptop on battery.
+  const shouldBlock =
+    isEnabled() &&
+    (mainBusy || (routineDue && !powerMonitor.isOnBatteryPower()));
   const active = blockerId !== null && powerSaveBlocker.isStarted(blockerId);
 
   if (shouldBlock && !active) {

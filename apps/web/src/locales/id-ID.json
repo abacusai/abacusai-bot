@@ -1650,9 +1650,7 @@
       "openAgent": "Atur rutinitas 24/7",
       "dismiss": "Dismiss",
       "missed_one": "Missed {{count}} run while your computer was off",
-      "missed_other": "Missed {{count}} runs while your computer was off",
-      "missedNoticeFree": "{{names}}. On the Basic plan, Abacus AI Agent on the web runs routines 24/7, even with your computer off.",
-      "missedNoticePaid": "{{names}}. Atur rutinitasmu di Abacus AI Agent di web, tempat rutinitas berjalan 24/7, bahkan saat komputermu mati."
+      "missed_other": "Missed {{count}} runs while your computer was off"
     },
     "reach": {
       "gmailSearch": "Search Gmail",
@@ -1674,7 +1672,6 @@
       "quiet": "Dijeda: {{runs}} kali berturut-turut tidak menemukan hal baru, jadi berhenti memakai kredit. Lanjutkan agar terus memeriksa."
     },
     "creditHold": {
-      "title": "Rutinitas Anda menunggu kredit",
       "notify": "Kredit Anda habis, jadi rutinitas Anda tidak akan berjalan. Proses yang dilewati tidak dikenai biaya, dan akan berjalan lagi dengan sendirinya saat Anda punya kredit.",
       "note": "Menunggu kredit: proses dilewati tanpa biaya dan berjalan lagi dengan sendirinya saat Anda punya kredit.",
       "cta": "Dapatkan kredit"
@@ -5180,6 +5177,35 @@
       "addMember": "Tambah atau hapus bot",
       "decisions": "Keputusan",
       "noDecisions": "Belum ada yang disematkan. Sematkan pesan, atau minta para bot menyepakati sesuatu."
+    }
+  },
+  "status": {
+    "aRoutine": "Sebuah rutinitas",
+    "yourChatApp": "aplikasi chat Anda",
+    "appClosed": "Aplikasi ditutup saat ini sedang berjalan.",
+    "continue": "Lanjutkan",
+    "title": {
+      "paused": "{{name}} dijeda",
+      "onHold": "{{name}} ditahan",
+      "laneStopped": "{{name}} tidak terhubung",
+      "missed": "{{name}} melewatkan jalankan",
+      "missedMany": "Rutinitas melewatkan jalankan",
+      "many_one": "{{count}} hal berhenti",
+      "many_other": "{{count}} hal berhenti"
+    },
+    "body": {
+      "signedOut": "Rutinitas ini tidak bisa berjalan saat Anda keluar. Masuk dan rutinitas berjalan lagi.",
+      "routineLinkLost": "Jalankannya menunggu sampai {{platform}} terhubung lagi. Jalankan yang terlewat akan disusulkan saat itu.",
+      "loginNotFinished": "Proses masuk {{platform}} belum selesai, jadi dijeda. Klik Hubungkan untuk menyelesaikannya.",
+      "missedMany_one": "{{routines}} rutinitas melewatkan {{count}} jalankan saat komputer tidur atau aplikasi ditutup. {{madeUp}} disusulkan.",
+      "missedMany_other": "{{routines}} rutinitas melewatkan {{count}} jalankan saat komputer tidur atau aplikasi ditutup. {{madeUp}} disusulkan.",
+      "routineLaneOff": "Jalankannya tidak sampai ke Anda: {{platform}} dimatikan. Hubungkan lagi untuk menerimanya."
+    },
+    "chat": {
+      "back": "{{name}} berjalan lagi."
+    },
+    "row": {
+      "waitingNetwork": "Menunggu jaringan. Berjalan segera setelah koneksi kembali."
     }
   }
 }

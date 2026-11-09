@@ -1650,9 +1650,7 @@
       "openAgent": "Set up 24/7 routines",
       "dismiss": "Dismiss",
       "missed_one": "Missed {{count}} run while your computer was off",
-      "missed_other": "Missed {{count}} runs while your computer was off",
-      "missedNoticeFree": "{{names}}. On the Basic plan, Abacus AI Agent on the web runs routines 24/7, even with your computer off.",
-      "missedNoticePaid": "{{names}}. Set up your routines in Abacus AI Agent on the web, where they run 24/7, even with your computer off."
+      "missed_other": "Missed {{count}} runs while your computer was off"
     },
     "reach": {
       "gmailSearch": "Search Gmail",
@@ -1674,7 +1672,6 @@
       "quiet": "Paused: {{runs}} runs in a row found nothing new, so it stopped using credits. Resume it to keep checking."
     },
     "creditHold": {
-      "title": "Your routines are waiting for credits",
       "notify": "You're out of credits, so your routines won't run. Skipped runs cost nothing, and they start again on their own when you have credits.",
       "note": "Waiting for credits: runs are skipped at no cost and start again on their own when you have credits.",
       "cta": "Get credits"
@@ -5180,6 +5177,35 @@
       "addMember": "Add or remove bots",
       "decisions": "Decisions",
       "noDecisions": "Nothing pinned yet. Pin a message, or ask the bots to agree on something."
+    }
+  },
+  "status": {
+    "aRoutine": "A routine",
+    "yourChatApp": "your chat app",
+    "appClosed": "The app closed while this was running.",
+    "continue": "Continue",
+    "title": {
+      "paused": "{{name}} paused",
+      "onHold": "{{name}} is on hold",
+      "laneStopped": "{{name}} isn't connected",
+      "missed": "{{name}} missed runs",
+      "missedMany": "Routines missed runs",
+      "many_one": "{{count}} thing stopped",
+      "many_other": "{{count}} things stopped"
+    },
+    "body": {
+      "signedOut": "It can't run while you're signed out. Sign in and it runs again.",
+      "routineLinkLost": "Its runs wait until {{platform}} is connected again. The missed run is made up then.",
+      "loginNotFinished": "The {{platform}} sign-in didn't finish, so it's paused. Click Connect to finish it.",
+      "missedMany_one": "{{routines}} routines missed {{count}} run while the computer slept or the app was closed. {{madeUp}} made up.",
+      "missedMany_other": "{{routines}} routines missed {{count}} runs while the computer slept or the app was closed. {{madeUp}} made up.",
+      "routineLaneOff": "Its runs can't reach you: {{platform}} is turned off. Connect it again to get them."
+    },
+    "chat": {
+      "back": "{{name}} is running again."
+    },
+    "row": {
+      "waitingNetwork": "Waiting for the network. It runs as soon as the connection is back."
     }
   }
 }

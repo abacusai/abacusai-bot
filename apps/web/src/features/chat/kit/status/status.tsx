@@ -1053,8 +1053,8 @@ export const ErrorCard = ({
         t("workspace.retryMessage")
       )
       .catch(() => {});
-  // The app closed under the run: an interruption, not the agent's failure,
-  // worded as the routine's runs list words it. A chat can still retry it.
+  // The app closed under the run: an interruption, not the agent's failure.
+  // What it did up to then was saved as it went; Continue picks it up there.
   if (error.code === "app_closed")
     return (
       <div
@@ -1063,10 +1063,24 @@ export const ErrorCard = ({
         data-kind="interrupted"
       >
         <CircleStop aria-hidden className="size-3.5 shrink-0" />
-        {t("phase5.outcomes.interrupted")}
+        {t("status.appClosed")}
         {latest && canReply ? (
-          <Button variant="ghost" size="xs" onClick={retry}>
-            {t("chat.error.retry")}
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={() =>
+              void session
+                .retry(
+                  {
+                    intent: "continue",
+                    ...(composer.fixedMode ? { mode: composer.fixedMode } : {}),
+                  },
+                  t("workspace.retryMessage")
+                )
+                .catch(() => {})
+            }
+          >
+            {t("status.continue")}
           </Button>
         ) : null}
       </div>

@@ -23,6 +23,7 @@ import type {
   BrowserRuntimeState,
 } from "@abacus-ai/contract/contracts";
 import type { ModelAvailability } from "@abacus-ai/contract/models";
+import type { StatusItem } from "@abacus-ai/contract/status";
 import { implement, type Router } from "@orpc/server";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -238,6 +239,11 @@ const shellRouter = (
       })),
       events: os.messaging.events.handler(quiet as never),
     },
+    // The status board: nothing stopped unless a test says so.
+    status: {
+      list: os.status.list.handler(() => options.statusItems ?? []),
+      events: os.status.events.handler(quiet as never),
+    },
     memory: {
       bots: os.memory.bots.handler(() => []),
       events: os.memory.events.handler(quiet as never),
@@ -394,6 +400,8 @@ export const defaultSeed = (): FixtureSeed => ({
 
 export interface HarnessOptions {
   onboarded?: boolean;
+  /** What `status.list` (the status board) answers. */
+  statusItems?: StatusItem[];
   signedIn?: boolean;
   authStart?(): Promise<AbacusAuthOutcome>;
   seed?: FixtureSeed;

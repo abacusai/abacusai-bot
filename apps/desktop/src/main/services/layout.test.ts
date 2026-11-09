@@ -44,6 +44,8 @@ const GROUPS = [
   "providers",
   "sandbox",
   "session",
+  // The status board: the one teller of what stopped (routines, lanes, runs).
+  "status",
   "updates",
   // The user's vault as the agent reaches it: its client, per-session state,
   // the waiter, its tools, the fill plan and the Pay guard.

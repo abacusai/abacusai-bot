@@ -30,6 +30,11 @@ type StoredPlatform = {
   signedIn?: boolean;
   /** The link it had ended, and no new one replaced it yet. */
   linkLost?: boolean;
+  /**
+   * The app stopped it (a login left unfinished), apart from the user's own
+   * `enabled`: it stays on, is not started again, and Connect resumes it.
+   */
+  appStopped?: "login-not-finished" | null;
 };
 
 type StoredConfig = {
@@ -294,13 +299,34 @@ export const isPlatformConfigured = (
 export const isPlatformEnabled = (platformId: MessagingPlatformId): boolean =>
   readConfig().platforms?.[platformId]?.enabled === true;
 
+/** Why the app stopped this lane, if it did; see `appStopped`. */
+export const readPlatformAppStopped = (
+  platformId: MessagingPlatformId
+): "login-not-finished" | null =>
+  readConfig().platforms?.[platformId]?.appStopped ?? null;
+
+export const savePlatformAppStopped = (
+  platformId: MessagingPlatformId,
+  reason: "login-not-finished" | null
+): void => {
+  const config = readConfig();
+  const platforms = { ...config.platforms };
+  platforms[platformId] = { ...platforms[platformId], appStopped: reason };
+  writeConfig({ ...config, platforms });
+};
+
 export const setPlatformEnabled = (
   platformId: MessagingPlatformId,
   enabled: boolean
 ): void => {
   const config = readConfig();
   const platforms = { ...config.platforms };
-  platforms[platformId] = { ...platforms[platformId], enabled };
+  // Switched by hand either way: whatever the app had stopped is the user's again.
+  platforms[platformId] = {
+    ...platforms[platformId],
+    enabled,
+    appStopped: null,
+  };
   writeConfig({ ...config, platforms });
   // A conversation in progress was told what connectors it has. Pairing changes
   // deliberately do not mark: they are traffic, not a connector-list change.

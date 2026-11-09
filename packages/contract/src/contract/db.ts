@@ -361,7 +361,6 @@ export const PREFS_SCALAR_ENTRIES = {
     v.object({
       at: v.number(),
       routineId: v.string(),
-      noticed: v.boolean(),
     })
   ),
   creditThresholds: v.record(v.string(), CreditThresholdMarkSchema),

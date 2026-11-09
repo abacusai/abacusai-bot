@@ -25,6 +25,7 @@ import { settingsRouter } from "./procedures/settings";
 import { sharesRouter } from "./procedures/shares";
 import { sitesRouter } from "./procedures/sites";
 import { skillsRouter } from "./procedures/skills";
+import { statusRouter } from "./procedures/status";
 import { systemRouter } from "./procedures/system";
 import { terminalRouter } from "./procedures/terminal";
 import { updateRouter } from "./procedures/update";
@@ -69,6 +70,7 @@ const routes: {
   window: typeof windowRouter;
   update: typeof updateRouter;
   skills: typeof skillsRouter;
+  status: typeof statusRouter;
   db: typeof dbRouter;
 } = {
   workspaces: workspacesRouter,
@@ -102,6 +104,7 @@ const routes: {
   window: windowRouter,
   update: updateRouter,
   skills: skillsRouter,
+  status: statusRouter,
   db: dbRouter,
 };
 export const createRouter = (): typeof routes => impl.router(routes);

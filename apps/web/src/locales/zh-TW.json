@@ -1650,9 +1650,7 @@
       "openAgent": "設定 24/7 例行工作",
       "dismiss": "關閉",
       "missed_one": "電腦關機期間錯過了 {{count}} 次執行",
-      "missed_other": "電腦關機期間錯過了 {{count}} 次執行",
-      "missedNoticeFree": "{{names}}。使用 Basic 方案，網頁版 Abacus AI Agent 可以 24/7 執行例行工作，即使你的電腦已關機。",
-      "missedNoticePaid": "{{names}}。在網頁版 Abacus AI Agent 中設定你的例行工作，它們會在那裡 24/7 執行，即使你的電腦已關機。"
+      "missed_other": "電腦關機期間錯過了 {{count}} 次執行"
     },
     "reach": {
       "gmailSearch": "搜尋 Gmail",
@@ -1674,7 +1672,6 @@
       "quiet": "已暫停：連續 {{runs}} 次執行都沒有發現新內容，因此不再消耗點數。繼續後就會再次檢查。"
     },
     "creditHold": {
-      "title": "你的例行工作正在等待點數",
       "notify": "你的點數已用完，所以例行工作不會執行。略過的執行不收費，等你有點數後，它們會自動重新開始。",
       "note": "正在等待點數：執行會被略過，不收費，等你有點數後會自動重新開始。",
       "cta": "取得點數"
@@ -5180,6 +5177,35 @@
       "addMember": "新增或移除機器人",
       "decisions": "決定",
       "noDecisions": "還沒有釘選的內容。釘選一則訊息，或請機器人們就某件事達成共識。"
+    }
+  },
+  "status": {
+    "aRoutine": "一個例行任務",
+    "yourChatApp": "你的聊天應用程式",
+    "appClosed": "執行期間應用程式已關閉。",
+    "continue": "繼續",
+    "title": {
+      "paused": "{{name}} 已暫停",
+      "onHold": "{{name}} 正在等待",
+      "laneStopped": "{{name}} 未連線",
+      "missed": "{{name}} 錯過了執行",
+      "missedMany": "例行任務錯過了執行",
+      "many_one": "{{count}} 項已停止",
+      "many_other": "{{count}} 項已停止"
+    },
+    "body": {
+      "signedOut": "你登出時它無法執行。登入後會再次執行。",
+      "routineLinkLost": "它的執行會等到 {{platform}} 重新連線，屆時會補上錯過的執行。",
+      "loginNotFinished": "{{platform}} 登入沒有完成，所以已暫停。點擊「連線」完成登入。",
+      "missedMany_one": "電腦睡眠或應用程式關閉期間，{{routines}} 個例行任務錯過了 {{count}} 次執行，已補上 {{madeUp}} 次。",
+      "missedMany_other": "電腦睡眠或應用程式關閉期間，{{routines}} 個例行任務錯過了 {{count}} 次執行，已補上 {{madeUp}} 次。",
+      "routineLaneOff": "{{platform}} 已關閉，它的執行結果無法送達你。重新連線即可收到。"
+    },
+    "chat": {
+      "back": "{{name}} 已恢復執行。"
+    },
+    "row": {
+      "waitingNetwork": "正在等待網路。連線恢復後立即執行。"
     }
   }
 }

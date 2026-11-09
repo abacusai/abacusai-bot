@@ -61,14 +61,13 @@ export const ROUTINE_QUIET_RUNS_BEFORE_PAUSE = 3;
 
 /**
  * Local routines are waiting for credits: their fires skip, unbilled, until
- * the credits are back, and the user is told once. Main stamps it and clears
- * it when the wall goes; the app marks it `noticed` once it has said so.
+ * the credits are back. Main stamps it and clears it when the wall goes; the
+ * status board tells the user, once.
  */
 export interface RoutineCreditHold {
   at: number;
   /** The routine that first skipped: where the notice opens. */
   routineId: string;
-  noticed: boolean;
 }
 
 /**

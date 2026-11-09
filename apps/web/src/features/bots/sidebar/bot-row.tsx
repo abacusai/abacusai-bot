@@ -6,6 +6,7 @@
  */
 import "../bots.css";
 import type { BotRow } from "@abacus-ai/contract/contract/rows";
+import type { StatusItem } from "@abacus-ai/contract/status";
 import type { TFunction } from "i18next";
 import { MoreHorizontal } from "lucide-react";
 import { motion, type Transition } from "motion/react";
@@ -13,6 +14,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ACCENT_OUTLINE_CLASS } from "#renderer/components/bot-avatar";
+import { StatusDot } from "#renderer/components/status-board";
 import { cn } from "#renderer/lib/cn";
 import { motionFor, springs, useMotionPreference } from "#renderer/lib/motion";
 import { AppLink } from "#renderer/lib/navigation/app-link";
@@ -129,6 +131,7 @@ export const BotRowView = ({
   attention,
   preview,
   channelNote = null,
+  status = null,
   stamp,
   active,
   hidden,
@@ -139,6 +142,8 @@ export const BotRowView = ({
   attention: BotAttention;
   preview: string | null;
   channelNote?: string | null;
+  /** What the status board says is not running for this bot: a dot by the name. */
+  status?: StatusItem | null;
   stamp: string | null;
   active: boolean;
   hidden?: boolean;
@@ -205,6 +210,7 @@ export const BotRowView = ({
                 >
                   {bot.name}
                 </span>
+                <StatusDot item={status} />
                 <span
                   style={{ visibility: menuOpen ? "hidden" : undefined }}
                   className="text-muted-foreground ml-auto shrink-0 text-[11px] group-focus-within/row:invisible group-hover/row:invisible [@media(hover:none)]:invisible"

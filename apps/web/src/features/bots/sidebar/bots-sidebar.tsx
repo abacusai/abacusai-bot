@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 import { ACCENT_OUTLINE_CLASS } from "#renderer/components/bot-avatar";
 import { CommandPaletteAction } from "#renderer/components/command-palette-action";
 import { NavList } from "#renderer/components/nav-list";
+import { statusLine, useStatusItems } from "#renderer/components/status-board";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { NEUTRAL_LOOK } from "#renderer/lib/bots/avatar";
 import { findCheckIn } from "#renderer/lib/bots/check-in";
@@ -117,6 +118,12 @@ const BotRowContainer = ({
     bot.homeChannel == null
       ? undefined
       : messaging?.platforms.find((entry) => entry.id === bot.homeChannel);
+  // A stop the board knows of: the bot's chat-app lane, else one of its routines.
+  const stops = useStatusItems();
+  const status =
+    stops.find((item) => item.key === `lane:${bot.homeChannel}`) ??
+    stops.find((item) => item.detail.botId === bot.id) ??
+    null;
   const channelNote =
     lane?.recovery != null
       ? recoveryLine(
@@ -125,7 +132,9 @@ const BotRowContainer = ({
           now,
           t
         )
-      : null;
+      : status != null
+        ? statusLine(status, t)
+        : null;
   const items = botMenuItems({
     pinned,
     unread: sources.unread.has(bot.id),
@@ -145,6 +154,7 @@ const BotRowContainer = ({
         attention={attention}
         preview={preview?.text ?? null}
         channelNote={channelNote}
+        status={status}
         stamp={formatChatStamp(
           preview?.at ?? bot.updatedAt,
           now,

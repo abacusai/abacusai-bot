@@ -18,9 +18,7 @@ import {
   LANE_CONNECTING_WATCHDOG_MS,
   LANE_GIVE_UP_MS,
   LANE_HINT_GAP_MS,
-  LANE_NOTIFY_AFTER_MS,
   LANE_RETRY_CAP_MS,
-  LANE_SHOW_AFTER_MS,
   LANE_STUCK_RETRY_MS,
   LaneSupervisor,
   laneRetryDelayMs,
@@ -39,8 +37,8 @@ const harness = (
     active: true,
     random: 0.5,
     restarts: [] as number[],
-    notified: 0,
-    toldUser: 0,
+    /** What the status board heard, in order. */
+    reports: [] as string[],
     hint: null as ((reason: string) => void) | null,
   };
   const supervisor: LaneSupervisor = new LaneSupervisor({
@@ -56,12 +54,8 @@ const harness = (
         supervisor.noteState(id, outcome.state, outcome.failure);
     },
     diskSpaceBack: () => world.diskFree,
-    userActive: () => world.active,
-    notifyDown: () => {
-      world.notified += 1;
-    },
-    tellNeedsUser: () => {
-      world.toldUser += 1;
+    report: (_id, state, reason) => {
+      world.reports.push(`${state}:${reason}`);
     },
     watchHints: (hint) => {
       world.hint = hint;
@@ -133,35 +127,33 @@ describe("a lane whose page could not be reached", () => {
     expect(Math.min(...gaps)).toBeGreaterThanOrEqual(LANE_RETRY_FIRST_STEP);
   });
 
-  it("is said in the pane only after 10 minutes down, with the next try", async () => {
+  it("gives the pane its next try while down", async () => {
     const { supervisor } = harness(() => unreachable);
     supervisor.noteState(ID, "error", { retry: "auto" });
-    await vi.advanceTimersByTimeAsync(LANE_SHOW_AFTER_MS - 1_000);
-    expect(supervisor.status(ID)).toBeNull();
-    await vi.advanceTimersByTimeAsync(2_000);
+    await vi.advanceTimersByTimeAsync(1_000);
     const status = supervisor.status(ID)!;
     expect(status.phase).toBe("scheduled");
     expect(status.nextTryAt).toBeGreaterThan(Date.now());
   });
 
-  it("notifies once after an hour, and waits for the user to be back", async () => {
-    const { supervisor, world } = harness(() => unreachable);
-    world.active = false;
+  it("reports one wait to the status board per outage, and the way back", async () => {
+    let up = false;
+    const { supervisor, world } = harness(() =>
+      up ? { state: "connected" } : unreachable
+    );
     supervisor.noteState(ID, "error", { retry: "auto" });
-    await vi.advanceTimersByTimeAsync(LANE_NOTIFY_AFTER_MS + 1_000);
-    expect(world.notified).toBe(0);
-
-    world.active = true;
-    world.hint!("the app came to the front");
-    world.hint!("the app came to the front");
-    await vi.advanceTimersByTimeAsync(5 * 60 * 60_000);
-    expect(world.notified).toBe(1);
+    await vi.advanceTimersByTimeAsync(2 * 60 * 60_000);
+    expect(world.reports).toEqual(["waiting:retrying"]);
+    up = true;
+    await vi.advanceTimersByTimeAsync(LANE_RETRY_CAP_MS * 2);
+    expect(world.reports).toEqual(["waiting:retrying", "running:ok"]);
   });
 
   it("stops after a day down; a hint or Try now still tries", async () => {
     const { supervisor, world } = harness(() => unreachable);
     supervisor.noteState(ID, "error", { retry: "auto" });
     await vi.advanceTimersByTimeAsync(LANE_GIVE_UP_MS + 10 * 60_000);
+    expect(world.reports.at(-1)).toBe("stopped-needs-user:gave-up");
     const count = world.restarts.length;
     // About one try per capped step over the day, then none.
     expect(count).toBeLessThan(LANE_GIVE_UP_MS / (LANE_RETRY_CAP_MS / 2) + 10);
@@ -292,7 +284,7 @@ describe("a failure only the user can fix", () => {
       world.hint?.("the network changed");
       await vi.advanceTimersByTimeAsync(2 * LANE_GIVE_UP_MS);
       expect(world.restarts).toHaveLength(0);
-      expect(world.notified).toBe(0);
+      expect(world.reports).toEqual([]);
       expect(supervisor.status(ID)).toBeNull();
     }
   );
@@ -318,7 +310,7 @@ describe("a lane the user opens while it waits for its next try", () => {
     supervisor.noteState(ID, "connecting");
     await vi.advanceTimersByTimeAsync(5 * 60_000);
     expect(world.restarts).toHaveLength(0);
-    expect(supervisor.status(ID)).toBeNull();
+    expect(supervisor.status(ID)?.phase).toBe("trying");
     // Their try failing goes back to the backoff.
     supervisor.noteState(ID, "error", { retry: "auto" });
     await vi.advanceTimersByTimeAsync(40_000);
@@ -334,9 +326,11 @@ describe("a refused certificate", () => {
     } as const;
     const { supervisor, world } = harness(() => cert);
     supervisor.noteState(ID, "error", cert.failure);
-    await vi.advanceTimersByTimeAsync(LANE_SHOW_AFTER_MS + 60_000);
+    await vi.advanceTimersByTimeAsync(11 * 60_000);
     expect(world.restarts).toHaveLength(3);
-    expect(world.toldUser).toBe(1);
+    expect(
+      world.reports.filter((r) => r === "stopped-needs-user:needs-user")
+    ).toHaveLength(1);
     expect(supervisor.status(ID)).toEqual({
       phase: "needs_user",
       nextTryAt: null,
@@ -349,7 +343,8 @@ describe("a refused certificate", () => {
     expect(supervisor.retryNow(ID)).toBe(true);
     await vi.advanceTimersByTimeAsync(0);
     expect(world.restarts).toHaveLength(4);
-    expect(world.toldUser).toBe(1);
+    // Told once: the board keys on the state, which did not change.
+    expect(world.reports.at(-1)).not.toBe("running:ok");
   });
 
   it("goes back to the backoff when Try now meets a different failure", async () => {
@@ -359,7 +354,7 @@ describe("a refused certificate", () => {
     };
     const { supervisor, world } = harness(() => outcome);
     supervisor.noteState(ID, "error", { retry: "auto", cert: true });
-    await vi.advanceTimersByTimeAsync(LANE_SHOW_AFTER_MS + 60_000);
+    await vi.advanceTimersByTimeAsync(11 * 60_000);
     expect(supervisor.status(ID)?.phase).toBe("needs_user");
 
     // The network changed: Try now now fails to load, not on the certificate.
@@ -378,7 +373,7 @@ describe("a full disk", () => {
     const { supervisor, world } = harness(() => null);
     world.diskFree = false;
     supervisor.noteState(ID, "error", { retry: "when_disk_free" });
-    await vi.advanceTimersByTimeAsync(LANE_SHOW_AFTER_MS + 1_000);
+    await vi.advanceTimersByTimeAsync(11 * 60_000);
     expect(supervisor.status(ID)).toEqual({ phase: "disk", nextTryAt: null });
   });
 

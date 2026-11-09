@@ -15,19 +15,32 @@ import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-/** Whether the stored link is recorded as lost. */
-const stored = vi.hoisted(() => ({ linkLost: false }));
+/** Whether the stored link is recorded as lost, and what the app stopped. */
+const stored = vi.hoisted(() => ({
+  linkLost: false,
+  appStopped: {} as Record<string, "login-not-finished" | null>,
+  enabled: [] as string[],
+}));
 
 vi.mock("./messaging-config-service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./messaging-config-service")>()),
   readPlatformLinkLost: () => stored.linkLost,
+  readPlatformAppStopped: (id: string) => stored.appStopped[id] ?? null,
+  savePlatformAppStopped: (id: string, reason: "login-not-finished" | null) => {
+    stored.appStopped[id] = reason;
+  },
+  // The user's own switch: the app must never write it.
+  setPlatformEnabled: (id: string, enabled: boolean) => {
+    stored.enabled.push(`${id}:${String(enabled)}`);
+  },
   readGatewaySettings: () => ({
     gatewayEnabled: true,
     autoApproveTools: true,
     respondToInbound: true,
     workspaceId: null,
   }),
-  isPlatformEnabled: (id: MessagingPlatformId) => id === "discord",
+  isPlatformEnabled: (id: MessagingPlatformId) =>
+    id === "discord" || id === "abacus_discord",
   isPlatformConfigured: (id: MessagingPlatformId) => id === "discord",
 }));
 
@@ -39,6 +52,10 @@ vi.mock("./page-boot-watch", async (importOriginal) => ({
 
 const { MessagingGatewayService, RELEASED_LOGIN_MS } =
   await import("./messaging-gateway-service");
+const { StatusBoard, STATUS_BATCH_MS, STATUS_MERGE_MS, LANE_FLAP_COOLDOWN_MS } =
+  await import("../status/status-board");
+const { channelWords } = await import("./channel-words");
+const english = await channelWords("en-US");
 
 /** Holds stub connectors' stop() open while a test needs it to be slow. */
 const stopGate = {
@@ -57,12 +74,19 @@ type Callbacks = {
 
 /** Builds a gateway whose connectors are stubs that hand their callbacks back. */
 const service = (
-  notifyUser?: (platform: string, title: string, body: string) => void
+  notified?: (title: string) => void
 ): {
   gateway: InstanceType<typeof MessagingGatewayService>;
   captured: Callbacks[];
+  board: InstanceType<typeof StatusBoard>;
 } => {
   const captured: Callbacks[] = [];
+  // The real status board, in memory: the gateway reports, the board tells.
+  const board = new StatusBoard({
+    file: () => null,
+    words: async () => english,
+    notify: (notice) => notified?.(notice.title),
+  });
 
   const gateway = new MessagingGatewayService({
     resolveWorkspaceId: () => null,
@@ -72,7 +96,7 @@ const service = (
     sendMessage: () => {},
     emitUserMessage: () => {},
     emitChanged: () => {},
-    notifyUser,
+    status: board,
   } as never);
 
   const build = (
@@ -106,7 +130,7 @@ const service = (
     };
   };
 
-  return { gateway, captured };
+  return { gateway, captured, board };
 };
 
 const platformState = (
@@ -121,6 +145,8 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  stored.appStopped = {};
+  stored.enabled = [];
 });
 
 describe("a lost link", () => {
@@ -128,14 +154,13 @@ describe("a lost link", () => {
     stored.linkLost = false;
   });
 
-  it("is told outside the chats, once a launch, and again if it is lost after coming back", async () => {
+  it("is told outside the chats, once per cooldown, and again if it is lost after coming back", async () => {
     const told: string[] = [];
-    const { gateway, captured } = service((_platform, title) =>
-      told.push(title)
-    );
+    const { gateway, captured } = service((title) => told.push(title));
     await gateway.syncConnectors();
     const settled = async (count: number) => {
-      await vi.waitFor(() => expect(told).toHaveLength(count));
+      await vi.advanceTimersByTimeAsync(STATUS_MERGE_MS + STATUS_BATCH_MS);
+      expect(told).toHaveLength(count);
     };
 
     // Waiting on a first login is nothing to announce.
@@ -146,12 +171,17 @@ describe("a lost link", () => {
     stored.linkLost = true;
     captured[0]!.onState("needs_login", "No longer linked.");
     await settled(1);
-    expect(told[0]).toContain("Discord");
+    expect(told[0]).toBe("Discord is disconnected");
     captured[0]!.onState("needs_login", "No longer linked, still.");
-    await vi.advanceTimersByTimeAsync(0);
-    expect(told).toHaveLength(1);
+    await settled(1);
 
+    // Lost again at once (a flapping link): not told twice in the cooldown.
     captured[0]!.onState("connected");
+    captured[0]!.onState("needs_login", "No longer linked.");
+    await settled(1);
+    // Back, and lost again after the cooldown: told again.
+    captured[0]!.onState("connected");
+    await vi.advanceTimersByTimeAsync(LANE_FLAP_COOLDOWN_MS);
     captured[0]!.onState("needs_login", "No longer linked.");
     await settled(2);
   });
@@ -273,76 +303,114 @@ describe("asking the platforms before saying what is connected", () => {
   });
 });
 
+describe("a link lost on an older build (the backfilled linkLost flag)", () => {
+  afterEach(() => {
+    stored.linkLost = false;
+  });
+
+  it("is told at launch, before its connector has said anything", async () => {
+    const told: string[] = [];
+    const { gateway, board } = service((title) => told.push(title));
+    stored.linkLost = true;
+    board.reconcile(() => gateway.reportLaneStates());
+    expect(board.get("lane:discord")).toMatchObject({
+      state: "stopped-needs-user",
+      reason: "link-lost",
+    });
+    await vi.advanceTimersByTimeAsync(STATUS_BATCH_MS);
+    expect(told).toEqual(["Discord is disconnected"]);
+  });
+});
+
 describe("a login whose connect dialog closed unlinked", () => {
   // The phone is ahead of the app: people close the dialog on the phone's
   // "linked", a moment before the connector says so.
-  const released = async () => {
-    const { gateway, captured } = service();
+  const released = async (notified?: (title: string) => void) => {
+    const { gateway, captured, board } = service(notified);
     await gateway.syncConnectors();
     captured[0]!.onState("needs_login", "Scan the QR to connect.");
-    const off = vi
-      .spyOn(gateway, "updatePlatform")
-      .mockResolvedValue(gateway.getSnapshot());
     gateway.releaseLogin("discord");
-    return { gateway, captured, off };
+    return { gateway, captured, board };
   };
+  const stopped = () => stored.appStopped.discord ?? null;
 
   it("is kept when the scan lands after the dialog closed", async () => {
-    const { gateway, captured, off } = await released();
+    const { gateway, captured } = await released();
     captured[0]!.onState("connected");
     await vi.advanceTimersByTimeAsync(RELEASED_LOGIN_MS);
-    expect(off).not.toHaveBeenCalled();
+    expect(stopped()).toBeNull();
     expect(platformState(gateway)).toBe("connected");
   });
 
-  it("is turned off, with its shared-bot lane, when none lands in time", async () => {
-    const { off } = await released();
+  it("is stopped by the app, with its shared-bot lane, never by the user's switch", async () => {
+    const told: string[] = [];
+    const { gateway, board } = await released((title) => told.push(title));
     await vi.advanceTimersByTimeAsync(RELEASED_LOGIN_MS - 1);
-    expect(off).not.toHaveBeenCalled();
+    expect(stopped()).toBeNull();
     await vi.advanceTimersByTimeAsync(1);
-    expect(off.mock.calls.map(([request]) => request)).toEqual([
-      { platformId: "abacus_discord", enabled: false },
-      { platformId: "discord", enabled: false },
-    ]);
+    expect(stored.appStopped).toEqual({
+      abacus_discord: "login-not-finished",
+      discord: "login-not-finished",
+    });
+    // The saved on/off stays the user's alone.
+    expect(stored.enabled).toEqual([]);
+    // Still the user's lane: routines skip and make up through it.
+    expect(gateway.unlinkedPlatforms()).toContain("discord");
+    expect(board.get("lane:discord")).toMatchObject({
+      state: "stopped-needs-user",
+      reason: "login-not-finished",
+    });
+    await vi.advanceTimersByTimeAsync(STATUS_BATCH_MS);
+    expect(told).toContain("Discord isn't connected");
   });
 
-  it("is not turned off while its page is still loading", async () => {
+  it("is not started again by a sync while the app holds it; Connect clears the hold", async () => {
+    const { gateway, captured } = await released();
+    await vi.advanceTimersByTimeAsync(RELEASED_LOGIN_MS);
+    expect(stopped()).toBe("login-not-finished");
+    const built = captured.length;
+    await gateway.syncConnectors();
+    expect(captured).toHaveLength(built);
+    expect(gateway.runningPlatforms()).not.toContain("discord");
+    // Connect: the user's switch, written on, lifts the app's hold.
+    stored.appStopped.discord = null;
+    await gateway.syncConnectors();
+    expect(captured.length).toBeGreaterThan(built);
+  });
+
+  it("is not stopped while its page is still loading", async () => {
     // A stored link signing back in (or a slow first load) shows no login yet.
-    const { gateway, captured, off } = await released();
+    const { gateway, captured } = await released();
     captured[0]!.onState("connecting");
     await vi.advanceTimersByTimeAsync(RELEASED_LOGIN_MS * 3);
-    expect(off).not.toHaveBeenCalled();
+    expect(stopped()).toBeNull();
 
     captured[0]!.onState("connected");
     expect(platformState(gateway)).toBe("connected");
   });
 
-  it("is turned off once a page that was loading lands on its login", async () => {
-    const { captured, off } = await released();
+  it("is stopped once a page that was loading lands on its login", async () => {
+    const { captured } = await released();
     captured[0]!.onState("connecting");
     await vi.advanceTimersByTimeAsync(RELEASED_LOGIN_MS);
     captured[0]!.onState("needs_login", "Scan the QR to connect.");
     await vi.advanceTimersByTimeAsync(RELEASED_LOGIN_MS);
-    expect(off).toHaveBeenCalledWith({
-      platformId: "discord",
-      enabled: false,
-    });
+    expect(stopped()).toBe("login-not-finished");
   });
 
   it("is not abandoned once its login is shown again", async () => {
-    const { gateway, off } = await released();
+    const { gateway } = await released();
     gateway.showMessagingLogin("discord");
     await vi.advanceTimersByTimeAsync(RELEASED_LOGIN_MS);
-    expect(off).not.toHaveBeenCalled();
+    expect(stopped()).toBeNull();
   });
 
   it("leaves a connected platform alone", async () => {
     const { gateway, captured } = service();
     await gateway.syncConnectors();
     captured[0]!.onState("connected");
-    const off = vi.spyOn(gateway, "updatePlatform");
     gateway.releaseLogin("discord");
     await vi.advanceTimersByTimeAsync(RELEASED_LOGIN_MS);
-    expect(off).not.toHaveBeenCalled();
+    expect(stopped()).toBeNull();
   });
 });

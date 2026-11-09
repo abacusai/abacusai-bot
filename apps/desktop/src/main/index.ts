@@ -59,7 +59,7 @@ import { installCrashGuard } from "./crash-guard";
 import { isSafeExternalUrl } from "./external-links";
 import type { HostOperations } from "./handler";
 import { electronHostPlatform } from "./host-operations/electron";
-import { followMainAgentBusy } from "./keep-awake";
+import { followMainAgentBusy, followRoutineDue } from "./keep-awake";
 import { decideLocalOpen } from "./local-open-guard";
 import { throttleMainWindowWhileHidden } from "./main-window-throttle";
 import { restoreLegacyFiles } from "./migrations/restore-legacy";
@@ -1598,13 +1598,14 @@ function publishChromeState(): void {
 /** Null until whenReady has registered the IPC handlers. */
 let rpcTransport: MessagePortTransport | null = null;
 let notchController: NotchController | null = null;
-workspaceServiceHost.attachUserNotifier((_platform, title, body, key) =>
-  appOperations.showNotification(
-    title,
-    body,
-    { kind: "messaging" },
-    { kind: "needs-you", dedupeKey: key }
-  )
+// Native notices from main (the status board's, a sender waiting): they reach a closed window.
+workspaceServiceHost.attachUserNotifier(
+  (notice) =>
+    appOperations.showNotification(notice.title, notice.body, notice.metadata, {
+      kind: "needs-you",
+      dedupeKey: notice.dedupeKey,
+    }),
+  () => aliveMainWindow()?.isFocused() === true
 );
 
 const notchNotifications = new NotchNotificationPolicy({
@@ -1877,6 +1878,7 @@ app
     // AG-UI run start and terminal (spec 07 review r1 #10), starting from the
     // value it already has (the relay and the cron scheduler started above).
     followMainAgentBusy(workspaceServiceHost.aguiRelay);
+    followRoutineDue(workspaceServiceHost);
 
     // Best-effort cleanup of attachment temp files older than 7 days across
     // every workspace; never blocks startup.

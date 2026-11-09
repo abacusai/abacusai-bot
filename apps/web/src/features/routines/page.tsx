@@ -35,7 +35,6 @@ import {
 } from "#renderer/ui/collapsible";
 import { Input } from "#renderer/ui/input";
 
-import { MissedRunsNote } from "./always-on";
 import {
   runsView,
   scheduleLabel,
@@ -49,12 +48,9 @@ import { HostedResults } from "./hosted-results";
 import { runRoutineNow, showSaveFailure, useHostedOff } from "./hosted-sync";
 import { RoutinesLanding } from "./landing";
 import { RoutineModel } from "./model";
-import {
-  RoutineCreditHoldNote,
-  RoutinePausedReason,
-  RoutineReachPanel,
-} from "./reach-panel";
+import { RoutinePausedReason, RoutineReachPanel } from "./reach-panel";
 import { RoutineIdentity } from "./row";
+import { RoutineStatusNote } from "./status-note";
 /** No routine open: the way to make one, with the templates (landing.tsx). */
 export const RoutinesListBody = RoutinesLanding;
 
@@ -306,8 +302,7 @@ export const RoutinePage = ({
       </dl>
       <RoutineModel row={row} />
       {!hosted && <RoutinePausedReason row={row} />}
-      {!hosted && <RoutineCreditHoldNote row={row} />}
-      {!hosted && row.missed != null && <MissedRunsNote missed={row.missed} />}
+      {!hosted && <RoutineStatusNote row={row} />}
       {row.webhookUrl && (
         <div className="flex items-center gap-2 text-xs">
           <code className="min-w-0 truncate">{row.webhookUrl}</code>

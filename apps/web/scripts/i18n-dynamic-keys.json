@@ -1824,5 +1824,21 @@
       "../../../packages/contract/src/success-pitch.ts",
       "../../desktop/src/main/services/messaging/chat-failure-reply.ts"
     ]
+  },
+  {
+    "prefix": "status.",
+    "values": [
+      "title.paused",
+      "title.onHold",
+      "title.missed",
+      "title.missedMany",
+      "title.many_one",
+      "title.many_other",
+      "body.missedMany_one",
+      "body.missedMany_other",
+      "chat.back",
+      "body.routineLaneOff"
+    ],
+    "sources": ["../../desktop/src/main/services/status/status-board.ts"]
   }
 ]

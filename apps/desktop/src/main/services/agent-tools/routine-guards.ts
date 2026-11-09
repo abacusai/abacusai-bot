@@ -33,14 +33,18 @@ export const stuckRuns = (
   now: number,
   timeoutMs: number = ROUTINE_RUN_TIMEOUT_MS,
   /** Time a run spent waiting for the network, which the timeout does not count. */
-  networkWaitMs: (sessionId: string) => number = () => 0
+  networkWaitMs: (sessionId: string) => number = () => 0,
+  /** Time the machine slept since the run started (the power clock), not counted either. */
+  asleepMs: (startedAt: number) => number = () => 0
 ): RoutineRunItem[] =>
-  runs.filter(
-    (run) =>
-      run.outcome === "running" &&
-      now - new Date(run.startedAt).getTime() >
-        timeoutMs + networkWaitMs(run.sessionId)
-  );
+  runs.filter((run) => {
+    if (run.outcome !== "running") return false;
+    const startedAt = new Date(run.startedAt).getTime();
+    return (
+      now - startedAt >
+      timeoutMs + networkWaitMs(run.sessionId) + asleepMs(startedAt)
+    );
+  });
 
 /**
  * How long each run has spent waiting for the network, read off its events:

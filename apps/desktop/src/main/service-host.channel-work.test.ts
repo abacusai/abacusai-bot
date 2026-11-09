@@ -25,6 +25,8 @@ vi.mock("electron", () => {
   );
 });
 const { ServiceHost } = await import("./service-host");
+const { ConnectivityService } =
+  await import("./services/connectivity/connectivity-service");
 
 type Method = (...args: unknown[]) => unknown;
 const proto = ServiceHost.prototype as unknown as Record<string, Method>;
@@ -32,6 +34,8 @@ const proto = ServiceHost.prototype as unknown as Record<string, Method>;
 const workHost = (ends: string | null = null) => {
   const self: Record<string, unknown> = {
     turnWaiters: new Map(),
+    // Turn waits are timed in awake time (the power clock).
+    connectivity: new ConnectivityService({ probe: async () => true }),
     channelWorks: new Map(),
     channelWorkLanes: new Map(),
     turnLedger: { isOpen: () => false },

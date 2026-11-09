@@ -10,10 +10,12 @@ import * as path from "node:path";
 
 import { StreamProcessor, type StreamChunk } from "@tanstack/ai";
 import { restoreInboundChunk } from "@tanstack/ai/client";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { applyJsonPatch } from "./json-patch";
 import {
+  CHECKPOINT_GAP_MS,
+  CHECKPOINT_LARGE_BYTES,
   FINISHED_LOG_TTL_MS,
   FINISHED_LOGS_KEPT,
   RING_EVENTS,
@@ -1172,4 +1174,124 @@ it("persists user operator metadata in the thread and hydration", () => {
     h.relay.checkpoint().messages.find((message) => message.role === "user")
       ?.metadata?.abacus?.userText
   ).toEqual(userText);
+});
+
+describe("a run the app may close under (saved as it goes)", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** Twelve tool calls, each with its result, and no terminal: the app dies here. */
+  const toolSteps = (count: number): RelayEvent[] =>
+    Array.from(
+      { length: count },
+      (_, i) =>
+        [
+          {
+            type: "TEXT_MESSAGE_START",
+            messageId: `a-${i}`,
+            role: "assistant",
+          },
+          {
+            type: "TOOL_CALL_START",
+            toolCallId: `call-${i}`,
+            parentMessageId: `a-${i}`,
+            metadata: { tanstack: { toolCallName: "bash" } },
+          },
+          {
+            type: "TOOL_CALL_END",
+            toolCallId: `call-${i}`,
+            metadata: { tanstack: { input: { cmd: `step ${i}` } } },
+          },
+          { type: "TEXT_MESSAGE_END", messageId: `a-${i}` },
+          {
+            type: "TOOL_CALL_RESULT",
+            messageId: `call-${i}:result`,
+            toolCallId: `call-${i}`,
+            role: "tool",
+            content: JSON.stringify({ text: `done ${i}` }),
+          },
+        ] as RelayEvent[]
+    ).flat();
+
+  const toolCalls = (history: ThreadHistory | undefined) =>
+    (history?.messages ?? [])
+      .flatMap((message) => message.parts)
+      .filter((part) => part.type === "tool-call").length;
+
+  it("writes the file at step ends, at most once per gap, with no terminal", () => {
+    vi.useFakeTimers();
+    const { relay, persisted } = make(undefined, undefined, {
+      now: () => Date.now(),
+    });
+    feed(relay, [hello("inc-1"), ...run("run-1", "go").start]);
+    expect(persisted).toHaveLength(1);
+
+    // A burst inside the gap is one save, at the gap's end.
+    feed(relay, toolSteps(3));
+    expect(persisted).toHaveLength(1);
+    vi.advanceTimersByTime(CHECKPOINT_GAP_MS);
+    expect(persisted).toHaveLength(2);
+    expect(toolCalls(persisted.at(-1))).toBe(3);
+
+    // A step after a quiet gap is saved at once.
+    vi.advanceTimersByTime(CHECKPOINT_GAP_MS);
+    const saves = persisted.length;
+    feed(relay, toolSteps(12).slice(15));
+    expect(persisted).toHaveLength(saves + 1);
+    expect(toolCalls(persisted.at(-1))).toBe(4);
+    // The rest within the gap: one more save when it ends, losing nothing.
+    vi.advanceTimersByTime(CHECKPOINT_GAP_MS);
+    expect(persisted).toHaveLength(saves + 2);
+    expect(toolCalls(persisted.at(-1))).toBe(12);
+    // Nothing closed the run: its outcome is the next start's to write.
+    expect(persisted.at(-1)!.runs).toEqual([]);
+  });
+
+  it("leaves the terminal's own save to cover a pending one", () => {
+    vi.useFakeTimers();
+    const { relay, persisted } = make(undefined, undefined, {
+      now: () => Date.now(),
+    });
+    const turn = run("run-1", "go");
+    feed(relay, [
+      hello("inc-1"),
+      ...turn.start,
+      ...toolSteps(2),
+      turn.finished,
+    ]);
+    vi.advanceTimersByTime(CHECKPOINT_GAP_MS * 2);
+    expect(persisted).toHaveLength(2);
+    expect(persisted.at(-1)!.runs).toHaveLength(1);
+  });
+
+  it("saves a thread past 2 MB at tool results only, not at every message", () => {
+    vi.useFakeTimers();
+    const big = "x".repeat(CHECKPOINT_LARGE_BYTES + 1);
+    const { relay, persisted } = make(
+      {
+        messages: [
+          {
+            id: "old",
+            role: "assistant",
+            parts: [{ type: "text", content: big }],
+          },
+        ] as never,
+        runs: [],
+      },
+      undefined,
+      { now: () => Date.now() }
+    );
+    feed(relay, [hello("inc-1"), ...run("run-1", "go").start]);
+    const saves = persisted.length;
+    vi.advanceTimersByTime(CHECKPOINT_GAP_MS);
+    // An assistant message alone: no rewrite of the large file.
+    feed(relay, run("run-1", "go").reply("a-1", "thinking"));
+    vi.advanceTimersByTime(CHECKPOINT_GAP_MS);
+    expect(persisted).toHaveLength(saves);
+    // A tool's result: saved.
+    feed(relay, toolSteps(1));
+    vi.advanceTimersByTime(CHECKPOINT_GAP_MS);
+    expect(persisted).toHaveLength(saves + 1);
+  });
 });

@@ -140,8 +140,9 @@ const harness = async (
   const send = vi
     .spyOn(host, "sendAgentMessage")
     .mockResolvedValue(true as never);
+  // The status board tells the hold, in the user's chat app among others.
   const chatLine = vi
-    .spyOn(internals.messagingGatewayService, "tellRoutinesOnHold")
+    .spyOn(internals.messagingGatewayService, "tellStatus")
     .mockResolvedValue(true);
   const job = createJob({
     schedule: "0 * * * *",
@@ -194,8 +195,13 @@ it("tells the user once, however many fires skip, until the credits are back", a
   await fire();
 
   expect(history()).toEqual([SKIPPED, SKIPPED, SKIPPED]);
-  expect(chatLine).toHaveBeenCalledTimes(1);
-  expect(row().routineCreditHold).toMatchObject({ noticed: false });
+  await vi.waitFor(() => expect(chatLine).toHaveBeenCalledTimes(1), {
+    timeout: 5_000,
+  });
+  expect(chatLine.mock.calls[0]![0]).toMatchObject({ credits: true });
+  expect(row().routineCreditHold).toMatchObject({
+    routineId: expect.any(String),
+  });
 });
 
 it("re-reads the account first, so a top-up starts that very run", async () => {
@@ -277,7 +283,9 @@ it("a run the credits ran out under is filed as such, and pauses nothing", async
 
   expect(getJob(job.id)?.enabled).toBe(true);
   expect(row().routineCreditHold).toMatchObject({ routineId: job.id });
-  expect(chatLine).toHaveBeenCalledTimes(1);
+  await vi.waitFor(() => expect(chatLine).toHaveBeenCalledTimes(1), {
+    timeout: 5_000,
+  });
   const run = readLastRoutineRun(internals.routineHome(job));
   expect(run).toMatchObject({
     outcome: "failed",

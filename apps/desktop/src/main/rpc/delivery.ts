@@ -33,6 +33,7 @@ export const DELIVERY = {
   "system.events": "coalescing",
   "settings.events": "coalescing",
   "messaging.events": "coalescing",
+  "status.events": "coalescing",
   "bots.events": "coalescing",
   "channels.events": "coalescing",
   "memory.events": "coalescing",

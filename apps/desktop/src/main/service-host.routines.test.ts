@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
+import { ROUTINE_PAUSE_NOTES } from "@abacus-ai/contract/routines";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { connectInProcess, fakeDeps } from "./rpc/testing";
@@ -342,6 +343,8 @@ describe("a routine whose runs keep finding nothing", () => {
 
     run("NO_REPLY");
     expect(getJob(job.id)?.enabled).toBe(false);
+    // The app's pause, apart from the user's own switch.
+    expect(getJob(job.id)?.pausedBy).toBe("app");
     expect(getJob(job.id)?.runs[0]).toMatchObject({
       kind: "paused",
       result: "paused after 3 runs in a row found nothing new",
@@ -349,8 +352,108 @@ describe("a routine whose runs keep finding nothing", () => {
 
     // Resumed: the user wants it polling, so quiet runs no longer pause it.
     updateJob(job.id, { enabled: true });
+    expect(getJob(job.id)?.pausedBy).toBeNull();
     for (let i = 0; i < 4; i++) run("NO_REPLY");
     expect(getJob(job.id)?.enabled).toBe(true);
+  });
+});
+
+describe("what the status board hears about routines (read off the store)", () => {
+  const proto = ServiceHost.prototype as unknown as {
+    reportRoutineStates: () => void;
+    routineDetail: (job: unknown) => unknown;
+    clearSignedOutStops: () => void;
+  };
+  const boardHost = async () => {
+    const { StatusBoard } = await import("./services/status/status-board");
+    const board = new StatusBoard({
+      file: () => null,
+      words: async () => ({ t: (key: string) => key }),
+    });
+    const lanesOff = new Set<string>();
+    const host = {
+      statusBoard: board,
+      prefs: null,
+      routineDetail: proto.routineDetail,
+      clearSignedOutStops: () => {},
+      messagingGatewayService: { laneOff: (id: string) => lanesOff.has(id) },
+    };
+    return {
+      board,
+      lanesOff,
+      report: () => proto.reportRoutineStates.call(host),
+    };
+  };
+
+  it("an app pause is paused-by-app with its reason; the user's own pause is not a stop", async () => {
+    const { recordRun, updateJob } =
+      await import("./services/agent-tools/cron-store");
+    const { board, report } = await boardHost();
+    const quiet = createJob({ schedule: "0 * * * *", prompt: "watch replies" });
+    updateJob(quiet.id, { enabled: false, pausedBy: "app" });
+    recordRun(quiet.id, ROUTINE_PAUSE_NOTES.quiet, "schedule", {
+      kind: "paused",
+    });
+    const mine = createJob({ schedule: "0 * * * *", prompt: "my own pause" });
+    updateJob(mine.id, { enabled: false });
+    report();
+    expect(board.get(`routine:${quiet.id}`)).toMatchObject({
+      state: "paused-by-app",
+      reason: "quiet",
+    });
+    expect(board.get(`routine:${mine.id}`)).toBeNull();
+
+    // Resumed by the user: the stop is over.
+    updateJob(quiet.id, { enabled: true });
+    report();
+    expect(board.get(`routine:${quiet.id}`)).toBeNull();
+  });
+
+  it("a pause an older build made (no pausedBy) is found by its history and told", async () => {
+    const { recordRun, writeJobsForTest } =
+      await import("./services/agent-tools/cron-store").then((store) => ({
+        ...store,
+        writeJobsForTest: (id: string) => {
+          const job = store.getJob(id)!;
+          // As 1.1.11 left it: off, a pause note, and no pausedBy at all.
+          store.updateJob(id, { enabled: false });
+          const file = path.join(home, "cronjobs.json");
+          const jobs = JSON.parse(fs.readFileSync(file, "utf8")) as Array<
+            Record<string, unknown>
+          >;
+          for (const row of jobs) if (row.id === job.id) delete row.pausedBy;
+          fs.writeFileSync(file, JSON.stringify(jobs));
+        },
+      }));
+    const { board, report } = await boardHost();
+    const job = createJob({ schedule: "0 * * * *", prompt: "hourly watcher" });
+    recordRun(job.id, ROUTINE_PAUSE_NOTES.failures, "schedule", {
+      kind: "paused",
+    });
+    writeJobsForTest(job.id);
+    report();
+    expect(board.get(`routine:${job.id}`)).toMatchObject({
+      state: "paused-by-app",
+      reason: "failing",
+    });
+  });
+
+  it("a routine whose chat app is switched off (as an older build left it) is held, until it is back on", async () => {
+    const { noteChatPlatform } =
+      await import("./services/agent-tools/cron-store");
+    const { board, lanesOff, report } = await boardHost();
+    const job = createJob({ schedule: "0 * * * *", prompt: "send my digest" });
+    noteChatPlatform(job.id, "whatsapp");
+    lanesOff.add("whatsapp");
+    report();
+    expect(board.get(`routine:${job.id}`)).toMatchObject({
+      state: "paused-by-app",
+      reason: "lane-off",
+      detail: { platform: "whatsapp" },
+    });
+    lanesOff.delete("whatsapp");
+    report();
+    expect(board.get(`routine:${job.id}`)).toBeNull();
   });
 });
 
@@ -907,12 +1010,29 @@ describe("a routine fired while signed out", () => {
         ): Promise<string>;
       }
     ).startRoutineRun;
+    const { StatusBoard } = await import("./services/status/status-board");
+    const statusBoard = new StatusBoard({
+      file: () => null,
+      words: async () => ({ t: (key: string) => key }),
+    });
+    const host = {
+      emitEvent: vi.fn(),
+      statusBoard,
+      routineDetail: (
+        ServiceHost.prototype as unknown as { routineDetail: unknown }
+      ).routineDetail,
+    };
     await expect(
-      startRoutineRun.call({ emitEvent: vi.fn() }, job.id, "schedule", null)
+      startRoutineRun.call(host, job.id, "schedule", null)
     ).resolves.toBe("skipped");
     expect(listJobs()[0]?.runs[0]).toMatchObject({
       result: "skipped: signed out",
       kind: "skipped",
+    });
+    // Not silent: the board holds it as waiting on the user.
+    expect(statusBoard.get(`routine:${job.id}`)).toMatchObject({
+      state: "stopped-needs-user",
+      reason: "signed-out",
     });
   });
 });
@@ -1167,5 +1287,130 @@ describe("a routine's own model", () => {
     const note = result.content.map((part) => part.text).join("\n");
     expect(note).toContain("Every run uses Pricey");
     expect(note).toContain("model: a/kept");
+  });
+});
+
+describe("a routine run the machine slept through", () => {
+  const proto = ServiceHost.prototype as unknown as Record<
+    string,
+    (...args: unknown[]) => unknown
+  >;
+  const sleeper = async (runStartedAt: number, asleepMs: number) => {
+    const { ConnectivityService } =
+      await import("./services/connectivity/connectivity-service");
+    const { StatusBoard } = await import("./services/status/status-board");
+    // The sleep ended just now: it began `asleepMs` ago.
+    let now = Date.now() - asleepMs;
+    const connectivity = new ConnectivityService({
+      probe: async () => true,
+      now: () => now,
+      log: () => {},
+    });
+    connectivity.suspended();
+    now = Date.now();
+    connectivity.resumed();
+    const job = createJob({ schedule: "0 9 * * *", prompt: "digest" });
+    const ended: Array<[string, string, string | undefined]> = [];
+    const statusBoard = new StatusBoard({
+      file: () => null,
+      words: async () => ({ t: (key: string) => key }),
+    });
+    const host: Record<string, unknown> = {
+      connectivity,
+      statusBoard,
+      frozenRunWatches: new Map(),
+      cronScheduler: { tick: async () => {} },
+      listRoutineRuns: () => [
+        {
+          sessionId: "run-1",
+          outcome: "running",
+          startedAt: new Date(runStartedAt).toISOString(),
+        },
+      ],
+      turnLedger: {
+        isOpen: () => true,
+        end: (id: string, kind: string, cause?: string) =>
+          ended.push([id, kind, cause]),
+      },
+      agentManagerService: { getRuntimeInfo: () => null },
+      stopAgentTurn: vi.fn(),
+      routineDetail: proto.routineDetail,
+    };
+    host.watchFrozenRun = proto.watchFrozenRun!.bind(host);
+    return { host, job, ended, statusBoard, now: () => now };
+  };
+
+  it("is given awake time to show progress, then made up as interrupted, not timed out", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const { host, job, ended, statusBoard } = await sleeper(
+        Date.now() - 50 * 60_000,
+        45 * 60_000
+      );
+      proto.routinesAfterWake!.call(host);
+      expect((host.frozenRunWatches as Map<string, unknown>).size).toBe(1);
+      vi.advanceTimersByTime(119_000);
+      expect(ended).toEqual([]);
+      vi.advanceTimersByTime(2_000);
+      expect(ended).toEqual([
+        ["run-1", "app_closed", "no progress after wake"],
+      ]);
+      // No make-up was held here (the ledger is a stub), so none is claimed.
+      expect(statusBoard.get(`routine:${job.id}`)).toMatchObject({
+        state: "missed",
+        detail: { madeUp: 0 },
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("is not watched when the sleep did not overlap it, or was short", async () => {
+    // Started after the sleep ended: it slept through nothing.
+    const run = await sleeper(Date.now() - 1000, 45 * 60_000);
+    proto.routinesAfterWake!.call(run.host);
+    expect((run.host.frozenRunWatches as Map<string, unknown>).size).toBe(0);
+    const short = await sleeper(Date.now() - 5 * 60_000, 60_000);
+    proto.routinesAfterWake!.call(short.host);
+    expect((short.host.frozenRunWatches as Map<string, unknown>).size).toBe(0);
+  });
+});
+
+describe("keep-awake's routine-due signal", () => {
+  const proto = ServiceHost.prototype as unknown as Record<
+    string,
+    (...args: unknown[]) => unknown
+  >;
+  const host = () => {
+    const seen: boolean[] = [];
+    const self: Record<string, unknown> = {
+      routineDueNow: false,
+      routineDueListeners: new Set([(due: boolean) => seen.push(due)]),
+      routineRunText: new Map(),
+      turnLedger: { isOpen: () => false },
+    };
+    return { self, seen };
+  };
+  const at = (minutes: number) => {
+    const d = new Date(Date.now() + minutes * 60_000);
+    return `${d.getMinutes()} ${d.getHours()} * * *`;
+  };
+
+  it("is due just before a sparse routine's slot, not for one every few minutes", () => {
+    const { self, seen } = host();
+    createJob({ schedule: "*/5 * * * *", prompt: "frequent" });
+    proto.noteRoutineDue!.call(self);
+    expect(seen).toEqual([]);
+    createJob({ schedule: at(1), prompt: "daily, a minute away" });
+    proto.noteRoutineDue!.call(self);
+    expect(seen).toEqual([true]);
+  });
+
+  it("stays due while a routine run's turn is open, read from memory", () => {
+    const { self, seen } = host();
+    self.routineRunText = new Map([["run-1", []]]);
+    self.turnLedger = { isOpen: (id: string) => id === "run-1" };
+    proto.noteRoutineDue!.call(self);
+    expect(seen).toEqual([true]);
   });
 });

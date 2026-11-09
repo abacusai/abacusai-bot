@@ -712,6 +712,8 @@ export type IpcEvent =
     } & IpcEventBase)
   // Coarse on purpose: the pane refetches its whole snapshot; none are hot paths.
   | ({ type: "messaging-updated" } & IpcEventBase)
+  /** The status board changed (status-board.ts): `status.list` reads it. */
+  | ({ type: "status-updated" } & IpcEventBase)
   | ({ type: "bots-updated" } & IpcEventBase)
   | ({ type: "channels-updated"; channelId: string | null } & IpcEventBase)
   | ({ type: "cronjobs-updated" } & IpcEventBase)

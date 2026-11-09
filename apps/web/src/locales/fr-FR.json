@@ -1650,9 +1650,7 @@
       "openAgent": "Configurer les routines 24h/24",
       "dismiss": "Dismiss",
       "missed_one": "Missed {{count}} run while your computer was off",
-      "missed_other": "Missed {{count}} runs while your computer was off",
-      "missedNoticeFree": "{{names}}. On the Basic plan, Abacus AI Agent on the web runs routines 24/7, even with your computer off.",
-      "missedNoticePaid": "{{names}}. Configurez vos routines dans Abacus AI Agent sur le web, où elles tournent 24h/24, même ordinateur éteint."
+      "missed_other": "Missed {{count}} runs while your computer was off"
     },
     "reach": {
       "gmailSearch": "Search Gmail",
@@ -1674,7 +1672,6 @@
       "quiet": "En pause : {{runs}} exécutions d'affilée n'ont rien trouvé de nouveau, elle a donc cessé d'utiliser des crédits. Reprenez-la pour qu'elle continue de vérifier."
     },
     "creditHold": {
-      "title": "Vos routines attendent des crédits",
       "notify": "Vous n'avez plus de crédits, vos routines ne s'exécuteront donc pas. Les exécutions ignorées ne coûtent rien, et elles reprennent toutes seules dès que vous avez des crédits.",
       "note": "En attente de crédits : les exécutions sont ignorées sans frais et reprennent toutes seules dès que vous avez des crédits.",
       "cta": "Obtenir des crédits"
@@ -5180,6 +5177,35 @@
       "addMember": "Ajouter ou retirer des bots",
       "decisions": "Décisions",
       "noDecisions": "Rien d'épinglé pour l'instant. Épinglez un message ou demandez aux bots de se mettre d'accord sur un point."
+    }
+  },
+  "status": {
+    "aRoutine": "Une routine",
+    "yourChatApp": "votre app de messagerie",
+    "appClosed": "L'app s'est fermée pendant que ceci tournait.",
+    "continue": "Continuer",
+    "title": {
+      "paused": "{{name}} en pause",
+      "onHold": "{{name}} est en attente",
+      "laneStopped": "{{name}} n'est pas connecté",
+      "missed": "{{name}} a manqué des exécutions",
+      "missedMany": "Des routines ont manqué des exécutions",
+      "many_one": "{{count}} élément arrêté",
+      "many_other": "{{count}} éléments arrêtés"
+    },
+    "body": {
+      "signedOut": "Elle ne peut pas tourner tant que vous êtes déconnecté. Connectez-vous et elle reprendra.",
+      "routineLinkLost": "Ses exécutions attendent que {{platform}} soit de nouveau connecté. L'exécution manquée est alors rattrapée.",
+      "loginNotFinished": "La connexion à {{platform}} n'a pas été terminée, il est donc en pause. Cliquez sur Connecter pour la terminer.",
+      "missedMany_one": "{{routines}} routines ont manqué {{count}} exécution pendant que l'ordinateur était en veille ou l'app fermée. {{madeUp}} rattrapée(s).",
+      "missedMany_other": "{{routines}} routines ont manqué {{count}} exécutions pendant que l'ordinateur était en veille ou l'app fermée. {{madeUp}} rattrapée(s).",
+      "routineLaneOff": "Ses exécutions ne vous parviennent pas : {{platform}} est désactivé. Reconnectez-le pour les recevoir."
+    },
+    "chat": {
+      "back": "{{name}} tourne de nouveau."
+    },
+    "row": {
+      "waitingNetwork": "En attente du réseau. Elle s'exécute dès que la connexion revient."
     }
   }
 }

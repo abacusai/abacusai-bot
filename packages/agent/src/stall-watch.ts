@@ -8,6 +8,7 @@
  * loop aborts the call and carries the turn on, on the next pool model or
  * with the same model asked once more.
  */
+import { onConnectivityRestored } from "./connectivity.js";
 
 const MODEL_STALL_MS = 120_000;
 
@@ -33,7 +34,13 @@ export class StallWatch {
       onStall: () => void;
       stallMs?: () => number;
     }
-  ) {}
+  ) {
+    // The machine woke (or the network came back): a call it slept through
+    // gets its whole window again instead of being read as silent.
+    onConnectivityRestored(() => {
+      if (this.timer != null) this.arm();
+    });
+  }
 
   /** Every pi event passes through here: which ones mean a call is being waited on. */
   note(eventType: string): void {

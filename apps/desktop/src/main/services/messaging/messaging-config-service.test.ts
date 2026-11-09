@@ -21,6 +21,10 @@ import {
   findPairing,
   listPairing,
   MESSAGING_CONFIG_VERSION,
+  isPlatformEnabled,
+  readPlatformAppStopped,
+  savePlatformAppStopped,
+  setPlatformEnabled,
 } from "./messaging-config-service";
 
 let home: string;
@@ -164,5 +168,16 @@ describe("looking a sender up", () => {
 
   it("returns null for a sender it has never seen", () => {
     expect(findPairing("telegram", "stranger")).toBeNull();
+  });
+});
+
+describe("a lane the app stopped (a login left unfinished)", () => {
+  it("is held apart from the user's switch, which Connect or a turn-off clears", () => {
+    setPlatformEnabled("whatsapp", true);
+    savePlatformAppStopped("whatsapp", "login-not-finished");
+    expect(readPlatformAppStopped("whatsapp")).toBe("login-not-finished");
+    expect(isPlatformEnabled("whatsapp")).toBe(true);
+    setPlatformEnabled("whatsapp", true);
+    expect(readPlatformAppStopped("whatsapp")).toBeNull();
   });
 });

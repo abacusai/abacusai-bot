@@ -34,7 +34,6 @@ vi.mock("./messaging-config-service", async (importOriginal) => ({
 vi.mock("./page-boot-watch", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./page-boot-watch")>()),
   watchLaneHints: () => () => {},
-  userActive: () => false,
 }));
 
 const { MessagingGatewayService } = await import("./messaging-gateway-service");
