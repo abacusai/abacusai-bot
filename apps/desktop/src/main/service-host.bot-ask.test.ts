@@ -677,18 +677,19 @@ describe("a task the user gave, passed on", () => {
     expect(self.stopAgentTurn).not.toHaveBeenCalled();
   });
 
-  const wordsHost = () => {
+  const BOTS = [
+    { id: "res", name: "Researcher" },
+    { id: "wri", name: "Writer" },
+    { id: "pla", name: "Planner" },
+  ];
+  const wordsHost = (
+    bots: Array<{ id: string; name: string; delegatesFreely?: boolean }> = BOTS
+  ) => {
     const self: Record<string, unknown> = {
       userWords: new Map(),
       taskFollowUps: new Map(),
       botAskService: { ask: vi.fn(() => ({ ask: TASK, behind: 0 })) },
-      botService: {
-        list: () => [
-          { id: "res", name: "Researcher" },
-          { id: "wri", name: "Writer" },
-          { id: "pla", name: "Planner" },
-        ],
-      },
+      botService: { list: () => bots },
       turnLedger: { channelOf: () => null },
       botAskTurns: new Map(),
       taskTurns: new Map(),
@@ -696,6 +697,7 @@ describe("a task the user gave, passed on", () => {
     for (const name of [
       "noteUserWords",
       "latestUserWords",
+      "recentUserWords",
       "askBot",
       "giveBotTask",
       "ownChatOfTurn",
@@ -729,6 +731,85 @@ describe("a task the user gave, passed on", () => {
     for (const message of messages) h.noteUserWords("res-chat", message);
     return { h, result: h.giveBotTask("res", "res-chat", "pla", "Draft it") };
   };
+
+  describe("as people write it (from real users' chats)", () => {
+    const sent = (h: ReturnType<typeof wordsHost>) =>
+      h.botAskService.ask.mock.calls.length;
+
+    it("'ask them', 'status from them': asking about the bots in view is asking", () => {
+      for (const words of [
+        "yes. can you ask status from them?",
+        "ask them what they are working on",
+        "get an update from each of them",
+        "check with the others before you decide",
+      ]) {
+        const h = wordsHost();
+        h.noteUserWords("res-chat", words);
+        h.askBot("res", "res-chat", "wri", "status please");
+        expect(sent(h), words).toBe(1);
+      }
+    });
+
+    it("a question may go on the bot named in the message before; a task may not", () => {
+      const h = wordsHost();
+      h.noteUserWords("res-chat", "can you get the numbers from Writer?");
+      h.noteUserWords("res-chat", "and when does the draft land?");
+      h.askBot("res", "res-chat", "wri", "when does the draft land?");
+      expect(sent(h)).toBe(1);
+      // Another bot than the one named before is still not asked.
+      h.askBot("res", "res-chat", "pla", "when does it land?");
+      expect(sent(h)).toBe(1);
+      expect(
+        tryTask("have Planner draft the checklist", "now make me a launch post")
+          .result
+      ).toEqual(handOffRefused);
+    });
+
+    it("a bot named by its own word and 'bot' ('video bot' for 'Ideas Bot For Video')", () => {
+      const bots = [...BOTS, { id: "vid", name: "Ideas Bot For Video" }];
+      const h = wordsHost(bots);
+      h.noteUserWords("res-chat", "video bot, three ideas please");
+      h.giveBotTask("res", "res-chat", "vid", "Three video ideas");
+      expect(sent(h)).toBe(1);
+      // A word of the name on its own names nobody.
+      const plain = wordsHost(bots);
+      plain.noteUserWords("res-chat", "write some ideas about video");
+      expect(
+        plain.giveBotTask("res", "res-chat", "vid", "Write the ideas")
+      ).toEqual(handOffRefused);
+    });
+
+    it("'someone' next to a named bot leaves the others open", () => {
+      const h = wordsHost();
+      h.noteUserWords(
+        "res-chat",
+        "someone needs to gather the notes. Planner should draft the plan."
+      );
+      h.giveBotTask("res", "res-chat", "wri", "Gather the notes");
+      expect(sent(h)).toBe(1);
+    });
+
+    it("the user's standing yes (the bot's setting) lets it ask and pass work on, only in their turn", () => {
+      const bots = [
+        { id: "res", name: "Researcher", delegatesFreely: true },
+        ...BOTS.slice(1),
+      ];
+      const h = wordsHost(bots);
+      h.noteUserWords("res-chat", "make me a launch checklist");
+      h.giveBotTask("res", "res-chat", "pla", "Draft the checklist");
+      h.askBot("res", "res-chat", "wri", "a tagline please");
+      expect(sent(h)).toBe(2);
+      // Not from a turn the user did not start: no chains, setting or not.
+      const quiet = wordsHost(bots);
+      expect(
+        quiet.giveBotTask("res", "res-chat", "pla", "Draft the checklist")
+      ).toEqual(refused);
+      // Off by default: the same words are refused.
+      expect(tryTask("make me a launch checklist").result).toEqual(
+        handOffRefused
+      );
+    });
+  });
 
   describe("a question to another bot", () => {
     const tryAsk = (...messages: string[]) => {

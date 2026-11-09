@@ -325,3 +325,25 @@ describe("askLogLine: the asked bot's conversation, as my_activity shows it", ()
     expect(askLogLine("assistant", "<reply>NO_REPLY</reply>")).toBeNull();
   });
 });
+
+describe("a bot's colleagues, with and without the user's standing yes", () => {
+  const team = [
+    { id: "res", name: "Researcher", title: "", description: "Finds facts." },
+    { id: "wri", name: "Writer", title: "", description: "Writes copy." },
+  ];
+  it("by default it offers first and waits for the user's yes", () => {
+    const lines = colleagueLines({ id: "res" }, team).join(" ");
+    expect(lines).toContain("Want me to ask it?");
+    expect(lines).not.toContain("standing yes");
+  });
+  it("with the standing yes it involves a fitting bot without offering", () => {
+    const lines = colleagueLines(
+      { id: "res", delegatesFreely: true },
+      team
+    ).join(" ");
+    expect(lines).toContain("standing yes");
+    expect(lines).toContain("without offering first");
+    expect(lines).not.toContain("Want me to ask it?");
+    expect(lines).toContain("- Writer: Writes copy.");
+  });
+});

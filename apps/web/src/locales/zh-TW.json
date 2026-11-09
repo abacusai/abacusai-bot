@@ -547,7 +547,9 @@
         "notes": "另存有 {{count}} 天的筆記",
         "clear": "全部忘記",
         "clearConfirm": "要忘記這裡的所有內容嗎？"
-      }
+      },
+      "delegatesFreely": "無需確認即可詢問其他機器人",
+      "delegatesFreelyDetail": "在有幫助時詢問你的其他機器人並把工作交給它們，不必每次都問你。僅在回覆你時。"
     },
     "gone": {
       "chat": "這段聊天已不存在",

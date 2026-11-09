@@ -80,6 +80,7 @@ export const BotUpdateInputSchema = v.object({
   avatarAccessory: AvatarAccessorySchema,
   wallpaper: BotWallpaperSchema,
   model: v.optional(v.nullable(v.string())),
+  delegatesFreely: v.optional(v.boolean()),
   channel: v.optional(v.nullable(v.string())),
 });
 

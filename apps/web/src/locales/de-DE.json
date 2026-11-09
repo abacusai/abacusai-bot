@@ -547,7 +547,9 @@
         "notes": "{{count}} day(s) of working notes on disk.",
         "clear": "Clear all",
         "clearConfirm": "Forget everything here?"
-      }
+      },
+      "delegatesFreely": "Darf andere Bots ohne Rückfrage fragen",
+      "delegatesFreelyDetail": "Fragt deine anderen Bots und gibt ihnen Arbeit, wenn es hilft, ohne dich jedes Mal zu fragen. Nur während es dir antwortet."
     },
     "gone": {
       "chat": "This chat is gone",
