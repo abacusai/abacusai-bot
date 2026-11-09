@@ -13,6 +13,37 @@ import {
 } from "@abacus-ai/test-support/fake-provider";
 import { expect, it, vi } from "vitest";
 
+import type { Route } from "../messaging/messaging-gateway-service";
+
+/** A gateway route with every field set: a field added to Route fails typecheck here. */
+const chatRoute = (fields: Partial<Route>): Route => ({
+  platform: "telegram",
+  chatId: "test-chat",
+  sessionId: "s",
+  workspaceId: "w",
+  userId: "test-user",
+  userName: null,
+  buffer: "",
+  bufferMessageId: null,
+  taggedReply: null,
+  heldWords: null,
+  busy: false,
+  busySince: 0,
+  queue: [],
+  queueFullNotified: false,
+  viaBot: false,
+  owner: false,
+  senderLabel: "",
+  pendingIntro: null,
+  failureReply: null,
+  delivered: false,
+  progressTimer: null,
+  answerContexts: new Map(),
+  appJoined: false,
+  sending: null,
+  ...fields,
+});
+
 vi.mock("electron", () => {
   const anything: unknown = new Proxy(function () {}, {
     get: (_target, key) => (key === "then" ? undefined : anything),
@@ -164,23 +195,11 @@ for (const transport of ["fd", "inline"] as const) {
       internals.messagingGatewayService.connectors.set("telegram", {
         sendText: sent,
       });
-      const route = {
-        platform: "telegram",
-        chatId: "test-chat",
-        sessionId: "s",
-        workspaceId: "w",
-        userId: "test-user",
-        buffer: "",
-        bufferMessageId: null,
-        taggedReply: null,
+      const route = chatRoute({
         busy: true,
         busySince: Date.now(),
-        queue: [],
-        queueFullNotified: false,
-        viaBot: false,
         senderLabel: "test",
-        pendingIntro: null,
-      };
+      });
       const gateway = internals.messagingGatewayService;
       gateway.routesBySession.set("s", route);
       let parentRound = 0,
@@ -425,28 +444,12 @@ it("a chat message queued behind an app turn gets its own reply, and only that",
       sendText: sent,
       selfChatId: () => "own-chat",
     });
-    const route = {
-      platform: "telegram",
+    const route = chatRoute({
       chatId: "ana-chat",
-      sessionId: "s",
-      workspaceId: "w",
       userId: "me",
       userName: "Ana",
-      buffer: "",
-      bufferMessageId: null,
-      taggedReply: null,
-      busy: false,
-      busySince: 0,
       queue: [{ text: "what's on my calendar today?" }],
-      queueFullNotified: false,
-      viaBot: false,
-      owner: false,
-      senderLabel: "",
-      pendingIntro: null,
-      failureReply: null,
-      delivered: false,
-      progressTimer: null,
-    };
+    });
     internals.messagingGatewayService.routesBySession.set("s", route);
     // The first-run turn: a greeting that ends on suggest_tasks.
     provider.script((call) => {

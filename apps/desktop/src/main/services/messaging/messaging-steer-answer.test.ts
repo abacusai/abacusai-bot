@@ -296,6 +296,25 @@ describe("a message that lands while the bot finishes", () => {
     expect(h.sent).toEqual(["Your calendar is empty."]);
   });
 
+  it("still answers a chat message steered in before the user joined from the app", async () => {
+    const h = harness();
+    const chat = h.lane("owner");
+    await chat.inbound("what is on my calendar?");
+    await chat.inbound("2+2");
+    h.gateway.noteAppMessage(chat.sessionId);
+    chat.agent().stream("Your calendar is empty.");
+    chat.agent().finish();
+    chat.agent().stream("4");
+    chat.agent().received("app-1");
+    chat.agent().finish();
+    chat.agent().stream("Here is what you asked in the app.");
+    chat.agent().finish();
+    chat.agent().end();
+    await flush();
+
+    expect(h.sent).toEqual(["Your calendar is empty.", "4"]);
+  });
+
   it("sends the whole reply when the app's message waits for the next turn", async () => {
     const h = harness();
     const chat = h.lane("owner");

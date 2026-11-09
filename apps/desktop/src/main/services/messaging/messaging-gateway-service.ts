@@ -411,7 +411,7 @@ type TurnProgress = {
 };
 
 /** A conversation in flight: which session it owns and what it's waiting on. */
-type Route = {
+export type Route = {
   platform: MessagingPlatformId;
   chatId: string;
   sessionId: string;
@@ -1545,13 +1545,16 @@ export class MessagingGatewayService {
       route.bufferMessageId = null;
       // The steered message is still owed its own answer, or the empty-reply line.
       route.delivered = false;
-      if (route.appJoined) this.leaveToApp(route);
       return;
     }
 
-    // The app's message joined the turn (chat steers wait while it is
-    // joined): any answer owed to the chat went just before, as turn_answer.
-    if (event.type === "user_message_steered" && route.appJoined) {
+    // The app's message joined the turn: any answer owed to the chat went
+    // just before, as turn_answer. A chat steer sent before the join is ours.
+    if (
+      event.type === "user_message_steered" &&
+      route.appJoined &&
+      !(event.messageId != null && route.answerContexts.has(event.messageId))
+    ) {
       if (route.busy) this.leaveToApp(route);
       return;
     }
