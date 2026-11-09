@@ -108,14 +108,21 @@ const DesktopMessagingPage = () => {
               id={p.id}
               title={t(`messaging.platforms.${p.nameKey}`)}
               detail={
-                p.recovery != null
-                  ? recoveryLine(
+                p.recovery != null ? (
+                  // What is wrong, then what the app is doing about it.
+                  <>
+                    {p.errorMessage}
+                    {p.errorMessage != null && <br />}
+                    {recoveryLine(
                       p.recovery,
                       t(`messaging.platforms.${p.nameKey}`),
                       now,
                       t
-                    )
-                  : (p.errorMessage ?? undefined)
+                    )}
+                  </>
+                ) : (
+                  (p.errorMessage ?? undefined)
+                )
               }
             >
               <ConnectorMark id={p.id} size={36} />
@@ -125,10 +132,7 @@ const DesktopMessagingPage = () => {
                   size="sm"
                   variant="secondary"
                   data-messaging-retry={p.id}
-                  disabled={
-                    retry.isPending ||
-                    (p.recovery.nextTryAt == null && !p.recovery.stopped)
-                  }
+                  disabled={retry.isPending || p.recovery.phase === "trying"}
                   onClick={() => retry.mutate({ platformId: p.id })}
                 >
                   {t("messaging.recovery.tryNow")}

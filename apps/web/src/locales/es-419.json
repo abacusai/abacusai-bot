@@ -1096,7 +1096,9 @@
     },
     "recommended": "Recomendado",
     "recovery": {
+      "disk": "{{platform}} se reintentará solo cuando haya espacio libre en el disco.",
       "next": "{{platform}} no está conectado. Se reintenta solo; próximo intento en {{minutes}} min.",
+      "needsUser": "{{platform}} sigue fallando igual, así que dejó de reintentarlo solo. Haz clic en Intentar ahora cuando la red lo permita.",
       "now": "{{platform}} no está conectado. Reintentando ahora.",
       "stopped": "{{platform}} lleva un día sin conectarse, así que dejó de reintentarlo solo.",
       "tryNow": "Intentar ahora"
@@ -4978,6 +4980,7 @@
     "linkLostTitle": "{{platform}} está desconectado",
     "linkLostLane": "{{platform}} ya no está vinculado, así que los mensajes y las rutinas no pueden enviarse por ahí. Haz clic en Conectar y vuelve a escanear el código QR.",
     "laneDownTitle": "{{platform}} no puede conectarse",
-    "laneDownBody": "{{platform}} lleva una hora sin conectarse. La app sigue intentándolo; abre Mensajería para intentarlo ahora."
+    "laneDownBody": "{{platform}} lleva una hora sin conectarse. La app sigue intentándolo; abre Mensajería para intentarlo ahora.",
+    "laneBlockedBody": "{{platform}} no logra establecer una conexión segura, así que puede estar bloqueado en esta red. La app dejó de reintentarlo; abre Mensajería y haz clic en Intentar ahora cuando la red lo permita."
   }
 }

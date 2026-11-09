@@ -1096,7 +1096,9 @@
     },
     "recommended": "Önerilen",
     "recovery": {
+      "disk": "Diskte boş alan olduğunda {{platform}} kendiliğinden yeniden dener.",
       "next": "{{platform}} bağlı değil. Kendiliğinden yeniden deneniyor, sonraki deneme {{minutes}} dk sonra.",
+      "needsUser": "{{platform}} aynı şekilde başarısız olmaya devam ediyor, bu yüzden kendiliğinden denemeyi bıraktı. Ağ izin verdiğinde Şimdi dene'ye tıklayın.",
       "now": "{{platform}} bağlı değil. Şimdi yeniden deneniyor.",
       "stopped": "{{platform}} bir gündür bağlanamadı, bu yüzden kendiliğinden denemeyi bıraktı.",
       "tryNow": "Şimdi dene"
@@ -4978,6 +4980,7 @@
     "linkLostTitle": "{{platform}} bağlantısı kesildi",
     "linkLostLane": "{{platform}} artık bağlı değil, bu yüzden mesajlar ve rutinler oradan gönderilemiyor. Bağlan'a tıklayın ve QR kodunu yeniden tarayın.",
     "laneDownTitle": "{{platform}} bağlanamıyor",
-    "laneDownBody": "{{platform}} bir saattir bağlanamadı. Uygulama denemeye devam ediyor; şimdi denemek için Mesajlaşma'yı açın."
+    "laneDownBody": "{{platform}} bir saattir bağlanamadı. Uygulama denemeye devam ediyor; şimdi denemek için Mesajlaşma'yı açın.",
+    "laneBlockedBody": "{{platform}} güvenli bağlantı kuramıyor, bu ağda engellenmiş olabilir. Uygulama denemeyi bıraktı; ağ izin verdiğinde Mesajlaşma'yı açıp Şimdi dene'ye tıklayın."
   }
 }

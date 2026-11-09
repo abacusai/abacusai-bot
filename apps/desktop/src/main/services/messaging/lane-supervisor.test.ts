@@ -40,6 +40,7 @@ const harness = (
     random: 0.5,
     restarts: [] as number[],
     notified: 0,
+    toldUser: 0,
     hint: null as ((reason: string) => void) | null,
   };
   const supervisor: LaneSupervisor = new LaneSupervisor({
@@ -58,6 +59,9 @@ const harness = (
     userActive: () => world.active,
     notifyDown: () => {
       world.notified += 1;
+    },
+    tellNeedsUser: () => {
+      world.toldUser += 1;
     },
     watchHints: (hint) => {
       world.hint = hint;
@@ -136,7 +140,7 @@ describe("a lane whose page could not be reached", () => {
     expect(supervisor.status(ID)).toBeNull();
     await vi.advanceTimersByTimeAsync(2_000);
     const status = supervisor.status(ID)!;
-    expect(status.stopped).toBe(false);
+    expect(status.phase).toBe("scheduled");
     expect(status.nextTryAt).toBeGreaterThan(Date.now());
   });
 
@@ -163,7 +167,10 @@ describe("a lane whose page could not be reached", () => {
     expect(count).toBeLessThan(LANE_GIVE_UP_MS / (LANE_RETRY_CAP_MS / 2) + 10);
     await vi.advanceTimersByTimeAsync(24 * 60 * 60_000);
     expect(world.restarts).toHaveLength(count);
-    expect(supervisor.status(ID)).toEqual({ nextTryAt: null, stopped: true });
+    expect(supervisor.status(ID)).toEqual({
+      nextTryAt: null,
+      phase: "stopped",
+    });
 
     world.hint!("the app came to the front");
     await vi.advanceTimersByTimeAsync(10_000);
@@ -238,6 +245,19 @@ describe("a page that loads but never boots", () => {
 });
 
 describe("a lane on connecting that never settles", () => {
+  it("is restarted once, then kept to the slow pace", async () => {
+    // Each fresh lane stays on connecting: a boot slower than the watchdog.
+    const { supervisor, world } = harness(() => null);
+    supervisor.noteState(ID, "connecting");
+    await vi.advanceTimersByTimeAsync(3 * 60 * 60_000);
+    const [first, second] = world.restarts;
+    expect(first).toBeLessThan(LANE_CONNECTING_WATCHDOG_MS + 20_000);
+    expect(second! - first!).toBeGreaterThanOrEqual(
+      LANE_CONNECTING_WATCHDOG_MS + LANE_STUCK_RETRY_MS
+    );
+    expect(world.restarts.length).toBeLessThanOrEqual(5);
+  });
+
   it("is restarted after 10 minutes with no change", async () => {
     const { supervisor, world } = harness(() => ({ state: "connected" }));
     supervisor.noteState(ID, "connecting");
@@ -289,7 +309,59 @@ describe("a failure only the user can fix", () => {
   });
 });
 
+describe("a lane the user opens while it waits for its next try", () => {
+  it("keeps the page they opened: the pending try does not replace it", async () => {
+    const { supervisor, world } = harness(() => null);
+    supervisor.noteState(ID, "error", { retry: "auto" });
+    await vi.advanceTimersByTimeAsync(3_000);
+    // Connect: the parked connector reloads its page and reports connecting.
+    supervisor.noteState(ID, "connecting");
+    await vi.advanceTimersByTimeAsync(5 * 60_000);
+    expect(world.restarts).toHaveLength(0);
+    expect(supervisor.status(ID)).toBeNull();
+    // Their try failing goes back to the backoff.
+    supervisor.noteState(ID, "error", { retry: "auto" });
+    await vi.advanceTimersByTimeAsync(40_000);
+    expect(world.restarts.length).toBeGreaterThan(0);
+  });
+});
+
+describe("a refused certificate", () => {
+  it("is retried three times, then waits for the user, who is told once", async () => {
+    const cert = {
+      state: "error",
+      failure: { retry: "auto", cert: true },
+    } as const;
+    const { supervisor, world } = harness(() => cert);
+    supervisor.noteState(ID, "error", cert.failure);
+    await vi.advanceTimersByTimeAsync(LANE_SHOW_AFTER_MS + 60_000);
+    expect(world.restarts).toHaveLength(3);
+    expect(world.toldUser).toBe(1);
+    expect(supervisor.status(ID)).toEqual({
+      phase: "needs_user",
+      nextTryAt: null,
+    });
+
+    // Hints do not retry it; Try now does, and is not told twice.
+    world.hint!("the network changed");
+    await vi.advanceTimersByTimeAsync(60 * 60_000);
+    expect(world.restarts).toHaveLength(3);
+    expect(supervisor.retryNow(ID)).toBe(true);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(world.restarts).toHaveLength(4);
+    expect(world.toldUser).toBe(1);
+  });
+});
+
 describe("a full disk", () => {
+  it("says it waits for disk space, not a next try", async () => {
+    const { supervisor, world } = harness(() => null);
+    world.diskFree = false;
+    supervisor.noteState(ID, "error", { retry: "when_disk_free" });
+    await vi.advanceTimersByTimeAsync(LANE_SHOW_AFTER_MS + 1_000);
+    expect(supervisor.status(ID)).toEqual({ phase: "disk", nextTryAt: null });
+  });
+
   it("is retried once space is back, not on the backoff", async () => {
     const { supervisor, world } = harness(() => ({ state: "connected" }));
     world.diskFree = false;

@@ -1096,7 +1096,9 @@
     },
     "recommended": "Direkomendasikan",
     "recovery": {
+      "disk": "{{platform}} akan mencoba lagi otomatis setelah disk punya ruang kosong.",
       "next": "{{platform}} tidak terhubung. Mencoba lagi otomatis, percobaan berikutnya dalam {{minutes}} mnt.",
+      "needsUser": "{{platform}} terus gagal dengan cara yang sama, jadi percobaan otomatis dihentikan. Klik Coba sekarang saat jaringan mengizinkan.",
       "now": "{{platform}} tidak terhubung. Sedang mencoba lagi.",
       "stopped": "{{platform}} tidak terhubung selama sehari, jadi percobaan otomatis dihentikan.",
       "tryNow": "Coba sekarang"
@@ -4978,6 +4980,7 @@
     "linkLostTitle": "{{platform}} terputus",
     "linkLostLane": "{{platform}} tidak lagi tertaut, jadi pesan dan rutinitas tidak bisa dikirim lewat sana. Klik Hubungkan lalu pindai kode QR lagi.",
     "laneDownTitle": "{{platform}} tidak bisa terhubung",
-    "laneDownBody": "{{platform}} tidak terhubung selama satu jam. Aplikasi terus mencoba; buka Pesan untuk mencoba sekarang."
+    "laneDownBody": "{{platform}} tidak terhubung selama satu jam. Aplikasi terus mencoba; buka Pesan untuk mencoba sekarang.",
+    "laneBlockedBody": "{{platform}} terus gagal membuat koneksi aman, jadi mungkin diblokir di jaringan ini. Aplikasi berhenti mencoba; buka Pesan dan klik Coba sekarang saat jaringan mengizinkan."
   }
 }

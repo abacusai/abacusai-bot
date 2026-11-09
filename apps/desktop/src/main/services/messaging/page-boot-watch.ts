@@ -102,11 +102,26 @@ export const diskSpaceBack = (): boolean =>
 /** How often the network is looked at for a change while a lane is down. */
 const NETWORK_CHECK_MS = 5_000;
 
-/** The machine's addresses: a router or adapter change moves them while "online" stays true. */
+/** Adapters that come and go on their own (containers, VMs, VPN tunnels, Apple's peer links). */
+const VIRTUAL_ADAPTER =
+  /^(lo\d*$|docker|br-|veth|virbr|vmnet|vboxnet|vEthernet|utun|awdl|llw|anpi|ap\d|bridge|tun|tap|zt|tailscale|wg)/i;
+
+/**
+ * The machine's real IPv4 addresses: a router or adapter change moves them
+ * while "online" stays true. IPv6 is left out (privacy addresses rotate on
+ * their own), as are link-local and virtual adapters, so churn there never
+ * reads as a network change.
+ */
 const networkFingerprint = (): string =>
-  Object.values(os.networkInterfaces())
-    .flatMap((entries) => entries ?? [])
-    .filter((entry) => !entry.internal)
+  Object.entries(os.networkInterfaces())
+    .filter(([name]) => !VIRTUAL_ADAPTER.test(name))
+    .flatMap(([, entries]) => entries ?? [])
+    .filter(
+      (entry) =>
+        !entry.internal &&
+        entry.family === "IPv4" &&
+        !entry.address.startsWith("169.254.")
+    )
     .map((entry) => entry.address)
     .sort()
     .join(",");

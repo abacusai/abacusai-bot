@@ -534,6 +534,7 @@ export class MessagingGatewayService {
     diskSpaceBack,
     userActive,
     notifyDown: (id) => void this.tellLaneDown(id),
+    tellNeedsUser: (id) => void this.tellLaneBlocked(id),
     watchHints: watchLaneHints,
     changed: () => this.options.emitChanged(),
     log: (line) => console.log(`[messaging] ${line}`),
@@ -608,12 +609,18 @@ export class MessagingGatewayService {
     platformId: MessagingPlatformId
   ): Promise<void> {
     await this.stopPlatform(platformId);
+    // dispose() may have run while the old connector stopped.
+    if (this.disposed) return;
     if (this.shouldRun(platformId) && !this.connectors.has(platformId))
       this.startPlatform(platformId);
     this.options.emitChanged();
   }
 
+  /** Set by dispose(): nothing starts a lane after it. */
+  private disposed = false;
+
   async dispose(): Promise<void> {
+    this.disposed = true;
     this.supervisor.dispose();
     this.outbox.dispose();
     for (const route of this.routes.values()) this.stopWatchingProgress(route);
@@ -2232,15 +2239,46 @@ export class MessagingGatewayService {
       words.t("native.linkLostTitle", { platform }),
       words.t("native.linkLostLane", { platform })
     );
-    // The lost app's own chat can't carry it; another connected app's can.
+    this.tellInAnotherApp(
+      platformId,
+      words.t("native.linkLostLane", { platform })
+    );
+  }
+
+  /** The down app's own chat can't carry a notice about it; another connected app's can. */
+  private tellInAnotherApp(
+    platformId: MessagingPlatformId,
+    text: string
+  ): void {
     const other = [...this.connectors.keys()]
       .filter(
         (id) => id !== platformId && this.states.get(id)?.state === "connected"
       )
       .map((id) => this.selfChatOf(id))
       .find((chat) => chat != null && chat.platform !== platformId);
-    if (other != null)
-      this.deliverToSelf(other, words.t("native.linkLostLane", { platform }));
+    if (other != null) this.deliverToSelf(other, text);
+  }
+
+  /** Retrying stopped on a failure only the user can clear: OS notification and another app's chat. */
+  private async tellLaneBlocked(
+    platformId: MessagingPlatformId
+  ): Promise<void> {
+    const words = await channelWords(
+      channelLocale(
+        readUserLanguage()?.name ?? null,
+        this.options.appLanguage?.() ?? null
+      )
+    );
+    const platform = words.t(
+      `messaging.platforms.${messagingPlatformSpec(platformId)?.nameKey ?? platformId}`
+    );
+    const body = words.t("native.laneBlockedBody", { platform });
+    this.options.notifyUser?.(
+      platformId,
+      words.t("native.laneDownTitle", { platform }),
+      body
+    );
+    this.tellInAnotherApp(platformId, body);
   }
 
   /** A lane down for an hour, still retrying: one OS notification per outage. */

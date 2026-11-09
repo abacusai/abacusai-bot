@@ -15,6 +15,8 @@ export type LaneFailure = {
   retry: LaneRetry;
   /** The page loaded and never booted: a full boot spent for nothing. */
   stuckBoot?: boolean;
+  /** The site's certificate was refused: retried a few times, then the user's. */
+  cert?: boolean;
 };
 
 /** First retry delay; doubles per failed try up to LANE_RETRY_CAP_MS. */
@@ -33,6 +35,8 @@ export const LANE_HINT_GAP_MS = 30_000;
 export const LANE_SHOW_AFTER_MS = 10 * 60_000;
 /** Down this long before one OS notification (per outage). */
 export const LANE_NOTIFY_AFTER_MS = 60 * 60_000;
+/** Retries of a refused certificate before the lane waits for the user. */
+export const LANE_CERT_TRIES = 3;
 /** How often a lane parked on a full disk checks for space. */
 const DISK_CHECK_MS = 10_000;
 
@@ -48,6 +52,8 @@ export type LaneSupervisorDeps = {
   userActive: () => boolean;
   /** One OS notification: the lane has been down for an hour. */
   notifyDown: (id: MessagingPlatformId) => void;
+  /** The failure persists in a way only the user can fix: tell them, once per outage. */
+  tellNeedsUser: (id: MessagingPlatformId) => void;
   /** Network, wake and focus events; returns the stop. Watched only while a lane is down. */
   watchHints: (hint: (reason: string) => void) => () => void;
   /** What the pane shows changed. */
@@ -66,6 +72,11 @@ type Lane = {
   /** Failed tries since the last hint or connect: the backoff step. */
   attempts: number;
   stuckBoots: number;
+  /** Refused certificates in a row. */
+  certFails: number;
+  /** Stopped retrying: what is wrong needs the user (see LANE_CERT_TRIES). */
+  needsUser: boolean;
+  toldUser: boolean;
   lastTryAt: number;
   /** A restart of ours is running. */
   trying: boolean;
@@ -108,7 +119,8 @@ export class LaneSupervisor {
   ): void {
     const lane = this.lane(id);
     const now = this.deps.now();
-    if (lane.state !== state) lane.stateSince = now;
+    const entered = lane.state !== state;
+    if (entered) lane.stateSince = now;
     lane.state = state;
     lane.failure = state === "error" ? (failure ?? { retry: "user" }) : null;
     this.clear(lane, "watchdog");
@@ -119,10 +131,20 @@ export class LaneSupervisor {
         if (lane.failure!.retry === "user") return this.settle(id, lane);
         lane.stuckBoots =
           lane.failure!.stuckBoot === true ? lane.stuckBoots + 1 : 0;
+        lane.certFails = lane.failure!.cert === true ? lane.certFails + 1 : 0;
         this.markDown(id, lane);
+        if (lane.certFails > LANE_CERT_TRIES) return this.needUser(id, lane);
         this.schedule(id, lane);
         return;
       case "connecting":
+        // The user opened a lane that is down (Connect): their try is running,
+        // and a pending retry must not replace the page they are looking at.
+        if (entered && lane.downSince != null && !lane.trying) {
+          this.clear(lane, "retryTimer");
+          lane.nextTryAt = null;
+          lane.lastTryAt = now;
+          lane.trying = true;
+        }
         // From when it started connecting: a changed note is no progress.
         lane.watchdog = setTimeout(
           () => {
@@ -132,7 +154,13 @@ export class LaneSupervisor {
               `${id}: still connecting after 10 min, restarting it`
             );
             lane.trying = false;
-            lane.failure = { retry: "auto" };
+            // A boot this slow costs a full boot each time: one restart soon,
+            // then the stuck-boot pace.
+            lane.failure = { retry: "auto", stuckBoot: true };
+            lane.stuckBoots =
+              lane.stuckBoots === 0
+                ? 1
+                : Math.max(LANE_STUCK_BOOTS, lane.stuckBoots + 1);
             this.markDown(id, lane);
             this.schedule(id, lane);
           },
@@ -154,7 +182,7 @@ export class LaneSupervisor {
   /** Network change, wake, focus, the Messaging page: try down lanes soon. */
   hint(reason: string): void {
     for (const [id, lane] of this.lanes) {
-      if (lane.downSince == null || lane.trying) continue;
+      if (lane.downSince == null || lane.trying || lane.needsUser) continue;
       if (lane.failure?.retry !== "auto") continue;
       if (lane.notifyOwed && this.deps.userActive()) this.notify(id, lane);
       const now = this.deps.now();
@@ -199,10 +227,16 @@ export class LaneSupervisor {
     const lane = this.lanes.get(id);
     if (lane?.downSince == null) return null;
     if (this.deps.now() - lane.downSince < LANE_SHOW_AFTER_MS) return null;
-    return {
-      nextTryAt: lane.trying ? null : lane.nextTryAt,
-      stopped: !lane.trying && lane.nextTryAt == null,
-    };
+    const phase: MessagingRecovery["phase"] = lane.trying
+      ? "trying"
+      : lane.needsUser
+        ? "needs_user"
+        : lane.failure?.retry === "when_disk_free"
+          ? "disk"
+          : lane.nextTryAt == null
+            ? "stopped"
+            : "scheduled";
+    return { phase, nextTryAt: phase === "scheduled" ? lane.nextTryAt : null };
   }
 
   /** Turned off, or the gateway is going away. */
@@ -229,6 +263,9 @@ export class LaneSupervisor {
         downSince: null,
         attempts: 0,
         stuckBoots: 0,
+        certFails: 0,
+        needsUser: false,
+        toldUser: false,
         lastTryAt: -Infinity,
         trying: false,
         nextTryAt: null,
@@ -271,6 +308,21 @@ export class LaneSupervisor {
     this.watchHintsWhileDown();
   }
 
+  /** Retrying cannot fix it: stop, and tell the user once per outage. */
+  private needUser(id: MessagingPlatformId, lane: Lane): void {
+    this.deps.log(
+      `${id}: the same failure keeps coming back, waiting for the user`
+    );
+    lane.needsUser = true;
+    this.clear(lane, "retryTimer");
+    lane.nextTryAt = null;
+    if (!lane.toldUser) {
+      lane.toldUser = true;
+      this.deps.tellNeedsUser(id);
+    }
+    this.deps.changed();
+  }
+
   private notify(id: MessagingPlatformId, lane: Lane): void {
     lane.notifyOwed = false;
     if (lane.notified) return;
@@ -286,6 +338,9 @@ export class LaneSupervisor {
     lane.nextTryAt = null;
     lane.notifyOwed = false;
     lane.notified = false;
+    lane.certFails = 0;
+    lane.needsUser = false;
+    lane.toldUser = false;
     this.clear(lane, "retryTimer");
     this.clear(lane, "showTimer");
     this.clear(lane, "notifyTimer");

@@ -1668,7 +1668,8 @@
       "linkLostLane",
       "linkLostTitle",
       "laneDownTitle",
-      "laneDownBody"
+      "laneDownBody",
+      "laneBlockedBody"
     ],
     "sources": [
       "../../desktop/src/main/index.ts",

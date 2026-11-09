@@ -92,7 +92,7 @@ export const SettingRow = ({
 }: {
   id: string;
   title: string;
-  detail?: string;
+  detail?: ReactNode;
   /** A mark before the title (a provider's). */
   media?: ReactNode;
   children?: ReactNode;

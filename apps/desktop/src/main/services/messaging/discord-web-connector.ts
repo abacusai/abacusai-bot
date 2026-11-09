@@ -857,6 +857,7 @@ export class DiscordWebConnector implements MessagingConnector {
     );
     this.park("error", isCertError(code) ? CERT_BLOCKED : UNREACHABLE, {
       retry: "auto",
+      cert: isCertError(code),
     });
   }
 

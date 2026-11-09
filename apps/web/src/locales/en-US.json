@@ -1096,7 +1096,9 @@
     },
     "recommended": "Recommended",
     "recovery": {
+      "disk": "{{platform}} tries again by itself once the disk has free space.",
       "next": "{{platform}} isn't connected. Trying again by itself, next try in {{minutes}} min.",
+      "needsUser": "{{platform}} keeps failing the same way, so it stopped trying by itself. Click Try now once the network allows it.",
       "now": "{{platform}} isn't connected. Trying again now.",
       "stopped": "{{platform}} has not connected for a day, so it stopped trying by itself.",
       "tryNow": "Try now"
@@ -4978,6 +4980,7 @@
     "linkLostTitle": "{{platform}} is disconnected",
     "linkLostLane": "{{platform}} is no longer linked, so messages and routines can't go through it. Click Connect and scan the QR again.",
     "laneDownTitle": "{{platform}} can't connect",
-    "laneDownBody": "{{platform}} has not connected for an hour. The app keeps trying; open Messaging to try now."
+    "laneDownBody": "{{platform}} has not connected for an hour. The app keeps trying; open Messaging to try now.",
+    "laneBlockedBody": "{{platform}} keeps failing to make a secure connection, so it may be blocked on this network. The app stopped retrying; open Messaging and click Try now once the network allows it."
   }
 }

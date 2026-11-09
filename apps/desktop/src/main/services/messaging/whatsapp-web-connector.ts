@@ -1542,7 +1542,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
     const failure = this.loadFailure;
     this.loadFailure = null;
     if (failure === "cert") {
-      this.park("error", CERT_BLOCKED, { retry: "auto" });
+      this.park("error", CERT_BLOCKED, { retry: "auto", cert: true });
       return;
     }
     if (failure === "network") {
