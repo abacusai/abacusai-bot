@@ -46,7 +46,6 @@ import type {
   ChannelSummary,
   ChannelThread,
 } from "@abacus-ai/contract/channels";
-import { ConflictError } from "@abacus-ai/contract/conflict";
 import type { NotificationMetadata } from "@abacus-ai/contract/contract";
 import { withoutRoutineDone } from "@abacus-ai/contract/contract/ai";
 import {
