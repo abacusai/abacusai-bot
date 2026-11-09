@@ -119,9 +119,55 @@ html:not(.dark):is(:not([data-palette]), [data-palette="default"]) [data-bot-row
 html[data-density="compact"] { --bots-row-h: 24px; }
 html[data-density="compact"] [data-bot-row] [data-slot="item"] > :first-child { width: 20px; height: 20px; }
 html[data-density="compact"] [data-bot-row] [data-slot="item"] > span > span:last-child { display: none; }
+/* Channel rows match: a 20 px face (the stacked faces scaled down), one line. */
+html[data-density="compact"] :is([data-channel-row], [data-channel-new]) > :first-child { transform: scale(0.56); margin-inline: -8px; }
+html[data-density="compact"] [data-channel-row] > span > span:last-child { display: none; }
 
 /* Template hover surfaces need the same readable muted text as selected rows. */
 html:not(.dark):is(:not([data-palette]), [data-palette="default"]) [data-slot="bot-template"] .text-muted-foreground { color: oklch(0.50 0 0); }
 @container bot-form (max-width: 819px) { .bot-form-columns > aside { gap: 8px; padding: 12px 24px; } .bot-form-columns > aside > p { max-width: 480px; } }
 
 @container bot-form (max-width: 719px) { .bot-form-columns > aside { display: grid; grid-template-columns: 56px minmax(0,1fr) auto; grid-template-rows: auto auto; align-items: center; text-align: left; gap: 2px 16px; min-height: 80px; } .bot-form-columns > aside > :first-child { grid-row: 1 / 3; } .bot-form-columns > aside > h2 { grid-column: 2; align-self: end; } .bot-form-columns > aside > p { grid-column: 2; text-align: left; align-self: start; } .bot-form-columns > aside > button { grid-column: 3; grid-row: 1 / 3; } }
+
+/* ─── channels: typing dots and @mention chips ───────────────────── */
+.channel-typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  animation: channel-bob 1.2s ease-in-out infinite;
+}
+.channel-typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.channel-typing-dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes channel-bob {
+  0%, 60%, 100% { translate: 0 0; opacity: 0.45; }
+  30% { translate: 0 -3px; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduce-motion="off"]) .channel-typing-dot { animation: none; opacity: 0.7; }
+}
+html[data-reduce-motion="on"] .channel-typing-dot { animation: none; opacity: 0.7; }
+
+/* "@Writer" in a channel message: a chip in that bot's colour that opens its chat. */
+[data-group-message] a[href^="#bot-"],
+[data-channel-user] a[href^="#bot-"] {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 1px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--bot-accent, var(--primary)) 14%, var(--background));
+  color: var(--bot-accent, var(--primary));
+  font-weight: 500;
+  font-size: 0.92em;
+  line-height: 1.55;
+  text-decoration: none;
+}
+[data-channel-user] a[href^="#bot-"] {
+  background: color-mix(in oklch, var(--primary-foreground) 22%, transparent);
+  color: var(--primary-foreground);
+}
+[data-group-message] a[href^="#bot-"]:hover,
+[data-channel-user] a[href^="#bot-"]:hover {
+  text-decoration: underline;
+}

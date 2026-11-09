@@ -9,6 +9,7 @@
     "./bot-help": "./src/bot-help.ts",
     "./billing-plan": "./src/billing-plan.ts",
     "./bots": "./src/bots.ts",
+    "./channels": "./src/channels.ts",
     "./conflict": "./src/conflict.ts",
     "./contracts": "./src/contracts.ts",
     "./credit-thresholds": "./src/credit-thresholds.ts",

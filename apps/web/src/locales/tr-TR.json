@@ -455,7 +455,9 @@
       },
       "task": {
         "from": "Senden, {{bot}} aracılığıyla",
-        "asWritten": "{{bot}} bunu şöyle iletti:"
+        "asWritten": "{{bot}} bunu şöyle iletti:",
+        "fromChannel": "Senden, {{channel}} içinde",
+        "asTakenOn": "Kanalda üstlenildiği şekliyle:"
       },
       "pairWith": "{{bot}} ile",
       "pairReadOnly": "salt okunur"
@@ -5010,5 +5012,109 @@
     "laneDownTitle": "{{platform}} bağlanamıyor",
     "laneDownBody": "{{platform}} bir saattir bağlanamadı. Uygulama denemeye devam ediyor; şimdi denemek için Mesajlaşma'yı açın.",
     "laneBlockedBody": "{{platform}} güvenli bağlantı kuramıyor, bu ağda engellenmiş olabilir. Uygulama denemeyi bıraktı; ağ izin verdiğinde Mesajlaşma'yı açıp Şimdi dene'ye tıklayın."
+  },
+  "channels": {
+    "sidebar": {
+      "title": "Kanallar",
+      "new": "Yeni kanal",
+      "untitled": "Kanal",
+      "you": "Sen",
+      "members_one": "{{count}} bot",
+      "members_other": "{{count}} bot",
+      "unread": "Okunmamış"
+    },
+    "new": {
+      "title": "Yeni kanal",
+      "name": "Kanal adı",
+      "namePlaceholder": "Kanal adı (isteğe bağlı, ör. Brewly lansmanı)",
+      "about": "Bu kanal ne için",
+      "aboutPlaceholder": "Bu kanal ne için? İçindeki her bot bunu bilir (isteğe bağlı)",
+      "to": "Botlar:",
+      "search": "Bot ekle…",
+      "add": "Kanala ekle",
+      "remove": "{{name}} adlı botu çıkar",
+      "pick_one": "Başlamak için en az {{count}} bot seç.",
+      "pick_other": "Başlamak için en az {{count}} bot seç.",
+      "pickFirst": "Önce botları seç",
+      "placeholder": "İlk mesajı yaz…",
+      "hint": "Botlar, onları @mention ile etiketlediğinde ya da adlarını yazdığında yanıt verir. Aksi halde en son konuşan bot (ya da eklediğin ilk bot) yanıt verir ve diğerlerini de sohbete çağırabilir.",
+      "needBots": "Bir kanal için en az iki bot gerekir. Önce bir bot daha oluştur."
+    },
+    "thread": {
+      "label": "Kanal mesajları",
+      "goneBot": "Silinmiş bot",
+      "working_one": "{{names}} yanıt veriyor…",
+      "working_other": "{{names}} yanıt veriyor…",
+      "queued_one": "{{count}} mesaj sırasını bekliyor",
+      "queued_other": "{{count}} mesaj sırasını bekliyor",
+      "reply": "Yanıtla",
+      "pin": "Karar olarak sabitle",
+      "empty": "{{names}} için bir merhaba de. Kimin yanıt vereceğini seçmek için bir botu @mention ile etiketle ya da hepsinden yanıt almak için @everyone yaz.",
+      "gone": "Bu kanal artık yok.",
+      "pinAgreed": "Üzerinde anlaşılan noktaları karar olarak sabitle",
+      "startAgreed": "Üzerinde anlaşılan işi başlat (her sahip kendi sohbetinde)",
+      "today": "Bugün"
+    },
+    "composer": {
+      "label": "Kanala mesaj yaz",
+      "placeholder": "{{names}} için mesaj yaz",
+      "mentions": "Bir bottan bahset",
+      "send": "Gönder",
+      "stop": "Yanıt veren tüm botları durdur",
+      "replyingTo": "{{name}} adlı kişiye yanıt veriliyor",
+      "cancelReply": "Vazgeç"
+    },
+    "decisions": {
+      "title": "Kararlar (tüm botlar bunları görür)",
+      "unpin": "Sabitlemeyi kaldır"
+    },
+    "menu": {
+      "delete": "Kanalı sil"
+    },
+    "members": {
+      "body": "{{min}} ile {{max}} arasında bot seç. Çıkardığın bot burada yanıt vermeyi bırakır."
+    },
+    "delete": {
+      "title": "“{{name}}” silinsin mi?",
+      "body": "Bu kanaldaki mesajlar silinir. Botlar ve kendi sohbetleri kalır.",
+      "confirm": "Sil"
+    },
+    "dialog": {
+      "cancel": "Vazgeç",
+      "save": "Kaydet"
+    },
+    "work": {
+      "waiting": "{{name}} sohbetinin boşalması bekleniyor…",
+      "running": "{{name}} kendi sohbetinde üzerinde çalışıyor…",
+      "done": "{{name}} sohbetinde tamamlandı: rapor aşağıda",
+      "failed": "{{name}} işi bitiremedi",
+      "stopped": "Durduruldu",
+      "step": "Adım {{step}}/{{of}}",
+      "open": "{{name}} sohbetini aç"
+    },
+    "proposal": {
+      "title": "Yeni bot önerisi: {{name}}",
+      "create": "Oluştur ve kanala ekle",
+      "dismiss": "Reddet",
+      "created": "{{name}} oluşturuldu ve katıldı: sohbetini aç",
+      "dismissed": "Reddedildi",
+      "inviteTitle": "{{name}} bu kanala eklensin mi?",
+      "add": "Kanala ekle",
+      "added": "{{name}} kanala katıldı: sohbetini aç"
+    },
+    "details": {
+      "open": "Kanal ayrıntıları: {{name}}",
+      "title": "Kanal ayrıntıları"
+    },
+    "panel": {
+      "edit": "Kanalı düzenle",
+      "members_one": "{{count}} üye",
+      "members_other": "{{count}} üye",
+      "lead": "Lider",
+      "answering": "Yanıtlıyor…",
+      "addMember": "Bot ekle veya çıkar",
+      "decisions": "Kararlar",
+      "noDecisions": "Henüz sabitlenen bir şey yok. Bir mesajı sabitle ya da botlardan bir konuda anlaşmalarını iste."
+    }
   }
 }

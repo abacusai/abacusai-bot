@@ -34,6 +34,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 
 import { recoveryLine } from "../../library/messaging-recovery";
 import { BotFace } from "../avatar";
+import { GroupChatRows } from "../channels/group-rows";
 import { moodFor, type BotAttention } from "../data/attention";
 import { botsQueries, useBots } from "../data/queries";
 import { useBotsTransport } from "../data/transport";
@@ -284,6 +285,7 @@ export const BotsSidebar = () => {
           data-slot="nav-list-rows"
           className="ui-list flex flex-col gap-0.5 pt-1"
         >
+          {!searching && <GroupChatRows />}
           {model.entries.map((entry) =>
             entry.kind === "label" ? (
               <GroupLabel

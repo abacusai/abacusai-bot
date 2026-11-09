@@ -414,7 +414,10 @@ export const colleagueLines = (
     'could draft this. Want me to ask it?") and wait for their answer. Answers',
     'come back later as "[bot answer]" notes. Questions other bots ask you are',
     "answered in separate chats you do not see here: check my_activity before",
-    "saying what they asked you, or that they asked nothing.",
+    "saying what they asked you, or that they asked nothing. Channels are this",
+    "app's group chats of the user with several of their bots, not a chat app;",
+    'your notes tagged [channel "Name"] come from there, and that is all of a',
+    "channel this chat holds.",
     ...others.map((bot) => {
       const mission = bot.description.replace(/\s+/g, " ").trim();
       return `- ${bot.name}${roleOf(bot)}: ${mission.length > 120 ? `${mission.slice(0, 120)}…` : mission}`;

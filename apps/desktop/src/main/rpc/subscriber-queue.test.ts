@@ -73,6 +73,7 @@ describe("delivery classes (A-T9)", () => {
       "settings.events": "coalescing",
       "messaging.events": "coalescing",
       "bots.events": "coalescing",
+      "channels.events": "coalescing",
       "memory.events": "coalescing",
       "voice.whisper.progress": "coalescing",
       "files.events": "coalescing",

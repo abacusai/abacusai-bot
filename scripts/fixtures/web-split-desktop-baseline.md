@@ -8,7 +8,23 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `55aecf25`, the app in Chinese
+## Current: `e6e480cd`, Channels on main
+
+**435 / 8723940 / 2930941.** Records the renderer with Channels (group chats
+of the user and several bots: the channel pages, the members panel, the work
+and hand-off cards, and their strings in 13 languages). Against `55aecf25`
+(430 / 8619560 / 2893106): +5 chunks (+1.16%), +104380 bytes (+1.21%), +37835
+gzip bytes (+1.31%). Channels is one route chunk plus a shared rows chunk; the
+rest is strings, carried once per language. `apps/web`'s dependencies did not
+change. The 1% allowance is unchanged.
+
+Measured from a frozen-lockfile build of `e6e480cd` (Linux x64), summed the
+same way as `check-desktop-parity.mjs`. This baseline-only change touches no
+renderer code.
+
+## History
+
+### `55aecf25`, the app in Chinese
 
 **430 / 8619560 / 2893106.** Records the renderer with Simplified and Traditional
 Chinese. Each language is one locale chunk, loaded only when that language is
@@ -20,8 +36,6 @@ is unchanged.
 Measured from a frozen-lockfile build of `55aecf25` and of `5380f79e` (Linux
 x64), summed the same way as `check-desktop-parity.mjs`. This baseline-only
 change touches no renderer code.
-
-## History
 
 ### `f5a587da` with slash commands
 

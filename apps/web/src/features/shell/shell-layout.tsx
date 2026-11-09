@@ -186,11 +186,18 @@ export const ShellLayout = ({
     panelOpen: area === "sessions" ? panel.sessionOpen : panel.open,
     view: (location.search as { view?: string }).view,
   });
+  // A channel's panel holds its details only (members, decisions).
+  const channelRoute = /^\/bots\/channels\/(?!new$)[^/]+$/.test(
+    location.pathname
+  );
   const panelKinds: readonly PanelTabKind[] =
-    area == null ? [] : AREA_PANEL_KINDS[area];
+    area == null ? [] : channelRoute ? ["details"] : AREA_PANEL_KINDS[area];
   const panelAvailable =
     area === "bots" &&
-    /^\/bots\/[^/]+(?:\/chats\/[^/]+|\/check-in)?$/.test(location.pathname) &&
+    (channelRoute ||
+      /^\/bots\/[^/]+(?:\/chats\/[^/]+|\/check-in)?$/.test(
+        location.pathname
+      )) &&
     botPanelFilled &&
     !overridden;
   const panelShown = panelAvailable && panel.open;

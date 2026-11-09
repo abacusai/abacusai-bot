@@ -455,7 +455,9 @@
       },
       "task": {
         "from": "あなたから({{bot}}経由)",
-        "asWritten": "{{bot}}が伝えた内容:"
+        "asWritten": "{{bot}}が伝えた内容:",
+        "fromChannel": "あなたから({{channel}}にて)",
+        "asTakenOn": "チャンネルで引き受けた内容:"
       },
       "pairWith": "{{bot}}と",
       "pairReadOnly": "読み取り専用"
@@ -5010,5 +5012,109 @@
     "laneDownTitle": "{{platform}} に接続できません",
     "laneDownBody": "{{platform}} が 1 時間接続できていません。アプリは再試行を続けています。メッセージを開くと今すぐ試せます。",
     "laneBlockedBody": "{{platform}} は安全な接続を確立できず、このネットワークでブロックされている可能性があります。アプリは再試行を停止しました。ネットワークが使えるようになったら、メッセージを開いて「今すぐ試す」をクリックしてください。"
+  },
+  "channels": {
+    "sidebar": {
+      "title": "チャンネル",
+      "new": "新しいチャンネル",
+      "untitled": "チャンネル",
+      "you": "あなた",
+      "members_one": "{{count}}体のボット",
+      "members_other": "{{count}}体のボット",
+      "unread": "未読"
+    },
+    "new": {
+      "title": "新しいチャンネル",
+      "name": "チャンネル名",
+      "namePlaceholder": "チャンネル名(任意、例:Brewlyのローンチ)",
+      "about": "このチャンネルの目的",
+      "aboutPlaceholder": "このチャンネルは何のためのものですか?チャンネル内のすべてのボットに伝わります(任意)",
+      "to": "ボット:",
+      "search": "ボットを追加…",
+      "add": "チャンネルに追加",
+      "remove": "{{name}}を削除",
+      "pick_one": "開始するには、ボットを{{count}}体以上選んでください。",
+      "pick_other": "開始するには、ボットを{{count}}体以上選んでください。",
+      "pickFirst": "先にボットを選んでください",
+      "placeholder": "最初のメッセージを書く…",
+      "hint": "@mentionするか名前を呼ぶと、そのボットが答えます。そうでない場合は、最後に発言したボット(または最初に追加したボット)が答え、ほかのボットを呼ぶこともできます。",
+      "needBots": "チャンネルにはボットが2体以上必要です。先にもう1体ボットを作ってください。"
+    },
+    "thread": {
+      "label": "チャンネルのメッセージ",
+      "goneBot": "削除されたボット",
+      "working_one": "{{names}}が回答中…",
+      "working_other": "{{names}}が回答中…",
+      "queued_one": "{{count}}件のメッセージが順番待ち",
+      "queued_other": "{{count}}件のメッセージが順番待ち",
+      "reply": "返信",
+      "pin": "決定事項としてピン留め",
+      "empty": "{{names}}にあいさつしましょう。@mentionで回答するボットを選べます。@everyoneで全員の意見を聞けます。",
+      "gone": "このチャンネルはなくなりました。",
+      "pinAgreed": "合意したポイントを決定事項としてピン留めする",
+      "startAgreed": "合意した作業を開始(各オーナーが自分のチャットで)",
+      "today": "今日"
+    },
+    "composer": {
+      "label": "チャンネルにメッセージ",
+      "placeholder": "{{names}}にメッセージ",
+      "mentions": "ボットをメンション",
+      "send": "送信",
+      "stop": "すべてのボットの回答を停止",
+      "replyingTo": "{{name}}に返信中",
+      "cancelReply": "キャンセル"
+    },
+    "decisions": {
+      "title": "決定事項(すべてのボットに共有されます)",
+      "unpin": "ピン留めを解除"
+    },
+    "menu": {
+      "delete": "チャンネルを削除"
+    },
+    "members": {
+      "body": "ボットを{{min}}~{{max}}体選んでください。削除したボットは、ここで回答しなくなります。"
+    },
+    "delete": {
+      "title": "「{{name}}」を削除しますか?",
+      "body": "このチャンネルのメッセージは削除されます。ボットとそれぞれのチャットは残ります。",
+      "confirm": "削除"
+    },
+    "dialog": {
+      "cancel": "キャンセル",
+      "save": "保存"
+    },
+    "work": {
+      "waiting": "{{name}}のチャットが空くのを待っています…",
+      "running": "{{name}}の個別チャットで作業中…",
+      "done": "{{name}}のチャットで完了しました。レポートは以下の通りです",
+      "failed": "{{name}}は完了できませんでした",
+      "stopped": "停止しました",
+      "step": "ステップ {{step}}/{{of}}",
+      "open": "{{name}}のチャットを開く"
+    },
+    "proposal": {
+      "title": "新しいボットの提案:{{name}}",
+      "create": "作成してチャンネルに追加",
+      "dismiss": "閉じる",
+      "created": "{{name}}を作成し、チャンネルに参加しました:チャットを開く",
+      "dismissed": "却下しました",
+      "inviteTitle": "{{name}}をこのチャンネルに追加しますか?",
+      "add": "チャンネルに追加",
+      "added": "{{name}}がチャンネルに参加しました:チャットを開く"
+    },
+    "details": {
+      "open": "チャンネルの詳細:{{name}}",
+      "title": "チャンネルの詳細"
+    },
+    "panel": {
+      "edit": "チャンネルを編集",
+      "members_one": "{{count}}体のメンバー",
+      "members_other": "{{count}}体のメンバー",
+      "lead": "リード",
+      "answering": "回答中…",
+      "addMember": "ボットを追加または削除",
+      "decisions": "決定事項",
+      "noDecisions": "ピン留めされたものはまだありません。メッセージをピン留めするか、ボットに何かについて合意するよう依頼してください。"
+    }
   }
 }

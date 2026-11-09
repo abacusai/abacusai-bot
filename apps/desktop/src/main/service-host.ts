@@ -38,6 +38,11 @@ import {
   CHECK_IN_PROMPT,
   missionForCheckIn,
 } from "@abacus-ai/contract/bots/check-in";
+import type {
+  Channel,
+  ChannelSummary,
+  ChannelThread,
+} from "@abacus-ai/contract/channels";
 import { ConflictError } from "@abacus-ai/contract/conflict";
 import {
   checkoutKey,
@@ -381,8 +386,8 @@ import {
   readBotMemoryText,
 } from "./services/bots/bot-memory-store";
 import { BotService, sponsoredRunEnvUntil } from "./services/bots/bot-service";
-import { botDir } from "./services/bots/bot-store";
 import {
+  botDir,
   getBot,
   getSenderSession,
   listSenderSessionEntries,
@@ -400,6 +405,12 @@ import {
   HostedChromiumService,
 } from "./services/browser/chrome/hosted-chromium";
 import type { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
+import { channelTitle } from "./services/channels/channel-logic";
+import {
+  CHANNEL_PLATFORM,
+  ChannelService,
+  fileChannelStore,
+} from "./services/channels/channel-service";
 import {
   buildAgentAuthEnv,
   buildAgentConfigEnv,
@@ -652,6 +663,15 @@ const connectorIdsFor = (services: string[]): string[] =>
  * offer to pass work on, so the message before it says what the work is.
  */
 /** How long the user's latest words count for passing a task on. */
+/** A piece of channel work from queued to ended: a stop may come before its turn starts. */
+interface ChannelWorkRun {
+  stopped: boolean;
+  /** Ends its wait for the user's own turn in that chat, if it is waiting. */
+  wake?: () => void;
+  /** Where to stop it, once its prompt is in the bot's chat. */
+  handle?: BotChatHandle;
+}
+
 const USER_WORDS_FRESH_MS = 15 * 60_000;
 /** How long after a passed-on task ends the user's next words there still go back to the passer. */
 const TASK_FOLLOW_UP_MS = 60 * 60_000;
@@ -2775,6 +2795,7 @@ export class ServiceHost {
     onBotRemoved: (botId) => {
       // Its open requests to other bots, and theirs to it, end here.
       this.botAskService.forgetBot(botId);
+      this.channelService.forgetBot(botId);
       // Its routines stay, paused: they were the bot's work, and without it
       // they would keep firing, spending credits, in nobody's voice. The
       // user resumes or deletes them from the Routines panel.
@@ -3286,6 +3307,7 @@ export class ServiceHost {
     this.startIdleAgentReaper();
     // Requests between bots the app closed on run again; queued ones start.
     this.botAskService.recover();
+    this.channelService.recover();
     // Failures are per-connector and reported through the pane.
     void this.messagingGatewayService
       .syncConnectors()
@@ -4073,7 +4095,10 @@ export class ServiceHost {
       .listAll()
       .filter(
         (session) =>
-          session.owner?.kind === "bot" && session.owner.role === "sender"
+          session.owner?.kind === "bot" &&
+          session.owner.role === "sender" &&
+          // A bot's answers in a channel live in the channel, not here.
+          session.owner.platform !== CHANNEL_PLATFORM
       )
       .map((session) => {
         const owner = session.owner!;
@@ -6078,8 +6103,9 @@ export class ServiceHost {
    */
   /**
    * The app writes into a bot's daily notes what it settled, did or learned
-   * outside its own chat (work for another bot, a channel's decisions), each
-   * with its source: the bot carries it into every chat, and its memory
+   * outside its own chat (work for another bot, work taken on for a channel,
+   * a channel's decisions), each with its source: the bot carries it into
+   * every chat, and its memory
    * search finds it later. Never another bot's mere words.
    */
   private noteToBot(botId: string, line: string): void {
@@ -6117,6 +6143,308 @@ export class ServiceHost {
     ...fileAskStore(),
   });
 
+  /** The bot's chat for each channel turn running now, by `<channel>|<bot>`. */
+  private readonly channelTurns = new Map<string, BotChatHandle>();
+
+  /** Group chats of the user and several bots (services/channels). */
+  private readonly channelService = new ChannelService({
+    store: fileChannelStore(),
+    note: (botId, line) => this.noteToBot(botId, line),
+    bot: (id) => {
+      const bot = this.botService.list().find((each) => each.id === id);
+      return bot == null
+        ? null
+        : { id: bot.id, name: bot.name, title: bot.title };
+    },
+    ownChat: (botId) => {
+      const sessionId = this.botService
+        .list()
+        .find((bot) => bot.id === botId)?.sessionId;
+      return {
+        busy: sessionId != null && this.turnLedger.isOpen(sessionId),
+        lines: this.recentOwnChat(botId),
+      };
+    },
+    runTurn: (botId, channel, prompt) =>
+      this.runChannelTurn(botId, channel, prompt),
+    runWork: (botId, _channel, prompt, workId, card) =>
+      this.runChannelWork(botId, prompt, workId, card),
+    createBot: ({ name, title, description, likeBotId }) => {
+      const like = this.botService.list().find((bot) => bot.id === likeBotId);
+      const bot = this.createBot({
+        name,
+        title,
+        description,
+        ...(like?.model != null ? { model: like.model } : {}),
+      });
+      this.emitEvent({
+        type: "bots-updated",
+        emittedAt: new Date().toISOString(),
+      });
+      return { id: bot.id, name: bot.name, title: bot.title };
+    },
+    allBots: () =>
+      this.botService
+        .list()
+        .map((bot) => ({ id: bot.id, name: bot.name, title: bot.title })),
+    // Stopped as the user's Stop does, never by closing the agent: a closed
+    // agent is started again by the next send and the work runs on.
+    stopWork: (workId) => {
+      const work = this.channelWorks.get(workId);
+      if (work == null) return;
+      work.stopped = true;
+      work.wake?.();
+      if (work.handle != null) this.stopAgentTurn(work.handle);
+    },
+    stopTurn: (botId, channelId) => {
+      const handle = this.channelTurns.get(`${channelId}|${botId}`);
+      if (handle != null) this.stopAgentTurn(handle);
+    },
+    forgetChats: (channelId, botIds) => {
+      const keys = new Set(
+        botIds.map((botId) =>
+          senderSessionKey(botId, CHANNEL_PLATFORM, channelId)
+        )
+      );
+      for (const session of this.agentSessionManagerService.listAll()) {
+        const owner = session.owner;
+        if (owner?.role !== "sender" || owner.key == null) continue;
+        if (keys.has(owner.key))
+          this.removeAgentSession(session.workspaceId, session.id);
+      }
+      for (const [key] of listSenderSessionEntries())
+        if (keys.has(key)) removeSenderSession(key);
+    },
+    changed: (channelId) =>
+      this.emitEvent({
+        type: "channels-updated",
+        channelId,
+        emittedAt: new Date().toISOString(),
+      }),
+    log: (line) => console.log(line),
+  });
+
+  /**
+   * One turn of a bot in its chat for a channel (a sender chat on the
+   * "bot-channel" platform, held like any other), so its main chat with the user
+   * is never written to. Resolves with the turn's raw text, in parts.
+   */
+  private async runChannelTurn(
+    botId: string,
+    channel: Channel,
+    prompt: string
+  ): Promise<string> {
+    const title = channelTitle(
+      channel,
+      (id) => this.botService.list().find((bot) => bot.id === id)?.name ?? null
+    );
+    const handle = await this.botService.openSenderChat(
+      botId,
+      CHANNEL_PLATFORM,
+      channel.id,
+      title
+    );
+    const key = `${channel.id}|${botId}`;
+    this.channelTurns.set(key, handle);
+    try {
+      if (this.turnLedger.isOpen(handle.sessionId))
+        await this.agentManagerService
+          .stopSessionAndWait(handle.workspaceId, handle.sessionId)
+          .catch(() => undefined);
+      const answer = this.waitForTurn(
+        handle.sessionId,
+        BOT_ASK_TURN_TIMEOUT_MS,
+        {
+          timeout: "it took more than 10 minutes, so it was stopped.",
+          failed: "its turn ended without an answer.",
+          stopped: "it was stopped.",
+          segment: BOT_ANSWER_SEGMENT,
+        }
+      );
+      const sent = await this.sendAgentMessage({
+        workspaceId: handle.workspaceId,
+        sessionId: handle.sessionId,
+        message: prompt,
+      });
+      if (!sent) {
+        const waiter = this.turnWaiters.get(handle.sessionId);
+        this.turnWaiters.delete(handle.sessionId);
+        waiter?.reject(new Error("it could not be started."));
+      }
+      return await answer;
+    } catch (error) {
+      if (error instanceof TimeoutError)
+        this.agentManagerService.stopSession(
+          handle.workspaceId,
+          handle.sessionId
+        );
+      throw error;
+    } finally {
+      this.channelTurns.delete(key);
+    }
+  }
+
+  /**
+   * Work a bot took on in a channel, run in its own chat with its normal
+   * tools, the way a passed-on task runs: after any turn the user has open
+   * there, shown in that chat as it arrived. Resolves with the raw text.
+   */
+  /** Channel work per bot: one at a time in its own chat (one turn waiter per chat). */
+  private readonly channelWorkLanes = new Map<string, Promise<unknown>>();
+  /**
+   * Channel work by its card's id, from queued to ended: whether a stop came
+   * (it may come before the work's turn starts) and, once its prompt is in
+   * the bot's chat, where to stop it.
+   */
+  private readonly channelWorks = new Map<string, ChannelWorkRun>();
+
+  private runChannelWork(
+    botId: string,
+    prompt: string,
+    workId: string,
+    card: BotTaskTag
+  ): Promise<string> {
+    const work: ChannelWorkRun = { stopped: false };
+    this.channelWorks.set(workId, work);
+    const before = this.channelWorkLanes.get(botId) ?? Promise.resolve();
+    const run = before
+      .catch(() => undefined)
+      .then(() => this.runChannelWorkNow(botId, prompt, work, workId, card))
+      .finally(() => this.channelWorks.delete(workId));
+    const lane = run.catch(() => undefined);
+    this.channelWorkLanes.set(botId, lane);
+    void lane.then(() => {
+      if (this.channelWorkLanes.get(botId) === lane)
+        this.channelWorkLanes.delete(botId);
+    });
+    return run;
+  }
+
+  private async runChannelWorkNow(
+    botId: string,
+    prompt: string,
+    work: ChannelWorkRun,
+    workId: string,
+    card: BotTaskTag
+  ): Promise<string> {
+    const stoppedFirst = (): Error =>
+      new Error("it was stopped before it began.");
+    if (work.stopped) throw stoppedFirst();
+    const handle = await this.botService.openChat(botId);
+    try {
+      // A stop while it waits for the user's own turn there ends the wait.
+      const closed = await Promise.race([
+        this.turnClosed(handle.sessionId, BOT_TASK_TURN_TIMEOUT_MS),
+        new Promise<false>((resolve) => {
+          work.wake = () => resolve(false);
+        }),
+      ]);
+      if (work.stopped) throw stoppedFirst();
+      if (!closed)
+        throw new Error("it stayed busy in its own chat for 30 minutes.");
+      // A turn there just stopped (the work before this one, say) closes a
+      // moment after the stop: not on this work's waiter.
+      await this.sessionTurnStateService.stopSettled(handle.sessionId, 15_000);
+      if (work.stopped) throw stoppedFirst();
+      const answer = this.waitForTurn(
+        handle.sessionId,
+        BOT_TASK_TURN_TIMEOUT_MS,
+        {
+          timeout: "it took more than 30 minutes, so it was stopped.",
+          failed: "its turn ended without a report.",
+          stopped: "it was stopped partway, so it may be half done.",
+          segment: BOT_ANSWER_SEGMENT,
+        }
+      );
+      // The card stops saying it waits for the chat: the prompt goes now.
+      this.channelService.workStarted(workId);
+      const sent = await this.sendAgentMessage({
+        workspaceId: handle.workspaceId,
+        sessionId: handle.sessionId,
+        message: prompt,
+        // Its chat shows the work as a card from the channel, not the prompt.
+        userText: { operator: { kind: "bot-task", task: card } },
+      });
+      work.handle = handle;
+      // Stopped while the prompt was on its way: it stops now.
+      if (work.stopped) this.stopAgentTurn(handle);
+      if (!sent) {
+        const waiter = this.turnWaiters.get(handle.sessionId);
+        this.turnWaiters.delete(handle.sessionId);
+        waiter?.reject(new Error("it could not be started."));
+      }
+      return await answer;
+    } catch (error) {
+      if (error instanceof TimeoutError)
+        this.agentManagerService.stopSession(
+          handle.workspaceId,
+          handle.sessionId
+        );
+      throw error;
+    } finally {
+      delete work.handle;
+    }
+  }
+
+  listChannels(): ChannelSummary[] {
+    return this.channelService.list();
+  }
+
+  channelThread(channelId: string): ChannelThread {
+    return this.channelService.thread(channelId);
+  }
+
+  createChannel(input: {
+    botIds: string[];
+    name?: string;
+    about?: string;
+    text?: string;
+  }): ChannelSummary {
+    return this.channelService.create(input);
+  }
+
+  updateChannel(
+    channelId: string,
+    input: { name?: string; about?: string; botIds?: string[] }
+  ): ChannelSummary {
+    return this.channelService.update(channelId, input);
+  }
+
+  removeChannel(channelId: string): void {
+    this.channelService.remove(channelId);
+  }
+
+  postToChannel(channelId: string, text: string, replyTo?: string): void {
+    this.channelService.post(channelId, text, replyTo);
+  }
+
+  pinInChannel(
+    channelId: string,
+    input: { text?: string; messageId?: string }
+  ): void {
+    this.channelService.pin(channelId, input);
+  }
+
+  unpinInChannel(channelId: string, decisionId: string): void {
+    this.channelService.unpin(channelId, decisionId);
+  }
+
+  startAgreedInChannel(channelId: string, messageId: string): void {
+    this.channelService.startAgreed(channelId, messageId);
+  }
+
+  decideChannelProposal(
+    channelId: string,
+    messageId: string,
+    create: boolean
+  ): void {
+    this.channelService.decideProposal(channelId, messageId, create);
+  }
+
+  stopChannel(channelId: string): void {
+    this.channelService.stop(channelId);
+  }
+
   /**
    * The user's latest messages in each session, in their own words: the
    * authority a task passed to another bot carries. Recorded from both ways
@@ -6135,9 +6463,10 @@ export class ServiceHost {
     message: string,
     tags: UserTextTags | undefined
   ): void {
-    // A task another bot passed on is not the user speaking here: nothing
-    // in that turn may pass work on, so their earlier words here no longer
-    // count either (else a doer could hand work back with their authority).
+    // A task another bot passed on, or work taken on in a channel, is not
+    // the user speaking here: nothing in that turn may pass work on, so
+    // their earlier words here no longer count either (else a doer could
+    // hand work back with their authority).
     if (message.startsWith(BOT_TASK_PREFIX)) {
       this.userWords.delete(sessionId);
       return;
@@ -6498,7 +6827,8 @@ export class ServiceHost {
 
   /**
    * The last exchanges of a bot's own (forever) chat, both sides, short: the
-   * context an asked bot answers with, since an ask runs in another chat.
+   * context an asked bot or a channel turn answers with, since each runs in
+   * another chat.
    * Its own replies are in it, so "what did you do today" is answered from
    * what it last reported there, not from notes that have since gone stale.
    */
@@ -6651,10 +6981,14 @@ export class ServiceHost {
     }
   }
 
-  /** A session that is a bot answering another bot's ask. */
+  /** A session that is a bot answering another bot's ask, or in a channel. */
   private isBotAskSession(sessionId: string): boolean {
     const owner = this.agentSessionManagerService.get(sessionId)?.owner;
-    return owner?.role === "sender" && owner.platform === BOT_ASK_PLATFORM;
+    return (
+      owner?.role === "sender" &&
+      (owner.platform === BOT_ASK_PLATFORM ||
+        owner.platform === CHANNEL_PLATFORM)
+    );
   }
 
   /**

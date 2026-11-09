@@ -22,6 +22,7 @@ import { showError } from "#renderer/lib/toast";
 import { Button } from "#renderer/ui/button";
 
 import { react } from "../avatar";
+import { useChannels } from "../channels/data";
 import { setBotModel, setCheckInsEnabled } from "../data/bot-actions";
 import { botsQueries } from "../data/queries";
 import { useBots, useCheckIn } from "../data/queries";
@@ -51,6 +52,7 @@ export const useBotChatSlots = (
   const transport = useBotsTransport();
   const routine = useCheckIn(bot.id);
   const { bots } = useBots();
+  const channels = useChannels();
   const navigate = useAppNavigate();
   const { data: session } = useLiveQuery({
     query: (q) =>
@@ -162,6 +164,7 @@ export const useBotChatSlots = (
         : undefined;
   const decorateMessage = botMessageDecorations({
     bots,
+    channels,
     sessionId,
     model: session?.model,
     feedbackEnabled: account.data != null,

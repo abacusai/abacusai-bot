@@ -455,7 +455,9 @@
       },
       "task": {
         "from": "De você, via {{bot}}",
-        "asWritten": "Como {{bot}} repassou:"
+        "asWritten": "Como {{bot}} repassou:",
+        "fromChannel": "De você, em {{channel}}",
+        "asTakenOn": "Como assumido no canal:"
       },
       "pairWith": "com {{bot}}",
       "pairReadOnly": "somente leitura"
@@ -5010,5 +5012,109 @@
     "laneDownTitle": "{{platform}} não consegue conectar",
     "laneDownBody": "{{platform}} está sem conexão há uma hora. O app continua tentando; abra Mensagens para tentar agora.",
     "laneBlockedBody": "{{platform}} não consegue criar uma conexão segura e pode estar bloqueado nesta rede. O app parou de tentar; abra Mensagens e clique em Tentar agora quando a rede permitir."
+  },
+  "channels": {
+    "sidebar": {
+      "title": "Canais",
+      "new": "Novo canal",
+      "untitled": "Canal",
+      "you": "Você",
+      "members_one": "{{count}} bot",
+      "members_other": "{{count}} bots",
+      "unread": "Não lidas"
+    },
+    "new": {
+      "title": "Novo canal",
+      "name": "Nome do canal",
+      "namePlaceholder": "Nome do canal (opcional, ex.: Lançamento da Brewly)",
+      "about": "Para que serve este canal",
+      "aboutPlaceholder": "Para que serve este canal? Todos os bots nele são informados (opcional)",
+      "to": "Bots:",
+      "search": "Adicionar bots…",
+      "add": "Adicionar ao canal",
+      "remove": "Remover {{name}}",
+      "pick_one": "Escolha pelo menos {{count}} bot para começar.",
+      "pick_other": "Escolha pelo menos {{count}} bots para começar.",
+      "pickFirst": "Escolha os bots primeiro",
+      "placeholder": "Escreva a primeira mensagem…",
+      "hint": "Os bots respondem quando você usa @mention ou os chama pelo nome. Caso contrário, responde o bot que falou por último (ou o primeiro que você adicionou), e ele pode chamar os outros.",
+      "needBots": "Um canal precisa de pelo menos dois bots. Crie outro bot primeiro."
+    },
+    "thread": {
+      "label": "Mensagens do canal",
+      "goneBot": "Bot excluído",
+      "working_one": "{{names}} está respondendo…",
+      "working_other": "{{names}} estão respondendo…",
+      "queued_one": "{{count}} mensagem aguardando a vez",
+      "queued_other": "{{count}} mensagens aguardando a vez",
+      "reply": "Responder",
+      "pin": "Fixar como decisão",
+      "empty": "Diga olá para {{names}}. Use @mention em um bot para escolher quem responde, ou @everyone para ouvir todos eles.",
+      "gone": "Este canal não existe mais.",
+      "pinAgreed": "Fixar os pontos acordados como decisões",
+      "startAgreed": "Iniciar o trabalho combinado (cada responsável em seu próprio chat)",
+      "today": "Hoje"
+    },
+    "composer": {
+      "label": "Enviar mensagem ao canal",
+      "placeholder": "Enviar mensagem para {{names}}",
+      "mentions": "Mencionar um bot",
+      "send": "Enviar",
+      "stop": "Parar todos os bots que estão respondendo",
+      "replyingTo": "Respondendo a {{name}}",
+      "cancelReply": "Cancelar"
+    },
+    "decisions": {
+      "title": "Decisões (todos os bots veem)",
+      "unpin": "Desafixar"
+    },
+    "menu": {
+      "delete": "Excluir canal"
+    },
+    "members": {
+      "body": "Escolha de {{min}} a {{max}} bots. Um bot removido deixa de responder aqui."
+    },
+    "delete": {
+      "title": "Excluir “{{name}}”?",
+      "body": "As mensagens deste canal serão excluídas. Os bots e as conversas próprias deles continuam.",
+      "confirm": "Excluir"
+    },
+    "dialog": {
+      "cancel": "Cancelar",
+      "save": "Salvar"
+    },
+    "work": {
+      "waiting": "Aguardando o chat de {{name}} ficar livre…",
+      "running": "Trabalhando nisso no chat próprio de {{name}}…",
+      "done": "Concluído no chat de {{name}}: o relatório está abaixo",
+      "failed": "{{name}} não concluiu",
+      "stopped": "Interrompido",
+      "step": "Etapa {{step}} de {{of}}",
+      "open": "Abrir o chat de {{name}}"
+    },
+    "proposal": {
+      "title": "Novo bot sugerido: {{name}}",
+      "create": "Criar e adicionar ao canal",
+      "dismiss": "Dispensar",
+      "created": "{{name}} foi criado e entrou no canal: abrir o chat",
+      "dismissed": "Dispensado",
+      "inviteTitle": "Adicionar {{name}} a este canal?",
+      "add": "Adicionar ao canal",
+      "added": "{{name}} entrou no canal: abrir o chat"
+    },
+    "details": {
+      "open": "Detalhes do canal: {{name}}",
+      "title": "Detalhes do canal"
+    },
+    "panel": {
+      "edit": "Editar canal",
+      "members_one": "{{count}} membro",
+      "members_other": "{{count}} membros",
+      "lead": "Líder",
+      "answering": "Respondendo…",
+      "addMember": "Adicionar ou remover bots",
+      "decisions": "Decisões",
+      "noDecisions": "Nada fixado ainda. Fixe uma mensagem ou peça aos bots que cheguem a um acordo sobre algo."
+    }
   }
 }

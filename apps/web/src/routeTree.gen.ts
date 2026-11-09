@@ -54,6 +54,7 @@ import { Route as ShellSettingsAboutChangelogRouteImport } from "./routes/_shell
 import { Route as ShellbotsBotsBotIdCheckInRouteImport } from "./routes/_shell/(bots)/bots.$botId.check-in"
 import { Route as ShellbotsBotsBotIdDetailsRouteImport } from "./routes/_shell/(bots)/bots.$botId.details"
 import { Route as ShellbotsBotsBotIdEditRouteImport } from "./routes/_shell/(bots)/bots.$botId_.edit"
+import { Route as ShellbotsBotsChannelsChannelIdRouteImport } from "./routes/_shell/(bots)/bots.channels.$channelId"
 import { Route as ShelllibraryLibraryToolsIndexRouteImport } from "./routes/_shell/(library)/library.tools.index"
 import { Route as ShelllibraryLibraryToolsToolsetIdRouteImport } from "./routes/_shell/(library)/library.tools.$toolsetId"
 import { Route as ShellroutinesRoutinesRoutineIdEditRouteImport } from "./routes/_shell/(routines)/routines.$routineId.edit"
@@ -300,6 +301,12 @@ const ShellbotsBotsBotIdEditRoute = ShellbotsBotsBotIdEditRouteImport.update({
   path: "/$botId/edit",
   getParentRoute: () => ShellbotsBotsRoute,
 } as any)
+const ShellbotsBotsChannelsChannelIdRoute =
+  ShellbotsBotsChannelsChannelIdRouteImport.update({
+    id: "/channels/$channelId",
+    path: "/channels/$channelId",
+    getParentRoute: () => ShellbotsBotsRoute,
+  } as any)
 const ShelllibraryLibraryToolsIndexRoute =
   ShelllibraryLibraryToolsIndexRouteImport.update({
     id: "/tools/",
@@ -392,6 +399,7 @@ export interface FileRoutesByFullPath {
   "/bots/$botId/check-in": typeof ShellbotsBotsBotIdCheckInRoute
   "/bots/$botId/details": typeof ShellbotsBotsBotIdDetailsRoute
   "/bots/$botId/edit": typeof ShellbotsBotsBotIdEditRoute
+  "/bots/channels/$channelId": typeof ShellbotsBotsChannelsChannelIdRoute
   "/library/tools/$toolsetId": typeof ShelllibraryLibraryToolsToolsetIdRoute
   "/routines/$routineId/edit": typeof ShellroutinesRoutinesRoutineIdEditRoute
   "/routines/new": typeof ShellroutinesRoutinesListNewRoute
@@ -438,6 +446,7 @@ export interface FileRoutesByTo {
   "/bots/$botId/check-in": typeof ShellbotsBotsBotIdCheckInRoute
   "/bots/$botId/details": typeof ShellbotsBotsBotIdDetailsRoute
   "/bots/$botId/edit": typeof ShellbotsBotsBotIdEditRoute
+  "/bots/channels/$channelId": typeof ShellbotsBotsChannelsChannelIdRoute
   "/library/tools/$toolsetId": typeof ShelllibraryLibraryToolsToolsetIdRoute
   "/routines/$routineId/edit": typeof ShellroutinesRoutinesRoutineIdEditRoute
   "/routines/new": typeof ShellroutinesRoutinesListNewRoute
@@ -493,6 +502,7 @@ export interface FileRoutesById {
   "/_shell/(bots)/bots/$botId/check-in": typeof ShellbotsBotsBotIdCheckInRoute
   "/_shell/(bots)/bots/$botId/details": typeof ShellbotsBotsBotIdDetailsRoute
   "/_shell/(bots)/bots/$botId_/edit": typeof ShellbotsBotsBotIdEditRoute
+  "/_shell/(bots)/bots/channels/$channelId": typeof ShellbotsBotsChannelsChannelIdRoute
   "/_shell/(library)/library/tools/$toolsetId": typeof ShelllibraryLibraryToolsToolsetIdRoute
   "/_shell/(routines)/routines/$routineId/edit": typeof ShellroutinesRoutinesRoutineIdEditRoute
   "/_shell/(routines)/routines/_list/new": typeof ShellroutinesRoutinesListNewRoute
@@ -547,6 +557,7 @@ export interface FileRouteTypes {
     | "/bots/$botId/check-in"
     | "/bots/$botId/details"
     | "/bots/$botId/edit"
+    | "/bots/channels/$channelId"
     | "/library/tools/$toolsetId"
     | "/routines/$routineId/edit"
     | "/routines/new"
@@ -593,6 +604,7 @@ export interface FileRouteTypes {
     | "/bots/$botId/check-in"
     | "/bots/$botId/details"
     | "/bots/$botId/edit"
+    | "/bots/channels/$channelId"
     | "/library/tools/$toolsetId"
     | "/routines/$routineId/edit"
     | "/routines/new"
@@ -647,6 +659,7 @@ export interface FileRouteTypes {
     | "/_shell/(bots)/bots/$botId/check-in"
     | "/_shell/(bots)/bots/$botId/details"
     | "/_shell/(bots)/bots/$botId_/edit"
+    | "/_shell/(bots)/bots/channels/$channelId"
     | "/_shell/(library)/library/tools/$toolsetId"
     | "/_shell/(routines)/routines/$routineId/edit"
     | "/_shell/(routines)/routines/_list/new"
@@ -979,6 +992,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof ShellbotsBotsBotIdEditRouteImport
       parentRoute: typeof ShellbotsBotsRoute
     }
+    "/_shell/(bots)/bots/channels/$channelId": {
+      id: "/_shell/(bots)/bots/channels/$channelId"
+      path: "/channels/$channelId"
+      fullPath: "/bots/channels/$channelId"
+      preLoaderRoute: typeof ShellbotsBotsChannelsChannelIdRouteImport
+      parentRoute: typeof ShellbotsBotsRoute
+    }
     "/_shell/(library)/library/tools/": {
       id: "/_shell/(library)/library/tools/"
       path: "/tools"
@@ -1136,6 +1156,7 @@ interface ShellbotsBotsRouteChildren {
   ShellbotsBotsNewRoute: typeof ShellbotsBotsNewRoute
   ShellbotsBotsIndexRoute: typeof ShellbotsBotsIndexRoute
   ShellbotsBotsBotIdEditRoute: typeof ShellbotsBotsBotIdEditRoute
+  ShellbotsBotsChannelsChannelIdRoute: typeof ShellbotsBotsChannelsChannelIdRoute
   ShellbotsBotsBotIdChatsSessionIdRoute: typeof ShellbotsBotsBotIdChatsSessionIdRoute
 }
 
@@ -1144,6 +1165,7 @@ const ShellbotsBotsRouteChildren: ShellbotsBotsRouteChildren = {
   ShellbotsBotsNewRoute: ShellbotsBotsNewRoute,
   ShellbotsBotsIndexRoute: ShellbotsBotsIndexRoute,
   ShellbotsBotsBotIdEditRoute: ShellbotsBotsBotIdEditRoute,
+  ShellbotsBotsChannelsChannelIdRoute: ShellbotsBotsChannelsChannelIdRoute,
   ShellbotsBotsBotIdChatsSessionIdRoute: ShellbotsBotsBotIdChatsSessionIdRoute,
 }
 

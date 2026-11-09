@@ -4,6 +4,7 @@ import { aiRouter } from "./procedures/ai";
 import { authRouter } from "./procedures/auth";
 import { botsRouter } from "./procedures/bots";
 import { browserRouter } from "./procedures/browser";
+import { channelsRouter } from "./procedures/channels";
 import { connectorsRouter } from "./procedures/connectors";
 import { dbRouter } from "./procedures/db";
 import { devicesRouter } from "./procedures/devices";
@@ -45,6 +46,7 @@ const routes: {
   agent: typeof agentRouter;
   ai: typeof aiRouter;
   bots: typeof botsRouter;
+  channels: typeof channelsRouter;
   routines: typeof routinesRouter;
   notch: typeof notchRouter;
   settings: typeof settingsRouter;
@@ -77,6 +79,7 @@ const routes: {
   agent: agentRouter,
   ai: aiRouter,
   bots: botsRouter,
+  channels: channelsRouter,
   routines: routinesRouter,
   notch: notchRouter,
   settings: settingsRouter,

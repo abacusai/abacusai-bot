@@ -16,7 +16,8 @@ export type NotFoundEntity =
   | "routine"
   | "terminal"
   | "thread"
-  | "file";
+  | "file"
+  | "channel";
 
 export type PreconditionReason =
   | "workspace-missing"

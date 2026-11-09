@@ -523,6 +523,7 @@ const MessageAbacus = v.strictObject({
               askId: Str,
               passerId: Str,
               passer: Str,
+              channelId: OptStr,
               task: Str,
               userWords: Str,
             })

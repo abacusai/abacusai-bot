@@ -455,7 +455,9 @@
       },
       "task": {
         "from": "来自你，由 {{bot}} 转达",
-        "asWritten": "{{bot}} 转达的内容："
+        "asWritten": "{{bot}} 转达的内容：",
+        "fromChannel": "来自你，在 {{channel}} 中",
+        "asTakenOn": "在频道中接下的任务："
       },
       "pairWith": "与 {{bot}}",
       "pairReadOnly": "只读"
@@ -5010,5 +5012,109 @@
     "laneDownTitle": "{{platform}} 无法连接",
     "laneDownBody": "{{platform}} 已经一小时没有连接。应用会继续尝试；打开“消息”即可立即重试。",
     "laneBlockedBody": "{{platform}} 一直无法建立安全连接，可能在此网络上被屏蔽。应用已停止重试；网络允许时，请打开“消息”并点击“立即重试”。"
+  },
+  "channels": {
+    "sidebar": {
+      "title": "频道",
+      "new": "新建频道",
+      "untitled": "频道",
+      "you": "你",
+      "members_one": "{{count}} 个机器人",
+      "members_other": "{{count}} 个机器人",
+      "unread": "未读"
+    },
+    "new": {
+      "title": "新建频道",
+      "name": "频道名称",
+      "namePlaceholder": "频道名称（可选，例如 Brewly 开业）",
+      "about": "这个频道的用途",
+      "aboutPlaceholder": "这个频道是做什么的？频道里的每个机器人都会知道（可选）",
+      "to": "机器人：",
+      "search": "添加机器人…",
+      "add": "添加到频道",
+      "remove": "移除 {{name}}",
+      "pick_one": "至少选择 {{count}} 个机器人才能开始。",
+      "pick_other": "至少选择 {{count}} 个机器人才能开始。",
+      "pickFirst": "先选择机器人",
+      "placeholder": "写下第一条消息…",
+      "hint": "当你 @提及 或点名某个机器人时，它会回答。否则由上一个发言的机器人（或你最先添加的那个）回答，它也可以请其他机器人加入。",
+      "needBots": "一个频道至少需要两个机器人。请先再创建一个机器人。"
+    },
+    "thread": {
+      "label": "频道消息",
+      "goneBot": "已删除的机器人",
+      "working_one": "{{names}} 正在回答…",
+      "working_other": "{{names}} 正在回答…",
+      "queued_one": "{{count}} 条消息正在排队等待",
+      "queued_other": "{{count}} 条消息正在排队等待",
+      "reply": "回复",
+      "pin": "置顶为决定",
+      "empty": "向 {{names}} 打个招呼。@提及 某个机器人来指定谁回答，或用 @everyone 听听所有机器人的意见。",
+      "gone": "这个频道已不存在。",
+      "pinAgreed": "把商定的要点置顶为决定",
+      "startAgreed": "开始商定的工作（每个负责人在自己的聊天里进行）",
+      "today": "今天"
+    },
+    "composer": {
+      "label": "在频道中发消息",
+      "placeholder": "给 {{names}} 发消息",
+      "mentions": "提及机器人",
+      "send": "发送",
+      "stop": "停止所有正在回答的机器人",
+      "replyingTo": "正在回复 {{name}}",
+      "cancelReply": "取消"
+    },
+    "decisions": {
+      "title": "决定（每个机器人都能看到）",
+      "unpin": "取消置顶"
+    },
+    "menu": {
+      "delete": "删除频道"
+    },
+    "members": {
+      "body": "选择 {{min}} 到 {{max}} 个机器人。被移除的机器人将不再在这里回答。"
+    },
+    "delete": {
+      "title": "删除“{{name}}”？",
+      "body": "这个频道中的消息将被删除。机器人及其各自的聊天会保留。",
+      "confirm": "删除"
+    },
+    "dialog": {
+      "cancel": "取消",
+      "save": "保存"
+    },
+    "work": {
+      "waiting": "等待 {{name}} 的聊天空闲…",
+      "running": "正在 {{name}} 自己的聊天中处理…",
+      "done": "已在 {{name}} 的聊天中完成：报告见下方",
+      "failed": "{{name}} 没有完成",
+      "stopped": "已停止",
+      "step": "第 {{step}} 步，共 {{of}} 步",
+      "open": "打开 {{name}} 的聊天"
+    },
+    "proposal": {
+      "title": "建议新机器人：{{name}}",
+      "create": "创建并添加到频道",
+      "dismiss": "忽略",
+      "created": "已创建 {{name}} 并加入频道：打开它的聊天",
+      "dismissed": "已忽略",
+      "inviteTitle": "把 {{name}} 添加到这个频道？",
+      "add": "添加到频道",
+      "added": "{{name}} 已加入频道：打开它的聊天"
+    },
+    "details": {
+      "open": "频道详情：{{name}}",
+      "title": "频道详情"
+    },
+    "panel": {
+      "edit": "编辑频道",
+      "members_one": "{{count}} 名成员",
+      "members_other": "{{count}} 名成员",
+      "lead": "负责人",
+      "answering": "正在回答…",
+      "addMember": "添加或移除机器人",
+      "decisions": "决定",
+      "noDecisions": "还没有置顶内容。置顶一条消息，或者让机器人们就某件事达成一致。"
+    }
   }
 }

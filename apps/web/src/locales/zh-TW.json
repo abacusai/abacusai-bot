@@ -455,7 +455,9 @@
       },
       "task": {
         "from": "來自你，由 {{bot}} 轉達",
-        "asWritten": "{{bot}} 轉達的內容："
+        "asWritten": "{{bot}} 轉達的內容：",
+        "fromChannel": "來自你，在 {{channel}} 中",
+        "asTakenOn": "在頻道中接下的任務："
       },
       "pairWith": "與 {{bot}}",
       "pairReadOnly": "唯讀"
@@ -5010,5 +5012,109 @@
     "laneDownTitle": "{{platform}} 無法連線",
     "laneDownBody": "{{platform}} 已經一小時沒有連線。應用程式會繼續嘗試；開啟「訊息」即可立即重試。",
     "laneBlockedBody": "{{platform}} 一直無法建立安全連線，可能在此網路上被封鎖。應用程式已停止重試；網路允許時，請開啟「訊息」並點選「立即重試」。"
+  },
+  "channels": {
+    "sidebar": {
+      "title": "頻道",
+      "new": "新增頻道",
+      "untitled": "頻道",
+      "you": "你",
+      "members_one": "{{count}} 個機器人",
+      "members_other": "{{count}} 個機器人",
+      "unread": "未讀"
+    },
+    "new": {
+      "title": "新增頻道",
+      "name": "頻道名稱",
+      "namePlaceholder": "頻道名稱（選填，例如 Brewly 開幕）",
+      "about": "這個頻道的用途",
+      "aboutPlaceholder": "這個頻道是做什麼的？頻道裡的每個機器人都會知道（選填）",
+      "to": "機器人：",
+      "search": "新增機器人…",
+      "add": "加入頻道",
+      "remove": "移除 {{name}}",
+      "pick_one": "至少選擇 {{count}} 個機器人才能開始。",
+      "pick_other": "至少選擇 {{count}} 個機器人才能開始。",
+      "pickFirst": "先選擇機器人",
+      "placeholder": "寫下第一則訊息…",
+      "hint": "當你 @提及 或點名某個機器人時，它會回答。否則由上一個發言的機器人（或你最先加入的那個）回答，它也可以請其他機器人加入。",
+      "needBots": "一個頻道至少需要兩個機器人。請先再建立一個機器人。"
+    },
+    "thread": {
+      "label": "頻道訊息",
+      "goneBot": "已刪除的機器人",
+      "working_one": "{{names}} 正在回答…",
+      "working_other": "{{names}} 正在回答…",
+      "queued_one": "{{count}} 則訊息正在排隊等候",
+      "queued_other": "{{count}} 則訊息正在排隊等候",
+      "reply": "回覆",
+      "pin": "釘選為決定",
+      "empty": "向 {{names}} 打聲招呼。@提及 某個機器人來指定誰回答，或用 @everyone 聽聽所有機器人的意見。",
+      "gone": "這個頻道已不存在。",
+      "pinAgreed": "把議定的重點釘選為決定",
+      "startAgreed": "開始議定的工作（每位負責人在自己的聊天裡進行）",
+      "today": "今天"
+    },
+    "composer": {
+      "label": "在頻道中傳訊息",
+      "placeholder": "傳訊息給 {{names}}",
+      "mentions": "提及機器人",
+      "send": "傳送",
+      "stop": "停止所有正在回答的機器人",
+      "replyingTo": "正在回覆 {{name}}",
+      "cancelReply": "取消"
+    },
+    "decisions": {
+      "title": "決定（每個機器人都看得到）",
+      "unpin": "取消釘選"
+    },
+    "menu": {
+      "delete": "刪除頻道"
+    },
+    "members": {
+      "body": "選擇 {{min}} 到 {{max}} 個機器人。被移除的機器人將不再在這裡回答。"
+    },
+    "delete": {
+      "title": "刪除「{{name}}」？",
+      "body": "這個頻道中的訊息將被刪除。機器人及其各自的聊天會保留。",
+      "confirm": "刪除"
+    },
+    "dialog": {
+      "cancel": "取消",
+      "save": "儲存"
+    },
+    "work": {
+      "waiting": "等待 {{name}} 的聊天空閒…",
+      "running": "正在 {{name}} 自己的聊天中處理…",
+      "done": "已在 {{name}} 的聊天中完成：報告見下方",
+      "failed": "{{name}} 沒有完成",
+      "stopped": "已停止",
+      "step": "第 {{step}} 步，共 {{of}} 步",
+      "open": "開啟 {{name}} 的聊天"
+    },
+    "proposal": {
+      "title": "建議新機器人：{{name}}",
+      "create": "建立並加入頻道",
+      "dismiss": "略過",
+      "created": "已建立 {{name}} 並加入頻道：開啟它的聊天",
+      "dismissed": "已略過",
+      "inviteTitle": "把 {{name}} 加入這個頻道？",
+      "add": "加入頻道",
+      "added": "{{name}} 已加入頻道：開啟它的聊天"
+    },
+    "details": {
+      "open": "頻道詳情：{{name}}",
+      "title": "頻道詳情"
+    },
+    "panel": {
+      "edit": "編輯頻道",
+      "members_one": "{{count}} 位成員",
+      "members_other": "{{count}} 位成員",
+      "lead": "負責人",
+      "answering": "正在回答…",
+      "addMember": "新增或移除機器人",
+      "decisions": "決定",
+      "noDecisions": "還沒有釘選的內容。釘選一則訊息，或請機器人們就某件事達成共識。"
+    }
   }
 }

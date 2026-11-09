@@ -44,9 +44,14 @@ export interface UserTextTags {
  */
 export interface BotTaskTag {
   askId: string;
-  /** The bot that passed it on. */
+  /** The bot that passed it on; for work from a channel, the channel. */
   passerId: string;
   passer: string;
+  /**
+   * Work taken on in a channel: its id (`passerId` is the same, `passer`
+   * the channel's title, `askId` its card's message id).
+   */
+  channelId?: string;
   /** The task as that bot wrote it. */
   task: string;
   /** The user's own words, verbatim. */

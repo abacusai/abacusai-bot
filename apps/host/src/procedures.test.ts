@@ -135,6 +135,46 @@ const expectedFailures: Record<string, { code: string; message: string }> = {
     code: "UNAVAILABLE",
     message: "The agent is not running",
   },
+  "channels.thread": {
+    code: "NOT_FOUND",
+    message: "No channel fixture",
+  },
+  "channels.update": {
+    code: "NOT_FOUND",
+    message: "No channel fixture",
+  },
+  "channels.remove": {
+    code: "NOT_FOUND",
+    message: "No channel fixture",
+  },
+  "channels.post": {
+    code: "NOT_FOUND",
+    message: "No channel fixture",
+  },
+  "channels.unpin": {
+    code: "NOT_FOUND",
+    message: "No channel fixture",
+  },
+  "channels.startAgreed": {
+    code: "NOT_FOUND",
+    message: "No channel fixture",
+  },
+  "channels.decideProposal": {
+    code: "NOT_FOUND",
+    message: "No channel fixture",
+  },
+  "channels.create": {
+    code: "BAD_REQUEST",
+    message: "A channel needs at least 2 bots.",
+  },
+  "channels.pin": {
+    code: "BAD_REQUEST",
+    message: "There is nothing to pin.",
+  },
+  "channels.events": {
+    code: "20",
+    message: "This operation was aborted",
+  },
   "bots.openChat": {
     code: "NOT_FOUND",
     message: "No bot fixture",
