@@ -18,6 +18,8 @@ import path from "path";
 export interface AtomicWriteOptions {
   /** 0600, applied to the temp file too so it is never briefly world-readable. */
   restrict?: boolean;
+  /** The new file's mode when not `restrict`ed, e.g. 0755 for a script. */
+  mode?: number;
   /**
    * Skip the write when the file already holds these bytes, sparing readers a
    * rename. Costs a read, so pointless for content that always differs.
@@ -178,11 +180,9 @@ export function writeFileAtomicSync(
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   const temp = tempPathFor(filePath);
   try {
-    writeFileDurableSync(
-      temp,
-      contents,
-      options.restrict === true ? { mode: 0o600 } : {}
-    );
+    writeFileDurableSync(temp, contents, {
+      mode: options.restrict === true ? 0o600 : options.mode,
+    });
     if (options.restrict === true) restrictToOwner(temp);
 
     for (let attempt = 1; attempt <= RENAME_ATTEMPTS; attempt++) {

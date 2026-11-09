@@ -560,6 +560,36 @@ describe("running a command on this machine", () => {
     });
   });
 
+  it.each(["darwin", "win32"] as const)(
+    "never hands a command the variable that ran this process as Node (%s)",
+    async (platform) => {
+      // An Electron app the command starts (LM Studio, VS Code) would read it
+      // and start as plain Node.
+      onPlatform(platform);
+      unconfined();
+      const operations = await localOperations();
+
+      const running = exec(operations, "lms server start", "/work", {
+        env: {
+          // Windows names are case-blind, so is the filter there.
+          [platform === "win32"
+            ? "Electron_Run_As_Node"
+            : "ELECTRON_RUN_AS_NODE"]: "1",
+          ELECTRON_NO_ATTACH_CONSOLE: "1",
+          TOKEN: "abc",
+        },
+      });
+      child.finish(0);
+      await running;
+
+      const { env } = lastSpawn().options as { env: Record<string, string> };
+      expect(env.TOKEN).toBe("abc");
+      expect(
+        Object.keys(env).filter((name) => /^electron_/i.test(name))
+      ).toEqual([]);
+    }
+  );
+
   it("merges into the caller's PATH whatever its spelling", async () => {
     // Windows spells it `Path`, and pi's getShellEnv() passes that casing
     // through; two spellings side by side would leave libuv keeping one.
