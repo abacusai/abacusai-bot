@@ -170,6 +170,13 @@ const scriptOfCode = (code: string): Script | null => {
 };
 
 const LANGUAGE_ALIASES: Record<string, string> = {
+  // Blends a model names romanized typing by: written in the base language's script.
+  hinglish: "hi",
+  banglish: "bn",
+  benglish: "bn",
+  gujlish: "gu",
+  tanglish: "ta",
+  urdish: "ur",
   bengali: "bn",
   farsi: "fa",
   oriya: "or",
@@ -228,7 +235,12 @@ export const languageCodeScript = (code: string): Script | null => {
 /** The script a language is written in, from its English name ("Brazilian Portuguese"); null when unknown. */
 export const languageScript = (name: string): Script | null => {
   const names = namedLanguages();
-  const lower = name.trim().toLowerCase();
+  // "Bengali (romanized)" is Bengali.
+  const lower = name
+    .replace(/\([^)]*\)/g, " ")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
   return names.get(lower) ?? names.get(lower.split(/\s+/).at(-1) ?? "") ?? null;
 };
 

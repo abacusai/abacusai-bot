@@ -242,40 +242,62 @@ export async function detectMessageLanguage(
 const WORDS_CHECK_TIMEOUT_MS = 5_000;
 /** Letters of new words after which their language is asked again. */
 const WORDS_CHECK_REFRESH_LETTERS = 300;
+/** After a failed check, candidates are left alone this long without asking. */
+const WORDS_CHECK_RETRY_MS = 10 * 60_000;
 
 /**
- * The language a session's person writes in, asked of the detection model
- * only when the reply-language guard has a romanized candidate (Latin words,
- * a reply in another script), and kept until their words move on. One per
+ * The language a session's person writes in, for the reply-language guard's
+ * romanized candidates (Latin words, a reply in another script). Their saved
+ * language decides when there is one; the detection model is asked only when
+ * nothing is known, and its answer kept until their words move on. One per
  * session, so one per contact in sender chats.
  */
 export class WordsLanguage {
   private known: { name: string; at: number } | null = null;
+  private failedAt: number | null = null;
 
   constructor(
-    private readonly detect: (text: string) => Promise<string | null> = (
+    private readonly detect: (text: string) => Promise<string | null> = async (
       text
-    ) =>
-      detectMessageLanguage(
-        text,
-        (process.env.ABACUS_API_KEY ?? "").trim(),
-        fetch,
-        WORDS_CHECK_TIMEOUT_MS
-      )
+    ) => {
+      const apiKey = (process.env.ABACUS_API_KEY ?? "").trim();
+      return apiKey.length === 0
+        ? null
+        : detectMessageLanguage(text, apiKey, fetch, WORDS_CHECK_TIMEOUT_MS);
+    },
+    private readonly now: () => number = Date.now
   ) {}
 
   /**
-   * Whether their recent words are the language `script` writes, typed in
-   * Latin. No answer (no key, a failed call, "unknown") reads as yes: the
-   * reply is left alone rather than rewritten on a guess.
+   * Whether their words are the language `script` writes, typed in Latin.
+   * A saved language in another script answers without a call. A saved
+   * Latin one (English, mostly) is often learnt from a first message and
+   * stale for someone who now types Bengali in Latin, so the model is asked.
+   * With no answer (no key, a failed call, "unknown"), yes: the reply is left
+   * alone rather than rewritten on a guess, and not asked again for a while.
    */
-  async writesIn(script: Script, words: RecentOwnWords): Promise<boolean> {
+  async writesIn(
+    script: Script,
+    words: RecentOwnWords,
+    saved: KnownLanguage | null = null
+  ): Promise<boolean> {
+    if (saved != null && saved.script !== "latin")
+      return saved.script === script;
     if (
       this.known == null ||
       words.lettersSeen - this.known.at >= WORDS_CHECK_REFRESH_LETTERS
     ) {
+      if (
+        this.failedAt != null &&
+        this.now() - this.failedAt < WORDS_CHECK_RETRY_MS
+      )
+        return true;
       const name = await this.detect(words.window.slice(-DETECT_MAX_CHARS));
-      if (name == null) return true;
+      if (name == null) {
+        this.failedAt = this.now();
+        return true;
+      }
+      this.failedAt = null;
       this.known = { name, at: words.lettersSeen };
     }
     return languageScript(this.known.name) === script;
@@ -283,6 +305,7 @@ export class WordsLanguage {
 
   clear(): void {
     this.known = null;
+    this.failedAt = null;
   }
 }
 

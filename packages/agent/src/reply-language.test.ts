@@ -468,13 +468,34 @@ describe("WordsLanguage", () => {
     ).toBe(true);
   });
 
-  it("leaves the reply alone when the detector has no answer", async () => {
+  it("goes by a saved language in another script without a call, and asks past a learnt English", async () => {
+    const detect = vi.fn(async (_text: string) => "Bengali");
+    const check = new WordsLanguage(detect);
+    const recent = words("amar kalker meeting kokhon ache bolo to ektu");
+    const bengali = { script: "bengali", chosen: false } as const;
+    expect(await check.writesIn("bengali", recent, bengali)).toBe(true);
+    expect(await check.writesIn("gujarati", recent, bengali)).toBe(false);
+    expect(detect).not.toHaveBeenCalled();
+    // English learnt from a first message: their words now say Bengali.
     expect(
-      await new WordsLanguage(async () => null).writesIn(
-        "devanagari",
-        words(HINGLISH)
-      )
+      await check.writesIn("bengali", recent, {
+        script: "latin",
+        chosen: false,
+      })
     ).toBe(true);
+    expect(detect).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves the reply alone when the detector has no answer, and does not ask again for a while", async () => {
+    let now = 0;
+    const detect = vi.fn(async (_text: string): Promise<string | null> => null);
+    const check = new WordsLanguage(detect, () => now);
+    expect(await check.writesIn("devanagari", words(HINGLISH))).toBe(true);
+    expect(await check.writesIn("devanagari", words(HINGLISH))).toBe(true);
+    expect(detect).toHaveBeenCalledTimes(1);
+    now += 11 * 60_000;
+    await check.writesIn("devanagari", words(HINGLISH));
+    expect(detect).toHaveBeenCalledTimes(2);
   });
 
   it("asks once, and again only after their words move on", async () => {
@@ -516,6 +537,10 @@ describe("languageScript", () => {
     ["Hindi", "devanagari"],
     ["Japanese", "cjk"],
     ["Brazilian Portuguese", "latin"],
+    ["Hinglish", "devanagari"],
+    ["Banglish", "bengali"],
+    ["Gujlish", "gujarati"],
+    ["Bengali (romanized)", "bengali"],
     ["Klingonese", null],
   ] as const)("writes %s in %s", (name, script) => {
     expect(languageScript(name)).toBe(script);
