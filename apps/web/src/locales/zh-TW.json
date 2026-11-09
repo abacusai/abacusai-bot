@@ -1704,6 +1704,15 @@
       "followsDefault": "跟隨你的方案預設模型：{{model}}。",
       "costly": "每次執行都使用 {{model}}，這是較貴的模型，所以每次會消耗更多點數。",
       "hosted": "託管的例行工作使用你的方案預設模型執行。"
+    },
+    "report": {
+      "checkIn": "簽到 · {{time}}",
+      "title": "{{name}} · {{time}}",
+      "openRun": "開啟執行紀錄"
+    },
+    "reply": {
+      "label": "回覆這次執行",
+      "failed": "無法傳送你的回覆。"
     }
   },
   "sessions": {

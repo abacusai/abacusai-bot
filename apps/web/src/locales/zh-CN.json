@@ -1704,6 +1704,15 @@
       "followsDefault": "跟随你的套餐默认模型：{{model}}。",
       "costly": "每次运行都使用 {{model}}，这是较贵的模型，因此每次会消耗更多积分。",
       "hosted": "托管的例行任务使用你的套餐默认模型运行。"
+    },
+    "report": {
+      "checkIn": "签到 · {{time}}",
+      "title": "{{name}} · {{time}}",
+      "openRun": "打开运行记录"
+    },
+    "reply": {
+      "label": "回复这次运行",
+      "failed": "无法发送你的回复。"
     }
   },
   "sessions": {
