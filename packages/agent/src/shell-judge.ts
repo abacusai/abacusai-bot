@@ -2406,7 +2406,10 @@ function judgeDeletes(
     }
     if (isRootOrHome(operand, target, context.options.home)) {
       add(context, "deleteRoot", "never", text);
-    } else if (/[*?[]/.test(operand)) {
+    } else if (
+      /[*?[]/.test(operand) &&
+      !globInWorkspace(context, operand, target)
+    ) {
       // A glob deletes whatever matches when it runs.
       unreadable(context, text);
     } else if (isSystemPath(target, context.options)) {
@@ -2418,6 +2421,32 @@ function judgeDeletes(
       add(context, "gitHistory", "confirm", text);
     }
   }
+}
+
+/**
+ * A relative glob (`*.log`, `build/*`) expanding in a known folder inside the
+ * workspace that is not home or a folder holding it: the user's own files.
+ */
+function globInWorkspace(
+  context: Context,
+  operand: string,
+  target: string
+): boolean {
+  if (path.isAbsolute(operand) || /^[a-z]:|^~/i.test(operand)) return false;
+  const glob = target.search(/[*?[]/);
+  const folder = trimSlashes(path.dirname(target.slice(0, glob) + "x"));
+  const workspace = trimSlashes(path.resolve(context.options.cwd));
+  const relative = path.relative(workspace, folder);
+  const inside =
+    relative === "" ||
+    (!relative.startsWith("..") && !path.isAbsolute(relative));
+  const home = trimSlashes(context.options.home);
+  return (
+    inside &&
+    folder !== "/" &&
+    folder !== home &&
+    !home.startsWith(`${folder}${path.sep}`)
+  );
 }
 
 /** Non-option words, honouring `--`. */

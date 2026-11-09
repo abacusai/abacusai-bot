@@ -530,7 +530,15 @@ const ROWS: Row[] = [
   // Deletes of targets nobody can read.
   { command: "rm -rf $1", expected: "confirm" },
   { command: 'rm -rf "$(cat list)"', expected: "confirm" },
-  { command: "rm -f *.log", expected: "confirm" },
+  // A relative glob in a known folder inside the workspace is the user's own files.
+  { command: "rm -f *.log", expected: "allow" },
+  { command: "rm -rf build/*", expected: "allow" },
+  { command: "cd src && rm -f *.tmp", expected: "allow" },
+  { command: 'cd "$D" && rm -f *.log', expected: "confirm" },
+  { command: "rm -rf ../*", expected: "confirm" },
+  { command: "rm -f /tmp/*.log", expected: "confirm" },
+  { command: "cd ~ && rm -f *.log", expected: "confirm" },
+  { command: "cd / && rm -rf *", expected: "never" },
   { command: "D=build; rm -rf $D", expected: "allow" },
   { command: "find build -name x | xargs rm -f", expected: "confirm" },
   { command: "echo / | xargs rm -rf", expected: "never" },
