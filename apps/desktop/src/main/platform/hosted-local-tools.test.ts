@@ -227,7 +227,7 @@ describe("a broken server file or a failed write on a hosted free account", () =
     ).toEqual(["local", "remote"]);
   });
 
-  it("tells the agent it was started by the hosted computer, so it never reads the raw file", async () => {
+  it("hands the agent an empty list when the write fails, and flags it as hosted", async () => {
     planIs("free");
     fs.writeFileSync(
       path.join(home, "mcp-code.json"),
@@ -243,8 +243,13 @@ describe("a broken server file or a failed write on a hosted free account", () =
 
     const env = await host.buildAdditionalConfigEnv("code", "s1");
 
-    expect(env.ABACUSAI_BOT_MCP_CONFIG).toBeUndefined();
+    // Always a list from the host: here an empty one, never the raw file.
+    const list = JSON.parse(
+      fs.readFileSync(env.ABACUSAI_BOT_MCP_CONFIG!, "utf8")
+    ) as { mcpServers: Record<string, unknown> };
+    expect(list.mcpServers).toEqual({});
     expect(env[HOSTED_LOCAL_TOOLS_ENV]).toBe("off");
+    expect(env.PI_OFFLINE).toBe("1");
   });
 
   it.each([

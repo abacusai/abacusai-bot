@@ -8144,17 +8144,18 @@ export class ServiceHost {
     } catch (err) {
       console.error("[mcp] failed to write runtime mcp config:", err);
     }
+    // A hosted agent always gets a list from here, never the user's raw file.
+    if (runtimeMcpPath == null && this.platform === "web-host")
+      runtimeMcpPath = this.mcpConfigService.writeEmptyRuntimeMcp(mode);
     const credits = creditSnapshot();
     return {
       // Set on every hosted agent: it then never reads the raw server file, and
       // "off" keeps extensions from disk out (hosted-local-tools.ts).
       ...(this.platform === "web-host"
-        ? {
-            [HOSTED_LOCAL_TOOLS_ENV]:
-              (await hostedLocalToolsRefusal(this.platform)) == null
-                ? "on"
-                : "off",
-          }
+        ? (await hostedLocalToolsRefusal(this.platform)) == null
+          ? { [HOSTED_LOCAL_TOOLS_ENV]: "on" }
+          : // Offline too, so pi's package manager fetches nothing.
+            { [HOSTED_LOCAL_TOOLS_ENV]: "off", PI_OFFLINE: "1" }
         : {}),
       ...buildAgentConfigEnv(
         runtimeMcpPath,

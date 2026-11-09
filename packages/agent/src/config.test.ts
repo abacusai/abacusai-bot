@@ -55,12 +55,16 @@ describe("keys saved by the desktop app", () => {
     expect(env.ABACUS_API_KEY).toBe("from-the-app");
   });
 
-  it("carries every provider, not a known list of them", () => {
+  it("carries the providers the app stores, and no other name", () => {
+    // config.json is hand-editable and this writes into the process
+    // environment: an unknown name could be LD_PRELOAD or NODE_OPTIONS.
     writeConfig({
       apiKeys: {
         ABACUS_API_KEY: "a",
         OPENROUTER_API_KEY: "b",
-        SOME_FUTURE_PROVIDER_KEY: "c",
+        GH_TOKEN: "c",
+        SOME_FUTURE_PROVIDER_KEY: "d",
+        LD_PRELOAD: "e",
       },
     });
 
@@ -68,8 +72,8 @@ describe("keys saved by the desktop app", () => {
 
     expect(applyStoredApiKeys(env).sort()).toEqual([
       "ABACUS_API_KEY",
+      "GH_TOKEN",
       "OPENROUTER_API_KEY",
-      "SOME_FUTURE_PROVIDER_KEY",
     ]);
   });
 });
@@ -105,9 +109,9 @@ describe("config that cannot be trusted", () => {
     // than coerced into one.
     writeConfig({
       apiKeys: {
-        GOOD_KEY: "yes",
-        EMPTY_KEY: "   ",
-        NUMBER_KEY: 42,
+        OPENAI_API_KEY: "yes",
+        ANTHROPIC_API_KEY: "   ",
+        GROQ_API_KEY: 42,
         lower_case: "no",
         "PATH; rm -rf /": "no",
       },
@@ -115,8 +119,8 @@ describe("config that cannot be trusted", () => {
 
     const env: NodeJS.ProcessEnv = {};
 
-    expect(applyStoredApiKeys(env)).toEqual(["GOOD_KEY"]);
-    expect(Object.keys(env)).toEqual(["GOOD_KEY"]);
+    expect(applyStoredApiKeys(env)).toEqual(["OPENAI_API_KEY"]);
+    expect(Object.keys(env)).toEqual(["OPENAI_API_KEY"]);
   });
 
   it("does nothing when there is no config at all", () => {

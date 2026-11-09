@@ -120,9 +120,6 @@ export interface AbacusBotConfig {
   apiKeys?: Record<string, string>;
 }
 
-/** Environment variable names, so a stray config key can't become one. */
-const ENV_NAME = /^[A-Z][A-Z0-9_]*$/;
-
 /**
  * The key each provider is stored under. Mirrors PROVIDER_ENV_VARS in the
  * desktop's shared settings; this package cannot import from the app's source
@@ -152,6 +149,17 @@ export const PROVIDER_API_KEY_ENV: Readonly<Record<string, string>> = {
 };
 
 /**
+ * Every key name the app stores in `apiKeys`: PROVIDER_ENV_VARS in the
+ * desktop's shared settings (the providers above, plus Abacus, Gemini and GitHub).
+ */
+const STORED_API_KEY_ENV_NAMES: ReadonlySet<string> = new Set([
+  ...Object.values(PROVIDER_API_KEY_ENV),
+  "ABACUS_API_KEY",
+  "GEMINI_API_KEY",
+  "GH_TOKEN",
+]);
+
+/**
  * Put the keys stored on disk into the environment, so the terminal client sees
  * the keys the desktop saved to `apiKeys`. The environment still wins: only
  * absent or empty names are filled. Returns the names it set, for tests.
@@ -166,7 +174,8 @@ export function applyStoredApiKeys(
   const applied: string[] = [];
 
   for (const [name, value] of Object.entries(stored)) {
-    if (!ENV_NAME.test(name)) continue;
+    // Only the app's own key names: a hand-edited one (LD_PRELOAD) never becomes a variable.
+    if (!STORED_API_KEY_ENV_NAMES.has(name)) continue;
     if (typeof value !== "string") continue;
 
     const key = value.trim();

@@ -83,7 +83,6 @@ import { callsTool, TurnReply } from "./forever/turn-reply.js";
 import { githubPrompt } from "./github-prompt.js";
 import { refreshGithubToken } from "./github-token.js";
 import { HostServiceClient } from "./host-services.js";
-import { diskExtensionsAllowed } from "./hosted-local-tools.js";
 import type { AppLine, InternalAgentEvent } from "./internal-events.js";
 import {
   connectMcpServers,
@@ -174,6 +173,7 @@ import {
   replyLanguageRepairPrompt,
   type ReplyLanguageMismatch,
 } from "./reply-language.js";
+import { createResourceLoader } from "./resource-loader.js";
 import { buildRoster } from "./roster.js";
 import {
   allowHostForSession,
@@ -1005,14 +1005,12 @@ export class AbacusBotSession {
       settingsManager,
       () => this.session?.model?.contextWindow
     );
-    const resourceLoader = new DefaultResourceLoader({
+    const resourceLoader = createResourceLoader({
       // Skill and AGENTS.md paths as the model should copy them.
       ...MODEL_PATH_RESOURCES,
       cwd: this.options.cwd,
       agentDir: dir,
       settingsManager,
-      // Hosted free accounts load only the app's own extensions, none from disk.
-      noExtensions: !diskExtensionsAllowed(),
       // Nor the folder's AGENTS.md and skills, which are the user's own text.
       additionalSkillPaths: unattended ? [] : skillDirs(this.options.cwd),
       ...(unattended ? { noSkills: true, noContextFiles: true } : {}),

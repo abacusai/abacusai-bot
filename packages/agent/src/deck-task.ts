@@ -7,7 +7,6 @@
  */
 import {
   createAgentSession,
-  DefaultResourceLoader,
   type ExtensionAPI,
   type InlineExtension,
   type ModelRuntime,
@@ -22,6 +21,7 @@ import guardrails from "./extensions/guardrails.js";
 import type { HostServiceClient } from "./host-services.js";
 import { modelPath, MODEL_PATH_RESOURCES } from "./model-path.js";
 import type { AgentEvent } from "./protocol.js";
+import { createResourceLoader } from "./resource-loader.js";
 import { forwardChildToolEvents } from "./subagent-events.js";
 import {
   makerVoice,
@@ -392,7 +392,7 @@ export async function runDeckTask(
   let run: SubagentRunResult;
 
   try {
-    const resourceLoader = new DefaultResourceLoader({
+    const resourceLoader = createResourceLoader({
       // Skill and AGENTS.md paths as the model should copy them.
       ...MODEL_PATH_RESOURCES,
       cwd: context.cwd,

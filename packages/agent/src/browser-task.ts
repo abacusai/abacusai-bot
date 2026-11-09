@@ -9,7 +9,6 @@ import path from "path";
 
 import {
   createAgentSession,
-  DefaultResourceLoader,
   type AgentSessionEvent,
   type ModelRuntime,
   type SettingsManager,
@@ -30,6 +29,7 @@ import { excludedTools, vaultEnabled } from "./excluded-tools.js";
 import type { MidTaskInbox, MidTaskRun } from "./mid-task-inbox.js";
 import { MODEL_PATH_RESOURCES } from "./model-path.js";
 import type { AgentEvent } from "./protocol.js";
+import { createResourceLoader } from "./resource-loader.js";
 import { DeliveredMedia, type MediaCheck } from "./send-media-tool.js";
 import { isMediaId } from "./send-media.js";
 import { whenAborted } from "./subagent-abort.js";
@@ -677,7 +677,7 @@ export async function runBrowserTask(
       gate.blocked.clear();
     } else {
       gate = { blocked: new Set(), pause: null };
-      const resourceLoader = new DefaultResourceLoader({
+      const resourceLoader = createResourceLoader({
         // Skill and AGENTS.md paths as the model should copy them.
         ...MODEL_PATH_RESOURCES,
         cwd: context.cwd,

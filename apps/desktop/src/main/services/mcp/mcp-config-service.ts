@@ -378,6 +378,20 @@ export class McpConfigService {
     return filePath;
   }
 
+  /**
+   * A list with no servers, for a hosted agent whose real list could not be
+   * written. If even this write fails, the path reads as unreadable: still no servers.
+   */
+  writeEmptyRuntimeMcp(mode: McpMode): string {
+    const filePath = path.join(RUNTIME_DIR, `mcp-${mode}-empty.json`);
+    try {
+      writeJsonAtomic(filePath, { mcpServers: {} });
+    } catch (error) {
+      console.error("[mcp] failed to write the empty server list:", error);
+    }
+    return filePath;
+  }
+
   /** Path of the runtime agent-config file (ABACUSAI_BOT_ADDITIONAL_CONFIG), or null when none. */
   writeRuntimeAgentConfig(mode: McpMode): string | null {
     const cfg = this.readUserAgentConfig(mode);

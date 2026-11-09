@@ -149,6 +149,7 @@ import {
   replyLanguageRepairPrompt,
   type ReplyLanguageMismatch,
 } from "../reply-language.js";
+import { createResourceLoader } from "../resource-loader.js";
 import { mediaCheckFrom } from "../send-media-tool.js";
 import { MEDIA_CHECK_TOOL_NAME } from "../send-media.js";
 import { runSessionAction } from "../session-actions.js";
@@ -480,7 +481,7 @@ export class ForeverEngine {
     // writes mid-session (what the bot settled in a channel, did for another
     // bot) is in its next turn, not its next session.
 
-    const resourceLoader = new DefaultResourceLoader({
+    const resourceLoader = createResourceLoader({
       // Skill and AGENTS.md paths as the model should copy them.
       ...MODEL_PATH_RESOURCES,
       cwd: this.options.cwd,
