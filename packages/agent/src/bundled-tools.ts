@@ -47,10 +47,8 @@ export function scriptModulesDir(): string {
 }
 
 /**
- * Lets the shell run Node scripts on this app's own runtime, which every
- * machine has: ABACUSAI_BOT_NODE names a launcher that runs this process's
- * executable as Node (launchers.ts) and NODE_PATH reaches the bundled
- * libraries. Idempotent.
+ * ABACUSAI_BOT_NODE runs this app's runtime through a launcher; NODE_PATH
+ * reaches the bundled libraries. Idempotent.
  */
 export function useScriptRuntime(
   env: NodeJS.ProcessEnv = process.env,

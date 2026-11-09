@@ -62,9 +62,7 @@ function readFlag(argv: readonly string[], name: string): string | undefined {
 }
 
 async function main(): Promise<void> {
-  // Electron read these when it started this process. Left in place, anything
-  // spawned with this environment would carry them on to the Electron apps a
-  // command starts, which then run as plain Node (child-env.ts).
+  // Electron already read these; inheriting them changes how other apps start.
   for (const name of ELECTRON_INTERNAL_ENV) delete process.env[name];
 
   // Keys saved in ~/.abacusai-bot; the environment wins, so under the desktop

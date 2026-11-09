@@ -10,11 +10,8 @@
 export const MANAGED_PYTHON_ENV = "ABACUSAI_BOT_PYTHON_ENV";
 
 /**
- * Set only for this app's own Node runs, never for what a user starts: an
- * inherited ELECTRON_RUN_AS_NODE turns any Electron app (LM Studio, VS Code,
- * Slack) into plain Node, and ELECTRON_NO_ATTACH_CONSOLE silences one on Windows.
- * Dropped from every base; a caller running the app's binary as Node passes it
- * back as an override.
+ * Inheriting these turns Electron apps into Node or silences their console.
+ * Only callers running this app's binary as Node should set them as overrides.
  */
 export const ELECTRON_INTERNAL_ENV: readonly string[] = [
   "ELECTRON_RUN_AS_NODE",
@@ -25,8 +22,7 @@ export const ELECTRON_INTERNAL_ENV: readonly string[] = [
 export type EnvOverrides = Readonly<Record<string, string | undefined>>;
 
 /**
- * `base` (this process's environment by default) without ELECTRON_INTERNAL_ENV,
- * with `overrides` applied in order.
+ * `base` without Electron's internal variables, then `overrides` in order.
  */
 export function childProcessEnv(
   base: NodeJS.ProcessEnv = process.env,

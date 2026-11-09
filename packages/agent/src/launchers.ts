@@ -1,7 +1,6 @@
 /**
- * `#!/bin/sh` launchers that run this app's binary as Node. ELECTRON_RUN_AS_NODE
- * is set for the launcher's own exec only, so it never reaches what a command
- * starts (child-env.ts). busybox runs them too, so they work on Windows.
+ * Shell launchers keep ELECTRON_RUN_AS_NODE local to the app's own Node runs.
+ * busybox runs them on Windows too.
  */
 import { createHash } from "node:crypto";
 import * as path from "node:path";
@@ -18,9 +17,8 @@ export function execAsNode(node: string, args: readonly string[]): string {
 }
 
 /**
- * The directory for one set of launchers under the app home, keyed by what
- * they were made from so two builds never share one. Forward slashes: the
- * Windows shell drops unquoted backslashes.
+ * Keyed by sources so builds do not share launchers. Forward slashes keep
+ * Windows shells from treating backslashes as escapes.
  */
 export function launcherDir(kind: string, ...sources: string[]): string {
   const key = createHash("sha256")
@@ -31,32 +29,24 @@ export function launcherDir(kind: string, ...sources: string[]): string {
   return path.join(abacusBotDir(), kind, key).replaceAll("\\", "/");
 }
 
-/** Writes each script into `dir` as an executable, only when its text changed. Throws when it cannot. */
-export function writeLaunchers(
-  dir: string,
-  scripts: Readonly<Record<string, string>>
-): void {
+/** Writes an executable only when its text changes. */
+export function writeLauncher(file: string, script: string): void {
   // Atomic, so a command never runs a half-written launcher.
-  for (const [name, script] of Object.entries(scripts))
-    writeFileAtomicSync(path.join(dir, name), script, {
-      mode: 0o755,
-      skipIfUnchanged: true,
-    });
+  writeFileAtomicSync(file, script, { mode: 0o755, skipIfUnchanged: true });
 }
 
 /** This process's executable, with the forward slashes a launcher needs. */
 export const selfNode = (): string => process.execPath.replaceAll("\\", "/");
 
 /**
- * This process's executable behind a launcher, so the shell can run it as
- * Node without ELECTRON_RUN_AS_NODE in its environment. Null when the
- * launcher cannot be written.
+ * Runs this executable as Node without changing the shell's environment.
+ * Null when the launcher cannot be written.
  */
 export function nodeLauncher(): string | null {
   const node = selfNode();
   const dir = launcherDir("node", node);
   try {
-    writeLaunchers(dir, { node: `#!/bin/sh\n${execAsNode(node, [])}\n` });
+    writeLauncher(`${dir}/node`, `#!/bin/sh\n${execAsNode(node, [])}\n`);
   } catch (error) {
     process.stderr.write(`[node] launcher not written: ${String(error)}\n`);
     return null;

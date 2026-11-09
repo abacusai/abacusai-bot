@@ -28,7 +28,7 @@ import {
   launcherDir,
   selfNode,
   shellQuote,
-  writeLaunchers,
+  writeLauncher,
 } from "./launchers.js";
 import { mergePath } from "./merge-path.js";
 import { modelPath } from "./model-path.js";
@@ -285,15 +285,11 @@ export function trashLaunchers(): string | null {
   );
   const script = entry.replaceAll("\\", "/");
   try {
-    writeLaunchers(
-      dir,
-      Object.fromEntries(
-        TRASH_SHIMMED.map((name) => [
-          name,
-          launcherScript(name, node, script, dir),
-        ])
-      )
-    );
+    for (const name of TRASH_SHIMMED)
+      writeLauncher(
+        path.join(dir, name),
+        launcherScript(name, node, script, dir)
+      );
     launchers = dir;
   } catch (error) {
     process.stderr.write(`[trash] launchers not written: ${String(error)}\n`);
