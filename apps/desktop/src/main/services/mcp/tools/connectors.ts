@@ -234,7 +234,7 @@ export const linkLifetimeLines = (
   return life == null
     ? []
     : [
-        `This link works until ${life.until} (about ${life.minutes} min from now), then stops working. ` +
+        `This link works until ${life.until} (about ${life.left} from now), then stops working. ` +
           "Next to the link, say in the user's language how long it works, so they open it in time.",
       ];
 };

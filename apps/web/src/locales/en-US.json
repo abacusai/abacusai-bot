@@ -425,8 +425,8 @@
         "connecting": "Waiting for you to finish signing in",
         "decline": "Not now",
         "stop": "Stop connecting",
-        "worksFor_one": "Works for {{count}} more min",
-        "worksFor_other": "Works for {{count}} more min",
+        "worksFor": "Works for {{left}} more",
+        "worksUntil": "Works until {{date}} ({{left}} left)",
         "expired": "This link expired.",
         "renew": "Get a new link",
         "homeChannel": "You talk to this agent from {{provider}} on your phone. Connect {{provider}} to start."

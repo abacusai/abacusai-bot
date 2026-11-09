@@ -2,7 +2,8 @@
  * A connect link lives as long as the server minted it for. That one expiry
  * decides when the watch gives up, what the model is told to pass on, and
  * when the Connect card turns into "Get a new link". The time left is read on
- * the server's own clock, so a skewed local clock moves neither.
+ * the server's own clock, so a skewed local clock moves neither. A link that
+ * lives for days is asked about less and less, and not at all after a day.
  */
 import type {
   ConnectorRequest,
@@ -14,10 +15,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ConnectorGate } from "../agent-tools/connector-gate";
 import { McpAgentToolsServer } from "../mcp/mcp-agent-tools-server";
+import { linkLifetime } from "../mcp/tools/connect-outcome";
 import { linkExpiresAt } from "../providers/abacus-connector-service";
-import { ConnectWatcher } from "./connect-watcher";
+import { ConnectWatcher, nextCheckAt } from "./connect-watcher";
 
 const MIN = 60_000;
+const HOUR = 60 * MIN;
+const DAY = 24 * HOUR;
 const LIFETIME_MS = 20 * MIN;
 /** How long past its expiry a link is still watched for a late sign-in. */
 const GRACE_MS = 5 * MIN;
@@ -28,6 +32,7 @@ let gate: ConnectorGate;
 let watcher: ConnectWatcher;
 let minted: number;
 const mint = vi.fn();
+const linkStatus = vi.fn();
 
 const server = (): McpAgentToolsServer =>
   new McpAgentToolsServer({
@@ -63,6 +68,12 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(2026, 10, 9, 13, 0, 0));
   minted = 0;
+  linkStatus.mockReset();
+  linkStatus.mockResolvedValue({
+    completed: false,
+    connected: [],
+    notGranted: [],
+  });
   mint.mockReset();
   mint.mockImplementation(async (connectorId: string) => {
     minted += 1;
@@ -81,11 +92,7 @@ beforeEach(() => {
   gate = new ConnectorGate((event) => events.push(event));
   watcher = new ConnectWatcher({
     list: async () => statuses,
-    linkStatus: async () => ({
-      completed: false,
-      connected: [],
-      notGranted: [],
-    }),
+    linkStatus,
     connected: () => {},
     expired: (ids, linked) => gate.expire(ids, linked, Date.now()),
   });
@@ -225,5 +232,121 @@ describe("the time left, from the mint", () => {
 
   it("has no expiry when the server gave none", () => {
     expect(linkExpiresAt({}, received, received)).toBeUndefined();
+  });
+});
+
+describe("the time a link works, as the model is told it", () => {
+  const now = new Date(2026, 10, 9, 13, 0, 0).getTime();
+
+  it.each([
+    [20 * MIN, { until: "13:20", left: "20 min" }],
+    [30 * 1000, { until: "13:00", left: "1 min" }],
+    [2 * HOUR + 5 * MIN, { until: "15:05", left: "2 h 5 min" }],
+    [HOUR, { until: "14:00", left: "1 h" }],
+    [11 * HOUR, { until: "00:00 on Tue 2026-11-10", left: "11 h" }],
+    [
+      DAY + 3 * HOUR + 40 * MIN,
+      { until: "16:40 on Tue 2026-11-10", left: "1 day 3 h" },
+    ],
+    [7 * DAY, { until: "13:00 on Mon 2026-11-16", left: "7 days" }],
+  ])("%i ms left reads %o", (leftMs, expected) => {
+    expect(linkLifetime(now + leftMs, now)).toEqual(expected);
+  });
+
+  it("a week-long link is passed on in days, with its date", async () => {
+    mint.mockImplementationOnce(async (connectorId: string) => ({
+      url: "https://apps.example/connect?r=week",
+      connectorIds: [connectorId],
+      requestId: "week",
+      expiresAt: Date.now() + 7 * DAY,
+    }));
+    const text = await ask("slack", "session-1");
+
+    expect(text).toContain(
+      "This link works until 13:00 on Mon 2026-11-16 (about 7 days from now)"
+    );
+    expect(text).not.toContain("10080");
+  });
+});
+
+describe("asking about a long-lived link", () => {
+  const week = async (): Promise<void> => {
+    mint.mockImplementationOnce(async (connectorId: string) => ({
+      url: "https://apps.example/connect?r=week",
+      connectorIds: [connectorId],
+      requestId: "week",
+      expiresAt: Date.now() + 7 * DAY,
+    }));
+    await ask("slack", "session-1");
+  };
+
+  it("checks every 5 s for half an hour, every 3 min to a day, then stops", async () => {
+    await week();
+
+    await vi.advanceTimersByTimeAsync(30 * MIN);
+    expect(linkStatus).toHaveBeenCalledTimes(360);
+
+    linkStatus.mockClear();
+    await vi.advanceTimersByTimeAsync(DAY - 30 * MIN);
+    expect(linkStatus).toHaveBeenCalledTimes((23.5 * 60) / 3);
+
+    linkStatus.mockClear();
+    await vi.advanceTimersByTimeAsync(7 * DAY);
+    expect(linkStatus).not.toHaveBeenCalled();
+    // The card stays, counting down to the link's own expiry.
+    expect(cards()).toMatchObject([
+      { connectorId: "abacus-slack", expiresAt: expect.any(Number) },
+    ]);
+    expect(cards()[0]?.expired).toBeUndefined();
+  });
+
+  it("still reports a link completed in the slow hours, within one slow tick", async () => {
+    const connected = vi.fn();
+    watcher.stop();
+    watcher = new ConnectWatcher({
+      list: async () => statuses,
+      linkStatus,
+      connected,
+      expired: () => {},
+    });
+    await week();
+
+    await vi.advanceTimersByTimeAsync(5 * HOUR);
+    linkStatus.mockResolvedValue({
+      completed: true,
+      connected: ["abacus-slack"],
+      notGranted: [],
+    });
+    await vi.advanceTimersByTimeAsync(3 * MIN);
+
+    expect(connected).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ connectorIds: ["abacus-slack"] })
+    );
+  });
+
+  it("a fresh offer is checked at once, not after the slow tick another one is on", async () => {
+    await week();
+    await vi.advanceTimersByTimeAsync(HOUR);
+    linkStatus.mockClear();
+
+    watcher.watch({
+      connectorIds: ["abacus-notion"],
+      sessionId: "session-2",
+      requestId: "other",
+      expiresAt: Date.now() + 7 * DAY,
+    });
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    expect(linkStatus).toHaveBeenCalledWith("other");
+  });
+
+  it.each([
+    [0, 5_000],
+    [29 * MIN, 29 * MIN + 5_000],
+    [30 * MIN, 33 * MIN],
+    [23 * HOUR, 23 * HOUR + 3 * MIN],
+    [DAY, null],
+  ])("an offer %i ms old is next checked at %o", (age, next) => {
+    expect(nextCheckAt(0, age)).toBe(next);
   });
 });

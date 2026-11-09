@@ -1,5 +1,9 @@
 import type { Connector } from "@abacus-ai/connectors/registry";
 import type { HomeChannel } from "@abacus-ai/contract/bots";
+import {
+  linkOutlivesToday,
+  linkTimeLeft,
+} from "@abacus-ai/contract/link-time-left";
 
 /**
  * What asking for or dropping a connector did, as facts. The engine
@@ -69,18 +73,30 @@ export type ConnectOutcome =
 
 /**
  * How long a link works, for the model to pass on: its local clock time
- * (HH:MM) and whole minutes left, at least one. Null when it has no expiry.
+ * (HH:MM), with the date when it outlives today, and the time left in days,
+ * hours and minutes. Null when it has no expiry.
  */
 export const linkLifetime = (
   expiresAt: number | undefined,
   now = Date.now()
-): { until: string; minutes: number } | null => {
+): { until: string; left: string } | null => {
   if (expiresAt == null) return null;
   const at = new Date(expiresAt);
   const pad = (value: number) => String(value).padStart(2, "0");
+  const time = `${pad(at.getHours())}:${pad(at.getMinutes())}`;
+  const { days, hours, minutes } = linkTimeLeft(expiresAt - now);
+  const unit = (value: number, one: string, many: string) =>
+    value > 0 ? [`${value} ${value === 1 ? one : many}`] : [];
   return {
-    until: `${pad(at.getHours())}:${pad(at.getMinutes())}`,
-    minutes: Math.max(1, Math.round((expiresAt - now) / 60_000)),
+    until: linkOutlivesToday(expiresAt, now)
+      ? `${time} on ${at.toLocaleDateString("en-US", { weekday: "short" })} ` +
+        `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`
+      : time,
+    left: [
+      ...unit(days, "day", "days"),
+      ...unit(hours, "h", "h"),
+      ...unit(minutes, "min", "min"),
+    ].join(" "),
   };
 };
 

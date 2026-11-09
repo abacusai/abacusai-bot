@@ -8,6 +8,11 @@
  * (clocks drift, and a sign-in started in time may finish late), or after
  * 30 minutes when it gave none.
  *
+ * Asking backs off (see nextCheckAt): every few seconds while a sign-in is
+ * likely, then every few minutes, and not at all after a day. A link that
+ * lands later is still reported to the chat by the server; its card stays,
+ * counting down to the link's own expiry.
+ *
  * An offer made with a link is judged by that link while the server reports
  * on it: completed is the outcome. While it is not completed, the offer still
  * lands once every one of its connectors reads connected, since the user may
@@ -45,6 +50,7 @@ interface ConnectWatcherDeps {
   connected: (offer: ConnectedOffer) => void;
   /** The offer expired unconnected; `linked` when it was made with a link. */
   expired: (connectorIds: string[], linked: boolean) => void;
+  /** How often a fresh offer is checked. */
   everyMs?: number;
   /** How long a link stays good when the server did not say. */
   forMs?: number;
@@ -54,6 +60,11 @@ interface ConnectWatcherDeps {
 }
 
 const WATCH_EVERY_MS = 5_000;
+/** Most sign-ins land this soon after the link is sent; it is checked often until then. */
+const WATCH_FAST_FOR_MS = 30 * 60_000;
+const WATCH_SLOW_EVERY_MS = 3 * 60_000;
+/** After this an offer is no longer asked about at all. */
+const WATCH_POLL_FOR_MS = 24 * 60 * 60_000;
 const WATCH_FOR_MS = 30 * 60_000;
 const EXPIRY_GRACE_MS = 5 * 60_000;
 // One consent saves every member it granted in one request; the rest of it
@@ -64,6 +75,21 @@ interface Landed {
   connected: string[];
   notGranted: string[];
 }
+
+/**
+ * When an offer made at `since` is next checked after one at `now`: every
+ * `fastEveryMs` at first, every few minutes after half an hour, and null (stop
+ * asking) once it is a day old.
+ */
+export const nextCheckAt = (
+  since: number,
+  now: number,
+  fastEveryMs = WATCH_EVERY_MS
+): number | null => {
+  const age = now - since;
+  if (age >= WATCH_POLL_FOR_MS) return null;
+  return now + (age < WATCH_FAST_FOR_MS ? fastEveryMs : WATCH_SLOW_EVERY_MS);
+};
 
 /** What the offer's link says: its outcome, still open, or nothing to go by. */
 type LinkState =
@@ -81,6 +107,9 @@ interface Offer {
   /** The server could not say once; the statuses judge it from then on. */
   linkUnavailable: boolean;
   until: number;
+  /** When it was offered, and when it is next checked. */
+  since: number;
+  nextAt: number;
   /** When some, not all, of its connectors were first seen connected. */
   partlySince?: number;
 }
@@ -88,6 +117,7 @@ interface Offer {
 export class ConnectWatcher {
   private readonly offers = new Map<string, Offer>();
   private timer: NodeJS.Timeout | null = null;
+  private timerAt = 0;
   private readonly now: () => number;
 
   constructor(private readonly deps: ConnectWatcherDeps) {
@@ -107,6 +137,7 @@ export class ConnectWatcher {
     // Nothing would ever tell a link-only offer without a link that it landed.
     if (input.byLinkOnly === true && input.requestId == null) return;
     const key = `${[...input.connectorIds].sort().join(",")}|${input.sessionId ?? ""}`;
+    const now = this.now();
     this.offers.set(key, {
       connectorIds: input.connectorIds,
       sessionId: input.sessionId,
@@ -117,7 +148,9 @@ export class ConnectWatcher {
       until:
         input.expiresAt != null
           ? input.expiresAt + EXPIRY_GRACE_MS
-          : this.now() + (this.deps.forMs ?? WATCH_FOR_MS),
+          : now + (this.deps.forMs ?? WATCH_FOR_MS),
+      since: now,
+      nextAt: now + this.everyMs,
     });
     this.arm();
   }
@@ -141,11 +174,22 @@ export class ConnectWatcher {
     this.offers.clear();
   }
 
+  private get everyMs(): number {
+    return this.deps.everyMs ?? WATCH_EVERY_MS;
+  }
+
+  /** One timer, set for the soonest offer due; a fresh offer brings it forward. */
   private arm(): void {
-    if (this.timer != null || this.offers.size === 0) return;
+    if (this.offers.size === 0) return;
+    const at = Math.min(...[...this.offers.values()].map((o) => o.nextAt));
+    if (this.timer != null) {
+      if (this.timerAt <= at) return;
+      clearTimeout(this.timer);
+    }
+    this.timerAt = at;
     this.timer = setTimeout(
       () => void this.check(),
-      this.deps.everyMs ?? WATCH_EVERY_MS
+      Math.max(0, at - this.now())
     );
     this.timer.unref?.();
   }
@@ -159,6 +203,7 @@ export class ConnectWatcher {
     }
     this.timer = null;
     for (const [key, offer] of this.offers) {
+      if (offer.nextAt > this.now()) continue;
       const link = await this.linkState(offer);
       if (link.kind === "unavailable" && offer.byLinkOnly) {
         // Nothing is left to tell a reconnect landing; its card stays up.
@@ -180,7 +225,12 @@ export class ConnectWatcher {
             offer.connectorIds,
             offer.url != null || offer.requestId != null
           );
+          continue;
         }
+        const next = nextCheckAt(offer.since, this.now(), this.everyMs);
+        // A day on, stop asking; the card keeps its link's own expiry.
+        if (next == null) this.offers.delete(key);
+        else offer.nextAt = next;
         continue;
       }
       this.offers.delete(key);

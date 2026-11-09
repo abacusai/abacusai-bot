@@ -18,6 +18,7 @@ import {
   connectUi,
 } from "@abacus-ai/connectors/registry";
 import type { ConnectorRequest } from "@abacus-ai/contract/contracts";
+import { linkOutlivesToday } from "@abacus-ai/contract/link-time-left";
 import { Link2, Plug, RefreshCw } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -27,6 +28,7 @@ import { ConnectorMark } from "#renderer/components/connector-mark";
 import { Spinner } from "#renderer/components/spinner";
 import { cn } from "#renderer/lib/cn";
 import { connectErrorText } from "#renderer/lib/connect-page";
+import { formatExpiryDate, formatTimeLeft } from "#renderer/lib/format-time";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
 
@@ -70,7 +72,7 @@ export const ConnectorRequestCard = ({
   onStop,
   className,
 }: ConnectorRequestCardProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const id = useId();
   const connector = connectorById(request.connectorId);
   const ui = connector == null ? "none" : connectUi(connector);
@@ -89,7 +91,8 @@ export const ConnectorRequestCard = ({
   const now = useLinkClock(
     request.expired === true ? undefined : request.expiresAt
   );
-  const left = request.expiresAt != null ? request.expiresAt - now : null;
+  const { expiresAt } = request;
+  const left = expiresAt != null ? expiresAt - now : null;
   const expired = request.expired === true || (left != null && left <= 0);
 
   return (
@@ -134,9 +137,14 @@ export const ConnectorRequestCard = ({
               className="text-muted-foreground mt-0.5 text-xs"
               data-slot="connector-request-expiry"
             >
-              {t("bots.chat.connector.worksFor", {
-                count: Math.ceil(left / 60_000),
-              })}
+              {expiresAt != null && linkOutlivesToday(expiresAt, now)
+                ? t("bots.chat.connector.worksUntil", {
+                    date: formatExpiryDate(expiresAt, i18n.language),
+                    left: formatTimeLeft(left, i18n.language),
+                  })
+                : t("bots.chat.connector.worksFor", {
+                    left: formatTimeLeft(left, i18n.language),
+                  })}
             </p>
           )
         )}

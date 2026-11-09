@@ -425,8 +425,8 @@
         "connecting": "正在等你完成登录",
         "decline": "暂不",
         "stop": "停止连接",
-        "worksFor_one": "还能用 {{count}} 分钟",
-        "worksFor_other": "还能用 {{count}} 分钟",
+        "worksFor": "还能用 {{left}}",
+        "worksUntil": "有效期至 {{date}}（还剩 {{left}}）",
         "expired": "此链接已过期。",
         "renew": "获取新链接",
         "homeChannel": "你可以在手机上通过 {{provider}} 与这个智能体对话。连接 {{provider}} 即可开始。"
