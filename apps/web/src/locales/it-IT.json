@@ -1097,6 +1097,14 @@
       "abacusTelegram": "Telegram"
     },
     "recommended": "Consigliato",
+    "recovery": {
+      "disk": "{{platform}} riproverà da solo appena il disco avrà spazio libero.",
+      "next": "{{platform}} non è connesso. Nuovo tentativo automatico, il prossimo tra {{minutes}} min.",
+      "needsUser": "{{platform}} continua a fallire allo stesso modo, quindi i tentativi automatici si sono fermati. Fai clic su Riprova ora quando la rete lo consente.",
+      "now": "{{platform}} non è connesso. Nuovo tentativo in corso.",
+      "stopped": "{{platform}} non si connette da un giorno, quindi i tentativi automatici si sono fermati.",
+      "tryNow": "Riprova ora"
+    },
     "reject": "Rifiuta",
     "required": "Obbligatorio",
     "revoke": "Revoca",
@@ -2984,6 +2992,11 @@
       "listening": "In ascolto",
       "dictationStarting": "Preparazione della dettatura",
       "transcribing": "Trascrizione in corso",
+      "dictationDownloading": "Preparazione della dettatura… {{percent}}%",
+      "dictationDownloadingFor": "Preparazione della dettatura in {{language}}… {{percent}}%",
+      "dictationQuickMode": "Uso la modalità rapida finché non è pronta.",
+      "dictationReady": "La dettatura è pronta.",
+      "dictationReadyFor": "La dettatura in {{language}} è pronta.",
       "stopDictation": "Interrompi la dettatura",
       "recordingTime": "Durata della registrazione",
       "favorites": "Preferiti",
@@ -4972,7 +4985,10 @@
     "themes": "Temi",
     "diskFullLane": "Il disco del computer è pieno, quindi {{platform}} non può salvare i suoi dati. Si riconnetterà da solo appena verrà liberato un po' di spazio.",
     "linkLostTitle": "{{platform}} è disconnesso",
-    "linkLostLane": "{{platform}} non è più collegato, quindi messaggi e routine non possono passare da lì. Fai clic su Connetti e scansiona di nuovo il codice QR."
+    "linkLostLane": "{{platform}} non è più collegato, quindi messaggi e routine non possono passare da lì. Fai clic su Connetti e scansiona di nuovo il codice QR.",
+    "laneDownTitle": "{{platform}} non riesce a connettersi",
+    "laneDownBody": "{{platform}} non è connesso da un'ora. L'app continua a provare; apri Messaggi per riprovare ora.",
+    "laneBlockedBody": "{{platform}} non riesce a stabilire una connessione sicura, quindi potrebbe essere bloccato su questa rete. L'app ha smesso di riprovare; apri Messaggi e fai clic su Riprova ora quando la rete lo consente."
   },
   "channels": {
     "sidebar": {

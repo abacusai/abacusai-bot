@@ -1097,6 +1097,14 @@
       "abacusTelegram": "Telegram"
     },
     "recommended": "推荐",
+    "recovery": {
+      "disk": "磁盘有可用空间后，{{platform}} 会自动重试。",
+      "next": "{{platform}} 未连接。正在自动重试，下次尝试在 {{minutes}} 分钟后。",
+      "needsUser": "{{platform}} 一直以同样的方式失败，因此已停止自动重试。网络允许时，请点击“立即重试”。",
+      "now": "{{platform}} 未连接。正在重试。",
+      "stopped": "{{platform}} 已经一天没有连接，因此已停止自动重试。",
+      "tryNow": "立即重试"
+    },
     "reject": "拒绝",
     "required": "必填",
     "revoke": "撤销",
@@ -2984,6 +2992,11 @@
       "listening": "正在聆听",
       "dictationStarting": "正在准备听写",
       "transcribing": "正在转写",
+      "dictationDownloading": "正在准备听写… {{percent}}%",
+      "dictationDownloadingFor": "正在准备{{language}}听写… {{percent}}%",
+      "dictationQuickMode": "准备好之前先使用快速模式。",
+      "dictationReady": "听写已就绪。",
+      "dictationReadyFor": "{{language}}听写已就绪。",
       "stopDictation": "停止听写",
       "recordingTime": "录音时长",
       "favorites": "收藏",
@@ -4972,7 +4985,10 @@
     "themes": "主题",
     "diskFullLane": "电脑磁盘已满，因此 {{platform}} 无法保存数据。释放一些空间后，它会自动重新连接。",
     "linkLostTitle": "{{platform}} 已断开连接",
-    "linkLostLane": "{{platform}} 已不再关联，因此消息和例行任务无法通过它发送。请点击“连接”，然后重新扫描 QR 码。"
+    "linkLostLane": "{{platform}} 已不再关联，因此消息和例行任务无法通过它发送。请点击“连接”，然后重新扫描 QR 码。",
+    "laneDownTitle": "{{platform}} 无法连接",
+    "laneDownBody": "{{platform}} 已经一小时没有连接。应用会继续尝试；打开“消息”即可立即重试。",
+    "laneBlockedBody": "{{platform}} 一直无法建立安全连接，可能在此网络上被屏蔽。应用已停止重试；网络允许时，请打开“消息”并点击“立即重试”。"
   },
   "channels": {
     "sidebar": {

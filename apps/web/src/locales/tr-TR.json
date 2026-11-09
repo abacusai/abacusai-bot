@@ -1097,6 +1097,14 @@
       "abacusTelegram": "Telegram"
     },
     "recommended": "Önerilen",
+    "recovery": {
+      "disk": "Diskte boş alan olduğunda {{platform}} kendiliğinden yeniden dener.",
+      "next": "{{platform}} bağlı değil. Kendiliğinden yeniden deneniyor, sonraki deneme {{minutes}} dk sonra.",
+      "needsUser": "{{platform}} aynı şekilde başarısız olmaya devam ediyor, bu yüzden kendiliğinden denemeyi bıraktı. Ağ izin verdiğinde Şimdi dene'ye tıklayın.",
+      "now": "{{platform}} bağlı değil. Şimdi yeniden deneniyor.",
+      "stopped": "{{platform}} bir gündür bağlanamadı, bu yüzden kendiliğinden denemeyi bıraktı.",
+      "tryNow": "Şimdi dene"
+    },
     "reject": "Reddet",
     "required": "Gerekli",
     "revoke": "İptal et",
@@ -2984,6 +2992,11 @@
       "listening": "Dinliyor",
       "dictationStarting": "Dikte hazırlanıyor",
       "transcribing": "Yazıya dökülüyor",
+      "dictationDownloading": "Dikte hazırlanıyor… %{{percent}}",
+      "dictationDownloadingFor": "{{language}} dikte hazırlanıyor… %{{percent}}",
+      "dictationQuickMode": "Hazır olana kadar hızlı mod kullanılıyor.",
+      "dictationReady": "Dikte hazır.",
+      "dictationReadyFor": "{{language}} dikte hazır.",
       "stopDictation": "Dikteyi durdur",
       "recordingTime": "Kayıt süresi",
       "favorites": "Favoriler",
@@ -4972,7 +4985,10 @@
     "themes": "Temalar",
     "diskFullLane": "Bilgisayarın diski dolu, bu yüzden {{platform}} verilerini kaydedemiyor. Biraz yer açıldığında kendiliğinden yeniden bağlanır.",
     "linkLostTitle": "{{platform}} bağlantısı kesildi",
-    "linkLostLane": "{{platform}} artık bağlı değil, bu yüzden mesajlar ve rutinler oradan gönderilemiyor. Bağlan'a tıklayın ve QR kodunu yeniden tarayın."
+    "linkLostLane": "{{platform}} artık bağlı değil, bu yüzden mesajlar ve rutinler oradan gönderilemiyor. Bağlan'a tıklayın ve QR kodunu yeniden tarayın.",
+    "laneDownTitle": "{{platform}} bağlanamıyor",
+    "laneDownBody": "{{platform}} bir saattir bağlanamadı. Uygulama denemeye devam ediyor; şimdi denemek için Mesajlaşma'yı açın.",
+    "laneBlockedBody": "{{platform}} güvenli bağlantı kuramıyor, bu ağda engellenmiş olabilir. Uygulama denemeyi bıraktı; ağ izin verdiğinde Mesajlaşma'yı açıp Şimdi dene'ye tıklayın."
   },
   "channels": {
     "sidebar": {

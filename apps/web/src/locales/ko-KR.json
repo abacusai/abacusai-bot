@@ -1097,6 +1097,14 @@
       "abacusTelegram": "Telegram"
     },
     "recommended": "권장",
+    "recovery": {
+      "disk": "디스크에 여유 공간이 생기면 {{platform}}이(가) 자동으로 다시 시도합니다.",
+      "next": "{{platform}}에 연결되지 않았습니다. 자동으로 다시 시도하며, 다음 시도까지 {{minutes}}분 남았습니다.",
+      "needsUser": "{{platform}}이(가) 같은 방식으로 계속 실패하여 자동 재시도를 멈췄습니다. 네트워크가 허용되면 지금 시도를 클릭하세요.",
+      "now": "{{platform}}에 연결되지 않았습니다. 지금 다시 시도하는 중입니다.",
+      "stopped": "{{platform}}이(가) 하루 동안 연결되지 않아 자동 재시도를 멈췄습니다.",
+      "tryNow": "지금 시도"
+    },
     "reject": "거부",
     "required": "필수",
     "revoke": "해제",
@@ -2984,6 +2992,11 @@
       "listening": "듣는 중",
       "dictationStarting": "받아쓰기 준비 중",
       "transcribing": "받아 적는 중",
+      "dictationDownloading": "받아쓰기 준비 중… {{percent}}%",
+      "dictationDownloadingFor": "{{language}} 받아쓰기 준비 중… {{percent}}%",
+      "dictationQuickMode": "준비될 때까지 빠른 모드를 사용합니다.",
+      "dictationReady": "받아쓰기가 준비되었습니다.",
+      "dictationReadyFor": "{{language}} 받아쓰기가 준비되었습니다.",
       "stopDictation": "받아쓰기 중지",
       "recordingTime": "녹음 시간",
       "favorites": "즐겨찾기",
@@ -4972,7 +4985,10 @@
     "themes": "테마",
     "diskFullLane": "컴퓨터의 디스크가 가득 차서 {{platform}}에서 데이터를 저장할 수 없습니다. 공간이 확보되면 자동으로 다시 연결됩니다.",
     "linkLostTitle": "{{platform}} 연결이 끊어졌습니다",
-    "linkLostLane": "{{platform}} 연결이 해제되어 메시지와 루틴을 보낼 수 없습니다. 연결을 클릭하고 QR 코드를 다시 스캔하세요."
+    "linkLostLane": "{{platform}} 연결이 해제되어 메시지와 루틴을 보낼 수 없습니다. 연결을 클릭하고 QR 코드를 다시 스캔하세요.",
+    "laneDownTitle": "{{platform}}에 연결할 수 없습니다",
+    "laneDownBody": "{{platform}}이(가) 한 시간 동안 연결되지 않았습니다. 앱이 계속 시도하고 있으며, 메시징을 열면 지금 시도할 수 있습니다.",
+    "laneBlockedBody": "{{platform}}이(가) 안전한 연결을 계속 만들지 못해 이 네트워크에서 차단되었을 수 있습니다. 앱이 재시도를 멈췄습니다. 네트워크가 허용되면 메시징을 열고 지금 시도를 클릭하세요."
   },
   "channels": {
     "sidebar": {

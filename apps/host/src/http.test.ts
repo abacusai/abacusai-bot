@@ -37,7 +37,7 @@ it("health reveals only readiness; uploads authenticate and save raw and multipa
     async () => new Response(new Uint8Array(2 * 1024 * 1024))
   );
   const whisper = new WhisperModelService({
-    modelDir: join(home, "models"),
+    modelsDir: join(home, "models"),
     emitEvent: () => {},
     fetch: fetchModel,
   });

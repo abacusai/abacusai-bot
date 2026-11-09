@@ -9,6 +9,7 @@ import type {
 import type { BrowserWindow, WebContents } from "electron";
 
 import { abacusBotHome } from "../../paths";
+import type { LaneFailure } from "./lane-supervisor";
 
 /**
  * The contract every platform connector implements: receive text, send text,
@@ -42,7 +43,15 @@ export type InboundMessage = {
 
 export type ConnectorCallbacks = {
   onMessage: (message: InboundMessage) => void;
-  onState: (state: MessagingPlatformState, errorMessage?: string) => void;
+  /**
+   * `failure` labels an `error`: whether the gateway's LaneSupervisor may
+   * retry it. Left out, an error waits for the user.
+   */
+  onState: (
+    state: MessagingPlatformState,
+    errorMessage?: string,
+    failure?: LaneFailure
+  ) => void;
   /** The platform has just proven which chat is the user's own. */
   onSelfLinked?: () => void;
   /** Diagnostics; surfaced in the main-process log, not the UI. */

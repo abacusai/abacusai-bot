@@ -61,6 +61,10 @@ export const messaging = {
    * since a scan may still land; main turns it off if none does in time.
    */
   releaseLogin: mutation.input(PlatformInput).output(type<void>()),
+  /** Try now: restart a lane that is down, without waiting for its next try. */
+  retryNow: mutation.input(PlatformInput).output(type<MessagingSnapshot>()),
+  /** The Messaging page opened: lanes that are down try again soon. */
+  pageOpened: mutation.input(NoInput).output(type<void>()),
   /** The user's Unlink: off, and any login stored on this computer is gone. */
   unlinkPlatform: mutation
     .input(PlatformInput)

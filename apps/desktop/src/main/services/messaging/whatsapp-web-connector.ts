@@ -30,6 +30,7 @@ import {
   setFileInput,
   UndeliverableChatError,
 } from "./connector";
+import type { LaneFailure } from "./lane-supervisor";
 import {
   readPlatformLinkLost,
   readPlatformSignedIn,
@@ -38,13 +39,10 @@ import {
   savePlatformUnlinked,
 } from "./messaging-config-service";
 import {
-  backOnline,
   BOOT_MAX_RELOADS,
-  diskSpaceBack,
   FIRST_LOAD_WAIT_MS,
   pageBusy,
   PageBootWatch,
-  retryWhen,
 } from "./page-boot-watch";
 import {
   type BridgeChat,
@@ -121,7 +119,7 @@ const RELINK_ATTACH_TRIES = 3;
 const BRIDGE_RETRY_MS = 10 * 60_000;
 /**
  * Reloads in a row that still show neither the chat list nor the QR before the
- * lane waits on the user. Unbounded, a page that never came back (blocked
+ * lane parks. Unbounded, a page that never came back (blocked
  * network, a wedged boot) reloaded every couple of minutes for days.
  */
 const MAX_STUCK_RELOADS = 3;
@@ -135,11 +133,12 @@ const isCertError = (code: number): boolean => code <= -200 && code > -300;
 const NOT_LINKED =
   "WhatsApp is not linked. Click Connect, then scan the QR from your phone (Settings → Linked devices).";
 const STUCK_LOADING =
-  "WhatsApp Web did not finish loading. Click Connect to try again.";
+  "WhatsApp Web did not finish loading. It tries again by itself, or click Connect to try now.";
 const UNREACHABLE =
-  "WhatsApp Web could not be reached. Check your connection, then click Connect.";
+  "WhatsApp Web could not be reached. It tries again by itself, or click Connect to try now.";
 const CERT_BLOCKED =
-  "WhatsApp Web's secure connection failed, so it may be blocked on this network. Click Connect to try again.";
+  "WhatsApp Web's secure connection failed, so it may be blocked on this network. It tries again by itself.";
+const PAGE_CRASHED = "WhatsApp Web stopped working. It restarts by itself.";
 
 /**
  * Whether the page can be used right now. `reconnecting`: the bridge or the
@@ -188,17 +187,15 @@ export class WhatsAppWebConnector implements MessagingConnector {
   /** What the last load since a reload failed on, for the parked note. */
   private loadFailure: "cert" | "network" | null = null;
   /**
-   * No page and no checks until the user clicks Connect (resume): signed out
-   * last time, out of reloads, or the page could not load at all. The note
-   * is what the pane shows and what a call fails with.
+   * No page and no checks until Connect (resume) or the gateway's restart:
+   * signed out last time, out of reloads, or the page could not load at all.
+   * The note is what the pane shows and what a call fails with.
    */
   private parkedNote: string | null = null;
   /** The stored sign-in verdict, so a poll writes it on change only. */
   private signedInRecord: boolean | null = null;
   /** The stored link ended and none replaced it: a lost link, not a first scan. */
   private linkLost = false;
-  /** Set while a parked lane waits for the network or disk space to come back. */
-  private stopParkedWait: (() => void) | null = null;
   private readonly loginPoll = new PollScheduler(
     () => this.checkLogin(),
     LOGIN_POLL_MS,
@@ -347,8 +344,6 @@ export class WhatsAppWebConnector implements MessagingConnector {
   async stop(): Promise<void> {
     this.running = false;
     this.parkedNote = null;
-    this.stopParkedWait?.();
-    this.stopParkedWait = null;
     this.loggedIn = false;
     this.bridgeReady = false;
     this.bridge = null;
@@ -452,7 +447,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
 
   /** One try: wait out a booting page, reload one that stays blank or lost
    * the bridge again, then attach. A page still blank after a few reloads
-   * waits on the user: one that never loads would reload for good. */
+   * parks: one that never loads would reload for good. */
   private async relinkOnce(): Promise<RelinkOutcome> {
     if (!this.running || !this.loggedIn) return "connected";
     this.relinkAttempts += 1;
@@ -501,7 +496,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
     }
     if (outcome === "stuck") {
       this.callbacks.onLog(
-        `whatsapp-web: still blank after ${MAX_STUCK_RELOADS} reloads, waiting for the user`
+        `whatsapp-web: still blank after ${MAX_STUCK_RELOADS} reloads, parking it`
       );
       this.parkUnloaded(STUCK_LOADING);
       return;
@@ -563,7 +558,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
     kind: "read" | "send" = "read"
   ): Promise<T> {
     const deadline = Date.now() + this.userDeadlineMs;
-    // Parked: no page until the user's Connect, so the call fails at once.
+    // Parked: no page until Connect or the gateway's restart, so the call fails at once.
     if (this.parkedNote != null)
       throw new Error(`${this.parkedNote} Connect is in Library → Messaging.`);
     if (this.relinking != null)
@@ -1349,7 +1344,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
     if (this.parkedNote != null) return;
     // Before a link nothing else watches the page. Blank can be WhatsApp
     // syncing a fresh link, which is left alone; a load that never settles
-    // is reloaded a few times, then waits on the user.
+    // is reloaded a few times, then parks.
     if (
       !this.loggedIn &&
       (state == null || (!state.loggedIn && state.loginVisible !== true))
@@ -1447,7 +1442,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
     if (verdict === "wait") return;
     if (verdict === "give_up") {
       this.callbacks.onLog(
-        `whatsapp-web: still not loaded after ${BOOT_MAX_RELOADS} reloads, waiting for the user`
+        `whatsapp-web: still not loaded after ${BOOT_MAX_RELOADS} reloads, parking it`
       );
       this.parkUnloaded(STUCK_LOADING);
       return;
@@ -1512,12 +1507,15 @@ export class WhatsAppWebConnector implements MessagingConnector {
   // ── Parking ────────────────────────────────────────────────────────────
 
   /**
-   * Stop checking and drop the page until the user clicks Connect. The state
-   * is one the gateway leaves alone (`needs_login`) or restarts only on the
-   * user's next connect (`error`), so nothing loads the page again by itself.
+   * Stop checking and drop the page. `needs_login` waits for the user; an
+   * `error` is retried by the gateway's LaneSupervisor as `failure` allows.
    * The session stays in the partition; the next page signs in from it.
    */
-  private park(state: "needs_login" | "error", note: string): void {
+  private park(
+    state: "needs_login" | "error",
+    note: string,
+    failure?: LaneFailure
+  ): void {
     this.parkedNote = note;
     this.loginPoll.stop();
     this.inboundPoll.stop();
@@ -1533,22 +1531,25 @@ export class WhatsAppWebConnector implements MessagingConnector {
     const win = this.window;
     this.window = null;
     if (win != null && !win.isDestroyed()) win.destroy();
-    this.callbacks.onState(state, note);
+    this.callbacks.onState(state, note, failure);
   }
 
-  /** Parked for a page that did not load, with the note its failure earned. */
+  /**
+   * Parked for a page that did not load, with the note its failure earned.
+   * A page that loaded and stayed blank cost a full boot, and says so.
+   */
   private parkUnloaded(fallback: string): void {
     const failure = this.loadFailure;
     this.loadFailure = null;
     if (failure === "cert") {
-      this.park("error", CERT_BLOCKED);
+      this.park("error", CERT_BLOCKED, { retry: "auto", cert: true });
       return;
     }
-    this.park("error", failure === "network" ? UNREACHABLE : fallback);
-    // Started before the network was up (a login item at boot), or dropped
-    // since: one more try once it is back. Online means the site itself.
-    if (failure === "network" && !net.isOnline())
-      this.retryWhenClear(backOnline, "back online");
+    if (failure === "network") {
+      this.park("error", UNREACHABLE, { retry: "auto" });
+      return;
+    }
+    this.park("error", fallback, { retry: "auto", stuckBoot: true });
   }
 
   /** The user clicked Connect: a fresh start for the checks and the page. */
@@ -1556,8 +1557,6 @@ export class WhatsAppWebConnector implements MessagingConnector {
     this.stuckReloads = 0;
     this.qrTicks = 0;
     this.boot.reset();
-    this.stopParkedWait?.();
-    this.stopParkedWait = null;
     if (!this.running || this.parkedNote == null) return;
     this.parkedNote = null;
     this.callbacks.onLog("whatsapp-web: opened by the user, checking again");
@@ -1573,42 +1572,31 @@ export class WhatsAppWebConnector implements MessagingConnector {
 
   /**
    * The page itself could not load. Before a link nothing reloads it, so the
-   * lane waits on the user at once; after one, the failure is noted and the
-   * relink's bounded reloads decide, since a navigation can fail mid-use and
-   * come back.
+   * lane parks at once for the gateway to retry; after one, the failure is
+   * noted and the relink's bounded reloads decide, since a navigation can
+   * fail mid-use and come back.
    */
   private onLoadFailed(code: number, description: string): void {
     if (!this.running || this.parkedNote != null) return;
     this.loadFailure = isCertError(code) ? "cert" : "network";
     if (this.loggedIn) return;
     this.callbacks.onLog(
-      `whatsapp-web: page failed to load (${code} ${description}), waiting for the user`
+      `whatsapp-web: page failed to load (${code} ${description}), parking it`
     );
     this.parkUnloaded(UNREACHABLE);
-  }
-
-  /** Parked by the machine (no network, a full disk): back by itself once it clears. */
-  private retryWhenClear(ready: () => boolean, what: string): void {
-    this.stopParkedWait?.();
-    this.stopParkedWait = retryWhen(ready, () => {
-      this.stopParkedWait = null;
-      if (!this.running || this.parkedNote == null) return;
-      this.callbacks.onLog(`whatsapp-web: ${what}, loading the page again`);
-      this.resume();
-      this.ensureWindow();
-    });
   }
 
   /**
    * The page's own storage found the disk full: every check fails the same
    * way, and a page that met it does not come back by itself, so the lane
-   * parks with the reason and loads a fresh page once space is freed.
+   * parks with the reason; the gateway starts it again once space is freed.
    */
   private parkOnFullDisk(): void {
     if (!this.running || this.parkedNote != null) return;
     this.callbacks.onLog("whatsapp-web: the disk is full, waiting for space");
-    this.park("error", nativeT("diskFullLane", { platform: "WhatsApp" }));
-    this.retryWhenClear(diskSpaceBack, "disk space is back");
+    this.park("error", nativeT("diskFullLane", { platform: "WhatsApp" }), {
+      retry: "when_disk_free",
+    });
   }
 
   // ── Inbound + contacts ─────────────────────────────────────────────────
@@ -1912,6 +1900,15 @@ export class WhatsAppWebConnector implements MessagingConnector {
     win.webContents.on("certificate-error", (_event, url, error) => {
       if (this.window !== win || !url.startsWith(WHATSAPP_WEB_URL)) return;
       this.onLoadFailed(-200, error);
+    });
+    // A crashed page answers nothing: park it, and the gateway starts a fresh one.
+    win.webContents.on("render-process-gone", (_event, details) => {
+      if (this.window !== win || !this.running || this.parkedNote != null)
+        return;
+      this.callbacks.onLog(
+        `whatsapp-web: page process gone (${details.reason})`
+      );
+      this.park("error", PAGE_CRASHED, { retry: "auto" });
     });
     return win;
   }

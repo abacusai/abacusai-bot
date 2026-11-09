@@ -1097,6 +1097,14 @@
       "abacusTelegram": "Telegram"
     },
     "recommended": "Empfohlen",
+    "recovery": {
+      "disk": "{{platform}} versucht es automatisch erneut, sobald wieder Speicherplatz frei ist.",
+      "next": "{{platform}} ist nicht verbunden. Neuer Versuch läuft automatisch, nächster in {{minutes}} Min.",
+      "needsUser": "{{platform}} scheitert immer wieder auf dieselbe Weise, daher werden keine automatischen Versuche mehr gemacht. Klicke auf „Jetzt versuchen“, sobald das Netzwerk es zulässt.",
+      "now": "{{platform}} ist nicht verbunden. Neuer Versuch läuft gerade.",
+      "stopped": "{{platform}} hat sich einen Tag lang nicht verbunden, daher werden keine automatischen Versuche mehr gemacht.",
+      "tryNow": "Jetzt versuchen"
+    },
     "reject": "Ablehnen",
     "required": "Erforderlich",
     "revoke": "Widerrufen",
@@ -2984,6 +2992,11 @@
       "listening": "Hört zu",
       "dictationStarting": "Diktat wird vorbereitet",
       "transcribing": "Wird aufgeschrieben",
+      "dictationDownloading": "Diktat wird vorbereitet … {{percent}} %",
+      "dictationDownloadingFor": "Diktat für {{language}} wird vorbereitet … {{percent}} %",
+      "dictationQuickMode": "Bis dahin wird der Schnellmodus verwendet.",
+      "dictationReady": "Das Diktat ist bereit.",
+      "dictationReadyFor": "Das Diktat für {{language}} ist bereit.",
       "stopDictation": "Diktat beenden",
       "recordingTime": "Aufnahmedauer",
       "favorites": "Favoriten",
@@ -4972,7 +4985,10 @@
     "themes": "Designs",
     "diskFullLane": "Der Speicher des Computers ist voll, daher kann {{platform}} seine Daten nicht speichern. Die Verbindung wird automatisch wiederhergestellt, sobald etwas Speicherplatz frei ist.",
     "linkLostTitle": "{{platform}} ist getrennt",
-    "linkLostLane": "{{platform}} ist nicht mehr verknüpft, daher können Nachrichten und Routinen nicht darüber gesendet werden. Klicke auf „Verbinden“ und scanne den QR-Code erneut."
+    "linkLostLane": "{{platform}} ist nicht mehr verknüpft, daher können Nachrichten und Routinen nicht darüber gesendet werden. Klicke auf „Verbinden“ und scanne den QR-Code erneut.",
+    "laneDownTitle": "{{platform}} kann keine Verbindung herstellen",
+    "laneDownBody": "{{platform}} ist seit einer Stunde nicht verbunden. Die App versucht es weiter; öffne Messaging, um es jetzt zu versuchen.",
+    "laneBlockedBody": "{{platform}} kann wiederholt keine sichere Verbindung herstellen und ist in diesem Netzwerk möglicherweise blockiert. Die App versucht es nicht mehr automatisch; öffne Messaging und klicke auf „Jetzt versuchen“, sobald das Netzwerk es zulässt."
   },
   "channels": {
     "sidebar": {

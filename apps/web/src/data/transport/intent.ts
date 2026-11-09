@@ -62,7 +62,7 @@ const READS: Record<string, string> = {
   system: "events info loginItem.get",
   terminal: "events output shell.get",
   update: "events status",
-  voice: "whisper.progress",
+  voice: "language whisper.progress",
   window: "chrome events state",
   workspaces: "checkPath sessionHomePath",
 };

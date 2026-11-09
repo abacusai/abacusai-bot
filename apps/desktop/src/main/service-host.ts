@@ -11,6 +11,10 @@ import path from "path";
 import { appendDailyNote } from "@abacus-ai/agent/bot-memory";
 import type { ChannelCapabilities } from "@abacus-ai/agent/channel";
 import type { UnattendedPolicy } from "@abacus-ai/agent/tool-policy";
+import {
+  readUserLanguage,
+  resolveReplyLanguage,
+} from "@abacus-ai/agent/user-language";
 import { visibleUserText } from "@abacus-ai/agent/user-text";
 import {
   connectorById,
@@ -224,6 +228,7 @@ import {
   TOOLSETS,
   TOOLSETS_BY_ID,
 } from "@abacus-ai/contract/toolsets";
+import type { DictationLanguage } from "@abacus-ai/contract/voice";
 import { app } from "electron";
 
 import {
@@ -3931,6 +3936,14 @@ export class ServiceHost {
 
   releaseMessagingLogin(platformId: MessagingPlatformId): void {
     this.messagingGatewayService.releaseLogin(platformId);
+  }
+
+  retryMessagingLane(platformId: MessagingPlatformId): MessagingSnapshot {
+    return this.messagingGatewayService.retryNow(platformId);
+  }
+
+  messagingPageOpened(): void {
+    this.messagingGatewayService.pageOpened();
   }
 
   listSessionArtifacts(): SessionArtifact[] {
@@ -7717,6 +7730,15 @@ export class ServiceHost {
       // A run may use its own folder without the containment gate asking.
       ...this.routineFolderEnvForSession(sessionId),
       ...this.sponsoredRunEnvForSession(sessionId),
+    };
+  }
+
+  /** The user's language for dictation: the reply-language resolver's answer and the app's tag. */
+  dictationLanguage(): DictationLanguage {
+    const locale = this.appLanguage();
+    return {
+      name: resolveReplyLanguage(readUserLanguage(), locale).name,
+      locale,
     };
   }
 

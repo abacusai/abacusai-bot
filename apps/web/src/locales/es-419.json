@@ -1097,6 +1097,14 @@
       "abacusTelegram": "Telegram"
     },
     "recommended": "Recomendado",
+    "recovery": {
+      "disk": "{{platform}} se reintentará solo cuando haya espacio libre en el disco.",
+      "next": "{{platform}} no está conectado. Se reintenta solo; próximo intento en {{minutes}} min.",
+      "needsUser": "{{platform}} sigue fallando igual, así que dejó de reintentarlo solo. Haz clic en Intentar ahora cuando la red lo permita.",
+      "now": "{{platform}} no está conectado. Reintentando ahora.",
+      "stopped": "{{platform}} lleva un día sin conectarse, así que dejó de reintentarlo solo.",
+      "tryNow": "Intentar ahora"
+    },
     "reject": "Rechazar",
     "required": "Obligatorio",
     "revoke": "Revocar",
@@ -2984,6 +2992,11 @@
       "listening": "Escuchando",
       "dictationStarting": "Preparando el dictado",
       "transcribing": "Transcribiendo",
+      "dictationDownloading": "Preparando el dictado… {{percent}} %",
+      "dictationDownloadingFor": "Preparando el dictado en {{language}}… {{percent}} %",
+      "dictationQuickMode": "Se usa el modo rápido hasta que esté listo.",
+      "dictationReady": "El dictado está listo.",
+      "dictationReadyFor": "El dictado en {{language}} está listo.",
       "stopDictation": "Detener el dictado",
       "recordingTime": "Tiempo de grabación",
       "favorites": "Favoritos",
@@ -4972,7 +4985,10 @@
     "themes": "Temas",
     "diskFullLane": "El disco de la computadora está lleno, así que {{platform}} no puede guardar sus datos. Se volverá a conectar solo en cuanto se libere algo de espacio.",
     "linkLostTitle": "{{platform}} está desconectado",
-    "linkLostLane": "{{platform}} ya no está vinculado, así que los mensajes y las rutinas no pueden enviarse por ahí. Haz clic en Conectar y vuelve a escanear el código QR."
+    "linkLostLane": "{{platform}} ya no está vinculado, así que los mensajes y las rutinas no pueden enviarse por ahí. Haz clic en Conectar y vuelve a escanear el código QR.",
+    "laneDownTitle": "{{platform}} no puede conectarse",
+    "laneDownBody": "{{platform}} lleva una hora sin conectarse. La app sigue intentándolo; abre Mensajería para intentarlo ahora.",
+    "laneBlockedBody": "{{platform}} no logra establecer una conexión segura, así que puede estar bloqueado en esta red. La app dejó de reintentarlo; abre Mensajería y haz clic en Intentar ahora cuando la red lo permita."
   },
   "channels": {
     "sidebar": {

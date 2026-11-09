@@ -20,6 +20,21 @@ vi.mock("./messaging-config-service", async (importOriginal) => ({
   writeStoredOutbox: (state: { pending: unknown[]; done: string[] }) => {
     stored.outbox = structuredClone(state);
   },
+  // WhatsApp is switched on, so the lane supervisor may restart it.
+  readGatewaySettings: () => ({
+    gatewayEnabled: true,
+    autoApproveTools: true,
+    respondToInbound: true,
+    workspaceId: null,
+  }),
+  isPlatformEnabled: (id: MessagingPlatformId) => id === "whatsapp",
+  isPlatformConfigured: (id: MessagingPlatformId) => id === "whatsapp",
+}));
+// No OS events to watch here: hints have their own test (lane-supervisor.test.ts).
+vi.mock("./page-boot-watch", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./page-boot-watch")>()),
+  watchLaneHints: () => () => {},
+  userActive: () => false,
 }));
 
 const { MessagingGatewayService } = await import("./messaging-gateway-service");
@@ -215,6 +230,66 @@ describe("a message owed while its platform is unlinked", () => {
 
     expect(sent).toEqual(["Hey! How's it going?"]);
     expect(stored.outbox?.pending).toEqual([]);
+  });
+});
+
+describe("a message owed while its platform is down and being retried", () => {
+  it("waits out the recovery, then goes exactly once on connect", async () => {
+    let down = true;
+    const sent: string[] = [];
+    const gateway = service(async (chatId, text) => {
+      if (down) throw new Error("WhatsApp Web could not be reached");
+      sent.push(text);
+    });
+    // Each restart the supervisor makes reports what the network allows.
+    type Callbacks = {
+      onState: (state: string, note?: string, failure?: unknown) => void;
+    };
+    const internals = gateway as unknown as {
+      buildConnector: (id: MessagingPlatformId) => unknown;
+      setState: (id: string, state: string, note?: string, f?: unknown) => void;
+    };
+    const build = internals.buildConnector.bind(gateway);
+    let restarts = 0;
+    internals.buildConnector = (id) => {
+      const { callbacks } = build(id) as unknown as { callbacks: Callbacks };
+      restarts += 1;
+      return {
+        id,
+        start: async () => {
+          if (down)
+            callbacks.onState("error", "could not be reached", {
+              retry: "auto",
+            });
+          else callbacks.onState("connected");
+        },
+        stop: async () => {},
+        sendText: async (_chatId: string, text: string) => {
+          if (down) throw new Error("WhatsApp Web could not be reached");
+          sent.push(text);
+        },
+      };
+    };
+
+    const done = send(gateway);
+    await vi.advanceTimersByTimeAsync(80_000);
+    await done;
+    // A failed load parked the lane: down, and retried by the supervisor.
+    internals.setState("whatsapp", "error", "could not be reached", {
+      retry: "auto",
+    });
+    await vi.advanceTimersByTimeAsync(8 * 60 * 60_000);
+
+    expect(restarts).toBeGreaterThan(10);
+    expect(stored.outbox?.pending).toHaveLength(1);
+    expect(sent).toEqual([]);
+
+    down = false;
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+
+    expect(sent).toEqual(["Hey! How's it going?"]);
+    expect(stored.outbox?.pending).toEqual([]);
+    await gateway.dispose();
   });
 });
 

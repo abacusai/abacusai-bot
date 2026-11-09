@@ -1,5 +1,7 @@
+import os from "node:os";
+
 import { freeBytes } from "@abacus-ai/agent/atomic-file";
-import { app, net, type WebContents } from "electron";
+import { app, net, powerMonitor, type WebContents } from "electron";
 
 /**
  * When a hidden chat-app page (Discord, Telegram Web) shows neither its app
@@ -25,7 +27,7 @@ export type PageBusy = "loading" | "offline" | "starting" | null;
 
 /** Idle time on a page that has not booted before its first reload. */
 export const BOOT_FIRST_WAIT_MS = 30_000;
-/** Reloads before the lane stops and waits for the user. */
+/** Reloads before the lane parks; the gateway's LaneSupervisor retries it from there. */
 export const BOOT_MAX_RELOADS = 3;
 /**
  * How long one load may keep the page busy before it stops counting as
@@ -85,9 +87,6 @@ export class PageBootWatch {
 export const pageBusy = (contents: WebContents): PageBusy =>
   !net.isOnline() ? "offline" : contents.isLoading() ? "loading" : null;
 
-/** How often a parked lane checks whether what parked it has cleared. */
-const RETRY_CHECK_MS = 10_000;
-
 /**
  * Free space a parked lane waits for before it loads its page again. A cold
  * WhatsApp Web boot alone writes about 30 MB (its service worker and cache);
@@ -96,25 +95,75 @@ const RETRY_CHECK_MS = 10_000;
  */
 const DISK_SPACE_BACK_BYTES = 256 * 1024 * 1024;
 
-/** The network is back, by the OS's own answer. */
-export const backOnline = (): boolean => net.isOnline();
-
 /** The disk holding the app's pages has room for one to load again. */
 export const diskSpaceBack = (): boolean =>
   (freeBytes(app.getPath("userData")) ?? 0) >= DISK_SPACE_BACK_BYTES;
 
+/** How often the network is looked at for a change while a lane is down. */
+const NETWORK_CHECK_MS = 5_000;
+
+/** Adapters that come and go on their own (containers, VMs, VPN tunnels, Apple's peer links). */
+const VIRTUAL_ADAPTER =
+  /^(lo\d*$|docker|br-|veth|virbr|vmnet|vboxnet|vEthernet|utun|awdl|llw|anpi|ap\d|bridge|tun|tap|zt|tailscale|wg)/i;
+/** Windows names adapters by their product, anywhere in the friendly name. */
+const VIRTUAL_ADAPTER_NAMED =
+  /vmware|virtualbox|zerotier|openvpn|bluetooth|local area connection\*/i;
+
 /**
- * A parked lane's way back by itself: `retry` runs once, as soon as `ready`.
- * Returns the stop; a lane keeps one wait at a time.
+ * The machine's real IPv4 addresses: a router or adapter change moves them
+ * while "online" stays true. IPv6 is left out (privacy addresses rotate on
+ * their own), as are link-local and virtual adapters, so churn there never
+ * reads as a network change.
  */
-export const retryWhen = (
-  ready: () => boolean,
-  retry: () => void
+const networkFingerprint = (): string =>
+  Object.entries(os.networkInterfaces())
+    .filter(
+      ([name]) =>
+        !VIRTUAL_ADAPTER.test(name) && !VIRTUAL_ADAPTER_NAMED.test(name)
+    )
+    .flatMap(([, entries]) => entries ?? [])
+    .filter(
+      (entry) =>
+        !entry.internal &&
+        entry.family === "IPv4" &&
+        !entry.address.startsWith("169.254.")
+    )
+    .map((entry) => entry.address)
+    .sort()
+    .join(",");
+
+/**
+ * When a lane that is down is worth trying sooner: the network changed (the
+ * OS online flag or the machine's addresses), the computer woke or unlocked,
+ * or an app window took focus. Returns the stop.
+ */
+export const watchLaneHints = (
+  hint: (reason: string) => void
 ): (() => void) => {
-  const timer = setInterval(() => {
-    if (!ready()) return;
-    clearInterval(timer);
-    retry();
-  }, RETRY_CHECK_MS);
-  return () => clearInterval(timer);
+  let online = net.isOnline();
+  let addresses = networkFingerprint();
+  const poll = setInterval(() => {
+    const nowOnline = net.isOnline();
+    const nowAddresses = networkFingerprint();
+    if (nowOnline === online && nowAddresses === addresses) return;
+    online = nowOnline;
+    addresses = nowAddresses;
+    hint("the network changed");
+  }, NETWORK_CHECK_MS);
+  poll.unref?.();
+  const onWake = (): void => hint("the computer woke up");
+  const onFocus = (): void => hint("the app came to the front");
+  powerMonitor.on("resume", onWake);
+  powerMonitor.on("unlock-screen", onWake);
+  app.on("browser-window-focus", onFocus);
+  return () => {
+    clearInterval(poll);
+    powerMonitor.removeListener("resume", onWake);
+    powerMonitor.removeListener("unlock-screen", onWake);
+    app.removeListener("browser-window-focus", onFocus);
+  };
 };
+
+/** Someone used the computer in the last five minutes. */
+export const userActive = (): boolean =>
+  powerMonitor.getSystemIdleState(300) === "active";
