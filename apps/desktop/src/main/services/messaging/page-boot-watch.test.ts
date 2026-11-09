@@ -126,10 +126,13 @@ afterEach(async () => {
 });
 
 const states: Array<{ state: string; message?: string }> = [];
+/** The retry label on the last state, for the gateway's supervisor. */
+let lastFailure: unknown = undefined;
 const callbacks = {
   onMessage: () => {},
-  onState: (state: string, message?: string) => {
+  onState: (state: string, message?: string, failure?: unknown) => {
     states.push({ state, message });
+    lastFailure = failure;
   },
   onLog: () => {},
 };
@@ -185,7 +188,7 @@ describe("the boot watch", () => {
 });
 
 describe("a Telegram Web page that cannot be reached", () => {
-  it("is reloaded a few times, then the lane waits for the user", async () => {
+  it("is reloaded a few times, then the lane parks for the gateway to retry", async () => {
     vi.useFakeTimers();
     await startLane(TelegramWebConnector);
     const initial = page.loads;
@@ -195,9 +198,9 @@ describe("a Telegram Web page that cannot be reached", () => {
 
     expect(page.loads - initial).toBe(3);
     expect(states.at(-1)).toEqual({
-      state: "needs_login",
+      state: "error",
       message:
-        "Telegram Web did not finish loading. Click Connect to try again.",
+        "Telegram Web did not finish loading. It tries again by itself, or click Connect to try now.",
     });
   });
 
@@ -217,7 +220,7 @@ describe("a Telegram Web page that cannot be reached", () => {
     vi.useFakeTimers();
     const lane = await startLane(TelegramWebConnector);
     await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
-    expect(states.at(-1)?.state).toBe("needs_login");
+    expect(states.at(-1)?.state).toBe("error");
 
     page.shows = { loggedIn: false, loginVisible: true };
     lane.showLoginWindow();
@@ -296,16 +299,16 @@ describe("a first page load that never settles", () => {
       "WhatsApp",
       WhatsAppWebConnector,
       "error",
-      "WhatsApp Web did not finish loading. Click Connect to try again.",
+      "WhatsApp Web did not finish loading. It tries again by itself, or click Connect to try now.",
     ],
     [
       "Telegram",
       TelegramWebConnector,
-      "needs_login",
-      "Telegram Web did not finish loading. Click Connect to try again.",
+      "error",
+      "Telegram Web did not finish loading. It tries again by itself, or click Connect to try now.",
     ],
   ] as const)(
-    "%s: is reloaded a few times, then the lane waits for the user",
+    "%s: is reloaded a few times, then the lane parks for the gateway to retry",
     async (_name, Connector, state, message) => {
       vi.useFakeTimers();
       page.loading = true;
@@ -319,6 +322,8 @@ describe("a first page load that never settles", () => {
 
       expect(page.loads).toBeGreaterThan(1);
       expect(states.at(-1)).toEqual({ state, message });
+      // A page that loaded and never booted: retried, at the slow pace.
+      expect(lastFailure).toEqual({ retry: "auto", stuckBoot: true });
     }
   );
 

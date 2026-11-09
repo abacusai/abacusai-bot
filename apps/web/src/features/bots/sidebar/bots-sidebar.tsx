@@ -1,5 +1,6 @@
 import type { BotRow } from "@abacus-ai/contract/contract/rows";
 import type { BotChatPreview } from "@abacus-ai/contract/contracts";
+import type { MessagingSnapshot } from "@abacus-ai/contract/messaging";
 /**
  * The Bots sidebar (spec 03 §7, canvas `BotsSidebar`, `BotsEmpty`,
  * `BotStates`), the 88 px strip (§7.7, canvas `BW800`) and the "Needs you"
@@ -26,10 +27,12 @@ import {
   useMotionPreference,
 } from "#renderer/lib/motion";
 import { AppLink } from "#renderer/lib/navigation/app-link";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { useNow } from "#renderer/lib/use-now";
 import { Input } from "#renderer/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 
+import { recoveryLine } from "../../library/messaging-recovery";
 import { BotFace } from "../avatar";
 import { moodFor, type BotAttention } from "../data/attention";
 import { botsQueries, useBots } from "../data/queries";
@@ -54,6 +57,11 @@ const useSidebarModel = (query: string) => {
   const sources = useAttentionSources();
   const previews =
     useQuery(botsQueries(transport.orpc).chatPreviews()).data ?? EMPTY_PREVIEWS;
+  // A home-channel bot's row says when its chat app has been down a while.
+  const messaging = useQuery({
+    ...transport.orpc.messaging.snapshot.queryOptions({ input: {} }),
+    enabled: IS_ELECTRON,
+  }).data;
   const attention = new Map<string, BotAttention>(
     bots.map((bot) => [bot.id, attentionOf(bot, sources)])
   );
@@ -64,7 +72,17 @@ const useSidebarModel = (query: string) => {
     previews,
     query,
   });
-  return { bots, status, retry, entries, attention, previews, sources, prefs };
+  return {
+    bots,
+    status,
+    retry,
+    entries,
+    attention,
+    previews,
+    sources,
+    prefs,
+    messaging,
+  };
 };
 
 const BotRowContainer = ({
@@ -76,11 +94,13 @@ const BotRowContainer = ({
   active,
   hidden,
   allBots,
+  messaging,
   onDelete,
 }: {
   bot: BotRow;
   attention: BotAttention;
   previews: Readonly<Record<string, BotChatPreview>>;
+  messaging: MessagingSnapshot | undefined;
   sources: AttentionSources;
   pinned: boolean;
   active: boolean;
@@ -92,6 +112,19 @@ const BotRowContainer = ({
   const now = useNow();
   const checkIn = findCheckIn(sources.routines, bot.id);
   const preview = previews[bot.id];
+  const lane =
+    bot.homeChannel == null
+      ? undefined
+      : messaging?.platforms.find((entry) => entry.id === bot.homeChannel);
+  const channelNote =
+    lane?.recovery != null
+      ? recoveryLine(
+          lane.recovery,
+          t(`messaging.platforms.${lane.nameKey}`),
+          now,
+          t
+        )
+      : null;
   const items = botMenuItems({
     pinned,
     unread: sources.unread.has(bot.id),
@@ -110,6 +143,7 @@ const BotRowContainer = ({
         bot={bot}
         attention={attention}
         preview={preview?.text ?? null}
+        channelNote={channelNote}
         stamp={formatChatStamp(
           preview?.at ?? bot.updatedAt,
           now,
@@ -271,6 +305,7 @@ export const BotsSidebar = () => {
                 active={params.botId === entry.bot.id}
                 hidden={entry.group === "pinned" && !pinnedOpen}
                 allBots={model.bots}
+                messaging={model.messaging}
                 onDelete={setDeleting}
               />
             )

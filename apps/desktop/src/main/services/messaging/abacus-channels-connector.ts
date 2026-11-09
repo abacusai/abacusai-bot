@@ -19,6 +19,7 @@ import {
   type MessagingConnector,
 } from "./connector";
 import { DISCORD_PARTITION } from "./discord-web-connector";
+import type { LaneFailure } from "./lane-supervisor";
 
 /**
  * Discord or Telegram through the shared "Abacus AI" bots. The platform owns
@@ -38,6 +39,25 @@ const MAX_MESSAGE_LENGTH: Record<SharedChannel, number> = {
 const INBOX_WAIT_SECS = 25;
 /** How often the pairing card re-asks "linked yet?" while a code is up. */
 const PAIR_POLL_MS = 3000;
+
+/** A channels call the server answered with an HTTP error. */
+class ChannelCallError extends Error {
+  constructor(
+    message: string,
+    readonly status: number
+  ) {
+    super(message);
+  }
+}
+
+/** Only a refused credential waits for the user; a timeout, abort or 5xx is retried. */
+const failureOf = (error: unknown): LaneFailure => ({
+  retry:
+    error instanceof ChannelCallError &&
+    (error.status === 401 || error.status === 403)
+      ? "user"
+      : "auto",
+});
 export type SharedChannel = "discord" | "telegram";
 
 const isSharedChannel = (value: unknown): value is SharedChannel =>
@@ -195,6 +215,8 @@ export class AbacusChannelsConnector implements MessagingConnector {
   private botProfileUrl: string | undefined;
   /** The tail of the link-state steps. See linkStep. */
   private linkSteps: Promise<unknown> = Promise.resolve();
+  /** The inbox poll runs while linked; see pollLoop. */
+  private polling = false;
 
   constructor(
     private readonly callbacks: ConnectorCallbacks,
@@ -227,7 +249,6 @@ export class AbacusChannelsConnector implements MessagingConnector {
     lanes.set(this.channel, this);
     this.callbacks.onState("connecting");
     await this.refreshStatus();
-    void this.pollLoop();
   }
 
   async stop(): Promise<void> {
@@ -522,7 +543,12 @@ export class AbacusChannelsConnector implements MessagingConnector {
       status = await this.call<StatusResponse>({ action: "status" });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.callbacks.onState("error", message);
+      // A pending code keeps waiting: the pair timer asks again.
+      if (this.link.status === "pending") {
+        this.callbacks.onLog(`${this.id}: status check failed: ${message}`);
+        return;
+      }
+      this.callbacks.onState("error", message, failureOf(error));
       return;
     }
     if (!(status.available ?? []).includes(this.channel)) {
@@ -530,7 +556,8 @@ export class AbacusChannelsConnector implements MessagingConnector {
         status: "unavailable",
         error: `The Abacus AI ${this.channel} bot is not available on this account yet.`,
       });
-      this.callbacks.onState("error", this.link.error);
+      // The server's answer can change; the gateway's supervisor asks again.
+      this.callbacks.onState("error", this.link.error, { retry: "auto" });
       return;
     }
     const botName =
@@ -565,6 +592,7 @@ export class AbacusChannelsConnector implements MessagingConnector {
       botProfileUrl: this.botProfileUrl,
     });
     this.callbacks.onState("connected");
+    if (!this.polling) void this.pollLoop();
     if (!wasLinked) this.callbacks.onSelfLinked?.();
   }
 
@@ -574,31 +602,40 @@ export class AbacusChannelsConnector implements MessagingConnector {
 
   // ── Inbound ───────────────────────────────────────────────────────────────
 
+  /**
+   * The inbox, long-polled while linked. Three failures in a row report the
+   * lane down and end the loop: the gateway's LaneSupervisor restarts the
+   * lane, whose start() reads status again. One retry loop, not two.
+   */
   private async pollLoop(): Promise<void> {
+    this.polling = true;
     let failures = 0;
-    while (this.running) {
-      if (!this.linked) {
-        await this.sleep(PAIR_POLL_MS);
-        continue;
+    try {
+      while (this.running && this.linked) {
+        try {
+          // The channel is a hint for a server that filters by it; routing
+          // below does not rely on it.
+          const result = await this.call<{ messages?: InboxEntry[] }>(
+            { action: "inbox", wait: INBOX_WAIT_SECS, channel: this.channel },
+            (INBOX_WAIT_SECS + 15) * 1000
+          );
+          failures = 0;
+          for (const entry of result.messages ?? []) this.route(entry);
+        } catch (error) {
+          if (!this.running) return;
+          failures += 1;
+          const message =
+            error instanceof Error ? error.message : String(error);
+          this.callbacks.onLog(`${this.id}: inbox poll failed: ${message}`);
+          if (failures >= 3) {
+            this.callbacks.onState("error", message, failureOf(error));
+            return;
+          }
+          await this.sleep(1000 * 2 ** failures);
+        }
       }
-      try {
-        // The channel is a hint for a server that filters by it; routing
-        // below does not rely on it.
-        const result = await this.call<{ messages?: InboxEntry[] }>(
-          { action: "inbox", wait: INBOX_WAIT_SECS, channel: this.channel },
-          (INBOX_WAIT_SECS + 15) * 1000
-        );
-        failures = 0;
-        for (const entry of result.messages ?? []) this.route(entry);
-      } catch (error) {
-        if (!this.running) return;
-        failures += 1;
-        const message = error instanceof Error ? error.message : String(error);
-        this.callbacks.onLog(`${this.id}: inbox poll failed: ${message}`);
-        if (failures >= 3) this.callbacks.onState("error", message);
-        await this.sleep(Math.min(1000 * 2 ** failures, 60_000));
-        if (this.running && failures >= 3) await this.refreshStatus();
-      }
+    } finally {
+      this.polling = false;
     }
   }
 
@@ -663,7 +700,8 @@ export class AbacusChannelsConnector implements MessagingConnector {
   ): Promise<T> {
     // The app requires an Abacus sign-in, so a missing key is a fault, not a state.
     const key = resolveAbacusApiKey();
-    if (key == null) throw new Error("Abacus.AI is not connected.");
+    if (key == null)
+      throw new ChannelCallError("Abacus.AI is not connected.", 401);
     const controller = new AbortController();
     this.abort = controller;
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -686,8 +724,9 @@ export class AbacusChannelsConnector implements MessagingConnector {
         error?: string;
       };
       if (!response.ok)
-        throw new Error(
-          payload.error ?? `Abacus API returned ${response.status}`
+        throw new ChannelCallError(
+          payload.error ?? `Abacus API returned ${response.status}`,
+          response.status
         );
       return payload;
     } finally {

@@ -188,6 +188,8 @@ export const WEB_HOST_ALLOWED = [
   "messaging.updatePlatform",
   "messaging.unlinkPlatform",
   "messaging.releaseLogin",
+  "messaging.retryNow",
+  "messaging.pageOpened",
   "messaging.decidePairing",
   "messaging.updateSettings",
   "messaging.setHomeBot",

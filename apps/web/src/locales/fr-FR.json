@@ -1095,6 +1095,14 @@
       "abacusTelegram": "Telegram"
     },
     "recommended": "Recommandé",
+    "recovery": {
+      "disk": "{{platform}} réessaiera automatiquement dès que le disque aura de l'espace libre.",
+      "next": "{{platform}} n'est pas connecté. Nouvel essai automatique, le prochain dans {{minutes}} min.",
+      "needsUser": "{{platform}} échoue toujours de la même façon, les essais automatiques sont donc arrêtés. Cliquez sur Réessayer quand le réseau le permet.",
+      "now": "{{platform}} n'est pas connecté. Nouvel essai en cours.",
+      "stopped": "{{platform}} ne s'est pas connecté depuis un jour, les essais automatiques sont donc arrêtés.",
+      "tryNow": "Réessayer"
+    },
     "reject": "Refuser",
     "required": "Requis",
     "revoke": "Révoquer",
@@ -4970,6 +4978,9 @@
     "themes": "Thèmes",
     "diskFullLane": "Le disque de l'ordinateur est plein : {{platform}} ne peut pas enregistrer ses données. La connexion reprendra d'elle-même dès qu'un peu d'espace sera libéré.",
     "linkLostTitle": "{{platform}} est déconnecté",
-    "linkLostLane": "{{platform}} n'est plus associé : les messages et les routines ne peuvent plus passer par là. Cliquez sur Connecter et scannez à nouveau le QR code."
+    "linkLostLane": "{{platform}} n'est plus associé : les messages et les routines ne peuvent plus passer par là. Cliquez sur Connecter et scannez à nouveau le QR code.",
+    "laneDownTitle": "{{platform}} ne parvient pas à se connecter",
+    "laneDownBody": "{{platform}} n'est plus connecté depuis une heure. L'app continue d'essayer ; ouvrez Messagerie pour réessayer maintenant.",
+    "laneBlockedBody": "{{platform}} n'arrive pas à établir une connexion sécurisée et est peut-être bloqué sur ce réseau. L'app a arrêté les essais ; ouvrez Messagerie et cliquez sur Réessayer quand le réseau le permet."
   }
 }

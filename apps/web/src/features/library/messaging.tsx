@@ -46,6 +46,7 @@ import {
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showError } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
+import { useNow } from "#renderer/lib/use-now";
 import { Button } from "#renderer/ui/button";
 import { Dialog } from "#renderer/ui/dialog";
 import { Field, FieldGroup, FieldLabel, FieldError } from "#renderer/ui/field";
@@ -57,6 +58,7 @@ import {
   useConnectFlow,
 } from "./connect-flow";
 import { useMessagingDialog } from "./messaging-dialog";
+import { recoveryLine } from "./messaging-recovery";
 export const MessagingPage = () =>
   IS_ELECTRON ? <DesktopMessagingPage /> : <WebMessagingPage />;
 const DesktopMessagingPage = () => {
@@ -81,6 +83,17 @@ const DesktopMessagingPage = () => {
   );
   const update = (patch: UpdateMessagingSettingsRequest) =>
     settings.mutate(patch);
+  const now = useNow();
+  const retry = useMutation(
+    transport.orpc.messaging.retryNow.mutationOptions({
+      ...useWritesSnapshot(),
+      meta: { errorToast: "phase5.failed" },
+    })
+  );
+  // Opening the page is a hint: a chat app that is down tries again soon.
+  useEffect(() => {
+    void transport.client.messaging.pageOpened({}).catch(() => undefined);
+  }, [transport]);
   return (
     <AreaPage
       title={t("library.pages.messaging")}
@@ -94,10 +107,37 @@ const DesktopMessagingPage = () => {
               key={p.id}
               id={p.id}
               title={t(`messaging.platforms.${p.nameKey}`)}
-              detail={p.errorMessage ?? undefined}
+              detail={
+                p.recovery != null ? (
+                  // What is wrong, then what the app is doing about it.
+                  <>
+                    {p.errorMessage}
+                    {p.errorMessage != null && <br />}
+                    {recoveryLine(
+                      p.recovery,
+                      t(`messaging.platforms.${p.nameKey}`),
+                      now,
+                      t
+                    )}
+                  </>
+                ) : (
+                  (p.errorMessage ?? undefined)
+                )
+              }
             >
               <ConnectorMark id={p.id} size={36} />
               <StatePill>{t(`messaging.states.${p.state}`)}</StatePill>
+              {p.recovery != null && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  data-messaging-retry={p.id}
+                  disabled={retry.isPending || p.recovery.phase === "trying"}
+                  onClick={() => retry.mutate({ platformId: p.id })}
+                >
+                  {t("messaging.recovery.tryNow")}
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="secondary"

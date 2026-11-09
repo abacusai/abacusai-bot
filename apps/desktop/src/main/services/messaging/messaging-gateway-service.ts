@@ -66,13 +66,14 @@ import {
   type TurnFailure,
 } from "./chat-failure-reply";
 import { forChat } from "./chat-markdown";
-import {
-  backoffDelayMs,
-  looksLikeBotOutput,
-  UndeliverableChatError,
-} from "./connector";
+import { looksLikeBotOutput, UndeliverableChatError } from "./connector";
 import type { InboundMessage, MessagingConnector } from "./connector";
 import { DiscordWebConnector } from "./discord-web-connector";
+import {
+  LANE_HINT_GAP_MS,
+  LaneSupervisor,
+  type LaneFailure,
+} from "./lane-supervisor";
 import {
   approvePairing,
   pausePairing,
@@ -101,6 +102,7 @@ import {
   type OwedLine,
   type OwedMessage,
 } from "./messaging-outbox";
+import { diskSpaceBack, userActive, watchLaneHints } from "./page-boot-watch";
 import type { SenderCandidate } from "./sender-resolution";
 import { TelegramWebConnector } from "./telegram-web-connector";
 import {
@@ -512,7 +514,9 @@ export class MessagingGatewayService {
         state === "connecting" ||
         state === "needs_login" ||
         state === "rate_limited" ||
-        state === "syncing"
+        state === "syncing" ||
+        // Down but being retried: what it owes waits out the recovery.
+        this.supervisor.retrying(platform)
       );
     },
     giveUp: (message) => this.tellUndelivered(message),
@@ -521,15 +525,20 @@ export class MessagingGatewayService {
   /** Armed by appendLog; one write covers a burst of messages. */
   private logSaveTimer: NodeJS.Timeout | null = null;
 
-  /**
-   * Errored connectors are restarted on a growing delay, not on every sync.
-   * Cleared the moment a platform connects, so a real recovery starts the
-   * ladder over.
-   */
-  private readonly restartBackoff = new Map<
-    MessagingPlatformId,
-    { attempts: number; notBefore: number }
-  >();
+  /** The one outer retry loop for lanes that should be connected and aren't. */
+  private readonly supervisor = new LaneSupervisor({
+    now: () => Date.now(),
+    random: Math.random,
+    shouldRun: (id) => this.shouldRun(id),
+    restart: (id) => this.restartPlatform(id),
+    diskSpaceBack,
+    userActive,
+    notifyDown: (id) => void this.tellLaneDown(id),
+    tellNeedsUser: (id) => void this.tellLaneBlocked(id),
+    watchHints: watchLaneHints,
+    changed: () => this.options.emitChanged(),
+    log: (line) => console.log(`[messaging] ${line}`),
+  });
 
   /** A bot that asked to connect a chat app, by the lane it would answer. */
   private readonly linkClaims = new Map<
@@ -562,38 +571,57 @@ export class MessagingGatewayService {
         !entry.id.startsWith("abacus_")
       )
         continue;
-      const shouldRun =
-        gatewayEnabled &&
-        isPlatformEnabled(entry.id) &&
-        isPlatformConfigured(entry.id);
+      const shouldRun = gatewayEnabled && this.shouldRun(entry.id);
 
-      // A connector that died terminally still sits in the map looking
-      // "running". Evict it so it restarts, on a backoff rather than on every
-      // sync. `needs_login` is healthy and is never evicted.
+      // A connector in `error` still sits in the map looking "running". A
+      // sync is the user's Connect or a settings change: restart it, at most
+      // once per LANE_HINT_GAP_MS. `needs_login` is healthy and never restarted.
       if (
         shouldRun &&
         this.connectors.has(entry.id) &&
-        this.states.get(entry.id)?.state === "error" &&
-        Date.now() >= (this.restartBackoff.get(entry.id)?.notBefore ?? 0)
+        this.states.get(entry.id)?.state === "error"
       ) {
-        const attempts = (this.restartBackoff.get(entry.id)?.attempts ?? 0) + 1;
-        this.restartBackoff.set(entry.id, {
-          attempts,
-          notBefore: Date.now() + backoffDelayMs(attempts),
-        });
-        await this.stopPlatform(entry.id);
+        this.supervisor.retryNow(entry.id, LANE_HINT_GAP_MS);
+        continue;
       }
 
       const isRunning = this.connectors.has(entry.id);
 
       if (shouldRun && !isRunning) this.startPlatform(entry.id);
       else if (!shouldRun && isRunning) await this.stopPlatform(entry.id);
+      if (!shouldRun) this.supervisor.forget(entry.id);
     }
 
     this.options.emitChanged();
   }
 
+  /** Switched on, configured, and messaging itself on. */
+  private shouldRun(platformId: MessagingPlatformId): boolean {
+    return (
+      readGatewaySettings().gatewayEnabled &&
+      isPlatformEnabled(platformId) &&
+      isPlatformConfigured(platformId)
+    );
+  }
+
+  /** The supervisor's retry: a fresh connector and page, as a relaunch would. */
+  private async restartPlatform(
+    platformId: MessagingPlatformId
+  ): Promise<void> {
+    await this.stopPlatform(platformId);
+    // dispose() may have run while the old connector stopped.
+    if (this.disposed) return;
+    if (this.shouldRun(platformId) && !this.connectors.has(platformId))
+      this.startPlatform(platformId);
+    this.options.emitChanged();
+  }
+
+  /** Set by dispose(): nothing starts a lane after it. */
+  private disposed = false;
+
   async dispose(): Promise<void> {
+    this.disposed = true;
+    this.supervisor.dispose();
     this.outbox.dispose();
     for (const route of this.routes.values()) this.stopWatchingProgress(route);
     for (const timer of this.releasedLogins.values()) clearTimeout(timer);
@@ -758,9 +786,13 @@ export class MessagingGatewayService {
           console.error(`[messaging] ${platformId} inbound failed:`, error);
         });
       },
-      onState: (state: MessagingPlatformState, errorMessage?: string) => {
+      onState: (
+        state: MessagingPlatformState,
+        errorMessage?: string,
+        failure?: LaneFailure
+      ) => {
         if (!current()) return;
-        this.setState(platformId, state, errorMessage);
+        this.setState(platformId, state, errorMessage, failure);
       },
       onLog: (line: string) => {
         console.log(`[messaging] ${line}`);
@@ -800,7 +832,8 @@ export class MessagingGatewayService {
   private setState(
     platformId: MessagingPlatformId,
     state: MessagingPlatformState,
-    error?: string
+    error?: string,
+    failure?: LaneFailure
   ): void {
     // The login poll re-reports an unchanged state every tick; nobody
     // downstream needs to hear it again.
@@ -813,10 +846,8 @@ export class MessagingGatewayService {
     // A released login that landed is kept.
     if (state === "connected" || state === "syncing")
       this.clearReleasedLogin(platformId);
-    // A connector that made it back up has earned a fresh restart ladder,
-    // and what it still owes a chat goes now.
+    // What a connector that made it back up still owes a chat goes now.
     if (state === "connected") {
-      this.restartBackoff.delete(platformId);
       this.linkLossTold.delete(platformId);
       if (this.outbox.owes(platformId)) this.outbox.schedule(0);
       this.options.onPlatformConnected?.(platformId);
@@ -829,6 +860,7 @@ export class MessagingGatewayService {
         (error != null && error.length > 0 ? ` (${error})` : "")
     );
     this.states.set(platformId, { state, error: error ?? null });
+    this.supervisor.noteState(platformId, state, failure);
     this.watchSync(platformId, state);
 
     // The environment notice tells every conversation what it can reach; a
@@ -2207,6 +2239,64 @@ export class MessagingGatewayService {
       words.t("native.linkLostTitle", { platform }),
       words.t("native.linkLostLane", { platform })
     );
+    this.tellInAnotherApp(
+      platformId,
+      words.t("native.linkLostLane", { platform })
+    );
+  }
+
+  /** The down app's own chat can't carry a notice about it; another connected app's can. */
+  private tellInAnotherApp(
+    platformId: MessagingPlatformId,
+    text: string
+  ): void {
+    const other = [...this.connectors.keys()]
+      .filter(
+        (id) => id !== platformId && this.states.get(id)?.state === "connected"
+      )
+      .map((id) => this.selfChatOf(id))
+      .find((chat) => chat != null && chat.platform !== platformId);
+    if (other != null) this.deliverToSelf(other, text);
+  }
+
+  /** Retrying stopped on a failure only the user can clear: OS notification and another app's chat. */
+  private async tellLaneBlocked(
+    platformId: MessagingPlatformId
+  ): Promise<void> {
+    const words = await channelWords(
+      channelLocale(
+        readUserLanguage()?.name ?? null,
+        this.options.appLanguage?.() ?? null
+      )
+    );
+    const platform = words.t(
+      `messaging.platforms.${messagingPlatformSpec(platformId)?.nameKey ?? platformId}`
+    );
+    const body = words.t("native.laneBlockedBody", { platform });
+    this.options.notifyUser?.(
+      platformId,
+      words.t("native.laneDownTitle", { platform }),
+      body
+    );
+    this.tellInAnotherApp(platformId, body);
+  }
+
+  /** A lane down for an hour, still retrying: one OS notification per outage. */
+  private async tellLaneDown(platformId: MessagingPlatformId): Promise<void> {
+    const words = await channelWords(
+      channelLocale(
+        readUserLanguage()?.name ?? null,
+        this.options.appLanguage?.() ?? null
+      )
+    );
+    const platform = words.t(
+      `messaging.platforms.${messagingPlatformSpec(platformId)?.nameKey ?? platformId}`
+    );
+    this.options.notifyUser?.(
+      platformId,
+      words.t("native.laneDownTitle", { platform }),
+      words.t("native.laneDownBody", { platform })
+    );
   }
 
   /** The user's own chat hears which message never went, unless it was theirs. */
@@ -3189,6 +3279,10 @@ export class MessagingGatewayService {
             enabled && configured && settings.gatewayEnabled
               ? (live?.error ?? null)
               : null,
+          recovery:
+            enabled && configured && settings.gatewayEnabled
+              ? this.supervisor.status(entry.id)
+              : null,
           fields: entry.fields.map((field) => {
             const value = readFieldValue(entry.id, field.key);
             return {
@@ -3256,6 +3350,17 @@ export class MessagingGatewayService {
 
     await this.syncConnectors();
     return this.getSnapshot();
+  }
+
+  /** Try now: restart a lane that is down without waiting for its next try. */
+  retryNow(platformId: MessagingPlatformId): MessagingSnapshot {
+    this.supervisor.retryNow(platformId);
+    return this.getSnapshot();
+  }
+
+  /** The Messaging page opened: a lane that is down tries again soon. */
+  pageOpened(): void {
+    this.supervisor.hint("the Messaging page opened");
   }
 
   /**
