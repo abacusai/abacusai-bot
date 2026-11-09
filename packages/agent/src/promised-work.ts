@@ -216,9 +216,7 @@ export class PromisedWork {
     this.abort = null;
     if (ending === "later")
       // Logged, not steered: a later promise needs its own structural test first.
-      process.stderr.write(
-        "[promised-work] reply promised later work; not steered\n"
-      );
+      console.error("[promised-work] reply promised later work; not steered");
     if (ending !== "now" || this.spent >= PROMISED_WORK_RECOVERIES)
       return ending === "now" ? "other" : ending;
     this.spent += 1;
