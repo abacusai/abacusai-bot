@@ -200,8 +200,7 @@ const ROWS: Row[] = [
   { command: '"$X/sudo" reboot', expected: "confirm" },
   { command: "[ -f x ] && echo y", expected: "allow" },
   // Folders that hold home, `cd` within the command, and find -delete.
-  { command: "rm -rf /home", expected: "never" },
-  // The folder holding home: /home here, /Users on a Mac.
+  // The folder holding this machine's home: /home on Linux, /Users on a Mac.
   { command: `rm -rf "${path.dirname(os.homedir())}"`, expected: "never" },
   { command: "rm -rf ~/..", expected: "never" },
   { command: "rm -rf /h*", expected: "never" },
@@ -441,6 +440,46 @@ describe("the shell judge", () => {
       judgeCommand(command, { cwd: os.tmpdir(), shell: "cmd" }).verdict
     ).toBe(expected);
   });
+
+  // A folder holding home is judged against the home given, so each row
+  // holds on every platform the paths can be spelled on.
+  it.skipIf(process.platform === "win32").each([
+    ["/home/u", "rm -rf /home", "never"],
+    ["/home/u", "rm -rf /home/u", "never"],
+    ["/home/u", "rm -rf /home/other/build", "allow"],
+    ["/Users/u", "rm -rf /Users", "never"],
+    ["/Users/u", "rm -rf /Users/u/project/build", "allow"],
+  ])("home %s: %s -> %s", (home, command, expected) => {
+    expect(judgeCommand(command, { cwd: os.tmpdir(), home }).verdict).toBe(
+      expected
+    );
+  });
+
+  it.each([
+    ["rd /s /q C:\\Users", "never"],
+    ["rd /s /q C:\\Users\\u", "never"],
+    ["rd /s /q C:\\Users\\u\\project\\build", "allow"],
+  ])("home C:\\Users\\u, cmd: %s -> %s", (command, expected) => {
+    expect(
+      judgeCommand(command, {
+        cwd: os.tmpdir(),
+        home: "C:\\Users\\u",
+        shell: "cmd",
+      }).verdict
+    ).toBe(expected);
+  });
+
+  it.runIf(process.platform === "win32")(
+    "home C:\\Users\\u: rm -rf C:/Users -> never",
+    () => {
+      expect(
+        judgeCommand("rm -rf C:/Users", {
+          cwd: os.tmpdir(),
+          home: "C:\\Users\\u",
+        }).verdict
+      ).toBe("never");
+    }
+  );
 
   it("reads remote copy destinations as another computer's, not as local writes", () => {
     const { localWrites } = judgeCommand("scp .env u@h:/srv/app/.env", {
