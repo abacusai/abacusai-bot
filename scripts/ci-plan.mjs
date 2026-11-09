@@ -1,15 +1,19 @@
-// Which test suites a CI run needs. A pull request runs the suites of the
-// packages its diff reaches (turbo's --affected: changed packages and their
-// dependents); a push to main, a manual run, or a change to shared tooling
-// runs everything.
+// Which test suites a CI run needs. A pull request or a merge queue run runs
+// the suites of the packages its diff reaches (turbo's --affected: changed
+// packages and their dependents); a push to main, the scheduled run, a manual
+// run, or a change to shared tooling runs everything.
 // Writes `tests` (a job matrix) and the flags the other jobs read to
 // $GITHUB_OUTPUT.
 import { execFileSync } from "node:child_process";
 import { appendFileSync } from "node:fs";
 
-const base = process.env.GITHUB_BASE_REF;
+// A pull request diffs against its base branch; a merge queue run, which has
+// no base branch, against the commit its group starts from.
+const base = process.env.GITHUB_BASE_REF
+  ? `origin/${process.env.GITHUB_BASE_REF}`
+  : process.env.MERGE_GROUP_BASE_SHA || "";
 const changed = base
-  ? execFileSync("git", ["diff", "--name-only", `origin/${base}...HEAD`], {
+  ? execFileSync("git", ["diff", "--name-only", `${base}...HEAD`], {
       encoding: "utf8",
     })
       .split("\n")
@@ -31,7 +35,7 @@ const affected = new Set(
             encoding: "utf8",
             // Against the pull request's own base, which for a stacked
             // pull request is not main.
-            env: { ...process.env, TURBO_SCM_BASE: `origin/${base}` },
+            env: { ...process.env, TURBO_SCM_BASE: base },
           }
         )
       ).packages.items.map((item) => item.name.replace("@abacus-ai/", ""))
@@ -85,7 +89,9 @@ for (const shard of [1, 2])
     "desktop",
     vitest("apps/desktop", ` --project main-serial --shard=${shard}/2`)
   );
-// A manual run can ask for Linux alone.
+// PLATFORMS=linux (the workflow's platforms step) keeps macOS and Windows out:
+// a pull request without `ci:all-os`, a push to main, a merge queue run with
+// `ci:skip-os`, or a manual run that asks.
 // A change to the renderer alone reaches the desktop app only as its built
 // renderer, which Linux's Electron suites drive; macOS and Windows test what
 // differs by system, so they wait for a change outside apps/web.
