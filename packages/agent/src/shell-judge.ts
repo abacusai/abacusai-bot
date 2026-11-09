@@ -841,7 +841,7 @@ function judgeVerb(
         add(context, "systemDelete", "confirm", text);
       } else if (
         tool === "rm" &&
-        path.basename(operand.replace(/[\\/]+$/, "")) === ".git"
+        path.basename(trimSlashes(operand)) === ".git"
       ) {
         add(context, "gitHistory", "confirm", text);
       }
@@ -915,14 +915,23 @@ function operandsOf(args: readonly string[]): string[] {
   return operands;
 }
 
+/** A path without trailing slashes; a loop, as a regex would be quadratic on a run of them. */
+function trimSlashes(value: string): string {
+  let end = value.length;
+  while (end > 1 && (value[end - 1] === "/" || value[end - 1] === "\\"))
+    end -= 1;
+  return value.slice(0, end) || "/";
+}
+
 /** `/`, a drive root, the home folder itself, or everything in one of them. */
 function isRootOrHome(operand: string, target: string, home: string): boolean {
-  const strip = (value: string): string => value.replace(/[\\/]+$/, "") || "/";
   const top = (value: string): boolean =>
-    value === "/" || value === strip(home) || /^[a-z]:$/i.test(value);
+    value === "/" || value === trimSlashes(home) || /^[a-z]:$/i.test(value);
   if (/^[a-z]:[\\/]*\*?$/i.test(operand)) return true;
-  if (top(strip(target))) return true;
-  return path.basename(target) === "*" && top(strip(path.dirname(target)));
+  if (top(trimSlashes(target))) return true;
+  return (
+    path.basename(target) === "*" && top(trimSlashes(path.dirname(target)))
+  );
 }
 
 /** A system folder, unless it is the workspace the user pointed the agent at. */

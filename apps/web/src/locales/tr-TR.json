@@ -3165,7 +3165,6 @@
         "guard_disk": "This erases or overwrites a disk.",
         "guard_forcePush": "This force-pushes over git history.",
         "guard_gitHistory": "This deletes a whole .git folder and its history.",
-        "guard_killProcess": "This stops a process the agent did not start.",
         "guard_power": "This shuts down or restarts the computer.",
         "guard_privileged": "This runs as administrator on this computer.",
         "guard_systemDelete": "This deletes inside a system folder.",
