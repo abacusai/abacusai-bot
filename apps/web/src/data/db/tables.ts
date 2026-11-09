@@ -196,8 +196,6 @@ const ROUTINE_UPDATE_FIELDS = [
   "name",
   "botId",
   "workspaceId",
-  "access",
-  "reach",
   "model",
 ] as const;
 
@@ -226,12 +224,9 @@ export const routinesCollectionOptions = (
       ...(row.hosted?.timezone != null
         ? { timezone: row.hosted.timezone }
         : {}),
-      // What its runs may read, as the user set it in the form.
-      ...((row.hosted ?? row.reach) != null
-        ? {
-            sources: (row.hosted ?? row.reach)!.sources,
-            reads: (row.hosted ?? row.reach)!.reads,
-          }
+      // What a hosted routine's runs may read.
+      ...(row.hosted != null
+        ? { sources: row.hosted.sources, reads: row.hosted.reads }
         : {}),
     }),
     toUpdateInput: (id, changes) => ({

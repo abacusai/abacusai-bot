@@ -331,7 +331,7 @@ const HOSTED_PROPERTIES = {
     type: "array",
     items: { type: "string" },
     description:
-      "The page addresses a run may read under, e.g. https://news.example.com/tech/.",
+      "hosted: the page addresses a run may read under, e.g. https://news.example.com/tech/.",
   },
   reads: {
     type: "array",
@@ -339,7 +339,7 @@ const HOSTED_PROPERTIES = {
       type: "string",
       enum: ROUTINE_READS,
     },
-    description: "The account data a run may read; none unless given.",
+    description: "hosted: the account data a run may read; none unless given.",
   },
   watch_url: {
     type: "string",

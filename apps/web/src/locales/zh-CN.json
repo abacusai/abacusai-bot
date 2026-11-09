@@ -1660,8 +1660,7 @@
       "calendarRead": "读取 Google Calendar",
       "reads": "读取：",
       "searchOnly": "仅网页搜索",
-      "watches": "监控：",
-      "dropped": "已略过，因为例行任务无法读取：{{items}}"
+      "watches": "监控："
     },
     "paused": {
       "credits": "已暂停：积分已用完。",

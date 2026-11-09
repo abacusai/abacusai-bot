@@ -98,9 +98,10 @@ export interface CronJob {
   runner?: "local" | "hosted";
   /** Moved to the server (see routine-migration.ts): its id there. */
   serverId?: string | null;
-  /** Full access unless the user made it read-only ("unattended"). */
-  access?: "unattended" | "full";
-  /** What its unattended runs may reach. */
+  /**
+   * What an older version let it read when read-only. Runs here ignore it;
+   * a move to the server carries it (routine-migration.ts).
+   */
   reach?: RoutineReach | null;
   /** The server would not take it: it stays here, paused, with this reason. */
   notMoved?: string | null;
@@ -382,7 +383,6 @@ export const createJob = (
     name?: string;
     workspaceId?: string | null;
     botId?: string | null;
-    reach?: RoutineReach | null;
     model?: string | null;
     originSessionId?: string | null;
   },
@@ -431,7 +431,6 @@ export const createJob = (
     lastRunAt: null,
     lastResult: null,
     runs: [],
-    ...(input.reach != null ? { reach: input.reach } : {}),
     ...(input.model !== undefined ? { model: input.model } : {}),
     ...(input.originSessionId != null
       ? { originSessionId: input.originSessionId }
@@ -456,8 +455,6 @@ export const updateJob = (
       | "name"
       | "botId"
       | "workspaceId"
-      | "access"
-      | "reach"
       | "model"
       | "pausedBy"
     >

@@ -116,17 +116,6 @@ export const RoutineUpdateInputSchema = v.object({
   botId: v.optional(v.nullable(v.string())),
   workspaceId: v.optional(v.nullable(v.string())),
   webhook: v.optional(v.boolean()),
-  access: v.optional(v.picklist(["unattended", "full"])),
-  reach: v.optional(
-    v.nullable(
-      v.object({
-        sources: v.array(v.string()),
-        reads: v.array(
-          v.picklist(["gmail.search", "gmail.read", "calendar.read"])
-        ),
-      })
-    )
-  ),
   model: v.optional(v.nullable(v.string())),
 });
 

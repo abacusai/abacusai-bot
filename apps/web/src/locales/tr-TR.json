@@ -1660,8 +1660,7 @@
       "calendarRead": "Google Calendar'ı oku",
       "reads": "Okuduğu:",
       "searchOnly": "yalnızca web araması",
-      "watches": "İzlediği:",
-      "dropped": "Bir rutin bunları okuyamadığı için dışarıda bırakıldı: {{items}}"
+      "watches": "İzlediği:"
     },
     "paused": {
       "credits": "Duraklatıldı: kredi kalmadı.",

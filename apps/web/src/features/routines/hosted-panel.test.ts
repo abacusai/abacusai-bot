@@ -14,7 +14,7 @@ import { routineState } from "./data";
 import { runRoutineNow } from "./hosted-sync";
 import { hostedAwayNotice, hostedRunNotice, remember } from "./notify";
 import { routineRefusal } from "./refusal";
-import { droppedSources, nextPreview, wallTimeIn } from "./schema";
+import { nextPreview, wallTimeIn } from "./schema";
 
 const toast = vi.hoisted(() => ({ showInfo: vi.fn(), showError: vi.fn() }));
 vi.mock("#renderer/lib/toast", () => toast);
@@ -190,16 +190,7 @@ describe("running a hosted routine", () => {
   });
 });
 
-describe("the form's sources and times", () => {
-  it("names the sources a local routine did not keep", () => {
-    expect(
-      droppedSources(
-        ["news.example.com", "https://blog.example.org/tech", "localhost:3000"],
-        ["https://news.example.com/", "https://blog.example.org/tech"]
-      )
-    ).toEqual(["localhost:3000"]);
-  });
-
+describe("the form's times", () => {
   it("reads a hosted cron in its own zone's wall clock", () => {
     const now = new Date(Date.UTC(2026, 9, 8, 6, 30));
     const wall = wallTimeIn(now, "Asia/Kolkata");

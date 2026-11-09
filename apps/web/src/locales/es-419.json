@@ -1660,8 +1660,7 @@
       "calendarRead": "Read Google Calendar",
       "reads": "Reads:",
       "searchOnly": "web search only",
-      "watches": "Vigila:",
-      "dropped": "Se omitieron porque una rutina no puede leerlas: {{items}}"
+      "watches": "Vigila:"
     },
     "paused": {
       "credits": "Paused: out of credits.",

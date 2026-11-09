@@ -1660,8 +1660,7 @@
       "calendarRead": "Read Google Calendar",
       "reads": "Reads:",
       "searchOnly": "web search only",
-      "watches": "확인 대상:",
-      "dropped": "루틴이 읽을 수 없어 제외했습니다: {{items}}"
+      "watches": "확인 대상:"
     },
     "paused": {
       "credits": "Paused: out of credits.",
