@@ -67,7 +67,7 @@ import compactionPruner from "./extensions/compaction-pruner.js";
 import diskFull from "./extensions/disk-full.js";
 import editTool from "./extensions/edit-tool.js";
 import emailFormat from "./extensions/email-format.js";
-import guardrails from "./extensions/guardrails.js";
+import { createGuardrails } from "./extensions/guardrails.js";
 import knowledge from "./extensions/knowledge.js";
 import orientation from "./extensions/orientation.js";
 import outputRepair from "./extensions/output-repair.js";
@@ -109,6 +109,7 @@ import {
   connectionRetryBudgetMs,
   networkWaitBudgetMs,
   runMadeProgress,
+  runOrigin,
   type NetworkSuspect,
 } from "./network-wait.js";
 import {
@@ -191,6 +192,7 @@ import {
 import { serviceRoutingPrompt } from "./service-routing-prompt.js";
 import { runSessionAction } from "./session-actions.js";
 import { conversationSessionManager } from "./session-file.js";
+import { guardDecision, logGuardVerdict } from "./shell-judge.js";
 import {
   MAX_STALL_RECOVERIES_PER_TURN,
   STALL_CONTINUATION_PROMPT,
@@ -1089,7 +1091,10 @@ export class AbacusBotSession {
             },
             {
               name: "abacusai-bot-guardrails",
-              factory: guardrails as unknown as (pi: ExtensionAPI) => void,
+              // The gate above asks about judged commands; this keeps the file rules.
+              factory: createGuardrails({
+                confirm: "gate",
+              }) as unknown as (pi: ExtensionAPI) => void,
             },
             // Spill runs before the extensions that read tool output, so they see
             // the bounded text rather than the full dump.
@@ -3620,6 +3625,8 @@ export class AbacusBotSession {
         }),
         promptableCredentialPaths: this.promptableCredentialPaths(ctx.cwd),
         allowedCredentialPaths: this.sandboxApprovals.reads.sessionPaths,
+        // A routine's run has nobody at a card, even with the app attached.
+        noAnswerer: !this.canReachUser() || runOrigin() === "routine",
         ...(this.options.unattended != null
           ? {
               unattended: {
@@ -3645,12 +3652,20 @@ export class AbacusBotSession {
       }
 
       if (gate.kind === "refuse") {
+        if (gate.guard != null)
+          logGuardVerdict(
+            gate.guard.verdict,
+            gate.guard.rules,
+            gate.guard.verdict === "never" ? "refused" : "no_answerer"
+          );
         this.noteBlocked(event.toolCallId, "refused");
 
         return { block: true, reason: gate.reason };
       }
 
       const permissionId = `perm-${++this.permissionCounter}`;
+      const guard =
+        gate.request.type === "run_terminal" ? gate.request.guard : undefined;
 
       // Before/after content up front, so the card shows the diff at once.
       if (gate.request.type === "edit_file") {
@@ -3713,6 +3728,12 @@ export class AbacusBotSession {
 
       const verdict = this.applyDecision(decision, tool, gate.request);
 
+      if (guard != null)
+        logGuardVerdict(
+          "confirm",
+          guard.rules,
+          guardDecision(decision, verdict)
+        );
       if (verdict?.block === true) {
         this.noteBlocked(event.toolCallId, "rejected");
       }

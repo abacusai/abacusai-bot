@@ -139,6 +139,39 @@ export const present = (request: PermissionRequest): CardModel => {
           note: true,
           chip: "runCommand",
         };
+      // The shell judge's short list: the reason on the card, and "for this
+      // chat" lifts the category (allowances.ts), never the command prefix.
+      if (request.guard != null) {
+        const liftable = request.guard.rules.filter(
+          (rule) => rule !== "unreadable"
+        );
+        return {
+          title: "runCommand",
+          warning: true,
+          description: `guard_${request.guard.rules[0] ?? "unreadable"}`,
+          body: { kind: "command", command: request.command, cwd: request.cwd },
+          ...(request.credentialPaths != null &&
+          request.credentialPaths.length > 0
+            ? { paths: request.credentialPaths }
+            : {}),
+          actions: [
+            allowOnce(),
+            ...(liftable.length > 0
+              ? [
+                  {
+                    id: "allowAlways",
+                    label: "allowGuardForChat",
+                    decision: "allowAlways",
+                    variant: "secondary",
+                  } as CardAction,
+                ]
+              : []),
+            deny(),
+          ],
+          note: true,
+          chip: "runCommand",
+        };
+      }
       const rule = bashRule(request.command);
       return {
         title: "runCommand",

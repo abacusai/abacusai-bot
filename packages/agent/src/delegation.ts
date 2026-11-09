@@ -20,7 +20,7 @@ import {
 import { confinedBashTool } from "./backends.js";
 import { subAgentBasePrompt } from "./base-prompt.js";
 import { excludedTools } from "./excluded-tools.js";
-import guardrails from "./extensions/guardrails.js";
+import { createGuardrails } from "./extensions/guardrails.js";
 import { scopeGuard, taskScope } from "./extensions/scope-guard.js";
 import { modelPath, MODEL_PATH_RESOURCES } from "./model-path.js";
 import { scriptRuntimesPrompt, windowsShellPrompt } from "./posix-shell.js";
@@ -150,7 +150,10 @@ export async function runDelegatedTask(
       extensionFactories: [
         {
           name: "abacusai-bot-guardrails",
-          factory: guardrails as unknown as (pi: ExtensionAPI) => void,
+          // Nobody watches a sub-agent: a judged command is refused, not asked.
+          factory: createGuardrails({ confirm: "refuse" }) as unknown as (
+            pi: ExtensionAPI
+          ) => void,
         },
         { name: "abacusai-bot-scope-guard", factory: scopeGuard(scope) },
       ] satisfies InlineExtension[],

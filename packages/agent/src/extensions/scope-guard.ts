@@ -19,17 +19,12 @@ import * as path from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 import { modelPath } from "../model-path.js";
+import { judgeCommand, type Judgement } from "../shell-judge.js";
 import {
   isInsideDirectory,
   realPathOf,
   resolveInWorkspace,
 } from "../workspace-path.js";
-import {
-  bashWriteTargets,
-  SEGMENT_SPLIT,
-  shellWords,
-  WRAPPER_COMMANDS,
-} from "./guardrails.js";
 
 export interface TaskScope {
   root: string;
@@ -146,41 +141,31 @@ export function outsideScope(
 const LOOKS_LIKE_PATH = /^(?:\/|~(?:[\\/]|$)|[A-Za-z]:[\\/]|\.\.(?:[\\/]|$))/;
 
 /**
- * The path operands of a shell command: every word after the verb that is
- * absolute, `~`-rooted, `$HOME`-rooted or climbs with `..`, including the
- * value of a `--flag=/path`. The verb itself is skipped, so running a tool
- * by its full path is not a read of that path.
+ * The path operands of a shell command: every argument or redirect file of a
+ * command this machine runs that is absolute, home-rooted or climbs with
+ * `..`, including the value of a `--flag=/path`. The verb itself is skipped,
+ * so running a tool by its full path is not a read of that path.
  */
-export function shellPathOperands(command: string): string[] {
+export function shellPathOperands(
+  command: string,
+  cwd: string = process.cwd(),
+  judgement: Judgement = judgeCommand(command, { cwd })
+): string[] {
   const operands: string[] = [];
-
-  for (const segment of command.split(SEGMENT_SPLIT)) {
-    const words = shellWords(segment);
-    let index = 0;
-    while (
-      index < words.length &&
-      (WRAPPER_COMMANDS.has(words[index]!) || /^\w+=/.test(words[index]!))
-    )
-      index += 1;
-
-    for (const word of words.slice(index + 1)) {
-      // `2>/dev/null`, `<in.txt`: the redirect's file is an operand too.
-      const unredirected = word.replace(/^(?:\d*|&)(?:>>?|<)/, "");
-      const value = unredirected.startsWith("-")
-        ? (unredirected.split("=")[1] ?? "")
-        : unredirected;
-      const expanded = value.replace(/^\$\{?HOME\}?(?=\/|$)/, "~");
-      if (LOOKS_LIKE_PATH.test(expanded)) operands.push(expanded);
+  for (const local of judgement.commands) {
+    for (const word of [...local.args, ...local.redirects]) {
+      const value = word.startsWith("-") ? (word.split("=")[1] ?? "") : word;
+      if (LOOKS_LIKE_PATH.test(value)) operands.push(value);
     }
   }
-
   return operands;
 }
 
 /** The paths one tool call reaches for, and how; empty for tools that touch none. */
 export function targetsOf(
   toolName: string,
-  input: Record<string, unknown>
+  input: Record<string, unknown>,
+  cwd: string = process.cwd()
 ): Array<{ path: string; access: Access }> {
   switch (toolName) {
     case "read":
@@ -197,13 +182,12 @@ export function targetsOf(
         : [];
     case "bash": {
       if (typeof input.command !== "string") return [];
-      // Operands are judged as reads, except the ones the guardrails' own
-      // parser says the command writes to.
-      const writes = bashWriteTargets(input.command).map((target) =>
-        target.replace(/^\$\{?HOME\}?(?=\/|$)/, "~")
-      );
+      // Operands are judged as reads, except the ones the shell judge says
+      // the command writes to.
+      const judgement = judgeCommand(input.command, { cwd });
+      const writes = judgement.localWrites.map((write) => write.target);
       const operands = new Set([
-        ...shellPathOperands(input.command),
+        ...shellPathOperands(input.command, cwd, judgement),
         ...writes.filter((target) => LOOKS_LIKE_PATH.test(target)),
       ]);
       return [...operands].map((operand) => ({
@@ -229,7 +213,7 @@ export function scopeGuard(scope: TaskScope): (pi: ExtensionAPI) => void {
   return (pi) => {
     pi.on("tool_call", async (event, ctx) => {
       const input = (event.input ?? {}) as Record<string, unknown>;
-      const outside = targetsOf(event.toolName, input).find((target) =>
+      const outside = targetsOf(event.toolName, input, ctx.cwd).find((target) =>
         outsideScope(target.path, ctx.cwd, scope, target.access)
       );
       if (outside == null) return;

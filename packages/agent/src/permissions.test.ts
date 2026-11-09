@@ -19,6 +19,7 @@ import * as path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { Allowances } from "./allowances.js";
 import { modelPath } from "./model-path.js";
 import {
   gateToolCall,
@@ -79,15 +80,100 @@ describe("bypass mode", () => {
   it.each([AgentMode.Yolo, AgentMode.Auto])(
     "%s allows everything, including what Plan would refuse",
     (mode) => {
+      // Off the shell judge's short list (its own describe below).
       for (const tool of ["bash", "write", "edit", "web_fetch", "read"]) {
         const gate = gateToolCall(
-          call(tool, { command: "rm -rf /", path: "x", url: "http://x.test" }),
+          call(tool, {
+            command: "npm publish",
+            path: "x",
+            url: "http://x.test",
+          }),
           options({ mode })
         );
         expect(gate.kind, tool).toBe("allow");
       }
     }
   );
+});
+
+/**
+ * The shell judge's short list asks in every mode, Full access included, and
+ * the user's yes is what lifts it: once, or for the chat by category.
+ */
+describe("the shell judge at the gate", () => {
+  const sudo = call("bash", { command: "sudo apt-get install -y nginx" });
+
+  it.each([
+    AgentMode.Yolo,
+    AgentMode.Auto,
+    AgentMode.Normal,
+    AgentMode.AcceptEdits,
+  ])("%s shows one run-command card with the reason", (mode) => {
+    const gate = gateToolCall(sudo, options({ mode }));
+    expect(gate.kind).toBe("ask");
+    if (gate.kind !== "ask" || gate.request.type !== "run_terminal")
+      throw new Error("expected a run-command card");
+    expect(gate.request.guard?.rules).toEqual(["privileged"]);
+  });
+
+  it("refuses the never tier in every mode, Full access included", () => {
+    const gate = gateToolCall(
+      call("bash", { command: "rm -rf ~" }),
+      options({ mode: AgentMode.Yolo })
+    );
+    expect(gate.kind).toBe("refuse");
+  });
+
+  it("lifts a category for the chat, not another category, and not by first word", () => {
+    const allowances = new Allowances();
+    const first = gateToolCall(sudo, options({ mode: AgentMode.Yolo }));
+    if (first.kind !== "ask") throw new Error("expected a card");
+    allowances.remember(sudo, first.request);
+
+    const gateWith = (command: string) =>
+      gateToolCall(
+        call("bash", { command }),
+        options({ mode: AgentMode.Yolo, ...allowances.gateOptions() })
+      ).kind;
+    expect(gateWith("sudo systemctl restart nginx")).toBe("allow");
+    expect(gateWith("git push --force origin main")).toBe("ask");
+    // Remembered by category: no `sudo` prefix lands in the command list.
+    expect(allowances.commands).toEqual([]);
+  });
+
+  it("is not lifted by an always-allowed command prefix", () => {
+    const gate = gateToolCall(
+      call("bash", { command: "sudo rm -rf /usr/local/lib/x" }),
+      options({ mode: AgentMode.Normal, allowedCommands: ["sudo"] })
+    );
+    expect(gate.kind).toBe("ask");
+  });
+
+  it("refuses with what to tell the user where nobody can answer", () => {
+    for (const command of ["sudo apt-get install -y x", "pkill -f server"]) {
+      const gate = gateToolCall(
+        call("bash", { command }),
+        options({ mode: AgentMode.Yolo, noAnswerer: true })
+      );
+      expect(gate.kind, command).toBe("refuse");
+      if (gate.kind === "refuse")
+        expect(gate.reason).toContain("exact command");
+    }
+    expect(
+      gateToolCall(
+        call("bash", { command: "pkill -f server" }),
+        options({ mode: AgentMode.Yolo })
+      ).kind
+    ).toBe("allow");
+  });
+
+  it("leaves a remote command to the mode", () => {
+    const gate = gateToolCall(
+      call("bash", { command: "ssh u@h 'sudo reboot'" }),
+      options({ mode: AgentMode.Yolo })
+    );
+    expect(gate.kind).toBe("allow");
+  });
 });
 
 describe("plan mode", () => {
@@ -264,7 +350,8 @@ describe("bash allowances", () => {
         call("bash", { command }),
         options({ allowedCommands: ["npm test"] })
       );
-      expect(gate.kind).toBe("ask");
+      // `rm -rf /` is refused outright by the shell judge; never allowed.
+      expect(gate.kind).not.toBe("allow");
     }
   );
 

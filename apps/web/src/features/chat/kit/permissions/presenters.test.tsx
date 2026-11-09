@@ -249,6 +249,32 @@ const REQUESTS: Array<[PermissionRequest, RegExp | string, string[]]> = [
     "question",
     ["reject"],
   ],
+  [
+    {
+      type: "run_terminal",
+      command: "sudo apt-get install -y nginx",
+      cwd: "/r",
+      background: false,
+      guard: { rules: ["privileged"] },
+      tool,
+      displayName: "",
+    } as PermissionRequest,
+    "runCommand",
+    ["accept", "allowAlways", "reject"],
+  ],
+  [
+    {
+      type: "run_terminal",
+      command: "$(echo x) y",
+      cwd: "/r",
+      background: false,
+      guard: { rules: ["unreadable"] },
+      tool,
+      displayName: "",
+    } as PermissionRequest,
+    "runCommand",
+    ["accept", "reject"],
+  ],
 ];
 
 describe("R2-T23 presenters", () => {

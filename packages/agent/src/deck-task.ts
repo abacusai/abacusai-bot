@@ -17,7 +17,7 @@ import { Type } from "typebox";
 import { confinedBashTool } from "./backends.js";
 import { subAgentBasePrompt } from "./base-prompt.js";
 import { excludedTools } from "./excluded-tools.js";
-import guardrails from "./extensions/guardrails.js";
+import { createGuardrails } from "./extensions/guardrails.js";
 import type { HostServiceClient } from "./host-services.js";
 import { modelPath, MODEL_PATH_RESOURCES } from "./model-path.js";
 import type { AgentEvent } from "./protocol.js";
@@ -405,7 +405,10 @@ export async function runDeckTask(
       extensionFactories: [
         {
           name: "abacusai-bot-guardrails",
-          factory: guardrails as unknown as (pi: ExtensionAPI) => void,
+          // Nobody watches a sub-agent: a judged command is refused, not asked.
+          factory: createGuardrails({ confirm: "refuse" }) as unknown as (
+            pi: ExtensionAPI
+          ) => void,
         },
       ] satisfies InlineExtension[],
     });

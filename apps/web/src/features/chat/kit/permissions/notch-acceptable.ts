@@ -10,7 +10,11 @@ export const notchAcceptable = (
   let lines: string[];
   switch (r.type) {
     case "run_terminal":
-      if (r.credentialPaths?.length || r.unmatchedPatterns?.length)
+      if (
+        r.credentialPaths?.length ||
+        r.unmatchedPatterns?.length ||
+        r.guard != null
+      )
         return { ok: false, reason: "review" };
       lines = [
         r.command,

@@ -85,6 +85,7 @@ import {
   connectionRetryBudgetMs,
   networkWaitBudgetMs,
   runMadeProgress,
+  runOrigin,
   type NetworkSuspect,
 } from "../network-wait.js";
 import {
@@ -162,6 +163,7 @@ import {
   mcpRosterFingerprint,
   reserveContextHeadroom,
 } from "../session.js";
+import { guardDecision, logGuardVerdict } from "../shell-judge.js";
 import {
   MAX_STALL_RECOVERIES_PER_TURN,
   STALL_CONTINUATION_PROMPT,
@@ -2682,6 +2684,8 @@ export class ForeverEngine {
           tools: [...this.profile.alwaysAllowedTools],
           readPaths: this.config.allowedReadPaths,
         }),
+        // A bot's routine run has nobody at a card either.
+        noAnswerer: this.noAnswerer() || runOrigin() === "routine",
         ...(this.options.unattended != null
           ? {
               unattended: {
@@ -2696,16 +2700,21 @@ export class ForeverEngine {
       if (gate.kind === "allow") return;
 
       if (gate.kind === "refuse") {
+        if (gate.guard != null)
+          logGuardVerdict(
+            gate.guard.verdict,
+            gate.guard.rules,
+            gate.guard.verdict === "never" ? "refused" : "no_answerer"
+          );
         this.noteBlocked(event.toolCallId, "refused");
 
         return { block: true, reason: gate.reason };
       }
 
-      if (
-        !this.profile.canAskForApproval ||
-        !process.stdout.writable ||
-        process.stdout.destroyed
-      ) {
+      const guard =
+        gate.request.type === "run_terminal" ? gate.request.guard : undefined;
+
+      if (this.noAnswerer()) {
         this.noteBlocked(event.toolCallId, "rejected");
 
         return {
@@ -2766,6 +2775,12 @@ export class ForeverEngine {
 
       const verdict = this.applyDecision(decision, tool, gate.request);
 
+      if (guard != null)
+        logGuardVerdict(
+          "confirm",
+          guard.rules,
+          guardDecision(decision, verdict)
+        );
       if (verdict?.block === true) {
         this.noteBlocked(event.toolCallId, "rejected");
       }
@@ -2773,6 +2788,15 @@ export class ForeverEngine {
       return verdict;
     });
   };
+
+  /** Whether a card could reach anyone: the profile asks, and stdout is open. */
+  private noAnswerer(): boolean {
+    return (
+      !this.profile.canAskForApproval ||
+      !process.stdout.writable ||
+      process.stdout.destroyed
+    );
+  }
 
   private applyDecision(
     decision: PermissionDecision,

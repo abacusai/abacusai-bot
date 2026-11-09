@@ -128,12 +128,13 @@ describe("how a tool call reaches a path", () => {
   });
 
   it("writes where the shell redirects or copies to, and reads the rest", () => {
+    const home = os.homedir();
     expect(targetsOf("bash", { command: "cat ~/.npm/a > ~/.npm/b" })).toEqual([
-      { path: "~/.npm/a", access: "read" },
-      { path: "~/.npm/b", access: "write" },
+      { path: `${home}/.npm/a`, access: "read" },
+      { path: `${home}/.npm/b`, access: "write" },
     ]);
     expect(targetsOf("bash", { command: "cp src/x $HOME/.cargo/y" })).toEqual([
-      { path: "~/.cargo/y", access: "write" },
+      { path: `${home}/.cargo/y`, access: "write" },
     ]);
   });
 });
@@ -169,8 +170,8 @@ describe("reading paths out of a shell command", () => {
       )
     ).toEqual(["/", "/dev/null"]);
     expect(shellPathOperands("ls ~ && cat $HOME/.zshrc ../x")).toEqual([
-      "~",
-      "~/.zshrc",
+      os.homedir(),
+      `${os.homedir()}/.zshrc`,
       "../x",
     ]);
   });
