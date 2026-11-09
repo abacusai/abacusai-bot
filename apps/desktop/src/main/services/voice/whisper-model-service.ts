@@ -172,6 +172,8 @@ export class WhisperModelService {
     try {
       response = await doFetch(remoteUrl(model, file).href);
     } catch (error) {
+      // Failures say so, or the renderer's notice would wait on this file forever.
+      progress(0, 0, true, true);
       return {
         status: 502,
         error: error instanceof Error ? error.message : String(error),
@@ -179,6 +181,7 @@ export class WhisperModelService {
     }
     if (response.status === 404) return { status: 404 };
     if (!response.ok || response.body == null) {
+      progress(0, 0, true, true);
       return { status: 502, error: `Hugging Face answered ${response.status}` };
     }
     const total = Number(response.headers.get("content-length") ?? 0);

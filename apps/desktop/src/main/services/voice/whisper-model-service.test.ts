@@ -130,6 +130,17 @@ describe("downloading", () => {
     });
   });
 
+  it("announces a failed answer from Hugging Face as a failed file", async () => {
+    const result = await service(
+      () => new Response("busy", { status: 503 })
+    ).fetchFile(`${REPO}onnx/encoder_model_quantized.onnx`);
+
+    expect(result.status).toBe(502);
+    expect(events.at(-1)).toMatchObject({
+      progress: { done: true, failed: true },
+    });
+  });
+
   it("passes a 404 through, so an optional file stays optional", async () => {
     const result = await service(
       () => new Response(null, { status: 404 })
@@ -149,7 +160,19 @@ describe("downloading", () => {
     }).fetchFile(`${REPO}config.json`);
 
     expect(result).toEqual({ status: 502, error: "offline" });
-    expect(events).toEqual([]);
+    // The renderer's download notice learns this file failed.
+    expect(
+      events.flatMap((event) =>
+        event.type === "whisper-download-progress" ? [event.progress] : []
+      )
+    ).toEqual([
+      expect.objectContaining({
+        file: "config.json",
+        done: true,
+        failed: true,
+        modelReady: false,
+      }),
+    ]);
     expect(fs.readdirSync(dir)).toEqual([]);
   });
 
