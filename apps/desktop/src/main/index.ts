@@ -1743,10 +1743,18 @@ registerAppScheme();
 // sessions. Losing the lock is not final: a relaunch's child arrives while
 // its parent is still dying, so whenReady retries before giving up.
 let gotSingleInstanceLock = app.requestSingleInstanceLock();
+// Relaunching during staging cancels the pending quit and restores the Dock.
+function revealOnRelaunch(): void {
+  if (quitAwaitingUpdate != null) {
+    quitAwaitingUpdate = null;
+    quitUpdateChecked = false;
+  }
+  if (process.platform === "darwin" && app.dock?.isVisible() === false)
+    void app.dock.show();
+  revealMainWindow();
+}
 if (gotSingleInstanceLock) {
-  app.on("second-instance", () => {
-    revealMainWindow();
-  });
+  app.on("second-instance", revealOnRelaunch);
 }
 
 app
@@ -1764,9 +1772,7 @@ app
         app.quit();
         return;
       }
-      app.on("second-instance", () => {
-        revealMainWindow();
-      });
+      app.on("second-instance", revealOnRelaunch);
     }
 
     if (process.argv.includes("--restore-legacy-files")) {
@@ -1973,7 +1979,7 @@ app
       if (aliveMainWindow() == null) {
         createWindow();
       } else {
-        revealMainWindow();
+        revealOnRelaunch();
       }
     });
 
@@ -2034,6 +2040,8 @@ nativeAutoUpdater.on("before-quit-for-update", () => {
 const QUIT_LOG_SYNC_MS = 2_500;
 let quitGracefulInProgress = false;
 let quitUpdateChecked = false;
+/** The quit waiting on its update install; a relaunch cancels it. */
+let quitAwaitingUpdate: object | null = null;
 app.on("before-quit", (event) => {
   if (
     !isDataResetPending() &&
@@ -2043,10 +2051,16 @@ app.on("before-quit", (event) => {
   ) {
     event.preventDefault();
     quitUpdateChecked = true;
+    const quit = {};
+    quitAwaitingUpdate = quit;
     // Never waits for a running task: a quit must not hang.
-    void updateService.installUpdate({ silent: true }).then((result) => {
-      if (!result.success) app.quit();
-    });
+    void updateService
+      .installUpdate({ silent: true, quitting: true })
+      .then((result) => {
+        if (quitAwaitingUpdate !== quit) return;
+        quitAwaitingUpdate = null;
+        if (!result.success) app.quit();
+      });
     return;
   }
   // So the window 'close' handler stops intercepting.
