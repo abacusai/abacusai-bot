@@ -352,7 +352,7 @@ import {
   buildRoutineEditorPrompt,
   buildRoutineFirePrompt,
 } from "./services/agent-tools/routine-prompt";
-import { cleanSources, policyFor } from "./services/agent-tools/routine-reach";
+import { policyFor } from "./services/agent-tools/routine-reach";
 import {
   carriesUserWords,
   chatAppReportText,
@@ -6323,8 +6323,6 @@ export class ServiceHost {
             watchUrl: request.watchUrl,
             watchPrompt: request.prompt,
             privateInput: request.payload != null,
-            // Every hosted run shares one folder: no run reads another's.
-            files: false,
           }
         )
       )
@@ -8250,15 +8248,6 @@ export class ServiceHost {
         idempotencyKey: id ?? randomUUID(),
       });
     }
-    // What a local routine may reach, in force at once.
-    const { sources, refused } = cleanSources(input.sources ?? []);
-    const reads = [...new Set(input.reads ?? [])];
-    if (refused.length > 0 && options.byAgent === true)
-      throw new InvalidInputError(
-        `These cannot be a routine's sources: ${refused.join(", ")}.`
-      );
-    const reach =
-      sources.length > 0 || reads.length > 0 ? { sources, reads } : null;
     const model = newRoutineModel(
       input.botId == null ? null : getBot(input.botId)?.model,
       options.chatModel
@@ -8267,7 +8256,6 @@ export class ServiceHost {
       {
         ...input,
         model,
-        ...(reach != null ? { reach } : {}),
         originSessionId: options.originSessionId ?? null,
       },
       id
@@ -8291,12 +8279,8 @@ export class ServiceHost {
         rest.name != null ||
         rest.prompt != null ||
         rest.schedule != null ||
-        rest.runAt != null ||
-        rest.reach != null
+        rest.runAt != null
           ? await this.hostedRoutines.update(id, {
-              ...(rest.reach != null
-                ? { sources: rest.reach.sources, reads: rest.reach.reads }
-                : {}),
               ...(rest.name != null ? { name: rest.name } : {}),
               ...(rest.prompt != null ? { prompt: rest.prompt } : {}),
               ...(rest.schedule != null ? { cron: rest.schedule } : {}),
@@ -8499,9 +8483,6 @@ export class ServiceHost {
     const stray = this.strayRoutineHome(job);
     if (stray != null) reclaimRoutineRecords(stray, home);
 
-    // Full access, as a routine on this computer always had, unless the user
-    // made this one read-only.
-    const unattended = job.access === "unattended";
     const fireKey = `${jobId}@${fire?.slot ?? attemptId}`;
     const lastRun = readLastRoutineRun(home);
     const prompt = this.withBotVoice(
@@ -8511,7 +8492,6 @@ export class ServiceHost {
         ...(this.deliversRoutineReports()
           ? { deliveredTo: this.reportDestination(job) }
           : {}),
-        unattended,
         dir: home,
         // The project when there is one; the run's cwd is that folder and its
         // records sit inside it. Otherwise the routine's own folder is both.
@@ -8571,31 +8551,8 @@ export class ServiceHost {
     this.updateAgentSessionLabel(target, session.id, `Routine: ${job.name}`);
     this.noteRoutineFire(session.id, fireKey);
 
-    // Held to what the user confirmed it may reach; a run that cannot be held
-    // does not start in any other mode.
-    if (
-      unattended &&
-      !this.agentSessionManagerService.holdUnattended(
-        session.id,
-        policyFor(job.reach, { privateInput: payload != null })
-      )
-    ) {
-      this.agentSessionManagerService.setRunOutcome(session.id, "failed");
-      recordRun(jobId, `${ROUTINE_RESULTS.startFailedPrefix}held`, trigger, {
-        id: attemptId,
-        kind: "start-failed",
-        sessionId: session.id,
-      });
-      this.emitEvent({
-        type: "cronjobs-updated",
-        emittedAt: new Date().toISOString(),
-      });
-      return "failed";
-    }
-
-    // Nobody is at the keyboard: a tool waiting for approval would wait
-    // until the reaper fails the run. A full-access routine runs in the
-    // default mode; any other is held unattended whatever this asks.
+    // Nobody is at the keyboard: a tool waiting for approval would wait until
+    // the reaper fails the run, so it runs in the default mode, which never asks.
     const started = await this.startAgentSession({
       workspaceId: target,
       sessionId: session.id,

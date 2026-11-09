@@ -452,31 +452,21 @@ describe("the fire prompt", () => {
   const records = `${project}/.abacusai-bot/routines/job-1`;
   it.each([
     {
-      access: "unattended",
-      notes: { path: `${records}/notes.md`, kept: false, maybeAt: null },
-      says: [`There is no ${records}/notes.md`],
-      never: ["Create", "Update"],
-    },
-    {
-      access: "unattended",
-      notes: { path: `${records}/notes.md`, kept: true, maybeAt: null },
-      says: [`${records}/notes.md holds the notes`, "read it first"],
-      never: ["There is no", "Create", "Update"],
-    },
-    {
-      access: "full",
       notes: { path: `${records}/notes.md`, kept: false, maybeAt: null },
       says: [`There is no ${records}/notes.md`, `Create ${records}/notes.md`],
       never: ["Update", `${project}/notes.md`],
     },
     {
-      access: "full",
       notes: { path: `${records}/notes.md`, kept: true, maybeAt: null },
-      says: [`Update ${records}/notes.md`, "keep notes nowhere else"],
+      says: [
+        `${records}/notes.md holds the notes`,
+        "read it first",
+        `Update ${records}/notes.md`,
+        "keep notes nowhere else",
+      ],
       never: ["There is no", "Create"],
     },
     {
-      access: "full",
       notes: {
         path: `${records}/notes.md`,
         kept: false,
@@ -490,10 +480,9 @@ describe("the fire prompt", () => {
       never: ["Update"],
     },
   ])(
-    "states the notes as a fact, by full path ($access, kept: $notes.kept, root: $notes.maybeAt)",
-    ({ access, notes, says, never }) => {
+    "states the notes as a fact, by full path (kept: $notes.kept, root: $notes.maybeAt)",
+    ({ notes, says, never }) => {
       const prompt = buildRoutineFirePrompt(job(), "schedule", null, {
-        unattended: access === "unattended",
         dir: records,
         notes,
         runs: 1,

@@ -94,21 +94,22 @@ const isLocalOrLiteral = (host: string): boolean => {
   );
 };
 
-/** An unattended run's policy from a routine's confirmed reach. */
+/**
+ * A hosted run's policy from its routine's reach. It reads no files: every
+ * hosted run shares one folder, and no run reads another's.
+ */
 export const policyFor = (
-  reach: RoutineReach | null | undefined,
+  reach: RoutineReach,
   extra: {
     watchUrl?: string | null;
     watchPrompt?: string;
     privateInput?: boolean;
-    /** False: the run reads no files (a hosted run's folder holds other runs). */
-    files?: boolean;
   } = {}
 ): UnattendedPolicy => ({
-  sources: cleanSources(reach?.sources ?? []).sources,
+  sources: cleanSources(reach.sources).sources,
   watchUrl: extra.watchUrl ?? null,
   ...(extra.watchPrompt != null ? { watchPrompt: extra.watchPrompt } : {}),
-  connectorReads: connectorReadsFor(reach?.reads ?? []),
+  connectorReads: connectorReadsFor(reach.reads),
   ...(extra.privateInput === true ? { privateInput: true } : {}),
-  ...(extra.files === false ? { files: false } : {}),
+  files: false,
 });

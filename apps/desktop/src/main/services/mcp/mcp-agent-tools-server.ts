@@ -1421,14 +1421,11 @@ export class McpAgentToolsServer extends McpHttpServer {
           workspaceId: this.options.workspaceId?.(callerSession) ?? null,
           botId,
         };
-        // What it may read, as asked: held until the user allows it.
-        const sources = requestedSources(args);
-        const reads = requestedReads(args);
         // The one create path, local here; without a host, the store itself.
         const job =
           this.options.routines != null
             ? await this.options.routines.create(
-                { ...input, runner: "local", sources, reads },
+                { ...input, runner: "local" },
                 { byAgent: true, fromSession: callerSession }
               )
             : createJob(input);
@@ -1477,29 +1474,16 @@ export class McpAgentToolsServer extends McpHttpServer {
             ? `\nIt can also be fired by POST to the webhook shown in the Routines panel.`
             : "";
 
-        // A read-only (or hosted) routine's runs are held: say what that means,
-        // and that what it was asked to read waits for the user. A local one
-        // runs with this conversation's reach.
-        const held = job.runner === "hosted" || job.access === "unattended";
         const where =
           " It runs on this computer, only while the computer is on and AbacusAI Bot is open;" +
-          " routines here are unlimited on every plan, though each run spends credits like a chat turn.";
-        const reach = !held
-          ? " Its runs have full access, like this conversation."
-          : " Its runs are unattended: they search the web and read its own folder, but " +
-            "cannot write files, run commands or message anyone, unless the user gives it " +
-            "full access on its page." +
-            (sources.length + reads.length > 0
-              ? " It reads nothing you asked for (" +
-                [...reads, ...sources].join(", ") +
-                ") until the user allows it on the routine's page: tell them."
-              : "");
+          " routines here are unlimited on every plan, though each run spends credits like a chat turn." +
+          " Its runs have full access, like this conversation.";
         const note = alwaysOnNote(
           (await this.options.routines?.alwaysOnNote?.()) ?? null
         );
         const costly = await this.costlyModelNote(job.model);
         return this.ok(
-          `Created. ${delivery}${once}${where}${reach}${first}${hook}${costly}${note}\n\n${describeJob(job)}`
+          `Created. ${delivery}${once}${where}${first}${hook}${costly}${note}\n\n${describeJob(job)}`
         );
       }
 

@@ -23,7 +23,7 @@ import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_BROWSER } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { ROUTINE_TEMPLATES } from "#renderer/lib/routines/templates";
-import { showError, showInfo } from "#renderer/lib/toast";
+import { showError } from "#renderer/lib/toast";
 import { useAccount } from "#renderer/lib/use-account";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import {
@@ -59,9 +59,7 @@ import {
   routineFormSchema,
   valuesForRoutine,
   dirtyPatch,
-  droppedSources,
   nextPreview,
-  reachOf,
 } from "./schema";
 export const RoutineDialog = ({
   routineId,
@@ -156,7 +154,6 @@ export const RoutineDialog = ({
           ).isPersisted.promise;
           baseline.current = parsed;
           form.reset(parsed);
-          reportDropped(routineId, parsed);
           close();
           return;
         }
@@ -187,17 +184,16 @@ export const RoutineDialog = ({
                     timezone: browserTimeZone(),
                     notify: "always" as const,
                     delivery: "default" as const,
-                    ...reachOf(parsed),
+                    sources: [],
+                    reads: [],
                     watchUrl: null,
                     pausedReason: null,
                     lastRun: null,
                   },
                 }
-              : {
-                  ...(offerRunner ? { runner: "local" as const } : {}),
-                  // The user's own form: in force at once.
-                  reach: reachOf(parsed),
-                }),
+              : offerRunner
+                ? { runner: "local" as const }
+                : {}),
           };
           await db.collections.routines.insert(optimistic).isPersisted.promise;
         };
@@ -211,7 +207,6 @@ export const RoutineDialog = ({
         const savedId = saved?.id ?? insertedId;
         baseline.current = parsed;
         form.reset(parsed);
-        reportDropped(savedId, parsed);
         if (parsed.testRun)
           void transport.client.routines
             .run({ id: savedId, trigger: "create" })
@@ -245,17 +240,6 @@ export const RoutineDialog = ({
       }
     },
   });
-  // A local routine keeps only the pages it can read: say what was left out.
-  const reportDropped = (savedId: string, value: typeof initial) => {
-    const saved = db.collections.routines.get(savedId);
-    if (saved == null || isHosted(saved)) return;
-    const dropped = droppedSources(
-      reachOf(value).sources,
-      saved.reach?.sources ?? []
-    );
-    if (dropped.length > 0)
-      showInfo(t("routines.reach.dropped", { items: dropped.join(", ") }));
-  };
   // A hosted routine's first run is asked for, not assumed.
   useEffect(() => {
     if (!hostedByDefault) return;
@@ -291,8 +275,6 @@ export const RoutineDialog = ({
       "schedule",
       "workspaceId",
       "webhook",
-      "sources",
-      "reads",
     ] as const) {
       if (
         JSON.stringify(incoming[key]) === JSON.stringify(baseline.current[key])

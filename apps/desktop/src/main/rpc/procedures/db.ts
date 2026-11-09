@@ -10,14 +10,9 @@ import type {
   RoutineRefusal,
 } from "@abacus-ai/contract/contract/errors";
 import type { TablePosition } from "@abacus-ai/contract/contract/rows";
-import type { RoutineUpdateInput } from "@abacus-ai/contract/routines";
 import { ORPCError } from "@orpc/server";
 
-import {
-  HostedRoutineRefusal,
-  isHostedRoutineId,
-} from "../../services/agent-tools/hosted-routines";
-import { cleanSources } from "../../services/agent-tools/routine-reach";
+import { HostedRoutineRefusal } from "../../services/agent-tools/hosted-routines";
 import type { RpcContext } from "../context";
 import {
   badRequest,
@@ -109,14 +104,6 @@ const hostedRefusalError = (error: unknown): unknown => {
     });
   return unavailable("The routine could not be saved on the server right now.");
 };
-
-/** A local routine keeps only the sources it can read; the rest are dropped. */
-const cleanReach = (
-  reach: RoutineUpdateInput["reach"]
-): RoutineUpdateInput["reach"] =>
-  reach == null
-    ? reach
-    : { ...reach, sources: cleanSources(reach.sources).sources };
 
 const echo = <Row, Key extends string>(
   feed: TableFeed<Row, Key>,
@@ -235,13 +222,8 @@ export const dbRouter = impl.db.router({
       return echo(context.deps.tables.routines, routine.id);
     }),
     update: impl.db.routines.update.handler(async ({ input, context }) => {
-      const patch = isHostedRoutineId(input.id)
-        ? input.patch
-        : input.patch.reach != null
-          ? { ...input.patch, reach: cleanReach(input.patch.reach) }
-          : input.patch;
       try {
-        await context.deps.serviceHost.updateRoutine(input.id, patch);
+        await context.deps.serviceHost.updateRoutine(input.id, input.patch);
       } catch (error) {
         throw hostedRefusalError(error);
       }

@@ -394,47 +394,7 @@ it("never makes a local routine on a hosted bot whose routines run on the server
   );
 });
 
-it("puts what the agent asks a local routine to read in force at once", async () => {
-  const { ServiceHost } = await import("../../service-host");
-  const host = new ServiceHost();
-  const internals = host as unknown as Record<string, any>;
-  vi.spyOn(internals, "emitEvent").mockImplementation(() => {});
-  const agent = await host.createRoutine(
-    {
-      prompt: "x",
-      schedule: "0 9 * * *",
-      sources: ["https://news.example/"],
-      reads: ["gmail.search"],
-    },
-    undefined,
-    { byAgent: true }
-  );
-  expect(agent).toMatchObject({
-    reach: {
-      sources: ["https://news.example/"],
-      reads: ["gmail.search"],
-    },
-  });
-  const user = await host.createRoutine({
-    prompt: "y",
-    schedule: "0 9 * * *",
-    sources: ["https://news.example/"],
-  });
-  expect(user.reach).toEqual({ sources: ["https://news.example/"], reads: [] });
-  await expect(
-    host.createRoutine(
-      {
-        prompt: "z",
-        schedule: "0 9 * * *",
-        sources: ["https://webhook.site/x"],
-      },
-      undefined,
-      { byAgent: true }
-    )
-  ).rejects.toThrow(/cannot be a routine's sources/);
-});
-
-it("runs a local routine with full access, held to what the user confirmed only once made read-only", async () => {
+it("runs a local routine with full access, even one an older version saved read-only", async () => {
   fs.writeFileSync(
     path.join(home, "config.json"),
     JSON.stringify({ apiKeys: { ABACUS_API_KEY: "k" } })
@@ -445,29 +405,43 @@ it("runs a local routine with full access, held to what the user confirmed only 
   vi.spyOn(internals, "emitEvent").mockImplementation(() => {});
   vi.spyOn(host, "ensureRoutineWorkspace").mockResolvedValue("w");
   vi.spyOn(internals, "updateAgentSessionLabel").mockImplementation(() => {});
-  vi.spyOn(host, "sendAgentMessage").mockImplementation((() => {}) as never);
+  const sent: string[] = [];
+  vi.spyOn(host, "sendAgentMessage").mockImplementation(((request: {
+    message: string;
+  }) => {
+    sent.push(request.message);
+  }) as never);
   const start = vi
     .spyOn(host, "startAgentSession")
     .mockResolvedValue({ success: true } as never);
-  const routine = await host.createRoutine({
-    prompt: "Digest",
-    schedule: "0 9 * * *",
-    sources: ["https://news.example/"],
-  });
-  expect(await host.runRoutine(routine.id, "manual")).toBe("started");
-  const free = start.mock.calls[0]![0].sessionId;
+  // What the agent asks it to read no longer limits a local routine.
+  const asked = await host.createRoutine(
+    { prompt: "Digest", schedule: "0 9 * * *", sources: ["news.example"] },
+    undefined,
+    { byAgent: true }
+  );
+  expect(asked).not.toHaveProperty("reach");
+  // As an older version stored a routine made read-only.
+  const file = path.join(home, "cronjobs.json");
+  const stored = JSON.parse(fs.readFileSync(file, "utf8")) as Array<
+    Record<string, unknown>
+  >;
+  fs.writeFileSync(
+    file,
+    JSON.stringify(
+      stored.map((job) => ({
+        ...job,
+        access: "unattended",
+        reach: { sources: ["https://news.example/"], reads: [] },
+      }))
+    )
+  );
+  expect(await host.runRoutine(asked.id, "manual")).toBe("started");
+  const session = start.mock.calls[0]![0].sessionId;
   expect(
-    internals.agentSessionManagerService.unattendedPolicy(free)
+    internals.agentSessionManagerService.unattendedPolicy(session)
   ).toBeNull();
-  // Read-only is the user's call; such a run is held to what it may reach.
-  await host.updateRoutine(routine.id, { access: "unattended" });
-  await internals.agentSessionManagerService.setRunOutcome(free, "completed");
-  expect(await host.runRoutine(routine.id, "manual")).toBe("started");
-  const held = start.mock.calls[1]![0].sessionId;
-  expect(internals.agentSessionManagerService.unattendedPolicy(held)).toEqual({
-    sources: ["https://news.example/"],
-    watchUrl: null,
-  });
+  expect(sent.at(-1)).toContain("You have full permissions this run.");
 });
 
 it("holds a bot's chat with anyone but its owner: no pages, reads or files", async () => {

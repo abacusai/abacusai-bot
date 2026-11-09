@@ -545,30 +545,6 @@ describe("damaged history and migration recovery", () => {
   );
 });
 
-describe("full access and a rewrite", () => {
-  it("keeps the access the user chose when the instruction or the reach changes", () => {
-    const job = createJob({ schedule: "0 9 * * *", prompt: "summarise" });
-    expect(job.access).toBeUndefined();
-    expect(
-      updateJob(job.id, { prompt: "email everyone" }).access
-    ).toBeUndefined();
-    updateJob(job.id, { access: "unattended" });
-    expect(
-      updateJob(job.id, {
-        prompt: "summarise again",
-        reach: { sources: ["https://news.example/"], reads: [] },
-      }).access
-    ).toBe("unattended");
-  });
-
-  it("keeps full access the same change gives again", () => {
-    const job = createJob({ schedule: "0 9 * * *", prompt: "a" });
-    expect(updateJob(job.id, { prompt: "b", access: "full" }).access).toBe(
-      "full"
-    );
-  });
-});
-
 describe("a fire that comes due without a network", () => {
   // Made just before the first tick, as a routine made while the app runs.
   beforeEach(() => {

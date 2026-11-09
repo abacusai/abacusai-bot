@@ -467,10 +467,11 @@ describe("cronjob, local", () => {
       expect.objectContaining({
         runner: "local",
         prompt: "Local digest",
-        sources: ["https://news.example/"],
       }),
       expect.objectContaining({ byAgent: true })
     );
+    // Its runs read what this conversation can: nothing asked for is held back.
+    expect(create.mock.calls[0]![0]).not.toHaveProperty("sources");
     expect(runCronJob).toHaveBeenCalledWith(listJobs()[0]!.id, "create");
     expect(text).toMatch(/^Created\./);
     expect(text).toContain(
@@ -478,7 +479,7 @@ describe("cronjob, local", () => {
     );
     expect(text).toContain("unlimited on every plan");
     expect(text).toContain("Its runs have full access");
-    expect(text).not.toContain("Its runs are unattended");
+    expect(text).not.toMatch(/unattended|read-only|allows it/);
     expect(text).not.toContain("[once]");
   });
 

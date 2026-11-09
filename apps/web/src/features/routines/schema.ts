@@ -57,10 +57,6 @@ export const routineFormSchema = (saved?: { name: string; prompt: string }) =>
     workspaceId: v.nullable(v.string()),
     webhook: v.boolean(),
     testRun: v.boolean(),
-    /** The pages its runs may read under, one per line. */
-    sources: v.string(),
-    /** The account data its runs may read. */
-    reads: v.array(v.picklist(["gmail.search", "gmail.read", "calendar.read"])),
   });
 export const RoutineFormSchema = routineFormSchema();
 export type RoutineValues = v.InferOutput<typeof RoutineFormSchema>;
@@ -73,22 +69,6 @@ export const valuesForRoutine = (row?: RoutineRow): RoutineValues => ({
   workspaceId: row?.workspaceId ?? null,
   webhook: row?.webhookToken != null,
   testRun: true,
-  sources: (row?.hosted?.sources ?? row?.reach?.sources ?? []).join("\n"),
-  reads: [...(row?.hosted?.reads ?? row?.reach?.reads ?? [])],
-});
-
-/** The form's reach as the routine carries it. */
-export const reachOf = (
-  value: Pick<RoutineValues, "sources" | "reads">
-): {
-  sources: string[];
-  reads: Array<"gmail.search" | "gmail.read" | "calendar.read">;
-} => ({
-  sources: value.sources
-    .split(/\s+/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0),
-  reads: [...new Set(value.reads)],
 });
 /** `at`'s wall clock in `zone`, as a local Date (a cron reads wall time). */
 export const wallTimeIn = (at: Date, zone: string): Date => {
@@ -138,29 +118,6 @@ export const nextPreview = (
   }
 };
 
-/** A typed source as a URL prefix's text, the way main keeps it; null when it is none. */
-const sourceHref = (line: string): string | null => {
-  try {
-    const url = new URL(
-      /^[a-z][a-z0-9+.-]*:/i.test(line) ? line : `https://${line}/`
-    );
-    url.search = "";
-    url.hash = "";
-    return url.href;
-  } catch {
-    return null;
-  }
-};
-
-/** The typed sources a local routine did not keep (main drops what it cannot read). */
-export const droppedSources = (
-  typed: readonly string[],
-  kept: readonly string[]
-): string[] =>
-  typed.filter((line) => {
-    const href = sourceHref(line);
-    return href == null || !kept.includes(href);
-  });
 export const dirtyPatch = (value: RoutineValues, baseline: RoutineValues) => {
   const patch: Partial<RoutineRow> = {};
   for (const key of ["name", "prompt", "workspaceId"] as const)
@@ -168,8 +125,6 @@ export const dirtyPatch = (value: RoutineValues, baseline: RoutineValues) => {
       Object.assign(patch, { [key]: value[key] });
   if (value.webhook !== baseline.webhook)
     patch.webhookToken = value.webhook ? "pending" : null;
-  if (JSON.stringify(reachOf(value)) !== JSON.stringify(reachOf(baseline)))
-    patch.reach = reachOf(value);
   const schedule = composeSchedule(value.schedule);
   if (
     JSON.stringify(schedule) !==

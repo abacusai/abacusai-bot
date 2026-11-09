@@ -215,14 +215,6 @@ export interface Routine {
   runner?: RoutineRunner;
   /** A local routine moved to the server: its id there. It no longer fires here. */
   serverId?: string | null;
-  /**
-   * How a local routine runs: unattended (the default; no shell, no writes,
-   * no sends, and only `reach`) or with full access, which only the user
-   * turns on, confirming it.
-   */
-  access?: "unattended" | "full";
-  /** What a local routine's unattended runs may reach. */
-  reach?: RoutineReach | null;
   /** The fires it last missed while the computer was off; cleared by its next on-time fire. */
   missed?: RoutineMissed | null;
   /**
@@ -292,8 +284,6 @@ export type RoutineUpdateInput = Partial<
     | "name"
     | "botId"
     | "workspaceId"
-    | "access"
-    | "reach"
     | "model"
   >
 > & {

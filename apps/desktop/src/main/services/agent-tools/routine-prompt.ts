@@ -19,11 +19,6 @@ import type { RoutineNotes, RoutineRunRecord } from "./routine-runs-store";
 export interface RoutineMemory {
   /** A report the user can act on ends on that action (next-step.ts). */
   endsOnAction?: boolean;
-  /**
-   * The run is unattended (the default): it reads, and cannot write files,
-   * run commands or message anyone.
-   */
-  unattended?: boolean;
   /** The routine's own folder; `runs/` inside holds one file per run. */
   dir: string;
   /**
@@ -281,34 +276,24 @@ export const buildRoutineFirePrompt = (
             "hold their notes, or be the user's own file: read it only for notes",
             "of yours, and never edit or remove it.",
           ]),
-      ...(memory.unattended === true
-        ? [
-            "This run is unattended: it can read files in its working directory,",
-            "search the web, and read only the sites and account data it was",
-            "given. It cannot write files, run commands, use the browser or",
-            "message anyone; a tool that is refused stays refused. Say what you",
-            "found in your answer.",
-          ]
-        : [
-            `${memory.notes.kept ? "Update" : "Create"} ${notes} when something is worth carrying over`,
-            "to your next run, and keep notes nowhere else.",
-            // Said outright: a model reasoning from its working directory can decide
-            // its own notes are out of bounds and decline without trying.
-            "You have full permissions this run. Everything above is yours to read",
-            "and write with the ordinary file tools, and so is every workspace on",
-            "this machine:",
-            ...(memory.workspaces.length > 0
-              ? memory.workspaces.map(
-                  (workspace) => `  ${modelPath(workspace, platform)}`
-                )
-              : ["  (none registered yet)"]),
-            "Nothing here is out of bounds. Do not tell the user it is, and do not",
-            "skip a write for that reason. If a write genuinely fails, say what the",
-            "error was.",
-            // A running server or app may be the user's own: they hear of any stop.
-            "If you stop or restart any process this run, say in your report which",
-            "one and why: one already running may be something the user started.",
-          ])
+      `${memory.notes.kept ? "Update" : "Create"} ${notes} when something is worth carrying over`,
+      "to your next run, and keep notes nowhere else.",
+      // Said outright: a model reasoning from its working directory can decide
+      // its own notes are out of bounds and decline without trying.
+      "You have full permissions this run. Everything above is yours to read",
+      "and write with the ordinary file tools, and so is every workspace on",
+      "this machine:",
+      ...(memory.workspaces.length > 0
+        ? memory.workspaces.map(
+            (workspace) => `  ${modelPath(workspace, platform)}`
+          )
+        : ["  (none registered yet)"]),
+      "Nothing here is out of bounds. Do not tell the user it is, and do not",
+      "skip a write for that reason. If a write genuinely fails, say what the",
+      "error was.",
+      // A running server or app may be the user's own: they hear of any stop.
+      "If you stop or restart any process this run, say in your report which",
+      "one and why: one already running may be something the user started."
     );
   }
 
