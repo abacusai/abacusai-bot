@@ -205,6 +205,8 @@ export interface PrefsRow {
     deliverableOffer?: DeliverableOfferCard | null;
     /** The next step under a result, shown and answered. */
     nextStepOffer?: NextStepCard | null;
+    /** The retry on a top model, shown and answered. */
+    retryOffer?: DeliverableOfferCard | null;
     freePlanSeenAt: number | null;
     upgradeRoutinesSeenAt: number | null;
     routineDuplicatesKept: string[];

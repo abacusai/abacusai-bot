@@ -49,7 +49,7 @@ const WORK_TOOLS = [
   "serve",
 ];
 
-const isWorkTool = (name: string): boolean =>
+export const isWorkTool = (name: string): boolean =>
   componentToolBase(name) != null ||
   WORK_TOOLS.some((tool) => name === tool || name.endsWith(`_${tool}`));
 

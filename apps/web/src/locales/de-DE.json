@@ -3369,6 +3369,9 @@
       "copy": "„{{text}}“ kopieren, um es vom Handy zu senden",
       "copyFailed": "Kopieren fehlgeschlagen"
     },
+    "retryOffer": {
+      "try": "Noch einmal mit {{model}} versuchen"
+    },
     "deliverableOffer": {
       "label": "Diese Antwort als Dokument behalten",
       "doc": "Als Dokument speichern",
