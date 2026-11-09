@@ -28,6 +28,7 @@ import {
   learnUserLanguage,
   readUserLanguage,
   resolveReplyLanguage,
+  WordsLanguage,
   writeUserLanguage,
 } from "./user-language.js";
 import { frameChannelMessage, ownWords } from "./user-text.js";
@@ -346,7 +347,12 @@ describe("replyLanguageMismatch", () => {
       assistant("আপনার আগামীকালের মিটিং সকাল দশটায়, তারপরেই একটা কল আছে।"),
     ];
     expect(judge(bengali, [], { script: "bengali", chosen: false })).toBeNull();
-    expect(judge(bengali)).toEqual({ expected: "latin", got: "bengali" });
+    // Unsaved, it is a romanized candidate: their language decides (WordsLanguage).
+    expect(judge(bengali)).toEqual({
+      expected: "latin",
+      got: "bengali",
+      romanized: true,
+    });
   });
 
   it("catches a Latin writer's reply drifting into another script", () => {
@@ -370,7 +376,7 @@ describe("replyLanguageMismatch", () => {
           "Да, завтра в десять у вас встреча с командой, а сразу после неё звонок."
         ),
       ])
-    ).toEqual({ expected: "latin", got: "cyrillic" });
+    ).toEqual({ expected: "latin", got: "cyrillic", romanized: true });
   });
 
   it.each([
@@ -429,6 +435,73 @@ describe("RecentOwnWords", () => {
     expect(
       replyLanguageMismatch(run, { turn: "whats in it ?", recent: [] })
     ).toBeNull();
+  });
+});
+
+describe("WordsLanguage", () => {
+  const HINGLISH = "kal ki meeting kitne baje hai, zara batao na mujhe";
+  const words = (...turns: string[]) => {
+    const recent = new RecentOwnWords();
+    for (const turn of turns) recent.beginTurn(turn);
+    return recent;
+  };
+
+  it("lets a romanized reply stand only when their words are that language", async () => {
+    // Hinglish answered in Devanagari mirrors them; English drifting into Hindi does not.
+    expect(
+      await new WordsLanguage(async () => "Hindi").writesIn(
+        "devanagari",
+        words(HINGLISH)
+      )
+    ).toBe(true);
+    expect(
+      await new WordsLanguage(async () => "English").writesIn(
+        "devanagari",
+        words("Can you tell me about tomorrow's meeting please?")
+      )
+    ).toBe(false);
+    expect(
+      await new WordsLanguage(async () => "Bengali").writesIn(
+        "bengali",
+        words("amar kalker meeting kokhon ache bolo to ektu")
+      )
+    ).toBe(true);
+  });
+
+  it("leaves the reply alone when the detector has no answer", async () => {
+    expect(
+      await new WordsLanguage(async () => null).writesIn(
+        "devanagari",
+        words(HINGLISH)
+      )
+    ).toBe(true);
+  });
+
+  it("asks once, and again only after their words move on", async () => {
+    const detect = vi.fn(async (_text: string) => "Hindi");
+    const check = new WordsLanguage(detect);
+    const recent = words(HINGLISH);
+    await check.writesIn("devanagari", recent);
+    recent.beginTurn("theek hai, aur kuch?");
+    await check.writesIn("devanagari", recent);
+    expect(detect).toHaveBeenCalledTimes(1);
+    for (let turn = 0; turn < 10; turn++) recent.beginTurn(HINGLISH);
+    await check.writesIn("devanagari", recent);
+    expect(detect).toHaveBeenCalledTimes(2);
+    expect(detect.mock.calls[1]?.[0]).toContain("kal ki meeting");
+  });
+
+  it("keeps the clear cases away from it: a Latin reply to other words, Han, a chosen language", () => {
+    expect(judge([user(URDU_QUESTION), assistant(ENGLISH_REPLY)])).toEqual({
+      expected: "arabic",
+      got: "latin",
+    });
+    expect(
+      judge([
+        user("Can you tell me about tomorrow's meeting please?"),
+        assistant(CHINESE_REPLY),
+      ])
+    ).toEqual({ expected: "latin", got: "cjk" });
   });
 });
 

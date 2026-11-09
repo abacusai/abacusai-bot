@@ -279,17 +279,30 @@ const RECENT_TURNS = 5;
 export class RecentOwnWords {
   private earlier: string[] = [];
   private now = "";
+  private seen = 0;
 
   /** A new turn, with its own words ("" when the app started it). */
   beginTurn(words: string): void {
     if (this.now.trim().length > 0) this.remember(this.now);
     this.now = words;
+    this.seen += scriptCounts(words).letters;
   }
 
   /** Words steered into the running turn. */
   add(words: string): void {
     if (words.trim().length === 0) return;
     this.now = this.now.length > 0 ? `${this.now}\n\n${words}` : words;
+    this.seen += scriptCounts(words).letters;
+  }
+
+  /** Letters of theirs read so far: how far their words have moved on. */
+  get lettersSeen(): number {
+    return this.seen;
+  }
+
+  /** Earlier turns then this one, as one text. */
+  get window(): string {
+    return [...this.earlier, this.now].filter((w) => w.length > 0).join("\n\n");
   }
 
   /** A resumed session's earlier user turns, each read with `own`. */
@@ -298,12 +311,14 @@ export class RecentOwnWords {
       if (roleOf(message) === "user") {
         const words = own(textOf(message));
         if (words.trim().length > 0) this.remember(words);
+        this.seen += scriptCounts(words).letters;
       }
   }
 
   clear(): void {
     this.earlier = [];
     this.now = "";
+    this.seen = 0;
   }
 
   get turn(): string {
@@ -342,6 +357,12 @@ export interface ReplyLanguageMismatch {
   expected: Script;
   /** The script the reply came back in. */
   got: Script;
+  /**
+   * The person typed Latin and the reply is in another script: right if
+   * their words are that language romanized (Hinglish answered in
+   * Devanagari), so only a check of their language (`WordsLanguage`) decides.
+   */
+  romanized?: true;
 }
 
 /** Scripts the person uses or asked for, and the one they write in most. */
@@ -349,7 +370,11 @@ const allowedScripts = ({
   turn,
   recent,
   known,
-}: ReplyLanguageContext): { allowed: Set<Script>; expected: Script } | null => {
+}: ReplyLanguageContext): {
+  allowed: Set<Script>;
+  expected: Script;
+  latinTurn: boolean;
+} | null => {
   const now = scriptCounts(turn);
   if (now.letters === 0) return null;
   const nonLatinNow = now.letters - (now.counts.get("latin") ?? 0);
@@ -391,6 +416,7 @@ const allowedScripts = ({
   return {
     allowed,
     expected: known?.chosen === true ? known.script : heaviest,
+    latinTurn: nonLatinNow < USED_LETTERS,
   };
 };
 
@@ -414,15 +440,22 @@ export const replyLanguageMismatch = (
     }
   }
   if (lastUser < 0) return null;
+  const { known } = context;
   const person = allowedScripts(context);
   if (person == null) return null;
-  const { allowed, expected } = person;
+  const { allowed, expected, latinTurn } = person;
+  // Latin words may be the reply's language romanized; never Han (a known
+  // model drift) or against a language they chose.
+  const mismatch = (got: Script): ReplyLanguageMismatch =>
+    latinTurn && got !== "latin" && got !== "cjk" && known?.chosen !== true
+      ? { expected, got, romanized: true }
+      : { expected, got };
   for (let index = messages.length - 1; index > lastUser; index--) {
     if (roleOf(messages[index]) !== "assistant") continue;
     const reply = scriptCounts(textOf(messages[index]));
     if (reply.letters < MIN_LETTERS) continue;
     const got = dominantOf(reply);
-    if (got != null && !allowed.has(got)) return { expected, got };
+    if (got != null && !allowed.has(got)) return mismatch(got);
     const han = reply.counts.get("cjk") ?? 0;
     if (
       !allowed.has("cjk") &&

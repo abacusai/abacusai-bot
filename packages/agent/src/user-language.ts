@@ -25,8 +25,10 @@ import { abacusBotDir } from "./config.js";
 import {
   type KnownLanguage,
   languageScript,
+  type RecentOwnWords,
   type ReplyLanguage,
   replyLanguagePrompt,
+  type Script,
 } from "./reply-language.js";
 
 /** The cheap model the free plan already runs on. */
@@ -204,7 +206,8 @@ const detectPrompt = (text: string): string =>
 export async function detectMessageLanguage(
   text: string,
   apiKey: string,
-  fetchImpl: typeof fetch = fetch
+  fetchImpl: typeof fetch = fetch,
+  timeoutMs = DETECT_TIMEOUT_MS
 ): Promise<string | null> {
   try {
     const response = await fetchImpl(`${abacusV1BaseUrl()}/chat/completions`, {
@@ -219,7 +222,7 @@ export async function detectMessageLanguage(
         max_tokens: 10,
         temperature: 0,
       }),
-      signal: AbortSignal.timeout(DETECT_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (!response.ok) return null;
     const body = (await response.json()) as {
@@ -232,6 +235,54 @@ export async function detectMessageLanguage(
     return name == null || name.toLowerCase() === "unknown" ? null : name;
   } catch {
     return null;
+  }
+}
+
+/** A turn's end waits on this check, so it gives up sooner than detection. */
+const WORDS_CHECK_TIMEOUT_MS = 5_000;
+/** Letters of new words after which their language is asked again. */
+const WORDS_CHECK_REFRESH_LETTERS = 300;
+
+/**
+ * The language a session's person writes in, asked of the detection model
+ * only when the reply-language guard has a romanized candidate (Latin words,
+ * a reply in another script), and kept until their words move on. One per
+ * session, so one per contact in sender chats.
+ */
+export class WordsLanguage {
+  private known: { name: string; at: number } | null = null;
+
+  constructor(
+    private readonly detect: (text: string) => Promise<string | null> = (
+      text
+    ) =>
+      detectMessageLanguage(
+        text,
+        (process.env.ABACUS_API_KEY ?? "").trim(),
+        fetch,
+        WORDS_CHECK_TIMEOUT_MS
+      )
+  ) {}
+
+  /**
+   * Whether their recent words are the language `script` writes, typed in
+   * Latin. No answer (no key, a failed call, "unknown") reads as yes: the
+   * reply is left alone rather than rewritten on a guess.
+   */
+  async writesIn(script: Script, words: RecentOwnWords): Promise<boolean> {
+    if (
+      this.known == null ||
+      words.lettersSeen - this.known.at >= WORDS_CHECK_REFRESH_LETTERS
+    ) {
+      const name = await this.detect(words.window.slice(-DETECT_MAX_CHARS));
+      if (name == null) return true;
+      this.known = { name, at: words.lettersSeen };
+    }
+    return languageScript(this.known.name) === script;
+  }
+
+  clear(): void {
+    this.known = null;
   }
 }
 

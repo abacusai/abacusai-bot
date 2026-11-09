@@ -231,6 +231,7 @@ import {
   isSenderChat,
   knownReplyLanguage,
   learnUserLanguage,
+  WordsLanguage,
 } from "./user-language.js";
 import { ownWords } from "./user-text.js";
 import { webHostPrompt } from "./web-host-prompt.js";
@@ -874,6 +875,8 @@ export class AbacusBotSession {
   private languageRepairsThisTurn = 0;
   /** The user's own words over recent turns: what a reply's language is judged by. */
   private readonly userWords = new RecentOwnWords();
+  /** What language those words are, asked only when their script cannot tell. */
+  private readonly wordsLanguage = new WordsLanguage();
   /** The turn's recoveries from an empty reply (empty-reply.ts). */
   private readonly emptyReplies = new EmptyReplies();
   /** The turn's ask after a reply that ended on a promise (promised-work.ts). */
@@ -1973,6 +1976,12 @@ export class AbacusBotSession {
         const mismatch = this.pendingLanguageRepair;
         this.pendingLanguageRepair = null;
         this.languageRepairsThisTurn += 1;
+        // Latin words may be the reply's own language, romanized.
+        if (
+          mismatch.romanized === true &&
+          (await this.wordsLanguage.writesIn(mismatch.got, this.userWords))
+        )
+          continue;
 
         this.emitAgentEvent({
           type: "notification",
@@ -3050,6 +3059,7 @@ export class AbacusBotSession {
       this.session = created.session;
       this.pi = this.loadedPi;
       this.userWords.clear();
+      this.wordsLanguage.clear();
       endTurnOnClosedReply(this.session.agent);
       // A fresh session has only the tools it was built with.
       this.mcpTools.rebind(
