@@ -78,6 +78,8 @@ const ALLOWED = new Set([
   // How a plan-only ask is worded (billing_plan, routines): a 2 kB chunk with
   // no imports at all.
   "@abacus-ai/agent/plan-asks",
+  // The hosted computer's local-tools flag name: no imports at all.
+  "@abacus-ai/agent/hosted-local-tools",
 ]);
 
 const MAIN_DIR = resolve(import.meta.dirname);

@@ -253,6 +253,8 @@ export const readDockerImage = (): string | undefined => {
  */
 const STORED_WINS = new Set(["ABACUS_API_KEY"]);
 
+const STORED_KEY_NAMES = new Set(Object.values(PROVIDER_ENV_VARS));
+
 /**
  * Credentials for the agent's environment; the environment wins, except for
  * the signed-in Abacus key (see `STORED_WINS`), which is always handed down so
@@ -263,6 +265,8 @@ export const credentialEnv = (): Record<string, string> => {
   const env: Record<string, string> = {};
 
   for (const [name, value] of Object.entries(stored)) {
+    // Only the app's own key names: a hand-edited name must not reach the agent's environment.
+    if (!STORED_KEY_NAMES.has(name) || typeof value !== "string") continue;
     if (value.length === 0) continue;
     if (STORED_WINS.has(name) || (process.env[name] ?? "").length === 0) {
       env[name] = value;

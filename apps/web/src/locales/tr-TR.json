@@ -1948,7 +1948,9 @@
     "terminal": {
       "title": "Terminal",
       "exited": "İşlem sonlandı ({{code}})",
-      "newShell": "Yeni terminal · {{shell}}"
+      "newShell": "Yeni terminal · {{shell}}",
+      "planRequired": "Terminal, barındırılan bilgisayarınızda ücretsiz planda kullanılamaz. Kullanmak için planınızı yükseltin.",
+      "planUnreadable": "Planınız kontrol edilemedi, bu yüzden terminal şimdilik kapalı. Birazdan tekrar deneyin."
     },
     "tray": {
       "workspaceLabel": "Çalışma alanı: {{name}}",
@@ -3664,6 +3666,10 @@
     "playSound": "{{cue}} sesini çal",
     "savedUnverified": "Kaydedildi, kontrol edilmedi",
     "notConnected": "Bağlı değil",
+    "needsPaidPlan": "Ücretli plan gerekir",
+    "paused": "Duraklatıldı",
+    "localPlanRequired": "Ücretsiz planda, yerel bir komut çalıştıran sunucular barındırılan bilgisayarınızda başlamaz. URL'si olan sunucular çalışmaya devam eder. Kullanmak için planınızı yükseltin.",
+    "localPlanUnreadable": "Planınız kontrol edilemedi, bu yüzden yerel bir komut çalıştıran sunucular duraklatıldı. Plan okunabildiğinde yeniden başlarlar.",
     "addKey": "Anahtar ekle",
     "creditsExhausted": "Ücretsiz Abacus.AI kredilerinin hepsini kullandın",
     "creditsAlternatives": "Devam etmek için ücretsiz bir kaynak bağla. Kart gerekmez.",

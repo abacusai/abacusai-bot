@@ -1948,7 +1948,9 @@
     "terminal": {
       "title": "Terminal",
       "exited": "Process exited ({{code}})",
-      "newShell": "New terminal · {{shell}}"
+      "newShell": "New terminal · {{shell}}",
+      "planRequired": "無料プランでは、ホスト型コンピューターでターミナルを使えません。使うにはアップグレードしてください。",
+      "planUnreadable": "プランを確認できなかったため、ターミナルは現在オフです。しばらくしてからもう一度お試しください。"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
@@ -3664,6 +3666,10 @@
     "playSound": "Play {{cue}} sound",
     "savedUnverified": "Saved, not checked",
     "notConnected": "Not connected",
+    "needsPaidPlan": "有料プランが必要",
+    "paused": "一時停止中",
+    "localPlanRequired": "無料プランでは、ローカルコマンドを実行するサーバーはホスト型コンピューターで起動しません。URL のあるサーバーは引き続き使えます。使うにはアップグレードしてください。",
+    "localPlanUnreadable": "プランを確認できなかったため、ローカルコマンドを実行するサーバーは一時停止しています。プランを読み取れるようになると再び起動します。",
     "addKey": "Add key",
     "creditsExhausted": "You’ve used all your free Abacus.AI credits",
     "creditsAlternatives": "Connect a free source to keep going. No card needed.",

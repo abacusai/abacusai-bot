@@ -1948,7 +1948,9 @@
     "terminal": {
       "title": "終端機",
       "exited": "處理程序已結束（{{code}}）",
-      "newShell": "新增終端機 · {{shell}}"
+      "newShell": "新增終端機 · {{shell}}",
+      "planRequired": "免費方案下，你的託管電腦無法使用終端機。升級後即可使用。",
+      "planUnreadable": "無法檢查你的方案，因此終端機暫時關閉。請稍後再試。"
     },
     "tray": {
       "workspaceLabel": "工作區：{{name}}",
@@ -3664,6 +3666,10 @@
     "playSound": "播放 {{cue}} 提示音",
     "savedUnverified": "已儲存，尚未檢查",
     "notConnected": "未連接",
+    "needsPaidPlan": "需要付費方案",
+    "paused": "已暫停",
+    "localPlanRequired": "在免費方案下，執行本機指令的伺服器不會在你的託管電腦上啟動。有 URL 的伺服器仍可使用。升級後即可使用。",
+    "localPlanUnreadable": "無法檢查你的方案，因此執行本機指令的伺服器已暫停。能讀取方案後會重新啟動。",
     "addKey": "新增金鑰",
     "creditsExhausted": "你的免費 Abacus.AI 點數已全部用完",
     "creditsAlternatives": "連接一個免費來源就能繼續。不需綁卡。",

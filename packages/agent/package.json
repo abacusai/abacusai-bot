@@ -29,6 +29,10 @@
       "types": "./dist/model-catalog.d.ts",
       "default": "./dist/model-catalog.js"
     },
+    "./hosted-local-tools": {
+      "types": "./dist/hosted-local-tools.d.ts",
+      "default": "./dist/hosted-local-tools.js"
+    },
     "./child-env": {
       "types": "./dist/child-env.d.ts",
       "default": "./dist/child-env.js"

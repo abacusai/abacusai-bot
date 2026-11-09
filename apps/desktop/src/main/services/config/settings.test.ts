@@ -404,6 +404,24 @@ describe("credentials for the agent's environment", () => {
     expect(credentialEnv()).toEqual({ OPENAI_API_KEY: "sk-stored" });
   });
 
+  it("supplies only the app's own key names, never a hand-added variable", async () => {
+    setEnv("OPENAI_API_KEY", undefined);
+    for (const name of ["LD_PRELOAD", "NODE_OPTIONS", "PI_OFFLINE"])
+      setEnv(name, undefined);
+    writeConfig({
+      apiKeys: {
+        OPENAI_API_KEY: "sk-stored",
+        LD_PRELOAD: "/tmp/x.so",
+        NODE_OPTIONS: "--require /tmp/x.js",
+        PI_OFFLINE: "0",
+        ABACUSAI_BOT_MCP_CONFIG: "/tmp/list.json",
+      },
+    });
+    const { credentialEnv } = await load();
+
+    expect(credentialEnv()).toEqual({ OPENAI_API_KEY: "sk-stored" });
+  });
+
   it("does not supply a stored key that is empty", async () => {
     setEnv("OPENAI_API_KEY", undefined);
     writeConfig({ apiKeys: { OPENAI_API_KEY: "" } });

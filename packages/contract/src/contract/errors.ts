@@ -27,8 +27,10 @@ export type PreconditionReason =
   /** The 50-bot limit (spec 03 §24.4). */
   | "bot-limit"
   | "unsupported-platform"
-  /** The free plan's hosted routine is taken; upgrading allows more. */
+  /** The free plan's hosted routine is taken, or a hosted free account asked for local tools; upgrading allows it. */
   | "plan-required"
+  /** The hosted computer could not read the plan, so it refused what only a paid plan allows. */
+  | "plan-unreadable"
   /** The free plan runs a hosted routine at most once a day. */
   | "plan-interval"
   /** The free plan's hosted routines are tasks only. */

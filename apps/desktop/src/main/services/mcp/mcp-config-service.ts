@@ -73,6 +73,10 @@ const withoutBuiltinMark = (entry: McpServerEntry): McpServerEntry => {
   return rest as McpServerEntry;
 };
 
+/** An entry the agent would start as a local process: it has no url. */
+export const isLocalCommandServer = (entry: McpServerEntry): boolean =>
+  typeof entry.url !== "string";
+
 export const BUILTIN_BROWSER_NAME = "browser";
 export const BUILTIN_DEVICE_NAME = "device";
 export const BUILTIN_AGENT_TOOLS_NAME = "agent-tools";
@@ -155,10 +159,16 @@ const readJson = <T>(filePath: string, fallback: T): T => {
 export class McpConfigService {
   readUserMcp(mode: McpMode): McpConfig {
     const parsed = readJson<McpConfig | null>(userMcpPath(mode), null);
-    if (parsed?.mcpServers != null && typeof parsed.mcpServers === "object") {
-      return parsed;
-    }
-    return { mcpServers: {} };
+    if (parsed?.mcpServers == null || typeof parsed.mcpServers !== "object")
+      return { mcpServers: {} };
+    // A hand edit can leave a non-object entry; nothing downstream can read one.
+    const mcpServers = Object.fromEntries(
+      Object.entries(parsed.mcpServers as Record<string, unknown>).filter(
+        ([, entry]) =>
+          entry != null && typeof entry === "object" && !Array.isArray(entry)
+      )
+    ) as Record<string, McpServerEntry>;
+    return { ...parsed, mcpServers };
   }
 
   writeUserMcp(mode: McpMode, config: McpConfig): void {
@@ -352,15 +362,33 @@ export class McpConfigService {
     }
   }
 
-  /** Path of the runtime mcp file (ABACUSAI_BOT_ADDITIONAL_MCP_CONFIG). */
+  /**
+   * Path of the runtime mcp file (ABACUSAI_BOT_ADDITIONAL_MCP_CONFIG).
+   * `localCommands: false` leaves out every user server started as a local command.
+   */
   writeRuntimeMcp(
     mode: McpMode,
-    builtins: Record<string, McpServerEntry> = {},
-    sessionId?: string
+    builtins: Record<string, McpServerEntry>,
+    sessionId: string | undefined,
+    options: { localCommands: boolean }
   ): string {
-    const merged = this.buildRuntimeConfig(mode, builtins);
+    const merged = this.buildRuntimeConfig(mode, builtins, options);
     const filePath = runtimeMcpPath(mode, sessionId);
     writeJsonAtomic(filePath, merged);
+    return filePath;
+  }
+
+  /**
+   * A list with no servers, for a hosted agent whose real list could not be
+   * written. If even this write fails, the path reads as unreadable: still no servers.
+   */
+  writeEmptyRuntimeMcp(mode: McpMode): string {
+    const filePath = path.join(RUNTIME_DIR, `mcp-${mode}-empty.json`);
+    try {
+      writeJsonAtomic(filePath, { mcpServers: {} });
+    } catch (error) {
+      console.error("[mcp] failed to write the empty server list:", error);
+    }
     return filePath;
   }
 
@@ -376,7 +404,8 @@ export class McpConfigService {
   /** Merges user entries with `builtins` in the agent's MCP config shape. */
   private buildRuntimeConfig(
     mode: McpMode,
-    builtins: Record<string, McpServerEntry>
+    builtins: Record<string, McpServerEntry>,
+    options: { localCommands: boolean }
   ): McpConfig {
     const user = this.readUserMcp(mode);
     const markedBuiltins: Record<string, McpServerEntry> = {};
@@ -397,6 +426,8 @@ export class McpConfigService {
     const userServers: Record<string, McpServerEntry> = {};
     for (const [name, entry] of Object.entries(user.mcpServers)) {
       if (RESERVED_BUILTIN_NAMES.includes(name)) continue;
+      // Every add path (add, update, import, a hand edit) ends in this file.
+      if (!options.localCommands && isLocalCommandServer(entry)) continue;
       // A user entry claiming to be built-in would pass for the app's own
       // server wherever that matters (an unattended run's tool origin).
       userServers[name] = withoutBuiltinMark(entry);

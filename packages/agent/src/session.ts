@@ -173,6 +173,7 @@ import {
   replyLanguageRepairPrompt,
   type ReplyLanguageMismatch,
 } from "./reply-language.js";
+import { createResourceLoader } from "./resource-loader.js";
 import { buildRoster } from "./roster.js";
 import {
   allowHostForSession,
@@ -1004,7 +1005,7 @@ export class AbacusBotSession {
       settingsManager,
       () => this.session?.model?.contextWindow
     );
-    const resourceLoader = new DefaultResourceLoader({
+    const resourceLoader = createResourceLoader({
       // Skill and AGENTS.md paths as the model should copy them.
       ...MODEL_PATH_RESOURCES,
       cwd: this.options.cwd,

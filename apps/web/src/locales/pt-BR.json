@@ -1948,7 +1948,9 @@
     "terminal": {
       "title": "Terminal",
       "exited": "Process exited ({{code}})",
-      "newShell": "New terminal · {{shell}}"
+      "newShell": "New terminal · {{shell}}",
+      "planRequired": "O terminal não está disponível no plano gratuito no seu computador hospedado. Faça upgrade para usá-lo.",
+      "planUnreadable": "Não foi possível verificar seu plano, então o terminal está desligado por enquanto. Tente novamente em instantes."
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
@@ -3664,6 +3666,10 @@
     "playSound": "Play {{cue}} sound",
     "savedUnverified": "Saved, not checked",
     "notConnected": "Not connected",
+    "needsPaidPlan": "Requer um plano pago",
+    "paused": "Pausado",
+    "localPlanRequired": "No plano gratuito, servidores que executam um comando local não iniciam no seu computador hospedado. Servidores com uma URL continuam funcionando. Faça upgrade para usá-los.",
+    "localPlanUnreadable": "Não foi possível verificar seu plano, então os servidores que executam um comando local estão pausados. Eles voltam a iniciar assim que o plano puder ser lido.",
     "addKey": "Add key",
     "creditsExhausted": "You’ve used all your free Abacus.AI credits",
     "creditsAlternatives": "Connect a free source to keep going. No card needed.",

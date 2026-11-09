@@ -742,6 +742,10 @@ export const fetchAbacusAccount = async (
   }
 };
 
+/** How long ago the account was last read from the server; null without a read. */
+export const abacusAccountAgeMs = (): number | null =>
+  accountCache == null ? null : Date.now() - accountCache.at;
+
 /** The account as last read, without a fetch: null before the first read or once signed out. */
 export const cachedAbacusAccount = (): AbacusAccountInfo | null =>
   accountCache?.value ?? null;

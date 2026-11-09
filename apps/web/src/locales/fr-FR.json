@@ -1948,7 +1948,9 @@
     "terminal": {
       "title": "Terminal",
       "exited": "Process exited ({{code}})",
-      "newShell": "New terminal · {{shell}}"
+      "newShell": "New terminal · {{shell}}",
+      "planRequired": "Le terminal n'est pas disponible avec l'offre gratuite sur votre ordinateur hébergé. Passez à une offre supérieure pour l'utiliser.",
+      "planUnreadable": "Votre offre n'a pas pu être vérifiée, le terminal est donc désactivé pour le moment. Réessayez dans un instant."
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
@@ -3664,6 +3666,10 @@
     "playSound": "Play {{cue}} sound",
     "savedUnverified": "Saved, not checked",
     "notConnected": "Not connected",
+    "needsPaidPlan": "Nécessite une offre payante",
+    "paused": "En pause",
+    "localPlanRequired": "Avec l'offre gratuite, les serveurs qui exécutent une commande locale ne démarrent pas sur votre ordinateur hébergé. Les serveurs avec une URL fonctionnent toujours. Passez à une offre supérieure pour les utiliser.",
+    "localPlanUnreadable": "Votre offre n'a pas pu être vérifiée, les serveurs qui exécutent une commande locale sont donc en pause. Ils redémarreront dès qu'elle pourra être lue.",
     "addKey": "Add key",
     "creditsExhausted": "You’ve used all your free Abacus.AI credits",
     "creditsAlternatives": "Connect a free source to keep going. No card needed.",

@@ -11,7 +11,6 @@ import * as os from "node:os";
 
 import {
   createAgentSession,
-  DefaultResourceLoader,
   type ExtensionAPI,
   type InlineExtension,
   type ModelRuntime,
@@ -26,6 +25,7 @@ import { scopeGuard, taskScope } from "./extensions/scope-guard.js";
 import { modelPath, MODEL_PATH_RESOURCES } from "./model-path.js";
 import { scriptRuntimesPrompt, windowsShellPrompt } from "./posix-shell.js";
 import type { AgentEvent } from "./protocol.js";
+import { createResourceLoader } from "./resource-loader.js";
 import { forwardChildToolEvents } from "./subagent-events.js";
 import {
   runSubagent,
@@ -115,7 +115,7 @@ export async function runDelegatedTask(
   const scriptsPrompt = scriptRuntimesPrompt();
 
   try {
-    const resourceLoader = new DefaultResourceLoader({
+    const resourceLoader = createResourceLoader({
       // Skill and AGENTS.md paths as the model should copy them.
       ...MODEL_PATH_RESOURCES,
       cwd: root,

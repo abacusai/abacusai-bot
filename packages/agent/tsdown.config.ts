@@ -42,6 +42,7 @@ export default defineConfig({
     "src/atomic-file.ts",
     // Every child process's environment: no imports at all.
     "src/child-env.ts",
+    "src/hosted-local-tools.ts",
     // The renderer's tool titles, kinds and result formatting. Browser-safe:
     // no node or pi anywhere in its closure (tool-display.test.ts).
     "src/tool-display.ts",

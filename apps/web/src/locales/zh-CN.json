@@ -1948,7 +1948,9 @@
     "terminal": {
       "title": "终端",
       "exited": "进程已退出（{{code}}）",
-      "newShell": "新建终端 · {{shell}}"
+      "newShell": "新建终端 · {{shell}}",
+      "planRequired": "免费套餐下，你的托管电脑无法使用终端。升级后即可使用。",
+      "planUnreadable": "无法检查你的套餐，因此终端暂时关闭。请稍后再试。"
     },
     "tray": {
       "workspaceLabel": "工作区：{{name}}",
@@ -3664,6 +3666,10 @@
     "playSound": "播放 {{cue}} 提示音",
     "savedUnverified": "已保存，未检查",
     "notConnected": "未连接",
+    "needsPaidPlan": "需要付费套餐",
+    "paused": "已暂停",
+    "localPlanRequired": "在免费套餐下，运行本地命令的服务器不会在你的托管电脑上启动。带 URL 的服务器仍可使用。升级后即可使用。",
+    "localPlanUnreadable": "无法检查你的套餐，因此运行本地命令的服务器已暂停。能读取套餐后会重新启动。",
     "addKey": "添加密钥",
     "creditsExhausted": "你的免费 Abacus.AI 积分已全部用完",
     "creditsAlternatives": "连接一个免费来源即可继续。无需绑卡。",
