@@ -9,6 +9,8 @@ import {
 import {
   creditThresholdWords,
   type CreditThresholdMark,
+  markPlan,
+  milestoneOffer,
   tasksLeft,
 } from "@abacus-ai/contract/credit-thresholds";
 import { providerDisplayName } from "@abacus-ai/contract/settings";
@@ -506,9 +508,13 @@ export const chatReplyForFailure = (
 };
 
 /**
- * A free account crossed a credit milestone in a chat-app turn: the card's
- * words, as of the read that crossed it, then the upgrade link. No keyword to
- * reply with; the link is the way on.
+ * A milestone crossed (credit-thresholds.ts), in the user's own chat: the
+ * card's words for the plan the watch stamped on the mark, as of the read that
+ * crossed it, then the plan's way on. The free plan hears its whole upgrade
+ * pitch and link; a paid plan its offer (paidCreditsOffer): Basic's next plan
+ * with the whole pitch, the top-up and next plan (paidOutLines), or the mobile
+ * app. Null when a paid plan's offer is not known: nothing is said rather
+ * than a link labelled as something it is not.
  */
 export const chatLineForCreditThreshold = (
   words: ChannelWords,
@@ -517,26 +523,48 @@ export const chatLineForCreditThreshold = (
   billing: BillingPlan | null = null,
   /** AbacusAI Bot's WhatsApp number: the plan works fully in the ChatLLM app on their phone. */
   mobileApp = false
-): string => {
+): string | null => {
+  const { t } = words;
   const left = Math.max(0, mark.granted - mark.used);
   const count = tasksLeft(left, mark.perTask);
+  const offer = milestoneOffer(markPlan(mark), billing);
+  if (offer.plan === "paid" && offer.offer == null) return null;
   const { title, lines } = creditThresholdWords(
-    words.t,
+    t,
     words.locale,
     mark.reached,
     { left, total: mark.granted },
-    count != null ? { count, kind: mark.kind } : null
+    count != null ? { count, kind: mark.kind } : null,
+    undefined,
+    offer
   );
+  const pitch = { upgradeUrl: link, topUpUrl: link, billing };
+  if (offer.plan === "paid") {
+    const paid = offer.offer!;
+    // Basic's way on is the next plan alone, pitched as the free plan's is.
+    const nextOnly: boolean = paidUpgradeOnly(paid);
+    const way = paid.inMobileApp
+      ? [t("outcome.channel.milestoneMobile")]
+      : nextOnly
+        ? offerLines(words, pitch)
+        : [
+            // Not Basic's next plan alone, so the offer has its top-up.
+            paidOutLines(
+              words,
+              pitch,
+              t("outcome.channel.milestoneTopUp", { link: paid.topUpUrl! }),
+              "outcome.channel.paidUpgradeOnly"
+            ),
+          ];
+    return [title, ...lines, ...way].join("\n");
+  }
   // The plan's whole pitch, as every upgrade line carries it; the link last.
   return [
     title,
     ...lines,
-    ...offerLines(words, { upgradeUrl: link, topUpUrl: link, billing }).slice(
-      0,
-      -1
-    ),
-    ...(mobileApp ? [words.t("outcome.channel.mobileApp")] : []),
-    words.t("outcome.channel.link", { link }),
+    ...offerLines(words, pitch).slice(0, -1),
+    ...(mobileApp ? [t("outcome.channel.mobileApp")] : []),
+    t("outcome.channel.link", { link }),
   ].join("\n");
 };
 

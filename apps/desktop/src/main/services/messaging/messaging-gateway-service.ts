@@ -2156,7 +2156,7 @@ export class MessagingGatewayService {
       words: ChannelWords,
       link: string,
       billing: BillingPlan | null
-    ) => string
+    ) => string | null
   ): Promise<boolean> {
     const route = this.routesBySession.get(sessionId);
     const ended = this.chatTurnEndedAt.get(sessionId);
@@ -2168,19 +2168,21 @@ export class MessagingGatewayService {
     const isOwn =
       own.platform === route.platform && own.chatId === route.userId;
     const text = await this.accountLine(line);
+    // Nothing true to say (a paid plan whose offer is not known): not told.
+    if (text == null) return false;
     if (isOwn) this.deliver(route, text);
     else this.deliverToSelf(own, text);
     return true;
   }
 
   /** A line about the account, in the user's language, with the plan and its link. */
-  private async accountLine(
+  private async accountLine<Line extends string | null>(
     line: (
       words: ChannelWords,
       link: string,
       billing: BillingPlan | null
-    ) => string
-  ): Promise<string> {
+    ) => Line
+  ): Promise<Line> {
     const [upgradeUrl, billing] = await Promise.all([
       withinMs(fetchUpgradeUrl("channel"), UPGRADE_URL_WAIT_MS),
       withinMs(fetchBillingPlan(false), UPGRADE_URL_WAIT_MS),

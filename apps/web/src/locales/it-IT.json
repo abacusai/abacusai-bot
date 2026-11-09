@@ -3092,6 +3092,7 @@
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
       "unsaved": "Il disco è pieno, quindi questa chat non viene salvata. Libera un po' di spazio; verrà salvata di nuovo con il tuo prossimo messaggio.",
+      "creditsLow": "Credits are almost out, so the agent is wrapping up what it has so the work isn't cut off halfway.",
       "showInFolder": "Show in folder"
     },
     "part": {
@@ -4806,6 +4807,8 @@
       "paidOutUpgrade": "Mi sono fermato perché i crediti di questo mese sono finiti. Passa a {{plan}} ({{price}}) per avere più crediti ogni mese: {{link}}",
       "paidUpgrade": "Oppure passa a {{plan}} ({{price}}) per avere più crediti ogni mese: {{link}}",
       "paidUpgradeOnly": "Passa a {{plan}} ({{price}}) per avere più crediti ogni mese: {{link}}",
+      "milestoneTopUp": "Add credits here: {{link}}",
+      "milestoneMobile": "Your plan is billed through the App Store or Google Play, so add credits or upgrade in the Abacus.AI mobile app.",
       "paidMobile": "I crediti di questo mese sono esauriti. Il tuo piano è fatturato tramite App Store o Google Play: aggiungi crediti o passa a un piano superiore nell'app mobile di Abacus.AI.",
       "unavailable": "{{model}} non è più disponibile, quindi non ho potuto finire. Il tuo messaggio è conservato: passa a RouteLLM - Open nel selettore dei modelli dell'app per continuare.",
       "unavailableDown": "{{model}} non è disponibile al momento: il suo provider continua a non rispondere. Il tuo messaggio è conservato: passa a RouteLLM - Open nel selettore dei modelli dell'app per continuare.",
@@ -4912,6 +4915,8 @@
     "half": {
       "title": "Hai usato metà dei tuoi crediti gratuiti",
       "body": "Te ne restano {{left}} su {{total}}.",
+      "paidTitle": "You've used half of this month's credits",
+      "paidBody": "You have {{left}} of {{total}} left this month.",
       "estimateBuilds_one": "Bastano per circa {{count}} altra build come quelle di oggi.",
       "estimateBuilds_other": "Bastano per circa {{count}} altre build come quelle di oggi.",
       "estimateMessages_one": "Bastano per circa {{count}} altro messaggio del bot come quelli di oggi.",
@@ -4923,6 +4928,13 @@
       "title": "Solo {{left}} crediti gratuiti rimasti",
       "urge": "Fai l'upgrade ora così il tuo lavoro non si ferma a metà.",
       "urgeProject": "Fai l'upgrade ora così «{{project}}» non si ferma a metà.",
+      "paidTitle": "Only {{left}} credits left this month",
+      "paidUrgeBoth": "Top up or move to {{plan}} so your work doesn't stop halfway.",
+      "paidUrgeBothProject": "Top up or move to {{plan}} so “{{project}}” doesn't stop halfway.",
+      "paidUrgeNext": "Move to {{plan}} so your work doesn't stop halfway.",
+      "paidUrgeNextProject": "Move to {{plan}} so “{{project}}” doesn't stop halfway.",
+      "paidUrgeMore": "Add credits so your work doesn't stop halfway.",
+      "paidUrgeMoreProject": "Add credits so “{{project}}” doesn't stop halfway.",
       "estimateBuilds_one": "Bastano per circa {{count}} altra build.",
       "estimateBuilds_other": "Bastano per circa {{count}} altre build.",
       "estimateMessages_one": "Bastano per circa {{count}} altro messaggio del bot.",
@@ -4931,12 +4943,14 @@
       "estimateTasks_other": "Bastano per circa {{count}} altre attività."
     },
     "meterLabel": "{{used}} crediti gratuiti usati su {{total}}",
+    "paidMeterLabel": "{{used}} of {{total}} credits used this month",
     "used": "{{used}} usati",
     "left": "{{left}} rimasti",
     "upgradeIntro": "Upgrade · {{price}} il primo mese",
     "upgradeMonthly": "Upgrade · {{price}}/mese",
     "upgrade": "Upgrade",
-    "continueFree": "Continua gratis"
+    "continueFree": "Continua gratis",
+    "keepGoing": "Keep going"
   },
   "successPitch": {
     "moment": {

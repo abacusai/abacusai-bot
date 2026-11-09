@@ -246,7 +246,7 @@ it("has no ready section when nothing was handed over", async () => {
   expect(screen.queryByText("What's ready")).toBeNull();
 });
 
-describe("the free grant's milestone card", () => {
+describe("the plan's credit milestone card", () => {
   const BILLING: BillingPlan = {
     current: {
       planName: "Free",
@@ -371,7 +371,7 @@ describe("the free grant's milestone card", () => {
     organization: null,
     org_user_count: null,
     plan: null,
-    subscription_tier: "free",
+    subscription_tier: "free" as string | null,
     credits_granted: 2000,
     credits_used: 1000,
   };
@@ -390,6 +390,7 @@ describe("the free grant's milestone card", () => {
     busy = false,
     mark = MARK,
     sessions = [] as Array<Partial<SessionRow>>,
+    billing = BILLING as BillingPlan,
   } = {}) => {
     const os = implement(contract);
     const seed = defaultSeed();
@@ -414,7 +415,7 @@ describe("the free grant's milestone card", () => {
       procedures: {
         account: {
           abacus: os.account.abacus.handler(() => account),
-          billingPlan: os.account.billingPlan.handler(() => BILLING),
+          billingPlan: os.account.billingPlan.handler(() => billing),
         },
       },
     });
@@ -517,13 +518,163 @@ describe("the free grant's milestone card", () => {
     ).toBeTruthy();
   });
 
-  it("never for a paid plan, a spent grant (the out-of-credits card's) or over a running turn", async () => {
+  // A paid plan: this month's credits, its own way on, and Keep going.
+  const PAID_ACCOUNT = {
+    ...ACCOUNT,
+    subscription_tier: "pro",
+    credits_granted: 20_000,
+    credits_used: 16_400,
+    plan_credits: 20_000,
+  };
+  const PAID_MARK = {
+    ...MARK,
+    plan: "paid" as const,
+    reached: 80 as const,
+    used: 16_400,
+    granted: 20_000,
+    perTask: null,
+  };
+  const MAX = {
+    plan: "max",
+    planName: "Max",
+    priceText: "$40/mo",
+    priceCents: 4000,
+    features: ["Top models including Model A, Model B, Model C, Model D"],
+  };
+  const PAID_BILLING: BillingPlan = {
+    current: {
+      plan: "pro",
+      planName: "Pro",
+      creditsRemaining: 3600,
+      creditsGranted: 20_000,
+      freeTierExpiresAt: null,
+    },
+    plans: [
+      { ...MAX, creditsPerMonth: 100_000, current: false },
+      {
+        plan: "pro",
+        planName: "Pro",
+        priceText: "$20/mo",
+        priceCents: 2000,
+        features: [],
+        creditsPerMonth: 20_000,
+        current: true,
+      },
+    ],
+    upgrades: [{ ...MAX, url: "https://example.com/max" }],
+    topUpUrl: "https://example.com/top-up",
+    upgradeInMobileApp: false,
+  };
+
+  it("a paid plan at four fifths: this month's credits, Top up, the next plan and Keep going", async () => {
+    const h = await host({
+      account: PAID_ACCOUNT,
+      mark: PAID_MARK,
+      billing: PAID_BILLING,
+    });
+    await screen.findByRole("heading", {
+      name: "Only 3,600 credits left this month",
+    });
+    const text = screen.getByRole("dialog").textContent;
+    expect(text).toContain(
+      "Top up or move to Max so your work doesn't stop halfway."
+    );
+    expect(text).not.toContain("free");
+    expect(screen.getByRole("button", { name: "Top up" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Upgrade to Max" })).toBeTruthy();
+    expect(screen.getByRole("meter").getAttribute("aria-label")).toBe(
+      "16,400 of 20,000 credits used this month"
+    );
+    await waitFor(() =>
+      expect(h.steps()).toEqual(["credit_card_paid_80_shown"])
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Keep going" }));
+    await waitFor(() =>
+      expect(h.steps()).toContain("credit_card_paid_80_continue")
+    );
+  });
+
+  it("Basic: the next plan alone, pitched in full as the free plan's upgrade is, and no top-up", async () => {
+    await host({
+      account: { ...PAID_ACCOUNT, subscription_tier: "basic" },
+      mark: PAID_MARK,
+      billing: {
+        ...PAID_BILLING,
+        current: { ...PAID_BILLING.current, plan: "basic", planName: "Basic" },
+      },
+    });
+    await screen.findByRole("heading", {
+      name: "Only 3,600 credits left this month",
+    });
+    expect(screen.getByRole("dialog").textContent).toContain(
+      "Move to Max so your work doesn't stop halfway."
+    );
+    expect(screen.queryByRole("button", { name: "Top up" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Upgrade · $40/month" })
+    ).toBeTruthy();
+    expect(
+      document.querySelectorAll('[data-slot="credit-threshold-benefits"] li')
+        .length
+    ).toBeGreaterThan(0);
+  });
+
+  it("Max, with no plan above it: Top up and Keep going", async () => {
+    await host({
+      account: { ...PAID_ACCOUNT, subscription_tier: "max" },
+      mark: PAID_MARK,
+      billing: { ...PAID_BILLING, upgrades: [] },
+    });
+    await screen.findByRole("heading", {
+      name: "Only 3,600 credits left this month",
+    });
+    expect(screen.getByRole("dialog").textContent).toContain(
+      "Add credits so your work doesn't stop halfway."
+    );
+    expect(screen.getByRole("button", { name: "Top up" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Upgrade/ })).toBeNull();
+    expect(
+      document.querySelector('[data-slot="credit-threshold-benefits"]')
+    ).toBeNull();
+  });
+
+  it("a plan billed by Apple or Google points to the mobile app, with no links", async () => {
+    await host({
+      account: PAID_ACCOUNT,
+      mark: PAID_MARK,
+      billing: { ...PAID_BILLING, upgradeInMobileApp: true },
+    });
+    await screen.findByRole("heading", {
+      name: "Only 3,600 credits left this month",
+    });
+    expect(
+      document.querySelector('[data-slot="credit-threshold-mobile"]')
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Top up" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Upgrade/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "Keep going" })).toBeTruthy();
+  });
+
+  it("a paid plan with nothing to offer gets no card", async () => {
+    const h = await host({
+      account: PAID_ACCOUNT,
+      mark: PAID_MARK,
+      billing: { ...PAID_BILLING, upgrades: [], topUpUrl: null },
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 80));
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(h.steps()).toEqual([]);
+  });
+
+  it("never for an unread plan, a spent grant (the out-of-credits card's) or over a running turn", async () => {
     const settle = () =>
       act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 50));
       });
     for (const options of [
-      { account: { ...ACCOUNT, subscription_tier: "basic" } },
+      { account: { ...ACCOUNT, subscription_tier: null } },
       { account: { ...ACCOUNT, credits_used: 2000 } },
       { busy: true },
     ]) {

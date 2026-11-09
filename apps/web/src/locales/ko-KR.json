@@ -3092,6 +3092,7 @@
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
       "unsaved": "디스크가 가득 차서 이 채팅이 저장되지 않고 있습니다. 공간을 확보하세요. 다음 메시지를 보낼 때 다시 저장됩니다.",
+      "creditsLow": "Credits are almost out, so the agent is wrapping up what it has so the work isn't cut off halfway.",
       "showInFolder": "Show in folder"
     },
     "part": {
@@ -4806,6 +4807,8 @@
       "paidOutUpgrade": "이번 달 크레딧을 모두 사용해서 잠시 멈췄어요. {{plan}}({{price}})(으)로 업그레이드하면 매달 더 많은 크레딧을 받을 수 있습니다: {{link}}",
       "paidUpgrade": "또는 {{plan}}({{price}})(으)로 업그레이드하면 매달 더 많은 크레딧을 받을 수 있습니다: {{link}}",
       "paidUpgradeOnly": "{{plan}}({{price}})(으)로 업그레이드하면 매달 더 많은 크레딧을 받을 수 있습니다: {{link}}",
+      "milestoneTopUp": "Add credits here: {{link}}",
+      "milestoneMobile": "Your plan is billed through the App Store or Google Play, so add credits or upgrade in the Abacus.AI mobile app.",
       "paidMobile": "이번 달 크레딧을 모두 사용했습니다. 이 플랜은 App Store 또는 Google Play로 결제되므로 Abacus.AI 모바일 앱에서 크레딧을 추가하거나 업그레이드하세요.",
       "unavailable": "{{model}}을(를) 더 이상 사용할 수 없어서 마무리하지 못했어요. 메시지는 그대로 보관돼요. 앱의 모델 선택에서 RouteLLM - Open으로 전환하면 계속할 수 있어요.",
       "unavailableDown": "{{model}}을(를) 지금 사용할 수 없어요. 제공업체에서 계속 오류가 나요. 메시지는 그대로 보관돼요. 앱의 모델 선택에서 RouteLLM - Open으로 전환하면 계속할 수 있어요.",
@@ -4912,6 +4915,8 @@
     "half": {
       "title": "무료 크레딧의 절반을 사용했어요",
       "body": "{{total}} 중 {{left}} 남았어요.",
+      "paidTitle": "You've used half of this month's credits",
+      "paidBody": "You have {{left}} of {{total}} left this month.",
       "estimateBuilds_one": "오늘 같은 빌드라면 약 {{count}}번 더 할 수 있어요.",
       "estimateBuilds_other": "오늘 같은 빌드라면 약 {{count}}번 더 할 수 있어요.",
       "estimateMessages_one": "오늘 같은 봇 메시지라면 약 {{count}}개 더 보낼 수 있어요.",
@@ -4923,6 +4928,13 @@
       "title": "무료 크레딧이 {{left}}만 남았어요",
       "urge": "작업이 중간에 멈추지 않도록 지금 업그레이드하세요.",
       "urgeProject": "“{{project}}” 작업이 중간에 멈추지 않도록 지금 업그레이드하세요.",
+      "paidTitle": "Only {{left}} credits left this month",
+      "paidUrgeBoth": "Top up or move to {{plan}} so your work doesn't stop halfway.",
+      "paidUrgeBothProject": "Top up or move to {{plan}} so “{{project}}” doesn't stop halfway.",
+      "paidUrgeNext": "Move to {{plan}} so your work doesn't stop halfway.",
+      "paidUrgeNextProject": "Move to {{plan}} so “{{project}}” doesn't stop halfway.",
+      "paidUrgeMore": "Add credits so your work doesn't stop halfway.",
+      "paidUrgeMoreProject": "Add credits so “{{project}}” doesn't stop halfway.",
       "estimateBuilds_one": "빌드 약 {{count}}번 더 할 수 있어요.",
       "estimateBuilds_other": "빌드 약 {{count}}번 더 할 수 있어요.",
       "estimateMessages_one": "봇 메시지 약 {{count}}개 더 보낼 수 있어요.",
@@ -4931,12 +4943,14 @@
       "estimateTasks_other": "작업 약 {{count}}개 더 할 수 있어요."
     },
     "meterLabel": "무료 크레딧 {{total}} 중 {{used}} 사용",
+    "paidMeterLabel": "{{used}} of {{total}} credits used this month",
     "used": "{{used}} 사용",
     "left": "{{left}} 남음",
     "upgradeIntro": "업그레이드 · 첫 달 {{price}}",
     "upgradeMonthly": "업그레이드 · 월 {{price}}",
     "upgrade": "업그레이드",
-    "continueFree": "무료로 계속하기"
+    "continueFree": "무료로 계속하기",
+    "keepGoing": "Keep going"
   },
   "successPitch": {
     "moment": {

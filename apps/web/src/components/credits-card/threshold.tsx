@@ -1,15 +1,22 @@
 import {
   type BillingPlan,
   formatUsd,
+  paidCreditsOffer,
+  paidUpgradeOnly,
   planPitch,
   wallOffer,
 } from "@abacus-ai/contract/billing-plan";
 import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 import {
   creditAccountKey,
+  creditMilestonePlan,
   type CreditTaskKind,
   type CreditThreshold,
   creditThresholdWords,
+  milestoneBalance,
+  markPlan,
+  type MilestoneOffer,
+  milestoneOffer,
   pendingThreshold,
   tasksLeft,
 } from "@abacus-ai/contract/credit-thresholds";
@@ -21,8 +28,7 @@ import { useTranslation } from "react-i18next";
 
 import { useCollections, useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
-import { creditsTier } from "#renderer/lib/credits";
-import { openUpgrade } from "#renderer/lib/upgrade";
+import { openNextPlan, openTopUp, openUpgrade } from "#renderer/lib/upgrade";
 import { useUpgradeDialogRequest } from "#renderer/lib/upgrade-dialog";
 import { useAccount } from "#renderer/lib/use-account";
 import { useAppContext } from "#renderer/lib/use-app-context";
@@ -35,9 +41,12 @@ import {
 } from "#renderer/ui/dialog";
 
 /**
- * A free account's credit milestone card (contract credit-thresholds.ts):
- * half, then four fifths, of the free grant used. Over the window between
- * turns; it stays until a button is picked, and Esc is Continue free.
+ * An account's credit milestone card (contract credit-thresholds.ts): half,
+ * then four fifths, of the plan's credits used. Over the window between
+ * turns; it stays until a button is picked, and Esc keeps going. The free
+ * plan is offered its upgrade; a paid plan its top-up and next plan by the
+ * one offer rule (paidCreditsOffer), Basic its next plan alone, pitched as
+ * the free plan's upgrade is.
  */
 
 export interface CreditThresholdCardProps {
@@ -48,7 +57,13 @@ export interface CreditThresholdCardProps {
   billing: BillingPlan | null;
   /** The chat the user is on, by its name: what running out would stop. */
   project?: string;
+  /** Absent: the free plan's. */
+  offer?: MilestoneOffer;
+  /** The upgrade as the free plan has it, which Basic's next plan alone also opens. */
   onUpgrade(): void;
+  /** A paid plan's next plan, beside its top-up. */
+  onNextPlan?(): void;
+  onTopUp?(): void;
   onContinue(): void;
 }
 
@@ -59,7 +74,10 @@ export const CreditThresholdCard = ({
   estimate,
   billing,
   project,
+  offer: milestone = { plan: "free" },
   onUpgrade,
+  onNextPlan,
+  onTopUp,
   onContinue,
 }: CreditThresholdCardProps) => {
   const { t, i18n } = useTranslation();
@@ -73,8 +91,24 @@ export const CreditThresholdCard = ({
     threshold,
     { left, total },
     estimate,
-    project
+    project,
+    milestone
   );
+  const paid = milestone.plan === "paid" ? milestone.offer : null;
+  const isPaid = milestone.plan === "paid";
+  // Basic's next plan alone reads as the free plan's upgrade.
+  const upgradeLike = !isPaid || paidUpgradeOnly(paid);
+  const mobile = paid?.inMobileApp === true;
+  const topUp = isPaid && !mobile && paid?.topUpUrl != null && onTopUp != null;
+  const nextPlan =
+    isPaid &&
+    !mobile &&
+    !upgradeLike &&
+    paid?.next?.url != null &&
+    onNextPlan != null
+      ? paid.next
+      : null;
+  const pitched = upgradeLike || nextPlan != null;
   const offer = wallOffer(billing);
   const first = offer?.firstMonthPriceCents;
   const price = offer?.priceCents;
@@ -114,10 +148,12 @@ export const CreditThresholdCard = ({
         <div className="flex flex-col gap-1.5">
           <div
             role="meter"
-            aria-label={t("creditThreshold.meterLabel", {
-              used: number(used),
-              total: number(total),
-            })}
+            aria-label={t(
+              isPaid
+                ? "creditThreshold.paidMeterLabel"
+                : "creditThreshold.meterLabel",
+              { used: number(used), total: number(total) }
+            )}
             aria-valuemin={0}
             aria-valuemax={total}
             aria-valuenow={Math.min(total, Math.max(0, used))}
@@ -139,44 +175,78 @@ export const CreditThresholdCard = ({
             <span>{t("creditThreshold.left", { left: number(left) })}</span>
           </div>
         </div>
-        <ul
-          className="flex flex-col gap-2"
-          data-slot="credit-threshold-benefits"
-        >
-          {planPitch(t, billing, locale).map((line) => (
-            <li key={line} className="flex gap-2 text-sm/5">
-              <Check
-                aria-hidden
-                className="text-primary mt-0.5 size-4 shrink-0"
-                strokeWidth={2.4}
-              />
-              <span>{line}</span>
-            </li>
-          ))}
-        </ul>
-        <div className="flex flex-col gap-1.5">
-          <Button
-            className="h-10 text-sm font-semibold"
-            data-action="upgrade"
-            onClick={onUpgrade}
+        {mobile ? (
+          <p
+            className="text-muted-foreground text-sm/5"
+            data-slot="credit-threshold-mobile"
           >
-            {first != null && price != null && first < price
-              ? t("creditThreshold.upgradeIntro", {
-                  price: formatUsd(first, locale),
-                })
-              : price != null
-                ? t("creditThreshold.upgradeMonthly", {
-                    price: formatUsd(price, locale),
+            {t("outcome.wall.paidMobile")}
+          </p>
+        ) : pitched ? (
+          <ul
+            className="flex flex-col gap-2"
+            data-slot="credit-threshold-benefits"
+          >
+            {planPitch(t, billing, locale).map((line) => (
+              <li key={line} className="flex gap-2 text-sm/5">
+                <Check
+                  aria-hidden
+                  className="text-primary mt-0.5 size-4 shrink-0"
+                  strokeWidth={2.4}
+                />
+                <span>{line}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <div className="flex flex-col gap-1.5">
+          {topUp && (
+            <Button
+              className="h-10 text-sm font-semibold"
+              data-action="top-up"
+              onClick={onTopUp}
+            >
+              {t("creditsCard.topUpCta")}
+            </Button>
+          )}
+          {nextPlan != null && (
+            <Button
+              variant={topUp ? "secondary" : "default"}
+              className="h-10 text-sm font-semibold"
+              data-action="next-plan"
+              onClick={onNextPlan}
+            >
+              {t("outcome.wall.upgradeCta", { plan: nextPlan.planName })}
+            </Button>
+          )}
+          {!mobile && upgradeLike && (
+            <Button
+              className="h-10 text-sm font-semibold"
+              data-action="upgrade"
+              onClick={onUpgrade}
+            >
+              {first != null && price != null && first < price
+                ? t("creditThreshold.upgradeIntro", {
+                    price: formatUsd(first, locale),
                   })
-                : t("creditThreshold.upgrade")}
-          </Button>
+                : price != null
+                  ? t("creditThreshold.upgradeMonthly", {
+                      price: formatUsd(price, locale),
+                    })
+                  : t("creditThreshold.upgrade")}
+            </Button>
+          )}
           <Button
             variant="ghost"
             className="text-muted-foreground h-10 text-sm"
             data-action="continue-free"
             onClick={onContinue}
           >
-            {t("creditThreshold.continueFree")}
+            {t(
+              isPaid
+                ? "creditThreshold.keepGoing"
+                : "creditThreshold.continueFree"
+            )}
           </Button>
         </div>
       </DialogContent>
@@ -186,7 +256,7 @@ export const CreditThresholdCard = ({
 
 /**
  * The card for the signed-in account's latest milestone, until it is
- * answered. A paid plan never sees it, nor a spent grant (the out-of-credits
+ * answered. Never for an unread plan or spent credits (the out-of-credits
  * card's), and it never opens over a running turn or the upgrade dialog.
  */
 export const CreditThresholdHost = () => {
@@ -223,31 +293,39 @@ export const CreditThresholdHost = () => {
   const mark = key != null ? prefs.creditThresholds?.[key] : undefined;
   const cards = prefs.dismissals.creditThresholdCards ?? {};
   const card = key != null ? cards[key] : undefined;
-  const total = account?.credits_granted ?? null;
+  // The plan the watch stamped on the mark, as every surface reads it.
+  const plan =
+    mark != null && creditMilestonePlan(account) != null
+      ? markPlan(mark)
+      : null;
+  const balance = milestoneBalance(account);
+  const total = balance?.granted ?? null;
   // The account query can trail the read that stamped the mark.
   const used =
-    account?.credits_used != null
-      ? Math.max(
-          account.credits_used,
-          mark?.granted === total ? (mark?.used ?? 0) : 0
-        )
+    balance != null
+      ? Math.max(balance.used, mark?.granted === total ? (mark?.used ?? 0) : 0)
       : null;
-  // At the whole grant the out-of-credits card speaks instead.
+  // At the whole of the credits the out-of-credits card speaks instead.
   const owed =
-    creditsTier(account) === "free" &&
-    used != null &&
-    total != null &&
-    used < total
+    plan != null && used != null && total != null && used < total
       ? pendingThreshold(mark, card)
       : null;
-  // Once on screen it stays until answered, whatever starts behind it.
-  const visible =
-    owed != null && !upgradeAsked && (card?.shown === owed || !turnRunning);
-  const { data: billing } = useQuery({
+  const { data: billing, isPending: billingPending } = useQuery({
     ...transport.orpc.account.billingPlan.queryOptions({ input: {} }),
     enabled: owed != null,
     staleTime: 60_000,
   });
+  // A paid plan's buttons are its offer's: the card waits for the plan read,
+  // and a paid plan with nothing to offer gets no card.
+  const offerKnown =
+    plan !== "paid" ||
+    (!billingPending && paidCreditsOffer(billing ?? null) != null);
+  // Once on screen it stays until answered, whatever starts behind it.
+  const visible =
+    owed != null &&
+    offerKnown &&
+    !upgradeAsked &&
+    (card?.shown === owed || !turnRunning);
 
   const write = (next: {
     shown: CreditThreshold;
@@ -262,9 +340,14 @@ export const CreditThresholdHost = () => {
       .catch(() => undefined);
   const shown = useEffectEvent((threshold: CreditThreshold) => {
     if (card?.shown === threshold) return;
-    console.info(`[credits] threshold card ${threshold} shown`);
+    console.info(`[credits] threshold card ${threshold} shown (${plan})`);
     void transport.client.system
-      .funnelStep({ step: `credit_card_${threshold}_shown` })
+      .funnelStep({
+        step:
+          plan === "paid"
+            ? `credit_card_paid_${threshold}_shown`
+            : `credit_card_${threshold}_shown`,
+      })
       .catch(() => undefined);
     write({ shown: threshold, answered: card?.answered ?? null });
   });
@@ -273,12 +356,19 @@ export const CreditThresholdHost = () => {
     if (showing != null) shown(showing);
   }, [showing]);
 
-  if (showing == null || used == null || total == null) return null;
+  if (showing == null || used == null || total == null || plan == null)
+    return null;
   const count = tasksLeft(Math.max(0, total - used), mark?.perTask ?? null);
-  const answer = (choice: "upgrade" | "continue") => {
+  const offer = milestoneOffer(plan, billing);
+  const answer = (choice: "upgrade" | "top_up" | "next_plan" | "continue") => {
     console.info(`[credits] threshold card ${showing} answered: ${choice}`);
     void transport.client.system
-      .funnelStep({ step: `credit_card_${showing}_${choice}` })
+      .funnelStep({
+        step:
+          plan === "paid"
+            ? `credit_card_paid_${showing}_${choice === "upgrade" ? "next_plan" : choice}`
+            : `credit_card_${showing}_${choice === "upgrade" ? "upgrade" : "continue"}`,
+      })
       .catch(() => undefined);
     write({ shown: showing, answered: showing });
   };
@@ -289,11 +379,20 @@ export const CreditThresholdHost = () => {
       total={total}
       estimate={count != null ? { count, kind: mark?.kind ?? null } : null}
       billing={billing ?? null}
+      offer={offer}
       {...(project != null && { project })}
       onUpgrade={() => {
         // Inside the click: the web build opens its checkout tab here.
         void openUpgrade(transport.client, "low_credits");
         answer("upgrade");
+      }}
+      onNextPlan={() => {
+        void openNextPlan(transport.client);
+        answer("next_plan");
+      }}
+      onTopUp={() => {
+        void openTopUp(transport.client);
+        answer("top_up");
       }}
       onContinue={() => answer("continue")}
     />

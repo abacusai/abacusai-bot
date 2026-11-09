@@ -5,9 +5,16 @@
  */
 import { toolActivity } from "@abacus-ai/agent/tool-display";
 import {
+  type BillingPlan,
   type PaidCreditsOffer,
   paidCreditsOffer,
+  paidUpgradeOnly,
 } from "@abacus-ai/contract/billing-plan";
+import {
+  CREDITS_LOW_NOTICE_ACTION,
+  creditMilestonePlan,
+  milestoneOffer,
+} from "@abacus-ai/contract/credit-thresholds";
 import { OPENLLM_ID } from "@abacus-ai/contract/models";
 import { providerDisplayName } from "@abacus-ai/contract/settings";
 import type { UIMessage } from "@tanstack/ai-client";
@@ -34,6 +41,7 @@ import {
   ModelUnavailableCard,
   PlanOffer,
 } from "#renderer/components/credits-card/model-unavailable";
+import { PaidOfferButtons } from "#renderer/components/credits-card/paid-offer";
 import { GroupCard } from "#renderer/components/form-kit/page";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import {
@@ -1553,6 +1561,61 @@ const backgroundJobLine = (
     : t("chat.notice.backgroundFinished", { command });
 };
 
+/**
+ * The low-credit notice's way on, as the milestone card offers it
+ * (milestoneOffer): Basic's next plan alone opens as the free plan's upgrade
+ * does; any other paid plan its top-up and next plan. None for a plan with
+ * nothing to offer, or one not read yet.
+ */
+const CreditsLowButtons = () => {
+  const { t } = useTranslation();
+  const { runtime } = useChatView();
+  const plan = creditMilestonePlan(useAccount().data);
+  const [billing, setBilling] = useState<BillingPlan | null | undefined>(
+    undefined
+  );
+  useEffect(() => {
+    if (plan == null) return;
+    let live = true;
+    void Promise.resolve(runtime.host.billingPlan?.() ?? null)
+      .then((read) => {
+        if (live) setBilling(read);
+      })
+      .catch(() => {
+        if (live) setBilling(null);
+      });
+    return () => {
+      live = false;
+    };
+  }, [plan, runtime]);
+  if (plan == null || billing === undefined) return null;
+  const offer = milestoneOffer(plan, billing);
+  if (offer.plan === "paid" && offer.offer == null) return null;
+  if (offer.plan === "free" || paidUpgradeOnly(offer.offer))
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        data-action="upgrade"
+        onClick={() => void runtime.host.openUpgrade("low_credits")}
+      >
+        {t("creditsCard.cta")}
+      </Button>
+    );
+  return (
+    <PaidOfferButtons
+      offer={offer.offer!}
+      className="shrink-0"
+      {...(runtime.host.openTopUp != null && {
+        onTopUp: () => void runtime.host.openTopUp?.(),
+      })}
+      {...(runtime.host.openNextPlan != null && {
+        onNextPlan: () => void runtime.host.openNextPlan?.(),
+      })}
+    />
+  );
+};
+
 const SEVERITY_ICON = {
   info: Info,
   success: CheckCircle2,
@@ -1596,20 +1659,25 @@ export const NoticeRow = ({
   const backgroundJob = actions.find(
     (action) => action.type === BACKGROUND_JOB_ACTION
   );
-  const message = tooLarge
-    ? t("chat.notice.historyTooLarge", {
-        size: formatBytes(Number(notice.value.size ?? 0)),
-        limit: formatBytes(Number(notice.value.limit ?? 0)),
-      })
-    : foreign
-      ? t("chat.notice.historyForeign")
-      : unsaved
-        ? t("chat.notice.unsaved")
-        : moved != null
-          ? ownKeyMovedLine(moved, t)
-          : backgroundJob != null
-            ? backgroundJobLine(backgroundJob, t)
-            : String(notice.value.message ?? "");
+  const creditsLow = actions.some(
+    (action) => action.type === CREDITS_LOW_NOTICE_ACTION
+  );
+  const message = creditsLow
+    ? t("chat.notice.creditsLow")
+    : tooLarge
+      ? t("chat.notice.historyTooLarge", {
+          size: formatBytes(Number(notice.value.size ?? 0)),
+          limit: formatBytes(Number(notice.value.limit ?? 0)),
+        })
+      : foreign
+        ? t("chat.notice.historyForeign")
+        : unsaved
+          ? t("chat.notice.unsaved")
+          : moved != null
+            ? ownKeyMovedLine(moved, t)
+            : backgroundJob != null
+              ? backgroundJobLine(backgroundJob, t)
+              : String(notice.value.message ?? "");
   return (
     <Marker
       variant="border"
@@ -1627,6 +1695,7 @@ export const NoticeRow = ({
         />
       </MarkerIcon>
       <MarkerContent className="flex-1">{message}</MarkerContent>
+      {creditsLow ? <CreditsLowButtons /> : null}
       {IS_ELECTRON && tooLarge && historyPath != null ? (
         <Button
           variant="ghost"

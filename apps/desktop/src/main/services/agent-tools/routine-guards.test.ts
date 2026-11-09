@@ -1,5 +1,5 @@
 import { AgentStatus } from "@abacus-ai/contract/agent-types";
-import type { PrefsPatch, PrefsRow } from "@abacus-ai/contract/contract/rows";
+import type { PrefsRow } from "@abacus-ai/contract/contract/rows";
 import type { RoutineRunItem } from "@abacus-ai/contract/contracts";
 import type { CreditThresholdMark } from "@abacus-ai/contract/credit-thresholds";
 import {
@@ -10,6 +10,7 @@ import {
 } from "@abacus-ai/contract/routines";
 import { describe, expect, it, vi } from "vitest";
 
+import { PrefsStore } from "../config/prefs-store";
 import {
   CreditThresholdWatch,
   markAfterRead,
@@ -407,7 +408,7 @@ describe("the agent running a routine again", () => {
   });
 });
 
-describe("the free grant's credit milestones", () => {
+describe("the plan's credit milestones", () => {
   const ACCOUNT = {
     user_id: "u1",
     organization_id: "o1",
@@ -423,16 +424,12 @@ describe("the free grant's credit milestones", () => {
     ) => Promise<boolean> = vi.fn(async () => false),
     retriesUntold?: (sessionId: string) => boolean
   ) => {
-    let row = { id: "app", creditThresholds: {} } as unknown as PrefsRow;
-    const account = { ...ACCOUNT };
+    // The real store: every stamped mark passes the prefs schema, as in the app.
+    const store = new PrefsStore({ file: null });
+    const account: Record<string, unknown> = { ...ACCOUNT };
     const clock = { now: new Date(2026, 9, 22, 10).getTime() };
     const watch = new CreditThresholdWatch({
-      prefs: () => ({
-        get: () => row,
-        update: (patch: PrefsPatch) => {
-          row = { ...row, ...patch } as PrefsRow;
-        },
-      }),
+      prefs: () => store,
       readAccount: async () => ({ ...account }) as never,
       tellInChat,
       ...(retriesUntold != null ? { retriesUntold } : {}),
@@ -445,14 +442,22 @@ describe("the free grant's credit milestones", () => {
       account.credits_used = used;
       clock.now += 60_000;
       await watch.turnSettled("s1", kind);
-      return row.creditThresholds?.[KEY];
+      return store.get().creditThresholds?.[KEY];
     };
     return {
       watch,
       settle,
       account,
       tellInChat,
-      mark: () => row.creditThresholds?.[KEY],
+      mark: () => store.get().creditThresholds?.[KEY],
+      card: () => store.get().dismissals.creditThresholdCards?.[KEY],
+      answer: (answered: 50 | 80) => {
+        store.update({
+          dismissals: {
+            creditThresholdCards: { [KEY]: { shown: answered, answered } },
+          },
+        });
+      },
     };
   };
 
@@ -461,10 +466,10 @@ describe("the free grant's credit milestones", () => {
     expect(await h.settle(900)).toBeUndefined();
     const half = await h.settle(1000);
     expect(half).toMatchObject({ reached: 50, used: 1000, granted: 2000 });
-    expect(await h.settle(1200)).toBe(half);
+    expect(await h.settle(1200)).toEqual(half);
     expect(await h.settle(1600)).toMatchObject({ reached: 80, used: 1600 });
     const low = h.mark();
-    expect(await h.settle(1700)).toBe(low);
+    expect(await h.settle(1700)).toEqual(low);
   });
 
   it("estimates from today's post-turn reads: credits per completed turn, and what they were", async () => {
@@ -488,10 +493,72 @@ describe("the free grant's credit milestones", () => {
     });
   });
 
-  it("never for a paid plan, and not at the whole grant, where the out-of-credits card speaks", async () => {
+  it("a paid plan's against its monthly credits, never what was bought on top", async () => {
     const paid = setup();
-    paid.account.subscription_tier = "basic";
-    expect(await paid.settle(1900)).toBeUndefined();
+    // 20,000 a month plus 10,000 bought: low only once below the plan's own.
+    Object.assign(paid.account, {
+      subscription_tier: "basic",
+      credits_granted: 30_000,
+      plan_credits: 20_000,
+    });
+    expect(await paid.settle(15_000)).toBeUndefined();
+    expect(await paid.settle(20_000)).toMatchObject({
+      reached: 50,
+      used: 10_000,
+      granted: 20_000,
+    });
+    expect(await paid.settle(26_500)).toMatchObject({ reached: 80 });
+    // An unread plan is not guessed at.
+    const unknown = setup();
+    unknown.account.subscription_tier = null;
+    expect(await unknown.settle(1900)).toBeUndefined();
+  });
+
+  it("a paid plan's new month clears the mark: the next spend-down warns again", async () => {
+    const h = setup();
+    h.account.subscription_tier = "pro";
+    await h.settle(1700);
+    h.answer(80);
+    expect(h.mark()).toMatchObject({ reached: 80, plan: "paid" });
+    // The month renews: the mark and the card's answer go, nothing is owed.
+    expect(await h.settle(0)).toBeUndefined();
+    expect(h.card()).toBeUndefined();
+    expect(await h.settle(1100)).toMatchObject({ reached: 50 });
+  });
+
+  it("a partial top-up brings back no card; spending down again warns at four fifths", async () => {
+    const h = setup();
+    Object.assign(h.account, { subscription_tier: "pro", plan_credits: 2000 });
+    await h.settle(1700);
+    h.answer(80);
+    // 5% of the plan bought: 70% of it used, so the mark moves down, answered.
+    h.account.credits_granted = 2300;
+    expect(await h.settle(1700)).toMatchObject({ reached: 50, plan: "paid" });
+    expect(h.card()).toEqual({ shown: 50, answered: 50 });
+    // Back to four fifths of the plan: the 80% card is owed again.
+    expect(await h.settle(1900)).toMatchObject({ reached: 80 });
+    expect(h.card()).toEqual({ shown: 50, answered: 50 });
+  });
+
+  it("the free plan's one-time grant never re-arms, as before", async () => {
+    const h = setup();
+    await h.settle(1700);
+    h.answer(80);
+    h.account.credits_granted = 4000;
+    await h.settle(1700);
+    expect(h.mark()).toMatchObject({ reached: 80, plan: "free" });
+    expect(h.card()).toEqual({ shown: 80, answered: 80 });
+  });
+
+  it("a team or enterprise plan, with no top-up of its own, gets no milestones", async () => {
+    for (const tier of ["enterprise", "team", "business"]) {
+      const h = setup();
+      h.account.subscription_tier = tier;
+      expect(await h.settle(1700)).toBeUndefined();
+    }
+  });
+
+  it("not at the whole grant, where the out-of-credits card speaks", async () => {
     const spent = setup();
     expect(await spent.settle(2000)).toBeUndefined();
     expect(
@@ -552,7 +619,7 @@ describe("the free grant's credit milestones", () => {
     const turnSettled = vi.fn(async () => {});
     const listen = settledTurnListener(
       { turnSettled },
-      { onFreePlan: () => true, kindOf: () => "build" }
+      { kindOf: () => "build" }
     );
     const event = (e: Record<string, unknown>) =>
       listen("s1", { type: "event", event: e } as never);

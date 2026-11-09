@@ -896,11 +896,9 @@ export class ServiceHost {
       );
       if (patch != null) prefs.update(patch);
     });
-    // A billed turn that settles on a free account checks the free grant's
-    // milestones.
+    // A billed turn that settles checks the plan's credit milestones.
     this.onAgentEvent(
       settledTurnListener(this.creditThresholds, {
-        onFreePlan: () => abacusPlanTier(cachedAbacusAccount()) === "free",
         kindOf: (id) => this.settledTurnKind(id),
       })
     );
@@ -1257,7 +1255,7 @@ export class ServiceHost {
     this.phoneCreditLine = tell;
   }
 
-  /** The free grant's milestones, checked after each billed turn settles. */
+  /** The plan's credit milestones, checked after each billed turn settles. */
   private readonly creditThresholds = new CreditThresholdWatch({
     prefs: () => this.prefs?.() ?? null,
     readAccount: () => fetchAbacusAccount(true),

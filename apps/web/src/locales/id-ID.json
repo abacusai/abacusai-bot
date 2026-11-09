@@ -3092,6 +3092,7 @@
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
       "unsaved": "Disk penuh, jadi chat ini tidak sedang disimpan. Kosongkan sebagian ruang; chat akan disimpan lagi dengan pesanmu berikutnya.",
+      "creditsLow": "Credits are almost out, so the agent is wrapping up what it has so the work isn't cut off halfway.",
       "showInFolder": "Show in folder"
     },
     "part": {
@@ -4806,6 +4807,8 @@
       "paidOutUpgrade": "Aku berhenti sementara karena kredit bulan ini sudah habis. Naik ke {{plan}} ({{price}}) untuk kredit lebih banyak setiap bulan: {{link}}",
       "paidUpgrade": "Atau naik ke {{plan}} ({{price}}) untuk kredit lebih banyak setiap bulan: {{link}}",
       "paidUpgradeOnly": "Naik ke {{plan}} ({{price}}) untuk kredit lebih banyak setiap bulan: {{link}}",
+      "milestoneTopUp": "Add credits here: {{link}}",
+      "milestoneMobile": "Your plan is billed through the App Store or Google Play, so add credits or upgrade in the Abacus.AI mobile app.",
       "paidMobile": "Kredit bulan ini sudah habis. Paket Anda ditagih melalui App Store atau Google Play, jadi tambahkan kredit atau upgrade di aplikasi seluler Abacus.AI.",
       "unavailable": "{{model}} sudah tidak tersedia, jadi aku tidak bisa menyelesaikannya. Pesanmu tetap tersimpan: beralih ke RouteLLM - Open di pemilih model aplikasi untuk melanjutkan.",
       "unavailableDown": "{{model}} sedang tidak tersedia: penyedianya terus gagal. Pesanmu tetap tersimpan: beralih ke RouteLLM - Open di pemilih model aplikasi untuk melanjutkan.",
@@ -4912,6 +4915,8 @@
     "half": {
       "title": "Kamu sudah memakai setengah kredit gratismu",
       "body": "Tersisa {{left}} dari {{total}}.",
+      "paidTitle": "You've used half of this month's credits",
+      "paidBody": "You have {{left}} of {{total}} left this month.",
       "estimateBuilds_one": "Cukup untuk sekitar {{count}} build lagi seperti hari ini.",
       "estimateBuilds_other": "Cukup untuk sekitar {{count}} build lagi seperti hari ini.",
       "estimateMessages_one": "Cukup untuk sekitar {{count}} pesan bot lagi seperti hari ini.",
@@ -4923,6 +4928,13 @@
       "title": "Kredit gratis tinggal {{left}}",
       "urge": "Upgrade sekarang supaya pekerjaanmu tidak berhenti di tengah jalan.",
       "urgeProject": "Upgrade sekarang supaya “{{project}}” tidak berhenti di tengah jalan.",
+      "paidTitle": "Only {{left}} credits left this month",
+      "paidUrgeBoth": "Top up or move to {{plan}} so your work doesn't stop halfway.",
+      "paidUrgeBothProject": "Top up or move to {{plan}} so “{{project}}” doesn't stop halfway.",
+      "paidUrgeNext": "Move to {{plan}} so your work doesn't stop halfway.",
+      "paidUrgeNextProject": "Move to {{plan}} so “{{project}}” doesn't stop halfway.",
+      "paidUrgeMore": "Add credits so your work doesn't stop halfway.",
+      "paidUrgeMoreProject": "Add credits so “{{project}}” doesn't stop halfway.",
       "estimateBuilds_one": "Cukup untuk sekitar {{count}} build lagi.",
       "estimateBuilds_other": "Cukup untuk sekitar {{count}} build lagi.",
       "estimateMessages_one": "Cukup untuk sekitar {{count}} pesan bot lagi.",
@@ -4931,12 +4943,14 @@
       "estimateTasks_other": "Cukup untuk sekitar {{count}} tugas lagi."
     },
     "meterLabel": "{{used}} dari {{total}} kredit gratis terpakai",
+    "paidMeterLabel": "{{used}} of {{total}} credits used this month",
     "used": "{{used}} terpakai",
     "left": "{{left}} tersisa",
     "upgradeIntro": "Upgrade · {{price}} bulan pertama",
     "upgradeMonthly": "Upgrade · {{price}}/bulan",
     "upgrade": "Upgrade",
-    "continueFree": "Lanjut gratis"
+    "continueFree": "Lanjut gratis",
+    "keepGoing": "Keep going"
   },
   "successPitch": {
     "moment": {

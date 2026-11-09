@@ -138,6 +138,7 @@ const CreditThresholdMarkSchema = v.strictObject({
   perTask: v.nullable(v.number()),
   kind: v.nullable(v.picklist(CREDIT_TASK_KINDS)),
   told: v.nullable(CreditThresholdSchema),
+  plan: v.optional(v.picklist(["free", "paid"])),
 });
 
 const SuccessPitchMarkSchema = v.strictObject({

@@ -71,6 +71,15 @@ export const FUNNEL_STEPS = [
   "credit_card_80_shown",
   "credit_card_80_upgrade",
   "credit_card_80_continue",
+  // A paid plan's credit milestone card: its top-up, its next plan, or keep going.
+  "credit_card_paid_50_shown",
+  "credit_card_paid_50_top_up",
+  "credit_card_paid_50_next_plan",
+  "credit_card_paid_50_continue",
+  "credit_card_paid_80_shown",
+  "credit_card_paid_80_top_up",
+  "credit_card_paid_80_next_plan",
+  "credit_card_paid_80_continue",
   // A free account's success pitch (success-pitch.ts); the detail is its trigger.
   "success_pitch_shown",
   "success_pitch_upgrade",

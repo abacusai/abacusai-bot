@@ -11,12 +11,16 @@ export interface CreditBalance {
   at: number;
   /** The plan's monthly credits, when the server says; absent on a free plan. */
   planCredits?: number;
+  /** A plan the user pays for (contract creditMilestonePlan): the user is told when the run wraps up. */
+  paid?: boolean;
 }
 
 /**
  * What "running low" is measured against: the plan's own credits, never what
  * was bought on top. Someone who bought 300,000 is not low at 30,000. A promoted
- * first month grants less than the plan, so the smaller of the two.
+ * first month grants less than the plan, so the smaller of the two. The
+ * app's credit milestones measure the same base (milestoneBalance in
+ * packages/contract/src/credit-thresholds.ts).
  */
 export const lowCreditBase = (balance: CreditBalance): number =>
   balance.planCredits != null
@@ -40,6 +44,7 @@ const parse = (raw: unknown): CreditBalance | null => {
         ...(finite(value.planCredits) && value.planCredits > 0
           ? { planCredits: value.planCredits }
           : {}),
+        ...(value.paid === true ? { paid: true } : {}),
       }
     : null;
 };

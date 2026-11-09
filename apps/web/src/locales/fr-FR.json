@@ -3092,6 +3092,7 @@
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
       "unsaved": "Le disque est plein : cette conversation n'est pas enregistrée. Libérez de l'espace ; elle sera de nouveau enregistrée avec votre prochain message.",
+      "creditsLow": "Credits are almost out, so the agent is wrapping up what it has so the work isn't cut off halfway.",
       "showInFolder": "Show in folder"
     },
     "part": {
@@ -4806,6 +4807,8 @@
       "paidOutUpgrade": "Je me suis mis en pause car les crédits de ce mois-ci sont épuisés. Passez à {{plan}} ({{price}}) pour plus de crédits chaque mois : {{link}}",
       "paidUpgrade": "Ou passez à {{plan}} ({{price}}) pour plus de crédits chaque mois : {{link}}",
       "paidUpgradeOnly": "Passez à {{plan}} ({{price}}) pour plus de crédits chaque mois : {{link}}",
+      "milestoneTopUp": "Add credits here: {{link}}",
+      "milestoneMobile": "Your plan is billed through the App Store or Google Play, so add credits or upgrade in the Abacus.AI mobile app.",
       "paidMobile": "Les crédits de ce mois-ci sont épuisés. Votre forfait est facturé via l'App Store ou Google Play : ajoutez des crédits ou passez à un forfait supérieur dans l'application mobile Abacus.AI.",
       "unavailable": "{{model}} n'est plus disponible, je n'ai donc pas pu terminer. Votre message est conservé : passez à RouteLLM - Open dans le sélecteur de modèles de l'app pour continuer.",
       "unavailableDown": "{{model}} n'est pas disponible pour le moment : son fournisseur continue d'échouer. Votre message est conservé : passez à RouteLLM - Open dans le sélecteur de modèles de l'app pour continuer.",
@@ -4912,6 +4915,8 @@
     "half": {
       "title": "Vous avez utilisé la moitié de vos crédits gratuits",
       "body": "Il vous en reste {{left}} sur {{total}}.",
+      "paidTitle": "You've used half of this month's credits",
+      "paidBody": "You have {{left}} of {{total}} left this month.",
       "estimateBuilds_one": "De quoi faire environ {{count}} build de plus comme ceux d'aujourd'hui.",
       "estimateBuilds_other": "De quoi faire environ {{count}} builds de plus comme ceux d'aujourd'hui.",
       "estimateMessages_one": "De quoi envoyer environ {{count}} message du bot de plus comme ceux d'aujourd'hui.",
@@ -4923,6 +4928,13 @@
       "title": "Plus que {{left}} crédits gratuits",
       "urge": "Passez au forfait maintenant pour que votre travail ne s'arrête pas en plein milieu.",
       "urgeProject": "Passez au forfait maintenant pour que « {{project}} » ne s'arrête pas en plein milieu.",
+      "paidTitle": "Only {{left}} credits left this month",
+      "paidUrgeBoth": "Top up or move to {{plan}} so your work doesn't stop halfway.",
+      "paidUrgeBothProject": "Top up or move to {{plan}} so “{{project}}” doesn't stop halfway.",
+      "paidUrgeNext": "Move to {{plan}} so your work doesn't stop halfway.",
+      "paidUrgeNextProject": "Move to {{plan}} so “{{project}}” doesn't stop halfway.",
+      "paidUrgeMore": "Add credits so your work doesn't stop halfway.",
+      "paidUrgeMoreProject": "Add credits so “{{project}}” doesn't stop halfway.",
       "estimateBuilds_one": "Assez pour environ {{count}} build de plus.",
       "estimateBuilds_other": "Assez pour environ {{count}} builds de plus.",
       "estimateMessages_one": "Assez pour environ {{count}} message du bot de plus.",
@@ -4931,12 +4943,14 @@
       "estimateTasks_other": "Assez pour environ {{count}} tâches de plus."
     },
     "meterLabel": "{{used}} crédits gratuits utilisés sur {{total}}",
+    "paidMeterLabel": "{{used}} of {{total}} credits used this month",
     "used": "{{used}} utilisés",
     "left": "{{left}} restants",
     "upgradeIntro": "Passer au forfait · {{price}} le premier mois",
     "upgradeMonthly": "Passer au forfait · {{price}}/mois",
     "upgrade": "Passer au forfait",
-    "continueFree": "Continuer gratuitement"
+    "continueFree": "Continuer gratuitement",
+    "keepGoing": "Keep going"
   },
   "successPitch": {
     "moment": {

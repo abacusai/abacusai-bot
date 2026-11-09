@@ -93,6 +93,46 @@ describe("a credit milestone on WhatsApp", () => {
     expect(text).toMatch(/\/bot\/link\/upgrade\?src=whatsapp/);
   });
 
+  it("a paid plan hears the plan the watch stamped, never the free words, and nothing without an offer", async () => {
+    const PRO: BillingPlan = {
+      ...BASIC,
+      current: { ...BASIC.current, plan: "pro", planName: "Pro" },
+      upgrades: [
+        {
+          ...BASIC.upgrades[0]!,
+          plan: "max",
+          planName: "Max",
+          url: "https://apps.example/max",
+        },
+      ],
+      topUpUrl: "https://apps.example/top-up",
+    };
+    const paidMark = { ...mark(80), plan: "paid" as const };
+    const say = vi.fn(async (_text: string) => true);
+    expect(
+      await phoneCreditLine({
+        phoneDir: phoneDir(),
+        say,
+        billing: async () => PRO,
+      })(paidMark)
+    ).toBe(true);
+    const text = say.mock.calls[0]![0];
+    expect(text.split("\n")[0]).toBe("Only 400 credits left this month");
+    expect(text).toContain("Add credits here: https://apps.example/top-up");
+    expect(text).toContain("https://apps.example/max");
+    expect(text).not.toMatch(/free/i);
+    // The plan could not be read in time: nothing is said, and it goes again later.
+    say.mockClear();
+    expect(
+      await phoneCreditLine({
+        phoneDir: phoneDir(),
+        say,
+        billing: async () => null,
+      })(paidMark)
+    ).toBe(false);
+    expect(say).not.toHaveBeenCalled();
+  });
+
   it("reports a line that did not go, so the watch does not mark it told", async () => {
     const went = await phoneCreditLine({
       phoneDir: phoneDir(),
