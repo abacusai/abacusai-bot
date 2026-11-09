@@ -147,7 +147,16 @@ const ROWS: Row[] = [
   { command: "shutdown -h now", expected: "confirm" },
   { command: "systemctl reboot", expected: "confirm" },
   { command: "powershell -Command Stop-Computer", expected: "confirm" },
-  { command: "rm -rf /etc/nginx/sites-enabled/x", expected: "confirm" },
+  // System folders are judged on this machine's own paths: on Windows `/etc`
+  // is a folder on the current drive, elsewhere `C:/Windows` is a relative name.
+  {
+    command: "rm -rf /etc/nginx/sites-enabled/x",
+    expected: process.platform === "win32" ? "allow" : "confirm",
+  },
+  {
+    command: 'rm -rf "C:/Windows/System32/x"',
+    expected: process.platform === "win32" ? "confirm" : "allow",
+  },
   { command: "sudo rm -rf ./build", expected: "confirm" },
   { command: "git push --force origin main", expected: "confirm" },
   { command: "git push --force-with-lease", expected: "confirm" },
