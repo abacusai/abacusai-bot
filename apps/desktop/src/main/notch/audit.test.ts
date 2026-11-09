@@ -56,7 +56,7 @@ it("R6-T29 every production native-window enumeration explicitly excludes the co
       );
     });
   }
-  expect(enumerations).toHaveLength(3);
+  expect(enumerations).toHaveLength(4);
 });
 it("R6-T29 production renderer trust is registered only in the two main wiring functions", () => {
   const registrations: string[] = [];

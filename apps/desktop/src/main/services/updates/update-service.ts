@@ -543,6 +543,7 @@ export class UpdateService {
 
   // Hide immediately on quit while Squirrel stages; a relaunch reveals it.
   private hideForQuit(): void {
+    // Every window, the notch companion included: the app is quitting.
     for (const win of BaseWindow.getAllWindows())
       if (!win.isDestroyed()) win.hide();
     app.dock?.hide();
