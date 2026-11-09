@@ -192,7 +192,11 @@ import {
 import { serviceRoutingPrompt } from "./service-routing-prompt.js";
 import { runSessionAction } from "./session-actions.js";
 import { conversationSessionManager } from "./session-file.js";
-import { guardDecision, logGuardVerdict } from "./shell-judge.js";
+import {
+  guardDecision,
+  logGuardVerdict,
+  unattendedNote,
+} from "./shell-judge.js";
 import {
   MAX_STALL_RECOVERIES_PER_TURN,
   STALL_CONTINUATION_PROMPT,
@@ -3601,6 +3605,16 @@ export class AbacusBotSession {
     // to take the handle; it becomes live only when a session is built on it.
     this.loadedPi = pi;
 
+    // A judged command that ran with nobody to approve it carries a note.
+    pi.on("tool_result", async (event) => {
+      const report = this.unaskedReports.get(event.toolCallId);
+      if (report == null) return;
+      this.unaskedReports.delete(event.toolCallId);
+      return {
+        content: [...event.content, { type: "text" as const, text: report }],
+      };
+    });
+
     pi.on("tool_call", async (event, ctx) => {
       // Before the gate, so it judges the file the model meant.
       repairEscapedPaths(event.input as Record<string, unknown>, ctx.cwd);
@@ -3639,7 +3653,17 @@ export class AbacusBotSession {
           : {}),
       });
 
-      if (gate.kind === "allow") return;
+      if (gate.kind === "allow") {
+        // Nobody could approve it: it runs, and its result asks for a mention.
+        if (gate.unasked != null) {
+          logGuardVerdict("confirm", gate.unasked, "ran_unattended");
+          this.unaskedReports.set(
+            event.toolCallId,
+            unattendedNote(gate.unasked)
+          );
+        }
+        return;
+      }
 
       // Asked and answered; the same card again talks over the user.
       if (tool.name === EXIT_PLAN_TOOL_NAME && this.planDeclinedThisTurn) {
@@ -3655,11 +3679,7 @@ export class AbacusBotSession {
 
       if (gate.kind === "refuse") {
         if (gate.guard != null)
-          logGuardVerdict(
-            gate.guard.verdict,
-            gate.guard.rules,
-            gate.guard.verdict === "never" ? "refused" : "no_answerer"
-          );
+          logGuardVerdict(gate.guard.verdict, gate.guard.rules, "refused");
         this.noteBlocked(event.toolCallId, "refused");
 
         return { block: true, reason: gate.reason };
@@ -3975,6 +3995,9 @@ export class AbacusBotSession {
    * Set when the user declines to start this turn. One question per turn:
    * after that the refusal comes back without another card.
    */
+  /** Notes for judged commands that ran unasked, by tool call (see permissionExtension). */
+  private readonly unaskedReports = new Map<string, string>();
+
   private planDeclinedThisTurn = false;
 
   /**

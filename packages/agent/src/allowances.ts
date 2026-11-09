@@ -50,11 +50,9 @@ export class Allowances {
         return;
       case "run_terminal":
         // A judged card lifts its categories, not the command's first word.
-        // An unreadable command is asked about each time.
         if (request.guard != null) {
           for (const rule of request.guard.rules)
-            if (rule !== "unreadable" && !this.guardRules.includes(rule))
-              this.guardRules.push(rule);
+            if (!this.guardRules.includes(rule)) this.guardRules.push(rule);
           return;
         }
         break;

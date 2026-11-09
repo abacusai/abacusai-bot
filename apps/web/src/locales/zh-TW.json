@@ -3164,12 +3164,10 @@
         "generic": "要使用 {{tool}} 嗎？",
         "guard_disk": "This erases or overwrites a disk.",
         "guard_forcePush": "This force-pushes or deletes git history on the remote.",
-        "guard_gitHistory": "This deletes a whole .git folder and its history.",
         "guard_killAll": "This stops every process you are running.",
         "guard_power": "This shuts down or restarts the computer.",
         "guard_privileged": "This runs as administrator on this computer.",
         "guard_systemDelete": "This deletes inside a system folder.",
-        "guard_unreadable": "The agent could not read what this command runs.",
         "networkHost": "要連線到 {{host}} 嗎？",
         "networkHostDescription": "沙箱封鎖了這台主機。允許後，指令就能下載套件。",
         "notebook": {

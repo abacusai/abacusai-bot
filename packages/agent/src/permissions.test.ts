@@ -152,22 +152,18 @@ describe("the shell judge at the gate", () => {
     expect(gate.kind).toBe("ask");
   });
 
-  it("refuses with what to tell the user where nobody can answer", () => {
-    for (const command of ["sudo apt-get install -y x", "pkill -f server"]) {
-      const gate = gateToolCall(
-        call("bash", { command }),
-        options({ mode: AgentMode.Yolo, noAnswerer: true })
-      );
-      expect(gate.kind, command).toBe("refuse");
-      if (gate.kind === "refuse")
-        expect(gate.reason).toContain("exact command");
-    }
+  it("runs a judged command where nobody can answer, and names what it skipped", () => {
+    const gate = gateToolCall(
+      call("bash", { command: "sudo apt-get install -y x" }),
+      options({ mode: AgentMode.Yolo, noAnswerer: true })
+    );
+    expect(gate).toEqual({ kind: "allow", unasked: ["privileged"] });
     expect(
       gateToolCall(
-        call("bash", { command: "pkill -f server" }),
-        options({ mode: AgentMode.Yolo })
+        call("bash", { command: "rm -rf ~" }),
+        options({ mode: AgentMode.Yolo, noAnswerer: true })
       ).kind
-    ).toBe("allow");
+    ).toBe("refuse");
   });
 
   it("leaves a remote command to the mode", () => {

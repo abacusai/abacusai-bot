@@ -28,13 +28,7 @@ import {
 } from "./sandbox/secrets.js";
 import { zoneContext, zoneOf } from "./sandbox/zones.js";
 import { namesSecretFile } from "./secret-files.js";
-import {
-  confirmRules,
-  judgeCommand,
-  neverMessage,
-  noAnswererMessage,
-  unattendedRules,
-} from "./shell-judge.js";
+import { confirmRules, judgeCommand, neverMessage } from "./shell-judge.js";
 import {
   ownEntry,
   sourceAllows,
@@ -248,7 +242,12 @@ export function shellSegments(command: string): string[] {
 
 export type Gate =
   /** `credentialPaths`: hidden stores the user already approved, to unhide. */
-  | { kind: "allow"; credentialPaths?: string[] }
+  | {
+      kind: "allow";
+      credentialPaths?: string[];
+      /** Judged rules a run nobody watches ran without a card, for its report. */
+      unasked?: GuardRule[];
+    }
   /** Refused outright without asking: PLAN mode's answer to a mutation. */
   | {
       kind: "refuse";
@@ -279,7 +278,7 @@ export interface GateOptions {
   allowedGuardRules?: readonly GuardRule[];
   /**
    * Nobody can answer a card here (a routine's run, or the app not attached):
-   * a judged command is refused with what to tell the user.
+   * a judged command runs, and the gate says which rules it skipped.
    */
   noAnswerer?: boolean;
   /**
@@ -835,17 +834,9 @@ function guardGate(tool: ToolRequest, options: GateOptions): Gate | null {
   const rules = confirmRules(judgement).filter(
     (rule) => !allowed.includes(rule)
   );
-  if (options.noAnswerer === true) {
-    const refused = [...rules, ...unattendedRules(judgement)];
-    return refused.length === 0
-      ? null
-      : {
-          kind: "refuse",
-          reason: noAnswererMessage(refused),
-          guard: { verdict: "confirm", rules: refused },
-        };
-  }
   if (rules.length === 0) return null;
+  // Nobody to ask: it runs, and the run's report says so.
+  if (options.noAnswerer === true) return { kind: "allow", unasked: rules };
 
   const { named } = namedCredentialStores(command, options);
   return {

@@ -426,8 +426,8 @@ export async function runDocumentTask(
       extensionFactories: [
         {
           name: "abacusai-bot-guardrails",
-          // Nobody watches a sub-agent: a judged command is refused, not asked.
-          factory: createGuardrails({ confirm: "refuse" }) as unknown as (
+          // Nobody watches a sub-agent: a judged command runs and is reported.
+          factory: createGuardrails({ confirm: "report" }) as unknown as (
             pi: ExtensionAPI
           ) => void,
         },

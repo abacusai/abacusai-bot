@@ -3,10 +3,9 @@
  * rather than its text. Only a word in command position is a command, so a
  * word inside quotes, a comment, a heredoc saved to a file, another
  * language's code or an ssh payload is data. One reader of shell text for
- * the permission gate and the guardrails. Anything that would run here but
- * cannot be read statically (a computed command name, a dynamic payload, a
- * script nobody can read) fails safe to the "could not read" card, never to
- * allow. An alias or function defined outside the command is not seen.
+ * the permission gate and the guardrails. A mistake-catcher, not a sandbox:
+ * it flags a short list of dangerous commands it can read, and lets through
+ * whatever it cannot read.
  */
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -34,17 +33,11 @@ export type ConfirmRule = GuardRule;
 /** Actions refused in every mode; no approval lifts them. */
 export type NeverRule = "deleteRoot" | "emptyTrash" | "forkBomb";
 
-/**
- * Actions fine with someone watching, refused where nobody is: a routine's
- * run stopping a process it did not start may be stopping the user's own.
- */
-export type UnattendedRule = "killProcess";
-
 export type Verdict = "allow" | "confirm" | "never";
 
 export interface Finding {
-  rule: ConfirmRule | NeverRule | UnattendedRule;
-  tier: "confirm" | "never" | "unattended";
+  rule: ConfirmRule | NeverRule;
+  tier: "confirm" | "never";
   /** The local command that raised it, as written. */
   command: string;
 }
@@ -89,41 +82,26 @@ export interface JudgeOptions {
 }
 
 /** What the card and the refusal say about each rule. */
-export const RULE_REASONS: Record<
-  ConfirmRule | NeverRule | UnattendedRule,
-  string
-> = {
+export const RULE_REASONS: Record<ConfirmRule | NeverRule, string> = {
   privileged: "runs as administrator",
   systemDelete: "deletes inside a system folder",
   disk: "erases or overwrites a disk",
   power: "shuts down or restarts the computer",
   forcePush: "force-pushes or deletes remote git history",
-  gitHistory: "deletes a whole .git folder",
   killAll: "stops every process the user is running",
-  killProcess: "stops a process this run did not start",
-  unreadable: "could not read this command",
   deleteRoot: "deletes the whole disk, the home folder or a folder holding it",
   emptyTrash: "empties the Trash",
   forkBomb: "is a fork bomb",
 };
 
 /** Run scripts read to see what they run: bounded size and nesting. */
-const MAX_SCRIPT_BYTES = 2 * 1024 * 1024;
+const MAX_SCRIPT_BYTES = 256 * 1024;
 const MAX_DEPTH = 6;
 
 /** A word whose value is not known before the shell runs, kept as its text. */
 const DYN = "\u0000";
-/**
- * A program named through a variable the user's environment set, with a
- * literal file name (`"$LOCALAPPDATA/…/adb.exe"`): known by that name, its
- * folder is not. Unknown as an argument, a program in command position.
- */
-const OPAQUE = "\u0002";
-const isDyn = (word: string): boolean =>
-  word.startsWith(DYN) || word.startsWith(OPAQUE);
+const isDyn = (word: string): boolean => word.startsWith(DYN);
 const raw = (word: string): string => (isDyn(word) ? word.slice(1) : word);
-/** Where a bash expansion sat in a PowerShell or cmd payload. */
-const HOLE = "\u0001";
 
 /** Content written by means the judge cannot read (a copy, a computed string). */
 const UNKNOWN = Symbol("unknown content");
@@ -136,22 +114,10 @@ const SHELLS = new Set(["bash", "sh", "zsh", "dash", "ksh", "ash", "fish"]);
 const POWER = new Set(["shutdown", "reboot", "halt", "poweroff"]);
 const POWER_CMDLETS = /^(?:stop-computer|restart-computer)$/i;
 const DISK_CMDLETS = /^(?:format-volume|clear-disk|initialize-disk)$/i;
-/** Commands that stop processes by id or name, on any platform. */
-const KILLERS = new Set([
-  "kill",
-  "pkill",
-  "killall",
-  "taskkill",
-  "tskill",
-  "xkill",
-]);
-const KILL_CMDLETS = /^(?:stop-process|spps|taskkill|tskill)$/i;
-/** `kill` operands that can only name this command's own shell jobs. */
-const OWN_SHELL_JOB = /^(?:%\d*|%[+%-]|\$!)$/;
 const DELETERS = new Set(["rm", "rmdir", "shred", "unlink"]);
 /** This machine by name or address: `localhost*`, 127.0.0.0/8, `0`, `::1`. */
 const isLocalHost = (host: string): boolean =>
-  /^(?:localhost(?:[.-][\w.-]*)?|127(?:\.\d+){0,3}|0(?:\.0+){0,3}|0x7f[\da-f]*|2130706433|\[?::1?\]?|\[?0:0:0:0:0:0:0:[01]\]?)(?::\d+)?$/i.test(
+  /^(?:localhost(?:[.-][\w.-]*)?|127(?:\.\d+){0,3}|0(?:\.0+){0,3}|\[?::1\]?)(?::\d+)?$/i.test(
     host
   );
 /** Windows delete verbs, in PowerShell and cmd. */
@@ -215,23 +181,6 @@ interface Context {
   pending: Map<string, Content>;
   /** The working folder as `cd` left it; null once a `cd` could not be read. */
   cwd: string | null;
-  /** The whole command, for checks that look across it. */
-  root: string;
-  /**
-   * Set once a command ran that may change files in ways nobody tracked (a
-   * build, git, an interpreter): a script run after it may not be the one on disk.
-   */
-  mutated: boolean;
-  /** The program the last simple command came down to, wrappers stepped over. */
-  lastTool: string | null;
-  /** Variables this command set: their value, or null when it cannot be read. */
-  vars: Map<string, string | null>;
-  /** IFS was set: how an unquoted expansion splits is no longer known. */
-  ifsChanged: boolean;
-  /** PATH was set: a bare command name may now be any file. */
-  pathChanged: boolean;
-  /** git was configured to run a command: later git commands may run it. */
-  gitTainted: boolean;
 }
 
 interface Scope {
@@ -264,13 +213,6 @@ export function judgeCommand(
     seen: new Set(),
     pending: new Map(),
     cwd: options.cwd,
-    root: command,
-    mutated: false,
-    lastTool: null,
-    vars: new Map(),
-    ifsChanged: false,
-    pathChanged: false,
-    gitTainted: false,
   };
 
   // Unchanged rule, kept in trash.ts: it also reads scripts in other languages.
@@ -325,26 +267,14 @@ export function neverMessage(judgement: Judgement): string {
   );
 }
 
-/** The rules that matter only where nobody is watching, once each. */
-export const unattendedRules = (judgement: Judgement): UnattendedRule[] => [
-  ...new Set(
-    judgement.findings
-      .filter((finding) => finding.tier === "unattended")
-      .map((finding) => finding.rule as UnattendedRule)
-  ),
-];
-
-/** Refusal for a judged command where nobody can answer a card. */
-export function noAnswererMessage(
-  rules: readonly (ConfirmRule | UnattendedRule)[]
-): string {
+/**
+ * What a run nobody watches is told after a command the user would have been
+ * asked about ran anyway: nothing is refused, and the report says so.
+ */
+export function unattendedNote(rules: readonly ConfirmRule[]): string {
   return (
-    `This needs the user's OK (it ${rules.map((rule) => RULE_REASONS[rule]).join(" and ")}), ` +
-    "and nobody can answer here. Tell them the exact command and why it is needed. " +
-    "Do not rephrase the command to get past this check." +
-    (rules.includes("killProcess")
-      ? " To stop a background job this run started, use kill_process with its id."
-      : "")
+    `Nobody was there to approve this command, so it ran without a yes (it ${rules.map((rule) => RULE_REASONS[rule]).join(" and ")}). ` +
+    "Say in your report that you ran it, and why."
   );
 }
 
@@ -378,27 +308,11 @@ export function guardDecision(
 
 function add(
   context: Context,
-  rule: ConfirmRule | NeverRule | UnattendedRule,
+  rule: ConfirmRule | NeverRule,
   tier: Finding["tier"],
   command: string
 ): void {
   context.findings.push({ rule, tier, command: command.trim().slice(0, 200) });
-}
-
-const unreadable = (context: Context, text: string): void =>
-  add(context, "unreadable", "confirm", text);
-
-/**
- * Run `body` where its variable assignments may not happen, or not here (a
- * branch, a loop, a subshell, a pipeline stage, a background job): whatever
- * it assigned is unknown afterwards.
- */
-function scoped(context: Context, body: () => void): void {
-  const before = new Map(context.vars);
-  body();
-  for (const [name, value] of context.vars)
-    if (!before.has(name) || before.get(name) !== value)
-      context.vars.set(name, null);
 }
 
 /** Run `body` in a child process's view: its `cd` does not leak out. */
@@ -409,10 +323,7 @@ function isolated(context: Context, body: () => void): void {
 }
 
 function judgeSource(context: Context, source: string, scope: Scope): void {
-  if (scope.depth > MAX_DEPTH) {
-    unreadable(context, source);
-    return;
-  }
+  if (scope.depth > MAX_DEPTH) return;
   const script = parse(source);
   const { stdin: _stdin, ...rest } = scope;
   judgeScript(context, script, { ...rest, source });
@@ -427,22 +338,9 @@ function judgeScript(
   const source = script.source ?? scope.source;
   const inner = { ...scope, source };
   const commands: Command[] = [];
+  // What parsed is judged; what did not is let through.
   for (const statement of script.commands)
     walk(context, statement, inner, commands);
-
-  // A parse error inside an argument leaves the command readable; anywhere
-  // else nobody knows what runs, so the user decides.
-  for (const error of script.errors ?? []) {
-    const inArgument = commands.some((command) =>
-      [...command.suffix, ...command.redirects].some(
-        (part) => error.pos >= part.pos && error.pos <= part.end
-      )
-    );
-    if (!inArgument) {
-      unreadable(context, source);
-      break;
-    }
-  }
   detectForkBomb(context, script, source);
 }
 
@@ -459,9 +357,7 @@ function walk(
   switch (node.type) {
     case "Statement":
       redirects(context, node.redirects, scope, scope.source);
-      if (node.background === true)
-        scoped(context, () => walk(context, node.command, scope, seen));
-      else walk(context, node.command, scope, seen);
+      walk(context, node.command, scope, seen);
       return;
     case "Command":
       seen.push(node);
@@ -470,63 +366,35 @@ function walk(
     case "Pipeline":
       // Every stage after the first reads the one before it on stdin.
       node.commands.forEach((stage, index) =>
-        scoped(context, () =>
-          walk(
-            context,
-            stage,
-            index === 0 ? scope : { ...scope, stdin: node.commands[index - 1] },
-            seen
-          )
+        walk(
+          context,
+          stage,
+          index === 0 ? scope : { ...scope, stdin: node.commands[index - 1] },
+          seen
         )
       );
       return;
     case "AndOr":
-      // Only the first part surely runs.
-      node.commands.forEach((part, index) =>
-        index === 0
-          ? walk(context, part, scope, seen)
-          : scoped(context, () => walk(context, part, scope, seen))
-      );
-      return;
     case "CompoundList":
       children(node.commands);
       return;
     case "If":
-      walk(context, node.clause, scope, seen);
-      scoped(context, () => children([node.then, node.else]));
+      children([node.clause, node.then, node.else]);
       return;
     case "For":
     case "Select":
-      // A loop over plain literal words: the variable is one of them, data
-      // with no shell or PowerShell syntax in it.
-      context.vars.set(
-        node.name.value,
-        node.wordlist.length > 0 &&
-          node.wordlist.every((word) => {
-            const value = sv(context, word);
-            return (
-              value != null &&
-              !hasGlob(word) &&
-              !/[\s;|&(){}$`'"<>]/.test(value)
-            );
-          })
-          ? HOLE
-          : null
-      );
       for (const word of node.wordlist) expansions(context, word, scope);
-      scoped(context, () => walk(context, node.body, scope, seen));
+      walk(context, node.body, scope, seen);
       return;
     case "While":
-      scoped(context, () => children([node.clause, node.body]));
+      children([node.clause, node.body]);
       return;
     case "Case":
       expansions(context, node.word, scope);
-      scoped(context, () => children(node.items.map((item) => item.body)));
+      children(node.items.map((item) => item.body));
       return;
     case "Subshell":
-      scoped(context, () =>
-        isolated(context, () => walk(context, node.body, scope, seen))
-      );
+      isolated(context, () => walk(context, node.body, scope, seen));
       return;
     case "BraceGroup":
       walk(context, node.body, scope, seen);
@@ -534,14 +402,9 @@ function walk(
     case "ArithmeticFor":
       for (const expression of [node.initialize, node.test, node.update])
         arithmetic(context, expression, scope);
-      scoped(context, () => walk(context, node.body, scope, seen));
+      walk(context, node.body, scope, seen);
       return;
     case "Function":
-      // A function renames commands: what a later word runs is not its name.
-      unreadable(context, scope.source.slice(node.pos, node.end));
-      redirects(context, node.redirects, scope, scope.source);
-      scoped(context, () => walk(context, node.body, scope, seen));
-      return;
     case "Coproc":
       redirects(context, node.redirects, scope, scope.source);
       walk(context, node.body, scope, seen);
@@ -632,9 +495,7 @@ function expandPart(context: Context, part: WordPart, scope: Scope): void {
   switch (part.type) {
     case "CommandExpansion":
     case "ProcessSubstitution":
-      scoped(context, () =>
-        isolated(context, () => judgeScript(context, part.script, inner))
-      );
+      isolated(context, () => judgeScript(context, part.script, inner));
       return;
     case "ArithmeticExpansion":
       arithmetic(context, part.expression, inner);
@@ -662,11 +523,7 @@ function expandPart(context: Context, part: WordPart, scope: Scope): void {
  * quotes, a leading unquoted `~`, and `$HOME`. Null when anything else
  * expands into it.
  */
-function staticValue(
-  word: Word | undefined,
-  home: string,
-  pwd: string | null = null
-): string | null {
+function staticValue(word: Word | undefined, home: string): string | null {
   if (word == null) return null;
   const tilde = (value: string): string =>
     word.text.startsWith("~") && (value === "~" || value.startsWith("~/"))
@@ -675,22 +532,14 @@ function staticValue(
   if (word.parts == null) return tilde(word.value);
   let value = "";
   for (const part of word.parts) {
-    const piece = partValue(part, home, pwd);
+    const piece = partValue(part, home);
     if (piece == null) return null;
     value += piece;
   }
   return tilde(value);
 }
 
-/** staticValue with this command's home and working folder. */
-const sv = (context: Context, word: Word | undefined): string | null =>
-  staticValue(word, context.options.home, context.cwd);
-
-function partValue(
-  part: WordPart,
-  home: string,
-  pwd: string | null
-): string | null {
+function partValue(part: WordPart, home: string): string | null {
   switch (part.type) {
     case "Literal":
     case "SingleQuoted":
@@ -700,21 +549,16 @@ function partValue(
     case "LocaleString": {
       let value = "";
       for (const child of part.parts) {
-        const piece = partValue(child, home, pwd);
+        const piece = partValue(child, home);
         if (piece == null) return null;
         value += piece;
       }
       return value;
     }
     case "SimpleExpansion":
-      return part.text === "$HOME" ? home : part.text === "$PWD" ? pwd : null;
+      return part.text === "$HOME" ? home : null;
     case "ParameterExpansion":
-      if (part.operator != null || part.index != null) return null;
-      return part.parameter === "HOME"
-        ? home
-        : part.parameter === "PWD"
-          ? pwd
-          : null;
+      return part.parameter === "HOME" && part.operator == null ? home : null;
     default:
       return null;
   }
@@ -731,158 +575,38 @@ function hasGlob(word: Word): boolean {
   return literals.some((text) => /[*?]|\[[^\]]*\]/.test(text));
 }
 
-/** Variables a program runs or loads when set: setting one runs code nobody can read. */
-const EXEC_VARIABLES = new Set([
-  "BASH_ENV",
-  "ENV",
-  "LD_PRELOAD",
-  "LD_AUDIT",
-  "DYLD_INSERT_LIBRARIES",
-  "PROMPT_COMMAND",
-  "GIT_SSH",
-  "GIT_SSH_COMMAND",
-  "GIT_EDITOR",
-  "GIT_PAGER",
-  "GIT_EXTERNAL_DIFF",
-  "GIT_ASKPASS",
-  "GIT_EXEC_PATH",
-  "GIT_CONFIG_PARAMETERS",
-  "SSH_ASKPASS",
-  "SUDO_ASKPASS",
-  "EDITOR",
-  "VISUAL",
-  "PAGER",
-  "MANPAGER",
-  "BROWSER",
-  "NODE_OPTIONS",
-  "PYTHONSTARTUP",
-  "PERL5OPT",
-  "RUBYOPT",
-]);
-
 /**
- * The app's own Node (`$ABACUSAI_BOT_NODE`, set for every shell it runs) is
- * a known program, unless this command sets the variable itself.
+ * `"$VENV/bin/python"`: a variable only in the folder, so the program is
+ * known by its last path segment. A shell script run that way is not, so its
+ * name stays unknown.
  */
-function appProgram(context: Context, text: string): string | null {
-  if (!/^"?\$\{?ABACUSAI_BOT_NODE\}?"?$/.test(text)) return null;
-  return /\bABACUSAI_BOT_NODE\s*=|\b(?:read|for|declare|typeset|local|readonly|export|unset|mapfile|readarray|printf\s+-v)\b[^\n;|&]*\bABACUSAI_BOT_NODE\b/.test(
-    context.root
-  )
-    ? null
-    : "node";
-}
-
-/** IFS and PATH change how every later word is read. */
-function noteSpecialVariable(context: Context, name: string): void {
-  if (name === "IFS") context.ifsChanged = true;
-  if (name === "PATH") context.pathChanged = true;
-}
-
-/**
- * A word as the shell hands it on: its static value, a variable's value
- * (split into words when unquoted, none when empty), or its text marked as
- * unknown. After IFS is set, an unquoted expansion is unknown.
- */
-function expandWord(context: Context, word: Word): string[] {
-  // A Windows path the model wrote unquoted keeps its backslashes as written.
-  if (/^[A-Za-z]:\\/.test(word.text)) return [word.text];
-  const value = sv(context, word);
-  if (value != null) return [value];
-  const app = appProgram(context, word.text);
-  if (app != null) return [app];
-  const unquoted =
-    word.parts?.some(
-      (part) =>
-        part.type === "SimpleExpansion" || part.type === "ParameterExpansion"
-    ) ?? false;
-  if (unquoted && context.ifsChanged) return [DYN + word.text];
-  const named = resolveName(context, word);
-  if (named == null || (named.opaque && named.name === ""))
-    return [DYN + word.text];
-  if (named.opaque) return [OPAQUE + named.name];
-  return unquoted
-    ? named.value.split(/\s+/).filter((piece) => piece.length > 0)
-    : [named.value];
-}
-
-/**
- * A variable the shell inherits from the app, as this process sees it; the
- * temp dir as the shell gets it where unset (posix-shell-install.ts).
- */
-function inheritedValue(name: string): string | undefined {
-  const found = Object.entries(process.env).find(([key]) =>
-    process.platform === "win32" ? key.toUpperCase() === name : key === name
-  )?.[1];
-  if (found != null && found.length > 0) return found;
-  return ["TMPDIR", "TMP", "TEMP"].includes(name) ? os.tmpdir() : undefined;
-}
-
-/** Programs known by name whose folder may come from the user's environment. */
-const KNOWN_PROGRAM =
-  /^(?:.+\.exe|python[\d.]*|pythonw|py|node|java|javaw|javac|php|ruby|perl|deno|bun|adb|fastboot|ffmpeg|ffprobe|git|npm|npx|pnpm|yarn|pip[\d.]*|uv|cargo|rustc|go|dotnet|gradle|mvn|kotlinc|sdkmanager|avdmanager|emulator|aapt2?|zipalign|apksigner|d8|keytool|jarsigner|code|magick|sqlite3|psql|mysql|curl|wget|unzip|zip|7z|tar)$/i;
-
-/**
- * A word built from variables: those this command set to a readable value,
- * and the user's own environment (`$LOCALAPPDATA`) as an unknown folder.
- * Null when anything else feeds it (`$1`, `$@`, a variable set from `read`, a
- * value that splits into words or globs).
- */
-function resolveName(
-  context: Context,
-  word: Word
-): { name: string; opaque: boolean; value: string } | null {
-  let parts = word.parts;
+function knownProgram(word: Word): string | null {
+  const parts =
+    word.parts?.length === 1 && word.parts[0]!.type === "DoubleQuoted"
+      ? word.parts[0]!.parts
+      : word.parts;
   if (parts == null) return null;
-  if (parts.length === 1 && parts[0]!.type === "DoubleQuoted")
-    parts = parts[0]!.parts;
-  let value = "";
-  for (const part of parts) {
-    if (part.type === "Literal" || part.type === "SingleQuoted") {
-      value += part.value;
-      continue;
-    }
-    if (part.type === "DoubleQuoted") {
-      const inner = part.parts.every((child) => child.type === "Literal");
-      if (!inner) return null;
-      value += part.parts
-        .map((child) => (child as { value: string }).value)
-        .join("");
-      continue;
-    }
-    const plain =
-      part.type === "SimpleExpansion" ||
-      (part.type === "ParameterExpansion" &&
-        part.operator == null &&
-        part.index == null &&
-        part.indirect !== true &&
-        part.length !== true &&
-        part.slice == null &&
-        part.replace == null);
-    if (!plain) return null;
-    const name =
-      part.type === "ParameterExpansion" ? part.parameter : part.text.slice(1);
-    if (!/^[A-Za-z_]\w*$/.test(name)) return null;
-    if (context.vars.has(name)) {
-      const known = context.vars.get(name);
-      if (known == null) return null;
-      value += known;
-    } else if (name === "HOME") value += context.options.home;
-    else if (name === "PWD" && context.cwd != null) value += context.cwd;
-    else if (/^[A-Z_][A-Z0-9_]*$/.test(name) && name !== "IFS")
-      value += inheritedValue(name) ?? HOLE;
-    else return null;
-  }
-  if (/[*?[]/.test(value)) return null;
-  // An unquoted value splits into words; a quoted one with spaces is one name.
-  const quoted = word.parts?.[0]?.type === "DoubleQuoted";
-  if (/\s/.test(value) && (quoted || value.includes(HOLE))) return null;
-  if (!value.includes(HOLE)) return { name: value, opaque: false, value };
-  const slash = Math.max(value.lastIndexOf("/"), value.lastIndexOf("\\"));
-  const program = value.slice(slash + 1);
-  if (slash <= 0 || program.includes(HOLE) || !KNOWN_PROGRAM.test(program))
-    return { name: "", opaque: true, value };
-  return { name: program, opaque: true, value };
+  const last = parts.at(-1);
+  if (last?.type !== "Literal" || !last.value.includes("/")) return null;
+  const plain = parts
+    .slice(0, -1)
+    .every(
+      (part) =>
+        part.type === "Literal" ||
+        part.type === "SimpleExpansion" ||
+        (part.type === "ParameterExpansion" && part.operator == null)
+    );
+  const program = last.value.slice(last.value.lastIndexOf("/") + 1);
+  return plain && program !== "" && !/\.(?:sh|bash|zsh)$/i.test(program)
+    ? program
+    : null;
+}
+
+/** A word for the rules: its static value, or its text marked as dynamic. */
+function wordValue(word: Word, home: string): string {
+  // A Windows path the model wrote unquoted keeps its backslashes as written.
+  if (/^[A-Za-z]:\\/.test(word.text)) return word.text;
+  return staticValue(word, home) ?? DYN + word.text;
 }
 
 /** Resolve a path as the shell would here; null when `cd` made it unknowable. */
@@ -915,7 +639,7 @@ function redirects(
           ? "append"
           : null;
     if (kind == null) continue;
-    const target = sv(context, redirect.target);
+    const target = staticValue(redirect.target, context.options.home);
     // `>&2`, `>&-`: a descriptor, not a file.
     if (target == null || /^(?:\d+|-)$/.test(target)) continue;
     addWrite(context, target, kind, scope, text);
@@ -950,13 +674,14 @@ function producedText(
   scope: Scope
 ): Content {
   if (node?.type !== "Command" || node.name == null) return UNKNOWN;
-  const name = sv(context, node.name);
-  const args = node.suffix.map((word) => sv(context, word));
+  const home = context.options.home;
+  const name = staticValue(node.name, home);
+  const args = node.suffix.map((word) => staticValue(word, home));
   if (name == null || args.some((arg) => arg == null)) return UNKNOWN;
   const words = args as string[];
   const tool = baseName(name);
 
-  if (tool === "curl" || tool === "wget") return download(words);
+  if (tool === "curl" || tool === "wget") return REMOTE;
   if (tool === "echo") {
     let at = 0;
     while (/^-[neE]+$/.test(words[at] ?? "")) at += 1;
@@ -993,15 +718,6 @@ function producedText(
   return UNKNOWN;
 }
 
-/** A download from another computer over https: REMOTE; anything else is unread. */
-function download(args: readonly string[]): Content {
-  const url = args.find((arg) => /^https?:\/\//i.test(arg));
-  const host = /^https:\/\/(?:[^@/]*@)?(\[[^\]]*\]|[^/:?#]+)/i.exec(
-    url ?? ""
-  )?.[1];
-  return host != null && !isLocalHost(host) ? REMOTE : UNKNOWN;
-}
-
 /** What a command reads on stdin: a heredoc, a herestring, a `<` file, or the pipe. */
 function stdinText(
   context: Context,
@@ -1010,33 +726,17 @@ function stdinText(
 ): Content | null {
   for (const redirect of node.redirects) {
     if (redirect.operator === "<<<")
-      return sv(context, redirect.target) ?? UNKNOWN;
+      return staticValue(redirect.target, context.options.home) ?? UNKNOWN;
     if (redirect.operator === "<<" || redirect.operator === "<<-")
       return redirect.content ?? UNKNOWN;
     if (redirect.operator === "<") {
-      const file = sv(context, redirect.target);
-      return file == null || context.mutated
-        ? UNKNOWN
-        : readScript(context, file);
+      const file = staticValue(redirect.target, context.options.home);
+      return file == null ? UNKNOWN : readScript(context, file);
     }
-    // `<&3`, `<>`: a descriptor or file opened somewhere else.
-    if (
-      (redirect.operator === "<&" || redirect.operator === "<>") &&
-      (redirect.fileDescriptor == null || redirect.fileDescriptor === 0)
-    )
-      return UNKNOWN;
   }
   if (scope.stdin != null)
     return producedText(context, scope.stdin, { ...scope, stdin: undefined });
   return null;
-}
-
-/**
- * Where this command's writes are remembered: the resolved path, or the
- * spelling itself when its folder comes from the environment (a HOLE).
- */
-function pendingKey(context: Context, spelled: string): string | null {
-  return spelled.includes(HOLE) ? spelled : resolve(context, spelled);
 }
 
 /** A script's text: what this command wrote there, or the file; UNKNOWN when neither reads. */
@@ -1046,8 +746,6 @@ function readScript(context: Context, file: string): Content {
   if (resolved == null) return UNKNOWN;
   const pending = context.pending.get(resolved);
   if (pending != null) return pending;
-  // Something earlier may have changed it: the file on disk is not what runs.
-  if (context.mutated) return UNKNOWN;
   try {
     const info = fs.statSync(resolved);
     if (!info.isFile() || info.size > MAX_SCRIPT_BYTES) return UNKNOWN;
@@ -1068,10 +766,11 @@ function rememberWrites(
   scope: Scope,
   writes: readonly string[]
 ): void {
+  const home = context.options.home;
   const known = producedText(context, node, scope);
-  const tool = baseName(sv(context, node.name) ?? "");
+  const tool = baseName(staticValue(node.name, home) ?? "");
   const store = (target: string, content: Content, append: boolean): void => {
-    const resolved = pendingKey(context, target);
+    const resolved = resolve(context, target);
     if (resolved == null) return;
     if (append && typeof content === "string") {
       const before =
@@ -1084,11 +783,7 @@ function rememberWrites(
   };
   for (const redirect of node.redirects) {
     if (![">", ">|", ">>", "&>", "&>>"].includes(redirect.operator)) continue;
-    const target =
-      sv(context, redirect.target) ??
-      (redirect.target == null
-        ? null
-        : (resolveName(context, redirect.target)?.value ?? null));
+    const target = staticValue(redirect.target, home);
     if (target == null) continue;
     store(target, known, redirect.operator.includes(">>"));
   }
@@ -1099,17 +794,8 @@ function rememberWrites(
   }
   // A download saved to a file runs as freely as one piped to a shell; any
   // other file this command writes (cp, mv, dd…) is unread.
-  // Only the download itself: headers, cookies and anything else are unread.
-  const words = node.suffix.map((word) => sv(context, word) ?? "");
-  const downloaded =
-    tool === "curl" || tool === "wget"
-      ? optionValue(
-          words,
-          tool === "curl" ? ["-o", "--output"] : ["-O", "--output-document"]
-        )
-      : undefined;
-  for (const target of writes)
-    store(target, target === downloaded ? download(words) : UNKNOWN, false);
+  const other = tool === "curl" || tool === "wget" ? REMOTE : UNKNOWN;
+  for (const target of writes) store(target, other, false);
 }
 
 /** Options of the wrappers stepped over that take a value. */
@@ -1127,7 +813,6 @@ const VALUE_OPTIONS: Record<string, Set<string>> = {
   setsid: new Set([]),
   taskset: new Set(["-c", "--cpu-list"]),
   caffeinate: new Set(["-t", "-w"]),
-  chrt: new Set([]),
   flock: new Set(["-w", "-E", "--timeout", "--conflict-exit-code"]),
   watch: new Set(["-n", "--interval", "-q", "--equexit"]),
   chroot: new Set(["--userspec", "--groups"]),
@@ -1155,143 +840,6 @@ function skipOptions(words: readonly string[], from: number, tool: string) {
   return index;
 }
 
-/**
- * Programs that change no file except where their output is redirected
- * (tracked): after only these, a script on disk is still the one read.
- */
-const SAFE_TOOLS = new Set([
-  "cd",
-  "pushd",
-  "popd",
-  "echo",
-  "printf",
-  "cat",
-  "ls",
-  "dir",
-  "pwd",
-  "true",
-  "false",
-  "test",
-  "[",
-  "sleep",
-  "export",
-  "set",
-  "unset",
-  "shift",
-  "which",
-  "type",
-  "command",
-  "chmod",
-  "mkdir",
-  "date",
-  "whoami",
-  "id",
-  "uname",
-  "head",
-  "tail",
-  "wc",
-  "grep",
-  "sort",
-  "uniq",
-  "cut",
-  "tr",
-  "basename",
-  "dirname",
-  "realpath",
-  "readlink",
-  "stat",
-  "file",
-  "du",
-  "df",
-  "env",
-  "printenv",
-  "hostname",
-  "nproc",
-  "uptime",
-  ":",
-  // Processes and the network, not files.
-  "ps",
-  "tasklist",
-  "taskkill",
-  "kill",
-  "pkill",
-  "killall",
-  "netstat",
-  "ss",
-  "lsof",
-  "ping",
-  "wait",
-  "jobs",
-  "where",
-  "tput",
-  "clear",
-  // A download goes to stdout, or to an `-o` file this judge tracks.
-  "curl",
-]);
-
-/** git subcommands that only read the repository. */
-const GIT_READS = new Set([
-  "status",
-  "log",
-  "diff",
-  "show",
-  "branch",
-  "rev-parse",
-  "remote",
-  "config",
-  "ls-files",
-  "describe",
-  "tag",
-  "blame",
-  "grep",
-  "shortlog",
-  "reflog",
-  "cat-file",
-  "ls-remote",
-]);
-
-/** Builtins bash runs itself, whatever PATH says. */
-const SHELL_BUILTINS = new Set(
-  (
-    "cd echo printf export set unset read test [ true false pwd eval source . exec " +
-    "command builtin type hash alias unalias local declare typeset readonly shift " +
-    "return exit wait jobs kill trap umask ulimit let getopts : times break " +
-    "continue pushd popd dirs shopt enable caller mapfile readarray bg fg disown"
-  ).split(" ")
-);
-
-/** Programs that run a command line they are given, and are not stepped through. */
-const OPAQUE_RUNNERS = new Set([
-  "watch",
-  "script",
-  "sg",
-  "unshare",
-  "nsenter",
-  "systemd-run",
-  "parallel",
-  "tmux",
-  "screen",
-  "expect",
-  "at",
-  "batch",
-  "schtasks",
-  "dbus-run-session",
-  "firejail",
-  "bwrap",
-  "proot",
-  "fakeroot",
-  "torsocks",
-  "proxychains",
-  "proxychains4",
-  "strace",
-  "ltrace",
-  "gdb",
-  "valgrind",
-  "chpst",
-  "daemonize",
-  "start-stop-daemon",
-]);
-
 const baseName = (word: string): string =>
   raw(word)
     .split(/[\\/]/)
@@ -1302,23 +850,6 @@ const baseName = (word: string): string =>
 function judgeSimple(context: Context, node: Command, scope: Scope): void {
   const text = scope.source.slice(node.pos, node.end);
   for (const assignment of node.prefix) {
-    const value =
-      assignment.array != null || assignment.append === true
-        ? null
-        : assignment.value == null
-          ? ""
-          : (sv(context, assignment.value) ??
-            resolveName(context, assignment.value)?.value ??
-            null);
-    // A program runs this variable's value: judge it as a command line.
-    if (assignment.name != null && EXEC_VARIABLES.has(assignment.name)) {
-      if (value == null || value.includes(HOLE)) unreadable(context, text);
-      else if (value !== "") judgeNested(context, value, scope, text);
-    }
-    // A bare assignment lasts for the rest of the command.
-    if (assignment.name != null && node.name == null)
-      context.vars.set(assignment.name, value);
-    if (assignment.name != null) noteSpecialVariable(context, assignment.name);
     expansions(context, assignment.value, scope);
     for (const word of assignment.array ?? []) expansions(context, word, scope);
   }
@@ -1329,47 +860,26 @@ function judgeSimple(context: Context, node: Command, scope: Scope): void {
   for (const word of node.suffix) expansions(context, word, scope);
   if (node.name == null) return;
 
-  // Words as the shell hands them on: unquoted expansions split, empty ones
-  // dropped, so the command is the first word left. Only a name written out
-  // in full is a program anyone can judge: a variable, `$(…)`, `{a,b}`,
-  // `a${IFS}b` or a glob is not.
-  const expanded = [node.name, ...node.suffix].map((word) => ({
-    word,
-    values: expandWord(context, word),
-  }));
-  const first = expanded.find((entry) => entry.values.length > 0);
-  if (first == null) return;
-  if (hasGlob(first.word)) {
-    unreadable(context, text);
-    context.mutated = true;
-    return;
-  }
-  const words = expanded.flatMap((entry) => entry.values);
+  const home = context.options.home;
+  const name = staticValue(node.name, home) ?? knownProgram(node.name);
+  // A computed name (`$X`, `$(…)`, `{a,b}`, a glob) is not judged.
+  if (name == null || hasGlob(node.name)) return;
+  const words = [name, ...node.suffix.map((word) => wordValue(word, home))];
   const files = node.redirects
     .filter((redirect) => !redirect.operator.startsWith("<<"))
-    .map((redirect) => sv(context, redirect.target))
+    .map((redirect) => staticValue(redirect.target, home))
     .filter(
       (target): target is string =>
         target != null && !/^(?:\d+|-)$/.test(target)
     );
-  context.lastTool = null;
   judgeWords(context, words, node, text, scope, files);
-  const lastTool = (context.lastTool as string | null) ?? "";
-  const gitRead =
-    lastTool === "git" &&
-    GIT_READS.has(words.slice(1).find((word) => !word.startsWith("-")) ?? "");
-  if (!SAFE_TOOLS.has(lastTool) && !gitRead) context.mutated = true;
   const cwdAfter = context.cwd;
   context.cwd = pendingCwd;
   rememberWrites(
     context,
     node,
     scope,
-    context.writes
-      .slice(writesBefore)
-      // chmod, chown and touch leave the content as it was.
-      .filter((write) => write.kind !== "meta")
-      .map((write) => write.target)
+    context.writes.slice(writesBefore).map((write) => write.target)
   );
   context.cwd = cwdAfter;
 }
@@ -1377,47 +887,26 @@ function judgeSimple(context: Context, node: Command, scope: Scope): void {
 /** Judge one command line from its words, stepping over wrappers. */
 function judgeWords(
   context: Context,
-  given: readonly string[],
+  words: readonly string[],
   node: Command | null,
   text: string,
   scope: Scope,
   files: string[] = []
 ): void {
-  const words = given.map((word) =>
-    isDyn(word) ? (appProgram(context, raw(word)) ?? word) : word
-  );
   let index = 0;
-  let viaXargs = false;
-  const nested = (source: string): void =>
-    judgeNested(context, source, scope, text);
+  const nested = (source: string): void => judgeNested(context, source, scope);
   const joined = (from: number): string | null => {
     const rest = words.slice(from);
     return rest.some(isDyn) ? null : rest.join(" ");
   };
   const runString = (source: string | null | undefined): void => {
-    if (source == null || isDyn(source)) unreadable(context, text);
-    else nested(source);
+    if (source != null && !isDyn(source)) nested(source);
   };
 
   while (index < words.length) {
     const word = words[index]!;
-    // A program known by name, its folder from the environment.
-    if (word.startsWith(OPAQUE)) break;
-    // After PATH is set, a bare name may run any file.
-    if (
-      context.pathChanged &&
-      !isDyn(word) &&
-      !/[\\/]/.test(word) &&
-      !SHELL_BUILTINS.has(word)
-    ) {
-      unreadable(context, text);
-      return;
-    }
-    if (isDyn(word)) {
-      // A wrapper running a program named at run time.
-      unreadable(context, text);
-      return;
-    }
+    // A program named at run time is not judged.
+    if (isDyn(word)) return;
     const tool = baseName(word);
     if (PRIVILEGED.has(tool)) {
       const next = skipOptions(words, index + 1, tool);
@@ -1497,33 +986,39 @@ function judgeWords(
       }
       continue;
     }
-    if (tool === "wsl") {
-      // The Linux side of this machine: its command is judged like any other.
-      let at = index + 1;
-      while (at < words.length && words[at]!.startsWith("-")) {
-        const flag = words[at]!;
-        if (flag === "--" || flag === "-e" || flag === "--exec") {
-          at += 1;
-          break;
-        }
-        // Root inside WSL is the Linux side's own user, not this machine's administrator.
-        if (/^(?:-d|--distribution|-u|--user|--cd)$/.test(flag)) at += 2;
-        else at += 1;
+    if (tool === "watch") {
+      const at = skipOptions(words, index + 1, tool);
+      const execs = words
+        .slice(index + 1, at)
+        .some((flag) => /^-[a-z]*x|^--exec$/.test(flag));
+      if (execs) {
+        index = at;
+        continue;
       }
-      index = at;
-      continue;
+      // watch hands its words to `sh -c`.
+      runString(joined(at));
+      return;
     }
-    if (OPAQUE_RUNNERS.has(tool)) {
-      // A runner nobody here steps through: whatever it is given runs unread.
-      if (words.length > index + 1) unreadable(context, text);
+    if (tool === "script") {
+      const command = optionValue(words.slice(index + 1), ["-c", "--command"]);
+      if (command !== undefined) runString(command);
+      return;
+    }
+    if (tool === "sg") {
+      const rest = words.slice(index + 2);
+      const command = rest[0] === "-c" ? rest[1] : joined(index + 2);
+      if (rest.length > 0) runString(command);
       return;
     }
     if (tool === "taskset" || tool === "chrt") {
       const at = skipOptions(words, index + 1, tool);
       const flags = words.slice(index + 1, at);
       // `-p`: an existing process, nothing new runs.
-      if (flags.some((flag) => /^-[a-z]*p|^--pid$/.test(flag))) return;
-      const listed = flags.some((flag) => /^-[a-z]*c|^--cpu-list$/.test(flag));
+      if (flags.some((flag) => isFlagWith(flag, "p") || flag === "--pid"))
+        return;
+      const listed = flags.some(
+        (flag) => isFlagWith(flag, "c") || flag === "--cpu-list"
+      );
       index = at + (tool === "taskset" && listed ? 0 : 1);
       continue;
     }
@@ -1546,7 +1041,6 @@ function judgeWords(
         "caffeinate",
       ].includes(tool)
     ) {
-      if (tool === "xargs") viaXargs = true;
       index = skipOptions(words, index + 1, tool);
       continue;
     }
@@ -1557,40 +1051,12 @@ function judgeWords(
   if (rest.length === 0) return;
   const tool = baseName(rest[0]!);
   const args = rest.slice(1);
-  context.lastTool = tool;
   context.commands.push({
     name: rest[0]!,
     args: args.map(raw),
     redirects: files,
   });
 
-  if (
-    [
-      "read",
-      "mapfile",
-      "readarray",
-      "declare",
-      "typeset",
-      "local",
-      "export",
-      "readonly",
-      "unset",
-      "getopts",
-      "printf",
-    ].includes(tool)
-  ) {
-    // Variables these set: a readable `export X=value` is kept, the rest unknown.
-    for (const arg of args) {
-      const set = /^([A-Za-z_]\w*)(?:=(.*))?$/s.exec(raw(arg));
-      if (set == null || (tool === "printf" && args[0] !== "-v")) continue;
-      if (tool !== "unset") noteSpecialVariable(context, set[1]!);
-      const keep =
-        ["declare", "typeset", "local", "export", "readonly"].includes(tool) &&
-        set[2] != null &&
-        !isDyn(arg);
-      context.vars.set(set[1]!, keep ? set[2]! : null);
-    }
-  }
   if (tool === "cd" || tool === "pushd" || tool === "popd") {
     const target = operandsOf(args)[0];
     context.cwd =
@@ -1610,7 +1076,7 @@ function judgeWords(
     return;
   }
   if (tool === "eval") {
-    runString(joined(words[index + 1] === "--" ? index + 2 : index + 1));
+    runString(joined(index + 1));
     return;
   }
   if (tool === "source" || tool === ".") {
@@ -1638,22 +1104,6 @@ function judgeWords(
   }
   if (raw(rest[0]!).includes("/") && !rest[0]!.includes("\\")) {
     if (judgeScriptFile(context, rest[0], scope, text, "path")) return;
-  }
-
-  // `… | xargs rm`: what comes down the pipe is what gets deleted.
-  if (viaXargs && DELETERS.has(tool)) {
-    const input = node == null ? null : stdinText(context, node, scope);
-    if (typeof input === "string")
-      judgeDeletes(
-        context,
-        input
-          .replaceAll("\u0000", " ")
-          .split(/\s+/)
-          .filter((item) => item.length > 0),
-        text,
-        tool
-      );
-    else unreadable(context, text);
   }
 
   judgeVerb(context, tool, args, text, scope);
@@ -1688,16 +1138,8 @@ function isSudoProbe(flags: string, rest: readonly string[]): boolean {
   return rest.length === 1 && (rest[0] === "true" || rest[0] === ":");
 }
 
-function judgeNested(
-  context: Context,
-  source: string,
-  scope: Scope,
-  text: string
-): void {
-  if (scope.depth >= MAX_DEPTH) {
-    unreadable(context, text);
-    return;
-  }
+function judgeNested(context: Context, source: string, scope: Scope): void {
+  if (scope.depth >= MAX_DEPTH) return;
   isolated(context, () =>
     judgeSource(context, source, { ...scope, depth: scope.depth + 1 })
   );
@@ -1728,28 +1170,24 @@ function judgeShell(
     }
     if (isFlagWith(arg, "c") || arg === "--command") {
       const command = args.slice(at + 1).find((word) => !word.startsWith("-"));
-      if (command == null || isDyn(command)) unreadable(context, text);
-      else judgeNested(context, command, scope, text);
+      if (command != null && !isDyn(command))
+        judgeNested(context, command, scope);
       return;
     }
     if (["-o", "+o", "-O", "+O", "--rcfile", "--init-file"].includes(arg))
       at += 1;
   }
-  // No script named: the shell reads its commands from stdin, which must be
-  // a static text or a download; anything else is unread.
-  const input = node == null ? null : stdinText(context, node, scope);
-  if (input === REMOTE) return;
-  if (input == null || input === UNKNOWN) unreadable(context, text);
-  else judgeNested(context, input, scope, text);
+  // No script named: the shell reads its commands from stdin.
+  if (node == null) return;
+  const input = stdinText(context, node, scope);
+  if (typeof input === "string") judgeNested(context, input, scope);
 }
 
 /**
- * A file this command runs, judged; true when it was handled. What this
- * command wrote there is judged as written; otherwise it must exist and be
- * read before anything untracked could have changed it. `shell` (bash x,
- * source x) is read as shell; `path` (./x) is when its first line names a
- * POSIX shell or it has no `#!` (bash runs that as shell), and another
- * interpreter or a binary is a program.
+ * A script this command runs as shell, judged when it can be read; true when
+ * it was handled. `shell` (bash x, source x) is read as shell; `path` (./x)
+ * is when its first line names a POSIX shell or it has no `#!` (bash runs
+ * that as shell). A binary, another interpreter or a missing file is not.
  */
 function judgeScriptFile(
   context: Context,
@@ -1759,30 +1197,19 @@ function judgeScriptFile(
   mode: "shell" | "path"
 ): boolean {
   if (file == null) return false;
-  if (scope.depth >= MAX_DEPTH) {
-    unreadable(context, text);
-    return true;
-  }
+  if (scope.depth >= MAX_DEPTH) return true;
   const resolved = isDyn(file) ? null : resolve(context, file);
   if (resolved != null && context.seen.has(resolved)) return true;
   let source = resolved == null ? UNKNOWN : context.pending.get(resolved);
   if (source == null && resolved != null) {
-    // After a command that may have changed files untracked, the file on
-    // disk is not necessarily what runs; one that is not there yet may be
-    // written by such a command. Either way nobody can read it.
-    // Once something may have changed files untracked, the disk says
-    // nothing about what runs, a binary included.
-    const head = context.mutated ? null : readHead(resolved);
-    if (head == null) source = UNKNOWN;
-    // A binary or another interpreter's script is a program, not shell.
-    else if (mode === "path" && !looksLikeShell(head)) return false;
-    else source = readScript(context, file);
+    if (mode === "path") {
+      // A program that is not there, or not readable, runs nothing here.
+      const head = readHead(resolved);
+      if (head == null || !looksLikeShell(head)) return false;
+    }
+    source = readScript(context, file);
   }
-  if (source === REMOTE) return true;
-  if (source === UNKNOWN || source == null) {
-    unreadable(context, text);
-    return true;
-  }
+  if (typeof source !== "string") return true;
   if (mode === "path" && !looksLikeShell(source.slice(0, 512))) return false;
   context.seen.add(resolved!);
   isolated(context, () =>
@@ -1842,15 +1269,13 @@ function judgeFind(
     if (DELETERS.has(baseName(inner[0] ?? ""))) deletes = true;
     judgeWords(context, inner, null, text, scope);
   }
-  if (deletes)
-    judgeDeletes(context, roots.length > 0 ? roots : ["."], text, "find");
+  if (deletes) judgeDeletes(context, roots.length > 0 ? roots : ["."], text);
 }
 
 /**
- * PowerShell and cmd: other languages, read as tokens. Anything that runs a
- * computed command (`iex`, `&`, dot-sourcing, a script block, an encoded
- * command, a variable or `%VAR%` in command position) is unread; power, disk,
- * elevation and deletes of home-holding or system folders are judged.
+ * PowerShell and cmd: other languages, read as words. Power, disk, elevation
+ * (`runas`, `-Verb RunAs`) and deletes of a drive root, the home folder, a
+ * folder holding it or a system folder are judged; nothing else is.
  */
 function judgeWindowsShell(
   context: Context,
@@ -1858,293 +1283,40 @@ function judgeWindowsShell(
   args: readonly string[],
   text: string
 ): void {
-  const words = args.map(raw);
-  const powershell = tool !== "cmd";
-  // `-EncodedCommand` and its short forms, with either switch prefix.
-  if (
-    powershell &&
-    words.some((word) => /^[-/]e(?:c|n\w*)?(?::|$)/i.test(word))
-  ) {
-    unreadable(context, text);
-    return;
-  }
-  // The host's own switches come first; the command follows -Command or /c.
-  let at = 0;
-  while (at < words.length) {
-    const word = words[at]!;
-    if (powershell) {
-      if (/^[-/](?:c|command)$/i.test(word)) {
-        at += 1;
-        break;
-      }
-      if (/^[-/](?:f|file)$/i.test(word)) {
-        // The script, as this command wrote it or as it is on disk, read
-        // with the same token rules; a folder from the environment is fine.
-        const file = args[at + 1];
-        const spelled =
-          file == null
-            ? null
-            : isDyn(file)
-              ? bashSkeleton(context, raw(file))
-              : file;
-        const key = spelled == null ? null : pendingKey(context, spelled);
-        let content: Content =
-          key == null ? UNKNOWN : (context.pending.get(key) ?? UNKNOWN);
-        if (key != null && !context.pending.has(key) && !key.includes(HOLE))
-          content = readScript(context, spelled!);
-        if (content === REMOTE) return;
-        if (content === UNKNOWN) unreadable(context, text);
-        else judgeWindowsTokens(context, true, windowsTokens(content), text);
-        return;
-      }
-      if (
-        /^[-/](?:executionpolicy|ep|ex|windowstyle|w|inputformat|if|outputformat|of|version|v|configurationname|workingdirectory|wd|settingsfile|custompipename|psconsolefile)$/i.test(
-          word
-        )
-      )
-        at += 2;
-      else if (/^[-/]\w+$/.test(word)) at += 1;
-      else break;
-    } else {
-      if (!/^\/[a-z](?::\w+)?$/i.test(word)) break;
-      at += 1;
-      if (/^\/[ck]$/i.test(word)) break;
-    }
-  }
-  // The POSIX shell expands the payload first: its variables are holes the
-  // rules below treat as unknown, and command output in it is unread.
-  const payload: string[] = [];
-  for (const arg of args.slice(at)) {
-    const skeleton = isDyn(arg) ? bashSkeleton(context, raw(arg)) : raw(arg);
-    if (skeleton == null) {
-      unreadable(context, text);
-      return;
-    }
-    payload.push(skeleton);
-  }
-  judgeWindowsTokens(
-    context,
-    powershell,
-    windowsTokens(payload.join(" ")),
-    text
-  );
-}
-
-/**
- * A word the POSIX shell expands, as the text it hands on: variables this
- * command set are filled in, others become a HOLE; null for command output,
- * positional parameters, or an expansion with an operator.
- */
-function bashSkeleton(context: Context, text: string): string | null {
-  let body = text;
-  if (body.length >= 2 && body.startsWith('"') && body.endsWith('"'))
-    body = body.slice(1, -1);
-  else if (/['"]/.test(body)) return null;
-  // Escaped `$` and backticks are literal; restored after the scan.
-  body = body
-    .replace(/\\\$/g, "\u0003")
-    .replace(/\\`/g, "\u0004")
-    .replace(/\\(["\\])/g, "$1");
-  if (/\$\(|`/.test(body)) return null;
-  let readable = true;
-  const filled = body.replace(
-    /\$\{([^}]*)\}|\$([A-Za-z_]\w*)|\$([@*#?$!0-9-])/g,
-    (match, braced?: string, simple?: string, special?: string) => {
-      // Status, pid and option flags carry nothing a command chose; the
-      // arguments (`$1`, `$@`) and `${x…}` forms do, or fail outright.
-      if (special != null) {
-        if (/^[?$!#-]$/.test(special)) return HOLE;
-        readable = false;
-        return match;
-      }
-      const name = braced ?? simple;
-      if (name == null || !/^[A-Za-z_]\w*$/.test(name)) {
-        // `${env:Path}` (PowerShell's) is a bad substitution: bash stops there.
-        if (braced != null && /^\w+:\w+$/.test(braced)) return HOLE;
-        readable = false;
-        return match;
-      }
-      if (!context.vars.has(name))
-        return /^[A-Z_][A-Z0-9_]*$/.test(name)
-          ? (inheritedValue(name) ?? HOLE)
-          : HOLE;
-      const value = context.vars.get(name);
-      if (value == null) readable = false;
-      return value ?? match;
-    }
-  );
-  return readable
-    ? filled.replaceAll("\u0003", "$").replaceAll("\u0004", "`")
-    : null;
-}
-
-/** Words, quoted strings kept whole, and the operators that separate statements. */
-function windowsTokens(source: string): string[] {
-  return (
-    source.match(
-      /"(?:[^"`]|`.)*"?|'[^']*'?|&&|\|\||[|&;(){}]|[^\s|&;(){}"']+/g
-    ) ?? []
-  );
-}
-
-const unquote = (token: string): string =>
-  token.replace(/^(["'])([\s\S]*?)\1?$/, "$2");
-
-const WINDOWS_SEPARATORS = new Set([
-  "&&",
-  "||",
-  "|",
-  "&",
-  ";",
-  "(",
-  ")",
-  "{",
-  "}",
-]);
-const POWERSHELL_DYNAMIC =
-  /^(?:iex|invoke-expression|icm|invoke-command|start-job|sajb|invoke-wmimethod|invoke-cimmethod|register-scheduledtask|start-scheduledtask)$/i;
-
-function judgeWindowsTokens(
-  context: Context,
-  powershell: boolean,
-  tokens: readonly string[],
-  text: string
-): void {
-  const source = tokens.join(" ");
-  if (
-    powershell &&
-    /\[scriptblock\]|::create\s*\(|\.invoke\s*\(/i.test(source)
-  ) {
-    unreadable(context, text);
-    return;
-  }
-  const home = windowsPath(context.options.home);
-  // `$py = "C:\…\python.exe"`: a variable set to a literal in this payload.
-  const literals = new Set<string>();
-  for (let at = 0; at + 2 < tokens.length; at += 1) {
-    const end = tokens[at + 3];
-    if (
-      /^\$\w+$/.test(tokens[at]!) &&
-      tokens[at + 1] === "=" &&
-      /^(?:"[^"$`]*"|'[^']*')$/.test(tokens[at + 2]!) &&
-      (end == null || WINDOWS_SEPARATORS.has(end))
-    )
-      literals.add(tokens[at]!.toLowerCase());
-  }
-  for (let at = 0; at < tokens.length; at += 1) {
-    const token = unquote(tokens[at]!);
-    const previous = tokens[at - 1];
-    const starts =
-      previous == null ||
-      (WINDOWS_SEPARATORS.has(previous) && previous !== ")");
+  const tokens = args
+    .map(raw)
+    .flatMap((arg) => arg.match(/"[^"]*"|'[^']*'|[^\s;|&(){}]+/g) ?? [])
+    .map((token) => token.replace(/^(["'])([\s\S]*)\1$/, "$2"))
+    .filter((token) => token.length > 0);
+  const has = (re: RegExp): boolean => tokens.some((token) => re.test(token));
+  for (const token of tokens) {
     const lower = token.toLowerCase().replace(/\.exe$/, "");
-
-    // Another shell inside: judged by its own rules.
-    if (starts && ["cmd", "powershell", "pwsh"].includes(lower)) {
-      const rest = tokens.slice(at + 1).map(unquote);
-      if (
-        lower !== "cmd" &&
-        rest.some((word) => /^[-/]e(?:c|n\w*)?(?::|$)/i.test(word))
-      ) {
-        unreadable(context, text);
-        return;
-      }
-      judgeWindowsTokens(
-        context,
-        lower !== "cmd",
-        windowsTokens(rest.join(" ")),
-        text
-      );
-      return;
-    }
-    // A command named by something the POSIX shell filled in; `$x = …` and
-    // `$x.Member` (what PowerShell meant) only lost their variable to it.
-    if (
-      starts &&
-      token === HOLE &&
-      !/^(?:[-+*/%]?=|\.|\[)/.test(tokens[at + 1] ?? "")
-    )
-      unreadable(context, text);
-    else if (
-      starts &&
-      token !== HOLE &&
-      token.includes(HOLE) &&
-      !token.startsWith(`${HOLE}.`)
-    )
-      unreadable(context, text);
-    if (powershell) {
-      // The call operator, dot-sourcing, and the cmdlets that run a string.
-      // `& "C:\Program Files\x.exe"` runs a program named in full; `& $x`,
-      // `& { … }` and `& (…)` run something computed.
-      const next = tokens[at + 1] ?? "";
-      if (
-        (token === "&" &&
-          (next === "" ||
-            (/^[$({@]/.test(unquote(next)) &&
-              !literals.has(next.toLowerCase())) ||
-            next.includes(HOLE))) ||
-        (starts && token === ".") ||
-        POWERSHELL_DYNAMIC.test(token)
-      )
-        unreadable(context, text);
-    } else if (
-      starts &&
-      (/[%!]/.test(token) ||
-        /^(?:call|start|for|forfiles|schtasks|at)$/i.test(token))
-    ) {
-      // cmd: a command named at run time, or one that runs another line.
-      unreadable(context, text);
-    }
-
-    if (POWER_CMDLETS.test(token) || (starts && POWER.has(lower)))
+    if (POWER_CMDLETS.test(token) || POWER.has(lower))
       add(context, "power", "confirm", text);
-    if (
-      DISK_CMDLETS.test(token) ||
-      (starts && /^(?:diskpart|format)$/i.test(lower))
-    )
+    if (DISK_CMDLETS.test(token) || /^(?:diskpart|format)$/.test(lower))
       add(context, "disk", "confirm", text);
-    if (KILL_CMDLETS.test(token))
-      add(context, "killProcess", "unattended", text);
-    if (starts && /^(?:runas|gsudo|sudo)$/i.test(lower))
+    if (/^(?:runas|gsudo)$/.test(lower) || /^-verb:runas$/i.test(token))
       add(context, "privileged", "confirm", text);
-
-    // `-Verb RunAs` / `-Verb:RunAs`; a computed verb is unread.
-    const verb = /^-verb(?::(.*))?$/i.exec(token);
-    if (verb != null) {
-      const value = unquote(verb[1] ?? tokens[at + 1] ?? "");
-      if (/^runas$/i.test(value)) add(context, "privileged", "confirm", text);
-      else if (/^[$(@%]/.test(value) || value === "" || value.includes(HOLE))
-        unreadable(context, text);
-    }
-
-    if (WINDOWS_DELETERS.test(token) && (starts || previous === "|")) {
-      // A delete fed by a pipe deletes whatever came down it.
-      if (previous === "|") {
-        unreadable(context, text);
-        continue;
-      }
-      let index = at + 1;
-      while (index < tokens.length) {
-        const word = unquote(tokens[index]!);
-        if (WINDOWS_SEPARATORS.has(tokens[index]!)) break;
-        if (/^-\w+(?::.*)?$/.test(word) || /^\/[a-z]$/i.test(word)) {
-          index += 1;
-          continue;
-        }
-        judgeWindowsDelete(context, word, home, text);
-        break;
-      }
-    }
   }
+  if (has(/^-verb$/i) && has(/^runas$/i))
+    add(context, "privileged", "confirm", text);
+  const home = windowsPath(context.options.home);
+  tokens.forEach((token, at) => {
+    if (!WINDOWS_DELETERS.test(token)) return;
+    const target = tokens
+      .slice(at + 1)
+      .find((word) => !/^-\w+(?::.*)?$/.test(word) && !/^\/[a-z]$/i.test(word));
+    if (target != null) judgeWindowsDelete(context, target, home, text);
+  });
 }
 
 /** A path in one spelling: backslashes, lower case, no trailing `\` or `\*`. */
-const windowsPath = (value: string): string => {
+function windowsPath(value: string): string {
   let out = value.replace(/\//g, "\\").toLowerCase();
   while (/\\\*?$/.test(out) && out.length > 1 && !/^[a-z]:\\$/.test(out))
     out = out.replace(/\\\*?$/, "");
   return out;
-};
+}
 
 function judgeWindowsDelete(
   context: Context,
@@ -2152,23 +1324,17 @@ function judgeWindowsDelete(
   home: string,
   text: string
 ): void {
-  // The home folder or drive by variable, as written.
   if (
-    /^(?:~|\$home|\$env:(?:userprofile|homedrive|systemdrive|systemroot|windir)|%(?:userprofile|homedrive|systemdrive|systemroot|windir)%)(?:[\\/]\*?)?$/i.test(
+    /^(?:~|\$home|\$env:(?:userprofile|homedrive|systemdrive)|%(?:userprofile|homedrive|systemdrive)%)(?:[\\/]\*?)?$/i.test(
       target
     )
   ) {
     add(context, "deleteRoot", "never", text);
     return;
   }
-  if (/^[$(@%!]/.test(target) || target.includes(HOLE)) {
-    unreadable(context, text);
-    return;
-  }
   const where = windowsPath(target);
-  const isDrive = /^(?:[a-z]:\\?|\\)$/.test(where);
   if (
-    isDrive ||
+    /^(?:[a-z]:\\?|\\)$/.test(where) ||
     where === home ||
     home.startsWith(`${where}\\`) ||
     /^[a-z]:\\users$/.test(where)
@@ -2188,28 +1354,7 @@ function judgeVerb(
 ): void {
   const operands = operandsOf(args);
 
-  if (DELETERS.has(tool)) judgeDeletes(context, operands, text, tool);
-  if (redefinesCommands(tool, args) || runsHiddenCommand(tool, args))
-    unreadable(context, text);
-  // Files whose names the judge cannot know: what lands there is unread.
-  if (
-    tool === "curl" &&
-    args.some(
-      (arg) =>
-        /^(?:-O|--remote-name(?:-all)?|--output-dir(?:=.*)?|-J|--remote-header-name)$/.test(
-          arg
-        ) ||
-        (/^-[a-zA-Z]+$/.test(arg) && arg.includes("O"))
-    )
-  )
-    context.mutated = true;
-  // `git config alias.x '!…'`: every later git command may run it.
-  if (tool === "git" && writesHiddenGitCommand(args)) {
-    context.gitTainted = true;
-    context.mutated = true;
-  }
-  if (tool === "git" && context.gitTainted && !writesHiddenGitCommand(args))
-    unreadable(context, text);
+  if (DELETERS.has(tool)) judgeDeletes(context, operands, text);
   if (tool === "ddrescue" && BLOCK_DEVICE.test(operands[1] ?? ""))
     add(context, "disk", "confirm", text);
 
@@ -2252,10 +1397,9 @@ function judgeVerb(
 }
 
 /**
- * Stopping processes. Every process the user runs (`kill -1`, a negative
- * pid, `kill 0`, `pkill -u`, `killall5`) needs a yes in every mode; one
- * process this run did not start only where nobody watches. `kill %1` and
- * `kill $!` name jobs of this command's own shell.
+ * Stopping every process the user runs: `kill -1`, a negative pid, `kill 0`,
+ * `killall5`, `pkill -u`, or a pattern that matches everything. Stopping one
+ * process is not judged.
  */
 function judgeKill(
   context: Context,
@@ -2281,172 +1425,35 @@ function judgeKill(
       add(context, "killAll", "confirm", text);
       return;
     }
-    if (operands.every((operand) => OWN_SHELL_JOB.test(raw(operand)))) return;
-    add(context, "killProcess", "unattended", text);
     return;
   }
   // A user's every process, or a pattern that matches every process.
-  const matchesAll = (pattern: string): boolean =>
-    /^(?:\^?\.[*+]?\$?|\^|\.\*|\^\.\*\$|)$/.test(pattern);
   if (
     (tool === "pkill" || tool === "killall") &&
     (args.some((arg) => /^(?:-u|-U(?!SR)|--e?uid|--user)/.test(raw(arg))) ||
-      operands.some((operand) => !isDyn(operand) && matchesAll(operand)))
-  ) {
+      operands.some(
+        (operand) =>
+          !isDyn(operand) && /^(?:\^?\.[*+]?\$?|\^|\.\*|)$/.test(operand)
+      ))
+  )
     add(context, "killAll", "confirm", text);
-    return;
-  }
-  if (
-    KILLERS.has(tool) ||
-    (tool === "fuser" && args.some((arg) => /^-[a-zA-Z]*k/.test(arg))) ||
-    (tool === "wmic" &&
-      operands.some((word) => /^process$/i.test(word)) &&
-      operands.some((word) => /^(?:delete|terminate)$/i.test(word)))
-  )
-    add(context, "killProcess", "unattended", text);
 }
 
-/**
- * An alias, a hashed path, a loaded builtin, an exported function, or a
- * variable a program runs (`export BASH_ENV=…`): later words stop meaning
- * what they say.
- */
-function redefinesCommands(tool: string, args: readonly string[]): boolean {
-  switch (tool) {
-    case "alias":
-      return args.some((arg) => raw(arg).includes("="));
-    case "hash":
-      return args.some((arg) => /^-[a-z]*p/.test(arg));
-    case "enable":
-      return args.some((arg) => /^-[a-z]*f/.test(arg));
-    case "shopt":
-      return args.some((arg) => raw(arg) === "expand_aliases");
-    case "export":
-    case "declare":
-    case "typeset":
-    case "local":
-    case "readonly":
-      return args.some(
-        (arg) =>
-          /^-[a-z]*f/.test(arg) ||
-          EXEC_VARIABLES.has(raw(arg).split("=")[0] ?? "")
-      );
-    default:
-      return false;
-  }
-}
-
-/**
- * A command line a known program runs that is not stepped through: `git -c
- * alias.x=!…` and friends, `npx -c`, `npm exec -c`, `wsl <command>`.
- */
-function runsHiddenCommand(tool: string, args: readonly string[]): boolean {
-  if (tool === "git") {
-    for (let at = 0; at < args.length; at += 1) {
-      const arg = raw(args[at]!);
-      const setting =
-        arg === "-c" || arg === "--config-env"
-          ? raw(args[at + 1] ?? "")
-          : arg.startsWith("--config-env=")
-            ? arg.slice("--config-env=".length)
-            : null;
-      if (
-        setting != null &&
-        (setting.includes("!") ||
-          /^(?:alias\.|core\.(?:sshcommand|pager|editor|hookspath|fsmonitor|askpass|gitproxy)|sequence\.editor|diff\.external|credential\.|filter\.|.*\.(?:command|cmd|textconv|helper)\b|uploadpack\.|gpg\.program|ssh\.variant)/i.test(
-            setting
-          ))
-      )
-        return true;
-      if (!arg.startsWith("-")) break;
-    }
-    return false;
-  }
-  const calls = args.some((arg) => /^(?:-c|--call(?:=.*)?|--shell)$/.test(arg));
-  if (["npx", "pnpx", "bunx"].includes(tool)) return calls;
-  if (["npm", "pnpm", "yarn", "bun"].includes(tool))
-    return ["exec", "x", "dlx"].includes(args[0] ?? "") && calls;
-  return false;
-}
-
-/** Keys whose value git runs as a command. */
-const GIT_COMMAND_KEY =
-  /^(?:alias\.|core\.(?:sshcommand|pager|editor|hookspath|fsmonitor|askpass|gitproxy)|sequence\.editor|diff\.external|credential\.|filter\.|.*\.(?:command|cmd|textconv|helper)\b|uploadpack\.|gpg\.program|ssh\.variant|include\.|includeif\.)/i;
-
-/** `git config KEY VALUE` (or `git config set KEY …`) for a key git runs. */
-function writesHiddenGitCommand(args: readonly string[]): boolean {
-  const at = args.findIndex((arg) => !raw(arg).startsWith("-"));
-  if (raw(args[at] ?? "") !== "config") return false;
-  // Reading a key changes nothing.
-  if (
-    args.some((arg) =>
-      /^(?:--get(?:-all|-regexp|-urlmatch)?|--list|-l|get|list)$/.test(raw(arg))
-    )
-  )
-    return false;
-  return args
-    .slice(at + 1)
-    .some((arg) => !raw(arg).startsWith("-") && GIT_COMMAND_KEY.test(raw(arg)));
-}
-
-/** Each operand a delete names: never the disk or home, a yes for system folders and .git. */
+/** Each operand a delete names: never the disk or home, a yes for system folders. */
 function judgeDeletes(
   context: Context,
   operands: readonly string[],
-  text: string,
-  tool: string
+  text: string
 ): void {
   for (const operand of operands) {
-    // A target nobody can read (a variable, command output, a `cd` that
-    // could not be followed) could be anything: the user decides.
+    // A target nobody can read is not judged.
     const target = isDyn(operand) ? null : resolve(context, operand);
-    if (target == null) {
-      unreadable(context, text);
-      continue;
-    }
-    if (isRootOrHome(operand, target, context.options.home)) {
+    if (target == null) continue;
+    if (isRootOrHome(operand, target, context.options.home))
       add(context, "deleteRoot", "never", text);
-    } else if (
-      /[*?[]/.test(operand) &&
-      !globInWorkspace(context, operand, target)
-    ) {
-      // A glob deletes whatever matches when it runs.
-      unreadable(context, text);
-    } else if (isSystemPath(target, context.options)) {
+    else if (isSystemPath(target, context.options))
       add(context, "systemDelete", "confirm", text);
-    } else if (
-      (tool === "rm" || tool === "find") &&
-      path.basename(trimSlashes(target)) === ".git"
-    ) {
-      add(context, "gitHistory", "confirm", text);
-    }
   }
-}
-
-/**
- * A relative glob (`*.log`, `build/*`) expanding in a known folder inside the
- * workspace that is not home or a folder holding it: the user's own files.
- */
-function globInWorkspace(
-  context: Context,
-  operand: string,
-  target: string
-): boolean {
-  if (path.isAbsolute(operand) || /^[a-z]:|^~/i.test(operand)) return false;
-  const glob = target.search(/[*?[]/);
-  const folder = trimSlashes(path.dirname(target.slice(0, glob) + "x"));
-  const workspace = trimSlashes(path.resolve(context.options.cwd));
-  const relative = path.relative(workspace, folder);
-  const inside =
-    relative === "" ||
-    (!relative.startsWith("..") && !path.isAbsolute(relative));
-  const home = trimSlashes(context.options.home);
-  return (
-    inside &&
-    folder !== "/" &&
-    folder !== home &&
-    !home.startsWith(`${folder}${path.sep}`)
-  );
 }
 
 /** Non-option words, honouring `--`. */
@@ -2570,17 +1577,7 @@ function writesOf(
       tool === "curl" ? ["-o", "--output"] : ["-O", "--output-document"]
     );
     if (output != null) write(output, "command");
-    if (tool === "curl")
-      for (const other of ["-D", "--dump-header", "-c", "--cookie-jar"]) {
-        const file = optionValue(args, [other]);
-        if (file != null) write(file, "command");
-      }
   }
-  if (tool === "sort") {
-    const output = optionValue(args, ["-o", "--output"]);
-    if (output != null) write(output, "command");
-  }
-  if (tool === "uniq" && operands.length > 1) write(operands[1]!, "command");
 }
 
 /** `:(){ :|:& };:` and its renamings: a function that starts copies of itself. */

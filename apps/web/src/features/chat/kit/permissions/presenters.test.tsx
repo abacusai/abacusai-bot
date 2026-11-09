@@ -262,19 +262,6 @@ const REQUESTS: Array<[PermissionRequest, RegExp | string, string[]]> = [
     "runCommand",
     ["accept", "allowAlways", "reject"],
   ],
-  [
-    {
-      type: "run_terminal",
-      command: "$(echo x) y",
-      cwd: "/r",
-      background: false,
-      guard: { rules: ["unreadable"] },
-      tool,
-      displayName: "",
-    } as PermissionRequest,
-    "runCommand",
-    ["accept", "reject"],
-  ],
 ];
 
 describe("R2-T23 presenters", () => {
@@ -296,7 +283,7 @@ describe("R2-T23 presenters", () => {
   );
 
   it("a judged card names every reason its yes lifts", () => {
-    const card = present(REQUESTS.at(-2)![0]);
+    const card = present(REQUESTS.at(-1)![0]);
     expect(card.reasons).toEqual(["guard_privileged", "guard_forcePush"]);
     expect(card.warning).toBe(true);
   });

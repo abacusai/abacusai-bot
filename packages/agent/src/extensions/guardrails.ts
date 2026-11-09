@@ -26,8 +26,7 @@ import {
   judgeCommand,
   logGuardVerdict,
   neverMessage,
-  noAnswererMessage,
-  unattendedRules,
+  unattendedNote,
   type LocalWrite,
 } from "../shell-judge.js";
 import { isInsideDirectory, realPathOf } from "../workspace-path.js";
@@ -189,9 +188,10 @@ function isSecretFile(lexical: string, real: string, cwd: string): boolean {
 export interface GuardrailsOptions {
   /**
    * What a command the shell judge wants confirmed gets: "gate" where the
-   * permission gate already asked the user, "refuse" where nobody can.
+   * permission gate asks the user; "report" where nobody can, so it runs and
+   * the result tells the run to say so in its report.
    */
-  confirm: "gate" | "refuse";
+  confirm: "gate" | "report";
 }
 
 export function createGuardrails(
@@ -204,6 +204,10 @@ function guardrails(pi: ExtensionAPI, options: GuardrailsOptions): void {
   // Files read (or created by us) this session. In-memory by design: after a
   // restart the model must re-read before editing, which is the safe default.
   const knownFiles = new Set<string>();
+
+  // Judged commands that ran with nobody to approve them, by call: the note
+  // their result carries so the run's report says so.
+  const reports = new Map<string, string>();
 
   // Files replaced this session and where the copy went. Consumed once by the
   // result hook; a stale entry would name an earlier write's copy as this one's.
@@ -334,7 +338,7 @@ function guardrails(pi: ExtensionAPI, options: GuardrailsOptions): void {
       const judgement = judgeCommand(cmd, { cwd: ctx.cwd });
       // The gate refuses these too; here it also covers the sub-agents.
       if (judgement.verdict === "never") {
-        if (options.confirm === "refuse")
+        if (options.confirm === "report")
           logGuardVerdict(
             "never",
             judgement.findings.map((finding) => finding.rule),
@@ -342,13 +346,11 @@ function guardrails(pi: ExtensionAPI, options: GuardrailsOptions): void {
           );
         return { block: true, reason: neverMessage(judgement) };
       }
-      const refused =
-        options.confirm === "refuse"
-          ? [...confirmRules(judgement), ...unattendedRules(judgement)]
-          : [];
-      if (refused.length > 0) {
-        logGuardVerdict("confirm", refused, "no_answerer");
-        return { block: true, reason: noAnswererMessage(refused) };
+      const unasked =
+        options.confirm === "report" ? confirmRules(judgement) : [];
+      if (unasked.length > 0) {
+        logGuardVerdict("confirm", unasked, "ran_unattended");
+        reports.set(event.toolCallId, unattendedNote(unasked));
       }
 
       // Judged on the real target: a link cannot rename what it points at.
@@ -410,6 +412,14 @@ function guardrails(pi: ExtensionAPI, options: GuardrailsOptions): void {
   });
 
   pi.on("tool_result", async (event, ctx) => {
+    const report = reports.get(event.toolCallId);
+    if (report != null) {
+      reports.delete(event.toolCallId);
+      return {
+        content: [...event.content, { type: "text" as const, text: report }],
+      };
+    }
+
     // A successful write means we know the file's content: allow future edits.
     if (event.toolName === "write" && !event.isError) {
       const input = event.input as { path?: string };

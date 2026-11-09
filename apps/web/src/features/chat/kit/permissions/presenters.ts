@@ -144,9 +144,6 @@ export const present = (request: PermissionRequest): CardModel => {
       // The shell judge's short list: the reason on the card, and "for this
       // chat" lifts the category (allowances.ts), never the command prefix.
       if (request.guard != null) {
-        const liftable = request.guard.rules.filter(
-          (rule) => rule !== "unreadable"
-        );
         return {
           title: "runCommand",
           warning: true,
@@ -159,16 +156,12 @@ export const present = (request: PermissionRequest): CardModel => {
             : {}),
           actions: [
             allowOnce(),
-            ...(liftable.length > 0
-              ? [
-                  {
-                    id: "allowAlways",
-                    label: "allowGuardForChat",
-                    decision: "allowAlways",
-                    variant: "secondary",
-                  } as CardAction,
-                ]
-              : []),
+            {
+              id: "allowAlways",
+              label: "allowGuardForChat",
+              decision: "allowAlways",
+              variant: "secondary",
+            },
             deny(),
           ],
           note: true,

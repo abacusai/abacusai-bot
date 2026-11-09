@@ -422,9 +422,7 @@ export type GuardRule =
   | "disk"
   | "power"
   | "forcePush"
-  | "gitHistory"
-  | "killAll"
-  | "unreadable";
+  | "killAll";
 
 interface PermissionRequestBase {
   tool: ToolRequest;
