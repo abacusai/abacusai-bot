@@ -228,6 +228,7 @@ import {
 import { addRunUsage, turnUsage, type TurnUsage } from "./turn-usage.js";
 import {
   accountReplyLanguagePrompt,
+  isSenderChat,
   knownReplyLanguage,
   learnUserLanguage,
 } from "./user-language.js";
@@ -1983,7 +1984,7 @@ export class AbacusBotSession {
         await this.session?.sendCustomMessage(
           {
             customType: LANGUAGE_REPAIR_TYPE,
-            content: replyLanguageRepairPrompt(mismatch),
+            content: replyLanguageRepairPrompt(mismatch, isSenderChat()),
             display: false,
           },
           { triggerTurn: true }

@@ -13,6 +13,7 @@ import fs from "fs";
 import path from "path";
 
 import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
+import { appNoteTag } from "@abacus-ai/agent/user-text";
 
 import { abacusBotHome } from "../../paths";
 import type { CronJob } from "./cron-store";
@@ -218,7 +219,8 @@ export const migrationNote = (
   notMoved: ReadonlyArray<{ name: string; reason: string }>
 ): string =>
   [
-    "[routines moved] The user's routines moved to the server, to run on their own even while",
+    appNoteTag("routines moved") +
+      " The user's routines moved to the server, to run on their own even while",
     "this computer sleeps. Their runs only read: search, and only the sites and account data",
     "declared for each; they no longer send messages, change files or use the browser.",
     ...(crons > 0

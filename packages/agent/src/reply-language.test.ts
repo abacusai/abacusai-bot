@@ -303,13 +303,14 @@ describe("replyLanguageMismatch", () => {
     ).toBeNull();
   });
 
-  it("reads a short message in another script on its own, earlier English or a learnt English aside", () => {
+  it("lets earlier English back a short message in another script, and never a learnt English", () => {
+    // A short "thanks" in Russian after English turns: an English reply stands.
     expect(
       judge(
-        [user("شکریہ دوست"), assistant(ENGLISH_REPLY)],
+        [user("Спасибо"), assistant(ENGLISH_REPLY)],
         ["Please open the quarterly report and summarise it for me."]
       )
-    ).toEqual({ expected: "arabic", got: "latin" });
+    ).toBeNull();
     expect(
       judge([user(URDU_QUESTION), assistant(ENGLISH_REPLY)], [], {
         script: "latin",
@@ -338,14 +339,38 @@ describe("replyLanguageMismatch", () => {
     ).toEqual({ expected: "latin", got: "cjk" });
   });
 
-  it("lets a language typed in Latin letters come back in its own script", () => {
-    // Bengali typed in Latin letters, answered in Bengali: Latin rules out only Han.
+  it("lets a language typed in Latin letters come back in its own script once it is saved", () => {
+    // Bengali typed in Latin letters: detection saved Bengali from their words.
+    const bengali = [
+      user("amar kalker meeting kokhon ache bolo to ektu"),
+      assistant("আপনার আগামীকালের মিটিং সকাল দশটায়, তারপরেই একটা কল আছে।"),
+    ];
+    expect(judge(bengali, [], { script: "bengali", chosen: false })).toBeNull();
+    expect(judge(bengali)).toEqual({ expected: "latin", got: "bengali" });
+  });
+
+  it("catches a Latin writer's reply drifting into another script", () => {
+    // They chose English: a Devanagari reply is drift, never the app picking Hindi.
+    expect(
+      judge(
+        [
+          user("Can you tell me about tomorrow's meeting please?"),
+          assistant(
+            "हाँ, कल सुबह दस बजे आपकी टीम के साथ मीटिंग है और उसके बाद एक कॉल है।"
+          ),
+        ],
+        [],
+        { script: "latin", chosen: true }
+      )
+    ).toEqual({ expected: "latin", got: "devanagari" });
     expect(
       judge([
-        user("amar kalker meeting kokhon ache bolo to ektu"),
-        assistant("আপনার আগামীকালের মিটিং সকাল দশটায়, তারপরেই একটা কল আছে।"),
+        user("Can you tell me about tomorrow's meeting please?"),
+        assistant(
+          "Да, завтра в десять у вас встреча с командой, а сразу после неё звонок."
+        ),
       ])
-    ).toBeNull();
+    ).toEqual({ expected: "latin", got: "cyrillic" });
   });
 
   it.each([

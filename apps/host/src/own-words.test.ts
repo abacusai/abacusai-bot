@@ -183,51 +183,89 @@ describe("ownWords", () => {
   });
 });
 
-/** Files that write notes into user turns; tags there must be declared. */
-const FRAMER_FILES = [
-  "apps/desktop/src/main/services/bots/bot-ask.ts",
-  "apps/desktop/src/main/services/bots/bot-service.ts",
-  "apps/desktop/src/main/services/messaging/messaging-gateway-service.ts",
-  "apps/desktop/src/main/services/agent-tools/routine-prompt.ts",
-  "apps/desktop/src/main/services/agent-tools/hosted-run.ts",
-  "apps/desktop/src/main/services/agent-tools/routine-migration.ts",
-  "apps/desktop/src/main/services/session/step-events.ts",
-  "apps/host/src/phone-lane.ts",
-  "apps/host/src/nudge-agenda.ts",
-  "packages/agent/src/bot/bot-prompts.ts",
-  "packages/agent/src/phone/phone-prompts.ts",
-  "packages/agent/src/mid-task-inbox.ts",
-  "packages/agent/src/agui/host.ts",
+/** Where prompts are written; user-text.ts itself declares the tags. */
+const SOURCE_ROOTS = [
+  "apps/desktop/src/main",
+  "apps/host/src",
+  "packages/agent/src",
 ];
-/** Log prefixes in those files, never in a prompt; and the mid-task prefix, which keeps the words. */
+/** A bracketed tag opening a string, or a paragraph inside one. */
+const RAW_TAG = /(?:["'`]|\\n\\n)\[([a-z][a-z -]*)\] /g;
+/** A log line names its subsystem in brackets; so may the lines just under its call. */
+const LOG_CALL =
+  /console\.|\blog\(|\.log\(|\bwarn\(|\berror\(|\binfo\(|\bdebug\(|Error\(|throw |logLine|\blogger\b/;
+/**
+ * Bracketed prefixes that never open a user turn: log subsystems the scan
+ * cannot tell from their call, and tool results the model reads as such.
+ */
 const NOT_NOTES = new Set([
   "abacusai-bot-agent",
-  "bots",
-  "messaging",
-  "phone",
-  "routines",
-  "steps",
+  "bot-ask",
+  "debug-sync",
+  "disk",
+  "grep",
+  "input",
+  "mcp",
+  "node",
+  "openllm",
+  "pi",
+  "posix-shell",
+  "provider",
+  "python",
+  "rpc",
+  "smoke",
+  "trash",
   "vault",
+  "window-chrome",
+  "not done",
+  "not started",
+  "not confirmed",
+  "needs a paid plan",
+  "once",
+  // midTaskText: the words after it are the user's.
   "user mid-task",
 ]);
 
+const sourceFiles = (dir: string): string[] =>
+  fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const file = path.join(dir, entry.name);
+    if (entry.isDirectory())
+      return entry.name === "node_modules" ? [] : sourceFiles(file);
+    return entry.name.endsWith(".ts") &&
+      !/\.(?:test|test-support|d)\.ts$/.test(entry.name)
+      ? [file]
+      : [];
+  });
+
 describe("every app note is declared", () => {
-  it("finds no undeclared tag in a framer file", () => {
+  it("opens every note with appNoteTag, and leaves no undeclared tag in a string", () => {
     const root = path.resolve(__dirname, "../../..");
     const declared = new Set<string>([
       ...APP_NOTE_TAGS.whole,
       ...APP_NOTE_TAGS.part,
     ]);
-    const undeclared = FRAMER_FILES.flatMap((file) =>
-      [
-        ...fs
-          .readFileSync(path.join(root, file), "utf8")
-          .matchAll(/["'`]\[([a-z][a-z -]*)\] /g),
-      ]
-        .map((match) => match[1]!)
-        .filter((tag) => !declared.has(tag) && !NOT_NOTES.has(tag))
-        .map((tag) => `${file}: [${tag}]`)
-    );
-    expect(undeclared).toEqual([]);
+    const found = SOURCE_ROOTS.flatMap((dir) =>
+      sourceFiles(path.join(root, dir))
+    )
+      .filter(
+        (file) => !file.endsWith(path.join("agent", "src", "user-text.ts"))
+      )
+      .flatMap((file) => {
+        const lines = fs.readFileSync(file, "utf8").split("\n");
+        return lines.flatMap((line, at) =>
+          [...line.matchAll(RAW_TAG)].flatMap((match) => {
+            const tag = match[1]!;
+            const near = lines.slice(Math.max(0, at - 2), at + 1).join("\n");
+            if (NOT_NOTES.has(tag) || LOG_CALL.test(near)) return [];
+            const where = `${path.relative(root, file)}:${at + 1} [${tag}]`;
+            return [
+              declared.has(tag)
+                ? `${where} use appNoteTag`
+                : `${where} undeclared`,
+            ];
+          })
+        );
+      });
+    expect(found).toEqual([]);
   });
 });

@@ -5,6 +5,7 @@
  */
 import { modelPath } from "@abacus-ai/agent/model-path";
 import {
+  appNoteTag,
   ROUTINE_EDITOR_OPENING,
   ROUTINE_EDITOR_WORDS,
 } from "@abacus-ai/agent/user-text";
@@ -139,7 +140,7 @@ export const buildRoutineFirePrompt = (
   platform: string = process.platform
 ): string => {
   const lines = [
-    `[routine] "${job.name}" fired ${TRIGGER_LINE[trigger]} at ${new Date().toLocaleString()}.`,
+    `${appNoteTag("routine")} "${job.name}" fired ${TRIGGER_LINE[trigger]} at ${new Date().toLocaleString()}.`,
     "This is the app's scheduler speaking, not the user typing. Carry out the",
     "saved instruction below; deliver anything useful naturally, and if the",
     "instruction says to stay quiet when nothing changed, end without filler.",

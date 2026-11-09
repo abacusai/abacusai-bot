@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { modelPath } from "@abacus-ai/agent/model-path";
 import { toolActivity } from "@abacus-ai/agent/tool-display";
 import { readUserLanguage } from "@abacus-ai/agent/user-language";
-import { frameChannelMessage } from "@abacus-ai/agent/user-text";
+import { appNoteTag, frameChannelMessage } from "@abacus-ai/agent/user-text";
 import type { UserTextTags } from "@abacus-ai/contract/agent-types";
 import { AgentMode, AgentStatus } from "@abacus-ai/contract/agent-types";
 import type { DesktopEvent } from "@abacus-ai/contract/agent-types";
@@ -171,7 +171,8 @@ export { outgoingWords } from "@abacus-ai/contract/reply-envelope";
 
 /** The one rule, restated on every auto-reply turn. See dispatch. */
 export const REPLY_REMINDER =
-  "[auto-reply] Everything you write here is delivered to them as if the " +
+  appNoteTag("auto-reply") +
+  " Everything you write here is delivered to them as if the " +
   "user typed it. Reply with only the words to send: never notes, " +
   "questions or options meant for the user, who is not in this chat. " +
   "Put the words to send inside <reply></reply>. ONLY what is inside that " +

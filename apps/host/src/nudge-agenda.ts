@@ -13,7 +13,7 @@ import {
 } from "@abacus-ai/agent/phone-nudges";
 import { PLAN_GIVES } from "@abacus-ai/agent/plan-asks";
 import { namesItsLanguage } from "@abacus-ai/agent/reply-language";
-import { ownWords } from "@abacus-ai/agent/user-text";
+import { appNoteTag, ownWords } from "@abacus-ai/agent/user-text";
 import type { AbacusPlanTier } from "@abacus-ai/contract/models";
 
 import type { PendingWait } from "#main/services/agent-tools/pending-waits";
@@ -421,7 +421,8 @@ const MAX_LANGUAGE_REFUSALS = 3;
 
 /** While no language is set, every turn asks for it: the server writes check-ins in no other. */
 const SET_LANGUAGE_NOTE =
-  "[check-ins language] No check-in language is set. Call `checkins` with op language and the code of the " +
+  appNoteTag("check-ins language") +
+  " No check-in language is set. Call `checkins` with op language and the code of the " +
   "language the user writes in, without mentioning it, then answer them as usual.";
 
 /** The first brief with Calendar or Gmail; the morning offer only on a plan with routines (`cronjob` refuses the free one). */
@@ -431,7 +432,8 @@ const connectedBrief = (routinesOnPlan: boolean): string =>
   FIRST_BRIEF_CLOSING;
 
 const FIRST_BRIEF_OPENING =
-  "[first brief] This is the user's first time here: instead of a question, open with a short brief, all in this one " +
+  appNoteTag("first brief") +
+  " This is the user's first time here: instead of a question, open with a short brief, all in this one " +
   "reply and in their language. Answer their greeting in a few words and greet them by first name. Call " +
   "`current_time` first and date every search from what it returns. If their calendar is connected, " +
   "their next meetings today or tomorrow (time and title, at most 3). If Gmail is connected, the unread emails from " +
@@ -455,7 +457,8 @@ const FIRST_BRIEF_CLOSING =
  * option. Offered, not made: a guessed demo spends the free window unasked.
  */
 const NO_GOOGLE_BRIEF =
-  "[first brief] This is the user's first time here and nothing is connected yet: instead of a question, open " +
+  appNoteTag("first brief") +
+  " This is the user's first time here and nothing is connected yet: instead of a question, open " +
   "with what you can make for them right now, all in this one reply and in their language. Before you write, " +
   "call `connect_connector` for Google: its link goes on your last line. Answer their greeting in a few words " +
   "and greet them by first name. Then a numbered list of 3 things you can make with nothing from them, each " +
@@ -473,7 +476,8 @@ const NO_GOOGLE_BRIEF =
   "link with one line on the default you used and that they can ask for changes.";
 
 const CHECKINS_ON_GREETING =
-  "[check-ins] Check-ins are on: say once in this greeting, in the user's language, that you may check in here " +
+  appNoteTag("check-ins") +
+  " Check-ins are on: say once in this greeting, in the user's language, that you may check in here " +
   "about their unfinished tasks, and that they can say stop any time.";
 
 /** Longest check-in text the loop is shown. */
@@ -498,13 +502,14 @@ export function nudgeNotes(entry: PhoneInboxEntry): string[] {
     .map((text) => JSON.stringify(text.slice(0, NUDGE_TEXT_MAX_CHARS)));
   if (sent.length > 0)
     notes.push(
-      `[check-ins sent] Since the user's last message the app texted them: ${sent.join("; ")}. Their message may answer that.`
+      `${appNoteTag("check-ins sent")} Since the user's last message the app texted them: ${sent.join("; ")}. Their message may answer that.`
     );
   const hint = upgradeHintNote(entry.upgrade_hint);
   if (hint != null) notes.push(hint);
   if (entry.stop_keyword === true)
     notes.push(
-      "[stop keyword] The user wrote only STOP, and nothing was turned off. Ask in one short line, in their language, " +
+      appNoteTag("stop keyword") +
+        " The user wrote only STOP, and nothing was turned off. Ask in one short line, in their language, " +
         "whether they want no more check-ins or want you to stop the task you are on; change nothing until they say."
     );
   return notes;
@@ -533,7 +538,7 @@ function upgradeHintNote(hint: PhoneInboxEntry["upgrade_hint"]): string | null {
       ? ` and has sent ${Math.floor(hint.messages)} messages`
       : "";
   return (
-    `[upgrade hint] The user is on the free plan${messages}. Only if this reply finishes a task for them or answers ` +
+    `${appNoteTag("upgrade hint")} The user is on the free plan${messages}. Only if this reply finishes a task for them or answers ` +
     `their thanks, end it with one short, friendly line in their language: what you have done for them so far, that ` +
     `${plan} adds ${PLAN_GIVES} for ${priceText} (write ${firstMonth} exactly), and ask ` +
     `whether they want the link. On their yes, send it with \`billing_plan\`. Never mid-task, after a complaint or an ` +

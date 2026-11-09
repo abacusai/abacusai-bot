@@ -349,11 +349,7 @@ const allowedScripts = ({
   turn,
   recent,
   known,
-}: ReplyLanguageContext): {
-  allowed: Set<Script>;
-  expected: Script;
-  latinOnly: boolean;
-} | null => {
+}: ReplyLanguageContext): { allowed: Set<Script>; expected: Script } | null => {
   const now = scriptCounts(turn);
   if (now.letters === 0) return null;
   const nonLatinNow = now.letters - (now.counts.get("latin") ?? 0);
@@ -374,9 +370,8 @@ const allowedScripts = ({
       allowed.add(script);
     weight.set(script, (weight.get(script) ?? 0) + count);
   }
-  // Earlier Latin only backs a short Latin message ("ok"): a long one says
-  // it all, and one in another script says which.
-  const latinFromEarlier = now.letters < MIN_LETTERS && nonLatinNow === 0;
+  // Earlier Latin only backs a short message ("ok", "Спасибо"): a long one says it all.
+  const latinFromEarlier = now.letters < MIN_LETTERS;
   for (const { counts, letters } of earlier) {
     if (letters < USED_LETTERS) continue;
     for (const [script, count] of counts) {
@@ -396,7 +391,6 @@ const allowedScripts = ({
   return {
     allowed,
     expected: known?.chosen === true ? known.script : heaviest,
-    latinOnly: [...weight.keys()].every((script) => script === "latin"),
   };
 };
 
@@ -422,17 +416,13 @@ export const replyLanguageMismatch = (
   if (lastUser < 0) return null;
   const person = allowedScripts(context);
   if (person == null) return null;
-  const { allowed, expected, latinOnly } = person;
+  const { allowed, expected } = person;
   for (let index = messages.length - 1; index > lastUser; index--) {
     if (roleOf(messages[index]) !== "assistant") continue;
     const reply = scriptCounts(textOf(messages[index]));
     if (reply.letters < MIN_LETTERS) continue;
     const got = dominantOf(reply);
-    // Latin is how every language is also typed (Hinglish, Banglish, Arabizi):
-    // Latin words alone rule out no script but Han, the drift models make.
-    const romanized = latinOnly && got !== "cjk";
-    if (got != null && !allowed.has(got) && !romanized)
-      return { expected, got };
+    if (got != null && !allowed.has(got)) return { expected, got };
     const han = reply.counts.get("cjk") ?? 0;
     if (
       !allowed.has("cjk") &&

@@ -30,6 +30,7 @@ import {
 import { AbacusBotSession, approvalTimeoutMs } from "../session.js";
 import { listServed } from "../static-server.js";
 import type { UnattendedPolicy } from "../tool-policy.js";
+import { appNoteTag } from "../user-text.js";
 import { BoundedSet, RUN_IDS_KEPT } from "./bounded.js";
 import type { CompatWriter } from "./channel.js";
 import { AguiEmitter } from "./emit.js";
@@ -423,7 +424,7 @@ export class AguiHost {
         if (command.selected)
           await this.core.handle({
             type: "send",
-            message: `[reaction] The user reacted ${command.emoji} to your message "${command.excerpt.slice(0, 80)}"`,
+            message: `${appNoteTag("reaction")} The user reacted ${command.emoji} to your message "${command.excerpt.slice(0, 80)}"`,
             userText: { operator: { kind: "user-reaction" } },
           });
         return;

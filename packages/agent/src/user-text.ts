@@ -121,6 +121,14 @@ export const APP_NOTE_TAGS = {
   ],
 } as const;
 
+/** A tag the app may open a note in a user turn with. */
+export type AppNoteTag =
+  | (typeof APP_NOTE_TAGS.whole)[number]
+  | (typeof APP_NOTE_TAGS.part)[number];
+
+/** "[first run]": every app note opens with this, so its tag is one `ownWords` knows. */
+export const appNoteTag = (tag: AppNoteTag): string => `[${tag}]`;
+
 /** A note another bot sent ("[from bot Name] ..."), or a task it passed on. */
 const BOT_NOTE = /^\[(?:from bot |task from the user, passed on by )/;
 /**

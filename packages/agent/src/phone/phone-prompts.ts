@@ -9,6 +9,7 @@ import { replyLanguageLine } from "../reply-language.js";
 import { serviceRoutingPrompt } from "../service-routing-prompt.js";
 import { PHONE_CONNECTABLE_SERVICES } from "../tool-policy.js";
 import { resolveReplyLanguage } from "../user-language.js";
+import { appNoteTag } from "../user-text.js";
 import { PHONE_BUBBLE_MARKER } from "./phone-bubbles.js";
 
 /** How the model names itself when asked. */
@@ -190,7 +191,8 @@ export const PHONE_FLUSH_TYPE = "abacusai-bot:phone-memory-flush";
 
 export function phoneFlushPrompt(today: string): string {
   return [
-    "[memory flush] Older messages will soon be summarized away. Save what",
+    appNoteTag("memory flush") +
+      " Older messages will soon be summarized away. Save what",
     "matters from this conversation that your memory does not hold yet.",
     "Reply with ONLY this JSON object, no tool calls, no other text:",
     "{",
@@ -223,7 +225,8 @@ export function phoneConsolidatePrompt(input: ConsolidationInput): string {
     items.length > 0 ? items.map((item) => `- ${item}`).join("\n") : "(none)";
 
   return [
-    "[memory maintenance] Tidy your memory. Reply with ONLY this JSON object,",
+    appNoteTag("memory maintenance") +
+      " Tidy your memory. Reply with ONLY this JSON object,",
     "no tool calls, no other text:",
     "{",
     '  "log": ["digest lines for the missing day, or [] if none is missing"],',

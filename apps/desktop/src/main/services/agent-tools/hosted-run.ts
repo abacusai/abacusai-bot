@@ -3,6 +3,7 @@
  * the prompt its unattended session is given, and how its final answer is
  * read back into what the server delivers.
  */
+import { appNoteTag } from "@abacus-ai/agent/user-text";
 import type { RoutineRead } from "@abacus-ai/contract/routines";
 
 import { readsFromConnectorReads } from "./routine-reach";
@@ -136,7 +137,7 @@ export const buildHostedRunPrompt = (
   const zone = request.timezone ?? "UTC";
   const full = request.access === "full";
   const lines = [
-    `[routine] "${request.name}" is running on its own at ${localTime(request.timezone, at)} (${zone}).`,
+    `${appNoteTag("routine")} "${request.name}" is running on its own at ${localTime(request.timezone, at)} (${zone}).`,
     "Nobody is watching this run and nobody can answer a question during it. This is",
     "the scheduler speaking, not the user. Carry out the saved instruction below.",
     "",
