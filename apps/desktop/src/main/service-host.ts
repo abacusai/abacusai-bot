@@ -359,7 +359,6 @@ import {
   BOT_ASK_TURN_TIMEOUT_MS,
   BOT_TASK_PREFIX,
   BOT_TASK_TURN_TIMEOUT_MS,
-  noteGist,
   requestGist,
   taskFollowUpNote,
 } from "./services/bots/bot-ask";
@@ -395,7 +394,10 @@ import {
   HostedChromiumService,
 } from "./services/browser/chrome/hosted-chromium";
 import type { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
-import { channelTitle } from "./services/channels/channel-logic";
+import {
+  channelTitle,
+  type OwnChatLine,
+} from "./services/channels/channel-logic";
 import {
   CHANNEL_PLATFORM,
   ChannelService,
@@ -6071,10 +6073,9 @@ export class ServiceHost {
       const sessionId = this.botService
         .list()
         .find((bot) => bot.id === botId)?.sessionId;
-      const asked = this.recentUserLines(botId).at(-1);
       return {
         busy: sessionId != null && this.turnLedger.isOpen(sessionId),
-        asked: asked == null ? null : noteGist(asked, 200),
+        lines: this.recentOwnChat(botId),
       };
     },
     runTurn: (botId, channel, prompt) =>
@@ -6732,6 +6733,26 @@ export class ServiceHost {
       .filter((turn) => turn.role === "user")
       .slice(-5)
       .map((turn) => turn.text);
+  }
+
+  /**
+   * The last exchanges of a bot's own (forever) chat, both sides, short: the
+   * context a channel turn answers with, since it runs in another chat. Its
+   * own replies are in it, so "what did you do today" is answered from what
+   * it last reported there, not from notes that have since gone stale.
+   */
+  private recentOwnChat(botId: string): OwnChatLine[] {
+    const sessionId = this.botService
+      .list()
+      .find((bot) => bot.id === botId)?.sessionId;
+    if (sessionId == null) return [];
+    const file =
+      this.agentSessionManagerService.getDiagnosticInfo(sessionId)
+        ?.agentSessionFile ?? null;
+    // Long enough per line that a status said late in a long reply survives.
+    return readTranscriptTail(file, 12, undefined, 600)
+      .filter((turn) => turn.text !== "NO_REPLY")
+      .slice(-8);
   }
 
   /** The asked bot's conversation for each ask whose turn is running. */

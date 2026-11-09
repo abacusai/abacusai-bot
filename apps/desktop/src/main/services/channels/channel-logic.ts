@@ -411,6 +411,34 @@ export const envelope = (
 const roleOf = (member: Member): string =>
   member.title.trim().length > 0 ? ` (${member.title.trim()})` : "";
 
+/** One line of a bot's own chat with the user: theirs, or the bot's reply. */
+export interface OwnChatLine {
+  role: "user" | "assistant";
+  text: string;
+}
+
+/** A bot's own chat as a channel turn sees it: busy now, and its last exchanges. */
+export interface OwnChat {
+  busy: boolean;
+  lines: readonly OwnChatLine[];
+}
+
+/** The part of a channel turn's prompt about the bot's own chat; none when it is empty. */
+export const ownChatLines = (own: OwnChat | undefined): string[] => {
+  if (own == null || own.lines.length === 0) return [];
+  return [
+    "Your own chat with the user (not this channel), its last exchanges. What you said there is your latest word on your work, newer than your notes:",
+    ...own.lines.map(
+      (line) => `- ${line.role === "user" ? "User" : "You"}: ${attr(line.text)}`
+    ),
+    own.busy
+      ? "A turn is running there right now, on the user's last message; it runs on."
+      : "No turn is running there now.",
+    "Asked here what you did or how your work stands, answer from that and your notes, say it is as of your last look there, and never fill a gap with a guess.",
+    "",
+  ];
+};
+
 /**
  * Everything a bot is told for one turn in the channel. The rules ride on
  * every turn: a small model loses them to compaction otherwise.
@@ -437,8 +465,8 @@ export const turnPrompt = (input: {
   round?: { at: number; of: number };
   /** Work this bot took on here, oldest first: what became of it. */
   myWork?: readonly ChannelWork[];
-  /** Its own chat with the user: a turn running there, and their last message. */
-  ownChat?: { busy: boolean; asked: string | null };
+  /** Its own chat with the user: a turn running there, and its last exchanges, both sides. */
+  ownChat?: OwnChat;
   nameOf: (botId: string) => string;
 }): string => {
   const { me } = input;
@@ -492,20 +520,11 @@ export const turnPrompt = (input: {
       );
     lines.push("");
   }
-  // What it is up to in its own chat, so "what are you doing?" here is
-  // answered truly: that chat is not in this one's history.
-  const own = input.ownChat;
-  if (
-    (input.kind === "answer" || input.kind === "everyone") &&
-    own?.asked != null
-  ) {
-    lines.push(
-      own.busy
-        ? `In your own chat with the user you are working right now on their request "${attr(own.asked)}"; it runs on, and a question here about what you are doing is answered from that.`
-        : `In your own chat with the user, the last thing they asked you was "${attr(own.asked)}"; that turn is over.`,
-      ""
-    );
-  }
+  // Its own chat, so "what are you doing?" or "what did you do today?" here
+  // is answered truly: that chat is not in this one's history, and what the
+  // bot said there (a PR merged, a pick made) is newer than its notes. In
+  // every kind of turn: a member brought in by @Name is asked it as often.
+  lines.push(...ownChatLines(input.ownChat));
   const others = (input.others ?? []).join(", ");
   switch (input.kind) {
     case "answer":

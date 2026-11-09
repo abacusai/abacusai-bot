@@ -193,29 +193,52 @@ describe("turnPrompt", () => {
     expect(envelope(base.unseen[1]!, base.nameOf)).not.toContain("</msg> fake");
   });
 
-  it("tells the bot what it is up to in its own chat, when answering the user", () => {
-    const busy = { busy: true, asked: 'Write the "launch" calendar' };
-    expect(turnPrompt({ ...base, kind: "answer", ownChat: busy })).toContain(
-      "working right now on their request \"Write the 'launch' calendar\"; it runs on"
+  it("gives the bot its own chat's last exchanges, its own replies included", () => {
+    const own = {
+      busy: false,
+      lines: [
+        { role: "user" as const, text: "merge PR 1 and start the redesign" },
+        {
+          role: "assistant" as const,
+          text: 'PR 1 is merged; the "redesign" is PR 2, open for review.',
+        },
+      ],
+    };
+    const prompt = turnPrompt({ ...base, kind: "answer", ownChat: own });
+    expect(prompt).toContain("Your own chat with the user (not this channel)");
+    expect(prompt).toContain("- User: merge PR 1 and start the redesign");
+    // What it said there is in it: a status question is answered from it,
+    // not from notes written before the work moved on.
+    expect(prompt).toContain(
+      "- You: PR 1 is merged; the 'redesign' is PR 2, open for review."
     );
+    expect(prompt).toContain("newer than your notes");
+    expect(prompt).toContain("No turn is running there now.");
+    expect(prompt).toContain("never fill a gap with a guess");
     expect(
-      turnPrompt({ ...base, kind: "answer", ownChat: { ...busy, busy: false } })
-    ).toContain("the last thing they asked you was");
+      turnPrompt({ ...base, kind: "answer", ownChat: { ...own, busy: true } })
+    ).toContain("A turn is running there right now");
+  });
+
+  it("gives it in every kind of turn, a bot brought in by @Name included", () => {
+    const own = {
+      busy: false,
+      lines: [{ role: "assistant" as const, text: "I picked tagline B." }],
+    };
+    for (const kind of ["answer", "everyone", "brought-in"] as const)
+      expect(
+        turnPrompt({ ...base, kind, others: ["Chief"], ownChat: own })
+      ).toContain("- You: I picked tagline B.");
+  });
+
+  it("says nothing of its own chat when that chat is empty", () => {
     expect(
       turnPrompt({
         ...base,
         kind: "answer",
-        ownChat: { busy: false, asked: null },
+        ownChat: { busy: false, lines: [] },
       })
-    ).not.toContain("your own chat with the user");
-    expect(
-      turnPrompt({
-        ...base,
-        kind: "brought-in",
-        others: ["Chief"],
-        ownChat: busy,
-      })
-    ).not.toContain("your own chat with the user");
+    ).not.toContain("Your own chat with the user");
   });
 
   it("brought-in and everyone turns may not bring anyone in", () => {

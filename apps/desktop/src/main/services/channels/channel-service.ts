@@ -45,6 +45,7 @@ import {
   MAX_NEW_MESSAGES,
   mentionedIn,
   type Member,
+  type OwnChat,
   postedWords,
   plainStop,
   speakersFor,
@@ -79,9 +80,9 @@ export interface ChannelDeps {
   bot: (botId: string) => Member | null;
   /**
    * The bot's own chat with the user as it stands: whether a turn runs
-   * there now, and the user's last message to it. Absent: not told.
+   * there now, and its last exchanges, both sides. Absent: not told.
    */
-  ownChat?: (botId: string) => { busy: boolean; asked: string | null };
+  ownChat?: (botId: string) => OwnChat;
   /**
    * Run one turn of the bot in its chat for this channel and resolve with
    * the turn's raw text; reject when it fails, is stopped or runs too long.
