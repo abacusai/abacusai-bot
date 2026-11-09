@@ -56,11 +56,11 @@ describe("leading reasoning blocks", () => {
   });
 
   it("hides an unclosed leading block while streaming only", () => {
-    const out = stream("<think>Ollama runs it; LM Studio needs 0.3.", 4);
+    const out = stream("<think>The answer is probably 42.", 4);
 
     expect(out.live).toBe("");
-    expect(out.thinking).toBe("Ollama runs it; LM Studio needs 0.3.");
-    expect(out.text).toBe("<think>Ollama runs it; LM Studio needs 0.3.");
+    expect(out.thinking).toBe("The answer is probably 42.");
+    expect(out.text).toBe("<think>The answer is probably 42.");
     expect(splitReasoning("<think>cut off").text).toBe("<think>cut off");
   });
 });
