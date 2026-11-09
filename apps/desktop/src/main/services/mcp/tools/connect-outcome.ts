@@ -1,4 +1,5 @@
 import type { Connector } from "@abacus-ai/connectors/registry";
+import type { HomeChannel } from "@abacus-ai/contract/bots";
 
 /**
  * What asking for or dropping a connector did, as facts. The engine
@@ -31,6 +32,8 @@ export type ConnectOutcome =
       account?: string;
       /** WhatsApp through AbacusAI Bot's own number: send_to_whatsapp reaches the user. */
       botNumber?: boolean;
+      /** A chat app: which, so the result can say how the user reaches the bot there. */
+      platform?: HomeChannel;
     }
   | {
       code: "unavailable";

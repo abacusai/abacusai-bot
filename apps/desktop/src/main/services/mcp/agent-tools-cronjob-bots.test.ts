@@ -401,8 +401,12 @@ describe("the routine editor's session", () => {
       sessionId === "editor-session" ? "job-1" : null,
   });
 
-  it("sees the cron tool and nothing else, whatever is switched on", async () => {
-    expect(await listedTools(editor, "editor-session")).toEqual(["cronjob"]);
+  it("sees the cron tool and the two read-only help tools its prompt names, whatever is switched on", async () => {
+    expect((await listedTools(editor, "editor-session")).sort()).toEqual([
+      "billing_plan",
+      "bot_help",
+      "cronjob",
+    ]);
     // Unchanged for everyone else: cron stays off for a plain session.
     expect(await listedTools(editor, "plain-session")).not.toContain("cronjob");
   });

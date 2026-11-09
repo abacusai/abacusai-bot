@@ -2,6 +2,7 @@ import {
   catalogByKind,
   describeForListing,
 } from "@abacus-ai/connectors/describe";
+import { phoneChatRoute } from "@abacus-ai/contract/capabilities";
 
 import type { ConnectOutcome, DisconnectOutcome } from "./connect-outcome";
 import type { ToolDefinition, ToolHost, ToolResult } from "./definition";
@@ -149,7 +150,10 @@ export function appConnectResult(
         return host.ok(
           `${outcome.name} is connected. Send, list and read with its own tools ` +
             "(send_<platform>_message, list_<platform>_chats, read_<platform>_messages). Do not ask the user to " +
-            "connect anything."
+            "connect anything." +
+            (outcome.platform != null
+              ? ` From their phone: ${phoneChatRoute(outcome.platform)}.`
+              : "")
         );
       if (outcome.via != null)
         return host.ok(

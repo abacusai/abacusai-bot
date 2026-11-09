@@ -10,6 +10,7 @@
  * shape and colour ids; lib/bots/avatar.ts resolveLook maps them.
  */
 import type { HomeChannel } from "../bots";
+import type { CapabilityId } from "../capabilities";
 
 export type BotTemplateCategory =
   | "featured"
@@ -63,6 +64,11 @@ export interface BotTemplate {
    * nothing must still give the user something.
    */
   firstReply?: string;
+  /**
+   * What the persona and mission promise the user can do, as capability ids;
+   * each must say how on the template's home channel (capabilities.ts).
+   */
+  claims?: readonly CapabilityId[];
 }
 
 /**
@@ -109,6 +115,7 @@ export const BOT_TEMPLATES: BotTemplate[] = [
     // Mirrors DeepAgent's "WhatsApp Agent" starter persona.
     id: "whatsapp-agent",
     homeChannel: "whatsapp",
+    claims: ["phone-chat"],
     name: "WhatsApp Agent",
     title: "Your agent in WhatsApp - message it anytime",
     persona:
@@ -145,6 +152,7 @@ export const BOT_TEMPLATES: BotTemplate[] = [
     // Mirrors DeepAgent's "Telegram Agent" starter persona.
     id: "telegram-agent",
     homeChannel: "telegram",
+    claims: ["phone-chat"],
     name: "Telegram Agent",
     title: "Your agent in Telegram - message it anytime",
     persona:
@@ -242,6 +250,7 @@ export const BOT_TEMPLATES: BotTemplate[] = [
     // Mirrors DeepAgent's "Discord Agent" starter persona.
     id: "discord-agent",
     homeChannel: "discord",
+    claims: ["phone-chat"],
     name: "Discord Agent",
     title: "Your agent in Discord - DM it or add it to a server",
     persona:
