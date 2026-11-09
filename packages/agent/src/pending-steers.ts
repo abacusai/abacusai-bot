@@ -15,6 +15,10 @@ export class PendingSteers {
     this.entries.push(messageId != null ? { text, messageId } : { text });
   }
 
+  get size(): number {
+    return this.entries.length;
+  }
+
   clear(): void {
     this.entries.length = 0;
   }

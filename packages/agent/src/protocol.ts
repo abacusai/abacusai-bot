@@ -367,7 +367,13 @@ export type AgentEvent =
    * An answer a turn finished before a steered message reopened it, for the
    * messages named: `turn_reply` says only what the turn wrote after it.
    */
-  | { type: "turn_answer"; messageIds: string[]; text: string }
+  | {
+      type: "turn_answer";
+      messageIds: string[];
+      text: string;
+      /** The turn's own reply, sent before it closes: nothing more is owed unless the turn adds to it. */
+      settled?: true;
+    }
   | {
       type: "error";
       // The error payload is inconsistent across models: text may be at

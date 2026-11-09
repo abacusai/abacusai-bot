@@ -1552,8 +1552,9 @@ export class MessagingGatewayService {
           : undefined
       );
       route.bufferMessageId = null;
-      // The steered message is still owed its own answer, or the empty-reply line.
-      route.delivered = false;
+      // The steered message is still owed its own answer, or the empty-reply
+      // line; a turn's own settled reply owes nothing more (flushReply set it).
+      if (event.settled !== true) route.delivered = false;
       // The chat just heard the answer: progress counts from here, and an update written before it is stale.
       if (route.progress != null) {
         route.progress.heardAt = Date.now();
@@ -1575,7 +1576,9 @@ export class MessagingGatewayService {
 
     // The turn goes on past these words, so nothing is sent yet.
     if (event.type === "promised_work_recovery") {
-      route.heldWords = outgoingWords(route.buffer);
+      // Already sent (a settled turn_answer): nothing to hold.
+      const words = outgoingWords(route.buffer);
+      route.heldWords = words.length > 0 ? words : route.heldWords;
       route.buffer = "";
       route.bufferMessageId = null;
       route.taggedReply = null;

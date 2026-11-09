@@ -1,9 +1,10 @@
 /**
  * A turn that ends on a promise, through the real loops and a scripted model.
  *
- * Both loops: the model is told once, inside the send, so the run stays open and
- * the turn ends once. The ask is a budget of one per user message: nothing a
- * continuation does may hand it back.
+ * Both loops: the closing words go to the judge (its endpoint answered here),
+ * and on "now" the model is told once, inside the send, so the run stays open
+ * and the turn ends once. The ask is a budget of one per user message: nothing
+ * a continuation does may hand it back. A judge that fails asks nothing.
  */
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -22,12 +23,14 @@ import {
   describe,
   expect,
   it,
+  vi,
 } from "vitest";
 
+import { abacusV1BaseUrl } from "./abacus-endpoint.js";
 import { resetBackgroundJobs } from "./background-processes.js";
 import { BotSession } from "./bot/bot-session.js";
 import { noteCreditsBack, noteCreditWall } from "./credit-wall.js";
-import { PROMISED_WORK_PROMPT } from "./promised-work.js";
+import { PROMISED_WORK_PROMPT, TURN_END_JUDGE_MODEL } from "./promised-work.js";
 import { AgentStatus, type DesktopEvent } from "./protocol.js";
 import { AbacusBotSession } from "./session.js";
 
@@ -37,6 +40,18 @@ const READ_CALL = { name: "ls", args: { path: "." } };
 
 let provider: FakeProvider;
 let home: string;
+
+/** The judge's answer to each request it gets; the closing words it was shown are recorded. */
+let judge: (shown: string, signal?: AbortSignal | null) => Promise<Response>;
+let judged: string[] = [];
+const letter = (answer: string): Promise<Response> =>
+  Promise.resolve(
+    Response.json({ choices: [{ message: { content: answer } }] })
+  );
+/** The scripted judge: the promise and nothing else reads as going on now. */
+const judgeByWords = (shown: string): Promise<Response> =>
+  letter(shown.includes(PROMISE) ? "A" : "B");
+const realFetch = globalThis.fetch;
 
 beforeAll(async () => {
   provider = await FakeProvider.start();
@@ -57,17 +72,41 @@ afterAll(async () => {
 
 beforeEach(() => {
   process.env.ABACUSAI_BOT_AUDIENCE = "owner";
+  process.env.ABACUS_API_KEY = ["judge", "test", "key"].join("-");
   provider.calls.length = 0;
+  judged = [];
+  judge = judgeByWords;
+  vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    const body =
+      typeof init?.body === "string"
+        ? (JSON.parse(init.body) as {
+            model?: string;
+            messages?: Array<{ content: string }>;
+          })
+        : {};
+    if (
+      !url.startsWith(abacusV1BaseUrl()) ||
+      body.model !== TURN_END_JUDGE_MODEL
+    )
+      return realFetch(input, init);
+    const shown = body.messages?.[0]?.content ?? "";
+    judged.push(shown);
+    return judge(shown, init?.signal);
+  });
 });
 
 afterEach(() => {
   delete process.env.ABACUSAI_BOT_AUDIENCE;
+  delete process.env.ABACUS_API_KEY;
+  vi.restoreAllMocks();
   resetBackgroundJobs();
 });
 
 type Loop = {
   start(): Promise<void>;
-  send(text: string): Promise<void>;
+  send(text: string, turn?: { messageId?: string }): Promise<void>;
+  steer(text: string, messageId?: string): Promise<void>;
   stop(): Promise<void>;
   dispose?(): void;
 };
@@ -96,6 +135,36 @@ const agentEvents = (events: DesktopEvent[], type: string): unknown[] =>
   events.flatMap((event) =>
     event.type === "event" && event.event.type === type ? [event.event] : []
   );
+
+/** Turns that ended with an outcome: one per send. */
+const turnEnds = (events: DesktopEvent[]): unknown[] =>
+  agentEvents(events, "turn_complete").filter(
+    (event) => (event as { outcome?: unknown }).outcome != null
+  );
+
+/** A judge that answers only when released, or never; it gives up when its call is cut off. */
+const heldJudge = () => {
+  let release: ((answer: string) => void) | undefined;
+  const answer = new Promise<string>((resolve) => {
+    release = resolve;
+  });
+  return {
+    judge: (_shown: string, signal?: AbortSignal | null) =>
+      new Promise<Response>((resolve, reject) => {
+        signal?.addEventListener("abort", () => reject(signal.reason));
+        void answer.then((letterAnswer) =>
+          resolve(
+            Response.json({ choices: [{ message: { content: letterAnswer } }] })
+          )
+        );
+      }),
+    release: (answerLetter: string) => release?.(answerLetter),
+  };
+};
+
+const until = async (check: () => boolean): Promise<void> => {
+  while (!check()) await new Promise((resolve) => setTimeout(resolve, 5));
+};
 
 /** Asks the last request carries in its history. */
 const asks = (): number =>
@@ -176,6 +245,119 @@ describe.each(LOOPS)("%s", (_name, Loop) => {
     await loop.send("read the files");
 
     expect(provider.calls).toHaveLength(1);
+  });
+
+  it("judges after the reply, with the user's words and the closing words", async () => {
+    scripted([{ say: PROMISE }, { say: "", call: READ_CALL }, { say: DONE }]);
+    const { loop } = await start(Loop);
+    await loop.send("read the files");
+
+    // The promise and the closing answer; the ask is spent, so DONE is judged by no one.
+    expect(judged).toHaveLength(1);
+    expect(judged[0]).toContain("The user asked: read the files");
+    expect(judged[0]).toContain(PROMISE);
+    // The judge never touches the session's prompt: its prefix is the same on every request.
+    const systems = provider.calls.map(
+      (call) =>
+        call.messages.find((message) => message.role === "system")?.content
+    );
+    expect(new Set(systems.map((system) => JSON.stringify(system))).size).toBe(
+      1
+    );
+  });
+
+  it("asks on a closing no word list named, when the judge reads it as going on", async () => {
+    judge = () => letter("A");
+    scripted([
+      { say: "Section one is in. Moving into the headers next." },
+      { say: "", call: READ_CALL },
+      { say: DONE },
+    ]);
+    const { loop } = await start(Loop);
+    await loop.send("fix the document");
+
+    expect(asks()).toBe(1);
+    expect(provider.calls).toHaveLength(3);
+  });
+
+  it.each([
+    ["an error", () => Promise.resolve(new Response("down", { status: 500 }))],
+    ["an answer it cannot read", () => letter("maybe")],
+    ["a later promise", () => letter("C")],
+    [
+      "a timeout",
+      // Never answers: only the judge's own timeout ends it.
+      (_shown: string, signal?: AbortSignal | null) =>
+        new Promise<Response>((_resolve, reject) =>
+          signal?.addEventListener("abort", () => reject(signal.reason))
+        ),
+    ],
+  ])("asks nothing when the judge gives %s", async (_kind, answer) => {
+    judge = answer;
+    scripted([{ say: PROMISE }]);
+    const { loop, events } = await start(Loop);
+    await loop.send("read the files");
+
+    expect(judged).toHaveLength(1);
+    expect(provider.calls).toHaveLength(1);
+    expect(agentEvents(events, "promised_work_recovery")).toHaveLength(0);
+    expect(turnEnds(events)).toHaveLength(1);
+  });
+
+  it("sends a chat's reply before the verdict, and owes nothing more when there is no steer", async () => {
+    const held = heldJudge();
+    judge = held.judge;
+    scripted([{ say: PROMISE }]);
+    const { loop, events } = await start(Loop);
+    const turn = loop.send("read the files", { messageId: "m1" });
+    await until(() => judged.length === 1);
+    await until(() => agentEvents(events, "turn_answer").length === 1);
+
+    expect(agentEvents(events, "turn_answer")[0]).toMatchObject({
+      messageIds: ["m1"],
+      text: PROMISE,
+      settled: true,
+    });
+    expect(turnEnds(events)).toHaveLength(0);
+    held.release("B");
+    await turn;
+    expect(turnEnds(events)).toHaveLength(1);
+  });
+
+  it("lands a Stop at once while the verdict is pending", async () => {
+    const held = heldJudge();
+    judge = held.judge;
+    scripted([{ say: PROMISE }]);
+    const { loop, events } = await start(Loop);
+    const turn = loop.send("read the files");
+    await until(() => judged.length === 1);
+    const stopped = Date.now();
+    await loop.stop();
+    await turn;
+
+    expect(Date.now() - stopped).toBeLessThan(1_500);
+    expect(asks()).toBe(0);
+    expect(provider.calls).toHaveLength(1);
+    expect(turnEnds(events)).toHaveLength(1);
+  });
+
+  it("answers a message the user sent meanwhile instead of steering", async () => {
+    const held = heldJudge();
+    judge = held.judge;
+    scripted([{ say: PROMISE }]);
+    const { loop, events } = await start(Loop);
+    const turn = loop.send("read the files");
+    await until(() => judged.length === 1);
+    await loop.steer("never mind, stop there");
+    held.release("A");
+    await turn;
+
+    expect(agentEvents(events, "promised_work_recovery")).toHaveLength(0);
+    expect(
+      provider.calls.some((call) =>
+        call.userText.some((text) => text.includes(PROMISED_WORK_PROMPT))
+      )
+    ).toBe(false);
   });
 
   it("never asks on a routine, a contact's chat or a plan", async () => {

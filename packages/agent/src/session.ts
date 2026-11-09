@@ -138,7 +138,6 @@ import {
 import { personaPrompt, readPersona } from "./persona.js";
 import { scriptRuntimesPrompt, windowsShellPrompt } from "./posix-shell.js";
 import {
-  endedOnPromise,
   mayAskForPromisedWork,
   PROMISED_WORK_PROMPT,
   PROMISED_WORK_TYPE,
@@ -889,6 +888,8 @@ export class AbacusBotSession {
   private readonly nextStepAsk = new NextStepAsk();
   private pendingNextStep = false;
   private pendingPromisedWork = false;
+  /** A run whose closing words are being judged (PromisedWork); its turn ends once they are. */
+  private judgedRun: readonly unknown[] | null = null;
   /** The same model is to be asked again, out of sight, for its answer. */
   private pendingEmptyAsk = false;
   /**
@@ -1487,8 +1488,9 @@ export class AbacusBotSession {
     this.languageCheckRun = null;
     this.emptyReplies.begin();
     this.pendingEmptyAsk = false;
-    this.promisedWork.begin();
+    this.promisedWork.begin(text);
     this.pendingPromisedWork = false;
+    this.judgedRun = null;
     this.nextStepAsk.begin(text);
     this.pendingNextStep = false;
     this.mcpTools.atTurnStart();
@@ -1892,29 +1894,26 @@ export class AbacusBotSession {
       this.pendingLanguageRepair == null &&
       this.pendingToolArrival == null &&
       !this.pendingEmptyAsk;
-    // Words that promise more, and nothing else on the way: told once to
-    // do it, inside this send so the run stays open (PromisedWork).
-    this.pendingPromisedWork =
+    this.nextStepAsk.sawRun(messages);
+    // Closing words with nothing else on the way: judged once the reply has
+    // gone out, inside this send so the run stays open (PromisedWork).
+    if (
       ending &&
       !this.interrupted &&
       this.ownedTurn != null &&
       mayAskForPromisedWork(this.mode) &&
-      endedOnPromise(messages) &&
-      this.promisedWork.claim();
-    this.nextStepAsk.sawRun(messages);
+      this.promisedWork.judge(messages)
+    ) {
+      this.judgedRun = messages;
+      // The reply goes out now, not after the verdict: nothing more is owed unless the steer adds to it.
+      const answered = this.reply.answers();
+      if (answered != null) this.emitAgentEvent({ ...answered, settled: true });
+      return;
+    }
     // Finished work ends on what comes next, in this send (NextStepAsk).
     this.pendingNextStep =
-      ending &&
-      !this.pendingPromisedWork &&
-      !this.interrupted &&
-      this.ownedTurn != null &&
-      nextStepAskOn() &&
-      mayAskForPromisedWork(this.mode) &&
-      endedOnResult(messages) &&
-      this.nextStepAsk.claim();
-    if (ending && !this.pendingPromisedWork && !this.pendingNextStep) {
-      this.finishTurn();
-    }
+      ending && !this.interrupted && this.nextStepDue(messages);
+    if (ending && !this.pendingNextStep) this.finishTurn();
   }
 
   private async continuePastRecoverableFailures(): Promise<void> {
@@ -1930,6 +1929,7 @@ export class AbacusBotSession {
       this.pendingBusyWait != null ||
       this.pendingEmptyAsk ||
       this.pendingPromisedWork ||
+      this.judgedRun != null ||
       this.pendingNextStep
     ) {
       // Stop cancels the continuation, but the withheld idle event still has
@@ -1938,6 +1938,7 @@ export class AbacusBotSession {
       if (this.interrupted || this.router.chain.diskFull) {
         this.pendingEmptyAsk = false;
         this.pendingPromisedWork = false;
+        this.judgedRun = null;
         this.pendingNextStep = false;
         this.pendingStreamCut = false;
         this.pendingNetworkFailure = null;
@@ -2020,6 +2021,24 @@ export class AbacusBotSession {
           },
           { triggerTurn: true }
         );
+
+        continue;
+      }
+
+      if (this.judgedRun != null) {
+        const run = this.judgedRun;
+        this.judgedRun = null;
+        // A message the user sent meanwhile is answered instead.
+        this.pendingPromisedWork =
+          (await this.promisedWork.verdict()) === "now" &&
+          this.pendingSteers.size === 0;
+        // Not going on: the turn ends here, or on what comes next.
+        this.pendingNextStep =
+          !this.pendingPromisedWork &&
+          !this.interrupted &&
+          this.nextStepDue(run);
+        if (!this.pendingPromisedWork && !this.pendingNextStep)
+          this.finishTurn();
 
         continue;
       }
@@ -2640,6 +2659,17 @@ export class AbacusBotSession {
     );
   }
 
+  /** Whether a finished run ends on what comes next, spending its ask if so (NextStepAsk). */
+  private nextStepDue(messages: readonly unknown[]): boolean {
+    return (
+      this.ownedTurn != null &&
+      nextStepAskOn() &&
+      mayAskForPromisedWork(this.mode) &&
+      endedOnResult(messages) &&
+      this.nextStepAsk.claim()
+    );
+  }
+
   /**
    * Close out a turn: fail any open subtask brackets, drop per-turn state, go
    * idle. A component whose tool_execution_end never came would otherwise spin
@@ -2772,6 +2802,8 @@ export class AbacusBotSession {
     this.busyWait.cancel();
     this.verifyLoop.cancel();
     this.reply.abandon();
+    // A verdict still pending settles now, so the Stop lands at once.
+    this.promisedWork.drop();
 
     // An unanswered approval would keep the tool hook parked forever.
     this.rejectAllPending("Interrupted.");
