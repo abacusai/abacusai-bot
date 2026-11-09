@@ -30,7 +30,12 @@ import { FakeRelay } from "../fixtures/relay";
 import { hostActionsFor, inertHostActions } from "../runtime/host-actions";
 import { emptyThreadState } from "../store/thread-store";
 import { renderRelay, renderScenario } from "../testing";
-import { busyLabel } from "./status/status";
+import {
+  busyLabel,
+  longToolLabel,
+  noteRunningCalls,
+  runningCallKey,
+} from "./status/status";
 
 let current: { cleanup(): Promise<void> } | null = null;
 afterEach(async () => {
@@ -40,6 +45,80 @@ afterEach(async () => {
 
 const t = (key: string, values?: Record<string, unknown>) =>
   `${key}${values != null ? JSON.stringify(values) : ""}`;
+
+/**
+ * A tool running past a minute reads in plain words with its own time, not
+ * as a raw shell line: "du -a . | sort -rn | head" told a non-technical user
+ * nothing through a 10-minute scan.
+ */
+describe("a long-running tool on the busy line", () => {
+  const running = (
+    ...calls: Array<[id: string, name: string, input?: object]>
+  ) =>
+    [
+      {
+        id: "a1",
+        role: "assistant",
+        parts: calls.map(([id, name, input = {}]) => ({
+          type: "tool-call",
+          id,
+          name,
+          input,
+          arguments: JSON.stringify(input),
+          state: "input-complete",
+        })),
+      },
+    ] as never;
+  const plain = (key: string, values?: Record<string, unknown>) =>
+    key === "chat.busy.longTool"
+      ? `${String(values?.activity)} · ${String(values?.minutes)} min`
+      : key === "chat.busy.activity.command"
+        ? "Running a command"
+        : key;
+
+  /** The busy line's effect: each newly running call's clock starts at `now`. */
+  const seen = (messages: never, now: number) =>
+    noteRunningCalls(runningCallKey(messages), now);
+
+  it("names the kind, with the tool's own minutes, once it passes a minute", () => {
+    const messages = running([
+      "du1",
+      "bash",
+      { command: "du -a . | sort -rn" },
+    ]);
+    // Before the effect has started its clock, nothing is claimed.
+    expect(longToolLabel(plain, messages, 10 * 60_000)).toBeNull();
+    seen(messages, 0);
+    expect(longToolLabel(plain, messages, 0)).toBeNull();
+    expect(longToolLabel(plain, messages, 59_000)).toBeNull();
+    expect(longToolLabel(plain, messages, 60_000)).toBe(
+      "Running a command · 1 min"
+    );
+    expect(longToolLabel(plain, messages, 4 * 60_000 + 5_000)).toBe(
+      "Running a command · 4 min"
+    );
+    // A new call starts its own clock.
+    const next = running(["du2", "bash", { command: "find . -size +1G" }]);
+    seen(next, 5 * 60_000);
+    expect(longToolLabel(plain, next, 5 * 60_000 + 30_000)).toBeNull();
+    expect(longToolLabel(plain, next, 6 * 60_000)).toBe(
+      "Running a command · 1 min"
+    );
+  });
+
+  it("keeps a tool's own title where it has no plain phrase", () => {
+    const messages = running(["g1", "gmail_search", { query: "invoices" }]);
+    seen(messages, 0);
+    expect(longToolLabel(plain, messages, 2 * 60_000)).toMatch(/ · 2 min$/);
+    expect(longToolLabel(plain, messages, 2 * 60_000)).not.toMatch(/^Running/);
+  });
+
+  it("leaves several running tools to the count", () => {
+    const messages = running(["x1", "bash"], ["x2", "bash"]);
+    seen(messages, 0);
+    expect(longToolLabel(plain, messages, 5 * 60_000)).toBeNull();
+  });
+});
 
 describe("R2-T15 status", () => {
   it("busy line labels", () => {

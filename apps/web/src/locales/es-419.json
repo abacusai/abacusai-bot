@@ -2941,7 +2941,18 @@
       "tools_other": "Running {{count}} tools",
       "typing": "Typing",
       "waitingForConnection": "Esperando conexión…",
-      "working": "Working"
+      "working": "Working",
+      "activity": {
+        "command": "Ejecutando un comando",
+        "files": "Leyendo archivos",
+        "edit": "Cambiando archivos",
+        "search": "Buscando en archivos",
+        "webSearch": "Buscando en la web",
+        "webPage": "Leyendo una página web",
+        "browser": "Trabajando en el navegador",
+        "subtask": "Trabajando en una subtarea"
+      },
+      "longTool": "{{activity}} · {{minutes}} min"
     },
     "code": {
       "copied": "Copied",
@@ -4819,7 +4830,8 @@
       "cutoff": "Google cortó mi respuesta a la mitad, así que me detuve. Envía tu mensaje de nuevo para reintentarlo.",
       "cutoffSwitch": "O cambia a RouteLLM - Open en el selector de modelos de la app para obtener respuestas más estables.",
       "cutoffVerify": "O verifica tu teléfono para desbloquear tus créditos gratis de Abacus y luego cambia a RouteLLM - Open en la app: {{link}}",
-      "cutoffTopUp": "O agrega créditos de Abacus y cambia a RouteLLM - Open en la app: {{link}}"
+      "cutoffTopUp": "O agrega créditos de Abacus y cambia a RouteLLM - Open en la app: {{link}}",
+      "stillWorkingOn": "Sigo trabajando en eso ({{minutes}} min hasta ahora). {{activity}}… Te respondo aquí cuando esté listo."
     },
     "unavailable": {
       "title": {

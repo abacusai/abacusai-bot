@@ -50,6 +50,14 @@ export const PRODUCT_FACTS_PROMPT = [
 ].join(" ");
 
 /**
+ * A long silent turn reads as a dead one. One fixed line, so the cached
+ * prefix holds; the code's hidden reminders (budgets.ts) back it up. The
+ * update rides with a tool call because a text-only message ends the turn.
+ */
+export const PROGRESS_UPDATES_PROMPT =
+  "On a task that takes several steps or minutes, keep the user posted with one short line in their language, written in the same message as your next tool call: before a step that may take minutes, after an attempt fails or times out, and when you change approach. Say something new each time, and never end your reply on such a line.";
+
+/**
  * Asked for a video, the model wrote "I can't make video here, let me check"
  * and only then called paid_feature, so the plan came second. One fixed line
  * too: a session without the tool skips it.
@@ -84,7 +92,13 @@ function toolGuidelinesPrompt(edit: EditTool): string {
 
 /** A main session's base: who the agent is, then how it uses its tools. */
 export function basePrompt(edit: EditTool): string {
-  return `${identityPrompt()}\n${PRODUCT_FACTS_PROMPT}\n${MEDIA_ASKS_PROMPT}\n${PLAN_ASKS_PROMPT}\n\n${toolGuidelinesPrompt(edit)}`;
+  return `${identityPrompt()}
+${PRODUCT_FACTS_PROMPT}
+${PROGRESS_UPDATES_PROMPT}
+${MEDIA_ASKS_PROMPT}
+${PLAN_ASKS_PROMPT}
+
+${toolGuidelinesPrompt(edit)}`;
 }
 
 /** A sub-agent's base; the guidelines only where it has file tools. */

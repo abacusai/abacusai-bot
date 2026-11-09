@@ -6,6 +6,8 @@
  * `node:*` or pi (tool-display.test.ts enforces it), so the renderer's bundle
  * can take it without the agent's dependency graph.
  */
+import { toToolKind } from "./agui/vendor/pi-acp/tool-kind.js";
+
 export {
   buildToolTitle,
   type ToolArgs,
@@ -43,4 +45,43 @@ export const describeToolCall = (tool: {
       ? `${flat.slice(0, ACTIVITY_SUMMARY_MAX)}…`
       : flat;
   return `${name} (${clipped})`;
+};
+
+/** What a running tool is doing, in words anyone reads (a locale key's last part). */
+export type ToolActivity =
+  | "command"
+  | "files"
+  | "edit"
+  | "search"
+  | "webSearch"
+  | "webPage"
+  | "browser"
+  | "subtask";
+
+/**
+ * The plain activity for a tool by its kind, or null where the tool's own
+ * title already reads plainly (connectors, components). A server prefix
+ * (`server_browser_click`) does not hide a browser tool.
+ */
+export const toolActivity = (name: string): ToolActivity | null => {
+  if (name === "browser_task" || /(?:^|_)browser_/.test(name)) return "browser";
+  if (name === "web_search") return "webSearch";
+  switch (toToolKind(name)) {
+    case "execute":
+      return "command";
+    case "read":
+      return "files";
+    case "edit":
+    case "delete":
+    case "move":
+      return "edit";
+    case "search":
+      return "search";
+    case "fetch":
+      return "webPage";
+    case "think":
+      return "subtask";
+    default:
+      return null;
+  }
 };

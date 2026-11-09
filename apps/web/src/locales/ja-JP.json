@@ -2941,7 +2941,18 @@
       "tools_other": "Running {{count}} tools",
       "typing": "Typing",
       "waitingForConnection": "接続を待っています…",
-      "working": "Working"
+      "working": "Working",
+      "activity": {
+        "command": "コマンドを実行中",
+        "files": "ファイルを読み込み中",
+        "edit": "ファイルを変更中",
+        "search": "ファイルを検索中",
+        "webSearch": "ウェブを検索中",
+        "webPage": "ウェブページを読み込み中",
+        "browser": "ブラウザで作業中",
+        "subtask": "サブタスクを処理中"
+      },
+      "longTool": "{{activity}} · {{minutes}}分"
     },
     "code": {
       "copied": "Copied",
@@ -4819,7 +4830,8 @@
       "cutoff": "Google に返信を途中で打ち切られたため、止まりました。もう一度メッセージを送ると再試行します。",
       "cutoffSwitch": "または、アプリのモデル選択で RouteLLM - Open に切り替えると、より安定した返信が得られます。",
       "cutoffVerify": "または、電話番号を認証して無料の Abacus クレジットを有効にしてから、アプリで RouteLLM - Open に切り替えてください: {{link}}",
-      "cutoffTopUp": "または、Abacus クレジットを追加して、アプリで RouteLLM - Open に切り替えてください: {{link}}"
+      "cutoffTopUp": "または、Abacus クレジットを追加して、アプリで RouteLLM - Open に切り替えてください: {{link}}",
+      "stillWorkingOn": "まだ作業中です(ここまで{{minutes}}分)。{{activity}}… 終わったらここで返信します。"
     },
     "unavailable": {
       "title": {

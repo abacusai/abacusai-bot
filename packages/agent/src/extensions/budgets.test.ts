@@ -800,44 +800,62 @@ describe("credits running out", () => {
 });
 
 /**
- * The same marks on a chat whose user waits in a messaging app: the phone
- * loop's user cannot see a preview, and a long research or browser run
- * writes no file, so the desktop's "built something, showed nothing" rule
- * would never fire there. Each mark checks in whenever the user heard
- * nothing since the last one.
+ * Progress updates. A "show my biggest files" ask ran 27 minutes of killed
+ * scans with no word to the user, who never wrote again. With someone in the
+ * chat, a run the user has heard nothing from for 3 working minutes (or 15
+ * tool calls) is now told, unseen, to write one short line. The steer is
+ * queued after a round of tools, so it lands at the tail of the next request
+ * and never reopens a finished reply. Sub-agents never load budgets.
  */
-describe("check-ins in a messaging chat", () => {
-  const checkIns = (pi: ReturnType<typeof fakePi>) =>
-    pi.messages.filter((m) => m.customType === "abacusai-bot-show-work");
-  const started = async () => {
+describe("progress updates", () => {
+  const MINUTE = 60_000;
+  const reminders = (pi: ReturnType<typeof fakePi>) =>
+    pi.messages.filter((m) => m.customType === "abacusai-bot-progress-update");
+  let id = 0;
+  /**
+   * One model call of `genMs` (with `text` when it says something), then a
+   * tool run of `toolMs`, then the turn's end, as pi fires them.
+   */
+  const round = async (
+    pi: ReturnType<typeof fakePi>,
+    {
+      genMs = 30_000,
+      toolMs = 30_000,
+      text = "",
+      toolName = "bash",
+    }: {
+      genMs?: number;
+      toolMs?: number;
+      text?: string;
+      toolName?: string;
+    } = {}
+  ) => {
+    const ctx = { hasUI: false, abort: () => {} };
+    await pi.fire("turn_start", {}, ctx);
+    vi.advanceTimersByTime(genMs);
+    await pi.fire("message_end", {
+      message: { role: "assistant", content: [{ type: "text", text }] },
+    });
+    const toolCallId = `p${++id}`;
+    await pi.fire("tool_execution_start", { toolName, toolCallId });
+    vi.advanceTimersByTime(toolMs);
+    await pi.fire("tool_execution_end", {
+      toolName,
+      toolCallId,
+      isError: false,
+    });
+    await pi.fire("turn_end", { toolResults: [{ toolCallId }] }, ctx);
+  };
+  /** `minutes` of silent rounds, a minute each. */
+  const silent = async (pi: ReturnType<typeof fakePi>, minutes: number) => {
+    for (let i = 0; i < minutes; i++) await round(pi);
+  };
+  const started = async (options = {}) => {
     const pi = fakePi();
-    createBudgets({ checkIns: { tools: ["send_progress", "send_media"] } })(
-      pi.api as never
-    );
+    createBudgets(options)(pi.api as never);
+    await pi.fire("input", {});
     await pi.fire("agent_start", {});
     return pi;
-  };
-  let id = 0;
-  /** `minutes` of work, a minute a step: a model call and a bash run. */
-  const work = async (
-    pi: ReturnType<typeof fakePi>,
-    minutes: number,
-    toolName = "bash"
-  ) => {
-    for (let i = 0; i < minutes; i++) {
-      await pi.fire("turn_start", {}, { hasUI: false, abort: () => {} });
-      vi.advanceTimersByTime(30_000);
-      await pi.fire("message_end", { message: { role: "assistant" } });
-      const toolCallId = `c${++id}`;
-      await pi.fire("tool_execution_start", { toolName, toolCallId });
-      vi.advanceTimersByTime(30_000);
-      await pi.fire("tool_execution_end", {
-        toolName,
-        toolCallId,
-        isError: false,
-      });
-    }
-    await pi.fire("turn_start", {}, { hasUI: false, abort: () => {} });
   };
 
   beforeEach(() => {
@@ -846,78 +864,217 @@ describe("check-ins in a messaging chat", () => {
   });
   afterEach(() => vi.useRealTimers());
 
-  it("checks in at 10 and 20 minutes of work, files or not, hidden from the user", async () => {
+  it("asks for one line once the user has heard nothing for 3 working minutes, hidden, at the tail", async () => {
     const pi = await started();
-    await work(pi, 9);
-    expect(checkIns(pi)).toHaveLength(0);
-
-    await work(pi, 1);
-    expect(checkIns(pi)).toHaveLength(1);
-    const first = String(checkIns(pi)[0]!.content);
-    expect(first).toContain("over 10 minutes");
-    expect(first).toContain("send_progress");
-    expect(first).toContain("present_deliverable");
-    expect(first).not.toMatch(/preview|pane/i);
-    expect(pi.messages.at(-1)?.options?.deliverAs).toBe("steer");
-
-    await work(pi, 10);
-    expect(checkIns(pi)).toHaveLength(2);
-    expect(String(checkIns(pi)[1]!.content)).toContain("over 20 minutes");
+    await silent(pi, 2);
+    expect(reminders(pi)).toHaveLength(0);
+    await silent(pi, 1);
+    expect(reminders(pi)).toHaveLength(1);
+    const reminder = reminders(pi)[0]!;
+    expect(String(reminder.content)).toContain(
+      "heard nothing from you for 3 minutes"
+    );
+    expect(String(reminder.content)).toContain("before your next tool call");
+    expect(String(reminder.content)).toContain("in their language");
+    expect((reminder as { display?: boolean }).display).toBe(false);
+    expect(reminder.options?.deliverAs).toBe("steer");
   });
 
-  it("stays quiet at a mark when the user heard from the run since the last one", async () => {
+  it("stays quiet while the model keeps the user posted", async () => {
     const pi = await started();
-    await work(pi, 8);
-    await work(pi, 1, "send_progress");
-    await work(pi, 2);
-    expect(checkIns(pi)).toHaveLength(0);
-
-    // Nothing since the 10-minute mark: the 20-minute one checks in.
-    await work(pi, 10);
-    expect(checkIns(pi)).toHaveLength(1);
-    expect(String(checkIns(pi)[0]!.content)).toContain("over 20 minutes");
+    for (let i = 0; i < 20; i++)
+      await round(pi, { text: i % 2 === 0 ? "Checking the next folder." : "" });
+    expect(reminders(pi)).toHaveLength(0);
   });
 
-  it("counts a file handed over as hearing from the run", async () => {
+  it("counts working time only: an approval wait is not silence", async () => {
     const pi = await started();
-    await work(pi, 9, "agent-tools_present_deliverable");
-    await work(pi, 2);
-    expect(checkIns(pi)).toHaveLength(0);
+    await silent(pi, 2);
+    await pi.fire("turn_start", {}, { hasUI: false, abort: () => {} });
+    vi.advanceTimersByTime(1000);
+    await pi.fire("message_end", {
+      message: { role: "assistant", content: [] },
+    });
+    vi.advanceTimersByTime(15 * MINUTE);
+    await pi.fire("tool_execution_start", {
+      toolName: "bash",
+      toolCallId: "w",
+    });
+    vi.advanceTimersByTime(1000);
+    await pi.fire("tool_execution_end", {
+      toolName: "bash",
+      toolCallId: "w",
+      isError: false,
+    });
+    await pi.fire(
+      "turn_end",
+      { toolResults: [{}] },
+      { hasUI: false, abort: () => {} }
+    );
+    expect(reminders(pi)).toHaveLength(0);
   });
 
-  it("never checks in while the run closes out: the close-out's calls are its own", async () => {
-    process.env.ABACUSAI_BOT_RUN_CAP_MS = String(15 * 60_000);
+  it("asks after 15 quick tool calls, once 90 seconds of work went by", async () => {
+    const pi = await started();
+    for (let i = 0; i < 14; i++) await round(pi, { genMs: 3000, toolMs: 3000 });
+    expect(reminders(pi)).toHaveLength(0);
+    await round(pi, { genMs: 3000, toolMs: 3000 });
+    expect(reminders(pi)).toHaveLength(1);
+    expect(String(reminders(pi)[0]!.content)).toContain("for 1 minute of work");
+  });
+
+  it("never asks a turn nobody is in the chat for", async () => {
+    process.env.ABACUSAI_BOT_NOBODY_PRESENT = "1";
     try {
       const pi = await started();
-      const aborts: number[] = [];
-      const ctx = { hasUI: false, abort: () => aborts.push(1) };
-      await work(pi, 9);
-      expect(checkIns(pi)).toHaveLength(0);
-      await work(pi, 1);
-      expect(checkIns(pi)).toHaveLength(1);
-      // Past the run cap: the close-out starts on this call.
-      await work(pi, 6);
-      const closeOut = pi.messages.filter(
-        (m) => m.customType === "abacusai-bot-close-out"
-      );
-      expect(closeOut).toHaveLength(1);
-      // The 20-minute mark passes during the close-out: no check-in, and the
-      // close-out keeps both its calls (the stop comes on the third, not sooner).
-      vi.advanceTimersByTime(6 * 60_000);
-      await pi.fire("turn_start", {}, ctx);
-      expect(checkIns(pi)).toHaveLength(1);
-      expect(aborts).toEqual([]);
-      await pi.fire("turn_start", {}, ctx);
-      expect(aborts).toHaveLength(1);
+      await silent(pi, 30);
+      expect(reminders(pi)).toHaveLength(0);
+    } finally {
+      delete process.env.ABACUSAI_BOT_NOBODY_PRESENT;
+    }
+  });
+
+  it("never asks a turn that ends without tools: it would reopen a finished reply", async () => {
+    const pi = await started();
+    await silent(pi, 2);
+    const ctx = { hasUI: false, abort: () => {} };
+    await pi.fire("turn_start", {}, ctx);
+    vi.advanceTimersByTime(2 * MINUTE);
+    await pi.fire("message_end", {
+      message: { role: "assistant", content: [] },
+    });
+    await pi.fire("turn_end", { toolResults: [] }, ctx);
+    expect(reminders(pi)).toHaveLength(0);
+  });
+
+  it("never asks while the run closes out", async () => {
+    process.env.ABACUSAI_BOT_RUN_CAP_MS = String(2 * MINUTE);
+    try {
+      const pi = await started();
+      await silent(pi, 6);
+      expect(
+        pi.messages.filter((m) => m.customType === "abacusai-bot-close-out")
+      ).toHaveLength(1);
+      expect(reminders(pi)).toHaveLength(0);
     } finally {
       delete process.env.ABACUSAI_BOT_RUN_CAP_MS;
     }
   });
 
-  it("leaves the desktop's rule alone: no file written, no nudge", async () => {
-    const pi = withBudgets();
+  /** Rows: what the model does after each reminder, and the reminders a long turn gets. */
+  const caps: [
+    name: string,
+    answer: (n: number) => boolean,
+    minutes: number,
+    count: number,
+  ][] = [
+    ["two ignored in a row stop it", () => false, 60, 2],
+    [
+      "answered ones keep coming, at least 4 minutes apart, at most 5 a turn",
+      () => true,
+      60,
+      5,
+    ],
+    ["an answer after one ignored resets the count", (n) => n % 2 === 0, 60, 5],
+  ];
+  it.each(caps)("caps: %s", async (_name, answer, minutes, count) => {
+    process.env.ABACUSAI_BOT_RUN_CAP_MS = String(120 * MINUTE);
+    try {
+      const pi = await started();
+      const at: number[] = [];
+      let seen = 0;
+      for (let i = 0; i < minutes; i++) {
+        // The model's next message after a reminder is its answer, or not.
+        const replying = reminders(pi).length > seen;
+        if (replying) at.push(i);
+        seen = reminders(pi).length;
+        await round(pi, {
+          text:
+            replying && answer(seen)
+              ? "Still scanning; trying folder by folder."
+              : "",
+        });
+      }
+      expect(reminders(pi)).toHaveLength(count);
+      // Answered reminders are 3 silent minutes past the answer, and never under 4 apart.
+      for (let k = 1; k < at.length; k++)
+        expect(at[k]! - at[k - 1]!).toBeGreaterThanOrEqual(4);
+    } finally {
+      delete process.env.ABACUSAI_BOT_RUN_CAP_MS;
+    }
+  });
+
+  it("starts the count over with the user's next message", async () => {
+    const pi = await started();
+    await silent(pi, 20);
+    expect(reminders(pi)).toHaveLength(2);
+    await pi.fire("input", {});
     await pi.fire("agent_start", {});
-    await work(pi, 25);
-    expect(checkIns(pi)).toHaveLength(0);
+    await silent(pi, 3);
+    expect(reminders(pi)).toHaveLength(3);
+  });
+
+  it("folds a show-work nudge due at the same time into the one steer", async () => {
+    const pi = await started();
+    const showWork = () =>
+      pi.messages.filter((m) => m.customType === "abacusai-bot-show-work");
+    await round(pi, { toolName: "write", text: "Writing the page." });
+    for (let i = 0; i < 6; i++) await round(pi, { text: "Styling it." });
+    await silent(pi, 3);
+    // 10 working minutes and 3 unheard land on the same turn's end.
+    expect(reminders(pi)).toHaveLength(1);
+    expect(String(reminders(pi)[0]!.content)).toContain("Show your work");
+    await silent(pi, 1);
+    expect(showWork()).toHaveLength(0);
+  });
+
+  it("lets a show-work nudge queued this turn stand alone, and asks on the next", async () => {
+    const pi = await started();
+    const showWork = () =>
+      pi.messages.filter((m) => m.customType === "abacusai-bot-show-work");
+    await round(pi, { toolName: "write", text: "Writing the page." });
+    for (let i = 0; i < 7; i++) await round(pi, { text: "Styling it." });
+    await silent(pi, 3);
+    expect(showWork()).toHaveLength(1);
+    expect(reminders(pi)).toHaveLength(0);
+    await silent(pi, 1);
+    expect(reminders(pi)).toHaveLength(1);
+    expect(String(reminders(pi)[0]!.content)).not.toContain("Show your work");
+  });
+
+  describe("in a messaging chat", () => {
+    const phone = { checkIns: { tools: ["send_progress", "send_media"] } };
+
+    it("names the progress tool, and words that never reach the chat do not count", async () => {
+      const pi = await started(phone);
+      for (let i = 0; i < 3; i++)
+        await round(pi, { text: "Thinking out loud." });
+      expect(reminders(pi)).toHaveLength(1);
+      const text = String(reminders(pi)[0]!.content);
+      expect(text).toContain("send_progress");
+      expect(text).toContain("present_deliverable");
+      expect(text).not.toMatch(/preview|pane/i);
+    });
+
+    it("counts a progress line or a file handed over as the user hearing", async () => {
+      for (const toolName of [
+        "send_progress",
+        "agent-tools_present_deliverable",
+      ]) {
+        const pi = await started(phone);
+        for (let i = 0; i < 10; i++)
+          await round(pi, i % 2 === 0 ? { toolName } : {});
+        expect(reminders(pi)).toHaveLength(0);
+      }
+    });
+
+    it("gets no show-work preview nudge", async () => {
+      const pi = await started(phone);
+      await round(pi, { toolName: "write" });
+      await silent(pi, 25);
+      expect(
+        pi.messages.filter((m) => m.customType === "abacusai-bot-show-work")
+      ).toHaveLength(0);
+    });
   });
 });

@@ -2941,7 +2941,18 @@
       "tools_other": "Running {{count}} tools",
       "typing": "Typing",
       "waitingForConnection": "Menunggu koneksi…",
-      "working": "Working"
+      "working": "Working",
+      "activity": {
+        "command": "Menjalankan perintah",
+        "files": "Membaca file",
+        "edit": "Mengubah file",
+        "search": "Mencari di file",
+        "webSearch": "Mencari di web",
+        "webPage": "Membaca halaman web",
+        "browser": "Bekerja di browser",
+        "subtask": "Mengerjakan subtugas"
+      },
+      "longTool": "{{activity}} · {{minutes}} mnt"
     },
     "code": {
       "copied": "Copied",
@@ -4819,7 +4830,8 @@
       "cutoff": "Google memotong balasanku di tengah jalan, jadi aku berhenti. Kirim pesanmu lagi untuk mencoba ulang.",
       "cutoffSwitch": "Atau beralih ke RouteLLM - Open di pemilih model aplikasi untuk balasan yang lebih stabil.",
       "cutoffVerify": "Atau verifikasi nomor teleponmu untuk membuka kredit Abacus gratismu, lalu beralih ke RouteLLM - Open di aplikasi: {{link}}",
-      "cutoffTopUp": "Atau tambahkan kredit Abacus dan beralih ke RouteLLM - Open di aplikasi: {{link}}"
+      "cutoffTopUp": "Atau tambahkan kredit Abacus dan beralih ke RouteLLM - Open di aplikasi: {{link}}",
+      "stillWorkingOn": "Masih saya kerjakan ({{minutes}} menit sejauh ini). {{activity}}… Saya akan membalas di sini setelah selesai."
     },
     "unavailable": {
       "title": {

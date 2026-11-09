@@ -295,7 +295,9 @@ describe("the watchdog", () => {
   });
 
   // "Command timed out after 120 seconds" leaves the model with one idea:
-  // run the same command again. Say what would actually work.
+  // run the same command again. "Re-run it with a larger timeout" made it so:
+  // a whole-folder scan was killed, re-run bigger, killed again, for 25
+  // silent minutes. Say what would actually work, and to tell the user.
   it("tells the model what to do about a killed command", async () => {
     const pi = withTimeouts();
     const result = (await pi.fire("tool_result", {
@@ -306,9 +308,11 @@ describe("the watchdog", () => {
     })) as { content: Array<{ text: string }> };
 
     expect(result.content[0]!.text).toBe("Command timed out after 120 seconds");
-    expect(result.content[1]!.text).toMatch(
-      /larger `timeout` \(up to 600 seconds\)/
-    );
+    const remedy = result.content[1]!.text;
+    expect(remedy).not.toMatch(/Re-run it with a larger/);
+    expect(remedy).toMatch(/Do not run it again with a larger `timeout`/);
+    expect(remedy).toMatch(/Tell the user in one line that this is slow/);
+    expect(remedy).toMatch(/a faster way: a narrower path, a depth limit/);
     expect(result.content[1]!.text).toMatch(
       /never for an install or a scaffold/
     );
