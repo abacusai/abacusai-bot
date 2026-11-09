@@ -61,6 +61,10 @@ export const messaging = {
    * since a scan may still land; main turns it off if none does in time.
    */
   releaseLogin: mutation.input(PlatformInput).output(type<void>()),
+  /** The user's Unlink: off, and any login stored on this computer is gone. */
+  unlinkPlatform: mutation
+    .input(PlatformInput)
+    .output(type<MessagingSnapshot>()),
   /** Mint a pairing code for a shared-bot platform. */
   pairShared: mutation.input(PlatformInput).output(type<MessagingSnapshot>()),
   unlinkShared: mutation.input(PlatformInput).output(type<MessagingSnapshot>()),

@@ -66,6 +66,10 @@ const setup = (
           };
           return snapshot;
         }),
+        unlinkPlatform: os.messaging.unlinkPlatform.handler(({ input }) => {
+          calls.push(`${input.platformId}:false`);
+          return snapshot;
+        }),
         showLogin: os.messaging.showLogin.handler(() => {}),
         releaseLogin: os.messaging.releaseLogin.handler(({ input }) => {
           calls.push(`${input.platformId}:released`);
