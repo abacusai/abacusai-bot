@@ -11,8 +11,15 @@ import {
   type WhisperModelId,
 } from "@abacus-ai/contract/voice";
 
+interface FileBytes {
+  loaded: number;
+  total: number;
+  /** This file's download failed; cleared when a new download of it starts. */
+  failed: boolean;
+}
+
 interface ModelDownload {
-  bytes: Record<string, { loaded: number; total: number }>;
+  bytes: Record<string, FileBytes>;
   /** Never goes back when a later file joins the total. */
   percent: number;
   status: "downloading" | "ready" | "failed";
@@ -32,9 +39,7 @@ const WEIGHT_FILES: readonly string[] = WHISPER_MODEL_FILES.filter((file) =>
 );
 
 /** Share of the weights on disk; a weight not started yet counts as nothing done. */
-const weightsPercent = (
-  bytes: Record<string, { loaded: number; total: number }>
-): number => {
+const weightsPercent = (bytes: Record<string, FileBytes>): number => {
   const started = WEIGHT_FILES.flatMap((file) => {
     const entry = bytes[file];
     return entry != null && entry.total > 0 ? [entry] : [];
@@ -54,11 +59,19 @@ export const foldDownload = (
   event: WhisperDownloadProgress
 ): DownloadState => {
   const before = state.models[event.model];
+  const restarted = event.loadedBytes === 0 && !event.done;
   const bytes = {
     ...before?.bytes,
-    [event.file]: { loaded: event.loadedBytes, total: event.totalBytes },
+    [event.file]: {
+      loaded: event.loadedBytes,
+      total: event.totalBytes,
+      failed:
+        event.failed === true ||
+        (!restarted && before?.bytes[event.file]?.failed === true),
+    },
   };
-  const status = event.failed
+  // A failed file keeps the notice down even while other files' chunks still arrive.
+  const status = Object.values(bytes).some((file) => file.failed)
     ? "failed"
     : event.modelReady
       ? "ready"

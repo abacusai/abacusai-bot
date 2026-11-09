@@ -139,6 +139,49 @@ describe("dictation download notice", () => {
     });
   });
 
+  it("stays silent after one file fails while another file's chunks keep arriving", () => {
+    const failed = fold(
+      event(WHISPER_SMALL_MODEL_ID, "onnx/encoder_model_quantized.onnx", 0, 90),
+      event(
+        WHISPER_SMALL_MODEL_ID,
+        "onnx/decoder_model_merged_quantized.onnx",
+        0,
+        150
+      ),
+      event(
+        WHISPER_SMALL_MODEL_ID,
+        "onnx/encoder_model_quantized.onnx",
+        30,
+        90,
+        {
+          done: true,
+          failed: true,
+        }
+      ),
+      event(
+        WHISPER_SMALL_MODEL_ID,
+        "onnx/decoder_model_merged_quantized.onnx",
+        60,
+        150
+      ),
+      event(
+        WHISPER_SMALL_MODEL_ID,
+        "onnx/decoder_model_merged_quantized.onnx",
+        90,
+        150
+      )
+    );
+    expect(downloadView(failed, FRENCH_QUICK)).toBeNull();
+    // A new download of the failed file brings the notice back.
+    const retried = foldDownload(
+      failed,
+      event(WHISPER_SMALL_MODEL_ID, "onnx/encoder_model_quantized.onnx", 0, 90)
+    );
+    expect(downloadView(retried, FRENCH_QUICK)).toMatchObject({
+      kind: "downloading",
+    });
+  });
+
   it("is silent after a failed download and when nothing was downloading", () => {
     const failed = fold(
       event(WHISPER_SMALL_MODEL_ID, "onnx/encoder_model_quantized.onnx", 3, 9),
