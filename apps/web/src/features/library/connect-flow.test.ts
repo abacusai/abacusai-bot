@@ -16,6 +16,9 @@ const snapshot = {
   gatewayEnabled: false,
   platforms: [],
   autoReplies: [],
+  answered: [],
+  reapprove: [],
+  answerPrivateChats: false,
   pendingRequests: [],
 } as unknown as MessagingSnapshot;
 const setup = () => {

@@ -1,5 +1,8 @@
 import { isDiskFull } from "@abacus-ai/agent/atomic-file";
-import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
+import type {
+  MessagingChatKind,
+  MessagingPlatformId,
+} from "@abacus-ai/contract/messaging";
 import { BrowserWindow, net, powerMonitor, session } from "electron";
 
 import {
@@ -164,6 +167,40 @@ export const forgetWhatsAppLogin = async (): Promise<void> => {
   const login = session.fromPartition(WHATSAPP_PARTITION);
   await login.clearStorageData();
   await login.clearCache();
+};
+
+/** A WhatsApp chat's kind off the bridge: its listed `isGroup`, else a group's `@g.us` id. */
+export const whatsAppChatKind = (
+  jid: string,
+  chat: { isGroup?: boolean } | undefined
+): MessagingChatKind | undefined =>
+  chat?.isGroup === true || jid.endsWith("@g.us")
+    ? "group"
+    : chat != null
+      ? "direct"
+      : undefined;
+
+/**
+ * A chat's kind by its name (the page sweep has no id): unknown until the chat
+ * list has it, and when a person and a group share the name.
+ */
+export const whatsAppKindByName = (
+  name: string,
+  chats: ReadonlyArray<{ name: string; isGroup?: boolean }>,
+  contacts: ReadonlyArray<{ name: string; isGroup?: boolean }>
+): MessagingChatKind | undefined => {
+  const kinds = new Set(
+    chats
+      .filter((row) => row.name === name)
+      .map((row) => (row.isGroup === true ? "group" : "direct"))
+  );
+  if (kinds.size > 0) return kinds.size === 1 ? [...kinds][0] : undefined;
+  const contact = contacts.find((row) => row.name === name);
+  return contact?.isGroup == null
+    ? undefined
+    : contact.isGroup
+      ? "group"
+      : "direct";
 };
 
 export class WhatsAppWebConnector implements MessagingConnector {
@@ -743,6 +780,14 @@ export class WhatsAppWebConnector implements MessagingConnector {
         name: chat.name,
         isGroup: chat.isGroup === true,
       }));
+  }
+
+  /**
+   * What the chat list says a chat is. Unknown until the bridge has listed
+   * it, and when a person and a group share the name.
+   */
+  private chatKindByName(name: string): MessagingChatKind | undefined {
+    return whatsAppKindByName(name, this.bridgeChats, this.contacts);
   }
 
   /**
@@ -1662,6 +1707,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
         userId: chatId,
         userName: row.name,
         chatId,
+        kind: isSelfRow ? "direct" : this.chatKindByName(row.name),
         text: row.text,
       });
     }
@@ -1731,6 +1777,8 @@ export class WhatsAppWebConnector implements MessagingConnector {
         userId: chatId,
         userName,
         chatId,
+        kind: isSelfChat ? "direct" : whatsAppChatKind(message.jid, chat),
+        ...(chat?.isGroup === true ? { chatName: chat.name } : {}),
         text,
       });
     }

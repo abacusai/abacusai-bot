@@ -22,19 +22,29 @@ const gateway = () => ({
   status: vi.fn(() => ({
     respondToInbound: false,
     botId: null as string | null,
+    answerPrivateChats: false,
     approved: [] as Array<{
       platform: "whatsapp";
       userId: string;
       name: string;
+      isGroup: boolean;
     }>,
     pending: [] as Array<{
       platform: "whatsapp";
       userId: string;
       name: string;
+      isGroup: boolean;
+    }>,
+    reapprove: [] as Array<{
+      platform: "whatsapp";
+      userId: string;
+      name: string;
+      isGroup: boolean;
     }>,
   })),
   enable: vi.fn(),
   disable: vi.fn(),
+  setAnswerPrivateChats: vi.fn(),
   senderCandidates: vi.fn(() => [
     candidate("Alex Fischer", "491701@c.us"),
     candidate("Alexandra", "491702@c.us"),
@@ -128,14 +138,14 @@ describe("turning auto-reply on from a bot's chat", () => {
     expect(text).not.toContain("goals");
   });
 
-  it("turns on without a sender, saying one is still needed", async () => {
+  it("turns on without a sender, saying only the user's own chat is answered", async () => {
     const { instance, autoReply } = server();
 
     const text = await call(instance, { action: "on" }, "bot-session");
 
     expect(autoReply.enable).toHaveBeenCalledWith("bot-1");
     expect(autoReply.allowSender).not.toHaveBeenCalled();
-    expect(text).toContain("No sender allowed yet");
+    expect(text).toContain("only the user's own chat");
   });
 
   it("infers the platform when exactly one is connected", async () => {
@@ -232,8 +242,12 @@ describe("the other actions", () => {
     autoReply.status.mockReturnValue({
       respondToInbound: true,
       botId: "bot-1",
-      approved: [{ platform: "whatsapp", userId: "1", name: "Alex" }],
+      answerPrivateChats: false,
+      approved: [
+        { platform: "whatsapp", userId: "1", name: "Alex", isGroup: false },
+      ],
       pending: [],
+      reapprove: [],
     });
     const { instance } = server(autoReply);
 

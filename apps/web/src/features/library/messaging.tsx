@@ -52,6 +52,7 @@ import { Dialog } from "#renderer/ui/dialog";
 import { Field, FieldGroup, FieldLabel, FieldError } from "#renderer/ui/field";
 import { Input } from "#renderer/ui/input";
 
+import { AutoReplySenders } from "./auto-reply-senders";
 import {
   connectPlatform,
   unlinkPlatform,
@@ -84,9 +85,10 @@ const DesktopMessagingPage = () => {
   const update = (patch: UpdateMessagingSettingsRequest) =>
     settings.mutate(patch);
   const now = useNow();
+  const writesSnapshot = useWritesSnapshot();
   const retry = useMutation(
     transport.orpc.messaging.retryNow.mutationOptions({
-      ...useWritesSnapshot(),
+      ...writesSnapshot,
       meta: { errorToast: "phase5.failed" },
     })
   );
@@ -156,7 +158,6 @@ const DesktopMessagingPage = () => {
           {(
             [
               ["gatewayEnabled", "phase5.messagingEnabled"],
-              ["respondToInbound", "phase5.respondInbound"],
               ["autoApproveTools", "phase5.remoteUnattended"],
             ] as const
           ).map(([id, key]) => (
@@ -204,6 +205,13 @@ const DesktopMessagingPage = () => {
             />
           </SettingRow>
         </GroupCard>
+      )}
+      {s && (
+        <AutoReplySenders
+          snapshot={s}
+          update={update}
+          writesSnapshot={writesSnapshot}
+        />
       )}
       <PlatformDialog />
     </AreaPage>
@@ -447,38 +455,8 @@ export const MessagingPlatformDialog = ({
             <ConnectNote>{t("messaging.whatsappSyncing")}</ConnectNote>
           )}
           {p && p.fields.length > 0 && <PlatformCredentials platform={p} />}
-          {s?.pending
-            .filter((u) => u.platform === platform)
-            .map((u) => (
-              <SettingRow
-                key={u.userId}
-                id={u.userId}
-                title={u.userName ?? u.userId}
-                detail={u.firstMessage ?? ""}
-              >
-                {(["approve", "revoke"] as const).map((decision) => (
-                  <Button
-                    key={decision}
-                    size="sm"
-                    variant={decision === "approve" ? "default" : "ghost"}
-                    disabled={deciding.includes(u.userId)}
-                    onClick={() =>
-                      decide.mutate({
-                        platformId: platform,
-                        userId: u.userId,
-                        decision,
-                      })
-                    }
-                  >
-                    {t(
-                      decision === "approve"
-                        ? "phase5.approve"
-                        : "phase5.reject"
-                    )}
-                  </Button>
-                ))}
-              </SettingRow>
-            ))}
+          {/* Waiting senders are decided in the page's Auto-reply card, with
+              the rule and who is answered beside them: one home for it. */}
           {s?.autoReplies
             .filter((u) => u.platform === platform)
             .map((u) => (

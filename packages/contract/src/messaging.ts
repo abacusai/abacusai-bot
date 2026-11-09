@@ -225,6 +225,9 @@ export type MessagingPlatformInfo = {
 
 // Pairing is the whole security model: an approved sender can drive an agent
 // with tool access on this machine, so an unknown sender lands as `pending`.
+/** One person, or a group/channel (where a reply reaches everyone in it). */
+export type MessagingChatKind = "direct" | "group";
+
 export type MessagingPairedUser = {
   platform: MessagingPlatformId;
   /** Platform-native id. Only unique within a platform. */
@@ -237,6 +240,12 @@ export type MessagingPairedUser = {
   managedBy?: "bot";
   /** The bot answering this sender. Per row: one global pointer let a second bot's setup hand the sender to the first. */
   botId?: string;
+  /** A group or channel, or one person; absent while the platform has not said. */
+  kind?: MessagingChatKind;
+  /** Approved by the old "off approves everyone" rule, not by the user; cleared when they approve. */
+  autoAdded?: true;
+  /** When the user was told this chat is waiting; they hear of it once. */
+  toldAt?: string;
   firstSeenAt: string;
   /** The message that triggered the pairing request. */
   firstMessage: string | null;
@@ -248,6 +257,12 @@ export type MessagingSnapshot = {
   approved: MessagingPairedUser[];
   /** Every sender a bot answers automatically, paused ones included. */
   autoReplies: MessagingPairedUser[];
+  /** Everyone auto-reply answers once on, whoever approved them: the list the switch confirms. */
+  answered: MessagingPairedUser[];
+  /** Approved by an older version and not known to be one person: not answered until approved again. */
+  reapprove: MessagingPairedUser[];
+  /** Also answer anyone who writes one to one; never a group. Off by default. */
+  answerPrivateChats: boolean;
   /** Global kill switch: when false, no connector runs. */
   gatewayEnabled: boolean;
   /**
@@ -281,6 +296,7 @@ export type MessagingPairingDecisionRequest = {
 
 export type UpdateMessagingSettingsRequest = {
   gatewayEnabled?: boolean;
+  answerPrivateChats?: boolean;
   autoApproveTools?: boolean;
   respondToInbound?: boolean;
   workspaceId?: string | null;

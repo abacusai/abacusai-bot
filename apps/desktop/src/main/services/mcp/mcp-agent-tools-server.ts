@@ -596,19 +596,30 @@ export interface McpAgentToolsServerOptions {
       status: () => {
         respondToInbound: boolean;
         botId: string | null;
+        answerPrivateChats: boolean;
         approved: Array<{
           platform: MessagingPlatformId;
           userId: string;
           name: string;
+          isGroup: boolean;
         }>;
         pending: Array<{
           platform: MessagingPlatformId;
           userId: string;
           name: string;
+          isGroup: boolean;
+        }>;
+        reapprove: Array<{
+          platform: MessagingPlatformId;
+          userId: string;
+          name: string;
+          isGroup: boolean;
         }>;
       };
       enable: (botId: string) => void;
       disable: () => void;
+      /** Also answer anyone writing one to one; never a group. */
+      setAnswerPrivateChats: (on: boolean) => void;
       senderCandidates: (platform?: MessagingPlatformId) => SenderCandidate[];
       /** The calling bot becomes the one that answers this sender. */
       allowSender: (candidate: SenderCandidate, botId?: string) => void;
@@ -3606,19 +3617,35 @@ export class McpAgentToolsServer extends McpHttpServer {
 
     const action = String(args.action ?? "");
 
+    // Who is answered, worded once: status and every switch-on say the same.
+    const answeredLine = (): string => {
+      const status = gateway.status();
+      const named =
+        status.approved.length === 0
+          ? "Answered: only the user's own chat; nobody else is allowed yet."
+          : `Answered: the user's own chat, and ${status.approved
+              .map(
+                (row) =>
+                  `${row.name} (${row.platform}${row.isGroup ? ", a group: everyone in it reads the replies" : ""})`
+              )
+              .join(", ")}.`;
+      const anyone = status.answerPrivateChats
+        ? " Also anyone who writes one to one (never a group)."
+        : "";
+      const waiting = status.pending
+        .slice(-5)
+        .map((row) => row.name)
+        .join(", ");
+      const reapprove = status.reapprove.map((row) => row.name).join(", ");
+      return `${named}${anyone}${reapprove.length > 0 ? ` Approved by an older version and not answered until the user approves them again in the app: ${reapprove}.` : ""}${waiting.length > 0 ? ` Waiting for the user's approval, not answered: ${waiting}.` : ""}`;
+    };
+
     if (action === "status") {
       const status = gateway.status();
-      const senders =
-        status.approved.length === 0
-          ? "No senders are allowed yet."
-          : `Allowed senders: ${status.approved
-              .map((row) => `${row.name} (${row.platform})`)
-              .join(", ")}.`;
-
       return this.ok(
         status.respondToInbound
-          ? `Auto-reply is on${status.botId != null ? ", delivered to a bot's chat" : ""}. ${senders}`
-          : `Auto-reply is off. ${senders}`
+          ? `Auto-reply is on${status.botId != null ? ", delivered to a bot's chat" : ""}. ${answeredLine()}`
+          : `Auto-reply is off: only the user's own chat is answered. When on: ${answeredLine()}`
       );
     }
 
@@ -3637,6 +3664,11 @@ export class McpAgentToolsServer extends McpHttpServer {
         : null;
     if (botId == null)
       return this.err("auto_reply only works in a bot's own chat.");
+
+    if (action === "allow_private_chats" || action === "stop_private_chats") {
+      gateway.setAnswerPrivateChats(action === "allow_private_chats");
+      return this.ok(answeredLine());
+    }
 
     if (
       action !== "on" &&
@@ -3711,8 +3743,8 @@ export class McpAgentToolsServer extends McpHttpServer {
 
     const allowedLine =
       resolved != null
-        ? `${resolved.name} will be answered in a separate conversation of their own. Everything written there is delivered to them, as the user. ${capabilityNote("auto-reply")} Gather the user's instructions for that sender now (tone, what not to say) and store them in memory.`
-        : "No sender allowed yet. Allow one with allow_sender, or approve pending ones from the Connectors page.";
+        ? `${resolved.name} will be answered in a separate conversation of their own. Everything written there is delivered to them, as the user. ${capabilityNote("auto-reply")} Gather the user's instructions for that sender now (tone, what not to say) and store them in memory. ${answeredLine()}`
+        : answeredLine();
 
     return this.ok(
       action === "on"

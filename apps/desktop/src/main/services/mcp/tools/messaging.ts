@@ -5,6 +5,28 @@ import type { ToolDefinition } from "./definition";
  * cross-platform originals stay callable for a model holding an older list
  * but are hidden, so one platform's chats never sit beside another's.
  */
+
+/** Every auto_reply tool's actions, the platform-scoped ones included. */
+const AUTO_REPLY_ACTIONS = [
+  "on",
+  "off",
+  "allow_sender",
+  "remove_sender",
+  "status",
+  "allow_private_chats",
+  "stop_private_chats",
+];
+
+/** Who auto-reply answers, said once for every auto_reply tool. */
+const AUTO_REPLY_RULE = [
+  "Only the user's own chat and the people and groups the user allowed are answered;",
+  "everyone else is logged and waits for the user's approval in the app. A group is",
+  "answered only when allowed by name, and everyone in it reads the replies.",
+  '"allow_private_chats" / "stop_private_chats" answer (or stop answering) anyone who',
+  "writes one to one without allowing each, never groups: only when the user asks for",
+  "everyone. Every result lists who is answered; tell the user exactly that list.",
+];
+
 export const MESSAGING_TOOLS: ToolDefinition[] = [
   {
     name: "send_chat_message",
@@ -292,13 +314,15 @@ export const MESSAGING_TOOLS: ToolDefinition[] = [
       "answered. Senders resolve by name against WhatsApp's contacts and people who",
       "have messaged before; if a name does not resolve, ask the user for the exact",
       "contact name, or have that person send one message and allow them from the log.",
+      "",
+      ...AUTO_REPLY_RULE,
     ].join("\n"),
     inputSchema: {
       type: "object",
       properties: {
         action: {
           type: "string",
-          enum: ["on", "off", "allow_sender", "remove_sender", "status"],
+          enum: AUTO_REPLY_ACTIONS,
         },
         sender: {
           type: "string",
@@ -395,13 +419,15 @@ export const MESSAGING_TOOLS: ToolDefinition[] = [
       "answered. Senders resolve by name against Telegram's contacts and people who",
       "have messaged before; if a name does not resolve, ask the user for the exact",
       "contact name, or have that person send one message and allow them from the log.",
+      "",
+      ...AUTO_REPLY_RULE,
     ].join("\n"),
     inputSchema: {
       type: "object",
       properties: {
         action: {
           type: "string",
-          enum: ["on", "off", "allow_sender", "remove_sender", "status"],
+          enum: AUTO_REPLY_ACTIONS,
         },
         sender: {
           type: "string",
@@ -498,13 +524,15 @@ export const MESSAGING_TOOLS: ToolDefinition[] = [
       "answered. Senders resolve by name against Discord's contacts and people who",
       "have messaged before; if a name does not resolve, ask the user for the exact",
       "contact name, or have that person send one message and allow them from the log.",
+      "",
+      ...AUTO_REPLY_RULE,
     ].join("\n"),
     inputSchema: {
       type: "object",
       properties: {
         action: {
           type: "string",
-          enum: ["on", "off", "allow_sender", "remove_sender", "status"],
+          enum: AUTO_REPLY_ACTIONS,
         },
         sender: {
           type: "string",
@@ -608,13 +636,15 @@ export const MESSAGING_TOOLS: ToolDefinition[] = [
       "Senders resolve by name against the platform's contacts and people who have",
       "messaged before. If a name does not resolve, ask the user for the exact contact",
       "name, or have that person send one message and allow them from the log.",
+      "",
+      ...AUTO_REPLY_RULE,
     ].join("\n"),
     inputSchema: {
       type: "object",
       properties: {
         action: {
           type: "string",
-          enum: ["on", "off", "allow_sender", "remove_sender", "status"],
+          enum: AUTO_REPLY_ACTIONS,
         },
         sender: {
           type: "string",

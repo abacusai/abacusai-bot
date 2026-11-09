@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 
 import type {
+  MessagingChatKind,
   MessagingPlatformId,
   SharedChannelLink,
   SharedLinkTarget,
@@ -159,6 +160,23 @@ export const entryChatId = (entry: {
   if (entry.chat !== "group" && entry.from_owner !== false && titled == null)
     return SELF_CHAT_ID;
   return `group:${entry.chat_id ?? titled ?? "unknown"}`;
+};
+
+/**
+ * Whether an entry is the owner's own DM, a group (with its title when the
+ * server only names it in the sender line), or unknown: anyone else's DM.
+ */
+export const entryChatKind = (entry: {
+  chat?: string;
+  chat_id?: string;
+  from_owner?: boolean;
+  sender: string | null;
+}): { kind?: MessagingChatKind; chatName?: string } => {
+  const titled = TELEGRAM_GROUP_SENDER.exec(entry.sender ?? "")?.[1];
+  if (entryChatId(entry) === SELF_CHAT_ID) return { kind: "direct" };
+  if (entry.chat === "group" || titled != null)
+    return { kind: "group", ...(titled != null ? { chatName: titled } : {}) };
+  return {};
 };
 
 export const isWebUrl = (url: string): boolean => {
@@ -682,10 +700,13 @@ export class AbacusChannelsConnector implements MessagingConnector {
         return [];
       }
     });
+    const { kind, chatName } = entryChatKind(entry);
     this.callbacks.onMessage({
       userId: chatId,
       userName: entry.sender ?? null,
       chatId,
+      kind,
+      ...(chatName != null ? { chatName } : {}),
       text: entry.text,
       ...(attachments.length > 0 ? { attachments } : {}),
       replyContext: { message_id: entry.id },

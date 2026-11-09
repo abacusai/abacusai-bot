@@ -1670,7 +1670,20 @@
       "linkLostTitle",
       "laneDownTitle",
       "laneDownBody",
-      "laneBlockedBody"
+      "laneBlockedBody",
+      "senderWaitingTitle",
+      "senderWaitingBody",
+      "groupWaitingTitle",
+      "groupWaitingBody",
+      "takenBackTitle",
+      "takenBackBody",
+      "chatsWaitingTitle_one",
+      "chatsWaitingTitle_other",
+      "chatsWaitingBody",
+      "groupsCount_one",
+      "groupsCount_other",
+      "morePeople_one",
+      "morePeople_other"
     ],
     "sources": [
       "../../desktop/src/main/index.ts",

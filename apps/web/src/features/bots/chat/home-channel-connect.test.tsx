@@ -91,6 +91,9 @@ const snapshotOf = (
     approved: [],
     pending: [],
     autoReplies: [],
+    answered: [],
+    reapprove: [],
+    answerPrivateChats: false,
     platforms: [
       {
         id: platform,
