@@ -81,6 +81,26 @@ export const visibleUserText = (text: string, tags?: UserTextTags): string => {
   return withoutReminders;
 };
 
+/** Whole-turn notes the app sends on the person's behalf: what the bot answers them is theirs to read. */
+const FOR_PERSON_NOTE =
+  /^\[(?:first run|routine|mission updated|routines moved|connected|upgraded)\]/;
+
+/**
+ * Whether the app started this turn for the person (a first run, a routine,
+ * a connector that came up): there are no words of theirs in it, and the
+ * reply is still theirs, so it is judged against their saved language.
+ * Another bot's note or a memory pass is not for them.
+ */
+export const isAppTurnForPerson = (
+  text: string,
+  tags?: UserTextTags
+): boolean => {
+  if (tags?.routineFire === true || isRoutineFire(text)) return true;
+  const kind = (tags?.operator ?? legacyOperator(text))?.kind;
+  if (kind === "kickstart" || kind === "mission-updated") return true;
+  return FOR_PERSON_NOTE.test(stripSystemReminders(text).trim());
+};
+
 /** A routine firing: the message is hidden entirely in the old UI. */
 export const isRoutineFire = (text: string): boolean =>
   ROUTINE_FIRE.test(stripSystemReminders(text).trim());

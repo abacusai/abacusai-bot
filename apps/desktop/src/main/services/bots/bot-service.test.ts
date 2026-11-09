@@ -347,6 +347,27 @@ describe("opening the forever chat", () => {
     expect(kickstart).not.toContain("connect_connector");
   });
 
+  it("answers a goal typed in another language in that language, from the first reply", async () => {
+    const callbacks = makeCallbacks({ appLanguage: () => "en-US" });
+    const service = new BotService(callbacks);
+    const bot = service.create({
+      name: "My Assistant",
+      description: GOAL_MISSION(
+        "Viết giúp tôi một đoạn mã quản lý danh sách khách hàng"
+      ),
+    });
+
+    await service.openChat(bot.id);
+
+    const [, , kickstart] = vi.mocked(callbacks.sendMessage).mock.calls[0]!;
+    expect(kickstart).toContain(
+      "Write in Vietnamese, the user's language, unless they write to you in another."
+    );
+    expect(
+      JSON.parse(fs.readFileSync(path.join(home, "user-language.json"), "utf8"))
+    ).toMatchObject({ language: { name: "Vietnamese", source: "detected" } });
+  });
+
   it("names Chinese by its script in the first-run note", async () => {
     const note = async (tag: string): Promise<string> => {
       const callbacks = makeCallbacks({ appLanguage: () => tag });

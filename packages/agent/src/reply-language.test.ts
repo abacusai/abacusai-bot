@@ -13,6 +13,12 @@ import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  identifyLanguage,
+  LanguageFollower,
+  learnGoalLanguage,
+  loadLanguageModel,
+} from "./language-id.js";
+import {
   dominantScript,
   languageScript,
   RecentOwnWords,
@@ -20,6 +26,8 @@ import {
   replyLanguagePrompt,
   replyLanguageRepairPrompt,
   type KnownLanguage,
+  sameLanguage,
+  textLanguageMismatch,
 } from "./reply-language.js";
 import {
   accountReplyLanguagePrompt,
@@ -31,7 +39,11 @@ import {
   WordsLanguage,
   writeUserLanguage,
 } from "./user-language.js";
-import { frameChannelMessage, ownWords } from "./user-text.js";
+import {
+  frameChannelMessage,
+  isAppTurnForPerson,
+  ownWords,
+} from "./user-text.js";
 
 const user = (text: string) => ({ role: "user", content: text });
 const assistant = (text: string) => ({
@@ -864,5 +876,246 @@ describe("which language replies fall back to", () => {
       /Message:\nher sabah dokuzda çalıştır$/
     );
     expect(readUserLanguage()).toEqual({ name: "Turkish", source: "detected" });
+  });
+});
+
+describe("the language within one script (language-id.ts)", () => {
+  beforeEach(async () => {
+    await loadLanguageModel();
+  });
+
+  const VIETNAMESE =
+    "Bạn có thể giúp tôi viết một đoạn mã để quản lý danh sách khách hàng không?";
+  const ENGLISH =
+    "Make a short video about a city where every road disappears for five seconds.";
+  const HUNGARIAN_REPLY =
+    "Szívesen segítek, a videókészítéshez először kiválasztom a stílust és a hosszt, aztán megírom a jeleneteket.";
+  const ENGLISH_REPLY =
+    "Sure, here is a small script that keeps your customer list in a file and lets you add, search and remove entries.";
+  const VIETNAMESE_REPLY =
+    "Được, đây là một đoạn mã nhỏ giúp bạn lưu danh sách khách hàng vào tệp và thêm, tìm, xóa từng mục.";
+  const ARABIC = "أريد ترجمة احترافية كاملة لهذا الملف إلى العربية من فضلك";
+  const CROATIAN =
+    "Možeš li mi pomoći napraviti jednostavnu igru u pregledniku?";
+  const SERBIAN_REPLY =
+    "Naravno, napraviću jednostavnu igru u pregledniku sa tri nivoa i tabelom rezultata koju možeš odmah da otvoriš.";
+
+  it("reads the language of real prose, and nothing from a few letters", () => {
+    expect(identifyLanguage(VIETNAMESE)).toBe("vi");
+    expect(identifyLanguage(ENGLISH)).toBe("en");
+    expect(identifyLanguage(HUNGARIAN_REPLY)).toBe("hu");
+    expect(identifyLanguage("ok")).toBeNull();
+    expect(
+      identifyLanguage("```\nconst a = 1;\n```  C:/Users/x/app.ts")
+    ).toBeNull();
+  });
+
+  it("takes Serbian and Croatian, or Malay and Indonesian, for one language", () => {
+    expect(sameLanguage("sr", "hr")).toBe(true);
+    expect(sameLanguage("ms", "id")).toBe(true);
+    expect(sameLanguage("pt", "pt-BR")).toBe(true);
+    expect(sameLanguage("uk", "ru")).toBe(false);
+  });
+
+  const judge = (
+    turn: string,
+    reply: string,
+    extra: Partial<Parameters<typeof textLanguageMismatch>[1]> = {}
+  ) =>
+    textLanguageMismatch(reply, {
+      turn,
+      recent: [],
+      identify: identifyLanguage,
+      ...extra,
+    })?.language ?? null;
+
+  it.each([
+    [
+      "English to Vietnamese words",
+      VIETNAMESE,
+      ENGLISH_REPLY,
+      {},
+      { expected: "vi", got: "en" },
+    ],
+    [
+      "Hungarian to English words",
+      ENGLISH,
+      HUNGARIAN_REPLY,
+      {},
+      { expected: "en", got: "hu" },
+    ],
+    ["Vietnamese to Vietnamese words", VIETNAMESE, VIETNAMESE_REPLY, {}, null],
+    ["Serbian to Croatian words", CROATIAN, SERBIAN_REPLY, {}, null],
+    [
+      "their language after an English paste, which they wrote in before",
+      ENGLISH,
+      VIETNAMESE_REPLY,
+      { recent: [VIETNAMESE] },
+      null,
+    ],
+    [
+      "their saved language after an English paste",
+      ENGLISH,
+      VIETNAMESE_REPLY,
+      { savedLanguage: "vi" },
+      null,
+    ],
+    [
+      "a translation they asked for",
+      "Hãy dịch đoạn văn này sang tiếng Anh giúp tôi nhé, cảm ơn bạn rất nhiều",
+      ENGLISH_REPLY,
+      {},
+      null,
+    ],
+    [
+      "English to their chosen Vietnamese, whatever they wrote",
+      ENGLISH,
+      ENGLISH_REPLY,
+      { savedLanguage: "vi", known: { script: "latin", chosen: true } },
+      { expected: "vi", got: "en" },
+    ],
+    [
+      "a first run in English for a Vietnamese user",
+      "",
+      ENGLISH_REPLY,
+      { savedLanguage: "vi", appTurn: true },
+      { expected: "vi", got: "en" },
+    ],
+    [
+      "a first run with nothing saved",
+      "",
+      ENGLISH_REPLY,
+      { appTurn: true },
+      null,
+    ],
+    ["a turn too short to read", "ok", HUNGARIAN_REPLY, {}, null],
+    ["a reply too short to read", ENGLISH, "Kész, itt van.", {}, null],
+  ] as const)("%s", (_name, turn, reply, extra, expected) => {
+    expect(judge(turn, reply, extra as never)).toEqual(expected);
+  });
+
+  it("leaves a reply in another script to the script check", () => {
+    const mismatch = textLanguageMismatch(ENGLISH_REPLY, {
+      turn: ARABIC,
+      recent: [],
+      identify: identifyLanguage,
+    });
+    expect(mismatch).toMatchObject({ expected: "arabic", got: "latin" });
+    expect(mismatch?.language).toBeUndefined();
+  });
+
+  it("asks for the reply again by the languages' names", () => {
+    const prompt = replyLanguageRepairPrompt({
+      expected: "latin",
+      got: "latin",
+      language: { expected: "vi", got: "en" },
+    });
+    expect(prompt).toContain("written in English");
+    expect(prompt).toContain("writes in Vietnamese");
+  });
+
+  it("judges the app's own turns for the person, not another bot's", () => {
+    expect(isAppTurnForPerson("[first run] Introduce yourself.")).toBe(true);
+    expect(isAppTurnForPerson('[routine] "Brief" fired.\n\nGo.')).toBe(true);
+    expect(isAppTurnForPerson("[connected] Gmail is connected now.")).toBe(
+      true
+    );
+    expect(isAppTurnForPerson("[bot answer] The report is done.")).toBe(false);
+    expect(isAppTurnForPerson("hello there")).toBe(false);
+  });
+
+  describe("the saved language follows what the user writes", () => {
+    let home: string;
+
+    beforeEach(() => {
+      home = fs.mkdtempSync(path.join(os.tmpdir(), "language-follow-"));
+      vi.stubEnv("ABACUSAI_BOT_HOME", home);
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      fs.rmSync(home, { recursive: true, force: true });
+    });
+
+    it("saves the first clear language, and moves on two clear turns in a row", () => {
+      const follower = new LanguageFollower();
+      expect(follower.follow("ok")).toBe(false);
+      expect(follower.follow(ENGLISH)).toBe(true);
+      expect(readUserLanguage()).toEqual({
+        name: "English",
+        source: "detected",
+      });
+      // One Vietnamese turn is a paste as far as anyone knows; two are the user.
+      expect(follower.follow(VIETNAMESE)).toBe(false);
+      expect(readUserLanguage()?.name).toBe("English");
+      expect(follower.follow(VIETNAMESE)).toBe(true);
+      expect(readUserLanguage()).toEqual({
+        name: "Vietnamese",
+        source: "detected",
+      });
+    });
+
+    it("never moves a language the user chose, nor a richer name for the same one", () => {
+      writeUserLanguage("Turkish", "user");
+      const follower = new LanguageFollower();
+      follower.follow(ENGLISH);
+      follower.follow(ENGLISH);
+      expect(readUserLanguage()).toEqual({ name: "Turkish", source: "user" });
+      writeUserLanguage("Brazilian Portuguese", "detected");
+      follower.follow(
+        "Você pode me ajudar a montar uma planilha com os gastos do mês e um gráfico simples?"
+      );
+      expect(readUserLanguage()?.name).toBe("Brazilian Portuguese");
+    });
+
+    it("learns a typed goal before the first run, asking the model only when it cannot read it", async () => {
+      const fetchImpl = vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              choices: [{ message: { content: "Vietnamese" } }],
+            })
+          )
+      );
+      await learnGoalLanguage(
+        VIETNAMESE,
+        "key",
+        "en-US",
+        fetchImpl as unknown as typeof fetch
+      );
+      expect(fetchImpl).not.toHaveBeenCalled();
+      expect(readUserLanguage()?.name).toBe("Vietnamese");
+      fs.rmSync(path.join(home, "user-language.json"));
+      await learnGoalLanguage(
+        "toi muon cai tien code",
+        "key",
+        "en-US",
+        fetchImpl as unknown as typeof fetch
+      );
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+      expect(readUserLanguage()).toEqual({
+        name: "Vietnamese",
+        source: "detected",
+      });
+    });
+
+    it("leaves an English goal on an app in another language to the user's first message", async () => {
+      const fetchImpl = vi.fn();
+      await learnGoalLanguage(
+        ENGLISH,
+        "key",
+        "hu-HU",
+        fetchImpl as unknown as typeof fetch
+      );
+      expect(readUserLanguage()).toBeNull();
+      await learnGoalLanguage(
+        ENGLISH,
+        "key",
+        "en-GB",
+        fetchImpl as unknown as typeof fetch
+      );
+      expect(readUserLanguage()?.name).toBe("English");
+      expect(fetchImpl).not.toHaveBeenCalled();
+    });
   });
 });

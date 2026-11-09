@@ -46,6 +46,7 @@ import {
   channelWords,
   type ChannelWords,
 } from "../messaging/channel-words";
+import { resolveAbacusApiKey } from "../providers/abacus";
 import { BOT_ASK_PLATFORM, colleagueLines } from "./bot-ask";
 import {
   botDir,
@@ -1017,8 +1018,27 @@ export class BotService {
     };
   }
 
-  /** The first-run note, in the language replies resolve to (user-language.ts). */
+  /**
+   * The first-run note, in the language replies resolve to (user-language.ts).
+   * A goal the user typed is their first words: its language is learnt
+   * first, so a Vietnamese goal on an English computer is answered in
+   * Vietnamese from the bot's first reply.
+   */
   private async kickstart(bot: Bot): Promise<string> {
+    const goal = goalOfMission(bot.description);
+    if (goal != null && goal !== RESEARCH_GOAL) {
+      try {
+        const { learnGoalLanguage } =
+          await import("@abacus-ai/agent/language-id");
+        await learnGoalLanguage(
+          goal,
+          resolveAbacusApiKey(),
+          this.callbacks.appLanguage?.() ?? null
+        );
+      } catch {
+        // Best effort: the bot still speaks, in the language already resolved.
+      }
+    }
     const tag = this.callbacks.appLanguage?.() ?? null;
     if (tag == null)
       return kickstartMessage(bot, null, await channelWords("en-US"));

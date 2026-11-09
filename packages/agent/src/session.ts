@@ -99,6 +99,12 @@ import { refreshGithubToken } from "./github-token.js";
 import { HostServiceClient } from "./host-services.js";
 import type { AppLine, InternalAgentEvent } from "./internal-events.js";
 import {
+  identifyLanguage,
+  LanguageFollower,
+  loadLanguageModel,
+  savedLanguageCode,
+} from "./language-id.js";
+import {
   connectMcpServers,
   type ConnectedMcp,
   type McpServerStatus,
@@ -183,7 +189,9 @@ import {
   DEFAULT_MAX_OUTPUT_TOKENS,
 } from "./providers.js";
 import {
+  progressLanguageSteer,
   RecentOwnWords,
+  type ReplyLanguageContext,
   replyLanguageMismatch,
   replyLanguageRepairPrompt,
   type ReplyLanguageMismatch,
@@ -253,7 +261,7 @@ import {
   learnUserLanguage,
   WordsLanguage,
 } from "./user-language.js";
-import { ownWords } from "./user-text.js";
+import { isAppTurnForPerson, ownWords } from "./user-text.js";
 import { webHostPrompt } from "./web-host-prompt.js";
 import { desktopXSearchAvailable, searchAvailable } from "./web/search.js";
 import webTools from "./web/tools.js";
@@ -877,6 +885,12 @@ export class AbacusBotSession {
   } | null = null;
   /** What language those words are, asked only when their script cannot tell. */
   private readonly wordsLanguage = new WordsLanguage();
+  /** Keeps the saved reply language with the language the user writes in. */
+  private readonly languageFollower = new LanguageFollower();
+  /** The app started this turn for the person: judged against their saved language. */
+  private appTurn = false;
+  /** A progress note between tool calls drifted and the model was told; once per turn. */
+  private languageSteeredThisTurn = false;
   /** The turn's recoveries from an empty reply (empty-reply.ts). */
   private readonly emptyReplies = new EmptyReplies();
   /** The turn's ask after a reply that ended on a promise (promised-work.ts). */
@@ -1315,6 +1329,8 @@ export class AbacusBotSession {
     this.pi = this.loadedPi;
     // A resumed chat: its earlier turns tell whose words the replies follow.
     this.userWords.seed(this.session.messages, (text) => ownWords(text));
+    // The language model loads off the turn's path; a turn before it has is judged by script.
+    void loadLanguageModel();
     endTurnOnClosedReply(this.session.agent);
     // The opening mode, so the log is a complete account rather than deltas.
     this.applyMode(this.mode, "startup");
@@ -1447,12 +1463,17 @@ export class AbacusBotSession {
       await this.refreshProviderRegistrations();
     }
 
-    // Edited instructions apply to this turn, not the next session.
-    await this.refreshCustomInstructions();
     // Only the user's own words name their language; a routine's prompt does not.
     const words = ownWords(text, turn?.userText);
+    this.appTurn =
+      words.length === 0 && isAppTurnForPerson(text, turn?.userText);
+    // Their language, read before the prompt is, so this turn's prompt names it.
+    if (this.mode !== AgentMode.Unattended && !isSenderChat())
+      this.languageFollower.follow(words);
+    // Edited instructions apply to this turn, not the next session.
+    await this.refreshCustomInstructions();
     this.userWords.beginTurn(words);
-    if (this.mode !== AgentMode.Unattended)
+    if (this.mode !== AgentMode.Unattended && !isSenderChat())
       void learnUserLanguage(words, (process.env.ABACUS_API_KEY ?? "").trim());
     // The sponsored window closing (or opening) changes the headers the
     // Abacus provider was registered with; a run must not carry the marker
@@ -1478,6 +1499,7 @@ export class AbacusBotSession {
     this.busyWait.reset();
     this.networkFailureReported = false;
     this.languageRepairsThisTurn = 0;
+    this.languageSteeredThisTurn = false;
     this.pendingLanguageRepair = null;
     this.languageCheckRun = null;
     this.emptyReplies.begin();
@@ -3311,6 +3333,7 @@ export class AbacusBotSession {
           });
         }
         this.reply.messageEnded(callsTool(event.message));
+        if (callsTool(event.message)) this.checkProgressLanguage(full);
 
         if (this.currentMessageId != null) {
           const stopReason = (event.message as { stopReason?: unknown })
@@ -3518,11 +3541,7 @@ export class AbacusBotSession {
           this.pendingBusyWait != null ||
           this.languageRepairsThisTurn > 0
             ? null
-            : replyLanguageMismatch(event.messages, {
-                turn: this.userWords.turn,
-                recent: this.userWords.recent,
-                known: knownReplyLanguage(),
-              });
+            : replyLanguageMismatch(event.messages, this.languageContext());
         // A romanized candidate is kept with its run: dismissed, the turn goes on from here.
         this.languageCheckRun =
           this.pendingLanguageRepair?.romanized === true
@@ -4255,6 +4274,36 @@ export class AbacusBotSession {
     this.emitSkills(loader);
   }
 
+  /** Whom a reply is judged against: the person's words, their saved language, and the device's reading of both. */
+  private languageContext(): ReplyLanguageContext {
+    return {
+      turn: this.userWords.turn,
+      recent: this.userWords.recent,
+      known: knownReplyLanguage(),
+      identify: identifyLanguage,
+      savedLanguage: isSenderChat() ? null : savedLanguageCode(),
+      appTurn: this.appTurn,
+    };
+  }
+
+  /**
+   * A note written between tool calls is read by the person too. One that
+   * drifted steers the rest of the run back to their language; nothing is
+   * rewritten, and the reply it ends with is judged at agent_end as always.
+   */
+  private checkProgressLanguage(text: string): void {
+    if (this.languageSteeredThisTurn || this.session == null) return;
+    const steer = progressLanguageSteer(text, this.languageContext());
+    if (steer == null) return;
+    this.languageSteeredThisTurn = true;
+    void this.session
+      .sendCustomMessage(
+        { customType: LANGUAGE_STEER_TYPE, content: steer, display: false },
+        { deliverAs: "steer" }
+      )
+      .catch(() => undefined);
+  }
+
   /**
    * Rebuild the prompt if the user's standing instructions have changed. Run
    * every turn, cheap when nothing changed. An edit pays the conversation's
@@ -4382,6 +4431,7 @@ const APP_LINE_TEXT: Record<AppLine, string> = {
 
 /** Marks a wrong-language repair in the session log as ours. */
 const LANGUAGE_REPAIR_TYPE = "abacusai-bot:reply-language";
+const LANGUAGE_STEER_TYPE = "abacusai-bot:progress-language";
 
 /** One more ask after a response with no text and no tool call. */
 const EMPTY_REPLY_TYPE = "abacusai-bot:empty-reply";
