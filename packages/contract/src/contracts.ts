@@ -1171,6 +1171,10 @@ export interface ConnectorRequest {
   label: string;
   /** Why the agent needs it, in its own words. */
   reason?: string;
+  /** When the link behind the card stops working (ms), when the server said. */
+  expiresAt?: number;
+  /** Its link expired unconnected: the card offers a new one. */
+  expired?: boolean;
   /**
    * Where the button appears. Never null: a caller with no conversation is
    * refused, since a card shown "wherever the user is" lands in the wrong chat.

@@ -8,6 +8,9 @@
  *
  * Decline is never disabled: while the connect page is open it becomes
  * "Stop connecting", which stops waiting (answered "declined").
+ *
+ * A card from a link shows how long the link works; once it expired the card
+ * stays and Connect becomes "Get a new link", the same flow with a fresh link.
  */
 import {
   connectFields,
@@ -15,8 +18,8 @@ import {
   connectUi,
 } from "@abacus-ai/connectors/registry";
 import type { ConnectorRequest } from "@abacus-ai/contract/contracts";
-import { Link2, Plug } from "lucide-react";
-import { useId, useState } from "react";
+import { Link2, Plug, RefreshCw } from "lucide-react";
+import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useBotNumberConnect } from "#platform/whatsapp-bot";
@@ -26,6 +29,23 @@ import { cn } from "#renderer/lib/cn";
 import { connectErrorText } from "#renderer/lib/connect-page";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
+
+/** The clock a live link's countdown reads, a few seconds fresh; idle without one. */
+const useLinkClock = (expiresAt: number | undefined): number => {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (expiresAt == null) return;
+    const tick = () => setNow(Date.now());
+    // At once for a new expiry (a renewed link), then every few seconds.
+    const first = setTimeout(tick, 0);
+    const timer = setInterval(tick, 5_000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(timer);
+    };
+  }, [expiresAt]);
+  return now;
+};
 
 export interface ConnectorRequestCardProps {
   request: ConnectorRequest;
@@ -66,6 +86,11 @@ export const ConnectorRequestCard = ({
   const fieldsReady = fields.every(
     ([key]) => (values[key] ?? "").trim() !== ""
   );
+  const now = useLinkClock(
+    request.expired === true ? undefined : request.expiresAt
+  );
+  const left = request.expiresAt != null ? request.expiresAt - now : null;
+  const expired = request.expired === true || (left != null && left <= 0);
 
   return (
     <div
@@ -96,6 +121,25 @@ export const ConnectorRequestCard = ({
         <p className="text-muted-foreground mt-0.5 text-xs">
           {request.reason ?? t("bots.chat.connector.body", { provider })}
         </p>
+        {expired ? (
+          <p
+            className="mt-0.5 text-xs text-amber-700 dark:text-amber-400"
+            data-slot="connector-request-expiry"
+          >
+            {t("bots.chat.connector.expired")}
+          </p>
+        ) : (
+          left != null && (
+            <p
+              className="text-muted-foreground mt-0.5 text-xs"
+              data-slot="connector-request-expiry"
+            >
+              {t("bots.chat.connector.worksFor", {
+                count: Math.ceil(left / 60_000),
+              })}
+            </p>
+          )
+        )}
         {fields.length > 0 && (
           <div className="mt-2 flex flex-col gap-2">
             {fields.map(([key, field]) => (
@@ -155,10 +199,18 @@ export const ConnectorRequestCard = ({
               : onConnect(fields.length > 0 ? values : undefined)
           }
         >
-          {busy ? <Spinner aria-hidden /> : <Link2 aria-hidden />}
+          {busy ? (
+            <Spinner aria-hidden />
+          ) : expired ? (
+            <RefreshCw aria-hidden />
+          ) : (
+            <Link2 aria-hidden />
+          )}
           {busy && hopsToBrowser
             ? t("bots.chat.connector.connecting")
-            : t("bots.chat.connector.connect", { provider })}
+            : expired
+              ? t("bots.chat.connector.renew")
+              : t("bots.chat.connector.connect", { provider })}
         </Button>
       </div>
       {botNumber?.dialog}

@@ -425,6 +425,10 @@
         "connecting": "正在等你完成登入",
         "decline": "先不要",
         "stop": "停止連接",
+        "worksFor_one": "還能用 {{count}} 分鐘",
+        "worksFor_other": "還能用 {{count}} 分鐘",
+        "expired": "此連結已過期。",
+        "renew": "取得新連結",
         "homeChannel": "你可以在手機上透過 {{provider}} 和這個 AI 代理對話。連接 {{provider}} 就能開始。"
       },
       "placeholder": "傳訊息給 {{name}}",

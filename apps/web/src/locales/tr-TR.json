@@ -425,6 +425,10 @@
         "connecting": "Girişi tamamlaman bekleniyor",
         "decline": "Şimdi değil",
         "stop": "Bağlanmayı durdur",
+        "worksFor_one": "{{count}} dakika daha geçerli",
+        "worksFor_other": "{{count}} dakika daha geçerli",
+        "expired": "Bu bağlantının süresi doldu.",
+        "renew": "Yeni bağlantı al",
         "homeChannel": "Bu ajanla telefonundaki {{provider}} üzerinden konuşursun. Başlamak için {{provider}} bağla."
       },
       "placeholder": "{{name}} adlı bota mesaj yaz",

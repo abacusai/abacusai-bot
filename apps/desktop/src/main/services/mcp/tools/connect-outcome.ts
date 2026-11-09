@@ -53,15 +53,36 @@ export type ConnectOutcome =
       card: boolean;
       routine: boolean;
     }
-  /** Every connector the link covers is connected already; it can only reconnect them. */
-  | { code: "reconnect"; names: string[]; url: string }
+  /**
+   * Every connector the link covers is connected already; it can only
+   * reconnect them. `expiresAt` (ms), on either, is when the link stops working.
+   */
+  | { code: "reconnect"; names: string[]; url: string; expiresAt?: number }
   | {
       code: "link";
       asking: string[];
       already: string[];
       url: string;
       routine: boolean;
+      expiresAt?: number;
     };
+
+/**
+ * How long a link works, for the model to pass on: its local clock time
+ * (HH:MM) and whole minutes left, at least one. Null when it has no expiry.
+ */
+export const linkLifetime = (
+  expiresAt: number | undefined,
+  now = Date.now()
+): { until: string; minutes: number } | null => {
+  if (expiresAt == null) return null;
+  const at = new Date(expiresAt);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return {
+    until: `${pad(at.getHours())}:${pad(at.getMinutes())}`,
+    minutes: Math.max(1, Math.round((expiresAt - now) / 60_000)),
+  };
+};
 
 export type DisconnectOutcome =
   | { code: "required" }

@@ -9,6 +9,7 @@ import {
 } from "../../../providers/abacus-upgrade";
 import { creditsLine } from "../billing";
 import type { ConnectOutcome, DisconnectOutcome } from "../connect-outcome";
+import { linkLifetimeLines } from "../connectors";
 import type { ToolHost, ToolResult } from "../definition";
 import type { PhoneToolDefinition } from "./definition";
 
@@ -111,6 +112,7 @@ export function phoneConnectResult(
           "",
           "Put it in a message of its own with one short line in the user's language, saying it reconnects the account. " +
             "Copy it exactly. This call does not wait: you will be told when the reconnect lands.",
+          ...linkLifetimeLines(outcome.expiresAt),
         ].join("\n")
       );
     case "link": {
@@ -131,6 +133,7 @@ export function phoneConnectResult(
             (outcome.asking.length > 1
               ? " The sign-in may show a checkbox for each; what is left unticked is not connected."
               : ""),
+          ...linkLifetimeLines(outcome.expiresAt),
           "This call does not wait. Carry on with whatever does not need it. You will be told when it is connected, and " +
             "its tools are in your tool list then. Until then do not send the link again unless the user asks for it.",
         ].join("\n")

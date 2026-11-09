@@ -38,11 +38,15 @@ export const reduceRequests = (
       );
     case "request":
       if (
-        (conversationKey != null &&
-          event.request.conversationKey !== conversationKey) ||
-        requests.some((row) => row.requestId === event.request.requestId)
+        conversationKey != null &&
+        event.request.conversationKey !== conversationKey
       )
         return [...requests];
+      // The same card again carries a change (its link expired or renewed).
+      if (requests.some((row) => row.requestId === event.request.requestId))
+        return requests.map((row) =>
+          row.requestId === event.request.requestId ? event.request : row
+        );
       return [...requests, event.request];
     case "cleared":
       return requests.filter((row) => row.requestId !== event.requestId);

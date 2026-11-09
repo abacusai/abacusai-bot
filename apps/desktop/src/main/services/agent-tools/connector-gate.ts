@@ -1,8 +1,9 @@
 /**
  * The Connect cards behind `connect_connector`. A card never holds the agent:
  * the tool has already answered with a one-tap link, and the card is the
- * same hop for a user at the app. A card goes when its connector connects,
- * when its link expires, or when the user dismisses it. Every card is filed
+ * same hop for a user at the app. A card goes when its connector connects
+ * or when the user dismisses it. When its link expires it stays, marked
+ * expired, and its Connect button gets a new link. Every card is filed
  * under its conversation, and only that conversation can list or answer it.
  * A routine's run has nobody in front of it, so its card is the one thing
  * left for the user to find: it is kept on disk across a relaunch, and a
@@ -121,6 +122,8 @@ export class ConnectorGate {
     connectorId: string;
     label: string;
     reason?: string;
+    /** When the link it came with stops working (ms). */
+    expiresAt?: number;
     /** The conversation that asked. See ConnectorRequest.conversationKey. */
     conversationKey: ConversationKey;
   }): void {
@@ -141,6 +144,7 @@ export class ConnectorGate {
       ...(input.reason != null && input.reason.length > 0
         ? { reason: input.reason }
         : {}),
+      ...(input.expiresAt != null ? { expiresAt: input.expiresAt } : {}),
     };
     this.pending.set(request.requestId, request);
     if (routineId != null) {
@@ -161,11 +165,48 @@ export class ConnectorGate {
     this.clear(request.requestId);
   }
 
-  /** These connectors are connected now, or their links expired: every card for them goes. */
+  /** These connectors are connected now: every card for them goes. */
   clearFor(connectorIds: readonly string[]): void {
     for (const [requestId, request] of this.pending) {
       if (connectorIds.includes(request.connectorId)) this.clear(requestId);
     }
+  }
+
+  /**
+   * An offer for these connectors expired unconnected. A card that came with
+   * a link stays, marked expired, unless a newer link of its own is still
+   * live; one with no link behind it goes, as there is nothing to renew.
+   */
+  expire(connectorIds: readonly string[], linked: boolean, now: number): void {
+    for (const [requestId, request] of this.pending) {
+      if (!connectorIds.includes(request.connectorId)) continue;
+      if (!linked) this.clear(requestId);
+      else if (
+        request.expired !== true &&
+        (request.expiresAt == null || request.expiresAt <= now)
+      )
+        this.update({ ...request, expired: true });
+    }
+  }
+
+  /** A fresh link went out for this connector: its cards count down from it again. */
+  renew(connectorId: string, expiresAt: number | undefined): void {
+    for (const request of this.pending.values()) {
+      if (request.connectorId !== connectorId) continue;
+      const { expired: _expired, expiresAt: _was, ...rest } = request;
+      this.update({ ...rest, ...(expiresAt != null ? { expiresAt } : {}) });
+    }
+  }
+
+  /** The same card, changed: kept on disk when it is a routine's, and shown again. */
+  private update(request: ConnectorRequest): void {
+    this.pending.set(request.requestId, request);
+    if (this.routines.has(request.requestId)) this.save();
+    this.emitEvent({
+      type: "connector-request",
+      request,
+      emittedAt: new Date().toISOString(),
+    });
   }
 
   private clear(requestId: string): void {

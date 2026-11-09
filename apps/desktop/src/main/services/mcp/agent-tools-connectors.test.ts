@@ -168,6 +168,7 @@ describe("asking for one", () => {
     expect(watch).toHaveBeenCalledWith({
       connectorIds: ["abacus-slack"],
       sessionId: "session-1",
+      url: "https://apps.example/chatllm/connect-connector?service=abacus-slack&r=req&autostart=1",
     });
     expect(text).toContain("service=abacus-slack&r=req");
     expect(text).toContain("This call does not wait");
@@ -184,6 +185,7 @@ describe("asking for one", () => {
     expect(watch).toHaveBeenCalledWith({
       connectorIds: ["abacus-googledriveuser", "abacus-googlecalendar"],
       sessionId: "session-1",
+      url: "https://apps.example/chatllm/connect-connector?service=google&r=req&autostart=1",
     });
   });
 

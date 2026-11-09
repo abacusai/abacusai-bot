@@ -655,8 +655,9 @@ export interface McpAgentToolsServerOptions {
      * (one Google consent covers Gmail, Drive and Calendar, less the members
      * already connected, which `connectedIds` names), or the web host's
      * connect route for an MCP server. `requestId` lets the watch read the
-     * link's own outcome. `sessionId` is the asking chat, which the link's
-     * completion reports back to. Null signed out, or with no link to give.
+     * link's own outcome, `expiresAt` (ms) when it stops working. `sessionId`
+     * is the asking chat, which the link's completion reports back to. Null
+     * signed out, or with no link to give.
      */
     link: (
       connectorId: string,
@@ -666,12 +667,14 @@ export interface McpAgentToolsServerOptions {
       connectorIds: string[];
       connectedIds?: string[];
       requestId?: string;
+      expiresAt?: number;
     } | null>;
     /** A Connect card in the conversation that asked; nothing waits on it. */
     show: (input: {
       connectorId: string;
       label: string;
       reason?: string;
+      expiresAt?: number;
       conversationKey: ConversationKey;
     }) => void;
     /** Follow these until they connect: tools refresh, cards clear, the asking chat is told. */
@@ -679,6 +682,8 @@ export interface McpAgentToolsServerOptions {
       connectorIds: string[];
       sessionId: string | null;
       requestId?: string;
+      url?: string;
+      expiresAt?: number;
       /** A reconnect: judged by the link's completion alone. */
       byLinkOnly?: boolean;
     }) => void;
@@ -2983,11 +2988,14 @@ export class McpAgentToolsServer extends McpHttpServer {
         ...(typeof args.reason === "string" && args.reason.length > 0
           ? { reason: args.reason }
           : {}),
+        ...(link?.expiresAt != null ? { expiresAt: link.expiresAt } : {}),
       });
     connectors.watch({
       connectorIds: reconnect ? link.connectorIds : asking,
       sessionId: callerSession ?? null,
+      ...(link != null ? { url: link.url } : {}),
       ...(link?.requestId != null ? { requestId: link.requestId } : {}),
+      ...(link?.expiresAt != null ? { expiresAt: link.expiresAt } : {}),
       ...(reconnect ? { byLinkOnly: true } : {}),
     });
     const routine =
@@ -3003,11 +3011,13 @@ export class McpAgentToolsServer extends McpHttpServer {
       };
     const nameOf = (id: string): string =>
       CONNECTORS.find((item) => item.id === id)?.name ?? id;
+    const expiry = link.expiresAt != null ? { expiresAt: link.expiresAt } : {};
     if (reconnect)
       return {
         code: "reconnect",
         names: link.connectorIds.map(nameOf),
         url: link.url,
+        ...expiry,
       };
     return {
       code: "link",
@@ -3015,6 +3025,7 @@ export class McpAgentToolsServer extends McpHttpServer {
       already: [...already].map(nameOf),
       url: link.url,
       routine,
+      ...expiry,
     };
   }
 
