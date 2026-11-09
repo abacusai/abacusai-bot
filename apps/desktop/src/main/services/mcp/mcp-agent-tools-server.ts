@@ -37,6 +37,7 @@ import {
   type HomeChannel,
 } from "@abacus-ai/contract/bots";
 import { CHECK_IN_PROMPT } from "@abacus-ai/contract/bots/check-in";
+import { capabilityNote } from "@abacus-ai/contract/capabilities";
 import type {
   ConnectorStatus,
   ConnectorStatuses,
@@ -53,6 +54,7 @@ import {
   describePlatformForAgent,
   isOwnChatTarget,
   selfLaneOf,
+  SELF_LANE_FOR_APP,
 } from "@abacus-ai/contract/messaging";
 import {
   isCostlyModel,
@@ -700,6 +702,20 @@ const timedArgs = (
   };
 };
 
+/** The hosted computer (bot.abacus.ai). The build defines a boolean; a test's stubbed env reads as "true". */
+const onWebHost = (): boolean =>
+  String(import.meta.env.ABACUS_WEB_HOST) === "true";
+
+/**
+ * The routine editor changes its one routine, and answers what the routine
+ * can do from the app's facts: its prompt sends those to bot_help and billing_plan.
+ */
+const ROUTINE_EDITOR_TOOLS: ReadonlySet<string> = new Set([
+  "cronjob",
+  "bot_help",
+  "billing_plan",
+]);
+
 /**
  * Not read from the platform catalog: that carries i18n keys and the main
  * process has no translator.
@@ -738,7 +754,7 @@ export class McpAgentToolsServer extends McpHttpServer {
         held && !Object.hasOwn(UNATTENDED_TOOLS, definition.name)
           ? false
           : forEditor
-            ? definition.name === "cronjob"
+            ? ROUTINE_EDITOR_TOOLS.has(definition.name)
             : this.isListedTool(definition, enabled, forBot, callerSession) &&
               this.reachesCaller(definition, callerSession) &&
               // Only a bot with requests to follow up gets the follow-up
@@ -932,7 +948,7 @@ export class McpAgentToolsServer extends McpHttpServer {
       );
 
     const forEditor = this.isRoutineEditor(callerSession);
-    if (forEditor && name !== "cronjob")
+    if (forEditor && !ROUTINE_EDITOR_TOOLS.has(name))
       return this.err("This session can only change its routine.");
     if (
       !forEditor &&
@@ -2878,6 +2894,7 @@ export class McpAgentToolsServer extends McpHttpServer {
           ? { account: status.account }
           : {}),
         ...(status.botNumber === true ? { botNumber: true } : {}),
+        ...(match.kind === "messaging" ? { platform: match.platform } : {}),
       };
 
     if (
@@ -3694,11 +3711,13 @@ export class McpAgentToolsServer extends McpHttpServer {
 
     const allowedLine =
       resolved != null
-        ? `${resolved.name} will be answered in a separate conversation of their own. Everything written there is delivered to them, as the user. Gather the user's instructions for that sender now (tone, goals, what not to say) and store them in memory.`
+        ? `${resolved.name} will be answered in a separate conversation of their own. Everything written there is delivered to them, as the user. ${capabilityNote("auto-reply")} Gather the user's instructions for that sender now (tone, what not to say) and store them in memory.`
         : "No sender allowed yet. Allow one with allow_sender, or approve pending ones from the Connectors page.";
 
     return this.ok(
-      action === "on" ? `Auto-reply is on. ${allowedLine}` : allowedLine
+      action === "on"
+        ? `Auto-reply is on. ${resolved == null ? `${capabilityNote("auto-reply")} ` : ""}${allowedLine}`
+        : allowedLine
     );
   }
 
@@ -3803,7 +3822,8 @@ export class McpAgentToolsServer extends McpHttpServer {
     const hostedRunner =
       routines?.hostedOnly?.() === true ||
       routines?.defaultRunner() === "hosted";
-    const connectorsNeeded = needs("connectors") || needs("chat_apps");
+    const connectorsNeeded =
+      needs("connectors") || needs("chat_apps") || needs("capabilities");
     const [connectors, models] = await Promise.all([
       connectorsNeeded
         ? this.connectConnectorOutcome({}, callerSession, { card: false })
@@ -3819,7 +3839,7 @@ export class McpAgentToolsServer extends McpHttpServer {
     return botHelpResult(this, {
       topic,
       name,
-      hosted: import.meta.env.ABACUS_WEB_HOST === true,
+      hosted: onWebHost(),
       tier: this.planTier(),
       card,
       phone,
@@ -3838,7 +3858,35 @@ export class McpAgentToolsServer extends McpHttpServer {
       bots: this.options.bots?.() ?? [],
       enabledToolsets: this.options.enabledToolsets(),
       withheldFeatures: this.hostCapabilities().withheldFeatures,
+      tools: new Set(this.listTools(callerSession).map((tool) => tool.name)),
+      chatApps: this.linkedChatApps(connectors),
     });
+  }
+
+  /**
+   * Which chat apps' own chats are linked: each app's self lane (Telegram and
+   * Discord go through the shared Abacus AI bot), or on the web WhatsApp
+   * through AbacusAI Bot's own number.
+   */
+  private linkedChatApps(
+    connectors: ReadonlyArray<{
+      connector: Connector;
+      status: { state: string; botNumber?: boolean };
+    }> | null
+  ): Partial<Record<HomeChannel, boolean>> | null {
+    if (onWebHost()) {
+      if (connectors == null) return null;
+      const whatsapp = connectors.find(
+        (entry) => entry.connector.id === "messaging-whatsapp"
+      );
+      return { whatsapp: whatsapp?.status.botNumber === true };
+    }
+    const messaging = this.options.messaging;
+    if (messaging == null) return null;
+    const live = (messaging.livePlatforms ?? messaging.runningPlatforms)();
+    return Object.fromEntries(
+      HOME_CHANNELS.map((app) => [app, live.includes(SELF_LANE_FOR_APP[app])])
+    );
   }
 
   // ── Integrations ─────────────────────────────────────────────────────────

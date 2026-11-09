@@ -15,6 +15,12 @@ import {
   botHelpPlace,
   type BotHelpTopic,
 } from "@abacus-ai/contract/bot-help";
+import type { HomeChannel } from "@abacus-ai/contract/bots";
+import {
+  capabilityFacts,
+  type CapabilityState,
+  type CapabilityTopic,
+} from "@abacus-ai/contract/capabilities";
 import type { ConnectorStatus } from "@abacus-ai/contract/contracts";
 import type {
   AbacusPlanTier,
@@ -63,7 +69,34 @@ export interface BotHelpFacts {
   bots: BotHelpBot[];
   enabledToolsets: ReadonlySet<string>;
   withheldFeatures: readonly PaidFeature[];
+  /** The tools this caller is listed: what it can do comes from these, never from the topic. */
+  tools: ReadonlySet<string>;
+  /** Which chat apps' own chats are linked (their self lane, or AbacusAI Bot's number on the web); null when unreadable. */
+  chatApps: Partial<Record<HomeChannel, boolean>> | null;
 }
+
+/** The capability registry's state for this caller. */
+const capabilityState = (facts: BotHelpFacts): CapabilityState => ({
+  surface: facts.hosted ? "hosted" : "desktop",
+  tier: facts.tier,
+  chatApps: facts.chatApps,
+  connectors:
+    facts.connectors == null
+      ? null
+      : Object.fromEntries(
+          facts.connectors.map(({ connector, status }) => [
+            connector.id,
+            status,
+          ])
+        ),
+  tools: facts.tools,
+});
+
+const capabilityLines = (
+  facts: BotHelpFacts,
+  ...topics: CapabilityTopic[]
+): string[] =>
+  topics.flatMap((topic) => capabilityFacts(capabilityState(facts), { topic }));
 
 const wants = (facts: BotHelpFacts, topic: BotHelpTopic): boolean =>
   facts.topic == null || facts.topic === topic;
@@ -222,6 +255,8 @@ function connectorsSection(
                 "To link a different WhatsApp number: Unlink it there, then Connect and scan the",
                 "new QR code with the other phone.",
               ]),
+          "What the chat apps let the user do:",
+          ...capabilityLines(facts, "chat_apps"),
           where(facts, "chat_apps"),
         ]
       : [
@@ -239,13 +274,20 @@ function connectorsSection(
                   .map((entry) => entry.connector.name)
                   .join(", ")}.`,
               ]),
-          "Connecting one: the user connects it in the app, or you ask for it with connect_connector.",
+          ...capabilityLines(facts, "connectors"),
           where(facts, "connectors"),
         ];
   if (facts.connectors == null)
     return [
       lines[0]!,
       "Their status cannot be read right now: say so, never guess.",
+      // What a chat app lets them do does not depend on reading its status.
+      ...(kind === "chat"
+        ? [
+            "What the chat apps let the user do:",
+            ...capabilityLines(facts, "chat_apps"),
+          ]
+        : []),
     ];
   return lines;
 }
@@ -277,13 +319,19 @@ function capabilitiesSection(facts: BotHelpFacts): string[] {
     `Off: ${off.length === 0 ? "none" : off.map((set) => set.id).join(", ")}.`,
   ];
   lines.push(
-    "Making images, video or audio: the plan makes them in Abacus AI Agent on the web (and the user's",
-    `own key for it makes them here, when one is set). Asked for one, call ${PAID_FEATURE_TOOL} first and lead with that.`
+    "What the user can do here:",
+    ...capabilityLines(facts, "capabilities", "routines", "models"),
+    // Asked about capabilities alone, the chat apps' are part of the answer.
+    ...(facts.topic === "capabilities"
+      ? capabilityLines(facts, "chat_apps")
+      : [])
   );
   if (facts.withheldFeatures.length > 0)
     lines.push(
       `Not on this account here: ${facts.withheldFeatures.map((feature) => feature.name).join(", ")}. ` +
-        `For any of these, call ${PAID_FEATURE_TOOL}: it says which plan has it and where.`
+        (facts.tools.has(PAID_FEATURE_TOOL)
+          ? `For any of these, call ${PAID_FEATURE_TOOL}: it says which plan has it and where.`
+          : "For any of these, the user asks in a main chat, which says which plan has it.")
     );
   if (phoneFreePlan(facts)) lines.push(FREE_PHONE_ROUTINES_NOTE);
   lines.push(where(facts, "capabilities"));
@@ -345,7 +393,8 @@ export function botHelpResult(
       "Answer from this, in the user's language, briefly. Every path above is the English app's:",
       `name each step as the app shows it in their language. ${how} Never add a setting, page,`,
       "limit or capability this answer does not give, and never say something is not connected",
-      "or not possible when this answer says otherwise.",
+      "or not possible when this answer says otherwise. If what they ask is not listed here, say",
+      "you will check; never a flat no.",
     ].join("\n")
   );
 }

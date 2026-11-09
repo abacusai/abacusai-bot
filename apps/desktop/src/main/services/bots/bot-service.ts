@@ -32,6 +32,10 @@ import {
   BOT_TEMPLATES,
   type BotTemplate,
 } from "@abacus-ai/contract/bots/templates";
+import {
+  AUTO_REPLY_NEVER,
+  phoneChatRoute,
+} from "@abacus-ai/contract/capabilities";
 import { languageNameTag } from "@abacus-ai/contract/contract/languages";
 import type { SupportedLanguage } from "@abacus-ai/contract/contract/rows";
 import type { SessionOwner } from "@abacus-ai/contract/contracts";
@@ -167,8 +171,8 @@ const homeChannelLines = (bot: Bot): string[] => {
     "reply in your own chat with the user in this app is two short lines and",
     `ends with suggest_tasks: first one concrete message to send you from`,
     `${app} right now, marked copy: true (for example "remind me at 6pm to call`,
-    'mom"), with a few words on where to send it (once connected, if it is',
-    "not yet); then one or two things you can do right here.",
+    `mom"), with a few words on where to send it (${phoneChatRoute(bot.homeChannel, import.meta.env.ABACUS_WEB_HOST === true ? "hosted" : "desktop")};`,
+    "once connected, if it is not yet); then one or two things you can do right here.",
   ];
 };
 
@@ -273,7 +277,7 @@ const isStaleTemplateRole = (bot: Bot): boolean => {
  * The bot's standing prompt, framed like custom instructions and explicit
  * that the persona does not widen permissions.
  */
-const renderPersona = (
+export const renderPersona = (
   bot: Bot,
   homes: Partial<Record<HomeChannel, Bot>>,
   bots: readonly Bot[] = []
@@ -479,7 +483,7 @@ export const senderChatIntro = (senderName: string, platform: string): string =>
     "echoing back to you: reply exactly NO_REPLY to those, and nothing is",
     "sent. Never use it for anything else.",
     "",
-    "Never start new topics, make plans, or volunteer information the user",
+    `Never ${AUTO_REPLY_NEVER}, and never volunteer information the user`,
     "has not asked you to handle. The user is not in this chat. They steer",
     "you from your main chat (check memory for their instructions about this",
     "person), and can read this conversation under your bot in the Bots",

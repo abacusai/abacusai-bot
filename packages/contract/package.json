@@ -7,6 +7,7 @@
     "./account": "./src/account.ts",
     "./agent-types": "./src/agent-types.ts",
     "./bot-help": "./src/bot-help.ts",
+    "./capabilities": "./src/capabilities.ts",
     "./billing-plan": "./src/billing-plan.ts",
     "./bots": "./src/bots.ts",
     "./channels": "./src/channels.ts",

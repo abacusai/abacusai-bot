@@ -113,6 +113,21 @@ describe("turning auto-reply on from a bot's chat", () => {
     expect(text).toContain("Alex Fischer");
   });
 
+  it("says what the lane does not do, at the moment it is set up", async () => {
+    const { instance } = server();
+
+    const text = await call(
+      instance,
+      { action: "allow_sender", sender: "mom" },
+      "bot-session"
+    );
+
+    // The lane only answers: nothing may promise it interviews or reports back.
+    expect(text).toContain("report back to the user on its own");
+    expect(text).toContain("never promise the user it will");
+    expect(text).not.toContain("goals");
+  });
+
   it("turns on without a sender, saying one is still needed", async () => {
     const { instance, autoReply } = server();
 
