@@ -7,10 +7,8 @@
  * words (the first-run note, native menus and dialogs) load the same way.
  */
 import type { PlanT } from "@abacus-ai/contract/billing-plan";
-import {
-  SUPPORTED_LANGUAGES,
-  type SupportedLanguage,
-} from "@abacus-ai/contract/contract/rows";
+import { matchSupportedLanguage } from "@abacus-ai/contract/contract/languages";
+import type { SupportedLanguage } from "@abacus-ai/contract/contract/rows";
 
 import enUS from "#locales/en-US.json";
 
@@ -30,6 +28,8 @@ const LOADERS: Record<
   "ko-KR": () => import("#locales/ko-KR.json"),
   "pt-BR": () => import("#locales/pt-BR.json"),
   "tr-TR": () => import("#locales/tr-TR.json"),
+  "zh-CN": () => import("#locales/zh-CN.json"),
+  "zh-TW": () => import("#locales/zh-TW.json"),
 };
 
 /**
@@ -52,29 +52,19 @@ const LANGUAGE_LOCALES: Record<string, SupportedLanguage> = {
   turkish: "tr-TR",
 };
 
-/** A BCP 47 tag ("pt-PT", "es-MX", "tr") to the closest locale the app ships. */
-const shippedLocale = (tag: string): SupportedLanguage | null => {
-  const exact = SUPPORTED_LANGUAGES.find(
-    (locale) => locale.toLowerCase() === tag.toLowerCase()
-  );
-  if (exact != null) return exact;
-  const language = tag.split(/[-_]/)[0]?.toLowerCase() ?? "";
-  // Latin American Spanish is the wider reading of a bare or regional "es".
-  if (language === "es") return "es-419";
-  return (
-    SUPPORTED_LANGUAGES.find((locale) =>
-      locale.toLowerCase().startsWith(`${language}-`)
-    ) ?? null
-  );
-};
+/** Names of Chinese, and those of them that are read in Traditional. */
+const CHINESE_NAME = /chinese|mandarin|cantonese/;
+const TRADITIONAL_NAME = /traditional|taiwan|hong kong|macau|cantonese/;
 
 /**
- * A language name's locale: "Turkish", or a regional name such as "European
- * Spanish" or "American English" by its last word.
+ * A language name's locale: "Turkish", a regional name such as "European
+ * Spanish" or "American English" by its last word, or Chinese by its script.
  */
 const namedLocale = (name: string): SupportedLanguage | undefined => {
   const lower = name.trim().toLowerCase();
   if (lower === "european spanish") return "es-ES";
+  if (CHINESE_NAME.test(lower))
+    return TRADITIONAL_NAME.test(lower) ? "zh-TW" : "zh-CN";
   return (
     LANGUAGE_LOCALES[lower] ?? LANGUAGE_LOCALES[lower.split(" ").at(-1) ?? ""]
   );
@@ -83,16 +73,20 @@ const namedLocale = (name: string): SupportedLanguage | undefined => {
 /**
  * The locale a chat-app line (or the app's own first-run note) is written
  * in: the language the bot answers this person in, else the app's own,
- * else English.
+ * else English. Plain "Chinese" names no script, so a Traditional app says
+ * which.
  */
 export function channelLocale(
   userLanguage: string | null,
   appLanguage: string | null
 ): SupportedLanguage {
   const named = userLanguage != null ? namedLocale(userLanguage) : undefined;
-  if (named != null) return named;
-  const app = appLanguage != null ? shippedLocale(appLanguage) : null;
-  return app ?? "en-US";
+  const app =
+    appLanguage != null ? matchSupportedLanguage([appLanguage]) : undefined;
+  const anyChinese =
+    named === "zh-CN" && !/simplified/i.test(userLanguage ?? "");
+  if (anyChinese && app === "zh-TW") return app;
+  return named ?? app ?? "en-US";
 }
 
 const lookup = (tree: unknown, key: string): string | undefined => {
