@@ -64,9 +64,16 @@ const setup = (stored: BotAskRecord[] = []) => {
     newId: () => `q${++ids}`,
     changed,
     note,
-    ownChatLines: (botId) =>
+    ownChatTail: (botId) =>
       botId === "wri"
-        ? ["our brand voice is cheeky", "always say pre-order"]
+        ? [
+            { role: "user", text: "our brand voice is cheeky" },
+            { role: "user", text: "pick one of the three taglines" },
+            {
+              role: "assistant",
+              text: "I picked B: Brew it till you make it.",
+            },
+          ]
         : [],
     log: (line) => logs.push(line),
   });
@@ -101,17 +108,25 @@ describe("BotAskService", () => {
     );
   });
 
-  it("gives the asked bot what the user told it in its own chat, as context", () => {
+  it("gives the asked bot the last exchanges of its own chat, its own replies included", () => {
     const { service, turns } = setup();
-    service.ask("res", "res-chat", "wri", "Draft a tagline");
+    service.ask("res", "res-chat", "wri", "Which tagline did you pick?");
     service.ask("res", "res-chat", "pla", "Plan the week");
     expect(turns[0].prompt).toContain(
-      "What the user told you recently in your own chat"
+      "Your own chat with the user, its last exchanges"
     );
-    expect(turns[0].prompt).toContain("- always say pre-order");
+    expect(turns[0].prompt).toContain("- User: pick one of the three taglines");
+    // What it said there is in it: a status question is answered from the
+    // real record, not from notes written before the work moved on.
+    expect(turns[0].prompt).toContain(
+      "- You: I picked B: Brew it till you make it."
+    );
+    expect(turns[0].prompt).toContain("newer than your notes");
     // The request still comes last, after the context.
-    expect(turns[0].prompt.trimEnd().endsWith("Draft a tagline")).toBe(true);
-    expect(turns[1].prompt).not.toContain("What the user told you recently");
+    expect(
+      turns[0].prompt.trimEnd().endsWith("Which tagline did you pick?")
+    ).toBe(true);
+    expect(turns[1].prompt).not.toContain("Your own chat with the user");
   });
 
   it("logs each request's steps without its text", async () => {

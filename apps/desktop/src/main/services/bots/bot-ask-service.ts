@@ -30,6 +30,7 @@ import {
   botAskIntro,
   botTaskPrompt,
   frameBotRequest,
+  type OwnChatLine,
   ownChatContext,
   requestNotes,
   MAX_REQUESTS_PER_DAY,
@@ -97,8 +98,8 @@ export interface BotAskDeps {
   changed?: () => void;
   /** A line for a bot's daily notes: what it asked, passed on, answered or did. */
   note?: (botId: string, line: string) => void;
-  /** The user's latest lines in a bot's own chat, for an ask's context. */
-  ownChatLines?: (botId: string) => string[];
+  /** The last exchanges of a bot's own chat, both sides, for an ask's context. */
+  ownChatTail?: (botId: string) => OwnChatLine[];
   /** One line per request event, no message text: for the app's log. */
   log?: (line: string) => void;
   now?: () => number;
@@ -338,7 +339,7 @@ export class BotAskService {
     } else {
       const framed = frameBotRequest(asker, next.request);
       const context = ownChatContext(
-        this.deps.ownChatLines?.(next.targetId) ?? []
+        this.deps.ownChatTail?.(next.targetId) ?? []
       );
       prompt = `${botAskIntro(asker)}\n\n${context.length > 0 ? `${context}\n\n` : ""}${framed}`;
       visibleFrom = prompt.length - framed.length;

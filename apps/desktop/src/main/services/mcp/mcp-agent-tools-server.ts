@@ -491,6 +491,11 @@ export interface McpAgentToolsServerOptions {
         targetId: string,
         task: string
       ) => ReturnType<BotAskService["ask"]>;
+      /**
+       * The asker read a finished answer whole (check_bot_answers): its note,
+       * still held for that chat, then says so, or the bot tells it twice.
+       */
+      answerRead?: (askerSession: string, id: string) => void;
     };
   };
   onCronChanged?: () => void;
@@ -3063,8 +3068,11 @@ export class McpAgentToolsServer extends McpHttpServer {
         return this.ok(
           `${botNamed(ask.askerId).name} ${ask.kind === "task" ? "passed you the user's task" : "asked you"} (${ask.id}):\n${ask.request}\n\nYou ${ask.kind === "task" ? "reported" : "answered"}:\n${ask.answer ?? ""}`
         );
-      if (ask.status === "answered")
+      if (ask.status === "answered") {
+        if (callerSession != null)
+          host.asks.answerRead?.(callerSession, ask.id);
         return this.ok(wrapBotAnswer(nameOf(ask), ask.answer ?? ""));
+      }
       return this.ok(
         ask.status === "failed"
           ? `Request ${ask.id} failed: ${ask.error ?? "no reason given"}`
