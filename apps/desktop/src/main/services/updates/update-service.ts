@@ -73,9 +73,8 @@ const REQUESTED_RESTART_MAX_WAIT_MS = 10 * 60 * 1000;
 const QUIT_STALL_MS = 15_000;
 const QUIT_FORCE_MS = 30_000;
 
-// Squirrel.Mac re-verifies the whole zip's signature before staging it, which
-// a busy Mac can drag out for minutes. Past this the install fails and the
-// pill stays, rather than quitting with nothing staged.
+// Signature verification can take minutes on a busy Mac. Keep the build for
+// retry if staging times out.
 const MAC_STAGE_TIMEOUT_MS = 3 * 60 * 1000;
 
 /** Squirrel.Mac (Electron's autoUpdater), as MacUpdater holds it. */
@@ -317,8 +316,7 @@ export class UpdateService {
     });
 
     autoUpdater.on("error", (error) => {
-      // While Squirrel fetches, its errors (re-emitted here before
-      // stageMacBuild hears them) are the install's to report.
+      // MacUpdater re-emits Squirrel errors before staging handles them.
       if (
         this.staging != null &&
         (typeof error !== "object" ||
@@ -543,8 +541,7 @@ export class UpdateService {
     );
   }
 
-  // A quit must not hang on screen while Squirrel stages: look gone. A relaunch
-  // meanwhile reveals the window and the Dock again (index.ts).
+  // Hide immediately on quit while Squirrel stages; a relaunch reveals it.
   private hideForQuit(): void {
     for (const win of BaseWindow.getAllWindows())
       if (!win.isDestroyed()) win.hide();
@@ -552,11 +549,8 @@ export class UpdateService {
   }
 
   /**
-   * With autoInstallOnAppQuit off, MacUpdater only serves the zip, and its
-   * quitAndInstall starts Squirrel's fetch, which the quit watchdog then cuts
-   * short. Fetch it here while the app runs: MacUpdater marks any native
-   * update-downloaded, so its quitAndInstall then installs at once.
-   * Null once staged, else why not.
+   * Stage before quitAndInstall so the quit watchdog cannot cut off the fetch.
+   * Return null on success or an error message.
    */
   private async stageMacBuild(
     squirrel: Squirrel,
@@ -810,8 +804,7 @@ export class UpdateService {
         }
         if (failure != null)
           throw new Error(`Couldn't prepare the update: ${failure}`);
-        // No quit then. Squirrel installs a staged build on the next quit,
-        // skipping the admission check only for one that passed it just now.
+        // Idle staging must not interrupt a task that started during the fetch.
         if (options?.idle && !this.idleAndSafe()) {
           console.log(
             `[UpdateService] ${version} staged but the app is busy again, installing on the next quit`

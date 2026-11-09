@@ -1743,13 +1743,9 @@ registerAppScheme();
 // sessions. Losing the lock is not final: a relaunch's child arrives while
 // its parent is still dying, so whenReady retries before giving up.
 let gotSingleInstanceLock = app.requestSingleInstanceLock();
-// A quit staging an update hid the Dock (UpdateService.hideForQuit). macOS
-// sends a relaunch to the running app as activate, elsewhere second-instance.
-// The user wants the app back: a failed staging no longer quits it, and the
-// next quit checks for the update again. A staged build still installs.
+// Relaunching during staging cancels the pending quit and restores the Dock.
 function revealOnRelaunch(): void {
   if (quitAwaitingUpdate != null) {
-    quitAwaitingUpdate.cancelled = true;
     quitAwaitingUpdate = null;
     quitUpdateChecked = false;
   }
@@ -2045,7 +2041,7 @@ const QUIT_LOG_SYNC_MS = 2_500;
 let quitGracefulInProgress = false;
 let quitUpdateChecked = false;
 /** The quit waiting on its update install; a relaunch cancels it. */
-let quitAwaitingUpdate: { cancelled: boolean } | null = null;
+let quitAwaitingUpdate: object | null = null;
 app.on("before-quit", (event) => {
   if (
     !isDataResetPending() &&
@@ -2055,14 +2051,15 @@ app.on("before-quit", (event) => {
   ) {
     event.preventDefault();
     quitUpdateChecked = true;
-    const quit = { cancelled: false };
+    const quit = {};
     quitAwaitingUpdate = quit;
     // Never waits for a running task: a quit must not hang.
     void updateService
       .installUpdate({ silent: true, quitting: true })
       .then((result) => {
-        if (quitAwaitingUpdate === quit) quitAwaitingUpdate = null;
-        if (!result.success && !quit.cancelled) app.quit();
+        if (quitAwaitingUpdate !== quit) return;
+        quitAwaitingUpdate = null;
+        if (!result.success) app.quit();
       });
     return;
   }
