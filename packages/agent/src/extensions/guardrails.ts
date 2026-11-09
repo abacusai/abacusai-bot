@@ -104,6 +104,12 @@ const SCRATCH_PREFIXES = [
   realTmpdir + path.sep,
 ];
 
+/**
+ * A routine's own records folder (`.abacusai-bot/routines/<id>/`, in the app's
+ * folder or a project's): its notes and state files are rewritten every run.
+ */
+const ROUTINE_RECORDS = /(^|\/)\.abacusai-bot\/routines\/[^/]+\//;
+
 const isScratch = (abs: string): boolean => {
   // Windows paths compare case-insensitively, and C:/ and C:\ are one dir.
   const fold = (p: string): string => {
@@ -368,6 +374,9 @@ function guardrails(pi: ExtensionAPI, options: GuardrailsOptions): void {
           isRealScratch(write.path) &&
           !isInsideWorkspace(write.path, ctx.cwd)
         )
+          continue;
+        const real = realPathOf(write.path);
+        if (real !== null && ROUTINE_RECORDS.test(real.replace(/\\/g, "/")))
           continue;
         try {
           if (fs.statSync(write.path).isFile()) {

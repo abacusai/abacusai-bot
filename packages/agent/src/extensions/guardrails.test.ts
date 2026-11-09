@@ -414,6 +414,22 @@ describe("redirects into scratch space", () => {
     }
   );
 
+  it("lets a routine rewrite its own notes and state files", async () => {
+    const records = path.join(cwd, ".abacusai-bot", "routines", "job-1");
+    fs.mkdirSync(records, { recursive: true });
+    fs.writeFileSync(path.join(records, "notes.md"), "old");
+    fs.writeFileSync(path.join(cwd, "notes.md"), "the user's own");
+
+    const fire = (command: string) =>
+      pi.fire("tool_call", { toolName: "bash", input: { command } }, ctx());
+    expect(
+      await fire("printf 'new' > .abacusai-bot/routines/job-1/notes.md")
+    ).toBeUndefined();
+    expect(
+      ((await fire("printf 'new' > notes.md")) as { block?: boolean })?.block
+    ).toBe(true);
+  });
+
   it("still refuses a redirect that would clobber a file in the workspace", async () => {
     fs.writeFileSync(path.join(cwd, "server.js"), "the real thing");
     const blocked = (await pi.fire(
