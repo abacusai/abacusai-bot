@@ -551,7 +551,9 @@
         "notes": "Ayrıca {{count}} günlük not tutuyor",
         "clear": "Her şeyi unut",
         "clearConfirm": "Buradaki her şey unutulsun mu?"
-      }
+      },
+      "delegatesFreely": "Sormadan diğer botlara danışabilir",
+      "delegatesFreelyDetail": "Yardımcı olduğunda her seferinde sana sormadan diğer botlarına soru sorar ve iş verir. Yalnızca sana yanıt verirken."
     },
     "gone": {
       "chat": "Bu sohbet artık yok",

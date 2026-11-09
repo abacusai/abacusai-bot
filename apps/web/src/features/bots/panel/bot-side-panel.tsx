@@ -13,7 +13,8 @@ import {
   containmentRootFor,
 } from "#renderer/components/file-preview";
 import { FileTreeView } from "#renderer/components/file-tree";
-import { GroupCard } from "#renderer/components/form-kit/page";
+import { SettingSwitch } from "#renderer/components/form-kit/controls";
+import { GroupCard, SettingRow } from "#renderer/components/form-kit/page";
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { checkInFromRoutine } from "#renderer/lib/bots/check-in";
@@ -186,6 +187,24 @@ export const DetailsTab = ({
           )
         }
       />
+      {/* The user's standing yes for asking and passing work to other bots. */}
+      <GroupCard>
+        <SettingRow
+          id="bot-delegates-freely"
+          title={t("bots.panel.delegatesFreely")}
+          detail={t("bots.panel.delegatesFreelyDetail")}
+        >
+          <SettingSwitch
+            id="bot-delegates-freely"
+            checked={bot.delegatesFreely === true}
+            onCheckedChange={(delegatesFreely) =>
+              void updateBot(db.collections.bots, bot.id, {
+                delegatesFreely,
+              }).catch(() => showError(t("bots.form.saveError")))
+            }
+          />
+        </SettingRow>
+      </GroupCard>
       {routine &&
         sessions.some((session) => session.routineId === routine.id) && (
           <section>

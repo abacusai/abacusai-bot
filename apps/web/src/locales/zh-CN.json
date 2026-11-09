@@ -551,7 +551,9 @@
         "notes": "另存有 {{count}} 天的笔记",
         "clear": "全部忘记",
         "clearConfirm": "忘记这里的所有内容？"
-      }
+      },
+      "delegatesFreely": "无需确认即可询问其他机器人",
+      "delegatesFreelyDetail": "在有帮助时询问你的其他机器人并把工作交给它们，不必每次都问你。仅在回复你时。"
     },
     "gone": {
       "chat": "此聊天已不存在",

@@ -551,7 +551,9 @@
         "notes": "{{count}} day(s) of working notes on disk.",
         "clear": "Clear all",
         "clearConfirm": "Forget everything here?"
-      }
+      },
+      "delegatesFreely": "확인 없이 다른 봇에게 요청 가능",
+      "delegatesFreelyDetail": "도움이 될 때 매번 묻지 않고 다른 봇에게 질문하거나 작업을 넘깁니다. 당신에게 답하는 동안에만 해당됩니다."
     },
     "gone": {
       "chat": "This chat is gone",

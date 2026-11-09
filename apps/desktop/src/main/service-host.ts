@@ -398,6 +398,7 @@ import {
   type OwnChatLine,
   requestGist,
   taskFollowUpNote,
+  taskRoundsLine,
 } from "./services/bots/bot-ask";
 import {
   type BotAskRecord,
@@ -705,6 +706,14 @@ interface ChannelWorkRun {
 }
 
 const USER_WORDS_FRESH_MS = 15 * 60_000;
+/** A fix-and-recheck loop the user asked for: the first hand-off and at most two more. */
+const TASK_ROUNDS = 3;
+/**
+ * "Until it's clean", "recheck after", "check it again": the user asked for
+ * rounds, not one pass, so the passer may pass work back after each report.
+ */
+const ROUNDS_ASKED =
+  /\b(?:until|till)\b[^.?!\n]{0,40}\b(?:clean|done|fixed|pass(?:es)?|green|nothing (?:is )?left|no (?:more )?(?:issues|bugs|problems|errors))\b|\b(?:re-?check|re-?audit|re-?review|check (?:it |that |them )?again|review (?:it |that |them )?again|verify (?:the |each )?fix(?:es)?|back and forth)\b/i;
 /** How long after a passed-on task ends the user's next words there still go back to the passer. */
 const TASK_FOLLOW_UP_MS = 60 * 60_000;
 
@@ -744,8 +753,17 @@ const HAND_OFF =
  * for. The same words merely mentioned ("the team is me and two
  * ambassadors") ask for nothing.
  */
-const ASK_FOR_HELP =
-  /\b(?:(?:ask|have|get|let|need|want|find|use|involve|check with|loop in|bring in)\b[^.?!\n]{0,12}|(?:can|could|would|will|should) )(?:someone|somebody|another bot|other bots?|your team|the team|a colleague)\b/i;
+const ASK_FOR_HELP = new RegExp(
+  [
+    String.raw`\b(?:(?:ask|have|get|let|need|want|find|use|involve|check with|loop in|bring in)\b[^.?!\n]{0,12}|(?:can|could|would|will|should) )(?:someone|somebody|another bot|other bots?|your team|the team|a colleague)\b`,
+    // "ask them", "status from them", "check with each of them": the bots
+    // the user and this bot are talking about.
+    String.raw`\b(?:ask|check with|ping|message|(?:a |the )?(?:status|update|answer|reply)s? from|hear from)\s+(?:them|each of them|all of them|both of them|the others|every(?:one|body|\s+bot)|all (?:the )?bots|the bots)\b`,
+    // "someone needs to…", "somebody should…".
+    String.raw`\b(?:someone|somebody|another bot)\s+(?:needs? to|has to|should|must|can|could)\b`,
+  ].join("|"),
+  "i"
+);
 
 /** "Ask Marketer", "have Designer": a capitalised name right after an asking word. */
 const ASKED_FOR =
@@ -786,6 +804,49 @@ const misspeltAfterAsk = (words: string, name: string): boolean => {
   ].some((match) => editDistance(match[1]!.toLowerCase(), lower) === 1);
 };
 
+/** Words in a bot's name that say nothing about which bot it is. */
+const GENERIC_NAME_WORDS = new Set([
+  "bot",
+  "bots",
+  "agent",
+  "assistant",
+  "the",
+  "for",
+  "and",
+  "your",
+  "with",
+  "from",
+  "chief",
+  "staff",
+  "manager",
+]);
+
+/**
+ * Whether the user's words name this bot: its whole name, a one-edit typo
+ * after an asking word, or one of its own words with "bot" or "agent" next
+ * to it ("video bot" for "Ideas Bot For Video", "the research
+ * agent"). A word of the name on its own ("write content") is not enough.
+ */
+const namesBot = (words: string, name: string): boolean => {
+  const whole = name.trim();
+  if (whole.length === 0) return false;
+  const escape = (text: string): string =>
+    text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (new RegExp(`\\b${escape(whole)}\\b`, "i").test(words)) return true;
+  if (misspeltAfterAsk(words, whole)) return true;
+  return whole
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(
+      (word) => word.length >= 4 && !GENERIC_NAME_WORDS.has(word.toLowerCase())
+    )
+    .some((word) =>
+      new RegExp(
+        `(?<![\\p{L}\\p{N}])${escape(word)}\\s+(?:bot|agent|assistant)\\b`,
+        "iu"
+      ).test(words)
+    );
+};
+
 /**
  * Why the user's words do not let this task go to `target`, or null when
  * they do: they named it, said someone else should do it, or agreed to the
@@ -808,18 +869,12 @@ const handOffRefusal = (
     AGREEMENT.test(ownWords(lines.at(-1) ?? ""))
   )
     return null;
-  const named = others.filter(
-    (name) =>
-      name.trim().length > 0 &&
-      (new RegExp(
-        `\\b${name.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
-        "i"
-      ).test(words) ||
-        misspeltAfterAsk(words, name.trim()))
-  );
-  // The user named the bot(s) to hand it to: only those.
+  const named = others.filter((name) => namesBot(words, name));
+  // The user named the bot(s) to hand it to: only those, unless they also
+  // asked for someone ("someone gather the notes… Planner should plan").
   if (named.length > 0)
-    return named.some((name) => name.toLowerCase() === target.toLowerCase())
+    return named.some((name) => name.toLowerCase() === target.toLowerCase()) ||
+      ASK_FOR_HELP.test(words)
       ? null
       : `The user asked for ${named.join(" or ")}, not ${target}, so nothing was sent. Go to the bot they named, or ask them.`;
   if (HAND_OFF.test(words) || ASK_FOR_HELP.test(words)) return null;
@@ -7172,6 +7227,8 @@ export class ServiceHost {
     const recent = this.userWords.get(sessionId) ?? [];
     // The same message can arrive by both paths; it counts once.
     if (recent.at(-1)?.text === words) return;
+    // The user speaking again ends any rounds they asked for before.
+    this.taskRounds.delete(sessionId);
     this.userWords.set(sessionId, [
       ...recent.slice(-1),
       { text: words, at: Date.now() },
@@ -7189,6 +7246,13 @@ export class ServiceHost {
    * a hidden note clears them). A plain yes ("ok, go ahead") agrees to an
    * offer, so the message before it, which says what the work is, comes too.
    */
+  /** The user's fresh messages in the session, oldest first (at most two are kept). */
+  private recentUserWords(sessionId: string): string[] {
+    return (this.userWords.get(sessionId) ?? [])
+      .filter((entry) => Date.now() - entry.at < USER_WORDS_FRESH_MS)
+      .map((entry) => entry.text);
+  }
+
   private latestUserWords(sessionId: string): string {
     const recent = (this.userWords.get(sessionId) ?? []).filter(
       (entry) => Date.now() - entry.at < USER_WORDS_FRESH_MS
@@ -7220,17 +7284,45 @@ export class ServiceHost {
     // yes to the bot's offer: a weak model asked on its own for work it
     // had already done, spending credits nobody asked to spend.
     const bots = this.botService.list();
-    const refusal = handOffRefusal(
-      words,
-      bots.filter((bot) => bot.id !== askerId).map((bot) => bot.name),
-      bots.find((bot) => bot.id === targetId)?.name ?? "",
-      "ask"
-    );
+    const others = bots
+      .filter((bot) => bot.id !== askerId)
+      .map((bot) => bot.name);
+    const target = bots.find((bot) => bot.id === targetId)?.name ?? "";
+    // The user's standing yes (the asker's own setting) stands for each ask;
+    // without it, their words do, or the message just before ("can you get the
+    // numbers from Writer?" then "and when does the draft land?"). Only a question goes
+    // on the earlier message: a task carries the user's words, so it is
+    // judged by the latest alone.
+    const refusal =
+      bots.find((bot) => bot.id === askerId)?.delegatesFreely === true
+        ? null
+        : this.recentUserWords(askerSession).some(
+              (said) => handOffRefusal(said, others, target, "ask") == null
+            )
+          ? null
+          : handOffRefusal(words, others, target, "ask");
     if (refusal != null) return { error: refusal };
     return this.botAskService.ask(askerId, askerSession, targetId, request, {
       channel: this.ownChatOfTurn(askerSession),
     });
   }
+
+  /**
+   * Rounds the user asked for in a passer's chat ("until it's clean"): when
+   * the doer's report comes (armed), that note's turn may pass work back to
+   * the same doer with the user's words, until no rounds are left or the
+   * user speaks again. Nothing else a note starts can pass work on.
+   */
+  private readonly taskRounds = new Map<
+    string,
+    {
+      words: string;
+      doerId: string;
+      askId: string;
+      left: number;
+      armed: boolean;
+    }
+  >();
 
   private giveBotTask(
     askerId: string,
@@ -7239,6 +7331,31 @@ export class ServiceHost {
     task: string
   ): ReturnType<BotAskService["ask"]> {
     const words = this.latestUserWords(askerSession);
+    const rounds = this.taskRounds.get(askerSession);
+    if (
+      words.length === 0 &&
+      rounds?.armed === true &&
+      rounds.doerId === targetId &&
+      rounds.left > 0
+    ) {
+      const passed = this.botAskService.ask(
+        askerId,
+        askerSession,
+        targetId,
+        task,
+        {
+          kind: "task",
+          userWords: rounds.words,
+          channel: this.ownChatOfTurn(askerSession),
+        }
+      );
+      if ("ask" in passed) {
+        rounds.armed = false;
+        rounds.left -= 1;
+        rounds.askId = passed.ask.id;
+      }
+      return passed;
+    }
     if (words.length === 0)
       return {
         error:
@@ -7248,18 +7365,38 @@ export class ServiceHost {
     // (to the bot they named, if they named one) or agreed to one; "make me
     // a checklist" is a request to this bot.
     const bots = this.botService.list();
-    const refusal = handOffRefusal(
-      words,
-      bots.filter((bot) => bot.id !== askerId).map((bot) => bot.name),
-      bots.find((bot) => bot.id === targetId)?.name ?? "",
-      "task"
-    );
+    // The user's standing yes (the asker's own setting) stands for each
+    // hand-off; it is still only from a turn they started, with their words.
+    const refusal =
+      bots.find((bot) => bot.id === askerId)?.delegatesFreely === true
+        ? null
+        : handOffRefusal(
+            words,
+            bots.filter((bot) => bot.id !== askerId).map((bot) => bot.name),
+            bots.find((bot) => bot.id === targetId)?.name ?? "",
+            "task"
+          );
     if (refusal != null) return { error: refusal };
-    return this.botAskService.ask(askerId, askerSession, targetId, task, {
-      kind: "task",
-      userWords: words,
-      channel: this.ownChatOfTurn(askerSession),
-    });
+    const passed = this.botAskService.ask(
+      askerId,
+      askerSession,
+      targetId,
+      task,
+      {
+        kind: "task",
+        userWords: words,
+        channel: this.ownChatOfTurn(askerSession),
+      }
+    );
+    if ("ask" in passed && ROUNDS_ASKED.test(words))
+      this.taskRounds.set(askerSession, {
+        words,
+        doerId: targetId,
+        askId: passed.ask.id,
+        left: TASK_ROUNDS - 1,
+        armed: false,
+      });
+    return passed;
   }
 
   /** Doing bot's chat → the passed-on task that ended there, and the user's next words in it. */
@@ -7398,9 +7535,10 @@ export class ServiceHost {
    */
   private tellBotAsk(
     ask: BotAskRecord,
-    note: string,
+    report: string,
     extra: { userWords?: string } = {}
   ): void {
+    const note = this.withRounds(ask, report, extra.userWords != null);
     if (
       ask.channel == null ||
       !this.messagingGatewayService.relayNote(
@@ -7409,11 +7547,39 @@ export class ServiceHost {
         note
       )
     )
+      // A follow-up goes in hidden: most of the time the user's next words
+      // there are about something else, and the passer says nothing; when
+      // they change the task, the passer tells the user itself.
       this.deliverSessionNote(
         ask.askerSession,
         note,
-        this.exchangeTags(ask, note, extra.userWords)
+        extra.userWords != null ? undefined : this.exchangeTags(ask, note)
       );
+  }
+
+  /**
+   * A task's report, in a chat where the user asked for rounds: it says to
+   * check the work and pass back what is open, and lets that note's turn do
+   * so (or, at the last round, only report). A failed task ends the rounds.
+   */
+  private withRounds(
+    ask: BotAskRecord,
+    note: string,
+    followUp: boolean
+  ): string {
+    const rounds = this.taskRounds.get(ask.askerSession);
+    if (followUp || rounds == null || rounds.askId !== ask.id) return note;
+    const doer = this.botService.list().find((bot) => bot.id === ask.targetId);
+    if (
+      doer == null ||
+      this.botAskService.get(ask.askerId, ask.id)?.status !== "answered"
+    ) {
+      this.taskRounds.delete(ask.askerSession);
+      return note;
+    }
+    if (rounds.left > 0) rounds.armed = true;
+    else this.taskRounds.delete(ask.askerSession);
+    return `${note}\n\n${taskRoundsLine(doer, rounds.words, rounds.left)}`;
   }
 
   /**
@@ -7454,21 +7620,13 @@ export class ServiceHost {
    * ("Planner finished the task", expanding to the exchange) rather than
    * hide it: who, what, how it ended, and where the exchange lives.
    */
-  private exchangeTags(
-    ask: BotAskRecord,
-    note: string,
-    userWords?: string
-  ): UserTextTags {
+  private exchangeTags(ask: BotAskRecord, note: string): UserTextTags {
     const target = this.botService
       .list()
       .find((bot) => bot.id === ask.targetId);
     const record = this.botAskService.get(ask.askerId, ask.id) ?? ask;
     const outcome =
-      userWords != null
-        ? ("follow-up" as const)
-        : record.status === "failed"
-          ? ("failed" as const)
-          : ("answered" as const);
+      record.status === "failed" ? ("failed" as const) : ("answered" as const);
     const pair =
       ask.kind === "task"
         ? null
@@ -7488,7 +7646,6 @@ export class ServiceHost {
           request: requestGist(ask.request),
           outcome,
           ...(pair?.sessionId != null ? { chatSessionId: pair.sessionId } : {}),
-          ...(userWords != null ? { userWords } : {}),
         },
       },
     };

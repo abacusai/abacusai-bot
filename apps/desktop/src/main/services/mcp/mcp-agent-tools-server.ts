@@ -743,6 +743,9 @@ const ROUTINE_EDITOR_TOOLS: ReadonlySet<string> = new Set([
  * Not read from the platform catalog: that carries i18n keys and the main
  * process has no translator.
  */
+/** A request checked within this long of going out was only just sent. */
+const JUST_SENT_MS = 60_000;
+
 export class McpAgentToolsServer extends McpHttpServer {
   constructor(private readonly options: McpAgentToolsServerOptions) {
     // listChanged: a platform's tools appear the moment it connects, and
@@ -3203,12 +3206,18 @@ export class McpAgentToolsServer extends McpHttpServer {
           host.asks.answerRead?.(callerSession, ask.id);
         return this.ok(wrapBotAnswer(nameOf(ask), ask.answer ?? ""));
       }
+      // Checked right after it went: say nothing to the user about it yet.
+      // Bots checked at once and sent "still waiting" to a chat app, where
+      // each such line is a message of its own.
+      const justSent = Date.now() - ask.createdAt < JUST_SENT_MS;
       return this.ok(
         ask.status === "failed"
           ? `Request ${ask.id} failed: ${ask.error ?? "no reason given"}`
           : ask.status === "cancelled"
             ? `Request ${ask.id} was cancelled.`
-            : `Request ${ask.id} is not answered yet; its answer will come as a note.`
+            : justSent
+              ? `Request ${ask.id} went ${Math.round((Date.now() - ask.createdAt) / 1000)} seconds ago and is being answered. Its answer comes as a note by itself: do not tell the user it is still waiting, and do not check again.`
+              : `Request ${ask.id} is not answered yet; its answer will come as a note.`
       );
     }
     const asks = host.asks.list(askerId);

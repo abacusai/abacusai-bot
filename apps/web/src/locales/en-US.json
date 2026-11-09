@@ -551,7 +551,9 @@
         "notes": "Also keeps {{count}} days of notes",
         "clear": "Forget everything",
         "clearConfirm": "Forget everything here?"
-      }
+      },
+      "delegatesFreely": "Can ask other bots without checking",
+      "delegatesFreelyDetail": "Asks your other bots and passes them work when it helps, without asking you each time. Only while answering you."
     },
     "gone": {
       "chat": "This chat is gone",

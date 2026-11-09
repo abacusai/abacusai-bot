@@ -551,7 +551,9 @@
         "notes": "{{count}} day(s) of working notes on disk.",
         "clear": "Clear all",
         "clearConfirm": "Forget everything here?"
-      }
+      },
+      "delegatesFreely": "Pode consultar outros bots sem perguntar",
+      "delegatesFreelyDetail": "Consulta seus outros bots e passa trabalho para eles quando ajuda, sem perguntar toda vez. Só enquanto responde a você."
     },
     "gone": {
       "chat": "This chat is gone",

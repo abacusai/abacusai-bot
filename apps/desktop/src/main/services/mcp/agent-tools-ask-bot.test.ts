@@ -222,6 +222,25 @@ describe("check_bot_answers", () => {
     expect(out).toContain("not a message from the user");
   });
 
+  it("checked right after it went, it says not to tell the user it is waiting", async () => {
+    const { server } = setup([
+      record({ id: "q4", status: "running", createdAt: Date.now() - 3_000 }),
+      record({
+        id: "q5",
+        status: "running",
+        createdAt: Date.now() - 5 * 60_000,
+      }),
+    ]);
+    const fresh = text(
+      await server.executeTool("check_bot_answers", { id: "q4" }, "res-chat")
+    );
+    expect(fresh).toContain("do not tell the user it is still waiting");
+    const older = text(
+      await server.executeTool("check_bot_answers", { id: "q5" }, "res-chat")
+    );
+    expect(older).toContain("is not answered yet");
+  });
+
   it("tells the app the asker has the answer, so its note does not repeat it", async () => {
     const { server, service } = setup([
       record({ id: "q2", status: "answered", answer: "Draft: hello" }),

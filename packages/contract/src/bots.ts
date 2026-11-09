@@ -49,6 +49,12 @@ export interface Bot {
   /** Per bot rather than per machine: the bot loop is tuned for cheap models. */
   model: string | null;
   /**
+   * The user's standing yes: this bot may ask other bots and pass them work
+   * without the user saying so each time, still only while answering them.
+   * Off unless the user turns it on.
+   */
+  delegatesFreely?: boolean;
+  /**
    * Until when the platform serves this bot's runs on the house (the Chief of
    * Staff made at onboarding drafts the inbox before the account spends a
    * credit). Null for every bot the user made.
@@ -113,6 +119,7 @@ export type BotUpdateInput = Partial<
     | "avatarAccessory"
     | "wallpaper"
     | "model"
+    | "delegatesFreely"
     | "channel"
     // Main only (adopting a legacy channel bot); the renderer cannot send it.
     | "homeChannel"

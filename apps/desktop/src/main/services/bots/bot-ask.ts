@@ -365,10 +365,11 @@ export const taskStartedText = (
     behind > 0
       ? `It first finishes ${behind === 1 ? "an earlier task" : `${behind} earlier tasks`}, then this one.`
       : "It is working on it in its own chat now.",
-    'Its report will come to you in this chat as a "[bot answer]" note.',
-    "Tell the user you passed it on and carry on: do not wait for it, and do",
-    "not pass it again. check_bot_answers shows where it is. If the user no",
-    `longer wants it, cancel_bot_ask ${id} stops it.`,
+    'Its report comes to you in this chat by itself, as a "[bot answer]" note.',
+    "Tell the user you passed it on and carry on: do not wait for it, check",
+    "on it or pass it again, and do not tell them it is still running. Only",
+    "if the user asks where it stands, check_bot_answers shows it. If the user",
+    `no longer wants it, cancel_bot_ask ${id} stops it.`,
   ].join(" ");
 
 /** What `ask_bot` says the moment the ask is queued. */
@@ -384,12 +385,31 @@ export const askStartedText = (
     behind > 0
       ? `It first finishes ${behind === 1 ? "an earlier ask" : `${behind} earlier asks`} from you, then this one.`
       : "It is working on it now.",
-    'Its answer will come to you in this chat as a "[bot answer]" note, usually',
-    "within a few minutes. Tell the user you asked it and carry on with",
-    "anything else: do not wait for it, and do not ask again.",
-    "check_bot_answers shows where it is. If the user no longer wants it,",
+    'Its answer comes to you in this chat by itself, as a "[bot answer]" note,',
+    "usually within a few minutes. Tell the user you asked it and carry on",
+    "with anything else: do not wait for it, check on it or ask again, and do",
+    "not tell them it has not answered yet. Only if the user asks where it",
+    "stands, check_bot_answers shows it. If the user no longer wants it,",
     `cancel_bot_ask ${id} stops it.`,
   ].join(" ");
+
+/**
+ * Added to a task's report when the user asked for rounds ("until it is
+ * clean", "recheck after"): the passer checks the work itself and passes
+ * back what is still open, while rounds are left; at the last one it only
+ * reports. `left` counts the hand-offs still allowed.
+ */
+export const taskRoundsLine = (
+  doer: Named,
+  userWords: string,
+  left: number
+): string => {
+  const asked = userWords.replace(/\s+/g, " ").trim();
+  const quoted = asked.length > 160 ? `${asked.slice(0, 160)}…` : asked;
+  return left > 0
+    ? `The user asked for this to go round until it is done ("${quoted}"). Check ${doer.name}'s work yourself now. If something is still open, pass exactly that back to ${doer.name} with give_task_to_bot (${left} more ${left === 1 ? "round" : "rounds"} allowed); if it is done, tell the user it is done and what changed.`
+    : `That was the last round the user's request allows ("${quoted}"). Check ${doer.name}'s work, and tell the user what is done and what is still open; do not pass it back again.`;
+};
 
 /**
  * The bot's colleagues, in its standing prompt: who they are, and the rule
@@ -399,7 +419,7 @@ export const askStartedText = (
  * none.
  */
 export const colleagueLines = (
-  self: Pick<Bot, "id">,
+  self: Pick<Bot, "id" | "delegatesFreely">,
   bots: readonly Pick<Bot, "id" | "name" | "title" | "description">[]
 ): string[] => {
   const others = bots.filter((bot) => bot.id !== self.id).slice(0, 8);
@@ -407,13 +427,25 @@ export const colleagueLines = (
   return [
     "",
     "**Your fellow bots.** The user has other bots, each with its own mission.",
-    "Do the user's work yourself by default. Involve another bot only when the",
-    "user asks you to (they need not name it: pick the one whose mission fits)",
-    "or says yes when you offer: ask_bot for a quick question (a draft, a fact,",
-    "an opinion), give_task_to_bot to hand over real work. If another bot fits",
-    'a request better and the user has not asked, offer in one line ("Writer',
-    'could draft this. Want me to ask it?") and wait for their answer. Answers',
-    'come back later as "[bot answer]" notes. Questions other bots ask you are',
+    ...(self.delegatesFreely === true
+      ? [
+          "The user gave you a standing yes: it counts as their yes to every ask",
+          "and hand-off, so when another bot's mission clearly fits part of the",
+          "user's request, involve it without offering first: ask_bot for a",
+          "quick question (a draft, a fact, an opinion), give_task_to_bot to hand",
+          "over real work. Small things you still do yourself. Answers",
+        ]
+      : [
+          "Do the user's work yourself by default. Involve another bot only when the",
+          "user asks you to (they need not name it: pick the one whose mission fits)",
+          "or says yes when you offer: ask_bot for a quick question (a draft, a fact,",
+          "an opinion), give_task_to_bot to hand over real work. If another bot fits",
+          'a request better and the user has not asked, offer in one line ("Writer',
+          'could draft this. Want me to ask it?") and wait for their answer. Answers',
+        ]),
+    'come back later as "[bot answer]" notes. When you pass work to more than',
+    "one bot, give each its own part and say in each task what the others are",
+    "doing, so no two do the same work. Questions other bots ask you are",
     "answered in separate chats you do not see here: check my_activity before",
     "saying what they asked you, or that they asked nothing. Channels are this",
     "app's group chats of the user with several of their bots, not a chat app;",
