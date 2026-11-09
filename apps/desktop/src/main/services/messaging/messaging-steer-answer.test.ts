@@ -101,7 +101,13 @@ const fakeAgent = (emit: (event: Record<string, unknown>) => void) => {
   };
 };
 
-const harness = (options: { slowFirstSend?: boolean } = {}) => {
+const harness = (
+  options: {
+    slowFirstSend?: boolean;
+    /** The first send finishes only when this settles: a page still taking it. */
+    firstSendDone?: Promise<void>;
+  } = {}
+) => {
   /** What reached the chat, and which message each send threaded against. */
   const sent: string[] = [];
   const threads: Array<string | undefined> = [];
@@ -157,8 +163,10 @@ const harness = (options: { slowFirstSend?: boolean } = {}) => {
         replyContext?: Record<string, string>
       ) => {
         // A long first answer, sent in parts, still sending when the next is ready.
-        if (options.slowFirstSend === true && ++sends === 1)
+        const first = ++sends === 1;
+        if (options.slowFirstSend === true && first)
           await new Promise((resolve) => setTimeout(resolve, 30));
+        if (options.firstSendDone != null && first) await options.firstSendDone;
         sent.push(text);
         threads.push(replyContext?.quoted);
       },
@@ -313,6 +321,57 @@ describe("a message that lands while the bot finishes", () => {
     await flush();
 
     expect(h.sent).toEqual(["Your calendar is empty.", "4"]);
+  });
+
+  it("counts the user's own chat as having heard from the bot when the answer goes out", async () => {
+    vi.useFakeTimers();
+    try {
+      const h = harness();
+      const chat = h.lane("owner");
+      await chat.inbound("what is on my calendar?");
+      await vi.advanceTimersByTimeAsync(9 * 60_000);
+      await chat.inbound("2+2");
+      chat.agent().stream("Your calendar is empty.");
+      chat.agent().finish();
+      // Ten minutes into the turn, two after the answer: no "still working".
+      await vi.advanceTimersByTimeAsync(3 * 60_000);
+      expect(h.sent).toEqual(["Your calendar is empty."]);
+      chat.agent().stream("4");
+      chat.agent().finish();
+      chat.agent().end();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(h.sent).toEqual(["Your calendar is empty.", "4"]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("never lets an update line overtake an answer still sending", async () => {
+    vi.useFakeTimers();
+    try {
+      let release = (): void => {};
+      const h = harness({
+        firstSendDone: new Promise((resolve) => (release = resolve)),
+      });
+      const chat = h.lane("owner");
+      await chat.inbound("what is on my calendar?");
+      await chat.inbound("and find my biggest files");
+      chat.agent().stream("Your calendar is empty.");
+      chat.agent().finish();
+      chat.agent().stream("Looking through your folders now.");
+      chat.agent().finish(true);
+      // The update is due; the answer is still with the page.
+      await vi.advanceTimersByTimeAsync(6 * 60_000);
+      expect(h.sent).toEqual([]);
+      release();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(h.sent).toEqual([
+        "Your calendar is empty.",
+        "Looking through your folders now.",
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("sends the whole reply when the app's message waits for the next turn", async () => {

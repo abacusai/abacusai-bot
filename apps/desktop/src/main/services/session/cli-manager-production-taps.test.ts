@@ -38,6 +38,7 @@ const chatRoute = (fields: Partial<Route>): Route => ({
   failureReply: null,
   delivered: false,
   progressTimer: null,
+  progress: null,
   answerContexts: new Map(),
   appJoined: false,
   sending: null,

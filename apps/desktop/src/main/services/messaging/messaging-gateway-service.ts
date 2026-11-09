@@ -1545,6 +1545,11 @@ export class MessagingGatewayService {
       route.bufferMessageId = null;
       // The steered message is still owed its own answer, or the empty-reply line.
       route.delivered = false;
+      // The chat just heard the answer: progress counts from here, and an update written before it is stale.
+      if (route.progress != null) {
+        route.progress.heardAt = Date.now();
+        route.progress.line = null;
+      }
       return;
     }
 
@@ -1696,14 +1701,9 @@ export class MessagingGatewayService {
     const words = forChat(text, route.platform);
     const replyContext =
       replyTo === undefined ? route.replyContext : (replyTo ?? undefined);
-    // After the route's send still going, retries included, so the chat reads them in order.
-    const send = (): Promise<void> =>
-      this.safeSend(route.platform, route.chatId, words, replyContext);
-    const sending = route.sending == null ? send() : route.sending.then(send);
-    route.sending = sending;
-    void sending.finally(() => {
-      if (route.sending === sending) route.sending = null;
-    });
+    this.inRouteOrder(route, () =>
+      this.safeSend(route.platform, route.chatId, words, replyContext)
+    );
     if (!route.viaBot) return;
     this.options.emitAgentMessage?.(
       route.workspaceId,
@@ -2047,7 +2047,22 @@ export class MessagingGatewayService {
     );
   }
 
-  private async sayProgress(route: Route, text: string): Promise<void> {
+  /** Runs `send` after the route's send still going, retries included, so the chat reads them in order. */
+  private inRouteOrder(route: Route, send: () => Promise<void>): Promise<void> {
+    const sending = route.sending == null ? send() : route.sending.then(send);
+    route.sending = sending;
+    void sending.finally(() => {
+      if (route.sending === sending) route.sending = null;
+    });
+    return sending;
+  }
+
+  /** In the route's order, so it never overtakes an answer still sending. */
+  private sayProgress(route: Route, text: string): Promise<void> {
+    return this.inRouteOrder(route, () => this.sendProgress(route, text));
+  }
+
+  private async sendProgress(route: Route, text: string): Promise<void> {
     const connector = this.connectors.get(route.platform);
     if (!route.busy || connector == null) return;
     try {
