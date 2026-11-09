@@ -3836,6 +3836,7 @@
       "installFailed": "Güncelleme yüklenemedi",
       "manualInstall": "Güncelleme hazır — elle yükleyin",
       "installing": "Yeniden başlatılıyor…",
+      "preparing": "Preparing update…",
       "queued": "Geçerli görev bitince yeniden başlatılacak",
       "checking": "Kontrol ediliyor…",
       "downloading": "Güncelleme indiriliyor… %{{percent}}",

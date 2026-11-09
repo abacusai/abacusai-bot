@@ -73,6 +73,22 @@ const REQUESTED_RESTART_MAX_WAIT_MS = 10 * 60 * 1000;
 const QUIT_STALL_MS = 15_000;
 const QUIT_FORCE_MS = 30_000;
 
+// Squirrel.Mac re-verifies the whole zip's signature before staging it, which
+// a busy Mac can drag out for minutes. Past this the install fails and the
+// pill stays, rather than quitting with nothing staged.
+const MAC_STAGE_TIMEOUT_MS = 3 * 60 * 1000;
+
+/** Squirrel.Mac (Electron's autoUpdater), as MacUpdater holds it. */
+type Squirrel = Pick<NodeJS.EventEmitter, "once" | "removeListener"> & {
+  checkForUpdates(): void;
+};
+
+// electron-updater errors arrive with full HTTP headers stapled on.
+const shortMessage = (error: unknown): string => {
+  const full = error instanceof Error ? error.message : String(error);
+  return full.split("\n")[0] || full;
+};
+
 // a < b over dotted numeric versions; bad segments count as 0, which only
 // errs toward "not critical".
 function versionLessThan(a: string, b: string): boolean {
@@ -138,6 +154,7 @@ const initialStatus = (): UpdateStatus => ({
   failedPhase: null,
   manualInstall: null,
   restartQueued: false,
+  preparing: false,
 });
 
 /**
@@ -178,6 +195,19 @@ export class UpdateService {
   private debCanElevate = true;
   private failedDebVersion: string | null = null;
   private quitWatchdog: NodeJS.Timeout[] = [];
+
+  // Only MacUpdater has one.
+  private readonly squirrel =
+    (autoUpdater as unknown as { nativeUpdater?: Squirrel }).nativeUpdater ??
+    null;
+  /** The version Squirrel holds verified and staged. */
+  private stagedVersion: string | null = null;
+  /** Squirrel's fetch; it outlives a timeout, so a retry joins it. */
+  private staging: {
+    version: string;
+    done: Promise<string | null>;
+    cancel(): void;
+  } | null = null;
 
   constructor(private readonly deps: UpdateServiceDeps = {}) {
     if (this.debPackage)
@@ -275,9 +305,10 @@ export class UpdateService {
     });
 
     autoUpdater.on("error", (error) => {
-      // electron-updater errors arrive with full HTTP headers stapled on.
-      const fullMsg = error?.message ?? String(error);
-      const shortMsg = fullMsg.split("\n")[0] || fullMsg;
+      // MacUpdater re-emits Squirrel's errors here before stageMacBuild hears
+      // them; while Squirrel fetches, an error is the install's to report.
+      if (this.staging != null) return;
+      const shortMsg = shortMessage(error);
       console.warn(`[UpdateService] Update error: ${shortMsg}`);
       this.status.failedPhase = failedPhaseOf(this.status);
       this.status.checking = false;
@@ -331,6 +362,9 @@ export class UpdateService {
     this.status.progress = null;
     this.downloadedVersion = null;
     this.downloadedFile = null;
+    this.stagedVersion = null;
+    this.staging?.cancel();
+    this.staging = null;
     this.status.manualInstall = null;
     this.endRestartRequest();
     this.stopAutoRestartPoll();
@@ -433,6 +467,7 @@ export class UpdateService {
     if (
       !this.status.downloaded ||
       this.status.installing ||
+      this.status.preparing ||
       this.status.installStalled ||
       this.status.manualInstall != null
     ) {
@@ -445,18 +480,10 @@ export class UpdateService {
     const capped =
       requested && Date.now() - requestedAt >= REQUESTED_RESTART_MAX_WAIT_MS;
 
-    // Where idle time is unavailable (some Wayland setups report 0 forever)
-    // this never fires and the pill carries the update.
     if (
-      !requested &&
-      powerMonitor.getSystemIdleTime() < AUTO_RESTART_IDLE_SECONDS
-    )
-      return false;
-
-    if (
-      !capped &&
-      this.deps.isSafeToRestart != null &&
-      !this.deps.isSafeToRestart({ requested })
+      requested
+        ? !capped && this.deps.isSafeToRestart?.({ requested }) === false
+        : !this.idleAndSafe()
     ) {
       return false;
     }
@@ -485,8 +512,73 @@ export class UpdateService {
       `[UpdateService] ${this.status.updateInfo?.version ?? "update"} ready and the app is idle, restarting silently`
     );
     this.stopAutoRestartPoll();
-    void this.installUpdate({ silent: true, relaunchHidden });
+    void this.installUpdate({ silent: true, relaunchHidden, idle: true });
     return true;
+  }
+
+  // Where idle time is unavailable (some Wayland setups report 0 forever)
+  // this never holds and the pill carries the update.
+  private idleAndSafe(): boolean {
+    return (
+      powerMonitor.getSystemIdleTime() >= AUTO_RESTART_IDLE_SECONDS &&
+      this.deps.isSafeToRestart?.({ requested: false }) !== false
+    );
+  }
+
+  /**
+   * With autoInstallOnAppQuit off, MacUpdater only serves the zip, and its
+   * quitAndInstall starts Squirrel's fetch, which the quit watchdog then cuts
+   * short. Fetch it here while the app runs: MacUpdater marks any native
+   * update-downloaded, so its quitAndInstall then installs at once.
+   * Null once staged, else why not.
+   */
+  private async stageMacBuild(
+    squirrel: Squirrel,
+    version: string
+  ): Promise<string | null> {
+    if (this.stagedVersion === version) return null;
+    if (this.staging?.version !== version) {
+      this.staging?.cancel();
+      let settle: (failure: string | null) => void = () => {};
+      const staged = () => settle(null);
+      const failed = (error: unknown) => settle(shortMessage(error));
+      const done: Promise<string | null> = new Promise<string | null>(
+        (resolve) => {
+          settle = (failure) => {
+            squirrel.removeListener("update-downloaded", staged);
+            squirrel.removeListener("error", failed);
+            resolve(failure);
+          };
+        }
+      ).then((failure) => {
+        // A dropped build cleared `staging`; its late answer is no one's.
+        if (this.staging?.done === done) {
+          this.staging = null;
+          if (failure == null) this.stagedVersion = version;
+        }
+        return failure;
+      });
+      squirrel.once("update-downloaded", staged);
+      squirrel.once("error", failed);
+      this.staging = { version, done, cancel: () => settle("build dropped") };
+      try {
+        squirrel.checkForUpdates();
+      } catch (error) {
+        failed(error);
+      }
+    }
+    let timer: NodeJS.Timeout | undefined;
+    const timeout = new Promise<string>((resolve) => {
+      timer = setTimeout(
+        () => resolve("Squirrel did not stage it in time"),
+        MAC_STAGE_TIMEOUT_MS
+      );
+    });
+    try {
+      return await Promise.race([this.staging.done, timeout]);
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   // Fails to "no change": metadata is an escalation channel, never a blocker.
@@ -583,8 +675,7 @@ export class UpdateService {
       }
       return { success: true };
     } catch (error) {
-      const fullMsg = error instanceof Error ? error.message : String(error);
-      const shortMsg = fullMsg.split("\n")[0] || fullMsg;
+      const shortMsg = shortMessage(error);
       console.warn(`[UpdateService] Failed to check for updates: ${shortMsg}`);
       this.status.error = shortMsg;
       this.status.failedPhase = "check";
@@ -604,6 +695,8 @@ export class UpdateService {
      * auto-restart gate (status.restartQueued). A quit never waits.
      */
     whenSafe?: boolean;
+    /** The idle restart: it stands down if the app got busy meanwhile. */
+    idle?: boolean;
   }): Promise<{ success: boolean; error?: string }> {
     if (this.installRequest != null) return this.installRequest;
     if (
@@ -638,6 +731,7 @@ export class UpdateService {
   private async installDownloadedUpdate(options?: {
     silent?: boolean;
     relaunchHidden?: boolean;
+    idle?: boolean;
   }): Promise<{ success: boolean; error?: string }> {
     try {
       if (!this.status.downloaded) {
@@ -668,6 +762,30 @@ export class UpdateService {
         );
       }
       this.endRestartRequest();
+
+      if (this.squirrel != null && version != null) {
+        this.status.preparing = true;
+        this.status.error = null;
+        this.status.failedPhase = null;
+        this.emitStatusUpdate();
+        const failure = await this.stageMacBuild(this.squirrel, version);
+        this.status.preparing = false;
+        if (!this.status.downloaded || this.downloadedVersion !== version) {
+          this.emitStatusUpdate();
+          return { success: false, error: "The update changed meanwhile" };
+        }
+        if (failure != null)
+          throw new Error(`Couldn't prepare the update: ${failure}`);
+        // No quit then. Squirrel installs a staged build on the next quit,
+        // skipping the admission check only for one that passed it just now.
+        if (options?.idle && !this.idleAndSafe()) {
+          console.log(
+            `[UpdateService] ${version} staged but the app is busy again, installing on the next quit`
+          );
+          this.emitStatusUpdate();
+          return { success: false, error: "The app is busy" };
+        }
+      }
       this.status.installing = true;
       this.emitStatusUpdate();
 

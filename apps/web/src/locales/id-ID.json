@@ -3836,6 +3836,7 @@
       "installFailed": "Couldn't install the update",
       "manualInstall": "Pembaruan siap — instal secara manual",
       "installing": "Restarting…",
+      "preparing": "Preparing update…",
       "queued": "Dimulai ulang setelah tugas saat ini",
       "checking": "Memeriksa…",
       "downloading": "Mengunduh pembaruan… {{percent}}%",

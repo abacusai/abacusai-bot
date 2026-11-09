@@ -3836,6 +3836,7 @@
       "installFailed": "Couldn't install the update",
       "manualInstall": "Atualização pronta — instale manualmente",
       "installing": "Restarting…",
+      "preparing": "Preparing update…",
       "queued": "Reinicia após a tarefa atual",
       "checking": "Procurando…",
       "downloading": "Baixando atualização… {{percent}}%",

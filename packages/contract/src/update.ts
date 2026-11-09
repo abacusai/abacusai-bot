@@ -39,6 +39,11 @@ export interface UpdateStatus {
    * for it to end (capped). Absent from older shells.
    */
   restartQueued?: boolean;
+  /**
+   * macOS: Squirrel is verifying and staging the build before the restart;
+   * `installing` follows once it is staged. Absent from older shells.
+   */
+  preparing?: boolean;
 }
 
 export interface UpdateManualInstall {
