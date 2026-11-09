@@ -326,6 +326,13 @@ const useMemoryWrites = () => {
       db.collections.memories.delete(row.id).isPersisted.promise.catch(fail),
   };
 };
+/** A card's filled-in lines, one per line; a "Goal:" with nothing after it is left out. */
+const cardText = (body: string): string =>
+  body
+    .split("\n")
+    .filter((line) => !/^\s*[^:]{1,20}:\s*$/.test(line) && line.trim() !== "")
+    .join("\n");
+
 const NoteRow = ({
   row,
   scope,
@@ -344,7 +351,7 @@ const NoteRow = ({
     <div>
       <SettingRow
         id={`memory-${row.id}`}
-        title={row.body}
+        title={row.type === "card" ? cardText(row.body) : row.body}
         detail={[
           label,
           t(TYPE_LABELS[row.type]),
@@ -362,17 +369,19 @@ const NoteRow = ({
             >
               {t("memory.edit")}
             </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={busy}
-              onClick={() => {
-                setBusy(true);
-                void writes.forget(row).finally(() => setBusy(false));
-              }}
-            >
-              {t("phase5.forget")}
-            </Button>
+            {row.type !== "card" && (
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => {
+                  setBusy(true);
+                  void writes.forget(row).finally(() => setBusy(false));
+                }}
+              >
+                {t("phase5.forget")}
+              </Button>
+            )}
           </>
         )}
       </SettingRow>
@@ -421,7 +430,10 @@ const NoteRow = ({
 const AddNoteRow = ({ id, scope }: { id: string; scope: MemoryScope }) => {
   const { t } = useTranslation();
   const writes = useMemoryWrites();
-  const [type, setType] = useState<NoteType>("rule");
+  // About you is mostly rules; a project is mostly facts and decisions.
+  const [type, setType] = useState<NoteType>(
+    scope.scope === "you" ? "rule" : "fact"
+  );
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   return (
@@ -519,9 +531,7 @@ const ProjectCard = ({
         </CollapsibleTrigger>
       </SettingRow>
       <CollapsibleContent className="pb-2">
-        {card != null && (
-          <NoteRow row={card} scope={scope} label={t("memory.types.card")} />
-        )}
+        {card != null && <NoteRow row={card} scope={scope} />}
         {notes.map((row) => (
           <NoteRow key={row.id} row={row} scope={scope} />
         ))}

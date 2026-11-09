@@ -102,7 +102,7 @@ export const SettingRow = ({
     <div className="min-w-0 flex-[1_1_140px]">
       <div
         id={`${id}-label`}
-        className="phone:text-[15px] text-[13px] font-medium break-words"
+        className="phone:text-[15px] text-[13px] font-medium break-words whitespace-pre-line"
       >
         {title}
       </div>
