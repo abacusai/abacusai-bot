@@ -53,6 +53,7 @@ import {
   type MessagingPlatformId,
   describePlatformForAgent,
   isOwnChatTarget,
+  isSelfName,
   selfLaneOf,
   SELF_LANE_FOR_APP,
 } from "@abacus-ai/contract/messaging";
@@ -562,7 +563,13 @@ export interface McpAgentToolsServerOptions {
       text: string,
       /** The calling bot, named on what it sends to the user's own chat. */
       fromBotId?: string
-    ) => Promise<void>;
+    ) => Promise<{
+      platform: MessagingPlatformId;
+      /** The app asked for, when it went to another app's own chat. */
+      downApp: string | null;
+      /** No path to the user was up: it goes, once, when one is back. */
+      queued: boolean;
+    } | void>;
     /** Throws where unsupported. */
     sendFile?: (
       platform: MessagingPlatformId,
@@ -2732,8 +2739,10 @@ export class McpAgentToolsServer extends McpHttpServer {
       );
     if (callerSession != null)
       this.options.noteRoutinePlatform?.(callerSession, platform);
-    // The platform being addressed, not "some platform is up".
-    const unavailable = this.notLinked(platform);
+    // The platform being addressed, not "some platform is up". "me" is not
+    // one lane: the gateway finds any path to the user's own chat, or owes it.
+    const toSelf = isSelfName(to) && attachmentPath.length === 0;
+    const unavailable = toSelf ? null : this.notLinked(platform);
     if (unavailable != null) return unavailable;
     if (to.length === 0) return this.err('"to" is required.');
     if (attachmentPath.length === 0 && message.trim().length === 0)
@@ -2793,9 +2802,22 @@ export class McpAgentToolsServer extends McpHttpServer {
       callerSession != null
         ? (this.options.botIdForSession?.(callerSession) ?? undefined)
         : undefined;
-    await messaging.send(platform, to, message, fromBotId);
+    const result = await messaging.send(platform, to, message, fromBotId);
     noteSent();
+    const went = typeof result === "object" ? result : null;
 
+    if (went != null && went.queued)
+      return this.ok(
+        "Queued: no chat app reaches the user right now, so it goes by itself, once, as soon as one is back. " +
+          "Do not send it again and do not say it was delivered; if you tell the user anything, say it is queued."
+      );
+    if (went != null && went.downApp != null)
+      return this.ok(
+        `Sent to the user's own chat on ${went.platform}: ${went.downApp} could not carry it right now, ` +
+          "so it went there with a line saying so. Do not send it again."
+      );
+    if (went != null && went.platform !== platform)
+      return this.ok(`Sent to ${to} on ${went.platform}.`);
     return this.ok(`Sent to ${to} on ${platform}.`);
   }
 

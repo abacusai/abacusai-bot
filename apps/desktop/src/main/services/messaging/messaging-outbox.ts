@@ -52,7 +52,7 @@ export interface ChatOutboxOptions {
    * The platform is down until a link comes back (re-scan, reload): an
    * attempt now can only fail, so none is made or counted.
    */
-  waitingOnLink?: (platform: MessagingPlatformId) => boolean;
+  waitingOnLink?: (message: OwedMessage) => boolean;
   /** The last attempt failed too: tell the user it never went. */
   giveUp: (message: OwedMessage) => Promise<void>;
 }
@@ -93,6 +93,11 @@ export class ChatOutbox {
 
   get size(): number {
     return this.pending.length;
+  }
+
+  /** Whether anything is owed to the user's own chat, on any app. */
+  owesSelf(): boolean {
+    return this.pending.some((message) => message.toSelf === true);
   }
 
   /** Whether anything is owed on the platform. */
@@ -171,7 +176,7 @@ export class ChatOutbox {
       if (message.notBefore != null && now < message.notBefore) continue;
       // Tried when the link is back; the gateway flushes on every connect.
       if (
-        this.options.waitingOnLink?.(message.platform) === true &&
+        this.options.waitingOnLink?.(message) === true &&
         this.options.now() - message.firstFailedAt <= OUTBOX_MAX_AGE_MS
       )
         continue;

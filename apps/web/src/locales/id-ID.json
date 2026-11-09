@@ -4872,7 +4872,10 @@
       "cutoffVerify": "Atau verifikasi nomor teleponmu untuk membuka kredit Abacus gratismu, lalu beralih ke RouteLLM - Open di aplikasi: {{link}}",
       "cutoffTopUp": "Atau tambahkan kredit Abacus dan beralih ke RouteLLM - Open di aplikasi: {{link}}",
       "stillWorkingOn": "Masih saya kerjakan ({{minutes}} menit sejauh ini). {{activity}}… Saya akan membalas di sini setelah selesai.",
-      "routineFullRun": "Laporan lengkapnya ada di AbacusAI Bot, di Rutinitas → {{name}}."
+      "routineFullRun": "Laporan lengkapnya ada di AbacusAI Bot, di Rutinitas → {{name}}.",
+      "viaOtherApp": "{{platform}} sedang tidak bisa dijangkau, jadi pesan ini dikirim ke sini.",
+      "missedWhileOff_one": "{{count}} chat mengirim pesan saat komputer mati atau tidur; saya belum membalasnya.",
+      "missedWhileOff_other": "{{count}} chat mengirim pesan saat komputer mati atau tidur; saya belum membalasnya."
     },
     "unavailable": {
       "title": {

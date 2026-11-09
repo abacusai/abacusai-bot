@@ -4872,7 +4872,10 @@
       "cutoffVerify": "Ou verifique seu telefone para liberar seus créditos gratuitos da Abacus e depois mude para o RouteLLM - Open no app: {{link}}",
       "cutoffTopUp": "Ou adicione créditos da Abacus e mude para o RouteLLM - Open no app: {{link}}",
       "stillWorkingOn": "Ainda estou trabalhando nisso ({{minutes}} min até agora). {{activity}}… Respondo aqui quando terminar.",
-      "routineFullRun": "O relatório completo está no AbacusAI Bot, em Rotinas → {{name}}."
+      "routineFullRun": "O relatório completo está no AbacusAI Bot, em Rotinas → {{name}}.",
+      "viaOtherApp": "{{platform}} não está acessível agora, então isto chegou aqui.",
+      "missedWhileOff_one": "{{count}} conversa escreveu enquanto o computador estava desligado ou em repouso; não respondi.",
+      "missedWhileOff_other": "{{count}} conversas escreveram enquanto o computador estava desligado ou em repouso; não respondi."
     },
     "unavailable": {
       "title": {

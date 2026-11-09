@@ -120,6 +120,7 @@ export const APP_NOTE_TAGS = {
     "delivery unconfirmed",
     "routine report",
     "routine report sent",
+    "late",
   ],
 } as const;
 

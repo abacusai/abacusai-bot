@@ -131,6 +131,8 @@ export class TelegramWebConnector implements MessagingConnector {
     (error) => this.logFailure("inbound sweep", error)
   );
   private contacts: Array<{ chatId: string; name: string }> = [];
+  /** The signed-in account's own peer id: its Saved Messages chat. */
+  private ownPeerId: string | null = null;
   /** Chat id -> the last inbound message id we already reported, for dedupe. */
   private lastSeen = new Map<string, string>();
   /** Chat id -> recent texts we sent there; the sweep skips our own echoes. */
@@ -221,6 +223,7 @@ export class TelegramWebConnector implements MessagingConnector {
     this.running = false;
     this.parked = false;
     this.loggedIn = false;
+    this.ownPeerId = null;
     this.loginPoll.stop();
     this.inboundPoll.stop();
     const win = this.window;
@@ -423,6 +426,8 @@ export class TelegramWebConnector implements MessagingConnector {
 
     if (state.loggedIn && !this.loggedIn) {
       this.loggedIn = true;
+      // Whose Saved Messages is read again on the next login: an account switch must never keep the old one.
+      this.ownPeerId = null;
       // Hide rather than close: the page is the session every send drives.
       const win = this.window;
       if (win != null && !win.isDestroyed() && win.isVisible()) {
@@ -466,6 +471,7 @@ export class TelegramWebConnector implements MessagingConnector {
       this.signedOutTicks = 0;
       // Signed out elsewhere, or expired: the session ended, not "connecting".
       this.loggedIn = false;
+      this.ownPeerId = null;
       this.callbacks.onState(
         "needs_login",
         "Telegram is signed out. The session was ended from another device or expired. Reconnect to sign in again."
@@ -540,6 +546,17 @@ export class TelegramWebConnector implements MessagingConnector {
       {}
     );
     if (rows != null) this.contacts = rows;
+    // Read with the list every time: it always names the account signed in now.
+    if (this.loggedIn)
+      this.ownPeerId = await this.run<string>(OWN_PEER_SCRIPT, {});
+  }
+
+  /** See MessagingConnector.ownChatForSend: Saved Messages, once its row is in the list. */
+  ownChatForSend(): string | null {
+    if (!this.loggedIn || this.ownPeerId == null) return null;
+    return this.contacts.some((row) => row.chatId === this.ownPeerId)
+      ? this.ownPeerId
+      : null;
   }
 
   // ── Page driving ────────────────────────────────────────────────────────
@@ -676,6 +693,14 @@ const LOGIN_STATE_SCRIPT = pageScript`
     if (m) loginError = m[0].replace(/\\s+/g, ' ').trim().slice(0, 120);
   }
   return { loggedIn: !loginVisible && chatUi, loginVisible, loginError };
+`;
+
+/** The signed-in account's user id, which is its Saved Messages peer id. */
+const OWN_PEER_SCRIPT = pageScript`
+  try {
+    const auth = JSON.parse(localStorage.getItem('user_auth') || 'null');
+    return auth && auth.id != null ? String(auth.id) : null;
+  } catch (e) { return null; }
 `;
 
 /** The dialog list as contacts: chat id (peer id) and title. */

@@ -14,9 +14,12 @@ import {
 import { nativeT } from "../config/native-language";
 import {
   backoffDelayMs,
+  type BacklogCandidate,
+  type BacklogChat,
   BOT_SIGNATURE,
   boundedWait,
   chunkMessage,
+  collectBacklog,
   looksLikeBotOutput,
   isEphemeralPreview,
   previewMatchesSent,
@@ -103,6 +106,9 @@ const refuseNonConversation = (chatId: string): void => {
 const LOGIN_POLL_MS = 1500;
 
 /** How often to sweep the chat list for new inbound messages. */
+/** Messages read per chat by a catch-up. */
+const BACKLOG_READ_COUNT = 20;
+
 const INBOUND_POLL_MS = 5000;
 /** How long a name waits for the chat list after a link before saying WhatsApp is still syncing. */
 const CHAT_SYNC_WAIT_MS = 60_000;
@@ -742,6 +748,67 @@ export class WhatsAppWebConnector implements MessagingConnector {
         `WhatsApp is still syncing your chats after linking, so "${chatId}" cannot be looked up yet. ` +
           "Try again in a minute, or send to a phone number in international format."
       );
+  }
+
+  /**
+   * See MessagingConnector.backlog: from WhatsApp's own store, so only with
+   * the bridge (the page driver cannot date a message). Same filters as the
+   * live path: the user's words count only in the self chat, never a bot's.
+   */
+  async backlog(
+    sinceMs: number,
+    maxChats: number,
+    wanted: (chat: BacklogCandidate) => boolean
+  ): Promise<BacklogChat[]> {
+    return this.serialize(async () => {
+      if (!(await this.useBridge()) || this.bridge == null)
+        throw new Error("the WhatsApp store bridge is not attached yet");
+      await this.findSelf();
+      await this.refreshBridgeChats();
+      if (!this.chatListRead)
+        throw new Error("WhatsApp has not listed its chats yet");
+      const bridge = this.bridge;
+      const recent = this.bridgeChats
+        .filter((chat) => (chat.t ?? 0) * 1000 > sinceMs)
+        .sort((a, b) => (b.t ?? 0) - (a.t ?? 0));
+      const byKey = new Map<string, BridgeChat>();
+      const rows = recent.map((chat) => {
+        const own = this.isOwnChat(chat.jid);
+        const chatId = own ? (this.self ?? chat.jid) : chat.name;
+        byKey.set(chatId, chat);
+        return {
+          chatId,
+          name: own ? (this.selfDisplayName ?? chatId) : chat.name,
+          own,
+          kind: own ? ("direct" as const) : whatsAppChatKind(chat.jid, chat),
+        };
+      });
+      return collectBacklog(
+        rows,
+        async (chatId) => {
+          const chat = byKey.get(chatId)!;
+          const own = this.isOwnChat(chat.jid);
+          const read = await bridge.readChat(chat.jid, BACKLOG_READ_COUNT);
+          if (!read.ok) return [];
+          return read.rows.map((message) => {
+            const mine =
+              message.fromMe &&
+              (!own ||
+                this.sentIds.has(message.id) ||
+                looksLikeBotOutput(message.text));
+            return {
+              id: message.id,
+              at: message.t * 1000,
+              text: normalizeScrapedText(message.text),
+              direction: mine ? ("out" as const) : ("in" as const),
+            };
+          });
+        },
+        sinceMs,
+        maxChats,
+        wanted
+      );
+    });
   }
 
   private async refreshBridgeChats(): Promise<void> {
@@ -1780,6 +1847,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
         kind: isSelfChat ? "direct" : whatsAppChatKind(message.jid, chat),
         ...(chat?.isGroup === true ? { chatName: chat.name } : {}),
         text,
+        id: message.id,
       });
     }
   }

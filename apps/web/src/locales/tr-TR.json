@@ -4872,7 +4872,10 @@
       "cutoffVerify": "Ya da ücretsiz Abacus kredilerinin kilidini açmak için telefonunu doğrula, ardından uygulamada RouteLLM - Open'a geç: {{link}}",
       "cutoffTopUp": "Ya da Abacus kredisi ekle ve uygulamada RouteLLM - Open'a geç: {{link}}",
       "stillWorkingOn": "Hâlâ üzerinde çalışıyorum (şu ana kadar {{minutes}} dk). {{activity}}… Bitince buradan yanıt vereceğim.",
-      "routineFullRun": "Raporun tamamı AbacusAI Bot'ta, Rutinler → {{name}} altında."
+      "routineFullRun": "Raporun tamamı AbacusAI Bot'ta, Rutinler → {{name}} altında.",
+      "viaOtherApp": "{{platform}} şu anda erişilemiyor, bu yüzden bu mesaj buraya geldi.",
+      "missedWhileOff_one": "Bilgisayar kapalıyken veya uykudayken {{count}} sohbet yazdı; yanıtlamadım.",
+      "missedWhileOff_other": "Bilgisayar kapalıyken veya uykudayken {{count}} sohbet yazdı; yanıtlamadım."
     },
     "unavailable": {
       "title": {

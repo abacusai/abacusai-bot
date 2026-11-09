@@ -217,6 +217,8 @@ it("tags the sender intro and later reminder at the framed message boundary", as
     "[Discord message from Ada] hello\n\nnext paragraph"
   );
   h.idle();
+  // The empty turn's notice to the user is worded before the turn ends.
+  await new Promise((resolve) => setTimeout(resolve, 20));
   await h.inbound("C1", "U1", "Ada", "second");
   expect(h.tags[1]?.operator?.kind).toBe("auto-reply-reminder");
   expect(visibleUserText(h.prompts[1]!, h.tags[1])).toBe(

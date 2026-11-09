@@ -71,6 +71,7 @@ export default defineConfig({
           name: "main",
           environment: "node",
           ...ciTimeouts,
+          setupFiles: ["./src/main/test-home.setup.ts"],
           include: [
             "src/main/**/*.test.ts",
             "scripts/vite-resolution.test.ts",

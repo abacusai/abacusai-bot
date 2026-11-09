@@ -4872,7 +4872,10 @@
       "cutoffVerify": "또는 전화번호를 인증해 무료 Abacus 크레딧을 잠금 해제한 다음 앱에서 RouteLLM - Open으로 전환하세요: {{link}}",
       "cutoffTopUp": "또는 Abacus 크레딧을 충전하고 앱에서 RouteLLM - Open으로 전환하세요: {{link}}",
       "stillWorkingOn": "아직 작업 중입니다(지금까지 {{minutes}}분). {{activity}}… 끝나면 여기서 답장할게요.",
-      "routineFullRun": "전체 보고서는 AbacusAI Bot의 루틴 → {{name}}에 있습니다."
+      "routineFullRun": "전체 보고서는 AbacusAI Bot의 루틴 → {{name}}에 있습니다.",
+      "viaOtherApp": "지금 {{platform}}에 연결할 수 없어 여기로 보냈습니다.",
+      "missedWhileOff_one": "컴퓨터가 꺼져 있거나 절전 중일 때 {{count}}개의 채팅에서 메시지가 왔습니다. 아직 답장하지 않았습니다.",
+      "missedWhileOff_other": "컴퓨터가 꺼져 있거나 절전 중일 때 {{count}}개의 채팅에서 메시지가 왔습니다. 아직 답장하지 않았습니다."
     },
     "unavailable": {
       "title": {

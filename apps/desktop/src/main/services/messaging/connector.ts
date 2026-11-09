@@ -44,6 +44,94 @@ export type InboundMessage = {
   }>;
   /** Per-platform context a reply needs: an email Message-ID, a thread_ts. */
   replyContext?: Record<string, string>;
+  /** The platform's own message id, where it has one: catch-up dedupes on it. */
+  id?: string;
+};
+
+/** A chat `backlog` may read, as the answer rule judges it. */
+export type BacklogCandidate = {
+  chatId: string;
+  userId: string;
+  kind?: MessagingChatKind;
+  /** The user's own chat on the lane. */
+  own: boolean;
+};
+
+/** One chat's traffic since the lane last watched, as `backlog` reads it. */
+export type BacklogChat = {
+  chatId: string;
+  userId: string;
+  userName: string | null;
+  kind?: MessagingChatKind;
+  /** Messages from the other side after `since`, oldest first. */
+  messages: Array<{ id: string; at: number; text: string }>;
+  /** The chat's newest message is the user's own: answered from the phone. */
+  answered: boolean;
+  /** Past `maxChats`: not opened, so nothing was read. */
+  unread?: true;
+};
+
+/**
+ * Read a backlog the same way on every lane: the chats the answer rule wants
+ * (the user's own first), capped, then each opened for what came in after
+ * `since`. Over the cap a wanted chat is only reported, never read.
+ */
+export const collectBacklog = async (
+  candidates: ReadonlyArray<{
+    chatId: string;
+    userId?: string;
+    name: string | null;
+    kind?: MessagingChatKind;
+    own: boolean;
+  }>,
+  read: (
+    chatId: string
+  ) => Promise<
+    Array<{ id?: string; at: number; text: string; direction: "in" | "out" }>
+  >,
+  sinceMs: number,
+  maxChats: number,
+  wanted: (chat: BacklogCandidate) => boolean
+): Promise<BacklogChat[]> => {
+  const chats = candidates
+    .filter((chat) =>
+      wanted({
+        chatId: chat.chatId,
+        userId: chat.userId ?? chat.chatId,
+        own: chat.own,
+        ...(chat.kind != null ? { kind: chat.kind } : {}),
+      })
+    )
+    .sort((a, b) => Number(b.own) - Number(a.own));
+  const out: BacklogChat[] = [];
+  for (const [index, chat] of chats.entries()) {
+    const base = {
+      chatId: chat.chatId,
+      userId: chat.userId ?? chat.chatId,
+      userName: chat.name,
+      ...(chat.kind != null ? { kind: chat.kind } : {}),
+    };
+    if (index >= maxChats) {
+      out.push({ ...base, messages: [], answered: false, unread: true });
+      continue;
+    }
+    const rows = (await read(chat.chatId)).filter(
+      (row) => row.text.trim().length > 0
+    );
+    const newest = rows.at(-1);
+    out.push({
+      ...base,
+      answered: newest?.direction === "out",
+      messages: rows
+        .filter((row) => row.direction === "in" && row.at > sinceMs)
+        .map((row) => ({
+          id: row.id ?? `${chat.chatId}:${row.at}:${row.text.slice(0, 40)}`,
+          at: row.at,
+          text: row.text,
+        })),
+    });
+  }
+  return out;
 };
 
 export type ConnectorCallbacks = {
@@ -100,6 +188,23 @@ export interface MessagingConnector {
    * one address the user must never be asked for, since connecting set it.
    */
   selfChatId?(): string | null;
+  /**
+   * A chat only the user reads that the app may write to but never answers
+   * (Telegram's Saved Messages): a way to reach "me" when the preferred one
+   * is down. Never `selfChatId`, which the inbound gate treats as the owner.
+   */
+  ownChatForSend?(): string | null;
+  /**
+   * What arrived while the lane was not watching: chats with activity after
+   * `sinceMs` that `wanted` keeps (the gateway's answer rule), the user's own
+   * first, then newest; at most `maxChats` opened. Optional: a lane that
+   * cannot date its chats without opening them (marking them read) has none.
+   */
+  backlog?(
+    sinceMs: number,
+    maxChats: number,
+    wanted: (chat: BacklogCandidate) => boolean
+  ): Promise<BacklogChat[]>;
   /**
    * Whether the chat list has actually been read. A page reports `connected`
    * before its DM rail renders, so the gateway treats a connected platform as
