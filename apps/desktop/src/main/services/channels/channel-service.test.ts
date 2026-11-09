@@ -935,6 +935,26 @@ describe("starting the agreed work", () => {
     );
   });
 
+  it("the lead is not woken after agreed work: the plan is the scope", async () => {
+    const { service, turns, works, flush, store } = setup();
+    const { id } = service.create({ botIds: ["chief", "res", "wri"] });
+    store.writeMessages(id, [
+      {
+        id: "c3",
+        author: { kind: "bot", botId: "chief" },
+        text: "Agreed:\n1. @Writer the DM\n2. Researcher the list",
+        at: 1,
+        conclusion: true,
+      },
+    ]);
+    service.startAgreed(id, "c3");
+    await flush();
+    works[0]!.resolve("<reply>DM written.</reply>");
+    works[1]!.resolve("<reply>List done.</reply>");
+    await flush();
+    expect(turns).toHaveLength(0);
+  });
+
   it("sends each agreed item to its owner's own chat as work, with a card each; once", async () => {
     const { service, turns, works, flush, store } = setup();
     const { id } = service.create({ botIds: ["chief", "res", "wri"] });

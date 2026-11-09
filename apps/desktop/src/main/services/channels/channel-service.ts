@@ -1113,7 +1113,9 @@ export class ChannelService {
           replyTo: userMessageId,
         });
         if (chain == null) {
-          this.wakeLead(channelId, botId, userMessageId);
+          // An agreed plan is a scope the team settled and the user started:
+          // the lead is not woken to add work beyond it.
+          if (!fromPlan) this.wakeLead(channelId, botId, userMessageId);
           return report;
         }
         // The next step gets the whole turn, not only the posted message.
