@@ -139,6 +139,14 @@ describe("answerWords: what is kept of the asked bot's turn", () => {
     );
   });
 
+  it("a <reply> named in the narration does not open the answer", () => {
+    expect(
+      answerWords(
+        "I'll put the answer in <reply> tags. Let me draft the posts first.\n<reply>Three posts: one, two, three.</reply>"
+      )
+    ).toBe("Three posts: one, two, three.");
+  });
+
   it("is empty for NO_REPLY or nothing", () => {
     expect(answerWords("<reply>NO_REPLY</reply>")).toBe("");
     expect(answerWords("")).toBe("");

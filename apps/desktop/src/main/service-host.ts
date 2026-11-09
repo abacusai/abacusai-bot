@@ -390,6 +390,7 @@ import {
   type OwnChatLine,
   requestGist,
   taskFollowUpNote,
+  taskRoundsLine,
 } from "./services/bots/bot-ask";
 import {
   type BotAskRecord,
@@ -695,6 +696,14 @@ interface ChannelWorkRun {
 }
 
 const USER_WORDS_FRESH_MS = 15 * 60_000;
+/** A fix-and-recheck loop the user asked for: the first hand-off and at most two more. */
+const TASK_ROUNDS = 3;
+/**
+ * "Until it's clean", "recheck after", "check it again": the user asked for
+ * rounds, not one pass, so the passer may pass work back after each report.
+ */
+const ROUNDS_ASKED =
+  /\b(?:until|till)\b[^.?!\n]{0,40}\b(?:clean|done|fixed|pass(?:es)?|green|nothing (?:is )?left|no (?:more )?(?:issues|bugs|problems|errors))\b|\b(?:re-?check|re-?audit|re-?review|check (?:it |that |them )?again|review (?:it |that |them )?again|verify (?:the |each )?fix(?:es)?|back and forth)\b/i;
 /** How long after a passed-on task ends the user's next words there still go back to the passer. */
 const TASK_FOLLOW_UP_MS = 60 * 60_000;
 
@@ -6841,6 +6850,8 @@ export class ServiceHost {
     const recent = this.userWords.get(sessionId) ?? [];
     // The same message can arrive by both paths; it counts once.
     if (recent.at(-1)?.text === words) return;
+    // The user speaking again ends any rounds they asked for before.
+    this.taskRounds.delete(sessionId);
     this.userWords.set(sessionId, [
       ...recent.slice(-1),
       { text: words, at: Date.now() },
@@ -6919,6 +6930,23 @@ export class ServiceHost {
     });
   }
 
+  /**
+   * Rounds the user asked for in a passer's chat ("until it's clean"): when
+   * the doer's report comes (armed), that note's turn may pass work back to
+   * the same doer with the user's words, until no rounds are left or the
+   * user speaks again. Nothing else a note starts can pass work on.
+   */
+  private readonly taskRounds = new Map<
+    string,
+    {
+      words: string;
+      doerId: string;
+      askId: string;
+      left: number;
+      armed: boolean;
+    }
+  >();
+
   private giveBotTask(
     askerId: string,
     askerSession: string,
@@ -6926,6 +6954,31 @@ export class ServiceHost {
     task: string
   ): ReturnType<BotAskService["ask"]> {
     const words = this.latestUserWords(askerSession);
+    const rounds = this.taskRounds.get(askerSession);
+    if (
+      words.length === 0 &&
+      rounds?.armed === true &&
+      rounds.doerId === targetId &&
+      rounds.left > 0
+    ) {
+      const passed = this.botAskService.ask(
+        askerId,
+        askerSession,
+        targetId,
+        task,
+        {
+          kind: "task",
+          userWords: rounds.words,
+          channel: this.ownChatOfTurn(askerSession),
+        }
+      );
+      if ("ask" in passed) {
+        rounds.armed = false;
+        rounds.left -= 1;
+        rounds.askId = passed.ask.id;
+      }
+      return passed;
+    }
     if (words.length === 0)
       return {
         error:
@@ -6947,11 +7000,26 @@ export class ServiceHost {
             "task"
           );
     if (refusal != null) return { error: refusal };
-    return this.botAskService.ask(askerId, askerSession, targetId, task, {
-      kind: "task",
-      userWords: words,
-      channel: this.ownChatOfTurn(askerSession),
-    });
+    const passed = this.botAskService.ask(
+      askerId,
+      askerSession,
+      targetId,
+      task,
+      {
+        kind: "task",
+        userWords: words,
+        channel: this.ownChatOfTurn(askerSession),
+      }
+    );
+    if ("ask" in passed && ROUNDS_ASKED.test(words))
+      this.taskRounds.set(askerSession, {
+        words,
+        doerId: targetId,
+        askId: passed.ask.id,
+        left: TASK_ROUNDS - 1,
+        armed: false,
+      });
+    return passed;
   }
 
   /** Doing bot's chat → the passed-on task that ended there, and the user's next words in it. */
@@ -7089,9 +7157,10 @@ export class ServiceHost {
    */
   private tellBotAsk(
     ask: BotAskRecord,
-    note: string,
+    report: string,
     extra: { userWords?: string } = {}
   ): void {
+    const note = this.withRounds(ask, report, extra.userWords != null);
     if (
       ask.channel == null ||
       !this.messagingGatewayService.relayNote(
@@ -7100,11 +7169,39 @@ export class ServiceHost {
         note
       )
     )
+      // A follow-up goes in hidden: most of the time the user's next words
+      // there are about something else, and the passer says nothing; when
+      // they change the task, the passer tells the user itself.
       this.deliverSessionNote(
         ask.askerSession,
         note,
-        this.exchangeTags(ask, note, extra.userWords)
+        extra.userWords != null ? undefined : this.exchangeTags(ask, note)
       );
+  }
+
+  /**
+   * A task's report, in a chat where the user asked for rounds: it says to
+   * check the work and pass back what is open, and lets that note's turn do
+   * so (or, at the last round, only report). A failed task ends the rounds.
+   */
+  private withRounds(
+    ask: BotAskRecord,
+    note: string,
+    followUp: boolean
+  ): string {
+    const rounds = this.taskRounds.get(ask.askerSession);
+    if (followUp || rounds == null || rounds.askId !== ask.id) return note;
+    const doer = this.botService.list().find((bot) => bot.id === ask.targetId);
+    if (
+      doer == null ||
+      this.botAskService.get(ask.askerId, ask.id)?.status !== "answered"
+    ) {
+      this.taskRounds.delete(ask.askerSession);
+      return note;
+    }
+    if (rounds.left > 0) rounds.armed = true;
+    else this.taskRounds.delete(ask.askerSession);
+    return `${note}\n\n${taskRoundsLine(doer, rounds.words, rounds.left)}`;
   }
 
   /**
@@ -7145,21 +7242,13 @@ export class ServiceHost {
    * ("Planner finished the task", expanding to the exchange) rather than
    * hide it: who, what, how it ended, and where the exchange lives.
    */
-  private exchangeTags(
-    ask: BotAskRecord,
-    note: string,
-    userWords?: string
-  ): UserTextTags {
+  private exchangeTags(ask: BotAskRecord, note: string): UserTextTags {
     const target = this.botService
       .list()
       .find((bot) => bot.id === ask.targetId);
     const record = this.botAskService.get(ask.askerId, ask.id) ?? ask;
     const outcome =
-      userWords != null
-        ? ("follow-up" as const)
-        : record.status === "failed"
-          ? ("failed" as const)
-          : ("answered" as const);
+      record.status === "failed" ? ("failed" as const) : ("answered" as const);
     const pair =
       ask.kind === "task"
         ? null
@@ -7179,7 +7268,6 @@ export class ServiceHost {
           request: requestGist(ask.request),
           outcome,
           ...(pair?.sessionId != null ? { chatSessionId: pair.sessionId } : {}),
-          ...(userWords != null ? { userWords } : {}),
         },
       },
     };

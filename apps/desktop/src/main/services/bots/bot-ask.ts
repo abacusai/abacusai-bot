@@ -393,6 +393,24 @@ export const askStartedText = (
   ].join(" ");
 
 /**
+ * Added to a task's report when the user asked for rounds ("until it is
+ * clean", "recheck after"): the passer checks the work itself and passes
+ * back what is still open, while rounds are left; at the last one it only
+ * reports. `left` counts the hand-offs still allowed.
+ */
+export const taskRoundsLine = (
+  doer: Named,
+  userWords: string,
+  left: number
+): string => {
+  const asked = userWords.replace(/\s+/g, " ").trim();
+  const quoted = asked.length > 160 ? `${asked.slice(0, 160)}…` : asked;
+  return left > 0
+    ? `The user asked for this to go round until it is done ("${quoted}"). Check ${doer.name}'s work yourself now. If something is still open, pass exactly that back to ${doer.name} with give_task_to_bot (${left} more ${left === 1 ? "round" : "rounds"} allowed); if it is done, tell the user it is done and what changed.`
+    : `That was the last round the user's request allows ("${quoted}"). Check ${doer.name}'s work, and tell the user what is done and what is still open; do not pass it back again.`;
+};
+
+/**
  * The bot's colleagues, in its standing prompt: who they are, and the rule
  * for involving them. It does the work itself by default; another bot is
  * involved (a question or a task) only when the user asked for that or said
@@ -424,7 +442,9 @@ export const colleagueLines = (
           'a request better and the user has not asked, offer in one line ("Writer',
           'could draft this. Want me to ask it?") and wait for their answer. Answers',
         ]),
-    'come back later as "[bot answer]" notes. Questions other bots ask you are',
+    'come back later as "[bot answer]" notes. When you pass work to more than',
+    "one bot, give each its own part and say in each task what the others are",
+    "doing, so no two do the same work. Questions other bots ask you are",
     "answered in separate chats you do not see here: check my_activity before",
     "saying what they asked you, or that they asked nothing. Channels are this",
     "app's group chats of the user with several of their bots, not a chat app;",

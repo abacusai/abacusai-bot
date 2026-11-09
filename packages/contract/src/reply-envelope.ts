@@ -34,9 +34,18 @@ const blocks = (
     if (opened == null) break;
     const closed = indexOfTag(close, text, opened[1]);
     if (closed == null) break;
+    // The block opens at the last open tag before its close: an earlier one
+    // is the model naming the tag in its narration ("I'll put it in <reply>
+    // tags. Let me draft…"), and its words are not the reply.
+    let start = opened;
+    for (;;) {
+      const next = indexOfTag(open, text, start[1]);
+      if (next == null || next[0] >= closed[0]) break;
+      start = next;
+    }
     found.push({
-      start: opened[0],
-      innerStart: opened[1],
+      start: start[0],
+      innerStart: start[1],
       innerEnd: closed[0],
       end: closed[1],
     });

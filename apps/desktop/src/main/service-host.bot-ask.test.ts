@@ -216,8 +216,14 @@ describe("where a request's answer goes", () => {
         ],
       },
       botAskService: { get: () => null },
+      taskRounds: new Map(),
     };
-    for (const name of ["tellBotAsk", "ownChatOfTurn", "exchangeTags"])
+    for (const name of [
+      "tellBotAsk",
+      "withRounds",
+      "ownChatOfTurn",
+      "exchangeTags",
+    ])
       self[name] = proto[name].bind(self);
     return self as {
       tellBotAsk: (ask: BotAskRecord, note: string) => void;
@@ -227,6 +233,7 @@ describe("where a request's answer goes", () => {
     };
   };
   const WA = { platform: "whatsapp", chatId: "ME" };
+  const TASK_ASK: BotAskRecord = { ...ASK, kind: "task", status: "answered" };
 
   it("goes back to the user's WhatsApp chat when the request came from there", () => {
     const h = host(true);
@@ -268,6 +275,24 @@ describe("where a request's answer goes", () => {
       request: "Draft a post",
       outcome: "answered",
     });
+  });
+
+  it("a follow-up (the user's next words in the doer's chat) goes in hidden: no row", () => {
+    const h = host(true) as ReturnType<typeof host> & {
+      tellBotAsk: (
+        ask: BotAskRecord,
+        note: string,
+        extra: { userWords?: string }
+      ) => void;
+    };
+    h.tellBotAsk(TASK_ASK, "FOLLOW-UP", {
+      userWords: "can you open a browser",
+    });
+    expect(h.deliverSessionNote).toHaveBeenCalledWith(
+      "res-chat",
+      "FOLLOW-UP",
+      undefined
+    );
   });
 
   it("remembers only the user's own chat as where a request came from, never a contact's", () => {
@@ -382,6 +407,7 @@ describe("a task the user gave, passed on", () => {
         stopSettled: vi.fn(() => settleGate ?? Promise.resolve(true)),
       },
       userWords: new Map(),
+      taskRounds: new Map(),
       taskFollowUps: new Map(),
       agentSessionManagerService: {
         getDiagnosticInfo: () => ({
@@ -687,6 +713,7 @@ describe("a task the user gave, passed on", () => {
   ) => {
     const self: Record<string, unknown> = {
       userWords: new Map(),
+      taskRounds: new Map(),
       taskFollowUps: new Map(),
       botAskService: { ask: vi.fn(() => ({ ask: TASK, behind: 0 })) },
       botService: { list: () => bots },
@@ -808,6 +835,87 @@ describe("a task the user gave, passed on", () => {
       expect(tryTask("make me a launch checklist").result).toEqual(
         handOffRefused
       );
+    });
+  });
+
+  describe("rounds the user asked for (fix, then recheck)", () => {
+    const roundsHost = () => {
+      const h = wordsHost() as ReturnType<typeof wordsHost> & {
+        taskRounds: Map<string, unknown>;
+        withRounds: (ask: BotAskRecord, note: string, f: boolean) => string;
+      };
+      const self = h as unknown as Record<string, unknown>;
+      let n = 0;
+      const asks = new Map<string, BotAskRecord>();
+      h.botAskService.ask.mockImplementation(() => {
+        n += 1;
+        const ask = { ...TASK, id: `t${n}`, targetId: "pla" };
+        asks.set(ask.id, ask);
+        return { ask, behind: 0 };
+      });
+      self.botAskService = {
+        ask: h.botAskService.ask,
+        get: (_asker: string, id: string) => ({
+          ...asks.get(id),
+          status: "answered",
+        }),
+      };
+      self.taskRounds = new Map();
+      self.withRounds = proto.withRounds.bind(self);
+      // The doer's report arrives: a hidden note, so the user's words go.
+      const report = (id: string): string => {
+        h.userWords.delete("res-chat");
+        return h.withRounds(asks.get(id)!, "Planner finished.", false);
+      };
+      const handBack = () =>
+        h.giveBotTask("res", "res-chat", "pla", "Fix what is still open");
+      return { h, report, handBack, sent: () => n };
+    };
+
+    it("passes work back after each report, with the user's words, up to three rounds", () => {
+      const { h, report, handBack, sent } = roundsHost();
+      h.noteUserWords(
+        "res-chat",
+        "have Planner fix the issues, then recheck until it's clean"
+      );
+      h.giveBotTask("res", "res-chat", "pla", "Fix the issues");
+      expect(sent()).toBe(1);
+      // Not before the report comes.
+      h.userWords.delete("res-chat");
+      expect(handBack()).toEqual(refused);
+      expect(report("t1")).toContain("2 more rounds allowed");
+      handBack();
+      expect(sent()).toBe(2);
+      expect(wordsGiven(h)).toBe(
+        "have Planner fix the issues, then recheck until it's clean"
+      );
+      // Once per report.
+      expect(handBack()).toEqual(refused);
+      expect(report("t2")).toContain("1 more round allowed");
+      // Only to the same doer.
+      expect(
+        h.giveBotTask("res", "res-chat", "wri", "Fix what is still open")
+      ).toEqual(refused);
+      handBack();
+      expect(sent()).toBe(3);
+      expect(report("t3")).toContain("last round");
+      expect(handBack()).toEqual(refused);
+      expect(sent()).toBe(3);
+    });
+
+    it("ends when the user speaks again, and never starts without their asking for rounds", () => {
+      const asked = roundsHost();
+      asked.h.noteUserWords("res-chat", "have Planner fix it and recheck");
+      asked.h.giveBotTask("res", "res-chat", "pla", "Fix it");
+      asked.h.noteUserWords("res-chat", "thanks, that's enough");
+      expect(asked.report("t1")).toBe("Planner finished.");
+      expect(asked.handBack()).toEqual(refused);
+
+      const once = roundsHost();
+      once.h.noteUserWords("res-chat", "have Planner fix the issues");
+      once.h.giveBotTask("res", "res-chat", "pla", "Fix the issues");
+      expect(once.report("t1")).toBe("Planner finished.");
+      expect(once.handBack()).toEqual(refused);
     });
   });
 
