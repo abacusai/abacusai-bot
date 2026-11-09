@@ -35,7 +35,10 @@ function isPlainObject(value) {
 // like `agent`), so a shallow copy would see the section as a non-string
 // and replace the whole translated subtree with en-US, silently reverting
 // every translation in the file the next time anyone ran this script.
-function syncLocale(baseObj, localeObj, prefix = "") {
+//
+// A plural stem (en-US has `x_one` / `x_other`) keeps the extra CLDR forms the
+// locale's own language uses (Polish `x_few`, `x_many`), after `x_other`.
+function syncLocale(baseObj, localeObj, prefix = "", categories = []) {
   const synced = {};
   for (const key of Object.keys(baseObj)) {
     const baseValue = baseObj[key];
@@ -45,16 +48,39 @@ function syncLocale(baseObj, localeObj, prefix = "") {
       synced[key] = syncLocale(
         baseValue,
         isPlainObject(existing) ? existing : {},
-        full
+        full,
+        categories
       );
     } else {
       synced[key] =
         typeof existing === "string" && existing.trim() !== ""
           ? existing
           : baseValue;
+      if (key.endsWith("_other") && isPlainObject(localeObj)) {
+        const stem = key.slice(0, -"_other".length);
+        for (const category of categories) {
+          const extra = localeObj[`${stem}_${category}`];
+          if (
+            !(`${stem}_${category}` in baseObj) &&
+            typeof extra === "string" &&
+            extra.trim() !== ""
+          )
+            synced[`${stem}_${category}`] = extra;
+        }
+      }
     }
   }
   return synced;
+}
+
+/** The CLDR plural categories a locale file's language uses (pl-PL: one, few, many, other). */
+function pluralCategories(file) {
+  try {
+    return new Intl.PluralRules(file.replace(/\.json$/, "")).resolvedOptions()
+      .pluralCategories;
+  } catch {
+    return [];
+  }
 }
 
 // Dotted leaf paths, so the missing/extra report counts real strings rather
@@ -166,11 +192,10 @@ function main() {
     const localeKeys = flattenKeys(localeObj);
 
     const localeKeySet = new Set(localeKeys);
-    const baseKeySet = new Set(baseKeys);
+    const synced = syncLocale(baseObj, localeObj, "", pluralCategories(file));
+    const keptKeySet = new Set(flattenKeys(synced));
     const missing = baseKeys.filter((k) => !localeKeySet.has(k));
-    const extra = localeKeys.filter((k) => !baseKeySet.has(k));
-
-    const synced = syncLocale(baseObj, localeObj);
+    const extra = localeKeys.filter((k) => !keptKeySet.has(k));
     const nextContent = serializeLocale(synced);
     const prevContent = fs.readFileSync(filePath, "utf8");
 
