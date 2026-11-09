@@ -1552,9 +1552,9 @@ export class MessagingGatewayService {
           : undefined
       );
       route.bufferMessageId = null;
-      // The steered message is still owed its own answer, or the empty-reply line;
-      // a turn's own settled reply owes nothing more.
-      route.delivered = event.settled === true;
+      // The steered message is still owed its own answer, or the empty-reply
+      // line; a turn's own settled reply owes nothing more (flushReply set it).
+      if (event.settled !== true) route.delivered = false;
       // The chat just heard the answer: progress counts from here, and an update written before it is stale.
       if (route.progress != null) {
         route.progress.heardAt = Date.now();

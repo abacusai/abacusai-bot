@@ -783,6 +783,32 @@ describe("the phone lane", () => {
     slow.phone.stop();
   });
 
+  it("sends a settled answer at once, without bringing typing back", async () => {
+    const { phone, send, event, reply, replies, calls, handled } = lane();
+    phone.arrive({ id: "m1", text: "my calendar?" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    event({
+      type: "turn_answer",
+      messageIds: ["m1"],
+      text: "Your calendar is empty.",
+      settled: true,
+    });
+    await vi.waitFor(() =>
+      expect(replies()).toContainEqual({
+        action: "reply",
+        message_id: "m1",
+        text: "Your calendar is empty.",
+      })
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(calls.at(-1)).not.toEqual({ action: "typing", message_id: "m1" });
+    // The turn's reply after it is empty: nothing more goes out.
+    reply(["m1"], "");
+    await handled([["m1"]]);
+    expect(replies()).toHaveLength(1);
+    phone.stop();
+  });
+
   it("sends an image at once with its caption, and keeps the turn open", async () => {
     const { phone, send, event, reply, replies, acks, calls, handled } = lane();
     phone.arrive({ id: "m1", text: "share a screenshot?" });

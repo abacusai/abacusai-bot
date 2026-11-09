@@ -244,6 +244,16 @@ describe("a reply sent before the turn closes (settled turn_answer)", () => {
     expect(h.failures).toEqual([]);
   });
 
+  it("still gets the empty-reply line when it carried no words", async () => {
+    const h = harness();
+    await h.inbound("fix both sections");
+    h.settled("");
+    h.idle();
+    await tick();
+    expect(h.sent).toEqual([]);
+    expect(h.failures).toHaveLength(1);
+  });
+
   it("is followed by what the steered work reports, once", async () => {
     const h = harness();
     await h.inbound("fix both sections");

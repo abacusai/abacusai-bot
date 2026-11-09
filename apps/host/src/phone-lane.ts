@@ -887,7 +887,8 @@ export class PhoneLane {
     );
     this.deps.activity();
     // A sent message clears WhatsApp's "typing…"; the session is still working.
-    if (delivered && this.busy)
+    // A settled answer is the turn's own reply: nothing more is likely, so no "typing…".
+    if (delivered && this.busy && answer.settled !== true)
       void this.channel("typing", { message_id: replyTo });
   }
 
