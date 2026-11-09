@@ -1745,7 +1745,14 @@ registerAppScheme();
 let gotSingleInstanceLock = app.requestSingleInstanceLock();
 // A quit staging an update hid the Dock (UpdateService.hideForQuit). macOS
 // sends a relaunch to the running app as activate, elsewhere second-instance.
+// The user wants the app back: a failed staging no longer quits it, and the
+// next quit checks for the update again. A staged build still installs.
 function revealOnRelaunch(): void {
+  if (quitAwaitingUpdate != null) {
+    quitAwaitingUpdate.cancelled = true;
+    quitAwaitingUpdate = null;
+    quitUpdateChecked = false;
+  }
   if (process.platform === "darwin" && app.dock?.isVisible() === false)
     void app.dock.show();
   revealMainWindow();
@@ -2037,6 +2044,8 @@ nativeAutoUpdater.on("before-quit-for-update", () => {
 const QUIT_LOG_SYNC_MS = 2_500;
 let quitGracefulInProgress = false;
 let quitUpdateChecked = false;
+/** The quit waiting on its update install; a relaunch cancels it. */
+let quitAwaitingUpdate: { cancelled: boolean } | null = null;
 app.on("before-quit", (event) => {
   if (
     !isDataResetPending() &&
@@ -2046,11 +2055,14 @@ app.on("before-quit", (event) => {
   ) {
     event.preventDefault();
     quitUpdateChecked = true;
+    const quit = { cancelled: false };
+    quitAwaitingUpdate = quit;
     // Never waits for a running task: a quit must not hang.
     void updateService
       .installUpdate({ silent: true, quitting: true })
       .then((result) => {
-        if (!result.success) app.quit();
+        if (quitAwaitingUpdate === quit) quitAwaitingUpdate = null;
+        if (!result.success && !quit.cancelled) app.quit();
       });
     return;
   }
