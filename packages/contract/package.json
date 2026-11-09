@@ -25,6 +25,7 @@
     "./forbidden": "./src/forbidden.ts",
     "./free-pool": "./src/free-pool.ts",
     "./funnel": "./src/funnel.ts",
+    "./link-time-left": "./src/link-time-left.ts",
     "./look": "./src/look.ts",
     "./message-reactions": "./src/message-reactions.ts",
     "./messaging": "./src/messaging.ts",

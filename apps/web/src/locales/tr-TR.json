@@ -425,8 +425,8 @@
         "connecting": "Girişi tamamlaman bekleniyor",
         "decline": "Şimdi değil",
         "stop": "Bağlanmayı durdur",
-        "worksFor_one": "{{count}} dakika daha geçerli",
-        "worksFor_other": "{{count}} dakika daha geçerli",
+        "worksFor": "{{left}} daha geçerli",
+        "worksUntil": "{{date}} tarihine kadar geçerli ({{left}} kaldı)",
         "expired": "Bu bağlantının süresi doldu.",
         "renew": "Yeni bağlantı al",
         "homeChannel": "Bu ajanla telefonundaki {{provider}} üzerinden konuşursun. Başlamak için {{provider}} bağla."

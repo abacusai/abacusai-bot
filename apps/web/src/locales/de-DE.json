@@ -425,8 +425,8 @@
         "connecting": "Connecting…",
         "decline": "Not now",
         "stop": "Verbindung abbrechen",
-        "worksFor_one": "Funktioniert noch {{count}} Min.",
-        "worksFor_other": "Funktioniert noch {{count}} Min.",
+        "worksFor": "Funktioniert noch {{left}}",
+        "worksUntil": "Funktioniert bis {{date}} (noch {{left}})",
         "expired": "Dieser Link ist abgelaufen.",
         "renew": "Neuen Link holen",
         "homeChannel": "Mit diesem Agenten schreibst du über {{provider}} auf deinem Handy. Verbinde {{provider}}, um loszulegen."

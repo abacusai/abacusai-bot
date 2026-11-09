@@ -1,6 +1,7 @@
 /**
  * R3-T32 (the card): the ask's copy, Connect / Not now, the inline fields of
- * a token connector, Stop connecting mid browser hop, and the error line.
+ * a token connector, Stop connecting mid browser hop, the error line, and how
+ * long the link works.
  * The data half (snapshot, request/cleared, refresh before answering) is
  * `features/bots/chat/connector-requests.test.tsx`.
  */
@@ -12,7 +13,7 @@ import {
 import type { ConnectorRequest } from "@abacus-ai/contract/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { i18n, initI18n } from "#renderer/lib/i18n";
 
@@ -211,5 +212,47 @@ describe("ConnectorRequestCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Done pairing" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(connected).not.toHaveBeenCalled();
+  });
+
+  describe("how long the link works", () => {
+    const MIN = 60_000;
+    const expiryText = (expiresAt: number): string => {
+      const { container } = render(
+        <ConnectorRequestCard
+          request={{ ...ask(hop.id), expiresAt }}
+          busy={false}
+          error={null}
+          onConnect={vi.fn()}
+          onDecline={vi.fn()}
+        />
+      );
+      const line = container.querySelector(
+        '[data-slot="connector-request-expiry"]'
+      );
+      // ICU puts a narrow no-break space before AM/PM.
+      return (line?.textContent ?? "").replace(/\s/gu, " ");
+    };
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it.each([
+      [13, 20 * MIN, "Works for 20 minutes more"],
+      [13, 1 * MIN, "Works for 1 minute more"],
+      [13, 2 * 60 * MIN + 5 * MIN, "Works for 2 hours 5 minutes more"],
+      [13, 60 * MIN, "Works for 1 hour more"],
+      [13, 7 * 24 * 60 * MIN, "Works until Mon, Nov 16, 1:00 PM (7 days left)"],
+      [
+        13,
+        (24 + 3) * 60 * MIN + 40 * MIN,
+        "Works until Tue, Nov 10, 4:40 PM (1 day 3 hours left)",
+      ],
+      [23, 2 * 60 * MIN, "Works until Tue, Nov 10, 1:00 AM (2 hours left)"],
+    ])("at %i:00, a link with %i ms left reads %s", (hour, leftMs, text) => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date(2026, 10, 9, hour, 0, 0));
+      expect(expiryText(Date.now() + leftMs)).toBe(text);
+    });
   });
 });
