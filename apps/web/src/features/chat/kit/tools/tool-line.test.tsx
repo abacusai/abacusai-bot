@@ -193,7 +193,7 @@ describe("R2-T12/T13 rendered tool rows", () => {
     expect(screen.queryByText(/no output/i)).toBeNull();
   });
 
-  it("rows carry status without status words; failures keep a destructive tint", async () => {
+  it("rows carry status without status words; a failed step reads like a finished one", async () => {
     const relay = await memoryRelay();
     relay.emitAll([
       ...b.sessionReady(),
@@ -201,16 +201,36 @@ describe("R2-T12/T13 rendered tool rows", () => {
       b.textStart("a"),
       ...b.toolCall("ok", "bash", "a", { command: "true" }),
       b.toolResult("ok", { text: "" }),
+      ...b.toolCall("bad", "bash", "a", { command: "ls missing-dir" }),
+      b.toolResult("bad", {
+        text: "",
+        rejected: true,
+        error: "ls: missing-dir: No such file or directory",
+        terminal: { output: "", exitCode: 1 } as { output: string },
+      }),
       b.textEnd("a"),
       b.runFinished("r"),
     ]);
     current = await renderRelay(relay, "session");
-    await waitFor(() => {
-      openRuns();
-      expect(document.querySelector('[data-status="done"]')).toBeTruthy();
+    const run = await waitFor(() => {
+      const group = document.querySelector('[data-slot="tool-group"]');
+      expect(group?.querySelector("button")?.textContent).toMatch(
+        /Ran 2 commands/
+      );
+      return group!;
     });
-    const row = document.querySelector('[data-status="done"]')!;
-    expect(row.textContent).not.toMatch(/\bdone\b/i);
+    openRuns();
+    await waitFor(() =>
+      expect(document.querySelector('[data-status="failed"]')).toBeTruthy()
+    );
+    const failedRow = document.querySelector('[data-status="failed"]')!;
+    expect(run.textContent).not.toMatch(/failed/i);
+    expect(run.querySelector(".text-destructive")).toBeNull();
+    expect(failedRow.textContent).toContain("exit 1");
+    fireEvent.click(screen.getByRole("button", { name: /ls missing-dir/ }));
+    expect(await screen.findByText(/No such file or directory/)).toBeTruthy();
+    expect(run.querySelector(".text-destructive")).toBeNull();
+    expect(run.querySelector('[role="alert"]')).toBeNull();
   });
 
   it("a failed component tool does not say Opened and can be expanded", async () => {

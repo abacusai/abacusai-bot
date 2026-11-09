@@ -85,21 +85,27 @@ const KIND_ICONS: Record<string, LucideIcon> = {
   other: Wrench,
 };
 
+/**
+ * The status a row shows. A failed step is the agent's to handle, and its reply
+ * says what matters, so it reads as a finished step: no tint, no word.
+ */
+type ShownStatus = Exclude<ToolStatus, "failed">;
+const shownStatus = (status: ToolStatus): ShownStatus =>
+  status === "failed" ? "done" : status;
+
 /** Done is the plain row; every other state is said by tint, not by a word. */
-const ROW_TONE: Record<ToolStatus, string> = {
+const ROW_TONE: Record<ShownStatus, string> = {
   running: "",
   "needs-you": "text-[var(--chat-status-attention)]",
   done: "",
-  failed: "text-destructive",
   refused: "",
   stopped: "",
 };
 
-const STATUS_KEY: Record<ToolStatus, string> = {
+const STATUS_KEY: Record<ShownStatus, string> = {
   running: "chat.tool.status.running",
   "needs-you": "chat.tool.status.needsYou",
   done: "chat.tool.status.done",
-  failed: "chat.tool.status.failed",
   refused: "chat.tool.status.refused",
   stopped: "chat.tool.status.stopped",
 };
@@ -264,7 +270,7 @@ const Meta = ({ meta }: { meta: ToolMeta }) => {
       );
     case "exit":
       return (
-        <span className="text-destructive">
+        <span className="text-muted-foreground">
           {t("chat.tool.meta.exit", { code: meta.code })}
         </span>
       );
@@ -411,9 +417,8 @@ const BashBody = ({ tool }: { tool: NormalizedTool }) => {
       )}
       {tool.error != null && tool.error !== "" && tool.error !== output ? (
         <div
-          role="alert"
           data-bash-error
-          className="text-destructive chat-mono text-xs break-words whitespace-pre-wrap"
+          className="text-muted-foreground chat-mono text-xs break-words whitespace-pre-wrap"
         >
           {tool.error}
         </div>
@@ -428,7 +433,7 @@ const BashBody = ({ tool }: { tool: NormalizedTool }) => {
               className={
                 exitCode === 0
                   ? "text-[var(--chat-status-done)]"
-                  : "text-destructive"
+                  : "text-muted-foreground"
               }
             >
               {t("chat.tool.meta.exit", { code: exitCode })}
@@ -518,18 +523,16 @@ const READ_LINES = 80;
 const ImageReadCard = ({ image }: { image: ImageRead }) => {
   const { runtime, workspaceRoot } = useChatView();
   const [thumb, setThumb] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
   useEffect(() => {
     let live = true;
     const path = image.filePath;
+    // An unreadable image keeps the plain file icon.
     runtime.host
       .readImage(path, containmentRootFor(path, workspaceRoot))
       .then((url) => {
-        if (!live) return;
-        if (url === "") setFailed(true);
-        else setThumb(url);
+        if (live && url !== "") setThumb(url);
       })
-      .catch(() => live && setFailed(true));
+      .catch(() => undefined);
     return () => {
       live = false;
     };
@@ -556,10 +559,7 @@ const ImageReadCard = ({ image }: { image: ImageRead }) => {
         ) : (
           <FileText
             aria-hidden
-            className={cn(
-              "size-4",
-              failed ? "text-destructive" : "text-muted-foreground opacity-50"
-            )}
+            className="text-muted-foreground size-4 opacity-50"
           />
         )}
       </div>
@@ -689,7 +689,7 @@ const Body = ({
   const { workspaceRoot, onOpenDiff } = useChatView();
   const { t } = useTranslation();
   if (tool.error != null && tool.status === "failed" && expander !== "bash")
-    return <pre className="chat-terminal text-destructive">{tool.error}</pre>;
+    return <pre className="chat-terminal">{tool.error}</pre>;
   switch (expander) {
     case "bash":
       return <BashBody tool={tool} />;
@@ -867,11 +867,12 @@ const MountedToolLine = ({ part, result, expander: fixed }: ToolLineProps) => {
     component == null &&
     tool.status !== "refused" &&
     hasBody(expander, tool, input);
-  const tone = ROW_TONE[tool.status];
+  const status = shownStatus(tool.status);
+  const tone = ROW_TONE[status];
   const row = (
     <>
-      {tool.status === "done" ? null : (
-        <span className="sr-only">{t(STATUS_KEY[tool.status])}</span>
+      {status === "done" ? null : (
+        <span className="sr-only">{t(STATUS_KEY[status])}</span>
       )}
       <Icon
         aria-hidden
