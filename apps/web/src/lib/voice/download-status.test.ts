@@ -65,6 +65,24 @@ describe("dictation download notice", () => {
     });
   });
 
+  it("ignores compressed files sent without a size, and counts a weight not started as nothing", () => {
+    const state = fold(
+      event(WHISPER_SMALL_MODEL_ID, "tokenizer.json", 2_480_466, 0, {
+        done: true,
+      }),
+      event(WHISPER_SMALL_MODEL_ID, "preprocessor_config.json", 339, 339, {
+        done: true,
+      }),
+      event(
+        WHISPER_SMALL_MODEL_ID,
+        "onnx/encoder_model_quantized.onnx",
+        50,
+        100
+      )
+    );
+    expect(downloadView(state, FRENCH_QUICK)).toMatchObject({ percent: 25 });
+  });
+
   it("never shows a lower percentage when a later file joins the total", () => {
     const state = fold(
       event(
@@ -80,7 +98,7 @@ describe("dictation download notice", () => {
         200
       )
     );
-    expect(downloadView(state, FRENCH_QUICK)).toMatchObject({ percent: 90 });
+    expect(downloadView(state, FRENCH_QUICK)).toMatchObject({ percent: 45 });
   });
 
   it("says nothing about language or quick mode for base's first download", () => {
@@ -89,7 +107,7 @@ describe("dictation download notice", () => {
     );
     expect(downloadView(state, FRENCH_QUICK)).toEqual({
       kind: "downloading",
-      percent: 50,
+      percent: 25,
       language: null,
       quick: false,
     });

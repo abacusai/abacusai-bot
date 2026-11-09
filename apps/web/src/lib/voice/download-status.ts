@@ -5,6 +5,7 @@
  */
 import {
   WHISPER_BASE_MODEL_ID,
+  WHISPER_MODEL_FILES,
   WHISPER_SMALL_MODEL_ID,
   type WhisperDownloadProgress,
   type WhisperModelId,
@@ -25,6 +26,29 @@ export interface DownloadState {
 
 export const EMPTY_DOWNLOAD: DownloadState = { models: {}, ready: null };
 
+/** The weights are nearly all the bytes, and the only files sent with a size (the rest come compressed). */
+const WEIGHT_FILES: readonly string[] = WHISPER_MODEL_FILES.filter((file) =>
+  file.endsWith(".onnx")
+);
+
+/** Share of the weights on disk; a weight not started yet counts as nothing done. */
+const weightsPercent = (
+  bytes: Record<string, { loaded: number; total: number }>
+): number => {
+  const started = WEIGHT_FILES.flatMap((file) => {
+    const entry = bytes[file];
+    return entry != null && entry.total > 0 ? [entry] : [];
+  });
+  const total = started.reduce((sum, file) => sum + file.total, 0);
+  if (total === 0) return 0;
+  const loaded = started.reduce(
+    (sum, file) => sum + Math.min(file.loaded, file.total),
+    0
+  );
+  const share = (loaded / total) * (started.length / WEIGHT_FILES.length);
+  return Math.min(99, Math.floor(share * 100));
+};
+
 export const foldDownload = (
   state: DownloadState,
   event: WhisperDownloadProgress
@@ -34,9 +58,6 @@ export const foldDownload = (
     ...before?.bytes,
     [event.file]: { loaded: event.loadedBytes, total: event.totalBytes },
   };
-  const all = Object.values(bytes);
-  const total = all.reduce((sum, file) => sum + file.total, 0);
-  const loaded = all.reduce((sum, file) => sum + file.loaded, 0);
   const status = event.failed
     ? "failed"
     : event.modelReady
@@ -46,7 +67,7 @@ export const foldDownload = (
     bytes,
     percent: Math.max(
       before?.status === "downloading" ? before.percent : 0,
-      total > 0 ? Math.min(99, Math.floor((loaded / total) * 100)) : 0
+      weightsPercent(bytes)
     ),
     status,
   };
