@@ -223,6 +223,18 @@ const namedLanguages = (): Map<string, Script> => {
   return names;
 };
 
+/** A name without its "(…)" qualifiers; a scan, so no input can make it slow. */
+const withoutParentheses = (name: string): string => {
+  let out = "";
+  let depth = 0;
+  for (const char of name) {
+    if (char === "(") depth += 1;
+    else if (char === ")" && depth > 0) depth -= 1;
+    else if (depth === 0) out += char;
+  }
+  return out;
+};
+
 /** The script a language code ("bn", "pt-BR") is written in; null when unknown. */
 export const languageCodeScript = (code: string): Script | null => {
   try {
@@ -236,8 +248,7 @@ export const languageCodeScript = (code: string): Script | null => {
 export const languageScript = (name: string): Script | null => {
   const names = namedLanguages();
   // "Bengali (romanized)" is Bengali.
-  const lower = name
-    .replace(/\([^)]*\)/g, " ")
+  const lower = withoutParentheses(name)
     .trim()
     .replace(/\s+/g, " ")
     .toLowerCase();

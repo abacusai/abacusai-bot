@@ -19,6 +19,7 @@ import {
   buildRoutineEditorPrompt,
   buildRoutineFirePrompt,
 } from "#main/services/agent-tools/routine-prompt";
+import { reportNote } from "#main/services/agent-tools/routine-report-delivery";
 import {
   askOutcomeNote,
   botAskIntro,
@@ -113,6 +114,21 @@ describe("ownWords", () => {
       WORDS,
     ],
     ["a mid-task message", midTaskText(WORDS), WORDS],
+    ...[true, false].map((delivered) => [
+      `a routine report ahead of the words (${delivered ? "sent" : "opened"})`,
+      `${reportNote({
+        routineId: "r1",
+        routineName: "Brief",
+        runSessionId: "s1",
+        startedAt: "2026-11-01T09:00:00Z",
+        addedAt: 0,
+        text: "Three emails need an answer.",
+        runFile: null,
+        delivered,
+        lanes: [],
+      })}\n\n${WORDS}`,
+      WORDS,
+    ]),
     ["another bot's request", frameBotRequest(ali, WORDS), ""],
     ["a bot request's rules", `${botAskIntro(ali)}\n\n${WORDS}`, ""],
     [
