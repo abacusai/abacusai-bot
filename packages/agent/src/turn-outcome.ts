@@ -236,8 +236,13 @@ export class TurnChain {
     this.attempts = [];
   }
 
-  failed(raw: string, provider: string | undefined): FailureCause {
-    const cause = classifyAttempt(raw, provider);
+  /** A failed call; `known` when the caller already knows why (a tool's full disk). */
+  failed(
+    raw: string,
+    provider: string | undefined,
+    known?: FailureCause
+  ): FailureCause {
+    const cause = known ?? classifyAttempt(raw, provider);
     this.attempts.push({ provider, cause, raw });
     return cause;
   }
@@ -253,7 +258,19 @@ export class TurnChain {
       role?: unknown;
       provider?: unknown;
       stopReason?: unknown;
+      errorMessage?: unknown;
     };
+    const provider =
+      typeof reply?.provider === "string" ? reply.provider : undefined;
+    // The chat's own save failing ends the turn now, in both loops, before any recovery runs.
+    if (
+      reply?.stopReason === "error" &&
+      typeof reply.errorMessage === "string" &&
+      classifyAttempt(reply.errorMessage, provider) === "disk_full"
+    ) {
+      this.failed(reply.errorMessage, provider, "disk_full");
+      return;
+    }
     if (
       reply?.role !== "assistant" ||
       reply.stopReason === "error" ||
@@ -261,8 +278,6 @@ export class TurnChain {
       !failedCallStreamed([message])
     )
       return;
-    const provider =
-      typeof reply.provider === "string" ? reply.provider : undefined;
     this.attempts.push({ provider, cause: null, raw: "" });
   }
 

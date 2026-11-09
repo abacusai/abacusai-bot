@@ -6,6 +6,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 import { freeBytes, isDiskFull } from "../atomic-file.js";
+import { toToolKind } from "../tool-display.js";
 import type { TurnChain } from "../turn-outcome.js";
 
 /**
@@ -14,31 +15,47 @@ import type { TurnChain } from "../turn-outcome.js";
  */
 const DISK_FULL_BELOW_BYTES = 256 * 1024 * 1024;
 
-/** The line of a tool's output that says the disk is full, as the chain records it. */
-const diskFullLine = (text: string): string | null => {
-  const line = text.split("\n").find((candidate) => isDiskFull(candidate));
-  if (line == null) return null;
-  // The chain classifies by text: led by the code, never by a number that reads as a status.
-  return `ENOSPC: no space left on device (${line.trim().slice(0, 300)})`;
-};
+/** Tools that only read: their output can quote "no space left" from a log without writing anything. */
+const READ_ONLY_KINDS: ReadonlySet<string> = new Set([
+  "read",
+  "search",
+  "fetch",
+  "think",
+  "switch_mode",
+]);
 
-const modelNote = (free: number | undefined): string =>
-  `The disk on this computer is full${free != null ? ` (${Math.floor(free / 1_000_000)} MB free)` : ""}, ` +
+/** The line of a failed tool's output that says the disk is full. */
+const diskFullLine = (text: string): string | null =>
+  text
+    .split("\n")
+    .find((candidate) => isDiskFull(candidate))
+    ?.trim()
+    .slice(0, 300) ?? null;
+
+const modelNote = (free: number): string =>
+  `The disk on this computer is full (${Math.floor(free / 1_000_000)} MB free), ` +
   "so this write failed and every further write will fail too. Do not retry it or write anything else. " +
   "Stop here and tell the user, in their language, that the disk is full and to free some space, then try again.";
 
 export default function diskFull(chain: () => TurnChain) {
   return (pi: ExtensionAPI): void => {
     pi.on("tool_result", (event, ctx) => {
+      // Only a write that failed: a shell, an edit, or a custom tool's error.
+      if (
+        event.isError !== true ||
+        READ_ONLY_KINDS.has(toToolKind(event.toolName))
+      )
+        return;
       const text = event.content
         .map((block) => (block.type === "text" ? block.text : ""))
         .join("\n");
       const line = diskFullLine(text);
       if (line == null) return;
+      // The disk must say so too; text alone may be about another volume.
       const free = freeBytes(ctx.sessionManager.getSessionDir() || ctx.cwd);
-      if (free != null && free >= DISK_FULL_BELOW_BYTES) return;
+      if (free == null || free >= DISK_FULL_BELOW_BYTES) return;
       const told = chain().diskFull;
-      chain().failed(line, undefined);
+      chain().failed(line, undefined, "disk_full");
       // Told already and still writing: the run stops here.
       if (told) ctx.abort();
       return {

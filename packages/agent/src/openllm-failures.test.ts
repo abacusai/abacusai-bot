@@ -566,6 +566,19 @@ describe("one cause per turn, read from the whole chain of calls", () => {
     expect(shown.message).toMatch(/disk is full/);
   });
 
+  it("a failed save is on the chain the moment its reply ends, in either loop", () => {
+    const chain = new TurnChain();
+    chain.replied({
+      role: "assistant",
+      provider: "abacus",
+      stopReason: "error",
+      errorMessage: "ENOSPC: no space left on device, write",
+      content: [{ type: "text", text: "" }],
+    });
+    expect(chain.diskFull).toBe(true);
+    expect(chain.failure()?.cause).toBe("disk_full");
+  });
+
   it("a full disk met mid-turn ends the turn on it, even after a later answer", () => {
     const chain = new TurnChain();
     chain.failed(

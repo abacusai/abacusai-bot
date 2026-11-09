@@ -28,6 +28,7 @@ const { AgentMode } = await import("../protocol.js");
 type DesktopEvent = import("../protocol.js").DesktopEvent;
 type AgentEvent = import("../protocol.js").AgentEvent;
 const { AbacusBotSession } = await import("../session.js");
+const { BotSession } = await import("../bot/bot-session.js");
 
 const nodeFs = createRequire(import.meta.url)("node:fs") as typeof fs;
 const restores: Array<() => void> = [];
@@ -45,6 +46,24 @@ const fillDisk = (): void => {
   restores.push(
     vi.spyOn(nodeFs, "writeFileSync").mockImplementation(enospc).mockRestore,
     vi.spyOn(nodeFs, "appendFileSync").mockImplementation(enospc).mockRestore
+  );
+  syncBuiltinESMExports();
+};
+
+/**
+ * The disk fills short of the session file's last block: a long message's
+ * append fails, the short failure record pi writes after it still fits, so
+ * the run ends on a failed call rather than a throw.
+ */
+const fillDiskButSlack = (): void => {
+  const append = nodeFs.appendFileSync.bind(nodeFs);
+  restores.push(
+    vi
+      .spyOn(nodeFs, "appendFileSync")
+      .mockImplementation(((...args: Parameters<typeof fs.appendFileSync>) =>
+        String(args[1]).length > 4000
+          ? enospc()
+          : append(...args)) as typeof fs.appendFileSync).mockRestore
   );
   syncBuiltinESMExports();
 };
@@ -72,8 +91,9 @@ let home: string;
 
 class Chat {
   readonly events: DesktopEvent[] = [];
+  readonly cwd = fs.mkdtempSync(path.join(os.tmpdir(), "abacusai-bot-disk-"));
   readonly session = new AbacusBotSession({
-    cwd: fs.mkdtempSync(path.join(os.tmpdir(), "abacusai-bot-disk-")),
+    cwd: this.cwd,
     mode: AgentMode.Yolo,
     emit: (event: DesktopEvent) => this.events.push(event),
   } as ConstructorParameters<typeof AbacusBotSession>[0]);
@@ -135,6 +155,12 @@ beforeAll(async () => {
     JSON.stringify({ language: { name: "English", source: "user" } })
   );
   process.env.ABACUSAI_BOT_HOME = home;
+  // A bot chat (the forever engine) reads its own directory.
+  const botDir = path.join(home, "bots", "bot-1");
+  fs.mkdirSync(botDir, { recursive: true });
+  process.env.ABACUSAI_BOT_BOT_DIR = botDir;
+  process.env.ABACUSAI_BOT_PHONE_DIR = path.join(home, "phone");
+  process.env.PI_OFFLINE = "1";
 }, 60_000);
 
 afterEach(() => {
@@ -146,6 +172,9 @@ afterAll(async () => {
   await provider?.close();
   fs.rmSync(home, { recursive: true, force: true });
   delete process.env.ABACUSAI_BOT_HOME;
+  delete process.env.ABACUSAI_BOT_BOT_DIR;
+  delete process.env.ABACUSAI_BOT_PHONE_DIR;
+  delete process.env.PI_OFFLINE;
 });
 
 describe("a disk that fills mid-turn", () => {
@@ -236,5 +265,60 @@ describe("a disk that fills mid-turn", () => {
     expect(lastToolResult(1)).not.toMatch(/The disk on this computer is full/);
     expect(c.agent("error")).toHaveLength(0);
     expect(c.agent("turn_complete").at(-1)?.outcome).toEqual({ kind: "reply" });
+  }, 30_000);
+
+  it("a successful read of a log that says so, on a nearly full disk, changes nothing", async () => {
+    const c = await chat();
+    const log = path.join(c.cwd, "build.log");
+    fs.writeFileSync(log, "OSError: [Errno 28] No space left on device\n");
+    reportLittleRoom();
+    provider.script((call): Reply =>
+      call.messages.at(-1)?.role === "tool"
+        ? { say: "That build failed for space last week." }
+        : { call: { name: "read", args: { path: log } } }
+    );
+
+    await c.turn("why did last week's build fail?");
+
+    expect(lastToolResult(1)).toMatch(/No space left on device/);
+    expect(lastToolResult(1)).not.toMatch(/The disk on this computer is full/);
+    expect(c.agent("error")).toHaveLength(0);
+    expect(c.agent("turn_complete").at(-1)?.outcome).toEqual({ kind: "reply" });
+  }, 30_000);
+});
+
+describe("a bot chat whose disk fills mid-turn", () => {
+  it("the chat's own save fails after a tool, with no throw: the turn ends on the card, and nothing runs after it", async () => {
+    const events: AgentEvent[] = [];
+    const bot = new BotSession({
+      cwd: fs.mkdtempSync(path.join(os.tmpdir(), "abacusai-bot-disk-bot-")),
+      mode: "yolo",
+      emit: (message: DesktopEvent) => {
+        if (message.type === "event") events.push(message.event);
+      },
+    });
+    try {
+      await bot.start();
+      provider.script(() => ({ say: "first answer" }));
+      await bot.send("hello", { messageId: "m0" });
+      provider.calls.length = 0;
+      provider.script((call): Reply => {
+        if (call.messages.at(-1)?.role !== "tool")
+          return { call: { name: "bash", args: { command: "echo step" } } };
+        fillDiskButSlack();
+        return {
+          say: "Here is what I found. ".repeat(400),
+          call: { name: "bash", args: { command: "echo next" } },
+        };
+      });
+
+      await bot.send("check my site", { messageId: "m1" });
+
+      const errors = events.filter((event) => event.type === "error");
+      expect(errors.at(-1)).toMatchObject({ error: { cause: "disk_full" } });
+      expect(provider.calls).toHaveLength(2);
+    } finally {
+      bot.dispose();
+    }
   }, 30_000);
 });

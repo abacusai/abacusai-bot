@@ -75,6 +75,9 @@ type SessionRecord = {
 // Persisted, so the old name stays. See workspace-store.ts.
 const SESSIONS_STORAGE_KEY = "localCode.agentSessions";
 
+/** How often a session list a full disk refused tries to save again. */
+const SESSIONS_DISK_FULL_RETRY_MS = 30_000;
+
 const toListItem = (record: SessionRecord): AgentSessionListItem => ({
   id: record.id,
   workspaceId: record.workspaceId,
@@ -694,16 +697,20 @@ export class AgentSessionManagerService {
 
   private schedulePersist(): void {
     this.changed();
-    if (this.persistTimer != null) return;
+    if (this.persistTimer == null) this.persistLater(500);
+  }
+
+  /** The debounced save. A full disk keeps the list in memory and tries again until it lands. */
+  private persistLater(delayMs: number): void {
     this.persistTimer = setTimeout(() => {
       this.persistTimer = null;
-      // A full disk keeps the list in memory; the next change writes it whole.
       try {
         this.persist();
       } catch (error) {
         if (!isDiskFull(error)) throw error;
+        this.persistLater(SESSIONS_DISK_FULL_RETRY_MS);
       }
-    }, 500);
+    }, delayMs);
   }
 
   private persist(): void {

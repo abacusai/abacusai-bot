@@ -21,8 +21,23 @@ const MAX_FILE_BYTES = 32 * 1024 * 1024;
 
 const FLUSH_INTERVAL_MS = 1000;
 
-/** Lines a full disk holds back per stream until there is room again; the oldest go first. */
-const MAX_HELD_LINES = 2000;
+/** What a full disk holds back per stream until there is room again; the oldest goes first. */
+const MAX_HELD_BYTES = 256 * 1024;
+const MAX_HELD_LINE_CHARS = 2000;
+
+/** The newest lines of `text` that fit the hold, each cut to a readable length. */
+const holdBack = (text: string): string[] => {
+  const held: string[] = [];
+  let bytes = 0;
+  for (const line of text.split("\n").reverse()) {
+    if (line.length === 0) continue;
+    const kept = line.slice(0, MAX_HELD_LINE_CHARS);
+    bytes += Buffer.byteLength(kept) + 1;
+    if (bytes > MAX_HELD_BYTES) break;
+    held.unshift(kept);
+  }
+  return held;
+};
 
 /** Each stream is its own file so one can be read without the others. */
 export type LogStream = "main" | "renderer" | "agent";
@@ -109,6 +124,7 @@ export class LogStore {
 
       if (already >= MAX_FILE_BYTES) continue;
 
+      const before = this.sizeOf(target);
       try {
         fs.appendFileSync(
           target,
@@ -118,10 +134,15 @@ export class LogStore {
         );
         this.written.set(target, already + payload.length);
       } catch (error) {
-        // A full disk keeps the lines for the next flush: what happened while it
-        // was full is what a report needs. Anything else drops them; the run continues.
-        if (isDiskFull(error))
-          this.pending.set(stream, lines.slice(-MAX_HELD_LINES));
+        // A full disk keeps what did not land for the next flush: what happened
+        // while it was full is what a report needs. Anything else drops it.
+        if (!isDiskFull(error)) continue;
+        const landed = Math.max(0, this.sizeOf(target) - before);
+        this.written.set(target, already + landed);
+        this.pending.set(
+          stream,
+          holdBack(Buffer.from(payload).subarray(landed).toString("utf8"))
+        );
       }
     }
   }
