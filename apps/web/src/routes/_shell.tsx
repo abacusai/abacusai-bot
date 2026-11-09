@@ -10,6 +10,7 @@ import { WhatsAppIntro } from "#platform/whatsapp-bot";
 import { CreditThresholdHost } from "#renderer/components/credits-card/threshold";
 import { PaymentRequiredDialog } from "#renderer/components/payment-required";
 import { ShareDialogHost } from "#renderer/components/share/share-dialog";
+import { StatusBanner } from "#renderer/components/status-board";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
 import { BotsGlobals } from "#renderer/features/bots/watcher";
 import { finishCompletion } from "#renderer/features/onboarding/actions";
@@ -95,6 +96,7 @@ const ShellRoute = () => {
       )}
       <OpenTargetBridge />
       <PairingQueueBanner suppressed={tour != null} />
+      <StatusBanner suppressed={tour != null || provisional} />
       {!provisional && tour == null && <WhatsAppIntro />}
       {!provisional && tour == null && <NewLookNotice />}
       <SessionsGlobals preview={dispatchPreview} />

@@ -29,11 +29,18 @@ const electron = vi.hoisted(() => {
       },
       isStarted: (id: number) => started.has(id),
     },
+    battery: false,
+    power: new Map<string, () => void>(),
   };
 });
 vi.mock("electron", () => ({
   ipcMain: electron.ipcMain,
   powerSaveBlocker: electron.powerSaveBlocker,
+  powerMonitor: {
+    isOnBatteryPower: () => electron.battery,
+    on: (event: string, listener: () => void) =>
+      electron.power.set(event, listener),
+  },
 }));
 vi.mock("electron-store", () => ({
   default: class {
@@ -67,6 +74,31 @@ describe("keep-awake", () => {
     followMainAgentBusy(source);
     expect(blocking()).toBe(true);
     for (const listener of listeners) listener(false);
+    expect(blocking()).toBe(false);
+  });
+
+  it("holds while a routine is due, only on mains power", async () => {
+    const { followRoutineDue } = await load();
+    electron.battery = false;
+    let tell: (due: boolean) => void = () => {};
+    followRoutineDue({
+      followRoutineDue: (listener) => {
+        tell = listener;
+        listener(false);
+        return () => {};
+      },
+    });
+    expect(blocking()).toBe(false);
+    tell(true);
+    expect(blocking()).toBe(true);
+    // Unplugged: a routine that is only due does not drain the battery.
+    electron.battery = true;
+    electron.power.get("on-battery")!();
+    expect(blocking()).toBe(false);
+    electron.battery = false;
+    electron.power.get("on-ac")!();
+    expect(blocking()).toBe(true);
+    tell(false);
     expect(blocking()).toBe(false);
   });
 });

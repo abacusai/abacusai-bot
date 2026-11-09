@@ -41,6 +41,7 @@
     "./share": "./src/share.ts",
     "./site-deploy": "./src/site-deploy.ts",
     "./skills-types": "./src/skills-types.ts",
+    "./status": "./src/status.ts",
     "./terminal-shells": "./src/terminal-shells.ts",
     "./timeout-error": "./src/timeout-error.ts",
     "./toolsets": "./src/toolsets.ts",

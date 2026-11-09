@@ -4,26 +4,20 @@
  * area says about that, and the one action it offers for it.
  */
 import type { RoutineMissed } from "@abacus-ai/contract/routines";
-import { useLiveQuery } from "@tanstack/react-db";
 import type { TFunction } from "i18next";
 import { ArrowUpRight, Moon, Sparkles, X } from "lucide-react";
-import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import { useCollections } from "#renderer/data/db";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import type { AppClient } from "#renderer/data/transport/types";
 import { ABACUS_AGENT_URL } from "#renderer/lib/abacus-links";
 import { creditsTier } from "#renderer/lib/credits";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
-import { showInfo } from "#renderer/lib/toast";
 import { openUpgrade } from "#renderer/lib/upgrade";
 import { useAccount } from "#renderer/lib/use-account";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
-
-import { routineOwns } from "./notify";
 
 export type AlwaysOnPlan = "free" | "paid";
 
@@ -179,64 +173,4 @@ export const MissedRunsNote = ({ missed }: { missed: RoutineMissed }) => {
       {plan != null && <AlwaysOnButton plan={plan} variant="outline" />}
     </div>
   );
-};
-
-/**
- * One notice for the fires routines missed while the computer was off, once
- * per finding (`missed.at`), whichever window is open when it lands.
- */
-export const RoutinesMissedNotice = () => {
-  const { t, i18n } = useTranslation();
-  const { transport } = useAppContext();
-  const collections = useCollections();
-  const prefs = useLiveQuery(collections.prefs).data?.[0];
-  const routines = useLiveQuery(collections.routines).data;
-  const update = useUpdatePrefs();
-  const shown = useRef(0);
-  const seen = prefs?.dismissals.routinesMissedSeenAt ?? null;
-  useEffect(() => {
-    // Read before deciding: unread prefs would tell an old finding again.
-    if (!IS_ELECTRON || prefs == null || routines == null) return;
-    const fresh = routines.filter(
-      (row) =>
-        routineOwns(row) &&
-        row.missed != null &&
-        row.missed.at > Math.max(seen ?? 0, shown.current)
-    );
-    if (fresh.length === 0) return;
-    const latest = Math.max(...fresh.map((row) => row.missed!.at));
-    shown.current = latest;
-    void update({ dismissals: { routinesMissedSeenAt: latest } }).catch(
-      () => undefined
-    );
-    const names = new Intl.ListFormat(i18n.language, {
-      type: "conjunction",
-    }).format(fresh.map((row) => row.name));
-    const count = fresh.reduce((sum, row) => sum + row.missed!.count, 0);
-    // Read only now: the notice is rare, and its action depends on the plan.
-    void transport.client.account
-      .abacus({})
-      .catch(() => null)
-      .then((account) => {
-        const plan = alwaysOnPlan(account);
-        const action =
-          plan == null ? null : alwaysOnAction(plan, transport.client, t);
-        showInfo(t("routines.alwaysOn.missed", { count }), {
-          description:
-            plan == null
-              ? names
-              : t(
-                  plan === "free"
-                    ? "routines.alwaysOn.missedNoticeFree"
-                    : "routines.alwaysOn.missedNoticePaid",
-                  { names }
-                ),
-          timeout: 15_000,
-          ...(action != null
-            ? { action: { label: action.label, onClick: action.run } }
-            : {}),
-        });
-      });
-  }, [prefs, routines, seen, update, transport, t, i18n.language]);
-  return null;
 };

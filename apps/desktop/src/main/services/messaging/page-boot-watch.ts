@@ -163,7 +163,3 @@ export const watchLaneHints = (
     app.removeListener("browser-window-focus", onFocus);
   };
 };
-
-/** Someone used the computer in the last five minutes. */
-export const userActive = (): boolean =>
-  powerMonitor.getSystemIdleState(300) === "active";

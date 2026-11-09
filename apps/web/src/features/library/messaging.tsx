@@ -37,6 +37,11 @@ import {
   SettingRow,
   StatePill,
 } from "#renderer/components/form-kit/page";
+import {
+  StatusDot,
+  statusLine,
+  useStatusItems,
+} from "#renderer/components/status-board";
 import { useCollections } from "#renderer/data/db";
 import {
   optimistic,
@@ -96,6 +101,11 @@ const DesktopMessagingPage = () => {
   useEffect(() => {
     void transport.client.messaging.pageOpened({}).catch(() => undefined);
   }, [transport]);
+  const stops = useStatusItems();
+  const laneStop = (id: string) =>
+    stops.find(
+      (item) => item.key === `lane:${id}` && item.state === "stopped-needs-user"
+    ) ?? null;
   return (
     <AreaPage
       title={t("library.pages.messaging")}
@@ -122,12 +132,16 @@ const DesktopMessagingPage = () => {
                       t
                     )}
                   </>
+                ) : laneStop(p.id) != null ? (
+                  // Stopped by the app or lost: what the board says, Connect fixes it.
+                  statusLine(laneStop(p.id)!, t)
                 ) : (
                   (p.errorMessage ?? undefined)
                 )
               }
             >
               <ConnectorMark id={p.id} size={36} />
+              <StatusDot item={laneStop(p.id)} />
               <StatePill>{t(`messaging.states.${p.state}`)}</StatePill>
               {p.recovery != null && (
                 <Button

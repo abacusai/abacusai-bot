@@ -58,6 +58,7 @@ const READS: Record<string, string> = {
   settings:
     "defaultMode.get events execBackend.get get keys.listProviders notifications.get promptHistory.list sandboxSupport toolsets.get",
   sites: "progress",
+  status: "events list",
   skills: "listInstalled search",
   system: "events info loginItem.get",
   terminal: "events output shell.get",

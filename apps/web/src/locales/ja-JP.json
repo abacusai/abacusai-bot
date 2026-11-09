@@ -1650,9 +1650,7 @@
       "openAgent": "24 時間ルーティンを設定",
       "dismiss": "Dismiss",
       "missed_one": "Missed {{count}} run while your computer was off",
-      "missed_other": "Missed {{count}} runs while your computer was off",
-      "missedNoticeFree": "{{names}}. On the Basic plan, Abacus AI Agent on the web runs routines 24/7, even with your computer off.",
-      "missedNoticePaid": "{{names}}。ウェブ版の Abacus AI Agent でルーティンを設定すると、パソコンの電源が切れていても 24 時間動き続けます。"
+      "missed_other": "Missed {{count}} runs while your computer was off"
     },
     "reach": {
       "gmailSearch": "Search Gmail",
@@ -1674,7 +1672,6 @@
       "quiet": "一時停止中: {{runs}}回続けて新しいことが見つからなかったため、クレジットの使用を止めました。確認を続けるには再開してください。"
     },
     "creditHold": {
-      "title": "ルーティンはクレジットを待っています",
       "notify": "クレジットがなくなったため、ルーティンは実行されません。スキップされた実行に費用はかからず、クレジットが入ると自動で再開します。",
       "note": "クレジット待ち: 実行は費用なしでスキップされ、クレジットが入ると自動で再開します。",
       "cta": "クレジットを入手"
@@ -5180,6 +5177,35 @@
       "addMember": "ボットを追加または削除",
       "decisions": "決定事項",
       "noDecisions": "ピン留めされたものはまだありません。メッセージをピン留めするか、ボットに何かについて合意するよう依頼してください。"
+    }
+  },
+  "status": {
+    "aRoutine": "ルーティン",
+    "yourChatApp": "チャットアプリ",
+    "appClosed": "実行中にアプリが閉じられました。",
+    "continue": "続ける",
+    "title": {
+      "paused": "{{name}}を一時停止しました",
+      "onHold": "{{name}}は保留中です",
+      "laneStopped": "{{name}}は接続されていません",
+      "missed": "{{name}}が実行を逃しました",
+      "missedMany": "ルーティンが実行を逃しました",
+      "many_one": "{{count}}件が停止しました",
+      "many_other": "{{count}}件が停止しました"
+    },
+    "body": {
+      "signedOut": "サインアウト中は実行できません。サインインすると再び実行されます。",
+      "routineLinkLost": "{{platform}}が再接続されるまで実行は待機します。その後、逃した実行を補います。",
+      "loginNotFinished": "{{platform}}のサインインが完了していないため、一時停止しています。「接続」をクリックして完了してください。",
+      "missedMany_one": "コンピューターのスリープ中またはアプリが閉じている間に、{{routines}}件のルーティンが{{count}}回の実行を逃しました。{{madeUp}}回を補いました。",
+      "missedMany_other": "コンピューターのスリープ中またはアプリが閉じている間に、{{routines}}件のルーティンが{{count}}回の実行を逃しました。{{madeUp}}回を補いました。",
+      "routineLaneOff": "{{platform}}がオフのため、実行結果が届きません。受け取るには再接続してください。"
+    },
+    "chat": {
+      "back": "{{name}}が再び実行されています。"
+    },
+    "row": {
+      "waitingNetwork": "ネットワークを待っています。接続が戻りしだい実行します。"
     }
   }
 }

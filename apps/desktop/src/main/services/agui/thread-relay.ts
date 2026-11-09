@@ -233,6 +233,21 @@ export interface ThreadHistory {
   v1Fingerprint?: string;
 }
 
+/** Mid-run transcript saves are at least this far apart. */
+export const CHECKPOINT_GAP_MS = 3_000;
+/** Past this size a mid-run save (~130 ms at 2 MB) runs only at tool results. */
+export const CHECKPOINT_LARGE_BYTES = 2 * 1024 * 1024;
+
+/** The transcript's size, near enough: its strings, without serializing it. */
+const approxBytes = (value: unknown): number => {
+  if (typeof value === "string") return value.length;
+  if (value == null || typeof value !== "object") return 8;
+  let total = 0;
+  for (const child of Array.isArray(value) ? value : Object.values(value))
+    total += approxBytes(child);
+  return total;
+};
+
 export interface ThreadRelayOptions {
   threadId: string;
   clock: SeqClock;
@@ -367,6 +382,11 @@ export class ThreadRelay {
   #notices: AiNotice[] = [];
   /** The unsaved notice is up: the last save found the disk full. */
   #unsaved = false;
+  /** Mid-run saves: the last one's time, and the one waiting out the gap. */
+  #lastCheckpointAt = -Infinity;
+  /** The last mid-run save was past CHECKPOINT_LARGE_BYTES. */
+  #large = false;
+  #checkpointTimer: ReturnType<typeof setTimeout> | null = null;
   /** The answerable set last reported (`#checkPending`); "" for none. */
   #pendingKey = "";
 
@@ -1017,6 +1037,7 @@ export class ThreadRelay {
     this.#record(chunk, event);
     if (isTerminal(event)) this.#finishRun(event, chunk.seq);
     else if (this.#endsUserMessage(event)) this.#checkpoint();
+    else if (this.#endsStep(event)) this.#checkpointSoon();
 
     // A copy: a listener may unsubscribe itself (a joined run ends).
     for (const listener of Array.from(this.#listeners)) listener(chunk);
@@ -1117,15 +1138,43 @@ export class ThreadRelay {
       .some((message) => message.id === id && message.role === "user");
   }
 
+  /** A step of the open run is complete: an assistant message, or a tool's result. */
+  #endsStep(event: RelayEvent): boolean {
+    if (this.#active == null) return false;
+    if (event.type === "TOOL_CALL_RESULT") return true;
+    // A large thread is saved at tool results only.
+    return event.type === "TEXT_MESSAGE_END" && !this.#large;
+  }
+
   /**
-   * The transcript so far, written as soon as the user's message is in. The
-   * file is otherwise written at a run's terminal, so a crash or a quit
-   * mid-run lost the message itself; the next start closes such a run
-   * (AguiRelayService.closeInterruptedRun) after the message it answered.
+   * A checkpoint at a step's end, at most one per CHECKPOINT_GAP_MS: a quit or
+   * a crash mid-run then loses a few seconds, not the whole run.
+   */
+  #checkpointSoon(): void {
+    if (this.#checkpointTimer != null) return;
+    const wait = this.#lastCheckpointAt + CHECKPOINT_GAP_MS - this.#now();
+    if (wait <= 0) return this.#checkpoint();
+    this.#checkpointTimer = setTimeout(() => {
+      this.#checkpointTimer = null;
+      this.#checkpoint();
+    }, wait);
+    this.#checkpointTimer.unref?.();
+  }
+
+  /**
+   * The transcript so far, written as soon as the user's message is in and
+   * then at step ends (`#checkpointSoon`), with the same writer the terminal
+   * uses. The next start closes a run the app closed under
+   * (AguiRelayService.closeInterruptedRun) after the last message it kept.
    */
   #checkpoint(): void {
+    if (this.#checkpointTimer != null) clearTimeout(this.#checkpointTimer);
+    this.#checkpointTimer = null;
     const active = this.#active;
     if (active == null || active.historyEpoch !== this.#historyEpoch) return;
+    this.#lastCheckpointAt = this.#now();
+    this.#large =
+      approxBytes(this.#processor.getMessages()) > CHECKPOINT_LARGE_BYTES;
     this.#save(
       {
         messages: structuredClone(this.#processor.getMessages()),
@@ -1179,6 +1228,9 @@ export class ThreadRelay {
   #finishRun(event: RelayEvent, seq: number): void {
     const active = this.#active;
     if (active == null) return;
+    // The terminal's own save covers whatever a pending checkpoint would have.
+    if (this.#checkpointTimer != null) clearTimeout(this.#checkpointTimer);
+    this.#checkpointTimer = null;
     this.#active = null;
     this.#publishFinished(active, event, seq);
 

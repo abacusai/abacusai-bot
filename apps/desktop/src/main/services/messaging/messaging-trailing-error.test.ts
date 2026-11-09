@@ -1338,10 +1338,18 @@ const reply = (
   repeat = false
 ) => chatReplyForFailure(error, "own", account, ENGLISH, OFFER, repeat);
 
-describe("routines waiting for credits", () => {
-  it("says so in the user's own chat with no turn to answer, and the plan's way on", async () => {
-    const h = harness({ self: true });
-    expect(await h.gateway.tellRoutinesOnHold()).toBe(true);
+describe("routines waiting for credits (the status board's chat line)", () => {
+  const onHold = {
+    // The outbox remembers ids it sent; each run is a new telling.
+    id: `status:routine:r:stopped-needs-user:${Date.now()}`,
+    text: "",
+    credits: true,
+    platform: null,
+    avoid: null,
+  };
+  it("says so in the user's own chat (its self lane, through the outbox), and the plan's way on", async () => {
+    const h = harness({ shared: true });
+    expect(await h.gateway.tellStatus(onHold)).toBe(true);
     expect(h.sent()).toEqual([
       [
         "Your routines have stopped because your credits are used up. Skipped runs cost nothing, and they start again on their own when you have credits.",
@@ -1350,15 +1358,16 @@ describe("routines waiting for credits", () => {
     ]);
   });
 
-  it("keeps it for the user's own chat while no app can carry it", async () => {
+  it("stays silent with no self lane of the user's to say it in", async () => {
     const h = harness({ selfId: null });
-    expect(await h.gateway.tellRoutinesOnHold()).toBe(true);
+    expect(await h.gateway.tellStatus(onHold)).toBe(false);
     expect(h.sent()).toEqual([]);
+    // In-app and native still carry it; nothing is owed to a chat that does not exist.
     expect(
       (
         h.gateway as unknown as { outbox: { owesSelf(): boolean } }
       ).outbox.owesSelf()
-    ).toBe(true);
+    ).toBe(false);
   });
 });
 

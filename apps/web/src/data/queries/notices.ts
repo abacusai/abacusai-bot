@@ -209,6 +209,7 @@ const SOURCES = {
   ),
   routines: source((client, signal) => client.routines.events({}, { signal })),
   settings: source((client, signal) => client.settings.events({}, { signal })),
+  status: source((client, signal) => client.status.events({}, { signal })),
   system: source((client, signal) => client.system.events({}, { signal })),
   window: source((client, signal) => client.window.events({}, { signal })),
 };

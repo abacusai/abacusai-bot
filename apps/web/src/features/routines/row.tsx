@@ -8,6 +8,11 @@ import { useTranslation } from "react-i18next";
 
 import { BotAvatar } from "#renderer/components/bot-avatar";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
+import {
+  StatusDot,
+  statusLine,
+  useStatusItem,
+} from "#renderer/components/status-board";
 import { resolveLook, type AvatarMood } from "#renderer/lib/bots/avatar";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
@@ -90,6 +95,7 @@ export const RoutineSidebarRow = ({
   const unread = useSyncExternalStore(hostedUnread.subscribe, () =>
     hostedUnread.count(row.id)
   );
+  const status = useStatusItem(`routine:${row.id}`);
   const actions = [
     {
       label: t("phase5.runNow"),
@@ -133,6 +139,7 @@ export const RoutineSidebarRow = ({
             <span className="min-w-0 flex-1">
               <span className="flex min-w-0 items-center gap-1 text-[13px]">
                 <span className="truncate">{row.name}</span>
+                <StatusDot item={status} />
                 {isHosted(row) && (
                   <Cloud
                     aria-label={t("routines.hosted.badge")}
@@ -147,7 +154,7 @@ export const RoutineSidebarRow = ({
                     {" · "}
                   </span>
                 )}
-                {label}
+                {status != null ? statusLine(status, t) : label}
               </span>
             </span>
             {unread > 0 && (

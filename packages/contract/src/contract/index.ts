@@ -30,6 +30,7 @@ import { settings } from "./settings";
 import { shares } from "./shares";
 import { sites } from "./sites";
 import { skills } from "./skills";
+import { status } from "./status";
 import { system } from "./system";
 import { terminal } from "./terminal";
 import { update } from "./update";
@@ -69,6 +70,7 @@ export const contract = {
   window,
   update,
   skills,
+  status,
   db,
 };
 
@@ -99,6 +101,7 @@ export type { McpRuntimeEvent } from "./mcp";
 export type { MemoryEvent } from "./memory";
 export type { MessagingEvent } from "./messaging";
 export type { SettingsEvent } from "./settings";
+export type { StatusEvent } from "./status";
 export type { NotificationMetadata, SystemEvent, SystemInfo } from "./system";
 export type { TerminalEvent, TerminalOutputChunk } from "./terminal";
 

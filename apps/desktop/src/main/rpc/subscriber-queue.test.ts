@@ -71,6 +71,7 @@ describe("delivery classes (A-T9)", () => {
       "window.events": "coalescing",
       "system.events": "coalescing",
       "settings.events": "coalescing",
+      "status.events": "coalescing",
       "messaging.events": "coalescing",
       "bots.events": "coalescing",
       "channels.events": "coalescing",

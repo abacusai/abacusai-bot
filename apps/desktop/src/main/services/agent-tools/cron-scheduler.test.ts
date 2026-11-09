@@ -172,3 +172,109 @@ describe("a tick while the store refuses writes", () => {
     ).resolves.toBeUndefined();
   });
 });
+
+describe("what the status board hears (never a silent stop)", () => {
+  const boardFor = async () => {
+    const { StatusBoard } = await import("../status/status-board");
+    const log: string[] = [];
+    const board = new StatusBoard({
+      file: () => null,
+      words: async () => ({ t: (key: string) => key }),
+      log: (line) => log.push(line),
+    });
+    return { board, log };
+  };
+
+  it("a fire held for the network is a wait, and the next slot it holds over is missed", async () => {
+    const { board, log } = await boardFor();
+    const job = {
+      id: "brief",
+      name: "Morning brief",
+      runAt: null,
+      schedule: "0 * * * *",
+      heldSince: null as number | null,
+    };
+    store.dueJobs.mockReturnValue([job]);
+    const scheduler = new CronScheduler(
+      vi.fn(async () => {}),
+      async () => false,
+      () => {},
+      undefined,
+      board
+    );
+    await scheduler.tick(at(1));
+    expect(board.get("routine:brief")).toMatchObject({
+      state: "waiting",
+      reason: "network",
+      detail: { name: "Morning brief" },
+    });
+    expect(log).toEqual([
+      "[status] routine:brief running -> waiting (network)",
+    ]);
+
+    job.heldSince = at(1).getTime();
+    await scheduler.tick(at(2));
+    expect(board.get("routine:brief")).toMatchObject({
+      state: "missed",
+      reason: "network",
+      detail: { count: 1, madeUp: 0 },
+    });
+  });
+
+  it("each routine a sleep missed is reported with its count and whether it is made up", async () => {
+    const { board } = await boardFor();
+    store.dueJobs.mockReturnValue([]);
+    store.missedJobs.mockReturnValue([
+      {
+        job: { id: "a", name: "A", schedule: "0 * * * *", heldSince: null },
+        count: 3,
+        latest: 1,
+      },
+      {
+        job: { id: "b", name: "B", schedule: "0 9 * * *", heldSince: null },
+        count: 1,
+        latest: 1,
+      },
+    ] as never);
+    store.catchUpWorthIt.mockImplementation(
+      ((schedule: string) => schedule === "0 * * * *") as never
+    );
+    const scheduler = new CronScheduler(
+      vi.fn(async () => {}),
+      async () => true,
+      () => {},
+      undefined,
+      board
+    );
+    await scheduler.tick(at(1));
+    expect(board.get("routine:a")).toMatchObject({
+      state: "missed",
+      detail: { count: 3, madeUp: 1 },
+    });
+    expect(board.get("routine:b")).toMatchObject({
+      state: "missed",
+      detail: { count: 1, madeUp: 0 },
+    });
+    store.catchUpWorthIt.mockReset().mockReturnValue(true);
+  });
+
+  it("back on time clears only what the scheduler reported", async () => {
+    const { board } = await boardFor();
+    board.report("routine:r", "paused-by-app", "link-lost", { name: "R" });
+    board.report("routine:s", "waiting", "network", { name: "S" });
+    store.dueJobs.mockReturnValue([
+      { id: "r", name: "R", runAt: null, heldSince: null },
+      { id: "s", name: "S", runAt: null, heldSince: null },
+    ]);
+    store.claimSlot.mockReturnValue(true);
+    await new CronScheduler(
+      vi.fn(async () => {}),
+      async () => true,
+      () => {},
+      undefined,
+      board
+    ).tick(at(1));
+    expect(board.get("routine:r")?.reason).toBe("link-lost");
+    expect(board.get("routine:s")).toBeNull();
+  });
+});

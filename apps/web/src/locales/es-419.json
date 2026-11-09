@@ -1650,9 +1650,7 @@
       "openAgent": "Configurar rutinas 24/7",
       "dismiss": "Dismiss",
       "missed_one": "Missed {{count}} run while your computer was off",
-      "missed_other": "Missed {{count}} runs while your computer was off",
-      "missedNoticeFree": "{{names}}. On the Basic plan, Abacus AI Agent on the web runs routines 24/7, even with your computer off.",
-      "missedNoticePaid": "{{names}}. Configura tus rutinas en Abacus AI Agent en la web, donde funcionan 24/7, incluso con tu computadora apagada."
+      "missed_other": "Missed {{count}} runs while your computer was off"
     },
     "reach": {
       "gmailSearch": "Search Gmail",
@@ -1674,7 +1672,6 @@
       "quiet": "En pausa: {{runs}} ejecuciones seguidas no encontraron nada nuevo, así que dejó de usar créditos. Reanúdala para que siga revisando."
     },
     "creditHold": {
-      "title": "Tus rutinas están esperando créditos",
       "notify": "Te quedaste sin créditos, así que tus rutinas no se ejecutarán. Las ejecuciones omitidas no cuestan nada y vuelven solas cuando tengas créditos.",
       "note": "Esperando créditos: las ejecuciones se omiten sin costo y vuelven solas cuando tengas créditos.",
       "cta": "Obtener créditos"
@@ -5180,6 +5177,35 @@
       "addMember": "Agregar o quitar bots",
       "decisions": "Decisiones",
       "noDecisions": "Aún no hay nada fijado. Fija un mensaje o pide a los bots que se pongan de acuerdo en algo."
+    }
+  },
+  "status": {
+    "aRoutine": "Una rutina",
+    "yourChatApp": "tu app de chat",
+    "appClosed": "La app se cerró mientras esto se ejecutaba.",
+    "continue": "Continuar",
+    "title": {
+      "paused": "{{name}} en pausa",
+      "onHold": "{{name}} está en espera",
+      "laneStopped": "{{name}} no está conectado",
+      "missed": "{{name}} se saltó ejecuciones",
+      "missedMany": "Las rutinas se saltaron ejecuciones",
+      "many_one": "{{count}} cosa se detuvo",
+      "many_other": "{{count}} cosas se detuvieron"
+    },
+    "body": {
+      "signedOut": "No puede ejecutarse mientras tengas la sesión cerrada. Inicia sesión y volverá a ejecutarse.",
+      "routineLinkLost": "Sus ejecuciones esperan hasta que {{platform}} vuelva a estar conectado. Entonces se recupera la ejecución perdida.",
+      "loginNotFinished": "El inicio de sesión en {{platform}} no terminó, así que está en pausa. Haz clic en Conectar para terminarlo.",
+      "missedMany_one": "{{routines}} rutinas se saltaron {{count}} ejecución mientras la computadora dormía o la app estaba cerrada. {{madeUp}} recuperadas.",
+      "missedMany_other": "{{routines}} rutinas se saltaron {{count}} ejecuciones mientras la computadora dormía o la app estaba cerrada. {{madeUp}} recuperadas.",
+      "routineLaneOff": "Sus ejecuciones no te llegan: {{platform}} está desactivado. Vuelve a conectarlo para recibirlas."
+    },
+    "chat": {
+      "back": "{{name}} vuelve a ejecutarse."
+    },
+    "row": {
+      "waitingNetwork": "Esperando la red. Se ejecuta en cuanto vuelva la conexión."
     }
   }
 }

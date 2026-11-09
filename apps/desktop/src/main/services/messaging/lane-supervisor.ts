@@ -31,10 +31,6 @@ export const LANE_GIVE_UP_MS = 24 * 60 * 60_000;
 export const LANE_CONNECTING_WATCHDOG_MS = 10 * 60_000;
 /** Hints and syncs try a lane at most this often. */
 export const LANE_HINT_GAP_MS = 30_000;
-/** Down this long before the app says so in the pane. */
-export const LANE_SHOW_AFTER_MS = 10 * 60_000;
-/** Down this long before one OS notification (per outage). */
-export const LANE_NOTIFY_AFTER_MS = 60 * 60_000;
 /** Retries of a refused certificate before the lane waits for the user. */
 export const LANE_CERT_TRIES = 3;
 /** How often a lane parked on a full disk checks for space. */
@@ -48,12 +44,15 @@ export type LaneSupervisorDeps = {
   /** A fresh connector: stop the old one, start a new one. */
   restart: (id: MessagingPlatformId) => Promise<void>;
   diskSpaceBack: () => boolean;
-  /** Someone is at the computer right now. */
-  userActive: () => boolean;
-  /** One OS notification: the lane has been down for an hour. */
-  notifyDown: (id: MessagingPlatformId) => void;
-  /** The failure persists in a way only the user can fix: tell them, once per outage. */
-  tellNeedsUser: (id: MessagingPlatformId) => void;
+  /**
+   * The lane's state for the status board, which alone decides when the
+   * user hears of it: retrying, back, or stopped until the user acts.
+   */
+  report: (
+    id: MessagingPlatformId,
+    state: "waiting" | "stopped-needs-user" | "running",
+    reason: "retrying" | "needs-user" | "gave-up" | "ok"
+  ) => void;
   /** Network, wake and focus events; returns the stop. Watched only while a lane is down. */
   watchHints: (hint: (reason: string) => void) => () => void;
   /** What the pane shows changed. */
@@ -76,18 +75,12 @@ type Lane = {
   certFails: number;
   /** Stopped retrying: what is wrong needs the user (see LANE_CERT_TRIES). */
   needsUser: boolean;
-  toldUser: boolean;
   lastTryAt: number;
   /** A restart of ours is running. */
   trying: boolean;
   nextTryAt: number | null;
   retryTimer: Timer | null;
   watchdog: Timer | null;
-  showTimer: Timer | null;
-  notifyTimer: Timer | null;
-  /** The hour passed while nobody was at the computer: told on their return. */
-  notifyOwed: boolean;
-  notified: boolean;
 };
 
 /** ±50% around a base that doubles from LANE_RETRY_FIRST_MS to LANE_RETRY_CAP_MS. */
@@ -186,7 +179,6 @@ export class LaneSupervisor {
     for (const [id, lane] of this.lanes) {
       if (lane.downSince == null || lane.trying || lane.needsUser) continue;
       if (lane.failure?.retry !== "auto") continue;
-      if (lane.notifyOwed && this.deps.userActive()) this.notify(id, lane);
       const now = this.deps.now();
       // A page that loads but never boots costs a full boot: hints keep its slow pace.
       const gap =
@@ -224,11 +216,10 @@ export class LaneSupervisor {
     return this.lanes.get(id)?.downSince != null;
   }
 
-  /** What the pane says: nothing until the lane has been down a while. */
+  /** What the pane says while the lane is down; the board decides when it shows. */
   status(id: MessagingPlatformId): MessagingRecovery | null {
     const lane = this.lanes.get(id);
     if (lane?.downSince == null) return null;
-    if (this.deps.now() - lane.downSince < LANE_SHOW_AFTER_MS) return null;
     const phase: MessagingRecovery["phase"] = lane.trying
       ? "trying"
       : lane.needsUser
@@ -267,16 +258,11 @@ export class LaneSupervisor {
         stuckBoots: 0,
         certFails: 0,
         needsUser: false,
-        toldUser: false,
         lastTryAt: -Infinity,
         trying: false,
         nextTryAt: null,
         retryTimer: null,
         watchdog: null,
-        showTimer: null,
-        notifyTimer: null,
-        notifyOwed: false,
-        notified: false,
       };
       this.lanes.set(id, lane);
     }
@@ -289,24 +275,7 @@ export class LaneSupervisor {
     // A connecting watchdog: the outage began when it started connecting.
     lane.downSince = lane.state === "connecting" ? lane.stateSince : now;
     this.deps.log(`${id}: down, retrying by itself`);
-    lane.showTimer = setTimeout(
-      () => {
-        lane.showTimer = null;
-        this.deps.changed();
-      },
-      Math.max(0, lane.downSince + LANE_SHOW_AFTER_MS - now)
-    );
-    lane.showTimer.unref?.();
-    lane.notifyTimer = setTimeout(
-      () => {
-        lane.notifyTimer = null;
-        if (lane.downSince == null || lane.notified) return;
-        if (this.deps.userActive()) this.notify(id, lane);
-        else lane.notifyOwed = true;
-      },
-      Math.max(0, lane.downSince + LANE_NOTIFY_AFTER_MS - now)
-    );
-    lane.notifyTimer.unref?.();
+    this.deps.report(id, "waiting", "retrying");
     this.watchHintsWhileDown();
   }
 
@@ -318,18 +287,8 @@ export class LaneSupervisor {
     lane.needsUser = true;
     this.clear(lane, "retryTimer");
     lane.nextTryAt = null;
-    if (!lane.toldUser) {
-      lane.toldUser = true;
-      this.deps.tellNeedsUser(id);
-    }
+    this.deps.report(id, "stopped-needs-user", "needs-user");
     this.deps.changed();
-  }
-
-  private notify(id: MessagingPlatformId, lane: Lane): void {
-    lane.notifyOwed = false;
-    if (lane.notified) return;
-    lane.notified = true;
-    this.deps.notifyDown(id);
   }
 
   /** Back up, waiting on a person, or off: the outage is over. */
@@ -338,16 +297,12 @@ export class LaneSupervisor {
     lane.downSince = null;
     lane.attempts = 0;
     lane.nextTryAt = null;
-    lane.notifyOwed = false;
-    lane.notified = false;
     lane.certFails = 0;
     lane.needsUser = false;
-    lane.toldUser = false;
     this.clear(lane, "retryTimer");
-    this.clear(lane, "showTimer");
-    this.clear(lane, "notifyTimer");
     if (wasDown) {
       this.deps.log(`${id}: no longer down (${lane.state})`);
+      this.deps.report(id, "running", "ok");
       this.deps.changed();
     }
     this.watchHintsWhileDown();
@@ -363,6 +318,7 @@ export class LaneSupervisor {
       this.deps.log(`${id}: down for a day, waiting for the user`);
       this.clear(lane, "retryTimer");
       lane.nextTryAt = null;
+      this.deps.report(id, "stopped-needs-user", "gave-up");
       this.deps.changed();
       return;
     }
@@ -431,10 +387,7 @@ export class LaneSupervisor {
     }
   }
 
-  private clear(
-    lane: Lane,
-    key: "retryTimer" | "watchdog" | "showTimer" | "notifyTimer"
-  ): void {
+  private clear(lane: Lane, key: "retryTimer" | "watchdog"): void {
     const timer = lane[key];
     if (timer != null) clearTimeout(timer);
     lane[key] = null;

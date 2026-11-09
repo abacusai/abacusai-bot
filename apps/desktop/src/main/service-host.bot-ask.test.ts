@@ -16,6 +16,7 @@ import {
   BOT_ASK_TURN_TIMEOUT_MS,
 } from "./services/bots/bot-ask";
 import type { BotAskRecord } from "./services/bots/bot-ask-service";
+import { ConnectivityService } from "./services/connectivity/connectivity-service";
 
 vi.mock("electron", () => {
   const anything: unknown = new Proxy(function () {}, {
@@ -82,6 +83,8 @@ const fakeHost = (
     turnWaiters: new Map(),
     botAskTurns: new Map(),
     taskTurns: new Map(),
+    // Turn waits are timed in awake time (the power clock).
+    connectivity: new ConnectivityService({ probe: async () => true }),
     turnLedger: { isOpen: () => options.leftOpen === true },
     botService: {
       list: () => [{ id: "res", name: "Researcher", title: "" }],
@@ -353,6 +356,7 @@ describe("a task the user gave, passed on", () => {
       turnWaiters: new Map(),
       botAskTurns: new Map(),
       taskTurns: new Map(),
+      connectivity: new ConnectivityService({ probe: async () => true }),
       turnLedger: {
         isOpen: () => open,
         onClose: (listener: (record: { sessionId: string }) => void) => {

@@ -1,3 +1,4 @@
+import type { StatusReporter } from "../status/status-board";
 /**
  * The scheduler half of cron: a minute tick that fires due jobs. What a run
  * actually does (spawn a session, send the prompt) is injected by the host.
@@ -71,8 +72,32 @@ export class CronScheduler {
     private readonly networkReady: NetworkReady = async () => true,
     /** Told whenever the held set changes, for the routine list. */
     private readonly onHeldChange: () => void = () => {},
-    private readonly wait: (ms: number) => Promise<void> = sleep
+    private readonly wait: (ms: number) => Promise<void> = sleep,
+    /** The status board: holds, releases and missed fires are reported, never silent. */
+    private readonly status: StatusReporter | null = null
   ) {}
+
+  /** Back on schedule: clears only the stops this scheduler reported. */
+  private settle(job: CronJob): void {
+    this.status?.clear(`routine:${job.id}`, ["network", "slept", "offline"]);
+  }
+
+  private report(
+    job: CronJob,
+    state: Parameters<StatusReporter["report"]>[1],
+    reason: Parameters<StatusReporter["report"]>[2],
+    detail: { count?: number; madeUp?: number; at?: number } = {}
+  ): void {
+    this.status?.report(`routine:${job.id}`, state, reason, {
+      name: job.name,
+      routineId: job.id,
+      botId: job.botId,
+      ...(job.chatPlatforms?.[0] != null
+        ? { platform: job.chatPlatforms[0] }
+        : {}),
+      ...detail,
+    });
+  }
 
   everyMinute(callback: () => void): void {
     this.onMinute = callback;
@@ -132,14 +157,22 @@ export class CronScheduler {
           job.schedule != null &&
           !catchUpWorthIt(job.schedule, slot, Date.now())
         ) {
-          if (trigger === "schedule")
+          if (trigger === "schedule") {
             this.stored(() =>
               recordRun(job.id, ROUTINE_RESULTS.skippedOffline, "schedule", {
                 kind: "skipped-offline",
               })
             );
+            // Let go unrun: said, not dropped.
+            this.report(job, "missed", "offline", {
+              count: 1,
+              madeUp: 0,
+              at: Date.now(),
+            });
+          }
           continue;
         }
+        if (trigger === "schedule") this.settle(job);
         if (fired++ > 0) await this.wait(RELEASE_SPACING_MS);
         await this.fire(job, slot, trigger);
       }
@@ -185,15 +218,21 @@ export class CronScheduler {
     for (const { job, count, latest } of missed) {
       this.stored(() => setMissed(job.id, { count, at: now.getTime() }));
       // A later moment missed is the run to make up, over an interrupted one.
-      if (
+      const makeUp =
         !dueIds.has(job.id) &&
         (job.heldSince == null || job.heldFor === "interrupted") &&
         job.schedule != null &&
-        catchUpWorthIt(job.schedule, latest, now.getTime())
-      )
+        catchUpWorthIt(job.schedule, latest, now.getTime());
+      if (makeUp)
         this.stored(() =>
           setHeld(job.id, now.getTime(), { slot: latest, reason: "catch-up" })
         );
+      // Every missed fire is told once, summed across routines by the board.
+      this.report(job, "missed", lastTickAt == null ? "offline" : "slept", {
+        count,
+        madeUp: makeUp || dueIds.has(job.id) ? 1 : 0,
+        at: now.getTime(),
+      });
     }
 
     if (
@@ -203,19 +242,28 @@ export class CronScheduler {
       for (const job of due) {
         // Its next fire came with the network still down: the held one is
         // skipped, said so, and this one waits in its place.
-        if (job.heldSince != null && job.runAt == null)
+        if (job.heldSince != null && job.runAt == null) {
           this.stored(() =>
             recordRun(job.id, ROUTINE_RESULTS.skippedOffline, "schedule", {
               kind: "skipped-offline",
             })
           );
-        if (job.heldSince == null || job.runAt == null)
+          // A hold longer than one slot: the passed one is missed, and told.
+          this.report(job, "missed", "network", {
+            count: 1,
+            madeUp: 0,
+            at: now.getTime(),
+          });
+        }
+        if (job.heldSince == null || job.runAt == null) {
           this.stored(() =>
             setHeld(job.id, now.getTime(), {
               slot: slotFor(job, now),
               reason: "network",
             })
           );
+          if (job.heldSince == null) this.report(job, "waiting", "network");
+        }
       }
       this.onHeldChange();
       return;
@@ -227,6 +275,7 @@ export class CronScheduler {
       // Back on time: what it missed before is history.
       if (job.missed != null && !missedIds.has(job.id))
         this.stored(() => setMissed(job.id, null));
+      if (!missedIds.has(job.id)) this.settle(job);
       await this.fire(job, slotFor(job, now), "schedule");
     }
     if (missed.length > 0) this.onHeldChange();

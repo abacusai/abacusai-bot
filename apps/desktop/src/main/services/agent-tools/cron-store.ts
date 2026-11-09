@@ -80,6 +80,11 @@ export interface CronJob {
   /** Bot that made this routine. Provenance, not ownership: it outlives the bot. */
   botId: string | null;
   enabled: boolean;
+  /**
+   * Who turned it off: the app (a quiet or failing pause) or the user.
+   * Absent on a routine an older build paused, which history then tells.
+   */
+  pausedBy?: "app" | "user" | null;
   /** When the user last resumed it; failures before that do not count toward a pause. */
   resumedAt?: number | null;
   createdAt: number;
@@ -443,6 +448,7 @@ export const updateJob = (
       | "access"
       | "reach"
       | "model"
+      | "pausedBy"
     >
   > & { webhook?: boolean }
 ): CronJob => {
@@ -475,6 +481,10 @@ export const updateJob = (
   // Resumed: the failures that led to the pause are history.
   if (rest.enabled === true && !jobs[index].enabled)
     updated.resumedAt = Date.now();
+  // On is nobody's pause; off is the user's unless the app says it paused it.
+  if (rest.enabled === true) updated.pausedBy = null;
+  if (rest.enabled === false && rest.pausedBy === undefined)
+    updated.pausedBy = "user";
 
   if (rest.schedule != null && rest.schedule.trim().length === 0)
     updated.schedule = null;
@@ -928,7 +938,7 @@ export const missedJobs = (from: Date | null, to: Date): MissedJob[] => {
 export const retireOnceJob = (id: string): void => {
   const job = getJob(id);
   if (job == null || job.runAt == null) return;
-  updateJob(id, { enabled: false });
+  updateJob(id, { enabled: false, pausedBy: null });
 };
 
 export const describeJob = (job: CronJob): string => {

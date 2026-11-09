@@ -1650,9 +1650,7 @@
       "openAgent": "Configura le routine 24/7",
       "dismiss": "Dismiss",
       "missed_one": "Missed {{count}} run while your computer was off",
-      "missed_other": "Missed {{count}} runs while your computer was off",
-      "missedNoticeFree": "{{names}}. On the Basic plan, Abacus AI Agent on the web runs routines 24/7, even with your computer off.",
-      "missedNoticePaid": "{{names}}. Configura le tue routine in Abacus AI Agent sul web, dove funzionano 24 ore su 24, anche a computer spento."
+      "missed_other": "Missed {{count}} runs while your computer was off"
     },
     "reach": {
       "gmailSearch": "Search Gmail",
@@ -1674,7 +1672,6 @@
       "quiet": "In pausa: {{runs}} esecuzioni di fila non hanno trovato nulla di nuovo, quindi ha smesso di usare crediti. Riprendila per continuare a controllare."
     },
     "creditHold": {
-      "title": "Le tue routine sono in attesa di crediti",
       "notify": "Hai esaurito i crediti, quindi le tue routine non verranno eseguite. Le esecuzioni saltate non costano nulla e riprendono da sole quando avrai crediti.",
       "note": "In attesa di crediti: le esecuzioni vengono saltate senza costi e riprendono da sole quando avrai crediti.",
       "cta": "Ottieni crediti"
@@ -5180,6 +5177,35 @@
       "addMember": "Aggiungi o rimuovi bot",
       "decisions": "Decisioni",
       "noDecisions": "Ancora nulla di fissato. Fissa un messaggio oppure chiedi ai bot di accordarsi su qualcosa."
+    }
+  },
+  "status": {
+    "aRoutine": "Una routine",
+    "yourChatApp": "la tua app di chat",
+    "appClosed": "L'app si è chiusa mentre questo era in corso.",
+    "continue": "Continua",
+    "title": {
+      "paused": "{{name}} in pausa",
+      "onHold": "{{name}} è in attesa",
+      "laneStopped": "{{name}} non è connesso",
+      "missed": "{{name}} ha saltato delle esecuzioni",
+      "missedMany": "Le routine hanno saltato delle esecuzioni",
+      "many_one": "{{count}} elemento fermo",
+      "many_other": "{{count}} elementi fermi"
+    },
+    "body": {
+      "signedOut": "Non può essere eseguita finché sei disconnesso. Accedi e riprenderà.",
+      "routineLinkLost": "Le sue esecuzioni aspettano che {{platform}} sia di nuovo connesso. L'esecuzione saltata viene recuperata allora.",
+      "loginNotFinished": "L'accesso a {{platform}} non è stato completato, quindi è in pausa. Fai clic su Connetti per completarlo.",
+      "missedMany_one": "{{routines}} routine hanno saltato {{count}} esecuzione mentre il computer era in sospensione o l'app era chiusa. {{madeUp}} recuperate.",
+      "missedMany_other": "{{routines}} routine hanno saltato {{count}} esecuzioni mentre il computer era in sospensione o l'app era chiusa. {{madeUp}} recuperate.",
+      "routineLaneOff": "Le sue esecuzioni non ti raggiungono: {{platform}} è disattivato. Ricollegalo per riceverle."
+    },
+    "chat": {
+      "back": "{{name}} è di nuovo in esecuzione."
+    },
+    "row": {
+      "waitingNetwork": "In attesa della rete. Viene eseguita appena torna la connessione."
     }
   }
 }

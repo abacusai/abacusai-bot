@@ -47,6 +47,7 @@ import type {
   ChannelThread,
 } from "@abacus-ai/contract/channels";
 import { ConflictError } from "@abacus-ai/contract/conflict";
+import type { NotificationMetadata } from "@abacus-ai/contract/contract";
 import {
   checkoutKey,
   type GitDiffResult,
@@ -207,7 +208,7 @@ import {
   EntityNotFoundError,
   WORKSPACE_NOT_FOUND,
 } from "@abacus-ai/contract/not-found";
-import { quietEndsAt } from "@abacus-ai/contract/quiet-hours";
+import { isQuietNow, quietEndsAt } from "@abacus-ai/contract/quiet-hours";
 import { detectRememberRequest } from "@abacus-ai/contract/remember";
 import {
   ROUTINE_PAUSE_NOTES,
@@ -226,6 +227,7 @@ import type {
   SitePack,
   SitePackProgress,
 } from "@abacus-ai/contract/site-deploy";
+import type { StatusDetail } from "@abacus-ai/contract/status";
 import { isPositiveReactionEmoji } from "@abacus-ai/contract/success-pitch";
 import type {
   TerminalShellId,
@@ -613,6 +615,7 @@ import { ThreadStore } from "./services/session/thread-store";
 import { TranscriptService } from "./services/session/transcript-service";
 import { TurnAbandoner } from "./services/session/turn-abandoner";
 import { TurnLedger, type TurnRecord } from "./services/session/turn-ledger";
+import { StatusBoard } from "./services/status/status-board";
 import { VaultClient } from "./services/vault/vault-client";
 import { Vault } from "./services/vault/vault-tools";
 import { WhisperModelService } from "./services/voice/whisper-model-service";
@@ -841,6 +844,31 @@ const routineAsk = (job: CronJob): string | null =>
       readSettings().defaultModel ??
       null);
 
+/** A run in flight at wake has this much awake time to show progress. */
+const FROZEN_RUN_GRACE_MS = 2 * 60_000;
+/** Only a sleep this long, during the run, can have frozen it. */
+const FROZEN_RUN_MIN_SLEEP_MS = 5 * 60_000;
+/** The turn ending a run frozen across a sleep: interrupted, not the app closing. */
+const FROZEN_RUN_CAUSE = "no progress after wake";
+/** Keep-awake holds only for schedules sparser than this; frequent ones would never sleep. */
+const ROUTINE_DUE_MIN_PERIOD_MS = 30 * 60_000;
+/** Keep-awake holds from this long before a routine's slot. */
+const ROUTINE_DUE_LEAD_MS = 2 * 60_000;
+
+/**
+ * Why the app paused this routine, if it did: `pausedBy`, else (a pause an
+ * older build made) its newest pause note since the user last resumed it.
+ */
+const appPauseOf = (job: CronJob): "quiet" | "failing" | null => {
+  if (job.enabled || job.pausedBy === "user") return null;
+  const note = job.runs.find(
+    (run) => run.kind === "paused" && run.at > (job.resumedAt ?? 0)
+  )?.result;
+  if (note == null) return null;
+  if (note === ROUTINE_PAUSE_NOTES.quiet) return "quiet";
+  return note === ROUTINE_PAUSE_NOTES.failures ? "failing" : null;
+};
+
 export class ServiceHost {
   constructor(readonly platform: HostPlatform = "electron") {
     this.vault =
@@ -870,8 +898,15 @@ export class ServiceHost {
     // app it answers, the routine run it is, a caller waiting on its text.
     this.turnLedger.onClose((record) => {
       // The app's own thread: a run the app closed under gets its terminal.
-      if (record.kind === "app_closed")
+      if (record.kind === "app_closed" && record.cause !== FROZEN_RUN_CAUSE) {
         this.aguiRelay.closeInterruptedRun(record.sessionId, record);
+        this.statusBoard.report(
+          `run:${record.sessionId}`,
+          "stopped",
+          "interrupted",
+          { sessionId: record.sessionId }
+        );
+      }
       this.messagingGatewayService.noteTurnClosed(record);
       this.settleRoutineRun(record);
       this.settleTurnWaiter(record);
@@ -987,6 +1022,9 @@ export class ServiceHost {
           void this.successPitch.reacted(threadId);
       },
       markSent: (threadId) => {
+        // A new turn in a chat the app closed under: its stop is over.
+        this.statusBoard.clear(`run:${threadId}`, ["interrupted"]);
+        this.statusBoard.clear("agent", ["crashed"]);
         // The user's own words in the app: a relayed turn they join answers
         // them here, not in the chat app.
         this.messagingGatewayService.noteAppMessage(threadId);
@@ -1308,7 +1346,11 @@ export class ServiceHost {
       type: "credit_wall",
       ...creditWallOf(row),
     });
-    if (holdLifted(row)) this.prefs?.()?.update({ routineCreditHold: null });
+    if (holdLifted(row)) {
+      this.prefs?.()?.update({ routineCreditHold: null });
+      for (const job of listJobs())
+        this.statusBoard.clear(`routine:${job.id}`, ["credits-out"]);
+    }
   }
 
   /**
@@ -1344,16 +1386,18 @@ export class ServiceHost {
    * here in the user's own chat app and in the app by the prefs row.
    */
   private holdRoutinesForCredits(routineId: string): void {
+    const job = getJob(routineId);
+    if (job != null)
+      this.statusBoard.routineStopped(
+        routineId,
+        "credit-hold",
+        this.routineDetail(job)
+      );
     const prefs = this.prefs?.();
     if (prefs == null || prefs.get().routineCreditHold != null) return;
     prefs.update({
-      routineCreditHold: { at: Date.now(), routineId, noticed: false },
+      routineCreditHold: { at: Date.now(), routineId },
     });
-    void this.messagingGatewayService
-      .tellRoutinesOnHold()
-      .catch((error: unknown) => {
-        console.warn(`[routines] credit notice failed: ${String(error)}`);
-      });
   }
 
   private readonly sitePacker = new SitePacker();
@@ -1570,24 +1614,29 @@ export class ServiceHost {
   }
 
   /** How a notice reaches the user outside any chat; the app shell owns it. */
+  /** How a notice reaches the user outside any chat (the app shell's native notification). */
   private userNotifier:
-    | ((
-        platform: MessagingPlatformId,
-        title: string,
-        body: string,
-        key: string
-      ) => void)
+    | ((notice: {
+        title: string;
+        body: string;
+        dedupeKey: string;
+        metadata?: NotificationMetadata;
+      }) => void)
     | null = null;
+  private windowFocused: (() => boolean) | null = null;
 
+  /** The status board's native notices, and whether a window would show them in-app. */
   attachUserNotifier(
-    notify: (
-      platform: MessagingPlatformId,
-      title: string,
-      body: string,
-      key: string
-    ) => void
+    notify: (notice: {
+      title: string;
+      body: string;
+      dedupeKey: string;
+      metadata?: NotificationMetadata;
+    }) => void,
+    focused: () => boolean
   ): void {
     this.userNotifier = notify;
+    this.windowFocused = focused;
   }
 
   /** Hear each finished hosted run once (the Routines notifications). */
@@ -1919,6 +1968,46 @@ export class ServiceHost {
   });
   /** Whether this machine can reach Abacus; see connectivity-service.ts. */
   readonly connectivity = new ConnectivityService();
+  /**
+   * The one teller of stops (status-board.ts): routines, lanes, runs and the
+   * agent report into it; it decides whether and where the user hears.
+   */
+  readonly statusBoard = new StatusBoard({
+    file: () =>
+      this.platform === "web-host"
+        ? null
+        : path.join(abacusBotHome(), "status.json"),
+    log: (line) => console.log(line),
+    changed: () =>
+      this.emitEvent({
+        type: "status-updated",
+        emittedAt: new Date().toISOString(),
+      }),
+    words: () =>
+      channelWords(
+        channelLocale(readUserLanguage()?.name ?? null, this.appLanguage())
+      ),
+    notify: (notice) =>
+      this.userNotifier?.({
+        title: notice.title,
+        body: notice.body,
+        dedupeKey: `status:${notice.key}`,
+        metadata: notice.key.startsWith("lane:")
+          ? { kind: "messaging" }
+          : notice.detail.routineId != null
+            ? { kind: "routine", routineId: notice.detail.routineId }
+            : notice.detail.sessionId != null
+              ? { kind: "session", sessionId: notice.detail.sessionId }
+              : { kind: "messaging" },
+      }),
+    windowFocused: () => this.windowFocused?.() === true,
+    tellChat: (notice) => this.messagingGatewayService.tellStatus(notice),
+    quiet: (now) => {
+      const prefs = this.prefs?.()?.get();
+      // A prefs row from before quiet hours has no sounds yet.
+      return isQuietNow(prefs?.sounds?.quietHours, now);
+    },
+  });
   /** Every account read reaches the agents, so a run can wrap up before the credits end. */
   private readonly stopCreditForwarding = onAbacusAccountRead((snapshot) => {
     this.agentManagerService.broadcastCommand({
@@ -1952,7 +2041,9 @@ export class ServiceHost {
       this.emitEvent({
         type: "cronjobs-updated",
         emittedAt: new Date().toISOString(),
-      })
+      }),
+    undefined,
+    this.statusBoard
   );
   private readonly webhookService = new WebhookService(
     async (jobId, trigger, payload) => {
@@ -2665,8 +2756,14 @@ export class ServiceHost {
   /** Given callbacks, not this host, so it cannot reach further than needed. */
   private readonly messagingGatewayService = new MessagingGatewayService({
     platform: () => this.platform,
-    notifyUser: (platform, title, body, key) =>
-      this.userNotifier?.(platform, title, body, key),
+    notifyUser: (_platform, title, body, key) =>
+      this.userNotifier?.({
+        title,
+        body,
+        dedupeKey: key,
+        metadata: { kind: "messaging" },
+      }),
+    status: this.statusBoard,
     appLanguage: () => this.appLanguage(),
     resolveWorkspaceId: () => {
       const workspaces = this.workspaceService.getWorkspaces();
@@ -2738,6 +2835,8 @@ export class ServiceHost {
     },
     onPlatformConnected: (platform) => this.routineLinkBack(platform),
     emitChanged: () => {
+      // A lane switched on or off changes where routines can deliver.
+      this.queueRoutineStates();
       this.emitEvent({
         type: "messaging-updated",
         emittedAt: new Date().toISOString(),
@@ -2943,6 +3042,14 @@ export class ServiceHost {
     },
     emitAguiExit: (_workspaceId, sessionId, exit) => {
       this.aguiRelay.runtimeExited(sessionId, exit);
+      // An exit nobody asked for (a crash), not a quit: the chat shows it,
+      // the board logs it; the next turn clears it.
+      if (
+        !exit.requested &&
+        !this.turnLedger.isAppClosing() &&
+        (exit.code !== 0 || exit.signal != null)
+      )
+        this.statusBoard.report("agent", "stopped", "crashed", { sessionId });
     },
     emitNdjson: (workspaceId, sessionId, payload, origin) => {
       // An agui runtime serves only the new renderer (spec 00-agent-agui
@@ -3360,6 +3467,15 @@ export class ServiceHost {
     // Requests between bots the app closed on run again; queued ones start.
     this.botAskService.recover();
     this.channelService.recover();
+    // Every reporter re-states what it knows: a stop from an older build,
+    // from sleep or while the app was closed is told now.
+    this.statusBoard.reconcile(() => {
+      this.reportRoutineStates();
+      this.messagingGatewayService.reportLaneStates();
+    });
+    this.stopRoutineStateReports ??= onCronStoreWrite(() =>
+      this.reportRoutineStates()
+    );
     // Failures are per-connector and reported through the pane.
     void this.messagingGatewayService
       .syncConnectors()
@@ -5675,8 +5791,16 @@ export class ServiceHost {
         ...(resumed ? { resumed: true } : {}),
       });
       if (state === "online") void this.cronScheduler.release();
+      if (resumed) this.routinesAfterWake();
     });
-    this.cronScheduler.everyMinute(() => this.reapStuckRoutineRuns());
+    this.cronScheduler.everyMinute(() => {
+      // Ticking means awake: a resume the OS never sent must not freeze
+      // awake-time waits and the reaper.
+      if (this.connectivity.missedResume()) this.connectivity.resumed();
+      this.clearSignedOutStops();
+      this.reapStuckRoutineRuns();
+      this.noteRoutineDue();
+    });
     // Report deliveries a closed app left unmade are made now.
     void this.replayRunReports();
     this.cronScheduler.start();
@@ -5719,6 +5843,9 @@ export class ServiceHost {
     if (payload.type !== "event") return;
     if (!this.agentSessionManagerService.isRoutineSession(sessionId)) return;
     const event = payload.event;
+    // Any word from a run in flight at wake is the progress it owed.
+    this.frozenRunWatches.get(sessionId)?.();
+    this.frozenRunWatches.delete(sessionId);
     this.routineNetworkWaits.note(
       sessionId,
       event.type === "retry" && event.waitingForConnection === true,
@@ -6186,10 +6313,13 @@ export class ServiceHost {
       userText: { routineFire: true },
     });
 
-    let timer: NodeJS.Timeout | undefined;
+    // Counted in awake time (the power clock): a sleep does not use it up.
+    let cancelDeadline: (() => void) | undefined;
     const deadline = new Promise<"timeout">((resolve) => {
-      timer = setTimeout(() => resolve("timeout"), request.deadlineSecs * 1000);
-      timer.unref?.();
+      cancelDeadline = this.connectivity.awakeTimeout(
+        request.deadlineSecs * 1000,
+        () => resolve("timeout")
+      );
     });
     try {
       const ended = await Promise.race([settled, deadline]);
@@ -6202,7 +6332,7 @@ export class ServiceHost {
         ...(full ? { actions: countedActions(actions) } : {}),
       };
     } finally {
-      if (timer != null) clearTimeout(timer);
+      cancelDeadline?.();
       await stop();
     }
   }
@@ -6287,10 +6417,199 @@ export class ServiceHost {
     }
   }
 
+  /** What the board says about a routine: its name, bot and chat app. */
+  private routineDetail(job: CronJob): StatusDetail {
+    return {
+      name: job.name,
+      routineId: job.id,
+      botId: job.botId,
+      ...(job.chatPlatforms?.[0] != null
+        ? { platform: job.chatPlatforms[0] }
+        : {}),
+    };
+  }
+
+  /**
+   * Each routine's app-made stops, read off the store (state, not edges): a
+   * pause the app made, an older build's pause its history shows, and a run
+   * held for a lost chat-app link. Run at launch and on every store write.
+   */
+  private reportRoutineStates(): void {
+    const jobs = listJobs();
+    const ids = new Set(jobs.map((job) => job.id));
+    for (const item of this.statusBoard.list())
+      if (item.key.startsWith("routine:") && !ids.has(item.key.slice(8)))
+        this.statusBoard.forget(item.key);
+    for (const job of jobs) {
+      const key = `routine:${job.id}` as const;
+      const pause = appPauseOf(job);
+      if (pause != null)
+        this.statusBoard.report(
+          key,
+          "paused-by-app",
+          pause,
+          this.routineDetail(job)
+        );
+      else if (job.enabled && job.chatLinkLostAt != null)
+        this.statusBoard.routineStopped(
+          job.id,
+          "link-down",
+          this.routineDetail(job)
+        );
+      // Its chat app is off (an older build turned it off for a login left
+      // unfinished): its runs deliver nowhere until Connect.
+      else if (
+        job.enabled &&
+        job.chatPlatforms?.[0] != null &&
+        this.messagingGatewayService.laneOff(job.chatPlatforms[0])
+      )
+        this.statusBoard.report(
+          key,
+          "paused-by-app",
+          "lane-off",
+          this.routineDetail(job)
+        );
+      else
+        this.statusBoard.clear(key, [
+          "quiet",
+          "failing",
+          "link-lost",
+          "lane-off",
+        ]);
+    }
+    this.clearSignedOutStops();
+    const hold = this.prefs?.()?.get().routineCreditHold;
+    const held = hold != null ? getJob(hold.routineId) : null;
+    if (held != null)
+      this.statusBoard.routineStopped(
+        held.id,
+        "credit-hold",
+        this.routineDetail(held)
+      );
+  }
+
+  /** Signed in again: a routine held for it is no longer stopped. */
+  private clearSignedOutStops(): void {
+    const signedIn = Object.values(readSettings().apiKeys ?? {}).some(
+      (key) => (key ?? "").trim().length > 0
+    );
+    if (!signedIn) return;
+    for (const item of this.statusBoard.list())
+      if (item.key.startsWith("routine:"))
+        this.statusBoard.clear(item.key, ["signed-out"]);
+  }
+
+  private routineStatesQueued = false;
+
+  /** Re-read on a messaging change too (a lane turned on or off); once per burst. */
+  private queueRoutineStates(): void {
+    if (this.routineStatesQueued) return;
+    this.routineStatesQueued = true;
+    queueMicrotask(() => {
+      this.routineStatesQueued = false;
+      this.reportRoutineStates();
+    });
+  }
+
+  private stopRoutineStateReports: (() => void) | null = null;
+  /** Runs in flight at wake, each given a little awake time to show progress. */
+  private readonly frozenRunWatches = new Map<string, () => void>();
+
+  /**
+   * The machine woke: missed slots are counted and made up at once (one
+   * tick), and each run that was in flight must show progress within a
+   * little awake time, or it is made up as interrupted, never reaped.
+   */
+  private routinesAfterWake(): void {
+    void this.cronScheduler.tick().catch((error: unknown) => {
+      console.error("[cron] wake tick failed:", error);
+    });
+    const now = Date.now();
+    for (const job of listJobs())
+      for (const run of this.listRoutineRuns(job.id))
+        if (
+          run.outcome === "running" &&
+          this.connectivity.asleepBetween(
+            new Date(run.startedAt).getTime(),
+            now
+          ) >= FROZEN_RUN_MIN_SLEEP_MS
+        )
+          this.watchFrozenRun(job, run.sessionId);
+  }
+
+  private watchFrozenRun(job: CronJob, sessionId: string): void {
+    this.frozenRunWatches.get(sessionId)?.();
+    const cancel = this.connectivity.awakeTimeout(FROZEN_RUN_GRACE_MS, () => {
+      this.frozenRunWatches.delete(sessionId);
+      if (!this.turnLedger.isOpen(sessionId)) return;
+      console.log(
+        `[routines] ${job.id}: run ${sessionId} showed no progress after wake; it is made up`
+      );
+      // Filed as interrupted, so the existing make-up runs it once again; the
+      // app did not close, so its chat gets the stop's own ending, not that line.
+      this.turnLedger.end(sessionId, "app_closed", FROZEN_RUN_CAUSE);
+      const runtime = this.agentManagerService.getRuntimeInfo(sessionId);
+      if (runtime != null)
+        this.stopAgentTurn({ workspaceId: runtime.workspaceId, sessionId });
+      this.statusBoard.report(`routine:${job.id}`, "missed", "slept", {
+        ...this.routineDetail(job),
+        count: 1,
+        madeUp: getJob(job.id)?.heldFor === "interrupted" ? 1 : 0,
+        at: Date.now(),
+      });
+    });
+    this.frozenRunWatches.set(sessionId, cancel);
+  }
+
+  private routineDueNow = false;
+  private readonly routineDueListeners = new Set<(due: boolean) => void>();
+
+  /** A routine is about to run or running (keep-awake holds for it); now, then each change. */
+  followRoutineDue(listener: (due: boolean) => void): () => void {
+    this.routineDueListeners.add(listener);
+    listener(this.routineDueNow);
+    return () => {
+      this.routineDueListeners.delete(listener);
+    };
+  }
+
+  /** From ROUTINE_DUE_LEAD_MS before a local routine's next slot until its run settles. */
+  private noteRoutineDue(now: number = Date.now()): void {
+    const soon = (at: number | null | undefined): boolean =>
+      at != null && at - now <= ROUTINE_DUE_LEAD_MS && at > now - 60_000;
+    const nextSparse = (schedule: string): number | null => {
+      const next = nextRun(schedule, new Date(now - 60_000));
+      const after = next == null ? null : nextRun(schedule, next);
+      if (next == null) return null;
+      // A routine every few minutes would hold the machine awake for good.
+      if (
+        after != null &&
+        after.getTime() - next.getTime() < ROUTINE_DUE_MIN_PERIOD_MS
+      )
+        return null;
+      return next.getTime();
+    };
+    const due =
+      listJobs().some(
+        (job) =>
+          job.enabled &&
+          soon(
+            job.runAt ??
+              (job.schedule != null ? nextSparse(job.schedule) : null)
+          )
+      ) ||
+      // A routine run still open (its turn), read from memory, not run files.
+      [...this.routineRunText.keys()].some((id) => this.turnLedger.isOpen(id));
+    if (due === this.routineDueNow) return;
+    this.routineDueNow = due;
+    for (const listener of Array.from(this.routineDueListeners)) listener(due);
+  }
+
   private pauseRoutine(routineId: string, reason: string): void {
     const job = getJob(routineId);
     if (job == null || !job.enabled) return;
-    updateJob(routineId, { enabled: false });
+    // The app's pause, apart from the user's own switch; the board tells it.
+    updateJob(routineId, { enabled: false, pausedBy: "app" });
     // Administrative history (spec 05 §31.5 f): no session, no attempt.
     recordRun(routineId, reason, "schedule", { kind: "paused" });
     this.emitEvent({
@@ -6306,7 +6625,9 @@ export class ServiceHost {
         this.listRoutineRuns(job.id),
         now,
         ROUTINE_RUN_TIMEOUT_MS,
-        (sessionId) => this.routineNetworkWaits.waitedMs(sessionId, now)
+        (sessionId) => this.routineNetworkWaits.waitedMs(sessionId, now),
+        // A run the machine slept through is not stuck: wake checks it.
+        (startedAt) => this.connectivity.asleepBetween(startedAt, now)
       )) {
         this.routineNetworkWaits.forget(run.sessionId);
         this.stopAgentTurn({
@@ -6425,10 +6746,11 @@ export class ServiceHost {
     }
   ): Promise<string> {
     return new Promise<string>((resolve, reject) => {
-      const timer = setTimeout(() => {
+      // Awake time: a turn the machine slept through is not timed out by it.
+      const cancel = this.connectivity.awakeTimeout(timeoutMs, () => {
         this.turnWaiters.delete(sessionId);
         reject(new TimeoutError(messages.timeout, timeoutMs));
-      }, timeoutMs);
+      });
       this.turnWaiters.set(sessionId, {
         text: [],
         failed: messages.failed,
@@ -6437,11 +6759,11 @@ export class ServiceHost {
           ? { segment: messages.segment, messageId: null }
           : {}),
         resolve: (text) => {
-          clearTimeout(timer);
+          cancel();
           resolve(text);
         },
         reject: (error) => {
-          clearTimeout(timer);
+          cancel();
           reject(error);
         },
       });
@@ -7052,13 +7374,13 @@ export class ServiceHost {
   private turnClosed(sessionId: string, ms: number): Promise<boolean> {
     if (!this.turnLedger.isOpen(sessionId)) return Promise.resolve(true);
     return new Promise((resolve) => {
-      const timer = setTimeout(() => {
+      const cancel = this.connectivity.awakeTimeout(ms, () => {
         stop();
         resolve(false);
-      }, ms);
+      });
       const stop = this.turnLedger.onClose((record) => {
         if (record.sessionId !== sessionId) return;
-        clearTimeout(timer);
+        cancel();
         stop();
         resolve(true);
       });
@@ -7880,6 +8202,11 @@ export class ServiceHost {
         id: attemptId,
         kind: "skipped",
       });
+      this.statusBoard.routineStopped(
+        jobId,
+        "signed-out",
+        this.routineDetail(job)
+      );
       this.emitEvent({
         type: "cronjobs-updated",
         emittedAt: new Date().toISOString(),

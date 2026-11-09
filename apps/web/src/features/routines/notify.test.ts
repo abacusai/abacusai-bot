@@ -2,11 +2,7 @@ import type { RunFinishedNotice } from "@abacus-ai/contract/contract/ai";
 import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
 import { describe, it, expect, vi } from "vitest";
 
-import {
-  createFireHandler,
-  completionNotice,
-  creditHoldToTell,
-} from "./notify";
+import { createFireHandler, completionNotice } from "./notify";
 const routine = { id: "r", name: "Briefing", botId: null } as RoutineRow;
 describe("routine attention ownership", () => {
   it("R5-T26 fires only scheduled/webhook attempts once", () => {
@@ -59,17 +55,5 @@ describe("routine attention ownership", () => {
         routine,
       ])
     ).toBeNull();
-  });
-});
-
-describe("the routines-on-hold notice", () => {
-  const hold = { at: 5, routineId: "r", noticed: false };
-
-  it("is told once, whether the row changes again or the app comes back", () => {
-    const seen = new Set<string>();
-    expect(creditHoldToTell(hold, seen)).toEqual(hold);
-    expect(creditHoldToTell(hold, seen)).toBeNull();
-    expect(creditHoldToTell({ ...hold, noticed: true }, new Set())).toBeNull();
-    expect(creditHoldToTell(null, new Set())).toBeNull();
   });
 });

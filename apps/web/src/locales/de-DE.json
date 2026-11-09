@@ -1650,9 +1650,7 @@
       "openAgent": "24/7-Routinen einrichten",
       "dismiss": "Dismiss",
       "missed_one": "Missed {{count}} run while your computer was off",
-      "missed_other": "Missed {{count}} runs while your computer was off",
-      "missedNoticeFree": "{{names}}. On the Basic plan, Abacus AI Agent on the web runs routines 24/7, even with your computer off.",
-      "missedNoticePaid": "{{names}}. Richte deine Routinen in Abacus AI Agent im Web ein, wo sie rund um die Uhr laufen, auch wenn dein Computer aus ist."
+      "missed_other": "Missed {{count}} runs while your computer was off"
     },
     "reach": {
       "gmailSearch": "Search Gmail",
@@ -1674,7 +1672,6 @@
       "quiet": "Pausiert: {{runs}} Läufe nacheinander haben nichts Neues gefunden, daher verbraucht sie keine Credits mehr. Setze sie fort, damit sie weiter prüft."
     },
     "creditHold": {
-      "title": "Deine Routinen warten auf Credits",
       "notify": "Du hast keine Credits mehr, deshalb laufen deine Routinen nicht. Übersprungene Läufe kosten nichts, und sie starten von selbst wieder, sobald du Credits hast.",
       "note": "Wartet auf Credits: Läufe werden kostenlos übersprungen und starten von selbst wieder, sobald du Credits hast.",
       "cta": "Credits holen"
@@ -5180,6 +5177,35 @@
       "addMember": "Bots hinzufügen oder entfernen",
       "decisions": "Entscheidungen",
       "noDecisions": "Noch nichts angepinnt. Pinne eine Nachricht an oder bitte die Bots, sich auf etwas zu einigen."
+    }
+  },
+  "status": {
+    "aRoutine": "Eine Routine",
+    "yourChatApp": "deine Chat-App",
+    "appClosed": "Die App wurde geschlossen, während das lief.",
+    "continue": "Fortsetzen",
+    "title": {
+      "paused": "{{name}} pausiert",
+      "onHold": "{{name}} wartet",
+      "laneStopped": "{{name}} ist nicht verbunden",
+      "missed": "{{name}} hat Läufe verpasst",
+      "missedMany": "Routinen haben Läufe verpasst",
+      "many_one": "{{count}} Sache gestoppt",
+      "many_other": "{{count}} Sachen gestoppt"
+    },
+    "body": {
+      "signedOut": "Sie kann nicht laufen, solange du abgemeldet bist. Melde dich an, dann läuft sie wieder.",
+      "routineLinkLost": "Ihre Läufe warten, bis {{platform}} wieder verbunden ist. Der verpasste Lauf wird dann nachgeholt.",
+      "loginNotFinished": "Die Anmeldung bei {{platform}} wurde nicht abgeschlossen, daher ist es pausiert. Klicke auf Verbinden, um sie abzuschließen.",
+      "missedMany_one": "{{routines}} Routinen haben {{count}} Lauf verpasst, während der Computer schlief oder die App geschlossen war. {{madeUp}} nachgeholt.",
+      "missedMany_other": "{{routines}} Routinen haben {{count}} Läufe verpasst, während der Computer schlief oder die App geschlossen war. {{madeUp}} nachgeholt.",
+      "routineLaneOff": "Ihre Läufe erreichen dich nicht: {{platform}} ist ausgeschaltet. Verbinde es erneut, um sie zu bekommen."
+    },
+    "chat": {
+      "back": "{{name}} läuft wieder."
+    },
+    "row": {
+      "waitingNetwork": "Wartet auf das Netzwerk. Sie läuft, sobald die Verbindung wieder da ist."
     }
   }
 }

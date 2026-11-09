@@ -1650,9 +1650,7 @@
       "openAgent": "Configurar rotinas 24/7",
       "dismiss": "Dismiss",
       "missed_one": "Missed {{count}} run while your computer was off",
-      "missed_other": "Missed {{count}} runs while your computer was off",
-      "missedNoticeFree": "{{names}}. On the Basic plan, Abacus AI Agent on the web runs routines 24/7, even with your computer off.",
-      "missedNoticePaid": "{{names}}. Configure suas rotinas no Abacus AI Agent na web, onde elas funcionam 24/7, mesmo com o computador desligado."
+      "missed_other": "Missed {{count}} runs while your computer was off"
     },
     "reach": {
       "gmailSearch": "Search Gmail",
@@ -1674,7 +1672,6 @@
       "quiet": "Pausada: {{runs}} execuções seguidas não encontraram nada novo, então ela parou de usar créditos. Retome para continuar verificando."
     },
     "creditHold": {
-      "title": "Suas rotinas estão aguardando créditos",
       "notify": "Seus créditos acabaram, então suas rotinas não vão rodar. Execuções ignoradas não custam nada, e elas voltam sozinhas quando você tiver créditos.",
       "note": "Aguardando créditos: as execuções são ignoradas sem custo e voltam sozinhas quando você tiver créditos.",
       "cta": "Obter créditos"
@@ -5180,6 +5177,35 @@
       "addMember": "Adicionar ou remover bots",
       "decisions": "Decisões",
       "noDecisions": "Nada fixado ainda. Fixe uma mensagem ou peça aos bots que cheguem a um acordo sobre algo."
+    }
+  },
+  "status": {
+    "aRoutine": "Uma rotina",
+    "yourChatApp": "seu app de chat",
+    "appClosed": "O app fechou enquanto isto estava em execução.",
+    "continue": "Continuar",
+    "title": {
+      "paused": "{{name}} pausada",
+      "onHold": "{{name}} está em espera",
+      "laneStopped": "{{name}} não está conectado",
+      "missed": "{{name}} perdeu execuções",
+      "missedMany": "Rotinas perderam execuções",
+      "many_one": "{{count}} item parou",
+      "many_other": "{{count}} itens pararam"
+    },
+    "body": {
+      "signedOut": "Ela não pode rodar enquanto você está desconectado. Entre e ela volta a rodar.",
+      "routineLinkLost": "As execuções esperam até o {{platform}} ser conectado de novo. A execução perdida é recuperada então.",
+      "loginNotFinished": "O login no {{platform}} não terminou, então está pausado. Clique em Conectar para terminar.",
+      "missedMany_one": "{{routines}} rotinas perderam {{count}} execução enquanto o computador dormia ou o app estava fechado. {{madeUp}} recuperadas.",
+      "missedMany_other": "{{routines}} rotinas perderam {{count}} execuções enquanto o computador dormia ou o app estava fechado. {{madeUp}} recuperadas.",
+      "routineLaneOff": "As execuções não chegam até você: o {{platform}} está desligado. Conecte-o de novo para recebê-las."
+    },
+    "chat": {
+      "back": "{{name}} voltou a rodar."
+    },
+    "row": {
+      "waitingNetwork": "Aguardando a rede. Ela roda assim que a conexão voltar."
     }
   }
 }

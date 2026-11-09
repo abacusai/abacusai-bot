@@ -11,6 +11,7 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import { PrefsStore } from "../config/prefs-store";
+import { ConnectivityService } from "../connectivity/connectivity-service";
 import {
   CreditThresholdWatch,
   markAfterRead,
@@ -96,6 +97,35 @@ describe("the stuck-run timeout", () => {
         clock.waitedMs(id, later)
       )
     ).toEqual([waiting]);
+  });
+  it("does not count time the machine slept (the power clock)", () => {
+    let now = new Date("2026-09-03T09:00:00.000Z").getTime();
+    const power = new ConnectivityService({
+      probe: async () => true,
+      now: () => now,
+      log: () => {},
+    });
+    const running = run("running", "2026-09-03T09:00:00.000Z");
+    const stuckAt = (at: number) =>
+      stuckRuns(
+        [running],
+        at,
+        30 * 60_000,
+        () => 0,
+        (from) => power.asleepBetween(from, at)
+      );
+    now += 10 * 60_000;
+    power.suspended();
+    now += 40 * 60_000;
+    // Asleep 40 minutes into a 30-minute allowance: not stuck, before or at wake.
+    expect(stuckAt(now)).toEqual([]);
+    power.resumed();
+    expect(stuckAt(now)).toEqual([]);
+    // Its awake time runs out 20 minutes after the wake, not before.
+    expect(stuckAt(now + 19 * 60_000)).toEqual([]);
+    expect(stuckAt(now + 21 * 60_000)).toEqual([running]);
+    // The wall clock alone (main before the power clock) reaped it at wake.
+    expect(stuckRuns([running], now, 30 * 60_000)).toEqual([running]);
   });
 });
 

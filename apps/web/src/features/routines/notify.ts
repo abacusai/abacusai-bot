@@ -1,10 +1,7 @@
 import type { RunFinishedNotice } from "@abacus-ai/contract/contract/ai";
 import type { RoutinesEvent } from "@abacus-ai/contract/contract/routines";
 import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
-import type {
-  HostedRoutineRun,
-  RoutineCreditHold,
-} from "@abacus-ai/contract/routines";
+import type { HostedRoutineRun } from "@abacus-ai/contract/routines";
 
 import { isCheckInRoutine } from "#renderer/lib/bots/check-in";
 
@@ -44,15 +41,6 @@ export const completionNotice = (
       }
     : null;
 };
-
-/** The hold the app has yet to tell of; each is told once, wherever it was stamped. */
-export const creditHoldToTell = (
-  hold: RoutineCreditHold | null | undefined,
-  seen: Set<string>
-): RoutineCreditHold | null =>
-  hold != null && !hold.noticed && remember(seen, `credit-hold:${hold.at}`)
-    ? hold
-    : null;
 
 /** Notices remembered as given; far more than a session sees. */
 const SEEN_KEPT = 500;
