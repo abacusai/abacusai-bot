@@ -3,7 +3,7 @@
  * agent-initiated-only mode (respondToInbound off).
  *
  * The contract worth pinning: an incoming message is recorded (into the log
- * read_chat_messages reads, and into the contact list, auto-approved) and
+ * read_chat_messages reads, and into the contact list, waiting) and
  * nothing else happens: no session, no turn, no reply. Sends are user-driven
  * from a desktop chat, go to whoever the user names, are logged, and fail
  * loudly (a platform that is not running, a delivery error) so the model can
@@ -170,9 +170,10 @@ describe("inbound with listening off", () => {
     expect(await gateway.readMessages({ platform: "whatsapp" })).toMatchObject([
       { direction: "in", userName: "Grace", text: "are you around?" },
     ]);
-    // …remembered as a contact, approved rather than queued…
+    // …remembered as a contact waiting for the user, never approved: the
+    // approved list is who gets answered once auto-reply is on…
     expect(recordPairingRequest).toHaveBeenCalledTimes(1);
-    expect(approvePairing).toHaveBeenCalledWith("whatsapp", "U7");
+    expect(approvePairing).not.toHaveBeenCalled();
     // …and otherwise inert: no session, no turn, no reply as the user.
     expect(sessions).toBe(0);
     expect(sent).toEqual([]);

@@ -1116,6 +1116,8 @@ export class DiscordWebConnector implements MessagingConnector {
         userId: row.chatId,
         userName: row.name,
         chatId: row.chatId,
+        // No kind: the DM rail mixes people and group DMs, and nothing in
+        // the row tells them apart, so a DM is never taken for one person.
         text: row.text,
       });
     }
@@ -1141,6 +1143,7 @@ export class DiscordWebConnector implements MessagingConnector {
         userId: guild.guildId,
         userName: guild.name,
         chatId: guild.guildId,
+        kind: "group",
         text: `${guild.name} has ${guild.mentions} unread mention(s)`,
       });
     }

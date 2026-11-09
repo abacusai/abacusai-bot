@@ -1566,11 +1566,21 @@ export class ServiceHost {
 
   /** How a notice reaches the user outside any chat; the app shell owns it. */
   private userNotifier:
-    | ((platform: MessagingPlatformId, title: string, body: string) => void)
+    | ((
+        platform: MessagingPlatformId,
+        title: string,
+        body: string,
+        key: string
+      ) => void)
     | null = null;
 
   attachUserNotifier(
-    notify: (platform: MessagingPlatformId, title: string, body: string) => void
+    notify: (
+      platform: MessagingPlatformId,
+      title: string,
+      body: string,
+      key: string
+    ) => void
   ): void {
     this.userNotifier = notify;
   }
@@ -1859,6 +1869,8 @@ export class ServiceHost {
         status: () => this.messagingGatewayService.autoReplyStatus(),
         enable: (botId) => this.messagingGatewayService.enableAutoReply(botId),
         disable: () => this.messagingGatewayService.disableAutoReply(),
+        setAnswerPrivateChats: (on) =>
+          this.messagingGatewayService.setAnswerPrivateChats(on),
         senderCandidates: (platform) =>
           this.messagingGatewayService.senderCandidates(platform),
         allowSender: (candidate) =>
@@ -2640,8 +2652,8 @@ export class ServiceHost {
   /** Given callbacks, not this host, so it cannot reach further than needed. */
   private readonly messagingGatewayService = new MessagingGatewayService({
     platform: () => this.platform,
-    notifyUser: (platform, title, body) =>
-      this.userNotifier?.(platform, title, body),
+    notifyUser: (platform, title, body, key) =>
+      this.userNotifier?.(platform, title, body, key),
     appLanguage: () => this.appLanguage(),
     resolveWorkspaceId: () => {
       const workspaces = this.workspaceService.getWorkspaces();

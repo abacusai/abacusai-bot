@@ -8,6 +8,7 @@ import {
 import {
   isMessagingPlatformId,
   messagingPlatformSpec,
+  type MessagingChatKind,
   type MessagingPairedUser,
   type MessagingPlatformId,
 } from "@abacus-ai/contract/messaging";
@@ -35,6 +36,8 @@ type StoredConfig = {
   gatewayEnabled?: boolean;
   autoApproveTools?: boolean;
   respondToInbound?: boolean;
+  /** Answer anyone writing one to one, without approving each. */
+  answerPrivateChats?: boolean;
   workspaceId?: string | null;
   botId?: string | null;
   /** The retired own-account Telegram bootstrap's self bot; kept as written. */
@@ -54,7 +57,7 @@ type StoredConfig = {
 };
 
 /** Bump with each new step in `upgradeConfig`. */
-const MESSAGING_CONFIG_VERSION = 1;
+export const MESSAGING_CONFIG_VERSION = 2;
 
 const configPath = (): string => path.join(abacusBotHome(), "messaging.json");
 
@@ -168,6 +171,35 @@ const markLinkLostBeforeFlag = (config: StoredConfig): StoredConfig => {
   };
 };
 
+/** The shared lanes' id for the user's own chat (abacus-channels-connector). */
+const SHARED_LANE_SELF_ID = "me";
+
+/**
+ * v2: take back what the old rule approved. It approved every sender seen
+ * while auto-reply was off, so switching on answered all of them. Rows a bot
+ * was told to answer, and the user's own chat, stay. Off, nobody is answered
+ * yet, so the rest wait for the user again; on, they are marked, and the
+ * gateway answers none of them until the user approves each again.
+ */
+const takeBackAutoApprovals = (config: StoredConfig): StoredConfig => {
+  if (!Array.isArray(config.pairing)) return config;
+  const on = config.respondToInbound === true;
+  return {
+    ...config,
+    pairing: config.pairing.map((row): MessagingPairedUser => {
+      if (
+        row?.status !== "approved" ||
+        row.managedBy === "bot" ||
+        row.userId === SHARED_LANE_SELF_ID
+      )
+        return row;
+      return on
+        ? { ...row, autoAdded: true }
+        : { ...row, status: "pending", autoAdded: true };
+    }),
+  };
+};
+
 /** Set once the read path has tried to save an upgrade; see `upgradeConfig`. */
 let upgradeSaveTried = false;
 
@@ -180,6 +212,7 @@ const upgradeConfig = (config: StoredConfig): StoredConfig => {
   if (from >= MESSAGING_CONFIG_VERSION) return config;
   let upgraded = config;
   if (from < 1) upgraded = markLinkLostBeforeFlag(upgraded);
+  if (from < 2) upgraded = takeBackAutoApprovals(upgraded);
   upgraded = { ...upgraded, configVersion: MESSAGING_CONFIG_VERSION };
   // Saved from a read at most once per run; any later save stores it anyway.
   if (upgradeSaveTried) return upgraded;
@@ -339,6 +372,7 @@ export const readGatewaySettings = (): {
   gatewayEnabled: boolean;
   autoApproveTools: boolean;
   respondToInbound: boolean;
+  answerPrivateChats: boolean;
   workspaceId: string | null;
   botId: string | null;
   selfBotIds: Partial<Record<MessagingPlatformId, string>>;
@@ -361,6 +395,8 @@ export const readGatewaySettings = (): {
     // Default off: connecting an account must not make the agent answer people
     // on its own. Inbound is logged; letting it drive turns is the opt-in.
     respondToInbound: config.respondToInbound === true,
+    // Default off: each person is the user's to approve.
+    answerPrivateChats: config.answerPrivateChats === true,
     workspaceId:
       typeof config.workspaceId === "string" ? config.workspaceId : null,
     // Deliver inbound into this bot's forever chat, not per-sender sessions.
@@ -381,6 +417,7 @@ export const saveGatewaySettings = (patch: {
   gatewayEnabled?: boolean;
   autoApproveTools?: boolean;
   respondToInbound?: boolean;
+  answerPrivateChats?: boolean;
   workspaceId?: string | null;
   botId?: string | null;
   autoReplyBootstrapped?: boolean;
@@ -414,6 +451,9 @@ export const saveGatewaySettings = (patch: {
       : {}),
     ...(patch.respondToInbound != null
       ? { respondToInbound: patch.respondToInbound }
+      : {}),
+    ...(patch.answerPrivateChats != null
+      ? { answerPrivateChats: patch.answerPrivateChats }
       : {}),
     ...(patch.autoReplyBootstrapped != null
       ? { autoReplyBootstrapped: patch.autoReplyBootstrapped }
@@ -478,16 +518,21 @@ export const recordPairingRequest = (input: {
   userName: string | null;
   chatId: string;
   firstMessage: string | null;
+  kind?: MessagingChatKind;
 }): MessagingPairedUser => {
   const existing = findPairing(input.platform, input.userId);
   if (existing != null) {
     // The reply address can legitimately move (a user who DMed from a group,
-    // a new email thread), so that one field is refreshed.
-    if (existing.chatId !== input.chatId) {
-      updatePairing(input.platform, input.userId, { chatId: input.chatId });
-      return { ...existing, chatId: input.chatId };
-    }
-    return existing;
+    // a new email thread), and the kind arrives once the platform knows it.
+    const patch: Partial<MessagingPairedUser> = {
+      ...(existing.chatId !== input.chatId ? { chatId: input.chatId } : {}),
+      ...(input.kind != null && existing.kind !== input.kind
+        ? { kind: input.kind }
+        : {}),
+    };
+    if (Object.keys(patch).length === 0) return existing;
+    updatePairing(input.platform, input.userId, patch);
+    return { ...existing, ...patch };
   }
 
   const row: MessagingPairedUser = {
@@ -496,6 +541,7 @@ export const recordPairingRequest = (input: {
     userName: input.userName,
     chatId: input.chatId,
     status: "pending",
+    ...(input.kind != null ? { kind: input.kind } : {}),
     firstSeenAt: new Date().toISOString(),
     firstMessage:
       input.firstMessage != null ? input.firstMessage.slice(0, 500) : null,
@@ -510,14 +556,17 @@ export const recordPairingRequest = (input: {
 };
 
 /**
- * Trim the oldest pending rows to the cap, keeping every approved one. Order
+ * Trim the oldest pending rows to the cap, keeping every approved one and the
+ * rows the migration took back, which wait for the user's decision. Order
  * is otherwise preserved: the pane shows the list as stored, and reshuffling
  * would move rows under someone mid-decision.
  */
 const withinPendingCap = (
   rows: MessagingPairedUser[]
 ): MessagingPairedUser[] => {
-  const pending = rows.filter((row) => row.status === "pending");
+  const pending = rows.filter(
+    (row) => row.status === "pending" && row.autoAdded !== true
+  );
   if (pending.length <= MAX_PENDING_PAIRING) return rows;
 
   const doomed = new Set(
@@ -558,9 +607,27 @@ export const approvePairing = (
 ): void => {
   updatePairing(platform, userId, {
     status: "approved",
+    // The user's own decision now; the old rule's marker no longer applies.
+    autoAdded: undefined,
     ...(options?.managedBy != null ? { managedBy: options.managedBy } : {}),
     ...(options?.botId != null ? { botId: options.botId } : {}),
   });
+};
+
+/** The user was told this chat is waiting (the gateway tells each once). */
+export const markPairingTold = (
+  platform: MessagingPlatformId,
+  userId: string
+): void => {
+  updatePairing(platform, userId, { toldAt: new Date().toISOString() });
+};
+
+/** Back to waiting for the user: a row the old rule approved, seen in a group. */
+export const holdPairing = (
+  platform: MessagingPlatformId,
+  userId: string
+): void => {
+  updatePairing(platform, userId, { status: "pending" });
 };
 
 /**

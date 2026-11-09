@@ -133,6 +133,9 @@ it("a messaging setting flips at once and a refusal restores the snapshot", asyn
     approved: [],
     pending: [],
     autoReplies: [],
+    answered: [],
+    reapprove: [],
+    answerPrivateChats: false,
     platforms: [],
   } as unknown as MessagingSnapshot;
   const answer = gate();

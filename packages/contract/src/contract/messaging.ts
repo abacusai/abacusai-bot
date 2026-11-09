@@ -29,6 +29,7 @@ export const MessagingPairingDecisionRequestSchema = v.object({
 export const UpdateMessagingSettingsRequestSchema = v.object({
   gatewayEnabled: v.optional(v.boolean()),
   autoApproveTools: v.optional(v.boolean()),
+  answerPrivateChats: v.optional(v.boolean()),
   respondToInbound: v.optional(v.boolean()),
   workspaceId: v.optional(v.nullable(WorkspaceId)),
   botId: v.optional(v.nullable(BotId)),

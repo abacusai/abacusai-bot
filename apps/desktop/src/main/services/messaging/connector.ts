@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import path from "path";
 
 import type {
+  MessagingChatKind,
   MessagingPlatformId,
   MessagingPlatformState,
 } from "@abacus-ai/contract/messaging";
@@ -25,6 +26,10 @@ export type InboundMessage = {
   userName: string | null;
   /** Where a reply goes. Not always equal to userId (groups, threads, email). */
   chatId: string;
+  /** A group or channel, or one person. Left out when the platform cannot tell. */
+  kind?: MessagingChatKind;
+  /** The chat's own name where userName is the person who posted (a group's). */
+  chatName?: string;
   text: string;
   /**
    * Media that arrived with the message, already saved to disk by the

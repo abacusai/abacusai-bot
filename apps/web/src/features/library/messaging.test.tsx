@@ -31,6 +31,9 @@ const setup = (
     approved: [],
     pending: [],
     autoReplies: [],
+    answered: [],
+    reapprove: [],
+    answerPrivateChats: false,
     platforms: [
       platform,
       ...(platform === "discord" ? ["abacus_discord" as const] : []),
@@ -174,6 +177,9 @@ it("changing the Messaging route settles delayed WhatsApp setup and preserves th
     botId: null,
     platforms: [],
     autoReplies: [],
+    answered: [],
+    reapprove: [],
+    answerPrivateChats: false,
     pending: [],
     approved: [],
   } as unknown as MessagingSnapshot;
@@ -298,7 +304,7 @@ it("a cold Messaging dialog link closes by replacement without reopening on Back
   }
 });
 
-it("channel details retain pairing decisions and independent bot auto-reply controls", async () => {
+it("channel details keep bot auto-reply controls; waiting senders are approved on the page", async () => {
   const d = setup();
   const sender = (
     userId: string,
@@ -370,6 +376,14 @@ it("channel details retain pairing decisions and independent bot auto-reply cont
     expect(
       within(row("Second bot sender")).getByRole("button", { name: "Resume" })
     ).not.toBeNull();
+    // Waiting senders are decided on the page, beside who is answered.
+    expect(
+      within(screen.getByRole("dialog")).queryByText("Pending sender")
+    ).toBeNull();
+    fireEvent.click(
+      screen.getByRole("button", { name: enUS.messaging.cancelConnect })
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     fireEvent.click(
       within(row("Pending sender")).getByRole("button", { name: "Approve" })
     );
@@ -381,7 +395,6 @@ it("channel details retain pairing decisions and independent bot auto-reply cont
       userId: "Pending sender",
       decision: "approve",
     });
-    expect(screen.getByText("Second bot sender")).not.toBeNull();
   } finally {
     app.view.unmount();
     await app.cleanup();

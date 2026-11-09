@@ -2,7 +2,10 @@ import fs from "fs";
 import path from "path";
 
 import { isDiskFull } from "@abacus-ai/agent/atomic-file";
-import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
+import type {
+  MessagingChatKind,
+  MessagingPlatformId,
+} from "@abacus-ai/contract/messaging";
 import { BrowserWindow } from "electron";
 
 import {
@@ -96,6 +99,12 @@ type LoginState = {
   /** A refusal the login page itself is showing (rate limits, mostly). */
   loginError?: string | null;
 };
+
+/** Telegram Web's peer ids are negative for groups and channels, positive for a person. */
+export const telegramPeerKind = (
+  peerId: string
+): MessagingChatKind | undefined =>
+  /^-\d+$/.test(peerId) ? "group" : /^\d+$/.test(peerId) ? "direct" : undefined;
 
 export class TelegramWebConnector implements MessagingConnector {
   readonly id: MessagingPlatformId = "telegram";
@@ -518,6 +527,7 @@ export class TelegramWebConnector implements MessagingConnector {
         userId: row.chatId,
         userName: row.name,
         chatId: row.chatId,
+        kind: telegramPeerKind(row.chatId),
         text: row.text,
       });
     }

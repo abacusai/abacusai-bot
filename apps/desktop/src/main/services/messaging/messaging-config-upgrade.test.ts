@@ -88,7 +88,7 @@ describe("the lost-link upgrade", () => {
 
     expect(readPlatformLinkLost("whatsapp")).toBe(true);
     expect(readStore()).toMatchObject({
-      configVersion: 1,
+      configVersion: store.MESSAGING_CONFIG_VERSION,
       platforms: { whatsapp: { ...signedOutStill, linkLost: true } },
     });
   });
@@ -112,7 +112,7 @@ describe("the lost-link upgrade", () => {
     expect(readStore()).toEqual({
       ...linkedOnce,
       platforms: { whatsapp },
-      configVersion: 1,
+      configVersion: store.MESSAGING_CONFIG_VERSION,
     });
   });
 
@@ -140,7 +140,7 @@ describe("the lost-link upgrade", () => {
     savePlatformSignedIn("whatsapp", false);
 
     expect(readStore()).toEqual({
-      configVersion: 1,
+      configVersion: store.MESSAGING_CONFIG_VERSION,
       platforms: { whatsapp: { signedIn: false } },
     });
   });
@@ -149,7 +149,7 @@ describe("the lost-link upgrade", () => {
     writeStore({
       ...linkedOnce,
       platforms: { whatsapp: signedOutStill },
-      configVersion: 1,
+      configVersion: store.MESSAGING_CONFIG_VERSION,
     });
     const before = fs.readFileSync(storePath(), "utf8");
 
@@ -183,7 +183,7 @@ describe("the lost-link upgrade", () => {
     store.saveGatewaySettings({ respondToInbound: true });
 
     expect(readStore()).toMatchObject({
-      configVersion: 1,
+      configVersion: store.MESSAGING_CONFIG_VERSION,
       platforms: { whatsapp: { linkLost: true } },
     });
     warn.mockRestore();

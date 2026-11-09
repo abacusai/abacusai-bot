@@ -20,6 +20,7 @@ import {
   approvedUserIds,
   findPairing,
   listPairing,
+  MESSAGING_CONFIG_VERSION,
 } from "./messaging-config-service";
 
 let home: string;
@@ -29,7 +30,8 @@ const writeStore = (pairing: unknown): void => {
   fs.mkdirSync(home, { recursive: true });
   fs.writeFileSync(
     path.join(home, "messaging.json"),
-    JSON.stringify({ pairing }),
+    // A current store: an older one is upgraded on read (messaging-config-upgrade).
+    JSON.stringify({ configVersion: MESSAGING_CONFIG_VERSION, pairing }),
     "utf8"
   );
 };

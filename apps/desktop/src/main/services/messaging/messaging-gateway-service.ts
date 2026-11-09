@@ -24,6 +24,7 @@ import {
   messagingPlatformSpec,
   selfLaneOf,
   redactSecret,
+  type MessagingPairedUser,
   type MessagingPlatformId,
   type MessagingPlatformInfo,
   type MessagingPlatformState,
@@ -48,7 +49,10 @@ import {
 } from "../providers/abacus-upgrade";
 import { environmentNoticeService } from "../providers/environment-notice-service";
 import type { TurnChannel, TurnRecord } from "../session/turn-ledger";
-import { AbacusChannelsConnector } from "./abacus-channels-connector";
+import {
+  AbacusChannelsConnector,
+  SELF_CHAT_ID,
+} from "./abacus-channels-connector";
 import {
   channelLocale,
   type ChannelWords,
@@ -84,7 +88,9 @@ import {
   pausePairing,
   approvedUserIds,
   findPairing,
+  holdPairing,
   isFieldFromEnv,
+  markPairingTold,
   isPlatformConfigured,
   isPlatformEnabled,
   listPairing,
@@ -263,11 +269,12 @@ type GatewayOptions = {
   ) => void;
   /** Broadcast so the Messaging pane re-reads its snapshot. */
   emitChanged: () => void;
-  /** Tells the user outside any chat, for what no chat can carry: a lost link. */
+  /** Tells the user outside any chat: a lost link, a sender waiting. `key` dedupes repeats. */
   notifyUser?: (
     platform: MessagingPlatformId,
     title: string,
-    body: string
+    body: string,
+    key: string
   ) => void;
   /** A platform came up: what waited on its link can go. */
   onPlatformConnected?: (platform: MessagingPlatformId) => void;
@@ -591,6 +598,13 @@ export class MessagingGatewayService {
   /** Platforms whose lost link the user heard of this run: once each launch, until it is back. */
   private readonly linkLossTold = new Set<MessagingPlatformId>();
 
+  /** Waiting-chat notices: when the last went out, what waits for the gap, its timer. */
+  private waitingToldAt = 0;
+  private readonly waitingQueue: WaitingNotice[] = [];
+  private waitingTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Chats told about this run, beside the row's mark. */
+  private readonly toldThisRun = new Set<string>();
+
   /** What each chat was already told about failed turns; see FailureReplyThrottle. */
   private readonly failureThrottle: FailureReplyThrottle;
 
@@ -668,6 +682,7 @@ export class MessagingGatewayService {
     for (const route of this.routes.values()) this.stopWatchingProgress(route);
     for (const timer of this.releasedLogins.values()) clearTimeout(timer);
     this.releasedLogins.clear();
+    this.dropWaitingNotices();
     if (this.logSaveTimer != null) {
       clearTimeout(this.logSaveTimer);
       this.logSaveTimer = null;
@@ -993,22 +1008,15 @@ export class MessagingGatewayService {
       return;
     }
 
-    // Listening is the opt-in: off, a message is logged, the sender stored
-    // approved (nothing to gate) and no turn runs. The user's own chat is
-    // exempt; the switch governs other people.
+    // Off, only the user's own chat is answered. Everyone else waits for the
+    // user's decision: being off never approves anyone, because the approved
+    // list is exactly who gets answered the moment it is switched on.
     if (
       !settings.respondToInbound &&
       !(isSelf && this.options.homeBots != null)
     ) {
-      recordPairingRequest({
-        platform: platformId,
-        userId: message.userId,
-        userName: message.userName,
-        chatId: message.chatId,
-        firstMessage: message.text,
-      });
-      approvePairing(platformId, message.userId);
-      this.options.emitChanged();
+      // The user's own chat is never someone to approve.
+      if (!isSelf) this.holdSender(platformId, message, { tell: false });
       return;
     }
 
@@ -1049,42 +1057,12 @@ export class MessagingGatewayService {
       return;
     }
 
-    const approved = approvedUserIds(platformId);
-
-    // A sender the connector itself identifies as "me" is approved on sight:
-    // the identity it established at connect outranks the pairing queue. Not
-    // a row the user paused, though: approving on sight there undid the
-    // pause with the next message, and deleting the bot was the only way to
-    // stop it answering.
-    if (!approved.has(message.userId) && isSelf) {
-      const paused =
-        findPairing(platformId, message.userId)?.status === "paused";
-      if (!paused) {
-        recordPairingRequest({
-          platform: platformId,
-          userId: message.userId,
-          userName: message.userName,
-          chatId: message.chatId,
-          firstMessage: message.text,
-        });
-        approvePairing(platformId, message.userId);
-        approved.add(message.userId);
-        this.options.emitChanged();
-      }
-    }
-
-    if (!approved.has(message.userId)) {
-      // Recorded for the approval queue and answered with nothing: any
-      // automatic reply goes out as the user's own account, to someone they
-      // may not want contacted.
-      recordPairingRequest({
-        platform: platformId,
-        userId: message.userId,
-        userName: message.userName,
-        chatId: message.chatId,
-        firstMessage: message.text,
+    const decision = this.answerDecision(platformId, message, isSelf);
+    if (decision !== "answer") {
+      this.holdSender(platformId, message, {
+        tell: !isSelf,
+        takeBack: decision === "takeBack",
       });
-      this.options.emitChanged();
       return;
     }
 
@@ -2433,7 +2411,8 @@ export class MessagingGatewayService {
     this.options.notifyUser?.(
       platformId,
       words.t("native.linkLostTitle", { platform }),
-      words.t("native.linkLostLane", { platform })
+      words.t("native.linkLostLane", { platform }),
+      `link-lost:${platformId}`
     );
     this.tellInAnotherApp(
       platformId,
@@ -2472,7 +2451,8 @@ export class MessagingGatewayService {
     this.options.notifyUser?.(
       platformId,
       words.t("native.laneDownTitle", { platform }),
-      body
+      body,
+      `link-lost:${platformId}`
     );
     this.tellInAnotherApp(platformId, body);
   }
@@ -2491,7 +2471,8 @@ export class MessagingGatewayService {
     this.options.notifyUser?.(
       platformId,
       words.t("native.laneDownTitle", { platform }),
-      words.t("native.laneDownBody", { platform })
+      words.t("native.laneDownBody", { platform }),
+      `link-lost:${platformId}`
     );
   }
 
@@ -2791,6 +2772,238 @@ export class MessagingGatewayService {
   }
 
   // ---------------------------------------------------------------------------
+  // Who auto-reply answers: the one rule
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Answer or hold a message while auto-reply is on. Answered: the user's own
+   * chat, and who the user approved (in the app, or by asking a bot). With
+   * the private-chats switch on, also anyone known to be writing one to one.
+   * Never a group the user did not approve: a reply there reaches everyone.
+   */
+  private answerDecision(
+    platformId: MessagingPlatformId,
+    message: InboundMessage,
+    isSelf: boolean
+  ): "answer" | "hold" | "takeBack" {
+    const approved = approvedUserIds(platformId).has(message.userId);
+    const row = findPairing(platformId, message.userId);
+    if (isSelf) {
+      if (approved) return "answer";
+      // The identity the connector proved at connect outranks the queue, but
+      // not a pause: approving on sight undid it with the next message.
+      if (row?.status === "paused") return "hold";
+      recordPairingRequest({
+        platform: platformId,
+        userId: message.userId,
+        userName: message.userName,
+        chatId: message.chatId,
+        firstMessage: message.text,
+        kind: "direct",
+      });
+      approvePairing(platformId, message.userId);
+      this.options.emitChanged();
+      return "answer";
+    }
+    if (approved) {
+      // The kind is learned as messages arrive, for the lists and the rule below.
+      if (message.kind != null && row != null && row.kind !== message.kind)
+        recordPairingRequest({
+          platform: platformId,
+          userId: message.userId,
+          userName: message.userName,
+          chatId: message.chatId,
+          firstMessage: null,
+          kind: message.kind,
+        });
+      return row == null || answersApproved(row) ? "answer" : "takeBack";
+    }
+    if (row?.status === "paused") return "hold";
+    return readGatewaySettings().answerPrivateChats === true &&
+      message.kind === "direct"
+      ? "answer"
+      : "hold";
+  }
+
+  /**
+   * Recorded for the user's decision and not answered. While auto-reply is
+   * on the user hears of each chat once (a mark on its row): when it first
+   * writes, or writes again after arriving while auto-reply was off, and when
+   * an old automatic approval is taken back (it was answered, and stops).
+   */
+  private holdSender(
+    platformId: MessagingPlatformId,
+    message: InboundMessage,
+    options: { tell: boolean; takeBack?: boolean }
+  ): void {
+    // A group is listed and announced by its own name, not by who posted.
+    const name =
+      message.kind === "group"
+        ? (message.chatName ?? message.userName ?? message.userId)
+        : (message.userName ?? message.userId);
+    const known = findPairing(platformId, message.userId);
+    recordPairingRequest({
+      platform: platformId,
+      userId: message.userId,
+      userName: name,
+      chatId: message.chatId,
+      firstMessage: message.text,
+      kind: message.kind,
+    });
+    const takeBack = options.takeBack === true;
+    if (takeBack) {
+      console.log(
+        `[messaging] ${platformId}: a chat approved without the user wrote in, now waiting for them`
+      );
+      holdPairing(platformId, message.userId);
+      this.dropRoutes(platformId, message.userId, message.chatId);
+    }
+    const key = `${platformId}:${message.userId}`;
+    // The mark lives on the row; the run's own set covers a row the pending
+    // cap evicted and a stranger re-created.
+    const told = known?.toldAt != null || this.toldThisRun.has(key);
+    if (options.tell && (takeBack || !told)) {
+      this.toldThisRun.add(key);
+      markPairingTold(platformId, message.userId);
+      this.queueWaitingNotice({
+        platform: platformId,
+        userId: message.userId,
+        name: known?.userName ?? name,
+        why: takeBack
+          ? "takenBack"
+          : message.kind === "group"
+            ? "group"
+            : "person",
+      });
+    }
+    this.options.emitChanged();
+  }
+
+  /**
+   * Notices go out at most once a minute. One waiting chat is named; a burst
+   * is one notice that names a few people and counts the groups. What waits
+   * for the gap is sent when it ends, not held until the next message.
+   */
+  private queueWaitingNotice(entry: WaitingNotice): void {
+    this.waitingQueue.push(entry);
+    if (this.waitingTimer != null) return;
+    const now = this.options.now?.() ?? Date.now();
+    const wait = this.waitingToldAt + SENDER_NOTICE_GAP_MS - now;
+    if (wait <= 0) {
+      void this.flushWaitingNotices();
+      return;
+    }
+    this.waitingTimer = setTimeout(() => {
+      this.waitingTimer = null;
+      void this.flushWaitingNotices();
+    }, wait);
+    this.waitingTimer.unref?.();
+  }
+
+  private dropWaitingNotices(): void {
+    if (this.waitingTimer != null) clearTimeout(this.waitingTimer);
+    this.waitingTimer = null;
+    this.waitingQueue.length = 0;
+  }
+
+  private async flushWaitingNotices(): Promise<void> {
+    const entries = this.waitingQueue.splice(0);
+    const [only] = entries;
+    if (only == null) return;
+    const now = this.options.now?.() ?? Date.now();
+    this.waitingToldAt = now;
+    const words = await channelWords(
+      channelLocale(
+        readUserLanguage()?.name ?? null,
+        this.options.appLanguage?.() ?? null
+      )
+    );
+    const platformName = (id: MessagingPlatformId) =>
+      words.t(
+        `messaging.platforms.${messagingPlatformSpec(id)?.nameKey ?? id}`
+      );
+    if (entries.length === 1) {
+      const platform = platformName(only.platform);
+      const [title, body] = {
+        person: ["native.senderWaitingTitle", "native.senderWaitingBody"],
+        group: ["native.groupWaitingTitle", "native.groupWaitingBody"],
+        takenBack: ["native.takenBackTitle", "native.takenBackBody"],
+      }[only.why];
+      this.options.notifyUser?.(
+        only.platform,
+        words.t(title, { name: only.name, platform }),
+        words.t(body),
+        `sender-waiting:${only.platform}:${only.userId}`
+      );
+      return;
+    }
+    const people = entries.filter((entry) => entry.why !== "group");
+    const groups = entries.length - people.length;
+    const names = [
+      ...people.slice(0, NOTICE_NAMES).map((entry) => entry.name),
+      ...(people.length > NOTICE_NAMES
+        ? [
+            words.t("native.morePeople", {
+              count: people.length - NOTICE_NAMES,
+            }),
+          ]
+        : []),
+      ...(groups > 0 ? [words.t("native.groupsCount", { count: groups })] : []),
+    ].join(", ");
+    this.options.notifyUser?.(
+      only.platform,
+      words.t("native.chatsWaitingTitle", { count: entries.length }),
+      words.t("native.chatsWaitingBody", { names }),
+      `senders-waiting:${now}`
+    );
+  }
+
+  /** A row for the user's own chat: never someone to approve or list. */
+  private isOwnRow(row: MessagingPairedUser): boolean {
+    return (
+      row.userId === SELF_CHAT_ID ||
+      this.connectors.get(row.platform)?.selfChatId?.() === row.userId ||
+      this.isOwnChat(row.platform, row.chatId)
+    );
+  }
+
+  /** Everyone auto-reply answers once on: what the switch, the card and the tool show. */
+  private answeredRows(): MessagingPairedUser[] {
+    return listPairing().filter(
+      (row) =>
+        row.status === "approved" && answersApproved(row) && !this.isOwnRow(row)
+    );
+  }
+
+  /** Approved by the old rule, not by the user: answered only once re-approved. */
+  private reapproveRows(): MessagingPairedUser[] {
+    return listPairing().filter(
+      (row) =>
+        row.status === "approved" &&
+        !answersApproved(row) &&
+        !this.isOwnRow(row)
+    );
+  }
+
+  /**
+   * Waiting for the user's decision; old automatic approvals first. With the
+   * private-chats switch on, a chat known to be one person is answered, not waiting.
+   */
+  private waitingRows(): MessagingPairedUser[] {
+    const privateAnswered = readGatewaySettings().answerPrivateChats === true;
+    const rows = listPairing().filter(
+      (row) =>
+        row.status === "pending" &&
+        !this.isOwnRow(row) &&
+        !(privateAnswered && row.kind === "direct")
+    );
+    return [
+      ...rows.filter((row) => row.autoAdded === true),
+      ...rows.filter((row) => row.autoAdded !== true),
+    ];
+  }
+
+  // ---------------------------------------------------------------------------
   // Auto-reply (the bot-only auto_reply tool)
   // ---------------------------------------------------------------------------
 
@@ -2865,6 +3078,8 @@ export class MessagingGatewayService {
 
   /** Stop answering. The pairing list survives; stopping is not forgetting. */
   disableAutoReply(): void {
+    // Notices are about chats auto-reply is not answering; off, nothing is owed.
+    this.dropWaitingNotices();
     saveGatewaySettings({ respondToInbound: false });
     this.options.emitChanged();
   }
@@ -2872,33 +3087,51 @@ export class MessagingGatewayService {
   autoReplyStatus(): {
     respondToInbound: boolean;
     botId: string | null;
+    /** Also anyone writing one to one, unapproved. */
+    answerPrivateChats: boolean;
+    /** Who is answered: the same list the app's switch confirms. */
     approved: Array<{
       platform: MessagingPlatformId;
       userId: string;
       name: string;
+      isGroup: boolean;
     }>;
     /** Senders who have messaged in but are not allowed; newest last. */
     pending: Array<{
       platform: MessagingPlatformId;
       userId: string;
       name: string;
+      isGroup: boolean;
+    }>;
+    /** Approved by an older version, not answered until the user approves again. */
+    reapprove: Array<{
+      platform: MessagingPlatformId;
+      userId: string;
+      name: string;
+      isGroup: boolean;
     }>;
   } {
     const settings = readGatewaySettings();
-    const rows = (status: "approved" | "pending") =>
-      listPairing()
-        .filter((row) => row.status === status)
-        .map((row) => ({
-          platform: row.platform,
-          userId: row.userId,
-          name: row.userName ?? row.userId,
-        }));
+    const shape = (row: MessagingPairedUser) => ({
+      platform: row.platform,
+      userId: row.userId,
+      name: row.userName ?? row.userId,
+      isGroup: row.kind === "group",
+    });
     return {
       respondToInbound: settings.respondToInbound,
       botId: settings.botId,
-      approved: rows("approved"),
-      pending: rows("pending"),
+      answerPrivateChats: settings.answerPrivateChats,
+      approved: this.answeredRows().map(shape),
+      pending: this.waitingRows().map(shape),
+      reapprove: this.reapproveRows().map(shape),
     };
+  }
+
+  /** "Answer anyone who writes to me one to one", from a bot's chat or the app. */
+  setAnswerPrivateChats(on: boolean): void {
+    saveGatewaySettings({ answerPrivateChats: on });
+    this.options.emitChanged();
   }
 
   /**
@@ -3483,6 +3716,7 @@ export class MessagingGatewayService {
   getSnapshot(): MessagingSnapshot {
     const settings = readGatewaySettings();
     const pairing = listPairing();
+    const waiting = this.waitingRows();
 
     const platforms: MessagingPlatformInfo[] = MESSAGING_PLATFORM_CATALOG.map(
       (entry) => {
@@ -3531,9 +3765,8 @@ export class MessagingGatewayService {
               fromEnv: isFieldFromEnv(field.key),
             };
           }),
-          pendingCount: pairing.filter(
-            (row) => row.platform === entry.id && row.status === "pending"
-          ).length,
+          pendingCount: waiting.filter((row) => row.platform === entry.id)
+            .length,
           sharedLink: this.sharedLink(entry.id),
           ...(isSelfLane(entry.id)
             ? { homeBotId: this.options.homeBots?.get(entry.id) ?? null }
@@ -3544,7 +3777,7 @@ export class MessagingGatewayService {
 
     return {
       platforms,
-      pending: pairing.filter((row) => row.status === "pending"),
+      pending: waiting,
       // Bot-managed rows are shown and undone under their bot in the Bots
       // pane; listing them here too gives the same grant two homes.
       approved: pairing.filter(
@@ -3556,6 +3789,9 @@ export class MessagingGatewayService {
           row.managedBy === "bot" &&
           (row.status === "approved" || row.status === "paused")
       ),
+      answered: this.answeredRows(),
+      reapprove: this.reapproveRows(),
+      answerPrivateChats: settings.answerPrivateChats,
       gatewayEnabled: settings.gatewayEnabled,
       autoApproveTools: settings.autoApproveTools,
       respondToInbound: settings.respondToInbound,
@@ -3649,6 +3885,7 @@ export class MessagingGatewayService {
 
   async updateSettings(patch: {
     gatewayEnabled?: boolean;
+    answerPrivateChats?: boolean;
     autoApproveTools?: boolean;
     respondToInbound?: boolean;
     workspaceId?: string | null;
@@ -3755,6 +3992,27 @@ const SELF_LOOP_WINDOW_MS = 5 * 60_000;
 
 /** How long the breaker holds before the lane answers again on its own. */
 const LOOP_PAUSE_MS = 10 * 60_000;
+
+/** The least time between "someone is waiting" notices; a burst folds into one. */
+const SENDER_NOTICE_GAP_MS = 60_000;
+
+/** How many people a folded notice names before it counts the rest. */
+const NOTICE_NAMES = 3;
+
+/** One chat the user is owed a "waiting" notice about. */
+type WaitingNotice = {
+  platform: MessagingPlatformId;
+  userId: string;
+  name: string;
+  why: "person" | "group" | "takenBack";
+};
+
+/**
+ * Whether an approved row is answered: the user's own approvals are; one the
+ * old "off approves everyone" rule made is not, until the user approves it again.
+ */
+const answersApproved = (row: MessagingPairedUser): boolean =>
+  row.autoAdded !== true;
 
 const QUEUE_FULL_NOTICE =
   "I'm still working through what you've already sent, so that last one didn't get queued. Send it again once I've replied.";

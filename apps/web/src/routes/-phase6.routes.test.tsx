@@ -638,6 +638,9 @@ it.each(["telegram", "discord"] as const)(
       approved: [],
       pending: [],
       autoReplies: [],
+      answered: [],
+      reapprove: [],
+      answerPrivateChats: false,
       platforms: [
         platform,
         ...(platform === "discord" ? ["abacus_discord" as const] : []),
