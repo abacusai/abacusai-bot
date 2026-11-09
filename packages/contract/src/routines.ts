@@ -263,9 +263,9 @@ export interface RoutineCreateInput {
   timezone?: string | null;
   notify?: HostedRoutineNotify;
   delivery?: HostedRoutineDelivery;
-  /** URL prefixes its runs may read pages under. */
+  /** Hosted only: URL prefixes its runs may read pages under. */
   sources?: string[];
-  /** Account data its runs may read; none unless declared. */
+  /** Hosted only: account data its runs may read; none unless declared. */
   reads?: RoutineRead[];
   /** The one page a hosted watch run opens. */
   watchUrl?: string | null;
