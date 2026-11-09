@@ -226,6 +226,12 @@ interface Context {
   lastTool: string | null;
   /** Variables this command set: their value, or null when it cannot be read. */
   vars: Map<string, string | null>;
+  /** IFS was set: how an unquoted expansion splits is no longer known. */
+  ifsChanged: boolean;
+  /** PATH was set: a bare command name may now be any file. */
+  pathChanged: boolean;
+  /** git was configured to run a command: later git commands may run it. */
+  gitTainted: boolean;
 }
 
 interface Scope {
@@ -262,6 +268,9 @@ export function judgeCommand(
     mutated: false,
     lastTool: null,
     vars: new Map(),
+    ifsChanged: false,
+    pathChanged: false,
+    gitTainted: false,
   };
 
   // Unchanged rule, kept in trash.ts: it also reads scripts in other languages.
@@ -379,6 +388,19 @@ function add(
 const unreadable = (context: Context, text: string): void =>
   add(context, "unreadable", "confirm", text);
 
+/**
+ * Run `body` where its variable assignments may not happen, or not here (a
+ * branch, a loop, a subshell, a pipeline stage, a background job): whatever
+ * it assigned is unknown afterwards.
+ */
+function scoped(context: Context, body: () => void): void {
+  const before = new Map(context.vars);
+  body();
+  for (const [name, value] of context.vars)
+    if (!before.has(name) || before.get(name) !== value)
+      context.vars.set(name, null);
+}
+
 /** Run `body` in a child process's view: its `cd` does not leak out. */
 function isolated(context: Context, body: () => void): void {
   const cwd = context.cwd;
@@ -437,7 +459,9 @@ function walk(
   switch (node.type) {
     case "Statement":
       redirects(context, node.redirects, scope, scope.source);
-      walk(context, node.command, scope, seen);
+      if (node.background === true)
+        scoped(context, () => walk(context, node.command, scope, seen));
+      else walk(context, node.command, scope, seen);
       return;
     case "Command":
       seen.push(node);
@@ -446,20 +470,30 @@ function walk(
     case "Pipeline":
       // Every stage after the first reads the one before it on stdin.
       node.commands.forEach((stage, index) =>
-        walk(
-          context,
-          stage,
-          index === 0 ? scope : { ...scope, stdin: node.commands[index - 1] },
-          seen
+        scoped(context, () =>
+          walk(
+            context,
+            stage,
+            index === 0 ? scope : { ...scope, stdin: node.commands[index - 1] },
+            seen
+          )
         )
       );
       return;
     case "AndOr":
+      // Only the first part surely runs.
+      node.commands.forEach((part, index) =>
+        index === 0
+          ? walk(context, part, scope, seen)
+          : scoped(context, () => walk(context, part, scope, seen))
+      );
+      return;
     case "CompoundList":
       children(node.commands);
       return;
     case "If":
-      children([node.clause, node.then, node.else]);
+      walk(context, node.clause, scope, seen);
+      scoped(context, () => children([node.then, node.else]));
       return;
     case "For":
     case "Select":
@@ -480,17 +514,19 @@ function walk(
           : null
       );
       for (const word of node.wordlist) expansions(context, word, scope);
-      walk(context, node.body, scope, seen);
+      scoped(context, () => walk(context, node.body, scope, seen));
       return;
     case "While":
-      children([node.clause, node.body]);
+      scoped(context, () => children([node.clause, node.body]));
       return;
     case "Case":
       expansions(context, node.word, scope);
-      children(node.items.map((item) => item.body));
+      scoped(context, () => children(node.items.map((item) => item.body)));
       return;
     case "Subshell":
-      isolated(context, () => walk(context, node.body, scope, seen));
+      scoped(context, () =>
+        isolated(context, () => walk(context, node.body, scope, seen))
+      );
       return;
     case "BraceGroup":
       walk(context, node.body, scope, seen);
@@ -498,13 +534,13 @@ function walk(
     case "ArithmeticFor":
       for (const expression of [node.initialize, node.test, node.update])
         arithmetic(context, expression, scope);
-      walk(context, node.body, scope, seen);
+      scoped(context, () => walk(context, node.body, scope, seen));
       return;
     case "Function":
       // A function renames commands: what a later word runs is not its name.
       unreadable(context, scope.source.slice(node.pos, node.end));
       redirects(context, node.redirects, scope, scope.source);
-      walk(context, node.body, scope, seen);
+      scoped(context, () => walk(context, node.body, scope, seen));
       return;
     case "Coproc":
       redirects(context, node.redirects, scope, scope.source);
@@ -596,7 +632,9 @@ function expandPart(context: Context, part: WordPart, scope: Scope): void {
   switch (part.type) {
     case "CommandExpansion":
     case "ProcessSubstitution":
-      isolated(context, () => judgeScript(context, part.script, inner));
+      scoped(context, () =>
+        isolated(context, () => judgeScript(context, part.script, inner))
+      );
       return;
     case "ArithmeticExpansion":
       arithmetic(context, part.expression, inner);
@@ -735,16 +773,37 @@ function appProgram(context: Context, text: string): string | null {
     : "node";
 }
 
-/** A word for the rules: its static value, or its text marked as dynamic. */
-function wordValue(context: Context, word: Word): string {
+/** IFS and PATH change how every later word is read. */
+function noteSpecialVariable(context: Context, name: string): void {
+  if (name === "IFS") context.ifsChanged = true;
+  if (name === "PATH") context.pathChanged = true;
+}
+
+/**
+ * A word as the shell hands it on: its static value, a variable's value
+ * (split into words when unquoted, none when empty), or its text marked as
+ * unknown. After IFS is set, an unquoted expansion is unknown.
+ */
+function expandWord(context: Context, word: Word): string[] {
   // A Windows path the model wrote unquoted keeps its backslashes as written.
-  if (/^[A-Za-z]:\\/.test(word.text)) return word.text;
+  if (/^[A-Za-z]:\\/.test(word.text)) return [word.text];
   const value = sv(context, word);
-  if (value != null) return value;
+  if (value != null) return [value];
+  const app = appProgram(context, word.text);
+  if (app != null) return [app];
+  const unquoted =
+    word.parts?.some(
+      (part) =>
+        part.type === "SimpleExpansion" || part.type === "ParameterExpansion"
+    ) ?? false;
+  if (unquoted && context.ifsChanged) return [DYN + word.text];
   const named = resolveName(context, word);
   if (named == null || (named.opaque && named.name === ""))
-    return DYN + word.text;
-  return named.opaque ? OPAQUE + named.name : named.name;
+    return [DYN + word.text];
+  if (named.opaque) return [OPAQUE + named.name];
+  return unquoted
+    ? named.value.split(/\s+/).filter((piece) => piece.length > 0)
+    : [named.value];
 }
 
 /**
@@ -1040,11 +1099,17 @@ function rememberWrites(
   }
   // A download saved to a file runs as freely as one piped to a shell; any
   // other file this command writes (cp, mv, dd…) is unread.
-  const other =
+  // Only the download itself: headers, cookies and anything else are unread.
+  const words = node.suffix.map((word) => sv(context, word) ?? "");
+  const downloaded =
     tool === "curl" || tool === "wget"
-      ? download(node.suffix.map((word) => sv(context, word) ?? ""))
-      : UNKNOWN;
-  for (const target of writes) store(target, other, false);
+      ? optionValue(
+          words,
+          tool === "curl" ? ["-o", "--output"] : ["-O", "--output-document"]
+        )
+      : undefined;
+  for (const target of writes)
+    store(target, target === downloaded ? download(words) : UNKNOWN, false);
 }
 
 /** Options of the wrappers stepped over that take a value. */
@@ -1072,6 +1137,10 @@ const VALUE_OPTIONS: Record<string, Set<string>> = {
     "-b -c -D -E -e -F -I -i -J -L -l -m -O -o -p -Q -R -S -W -w".split(" ")
   ),
 };
+
+/** `-xyz` holding the letter: a short-flag cluster, read without a backtracking regex. */
+const isFlagWith = (arg: string, letter: string): boolean =>
+  /^-[a-zA-Z]+$/.test(arg) && arg.includes(letter);
 
 /** Index of the first word after a wrapper's own options. */
 function skipOptions(words: readonly string[], from: number, tool: string) {
@@ -1181,6 +1250,16 @@ const GIT_READS = new Set([
   "ls-remote",
 ]);
 
+/** Builtins bash runs itself, whatever PATH says. */
+const SHELL_BUILTINS = new Set(
+  (
+    "cd echo printf export set unset read test [ true false pwd eval source . exec " +
+    "command builtin type hash alias unalias local declare typeset readonly shift " +
+    "return exit wait jobs kill trap umask ulimit let getopts : times break " +
+    "continue pushd popd dirs shopt enable caller mapfile readarray bg fg disown"
+  ).split(" ")
+);
+
 /** Programs that run a command line they are given, and are not stepped through. */
 const OPAQUE_RUNNERS = new Set([
   "watch",
@@ -1239,6 +1318,7 @@ function judgeSimple(context: Context, node: Command, scope: Scope): void {
     // A bare assignment lasts for the rest of the command.
     if (assignment.name != null && node.name == null)
       context.vars.set(assignment.name, value);
+    if (assignment.name != null) noteSpecialVariable(context, assignment.name);
     expansions(context, assignment.value, scope);
     for (const word of assignment.array ?? []) expansions(context, word, scope);
   }
@@ -1249,28 +1329,22 @@ function judgeSimple(context: Context, node: Command, scope: Scope): void {
   for (const word of node.suffix) expansions(context, word, scope);
   if (node.name == null) return;
 
-  // Only a name written out in full is a program anyone can judge: a
-  // variable, `$(…)`, `{a,b}`, `a${IFS}b` or a glob is not.
-  const named = resolveName(context, node.name);
-  const name =
-    sv(context, node.name) ??
-    appProgram(context, node.name.text) ??
-    (named == null || (named.opaque && named.name === "")
-      ? null
-      : named.opaque
-        ? OPAQUE + named.name
-        : named.name);
-  if (name == null || hasGlob(node.name)) {
+  // Words as the shell hands them on: unquoted expansions split, empty ones
+  // dropped, so the command is the first word left. Only a name written out
+  // in full is a program anyone can judge: a variable, `$(…)`, `{a,b}`,
+  // `a${IFS}b` or a glob is not.
+  const expanded = [node.name, ...node.suffix].map((word) => ({
+    word,
+    values: expandWord(context, word),
+  }));
+  const first = expanded.find((entry) => entry.values.length > 0);
+  if (first == null) return;
+  if (hasGlob(first.word)) {
     unreadable(context, text);
     context.mutated = true;
     return;
   }
-  // `S="ssh -i k host"; $S …`: an unquoted variable splits into words.
-  const split = sv(context, node.name) == null && named?.opaque === false;
-  const words = [
-    ...(split ? name.trim().split(/\s+/) : [name]),
-    ...node.suffix.map((word) => wordValue(context, word)),
-  ];
+  const words = expanded.flatMap((entry) => entry.values);
   const files = node.redirects
     .filter((redirect) => !redirect.operator.startsWith("<<"))
     .map((redirect) => sv(context, redirect.target))
@@ -1313,6 +1387,7 @@ function judgeWords(
     isDyn(word) ? (appProgram(context, raw(word)) ?? word) : word
   );
   let index = 0;
+  let viaXargs = false;
   const nested = (source: string): void =>
     judgeNested(context, source, scope, text);
   const joined = (from: number): string | null => {
@@ -1328,6 +1403,16 @@ function judgeWords(
     const word = words[index]!;
     // A program known by name, its folder from the environment.
     if (word.startsWith(OPAQUE)) break;
+    // After PATH is set, a bare name may run any file.
+    if (
+      context.pathChanged &&
+      !isDyn(word) &&
+      !/[\\/]/.test(word) &&
+      !SHELL_BUILTINS.has(word)
+    ) {
+      unreadable(context, text);
+      return;
+    }
     if (isDyn(word)) {
       // A wrapper running a program named at run time.
       unreadable(context, text);
@@ -1461,6 +1546,7 @@ function judgeWords(
         "caffeinate",
       ].includes(tool)
     ) {
+      if (tool === "xargs") viaXargs = true;
       index = skipOptions(words, index + 1, tool);
       continue;
     }
@@ -1497,6 +1583,7 @@ function judgeWords(
     for (const arg of args) {
       const set = /^([A-Za-z_]\w*)(?:=(.*))?$/s.exec(raw(arg));
       if (set == null || (tool === "printf" && args[0] !== "-v")) continue;
+      if (tool !== "unset") noteSpecialVariable(context, set[1]!);
       const keep =
         ["declare", "typeset", "local", "export", "readonly"].includes(tool) &&
         set[2] != null &&
@@ -1551,6 +1638,22 @@ function judgeWords(
   }
   if (raw(rest[0]!).includes("/") && !rest[0]!.includes("\\")) {
     if (judgeScriptFile(context, rest[0], scope, text, "path")) return;
+  }
+
+  // `… | xargs rm`: what comes down the pipe is what gets deleted.
+  if (viaXargs && DELETERS.has(tool)) {
+    const input = node == null ? null : stdinText(context, node, scope);
+    if (typeof input === "string")
+      judgeDeletes(
+        context,
+        input
+          .replaceAll("\u0000", " ")
+          .split(/\s+/)
+          .filter((item) => item.length > 0),
+        text,
+        tool
+      );
+    else unreadable(context, text);
   }
 
   judgeVerb(context, tool, args, text, scope);
@@ -1611,7 +1714,7 @@ function judgeShell(
   for (let at = 0; at < args.length; at += 1) {
     const arg = args[at]!;
     // `-s`: commands come from stdin, and the words after are its arguments.
-    if (/^-[a-zA-Z]*s[a-zA-Z]*$/.test(arg) && !arg.includes("c")) break;
+    if (isFlagWith(arg, "s") && !arg.includes("c")) break;
     if (
       arg === "--" ||
       (!arg.startsWith("-") && !arg.startsWith("+")) ||
@@ -1623,7 +1726,7 @@ function judgeShell(
       else break;
       return;
     }
-    if (/^-[a-zA-Z]*c[a-zA-Z]*$/.test(arg) || arg === "--command") {
+    if (isFlagWith(arg, "c") || arg === "--command") {
       const command = args.slice(at + 1).find((word) => !word.startsWith("-"));
       if (command == null || isDyn(command)) unreadable(context, text);
       else judgeNested(context, command, scope, text);
@@ -1667,11 +1770,12 @@ function judgeScriptFile(
     // After a command that may have changed files untracked, the file on
     // disk is not necessarily what runs; one that is not there yet may be
     // written by such a command. Either way nobody can read it.
-    const head = readHead(resolved);
+    // Once something may have changed files untracked, the disk says
+    // nothing about what runs, a binary included.
+    const head = context.mutated ? null : readHead(resolved);
     if (head == null) source = UNKNOWN;
     // A binary or another interpreter's script is a program, not shell.
     else if (mode === "path" && !looksLikeShell(head)) return false;
-    else if (context.mutated) source = UNKNOWN;
     else source = readScript(context, file);
   }
   if (source === REMOTE) return true;
@@ -2087,6 +2191,25 @@ function judgeVerb(
   if (DELETERS.has(tool)) judgeDeletes(context, operands, text, tool);
   if (redefinesCommands(tool, args) || runsHiddenCommand(tool, args))
     unreadable(context, text);
+  // Files whose names the judge cannot know: what lands there is unread.
+  if (
+    tool === "curl" &&
+    args.some(
+      (arg) =>
+        /^(?:-O|--remote-name(?:-all)?|--output-dir(?:=.*)?|-J|--remote-header-name)$/.test(
+          arg
+        ) ||
+        (/^-[a-zA-Z]+$/.test(arg) && arg.includes("O"))
+    )
+  )
+    context.mutated = true;
+  // `git config alias.x '!…'`: every later git command may run it.
+  if (tool === "git" && writesHiddenGitCommand(args)) {
+    context.gitTainted = true;
+    context.mutated = true;
+  }
+  if (tool === "git" && context.gitTainted && !writesHiddenGitCommand(args))
+    unreadable(context, text);
   if (tool === "ddrescue" && BLOCK_DEVICE.test(operands[1] ?? ""))
     add(context, "disk", "confirm", text);
 
@@ -2246,6 +2369,26 @@ function runsHiddenCommand(tool: string, args: readonly string[]): boolean {
   return false;
 }
 
+/** Keys whose value git runs as a command. */
+const GIT_COMMAND_KEY =
+  /^(?:alias\.|core\.(?:sshcommand|pager|editor|hookspath|fsmonitor|askpass|gitproxy)|sequence\.editor|diff\.external|credential\.|filter\.|.*\.(?:command|cmd|textconv|helper)\b|uploadpack\.|gpg\.program|ssh\.variant|include\.|includeif\.)/i;
+
+/** `git config KEY VALUE` (or `git config set KEY …`) for a key git runs. */
+function writesHiddenGitCommand(args: readonly string[]): boolean {
+  const at = args.findIndex((arg) => !raw(arg).startsWith("-"));
+  if (raw(args[at] ?? "") !== "config") return false;
+  // Reading a key changes nothing.
+  if (
+    args.some((arg) =>
+      /^(?:--get(?:-all|-regexp|-urlmatch)?|--list|-l|get|list)$/.test(raw(arg))
+    )
+  )
+    return false;
+  return args
+    .slice(at + 1)
+    .some((arg) => !raw(arg).startsWith("-") && GIT_COMMAND_KEY.test(raw(arg)));
+}
+
 /** Each operand a delete names: never the disk or home, a yes for system folders and .git. */
 function judgeDeletes(
   context: Context,
@@ -2254,19 +2397,18 @@ function judgeDeletes(
   tool: string
 ): void {
   for (const operand of operands) {
-    if (isDyn(operand)) continue;
-    const target = resolve(context, operand);
+    // A target nobody can read (a variable, command output, a `cd` that
+    // could not be followed) could be anything: the user decides.
+    const target = isDyn(operand) ? null : resolve(context, operand);
     if (target == null) {
-      // After a `cd` nobody can read, a relative glob or `..` could be anywhere.
-      if (
-        /[*?[]/.test(operand) ||
-        operand.split(/[\\/]/).every((s) => s === "." || s === ".." || s === "")
-      )
-        unreadable(context, text);
+      unreadable(context, text);
       continue;
     }
     if (isRootOrHome(operand, target, context.options.home)) {
       add(context, "deleteRoot", "never", text);
+    } else if (/[*?[]/.test(operand)) {
+      // A glob deletes whatever matches when it runs.
+      unreadable(context, text);
     } else if (isSystemPath(target, context.options)) {
       add(context, "systemDelete", "confirm", text);
     } else if (
@@ -2358,7 +2500,8 @@ function rewritesRemote(args: readonly string[]): boolean {
         /^--(?:force(?:-with-lease|-if-includes)?|mirror|delete|prune)(?:=|$)/.test(
           arg
         ) ||
-        /^-[a-zA-Z]*[fd][a-zA-Z]*$/.test(arg) ||
+        isFlagWith(arg, "f") ||
+        isFlagWith(arg, "d") ||
         /^[+:][^\s]/.test(arg)
     );
 }
@@ -2398,7 +2541,17 @@ function writesOf(
       tool === "curl" ? ["-o", "--output"] : ["-O", "--output-document"]
     );
     if (output != null) write(output, "command");
+    if (tool === "curl")
+      for (const other of ["-D", "--dump-header", "-c", "--cookie-jar"]) {
+        const file = optionValue(args, [other]);
+        if (file != null) write(file, "command");
+      }
   }
+  if (tool === "sort") {
+    const output = optionValue(args, ["-o", "--output"]);
+    if (output != null) write(output, "command");
+  }
+  if (tool === "uniq" && operands.length > 1) write(operands[1]!, "command");
 }
 
 /** `:(){ :|:& };:` and its renamings: a function that starts copies of itself. */
