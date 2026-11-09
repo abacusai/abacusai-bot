@@ -1672,7 +1672,8 @@
       "other": "已暂停。",
       "denied": "已暂停：你没有允许。",
       "quiet": "已暂停：连续 {{runs}} 次运行都没有发现新内容，因此不再消耗积分。恢复后可继续检查。",
-      "done": "Finished: what it was waiting for happened, so it stopped."
+      "done": "Finished: what it was waiting for happened, so it stopped.",
+      "budget": "Paused: {{runs}} runs in a row stopped at their credit budget."
     },
     "creditHold": {
       "notify": "你的积分已用完，所以例行任务不会运行。跳过的运行不收费，等你有积分后，它们会自动重新开始。",
@@ -3098,7 +3099,17 @@
       "historyForeign": "此对话由较新版本的应用保存，部分内容可能无法在这里显示。",
       "historyTooLarge": "较早的历史记录太大，无法在这里显示（{{size}}，上限为 {{limit}}）。",
       "unsaved": "磁盘已满，此聊天目前没有保存。请释放一些空间；你发送下一条消息时会重新保存。",
-      "creditsLow": "Credits are almost out, so the agent is wrapping up what it has so the work isn't cut off halfway.",
+      "creditsLow_one": "{{count}} credit left. The agent keeps going and hands over each piece as it's ready.",
+      "creditsLow_other": "{{count}} credits left. The agent keeps going and hands over each piece as it's ready.",
+      "spendCheckIn_one": "This task has used {{count}} credit so far. Send a message to keep going.",
+      "spendCheckIn_other": "This task has used {{count}} credits so far. Send a message to keep going.",
+      "spendBudget_one": "Stopped at its credit budget ({{count}} credit).",
+      "spendBudget_other": "Stopped at its credit budget ({{count}} credits).",
+      "spendCalls_one": "This task reached its limit of {{count}} step, so it's wrapping up. Send a message to keep going.",
+      "spendCalls_other": "This task reached its limit of {{count}} steps, so it's wrapping up. Send a message to keep going.",
+      "spendTime_one": "This task has worked for {{count}} minute, its limit, so it's wrapping up. Send a message to keep going.",
+      "spendTime_other": "This task has worked for {{count}} minutes, its limit, so it's wrapping up. Send a message to keep going.",
+      "compacted": "Summarized older messages to keep this chat fast and cheap.",
       "showInFolder": "在文件夹中显示"
     },
     "part": {
@@ -4780,7 +4791,8 @@
       "warning": "要立即继续，机器人将切换到其他提供商（{{providers}}）的免费模型。它们的质量低得多：错误更多，可能破坏正常运行的代码，还经常触发速率限制。",
       "offer": "升级到 {{plan}}：{{price}}",
       "upgradeCta": "升级到 {{plan}}",
-      "continueFree": "继续使用免费模型（质量较低）"
+      "continueFree": "继续使用免费模型（质量较低）",
+      "continueOwnKey": "Continue on your own key ({{model}})"
     },
     "plan": {
       "introPrice": "首月 {{first}}，之后 {{monthly}}/月",
@@ -4809,7 +4821,7 @@
       "body": "请检查你的网络连接、VPN 或代理，然后重试。"
     },
     "cause": {
-      "context_too_long": "此对话对该模型来说太长了。请开始新聊天，或选择上下文更大的模型。",
+      "context_too_long": "此对话对该模型来说太长了。请选择上下文更大的模型。",
       "key_invalid": "你的 {{provider}} 密钥被拒绝：密钥无效或已过期。",
       "own_key_quota": "你的 {{provider}} 密钥已达到配额。请切换到其他模型，或检查该密钥的套餐。",
       "model_unavailable": "此模型无法处理该请求。请选择其他模型。",

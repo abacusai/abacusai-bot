@@ -342,6 +342,14 @@ export interface FailureContext {
   cutoffsBefore?: number;
   /** For a full disk: the bytes left where the agent writes, when measured. */
   freeBytes?: number;
+  /** Models on the user's own key: the credit wall's "continue on your key". */
+  ownKeyModels?: ReadonlyArray<{ model: string; label: string }>;
+  /**
+   * After a refusal for size, from the fit ladder: whether one turn fits the
+   * model's limit at all (else a new chat is no way out), and a model that
+   * holds the chat, by name.
+   */
+  fit?: { oneTurnFits: boolean; model?: { model: string; label: string } };
 }
 
 /** The error a failed turn ends with, as the desktop receives it. */
@@ -391,7 +399,7 @@ const routedMessage = (failure: TurnFailure): string => {
     case "connection":
       return NETWORK_UNREACHABLE_MESSAGE;
     case "context_too_long":
-      return "This conversation is too long for the free models. Start a new chat, or pick a model with a larger context.";
+      return "This conversation is too long for the model. Pick a model with a larger context.";
     case "key_invalid":
       return `Your ${providerName(failure.provider)} key was rejected — it's invalid or expired.`;
     case "own_key_quota":
@@ -565,6 +573,8 @@ const modelOf = (context: FailureContext) =>
 
 /** What a model off Abacus can end on that RouteLLM - Open answers. */
 const MOVES_TO_OPENLLM: ReadonlySet<FailureCause> = new Set([
+  // Only to a model whose window holds it: the loops check before moving.
+  "context_too_long",
   "model_unavailable",
   "rate_limited",
   "empty",
@@ -685,6 +695,15 @@ const failureActions = (
               model: choice.model,
               label: choice.label,
             }))),
+        // The user's own key is a choice at the wall, never a silent fallback.
+        ...(context.routed
+          ? (context.ownKeyModels ?? []).map((choice) => ({
+              type: "switch-model",
+              model: choice.model,
+              label: choice.label,
+              ownKey: true,
+            }))
+          : []),
       ];
     case "payment_required":
       // The account must settle its billing; another model is the way on now.
@@ -708,8 +727,16 @@ const failureActions = (
           ...(context.freeBytes != null && { bytesFree: context.freeBytes }),
         },
       ];
-    case "context_too_long":
-      return [{ type: "new-chat" }, { type: "switch-model" }];
+    case "context_too_long": {
+      // A new chat only when one message fits the limit at all.
+      const roomy = context.fit?.model;
+      return [
+        ...(context.fit?.oneTurnFits === false ? [] : [{ type: "new-chat" }]),
+        roomy != null
+          ? { type: "switch-model", model: roomy.model, label: roomy.label }
+          : { type: "switch-model" },
+      ];
+    }
     case "key_invalid":
     case "own_key_quota":
       if (!ownKey(provider)) return [{ type: "switch-model" }];
@@ -1101,7 +1128,7 @@ export function classifyProviderFailure(
     return {
       summary: "This request is too large for the model's limit",
       remedy:
-        "Start a new chat, switch to a model with a higher limit, or raise the limit with the provider.",
+        "Switch to a model with a higher limit, or raise the limit with the provider.",
     };
   }
 
@@ -1124,7 +1151,7 @@ export function classifyProviderFailure(
   if (CONTEXT_LENGTH_PATTERN.test(text)) {
     return {
       summary: "This conversation is too long for the model",
-      remedy: "Start a new chat, or switch to a model with a larger context.",
+      remedy: "Switch to a model with a larger context.",
     };
   }
 

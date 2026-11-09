@@ -43,6 +43,7 @@ import {
   PROVIDER_API_KEY_ENV,
 } from "../config.js";
 import { hostConnectivity, hostIsGone } from "../connectivity.js";
+import { creditWallActive, freeLaneChosen } from "../credit-wall.js";
 import {
   fetchHold,
   setCurrentMode,
@@ -52,10 +53,24 @@ import { EmptyReplies } from "../empty-reply.js";
 import { tagEvent, type EventMeta } from "../event-meta.js";
 import { TOOL_NAME_ALIASES } from "../excluded-tools.js";
 import background from "../extensions/background.js";
-import { budgetStopReason, createBudgets } from "../extensions/budgets.js";
+import { createBudgets } from "../extensions/budgets.js";
 import compactionPruner from "../extensions/compaction-pruner.js";
 import diskFull from "../extensions/disk-full.js";
 import requestSize from "../extensions/request-size.js";
+import {
+  COMPACTED_ACTION,
+  COMPACTED_NOTICE,
+  CREDITS_LOW_ACTION,
+  creditsLowNotice,
+  fitChoices,
+  laneOfModel,
+  paysNothing,
+  SPEND_LIMIT_ACTION,
+  SpendGovernor,
+  spendLimitNotice,
+  spendStopReason,
+  summarizerFrom,
+} from "../extensions/spend-governor.js";
 import spill from "../extensions/spill.js";
 import toolCallRepair from "../extensions/tool-call-repair.js";
 import toolTimeouts from "../extensions/tool-timeouts.js";
@@ -161,7 +176,6 @@ import {
   endedOnProviderError,
   mcpPrompt,
   mcpRosterFingerprint,
-  reserveContextHeadroom,
 } from "../session.js";
 import {
   guardDecision,
@@ -231,6 +245,8 @@ const FOREVER_CONTEXT_TYPE = "abacusai-bot:forever-turn-context";
 const MALFORMED_TOOL_CALL_PATTERN = /malformed[ _]?(function|tool)[ _]?call/i;
 
 const MAX_MALFORMED_CONTINUATIONS = 1;
+/** Fit-ladder steps per user turn: compact, move, and a move's own refusal. */
+const MAX_FIT_STEPS = 3;
 
 function approvalTimeoutMs(): number {
   const raw = Number(process.env.ABACUSAI_BOT_APPROVAL_TIMEOUT_MS);
@@ -252,6 +268,10 @@ export class ForeverEngine {
   private openLlmActive = false;
   /** The free pool: which model runs, and what happens when it fails. See openllm-router.ts. */
   private readonly router = new OpenLlmRouter();
+  /** The user's choice is the router, whatever it runs on now; see the wall gate in sendTurn. */
+  private poolChosen = false;
+  /** What a turn may spend, and the context it may carry; see spend-governor.ts. */
+  private readonly governor: SpendGovernor;
   /** Whether the Abacus provider was registered with the sponsored-run marker. */
   private sponsoredAtRegistration = sponsoredRunActive();
   /**
@@ -376,9 +396,10 @@ export class ForeverEngine {
   // Turn recovery state.
   private interrupted = false;
   private malformedContinuations = 0;
-  private contextCompactions = 0;
+  /** Steps taken on the fit ladder this turn; see climbFitLadder. */
+  private fitSteps = 0;
   private continuingPastMalformedToolCall = false;
-  private pendingContextCompaction: string | null = null;
+  private pendingFit: string | null = null;
   /** A reply in the wrong language, to be asked for again (once per turn). */
   private pendingLanguageRepair: ReplyLanguageMismatch | null = null;
   private languageRepairsThisTurn = 0;
@@ -435,6 +456,49 @@ export class ForeverEngine {
     private readonly options: ForeverEngineOptions,
     private readonly profile: ForeverProfile
   ) {
+    // Here, not as a field: the kind reads the profile.
+    this.governor = new SpendGovernor({
+      kind:
+        process.env.ABACUSAI_BOT_ROUTINE_RUN === "1"
+          ? "routine"
+          : this.profile.checkIns != null
+            ? "phone"
+            : "attended",
+      laneOf: (model) => laneOfModel(model, this.openLlmActive),
+      onCreditsLow: (left) =>
+        this.emitAgentEvent({
+          type: "notification",
+          severity: "warning",
+          message: creditsLowNotice(left),
+          actions: [{ type: CREDITS_LOW_ACTION, amount: left }],
+          notificationKey: CREDITS_LOW_ACTION,
+        }),
+      onCloseOut: (hit) => {
+        // A hidden turn's limit is its own: never a line, never a chat-app send.
+        if (this.hiddenTurn) return;
+        this.emitAgentEvent({
+          type: "notification",
+          severity: "info",
+          message: spendLimitNotice(hit),
+          actions: [{ type: SPEND_LIMIT_ACTION, ...hit }],
+        });
+      },
+      onCompacted: () => {
+        if (!this.hiddenTurn)
+          this.emitAgentEvent({
+            type: "notification",
+            severity: "info",
+            message: COMPACTED_NOTICE,
+            actions: [{ type: COMPACTED_ACTION }],
+          });
+      },
+      summarizer: summarizerFrom(
+        () => this.registry,
+        () => this.modelRuntime,
+        () => this.router,
+        this.maxOutputTokens
+      ),
+    });
     this.mode = parseMode(options.mode);
     // The sandbox reads the mode from here: a bot in YOLO runs unconfined,
     // as a chat in YOLO does.
@@ -480,11 +544,8 @@ export class ForeverEngine {
     // On the router a failing model is rotated away from, not retried thrice.
     capRetriesWhileRouting(settingsManager, () => this.openLlmActive);
 
-    // A fraction of the live window rather than pi's flat 16k.
-    reserveContextHeadroom(
-      settingsManager,
-      () => this.session?.model?.contextWindow
-    );
+    // The context ceiling by who pays (spend-governor.ts).
+    this.governor.governContext(settingsManager, () => this.session?.model);
 
     // Re-read on prompt rebuilds, like standing memory: a note the app
     // writes mid-session (what the bot settled in a channel, did for another
@@ -559,6 +620,11 @@ export class ForeverEngine {
           name: "abacusai-bot-tool-call-repair",
           factory: toolCallRepair as unknown as (pi: ExtensionAPI) => void,
         },
+        // Before the budgets: a close-out it starts silences their check-ins.
+        {
+          name: "abacusai-bot-spend-governor",
+          factory: this.governor.extension,
+        },
         {
           name: "abacusai-bot-disk-full",
           factory: diskFull(() => this.router.chain) as unknown as (
@@ -567,11 +633,12 @@ export class ForeverEngine {
         },
         {
           name: "abacusai-bot-budgets",
-          factory: createBudgets(
-            this.profile.checkIns != null
+          factory: createBudgets({
+            closing: () => this.governor.closing(),
+            ...(this.profile.checkIns != null
               ? { checkIns: this.profile.checkIns }
-              : {}
-          ) as unknown as (pi: ExtensionAPI) => void,
+              : {}),
+          }) as unknown as (pi: ExtensionAPI) => void,
         },
         // Background bash: the finish notice, fetch_background_output and
         // kill_process the bot's bash tool promises.
@@ -721,6 +788,7 @@ export class ForeverEngine {
 
     // The router is the choice; the model it lands on is a detail.
     this.openLlmActive = isOpenLlmReference(requested);
+    this.poolChosen = this.openLlmActive;
 
     const reference = this.openLlmActive
       ? this.router.pick(registry)?.id
@@ -822,8 +890,8 @@ export class ForeverEngine {
 
     this.interrupted = false;
     this.malformedContinuations = 0;
-    this.contextCompactions = 0;
-    this.pendingContextCompaction = null;
+    this.fitSteps = 0;
+    this.pendingFit = null;
     // A rotation left over from a stopped turn must not fire here.
     this.pendingOpenLlmRotation = null;
     this.router.beginTurn();
@@ -861,14 +929,24 @@ export class ForeverEngine {
       status: AgentStatus.Submitted,
     });
 
-    // At the credit wall the turn waits for the user's choice: it never
-    // runs on a weaker model they have not chosen.
+    // Who pays, decided before the model runs. At the credit wall the turn
+    // waits for the user's choice: it never runs on a weaker model they have
+    // not chosen, nor on their own key because the pool had nothing (the
+    // fallback is the router's still, and the key is one of the card's choices).
     const wall =
-      this.openLlmActive && this.registry != null
-        ? this.router.wallStops(this.registry)
-        : null;
+      !this.poolChosen ||
+      this.registry == null ||
+      !creditWallActive() ||
+      freeLaneChosen()
+        ? null
+        : this.openLlmActive
+          ? this.router.wallStops(this.registry)
+          : // A fallback that costs nothing (a local or free model) runs.
+            paysNothing(session.model)
+            ? null
+            : this.router.wallRefusal();
     if (wall != null) {
-      this.emitFailure(wall);
+      this.emitFailure(wall, true);
       this.finishTurn();
       this.closeOwnedTurn(owned);
       this.emitReply();
@@ -901,6 +979,16 @@ export class ForeverEngine {
             },
             { deliverAs: "nextTurn" }
           );
+        // The ceiling by who pays, before the run's first request. Stop
+        // during that summary ends the turn: nothing is sent.
+        const preflight = await this.governor.preflight(session, text);
+        if (preflight === "stopped" || this.interrupted) {
+          this.finishTurn();
+          this.closeOwnedTurn(owned);
+          this.emitReply();
+          turn?.settled?.();
+          return;
+        }
         await session.prompt(text);
       }
       await this.continuePastRecoverableFailures();
@@ -1013,6 +1101,8 @@ export class ForeverEngine {
     const session = this.session;
 
     if (session == null) return false;
+    // Memory upkeep has its own small limits, and none at all in reserve.
+    if (!this.governor.beginMemory()) return false;
 
     this.hiddenTurn = true;
     this.hiddenReply = "";
@@ -1031,6 +1121,7 @@ export class ForeverEngine {
       // Housekeeping must never surface as a failed reply.
     } finally {
       this.hiddenTurn = false;
+      this.governor.endMemory();
       this.emitInternal({ type: "hidden_turn", phase: "end", customType });
     }
     return ok;
@@ -1089,7 +1180,7 @@ export class ForeverEngine {
     const arrivals =
       this.hiddenTurn ||
       this.continuingPastMalformedToolCall ||
-      this.pendingContextCompaction != null ||
+      this.pendingFit != null ||
       this.pendingOpenLlmRotation != null ||
       this.pendingBusyWait != null ||
       this.pendingLanguageRepair != null ||
@@ -1106,7 +1197,7 @@ export class ForeverEngine {
       !this.interrupted &&
       this.ownedTurn?.endedEmpty === true &&
       !this.continuingPastMalformedToolCall &&
-      this.pendingContextCompaction == null &&
+      this.pendingFit == null &&
       this.pendingOpenLlmRotation == null &&
       this.pendingBusyWait == null &&
       this.pendingLanguageRepair == null &&
@@ -1126,7 +1217,7 @@ export class ForeverEngine {
     const ending =
       !willRetry &&
       !this.continuingPastMalformedToolCall &&
-      this.pendingContextCompaction == null &&
+      this.pendingFit == null &&
       this.pendingOpenLlmRotation == null &&
       this.pendingBusyWait == null &&
       this.pendingLanguageRepair == null &&
@@ -1159,7 +1250,7 @@ export class ForeverEngine {
   private async continuePastRecoverableFailures(): Promise<void> {
     while (
       this.continuingPastMalformedToolCall ||
-      this.pendingContextCompaction != null ||
+      this.pendingFit != null ||
       this.pendingOpenLlmRotation != null ||
       this.pendingLanguageRepair != null ||
       this.pendingToolArrival != null ||
@@ -1182,7 +1273,7 @@ export class ForeverEngine {
         this.pendingNetworkFailure = null;
         this.pendingBusyWait = null;
         this.continuingPastMalformedToolCall = false;
-        this.pendingContextCompaction = null;
+        this.pendingFit = null;
         this.pendingOpenLlmRotation = null;
         this.pendingLanguageRepair = null;
         this.pendingToolArrival = null;
@@ -1357,7 +1448,7 @@ export class ForeverEngine {
         continue;
       }
 
-      await this.compactAndRetry();
+      await this.climbFitLadder();
     }
   }
 
@@ -1643,51 +1734,40 @@ export class ForeverEngine {
     this.finishTurn();
   }
 
-  /** Same shape as the coding loop's recovery: compact once, retry once. */
-  private async compactAndRetry(): Promise<void> {
-    const failure = this.pendingContextCompaction;
+  /** The provider refused the request for its size: one step of the governor's fit ladder. */
+  private async climbFitLadder(): Promise<void> {
+    const failure = this.pendingFit;
     const session = this.session;
 
-    this.pendingContextCompaction = null;
+    this.pendingFit = null;
 
     if (failure == null || session == null) return;
 
-    this.contextCompactions += 1;
-
-    try {
-      await session.compact();
-    } catch {
-      // Nothing older than the recency window to summarise. Another pool
-      // model may have room for the transcript as it stands.
-      const registry = this.registry;
-      const next =
-        this.openLlmActive && registry != null
-          ? this.router.failed(registry, failure, session.model)
-          : null;
-      if (next != null && "nextId" in next) {
-        this.pendingOpenLlmRotation = { failure, nextId: next.nextId };
-        return;
-      }
-      if (!this.openLlmActive)
-        this.router.chain.failed(failure, session.model?.provider);
-      this.reportFailure();
-      this.finishTurn();
-
-      return;
-    }
-
-    this.flushedSinceCompaction = false;
-
-    if (this.interrupted) {
-      this.finishTurn();
-
-      return;
-    }
-
-    await session.sendCustomMessage(
-      { ...this.profile.continuations.compaction, display: false },
-      { triggerTurn: true }
-    );
+    this.fitSteps += 1;
+    await this.governor.recover(failure, {
+      session: session as never,
+      continuation: this.profile.continuations.compaction,
+      interrupted: () => this.interrupted,
+      finishTurn: () => this.finishTurn(),
+      beyondCompaction: (need) => {
+        // On the pool: the next model whose window holds it.
+        const registry = this.registry;
+        if (this.openLlmActive && registry != null) {
+          const next = this.router.failed(
+            registry,
+            failure,
+            session.model,
+            undefined,
+            need.need
+          );
+          if (next != null && "nextId" in next) {
+            this.pendingOpenLlmRotation = { failure, nextId: next.nextId };
+            return;
+          }
+        } else this.router.chain.failed(failure, session.model?.provider);
+        if (!this.reportFailure()) this.finishTurn();
+      },
+    });
   }
 
   private reportTurnFailure(): void {
@@ -1700,7 +1780,7 @@ export class ForeverEngine {
 
     // The budget extension aborted the run; pi records that as an error with
     // "This operation was aborted" for text, which reads as a provider fault.
-    const budgetStop = budgetStopReason();
+    const budgetStop = spendStopReason();
     if (budgetStop != null && !this.router.chain.diskFull) {
       this.emitAgentEvent(
         {
@@ -1751,13 +1831,15 @@ export class ForeverEngine {
    * call did not answer (turn-outcome.ts). The gateway words it for the
    * chat app; an empty reply after a failure is a failure, never silence.
    */
-  private reportFailure(move = true): void {
+  private reportFailure(move = true): boolean {
     const registry = this.registry;
     const failure = this.router.chain.failure(
       this.openLlmActive && registry != null && this.router.poolShut(registry)
     );
-    if (failure != null && (!move || !this.moveToOpenLlm(failure)))
-      this.emitFailure(failure);
+    if (failure == null) return false;
+    if (move && this.moveToOpenLlm(failure)) return true;
+    this.emitFailure(failure);
+    return false;
   }
 
   /**
@@ -1779,8 +1861,15 @@ export class ForeverEngine {
     const planRouter = payingPlanRouter(registry);
     const next = planRouter ?? this.router.pick(registry);
     if (next == null || !movesToOpenLlm(failure, context)) return false;
+    // Too large: only to a model whose window holds it (the fit ladder).
+    if (
+      failure.cause === "context_too_long" &&
+      !this.governor.holdsNeed(next, this.session?.messages ?? [])
+    )
+      return false;
     const paying = planRouter != null;
     this.openLlmActive = !paying;
+    this.poolChosen = !paying;
     // The run on the router ends on its own calls, not the failed model's.
     this.router.chain.begin();
     this.pendingOpenLlmRotation = { failure: failure.raw, nextId: next.id };
@@ -1800,25 +1889,33 @@ export class ForeverEngine {
     return true;
   }
 
-  private emitFailure(failure: TurnFailure): void {
+  private emitFailure(
+    failure: TurnFailure,
+    /** The card is the router's even though the session fell back off it. */
+    routed: boolean = this.openLlmActive
+  ): void {
     const registry = this.registry;
     this.emitAgentEvent(
       {
         type: "error",
         error: presentFailure(failure, {
           ...(registry != null
-            ? this.router.failureContext(
-                registry,
-                this.openLlmActive,
-                this.session?.model
-              )
+            ? this.router.failureContext(registry, routed, this.session?.model)
             : {
-                routed: this.openLlmActive,
+                routed,
                 freeLaneProviders: [],
                 onFreeLane: false,
                 abacusFreeModels: [],
                 abacus: null,
               }),
+          ...(failure.cause === "context_too_long" &&
+            registry != null && {
+              fit: this.governor.fitCard(
+                fitChoices(registry),
+                this.session?.model,
+                this.session?.messages ?? []
+              ),
+            }),
           ...(failure.cause === "stream_cut" &&
             !this.openLlmActive && {
               streamed: this.cutStreamedThisTurn,
@@ -2237,6 +2334,12 @@ export class ForeverEngine {
 
   private onPiEvent(event: AgentSessionEvent): void {
     this.stallWatch.note(event.type);
+    // A summary was made: the spend governor says so and resets its triggers.
+    if (
+      event.type === "compaction_end" &&
+      (event as { result?: unknown }).result != null
+    )
+      this.governor.noteCompacted((event as { reason?: string }).reason);
 
     switch (event.type) {
       case "agent_start":
@@ -2499,7 +2602,7 @@ export class ForeverEngine {
         }
         if (this.pendingStreamCut) {
           this.continuingPastMalformedToolCall = false;
-          this.pendingContextCompaction = null;
+          this.pendingFit = null;
           this.pendingOpenLlmRotation = null;
           this.pendingBusyWait = null;
           this.pendingLanguageRepair = null;
@@ -2510,7 +2613,7 @@ export class ForeverEngine {
         if (suspect != null && !this.hiddenTurn) {
           this.pendingNetworkFailure = suspect;
           this.continuingPastMalformedToolCall = false;
-          this.pendingContextCompaction = null;
+          this.pendingFit = null;
           this.pendingOpenLlmRotation = null;
           this.pendingBusyWait = null;
           this.pendingLanguageRepair = null;
@@ -2527,16 +2630,16 @@ export class ForeverEngine {
         this.continuingPastMalformedToolCall =
           !this.hiddenTurn &&
           this.shouldContinuePastMalformedToolCall(event.messages);
-        this.pendingContextCompaction =
+        this.pendingFit =
           this.hiddenTurn || this.continuingPastMalformedToolCall
             ? null
-            : this.shouldCompactAndRetry(event.messages);
+            : this.tooLargeFailure(event.messages);
         // A malformed call is retried on the same model, not rotated, and an
         // outgrown transcript does not fit the next model either.
         const route =
           this.hiddenTurn ||
           this.continuingPastMalformedToolCall ||
-          this.pendingContextCompaction != null
+          this.pendingFit != null
             ? { rotation: null, busy: null }
             : this.shouldRotateOpenLlm(event.messages);
         this.pendingOpenLlmRotation = route.rotation;
@@ -2546,7 +2649,7 @@ export class ForeverEngine {
         this.pendingLanguageRepair =
           this.hiddenTurn ||
           this.continuingPastMalformedToolCall ||
-          this.pendingContextCompaction != null ||
+          this.pendingFit != null ||
           this.pendingOpenLlmRotation != null ||
           this.pendingBusyWait != null ||
           this.languageRepairsThisTurn > 0
@@ -2602,8 +2705,8 @@ export class ForeverEngine {
     return failure != null && MALFORMED_TOOL_CALL_PATTERN.test(failure);
   }
 
-  private shouldCompactAndRetry(messages: readonly unknown[]): string | null {
-    if (this.interrupted || this.contextCompactions > 0) return null;
+  private tooLargeFailure(messages: readonly unknown[]): string | null {
+    if (this.interrupted || this.fitSteps >= MAX_FIT_STEPS) return null;
 
     const failure = lastAssistantError(messages);
 

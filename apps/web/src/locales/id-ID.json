@@ -1672,7 +1672,8 @@
       "other": "Paused.",
       "denied": "Paused: you did not allow it.",
       "quiet": "Dijeda: {{runs}} kali berturut-turut tidak menemukan hal baru, jadi berhenti memakai kredit. Lanjutkan agar terus memeriksa.",
-      "done": "Finished: what it was waiting for happened, so it stopped."
+      "done": "Finished: what it was waiting for happened, so it stopped.",
+      "budget": "Paused: {{runs}} runs in a row stopped at their credit budget."
     },
     "creditHold": {
       "notify": "Kredit Anda habis, jadi rutinitas Anda tidak akan berjalan. Proses yang dilewati tidak dikenai biaya, dan akan berjalan lagi dengan sendirinya saat Anda punya kredit.",
@@ -3098,7 +3099,17 @@
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
       "unsaved": "Disk penuh, jadi chat ini tidak sedang disimpan. Kosongkan sebagian ruang; chat akan disimpan lagi dengan pesanmu berikutnya.",
-      "creditsLow": "Credits are almost out, so the agent is wrapping up what it has so the work isn't cut off halfway.",
+      "creditsLow_one": "{{count}} credit left. The agent keeps going and hands over each piece as it's ready.",
+      "creditsLow_other": "{{count}} credits left. The agent keeps going and hands over each piece as it's ready.",
+      "spendCheckIn_one": "This task has used {{count}} credit so far. Send a message to keep going.",
+      "spendCheckIn_other": "This task has used {{count}} credits so far. Send a message to keep going.",
+      "spendBudget_one": "Stopped at its credit budget ({{count}} credit).",
+      "spendBudget_other": "Stopped at its credit budget ({{count}} credits).",
+      "spendCalls_one": "This task reached its limit of {{count}} step, so it's wrapping up. Send a message to keep going.",
+      "spendCalls_other": "This task reached its limit of {{count}} steps, so it's wrapping up. Send a message to keep going.",
+      "spendTime_one": "This task has worked for {{count}} minute, its limit, so it's wrapping up. Send a message to keep going.",
+      "spendTime_other": "This task has worked for {{count}} minutes, its limit, so it's wrapping up. Send a message to keep going.",
+      "compacted": "Summarized older messages to keep this chat fast and cheap.",
       "showInFolder": "Show in folder"
     },
     "part": {
@@ -4780,7 +4791,8 @@
       "warning": "Untuk lanjut sekarang, bot akan beralih ke model gratis dari penyedia lain ({{providers}}). Kualitasnya jauh lebih rendah: lebih banyak kesalahan, bisa merusak kode yang sudah berjalan, dan sering terkena batas penggunaan.",
       "offer": "Upgrade ke {{plan}} — {{price}}",
       "upgradeCta": "Upgrade ke {{plan}}",
-      "continueFree": "Lanjut dengan model gratis (kualitas lebih rendah)"
+      "continueFree": "Lanjut dengan model gratis (kualitas lebih rendah)",
+      "continueOwnKey": "Continue on your own key ({{model}})"
     },
     "plan": {
       "introPrice": "{{first}} untuk bulan pertama, lalu {{monthly}}/bulan",
@@ -4809,7 +4821,7 @@
       "body": "Periksa koneksi internet, VPN, atau proxy kamu, lalu coba lagi."
     },
     "cause": {
-      "context_too_long": "Percakapan ini terlalu panjang untuk model ini. Mulai chat baru, atau pilih model dengan konteks lebih besar.",
+      "context_too_long": "Percakapan ini terlalu panjang untuk model ini. Pilih model dengan konteks lebih besar.",
       "key_invalid": "Kunci {{provider}} kamu ditolak — tidak valid atau sudah kedaluwarsa.",
       "own_key_quota": "Kunci {{provider}} kamu sudah mencapai kuotanya. Beralih ke model lain, atau periksa paket kunci tersebut.",
       "model_unavailable": "Model ini tidak bisa menerima permintaan. Pilih model lain.",

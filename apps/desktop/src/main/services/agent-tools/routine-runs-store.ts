@@ -222,6 +222,9 @@ export const readLastRoutineRun = (home: string): RoutineRunRecord | null => {
           ? record.outcome
           : "completed",
       reply: record.reply,
+      ...(typeof record.stopped === "string"
+        ? { stopped: record.stopped }
+        : {}),
     };
   } catch {
     return null;
@@ -232,7 +235,7 @@ export const readLastRoutineRun = (home: string): RoutineRunRecord | null => {
 const readRunFile = (file: string): RoutineRunRecord | null => {
   const text = fs.readFileSync(file, "utf8");
   const head =
-    /^# Run at (\S+)\n\n- Outcome: (\w+)\n- Ended: (\S+)\n- Session: (\S*)\n\n/.exec(
+    /^# Run at (\S+)\n\n- Outcome: (\w+)\n(?:- Stopped: ([^\n]*)\n)?- Ended: (\S+)\n- Session: (\S*)\n\n/.exec(
       text
     );
   if (head == null) return null;
@@ -240,9 +243,11 @@ const readRunFile = (file: string): RoutineRunRecord | null => {
   return {
     startedAt: head[1]!,
     outcome: head[2] as RoutineRunRecord["outcome"],
-    endedAt: head[3]!,
-    sessionId: head[4]!,
+    endedAt: head[4]!,
+    sessionId: head[5]!,
     reply: reply === NOTHING_SAID ? "" : reply,
+    // Why it stopped partway: the budget pause reads it back.
+    ...(head[3] != null ? { stopped: head[3] } : {}),
   };
 };
 

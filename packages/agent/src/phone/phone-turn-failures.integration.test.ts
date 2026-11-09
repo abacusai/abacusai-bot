@@ -46,6 +46,7 @@ type DesktopEvent = import("../protocol.js").DesktopEvent;
 type AgentEvent = import("../protocol.js").AgentEvent;
 const { PhoneSession } = await import("./phone-session.js");
 const { IMAGE_LIMIT } = await import("../extensions/request-size.js");
+const { noteCreditsBack } = await import("../credit-wall.js");
 
 const MODEL = "abacus-vision-1";
 /** The server's limit on one request, scaled down with the screenshots. */
@@ -190,6 +191,8 @@ afterAll(async () => {
 
 beforeEach(() => {
   provider.calls.splice(0);
+  // A wall one test meets (credits_exhausted) is not the next test's.
+  noteCreditsBack();
 });
 
 describe("a long build that keeps looking at screenshots", () => {

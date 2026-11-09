@@ -124,6 +124,10 @@ interface ErrorAction {
   streamed?: boolean;
   /** `retry` on a full disk: the bytes left where the agent writes. */
   bytesFree?: number;
+  /** `spend-limit`: the limit's size; `credits-low`: the credits left. */
+  amount?: number;
+  /** `switch-model` at the credit wall: the model is on the user's own key. */
+  ownKey?: boolean;
 }
 
 /** Why the turn did not finish, as the agent named it (turn-outcome.ts). */
@@ -1245,9 +1249,13 @@ export const ErrorCard = ({
                   variant="secondary"
                   onClick={() => composer.model?.onChange(action.model!)}
                 >
-                  {t("workspace.premiumUpgrade.continueOn", {
-                    model: action.label ?? action.model,
-                  })}
+                  {action.ownKey === true
+                    ? t("outcome.wall.continueOwnKey", {
+                        model: action.label ?? action.model,
+                      })
+                    : t("workspace.premiumUpgrade.continueOn", {
+                        model: action.label ?? action.model,
+                      })}
                 </Button>
               ))}
           {actions.some((action) => action.type === "fix-key") && (
@@ -1575,6 +1583,29 @@ const backgroundJobLine = (
     : t("chat.notice.backgroundFinished", { command });
 };
 
+/** The spend governor closed the run out at a limit; see spendLimitLine. */
+const SPEND_LIMIT_ACTION = "spend-limit";
+/** The history was summarized to keep the chat fast and cheap. */
+const COMPACTED_ACTION = "compacted";
+
+const SPEND_LIMIT_KEYS = {
+  "check-in": "chat.notice.spendCheckIn",
+  budget: "chat.notice.spendBudget",
+  calls: "chat.notice.spendCalls",
+  time: "chat.notice.spendTime",
+} as const;
+
+/** The close-out line in the app's words: which limit, and its size. */
+const spendLimitLine = (
+  action: ErrorAction,
+  t: (key: string, values?: Record<string, unknown>) => string
+): string => {
+  const key =
+    SPEND_LIMIT_KEYS[action.cause as keyof typeof SPEND_LIMIT_KEYS] ??
+    SPEND_LIMIT_KEYS.calls;
+  return t(key, { count: action.amount ?? 0 });
+};
+
 /**
  * The low-credit notice's way on, as the milestone card offers it
  * (milestoneOffer): Basic's next plan alone opens as the free plan's upgrade
@@ -1673,25 +1704,35 @@ export const NoticeRow = ({
   const backgroundJob = actions.find(
     (action) => action.type === BACKGROUND_JOB_ACTION
   );
-  const creditsLow = actions.some(
+  const creditsLowAction = actions.find(
     (action) => action.type === CREDITS_LOW_NOTICE_ACTION
   );
+  const creditsLow = creditsLowAction != null;
+  // A limit the spend governor closed the run out at, and the history summary.
+  const spendLimit = actions.find(
+    (action) => action.type === SPEND_LIMIT_ACTION
+  );
+  const compacted = actions.some((action) => action.type === COMPACTED_ACTION);
   const message = creditsLow
-    ? t("chat.notice.creditsLow")
-    : tooLarge
-      ? t("chat.notice.historyTooLarge", {
-          size: formatBytes(Number(notice.value.size ?? 0)),
-          limit: formatBytes(Number(notice.value.limit ?? 0)),
-        })
-      : foreign
-        ? t("chat.notice.historyForeign")
-        : unsaved
-          ? t("chat.notice.unsaved")
-          : moved != null
-            ? ownKeyMovedLine(moved, t)
-            : backgroundJob != null
-              ? backgroundJobLine(backgroundJob, t)
-              : String(notice.value.message ?? "");
+    ? t("chat.notice.creditsLow", { count: creditsLowAction.amount ?? 0 })
+    : spendLimit != null
+      ? spendLimitLine(spendLimit, t)
+      : compacted
+        ? t("chat.notice.compacted")
+        : tooLarge
+          ? t("chat.notice.historyTooLarge", {
+              size: formatBytes(Number(notice.value.size ?? 0)),
+              limit: formatBytes(Number(notice.value.limit ?? 0)),
+            })
+          : foreign
+            ? t("chat.notice.historyForeign")
+            : unsaved
+              ? t("chat.notice.unsaved")
+              : moved != null
+                ? ownKeyMovedLine(moved, t)
+                : backgroundJob != null
+                  ? backgroundJobLine(backgroundJob, t)
+                  : String(notice.value.message ?? "");
   return (
     <Marker
       variant="border"

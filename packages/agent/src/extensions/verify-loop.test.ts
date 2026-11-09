@@ -71,7 +71,10 @@ describe("what starts a new budget", () => {
     wrote: () => void;
   } => {
     const handlers = new Map<string, Handler>();
-    const verify = new VerifyLoop();
+    const verify = new VerifyLoop({
+      beginUnasked() {},
+      endUnasked: () => false,
+    });
 
     verify.extension({
       on: (name: string, handler: Handler) => handlers.set(name, handler),

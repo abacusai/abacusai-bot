@@ -69,8 +69,32 @@ function textOf(content: unknown): string {
     .join("");
 }
 
+/**
+ * What a provider charges and refuses by size: the request's input tokens
+ * (four characters each), billed as Abacus does on the last usage chunk, and
+ * refused past a model's window or a tier's per-request cap.
+ */
+export interface FakeMeter {
+  /** Credits one request bills, from its input tokens; absent bills nothing. */
+  credits?: (inputTokens: number, call: RecordedCall) => number;
+  /** Refuse requests over this many tokens, per model id, with the provider's words. */
+  limits?: Record<string, { tokens: number; status: number; message: string }>;
+}
+
+/** Input tokens of a request as a provider counts them, roughly: four characters each. */
+export const requestTokens = (call: RecordedCall): number =>
+  Math.ceil(
+    (JSON.stringify(call.messages).length +
+      JSON.stringify(call.body.tools ?? []).length) /
+      4
+  );
+
 export class FakeProvider {
   readonly calls: RecordedCall[] = [];
+  /** Each request's input tokens and billed credits, in order. */
+  readonly billed: Array<{ model: string; tokens: number; credits: number }> =
+    [];
+  private meter: FakeMeter = {};
   /** Responses left open by a `stall` reply, closed with the server. */
   private readonly stalled: http.ServerResponse[] = [];
   private responder: Responder = () => ({ say: "ok" });
@@ -109,6 +133,11 @@ export class FakeProvider {
   /** How the model answers. Called once per request, with the call index. */
   script(responder: Responder): void {
     this.responder = responder;
+  }
+
+  /** Bill and refuse by size; see FakeMeter. */
+  meterWith(meter: FakeMeter): void {
+    this.meter = meter;
   }
 
   /** What `GET /models` answers with, as `{ data: entries }`. */
@@ -172,7 +201,17 @@ export class FakeProvider {
     const index = this.calls.length;
     this.calls.push(call);
 
-    const reply = await this.responder(call, index);
+    const tokens = requestTokens(call);
+    const limit = this.meter.limits?.[call.model];
+    const reply: Reply =
+      limit != null && tokens > limit.tokens
+        ? { fail: { status: limit.status, message: limit.message } }
+        : await this.responder(call, index);
+    const credits =
+      "fail" in reply || "drop" in reply
+        ? 0
+        : (this.meter.credits?.(tokens, call) ?? 0);
+    this.billed.push({ model: call.model, tokens, credits });
 
     if ("drop" in reply) {
       request.socket.destroy();
@@ -257,6 +296,23 @@ export class FakeProvider {
       frame({}, "stop");
     }
 
+    // The final usage chunk, with the billed points (100 to a credit) when metered.
+    if (this.meter.credits != null)
+      response.write(
+        `data: ${JSON.stringify({
+          id: "chunk-1",
+          object: "chat.completion.chunk",
+          created: 1,
+          model: "fake-1",
+          choices: [],
+          usage: {
+            prompt_tokens: tokens,
+            completion_tokens: 10,
+            total_tokens: tokens + 10,
+            compute_points_used: Math.round(credits * 100),
+          },
+        })}\n\n`
+      );
     response.write("data: [DONE]\n\n");
     response.end();
   }

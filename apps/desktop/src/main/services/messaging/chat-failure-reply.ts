@@ -336,6 +336,26 @@ export const chatLineForBackgroundJob = (
     : words.t("outcome.channel.backgroundFinished");
 };
 
+/** The spend governor's lines, in the chat app: reserve began, or a limit closed the run out. */
+const SPEND_LINE_KEYS = {
+  "check-in": "chat.notice.spendCheckIn",
+  budget: "chat.notice.spendBudget",
+  calls: "chat.notice.spendCalls",
+  time: "chat.notice.spendTime",
+} as const;
+
+export const chatLineForSpend = (
+  words: ChannelWords,
+  action: { type: string; cause?: string; amount?: number }
+): string =>
+  action.type === "credits-low"
+    ? words.t("chat.notice.creditsLow", { count: action.amount ?? 0 })
+    : words.t(
+        SPEND_LINE_KEYS[action.cause as keyof typeof SPEND_LINE_KEYS] ??
+          SPEND_LINE_KEYS.calls,
+        { count: action.amount ?? 0 }
+      );
+
 /**
  * A model off Abacus did not finish: what happened and why such a model
  * fails, then the way on. Free: RouteLLM - Open while Abacus credits are left, the

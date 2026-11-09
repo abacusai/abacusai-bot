@@ -165,6 +165,11 @@ export class OpenLlmRouter {
     const now = this.now();
     if (!creditWallActive(now) || freeLaneChosen(now)) return null;
     if (!this.rotation.poolShut(this.candidates(registry))) return null;
+    return this.wallRefusal();
+  }
+
+  /** The refusal the credit wall stands on: the last one heard, or the plain one. */
+  wallRefusal(): TurnFailure {
     return (
       this.lastWall ?? {
         cause: "credits_exhausted",
@@ -194,6 +199,22 @@ export class OpenLlmRouter {
         },
       }),
       freeLaneProviders: this.freeLaneProviders(registry),
+      // A model on the user's own key, for the wall's "continue on your key".
+      ownKeyModels: registry
+        .getAvailable()
+        .filter(
+          (entry) =>
+            entry.provider !== "abacus" && entry.provider !== LOCAL_PROVIDER
+        )
+        .slice(0, 1)
+        .map((entry) => {
+          const id = `${entry.provider}/${entry.id}`;
+          return {
+            model: id,
+            label:
+              choices.find((choice) => choice.id === id)?.label ?? entry.id,
+          };
+        }),
       onFreeLane: routed && this.onFreeLane(provider),
       abacusFreeModels: choices
         .filter((choice) => choice.provider === "abacus" && choice.free)
@@ -243,7 +264,9 @@ export class OpenLlmRouter {
     registry: ModelRegistry,
     failure: string,
     current: RunningModel | undefined,
-    network?: NetworkEvidence
+    network?: NetworkEvidence,
+    /** After a refusal for size: only a model whose window holds this many tokens. */
+    minTokens?: number
   ): RouterStep {
     const currentId =
       current != null ? `${current.provider}/${current.id}` : undefined;
@@ -276,7 +299,9 @@ export class OpenLlmRouter {
       this.rotation.markScopeFailed(verdict.scope, verdict.scopeMs);
 
     const next = this.rotation.pick(
-      this.candidates(registry),
+      this.candidates(registry).filter(
+        (choice) => minTokens == null || choice.contextWindow * 0.8 >= minTokens
+      ),
       this.failedThisTurn
     );
 

@@ -110,6 +110,10 @@
       "types": "./dist/user-text.d.ts",
       "default": "./dist/user-text.js"
     },
+    "./spend-policy": {
+      "types": "./dist/spend-policy.d.ts",
+      "default": "./dist/spend-policy.js"
+    },
     "./bot-task": {
       "types": "./dist/bot-task.d.ts",
       "default": "./dist/bot-task.js"

@@ -26,7 +26,6 @@ import { currentMode } from "../current-mode.js";
 import { toolPath, WRITE_TOOLS } from "../permissions.js";
 import { AgentMode } from "../protocol.js";
 import { runFallbackShell } from "../sandbox/shell.js";
-import type { RunLimit } from "./budgets.js";
 import type { Framework } from "./test-runner.js";
 import { detectFramework } from "./test-runner.js";
 import { inPreTurnTree, PreImages } from "./verify-baseline.js";
@@ -143,10 +142,17 @@ const repairPrompt = (
   );
 };
 
+/** The tighter limits of work nobody asked for: the spend governor's "unasked" kind. */
+export interface UnaskedLimit {
+  beginUnasked(calls: number): void;
+  /** True when the follow-up was stopped at its limit. */
+  endUnasked(): boolean;
+}
+
 /** The loop's state and the hooks it needs; see AbacusBotSession.verifyTurn. */
 export class VerifyLoop {
-  /** The budget extension enforces this; `beginRepair` arms it. */
-  readonly runLimit: RunLimit = { calls: null, used: 0, reached: false };
+  constructor(private readonly limit: UnaskedLimit) {}
+
   private readonly maxRetries = resolveMaxRetries(
     process.env.ABACUSAI_BOT_VERIFY_RETRIES
   );
@@ -342,16 +348,13 @@ export class VerifyLoop {
 
   beginRepair(): void {
     this.repairing = true;
-    this.runLimit.calls = this.maxCalls;
-    this.runLimit.used = 0;
-    this.runLimit.reached = false;
+    this.limit.beginUnasked(this.maxCalls);
   }
 
   /** The follow-up ended; true when it was stopped at its limit. */
   endRepair(): boolean {
     this.repairing = false;
-    this.runLimit.calls = null;
 
-    return this.runLimit.reached;
+    return this.limit.endUnasked();
   }
 }

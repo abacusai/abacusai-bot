@@ -1672,7 +1672,8 @@
       "other": "Paused.",
       "denied": "Paused: you did not allow it.",
       "quiet": "일시 중지됨: {{runs}}번 연속으로 새로운 내용이 없어 크레딧 사용을 멈췄습니다. 계속 확인하려면 다시 시작하세요.",
-      "done": "Finished: what it was waiting for happened, so it stopped."
+      "done": "Finished: what it was waiting for happened, so it stopped.",
+      "budget": "Paused: {{runs}} runs in a row stopped at their credit budget."
     },
     "creditHold": {
       "notify": "크레딧이 소진되어 루틴이 실행되지 않습니다. 건너뛴 실행에는 비용이 들지 않으며, 크레딧이 생기면 자동으로 다시 시작됩니다.",
@@ -3098,7 +3099,17 @@
       "historyForeign": "This conversation was saved by a newer version of the app, so some of it may not show here.",
       "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
       "unsaved": "디스크가 가득 차서 이 채팅이 저장되지 않고 있습니다. 공간을 확보하세요. 다음 메시지를 보낼 때 다시 저장됩니다.",
-      "creditsLow": "Credits are almost out, so the agent is wrapping up what it has so the work isn't cut off halfway.",
+      "creditsLow_one": "{{count}} credit left. The agent keeps going and hands over each piece as it's ready.",
+      "creditsLow_other": "{{count}} credits left. The agent keeps going and hands over each piece as it's ready.",
+      "spendCheckIn_one": "This task has used {{count}} credit so far. Send a message to keep going.",
+      "spendCheckIn_other": "This task has used {{count}} credits so far. Send a message to keep going.",
+      "spendBudget_one": "Stopped at its credit budget ({{count}} credit).",
+      "spendBudget_other": "Stopped at its credit budget ({{count}} credits).",
+      "spendCalls_one": "This task reached its limit of {{count}} step, so it's wrapping up. Send a message to keep going.",
+      "spendCalls_other": "This task reached its limit of {{count}} steps, so it's wrapping up. Send a message to keep going.",
+      "spendTime_one": "This task has worked for {{count}} minute, its limit, so it's wrapping up. Send a message to keep going.",
+      "spendTime_other": "This task has worked for {{count}} minutes, its limit, so it's wrapping up. Send a message to keep going.",
+      "compacted": "Summarized older messages to keep this chat fast and cheap.",
       "showInFolder": "Show in folder"
     },
     "part": {
@@ -4780,7 +4791,8 @@
       "warning": "지금 계속하면 봇이 다른 제공업체({{providers}})의 무료 모델로 전환돼요. 품질이 훨씬 낮아서 실수가 많고, 잘 돌아가던 코드를 망가뜨릴 수 있으며, 사용 한도에 자주 걸려요.",
       "offer": "{{plan}}(으)로 업그레이드 — {{price}}",
       "upgradeCta": "{{plan}}(으)로 업그레이드",
-      "continueFree": "무료 모델로 계속하기 (품질 낮음)"
+      "continueFree": "무료 모델로 계속하기 (품질 낮음)",
+      "continueOwnKey": "Continue on your own key ({{model}})"
     },
     "plan": {
       "introPrice": "첫 달 {{first}}, 이후 월 {{monthly}}",
@@ -4809,7 +4821,7 @@
       "body": "인터넷 연결, VPN 또는 프록시를 확인한 뒤 다시 시도해 주세요."
     },
     "cause": {
-      "context_too_long": "이 대화는 모델이 처리하기에 너무 길어요. 새 채팅을 시작하거나 더 큰 컨텍스트를 지원하는 모델을 선택하세요.",
+      "context_too_long": "이 대화는 모델이 처리하기에 너무 길어요. 더 큰 컨텍스트를 지원하는 모델을 선택하세요.",
       "key_invalid": "{{provider}} 키가 거부되었어요. 유효하지 않거나 만료되었어요.",
       "own_key_quota": "{{provider}} 키가 할당량에 도달했어요. 다른 모델로 전환하거나 키의 요금제를 확인하세요.",
       "model_unavailable": "이 모델은 요청을 받을 수 없었어요. 다른 모델을 선택하세요.",

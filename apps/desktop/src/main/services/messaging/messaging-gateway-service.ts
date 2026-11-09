@@ -69,6 +69,7 @@ import {
   chatFailureOf,
   chatReplyForFailure,
   chatLineForBackgroundJob,
+  chatLineForSpend,
   chatLineForMove,
   contactFailureNotice,
   FailureReplyThrottle,
@@ -1629,6 +1630,11 @@ export class MessagingGatewayService {
         (action) => action.type === "background-job"
       );
       if (job != null) void this.tellBackgroundJob(route, job.cause);
+      const spend = event.actions?.find(
+        (action) =>
+          action.type === "credits-low" || action.type === "spend-limit"
+      );
+      if (spend != null) void this.tellSpend(route, spend);
       return;
     }
 
@@ -1875,6 +1881,21 @@ export class MessagingGatewayService {
       )
     );
     this.deliver(route, chatLineForMove(words, action));
+  }
+
+  /** Reserve began, or a limit closed the run out: the user's own chat hears it. */
+  private async tellSpend(
+    route: Route,
+    action: { type: string; cause?: string; amount?: number }
+  ): Promise<void> {
+    if (!this.isOwnChatId(route.platform, route.userId)) return;
+    const words = await channelWords(
+      channelLocale(
+        readUserLanguage()?.name ?? null,
+        this.options.appLanguage?.() ?? null
+      )
+    );
+    this.deliver(route, chatLineForSpend(words, action));
   }
 
   /** A job this chat's agent started finished after its reply went. */

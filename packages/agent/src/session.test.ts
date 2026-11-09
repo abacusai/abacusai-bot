@@ -27,7 +27,6 @@ import {
   AbacusBotSession,
   capRetriesWhileRouting,
   componentsPrompt,
-  reserveContextHeadroom,
   endedOnMalformedToolCall,
   endedOnProviderError,
   isSupersededWebTool,
@@ -516,102 +515,6 @@ describe("retry budgets while OpenLLM routes", () => {
   });
 });
 
-/**
- * Compaction has to run before the provider refuses, and pi's flat 16k reserve
- * stops meaning that as the window grows: it is half of a 32k model and 1.6% of
- * a million-token one, where a single large tool result crosses the threshold
- * and overshoots it in the same step.
- */
-describe("how much of the context window is kept free", () => {
-  const holder = (
-    reserveTokens: number
-  ): {
-    getCompactionSettings: () => {
-      enabled: boolean;
-      reserveTokens: number;
-      keepRecentTokens: number;
-    };
-  } => ({
-    getCompactionSettings: () => ({
-      enabled: true,
-      reserveTokens,
-      keepRecentTokens: 20_000,
-    }),
-  });
-
-  it("scales the reserve with the window rather than fixing it", () => {
-    const manager = holder(16_384);
-
-    reserveContextHeadroom(manager, () => 1_000_000);
-
-    // A fifth of the window, so compaction runs at 80% rather than 98.4%.
-    expect(manager.getCompactionSettings().reserveTokens).toBe(200_000);
-  });
-
-  it("keeps pi's reserve when it is the larger of the two", () => {
-    const manager = holder(16_384);
-
-    // A fifth of 32k is 6,553, less headroom than pi already asks for.
-    reserveContextHeadroom(manager, () => 32_000);
-
-    expect(manager.getCompactionSettings().reserveTokens).toBe(16_384);
-  });
-
-  it("never takes headroom away from a user who configured more", () => {
-    const manager = holder(400_000);
-
-    reserveContextHeadroom(manager, () => 1_000_000);
-
-    expect(manager.getCompactionSettings().reserveTokens).toBe(400_000);
-  });
-
-  it("caps a routine session's context via the env budget", () => {
-    const manager = holder(16_384);
-    process.env.ABACUSAI_BOT_CONTEXT_CAP_TOKENS = "50000";
-    try {
-      reserveContextHeadroom(manager, () => 1_000_000);
-
-      // Reserve is window - cap, so compaction triggers near 50k of usage.
-      expect(manager.getCompactionSettings().reserveTokens).toBe(950_000);
-    } finally {
-      delete process.env.ABACUSAI_BOT_CONTEXT_CAP_TOKENS;
-    }
-  });
-
-  it("ignores a nonsense cap that would swallow the window", () => {
-    const manager = holder(16_384);
-    process.env.ABACUSAI_BOT_CONTEXT_CAP_TOKENS = "5";
-    try {
-      reserveContextHeadroom(manager, () => 1_000_000);
-
-      expect(manager.getCompactionSettings().reserveTokens).toBe(200_000);
-    } finally {
-      delete process.env.ABACUSAI_BOT_CONTEXT_CAP_TOKENS;
-    }
-  });
-
-  it("leaves the settings alone when the window is unknown", () => {
-    const manager = holder(16_384);
-
-    // Mid-rotation, or before a model is resolved: guessing a reserve from a
-    // window nobody has stated is how the 128k default caused this.
-    reserveContextHeadroom(manager, () => undefined);
-
-    expect(manager.getCompactionSettings().reserveTokens).toBe(16_384);
-  });
-
-  it("reads the window at call time, since rotation changes the model", () => {
-    const manager = holder(16_384);
-    let window = 32_000;
-
-    reserveContextHeadroom(manager, () => window);
-    expect(manager.getCompactionSettings().reserveTokens).toBe(16_384);
-
-    window = 200_000;
-    expect(manager.getCompactionSettings().reserveTokens).toBe(40_000);
-  });
-});
-
 describe("what the provider itself said", () => {
   it("is kept when the app's reading of the failure does not carry it", () => {
     // The generic branch: a 400 nobody has a pattern for. Without this the
@@ -1015,7 +918,7 @@ describe("a model the user picked that Abacus does not serve", () => {
     }
   );
 
-  it("never moves an Abacus model, a dropped connection, an outgrown chat or a cut-off", () => {
+  it("never moves an Abacus model, a dropped connection or a cut-off; an outgrown chat moves only where the loop finds room", () => {
     const context = {
       routed: false,
       freeLaneProviders: [],
@@ -1026,10 +929,16 @@ describe("a model the user picked that Abacus does not serve", () => {
     for (const failure of [
       { cause: "model_unavailable" as const, provider: "abacus", raw: "410" },
       { cause: "connection" as const, provider: "nvidia", raw: "fetch failed" },
-      { cause: "context_too_long" as const, provider: "nvidia", raw: "413" },
       { cause: "stream_cut" as const, provider: "gemini", raw: "cut" },
     ])
       expect(movesToOpenLlm(failure, context)).toBe(false);
+    // The fit ladder's move: the loop checks the target's window first.
+    expect(
+      movesToOpenLlm(
+        { cause: "context_too_long", provider: "nvidia", raw: "413" },
+        context
+      )
+    ).toBe(true);
   });
 
   it("a stall ends on the same card off Abacus, and on its own line on Abacus", () => {
@@ -1191,8 +1100,10 @@ describe("a request the provider's tier will not take", () => {
     expect(summary).toBe("This request is too large for the model's limit");
     expect(summary).not.toContain("rate-limited");
     // A different model is the way out, so the switch action stays offered.
-    expect(remedy).toContain("switch");
+    expect(remedy).toMatch(/switch/i);
     expect(remedy).not.toContain("Try again in a moment");
+    // One request over the tier's limit: a new chat would not fit either.
+    expect(remedy).not.toMatch(/new chat/i);
   });
 
   it("is told apart by the sentence when the status is generic", () => {

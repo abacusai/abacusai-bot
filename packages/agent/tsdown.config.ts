@@ -49,6 +49,8 @@ export default defineConfig({
     "src/user-text.ts",
     // Leaked reasoning tags: the chat-app lanes' reply envelope reads it too.
     "src/reasoning-tags.ts",
+    // The spend policy: the desktop's routine runner reads it too.
+    "src/spend-policy.ts",
     "src/secret-files.ts",
     "src/bot-task.ts",
     // A bot's daily notes: main writes what a bot did or learned in a channel or for another bot.

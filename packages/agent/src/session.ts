@@ -62,7 +62,7 @@ import { EXIT_PLAN_TOOL_NAME } from "./exit-plan-tool.js";
 import astTools from "./extensions/ast-tools.js";
 import background from "./extensions/background.js";
 import batchReadTool from "./extensions/batch-read-tool.js";
-import { budgetStopReason, createBudgets } from "./extensions/budgets.js";
+import { createBudgets } from "./extensions/budgets.js";
 import compactionPruner from "./extensions/compaction-pruner.js";
 import diskFull from "./extensions/disk-full.js";
 import editTool from "./extensions/edit-tool.js";
@@ -72,6 +72,20 @@ import knowledge from "./extensions/knowledge.js";
 import orientation from "./extensions/orientation.js";
 import outputRepair from "./extensions/output-repair.js";
 import requestSize from "./extensions/request-size.js";
+import {
+  COMPACTED_ACTION,
+  COMPACTED_NOTICE,
+  CREDITS_LOW_ACTION,
+  creditsLowNotice,
+  fitChoices,
+  SPEND_LIMIT_ACTION,
+  laneOfModel,
+  paysNothing,
+  SpendGovernor,
+  spendLimitNotice,
+  spendStopReason,
+  summarizerFrom,
+} from "./extensions/spend-governor.js";
 import spill from "./extensions/spill.js";
 import syntaxCheck from "./extensions/syntax-check.js";
 import testRunner from "./extensions/test-runner.js";
@@ -642,66 +656,6 @@ export function capRetriesWhileRouting(
   };
 }
 
-/** The slice of a settings manager the compaction threshold reads and replaces. */
-interface CompactionBudgetHolder {
-  getCompactionSettings: () => {
-    enabled: boolean;
-    reserveTokens: number;
-    keepRecentTokens: number;
-  };
-}
-
-/**
- * The share of a context window kept free, so compaction runs before the
- * provider refuses. pi's flat 16k is 50% of a 32k window and nothing at all
- * on a million-token one, where a single tool result overshoots because the
- * check runs on the *previous* turn's usage.
- */
-const CONTEXT_HEADROOM = 0.2;
-
-/**
- * An absolute context budget for this session, or null. Routine fires replay
- * their whole conversation every run, so the desktop caps them via this env
- * var; usage past the cap triggers pi's ordinary compaction. Floored at 20k,
- * below which the session would thrash compactions instead of working.
- */
-const contextCapTokens = (): number | null => {
-  const raw = process.env.ABACUSAI_BOT_CONTEXT_CAP_TOKENS;
-  if (raw == null || raw.length === 0) return null;
-  const cap = Number(raw);
-  return Number.isFinite(cap) && cap >= 20_000 ? Math.floor(cap) : null;
-};
-
-/**
- * Compact at a fraction of the window, not a fixed distance from its end.
- * Read at call time because OpenLLM changes the model mid-session; pi's
- * configured reserve stays a floor.
- */
-export function reserveContextHeadroom(
-  manager: CompactionBudgetHolder,
-  contextWindow: () => number | undefined
-): void {
-  const configured = manager.getCompactionSettings.bind(manager);
-
-  manager.getCompactionSettings = () => {
-    const settings = configured();
-    const window = contextWindow();
-
-    if (window == null || window <= 0) return settings;
-
-    const cap = contextCapTokens();
-
-    return {
-      ...settings,
-      reserveTokens: Math.max(
-        settings.reserveTokens,
-        Math.ceil(window * CONTEXT_HEADROOM),
-        cap != null ? window - cap : 0
-      ),
-    };
-  };
-}
-
 /** The servers the app itself hosts; see DESKTOP_ONLY_SERVERS in mcp/index.ts. */
 const APP_SERVERS: ReadonlySet<string> = new Set([
   "browser",
@@ -822,12 +776,14 @@ export class AbacusBotSession {
   /** The Abacus credits of every run in the turn so far, added at each `agent_end`. */
   private turnCreditsSoFar: TurnCredits;
   /** The context failure to compact around, with the turn it ended, set at `agent_end`. */
-  private pendingContextCompaction: {
+  private pendingFit: {
     failure: string;
     messages: readonly unknown[];
   } | null = null;
-  /** Compactions spent recovering this turn. One is the limit; see compactAndRetry. */
-  private contextCompactions = 0;
+  /** Steps taken on the fit ladder this turn; see climbFitLadder. */
+  private fitSteps = 0;
+  /** The user's choice is the router, whatever it runs on now; see stopAtCreditWall. */
+  private poolChosen = false;
   /** Set at `agent_end` when the turn is to be continued rather than ended. */
   private continuingPastMalformedToolCall = false;
   /** Whether a user turn is in flight: a refresh landing now is mid-turn. */
@@ -846,7 +802,40 @@ export class AbacusBotSession {
     toolsRunning: () => this.heartbeat.size,
     onStall: () => void this.onModelStall(),
   });
-  private readonly verifyLoop = new VerifyLoop();
+  /** What a turn may spend, and the context it may carry; see spend-governor.ts. */
+  private readonly governor = new SpendGovernor({
+    kind: process.env.ABACUSAI_BOT_ROUTINE_RUN === "1" ? "routine" : "attended",
+    laneOf: (model) => laneOfModel(model, this.openLlmActive),
+    onCreditsLow: (left) =>
+      this.emitAgentEvent({
+        type: "notification",
+        severity: "warning",
+        message: creditsLowNotice(left),
+        actions: [{ type: CREDITS_LOW_ACTION, amount: left }],
+        notificationKey: CREDITS_LOW_ACTION,
+      }),
+    onCloseOut: (hit) =>
+      this.emitAgentEvent({
+        type: "notification",
+        severity: "info",
+        message: spendLimitNotice(hit),
+        actions: [{ type: SPEND_LIMIT_ACTION, ...hit }],
+      }),
+    onCompacted: () =>
+      this.emitAgentEvent({
+        type: "notification",
+        severity: "info",
+        message: COMPACTED_NOTICE,
+        actions: [{ type: COMPACTED_ACTION }],
+      }),
+    summarizer: summarizerFrom(
+      () => this.registry,
+      () => this.modelRuntime,
+      () => this.router,
+      this.maxOutputTokens
+    ),
+  });
+  private readonly verifyLoop = new VerifyLoop(this.governor);
   private pendingStall: { modelId: string } | null = null;
   private stallRecoveriesThisTurn = 0;
   /** The turn already ended on the stall error; pi's aborted state is not a second one. */
@@ -1006,11 +995,8 @@ export class AbacusBotSession {
     );
 
     capRetriesWhileRouting(settingsManager, () => this.openLlmActive);
-    // Sub-agents keep pi's flat reserve: one concrete model, short transcript.
-    reserveContextHeadroom(
-      settingsManager,
-      () => this.session?.model?.contextWindow
-    );
+    // The context ceiling by who pays; sub-agents keep pi's flat reserve.
+    this.governor.governContext(settingsManager, () => this.session?.model);
     const resourceLoader = createResourceLoader({
       // Skill and AGENTS.md paths as the model should copy them.
       ...MODEL_PATH_RESOURCES,
@@ -1170,6 +1156,11 @@ export class AbacusBotSession {
               name: "abacusai-bot-verify-loop",
               factory: this.verifyLoop.extension,
             },
+            // Before the budgets: a close-out it starts silences their check-ins.
+            {
+              name: "abacusai-bot-spend-governor",
+              factory: this.governor.extension,
+            },
             {
               name: "abacusai-bot-disk-full",
               factory: diskFull(() => this.router.chain) as unknown as (
@@ -1179,15 +1170,7 @@ export class AbacusBotSession {
             {
               name: "abacusai-bot-budgets",
               factory: createBudgets({
-                runLimit: this.verifyLoop.runLimit,
-                onCreditsLow: () =>
-                  this.emitAgentEvent({
-                    type: "notification",
-                    severity: "warning",
-                    message: CREDITS_LOW_NOTICE,
-                    actions: [{ type: CREDITS_LOW_ACTION }],
-                    notificationKey: CREDITS_LOW_ACTION,
-                  }),
+                closing: () => this.governor.closing(),
               }) as unknown as (pi: ExtensionAPI) => void,
             },
           ]) satisfies InlineExtension[],
@@ -1221,6 +1204,7 @@ export class AbacusBotSession {
             };
 
     this.openLlmActive = routerChoice != null && resolved.model != null;
+    this.poolChosen = isOpenLlmReference(requested);
 
     // A model without credentials is unavailable too; pick the first configured
     // one rather than leave `model` undefined. Messages wait until after
@@ -1485,8 +1469,8 @@ export class AbacusBotSession {
     this.retriedCalls = 0;
     this.interrupted = false;
     this.malformedContinuations = 0;
-    this.contextCompactions = 0;
-    this.pendingContextCompaction = null;
+    this.fitSteps = 0;
+    this.pendingFit = null;
     this.router.beginTurn();
     this.pendingNetworkFailure = null;
     this.pendingBusyWait = null;
@@ -1546,7 +1530,18 @@ export class AbacusBotSession {
     try {
       // The cut-off card's Continue: the cut reply is picked up, never asked anew.
       if (turn?.continueCut === true) await continueCutReply(session);
-      else await session.prompt(text);
+      else {
+        // The ceiling by who pays, before the run's first request. Stop
+        // during that summary ends the turn: nothing is sent.
+        const preflight = await this.governor.preflight(session, text);
+        if (preflight === "stopped" || this.interrupted) {
+          this.finishTurn();
+          this.closeOwnedTurn(owned);
+          turn?.settled?.();
+          return;
+        }
+        await session.prompt(text);
+      }
       await this.settleRun();
       await this.verifyTurn(owned);
       this.closeOwnedTurn(owned);
@@ -1590,7 +1585,7 @@ export class AbacusBotSession {
       !owned.isClosed() &&
       owned.failure == null &&
       !owned.endedEmpty &&
-      budgetStopReason() == null;
+      spendStopReason() == null;
 
     while (session != null && endedWell() && !creditWallActive()) {
       const verdict = await this.verifyLoop.check(this.options.cwd);
@@ -1653,7 +1648,7 @@ export class AbacusBotSession {
 
     // The budget extension aborted the run; pi records that as an error with
     // "This operation was aborted" for text, which reads as a provider fault.
-    const budgetStop = budgetStopReason();
+    const budgetStop = spendStopReason();
     if (budgetStop != null && !this.router.chain.diskFull) {
       this.emitAgentEvent(
         {
@@ -1693,12 +1688,14 @@ export class AbacusBotSession {
    * call answered reports nothing, and an empty reply after a failure is a
    * failure, never a silent end.
    */
-  private reportFailure(move = true): void {
+  private reportFailure(move = true): boolean {
     const failure = this.router.chain.failure(
       this.openLlmActive && this.isPoolShut()
     );
-    if (failure == null) return;
-    if (!move || !this.moveToOpenLlm(failure)) this.emitFailure(failure);
+    if (failure == null) return false;
+    if (move && this.moveToOpenLlm(failure)) return true;
+    this.emitFailure(failure);
+    return false;
   }
 
   /**
@@ -1720,11 +1717,18 @@ export class AbacusBotSession {
     const planRouter = payingPlanRouter(registry);
     const next = planRouter ?? this.router.pick(registry);
     if (next == null || !movesToOpenLlm(failure, context)) return false;
+    // Too large: only to a model whose window holds it (the fit ladder).
+    if (
+      failure.cause === "context_too_long" &&
+      !this.governor.holdsNeed(next, this.session?.messages ?? [])
+    )
+      return false;
     // A refused key is re-read before the next turn, as when it is shown.
     if (failure.cause === "key_invalid" || isAuthFailure(failure.raw))
       this.providersStale = true;
     const paying = planRouter != null;
     this.openLlmActive = !paying;
+    this.poolChosen = !paying;
     // The run on the router ends on its own calls, not the failed model's.
     this.router.chain.begin();
     this.pendingOpenLlmRotation = { failure: failure.raw, nextId: next.id };
@@ -1744,7 +1748,11 @@ export class AbacusBotSession {
     return true;
   }
 
-  private emitFailure(failure: TurnFailure): void {
+  private emitFailure(
+    failure: TurnFailure,
+    /** The card is the router's even though the session fell back off it. */
+    routed: boolean = this.openLlmActive
+  ): void {
     // Credits, billing or credentials: whatever the user does about them (a
     // key, a top-up, an upgrade, a payment) is re-read before the next turn.
     if (
@@ -1762,18 +1770,22 @@ export class AbacusBotSession {
         type: "error",
         error: presentFailure(failure, {
           ...(registry != null
-            ? this.router.failureContext(
-                registry,
-                this.openLlmActive,
-                this.session?.model
-              )
+            ? this.router.failureContext(registry, routed, this.session?.model)
             : {
-                routed: this.openLlmActive,
+                routed,
                 freeLaneProviders: [],
                 onFreeLane: false,
                 abacusFreeModels: [],
                 abacus: null,
               }),
+          ...(failure.cause === "context_too_long" &&
+            registry != null && {
+              fit: this.governor.fitCard(
+                fitChoices(registry),
+                this.session?.model,
+                this.session?.messages ?? []
+              ),
+            }),
           ...(failure.cause === "stream_cut" &&
             !this.openLlmActive && {
               streamed: this.cutStreamedThisTurn,
@@ -1792,29 +1804,36 @@ export class AbacusBotSession {
   }
 
   /**
-   * At the credit wall, before the free lane is chosen, a turn on the pool
-   * runs on Abacus or not at all: it moves back to Abacus when Abacus is
-   * there to ask, and otherwise ends at once on the wall's card.
+   * Who pays, decided before the model runs. At the credit wall, before the
+   * free lane is chosen, a turn the user gave the router runs on Abacus or
+   * not at all: it moves back to Abacus when Abacus is there to ask, and
+   * otherwise ends at once on the wall's card. A session that fell back off
+   * the pool onto the user's own key is the router's still: the card comes
+   * first, with that key as one of its choices.
    */
   private async stopAtCreditWall(): Promise<boolean> {
     const registry = this.registry;
     const runtime = this.modelRuntime;
     const session = this.session;
     if (
-      !this.openLlmActive ||
+      !this.poolChosen ||
       registry == null ||
       session == null ||
       !creditWallActive() ||
       freeLaneChosen()
     )
       return false;
-    const stop = this.router.wallStops(registry);
+    // A fallback that costs nothing (a local or free model) runs: nobody pays.
+    if (!this.openLlmActive && paysNothing(session.model)) return false;
+    const stop = this.openLlmActive
+      ? this.router.wallStops(registry)
+      : this.router.wallRefusal();
     if (stop != null) {
       this.emitAgentEvent({
         type: "status_changed",
         status: AgentStatus.Submitted,
       });
-      this.emitFailure(stop);
+      this.emitFailure(stop, true);
       this.finishTurn();
       return true;
     }
@@ -1864,7 +1883,7 @@ export class AbacusBotSession {
     // impossible. Once per turn.
     const arrivals =
       this.continuingPastMalformedToolCall ||
-      this.pendingContextCompaction != null ||
+      this.pendingFit != null ||
       this.pendingOpenLlmRotation != null ||
       this.pendingBusyWait != null ||
       this.pendingLanguageRepair != null ||
@@ -1879,7 +1898,7 @@ export class AbacusBotSession {
       !this.interrupted &&
       this.ownedTurn?.endedEmpty === true &&
       !this.continuingPastMalformedToolCall &&
-      this.pendingContextCompaction == null &&
+      this.pendingFit == null &&
       this.pendingOpenLlmRotation == null &&
       this.pendingBusyWait == null &&
       this.pendingLanguageRepair == null &&
@@ -1898,7 +1917,7 @@ export class AbacusBotSession {
     const ending =
       !willRetry &&
       !this.continuingPastMalformedToolCall &&
-      this.pendingContextCompaction == null &&
+      this.pendingFit == null &&
       this.pendingOpenLlmRotation == null &&
       this.pendingBusyWait == null &&
       this.pendingLanguageRepair == null &&
@@ -1929,7 +1948,7 @@ export class AbacusBotSession {
   private async continuePastRecoverableFailures(): Promise<void> {
     while (
       this.continuingPastMalformedToolCall ||
-      this.pendingContextCompaction != null ||
+      this.pendingFit != null ||
       this.pendingOpenLlmRotation != null ||
       this.pendingLanguageRepair != null ||
       this.pendingToolArrival != null ||
@@ -1954,7 +1973,7 @@ export class AbacusBotSession {
         this.pendingNetworkFailure = null;
         this.pendingBusyWait = null;
         this.continuingPastMalformedToolCall = false;
-        this.pendingContextCompaction = null;
+        this.pendingFit = null;
         this.pendingOpenLlmRotation = null;
         this.pendingLanguageRepair = null;
         this.pendingToolArrival = null;
@@ -2150,8 +2169,8 @@ export class AbacusBotSession {
         continue;
       }
 
-      if (this.pendingContextCompaction != null) {
-        await this.compactAndRetry();
+      if (this.pendingFit != null) {
+        await this.climbFitLadder();
 
         continue;
       }
@@ -2239,72 +2258,61 @@ export class AbacusBotSession {
     await this.session?.abort();
   }
 
-  /**
-   * Shorten the history the provider just refused and run the turn again: the
-   * refusal is the only authority on the real limit, since pi's threshold uses
-   * a guessed window and the *previous* turn's usage. Same model (the
-   * transcript failed, not the provider), one attempt per turn, and silent.
-   */
-  private async compactAndRetry(): Promise<void> {
-    const pending = this.pendingContextCompaction;
+  /** The provider refused the request for its size: one step of the governor's fit ladder. */
+  private async climbFitLadder(): Promise<void> {
+    const pending = this.pendingFit;
     const session = this.session;
 
-    this.pendingContextCompaction = null;
+    this.pendingFit = null;
 
     if (pending == null || session == null) return;
 
-    this.contextCompactions += 1;
-
-    try {
-      await session.compact();
-    } catch {
-      // Nothing older than the recency window to summarize. Another pool
-      // model may have room for the transcript as it stands, so try that
-      // before anything reaches the user.
-      this.pendingOpenLlmRotation = this.shouldRotateOpenLlm(
-        pending.messages
-      ).rotation;
-
-      if (this.pendingOpenLlmRotation != null) return;
-
-      // On the pool the router recorded the failure as it looked for room.
-      if (!this.openLlmActive)
-        this.router.chain.failed(
-          pending.failure,
-          this.session?.model?.provider
-        );
-      this.reportFailure();
-      this.finishTurn();
-
-      return;
-    }
-
-    // Stop can land during the (slow) summary; continuing would make Stop
-    // not stop.
-    if (this.interrupted) {
-      this.finishTurn();
-
-      return;
-    }
-
-    await session.sendCustomMessage(
-      {
+    this.fitSteps += 1;
+    await this.governor.recover(pending.failure, {
+      session: session as never,
+      continuation: {
         customType: COMPACTION_CONTINUATION_TYPE,
         content: COMPACTION_CONTINUATION_PROMPT,
-        display: false,
       },
-      { triggerTurn: true }
-    );
+      interrupted: () => this.interrupted,
+      finishTurn: () => this.finishTurn(),
+      beyondCompaction: (need) =>
+        this.fitBeyondCompaction(pending.failure, need),
+    });
   }
 
   /**
-   * The failure to compact around, or null. Decided at `agent_end` because
-   * the idle event a continuation must suppress is emitted from that handler.
+   * Compaction cannot get the turn under this model's limit: a model that
+   * holds it (the pool's next with room, or RouteLLM with credits left), and
+   * only then the card, which offers only what would work.
    */
-  private shouldCompactAndRetry(
+  private fitBeyondCompaction(
+    failure: string,
+    need: { need: number; oneTurnFits: boolean }
+  ): void {
+    const registry = this.registry;
+    const current = this.session?.model;
+    if (this.openLlmActive && registry != null) {
+      const next = this.router.failed(
+        registry,
+        failure,
+        current,
+        undefined,
+        need.need
+      );
+      if (next != null && "nextId" in next) {
+        this.pendingOpenLlmRotation = { failure, nextId: next.nextId };
+        return;
+      }
+    } else this.router.chain.failed(failure, current?.provider);
+    if (!this.reportFailure()) this.finishTurn();
+  }
+
+  /** The refusal to climb the fit ladder from, or null; decided at `agent_end`. */
+  private tooLargeFailure(
     messages: readonly unknown[]
   ): { failure: string; messages: readonly unknown[] } | null {
-    if (this.interrupted || this.contextCompactions > 0) return null;
+    if (this.interrupted || this.fitSteps >= MAX_FIT_STEPS) return null;
 
     const failure = endedOnProviderError(messages);
 
@@ -2623,7 +2631,7 @@ export class AbacusBotSession {
     }
 
     // A run the budget stopped is not being retried; reportTurnFailure says why.
-    if (budgetStopReason() != null) {
+    if (spendStopReason() != null) {
       return;
     }
 
@@ -2639,7 +2647,7 @@ export class AbacusBotSession {
       return;
     }
 
-    // An outgrown window is compacted silently (compactAndRetry); if even a
+    // An outgrown window climbs the fit ladder silently (climbFitLadder); if even a
     // summary will not fit, the turn ends on an error that says what to do.
     if (isContextTooLong(text)) {
       return;
@@ -2946,6 +2954,7 @@ export class AbacusBotSession {
 
     // Picking a concrete model is leaving the router, not steering it.
     this.openLlmActive = false;
+    this.poolChosen = false;
 
     let resolved = resolveModel(
       this.modelRuntime,
@@ -3042,6 +3051,7 @@ export class AbacusBotSession {
       if (wall != null) {
         // Chosen, and held at the wall: the next turn stops on its card.
         this.openLlmActive = true;
+        this.poolChosen = true;
         this.emitFailure(wall);
         return;
       }
@@ -3069,6 +3079,7 @@ export class AbacusBotSession {
     }
 
     this.openLlmActive = true;
+    this.poolChosen = true;
     await session.setModel(resolved.model);
     this.openRoutingLine(choice?.id ?? resolved.model.id);
     this.emitAgentEvent({
@@ -3231,6 +3242,12 @@ export class AbacusBotSession {
     }
 
     this.stallWatch.note(event.type);
+    // A summary was made: the spend governor says so and resets its triggers.
+    if (
+      event.type === "compaction_end" &&
+      (event as { result?: unknown }).result != null
+    )
+      this.governor.noteCompacted((event as { reason?: string }).reason);
 
     switch (event.type) {
       case "agent_start":
@@ -3468,7 +3485,7 @@ export class AbacusBotSession {
         if (this.pendingNetworkFailure != null || this.pendingStreamCut) {
           this.noteRunUsage(event.messages);
           this.continuingPastMalformedToolCall = false;
-          this.pendingContextCompaction = null;
+          this.pendingFit = null;
           this.pendingOpenLlmRotation = null;
           this.pendingBusyWait = null;
           this.pendingLanguageRepair = null;
@@ -3484,12 +3501,11 @@ export class AbacusBotSession {
         // A malformed call is retried on the same model, not rotated. Compaction
         // comes before rotation too: an outgrown transcript does not fit the
         // next model either, and the pool is not ordered by context window.
-        this.pendingContextCompaction = this.continuingPastMalformedToolCall
+        this.pendingFit = this.continuingPastMalformedToolCall
           ? null
-          : this.shouldCompactAndRetry(event.messages);
+          : this.tooLargeFailure(event.messages);
         const route =
-          this.continuingPastMalformedToolCall ||
-          this.pendingContextCompaction != null
+          this.continuingPastMalformedToolCall || this.pendingFit != null
             ? { rotation: null, busy: null }
             : this.shouldRotateOpenLlm(event.messages);
         this.pendingOpenLlmRotation = route.rotation;
@@ -3497,7 +3513,7 @@ export class AbacusBotSession {
         // Only a turn that ended cleanly is judged on its language.
         this.pendingLanguageRepair =
           this.continuingPastMalformedToolCall ||
-          this.pendingContextCompaction != null ||
+          this.pendingFit != null ||
           this.pendingOpenLlmRotation != null ||
           this.pendingBusyWait != null ||
           this.languageRepairsThisTurn > 0
@@ -4343,16 +4359,8 @@ const MALFORMED_TOOL_CALL_PATTERN = /malformed[ _]?(function|tool)[ _]?call/i;
 /** Continuations spent on a malformed tool call, per user turn. */
 const MAX_MALFORMED_CONTINUATIONS = 1;
 
-/**
- * The notice the low-credit steer shows a paid user, so they know why the run
- * wraps up. The app shows its own translation, keyed by the action; this
- * English line is for a client that does not know it. The id must match
- * CREDITS_LOW_NOTICE_ACTION in packages/contract/src/credit-thresholds.ts,
- * which this package cannot import.
- */
-const CREDITS_LOW_ACTION = "credits-low";
-const CREDITS_LOW_NOTICE =
-  "Credits are almost out, so the agent is wrapping up what it has so the work isn't cut off halfway.";
+/** Fit-ladder steps per user turn: compact, move, and a move's own refusal. */
+const MAX_FIT_STEPS = 3;
 
 /** Marks the continuation in the session log as ours rather than the user's. */
 const MALFORMED_CONTINUATION_TYPE = "abacusai-bot:malformed-tool-call";
