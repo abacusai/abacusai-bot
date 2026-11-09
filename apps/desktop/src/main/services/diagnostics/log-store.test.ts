@@ -11,7 +11,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { dayKey, dayOfFile, LogStore, RETENTION_DAYS } from "./log-store";
 
@@ -97,6 +97,73 @@ describe("writing", () => {
       store.append("main", "still running");
       store.flush();
     }).not.toThrow();
+  });
+
+  it("holds what a full disk refused and writes it once there is room", () => {
+    const store = new LogStore(dir, at("2026-08-21T10:00:00"));
+    const append = vi.spyOn(fs, "appendFileSync").mockImplementationOnce(() => {
+      throw Object.assign(new Error("ENOSPC: no space left on device, write"), {
+        code: "ENOSPC",
+      });
+    });
+
+    store.start();
+    store.append("agent", "the turn's last words");
+    store.flush();
+    append.mockRestore();
+    store.append("agent", "space is back");
+    store.flush();
+
+    expect(read("agent-2026-08-21.log")).toMatch(
+      /the turn's last words\n.*space is back/
+    );
+  });
+
+  it("after a write the full disk cut short, holds only what did not land", () => {
+    const store = new LogStore(dir, at("2026-08-21T10:00:00"));
+    const real = fs.appendFileSync;
+    const append = vi
+      .spyOn(fs, "appendFileSync")
+      .mockImplementationOnce((file, data) => {
+        // Half the batch reaches the disk before it is full.
+        real(file, String(data).slice(0, String(data).indexOf("second")));
+        throw Object.assign(new Error("ENOSPC: no space left on device"), {
+          code: "ENOSPC",
+        });
+      });
+
+    store.start();
+    store.append("agent", "first line");
+    store.append("agent", "second line");
+    store.flush();
+    append.mockRestore();
+    store.flush();
+
+    const written = read("agent-2026-08-21.log");
+    expect(written.match(/first line/g)).toHaveLength(1);
+    expect(written.match(/second line/g)).toHaveLength(1);
+  });
+
+  it("holds at most a bounded amount, newest first, each line cut short", () => {
+    const store = new LogStore(dir, at("2026-08-21T10:00:00"));
+    const append = vi.spyOn(fs, "appendFileSync").mockImplementation(() => {
+      throw Object.assign(new Error("ENOSPC: no space left on device"), {
+        code: "ENOSPC",
+      });
+    });
+
+    store.start();
+    for (let index = 0; index < 400; index++)
+      store.append("agent", `line ${index} ${"x".repeat(5000)}`);
+    store.flush();
+    append.mockRestore();
+    store.flush();
+
+    const written = read("agent-2026-08-21.log");
+    expect(written.length).toBeLessThanOrEqual(256 * 1024);
+    expect(written).toContain("line 399 ");
+    expect(written).not.toContain("line 0 ");
+    expect(written.split("\n").every((line) => line.length <= 2000)).toBe(true);
   });
 });
 

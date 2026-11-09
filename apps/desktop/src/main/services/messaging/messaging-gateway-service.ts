@@ -103,7 +103,10 @@ import {
 } from "./messaging-outbox";
 import type { SenderCandidate } from "./sender-resolution";
 import { TelegramWebConnector } from "./telegram-web-connector";
-import { WhatsAppWebConnector } from "./whatsapp-web-connector";
+import {
+  forgetWhatsAppLogin,
+  WhatsAppWebConnector,
+} from "./whatsapp-web-connector";
 
 /**
  * The messaging gateway: connectors in, agent turns out. A connector hands it
@@ -154,7 +157,7 @@ const RESPONSE_LABEL = "[Response from AbacusAI Bot]";
  * The words for the other person, out of everything the model wrote. Asking
  * a model not to think aloud does not work; asking it to wrap the reply in
  * <reply>…</reply> does, and is checkable: only the last such block is sent.
- * Without a block the whole text goes, minus any <thinking> block, because a
+ * Without a block the whole text goes, minus a leading <thinking> block, because a
  * reply must never be lost to a missing tag.
  */
 export { outgoingWords } from "@abacus-ai/contract/reply-envelope";
@@ -3252,6 +3255,22 @@ export class MessagingGatewayService {
     }
 
     await this.syncConnectors();
+    return this.getSnapshot();
+  }
+
+  /**
+   * The user's Unlink, the only thing that forgets a login: every other way off
+   * (a dialog closed unfinished, a stop) keeps it for the next start.
+   */
+  async unlinkPlatform(
+    platformId: MessagingPlatformId
+  ): Promise<MessagingSnapshot> {
+    const connector = this.connectors.get(platformId);
+    if (connector instanceof WhatsAppWebConnector) await connector.logOut();
+    await this.updatePlatform({ platformId, enabled: false });
+    // The window must be gone before its storage is cleared under it.
+    await this.stopPlatform(platformId);
+    if (platformId === "whatsapp") await forgetWhatsAppLogin();
     return this.getSnapshot();
   }
 

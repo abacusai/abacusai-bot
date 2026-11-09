@@ -94,6 +94,10 @@
       "default": "./dist/traveler/traveler-store.js"
     },
     "./package.json": "./package.json",
+    "./reasoning-tags": {
+      "types": "./dist/reasoning-tags.d.ts",
+      "default": "./dist/reasoning-tags.js"
+    },
     "./user-text": {
       "types": "./dist/user-text.d.ts",
       "default": "./dist/user-text.js"

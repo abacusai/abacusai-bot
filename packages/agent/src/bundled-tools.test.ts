@@ -88,20 +88,42 @@ describe("useScriptRuntime", () => {
   it("names the app's own Node and puts the libraries first on NODE_PATH, once", () => {
     const dir = tempDir();
     const env: NodeJS.ProcessEnv = { NODE_PATH: "/elsewhere" };
+    const launcher = "C:/Home/node/abc/node";
 
-    expect(useScriptRuntime(env, dir, "C:\\Apps\\AbacusBot.exe")).toBe(true);
-    useScriptRuntime(env, dir, "C:\\Apps\\AbacusBot.exe");
+    expect(useScriptRuntime(env, dir, launcher)).toBe(true);
+    useScriptRuntime(env, dir, launcher);
 
-    expect(env.ABACUSAI_BOT_NODE).toBe("C:/Apps/AbacusBot.exe");
+    expect(env.ABACUSAI_BOT_NODE).toBe("C:/Home/node/abc/node");
+    expect(env.ELECTRON_RUN_AS_NODE).toBeUndefined();
     expect(env.NODE_PATH?.split(delimiter)).toEqual([dir, "/elsewhere"]);
   });
 
-  it("does nothing when the libraries were not built", () => {
+  it("does nothing when the libraries were not built or there is no launcher", () => {
     const env: NodeJS.ProcessEnv = {};
 
     expect(useScriptRuntime(env, join(tempDir(), "absent"))).toBe(false);
+    expect(useScriptRuntime(env, tempDir(), null)).toBe(false);
     expect(env).toEqual({});
   });
+
+  it.skipIf(process.platform === "win32")(
+    "runs this process's executable as Node, telling only that run so",
+    () => {
+      const env: NodeJS.ProcessEnv = { PATH: process.env.PATH };
+      expect(useScriptRuntime(env, tempDir())).toBe(true);
+
+      const command = [
+        `"$ABACUSAI_BOT_NODE" -e 'console.log(process.env.ELECTRON_RUN_AS_NODE)'`,
+        "echo ${ELECTRON_RUN_AS_NODE:-unset}",
+      ].join("; ");
+      expect(
+        execFileSync("/bin/sh", ["-c", command], {
+          env: childProcessEnv(env),
+          encoding: "utf8",
+        })
+      ).toBe("1\nunset\n");
+    }
+  );
 
   it("lets a script the agent writes require the bundled libraries", () => {
     const dir = tempDir();
@@ -189,6 +211,21 @@ describe("childProcessEnv on Windows", () => {
     expect(win({}).PYTHONUTF8).toBeUndefined();
   });
 
+  it("drops Electron's own variables in any case, unless an override sets one", () => {
+    const base = {
+      electron_run_as_node: "1",
+      ELECTRON_NO_ATTACH_CONSOLE: "1",
+      HOME: "C:\\home",
+    };
+
+    expect(win(base)).toEqual({ HOME: "C:\\home", ...UTF8 });
+    expect(win(base, { ELECTRON_RUN_AS_NODE: "1" })).toEqual({
+      HOME: "C:\\home",
+      ELECTRON_RUN_AS_NODE: "1",
+      ...UTF8,
+    });
+  });
+
   it("leaves the base untouched", () => {
     const base = { Path: "C:\\user" };
 
@@ -207,6 +244,19 @@ describe("childProcessEnv elsewhere", () => {
         { HOME: "/home/me", DROP: undefined }
       )
     ).toEqual({ PATH: "/usr/bin", Path: "kept", HOME: "/home/me" });
+  });
+
+  it("drops Electron's own variables, unless an override sets one", () => {
+    const base = {
+      ELECTRON_RUN_AS_NODE: "1",
+      ELECTRON_NO_ATTACH_CONSOLE: "1",
+      HOME: "/home/me",
+    };
+
+    expect(childProcessEnvFor("darwin", base)).toEqual({ HOME: "/home/me" });
+    expect(
+      childProcessEnvFor("linux", base, { ELECTRON_RUN_AS_NODE: "1" })
+    ).toEqual({ HOME: "/home/me", ELECTRON_RUN_AS_NODE: "1" });
   });
 
   it("sets no Python encoding off Windows", () => {

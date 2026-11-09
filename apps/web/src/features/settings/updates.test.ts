@@ -76,4 +76,10 @@ describe("update recovery", () => {
     // A shell without the field: a click still reads as installing.
     expect(updatePhase({ ...idle, downloaded: true }, true)).toBe("installing");
   });
+  it("macOS staging reads as preparing, clicked or not, until the hand-off", () => {
+    const preparing = { ...idle, downloaded: true, preparing: true };
+    expect(updatePhase(preparing)).toBe("preparing");
+    expect(updatePhase(preparing, true)).toBe("preparing");
+    expect(updatePhase({ ...preparing, installing: true })).toBe("installing");
+  });
 });

@@ -345,6 +345,38 @@ describe("state streaming in from a running agent", () => {
     expect(readStored()).toEqual(writes);
   });
 
+  it("on a full disk stays in memory, and saves itself once there is room, with no further change", () => {
+    vi.useFakeTimers();
+    const session = service.create(WORKSPACE);
+    stored.delete("localCode.agentSessions");
+    const save = vi.spyOn(stored, "set").mockImplementation(() => {
+      throw Object.assign(new Error("ENOSPC: no space left on device, open"), {
+        code: "ENOSPC",
+      });
+    });
+    try {
+      service.updateFromCliState({
+        sessionId: session.id,
+        status: "stopped",
+        agentStatus: "idle",
+        model: "m",
+        mode: "YOLO",
+      } as never);
+
+      // The timer's save fails without throwing out of the timer, and keeps trying.
+      expect(() => vi.advanceTimersByTime(30_500)).not.toThrow();
+      expect(service.list(WORKSPACE)[0]).toMatchObject({ model: "m" });
+      expect(save.mock.calls.length).toBeGreaterThan(1);
+
+      // Space is back: the next try lands the list whole.
+      save.mockRestore();
+      vi.advanceTimersByTime(30_000);
+      expect(readStored()[0]).toMatchObject({ status: "stopped", model: "m" });
+    } finally {
+      save.mockRestore();
+    }
+  });
+
   it("ignores state for a session it does not hold", () => {
     expect(() =>
       service.updateFromCliState({

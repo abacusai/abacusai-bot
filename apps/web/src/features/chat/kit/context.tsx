@@ -10,6 +10,7 @@ import type { UIMessage } from "@tanstack/ai-client";
 import { createContext, use, type ReactNode } from "react";
 
 import type { TurnDeliverable } from "#renderer/lib/bot-turns/deliverables";
+import type { ComposerCommand } from "#renderer/lib/chat-commands";
 
 import type { SubmissionEnvelope } from "../runtime/admission";
 import type { ChatRuntime } from "../runtime/runtime";
@@ -86,6 +87,13 @@ export interface ComposerConfig {
   showModeChip: boolean;
   model: ModelChipBinding | null;
   mentions?: MentionSource;
+  /**
+   * The + menu's Add connectors: `panel` opens beside the button, `overlay`
+   * stays mounted past it (a token form's dialog closes the panel).
+   */
+  connectors?: { panel: ReactNode; overlay: ReactNode };
+  /** The surface's `/` commands, beside the composer's own. */
+  commands?: readonly ComposerCommand[];
   /** Query-backed disk skills, used until a nonempty live list arrives. */
   skillsBaseline?: readonly SkillMetadata[];
   /** Apply the free router before replaying a dead turn. */
@@ -178,6 +186,8 @@ export interface ChatViewSlots {
   successPitchOffer?: SuccessPitchOffer;
   /** The gallery shows the deliverable offer without its caps, keeping no answer. */
   deliverableOfferPreview?: boolean;
+  /** The gallery shows the retry offer on this model, without its caps. */
+  retryOfferPreview?: { label: string; plan: string };
   /** A turn's files as the route's deliverables card, opening the way it does. */
   renderDeliverables?: (items: readonly TurnDeliverable[]) => ReactNode;
   /** Route-owned actions beside the permission card (sessions §17.1). */

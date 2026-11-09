@@ -3,20 +3,29 @@
  * tapped instead of typed. A tap sends the button's own text as the user's
  * message (send-as-user.ts); a copy button puts its text on the clipboard for the
  * user to send from their phone. The buttons show once the reply is done
- * and only on the latest offer, until the user writes anything.
+ * and only on the latest offer, until the user writes anything. A next step
+ * under a result (contract next-step.ts) is the same buttons in any chat, with
+ * a clock on a routine's.
  */
 import {
   isSuggestTasksTool,
   suggestedTasks,
+  suggestsNextStep,
 } from "@abacus-ai/contract/bots/suggested-tasks";
+import {
+  deliverableOfferIgnored,
+  EMPTY_DELIVERABLE_OFFER_CARD,
+} from "@abacus-ai/contract/deliverable-offer";
 import { funnelDetail } from "@abacus-ai/contract/funnel";
+import { nextStepAllowed } from "@abacus-ai/contract/next-step";
 import { parsePartialJSON, type UIMessage } from "@tanstack/ai-client";
 import type { ToolProps } from "@tanstack/ai-react/ui";
-import { Check, Copy } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Check, Clock, Copy } from "lucide-react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useOptionalDb } from "#renderer/data/db";
+import { turnsOf } from "#renderer/lib/bot-turns/turns";
 import { showError } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { hiddenUserMessage } from "#renderer/lib/user-message";
@@ -79,8 +88,12 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
   const [copied, setCopied] = useState<string | null>(null);
   // A tap answers the offer at once: a second tap must not send again.
   const [sent, setSent] = useState(false);
-  const tasks =
-    part.input == null ? [] : suggestedTasks(toolInput(part, parsePartialJSON));
+  const input = part.input == null ? null : toolInput(part, parsePartialJSON);
+  const tasks = input == null ? [] : suggestedTasks(input);
+  // A next step keeps its caps in prefs, as the deliverable offer does.
+  const nextStep = suggestsNextStep(input);
+  const card = db?.collections.prefs.get("app")?.dismissals.nextStepOffer;
+  const turn = turnsOf(messages).length;
   const refused =
     result != null &&
     (result.state === "error" ||
@@ -92,19 +105,56 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
     !refused &&
     !running &&
     composer.readOnly == null &&
-    isLatestOffer(messages, part.id);
+    isLatestOffer(messages, part.id) &&
+    (!nextStep ||
+      card?.shownOffer === part.id ||
+      nextStepAllowed(card, {
+        id: part.id,
+        threadId: session.threadId,
+        turn,
+      }));
   const template =
     composer.botId != null
       ? db?.collections.bots.get(composer.botId)?.templateId
       : null;
   const detail = funnelDetail(template ?? "custom");
+  const offersRoutine = tasks.some((task) => task.routine);
+  const reportShown = useEffectEvent(() => {
+    // A relaunch redraws an offer already counted.
+    if (nextStep && card?.shownOffer === part.id) return;
+    if (nextStep) {
+      const base = card ?? EMPTY_DELIVERABLE_OFFER_CARD;
+      void db
+        ?.updatePrefs({
+          dismissals: {
+            nextStepOffer: {
+              ...base,
+              misses:
+                base.misses + (deliverableOfferIgnored(card, part.id) ? 1 : 0),
+              shownOffer: part.id,
+              shownThread: session.threadId,
+              shownTurn: turn,
+            },
+          },
+        })
+        .catch(() => undefined);
+    }
+    void transport.client.system
+      .funnelStep(
+        nextStep
+          ? {
+              step: "next_step_shown",
+              detail: offersRoutine ? "routine" : "work",
+            }
+          : { step: "task_suggestions_shown", detail }
+      )
+      .catch(() => undefined);
+  });
   useEffect(() => {
     if (!ready || shown.has(part.id)) return;
     shown.add(part.id);
-    void transport.client.system
-      .funnelStep({ step: "task_suggestions_shown", detail })
-      .catch(() => undefined);
-  }, [ready, part.id, transport, detail]);
+    reportShown();
+  }, [ready, part.id]);
   useEffect(() => {
     if (copied == null) return;
     const timer = setTimeout(() => setCopied(null), COPIED_MS);
@@ -112,18 +162,35 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
   }, [copied]);
   if (!ready) return null;
 
-  const tapped = (copy: boolean) =>
+  const tapped = (copy: boolean, routine = false) => {
+    if (nextStep)
+      void db
+        ?.updatePrefs({
+          dismissals: {
+            nextStepOffer: {
+              ...(card ?? EMPTY_DELIVERABLE_OFFER_CARD),
+              answered: part.id,
+              misses: 0,
+            },
+          },
+        })
+        .catch(() => undefined);
     void transport.client.system
-      .funnelStep({
-        step: "task_suggestion_tapped",
-        detail: funnelDetail(`${copy ? "copy_" : ""}${detail}`),
-      })
+      .funnelStep(
+        nextStep
+          ? { step: "next_step_tapped", detail: routine ? "routine" : "work" }
+          : {
+              step: "task_suggestion_tapped",
+              detail: funnelDetail(`${copy ? "copy_" : ""}${detail}`),
+            }
+      )
       .catch(() => undefined);
-  const send = (text: string) =>
+  };
+  const send = (text: string, routine: boolean) =>
     sendAsUser(text, {
       accepted: () => {
         setSent(true);
-        tapped(false);
+        tapped(false, routine);
       },
       failed: () => setSent(false),
     });
@@ -156,8 +223,11 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
                 }),
               }
             : {})}
-          onClick={() => (task.copy ? copy(task.text) : send(task.text))}
+          onClick={() =>
+            task.copy ? copy(task.text) : send(task.text, task.routine)
+          }
         >
+          {task.routine && <Clock aria-hidden className="size-3.5 shrink-0" />}
           {task.copy &&
             (copied === task.text ? (
               <Check aria-hidden className="size-3.5 shrink-0" />

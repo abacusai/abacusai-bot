@@ -46,6 +46,8 @@ export default defineConfig({
     // no node or pi anywhere in its closure (tool-display.test.ts).
     "src/tool-display.ts",
     "src/user-text.ts",
+    // Leaked reasoning tags: the chat-app lanes' reply envelope reads it too.
+    "src/reasoning-tags.ts",
     "src/secret-files.ts",
     "src/bot-task.ts",
     // A bot's daily notes: main writes what a bot did or learned in a channel or for another bot.
@@ -75,6 +77,8 @@ export default defineConfig({
     // What the agent shell's rm, find, git clean, cmd and PowerShell run to
     // send deletes to the trash, once per command: node builtins only.
     "src/trash-shim.ts",
+    // What the Windows shell's grep runs for GNU's options: node builtins only.
+    "src/grep-shim.ts",
     // Libraries the agent's own Node scripts `require` (Word and Excel files),
     // one file each under dist/modules, which NODE_PATH names (bundled-tools.ts).
     "src/modules/docx.js",

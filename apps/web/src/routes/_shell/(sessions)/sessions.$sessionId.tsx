@@ -17,7 +17,7 @@ import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
 import { ComposerUpdateNotice } from "#platform/updates";
-import { useCollections } from "#renderer/data/db";
+import { useCollections, useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { loadFixtureRuntime } from "#renderer/features/chat/fixture-runtime";
 import { ChatView } from "#renderer/features/chat/kit/lazy-view";
@@ -28,6 +28,10 @@ import {
   hasAgentBrowserTab,
 } from "#renderer/features/sessions/dock/agent-browser";
 import { openStartDraft } from "#renderer/features/sessions/start/start-session";
+import {
+  useChatCommands,
+  type ComposerCommand,
+} from "#renderer/lib/chat-commands";
 import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
@@ -70,6 +74,7 @@ import { hasInAppViewer, isUrl } from "#renderer/components/file-preview";
 import { MessageFeedback } from "#renderer/components/message-feedback";
 import { chatLoading } from "#renderer/features/chat/runtime/lazy-runtime";
 import { type ChatRuntime } from "#renderer/features/chat/runtime/runtime";
+import { COMPOSER_CONNECTORS } from "#renderer/features/library/composer-connectors";
 import { SessionChangesCard } from "#renderer/features/sessions/changes/changes-card";
 import {
   deliverablesAfter,
@@ -86,6 +91,7 @@ import {
   useSession,
   useWorkspace,
 } from "#renderer/features/sessions/data/queries";
+import { renameSession } from "#renderer/features/sessions/data/session-actions";
 import { openSessionOnce } from "#renderer/features/sessions/data/unread-store";
 import {
   awaitTabDraw,
@@ -342,6 +348,44 @@ const SessionRoute = () => {
     observedWorkspace ??
     (row ? collections.workspaces.get(row.workspaceId) : undefined);
   const model = useSessionComposerModel(row);
+  const db = useDb();
+  const sharedCommands = useChatCommands(
+    row ? { workspaceId: row.workspaceId, sessionId } : null
+  );
+  const commands: ComposerCommand[] = [
+    ...sharedCommands,
+    {
+      name: "rename",
+      argument: t("chat.commands.renameArgument"),
+      valueRequired: true,
+      description: t("chat.commands.rename"),
+      run: (label) => renameSession(db, sessionId, label),
+    },
+    {
+      name: "diff",
+      description: t("chat.commands.diff"),
+      run: () =>
+        navigate({
+          to: ".",
+          search: (p: Record<string, unknown>) => ({ ...p, tab: "changes" }),
+          transition: "none",
+        }),
+    },
+    ...(IS_ELECTRON
+      ? [
+          {
+            name: "add-dir",
+            description: t("chat.commands.addDir"),
+            run: async () => {
+              const path = await platformSystem(
+                transport.client
+              ).dialog.openFolder({});
+              if (path) await transport.client.workspaces.add({ path });
+            },
+          },
+        ]
+      : []),
+  ];
   const prefs = usePrefs();
   const session = runtime.session(sessionId);
   // Only the inner store handle: the host state also carries the streaming
@@ -607,6 +651,8 @@ const SessionRoute = () => {
                 sessionId: row.id,
               }),
               showModeChip: true,
+              connectors: COMPOSER_CONNECTORS,
+              commands,
               model: model.model,
               onResumeOnFreePool: model.onResumeOnFreePool,
               onNewChat: () =>

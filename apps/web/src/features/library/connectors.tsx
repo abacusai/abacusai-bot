@@ -1,18 +1,13 @@
 import {
-  CONNECTORS,
   connectFields,
   connectorById,
   type Connector,
 } from "@abacus-ai/connectors/registry";
-import type {
-  ConnectorStatus,
-  ConnectorStatuses,
-} from "@abacus-ai/contract/contracts";
 import { revalidateLogic } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { ExternalLinkIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
@@ -47,6 +42,12 @@ import { Field, FieldLabel, FieldGroup } from "#renderer/ui/field";
 import { Input } from "#renderer/ui/input";
 
 import { useConnectFlow } from "./connect-flow";
+import {
+  connectorAdded,
+  offeredConnectors,
+  uncheckable,
+  useConnectorStatuses,
+} from "./connector-status";
 import { CONNECTOR_CATEGORY_TABS } from "./search";
 export const visibleTabsFor = (entry: Connector): string[] =>
   entry.kind === "messaging"
@@ -56,43 +57,17 @@ export const visibleTabsFor = (entry: Connector): string[] =>
         ? ["abacus", "featured"]
         : ["abacus"]
       : [entry.category];
-/** Abacus could not be read and nothing was known before: neither connected nor not. */
-const uncheckable = (status: ConnectorStatus | undefined): boolean =>
-  status?.state === "unavailable" && status?.reason === "unavailable";
-/** Read from Abacus last time rather than now, or not read at all. */
-const unconfirmed = (statuses: ConnectorStatuses | undefined) => {
-  const all = Object.values(statuses ?? {});
-  return {
-    stale: all.some((status) => status.stale === true),
-    unchecked: all.some(uncheckable),
-  };
-};
-/** While Abacus cannot be read, the page asks again on its own this often. */
-const UNCONFIRMED_REFETCH_MS = 15_000;
 export const ConnectorsPage = () => {
   const { t } = useTranslation();
-  const { transport } = useAppContext();
   const search = useSearch({ strict: false }) as {
     category?: string;
     q?: string;
   };
   const navigate = useAppNavigate({ from: "/library/connectors" });
   const flow = useConnectFlow();
-  const statuses = useQuery({
-    ...transport.orpc.connectors.statuses.queryOptions({ input: {} }),
-    staleTime: 60000,
-    // Only while the shown state is not a fresh read: back to fresh once Abacus answers.
-    refetchInterval: (query) => {
-      const { stale, unchecked } = unconfirmed(query.state.data);
-      return stale || unchecked ? UNCONFIRMED_REFETCH_MS : false;
-    },
-  });
+  const { statuses, stale, unchecked } = useConnectorStatuses(flow);
   // Chat apps pair from the desktop; a browser has no pairing.
-  const offered = CONNECTORS.filter(
-    (e) =>
-      (IS_ELECTRON || e.kind !== "messaging") &&
-      statuses.data?.[e.id]?.reason !== "not-offered"
-  );
+  const offered = offeredConnectors(statuses.data, IS_ELECTRON);
   // Only categories with something in them; Featured always leads.
   const tabs = CONNECTOR_CATEGORY_TABS.filter(
     (tab) =>
@@ -105,17 +80,7 @@ export const ConnectorsPage = () => {
       ? foldSearch(e.name + " " + e.description).includes(foldSearch(search.q))
       : visibleTabsFor(e).includes(category)
   );
-  const connected = (id: string) =>
-    ["connected", "pending"].includes(statuses.data?.[id]?.state ?? "");
-  const { stale, unchecked } = unconfirmed(statuses.data);
-  // Abacus answers again: a Connect that could not reach it is no longer the news.
-  const reachable = statuses.data != null && !stale && !unchecked;
-  useEffect(() => {
-    if (reachable)
-      flow.store.setState((state) =>
-        state.error === "unreachable" ? { ...state, error: undefined } : state
-      );
-  }, [reachable, flow.store]);
+  const connected = (id: string) => connectorAdded(statuses.data?.[id]);
   return (
     <AreaPage
       testId="connectors-page"

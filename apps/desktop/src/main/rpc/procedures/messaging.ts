@@ -9,6 +9,9 @@ export const messagingRouter = impl.messaging.router({
   updatePlatform: impl.messaging.updatePlatform.handler(({ input, context }) =>
     context.deps.serviceHost.updateMessagingPlatform(input)
   ),
+  unlinkPlatform: impl.messaging.unlinkPlatform.handler(({ input, context }) =>
+    context.deps.serviceHost.unlinkMessagingPlatform(input.platformId)
+  ),
   decidePairing: impl.messaging.decidePairing.handler(({ input, context }) =>
     context.deps.serviceHost.decideMessagingPairing(input)
   ),

@@ -8,6 +8,9 @@
 
 ## Unreleased
 
+The + button in a chat can add connectors: search, connect and carry on, without leaving the chat.
+Type / in a chat for commands: start a new chat, shorten this one, check how full it is, change the model, save the chat as a file, and open any page, without sending a message.
+
 The app has a new rail for Bots, Sessions, Routines, Artifacts and Library. Library brings together connectors, messaging, MCP servers, skills and tools. Settings has separate pages and search. The system draws the title bar, and your light, dark or system theme applies before the window appears.
 
 A companion around the Mac notch, or by the Windows clock, shows bot activity and requests your attention. You can turn it off in General settings. Sounds have per-bot levels and quiet hours; system notifications are silent. Bots keep their looks in the new avatar style, math renders as replies arrive, and the tour can be replayed from Settings.
@@ -21,6 +24,8 @@ On first launch, Updating your data may appear while conversations are converted
 - Start a bot chat from its bot page; the start page no longer has a composer.
 - Each rail item has its own sidebar.
 - Open connectors and messaging from Library.
+- Connect 20 more services from Library: Google Ads, Google Analytics, Search Console, YouTube, Meta Ads, Instagram, HubSpot, QuickBooks, Monday.com, Smartsheet, Dynamics 365, Teams, SharePoint, OneNote, Box, GitLab, Azure, Autodesk, Messenger and WhatsApp Business.
+- With GitHub connected, new sessions suggest fixing a bug, adding a feature or reviewing your pull requests, and Work on my code in setup opens a session.
 - The companion shows ongoing work; the background Task still running notification is removed.
 - Finishing setup opens the saved destination without switching a workspace.
 - Setup no longer resets an open tour.

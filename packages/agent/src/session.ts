@@ -15,6 +15,7 @@ import {
 
 import { addCredits, type TurnCredits, turnCredits } from "./abacus-credits.js";
 import { sponsoredRunActive } from "./abacus-endpoint.js";
+import { planFactsPrompt } from "./account-plan.js";
 import { Allowances } from "./allowances.js";
 import { allowedPathsFromEnv } from "./allowed-paths.js";
 import { freeBytes } from "./atomic-file.js";
@@ -63,6 +64,7 @@ import background from "./extensions/background.js";
 import batchReadTool from "./extensions/batch-read-tool.js";
 import { budgetStopReason, createBudgets } from "./extensions/budgets.js";
 import compactionPruner from "./extensions/compaction-pruner.js";
+import diskFull from "./extensions/disk-full.js";
 import editTool from "./extensions/edit-tool.js";
 import emailFormat from "./extensions/email-format.js";
 import guardrails from "./extensions/guardrails.js";
@@ -76,6 +78,7 @@ import testRunner from "./extensions/test-runner.js";
 import toolCallRepair from "./extensions/tool-call-repair.js";
 import toolTimeouts from "./extensions/tool-timeouts.js";
 import { VerifyLoop } from "./extensions/verify-loop.js";
+import { endTurnOnClosedReply } from "./forever/reply-end.js";
 import { githubPrompt } from "./github-prompt.js";
 import { refreshGithubToken } from "./github-token.js";
 import { HostServiceClient } from "./host-services.js";
@@ -107,6 +110,13 @@ import {
   runMadeProgress,
   type NetworkSuspect,
 } from "./network-wait.js";
+import {
+  endedOnResult,
+  NEXT_STEP_PROMPT,
+  NEXT_STEP_TYPE,
+  NextStepAsk,
+  nextStepAskOn,
+} from "./next-step-ask.js";
 import { endedOnLeakedToolCall, networkVerdict } from "./openllm-failures.js";
 import {
   OPENLLM_CONTINUATION_PROMPT,
@@ -140,6 +150,8 @@ import {
   type DesktopEvent,
   type PermissionDecision,
   type PermissionRequest,
+  type SessionAction,
+  type SessionActionResult,
   type SkillMetadata,
   type ToolRequest,
   type TurnOutcome,
@@ -174,6 +186,7 @@ import {
   type DenialDecision,
 } from "./sandbox/index.js";
 import { serviceRoutingPrompt } from "./service-routing-prompt.js";
+import { runSessionAction } from "./session-actions.js";
 import { conversationSessionManager } from "./session-file.js";
 import {
   MAX_STALL_RECOVERIES_PER_TURN,
@@ -190,6 +203,7 @@ import { type ToolOrigin, type UnattendedPolicy } from "./tool-policy.js";
 import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "./tools-arrived.js";
 import { setTrashMover, TRASH_TIMEOUT_MS } from "./trash.js";
 import {
+  classifyAttempt,
   EMPTY_REPLY_FAILURE,
   OPENLLM_POOL_EMPTY_MESSAGE,
   OPENLLM_POOL_SHUT_MESSAGE,
@@ -852,6 +866,8 @@ export class AbacusBotSession {
   private readonly emptyReplies = new EmptyReplies();
   /** The turn's ask after a reply that ended on a promise (promised-work.ts). */
   private readonly promisedWork = new PromisedWork();
+  private readonly nextStepAsk = new NextStepAsk();
+  private pendingNextStep = false;
   private pendingPromisedWork = false;
   /** The same model is to be asked again, out of sight, for its answer. */
   private pendingEmptyAsk = false;
@@ -885,6 +901,8 @@ export class AbacusBotSession {
   private promptPersona = "";
   /** The MCP roster the prompt was last built against. */
   private promptMcpRoster = "";
+  /** The plan line the prompt was built with; an upgrade mid-chat rebuilds it. */
+  private promptPlan = "";
 
   constructor(private readonly options: SessionOptions) {
     this.mode = parseMode(options.mode);
@@ -1009,11 +1027,15 @@ export class AbacusBotSession {
         // Live statuses, so a connector added mid-chat updates the line.
         const mcp = mcpPrompt(this.mcp.statuses);
         this.promptMcpRoster = mcpRosterFingerprint(this.mcp.statuses);
+        const plan = planFactsPrompt();
+        this.promptPlan = plan;
 
         return [
           ...(persona == null ? [] : [persona]),
           ...base,
           ...(mcp == null ? [] : [mcp]),
+          // After the static blocks: a plan change rebuilds only from here.
+          plan,
           ...(remember == null ? [] : [remember]),
           ...(instructions == null ? [] : [instructions]),
           // Last of all, so it outweighs a template or routine written in English.
@@ -1114,6 +1136,12 @@ export class AbacusBotSession {
             {
               name: "abacusai-bot-verify-loop",
               factory: this.verifyLoop.extension,
+            },
+            {
+              name: "abacusai-bot-disk-full",
+              factory: diskFull(() => this.router.chain) as unknown as (
+                pi: ExtensionAPI
+              ) => void,
             },
             {
               name: "abacusai-bot-budgets",
@@ -1260,6 +1288,7 @@ export class AbacusBotSession {
 
     this.session = created.session;
     this.pi = this.loadedPi;
+    endTurnOnClosedReply(this.session.agent);
     // The opening mode, so the log is a complete account rather than deltas.
     this.applyMode(this.mode, "startup");
     anchorCompactions(this.session.sessionManager);
@@ -1422,6 +1451,8 @@ export class AbacusBotSession {
     this.pendingEmptyAsk = false;
     this.promisedWork.begin();
     this.pendingPromisedWork = false;
+    this.nextStepAsk.begin(text);
+    this.pendingNextStep = false;
     this.mcpTools.atTurnStart();
     this.pendingToolArrival = null;
     this.toolArrivalsThisTurn = 0;
@@ -1573,7 +1604,7 @@ export class AbacusBotSession {
     // The budget extension aborted the run; pi records that as an error with
     // "This operation was aborted" for text, which reads as a provider fault.
     const budgetStop = budgetStopReason();
-    if (budgetStop != null) {
+    if (budgetStop != null && !this.router.chain.diskFull) {
       this.emitAgentEvent(
         {
           type: "error",
@@ -1781,13 +1812,16 @@ export class AbacusBotSession {
       this.pendingStreamCut ||
       this.pendingBusyWait != null ||
       this.pendingEmptyAsk ||
-      this.pendingPromisedWork
+      this.pendingPromisedWork ||
+      this.pendingNextStep
     ) {
       // Stop cancels the continuation, but the withheld idle event still has
-      // to go out or the session stays busy forever.
-      if (this.interrupted) {
+      // to go out or the session stays busy forever. A full disk ends it too:
+      // a continuation would only write again.
+      if (this.interrupted || this.router.chain.diskFull) {
         this.pendingEmptyAsk = false;
         this.pendingPromisedWork = false;
+        this.pendingNextStep = false;
         this.pendingStreamCut = false;
         this.pendingNetworkFailure = null;
         this.pendingBusyWait = null;
@@ -1884,6 +1918,20 @@ export class AbacusBotSession {
           {
             customType: PROMISED_WORK_TYPE,
             content: PROMISED_WORK_PROMPT,
+            display: false,
+          },
+          { triggerTurn: true }
+        );
+
+        continue;
+      }
+
+      if (this.pendingNextStep) {
+        this.pendingNextStep = false;
+        await this.session?.sendCustomMessage(
+          {
+            customType: NEXT_STEP_TYPE,
+            content: NEXT_STEP_PROMPT,
             display: false,
           },
           { triggerTurn: true }
@@ -2444,6 +2492,15 @@ export class AbacusBotSession {
       return;
     }
 
+    // This machine's write (pi's session file), not the provider: nothing retries
+    // it, and the chain recorded it at the reply (TurnChain.replied).
+    if (classifyAttempt(text, this.session?.model?.provider) === "disk_full") {
+      process.stderr.write(
+        `[disk] the disk is full; this turn ends: ${text.slice(0, 200)}\n`
+      );
+      return;
+    }
+
     this.retriedCalls += 1;
     process.stderr.write(
       `[provider] ${providerFailureSummary(text, this.session?.model?.provider)}; retrying (attempt ${this.retriedCalls + 1}).\n`
@@ -2918,6 +2975,13 @@ export class AbacusBotSession {
     pending.resolve(decision);
   }
 
+  runAction(
+    action: SessionAction,
+    value: string | undefined
+  ): Promise<SessionActionResult> {
+    return runSessionAction(this.session, this.options.cwd, action, value);
+  }
+
   /** Start a fresh conversation, discarding the transcript but keeping the process. */
   async resetConversation(): Promise<void> {
     this.interrupted = true;
@@ -2952,6 +3016,7 @@ export class AbacusBotSession {
 
       this.session = created.session;
       this.pi = this.loadedPi;
+      endTurnOnClosedReply(this.session.agent);
       // A fresh session has only the tools it was built with.
       this.mcpTools.rebind(
         new Set(this.session.getAllTools().map((tool) => tool.name))
@@ -3306,7 +3371,18 @@ export class AbacusBotSession {
           mayAskForPromisedWork(this.mode) &&
           endedOnPromise(event.messages) &&
           this.promisedWork.claim();
-        if (ending && !this.pendingPromisedWork) {
+        this.nextStepAsk.sawRun(event.messages);
+        // Finished work ends on what comes next, in this send (NextStepAsk).
+        this.pendingNextStep =
+          ending &&
+          !this.pendingPromisedWork &&
+          !this.interrupted &&
+          this.ownedTurn != null &&
+          nextStepAskOn() &&
+          mayAskForPromisedWork(this.mode) &&
+          endedOnResult(event.messages) &&
+          this.nextStepAsk.claim();
+        if (ending && !this.pendingPromisedWork && !this.pendingNextStep) {
           this.finishTurn();
         }
 
@@ -4008,16 +4084,18 @@ export class AbacusBotSession {
    */
   private async refreshCustomInstructions(): Promise<void> {
     const current = readCustomInstructions();
-    // The bot persona and the MCP roster ride the same rebuild.
+    // The bot persona, the MCP roster and the plan ride the same rebuild.
     const persona = readPersona();
     const roster = mcpRosterFingerprint(this.mcp.statuses);
     const language = accountReplyLanguagePrompt();
+    const plan = planFactsPrompt();
 
     if (
       current === this.promptInstructions &&
       persona === this.promptPersona &&
       roster === this.promptMcpRoster &&
-      language === this.promptUserLanguage
+      language === this.promptUserLanguage &&
+      plan === this.promptPlan
     )
       return;
 

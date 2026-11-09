@@ -1297,8 +1297,7 @@
         "title": "コードに取りかかる",
         "body": "GitHub リポジトリのバグ修正や機能追加を行います。",
         "connect": "GitHub を接続",
-        "start": "開始",
-        "botName": "コードアシスタント"
+        "start": "開始"
       },
       "research": {
         "title": "調べもの・文章作成",
@@ -1777,6 +1776,23 @@
           "name": "かんたんなゲーム",
           "detail": "ブラウザですぐ遊べます。",
           "prompt": "ブラウザですぐ遊べるかんたんなゲームを作ってください。矢印キーとスワイプで操作するスネークゲームで、スコア、ベストスコア、リスタートボタン付きにしてください。1 ページにまとめて、できたら見せてください。"
+        }
+      },
+      "code": {
+        "fix-a-bug": {
+          "name": "バグを修正",
+          "detail": "原因を見つけてプルリクエストを作成します。",
+          "prompt": "コードのバグを修正してください。このフォルダが GitHub リポジトリならそれを使い、違う場合は私の GitHub リポジトリを一覧にしてどれか聞いてください。何が壊れているか私に聞いてから、原因を見つけ、新しいブランチで修正し、テストを実行してプルリクエストを作成してください。"
+        },
+        "add-a-feature": {
+          "name": "機能を追加",
+          "detail": "ブランチで作成してプルリクエストを作成します。",
+          "prompt": "コードに機能を追加してください。このフォルダが GitHub リポジトリならそれを使い、違う場合は私の GitHub リポジトリを一覧にしてどれか聞いてください。何を追加するか私に聞いてから、新しいブランチで作成し、テストを実行してプルリクエストを作成してください。"
+        },
+        "review-my-prs": {
+          "name": "プルリクエストをレビュー",
+          "detail": "バグや不足しているテストをファイルと行で示します。",
+          "prompt": "未解決のプルリクエストをレビューしてください。このフォルダが GitHub リポジトリならそれを使い、違う場合は私の GitHub リポジトリを一覧にしてどれか聞いてください。各プルリクエストについて、何を変更するかを説明し、バグ、リスク、不足しているテストをファイルと行とともに指摘してください。ここで伝えるだけにして、GitHub への投稿やコードの変更はしないでください。"
         }
       }
     },
@@ -2929,6 +2945,7 @@
       "showMore_other": "Show {{count}} more lines"
     },
     "composer": {
+      "addConnectors": "コネクタを追加",
       "attach": "添付",
       "attachFailed": "Couldn't attach this file",
       "attachFiles": "Files or images",
@@ -2940,7 +2957,9 @@
       "files": "Files",
       "gone": "This conversation no longer exists.",
       "mini": "Reply, or steer the run",
+      "manageConnectors": "コネクタを管理",
       "modeFailed": "Couldn't change the mode",
+      "noConnectors": "コネクタが見つかりません",
       "model": "Model: {{name}}",
       "models": "Models",
       "notReady": "The agent isn't ready. Try again.",
@@ -2976,7 +2995,9 @@
       "folderItems_one": "{{count}} item",
       "folderItems_other": "{{count}} items",
       "includedIn": "{{plan}} に含まれます",
-      "includedInPaid": "有料プランに含まれます"
+      "includedInPaid": "有料プランに含まれます",
+      "commands": "Commands",
+      "commandFailed": "That didn't work. Try again."
     },
     "day": {
       "today": "Today",
@@ -3350,6 +3371,9 @@
       "copy": "「{{text}}」をコピーしてスマホから送信",
       "copyFailed": "コピーできませんでした"
     },
+    "retryOffer": {
+      "try": "{{model}} でもう一度試す"
+    },
     "deliverableOffer": {
       "label": "この回答をドキュメントとして残す",
       "doc": "ドキュメントにする",
@@ -3360,6 +3384,59 @@
         "doc": "直前の回答を、保存して共有できる整ったドキュメントにして、ワークスペースにPDFで保存してください。",
         "report": "直前の回答を、保存して共有できる整ったレポートにして、ワークスペースにPDFで保存してください。"
       }
+    },
+    "commands": {
+      "new": "Start a new chat",
+      "model": "Change the model",
+      "plan": "Plan before acting",
+      "permissions": "Choose what runs without asking",
+      "copy": "Copy the last reply",
+      "help": "Show every command",
+      "busy": "Wait for this reply to finish, then try again",
+      "notRunning": "Send a message first, then try again",
+      "invalid": "That value is not available here",
+      "contextUnknown": "Not measured yet. Send a message first.",
+      "contextPercent": "This chat is {{percent}}% full",
+      "compact": "Shorten this chat (uses credits)",
+      "compactArgument": "what to keep",
+      "compactDone": "Chat shortened",
+      "context": "How full this chat is",
+      "effort": "Set how hard the model thinks",
+      "effortArgument": "low, medium or high",
+      "effortDone": "Effort: {{level}}",
+      "autocompact": "Turn automatic shortening on or off",
+      "autocompactArgument": "on or off",
+      "autocompactDone": "Automatic shortening: {{value}}",
+      "export": "Save this chat as a file",
+      "exportDone": "Chat saved",
+      "tasks": "Work still running",
+      "tasksDone": "{{count}} running in the background",
+      "status": "How this chat is doing",
+      "statusDone": "Chat is running",
+      "review": "Review the work (uses credits)",
+      "reviewArgument": "what to review",
+      "reviewPrompt": "Review the changes in this workspace for bugs. {{value}}",
+      "subtask": "Hand off a task (uses credits)",
+      "subtaskArgument": "the task",
+      "subtaskPrompt": "Delegate this as a separate task: {{value}}",
+      "resume": "Open another chat",
+      "usage": "Credits used",
+      "config": "Open settings",
+      "theme": "Change the theme",
+      "login": "Your account",
+      "memory": "What the app remembers",
+      "connectors": "Add or manage connectors",
+      "skills": "Manage skills",
+      "mcp": "Manage MCP servers",
+      "plugin": "Browse tools",
+      "workflows": "Open routines",
+      "agents": "Create a bot",
+      "feedback": "Report a problem",
+      "rename": "Rename this chat",
+      "renameArgument": "new name",
+      "diff": "See what changed",
+      "addDir": "Add a folder",
+      "tooSmall": "This chat is too short to shorten yet"
     }
   },
   "notch": {
@@ -3761,6 +3838,7 @@
       "installFailed": "Couldn't install the update",
       "manualInstall": "アップデートの準備完了 — 手動でインストールしてください",
       "installing": "Restarting…",
+      "preparing": "Preparing update…",
       "queued": "現在のタスクの完了後に再起動します",
       "checking": "確認中…",
       "downloading": "アップデートをダウンロード中… {{percent}}%",

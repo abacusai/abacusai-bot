@@ -1,3 +1,9 @@
+import type {
+  ChannelDecision,
+  ChannelMessage,
+  ChannelWork,
+} from "@abacus-ai/contract/channels";
+
 /**
  * The rules of a channel, as pure functions: who answers a message, which
  * other members a bot's reply brings in, what each bot is told, and what of
@@ -17,11 +23,7 @@
  * that brought them in then finishes its answer with theirs. One level deep,
  * by rule rather than by a count.
  */
-import type {
-  ChannelDecision,
-  ChannelMessage,
-  ChannelWork,
-} from "@abacus-ai/contract/channels";
+import type { OwnChatLine } from "../bots/bot-ask";
 
 export { agreedItems, channelTitle } from "@abacus-ai/contract/channels";
 
@@ -410,12 +412,6 @@ export const envelope = (
 
 const roleOf = (member: Member): string =>
   member.title.trim().length > 0 ? ` (${member.title.trim()})` : "";
-
-/** One line of a bot's own chat with the user: theirs, or the bot's reply. */
-export interface OwnChatLine {
-  role: "user" | "assistant";
-  text: string;
-}
 
 /** A bot's own chat as a channel turn sees it: busy now, and its last exchanges. */
 export interface OwnChat {

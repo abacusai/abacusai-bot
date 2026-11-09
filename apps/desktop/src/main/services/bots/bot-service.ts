@@ -31,6 +31,8 @@ import {
   BOT_TEMPLATES,
   type BotTemplate,
 } from "@abacus-ai/contract/bots/templates";
+import { languageNameTag } from "@abacus-ai/contract/contract/languages";
+import type { SupportedLanguage } from "@abacus-ai/contract/contract/rows";
 import type { SessionOwner } from "@abacus-ai/contract/contracts";
 import { EntityNotFoundError } from "@abacus-ai/contract/not-found";
 
@@ -394,11 +396,11 @@ const changeNotice = (
   );
 };
 
-/** A language's own name in its own locale: "Türkçe", "português". */
-const nativeLanguageName = (locale: string): string => {
+/** A language's own name in its own locale: "Türkçe", "português", "繁體中文". */
+const nativeLanguageName = (locale: SupportedLanguage): string => {
   try {
     const name = new Intl.DisplayNames([locale], { type: "language" }).of(
-      locale
+      languageNameTag(locale)
     );
     return (name ?? locale).replace(/\s*\(.*\)$/, "");
   } catch {

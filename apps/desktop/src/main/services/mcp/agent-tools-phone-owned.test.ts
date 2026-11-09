@@ -824,7 +824,7 @@ describe("paid-plan capabilities", () => {
     expect(text).toMatch(/whether they want Basic/);
     // A no gets the free way: the desktop app on a computer.
     expect(text).toMatch(
-      /A no or not now: .*AbacusAI Bot is free on a computer, at bot\.abacus\.ai/
+      /A no or not now: .*AbacusAI Bot desktop app is a free download that does this on a computer \(bot\.abacus\.ai\)/
     );
     expect(text).toMatch(/no `serve`, no `page`, no zip/);
   });

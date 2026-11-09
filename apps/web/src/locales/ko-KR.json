@@ -1297,8 +1297,7 @@
         "title": "내 코드 작업하기",
         "body": "GitHub 저장소의 버그를 고치거나 기능을 추가합니다.",
         "connect": "GitHub 연결",
-        "start": "시작",
-        "botName": "코드 어시스턴트"
+        "start": "시작"
       },
       "research": {
         "title": "조사하거나 글쓰기",
@@ -1777,6 +1776,23 @@
           "name": "간단한 게임",
           "detail": "브라우저에서 바로 플레이.",
           "prompt": "브라우저에서 바로 할 수 있는 간단한 게임을 만들어 줘. 방향키와 스와이프로 조작하는 스네이크 게임으로, 점수, 최고 점수, 다시 시작 버튼을 넣어 줘. 한 페이지로 만들고 완성되면 보여 줘."
+        }
+      },
+      "code": {
+        "fix-a-bug": {
+          "name": "버그 수정",
+          "detail": "원인을 찾아 풀 리퀘스트를 엽니다.",
+          "prompt": "내 코드의 버그를 고쳐 주세요. 이 폴더가 GitHub 저장소면 여기서 작업하고, 아니면 내 GitHub 저장소 목록을 보여 주고 어느 것인지 물어봐 주세요. 무엇이 문제인지 물어본 뒤 원인을 찾아 새 브랜치에서 고치고, 테스트를 실행하고, 풀 리퀘스트를 열어 주세요."
+        },
+        "add-a-feature": {
+          "name": "기능 추가",
+          "detail": "브랜치에서 만들고 풀 리퀘스트를 엽니다.",
+          "prompt": "내 코드에 기능을 추가해 주세요. 이 폴더가 GitHub 저장소면 여기서 작업하고, 아니면 내 GitHub 저장소 목록을 보여 주고 어느 것인지 물어봐 주세요. 무엇을 추가할지 물어본 뒤 새 브랜치에서 만들고, 테스트를 실행하고, 풀 리퀘스트를 열어 주세요."
+        },
+        "review-my-prs": {
+          "name": "내 풀 리퀘스트 리뷰",
+          "detail": "버그와 빠진 테스트를 파일과 줄별로 알려 줍니다.",
+          "prompt": "열려 있는 내 풀 리퀘스트를 리뷰해 주세요. 이 폴더가 GitHub 저장소면 그것을 쓰고, 아니면 내 GitHub 저장소 목록을 보여 주고 어느 것인지 물어봐 주세요. 풀 리퀘스트마다 무엇이 바뀌는지 알려 주고, 버그, 위험 요소, 빠진 테스트를 파일과 줄과 함께 짚어 주세요. 여기에서만 알려 주고 GitHub에 게시하거나 코드를 바꾸지 마세요."
         }
       }
     },
@@ -2929,6 +2945,7 @@
       "showMore_other": "Show {{count}} more lines"
     },
     "composer": {
+      "addConnectors": "커넥터 추가",
       "attach": "첨부",
       "attachFailed": "Couldn't attach this file",
       "attachFiles": "Files or images",
@@ -2940,7 +2957,9 @@
       "files": "Files",
       "gone": "This conversation no longer exists.",
       "mini": "Reply, or steer the run",
+      "manageConnectors": "커넥터 관리",
       "modeFailed": "Couldn't change the mode",
+      "noConnectors": "커넥터를 찾을 수 없습니다",
       "model": "Model: {{name}}",
       "models": "Models",
       "notReady": "The agent isn't ready. Try again.",
@@ -2976,7 +2995,9 @@
       "folderItems_one": "{{count}} item",
       "folderItems_other": "{{count}} items",
       "includedIn": "{{plan}}에 포함",
-      "includedInPaid": "유료 요금제에 포함"
+      "includedInPaid": "유료 요금제에 포함",
+      "commands": "Commands",
+      "commandFailed": "That didn't work. Try again."
     },
     "day": {
       "today": "Today",
@@ -3350,6 +3371,9 @@
       "copy": "휴대폰에서 보낼 수 있게 “{{text}}” 복사",
       "copyFailed": "복사하지 못했어요"
     },
+    "retryOffer": {
+      "try": "{{model}}(으)로 다시 시도"
+    },
     "deliverableOffer": {
       "label": "이 답변을 문서로 남기기",
       "doc": "문서로 만들기",
@@ -3360,6 +3384,59 @@
         "doc": "방금 답변을 보관하고 공유할 수 있는 깔끔한 문서로 만들어 작업 공간에 PDF로 저장해 주세요.",
         "report": "방금 답변을 보관하고 공유할 수 있는 깔끔한 보고서로 만들어 작업 공간에 PDF로 저장해 주세요."
       }
+    },
+    "commands": {
+      "new": "Start a new chat",
+      "model": "Change the model",
+      "plan": "Plan before acting",
+      "permissions": "Choose what runs without asking",
+      "copy": "Copy the last reply",
+      "help": "Show every command",
+      "busy": "Wait for this reply to finish, then try again",
+      "notRunning": "Send a message first, then try again",
+      "invalid": "That value is not available here",
+      "contextUnknown": "Not measured yet. Send a message first.",
+      "contextPercent": "This chat is {{percent}}% full",
+      "compact": "Shorten this chat (uses credits)",
+      "compactArgument": "what to keep",
+      "compactDone": "Chat shortened",
+      "context": "How full this chat is",
+      "effort": "Set how hard the model thinks",
+      "effortArgument": "low, medium or high",
+      "effortDone": "Effort: {{level}}",
+      "autocompact": "Turn automatic shortening on or off",
+      "autocompactArgument": "on or off",
+      "autocompactDone": "Automatic shortening: {{value}}",
+      "export": "Save this chat as a file",
+      "exportDone": "Chat saved",
+      "tasks": "Work still running",
+      "tasksDone": "{{count}} running in the background",
+      "status": "How this chat is doing",
+      "statusDone": "Chat is running",
+      "review": "Review the work (uses credits)",
+      "reviewArgument": "what to review",
+      "reviewPrompt": "Review the changes in this workspace for bugs. {{value}}",
+      "subtask": "Hand off a task (uses credits)",
+      "subtaskArgument": "the task",
+      "subtaskPrompt": "Delegate this as a separate task: {{value}}",
+      "resume": "Open another chat",
+      "usage": "Credits used",
+      "config": "Open settings",
+      "theme": "Change the theme",
+      "login": "Your account",
+      "memory": "What the app remembers",
+      "connectors": "Add or manage connectors",
+      "skills": "Manage skills",
+      "mcp": "Manage MCP servers",
+      "plugin": "Browse tools",
+      "workflows": "Open routines",
+      "agents": "Create a bot",
+      "feedback": "Report a problem",
+      "rename": "Rename this chat",
+      "renameArgument": "new name",
+      "diff": "See what changed",
+      "addDir": "Add a folder",
+      "tooSmall": "This chat is too short to shorten yet"
     }
   },
   "notch": {
@@ -3761,6 +3838,7 @@
       "installFailed": "Couldn't install the update",
       "manualInstall": "업데이트 준비 완료 — 직접 설치하세요",
       "installing": "Restarting…",
+      "preparing": "Preparing update…",
       "queued": "현재 작업이 끝나면 다시 시작합니다",
       "checking": "확인 중…",
       "downloading": "업데이트 다운로드 중… {{percent}}%",

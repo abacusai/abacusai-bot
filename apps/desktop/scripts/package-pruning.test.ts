@@ -76,8 +76,12 @@ it.each(
       "it",
       "ja",
       "ko",
+      "zh_CN",
+      "zh_TW",
+      "zh-CN",
+      "zh-TW",
     ].map(f.locale);
-    const remove = ["ru", "zh_CN", "ar_NEUTER"].map(f.locale);
+    const remove = ["ru", "ar_NEUTER"].map(f.locale);
     for (const name of [
       "icudtl.dat",
       "resources.pak",

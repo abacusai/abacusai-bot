@@ -25,6 +25,8 @@ const LOADERS: Record<
   "ko-KR": () => import("#locales/ko-KR.json"),
   "pt-BR": () => import("#locales/pt-BR.json"),
   "tr-TR": () => import("#locales/tr-TR.json"),
+  "zh-CN": () => import("#locales/zh-CN.json"),
+  "zh-TW": () => import("#locales/zh-TW.json"),
 };
 
 export const i18n: I18n = createInstance();

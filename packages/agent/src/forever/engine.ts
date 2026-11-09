@@ -18,12 +18,13 @@ import {
 } from "@earendil-works/pi-coding-agent";
 
 import { sponsoredRunActive } from "../abacus-endpoint.js";
+import { planFactsPrompt } from "../account-plan.js";
 import { Allowances } from "../allowances.js";
 import { freeBytes } from "../atomic-file.js";
 import { PYTHON_SETUP_TIMEOUT_MS, setPythonProvisioner } from "../backends.js";
 import { notifyConversationQueueCleared } from "../background-processes.js";
 import { basePrompt } from "../base-prompt.js";
-import { BotOutputSanitizer, tidyBotText } from "../bot/bot-output.js";
+import { tidyBotText } from "../bot/bot-output.js";
 import {
   browserTaskEnabled,
   buildBrowserTaskTool,
@@ -53,6 +54,7 @@ import { TOOL_NAME_ALIASES } from "../excluded-tools.js";
 import background from "../extensions/background.js";
 import { budgetStopReason, createBudgets } from "../extensions/budgets.js";
 import compactionPruner from "../extensions/compaction-pruner.js";
+import diskFull from "../extensions/disk-full.js";
 import requestSize from "../extensions/request-size.js";
 import spill from "../extensions/spill.js";
 import toolCallRepair from "../extensions/tool-call-repair.js";
@@ -85,6 +87,13 @@ import {
   runMadeProgress,
   type NetworkSuspect,
 } from "../network-wait.js";
+import {
+  endedOnResult,
+  NEXT_STEP_PROMPT,
+  NEXT_STEP_TYPE,
+  NextStepAsk,
+  nextStepAskOn,
+} from "../next-step-ask.js";
 import { endedOnLeakedToolCall, networkVerdict } from "../openllm-failures.js";
 import {
   OPENLLM_CONTINUATION_PROMPT,
@@ -119,6 +128,8 @@ import {
   type DesktopEvent,
   type PermissionDecision,
   type PermissionRequest,
+  type SessionAction,
+  type SessionActionResult,
   type ToolRequest,
   type TurnOutcome,
 } from "../protocol.js";
@@ -132,6 +143,7 @@ import {
   settleProviderRegistrations,
   DEFAULT_MAX_OUTPUT_TOKENS,
 } from "../providers.js";
+import { ReasoningSplitter, splitReasoning } from "../reasoning-tags.js";
 import {
   replyLanguageMismatch,
   replyLanguageRepairPrompt,
@@ -139,6 +151,7 @@ import {
 } from "../reply-language.js";
 import { mediaCheckFrom } from "../send-media-tool.js";
 import { MEDIA_CHECK_TOOL_NAME } from "../send-media.js";
+import { runSessionAction } from "../session-actions.js";
 import { conversationSessionManager } from "../session-file.js";
 import type { TurnHandle } from "../session.js";
 import {
@@ -322,7 +335,7 @@ export class ForeverEngine {
   private readonly allowances = new Allowances();
 
   // Streaming state.
-  private readonly sanitizer = new BotOutputSanitizer();
+  private readonly sanitizer = new ReasoningSplitter();
   /** Raw (unsanitized) streamed text of the in-flight assistant message. */
   private rawStreamed = "";
   private currentMessageId: string | null = null;
@@ -359,6 +372,8 @@ export class ForeverEngine {
   private readonly emptyReplies = new EmptyReplies();
   /** The turn's ask after a reply that ended on a promise (promised-work.ts). */
   private readonly promisedWork = new PromisedWork();
+  private readonly nextStepAsk = new NextStepAsk();
+  private pendingNextStep = false;
   private pendingPromisedWork = false;
   /** The same model is to be asked again, out of sight, for its answer. */
   private pendingEmptyAsk = false;
@@ -388,6 +403,8 @@ export class ForeverEngine {
   private promptMcpRoster = "";
   /** The reply-language block the prompt was built with. */
   private promptReplyLanguage: string | null = null;
+  /** The plan line the prompt was built with. */
+  private promptPlan = "";
 
   constructor(
     private readonly options: ForeverEngineOptions,
@@ -473,11 +490,15 @@ export class ForeverEngine {
         // Same block as the desktop chat; the check at agent_end catches drift.
         const language = this.replyLanguagePrompt();
         this.promptReplyLanguage = language;
+        const plan = planFactsPrompt();
+        this.promptPlan = plan;
 
         return [
           ...(persona == null ? [] : [persona]),
           ...base,
           ...(mcp == null ? [] : [mcp]),
+          // After the static blocks: a plan change rebuilds only from here.
+          plan,
           ...(memory == null ? [] : [memory]),
           ...(recentMemory == null ? [] : [recentMemory]),
           // Last of all, so it outweighs a kickstart or routine written in English.
@@ -512,6 +533,12 @@ export class ForeverEngine {
         {
           name: "abacusai-bot-tool-call-repair",
           factory: toolCallRepair as unknown as (pi: ExtensionAPI) => void,
+        },
+        {
+          name: "abacusai-bot-disk-full",
+          factory: diskFull(() => this.router.chain) as unknown as (
+            pi: ExtensionAPI
+          ) => void,
         },
         {
           name: "abacusai-bot-budgets",
@@ -790,6 +817,8 @@ export class ForeverEngine {
     this.emptyReplies.begin();
     this.promisedWork.begin();
     this.pendingPromisedWork = false;
+    this.nextStepAsk.begin(text);
+    this.pendingNextStep = false;
     this.mcpTools.atTurnStart();
     this.pendingToolArrival = null;
     this.toolArrivalsThisTurn = 0;
@@ -992,12 +1021,14 @@ export class ForeverEngine {
     const fingerprint = this.profile.memory.fingerprint();
     const roster = mcpRosterFingerprint(this.mcp.statuses);
     const language = this.replyLanguagePrompt();
+    const plan = planFactsPrompt();
 
     if (
       persona === this.promptPersona &&
       fingerprint === this.promptMemoryFingerprint &&
       roster === this.promptMcpRoster &&
-      language === this.promptReplyLanguage
+      language === this.promptReplyLanguage &&
+      plan === this.promptPlan
     )
       return;
 
@@ -1024,11 +1055,14 @@ export class ForeverEngine {
       this.pendingStreamCut ||
       this.pendingBusyWait != null ||
       this.pendingEmptyAsk ||
-      this.pendingPromisedWork
+      this.pendingPromisedWork ||
+      this.pendingNextStep
     ) {
-      if (this.interrupted) {
+      // A full disk ends the turn as a Stop does: a continuation would only write again.
+      if (this.interrupted || this.router.chain.diskFull) {
         this.pendingEmptyAsk = false;
         this.pendingPromisedWork = false;
+        this.pendingNextStep = false;
         this.pendingStreamCut = false;
         this.pendingNetworkFailure = null;
         this.pendingBusyWait = null;
@@ -1123,6 +1157,20 @@ export class ForeverEngine {
           {
             customType: PROMISED_WORK_TYPE,
             content: PROMISED_WORK_PROMPT,
+            display: false,
+          },
+          { triggerTurn: true }
+        );
+
+        continue;
+      }
+
+      if (this.pendingNextStep) {
+        this.pendingNextStep = false;
+        await this.session?.sendCustomMessage(
+          {
+            customType: NEXT_STEP_TYPE,
+            content: NEXT_STEP_PROMPT,
             display: false,
           },
           { triggerTurn: true }
@@ -1504,7 +1552,7 @@ export class ForeverEngine {
     // The budget extension aborted the run; pi records that as an error with
     // "This operation was aborted" for text, which reads as a provider fault.
     const budgetStop = budgetStopReason();
-    if (budgetStop != null) {
+    if (budgetStop != null && !this.router.chain.diskFull) {
       this.emitAgentEvent(
         {
           type: "error",
@@ -1911,6 +1959,13 @@ export class ForeverEngine {
     pending.resolve(decision);
   }
 
+  runAction(
+    action: SessionAction,
+    value: string | undefined
+  ): Promise<SessionActionResult> {
+    return runSessionAction(this.session, this.options.cwd, action, value);
+  }
+
   async resetConversation(): Promise<void> {
     this.interrupted = true;
     this.networkWait.cancel();
@@ -2074,10 +2129,11 @@ export class ForeverEngine {
 
           const { text, thinking } = this.sanitizer.push(stream.delta);
 
-          if (text.length > 0) this.streamText(text);
-
+          // Reasoning first: in one delta a leading block precedes its reply.
           if (thinking.length > 0)
             this.emitAgentEvent({ type: "thinking_delta", content: thinking });
+
+          if (text.length > 0) this.streamText(text);
         } else if (stream.type === "thinking_delta" && stream.delta) {
           if (!this.hiddenTurn)
             this.emitAgentEvent({
@@ -2103,10 +2159,11 @@ export class ForeverEngine {
         if (!this.hiddenTurn) {
           if (this.rawStreamed.length === 0 && full.length > 0) {
             // A non-streaming provider delivers the whole message here.
-            const { text, thinking } = this.sanitizer.push(full);
-            const tail = this.sanitizer.flush();
-            const cleaned = tidyBotText(text + tail.text).trim();
-            const reasoning = (thinking + tail.thinking).trim();
+            const split = splitReasoning(full);
+            const cleaned = tidyBotText(split.text).trim();
+            const reasoning = split.thinking.trim();
+
+            this.sanitizer.reset();
 
             if (reasoning.length > 0)
               this.emitAgentEvent({
@@ -2124,13 +2181,13 @@ export class ForeverEngine {
             const remainder = text + tail.text;
             const reasoning = thinking + tail.thinking;
 
-            if (remainder.length > 0) this.streamText(remainder);
-
             if (reasoning.length > 0)
               this.emitAgentEvent({
                 type: "thinking_delta",
                 content: reasoning,
               });
+
+            if (remainder.length > 0) this.streamText(remainder);
           } else {
             // An extension replaced the message (tool-call repair); nothing
             // new is owed.
@@ -2389,7 +2446,19 @@ export class ForeverEngine {
           mayAskForPromisedWork(this.mode) &&
           endedOnPromise(event.messages) &&
           this.promisedWork.claim();
-        if (ending && !this.pendingPromisedWork) {
+        this.nextStepAsk.sawRun(event.messages);
+        // Finished work ends on what comes next, in this send (NextStepAsk).
+        this.pendingNextStep =
+          ending &&
+          !this.pendingPromisedWork &&
+          !this.hiddenTurn &&
+          !this.interrupted &&
+          this.ownedTurn != null &&
+          nextStepAskOn() &&
+          mayAskForPromisedWork(this.mode) &&
+          endedOnResult(event.messages) &&
+          this.nextStepAsk.claim();
+        if (ending && !this.pendingPromisedWork && !this.pendingNextStep) {
           this.finishTurn();
         }
 

@@ -13,7 +13,7 @@ catalog:
   "@types/react": ^19.3.0
   "@types/react-dom": ^19.3.0
   "@vitejs/plugin-react": 6.1.1
-  "@vitest/coverage-v8": ^4.1.11
+  "@vitest/coverage-v8": ^4.1.12
   oxfmt: ^0.64.0
   oxlint: ^1.79.0
   turbo: ^2.10.11
@@ -23,7 +23,7 @@ catalog:
   typescript: ^7.0.2
   ultracite: ^7.10.5
   vite: ~8.2.4
-  vitest: ^4.1.11
+  vitest: ^4.1.12
 
 # Electron and the native addons resolve their own binaries by walking up from
 # wherever they are linked, which a symlinked store breaks.
@@ -100,6 +100,18 @@ overrides:
   # (GHSA-7wch-p9px-956x, GHSA-jc66-7q78-782g, GHSA-8hrf-8g6f-7xwp,
   # GHSA-hqq3-7jhf-c5jx, GHSA-5x38-2vff-x55p).
   node-forge: ^1.4.2
+  # The MCP SDK's express-rate-limit (local connector auth callbacks): SSRF
+  # range misclassification and unbounded IPv6 parsing (GHSA-2vr4-cq9g-pvrc,
+  # GHSA-rpw4-54j3-4h4q, GHSA-h3mg-xc3c-68pw, GHSA-j6r3-76f7-8jcv,
+  # GHSA-rxp7-6hxx-x8q5).
+  ip-address: ^10.7.4
+  # Packaging (@electron/universal) and the coding agent's package filters:
+  # globparts amplification (GHSA-g3hv-75wg-m249). Both call only minimatch(),
+  # which 11 keeps.
+  "minimatch@9": ^11.0.1
+  "minimatch@10": ^11.0.1
+  # exceljs calls only uuid's v4(); 11 still ships CommonJS (GHSA-w5hq-g745-h8pq).
+  "uuid@8": ^11.1.1
   # transformers.js runs Whisper in the renderer on onnxruntime-web; its Node
   # backend and image codec would only add native binaries the app never loads.
   onnxruntime-node: "-"

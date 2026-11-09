@@ -20,6 +20,7 @@ import { helloEvent, serialize } from "./agui/event.js";
 import { AguiHost } from "./agui/host.js";
 import { newIncarnation } from "./agui/ids.js";
 import { useBundledTools, useScriptRuntime } from "./bundled-tools.js";
+import { ELECTRON_INTERNAL_ENV } from "./child-env.js";
 import { applyStoredApiKeys } from "./config.js";
 import { followGithubToken } from "./github-token.js";
 import { probeGrammars } from "./lang.js";
@@ -61,6 +62,9 @@ function readFlag(argv: readonly string[], name: string): string | undefined {
 }
 
 async function main(): Promise<void> {
+  // Electron already read these; inheriting them changes how other apps start.
+  for (const name of ELECTRON_INTERNAL_ENV) delete process.env[name];
+
   // Keys saved in ~/.abacusai-bot; the environment wins, so under the desktop
   // app this changes nothing.
   applyStoredApiKeys();

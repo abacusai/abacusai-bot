@@ -6,7 +6,7 @@
  */
 import { createHash } from "crypto";
 
-import { BotOutputSanitizer } from "../bot/bot-output.js";
+import { splitReasoning } from "../reasoning-tags.js";
 import { DAY_MS, localDay } from "./phone-config.js";
 import {
   aboutYouEntries,
@@ -50,7 +50,7 @@ const CONSOLIDATE_TRANSCRIPT_CHARS = 4_000;
 
 /** The JSON object in a model reply: reasoning tags and code fences ignored. */
 export function parseJsonReply(reply: string): Record<string, unknown> | null {
-  const bare = reply.replace(/<(think|thinking|reasoning)>[\s\S]*?<\/\1>/g, "");
+  const bare = splitReasoning(reply).text;
   const start = bare.indexOf("{");
   const end = bare.lastIndexOf("}");
 
@@ -285,8 +285,7 @@ function toArchiveEntry(message: unknown): ArchiveEntry | null {
 
   if (role === "assistant") {
     // Leaked reasoning is not part of what was said.
-    const sanitizer = new BotOutputSanitizer();
-    text = sanitizer.push(raw).text + sanitizer.flush().text;
+    text = splitReasoning(raw).text;
   }
 
   text = text.trim();

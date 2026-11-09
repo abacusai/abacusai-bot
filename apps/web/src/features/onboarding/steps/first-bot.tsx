@@ -18,14 +18,16 @@ import { useState, type ComponentProps, type ReactNode, type Ref } from "react";
 import { BotAvatar } from "#renderer/components/bot-avatar";
 import { Spinner } from "#renderer/components/spinner";
 import { resolveLook } from "#renderer/lib/bots/avatar";
-import { BUILD_STARTER_IDS } from "#renderer/lib/build-starters";
+import {
+  BUILD_STARTER_IDS,
+  GITHUB_CONNECTOR_ID,
+} from "#renderer/lib/build-starters";
 import { cn } from "#renderer/lib/cn";
 import { Badge } from "#renderer/ui/badge";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
 
 import {
-  GITHUB_CONNECTOR_ID,
   type FirstBotState,
   type FirstChoice,
   type GithubChoice,

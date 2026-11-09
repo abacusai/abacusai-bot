@@ -12,18 +12,25 @@
  * Emptying the trash is refused before a command starts (emptiesTrash), and
  * again by the launchers on the paths the shell actually expanded.
  */
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as net from "node:net";
 import * as os from "node:os";
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import type { BashOperations } from "@earendil-works/pi-coding-agent";
 
 import { childProcessEnv } from "./child-env.js";
-import { abacusBotDir } from "./config.js";
+import {
+  entryBeside,
+  execAsNode,
+  launcherDir,
+  selfNode,
+  shellQuote,
+  withOverrides,
+  writeLauncher,
+} from "./launchers.js";
 import { mergePath } from "./merge-path.js";
 import { modelPath } from "./model-path.js";
 import { posixShell } from "./posix-shell-install.js";
@@ -202,18 +209,9 @@ export function trashSocket(): string {
   return address;
 }
 
-/** The launcher this file's build sits beside: the bundle's `.js`, or the source in tests. */
-function shimEntry(): string | null {
-  const dir = path.dirname(fileURLToPath(import.meta.url));
-  for (const name of ["trash-shim.js", "trash-shim.ts"]) {
-    const candidate = path.join(dir, name);
-    if (fs.existsSync(candidate)) return candidate;
-  }
-
-  return null;
-}
-
-const shellQuote = (text: string): string => `'${text.replace(/'/g, "'\\''")}'`;
+/** The launcher this file's build sits beside. */
+const shimEntry = (): string | null =>
+  entryBeside(import.meta.url, "trash-shim");
 
 /** One launcher: `#!/bin/sh`, which busybox runs too. `find` and `git` skip Node unless they delete. */
 export function launcherScript(
@@ -223,8 +221,8 @@ export function launcherScript(
   dir: string,
   platform: NodeJS.Platform = process.platform
 ): string {
-  const flags = entry.endsWith(".ts") ? " --no-warnings" : "";
-  const run = `ELECTRON_RUN_AS_NODE=1; export ELECTRON_RUN_AS_NODE; exec ${shellQuote(node)}${flags} ${shellQuote(entry)} ${name} "$@"`;
+  const flags = entry.endsWith(".ts") ? ["--no-warnings"] : [];
+  const run = execAsNode(node, [...flags, shellQuote(entry), name]);
   const separator = platform === "win32" ? ";" : ":";
   const fast: Record<string, string> = {
     find: "-delete) deletes=1 ;;",
@@ -272,30 +270,20 @@ export function trashLaunchers(): string | null {
   if (launchers !== undefined) return launchers;
   const entry = shimEntry();
   if (entry == null) return (launchers = null);
-  const node = process.execPath.replaceAll("\\", "/");
-  const key = createHash("sha256")
-    .update(`${node}\n${entry}\n${fs.readFileSync(entry, "utf8")}`)
-    .digest("hex")
-    .slice(0, 16);
-  const dir = path
-    .join(abacusBotDir(), "trash-shim", key)
-    .replaceAll("\\", "/");
+  const node = selfNode();
+  const dir = launcherDir(
+    "trash-shim",
+    node,
+    entry,
+    fs.readFileSync(entry, "utf8")
+  );
+  const script = entry.replaceAll("\\", "/");
   try {
-    for (const name of TRASH_SHIMMED) {
-      const file = path.join(dir, name);
-      const script = launcherScript(
-        name,
-        node,
-        entry.replaceAll("\\", "/"),
-        dir
+    for (const name of TRASH_SHIMMED)
+      writeLauncher(
+        path.join(dir, name),
+        launcherScript(name, node, script, dir)
       );
-      if (fs.existsSync(file) && fs.readFileSync(file, "utf8") === script)
-        continue;
-      fs.mkdirSync(dir, { recursive: true });
-      const temp = `${file}.${process.pid}.tmp`;
-      fs.writeFileSync(temp, script, { mode: 0o755 });
-      fs.renameSync(temp, file);
-    }
     launchers = dir;
   } catch (error) {
     process.stderr.write(`[trash] launchers not written: ${String(error)}\n`);
@@ -312,19 +300,6 @@ export function resetTrashForTesting(): void {
   service = null;
   scopes.clear();
   mover = null;
-}
-
-/** `BB_OVERRIDE_APPLETS` with busybox's own rm and find giving way to what PATH finds first. */
-function overrideApplets(current: string | undefined): string {
-  const value = current ?? "";
-  const separator = value.includes(";") ? "," : ";";
-  const missing = TRASH_APPLETS.filter(
-    (name) => !value.split(/[;,\s]/).includes(name)
-  );
-
-  return missing.length === 0
-    ? value
-    : `${value}${separator}${missing.join(",")}`;
 }
 
 /**
@@ -349,12 +324,15 @@ export function trashShimEnv(
     [TRASH_ENV.socket]: trashSocket(),
     [TRASH_ENV.token]: issueToken(scope),
     [TRASH_ENV.shims]: dir,
-    [TRASH_ENV.node]: process.execPath.replaceAll("\\", "/"),
+    [TRASH_ENV.node]: selfNode(),
     [TRASH_ENV.entry]: entry,
     ...(applets != null
       ? {
           [TRASH_ENV.applets]: applets.replaceAll("\\", "/"),
-          BB_OVERRIDE_APPLETS: overrideApplets(base.BB_OVERRIDE_APPLETS),
+          BB_OVERRIDE_APPLETS: withOverrides(
+            base.BB_OVERRIDE_APPLETS,
+            TRASH_APPLETS
+          ),
         }
       : {}),
   });

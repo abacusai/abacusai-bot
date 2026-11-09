@@ -167,6 +167,15 @@ describe("a bot's suggest_tasks call", () => {
     expect(said()).toBe(REPLY);
   }, 60_000);
 
+  it("with an unclosed leading reasoning block keeps the turn running", async () => {
+    await turn([
+      { say: "<think>They said hi; greet them back.", call: suggest },
+      { say: REPLY },
+    ]);
+
+    expect(provider.calls).toHaveLength(2);
+  }, 60_000);
+
   it("refused by the app keeps the turn running, and the fixed retry closes the reply already written", async () => {
     await turn([
       { say: REPLY, call: { name: "suggest_tasks", args: { tasks: [] } } },

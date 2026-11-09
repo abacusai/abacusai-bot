@@ -8,10 +8,27 @@
  * round(size × 0.68). Decorative unless given a `label`. Every id in the
  * `@abacus-ai/connectors` registry has a mark (connector-mark.test.tsx).
  */
+import azureLogo from "#renderer/assets/connectors/azure.webp";
+import boxLogo from "#renderer/assets/connectors/box.webp?no-inline";
+import dynamics365Logo from "#renderer/assets/connectors/dynamics365.webp?no-inline";
 import geminiLogo from "#renderer/assets/connectors/gemini.svg";
+import gitlabLogo from "#renderer/assets/connectors/gitlab.webp?no-inline";
 import gmailLogo from "#renderer/assets/connectors/gmail.png";
+import googleAdsLogo from "#renderer/assets/connectors/google_ads.webp?no-inline";
+import googleAnalyticsLogo from "#renderer/assets/connectors/google_analytics.webp?no-inline";
 import calendarLogo from "#renderer/assets/connectors/google_calendar.webp";
 import driveLogo from "#renderer/assets/connectors/google_drive.webp";
+import searchConsoleLogo from "#renderer/assets/connectors/google_search_console.webp?no-inline";
+import instagramLogo from "#renderer/assets/connectors/instagram.webp?no-inline";
+import messengerLogo from "#renderer/assets/connectors/messenger.webp?no-inline";
+import metaLogo from "#renderer/assets/connectors/meta.webp?no-inline";
+import mondayLogo from "#renderer/assets/connectors/monday.webp?no-inline";
+import onenoteLogo from "#renderer/assets/connectors/onenote.webp?no-inline";
+import quickbooksLogo from "#renderer/assets/connectors/quickbooks.webp?no-inline";
+import sharepointLogo from "#renderer/assets/connectors/sharepoint.webp?no-inline";
+import smartsheetLogo from "#renderer/assets/connectors/smartsheet.webp?no-inline";
+import teamsLogo from "#renderer/assets/connectors/teams.webp?no-inline";
+import youtubeLogo from "#renderer/assets/connectors/youtube.webp?no-inline";
 import { AppBrandMark } from "#renderer/components/app-icon";
 import { cn } from "#renderer/lib/cn";
 
@@ -54,6 +71,24 @@ export const CONNECTOR_MARK_IDS = [
   "gcp",
   "canva",
   "paypal",
+  "autodesk",
+  "azure",
+  "box",
+  "dynamics365",
+  "gitlab",
+  "google-ads",
+  "google-analytics",
+  "search-console",
+  "instagram",
+  "messenger",
+  "meta",
+  "monday",
+  "onenote",
+  "quickbooks",
+  "sharepoint",
+  "smartsheet",
+  "teams",
+  "youtube",
   // Model providers (the picker, Settings › Models, onboarding).
   "anthropic",
   "openai",
@@ -94,9 +129,46 @@ const LOGO_ASSETS: Record<string, string> = {
   calendar: calendarLogo,
   drive: driveLogo,
   gemini: geminiLogo,
+  azure: azureLogo,
+  box: boxLogo,
+  dynamics365: dynamics365Logo,
+  gitlab: gitlabLogo,
+  "google-ads": googleAdsLogo,
+  "google-analytics": googleAnalyticsLogo,
+  "search-console": searchConsoleLogo,
+  instagram: instagramLogo,
+  messenger: messengerLogo,
+  meta: metaLogo,
+  monday: mondayLogo,
+  onenote: onenoteLogo,
+  quickbooks: quickbooksLogo,
+  sharepoint: sharepointLogo,
+  smartsheet: smartsheetLogo,
+  teams: teamsLogo,
+  youtube: youtubeLogo,
 };
 
 const MARKS: Record<ConnectorMarkId, { parts: Part[] }> = {
+  autodesk: {
+    parts: [{ d: "M2 20 15 5h7v15h-5v-4h-4l-3.5 4z", fill: INK }],
+  },
+  azure: { parts: [] },
+  box: { parts: [] },
+  dynamics365: { parts: [] },
+  gitlab: { parts: [] },
+  "google-ads": { parts: [] },
+  "google-analytics": { parts: [] },
+  "search-console": { parts: [] },
+  instagram: { parts: [] },
+  messenger: { parts: [] },
+  meta: { parts: [] },
+  monday: { parts: [] },
+  onenote: { parts: [] },
+  quickbooks: { parts: [] },
+  sharepoint: { parts: [] },
+  smartsheet: { parts: [] },
+  teams: { parts: [] },
+  youtube: { parts: [] },
   gmail: { parts: [] },
   calendar: { parts: [] },
   drive: { parts: [] },

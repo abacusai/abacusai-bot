@@ -103,6 +103,12 @@ vi.mock("./trash.js", async (importOriginal) => ({
   trashShimEnv: (env: Record<string, string>) => env,
 }));
 
+// Likewise the grep launchers, which grep-shim.test.ts runs through a real shell.
+vi.mock("./grep-launcher.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./grep-launcher.js")>()),
+  grepShimEnv: (env: Record<string, string>) => env,
+}));
+
 /** A child's pipe: an emitter the backend is also allowed to tear down. */
 class FakeStream extends EventEmitter {
   destroy = vi.fn();
@@ -559,6 +565,36 @@ describe("running a command on this machine", () => {
       NODE_USE_ENV_PROXY: "1",
     });
   });
+
+  it.each(["darwin", "win32"] as const)(
+    "never hands a command the variable that ran this process as Node (%s)",
+    async (platform) => {
+      // An Electron app the command starts (LM Studio, VS Code) would read it
+      // and start as plain Node.
+      onPlatform(platform);
+      unconfined();
+      const operations = await localOperations();
+
+      const running = exec(operations, "lms server start", "/work", {
+        env: {
+          // Windows names are case-blind, so is the filter there.
+          [platform === "win32"
+            ? "Electron_Run_As_Node"
+            : "ELECTRON_RUN_AS_NODE"]: "1",
+          ELECTRON_NO_ATTACH_CONSOLE: "1",
+          TOKEN: "abc",
+        },
+      });
+      child.finish(0);
+      await running;
+
+      const { env } = lastSpawn().options as { env: Record<string, string> };
+      expect(env.TOKEN).toBe("abc");
+      expect(
+        Object.keys(env).filter((name) => /^electron_/i.test(name))
+      ).toEqual([]);
+    }
+  );
 
   it("merges into the caller's PATH whatever its spelling", async () => {
     // Windows spells it `Path`, and pi's getShellEnv() passes that casing

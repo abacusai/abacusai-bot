@@ -8,22 +8,33 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `5504c7cf` with Channels (#678)
+## Current: `55aecf25`, the app in Chinese
 
-**430 / 8224918 / 2753945.** Records the renderer with Channels (#678): the
-channel page and its details (one lazy route chunk of 37719 bytes, 13197
-gzip, and a 2762-byte second chunk), the channel rows the bots list shares
-with it (`group-rows`, 5817 bytes), and the `channels.*` strings in every
-locale chunk. Against `ce39b54f5` with #664: +4 chunks (+0.94%), +79868
-bytes (+0.98%), +28941 gzip bytes (+1.06%); gzip was 28941 bytes over the
-allowance's 27250. `apps/web`'s dependencies did not change. The 1% allowance
+**430 / 8619560 / 2893106.** Records the renderer with Simplified and Traditional
+Chinese. Each language is one locale chunk, loaded only when that language is
+picked, so nobody downloads both. Against `5380f79e` (main before this change,
+428 / 8242828 / 2759597): +2 chunks (+0.47%), +376732 bytes (+4.57%), +133509
+gzip bytes (+4.84%). `apps/web`'s dependencies did not change. The 1% allowance
 is unchanged.
 
-Measured from a build of main at `5504c7cf` merged with #678 (Linux x64),
-summed the same way as `check-desktop-parity.mjs`; the totals equal what CI
-reported on the branch. This baseline-only change touches no renderer code.
+Measured from a frozen-lockfile build of `55aecf25` and of `5380f79e` (Linux
+x64), summed the same way as `check-desktop-parity.mjs`. This baseline-only
+change touches no renderer code.
 
 ## History
+
+### `f5a587da` with slash commands
+
+**428 / 8233686 / 2756234.** Records the renderer with the work merged since
+#664, the + menu's connectors and slash commands, which took it 7186 bytes past
+the 1% allowance. Most of the growth is the strings, carried once per language.
+Against `ce39b54f5`: +2 chunks (+0.47%), +88636 bytes (+1.09%), +31230 gzip
+bytes (+1.15%). `apps/web`'s dependencies did not change. The 1% allowance is
+unchanged.
+
+Measured from a frozen-lockfile build of `f5a587da` (Linux x64), summed the
+same way as `check-desktop-parity.mjs`. This baseline-only change touches no
+renderer code.
 
 ### `ce39b54f5` with Share (#664)
 

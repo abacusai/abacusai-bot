@@ -21,6 +21,7 @@ import {
 import { ChatView } from "#renderer/features/chat/kit/lazy-view";
 import { useThreadHost } from "#renderer/features/chat/runtime/host";
 import { chatLoading } from "#renderer/features/chat/runtime/lazy-runtime";
+import { COMPOSER_CONNECTORS } from "#renderer/features/library/composer-connectors";
 import { requestBrowserOpen } from "#renderer/features/shell/browser-open";
 import {
   openPanelTab,
@@ -85,7 +86,7 @@ const Sender = ({
           ...slots.chat,
           wallpaper: bot.wallpaper ?? null,
         }}
-        composer={slots.composer}
+        composer={{ ...slots.composer, connectors: COMPOSER_CONNECTORS }}
       />
       <SidePanelContent kind="details">
         {(_, active) => (

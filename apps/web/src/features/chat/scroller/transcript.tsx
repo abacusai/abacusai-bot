@@ -36,6 +36,7 @@ import {
 import { useChatView } from "../kit/context";
 import { DeliverableOfferRow } from "../kit/deliverable-offer";
 import { appLineOf, userView, routeRowOf } from "../kit/message";
+import { RetryOfferRow } from "../kit/retry-offer";
 import {
   BusyLine,
   busyLabel,
@@ -914,6 +915,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
           {rows}
           <RunTail messages={messages} />
           <DeliverableOfferRow messages={messages} active={active} />
+          <RetryOfferRow messages={messages} active={active} />
           <SuccessPitchRow active={active} />
           <UpgradeTriggers
             messages={messages}

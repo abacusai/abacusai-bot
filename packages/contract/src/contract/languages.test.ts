@@ -9,7 +9,11 @@ import * as v from "valibot";
 import { describe, expect, it } from "vitest";
 
 import { PrefsPatchSchema } from "./db";
-import { matchSupportedLanguage, resolveAppLanguage } from "./languages";
+import {
+  languageNameTag,
+  matchSupportedLanguage,
+  resolveAppLanguage,
+} from "./languages";
 import { SUPPORTED_LANGUAGES } from "./rows";
 
 describe("supported languages", () => {
@@ -39,6 +43,47 @@ describe("supported languages", () => {
   it("are never Hindi: a Hindi OS matches no UI locale", () => {
     expect(matchSupportedLanguage(["hi-IN"])).toBeUndefined();
     expect(matchSupportedLanguage(["hi"])).toBeUndefined();
+  });
+});
+
+describe("Chinese, by the script its readers read", () => {
+  it.each([
+    ["zh", "zh-CN"],
+    ["zh-CN", "zh-CN"],
+    ["zh-SG", "zh-CN"],
+    ["zh-MY", "zh-CN"],
+    ["zh-Hans", "zh-CN"],
+    ["zh-Hans-CN", "zh-CN"],
+    ["zh-Hans-SG", "zh-CN"],
+    // A script outranks a region.
+    ["zh-Hans-HK", "zh-CN"],
+    ["zh-Hans-TW", "zh-CN"],
+    ["zh-TW", "zh-TW"],
+    ["zh-HK", "zh-TW"],
+    ["zh-MO", "zh-TW"],
+    ["zh-Hant", "zh-TW"],
+    ["zh-Hant-TW", "zh-TW"],
+    ["zh-Hant-HK", "zh-TW"],
+    ["zh-Hant-MO", "zh-TW"],
+    ["zh-Hant-CN", "zh-TW"],
+    ["zh_TW", "zh-TW"],
+    ["ZH-hk", "zh-TW"],
+    // An invalid value gets the deliberate default, as Spanish does.
+    ["zh-!!", "zh-CN"],
+  ])("%s reads %s", (tag, expected) => {
+    expect(matchSupportedLanguage([tag])).toBe(expected);
+  });
+
+  it("names each by its script, and every other locale by its own code", () => {
+    expect(languageNameTag("zh-CN")).toBe("zh-Hans");
+    expect(languageNameTag("zh-TW")).toBe("zh-Hant");
+    expect(languageNameTag("tr-TR")).toBe("tr-TR");
+  });
+
+  it("does not move the Spanish rule", () => {
+    expect(matchSupportedLanguage(["es_ES"])).toBe("es-ES");
+    expect(matchSupportedLanguage(["es-Latn-ES"])).toBe("es-ES");
+    expect(matchSupportedLanguage(["es-!!"])).toBe("es-419");
   });
 });
 
@@ -73,6 +118,18 @@ describe("the app's language, one resolution for the UI, the menus and the agent
       "system",
       ["es-MX"],
       { ui: "es-419", tag: "es-MX" },
+    ],
+    [
+      "Traditional for a Hong Kong OS, whose tag the agent still gets",
+      "system",
+      ["zh-Hant-HK", "en-US"],
+      { ui: "zh-TW", tag: "zh-Hant-HK" },
+    ],
+    [
+      "Simplified for bare Chinese",
+      "system",
+      ["zh"],
+      { ui: "zh-CN", tag: "zh" },
     ],
     [
       "an English UI on a Hindi OS (the agent reads hi as English too)",

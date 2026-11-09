@@ -3,6 +3,7 @@ import { GATEWAY_SERVER_NAME } from "@abacus-ai/connectors/registry";
 import type {
   AgentMode,
   AgentStatus,
+  SessionAction,
   SkillMetadata,
   UserTextTags,
 } from "./agent-types";
@@ -449,6 +450,11 @@ export interface AgentSetModelRequest extends AgentSessionCommandRequest {
 export interface AgentPermissionResponseRequest extends AgentSessionCommandRequest {
   permissionId: string;
   decision: unknown;
+}
+
+export interface AgentActionRequest extends AgentSessionCommandRequest {
+  action: SessionAction;
+  value?: string;
 }
 
 export interface AgentSwitchConversationRequest extends AgentSessionCommandRequest {

@@ -1,4 +1,4 @@
-import type { AgentMode } from "@abacus-ai/contract/agent-types";
+import { AgentMode } from "@abacus-ai/contract/agent-types";
 import { detectRememberRequest } from "@abacus-ai/contract/remember";
 /**
  * The composer (spec 02 §8): a compound around the draft store. The bot pill
@@ -8,7 +8,7 @@ import { detectRememberRequest } from "@abacus-ai/contract/remember";
  * element-level, except Stop (`Mod+.`), the one global shortcut.
  */
 import { Store, useSelector } from "@tanstack/react-store";
-import { ArrowUp, FileText, Folder, Mic, Plus } from "lucide-react";
+import { ArrowUp, FileText, Folder, Mic, Plug, Plus } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   createContext,
@@ -30,6 +30,7 @@ import { SendError } from "#renderer/components/send-error";
 import { Spinner } from "#renderer/components/spinner";
 import { isNotFound } from "#renderer/data/ai";
 import { isRpcError } from "#renderer/data/query-client";
+import type { ComposerCommand } from "#renderer/lib/chat-commands";
 import { cn } from "#renderer/lib/cn";
 import {
   clearDraft,
@@ -53,11 +54,14 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "#renderer/ui/dropdown-menu";
+import { Popover, PopoverContent } from "#renderer/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 
 import { useChatView } from "../kit/context";
+import { messageMarkdown } from "../kit/message-actions";
 import { composeReply, ReplyQuote } from "../kit/reply";
 import {
   composerChildren,
@@ -81,9 +85,15 @@ import {
   retryAttachment,
 } from "./attachments";
 import { ModeChip, ModelChip, type ModelChipHandle } from "./chips";
+import { composerCommands } from "./commands";
 import { OtherProviderNotice } from "./other-provider-notice";
 import { setQueueEditing } from "./queue-editing";
-import { TriggerMenu, triggerAt, type TriggerState } from "./triggers";
+import {
+  matchCommand,
+  TriggerMenu,
+  triggerAt,
+  type TriggerState,
+} from "./triggers";
 
 /** The composer's max height before it scrolls (today's `COMPOSER_MAX_HEIGHT`). */
 const COMPOSER_MAX_HEIGHT = 200;
@@ -250,6 +260,9 @@ const Attach = () => {
   const { runtime, composer: config } = useChatView();
   const { threadId } = useComposer();
   const [error, setError] = useState<string | null>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  // null until first opened: nothing of the panel loads before it is asked for.
+  const [connectors, setConnectors] = useState<boolean | null>(null);
   return (
     <>
       {error && <p role="alert">{error}</p>}
@@ -257,6 +270,7 @@ const Attach = () => {
         <DropdownMenuTrigger
           render={
             <Button
+              ref={button}
               variant="secondary"
               size="icon-lg"
               aria-label={t("chat.composer.attach")}
@@ -363,8 +377,32 @@ const Attach = () => {
               {t("web.files.vmFiles")}
             </DropdownMenuItem>
           )}
+          {config.connectors && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setConnectors(true)}>
+                <Plug aria-hidden />
+                {t("chat.composer.addConnectors")}
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
+      {config.connectors && connectors != null && (
+        <>
+          <Popover open={connectors} onOpenChange={setConnectors}>
+            <PopoverContent
+              anchor={button}
+              side="top"
+              align="start"
+              className="w-80 gap-1 p-1.5"
+            >
+              {config.connectors.panel}
+            </PopoverContent>
+          </Popover>
+          {config.connectors.overlay}
+        </>
+      )}
     </>
   );
 };
@@ -608,7 +646,7 @@ export const ThreadComposer = () => {
   const [trigger, setTrigger] = useState<TriggerState | null>(() =>
     triggerAt(draft.text, draft.text.length, {
       mentions: config.mentions != null,
-      skills: skills.length > 0,
+      skills: true,
     })
   );
   const field = useRef<HTMLTextAreaElement>(null);
@@ -661,15 +699,71 @@ export const ThreadComposer = () => {
               ? "focused"
               : "resting";
 
+  const [modePicks, setModePicks] = useState(0);
+  const [modelPicks, setModelPicks] = useState(0);
+  useEffect(() => {
+    if (modelPicks > 0) modelChip.current?.openMenu();
+  }, [modelPicks]);
+  const commands = [
+    ...composerCommands(t, {
+      ...(config.onNewChat != null ? { newChat: config.onNewChat } : {}),
+      ...(config.model != null
+        ? { chooseModel: () => setModelPicks((picks) => picks + 1) }
+        : {}),
+      ...(config.showModeChip
+        ? {
+            plan: () => {
+              if (config.setMode != null)
+                return config.setMode(AgentMode.PlanMode);
+              updateDraft(threadId, (current) => ({
+                ...current,
+                mode: AgentMode.PlanMode,
+              }));
+            },
+            chooseMode: () => setModePicks((picks) => picks + 1),
+          }
+        : {}),
+      copyLast: () => {
+        const last = session.hostStore.state.messages.findLast(
+          (message) => message.role === "assistant"
+        );
+        if (last == null) return;
+        return navigator.clipboard.writeText(messageMarkdown(last));
+      },
+      help: () => {
+        setText("/", 1);
+        field.current?.focus();
+      },
+    }),
+    ...(config.commands ?? []),
+  ];
+  const runCommand = (command: ComposerCommand, value: string): void => {
+    setError(null);
+    setTrigger(null);
+    updateDraft(threadId, (current) => ({ ...current, text: "" }));
+    void Promise.resolve()
+      .then(() => command.run?.(value))
+      .catch(() => setError(t("chat.composer.commandFailed")));
+  };
+
   const submit = (): void => {
     if (submitting.current || config.pending) return;
+    const typed =
+      config.readOnly == null && draft.attachments.length === 0
+        ? matchCommand(draft.text, commands)
+        : null;
+    if (typed?.command.valueRequired === true && typed.value === "") return;
+    if (typed?.command.run != null) {
+      runCommand(typed.command, typed.value);
+      return;
+    }
     if (config.blocked) {
       if (config.model != null) modelChip.current?.requestModel();
       else config.onBlocked?.();
       return;
     }
     const route = routeSubmit({
-      text: draft.text,
+      text: typed?.command.expand?.(typed.value) ?? draft.text,
       attachments: draft.attachments,
       busy,
       readOnly: config.readOnly != null || gone,
@@ -790,7 +884,7 @@ export const ThreadComposer = () => {
         ? null
         : triggerAt(text, caret, {
             mentions: config.mentions != null,
-            skills: skills.length > 0,
+            skills: true,
           })
     );
   };
@@ -978,6 +1072,8 @@ export const ThreadComposer = () => {
   };
   const mode = config.showModeChip ? (
     <ModeChip
+      key={modePicks}
+      defaultOpen={modePicks > 0}
       availableModes={config.availableModes}
       value={liveMode}
       draft={draft.mode ?? config.defaultMode}
@@ -1040,8 +1136,16 @@ export const ThreadComposer = () => {
           <TriggerMenu
             trigger={trigger}
             field={field}
+            commands={config.readOnly == null ? commands : []}
             skills={skills}
             mentions={config.mentions}
+            onCommand={(command) => {
+              if (command.run != null) runCommand(command, "");
+              else {
+                setText(`/${command.name}`, null);
+                field.current?.focus();
+              }
+            }}
             onPick={(insert) => {
               const next =
                 draft.text.slice(0, trigger.start) +

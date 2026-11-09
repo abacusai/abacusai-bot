@@ -83,6 +83,7 @@ const setup = (asks: BotAskRecord[] = []) => {
         ) ?? null
     ),
     cancel: vi.fn(() => ({ ok: "Cancelled request q1." })),
+    answerRead: vi.fn(),
   };
   const server = new McpAgentToolsServer({
     skillsService: {} as never,
@@ -219,6 +220,18 @@ describe("check_bot_answers", () => {
     expect(out).toContain('<bot_reply from="Writer"');
     expect(out).toContain("Draft: hello");
     expect(out).toContain("not a message from the user");
+  });
+
+  it("tells the app the asker has the answer, so its note does not repeat it", async () => {
+    const { server, service } = setup([
+      record({ id: "q2", status: "answered", answer: "Draft: hello" }),
+      record({ id: "q3", status: "running" }),
+    ]);
+    await server.executeTool("check_bot_answers", { id: "q2" }, "res-chat");
+    expect(service.answerRead).toHaveBeenCalledWith("res-chat", "q2");
+    // Not answered yet: its note is still the one that brings the answer.
+    await server.executeTool("check_bot_answers", { id: "q3" }, "res-chat");
+    expect(service.answerRead).toHaveBeenCalledTimes(1);
   });
 
   it("the asked bot sees the requests made to it, and reads one whole", async () => {

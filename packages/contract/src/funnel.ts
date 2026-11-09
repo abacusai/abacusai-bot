@@ -38,10 +38,25 @@ export const FUNNEL_STEPS = [
   // A bot asked to build offers a session (offer_session's card).
   "session_offer_shown",
   "session_offer_opened",
+  // A coding starter on the session start page; the detail is which.
+  "code_starter_tapped",
   // A bot's reply ended with tap-to-run tasks (suggest_tasks); the detail is
   // the bot's template, and a tap's also whether it copied.
   "task_suggestions_shown",
   "task_suggestion_tapped",
+  // The next step (next-step.ts). The install's half, once (on or off); a
+  // result handed over, by what it was and the half; then the offer under it,
+  // and a tap, as work or routine.
+  "next_step_half",
+  "result_delivered",
+  "next_step_shown",
+  "next_step_tapped",
+  // The retry on a top model (retry-offer.ts). The account's half, once (on
+  // or off); the line, by why it showed; a tap and a close.
+  "retry_offer_half",
+  "retry_offer_shown",
+  "retry_offer_tapped",
+  "retry_offer_dismissed",
   // The agent asked for a routine that already exists, and got that one back;
   // the detail is how it compared (same, alike or check-in) and where it lives.
   "routine_duplicate_avoided",

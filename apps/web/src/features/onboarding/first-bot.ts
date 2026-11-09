@@ -29,8 +29,6 @@ export type FirstBotResult = {
   checkInRoutineId: string | null;
   preview?: boolean;
 };
-export const GITHUB_CONNECTOR_ID = "abacus-githubbot";
-
 /** What the GitHub card offers: `null` where this account can't connect it. */
 export type GithubChoice = "connect" | "start" | null;
 

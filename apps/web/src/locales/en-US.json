@@ -1297,8 +1297,7 @@
         "title": "Work on my code",
         "body": "Fix a bug or add a feature in your GitHub repo.",
         "connect": "Connect GitHub",
-        "start": "Start",
-        "botName": "Code Assistant"
+        "start": "Start"
       },
       "research": {
         "title": "Research or write",
@@ -1777,6 +1776,23 @@
           "name": "A simple game",
           "detail": "Playable in your browser.",
           "prompt": "Build a simple game I can play in the browser right away: a snake game with arrow-key and swipe controls, a score, a best score and a restart button. Keep it to one page and show it to me when it is ready."
+        }
+      },
+      "code": {
+        "fix-a-bug": {
+          "name": "Fix a bug",
+          "detail": "Find the cause and open a pull request.",
+          "prompt": "Fix a bug in my code. If this folder is a GitHub repository, work on it; if not, list my GitHub repositories and ask me which one. Ask me what is broken, then find the cause, fix it on a new branch, run the tests and open a pull request."
+        },
+        "add-a-feature": {
+          "name": "Add a feature",
+          "detail": "Build it on a branch and open a pull request.",
+          "prompt": "Add a feature to my code. If this folder is a GitHub repository, work on it; if not, list my GitHub repositories and ask me which one. Ask me what to add, then build it on a new branch, run the tests and open a pull request."
+        },
+        "review-my-prs": {
+          "name": "Review my pull requests",
+          "detail": "Bugs and missing tests, by file and line.",
+          "prompt": "Review my open pull requests. If this folder is a GitHub repository, use it; if not, list my GitHub repositories and ask me which one. For each pull request, tell me what it changes and call out bugs, risks and missing tests, with the file and line. Tell me here only: do not post on GitHub or change any code."
         }
       }
     },
@@ -2929,6 +2945,7 @@
       "showMore_other": "Show {{count}} more lines"
     },
     "composer": {
+      "addConnectors": "Add connectors",
       "attach": "Attach",
       "attachFailed": "Couldn't attach this file",
       "attachFiles": "Files or images",
@@ -2940,7 +2957,9 @@
       "files": "Files",
       "gone": "This conversation no longer exists.",
       "mini": "Reply, or steer the run",
+      "manageConnectors": "Manage connectors",
       "modeFailed": "Couldn't change the mode",
+      "noConnectors": "No connectors found",
       "model": "Model: {{name}}",
       "models": "Models",
       "notReady": "The agent isn't ready. Try again.",
@@ -2976,7 +2995,9 @@
       "folderItems_one": "{{count}} item",
       "folderItems_other": "{{count}} items",
       "includedIn": "Included in {{plan}}",
-      "includedInPaid": "Included in paid plans"
+      "includedInPaid": "Included in paid plans",
+      "commands": "Commands",
+      "commandFailed": "That didn't work. Try again."
     },
     "day": {
       "today": "Today",
@@ -3350,6 +3371,9 @@
       "copy": "Copy “{{text}}” to send from your phone",
       "copyFailed": "Couldn't copy that"
     },
+    "retryOffer": {
+      "try": "Try this again with {{model}}"
+    },
     "deliverableOffer": {
       "label": "Keep this answer as a document",
       "doc": "Make this a doc",
@@ -3360,6 +3384,59 @@
         "doc": "Turn your last answer into a polished document I can keep and share, saved as a PDF in the workspace.",
         "report": "Turn your last answer into a polished report I can keep and share, saved as a PDF in the workspace."
       }
+    },
+    "commands": {
+      "new": "Start a new chat",
+      "model": "Change the model",
+      "plan": "Plan before acting",
+      "permissions": "Choose what runs without asking",
+      "copy": "Copy the last reply",
+      "help": "Show every command",
+      "busy": "Wait for this reply to finish, then try again",
+      "notRunning": "Send a message first, then try again",
+      "invalid": "That value is not available here",
+      "contextUnknown": "Not measured yet. Send a message first.",
+      "contextPercent": "This chat is {{percent}}% full",
+      "compact": "Shorten this chat (uses credits)",
+      "compactArgument": "what to keep",
+      "compactDone": "Chat shortened",
+      "context": "How full this chat is",
+      "effort": "Set how hard the model thinks",
+      "effortArgument": "low, medium or high",
+      "effortDone": "Effort: {{level}}",
+      "autocompact": "Turn automatic shortening on or off",
+      "autocompactArgument": "on or off",
+      "autocompactDone": "Automatic shortening: {{value}}",
+      "export": "Save this chat as a file",
+      "exportDone": "Chat saved",
+      "tasks": "Work still running",
+      "tasksDone": "{{count}} running in the background",
+      "status": "How this chat is doing",
+      "statusDone": "Chat is running",
+      "review": "Review the work (uses credits)",
+      "reviewArgument": "what to review",
+      "reviewPrompt": "Review the changes in this workspace for bugs. {{value}}",
+      "subtask": "Hand off a task (uses credits)",
+      "subtaskArgument": "the task",
+      "subtaskPrompt": "Delegate this as a separate task: {{value}}",
+      "resume": "Open another chat",
+      "usage": "Credits used",
+      "config": "Open settings",
+      "theme": "Change the theme",
+      "login": "Your account",
+      "memory": "What the app remembers",
+      "connectors": "Add or manage connectors",
+      "skills": "Manage skills",
+      "mcp": "Manage MCP servers",
+      "plugin": "Browse tools",
+      "workflows": "Open routines",
+      "agents": "Create a bot",
+      "feedback": "Report a problem",
+      "rename": "Rename this chat",
+      "renameArgument": "new name",
+      "diff": "See what changed",
+      "addDir": "Add a folder",
+      "tooSmall": "This chat is too short to shorten yet"
     }
   },
   "notch": {
@@ -3761,6 +3838,7 @@
       "installFailed": "Couldn't install the update",
       "manualInstall": "Update ready — install manually",
       "installing": "Restarting…",
+      "preparing": "Preparing update…",
       "queued": "Restarts after the current task",
       "checking": "Checking…",
       "downloading": "Downloading update… {{percent}}%",

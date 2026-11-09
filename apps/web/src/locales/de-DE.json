@@ -1297,8 +1297,7 @@
         "title": "An meinem Code arbeiten",
         "body": "Behebe einen Fehler oder ergänze eine Funktion in deinem GitHub-Repo.",
         "connect": "GitHub verbinden",
-        "start": "Starten",
-        "botName": "Code-Assistent"
+        "start": "Starten"
       },
       "research": {
         "title": "Recherchieren oder schreiben",
@@ -1777,6 +1776,23 @@
           "name": "Ein einfaches Spiel",
           "detail": "Direkt im Browser spielbar.",
           "prompt": "Bau ein einfaches Spiel, das ich sofort im Browser spielen kann: ein Snake-Spiel mit Pfeiltasten- und Wischsteuerung, Punktestand, Bestwert und einem Neustart-Button. Alles auf einer Seite, und zeig es mir, wenn es fertig ist."
+        }
+      },
+      "code": {
+        "fix-a-bug": {
+          "name": "Einen Fehler beheben",
+          "detail": "Ursache finden und einen Pull Request öffnen.",
+          "prompt": "Behebe einen Fehler in meinem Code. Wenn dieser Ordner ein GitHub-Repository ist, arbeite damit; wenn nicht, liste meine GitHub-Repositories auf und frag mich, welches. Frag mich, was nicht funktioniert, finde dann die Ursache, behebe sie auf einem neuen Branch, führe die Tests aus und öffne einen Pull Request."
+        },
+        "add-a-feature": {
+          "name": "Eine Funktion hinzufügen",
+          "detail": "Auf einem Branch bauen und einen Pull Request öffnen.",
+          "prompt": "Füge meinem Code eine Funktion hinzu. Wenn dieser Ordner ein GitHub-Repository ist, arbeite damit; wenn nicht, liste meine GitHub-Repositories auf und frag mich, welches. Frag mich, was hinzukommen soll, baue es dann auf einem neuen Branch, führe die Tests aus und öffne einen Pull Request."
+        },
+        "review-my-prs": {
+          "name": "Meine Pull Requests prüfen",
+          "detail": "Fehler und fehlende Tests, mit Datei und Zeile.",
+          "prompt": "Prüfe meine offenen Pull Requests. Wenn dieser Ordner ein GitHub-Repository ist, nutze es; wenn nicht, liste meine GitHub-Repositories auf und frag mich, welches. Sag mir für jeden Pull Request, was er ändert, und nenne Fehler, Risiken und fehlende Tests mit Datei und Zeile. Sag es nur hier: Poste nichts auf GitHub und ändere keinen Code."
         }
       }
     },
@@ -2929,6 +2945,7 @@
       "showMore_other": "Show {{count}} more lines"
     },
     "composer": {
+      "addConnectors": "Konnektoren hinzufügen",
       "attach": "Anhängen",
       "attachFailed": "Couldn't attach this file",
       "attachFiles": "Files or images",
@@ -2940,7 +2957,9 @@
       "files": "Files",
       "gone": "This conversation no longer exists.",
       "mini": "Reply, or steer the run",
+      "manageConnectors": "Konnektoren verwalten",
       "modeFailed": "Couldn't change the mode",
+      "noConnectors": "Keine Konnektoren gefunden",
       "model": "Model: {{name}}",
       "models": "Models",
       "notReady": "The agent isn't ready. Try again.",
@@ -2976,7 +2995,9 @@
       "folderItems_one": "{{count}} item",
       "folderItems_other": "{{count}} items",
       "includedIn": "In {{plan}} enthalten",
-      "includedInPaid": "In bezahlten Tarifen enthalten"
+      "includedInPaid": "In bezahlten Tarifen enthalten",
+      "commands": "Commands",
+      "commandFailed": "That didn't work. Try again."
     },
     "day": {
       "today": "Today",
@@ -3350,6 +3371,9 @@
       "copy": "„{{text}}“ kopieren, um es vom Handy zu senden",
       "copyFailed": "Kopieren fehlgeschlagen"
     },
+    "retryOffer": {
+      "try": "Noch einmal mit {{model}} versuchen"
+    },
     "deliverableOffer": {
       "label": "Diese Antwort als Dokument behalten",
       "doc": "Als Dokument speichern",
@@ -3360,6 +3384,59 @@
         "doc": "Mach aus deiner letzten Antwort ein ansprechendes Dokument, das ich behalten und teilen kann, und speichere es als PDF im Arbeitsbereich.",
         "report": "Mach aus deiner letzten Antwort einen ansprechenden Bericht, den ich behalten und teilen kann, und speichere ihn als PDF im Arbeitsbereich."
       }
+    },
+    "commands": {
+      "new": "Start a new chat",
+      "model": "Change the model",
+      "plan": "Plan before acting",
+      "permissions": "Choose what runs without asking",
+      "copy": "Copy the last reply",
+      "help": "Show every command",
+      "busy": "Wait for this reply to finish, then try again",
+      "notRunning": "Send a message first, then try again",
+      "invalid": "That value is not available here",
+      "contextUnknown": "Not measured yet. Send a message first.",
+      "contextPercent": "This chat is {{percent}}% full",
+      "compact": "Shorten this chat (uses credits)",
+      "compactArgument": "what to keep",
+      "compactDone": "Chat shortened",
+      "context": "How full this chat is",
+      "effort": "Set how hard the model thinks",
+      "effortArgument": "low, medium or high",
+      "effortDone": "Effort: {{level}}",
+      "autocompact": "Turn automatic shortening on or off",
+      "autocompactArgument": "on or off",
+      "autocompactDone": "Automatic shortening: {{value}}",
+      "export": "Save this chat as a file",
+      "exportDone": "Chat saved",
+      "tasks": "Work still running",
+      "tasksDone": "{{count}} running in the background",
+      "status": "How this chat is doing",
+      "statusDone": "Chat is running",
+      "review": "Review the work (uses credits)",
+      "reviewArgument": "what to review",
+      "reviewPrompt": "Review the changes in this workspace for bugs. {{value}}",
+      "subtask": "Hand off a task (uses credits)",
+      "subtaskArgument": "the task",
+      "subtaskPrompt": "Delegate this as a separate task: {{value}}",
+      "resume": "Open another chat",
+      "usage": "Credits used",
+      "config": "Open settings",
+      "theme": "Change the theme",
+      "login": "Your account",
+      "memory": "What the app remembers",
+      "connectors": "Add or manage connectors",
+      "skills": "Manage skills",
+      "mcp": "Manage MCP servers",
+      "plugin": "Browse tools",
+      "workflows": "Open routines",
+      "agents": "Create a bot",
+      "feedback": "Report a problem",
+      "rename": "Rename this chat",
+      "renameArgument": "new name",
+      "diff": "See what changed",
+      "addDir": "Add a folder",
+      "tooSmall": "This chat is too short to shorten yet"
     }
   },
   "notch": {
@@ -3761,6 +3838,7 @@
       "installFailed": "Couldn't install the update",
       "manualInstall": "Update bereit – manuell installieren",
       "installing": "Restarting…",
+      "preparing": "Preparing update…",
       "queued": "Neustart nach der aktuellen Aufgabe",
       "checking": "Wird gesucht…",
       "downloading": "Update wird geladen… {{percent}} %",

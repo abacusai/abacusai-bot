@@ -9,10 +9,21 @@
  */
 export const MANAGED_PYTHON_ENV = "ABACUSAI_BOT_PYTHON_ENV";
 
+/**
+ * Inheriting these turns Electron apps into Node or silences their console.
+ * Only callers running this app's binary as Node should set them as overrides.
+ */
+export const ELECTRON_INTERNAL_ENV: readonly string[] = [
+  "ELECTRON_RUN_AS_NODE",
+  "ELECTRON_NO_ATTACH_CONSOLE",
+];
+
 /** Variables laid over the base; an `undefined` value removes one, as a spread would. */
 export type EnvOverrides = Readonly<Record<string, string | undefined>>;
 
-/** `base` (this process's environment by default) with `overrides` applied in order. */
+/**
+ * `base` without Electron's internal variables, then `overrides` in order.
+ */
 export function childProcessEnv(
   base: NodeJS.ProcessEnv = process.env,
   ...overrides: Array<EnvOverrides | undefined>
@@ -30,7 +41,8 @@ export function childProcessEnvFor(
 
   if (platform !== "win32") {
     for (const [key, value] of Object.entries(base))
-      if (typeof value === "string") env[key] = value;
+      if (typeof value === "string" && !ELECTRON_INTERNAL_ENV.includes(key))
+        env[key] = value;
     for (const layer of overrides)
       for (const [key, value] of Object.entries(layer ?? {}))
         if (typeof value === "string") env[key] = value;
@@ -57,7 +69,12 @@ export function childProcessEnvFor(
   // Within the base, the spelling spawn itself would keep: first in sorted order.
   for (const key of Object.keys(base).sort()) {
     const value = base[key];
-    if (typeof value === "string" && !names.has(key.toUpperCase()))
+    const folded = key.toUpperCase();
+    if (
+      typeof value === "string" &&
+      !names.has(folded) &&
+      !ELECTRON_INTERNAL_ENV.includes(folded)
+    )
       put(key, value);
   }
   for (const layer of overrides)

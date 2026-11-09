@@ -117,6 +117,7 @@ const harness = async (
   const internals = host as unknown as Record<string, any>;
   let row = {
     creditsExhaustedAt: Date.now(),
+    dismissals: {},
     freeLaneChosenAt: null,
     routineCreditHold: null,
     ...seed,

@@ -9,6 +9,8 @@ import { existsSync } from "node:fs";
 import { delimiter, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { nodeLauncher } from "./launchers.js";
+
 /**
  * The package's `vendor/` directory: beside the bundle when packaged, one level
  * above dist/ in the workspace (tsdown clears dist on every build). Neither
@@ -45,21 +47,17 @@ export function scriptModulesDir(): string {
 }
 
 /**
- * Lets the shell run Node scripts on this app's own runtime, which every
- * machine has: ABACUSAI_BOT_NODE names this process's executable (run as Node,
- * as this process is) and NODE_PATH reaches the bundled libraries. Idempotent.
+ * ABACUSAI_BOT_NODE runs this app's runtime through a launcher; NODE_PATH
+ * reaches the bundled libraries. Idempotent.
  */
 export function useScriptRuntime(
   env: NodeJS.ProcessEnv = process.env,
   dir: string = scriptModulesDir(),
-  node: string = process.execPath
+  node: string | null = nodeLauncher()
 ): boolean {
-  if (!existsSync(dir)) return false;
+  if (!existsSync(dir) || node == null) return false;
 
-  // Forward slashes: the Windows shell drops unquoted backslashes.
-  env.ABACUSAI_BOT_NODE = node.replaceAll("\\", "/");
-  // The app's executable is Node only when told so; children inherit this.
-  if (process.versions.electron != null) env.ELECTRON_RUN_AS_NODE = "1";
+  env.ABACUSAI_BOT_NODE = node;
   const current = env.NODE_PATH ?? "";
   if (!current.split(delimiter).includes(dir))
     env.NODE_PATH = current === "" ? dir : `${dir}${delimiter}${current}`;

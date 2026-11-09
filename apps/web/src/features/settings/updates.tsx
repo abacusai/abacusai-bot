@@ -43,6 +43,7 @@ export const updatePhase = (
   if (!status) return "loading";
   if (status.installStalled) return "stalled";
   if (status.installing) return "installing";
+  if (status.preparing) return "preparing";
   if (status.manualInstall) return "manualInstall";
   if (status.error && status.failedPhase === "install") return "installFailed";
   if (status.restartQueued) return "queued";
@@ -348,11 +349,13 @@ export const CriticalUpdateDialog = () => {
     !!update.status.downloaded &&
     !update.status.installStalled &&
     !update.status.manualInstall;
+  const busy = ["installing", "preparing", "queued"].includes(update.phase);
   const paused =
     !!update.status?.error ||
     !!update.installError ||
     update.clicked ||
     !!update.status?.installing ||
+    !!update.status?.preparing ||
     !!update.status?.restartQueued;
   useEffect(() => {
     if (!open || paused) return;
@@ -404,12 +407,9 @@ export const CriticalUpdateDialog = () => {
           </p>
         )}
         <AlertDialogFooter>
-          <Button
-            disabled={["installing", "queued"].includes(update.phase)}
-            onClick={() => update.install()}
-          >
+          <Button disabled={busy} onClick={() => update.install()}>
             {t(
-              update.phase === "installing" || update.phase === "queued"
+              busy
                 ? `phase5.updates.${update.phase}`
                 : update.phase === "installFailed"
                   ? "phase5.tryAgain"

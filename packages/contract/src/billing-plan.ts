@@ -203,27 +203,33 @@ const TOP_MODELS_FEATURE = "top models including ";
  * Plain string splits: the line is the server's, and a backtracking pattern
  * over it could be made slow.
  */
-const planTopModels = (
-  features: readonly string[],
-  locale: string
-): string | null => {
+export const planTopModelNames = (features: readonly string[]): string[] => {
   for (const feature of features) {
     const line = feature.trim();
     if (!line.toLowerCase().startsWith(TOP_MODELS_FEATURE)) continue;
-    const names = line
+    return line
       .slice(TOP_MODELS_FEATURE.length)
       .split(",")
       .flatMap((part) => part.split(" and "))
       .map((name) => name.trim())
       .filter((name) => name.length > 0)
       .slice(0, TOP_MODEL_COUNT);
-    return names.length > 0
-      ? new Intl.ListFormat(locale, { style: "short", type: "unit" }).format(
-          names
-        )
-      : null;
   }
-  return null;
+  return [];
+};
+
+const planTopModels = (
+  features: readonly string[],
+  locale: string
+): string | null => {
+  const names = planTopModelNames(features);
+  if (names.length === 0) return null;
+  // Chinese's unit list has no separator at all: names would run together.
+  return locale.startsWith("zh")
+    ? names.join("、")
+    : new Intl.ListFormat(locale, { style: "short", type: "unit" }).format(
+        names
+      );
 };
 
 const APP_PROJECTS_FEATURE = " projects a month";

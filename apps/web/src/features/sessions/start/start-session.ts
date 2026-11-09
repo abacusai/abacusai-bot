@@ -38,8 +38,8 @@ export interface StartDraft {
   submittedAt?: number;
   /** Onboarding's first session: its first runs are on the house. */
   sponsored?: true;
-  /** Which suggestions the start page shows; onboarding's Build opens on its examples. */
-  starters?: "build";
+  /** Which suggestions the start page shows; onboarding's Build and GitHub picks open on their own. */
+  starters?: "build" | "code";
 }
 export const newStartDraft = (): StartDraft => ({
   id: crypto.randomUUID(),
@@ -104,16 +104,18 @@ export const takeStartPrompt = (threadId: string): string | null => {
 };
 
 /**
- * Onboarding's Build: a fresh draft on its examples, its first runs on the
- * house. `example` waits in the box, editable, so Enter starts something.
+ * Onboarding's Build and GitHub picks: a fresh draft on their starters, its
+ * first runs on the house. `example` waits in the box, editable, so Enter
+ * starts something.
  */
-export const startBuildDraft = (
+export const startExampleDraft = (
+  starters: NonNullable<StartDraft["starters"]>,
   sponsored: boolean,
   example?: string
 ): string => {
   startDraftStore.setState(() => ({
     ...newStartDraft(),
-    starters: "build",
+    starters,
     ...(sponsored ? { sponsored: true as const } : {}),
   }));
   const { id } = startDraftStore.state;

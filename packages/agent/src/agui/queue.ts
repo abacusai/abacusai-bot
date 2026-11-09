@@ -11,6 +11,7 @@
 import * as readline from "node:readline";
 import type { Readable } from "node:stream";
 
+import { setHostAccountPlan } from "../account-plan.js";
 import { isBotTask } from "../bot-task.js";
 import type { BotSession } from "../bot/bot-session.js";
 import {
@@ -27,6 +28,7 @@ import {
   type DesktopEvent,
   type PermissionDecision,
   type QueueEntry,
+  type SessionActionResult,
   type UserTextTags,
 } from "../protocol.js";
 import { shutdownRuntime } from "../sandbox/index.js";
@@ -315,6 +317,11 @@ export class HostCore {
 
         return;
 
+      case "account_plan":
+        setHostAccountPlan(command);
+
+        return;
+
       case "permission_response": {
         const released = this.session.hasPendingPermission(
           command.permissionId
@@ -459,6 +466,30 @@ export class HostCore {
           return;
         }
         this.emit({ type: "mcp_refreshed", requestId });
+
+        return;
+      }
+
+      case "session_action": {
+        const { requestId, action, value } = command;
+        // A compaction under a running turn would rewrite what it is reading.
+        if (action === "compact" && this.busy) {
+          this.emit({
+            type: "session_action_done",
+            requestId,
+            result: { ok: false, reason: "busy" },
+          });
+
+          return;
+        }
+        let result: SessionActionResult;
+        try {
+          result = await this.session.runAction(action, value);
+        } catch (error) {
+          console.error(`[session-action] ${action}: ${describe(error)}`);
+          result = { ok: false, reason: "failed" };
+        }
+        this.emit({ type: "session_action_done", requestId, result });
 
         return;
       }

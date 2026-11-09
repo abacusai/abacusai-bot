@@ -20,6 +20,7 @@ import type {
   CreditThresholdMark,
 } from "../credit-thresholds";
 import type { DeliverableOfferCard } from "../deliverable-offer";
+import type { NextStepCard } from "../next-step";
 import type {
   RoutineCreditHold,
   RoutineListItem,
@@ -141,6 +142,8 @@ export const SUPPORTED_LANGUAGES = [
   "ko-KR",
   "pt-BR",
   "tr-TR",
+  "zh-CN",
+  "zh-TW",
 ] as const;
 
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
@@ -202,6 +205,10 @@ export interface PrefsRow {
     successPitchCards?: Record<string, SuccessPitchCard>;
     /** The offer to turn a long answer into a document, shown and answered. */
     deliverableOffer?: DeliverableOfferCard | null;
+    /** The next step under a result, shown and answered. */
+    nextStepOffer?: NextStepCard | null;
+    /** The retry on a top model, shown and answered. */
+    retryOffer?: DeliverableOfferCard | null;
     freePlanSeenAt: number | null;
     upgradeRoutinesSeenAt: number | null;
     routineDuplicatesKept: string[];

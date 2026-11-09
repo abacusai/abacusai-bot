@@ -20,6 +20,7 @@ import {
   AgentMode,
   type DesktopEvent,
   type BotTaskTag,
+  type SessionActionResult,
   type UserTextTags,
 } from "@abacus-ai/contract/agent-types";
 import type {
@@ -120,6 +121,7 @@ import type {
   AgentSessionCommandRequest,
   AgentSessionSnapshot,
   AgentSetModeRequest,
+  AgentActionRequest,
   AgentSetModelRequest,
   AgentSwitchConversationRequest,
   IpcEvent,
@@ -172,6 +174,7 @@ import {
   type ConversationKey,
 } from "@abacus-ai/contract/conversation-scope";
 import type { CreditThresholdMark } from "@abacus-ai/contract/credit-thresholds";
+import { DELIVERABLE_OFFER_MAX_MISSES } from "@abacus-ai/contract/deliverable-offer";
 import type {
   BackendId,
   BackendStatus,
@@ -190,6 +193,7 @@ import {
   type UpdateMessagingSettingsRequest,
 } from "@abacus-ai/contract/messaging";
 import { abacusPlanTier, OPENLLM_ID } from "@abacus-ai/contract/models";
+import { routineOfferClosed } from "@abacus-ai/contract/next-step";
 import {
   EntityNotFoundError,
   WORKSPACE_NOT_FOUND,
@@ -359,6 +363,8 @@ import {
   BOT_ASK_TURN_TIMEOUT_MS,
   BOT_TASK_PREFIX,
   BOT_TASK_TURN_TIMEOUT_MS,
+  answerAlreadyReadNote,
+  type OwnChatLine,
   requestGist,
   taskFollowUpNote,
 } from "./services/bots/bot-ask";
@@ -394,10 +400,7 @@ import {
   HostedChromiumService,
 } from "./services/browser/chrome/hosted-chromium";
 import type { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
-import {
-  channelTitle,
-  type OwnChatLine,
-} from "./services/channels/channel-logic";
+import { channelTitle } from "./services/channels/channel-logic";
 import {
   CHANNEL_PLATFORM,
   ChannelService,
@@ -497,10 +500,12 @@ import {
 import { MessagingGatewayService } from "./services/messaging/messaging-gateway-service";
 import {
   accountMovedPlan,
+  accountPlan,
   cachedAbacusAccount,
   creditSnapshot,
   fetchAbacusAccount,
   lockAbacusModelForPlan,
+  onAbacusAccountPlan,
   onAbacusAccountRead,
   onAbacusPlanChange,
   onFreePlan,
@@ -545,6 +550,7 @@ import {
   resolveBackend,
 } from "./services/providers/exec-backend-service";
 import { listAvailableModels, modelForTier } from "./services/providers/models";
+import { nextStepOn } from "./services/providers/next-step";
 import {
   currentTier,
   newRoutineModel,
@@ -627,9 +633,12 @@ const ROUTINE_CONTEXT_CAP_TOKENS = 80_000;
 /** How far back a routine's runs show what it reaches besides a chat app. */
 const ROUTINE_RUNS_FOR_REACH = 5;
 const ROUTINE_FIRES_KEPT = 200;
+/** On an install with the next step, how long a routine runs before the free plan's 24/7 line. */
+const ALWAYS_ON_WAIT_MS = 24 * 60 * 60_000;
 
 /** The longest an unattended run's agent may take to start. */
 const UNATTENDED_STARTUP_TIMEOUT_MS = 90_000;
+const AGENT_ACTION_TIMEOUT_MS = 5 * 60_000;
 
 /** The folder every hosted routine run works in: one, kept out of the pickers. */
 const HOSTED_RUNS_FOLDER = "hosted-runs";
@@ -677,15 +686,15 @@ interface TaskTurnState {
  * ("ok but actually no", "okay never mind" are not a yes).
  */
 const YES =
-  "yes|yeah|yep|yup|ok|okay|sure|go ahead|please|do it|sounds good|y|sí|si|claro|dale|vale|adelante|oui|ouais|d'accord|vas-y|allez-y|ja|jawohl|klar|gerne|sim|pode|certo|va bene|ya|iya|boleh|silakan|evet|tamam|olur|はい|うん|どうぞ|お願いします|네|예|응|좋아|👍";
+  "yes|yeah|yep|yup|ok|okay|sure|go ahead|please|do it|sounds good|y|sí|si|claro|dale|vale|adelante|oui|ouais|d'accord|vas-y|allez-y|ja|jawohl|klar|gerne|sim|pode|certo|va bene|ya|iya|boleh|silakan|evet|tamam|olur|はい|うん|どうぞ|お願いします|네|예|응|좋아|好|好的|好吧|好啊|行|可以|是|是的|对|對|嗯|当然|當然|没问题|沒問題|请|請|👍";
 // Words that take the yes back. "no" and "wait" are not among them: "ok no
 // problem" and "sure, hold on" are yeses. The CJK ones have no word
 // boundary to look for.
 const TAKEN_BACK_WORDS =
   "but|don'?t|never|nah|forget|cancel|instead|actually|nein|non|pero|mais|aber|não|nao|hayır|tidak|jangan";
-const TAKEN_BACK_CJK = "いや|やめ|아니";
+const TAKEN_BACK_CJK = "いや|やめ|아니|不|别|別|算了|但是|可是|取消";
 const AGREEMENT = new RegExp(
-  `^(?:${YES})(?=[\\s,.!'’、。]|$)(?![\\p{L}\\p{N}\\s,.!'’、。]{0,30}(?:(?<![\\p{L}\\p{N}])(?:${TAKEN_BACK_WORDS})(?![\\p{L}\\p{N}])|(?:${TAKEN_BACK_CJK})))[\\p{L}\\p{N}\\s,.!'’、。]{0,30}$`,
+  `^(?:${YES})(?=[\\s,.!'’、。，！]|$)(?![\\p{L}\\p{N}\\s,.!'’、。，！]{0,30}(?:(?<![\\p{L}\\p{N}])(?:${TAKEN_BACK_WORDS})(?![\\p{L}\\p{N}])|(?:${TAKEN_BACK_CJK})))[\\p{L}\\p{N}\\s,.!'’、。，！]{0,30}$`,
   "iu"
 );
 
@@ -1253,6 +1262,7 @@ export class ServiceHost {
     tellInChat: (sessionId) =>
       this.messagingGatewayService.tellSuccessPitch(sessionId),
     funnel: (step, detail) => reportFunnelStep(step, detail),
+    nextStep: nextStepOn,
   });
 
   /** What a turn in `sessionId` counts as for the milestone card's estimate. */
@@ -1350,6 +1360,11 @@ export class ServiceHost {
     this.sitePacker.cancel(packId);
   }
 
+  private nextStepPassedOver(): boolean {
+    const misses = this.prefs?.().get().dismissals.nextStepOffer?.misses ?? 0;
+    return misses >= DELIVERABLE_OFFER_MAX_MISSES;
+  }
+
   /**
    * The desktop's once-per-user word on 24/7 routines, claimed by the agent's
    * first local routine: the plan to speak to, or null once told, on the
@@ -1361,6 +1376,13 @@ export class ServiceHost {
       return null;
     const tier = abacusPlanTier(await fetchAbacusAccount());
     if (tier === "unknown") return null;
+    // Next to a routine they just tapped, a pitch waits for one that has run a day.
+    if (
+      tier === "free" &&
+      nextStepOn() &&
+      !listJobs().some((job) => Date.now() - job.createdAt >= ALWAYS_ON_WAIT_MS)
+    )
+      return null;
     prefs.update({ dismissals: { routinesAlwaysOnToldAt: Date.now() } });
     return tier === "free" ? "free" : "paid";
   }
@@ -1553,6 +1575,14 @@ export class ServiceHost {
       return new Set(Object.keys(states).filter((id) => states[id]));
     },
     planTier: () => abacusPlanTier(cachedAbacusAccount()),
+    nextStep: nextStepOn,
+    routineOfferClosed: () => {
+      const account = cachedAbacusAccount();
+      return (
+        abacusPlanTier(account) === "free" &&
+        routineOfferClosed(account?.credits_used, account?.credits_granted)
+      );
+    },
     planName: () => cachedAbacusAccount()?.plan ?? null,
     models: () => listAvailableModels(),
     bots: () =>
@@ -1740,6 +1770,7 @@ export class ServiceHost {
           this.askBot(askerId, askerSession, targetId, request),
         give: (askerId, askerSession, targetId, task) =>
           this.giveBotTask(askerId, askerSession, targetId, task),
+        answerRead: (askerSession, id) => this.botAnswerRead(askerSession, id),
         list: (askerId, limit) => this.botAskService.list(askerId, limit),
         received: (botId, limit) => this.botAskService.received(botId, limit),
         get: (askerId, id) => this.botAskService.get(askerId, id),
@@ -1756,10 +1787,7 @@ export class ServiceHost {
     messaging: {
       runningPlatforms: () => this.messagingGatewayService.runningPlatforms(),
       disablePlatform: async (id) => {
-        await this.messagingGatewayService.updatePlatform({
-          platformId: id,
-          enabled: false,
-        });
+        await this.messagingGatewayService.unlinkPlatform(id);
       },
       listChats: (query, platform) =>
         this.messagingGatewayService.listKnownChats(query, platform),
@@ -1850,6 +1878,13 @@ export class ServiceHost {
     const patch =
       prefs != null ? wallAfterAccountRead(prefs.get(), snapshot) : null;
     if (patch != null) prefs?.update(patch);
+  });
+  /** What the model is told about cost follows the plan; see account-plan.ts. */
+  private readonly stopAccountPlanForwarding = onAbacusAccountPlan((plan) => {
+    this.agentManagerService.broadcastCommand({
+      type: "account_plan",
+      ...plan,
+    });
   });
   /** The plan decides which paid-plan capabilities are on or offered, and which models it serves. */
   private readonly stopPlanForwarding = onAbacusPlanChange(() => {
@@ -3001,6 +3036,9 @@ export class ServiceHost {
     },
     emitMcpRefreshed: (_sessionId, requestId, ok) =>
       this.connectorSync.refreshed(requestId, ok),
+    emitSessionActionDone: (requestId, result) => {
+      this.agentActions.get(requestId)?.(result);
+    },
     emitMcpRuntimeError: (workspaceId, sessionId, event) => {
       if (event.kind === "refresh") {
         this.emitEvent({
@@ -3028,6 +3066,10 @@ export class ServiceHost {
     runHostService: (service, payload) =>
       this.runAgentHostService(service, payload),
   });
+  private readonly agentActions = new Map<
+    string,
+    (result: SessionActionResult) => void
+  >();
   private readonly agentCommunicationService = new AgentCommunicationService(
     (workspaceId, sessionId, command) => {
       return this.agentManagerService.sendCommand(
@@ -3316,6 +3358,7 @@ export class ServiceHost {
     this.stop();
     this.stopCreditForwarding();
     this.stopPlanForwarding();
+    this.stopAccountPlanForwarding();
     this.connectWatcher.stop();
     this.vault?.stop();
     this.builtinMcpLifecycle.stopBrowserServer();
@@ -3821,6 +3864,12 @@ export class ServiceHost {
     request: UpdateMessagingPlatformRequest
   ): Promise<MessagingSnapshot> {
     return this.messagingGatewayService.updatePlatform(request);
+  }
+
+  unlinkMessagingPlatform(
+    platformId: MessagingPlatformId
+  ): Promise<MessagingSnapshot> {
+    return this.messagingGatewayService.unlinkPlatform(platformId);
   }
 
   decideMessagingPairing(
@@ -4707,6 +4756,25 @@ export class ServiceHost {
     return this.modelSwitches.wait(request.sessionId, request.model, () =>
       this.agentCommunicationService.setModel(request)
     );
+  }
+
+  /** A slash command run on the agent; `compact` calls a model, so it gets minutes. */
+  runAgentAction(request: AgentActionRequest): Promise<SessionActionResult> {
+    const requestId = randomUUID();
+    return new Promise((resolve) => {
+      const settle = (result: SessionActionResult) => {
+        clearTimeout(timer);
+        this.agentActions.delete(requestId);
+        resolve(result);
+      };
+      const timer = setTimeout(
+        () => settle({ ok: false, reason: "failed" }),
+        AGENT_ACTION_TIMEOUT_MS
+      );
+      this.agentActions.set(requestId, settle);
+      if (!this.agentCommunicationService.runAction(request, requestId))
+        settle({ ok: false, reason: "not-running" });
+    });
   }
 
   stopAgentTurn(request: AgentSessionCommandRequest): void {
@@ -6051,7 +6119,7 @@ export class ServiceHost {
     // The app's one way to refresh running chats' tools (as when a chat app
     // connects): the asker's follow-up tools appear.
     changed: () => this.toolAvailabilityChanged(),
-    ownChatLines: (botId) => this.recentUserLines(botId),
+    ownChatTail: (botId) => this.recentOwnChat(botId),
     log: (line) => console.log(line),
     ...fileAskStore(),
   });
@@ -6647,6 +6715,27 @@ export class ServiceHost {
       );
   }
 
+  /**
+   * The asker read an answer whole with check_bot_answers, mid-turn, before
+   * its note came: the note, still held for that chat, now says the bot has
+   * it already. The row it draws stays; the bot does not tell the user twice.
+   */
+  private botAnswerRead(askerSession: string, id: string): void {
+    const held = this.heldNotes.get(askerSession);
+    if (held == null) return;
+    this.heldNotes.set(
+      askerSession,
+      held.map((entry) => {
+        const operator = entry.tags?.operator;
+        const exchange =
+          operator?.kind === "bot-exchange" ? operator.exchange : null;
+        return exchange?.askId === id && exchange.outcome === "answered"
+          ? { ...entry, note: answerAlreadyReadNote(id, exchange.bot) }
+          : entry;
+      })
+    );
+  }
+
   /** What the doing bot's chat draws in place of a passed-on task's prompt. */
   private taskTag(ask: BotAskRecord): BotTaskTag {
     const passer = this.botService.list().find((bot) => bot.id === ask.askerId);
@@ -6718,28 +6807,11 @@ export class ServiceHost {
   }
 
   /**
-   * The user's last few messages in a bot's own (forever) chat, short: the
-   * context an asked bot answers with, since an ask runs in another chat.
-   */
-  private recentUserLines(botId: string): string[] {
-    const sessionId = this.botService
-      .list()
-      .find((bot) => bot.id === botId)?.sessionId;
-    if (sessionId == null) return [];
-    const file =
-      this.agentSessionManagerService.getDiagnosticInfo(sessionId)
-        ?.agentSessionFile ?? null;
-    return readTranscriptTail(file, 12)
-      .filter((turn) => turn.role === "user")
-      .slice(-5)
-      .map((turn) => turn.text);
-  }
-
-  /**
    * The last exchanges of a bot's own (forever) chat, both sides, short: the
-   * context a channel turn answers with, since it runs in another chat. Its
-   * own replies are in it, so "what did you do today" is answered from what
-   * it last reported there, not from notes that have since gone stale.
+   * context an asked bot or a channel turn answers with, since each runs in
+   * another chat.
+   * Its own replies are in it, so "what did you do today" is answered from
+   * what it last reported there, not from notes that have since gone stale.
    */
   private recentOwnChat(botId: string): OwnChatLine[] {
     const sessionId = this.botService
@@ -7383,6 +7455,7 @@ export class ServiceHost {
     const prompt = this.withBotVoice(
       job,
       buildRoutineFirePrompt(job, trigger, payload, {
+        endsOnAction: nextStepOn(),
         unattended,
         dir: home,
         // The project when there is one; the run's cwd is that folder and its
@@ -7601,10 +7674,16 @@ export class ServiceHost {
       ABACUSAI_BOT_CHECKOUT_TOKEN: this.checkoutToken,
       // Kept current afterwards by the `connectivity` command.
       ABACUSAI_BOT_CONNECTIVITY: this.connectivity.state,
+      // Read at spawn: three offers passed over stop it for the next session.
+      ...(nextStepOn() && !this.nextStepPassedOver()
+        ? { ABACUSAI_BOT_NEXT_STEP_ASK: "1" }
+        : {}),
       // Kept current afterwards by the `credit_balance` command.
       ...(credits != null
         ? { ABACUSAI_BOT_CREDITS: JSON.stringify(credits) }
         : {}),
+      // Kept current afterwards by the `account_plan` command.
+      ABACUSAI_BOT_PLAN: JSON.stringify(accountPlan()),
       // Kept current afterwards by the `credit_wall` command.
       ...(this.prefs != null
         ? {

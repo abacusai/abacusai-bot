@@ -9,7 +9,7 @@
 import fs from "fs";
 import path from "path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { DiscordWebConnector, sendProbe } from "./discord-web-connector";
 
@@ -247,5 +247,112 @@ describe("every navigation", () => {
     const masked = source.split("userAgent: userAgent()").length - 1;
     expect(loads).toBeGreaterThan(0);
     expect(masked).toBe(loads);
+  });
+});
+
+describe("the channel crawl and the page", () => {
+  type Crawl = {
+    running: boolean;
+    loggedIn: boolean;
+    guildChannels: Map<string, Array<{ chatId: string; name: string }>>;
+    crawlLeft: unknown[];
+    pagesWaiting: number;
+    run: (script: string, args: Record<string, unknown>) => Promise<unknown>;
+    goHome: () => Promise<void>;
+    crawlGuilds: () => Promise<void>;
+    serialize: <T>(task: () => Promise<T>) => Promise<T>;
+    waitForGuildChannels: (id: string) => Promise<unknown[]>;
+  };
+
+  // A signed-in page with these servers. A server with no channels listed
+  // never renders any, so the crawl waits on it.
+  const page = (servers: Record<string, string[]>) => {
+    const { c } = connector();
+    const inner = c as unknown as Crawl;
+    const rail = Object.keys(servers).map((guildId) => ({
+      guildId,
+      name: `s${guildId}`,
+      mentions: 0,
+    }));
+    inner.running = true;
+    inner.loggedIn = true;
+    inner.goHome = async () => {};
+    const reads: string[] = [];
+    inner.run = async (script, args) => {
+      const guildId = args.guildId as string | undefined;
+      if (guildId == null) return script.includes("badgeIn") ? rail : null;
+      if (!script.includes("const rows = []")) return { found: true };
+      reads.push(guildId);
+      return (servers[guildId] ?? []).map((name) => ({
+        channelId: `${guildId}9`,
+        name,
+      }));
+    };
+    return { inner, reads };
+  };
+  const finished = async (inner: Crawl) =>
+    vi.waitFor(() => expect(inner.crawlLeft).toHaveLength(0), {
+      timeout: 5000,
+    });
+
+  it("takes turns: queued work runs after one server, and the crawl still finishes", async () => {
+    const { inner, reads } = page({ "1": ["a"], "2": ["b"], "3": ["c"] });
+    const order: string[] = [];
+    const run = inner.run;
+    // A queue that is never empty: each task queues the next.
+    const busy = async (): Promise<void> => {
+      order.push(`task after ${reads.length}`);
+      if (order.length < 6) void inner.serialize(busy);
+    };
+    inner.run = async (script, args) => {
+      const value = await run(script, args);
+      if (reads.length === 1 && order.length === 0 && args.guildId != null)
+        void inner.serialize(busy);
+      return value;
+    };
+
+    await inner.serialize(() => inner.crawlGuilds());
+    await finished(inner);
+    expect([...inner.guildChannels.keys()]).toEqual(["1", "2", "3"]);
+    expect(order[0]).toBe("task after 1");
+    expect(order[1]).toBe("task after 2");
+  });
+
+  it("moves past a server with no channels even with the queue busy", async () => {
+    const { inner } = page({ "1": [], "2": ["b"] });
+    const crawl = inner.serialize(() => inner.crawlGuilds());
+    void inner.serialize(async () => {});
+    await crawl;
+    await vi.waitFor(() => expect(inner.crawlLeft).toHaveLength(0), {
+      timeout: 15_000,
+    });
+    expect([...inner.guildChannels.keys()]).toEqual(["2"]);
+  }, 20_000);
+
+  it("cuts a server short for a page the user asked for, and reads it after", async () => {
+    const servers: Record<string, string[]> = { "1": [], "2": ["b"] };
+    const { inner } = page(servers);
+    const started = Date.now();
+    const crawl = inner.serialize(() => inner.crawlGuilds());
+    let pageAt = 0;
+    setTimeout(() => {
+      inner.pagesWaiting += 1;
+      void inner.serialize(async () => {
+        inner.pagesWaiting -= 1;
+        pageAt = Date.now() - started;
+        servers["1"] = ["a"];
+      });
+    }, 50);
+    await crawl;
+    await finished(inner);
+    expect(pageAt).toBeLessThan(2000);
+    expect([...inner.guildChannels.keys()]).toEqual(["1", "2"]);
+  });
+
+  it("does not make a chat open on a bare server id give up early", async () => {
+    const { inner } = page({ "1": ["a"] });
+    const held = inner.serialize(() => inner.waitForGuildChannels("1"));
+    void inner.serialize(async () => {});
+    await expect(held).resolves.toHaveLength(1);
   });
 });

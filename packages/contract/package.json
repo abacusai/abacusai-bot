@@ -17,6 +17,8 @@
     "./conversation-scope": "./src/conversation-scope.ts",
     "./deliverable-offer": "./src/deliverable-offer.ts",
     "./deliverables": "./src/deliverables.ts",
+    "./next-step": "./src/next-step.ts",
+    "./retry-offer": "./src/retry-offer.ts",
     "./exec-backends": "./src/exec-backends.ts",
     "./experience": "./src/experience.ts",
     "./forbidden": "./src/forbidden.ts",

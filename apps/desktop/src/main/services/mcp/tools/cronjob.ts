@@ -340,6 +340,8 @@ export const CRONJOB_TOOLS: ToolDefinition[] = [
     name: "cronjob",
     toolsets: ["cronjob"],
     botAlways: true,
+    // A next step's routine button is answered with this tool.
+    sessionsWhen: (host) => host.nextStep,
     description: (_channel, host) =>
       [
         ...BASE_DESCRIPTION,

@@ -11,6 +11,9 @@
  * - a user who works mainly from their own chat app hears it there once ever,
  *   after a positive reaction, never in a contact's chat.
  *
+ * On an install with the next step (next-step.ts), a result ends on that
+ * instead, and the card comes only with praise.
+ *
  * Never on a routine, a host lane, a turn the app opened itself (a bot's
  * first-run note, a routine's fire), or a turn that showed another card.
  * On every plan, a clean turn also marks whether the chat's latest result
@@ -92,6 +95,8 @@ export interface SuccessPitchDeps {
   /** The pitch in the user's own chat app, right after `sessionId`'s turn there; whether it went. */
   tellInChat: (sessionId: string) => Promise<boolean>;
   funnel: (step: FunnelStep, detail: string) => void;
+  /** This install's results end on a next step, which takes the card's place. */
+  nextStep: () => boolean;
   now?: () => number;
 }
 
@@ -266,12 +271,18 @@ export class SuccessPitchWatch {
       record.channel == null ? "app" : record.channel.owner ? "chat" : null;
     if (where == null) return Promise.resolve();
     if (clean) this.markSite(record.sessionId, record.turnId, facts);
+    const nextStep = this.deps.nextStep();
+    if (clean && facts.delivered != null)
+      this.deps.funnel(
+        "result_delivered",
+        `${facts.delivered}_${nextStep ? "on" : "off"}`
+      );
     const signal: {
       trigger: SuccessPitchTrigger;
       moment: SuccessPitchMoment;
       lead: SuccessPitchLead | null;
     } | null =
-      clean && facts.delivered != null
+      clean && facts.delivered != null && !nextStep
         ? { trigger: "deliverable", moment: facts.delivered, lead }
         : facts.praise && previous?.clean === true
           ? {

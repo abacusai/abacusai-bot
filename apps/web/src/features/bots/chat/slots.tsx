@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { ConnectorRequestCard } from "#renderer/components/connector-request-card";
 import { confirmFreePoolModel } from "#renderer/components/credits-card/actions";
 import { useCollections } from "#renderer/data/db";
+import { useChatCommands } from "#renderer/lib/chat-commands";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { useVisibleThread } from "#renderer/lib/navigation/visible-thread";
 import { IS_ELECTRON } from "#renderer/lib/platform";
@@ -71,6 +72,11 @@ export const useBotChatSlots = (
   const senders = useQuery(queries.senderChats());
   const senderInfo = senders.data?.find((row) => row.sessionId === sessionId);
   const isRun = !!session?.routineId;
+  const commands = useChatCommands(
+    session?.workspaceId
+      ? { workspaceId: session.workspaceId, sessionId }
+      : null
+  );
   const key = session?.workspaceId
     ? sessionConversationKey(session.workspaceId, sessionId)
     : null;
@@ -231,6 +237,7 @@ export const useBotChatSlots = (
       ),
     },
     composer: {
+      commands,
       botId: bot.id,
       mode: "full" as const,
       sharedElement: true,

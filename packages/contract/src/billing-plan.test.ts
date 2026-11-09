@@ -76,6 +76,15 @@ describe("planPitch", () => {
     ]);
   });
 
+  it.each(["zh-CN", "zh-TW"])(
+    "keeps the model names apart in %s, whose unit list has no separator",
+    (locale) => {
+      expect(planPitch(t, billing(BASIC_FEATURES), locale)).toContain(
+        'outcome.pitch.models {"models":"Model A、Model B、Model C、Model D"}'
+      );
+    }
+  );
+
   it("keeps the apps line without a count when the plan names none", () => {
     const lines = planPitch(
       t,

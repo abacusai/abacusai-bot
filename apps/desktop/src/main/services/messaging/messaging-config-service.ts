@@ -220,6 +220,18 @@ export const savePlatformSignedIn = (
   writeConfig({ ...config, platforms });
 };
 
+/** The user ended the link: signed out, and nothing was lost to tell them about. */
+export const savePlatformUnlinked = (platformId: MessagingPlatformId): void => {
+  const config = readConfig();
+  const platforms = { ...config.platforms };
+  platforms[platformId] = {
+    ...platforms[platformId],
+    signedIn: false,
+    linkLost: false,
+  };
+  writeConfig({ ...config, platforms });
+};
+
 export const readPlatformLinkLost = (
   platformId: MessagingPlatformId
 ): boolean => readConfig().platforms?.[platformId]?.linkLost === true;

@@ -1,3 +1,4 @@
+import { isSuggestTasksTool } from "@abacus-ai/contract/bots/suggested-tasks";
 import {
   stripAttachmentRefs,
   visibleUserText,
@@ -841,7 +842,8 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
           // stands on its own: folded into a closed run, nobody saw it.
           if (
             isPaidFeatureTool(part.part.name) ||
-            isBotHelpTool(part.part.name)
+            isBotHelpTool(part.part.name) ||
+            isSuggestTasksTool(part.part.name)
           ) {
             flush();
             blocks.push({ run: false, part });

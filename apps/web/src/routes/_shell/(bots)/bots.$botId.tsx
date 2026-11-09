@@ -25,6 +25,7 @@ import { loadFixtureRuntime } from "#renderer/features/chat/fixture-runtime";
 import { ChatView } from "#renderer/features/chat/kit/lazy-view";
 import { useThreadHost } from "#renderer/features/chat/runtime/host";
 import { chatLoading } from "#renderer/features/chat/runtime/lazy-runtime";
+import { COMPOSER_CONNECTORS } from "#renderer/features/library/composer-connectors";
 import { requestBrowserOpen } from "#renderer/features/shell/browser-open";
 import {
   openPanelTab,
@@ -123,7 +124,7 @@ const ComposedChat = ({
         runtime={runtime}
         workspaceRoot={slots.workspaceRoot}
         onOpenFile={slots.openFile}
-        composer={slots.composer}
+        composer={{ ...slots.composer, connectors: COMPOSER_CONNECTORS }}
         slots={{
           composerNotice: <ComposerUpdateNotice />,
           ...slots.chat,

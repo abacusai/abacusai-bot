@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { usePrefs } from "#renderer/data/db/prefs";
 import { StartComposer } from "#renderer/features/chat/composer/start-composer";
+import { COMPOSER_CONNECTORS } from "#renderer/features/library/composer-connectors";
 import { useSessionComposerModel } from "#renderer/features/sessions/data/composer-model";
 import { restoreSessionDraft } from "#renderer/features/sessions/start/session-drafts";
 import {
@@ -26,12 +27,14 @@ import {
   shellStore,
 } from "#renderer/features/shell/shell-store";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
+import { useChatCommands } from "#renderer/lib/chat-commands";
 import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
 import { NewSessionSearch } from "#renderer/lib/navigation/search";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 /** Offers already turned into a draft: a reload or a revisit never starts another. */
 const offersTaken = new Set<string>();
 const SessionsNewRoute = () => {
+  const commands = useChatCommands(null);
   const { t } = useTranslation();
   const { transport, chat } = Route.useRouteContext();
   const { workspaceId, draftId } = Route.useLoaderData();
@@ -136,6 +139,8 @@ const SessionsNewRoute = () => {
                   attachmentsBase: binding.root,
                   attachmentContext: binding.attachmentContext,
                   showModeChip: true,
+                  connectors: COMPOSER_CONNECTORS,
+                  commands,
                   model: model.model,
                   availableModes: model.availableModes,
                   defaultMode: prefs.defaultMode,

@@ -599,6 +599,32 @@ export interface QueueEntry {
 }
 
 /** Commands sent from main process to ndjson IPC host (stdin) */
+/** What `/compact`, `/context`, `/effort`, `/autocompact`, `/export` and `/tasks` ask of a running agent. */
+export type SessionAction =
+  | "compact"
+  | "context"
+  | "effort"
+  | "autocompact"
+  | "export"
+  | "tasks";
+
+export type SessionActionResult =
+  | {
+      ok: true;
+      /** `context`: how full the chat is; null until the next reply measures it. */
+      percent?: number | null;
+      /** `effort`: the level now in force. */
+      level?: string;
+      /** `export`: the file written. */
+      path?: string;
+      /** `tasks`: work still running past the turn. */
+      live?: number;
+    }
+  | {
+      ok: false;
+      reason: "not-running" | "busy" | "invalid" | "too-small" | "failed";
+    };
+
 export type DesktopCommand =
   | {
       type: "message.react";
@@ -657,11 +683,23 @@ export type DesktopCommand =
       exhaustedAt: number | null;
       freeLaneChosenAt: number | null;
     }
+  /** The account's Abacus AI plan as the desktop last read it; see account-plan.ts. */
+  | {
+      type: "account_plan";
+      tier: "free" | "basic" | "paid" | "unknown";
+      name: string | null;
+    }
   /**
    * Reconnect every MCP server. With `requestId`, the agent answers
    * `mcp_refreshed` (or `mcp_refresh_failed`) carrying it once done.
    */
   | { type: "mcp_refresh"; requestId?: string }
+  | {
+      type: "session_action";
+      requestId: string;
+      action: SessionAction;
+      value?: string;
+    }
   | { type: "mcp_restart_server"; serverId: string }
   | {
       type: "host_service_response";
@@ -797,6 +835,11 @@ export type DesktopEvent =
   | { type: "mcp_server_logs"; serverId: string; entries: CliMcpLogEntry[] }
   /** A refresh finished: the servers are reconnected and the tools reconciled. */
   | { type: "mcp_refreshed"; requestId: string | null }
+  | {
+      type: "session_action_done";
+      requestId: string;
+      result: SessionActionResult;
+    }
   | { type: "mcp_refresh_failed"; error: string; requestId?: string | null }
   | { type: "mcp_restart_failed"; serverId: string; error: string };
 

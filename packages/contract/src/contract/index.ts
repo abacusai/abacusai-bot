@@ -112,6 +112,7 @@ export type * from "./rows";
 export { SUPPORTED_LANGUAGES } from "./rows";
 export {
   FALLBACK_LANGUAGE,
+  languageNameTag,
   matchSupportedLanguage,
   resolveAppLanguage,
   type AppLanguage,
