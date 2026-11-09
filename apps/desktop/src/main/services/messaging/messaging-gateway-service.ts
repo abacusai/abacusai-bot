@@ -82,6 +82,7 @@ import type { InboundMessage, MessagingConnector } from "./connector";
 import { DiscordWebConnector } from "./discord-web-connector";
 import {
   BACKLOG_MAX_CHATS,
+  SEEN_SLEEP_GAP_MS,
   foldLate,
   InboundWatermark,
   planCatchUp,
@@ -651,6 +652,26 @@ export class MessagingGatewayService {
   /** Lanes whose catch-up has not read yet: their watermark stays put until it has. */
   private readonly catchingUp = new Set<MessagingPlatformId>();
 
+  /** When the heartbeat last ran: a much longer gap was the computer asleep. */
+  private lastBeat: number;
+
+  /**
+   * The only thing that moves a lane's mark: each connected lane is stamped
+   * as watching. A beat far later than due means the process was suspended
+   * (sleep); what came in meanwhile is caught up from the last real stamp.
+   */
+  private beat(): void {
+    const now = this.options.now?.() ?? Date.now();
+    const slept = now - this.lastBeat > SEEN_SLEEP_GAP_MS;
+    this.lastBeat = now;
+    for (const id of this.connectors.keys()) {
+      if (this.states.get(id)?.state !== "connected" || this.catchingUp.has(id))
+        continue;
+      if (slept) void this.catchUp(id);
+      else this.seen.stamp(id, now);
+    }
+  }
+
   /** Stamps every connected lane as watching, once a minute. */
   private readonly seenHeartbeat: ReturnType<typeof setInterval>;
 
@@ -658,14 +679,8 @@ export class MessagingGatewayService {
     this.failureThrottle = new FailureReplyThrottle(options.now);
     // Owed from the last run: tried once the connectors have had a moment.
     if (this.outbox.size > 0) this.outbox.schedule(OUTBOX_STARTUP_DELAY_MS);
-    this.seenHeartbeat = setInterval(() => {
-      for (const id of this.connectors.keys())
-        if (
-          this.states.get(id)?.state === "connected" &&
-          !this.catchingUp.has(id)
-        )
-          this.seen.stamp(id, this.options.now?.() ?? Date.now());
-    }, SEEN_HEARTBEAT_MS);
+    this.lastBeat = this.options.now?.() ?? Date.now();
+    this.seenHeartbeat = setInterval(() => this.beat(), SEEN_HEARTBEAT_MS);
     this.seenHeartbeat.unref?.();
   }
 
@@ -975,14 +990,9 @@ export class MessagingGatewayService {
         (error != null && error.length > 0 ? ` (${error})` : "")
     );
     this.states.set(platformId, { state, error: error ?? null });
-    // Last seen up when it goes down; what came in meanwhile is answered when it is back.
-    if (
-      previous?.state === "connected" &&
-      state !== "connected" &&
-      !this.catchingUp.has(platformId)
-    )
-      this.seen.stamp(platformId, this.options.now?.() ?? Date.now());
-    if (state === "connected") void this.catchUp(platformId);
+    // What came in while it was not watching is answered now it is back.
+    if (state === "connected" && previous?.state !== "connected")
+      void this.catchUp(platformId);
     this.supervisor.noteState(platformId, state, failure);
     this.watchSync(platformId, state);
 
@@ -2587,13 +2597,16 @@ export class MessagingGatewayService {
         `${plan.turns.length} chat(s) answered, ${plan.missed} only reported`
     );
     for (const { chat, messages } of plan.turns) {
-      for (const message of messages)
-        this.seen.remember(platformId, message.id);
+      // A message the live path handed over since the read is not answered twice.
+      const fresh = messages.filter((message) =>
+        this.seen.remember(platformId, message.id)
+      );
+      if (fresh.length === 0) continue;
       await this.handleInbound(platformId, {
         userId: chat.userId,
         userName: chat.userName,
         chatId: chat.chatId,
-        text: foldLate(messages, now),
+        text: foldLate(fresh, now),
       });
     }
     if (plan.missed === 0) return;

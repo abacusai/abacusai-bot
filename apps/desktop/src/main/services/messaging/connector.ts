@@ -169,7 +169,7 @@ export interface MessagingConnector {
   /**
    * What arrived while the lane was not watching: chats with activity after
    * `sinceMs`, newest first, at most `maxChats` opened. Optional: a lane that
-   * cannot date its messages has no backlog to give.
+   * cannot date its chats without opening them (marking them read) has none.
    */
   backlog?(sinceMs: number, maxChats: number): Promise<BacklogChat[]>;
   /**

@@ -58,7 +58,10 @@ const HOUR = 60 * 60_000;
 const NOW = Date.UTC(2026, 10, 9, 20, 0);
 
 /** A WhatsApp lane whose catch-up read answers `backlog`, and what reached the gateway. */
-const lane = (backlog: (since: number) => BacklogChat[]) => {
+const lane = (
+  backlog: (since: number) => BacklogChat[],
+  { gate = false } = {}
+) => {
   const turns: Array<{ chatId: string; text: string }> = [];
   const sent: Array<[string, string]> = [];
   const reads: number[] = [];
@@ -80,11 +83,12 @@ const lane = (backlog: (since: number) => BacklogChat[]) => {
       message: { chatId: string; text: string; id?: string; userId: string }
     ) => Promise<void>;
   };
-  // What the catch-up hands to the normal inbound path (its gate is tested elsewhere).
+  // What the catch-up hands to the normal inbound path; `gate` runs that path for real.
   const real = internals.handleInbound.bind(gateway);
-  internals.handleInbound = async (_id, message) => {
-    turns.push(message);
-  };
+  if (!gate)
+    internals.handleInbound = async (_id, message) => {
+      turns.push(message);
+    };
   internals.connectors.set("whatsapp", {
     id: "whatsapp",
     start: async () => {},
@@ -112,10 +116,9 @@ const lane = (backlog: (since: number) => BacklogChat[]) => {
       await vi.advanceTimersByTimeAsync(50);
     },
     disconnect: () => internals.setState("whatsapp", "connecting"),
-    live: async (id: string, text: string) => {
-      turns.push({ chatId: "ana", text });
-      await real("whatsapp", { userId: "ana", chatId: "ana", text, id });
-    },
+    // A live message; with no workspace, each one that passes the gate gets the app's notice.
+    live: (id: string, text: string) =>
+      real("whatsapp", { userId: "ana", chatId: "ana", text, id }),
   };
 };
 
@@ -163,7 +166,7 @@ describe("catch-up after a gap", () => {
     expect(h.turns).toHaveLength(1);
     expect(h.turns[0]?.chatId).toBe("ana");
     expect(h.turns[0]?.text).toMatch(
-      /^\[Arrived at .+ while this computer was off or asleep;.+\]\nare you free\?\nfor the interview$/
+      /^\[late\] Arrived at .+ while this computer was off or asleep;.+\n\nare you free\?\nfor the interview$/
     );
 
     // Relaunched: the same messages are known and answered again by nobody.
@@ -196,11 +199,55 @@ describe("catch-up after a gap", () => {
 
   it("never delivers a message the live path already handed over", async () => {
     stored.seen = { whatsapp: { seenUntil: NOW - HOUR, ids: [] } };
-    const h = lane(() => [chat("ana", [["m1", NOW - 30_000, "live one"]])]);
+    // The store's copy of a message can read differently from the live event's: the id decides.
+    // Dated after the app's own notice to Ana, so only the id can tell it was handled.
+    const h = lane(() => [chat("ana", [["m1", NOW + 10, "live one 🙂"]])]);
     await h.live("m1", "live one");
     await h.connect();
-    // The live delivery only; the catch-up found it known.
-    expect(h.turns.map((turn) => turn.text)).toEqual(["live one"]);
+    expect(h.sent.filter(([to]) => to === "ana")).toHaveLength(1);
+    expect(h.turns).toEqual([]);
+  });
+
+  it("answers a message the live path hands over twice only once", async () => {
+    const h = lane(() => []);
+    await h.live("m1", "hello");
+    await h.live("m1", "hello");
+    expect(h.sent.filter(([to]) => to === "ana")).toHaveLength(1);
+  });
+
+  it("goes through the normal sender gate: an unknown sender is not answered", async () => {
+    stored.seen = { whatsapp: { seenUntil: NOW - 3 * HOUR, ids: [] } };
+    const h = lane(
+      () => [
+        chat("zed", [["z1", NOW - HOUR, "who is this?"]]),
+        chat("ana", [["a1", NOW - HOUR, "are you there?"]]),
+      ],
+      { gate: true }
+    );
+    await h.connect();
+    // Ana is approved and passes (no workspace here, so she gets the app's notice); Zed gets nothing.
+    expect(h.sent.map(([to]) => to)).toEqual(["ana"]);
+  });
+
+  it("catches up what came in while the computer slept, though the lane never went down", async () => {
+    stored.seen = { whatsapp: { seenUntil: NOW - 30_000, ids: [] } };
+    let asleepAt = 0;
+    const h = lane((since) =>
+      since <= asleepAt
+        ? [chat("ana", [["s1", asleepAt + HOUR, "you up?"]])]
+        : []
+    );
+    await h.connect();
+    await vi.advanceTimersByTimeAsync(2 * 60_000);
+    expect(h.turns).toEqual([]);
+    // Asleep for two hours: no timer runs, then the first late heartbeat.
+    asleepAt = Date.now();
+    vi.setSystemTime(asleepAt + 2 * HOUR);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(h.reads.at(-1)).toBeLessThanOrEqual(asleepAt);
+    expect(h.turns.map((turn) => turn.text)).toEqual([
+      expect.stringMatching(/^\[late\] .+\n\nyou up\?$/),
+    ]);
   });
 
   it("answers at most 10 chats and tells the user once about the rest and the too-old", async () => {

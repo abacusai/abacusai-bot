@@ -1,3 +1,4 @@
+import { appNoteTag } from "@abacus-ai/agent/user-text";
 import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 
 import type { BacklogChat } from "./connector";
@@ -15,6 +16,8 @@ export const BACKLOG_WINDOW_MS = 6 * 60 * 60_000;
 export const BACKLOG_MAX_CHATS = 10;
 /** How often a connected lane stamps that it is watching. */
 export const SEEN_HEARTBEAT_MS = 60_000;
+/** A heartbeat this late means the process was suspended: the computer slept. */
+export const SEEN_SLEEP_GAP_MS = 3 * SEEN_HEARTBEAT_MS;
 /** Message ids remembered per lane. */
 const SEEN_IDS_KEPT = 500;
 
@@ -153,8 +156,9 @@ export const foldLate = (
 ): string => {
   const clock = (at: number): string => new Date(at).toTimeString().slice(0, 5);
   const first = messages[0]!.at;
+  // A note paragraph of its own, so the user's words stay theirs (ownWords).
   return [
-    `[Arrived at ${clock(first)} while this computer was off or asleep; it is ${clock(now)} now. Answer knowing it is late.]`,
-    ...messages.map((message) => message.text),
-  ].join("\n");
+    `${appNoteTag("late")} Arrived at ${clock(first)} while this computer was off or asleep; it is ${clock(now)} now. Answer knowing it is late.`,
+    messages.map((message) => message.text).join("\n"),
+  ].join("\n\n");
 };

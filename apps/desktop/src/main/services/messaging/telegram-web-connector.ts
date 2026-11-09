@@ -17,10 +17,8 @@ import {
 import { abacusBotHome } from "../../paths";
 import { nativeT } from "../config/native-language";
 import {
-  type BacklogChat,
   boundedWait,
   chunkMessage,
-  collectBacklog,
   isEphemeralPreview,
   previewMatchesSent,
   normalizeScrapedText,
@@ -86,8 +84,6 @@ const LOGIN_POLL_MS = 1500;
 const SIGN_OUT_SETTLE_MS = 15_000;
 
 const INBOUND_POLL_MS = 5000;
-/** Messages read per chat by a catch-up. */
-const BACKLOG_READ_COUNT = 20;
 
 const STUCK_LOADING =
   "Telegram Web did not finish loading. It tries again by itself, or click Connect to try now.";
@@ -227,6 +223,7 @@ export class TelegramWebConnector implements MessagingConnector {
     this.running = false;
     this.parked = false;
     this.loggedIn = false;
+    this.ownPeerId = null;
     this.loginPoll.stop();
     this.inboundPoll.stop();
     const win = this.window;
@@ -318,41 +315,6 @@ export class TelegramWebConnector implements MessagingConnector {
       direction: row.direction,
       at: row.at,
     }));
-  }
-
-  /**
-   * See MessagingConnector.backlog: the chats still unread in the list, each
-   * opened and read by its bubbles' own times and ids.
-   */
-  async backlog(sinceMs: number, maxChats: number): Promise<BacklogChat[]> {
-    if (!this.loggedIn) throw new Error("Telegram is not signed in yet");
-    await this.refreshContacts();
-    const rows = await this.run<Array<{ chatId: string; name: string }>>(
-      INBOUND_SCRIPT,
-      {}
-    );
-    if (rows == null) throw new Error("the chat list did not answer yet");
-    return collectBacklog(
-      rows.filter((row) => row.chatId !== this.ownPeerId),
-      async (chatId) => {
-        const read = await this.run<
-          Array<{
-            id: string;
-            direction: "in" | "out";
-            text: string;
-            at: string;
-          }>
-        >(READ_CHAT_SCRIPT, { target: chatId, limit: BACKLOG_READ_COUNT });
-        return (read ?? []).map((row) => ({
-          ...(row.id.length > 0 ? { id: `${chatId}:${row.id}` } : {}),
-          at: Date.parse(row.at),
-          text: normalizeScrapedText(row.text),
-          direction: row.direction,
-        }));
-      },
-      sinceMs,
-      maxChats
-    );
   }
 
   // ── Login ──────────────────────────────────────────────────────────────
@@ -464,6 +426,8 @@ export class TelegramWebConnector implements MessagingConnector {
 
     if (state.loggedIn && !this.loggedIn) {
       this.loggedIn = true;
+      // Whose Saved Messages is read again on the next login: an account switch must never keep the old one.
+      this.ownPeerId = null;
       // Hide rather than close: the page is the session every send drives.
       const win = this.window;
       if (win != null && !win.isDestroyed() && win.isVisible()) {
@@ -507,6 +471,7 @@ export class TelegramWebConnector implements MessagingConnector {
       this.signedOutTicks = 0;
       // Signed out elsewhere, or expired: the session ended, not "connecting".
       this.loggedIn = false;
+      this.ownPeerId = null;
       this.callbacks.onState(
         "needs_login",
         "Telegram is signed out. The session was ended from another device or expired. Reconnect to sign in again."
@@ -581,7 +546,8 @@ export class TelegramWebConnector implements MessagingConnector {
       {}
     );
     if (rows != null) this.contacts = rows;
-    if (this.ownPeerId == null)
+    // Read with the list every time: it always names the account signed in now.
+    if (this.loggedIn)
       this.ownPeerId = await this.run<string>(OWN_PEER_SCRIPT, {});
   }
 
@@ -791,7 +757,6 @@ const READ_CHAT_SCRIPT = pageScript`
     .filter((b) => b.querySelector('.message'))
     .slice(-limit)
     .map((b) => ({
-      id: b.getAttribute('data-mid') || '',
       direction: b.classList.contains('is-out') ? 'out' : 'in',
       text: clean(b),
       at: new Date((Number(b.getAttribute('data-timestamp')) || 0) * 1000).toISOString(),

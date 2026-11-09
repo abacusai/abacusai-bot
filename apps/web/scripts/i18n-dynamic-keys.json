@@ -1771,7 +1771,10 @@
       "cutoffSwitch",
       "cutoffVerify",
       "cutoffTopUp",
-      "diskFull"
+      "diskFull",
+      "viaOtherApp",
+      "missedWhileOff_one",
+      "missedWhileOff_other"
     ],
     "sources": [
       "../../desktop/src/main/services/messaging/chat-failure-reply.ts",
