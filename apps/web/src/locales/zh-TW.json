@@ -2943,6 +2943,7 @@
       "showMore_other": "再顯示 {{count}} 行"
     },
     "composer": {
+      "addConnectors": "新增連接器",
       "attach": "附加",
       "attachFailed": "無法附加這個檔案",
       "attachFiles": "檔案或圖片",
@@ -2954,7 +2955,9 @@
       "files": "檔案",
       "gone": "這段對話已不存在。",
       "mini": "回覆，或引導執行",
+      "manageConnectors": "管理連接器",
       "modeFailed": "無法變更模式",
+      "noConnectors": "找不到連接器",
       "model": "模型：{{name}}",
       "models": "模型",
       "notReady": "AI 代理尚未就緒。請再試一次。",
@@ -2990,7 +2993,9 @@
       "folderItems_one": "{{count}} 個項目",
       "folderItems_other": "{{count}} 個項目",
       "includedIn": "包含在 {{plan}} 中",
-      "includedInPaid": "包含在付費方案中"
+      "includedInPaid": "包含在付費方案中",
+      "commands": "指令",
+      "commandFailed": "操作沒有成功，請再試一次。"
     },
     "day": {
       "today": "今天",
@@ -3364,6 +3369,9 @@
       "copy": "複製「{{text}}」，再從手機傳送",
       "copyFailed": "無法複製"
     },
+    "retryOffer": {
+      "try": "用 {{model}} 再試一次"
+    },
     "deliverableOffer": {
       "label": "把這個回答存成文件",
       "doc": "製作成文件",
@@ -3374,6 +3382,59 @@
         "doc": "把你上一則回答整理成一份精美的文件，方便我保留和分享，並以 PDF 格式儲存到工作區。",
         "report": "把你上一則回答整理成一份精美的報告，方便我保留和分享，並以 PDF 格式儲存到工作區。"
       }
+    },
+    "commands": {
+      "new": "開始新聊天",
+      "model": "變更模型",
+      "plan": "先規劃再執行",
+      "permissions": "選擇哪些操作不需詢問即可執行",
+      "copy": "複製上一則回覆",
+      "help": "顯示所有指令",
+      "busy": "請等這則回覆完成後再試",
+      "notRunning": "請先傳送一則訊息，然後再試",
+      "invalid": "這裡無法使用這個值",
+      "contextUnknown": "尚未統計。請先傳送一則訊息。",
+      "contextPercent": "此聊天已使用 {{percent}}%",
+      "compact": "精簡此聊天（會使用點數）",
+      "compactArgument": "要保留的內容",
+      "compactDone": "聊天已精簡",
+      "context": "此聊天已使用多少",
+      "effort": "設定模型的思考強度",
+      "effortArgument": "low、medium 或 high",
+      "effortDone": "思考強度：{{level}}",
+      "autocompact": "開啟或關閉自動精簡",
+      "autocompactArgument": "on 或 off",
+      "autocompactDone": "自動精簡：{{value}}",
+      "export": "將此聊天儲存為檔案",
+      "exportDone": "聊天已儲存",
+      "tasks": "仍在執行的工作",
+      "tasksDone": "{{count}} 項正在背景執行",
+      "status": "此聊天的狀態",
+      "statusDone": "聊天正在執行",
+      "review": "審查工作（會使用點數）",
+      "reviewArgument": "要審查的內容",
+      "reviewPrompt": "檢查此工作區中的變更是否有錯誤。{{value}}",
+      "subtask": "交辦一項任務（會使用點數）",
+      "subtaskArgument": "任務",
+      "subtaskPrompt": "將此作為獨立任務交辦：{{value}}",
+      "resume": "開啟另一個聊天",
+      "usage": "已使用點數",
+      "config": "開啟設定",
+      "theme": "變更主題",
+      "login": "你的帳戶",
+      "memory": "應用程式記住的內容",
+      "connectors": "新增或管理連接器",
+      "skills": "管理技能",
+      "mcp": "管理 MCP 伺服器",
+      "plugin": "瀏覽工具",
+      "workflows": "開啟例行工作",
+      "agents": "建立機器人",
+      "feedback": "回報問題",
+      "rename": "重新命名此聊天",
+      "renameArgument": "新名稱",
+      "diff": "查看變更",
+      "addDir": "新增資料夾",
+      "tooSmall": "此聊天還太短，暫時無法精簡"
     }
   },
   "notch": {

@@ -2943,6 +2943,7 @@
       "showMore_other": "再显示 {{count}} 行"
     },
     "composer": {
+      "addConnectors": "添加连接器",
       "attach": "附加",
       "attachFailed": "无法附加此文件",
       "attachFiles": "文件或图片",
@@ -2954,7 +2955,9 @@
       "files": "文件",
       "gone": "此对话已不存在。",
       "mini": "回复，或引导运行",
+      "manageConnectors": "管理连接器",
       "modeFailed": "无法更改模式",
+      "noConnectors": "未找到连接器",
       "model": "模型：{{name}}",
       "models": "模型",
       "notReady": "智能体尚未就绪。请重试。",
@@ -2990,7 +2993,9 @@
       "folderItems_one": "{{count}} 个项目",
       "folderItems_other": "{{count}} 个项目",
       "includedIn": "包含在 {{plan}} 中",
-      "includedInPaid": "包含在付费套餐中"
+      "includedInPaid": "包含在付费套餐中",
+      "commands": "命令",
+      "commandFailed": "操作没有成功，请重试。"
     },
     "day": {
       "today": "今天",
@@ -3364,6 +3369,9 @@
       "copy": "复制“{{text}}”，然后从手机发送",
       "copyFailed": "无法复制"
     },
+    "retryOffer": {
+      "try": "用 {{model}} 再试一次"
+    },
     "deliverableOffer": {
       "label": "将此回答保存为文档",
       "doc": "生成文档",
@@ -3374,6 +3382,59 @@
         "doc": "把你上一条回答整理成一份精美的文档，方便我保存和分享，并以 PDF 格式保存到工作区。",
         "report": "把你上一条回答整理成一份精美的报告，方便我保存和分享，并以 PDF 格式保存到工作区。"
       }
+    },
+    "commands": {
+      "new": "开始新聊天",
+      "model": "更换模型",
+      "plan": "先规划再执行",
+      "permissions": "选择哪些操作无需询问即可运行",
+      "copy": "复制上一条回复",
+      "help": "显示所有命令",
+      "busy": "请等这条回复完成后再试",
+      "notRunning": "请先发送一条消息，然后再试",
+      "invalid": "这里不能使用这个值",
+      "contextUnknown": "尚未统计。请先发送一条消息。",
+      "contextPercent": "此聊天已用 {{percent}}%",
+      "compact": "精简此聊天（消耗积分）",
+      "compactArgument": "要保留的内容",
+      "compactDone": "聊天已精简",
+      "context": "此聊天已用多少",
+      "effort": "设置模型的思考强度",
+      "effortArgument": "low、medium 或 high",
+      "effortDone": "思考强度：{{level}}",
+      "autocompact": "开启或关闭自动精简",
+      "autocompactArgument": "on 或 off",
+      "autocompactDone": "自动精简：{{value}}",
+      "export": "将此聊天保存为文件",
+      "exportDone": "聊天已保存",
+      "tasks": "仍在运行的工作",
+      "tasksDone": "{{count}} 项正在后台运行",
+      "status": "此聊天的状态",
+      "statusDone": "聊天正在运行",
+      "review": "审查工作（消耗积分）",
+      "reviewArgument": "要审查的内容",
+      "reviewPrompt": "检查此工作区中的改动是否有错误。{{value}}",
+      "subtask": "交出一项任务（消耗积分）",
+      "subtaskArgument": "任务",
+      "subtaskPrompt": "将此作为单独的任务委派：{{value}}",
+      "resume": "打开另一个聊天",
+      "usage": "已用积分",
+      "config": "打开设置",
+      "theme": "更换主题",
+      "login": "你的账户",
+      "memory": "应用记住的内容",
+      "connectors": "添加或管理连接器",
+      "skills": "管理技能",
+      "mcp": "管理 MCP 服务器",
+      "plugin": "浏览工具",
+      "workflows": "打开例行任务",
+      "agents": "创建机器人",
+      "feedback": "报告问题",
+      "rename": "重命名此聊天",
+      "renameArgument": "新名称",
+      "diff": "查看改动",
+      "addDir": "添加文件夹",
+      "tooSmall": "此聊天还太短，暂时无法精简"
     }
   },
   "notch": {
