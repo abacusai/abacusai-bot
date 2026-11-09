@@ -1973,7 +1973,13 @@
       "zoom-out": "Pomniejsz",
       "zoom-reset": "Resetuj powiększenie",
       "open-devtools": "Narzędzia deweloperskie",
-      "clear-site-data": "Wyczyść dane witryny"
+      "clear-site-data": "Wyczyść dane witryny",
+      "site": {
+        "title": "Użyć Twojego logowania w {{site}}?",
+        "allow": "Zezwól w tym czacie",
+        "deny": "Nie zezwalaj",
+        "always": "Zawsze zezwalaj"
+      }
     },
     "files": {
       "filter": "Filtruj pliki…",
@@ -4412,6 +4418,21 @@
         "notReady": "Roblox Studio nie odpowiedziało. Otwórz swoje miejsce w Studio, włącz Enable Studio as MCP server (Assistant > … > Manage MCP Servers) i spróbuj ponownie.",
         "get": "Pobierz Roblox Studio"
       }
+    },
+    "sites": {
+      "title": "Połączone witryny",
+      "intro": "Witryny, w których przeglądarka Twoich botów jest zalogowana. Wybierz, czy boty mogą używać każdego logowania. Witryny banków, płatności, zdrowia i administracji są na początku zablokowane.",
+      "signedIn": "Zalogowano",
+      "used": "użyte przez bota {{when}}",
+      "empty": "Brak witryn. Gdy bot dotrze do strony logowania, a Ty się tam za niego zalogujesz, witryna pojawi się tutaj.",
+      "addLabel": "Zalogowano w innej witrynie w panelu Przeglądarka?",
+      "add": "Dodaj witrynę",
+      "placeholder": "goindigo.in",
+      "rule": "Reguła dla {{site}}",
+      "ask": "Najpierw pytaj",
+      "allowed": "Dozwolone",
+      "blocked": "Zablokowane",
+      "signOut": "Wyloguj"
     }
   },
   "browserPermission": {

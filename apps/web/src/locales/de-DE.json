@@ -1951,7 +1951,13 @@
       "zoom-out": "Zoom out",
       "zoom-reset": "Reset zoom",
       "open-devtools": "Developer tools",
-      "clear-site-data": "Clear site data"
+      "clear-site-data": "Clear site data",
+      "site": {
+        "title": "Deine Anmeldung bei {{site}} nutzen?",
+        "allow": "In diesem Chat erlauben",
+        "deny": "Nicht erlauben",
+        "always": "Immer erlauben"
+      }
     },
     "files": {
       "filter": "Filter files…",
@@ -4272,6 +4278,21 @@
         "notReady": "Roblox Studio hat nicht geantwortet. Öffne deinen Ort in Studio, schalte Enable Studio as MCP server ein (Assistant > … > Manage MCP Servers) und versuche es erneut.",
         "get": "Roblox Studio holen"
       }
+    },
+    "sites": {
+      "title": "Verbundene Websites",
+      "intro": "Websites, bei denen der Browser deiner Bots angemeldet ist. Lege fest, ob Bots die jeweilige Anmeldung nutzen dürfen. Banken, Zahlungen, Gesundheit und Behörden sind anfangs gesperrt.",
+      "signedIn": "Angemeldet",
+      "used": "von einem Bot genutzt {{when}}",
+      "empty": "Noch keine Websites. Wenn ein Bot eine Anmeldeseite erreicht und du dich für ihn anmeldest, erscheint die Website hier.",
+      "addLabel": "Im Browser-Bereich bei einer anderen Website angemeldet?",
+      "add": "Website hinzufügen",
+      "placeholder": "goindigo.in",
+      "rule": "Regel für {{site}}",
+      "ask": "Erst fragen",
+      "allowed": "Erlaubt",
+      "blocked": "Gesperrt",
+      "signOut": "Abmelden"
     }
   },
   "browserPermission": {

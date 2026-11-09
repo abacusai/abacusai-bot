@@ -4091,3 +4091,177 @@ describe("screenshots as media for the chat", () => {
     expect(store.resolve("/etc/hosts", "s")).toMatchObject({ ok: false });
   });
 });
+
+describe("a connected site's rule", () => {
+  let sited: import("./mcp-browser-server").McpBrowserServer;
+  let sitedPort: number;
+  const gateCalls: string[] = [];
+  const loginStops: string[] = [];
+  const refuse = "The user blocked bots from using their sign-in on bank.test.";
+
+  const sitedCall = async (
+    name: string,
+    args: Record<string, unknown>
+  ): Promise<{ text: string; isError: boolean }> => {
+    const res = await fetch(
+      `http://127.0.0.1:${sitedPort}/mcp?session=session-1`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: ++nextId,
+          method: "tools/call",
+          params: { name, arguments: args },
+        }),
+      }
+    );
+    const body = (await res.json()) as { result?: ToolResult };
+    return {
+      text: body.result?.content?.[0]?.text ?? "",
+      isError: body.result?.isError === true,
+    };
+  };
+
+  beforeAll(async () => {
+    const { McpBrowserServer } = await import("./mcp-browser-server");
+    sited = new McpBrowserServer({
+      target: () => fakeTarget,
+      timeouts: { attachMs: 300, navigateMs: 600, historyMs: 600 },
+      siteGate: async (url) => {
+        gateCalls.push(url);
+        return url.includes("bank.test") ? refuse : null;
+      },
+      onSignInPage: (site) => loginStops.push(site),
+      workspaceForSession: (sessionId) => workspaces.get(sessionId) ?? null,
+      checkoutToken: AGENT_TOKEN,
+    });
+    sitedPort = await sited.start();
+  });
+
+  afterAll(() => sited.stop());
+
+  beforeEach(() => {
+    gateCalls.length = 0;
+    loginStops.length = 0;
+  });
+
+  it("refuses a navigation to a site whose rule says no, before it loads", async () => {
+    const result = await sitedCall("browser_navigate", {
+      action: "goto",
+      url: "https://www.bank.test/accounts",
+    });
+    expect(result).toEqual({ isError: true, text: refuse });
+    expect(page.getURL()).toBe("https://example.test/start");
+  });
+
+  it("lets other sites through, checking the page the call acts on", async () => {
+    const result = await sitedCall("browser_navigate", {
+      action: "goto",
+      url: "https://example.test/next",
+    });
+    expect(result.isError).toBe(false);
+    expect(gateCalls[0]).toBe("https://example.test/next");
+  });
+
+  it("holds a call on a page already on such a site, and never holds the tab list", async () => {
+    page.url = "https://bank.test/home";
+    respondWith(() => oneButton);
+    expect(await sitedCall("browser_snapshot", { action: "snapshot" })).toEqual(
+      {
+        isError: true,
+        text: refuse,
+      }
+    );
+    gateCalls.length = 0;
+    await sitedCall("browser_tabs", { action: "list" });
+    expect(gateCalls).toEqual([]);
+  });
+
+  it("notes a site whose page has a password field, by the app's own look", async () => {
+    respondWith((expression) =>
+      expression.includes("input[type=password]") ? true : oneButton
+    );
+    await sitedCall("browser_navigate", {
+      action: "goto",
+      url: "https://shop.example.test/login",
+    });
+    expect(loginStops).toEqual(["example.test"]);
+    loginStops.length = 0;
+    respondWith((expression) =>
+      expression.includes("input[type=password]") ? false : oneButton
+    );
+    await sitedCall("browser_navigate", {
+      action: "goto",
+      url: "https://news.example.test/",
+    });
+    expect(loginStops).toEqual([]);
+  });
+
+  it("holds an upload to the site's rule first, then to the user's own words", async () => {
+    const ws = fs.mkdtempSync(path.join(os.tmpdir(), "sited-ws-"));
+    workspaces.set("session-1", ws);
+    const cv = path.join(ws, "cv.pdf");
+    fs.writeFileSync(cv, "pdf");
+    fs.writeFileSync(path.join(ws, ".env"), "decoy");
+    const given: unknown[] = [];
+    const own = page.debugger.sendCommand;
+    page.debugger.sendCommand = async (method, params) => {
+      if (method === "DOM.getDocument") return { root: { nodeId: 1 } };
+      if (method === "DOM.querySelector") return { nodeId: 5 };
+      if (method === "DOM.setFileInputFiles") {
+        given.push(params);
+        return {};
+      }
+      return own(method, params);
+    };
+    try {
+      // A blocked site: refused by its rule, even for the file the user attached.
+      page.url = "https://bank.test/upload";
+      gateCalls.length = 0;
+      const blocked = await sitedCall("browser_interact", {
+        action: "upload",
+        ref: "@e1",
+        path: cv,
+        user_grant: userGrant([`upload my cv on bank.test\n\n@${cv}`]),
+      });
+      expect(blocked).toEqual({ isError: true, text: refuse });
+      // A site the rule allows: the user's words decide the file.
+      page.url = "https://example.test/start";
+      respondWith(() => oneButton);
+      await sitedCall("browser_snapshot", { action: "snapshot" });
+      respondWith(() => ({ status: "ok" }));
+      const decoy = await sitedCall("browser_interact", {
+        action: "upload",
+        ref: "@e1",
+        path: ".env",
+        user_grant: userGrant([`upload my cv on example.test\n\n@${cv}`]),
+      });
+      expect(decoy.isError).toBe(true);
+      expect(decoy.text).toContain("did not name or attach");
+      const ok = await sitedCall("browser_interact", {
+        action: "upload",
+        ref: "@e1",
+        path: cv,
+        user_grant: userGrant([`upload my cv on example.test\n\n@${cv}`]),
+      });
+      expect(ok.isError).toBe(false);
+      expect(given).toEqual([{ files: [fs.realpathSync(cv)], nodeId: 5 }]);
+    } finally {
+      page.debugger.sendCommand = own;
+      workspaces.clear();
+    }
+  });
+
+  it("leaves a page that landed on such a site (back, a link, a redirect) before it is read", async () => {
+    page.history = ["https://bank.test/home"];
+    page.url = "https://example.test/start";
+    const result = await sitedCall("browser_navigate", { action: "back" });
+    expect(result).toEqual({ isError: true, text: refuse });
+    expect(page.getURL()).toBe("about:blank");
+  });
+});

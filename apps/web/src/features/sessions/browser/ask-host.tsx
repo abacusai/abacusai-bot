@@ -48,20 +48,36 @@ export const BrowserAskHost = () => {
   return (
     <section
       role="dialog"
-      aria-label={t("sessions.browser.permission")}
+      aria-label={
+        ask.site != null
+          ? t("sessions.browser.site.title", { site: ask.site })
+          : t("sessions.browser.permission")
+      }
       className="bg-popover text-popover-foreground fixed right-6 bottom-6 z-50 flex max-w-md flex-col gap-3 rounded-xl border p-4 shadow-lg"
     >
-      <h2 className="font-semibold">{t("sessions.browser.permission")}</h2>
+      <h2 className="font-semibold">
+        {ask.site != null
+          ? t("sessions.browser.site.title", { site: ask.site })
+          : t("sessions.browser.permission")}
+      </h2>
       <p>{ask.summary}</p>
       {error ? <p role="alert">{error}</p> : null}
       <div className="flex flex-wrap gap-2">
-        {(["allow", "deny", "session", "always"] as const).map((decision) => (
+        {(ask.site != null
+          ? // A site's sign-in: this chat, for good, or no.
+            (["allow", "always", "deny"] as const)
+          : (["allow", "deny", "session", "always"] as const)
+        ).map((decision) => (
           <Button
             key={decision}
             variant={decision === "allow" ? "default" : "outline"}
             onClick={() => void respond(decision)}
           >
-            {t(`sessions.browser.${decision}`)}
+            {t(
+              ask.site != null
+                ? `sessions.browser.site.${decision}`
+                : `sessions.browser.${decision}`
+            )}
           </Button>
         ))}
       </div>

@@ -69,7 +69,11 @@ import {
   checkServedPageIn,
   type ServedPageCheck,
 } from "../browser/page-errors";
-import { type CapturedImage, SecretFields } from "../browser/secret-fields";
+import {
+  type CapturedImage,
+  SecretFields,
+  WAS_PASSWORD_ATTRIBUTE,
+} from "../browser/secret-fields";
 import {
   isLocalTarget,
   localAddressesIn,
@@ -127,7 +131,7 @@ import {
   TOTAL_NOT_ANCHORED,
   USED_REFUSAL,
 } from "../vault/pay-guard";
-import { onSite, registrableDomain } from "../vault/site";
+import { onSite, registrableDomain, sameSite } from "../vault/site";
 import { VAULT_UNAVAILABLE, type VaultField } from "../vault/vault-client";
 import {
   cardField,
@@ -665,6 +669,15 @@ const CARD_DETAILS: ReadonlySet<VaultField> = new Set([
   "cardholder_name",
 ]);
 
+/** Calls after which the page is looked at for a sign-in form. */
+const SIGN_IN_WATCHED = new Set([
+  "browser_navigate",
+  "browser_snapshot",
+  "browser_interact",
+]);
+/** A password field on the page, or one that was before a "show password" toggle. */
+const HAS_PASSWORD_FIELD_JS = `!!document.querySelector('input[type=password], input[${WAS_PASSWORD_ATTRIBUTE}]')`;
+
 /** A card detail the vault cannot give, left to the user, never guessed. */
 const CARD_DETAIL_UNSUPPORTED =
   "The vault cannot fill the card's expiry or the name on it (not supported, or not saved with the card), so " +
@@ -673,6 +686,18 @@ const CARD_DETAIL_UNSUPPORTED =
   "page themselves.";
 
 export interface McpBrowserServerOptions {
+  /**
+   * Why a call may not touch `url` (a connected site whose rule says no, or
+   * ask and the user did not allow it here), or null. Checked on the page a
+   * call acts on or reads, and on the page it lands on.
+   */
+  siteGate?: (url: string, sessionId: string) => Promise<string | null>;
+  /**
+   * The bot's browser reached a site's sign-in page (a password field on
+   * the page, or the run stopped there for the user): the user is about to
+   * sign in there for the bot.
+   */
+  onSignInPage?: (site: string, sessionId: string) => void;
   /** Gate consulted before each tool call; when omitted, nothing is gated. */
   requestPermission?: (
     tool: string,
@@ -2342,12 +2367,22 @@ export class McpBrowserServer extends McpHttpServer {
             return this.err(`${name} was not run: it timed out while waiting.`);
           const refused = await this.abacusFence(name, args, sessionId);
           if (refused != null) return refused;
+          const before = this.findView(sessionId)?.getURL() ?? null;
+          const notAllowed = await this.siteRefusal(name, args, sessionId);
+          if (notAllowed != null) return notAllowed;
           if (held?.watchUrl != null && name === "browser_snapshot") {
             const page = this.findView(sessionId);
             if (page == null || !onWatchHost(page.getURL(), held.watchUrl))
               return this.err("The routine's page is not open.");
           }
           const result = await act();
+          // Landed on this computer or its network where the user never sent it.
+          const local = await this.leaveLocalPage(args, sessionId);
+          if (local != null) return local;
+          // Landed on another site (a link, a redirect): its rule, before it is read.
+          const landed = await this.landedRefusal(before, sessionId);
+          if (landed != null) return landed;
+          if (SIGN_IN_WATCHED.has(name)) await this.noteSignInPage(sessionId);
           // Landed somewhere else (a redirect): leave before it is read.
           if (held?.watchUrl != null) {
             const page = this.findView(sessionId);
@@ -2358,11 +2393,7 @@ export class McpBrowserServer extends McpHttpServer {
               );
             }
           }
-          return (
-            (await this.leaveAbacusPage(sessionId)) ??
-            (await this.leaveLocalPage(args, sessionId)) ??
-            result
-          );
+          return (await this.leaveAbacusPage(sessionId)) ?? result;
         };
         try {
           return await this.inSessionOrder(sessionId ?? "", guarded);
@@ -3890,6 +3921,9 @@ export class McpBrowserServer extends McpHttpServer {
     };
     const held = session.checkout.pause(pause);
     if (held.ok === false) return this.err(`Not paused: ${held.reason}`);
+    // The user signs in here for the bot: the site joins Connected sites.
+    if (input.need === "login" && pause.site != null)
+      this.options.onSignInPage?.(pause.site, sessionId);
     return this.ok(
       "Paused for the user. Your run ends here and the page stays as it is; write nothing more.\n" +
         checkoutStateLine({ stage: held.stage, paused: pause })
@@ -4275,6 +4309,81 @@ export class McpBrowserServer extends McpHttpServer {
         found.push({ origin, top: frameId == null });
     }
     return found;
+  }
+
+  /**
+   * A connected site's rule, before a call: the page a navigation goes to,
+   * or the page any other call acts on or reads. A pause (the run stopping
+   * at a sign-in for the user) and the tab list are never held.
+   */
+  private async siteRefusal(
+    name: string,
+    args: Record<string, unknown>,
+    sessionId?: string
+  ): Promise<ToolResult | null> {
+    const gate = this.options.siteGate;
+    if (gate == null || sessionId == null) return null;
+    if (name === BROWSER_PAUSE_TOOL || name === "browser_tabs") return null;
+    const url =
+      name === "browser_navigate" &&
+      typeof args.url === "string" &&
+      (args.action == null || args.action === "goto")
+        ? args.url
+        : (this.findView(sessionId)?.getURL() ?? null);
+    if (url == null) return null;
+    const refusal = await gate(url, sessionId);
+    return refusal == null ? null : this.err(refusal);
+  }
+
+  /**
+   * Whether the page is a sign-in page (a password field, now or once), by
+   * the app's own look, not the model's word: a run may report the wall
+   * instead of pausing at it.
+   */
+  private async noteSignInPage(sessionId?: string): Promise<void> {
+    const note = this.options.onSignInPage;
+    const page = sessionId == null ? null : this.findView(sessionId);
+    if (note == null || page == null) return;
+    let host: string;
+    try {
+      const url = new URL(page.getURL());
+      if (url.protocol !== "https:" && url.protocol !== "http:") return;
+      host = url.hostname;
+    } catch {
+      return;
+    }
+    const site = registrableDomain(host);
+    if (site == null) return;
+    const signIn = await this.readPage(page, HAS_PASSWORD_FIELD_JS).catch(
+      () => false
+    );
+    if (signIn === true && sessionId != null) note(site, sessionId);
+  }
+
+  /** After a call: a page now on another site is held to that site's rule, and left if it says no. */
+  private async landedRefusal(
+    before: string | null,
+    sessionId?: string
+  ): Promise<ToolResult | null> {
+    const gate = this.options.siteGate;
+    if (gate == null || sessionId == null) return null;
+    const page = this.findView(sessionId);
+    const now = page?.getURL() ?? null;
+    if (page == null || now == null || now === before) return null;
+    const hostOf = (url: string | null): string | null => {
+      try {
+        return url == null ? null : new URL(url).hostname;
+      } catch {
+        return null;
+      }
+    };
+    const was = hostOf(before);
+    const is = hostOf(now);
+    if (is == null || (was != null && sameSite(was, is))) return null;
+    const refusal = await gate(now, sessionId);
+    if (refusal == null) return null;
+    await page.loadURL("about:blank").catch(() => undefined);
+    return this.err(refusal);
   }
 
   /** Whether `url` is on one of Abacus.AI's hosts (see `abacusHostFence`). */

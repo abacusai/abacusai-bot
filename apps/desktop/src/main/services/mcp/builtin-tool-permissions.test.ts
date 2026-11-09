@@ -125,3 +125,62 @@ describe("a permission prompt's conversation", () => {
     ).toBe(false);
   });
 });
+
+describe("a connected site's ask (may this chat use your sign-in?)", () => {
+  it("asks even when browsing never asks, and passes the user's exact choice on", async () => {
+    const { gate: g, events } = gate();
+    const pending = g.askSite(
+      "goindigo.in",
+      "Writer wants to use your sign-in on goindigo.in.",
+      "session-1"
+    );
+    const request = emitted(events);
+    expect(request).toMatchObject({
+      site: "goindigo.in",
+      conversationKey: here,
+      tool: "browser_site",
+    });
+    await g.respond({
+      requestId: request.requestId,
+      conversationKey: here,
+      decision: "always",
+    });
+    await expect(pending).resolves.toBe("always");
+  });
+
+  it("asks a bot running where nothing asks (the default for bots)", async () => {
+    const events: IpcEvent[] = [];
+    const yolo = new BuiltinToolPermissions({
+      mcpConfigService: {
+        readState: () => ({}),
+        writeState: () => undefined,
+      } as never,
+      emitEvent: (event) => events.push(event),
+      getSessionMode: () => AgentMode.Yolo,
+      setBrowserApprovalAlways: async () => undefined,
+      conversationKeyForSession: () => here,
+    });
+    const pending = yolo.askSite("goindigo.in", "s", "session-1", 50);
+    expect(emitted(events).site).toBe("goindigo.in");
+    await expect(pending).resolves.toBe("deny");
+  });
+
+  it("is a no when nobody answers in time, or there is nobody to ask", async () => {
+    const { gate: g, events } = gate();
+    await expect(g.askSite("goindigo.in", "s", "session-1", 20)).resolves.toBe(
+      "deny"
+    );
+    expect(events.some((e) => e.type === "browser-permission-cleared")).toBe(
+      true
+    );
+    await expect(g.askSite("goindigo.in", "s", "nobody")).resolves.toBe("deny");
+  });
+
+  it("is not answered by a browsing setting turned to never ask", async () => {
+    const { gate: g, events } = gate();
+    const pending = g.askSite("goindigo.in", "s", "session-1", 50);
+    emitted(events);
+    g.flushPending("allow", "browser");
+    await expect(pending).resolves.toBe("deny");
+  });
+});

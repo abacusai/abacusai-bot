@@ -1951,7 +1951,13 @@
       "zoom-out": "Zoom out",
       "zoom-reset": "Reset zoom",
       "open-devtools": "Developer tools",
-      "clear-site-data": "Clear site data"
+      "clear-site-data": "Clear site data",
+      "site": {
+        "title": "Pakai login kamu di {{site}}?",
+        "allow": "Izinkan di chat ini",
+        "deny": "Jangan izinkan",
+        "always": "Selalu izinkan"
+      }
     },
     "files": {
       "filter": "Filter files…",
@@ -4272,6 +4278,21 @@
         "notReady": "Roblox Studio tidak merespons. Buka place kamu di Studio, aktifkan Enable Studio as MCP server (Assistant > … > Manage MCP Servers), lalu coba lagi.",
         "get": "Dapatkan Roblox Studio"
       }
+    },
+    "sites": {
+      "title": "Situs terhubung",
+      "intro": "Situs tempat browser bot kamu sudah masuk. Pilih apakah bot boleh memakai setiap login. Bank, pembayaran, kesehatan, dan pemerintahan diblokir sejak awal.",
+      "signedIn": "Sudah masuk",
+      "used": "dipakai bot {{when}}",
+      "empty": "Belum ada situs. Saat bot sampai di halaman masuk dan kamu masuk untuknya, situsnya muncul di sini.",
+      "addLabel": "Sudah masuk ke situs lain di panel Browser?",
+      "add": "Tambah situs",
+      "placeholder": "goindigo.in",
+      "rule": "Aturan untuk {{site}}",
+      "ask": "Tanya dulu",
+      "allowed": "Diizinkan",
+      "blocked": "Diblokir",
+      "signOut": "Keluar"
     }
   },
   "browserPermission": {

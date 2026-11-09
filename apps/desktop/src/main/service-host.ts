@@ -83,6 +83,8 @@ import type {
   BrowserEngine,
   ClearBrowserDataRequest,
   ClearBrowserDataResult,
+  ConnectedSite,
+  ConnectedSitePolicy,
   GetMcpRuntimeServersRequest,
   GetMcpServerLogsRequest,
   BrowserPermissionRequest,
@@ -258,7 +260,8 @@ import {
   TOOLSETS_BY_ID,
 } from "@abacus-ai/contract/toolsets";
 import type { DictationLanguage } from "@abacus-ai/contract/voice";
-import { app, net } from "electron";
+import { ORPCError } from "@orpc/server";
+import { app, net, session as electronSession } from "electron";
 
 import {
   abacusBotHome,
@@ -459,6 +462,10 @@ import {
   HostedChromiumLauncher,
   HostedChromiumService,
 } from "./services/browser/chrome/hosted-chromium";
+import {
+  BROWSER_PARTITION,
+  ConnectedSites,
+} from "./services/browser/connected-sites";
 import type { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import { channelTitle } from "./services/channels/channel-logic";
 import {
@@ -1330,6 +1337,15 @@ export class ServiceHost {
   private readonly mcpBrowserServer = new McpBrowserServer({
     requestPermission: (tool, summary, sessionId) =>
       this.requestBrowserToolPermission(tool, summary, sessionId),
+    // Connected sites live in the desktop browser's saved session.
+    siteGate: (url, sessionId) =>
+      this.platform === "electron"
+        ? this.connectedSites.gate(url, sessionId)
+        : Promise.resolve(null),
+    onSignInPage: (site, sessionId) => {
+      if (this.platform === "electron")
+        this.connectedSites.signInPage(site, sessionId);
+    },
     target: () => this.browserTargetSource(),
     // Only the hosted computer carries a chat that takes media (WhatsApp).
     media: () => (this.platform === "web-host" ? this.mediaStore : null),
@@ -2883,6 +2899,22 @@ export class ServiceHost {
     setBrowserApprovalAlways: () => this.setBrowserApproval("always"),
     conversationKeyForSession: (sessionId) =>
       this.conversationKeyForSession(sessionId),
+  });
+  /** The sites the bot's browser is signed in to, and whether bots may use each. */
+  private readonly connectedSites = new ConnectedSites({
+    file: () => path.join(abacusBotHome(), "connected-sites.json"),
+    store: () => electronSession.fromPartition(BROWSER_PARTITION),
+    ask: (site, sessionId) =>
+      this.builtinToolPermissions.askSite(
+        site,
+        `${this.botService.list().find((bot) => bot.id === this.botOfSession(sessionId))?.name ?? "The agent"} wants to use your sign-in on ${site}.`,
+        sessionId
+      ),
+    conversationOf: (sessionId) => {
+      const key = this.conversationKeyForSession(sessionId);
+      return key == null ? null : JSON.stringify(key);
+    },
+    isOwnChat: (sessionId) => this.isOwnerSession(sessionId),
   });
   private readonly workspaceService = new WorkspaceService();
   private readonly browserProfilesService = new BrowserProfilesService();
@@ -6602,10 +6634,11 @@ export class ServiceHost {
     assertHostCapability(this.platform, "browser.clearData");
     try {
       // The browser's own views; profile-import partitions belong to the
-      // browser-profiles flow.
+      // browser-profiles flow. Its sign-ins go, so Connected sites is emptied too.
       if (this.browserRuntime == null)
         return { success: false, error: "The browser is not running." };
       await this.browserRuntime.clearData();
+      this.connectedSites.clear();
       return { success: true };
     } catch (err) {
       return {
@@ -9959,6 +9992,36 @@ export class ServiceHost {
       });
     }
     return state;
+  }
+
+  listConnectedSites(): Promise<ConnectedSite[]> {
+    assertHostCapability(this.platform, "browser.sites");
+    return this.connectedSites.list();
+  }
+
+  /** "goindigo.in" or a URL; the list, with it, once it holds cookies there. */
+  addConnectedSite(site: string): Promise<ConnectedSite[]> {
+    assertHostCapability(this.platform, "browser.sites");
+    if (this.connectedSites.add(site) == null)
+      throw new ORPCError("BAD_REQUEST", {
+        message: `"${site}" is not a website address.`,
+      });
+    return this.connectedSites.list();
+  }
+
+  setConnectedSitePolicy(
+    site: string,
+    policy: ConnectedSitePolicy
+  ): Promise<ConnectedSite[]> {
+    assertHostCapability(this.platform, "browser.sites");
+    this.connectedSites.setPolicy(site, policy);
+    return this.connectedSites.list();
+  }
+
+  async signOutConnectedSite(site: string): Promise<ConnectedSite[]> {
+    assertHostCapability(this.platform, "browser.sites");
+    await this.connectedSites.signOut(site);
+    return this.connectedSites.list();
   }
 
   listBrowserProfiles(): ReturnType<BrowserProfilesService["listProfiles"]> {

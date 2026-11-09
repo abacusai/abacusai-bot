@@ -1951,7 +1951,13 @@
       "zoom-out": "Zoom out",
       "zoom-reset": "Reset zoom",
       "open-devtools": "Developer tools",
-      "clear-site-data": "Clear site data"
+      "clear-site-data": "Clear site data",
+      "site": {
+        "title": "Usar seu login em {{site}}?",
+        "allow": "Permitir nesta conversa",
+        "deny": "Não permitir",
+        "always": "Sempre permitir"
+      }
     },
     "files": {
       "filter": "Filter files…",
@@ -4272,6 +4278,21 @@
         "notReady": "O Roblox Studio não respondeu. Abra sua experiência no Studio, ative Enable Studio as MCP server (Assistant > … > Manage MCP Servers) e tente de novo.",
         "get": "Baixar o Roblox Studio"
       }
+    },
+    "sites": {
+      "title": "Sites conectados",
+      "intro": "Sites em que o navegador dos seus bots está conectado. Escolha se os bots podem usar cada login. Bancos, pagamentos, saúde e governo começam bloqueados.",
+      "signedIn": "Conectado",
+      "used": "usado por um bot {{when}}",
+      "empty": "Nenhum site ainda. Quando um bot chegar a uma página de login e você entrar por ele, o site aparece aqui.",
+      "addLabel": "Entrou em outro site no painel do navegador?",
+      "add": "Adicionar site",
+      "placeholder": "goindigo.in",
+      "rule": "Regra para {{site}}",
+      "ask": "Perguntar antes",
+      "allowed": "Permitido",
+      "blocked": "Bloqueado",
+      "signOut": "Sair"
     }
   },
   "browserPermission": {

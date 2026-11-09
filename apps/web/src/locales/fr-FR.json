@@ -1951,7 +1951,13 @@
       "zoom-out": "Zoom out",
       "zoom-reset": "Reset zoom",
       "open-devtools": "Developer tools",
-      "clear-site-data": "Clear site data"
+      "clear-site-data": "Clear site data",
+      "site": {
+        "title": "Utiliser votre connexion sur {{site}} ?",
+        "allow": "Autoriser dans cette conversation",
+        "deny": "Ne pas autoriser",
+        "always": "Toujours autoriser"
+      }
     },
     "files": {
       "filter": "Filter files…",
@@ -4272,6 +4278,21 @@
         "notReady": "Roblox Studio n’a pas répondu. Ouvrez votre expérience dans Studio, activez Enable Studio as MCP server (Assistant > … > Manage MCP Servers), puis réessayez.",
         "get": "Obtenir Roblox Studio"
       }
+    },
+    "sites": {
+      "title": "Sites connectés",
+      "intro": "Les sites sur lesquels le navigateur de vos bots est connecté. Choisissez si les bots peuvent utiliser chaque connexion. Banques, paiements, santé et administrations sont bloqués au départ.",
+      "signedIn": "Connecté",
+      "used": "utilisé par un bot {{when}}",
+      "empty": "Aucun site pour l'instant. Quand un bot arrive sur une page de connexion et que vous vous connectez pour lui, le site apparaît ici.",
+      "addLabel": "Connecté à un autre site dans le panneau du navigateur ?",
+      "add": "Ajouter le site",
+      "placeholder": "goindigo.in",
+      "rule": "Règle pour {{site}}",
+      "ask": "Demander d'abord",
+      "allowed": "Autorisé",
+      "blocked": "Bloqué",
+      "signOut": "Se déconnecter"
     }
   },
   "browserPermission": {

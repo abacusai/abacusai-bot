@@ -1951,7 +1951,13 @@
       "zoom-out": "缩小",
       "zoom-reset": "重置缩放",
       "open-devtools": "开发者工具",
-      "clear-site-data": "清除网站数据"
+      "clear-site-data": "清除网站数据",
+      "site": {
+        "title": "使用你在 {{site}} 的登录？",
+        "allow": "在此对话中允许",
+        "deny": "不允许",
+        "always": "始终允许"
+      }
     },
     "files": {
       "filter": "筛选文件…",
@@ -4272,6 +4278,21 @@
         "notReady": "Roblox Studio 没有响应。请在 Studio 中打开你的体验，开启 Enable Studio as MCP server（Assistant > … > Manage MCP Servers），然后重试。",
         "get": "获取 Roblox Studio"
       }
+    },
+    "sites": {
+      "title": "已连接的网站",
+      "intro": "机器人浏览器已登录的网站。你可以决定机器人能否使用每个登录。银行、支付、医疗和政府网站默认阻止。",
+      "signedIn": "已登录",
+      "used": "机器人使用于 {{when}}",
+      "empty": "还没有网站。当机器人到达登录页、你替它登录后，网站会显示在这里。",
+      "addLabel": "在浏览器面板中登录了其他网站？",
+      "add": "添加网站",
+      "placeholder": "goindigo.in",
+      "rule": "{{site}} 的规则",
+      "ask": "先询问",
+      "allowed": "允许",
+      "blocked": "阻止",
+      "signOut": "退出登录"
     }
   },
   "browserPermission": {

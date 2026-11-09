@@ -1951,7 +1951,13 @@
       "zoom-out": "縮小",
       "zoom-reset": "重設縮放",
       "open-devtools": "開發人員工具",
-      "clear-site-data": "清除網站資料"
+      "clear-site-data": "清除網站資料",
+      "site": {
+        "title": "使用你在 {{site}} 的登入？",
+        "allow": "在此對話中允許",
+        "deny": "不允許",
+        "always": "一律允許"
+      }
     },
     "files": {
       "filter": "篩選檔案…",
@@ -4272,6 +4278,21 @@
         "notReady": "Roblox Studio 沒有回應。請在 Studio 中開啟你的體驗，開啟 Enable Studio as MCP server（Assistant > … > Manage MCP Servers），然後再試一次。",
         "get": "取得 Roblox Studio"
       }
+    },
+    "sites": {
+      "title": "已連線的網站",
+      "intro": "機器人瀏覽器已登入的網站。你可以決定機器人能否使用每個登入。銀行、支付、醫療和政府網站預設封鎖。",
+      "signedIn": "已登入",
+      "used": "機器人使用於 {{when}}",
+      "empty": "還沒有網站。當機器人到達登入頁、你替它登入後，網站會顯示在這裡。",
+      "addLabel": "在瀏覽器面板中登入了其他網站？",
+      "add": "新增網站",
+      "placeholder": "goindigo.in",
+      "rule": "{{site}} 的規則",
+      "ask": "先詢問",
+      "allowed": "允許",
+      "blocked": "封鎖",
+      "signOut": "登出"
     }
   },
   "browserPermission": {

@@ -39,6 +39,7 @@ import {
   browserResourceId,
   type BrowserRuntimeLease,
 } from "./browser-runtime-registry";
+import { BROWSER_PARTITION } from "./connected-sites";
 import { isInsideRoot } from "./local-preview-file";
 import { checkServedPageIn, type ServedPageCheck } from "./page-errors";
 
@@ -133,7 +134,7 @@ type CrashRecovery = {
   timer: ReturnType<typeof setTimeout> | null;
 };
 
-const DEFAULT_PARTITION = "persist:browser-runtime";
+const DEFAULT_PARTITION = BROWSER_PARTITION;
 
 /** Per page id, what it did that the page itself does not show (downloads). */
 const pendingPageEvents = new Map<number, string[]>();
