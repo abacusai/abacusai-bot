@@ -252,7 +252,7 @@ const PHONE_NO_DETOURS =
 
 /** The free alternative a free account hears when it says no. */
 const DESKTOP_ALTERNATIVE =
-  "say that is fine in one short line, and that AbacusAI Bot is free on a computer, at bot.abacus.ai. Do not offer the upgrade again in this chat unless they ask for one of these again.";
+  "say that is fine in one short line, and that the AbacusAI Bot desktop app is a free download that does this on a computer (bot.abacus.ai). Do not offer the upgrade again in this chat unless they ask for one of these again.";
 
 /** The free account's pitch: Basic, all of it, and the link that takes them on to the ChatLLM app. */
 const phoneUpgradeLines = (call: PhoneHandoffCall, link: string): string[] => {

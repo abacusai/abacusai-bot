@@ -487,10 +487,12 @@ import {
 import { MessagingGatewayService } from "./services/messaging/messaging-gateway-service";
 import {
   accountMovedPlan,
+  accountPlan,
   cachedAbacusAccount,
   creditSnapshot,
   fetchAbacusAccount,
   lockAbacusModelForPlan,
+  onAbacusAccountPlan,
   onAbacusAccountRead,
   onAbacusPlanChange,
   onFreePlan,
@@ -1853,6 +1855,13 @@ export class ServiceHost {
     const patch =
       prefs != null ? wallAfterAccountRead(prefs.get(), snapshot) : null;
     if (patch != null) prefs?.update(patch);
+  });
+  /** What the model is told about cost follows the plan; see account-plan.ts. */
+  private readonly stopAccountPlanForwarding = onAbacusAccountPlan((plan) => {
+    this.agentManagerService.broadcastCommand({
+      type: "account_plan",
+      ...plan,
+    });
   });
   /** The plan decides which paid-plan capabilities are on or offered, and which models it serves. */
   private readonly stopPlanForwarding = onAbacusPlanChange(() => {
@@ -3324,6 +3333,7 @@ export class ServiceHost {
     this.stop();
     this.stopCreditForwarding();
     this.stopPlanForwarding();
+    this.stopAccountPlanForwarding();
     this.connectWatcher.stop();
     this.vault?.stop();
     this.builtinMcpLifecycle.stopBrowserServer();
@@ -7312,6 +7322,8 @@ export class ServiceHost {
       ...(credits != null
         ? { ABACUSAI_BOT_CREDITS: JSON.stringify(credits) }
         : {}),
+      // Kept current afterwards by the `account_plan` command.
+      ABACUSAI_BOT_PLAN: JSON.stringify(accountPlan()),
       // Kept current afterwards by the `credit_wall` command.
       ...(this.prefs != null
         ? {
