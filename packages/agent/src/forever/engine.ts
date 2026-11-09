@@ -145,6 +145,7 @@ import {
 } from "../providers.js";
 import { ReasoningSplitter, splitReasoning } from "../reasoning-tags.js";
 import {
+  RecentOwnWords,
   replyLanguageMismatch,
   replyLanguageRepairPrompt,
   type ReplyLanguageMismatch,
@@ -190,8 +191,12 @@ import {
 import { addRunUsage, turnUsage, type TurnUsage } from "../turn-usage.js";
 import {
   accountReplyLanguagePrompt,
+  isSenderChat,
+  knownReplyLanguage,
   learnUserLanguage,
+  WordsLanguage,
 } from "../user-language.js";
+import { ownWords } from "../user-text.js";
 import webTools from "../web/tools.js";
 import type { ForeverProfile, HiddenTurnPrompt } from "./profile.js";
 import { endTurnOnClosedReply } from "./reply-end.js";
@@ -368,6 +373,15 @@ export class ForeverEngine {
   /** A reply in the wrong language, to be asked for again (once per turn). */
   private pendingLanguageRepair: ReplyLanguageMismatch | null = null;
   private languageRepairsThisTurn = 0;
+  /** The words of whoever writes here (the user, or a sender) over recent turns. */
+  private readonly userWords = new RecentOwnWords();
+  /** The run a romanized candidate came from, until its check is done. */
+  private languageCheckRun: {
+    messages: readonly unknown[];
+    willRetry: boolean;
+  } | null = null;
+  /** What language those words are, asked only when their script cannot tell. */
+  private readonly wordsLanguage = new WordsLanguage();
   /** The turn's recoveries from an empty reply (empty-reply.ts). */
   private readonly emptyReplies = new EmptyReplies();
   /** The turn's ask after a reply that ended on a promise (promised-work.ts). */
@@ -653,6 +667,8 @@ export class ForeverEngine {
 
     this.session = created.session;
     this.pi = this.loadedPi;
+    // A resumed chat: its earlier turns tell whose words the replies follow.
+    this.userWords.seed(this.session.messages, (text) => ownWords(text));
     endTurnOnClosedReply(this.session.agent);
     // A degenerate summary from a cheap model must not erase the history.
     anchorCompactions(this.session.sessionManager, {
@@ -813,6 +829,7 @@ export class ForeverEngine {
     this.cutStreamedThisTurn = false;
     this.languageRepairsThisTurn = 0;
     this.pendingLanguageRepair = null;
+    this.languageCheckRun = null;
     this.pendingEmptyAsk = false;
     this.emptyReplies.begin();
     this.promisedWork.begin();
@@ -853,10 +870,12 @@ export class ForeverEngine {
       if (turn?.continueCut === true) await continueCutReply(session);
       else {
         this.profile.noteUserWords?.(text);
+        const words = ownWords(text, turn?.userText);
+        this.userWords.beginTurn(words);
         // Only the user's own words name their language: not a sender's, not a routine's.
         if (isOwnerAudience() && this.profile.statesReplyLanguage !== true)
           void learnUserLanguage(
-            text,
+            words,
             (process.env.ABACUS_API_KEY ?? "").trim()
           );
         const context = await this.profile.beforeTurn(text);
@@ -1043,6 +1062,92 @@ export class ForeverEngine {
     this.session.setActiveToolsByName(this.session.getActiveToolNames());
   }
 
+  /**
+   * What follows a clean run once its language is judged: tools that arrived,
+   * an empty reply's retry, promised work, the next step, or the turn's end.
+   * Also run when a romanized candidate turns out to be the person's language.
+   */
+  private scheduleAfterRun(
+    messages: readonly unknown[],
+    willRetry: boolean
+  ): void {
+    // Tools a change deferred under this turn adds: the turn continues
+    // once with them, so the sender's request is finished rather than
+    // declared impossible. Once per turn.
+    const arrivals =
+      this.hiddenTurn ||
+      this.continuingPastMalformedToolCall ||
+      this.pendingContextCompaction != null ||
+      this.pendingOpenLlmRotation != null ||
+      this.pendingBusyWait != null ||
+      this.pendingLanguageRepair != null ||
+      this.toolArrivalsThisTurn > 0
+        ? []
+        : this.mcpTools.pendingArrivals();
+    this.pendingToolArrival = arrivals.length > 0 ? arrivals : null;
+    // Nothing at all, with no other way on: the turn tries again rather
+    // than ending on silence (EmptyReplies). Only a send's own turn
+    // (OwnedTurn) is asked: a hidden housekeeping turn has no reader.
+    const emptyStep =
+      !willRetry &&
+      !this.hiddenTurn &&
+      !this.interrupted &&
+      this.ownedTurn?.endedEmpty === true &&
+      !this.continuingPastMalformedToolCall &&
+      this.pendingContextCompaction == null &&
+      this.pendingOpenLlmRotation == null &&
+      this.pendingBusyWait == null &&
+      this.pendingLanguageRepair == null &&
+      this.pendingToolArrival == null &&
+      this.pendingStall == null
+        ? this.emptyReplies.next(
+            this.openLlmActive,
+            this.router.chain.hadFailure
+          )
+        : null;
+    if (emptyStep === "rotate")
+      this.pendingOpenLlmRotation =
+        this.routeAfterFailure(EMPTY_REPLY_FAILURE).rotation;
+    // With no other model to move to, the same one is asked.
+    this.pendingEmptyAsk =
+      emptyStep != null && this.pendingOpenLlmRotation == null;
+    const ending =
+      !willRetry &&
+      !this.continuingPastMalformedToolCall &&
+      this.pendingContextCompaction == null &&
+      this.pendingOpenLlmRotation == null &&
+      this.pendingBusyWait == null &&
+      this.pendingLanguageRepair == null &&
+      this.pendingToolArrival == null &&
+      this.pendingStall == null &&
+      !this.pendingEmptyAsk;
+    // Words that promise more, and nothing else on the way: told once to
+    // do it, inside this send so the run stays open (PromisedWork).
+    this.pendingPromisedWork =
+      ending &&
+      !this.hiddenTurn &&
+      !this.interrupted &&
+      this.ownedTurn != null &&
+      mayAskForPromisedWork(this.mode) &&
+      endedOnPromise(messages) &&
+      this.promisedWork.claim();
+    this.nextStepAsk.sawRun(messages);
+    // Finished work ends on what comes next, in this send (NextStepAsk).
+    this.pendingNextStep =
+      ending &&
+      !this.pendingPromisedWork &&
+      !this.hiddenTurn &&
+      !this.interrupted &&
+      this.ownedTurn != null &&
+      nextStepAskOn() &&
+      mayAskForPromisedWork(this.mode) &&
+      endedOnResult(messages) &&
+      this.nextStepAsk.claim();
+    if (ending && !this.pendingPromisedWork && !this.pendingNextStep) {
+      this.finishTurn();
+    }
+  }
+
   private async continuePastRecoverableFailures(): Promise<void> {
     while (
       this.continuingPastMalformedToolCall ||
@@ -1182,12 +1287,28 @@ export class ForeverEngine {
       if (this.pendingLanguageRepair != null) {
         const mismatch = this.pendingLanguageRepair;
         this.pendingLanguageRepair = null;
+        const run = this.languageCheckRun;
+        this.languageCheckRun = null;
+        // Latin words may be the reply's own language, romanized: then the
+        // turn goes on as if nothing had been flagged, and may end here.
+        if (
+          mismatch.romanized === true &&
+          run != null &&
+          (await this.wordsLanguage.writesIn(
+            mismatch.got,
+            this.userWords,
+            this.profile.knownReplyLanguage?.() ?? knownReplyLanguage()
+          ))
+        ) {
+          this.scheduleAfterRun(run.messages, run.willRetry);
+          continue;
+        }
         this.languageRepairsThisTurn += 1;
 
         await this.session?.sendCustomMessage(
           {
             customType: this.profile.continuations.languageRepairType,
-            content: replyLanguageRepairPrompt(mismatch),
+            content: replyLanguageRepairPrompt(mismatch, isSenderChat()),
             display: false,
           },
           { triggerTurn: true }
@@ -1708,6 +1829,7 @@ export class ForeverEngine {
     // Steered into housekeeping it would be answered where no one reads.
     if (this.upkeep || this.hiddenTurn) return;
     this.profile.noteUserWords?.(text);
+    this.userWords.add(ownWords(text));
     if (this.midTask.live) {
       try {
         await this.midTask.deliver({
@@ -1997,6 +2119,8 @@ export class ForeverEngine {
 
       this.session = created.session;
       this.pi = this.loadedPi;
+      this.userWords.clear();
+      this.wordsLanguage.clear();
       endTurnOnClosedReply(this.session.agent);
       // A fresh session has only the tools it was built with.
       this.mcpTools.rebind(
@@ -2385,82 +2509,18 @@ export class ForeverEngine {
           this.pendingBusyWait != null ||
           this.languageRepairsThisTurn > 0
             ? null
-            : replyLanguageMismatch(event.messages);
-        // Tools a change deferred under this turn adds: the turn continues
-        // once with them, so the sender's request is finished rather than
-        // declared impossible. Once per turn.
-        const arrivals =
-          this.hiddenTurn ||
-          this.continuingPastMalformedToolCall ||
-          this.pendingContextCompaction != null ||
-          this.pendingOpenLlmRotation != null ||
-          this.pendingBusyWait != null ||
-          this.pendingLanguageRepair != null ||
-          this.toolArrivalsThisTurn > 0
-            ? []
-            : this.mcpTools.pendingArrivals();
-        this.pendingToolArrival = arrivals.length > 0 ? arrivals : null;
-        // Nothing at all, with no other way on: the turn tries again rather
-        // than ending on silence (EmptyReplies). Only a send's own turn
-        // (OwnedTurn) is asked: a hidden housekeeping turn has no reader.
-        const emptyStep =
-          !event.willRetry &&
-          !this.hiddenTurn &&
-          !this.interrupted &&
-          this.ownedTurn?.endedEmpty === true &&
-          !this.continuingPastMalformedToolCall &&
-          this.pendingContextCompaction == null &&
-          this.pendingOpenLlmRotation == null &&
-          this.pendingBusyWait == null &&
-          this.pendingLanguageRepair == null &&
-          this.pendingToolArrival == null &&
-          this.pendingStall == null
-            ? this.emptyReplies.next(
-                this.openLlmActive,
-                this.router.chain.hadFailure
-              )
+            : replyLanguageMismatch(event.messages, {
+                turn: this.userWords.turn,
+                recent: this.userWords.recent,
+                known:
+                  this.profile.knownReplyLanguage?.() ?? knownReplyLanguage(),
+              });
+        // A romanized candidate is kept with its run: dismissed, the turn goes on from here.
+        this.languageCheckRun =
+          this.pendingLanguageRepair?.romanized === true
+            ? { messages: event.messages, willRetry: event.willRetry === true }
             : null;
-        if (emptyStep === "rotate")
-          this.pendingOpenLlmRotation =
-            this.routeAfterFailure(EMPTY_REPLY_FAILURE).rotation;
-        // With no other model to move to, the same one is asked.
-        this.pendingEmptyAsk =
-          emptyStep != null && this.pendingOpenLlmRotation == null;
-        const ending =
-          !event.willRetry &&
-          !this.continuingPastMalformedToolCall &&
-          this.pendingContextCompaction == null &&
-          this.pendingOpenLlmRotation == null &&
-          this.pendingBusyWait == null &&
-          this.pendingLanguageRepair == null &&
-          this.pendingToolArrival == null &&
-          this.pendingStall == null &&
-          !this.pendingEmptyAsk;
-        // Words that promise more, and nothing else on the way: told once to
-        // do it, inside this send so the run stays open (PromisedWork).
-        this.pendingPromisedWork =
-          ending &&
-          !this.hiddenTurn &&
-          !this.interrupted &&
-          this.ownedTurn != null &&
-          mayAskForPromisedWork(this.mode) &&
-          endedOnPromise(event.messages) &&
-          this.promisedWork.claim();
-        this.nextStepAsk.sawRun(event.messages);
-        // Finished work ends on what comes next, in this send (NextStepAsk).
-        this.pendingNextStep =
-          ending &&
-          !this.pendingPromisedWork &&
-          !this.hiddenTurn &&
-          !this.interrupted &&
-          this.ownedTurn != null &&
-          nextStepAskOn() &&
-          mayAskForPromisedWork(this.mode) &&
-          endedOnResult(event.messages) &&
-          this.nextStepAsk.claim();
-        if (ending && !this.pendingPromisedWork && !this.pendingNextStep) {
-          this.finishTurn();
-        }
+        this.scheduleAfterRun(event.messages, event.willRetry === true);
 
         return;
       }

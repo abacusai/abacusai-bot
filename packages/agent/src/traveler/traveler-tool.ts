@@ -13,6 +13,7 @@ import {
   stringParam,
   toolText,
 } from "../phone/phone-tool.js";
+import { ownWords } from "../user-text.js";
 import {
   type Consent,
   MAX_TRAVELERS,
@@ -30,16 +31,15 @@ export interface UserWords {
   text: string;
 }
 
-/** Host-added parts of a turn's text: "[note] …", "[linked] …", "[routine] …". */
+/** Any tagged part: a consent reads none of them, declared to `ownWords` or not. */
 const HOST_TAG = /^\s*\[[a-z][a-z -]*\]/i;
 
 /**
- * The user's own words in a turn's text. The phone lane joins a batch's
- * messages with blank lines and writes its own notes as one tagged line, so
- * a part that starts with a host tag is not the user's.
+ * The user's own words in a turn's text (user-text.ts `ownWords`), one entry
+ * per message: the phone lane joins a batch's messages with blank lines.
  */
 export function userWords(turnText: string): string[] {
-  return turnText
+  return ownWords(turnText)
     .split(/\n\s*\n/)
     .map((part) => part.trim())
     .filter((part) => part.length > 0 && !HOST_TAG.test(part));

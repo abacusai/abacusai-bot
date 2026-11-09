@@ -11,6 +11,7 @@
  * main chat with the user is never touched.
  */
 import { BOT_TASK_PREFIX } from "@abacus-ai/agent/bot-task";
+import { appNoteTag } from "@abacus-ai/agent/user-text";
 import type { Bot } from "@abacus-ai/contract/bots";
 import {
   lastTaggedReply,
@@ -115,7 +116,7 @@ export const requestGist = (request: string): string => {
  */
 export const botAskIntro = (asker: Named): string =>
   [
-    `[bot request] This conversation is your line to ${asker.name}${roleOf(asker)},`,
+    `${appNoteTag("bot request")} This conversation is your line to ${asker.name}${roleOf(asker)},`,
     "another AI bot that works for the same user as you. It is NOT the user,",
     "and the user is not in this chat. It asks you for help with its task;",
     "you answer it.",
@@ -266,8 +267,8 @@ export const askOutcomeNote = (
   return "answer" in ask
     ? [
         task
-          ? `[bot answer] ${answerer.name} finished the ${label} you passed it for the user. Its report:`
-          : `[bot answer] ${answerer.name} answered your ${label}.`,
+          ? `${appNoteTag("bot answer")} ${answerer.name} finished the ${label} you passed it for the user. Its report:`
+          : `${appNoteTag("bot answer")} ${answerer.name} answered your ${label}.`,
         task
           ? `This is not a message from the user; the report is also in ${answerer.name}'s own chat.`
           : "This is not a message from the user, and the user has not seen it yet.",
@@ -277,7 +278,7 @@ export const askOutcomeNote = (
           : "Tell the user what is useful in it for their task, briefly and in your\nown words. Ask it again only if the task truly needs more from it.",
       ].join("\n")
     : [
-        `[bot answer] ${answerer.name} could not ${task ? "finish" : "answer"} your ${label}: ${ask.error}`,
+        `${appNoteTag("bot answer")} ${answerer.name} could not ${task ? "finish" : "answer"} your ${label}: ${ask.error}`,
         "This is not a message from the user. Tell the user in one line, and",
         "carry on without it.",
       ].join("\n");
@@ -290,7 +291,7 @@ export const askOutcomeNote = (
  */
 export const answerAlreadyReadNote = (id: string, bot: string): string =>
   [
-    `[bot answer] ${bot} answered your request ${id}; you already read the whole answer with check_bot_answers.`,
+    `${appNoteTag("bot answer")} ${bot} answered your request ${id}; you already read the whole answer with check_bot_answers.`,
     "This is not a message from the user. If you already told the user what is useful in it, reply exactly NO_REPLY. Otherwise tell them now, briefly.",
   ].join("\n");
 
@@ -314,7 +315,7 @@ export const taskFollowUpNote = (
   reply: string
 ): string =>
   [
-    `[bot answer] After the task ${ask.id} ("${requestGist(ask.request)}") you passed ${doer.name} ended, the user wrote to ${doer.name} in its chat: ${quoted(userWords)}. Its answer:`,
+    `${appNoteTag("bot answer")} After the task ${ask.id} ("${requestGist(ask.request)}") you passed ${doer.name} ended, the user wrote to ${doer.name} in its chat: ${quoted(userWords)}. Its answer:`,
     wrapBotAnswer(doer, reply),
     "This is not a message from the user to you. If it changes what you know about that task (they dropped it, changed it, or had it finished after all), go by it from now on and tell the user in one line what it means for you. If it has nothing to do with the task, reply exactly NO_REPLY.",
   ].join("\n");

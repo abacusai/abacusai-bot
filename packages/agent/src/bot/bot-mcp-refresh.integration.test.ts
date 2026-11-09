@@ -344,8 +344,9 @@ describe("the reply-language block in a bot's chats", () => {
 
     const line = blockLine(systemPrompt());
     expect(line).toMatch(
-      /^The user's language is German\. Reply in the language of the user's latest message/
+      /^The person writing to you here is not the user\. Reply in the language of their latest message;/
     );
+    expect(line).toContain("reply in German, the user's language.");
     expect(line).not.toContain("The user chose");
   }, 60_000);
 

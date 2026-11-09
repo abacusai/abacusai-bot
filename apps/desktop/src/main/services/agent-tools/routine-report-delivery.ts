@@ -11,6 +11,7 @@
 import fs from "node:fs";
 
 import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
+import { appNoteTag } from "@abacus-ai/agent/user-text";
 import type { UserTextTags } from "@abacus-ai/contract/agent-types";
 import type { RoutineRunOutcome } from "@abacus-ai/contract/contracts";
 import {
@@ -131,7 +132,7 @@ export const carriesUserWords = (tags: UserTextTags | undefined): boolean =>
     : tags.operator.visibleFrom != null &&
       tags.operator.kind !== "routine-editor");
 
-interface PendingNote {
+export interface PendingNote {
   routineId: string;
   routineName: string;
   runSessionId: string;
@@ -281,11 +282,11 @@ export class RoutineReportStore {
 }
 
 /** The `[routine report sent]` line: what the user is likely answering. */
-const reportNote = (note: PendingNote): string => {
+export const reportNote = (note: PendingNote): string => {
   const when = new Date(note.startedAt).toLocaleString();
   const head = note.delivered
-    ? `[routine report sent] Your routine "${note.routineName}" (id ${note.routineId}) ran at ${when} and the app delivered its report to the user in ${["this chat", ...note.lanes.map((lane) => REPORT_LANE_NAMES[lane])].join(" and ")}:`
-    : `[routine report] The user opened this chat to reply to the report of your routine "${note.routineName}" (id ${note.routineId}) from its run at ${when}:`;
+    ? `${appNoteTag("routine report sent")} Your routine "${note.routineName}" (id ${note.routineId}) ran at ${when} and the app delivered its report to the user in ${["this chat", ...note.lanes.map((lane) => REPORT_LANE_NAMES[lane])].join(" and ")}:`
+    : `${appNoteTag("routine report")} The user opened this chat to reply to the report of your routine "${note.routineName}" (id ${note.routineId}) from its run at ${when}:`;
   return (
     `${head} ${neutralized(JSON.stringify(note.text))}. Their message may answer it: if they say go or ` +
     "answer its question, do it here with your own tools; change the routine with the cronjob tool only " +

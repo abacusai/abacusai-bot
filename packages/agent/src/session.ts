@@ -156,6 +156,7 @@ import {
   type SkillMetadata,
   type ToolRequest,
   type TurnOutcome,
+  type UserTextTags,
 } from "./protocol.js";
 import {
   createModelRuntime,
@@ -168,6 +169,7 @@ import {
   DEFAULT_MAX_OUTPUT_TOKENS,
 } from "./providers.js";
 import {
+  RecentOwnWords,
   replyLanguageMismatch,
   replyLanguageRepairPrompt,
   type ReplyLanguageMismatch,
@@ -226,8 +228,12 @@ import {
 import { addRunUsage, turnUsage, type TurnUsage } from "./turn-usage.js";
 import {
   accountReplyLanguagePrompt,
+  isSenderChat,
+  knownReplyLanguage,
   learnUserLanguage,
+  WordsLanguage,
 } from "./user-language.js";
+import { ownWords } from "./user-text.js";
 import { webHostPrompt } from "./web-host-prompt.js";
 import { desktopXSearchAvailable, searchAvailable } from "./web/search.js";
 import webTools from "./web/tools.js";
@@ -271,6 +277,8 @@ export interface SessionOptions {
 /** What a host passes with a turn: told once the user-visible turn is over. */
 export interface TurnHandle {
   settled?: () => void;
+  /** The message's display tags: where the user's own words are in it. */
+  userText?: UserTextTags;
   /** The sender's id for the message this turn answers. */
   messageId?: string;
   /** Pick the reply Google cut off back up instead of sending the text again. */
@@ -865,6 +873,15 @@ export class AbacusBotSession {
    */
   private pendingLanguageRepair: ReplyLanguageMismatch | null = null;
   private languageRepairsThisTurn = 0;
+  /** The user's own words over recent turns: what a reply's language is judged by. */
+  private readonly userWords = new RecentOwnWords();
+  /** The run a romanized candidate came from, until its check is done. */
+  private languageCheckRun: {
+    messages: readonly unknown[];
+    willRetry: boolean;
+  } | null = null;
+  /** What language those words are, asked only when their script cannot tell. */
+  private readonly wordsLanguage = new WordsLanguage();
   /** The turn's recoveries from an empty reply (empty-reply.ts). */
   private readonly emptyReplies = new EmptyReplies();
   /** The turn's ask after a reply that ended on a promise (promised-work.ts). */
@@ -1301,6 +1318,8 @@ export class AbacusBotSession {
 
     this.session = created.session;
     this.pi = this.loadedPi;
+    // A resumed chat: its earlier turns tell whose words the replies follow.
+    this.userWords.seed(this.session.messages, (text) => ownWords(text));
     endTurnOnClosedReply(this.session.agent);
     // The opening mode, so the log is a complete account rather than deltas.
     this.applyMode(this.mode, "startup");
@@ -1436,8 +1455,10 @@ export class AbacusBotSession {
     // Edited instructions apply to this turn, not the next session.
     await this.refreshCustomInstructions();
     // Only the user's own words name their language; a routine's prompt does not.
+    const words = ownWords(text, turn?.userText);
+    this.userWords.beginTurn(words);
     if (this.mode !== AgentMode.Unattended)
-      void learnUserLanguage(text, (process.env.ABACUS_API_KEY ?? "").trim());
+      void learnUserLanguage(words, (process.env.ABACUS_API_KEY ?? "").trim());
     // The sponsored window closing (or opening) changes the headers the
     // Abacus provider was registered with; a run must not carry the marker
     // past its deadline, nor miss it.
@@ -1463,6 +1484,7 @@ export class AbacusBotSession {
     this.networkFailureReported = false;
     this.languageRepairsThisTurn = 0;
     this.pendingLanguageRepair = null;
+    this.languageCheckRun = null;
     this.emptyReplies.begin();
     this.pendingEmptyAsk = false;
     this.promisedWork.begin();
@@ -1816,6 +1838,85 @@ export class AbacusBotSession {
    * transcript. `agent_end` has already withheld the idle event, so the
    * continuation does not read as two turns.
    */
+  /**
+   * What follows a clean run once its language is judged: tools that arrived,
+   * an empty reply's retry, promised work, the next step, or the turn's end.
+   * Also run when a romanized candidate turns out to be the person's language.
+   */
+  private scheduleAfterRun(
+    messages: readonly unknown[],
+    willRetry: boolean
+  ): void {
+    // Tools a change deferred under this turn adds: the turn continues
+    // once with them, so the request is finished rather than declared
+    // impossible. Once per turn.
+    const arrivals =
+      this.continuingPastMalformedToolCall ||
+      this.pendingContextCompaction != null ||
+      this.pendingOpenLlmRotation != null ||
+      this.pendingBusyWait != null ||
+      this.pendingLanguageRepair != null ||
+      this.toolArrivalsThisTurn > 0
+        ? []
+        : this.mcpTools.pendingArrivals();
+    this.pendingToolArrival = arrivals.length > 0 ? arrivals : null;
+    // Nothing at all, with no other way on: the turn tries again rather
+    // than ending on silence (EmptyReplies).
+    const emptyStep =
+      !willRetry &&
+      !this.interrupted &&
+      this.ownedTurn?.endedEmpty === true &&
+      !this.continuingPastMalformedToolCall &&
+      this.pendingContextCompaction == null &&
+      this.pendingOpenLlmRotation == null &&
+      this.pendingBusyWait == null &&
+      this.pendingLanguageRepair == null &&
+      this.pendingToolArrival == null
+        ? this.emptyReplies.next(
+            this.openLlmActive,
+            this.router.chain.hadFailure
+          )
+        : null;
+    if (emptyStep === "rotate")
+      this.pendingOpenLlmRotation =
+        this.routeAfterFailure(EMPTY_REPLY_FAILURE).rotation;
+    // With no other model to move to, the same one is asked.
+    this.pendingEmptyAsk =
+      emptyStep != null && this.pendingOpenLlmRotation == null;
+    const ending =
+      !willRetry &&
+      !this.continuingPastMalformedToolCall &&
+      this.pendingContextCompaction == null &&
+      this.pendingOpenLlmRotation == null &&
+      this.pendingBusyWait == null &&
+      this.pendingLanguageRepair == null &&
+      this.pendingToolArrival == null &&
+      !this.pendingEmptyAsk;
+    // Words that promise more, and nothing else on the way: told once to
+    // do it, inside this send so the run stays open (PromisedWork).
+    this.pendingPromisedWork =
+      ending &&
+      !this.interrupted &&
+      this.ownedTurn != null &&
+      mayAskForPromisedWork(this.mode) &&
+      endedOnPromise(messages) &&
+      this.promisedWork.claim();
+    this.nextStepAsk.sawRun(messages);
+    // Finished work ends on what comes next, in this send (NextStepAsk).
+    this.pendingNextStep =
+      ending &&
+      !this.pendingPromisedWork &&
+      !this.interrupted &&
+      this.ownedTurn != null &&
+      nextStepAskOn() &&
+      mayAskForPromisedWork(this.mode) &&
+      endedOnResult(messages) &&
+      this.nextStepAsk.claim();
+    if (ending && !this.pendingPromisedWork && !this.pendingNextStep) {
+      this.finishTurn();
+    }
+  }
+
   private async continuePastRecoverableFailures(): Promise<void> {
     while (
       this.continuingPastMalformedToolCall ||
@@ -1959,6 +2060,22 @@ export class AbacusBotSession {
       if (this.pendingLanguageRepair != null) {
         const mismatch = this.pendingLanguageRepair;
         this.pendingLanguageRepair = null;
+        const run = this.languageCheckRun;
+        this.languageCheckRun = null;
+        // Latin words may be the reply's own language, romanized: then the
+        // turn goes on as if nothing had been flagged, and may end here.
+        if (
+          mismatch.romanized === true &&
+          run != null &&
+          (await this.wordsLanguage.writesIn(
+            mismatch.got,
+            this.userWords,
+            knownReplyLanguage()
+          ))
+        ) {
+          this.scheduleAfterRun(run.messages, run.willRetry);
+          continue;
+        }
         this.languageRepairsThisTurn += 1;
 
         this.emitAgentEvent({
@@ -1971,7 +2088,7 @@ export class AbacusBotSession {
         await this.session?.sendCustomMessage(
           {
             customType: LANGUAGE_REPAIR_TYPE,
-            content: replyLanguageRepairPrompt(mismatch),
+            content: replyLanguageRepairPrompt(mismatch, isSenderChat()),
             display: false,
           },
           { triggerTurn: true }
@@ -2618,6 +2735,7 @@ export class AbacusBotSession {
    */
   async steer(text: string, messageId?: string): Promise<void> {
     this.pendingSteers.add(text, messageId);
+    this.userWords.add(ownWords(text));
     // The user spoke: they go first, not a test run nobody asked for.
     this.verifyLoop.cancel();
     await this.requireSession().steer(text);
@@ -3035,6 +3153,8 @@ export class AbacusBotSession {
 
       this.session = created.session;
       this.pi = this.loadedPi;
+      this.userWords.clear();
+      this.wordsLanguage.clear();
       endTurnOnClosedReply(this.session.agent);
       // A fresh session has only the tools it was built with.
       this.mcpTools.rebind(
@@ -3338,75 +3458,17 @@ export class AbacusBotSession {
           this.pendingBusyWait != null ||
           this.languageRepairsThisTurn > 0
             ? null
-            : replyLanguageMismatch(event.messages);
-        // Tools a change deferred under this turn adds: the turn continues
-        // once with them, so the request is finished rather than declared
-        // impossible. Once per turn.
-        const arrivals =
-          this.continuingPastMalformedToolCall ||
-          this.pendingContextCompaction != null ||
-          this.pendingOpenLlmRotation != null ||
-          this.pendingBusyWait != null ||
-          this.pendingLanguageRepair != null ||
-          this.toolArrivalsThisTurn > 0
-            ? []
-            : this.mcpTools.pendingArrivals();
-        this.pendingToolArrival = arrivals.length > 0 ? arrivals : null;
-        // Nothing at all, with no other way on: the turn tries again rather
-        // than ending on silence (EmptyReplies).
-        const emptyStep =
-          !event.willRetry &&
-          !this.interrupted &&
-          this.ownedTurn?.endedEmpty === true &&
-          !this.continuingPastMalformedToolCall &&
-          this.pendingContextCompaction == null &&
-          this.pendingOpenLlmRotation == null &&
-          this.pendingBusyWait == null &&
-          this.pendingLanguageRepair == null &&
-          this.pendingToolArrival == null
-            ? this.emptyReplies.next(
-                this.openLlmActive,
-                this.router.chain.hadFailure
-              )
+            : replyLanguageMismatch(event.messages, {
+                turn: this.userWords.turn,
+                recent: this.userWords.recent,
+                known: knownReplyLanguage(),
+              });
+        // A romanized candidate is kept with its run: dismissed, the turn goes on from here.
+        this.languageCheckRun =
+          this.pendingLanguageRepair?.romanized === true
+            ? { messages: event.messages, willRetry: event.willRetry === true }
             : null;
-        if (emptyStep === "rotate")
-          this.pendingOpenLlmRotation =
-            this.routeAfterFailure(EMPTY_REPLY_FAILURE).rotation;
-        // With no other model to move to, the same one is asked.
-        this.pendingEmptyAsk =
-          emptyStep != null && this.pendingOpenLlmRotation == null;
-        const ending =
-          !event.willRetry &&
-          !this.continuingPastMalformedToolCall &&
-          this.pendingContextCompaction == null &&
-          this.pendingOpenLlmRotation == null &&
-          this.pendingBusyWait == null &&
-          this.pendingLanguageRepair == null &&
-          this.pendingToolArrival == null &&
-          !this.pendingEmptyAsk;
-        // Words that promise more, and nothing else on the way: told once to
-        // do it, inside this send so the run stays open (PromisedWork).
-        this.pendingPromisedWork =
-          ending &&
-          !this.interrupted &&
-          this.ownedTurn != null &&
-          mayAskForPromisedWork(this.mode) &&
-          endedOnPromise(event.messages) &&
-          this.promisedWork.claim();
-        this.nextStepAsk.sawRun(event.messages);
-        // Finished work ends on what comes next, in this send (NextStepAsk).
-        this.pendingNextStep =
-          ending &&
-          !this.pendingPromisedWork &&
-          !this.interrupted &&
-          this.ownedTurn != null &&
-          nextStepAskOn() &&
-          mayAskForPromisedWork(this.mode) &&
-          endedOnResult(event.messages) &&
-          this.nextStepAsk.claim();
-        if (ending && !this.pendingPromisedWork && !this.pendingNextStep) {
-          this.finishTurn();
-        }
+        this.scheduleAfterRun(event.messages, event.willRetry === true);
 
         return;
       }

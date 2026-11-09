@@ -12,6 +12,7 @@
  */
 import { randomBytes } from "node:crypto";
 
+import { appNoteTag } from "@abacus-ai/agent/user-text";
 import {
   connectorById,
   connectorForService,
@@ -101,7 +102,8 @@ const connectedNote = (facts: StepFacts): string => {
       ? connector.via
       : null;
   return (
-    "[connected] " +
+    appNoteTag("connected") +
+    " " +
     (connectors.length > 0
       ? `${names} ${connectors.length > 1 ? "are" : "is"} connected now` +
         `${accounts.length > 0 ? ` (${accounts.join(", ")}): that account is who the user means by "me"` : ""}. ` +
@@ -185,7 +187,7 @@ const upgradedNote = (facts: StepFacts): string => {
     ...(android != null ? [`Android: ${android}`] : []),
   ];
   return (
-    `[upgraded] The user's account just moved to ${plan}. Text them first, in their language, as one short WhatsApp ` +
+    `${appNoteTag("upgraded")} The user's account just moved to ${plan}. Text them first, in their language, as one short WhatsApp ` +
     `message: they are on ${plan}, and reminders, routines and daily briefs now work right here in this chat. Lead with ` +
     "the ChatLLM app on their phone as where the plan's full power is: building apps (mobile apps too) and everything " +
     "else; this chat is not the place to build apps." +

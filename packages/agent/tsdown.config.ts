@@ -60,6 +60,10 @@ export default defineConfig({
     "src/phone/phone-bubbles.ts",
     // The phone loop's zone, check-in language and due loops, for its agenda.
     "src/phone/phone-nudges.ts",
+    // Whether a message names its language, for the phone agenda's ask. No imports.
+    "src/reply-language.ts",
+    // How a mid-task message reads, for the hosted app's tests. No imports.
+    "src/mid-task-inbox.ts",
     // The asks only a paid plan answers in full, worded once: main's billing_plan and the hosted app's upgrade line.
     "src/plan-asks.ts",
     // Media for the chat: the hosted app's lane and main's media store read it.

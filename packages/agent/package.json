@@ -65,6 +65,10 @@
       "types": "./dist/plan-asks.d.ts",
       "default": "./dist/plan-asks.js"
     },
+    "./reply-language": {
+      "types": "./dist/reply-language.d.ts",
+      "default": "./dist/reply-language.js"
+    },
     "./send-media": {
       "types": "./dist/send-media.d.ts",
       "default": "./dist/send-media.js"
@@ -105,6 +109,10 @@
     "./bot-task": {
       "types": "./dist/bot-task.d.ts",
       "default": "./dist/bot-task.js"
+    },
+    "./mid-task-inbox": {
+      "types": "./dist/mid-task-inbox.d.ts",
+      "default": "./dist/mid-task-inbox.js"
     },
     "./model-path": {
       "types": "./dist/model-path.d.ts",

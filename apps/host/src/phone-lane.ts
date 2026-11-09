@@ -12,6 +12,7 @@ import {
   type ResolvedMedia,
   SEND_MEDIA_TOOL_NAME,
 } from "@abacus-ai/agent/send-media";
+import { appNoteTag } from "@abacus-ai/agent/user-text";
 import type { AgentEvent, DesktopEvent } from "@abacus-ai/contract/agent-types";
 import { isMessageReaction } from "@abacus-ai/contract/message-reactions";
 
@@ -171,12 +172,17 @@ function linkedGreeting(text: string | undefined): string {
 }
 
 /** What the loop is told for one inbox entry, after `notes`, each its own tagged part. */
-function phoneTurnText(entry: PhoneInboxEntry, notes: string[] = []): string {
+export function phoneTurnText(
+  entry: PhoneInboxEntry,
+  notes: string[] = []
+): string {
   // The host's own news is one tagged line, so the agent never takes it for
   // the user's words (a consent it checks reads only those).
   if (entry.kind === "note") {
     const line = (entry.text ?? "").replace(/\s+/g, " ").trim();
-    return /^\[[a-z][a-z -]*\]/i.test(line) ? line : `[note] ${line}`;
+    return /^\[[a-z][a-z -]*\]/i.test(line)
+      ? line
+      : `${appNoteTag("note")} ${line}`;
   }
   // The note the host made of the server's event, never the user's words.
   if (entry.kind === "event") return [entry.text ?? "", ...notes].join("\n\n");
@@ -187,7 +193,8 @@ function phoneTurnText(entry: PhoneInboxEntry, notes: string[] = []): string {
   // messages do.
   const greeting = linkedGreeting(entry.text);
   return [
-    "[linked] The user just connected WhatsApp." +
+    appNoteTag("linked") +
+      " The user just connected WhatsApp." +
       (name ? ` Their WhatsApp name: ${name}.` : "") +
       (greeting
         ? ` Their greeting, in their own words: ${JSON.stringify(greeting)}. Reply to it.`
@@ -1203,7 +1210,7 @@ export function channelsTransport(options: {
  */
 function notAttachedNote(what: string): string {
   return (
-    `[not attached] ${what} could not be attached in WhatsApp. Tell the user ` +
+    `${appNoteTag("not attached")} ${what} could not be attached in WhatsApp. Tell the user ` +
     "in one short text, in their language, that it did not come through, and give them " +
     "its content another way if you can (a short summary, or a `page` link). Do not " +
     "send it again."
@@ -1213,7 +1220,7 @@ function notAttachedNote(what: string): string {
 /** An image `send_media` named that did not reach the chat. */
 function imageNotSentNote(reason: string): string {
   return (
-    `[not sent] An image you sent with send_media did not reach the user (${reason}). ` +
+    `${appNoteTag("not sent")} An image you sent with send_media did not reach the user (${reason}). ` +
     "If they asked to see it, take a new screenshot and send that one; otherwise tell " +
     "them in one short text, in their language, that it did not come through. Never " +
     "say it was sent."
@@ -1223,7 +1230,7 @@ function imageNotSentNote(reason: string): string {
 /** When WhatsApp did not say in time whether a file went. */
 function unconfirmedNote(what: string): string {
   return (
-    `[delivery unconfirmed] ${what} was sent to WhatsApp, which did not confirm it in ` +
+    `${appNoteTag("delivery unconfirmed")} ${what} was sent to WhatsApp, which did not confirm it in ` +
     "time; it has most likely arrived. Do not tell the user it failed, and do not send it " +
     "again unless they say it did not arrive. Reply with exactly NO_REPLY."
   );

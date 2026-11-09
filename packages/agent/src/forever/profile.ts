@@ -4,6 +4,7 @@
  * tools and memory.
  */
 import type { BrowserTaskContext } from "../browser-task.js";
+import type { KnownLanguage } from "../reply-language.js";
 import type { MediaCheck } from "../send-media-tool.js";
 import type { McpToolPolicy } from "../tool-policy.js";
 
@@ -59,6 +60,8 @@ export interface ForeverProfile {
    * the prompt with the account's otherwise, and learns it from the owner.
    */
   statesReplyLanguage?: boolean;
+  /** The person's saved language, when the profile keeps its own (the phone's check-in language). */
+  knownReplyLanguage?(): KnownLanguage | null;
   /** The profile's own pi tool definitions, ahead of browser_task and MCP. */
   tools(cwd: string, host: ProfileToolHost): unknown[];
   /** The MCP tools this chat gets, none unless named there; every one without it. */

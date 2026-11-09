@@ -7,6 +7,7 @@
 import { APP_CHANNEL, type ChannelCapabilities } from "../channel.js";
 import { vaultEnabled } from "../excluded-tools.js";
 import { serviceRoutingPrompt } from "../service-routing-prompt.js";
+import { appNoteTag } from "../user-text.js";
 import { timezonePrompt } from "./bot-time-tool.js";
 
 /**
@@ -189,7 +190,8 @@ export const FLUSH_CUSTOM_TYPE = "abacusai-bot:bot-memory-flush";
 
 export function flushPrompt(): string {
   return [
-    "[memory flush] This conversation is close to its context limit and older",
+    appNoteTag("memory flush") +
+      " This conversation is close to its context limit and older",
     "turns will soon be summarized away. Before that happens, store anything",
     "durable you have not already noted: use the `memory` tool, action",
     '"note" for facts, open threads, and commitments from this conversation;',
@@ -204,7 +206,8 @@ export const CONSOLIDATE_CUSTOM_TYPE = "abacusai-bot:bot-memory-consolidate";
 
 export function consolidatePrompt(): string {
   return [
-    "[memory maintenance] Curate your long-term memory. Use the `memory` tool:",
+    appNoteTag("memory maintenance") +
+      " Curate your long-term memory. Use the `memory` tool:",
     'search your recent notes (action "search" with a few broad queries, e.g.',
     "the user's name, your mission's key topics), promote facts that kept",
     'mattering into core memory with "remember", and prune core entries that',

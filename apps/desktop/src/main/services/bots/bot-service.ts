@@ -10,6 +10,7 @@ import {
   readUserLanguage,
   resolveReplyLanguage,
 } from "@abacus-ai/agent/user-language";
+import { appNoteTag } from "@abacus-ai/agent/user-text";
 import { connectorById } from "@abacus-ai/connectors/registry";
 import type { UserTextTags } from "@abacus-ai/contract/agent-types";
 import {
@@ -375,7 +376,7 @@ const changeNotice = (
   if (notice.checkIn != null)
     changed.push(`your check-in schedule (now: ${notice.checkIn})`);
   return (
-    `[mission updated] The user just edited ${changed.join(", ")}. ` +
+    `${appNoteTag("mission updated")} The user just edited ${changed.join(", ")}. ` +
     "Read your updated standing prompt. In one short message, acknowledge " +
     "what changed and say what you will do differently from now on; if the " +
     "check-in schedule changed, say when the next check-in is. Do not " +
@@ -411,11 +412,11 @@ const nativeLanguageName = (locale: SupportedLanguage): string => {
 /**
  * Visible first message of a fresh bot chat, so the bot speaks first. Written
  * in the user's resolved reply language (the app's own locale files, English
- * for a language the app does not ship), never Hindi: a note in English is
- * what the model answers in English. The `[first run]` tag stays as is; the
+ * for a language the app does not ship): a note in English is what the model
+ * answers in English. The `[first run]` tag stays as is; the
  * app and the agent recognise the note by it.
  */
-const kickstartMessage = (
+export const kickstartMessage = (
   bot: Bot,
   language: string | null,
   words: ChannelWords
@@ -435,7 +436,7 @@ const kickstartMessage = (
   const goal = goalOfMission(bot.description);
   const start =
     goal == null ? t("kickoff.startMission") : t("kickoff.startGoal", { goal });
-  return `[first run] ${[
+  return `${appNoteTag("first run")} ${[
     connect,
     t("kickoff.introduce", { start }),
     t("kickoff.continuing"),
@@ -450,9 +451,9 @@ const kickstartMessage = (
  * inbound message rather than as a message of their own: a separate kickstart
  * can race the first inbound, and the rules must never arrive second.
  */
-const senderChatIntro = (senderName: string, platform: string): string =>
+export const senderChatIntro = (senderName: string, platform: string): string =>
   [
-    `[auto-reply] This conversation is your line to ${senderName} on`,
+    `${appNoteTag("auto-reply")} This conversation is your line to ${senderName} on`,
     `${platform}, answering on the user's behalf. Every visible word you`,
     "write here is delivered to them and reads as if the user typed it. So:",
     "reply with exactly what should be sent, and nothing else: no status",

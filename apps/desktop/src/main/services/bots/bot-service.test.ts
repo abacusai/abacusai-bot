@@ -284,7 +284,7 @@ describe("opening the forever chat", () => {
     );
   });
 
-  it("writes the first run in the reply language's resolver: the saved language first, never Hindi", async () => {
+  it("writes the first run in the reply language's resolver: the saved language first, never Hindi from the device", async () => {
     const callbacks = makeCallbacks({ appLanguage: () => "hi-IN" });
     const service = new BotService(callbacks);
     const bot = service.create({ name: "Scout", description: "Watch." });
@@ -297,7 +297,10 @@ describe("opening the forever chat", () => {
 
     fs.writeFileSync(
       path.join(home, "user-language.json"),
-      JSON.stringify({ language: { name: "Spanish", source: "detected" } })
+      JSON.stringify({
+        language: { name: "Spanish", source: "detected" },
+        version: 2,
+      })
     );
     const other = service.create({ name: "Scout 2", description: "Watch." });
     await service.openChat(other.id);
@@ -310,7 +313,10 @@ describe("opening the forever chat", () => {
     // A language the app has no locale for: the English note, naming it.
     fs.writeFileSync(
       path.join(home, "user-language.json"),
-      JSON.stringify({ language: { name: "Bangla", source: "detected" } })
+      JSON.stringify({
+        language: { name: "Bangla", source: "detected" },
+        version: 2,
+      })
     );
     const third = service.create({ name: "Scout 3", description: "Watch." });
     await service.openChat(third.id);

@@ -670,7 +670,8 @@ export class HostCore {
             userText: options.userText,
           }),
         options.messageId,
-        options.continueCut === true
+        options.continueCut === true,
+        options.userText
       );
       await this.drainAfter(turn);
     } finally {
@@ -709,7 +710,9 @@ export class HostCore {
           echoed,
           userText: next.userText,
         }),
-        next.messageId
+        next.messageId,
+        false,
+        next.userText
       );
     }
   }
@@ -737,7 +740,8 @@ export class HostCore {
     message: string,
     token: TurnToken | undefined,
     messageId?: string,
-    continueCut = false
+    continueCut = false,
+    userText?: UserTextTags
   ): Promise<void> {
     this.hooks.sending?.(token);
     this.idleSaid = false;
@@ -746,6 +750,7 @@ export class HostCore {
         settled: () => this.hooks.settle?.(token),
         ...(messageId != null && { messageId }),
         ...(continueCut && { continueCut }),
+        ...(userText != null && { userText }),
       });
     } catch (error) {
       // Recorded against this token's own run before the settle below

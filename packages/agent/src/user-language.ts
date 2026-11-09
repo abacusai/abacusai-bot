@@ -9,8 +9,9 @@
  * 5. English.
  *
  * In a bot's chat with a remote sender the sender is someone else, so their
- * message wins and the user's choice is only the fallback. Hindi is never a
- * reply language: from any source it reads as English. The resolved language
+ * message wins and the user's choice is only the fallback. The app never
+ * picks Hindi on its own: a Hindi device language reads as English, while a
+ * user who writes or asks for Hindi gets Hindi. The resolved language
  * closes every system prompt, so bots, routines and setup runs that have no
  * message to copy still answer in it; engines rebuild the prompt only when it
  * changes, which is at most once per account at a reload.
@@ -22,9 +23,12 @@ import { abacusV1BaseUrl } from "./abacus-endpoint.js";
 import { writeFileAtomicSync } from "./atomic-file.js";
 import { abacusBotDir } from "./config.js";
 import {
+  type KnownLanguage,
+  languageScript,
+  type RecentOwnWords,
   type ReplyLanguage,
   replyLanguagePrompt,
-  withoutAppNotes,
+  type Script,
 } from "./reply-language.js";
 
 /** The cheap model the free plan already runs on. */
@@ -46,7 +50,17 @@ interface StoredUserLanguage {
   language?: UserLanguage;
   /** Detection calls made while nothing is set. */
   attempts?: number;
+  /** STORE_VERSION once written by detection that reads only the user's own words. */
+  version?: number;
 }
+
+/**
+ * Before version 2, detection also read the app's notes (a first run's
+ * reminder), so a detected language or a spent attempt count from then is
+ * forgotten once and learnt again from what the user types. A language the
+ * user chose stays.
+ */
+const STORE_VERSION = 2;
 
 export function userLanguagePath(): string {
   return path.join(abacusBotDir(), "user-language.json");
@@ -57,7 +71,10 @@ const readStored = (): StoredUserLanguage => {
     const parsed = JSON.parse(
       fs.readFileSync(userLanguagePath(), "utf8")
     ) as StoredUserLanguage;
-    return parsed != null && typeof parsed === "object" ? parsed : {};
+    if (parsed == null || typeof parsed !== "object") return {};
+    if (parsed.version === STORE_VERSION || parsed.language?.source === "user")
+      return parsed;
+    return {};
   } catch {
     // Missing or unreadable must never stop a session starting.
     return {};
@@ -65,7 +82,10 @@ const readStored = (): StoredUserLanguage => {
 };
 
 const writeStored = (stored: StoredUserLanguage): void => {
-  writeFileAtomicSync(userLanguagePath(), JSON.stringify(stored));
+  writeFileAtomicSync(
+    userLanguagePath(),
+    JSON.stringify({ ...stored, version: STORE_VERSION })
+  );
 };
 
 /** A language name as the prompt may state it, or null. */
@@ -75,8 +95,6 @@ const cleanName = (raw: unknown): string | null => {
   if (name.length === 0 || name.length > NAME_MAX_CHARS) return null;
   // A name, not an instruction smuggled in as one.
   if (!/^\p{L}[\p{L}\p{M} ()'-]*$/u.test(name)) return null;
-  // Hindi is never a reply language; Hinglish reads as English too.
-  if (/^(hindi|hinglish)\b/i.test(name)) return ENGLISH;
   return name.charAt(0).toUpperCase() + name.slice(1);
 };
 
@@ -109,6 +127,8 @@ function localeLanguageName(tag: string): string | null {
   try {
     const names = new Intl.DisplayNames(["en"], { type: "language" });
     const locale = new Intl.Locale(tag.trim().replace(/_/g, "-"));
+    // A device set to Hindi never makes Hindi the reply language.
+    if (locale.language === "hi") return ENGLISH;
     const full = names.of(
       locale.language === "zh"
         ? `zh-${locale.maximize().script}`
@@ -125,7 +145,7 @@ function localeLanguageName(tag: string): string | null {
 }
 
 /** Whether this is a bot's chat with a remote sender, as the desktop that spawned it says. */
-const isSenderChat = (): boolean =>
+export const isSenderChat = (): boolean =>
   (process.env.ABACUSAI_BOT_SENDER_CHAT ?? "").trim() === "1";
 
 /** The precedence above, from its inputs; see the module comment. */
@@ -141,15 +161,31 @@ export function resolveReplyLanguage(
   return { name: app ?? ENGLISH, chosen: false };
 }
 
+/** This session's reply language, by the precedence above. */
+export function accountReplyLanguage(): ReplyLanguage {
+  return resolveReplyLanguage(
+    readUserLanguage(),
+    process.env.ABACUSAI_BOT_LOCALE,
+    isSenderChat()
+  );
+}
+
 /** The reply-language block this session's prompt closes with. */
 export function accountReplyLanguagePrompt(): string {
-  return replyLanguagePrompt(
-    resolveReplyLanguage(
-      readUserLanguage(),
-      process.env.ABACUSAI_BOT_LOCALE,
-      isSenderChat()
-    )
-  );
+  return replyLanguagePrompt(accountReplyLanguage(), isSenderChat());
+}
+
+/**
+ * The user's saved language as a script, which a reply may always be in: a
+ * user who types Bengali or Hindi in Latin letters is answered in its own
+ * script. Learnt from their words or chosen, never the app's language; none
+ * in a sender's chat, where the person writing is someone else.
+ */
+export function knownReplyLanguage(): KnownLanguage | null {
+  const saved = readUserLanguage();
+  if (saved == null || isSenderChat()) return null;
+  const script = languageScript(saved.name);
+  return script == null ? null : { script, chosen: saved.source === "user" };
 }
 
 const detectPrompt = (text: string): string =>
@@ -170,7 +206,8 @@ const detectPrompt = (text: string): string =>
 export async function detectMessageLanguage(
   text: string,
   apiKey: string,
-  fetchImpl: typeof fetch = fetch
+  fetchImpl: typeof fetch = fetch,
+  timeoutMs = DETECT_TIMEOUT_MS
 ): Promise<string | null> {
   try {
     const response = await fetchImpl(`${abacusV1BaseUrl()}/chat/completions`, {
@@ -185,7 +222,7 @@ export async function detectMessageLanguage(
         max_tokens: 10,
         temperature: 0,
       }),
-      signal: AbortSignal.timeout(DETECT_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (!response.ok) return null;
     const body = (await response.json()) as {
@@ -201,19 +238,89 @@ export async function detectMessageLanguage(
   }
 }
 
+/** A turn's end waits on this check, so it gives up sooner than detection. */
+const WORDS_CHECK_TIMEOUT_MS = 5_000;
+/** Letters of new words after which their language is asked again. */
+const WORDS_CHECK_REFRESH_LETTERS = 300;
+/** After a failed check, candidates are left alone this long without asking. */
+const WORDS_CHECK_RETRY_MS = 10 * 60_000;
+
+/**
+ * The language a session's person writes in, for the reply-language guard's
+ * romanized candidates (Latin words, a reply in another script). Their saved
+ * language decides when there is one; the detection model is asked only when
+ * nothing is known, and its answer kept until their words move on. One per
+ * session, so one per contact in sender chats.
+ */
+export class WordsLanguage {
+  private known: { name: string; at: number } | null = null;
+  private failedAt: number | null = null;
+
+  constructor(
+    private readonly detect: (text: string) => Promise<string | null> = async (
+      text
+    ) => {
+      const apiKey = (process.env.ABACUS_API_KEY ?? "").trim();
+      return apiKey.length === 0
+        ? null
+        : detectMessageLanguage(text, apiKey, fetch, WORDS_CHECK_TIMEOUT_MS);
+    },
+    private readonly now: () => number = Date.now
+  ) {}
+
+  /**
+   * Whether their words are the language `script` writes, typed in Latin.
+   * A saved language in another script answers without a call. A saved
+   * Latin one (English, mostly) is often learnt from a first message and
+   * stale for someone who now types Bengali in Latin, so the model is asked.
+   * With no answer (no key, a failed call, "unknown"), yes: the reply is left
+   * alone rather than rewritten on a guess, and not asked again for a while.
+   */
+  async writesIn(
+    script: Script,
+    words: RecentOwnWords,
+    saved: KnownLanguage | null = null
+  ): Promise<boolean> {
+    if (saved != null && saved.script !== "latin")
+      return saved.script === script;
+    if (
+      this.known == null ||
+      words.lettersSeen - this.known.at >= WORDS_CHECK_REFRESH_LETTERS
+    ) {
+      if (
+        this.failedAt != null &&
+        this.now() - this.failedAt < WORDS_CHECK_RETRY_MS
+      )
+        return true;
+      const name = await this.detect(words.window.slice(-DETECT_MAX_CHARS));
+      if (name == null) {
+        this.failedAt = this.now();
+        return true;
+      }
+      this.failedAt = null;
+      this.known = { name, at: words.lettersSeen };
+    }
+    return languageScript(this.known.name) === script;
+  }
+
+  clear(): void {
+    this.known = null;
+    this.failedAt = null;
+  }
+}
+
 let detecting = false;
 
 /**
- * Detects and saves the user's language from a message they wrote, while none
- * is saved and attempts remain. Runs in the background; never throws.
+ * Detects and saves the user's language from their own words (user-text.ts
+ * `ownWords`: "" for a first run or any turn the app wrote), while none is
+ * saved and attempts remain. Runs in the background; never throws.
  */
 export async function learnUserLanguage(
-  message: string,
+  text: string,
   apiKey: string,
   fetchImpl: typeof fetch = fetch
 ): Promise<void> {
-  // The app's own tagged notes ("[first run] ...") are English and not theirs.
-  const text = withoutAppNotes(message);
   if (detecting || text.trim().length === 0 || apiKey.length === 0) return;
   const stored = readStored();
   if (cleanName(stored.language?.name) != null) return;
