@@ -49,7 +49,12 @@ type StoredConfig = {
   autoReplyBootstrappedFor?: MessagingPlatformId[];
   /** Epoch ms until which the loop breaker holds auto-reply. See the gateway. */
   autoReplyPausedUntil?: number;
+  /** The last one-time upgrade applied (see `upgradeConfig`); absent before any. */
+  configVersion?: number;
 };
+
+/** Bump with each new step in `upgradeConfig`. */
+const MESSAGING_CONFIG_VERSION = 1;
 
 const configPath = (): string => path.join(abacusBotHome(), "messaging.json");
 
@@ -118,10 +123,11 @@ const readConfig = (): StoredConfig => {
   try {
     text = fs.readFileSync(configPath(), "utf8");
   } catch {
-    return {};
+    // A new install has nothing to upgrade: its first save is current.
+    return { configVersion: MESSAGING_CONFIG_VERSION };
   }
   const parsed = parseConfig(text);
-  if (parsed !== null) return parsed;
+  if (parsed !== null) return upgradeConfig(parsed);
   const restored = recoverFromBackupSync(
     configPath(),
     (backup) => parseConfig(backup) !== null,
@@ -131,7 +137,48 @@ const readConfig = (): StoredConfig => {
   console.warn(
     "[messaging] messaging config did not parse; restored it from its last good copy"
   );
-  return parseConfig(restored) ?? {};
+  return upgradeConfig(parseConfig(restored) ?? {});
+};
+
+/** WhatsApp's self chat was found once, or someone wrote in on it: it was linked. */
+const whatsAppLinkedOnce = (config: StoredConfig): boolean =>
+  (config.autoReplyBootstrappedFor ?? []).includes("whatsapp") ||
+  (Array.isArray(config.pairing) &&
+    config.pairing.some((row) => row?.platform === "whatsapp"));
+
+/**
+ * One-time upgrades of a config an older app wrote, saved with the version so
+ * none runs twice. v1: a WhatsApp link that ended on an app from before
+ * `linkLost` saved only `signedIn: false`, so the lane never said it was lost.
+ * A lane the user unlinked is off, and one never linked has no evidence: both stay.
+ */
+const upgradeConfig = (config: StoredConfig): StoredConfig => {
+  if ((config.configVersion ?? 0) >= MESSAGING_CONFIG_VERSION) return config;
+  const whatsapp = config.platforms?.whatsapp;
+  const lostBeforeFlag =
+    whatsapp?.enabled === true &&
+    whatsapp.signedIn === false &&
+    whatsapp.linkLost === undefined &&
+    whatsAppLinkedOnce(config);
+  const upgraded: StoredConfig = {
+    ...config,
+    configVersion: MESSAGING_CONFIG_VERSION,
+    ...(lostBeforeFlag
+      ? {
+          platforms: {
+            ...config.platforms,
+            whatsapp: { ...whatsapp, linkLost: true },
+          },
+        }
+      : {}),
+  };
+  try {
+    return writeConfig(upgraded);
+  } catch (error) {
+    // A read must not fail on the save (a full disk); the next read retries.
+    console.warn("[messaging] messaging config upgrade not saved:", error);
+    return upgraded;
+  }
 };
 
 const writeConfig = (config: StoredConfig): StoredConfig => {
