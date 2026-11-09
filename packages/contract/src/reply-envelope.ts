@@ -1,10 +1,10 @@
+import { splitReasoning } from "@abacus-ai/agent/reasoning-tags";
+
 // Literal tag matchers only: a lazy `[\s\S]*?` between two tags backtracks
 // polynomially on model output (CodeQL js/polynomial-redos), so the blocks are
 // found by scanning for the tags and slicing between them instead.
 const REPLY_OPEN = /<reply>/gi;
 const REPLY_CLOSE = /<\/reply>/gi;
-const THINKING_OPEN = /<(?:thinking|think|reasoning)>/gi;
-const THINKING_CLOSE = /<\/(?:thinking|think|reasoning)>/gi;
 
 const indexOfTag = (
   pattern: RegExp,
@@ -50,19 +50,9 @@ const lastReplyBlock = (text: string): string | null => {
   return last == null ? null : text.slice(last.innerStart, last.innerEnd);
 };
 
-const withoutThinking = (text: string): string => {
-  let kept = "";
-  let from = 0;
-  for (const block of blocks(text, THINKING_OPEN, THINKING_CLOSE)) {
-    kept += text.slice(from, block.start);
-    from = block.end;
-  }
-  return kept + text.slice(from);
-};
-
 export const outgoingWords = (text: string): string => {
   const last = lastReplyBlock(text);
-  return (last ?? withoutThinking(text)).trim();
+  return (last ?? splitReasoning(text).text).trim();
 };
 
 /** The last complete <reply> block in `text`, or null when there is none. */

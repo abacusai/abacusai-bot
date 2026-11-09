@@ -24,7 +24,7 @@ import { freeBytes } from "../atomic-file.js";
 import { PYTHON_SETUP_TIMEOUT_MS, setPythonProvisioner } from "../backends.js";
 import { notifyConversationQueueCleared } from "../background-processes.js";
 import { basePrompt } from "../base-prompt.js";
-import { BotOutputSanitizer, tidyBotText } from "../bot/bot-output.js";
+import { tidyBotText } from "../bot/bot-output.js";
 import {
   browserTaskEnabled,
   buildBrowserTaskTool,
@@ -142,6 +142,7 @@ import {
   settleProviderRegistrations,
   DEFAULT_MAX_OUTPUT_TOKENS,
 } from "../providers.js";
+import { ReasoningSplitter } from "../reasoning-tags.js";
 import {
   replyLanguageMismatch,
   replyLanguageRepairPrompt,
@@ -333,7 +334,7 @@ export class ForeverEngine {
   private readonly allowances = new Allowances();
 
   // Streaming state.
-  private readonly sanitizer = new BotOutputSanitizer();
+  private readonly sanitizer = new ReasoningSplitter();
   /** Raw (unsanitized) streamed text of the in-flight assistant message. */
   private rawStreamed = "";
   private currentMessageId: string | null = null;

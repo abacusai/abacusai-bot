@@ -6,7 +6,8 @@
  */
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 
-import { BotOutputSanitizer, tidyBotText } from "../bot/bot-output.js";
+import { tidyBotText } from "../bot/bot-output.js";
+import { splitReasoning } from "../reasoning-tags.js";
 
 type PiAgent = AgentSession["agent"];
 type AfterToolCallContext = Parameters<
@@ -20,12 +21,10 @@ type AssistantMessage = AfterToolCallContext["assistantMessage"];
 
 /** Whether the message says anything the user sees: leaked reasoning is not a reply. */
 const hasWords = (message: AssistantMessage): boolean => {
-  const sanitizer = new BotOutputSanitizer();
   const raw = message.content
     .map((block) => (block.type === "text" ? block.text : ""))
     .join("");
-  const shown = sanitizer.push(raw).text + sanitizer.flush().text;
-  return tidyBotText(shown).trim().length > 0;
+  return tidyBotText(splitReasoning(raw).text).trim().length > 0;
 };
 
 const ranOtherTool = (message: AssistantMessage): boolean =>
