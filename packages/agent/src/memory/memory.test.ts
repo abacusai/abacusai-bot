@@ -384,6 +384,33 @@ describe("recall", () => {
     expect(recallFor(context, slug, "hi, how are you today?")).toBe("");
   });
 
+  it("finds a note by its keywords in another language, and sees a new note at once", async () => {
+    const { call, context } = chat("owner");
+    await call({
+      action: "save",
+      type: "decision",
+      text: "The venue is the old fort hotel, booked for 14 February.",
+      name: "venue",
+      keywords: "wedding, hall, शादी, स्थल",
+    });
+    const slug = listProjects()[0]!.slug;
+    expect(recallFor(context, slug, "शादी का स्थल कौन सा है?")).toContain(
+      "old fort hotel"
+    );
+    expect(
+      recallFor(context, slug, "who is the caterer for the wedding?")
+    ).toBe("");
+    await call({
+      action: "save",
+      type: "fact",
+      text: "The caterer for the wedding is Anand Foods.",
+      name: "caterer",
+    });
+    expect(
+      recallFor(context, slug, "who is the caterer for the wedding?")
+    ).toContain("Anand Foods");
+  });
+
   it("never brings the user's notes into a stranger's chat", async () => {
     const owner = chat("owner");
     await owner.call({

@@ -251,6 +251,7 @@ export const saveNote = async (
           type: input.type,
           body: text,
           ...(expires != null ? { expires } : {}),
+          ...(current?.keywords != null ? { keywords: current.keywords } : {}),
         },
         siblings,
         updating: current?.name ?? null,
@@ -314,43 +315,45 @@ const readOrNull = (file: string): string | null => {
   }
 };
 
-/** The journal line a change added. */
-const addedLine = (entry: HistoryEntry): string =>
-  (entry.after ?? "")
-    .slice((entry.before ?? "").length)
-    .trim()
-    .replace(/^- [^·]*·\s*/, "");
+/** A journal line without its date stamp. */
+const lineText = (line: string): string =>
+  line.trim().replace(/^- [^·]*·\s*/, "");
 
 const viewOf = (entry: HistoryEntry, scope: Scope): MemoryChangeView => {
-  const name = noteNameOfPath(entry.path);
-  const note =
-    name == null
-      ? null
-      : parseNote(scope, name, entry.after ?? entry.before ?? "");
-  const summary =
-    name == null
-      ? addedLine(entry)
-      : note?.description || (note?.body.split("\n")[0] ?? "");
-  return {
-    id: `${entry.at}|${entry.path}`,
+  const base = {
+    id: entry.id,
     at: entry.at,
     by: entry.by,
     model: entry.model ?? null,
     scope: scope.kind,
     project: scope.kind === "you" ? null : scope.slug,
+  };
+  const current = readOrNull(absoluteOfHistory(entry.path));
+  if ("appended" in entry)
+    return {
+      ...base,
+      name: null,
+      action: "noted",
+      summary: lineText(entry.appended),
+      undoable: current?.endsWith(entry.appended) ?? false,
+    };
+  const name = noteNameOfPath(entry.path);
+  const note =
+    name == null
+      ? null
+      : parseNote(scope, name, entry.after ?? entry.before ?? "");
+  return {
+    ...base,
     name,
     action:
-      name == null
-        ? "noted"
-        : entry.before == null
-          ? "saved"
-          : entry.after == null
-            ? "forgot"
-            : "changed",
-    summary,
+      entry.before == null
+        ? "saved"
+        : entry.after == null
+          ? "forgot"
+          : "changed",
+    summary: note?.description || (note?.body.split("\n")[0] ?? ""),
     undoable:
-      !(name === CARD_NAME && entry.before == null) &&
-      readOrNull(absoluteOfHistory(entry.path)) === entry.after,
+      !(name === CARD_NAME && entry.before == null) && current === entry.after,
   };
 };
 
@@ -369,20 +372,33 @@ export const memoryHistory = (limit = HISTORY_SHOWN): MemoryChangeView[] => {
 
 /** Put a file back as it was before one change, if nothing changed it since. */
 export const undoChange = async (id: string): Promise<void> => {
-  const at = id.slice(0, id.indexOf("|"));
-  const relativePath = id.slice(id.indexOf("|") + 1);
+  const relativePath = id.split("|")[1] ?? id;
   const file = insideMemory(relativePath);
   const entry = recentHistory(HISTORY_SCAN).find(
-    (each) => each.at === at && each.path === relativePath
+    (each) => each.id === id && each.path === relativePath
   );
   if (entry == null || scopeOfPath(relativePath) == null)
     throw new ConflictError("That change is no longer in the history.");
-  if (noteNameOfPath(relativePath) === CARD_NAME && entry.before == null)
+  if (
+    !("appended" in entry) &&
+    noteNameOfPath(relativePath) === CARD_NAME &&
+    entry.before == null
+  )
     throw new InvalidInputError("A project's card cannot be removed.");
   settled(
     await commit({ by: "you" }, () => {
-      if (readOrNull(file) !== entry.after)
-        throw new ConflictError(CHANGED_SINCE);
+      const now = readOrNull(file);
+      if ("appended" in entry) {
+        // A journal line comes off the end, if nothing was added after it.
+        if (now == null || !now.endsWith(entry.appended))
+          throw new ConflictError(CHANGED_SINCE);
+        const rest = now.slice(0, now.length - entry.appended.length);
+        return {
+          writes: [{ file, contents: rest.length > 0 ? rest : null }],
+          value: null,
+        };
+      }
+      if (now !== entry.after) throw new ConflictError(CHANGED_SINCE);
       return { writes: [{ file, contents: entry.before }], value: null };
     })
   );

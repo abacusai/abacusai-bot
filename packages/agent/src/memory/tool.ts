@@ -233,6 +233,9 @@ export function buildMemoryTool(
             ...(string(params.expires) || current?.expires
               ? { expires: string(params.expires) || current!.expires! }
               : {}),
+            ...(string(params.keywords) || current?.keywords
+              ? { keywords: string(params.keywords) || current!.keywords! }
+              : {}),
           },
           siblings,
           updating: current?.name ?? (replaces || null),
@@ -297,6 +300,7 @@ export function buildMemoryTool(
       'about: "you" (who the user is, their rules and preferences) or "project" (this project). Leave it out to let the app choose.',
       `The project card is the note "${CARD_NAME}": update it when the goal, status or a decision changes.`,
       "replaces: the name of a note this one supersedes; that note is removed.",
+      "keywords: other words someone would use to ask about the note, and the same words in the user's language when it is not the note's. Memory is found by matching words, so this is how a note is found later.",
     ].join("\n"),
     parameters: {
       type: "object",
@@ -327,6 +331,11 @@ export function buildMemoryTool(
         replaces: {
           type: "string",
           description: "Name of a note this one supersedes.",
+        },
+        keywords: {
+          type: "string",
+          description:
+            "Other words for the note, comma separated, including the user's language.",
         },
         query: { type: "string", description: "Words to search for." },
         project: {
@@ -499,10 +508,12 @@ const search = async (query: string, scopes: Scope[]): Promise<string[]> => {
     for (const note of listNotes(scope)) {
       const score = overlap(
         words,
-        contentWords(`${note.name} ${note.description} ${note.body}`)
+        contentWords(
+          `${note.name} ${note.description} ${note.body} ${note.keywords ?? ""}`
+        )
       );
       const hit = [...words].some((word) =>
-        `${note.name} ${note.description} ${note.body}`
+        `${note.name} ${note.description} ${note.body} ${note.keywords ?? ""}`
           .toLowerCase()
           .includes(word)
       );

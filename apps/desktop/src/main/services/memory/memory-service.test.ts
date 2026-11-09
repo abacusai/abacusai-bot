@@ -7,7 +7,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { ensureProject } from "@abacus-ai/agent/memory";
+import {
+  ensureProject,
+  readJournal,
+  recentHistory,
+} from "@abacus-ai/agent/memory";
 import { ConflictError } from "@abacus-ai/contract/conflict";
 import { InvalidInputError } from "@abacus-ai/contract/service-errors";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -219,6 +223,30 @@ describe("history and undo", () => {
     expect(memoryProjects()).toMatchObject([
       { kind: "bot", key: "bot-ada", name: "Ada" },
     ]);
+  });
+
+  it("keeps only the added line of a journal change, and undoes the newest line", async () => {
+    const bot = { id: "bot-ada", name: "Ada" };
+    await noteToBotJournal(bot, "Drafted the newsletter for Bea.");
+    await noteToBotJournal(bot, "Sent the newsletter.");
+    const lines = recentHistory().filter((entry) => "appended" in entry);
+    expect(lines).toHaveLength(2);
+    expect(lines.every((entry) => !("before" in entry))).toBe(true);
+
+    const [newest, older] = memoryHistory();
+    expect(newest).toMatchObject({
+      summary: "Sent the newsletter.",
+      undoable: true,
+    });
+    expect(older).toMatchObject({ undoable: false });
+    await expect(undoChange(older!.id)).rejects.toThrow(ConflictError);
+    await undoChange(newest!.id);
+    const journal = readJournal({
+      kind: "project",
+      slug: memoryProjects()[0]!.slug,
+    });
+    expect(journal).toHaveLength(1);
+    expect(journal[0]).toContain("Drafted the newsletter");
   });
 
   it("refuses an undo of a change no longer in the history", async () => {

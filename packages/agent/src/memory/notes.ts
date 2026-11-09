@@ -12,7 +12,7 @@
  *   memory/projects/<slug>/contacts/<who>/...    what a bot's sender chat may keep
  *   memory/.history/YYYY-MM.jsonl                every change, before and after
  */
-import { createHash } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import fs from "fs";
 import path from "path";
 
@@ -54,6 +54,11 @@ export interface Note {
   model?: string;
   /** YYYY-MM-DD; only status notes carry one. */
   expires?: string;
+  /**
+   * Other words for it, in any language the user uses: recall matches them,
+   * the prompt never shows them.
+   */
+  keywords?: string;
 }
 
 /** A project card's binding: what in the app the project is. */
@@ -70,7 +75,9 @@ export interface Project extends ProjectRef {
   slug: string;
 }
 
-export interface HistoryEntry {
+interface HistoryBase {
+  /** Unique, for undo: two changes to one file can share a millisecond. */
+  id: string;
   at: string;
   by: Author;
   /** The process that made it, so a chat is not told about its own changes. */
@@ -78,9 +85,11 @@ export interface HistoryEntry {
   model?: string;
   /** Relative to the memory folder. */
   path: string;
-  before: string | null;
-  after: string | null;
 }
+
+/** A note written or removed whole, or a journal line added (only the line is kept). */
+export type HistoryEntry = HistoryBase &
+  ({ before: string | null; after: string | null } | { appended: string });
 
 export const CARD_NAME = "project";
 const CARD_FILE = "PROJECT.md";
@@ -171,6 +180,7 @@ export const parseNote = (
     by,
     ...(header.model ? { model: header.model } : {}),
     ...(header.expires ? { expires: header.expires } : {}),
+    ...(header.keywords ? { keywords: header.keywords } : {}),
   };
 };
 
@@ -274,6 +284,7 @@ const serialize = (note: Note, binding?: ProjectRef): string => {
     `updated: ${note.updated}`,
     `by: ${note.by}`,
     ...(note.model ? [`model: ${oneLine(note.model)}`] : []),
+    ...(note.keywords ? [`keywords: ${oneLine(note.keywords)}`] : []),
     ...(binding
       ? [
           `project: ${oneLine(binding.name)}`,
@@ -302,11 +313,10 @@ export interface Change {
   model?: string;
 }
 
-/** One file's new contents, or null to delete it. */
-export interface FileWrite {
-  file: string;
-  contents: string | null;
-}
+/** One file's new contents, null to delete it, or text added to its end. */
+export type FileWrite =
+  | { file: string; contents: string | null }
+  | { file: string; append: string };
 
 const readOrNull = (file: string): string | null => {
   try {
@@ -344,7 +354,24 @@ export const commit = async <T>(
     if (typeof planned === "string") return planned;
     const at = new Date().toISOString();
     const entries: HistoryEntry[] = [];
-    for (const { file, contents } of planned.writes) {
+    for (const write of planned.writes) {
+      const { file } = write;
+      const where = relative(file);
+      const base = {
+        id: `${at}|${where}|${randomBytes(4).toString("hex")}`,
+        at,
+        by: change.by,
+        session: SESSION_ID,
+        ...(change.model ? { model: change.model } : {}),
+        path: where,
+      };
+      if ("append" in write) {
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.appendFileSync(file, write.append);
+        entries.push({ ...base, appended: write.append });
+        continue;
+      }
+      const { contents } = write;
       const before = readOrNull(file);
       if (before === contents) continue;
       if (contents == null) fs.rmSync(file, { force: true });
@@ -352,15 +379,7 @@ export const commit = async <T>(
         fs.mkdirSync(path.dirname(file), { recursive: true });
         writeFileAtomicSync(file, contents);
       }
-      entries.push({
-        at,
-        by: change.by,
-        session: SESSION_ID,
-        ...(change.model ? { model: change.model } : {}),
-        path: relative(file),
-        before,
-        after: contents,
-      });
+      entries.push({ ...base, before, after: contents });
     }
     appendHistory(entries);
     return planned;
@@ -395,12 +414,10 @@ export const journalAppend = (
   line: string,
   now = new Date()
 ): FileWrite => {
-  const file = journalFile(scope, now);
   const stamp = now.toISOString().slice(0, 16).replace("T", " ");
-  const existing = readOrNull(file) ?? "";
   return {
-    file,
-    contents: `${existing}- ${stamp} · ${line.replace(/\s*\r?\n\s*/g, " ").trim()}\n`,
+    file: journalFile(scope, now),
+    append: `- ${stamp} · ${line.replace(/\s*\r?\n\s*/g, " ").trim()}\n`,
   };
 };
 

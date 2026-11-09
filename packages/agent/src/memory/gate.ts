@@ -12,6 +12,7 @@ export const MAX_CARD_CHARS = 3_000;
 /** What one scope may put in the prompt: full rules and preferences plus one line per other note. */
 export const MAX_SCOPE_CORE_CHARS = 3_000;
 const MAX_DESCRIPTION_CHARS = 150;
+const MAX_KEYWORDS_CHARS = 200;
 const MAX_STATUS_DAYS = 14;
 /** Above this word overlap a new note restates an existing one. */
 const DUPLICATE_OVERLAP = 0.6;
@@ -55,15 +56,28 @@ const STOP_WORDS = new Set(
 );
 
 /** Lower-cased content words, crudely stemmed, for overlap scores. */
-export const contentWords = (text: string): Set<string> =>
-  new Set(
-    text
-      .toLowerCase()
-      .split(/[^\p{L}\p{N}]+/u)
-      .filter((word) => word.length >= 3 && !STOP_WORDS.has(word))
-      .map((word) => word.replace(/(?:ing|ed|es|s)$/, ""))
-      .filter((word) => word.length >= 3)
-  );
+/** Scripts written without spaces: matched by pairs of characters instead of words. */
+const UNSPACED =
+  /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}]/u;
+
+export const contentWords = (text: string): Set<string> => {
+  const words = new Set<string>();
+  // Marks belong to their word: Indic vowel signs are marks, not letters.
+  for (const word of text
+    .normalize("NFC")
+    .toLowerCase()
+    .split(/[^\p{L}\p{M}\p{N}]+/u)) {
+    if (UNSPACED.test(word)) {
+      for (let at = 0; at + 1 < word.length; at += 1)
+        words.add(word.slice(at, at + 2));
+      continue;
+    }
+    if (word.length < 3 || STOP_WORDS.has(word)) continue;
+    const stem = word.replace(/(?:ing|ed|es|s)$/, "");
+    if (stem.length >= 3) words.add(stem);
+  }
+  return words;
+};
 
 /** Share of the smaller set's words found in the other. */
 const containment = (a: Set<string>, b: Set<string>): number => {
@@ -98,6 +112,7 @@ export interface Draft {
   type: NoteType;
   body: string;
   expires?: string;
+  keywords?: string;
 }
 
 export interface GateInput {
@@ -138,11 +153,16 @@ export const checkDraft = (input: GateInput): Draft | string => {
     MAX_DESCRIPTION_CHARS
   );
 
+  const keywords = (draft.keywords ?? "")
+    .replace(/\s*\r?\n\s*/g, " ")
+    .trim()
+    .slice(0, MAX_KEYWORDS_CHARS);
+
   if (body.length === 0) return "Nothing to save: the text is empty.";
   if (body.length > sizeLimit(draft.type))
     return `That is ${body.length} characters; a ${draft.type === "card" ? "project card" : "note"} holds ${sizeLimit(draft.type)}. Keep one fact per note, or split it.`;
 
-  if (looksSecret(`${description}\n${body}`))
+  if (looksSecret(`${description}\n${body}\n${keywords}`))
     return byUser
       ? "That looks like a password, key or code. Memory never keeps those; the vault is the place for them."
       : "That looks like a password, key or code. Memory never keeps those: suggest the user keeps it in the app's vault, and save only where it is kept.";
@@ -201,7 +221,13 @@ export const checkDraft = (input: GateInput): Draft | string => {
       ? "This part of memory is full. Merge two notes or forget one that no longer matters, then save again."
       : 'This memory is full. Merge two related notes with "update", or "forget" one that no longer matters, then save again.';
 
-  return { ...draft, body, description };
+  const { keywords: _given, ...rest } = draft;
+  return {
+    ...rest,
+    body,
+    description,
+    ...(keywords.length > 0 ? { keywords } : {}),
+  };
 };
 
 /** Up to three notes of the scope that look related, most related first. */

@@ -292,7 +292,8 @@ export const memoryNews = (
   const slug = projectSlug(context);
   const lines: string[] = [];
   for (const entry of entries) {
-    if (entry.session === session) continue;
+    // Journal lines are recalled by their words, not announced.
+    if (entry.session === session || "appended" in entry) continue;
     const scope = scopeOfPath(entry.path);
     const name = noteNameOfPath(entry.path);
     if (scope == null || name == null || !mayRead(context, scope, slug))
