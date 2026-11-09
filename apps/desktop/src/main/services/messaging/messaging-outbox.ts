@@ -38,6 +38,8 @@ interface StoredOutbox {
   pending: OwedMessage[];
   /** Ids that went (or were given up on): owing one again is a no-op. */
   done: string[];
+  /** The finished ids that never went (dropped, expired, replaced, given up). */
+  dropped?: string[];
 }
 
 export interface ChatOutboxOptions {
@@ -76,6 +78,7 @@ const DONE_KEPT = 500;
 export class ChatOutbox {
   private readonly pending: OwedMessage[];
   private readonly done: string[];
+  private readonly dropped: string[];
   private timer: ReturnType<typeof setTimeout> | null = null;
   private flushing: Promise<void> | null = null;
   /** A pass was asked for while one ran: run another once it ends. */
@@ -85,6 +88,7 @@ export class ChatOutbox {
     const stored = readStored(options.read());
     this.pending = stored.pending;
     this.done = stored.done;
+    this.dropped = stored.dropped ?? [];
   }
 
   get size(): number {
@@ -106,7 +110,7 @@ export class ChatOutbox {
       for (const older of this.pending.filter(
         (entry) => entry.replaces === message.replaces
       ))
-        this.finish(older);
+        this.finish(older, "dropped");
     this.pending.push({ ...message, tries: 0 });
     this.save();
     this.schedule(delayMs);
@@ -116,6 +120,13 @@ export class ChatOutbox {
   /** The message went, or was given up on or dropped. */
   isDone(id: string): boolean {
     return this.done.includes(id);
+  }
+
+  /** Where the message `id` stands: still owed, sent, or finished unsent. */
+  statusOf(id: string): "queued" | "sent" | "dropped" | null {
+    if (this.pending.some((message) => message.id === id)) return "queued";
+    if (this.dropped.includes(id)) return "dropped";
+    return this.done.includes(id) ? "sent" : null;
   }
 
   /** Try everything owed after `delayMs` (0: now). */
@@ -154,7 +165,7 @@ export class ChatOutbox {
     for (const message of this.pending.slice()) {
       const now = this.options.now();
       if (message.expiresAt != null && now > message.expiresAt) {
-        this.finish(message);
+        this.finish(message, "dropped");
         continue;
       }
       if (message.notBefore != null && now < message.notBefore) continue;
@@ -175,7 +186,7 @@ export class ChatOutbox {
           console.error(
             `[messaging] ${message.platform} owed message dropped: ${error.message}`
           );
-          this.finish(message);
+          this.finish(message, "dropped");
           continue;
         }
         console.error(
@@ -192,7 +203,7 @@ export class ChatOutbox {
         message.tries >= OUTBOX_RETRY_MS.length ||
         this.options.now() - message.firstFailedAt > OUTBOX_MAX_AGE_MS
       ) {
-        this.finish(message);
+        this.finish(message, "dropped");
         await this.options.giveUp(message);
       }
     }
@@ -219,18 +230,26 @@ export class ChatOutbox {
     );
   }
 
-  private finish(message: OwedMessage): void {
+  private finish(message: OwedMessage, how: "sent" | "dropped" = "sent"): void {
     const at = this.pending.indexOf(message);
     if (at >= 0) this.pending.splice(at, 1);
     this.done.push(message.id);
     if (this.done.length > DONE_KEPT)
       this.done.splice(0, this.done.length - DONE_KEPT);
+    if (how === "dropped") this.dropped.push(message.id);
+    // Only ids still remembered as finished.
+    while (this.dropped.length > 0 && !this.done.includes(this.dropped[0]!))
+      this.dropped.shift();
     this.save();
   }
 
   private save(): void {
     try {
-      this.options.write({ pending: this.pending, done: this.done });
+      this.options.write({
+        pending: this.pending,
+        done: this.done,
+        dropped: this.dropped,
+      });
     } catch (error) {
       console.error("[messaging] could not persist the outbox:", error);
     }
@@ -241,11 +260,13 @@ const readStored = (raw: unknown): StoredOutbox => {
   const value = raw as Partial<StoredOutbox> | null;
   const pending = Array.isArray(value?.pending) ? value.pending : [];
   const done = Array.isArray(value?.done) ? value.done : [];
+  const dropped = Array.isArray(value?.dropped) ? value.dropped : [];
   return {
     pending: pending.filter(
       (message): message is OwedMessage =>
         typeof message?.id === "string" && typeof message.chatId === "string"
     ),
     done: done.filter((id): id is string => typeof id === "string"),
+    dropped: dropped.filter((id): id is string => typeof id === "string"),
   };
 };

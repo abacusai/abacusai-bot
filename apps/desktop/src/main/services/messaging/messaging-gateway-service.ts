@@ -2363,7 +2363,12 @@ export class MessagingGatewayService {
       message.say != null
         ? forChat(await this.wordOwed(message.say, message.userName), platform)
         : message.text;
-    await connector.sendText(chatId, text, message.replyContext);
+    const send = () => connector.sendText(chatId, text, message.replyContext);
+    // The user's own chat may have a route sending an answer: this waits for
+    // it, so the chat reads them in order.
+    const route = own != null ? this.routes.get(`${platform}:${chatId}`) : null;
+    if (route != null) await this.inRouteOrder(route, send);
+    else await send();
     this.appendLog({
       platform,
       chatId,
@@ -3130,7 +3135,7 @@ export class MessagingGatewayService {
       expiresAt?: number;
       replaces?: string;
     }
-  ): Promise<"sent" | "queued"> {
+  ): Promise<"sent" | "queued" | "dropped"> {
     const owed = this.outbox.owe(
       {
         id: message.id,
@@ -3147,7 +3152,7 @@ export class MessagingGatewayService {
       0
     );
     if (owed) await this.outbox.flush();
-    return this.outbox.isDone(message.id) ? "sent" : "queued";
+    return this.outbox.statusOf(message.id) ?? "dropped";
   }
 
   /** `to` on `platform` is the user's own chat there. */

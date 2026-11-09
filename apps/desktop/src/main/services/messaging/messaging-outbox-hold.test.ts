@@ -86,6 +86,27 @@ describe("an owed message with a hold, an expiry and a replace key", () => {
     expect(sent).toEqual([]);
     expect(told).toEqual([]);
     expect(outbox.size).toBe(0);
+    expect(outbox.statusOf("r1")).toBe("dropped");
+  });
+
+  it("says truthfully whether a message is queued, sent or dropped, across a restart", async () => {
+    const file = tempFile();
+    const clock = { now: 0 };
+    const up = { value: false };
+    const { outbox } = open(file, clock, up);
+    outbox.owe(owed("a", "A", { replaces: "k" }), 0);
+    expect(outbox.statusOf("a")).toBe("queued");
+    outbox.owe(owed("b", "B", { replaces: "k" }), 0);
+    up.value = true;
+    await outbox.flush();
+    expect(outbox.statusOf("a")).toBe("dropped");
+    expect(outbox.statusOf("b")).toBe("sent");
+    expect(outbox.statusOf("never")).toBeNull();
+    const after = open(file, clock).outbox;
+    expect([after.statusOf("a"), after.statusOf("b")]).toEqual([
+      "dropped",
+      "sent",
+    ]);
   });
 
   it("gives way to a newer message with the same key", async () => {

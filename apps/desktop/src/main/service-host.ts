@@ -5878,20 +5878,22 @@ export class ServiceHost {
         undefined;
       for (const lane of lanes) {
         // The gateway's one own-chat send: sent now, or held in its outbox.
-        await this.messagingGatewayService.sendToOwnChat(lane, {
+        const status = await this.messagingGatewayService.sendToOwnChat(lane, {
           id: `routine-report:${report.fire}:${lane}`,
           text,
           ...(notBefore != null ? { notBefore } : {}),
           expiresAt: now + REPORT_OUTBOX_KEPT_MS,
           replaces: `routine-report:${report.routineId}:${lane}`,
         });
-        this.routineSends.record(
-          report.fire,
-          lane,
-          "me",
-          report.runSessionId,
-          report.text
-        );
+        // Sent or still owed: the fire has its delivery on this app.
+        if (status !== "dropped")
+          this.routineSends.record(
+            report.fire,
+            lane,
+            "me",
+            report.runSessionId,
+            report.text
+          );
       }
     }
     this.routineReports.finish(report.fire);

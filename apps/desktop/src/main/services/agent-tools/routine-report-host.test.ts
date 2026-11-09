@@ -493,3 +493,65 @@ describe("a message typed in the app's chat", () => {
     expect(messages[1]).toMatchObject({ parts: [{ content: "go" }] });
   });
 });
+
+describe("a message to a chat owed a report's note", () => {
+  const deliver = (h: ReturnType<typeof harness>, agentTakesIt: boolean) => {
+    const written: string[] = [];
+    const service = {
+      ...h.service,
+      moveSessionPinToTier: () => undefined,
+      withVaultNotes: async (request: unknown) => request,
+      withEnvironmentNotice: async (request: unknown) => request,
+      waitOutStoppingAgent: async () => undefined,
+      agentManagerService: {
+        getSessionState: () => ({
+          status: agentTakesIt ? "running" : "stopped",
+        }),
+      },
+      agentCommunicationService: {
+        sendMessage: (request: { message: string }) => {
+          written.push(request.message);
+          return true;
+        },
+      },
+      startAgentSession: async () => ({ success: false }),
+    };
+    return {
+      written,
+      send: () =>
+        proto.deliverAgentMessage!.call(
+          service,
+          { workspaceId: "w", sessionId: "chat", message: "go" },
+          null,
+          () => true
+        ) as Promise<{ outcome: string }>,
+    };
+  };
+
+  it("leaves it owed when no agent took the message, and carries it once one does", async () => {
+    const h = harness();
+    (h.service.routineReports as RoutineReportStore).addNote(
+      "chat",
+      {
+        routineId: "job-1",
+        routineName: "Check-in",
+        runSessionId: "run-9",
+        startedAt: new Date().toISOString(),
+        text: "Say go?",
+        runFile: null,
+      },
+      { delivered: true }
+    );
+
+    const refused = deliver(h, false);
+    expect((await refused.send()).outcome).toBe("undeliverable");
+    expect(h.notes("chat").notes).toHaveLength(1);
+
+    const taken = deliver(h, true);
+    expect((await taken.send()).outcome).not.toBe("undeliverable");
+    expect(taken.written[0]).toMatch(
+      /^<system_reminder>\n\[routine report sent\][\s\S]*go$/
+    );
+    expect(h.notes("chat").notes).toEqual([]);
+  });
+});
