@@ -40,6 +40,12 @@ vi.mock("./page-boot-watch", async (importOriginal) => ({
 const { MessagingGatewayService, RELEASED_LOGIN_MS } =
   await import("./messaging-gateway-service");
 
+/** Holds stub connectors' stop() open while a test needs it to be slow. */
+const stopGate = {
+  held: null as Promise<void> | null,
+  wait: (): Promise<void> => stopGate.held ?? Promise.resolve(),
+};
+
 /** What each stub connector's login probe will report, when asked. */
 const probeVerdicts = new Map<MessagingPlatformId, string>();
 
@@ -87,7 +93,7 @@ const service = (
     return {
       id,
       start: async () => {},
-      stop: async () => {},
+      stop: () => stopGate.wait(),
       sendText: async () => {},
       // The probe is the page's verdict this second: whatever the stub was
       // told to answer, reported the way a real connector reports it.
@@ -202,6 +208,33 @@ describe("a connector that failed", () => {
     await gateway.syncConnectors();
     await vi.advanceTimersByTimeAsync(0);
     expect(captured).toHaveLength(3);
+  });
+
+  it("starts nothing once the gateway is disposed mid-restart", async () => {
+    // The first retry lands at exactly 10 s.
+    vi.spyOn(Math, "random").mockReturnValue(0.5);
+    const { gateway, captured } = service();
+    await gateway.syncConnectors();
+    let release = (): void => {};
+    stopGate.held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    (
+      captured[0]!.onState as (
+        state: string,
+        error?: string,
+        failure?: unknown
+      ) => void
+    )("error", "could not be reached", { retry: "auto" });
+    // The supervisor's restart is stopping the old lane when the app quits.
+    await vi.advanceTimersByTimeAsync(10_100);
+    const disposed = gateway.dispose();
+    release();
+    stopGate.held = null;
+    await vi.advanceTimersByTimeAsync(10_000);
+    await disposed;
+    expect(captured).toHaveLength(1);
+    vi.restoreAllMocks();
   });
 
   it("comes back by itself when it says it may be retried, with no sync", async () => {

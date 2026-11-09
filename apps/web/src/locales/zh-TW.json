@@ -1095,6 +1095,14 @@
       "abacusTelegram": "Telegram"
     },
     "recommended": "推薦",
+    "recovery": {
+      "disk": "磁碟有可用空間後，{{platform}} 會自動重試。",
+      "next": "{{platform}} 未連線。正在自動重試，下次嘗試在 {{minutes}} 分鐘後。",
+      "needsUser": "{{platform}} 一直以同樣的方式失敗，因此已停止自動重試。網路允許時，請點選「立即重試」。",
+      "now": "{{platform}} 未連線。正在重試。",
+      "stopped": "{{platform}} 已經一天沒有連線，因此已停止自動重試。",
+      "tryNow": "立即重試"
+    },
     "reject": "拒絕",
     "required": "必填",
     "revoke": "撤銷",
@@ -3836,6 +3844,7 @@
       "installFailed": "無法安裝更新",
       "manualInstall": "更新已就緒，請手動安裝",
       "installing": "正在重新啟動…",
+      "preparing": "正在準備更新…",
       "queued": "目前的任務完成後重新啟動",
       "checking": "正在檢查…",
       "downloading": "正在下載更新… {{percent}}%",
@@ -4969,6 +4978,9 @@
     "themes": "主題",
     "diskFullLane": "電腦磁碟已滿，所以 {{platform}} 無法儲存資料。釋出一些空間後，它會自動重新連線。",
     "linkLostTitle": "{{platform}} 已中斷連線",
-    "linkLostLane": "{{platform}} 已不再連結，所以訊息和例行工作無法透過它傳送。請點選「連接」，然後重新掃描 QR 碼。"
+    "linkLostLane": "{{platform}} 已不再連結，所以訊息和例行工作無法透過它傳送。請點選「連接」，然後重新掃描 QR 碼。",
+    "laneDownTitle": "{{platform}} 無法連線",
+    "laneDownBody": "{{platform}} 已經一小時沒有連線。應用程式會繼續嘗試；開啟「訊息」即可立即重試。",
+    "laneBlockedBody": "{{platform}} 一直無法建立安全連線，可能在此網路上被封鎖。應用程式已停止重試；網路允許時，請開啟「訊息」並點選「立即重試」。"
   }
 }

@@ -105,6 +105,9 @@ const NETWORK_CHECK_MS = 5_000;
 /** Adapters that come and go on their own (containers, VMs, VPN tunnels, Apple's peer links). */
 const VIRTUAL_ADAPTER =
   /^(lo\d*$|docker|br-|veth|virbr|vmnet|vboxnet|vEthernet|utun|awdl|llw|anpi|ap\d|bridge|tun|tap|zt|tailscale|wg)/i;
+/** Windows names adapters by their product, anywhere in the friendly name. */
+const VIRTUAL_ADAPTER_NAMED =
+  /vmware|virtualbox|zerotier|openvpn|bluetooth|local area connection\*/i;
 
 /**
  * The machine's real IPv4 addresses: a router or adapter change moves them
@@ -114,7 +117,10 @@ const VIRTUAL_ADAPTER =
  */
 const networkFingerprint = (): string =>
   Object.entries(os.networkInterfaces())
-    .filter(([name]) => !VIRTUAL_ADAPTER.test(name))
+    .filter(
+      ([name]) =>
+        !VIRTUAL_ADAPTER.test(name) && !VIRTUAL_ADAPTER_NAMED.test(name)
+    )
     .flatMap(([, entries]) => entries ?? [])
     .filter(
       (entry) =>

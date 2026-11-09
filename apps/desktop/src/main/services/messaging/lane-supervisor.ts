@@ -132,6 +132,8 @@ export class LaneSupervisor {
         lane.stuckBoots =
           lane.failure!.stuckBoot === true ? lane.stuckBoots + 1 : 0;
         lane.certFails = lane.failure!.cert === true ? lane.certFails + 1 : 0;
+        // A different failure: no longer the one only the user can clear.
+        if (lane.failure!.cert !== true) lane.needsUser = false;
         this.markDown(id, lane);
         if (lane.certFails > LANE_CERT_TRIES) return this.needUser(id, lane);
         this.schedule(id, lane);

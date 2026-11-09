@@ -351,6 +351,26 @@ describe("a refused certificate", () => {
     expect(world.restarts).toHaveLength(4);
     expect(world.toldUser).toBe(1);
   });
+
+  it("goes back to the backoff when Try now meets a different failure", async () => {
+    let outcome: { state: MessagingPlatformState; failure?: LaneFailure } = {
+      state: "error",
+      failure: { retry: "auto", cert: true },
+    };
+    const { supervisor, world } = harness(() => outcome);
+    supervisor.noteState(ID, "error", { retry: "auto", cert: true });
+    await vi.advanceTimersByTimeAsync(LANE_SHOW_AFTER_MS + 60_000);
+    expect(supervisor.status(ID)?.phase).toBe("needs_user");
+
+    // The network changed: Try now now fails to load, not on the certificate.
+    outcome = unreachable;
+    supervisor.retryNow(ID);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(supervisor.status(ID)?.phase).toBe("scheduled");
+    const tries = world.restarts.length;
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(world.restarts.length).toBeGreaterThan(tries);
+  });
 });
 
 describe("a full disk", () => {
