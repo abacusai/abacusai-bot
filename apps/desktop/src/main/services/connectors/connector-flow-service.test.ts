@@ -76,7 +76,10 @@ describe("a platform connector", () => {
     });
 
     expect(platformConnect).toHaveBeenCalledWith("gmailuser");
-    expect(watch).toHaveBeenCalledWith("abacus-gmailuser", "req_1");
+    expect(watch).toHaveBeenCalledWith("abacus-gmailuser", {
+      url: "https://apps.example/connect?r=req_1",
+      requestId: "req_1",
+    });
   });
 
   it("watches the statuses for a page opened without a minted link", async () => {
@@ -89,7 +92,9 @@ describe("a platform connector", () => {
       ok: true,
       url: "https://apps.example/chatllm/connect-connector?service=gmailuser",
     });
-    expect(watch).toHaveBeenCalledWith("abacus-gmailuser", undefined);
+    expect(watch).toHaveBeenCalledWith("abacus-gmailuser", {
+      url: "https://apps.example/chatllm/connect-connector?service=gmailuser",
+    });
   });
 
   it("watches nothing when no link could be handed out", async () => {

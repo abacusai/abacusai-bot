@@ -425,6 +425,10 @@
         "connecting": "Connecting…",
         "decline": "Not now",
         "stop": "Arrêter la connexion",
+        "worksFor_one": "Fonctionne encore {{count}} min",
+        "worksFor_other": "Fonctionne encore {{count}} min",
+        "expired": "Ce lien a expiré.",
+        "renew": "Obtenir un nouveau lien",
         "homeChannel": "Vous parlez à cet agent depuis {{provider}} sur votre téléphone. Connectez {{provider}} pour commencer."
       },
       "placeholder": "Message à {{name}}",

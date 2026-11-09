@@ -4,7 +4,11 @@ import {
 } from "@abacus-ai/connectors/describe";
 import { phoneChatRoute } from "@abacus-ai/contract/capabilities";
 
-import type { ConnectOutcome, DisconnectOutcome } from "./connect-outcome";
+import {
+  linkLifetime,
+  type ConnectOutcome,
+  type DisconnectOutcome,
+} from "./connect-outcome";
 import type { ToolDefinition, ToolHost, ToolResult } from "./definition";
 
 const names = catalogByKind();
@@ -203,6 +207,7 @@ export function appConnectResult(
           "Put it in a message of its own with one short line in the user's language, saying it reconnects the account. " +
             "Copy it exactly; never shorten or reword it. This call does not wait: you will be told when the reconnect " +
             "lands. Never offer to flag or report anything: there is no such process.",
+          ...linkLifetimeLines(outcome.expiresAt),
         ].join("\n")
       );
     case "link":
@@ -217,9 +222,26 @@ const ROUTINE_RUN_REPORTS =
   "Do what does not need it, and say in your report what was left undone and why, without saying they have seen anything. " +
   "Nothing is redone or sent later by itself: never promise that. The next run has it once it is connected.";
 
+/**
+ * How long a link works, for the model to pass on in the user's language; none
+ * when the server gave no expiry. Shared by every chat surface.
+ */
+export const linkLifetimeLines = (
+  expiresAt: number | undefined,
+  now = Date.now()
+): string[] => {
+  const life = linkLifetime(expiresAt, now);
+  return life == null
+    ? []
+    : [
+        `This link works until ${life.until} (about ${life.minutes} min from now), then stops working. ` +
+          "Next to the link, say in the user's language how long it works, so they open it in time.",
+      ];
+};
+
 /** The app's words for a link to send the user. */
 function linkText(outcome: Extract<ConnectOutcome, { code: "link" }>): string {
-  const { asking, already, url, routine } = outcome;
+  const { asking, already, url, routine, expiresAt } = outcome;
   const covered = asking.join(", ");
   const connected = already.join(", ");
   return [
@@ -237,6 +259,7 @@ function linkText(outcome: Extract<ConnectOutcome, { code: "link" }>): string {
       (asking.length > 1
         ? " The sign-in screen may show a checkbox for each; whatever is left unticked is not connected."
         : ""),
+    ...linkLifetimeLines(expiresAt),
     routine
       ? `${ROUTINE_RUN_ALONE} ${ROUTINE_RUN_REPORTS}`
       : "This call does not wait. Carry on with whatever does not need it. When it lands you will be told exactly what " +

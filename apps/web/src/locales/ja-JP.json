@@ -425,6 +425,10 @@
         "connecting": "Connecting…",
         "decline": "Not now",
         "stop": "接続を中止",
+        "worksFor_one": "あと{{count}}分有効",
+        "worksFor_other": "あと{{count}}分有効",
+        "expired": "このリンクは期限切れです。",
+        "renew": "新しいリンクを取得",
         "homeChannel": "このエージェントとはスマホの{{provider}}で話します。{{provider}}を接続して始めましょう。"
       },
       "placeholder": "{{name}}にメッセージ",

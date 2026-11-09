@@ -425,6 +425,10 @@
         "connecting": "Connecting…",
         "decline": "Not now",
         "stop": "Interrompi connessione",
+        "worksFor_one": "Valido ancora {{count}} min",
+        "worksFor_other": "Valido ancora {{count}} min",
+        "expired": "Questo link è scaduto.",
+        "renew": "Ottieni un nuovo link",
         "homeChannel": "Parli con questo agente da {{provider}} sul tuo telefono. Collega {{provider}} per iniziare."
       },
       "placeholder": "Messaggio a {{name}}",

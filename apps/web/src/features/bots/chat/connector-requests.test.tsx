@@ -150,6 +150,23 @@ describe("reduceRequests", () => {
     list = reduceRequests(list, { type: "cleared", requestId: "a" }, MINE);
     expect(list.map((r) => r.requestId)).toEqual(["d"]);
   });
+
+  it("replaces a card that arrives again with the same id, in place", () => {
+    let list = reduceRequests(
+      [],
+      { type: "snapshot", requests: [ask("a"), ask("b")] },
+      MINE
+    );
+    list = reduceRequests(
+      list,
+      { type: "request", request: { ...ask("a"), expired: true } },
+      MINE
+    );
+    expect(list.map((r) => [r.requestId, r.expired === true])).toEqual([
+      ["a", true],
+      ["b", false],
+    ]);
+  });
 });
 
 describe("useConnectorRequests", () => {

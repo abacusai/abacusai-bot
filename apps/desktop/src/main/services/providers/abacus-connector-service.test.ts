@@ -21,6 +21,8 @@ type Reply = { success: true; result: unknown } | null;
 
 let replies: Map<string, Reply[]>;
 let calls: string[];
+/** The server's `Date` header on every reply; none by default. */
+let serverDate: string | null;
 
 const method = (url: string): string =>
   new URL(url).pathname.replace("/api/v1/", "");
@@ -33,6 +35,7 @@ const answer = (name: string, ...queued: Reply[]): void => {
 beforeEach(() => {
   replies = new Map();
   calls = [];
+  serverDate = null;
   apiKey.mockReturnValue("test-key");
 
   vi.stubGlobal(
@@ -54,6 +57,7 @@ beforeEach(() => {
       return Promise.resolve({
         ok: true,
         status: 200,
+        headers: new Headers(serverDate != null ? { date: serverDate } : {}),
         json: () => Promise.resolve(reply),
       } as unknown as Response);
     })
@@ -369,6 +373,26 @@ describe("a one-tap connect link", () => {
     expect(link?.url).toContain(
       "/chatllm/connect-connector?service=slack&r=req_0123456789abcdef&autostart=1"
     );
+  });
+
+  it("counts its lifetime by the server's clock, from its Date header, not this machine's", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.UTC(2026, 10, 9, 13, 0, 0));
+    // The server's clock is 8 minutes behind; its link has 30 minutes left.
+    const server = Date.UTC(2026, 10, 9, 12, 52, 0);
+    serverDate = new Date(server).toUTCString();
+    answer("_createAbacusbotConnectLink", {
+      success: true,
+      result: {
+        requestId: "req_0123456789abcdef",
+        services: ["slack"],
+        expiresAt: (server + 30 * 60_000) / 1000,
+      },
+    });
+
+    const link = await createConnectLink("slack");
+    vi.useRealTimers();
+    expect(link?.expiresAt).toBe(Date.UTC(2026, 10, 9, 13, 30, 0));
   });
 
   it("never sends a link that is not https", async () => {

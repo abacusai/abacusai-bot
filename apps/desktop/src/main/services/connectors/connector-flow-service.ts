@@ -28,12 +28,15 @@ export interface FlowSources {
     connect: (
       service: string
     ) => Promise<
-      | { ok: true; url: string; requestId?: string }
+      | { ok: true; url: string; requestId?: string; expiresAt?: number }
       | { ok: false; error: string }
     >;
     disconnect: (service: string) => Promise<ConnectorOutcome>;
-    /** Follows a connector whose link was handed out until it connects. */
-    watch: (connectorId: string, requestId?: string) => void;
+    /** Follows a connector whose link was handed out until it connects or the link expires. */
+    watch: (
+      connectorId: string,
+      link: { url: string; requestId?: string; expiresAt?: number }
+    ) => void;
   };
   /**
    * A GitHub token pasted on the card GitHub had before its sign-in, while
@@ -169,7 +172,8 @@ export class ConnectorFlowService {
       // The caller opens the link; completion arrives through the watch.
       const link = await this.sources.platform.connect(connector.service);
       if (!link.ok) return link;
-      this.sources.platform.watch(connector.id, link.requestId);
+      const { ok: _ok, ...handed } = link;
+      this.sources.platform.watch(connector.id, handed);
       return { ok: true, url: link.url };
     }
     if (connector.kind === "mcp") {

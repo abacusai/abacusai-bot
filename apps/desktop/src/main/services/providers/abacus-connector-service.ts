@@ -43,6 +43,8 @@ export const abacusApiCall = async (
   result: unknown;
   /** No answer at all (offline, DNS, refused, timed out): not a refusal. */
   unreachable?: true;
+  /** The server's clock (ms) from the response's `Date` header, when it sent one. */
+  serverDate?: number;
 }> => {
   const key = keyOverride ?? abacusApiKey();
   if (key.length === 0) return { ok: false, result: null };
@@ -79,7 +81,12 @@ export const abacusApiCall = async (
       );
       return { ok: false, result: null };
     }
-    return { ok: true, result: payload.result ?? null };
+    const serverDate = Date.parse(response.headers.get("date") ?? "");
+    return {
+      ok: true,
+      result: payload.result ?? null,
+      ...(Number.isFinite(serverDate) ? { serverDate } : {}),
+    };
   } catch (error) {
     console.warn(
       `[abacus-connectors] ${method} error: ${
@@ -256,6 +263,43 @@ const serviceKeys = (value: unknown): string[] =>
     ? value.filter((item): item is string => typeof item === "string")
     : [];
 
+/** A server timestamp in ms; it sends unix seconds. Undefined when absent. */
+const stampMs = (value: unknown): number | undefined => {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0)
+    return undefined;
+  return value < 1e12 ? value * 1000 : value;
+};
+
+/**
+ * When a just-minted link stops working, on the local clock: the time it has
+ * left by the server's own clock, counted from `receivedAt`, so a skewed
+ * local clock does not move it. A relative lifetime wins; then the absolute
+ * expiry less the server's time for the same response (a stamp in the
+ * payload, else its `Date` header); with neither, the local clock.
+ */
+export const linkExpiresAt = (
+  minted: {
+    expiresIn?: unknown;
+    expires_in?: unknown;
+    expiresAt?: unknown;
+    expires_at?: unknown;
+    issuedAt?: unknown;
+    issued_at?: unknown;
+  },
+  serverDate: number | undefined,
+  receivedAt = Date.now()
+): number | undefined => {
+  const relative = minted.expiresIn ?? minted.expires_in;
+  if (typeof relative === "number" && Number.isFinite(relative) && relative > 0)
+    return receivedAt + relative * 1000;
+  const expires = stampMs(minted.expiresAt ?? minted.expires_at);
+  if (expires == null) return undefined;
+  const serverNow = stampMs(minted.issuedAt ?? minted.issued_at) ?? serverDate;
+  return serverNow == null
+    ? expires
+    : receivedAt + Math.max(0, expires - serverNow);
+};
+
 /**
  * A one-tap connect link (WhatsApp, or a chat in the app), the services its
  * consent asks for, and, for a bundle, the members already connected, which
@@ -271,6 +315,8 @@ export const createConnectLink = async (
   services: string[];
   connected: string[];
   requestId?: string;
+  /** When the link stops working (ms), as the server minted it. */
+  expiresAt?: number;
   /** Abacus did not answer: the plain page will not load either. */
   unreachable?: true;
 } | null> => {
@@ -296,6 +342,12 @@ export const createConnectLink = async (
         services?: unknown;
         connected?: unknown;
         url?: unknown;
+        expiresIn?: unknown;
+        expires_in?: unknown;
+        expiresAt?: unknown;
+        expires_at?: unknown;
+        issuedAt?: unknown;
+        issued_at?: unknown;
       } | null)
     : null;
   const url = new URL(CONNECT_PATH, abacusAppHost());
@@ -306,6 +358,7 @@ export const createConnectLink = async (
     url.searchParams.set("service", bundled ? "google" : serviceKey);
     url.searchParams.set("r", request.requestId);
     url.searchParams.set("autostart", "1");
+    const expiresAt = linkExpiresAt(request, minted.serverDate);
     return {
       // The server's own link when it gives one: a page whose preview card
       // names the service, on its way to the same connect page.
@@ -316,6 +369,7 @@ export const createConnectLink = async (
       services: serviceKeys(request.services),
       connected: serviceKeys(request.connected),
       requestId: request.requestId,
+      ...(expiresAt != null ? { expiresAt } : {}),
     };
   }
   url.searchParams.set("service", serviceKey);
@@ -368,7 +422,8 @@ export const connectLinkStatus = async (
 export const connectButtonLink = async (
   service: string
 ): Promise<
-  { ok: true; url: string; requestId?: string } | { ok: false; error: string }
+  | { ok: true; url: string; requestId?: string; expiresAt?: number }
+  | { ok: false; error: string }
 > => {
   const serviceKey = service.toLowerCase();
   if (!SERVICE_RE.test(serviceKey))
@@ -382,5 +437,6 @@ export const connectButtonLink = async (
     ok: true,
     url: link.url,
     ...(link.requestId != null ? { requestId: link.requestId } : {}),
+    ...(link.expiresAt != null ? { expiresAt: link.expiresAt } : {}),
   };
 };

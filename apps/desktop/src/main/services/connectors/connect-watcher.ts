@@ -4,7 +4,9 @@
  * every offer; an offer is reported once, with whichever of its connectors
  * connected and whichever its consent did not grant (one Google consent lands
  * several together, and the user can untick some), and is given up when its
- * link expires.
+ * link expires: a grace period after the expiry the server minted it with
+ * (clocks drift, and a sign-in started in time may finish late), or after
+ * 30 minutes when it gave none.
  *
  * An offer made with a link is judged by that link while the server reports
  * on it: completed is the outcome. While it is not completed, the offer still
@@ -41,10 +43,10 @@ interface ConnectWatcherDeps {
   /** What the offer's link has done, read when an offer carries one. */
   linkStatus?: (requestId: string) => Promise<LinkOutcome>;
   connected: (offer: ConnectedOffer) => void;
-  /** The offer's link expired unconnected. */
-  expired: (connectorIds: string[]) => void;
+  /** The offer expired unconnected; `linked` when it was made with a link. */
+  expired: (connectorIds: string[], linked: boolean) => void;
   everyMs?: number;
-  /** How long a link stays good. */
+  /** How long a link stays good when the server did not say. */
   forMs?: number;
   /** How long a partly landed offer waits for the rest of one consent. */
   settleMs?: number;
@@ -53,6 +55,7 @@ interface ConnectWatcherDeps {
 
 const WATCH_EVERY_MS = 5_000;
 const WATCH_FOR_MS = 30 * 60_000;
+const EXPIRY_GRACE_MS = 5 * 60_000;
 // One consent saves every member it granted in one request; the rest of it
 // lands well within this.
 const SETTLE_MS = 15_000;
@@ -72,6 +75,7 @@ interface Offer {
   connectorIds: string[];
   sessionId: string | null;
   requestId?: string;
+  url?: string;
   /** Judged by its link alone, never the statuses: a reconnect. */
   byLinkOnly: boolean;
   /** The server could not say once; the statuses judge it from then on. */
@@ -95,6 +99,8 @@ export class ConnectWatcher {
     connectorIds: string[];
     sessionId: string | null;
     requestId?: string;
+    url?: string;
+    expiresAt?: number;
     byLinkOnly?: boolean;
   }): void {
     if (input.connectorIds.length === 0) return;
@@ -105,9 +111,13 @@ export class ConnectWatcher {
       connectorIds: input.connectorIds,
       sessionId: input.sessionId,
       ...(input.requestId != null ? { requestId: input.requestId } : {}),
+      ...(input.url != null ? { url: input.url } : {}),
       byLinkOnly: input.byLinkOnly === true,
       linkUnavailable: false,
-      until: this.now() + (this.deps.forMs ?? WATCH_FOR_MS),
+      until:
+        input.expiresAt != null
+          ? input.expiresAt + EXPIRY_GRACE_MS
+          : this.now() + (this.deps.forMs ?? WATCH_FOR_MS),
     });
     this.arm();
   }
@@ -166,7 +176,10 @@ export class ConnectWatcher {
       if (landed == null) {
         if (this.now() >= offer.until) {
           this.offers.delete(key);
-          this.deps.expired(offer.connectorIds);
+          this.deps.expired(
+            offer.connectorIds,
+            offer.url != null || offer.requestId != null
+          );
         }
         continue;
       }

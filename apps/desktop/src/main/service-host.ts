@@ -1651,6 +1651,7 @@ export class ServiceHost {
           connectorIds: connectorIdsFor(link.services),
           connectedIds: connectorIdsFor(link.connected),
           ...(link.requestId != null ? { requestId: link.requestId } : {}),
+          ...(link.expiresAt != null ? { expiresAt: link.expiresAt } : {}),
         };
       },
       show: (input) => this.connectorGate.show(input),
@@ -1992,7 +1993,9 @@ export class ServiceHost {
           };
     },
     connected: (offer) => this.connectorsConnected(offer),
-    expired: (connectorIds) => this.connectorGate.clearFor(connectorIds),
+    // A card whose link expired stays, offering a new one.
+    expired: (connectorIds, linked) =>
+      this.connectorGate.expire(connectorIds, linked, Date.now()),
   });
 
   /** Lanes that deliver a note to their own session as a turn, by lane. */
@@ -2208,12 +2211,15 @@ export class ServiceHost {
     platform: {
       connect: connectButtonLink,
       disconnect: disconnectAbacusConnector,
-      watch: (connectorId, requestId) =>
+      watch: (connectorId, link) => {
         this.connectWatcher.watch({
           connectorIds: [connectorId],
           sessionId: null,
-          ...(requestId != null ? { requestId } : {}),
-        }),
+          ...link,
+        });
+        // A card's "Get a new link" counts down from the fresh link.
+        this.connectorGate.renew(connectorId, link.expiresAt);
+      },
     },
     pastedGithubToken: {
       held: async () =>
