@@ -12,6 +12,13 @@ export const routinesRouter = impl.routines.router({
       input.runId
     ),
   })),
+  replyToRun: impl.routines.replyToRun.handler(({ input, context }) =>
+    context.deps.serviceHost.replyToRoutineRun(
+      input.routineId,
+      input.runId,
+      input.text
+    )
+  ),
   run: impl.routines.run.handler(({ input, context }) =>
     context.deps.host.runRoutine(input.id, input.trigger)
   ),

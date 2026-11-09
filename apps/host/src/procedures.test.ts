@@ -187,6 +187,10 @@ const expectedFailures: Record<string, { code: string; message: string }> = {
     code: "NOT_FOUND",
     message: "No routine fixture",
   },
+  "routines.replyToRun": {
+    code: "NOT_FOUND",
+    message: "No routine fixture",
+  },
   "routines.events": {
     code: "20",
     message: "This operation was aborted",

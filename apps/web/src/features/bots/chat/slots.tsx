@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 
 import { ConnectorRequestCard } from "#renderer/components/connector-request-card";
 import { confirmFreePoolModel } from "#renderer/components/credits-card/actions";
+import { useRunReports, withRunReports } from "#renderer/components/run-report";
 import { useCollections } from "#renderer/data/db";
 import { useChatCommands } from "#renderer/lib/chat-commands";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
@@ -72,6 +73,8 @@ export const useBotChatSlots = (
   const senders = useQuery(queries.senderChats());
   const senderInfo = senders.data?.find((row) => row.sessionId === sessionId);
   const isRun = !!session?.routineId;
+  // Its routines' reports, as the app delivered them here.
+  const reports = useRunReports(isRun || sender ? null : sessionId);
   const commands = useChatCommands(
     session?.workspaceId
       ? { workspaceId: session.workspaceId, sessionId }
@@ -185,7 +188,11 @@ export const useBotChatSlots = (
     setTab,
     openFile,
     chat: {
-      decorateMessage,
+      decorateMessage: withRunReports(
+        decorateMessage,
+        reports,
+        decorateMessage.isMessageHidden
+      ),
       isMessageHidden: decorateMessage.isMessageHidden,
       renderDeliverables: decorateMessage.renderDeliverables,
       typingCaption: (activity: {

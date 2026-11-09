@@ -51,6 +51,8 @@ import {
   isMessagingPlatformId,
   type MessagingPlatformId,
   describePlatformForAgent,
+  isOwnChatTarget,
+  selfLaneOf,
 } from "@abacus-ai/contract/messaging";
 import {
   isCostlyModel,
@@ -374,6 +376,13 @@ export interface McpAgentToolsServerOptions {
   isAppBotChat?: (sessionId: string) => boolean;
   /** This install gets the next step after a result. */
   nextStep?: () => boolean;
+  /** The app delivers local routine runs' answers (flag routine-delivery). */
+  routineDelivery?: () => boolean;
+  /**
+   * The app delivers this routine run's answer to the user's own chat on
+   * `platform`'s lane: the run's own send there is skipped, not doubled.
+   */
+  routineDeliversToSelf?: (sessionId: string, platform: string) => boolean;
   /** A free grant is nearly used: `suggest_tasks` offers no routine. */
   routineOfferClosed?: () => boolean;
   /**
@@ -760,6 +769,7 @@ export class McpAgentToolsServer extends McpHttpServer {
         this.featureListed(feature.toolsets, enabled, callerSession)
       ),
       nextStep: this.options.nextStep?.() === true,
+      routineDelivery: this.options.routineDelivery?.() === true,
     };
   }
 
@@ -2677,6 +2687,22 @@ export class McpAgentToolsServer extends McpHttpServer {
 
     if (!isMessagingPlatformId(platform))
       return this.err(`Unknown platform "${platform}".`);
+    // The app sends the run's answer to the user's own chat: once, not twice.
+    // A file still goes: the app's delivery carries only the words.
+    if (
+      callerSession != null &&
+      attachmentPath.length === 0 &&
+      this.options.routineDeliversToSelf?.(callerSession, platform) === true &&
+      isOwnChatTarget(
+        to,
+        (messaging.selfChats?.() ?? []).find(
+          (self) => selfLaneOf(self.platform) === selfLaneOf(platform)
+        )?.chatId ?? null
+      )
+    )
+      return this.ok(
+        "Not sent: the app delivers your final answer to the user's own chat, word for word. Put what you meant to send in your answer instead."
+      );
     if (callerSession != null)
       this.options.noteRoutinePlatform?.(callerSession, platform);
     // The platform being addressed, not "some platform is up".

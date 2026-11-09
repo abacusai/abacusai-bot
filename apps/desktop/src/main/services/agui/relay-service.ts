@@ -70,6 +70,7 @@ import {
   SubscriberQueue,
   resyncRequired,
 } from "../../rpc/subscriber-queue";
+import { prependSystemReminder } from "../providers/environment-notice-service";
 import type { AgentWire, NdjsonOrigin } from "../session/cli-manager-service";
 import {
   SeqClock,
@@ -105,6 +106,14 @@ export interface AguiRelayHost {
    * running (its compat `ready` seen) before its `wire.hello` arrives.
    */
   send(threadId: string, command: object): object | null;
+  /**
+   * Hidden notes owed to the user's next message in the thread (a routine
+   * report it may answer), taken once; none for a message that is not theirs.
+   */
+  userMessageNotes?(
+    threadId: string,
+    tags: UserTextTags | undefined
+  ): { notes: string[]; taken: () => void };
   /** Main's turn state: a turn was sent (legacy `sendAgentMessage` does this). */
   markSent(threadId: string): void;
   /** A human message the agent accepted, including queued admissions. */
@@ -280,6 +289,52 @@ const newestUserId = (messages: AiSendInput["messages"]): string | null => {
   for (let index = messages.length - 1; index >= 0; index -= 1)
     if (messages[index]!.role === "user") return messages[index]!.id;
   return null;
+};
+
+/**
+ * The newest user message with `notes` in a hidden reminder block in front,
+ * its display tags shifted so the transcript still shows only their words.
+ */
+export const withUserMessageNotes = (
+  messages: AiSendInput["messages"],
+  notes: readonly string[]
+): AiSendInput["messages"] => {
+  let index = messages.length - 1;
+  while (index >= 0 && messages[index]!.role !== "user") index -= 1;
+  if (index < 0) return messages;
+  const message = messages[index]! as unknown as {
+    parts: Array<{ type: string; content?: string }>;
+    metadata?: {
+      abacus?: { userText?: UserTextTags } & Record<string, unknown>;
+    };
+  };
+  const text = message.parts
+    .flatMap((part) => (part.type === "text" ? [part.content ?? ""] : []))
+    .join("");
+  // The chat's own prepend: one block, the display tags shifted past it.
+  const noted = prependSystemReminder(
+    {
+      workspaceId: "",
+      sessionId: "",
+      message: text,
+      ...(message.metadata?.abacus?.userText != null
+        ? { userText: message.metadata.abacus.userText }
+        : {}),
+    },
+    notes
+  );
+  const block = noted.message.slice(0, noted.message.length - text.length);
+  const replaced = {
+    ...message,
+    parts: [{ type: "text", content: block }, ...message.parts],
+    metadata: {
+      ...message.metadata,
+      abacus: { ...message.metadata?.abacus, userText: noted.userText },
+    },
+  };
+  return messages.map((entry, at) =>
+    at === index ? (replaced as unknown as typeof entry) : entry
+  );
 };
 
 /** The agent's hidden `user-reaction` note for one selected reaction. */
@@ -967,6 +1022,22 @@ export class AguiRelayService implements AguiSource {
         if (pending.abandoned !== undefined) throw pending.abandoned;
       }
 
+      // Taken once the send is this run's own, so a repeat never spends them.
+      const newest = [...input.messages]
+        .reverse()
+        .find((message) => message.role === "user") as
+        | { metadata?: { abacus?: { userText?: UserTextTags } } }
+        | undefined;
+      const owed = this.#host.userMessageNotes?.(
+        threadId,
+        newest?.metadata?.abacus?.userText
+      );
+      if (owed != null && owed.notes.length > 0)
+        command = this.#runCommand({
+          ...input,
+          messages: withUserMessageNotes(input.messages, owed.notes),
+        });
+
       const thread = this.#thread(threadId);
       const echo = newestUserId(input.messages);
       if (echo != null) thread.expectEcho(runId, echo);
@@ -976,6 +1047,7 @@ export class AguiRelayService implements AguiSource {
       const target = this.#host.send(threadId, command);
       if (target == null)
         throw unavailable("The agent is not accepting input", 1_000);
+      owed?.taken();
       pending.runtime = target;
       written = true;
 

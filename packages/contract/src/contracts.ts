@@ -331,6 +331,15 @@ export interface RoutineRunItem {
   trigger: string | null;
 }
 
+/** A run's final answer as delivered into a chat (`to`), word for word. */
+export interface RunReportStamp {
+  /** The chat session it was delivered to. */
+  to: string;
+  /** ISO time it was delivered. */
+  at: string;
+  text: string;
+}
+
 /** A bot conversation's parentage, stamped on the session at mint. */
 export interface SessionOwner {
   kind: "bot";
@@ -367,6 +376,8 @@ export interface AgentSessionListItem {
   runOutcome: RoutineRunOutcome | null;
   /** Routine runs only: what fired it. */
   runTrigger: string | null;
+  /** Routine runs only: the report the app delivered to a chat, drawn there as a card. */
+  report?: RunReportStamp | null;
   /** The routine this session edits, when it is the editor turn behind a routine page. Hidden from lists. */
   editorFor: string | null;
   /** Derived from `owner` (plus legacy stamps); hides the session from the Sessions tree. */

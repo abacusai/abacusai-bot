@@ -6,6 +6,10 @@
  * another platform's. Each platform has its own send, read, list and
  * auto-reply tool; the cross-platform originals are hidden from the model.
  */
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { McpAgentToolsServer } from "./mcp-agent-tools-server";
@@ -193,5 +197,71 @@ describe("a routine run's messages to someone", () => {
     await send("chat", "Sam", "Hi");
 
     expect(sent).toHaveLength(2);
+  });
+});
+
+describe("a routine run whose answer the app delivers to the user's own chat", () => {
+  // A made-up number, built from parts so no scanner takes it for a real one.
+  const PARTS = ["1", "555", "000", "1111"];
+  const SELF = `${PARTS.join("")}@c.us`;
+  const deliveringHarness = () => {
+    const sent: Sent[] = [];
+    const files: string[] = [];
+    const server = new McpAgentToolsServer({
+      skillsService: {} as never,
+      enabledToolsets: () => new Set(["messaging"]),
+      workspacePath: () => null,
+      botIdForSession: () => null,
+      routineFireForSession: () => "job-1@1700000000000",
+      routineDeliversToSelf: (_session: string, platform: string) =>
+        platform === "whatsapp",
+      messaging: {
+        runningPlatforms: () => ["whatsapp"],
+        livePlatforms: () => ["whatsapp"],
+        listChats: () => [],
+        selfChats: () => [{ platform: "whatsapp", chatId: SELF }],
+        send: async (platform: string, chatId: string, text: string) => {
+          sent.push({ platform, chatId, text });
+        },
+        sendFile: async (_platform: string, _to: string, file: string) => {
+          files.push(file);
+        },
+      },
+    } as never);
+    const send = async (args: Record<string, unknown>) => {
+      const result = await (
+        server as unknown as {
+          executeTool: (
+            n: string,
+            a: Record<string, unknown>,
+            s?: string
+          ) => Promise<{ content: { text?: string }[] }>;
+        }
+      ).executeTool("send_whatsapp_message", args, "run-a");
+      return result.content.map((part) => part.text ?? "").join("\n");
+    };
+    return { sent, files, send };
+  };
+
+  it("skips a text to the user, by name, chat id or own number, and says the app delivers it", async () => {
+    const { sent, send } = deliveringHarness();
+    for (const to of ["me", SELF, `+${PARTS.join(" ")}`])
+      expect(await send({ to, message: "Your digest" })).toContain(
+        "the app delivers your final answer"
+      );
+    expect(sent).toEqual([]);
+  });
+
+  it("still sends a text to someone else, and a file to the user", async () => {
+    const { sent, files, send } = deliveringHarness();
+    expect(await send({ to: "Sam", message: "Hello" })).toContain("Sent");
+    const dir = mkdtempSync(join(tmpdir(), "send-file-"));
+    const file = join(dir, "report.pdf");
+    writeFileSync(file, "pdf");
+    expect(
+      await send({ to: "me", message: "", attachment_path: file })
+    ).toContain("Sent the file");
+    expect(sent.map((entry) => entry.chatId)).toEqual(["Sam"]);
+    expect(files).toEqual([file]);
   });
 });

@@ -376,6 +376,62 @@ describe("the fire prompt", () => {
     ).not.toContain("NO_REPLY");
   });
 
+  // Where the app delivers, a digest asked for on every run is written, not
+  // dropped as "nothing new"; a bare "nothing new" line still is.
+  it("keeps a digest the instruction asks for on every run out of NO_REPLY, only where the app delivers", () => {
+    const memory = {
+      dir: "/x/routines/job-1",
+      notes: noNotes("/x/routines/job-1"),
+      runs: 4,
+      workingDirectory: "/x/routines/job-1",
+      workspaces: [],
+      lastRun: {
+        sessionId: "s",
+        startedAt: "2026-09-04T08:00:00.000Z",
+        endedAt: "2026-09-04T08:01:00.000Z",
+        outcome: "completed" as const,
+        reply: "Today's digest: two meetings.",
+      },
+    };
+    const delivered = buildRoutineFirePrompt(job(), "schedule", null, {
+      ...memory,
+      deliveredTo: "in your chat with the user in the app",
+    });
+    expect(delivered).toContain(
+      "A report the instruction asks for on every run"
+    );
+    expect(delivered).toContain("write it, even when little changed");
+    expect(delivered).toContain('no "nothing');
+    const today = buildRoutineFirePrompt(job(), "schedule", null, memory);
+    expect(today).not.toContain("A report the instruction asks for");
+    expect(today).toContain("The same goes for a blocker");
+  });
+
+  // The hosted runs' contract: the app delivers, the run writes the message.
+  it("tells a run the app delivers its answer, and where, only when it does", () => {
+    const memory = {
+      dir: "/x/routines/job-1",
+      notes: noNotes("/x/routines/job-1"),
+      runs: 0,
+      workingDirectory: "/x/routines/job-1",
+      workspaces: [],
+      lastRun: null,
+    };
+    const delivered = buildRoutineFirePrompt(job(), "schedule", null, {
+      ...memory,
+      deliveredTo: "in your chat with the user in the app and on WhatsApp",
+    });
+    expect(delivered).toContain(
+      "The app delivers your final answer to the user word for word, in your chat with the user in the app and on WhatsApp."
+    );
+    expect(delivered).toContain("do not use a send tool to reach the user");
+    // The check-in's own instruction is left word for word.
+    expect(delivered).toContain(job().prompt);
+    expect(
+      buildRoutineFirePrompt(job(), "schedule", null, memory)
+    ).not.toContain("The app delivers");
+  });
+
   it("hands the previous reply over as a record, not an example", () => {
     const prompt = buildRoutineFirePrompt(job(), "schedule", null, {
       dir: "/x/routines/job-1",

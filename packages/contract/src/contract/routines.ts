@@ -56,6 +56,21 @@ export const routines = {
       })
     )
     .output(type<{ reply: string }>()),
+  /**
+   * "Reply to this run": the user's words go to the chat the routine reports
+   * to (opened when it has none), with the run's report as a hidden note.
+   */
+  replyToRun: mutation
+    .input(
+      v.object({
+        routineId: RoutineId,
+        runId: v.pipe(v.string(), v.nonEmpty()),
+        text: v.pipe(v.string(), v.nonEmpty()),
+      })
+    )
+    .output(
+      type<{ workspaceId: string; sessionId: string; botId: string | null }>()
+    ),
   /** `create` marks the run as the test run after setup. */
   run: mutation
     .input(

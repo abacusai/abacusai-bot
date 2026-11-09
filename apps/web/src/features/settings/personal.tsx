@@ -5,6 +5,7 @@ import {
   type PrefsRow,
   type SupportedLanguage,
 } from "@abacus-ai/contract/contract/rows";
+import { isQuietNow } from "@abacus-ai/contract/quiet-hours";
 import { useLiveQuery } from "@tanstack/react-db";
 import { revalidateLogic } from "@tanstack/react-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -36,7 +37,6 @@ import {
 import { resolveLook } from "#renderer/lib/bots/avatar";
 import { cn } from "#renderer/lib/cn";
 import { AppLink } from "#renderer/lib/navigation/app-link";
-import { isQuietNow } from "#renderer/lib/notify";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import type { Cue } from "#renderer/lib/sound";
 import { showError } from "#renderer/lib/toast";

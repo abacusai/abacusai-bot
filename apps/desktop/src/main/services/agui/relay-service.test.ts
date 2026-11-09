@@ -217,6 +217,68 @@ describe("ai.send", () => {
     ]);
   });
 
+  it("puts a hidden note owed to the thread in front of the user's words, taken once the run was written", async () => {
+    const { agent } = setup();
+    agent.answer = (command) =>
+      command.type === "run"
+        ? started((command.input as { runId: string }).runId)
+        : [];
+    const taken = vi.fn();
+    const asked: unknown[] = [];
+    const hostWithNotes = host(agent);
+    hostWithNotes.userMessageNotes = (threadId, tags) => {
+      asked.push([threadId, tags]);
+      return { notes: ["[routine report sent] Say go?"], taken };
+    };
+    const noted = new AguiRelayService({
+      host: hostWithNotes,
+      files: new ThreadStore({ home: () => home, log: () => undefined }),
+      ackTimeoutMs: 2_000,
+      log: () => undefined,
+    });
+    agent.relay = noted;
+    const connection = connectInProcess(fakeDeps({ ai: noted }));
+
+    await connection.client.ai.send({
+      threadId: "s1",
+      runId: "run-1",
+      messages: [userMessage("u-1", "go")],
+    });
+
+    expect(asked).toEqual([["s1", undefined]]);
+    expect(taken).toHaveBeenCalledTimes(1);
+    const [message] = (
+      agent.commands[0]!.input as { messages: Array<{ content: string }> }
+    ).messages;
+    expect(message!.content).toBe(
+      "<system_reminder>\n[routine report sent] Say go?\n</system_reminder>\n\ngo"
+    );
+  });
+
+  it("leaves the note owed when the agent takes no input", async () => {
+    const { agent } = setup();
+    const taken = vi.fn();
+    const hostWithNotes = host(agent);
+    hostWithNotes.userMessageNotes = () => ({ notes: ["note"], taken });
+    hostWithNotes.send = () => null;
+    const noted = new AguiRelayService({
+      host: hostWithNotes,
+      files: new ThreadStore({ home: () => home, log: () => undefined }),
+      ackTimeoutMs: 2_000,
+      log: () => undefined,
+    });
+    agent.relay = noted;
+    const connection = connectInProcess(fakeDeps({ ai: noted }));
+    await expect(
+      connection.client.ai.send({
+        threadId: "s1",
+        runId: "run-1",
+        messages: [userMessage("u-1", "go")],
+      })
+    ).rejects.toThrow();
+    expect(taken).not.toHaveBeenCalled();
+  });
+
   it("is idempotent by run id: a repeat waits for the first ack, and never writes run twice, across a respawn", async () => {
     const { agent, client } = setup();
     agent.boot();

@@ -17,6 +17,9 @@ import {
   MESSAGING_PLATFORM_CATALOG,
   SHARED_BOT_PLATFORM_OF,
   appOfSelfLane,
+  isMessagingPlatformId,
+  isOwnChatTarget,
+  isSelfName,
   messagingPlatformSpec,
   selfLaneOf,
   redactSecret,
@@ -2360,7 +2363,12 @@ export class MessagingGatewayService {
       message.say != null
         ? forChat(await this.wordOwed(message.say, message.userName), platform)
         : message.text;
-    await connector.sendText(chatId, text, message.replyContext);
+    const send = () => connector.sendText(chatId, text, message.replyContext);
+    // The user's own chat may have a route sending an answer: this waits for
+    // it, so the chat reads them in order.
+    const route = own != null ? this.routes.get(`${platform}:${chatId}`) : null;
+    if (route != null) await this.inRouteOrder(route, send);
+    else await send();
     this.appendLog({
       platform,
       chatId,
@@ -3069,7 +3077,7 @@ export class MessagingGatewayService {
     const target = to.trim();
 
     // "me" is a name no address book holds, and the one the user says most.
-    if (/^(me|myself|self)$/i.test(target)) {
+    if (isSelfName(target)) {
       const self = this.connectors.get(platformId)?.selfChatId?.() ?? null;
       if (self != null && self.length > 0) return self;
       throw new Error(
@@ -3112,6 +3120,48 @@ export class MessagingGatewayService {
   }
 
   /**
+   * The one way the app's own report reaches the user's own chat on `lane`:
+   * kept in the outbox first (an id owed or sent once is never sent again),
+   * then sent at once when it can go. Otherwise it waits for the lane, until
+   * `notBefore`, never past `expiresAt`, and a later message with the same
+   * `replaces` drops it unsent.
+   */
+  async sendToOwnChat(
+    lane: SelfLanePlatform,
+    message: {
+      id: string;
+      text: string;
+      notBefore?: number;
+      expiresAt?: number;
+      replaces?: string;
+    }
+  ): Promise<"sent" | "queued" | "dropped"> {
+    const owed = this.outbox.owe(
+      {
+        id: message.id,
+        platform: lane,
+        chatId: "",
+        toSelf: true,
+        text: forChat(message.text, lane),
+        userName: null,
+        firstFailedAt: this.options.now?.() ?? Date.now(),
+        ...(message.notBefore != null ? { notBefore: message.notBefore } : {}),
+        ...(message.expiresAt != null ? { expiresAt: message.expiresAt } : {}),
+        ...(message.replaces != null ? { replaces: message.replaces } : {}),
+      },
+      0
+    );
+    if (owed) await this.outbox.flush();
+    return this.outbox.statusOf(message.id) ?? "dropped";
+  }
+
+  /** `to` on `platform` is the user's own chat there. */
+  isOwnChat(platform: string, to: string): boolean {
+    if (!isMessagingPlatformId(platform)) return false;
+    return isOwnChatTarget(to, this.selfChatOf(platform)?.chatId ?? null);
+  }
+
+  /**
    * Send on the agent's behalf. Unlike safeSend, a failed delivery must reach
    * the model as an error it can report. No allowlist: the user asking
    * "message so-and-so" from a chat they are driving is the authorization.
@@ -3126,7 +3176,7 @@ export class MessagingGatewayService {
   ): Promise<void> {
     // "me" on a platform with no self chat (Discord: you cannot DM yourself)
     // is still deliverable through the shared Abacus bot's DM.
-    if (/^(me|myself|self)$/i.test(chatId.trim())) {
+    if (isSelfName(chatId)) {
       const own = this.connectors.get(platformId)?.selfChatId?.() ?? null;
       const sharedId = SHARED_BOT_PLATFORM_OF[platformId];
       const shared =

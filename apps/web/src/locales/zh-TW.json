@@ -1704,6 +1704,15 @@
       "followsDefault": "跟隨你的方案預設模型：{{model}}。",
       "costly": "每次執行都使用 {{model}}，這是較貴的模型，所以每次會消耗更多點數。",
       "hosted": "託管的例行工作使用你的方案預設模型執行。"
+    },
+    "report": {
+      "checkIn": "簽到 · {{time}}",
+      "title": "{{name}} · {{time}}",
+      "openRun": "開啟執行紀錄"
+    },
+    "reply": {
+      "label": "回覆這次執行",
+      "failed": "無法傳送你的回覆。"
     }
   },
   "sessions": {
@@ -4844,7 +4853,8 @@
       "cutoffSwitch": "或在應用程式的模型選擇器中切換到 RouteLLM - Open，回覆會更穩定。",
       "cutoffVerify": "或驗證手機來解鎖你的免費 Abacus 點數，然後在應用程式中切換到 RouteLLM - Open：{{link}}",
       "cutoffTopUp": "或儲值 Abacus 點數，然後在應用程式中切換到 RouteLLM - Open：{{link}}",
-      "stillWorkingOn": "還在處理中（目前已花 {{minutes}} 分鐘）。{{activity}}… 完成後我會在這裡回覆。"
+      "stillWorkingOn": "還在處理中（目前已花 {{minutes}} 分鐘）。{{activity}}… 完成後我會在這裡回覆。",
+      "routineFullRun": "完整報告在 AbacusAI Bot 的「例行工作」→「{{name}}」中。"
     },
     "unavailable": {
       "title": {

@@ -1704,6 +1704,15 @@
       "followsDefault": "Folgt dem Standard deines Tarifs: {{model}}.",
       "costly": "Jeder Lauf nutzt {{model}}, ein teureres Modell, und verbraucht deshalb mehr Credits.",
       "hosted": "Gehostete Routinen laufen mit dem Standard deines Tarifs."
+    },
+    "report": {
+      "checkIn": "Check-in · {{time}}",
+      "title": "{{name}} · {{time}}",
+      "openRun": "Lauf öffnen"
+    },
+    "reply": {
+      "label": "Auf diesen Lauf antworten",
+      "failed": "Deine Antwort konnte nicht gesendet werden."
     }
   },
   "sessions": {
@@ -4844,7 +4853,8 @@
       "cutoffSwitch": "Oder wechsle in der Modellauswahl der App zu RouteLLM - Open, um zuverlässigere Antworten zu bekommen.",
       "cutoffVerify": "Oder bestätige deine Telefonnummer, um deine kostenlosen Abacus-Credits freizuschalten, und wechsle dann in der App zu RouteLLM - Open: {{link}}",
       "cutoffTopUp": "Oder lade Abacus-Credits auf und wechsle in der App zu RouteLLM - Open: {{link}}",
-      "stillWorkingOn": "Ich arbeite noch daran (bisher {{minutes}} Min.). {{activity}}… Ich antworte hier, sobald es fertig ist."
+      "stillWorkingOn": "Ich arbeite noch daran (bisher {{minutes}} Min.). {{activity}}… Ich antworte hier, sobald es fertig ist.",
+      "routineFullRun": "Den vollständigen Bericht findest du in AbacusAI Bot unter Routinen → {{name}}."
     },
     "unavailable": {
       "title": {

@@ -1704,6 +1704,15 @@
       "followsDefault": "Follows your plan's default: {{model}}.",
       "costly": "Every run uses {{model}}, a costlier model, so each one spends more credits.",
       "hosted": "Hosted routines run on your plan's default."
+    },
+    "report": {
+      "checkIn": "Check-in · {{time}}",
+      "title": "{{name}} · {{time}}",
+      "openRun": "Open run"
+    },
+    "reply": {
+      "label": "Reply to this run",
+      "failed": "Couldn't send your reply."
     }
   },
   "sessions": {
@@ -4844,7 +4853,8 @@
       "cutoffSwitch": "Or switch to RouteLLM - Open in the app's model picker for steadier replies.",
       "cutoffVerify": "Or verify your phone to unlock your free Abacus credits, then switch to RouteLLM - Open in the app: {{link}}",
       "cutoffTopUp": "Or add Abacus credits and switch to RouteLLM - Open in the app: {{link}}",
-      "stillWorkingOn": "Still working on it ({{minutes}} min so far). {{activity}}… I'll reply here when it's done."
+      "stillWorkingOn": "Still working on it ({{minutes}} min so far). {{activity}}… I'll reply here when it's done.",
+      "routineFullRun": "The full report is in AbacusAI Bot, under Routines → {{name}}."
     },
     "unavailable": {
       "title": {

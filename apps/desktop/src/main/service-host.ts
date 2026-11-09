@@ -10,6 +10,7 @@ import path from "path";
 
 import { appendDailyNote } from "@abacus-ai/agent/bot-memory";
 import type { ChannelCapabilities } from "@abacus-ai/agent/channel";
+import { modelPath } from "@abacus-ai/agent/model-path";
 import type { UnattendedPolicy } from "@abacus-ai/agent/tool-policy";
 import {
   readUserLanguage,
@@ -34,6 +35,7 @@ import type {
   BotCreateInput,
   BotUpdateInput,
 } from "@abacus-ai/contract/bots";
+import type { HomeChannel } from "@abacus-ai/contract/bots";
 import {
   CHECK_IN_PROMPT,
   missionForCheckIn,
@@ -187,8 +189,10 @@ import {
   APP_OF_SELF_LANE,
   SELF_LANE_FOR_APP,
   describePlatformForAgent,
+  isMessagingPlatformId,
   reportableLivePlatforms,
   selfLaneOf,
+  type SelfLanePlatform,
   type MessagingPairingDecisionRequest,
   type MessagingPlatformId,
   type MessagingSnapshot,
@@ -202,6 +206,7 @@ import {
   EntityNotFoundError,
   WORKSPACE_NOT_FOUND,
 } from "@abacus-ai/contract/not-found";
+import { quietEndsAt } from "@abacus-ai/contract/quiet-hours";
 import { detectRememberRequest } from "@abacus-ai/contract/remember";
 import {
   ROUTINE_PAUSE_NOTES,
@@ -262,6 +267,7 @@ import {
   recordRun,
   setChatLinkLost,
   setHeld,
+  setOriginSession,
   type RoutineRunStarted,
   removeJob,
   updateJob,
@@ -320,6 +326,7 @@ import {
   ROUTINE_RESULTS,
   started as startedResult,
 } from "./services/agent-tools/routine-attempts";
+import { routineDeliveryOn } from "./services/agent-tools/routine-delivery-flag";
 import {
   hasRunInFlight,
   NetworkWaitClock,
@@ -337,6 +344,16 @@ import {
 } from "./services/agent-tools/routine-prompt";
 import { cleanSources, policyFor } from "./services/agent-tools/routine-reach";
 import {
+  carriesUserWords,
+  chatAppReportText,
+  REPORT_CHAT_PLATFORM,
+  REPORT_LANE_NAMES,
+  REPORT_OUTBOX_KEPT_MS,
+  RoutineReportStore,
+  runReportTargets,
+  type RunReport,
+} from "./services/agent-tools/routine-report-delivery";
+import {
   countRoutineRuns,
   readLastRoutineRun,
   recentRoutineRuns,
@@ -346,6 +363,7 @@ import {
   routineDirInWorkspace,
   reclaimRoutineRecords,
   routineNotes,
+  routineRunFile,
 } from "./services/agent-tools/routine-runs-store";
 import {
   connectorActionsOf,
@@ -496,6 +514,10 @@ import {
   BotNumber,
   type BotNumberCall,
 } from "./services/messaging/bot-number";
+import {
+  channelLocale,
+  channelWords,
+} from "./services/messaging/channel-words";
 import { MediaStore } from "./services/messaging/media-store";
 import {
   listPairing,
@@ -950,6 +972,8 @@ export class ServiceHost {
       },
       send: (threadId, command) =>
         this.agentManagerService.sendCommandToSession(threadId, command),
+      userMessageNotes: (threadId, tags) =>
+        this.routineReportNotes(threadId, tags),
       acceptedMessage: (threadId, message, tags) => {
         this.successPitch.userSaid(threadId, message, tags);
         this.noteUserWords(threadId, message, tags);
@@ -1570,6 +1594,11 @@ export class ServiceHost {
     file: () => path.join(abacusBotHome(), "routine-sends.json"),
   });
 
+  /** Routine runs' reports to their chat and the user's chat app (flag routine-delivery). */
+  private readonly routineReports = new RoutineReportStore({
+    file: () => path.join(abacusBotHome(), "routine-reports.json"),
+  });
+
   private readonly mcpAgentToolsServer = new McpAgentToolsServer({
     skillsService: this.skillsService,
     previewTargets: this.previewTargets,
@@ -1664,6 +1693,9 @@ export class ServiceHost {
       if (fire != null) noteChatPlatform(fire.split("@")[0]!, platform);
     },
     routineSends: this.routineSends,
+    routineDelivery: routineDeliveryOn,
+    routineDeliversToSelf: (sessionId, platform) =>
+      this.routineDeliversToSelf(sessionId, platform),
     // A routine's run is its bot's work too: a routine made from inside one
     // belongs to the bot, and `list` shows the bot its own.
     isAppBotChat: (sessionId) => this.botService.isAppBotChat(sessionId),
@@ -1722,6 +1754,7 @@ export class ServiceHost {
             fromSession == null
               ? null
               : this.agentSessionManagerService.get(fromSession)?.model,
+          originSessionId: this.routineOrigin(fromSession),
         });
         // The user hears of every routine the agent sets up.
         if (options?.byAgent === true) this.routineCreatedByAgent(routine);
@@ -4543,7 +4576,15 @@ export class ServiceHost {
   }> {
     // Into a running agent too: the turn runs on the plan's model.
     this.moveSessionPinToTier(request.workspaceId, request.sessionId);
-    const noted = await this.withVaultNotes(request);
+    const reports = this.routineReportNotes(
+      request.sessionId,
+      request.userText
+    );
+    const vaulted = await this.withVaultNotes(request);
+    const noted =
+      reports.notes.length === 0
+        ? vaulted
+        : prependSystemReminder(vaulted, reports.notes);
     const delivered = await this.withEnvironmentNotice(noted);
     // Sent while its agent is being stopped (an idle stop, say): written to
     // the dying process it would be lost, so it waits for that one to go and
@@ -4575,6 +4616,8 @@ export class ServiceHost {
       isRunning,
       delay: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     });
+    // Taken only once the message reached the agent.
+    if (outcome !== "undeliverable") reports.taken();
     return { noticed: delivered !== noted, outcome };
   }
 
@@ -4592,6 +4635,25 @@ export class ServiceHost {
       .checkBeforeMessage(request.sessionId)
       .catch(() => []);
     return notes.length === 0 ? request : prependSystemReminder(request, notes);
+  }
+
+  /**
+   * The routine reports delivered to this chat since the user last wrote, as
+   * a hidden note on their next message there (the app's chat or a chat app's
+   * route into it), so an answer to a run's question has the run's context.
+   * `taken` once the message has reached the agent.
+   */
+  private routineReportNotes(
+    sessionId: string,
+    tags: UserTextTags | undefined
+  ): { notes: string[]; taken: () => void } {
+    if (
+      !routineDeliveryOn() ||
+      !carriesUserWords(tags) ||
+      this.isUnattendedSession(sessionId)
+    )
+      return { notes: [], taken: () => undefined };
+    return this.routineReports.notesFor(sessionId);
   }
 
   /**
@@ -5572,6 +5634,8 @@ export class ServiceHost {
       if (state === "online") void this.cronScheduler.release();
     });
     this.cronScheduler.everyMinute(() => this.reapStuckRoutineRuns());
+    // Report deliveries a closed app left unmade are made now.
+    void this.replayRunReports();
     this.cronScheduler.start();
     this.connectorGate.restore();
     void this.pruneKeptConnectorCards();
@@ -5591,6 +5655,11 @@ export class ServiceHost {
 
   /** What each running routine session has said so far, for its run file. */
   private readonly routineRunText = new Map<string, string[]>();
+  /** Each running routine session's latest message: its final answer, delivered. */
+  private readonly routineRunLast = new Map<
+    string,
+    { id: string; text: string }
+  >();
   /** Hosted routine runs on this computer: routine runs, though not stamped with a routine. */
   private readonly hostedRunSessions = new Set<string>();
   /** Time routine runs spent waiting for the network; the reaper allows it. */
@@ -5616,6 +5685,12 @@ export class ServiceHost {
     const text = this.routineRunText.get(sessionId) ?? [];
     text.push(event.content);
     this.routineRunText.set(sessionId, text);
+    const id = event.messageId ?? "message";
+    const last = this.routineRunLast.get(sessionId);
+    this.routineRunLast.set(sessionId, {
+      id,
+      text: (last?.id === id ? last.text : "") + event.content,
+    });
   }
 
   /** A routine run's turn closed (TurnLedger): the run is filed with how it ended. */
@@ -5642,7 +5717,7 @@ export class ServiceHost {
       outcome === "failed" &&
       record.error != null &&
       ranOutOfAbacusCredits(record.error);
-    recordRoutineRun(this.routineHome(finishedJob), {
+    const runFile = recordRoutineRun(this.routineHome(finishedJob), {
       sessionId,
       startedAt: session.createdAt,
       endedAt: new Date(record.endedAt).toISOString(),
@@ -5664,6 +5739,19 @@ export class ServiceHost {
       return;
     }
     if (outcome === "completed") {
+      if (routineDeliveryOn())
+        void this.deliverRunReport(
+          finishedJob,
+          sessionId,
+          session.createdAt,
+          this.routineRunLast.get(sessionId)?.text ?? text,
+          runFile
+        ).catch((error: unknown) => {
+          console.error(
+            `[routines] delivering ${finishedJob.id}'s report failed:`,
+            error
+          );
+        });
       this.pauseIfQuietRepeatedly(session.routineId);
       return;
     }
@@ -5673,6 +5761,205 @@ export class ServiceHost {
     // Not the routine's failure: its next fires skip until the credits are back.
     if (creditsOut) this.holdRoutinesForCredits(session.routineId);
     else this.pauseIfFailingRepeatedly(session.routineId);
+  }
+
+  /** The chat apps a routine's reports go to: set up ones whose home bot made it. */
+  private reportLanesOf(job: CronJob): SelfLanePlatform[] {
+    if (job.botId == null) return [];
+    const running = this.messagingGatewayService.runningPlatforms();
+    return (
+      Object.entries(SELF_LANE_FOR_APP) as Array<
+        [HomeChannel, SelfLanePlatform]
+      >
+    )
+      .filter(
+        ([app, lane]) =>
+          running.includes(lane) && this.botService.homeBotId(app) === job.botId
+      )
+      .map(([, lane]) => lane);
+  }
+
+  /** The chat a routine's reports go to: its bot's, else the one it came from. */
+  private async reportChatOf(job: CronJob): Promise<string | null> {
+    if (job.botId != null && getBot(job.botId) != null) {
+      try {
+        return (await this.botService.openChat(job.botId)).sessionId;
+      } catch (error) {
+        console.error(`[routines] ${job.botId}'s chat would not open:`, error);
+        return null;
+      }
+    }
+    const origin = job.originSessionId ?? null;
+    return origin != null && this.agentSessionManagerService.get(origin) != null
+      ? origin
+      : null;
+  }
+
+  /**
+   * A completed run's final answer, delivered by the app (flag
+   * routine-delivery): once per fire, never a NO_REPLY run's, and with no
+   * model call of its own. Recorded before it is made.
+   */
+  private async deliverRunReport(
+    job: CronJob,
+    runSessionId: string,
+    startedAt: string,
+    reply: string,
+    runFile: string
+  ): Promise<void> {
+    const report: RunReport = {
+      fire: this.routineFires.get(runSessionId) ?? `${job.id}@${runSessionId}`,
+      routineId: job.id,
+      routineName: job.name,
+      runSessionId,
+      startedAt,
+      text: reply.trim(),
+      runFile: modelPath(runFile),
+    };
+    // Nothing to say: nothing is recorded and no chat is opened for it.
+    if (this.reportTargets(job, report, null) == null) return;
+    this.routineReports.begin(report);
+    await this.makeRunReport(report);
+  }
+
+  private reportTargets(job: CronJob, report: RunReport, chat: string | null) {
+    return runReportTargets({
+      outcome: "completed",
+      reply: report.text,
+      chat,
+      lanes: this.reportLanesOf(job),
+      sent: this.routineSends.recipients(report.fire),
+      isOwnChat: (platform, to) =>
+        this.messagingGatewayService.isOwnChat(platform, to),
+    });
+  }
+
+  /** Make a recorded delivery; again after a restart, it repeats nothing. */
+  private async makeRunReport(report: RunReport): Promise<void> {
+    const job = getJob(report.routineId);
+    if (job == null) {
+      this.routineReports.finish(report.fire);
+      return;
+    }
+    const targets = this.reportTargets(
+      job,
+      report,
+      await this.reportChatOf(job)
+    );
+    if (targets?.chat != null) {
+      this.agentSessionManagerService.setRunReport(report.runSessionId, {
+        to: targets.chat,
+        at: new Date().toISOString(),
+        text: report.text,
+      });
+      this.routineSends.record(
+        report.fire,
+        REPORT_CHAT_PLATFORM,
+        targets.chat,
+        report.runSessionId,
+        report.text
+      );
+      this.routineReports.addNote(targets.chat, report, {
+        delivered: true,
+        lanes: targets.lanes,
+      });
+    }
+    const lanes = targets?.lanes ?? [];
+    if (lanes.length > 0) {
+      const text = chatAppReportText(
+        report.text,
+        (await this.channelWordsNow()).t("outcome.channel.routineFullRun", {
+          name: job.name,
+        })
+      );
+      const now = Date.now();
+      const notBefore =
+        quietEndsAt(this.prefs?.()?.get().sounds.quietHours, new Date(now)) ??
+        undefined;
+      for (const lane of lanes) {
+        // The gateway's one own-chat send: sent now, or held in its outbox.
+        const status = await this.messagingGatewayService.sendToOwnChat(lane, {
+          id: `routine-report:${report.fire}:${lane}`,
+          text,
+          ...(notBefore != null ? { notBefore } : {}),
+          expiresAt: now + REPORT_OUTBOX_KEPT_MS,
+          replaces: `routine-report:${report.routineId}:${lane}`,
+        });
+        // Sent or still owed: the fire has its delivery on this app.
+        if (status !== "dropped")
+          this.routineSends.record(
+            report.fire,
+            lane,
+            "me",
+            report.runSessionId,
+            report.text
+          );
+      }
+    }
+    this.routineReports.finish(report.fire);
+  }
+
+  /** Deliveries the app closed under, made at launch. */
+  private async replayRunReports(): Promise<void> {
+    if (!routineDeliveryOn()) return;
+    for (const report of this.routineReports.unfinished())
+      await this.makeRunReport(report).catch((error: unknown) => {
+        console.error(
+          `[routines] replaying ${report.routineId}'s report failed:`,
+          error
+        );
+      });
+  }
+
+  /** The chat apps' words, in the user's language now. */
+  private channelWordsNow() {
+    return channelWords(
+      channelLocale(readUserLanguage()?.name ?? null, this.appLanguage())
+    );
+  }
+
+  /**
+   * The chat a routine made by the agent in `sessionId` reports to: a chat the
+   * user is in, never a run, the routine editor or a bot's (a bot's routine
+   * reports to the bot's own chat).
+   */
+  private routineOrigin(sessionId: string | undefined): string | null {
+    if (sessionId == null || !routineDeliveryOn()) return null;
+    const session = this.agentSessionManagerService.get(sessionId);
+    if (
+      session == null ||
+      session.routineId != null ||
+      session.editorFor != null ||
+      session.owner != null ||
+      this.isUnattendedSession(sessionId)
+    )
+      return null;
+    return sessionId;
+  }
+
+  /** Where a run's report goes, as the run is told: "in ... and on WhatsApp". */
+  private reportDestination(job: CronJob): string {
+    const chat =
+      job.botId != null && getBot(job.botId) != null
+        ? "in your chat with the user in the app"
+        : job.originSessionId != null &&
+            this.agentSessionManagerService.get(job.originSessionId) != null
+          ? "in the chat this routine was set up from"
+          : "on the routine's page in the app, where the user can reply to it";
+    const lanes = this.reportLanesOf(job).map(
+      (lane) => REPORT_LANE_NAMES[lane]
+    );
+    return lanes.length === 0 ? chat : `${chat} and on ${lanes.join(" and ")}`;
+  }
+
+  /** The app sends this run's answer to the user's own chat on `platform`'s lane. */
+  private routineDeliversToSelf(sessionId: string, platform: string): boolean {
+    if (!routineDeliveryOn()) return false;
+    const routineId = this.agentSessionManagerService.get(sessionId)?.routineId;
+    const job = routineId == null ? null : getJob(routineId);
+    if (job == null || !isMessagingPlatformId(platform)) return false;
+    const lane = selfLaneOf(platform);
+    return lane != null && this.reportLanesOf(job).includes(lane);
   }
 
   /**
@@ -5697,6 +5984,17 @@ export class ServiceHost {
       ],
       unsure: connector.unsure,
     };
+  }
+
+  /** The last assistant message's text, as a run's final answer. */
+  private lastAssistantText(sessionId: string): string {
+    const last = (this.threadStore.readCurrentFile(sessionId)?.messages ?? [])
+      .filter((message) => message.role === "assistant")
+      .at(-1);
+    return (last?.parts ?? [])
+      .flatMap((part) => (part.type === "text" ? [part.content] : []))
+      .join("")
+      .trim();
   }
 
   /** The text of a session's answers as its thread kept them. */
@@ -5895,6 +6193,14 @@ export class ServiceHost {
    * are its only road: a routine that also mails or posts still has work to do.
    */
   private routineLinkDown(job: CronJob): boolean {
+    // Its report always reaches its chat in the app, link or not.
+    if (
+      routineDeliveryOn() &&
+      (job.botId != null ||
+        (job.originSessionId != null &&
+          this.agentSessionManagerService.get(job.originSessionId) != null))
+    )
+      return false;
     const used = job.chatPlatforms ?? [];
     const unlinked: string[] = this.messagingGatewayService.unlinkedPlatforms();
     return (
@@ -7069,6 +7375,122 @@ export class ServiceHost {
     return reply;
   }
 
+  /**
+   * "Reply to this run" (flag routine-delivery): the user's words go to the
+   * chat the routine reports to, opened and stamped on the routine when it
+   * has none, carrying the run's report as a hidden note. That chat is
+   * attended and has its full tools, so "go" is done there.
+   */
+  async replyToRoutineRun(
+    routineId: string,
+    runId: string,
+    text: string
+  ): Promise<{ workspaceId: string; sessionId: string; botId: string | null }> {
+    // The hosted computer's routines are the server's; a local one answers
+    // in its chat only where the app delivers its reports.
+    if (this.platform === "web-host" || !routineDeliveryOn())
+      throw new InvalidInputError("Replying to a run is not available here.");
+    const job = getJob(routineId);
+    if (job == null)
+      throw new EntityNotFoundError(
+        "routine",
+        routineId,
+        "This routine is gone."
+      );
+    // Only this routine's own runs: the id comes from the page.
+    const run = this.listRoutineRuns(routineId).find(
+      (item) => item.sessionId === runId
+    );
+    if (run == null)
+      throw new EntityNotFoundError("routine", runId, "This run is gone.");
+    const chat = await this.replyChatOf(job, run.startedAt);
+    const stamp = this.agentSessionManagerService.get(runId)?.report ?? null;
+    this.routineReports.addNote(
+      chat.sessionId,
+      {
+        routineId,
+        routineName: job.name,
+        runSessionId: runId,
+        startedAt: run.startedAt,
+        // The run's final message, as a delivery would have sent it.
+        text: stamp?.text ?? this.lastAssistantText(runId),
+        runFile: modelPath(
+          routineRunFile(this.routineHome(job), {
+            startedAt: run.startedAt,
+            sessionId: runId,
+          })
+        ),
+      },
+      { delivered: stamp?.to === chat.sessionId }
+    );
+    if (chat.created) {
+      const started = await this.startAgentSession({
+        workspaceId: chat.workspaceId,
+        sessionId: chat.sessionId,
+      });
+      if (!started.success)
+        throw new Error(started.error ?? "The chat could not start.");
+    }
+    const sent = await this.sendAgentMessage({
+      workspaceId: chat.workspaceId,
+      sessionId: chat.sessionId,
+      message: text,
+    });
+    if (!sent) throw new Error("The chat could not take the message.");
+    return {
+      workspaceId: chat.workspaceId,
+      sessionId: chat.sessionId,
+      botId: chat.botId,
+    };
+  }
+
+  /** The chat a routine reports to, a new one (stamped as its chat) when it has none. */
+  private async replyChatOf(
+    job: CronJob,
+    runStartedAt: string
+  ): Promise<{
+    workspaceId: string;
+    sessionId: string;
+    botId: string | null;
+    created: boolean;
+  }> {
+    if (job.botId != null && getBot(job.botId) != null) {
+      const handle = await this.botService.openChat(job.botId);
+      return { ...handle, botId: job.botId, created: false };
+    }
+    const origin =
+      job.originSessionId == null
+        ? null
+        : this.agentSessionManagerService.get(job.originSessionId);
+    if (origin != null)
+      return {
+        workspaceId: origin.workspaceId,
+        sessionId: origin.id,
+        botId: null,
+        created: false,
+      };
+    // Its project, else where a chat with no project runs.
+    const workspaceId =
+      this.routineProject(job)?.id ?? (await this.ensureSessionHomeWorkspace());
+    if (workspaceId == null) throw new Error("No workspace to reply in.");
+    const session = this.createAgentSession(workspaceId);
+    const time = new Date(runStartedAt).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    this.updateAgentSessionLabel(
+      workspaceId,
+      session.id,
+      `${job.name} · ${time}`
+    );
+    setOriginSession(job.id, session.id);
+    this.emitEvent({
+      type: "cronjobs-updated",
+      emittedAt: new Date().toISOString(),
+    });
+    return { workspaceId, sessionId: session.id, botId: null, created: true };
+  }
+
   /** Every fire of a routine that got a session, newest first. */
   listRoutineRuns(routineId: string): RoutineRunItem[] {
     return this.agentSessionManagerService
@@ -7093,6 +7515,7 @@ export class ServiceHost {
     const port = this.webhookService.port();
 
     // A job moved to the server is listed once, as the server's.
+    const delivers = routineDeliveryOn();
     const local = listJobs()
       .filter((job) => job.serverId == null)
       .map((job) => ({
@@ -7123,6 +7546,7 @@ export class ServiceHost {
             ? (this.botService.list().find((bot) => bot.id === job.botId)
                 ?.name ?? null)
             : null,
+        ...(delivers ? { repliesInChat: true } : {}),
         ...(this.cronScheduler.isHeld(job.id)
           ? { waitingForConnection: true }
           : {}),
@@ -7172,6 +7596,8 @@ export class ServiceHost {
       runAtText?: string | null;
       /** The model of the chat that asked for it. */
       chatModel?: string | null;
+      /** The chat it was made from: its reports go there. */
+      originSessionId?: string | null;
     } = {}
   ): Promise<CreatedRoutine> {
     if (this.platform === "web-host" && onFreePlan(await fetchAbacusAccount()))
@@ -7242,7 +7668,12 @@ export class ServiceHost {
       options.chatModel
     );
     const job = createJob(
-      { ...input, model, ...(reach != null ? { reach } : {}) },
+      {
+        ...input,
+        model,
+        ...(reach != null ? { reach } : {}),
+        originSessionId: options.originSessionId ?? null,
+      },
       id
     );
     this.emitEvent({
@@ -7316,6 +7747,7 @@ export class ServiceHost {
       );
       for (const run of runs) {
         this.routineRunText.delete(run.id);
+        this.routineRunLast.delete(run.id);
         this.removeAgentSession(run.workspaceId, run.id);
       }
 
@@ -7475,6 +7907,9 @@ export class ServiceHost {
       job,
       buildRoutineFirePrompt(job, trigger, payload, {
         endsOnAction: nextStepOn(),
+        ...(routineDeliveryOn()
+          ? { deliveredTo: this.reportDestination(job) }
+          : {}),
         unattended,
         dir: home,
         // The project when there is one; the run's cwd is that folder and its
@@ -7586,8 +8021,10 @@ export class ServiceHost {
     }
 
     // Earlier runs' text is kept until now, for a failure that lands late.
-    for (const run of this.listRoutineRuns(jobId))
+    for (const run of this.listRoutineRuns(jobId)) {
       this.routineRunText.delete(run.sessionId);
+      this.routineRunLast.delete(run.sessionId);
+    }
     // Seeded now so a run that never says a word still gets its file.
     this.routineRunText.set(session.id, []);
     this.sendAgentMessage({

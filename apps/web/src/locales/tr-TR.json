@@ -1704,6 +1704,15 @@
       "followsDefault": "Planınızın varsayılanını izler: {{model}}.",
       "costly": "Her çalıştırma daha pahalı bir model olan {{model}} kullanır, bu yüzden her biri daha fazla kredi harcar.",
       "hosted": "Barındırılan rutinler planınızın varsayılanıyla çalışır."
+    },
+    "report": {
+      "checkIn": "Kontrol · {{time}}",
+      "title": "{{name}} · {{time}}",
+      "openRun": "Çalışmayı aç"
+    },
+    "reply": {
+      "label": "Bu çalışmaya yanıt ver",
+      "failed": "Yanıtın gönderilemedi."
     }
   },
   "sessions": {
@@ -4844,7 +4853,8 @@
       "cutoffSwitch": "Ya da daha istikrarlı yanıtlar için uygulamanın model seçicisinde RouteLLM - Open'a geç.",
       "cutoffVerify": "Ya da ücretsiz Abacus kredilerinin kilidini açmak için telefonunu doğrula, ardından uygulamada RouteLLM - Open'a geç: {{link}}",
       "cutoffTopUp": "Ya da Abacus kredisi ekle ve uygulamada RouteLLM - Open'a geç: {{link}}",
-      "stillWorkingOn": "Hâlâ üzerinde çalışıyorum (şu ana kadar {{minutes}} dk). {{activity}}… Bitince buradan yanıt vereceğim."
+      "stillWorkingOn": "Hâlâ üzerinde çalışıyorum (şu ana kadar {{minutes}} dk). {{activity}}… Bitince buradan yanıt vereceğim.",
+      "routineFullRun": "Raporun tamamı AbacusAI Bot'ta, Rutinler → {{name}} altında."
     },
     "unavailable": {
       "title": {
