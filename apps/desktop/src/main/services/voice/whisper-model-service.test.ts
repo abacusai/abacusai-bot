@@ -149,6 +149,7 @@ describe("downloading", () => {
     }).fetchFile(`${REPO}config.json`);
 
     expect(result).toEqual({ status: 502, error: "offline" });
+    expect(events).toEqual([]);
     expect(fs.readdirSync(dir)).toEqual([]);
   });
 
@@ -164,6 +165,12 @@ describe("downloading", () => {
     expect(requests.sort()).toEqual(
       WHISPER_MODEL_FILES.map((file) => `${SMALL_REPO}${file}`).sort()
     );
+    const progress = events.flatMap((event) =>
+      event.type === "whisper-download-progress" ? [event.progress] : []
+    );
+    // Only the file that completes the set says the model is ready.
+    expect(progress.filter((entry) => entry.modelReady)).toHaveLength(1);
+    expect(progress.at(-1)).toMatchObject({ done: true, modelReady: true });
     expect(whisper.prepare(WHISPER_SMALL_MODEL_ID)).toBe(true);
     expect(whisper.isCached(WHISPER_BASE_MODEL_ID)).toBe(false);
   });

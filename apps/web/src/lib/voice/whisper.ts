@@ -22,6 +22,7 @@ import {
   dictationModel,
   type LanguageScore,
 } from "./dictation-language";
+import { setDictationNote } from "./download-status";
 
 type Transformers = typeof import("@huggingface/transformers");
 type Transcriber =
@@ -41,6 +42,12 @@ export const configureVoice = (value: Transport): void => {
   transport = value;
 };
 const loading = new Map<WhisperModelId, Promise<Loaded>>();
+/** Small failed to load in this renderer: base serves until `disposeWhisper` or a reload. */
+let smallFailed = false;
+/** Below this RMS a clip is silence or room noise: nothing to transcribe, nothing to download. */
+const SILENCE_RMS = 0.003;
+/** Clips shorter than this are too short to trust a non-confident language pick. */
+const MIN_DOWNLOAD_CLIP_S = 2;
 
 /** Model downloads use authenticated HTTP in the browser and RPC on Electron. */
 export const fetchWhisperModel = async (
@@ -145,6 +152,10 @@ export const prepareDictation = async (): Promise<void> => {
 };
 
 /** Whisper's start token and `<|fr|>` language tokens, from the model's generation config. */
+interface Disposable {
+  dispose(): void;
+}
+
 const whisperTokens = ({ transcriber }: Loaded) =>
   transcriber.model.generation_config as unknown as {
     decoder_start_token_id: number;
@@ -161,16 +172,25 @@ const detectLanguage = async (
   const config = whisperTokens(loaded);
   const { input_features } = (await processor(
     samples.subarray(0, 30 * WHISPER_SAMPLE_RATE)
-  )) as { input_features: unknown };
-  const output = (await model({
-    input_features,
-    decoder_input_ids: new Tensor(
-      "int64",
-      BigInt64Array.from([BigInt(config.decoder_start_token_id)]),
-      [1, 1]
-    ),
-  })) as { logits: { data: Float32Array } };
-  const logits = output.logits.data;
+  )) as { input_features: Disposable };
+  const start = new Tensor(
+    "int64",
+    BigInt64Array.from([BigInt(config.decoder_start_token_id)]),
+    [1, 1]
+  );
+  let output: Record<string, Disposable & { data?: unknown }> = {};
+  let logits: Float32Array;
+  try {
+    output = (await model({
+      input_features,
+      decoder_input_ids: start,
+    })) as typeof output;
+    logits = Float32Array.from(output.logits!.data as Float32Array);
+  } finally {
+    // The decoder's present.* key/values live on the GPU under WebGPU; only the logits are kept.
+    for (const tensor of [input_features, start, ...Object.values(output)])
+      tensor.dispose();
+  }
   const tokens = Object.entries(config.lang_to_id);
   const max = Math.max(...tokens.map(([, id]) => logits[id] ?? -Infinity));
   const weights = tokens.map(([token, id]) => ({
@@ -198,6 +218,7 @@ export const transcribe = async (samples: Float32Array): Promise<string> => {
   clearTimeout(disposal);
   ++inFlight;
   try {
+    if (rms(samples) < SILENCE_RMS) return "";
     const base = await whisper(WHISPER_BASE_MODEL_ID);
     const [user, scores] = await Promise.all([
       userLanguage(),
@@ -209,17 +230,24 @@ export const transcribe = async (samples: Float32Array): Promise<string> => {
     const supported = supportedLanguages(base);
     const userCode =
       user == null ? null : dictationLanguageCode(user.name, supported);
-    const language = chooseDictationLanguage(scores, {
+    const { language, confident } = chooseDictationLanguage(scores, {
       code: userCode,
       localeTags: [
         ...(user == null ? [] : [user.locale]),
         ...navigator.languages,
       ],
     });
+    // A short, unsure clip may be misheard: it never starts the 238 MB download.
+    const trusted =
+      confident || samples.length >= MIN_DOWNLOAD_CLIP_S * WHISPER_SAMPLE_RATE;
     const model = dictationModel(
       language,
-      language !== "en" && (await prepareSmall())
+      language !== "en" && !smallFailed && trusted && (await prepareSmall())
     );
+    setDictationNote({
+      language: language === "en" ? null : language,
+      quick: language !== "en" && model === WHISPER_BASE_MODEL_ID,
+    });
     const top = scores[0];
     console.info(
       `[dictation] heard ${top?.code ?? "?"} ${top?.p.toFixed(2) ?? "-"}, ` +
@@ -232,6 +260,7 @@ export const transcribe = async (samples: Float32Array): Promise<string> => {
         ? base
         : await whisper(model).catch((error: unknown) => {
             console.warn(`[dictation] ${model} failed to load`, error);
+            smallFailed = true;
             return base;
           });
     const output = (await transcriber(samples, {
@@ -261,6 +290,7 @@ export const transcribe = async (samples: Float32Array): Promise<string> => {
 export const disposeWhisper = async (): Promise<void> => {
   if (inFlight) await new Promise<void>((resolve) => idleWaiters.add(resolve));
   clearTimeout(disposal);
+  smallFailed = false;
   const pending = [...loading.values()];
   loading.clear();
   await Promise.all(
@@ -273,6 +303,12 @@ export const disposeWhisper = async (): Promise<void> => {
       }
     })
   );
+};
+
+const rms = (samples: Float32Array): number => {
+  let sum = 0;
+  for (const sample of samples) sum += sample * sample;
+  return samples.length === 0 ? 0 : Math.sqrt(sum / samples.length);
 };
 
 /** Whisper's known outputs on silence, which are noise rather than speech. */

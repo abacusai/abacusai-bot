@@ -46,6 +46,7 @@ import { useMotionPreference } from "#renderer/lib/motion";
 import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import { showInfo } from "#renderer/lib/toast";
 import { useMediaQuery } from "#renderer/lib/use-media-query";
+import type { DownloadView } from "#renderer/lib/voice/download-status";
 import type { VoiceState } from "#renderer/lib/voice/operation";
 import { useConnectedDictation } from "#renderer/lib/voice/use-dictation";
 import { AttachmentGroup } from "#renderer/ui/attachment";
@@ -145,6 +146,8 @@ type ComposerState =
 interface ComposerVoice {
   state: VoiceState;
   level: number;
+  /** A Whisper model downloading, or just ready. */
+  download?: DownloadView;
   start(): Promise<void>;
   end(): Promise<void>;
   cancel(): void;
@@ -561,6 +564,52 @@ const DictationRow = ({ preview }: { preview: boolean }) => {
         </Button>
       </Still>
     </>
+  );
+};
+
+/**
+ * Under the box while a dictation model downloads: what is getting ready and
+ * how far along, that a clip meanwhile ran in quick mode, then "ready".
+ */
+const DictationDownload = () => {
+  const { t, i18n } = useTranslation();
+  const { voice } = useComposer();
+  const view = voice.download;
+  if (view == null) return null;
+  let language: string | null = null;
+  if (view.language != null) {
+    try {
+      language =
+        new Intl.DisplayNames([i18n.resolvedLanguage ?? "en"], {
+          type: "language",
+        }).of(view.language) ?? null;
+    } catch {
+      language = null;
+    }
+  }
+  const line =
+    view.kind === "ready"
+      ? language == null
+        ? t("chat.composer.dictationReady")
+        : t("chat.composer.dictationReadyFor", { language })
+      : language == null
+        ? t("chat.composer.dictationDownloading", { percent: view.percent })
+        : t("chat.composer.dictationDownloadingFor", {
+            language,
+            percent: view.percent,
+          });
+  return (
+    <p
+      role="status"
+      data-slot="composer-dictation-download"
+      data-state={view.kind}
+      className="text-muted-foreground px-4 pt-2 text-xs"
+    >
+      {line}
+      {view.kind === "downloading" && view.quick
+        ? ` ${t("chat.composer.dictationQuickMode")}`
+        : null}
+    </p>
   );
 };
 
@@ -1349,6 +1398,7 @@ export const ThreadComposer = () => {
             </>
           )}
         </motion.div>
+        <DictationDownload />
         {view.slots.composerContext != null ? (
           // The context bar (repo · branch · worktree) hangs under the box
           // as its own 48 px strip: inset 12 px, bottom corners 14 px, tucked

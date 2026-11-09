@@ -1,10 +1,21 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
+import { followNotices } from "#renderer/data/queries/notices";
 import { getTransport, type Transport } from "#renderer/data/transport";
 
+import {
+  dictationNote,
+  downloadView,
+  EMPTY_DOWNLOAD,
+  foldDownload,
+  subscribeDictationNote,
+} from "./download-status";
 import { VoiceOperation, type VoiceState } from "./operation";
 import { startRecording, decodeForWhisper } from "./recorder";
 import { configureVoice, prepareDictation, transcribe } from "./whisper";
+/** How long "ready" stays up after a download lands. */
+const READY_NOTICE_MS = 5_000;
+
 export const useDictation = (
   transport: Transport | null,
   sessionId: string,
@@ -19,6 +30,26 @@ export const useDictation = (
   useEffect(() => {
     callback.current = onTranscript;
   }, [onTranscript]);
+  const [download, setDownload] = useState(EMPTY_DOWNLOAD);
+  const note = useSyncExternalStore(subscribeDictationNote, dictationNote);
+  useEffect(() => {
+    if (!transport) return;
+    const abort = new AbortController();
+    void followNotices(
+      transport,
+      ({ signal }) => transport.client.voice.whisper.progress({}, { signal }),
+      (event) => setDownload((state) => foldDownload(state, event)),
+      abort.signal
+    );
+    return () => abort.abort();
+  }, [transport]);
+  useEffect(() => {
+    if (download.ready == null) return;
+    const dismiss = setTimeout(() => {
+      setDownload((state) => ({ ...state, ready: null }));
+    }, READY_NOTICE_MS);
+    return () => clearTimeout(dismiss);
+  }, [download.ready]);
   const operation = useRef<VoiceOperation | null>(null);
   useEffect(() => {
     if (!transport) return;
@@ -48,6 +79,8 @@ export const useDictation = (
     state,
     level,
     error,
+    /** What to say while a model downloads; null when nothing is pending. */
+    download: downloadView(download, note),
     start: () => operation.current?.start() ?? Promise.resolve(),
     end: () => operation.current?.end() ?? Promise.resolve(),
     cancel: () => operation.current?.cancel(),

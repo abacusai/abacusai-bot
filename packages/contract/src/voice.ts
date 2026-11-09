@@ -48,6 +48,10 @@ export interface WhisperDownloadProgress {
   loadedBytes: number;
   totalBytes: number;
   done: boolean;
+  /** The download failed; `done` is true too. */
+  failed?: boolean;
+  /** Every file the transcriber loads is now on disk. */
+  modelReady: boolean;
 }
 
 /** Sample rate Whisper's feature extractor expects. */

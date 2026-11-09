@@ -147,10 +147,23 @@ export class WhisperModelService {
     file: string,
     target: string
   ): Promise<WhisperFileResult & { path?: string }> {
-    const progress = (loaded: number, total: number, done: boolean): void => {
+    const progress = (
+      loaded: number,
+      total: number,
+      done: boolean,
+      failed = false
+    ): void => {
       this.options.emitEvent({
         type: "whisper-download-progress",
-        progress: { model, file, loadedBytes: loaded, totalBytes: total, done },
+        progress: {
+          model,
+          file,
+          loadedBytes: loaded,
+          totalBytes: total,
+          done,
+          ...(failed ? { failed } : {}),
+          modelReady: done && !failed && this.isCached(model),
+        },
         emittedAt: new Date().toISOString(),
       });
     };
@@ -187,7 +200,7 @@ export class WhisperModelService {
       return { status: 200, path: target };
     } catch (error) {
       await rm(tmp, { force: true });
-      progress(loaded, total, true);
+      progress(loaded, total, true, true);
       return {
         status: 502,
         error: error instanceof Error ? error.message : String(error),

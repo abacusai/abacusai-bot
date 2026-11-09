@@ -16,6 +16,9 @@ import {
   type LanguageScore,
 } from "./dictation-language";
 
+const pick = (...args: Parameters<typeof chooseDictationLanguage>): string =>
+  chooseDictationLanguage(...args).language;
+
 const scores = (entries: Record<string, number>): LanguageScore[] =>
   Object.entries(entries).map(([code, p]) => ({ code, p }));
 
@@ -116,18 +119,32 @@ describe("chooseDictationLanguage", () => {
       "hi",
     ],
   ])("%s", (_case, audio, code, localeTags, expected) => {
-    expect(chooseDictationLanguage(scores(audio), { code, localeTags })).toBe(
-      expected
+    expect(pick(scores(audio), { code, localeTags })).toBe(expected);
+  });
+
+  it("reads every tag's language before any tag's region", () => {
+    expect(
+      pick(scores({ hi: 0.6, ur: 0.35 }), {
+        code: null,
+        localeTags: ["en-IN", "ur"],
+      })
+    ).toBe("ur");
+  });
+
+  it("reports whether the audio alone was confident", () => {
+    const user = { code: "pt", localeTags: [] };
+    expect(chooseDictationLanguage(scores({ fr: 0.97 }), user).confident).toBe(
+      true
     );
+    expect(
+      chooseDictationLanguage(scores({ es: 0.48, pt: 0.42 }), user)
+    ).toEqual({ language: "pt", confident: false });
+    expect(chooseDictationLanguage([], user).confident).toBe(false);
   });
 
   it("falls back to the user's language, then English, without scores", () => {
-    expect(chooseDictationLanguage([], { code: "fr", localeTags: [] })).toBe(
-      "fr"
-    );
-    expect(chooseDictationLanguage([], { code: null, localeTags: [] })).toBe(
-      "en"
-    );
+    expect(pick([], { code: "fr", localeTags: [] })).toBe("fr");
+    expect(pick([], { code: null, localeTags: [] })).toBe("en");
   });
 });
 
@@ -157,7 +174,7 @@ describe("dictationLanguageCode", () => {
   it("an unsupported user language leaves the audio to decide", () => {
     const code = dictationLanguageCode("Klingon", SUPPORTED);
     expect(
-      chooseDictationLanguage(scores({ es: 0.5, pt: 0.45 }), {
+      pick(scores({ es: 0.5, pt: 0.45 }), {
         code,
         localeTags: [],
       })

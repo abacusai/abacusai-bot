@@ -15,9 +15,8 @@ export interface LanguageScore {
   p: number;
 }
 
-/** A top language this likely, and this far ahead of the next, needs no hint. */
+/** A top language this likely needs no hint (the rest share at most 0.2, so it is well ahead). */
 export const DICTATION_CONFIDENT = 0.8;
-export const DICTATION_CONFIDENT_LEAD = 0.5;
 /** The hint may win only among the first few, each at least half as likely as the top. */
 const HINT_CANDIDATES = 3;
 const FALLBACK_LANGUAGE = "en";
@@ -48,36 +47,52 @@ const grouped = (scores: readonly LanguageScore[]): Group[] => {
   return groups.sort((a, b) => b.p - a.p);
 };
 
+/** Hindi or Urdu from the locale tags: any tag's language first, then any tag's region. */
 const localeHindustani = (tags: readonly string[]): string | null => {
-  for (const tag of tags) {
+  const locales = tags.flatMap((tag) => {
     try {
-      const locale = new Intl.Locale(tag.replace(/_/g, "-"));
-      if (HINDUSTANI.has(locale.language)) return locale.language;
-      const region = HINDUSTANI_REGIONS[locale.region ?? ""];
-      if (region != null) return region;
+      return [new Intl.Locale(tag.replace(/_/g, "-"))];
     } catch {
-      // Not a tag: the next one may be.
+      return []; // Not a tag.
     }
-  }
-  return null;
+  });
+  return (
+    locales.find((locale) => HINDUSTANI.has(locale.language))?.language ??
+    locales
+      .map((locale) => HINDUSTANI_REGIONS[locale.region ?? ""])
+      .find((code) => code != null) ??
+    null
+  );
 };
 
 /**
- * The language to transcribe in. A confident top wins; otherwise the user's
- * language wins when it is a close candidate. Hindi or Urdu takes its script
- * from the user's language, then their locale, else Hindi: the audio cannot
- * tell the two apart (base splits a Hindi clip 0.50 Urdu to 0.45 Hindi).
+ * The language to transcribe in, and whether the audio was confident. A
+ * confident top wins; otherwise the user's language wins when it is a close
+ * candidate. Hindi or Urdu takes its script from the user's language, then
+ * their locale, else Hindi: the audio cannot tell the two apart (base splits
+ * a Hindi clip 0.50 Urdu to 0.45 Hindi). The reply-language resolver reads
+ * Hindi as English today, so the user's-language step only decides once the
+ * resolver can return Hindi or Urdu.
  */
 export const chooseDictationLanguage = (
   scores: readonly LanguageScore[],
   user: { code: string | null; localeTags: readonly string[] }
-): string => {
+): { language: string; confident: boolean } => {
   const groups = grouped(scores);
   const top = groups[0];
-  if (top == null) return user.code ?? FALLBACK_LANGUAGE;
-  const second = groups[1]?.p ?? 0;
-  const confident =
-    top.p >= DICTATION_CONFIDENT && top.p - second >= DICTATION_CONFIDENT_LEAD;
+  if (top == null)
+    return { language: user.code ?? FALLBACK_LANGUAGE, confident: false };
+  const confident = top.p >= DICTATION_CONFIDENT;
+  const language = scriptOf(groups, top, confident, user);
+  return { language, confident };
+};
+
+const scriptOf = (
+  groups: readonly Group[],
+  top: Group,
+  confident: boolean,
+  user: { code: string | null; localeTags: readonly string[] }
+): string => {
   const hint = user.code;
   const hinted =
     confident || hint == null
