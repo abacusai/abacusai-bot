@@ -133,7 +133,7 @@ const readConfig = (): StoredConfig => {
     (backup) => parseConfig(backup) !== null,
     { restrict: true }
   );
-  if (restored === null) return {};
+  if (restored === null) return { configVersion: MESSAGING_CONFIG_VERSION };
   console.warn(
     "[messaging] messaging config did not parse; restored it from its last good copy"
   );
@@ -147,35 +147,47 @@ const whatsAppLinkedOnce = (config: StoredConfig): boolean =>
     config.pairing.some((row) => row?.platform === "whatsapp"));
 
 /**
- * One-time upgrades of a config an older app wrote, saved with the version so
- * none runs twice. v1: a WhatsApp link that ended on an app from before
- * `linkLost` saved only `signedIn: false`, so the lane never said it was lost.
- * A lane the user unlinked is off, and one never linked has no evidence: both stay.
+ * v1: a WhatsApp link that ended on an app from before `linkLost` saved only
+ * `signedIn: false`, so the lane never said it was lost. A lane the user
+ * unlinked is off, and one never linked has no evidence: both stay.
  */
-const upgradeConfig = (config: StoredConfig): StoredConfig => {
-  if ((config.configVersion ?? 0) >= MESSAGING_CONFIG_VERSION) return config;
+const markLinkLostBeforeFlag = (config: StoredConfig): StoredConfig => {
   const whatsapp = config.platforms?.whatsapp;
   const lostBeforeFlag =
     whatsapp?.enabled === true &&
     whatsapp.signedIn === false &&
     whatsapp.linkLost === undefined &&
     whatsAppLinkedOnce(config);
-  const upgraded: StoredConfig = {
+  if (!lostBeforeFlag) return config;
+  return {
     ...config,
-    configVersion: MESSAGING_CONFIG_VERSION,
-    ...(lostBeforeFlag
-      ? {
-          platforms: {
-            ...config.platforms,
-            whatsapp: { ...whatsapp, linkLost: true },
-          },
-        }
-      : {}),
+    platforms: {
+      ...config.platforms,
+      whatsapp: { ...whatsapp, linkLost: true },
+    },
   };
+};
+
+/** Set once the read path has tried to save an upgrade; see `upgradeConfig`. */
+let upgradeSaveTried = false;
+
+/**
+ * One-time upgrades of a config an older app wrote: each step runs only on a
+ * config older than its own number, then the current version is stamped.
+ */
+const upgradeConfig = (config: StoredConfig): StoredConfig => {
+  const from = config.configVersion ?? 0;
+  if (from >= MESSAGING_CONFIG_VERSION) return config;
+  let upgraded = config;
+  if (from < 1) upgraded = markLinkLostBeforeFlag(upgraded);
+  upgraded = { ...upgraded, configVersion: MESSAGING_CONFIG_VERSION };
+  // Saved from a read at most once per run; any later save stores it anyway.
+  if (upgradeSaveTried) return upgraded;
+  upgradeSaveTried = true;
   try {
     return writeConfig(upgraded);
   } catch (error) {
-    // A read must not fail on the save (a full disk); the next read retries.
+    // A read must not fail on the save (a read-only or full disk).
     console.warn("[messaging] messaging config upgrade not saved:", error);
     return upgraded;
   }

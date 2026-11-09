@@ -3,19 +3,38 @@
  * `signedIn: false`. The one-time config upgrade marks it lost, so the lane
  * says so; nothing the user chose, and nothing never linked, is touched.
  *
- * Written against the real store: the upgrade is a file format change.
+ * Written against the real store: the upgrade is a file format change. Each
+ * test loads the module afresh, since a run saves an upgrade from a read once.
  */
 import fs from "fs";
 import os from "os";
 import path from "path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  readPlatformLinkLost,
-  readPlatformSignedIn,
-  savePlatformSignedIn,
-} from "./messaging-config-service";
+/** Set to make every store write fail, as on a read-only or full disk. */
+const disk = vi.hoisted(() => ({ refuse: false, writes: 0 }));
+vi.mock("@abacus-ai/agent/atomic-file", async (importActual) => {
+  const actual =
+    await importActual<typeof import("@abacus-ai/agent/atomic-file")>();
+  return {
+    ...actual,
+    writeFileAtomicSync: (
+      ...args: Parameters<typeof actual.writeFileAtomicSync>
+    ) => {
+      disk.writes += 1;
+      if (disk.refuse) throw new Error("EROFS: read-only file system");
+      return actual.writeFileAtomicSync(...args);
+    },
+  };
+});
+
+let store: typeof import("./messaging-config-service");
+const readPlatformLinkLost = (id: "whatsapp" | "discord" | "telegram") =>
+  store.readPlatformLinkLost(id);
+const readPlatformSignedIn = (id: "whatsapp") => store.readPlatformSignedIn(id);
+const savePlatformSignedIn = (id: "whatsapp", signedIn: boolean) =>
+  store.savePlatformSignedIn(id, signedIn);
 
 let home: string;
 const previousHome = process.env.ABACUSAI_BOT_HOME;
@@ -33,9 +52,13 @@ const readStore = (): Record<string, unknown> =>
 const signedOutStill = { enabled: true, signedIn: false };
 const linkedOnce = { autoReplyBootstrappedFor: ["whatsapp"] };
 
-beforeEach(() => {
+beforeEach(async () => {
   home = fs.mkdtempSync(path.join(os.tmpdir(), "abacusai-bot-upgrade-"));
   process.env.ABACUSAI_BOT_HOME = home;
+  disk.refuse = false;
+  disk.writes = 0;
+  vi.resetModules();
+  store = await import("./messaging-config-service");
 });
 
 afterEach(() => {
@@ -142,5 +165,27 @@ describe("the lost-link upgrade", () => {
     savePlatformSignedIn("whatsapp", false);
 
     expect(readPlatformLinkLost("whatsapp")).toBe(false);
+  });
+
+  it("reads upgraded on a disk that refuses the save, tries it once, and a later save stores it", () => {
+    writeStore({ ...linkedOnce, platforms: { whatsapp: signedOutStill } });
+    const before = fs.readFileSync(storePath(), "utf8");
+    disk.refuse = true;
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    expect(readPlatformLinkLost("whatsapp")).toBe(true);
+    expect(readPlatformLinkLost("whatsapp")).toBe(true);
+    expect(disk.writes).toBe(1);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(fs.readFileSync(storePath(), "utf8")).toBe(before);
+
+    disk.refuse = false;
+    store.saveGatewaySettings({ respondToInbound: true });
+
+    expect(readStore()).toMatchObject({
+      configVersion: 1,
+      platforms: { whatsapp: { linkLost: true } },
+    });
+    warn.mockRestore();
   });
 });
