@@ -189,6 +189,11 @@ export class LaneSupervisor {
     return true;
   }
 
+  /** The lane is down and this supervisor is bringing it back. */
+  retrying(id: MessagingPlatformId): boolean {
+    return this.lanes.get(id)?.downSince != null;
+  }
+
   /** What the pane says: nothing until the lane has been down a while. */
   status(id: MessagingPlatformId): MessagingRecovery | null {
     const lane = this.lanes.get(id);

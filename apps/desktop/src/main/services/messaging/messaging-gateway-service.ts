@@ -514,7 +514,9 @@ export class MessagingGatewayService {
         state === "connecting" ||
         state === "needs_login" ||
         state === "rate_limited" ||
-        state === "syncing"
+        state === "syncing" ||
+        // Down but being retried: what it owes waits out the recovery.
+        this.supervisor.retrying(platform)
       );
     },
     giveUp: (message) => this.tellUndelivered(message),

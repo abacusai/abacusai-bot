@@ -37,8 +37,8 @@ type Lane = {
   route: (entry: Entry) => void;
 };
 
-// Every call answers "available, nothing linked": start() registers the lane
-// and its poll then idles on the pairing interval instead of the inbox.
+// Every call answers "available, nothing linked": start() registers the lane,
+// and no inbox poll runs until a link.
 const requests: Array<Record<string, unknown>> = [];
 globalThis.fetch = vi.fn(async (_url: unknown, init?: RequestInit) => {
   requests.push(JSON.parse(String(init?.body ?? "{}")));
