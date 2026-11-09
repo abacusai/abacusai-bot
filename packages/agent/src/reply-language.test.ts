@@ -303,6 +303,28 @@ describe("replyLanguageMismatch", () => {
     ).toBeNull();
   });
 
+  it("reads a short message in another script on its own, earlier English or a learnt English aside", () => {
+    expect(
+      judge(
+        [user("شکریہ دوست"), assistant(ENGLISH_REPLY)],
+        ["Please open the quarterly report and summarise it for me."]
+      )
+    ).toEqual({ expected: "arabic", got: "latin" });
+    expect(
+      judge([user(URDU_QUESTION), assistant(ENGLISH_REPLY)], [], {
+        script: "latin",
+        chosen: false,
+      })
+    ).toEqual({ expected: "arabic", got: "latin" });
+    // English they chose is theirs to get.
+    expect(
+      judge([user(URDU_QUESTION), assistant(ENGLISH_REPLY)], [], {
+        script: "latin",
+        chosen: true,
+      })
+    ).toBeNull();
+  });
+
   it("catches real drift both ways", () => {
     expect(judge([user(URDU_QUESTION), assistant(ENGLISH_REPLY)])).toEqual({
       expected: "arabic",

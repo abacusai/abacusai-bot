@@ -356,10 +356,17 @@ const allowedScripts = ({
 } | null => {
   const now = scriptCounts(turn);
   if (now.letters === 0) return null;
+  const nonLatinNow = now.letters - (now.counts.get("latin") ?? 0);
   const earlier = recent.map(scriptCounts);
   const earlierLetters = earlier.reduce((sum, each) => sum + each.letters, 0);
-  // Too little to know the person by: "ok" opening a session.
-  if (now.letters < MIN_LETTERS && earlierLetters < MIN_LETTERS) return null;
+  // Too little to know the person by: "ok" opening a session. A few letters
+  // of another script are plain enough.
+  if (
+    now.letters < MIN_LETTERS &&
+    earlierLetters < MIN_LETTERS &&
+    nonLatinNow < USED_LETTERS
+  )
+    return null;
   const allowed = new Set<Script>();
   const weight = new Map<Script, number>();
   for (const [script, count] of now.counts) {
@@ -367,11 +374,13 @@ const allowedScripts = ({
       allowed.add(script);
     weight.set(script, (weight.get(script) ?? 0) + count);
   }
-  // Earlier Latin only backs a short message: a long one says it all.
+  // Earlier Latin only backs a short Latin message ("ok"): a long one says
+  // it all, and one in another script says which.
+  const latinFromEarlier = now.letters < MIN_LETTERS && nonLatinNow === 0;
   for (const { counts, letters } of earlier) {
     if (letters < USED_LETTERS) continue;
     for (const [script, count] of counts) {
-      if (script === "latin" && now.letters >= MIN_LETTERS) continue;
+      if (script === "latin" && !latinFromEarlier) continue;
       if (count / letters < RECENT_SHARE) continue;
       allowed.add(script);
       weight.set(script, (weight.get(script) ?? 0) + count);
@@ -379,7 +388,10 @@ const allowedScripts = ({
   }
   for (const script of scriptsNamedIn([...recent, turn].join("\n")))
     allowed.add(script);
-  if (known != null) allowed.add(known.script);
+  // A saved language backs its script for words typed in Latin; a learnt
+  // English never excuses a Latin reply to words in another script.
+  if (known != null && (known.chosen || known.script !== "latin"))
+    allowed.add(known.script);
   const heaviest = [...weight].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "latin";
   return {
     allowed,
