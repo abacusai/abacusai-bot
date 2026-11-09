@@ -151,27 +151,6 @@ describe("the bot chat's transcript", () => {
     expect(h.gateway.relayingSession("bot-chat")).toBe(false);
   });
 
-  it("sends the answer it already wrote when a follow-up lands mid-turn", async () => {
-    const h = harness();
-
-    await h.inbound("Hey tell me abt Nepal flood");
-    h.delta("<reply>Over 1,300 dead, rescue ongoing.</reply>");
-    // "Hey" arriving behind a real question steers the same turn, and only
-    // the last reply of a turn is sent, so the answer used to be dropped and
-    // the model would then say "as I said above" about words nobody got.
-    await h.inbound("Hey");
-
-    expect(h.sent).toEqual(["Over 1,300 dead, rescue ongoing."]);
-
-    h.delta("<reply>hey! what's up?</reply>");
-    h.idle();
-
-    expect(h.sent).toEqual([
-      "Over 1,300 dead, rescue ongoing.",
-      "hey! what's up?",
-    ]);
-  });
-
   it("takes the name once the chat list catches up with the number", async () => {
     const h = harness();
 

@@ -79,6 +79,7 @@ import toolCallRepair from "./extensions/tool-call-repair.js";
 import toolTimeouts from "./extensions/tool-timeouts.js";
 import { VerifyLoop } from "./extensions/verify-loop.js";
 import { endTurnOnClosedReply } from "./forever/reply-end.js";
+import { callsTool, TurnReply } from "./forever/turn-reply.js";
 import { githubPrompt } from "./github-prompt.js";
 import { refreshGithubToken } from "./github-token.js";
 import { HostServiceClient } from "./host-services.js";
@@ -696,6 +697,8 @@ const APP_SERVERS: ReadonlySet<string> = new Set([
 
 export class AbacusBotSession {
   private readonly pendingSteers = new PendingSteers();
+  /** What a send with an id answers (`turn_answer`, `turn_reply`), as the forever engine reports it. */
+  private readonly reply = new TurnReply();
   private session: AgentSession | undefined;
   /** Construction options for the inner pi session, minus the model; see resetConversation. */
   private sessionInit: Parameters<typeof createAgentSession>[0] | undefined;
@@ -1399,6 +1402,8 @@ export class AbacusBotSession {
     } finally {
       // Whatever path the send left by, its turn closes, and only once.
       if (slot.owned != null) this.closeOwnedTurn(slot.owned);
+      const reply = this.reply.take();
+      if (reply != null) this.emitAgentEvent(reply);
     }
   }
 
@@ -1408,6 +1413,7 @@ export class AbacusBotSession {
     slot: { owned?: OwnedTurn }
   ): Promise<void> {
     const session = this.requireSession();
+    this.reply.begin(turn?.messageId);
 
     // The last turn died on credits or credentials. Whatever the user did
     // about it (a key, a top-up, an upgrade) is on disk or on the account
@@ -2621,6 +2627,8 @@ export class AbacusBotSession {
     if ((message as { role?: unknown } | undefined)?.role !== "user") return;
     const steer = this.pendingSteers.take(messageText(message));
     if (steer == null) return;
+    const answered = this.reply.answers(steer.messageId);
+    if (answered != null) this.emitAgentEvent(answered);
     this.emitAgentEvent({
       type: "user_message_steered",
       content: steer.text,
@@ -2635,6 +2643,7 @@ export class AbacusBotSession {
     this.networkWait.cancel();
     this.busyWait.cancel();
     this.verifyLoop.cancel();
+    this.reply.abandon();
 
     // An unanswered approval would keep the tool hook parked forever.
     this.rejectAllPending("Interrupted.");
@@ -3064,6 +3073,7 @@ export class AbacusBotSession {
           this.streamedText = "";
           this.currentMessageId = `msg-${++this.messageCounter}`;
           this.toolCallStream.reset();
+          this.reply.messageStarted();
           const messageId = this.aguiMessageId(event.message);
 
           this.emitInternal({
@@ -3102,12 +3112,14 @@ export class AbacusBotSession {
           : "";
 
         if (remainder.length > 0) {
+          this.reply.textStreamed(remainder);
           this.emitAgentEvent({
             type: "text_delta",
             content: remainder,
             messageId: this.messageId(),
           });
         }
+        this.reply.messageEnded(callsTool(event.message));
 
         if (this.currentMessageId != null) {
           const stopReason = (event.message as { stopReason?: unknown })
@@ -3433,6 +3445,7 @@ export class AbacusBotSession {
         if (streamEvent.delta) {
           this.settleRoutingLine();
           this.streamedText += streamEvent.delta;
+          this.reply.textStreamed(streamEvent.delta);
           this.emitAgentEvent({
             type: "text_delta",
             content: streamEvent.delta,
@@ -4124,6 +4137,8 @@ export class AbacusBotSession {
   }
 
   private emitAgentEvent(event: AgentEvent, meta?: EventMeta): void {
+    if (event.type === "error" && meta?.origin === "turn")
+      this.reply.fail(event.error.cause);
     if (meta != null) tagEvent(event, meta);
     if (event.type === "error" && meta?.origin !== "startup")
       this.ownedTurn?.noteError(event.error);

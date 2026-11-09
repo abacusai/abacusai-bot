@@ -225,11 +225,16 @@ type GatewayOptions = {
     sessionId: string,
     mode: AgentMode
   ) => Promise<StartAgentSessionResult>;
+  /**
+   * `messageId` asks the agent to report what the turn answers for it
+   * (`turn_answer`), as the hosted phone lane does.
+   */
   sendMessage: (
     workspaceId: string,
     sessionId: string,
     message: string,
-    userText?: UserTextTags
+    userText?: UserTextTags,
+    messageId?: string
   ) => void;
   /**
    * Show the incoming message in the session's transcript. The composer echoes
@@ -329,6 +334,9 @@ type GatewayOptions = {
     intro?: string;
   }>;
 };
+
+/** A chat message's id for the agent, so it names what a turn answers for it. */
+const chatMessageId = (): string => `chat-${randomUUID()}`;
 
 /** The user's own chat on a chat app, answered by that app's home bot. */
 const isSelfLane = (
@@ -1374,10 +1382,13 @@ export class MessagingGatewayService {
         userName: route.userName,
       });
       this.watchProgress(route);
-      this.options.sendMessage(route.workspaceId, route.sessionId, text, {
-        systemReminder: true,
-        operator: { kind: "environment-notice" },
-      });
+      this.options.sendMessage(
+        route.workspaceId,
+        route.sessionId,
+        text,
+        { systemReminder: true, operator: { kind: "environment-notice" } },
+        chatMessageId()
+      );
       return;
     }
     // A bot answers many chats from one conversation, so the prompt says
@@ -1421,36 +1432,32 @@ export class MessagingGatewayService {
       route.workspaceId,
       route.sessionId,
       prompt,
-      userText
+      userText,
+      chatMessageId()
     );
   }
 
   /**
    * A message for the turn already running on this route; the host steers
-   * the turn with it. The reply context moves to this message so the answer
-   * threads against the latest thing they said.
+   * the turn with it. An answer the turn finished before it lands goes out
+   * on the agent's `turn_answer` (handleAgentEvent). The reply context moves
+   * to this message so the answer threads against the latest thing they said.
    */
   private steer(
     route: Route,
     text: string,
     replyContext?: Record<string, string>
   ): void {
-    // An answer the model had already finished goes now, before the new
-    // message can make it write a second one. Only the last reply of a turn
-    // is sent, so without this a "hey" landing behind a real question loses
-    // the answer to it, and the reply that does go out says "as I said
-    // above" about words nobody ever received.
-    const written = lastTaggedReply(route.buffer) ?? route.taggedReply;
-    if (written != null && written !== "NO_REPLY") {
-      this.deliver(route, written);
-      route.buffer = "";
-      route.bufferMessageId = null;
-      route.taggedReply = null;
-    }
     route.replyContext = replyContext ?? route.replyContext;
     const prompt = route.viaBot ? `[${route.senderLabel}] ${text}` : text;
     this.options.emitUserMessage(route.workspaceId, route.sessionId, prompt);
-    this.options.sendMessage(route.workspaceId, route.sessionId, prompt);
+    this.options.sendMessage(
+      route.workspaceId,
+      route.sessionId,
+      prompt,
+      undefined,
+      chatMessageId()
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -1493,6 +1500,15 @@ export class MessagingGatewayService {
         (action) => action.type === "background-job"
       );
       if (job != null) void this.tellBackgroundJob(route, job.cause);
+      return;
+    }
+
+    // A steer landed behind an answer the turn had finished: that answer goes
+    // now, once, since the steer's answer would replace it as the reply.
+    if (event.type === "turn_answer") {
+      if (!route.busy) return;
+      this.flushReply(route, event.text);
+      route.bufferMessageId = null;
       return;
     }
 
@@ -1561,14 +1577,17 @@ export class MessagingGatewayService {
     route.taggedReply = null;
   }
 
-  /** Send whatever the turn has produced so far and clear the buffer. */
-  private flushReply(route: Route): void {
+  /**
+   * Send what the turn has produced so far (`written`, the buffer unless the
+   * agent named its answer) and clear the buffer.
+   */
+  private flushReply(route: Route, written = route.buffer): void {
     // The last round's words win when they carry a reply; otherwise the
     // reply wrapped before a tool round is what the model meant to send.
     const reply =
-      lastTaggedReply(route.buffer) == null && route.taggedReply != null
+      lastTaggedReply(written) == null && route.taggedReply != null
         ? route.taggedReply
-        : outgoingWords(route.buffer);
+        : outgoingWords(written);
     const held = route.heldWords;
     route.buffer = "";
     route.taggedReply = null;
