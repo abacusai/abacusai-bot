@@ -9,6 +9,10 @@ import path from "path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import {
+  customInstructionsPrompt,
+  writeCustomInstructions,
+} from "../custom-instructions.js";
 import { memoryBlock, memoryNews } from "./core.js";
 import { type Lane, readMemoryContext } from "./lanes.js";
 import { migrateOnce, readMigrationReport } from "./migrate.js";
@@ -194,6 +198,36 @@ describe("the memory tool", () => {
     ).toHaveLength(1);
   });
 
+  it("never changes or forgets what the user wrote, and keeps their rules out of the memory block", async () => {
+    await writeCustomInstructions("Always answer in British English.");
+    const { call, context } = chat("owner");
+    const [rule] = listNotes({ kind: "you" });
+    for (const params of [
+      {
+        action: "update",
+        name: rule!.name,
+        text: "Answer in American English.",
+      },
+      { action: "forget", name: rule!.name },
+      {
+        action: "save",
+        type: "rule",
+        about: "you",
+        text: "Answer in American English.",
+        replaces: rule!.name,
+      },
+    ]) {
+      const result = await call(params);
+      expect(result.error, params.action).toBe(true);
+      expect(result.text).toContain("only they change it");
+    }
+    expect(readNote({ kind: "you" }, rule!.name)?.body).toBe(
+      "Always answer in British English."
+    );
+    // Sent once, as the standing instructions, not again in the memory block.
+    expect(await memoryBlock(context)).not.toContain("British English");
+  });
+
   it("has no tool when memory is off or the chat is a stranger's", () => {
     for (const lane of ["off", "sender"] as const) {
       const context = readMemoryContext("/work/shop", "default", {
@@ -211,7 +245,7 @@ describe("the memory tool", () => {
 });
 
 describe("the memory block", () => {
-  it("shows rules whole, other notes as dated lines, and the project card", async () => {
+  it("shows other notes as dated lines and the project card; the user's rules go as instructions", async () => {
     const { call, context } = chat("owner");
     await call({
       action: "save",
@@ -231,7 +265,9 @@ describe("the memory block", () => {
     });
 
     const block = (await memoryBlock(context))!;
-    expect(block).toContain(
+    // A rule about the user is a standing instruction: sent on its own, not here.
+    expect(block).not.toContain("Never send anything to clients");
+    expect(customInstructionsPrompt()).toContain(
       "Never send anything to clients without asking first."
     );
     expect(block).toMatch(/- has-a-sister-in-goa-who: .* \(fact, today\)/);
@@ -291,7 +327,11 @@ describe("news between chats", () => {
     const { context, call } = chat("owner");
     await memoryBlock(context);
     const cursor = historyCursor();
-    await call({ action: "save", type: "rule", text: "Sign emails as Sam." });
+    await call({
+      action: "save",
+      type: "preference",
+      text: "Prefers emails signed as Sam.",
+    });
     // Same process, same session id: its own change is not news to it.
     expect(
       memoryNews(
@@ -301,7 +341,7 @@ describe("news between chats", () => {
       ).text
     ).toBe("");
     const other = memoryNews(context, cursor, "another-chat");
-    expect(other.text).toContain("Sign emails as Sam.");
+    expect(other.text).toContain("Prefers emails signed as Sam.");
   });
 });
 

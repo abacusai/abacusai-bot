@@ -88,6 +88,11 @@ const ABOUT_YOU_TYPES: ReadonlySet<NoteType> = new Set([
 
 const SEARCH_LIMIT = 8;
 
+/** The user's own words in memory are theirs: a model adds beside them, never over them. */
+const userWrote = (note: Note): boolean => note.by === "you";
+const USER_WROTE = (name: string): string =>
+  `The user wrote "${name}" themselves, so only they change it, on the Memory page. Tell them what you would change.`;
+
 const string = (value: unknown): string =>
   typeof value === "string" ? value : "";
 
@@ -223,6 +228,9 @@ export function buildMemoryTool(
           !siblings.some((note) => note.name === replaces)
         )
           return `"replaces" names "${replaces}", which is not a note ${where(scope)}.`;
+        const replaced = siblings.find((note) => note.name === replaces);
+        if (replaced != null && userWrote(replaced))
+          return USER_WROTE(replaced.name);
         const draft = checkDraft({
           draft: {
             name,
@@ -394,6 +402,8 @@ export function buildMemoryTool(
             `There is no note "${name}". Use "search" to find its name, or "save" a new one.`,
             true
           );
+        if (userWrote(note) && note.type !== "card")
+          return reply(USER_WROTE(note.name), true);
         return save(params, note);
       }
 
@@ -405,6 +415,7 @@ export function buildMemoryTool(
             "The project card cannot be forgotten; update it instead.",
             true
           );
+        if (userWrote(note)) return reply(USER_WROTE(note.name), true);
         const own = await currentProject();
         if (!mayWrite(context, note.scope, own?.slug ?? null))
           return reply(

@@ -76,7 +76,7 @@ const MARKS = [
   "SKILL-MARK",
 ];
 
-const seed = (): void => {
+const seed = async (): Promise<void> => {
   const memories = path.join(home, "memories");
   fs.mkdirSync(memories, { recursive: true });
   fs.writeFileSync(path.join(memories, "MEMORY.md"), "MEMORY-MARK");
@@ -85,7 +85,7 @@ const seed = (): void => {
     path.join(home, "account.json"),
     JSON.stringify({ account: { username: "Alex PROFILE-MARK" } })
   );
-  writeCustomInstructions("INSTRUCTIONS-MARK");
+  await writeCustomInstructions("INSTRUCTIONS-MARK");
   fs.writeFileSync(path.join(cwd, "AGENTS.md"), "AGENTS-MARK");
   const skill = path.join(cwd, ".abacusai-bot", "skills", "demo");
   fs.mkdirSync(skill, { recursive: true });
@@ -114,7 +114,7 @@ const promptFor = async (
 
 describe("an unattended run's prompt", () => {
   it("carries none of the user's private context", async () => {
-    seed();
+    await seed();
     const attended = await promptFor("yolo");
     // The fixture works: an attended session gets every mark.
     for (const mark of MARKS) expect(attended, mark).toContain(mark);

@@ -131,6 +131,13 @@ describe("saving from the page", () => {
 });
 
 describe("clear", () => {
+  it("clears About you but keeps the instructions, which have their own group", async () => {
+    await saveNote({ scope: "you", type: "rule", text: "Never use emoji." });
+    await saveNote({ scope: "you", type: "fact", text: "Lives in Pune." });
+    await clearMemory({ scope: "you" });
+    expect(memoryRows().map((row) => row.type)).toEqual(["rule"]);
+  });
+
   it("forgets a project's notes and resets its card", async () => {
     const project = (await shop())!;
     const scope = { scope: "project" as const, project: project.slug };

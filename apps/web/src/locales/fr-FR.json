@@ -1056,13 +1056,8 @@
     "title": "Mémoire",
     "writeFailed": "Rien n'a été supprimé : une session écrivait dans la mémoire au même moment. Réessayez.",
     "instructions": {
-      "title": "Instructions personnalisées",
-      "description": "Toujours envoyé au modèle, à la fin des instructions de chaque conversation. Utilisez-le selon la manière dont vous souhaitez travailler : le ton, le langage, le style de la maison, les choses à ne jamais faire.",
-      "placeholder": "par ex. Réponse en anglais britannique. N'utilisez jamais d'emoji. Montre-moi la commande avant de l'exécuter.",
-      "save": "Enregistrer",
-      "saveFailed": "Impossible d'enregistrer. Vérifiez que le dossier des paramètres est accessible en écriture.",
-      "unsaved": "Non enregistré",
-      "applies": "S'applique à votre prochain message, y compris dans un chat déjà ouvert."
+      "detail": "Chaque discussion les suit, même avec la Mémoire désactivée. L'agent en ajoute une quand vous le demandez ; vous seul modifiez celles que vous avez écrites.",
+      "placeholder": "Ajoutez une instruction, ex. Réponds toujours en anglais britannique"
     },
     "sections": {
       "sessions": "Séances",
@@ -1113,7 +1108,7 @@
     },
     "you": {
       "title": "À propos de vous",
-      "detail": "Qui vous êtes et comment vous aimez que les choses soient faites. Chaque discussion lit vos règles et préférences."
+      "detail": "Qui vous êtes : votre nom, votre travail, vos préférences. Les discussions s'en servent quand c'est utile."
     },
     "projects": {
       "title": "Projets"

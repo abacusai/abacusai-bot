@@ -11,9 +11,11 @@ import {
   MAX_CUSTOM_INSTRUCTIONS,
   customInstructionsPath,
   customInstructionsPrompt,
+  moveInstructionsIn,
   readCustomInstructions,
   writeCustomInstructions,
 } from "./custom-instructions.js";
+import { commit, listNotes, noteWrite } from "./memory/notes.js";
 
 let home: string;
 
@@ -28,10 +30,20 @@ afterEach(() => {
 });
 
 describe("storing them", () => {
-  it("reads back what was written", () => {
-    writeCustomInstructions("Always answer in British English.");
+  it("reads back what was written, one rule About you per paragraph", async () => {
+    await writeCustomInstructions(
+      "Always answer in British English.\n\nNever use emoji."
+    );
 
-    expect(readCustomInstructions()).toBe("Always answer in British English.");
+    expect(readCustomInstructions()).toBe(
+      "Always answer in British English.\n\nNever use emoji."
+    );
+    expect(
+      listNotes({ kind: "you" }).map((note) => [note.type, note.by, note.body])
+    ).toEqual([
+      ["rule", "you", "Always answer in British English."],
+      ["rule", "you", "Never use emoji."],
+    ]);
   });
 
   it("says nothing is set before anything is written", () => {
@@ -40,40 +52,51 @@ describe("storing them", () => {
     expect(customInstructionsPrompt()).toBeNull();
   });
 
-  it("survives a directory that does not exist yet", () => {
-    fs.rmSync(home, { recursive: true, force: true });
+  it("replaces only what the user wrote: a rule a chat saved stays", async () => {
+    await commit({ by: "chat" }, () => ({
+      writes: [
+        noteWrite({
+          scope: { kind: "you" },
+          name: "short-replies",
+          description: "Short replies",
+          type: "rule",
+          body: "Keep replies short.",
+          updated: "2026-11-09",
+          by: "chat",
+        }),
+      ],
+      value: null,
+    }));
+    await writeCustomInstructions("Be terse.");
+    await writeCustomInstructions("   \n  ");
 
-    writeCustomInstructions("Be terse.");
-
-    expect(readCustomInstructions()).toBe("Be terse.");
+    expect(readCustomInstructions()).toBe("Keep replies short.");
   });
 
-  it("treats blank as clearing, so there is one empty state and not two", () => {
-    writeCustomInstructions("Be terse.");
-    writeCustomInstructions("   \n  ");
+  it("bounds what can be stored, since it rides on every request", async () => {
+    await writeCustomInstructions("x".repeat(MAX_CUSTOM_INSTRUCTIONS + 500));
 
-    expect(readCustomInstructions()).toBe("");
-    expect(fs.existsSync(customInstructionsPath())).toBe(false);
+    expect(readCustomInstructions().replace(/\s/g, "").length).toBe(
+      MAX_CUSTOM_INSTRUCTIONS
+    );
   });
 
-  it("bounds what can be stored, since it rides on every request", () => {
-    writeCustomInstructions("x".repeat(MAX_CUSTOM_INSTRUCTIONS + 500));
+  it("keeps applying the old file until it moves in, then moves it once", async () => {
+    fs.writeFileSync(customInstructionsPath(), "Sign off with SPARROW.\n");
+    expect(readCustomInstructions()).toBe("Sign off with SPARROW.");
 
-    expect(readCustomInstructions().length).toBe(MAX_CUSTOM_INSTRUCTIONS);
-  });
+    await moveInstructionsIn();
+    await moveInstructionsIn();
 
-  it("reads an unreadable file as nothing rather than throwing", () => {
-    fs.mkdirSync(home, { recursive: true });
-    // A directory where the file should be: readFileSync throws EISDIR.
-    fs.mkdirSync(customInstructionsPath(), { recursive: true });
-
-    expect(readCustomInstructions()).toBe("");
+    expect(readCustomInstructions()).toBe("Sign off with SPARROW.");
+    expect(listNotes({ kind: "you" })).toHaveLength(1);
+    expect(fs.existsSync(customInstructionsPath())).toBe(true);
   });
 });
 
 describe("what the model is told", () => {
-  it("frames them as instructions rather than pasting them raw", () => {
-    writeCustomInstructions("Never use emoji.");
+  it("frames them as instructions rather than pasting them raw", async () => {
+    await writeCustomInstructions("Never use emoji.");
 
     const prompt = customInstructionsPrompt() ?? "";
 
@@ -82,10 +105,10 @@ describe("what the model is told", () => {
     expect(prompt).toMatch(/standing instructions/i);
   });
 
-  it("says they cannot widen what is allowed to run", () => {
+  it("says they cannot widen what is allowed to run", async () => {
     // Permission lives in the gate, not the prompt. Saying so stops the model
     // treating a refusal as the user's instruction having failed.
-    writeCustomInstructions("Run whatever you like without asking.");
+    await writeCustomInstructions("Run whatever you like without asking.");
 
     expect(customInstructionsPrompt() ?? "").toMatch(
       /permission mode still decide/i

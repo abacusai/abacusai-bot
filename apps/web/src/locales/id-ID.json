@@ -1056,13 +1056,8 @@
     "title": "Memori",
     "writeFailed": "Tidak ada yang dihapus. Sebuah sesi sedang menulis ke memori pada saat yang sama. Coba lagi.",
     "instructions": {
-      "title": "Instruksi khusus",
-      "description": "Selalu dikirimkan ke model, di akhir setiap instruksi percakapan. Gunakan sesuai keinginan Anda: nada, bahasa, gaya rumah, hal-hal yang tidak boleh dilakukan.",
-      "placeholder": "misalnya Jawab dalam bahasa Inggris British. Jangan pernah menggunakan emoji. Tunjukkan pada saya perintahnya sebelum Anda menjalankannya.",
-      "save": "Simpan",
-      "saveFailed": "Tidak dapat menyimpan. Periksa apakah folder pengaturan dapat ditulisi.",
-      "unsaved": "Belum disimpan",
-      "applies": "Berlaku untuk pesan Anda berikutnya, termasuk dalam obrolan yang sudah terbuka."
+      "detail": "Setiap chat mengikutinya, bahkan saat Memori mati. Agen menambahkannya saat Anda minta; hanya Anda yang mengubah yang Anda tulis sendiri.",
+      "placeholder": "Tambahkan instruksi, mis. Selalu balas dalam bahasa Inggris Britania"
     },
     "sections": {
       "sessions": "Sesi",
@@ -1113,7 +1108,7 @@
     },
     "you": {
       "title": "Tentang Anda",
-      "detail": "Siapa Anda dan bagaimana Anda suka sesuatu dikerjakan. Setiap chat membaca aturan dan preferensi Anda."
+      "detail": "Siapa Anda: nama, pekerjaan, preferensi Anda. Chat memakainya saat berguna."
     },
     "projects": {
       "title": "Proyek"

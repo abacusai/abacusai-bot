@@ -1056,13 +1056,8 @@
     "title": "Memory",
     "writeFailed": "Nothing was deleted. A session was writing to memory at the same moment. Try again.",
     "instructions": {
-      "title": "Custom instructions",
-      "description": "Always sent to the model, at the end of every conversation's instructions. Use it for how you want to be worked with: tone, language, house style, things to never do.",
-      "placeholder": "e.g. Answer in British English. Never use emoji. Show me the command before you run it.",
-      "save": "Save",
-      "saveFailed": "Could not save. Check that the settings folder is writable.",
-      "unsaved": "Unsaved",
-      "applies": "Applies to your next message, including in a chat already open."
+      "detail": "Every chat follows these, even with Memory off. The agent adds one when you ask; only you change the ones you wrote.",
+      "placeholder": "Add an instruction, e.g. Always reply in British English"
     },
     "sections": {
       "sessions": "Sessions",
@@ -1113,7 +1108,7 @@
     },
     "you": {
       "title": "About you",
-      "detail": "Who you are and how you like things done. Every chat reads your rules and preferences."
+      "detail": "Who you are: your name, your work, what you prefer. Chats use it when it helps."
     },
     "projects": {
       "title": "Projects"

@@ -13,6 +13,8 @@ export const MAX_CARD_CHARS = 3_000;
 export const MAX_SCOPE_CORE_CHARS = 3_000;
 const MAX_DESCRIPTION_CHARS = 150;
 const MAX_KEYWORDS_CHARS = 200;
+/** Rules ride in every request as the standing instructions: a page of house style fits. */
+export const MAX_RULES_CHARS = 8_000;
 const MAX_STATUS_DAYS = 14;
 /** Above this word overlap a new note restates an existing one. */
 const DUPLICATE_OVERLAP = 0.6;
@@ -208,14 +210,20 @@ export const checkDraft = (input: GateInput): Draft | string => {
   if (twin != null)
     return byUser
       ? `That says the same as "${twin.description}". Edit that note instead.`
-      : `That restates the note "${twin.name}" (${twin.description}). Update it instead: action "update", name "${twin.name}".`;
+      : twin.by === "you"
+        ? `The user's own note "${twin.name}" already says this; nothing to save.`
+        : `That restates the note "${twin.name}" (${twin.description}). Update it instead: action "update", name "${twin.name}".`;
 
+  // Rules have their own room (they are the standing instructions); the rest share the core's.
+  const isRule = draft.type === "rule";
   const used = siblings
     .filter((note) => note.name !== updating && note.name !== draft.name)
+    .filter((note) => (note.type === "rule") === isRule)
     .reduce((sum, note) => sum + coreChars(note), 0);
   if (
     draft.type !== "card" &&
-    used + coreChars({ ...draft, body, description }) > MAX_SCOPE_CORE_CHARS
+    used + coreChars({ ...draft, body, description }) >
+      (isRule ? MAX_RULES_CHARS : MAX_SCOPE_CORE_CHARS)
   )
     return byUser
       ? "This part of memory is full. Merge two notes or forget one that no longer matters, then save again."

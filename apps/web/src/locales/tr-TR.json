@@ -1056,13 +1056,8 @@
     "title": "Bellek",
     "writeFailed": "Hiçbir şey silinmedi. Aynı anda bir oturum belleğe yazıyordu. Yeniden dene.",
     "instructions": {
-      "title": "Özel talimatlar",
-      "description": "Her sohbetin talimatlarının sonunda modele her zaman gönderilir. Seninle nasıl çalışılmasını istediğini yaz: ton, dil, üslup, asla yapılmaması gerekenler.",
-      "placeholder": "ör. İngiliz İngilizcesiyle yanıtla. Asla emoji kullanma. Çalıştırmadan önce komutu bana göster.",
-      "save": "Kaydet",
-      "saveFailed": "Kaydedilemedi. Ayarlar klasörünün yazılabilir olduğunu kontrol et.",
-      "unsaved": "Kaydedilmedi",
-      "applies": "Zaten açık bir sohbet dahil, bir sonraki mesajından itibaren geçerli olur."
+      "detail": "Bellek kapalıyken bile her sohbet bunlara uyar. İstediğinde ajan bir tane ekler; kendi yazdıklarını yalnızca sen değiştirirsin.",
+      "placeholder": "Talimat ekle, ör. Her zaman İngiliz İngilizcesiyle yanıt ver"
     },
     "sections": {
       "sessions": "Oturumlar",
@@ -1113,7 +1108,7 @@
     },
     "you": {
       "title": "Hakkında",
-      "detail": "Kim olduğun ve işlerin nasıl yapılmasını sevdiğin. Her sohbet kurallarını ve tercihlerini okur."
+      "detail": "Kim olduğun: adın, işin, tercihlerin. Sohbetler işe yaradığında kullanır."
     },
     "projects": {
       "title": "Projeler"

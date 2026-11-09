@@ -13,7 +13,6 @@ import type {
 import { isQuietNow } from "@abacus-ai/contract/quiet-hours";
 import { EMPTY_RATING_PROMPT_CARD } from "@abacus-ai/contract/rating-prompt";
 import { useLiveQuery } from "@tanstack/react-db";
-import { revalidateLogic } from "@tanstack/react-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -242,7 +241,6 @@ const LanguageRow = () => {
     </SettingRow>
   );
 };
-const InstructionSchema = v.object({ text: v.pipe(v.string(), v.trim()) });
 type NoteType = MemoryRow["type"];
 type MemoryScope = { scope: "you" } | { scope: "project"; project: string };
 const TYPE_LABELS = {
@@ -256,6 +254,7 @@ const TYPE_LABELS = {
   card: "memory.types.card",
 } as const;
 /** What the Add row offers; a status note needs an expiry the agent sets. */
+const ABOUT_YOU_ADDABLE: NoteType[] = ["fact", "preference", "profile"];
 const ADDABLE: NoteType[] = [
   "rule",
   "preference",
@@ -427,12 +426,22 @@ const NoteRow = ({
     </div>
   );
 };
-const AddNoteRow = ({ id, scope }: { id: string; scope: MemoryScope }) => {
+const AddNoteRow = ({
+  id,
+  scope,
+  types = ADDABLE,
+  placeholder,
+}: {
+  id: string;
+  scope: MemoryScope;
+  /** One type hides the picker: the group already says what is added. */
+  types?: NoteType[];
+  placeholder?: string;
+}) => {
   const { t } = useTranslation();
   const writes = useMemoryWrites();
-  // About you is mostly rules; a project is mostly facts and decisions.
   const [type, setType] = useState<NoteType>(
-    scope.scope === "you" ? "rule" : "fact"
+    types.includes("fact") ? "fact" : types[0]!
   );
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -450,22 +459,26 @@ const AddNoteRow = ({ id, scope }: { id: string; scope: MemoryScope }) => {
           .finally(() => setBusy(false));
       }}
     >
-      <span id={`${id}-label`} className="sr-only">
-        {t("memory.typeLabel")}
-      </span>
-      <Choice
-        id={id}
-        value={type}
-        options={ADDABLE.map((value) => ({
-          value,
-          label: t(TYPE_LABELS[value]),
-        }))}
-        onChange={(value) => setType(value as NoteType)}
-      />
+      {types.length > 1 && (
+        <>
+          <span id={`${id}-label`} className="sr-only">
+            {t("memory.typeLabel")}
+          </span>
+          <Choice
+            id={id}
+            value={type}
+            options={types.map((value) => ({
+              value,
+              label: t(TYPE_LABELS[value]),
+            }))}
+            onChange={(value) => setType(value as NoteType)}
+          />
+        </>
+      )}
       <Input
         className="min-w-0 flex-[1_1_200px]"
-        aria-label={t("memory.addPlaceholder")}
-        placeholder={t("memory.addPlaceholder")}
+        aria-label={placeholder ?? t("memory.addPlaceholder")}
+        placeholder={placeholder ?? t("memory.addPlaceholder")}
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
@@ -615,7 +628,6 @@ const HistoryCard = ({
 export const MemoryPage = () => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
-  const cache = useQueryClient();
   const c = useCollections();
   const memoryQuery = useLiveQuery(c.memories);
   const memories = memoryQuery.data ?? [];
@@ -628,61 +640,13 @@ export const MemoryPage = () => {
   const withheld = useQuery(
     transport.orpc.memory.withheld.queryOptions({ input: {} })
   );
-  const query = useQuery({
-    ...transport.orpc.memory.customInstructions.get.queryOptions({ input: {} }),
-    refetchOnMount: "always",
-    refetchOnWindowFocus: true,
-  });
-  const saveInstructions = useMutation(
-    transport.orpc.memory.customInstructions.set.mutationOptions({
-      onSuccess: (saved) =>
-        cache.setQueryData(
-          transport.orpc.memory.customInstructions.get.queryKey({ input: {} }),
-          saved
-        ),
-      meta: { errorToast: "phase5.saveFailed" },
-    })
-  );
-  const baseline = useRef(query.data ?? "");
-  const [remoteChanged, setRemoteChanged] = useState(false);
-  const form = useAppForm({
-    defaultValues: { text: query.data ?? "" },
-    validationLogic: revalidateLogic({
-      mode: "blur",
-      modeAfterSubmission: "change",
-    }),
-    validators: { onDynamic: InstructionSchema },
-    onSubmit: async ({ value }) => {
-      // A failure is toasted by the mutation's meta; the field keeps the text.
-      const saved = await saveInstructions
-        .mutateAsync(v.parse(InstructionSchema, value))
-        .catch(() => null);
-      if (saved === null) return;
-      baseline.current = saved;
-      setRemoteChanged(false);
-      form.reset({ text: saved });
-    },
-  });
-  useEffect(() => {
-    if (query.data === undefined || query.data === baseline.current) return;
-    if (form.state.values.text === baseline.current) {
-      form.setFieldValue("text", query.data, {
-        dontUpdateMeta: true,
-        dontValidate: true,
-        dontRunListeners: true,
-      });
-    } else {
-      // The remote query has advanced beyond this field's editing baseline.
-      setRemoteChanged(true);
-    }
-    baseline.current = query.data;
-  }, [query.data, form]);
-  const you = memories
-    .filter((row) => row.scope === "you")
+  const mine = memories.filter((row) => row.scope === "you");
+  const instructions = mine
+    .filter((row) => row.type === "rule")
     .sort(byTypeThenName);
+  const you = mine.filter((row) => row.type !== "rule").sort(byTypeThenName);
   const changes = history.data ?? [];
-  const failed =
-    memoryQuery.isError || projects.isError || history.isError || query.isError;
+  const failed = memoryQuery.isError || projects.isError || history.isError;
   return (
     <AreaPage
       title={t("settings.pages.memory")}
@@ -698,7 +662,6 @@ export const MemoryPage = () => {
             onClick={() => {
               void projects.refetch();
               void history.refetch();
-              void query.refetch();
             }}
           >
             {t("phase5.retry")}
@@ -713,51 +676,19 @@ export const MemoryPage = () => {
         <SettingRow
           id="customInstructions"
           title={t("phase5.settings.customInstructions")}
+          detail={t("memory.instructions.detail")}
         />
-        {remoteChanged && (
-          <PageNote live className="px-3">
-            {t("phase5.remoteChanged")}
-          </PageNote>
-        )}
-        <form
-          className="space-y-3 p-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void form.handleSubmit();
-          }}
-        >
-          <form.Field name="text">
-            {(f) => (
-              <Textarea
-                aria-label={t("phase5.settings.customInstructions")}
-                rows={5}
-                disabled={query.isPending || query.isError}
-                value={f.state.value}
-                onChange={(e) => f.handleChange(e.target.value)}
-                onBlur={f.handleBlur}
-              />
-            )}
-          </form.Field>
-          <form.Subscribe
-            selector={(s) => [s.values.text, s.isSubmitting] as const}
-          >
-            {([text, busy]) => (
-              <Button
-                disabled={
-                  query.isPending ||
-                  query.isError ||
-                  busy ||
-                  text.trim() === (query.data ?? "").trim()
-                }
-                type="submit"
-              >
-                {t("phase5.save")}
-              </Button>
-            )}
-          </form.Subscribe>
-        </form>
+        {instructions.map((row) => (
+          <NoteRow key={row.id} row={row} scope={{ scope: "you" }} />
+        ))}
+        <AddNoteRow
+          id="memory-add-instruction"
+          scope={{ scope: "you" }}
+          types={["rule"]}
+          placeholder={t("memory.instructions.placeholder")}
+        />
       </GroupCard>
-      <GroupCard title={t("memory.you.title")}>
+      <GroupCard>
         <SettingRow
           id="memory-you"
           title={t("memory.you.title")}
@@ -766,7 +697,11 @@ export const MemoryPage = () => {
         {you.map((row) => (
           <NoteRow key={row.id} row={row} scope={{ scope: "you" }} />
         ))}
-        <AddNoteRow id="memory-add-you" scope={{ scope: "you" }} />
+        <AddNoteRow
+          id="memory-add-you"
+          scope={{ scope: "you" }}
+          types={ABOUT_YOU_ADDABLE}
+        />
         {you.length > 0 && (
           <ConfirmAction
             title={t("memory.clearYou")}

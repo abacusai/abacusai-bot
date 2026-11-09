@@ -1056,13 +1056,8 @@
     "title": "Gedächtnis",
     "writeFailed": "Es wurde nichts gelöscht. Eine Sitzung hat im selben Moment in den Speicher geschrieben. Bitte erneut versuchen.",
     "instructions": {
-      "title": "Benutzerdefinierte Anweisungen",
-      "description": "Am Ende jedes Gesprächs werden immer Anweisungen an das Model gesendet. Verwenden Sie es für die Art und Weise, wie mit Ihnen gearbeitet werden soll: Ton, Sprache, Hausstil, Dinge, die Sie niemals tun sollten.",
-      "placeholder": "z.B. Antwort in britischem Englisch. Benutze niemals Emojis. Zeigen Sie mir den Befehl, bevor Sie ihn ausführen.",
-      "save": "Speichern",
-      "saveFailed": "Konnte nicht gespeichert werden. Überprüfen Sie, ob der Einstellungsordner beschreibbar ist.",
-      "unsaved": "Nicht gespeichert",
-      "applies": "Gilt für Ihre nächste Nachricht, auch in einem bereits geöffneten Chat."
+      "detail": "Jeder Chat befolgt diese, auch wenn das Gedächtnis aus ist. Der Agent fügt eine hinzu, wenn du ihn darum bittest; nur du änderst die, die du selbst geschrieben hast.",
+      "placeholder": "Anweisung hinzufügen, z. B. Antworte immer auf britischem Englisch"
     },
     "sections": {
       "sessions": "Sitzungen",
@@ -1113,7 +1108,7 @@
     },
     "you": {
       "title": "Über dich",
-      "detail": "Wer du bist und wie du die Dinge gern erledigt hast. Jeder Chat liest deine Regeln und Vorlieben."
+      "detail": "Wer du bist: dein Name, deine Arbeit, was du bevorzugst. Chats nutzen es, wenn es hilft."
     },
     "projects": {
       "title": "Projekte"

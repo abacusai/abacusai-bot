@@ -7,6 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { moveInstructionsIn } from "@abacus-ai/agent/custom-instructions";
 import {
   absoluteOfHistory,
   blankCard,
@@ -274,7 +275,7 @@ export const saveNote = async (
   return rowOf(note);
 };
 
-/** Forget every note of the scope; a project's card goes back to blank. */
+/** Forget every note of the scope (About you keeps its instructions); a project's card goes back to blank. */
 export const clearMemory = async (
   input: { scope: "you" } | { scope: "project"; project: string },
   now = new Date()
@@ -295,7 +296,9 @@ export const clearMemory = async (
     await commit({ by: "you" }, () => {
       const writes: FileWrite[] = scopes.flatMap((scope) =>
         listNotes(scope)
+          // About you's Clear all leaves the instructions, which have their own group.
           .filter((note) => note.type !== "card")
+          .filter((note) => scope.kind !== "you" || note.type !== "rule")
           .map((note) => noteDelete(note.scope, note.name))
       );
       if (project != null)
@@ -415,6 +418,7 @@ export const migrateMemory = async (
 ): Promise<void> => {
   try {
     await migrateOnce(botName);
+    await moveInstructionsIn();
   } catch (error) {
     console.error("[memory] migration failed", error);
   }

@@ -534,8 +534,8 @@ export const createHostOperations = (
     );
   };
 
-  const setCustomInstructions = (text: unknown): string => {
-    writeCustomInstructions(typeof text === "string" ? text : "");
+  const setCustomInstructions = async (text: unknown): Promise<string> => {
+    await writeCustomInstructions(typeof text === "string" ? text : "");
 
     return readCustomInstructions();
   };

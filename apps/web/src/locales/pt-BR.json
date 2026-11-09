@@ -1056,13 +1056,8 @@
     "title": "Memória",
     "writeFailed": "Nada foi excluído. Uma sessão estava gravando na memória no mesmo momento. Tente novamente.",
     "instructions": {
-      "title": "Instruções personalizadas",
-      "description": "Sempre enviado para a modelo, ao final das instruções de cada conversa. Use-o de acordo com a forma como você deseja trabalhar: tom, linguagem, estilo da casa, coisas que nunca devem ser feitas.",
-      "placeholder": "por exemplo Responda em inglês britânico. Nunca use emojis. Mostre-me o comando antes de executá-lo.",
-      "save": "Salvar",
-      "saveFailed": "Não foi possível salvar. Verifique se a pasta de configurações é gravável.",
-      "unsaved": "Não salvo",
-      "applies": "Aplica-se à sua próxima mensagem, inclusive em um chat já aberto."
+      "detail": "Todo chat segue estas instruções, mesmo com a Memória desligada. O agente adiciona uma quando você pede; só você altera as que escreveu.",
+      "placeholder": "Adicione uma instrução, ex.: Responda sempre em inglês britânico"
     },
     "sections": {
       "sessions": "Sessões",
@@ -1113,7 +1108,7 @@
     },
     "you": {
       "title": "Sobre você",
-      "detail": "Quem você é e como gosta que as coisas sejam feitas. Todo chat lê suas regras e preferências."
+      "detail": "Quem você é: seu nome, seu trabalho, o que prefere. Os chats usam quando ajuda."
     },
     "projects": {
       "title": "Projetos"

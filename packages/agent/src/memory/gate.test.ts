@@ -149,8 +149,24 @@ const ROWS: Array<{
   { case: "too long", draft: draft("x ".repeat(900)), refused: /holds 1500/ },
   {
     case: "a full scope",
+    draft: draft("One more fact about the shop and its hours."),
+    siblings: Array.from({ length: 12 }, (_, i) =>
+      note(`fact-${i}`, `${i} `.repeat(120), "preference")
+    ),
+    refused: /memory is full/,
+  },
+  {
+    case: "rules have their own room, as the standing instructions",
     draft: draft("One more rule about tone and greetings.", { type: "rule" }),
     siblings: Array.from({ length: 12 }, (_, i) =>
+      note(`fact-${i}`, `${i} `.repeat(120), "preference")
+    ),
+    refused: null,
+  },
+  {
+    case: "too many instructions",
+    draft: draft("One more rule about tone and greetings.", { type: "rule" }),
+    siblings: Array.from({ length: 40 }, (_, i) =>
       note(`rule-${i}`, `${i} `.repeat(120), "rule")
     ),
     refused: /memory is full/,

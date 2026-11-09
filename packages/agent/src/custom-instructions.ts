@@ -1,48 +1,141 @@
 /**
- * Standing instructions the user writes once and the agent follows always.
- * Unlike MEMORY.md and USER.md, nothing in the agent writes this file: a model
- * that could edit its own instructions could edit them away. Re-read per turn
- * (refreshCustomInstructions in session.ts) so edits land on the next message.
+ * Standing instructions: the rule notes About you (memory/you/), which every
+ * chat follows, Memory on or off. The user adds and edits them on the Memory
+ * page; a chat may save one when the user asks, but never changes one the user
+ * wrote (memory/tool.ts), so a model cannot edit the user's instructions away.
+ * Re-read per turn (refreshCustomInstructions in session.ts) so edits land on
+ * the next message.
  */
 import fs from "fs";
 import path from "path";
 
 import { abacusBotDir } from "./config.js";
+import { MAX_NOTE_CHARS } from "./memory/gate.js";
+import {
+  commit,
+  type FileWrite,
+  listNotes,
+  memoryDir,
+  type Note,
+  noteDelete,
+  noteWrite,
+  slugify,
+  today,
+} from "./memory/notes.js";
 
 /** Bounded because this lands in every request; a page of house style fits. */
 export const MAX_CUSTOM_INSTRUCTIONS = 8_000;
 
+const MOVED_MARKER = ".migrated-instructions";
+
+/** The file the instructions lived in before they were rule notes. */
 export function customInstructionsPath(): string {
   return path.join(abacusBotDir(), "INSTRUCTIONS.md");
 }
 
-/** What the user wrote, or "" for nothing set. Never throws. */
-export function readCustomInstructions(): string {
+const legacyText = (): string => {
+  if (fs.existsSync(path.join(memoryDir(), MOVED_MARKER))) return "";
   try {
     return fs.readFileSync(customInstructionsPath(), "utf8").trim();
+  } catch {
+    return "";
+  }
+};
+
+const rules = (): Note[] =>
+  listNotes({ kind: "you" }).filter((note) => note.type === "rule");
+
+/** Every instruction, one per paragraph, or "" for none. Never throws. */
+export function readCustomInstructions(): string {
+  try {
+    const text = rules()
+      .map((note) => note.body.trim())
+      .join("\n\n");
+    // Until the old file has moved in (the desktop does it at start), it still applies.
+    return [legacyText(), text].filter((part) => part.length > 0).join("\n\n");
   } catch {
     // Missing or unreadable must never stop a session starting.
     return "";
   }
 }
 
-/** Replace them. Empty clears the file, so "none" is one state on disk. */
-export function writeCustomInstructions(text: string): void {
-  const trimmed = text.trim().slice(0, MAX_CUSTOM_INSTRUCTIONS);
+/** Text cut into notes: one per paragraph, none longer than a note holds. */
+const paragraphs = (text: string): string[] =>
+  text
+    .trim()
+    .slice(0, MAX_CUSTOM_INSTRUCTIONS)
+    .split(/\n\s*\n/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0)
+    .flatMap((part) => {
+      const pieces: string[] = [];
+      for (let at = 0; at < part.length; at += MAX_NOTE_CHARS)
+        pieces.push(part.slice(at, at + MAX_NOTE_CHARS));
+      return pieces;
+    });
 
-  fs.mkdirSync(abacusBotDir(), { recursive: true });
+const ruleNotes = (text: string, taken: Set<string>, now: Date): Note[] =>
+  paragraphs(text).map((body) => {
+    const base = slugify(
+      body.split(/\s+/).slice(0, 6).join(" "),
+      "instruction"
+    );
+    let name = base;
+    for (let n = 2; taken.has(name); n += 1) name = `${base}-${n}`;
+    taken.add(name);
+    return {
+      scope: { kind: "you" },
+      name,
+      description: (body.split("\n")[0] ?? body).slice(0, 150),
+      type: "rule",
+      body,
+      updated: today(now),
+      by: "you",
+    };
+  });
 
-  if (trimmed.length === 0) {
-    try {
-      fs.rmSync(customInstructionsPath());
-    } catch {
-      // Already absent, which is the state being asked for.
-    }
+/**
+ * Replace the instructions the user wrote with `text`, one rule per
+ * paragraph; rules a chat saved stay. Empty clears the user's own.
+ */
+export async function writeCustomInstructions(
+  text: string,
+  now = new Date()
+): Promise<void> {
+  const result = await commit({ by: "you" }, () => {
+    const all = listNotes({ kind: "you" });
+    const own = all.filter((note) => note.type === "rule" && note.by === "you");
+    const taken = new Set(
+      all.filter((note) => !own.includes(note)).map((note) => note.name)
+    );
+    const writes: FileWrite[] = [
+      ...own.map((note) => noteDelete(note.scope, note.name)),
+      ...ruleNotes(text, taken, now).map(noteWrite),
+    ];
+    return { writes, value: null };
+  });
+  if (!result.ok) throw new Error(result.message);
+}
 
-    return;
-  }
-
-  fs.writeFileSync(customInstructionsPath(), `${trimmed}\n`, "utf8");
+/**
+ * The old instructions file, moved into rule notes once (a marker records it).
+ * The file is left where it was.
+ */
+export async function moveInstructionsIn(now = new Date()): Promise<void> {
+  if (fs.existsSync(path.join(memoryDir(), MOVED_MARKER))) return;
+  await commit({ by: "app" }, () => {
+    const marker = path.join(memoryDir(), MOVED_MARKER);
+    if (fs.existsSync(marker)) return { writes: [], value: null };
+    const text = legacyText();
+    const taken = new Set(listNotes({ kind: "you" }).map((note) => note.name));
+    return {
+      writes: [
+        ...ruleNotes(text, taken, now).map(noteWrite),
+        { file: marker, contents: now.toISOString() },
+      ],
+      value: null,
+    };
+  });
 }
 
 /**

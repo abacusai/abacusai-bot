@@ -12,6 +12,7 @@ import {
   cardWrite,
   commit,
   findProject,
+  type HistoryEntry,
   historySince,
   listNotes,
   listProjects,
@@ -195,7 +196,11 @@ export const memoryBlock = async (
   const sections: string[] = [];
 
   if (readsYou(context)) {
-    const you = scopeBlock(listNotes({ kind: "you" }), now);
+    // The user's rules are the standing instructions block, sent separately.
+    const you = scopeBlock(
+      listNotes({ kind: "you" }).filter((note) => note.type !== "rule"),
+      now
+    );
     if (you.length > 0)
       sections.push(
         ["About the user:", ...capLines(you, MAX_SCOPE_CORE_CHARS)].join("\n")
@@ -270,6 +275,7 @@ const memoryInstructions = (context: MemoryContext): string => {
     '- Things that change (status, waiting on someone) are type "status" with "expires".',
     '- Run logs and what you did go in "note" (a dated journal line), not in notes.',
     "- Only say something is saved after the tool said Saved.",
+    '- A rule about the user (type "rule", about "you") applies to every chat from then on. Notes the user wrote themselves only they change, on the Memory page.',
     ...(context.project == null || context.project.kind === "topic"
       ? [
           '- When this chat is about one of the projects above, or about ongoing work the user keeps coming back to, use "open" with its name (a new name starts a project) before saving project facts.',
@@ -283,6 +289,11 @@ const memoryInstructions = (context: MemoryContext): string => {
  * one hidden line for the next turn, and the cursor to keep. Only what this
  * chat may read, and never its own changes.
  */
+const noteTypeOf = (entry: HistoryEntry): string | null =>
+  "appended" in entry
+    ? null
+    : (/^type: (\S+)$/m.exec(entry.after ?? entry.before ?? "")?.[1] ?? null);
+
 export const memoryNews = (
   context: MemoryContext,
   cursor: string,
@@ -298,6 +309,8 @@ export const memoryNews = (
     const name = noteNameOfPath(entry.path);
     if (scope == null || name == null || !mayRead(context, scope, slug))
       continue;
+    // The user's rules reach every chat live, as its standing instructions.
+    if (scope.kind === "you" && noteTypeOf(entry) === "rule") continue;
     if (scope.kind === "you" && !readsYou(context)) continue;
     const where = scope.kind === "you" ? "about the user" : `in ${scope.slug}`;
     if (entry.after == null) {

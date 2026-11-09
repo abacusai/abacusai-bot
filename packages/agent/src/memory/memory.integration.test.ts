@@ -131,13 +131,13 @@ describe("memory in a real session", () => {
     await agent.start();
     await agent.send("one");
 
-    // Another process (the Memory page, another chat) saves a rule: its file
+    // Another process (the Memory page, another chat) saves a preference: its file
     // and its history line, which is how processes see each other's changes.
     const note = [
       "---",
       "name: sign-as-sam",
       "description: Sign every email as Sam.",
-      "type: rule",
+      "type: preference",
       "updated: 2026-11-09",
       "by: you",
       "---",
