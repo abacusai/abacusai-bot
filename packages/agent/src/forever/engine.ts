@@ -195,7 +195,7 @@ import {
 import webTools from "../web/tools.js";
 import type { ForeverProfile, HiddenTurnPrompt } from "./profile.js";
 import { endTurnOnClosedReply } from "./reply-end.js";
-import { TurnReply } from "./turn-reply.js";
+import { callsTool, TurnReply } from "./turn-reply.js";
 
 export interface ForeverEngineOptions {
   cwd: string;
@@ -2884,14 +2884,6 @@ const NO_MODEL_CONFIGURED =
 
 function isAssistantMessage(message: unknown): boolean {
   return (message as { role?: unknown } | undefined)?.role === "assistant";
-}
-
-function callsTool(message: unknown): boolean {
-  const content = (message as { content?: unknown } | undefined)?.content;
-  return (
-    Array.isArray(content) &&
-    content.some((part) => (part as { type?: unknown }).type === "toolCall")
-  );
 }
 
 function messageText(message: unknown): string {

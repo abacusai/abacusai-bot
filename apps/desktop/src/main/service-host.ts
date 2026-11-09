@@ -2637,8 +2637,14 @@ export class ServiceHost {
       this.laneEnv.set(sessionId, { ABACUSAI_BOT_VERIFY_RETRIES: "0" });
       return this.startAgentSession({ workspaceId, sessionId, mode });
     },
-    sendMessage: (workspaceId, sessionId, message, userText) => {
-      void this.sendAgentMessage({ workspaceId, sessionId, message, userText });
+    sendMessage: (workspaceId, sessionId, message, userText, messageId) => {
+      void this.sendAgentMessage({
+        workspaceId,
+        sessionId,
+        message,
+        userText,
+        ...(messageId != null && { messageId }),
+      });
     },
     emitUserMessage: (workspaceId, sessionId, content) => {
       this.emitEvent({

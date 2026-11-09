@@ -139,6 +139,8 @@ describe("relayNote", () => {
     expect(h.shown).not.toContain(NOTE);
 
     h.reply("ME", "Writer's draft: memory matters.");
+    // Sent after the first reply's send settles.
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(h.sent.at(-1)).toEqual({
       chatId: "ME",
       text: expect.stringContaining("Writer's draft"),

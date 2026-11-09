@@ -225,11 +225,16 @@ type GatewayOptions = {
     sessionId: string,
     mode: AgentMode
   ) => Promise<StartAgentSessionResult>;
+  /**
+   * `messageId` asks the agent to report what the turn answers for it
+   * (`turn_answer`), as the hosted phone lane does.
+   */
   sendMessage: (
     workspaceId: string,
     sessionId: string,
     message: string,
-    userText?: UserTextTags
+    userText?: UserTextTags,
+    messageId?: string
   ) => void;
   /**
    * Show the incoming message in the session's transcript. The composer echoes
@@ -330,6 +335,12 @@ type GatewayOptions = {
   }>;
 };
 
+/** What a send threads against: the route's current message when undefined, none when null. */
+type ReplyTarget = Record<string, string> | null;
+
+/** A chat message's id for the agent, so it names what a turn answers for it. */
+const chatMessageId = (): string => `chat-${randomUUID()}`;
+
 /** The user's own chat on a chat app, answered by that app's home bot. */
 const isSelfLane = (
   platformId: MessagingPlatformId
@@ -400,7 +411,7 @@ type TurnProgress = {
 };
 
 /** A conversation in flight: which session it owns and what it's waiting on. */
-type Route = {
+export type Route = {
   platform: MessagingPlatformId;
   chatId: string;
   sessionId: string;
@@ -472,6 +483,12 @@ type Route = {
   /** The user's own chat hears, now and then, that a long turn is still going. */
   progressTimer: ReturnType<typeof setInterval> | null;
   progress: TurnProgress | null;
+  /** Each message this turn answers, by the id the agent names it with: what its answer threads against. */
+  answerContexts: Map<string, Record<string, string> | undefined>;
+  /** The user joined the turn from the app: the chat is owed only the answer it was waiting for. */
+  appJoined: boolean;
+  /** The route's send still going, if any: the next waits for it, so the chat gets them in order. */
+  sending: Promise<void> | null;
 };
 
 /** How long a login probe may take before the last known state is used. */
@@ -1121,7 +1138,7 @@ export class MessagingGatewayService {
     if ((active != null && active.busy) || appTurn) {
       // A follow-up from the chat whose turn is running steers that turn;
       // other chats wait, since theirs is a different conversation.
-      if (active === route && !appTurn) {
+      if (active === route && !appTurn && !route.appJoined) {
         this.steer(route, message.text, message.replyContext);
         return;
       }
@@ -1216,6 +1233,9 @@ export class MessagingGatewayService {
         delivered: false,
         progressTimer: null,
         progress: null,
+        answerContexts: new Map(),
+        appJoined: false,
+        sending: null,
       };
 
       if (existing != null) this.routesBySession.delete(existing.sessionId);
@@ -1298,6 +1318,9 @@ export class MessagingGatewayService {
       delivered: false,
       progressTimer: null,
       progress: null,
+      answerContexts: new Map(),
+      appJoined: false,
+      sending: null,
     };
 
     const { autoApproveTools } = readGatewaySettings();
@@ -1359,6 +1382,8 @@ export class MessagingGatewayService {
     // A fresh turn may fill the queue again, and deserves to say so again.
     route.queueFullNotified = false;
     route.delivered = false;
+    route.appJoined = false;
+    route.answerContexts.clear();
     // Set at dispatch time, not arrival: the context must describe the message
     // this turn is answering, not one that queued behind it.
     route.replyContext = replyContext;
@@ -1374,10 +1399,13 @@ export class MessagingGatewayService {
         userName: route.userName,
       });
       this.watchProgress(route);
-      this.options.sendMessage(route.workspaceId, route.sessionId, text, {
-        systemReminder: true,
-        operator: { kind: "environment-notice" },
-      });
+      this.options.sendMessage(
+        route.workspaceId,
+        route.sessionId,
+        text,
+        { systemReminder: true, operator: { kind: "environment-notice" } },
+        this.answerId(route, replyContext)
+      );
       return;
     }
     // A bot answers many chats from one conversation, so the prompt says
@@ -1421,36 +1449,42 @@ export class MessagingGatewayService {
       route.workspaceId,
       route.sessionId,
       prompt,
-      userText
+      userText,
+      this.answerId(route, replyContext)
     );
+  }
+
+  /** A new message's id for the agent, remembering what its answer threads against. */
+  private answerId(
+    route: Route,
+    replyContext: Record<string, string> | undefined
+  ): string {
+    const id = chatMessageId();
+    route.answerContexts.set(id, replyContext);
+    return id;
   }
 
   /**
    * A message for the turn already running on this route; the host steers
-   * the turn with it. The reply context moves to this message so the answer
-   * threads against the latest thing they said.
+   * the turn with it. An answer the turn finished before it lands goes out
+   * on the agent's `turn_answer` (handleAgentEvent). The reply context moves
+   * to this message so the answer threads against the latest thing they said.
    */
   private steer(
     route: Route,
     text: string,
     replyContext?: Record<string, string>
   ): void {
-    // An answer the model had already finished goes now, before the new
-    // message can make it write a second one. Only the last reply of a turn
-    // is sent, so without this a "hey" landing behind a real question loses
-    // the answer to it, and the reply that does go out says "as I said
-    // above" about words nobody ever received.
-    const written = lastTaggedReply(route.buffer) ?? route.taggedReply;
-    if (written != null && written !== "NO_REPLY") {
-      this.deliver(route, written);
-      route.buffer = "";
-      route.bufferMessageId = null;
-      route.taggedReply = null;
-    }
     route.replyContext = replyContext ?? route.replyContext;
     const prompt = route.viaBot ? `[${route.senderLabel}] ${text}` : text;
     this.options.emitUserMessage(route.workspaceId, route.sessionId, prompt);
-    this.options.sendMessage(route.workspaceId, route.sessionId, prompt);
+    this.options.sendMessage(
+      route.workspaceId,
+      route.sessionId,
+      prompt,
+      undefined,
+      this.answerId(route, replyContext ?? route.replyContext)
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -1493,6 +1527,40 @@ export class MessagingGatewayService {
         (action) => action.type === "background-job"
       );
       if (job != null) void this.tellBackgroundJob(route, job.cause);
+      return;
+    }
+
+    // A steer landed behind an answer the turn had finished: that answer goes
+    // now, once, since the steer's answer would replace it as the reply.
+    if (event.type === "turn_answer") {
+      if (!route.busy) return;
+      const answered = event.messageIds.at(-1);
+      this.flushReply(
+        route,
+        event.text,
+        answered != null && route.answerContexts.has(answered)
+          ? (route.answerContexts.get(answered) ?? null)
+          : undefined
+      );
+      route.bufferMessageId = null;
+      // The steered message is still owed its own answer, or the empty-reply line.
+      route.delivered = false;
+      // The chat just heard the answer: progress counts from here, and an update written before it is stale.
+      if (route.progress != null) {
+        route.progress.heardAt = Date.now();
+        route.progress.line = null;
+      }
+      return;
+    }
+
+    // The app's message joined the turn: any answer owed to the chat went
+    // just before, as turn_answer. A chat steer sent before the join is ours.
+    if (
+      event.type === "user_message_steered" &&
+      route.appJoined &&
+      !(event.messageId != null && route.answerContexts.has(event.messageId))
+    ) {
+      if (route.busy) this.leaveToApp(route);
       return;
     }
 
@@ -1542,33 +1610,47 @@ export class MessagingGatewayService {
   }
 
   /**
-   * The user wrote in the app to a session a relayed turn holds. The turn
-   * answers them there from now on, so no more of it goes to the chat; a
-   * reply it had already finished still does.
+   * The user wrote in the app to a session a relayed turn holds. Once their
+   * message joins the turn, the rest is theirs in the app; the chat still
+   * gets an answer it was owed (turn_answer), or the whole reply when the
+   * turn ends before their message joins it.
    */
   noteAppMessage(sessionId: string): void {
     const route = this.routesBySession.get(sessionId);
-    if (route == null || !route.busy) return;
-    const written = lastTaggedReply(route.buffer) ?? route.taggedReply;
-    if (written != null && written !== "NO_REPLY") this.deliver(route, written);
+    if (route == null || !route.busy || route.appJoined) return;
     console.log(
       `[messaging] ${route.platform}:${route.chatId} turn joined from the app; the rest of it stays there`
     );
-    route.busy = false;
+    route.appJoined = true;
     this.stopWatchingProgress(route);
+  }
+
+  /** The chat's answer has gone; the rest of the turn is the app's. */
+  private leaveToApp(route: Route): void {
+    route.busy = false;
+    route.appJoined = false;
     route.buffer = "";
     route.bufferMessageId = null;
     route.taggedReply = null;
+    route.heldWords = null;
+    route.answerContexts.clear();
   }
 
-  /** Send whatever the turn has produced so far and clear the buffer. */
-  private flushReply(route: Route): void {
+  /**
+   * Send what the turn has produced so far (`written`, the buffer unless the
+   * agent named its answer) and clear the buffer.
+   */
+  private flushReply(
+    route: Route,
+    written = route.buffer,
+    replyContext?: ReplyTarget
+  ): void {
     // The last round's words win when they carry a reply; otherwise the
     // reply wrapped before a tool round is what the model meant to send.
     const reply =
-      lastTaggedReply(route.buffer) == null && route.taggedReply != null
+      lastTaggedReply(written) == null && route.taggedReply != null
         ? route.taggedReply
-        : outgoingWords(route.buffer);
+        : outgoingWords(written);
     const held = route.heldWords;
     route.buffer = "";
     route.taggedReply = null;
@@ -1577,7 +1659,7 @@ export class MessagingGatewayService {
     // The agent's way of sending nothing; the sentinel must never reach a chat.
     if (reply === "NO_REPLY") {
       route.delivered = true;
-      if (held != null) this.deliver(route, held);
+      if (held != null) this.deliver(route, held, replyContext);
       return;
     }
 
@@ -1593,7 +1675,7 @@ export class MessagingGatewayService {
       );
       // Not silence, which reads as the user ignoring them: the deferral the
       // preamble already prescribes goes instead.
-      this.deliver(route, DEFERRAL);
+      this.deliver(route, DEFERRAL, replyContext);
       return;
     }
 
@@ -1603,7 +1685,8 @@ export class MessagingGatewayService {
         route,
         words.length > MAX_REPLY_LENGTH
           ? `${words.slice(0, MAX_REPLY_LENGTH)}\n\n[truncated]`
-          : words
+          : words,
+        replyContext
       );
     }
   }
@@ -1613,10 +1696,14 @@ export class MessagingGatewayService {
    * app, not what the model wrote around it: on a bot route the turn's own
    * text is withheld (see relayingSession) precisely so this stands alone.
    */
-  private deliver(route: Route, text: string): void {
+  private deliver(route: Route, text: string, replyTo?: ReplyTarget): void {
     route.delivered = true;
     const words = forChat(text, route.platform);
-    void this.safeSend(route.platform, route.chatId, words, route.replyContext);
+    const replyContext =
+      replyTo === undefined ? route.replyContext : (replyTo ?? undefined);
+    this.inRouteOrder(route, () =>
+      this.safeSend(route.platform, route.chatId, words, replyContext)
+    );
     if (!route.viaBot) return;
     this.options.emitAgentMessage?.(
       route.workspaceId,
@@ -1667,7 +1754,7 @@ export class MessagingGatewayService {
    */
   relayingSession(sessionId: string): boolean {
     const route = this.routesBySession.get(sessionId);
-    return route != null && route.viaBot && route.busy;
+    return route != null && route.viaBot && route.busy && !route.appJoined;
   }
 
   /** The move's line, in the user's own chat only. */
@@ -1825,8 +1912,10 @@ export class MessagingGatewayService {
   ): void {
     const route = this.routes.get(`${own.platform}:${own.chatId}`);
     if (route != null) {
-      // Not a reply to anything said there: no reply context.
-      this.deliver({ ...route, replyContext: undefined }, text);
+      // Not a reply to anything said there, nor the turn's answer.
+      const delivered = route.delivered;
+      this.deliver(route, text, null);
+      route.delivered = delivered;
       return;
     }
     void this.safeSend(own.platform, own.chatId, forChat(text, own.platform));
@@ -1958,7 +2047,22 @@ export class MessagingGatewayService {
     );
   }
 
-  private async sayProgress(route: Route, text: string): Promise<void> {
+  /** Runs `send` after the route's send still going, retries included, so the chat reads them in order. */
+  private inRouteOrder(route: Route, send: () => Promise<void>): Promise<void> {
+    const sending = route.sending == null ? send() : route.sending.then(send);
+    route.sending = sending;
+    void sending.finally(() => {
+      if (route.sending === sending) route.sending = null;
+    });
+    return sending;
+  }
+
+  /** In the route's order, so it never overtakes an answer still sending. */
+  private sayProgress(route: Route, text: string): Promise<void> {
+    return this.inRouteOrder(route, () => this.sendProgress(route, text));
+  }
+
+  private async sendProgress(route: Route, text: string): Promise<void> {
     const connector = this.connectors.get(route.platform);
     if (!route.busy || connector == null) return;
     try {
@@ -1991,6 +2095,8 @@ export class MessagingGatewayService {
     }
 
     route.busy = false;
+    route.appJoined = false;
+    route.answerContexts.clear();
     this.stopWatchingProgress(route);
     this.chatTurnEndedAt.set(
       route.sessionId,

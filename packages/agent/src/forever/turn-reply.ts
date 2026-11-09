@@ -11,6 +11,15 @@ import type { AgentEvent } from "../protocol.js";
 
 type TurnAnswer = Extract<AgentEvent, { type: "turn_answer" }>;
 
+/** Whether an assistant message calls a tool: its words were narration. */
+export function callsTool(message: unknown): boolean {
+  const content = (message as { content?: unknown } | undefined)?.content;
+  return (
+    Array.isArray(content) &&
+    content.some((part) => (part as { type?: unknown }).type === "toolCall")
+  );
+}
+
 export class TurnReply {
   private ids: string[] = [];
   private final = "";
