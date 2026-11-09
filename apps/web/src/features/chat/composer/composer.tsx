@@ -46,9 +46,9 @@ import { useMotionPreference } from "#renderer/lib/motion";
 import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import { showInfo } from "#renderer/lib/toast";
 import { useMediaQuery } from "#renderer/lib/use-media-query";
-import type { DownloadView } from "#renderer/lib/voice/download-status";
 import type { VoiceState } from "#renderer/lib/voice/operation";
 import { useConnectedDictation } from "#renderer/lib/voice/use-dictation";
+import { useDictationDownload } from "#renderer/lib/voice/use-dictation-download";
 import { AttachmentGroup } from "#renderer/ui/attachment";
 import { Button } from "#renderer/ui/button";
 import {
@@ -146,8 +146,6 @@ type ComposerState =
 interface ComposerVoice {
   state: VoiceState;
   level: number;
-  /** A Whisper model downloading, or just ready. */
-  download?: DownloadView;
   start(): Promise<void>;
   end(): Promise<void>;
   cancel(): void;
@@ -573,8 +571,7 @@ const DictationRow = ({ preview }: { preview: boolean }) => {
  */
 const DictationDownload = () => {
   const { t, i18n } = useTranslation();
-  const { voice } = useComposer();
-  const view = voice.download;
+  const view = useDictationDownload();
   if (view == null) return null;
   let language: string | null = null;
   if (view.language != null) {
