@@ -1,3 +1,4 @@
+import type { FunnelStep } from "@abacus-ai/contract/funnel";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useQuery } from "@tanstack/react-query";
 import { useSelector } from "@tanstack/react-store";
@@ -36,7 +37,10 @@ import {
   CODE_STARTER_IDS,
   GITHUB_CONNECTOR_ID,
 } from "#renderer/lib/build-starters";
-import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
+import {
+  draftStore,
+  updateDraft,
+} from "#renderer/lib/continuity/composer-drafts";
 import { formatChatStamp } from "#renderer/lib/format/chat-stamp";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
@@ -69,6 +73,21 @@ const STARTER_ICONS: Record<string, LucideIcon> = {
 };
 /** The start page's grid: three across, two rows. */
 const STARTER_SLOTS = 6;
+/**
+ * The start page's funnel, per draft: what waited in the box when it showed and
+ * the starter last tapped, so a send says whether it was the example, a starter,
+ * an edit or the user's own words.
+ */
+const funnelDrafts = new Map<
+  string,
+  { example: string; starter: string | null; edited: boolean }
+>();
+const sentText = (envelope: SubmissionEnvelope): string =>
+  envelope.parts
+    .map((part) => (part.type === "text" ? part.content : ""))
+    .join("")
+    .trim();
+
 /** Sends a queued prompt as soon as the composer could; a failure leaves it in the box. */
 export const QueuedPrompt = ({
   threadId,
@@ -165,9 +184,28 @@ export const SessionStartPage = ({
         inFlight.delete("submit");
         setPending(false);
       });
+  const funnel = (step: FunnelStep, detail: string) =>
+    void transport.client.system
+      .funnelStep({ step, detail })
+      .catch(() => undefined);
   const submit = async (envelope: SubmissionEnvelope) => {
     if (inFlight.has("submit")) return;
     inFlight.add("submit");
+    const seen = funnelDrafts.get(draft.id);
+    if (seen) {
+      funnelDrafts.delete(draft.id);
+      const text = sentText(envelope);
+      funnel(
+        "start_sent",
+        seen.example && text === seen.example.trim()
+          ? "example"
+          : seen.starter && text === seen.starter.trim()
+            ? "starter"
+            : seen.example || seen.starter
+              ? "edited"
+              : "own"
+      );
+    }
     setPending(true);
     setError(null);
     await send(envelope);
@@ -192,6 +230,32 @@ export const SessionStartPage = ({
     return () => cancelAnimationFrame(frame);
   }, [opensOnExample]);
   const id = `draft:${draft.id}`;
+  useEffect(() => {
+    if (draft.stage !== "draft" || funnelDrafts.has(draft.id)) return;
+    const example = draftStore.state[id]?.text ?? "";
+    funnelDrafts.set(draft.id, { example, starter: null, edited: false });
+    funnel(
+      "start_page_shown",
+      `${draft.starters ?? "none"}_${example ? "example" : "blank"}`
+    );
+    // Once per draft: the page's first showing, not every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.id, draft.stage]);
+  const boxText = useSelector(draftStore, (s) => s[id]?.text ?? "");
+  useEffect(() => {
+    const seen = funnelDrafts.get(draft.id);
+    if (
+      seen == null ||
+      seen.edited ||
+      boxText === seen.example ||
+      boxText === seen.starter
+    )
+      return;
+    seen.edited = true;
+    funnel("start_prompt_edited", draft.starters ?? "none");
+    // Fires on the box's text alone.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boxText, draft.id]);
   const buildStarters = BUILD_STARTER_IDS.map((starterId) => ({
     id: starterId,
     name: t(`sessions.start.build.${starterId}.name`),
@@ -352,6 +416,10 @@ export const SessionStartPage = ({
                   if (pending) return;
                   setError(null);
                   prefill(id, starter.prompt);
+                  const seen = funnelDrafts.get(draft.id);
+                  if (seen) seen.starter = starter.prompt;
+                  if (!codeStarters.some((code) => code.id === starter.id))
+                    funnel("start_starter_tapped", starter.id);
                   if (codeStarters.some((code) => code.id === starter.id))
                     void transport.client.system
                       .funnelStep({
