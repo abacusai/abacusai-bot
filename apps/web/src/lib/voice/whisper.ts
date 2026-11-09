@@ -20,6 +20,7 @@ import {
   chooseDictationLanguage,
   dictationLanguageCode,
   dictationModel,
+  isoLanguageCodes,
   type LanguageScore,
 } from "./dictation-language";
 import { setDictationNote } from "./download-status";
@@ -148,7 +149,11 @@ const prepareSmall = (): Promise<boolean> =>
 /** Fetches small ahead of the first clip when the user's language is not English. */
 export const prepareDictation = async (): Promise<void> => {
   const user = await userLanguage();
-  if (user != null && user.name !== "English") await prepareSmall();
+  if (user == null || user.name === "English") return;
+  // Names the language in the download notice before any clip has been heard.
+  const code = dictationLanguageCode(user.name, isoLanguageCodes());
+  if (code != null) setDictationNote({ language: code, quick: false });
+  await prepareSmall();
 };
 
 /** Whisper's start token and `<|fr|>` language tokens, from the model's generation config. */

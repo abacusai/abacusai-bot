@@ -130,6 +130,26 @@ export const dictationLanguageCode = (
   return null;
 };
 
+let isoCodes: string[] | null = null;
+
+/** Every two-letter language code Intl can name, for a label before the model's own list is loaded. */
+export const isoLanguageCodes = (): string[] => {
+  if (isoCodes != null) return isoCodes;
+  const names = new Intl.DisplayNames(["en"], { type: "language" });
+  const letters = "abcdefghijklmnopqrstuvwxyz";
+  isoCodes = [...letters].flatMap((first) =>
+    [...letters].flatMap((second) => {
+      const code = first + second;
+      try {
+        return names.of(code) === code ? [] : [code];
+      } catch {
+        return [];
+      }
+    })
+  );
+  return isoCodes;
+};
+
 /** English on base; every other language on small once it is on disk. */
 export const dictationModel = (
   language: string,

@@ -13,6 +13,7 @@ import {
   chooseDictationLanguage,
   dictationLanguageCode,
   dictationModel,
+  isoLanguageCodes,
   type LanguageScore,
 } from "./dictation-language";
 
@@ -166,6 +167,13 @@ describe("dictationLanguageCode", () => {
       expect(dictationLanguageCode(name, SUPPORTED)).toBeNull();
     }
   );
+
+  it("finds a language among Intl's two-letter codes before the model is loaded", () => {
+    expect(dictationLanguageCode("French", isoLanguageCodes())).toBe("fr");
+    expect(
+      dictationLanguageCode("Brazilian Portuguese", isoLanguageCodes())
+    ).toBe("pt");
+  });
 
   it("ignores a supported code with no English name instead of throwing", () => {
     expect(dictationLanguageCode("French", ["jw", "x-bad", "fr"])).toBe("fr");
