@@ -50,6 +50,12 @@ describe("the words that go out", () => {
     ).toBe("Which city?");
   });
 
+  it("send a thinking tag the reply only mentions", () => {
+    const reply =
+      "Some models wrap reasoning in <think></think>; this one does not.";
+    expect(outgoingWords(reply)).toBe(reply);
+  });
+
   it("leave NO_REPLY recognisable", () => {
     expect(outgoingWords("<reply>NO_REPLY</reply>")).toBe("NO_REPLY");
     expect(outgoingWords("NO_REPLY")).toBe("NO_REPLY");

@@ -157,7 +157,7 @@ const RESPONSE_LABEL = "[Response from AbacusAI Bot]";
  * The words for the other person, out of everything the model wrote. Asking
  * a model not to think aloud does not work; asking it to wrap the reply in
  * <reply>…</reply> does, and is checkable: only the last such block is sent.
- * Without a block the whole text goes, minus any <thinking> block, because a
+ * Without a block the whole text goes, minus a leading <thinking> block, because a
  * reply must never be lost to a missing tag.
  */
 export { outgoingWords } from "@abacus-ai/contract/reply-envelope";
