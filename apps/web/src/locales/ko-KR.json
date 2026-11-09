@@ -1704,6 +1704,15 @@
       "followsDefault": "요금제 기본값을 따릅니다: {{model}}.",
       "costly": "매 실행마다 비용이 더 높은 모델 {{model}}을(를) 사용하므로 실행할 때마다 크레딧이 더 많이 듭니다.",
       "hosted": "호스팅 루틴은 요금제 기본값으로 실행됩니다."
+    },
+    "report": {
+      "checkIn": "체크인 · {{time}}",
+      "title": "{{name}} · {{time}}",
+      "openRun": "실행 열기"
+    },
+    "reply": {
+      "label": "이 실행에 답장",
+      "failed": "답장을 보내지 못했습니다."
     }
   },
   "sessions": {

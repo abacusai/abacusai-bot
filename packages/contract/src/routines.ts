@@ -223,6 +223,11 @@ export interface Routine {
    * is the plan's default. Absent on a routine saved before routines had one.
    */
   model?: string | null;
+  /**
+   * The chat a local routine was made from, or opened by "Reply to this run":
+   * its runs' reports are delivered there. Absent on older routines.
+   */
+  originSessionId?: string | null;
 }
 
 export interface RoutineListItem extends Routine {
@@ -237,6 +242,8 @@ export interface RoutineListItem extends Routine {
   hosted?: HostedRoutineInfo;
   /** A fire came due with the network down: it runs once the network is back. */
   waitingForConnection?: boolean;
+  /** Its runs' reports reach a chat, where the user replies to a run (flag `routine-delivery`). */
+  repliesInChat?: boolean;
 }
 
 export interface RoutineCreateInput {

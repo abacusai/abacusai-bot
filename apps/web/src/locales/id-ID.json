@@ -1704,6 +1704,15 @@
       "followsDefault": "Mengikuti default paket Anda: {{model}}.",
       "costly": "Setiap proses memakai {{model}}, model yang lebih mahal, jadi setiap proses memakai lebih banyak kredit.",
       "hosted": "Rutinitas yang di-hosting memakai default paket Anda."
+    },
+    "report": {
+      "checkIn": "Check-in · {{time}}",
+      "title": "{{name}} · {{time}}",
+      "openRun": "Buka eksekusi"
+    },
+    "reply": {
+      "label": "Balas eksekusi ini",
+      "failed": "Balasan Anda tidak dapat dikirim."
     }
   },
   "sessions": {

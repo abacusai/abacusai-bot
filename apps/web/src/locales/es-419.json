@@ -1704,6 +1704,15 @@
       "followsDefault": "Sigue el predeterminado de tu plan: {{model}}.",
       "costly": "Cada ejecución usa {{model}}, un modelo más caro, así que cada una gasta más créditos.",
       "hosted": "Las rutinas alojadas usan el predeterminado de tu plan."
+    },
+    "report": {
+      "checkIn": "Seguimiento · {{time}}",
+      "title": "{{name}} · {{time}}",
+      "openRun": "Abrir ejecución"
+    },
+    "reply": {
+      "label": "Responder a esta ejecución",
+      "failed": "No se pudo enviar tu respuesta."
     }
   },
   "sessions": {

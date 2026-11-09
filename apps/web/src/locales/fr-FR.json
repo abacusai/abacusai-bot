@@ -1704,6 +1704,15 @@
       "followsDefault": "Suit le modèle par défaut de votre forfait : {{model}}.",
       "costly": "Chaque exécution utilise {{model}}, un modèle plus coûteux, et consomme donc plus de crédits.",
       "hosted": "Les routines hébergées utilisent le modèle par défaut de votre forfait."
+    },
+    "report": {
+      "checkIn": "Suivi · {{time}}",
+      "title": "{{name}} · {{time}}",
+      "openRun": "Ouvrir l'exécution"
+    },
+    "reply": {
+      "label": "Répondre à cette exécution",
+      "failed": "Impossible d'envoyer votre réponse."
     }
   },
   "sessions": {

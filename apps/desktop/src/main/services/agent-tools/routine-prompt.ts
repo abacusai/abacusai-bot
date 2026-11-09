@@ -38,6 +38,11 @@ export interface RoutineMemory {
   sent?: { done: string[]; unsure: string[] };
   /** What the user wrote that led to this run, in the routine's chat box. */
   userWords?: string;
+  /**
+   * The app delivers the final answer (flag routine-delivery): where, said to
+   * the run, e.g. "in your chat in the app and on WhatsApp".
+   */
+  deliveredTo?: string;
 }
 
 /** Fires nobody pressed for: a quiet one ends on NO_REPLY rather than a "nothing new" line. */
@@ -142,6 +147,14 @@ export const buildRoutineFirePrompt = (
   // and the folder covers anything older.
   if (memory != null) {
     lines.push("");
+    // The hosted runs' contract: the app delivers, the run only writes.
+    if (memory.deliveredTo != null)
+      lines.push(
+        `The app delivers your final answer to the user word for word, ${memory.deliveredTo}.`,
+        "Write it as your message to them, and do not use a send tool to reach the user:",
+        "messages to other people stay yours to send when the instruction asks.",
+        ""
+      );
     if (memory.lastRun == null) {
       lines.push("This is your first run; there is nothing before it.");
     } else {
@@ -190,7 +203,9 @@ export const buildRoutineFirePrompt = (
         "If nothing has changed for the user since that run, and you did nothing for",
         'them this time, reply with exactly NO_REPLY and nothing else: no "nothing',
         'new" line and no message to anyone, even if the instruction asks you to say',
-        "so. The same goes for a blocker that run already told them about, such as a",
+        "so. A report the instruction asks for on every run (a digest, a summary, a",
+        "brief of the day) is not that: write it, even when little changed. NO_REPLY",
+        "also goes for a blocker that run already told them about, such as a",
         "connection that is missing or signed out: it is said once, not on every run.",
         "A routine whose runs keep finding nothing pauses itself until the user resumes it."
       );

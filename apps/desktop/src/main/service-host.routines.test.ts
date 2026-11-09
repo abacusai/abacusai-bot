@@ -70,12 +70,15 @@ const previousHome = process.env.ABACUSAI_BOT_HOME;
 beforeEach(() => {
   home = fs.mkdtempSync(path.join(os.tmpdir(), "routine-plan-"));
   process.env.ABACUSAI_BOT_HOME = home;
+  // Today's behaviour; the app's delivery has its own file.
+  vi.stubEnv("ABACUSAI_BOT_ROUTINE_DELIVERY", "off");
   account.mockReset();
   account.mockResolvedValue({ subscription_tier: "free", plan: null });
   tier.current = null;
 });
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   if (previousHome == null) delete process.env.ABACUSAI_BOT_HOME;
   else process.env.ABACUSAI_BOT_HOME = previousHome;
   fs.rmSync(home, { recursive: true, force: true });

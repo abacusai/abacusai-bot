@@ -1704,6 +1704,15 @@
       "followsDefault": "Folgt dem Standard deines Tarifs: {{model}}.",
       "costly": "Jeder Lauf nutzt {{model}}, ein teureres Modell, und verbraucht deshalb mehr Credits.",
       "hosted": "Gehostete Routinen laufen mit dem Standard deines Tarifs."
+    },
+    "report": {
+      "checkIn": "Check-in · {{time}}",
+      "title": "{{name}} · {{time}}",
+      "openRun": "Lauf öffnen"
+    },
+    "reply": {
+      "label": "Auf diesen Lauf antworten",
+      "failed": "Deine Antwort konnte nicht gesendet werden."
     }
   },
   "sessions": {

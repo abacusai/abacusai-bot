@@ -105,6 +105,11 @@ export interface AguiRelayHost {
    * running (its compat `ready` seen) before its `wire.hello` arrives.
    */
   send(threadId: string, command: object): object | null;
+  /**
+   * Hidden notes owed to the user's next message in the thread (a routine
+   * report it may answer), taken once; none for a message that is not theirs.
+   */
+  userMessageNotes?(threadId: string, tags: UserTextTags | undefined): string[];
   /** Main's turn state: a turn was sent (legacy `sendAgentMessage` does this). */
   markSent(threadId: string): void;
   /** A human message the agent accepted, including queued admissions. */
@@ -280,6 +285,60 @@ const newestUserId = (messages: AiSendInput["messages"]): string | null => {
   for (let index = messages.length - 1; index >= 0; index -= 1)
     if (messages[index]!.role === "user") return messages[index]!.id;
   return null;
+};
+
+/**
+ * The newest user message with `notes` in a hidden reminder block in front,
+ * its display tags shifted so the transcript still shows only their words.
+ */
+export const withUserMessageNotes = (
+  messages: AiSendInput["messages"],
+  notes: readonly string[]
+): AiSendInput["messages"] => {
+  const block = `<system_reminder>\n${notes.join("\n")}\n</system_reminder>\n\n`;
+  const shift = (offset: number | undefined): number | undefined =>
+    offset == null ? undefined : offset + block.length;
+  let index = messages.length - 1;
+  while (index >= 0 && messages[index]!.role !== "user") index -= 1;
+  if (index < 0) return messages;
+  const message = messages[index]! as unknown as {
+    parts: Array<Record<string, unknown>>;
+    metadata?: {
+      abacus?: { userText?: UserTextTags } & Record<string, unknown>;
+    };
+  };
+  const tags = message.metadata?.abacus?.userText;
+  const operator = tags?.operator;
+  const noted = {
+    ...message,
+    parts: [{ type: "text", content: block }, ...message.parts],
+    metadata: {
+      ...message.metadata,
+      abacus: {
+        ...message.metadata?.abacus,
+        userText: {
+          ...tags,
+          systemReminder: true,
+          ...(shift(tags?.visibleFrom) != null
+            ? { visibleFrom: shift(tags?.visibleFrom) }
+            : {}),
+          ...(operator != null
+            ? {
+                operator: {
+                  ...operator,
+                  ...(shift(operator.visibleFrom) != null
+                    ? { visibleFrom: shift(operator.visibleFrom) }
+                    : {}),
+                },
+              }
+            : {}),
+        },
+      },
+    },
+  };
+  return messages.map((entry, at) =>
+    at === index ? (noted as unknown as typeof entry) : entry
+  );
 };
 
 /** The agent's hidden `user-reaction` note for one selected reaction. */
@@ -966,6 +1025,23 @@ export class AguiRelayService implements AguiSource {
         }
         if (pending.abandoned !== undefined) throw pending.abandoned;
       }
+
+      // Taken once the send is this run's own, so a repeat never spends them.
+      const newest = [...input.messages]
+        .reverse()
+        .find((message) => message.role === "user") as
+        | { metadata?: { abacus?: { userText?: UserTextTags } } }
+        | undefined;
+      const notes =
+        this.#host.userMessageNotes?.(
+          threadId,
+          newest?.metadata?.abacus?.userText
+        ) ?? [];
+      if (notes.length > 0)
+        command = this.#runCommand({
+          ...input,
+          messages: withUserMessageNotes(input.messages, notes),
+        });
 
       const thread = this.#thread(threadId);
       const echo = newestUserId(input.messages);

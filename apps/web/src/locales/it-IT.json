@@ -1704,6 +1704,15 @@
       "followsDefault": "Segue il predefinito del tuo piano: {{model}}.",
       "costly": "Ogni esecuzione usa {{model}}, un modello più costoso, quindi consuma più crediti.",
       "hosted": "Le routine ospitate usano il predefinito del tuo piano."
+    },
+    "report": {
+      "checkIn": "Check-in · {{time}}",
+      "title": "{{name}} · {{time}}",
+      "openRun": "Apri esecuzione"
+    },
+    "reply": {
+      "label": "Rispondi a questa esecuzione",
+      "failed": "Impossibile inviare la tua risposta."
     }
   },
   "sessions": {

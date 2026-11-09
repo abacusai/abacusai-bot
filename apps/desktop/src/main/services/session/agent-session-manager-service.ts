@@ -11,6 +11,7 @@ import type {
   AgentSessionListItem,
   AgentSessionSnapshot,
   RoutineRunOutcome,
+  RunReportStamp,
   SessionOwner,
   WorktreeListItem,
 } from "@abacus-ai/contract/contracts";
@@ -50,6 +51,8 @@ type SessionRecord = {
   runOutcome?: RoutineRunOutcome | null;
   /** For a routine run: what fired it. */
   runTrigger?: string | null;
+  /** For a routine run: the report the app delivered into a chat. */
+  report?: RunReportStamp | null;
   /** The routine this session edits: the editor turn behind its composer. */
   editorFor?: string | null;
   /** The host lane that keeps this session for good. See laneSession. */
@@ -98,6 +101,7 @@ const toListItem = (record: SessionRecord): AgentSessionListItem => ({
   routineId: record.routineId ?? null,
   runOutcome: record.runOutcome ?? null,
   runTrigger: record.runTrigger ?? null,
+  ...(record.report != null ? { report: record.report } : {}),
   editorFor: record.editorFor ?? null,
   botOwned: record.botOwned === true || record.owner != null,
   owner: record.owner ?? null,
@@ -296,6 +300,15 @@ export class AgentSessionManagerService {
     if (session.runOutcome === outcome) return false;
     session.runOutcome = outcome;
     session.updatedAt = new Date().toISOString();
+    this.persist();
+    return true;
+  }
+
+  /** A routine run's report was delivered into a chat: that chat draws it. */
+  setRunReport(sessionId: string, report: RunReportStamp): boolean {
+    const session = this.sessions.get(sessionId);
+    if (session == null || session.routineId == null) return false;
+    session.report = report;
     this.persist();
     return true;
   }

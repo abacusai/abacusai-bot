@@ -125,6 +125,8 @@ export interface CronJob {
    * bot's model, else the stored default.
    */
   model?: string | null;
+  /** The chat it was made from or replied in: its runs' reports go there. */
+  originSessionId?: string | null;
 }
 
 /** Why a fire waits: the network, a missed fire, or a run the app closed under. */
@@ -370,6 +372,7 @@ export const createJob = (
     botId?: string | null;
     reach?: RoutineReach | null;
     model?: string | null;
+    originSessionId?: string | null;
   },
   id?: string
 ): CronJob => {
@@ -415,6 +418,9 @@ export const createJob = (
     runs: [],
     ...(input.reach != null ? { reach: input.reach } : {}),
     ...(input.model !== undefined ? { model: input.model } : {}),
+    ...(input.originSessionId != null
+      ? { originSessionId: input.originSessionId }
+      : {}),
   };
 
   write([...existing, job]);
@@ -584,6 +590,15 @@ export const noteChatPlatform = (id: string, platform: string): void => {
     ...jobs[index],
     chatPlatforms: [...(jobs[index].chatPlatforms ?? []), platform],
   };
+  write(jobs);
+};
+
+/** The chat its runs' reports go to from now on. */
+export const setOriginSession = (id: string, sessionId: string): void => {
+  const jobs = readForWrite();
+  const index = jobs.findIndex((job) => job.id === id);
+  if (index < 0 || jobs[index].originSessionId === sessionId) return;
+  jobs[index] = { ...jobs[index], originSessionId: sessionId };
   write(jobs);
 };
 

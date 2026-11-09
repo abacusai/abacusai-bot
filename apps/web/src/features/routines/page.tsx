@@ -356,6 +356,10 @@ export const RoutinePage = ({
         </Collapsible>
       </section>
       <RoutineReachPanel row={row} />
+      {/* Where runs are answered in a chat, this box changes the routine only. */}
+      {!hosted && row.repliesInChat === true && (
+        <EditorChat key={row.id} routineId={row.id} />
+      )}
       {!hosted && (
         <RunsRail
           attempts={attempts}
@@ -526,10 +530,81 @@ export const RoutinePage = ({
           )}
         </div>
       )}
-      {!hosted && (
-        <EditorChat key={row.id} routineId={row.id} runId={selected} />
-      )}
+      {!hosted &&
+        (row.repliesInChat !== true ? (
+          <EditorChat key={row.id} routineId={row.id} runId={selected} />
+        ) : (
+          selected != null && (
+            <ReplyToRun key={selected} routineId={row.id} runId={selected} />
+          )
+        ))}
     </div>
+  );
+};
+/**
+ * "Reply to this run": the words go to the chat the routine reports to (its
+ * bot's, the one it was made from, or a new one that knows the run), which
+ * opens with them.
+ */
+export const ReplyToRun = ({
+  routineId,
+  runId,
+}: {
+  routineId: string;
+  runId: string;
+}) => {
+  const { t } = useTranslation();
+  const { transport } = useAppContext();
+  const navigate = useAppNavigate();
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const send = async () => {
+    const words = text.trim();
+    if (!words || busy) return;
+    setBusy(true);
+    try {
+      const chat = await transport.client.routines.replyToRun({
+        routineId,
+        runId,
+        text: words,
+      });
+      setText("");
+      if (chat.botId != null)
+        void navigate({ to: "/bots/$botId", params: { botId: chat.botId } });
+      else
+        void navigate({
+          to: "/sessions/$sessionId",
+          params: { sessionId: chat.sessionId },
+        });
+    } catch (e) {
+      showError(`${t("routines.reply.failed")} ${errorText(e)}`);
+    }
+    setBusy(false);
+  };
+  return (
+    <section
+      aria-label={t("routines.reply.label")}
+      className="flex flex-col gap-2 border-t px-4 py-3"
+    >
+      <form
+        className="flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void send();
+        }}
+      >
+        <Input
+          aria-label={t("routines.reply.label")}
+          placeholder={t("routines.reply.label")}
+          value={text}
+          disabled={busy}
+          onChange={(e) => setText(e.target.value)}
+        />
+        <Button disabled={busy || !text.trim()} type="submit">
+          {t("phase5.send")}
+        </Button>
+      </form>
+    </section>
   );
 };
 type Exchange = { user: string; reply: string };

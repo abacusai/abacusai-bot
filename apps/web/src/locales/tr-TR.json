@@ -1704,6 +1704,15 @@
       "followsDefault": "Planınızın varsayılanını izler: {{model}}.",
       "costly": "Her çalıştırma daha pahalı bir model olan {{model}} kullanır, bu yüzden her biri daha fazla kredi harcar.",
       "hosted": "Barındırılan rutinler planınızın varsayılanıyla çalışır."
+    },
+    "report": {
+      "checkIn": "Kontrol · {{time}}",
+      "title": "{{name}} · {{time}}",
+      "openRun": "Çalışmayı aç"
+    },
+    "reply": {
+      "label": "Bu çalışmaya yanıt ver",
+      "failed": "Yanıtın gönderilemedi."
     }
   },
   "sessions": {

@@ -10,7 +10,7 @@ import {
 } from "../../agent-tools/hosted-run";
 import { ROUTINE_READS } from "../../agent-tools/routine-reach";
 import { billingPlanReady } from "./billing";
-import type { ToolDefinition } from "./definition";
+import type { HostCapabilities, ToolDefinition } from "./definition";
 
 const BASE_DESCRIPTION = [
   "Schedule the agent to run a prompt on its own: on a clock, once at a moment, on an incoming webhook, or both.",
@@ -64,6 +64,19 @@ const LOCAL_FIRE_SESSION = [
   "promise to report back here. In a bot's own chat the routine belongs to the bot",
   "and runs in its voice, with what the bot remembers.",
 ];
+
+/** The same, where the app delivers each run's answer (flag routine-delivery). */
+const LOCAL_FIRE_DELIVERED = [
+  "Every fire runs in a fresh session of its own, listed under Routines. The app delivers",
+  "each run's final answer to the user in this conversation (a bot's routine: in the",
+  "bot's chat, and in the user's own chat app when that bot answers it there). Write the",
+  "prompt to say what to find or do and what to tell the user, never how to send it to",
+  "them. In a bot's own chat the routine belongs to the bot and runs in its voice, with",
+  "what the bot remembers.",
+];
+
+const localFireSession = (host: HostCapabilities): string[] =>
+  host.routineDelivery ? LOCAL_FIRE_DELIVERED : LOCAL_FIRE_SESSION;
 
 /** The hosted computer, where a routine can live on the server: its options. */
 /** The account reads a hosted routine may be given, quoted. */
@@ -352,7 +365,7 @@ export const CRONJOB_TOOLS: ToolDefinition[] = [
               "",
               ...WEBHOOK_DESCRIPTION,
               "",
-              ...LOCAL_FIRE_SESSION,
+              ...localFireSession(host),
               "",
               ...LOCAL_ROUTINE_FACTS,
             ]
@@ -369,7 +382,7 @@ export const CRONJOB_TOOLS: ToolDefinition[] = [
                     'Only for runner: "local", which runs in this app:',
                     ...LOCAL_FIRST_RUN,
                     "",
-                    ...LOCAL_FIRE_SESSION,
+                    ...localFireSession(host),
                   ]),
             ]),
       ].join("\n"),

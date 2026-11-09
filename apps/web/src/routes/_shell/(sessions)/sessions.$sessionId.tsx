@@ -72,6 +72,7 @@ import { feedbackSegmentId } from "@abacus-ai/contract/transcript/feedback-targe
 import { EmptyState } from "#renderer/components/empty-state";
 import { hasInAppViewer, isUrl } from "#renderer/components/file-preview";
 import { MessageFeedback } from "#renderer/components/message-feedback";
+import { useRunReports, withRunReports } from "#renderer/components/run-report";
 import { chatLoading } from "#renderer/features/chat/runtime/lazy-runtime";
 import { type ChatRuntime } from "#renderer/features/chat/runtime/runtime";
 import { COMPOSER_CONNECTORS } from "#renderer/features/library/composer-connectors";
@@ -349,6 +350,8 @@ const SessionRoute = () => {
     (row ? collections.workspaces.get(row.workspaceId) : undefined);
   const model = useSessionComposerModel(row);
   const db = useDb();
+  // Its routines' reports, as the app delivered them here.
+  const reports = useRunReports(sessionId);
   const sharedCommands = useChatCommands(
     row ? { workspaceId: row.workspaceId, sessionId } : null
   );
@@ -564,7 +567,7 @@ const SessionRoute = () => {
               ),
               renderDeliverables: (items) =>
                 sessionDeliverablesCard(items, deliverableOptions),
-              decorateMessage: (message, context) => {
+              decorateMessage: withRunReports((message, context) => {
                 if (message.role !== "assistant") return null;
                 // A coalesced row is keyed by its host; the turn's carrier
                 // may be any message folded into it, so use the last of them.
@@ -608,7 +611,7 @@ const SessionRoute = () => {
                     />
                   ),
                 };
-              },
+              }, reports),
               permissionActions: (descriptor) => (
                 <SessionPermissionAction
                   request={
