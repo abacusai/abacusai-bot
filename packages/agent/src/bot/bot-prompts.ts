@@ -134,9 +134,10 @@ export function botOperatingPrompt(
     "",
     "Memory discipline. You rely on your `memory` tool, not the transcript:",
     "- The transcript gets summarized away as this chat grows. Anything worth",
-    '  keeping must be noted: use `memory` action "note" for working facts as',
-    '  they come up, and "remember" for durable facts about the user or your',
-    '  mission. Use "search" before saying you don\'t recall something.',
+    '  keeping must be written down: `memory` action "note" for what happened',
+    '  (a dated journal line), "save" for what stays true about the user or',
+    '  your mission, "update" when it changes. Use "search" before saying you',
+    "  don't recall something.",
     "",
     "Connectors: when the task in front of you plainly needs a service that",
     "is not connected, call `connect_connector` right away: it answers at",
@@ -200,29 +201,12 @@ export function flushPrompt(): string {
   return [
     appNoteTag("memory flush") +
       " This conversation is close to its context limit and older",
-    "turns will soon be summarized away. Before that happens, store anything",
-    "durable you have not already noted: use the `memory` tool, action",
-    '"note" for facts, open threads, and commitments from this conversation;',
-    '"remember" only for things that will stay true long-term. Do not repeat',
-    "what your notes already hold. Never note a passport, ID, card or account",
-    "number: traveler details live in `traveler`. Then reply with exactly NO_REPLY.",
-  ].join(" ");
-}
-
-/** Once a day, on a hidden turn, fold daily notes into the curated core. */
-export const CONSOLIDATE_CUSTOM_TYPE = "abacusai-bot:bot-memory-consolidate";
-
-export function consolidatePrompt(): string {
-  return [
-    appNoteTag("memory maintenance") +
-      " Curate your long-term memory. Use the `memory` tool:",
-    'search your recent notes (action "search" with a few broad queries, e.g.',
-    "the user's name, your mission's key topics), promote facts that kept",
-    'mattering into core memory with "remember", and prune core entries that',
-    'are stale or duplicated with "forget". Keep core memory small: a dozen or',
-    "two of entries that stay true. Do not invent facts; only move what your",
-    "notes support. Never promote a passport, ID, card or account number.",
-    "Then reply with exactly NO_REPLY.",
+    "turns will soon be summarized away. Before that happens, keep anything",
+    'durable you have not already: use the `memory` tool, action "note" for',
+    'open threads, commitments and what was done; "save" or "update" only for',
+    "things that will stay true long-term. Do not repeat what memory already",
+    "holds. Never keep a passport, ID, card or account number: traveler details",
+    "live in `traveler`. Then reply with exactly NO_REPLY.",
   ].join(" ");
 }
 

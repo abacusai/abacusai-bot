@@ -4,6 +4,7 @@
  * tools and memory.
  */
 import type { BrowserTaskContext } from "../browser-task.js";
+import type { AgentMode } from "../protocol.js";
 import type { KnownLanguage } from "../reply-language.js";
 import type { MediaCheck } from "../send-media-tool.js";
 import type { McpToolPolicy } from "../tool-policy.js";
@@ -30,7 +31,9 @@ export interface ForeverMemoryPolicy {
   measureFlushOnFullTranscript?: boolean;
   flush(): HiddenTurnPrompt;
   /** The consolidation turn when one is due, else null; claiming it stamps the run. */
-  claimConsolidation(): HiddenTurnPrompt | null;
+  claimConsolidation?(): HiddenTurnPrompt | null;
+  /** After a turn: the follow-up when the user asked to keep something and nothing was saved. */
+  saveCheck?(ownWords: string): HiddenTurnPrompt | null;
 }
 
 /** What the model is told when the engine carries a turn on. */
@@ -52,6 +55,8 @@ export interface ProfileToolHost {
 }
 
 export interface ForeverProfile {
+  /** Once, before the prompt is first built: load what the profile reads. */
+  prepare?(mode: AgentMode): Promise<void>;
   /** Standing prompt parts after pi's base prompt, fixed for the session. */
   systemPrompt(): string[];
   /**

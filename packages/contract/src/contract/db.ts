@@ -491,16 +491,9 @@ export const PrefsPatchSchema = v.strictObject({
   onboardingPairing: v.optional(S.onboardingPairing),
 });
 
+/** A note by its path; a project's card is refused (clear resets it). */
 export const MemoryDeleteInputSchema = v.object({
   id: v.pipe(v.string(), v.nonEmpty()),
-  scope: v.picklist(["global", "bot"]),
-  target: v.nullable(v.picklist(["memory", "user", "remember"])),
-  botId: v.nullable(BotId),
-  /** The row the user clicked, so a stale click cannot delete its successor. */
-  index: v.pipe(v.number(), v.integer(), v.minValue(0)),
-  entry: v.string(),
-  /** The row's `occurrences`: with duplicates, what tells a stale click. */
-  occurrences: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 });
 
 export const db = {
@@ -567,7 +560,7 @@ export const db = {
   routineRuns: readTable<RoutineRunRow>(),
   /** Read-only; removed with their session. */
   artifacts: readTable<ArtifactRow>(),
-  /** No insert: entries come from the agent (`remember`). */
+  /** No insert: notes are saved through `memory.save` or by the agent. */
   memories: {
     ...readTable<MemoryRow>(),
     delete: write(MemoryDeleteInputSchema),

@@ -98,7 +98,7 @@ describe("the agent-tools server, for a held session", () => {
     expect(listed(server, "someone")).toContain("cronjob");
   });
 
-  it.each(["cronjob", "memory", "send_whatsapp_message", "pdf", "serve"])(
+  it.each(["cronjob", "send_whatsapp_message", "pdf", "serve"])(
     "refuses %s even when the agent asks",
     async (name) => {
       const result = text(await agentTools().executeTool(name, {}, HELD));

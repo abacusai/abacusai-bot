@@ -397,8 +397,7 @@ describe("gitState per checkout (R4-T33)", () => {
       listRoutines: () => [],
       onRoutinesWritten: () => () => undefined,
       listSessionArtifacts: () => [],
-      listMemories: () => ({ global: [], bots: [] }),
-      listBotMemories: () => [],
+      listMemoryRows: () => [],
       getMetadata: () => ({
         workspaces: [
           {

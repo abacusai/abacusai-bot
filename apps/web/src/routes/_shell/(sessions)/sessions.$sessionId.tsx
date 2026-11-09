@@ -108,7 +108,10 @@ import {
   previewTargetPath,
 } from "#renderer/features/sessions/files/preview-target";
 import { SessionWorkspace } from "#renderer/features/sessions/session-workspace";
-import { SessionIdentity } from "#renderer/features/sessions/sessions-pages";
+import {
+  ChatProjectChip,
+  SessionIdentity,
+} from "#renderer/features/sessions/sessions-pages";
 import {
   APP_HOTKEYS,
   useAppHotkey,
@@ -510,6 +513,7 @@ const SessionRoute = () => {
       />
       <TopBarSlot>
         <SessionIdentity sessionId={sessionId} />
+        <ChatProjectChip sessionId={sessionId} />
       </TopBarSlot>
       <SidePanelOverride />
       <SessionWorkspace

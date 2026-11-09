@@ -13,9 +13,9 @@ import type { TablePosition } from "@abacus-ai/contract/contract/rows";
 import { ORPCError } from "@orpc/server";
 
 import { HostedRoutineRefusal } from "../../services/agent-tools/hosted-routines";
+import { forgetNote } from "../../services/memory/memory-service";
 import type { RpcContext } from "../context";
 import {
-  badRequest,
   forbidden,
   notFound,
   preconditionFailed,
@@ -248,24 +248,8 @@ export const dbRouter = impl.db.router({
   memories: {
     snapshot: impl.db.memories.snapshot.handler(memories.snapshot),
     changes: impl.db.memories.changes.handler(memories.changes),
-    // The clicked row's index and entry are checked under the store lock: a
-    // stale click is CONFLICT, never its successor deleted.
     delete: impl.db.memories.delete.handler(async ({ input, context }) => {
-      const { serviceHost } = context.deps;
-      if (input.scope === "global") {
-        if (input.target == null)
-          throw badRequest("A global memory names its target");
-        await serviceHost.forgetMemory(
-          { target: input.target, index: input.index, entry: input.entry },
-          input.occurrences
-        );
-      } else {
-        if (input.botId == null) throw badRequest("A bot memory names its bot");
-        serviceHost.forgetBotMemory(
-          { botId: input.botId, index: input.index, entry: input.entry },
-          input.occurrences
-        );
-      }
+      await forgetNote(input.id);
       return echo(context.deps.tables.memories, input.id);
     }),
   },

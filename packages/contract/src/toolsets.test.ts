@@ -282,6 +282,17 @@ describe("the always-on tools are in the registry", () => {
   );
 });
 
+/** The agent registers `memory` itself, so its switch must reach `excludeTools`. */
+describe("the memory tool", () => {
+  it("reaches the model by default", () => {
+    expect(excludedBuiltinTools(undefined)).not.toContain("memory");
+  });
+
+  it("is withheld when Memory is switched off", () => {
+    expect(excludedBuiltinTools({ memory: false })).toContain("memory");
+  });
+});
+
 describe("the paid-plan capabilities", () => {
   it("group every toolset that delivers one, read off the registry", () => {
     expect(PAID_FEATURES).toEqual([

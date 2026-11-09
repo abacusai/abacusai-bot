@@ -3,12 +3,10 @@
  * of it; tests pass fakes. Every `on*` returns its removal.
  */
 import type { Bot } from "@abacus-ai/contract/bots";
-import type { GitStateRow } from "@abacus-ai/contract/contract/rows";
+import type { GitStateRow, MemoryRow } from "@abacus-ai/contract/contract/rows";
 import type {
   AgentSessionListItem,
-  BotMemoryView,
   GitStateSnapshot,
-  MemorySnapshot,
   SessionArtifact,
   SessionTurnStateSnapshot,
   WorkspaceMetadataSnapshot,
@@ -30,8 +28,8 @@ export interface TableSources {
   /** Fired after every write of `cronjobs.json`. */
   onRoutinesWritten(listener: () => void): Unhook;
   listSessionArtifacts(): SessionArtifact[];
-  listMemories(): MemorySnapshot;
-  listBotMemories(): BotMemoryView[];
+  /** Every note in the memory folder (services/memory/memory-service.ts). */
+  listMemoryRows(): MemoryRow[];
   getMetadata(): WorkspaceMetadataSnapshot;
   /** Fired after every workspace store write. */
   onWorkspacesChanged(listener: () => void): Unhook;
@@ -49,6 +47,6 @@ export interface TableSources {
   /** The rows of checkouts with a live `git.watch` (spec 04 §26.4 b). */
   checkoutRows?(): GitStateRow[];
   onCheckoutRowsChanged?(listener: () => void): Unhook;
-  /** `~/.abacusai-bot` (or `ABACUSAI_BOT_HOME`): the memory watchers' root. */
+  /** `~/.abacusai-bot` (or `ABACUSAI_BOT_HOME`): the memory watcher's root. */
   botHome(): string;
 }

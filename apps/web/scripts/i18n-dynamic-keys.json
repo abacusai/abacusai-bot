@@ -780,11 +780,6 @@
     "sources": ["features/library/mcp.tsx"]
   },
   {
-    "prefix": "phase5.memoryTargets.",
-    "values": ["remember", "user", "memory"],
-    "sources": ["features/settings/personal.tsx"]
-  },
-  {
     "prefix": "phase5.modeDescriptions.",
     "values": ["AUTO", "DEFAULT", "PLAN", "YOLO", "ACCEPTEDITS"],
     "sources": ["features/settings/personal.tsx"]
@@ -1405,9 +1400,6 @@
       "mcpFields.clientId",
       "mcpFields.clientSecret",
       "mcpFields.scope",
-      "memoryTargets.remember",
-      "memoryTargets.user",
-      "memoryTargets.memory",
       "modeDescriptions.AUTO",
       "modeDescriptions.DEFAULT",
       "modeDescriptions.PLAN",

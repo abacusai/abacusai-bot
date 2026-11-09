@@ -26,29 +26,15 @@ import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { showError, showInfo } from "#renderer/lib/toast";
 import { useNow } from "#renderer/lib/use-now";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
-} from "#renderer/ui/alert-dialog";
 import { Button } from "#renderer/ui/button";
 
 import { BotFace } from "../avatar";
+import { forgetMemory, setPinned, updateBot } from "../data/bot-actions";
 import {
-  clearMemory,
-  forgetMemory,
-  setPinned,
-  updateBot,
-} from "../data/bot-actions";
-import {
-  useBotMemories,
   useBotFiles,
   useBotSessions,
   useCheckIn,
+  useProjectNotes,
   botsQueries,
 } from "../data/queries";
 import { botTagline } from "../data/tagline";
@@ -75,7 +61,7 @@ export const DetailsTab = ({
   const prefs = usePrefs();
   const transport = useBotsTransport();
   const queries = botsQueries(transport.orpc);
-  const memory = useQuery(queries.memoryBots());
+  const memoryCount = useBotNotes(bot.id).length;
   const senders = useQuery(queries.senderChats());
   const messaging = useQuery(queries.messaging());
   const routine = useCheckIn(bot.id);
@@ -97,8 +83,6 @@ export const DetailsTab = ({
           (row) => row.platform === platform.id && row.botId === bot.id
         )
     ) ?? [];
-  const memoryCount =
-    memory.data?.find((row) => row.botId === bot.id)?.entries.length ?? 0;
   return (
     <div
       className="flex min-w-0 shrink-0 flex-col gap-4 p-4 pb-6"
@@ -307,22 +291,26 @@ export const DetailsTab = ({
     </div>
   );
 };
+/** The notes of the bot's project: the one bound to its id. */
+const useBotNotes = (botId: string) => {
+  const transport = useBotsTransport();
+  const projects = useQuery(botsQueries(transport.orpc).memoryProjects());
+  const slug =
+    projects.data?.find(
+      (project) => project.kind === "bot" && project.key === botId
+    )?.slug ?? null;
+  return useProjectNotes(slug);
+};
 export const MemoryTab = ({ bot }: { bot: BotRow }) => {
   const { t } = useTranslation();
   const db = useDb();
-  const transport = useBotsTransport();
-  const entries = useBotMemories(bot.id);
-  const memory = useQuery(botsQueries(transport.orpc).memoryBots());
-  const noteDays =
-    memory.data?.find((row) => row.botId === bot.id)?.noteDays ?? 0;
-  const [confirm, setConfirm] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const notes = useBotNotes(bot.id);
   useEffect(() => {
     void db.collections.memories.preload();
   }, [db]);
   return (
     <div className="flex flex-col gap-3 p-4">
-      {!entries.length ? (
+      {!notes.length ? (
         <EmptyState
           title={t("bots.panel.memory.empty")}
           description={t("bots.panel.memoryIntro", { name: bot.name })}
@@ -332,9 +320,9 @@ export const MemoryTab = ({ bot }: { bot: BotRow }) => {
           {t("bots.panel.memoryIntro", { name: bot.name })}
         </p>
       )}
-      {entries.length > 0 && (
+      {notes.length > 0 && (
         <BotMemoryList
-          entries={entries}
+          entries={notes}
           onForget={(row) =>
             void forgetMemory(db.collections.memories, row)
               .then((result) => {
@@ -345,50 +333,13 @@ export const MemoryTab = ({ bot }: { bot: BotRow }) => {
           }
         />
       )}
-      {noteDays > 0 && (
-        <p className="text-muted-foreground text-xs">
-          {t("bots.panel.memory.notes", { count: noteDays })}
-        </p>
-      )}
-      {entries.length > 0 && (
-        <Button
-          variant="ghost"
-          className="text-destructive"
-          onClick={() => setConfirm(true)}
-        >
-          {t("bots.panel.memory.clear")}
-        </Button>
-      )}
-      <AlertDialog open={confirm} onOpenChange={setConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("bots.panel.memory.clearConfirm")}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("bots.panel.memoryIntro", { name: bot.name })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel autoFocus>
-              {t("bots.form.cancel")}
-            </AlertDialogCancel>
-            <Button
-              variant="destructive"
-              disabled={busy}
-              onClick={() => {
-                setBusy(true);
-                void clearMemory(transport, bot.id)
-                  .then(() => setConfirm(false))
-                  .catch(() => showError(t("bots.errors.memory")))
-                  .finally(() => setBusy(false));
-              }}
-            >
-              {t("bots.panel.memory.clear")}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Button
+        variant="ghost"
+        nativeButton={false}
+        render={<AppLink to="/settings/memory" transition="settings-in" />}
+      >
+        {t("bots.panel.memory.manage")}
+      </Button>
     </div>
   );
 };

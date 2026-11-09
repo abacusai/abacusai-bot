@@ -1,12 +1,46 @@
+import { useQuery } from "@tanstack/react-query";
+import { FolderOpen } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useDb } from "#renderer/data/db";
+import { AppLink } from "#renderer/lib/navigation/app-link";
+import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
 
 import { useSession, useWorkspace } from "./data/queries";
 import { renameSession } from "./data/session-actions";
+
+/** The project this chat works in, read-only; opens it on the Memory page. */
+export const ChatProjectChip = ({ sessionId }: { sessionId: string }) => {
+  const { t } = useTranslation();
+  const { transport } = useAppContext();
+  const project = useQuery(
+    transport.orpc.memory.chatProject.queryOptions({ input: { sessionId } })
+  ).data;
+  if (project == null) return null;
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="text-muted-foreground max-w-48 shrink-0 gap-1 text-xs font-normal"
+      title={t("memory.chatProject", { name: project.name })}
+      aria-label={t("memory.chatProject", { name: project.name })}
+      nativeButton={false}
+      render={
+        <AppLink
+          to="/settings/memory"
+          search={{ focus: `memory-project-${project.slug}` }}
+          transition="settings-in"
+        />
+      }
+    >
+      <FolderOpen aria-hidden className="size-3.5 shrink-0" />
+      <span className="truncate">{project.name}</span>
+    </Button>
+  );
+};
 
 export const SessionIdentity = ({ sessionId }: { sessionId: string }) => {
   const { t } = useTranslation();

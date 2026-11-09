@@ -461,6 +461,8 @@ export class ForeverEngine {
   private hiddenReply = "";
   /** What the current prompt's memory block was built from. */
   private promptMemoryFingerprint = "";
+  /** The user's own words in the turn being answered, for the memory save check. */
+  private turnOwnWords = "";
   private promptPersona = "";
   /** The MCP roster the prompt was last built against. */
   private promptMcpRoster = "";
@@ -563,6 +565,7 @@ export class ForeverEngine {
     await settleProviderRegistrations(registry);
 
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
+    await this.profile.prepare?.(this.mode);
     this.mcp.onToolsAdded = () => this.mcpTools.changed();
     this.mcp.onStatusChange = () => this.emitMcpServers();
 
@@ -1002,6 +1005,7 @@ export class ForeverEngine {
           words.length === 0 && isAppTurnForPerson(text, turn?.userText);
         this.taskTurn = turn?.userText?.operator?.kind === "bot-task";
         this.userWords.beginTurn(words);
+        this.turnOwnWords = words;
         // Only the user's own words name their language: not a sender's, not a routine's.
         if (isOwnerAudience() && this.profile.statesReplyLanguage !== true)
           void learnUserLanguage(
@@ -1127,7 +1131,12 @@ export class ForeverEngine {
 
     if (this.interrupted) return;
 
-    const consolidation = memory.claimConsolidation();
+    const check = memory.saveCheck?.(this.turnOwnWords) ?? null;
+    if (check != null) await this.runHiddenTurn(check);
+
+    if (this.interrupted) return;
+
+    const consolidation = memory.claimConsolidation?.() ?? null;
 
     if (consolidation != null) await this.runHiddenTurn(consolidation);
   }

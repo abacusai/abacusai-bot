@@ -1,24 +1,20 @@
 /**
  * A bot's forever chat as a ForeverProfile: the persona-led operating prompt,
- * the memory/time/reaction tools and bash, and the daily-notes memory with its
- * pre-compaction flush and daily consolidation into MEMORY.md.
+ * the memory/time/reaction tools and bash. A bot is a project in the memory
+ * folder (memory/lanes.ts says what its owner's and its senders' chats may
+ * keep); a pre-compaction flush writes what the summary would lose.
  */
 import { createBashToolDefinition } from "@earendil-works/pi-coding-agent";
 
 import { agentShellOperations } from "../backends.js";
 import { withBackgroundOption } from "../background-bash.js";
 import type { ForeverProfile } from "../forever/profile.js";
+import { ChatMemory, MEMORY_SAVE_CHECK_TYPE } from "../memory/chat.js";
+import { MEMORY_TOOL_NAME } from "../memory/tool.js";
 import { buildOwnerTools, isOwnerAudience } from "../owner-tools.js";
 import { RecentUserText } from "../traveler/traveler-tool.js";
 import { buildSetUserLanguageTool } from "../user-language.js";
-import { botDir, readBotState, writeBotState } from "./bot-config.js";
-import { BOT_MEMORY_TOOL_NAME, buildBotMemoryTool } from "./bot-memory-tool.js";
-import {
-  coreMemoryPrompt,
-  hasDailyNotes,
-  memoryFingerprint,
-  recentNotesPrompt,
-} from "./bot-memory.js";
+import { botDir } from "./bot-config.js";
 import {
   BOT_COMPACTION_CONTINUATION_PROMPT,
   BOT_COMPACTION_CONTINUATION_TYPE,
@@ -28,8 +24,6 @@ import {
   BOT_MALFORMED_CONTINUATION_PROMPT,
   BOT_MALFORMED_CONTINUATION_TYPE,
   botOperatingPrompt,
-  CONSOLIDATE_CUSTOM_TYPE,
-  consolidatePrompt,
   FLUSH_CUSTOM_TYPE,
   flushPrompt,
 } from "./bot-prompts.js";
@@ -44,9 +38,6 @@ import { BOT_TIME_TOOL_NAME, buildBotTimeTool } from "./bot-time-tool.js";
  * of the 20% compaction reserve so notes are on disk before the summary.
  */
 const FLUSH_AT_WINDOW_SHARE = 0.55;
-
-/** How often the consolidation pass runs, at most. */
-const CONSOLIDATE_EVERY_MS = 24 * 60 * 60_000;
 
 /**
  * The bot's `bash`, over the same operations as the coding session's: the
@@ -74,11 +65,29 @@ export function createBotProfile(): ForeverProfile {
 
   // What the user wrote lately: a saved traveler's consent must be their words.
   const recentUserText = new RecentUserText();
+  let memory: ChatMemory | null = null;
+  const chatMemory = (): ChatMemory => {
+    if (memory == null) throw new Error("bot memory used before prepare()");
+    return memory;
+  };
 
   return {
+    prepare: async (mode) => {
+      memory = new ChatMemory(
+        home,
+        mode,
+        () =>
+          recentUserText
+            .read()
+            .map((each) => each.text)
+            .join("\n\n"),
+        () => undefined
+      );
+      await memory.start();
+    },
     systemPrompt: () => [botOperatingPrompt()],
     tools: (cwd) => [
-      buildBotMemoryTool(home),
+      ...(chatMemory().tool() != null ? [chatMemory().tool()] : []),
       buildBotTimeTool(),
       buildBotReactionTool(),
       ...buildOwnerTools({ recentUserText }),
@@ -86,35 +95,29 @@ export function createBotProfile(): ForeverProfile {
       ...(isOwnerAudience() ? [buildSetUserLanguageTool()] : []),
       botBashTool(cwd),
     ],
-    // The bot's own memory tool replaces the desktop's global one.
+    // The chat's own memory tool; no MCP server serves one.
     replacesMcpTool: (name) =>
-      name === BOT_MEMORY_TOOL_NAME ||
-      name.endsWith(`_${BOT_MEMORY_TOOL_NAME}`) ||
+      name === MEMORY_TOOL_NAME ||
+      name.endsWith(`_${MEMORY_TOOL_NAME}`) ||
       name === BOT_TIME_TOOL_NAME ||
       name === BOT_REACTION_TOOL_NAME,
     alwaysAllowedTools: [BOT_REACTION_TOOL_NAME],
     canAskForApproval: true,
     memory: {
-      recentPrompt: () => recentNotesPrompt(home),
-      standingPrompt: () => coreMemoryPrompt(home),
-      fingerprint: () => memoryFingerprint(home),
+      // The block is built once, in prepare(): it sits in the cached prefix.
+      recentPrompt: () => null,
+      standingPrompt: () => chatMemory().prompt(),
+      fingerprint: () => "",
       flushAtWindowShare: FLUSH_AT_WINDOW_SHARE,
       flush: () => ({ customType: FLUSH_CUSTOM_TYPE, content: flushPrompt() }),
-      claimConsolidation: () => {
-        const state = readBotState(home);
-        const due =
-          hasDailyNotes(home) &&
-          Date.now() - (state.lastConsolidatedAt ?? 0) > CONSOLIDATE_EVERY_MS;
-
-        if (!due) return null;
-
-        // Stamped before the turn so an erroring consolidation does not retry
-        // on every message all day.
-        writeBotState(home, { ...state, lastConsolidatedAt: Date.now() });
-        return {
-          customType: CONSOLIDATE_CUSTOM_TYPE,
-          content: consolidatePrompt(),
-        };
+      saveCheck: (ownWords) => {
+        const content = chatMemory().saveCheck(ownWords);
+        return content == null
+          ? null
+          : {
+              customType: MEMORY_SAVE_CHECK_TYPE,
+              content: `${content} Then reply with exactly NO_REPLY.`,
+            };
       },
     },
     continuations: {
@@ -134,7 +137,8 @@ export function createBotProfile(): ForeverProfile {
     },
     // A details stop the user answered binds where saved travelers fill.
     browserTask: { userWords: recentUserText.read },
-    beforeTurn: () => "",
+    // What changed in memory elsewhere since the last turn, as a hidden line.
+    beforeTurn: (message) => chatMemory().beginTurn(message),
     noteUserWords: (text) => recentUserText.note(text),
     afterTurn: () => undefined,
   };

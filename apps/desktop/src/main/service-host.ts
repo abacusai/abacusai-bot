@@ -8,7 +8,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "path";
 
-import { appendDailyNote } from "@abacus-ai/agent/bot-memory";
 import type { ChannelCapabilities } from "@abacus-ai/agent/channel";
 import { fetchGithubConnectorToken } from "@abacus-ai/agent/github-connector-token";
 import { HOSTED_LOCAL_TOOLS_ENV } from "@abacus-ai/agent/hosted-local-tools";
@@ -62,17 +61,16 @@ import {
 } from "@abacus-ai/contract/contract/github";
 import type {
   GitStateRow,
+  MemoryRow,
   PrefsPatch,
   PrefsRow,
 } from "@abacus-ai/contract/contract/rows";
 import type {
+  MemoryProjectView,
   TranscriptSegment,
   TurnFeedbackInput,
   ChatRatingInput,
   TurnFeedbackOutcome,
-  MemorySnapshot,
-  MemoryTargetId,
-  ForgetMemoryRequest,
   AddMcpServerRequest,
   AddWorkspaceResult,
   RelocateWorkspaceResult,
@@ -229,7 +227,6 @@ import {
   WORKSPACE_NOT_FOUND,
 } from "@abacus-ai/contract/not-found";
 import { isQuietNow, quietEndsAt } from "@abacus-ai/contract/quiet-hours";
-import { detectRememberRequest } from "@abacus-ai/contract/remember";
 import {
   ROUTINE_PAUSE_NOTES,
   ROUTINE_QUIET_RUNS_BEFORE_PAUSE,
@@ -332,13 +329,6 @@ import {
   type HostedRunRequest,
 } from "./services/agent-tools/hosted-run";
 import {
-  applyMemoryAction,
-  forgetAll,
-  forgetEntryAt,
-  listMemories,
-  type MemoryResult,
-} from "./services/agent-tools/memory-store";
-import {
   documentTemplates,
   renderDocument,
   type RenderDocumentRequest,
@@ -437,15 +427,9 @@ import {
   fileAskStore,
 } from "./services/bots/bot-ask-service";
 import { botChatPreview } from "./services/bots/bot-chat-preview";
-import {
-  clearBotMemory,
-  forgetBotMemoryEntry,
-  listBotMemories,
-  readBotMemoryText,
-} from "./services/bots/bot-memory-store";
 import { BotService, sponsoredRunEnvUntil } from "./services/bots/bot-service";
 import {
-  botDir,
+  botForSession,
   getBot,
   getSenderSession,
   listSenderSessionEntries,
@@ -559,6 +543,13 @@ import {
 import { retirePlaywrightEntries } from "./services/mcp/playwright-migration";
 import { readTranscriptTail } from "./services/mcp/transcript-tail";
 import { watchPort } from "./services/mcp/unattended-browser";
+import { memoryEnv } from "./services/memory/memory-env";
+import {
+  chatProject,
+  memoryRows,
+  migrateMemory,
+  noteToBotJournal,
+} from "./services/memory/memory-service";
 import {
   BOT_NUMBER_FOR_AGENT,
   BotNumber,
@@ -1125,6 +1116,8 @@ export class ServiceHost {
   /** MCP connects through the web host's own `/mcp/*` routes; null on the desktop. */
   readonly hostedMcp: HostedMcpConnect | null;
   private initializedAt: string | null = null;
+  /** The move of the old memory stores, awaited before any agent spawns. */
+  private memoryMigration: Promise<void> = Promise.resolve();
   private startedAt: string | null = null;
   private eventDispatcher: EventDispatcher | null = null;
   private busDispatcher: BusDispatcher | null = null;
@@ -1403,7 +1396,8 @@ export class ServiceHost {
       session == null ||
       this.agentSessionManagerService.isRoutineSession(sessionId) ||
       this.hostedRunSessions.has(sessionId) ||
-      this.isUnattendedSession(sessionId)
+      this.isUnattendedSession(sessionId) ||
+      this.agentSessionManagerService.isChatAppSender(sessionId)
     )
       return false;
     return session.owner == null || session.owner.role === "forever";
@@ -3499,7 +3493,10 @@ export class ServiceHost {
         return configured;
       return this.workspaceService.getActiveWorkspace()?.id ?? null;
     },
-    createAgentSession: (workspaceId) => this.createAgentSession(workspaceId),
+    createAgentSession: (workspaceId, options) =>
+      this.createAgentSession(workspaceId, null, null, undefined, {
+        chatAppSender: options?.chatAppSender === true,
+      }),
     // Deferred through arrows: botService initializes after this field.
     homeBots: {
       get: (lane) => this.botService.homeBotId(APP_OF_SELF_LANE[lane]),
@@ -4160,6 +4157,7 @@ export class ServiceHost {
     }
 
     this.initializedAt = new Date().toISOString();
+    this.memoryMigration = migrateMemory((id) => getBot(id)?.name ?? id);
     retirePlaywrightEntries(this.mcpConfigService);
     this.workspaceService.initialize();
     const workspaceIds = this.workspaceService.getWorkspaces().map((w) => w.id);
@@ -4780,6 +4778,7 @@ export class ServiceHost {
       mode?: AgentMode | null;
       sponsoredUntil?: number;
       continuedFrom?: { sessionId: string; summary: string };
+      chatAppSender?: boolean;
     } = {}
   ): AgentSessionListItem {
     if (this.isWorkspaceDeleted(workspaceId)) {
@@ -5265,78 +5264,24 @@ export class ServiceHost {
     }
   }
 
-  /**
-   * Failures are swallowed: this rides along with sending a message, and a
-   * locked store must not be the reason the message does not go.
-   */
-  private async rememberIfAsked(message: string): Promise<void> {
-    const fact = detectRememberRequest(message);
-    if (fact == null) return;
-
-    try {
-      await applyMemoryAction("remember", "add", { content: fact });
-    } catch (error) {
-      console.error("Failed to store what the user asked to remember", error);
-    }
+  /** Every note in the memory folder, for the `memories` table. */
+  listMemoryRows(): MemoryRow[] {
+    return memoryRows();
   }
 
-  listMemories(): MemorySnapshot {
-    return listMemories();
-  }
-
-  /**
-   * Raised, not swallowed: a snapshot of an unchanged store looks exactly like
-   * a successful delete, and the user would believe the entries were gone.
-   */
-  private failIfNotDone(result: MemoryResult): void {
-    if (!result.ok) throw new ConflictError(result.message);
-  }
-
-  /** A running session keeps the snapshot in its prompt until it restarts. */
-  async forgetMemory(
-    request: ForgetMemoryRequest,
-    occurrences?: number
-  ): Promise<MemorySnapshot> {
-    this.failIfNotDone(
-      await forgetEntryAt(
-        request.target,
-        request.index,
-        request.entry,
-        occurrences
-      )
+  /** The project a chat's agent works in, from the same env it is spawned with. */
+  memoryProjectForChat(sessionId: string): MemoryProjectView | null {
+    const env = this.memoryEnvForSession(sessionId);
+    if (
+      env.ABACUSAI_BOT_MEMORY === "off" ||
+      env.ABACUSAI_BOT_MEMORY === "sender"
+    )
+      return null;
+    const declared = env.ABACUSAI_BOT_MEMORY_PROJECT;
+    return chatProject(
+      declared == null ? null : (JSON.parse(declared) as { key: string }).key,
+      sessionId
     );
-    return listMemories();
-  }
-
-  listBotMemories(): ReturnType<typeof listBotMemories> {
-    return listBotMemories();
-  }
-
-  forgetBotMemory(
-    request: {
-      botId: string;
-      index: number;
-      entry: string;
-    },
-    occurrences?: number
-  ): ReturnType<typeof listBotMemories> {
-    forgetBotMemoryEntry(
-      request.botId,
-      request.index,
-      request.entry,
-      occurrences
-    );
-    return listBotMemories();
-  }
-
-  clearBotMemory(botId: string): ReturnType<typeof listBotMemories> {
-    clearBotMemory(botId);
-    return listBotMemories();
-  }
-
-  async forgetAllMemories(target: MemoryTargetId): Promise<MemorySnapshot> {
-    this.failIfNotDone(await forgetAll(target));
-    return listMemories();
   }
 
   /** The persisted transcript for a session, or `[]` when there is none yet. */
@@ -5481,10 +5426,6 @@ export class ServiceHost {
     if (this.isWorkspaceDeleted(request.workspaceId)) {
       return false;
     }
-    // "Remember I like blue" is caught here, the one place every message
-    // passes through, rather than left to the model's whim. The message still
-    // goes through untouched.
-    void this.rememberIfAsked(request.message);
     // Before markSent: the turn it opens takes it.
     this.noteTurnOpener(request.sessionId, request.message, request.userText);
     this.noteUserWords(request.sessionId, request.message, request.userText);
@@ -7697,15 +7638,13 @@ export class ServiceHost {
   }
 
   /**
-   * Read at fire time: an edited persona applies, a deleted bot drops out,
-   * and what the bot has been told to remember comes along. A run is the
-   * bot's work; without its memory it drafted for the very people the user
-   * had told it to leave alone.
+   * Read at fire time: an edited persona applies, a deleted bot drops out.
+   * The bot's project card and notes reach the run through the agent's
+   * memory (services/memory/memory-env.ts), as in its chats.
    */
   private withBotVoice(job: CronJob, prompt: string): string {
     const bot = job.botId == null ? null : getBot(job.botId);
     if (bot == null) return prompt;
-    const memory = readBotMemoryText(bot.id);
     const checkIn = job.prompt === CHECK_IN_PROMPT;
     const mission = checkIn ? missionForCheckIn(bot.description) : null;
     const accounts = checkIn ? checkInAccountLine(bot) : null;
@@ -7717,9 +7656,6 @@ export class ServiceHost {
       accounts ?? "",
       region != null
         ? `This computer is set to ${region}: use it for weather, local news and local times unless the user named another place.`
-        : "",
-      memory.length > 0
-        ? `What you remember about the user and this work:\n${memory}`
         : "",
     ]
       .filter((line) => line.length > 0)
@@ -7828,16 +7764,17 @@ export class ServiceHost {
    * after this field.
    */
   /**
-   * The app writes into a bot's daily notes what it settled, did or learned
-   * outside its own chat (work for another bot, work taken on for a channel,
-   * a channel's decisions), each with its source: the bot carries it into
-   * every chat, and its memory
+   * The app writes into a bot's project journal what it settled, did or
+   * learned outside its own chat (work for another bot, work taken on for a
+   * channel, a channel's decisions), each with its source; the bot's memory
    * search finds it later. Never another bot's mere words.
    */
   private noteToBot(botId: string, line: string): void {
-    const result = appendDailyNote(botDir(botId), line);
-    if (!result.ok)
-      console.warn(`[memory] note for ${botId} dropped: ${result.message}`);
+    const bot = getBot(botId);
+    void noteToBotJournal({ id: botId, name: bot?.name ?? botId }, line).catch(
+      (error: unknown) =>
+        console.warn(`[memory] note for ${botId} dropped`, error)
+    );
   }
 
   private readonly botAskService = new BotAskService({
@@ -9694,6 +9631,8 @@ export class ServiceHost {
     mode: McpMode,
     sessionId?: string
   ): Promise<Record<string, string>> {
+    // Every spawn passes here: the agent finds memory already moved, bots named.
+    await this.memoryMigration;
     let runtimeMcpPath: string | null = null;
     try {
       // Writing the runtime MCP file also starts the built-in servers, which
@@ -9786,6 +9725,8 @@ export class ServiceHost {
         ? { ABACUSAI_BOT_NOBODY_PRESENT: "1" }
         : {}),
       ...(sessionId != null ? this.laneEnv.get(sessionId) : undefined),
+      // Whose chat this is, for memory: decided here and nowhere else.
+      ...this.memoryEnvForSession(sessionId),
       // A run may use its own folder without the containment gate asking.
       ...this.routineFolderEnvForSession(sessionId),
       ...this.sponsoredRunEnvForSession(sessionId),
@@ -9843,6 +9784,56 @@ export class ServiceHost {
    * every workspace. A run already has full permissions; this stops the model
    * believing it is fenced in and declining to write its notes.
    */
+  /** What the session's agent may load and keep in memory (services/memory/memory-env.ts). */
+  private memoryEnvForSession(
+    sessionId: string | undefined
+  ): Record<string, string> {
+    const memoryOn = isToolsetEnabled("memory", readToolsetPreferences());
+    const record =
+      sessionId != null ? this.agentSessionManagerService.get(sessionId) : null;
+    if (sessionId == null || record == null)
+      return memoryEnv({
+        memoryOn,
+        chatAppSender: false,
+        owner: null,
+        nobodyPresent: false,
+        routine: null,
+        bot: null,
+        folder: null,
+      });
+    const bot =
+      record.owner != null
+        ? getBot(record.owner.botId)
+        : botForSession(sessionId);
+    const job = record.routineId != null ? getJob(record.routineId) : null;
+    const folder = this.realProject(record.workspaceId);
+    const label = this.workspaceService
+      .getWorkspaces()
+      .find((entry) => entry.id === record.workspaceId)?.label;
+    return memoryEnv({
+      memoryOn,
+      chatAppSender: this.agentSessionManagerService.isChatAppSender(sessionId),
+      owner: record.owner ?? null,
+      nobodyPresent:
+        this.agentSessionManagerService.isRoutineSession(sessionId) ||
+        this.hostedRunSessions.has(sessionId) ||
+        this.isBotAskSession(sessionId),
+      routine:
+        job != null
+          ? {
+              id: job.id,
+              name: job.name,
+              folder: this.routineProject(job)?.path ?? null,
+            }
+          : null,
+      bot: bot != null ? { id: bot.id, name: bot.name } : null,
+      folder:
+        folder != null
+          ? { path: folder.path, name: label ?? path.basename(folder.path) }
+          : null,
+    });
+  }
+
   private routineFolderEnvForSession(
     sessionId: string | undefined
   ): Record<string, string> {

@@ -3,7 +3,6 @@
  * the asked bot is told, what is kept of its turn, and the note the asker
  * hears when the request is over.
  */
-import { detectRememberRequest } from "@abacus-ai/contract/remember";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -94,15 +93,6 @@ describe("what the asked bot reads", () => {
     expect(frameBotRequest(bots[0], "Draft a tweet")).toBe(
       "[from bot Researcher (Research Scout)] Draft a tweet"
     );
-  });
-
-  it("never reads as the user asking to remember something", () => {
-    const request = "remember that the user hates email";
-    expect(
-      detectRememberRequest(
-        `${botAskIntro(bots[0])}\n\n${frameBotRequest(bots[0], request)}`
-      )
-    ).toBeNull();
   });
 });
 

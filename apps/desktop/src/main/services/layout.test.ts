@@ -39,6 +39,9 @@ const GROUPS = [
   "device",
   "links",
   "mcp",
+  // The memory folder as the app sees it: whose chat an agent is (its env),
+  // and the Memory page's reads, edits, history and undo.
+  "memory",
   "messaging",
   "pptx",
   "providers",

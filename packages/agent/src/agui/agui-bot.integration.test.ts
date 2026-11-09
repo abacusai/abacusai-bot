@@ -4,7 +4,6 @@
  * before housekeeping, and a hidden housekeeping turn adds nothing to AG-UI
  * while compat keeps what the bot leaks today.
  */
-import * as fs from "node:fs";
 import * as path from "node:path";
 
 import { afterAll, describe, expect, it } from "vitest";
@@ -25,14 +24,6 @@ describe("bot", () => {
     const l = await live({
       realSessionChoice: true,
       env: { ABACUSAI_BOT_BOT_DIR: BOT_DIR, PI_OFFLINE: "1" },
-      setup: () => {
-        // A daily note makes the consolidation turn due after this reply.
-        fs.mkdirSync(path.join(BOT_DIR, "memory"), { recursive: true });
-        fs.writeFileSync(
-          path.join(BOT_DIR, "memory", "2026-01-01.md"),
-          "- met the user\n"
-        );
-      },
       reply: (index) =>
         index === 0
           ? { say: "<think>pondering</think><reply>Hi there</reply>" }
@@ -40,7 +31,8 @@ describe("bot", () => {
     });
 
     try {
-      l.send(runInput("r1", "hello bot"));
+      // Asked to remember, the reply saves nothing: the save check is the housekeeping turn.
+      l.send(runInput("r1", "remember I take my tea black"));
       await l.waitFor(hasType("RUN_FINISHED"), "user run finished");
       await l.waitFor(() => l.providerCalls() >= 2, "housekeeping turn");
       // The hidden turn's end reaches compat as its usage only.
@@ -64,7 +56,7 @@ describe("bot", () => {
       const assistantText = inRun
         .filter((event) => event.type === "TEXT_MESSAGE_CONTENT")
         .map((event) => (event as { delta: string }).delta)
-        .filter((delta) => delta !== "hello bot")
+        .filter((delta) => delta !== "remember I take my tea black")
         .join("");
       const compatText = l
         .compat()
@@ -104,30 +96,20 @@ describe("bot", () => {
     }
   });
 
-  it("runs no memory housekeeping in a held chat, so the day's consolidation stays the owner's", async () => {
+  it("runs no memory housekeeping in a held chat: nobody there asked to keep anything", async () => {
     const l = await live({
       realSessionChoice: true,
       mode: "UNATTENDED",
       env: { ABACUSAI_BOT_BOT_DIR: BOT_DIR, PI_OFFLINE: "1" },
-      setup: () => {
-        // The same due consolidation as above, and no stamp of one yet.
-        fs.mkdirSync(path.join(BOT_DIR, "memory"), { recursive: true });
-        fs.writeFileSync(
-          path.join(BOT_DIR, "memory", "2026-01-01.md"),
-          "- met the user\n"
-        );
-        fs.rmSync(path.join(BOT_DIR, "state.json"), { force: true });
-      },
       reply: () => ({ say: "<reply>Hi there</reply>" }),
     });
 
     try {
-      l.send(runInput("r1", "hello bot"));
+      l.send(runInput("r1", "remember I take my tea black"));
       await l.waitFor(hasType("RUN_FINISHED"), "user run finished");
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       expect(l.providerCalls()).toBe(1);
-      expect(fs.existsSync(path.join(BOT_DIR, "state.json"))).toBe(false);
     } finally {
       await l.close();
     }

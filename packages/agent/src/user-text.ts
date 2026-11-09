@@ -124,6 +124,7 @@ export const APP_NOTE_TAGS = {
     "bot request",
     "memory flush",
     "memory maintenance",
+    "memory check",
   ],
   part: [
     "auto-reply",

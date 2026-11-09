@@ -9,7 +9,6 @@ import { DOCUMENTS_TOOLS } from "./documents";
 import { GITHUB_WATCH_TOOLS } from "./github-watch";
 import { INTEGRATIONS_TOOLS } from "./integrations";
 import { MEDIA_TOOLS } from "./media";
-import { MEMORY_TOOLS } from "./memory";
 import { MESSAGING_TOOLS } from "./messaging";
 import { PAID_FEATURE_TOOLS } from "./paid-features";
 import { SESSIONS_TOOLS } from "./sessions";
@@ -27,7 +26,6 @@ import { TODO_TOOLS } from "./todo";
 export const AGENT_TOOLS: readonly ToolDefinition[] = [
   ...SKILLS_TOOLS,
   ...TODO_TOOLS,
-  ...MEMORY_TOOLS,
   ...CRONJOB_TOOLS,
   ...MEDIA_TOOLS,
   ...INTEGRATIONS_TOOLS,

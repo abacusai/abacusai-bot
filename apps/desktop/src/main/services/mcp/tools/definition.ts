@@ -18,7 +18,6 @@ export type ToolHost = Pick<
   | "skillView"
   | "skillManage"
   | "todo"
-  | "memory"
   | "cronjob"
   | "analyze"
   | "imageGenerate"

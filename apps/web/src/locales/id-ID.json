@@ -555,9 +555,7 @@
       "memory": {
         "empty": "This bot has not saved any core memories yet.",
         "forget": "Forget this",
-        "notes": "{{count}} day(s) of working notes on disk.",
-        "clear": "Clear all",
-        "clearConfirm": "Forget everything here?"
+        "manage": "Kelola di Pengaturan"
       },
       "delegatesFreely": "Boleh bertanya ke bot lain tanpa konfirmasi",
       "delegatesFreelyDetail": "Bertanya ke bot lain Anda dan memberi mereka pekerjaan bila membantu, tanpa menanyakan Anda setiap kali. Hanya saat menjawab Anda."
@@ -1038,7 +1036,7 @@
     "empty": "Belum ada yang ingat. Agen menulis di sini sendiri ketika ia mempelajari sesuatu yang layak dilakukan di antara sesi: preferensi Anda, fakta tentang pengaturan Anda.",
     "forget": "Lupakan ini",
     "loading": "Membaca memori…",
-    "readFailed": "Tidak dapat membaca apa yang diingat. Filenya ada di ~/.abacusai-bot/memories.",
+    "readFailed": "Tidak dapat membaca apa yang diingat. Filenya ada di ~/.abacusai-bot/memory.",
     "storeEmpty": "Belum ada apa pun di sini.",
     "stores": {
       "memory": {
@@ -1066,7 +1064,6 @@
       "unsaved": "Belum disimpan",
       "applies": "Berlaku untuk pesan Anda berikutnya, termasuk dalam obrolan yang sudah terbuka."
     },
-    "rememberedToast": "Ditambahkan ke otak AI saya.",
     "sections": {
       "sessions": "Sesi",
       "bots": "Bot"
@@ -1074,7 +1071,59 @@
     "bots": {
       "notes": "{{count}} hari catatan kerja pada disk.",
       "empty": "Bot ini belum menyimpan memori inti apa pun."
-    }
+    },
+    "edit": "Edit",
+    "add": "Tambah",
+    "addPlaceholder": "Sesuatu untuk diingat…",
+    "typeLabel": "Jenis catatan",
+    "saveRefused": "Tidak disimpan: {{reason}}",
+    "busy": "Memori sedang diubah pada saat yang sama. Coba lagi.",
+    "types": {
+      "profile": "Profil",
+      "rule": "Aturan",
+      "preference": "Preferensi",
+      "fact": "Fakta",
+      "decision": "Keputusan",
+      "reference": "Referensi",
+      "status": "Status",
+      "card": "Kartu proyek"
+    },
+    "kinds": {
+      "folder": "Folder",
+      "bot": "Bot",
+      "routine": "Rutinitas",
+      "topic": "Topik"
+    },
+    "history": {
+      "title": "Riwayat",
+      "saved": "Disimpan",
+      "changed": "Diubah",
+      "forgot": "Dilupakan",
+      "noted": "Dicatat",
+      "undo": "Urungkan",
+      "changedSince": "Catatan itu sudah berubah sejak itu. Urungkan dulu perubahan yang lebih baru."
+    },
+    "by": {
+      "you": "Anda",
+      "chat": "Sebuah chat",
+      "routine": "Sebuah rutinitas",
+      "bot": "Sebuah bot",
+      "contact": "Chat seseorang dengan bot",
+      "app": "Aplikasi"
+    },
+    "you": {
+      "title": "Tentang Anda",
+      "detail": "Siapa Anda dan bagaimana Anda suka sesuatu dikerjakan. Setiap chat membaca aturan dan preferensi Anda."
+    },
+    "projects": {
+      "title": "Proyek"
+    },
+    "aboutContact": "Tentang {{name}}",
+    "clearProject": "Lupakan catatan proyek ini?",
+    "clearProjectDetail": "Catatannya dihapus dan kartunya dikosongkan. Setiap perubahan bisa diurungkan dari Riwayat.",
+    "clearYou": "Lupakan semua tentang Anda?",
+    "withheld": "Dihapus saat memori dipindahkan karena terlihat seperti kata sandi atau kunci: {{entries}}. Simpan rahasia di brankas.",
+    "chatProject": "Proyek: {{name}}. Buka di Memori"
   },
   "messaging": {
     "advanced": "Lanjutan ({{count}})",
@@ -3458,7 +3507,8 @@
       "askWaiting": "Waiting for a response…",
       "askSkipped": "Skipped",
       "askBot": "Bertanya kepada {{bot}}: {{what}}",
-      "giveTask": "Memberikan tugas kepada {{bot}}: {{what}}"
+      "giveTask": "Memberikan tugas kepada {{bot}}: {{what}}",
+      "memoryUpdated": "Memori diperbarui: {{name}}"
     },
     "transcript": {
       "jump": "Jump to the end",
@@ -3802,7 +3852,6 @@
     "off": "Off",
     "systemLanguage": "System ({{language}})",
     "forget": "Forget this",
-    "memoryConflict": "Tidak ada yang dihapus. Sebuah sesi sedang menulis ke memori pada saat yang sama. Coba lagi.",
     "clearAll": "Clear all",
     "forgetDescription": "Forget everything here?",
     "quietUntil": "Now quiet until {{end}}",
@@ -4015,11 +4064,6 @@
       "PLAN": "Reads and plans only",
       "YOLO": "Nothing asks",
       "ACCEPTEDITS": "Edits go through, commands ask"
-    },
-    "memoryTargets": {
-      "remember": "Always remember",
-      "user": "About you",
-      "memory": "The agent’s own notes"
     },
     "cues": {
       "sent": "Sent",
@@ -4259,8 +4303,6 @@
       "too-long": "This is too long",
       "schedule-invalid": "Choose a valid schedule"
     },
-    "rememberedByBots": "Remembered by bots",
-    "botMemoryCount": "{{name}} · {{count}} things",
     "showMemory": "Show memories",
     "pairingPending": "Finish linking your messaging apps.",
     "finishPairing": "Link {{platform}}",

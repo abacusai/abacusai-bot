@@ -105,7 +105,7 @@ it("opens each keyless stream once and reaches every area's queries", async () =
       true
     );
     expect(reached(orpc.bots.chatPreviews.queryKey({ input: {} }))).toBe(true);
-    expect(reached(orpc.memory.bots.queryKey({ input: {} }))).toBe(true);
+    expect(reached(orpc.memory.key())).toBe(true);
     expect(reached(orpc.settings.get.key())).toBe(true);
   });
 });

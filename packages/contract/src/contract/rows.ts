@@ -9,7 +9,6 @@ import type { Bot } from "../bots";
 import type {
   AgentSessionListItem,
   GitStateSnapshot,
-  MemoryTargetId,
   RoutineRunItem,
   SessionArtifact,
   SessionTurnPhase,
@@ -106,21 +105,31 @@ export type RoutineRunRow = RoutineRunItem & {
 
 export type ArtifactRow = SessionArtifact;
 
+/** One note in the memory folder. */
 export interface MemoryRow {
-  /** `${scope}:${botId ?? target}:${sha256(entry).slice(0, 16)}:${n}` */
+  /** The note's path relative to the memory folder. */
   id: string;
-  scope: "global" | "bot";
-  target: MemoryTargetId | null;
-  botId: string | null;
-  botName: string | null;
-  index: number;
-  entry: string;
-  /**
-   * Copies of `entry` in the same list. A delete sends it back, so a stale
-   * click on one of two identical entries is `CONFLICT`, not the other's
-   * removal.
-   */
-  occurrences: number;
+  scope: "you" | "project" | "contact";
+  /** The project's slug. */
+  project: string | null;
+  contact: string | null;
+  name: string;
+  description: string;
+  type:
+    | "profile"
+    | "rule"
+    | "preference"
+    | "fact"
+    | "decision"
+    | "reference"
+    | "status"
+    | "card";
+  body: string;
+  /** YYYY-MM-DD */
+  updated: string;
+  by: "you" | "chat" | "routine" | "bot" | "contact" | "app";
+  model: string | null;
+  expires: string | null;
 }
 
 export type WorkspaceRow = WorkspaceListItem & { isActive: boolean };

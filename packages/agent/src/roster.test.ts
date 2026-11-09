@@ -70,7 +70,10 @@ describe("the roster table", () => {
 });
 
 describe("building the roster", () => {
-  const context = (provided: string[]): RosterContext =>
+  const context = (
+    provided: string[],
+    memoryTool: { name: string } | null = null
+  ): RosterContext =>
     ({
       cwd: "/tmp/roster-ws",
       agentDir: "/tmp/roster-agent",
@@ -83,6 +86,8 @@ describe("building the roster", () => {
       operations: {} as never,
       mcp: () => ({ tools: [], clients: [], statuses: [] }) as never,
       provided: new Set(provided),
+      memoryTool,
+      pastChats: true,
       mode: () => "normal" as never,
       sessionId: () => undefined,
       emit: () => undefined,
@@ -94,12 +99,22 @@ describe("building the roster", () => {
       roster.tools.map((tool) => tool.name);
 
     const bare = names(buildRoster(context([]), () => false));
-    expect(bare).toEqual(expect.arrayContaining(["todo", "memory", "serve"]));
+    expect(bare).toEqual(expect.arrayContaining(["todo", "serve"]));
 
-    const served = names(buildRoster(context(["todo", "memory"]), () => false));
+    const served = names(buildRoster(context(["todo"]), () => false));
     expect(served).not.toContain("todo");
-    expect(served).not.toContain("memory");
     expect(served).toContain("serve");
+  });
+
+  it("registers memory only for a chat that has it", () => {
+    const names = (roster: { tools: { name: string }[] }): string[] =>
+      roster.tools.map((tool) => tool.name);
+    expect(names(buildRoster(context([]), () => false))).not.toContain(
+      "memory"
+    );
+    expect(
+      names(buildRoster(context([], { name: "memory" }), () => false))
+    ).toContain("memory");
   });
 
   it("keeps the always-on tools whatever is provided", () => {

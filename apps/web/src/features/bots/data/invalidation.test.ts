@@ -49,10 +49,9 @@ afterEach(async () => {
   if (db)
     await Promise.all(Object.values(db.collections).map((c) => c.cleanup()));
 });
-it("routes previews, messaging, memory, connector status, sender insert and bot rename precisely", async () => {
+it("routes previews, messaging, connector status and sender insert precisely", async () => {
   const bots = source(),
     messaging = source(),
-    memory = source(),
     connectors = source(),
     attention = source();
   const bot = fixtureBots()[0]!;
@@ -77,7 +76,6 @@ it("routes previews, messaging, memory, connector status, sender insert and bot 
       messaging: {
         events: impl.messaging.events.handler(messaging.stream as never),
       },
-      memory: { events: impl.memory.events.handler(memory.stream as never) },
       connectors: {
         events: impl.connectors.events.handler(connectors.stream as never),
       },
@@ -123,12 +121,10 @@ it("routes previews, messaging, memory, connector status, sender insert and bot 
   await expectKeys([q.chatPreviews()]);
   messaging.push({ type: "changed" });
   await expectKeys([q.senderChats(), q.messaging()]);
-  memory.push({ type: "changed" });
-  await expectKeys([q.memoryBots()]);
   connectors.push({ type: "status-changed" });
   await expectKeys([q.connectorStatuses()]);
+  // A rename is not a derived query's business any more.
   feed.bots.upsert({ ...bot, name: "Renamed" });
-  await expectKeys([q.memoryBots()]);
   feed.sessions.upsert({ ...session, id: "new-sender" });
   await expectKeys([q.senderChats()]);
   connectors.push({

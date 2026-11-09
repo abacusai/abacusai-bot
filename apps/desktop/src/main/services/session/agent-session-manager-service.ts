@@ -77,6 +77,11 @@ type SessionRecord = {
   continuedFrom?: string;
   /** That chat's summary, owed to this one's first message and then dropped. */
   continuationSeed?: string;
+  /**
+   * Someone other than the user, writing from a chat app with no bot: never
+   * the user's own conversation. Stamped once at mint.
+   */
+  chatAppSender?: boolean;
 };
 
 // Persisted, so the old name stays. See workspace-store.ts.
@@ -193,6 +198,7 @@ export class AgentSessionManagerService {
       mode?: AgentMode | null;
       sponsoredUntil?: number;
       continuedFrom?: { sessionId: string; summary: string };
+      chatAppSender?: boolean;
     } = {}
   ): AgentSessionListItem {
     if (
@@ -227,6 +233,7 @@ export class AgentSessionManagerService {
         ? { sponsoredUntil: initial.sponsoredUntil }
         : {}),
       ...this.continuationFrom(workspaceId, routineId, owner, initial),
+      ...(initial.chatAppSender === true ? { chatAppSender: true } : {}),
     };
     this.sessions.set(sessionId, record);
     const workspaceSessionIds = this.workspaceSessionIds.get(workspaceId) ?? [];
@@ -444,6 +451,11 @@ export class AgentSessionManagerService {
   }
 
   /** A session that exists to run a routine: minted by a fire, or a bot's routine chat. */
+  /** Someone else's chat from a chat app with no bot (see SessionRecord.chatAppSender). */
+  isChatAppSender(sessionId: string): boolean {
+    return this.sessions.get(sessionId)?.chatAppSender === true;
+  }
+
   isRoutineSession(sessionId: string): boolean {
     const record = this.sessions.get(sessionId);
     return record?.routineId != null || record?.owner?.role === "routine";

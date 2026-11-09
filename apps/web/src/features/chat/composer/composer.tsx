@@ -1,5 +1,4 @@
 import { AgentMode } from "@abacus-ai/contract/agent-types";
-import { detectRememberRequest } from "@abacus-ai/contract/remember";
 /**
  * The composer (spec 02 §8): a compound around the draft store. The bot pill
  * grows into a box on focus, text or attachments; the session box has two
@@ -44,7 +43,6 @@ import {
 import { documentSoundPlayer } from "#renderer/lib/document-sound";
 import { useMotionPreference } from "#renderer/lib/motion";
 import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
-import { showInfo } from "#renderer/lib/toast";
 import { useMediaQuery } from "#renderer/lib/use-media-query";
 import type { VoiceState } from "#renderer/lib/voice/operation";
 import { useConnectedDictation } from "#renderer/lib/voice/use-dictation";
@@ -942,8 +940,6 @@ export const ThreadComposer = () => {
               )
                 clearDraft(threadId);
               config.onFirstSend?.(route.text);
-              if (detectRememberRequest(route.text) != null)
-                showInfo(t("memory.rememberedToast"));
             }
           })
           .catch((thrown: unknown) => {

@@ -8,12 +8,9 @@ import path from "path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { botDailyNoteFile } from "../bot/bot-config.js";
-import {
-  addCoreEntry,
-  appendDailyNote,
-  readCoreEntries,
-} from "../bot/bot-memory.js";
+import { readMemoryContext } from "../memory/lanes.js";
+import { listNotes, listProjects, readJournal } from "../memory/notes.js";
+import { buildMemoryTool } from "../memory/tool.js";
 import { phonePaths } from "../phone/phone-config.js";
 import {
   aboutYouEntries,
@@ -69,14 +66,39 @@ describe("the phone's memory writers", () => {
   });
 });
 
-describe("a bot's memory writers", () => {
-  it("withhold ID numbers in core memory and the daily notes", () => {
-    addCoreEntry(dir, `Owner's ${ID}`);
-    appendDailyNote(dir, `Used ${ID} for the booking`);
+describe("the memory tool", () => {
+  it("withholds ID numbers in notes and journal lines", async () => {
+    const context = readMemoryContext(dir, "default", {
+      ABACUSAI_BOT_MEMORY: "owner",
+      ABACUSAI_BOT_MEMORY_PROJECT: JSON.stringify({
+        kind: "bot",
+        key: "b1",
+        name: "Helper",
+      }),
+    });
+    const tool = buildMemoryTool(context, {
+      userWords: () => "",
+      model: () => undefined,
+      saved: () => undefined,
+    })!;
+    await tool.execute("1", {
+      action: "save",
+      about: "project",
+      type: "fact",
+      text: `Owner's ${ID}`,
+    });
+    await tool.execute("2", {
+      action: "note",
+      text: `Used ${ID} for the booking`,
+    });
+    const slug = listProjects()[0]!.slug;
     const written = [
-      ...readCoreEntries(dir),
-      fs.readFileSync(botDailyNoteFile(dir), "utf8"),
+      ...listNotes({ kind: "project", slug })
+        .filter((note) => note.type !== "card")
+        .map((note) => note.body),
+      ...readJournal({ kind: "project", slug }),
     ];
+    expect(written).toHaveLength(2);
     for (const text of written) {
       expect(text).not.toContain(PASSPORT);
       expect(text).toContain(ID_NUMBER_WITHHELD);

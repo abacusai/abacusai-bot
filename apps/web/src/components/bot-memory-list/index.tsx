@@ -3,14 +3,14 @@ import { useTranslation } from "react-i18next";
 import { Button } from "#renderer/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "#renderer/ui/tooltip";
 
-/** Presentational memory rows, shared by Bots and Settings. */
+/** A bot's notes, each with Forget (the bot side panel). */
 export const BotMemoryList = ({
   entries,
   onForget,
   pendingId,
 }: {
-  entries: readonly { id: string; entry: string }[];
-  onForget(row: { id: string; entry: string }): void;
+  entries: readonly { id: string; body: string }[];
+  onForget(row: { id: string; body: string }): void;
   pendingId?: string;
 }) => {
   const { t } = useTranslation();
@@ -31,15 +31,15 @@ export const BotMemoryList = ({
             />
           }
         >
-          {row.entry}
+          {row.body}
         </TooltipTrigger>
-        <TooltipContent>{row.entry}</TooltipContent>
+        <TooltipContent>{row.body}</TooltipContent>
       </Tooltip>
       <Button
         variant="ghost"
         size="sm"
         disabled={pendingId === row.id}
-        aria-label={t("bots.panel.forgetEntry", { entry: row.entry })}
+        aria-label={t("bots.panel.forgetEntry", { entry: row.body })}
         onClick={() => onForget(row)}
       >
         {t("bots.panel.memory.forget")}

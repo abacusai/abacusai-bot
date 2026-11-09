@@ -2,9 +2,14 @@ import { AgentMode } from "@abacus-ai/contract/agent-types";
 import { languageNameTag } from "@abacus-ai/contract/contract/languages";
 import {
   SUPPORTED_LANGUAGES,
+  type MemoryRow,
   type PrefsRow,
   type SupportedLanguage,
 } from "@abacus-ai/contract/contract/rows";
+import type {
+  MemoryChangeView,
+  MemoryProjectView,
+} from "@abacus-ai/contract/contracts";
 import { isQuietNow } from "@abacus-ai/contract/quiet-hours";
 import { EMPTY_RATING_PROMPT_CARD } from "@abacus-ai/contract/rating-prompt";
 import { useLiveQuery } from "@tanstack/react-db";
@@ -16,7 +21,6 @@ import * as v from "valibot";
 
 import { CompanionSettings } from "#platform/companion";
 import { BotAvatar } from "#renderer/components/bot-avatar";
-import { BotMemoryList } from "#renderer/components/bot-memory-list";
 import { useAppForm } from "#renderer/components/form-kit";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
 import { Choice, SettingSwitch } from "#renderer/components/form-kit/controls";
@@ -37,6 +41,7 @@ import {
 } from "#renderer/data/query-client";
 import { resolveLook } from "#renderer/lib/bots/avatar";
 import { cn } from "#renderer/lib/cn";
+import { formatWhen } from "#renderer/lib/format-time";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import type { Cue } from "#renderer/lib/sound";
@@ -238,6 +243,365 @@ const LanguageRow = () => {
   );
 };
 const InstructionSchema = v.object({ text: v.pipe(v.string(), v.trim()) });
+type NoteType = MemoryRow["type"];
+type MemoryScope = { scope: "you" } | { scope: "project"; project: string };
+const TYPE_LABELS = {
+  profile: "memory.types.profile",
+  rule: "memory.types.rule",
+  preference: "memory.types.preference",
+  fact: "memory.types.fact",
+  decision: "memory.types.decision",
+  reference: "memory.types.reference",
+  status: "memory.types.status",
+  card: "memory.types.card",
+} as const;
+/** What the Add row offers; a status note needs an expiry the agent sets. */
+const ADDABLE: NoteType[] = [
+  "rule",
+  "preference",
+  "fact",
+  "decision",
+  "reference",
+  "profile",
+];
+const KIND_LABELS = {
+  folder: "memory.kinds.folder",
+  bot: "memory.kinds.bot",
+  routine: "memory.kinds.routine",
+  topic: "memory.kinds.topic",
+} as const;
+const ACTION_LABELS = {
+  saved: "memory.history.saved",
+  changed: "memory.history.changed",
+  forgot: "memory.history.forgot",
+  noted: "memory.history.noted",
+} as const;
+const AUTHOR_LABELS = {
+  you: "memory.by.you",
+  chat: "memory.by.chat",
+  routine: "memory.by.routine",
+  bot: "memory.by.bot",
+  contact: "memory.by.contact",
+  app: "memory.by.app",
+} as const;
+/** Rules and preferences first: they are what every chat obeys. */
+const TYPE_ORDER: NoteType[] = [
+  "rule",
+  "preference",
+  "profile",
+  "decision",
+  "fact",
+  "reference",
+  "status",
+];
+const byTypeThenName = (a: MemoryRow, b: MemoryRow) =>
+  TYPE_ORDER.indexOf(a.type) - TYPE_ORDER.indexOf(b.type) ||
+  a.name.localeCompare(b.name);
+/** The page's writes: a refusal names its reason, anything else says so plainly. */
+const useMemoryWrites = () => {
+  const { t } = useTranslation();
+  const { transport, db } = useAppContext();
+  const fail = (error: unknown) =>
+    showError(
+      isRpcError(error) && error.code === "BAD_REQUEST"
+        ? t("memory.saveRefused", { reason: error.message })
+        : isRpcError(error) && error.code === "CONFLICT"
+          ? t("memory.busy")
+          : t("phase5.saveFailed")
+    );
+  return {
+    /** Resolves true once saved; a failure is shown. */
+    save: (
+      scope: MemoryScope,
+      note: { name?: string; type: NoteType; text: string }
+    ): Promise<boolean> =>
+      transport.client.memory
+        .save({ ...scope, ...note })
+        .then(() => true)
+        .catch((error: unknown) => {
+          fail(error);
+          return false;
+        }),
+    forget: (row: MemoryRow) =>
+      db.collections.memories.delete(row.id).isPersisted.promise.catch(fail),
+  };
+};
+const NoteRow = ({
+  row,
+  scope,
+  label,
+}: {
+  row: MemoryRow;
+  scope: MemoryScope;
+  label?: string;
+}) => {
+  const { t, i18n } = useTranslation();
+  const now = useNow();
+  const writes = useMemoryWrites();
+  const [draft, setDraft] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  return (
+    <div>
+      <SettingRow
+        id={`memory-${row.id}`}
+        title={row.body}
+        detail={[
+          label,
+          t(TYPE_LABELS[row.type]),
+          formatWhen(row.updated, now, i18n.language),
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+      >
+        {draft == null && (
+          <>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setDraft(row.body)}
+            >
+              {t("memory.edit")}
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busy}
+              onClick={() => {
+                setBusy(true);
+                void writes.forget(row).finally(() => setBusy(false));
+              }}
+            >
+              {t("phase5.forget")}
+            </Button>
+          </>
+        )}
+      </SettingRow>
+      {draft != null && (
+        <form
+          className="space-y-2 px-3 pb-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setBusy(true);
+            void writes
+              .save(scope, { name: row.name, type: row.type, text: draft })
+              .then((saved) => {
+                if (saved) setDraft(null);
+              })
+              .finally(() => setBusy(false));
+          }}
+        >
+          <Textarea
+            aria-label={t("memory.edit")}
+            rows={row.type === "card" ? 6 : 3}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+          />
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              type="submit"
+              disabled={busy || draft.trim() === "" || draft === row.body}
+            >
+              {t("phase5.save")}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              type="button"
+              onClick={() => setDraft(null)}
+            >
+              {t("phase5.cancel")}
+            </Button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+};
+const AddNoteRow = ({ id, scope }: { id: string; scope: MemoryScope }) => {
+  const { t } = useTranslation();
+  const writes = useMemoryWrites();
+  const [type, setType] = useState<NoteType>("rule");
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  return (
+    <form
+      className="flex flex-wrap items-start gap-2 p-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        setBusy(true);
+        void writes
+          .save(scope, { type, text })
+          .then((saved) => {
+            if (saved) setText("");
+          })
+          .finally(() => setBusy(false));
+      }}
+    >
+      <span id={`${id}-label`} className="sr-only">
+        {t("memory.typeLabel")}
+      </span>
+      <Choice
+        id={id}
+        value={type}
+        options={ADDABLE.map((value) => ({
+          value,
+          label: t(TYPE_LABELS[value]),
+        }))}
+        onChange={(value) => setType(value as NoteType)}
+      />
+      <Input
+        className="min-w-0 flex-[1_1_200px]"
+        aria-label={t("memory.addPlaceholder")}
+        placeholder={t("memory.addPlaceholder")}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <Button size="sm" type="submit" disabled={busy || text.trim() === ""}>
+        {t("memory.add")}
+      </Button>
+    </form>
+  );
+};
+const ProjectCard = ({
+  project,
+  rows,
+}: {
+  project: MemoryProjectView;
+  rows: MemoryRow[];
+}) => {
+  const { t } = useTranslation();
+  const { transport } = useAppContext();
+  const bots = useLiveQuery(useCollections().bots).data ?? [];
+  const bot =
+    project.kind === "bot"
+      ? bots.find((each) => each.id === project.key)
+      : undefined;
+  const scope: MemoryScope = { scope: "project", project: project.slug };
+  const card = rows.find((row) => row.type === "card");
+  const notes = rows
+    .filter((row) => row.scope === "project" && row.type !== "card")
+    .sort(byTypeThenName);
+  const contacts = rows.filter((row) => row.scope === "contact");
+  return (
+    <Collapsible>
+      <SettingRow
+        id={`memory-project-${project.slug}`}
+        title={bot?.name ?? project.name}
+        detail={[t(KIND_LABELS[project.kind]), project.path]
+          .filter(Boolean)
+          .join(" · ")}
+        media={
+          bot != null ? (
+            <BotAvatar animate look={resolveLook(bot)} size={28} />
+          ) : undefined
+        }
+      >
+        {bot != null && (
+          <Button
+            size="sm"
+            variant="secondary"
+            nativeButton={false}
+            render={
+              <AppLink
+                to="/bots/$botId"
+                params={{ botId: bot.id }}
+                search={{ tab: "memory" }}
+                transition="settings-out"
+              />
+            }
+          >
+            {t("phase5.openAction")}
+          </Button>
+        )}
+        <CollapsibleTrigger render={<Button size="sm" variant="ghost" />}>
+          {t("phase5.showMemory")}
+        </CollapsibleTrigger>
+      </SettingRow>
+      <CollapsibleContent className="pb-2">
+        {card != null && (
+          <NoteRow row={card} scope={scope} label={t("memory.types.card")} />
+        )}
+        {notes.map((row) => (
+          <NoteRow key={row.id} row={row} scope={scope} />
+        ))}
+        {contacts.map((row) => (
+          <NoteRow
+            key={row.id}
+            row={row}
+            scope={scope}
+            label={t("memory.aboutContact", { name: row.contact })}
+          />
+        ))}
+        <AddNoteRow id={`memory-add-${project.slug}`} scope={scope} />
+        <ConfirmAction
+          title={t("memory.clearProject")}
+          description={t("memory.clearProjectDetail")}
+          label={t("phase5.clearAll")}
+          onConfirm={() => transport.client.memory.clear(scope)}
+        />
+      </CollapsibleContent>
+    </Collapsible>
+  );
+};
+const HistoryCard = ({
+  changes,
+  projects,
+}: {
+  changes: MemoryChangeView[];
+  projects: MemoryProjectView[];
+}) => {
+  const { t, i18n } = useTranslation();
+  const { transport } = useAppContext();
+  const now = useNow();
+  const [pending, setPending] = useState<string | null>(null);
+  const where = (change: MemoryChangeView) =>
+    change.project == null
+      ? t("memory.you.title")
+      : (projects.find((project) => project.slug === change.project)?.name ??
+        change.project);
+  return (
+    <GroupCard title={t("memory.history.title")}>
+      {changes.map((change) => (
+        <SettingRow
+          key={change.id}
+          id={`memory-change-${change.id}`}
+          title={`${t(ACTION_LABELS[change.action])} · ${change.summary || change.name || ""}`}
+          detail={[
+            t(AUTHOR_LABELS[change.by]),
+            where(change),
+            formatWhen(change.at, now, i18n.language),
+          ].join(" · ")}
+        >
+          {change.undoable && (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={pending === change.id}
+              onClick={() => {
+                setPending(change.id);
+                void transport.client.memory
+                  .undo({ id: change.id })
+                  .catch((error: unknown) =>
+                    showError(
+                      t(
+                        isRpcError(error) && error.code === "CONFLICT"
+                          ? "memory.history.changedSince"
+                          : "phase5.saveFailed"
+                      )
+                    )
+                  )
+                  .finally(() => setPending(null));
+              }}
+            >
+              {t("memory.history.undo")}
+            </Button>
+          )}
+        </SettingRow>
+      ))}
+    </GroupCard>
+  );
+};
 export const MemoryPage = () => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
@@ -245,28 +609,15 @@ export const MemoryPage = () => {
   const c = useCollections();
   const memoryQuery = useLiveQuery(c.memories);
   const memories = memoryQuery.data ?? [];
-  const bots = useLiveQuery(c.bots).data ?? [];
-  const botNotes = useQuery(
-    transport.orpc.memory.bots.queryOptions({ input: {} })
+  const projects = useQuery(
+    transport.orpc.memory.projects.queryOptions({ input: {} })
   );
-  const [memoryError, setMemoryError] = useState<string | null>(null);
-  const [pendingMemory, setPendingMemory] = useState<string | undefined>();
-  const forget = async (id: string) => {
-    setPendingMemory(id);
-    try {
-      await c.memories.delete(id).isPersisted.promise;
-      setMemoryError(null);
-    } catch (error) {
-      setMemoryError(
-        t(
-          isRpcError(error) && error.code === "CONFLICT"
-            ? "phase5.memoryConflict"
-            : "phase5.saveFailed"
-        )
-      );
-    }
-    setPendingMemory(undefined);
-  };
+  const history = useQuery(
+    transport.orpc.memory.history.queryOptions({ input: {} })
+  );
+  const withheld = useQuery(
+    transport.orpc.memory.withheld.queryOptions({ input: {} })
+  );
   const query = useQuery({
     ...transport.orpc.memory.customInstructions.get.queryOptions({ input: {} }),
     refetchOnMount: "always",
@@ -280,15 +631,6 @@ export const MemoryPage = () => {
           saved
         ),
       meta: { errorToast: "phase5.saveFailed" },
-    })
-  );
-  const clearBot = useMutation(
-    transport.orpc.memory.clearBot.mutationOptions({
-      onSuccess: (next) =>
-        cache.setQueryData(
-          transport.orpc.memory.bots.queryKey({ input: {} }),
-          next
-        ),
     })
   );
   const baseline = useRef(query.data ?? "");
@@ -325,20 +667,27 @@ export const MemoryPage = () => {
     }
     baseline.current = query.data;
   }, [query.data, form]);
+  const you = memories
+    .filter((row) => row.scope === "you")
+    .sort(byTypeThenName);
+  const changes = history.data ?? [];
+  const failed =
+    memoryQuery.isError || projects.isError || history.isError || query.isError;
   return (
     <AreaPage
       title={t("settings.pages.memory")}
       description={t("phase5.settings.memoryDetail")}
     >
       {memoryQuery.isLoading && <PageNote live>{t("memory.loading")}</PageNote>}
-      {(memoryQuery.isError || botNotes.isError || query.isError) && (
+      {failed && (
         <div className="flex items-center gap-3">
           <PageNote error>{t("memory.readFailed")}</PageNote>
           <Button
             size="sm"
             variant="secondary"
             onClick={() => {
-              void botNotes.refetch();
+              void projects.refetch();
+              void history.refetch();
               void query.refetch();
             }}
           >
@@ -347,11 +696,9 @@ export const MemoryPage = () => {
         </div>
       )}
       {!memoryQuery.isLoading &&
-        !memoryQuery.isError &&
+        !failed &&
         memories.length === 0 &&
-        !botNotes.data?.some((bot) => bot.noteDays > 0) && (
-          <PageNote>{t("memory.empty")}</PageNote>
-        )}
+        changes.length === 0 && <PageNote>{t("memory.empty")}</PageNote>}
       <GroupCard>
         <SettingRow
           id="customInstructions"
@@ -400,104 +747,47 @@ export const MemoryPage = () => {
           </form.Subscribe>
         </form>
       </GroupCard>
-      {memoryError && <PageNote error>{memoryError}</PageNote>}
-      {(["remember", "user", "memory"] as const)
-        .filter((target) =>
-          memories.some((m) => m.scope === "global" && m.target === target)
-        )
-        .map((target) => (
-          <GroupCard key={target} title={t(`phase5.memoryTargets.${target}`)}>
-            {memories
-              .filter((m) => m.scope === "global" && m.target === target)
-              .map((m) => (
-                <SettingRow key={m.id} id={`memory-${m.id}`} title={m.entry}>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => {
-                      void forget(m.id);
-                    }}
-                  >
-                    {t("phase5.forget")}
-                  </Button>
-                </SettingRow>
-              ))}
-            <ConfirmAction
-              title={t("phase5.clearAll")}
-              description={t("phase5.forgetDescription")}
-              label={t("phase5.clearAll")}
-              onConfirm={() => transport.client.memory.forgetAll({ target })}
-            />
-          </GroupCard>
+      <GroupCard title={t("memory.you.title")}>
+        <SettingRow
+          id="memory-you"
+          title={t("memory.you.title")}
+          detail={t("memory.you.detail")}
+        />
+        {you.map((row) => (
+          <NoteRow key={row.id} row={row} scope={{ scope: "you" }} />
         ))}
-      {(memories.some((m) => m.scope === "bot") ||
-        botNotes.data?.some((bot) => bot.noteDays > 0)) && (
-        <GroupCard title={t("phase5.rememberedByBots")}>
-          {bots.map((bot) => {
-            const entries = memories.filter(
-              (row) => row.scope === "bot" && row.botId === bot.id
-            );
-            const noteDays =
-              botNotes.data?.find((item) => item.botId === bot.id)?.noteDays ??
-              0;
-            if (!entries.length && !noteDays) return null;
-            return (
-              <Collapsible key={bot.id}>
-                <SettingRow
-                  id={`memory-bot-${bot.id}`}
-                  title={t("phase5.botMemoryCount", {
-                    name: bot.name,
-                    count: entries.length,
-                  })}
-                  detail={entries
-                    .slice(0, 3)
-                    .map((row) => row.entry)
-                    .join(" · ")}
-                >
-                  <BotAvatar animate look={resolveLook(bot)} size={28} />
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    nativeButton={false}
-                    render={
-                      <AppLink
-                        to="/bots/$botId"
-                        params={{ botId: bot.id }}
-                        search={{ tab: "memory" }}
-                        transition="settings-out"
-                      />
-                    }
-                  >
-                    {t("phase5.openAction")}
-                  </Button>
-                  <CollapsibleTrigger
-                    render={<Button size="sm" variant="ghost" />}
-                  >
-                    {t("phase5.showMemory")}
-                  </CollapsibleTrigger>
-                </SettingRow>
-                <CollapsibleContent className="px-3 pb-3">
-                  <BotMemoryList
-                    entries={entries}
-                    pendingId={pendingMemory}
-                    onForget={(row) => void forget(row.id)}
-                  />
-                  {noteDays > 0 && (
-                    <p className="text-muted-foreground text-xs">
-                      {t("bots.panel.memory.notes", { count: noteDays })}
-                    </p>
-                  )}
-                  <ConfirmAction
-                    title={t("bots.panel.memory.clear")}
-                    description={t("phase5.forgetDescription")}
-                    label={t("phase5.clearAll")}
-                    onConfirm={() => clearBot.mutateAsync({ botId: bot.id })}
-                  />
-                </CollapsibleContent>
-              </Collapsible>
-            );
-          })}
+        <AddNoteRow id="memory-add-you" scope={{ scope: "you" }} />
+        {you.length > 0 && (
+          <ConfirmAction
+            title={t("memory.clearYou")}
+            description={t("phase5.forgetDescription")}
+            label={t("phase5.clearAll")}
+            onConfirm={() => transport.client.memory.clear({ scope: "you" })}
+          />
+        )}
+      </GroupCard>
+      {(projects.data ?? []).length > 0 && (
+        <GroupCard title={t("memory.projects.title")}>
+          {(projects.data ?? []).map((project) => (
+            <ProjectCard
+              key={project.slug}
+              project={project}
+              rows={memories.filter((row) => row.project === project.slug)}
+            />
+          ))}
         </GroupCard>
+      )}
+      {changes.length > 0 && (
+        <HistoryCard changes={changes} projects={projects.data ?? []} />
+      )}
+      {(withheld.data ?? []).length > 0 && (
+        <PageNote>
+          {t("memory.withheld", {
+            entries: (withheld.data ?? [])
+              .map((entry) => `${entry.from}: ${entry.preview}`)
+              .join(", "),
+          })}
+        </PageNote>
       )}
     </AreaPage>
   );

@@ -555,9 +555,7 @@
       "memory": {
         "empty": "This bot has not saved any core memories yet.",
         "forget": "Forget this",
-        "notes": "{{count}} day(s) of working notes on disk.",
-        "clear": "Clear all",
-        "clearConfirm": "Forget everything here?"
+        "manage": "Gérer dans les réglages"
       },
       "delegatesFreely": "Peut solliciter d'autres bots sans demander",
       "delegatesFreelyDetail": "Interroge tes autres bots et leur confie du travail quand c'est utile, sans te demander à chaque fois. Seulement quand il te répond."
@@ -1038,7 +1036,7 @@
     "empty": "Je ne me souviens encore de rien. L'agent écrit ici tout seul lorsqu'il apprend quelque chose qui mérite d'être reporté entre les sessions : une de vos préférences, un fait sur votre configuration.",
     "forget": "Oublie ça",
     "loading": "Lecture de la mémoire…",
-    "readFailed": "Impossible de lire ce qui est mémorisé. Les fichiers sont dans ~/.abacusai-bot/memories.",
+    "readFailed": "Impossible de lire ce qui est mémorisé. Les fichiers sont dans ~/.abacusai-bot/memory.",
     "storeEmpty": "Rien ici encore.",
     "stores": {
       "memory": {
@@ -1066,7 +1064,6 @@
       "unsaved": "Non enregistré",
       "applies": "S'applique à votre prochain message, y compris dans un chat déjà ouvert."
     },
-    "rememberedToast": "Ajouté à mon cerveau IA.",
     "sections": {
       "sessions": "Séances",
       "bots": "Bots"
@@ -1074,7 +1071,59 @@
     "bots": {
       "notes": "{{count}} jour(s) de notes de travail sur disque.",
       "empty": "Ce bot n'a pas encore enregistré de mémoire principale."
-    }
+    },
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "addPlaceholder": "Quelque chose à retenir…",
+    "typeLabel": "Type de note",
+    "saveRefused": "Non enregistré : {{reason}}",
+    "busy": "La mémoire était modifiée au même moment. Réessayez.",
+    "types": {
+      "profile": "Profil",
+      "rule": "Règle",
+      "preference": "Préférence",
+      "fact": "Fait",
+      "decision": "Décision",
+      "reference": "Référence",
+      "status": "Statut",
+      "card": "Fiche du projet"
+    },
+    "kinds": {
+      "folder": "Dossier",
+      "bot": "Bot",
+      "routine": "Routine",
+      "topic": "Sujet"
+    },
+    "history": {
+      "title": "Historique",
+      "saved": "Enregistré",
+      "changed": "Modifié",
+      "forgot": "Oublié",
+      "noted": "Noté",
+      "undo": "Annuler",
+      "changedSince": "Cette note a changé depuis. Annulez d'abord la modification la plus récente."
+    },
+    "by": {
+      "you": "Vous",
+      "chat": "Une discussion",
+      "routine": "Une routine",
+      "bot": "Un bot",
+      "contact": "La discussion d'une personne avec un bot",
+      "app": "L'application"
+    },
+    "you": {
+      "title": "À propos de vous",
+      "detail": "Qui vous êtes et comment vous aimez que les choses soient faites. Chaque discussion lit vos règles et préférences."
+    },
+    "projects": {
+      "title": "Projets"
+    },
+    "aboutContact": "À propos de {{name}}",
+    "clearProject": "Oublier les notes de ce projet ?",
+    "clearProjectDetail": "Ses notes sont supprimées et sa fiche est remise à zéro. Chaque modification peut être annulée depuis l'historique.",
+    "clearYou": "Tout oublier à votre sujet ?",
+    "withheld": "Retirés lors du déplacement de la mémoire, car ils ressemblaient à des mots de passe ou des clés : {{entries}}. Gardez les secrets dans le coffre.",
+    "chatProject": "Projet : {{name}}. L'ouvrir dans la mémoire"
   },
   "messaging": {
     "advanced": "Avancé ({{count}})",
@@ -3458,7 +3507,8 @@
       "askWaiting": "Waiting for a response…",
       "askSkipped": "Skipped",
       "askBot": "A demandé à {{bot}} : {{what}}",
-      "giveTask": "A transmis une tâche à {{bot}} : {{what}}"
+      "giveTask": "A transmis une tâche à {{bot}} : {{what}}",
+      "memoryUpdated": "Mémoire mise à jour : {{name}}"
     },
     "transcript": {
       "jump": "Jump to the end",
@@ -3802,7 +3852,6 @@
     "off": "Off",
     "systemLanguage": "System ({{language}})",
     "forget": "Forget this",
-    "memoryConflict": "Rien n'a été supprimé : une session écrivait dans la mémoire au même moment. Réessayez.",
     "clearAll": "Clear all",
     "forgetDescription": "Forget everything here?",
     "quietUntil": "Now quiet until {{end}}",
@@ -4015,11 +4064,6 @@
       "PLAN": "Reads and plans only",
       "YOLO": "Nothing asks",
       "ACCEPTEDITS": "Edits go through, commands ask"
-    },
-    "memoryTargets": {
-      "remember": "Always remember",
-      "user": "About you",
-      "memory": "The agent’s own notes"
     },
     "cues": {
       "sent": "Sent",
@@ -4259,8 +4303,6 @@
       "too-long": "This is too long",
       "schedule-invalid": "Choose a valid schedule"
     },
-    "rememberedByBots": "Remembered by bots",
-    "botMemoryCount": "{{name}} · {{count}} things",
     "showMemory": "Show memories",
     "pairingPending": "Finish linking your messaging apps.",
     "finishPairing": "Link {{platform}}",

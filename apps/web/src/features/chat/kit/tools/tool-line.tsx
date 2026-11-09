@@ -137,7 +137,7 @@ export const expanderFor = (name: string): Expander => {
 };
 
 /** Everything a row needs, from the part, its result and the store. */
-const useNormalizedTool = (
+export const useNormalizedTool = (
   part: ToolCallPart,
   result: ToolResultPart | undefined
 ): {
