@@ -97,6 +97,14 @@ const unique = (ids: readonly string[]): string[] => [...new Set(ids)];
 
 const EVERYONE = /(^|\s)@(everyone|all|channel|here)\b/i;
 
+/**
+ * Words to every member without an @: "hi both", "hello all", "hey team",
+ * "everyone, …", "one line each", "each of you". Every member answers,
+ * unless the message also names a bot ("hi all, Writer can you…").
+ */
+const TO_ALL =
+  /\b(?:hi|hello|hey|hiya|morning|good (?:morning|afternoon|evening)|evening|yo)\s+(?:both|all|everyone|everybody|team|guys|folks|y'all|you two|you all)\b|(?:^|[.!?\n]\s*)(?:both|everyone|everybody|all of you)\s*[,:]|\b(?:each of you|every one of you|one (?:line|sentence|word) each|a line each)\b/i;
+
 /** Where a sentence or a clause addressing someone can start. */
 const CLAUSE_START = String.raw`(?:^|[.!?\n;]\s*|,\s*(?:and\s+)?then\s+|\bthen\s+|\b(?:hey|hi|hello|ok|okay|so|and|also|now|yo)[,!]?\s+)`;
 
@@ -362,6 +370,21 @@ export const speakersFor = (
       discussion: true,
     };
   if (named.length > 0) return { botIds: named, everyone: false };
+  // "hi both, one line each": every member, each on its own; "hi all,
+  // Coder can you…" is for Coder, wherever the name stands.
+  if (TO_ALL.test(text) && !noAnswer) {
+    const inIt = byLength(members)
+      .filter((member) =>
+        new RegExp(
+          `(?<![\\p{L}\\p{N}_-])${escape(member.name)}(?![\\p{L}\\p{N}_-])`,
+          "iu"
+        ).test(text)
+      )
+      .map((member) => member.id);
+    return inIt.length > 0
+      ? { botIds: inIt, everyone: false }
+      : { botIds: members.map((member) => member.id), everyone: true };
+  }
   // "stop, Writer": the bot a stop names answers it, however it is placed.
   const stopNamed = plainStop(message, members);
   if (stopNamed != null && stopNamed.length > 0)
@@ -732,6 +755,7 @@ const chainLines = (chain: {
   chain.step < chain.steps.length
     ? "Everything you write in this turn goes to the next step, so put every finding in it. If your step is checking earlier work and nothing is left to do, end your report with <chain_done/>: the steps after yours are skipped. Otherwise say exactly what is left, so the next step can act on it."
     : "This is the last step: end with what is done and anything still open.",
+  "The steps after yours start on their own: never ask the user whether to run them; end with your report.",
 ];
 
 const CHAIN = /<chain\b([^>]*)>([\s\S]*?)<\/chain>/i;

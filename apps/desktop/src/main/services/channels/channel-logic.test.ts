@@ -569,3 +569,30 @@ describe("hand-off chains", () => {
     });
   });
 });
+
+describe("a message to every member without an @", () => {
+  const members = [
+    { id: "aud", name: "Auditor", title: "" },
+    { id: "cod", name: "Coder", title: "" },
+    { id: "pla", name: "Planner", title: "" },
+  ];
+  const ids = (text: string) => speakersFor(text, members.slice(0, 2)).botIds;
+  it("greetings and 'each' to all bring every member in", () => {
+    for (const text of [
+      "hi both, one line each: what do you do?",
+      "Hello all!",
+      "hey team, quick intro please",
+      "everyone, what are you working on?",
+      "one line each: what do you do?",
+      "each of you, tell me your role",
+    ])
+      expect(ids(text), text).toEqual(["aud", "cod"]);
+    expect(speakersFor("hi all", members).everyone).toBe(true);
+  });
+  it("a named bot still wins, thanks still get nobody, and a plain word is not a greeting", () => {
+    expect(ids("hi all, Coder can you fix it?")).toEqual(["cod"]);
+    expect(ids("thanks all")).toEqual([]);
+    expect(ids("all the tests pass now")).toEqual(["aud"]);
+    expect(ids("both files are fine")).toEqual(["aud"]);
+  });
+});
