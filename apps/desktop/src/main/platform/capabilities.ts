@@ -29,6 +29,8 @@ export const WEB_HOST_DENIED = [
   "voice.whisper.fetch",
   // Reads the user's own files and shows them to the world: desktop only for now.
   "shares",
+  // The app delivers local routine runs' reports; the server delivers hosted ones.
+  "routines.replyToRun",
 ] as const;
 // Exact paths: a new contract procedure requires an explicit platform decision.
 export const WEB_HOST_ALLOWED = [
@@ -120,7 +122,6 @@ export const WEB_HOST_ALLOWED = [
   "channels.startAgreed",
   "channels.events",
   "routines.editByChat",
-  "routines.replyToRun",
   "routines.run",
   "routines.hostedRuns",
   "routines.runners",
