@@ -27,6 +27,8 @@ const electron = vi.hoisted(() => ({
   quit: vi.fn(),
   exit: vi.fn(),
   idleSeconds: 0,
+  hideWindow: vi.fn(),
+  hideDock: vi.fn(),
 }));
 vi.mock("electron", () => ({
   app: {
@@ -35,10 +37,17 @@ vi.mock("electron", () => ({
     on: () => {},
     quit: electron.quit,
     exit: electron.exit,
+    dock: { hide: electron.hideDock },
   },
   // A visible window: the idle restart then restarts on every platform.
   BaseWindow: {
-    getAllWindows: () => [{ isDestroyed: () => false, isVisible: () => true }],
+    getAllWindows: () => [
+      {
+        isDestroyed: () => false,
+        isVisible: () => true,
+        hide: electron.hideWindow,
+      },
+    ],
   },
   powerMonitor: {
     on: () => {},
@@ -70,6 +79,8 @@ beforeEach(() => {
   electron.idleSeconds = 0;
   electron.quit.mockClear();
   electron.exit.mockClear();
+  electron.hideWindow.mockClear();
+  electron.hideDock.mockClear();
   quitAndInstall.mockClear();
   autoUpdater.removeAllListeners();
   squirrel.removeAllListeners();
@@ -158,6 +169,7 @@ describe("macOS install staging", () => {
 
   it("a Squirrel error is an install failure that keeps the build", async () => {
     const service = downloaded();
+    const permanent = squirrel.listenerCount("error");
     const result = service.installUpdate();
     await settle();
     squirrel.emit("error", new Error("signature invalid\nheaders…"));
@@ -168,7 +180,42 @@ describe("macOS install staging", () => {
       ...keptForRetry,
       error: "Couldn't prepare the update: signature invalid",
     });
-    expect(squirrel.listenerCount("error")).toBe(1);
+    expect(squirrel.listenerCount("error")).toBe(permanent);
+  });
+
+  it("an updater error not from Squirrel during staging is still reported", async () => {
+    const service = downloaded();
+    void service.installUpdate();
+    await settle();
+    autoUpdater.emit("error", new Error("newer download failed\nheaders…"));
+    expect(service.getStatus()).toMatchObject({
+      preparing: true,
+      error: "newer download failed",
+    });
+  });
+
+  it("a quit hides the app before staging and still quits on a timeout", async () => {
+    const service = downloaded();
+    const result = service.installUpdate({ silent: true, quitting: true });
+    await settle();
+    expect(squirrel.checkForUpdates).toHaveBeenCalledTimes(1);
+    expect(electron.hideWindow).toHaveBeenCalled();
+    expect(electron.hideDock).toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(3 * 60 * 1000);
+    // before-quit then quits normally on this answer.
+    await expect(result).resolves.toMatchObject({ success: false });
+    expect(quitAndInstall).not.toHaveBeenCalled();
+  });
+
+  it("a quit joining a staging install hides the app too", async () => {
+    const service = downloaded();
+    void service.installUpdate();
+    await settle();
+    expect(electron.hideWindow).not.toHaveBeenCalled();
+    void service.installUpdate({ silent: true, quitting: true });
+    expect(electron.hideWindow).toHaveBeenCalled();
+    expect(electron.hideDock).toHaveBeenCalled();
   });
 
   it("installs asked for during staging join it", async () => {

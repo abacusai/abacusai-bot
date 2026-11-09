@@ -1743,10 +1743,15 @@ registerAppScheme();
 // sessions. Losing the lock is not final: a relaunch's child arrives while
 // its parent is still dying, so whenReady retries before giving up.
 let gotSingleInstanceLock = app.requestSingleInstanceLock();
+// A quit staging an update hid the Dock (UpdateService.hideForQuit). macOS
+// sends a relaunch to the running app as activate, elsewhere second-instance.
+function revealOnRelaunch(): void {
+  if (process.platform === "darwin" && app.dock?.isVisible() === false)
+    void app.dock.show();
+  revealMainWindow();
+}
 if (gotSingleInstanceLock) {
-  app.on("second-instance", () => {
-    revealMainWindow();
-  });
+  app.on("second-instance", revealOnRelaunch);
 }
 
 app
@@ -1764,9 +1769,7 @@ app
         app.quit();
         return;
       }
-      app.on("second-instance", () => {
-        revealMainWindow();
-      });
+      app.on("second-instance", revealOnRelaunch);
     }
 
     if (process.argv.includes("--restore-legacy-files")) {
@@ -1973,7 +1976,7 @@ app
       if (aliveMainWindow() == null) {
         createWindow();
       } else {
-        revealMainWindow();
+        revealOnRelaunch();
       }
     });
 
@@ -2044,9 +2047,11 @@ app.on("before-quit", (event) => {
     event.preventDefault();
     quitUpdateChecked = true;
     // Never waits for a running task: a quit must not hang.
-    void updateService.installUpdate({ silent: true }).then((result) => {
-      if (!result.success) app.quit();
-    });
+    void updateService
+      .installUpdate({ silent: true, quitting: true })
+      .then((result) => {
+        if (!result.success) app.quit();
+      });
     return;
   }
   // So the window 'close' handler stops intercepting.

@@ -79,7 +79,10 @@ const QUIT_FORCE_MS = 30_000;
 const MAC_STAGE_TIMEOUT_MS = 3 * 60 * 1000;
 
 /** Squirrel.Mac (Electron's autoUpdater), as MacUpdater holds it. */
-type Squirrel = Pick<NodeJS.EventEmitter, "once" | "removeListener"> & {
+type Squirrel = Pick<
+  NodeJS.EventEmitter,
+  "once" | "removeListener" | "prependListener"
+> & {
   checkForUpdates(): void;
 };
 
@@ -208,6 +211,10 @@ export class UpdateService {
     done: Promise<string | null>;
     cancel(): void;
   } | null = null;
+  /** Errors Squirrel raised, which MacUpdater then re-emits as its own. */
+  private readonly squirrelErrors = new WeakSet<object>();
+  /** A quit waits on the install in flight. */
+  private quitWaiting = false;
 
   constructor(private readonly deps: UpdateServiceDeps = {}) {
     if (this.debPackage)
@@ -215,6 +222,11 @@ export class UpdateService {
         app.getVersion(),
         versionLessThan
       );
+    // Ahead of MacUpdater's re-emit, so the generic handler can tell them apart.
+    this.squirrel?.prependListener("error", (error: unknown) => {
+      if (typeof error === "object" && error != null)
+        this.squirrelErrors.add(error);
+    });
     this.setupAutoUpdater();
   }
 
@@ -305,9 +317,15 @@ export class UpdateService {
     });
 
     autoUpdater.on("error", (error) => {
-      // MacUpdater re-emits Squirrel's errors here before stageMacBuild hears
-      // them; while Squirrel fetches, an error is the install's to report.
-      if (this.staging != null) return;
+      // While Squirrel fetches, its errors (re-emitted here before
+      // stageMacBuild hears them) are the install's to report.
+      if (
+        this.staging != null &&
+        (typeof error !== "object" ||
+          error == null ||
+          this.squirrelErrors.has(error))
+      )
+        return;
       const shortMsg = shortMessage(error);
       console.warn(`[UpdateService] Update error: ${shortMsg}`);
       this.status.failedPhase = failedPhaseOf(this.status);
@@ -525,6 +543,14 @@ export class UpdateService {
     );
   }
 
+  // A quit must not hang on screen while Squirrel stages: look gone. A relaunch
+  // meanwhile reveals the window and the Dock again (index.ts).
+  private hideForQuit(): void {
+    for (const win of BaseWindow.getAllWindows())
+      if (!win.isDestroyed()) win.hide();
+    app.dock?.hide();
+  }
+
   /**
    * With autoInstallOnAppQuit off, MacUpdater only serves the zip, and its
    * quitAndInstall starts Squirrel's fetch, which the quit watchdog then cuts
@@ -697,7 +723,13 @@ export class UpdateService {
     whenSafe?: boolean;
     /** The idle restart: it stands down if the app got busy meanwhile. */
     idle?: boolean;
+    /** The user quit: the app looks gone while macOS stages the build. */
+    quitting?: boolean;
   }): Promise<{ success: boolean; error?: string }> {
+    if (options?.quitting) {
+      this.quitWaiting = true;
+      if (this.status.preparing) this.hideForQuit();
+    }
     if (this.installRequest != null) return this.installRequest;
     if (
       options?.whenSafe &&
@@ -724,6 +756,7 @@ export class UpdateService {
     // request so another control cannot start a second ShipIt handoff.
     this.installRequest = this.installDownloadedUpdate(options).finally(() => {
       this.installRequest = null;
+      this.quitWaiting = false;
     });
     return this.installRequest;
   }
@@ -768,6 +801,7 @@ export class UpdateService {
         this.status.error = null;
         this.status.failedPhase = null;
         this.emitStatusUpdate();
+        if (this.quitWaiting) this.hideForQuit();
         const failure = await this.stageMacBuild(this.squirrel, version);
         this.status.preparing = false;
         if (!this.status.downloaded || this.downloadedVersion !== version) {
