@@ -82,6 +82,8 @@ export interface ChannelWork {
   error?: string;
   startedAt: number;
   endedAt?: number;
+  /** One step of a hand-off chain the user started: which, of how many. */
+  chain?: { id: string; step: number; of: number };
 }
 
 /** A channel as the sidebar lists it. */

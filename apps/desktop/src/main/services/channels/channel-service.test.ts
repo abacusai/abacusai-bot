@@ -1151,3 +1151,94 @@ describe("inviting a bot not in the channel", () => {
     ).toHaveLength(0);
   });
 });
+
+describe("a hand-off chain", () => {
+  const CHAIN =
+    '<chain rounds="2"><step bot="Researcher">audit the repo</step><step bot="Writer">fix what Researcher found</step><step bot="Researcher">re-check the fixes</step></chain>';
+  const start = async (
+    words = "Researcher, audit the repo and have Writer fix what you find, then check again"
+  ) => {
+    const t = setup();
+    const { id } = t.service.create({ botIds: ["chief", "res", "wri"] });
+    t.service.post(id, words);
+    await t.flush();
+    t.turns[0]!.resolve(`<reply>On it, then Writer. ${CHAIN}</reply>`);
+    await t.flush();
+    return { ...t, id };
+  };
+
+  it("runs the steps in order, each in its bot's own chat with the report before it", async () => {
+    const { works, flush, texts, id, store } = await start();
+    // Step 1 only: the next waits for it.
+    expect(works.map((w) => w.botId)).toEqual(["res"]);
+    expect(works[0]!.prompt).toContain("step 1 of 5 of a hand-off chain");
+    expect(works[0]!.prompt).toContain("2. Writer: fix what Researcher found");
+    works[0]!.resolve("<reply>Found 2 bugs: a and b.</reply>");
+    await flush();
+    expect(works.map((w) => w.botId)).toEqual(["res", "wri"]);
+    expect(works[1]!.prompt).toContain("step 2 of 5");
+    expect(works[1]!.prompt).toContain(
+      "What step 1 reported (Researcher's words"
+    );
+    expect(works[1]!.prompt).toContain("Found 2 bugs: a and b.");
+    // Each step is a card in the thread, labelled with its place.
+    const cards = (store.threads.get(id) ?? []).filter((m) => m.work != null);
+    expect(cards.map((m) => m.work?.chain?.step)).toEqual([1, 2]);
+    expect(cards.every((m) => m.work?.chain?.of === 5)).toBe(true);
+    expect(texts(id)).toContain("res: Found 2 bugs: a and b.");
+  });
+
+  it("hands the next step the whole turn, not only the closing line the thread shows", async () => {
+    const { works, flush, texts, id } = await start();
+    // As live: the findings in one message, then a closing line.
+    works[0]!.resolve(
+      "B1: add() subtracts.\nB2: average() divides by length - 1.\n␞\n<reply>The audit is done: findings above.</reply>"
+    );
+    await flush();
+    expect(texts(id)).toContain("res: The audit is done: findings above.");
+    expect(works[1]!.prompt).toContain("B1: add() subtracts.");
+    expect(works[1]!.prompt).toContain("B2: average() divides by length - 1.");
+  });
+
+  it("ends when a check finds nothing left, and says so; the tag is never posted", async () => {
+    const { works, flush, texts, id } = await start();
+    works[0]!.resolve("<reply>Found a bug.</reply>");
+    await flush();
+    works[1]!.resolve("<reply>Fixed it.</reply>");
+    await flush();
+    works[2]!.resolve("<reply>All clean now. <chain_done/></reply>");
+    await flush();
+    expect(works).toHaveLength(3);
+    const last = texts(id).at(-1)!;
+    expect(last).toContain("All clean now.");
+    expect(last).toContain("the hand-off ends here (step 3 of 5)");
+    expect(last).not.toContain("chain_done");
+  });
+
+  it("ends at a step that fails, and Stop ends it before the next step", async () => {
+    const failed = await start();
+    failed.works[0]!.reject(new Error("no access to the repo"));
+    await failed.flush();
+    expect(failed.works).toHaveLength(1);
+
+    const stopped = await start();
+    stopped.works[0]!.resolve("<reply>Found a bug.</reply>");
+    await stopped.flush();
+    expect(stopped.works).toHaveLength(2);
+    stopped.service.stop(stopped.id);
+    await stopped.flush();
+    expect(stopped.works).toHaveLength(2);
+  });
+
+  it("is not run when the user did not name a bot in it", async () => {
+    const { works, texts, id } = await start("Researcher, audit the repo");
+    expect(works).toHaveLength(0);
+    // The words are posted, not the tag, and they say the hand-off did not start.
+    const last = texts(id).at(-1)!;
+    expect(last.startsWith("res: On it, then Writer.")).toBe(true);
+    expect(last).toContain(
+      "The hand-off did not start: your message did not name Writer."
+    );
+    expect(last).not.toContain("<chain");
+  });
+});

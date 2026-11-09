@@ -4972,6 +4972,7 @@
       "done": "Selesai di chat {{name}}: laporannya ada di bawah",
       "failed": "{{name}} tidak menyelesaikannya",
       "stopped": "Dihentikan",
+      "step": "Langkah {{step}} dari {{of}}",
       "open": "Buka chat {{name}}"
     },
     "proposal": {

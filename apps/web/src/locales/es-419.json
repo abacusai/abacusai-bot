@@ -4972,6 +4972,7 @@
       "done": "Listo en el chat de {{name}}: el informe está abajo",
       "failed": "{{name}} no terminó",
       "stopped": "Detenido",
+      "step": "Paso {{step}} de {{of}}",
       "open": "Abrir el chat de {{name}}"
     },
     "proposal": {

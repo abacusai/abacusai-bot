@@ -4972,6 +4972,7 @@
       "done": "{{name}} sohbetinde tamamlandı: rapor aşağıda",
       "failed": "{{name}} işi bitiremedi",
       "stopped": "Durduruldu",
+      "step": "Adım {{step}}/{{of}}",
       "open": "{{name}} sohbetini aç"
     },
     "proposal": {

@@ -508,6 +508,17 @@ const WorkCard = ({ work, bot }: { work: ChannelWork; bot: BotRow }) => {
           )}
         />
         {t(`channels.work.${work.status}`, { name: bot.name })}
+        {work.chain != null && (
+          <span
+            data-channel-step={`${work.chain.step}/${work.chain.of}`}
+            className="text-muted-foreground ms-auto font-normal"
+          >
+            {t("channels.work.step", {
+              step: work.chain.step,
+              of: work.chain.of,
+            })}
+          </span>
+        )}
       </div>
       <p className="text-muted-foreground">{work.task}</p>
       {work.error != null && work.status !== "done" && (

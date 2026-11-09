@@ -4972,6 +4972,7 @@
       "done": "Done in {{name}}'s chat: the report is below",
       "failed": "{{name}} didn't finish",
       "stopped": "Stopped",
+      "step": "Step {{step}} of {{of}}",
       "open": "Open {{name}}'s chat"
     },
     "proposal": {

@@ -4972,6 +4972,7 @@
       "done": "Terminé dans le chat de {{name}} : le rapport se trouve ci-dessous",
       "failed": "{{name}} n'a pas terminé",
       "stopped": "Arrêté",
+      "step": "Étape {{step}} sur {{of}}",
       "open": "Ouvrir le chat de {{name}}"
     },
     "proposal": {

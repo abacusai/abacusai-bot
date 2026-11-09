@@ -8,6 +8,10 @@ import { describe, expect, it } from "vitest";
 import {
   addressedIn,
   agreedItems,
+  chainAllowed,
+  chainDoneIn,
+  chainIn,
+  channelWorkPrompt,
   ownerOf,
   workIn,
   channelTitle,
@@ -229,6 +233,13 @@ describe("turnPrompt", () => {
       expect(
         turnPrompt({ ...base, kind, others: ["Chief"], ownChat: own })
       ).toContain("- You: I picked tagline B.");
+  });
+
+  it("tells a bot answering the user how to write a hand-off chain, and only then", () => {
+    expect(turnPrompt({ ...base, kind: "answer" })).toContain(
+      '<chain rounds="1"><step bot="Name">'
+    );
+    expect(turnPrompt({ ...base, kind: "everyone" })).not.toContain("<chain");
   });
 
   it("says nothing of its own chat when that chat is empty", () => {
@@ -458,4 +469,103 @@ describe("goesAhead", () => {
     "start over",
     "do it tomorrow",
   ])("%s does not", (text) => expect(goesAhead(text, M)).toBe(false));
+});
+
+describe("hand-off chains", () => {
+  const members = [
+    { id: "aud", name: "Auditor", title: "" },
+    { id: "cod", name: "Coder", title: "" },
+  ];
+  it("expands rounds after the first step, and caps the steps", () => {
+    const { steps, words } = chainIn(
+      'Starting. <chain rounds="2"><step bot="Auditor">audit</step><step bot="coder">fix</step><step bot="Auditor">check</step></chain>',
+      members
+    );
+    expect(words).toBe("Starting.");
+    expect(steps?.map((s) => `${s.botId}:${s.task}`)).toEqual([
+      "aud:audit",
+      "cod:fix",
+      "aud:check",
+      "cod:fix",
+      "aud:check",
+    ]);
+    const many = chainIn(
+      `<chain rounds="9"><step bot="Auditor">a</step><step bot="Coder">b</step><step bot="Auditor">c</step></chain>`,
+      members
+    );
+    expect(many.steps).toHaveLength(7);
+  });
+
+  it("is no chain with an unknown bot or a single step", () => {
+    expect(
+      chainIn(
+        '<chain><step bot="Nobody">x</step><step bot="Coder">y</step></chain>',
+        members
+      ).steps
+    ).toBeNull();
+    expect(
+      chainIn('<chain><step bot="Coder">y</step></chain>', members).steps
+    ).toBeNull();
+  });
+
+  it("runs only bots the user named, the starter aside", () => {
+    const steps = [
+      { botId: "aud", task: "a" },
+      { botId: "cod", task: "b" },
+    ];
+    expect(
+      chainAllowed(
+        "Auditor, audit it and have Coder fix it",
+        steps,
+        members,
+        "aud"
+      )
+    ).toBe(true);
+    expect(
+      chainAllowed("audit it and get it fixed", steps, members, "aud")
+    ).toBe(false);
+    expect(
+      chainAllowed("@coder fix what you find", steps, members, "aud")
+    ).toBe(true);
+    expect(chainAllowed("the Coders fix it", steps, members, "aud")).toBe(
+      false
+    );
+  });
+
+  it("tells a bot answering the user how to write one, and a step where it stands", () => {
+    const prompt = channelWorkPrompt({
+      prefix: "[task from the user, passed on by ",
+      channelTitle: "Repo",
+      task: "fix what Auditor found",
+      userWords: "Auditor, audit it and have Coder fix it",
+      chain: {
+        step: 2,
+        steps: [
+          { bot: "Auditor", task: "audit" },
+          { bot: "Coder", task: "fix what Auditor found" },
+          { bot: "Auditor", task: "check" },
+        ],
+        previous: { bot: "Auditor", report: "Bug in add(): returns a - b." },
+      },
+    });
+    expect(prompt).toContain("step 2 of 3 of a hand-off chain");
+    expect(prompt).toContain(
+      "2. Coder: fix what Auditor found (this step, yours)"
+    );
+    expect(prompt).toContain('<bot_reply from="Auditor">');
+    expect(prompt).toContain("Bug in add(): returns a - b.");
+    expect(prompt).toContain("<chain_done/>");
+    expect(prompt).toContain("the app gives your report to the next step");
+  });
+
+  it("reads a step's done marker and drops it", () => {
+    expect(chainDoneIn("Clean. <chain_done/>")).toEqual({
+      done: true,
+      words: "Clean.",
+    });
+    expect(chainDoneIn("Two bugs left.")).toEqual({
+      done: false,
+      words: "Two bugs left.",
+    });
+  });
 });
