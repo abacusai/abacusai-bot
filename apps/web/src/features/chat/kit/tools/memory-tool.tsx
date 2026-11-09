@@ -9,6 +9,9 @@ import { useTranslation } from "react-i18next";
 
 import { useNormalizedTool } from "./tool-line";
 
+/** Registered by the agent itself, so never under a server prefix. */
+export const isMemoryTool = (name: string): boolean => name === "memory";
+
 /** `Saved "name" …` / `Forgot "name" …`, as packages/agent/src/memory/tool.ts words its result. */
 const CHANGED = /^(?:Saved|Forgot) "([^"]+)"/;
 

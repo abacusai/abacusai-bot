@@ -41,7 +41,7 @@ import {
 } from "#renderer/data/query-client";
 import { resolveLook } from "#renderer/lib/bots/avatar";
 import { cn } from "#renderer/lib/cn";
-import { formatWhen } from "#renderer/lib/format-time";
+import { formatDayAgo, formatWhen } from "#renderer/lib/format-time";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import type { Cue } from "#renderer/lib/sound";
@@ -348,7 +348,7 @@ const NoteRow = ({
         detail={[
           label,
           t(TYPE_LABELS[row.type]),
-          formatWhen(row.updated, now, i18n.language),
+          formatDayAgo(row.updated, now, i18n.language),
         ]
           .filter(Boolean)
           .join(" · ")}

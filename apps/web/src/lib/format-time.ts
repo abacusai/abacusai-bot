@@ -58,3 +58,23 @@ export const formatExpiryDate = (at: number, locale: string): string =>
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(at));
+
+/**
+ * A day with no time of day ("2026-11-09", a memory note's date) as how long
+ * ago it was: "today", "yesterday", "3 days ago", in the reader's language.
+ */
+export const formatDayAgo = (
+  day: string,
+  now: number,
+  locale: string
+): string => {
+  const at = Date.parse(`${day}T00:00:00`);
+  if (!Number.isFinite(at)) return "";
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const days = Math.round((start.getTime() - at) / DAY);
+  const relative = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  if (days < 30) return relative.format(-Math.max(0, days), "day");
+  if (days < 365) return relative.format(-Math.round(days / 30), "month");
+  return relative.format(-Math.round(days / 365), "year");
+};
