@@ -143,6 +143,61 @@
       }
     },
     {
+      "name": "artifact",
+      "description": "Build a page people can use: a report, dashboard, one-pager, diagram or small working\ntool. It opens beside the chat and the user can share it by link. A short answer stays\nin the chat. Read the artifact-design skill first.\n\nActions:\n  \"create\":  a new page (title, body). `body` is what goes inside <body>; the page's\n             head, palette and rules are added for you.\n  \"edit\":    small changes (slug, edits). Each `old` must appear exactly once.\n  \"restore\": go back to a saved version (slug, version).\n\nEvery action saves a new version and returns the page's path. Hand that path to\npresent_deliverable to show it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "create",
+              "edit",
+              "restore"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "description": "create: a short real name."
+          },
+          "body": {
+            "type": "string",
+            "description": "create: the markup inside <body>."
+          },
+          "slug": {
+            "type": "string",
+            "description": "edit, restore: the page's slug, as create returned it."
+          },
+          "edits": {
+            "type": "array",
+            "description": "edit: exact replacements, in order.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "old": {
+                  "type": "string"
+                },
+                "new": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "old",
+                "new"
+              ]
+            }
+          },
+          "version": {
+            "type": "number",
+            "description": "restore: the version."
+          }
+        },
+        "required": [
+          "action"
+        ]
+      }
+    },
+    {
       "name": "serve",
       "description": "Serve a directory over http and get back a URL, so a web page you wrote can actually\nbe opened. Static files only: html, css, js, images.\n\nUse it the moment you have written a page the user is meant to look at. `bash` cannot\ndo this: it runs a command to completion, so a dev server started there is killed as\nsoon as it reports being ready, and the URL answers nothing.\n\nThen hand the URL to present_deliverable: that is what opens the preview pane. A URL\nin prose is not previewed and not recorded.\n\nActions:\n  \"start\": serve a directory (directory). Serving it again returns the same URL.\n  \"stop\":  stop serving one (directory).\n  \"list\":  what is being served right now.",
       "inputSchema": {
@@ -387,6 +442,61 @@
           "distinct_from": {
             "type": "string",
             "description": "create: the id of an existing routine you have read and this one is a separate job from. Only after create named it."
+          }
+        },
+        "required": [
+          "action"
+        ]
+      }
+    },
+    {
+      "name": "artifact",
+      "description": "Build a page people can use: a report, dashboard, one-pager, diagram or small working\ntool. It opens beside the chat and the user can share it by link. A short answer stays\nin the chat. Read the artifact-design skill first.\n\nActions:\n  \"create\":  a new page (title, body). `body` is what goes inside <body>; the page's\n             head, palette and rules are added for you.\n  \"edit\":    small changes (slug, edits). Each `old` must appear exactly once.\n  \"restore\": go back to a saved version (slug, version).\n\nEvery action saves a new version and returns the page's path. Hand that path to\npresent_deliverable to show it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "create",
+              "edit",
+              "restore"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "description": "create: a short real name."
+          },
+          "body": {
+            "type": "string",
+            "description": "create: the markup inside <body>."
+          },
+          "slug": {
+            "type": "string",
+            "description": "edit, restore: the page's slug, as create returned it."
+          },
+          "edits": {
+            "type": "array",
+            "description": "edit: exact replacements, in order.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "old": {
+                  "type": "string"
+                },
+                "new": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "old",
+                "new"
+              ]
+            }
+          },
+          "version": {
+            "type": "number",
+            "description": "restore: the version."
           }
         },
         "required": [

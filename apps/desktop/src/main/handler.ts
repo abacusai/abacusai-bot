@@ -17,6 +17,7 @@ import {
   abacusConnectorsMcpEntry,
 } from "@abacus-ai/contract/contracts";
 import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
+import type { ArtifactAccess } from "@abacus-ai/contract/share";
 
 import { sessionDefaultWorkspace } from "./paths";
 import {
@@ -57,7 +58,9 @@ import {
   createShare,
   listShares,
   previewShare,
+  publishArtifact,
   removeShare,
+  unpublishArtifact,
 } from "./services/providers/abacus-share-service";
 import {
   fetchBillingPlan,
@@ -575,6 +578,9 @@ export const createHostOperations = (
     createShare: (path: string, lang: string) => createShare(path, lang),
     listShares: () => listShares(),
     removeShare: (shareId: string) => removeShare(shareId),
+    publishArtifact: (path: string, access: ArtifactAccess) =>
+      publishArtifact(path, access),
+    unpublishArtifact: (path: string) => unpublishArtifact(path),
     listReferralGmailContacts: () => listReferralGmailContacts(),
     sendReferralEmailInvites: (emails: unknown, message: unknown) =>
       sendReferralEmailInvites(emails, message),

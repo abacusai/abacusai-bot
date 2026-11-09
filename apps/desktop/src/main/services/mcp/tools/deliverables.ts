@@ -22,6 +22,54 @@ const LOCAL_URL_CHECK = [
 ].join("\n");
 export const DELIVERABLES_TOOLS: ToolDefinition[] = [
   {
+    name: "artifact",
+    toolsets: "always",
+    description: [
+      "Build a page people can use: a report, dashboard, one-pager, diagram or small working",
+      "tool. It opens beside the chat and the user can share it by link. A short answer stays",
+      "in the chat. Read the artifact-design skill first.",
+      "",
+      "Actions:",
+      '  "create":  a new page (title, body). `body` is what goes inside <body>; the page\'s',
+      "             head, palette and rules are added for you.",
+      '  "edit":    small changes (slug, edits). Each `old` must appear exactly once.',
+      '  "restore": go back to a saved version (slug, version).',
+      "",
+      "Every action saves a new version and returns the page's path. Hand that path to",
+      "present_deliverable to show it.",
+    ].join("\n"),
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["create", "edit", "restore"] },
+        title: { type: "string", description: "create: a short real name." },
+        body: {
+          type: "string",
+          description: "create: the markup inside <body>.",
+        },
+        slug: {
+          type: "string",
+          description: "edit, restore: the page's slug, as create returned it.",
+        },
+        edits: {
+          type: "array",
+          description: "edit: exact replacements, in order.",
+          items: {
+            type: "object",
+            properties: {
+              old: { type: "string" },
+              new: { type: "string" },
+            },
+            required: ["old", "new"],
+          },
+        },
+        version: { type: "number", description: "restore: the version." },
+      },
+      required: ["action"],
+    },
+    run: (host, args, callerSession) => host.artifact(args, callerSession),
+  },
+  {
     name: "serve",
     toolsets: "always",
     description: (channel) =>

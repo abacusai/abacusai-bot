@@ -27,6 +27,7 @@ export type ToolHost = Pick<
   | "pdf"
   | "serve"
   | "presentDeliverable"
+  | "artifact"
   | "pollVideoJob"
   | "submitVideoJob"
   | "xSearch"

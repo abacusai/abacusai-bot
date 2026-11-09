@@ -4,11 +4,14 @@ import path from "node:path";
 
 import { namesSecretFile } from "@abacus-ai/agent/secret-files";
 import {
+  isArtifactPage,
   isShareableFile,
   SHARE_MAX_BYTES,
   SHARE_REFUSALS,
   SHARE_TEXT_EXTENSIONS,
   shareExtension,
+  type ArtifactAccess,
+  type ArtifactPublished,
   type ShareCreated,
   type SharedLink,
   type SharePreview,
@@ -164,5 +167,57 @@ export const removeShare = async (
   const response = await abacusApiCall("_deleteAbacusaibotShare", "POST", {
     shareId,
   });
+  return { ok: response.ok };
+};
+
+/** The page's own name, for the share page's tab. */
+const pageTitle = (html: string): string =>
+  /<title>([^<]*)<\/title>/i.exec(html)?.[1]?.trim() || "Artifact";
+
+export const publishArtifact = async (
+  filePath: string,
+  access: ArtifactAccess
+): Promise<ArtifactPublished> => {
+  if (!isArtifactPage(filePath)) return { ok: false, code: "UNSUPPORTED" };
+  const read = await readShareFile(filePath);
+  if (read.ok === false) return read;
+  const content = Buffer.from(read.file.contentBase64, "base64").toString(
+    "utf8"
+  );
+  const response = await abacusApiCall(
+    "_publishAbacusaibotArtifact",
+    "POST",
+    {
+      identifier: read.file.sourceKey,
+      title: pageTitle(content),
+      content,
+      access,
+    },
+    UPLOAD_TIMEOUT_MS
+  );
+  if (!response.ok || response.result == null)
+    return { ok: false, code: "FAILED" };
+  const result = response.result as Record<string, unknown>;
+  if (result.refused != null)
+    return { ok: false, code: refusal(result.refused) };
+  if (typeof result.shareUrl !== "string") return { ok: false, code: "FAILED" };
+  return {
+    ok: true,
+    url: result.shareUrl,
+    access,
+    updated: result.updated === true,
+  };
+};
+
+export const unpublishArtifact = async (
+  filePath: string
+): Promise<{ ok: boolean }> => {
+  const read = await readShareFile(filePath);
+  if (read.ok === false) return { ok: false };
+  const response = await abacusApiCall(
+    "_unpublishAbacusaibotArtifact",
+    "POST",
+    { identifier: read.file.sourceKey }
+  );
   return { ok: response.ok };
 };
