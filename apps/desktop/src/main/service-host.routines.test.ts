@@ -70,8 +70,6 @@ const previousHome = process.env.ABACUSAI_BOT_HOME;
 beforeEach(() => {
   home = fs.mkdtempSync(path.join(os.tmpdir(), "routine-plan-"));
   process.env.ABACUSAI_BOT_HOME = home;
-  // Today's behaviour; the app's delivery has its own file.
-  vi.stubEnv("ABACUSAI_BOT_ROUTINE_DELIVERY", "off");
   account.mockReset();
   account.mockResolvedValue({ subscription_tier: "free", plan: null });
   tier.current = null;
@@ -302,6 +300,10 @@ describe("a routine whose runs keep finding nothing", () => {
       },
       routineNetworkWaits: { forget: vi.fn() },
       routineRunText: text,
+      routineRunLast: new Map(),
+      // Delivery has its own tests (routine-report-host.test.ts).
+      deliversRoutineReports: () => true,
+      deliverRunReport: async () => undefined,
       routineHome: () => dir,
       emitEvent: vi.fn(),
       pauseIfQuietRepeatedly: proto.pauseIfQuietRepeatedly,
@@ -689,6 +691,9 @@ describe("a routine whose chat app lost its link", () => {
   ) => {
     const service = {
       messagingGatewayService: { unlinkedPlatforms: () => unlinked },
+      // The desktop app: a routine with a chat of its own still reports there.
+      deliversRoutineReports: () => true,
+      agentSessionManagerService: { get: () => null },
       routineLinkDown: proto.routineLinkDown,
       markRoutineLinkLost: proto.markRoutineLinkLost,
       routineAtCreditWall: async () => false,
@@ -734,6 +739,21 @@ describe("a routine whose chat app lost its link", () => {
 
     expect(await fire(withLink(unlinked).service, job.id, "schedule")).toBe(
       expected
+    );
+  });
+
+  it("still runs for a bot, whose report reaches the bot's chat in the app", async () => {
+    const { noteChatPlatform } =
+      await import("./services/agent-tools/cron-store");
+    const bot = createBot({ name: "Scout", description: "Watches the rain" });
+    const job = createJob({
+      schedule: "0 * * * *",
+      prompt: "tell me",
+      botId: bot.id,
+    });
+    noteChatPlatform(job.id, "whatsapp");
+    expect(await fire(withLink(["whatsapp"]).service, job.id, "schedule")).toBe(
+      "ran"
     );
   });
 

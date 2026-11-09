@@ -65,7 +65,7 @@ const LOCAL_FIRE_SESSION = [
   "and runs in its voice, with what the bot remembers.",
 ];
 
-/** The same, where the app delivers each run's answer (flag routine-delivery). */
+/** The same, where the app delivers each run's answer (all but the hosted computer). */
 const LOCAL_FIRE_DELIVERED = [
   "Every fire runs in a fresh session of its own, listed under Routines. The app delivers",
   "each run's final answer to the user in this conversation (a bot's routine: in the",

@@ -331,7 +331,6 @@ import {
   ROUTINE_RESULTS,
   started as startedResult,
 } from "./services/agent-tools/routine-attempts";
-import { routineDeliveryOn } from "./services/agent-tools/routine-delivery-flag";
 import {
   hasRunInFlight,
   NetworkWaitClock,
@@ -1604,7 +1603,7 @@ export class ServiceHost {
     file: () => path.join(abacusBotHome(), "routine-sends.json"),
   });
 
-  /** Routine runs' reports to their chat and the user's chat app (flag routine-delivery). */
+  /** Routine runs' reports to their chat and the user's chat app. */
   private readonly routineReports = new RoutineReportStore({
     file: () => path.join(abacusBotHome(), "routine-reports.json"),
   });
@@ -1704,7 +1703,7 @@ export class ServiceHost {
       if (fire != null) noteChatPlatform(fire.split("@")[0]!, platform);
     },
     routineSends: this.routineSends,
-    routineDelivery: routineDeliveryOn,
+    routineDelivery: () => this.deliversRoutineReports(),
     routineDeliversToSelf: (sessionId, platform) =>
       this.routineDeliversToSelf(sessionId, platform),
     // A routine's run is its bot's work too: a routine made from inside one
@@ -4679,7 +4678,7 @@ export class ServiceHost {
     tags: UserTextTags | undefined
   ): { notes: string[]; taken: () => void } {
     if (
-      !routineDeliveryOn() ||
+      !this.deliversRoutineReports() ||
       !carriesUserWords(tags) ||
       this.isUnattendedSession(sessionId)
     )
@@ -5783,7 +5782,7 @@ export class ServiceHost {
       return;
     }
     if (outcome === "completed") {
-      if (routineDeliveryOn())
+      if (this.deliversRoutineReports())
         void this.deliverRunReport(
           finishedJob,
           sessionId,
@@ -5805,6 +5804,11 @@ export class ServiceHost {
     // Not the routine's failure: its next fires skip until the credits are back.
     if (creditsOut) this.holdRoutinesForCredits(session.routineId);
     else this.pauseIfFailingRepeatedly(session.routineId);
+  }
+
+  /** The app delivers routine reports here; the hosted computer's are the server's. */
+  private deliversRoutineReports(): boolean {
+    return this.platform !== "web-host";
   }
 
   /** The chat apps a routine's reports go to: set up ones whose home bot made it. */
@@ -5840,9 +5844,9 @@ export class ServiceHost {
   }
 
   /**
-   * A completed run's final answer, delivered by the app (flag
-   * routine-delivery): once per fire, never a NO_REPLY run's, and with no
-   * model call of its own. Recorded before it is made.
+   * A completed run's final answer, delivered by the app: once per fire,
+   * never a NO_REPLY run's, and with no model call of its own. Recorded
+   * before it is made.
    */
   private async deliverRunReport(
     job: CronJob,
@@ -5945,7 +5949,7 @@ export class ServiceHost {
 
   /** Deliveries the app closed under, made at launch. */
   private async replayRunReports(): Promise<void> {
-    if (!routineDeliveryOn()) return;
+    if (!this.deliversRoutineReports()) return;
     for (const report of this.routineReports.unfinished())
       await this.makeRunReport(report).catch((error: unknown) => {
         console.error(
@@ -5968,7 +5972,7 @@ export class ServiceHost {
    * reports to the bot's own chat).
    */
   private routineOrigin(sessionId: string | undefined): string | null {
-    if (sessionId == null || !routineDeliveryOn()) return null;
+    if (sessionId == null || !this.deliversRoutineReports()) return null;
     const session = this.agentSessionManagerService.get(sessionId);
     if (
       session == null ||
@@ -5998,7 +6002,7 @@ export class ServiceHost {
 
   /** The app sends this run's answer to the user's own chat on `platform`'s lane. */
   private routineDeliversToSelf(sessionId: string, platform: string): boolean {
-    if (!routineDeliveryOn()) return false;
+    if (!this.deliversRoutineReports()) return false;
     const routineId = this.agentSessionManagerService.get(sessionId)?.routineId;
     const job = routineId == null ? null : getJob(routineId);
     if (job == null || !isMessagingPlatformId(platform)) return false;
@@ -6239,7 +6243,7 @@ export class ServiceHost {
   private routineLinkDown(job: CronJob): boolean {
     // Its report always reaches its chat in the app, link or not.
     if (
-      routineDeliveryOn() &&
+      this.deliversRoutineReports() &&
       (job.botId != null ||
         (job.originSessionId != null &&
           this.agentSessionManagerService.get(job.originSessionId) != null))
@@ -7421,7 +7425,7 @@ export class ServiceHost {
   }
 
   /**
-   * "Reply to this run" (flag routine-delivery): the user's words go to the
+   * "Reply to this run": the user's words go to the
    * chat the routine reports to, opened and stamped on the routine when it
    * has none, carrying the run's report as a hidden note. That chat is
    * attended and has its full tools, so "go" is done there.
@@ -7431,9 +7435,7 @@ export class ServiceHost {
     runId: string,
     text: string
   ): Promise<{ workspaceId: string; sessionId: string; botId: string | null }> {
-    // The hosted computer's routines are the server's; a local one answers
-    // in its chat only where the app delivers its reports.
-    if (this.platform === "web-host" || !routineDeliveryOn())
+    if (!this.deliversRoutineReports())
       throw new InvalidInputError("Replying to a run is not available here.");
     const job = getJob(routineId);
     if (job == null)
@@ -7560,7 +7562,7 @@ export class ServiceHost {
     const port = this.webhookService.port();
 
     // A job moved to the server is listed once, as the server's.
-    const delivers = routineDeliveryOn();
+    const delivers = this.deliversRoutineReports();
     const local = listJobs()
       .filter((job) => job.serverId == null)
       .map((job) => ({
@@ -7952,7 +7954,7 @@ export class ServiceHost {
       job,
       buildRoutineFirePrompt(job, trigger, payload, {
         endsOnAction: nextStepOn(),
-        ...(routineDeliveryOn()
+        ...(this.deliversRoutineReports()
           ? { deliveredTo: this.reportDestination(job) }
           : {}),
         unattended,
