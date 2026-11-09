@@ -79,6 +79,11 @@ export class Allowances {
     this.allowCommand(String(tool.input.command ?? ""));
   }
 
+  /** A new conversation starts with nothing lifted for it. */
+  forgetGuardRules(): void {
+    this.guardRules.length = 0;
+  }
+
   /** Every segment of `cd repo && git pull`, or the `git` half asks again. */
   allowCommand(command: string): void {
     for (const segment of shellSegments(command)) {

@@ -3,19 +3,23 @@
  * rather than its text. Only a word in command position is a command, so a
  * word inside quotes, a comment, a heredoc saved to a file, another
  * language's code or an ssh payload is data. One reader of shell text for
- * the permission gate and the guardrails; deliberately syntactic, like the
- * sandbox policy: an alias or a function wrapping sudo is not seen.
+ * the permission gate and the guardrails. Anything that would run here but
+ * cannot be read statically (a computed command name, a dynamic payload, a
+ * script nobody can read) fails safe to the "could not read" card, never to
+ * allow. An alias or function defined outside the command is not seen.
  */
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
 import {
+  type ArithmeticExpression,
   type Command,
   type Node,
   parse,
   type ParsedScript,
   type Redirect,
+  type TestExpression,
   type Word,
   type WordPart,
 } from "unbash";
@@ -87,21 +91,33 @@ export const RULE_REASONS: Record<
   systemDelete: "deletes inside a system folder",
   disk: "erases or overwrites a disk",
   power: "shuts down or restarts the computer",
-  forcePush: "force-pushes over git history",
+  forcePush: "force-pushes or deletes remote git history",
   gitHistory: "deletes a whole .git folder",
+  killAll: "stops every process the user is running",
   killProcess: "stops a process this run did not start",
   unreadable: "could not read this command",
-  deleteRoot: "deletes the whole disk or home folder",
+  deleteRoot: "deletes the whole disk, the home folder or a folder holding it",
   emptyTrash: "empties the Trash",
   forkBomb: "is a fork bomb",
 };
 
 /** Run scripts read to see what they run: bounded size and nesting. */
 const MAX_SCRIPT_BYTES = 256 * 1024;
-const MAX_DEPTH = 3;
+const MAX_DEPTH = 6;
+
+/** A word whose value is not known before the shell runs, kept as its text. */
+const DYN = "\u0000";
+const isDyn = (word: string): boolean => word.startsWith(DYN);
+const raw = (word: string): string => (isDyn(word) ? word.slice(1) : word);
+
+/** Content written by means the judge cannot read (a copy, a computed string). */
+const UNKNOWN = Symbol("unknown content");
+/** A download: running it is allowed, as `curl … | sh` is (Full access means full access). */
+const REMOTE = Symbol("download");
+type Content = string | typeof UNKNOWN | typeof REMOTE;
 
 const PRIVILEGED = new Set(["sudo", "doas", "su", "pkexec", "runas", "gsudo"]);
-const SHELLS = new Set(["bash", "sh", "zsh", "dash", "ksh", "ash"]);
+const SHELLS = new Set(["bash", "sh", "zsh", "dash", "ksh", "ash", "fish"]);
 const POWER = new Set(["shutdown", "reboot", "halt", "poweroff"]);
 const POWER_CMDLETS = /^(?:stop-computer|restart-computer)$/i;
 const DISK_CMDLETS = /^(?:format-volume|clear-disk|initialize-disk)$/i;
@@ -119,6 +135,8 @@ const KILL_CMDLETS = /^(?:stop-process|spps|taskkill|tskill)$/i;
 const OWN_SHELL_JOB = /^(?:%\d*|%[+%-]|\$!)$/;
 const DELETERS = new Set(["rm", "rmdir", "shred", "unlink"]);
 const LOCALHOST = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+/** Windows delete verbs, in PowerShell and cmd. */
+const WINDOWS_DELETERS = /^(?:remove-item|ri|rm|rmdir|rd|del|erase|rni)$/i;
 
 /** Writer verbs: every operand, or only the last. */
 const WRITES_EVERY_OPERAND = new Set([
@@ -140,9 +158,9 @@ const WRITES_LAST_OPERAND = new Set([
   "scp",
 ]);
 
-/** Devices `dd of=` may write without touching a disk. */
-const HARMLESS_DEVICES =
-  /^\/dev\/(?:null|zero|stdout|stderr|tty|fd\/\d+|full)$/;
+/** A whole disk or partition: writing it is like `dd of=` one. */
+const BLOCK_DEVICE =
+  /^(?:\/dev\/(?:sd|hd|vd|xvd|nvme|mmcblk|disk|rdisk|loop|md|dm-|mapper\/|sr)|\\\\\.\\physicaldrive)/i;
 
 /** System folders: deleting inside them needs a yes. Temp folders are not. */
 const SYSTEM_DIRS = [
@@ -174,8 +192,10 @@ interface Context {
   commands: LocalCommand[];
   /** Script files already read, so a script that runs itself ends. */
   seen: Set<string>;
-  /** Files this same command writes from a heredoc, by resolved path. */
-  pending: Map<string, string>;
+  /** Files this command wrote earlier on, by resolved path. */
+  pending: Map<string, Content>;
+  /** The working folder as `cd` left it; null once a `cd` could not be read. */
+  cwd: string | null;
 }
 
 interface Scope {
@@ -183,6 +203,8 @@ interface Scope {
   depth: number;
   /** Writes in a script being run are its business, not this command's. */
   collectWrites: boolean;
+  /** What feeds this command's stdin, when it is a later pipeline stage. */
+  stdin?: Node;
 }
 
 export function judgeCommand(
@@ -200,6 +222,7 @@ export function judgeCommand(
     commands: [],
     seen: new Set(),
     pending: new Map(),
+    cwd: options.cwd,
   };
 
   // Unchanged rule, kept in trash.ts: it also reads scripts in other languages.
@@ -310,9 +333,24 @@ function add(
   context.findings.push({ rule, tier, command: command.trim().slice(0, 200) });
 }
 
+const unreadable = (context: Context, text: string): void =>
+  add(context, "unreadable", "confirm", text);
+
+/** Run `body` in a child process's view: its `cd` does not leak out. */
+function isolated(context: Context, body: () => void): void {
+  const cwd = context.cwd;
+  body();
+  context.cwd = cwd;
+}
+
 function judgeSource(context: Context, source: string, scope: Scope): void {
+  if (scope.depth > MAX_DEPTH) {
+    unreadable(context, source);
+    return;
+  }
   const script = parse(source);
-  judgeScript(context, script, { ...scope, source });
+  const { stdin: _stdin, ...rest } = scope;
+  judgeScript(context, script, { ...rest, source });
 }
 
 function judgeScript(
@@ -336,7 +374,7 @@ function judgeScript(
       )
     );
     if (!inArgument) {
-      add(context, "unreadable", "confirm", source);
+      unreadable(context, source);
       break;
     }
   }
@@ -355,7 +393,7 @@ function walk(
   };
   switch (node.type) {
     case "Statement":
-      redirects(context, node.redirects, scope);
+      redirects(context, node.redirects, scope, scope.source);
       walk(context, node.command, scope, seen);
       return;
     case "Command":
@@ -363,6 +401,16 @@ function walk(
       judgeSimple(context, node, scope);
       return;
     case "Pipeline":
+      // Every stage after the first reads the one before it on stdin.
+      node.commands.forEach((stage, index) =>
+        walk(
+          context,
+          stage,
+          index === 0 ? scope : { ...scope, stdin: node.commands[index - 1] },
+          seen
+        )
+      );
+      return;
     case "AndOr":
     case "CompoundList":
       children(node.commands);
@@ -383,17 +431,89 @@ function walk(
       children(node.items.map((item) => item.body));
       return;
     case "Subshell":
+      isolated(context, () => walk(context, node.body, scope, seen));
+      return;
     case "BraceGroup":
+      walk(context, node.body, scope, seen);
+      return;
     case "ArithmeticFor":
+      for (const expression of [node.initialize, node.test, node.update])
+        arithmetic(context, expression, scope);
       walk(context, node.body, scope, seen);
       return;
     case "Function":
     case "Coproc":
-      redirects(context, node.redirects, scope);
+      redirects(context, node.redirects, scope, scope.source);
       walk(context, node.body, scope, seen);
       return;
+    case "TestCommand":
+      test(context, node.expression, scope);
+      return;
+    case "ArithmeticCommand":
+      arithmetic(context, node.expression, scope);
+      return;
     default:
-      // `[[ ]]` and `(( ))` run nothing of their own worth judging.
+      return;
+  }
+}
+
+/** `[[ … ]]`: its words expand, and a `$(…)` in one runs. */
+function test(
+  context: Context,
+  expression: TestExpression | undefined,
+  scope: Scope
+): void {
+  if (expression == null) return;
+  switch (expression.type) {
+    case "TestUnary":
+      expansions(context, expression.operand, scope);
+      return;
+    case "TestBinary":
+      expansions(context, expression.left, scope);
+      expansions(context, expression.right, scope);
+      return;
+    case "TestLogical":
+      test(context, expression.left, scope);
+      test(context, expression.right, scope);
+      return;
+    case "TestNot":
+      test(context, expression.operand, scope);
+      return;
+    case "TestGroup":
+      test(context, expression.expression, scope);
+      return;
+  }
+}
+
+/** `(( … ))` and `$(( … ))`: a `$(…)` inside runs. */
+function arithmetic(
+  context: Context,
+  expression: ArithmeticExpression | undefined,
+  scope: Scope
+): void {
+  if (expression == null) return;
+  switch (expression.type) {
+    case "ArithmeticBinary":
+      arithmetic(context, expression.left, scope);
+      arithmetic(context, expression.right, scope);
+      return;
+    case "ArithmeticUnary":
+      arithmetic(context, expression.operand, scope);
+      return;
+    case "ArithmeticTernary":
+      arithmetic(context, expression.test, scope);
+      arithmetic(context, expression.consequent, scope);
+      arithmetic(context, expression.alternate, scope);
+      return;
+    case "ArithmeticGroup":
+      arithmetic(context, expression.expression, scope);
+      return;
+    case "ArithmeticWord":
+      for (const part of expression.parts ?? [])
+        expandPart(context, part, scope);
+      return;
+    case "ArithmeticCommandExpansion":
+      isolated(context, () => judgeScript(context, expression.script, scope));
       return;
   }
 }
@@ -408,10 +528,14 @@ function expansions(
 }
 
 function expandPart(context: Context, part: WordPart, scope: Scope): void {
+  const { stdin: _stdin, ...inner } = scope;
   switch (part.type) {
     case "CommandExpansion":
     case "ProcessSubstitution":
-      judgeScript(context, part.script, scope);
+      isolated(context, () => judgeScript(context, part.script, inner));
+      return;
+    case "ArithmeticExpansion":
+      arithmetic(context, part.expression, inner);
       return;
     case "DoubleQuoted":
     case "LocaleString":
@@ -419,6 +543,8 @@ function expandPart(context: Context, part: WordPart, scope: Scope): void {
       return;
     case "ParameterExpansion":
       expansions(context, part.operand, scope);
+      for (const child of part.indexParts ?? [])
+        expandPart(context, child, scope);
       return;
     case "BraceExpansion":
     case "ExtendedGlob":
@@ -475,17 +601,89 @@ function partValue(part: WordPart, home: string): string | null {
   }
 }
 
+/** An unquoted glob character the shell would expand: `*`, `?`, `[…]`. */
+function hasGlob(word: Word): boolean {
+  const literals =
+    word.parts == null
+      ? [word.text]
+      : word.parts
+          .filter((part) => part.type === "Literal")
+          .map((part) => part.text);
+  return literals.some((text) => /[*?]|\[[^\]]*\]/.test(text));
+}
+
+/** `$CMD` or `${CMD}`, quoted or not: a variable the command's own script set. */
+function isPlainVariable(word: Word): boolean {
+  const parts =
+    word.parts?.length === 1 && word.parts[0]!.type === "DoubleQuoted"
+      ? word.parts[0]!.parts
+      : word.parts;
+  if (parts?.length !== 1) return false;
+  const only = parts[0]!;
+  return (
+    only.type === "SimpleExpansion" ||
+    (only.type === "ParameterExpansion" &&
+      only.operator == null &&
+      only.index == null &&
+      only.indirect !== true &&
+      only.length !== true &&
+      only.slice == null &&
+      only.replace == null)
+  );
+}
+
+/**
+ * `"$VENV/bin/python"`: a variable only in the folder, so the program is
+ * known by its last path segment. A shell script run that way is not, so its
+ * name stays unknown.
+ */
+function knownProgram(word: Word): string | null {
+  const parts =
+    word.parts?.length === 1 && word.parts[0]!.type === "DoubleQuoted"
+      ? word.parts[0]!.parts
+      : word.parts;
+  if (parts == null) return null;
+  const last = parts.at(-1);
+  if (last?.type !== "Literal" || !last.value.includes("/")) return null;
+  const plain = parts
+    .slice(0, -1)
+    .every(
+      (part) =>
+        part.type === "Literal" ||
+        part.type === "SimpleExpansion" ||
+        (part.type === "ParameterExpansion" && part.operator == null)
+    );
+  const program = last.value.slice(last.value.lastIndexOf("/") + 1);
+  return plain && program !== "" && !/\.(?:sh|bash|zsh)$/i.test(program)
+    ? program
+    : null;
+}
+
+/** A word for the rules: its static value, or its text marked as dynamic. */
+function wordValue(word: Word, home: string): string {
+  // A Windows path the model wrote unquoted keeps its backslashes as written.
+  if (/^[A-Za-z]:\\/.test(word.text)) return word.text;
+  return staticValue(word, home) ?? DYN + word.text;
+}
+
+/** Resolve a path as the shell would here; null when `cd` made it unknowable. */
+function resolve(context: Context, target: string): string | null {
+  if (path.isAbsolute(target) || /^[a-z]:[\\/]/i.test(target))
+    return path.resolve(target);
+  return context.cwd == null ? null : path.resolve(context.cwd, target);
+}
+
 function redirects(
   context: Context,
   list: readonly Redirect[],
-  scope: Scope
+  scope: Scope,
+  text: string
 ): void {
   for (const redirect of list) {
     expansions(context, redirect.target, scope);
     // An unquoted heredoc expands `$(…)` here, whatever reads it.
     if (redirect.heredocQuoted !== true)
       expansions(context, redirect.body, scope);
-    if (!scope.collectWrites) continue;
     const kind =
       redirect.operator === ">" ||
       redirect.operator === ">|" ||
@@ -501,34 +699,160 @@ function redirects(
     const target = staticValue(redirect.target, context.options.home);
     // `>&2`, `>&-`: a descriptor, not a file.
     if (target == null || /^(?:\d+|-)$/.test(target)) continue;
-    addWrite(context, target, kind);
+    addWrite(context, target, kind, scope, text);
   }
 }
 
 function addWrite(
   context: Context,
   target: string,
-  kind: LocalWrite["kind"]
+  kind: LocalWrite["kind"],
+  scope: Scope,
+  text: string
 ): void {
-  if (target === "/dev/null" || target.length === 0) return;
-  const resolved = path.resolve(context.options.cwd, target);
+  if (target === "/dev/null" || target.length === 0 || isDyn(target)) return;
+  if (BLOCK_DEVICE.test(target)) add(context, "disk", "confirm", text);
+  if (!scope.collectWrites) return;
+  // An unknown `cd` leaves the original folder as the best guess for the file rules.
+  const resolved =
+    resolve(context, target) ?? path.resolve(context.options.cwd, target);
   context.writes.push({ target, path: resolved, kind });
 }
 
 /**
- * `cat > x.sh <<EOF … EOF; bash x.sh`: the script does not exist yet when the
- * command is judged, so what the heredoc writes is kept for judgeScriptFile.
+ * What a command writes to its stdout, when it can be read without running
+ * anything: a static `echo` or `printf`, `cat` of a heredoc, a herestring or
+ * readable files, and what a pipeline stage before it produced. REMOTE for
+ * a download, UNKNOWN for anything else.
  */
-function rememberHeredocFile(context: Context, node: Command): void {
-  const body = node.redirects.find(
-    (r) => r.operator.startsWith("<<") && r.operator !== "<<<"
-  );
-  const out = node.redirects.find(
-    (r) => r.operator === ">" || r.operator === ">>"
-  );
-  const target = staticValue(out?.target, context.options.home);
-  if (body?.content == null || target == null) return;
-  context.pending.set(path.resolve(context.options.cwd, target), body.content);
+function producedText(
+  context: Context,
+  node: Node | undefined,
+  scope: Scope
+): Content {
+  if (node?.type !== "Command" || node.name == null) return UNKNOWN;
+  const home = context.options.home;
+  const name = staticValue(node.name, home);
+  const args = node.suffix.map((word) => staticValue(word, home));
+  if (name == null || args.some((arg) => arg == null)) return UNKNOWN;
+  const words = args as string[];
+  const tool = baseName(name);
+
+  if (tool === "curl" || tool === "wget") return REMOTE;
+  if (tool === "echo") {
+    let at = 0;
+    while (/^-[neE]+$/.test(words[at] ?? "")) at += 1;
+    const text = words.slice(at).join(" ");
+    // Some shells' echo reads backslash escapes: that is not static text.
+    if (text.includes("\\")) return UNKNOWN;
+    return words.slice(0, at).some((flag) => flag.includes("n"))
+      ? text
+      : `${text}\n`;
+  }
+  if (tool === "printf") {
+    const [format, ...rest] = words;
+    if (format == null || /\\[^nt\\]|%[^s%]/.test(format)) return UNKNOWN;
+    return format
+      .replace(/%s/g, () => rest.shift() ?? "")
+      .replace(/%%/g, "%")
+      .replace(/\\n/g, "\n")
+      .replace(/\\t/g, "\t")
+      .replace(/\\\\/g, "\\");
+  }
+  if (tool === "cat") {
+    const files = operandsOf(words);
+    if (files.length > 0) {
+      let joined = "";
+      for (const file of files) {
+        const content = readScript(context, file);
+        if (typeof content !== "string") return content;
+        joined += content;
+      }
+      return joined;
+    }
+    return stdinText(context, node, scope) ?? UNKNOWN;
+  }
+  return UNKNOWN;
+}
+
+/** What a command reads on stdin: a heredoc, a herestring, a `<` file, or the pipe. */
+function stdinText(
+  context: Context,
+  node: Command,
+  scope: Scope
+): Content | null {
+  for (const redirect of node.redirects) {
+    if (redirect.operator === "<<<")
+      return staticValue(redirect.target, context.options.home) ?? UNKNOWN;
+    if (redirect.operator === "<<" || redirect.operator === "<<-")
+      return redirect.content ?? UNKNOWN;
+    if (redirect.operator === "<") {
+      const file = staticValue(redirect.target, context.options.home);
+      return file == null ? UNKNOWN : readScript(context, file);
+    }
+  }
+  if (scope.stdin != null)
+    return producedText(context, scope.stdin, { ...scope, stdin: undefined });
+  return null;
+}
+
+/** A script's text: what this command wrote there, or the file; UNKNOWN when neither reads. */
+function readScript(context: Context, file: string): Content {
+  if (isDyn(file)) return UNKNOWN;
+  const resolved = resolve(context, file);
+  if (resolved == null) return UNKNOWN;
+  const pending = context.pending.get(resolved);
+  if (pending != null) return pending;
+  try {
+    const info = fs.statSync(resolved);
+    if (!info.isFile() || info.size > MAX_SCRIPT_BYTES) return UNKNOWN;
+    return fs.readFileSync(resolved, "utf8");
+  } catch {
+    return UNKNOWN;
+  }
+}
+
+/**
+ * Remember what this command writes, so a later `bash t.sh` in the same
+ * command judges it: the text of a static producer redirected or `tee`d to a
+ * file, and UNKNOWN for anything else written here.
+ */
+function rememberWrites(
+  context: Context,
+  node: Command,
+  scope: Scope,
+  writes: readonly string[]
+): void {
+  const home = context.options.home;
+  const known = producedText(context, node, scope);
+  const tool = baseName(staticValue(node.name, home) ?? "");
+  const store = (target: string, content: Content, append: boolean): void => {
+    const resolved = resolve(context, target);
+    if (resolved == null) return;
+    if (append && typeof content === "string") {
+      const before =
+        context.pending.get(resolved) ?? readScript(context, target);
+      context.pending.set(
+        resolved,
+        typeof before === "string" ? before + content : UNKNOWN
+      );
+    } else context.pending.set(resolved, content);
+  };
+  for (const redirect of node.redirects) {
+    if (![">", ">|", ">>", "&>", "&>>"].includes(redirect.operator)) continue;
+    const target = staticValue(redirect.target, home);
+    if (target == null) continue;
+    store(target, known, redirect.operator.includes(">>"));
+  }
+  if (tool === "tee") {
+    const content = stdinText(context, node, scope) ?? UNKNOWN;
+    for (const target of writes) store(target, content, false);
+    return;
+  }
+  // A download saved to a file runs as freely as one piped to a shell; any
+  // other file this command writes (cp, mv, dd…) is unread.
+  const other = tool === "curl" || tool === "wget" ? REMOTE : UNKNOWN;
+  for (const target of writes) store(target, other, false);
 }
 
 /** Options of the wrappers stepped over that take a value. */
@@ -543,6 +867,12 @@ const VALUE_OPTIONS: Record<string, Set<string>> = {
   stdbuf: new Set(["-i", "-o", "-e"]),
   ionice: new Set(["-c", "-n", "-p"]),
   xargs: new Set(["-I", "-n", "-P", "-L", "-d", "-E", "-s", "-a"]),
+  setsid: new Set([]),
+  flock: new Set(["-w", "-E", "--timeout", "--conflict-exit-code"]),
+  watch: new Set(["-n", "--interval", "-q", "--equexit"]),
+  chroot: new Set(["--userspec", "--groups"]),
+  runuser: new Set(["-u", "-g", "-G", "--user", "--group", "-s", "--shell"]),
+  script: new Set(["-E", "-I", "-O", "-T", "-B", "-m", "--log-io"]),
   ssh: new Set(
     "-b -c -D -E -e -F -I -i -J -L -l -m -O -o -p -Q -R -S -W -w".split(" ")
   ),
@@ -562,44 +892,35 @@ function skipOptions(words: readonly string[], from: number, tool: string) {
 }
 
 const baseName = (word: string): string =>
-  word
+  raw(word)
     .split(/[\\/]/)
     .at(-1)!
     .replace(/\.exe$/i, "")
     .toLowerCase();
 
 function judgeSimple(context: Context, node: Command, scope: Scope): void {
+  const text = scope.source.slice(node.pos, node.end);
   for (const assignment of node.prefix) {
     expansions(context, assignment.value, scope);
     for (const word of assignment.array ?? []) expansions(context, word, scope);
   }
-  redirects(context, node.redirects, scope);
-  rememberHeredocFile(context, node);
+  const pendingCwd = context.cwd;
+  redirects(context, node.redirects, scope, text);
+  const writesBefore = context.writes.length;
   expansions(context, node.name, scope);
   for (const word of node.suffix) expansions(context, word, scope);
   if (node.name == null) return;
 
-  const text = scope.source.slice(node.pos, node.end);
   const home = context.options.home;
-  const name = staticValue(node.name, home);
-  if (name == null) {
-    // `$(echo sudo) …` names its command at run time; `$SSH …` is a variable
-    // the user's own script set, judged as an unknown command.
-    if (node.name.parts?.some((part) => part.type === "CommandExpansion"))
-      add(context, "unreadable", "confirm", text);
+  const name = staticValue(node.name, home) ?? knownProgram(node.name);
+  if (name == null || hasGlob(node.name)) {
+    // `$SSH …` is a variable the command's own script set, judged as an
+    // unknown command; any other computed name (`$(…)`, `{a,b}`, `a${IFS}b`,
+    // a glob) is a command nobody can read.
+    if (name != null || !isPlainVariable(node.name)) unreadable(context, text);
     return;
   }
-  // An argument that is not static stays in place as its raw text: what it
-  // expands to is unknown, which no rule below reads as a match.
-  // A Windows path the model wrote unquoted keeps its backslashes as written.
-  const words = [
-    name,
-    ...node.suffix.map((word) =>
-      /^[A-Za-z]:\\/.test(word.text)
-        ? word.text
-        : (staticValue(word, home) ?? word.text)
-    ),
-  ];
+  const words = [name, ...node.suffix.map((word) => wordValue(word, home))];
   const files = node.redirects
     .filter((redirect) => !redirect.operator.startsWith("<<"))
     .map((redirect) => staticValue(redirect.target, home))
@@ -608,6 +929,15 @@ function judgeSimple(context: Context, node: Command, scope: Scope): void {
         target != null && !/^(?:\d+|-)$/.test(target)
     );
   judgeWords(context, words, node, text, scope, files);
+  const cwdAfter = context.cwd;
+  context.cwd = pendingCwd;
+  rememberWrites(
+    context,
+    node,
+    scope,
+    context.writes.slice(writesBefore).map((write) => write.target)
+  );
+  context.cwd = cwdAfter;
 }
 
 /** Judge one command line from its words, stepping over wrappers. */
@@ -620,9 +950,26 @@ function judgeWords(
   files: string[] = []
 ): void {
   let index = 0;
+  const nested = (source: string): void =>
+    judgeNested(context, source, scope, text);
+  const joined = (from: number): string | null => {
+    const rest = words.slice(from);
+    return rest.some(isDyn) ? null : rest.join(" ");
+  };
+  const runString = (source: string | null | undefined): void => {
+    if (source == null || isDyn(source)) unreadable(context, text);
+    else nested(source);
+  };
 
   while (index < words.length) {
-    const tool = baseName(words[index]!);
+    const word = words[index]!;
+    if (isDyn(word)) {
+      // `timeout 60 "$NODE" x.js`: a plain variable is an unknown program, as
+      // at the start of a command; anything else computed is unreadable.
+      if (!/^"?\$\{?\w+\}?"?$/.test(raw(word))) unreadable(context, text);
+      return;
+    }
+    const tool = baseName(word);
     if (PRIVILEGED.has(tool)) {
       const next = skipOptions(words, index + 1, tool);
       const flags = words.slice(index + 1, next).join(" ");
@@ -630,14 +977,51 @@ function judgeWords(
       if (tool === "sudo" && isSudoProbe(flags, rest)) return;
       add(context, "privileged", "confirm", text);
       if (tool === "su") {
-        const command = suCommand(words.slice(index + 1));
-        if (command != null) judgeNested(context, command, scope);
+        const command = optionValue(words.slice(index + 1), [
+          "-c",
+          "--command",
+        ]);
+        if (command !== undefined) runString(command);
         return;
       }
       index = next;
       continue;
     }
+    if (tool === "runuser" || tool === "chroot") {
+      add(context, "privileged", "confirm", text);
+      const command = optionValue(words.slice(index + 1), ["-c", "--command"]);
+      if (command !== undefined) {
+        runString(command);
+        return;
+      }
+      index = skipOptions(words, index + 1, tool);
+      // chroot names the new root first; runuser, without -u, the user.
+      if (tool === "chroot" || !words.slice(0, index).includes("-u"))
+        index += 1;
+      continue;
+    }
     if (tool === "env") {
+      // `env -S STR` splits STR into the command line.
+      for (let at = index + 1; at < words.length; at += 1) {
+        const flag = words[at]!;
+        const inline = /^-S./.test(flag)
+          ? flag.slice(2)
+          : flag.startsWith("--split-string=")
+            ? flag.slice("--split-string=".length)
+            : null;
+        if (inline == null && flag !== "-S" && flag !== "--split-string") {
+          if (!flag.startsWith("-") || flag === "--") break;
+          continue;
+        }
+        const split = inline ?? words[at + 1];
+        const tail = joined(inline == null ? at + 2 : at + 1);
+        runString(
+          split == null || isDyn(split) || tail == null
+            ? null
+            : `${split} ${tail}`
+        );
+        return;
+      }
       index = skipOptions(words, index + 1, tool);
       while (index < words.length && /^\w+=/.test(words[index]!)) index += 1;
       continue;
@@ -646,7 +1030,7 @@ function judgeWords(
       index = skipOptions(words, index + 1, tool) + 1;
       continue;
     }
-    if (tool === "busybox") {
+    if (tool === "busybox" || tool === "builtin") {
       index += 1;
       continue;
     }
@@ -656,10 +1040,55 @@ function judgeWords(
       index = skipOptions(words, index + 1, tool);
       continue;
     }
+    if (tool === "flock") {
+      index = skipOptions(words, index + 1, tool) + 1;
+      if (words[index] === "-c" || words[index] === "--command") {
+        runString(words[index + 1]);
+        return;
+      }
+      continue;
+    }
+    if (tool === "watch") {
+      const at = skipOptions(words, index + 1, tool);
+      const execs = words
+        .slice(index + 1, at)
+        .some((flag) => /^-[a-z]*x|^--exec$/.test(flag));
+      if (execs) {
+        index = at;
+        continue;
+      }
+      // watch hands its words to `sh -c`.
+      runString(joined(at));
+      return;
+    }
+    if (tool === "script") {
+      const command = optionValue(words.slice(index + 1), ["-c", "--command"]);
+      if (command !== undefined) runString(command);
+      return;
+    }
+    if (tool === "sg") {
+      const rest = words.slice(index + 2);
+      const command = rest[0] === "-c" ? rest[1] : joined(index + 2);
+      if (rest.length > 0) runString(command);
+      return;
+    }
+    if (tool === "trap") {
+      const action = words[index + 1];
+      if (action != null && !["-", "-l", "-p", ""].includes(action))
+        runString(action);
+      return;
+    }
     if (
-      ["nohup", "time", "nice", "exec", "stdbuf", "ionice", "xargs"].includes(
-        tool
-      )
+      [
+        "nohup",
+        "time",
+        "nice",
+        "exec",
+        "stdbuf",
+        "ionice",
+        "xargs",
+        "setsid",
+      ].includes(tool)
     ) {
       index = skipOptions(words, index + 1, tool);
       continue;
@@ -671,55 +1100,83 @@ function judgeWords(
   if (rest.length === 0) return;
   const tool = baseName(rest[0]!);
   const args = rest.slice(1);
-  context.commands.push({ name: rest[0]!, args, redirects: files });
+  context.commands.push({
+    name: rest[0]!,
+    args: args.map(raw),
+    redirects: files,
+  });
 
+  if (tool === "cd" || tool === "pushd" || tool === "popd") {
+    const target = operandsOf(args)[0];
+    context.cwd =
+      tool === "popd" || target === "-" || (target != null && isDyn(target))
+        ? null
+        : target == null
+          ? context.options.home
+          : resolve(context, target);
+    return;
+  }
   if (tool === "find") {
-    for (let at = 0; at < args.length; at += 1) {
-      if (!["-exec", "-execdir", "-ok", "-okdir"].includes(args[at]!)) continue;
-      const end = args.findIndex(
-        (word, position) => position > at && (word === ";" || word === "+")
-      );
-      const inner = args.slice(at + 1, end === -1 ? undefined : end);
-      judgeWords(context, inner, null, inner.join(" "), scope);
-    }
+    judgeFind(context, args, text, scope);
     return;
   }
   if (SHELLS.has(tool)) {
-    judgeShell(context, args, node, scope);
+    judgeShell(context, args, node, scope, text);
     return;
   }
-  if (tool === "eval" || tool === "source" || tool === ".") {
-    if (tool === "eval") judgeNested(context, args.join(" "), scope);
-    else if (args[0] != null) judgeScriptFile(context, args[0], scope);
+  if (tool === "eval") {
+    runString(joined(index + 1));
+    return;
+  }
+  if (tool === "source" || tool === ".") {
+    judgeScriptFile(context, args[0], scope, text, "shell");
     return;
   }
   if (tool === "ssh") {
-    const at = skipOptions(args, 0, "ssh");
-    const host = (args[at] ?? "").replace(/^[^@]*@/, "");
+    let at = skipOptions(args, 0, "ssh");
+    const host = raw(args[at] ?? "").replace(/^[^@]*@/, "");
+    at += 1;
+    if (args[at] === "--") at += 1;
     // Another computer's command is an argument here; this machine is not.
-    if (LOCALHOST.has(host) && args.length > at + 1)
-      judgeNested(context, args.slice(at + 1).join(" "), scope);
+    if (LOCALHOST.has(host) && args.length > at)
+      runString(joined(index + 1 + at));
+    return;
+  }
+  if (tool === "osascript") {
+    if (args.some((arg) => /with\s+administrator\s+privileges/i.test(raw(arg))))
+      add(context, "privileged", "confirm", text);
     return;
   }
   if (tool === "powershell" || tool === "pwsh" || tool === "cmd") {
-    // Another language: only its power and disk commands are looked for.
-    for (const word of args.flatMap((arg) => arg.split(/[\s;|&()]+/))) {
-      if (
-        POWER_CMDLETS.test(word) ||
-        (tool === "cmd" && POWER.has(word.toLowerCase()))
-      )
-        add(context, "power", "confirm", text);
-      if (DISK_CMDLETS.test(word)) add(context, "disk", "confirm", text);
-      if (KILL_CMDLETS.test(word))
-        add(context, "killProcess", "unattended", text);
-    }
+    judgeWindowsShell(context, tool, args, text);
     return;
   }
-  if (rest[0]!.includes("/") && !rest[0]!.includes("\\")) {
-    if (judgeScriptFile(context, rest[0]!, scope, true)) return;
+  if (raw(rest[0]!).includes("/") && !rest[0]!.includes("\\")) {
+    if (judgeScriptFile(context, rest[0], scope, text, "path")) return;
   }
 
   judgeVerb(context, tool, args, text, scope);
+}
+
+/**
+ * The value of an option such as `-c CMD` or `--command=CMD`: undefined when
+ * absent, null when it has no value.
+ */
+function optionValue(
+  args: readonly string[],
+  names: readonly string[]
+): string | null | undefined {
+  for (let at = 0; at < args.length; at += 1) {
+    const arg = args[at]!;
+    if (names.includes(arg)) return args[at + 1] ?? null;
+    for (const name of names) {
+      if (name.startsWith("--") && arg.startsWith(`${name}=`))
+        return arg.slice(name.length + 1);
+      if (!name.startsWith("--") && arg.startsWith(name) && arg.length > 2)
+        return arg.slice(name.length);
+    }
+  }
+  return undefined;
 }
 
 /** `sudo -n true`, `sudo -n -v`, `sudo -n -l`: asks whether a password is needed. */
@@ -730,96 +1187,207 @@ function isSudoProbe(flags: string, rest: readonly string[]): boolean {
   return rest.length === 1 && (rest[0] === "true" || rest[0] === ":");
 }
 
-function suCommand(args: readonly string[]): string | null {
-  for (let at = 0; at < args.length; at += 1) {
-    const arg = args[at]!;
-    if (arg === "-c" || arg === "--command") return args[at + 1] ?? null;
-    if (arg.startsWith("--command=")) return arg.slice("--command=".length);
-  }
-  return null;
-}
-
-function judgeNested(context: Context, source: string, scope: Scope): void {
-  if (scope.depth >= MAX_DEPTH + 3) {
-    add(context, "unreadable", "confirm", source);
+function judgeNested(
+  context: Context,
+  source: string,
+  scope: Scope,
+  text: string
+): void {
+  if (scope.depth >= MAX_DEPTH) {
+    unreadable(context, text);
     return;
   }
-  judgeSource(context, source, { ...scope, depth: scope.depth + 1 });
+  isolated(context, () =>
+    judgeSource(context, source, { ...scope, depth: scope.depth + 1 })
+  );
 }
 
-/** `bash -c STR`, `bash <<EOF`, `sh -s <<<STR`, `bash x.sh`. */
+/** `bash -c STR`, `bash s.sh`, `bash <<EOF`, `echo … | sh`, `bash < s.sh`. */
 function judgeShell(
   context: Context,
   args: readonly string[],
   node: Command | null,
-  scope: Scope
+  scope: Scope,
+  text: string
 ): void {
   for (let at = 0; at < args.length; at += 1) {
     const arg = args[at]!;
-    if (arg === "--") break;
-    if (!arg.startsWith("-") && !arg.startsWith("+")) {
-      judgeScriptFile(context, arg, scope);
+    // `-s`: commands come from stdin, and the words after are its arguments.
+    if (/^-[a-zA-Z]*s[a-zA-Z]*$/.test(arg) && !arg.includes("c")) break;
+    if (
+      arg === "--" ||
+      (!arg.startsWith("-") && !arg.startsWith("+")) ||
+      isDyn(arg)
+    ) {
+      const script = arg === "--" ? args[at + 1] : arg;
+      if (script != null)
+        judgeScriptFile(context, script, scope, text, "shell");
+      else break;
       return;
     }
-    if (/^-[a-zA-Z]*c[a-zA-Z]*$/.test(arg)) {
+    if (/^-[a-zA-Z]*c[a-zA-Z]*$/.test(arg) || arg === "--command") {
       const command = args.slice(at + 1).find((word) => !word.startsWith("-"));
-      if (command != null) judgeNested(context, command, scope);
+      if (command == null || isDyn(command)) unreadable(context, text);
+      else judgeNested(context, command, scope, text);
       return;
     }
-    if (arg === "-o" || arg === "+o" || arg === "-O" || arg === "+O") at += 1;
+    if (["-o", "+o", "-O", "+O", "--rcfile", "--init-file"].includes(arg))
+      at += 1;
   }
   // No script named: the shell reads its commands from stdin.
-  for (const redirect of node?.redirects ?? []) {
-    if (["<<", "<<-", "<<<"].includes(redirect.operator)) {
-      const body =
-        redirect.operator === "<<<"
-          ? staticValue(redirect.target, context.options.home)
-          : redirect.content;
-      if (body != null) judgeNested(context, body, scope);
-    }
-  }
+  if (node == null) return;
+  const input = stdinText(context, node, scope);
+  if (input == null || input === REMOTE) return;
+  if (input === UNKNOWN) unreadable(context, text);
+  else judgeNested(context, input, scope, text);
 }
 
 /**
- * A local script this command runs, read and judged; true when one was. Only
- * files inside the workspace or temp, small, and nested at most a few deep.
- * `requireShebang`: a bare `./x` runs as shell only when it says so.
+ * A script this command runs as shell, judged; true when it was handled.
+ * `shell` (bash x, source x): it must be read, or the user is asked.
+ * `path` (./x): read when its first line names a POSIX shell or it has no
+ * `#!` at all (bash runs that as shell); another interpreter, a binary, or a
+ * file that is not there (it cannot run) is not shell.
  */
 function judgeScriptFile(
   context: Context,
-  file: string,
+  file: string | undefined,
   scope: Scope,
-  requireShebang = false
+  text: string,
+  mode: "shell" | "path"
 ): boolean {
-  const resolved = path.resolve(context.options.cwd, file);
-  if (scope.depth >= MAX_DEPTH || context.seen.has(resolved)) return false;
-  const inside = [context.options.cwd, os.tmpdir()].some((root) => {
-    const relative = path.relative(root, resolved);
-    return !relative.startsWith("..") && !path.isAbsolute(relative);
-  });
-  if (!inside) return false;
-  let source = context.pending.get(resolved);
-  if (source == null) {
-    try {
-      const info = fs.statSync(resolved);
-      if (!info.isFile() || info.size > MAX_SCRIPT_BYTES) return false;
-      source = fs.readFileSync(resolved, "utf8");
-    } catch {
-      return false;
+  if (file == null) return false;
+  if (scope.depth >= MAX_DEPTH) {
+    unreadable(context, text);
+    return true;
+  }
+  const resolved = isDyn(file) ? null : resolve(context, file);
+  if (resolved != null && context.seen.has(resolved)) return true;
+  let source = resolved == null ? UNKNOWN : context.pending.get(resolved);
+  if (source == null && resolved != null) {
+    if (mode === "path") {
+      // A program that is not there, or not readable, runs nothing here.
+      const head = readHead(resolved);
+      if (head == null || !looksLikeShell(head)) return false;
     }
+    source = readScript(context, file);
+  }
+  if (source === REMOTE) return true;
+  if (source === UNKNOWN || source == null) {
+    unreadable(context, text);
+    return true;
+  }
+  if (mode === "path" && !looksLikeShell(source.slice(0, 512))) return false;
+  context.seen.add(resolved!);
+  isolated(context, () =>
+    judgeSource(context, source, {
+      ...scope,
+      depth: scope.depth + 1,
+      collectWrites: false,
+    })
+  );
+  return true;
+}
+
+/** The first bytes of a file, or null when it cannot be read. */
+function readHead(file: string): string | null {
+  try {
+    const handle = fs.openSync(file, "r");
+    try {
+      const buffer = Buffer.alloc(512);
+      const length = fs.readSync(handle, buffer, 0, 512, 0);
+      return buffer.subarray(0, length).toString("latin1");
+    } finally {
+      fs.closeSync(handle);
+    }
+  } catch {
+    return null;
+  }
+}
+
+/** A POSIX shell `#!`, or text with no `#!` (bash runs it as shell). */
+function looksLikeShell(head: string): boolean {
+  if (head.startsWith("#!"))
+    return /^#!.*\b(?:ba|z|da|k|a)?sh\b/.test(head.split("\n", 1)[0]!);
+  return !head.includes("\u0000") && !head.startsWith("\u007fELF");
+}
+
+/** `find P … -delete` and `find P -exec rm … {}` delete P's contents. */
+function judgeFind(
+  context: Context,
+  args: readonly string[],
+  text: string,
+  scope: Scope
+): void {
+  const firstExpression = args.findIndex(
+    (word) => word.startsWith("-") || word === "(" || word === "!"
+  );
+  const roots = args.slice(
+    0,
+    firstExpression === -1 ? undefined : firstExpression
+  );
+  let deletes = args.includes("-delete");
+  for (let at = 0; at < args.length; at += 1) {
+    if (!["-exec", "-execdir", "-ok", "-okdir"].includes(args[at]!)) continue;
+    const end = args.findIndex(
+      (word, position) => position > at && (word === ";" || word === "+")
+    );
+    const inner = args.slice(at + 1, end === -1 ? undefined : end);
+    if (DELETERS.has(baseName(inner[0] ?? ""))) deletes = true;
+    judgeWords(context, inner, null, text, scope);
+  }
+  if (deletes)
+    judgeDeletes(context, roots.length > 0 ? roots : ["."], text, "find");
+}
+
+/** PowerShell and cmd: another language; only the rules below are read. */
+function judgeWindowsShell(
+  context: Context,
+  tool: string,
+  args: readonly string[],
+  text: string
+): void {
+  // `-EncodedCommand` (and its short forms) hides the command entirely.
+  if (tool !== "cmd" && args.some((arg) => /^-e(?:c|n\w*)?$/i.test(arg))) {
+    unreadable(context, text);
+    return;
+  }
+  const tokens = args
+    .map(raw)
+    .flatMap((arg) => arg.split(/[\s;|&()]+/))
+    .map((token) => token.replace(/^['"]|['"]$/g, ""))
+    .filter((token) => token.length > 0);
+  const has = (re: RegExp): boolean => tokens.some((token) => re.test(token));
+  for (const token of tokens) {
+    if (
+      POWER_CMDLETS.test(token) ||
+      (tool === "cmd" && POWER.has(token.toLowerCase()))
+    )
+      add(context, "power", "confirm", text);
+    if (DISK_CMDLETS.test(token)) add(context, "disk", "confirm", text);
+    if (KILL_CMDLETS.test(token))
+      add(context, "killProcess", "unattended", text);
   }
   if (
-    requireShebang &&
-    !/^#!.*\b(?:ba|z|da|k|a)?sh\b/.test(source.split("\n", 1)[0] ?? "")
+    (has(/^(?:start-process|saps|start)$/i) && has(/^runas$/i)) ||
+    (tool === "cmd" && has(/^runas$/i))
   )
-    return false;
-  context.seen.add(resolved);
-  judgeSource(context, source, {
-    ...scope,
-    depth: scope.depth + 1,
-    collectWrites: false,
+    add(context, "privileged", "confirm", text);
+  // A delete whose target (its first word that is not a flag) is a drive
+  // root or the home folder.
+  const home = trimSlashes(context.options.home).toLowerCase();
+  const isTop = (token: string): boolean =>
+    /^[a-z]:[\\/]?\*?$/i.test(token) ||
+    /^(?:~|\$home|\$env:userprofile|%userprofile%)[\\/]?\*?$/i.test(token) ||
+    trimSlashes(token).toLowerCase() === home;
+  tokens.forEach((token, at) => {
+    if (!WINDOWS_DELETERS.test(token)) return;
+    const target = tokens
+      .slice(at + 1)
+      .find((word) => !/^[-/][a-z]/i.test(word) || /^[a-z]:/i.test(word));
+    if (target != null && isTop(target))
+      add(context, "deleteRoot", "never", text);
   });
-  return true;
 }
 
 /** The command itself, wrappers and nested shells already stepped over. */
@@ -832,21 +1400,7 @@ function judgeVerb(
 ): void {
   const operands = operandsOf(args);
 
-  if (DELETERS.has(tool)) {
-    for (const operand of operands) {
-      const target = path.resolve(context.options.cwd, operand);
-      if (isRootOrHome(operand, target, context.options.home)) {
-        add(context, "deleteRoot", "never", text);
-      } else if (isSystemPath(target, context.options)) {
-        add(context, "systemDelete", "confirm", text);
-      } else if (
-        tool === "rm" &&
-        path.basename(trimSlashes(operand)) === ".git"
-      ) {
-        add(context, "gitHistory", "confirm", text);
-      }
-    }
-  }
+  if (DELETERS.has(tool)) judgeDeletes(context, operands, text, tool);
 
   if (/^(?:mkfs(?:\..+)?|mke2fs|newfs(?:_.+)?|wipefs)$/.test(tool))
     add(context, "disk", "confirm", text);
@@ -860,13 +1414,9 @@ function judgeVerb(
   if (tool === "format" && /^[a-z]:$/i.test(operands[0] ?? ""))
     add(context, "disk", "confirm", text);
   if (tool === "dd") {
-    for (const arg of args) {
-      if (!arg.startsWith("of=")) continue;
-      const target = arg.slice(3);
-      if (target.startsWith("/dev/") && !HARMLESS_DEVICES.test(target))
-        add(context, "disk", "confirm", text);
-      else if (scope.collectWrites) addWrite(context, target, "command");
-    }
+    for (const arg of args)
+      if (arg.startsWith("of="))
+        addWrite(context, arg.slice(3), "command", scope, text);
   }
 
   if (POWER.has(tool) || POWER_CMDLETS.test(tool))
@@ -882,25 +1432,95 @@ function judgeVerb(
   )
     add(context, "power", "confirm", text);
 
-  // A server or app may be the user's own: `kill %1` and `kill $!` name only
-  // jobs of this command's shell; `kill -l` lists signals.
+  judgeKill(context, tool, args, operands, text);
+
+  if (tool === "git" && rewritesRemote(args))
+    add(context, "forcePush", "confirm", text);
+
+  writesOf(context, tool, args, operands, scope, text);
+}
+
+/**
+ * Stopping processes. Every process the user runs (`kill -1`, a negative
+ * pid, `kill 0`, `pkill -u`, `killall5`) needs a yes in every mode; one
+ * process this run did not start only where nobody watches. `kill %1` and
+ * `kill $!` name jobs of this command's own shell.
+ */
+function judgeKill(
+  context: Context,
+  tool: string,
+  args: readonly string[],
+  operands: readonly string[],
+  text: string
+): void {
+  if (tool === "killall5") {
+    add(context, "killAll", "confirm", text);
+    return;
+  }
+  if (tool === "kill") {
+    const afterDashes = args.indexOf("--");
+    const negatives = args.filter(
+      (arg, at) =>
+        /^-\d+$/.test(arg) &&
+        (at > 0 ||
+          args.length === 1 ||
+          (afterDashes !== -1 && at > afterDashes))
+    );
+    if (negatives.length > 0 || operands.some((operand) => operand === "0")) {
+      add(context, "killAll", "confirm", text);
+      return;
+    }
+    if (operands.every((operand) => OWN_SHELL_JOB.test(raw(operand)))) return;
+    add(context, "killProcess", "unattended", text);
+    return;
+  }
   if (
-    (KILLERS.has(tool) &&
-      !(
-        tool === "kill" &&
-        operands.every((operand) => OWN_SHELL_JOB.test(operand))
-      )) ||
+    (tool === "pkill" || tool === "killall") &&
+    args.some((arg) => /^(?:-[uU]|--e?uid|--user)(?:=|$)/.test(arg))
+  ) {
+    add(context, "killAll", "confirm", text);
+    return;
+  }
+  if (
+    KILLERS.has(tool) ||
     (tool === "fuser" && args.some((arg) => /^-[a-zA-Z]*k/.test(arg))) ||
     (tool === "wmic" &&
       operands.some((word) => /^process$/i.test(word)) &&
       operands.some((word) => /^(?:delete|terminate)$/i.test(word)))
   )
     add(context, "killProcess", "unattended", text);
+}
 
-  if (tool === "git" && isForcePush(args))
-    add(context, "forcePush", "confirm", text);
-
-  if (scope.collectWrites) writesOf(context, tool, args, operands);
+/** Each operand a delete names: never the disk or home, a yes for system folders and .git. */
+function judgeDeletes(
+  context: Context,
+  operands: readonly string[],
+  text: string,
+  tool: string
+): void {
+  for (const operand of operands) {
+    if (isDyn(operand)) continue;
+    const target = resolve(context, operand);
+    if (target == null) {
+      // After a `cd` nobody can read, a relative glob or `..` could be anywhere.
+      if (
+        /[*?[]/.test(operand) ||
+        operand.split(/[\\/]/).every((s) => s === "." || s === ".." || s === "")
+      )
+        unreadable(context, text);
+      continue;
+    }
+    if (isRootOrHome(operand, target, context.options.home)) {
+      add(context, "deleteRoot", "never", text);
+    } else if (isSystemPath(target, context.options)) {
+      add(context, "systemDelete", "confirm", text);
+    } else if (
+      (tool === "rm" || tool === "find") &&
+      path.basename(trimSlashes(target)) === ".git"
+    ) {
+      add(context, "gitHistory", "confirm", text);
+    }
+  }
 }
 
 /** Non-option words, honouring `--`. */
@@ -923,14 +1543,28 @@ function trimSlashes(value: string): string {
   return value.slice(0, end) || "/";
 }
 
-/** `/`, a drive root, the home folder itself, or everything in one of them. */
+/**
+ * `/`, a drive root, the home folder or any folder holding it (`/home`,
+ * `/Users`), or everything in one of them (`/*`, `~/*`, `/h*`).
+ */
 function isRootOrHome(operand: string, target: string, home: string): boolean {
-  const top = (value: string): boolean =>
-    value === "/" || value === trimSlashes(home) || /^[a-z]:$/i.test(value);
+  const homeDir = trimSlashes(home);
+  const holdsHome = (dir: string): boolean =>
+    dir === "/" ||
+    /^[a-z]:[\\/]?$/i.test(dir) ||
+    dir === homeDir ||
+    homeDir.startsWith(dir.endsWith(path.sep) ? dir : dir + path.sep);
   if (/^[a-z]:[\\/]*\*?$/i.test(operand)) return true;
-  if (top(trimSlashes(target))) return true;
+  const resolved = trimSlashes(target);
+  if (holdsHome(resolved)) return true;
+  // A glob: judged on the folder it expands in.
+  const glob = resolved.search(/[*?[]/);
+  if (glob === -1) return false;
+  const parent = trimSlashes(path.dirname(resolved.slice(0, glob) + "x"));
+  const leaf = path.basename(resolved);
   return (
-    path.basename(target) === "*" && top(trimSlashes(path.dirname(target)))
+    (holdsHome(parent) && parent !== homeDir) ||
+    (parent === homeDir && /^(?:\*|\.\*|\.?\[.*\]\*?)$/.test(leaf))
   );
 }
 
@@ -947,8 +1581,12 @@ function isSystemPath(
   return SYSTEM_DIRS.some(within);
 }
 
-/** `git [global options] push` with `--force`, `-f`, `--force-with-lease` or `+ref`. */
-function isForcePush(args: readonly string[]): boolean {
+/**
+ * `git [global options] push` that rewrites or deletes remote history:
+ * `--force`, `-f`, `--force-with-lease`, a `+ref`, `--mirror`, `--delete`,
+ * `-d`, `--prune` or a `:ref`.
+ */
+function rewritesRemote(args: readonly string[]): boolean {
   let at = 0;
   while (at < args.length && args[at]!.startsWith("-")) {
     at += ["-C", "-c", "--git-dir", "--work-tree", "--namespace"].includes(
@@ -962,9 +1600,11 @@ function isForcePush(args: readonly string[]): boolean {
     .slice(at + 1)
     .some(
       (arg) =>
-        /^--force(?:-with-lease|-if-includes)?(?:=|$)/.test(arg) ||
-        /^-[a-zA-Z]*f[a-zA-Z]*$/.test(arg) ||
-        /^\+[^\s]/.test(arg)
+        /^--(?:force(?:-with-lease|-if-includes)?|mirror|delete|prune)(?:=|$)/.test(
+          arg
+        ) ||
+        /^-[a-zA-Z]*[fd][a-zA-Z]*$/.test(arg) ||
+        /^[+:][^\s]/.test(arg)
     );
 }
 
@@ -973,27 +1613,36 @@ function writesOf(
   context: Context,
   tool: string,
   args: readonly string[],
-  operands: readonly string[]
+  operands: readonly string[],
+  scope: Scope,
+  text: string
 ): void {
   const local = (operand: string): boolean =>
     !/^[^/\\:]{2,}:/.test(operand) || /^[a-z]:[\\/]/i.test(operand);
+  const write = (target: string, kind: LocalWrite["kind"]): void =>
+    addWrite(context, target, kind, scope, text);
 
   if (tool === "sed") {
     if (args.some((word) => /^-[a-zA-Z]*i/.test(word) || word === "--in-place"))
-      for (const operand of operands.slice(1))
-        addWrite(context, operand, "command");
+      for (const operand of operands.slice(1)) write(operand, "command");
     return;
   }
   if (WRITES_EVERY_OPERAND.has(tool)) {
     const kind = DELETERS.has(tool) ? "delete" : "command";
-    for (const operand of operands) addWrite(context, operand, kind);
+    for (const operand of operands) write(operand, kind);
   } else if (WRITES_METADATA.has(tool)) {
     // chmod and chown name the mode or owner first.
     for (const operand of tool === "touch" ? operands : operands.slice(1))
-      addWrite(context, operand, "meta");
+      write(operand, "meta");
   } else if (WRITES_LAST_OPERAND.has(tool) && operands.length > 1) {
     const last = operands[operands.length - 1]!;
-    if (local(last)) addWrite(context, last, "copy");
+    if (local(last)) write(last, "copy");
+  } else if (tool === "curl" || tool === "wget") {
+    const output = optionValue(
+      args,
+      tool === "curl" ? ["-o", "--output"] : ["-O", "--output-document"]
+    );
+    if (output != null) write(output, "command");
   }
 }
 

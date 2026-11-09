@@ -255,7 +255,7 @@ const REQUESTS: Array<[PermissionRequest, RegExp | string, string[]]> = [
       command: "sudo apt-get install -y nginx",
       cwd: "/r",
       background: false,
-      guard: { rules: ["privileged"] },
+      guard: { rules: ["privileged", "forcePush"] },
       tool,
       displayName: "",
     } as PermissionRequest,
@@ -294,6 +294,12 @@ describe("R2-T23 presenters", () => {
         );
     }
   );
+
+  it("a judged card names every reason its yes lifts", () => {
+    const card = present(REQUESTS.at(-2)![0]);
+    expect(card.reasons).toEqual(["guard_privileged", "guard_forcePush"]);
+    expect(card.warning).toBe(true);
+  });
 
   it("bodies read the variant's own fields", () => {
     const edit = present(REQUESTS[2]![0]);

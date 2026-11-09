@@ -10,7 +10,14 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { fakePi, type FakePi } from "@abacus-ai/test-support/fake-pi";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+} from "vitest";
 
 import { ALLOWED_PATHS_ENV } from "../allowed-paths.js";
 import { setCurrentMode } from "../current-mode.js";
@@ -414,7 +421,28 @@ describe("redirects into scratch space", () => {
     }
   );
 
+  it("lets only a routine's run rewrite a routine's notes", async () => {
+    const records = path.join(cwd, ".abacusai-bot", "routines", "job-1");
+    fs.mkdirSync(records, { recursive: true });
+    fs.writeFileSync(path.join(records, "notes.md"), "old");
+    const blocked = (await pi.fire(
+      "tool_call",
+      {
+        toolName: "bash",
+        input: {
+          command: "printf 'new' > .abacusai-bot/routines/job-1/notes.md",
+        },
+      },
+      ctx()
+    )) as { block?: boolean };
+    expect(blocked?.block).toBe(true);
+  });
+
   it("lets a routine rewrite its own notes and state files", async () => {
+    process.env.ABACUSAI_BOT_ROUTINE_RUN = "1";
+    onTestFinished(() => {
+      delete process.env.ABACUSAI_BOT_ROUTINE_RUN;
+    });
     const records = path.join(cwd, ".abacusai-bot", "routines", "job-1");
     fs.mkdirSync(records, { recursive: true });
     fs.writeFileSync(path.join(records, "notes.md"), "old");
@@ -824,6 +852,20 @@ describe("writing outside the workspace", () => {
     const blocked = await pi.fire("tool_call", writeCall(target()), ctx());
 
     expect(blocked).toBeUndefined();
+  });
+
+  it("refuses replacing a secret file outside the workspace, where no copy is kept", async () => {
+    fs.writeFileSync(path.join(outside, ".env"), "KEY=1");
+
+    const blocked = (await pi.fire(
+      "tool_call",
+      writeCall(path.join(outside, ".env")),
+      ctx()
+    )) as { block: boolean; reason: string };
+
+    expect(blocked?.block).toBe(true);
+    expect(blocked.reason).toContain("edit tool");
+    expect(fs.readFileSync(path.join(outside, ".env"), "utf8")).toBe("KEY=1");
   });
 
   it("still refuses a protected path under Full access", async () => {

@@ -266,6 +266,11 @@ export const PermissionCard = ({
           {t(`chat.permission.title.${model.description}`)}
         </p>
       ) : null}
+      {model.reasons?.map((reason) => (
+        <p key={reason} className="text-muted-foreground leading-normal">
+          {t(`chat.permission.title.${reason}`)}
+        </p>
+      ))}
       <Body body={model.body} />
       {model.paths != null ? (
         <ul className="chat-mono text-muted-foreground text-xs">

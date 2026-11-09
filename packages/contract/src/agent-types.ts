@@ -423,6 +423,7 @@ export type GuardRule =
   | "power"
   | "forcePush"
   | "gitHistory"
+  | "killAll"
   | "unreadable";
 
 interface PermissionRequestBase {

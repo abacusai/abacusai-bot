@@ -85,7 +85,6 @@ import {
   connectionRetryBudgetMs,
   networkWaitBudgetMs,
   runMadeProgress,
-  runOrigin,
   type NetworkSuspect,
 } from "../network-wait.js";
 import {
@@ -2684,8 +2683,9 @@ export class ForeverEngine {
           tools: [...this.profile.alwaysAllowedTools],
           readPaths: this.config.allowedReadPaths,
         }),
-        // A bot's routine run has nobody at a card either.
-        noAnswerer: this.noAnswerer() || runOrigin() === "routine",
+        // A bot never gets a judged command through on a yes: anyone in its
+        // chats can drive it, and an allowance would reach all of them.
+        noAnswerer: true,
         ...(this.options.unattended != null
           ? {
               unattended: {

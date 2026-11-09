@@ -3164,6 +3164,8 @@ export class AbacusBotSession {
     this.busyWait.cancel();
     this.verifyLoop.cancel();
     this.rejectAllPending("Conversation reset.");
+    // "Allow for this chat" ends with the chat.
+    this.allowances.forgetGuardRules();
     // As in `stop`: a queued message must not land in the fresh conversation.
     this.pendingSteers.clear();
     this.session?.clearQueue();

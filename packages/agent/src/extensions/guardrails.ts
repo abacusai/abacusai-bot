@@ -19,6 +19,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 
 import { modelPath } from "../model-path.js";
+import { runOrigin } from "../network-wait.js";
 import { namesSecretFile } from "../secret-files.js";
 import {
   confirmRules,
@@ -106,7 +107,8 @@ const SCRATCH_PREFIXES = [
 
 /**
  * A routine's own records folder (`.abacusai-bot/routines/<id>/`, in the app's
- * folder or a project's): its notes and state files are rewritten every run.
+ * folder or a project's): its notes and state files are rewritten every run,
+ * so a routine's run may overwrite them there.
  */
 const ROUTINE_RECORDS = /(^|\/)\.abacusai-bot\/routines\/[^/]+\//;
 
@@ -271,6 +273,14 @@ function guardrails(pi: ExtensionAPI, options: GuardrailsOptions): void {
         try {
           const backup = backUpExistingFile(abs, ctx.cwd);
           if (backup != null) backups.set(abs, path.relative(ctx.cwd, backup));
+          // A secret file replaced is only safe with its copy kept.
+          else if (isSecretFile(abs, realPathOf(abs) ?? abs, ctx.cwd))
+            return {
+              block: true,
+              reason:
+                `${event.input.path} holds keys or tokens and is outside the workspace, so no copy ` +
+                `can be kept before replacing it. Change only the lines needed with the edit tool.`,
+            };
         } catch (error) {
           // No copy means no safety net; refuse rather than let it through.
           return {
@@ -376,7 +386,11 @@ function guardrails(pi: ExtensionAPI, options: GuardrailsOptions): void {
         )
           continue;
         const real = realPathOf(write.path);
-        if (real !== null && ROUTINE_RECORDS.test(real.replace(/\\/g, "/")))
+        if (
+          runOrigin() === "routine" &&
+          real !== null &&
+          ROUTINE_RECORDS.test(real.replace(/\\/g, "/"))
+        )
           continue;
         try {
           if (fs.statSync(write.path).isFile()) {

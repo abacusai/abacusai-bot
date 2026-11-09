@@ -139,6 +139,9 @@ describe("the shell judge at the gate", () => {
     expect(gateWith("git push --force origin main")).toBe("ask");
     // Remembered by category: no `sudo` prefix lands in the command list.
     expect(allowances.commands).toEqual([]);
+    // A new conversation starts with nothing lifted.
+    allowances.forgetGuardRules();
+    expect(gateWith("sudo systemctl restart nginx")).toBe("ask");
   });
 
   it("is not lifted by an always-allowed command prefix", () => {

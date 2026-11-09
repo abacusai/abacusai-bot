@@ -46,6 +46,8 @@ export interface CardModel {
   /** An orange dot before the title. */
   warning?: boolean;
   description?: string;
+  /** i18n keys under `chat.permission.title`, one line each: every reason a yes lifts. */
+  reasons?: string[];
   body: CardBody;
   paths?: string[];
   actions: CardAction[];
@@ -148,7 +150,8 @@ export const present = (request: PermissionRequest): CardModel => {
         return {
           title: "runCommand",
           warning: true,
-          description: `guard_${request.guard.rules[0] ?? "unreadable"}`,
+          // Every reason, so "for this chat" never lifts one the card did not show.
+          reasons: request.guard.rules.map((rule) => `guard_${rule}`),
           body: { kind: "command", command: request.command, cwd: request.cwd },
           ...(request.credentialPaths != null &&
           request.credentialPaths.length > 0
