@@ -376,9 +376,9 @@ describe("the fire prompt", () => {
     ).not.toContain("NO_REPLY");
   });
 
-  // Where the app delivers, a digest asked for on every run is written, not
-  // dropped as "nothing new"; a bare "nothing new" line still is.
-  it("keeps a digest the instruction asks for on every run out of NO_REPLY, only where the app delivers", () => {
+  // A digest asked for on every run is written, not dropped as "nothing
+  // new"; a bare "nothing new" line still is.
+  it("keeps a digest the instruction asks for on every run out of NO_REPLY", () => {
     const memory = {
       dir: "/x/routines/job-1",
       notes: noNotes("/x/routines/job-1"),
@@ -393,18 +393,11 @@ describe("the fire prompt", () => {
         reply: "Today's digest: two meetings.",
       },
     };
-    const delivered = buildRoutineFirePrompt(job(), "schedule", null, {
-      ...memory,
-      deliveredTo: "in your chat with the user in the app",
-    });
-    expect(delivered).toContain(
-      "A report the instruction asks for on every run"
-    );
-    expect(delivered).toContain("write it, even when little changed");
-    expect(delivered).toContain('no "nothing');
-    const today = buildRoutineFirePrompt(job(), "schedule", null, memory);
-    expect(today).not.toContain("A report the instruction asks for");
-    expect(today).toContain("The same goes for a blocker");
+    const prompt = buildRoutineFirePrompt(job(), "schedule", null, memory);
+    expect(prompt).toContain("A report the instruction asks for on every run");
+    expect(prompt).toContain("write it, even when little changed");
+    expect(prompt).toContain('no "nothing');
+    expect(prompt).toContain("NO_REPLY\nalso goes for a blocker");
   });
 
   // The hosted runs' contract: the app delivers, the run writes the message.

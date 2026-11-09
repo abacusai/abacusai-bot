@@ -242,7 +242,7 @@ export interface RoutineListItem extends Routine {
   hosted?: HostedRoutineInfo;
   /** A fire came due with the network down: it runs once the network is back. */
   waitingForConnection?: boolean;
-  /** Its runs' reports reach a chat, where the user replies to a run (flag `routine-delivery`). */
+  /** Its runs' reports reach a chat, where the user replies to a run (not on the hosted computer). */
   repliesInChat?: boolean;
 }
 

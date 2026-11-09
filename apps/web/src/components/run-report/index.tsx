@@ -1,6 +1,6 @@
 /**
  * A routine run's report as the app delivered it into a chat (the run
- * session's `report` stamp, flag `routine-delivery`): a card in the
+ * session's `report` stamp): a card in the
  * transcript at the time it arrived, the run's final answer word for word,
  * with a link to the full run. Drawn by wrapping the route's
  * `decorateMessage`; the types are the chat kit's, declared structurally.

@@ -69,7 +69,7 @@ export interface HostCapabilities {
   withheldFeatures: readonly PaidFeature[];
   /** This install gets the next step after a result (next-step.ts). */
   nextStep: boolean;
-  /** The app delivers local routine runs' answers (routine-delivery-flag.ts). */
+  /** The app delivers local routine runs' answers (not on the hosted computer). */
   routineDelivery?: boolean;
 }
 

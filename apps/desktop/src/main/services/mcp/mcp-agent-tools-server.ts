@@ -379,7 +379,7 @@ export interface McpAgentToolsServerOptions {
   isAppBotChat?: (sessionId: string) => boolean;
   /** This install gets the next step after a result. */
   nextStep?: () => boolean;
-  /** The app delivers local routine runs' answers (flag routine-delivery). */
+  /** The app delivers local routine runs' answers (not on the hosted computer). */
   routineDelivery?: () => boolean;
   /**
    * The app delivers this routine run's answer to the user's own chat on

@@ -39,7 +39,6 @@ let home: string;
 beforeEach(() => {
   home = fs.mkdtempSync(path.join(os.tmpdir(), "routine-reports-"));
   vi.stubEnv("ABACUSAI_BOT_HOME", home);
-  vi.stubEnv("ABACUSAI_BOT_ROUTINE_DELIVERY", "on");
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -166,6 +165,7 @@ const harness = (options: { quiet?: boolean; platform?: string } = {}) => {
     },
   };
   for (const name of [
+    "deliversRoutineReports",
     "deliverRunReport",
     "makeRunReport",
     "reportTargets",
@@ -340,9 +340,8 @@ describe("a bot's check-in run", () => {
     expect(delivers("abacus_telegram")).toBe(false);
   });
 
-  it("is not delivered with the flag off", async () => {
-    vi.stubEnv("ABACUSAI_BOT_ROUTINE_DELIVERY", "off");
-    const h = harness();
+  it("is not delivered by the hosted computer, whose server delivers it", async () => {
+    const h = harness({ platform: "web-host" });
     const job = createJob({
       schedule: "0 9 * * *",
       prompt: "check in",
@@ -452,7 +451,7 @@ describe("Reply to this run", () => {
     );
   });
 
-  it("is refused with the flag off and on the hosted computer, and for another routine's run", async () => {
+  it("is refused on the hosted computer, and for another routine's run", async () => {
     const job = createJob({ schedule: "0 9 * * *", prompt: "news" });
     const other = createJob({ schedule: "0 9 * * *", prompt: "other" });
     const hosted = harness({ platform: "web-host" });
@@ -462,10 +461,6 @@ describe("Reply to this run", () => {
     const h = harness();
     await expect(reply(h, job.id, h.run(other.id), "x")).rejects.toThrow(
       /gone/
-    );
-    vi.stubEnv("ABACUSAI_BOT_ROUTINE_DELIVERY", "off");
-    await expect(reply(h, job.id, h.run(job.id), "x")).rejects.toThrow(
-      /not available/
     );
     expect(h.sent).toEqual([]);
   });
