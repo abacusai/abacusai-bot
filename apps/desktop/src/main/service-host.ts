@@ -10,6 +10,7 @@ import path from "path";
 
 import { appendDailyNote } from "@abacus-ai/agent/bot-memory";
 import type { ChannelCapabilities } from "@abacus-ai/agent/channel";
+import { HOSTED_LOCAL_TOOLS_ENV } from "@abacus-ai/agent/hosted-local-tools";
 import { modelPath } from "@abacus-ai/agent/model-path";
 import type { UnattendedPolicy } from "@abacus-ai/agent/tool-policy";
 import {
@@ -8145,6 +8146,16 @@ export class ServiceHost {
     }
     const credits = creditSnapshot();
     return {
+      // Set on every hosted agent: it then never reads the raw server file, and
+      // "off" keeps extensions from disk out (hosted-local-tools.ts).
+      ...(this.platform === "web-host"
+        ? {
+            [HOSTED_LOCAL_TOOLS_ENV]:
+              (await hostedLocalToolsRefusal(this.platform)) == null
+                ? "on"
+                : "off",
+          }
+        : {}),
       ...buildAgentConfigEnv(
         runtimeMcpPath,
         // The lifecycle owns whether there is a browser: on a web host, the

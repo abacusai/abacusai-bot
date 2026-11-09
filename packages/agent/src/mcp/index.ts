@@ -16,6 +16,7 @@ import {
 
 import { DEFAULT_ABACUS_V1, sponsoredRunHeaders } from "../abacus-endpoint.js";
 import { abacusBotDir, desktopMcpConfigPath } from "../config.js";
+import { startedByHostedComputer } from "../hosted-local-tools.js";
 import { modelPath } from "../model-path.js";
 import { MEDIA_CHECK_TOOL_NAME } from "../send-media.js";
 import {
@@ -327,6 +328,11 @@ export async function connectMcpServers(
   // Without a named file, fall back to the app's own server list so an agent
   // started outside the app still sees the connectors added there.
   const fromDesktopConfig = configPath == null || configPath.length === 0;
+  // The hosted computer always names its list; never fall back to the raw file there.
+  if (fromDesktopConfig && startedByHostedComputer())
+    return noServers(
+      "The hosted computer could not prepare this agent's server list, so it has no MCP servers this time."
+    );
   const resolvedPath = fromDesktopConfig ? desktopMcpConfigPath() : configPath;
 
   if (resolvedPath == null) {

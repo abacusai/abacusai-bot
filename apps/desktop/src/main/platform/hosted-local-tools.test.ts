@@ -62,17 +62,22 @@ vi.mock("electron", () => {
   );
 });
 
+const keyStore = vi.hoisted(() => ({ broken: false }));
 vi.mock("../services/config/settings", async (importActual) => ({
   ...(await importActual<typeof import("../services/config/settings")>()),
   hasCredential: () => true,
-  credentialFor: (name: string) =>
-    name === "ABACUS_API_KEY" ? "test-key" : "",
+  credentialFor: (name: string) => {
+    if (keyStore.broken) throw new Error("credential store unreadable");
+    return name === "ABACUS_API_KEY" ? "test-key" : "";
+  },
 }));
 
 const { clearAbacusCache } = await import("../services/providers/abacus");
 const { ServiceHost } = await import("../service-host");
 const { hostedLocalToolsRefusal } = await import("./hosted-local-tools");
 const { connectInProcess, fakeDeps } = await import("../rpc/testing");
+const { HOSTED_LOCAL_TOOLS_ENV } =
+  await import("@abacus-ai/agent/hosted-local-tools");
 
 const accountReply = (tier: string): Response =>
   new Response(JSON.stringify({ subscription_tier: tier, plan: tier }), {
@@ -92,6 +97,7 @@ const REMOTE = { url: "https://mcp.example.test/mcp" };
 
 let userHome: string;
 beforeEach(() => {
+  keyStore.broken = false;
   fetchMock.mockReset();
   clearAbacusCache();
   for (const name of fs.readdirSync(home))
@@ -100,6 +106,7 @@ beforeEach(() => {
   vi.spyOn(os, "homedir").mockReturnValue(userHome);
 });
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   fs.rmSync(userHome, { recursive: true, force: true });
 });
@@ -184,6 +191,76 @@ describe("the plan read", () => {
     fetchMock.mockImplementation(reply);
     expect(await hostedLocalToolsRefusal("web-host")).toBe("plan-unreadable");
   });
+
+  it("fails closed when the read throws", async () => {
+    keyStore.broken = true;
+    expect(await hostedLocalToolsRefusal("web-host")).toBe("plan-unreadable");
+  });
+
+  it("keeps the last good answer through failed reads for a few minutes only", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    planIs("pro");
+    expect(await hostedLocalToolsRefusal("web-host")).toBeNull();
+    fetchMock.mockImplementation(async () => new Response("", { status: 500 }));
+
+    vi.setSystemTime(Date.now() + 2 * 60_000);
+    expect(await hostedLocalToolsRefusal("web-host")).toBeNull();
+    vi.setSystemTime(Date.now() + 4 * 60_000);
+    expect(await hostedLocalToolsRefusal("web-host")).toBe("plan-unreadable");
+  });
+});
+
+describe("a broken server file or a failed write on a hosted free account", () => {
+  it("skips a non-object entry and still leaves local servers out", async () => {
+    planIs("free");
+    fs.writeFileSync(
+      path.join(home, "mcp-code.json"),
+      JSON.stringify({
+        mcpServers: { broken: null, list: [1], local: LOCAL, remote: REMOTE },
+      })
+    );
+    const host = new ServiceHost("web-host");
+
+    expect(await runtimeServers(host)).toEqual(["remote"]);
+    expect(
+      (await host.listMcpServers({ mode: "code" })).map((s) => s.name)
+    ).toEqual(["local", "remote"]);
+  });
+
+  it("tells the agent it was started by the hosted computer, so it never reads the raw file", async () => {
+    planIs("free");
+    fs.writeFileSync(
+      path.join(home, "mcp-code.json"),
+      JSON.stringify({ mcpServers: { local: LOCAL } })
+    );
+    const host = new ServiceHost("web-host");
+    const internals = host as unknown as Record<string, any>;
+    vi.spyOn(internals.mcpConfigService, "writeRuntimeMcp").mockImplementation(
+      () => {
+        throw new Error("disk full");
+      }
+    );
+
+    const env = await host.buildAdditionalConfigEnv("code", "s1");
+
+    expect(env.ABACUSAI_BOT_MCP_CONFIG).toBeUndefined();
+    expect(env[HOSTED_LOCAL_TOOLS_ENV]).toBe("off");
+  });
+
+  it.each([
+    ["a paid hosted account", "web-host", "pro", "on"],
+    ["the desktop app", "electron", "free", undefined],
+  ] as const)(
+    "sets the flag as expected for %s",
+    async (_case, platform, tier, flag) => {
+      planIs(tier);
+      const env = await new ServiceHost(platform).buildAdditionalConfigEnv(
+        "code",
+        "s1"
+      );
+      expect(env[HOSTED_LOCAL_TOOLS_ENV]).toBe(flag);
+    }
+  );
 });
 
 describe("local MCP servers on a hosted free account", () => {

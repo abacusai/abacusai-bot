@@ -159,10 +159,16 @@ const readJson = <T>(filePath: string, fallback: T): T => {
 export class McpConfigService {
   readUserMcp(mode: McpMode): McpConfig {
     const parsed = readJson<McpConfig | null>(userMcpPath(mode), null);
-    if (parsed?.mcpServers != null && typeof parsed.mcpServers === "object") {
-      return parsed;
-    }
-    return { mcpServers: {} };
+    if (parsed?.mcpServers == null || typeof parsed.mcpServers !== "object")
+      return { mcpServers: {} };
+    // A hand edit can leave a non-object entry; nothing downstream can read one.
+    const mcpServers = Object.fromEntries(
+      Object.entries(parsed.mcpServers as Record<string, unknown>).filter(
+        ([, entry]) =>
+          entry != null && typeof entry === "object" && !Array.isArray(entry)
+      )
+    ) as Record<string, McpServerEntry>;
+    return { ...parsed, mcpServers };
   }
 
   writeUserMcp(mode: McpMode, config: McpConfig): void {
