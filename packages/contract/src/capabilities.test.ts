@@ -101,11 +101,15 @@ describe("on the web version", () => {
     ],
     ["always-on", web({ tier: "free" }), "the web version runs on the server"],
     ["auto-reply", web(), "Not on the web version"],
-    ["send-read-messages", web(), "reaches only them"],
     [
       "send-read-messages",
-      web({ chatApps: { whatsapp: false } }),
-      "After one step (connect WhatsApp",
+      web({ tools: new Set(["send_to_whatsapp"]) }),
+      "Yes, now: send_to_whatsapp messages the user",
+    ],
+    [
+      "send-read-messages",
+      web({ chatApps: { whatsapp: false }, tools: new Set() }),
+      "Not from this chat: after they connect WhatsApp in the app",
     ],
   ] as const)("%s reads %s", (id, caller, expected) => {
     expect(line(id, caller)).toContain(expected);

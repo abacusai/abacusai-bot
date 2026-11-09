@@ -702,6 +702,10 @@ const timedArgs = (
   };
 };
 
+/** The hosted computer (bot.abacus.ai). The build defines a boolean; a test's stubbed env reads as "true". */
+const onWebHost = (): boolean =>
+  String(import.meta.env.ABACUS_WEB_HOST) === "true";
+
 /**
  * The routine editor changes its one routine, and answers what the routine
  * can do from the app's facts: its prompt sends those to bot_help and billing_plan.
@@ -3835,7 +3839,7 @@ export class McpAgentToolsServer extends McpHttpServer {
     return botHelpResult(this, {
       topic,
       name,
-      hosted: import.meta.env.ABACUS_WEB_HOST === true,
+      hosted: onWebHost(),
       tier: this.planTier(),
       card,
       phone,
@@ -3870,7 +3874,7 @@ export class McpAgentToolsServer extends McpHttpServer {
       status: { state: string; botNumber?: boolean };
     }> | null
   ): Partial<Record<HomeChannel, boolean>> | null {
-    if (import.meta.env.ABACUS_WEB_HOST === true) {
+    if (onWebHost()) {
       if (connectors == null) return null;
       const whatsapp = connectors.find(
         (entry) => entry.connector.id === "messaging-whatsapp"

@@ -166,6 +166,8 @@ export const CAPABILITIES: readonly Capability[] = [
     },
     hosted: {
       does: "send_to_whatsapp messages the user on WhatsApp through AbacusAI Bot's number, and reaches only them; messaging other people and reading their chats is the desktop app's",
+      tools: ["send_to_whatsapp"],
+      elsewhere: `after they ${HOSTED_LINK}; messaging other people and reading their chats is the desktop app's`,
       linkStep: HOSTED_LINK,
     },
   },

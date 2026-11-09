@@ -12,7 +12,7 @@ import { WHATSAPP_CHANNEL } from "@abacus-ai/agent/channel";
 import type { Bot } from "@abacus-ai/contract/bots";
 import { BOT_TEMPLATES } from "@abacus-ai/contract/bots/templates";
 import { TOOLSETS_FOR_DISPLAY } from "@abacus-ai/contract/toolsets";
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { CronJob } from "../agent-tools/cron-store";
 import {
@@ -215,6 +215,66 @@ describe("bot_help's answer names only tools its caller is listed", () => {
       expect(
         namedTools(orders).filter((name) => !listed(session).includes(name))
       ).toEqual([]);
+    } finally {
+      if (previous == null) delete process.env.ABACUSAI_BOT_HOME;
+      else process.env.ABACUSAI_BOT_HOME = previous;
+    }
+  });
+});
+
+describe("on the web version, bot_help's answer names only tools its caller is listed", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  /** The hosted computer: WhatsApp is linked to AbacusAI Bot's own number, no chat apps run. */
+  const web = new McpAgentToolsServer({
+    skillsService: {} as never,
+    enabledToolsets: () => new Set(TOOLSETS_FOR_DISPLAY.map((set) => set.id)),
+    workspacePath: () => null,
+    workspaceId: () => null,
+    botIdForSession: (session: string) => (session === "bot" ? "bot-1" : null),
+    routineEditorFor: (session: string) =>
+      session === "editor" ? "job-1" : null,
+    connectors: {
+      list: async () => ({
+        "messaging-whatsapp": { state: "connected", botNumber: true },
+      }),
+    },
+    botNumber: () => ({ linked: () => true }),
+    planTier: () => "free",
+  } as never);
+
+  it.each([
+    ["the routine editor", "editor"],
+    ["a main chat", "main"],
+    ["a bot's chat", "bot"],
+  ])("%s", async (_kind, session) => {
+    vi.stubEnv("ABACUS_WEB_HOST", "true");
+    const previous = process.env.ABACUSAI_BOT_HOME;
+    process.env.ABACUSAI_BOT_HOME = fs.mkdtempSync(
+      path.join(os.tmpdir(), "prompt-roster-web-")
+    );
+    try {
+      const asWeb = web as unknown as {
+        executeTool: (
+          name: string,
+          args: Record<string, unknown>,
+          session?: string
+        ) => Promise<{ content: { text?: string }[] }>;
+        listTools: (callerSession?: string) => Array<{ name: string }>;
+      };
+      const text = (await asWeb.executeTool("bot_help", {}, session)).content
+        .map((part) => part.text ?? "")
+        .join("\n");
+      // The web wording, not the desktop's.
+      expect(text).toContain("AbacusAI Bot's own number");
+      expect(text).not.toContain("Message yourself");
+      const has = asWeb.listTools(session).map((tool) => tool.name);
+      const orders = text.replace(/^(On|Off): .*$/gm, "");
+      expect(namedTools(orders).filter((name) => !has.includes(name))).toEqual(
+        []
+      );
     } finally {
       if (previous == null) delete process.env.ABACUSAI_BOT_HOME;
       else process.env.ABACUSAI_BOT_HOME = previous;
