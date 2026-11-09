@@ -48,8 +48,7 @@ const t = (key: string, values?: Record<string, unknown>) =>
 
 /**
  * A tool running past a minute reads in plain words with its own time, not
- * as a raw shell line: "du -a . | sort -rn | head" told a non-technical user
- * nothing through a 10-minute scan.
+ * as a raw shell line, which tells someone who does not read shell nothing.
  */
 describe("a long-running tool on the busy line", () => {
   const running = (
@@ -77,8 +76,8 @@ describe("a long-running tool on the busy line", () => {
         : key;
 
   /** The busy line's effect: each newly running call's clock starts at `now`. */
-  const seen = (messages: never, now: number) =>
-    noteRunningCalls(runningCallKey(messages), now);
+  const seen = (messages: never, now: number, thread = "t1") =>
+    noteRunningCalls(thread, runningCallKey(messages), now);
 
   it("names the kind, with the tool's own minutes, once it passes a minute", () => {
     const messages = running([
@@ -87,36 +86,51 @@ describe("a long-running tool on the busy line", () => {
       { command: "du -a . | sort -rn" },
     ]);
     // Before the effect has started its clock, nothing is claimed.
-    expect(longToolLabel(plain, messages, 10 * 60_000)).toBeNull();
+    expect(longToolLabel(plain, "t1", messages, 10 * 60_000)).toBeNull();
     seen(messages, 0);
-    expect(longToolLabel(plain, messages, 0)).toBeNull();
-    expect(longToolLabel(plain, messages, 59_000)).toBeNull();
-    expect(longToolLabel(plain, messages, 60_000)).toBe(
+    expect(longToolLabel(plain, "t1", messages, 0)).toBeNull();
+    expect(longToolLabel(plain, "t1", messages, 59_000)).toBeNull();
+    expect(longToolLabel(plain, "t1", messages, 60_000)).toBe(
       "Running a command · 1 min"
     );
-    expect(longToolLabel(plain, messages, 4 * 60_000 + 5_000)).toBe(
+    expect(longToolLabel(plain, "t1", messages, 4 * 60_000 + 5_000)).toBe(
       "Running a command · 4 min"
     );
     // A new call starts its own clock.
     const next = running(["du2", "bash", { command: "find . -size +1G" }]);
     seen(next, 5 * 60_000);
-    expect(longToolLabel(plain, next, 5 * 60_000 + 30_000)).toBeNull();
-    expect(longToolLabel(plain, next, 6 * 60_000)).toBe(
+    expect(longToolLabel(plain, "t1", next, 5 * 60_000 + 30_000)).toBeNull();
+    expect(longToolLabel(plain, "t1", next, 6 * 60_000)).toBe(
       "Running a command · 1 min"
+    );
+  });
+
+  it("keeps each chat's clock while another chat is open", () => {
+    const here = running(["h1", "bash", { command: "du -a ." }]);
+    seen(here, 0);
+    // The user opens another chat with a command of its own, then comes back.
+    seen(running(["o1", "bash", { command: "ls" }]), 2 * 60_000, "t2");
+    seen(here, 3 * 60_000);
+    expect(longToolLabel(plain, "t1", here, 3 * 60_000)).toBe(
+      "Running a command · 3 min"
     );
   });
 
   it("keeps a tool's own title where it has no plain phrase", () => {
     const messages = running(["g1", "gmail_search", { query: "invoices" }]);
     seen(messages, 0);
-    expect(longToolLabel(plain, messages, 2 * 60_000)).toMatch(/ · 2 min$/);
-    expect(longToolLabel(plain, messages, 2 * 60_000)).not.toMatch(/^Running/);
+    expect(longToolLabel(plain, "t1", messages, 2 * 60_000)).toMatch(
+      / · 2 min$/
+    );
+    expect(longToolLabel(plain, "t1", messages, 2 * 60_000)).not.toMatch(
+      /^Running/
+    );
   });
 
   it("leaves several running tools to the count", () => {
     const messages = running(["x1", "bash"], ["x2", "bash"]);
     seen(messages, 0);
-    expect(longToolLabel(plain, messages, 5 * 60_000)).toBeNull();
+    expect(longToolLabel(plain, "t1", messages, 5 * 60_000)).toBeNull();
   });
 });
 

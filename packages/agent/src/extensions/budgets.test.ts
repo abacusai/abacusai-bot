@@ -512,7 +512,9 @@ describe("show your work", () => {
   const step = async (pi: ReturnType<typeof fakePi>, ms: number) => {
     await pi.fire("turn_start", {}, { hasUI: false, abort: () => {} });
     vi.advanceTimersByTime(ms);
-    await pi.fire("message_end", { message: { role: "assistant" } });
+    await pi.fire("message_end", {
+      message: { role: "assistant", content: [] },
+    });
   };
   /** One tool run of `ms`. */
   let id = 0;
@@ -800,12 +802,12 @@ describe("credits running out", () => {
 });
 
 /**
- * Progress updates. A "show my biggest files" ask ran 27 minutes of killed
- * scans with no word to the user, who never wrote again. With someone in the
- * chat, a run the user has heard nothing from for 3 working minutes (or 15
- * tool calls) is now told, unseen, to write one short line. The steer is
- * queued after a round of tools, so it lands at the tail of the next request
- * and never reopens a finished reply. Sub-agents never load budgets.
+ * Progress updates. A long run of slow tool calls can leave the user with
+ * nothing to read for many minutes. In the user's own chat, a run the user
+ * has heard nothing from for 3 working minutes (or 15 tool calls) is told,
+ * unseen, to write one short line. The steer is queued after a round of
+ * tools, so it lands at the tail of the next request and never reopens a
+ * finished reply. Sub-agents never load budgets.
  */
 describe("progress updates", () => {
   const MINUTE = 60_000;
@@ -844,7 +846,7 @@ describe("progress updates", () => {
       toolCallId,
       isError: false,
     });
-    await pi.fire("turn_end", { toolResults: [{ toolCallId }] }, ctx);
+    await pi.fire("turn_end", { toolResults: [{ toolCallId, toolName }] }, ctx);
   };
   /** `minutes` of silent rounds, a minute each. */
   const silent = async (pi: ReturnType<typeof fakePi>, minutes: number) => {
@@ -861,8 +863,12 @@ describe("progress updates", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
+    process.env.ABACUSAI_BOT_AUDIENCE = "owner";
   });
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+    delete process.env.ABACUSAI_BOT_AUDIENCE;
+  });
 
   it("asks for one line once the user has heard nothing for 3 working minutes, hidden, at the tail", async () => {
     const pi = await started();
@@ -921,6 +927,29 @@ describe("progress updates", () => {
     await round(pi, { genMs: 3000, toolMs: 3000 });
     expect(reminders(pi)).toHaveLength(1);
     expect(String(reminders(pi)[0]!.content)).toContain("for 1 minute of work");
+  });
+
+  it("never asks in a contact's chat: only the user's own hears progress", async () => {
+    delete process.env.ABACUSAI_BOT_AUDIENCE;
+    const pi = await started();
+    await silent(pi, 30);
+    expect(reminders(pi)).toHaveLength(0);
+  });
+
+  it("does not count leaked reasoning as the user hearing anything", async () => {
+    const pi = await started();
+    for (let i = 0; i < 3; i++)
+      await round(pi, {
+        text: "<think>The du call is slow; maybe find.</think>",
+      });
+    expect(reminders(pi)).toHaveLength(1);
+  });
+
+  it("never asks after a batch that can close the reply", async () => {
+    const pi = await started();
+    await silent(pi, 2);
+    await round(pi, { toolName: "suggest_tasks" });
+    expect(reminders(pi)).toHaveLength(0);
   });
 
   it("never asks a turn nobody is in the chat for", async () => {

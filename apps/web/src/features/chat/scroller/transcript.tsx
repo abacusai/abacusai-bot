@@ -157,11 +157,15 @@ const RunTail = ({ messages }: { messages: UIMessage[] }) => {
   // Each running tool's own clock, ticking once a second while one runs.
   const now = useSeconds(active != null && titles.length > 0);
   const callKey = runningCallKey(messages);
-  useEffect(() => noteRunningCalls(callKey, Date.now()), [callKey]);
+  const thread = session.threadId;
+  useEffect(
+    () => noteRunningCalls(thread, callKey, Date.now()),
+    [thread, callKey]
+  );
   if (active == null)
     return slots.runTail != null ? <>{slots.runTail}</> : null;
   // Past a minute, one running tool reads in plain words with its own time.
-  const long = longToolLabel(t, messages, now);
+  const long = longToolLabel(t, thread, messages, now);
   const running = long != null ? [long] : titles;
   if (skin === "bot") {
     const caption =

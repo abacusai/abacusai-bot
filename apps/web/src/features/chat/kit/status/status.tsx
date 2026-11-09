@@ -1,9 +1,9 @@
-import { toolActivity } from "@abacus-ai/agent/tool-display";
 /**
  * Status components (spec 02 §5.6): the sessions busy line, the bots typing
  * bubble, run outcome markers, the error card with its action table (and
  * the upgrade variant), and notices.
  */
+import { toolActivity } from "@abacus-ai/agent/tool-display";
 import {
   type PaidCreditsOffer,
   paidCreditsOffer,
@@ -165,8 +165,11 @@ export const runningTools = (messages: readonly UIMessage[]): string[] =>
 
 /** How long a tool runs before the busy line says what it is doing in plain words. */
 const LONG_TOOL_MS = 60_000;
-/** When each running call was first seen here: its own clock, not the turn's. */
-const callSeenAt = new Map<string, number>();
+/**
+ * When each running call was first seen, per thread: its own clock, not the
+ * turn's, kept while the user looks at another chat.
+ */
+const callSeenAt = new Map<string, Map<string, number>>();
 
 /** The ids of the active run's running calls, as one dependency key. */
 export const runningCallKey = (messages: readonly UIMessage[]): string =>
@@ -175,10 +178,17 @@ export const runningCallKey = (messages: readonly UIMessage[]): string =>
     .join("\n");
 
 /** Starts the clock of each newly running call (from an effect: it reads the time). */
-export const noteRunningCalls = (key: string, now: number): void => {
+export const noteRunningCalls = (
+  thread: string,
+  key: string,
+  now: number
+): void => {
   const live = new Set(key === "" ? [] : key.split("\n"));
-  for (const id of callSeenAt.keys()) if (!live.has(id)) callSeenAt.delete(id);
-  for (const id of live) if (!callSeenAt.has(id)) callSeenAt.set(id, now);
+  const seen = callSeenAt.get(thread) ?? new Map<string, number>();
+  for (const id of seen.keys()) if (!live.has(id)) seen.delete(id);
+  for (const id of live) if (!seen.has(id)) seen.set(id, now);
+  if (seen.size > 0) callSeenAt.set(thread, seen);
+  else callSeenAt.delete(thread);
 };
 
 /**
@@ -188,13 +198,14 @@ export const noteRunningCalls = (key: string, now: number): void => {
  */
 export const longToolLabel = (
   t: (key: string, values?: Record<string, unknown>) => string,
+  thread: string,
   messages: readonly UIMessage[],
   now: number
 ): string | null => {
   const calls = runningCalls(messages);
   if (calls.length !== 1) return null;
   const call = calls[0]!;
-  const seenAt = callSeenAt.get(call.id);
+  const seenAt = callSeenAt.get(thread)?.get(call.id);
   if (seenAt == null || now - seenAt < LONG_TOOL_MS) return null;
   const activity = toolActivity(call.name);
   return t("chat.busy.longTool", {

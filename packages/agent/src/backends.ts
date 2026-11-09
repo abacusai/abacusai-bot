@@ -88,6 +88,21 @@ export function deadline(
 }
 
 /**
+ * How a command stopped by Stop or by its deadline ends: pi's bash tool reads
+ * these exact rejections as a stop and as "Command timed out after N
+ * seconds" (posix-shell.ts does the same). An exit code would hide both.
+ */
+function stoppedOutcome(
+  signal: AbortSignal | undefined,
+  timedOut: boolean,
+  seconds: number | undefined
+): Error | null {
+  if (signal?.aborted === true) return new Error("aborted");
+  if (timedOut) return new Error(`timeout:${seconds}`);
+  return null;
+}
+
+/**
  * Run commands inside a Docker container with the workspace bind-mounted at its
  * host path, so paths the model learned from `read` or `grep` stay valid in a
  * shell command. `--rm` per command: nothing to poison the next one or leak.
@@ -118,7 +133,7 @@ function dockerOperations(image: string): BashOperations {
         command,
       ];
 
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         const child = spawn(
           "docker",
           args,
@@ -163,7 +178,11 @@ function dockerOperations(image: string): BashOperations {
         if (options.signal?.aborted === true) terminate();
         else options.signal?.addEventListener("abort", onAbort, { once: true });
 
-        const timer = deadline(options.timeout, terminate);
+        let timedOut = false;
+        const timer = deadline(options.timeout, () => {
+          timedOut = true;
+          terminate();
+        });
 
         child.stdout.on("data", (data: Buffer) => options.onData(data));
         child.stderr.on("data", (data: Buffer) => options.onData(data));
@@ -183,9 +202,15 @@ function dockerOperations(image: string): BashOperations {
           if (timer != null) clearTimeout(timer);
           options.signal?.removeEventListener("abort", onAbort);
           unregister();
+          const stopped = stoppedOutcome(
+            options.signal,
+            timedOut,
+            options.timeout
+          );
+          if (stopped != null) reject(stopped);
           // code is null when our kill signalled the client; report a real
           // code.
-          resolve({ exitCode: code ?? 1 });
+          else resolve({ exitCode: code ?? 1 });
         });
       });
     },
@@ -297,6 +322,7 @@ function localSandboxedOperations(
 
     // The tail of the output, to name a hidden store on failure.
     let tail = "";
+    let timedOut = false;
     const result = await new Promise<{ exitCode: number }>((resolve) => {
       const child = spawn(argv[0]!, argv.slice(1), {
         cwd,
@@ -340,7 +366,10 @@ function localSandboxedOperations(
       if (options.signal?.aborted === true) terminate();
       else options.signal?.addEventListener("abort", onAbort, { once: true });
 
-      const timer = deadline(options.timeout, terminate);
+      const timer = deadline(options.timeout, () => {
+        timedOut = true;
+        terminate();
+      });
 
       const collect = (data: Buffer): void => {
         options.onData(data);
@@ -382,6 +411,10 @@ function localSandboxedOperations(
       const note = hiddenStoreNote(tail, policy.secrets.promptable);
       if (note != null) options.onData(Buffer.from(note));
     }
+
+    // Stopped by the user or the deadline: never re-run, whatever was refused.
+    const stopped = stoppedOutcome(options.signal, timedOut, options.timeout);
+    if (stopped != null) throw stopped;
 
     // What a granted command made is the session's own from here on.
     if (decision.kind === "confined" && approvals != null && intent != null) {
@@ -658,13 +691,19 @@ export async function execConfined(
   // The backends stream both through one callback, so stderr stays empty;
   // every caller concatenates the two anyway.
   let output = "";
-  const { exitCode } = await operations.exec(command, cwd, {
-    onData: (data: Buffer) => {
-      output += data.toString();
-    },
-    ...(options.signal != null ? { signal: options.signal } : {}),
-    ...(options.timeout != null ? { timeout: options.timeout } : {}),
-  });
-
-  return { stdout: output, stderr: "", code: exitCode ?? 1, killed: false };
+  try {
+    const { exitCode } = await operations.exec(command, cwd, {
+      onData: (data: Buffer) => {
+        output += data.toString();
+      },
+      ...(options.signal != null ? { signal: options.signal } : {}),
+      ...(options.timeout != null ? { timeout: options.timeout } : {}),
+    });
+    return { stdout: output, stderr: "", code: exitCode ?? 1, killed: false };
+  } catch (error) {
+    // Stopped or past its deadline: pi's exec shape says so with `killed`.
+    const message = error instanceof Error ? error.message : "";
+    if (message !== "aborted" && !message.startsWith("timeout:")) throw error;
+    return { stdout: output, stderr: "", code: 1, killed: true };
+  }
 }

@@ -17,10 +17,14 @@ type AfterToolCallContext = Parameters<
 /** The app's tools a reply ends with; the name is bare because the app's own server does not prefix. */
 const REPLY_CLOSING_TOOLS: ReadonlySet<string> = new Set(["suggest_tasks"]);
 
+/** Whether a tool closes the reply: a batch of only these may end the run. */
+export const closesReply = (name: string): boolean =>
+  REPLY_CLOSING_TOOLS.has(name);
+
 type AssistantMessage = AfterToolCallContext["assistantMessage"];
 
 /** Whether the message says anything the user sees: leaked reasoning is not a reply. */
-const hasWords = (message: AssistantMessage): boolean => {
+export const hasWords = (message: AssistantMessage): boolean => {
   const raw = message.content
     .map((block) => (block.type === "text" ? block.text : ""))
     .join("");

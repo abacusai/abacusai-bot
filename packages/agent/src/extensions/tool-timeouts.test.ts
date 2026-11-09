@@ -295,9 +295,8 @@ describe("the watchdog", () => {
   });
 
   // "Command timed out after 120 seconds" leaves the model with one idea:
-  // run the same command again. "Re-run it with a larger timeout" made it so:
-  // a whole-folder scan was killed, re-run bigger, killed again, for 25
-  // silent minutes. Say what would actually work, and to tell the user.
+  // run the same command again, and "re-run it with a larger timeout" only
+  // makes the wait longer. Say what would actually work, and to tell the user.
   it("tells the model what to do about a killed command", async () => {
     const pi = withTimeouts();
     const result = (await pi.fire("tool_result", {

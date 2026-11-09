@@ -36,7 +36,9 @@ import {
   refreshCreditBalanceIfStale,
   type CreditBalance,
 } from "../credit-balance.js";
+import { closesReply, hasWords } from "../forever/reply-end.js";
 import { connectorToolMeta } from "../mcp/index.js";
+import { isOwnerAudience } from "../owner-tools.js";
 import { WRITE_TOOLS } from "../permissions.js";
 import { toToolKind } from "../tool-display.js";
 import { ownEntry, UNATTENDED_CONNECTOR_READS } from "../tool-policy.js";
@@ -170,34 +172,20 @@ const presentNudgePrompt = (minutes: number): string =>
   `with CSS or placeholder images instead of generated art, and present that. You can keep ` +
   `improving it afterwards.`;
 
-/** The user has heard nothing for a while: one line on where things stand. */
-const updatePrompt = (minutes: number): string =>
-  `The user has heard nothing from you for ${minutes} ${minutes === 1 ? "minute" : "minutes"} of work. ` +
-  `In this message, before your next tool call, write one short line in their language: what you found so ` +
-  `far and what you are trying next. If you are ready to give the final answer, just give it.`;
-
 /**
- * The same for a chat whose user waits in a messaging app: what they hear is
- * a progress line or a file in the chat, never a preview.
+ * The user has heard nothing for a while: one line on where things stand.
+ * A messaging chat hears only its progress tool (`tools[0]`) and files, never
+ * a preview; elsewhere the model's own words reach the user.
  */
-const checkInPrompt = (minutes: number, tools: readonly string[]): string =>
-  `Check in: the user, waiting in the chat, has heard nothing from you for ${minutes} ` +
-  `${minutes === 1 ? "minute" : "minutes"} of work. Before your next step, send them one short line in ` +
-  `their language with ${tools[0]}: what you found so far and what you are trying next, and any files made ` +
-  `so far, finished or not, with ${PRESENT_TOOL}. If you are ready to give the final answer, just give it.`;
-
-/** Whether an assistant message carries words the user reads. */
-const hasText = (message: unknown): boolean => {
-  const content = (message as { content?: unknown }).content;
-  if (typeof content === "string") return content.trim() !== "";
-  return (
-    Array.isArray(content) &&
-    content.some(
-      (block) =>
-        (block as { type?: string }).type === "text" &&
-        String((block as { text?: unknown }).text ?? "").trim() !== ""
-    )
-  );
+const updatePrompt = (minutes: number, tools: readonly string[]): string => {
+  const silence = `The user has heard nothing from you for ${minutes} ${minutes === 1 ? "minute" : "minutes"} of work.`;
+  const what = "what you found so far and what you are trying next";
+  const done = "If you are ready to give the final answer, just give it.";
+  return tools.length > 0
+    ? `${silence} Before your next step, send them one short line in their language with ${tools[0]}: ` +
+        `${what}, and any files made so far, finished or not, with ${PRESENT_TOOL}. ${done}`
+    : `${silence} In this message, before your next tool call, write one short line in their language: ` +
+        `${what}. ${done}`;
 };
 
 const creditsLowPrompt = (balance: CreditBalance): string =>
@@ -382,7 +370,11 @@ export default function budgets(
     });
     // On the desktop the model's own words reach the user; a messaging chat
     // hears only what its progress tools send.
-    if (checkInTools.length === 0 && hasText(event.message)) hear();
+    if (
+      checkInTools.length === 0 &&
+      hasWords(event.message as Parameters<typeof hasWords>[0])
+    )
+      hear();
   });
 
   pi.on("tool_execution_start", (event) => {
@@ -429,10 +421,7 @@ export default function budgets(
     unanswered++;
     lastReminderAt = workedMs;
     const minutes = Math.max(1, Math.floor(unheard / 60_000));
-    let content =
-      checkInTools.length > 0
-        ? checkInPrompt(minutes, checkInTools)
-        : updatePrompt(minutes);
+    let content = updatePrompt(minutes, checkInTools);
     const mark = showWorkDue();
     if (mark != null) {
       presentNudges = mark;
@@ -446,12 +435,19 @@ export default function budgets(
 
   pi.on("turn_end", (event, ctx) => {
     refreshCredits(ctx);
-    // After a round of tools the run goes on, so a steer queued here lands at
-    // the tail of the very next request (never extending a finished reply).
+    // After a round of tools the run usually goes on, so a steer queued here
+    // lands at the tail of the next request. A batch of reply-closing tools
+    // can end the run instead; a steer then would reopen the finished reply.
+    // Only the user's own chat is told: a contact never hears progress.
+    const results = (event as { toolResults?: Array<{ toolName?: string }> })
+      .toolResults;
     if (
-      (event as { toolResults?: unknown[] }).toolResults?.length &&
+      results != null &&
+      results.length > 0 &&
+      !results.every((result) => closesReply(result.toolName ?? "")) &&
       closingTurns == null &&
-      !nobodyPresent()
+      !nobodyPresent() &&
+      (checkInTools.length > 0 || isOwnerAudience())
     )
       remindIfDue();
   });

@@ -1,11 +1,10 @@
 /**
- * A long silent turn, replayed through the real session loop: a scripted
- * model and real bash, with each kill shrunk to a second. A "biggest files"
- * ask once ran three killed whole-folder scans over 27 minutes without a
- * word to the user. Now each kill tells the model to try a faster way and
- * say so, a hidden reminder asks for a line while the user hears nothing,
- * and both ride at the tail: the system prompt and every earlier message
- * stay byte-identical, so the cached prefix holds.
+ * A long silent turn through the real session loop and the default shell
+ * backend: a scripted model and real bash, each slow scan killed at a
+ * one-second deadline. Each kill tells the model to try a faster way and say
+ * so, a hidden reminder asks for a line while the user hears nothing, and
+ * both ride at the tail: the system prompt and every earlier message stay
+ * byte-identical, so the cached prefix holds.
  */
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -33,8 +32,6 @@ beforeAll(async () => {
   home = fs.mkdtempSync(path.join(os.tmpdir(), "progress-updates-home-"));
   process.env.ABACUSAI_BOT_HOME = home;
   process.env.ABACUSAI_BOT_AUDIENCE = "owner";
-  // pi's own shell, whose deadline reports "Command timed out after N seconds".
-  process.env.ABACUSAI_BOT_SANDBOX = "off";
   fs.writeFileSync(
     path.join(home, "config.json"),
     fakeProviderConfig(provider)
@@ -43,7 +40,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   delete process.env.ABACUSAI_BOT_AUDIENCE;
-  delete process.env.ABACUSAI_BOT_SANDBOX;
   resetBackgroundJobs();
   await provider.close();
   fs.rmSync(home, { recursive: true, force: true });
