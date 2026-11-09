@@ -610,8 +610,7 @@ describe("scriptRuntimesPrompt", () => {
     ABACUSAI_BOT_PYTHON_ENV: "/home/u/.abacusai-bot/shell-python",
   };
   const node = {
-    ABACUSAI_BOT_NODE:
-      "/Applications/AbacusAI-Bot.app/Contents/MacOS/AbacusAI-Bot",
+    ABACUSAI_BOT_NODE: "/Users/u/.abacusai-bot/node/0123456789abcdef/node",
   };
 
   it("is absent when neither runtime is the app's", () => {
