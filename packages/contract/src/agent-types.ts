@@ -624,6 +624,12 @@ export type DesktopCommand =
       exhaustedAt: number | null;
       freeLaneChosenAt: number | null;
     }
+  /** The account's Abacus AI plan as the desktop last read it; see account-plan.ts. */
+  | {
+      type: "account_plan";
+      tier: "free" | "basic" | "paid" | "unknown";
+      name: string | null;
+    }
   /**
    * Reconnect every MCP server. With `requestId`, the agent answers
    * `mcp_refreshed` (or `mcp_refresh_failed`) carrying it once done.

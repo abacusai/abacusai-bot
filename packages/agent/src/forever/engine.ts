@@ -18,6 +18,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 
 import { sponsoredRunActive } from "../abacus-endpoint.js";
+import { planFactsPrompt } from "../account-plan.js";
 import { Allowances } from "../allowances.js";
 import { freeBytes } from "../atomic-file.js";
 import { PYTHON_SETUP_TIMEOUT_MS, setPythonProvisioner } from "../backends.js";
@@ -400,6 +401,8 @@ export class ForeverEngine {
   private promptMcpRoster = "";
   /** The reply-language block the prompt was built with. */
   private promptReplyLanguage: string | null = null;
+  /** The plan line the prompt was built with. */
+  private promptPlan = "";
 
   constructor(
     private readonly options: ForeverEngineOptions,
@@ -485,9 +488,12 @@ export class ForeverEngine {
         // Same block as the desktop chat; the check at agent_end catches drift.
         const language = this.replyLanguagePrompt();
         this.promptReplyLanguage = language;
+        const plan = planFactsPrompt();
+        this.promptPlan = plan;
 
         return [
           ...(persona == null ? [] : [persona]),
+          plan,
           ...base,
           ...(mcp == null ? [] : [mcp]),
           ...(memory == null ? [] : [memory]),
@@ -1006,12 +1012,14 @@ export class ForeverEngine {
     const fingerprint = this.profile.memory.fingerprint();
     const roster = mcpRosterFingerprint(this.mcp.statuses);
     const language = this.replyLanguagePrompt();
+    const plan = planFactsPrompt();
 
     if (
       persona === this.promptPersona &&
       fingerprint === this.promptMemoryFingerprint &&
       roster === this.promptMcpRoster &&
-      language === this.promptReplyLanguage
+      language === this.promptReplyLanguage &&
+      plan === this.promptPlan
     )
       return;
 

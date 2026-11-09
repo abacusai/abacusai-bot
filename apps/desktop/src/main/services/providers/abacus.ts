@@ -11,6 +11,7 @@ import {
 } from "@abacus-ai/contract/contracts";
 import {
   abacusPlanTier,
+  type AbacusPlanTier,
   isPayingAbacusTier,
   type ModelAvailability,
   type ModelTier,
@@ -738,6 +739,16 @@ export const fetchAbacusAccount = async (
 /** The account as last read, without a fetch: null before the first read or once signed out. */
 export const cachedAbacusAccount = (): AbacusAccountInfo | null =>
   accountCache?.value ?? null;
+
+/** The plan as each agent is told it (ABACUSAI_BOT_PLAN, then the `account_plan` command). */
+export const accountPlan = (): {
+  tier: AbacusPlanTier;
+  name: string | null;
+} => ({
+  tier: abacusPlanTier(accountCache?.value),
+  // Optional on the server: the line then says "a paid plan".
+  name: accountCache?.value.plan?.trim() || null,
+});
 
 /** Whether the account is on the free plan: its tier, else its plan, reads "free". */
 export const onFreePlan = (

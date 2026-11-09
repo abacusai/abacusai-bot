@@ -15,6 +15,7 @@ import {
 
 import { addCredits, type TurnCredits, turnCredits } from "./abacus-credits.js";
 import { sponsoredRunActive } from "./abacus-endpoint.js";
+import { planFactsPrompt } from "./account-plan.js";
 import { Allowances } from "./allowances.js";
 import { allowedPathsFromEnv } from "./allowed-paths.js";
 import { freeBytes } from "./atomic-file.js";
@@ -898,6 +899,8 @@ export class AbacusBotSession {
   private promptPersona = "";
   /** The MCP roster the prompt was last built against. */
   private promptMcpRoster = "";
+  /** The plan line the prompt was built with; an upgrade mid-chat rebuilds it. */
+  private promptPlan = "";
 
   constructor(private readonly options: SessionOptions) {
     this.mode = parseMode(options.mode);
@@ -1022,9 +1025,12 @@ export class AbacusBotSession {
         // Live statuses, so a connector added mid-chat updates the line.
         const mcp = mcpPrompt(this.mcp.statuses);
         this.promptMcpRoster = mcpRosterFingerprint(this.mcp.statuses);
+        const plan = planFactsPrompt();
+        this.promptPlan = plan;
 
         return [
           ...(persona == null ? [] : [persona]),
+          plan,
           ...base,
           ...(mcp == null ? [] : [mcp]),
           ...(remember == null ? [] : [remember]),
@@ -4059,16 +4065,18 @@ export class AbacusBotSession {
    */
   private async refreshCustomInstructions(): Promise<void> {
     const current = readCustomInstructions();
-    // The bot persona and the MCP roster ride the same rebuild.
+    // The bot persona, the MCP roster and the plan ride the same rebuild.
     const persona = readPersona();
     const roster = mcpRosterFingerprint(this.mcp.statuses);
     const language = accountReplyLanguagePrompt();
+    const plan = planFactsPrompt();
 
     if (
       current === this.promptInstructions &&
       persona === this.promptPersona &&
       roster === this.promptMcpRoster &&
-      language === this.promptUserLanguage
+      language === this.promptUserLanguage &&
+      plan === this.promptPlan
     )
       return;
 

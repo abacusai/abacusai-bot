@@ -49,6 +49,31 @@ function envelope(url: string, body: string): string {
   ].join("\n");
 }
 
+/**
+ * abacus.ai's help pages are written for Abacus AI's other products: read for
+ * a how-to, the model gave another product's CLI steps as this app's. A page
+ * or result there carries this note, outside the fence, pointing at bot_help.
+ */
+export const OTHER_PRODUCT_NOTE =
+  "Note from AbacusAI Bot: pages on abacus.ai/help document Abacus AI's other products (Abacus AI Desktop with its CLI and VS Code extension, ChatLLM, Abacus AI Agent), not this app. Never give their steps, commands, settings or prices as AbacusAI Bot's: for this app's own settings and steps call bot_help, and for what it costs billing_plan.";
+
+const isAbacusHelpPage = (url: string): boolean => {
+  try {
+    const { hostname, pathname } = new URL(url);
+    return (
+      (hostname === "abacus.ai" || hostname === "www.abacus.ai") &&
+      (pathname === "/help" || pathname.startsWith("/help/"))
+    );
+  } catch {
+    // Not a URL (a search provider's label): nothing to say about it.
+    return false;
+  }
+};
+
+/** The note, when any of these URLs is an abacus.ai help page. */
+export const otherProductNote = (urls: readonly string[]): string =>
+  urls.some(isAbacusHelpPage) ? `\n\n${OTHER_PRODUCT_NOTE}` : "";
+
 /** Error text the model can act on, rather than a stack trace. */
 function describe(error: unknown): string {
   if (error instanceof WebSearchError || error instanceof WebFetchError)
@@ -136,7 +161,10 @@ export default function (pi: ExtensionAPI): void {
                     envelope("web search results", lines.join("\n\n")) +
                     (result.summary != null
                       ? `\n\nProvider summary:\n${result.summary}`
-                      : ""),
+                      : "") +
+                    otherProductNote(
+                      result.sources.map((source) => source.url)
+                    ),
                 },
               ],
               details: { sources: result.sources.length },
@@ -272,7 +300,9 @@ export default function (pi: ExtensionAPI): void {
           content: [
             {
               type: "text",
-              text: `${header}\n\n${envelope(result.url, result.text)}`,
+              text:
+                `${header}\n\n${envelope(result.url, result.text)}` +
+                otherProductNote([params.url, result.url]),
             },
           ],
           details: {

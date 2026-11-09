@@ -487,6 +487,7 @@ import {
 import { MessagingGatewayService } from "./services/messaging/messaging-gateway-service";
 import {
   accountMovedPlan,
+  accountPlan,
   cachedAbacusAccount,
   creditSnapshot,
   fetchAbacusAccount,
@@ -1858,6 +1859,11 @@ export class ServiceHost {
   private readonly stopPlanForwarding = onAbacusPlanChange(() => {
     this.toolAvailabilityChanged();
     this.moveModelPinsToTier();
+    // What the model is told about cost follows the plan; see account-plan.ts.
+    this.agentManagerService.broadcastCommand({
+      type: "account_plan",
+      ...accountPlan(),
+    });
   });
   private readonly cronScheduler = new CronScheduler(
     async (jobId, trigger, fire) => {
@@ -7312,6 +7318,8 @@ export class ServiceHost {
       ...(credits != null
         ? { ABACUSAI_BOT_CREDITS: JSON.stringify(credits) }
         : {}),
+      // Kept current afterwards by the `account_plan` command.
+      ABACUSAI_BOT_PLAN: JSON.stringify(accountPlan()),
       // Kept current afterwards by the `credit_wall` command.
       ...(this.prefs != null
         ? {

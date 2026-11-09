@@ -11,6 +11,7 @@
 import * as readline from "node:readline";
 import type { Readable } from "node:stream";
 
+import { setHostAccountPlan } from "../account-plan.js";
 import { isBotTask } from "../bot-task.js";
 import type { BotSession } from "../bot/bot-session.js";
 import {
@@ -313,6 +314,11 @@ export class HostCore {
 
       case "credit_wall":
         setHostCreditWall(command);
+
+        return;
+
+      case "account_plan":
+        setHostAccountPlan(command);
 
         return;
 

@@ -30,12 +30,20 @@ const SUB_AGENT_IDENTITY_PROMPT = [
 ].join("\n");
 
 /**
- * Questions about the app itself go to bot_help, which reads the app's
- * state: from memory the model said routines run on a server and that
- * external models cannot be added. One fixed line, so the cached prefix holds.
+ * What this app is, beside Abacus AI's other products, and what chatting costs
+ * on every plan; the plan itself is account-plan.ts's line. From memory the
+ * model gave another product's CLI steps as this app's and called chatting
+ * free. Fixed, so the cached prefix holds.
  */
-export const APP_QUESTIONS_PROMPT =
-  "Questions about AbacusAI Bot itself (what it can do, its settings, models, connectors, chat apps, routines, bots, limits, or where something is) are answered from bot_help, never from memory.";
+export const PRODUCT_FACTS_PROMPT = [
+  "About this app: AbacusAI Bot runs as a desktop app and on the web at bot.abacus.ai, and answers in WhatsApp, Telegram and Discord through its chat apps.",
+  "It is not Abacus AI's other products (Abacus AI Desktop with its CLI and VS Code extension, ChatLLM, Abacus AI Agent on the web): their help pages, commands and settings are not this app's.",
+  "This app has no CLI to install, nothing to type in a terminal to set it up and no VS Code extension; its settings are pages in the app.",
+  "Questions about AbacusAI Bot itself (how do I, where is, what it can do, its settings, models, provider keys, connectors, chat apps, routines, bots, limits) are answered from bot_help, never from memory or a web page.",
+  "Chats, bots and routines on Abacus AI models use the account's credits on every plan, free and paid alike: never say chatting, this chat or small tasks are free or cost nothing.",
+  "Only a model on the user's own provider key, or one the model menu lists as free, runs without Abacus credits.",
+  "Prices, credits left and what each plan includes are billing_plan's.",
+].join(" ");
 
 /**
  * Asked for a video, the model wrote "I can't make video here, let me check"
@@ -72,7 +80,7 @@ function toolGuidelinesPrompt(edit: EditTool): string {
 
 /** A main session's base: who the agent is, then how it uses its tools. */
 export function basePrompt(edit: EditTool): string {
-  return `${identityPrompt()}\n${APP_QUESTIONS_PROMPT}\n${MEDIA_ASKS_PROMPT}\n${PLAN_ASKS_PROMPT}\n\n${toolGuidelinesPrompt(edit)}`;
+  return `${identityPrompt()}\n${PRODUCT_FACTS_PROMPT}\n${MEDIA_ASKS_PROMPT}\n${PLAN_ASKS_PROMPT}\n\n${toolGuidelinesPrompt(edit)}`;
 }
 
 /** A sub-agent's base; the guidelines only where it has file tools. */
