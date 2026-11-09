@@ -19,9 +19,9 @@ import { childProcessEnv } from "./child-env.js";
 import { currentMode } from "./current-mode.js";
 import { modelPath } from "./model-path.js";
 import {
+  bundledShellEnv,
   commandPosixShell,
   managedPythonEnv,
-  posixShellEnv,
   posixShellOperations,
 } from "./posix-shell.js";
 import {
@@ -270,7 +270,7 @@ function localSandboxedOperations(
             ],
     };
     const spawnEnv = trashShimEnv(
-      bundledShell != null ? posixShellEnv(childEnv, bundledShell) : childEnv,
+      bundledShell != null ? bundledShellEnv(childEnv, bundledShell) : childEnv,
       trash
     );
     const decision = await decide(policy, command, cwd, spawnEnv, commandId);

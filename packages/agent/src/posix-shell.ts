@@ -11,6 +11,7 @@ import * as path from "node:path";
 import { createLocalBashOperations } from "@earendil-works/pi-coding-agent";
 
 import { MANAGED_PYTHON_ENV } from "./child-env.js";
+import { grepShimEnv } from "./grep-launcher.js";
 import { modelPath } from "./model-path.js";
 import {
   commandPosixShell,
@@ -80,6 +81,14 @@ export function posixShellOperations(
   };
 }
 
+/** What every agent command under the bundled shell gets: its environment, with GNU grep's launchers (grep-launcher.ts). */
+export function bundledShellEnv(
+  env: NodeJS.ProcessEnv,
+  shell: PosixShell
+): Record<string, string> {
+  return grepShimEnv(posixShellEnv(env, shell), shell);
+}
+
 /** The operations for one resolved shell. */
 function shellOperations(shell: PosixShell): ShellOperations {
   if (shell.args != null) {
@@ -105,7 +114,7 @@ function shellOperations(shell: PosixShell): ShellOperations {
         const child = spawn(shell.sh, [...args, "-c", command], {
           cwd,
           // The trash launchers go ahead of the applets (trash.ts).
-          env: trashShimEnv(posixShellEnv(options.env ?? process.env, shell)),
+          env: trashShimEnv(bundledShellEnv(options.env ?? process.env, shell)),
           stdio: ["ignore", "pipe", "pipe"],
           windowsHide: true,
         });
@@ -155,7 +164,7 @@ function shellOperations(shell: PosixShell): ShellOperations {
     exec: (command, cwd, options) =>
       local.exec(command, cwd, {
         ...options,
-        env: trashShimEnv(posixShellEnv(options.env ?? process.env, shell)),
+        env: trashShimEnv(bundledShellEnv(options.env ?? process.env, shell)),
       }),
   };
 }
@@ -165,6 +174,11 @@ const WINDOWS_SHELL_PROMPT = [
   "`bash` runs busybox ash on Windows, not bash, WSL or MSYS. Pipes, `&&`, redirects, `$(...)`,",
   "heredocs and grep/sed/awk/find/head/tail/wc/sort/xargs work; arrays, `**` and some GNU flags",
   "do not. Write POSIX shell in it, never cmd.exe or PowerShell syntax.",
+  "- grep takes GNU's options (-r, --include, --exclude-dir, -P), and rg is on PATH. The other",
+  "  tools are BusyBox's: find has no -printf, du takes -d N (no --max-depth), realpath has no",
+  "  --relative-to, there is no column. With 2>/dev/null a refused option reads as no output.",
+  "- A Windows program reads /dev/null as a missing path: give it NUL (`-o NUL`). Redirects",
+  "  to /dev/null work.",
   "- Paths are native, with forward slashes: 'C:/Users/Name/project'. /c/..., /mnt/c and",
   "  /cygdrive/c do not exist. Quote any path with a space ('C:/Program Files/...'). Avoid",
   '  backslashes: unquoted they vanish, and a trailing one inside "..." escapes the quote.',

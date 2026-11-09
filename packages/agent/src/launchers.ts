@@ -1,9 +1,12 @@
 /**
  * Shell launchers keep ELECTRON_RUN_AS_NODE local to the app's own Node runs.
- * busybox runs them on Windows too.
+ * busybox runs them on Windows too: the trash's (trash.ts) and GNU grep's
+ * (grep-launcher.ts) sit first on its PATH, ahead of the applets.
  */
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { writeFileAtomicSync } from "./atomic-file.js";
 import { abacusBotDir } from "./config.js";
@@ -53,4 +56,29 @@ export function nodeLauncher(): string | null {
   }
 
   return `${dir}/node`;
+}
+
+/** A launcher target beside the build at `moduleUrl`: the bundle's `.js`, or the source in tests. */
+export function entryBeside(moduleUrl: string, base: string): string | null {
+  const dir = path.dirname(fileURLToPath(moduleUrl));
+  for (const name of [`${base}.js`, `${base}.ts`]) {
+    const candidate = path.join(dir, name);
+    if (existsSync(candidate)) return candidate;
+  }
+
+  return null;
+}
+
+/** `BB_OVERRIDE_APPLETS` with `names` added: busybox's own applets give way to what PATH finds first. */
+export function withOverrides(
+  current: string | undefined,
+  names: readonly string[]
+): string {
+  const value = current ?? "";
+  const separator = value.includes(";") ? "," : ";";
+  const missing = names.filter((name) => !value.split(/[;,\s]/).includes(name));
+
+  return missing.length === 0
+    ? value
+    : `${value}${separator}${missing.join(",")}`;
 }

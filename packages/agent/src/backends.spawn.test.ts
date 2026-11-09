@@ -103,6 +103,12 @@ vi.mock("./trash.js", async (importOriginal) => ({
   trashShimEnv: (env: Record<string, string>) => env,
 }));
 
+// Likewise the grep launchers, which grep-shim.test.ts runs through a real shell.
+vi.mock("./grep-launcher.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./grep-launcher.js")>()),
+  grepShimEnv: (env: Record<string, string>) => env,
+}));
+
 /** A child's pipe: an emitter the backend is also allowed to tear down. */
 class FakeStream extends EventEmitter {
   destroy = vi.fn();
