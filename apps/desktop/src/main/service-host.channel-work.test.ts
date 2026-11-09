@@ -44,6 +44,8 @@ const workHost = (ends: string | null = null) => {
     },
     agentManagerService: { stopSession: vi.fn() },
     sessionTurnStateService: { stopSettled: vi.fn(async () => true) },
+    // The card turns from waiting to running when the prompt goes.
+    channelService: { workStarted: vi.fn() },
   };
   for (const name of [
     "runChannelWork",
@@ -84,19 +86,26 @@ const workHost = (ends: string | null = null) => {
     if (work.handle != null) (self.stopAgentTurn as Method)(work.handle);
   };
   const run = (workId: string) =>
-    (self.runChannelWork as Method)(
-      "wri",
-      "ch1",
-      "WORK",
-      workId
-    ) as Promise<string>;
+    (self.runChannelWork as Method)("wri", "WORK", workId, {
+      askId: workId,
+      passerId: "ch1",
+      passer: "Launch",
+      channelId: "ch1",
+      task: "the task",
+      userWords: "do the task",
+    }) as Promise<string>;
   return { self, run, stop };
 };
 
 describe("channel work", () => {
   it("runs in the bot's own chat and resolves with its report", async () => {
-    const { run } = workHost("reply");
+    const { self, run } = workHost("reply");
     await expect(run("w1")).resolves.toBe("Done.");
+    // The card turned from waiting to running as the prompt went.
+    expect(
+      (self.channelService as { workStarted: ReturnType<typeof vi.fn> })
+        .workStarted
+    ).toHaveBeenCalledWith("w1");
   });
 
   it("a stop before its turn starts: it never starts", async () => {
