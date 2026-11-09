@@ -36,10 +36,11 @@ export interface PhoneCreditLineDeps {
 }
 
 /**
- * A free account crossed half, then four fifths, of its free credits in a
+ * An account crossed half, then four fifths, of its plan's credits in a
  * WhatsApp turn: the desktop's milestone line (the same words, once each),
- * in the user's language, with the plan's whole pitch, that everything then
- * works on their phone in the ChatLLM app, and the upgrade link.
+ * in the user's language. A free account hears the plan's whole pitch, that
+ * everything then works on their phone in the ChatLLM app, and the upgrade
+ * link; a paid one its own way on (paidCreditsOffer).
  */
 export const phoneCreditLine =
   (deps: PhoneCreditLineDeps) =>
@@ -58,7 +59,8 @@ export const phoneCreditLine =
     );
     // AbacusAI Bot's page, tagged for WhatsApp: through the upgrade, then the ChatLLM app.
     const link = billing?.upgrades[0]?.url ?? botUpgradePage("whatsapp");
-    return deps.say(
-      chatLineForCreditThreshold(words, mark, link, billing, true)
-    );
+    // The plan is the mark's, as the watch read it; a paid plan whose offer
+    // is not known says nothing yet, and the line goes after a later turn.
+    const line = chatLineForCreditThreshold(words, mark, link, billing, true);
+    return line != null && deps.say(line);
   };

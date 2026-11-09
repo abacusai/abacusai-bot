@@ -3092,6 +3092,7 @@
       "historyForeign": "Bu konuşma uygulamanın daha yeni bir sürümüyle kaydedildi, bu yüzden bir kısmı burada görünmeyebilir.",
       "historyTooLarge": "Önceki geçmiş burada gösterilemeyecek kadar büyük ({{size}}, sınır {{limit}}).",
       "unsaved": "Disk dolu, bu yüzden bu sohbet kaydedilmiyor. Biraz yer açın; bir sonraki mesajınızla yeniden kaydedilir.",
+      "creditsLow": "Credits are almost out, so the agent is wrapping up what it has so the work isn't cut off halfway.",
       "showInFolder": "Klasörde göster"
     },
     "part": {
@@ -4806,6 +4807,8 @@
       "paidOutUpgrade": "Bu ayın kredileri bittiği için durakladım. Her ay daha fazla kredi için {{plan}} planına geç ({{price}}): {{link}}",
       "paidUpgrade": "Ya da her ay daha fazla kredi için {{plan}} planına geç ({{price}}): {{link}}",
       "paidUpgradeOnly": "Her ay daha fazla kredi için {{plan}} planına geç ({{price}}): {{link}}",
+      "milestoneTopUp": "Add credits here: {{link}}",
+      "milestoneMobile": "Your plan is billed through the App Store or Google Play, so add credits or upgrade in the Abacus.AI mobile app.",
       "paidMobile": "Bu ayın kredileri bitti. Planın App Store veya Google Play üzerinden faturalandırılıyor; kredi eklemek ya da yükseltmek için Abacus.AI mobil uygulamasını kullan.",
       "unavailable": "{{model}} artık kullanılamıyor, bu yüzden bunu bitiremedim. Mesajın saklandı: devam etmek için uygulamanın model seçicisinde RouteLLM - Open'a geç.",
       "unavailableDown": "{{model}} şu anda kullanılamıyor: sağlayıcısı hata vermeye devam ediyor. Mesajın saklandı: devam etmek için uygulamanın model seçicisinde RouteLLM - Open'a geç.",
@@ -4912,6 +4915,8 @@
     "half": {
       "title": "Ücretsiz kredilerinin yarısını kullandın",
       "body": "{{total}} krediden {{left}} kaldı.",
+      "paidTitle": "You've used half of this month's credits",
+      "paidBody": "You have {{left}} of {{total}} left this month.",
       "estimateBuilds_one": "Bugünkü gibi yaklaşık {{count}} derleme daha yapmaya yeter.",
       "estimateBuilds_other": "Bugünkü gibi yaklaşık {{count}} derleme daha yapmaya yeter.",
       "estimateMessages_one": "Bugünkü gibi yaklaşık {{count}} bot mesajına daha yeter.",
@@ -4923,6 +4928,13 @@
       "title": "Yalnızca {{left}} ücretsiz kredi kaldı",
       "urge": "İşin yarıda kalmasın diye şimdi yükselt.",
       "urgeProject": "“{{project}}” yarıda kalmasın diye şimdi yükselt.",
+      "paidTitle": "Only {{left}} credits left this month",
+      "paidUrgeBoth": "Top up or move to {{plan}} so your work doesn't stop halfway.",
+      "paidUrgeBothProject": "Top up or move to {{plan}} so “{{project}}” doesn't stop halfway.",
+      "paidUrgeNext": "Move to {{plan}} so your work doesn't stop halfway.",
+      "paidUrgeNextProject": "Move to {{plan}} so “{{project}}” doesn't stop halfway.",
+      "paidUrgeMore": "Add credits so your work doesn't stop halfway.",
+      "paidUrgeMoreProject": "Add credits so “{{project}}” doesn't stop halfway.",
       "estimateBuilds_one": "Yaklaşık {{count}} derleme daha yapmaya yeter.",
       "estimateBuilds_other": "Yaklaşık {{count}} derleme daha yapmaya yeter.",
       "estimateMessages_one": "Yaklaşık {{count}} bot mesajına daha yeter.",
@@ -4931,12 +4943,14 @@
       "estimateTasks_other": "Yaklaşık {{count}} görev daha yapmaya yeter."
     },
     "meterLabel": "{{total}} ücretsiz krediden {{used}} kullanıldı",
+    "paidMeterLabel": "{{used}} of {{total}} credits used this month",
     "used": "{{used}} kullanıldı",
     "left": "{{left}} kaldı",
     "upgradeIntro": "Yükselt · ilk ay {{price}}",
     "upgradeMonthly": "Yükselt · aylık {{price}}",
     "upgrade": "Yükselt",
-    "continueFree": "Ücretsiz devam et"
+    "continueFree": "Ücretsiz devam et",
+    "keepGoing": "Keep going"
   },
   "successPitch": {
     "moment": {

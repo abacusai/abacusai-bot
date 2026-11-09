@@ -256,6 +256,8 @@ export interface BudgetOptions {
    */
   checkIns?: { tools: readonly string[] };
   runLimit?: RunLimit;
+  /** The low-credit steer went to a paid plan's model: the chat shows the user why it wraps up. */
+  onCreditsLow?: () => void;
 }
 
 /** The tool under its own name or a server's prefix. */
@@ -466,7 +468,7 @@ export default function budgets(
       balance.remaining < lowCreditBase(balance) * CREDITS_LOW_SHARE
     ) {
       creditsNudged = true;
-      // Hidden: what the user reads is the model's own wrap-up.
+      // The steer is the model's; a paid user also sees the notice.
       pi.sendMessage(
         {
           customType: "abacusai-bot-credits-low",
@@ -475,6 +477,8 @@ export default function budgets(
         },
         { deliverAs: "steer" }
       );
+      // The free plan's runs wrap up as they always have, with no notice.
+      if (balance.paid === true) options.onCreditsLow?.();
     }
     // Hidden from the user: the preview appearing is what they see.
     const mark = showWorkDue();

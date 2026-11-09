@@ -1716,6 +1716,8 @@
       "paidUpgradeOnly",
       "paidOutUpgrade",
       "paidMobile",
+      "milestoneTopUp",
+      "milestoneMobile",
       "ownKeyCredit",
       "ownKeyRateLimit",
       "ownKeyDown",
@@ -1786,7 +1788,16 @@
       "low.urgeProject",
       "low.estimateBuilds",
       "low.estimateMessages",
-      "low.estimateTasks"
+      "low.estimateTasks",
+      "half.paidTitle",
+      "half.paidBody",
+      "low.paidTitle",
+      "low.paidUrgeBoth",
+      "low.paidUrgeBothProject",
+      "low.paidUrgeNext",
+      "low.paidUrgeNextProject",
+      "low.paidUrgeMore",
+      "low.paidUrgeMoreProject"
     ],
     "sources": ["../../../packages/contract/src/credit-thresholds.ts"]
   },

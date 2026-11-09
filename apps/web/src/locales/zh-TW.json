@@ -3092,6 +3092,7 @@
       "historyForeign": "這段對話是由較新版本的應用程式儲存，部分內容可能無法在這裡顯示。",
       "historyTooLarge": "較早的記錄太大，無法在這裡顯示（{{size}}，上限為 {{limit}}）。",
       "unsaved": "磁碟已滿，這個聊天目前沒有儲存。請釋出一些空間；下次傳送訊息時會重新儲存。",
+      "creditsLow": "Credits are almost out, so the agent is wrapping up what it has so the work isn't cut off halfway.",
       "showInFolder": "在資料夾中顯示"
     },
     "part": {
@@ -4806,6 +4807,8 @@
       "paidOutUpgrade": "我已暫停，因為本月點數已用完。升級到 {{plan}}（{{price}}），每月可獲得更多點數：{{link}}",
       "paidUpgrade": "或升級到 {{plan}}（{{price}}），每月可獲得更多點數：{{link}}",
       "paidUpgradeOnly": "升級到 {{plan}}（{{price}}），每月可獲得更多點數：{{link}}",
+      "milestoneTopUp": "Add credits here: {{link}}",
+      "milestoneMobile": "Your plan is billed through the App Store or Google Play, so add credits or upgrade in the Abacus.AI mobile app.",
       "paidMobile": "本月點數已用完。你的方案是透過 App Store 或 Google Play 計費，所以請在 Abacus.AI 行動應用程式中儲值點數或升級。",
       "unavailable": "{{model}} 已無法使用，所以我沒能完成。你的訊息已保留：在應用程式的模型選擇器中切換到 RouteLLM - Open 就能繼續。",
       "unavailableDown": "{{model}} 目前無法使用：它的供應商一直發生錯誤。你的訊息已保留：在應用程式的模型選擇器中切換到 RouteLLM - Open 就能繼續。",
@@ -4912,6 +4915,8 @@
     "half": {
       "title": "你已用掉一半的免費點數",
       "body": "你還剩 {{left}}/{{total}}。",
+      "paidTitle": "You've used half of this month's credits",
+      "paidBody": "You have {{left}} of {{total}} left this month.",
       "estimateBuilds_one": "大約還夠再做 {{count}} 次像今天這樣的建置。",
       "estimateBuilds_other": "大約還夠再做 {{count}} 次像今天這樣的建置。",
       "estimateMessages_one": "大約還夠再傳 {{count}} 則像今天這樣的機器人訊息。",
@@ -4923,6 +4928,13 @@
       "title": "免費點數只剩 {{left}}",
       "urge": "現在就升級，工作才不會中途停下來。",
       "urgeProject": "現在就升級，「{{project}}」才不會中途停下來。",
+      "paidTitle": "Only {{left}} credits left this month",
+      "paidUrgeBoth": "Top up or move to {{plan}} so your work doesn't stop halfway.",
+      "paidUrgeBothProject": "Top up or move to {{plan}} so “{{project}}” doesn't stop halfway.",
+      "paidUrgeNext": "Move to {{plan}} so your work doesn't stop halfway.",
+      "paidUrgeNextProject": "Move to {{plan}} so “{{project}}” doesn't stop halfway.",
+      "paidUrgeMore": "Add credits so your work doesn't stop halfway.",
+      "paidUrgeMoreProject": "Add credits so “{{project}}” doesn't stop halfway.",
       "estimateBuilds_one": "大約還夠再做 {{count}} 次建置。",
       "estimateBuilds_other": "大約還夠再做 {{count}} 次建置。",
       "estimateMessages_one": "大約還夠再傳 {{count}} 則機器人訊息。",
@@ -4931,12 +4943,14 @@
       "estimateTasks_other": "大約還夠再完成 {{count}} 項任務。"
     },
     "meterLabel": "已使用 {{used}}/{{total}} 免費點數",
+    "paidMeterLabel": "{{used}} of {{total}} credits used this month",
     "used": "已用 {{used}}",
     "left": "剩餘 {{left}}",
     "upgradeIntro": "升級 · 首月 {{price}}",
     "upgradeMonthly": "升級 · {{price}}/月",
     "upgrade": "升級",
-    "continueFree": "免費繼續"
+    "continueFree": "免費繼續",
+    "keepGoing": "Keep going"
   },
   "successPitch": {
     "moment": {

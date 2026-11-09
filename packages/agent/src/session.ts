@@ -1150,6 +1150,14 @@ export class AbacusBotSession {
               name: "abacusai-bot-budgets",
               factory: createBudgets({
                 runLimit: this.verifyLoop.runLimit,
+                onCreditsLow: () =>
+                  this.emitAgentEvent({
+                    type: "notification",
+                    severity: "warning",
+                    message: CREDITS_LOW_NOTICE,
+                    actions: [{ type: CREDITS_LOW_ACTION }],
+                    notificationKey: CREDITS_LOW_ACTION,
+                  }),
               }) as unknown as (pi: ExtensionAPI) => void,
             },
           ]) satisfies InlineExtension[],
@@ -4191,6 +4199,17 @@ const MALFORMED_TOOL_CALL_PATTERN = /malformed[ _]?(function|tool)[ _]?call/i;
 
 /** Continuations spent on a malformed tool call, per user turn. */
 const MAX_MALFORMED_CONTINUATIONS = 1;
+
+/**
+ * The notice the low-credit steer shows a paid user, so they know why the run
+ * wraps up. The app shows its own translation, keyed by the action; this
+ * English line is for a client that does not know it. The id must match
+ * CREDITS_LOW_NOTICE_ACTION in packages/contract/src/credit-thresholds.ts,
+ * which this package cannot import.
+ */
+const CREDITS_LOW_ACTION = "credits-low";
+const CREDITS_LOW_NOTICE =
+  "Credits are almost out, so the agent is wrapping up what it has so the work isn't cut off halfway.";
 
 /** Marks the continuation in the session log as ours rather than the user's. */
 const MALFORMED_CONTINUATION_TYPE = "abacusai-bot:malformed-tool-call";

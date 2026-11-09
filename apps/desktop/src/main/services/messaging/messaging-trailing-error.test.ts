@@ -25,7 +25,7 @@ import { AgentStatus } from "@abacus-ai/contract/agent-types";
 import type { BillingPlan } from "@abacus-ai/contract/billing-plan";
 import type { CreditThresholdMark } from "@abacus-ai/contract/credit-thresholds";
 import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TurnLedger } from "../session/turn-ledger";
 import { channelLocale, channelWords } from "./channel-words";
@@ -1448,6 +1448,110 @@ describe("a credit milestone crossed in a chat-app turn", () => {
     );
     expect(line).toContain("- Geração de imagens e vídeos");
     expect(line.endsWith(`Faça upgrade aqui: ${UPGRADE_URL}`)).toBe(true);
+  });
+});
+
+describe("a paid plan's credit milestone in a chat-app turn", () => {
+  const tierOf = (plan: string, planName: string, cents: number) => ({
+    plan,
+    planName,
+    priceText: `$${cents / 100}/mo`,
+    priceCents: cents,
+    features: ["Image and video generation"],
+  });
+  const PRO: BillingPlan = {
+    current: {
+      plan: "pro",
+      planName: "Pro",
+      creditsRemaining: 3600,
+      creditsGranted: 20_000,
+      freeTierExpiresAt: null,
+    },
+    plans: [
+      { ...tierOf("pro", "Pro", 2000), creditsPerMonth: 20_000, current: true },
+      {
+        ...tierOf("max", "Max", 4000),
+        creditsPerMonth: 100_000,
+        current: false,
+      },
+    ],
+    upgrades: [
+      { ...tierOf("max", "Max", 4000), url: "https://apps.example.test/max" },
+    ],
+    topUpUrl: TOP_UP_URL,
+    upgradeInMobileApp: false,
+  };
+  const paidMark = {
+    reached: 80,
+    at: 0,
+    used: 16_400,
+    granted: 20_000,
+    perTask: null,
+    kind: null,
+    told: null,
+    plan: "paid",
+  } as CreditThresholdMark;
+  const told = async (billing: BillingPlan | null) => {
+    mocks.billing = billing;
+    const h = harness({ self: true });
+    await h.inbound("plan my week");
+    h.say("Done.");
+    h.idle();
+    const went = await h.gateway.tellCreditThreshold(
+      h.sessionOf("C1"),
+      paidMark
+    );
+    return { went, line: h.sent().at(-1)! };
+  };
+  afterEach(() => {
+    mocks.billing = null;
+  });
+
+  it("Pro: this month's credits, the top-up and the next plan, never the free words", async () => {
+    const { went, line } = await told(PRO);
+    expect(went).toBe(true);
+    expect(line.split("\n").slice(0, 2)).toEqual([
+      "Only 3,600 credits left this month",
+      "Top up or move to Max so your work doesn't stop halfway.",
+    ]);
+    expect(line).toContain(`Add credits here: ${TOP_UP_URL}`);
+    expect(line).toContain("Max");
+    expect(line).toContain("https://apps.example.test/max");
+    expect(line).not.toMatch(/free/i);
+  });
+
+  it("Max, with no plan above it: the top-up alone", async () => {
+    const { line } = await told({ ...PRO, upgrades: [] });
+    expect(line.split("\n").slice(1)).toEqual([
+      "Add credits so your work doesn't stop halfway.",
+      `Add credits here: ${TOP_UP_URL}`,
+    ]);
+  });
+
+  it("Basic: the next plan alone, with its whole pitch, and no top-up", async () => {
+    const basic: BillingPlan = {
+      ...PRO,
+      current: { ...PRO.current, plan: "basic", planName: "Basic" },
+      topUpUrl: null,
+    };
+    const { line } = await told(basic);
+    expect(line).toContain("Move to Max so your work doesn't stop halfway.");
+    expect(line).toContain("- Image and video generation");
+    expect(line).not.toContain(TOP_UP_URL);
+  });
+
+  it("a plan billed by Apple or Google points to the mobile app", async () => {
+    const { line } = await told({ ...PRO, upgradeInMobileApp: true });
+    expect(line).toContain(
+      "Your plan is billed through the App Store or Google Play, so add credits or upgrade in the Abacus.AI mobile app."
+    );
+    expect(line).not.toContain("https://");
+  });
+
+  it("no known offer says nothing, rather than a link labelled as a top-up", async () => {
+    const { went, line } = await told(null);
+    expect(went).toBe(false);
+    expect(line).toBe("Done.");
   });
 });
 

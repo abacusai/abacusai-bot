@@ -9,6 +9,7 @@ import {
   type AbacusAccountInfo,
   type AbacusPaymentRequired,
 } from "@abacus-ai/contract/contracts";
+import { creditMilestonePlan } from "@abacus-ai/contract/credit-thresholds";
 import {
   abacusPlanTier,
   type AbacusPlanTier,
@@ -466,6 +467,8 @@ export interface CreditSnapshot {
   at: number;
   /** The plan's monthly credits, without what was bought on top. */
   planCredits?: number;
+  /** A plan the user pays for (creditMilestonePlan): the agent tells them when it wraps up. */
+  paid?: boolean;
 }
 
 const snapshotOf = (
@@ -483,6 +486,7 @@ const snapshotOf = (
     granted,
     at: cached.at,
     ...(planCredits != null ? { planCredits } : {}),
+    ...(creditMilestonePlan(cached.value) === "paid" ? { paid: true } : {}),
   };
 };
 

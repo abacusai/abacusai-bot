@@ -15,9 +15,9 @@ import { BOT_TIME_TOOL_NAME } from "../bot/bot-time-tool.js";
 import { hostCreditBalance, setCreditRefresher } from "../credit-balance.js";
 import budgets, { budgetStopReason, createBudgets } from "./budgets.js";
 
-const withBudgets = () => {
+const withBudgets = (options: Parameters<typeof budgets>[1] = {}) => {
   const pi = fakePi();
-  budgets(pi.api as never);
+  budgets(pi.api as never, options);
   return pi;
 };
 
@@ -643,13 +643,19 @@ describe("credits running out", () => {
   const core = new HostCore({} as never, () => {});
   // Each read is newer than the last, as the host's are.
   let stamp = Date.now();
-  const balance = (remaining: number, granted = 2000, planCredits?: number) =>
+  const balance = (
+    remaining: number,
+    granted = 2000,
+    planCredits?: number,
+    paid?: boolean
+  ) =>
     core.handle({
       type: "credit_balance",
       remaining,
       granted,
       at: ++stamp,
       ...(planCredits != null ? { planCredits } : {}),
+      ...(paid != null ? { paid } : {}),
     });
   const on = (model: Record<string, unknown>) => ({
     hasUI: false,
@@ -688,6 +694,25 @@ describe("credits running out", () => {
     expect(String(nudge!.content)).toMatch(/Do not start new work/);
     expect((nudge as { display?: boolean }).display).toBe(false);
     expect(nudge!.options?.deliverAs).toBe("steer");
+  });
+
+  it("shows a paid plan's user the notice with the steer; the free plan's runs stay as they were", async () => {
+    const onCreditsLow = vi.fn();
+    await balance(150, 2000, 2000, true);
+    const paid = withBudgets({ onCreditsLow });
+    await paid.fire("agent_start", {});
+    await paid.fire("turn_start", {}, billed);
+    await paid.fire("turn_start", {}, billed);
+    expect(nudges(paid)).toHaveLength(1);
+    expect(onCreditsLow).toHaveBeenCalledOnce();
+
+    onCreditsLow.mockClear();
+    await balance(150);
+    const free = withBudgets({ onCreditsLow });
+    await free.fire("agent_start", {});
+    await free.fire("turn_start", {}, billed);
+    expect(nudges(free)).toHaveLength(1);
+    expect(onCreditsLow).not.toHaveBeenCalled();
   });
 
   it("tells nobody to wrap up when nobody is in the chat", async () => {

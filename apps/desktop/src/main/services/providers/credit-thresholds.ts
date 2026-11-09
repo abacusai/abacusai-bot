@@ -1,9 +1,11 @@
 /**
- * The free plan's credit milestones (contract credit-thresholds.ts). When a
+ * Every plan's credit milestones (contract credit-thresholds.ts). When a
  * billed turn settles, the account is read afresh; crossing half, then four
- * fifths, of the free grant is stamped in the prefs row once per account, and
- * a chat-app turn also hears it in the user's own chat. Today's post-turn
- * reads give the estimate.
+ * fifths, of the plan's credits is stamped in the prefs row once per
+ * spend-down, and a chat-app turn also hears it in the user's own chat. A
+ * paid balance back above the mark (risenMilestone) lowers it, answered at
+ * the level it stands at, or clears it below half; the free plan's one-time
+ * grant never re-arms. Today's post-turn reads give the estimate.
  */
 import {
   AgentStatus,
@@ -13,11 +15,15 @@ import type { PrefsPatch, PrefsRow } from "@abacus-ai/contract/contract/rows";
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
 import {
   creditAccountKey,
+  creditMilestonePlan,
+  type CreditMilestonePlan,
   type CreditTaskKind,
+  type CreditThreshold,
   type CreditThresholdMark,
+  milestoneBalance,
+  risenMilestone,
   thresholdOf,
 } from "@abacus-ai/contract/credit-thresholds";
-import { abacusPlanTier } from "@abacus-ai/contract/models";
 
 /** What a settled turn was, for the estimate's wording; null counts toward neither. */
 export type SettledTurnKind = "build" | "message" | null;
@@ -35,7 +41,8 @@ interface DaySample {
 export const markAfterRead = (
   previous: CreditThresholdMark | undefined,
   read: { used: number; granted: number; at: number },
-  estimate: { perTask: number; kind: CreditTaskKind } | null
+  estimate: { perTask: number; kind: CreditTaskKind } | null,
+  plan: CreditMilestonePlan = "free"
 ): CreditThresholdMark | null => {
   const reached = thresholdOf(read.used, read.granted);
   if (reached == null || (previous != null && previous.reached >= reached))
@@ -48,6 +55,7 @@ export const markAfterRead = (
     perTask: estimate?.perTask ?? null,
     kind: estimate?.kind ?? null,
     told: previous?.told ?? null,
+    plan,
   };
 };
 
@@ -87,18 +95,29 @@ export class CreditThresholdWatch {
 
   private async check(sessionId: string, kind: SettledTurnKind) {
     const account = await this.deps.readAccount();
-    // Paid plans never see it; an unread or anonymous account is not guessed at.
-    if (account == null || abacusPlanTier(account) !== "free") return;
+    // An unread, anonymous or team plan is not guessed at.
+    const plan = creditMilestonePlan(account);
+    if (account == null || plan == null) return;
     const key = creditAccountKey(account);
-    const { credits_used: used, credits_granted: granted } = account;
-    if (key == null || used == null || granted == null || !(granted > 0))
-      return;
+    const balance = milestoneBalance(account);
+    if (key == null || balance == null || account.credits_used == null) return;
+    const { used, granted } = balance;
     const at = this.deps.now?.() ?? Date.now();
-    const estimate = this.estimate(key, used, kind, at);
+    // Today's rate reads the account's own counter: a top-up moves no spend.
+    const estimate = this.estimate(key, account.credits_used, kind, at);
     const prefs = this.deps.prefs();
     if (prefs == null) return;
-    const marks = prefs.get().creditThresholds ?? {};
-    const crossed = markAfterRead(marks[key], { used, granted, at }, estimate);
+    let marks = prefs.get().creditThresholds ?? {};
+    const risen =
+      plan === "paid" ? risenMilestone(marks[key], balance) : undefined;
+    if (risen !== undefined)
+      marks = this.lower(prefs, key, risen, balance, plan);
+    const crossed = markAfterRead(
+      marks[key],
+      { used, granted, at },
+      estimate,
+      plan
+    );
     const previous = marks[key];
     // Nothing newly crossed: an untold line goes again where only the line tells it.
     const untold =
@@ -122,6 +141,46 @@ export class CreditThresholdWatch {
         [key]: { ...(latest[key] ?? mark), told: mark.reached },
       },
     });
+  }
+
+  /**
+   * A paid balance back above its mark: the mark and its card's answer move
+   * down to `level` (nothing re-shows), or go once less than half is used.
+   */
+  private lower(
+    prefs: { get(): PrefsRow; update(patch: PrefsPatch): unknown },
+    key: string,
+    level: CreditThreshold | null,
+    balance: { used: number; granted: number },
+    plan: CreditMilestonePlan
+  ): Record<string, CreditThresholdMark> {
+    const { [key]: mark, ...otherMarks } = prefs.get().creditThresholds ?? {};
+    const { [key]: _card, ...otherCards } =
+      prefs.get().dismissals.creditThresholdCards ?? {};
+    console.log(`[credits] threshold ${mark?.reached} lowered to ${level}`);
+    const marks =
+      level == null || mark == null
+        ? otherMarks
+        : {
+            ...otherMarks,
+            [key]: {
+              ...mark,
+              ...balance,
+              reached: level,
+              plan,
+              told: mark.told != null && mark.told > level ? level : mark.told,
+            },
+          };
+    prefs.update({
+      creditThresholds: marks,
+      dismissals: {
+        creditThresholdCards:
+          level == null
+            ? otherCards
+            : { ...otherCards, [key]: { shown: level, answered: level } },
+      },
+    });
+    return marks;
   }
 
   /**
@@ -173,10 +232,9 @@ export class CreditThresholdWatch {
  */
 export const settledTurnListener = (
   watch: Pick<CreditThresholdWatch, "turnSettled">,
-  facts: { onFreePlan(): boolean; kindOf(sessionId: string): SettledTurnKind }
+  facts: { kindOf(sessionId: string): SettledTurnKind }
 ): ((sessionId: string, payload: DesktopEvent) => void) => {
   const billed = new Set<string>();
-  let toldPaid = false;
   return (sessionId, payload) => {
     if (payload.type !== "event") return;
     const event = payload.event;
@@ -189,12 +247,6 @@ export const settledTurnListener = (
     if (event.type !== "status_changed" || event.status !== AgentStatus.Idle)
       return;
     if (!billed.delete(sessionId)) return;
-    if (!facts.onFreePlan()) {
-      // The cards are the free plan's: a log that shows none is not a miss.
-      if (!toldPaid) console.log("[credits] threshold cards: not a free plan");
-      toldPaid = true;
-      return;
-    }
     void watch.turnSettled(sessionId, facts.kindOf(sessionId));
   };
 };
