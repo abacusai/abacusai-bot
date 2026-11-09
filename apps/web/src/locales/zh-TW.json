@@ -1669,7 +1669,8 @@
       "failures": "多次失敗後已暫停。",
       "other": "已暫停。",
       "denied": "已暫停：你沒有允許。",
-      "quiet": "已暫停：連續 {{runs}} 次執行都沒有發現新內容，因此不再消耗點數。繼續後就會再次檢查。"
+      "quiet": "已暫停：連續 {{runs}} 次執行都沒有發現新內容，因此不再消耗點數。繼續後就會再次檢查。",
+      "done": "Finished: what it was waiting for happened, so it stopped."
     },
     "creditHold": {
       "notify": "你的點數已用完，所以例行工作不會執行。略過的執行不收費，等你有點數後，它們會自動重新開始。",

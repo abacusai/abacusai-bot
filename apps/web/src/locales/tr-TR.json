@@ -1669,7 +1669,8 @@
       "failures": "Birkaç kez başarısız olduktan sonra duraklatıldı.",
       "other": "Duraklatıldı.",
       "denied": "Duraklatıldı: izin vermedin.",
-      "quiet": "Duraklatıldı: art arda {{runs}} çalıştırmada yeni bir şey bulunamadı, bu yüzden kredi kullanmayı bıraktı. Kontrol etmeye devam etmesi için sürdürün."
+      "quiet": "Duraklatıldı: art arda {{runs}} çalıştırmada yeni bir şey bulunamadı, bu yüzden kredi kullanmayı bıraktı. Kontrol etmeye devam etmesi için sürdürün.",
+      "done": "Finished: what it was waiting for happened, so it stopped."
     },
     "creditHold": {
       "notify": "Krediniz bitti, bu yüzden rutinleriniz çalışmayacak. Atlanan çalıştırmalar ücretsizdir ve krediniz olduğunda kendiliğinden yeniden başlar.",

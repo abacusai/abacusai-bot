@@ -1411,6 +1411,7 @@ export class McpAgentToolsServer extends McpHttpServer {
         const input = {
           schedule: schedule.trim().length > 0 ? schedule : null,
           runAt,
+          until: typeof args.until === "string" ? args.until : null,
           webhook,
           prompt,
           name: typeof args.name === "string" ? args.name : undefined,
@@ -1571,6 +1572,7 @@ export class McpAgentToolsServer extends McpHttpServer {
         const changes: {
           schedule?: string;
           runAt?: number;
+          until?: string | null;
           prompt?: string;
           enabled?: boolean;
           name?: string;
@@ -1585,6 +1587,7 @@ export class McpAgentToolsServer extends McpHttpServer {
         if (typeof args.prompt === "string" && args.prompt.trim().length > 0)
           changes.prompt = args.prompt;
         if (typeof args.enabled === "boolean") changes.enabled = args.enabled;
+        if (typeof args.until === "string") changes.until = args.until;
         // A repurposed routine must be renameable, or the model sees the
         // mismatch in every list it reads back and can do nothing about it.
         if (typeof args.name === "string" && args.name.trim().length > 0)
@@ -1592,7 +1595,7 @@ export class McpAgentToolsServer extends McpHttpServer {
 
         if (Object.keys(changes).length === 0)
           return this.err(
-            "Nothing to update: give a schedule, run_at or in_minutes, a prompt, a name, or enabled."
+            "Nothing to update: give a schedule, run_at or in_minutes, until, a prompt, a name, or enabled."
           );
 
         const job = updateJob(id, changes);

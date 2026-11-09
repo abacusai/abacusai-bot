@@ -119,6 +119,20 @@ export const withoutNoReply = (text: string): string => {
 };
 
 /**
+ * What a routine with an end condition ends its run's reply on when the
+ * condition holds: the app then retires the routine. Never shown to the user.
+ */
+export const ROUTINE_DONE = "ROUTINE_DONE";
+
+/** The reply without a trailing `ROUTINE_DONE`, or as it was when it has none. */
+export const withoutRoutineDone = (text: string): string => {
+  const trimmed = text.trimEnd();
+  return trimmed.endsWith(ROUTINE_DONE)
+    ? trimmed.slice(0, -ROUTINE_DONE.length).trimEnd()
+    : text;
+};
+
+/**
  * A run's end, once per run id, from the relay's authoritative terminal
  * (spec 03 §24.11): the first terminal of the run, main's own
  * (`agent_exit`, `agent_crashed`, `inactivity_timeout`) included; never

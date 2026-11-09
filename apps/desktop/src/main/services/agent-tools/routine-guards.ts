@@ -5,7 +5,10 @@
  * keeps failing or keeps finding nothing is paused, and the agent's own runs
  * and schedules are kept from multiplying what the user asked for.
  */
-import { withoutNoReply } from "@abacus-ai/contract/contract/ai";
+import {
+  withoutNoReply,
+  withoutRoutineDone,
+} from "@abacus-ai/contract/contract/ai";
 import type {
   RoutineRunItem,
   RoutineRunOutcome,
@@ -106,6 +109,18 @@ export const shouldPauseAfter = (runs: RoutineRunItem[]): boolean =>
 /** A run that found nothing new ends on NO_REPLY, after any narration of its checks. */
 export const isQuietReply = (reply: string): boolean =>
   withoutNoReply(reply) !== reply;
+
+/**
+ * A completed run of a routine with an end condition that found it holds:
+ * the routine is retired. A routine without one never ends on a reply.
+ */
+export const runEndsRoutine = (
+  job: { until?: string | null },
+  run: { outcome: string; reply: string }
+): boolean =>
+  job.until != null &&
+  run.outcome === "completed" &&
+  withoutRoutineDone(run.reply) !== run.reply;
 
 /**
  * Newest completed runs in a row that found nothing new. A failed run is the

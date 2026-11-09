@@ -1669,7 +1669,8 @@
       "failures": "Paused after failing several times.",
       "other": "Paused.",
       "denied": "Paused: you did not allow it.",
-      "quiet": "Dijeda: {{runs}} kali berturut-turut tidak menemukan hal baru, jadi berhenti memakai kredit. Lanjutkan agar terus memeriksa."
+      "quiet": "Dijeda: {{runs}} kali berturut-turut tidak menemukan hal baru, jadi berhenti memakai kredit. Lanjutkan agar terus memeriksa.",
+      "done": "Finished: what it was waiting for happened, so it stopped."
     },
     "creditHold": {
       "notify": "Kredit Anda habis, jadi rutinitas Anda tidak akan berjalan. Proses yang dilewati tidak dikenai biaya, dan akan berjalan lagi dengan sendirinya saat Anda punya kredit.",

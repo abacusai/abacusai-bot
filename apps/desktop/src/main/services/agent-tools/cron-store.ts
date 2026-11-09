@@ -71,6 +71,8 @@ export interface CronJob {
    * slept through still happens on the next tick.
    */
   runAt: number | null;
+  /** What it waits for: the run that finds it holds retires the job. */
+  until?: string | null;
   /** Secret path segment for `POST /hooks/<token>`, or null for cron-only jobs. */
   webhookToken: string | null;
   /** What to ask the agent when it fires. */
@@ -364,11 +366,16 @@ export const jobForWebhookToken = (token: string): CronJob | null =>
     ? null
     : (read().find((job) => job.webhookToken === token) ?? null);
 
+/** A routine's end condition as stored: trimmed, and null when blank. */
+const endCondition = (until: string | null | undefined): string | null =>
+  until == null || until.trim().length === 0 ? null : until.trim();
+
 /** `id`: the caller's own (an optimistic insert); a taken one is refused. */
 export const createJob = (
   input: {
     schedule?: string | null;
     runAt?: number | null;
+    until?: string | null;
     /** True mints a webhook token, making the job POST-firable. */
     webhook?: boolean;
     prompt: string;
@@ -410,6 +417,9 @@ export const createJob = (
     schedule: hasSchedule ? schedule : null,
     // One or the other: a time to run once wins over a repeating schedule.
     runAt: runAt != null && !hasSchedule ? runAt : null,
+    ...(endCondition(input.until) != null
+      ? { until: endCondition(input.until) }
+      : {}),
     // 24 random bytes: the token is the only secret guarding the endpoint.
     webhookToken:
       input.webhook === true ? crypto.randomBytes(24).toString("hex") : null,
@@ -440,6 +450,7 @@ export const updateJob = (
       CronJob,
       | "schedule"
       | "runAt"
+      | "until"
       | "prompt"
       | "enabled"
       | "name"
@@ -503,6 +514,8 @@ export const updateJob = (
     updated.firedSlot = null;
   if (rest.name != null)
     updated.name = rest.name.trim() || deriveName(updated.prompt);
+  // An empty condition clears it: the routine no longer ends on its own.
+  if (rest.until !== undefined) updated.until = endCondition(rest.until);
 
   // Turning the webhook off revokes the token; old URLs must stop working.
   if (webhook === true && updated.webhookToken == null)
@@ -967,6 +980,7 @@ export const describeJob = (job: CronJob): string => {
   return [
     `${job.id}  [${job.enabled ? "enabled" : "paused"}]  ${triggers}  ${job.name}`,
     `  ${job.prompt}`,
+    ...(job.until != null ? [`  ends when: ${job.until}`] : []),
     `  model: ${job.model ?? "plan default"}`,
     `  next: ${next}   last: ${last}${job.lastResult != null ? ` (${job.lastResult})` : ""}`,
   ].join("\n");

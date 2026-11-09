@@ -178,6 +178,7 @@ const harness = (options: { quiet?: boolean; platform?: string } = {}) => {
     "routineOrigin",
     "replyChatOf",
     "lastAssistantText",
+    "pauseRoutine",
   ])
     service[name] = proto[name];
   const homeBot = createBot({ name: "Planner", description: "Plans my week" });
@@ -285,6 +286,21 @@ describe("a bot's check-in run", () => {
     const run = await h.settle(job.id, "Nothing new.\nNO_REPLY");
     expect(h.sessions.get(run)?.report).toBeUndefined();
     expect(h.owed).toEqual([]);
+  });
+
+  it("delivers a finishing run's report without the app's end marker", async () => {
+    const h = harness();
+    const job = createJob({
+      schedule: "*/10 * * * *",
+      prompt: "check the download",
+      until: "the download has finished",
+      botId: h.homeBot.id,
+    });
+    const run = await h.settle(job.id, "The download finished.\nROUTINE_DONE");
+    expect(h.sessions.get(run)?.report).toMatchObject({
+      text: "The download finished.",
+    });
+    expect(h.owed[0]!.text).not.toContain("ROUTINE_DONE");
   });
 
   it("holds the chat-app send until quiet hours end, and still lands in the app's chat", async () => {
