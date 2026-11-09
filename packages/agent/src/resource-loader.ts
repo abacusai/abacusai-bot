@@ -8,7 +8,7 @@ import {
   SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 
-import { diskExtensionsAllowed } from "./hosted-local-tools.js";
+import { userConfigCodeAllowed } from "./hosted-local-tools.js";
 
 type ResourceLoaderOptions = ConstructorParameters<
   typeof DefaultResourceLoader
@@ -37,7 +37,7 @@ export const createResourceLoader = (
   options: ResourceLoaderOptions,
   env: NodeJS.ProcessEnv = process.env
 ): DefaultResourceLoader =>
-  diskExtensionsAllowed(env)
+  userConfigCodeAllowed(env)
     ? new DefaultResourceLoader(options)
     : new DefaultResourceLoader({
         ...options,

@@ -10,6 +10,10 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import {
+  InMemoryCredentialStore,
+  InMemoryModelsStore,
+} from "@earendil-works/pi-ai";
+import {
   ModelRegistry,
   ModelRuntime,
   resolveCliModel,
@@ -23,6 +27,7 @@ import {
   type AbacusBotConfig,
   type CustomProviderConfig,
 } from "./config.js";
+import { userConfigCodeAllowed } from "./hosted-local-tools.js";
 import { isServed, missingCatalogSupplements } from "./model-catalog.js";
 
 /** Providers AbacusAI Bot surfaces by name, in the order the UI shows them. */
@@ -107,9 +112,20 @@ export async function createModelRuntime(
   // state rather than in pi's default `~/.pi/agent`, so an install never
   // clobbers a user's own pi setup.
   return ModelRuntime.create({
-    authPath: path.join(agentDir, "auth.json"),
+    // A hosted account without local tools reads no user-writable auth or
+    // model files: pi runs a `!command` value in them. Keys still come from
+    // the environment (the allowlisted names the app sets).
+    ...(userConfigCodeAllowed()
+      ? {
+          authPath: path.join(agentDir, "auth.json"),
+          modelsStorePath: path.join(agentDir, "models.json"),
+        }
+      : {
+          credentials: new InMemoryCredentialStore(),
+          modelsStore: new InMemoryModelsStore(),
+        }),
+    // The app's own supplement, rewritten here on every start.
     modelsPath: writeCatalogSupplement(agentDir),
-    modelsStorePath: path.join(agentDir, "models.json"),
     // Refresh catalogs at startup so OpenRouter's free tier reflects what is
     // actually free today, not whatever shipped with the build.
     allowModelNetwork: true,
@@ -120,13 +136,49 @@ export async function createModelRuntime(
  * Register the user's custom OpenAI-compatible endpoints with pi. Each becomes
  * a real provider, so its models flow through the same paths as the built-ins.
  */
+type ProviderConfig = Parameters<ModelRegistry["registerProvider"]>[1];
+
+/** pi runs a config value that starts with `!` as a shell command. */
+const runsCommand = (value: unknown): boolean =>
+  typeof value === "string" && value.trimStart().startsWith("!");
+
+const headersRunCommand = (headers: unknown): boolean =>
+  headers != null &&
+  typeof headers === "object" &&
+  Object.values(headers).some(runsCommand);
+
+/**
+ * Every provider the agent registers goes through here. On a hosted account
+ * without local tools, a provider whose key or headers would run a command is
+ * skipped.
+ */
+const registerProvider = (
+  registry: ModelRegistry,
+  id: string,
+  config: ProviderConfig
+): void => {
+  const models = (config as { models?: Array<{ headers?: unknown }> }).models;
+  if (
+    !userConfigCodeAllowed() &&
+    (runsCommand(config.apiKey) ||
+      headersRunCommand(config.headers) ||
+      (models ?? []).some((model) => headersRunCommand(model.headers)))
+  ) {
+    process.stderr.write(
+      `[abacusai-bot-agent] skipping provider ${id}: its config runs a command\n`
+    );
+    return;
+  }
+  registry.registerProvider(id, config);
+};
+
 export function registerCustomProviders(
   registry: ModelRegistry,
   config: AbacusBotConfig
 ): void {
   for (const provider of config.customProviders ?? []) {
     try {
-      registry.registerProvider(provider.id, toProviderConfig(provider));
+      registerProvider(registry, provider.id, toProviderConfig(provider));
     } catch (error) {
       // pi validates on registration; letting the throw out would stop every
       // provider after this one and fail the session (or, on a model-pick
@@ -198,7 +250,7 @@ export function registerGeminiProvider(registry: ModelRegistry): void {
     thinkingLevelMap: { off: null },
   });
 
-  registry.registerProvider("gemini", {
+  registerProvider(registry, "gemini", {
     name: "Google Gemini",
     baseUrl: geminiBaseUrl(),
     apiKey,
@@ -569,7 +621,7 @@ export async function registerAbacusProvider(
   const lastGood = live.length > 0 ? [] : readLastGoodCatalog(apiKey);
   const sponsored = sponsoredRunHeaders();
 
-  registry.registerProvider("abacus", {
+  registerProvider(registry, "abacus", {
     name: "Abacus.AI",
     baseUrl: abacusBaseUrl(),
     apiKey,

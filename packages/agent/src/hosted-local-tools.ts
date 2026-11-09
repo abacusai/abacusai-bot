@@ -9,7 +9,10 @@ export const startedByHostedComputer = (
   env: NodeJS.ProcessEnv = process.env
 ): boolean => env[HOSTED_LOCAL_TOOLS_ENV] != null;
 
-/** Whether extensions from disk (agent dir, project, settings packages) may load. */
-export const diskExtensionsAllowed = (
+/**
+ * Whether code named in user-writable config may run: extensions and settings
+ * packages from disk, and `!command` values in auth, model or provider config.
+ */
+export const userConfigCodeAllowed = (
   env: NodeJS.ProcessEnv = process.env
 ): boolean => env[HOSTED_LOCAL_TOOLS_ENV] !== "off";
