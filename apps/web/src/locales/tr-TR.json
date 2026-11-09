@@ -3250,7 +3250,6 @@
       "showAll_other": "{{count}} satırın tümünü göster",
       "status": {
         "done": "bitti",
-        "failed": "başarısız",
         "needsYou": "sana ihtiyaç var",
         "refused": "reddedildi",
         "running": "çalışıyor",
@@ -3310,8 +3309,6 @@
       "summaryCreate_other": "{{count}} dosya oluşturuldu",
       "summaryCreateActive_one": "{{count}} dosya oluşturuluyor",
       "summaryCreateActive_other": "{{count}} dosya oluşturuluyor",
-      "summaryFailed_one": "{{count}} başarısız",
-      "summaryFailed_other": "{{count}} başarısız",
       "summaryNeedsYou_one": "{{count}} onay bekliyor",
       "summaryNeedsYou_other": "{{count}} onay bekliyor",
       "summaryStopped_one": "{{count}} durduruldu",

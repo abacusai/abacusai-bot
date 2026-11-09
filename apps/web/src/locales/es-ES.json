@@ -3250,7 +3250,6 @@
       "showAll_other": "Show all {{count}} lines",
       "status": {
         "done": "done",
-        "failed": "failed",
         "needsYou": "needs you",
         "refused": "refused",
         "running": "runs",
@@ -3310,8 +3309,6 @@
       "summaryCreate_other": "Built {{count}} files",
       "summaryCreateActive_one": "Building {{count}} file",
       "summaryCreateActive_other": "Building {{count}} files",
-      "summaryFailed_one": "{{count}} failed",
-      "summaryFailed_other": "{{count}} failed",
       "summaryNeedsYou_one": "{{count}} needs approval",
       "summaryNeedsYou_other": "{{count}} need approval",
       "summaryStopped_one": "{{count}} stopped",

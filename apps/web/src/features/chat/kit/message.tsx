@@ -647,17 +647,10 @@ const RUN_ICONS = {
 type ToolCall = Extract<UIMessage["parts"][number], { type: "tool-call" }>;
 type ToolResult = Extract<UIMessage["parts"][number], { type: "tool-result" }>;
 
-const callFailed = (call: ToolCall, result: ToolResult | undefined) =>
-  result == null
-    ? call.state === "error"
-    : (result.state === "error" ||
-        (result.state as string) === "output-error") &&
-      result.outcome !== "denied" &&
-      result.outcome !== "cancelled";
-
 /**
  * Every consecutive tool call, of any kind, is one run. It stays closed unless
- * the person opens it; while it works the header says so with a shimmer.
+ * the person opens it; while it works the header says so with a shimmer. A
+ * failed step is not counted: the agent handles it and its reply says what matters.
  */
 const ToolRun = ({
   calls,
@@ -696,9 +689,6 @@ const ToolRun = ({
     (call) => !results.has(call.id) && call.state !== "error"
   ).length;
   const running = streaming && pending > needsYou;
-  const failed = calls.filter((call) =>
-    callFailed(call, results.get(call.id))
-  ).length;
   const stopped = calls.filter(
     (call) => results.get(call.id)?.outcome === "cancelled"
   ).length;
@@ -741,12 +731,6 @@ const ToolRun = ({
           >
             <CircleAlert aria-hidden className="size-3" />
             {t("chat.tool.summaryNeedsYou", { count: needsYou })}
-          </span>
-        ) : null}
-        {failed > 0 ? (
-          <span className="text-destructive flex shrink-0 items-center gap-1">
-            <CircleAlert aria-hidden className="size-3" />
-            {t("chat.tool.summaryFailed", { count: failed })}
           </span>
         ) : null}
         {stopped > 0 ? (

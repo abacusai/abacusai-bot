@@ -3250,7 +3250,6 @@
       "showAll_other": "顯示全部 {{count}} 行",
       "status": {
         "done": "完成",
-        "failed": "失敗",
         "needsYou": "需要你處理",
         "refused": "已拒絕",
         "running": "執行中",
@@ -3310,8 +3309,6 @@
       "summaryCreate_other": "建立了 {{count}} 個檔案",
       "summaryCreateActive_one": "正在建立 {{count}} 個檔案",
       "summaryCreateActive_other": "正在建立 {{count}} 個檔案",
-      "summaryFailed_one": "{{count}} 個失敗",
-      "summaryFailed_other": "{{count}} 個失敗",
       "summaryNeedsYou_one": "{{count}} 個需要核准",
       "summaryNeedsYou_other": "{{count}} 個需要核准",
       "summaryStopped_one": "{{count}} 個已停止",

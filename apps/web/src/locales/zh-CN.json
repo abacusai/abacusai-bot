@@ -3250,7 +3250,6 @@
       "showAll_other": "显示全部 {{count}} 行",
       "status": {
         "done": "完成",
-        "failed": "失败",
         "needsYou": "需要你处理",
         "refused": "已拒绝",
         "running": "运行中",
@@ -3310,8 +3309,6 @@
       "summaryCreate_other": "创建了 {{count}} 个文件",
       "summaryCreateActive_one": "正在创建 {{count}} 个文件",
       "summaryCreateActive_other": "正在创建 {{count}} 个文件",
-      "summaryFailed_one": "{{count}} 个失败",
-      "summaryFailed_other": "{{count}} 个失败",
       "summaryNeedsYou_one": "{{count}} 个需要批准",
       "summaryNeedsYou_other": "{{count}} 个需要批准",
       "summaryStopped_one": "{{count}} 个已停止",
