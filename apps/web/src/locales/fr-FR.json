@@ -4872,7 +4872,10 @@
       "cutoffVerify": "Ou vérifiez votre téléphone pour débloquer vos crédits Abacus gratuits, puis passez à RouteLLM - Open dans l'app : {{link}}",
       "cutoffTopUp": "Ou ajoutez des crédits Abacus et passez à RouteLLM - Open dans l'app : {{link}}",
       "stillWorkingOn": "J'y travaille encore ({{minutes}} min pour l'instant). {{activity}}… Je répondrai ici quand ce sera fini.",
-      "routineFullRun": "Le rapport complet est dans AbacusAI Bot, sous Routines → {{name}}."
+      "routineFullRun": "Le rapport complet est dans AbacusAI Bot, sous Routines → {{name}}.",
+      "viaOtherApp": "{{platform}} n'est pas joignable pour le moment, donc ce message arrive ici.",
+      "missedWhileOff_one": "{{count}} discussion a écrit pendant que l'ordinateur était éteint ou en veille ; je n'y ai pas répondu.",
+      "missedWhileOff_other": "{{count}} discussions ont écrit pendant que l'ordinateur était éteint ou en veille ; je n'y ai pas répondu."
     },
     "unavailable": {
       "title": {

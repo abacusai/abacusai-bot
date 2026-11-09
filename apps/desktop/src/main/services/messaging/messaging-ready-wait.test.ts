@@ -94,7 +94,7 @@ describe("a platform that is linked but has not yet learned who the user is", ()
     expect(sent).toEqual(["+919000000001"]);
   });
 
-  it("gives up waiting after the bound, with the honest error", async () => {
+  it('gives up waiting after the bound, and keeps the message, never "sent"', async () => {
     const gateway = gatewayWith({
       selfChatId: () => null,
       sendText: async () => {},
@@ -104,12 +104,12 @@ describe("a platform that is linked but has not yet learned who the user is", ()
     await gateway.awaitReady("whatsapp", 600);
     expect(Date.now() - started).toBeGreaterThanOrEqual(550);
     expect(gateway.startingPlatforms()).toEqual(["whatsapp"]);
-    // Past the bound the send says what is actually wrong, not "sent".
+    // Past the bound the send is kept for when "me" is known, not "sent".
     (gateway as unknown as { awaitReady: () => Promise<void> }).awaitReady =
       async () => {};
-    await expect(gateway.sendToChat("whatsapp", "me", "hi")).rejects.toThrow(
-      /has not said which account/
-    );
+    await expect(
+      gateway.sendToChat("whatsapp", "me", "hi")
+    ).resolves.toMatchObject({ queued: true });
   });
 });
 

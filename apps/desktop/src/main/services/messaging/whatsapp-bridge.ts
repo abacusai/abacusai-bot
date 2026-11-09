@@ -23,6 +23,8 @@ export type BridgeChat = {
   isMe: boolean;
   /** Negative means the user marked the chat unread by hand. */
   unreadCount: number;
+  /** Its last activity, in Unix seconds; absent when the page did not say. */
+  t?: number;
 };
 
 export type BridgeMessage = {
@@ -482,6 +484,7 @@ const LIST_CHATS_SCRIPT = pageScript`
       isGroup: !!chat.isGroup,
       isMe,
       unreadCount: Number(chat.unreadCount) || 0,
+      t: Number(chat.t) || 0,
     };
   });
   // The store's own filter is belt; this is braces, for a build whose

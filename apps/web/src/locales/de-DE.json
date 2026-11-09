@@ -4872,7 +4872,10 @@
       "cutoffVerify": "Oder bestätige deine Telefonnummer, um deine kostenlosen Abacus-Credits freizuschalten, und wechsle dann in der App zu RouteLLM - Open: {{link}}",
       "cutoffTopUp": "Oder lade Abacus-Credits auf und wechsle in der App zu RouteLLM - Open: {{link}}",
       "stillWorkingOn": "Ich arbeite noch daran (bisher {{minutes}} Min.). {{activity}}… Ich antworte hier, sobald es fertig ist.",
-      "routineFullRun": "Den vollständigen Bericht findest du in AbacusAI Bot unter Routinen → {{name}}."
+      "routineFullRun": "Den vollständigen Bericht findest du in AbacusAI Bot unter Routinen → {{name}}.",
+      "viaOtherApp": "{{platform}} ist gerade nicht erreichbar, deshalb kommt das hier an.",
+      "missedWhileOff_one": "{{count}} Chat hat geschrieben, während der Computer aus war oder schlief; ich habe nicht geantwortet.",
+      "missedWhileOff_other": "{{count}} Chats haben geschrieben, während der Computer aus war oder schlief; ich habe nicht geantwortet."
     },
     "unavailable": {
       "title": {

@@ -98,6 +98,24 @@ export const writeStoredOutbox = (state: unknown): void => {
   });
 };
 
+const seenPath = (): string =>
+  path.join(abacusBotHome(), "messaging-seen.json");
+
+/** What each lane last saw (InboundWatermark): its file as last written. */
+export const readStoredSeen = (): unknown => {
+  try {
+    return JSON.parse(fs.readFileSync(seenPath(), "utf8"));
+  } catch {
+    return null;
+  }
+};
+
+export const writeStoredSeen = (state: unknown): void => {
+  writeFileAtomicSync(seenPath(), `${JSON.stringify(state)}\n`, {
+    restrict: true,
+  });
+};
+
 export const writeStoredMessageLog = (entries: unknown[]): void => {
   writeFileAtomicSync(messageLogPath(), `${JSON.stringify(entries)}\n`, {
     restrict: true,

@@ -62,6 +62,9 @@ vi.mock("./messaging-config-service", async (importOriginal) => {
     findPairing: () => null,
     recordPairingRequest: () => {},
     listPairing: () => [],
+    // Each gateway starts with nothing owed: one test's queued notice is not the next's.
+    readStoredOutbox: () => null,
+    writeStoredOutbox: () => {},
   };
 });
 
@@ -1347,10 +1350,15 @@ describe("routines waiting for credits", () => {
     ]);
   });
 
-  it("stays silent with no chat of the user's to say it in", async () => {
+  it("keeps it for the user's own chat while no app can carry it", async () => {
     const h = harness({ selfId: null });
-    expect(await h.gateway.tellRoutinesOnHold()).toBe(false);
+    expect(await h.gateway.tellRoutinesOnHold()).toBe(true);
     expect(h.sent()).toEqual([]);
+    expect(
+      (
+        h.gateway as unknown as { outbox: { owesSelf(): boolean } }
+      ).outbox.owesSelf()
+    ).toBe(true);
   });
 });
 

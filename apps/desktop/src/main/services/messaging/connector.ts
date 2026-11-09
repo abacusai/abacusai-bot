@@ -44,6 +44,66 @@ export type InboundMessage = {
   }>;
   /** Per-platform context a reply needs: an email Message-ID, a thread_ts. */
   replyContext?: Record<string, string>;
+  /** The platform's own message id, where it has one: catch-up dedupes on it. */
+  id?: string;
+};
+
+/** One chat's traffic since the lane last watched, as `backlog` reads it. */
+export type BacklogChat = {
+  chatId: string;
+  userId: string;
+  userName: string | null;
+  /** Messages from the other side after `since`, oldest first. */
+  messages: Array<{ id: string; at: number; text: string }>;
+  /** The chat's newest message is the user's own: answered from the phone. */
+  answered: boolean;
+  /** Past `maxChats`: not opened, so nothing was read. */
+  unread?: true;
+};
+
+/** Read a backlog the same way on every lane: open each recent chat, keep what came in after `since`. */
+export const collectBacklog = async (
+  chats: ReadonlyArray<{
+    chatId: string;
+    userId?: string;
+    name: string | null;
+  }>,
+  read: (
+    chatId: string
+  ) => Promise<
+    Array<{ id?: string; at: number; text: string; direction: "in" | "out" }>
+  >,
+  sinceMs: number,
+  maxChats: number
+): Promise<BacklogChat[]> => {
+  const out: BacklogChat[] = [];
+  for (const [index, chat] of chats.entries()) {
+    const base = {
+      chatId: chat.chatId,
+      userId: chat.userId ?? chat.chatId,
+      userName: chat.name,
+    };
+    if (index >= maxChats) {
+      out.push({ ...base, messages: [], answered: false, unread: true });
+      continue;
+    }
+    const rows = (await read(chat.chatId)).filter(
+      (row) => row.text.trim().length > 0
+    );
+    const newest = rows.at(-1);
+    out.push({
+      ...base,
+      answered: newest?.direction === "out",
+      messages: rows
+        .filter((row) => row.direction === "in" && row.at > sinceMs)
+        .map((row) => ({
+          id: row.id ?? `${chat.chatId}:${row.at}:${row.text.slice(0, 40)}`,
+          at: row.at,
+          text: row.text,
+        })),
+    });
+  }
+  return out;
 };
 
 export type ConnectorCallbacks = {
@@ -100,6 +160,18 @@ export interface MessagingConnector {
    * one address the user must never be asked for, since connecting set it.
    */
   selfChatId?(): string | null;
+  /**
+   * A chat only the user reads that the app may write to but never answers
+   * (Telegram's Saved Messages): a way to reach "me" when the preferred one
+   * is down. Never `selfChatId`, which the inbound gate treats as the owner.
+   */
+  ownChatForSend?(): string | null;
+  /**
+   * What arrived while the lane was not watching: chats with activity after
+   * `sinceMs`, newest first, at most `maxChats` opened. Optional: a lane that
+   * cannot date its messages has no backlog to give.
+   */
+  backlog?(sinceMs: number, maxChats: number): Promise<BacklogChat[]>;
   /**
    * Whether the chat list has actually been read. A page reports `connected`
    * before its DM rail renders, so the gateway treats a connected platform as

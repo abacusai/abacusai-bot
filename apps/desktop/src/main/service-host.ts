@@ -3907,7 +3907,9 @@ export class ServiceHost {
     chatId: string,
     text: string
   ): Promise<void> {
-    return this.messagingGatewayService.sendToChat(platformId, chatId, text);
+    return this.messagingGatewayService
+      .sendToChat(platformId, chatId, text)
+      .then(() => undefined);
   }
 
   updateMessagingPlatform(

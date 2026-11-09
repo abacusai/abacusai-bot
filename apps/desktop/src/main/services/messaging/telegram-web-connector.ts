@@ -17,8 +17,10 @@ import {
 import { abacusBotHome } from "../../paths";
 import { nativeT } from "../config/native-language";
 import {
+  type BacklogChat,
   boundedWait,
   chunkMessage,
+  collectBacklog,
   isEphemeralPreview,
   previewMatchesSent,
   normalizeScrapedText,
@@ -84,6 +86,8 @@ const LOGIN_POLL_MS = 1500;
 const SIGN_OUT_SETTLE_MS = 15_000;
 
 const INBOUND_POLL_MS = 5000;
+/** Messages read per chat by a catch-up. */
+const BACKLOG_READ_COUNT = 20;
 
 const STUCK_LOADING =
   "Telegram Web did not finish loading. It tries again by itself, or click Connect to try now.";
@@ -131,6 +135,8 @@ export class TelegramWebConnector implements MessagingConnector {
     (error) => this.logFailure("inbound sweep", error)
   );
   private contacts: Array<{ chatId: string; name: string }> = [];
+  /** The signed-in account's own peer id: its Saved Messages chat. */
+  private ownPeerId: string | null = null;
   /** Chat id -> the last inbound message id we already reported, for dedupe. */
   private lastSeen = new Map<string, string>();
   /** Chat id -> recent texts we sent there; the sweep skips our own echoes. */
@@ -312,6 +318,41 @@ export class TelegramWebConnector implements MessagingConnector {
       direction: row.direction,
       at: row.at,
     }));
+  }
+
+  /**
+   * See MessagingConnector.backlog: the chats still unread in the list, each
+   * opened and read by its bubbles' own times and ids.
+   */
+  async backlog(sinceMs: number, maxChats: number): Promise<BacklogChat[]> {
+    if (!this.loggedIn) throw new Error("Telegram is not signed in yet");
+    await this.refreshContacts();
+    const rows = await this.run<Array<{ chatId: string; name: string }>>(
+      INBOUND_SCRIPT,
+      {}
+    );
+    if (rows == null) throw new Error("the chat list did not answer yet");
+    return collectBacklog(
+      rows.filter((row) => row.chatId !== this.ownPeerId),
+      async (chatId) => {
+        const read = await this.run<
+          Array<{
+            id: string;
+            direction: "in" | "out";
+            text: string;
+            at: string;
+          }>
+        >(READ_CHAT_SCRIPT, { target: chatId, limit: BACKLOG_READ_COUNT });
+        return (read ?? []).map((row) => ({
+          ...(row.id.length > 0 ? { id: `${chatId}:${row.id}` } : {}),
+          at: Date.parse(row.at),
+          text: normalizeScrapedText(row.text),
+          direction: row.direction,
+        }));
+      },
+      sinceMs,
+      maxChats
+    );
   }
 
   // ── Login ──────────────────────────────────────────────────────────────
@@ -540,6 +581,16 @@ export class TelegramWebConnector implements MessagingConnector {
       {}
     );
     if (rows != null) this.contacts = rows;
+    if (this.ownPeerId == null)
+      this.ownPeerId = await this.run<string>(OWN_PEER_SCRIPT, {});
+  }
+
+  /** See MessagingConnector.ownChatForSend: Saved Messages, once its row is in the list. */
+  ownChatForSend(): string | null {
+    if (!this.loggedIn || this.ownPeerId == null) return null;
+    return this.contacts.some((row) => row.chatId === this.ownPeerId)
+      ? this.ownPeerId
+      : null;
   }
 
   // ── Page driving ────────────────────────────────────────────────────────
@@ -678,6 +729,14 @@ const LOGIN_STATE_SCRIPT = pageScript`
   return { loggedIn: !loginVisible && chatUi, loginVisible, loginError };
 `;
 
+/** The signed-in account's user id, which is its Saved Messages peer id. */
+const OWN_PEER_SCRIPT = pageScript`
+  try {
+    const auth = JSON.parse(localStorage.getItem('user_auth') || 'null');
+    return auth && auth.id != null ? String(auth.id) : null;
+  } catch (e) { return null; }
+`;
+
 /** The dialog list as contacts: chat id (peer id) and title. */
 const CONTACTS_SCRIPT = pageScript`
   const rows = [];
@@ -732,6 +791,7 @@ const READ_CHAT_SCRIPT = pageScript`
     .filter((b) => b.querySelector('.message'))
     .slice(-limit)
     .map((b) => ({
+      id: b.getAttribute('data-mid') || '',
       direction: b.classList.contains('is-out') ? 'out' : 'in',
       text: clean(b),
       at: new Date((Number(b.getAttribute('data-timestamp')) || 0) * 1000).toISOString(),

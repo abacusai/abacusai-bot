@@ -10,8 +10,10 @@ import {
 } from "../../bring-to-front";
 import { nativeT } from "../config/native-language";
 import {
+  type BacklogChat,
   boundedWait,
   chunkMessage,
+  collectBacklog,
   isEphemeralPreview,
   previewMatchesSent,
   normalizeScrapedText,
@@ -64,6 +66,8 @@ const LOGIN_POLL_MS = 1500;
 
 /** How often to sweep the DM list for new inbound messages. */
 const INBOUND_POLL_MS = 5000;
+/** Messages read per chat by a catch-up. */
+const BACKLOG_READ_COUNT = 20;
 
 /** Chromium's net error for a navigation we replaced or refused ourselves. */
 const NET_ERR_ABORTED = -3;
@@ -530,6 +534,29 @@ export class DiscordWebConnector implements MessagingConnector {
       rows.push({ chatId: guild.guildId, name: `${guild.name} (server)` });
     for (const channels of this.guildChannels.values()) rows.push(...channels);
     return rows;
+  }
+
+  /**
+   * See MessagingConnector.backlog: the DMs with an unread pill, each read
+   * live (opening it) for the messages after `since`.
+   */
+  async backlog(sinceMs: number, maxChats: number): Promise<BacklogChat[]> {
+    if (!this.loggedIn) throw new Error("Discord is not signed in yet");
+    const rows = await this.serialize(() =>
+      this.run<Array<{ chatId: string; name: string }>>(INBOUND_SCRIPT, {})
+    );
+    if (rows == null) throw new Error("the DM list did not answer yet");
+    return collectBacklog(
+      rows,
+      async (chatId) =>
+        (await this.readChat(chatId, BACKLOG_READ_COUNT)).map((row) => ({
+          at: Date.parse(row.at),
+          text: normalizeScrapedText(row.text),
+          direction: row.direction,
+        })),
+      sinceMs,
+      maxChats
+    );
   }
 
   async readChat(

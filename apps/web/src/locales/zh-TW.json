@@ -4872,7 +4872,10 @@
       "cutoffVerify": "或驗證手機來解鎖你的免費 Abacus 點數，然後在應用程式中切換到 RouteLLM - Open：{{link}}",
       "cutoffTopUp": "或儲值 Abacus 點數，然後在應用程式中切換到 RouteLLM - Open：{{link}}",
       "stillWorkingOn": "還在處理中（目前已花 {{minutes}} 分鐘）。{{activity}}… 完成後我會在這裡回覆。",
-      "routineFullRun": "完整報告在 AbacusAI Bot 的「例行工作」→「{{name}}」中。"
+      "routineFullRun": "完整報告在 AbacusAI Bot 的「例行工作」→「{{name}}」中。",
+      "viaOtherApp": "{{platform}} 目前無法連線，所以這則訊息傳到了這裡。",
+      "missedWhileOff_one": "電腦關機或睡眠期間有 {{count}} 個聊天傳來訊息，我還沒有回覆。",
+      "missedWhileOff_other": "電腦關機或睡眠期間有 {{count}} 個聊天傳來訊息，我還沒有回覆。"
     },
     "unavailable": {
       "title": {

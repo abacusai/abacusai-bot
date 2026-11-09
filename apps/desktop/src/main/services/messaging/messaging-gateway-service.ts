@@ -8,6 +8,7 @@ import type { UserTextTags } from "@abacus-ai/contract/agent-types";
 import { AgentMode, AgentStatus } from "@abacus-ai/contract/agent-types";
 import type { DesktopEvent } from "@abacus-ai/contract/agent-types";
 import type { BillingPlan } from "@abacus-ai/contract/billing-plan";
+import type { HomeChannel } from "@abacus-ai/contract/bots";
 import { isSuggestTasksTool } from "@abacus-ai/contract/bots/suggested-tasks";
 import type {
   AgentSessionListItem,
@@ -29,6 +30,7 @@ import {
   type MessagingPlatformInfo,
   type MessagingPlatformState,
   type MessagingSnapshot,
+  SELF_LANE_FOR_APP,
   type SelfLanePlatform,
   type SharedChannelLink,
   type SharedLinkTarget,
@@ -79,6 +81,13 @@ import { looksLikeBotOutput, UndeliverableChatError } from "./connector";
 import type { InboundMessage, MessagingConnector } from "./connector";
 import { DiscordWebConnector } from "./discord-web-connector";
 import {
+  BACKLOG_MAX_CHATS,
+  foldLate,
+  InboundWatermark,
+  planCatchUp,
+  SEEN_HEARTBEAT_MS,
+} from "./inbound-backlog";
+import {
   LANE_HINT_GAP_MS,
   LaneSupervisor,
   type LaneFailure,
@@ -99,6 +108,7 @@ import {
   readStoredMessageLog,
   readPlatformLinkLost,
   readStoredOutbox,
+  readStoredSeen,
   recordPairingRequest,
   revokePairing,
   saveGatewaySettings,
@@ -106,6 +116,7 @@ import {
   setPlatformEnabled,
   writeStoredMessageLog,
   writeStoredOutbox,
+  writeStoredSeen,
 } from "./messaging-config-service";
 import {
   ChatOutbox,
@@ -113,6 +124,12 @@ import {
   type OwedLine,
   type OwedMessage,
 } from "./messaging-outbox";
+import {
+  appOfPlatform,
+  type OwnChatPath,
+  ownChatsOn,
+  pickOwnChat,
+} from "./own-chat";
 import { diskSpaceBack, userActive, watchLaneHints } from "./page-boot-watch";
 import type { SenderCandidate } from "./sender-resolution";
 import { TelegramWebConnector } from "./telegram-web-connector";
@@ -503,8 +520,21 @@ export type Route = {
   sending: Promise<void> | null;
 };
 
+/** A catch-up whose read failed (a page still settling) is asked again this often, this many times. */
+const CATCH_UP_RETRY_MS = 30_000;
+const CATCH_UP_RETRIES = 3;
+
 /** How long a login probe may take before the last known state is used. */
 const PROBE_LIVE_TIMEOUT_MS = 3000;
+
+/** Where an agent's send went: `queued` when no path was up and it waits to go once. */
+export type ChatSendResult = {
+  platform: MessagingPlatformId;
+  chatId: string;
+  /** The app asked for, when it went to another app's own chat instead. */
+  downApp: HomeChannel | null;
+  queued: boolean;
+};
 
 export class MessagingGatewayService {
   private readonly connectors = new Map<
@@ -557,7 +587,11 @@ export class MessagingGatewayService {
     read: readStoredOutbox,
     write: writeStoredOutbox,
     send: (message) => this.sendOwed(message),
-    waitingOnLink: (platform) => {
+    waitingOnLink: (message) => {
+      // The user's own chat waits only while no app at all can carry it.
+      if (message.toSelf === true)
+        return this.ownChat(message.platform) == null;
+      const platform = message.platform;
       const state = this.states.get(platform)?.state;
       return (
         state === "connecting" ||
@@ -608,10 +642,31 @@ export class MessagingGatewayService {
   /** What each chat was already told about failed turns; see FailureReplyThrottle. */
   private readonly failureThrottle: FailureReplyThrottle;
 
+  /** When each lane was last seen up, and what it handed over (inbound-backlog.ts). */
+  private readonly seen = new InboundWatermark({
+    read: readStoredSeen,
+    write: writeStoredSeen,
+  });
+
+  /** Lanes whose catch-up has not read yet: their watermark stays put until it has. */
+  private readonly catchingUp = new Set<MessagingPlatformId>();
+
+  /** Stamps every connected lane as watching, once a minute. */
+  private readonly seenHeartbeat: ReturnType<typeof setInterval>;
+
   constructor(private readonly options: GatewayOptions) {
     this.failureThrottle = new FailureReplyThrottle(options.now);
     // Owed from the last run: tried once the connectors have had a moment.
     if (this.outbox.size > 0) this.outbox.schedule(OUTBOX_STARTUP_DELAY_MS);
+    this.seenHeartbeat = setInterval(() => {
+      for (const id of this.connectors.keys())
+        if (
+          this.states.get(id)?.state === "connected" &&
+          !this.catchingUp.has(id)
+        )
+          this.seen.stamp(id, this.options.now?.() ?? Date.now());
+    }, SEEN_HEARTBEAT_MS);
+    this.seenHeartbeat.unref?.();
   }
 
   /**
@@ -677,6 +732,7 @@ export class MessagingGatewayService {
 
   async dispose(): Promise<void> {
     this.disposed = true;
+    clearInterval(this.seenHeartbeat);
     this.supervisor.dispose();
     this.outbox.dispose();
     for (const route of this.routes.values()) this.stopWatchingProgress(route);
@@ -906,7 +962,9 @@ export class MessagingGatewayService {
     // What a connector that made it back up still owes a chat goes now.
     if (state === "connected") {
       this.linkLossTold.delete(platformId);
-      if (this.outbox.owes(platformId)) this.outbox.schedule(0);
+      // The user's own chat may now be reachable through this app too.
+      if (this.outbox.owes(platformId) || this.outbox.owesSelf())
+        this.outbox.schedule(0);
       this.options.onPlatformConnected?.(platformId);
     }
     if (state === "needs_login" && readPlatformLinkLost(platformId))
@@ -917,6 +975,14 @@ export class MessagingGatewayService {
         (error != null && error.length > 0 ? ` (${error})` : "")
     );
     this.states.set(platformId, { state, error: error ?? null });
+    // Last seen up when it goes down; what came in meanwhile is answered when it is back.
+    if (
+      previous?.state === "connected" &&
+      state !== "connected" &&
+      !this.catchingUp.has(platformId)
+    )
+      this.seen.stamp(platformId, this.options.now?.() ?? Date.now());
+    if (state === "connected") void this.catchUp(platformId);
     this.supervisor.noteState(platformId, state, failure);
     this.watchSync(platformId, state);
 
@@ -967,6 +1033,9 @@ export class MessagingGatewayService {
     platformId: MessagingPlatformId,
     message: InboundMessage
   ): Promise<void> {
+    // Handed over live: a catch-up after a reconnect skips it.
+    if (message.id != null && !this.seen.remember(platformId, message.id))
+      return;
     // Saved media rides into the text as paths, so the log, the prompt and
     // the agent all see where the file is instead of "📷 Photo".
     if (message.attachments != null && message.attachments.length > 0) {
@@ -1752,13 +1821,7 @@ export class MessagingGatewayService {
     route: Route,
     action: { provider?: string; label?: string; target?: string }
   ): Promise<void> {
-    const own = this.selfChatOf(route.platform);
-    if (
-      own == null ||
-      own.platform !== route.platform ||
-      own.chatId !== route.userId
-    )
-      return;
+    if (!this.isOwnChatId(route.platform, route.userId)) return;
     const words = await channelWords(
       channelLocale(
         readUserLanguage()?.name ?? null,
@@ -1773,13 +1836,7 @@ export class MessagingGatewayService {
     route: Route,
     cause: string | undefined
   ): Promise<void> {
-    const own = this.selfChatOf(route.platform);
-    if (
-      own == null ||
-      own.platform !== route.platform ||
-      own.chatId !== route.userId
-    )
-      return;
+    if (!this.isOwnChatId(route.platform, route.userId)) return;
     const words = await channelWords(
       channelLocale(
         readUserLanguage()?.name ?? null,
@@ -1798,11 +1855,7 @@ export class MessagingGatewayService {
     route: Route,
     failure: TurnFailure
   ): Promise<void> {
-    const own = this.selfChatOf(route.platform);
-    const isOwn =
-      own != null &&
-      own.platform === route.platform &&
-      own.chatId === route.userId;
+    const isOwn = this.isOwnChatId(route.platform, route.userId);
     const words = await channelWords(
       channelLocale(
         readUserLanguage()?.name ?? null,
@@ -1814,13 +1867,6 @@ export class MessagingGatewayService {
     // one is the user's call, told to them below.
     if (!isOwn && failureKind(failure) !== "empty")
       this.deliver(route, words.t("outcome.channel.contactNeutral"));
-    if (!isOwn && own == null) {
-      console.log(
-        `[messaging] ${route.platform}:${route.chatId} failed turn not reported: the platform has no own chat`
-      );
-      return;
-    }
-
     const account = accountKind();
     const offering = wantsUpgradeUrl(failure, account);
     // Fetched afresh every time: a link that failed while offline is asked
@@ -1836,10 +1882,8 @@ export class MessagingGatewayService {
         ? withinMs(fetchBillingPlan(false), UPGRADE_URL_WAIT_MS)
         : null,
     ]);
-    // The offer is throttled per chat it lands in, always the user's own.
-    const ownChatKey = isOwn
-      ? `${route.platform}:${route.chatId}`
-      : `${own.platform}:${own.chatId}`;
+    // The offer is throttled per chat it lands in: only the user's own repeats.
+    const ownChatKey = `${route.platform}:${route.chatId}`;
     const fallback = botUpgradePage("channel");
     const line = chatReplyForFailure(
       failure,
@@ -1870,29 +1914,106 @@ export class MessagingGatewayService {
     if (isOwn) this.deliver(route, line);
     // Someone else's chat hears nothing; the user's own chat hears who.
     else
-      this.deliverToSelf(
-        own,
+      await this.tellSelf(
+        route.platform,
         contactFailureNotice(words, route.userName, line, failureKind(failure))
       );
   }
 
+  /** A lane that can take a message now: running, and connected as far as it last said. */
+  private laneUp(platformId: MessagingPlatformId): boolean {
+    if (!this.connectors.has(platformId)) return false;
+    const state = this.states.get(platformId)?.state;
+    return state == null || state === "connected";
+  }
+
+  private readonly ownChatSource = {
+    connector: (id: MessagingPlatformId) => this.connectors.get(id),
+    up: (id: MessagingPlatformId) => this.laneUp(id),
+  };
+
+  /** The user's own chat that can take a message now (own-chat.ts); null when none is up. */
+  private ownChat(
+    platformId: MessagingPlatformId,
+    options: Parameters<typeof pickOwnChat>[2] = {}
+  ): OwnChatPath | null {
+    return pickOwnChat(platformId, this.ownChatSource, options);
+  }
+
+  /** Whether `chatId` on `platformId` is one of the user's own chats. */
+  private isOwnChatId(
+    platformId: MessagingPlatformId,
+    chatId: string
+  ): boolean {
+    const app = appOfPlatform(platformId);
+    return (
+      app != null &&
+      ownChatsOn(app, this.ownChatSource).some(
+        (row) => row.platform === platformId && row.chatId === chatId
+      )
+    );
+  }
+
+  /** The chat app whose home bot `botId` is, to try first for its sends. */
+  private homeAppOf(botId: string): HomeChannel | null {
+    for (const [app, lane] of Object.entries(SELF_LANE_FOR_APP) as Array<
+      [HomeChannel, SelfLanePlatform]
+    >)
+      if (this.options.homeBots?.get(lane) === botId) return app;
+    return null;
+  }
+
+  /** Text that reached another app's own chat says which app could not carry it. */
+  private async labelled(path: OwnChatPath, text: string): Promise<string> {
+    if (path.downApp == null) return text;
+    const words = await channelWords(
+      channelLocale(
+        readUserLanguage()?.name ?? null,
+        this.options.appLanguage?.() ?? null
+      )
+    );
+    const platform = words.t(
+      `messaging.platforms.${messagingPlatformSpec(path.downApp)?.nameKey ?? path.downApp}`
+    );
+    return `${words.t("outcome.channel.viaOtherApp", { platform })}\n\n${text}`;
+  }
+
   /**
-   * The user's own chat on a platform, as something a notice can reach: the
-   * platform's self chat, else the shared Abacus bot's DM for that app (you
-   * cannot DM yourself on Discord). Null when there is none to reach.
+   * A notice for the user: their own chat on `platformId`'s app, else another
+   * app's (labelled), else owed until one is up. `label: false` for a notice
+   * that is itself about the down app; `queue: false` for one that is moot later.
    */
-  private selfChatOf(
-    platformId: MessagingPlatformId
-  ): { platform: MessagingPlatformId; chatId: string } | null {
-    const own = this.connectors.get(platformId)?.selfChatId?.() ?? null;
-    if (own != null && own.length > 0)
-      return { platform: platformId, chatId: own };
-    const sharedId = SHARED_BOT_PLATFORM_OF[platformId];
-    if (sharedId == null) return null;
-    const shared = this.connectors.get(sharedId)?.selfChatId?.() ?? null;
-    return shared != null && shared.length > 0
-      ? { platform: sharedId, chatId: shared }
-      : null;
+  private async tellSelf(
+    platformId: MessagingPlatformId,
+    text: string,
+    options: {
+      exclude?: MessagingPlatformId;
+      label?: boolean;
+      queue?: boolean;
+    } = {}
+  ): Promise<"sent" | "queued" | "none"> {
+    const path = this.ownChat(platformId, { exclude: options.exclude });
+    if (path != null) {
+      this.deliverToSelf(
+        path,
+        options.label === false ? text : await this.labelled(path, text)
+      );
+      return "sent";
+    }
+    if (options.queue === false) return "none";
+    this.outbox.owe(
+      {
+        id: randomUUID(),
+        platform: platformId,
+        chatId: "",
+        toSelf: true,
+        text: forChat(text, platformId),
+        userName: null,
+        firstFailedAt: this.options.now?.() ?? Date.now(),
+      },
+      0
+    );
+    return "queued";
   }
 
   /** Send a notice to the user's own chat, shown in its transcript if routed. */
@@ -2115,11 +2236,12 @@ export class MessagingGatewayService {
    * it went; false with no chat app linked.
    */
   async tellRoutinesOnHold(): Promise<boolean> {
-    const own = [...this.connectors.keys()]
-      .map((platform) => this.selfChatOf(platform))
-      .find((chat) => chat != null);
-    if (own == null) return false;
-    this.deliverToSelf(own, await this.accountLine(chatLineForRoutinesOnHold));
+    const first = [...this.connectors.keys()][0];
+    if (first == null) return false;
+    await this.tellSelf(
+      first,
+      await this.accountLine(chatLineForRoutinesOnHold)
+    );
     return true;
   }
 
@@ -2150,15 +2272,12 @@ export class MessagingGatewayService {
     const now = this.options.now?.() ?? Date.now();
     if (route == null || ended == null || now - ended > CHAT_TURN_RECENT_MS)
       return false;
-    const own = this.selfChatOf(route.platform);
-    if (own == null) return false;
-    const isOwn =
-      own.platform === route.platform && own.chatId === route.userId;
     const text = await this.accountLine(line);
     // Nothing true to say (a paid plan whose offer is not known): not told.
     if (text == null) return false;
-    if (isOwn) this.deliver(route, text);
-    else this.deliverToSelf(own, text);
+    if (this.isOwnChatId(route.platform, route.userId))
+      this.deliver(route, text);
+    else await this.tellSelf(route.platform, text);
     return true;
   }
 
@@ -2340,18 +2459,18 @@ export class MessagingGatewayService {
 
   /** One later attempt at a message still owed; true once it went. */
   private async sendOwed(message: OwedMessage): Promise<boolean> {
-    // The user's own chat on the platform, known only once it is up.
-    const own =
-      message.toSelf === true ? this.selfChatOf(message.platform) : null;
+    // The user's own chat by whichever path is up when it goes (own-chat.ts).
+    const own = message.toSelf === true ? this.ownChat(message.platform) : null;
     if (message.toSelf === true && own == null) return false;
     const platform = own?.platform ?? message.platform;
     const chatId = own?.chatId ?? message.chatId;
     const connector = this.connectors.get(platform);
     if (connector == null) return false;
-    const text =
+    const worded =
       message.say != null
         ? forChat(await this.wordOwed(message.say, message.userName), platform)
         : message.text;
+    const text = own != null ? await this.labelled(own, worded) : worded;
     const send = () => connector.sendText(chatId, text, message.replyContext);
     // The user's own chat may have a route sending an answer: this waits for
     // it, so the chat reads them in order.
@@ -2395,6 +2514,101 @@ export class MessagingGatewayService {
     }
   }
 
+  /**
+   * Answer what came in while the lane was not watching (inbound-backlog.ts):
+   * each chat's late messages as one turn through the normal inbound gate,
+   * and one line to the user for what is too old or too much. A lane's first
+   * connect ever replays nothing.
+   */
+  private async catchUp(
+    platformId: MessagingPlatformId,
+    attempt = 0
+  ): Promise<void> {
+    const now = this.options.now?.() ?? Date.now();
+    const since = this.seen.seenUntil(platformId);
+    const connector = this.connectors.get(platformId);
+    if (since == null || connector?.backlog == null) {
+      this.catchingUp.delete(platformId);
+      this.seen.stamp(platformId, now);
+      return;
+    }
+    if (attempt === 0 && this.catchingUp.has(platformId)) return;
+    this.catchingUp.add(platformId);
+    let chats: Awaited<ReturnType<NonNullable<MessagingConnector["backlog"]>>>;
+    try {
+      chats = await connector.backlog(since, BACKLOG_MAX_CHATS);
+    } catch (error) {
+      console.error(`[messaging] ${platformId} catch-up read failed:`, error);
+      // A page still settling after connect: asked again a few times, then let go.
+      if (attempt < CATCH_UP_RETRIES && !this.disposed) {
+        const timer = setTimeout(() => {
+          if (
+            this.connectors.get(platformId) === connector &&
+            this.states.get(platformId)?.state === "connected"
+          )
+            void this.catchUp(platformId, attempt + 1);
+          else this.catchingUp.delete(platformId);
+        }, CATCH_UP_RETRY_MS);
+        timer.unref?.();
+        return;
+      }
+      chats = [];
+    }
+    this.catchingUp.delete(platformId);
+    this.seen.stamp(platformId, now);
+    if (this.connectors.get(platformId) !== connector) return;
+    // Off, only the user's own chat is answered: nobody else would be.
+    const self = connector.selfChatId?.() ?? null;
+    const answering = readGatewaySettings().respondToInbound;
+    const log = this.messageLog.filter(
+      (entry) => entry.platform === platformId
+    );
+    const plan = planCatchUp({
+      chats: chats.filter((chat) => answering || chat.userId === self),
+      now,
+      known: (id) => this.seen.has(platformId, id),
+      lastSentAt: (chatId) => {
+        const sent = log.filter(
+          (entry) => entry.direction === "out" && entry.chatId === chatId
+        );
+        return sent.length > 0 ? Date.parse(sent.at(-1)!.at) : null;
+      },
+      loggedIn: (chatId, text) =>
+        log.some(
+          (entry) =>
+            entry.direction === "in" &&
+            entry.chatId === chatId &&
+            entry.text === text &&
+            Date.parse(entry.at) > since
+        ),
+    });
+    console.log(
+      `[messaging] ${platformId} catch-up since ${new Date(since).toISOString()}: ` +
+        `${plan.turns.length} chat(s) answered, ${plan.missed} only reported`
+    );
+    for (const { chat, messages } of plan.turns) {
+      for (const message of messages)
+        this.seen.remember(platformId, message.id);
+      await this.handleInbound(platformId, {
+        userId: chat.userId,
+        userName: chat.userName,
+        chatId: chat.chatId,
+        text: foldLate(messages, now),
+      });
+    }
+    if (plan.missed === 0) return;
+    const words = await channelWords(
+      channelLocale(
+        readUserLanguage()?.name ?? null,
+        this.options.appLanguage?.() ?? null
+      )
+    );
+    await this.tellSelf(
+      platformId,
+      words.t("outcome.channel.missedWhileOff", { count: plan.missed })
+    );
+  }
+
   /** A link that ended can't say so in its own chat, so the computer does. */
   private async tellLinkLost(platformId: MessagingPlatformId): Promise<void> {
     if (this.linkLossTold.has(platformId)) return;
@@ -2425,13 +2639,11 @@ export class MessagingGatewayService {
     platformId: MessagingPlatformId,
     text: string
   ): void {
-    const other = [...this.connectors.keys()]
-      .filter(
-        (id) => id !== platformId && this.states.get(id)?.state === "connected"
-      )
-      .map((id) => this.selfChatOf(id))
-      .find((chat) => chat != null && chat.platform !== platformId);
-    if (other != null) this.deliverToSelf(other, text);
+    void this.tellSelf(platformId, text, {
+      exclude: platformId,
+      label: false,
+      queue: false,
+    });
   }
 
   /** Retrying stopped on a failure only the user can clear: OS notification and another app's chat. */
@@ -2481,12 +2693,7 @@ export class MessagingGatewayService {
     console.error(
       `[messaging] ${entry.platform} message to ${entry.chatId} given up on`
     );
-    const own = this.selfChatOf(entry.platform);
-    if (
-      own == null ||
-      entry.toSelf === true ||
-      (own.platform === entry.platform && own.chatId === entry.chatId)
-    )
+    if (entry.toSelf === true || this.isOwnChatId(entry.platform, entry.chatId))
       return;
     const words = await channelWords(
       channelLocale(
@@ -2498,7 +2705,10 @@ export class MessagingGatewayService {
       entry.userName != null && entry.userName.trim().length > 0
         ? entry.userName.trim()
         : words.t("outcome.channel.someone");
-    this.deliverToSelf(own, words.t("outcome.channel.undelivered", { name }));
+    await this.tellSelf(
+      entry.platform,
+      words.t("outcome.channel.undelivered", { name })
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -3322,8 +3532,15 @@ export class MessagingGatewayService {
 
     // "me" is a name no address book holds, and the one the user says most.
     if (isSelfName(target)) {
-      const self = this.connectors.get(platformId)?.selfChatId?.() ?? null;
-      if (self != null && self.length > 0) return self;
+      // The user's own chat on this very lane (a file cannot change lanes).
+      const app = appOfPlatform(platformId);
+      const self =
+        app != null
+          ? ownChatsOn(app, this.ownChatSource).find(
+              (row) => row.platform === platformId
+            )?.chatId
+          : undefined;
+      if (self != null) return self;
       throw new Error(
         `${platformLabel(platformId)} has not said which account it is connected as yet. ` +
           "Wait for it to finish connecting, or give a phone number."
@@ -3402,7 +3619,14 @@ export class MessagingGatewayService {
   /** `to` on `platform` is the user's own chat there. */
   isOwnChat(platform: string, to: string): boolean {
     if (!isMessagingPlatformId(platform)) return false;
-    return isOwnChatTarget(to, this.selfChatOf(platform)?.chatId ?? null);
+    const app = appOfPlatform(platform);
+    return (
+      isSelfName(to) ||
+      (app != null &&
+        ownChatsOn(app, this.ownChatSource).some((row) =>
+          isOwnChatTarget(to, row.chatId)
+        ))
+    );
   }
 
   /**
@@ -3417,17 +3641,9 @@ export class MessagingGatewayService {
     // The sending bot: named on what lands in the user's own chat, unless
     // it is that chat's home bot.
     from?: { botId: string; name: string }
-  ): Promise<void> {
-    // "me" on a platform with no self chat (Discord: you cannot DM yourself)
-    // is still deliverable through the shared Abacus bot's DM.
-    if (isSelfName(chatId)) {
-      const own = this.connectors.get(platformId)?.selfChatId?.() ?? null;
-      const sharedId = SHARED_BOT_PLATFORM_OF[platformId];
-      const shared =
-        sharedId != null ? this.connectors.get(sharedId) : undefined;
-      if ((own == null || own.length === 0) && shared?.selfChatId?.() != null)
-        platformId = sharedId as MessagingPlatformId;
-    }
+  ): Promise<ChatSendResult> {
+    // "me" takes whichever path to the user's own chat is up (own-chat.ts).
+    if (isSelfName(chatId)) return this.sendToSelf(platformId, text, from);
     const connector = this.connectors.get(platformId);
     if (connector == null) {
       throw new Error(
@@ -3438,6 +3654,23 @@ export class MessagingGatewayService {
     // A send during startup waits rather than failing on "who is me".
     await this.awaitReady(platformId);
     const target = this.resolveTarget(platformId, chatId);
+    await this.sendAs(connector, platformId, target, text, from);
+    return {
+      platform: platformId,
+      chatId: target,
+      downApp: null,
+      queued: false,
+    };
+  }
+
+  /** One agent send on a chosen lane: named for another bot in a self chat, logged. */
+  private async sendAs(
+    connector: MessagingConnector,
+    platformId: MessagingPlatformId,
+    target: string,
+    text: string,
+    from?: { botId: string; name: string }
+  ): Promise<void> {
     // The self chat is the home bot's conversation; another bot's update
     // there says whose it is.
     if (
@@ -3459,6 +3692,58 @@ export class MessagingGatewayService {
       direction: "out",
       at: new Date().toISOString(),
     });
+  }
+
+  /**
+   * The agent's message to "me": the first path to the user's own chat that
+   * is up, another app's labelled; with none up (or the send failing) it is
+   * owed once and goes when one comes back. Never an error: nothing is lost.
+   */
+  private async sendToSelf(
+    platformId: MessagingPlatformId,
+    text: string,
+    from?: { botId: string; name: string }
+  ): Promise<ChatSendResult> {
+    // A send during startup waits rather than failing on "who is me".
+    const app = appOfPlatform(platformId);
+    await this.awaitReady(app != null ? SELF_LANE_FOR_APP[app] : platformId);
+    const path = this.ownChat(platformId, {
+      preferApp: from != null ? this.homeAppOf(from.botId) : null,
+    });
+    const connector = path != null ? this.connectors.get(path.platform) : null;
+    if (path != null && connector != null) {
+      try {
+        await this.sendAs(
+          connector,
+          path.platform,
+          path.chatId,
+          await this.labelled(path, text),
+          from
+        );
+        return { ...path, queued: false };
+      } catch (error) {
+        console.error(
+          `[messaging] ${path.platform} send to the user's own chat failed, kept to retry:`,
+          error
+        );
+      }
+    }
+    this.outbox.owe(
+      {
+        id: randomUUID(),
+        platform: platformId,
+        chatId: "",
+        toSelf: true,
+        text: forChat(
+          from != null ? `[${from.name}] ${text}` : text,
+          platformId
+        ),
+        userName: null,
+        firstFailedAt: this.options.now?.() ?? Date.now(),
+      },
+      path != null ? (OUTBOX_RETRY_MS[0] ?? 0) : 0
+    );
+    return { platform: platformId, chatId: "", downApp: null, queued: true };
   }
 
   /** Send a file where sendToChat would send words. Platform support varies. */

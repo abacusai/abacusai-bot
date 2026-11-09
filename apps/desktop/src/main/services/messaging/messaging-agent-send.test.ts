@@ -415,12 +415,12 @@ describe("sending to yourself", () => {
    * Not silently treated as a contact named "me": that would either miss and
    * read as an unknown name, or, worse, match somebody actually called Me.
    */
-  it("says the platform has not said yet, rather than guessing", async () => {
+  it("keeps it for the user's own chat, rather than guessing", async () => {
     const { service, sent } = withSelf(null);
 
-    await expect(service.sendToChat("whatsapp", "me", "hi")).rejects.toThrow(
-      "has not said which account"
-    );
+    await expect(
+      service.sendToChat("whatsapp", "me", "hi")
+    ).resolves.toMatchObject({ queued: true });
     expect(sent).toHaveLength(0);
   });
 });
