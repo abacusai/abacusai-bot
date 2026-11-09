@@ -2492,8 +2492,11 @@ export class AbacusBotSession {
       return;
     }
 
-    // This machine's write (pi's session file), not the provider: nothing retries it.
-    if (classifyAttempt(text, this.session?.model?.provider) === "disk_full") {
+    // This machine's write (pi's session file), not the provider: nothing retries it,
+    // and the chain has it now, so no recovery continues the turn.
+    const provider = this.session?.model?.provider;
+    if (classifyAttempt(text, provider) === "disk_full") {
+      this.router.chain.failed(text, provider);
       process.stderr.write(
         `[disk] the disk is full; this turn ends: ${text.slice(0, 200)}\n`
       );
