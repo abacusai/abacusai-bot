@@ -78,6 +78,44 @@ describe("bot_help on the chat apps", () => {
   });
 });
 
+describe("a chat app's own chat", () => {
+  it("is linked by its self lane, not the user's own account on that app", async () => {
+    const lanes = (live: string[]) =>
+      new McpAgentToolsServer({
+        skillsService: {} as never,
+        enabledToolsets: () => new Set(["messaging"]),
+        workspacePath: () => null,
+        workspaceId: () => null,
+        messaging: {
+          runningPlatforms: () => ["telegram", "abacus_telegram"],
+          livePlatforms: () => live,
+          listChats: () => [],
+        },
+      } as never);
+    const answer = async (instance: McpAgentToolsServer) =>
+      (
+        await (
+          instance as unknown as {
+            executeTool: (
+              name: string,
+              args: Record<string, unknown>,
+              session?: string
+            ) => Promise<{ content: { text?: string }[] }>;
+          }
+        ).executeTool("bot_help", { topic: "chat_apps" }, "main")
+      ).content
+        .map((part) => part.text ?? "")
+        .join("\n");
+    expect(await answer(lanes(["abacus_telegram"]))).toContain(
+      "Telegram: in Telegram they write to the Abacus AI bot"
+    );
+    // The user's own Telegram account linked, the shared bot's chat not.
+    expect(await answer(lanes(["telegram"]))).toContain(
+      "Telegram (after one step: link it under Messaging)"
+    );
+  });
+});
+
 describe("the routine editor", () => {
   it("answers what a routine can do from bot_help and billing_plan's facts, not a refusal", async () => {
     const { text, isError } = await ask({ topic: "routines" }, "editor");

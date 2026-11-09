@@ -171,7 +171,7 @@ const homeChannelLines = (bot: Bot): string[] => {
     "reply in your own chat with the user in this app is two short lines and",
     `ends with suggest_tasks: first one concrete message to send you from`,
     `${app} right now, marked copy: true (for example "remind me at 6pm to call`,
-    `mom"), with a few words on where to send it (${phoneChatRoute(bot.homeChannel)};`,
+    `mom"), with a few words on where to send it (${phoneChatRoute(bot.homeChannel, import.meta.env.ABACUS_WEB_HOST === true ? "hosted" : "desktop")};`,
     "once connected, if it is not yet); then one or two things you can do right here.",
   ];
 };

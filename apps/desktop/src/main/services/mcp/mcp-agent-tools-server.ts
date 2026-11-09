@@ -54,6 +54,7 @@ import {
   describePlatformForAgent,
   isOwnChatTarget,
   selfLaneOf,
+  SELF_LANE_FOR_APP,
 } from "@abacus-ai/contract/messaging";
 import {
   isCostlyModel,
@@ -3817,7 +3818,8 @@ export class McpAgentToolsServer extends McpHttpServer {
     const hostedRunner =
       routines?.hostedOnly?.() === true ||
       routines?.defaultRunner() === "hosted";
-    const connectorsNeeded = needs("connectors") || needs("chat_apps");
+    const connectorsNeeded =
+      needs("connectors") || needs("chat_apps") || needs("capabilities");
     const [connectors, models] = await Promise.all([
       connectorsNeeded
         ? this.connectConnectorOutcome({}, callerSession, { card: false })
@@ -3853,7 +3855,34 @@ export class McpAgentToolsServer extends McpHttpServer {
       enabledToolsets: this.options.enabledToolsets(),
       withheldFeatures: this.hostCapabilities().withheldFeatures,
       tools: new Set(this.listTools(callerSession).map((tool) => tool.name)),
+      chatApps: this.linkedChatApps(connectors),
     });
+  }
+
+  /**
+   * Which chat apps' own chats are linked: each app's self lane (Telegram and
+   * Discord go through the shared Abacus AI bot), or on the web WhatsApp
+   * through AbacusAI Bot's own number.
+   */
+  private linkedChatApps(
+    connectors: ReadonlyArray<{
+      connector: Connector;
+      status: { state: string; botNumber?: boolean };
+    }> | null
+  ): Partial<Record<HomeChannel, boolean>> | null {
+    if (import.meta.env.ABACUS_WEB_HOST === true) {
+      if (connectors == null) return null;
+      const whatsapp = connectors.find(
+        (entry) => entry.connector.id === "messaging-whatsapp"
+      );
+      return { whatsapp: whatsapp?.status.botNumber === true };
+    }
+    const messaging = this.options.messaging;
+    if (messaging == null) return null;
+    const live = (messaging.livePlatforms ?? messaging.runningPlatforms)();
+    return Object.fromEntries(
+      HOME_CHANNELS.map((app) => [app, live.includes(SELF_LANE_FOR_APP[app])])
+    );
   }
 
   // ── Integrations ─────────────────────────────────────────────────────────

@@ -71,26 +71,23 @@ export interface BotHelpFacts {
   withheldFeatures: readonly PaidFeature[];
   /** The tools this caller is listed: what it can do comes from these, never from the topic. */
   tools: ReadonlySet<string>;
+  /** Which chat apps' own chats are linked (their self lane, or AbacusAI Bot's number on the web); null when unreadable. */
+  chatApps: Partial<Record<HomeChannel, boolean>> | null;
 }
 
 /** The capability registry's state for this caller. */
 const capabilityState = (facts: BotHelpFacts): CapabilityState => ({
   surface: facts.hosted ? "hosted" : "desktop",
   tier: facts.tier,
-  chatApps:
+  chatApps: facts.chatApps,
+  connectors:
     facts.connectors == null
       ? null
       : Object.fromEntries(
-          facts.connectors.flatMap(({ connector, status }) =>
-            connector.kind === "messaging"
-              ? [
-                  [
-                    connector.platform as HomeChannel,
-                    status.state === "connected",
-                  ],
-                ]
-              : []
-          )
+          facts.connectors.map(({ connector, status }) => [
+            connector.id,
+            status,
+          ])
         ),
   tools: facts.tools,
 });
@@ -332,7 +329,9 @@ function capabilitiesSection(facts: BotHelpFacts): string[] {
   if (facts.withheldFeatures.length > 0)
     lines.push(
       `Not on this account here: ${facts.withheldFeatures.map((feature) => feature.name).join(", ")}. ` +
-        `For any of these, call ${PAID_FEATURE_TOOL}: it says which plan has it and where.`
+        (facts.tools.has(PAID_FEATURE_TOOL)
+          ? `For any of these, call ${PAID_FEATURE_TOOL}: it says which plan has it and where.`
+          : "For any of these, the user asks in a main chat, which says which plan has it.")
     );
   if (phoneFreePlan(facts)) lines.push(FREE_PHONE_ROUTINES_NOTE);
   lines.push(where(facts, "capabilities"));

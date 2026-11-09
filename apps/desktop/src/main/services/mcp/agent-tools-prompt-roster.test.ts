@@ -3,6 +3,8 @@
  * The routine editor's prompt sent it to bot_help and billing_plan while it was
  * listed only cronjob; the model saw the tool missing and answered a flat no.
  */
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -184,5 +186,38 @@ describe("a caller's prompt names only tools it is listed", () => {
     expect(namedTools("call cronjob, while you have paid_feature")).toEqual([
       "cronjob",
     ]);
+  });
+});
+
+describe("bot_help's answer names only tools its caller is listed", () => {
+  it.each([
+    ["the routine editor", "editor"],
+    ["a main chat", "main"],
+  ])("%s", async (_kind, session) => {
+    const previous = process.env.ABACUSAI_BOT_HOME;
+    process.env.ABACUSAI_BOT_HOME = fs.mkdtempSync(
+      path.join(os.tmpdir(), "prompt-roster-")
+    );
+    try {
+      const result = await (
+        server as unknown as {
+          executeTool: (
+            name: string,
+            args: Record<string, unknown>,
+            session?: string
+          ) => Promise<{ content: { text?: string }[] }>;
+        }
+      ).executeTool("bot_help", {}, session);
+      const text = result.content.map((part) => part.text ?? "").join("\n");
+      expect(text).toContain("What the user can do here:");
+      // "On:" and "Off:" list toolset ids (switches the user flips), not tools to call.
+      const orders = text.replace(/^(On|Off): .*$/gm, "");
+      expect(
+        namedTools(orders).filter((name) => !listed(session).includes(name))
+      ).toEqual([]);
+    } finally {
+      if (previous == null) delete process.env.ABACUSAI_BOT_HOME;
+      else process.env.ABACUSAI_BOT_HOME = previous;
+    }
   });
 });
