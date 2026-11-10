@@ -61,6 +61,7 @@ import type { HostOperations } from "./handler";
 import { electronHostPlatform } from "./host-operations/electron";
 import { followMainAgentBusy, followRoutineDue } from "./keep-awake";
 import { decideLocalOpen } from "./local-open-guard";
+import { openedAtLogin } from "./login-item";
 import { throttleMainWindowWhileHidden } from "./main-window-throttle";
 import { restoreLegacyFiles } from "./migrations/restore-legacy";
 import {
@@ -1492,7 +1493,7 @@ const appOperations: AppOperations = {
     }
   },
 
-  showNotification(title, body, metadata, attention) {
+  showNotification(title, body, metadata, attention, clicked) {
     notchNotifications.notify(
       { ...attention, botReply: metadata?.kind === "bot" },
       () => {
@@ -1505,6 +1506,7 @@ const appOperations: AppOperations = {
           silent: notificationSilent(),
         });
         notification.on("click", () => {
+          clicked?.();
           const win = revealMainWindow();
           // Consumed by the onNotificationClicked subscriber in app.tsx.
           if (win && metadata) {
@@ -1600,10 +1602,13 @@ let notchController: NotchController | null = null;
 // Native notices from main (the status board's, a sender waiting): they reach a closed window.
 workspaceServiceHost.attachUserNotifier(
   (notice) =>
-    appOperations.showNotification(notice.title, notice.body, notice.metadata, {
-      kind: "needs-you",
-      dedupeKey: notice.dedupeKey,
-    }),
+    appOperations.showNotification(
+      notice.title,
+      notice.body,
+      notice.metadata,
+      { kind: "needs-you", dedupeKey: notice.dedupeKey },
+      notice.clicked
+    ),
   () => aliveMainWindow()?.isFocused() === true
 );
 
@@ -1939,6 +1944,7 @@ app
         ? "signed_in"
         : "signed_out"
     );
+    if (openedAtLogin()) reportFunnelStep("opened_at_login");
 
     // Backs the "Paste image" attach item, which has no paste event to read
     // because the click happens in a menu. Null when there is no image.

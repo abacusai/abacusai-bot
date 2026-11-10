@@ -5035,6 +5035,11 @@
       "once": "I won't bring this up again here."
     }
   },
+  "workWaiting": {
+    "title": "Your work is waiting",
+    "site": "Your site is ready. Pick up where you left off.",
+    "file": "Your file is ready. Pick up where you left off."
+  },
   "kickoff": {
     "connectOne": "First, if the system reminder does not list {{name}} as connected, call connect_connector for it now.",
     "resultFirst": "First hand over a real result made with what works without any account, or, when the job starts from something only the user can give (their question, a topic, a list), ask for it in one short question; only after that, offer at most one connection, the one that most improves the result.",

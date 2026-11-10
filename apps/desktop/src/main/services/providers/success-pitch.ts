@@ -73,6 +73,8 @@ interface TurnFacts {
   troubled: boolean;
   /** The text since the turn's last tool call: its final reply. */
   reply: string;
+  /** The first task of the next step the turn ended on (`after_result`), if any. */
+  nextTask: string | null;
 }
 
 /** A session's last closed reply, which a reaction can point at. */
@@ -97,11 +99,32 @@ export interface SuccessPitchDeps {
   funnel: (step: FunnelStep, detail: string) => void;
   /** Results end on a next step, which takes the card's place (off on the hosted computer). */
   nextStep: () => boolean;
+  /** A result handed over in the app, with the next step it ended on. */
+  resultDelivered?: (
+    sessionId: string,
+    kind: Exclude<SuccessPitchMoment, "reaction">,
+    task: string | null
+  ) => void;
+  /** Someone's own words reached `sessionId` (any chat). */
+  userWrote?: (sessionId: string) => void;
   now?: () => number;
 }
 
 /** Tools that are another card of their own: the pitch never stacks on them. */
 const CARD_TOOLS = ["paid_feature", "offer_session"];
+
+/** The first task of a next step that is more work, not a routine. */
+const firstWorkTask = (tasks: unknown): string | null => {
+  if (!Array.isArray(tasks)) return null;
+  for (const task of tasks as { text?: unknown; routine?: unknown }[])
+    if (
+      task?.routine !== true &&
+      typeof task?.text === "string" &&
+      task.text.trim().length > 0
+    )
+      return task.text.trim();
+  return null;
+};
 
 /** `tool`, under its MCP server's prefix (`agent-tools_serve`) or bare. */
 const isTool = (name: string, tool: string): boolean =>
@@ -137,6 +160,7 @@ export class SuccessPitchWatch {
         tools: 0,
         troubled: false,
         reply: "",
+        nextTask: null,
       };
       this.turns.set(sessionId, facts);
     }
@@ -155,7 +179,10 @@ export class SuccessPitchWatch {
       facts.byUser = words.length > 0;
       facts.praise = facts.byUser && isPositiveReaction(words);
     } else facts.praise = false;
-    if (words.length > 0) this.endOffer(sessionId, isComplaint(words));
+    if (words.length > 0) {
+      this.endOffer(sessionId, isComplaint(words));
+      this.deps.userWrote?.(sessionId);
+    }
   }
 
   /** One of the session's agent events, while its turn runs. */
@@ -204,6 +231,8 @@ export class SuccessPitchWatch {
     const name = event.tool.name;
     // The reply stands: suggest_tasks comes after it and can end the turn.
     if (!isSuggestTasksTool(name)) facts.reply = "";
+    else if (event.tool.input.after_result === true)
+      facts.nextTask = firstWorkTask(event.tool.input.tasks);
     if (event.result.rejected === true) {
       facts.troubled = true;
       return;
@@ -274,6 +303,12 @@ export class SuccessPitchWatch {
     const nextStep = this.deps.nextStep();
     if (clean && facts.delivered != null)
       this.deps.funnel("result_delivered", facts.delivered);
+    if (clean && facts.delivered != null && where === "app")
+      this.deps.resultDelivered?.(
+        record.sessionId,
+        facts.delivered,
+        facts.nextTask
+      );
     const signal: {
       trigger: SuccessPitchTrigger;
       moment: SuccessPitchMoment;

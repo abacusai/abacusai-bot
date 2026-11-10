@@ -56,6 +56,7 @@ const setup = (
     turnOpen?: boolean;
     told?: boolean;
     prefs?: Partial<PrefsRow>;
+    deps?: Partial<SuccessPitchDeps>;
   } = {}
 ) => {
   let row = {
@@ -81,6 +82,7 @@ const setup = (
     funnel,
     nextStep: () => false,
     now: () => now,
+    ...options.deps,
   };
   const watch = new SuccessPitchWatch(deps);
   let turn = 0;
@@ -520,5 +522,73 @@ describe("SuccessPitchWatch: the chat's latest site, on any plan", () => {
       text(LONG_REPLY),
     ]);
     expect(t.sites()?.s1?.siteDir).toBe("/home/me/shop");
+  });
+});
+
+describe("the result it hands to the work-waiting reminder", () => {
+  const nextStep = (tasks: object[]) =>
+    tool("agent-tools_suggest_tasks", { after_result: true, tasks });
+
+  it("names the first work task the result ended on, never a routine", async () => {
+    const resultDelivered = vi.fn();
+    const { run } = setup({ deps: { resultDelivered } });
+    await run("Build me a portfolio page", [
+      presentSite,
+      text(LONG_REPLY),
+      nextStep([
+        { text: "Every Monday, check my site", routine: true },
+        { text: "Put my real name and projects in" },
+      ]),
+    ]);
+    expect(resultDelivered).toHaveBeenCalledWith(
+      "s1",
+      "site",
+      "Put my real name and projects in"
+    );
+  });
+
+  it("hands a result over with no task when the turn ended without a next step", async () => {
+    const resultDelivered = vi.fn();
+    const { run } = setup({ deps: { resultDelivered } });
+    await run("Make my CV a PDF", [presentFile, text(LONG_REPLY)]);
+    expect(resultDelivered).toHaveBeenCalledWith("s1", "file", null);
+  });
+
+  it("ignores tasks that are not a next step", async () => {
+    const resultDelivered = vi.fn();
+    const { run } = setup({ deps: { resultDelivered } });
+    await run("Build me a portfolio page", [
+      presentSite,
+      text(LONG_REPLY),
+      tool("agent-tools_suggest_tasks", { tasks: [{ text: "Something" }] }),
+    ]);
+    expect(resultDelivered).toHaveBeenCalledWith("s1", "site", null);
+  });
+
+  it("hands over nothing for a turn answering a chat app, or a troubled one", async () => {
+    const resultDelivered = vi.fn();
+    const { run } = setup({ deps: { resultDelivered } });
+    await run(
+      "Build me a portfolio page",
+      [presentSite, text(LONG_REPLY)],
+      CHAT
+    );
+    await run("Build me a portfolio page", [
+      presentSite,
+      event({ type: "error", error: "boom" }),
+      text(LONG_REPLY),
+    ]);
+    expect(resultDelivered).not.toHaveBeenCalled();
+  });
+
+  it("tells it the user wrote, only for their own words", () => {
+    const userWrote = vi.fn();
+    const { watch } = setup({ deps: { userWrote } });
+    watch.userSaid("s1", "[first run] Introduce yourself", {
+      operator: { kind: "kickstart" },
+    });
+    expect(userWrote).not.toHaveBeenCalled();
+    watch.userSaid("s1", "Add a dark mode");
+    expect(userWrote).toHaveBeenCalledWith("s1");
   });
 });

@@ -5035,6 +5035,11 @@
       "once": "Non ne parlerò più qui."
     }
   },
+  "workWaiting": {
+    "title": "Il tuo lavoro ti aspetta",
+    "site": "Il tuo sito è pronto. Riprendi da dove avevi lasciato.",
+    "file": "Il tuo file è pronto. Riprendi da dove avevi lasciato."
+  },
   "kickoff": {
     "connectOne": "Per prima cosa, se il promemoria di sistema non indica {{name}} come connesso, chiama subito connect_connector per collegarlo.",
     "resultFirst": "Prima consegna un risultato reale con ciò che funziona senza alcun account oppure, se il lavoro parte da qualcosa che solo l'utente può dare (la sua domanda, un argomento, un elenco), chiedilo con una sola domanda breve; solo dopo, proponi al massimo una connessione, quella che migliora di più il risultato.",

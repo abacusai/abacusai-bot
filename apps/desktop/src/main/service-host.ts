@@ -611,6 +611,12 @@ import {
   successPitchListener,
   SuccessPitchWatch,
 } from "./services/providers/success-pitch";
+import {
+  WORK_WAITING_CHECK_EVERY_MS,
+  WORK_WAITING_FIRST_CHECK_MS,
+  WorkWaiting,
+  workWaitingTask,
+} from "./services/providers/work-waiting";
 import { SandboxProbeService } from "./services/sandbox/sandbox-probe-service";
 import { agentTurnBusy } from "./services/session/agent-busy";
 import { AgentSessionManagerService } from "./services/session/agent-session-manager-service";
@@ -1389,6 +1395,36 @@ export class ServiceHost {
   });
 
   /** The success pitch, decided at each turn's close (TurnLedger). */
+  /** "Your work is waiting": a result the user left, brought up again (work-waiting.ts). */
+  private readonly workWaiting = new WorkWaiting({
+    file: () =>
+      this.platform === "web-host"
+        ? null
+        : path.join(abacusBotHome(), "work-waiting.json"),
+    quiet: (now) =>
+      isQuietNow(this.prefs?.()?.get().sounds?.quietHours, new Date(now)),
+    busy: () => this.turnLedger.anyOpen(),
+    sessionExists: (sessionId) =>
+      this.agentSessionManagerService.get(sessionId) != null,
+    words: async () => {
+      const words = await channelWords(
+        channelLocale(readUserLanguage()?.name ?? null, this.appLanguage())
+      );
+      return (key) => words.t(key);
+    },
+    show: (notice, clicked) =>
+      this.userNotifier?.({
+        title: notice.title,
+        body: notice.body,
+        dedupeKey: notice.dedupeKey,
+        // No kind: a bot's chat opens in its bot, any other chat as itself.
+        metadata: { sessionId: notice.sessionId },
+        clicked,
+      }),
+    funnel: (step, detail) => reportFunnelStep(step, detail),
+  });
+  private workWaitingTimers: NodeJS.Timeout[] = [];
+
   private readonly successPitch = new SuccessPitchWatch({
     prefs: () => this.prefs?.() ?? null,
     account: () => cachedAbacusAccount(),
@@ -1404,6 +1440,15 @@ export class ServiceHost {
       this.messagingGatewayService.tellSuccessPitch(sessionId),
     funnel: (step, detail) => reportFunnelStep(step, detail),
     nextStep: nextStepOn,
+    resultDelivered: (sessionId, kind, task) =>
+      this.workWaiting.resultDelivered(sessionId, kind, workWaitingTask(task)),
+    // Another person writing to the user's bot is not the user coming back.
+    userWrote: (sessionId) => {
+      if (
+        this.agentSessionManagerService.get(sessionId)?.owner?.role !== "sender"
+      )
+        this.workWaiting.userWrote();
+    },
   });
 
   /** What a turn in `sessionId` counts as for the milestone card's estimate. */
@@ -1696,6 +1741,7 @@ export class ServiceHost {
         body: string;
         dedupeKey: string;
         metadata?: NotificationMetadata;
+        clicked?: () => void;
       }) => void)
     | null = null;
   private windowFocused: (() => boolean) | null = null;
@@ -1707,6 +1753,8 @@ export class ServiceHost {
       body: string;
       dedupeKey: string;
       metadata?: NotificationMetadata;
+      /** Told when the user clicks the notice. */
+      clicked?: () => void;
     }) => void,
     focused: () => boolean
   ): void {
@@ -3583,6 +3631,7 @@ export class ServiceHost {
     if (this.platform === "electron")
       void this.builtinMcpLifecycle.startBrowserServer();
     this.startIdleAgentReaper();
+    if (this.platform === "electron") this.startWorkWaiting();
     // Requests between bots the app closed on run again; queued ones start.
     this.botAskService.recover();
     this.channelService.recover();
@@ -3631,8 +3680,24 @@ export class ServiceHost {
     this.debugSyncService.sweepOnStartup();
   }
 
+  /** A first look soon after launch (a login start), then every quarter hour. */
+  private startWorkWaiting(): void {
+    const tick = (): void => {
+      void this.workWaiting.tick().catch((error: unknown) => {
+        console.warn(`[work-waiting] check failed: ${String(error)}`);
+      });
+    };
+    const first = setTimeout(tick, WORK_WAITING_FIRST_CHECK_MS);
+    const every = setInterval(tick, WORK_WAITING_CHECK_EVERY_MS);
+    first.unref();
+    every.unref();
+    this.workWaitingTimers = [first, every];
+  }
+
   stop(): void {
     this.startedAt = null;
+    for (const timer of this.workWaitingTimers) clearTimeout(timer);
+    this.workWaitingTimers = [];
     this.idleAgentReaper?.dispose();
     this.idleAgentReaper = null;
     this.workspaceRuntimeService.stop();

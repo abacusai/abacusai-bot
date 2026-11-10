@@ -1848,5 +1848,10 @@
       "body.routineLaneOff"
     ],
     "sources": ["../../desktop/src/main/services/status/status-board.ts"]
+  },
+  {
+    "prefix": "workWaiting.",
+    "values": ["title", "site", "file"],
+    "sources": ["../../desktop/src/main/services/providers/work-waiting.ts"]
   }
 ]

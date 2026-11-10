@@ -185,6 +185,11 @@ export class TurnLedger {
     return this.open.has(sessionId);
   }
 
+  /** Whether a turn runs in any session. */
+  anyOpen(): boolean {
+    return this.open.size > 0;
+  }
+
   /** The chat app the open turn answers, or null (none open, or the app's own). */
   channelOf(sessionId: string): TurnChannel | null {
     return this.open.get(sessionId)?.channel ?? null;
