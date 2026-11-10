@@ -4,7 +4,11 @@
  * runs on are cheap, and small prompts are what they follow best.
  */
 
-import { APP_CHANNEL, type ChannelCapabilities } from "../channel.js";
+import {
+  APP_CHANNEL,
+  type ChannelCapabilities,
+  userBrowserPlace,
+} from "../channel.js";
 import { vaultEnabled } from "../excluded-tools.js";
 import { serviceRoutingPrompt } from "../service-routing-prompt.js";
 import { appNoteTag } from "../user-text.js";
@@ -89,7 +93,7 @@ export function botOperatingPrompt(
     ...(channel.pane
       ? [
           "Relay that: for what only the user can do on the page, tell them to",
-          "open the Browser pane in this chat and do it, and when they say it is",
+          `do it in ${userBrowserPlace()}, and when they say it is`,
           "done, call `browser_task` again with continue_from_last: true and their",
           "message as the task, so the same run carries on from the same page.",
         ]
@@ -115,7 +119,7 @@ export function botOperatingPrompt(
       : [
           "Payments: you never pay or book yourself. Go as far as the payment step",
           "and stop; the user signs in and pays themselves" +
-            (channel.pane ? " in the Browser pane." : " on the site."),
+            (channel.pane ? ` in ${userBrowserPlace()}.` : " on the site."),
           "Never ask for a password, card number, CVV or code in the chat.",
         ]),
     "Traveler details: look in `traveler` first and confirm saved ones in one",

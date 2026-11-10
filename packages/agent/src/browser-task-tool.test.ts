@@ -126,9 +126,31 @@ describe("what the caller is told about a step only the user can do", () => {
       { cwd: process.cwd(), channel: APP_CHANNEL } as never,
       () => undefined
     );
-    expect(tool.description).toMatch(/open the Browser pane in this chat/);
+    expect(tool.description).toMatch(
+      /do that step in the Browser pane in this chat/
+    );
     const { result } = await run("needs-user", APP_CHANNEL);
-    expect(result.content[0]?.text).toMatch(/open the Browser pane/);
+    expect(result.content[0]?.text).toMatch(/in the Browser pane in this chat/);
+  });
+
+  it("sends the user to their own Chrome, not a pane, when the app drives their Chrome", async () => {
+    vi.stubEnv("ABACUSAI_BOT_BROWSER", "chrome");
+    try {
+      const tool = buildBrowserTaskTool(
+        { cwd: process.cwd(), channel: APP_CHANNEL } as never,
+        () => undefined
+      );
+      expect(tool.description).toMatch(
+        /in their own Chrome, on the tab the bot left open/
+      );
+      expect(tool.description).not.toMatch(/pane/i);
+      const { result } = await run("needs-user", APP_CHANNEL);
+      const text = result.content[0]?.text ?? "";
+      expect(text).toMatch(/their own Chrome/);
+      expect(text).not.toMatch(/Browser pane/);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("never mentions a pane on WhatsApp, and never asks for secrets there", async () => {

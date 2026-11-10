@@ -9088,6 +9088,11 @@ export class ServiceHost {
         this.vault != null &&
           !(sessionId != null && this.hostedRunSessions.has(sessionId))
       ),
+      // The browser is the user's own Chrome: a step only they can do is
+      // done there, not in a pane (channel.ts userBrowserPlace).
+      ...(this.builtinMcpLifecycle.getBrowserStatus().engine === "chrome"
+        ? { ABACUSAI_BOT_BROWSER: "chrome" }
+        : {}),
       // A bot's chat carries the bot's identity; this process owns the registry.
       ...(sessionId != null
         ? this.botService.personaEnvForSession(sessionId)
