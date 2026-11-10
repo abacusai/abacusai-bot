@@ -448,6 +448,25 @@ const REFUSAL_WORDS = [
   "non riesco",
   "non posso",
   "tidak bisa",
+  // A file that came out broken, said in the reply
+  "does not open",
+  "doesn't open",
+  "won't open",
+  "no abre",
+  "não abre",
+  "açılmıyor",
+  "öffnet nicht",
+  "لم أتمكن",
+  "لا أستطيع",
+  "ما قدرت",
+  "не удалось",
+  "не могу",
+  "nie udało",
+  "nie mogę",
+  "kunne ikke",
+  "kon niet",
+  "无法",
+  "できません",
 ];
 const REFUSAL = wordsPattern(REFUSAL_WORDS);
 
