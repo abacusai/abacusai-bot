@@ -37,6 +37,8 @@ export interface FeedbackOutcome {
   ok: boolean;
   /** Why not, in the platform's words; the renderer shows a generic line. */
   reason?: string;
+  /** Not taken, but worth sending again later (busy, a server error, no network). */
+  retryable?: boolean;
 }
 
 const DEFAULT_TIMEOUT_MS = 10_000;
@@ -180,7 +182,8 @@ export class FeedbackService {
   /** The chat's rating line, on the same endpoint as a thumb. */
   async rate(input: unknown): Promise<FeedbackOutcome> {
     const verdict = sanitizeChatRating(input);
-    if (verdict == null) return { ok: false, reason: "invalid" };
+    if (verdict == null)
+      return { ok: false, reason: "invalid", retryable: false };
     return this.post(verdict.sessionId, verdict.segmentId, {
       rating: verdict.rating,
       rating_id: verdict.ratingId,
@@ -200,12 +203,13 @@ export class FeedbackService {
   ): Promise<FeedbackOutcome> {
     const key = readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus];
     if (key == null || key.trim().length === 0)
-      return { ok: false, reason: "no-key" };
+      return { ok: false, reason: "no-key", retryable: false };
 
     // The server rates a synced event; make sure this turn is one.
     await this.options.debugSync.flush(sessionId);
     const sequence = this.options.debugSync.sequenceOf(sessionId, segmentId);
-    if (sequence == null) return { ok: false, reason: "not-synced" };
+    if (sequence == null)
+      return { ok: false, reason: "not-synced", retryable: true };
 
     const doFetch = this.options.fetchImpl ?? fetch;
     const controller = new AbortController();
@@ -227,6 +231,9 @@ export class FeedbackService {
         signal: controller.signal,
       });
       if (response.ok) return { ok: true };
+      // Busy or a server error may clear up; anything else is the server's
+      // final answer (a bad request, a limit reached).
+      const retryable = response.status === 409 || response.status >= 500;
       let reason = `http-${response.status}`;
       try {
         const answer = (await response.json()) as { error?: unknown };
@@ -234,10 +241,11 @@ export class FeedbackService {
       } catch {
         // The status is reason enough.
       }
-      return { ok: false, reason };
+      return { ok: false, reason, retryable };
     } catch (error) {
       return {
         ok: false,
+        retryable: true,
         reason: error instanceof Error ? error.message : String(error),
       };
     } finally {

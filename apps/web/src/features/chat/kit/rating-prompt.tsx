@@ -312,7 +312,8 @@ export const RatingPromptRow = ({
     void (async () => {
       for (const wait of COMMENT_RETRY_MS) {
         const outcome = await send(rating, ratingId, text).catch(() => null);
-        if (outcome?.ok) return;
+        // Taken, or a final answer (a limit, a bad request): stop.
+        if (outcome?.ok || outcome?.retryable === false) return;
         await new Promise((resolve) => setTimeout(resolve, wait));
       }
     })();
