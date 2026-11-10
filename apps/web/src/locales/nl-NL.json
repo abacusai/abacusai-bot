@@ -3657,6 +3657,7 @@
       "failed": "Mislukt",
       "skipped": "Overgeslagen",
       "skipped-link": "Overgeslagen: chat-app niet gekoppeld",
+      "skipped-account": "Overgeslagen: wacht op een account",
       "skipped-offline": "Overgeslagen: offline",
       "skipped-credits": "Overgeslagen: geen credits meer",
       "offline": "Kan Abacus niet bereiken",
@@ -5010,7 +5011,7 @@
   },
   "kickoff": {
     "connectOne": "Als de systeemherinnering {{name}} niet als verbonden vermeldt, roep dan eerst nu connect_connector daarvoor aan.",
-    "connectMany": "Roep eerst nu connect_connector aan voor elk van {{names}} die de systeemherinnering niet als verbonden vermeldt.",
+    "resultFirst": "Lever eerst een echt resultaat af met wat zonder account werkt, of, als de taak begint met iets dat alleen de gebruiker kan geven (hun vraag, een onderwerp, een lijst), vraag erom in één korte vraag; bied pas daarna hooguit één verbinding aan, degene die het resultaat het meest verbetert.",
     "introduce": "Stel jezelf één keer voor en {{start}}.",
     "startMission": "ga daarna aan de slag met je missie",
     "startGoal": "zet daarna de eerste stap richting wat de gebruiker vroeg: \"{{goal}}\"",
@@ -5216,6 +5217,7 @@
     "body": {
       "signedOut": "Het kan niet draaien terwijl je bent uitgelogd. Log in en het draait weer.",
       "routineLinkLost": "De uitvoeringen wachten tot {{platform}} weer verbonden is. De gemiste uitvoering wordt dan ingehaald.",
+      "routineNeedsAccount": "De check-ins wachten tot {{account}} verbonden is. Verbind het en ze starten vanzelf.",
       "loginNotFinished": "Het inloggen bij {{platform}} is niet voltooid, dus het is gepauzeerd. Klik op Verbinden om het af te ronden.",
       "missedMany_one": "{{routines}} routines hebben {{count}} uitvoering gemist terwijl de computer sliep of de app gesloten was. {{madeUp}} ingehaald.",
       "missedMany_other": "{{routines}} routines hebben {{count}} uitvoeringen gemist terwijl de computer sliep of de app gesloten was. {{madeUp}} ingehaald.",

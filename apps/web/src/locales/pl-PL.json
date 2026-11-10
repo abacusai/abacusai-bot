@@ -3795,6 +3795,7 @@
       "failed": "Niepowodzenie",
       "skipped": "Pominięto",
       "skipped-link": "Pominięto: aplikacja czatu niepołączona",
+      "skipped-account": "Pominięto: oczekiwanie na konto",
       "skipped-offline": "Pominięto: brak połączenia",
       "skipped-credits": "Pominięto: brak kredytów",
       "offline": "Brak połączenia z Abacus",
@@ -5172,7 +5173,7 @@
   },
   "kickoff": {
     "connectOne": "Najpierw, jeśli przypomnienie systemowe nie wymienia {{name}} jako połączonego, wywołaj teraz dla niego connect_connector.",
-    "connectMany": "Najpierw wywołaj teraz connect_connector dla każdego z: {{names}}, którego przypomnienie systemowe nie wymienia jako połączonego.",
+    "resultFirst": "Najpierw przekaż prawdziwy wynik zrobiony tym, co działa bez żadnego konta, albo, jeśli zadanie zaczyna się od czegoś, co może dać tylko użytkownik (jego pytanie, temat, lista), poproś o to jednym krótkim pytaniem; dopiero potem zaproponuj najwyżej jedno połączenie, to, które najbardziej poprawi wynik.",
     "introduce": "Przedstaw się raz, a potem {{start}}.",
     "startMission": "zabierz się za swoją misję",
     "startGoal": "zrób pierwszy krok w stronę tego, o co prosił użytkownik: \"{{goal}}\"",
@@ -5396,6 +5397,7 @@
     "body": {
       "signedOut": "Nie może działać po wylogowaniu. Zaloguj się, a znów ruszy.",
       "routineLinkLost": "Uruchomienia czekają na ponowne połączenie z: {{platform}}. Pominięte uruchomienie zostanie wtedy nadrobione.",
+      "routineNeedsAccount": "Jej sprawdzenia czekają, aż {{account}} zostanie połączone. Połącz je, a ruszą same.",
       "loginNotFinished": "Logowanie do: {{platform}} nie zostało dokończone, więc działanie wstrzymano. Kliknij Połącz, aby je dokończyć.",
       "missedMany_one": "Rutyny ({{routines}}) pominęły {{count}} uruchomienie, gdy komputer był uśpiony lub aplikacja zamknięta. Nadrobiono: {{madeUp}}.",
       "missedMany_other": "Rutyny ({{routines}}) pominęły {{count}} uruchomienia, gdy komputer był uśpiony lub aplikacja zamknięta. Nadrobiono: {{madeUp}}.",
