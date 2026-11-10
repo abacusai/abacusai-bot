@@ -4105,9 +4105,13 @@
     "connectTimedOut": "Przekroczono limit czasu połączenia. Spróbuj ponownie.",
     "connectFailed": "Nie udało się dokończyć łączenia. Spróbuj ponownie.",
     "connectUnreachable": "Nie można teraz połączyć się z Abacus. Sprawdź połączenie z internetem i spróbuj ponownie.",
+    "connectAppMissing": "Najpierw zainstaluj aplikację na tym komputerze, a potem połącz ponownie.",
+    "connectOtherOs": "Ten konektor wymaga systemu Windows lub macOS.",
     "connectorsLastSeen": "Nie można teraz połączyć się z Abacus. Wyświetlamy połączenia według ostatnio znanego stanu.",
     "connectorsUnchecked": "Nie można teraz połączyć się z Abacus, więc nie da się sprawdzić twoich połączeń.",
     "cantCheck": "Nie można sprawdzić",
+    "appMissing": "Nie zainstalowano",
+    "appNotReady": "Nie gotowe",
     "connectChatAppOnDesktop": "Tę aplikację czatu łączysz z poziomu aplikacji desktopowej AbacusAI Bot.",
     "connectorsDescription": "Połącz usługi, z których twój agent może korzystać przy wykonywaniu zadań.",
     "credentialsLocal": "Dane logowania są przechowywane na tym komputerze.",
@@ -4281,7 +4285,15 @@
     },
     "connecting": "Wczytywanie",
     "toolsUnavailable": "Te narzędzia nie są dostępne w tej wersji.",
-    "noInstalledSkills": "Brak zainstalowanych umiejętności w tym zakresie. Zaimportuj umiejętność lub przejrzyj marketplace."
+    "noInstalledSkills": "Brak zainstalowanych umiejętności w tym zakresie. Zaimportuj umiejętność lub przejrzyj marketplace.",
+    "localApp": {
+      "robloxStudio": {
+        "ready": "Miej swoje miejsce otwarte w Roblox Studio z włączoną opcją Enable Studio as MCP server (Assistant > … > Manage MCP Servers).",
+        "missing": "Na tym komputerze nie ma Roblox Studio. Zainstaluj je, a potem połącz ponownie.",
+        "notReady": "Roblox Studio nie odpowiedziało. Otwórz swoje miejsce w Studio, włącz Enable Studio as MCP server (Assistant > … > Manage MCP Servers) i spróbuj ponownie.",
+        "get": "Pobierz Roblox Studio"
+      }
+    }
   },
   "browserPermission": {
     "allow": "Zezwól",
