@@ -401,3 +401,4 @@ export function windowsShellPrompt(
     ...(toolchain.length > 0 ? [toolchain] : []),
   ].join("\n");
 }
+// mq-sandbox test B
