@@ -797,12 +797,42 @@ describe("R2-T25 composer", () => {
     current = await renderRelay(relay, "session", { mode: "mini" });
     expect(composer().hasAttribute("data-expanded")).toBe(false);
     const stop = await screen.findByRole("button", { name: "Stop" });
-    // The press must not take focus: focus would expand the pill and render
+    // Focus on the pill's own button must not expand it: that would render
     // the button anew, so the click would land on nothing.
-    expect(fireEvent.mouseDown(stop)).toBe(false);
+    act(() => stop.focus());
     expect(composer().hasAttribute("data-expanded")).toBe(false);
     fireEvent.click(stop);
     await waitFor(() => expect(relay.stats.cancel).toHaveLength(1));
+  });
+
+  it("mini: one press on the collapsed pill's + opens the attach menu", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll(b.sessionReady());
+    const rendered = await renderRelay(relay, "session", { mode: "mini" });
+    current = rendered;
+    expect(composer().hasAttribute("data-expanded")).toBe(false);
+    const attach = screen.getByRole("button", { name: "Attach" });
+    // Keyboard or mouse focus on + keeps the pill, and the same button
+    // stays mounted, so its press opens the menu at once.
+    act(() => attach.focus());
+    expect(composer().hasAttribute("data-expanded")).toBe(false);
+    fireEvent.click(attach);
+    const item = await screen.findByRole("menuitem", {
+      name: "Files or images",
+    });
+    // Focus moving into the menu does not expand the pill either.
+    act(() => item.focus());
+    expect(composer().hasAttribute("data-expanded")).toBe(false);
+    expect(attach.isConnected).toBe(true);
+    const pick = vi
+      .spyOn(rendered.runtime.host, "pickFiles")
+      .mockResolvedValue([{ path: "/repo/report.pdf", name: "report.pdf" }]);
+    fireEvent.click(item);
+    await screen.findByText("report.pdf");
+    expect(pick).toHaveBeenCalledTimes(1);
+    // The text field still expands the pill.
+    fireEvent.focus(field());
+    expect(composer().hasAttribute("data-expanded")).toBe(true);
   });
 
   it.each([true, false])(
