@@ -23,7 +23,8 @@ export const TurnFeedbackInputSchema = v.object({
 export const ChatRatingInputSchema = v.object({
   sessionId: SessionId,
   segmentId: v.pipe(v.string(), v.nonEmpty()),
-  ratingId: v.pipe(v.string(), v.regex(/^[A-Za-z0-9-]{8,64}$/)),
+  // Its shape is checked in main, with the rest of the verdict.
+  ratingId: v.pipe(v.string(), v.nonEmpty()),
   rating: v.picklist(CHAT_RATINGS),
   comment: v.optional(v.string()),
   taskType: v.picklist(RATING_TASK_TYPES),

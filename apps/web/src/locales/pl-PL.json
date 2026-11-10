@@ -3576,6 +3576,21 @@
     "retryOffer": {
       "try": "Spróbuj ponownie z {{model}}"
     },
+    "ratingPrompt": {
+      "question": "Jak radzi sobie bot w tym czacie?",
+      "bad": "Źle",
+      "okay": "Tak sobie",
+      "good": "Dobrze",
+      "great": "Świetnie",
+      "dismiss": "Zamknij",
+      "whatWrong": "Co poszło nie tak?",
+      "whatGood": "Co ci się podobało?",
+      "privacy": "Opcjonalnie. Nie podawaj danych osobowych.",
+      "send": "Wyślij",
+      "skip": "Pomiń",
+      "thanks": "Dziękujemy za opinię.",
+      "failed": "Nie udało się wysłać. Spróbuj ponownie:"
+    },
     "deliverableOffer": {
       "label": "Zachowaj tę odpowiedź jako dokument",
       "doc": "Zrób z tego dokument",
@@ -3963,6 +3978,8 @@
       "notificationDetail": "O czym AbacusAI Bot informuje Cię, gdy zajmujesz się czymś innym.",
       "notify": "Powiadamiaj mnie",
       "notifyDetail": "Gdy zadanie się zakończy lub narzędzie na Ciebie czeka. Tylko gdy okno nie jest aktywne.",
+      "ratingPrompt": "Pytaj, jak radzi sobie bot",
+      "ratingPromptDetail": "Od czasu do czasu jedna linia pod odpowiedzią. Wysyłana jest tylko ocena i komentarz, nigdy treść czatu.",
       "sounds": "Odtwarzaj dźwięki",
       "quietHours": "Godziny ciszy",
       "perBot": "Dla każdego bota",
