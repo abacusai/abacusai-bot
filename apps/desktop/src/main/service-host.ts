@@ -6835,6 +6835,8 @@ export class ServiceHost {
       stopped?: string;
       /** Mark each new message and tool call with this, so the last part can be told apart. */
       segment?: string;
+      /** Mark only tool calls: the messages after the last one are all its last part. */
+      joinMessages?: boolean;
       /** The message the last text belonged to. */
       messageId?: string | null;
       resolve: (text: string) => void;
@@ -6853,7 +6855,9 @@ export class ServiceHost {
         waiter.messageId != null &&
         event.messageId !== waiter.messageId
       )
-        waiter.text.push(waiter.segment);
+        waiter.text.push(
+          waiter.joinMessages === true ? "\n\n" : waiter.segment
+        );
       if (event.messageId != null) waiter.messageId = event.messageId;
       waiter.text.push(event.content);
     } else if (event.type === "tool_call_start" && waiter.segment != null)
@@ -6879,6 +6883,7 @@ export class ServiceHost {
       failed: string;
       stopped?: string;
       segment?: string;
+      joinMessages?: boolean;
     } = {
       timeout: "The routine did not answer in time.",
       failed: "The editor did not answer.",
@@ -6897,6 +6902,7 @@ export class ServiceHost {
         ...(messages.segment != null
           ? { segment: messages.segment, messageId: null }
           : {}),
+        ...(messages.joinMessages === true ? { joinMessages: true } : {}),
         resolve: (text) => {
           cancel();
           resolve(text);
@@ -7169,6 +7175,9 @@ export class ServiceHost {
           failed: "its turn ended without a report.",
           stopped: "it was stopped partway, so it may be half done.",
           segment: BOT_ANSWER_SEGMENT,
+          // A report written as several messages ("the list…", then "want me
+          // to re-check prices?") is posted whole, not only its last line.
+          joinMessages: true,
         }
       );
       // The card stops saying it waits for the chat: the prompt goes now.

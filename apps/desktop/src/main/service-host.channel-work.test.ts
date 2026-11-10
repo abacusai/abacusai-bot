@@ -25,6 +25,7 @@ vi.mock("electron", () => {
   );
 });
 const { ServiceHost } = await import("./service-host");
+const { answerWords } = await import("./services/bots/bot-ask");
 const { ConnectivityService } =
   await import("./services/connectivity/connectivity-service");
 
@@ -110,6 +111,36 @@ describe("channel work", () => {
       (self.channelService as { workStarted: ReturnType<typeof vi.fn> })
         .workStarted
     ).toHaveBeenCalledWith("w1");
+  });
+
+  it("reports everything after the last tool call, even across messages", async () => {
+    const { self, run } = workHost();
+    const feed = (event: Record<string, unknown>) =>
+      (self.feedTurnWaiter as Method)("wri-main", { type: "event", event });
+    self.sendAgentMessage = vi.fn(async () => {
+      feed({ type: "text_delta", content: "Looking it up.", messageId: "m1" });
+      feed({ type: "tool_call_start" });
+      feed({
+        type: "text_delta",
+        content: "The ranked list: 1. A",
+        messageId: "m2",
+      });
+      feed({ type: "text_delta", content: ", 2. B", messageId: "m2" });
+      feed({
+        type: "text_delta",
+        content: "Want me to re-check prices?",
+        messageId: "m3",
+      });
+      (self.settleTurnWaiter as Method)({
+        sessionId: "wri-main",
+        kind: "reply",
+      });
+      return true;
+    });
+    const report = answerWords(await run("w1"));
+    expect(report).toBe(
+      "The ranked list: 1. A, 2. B\n\nWant me to re-check prices?"
+    );
   });
 
   it("a stop before its turn starts: it never starts", async () => {
