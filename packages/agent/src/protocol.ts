@@ -631,7 +631,8 @@ export type SessionAction =
   | "effort"
   | "autocompact"
   | "export"
-  | "tasks";
+  | "tasks"
+  | "handoff";
 
 export type SessionActionResult =
   | {
@@ -644,6 +645,8 @@ export type SessionActionResult =
       path?: string;
       /** `tasks`: work still running past the turn. */
       live?: number;
+      /** `handoff`: what a new chat needs to carry on from this one. */
+      summary?: string;
     }
   | {
       ok: false;

@@ -40,6 +40,9 @@ import type {
   WorkspaceRow,
 } from "./rows";
 
+/** A hand-off summary is a few thousand words at most; this is far past that. */
+export const CONTINUATION_SUMMARY_MAX_CHARS = 60_000;
+
 const readTable = <Row, Key extends string = string>() => ({
   snapshot: query
     .input(v.optional(v.object({})))
@@ -286,6 +289,18 @@ export const PREFS_GROUP_ENTRIES = {
         off: v.boolean(),
       })
     ),
+    /** The top-model hint above the composer, shown and answered (top-model-hint.ts). */
+    topModelHint: v.nullable(
+      v.strictObject({
+        shown: v.pipe(v.number(), v.integer(), v.minValue(0)),
+        threads: v.array(v.string()),
+        shownThread: v.nullable(v.string()),
+        shownTurn: v.nullable(v.pipe(v.number(), v.integer(), v.minValue(1))),
+        dismissed: v.pipe(v.number(), v.integer(), v.minValue(0)),
+        dismissedAt: NullableTimestamp,
+        switched: v.boolean(),
+      })
+    ),
     /** The account first read on the free plan here, so a paid read after it is an upgrade. */
     freePlanSeenAt: NullableTimestamp,
     /** An older build's after-upgrade card, seen: that upgrade counts as welcomed. */
@@ -469,6 +484,17 @@ export const db = {
         model: v.optional(v.nullable(v.pipe(v.string(), v.nonEmpty()))),
         mode: v.optional(v.nullable(AgentModeSchema)),
         sponsoredFirstRun: v.optional(v.boolean()),
+        /** The chat this one continues; its summary goes with the first message. */
+        continuation: v.optional(
+          v.object({
+            sessionId: SessionId,
+            summary: v.pipe(
+              v.string(),
+              v.nonEmpty(),
+              v.maxLength(CONTINUATION_SUMMARY_MAX_CHARS)
+            ),
+          })
+        ),
       })
     ),
     /** Only `label` and `model` are writable; any other field is `FORBIDDEN`. */

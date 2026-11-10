@@ -39,6 +39,8 @@ export interface Scenario {
     deliverableOffer?: boolean;
     /** The retry offer on this model, without its caps. */
     retryOffer?: { label: string; plan: string };
+    /** The composer's top-model hint on a paying plan, without its caps. */
+    topModels?: boolean;
     /** The turns' files on the deliverables card, as the sessions route shows them. */
     deliverables?: boolean;
     /** The shell's upgrade dialog, for a line or card in the chat that opens it. */
@@ -497,6 +499,23 @@ const retryAfterComplaint = (): RelayEvent[] =>
     ),
     b.textEnd("a2"),
     b.runFinished("r2", "success", { timestamp: at(1) }),
+  ]);
+
+const headerAnswered = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn("r1", "u1", "Make the header sticky on scroll", at(3)),
+    b.textStart("a1"),
+    ...b.toolCall("c1", "edit", "a1", {
+      file_path: "/Users/me/app/header.css",
+    }),
+    b.toolResult("c1", { text: "Edited header.css" }),
+    b.textDelta(
+      "a1",
+      "Done: the header now stays at the top while you scroll."
+    ),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", { timestamp: at(2) }),
   ]);
 
 const nextStepStore = (): RelayEvent[] =>
@@ -1012,6 +1031,13 @@ export const SCENARIOS: Scenario[] = [
       placeholder: "Message your bot...",
       retryOffer: { label: "Claude Opus 5.5", plan: "Basic" },
     },
+  },
+  {
+    id: "top-model-hint-session",
+    canvas: ["TopModelHint", "session"],
+    skin: "session",
+    events: headerAnswered,
+    view: { model: "RouteLLM", topModels: true },
   },
   {
     id: "next-step-session",

@@ -2099,6 +2099,12 @@
       "undo": "Ongedaan maken",
       "discard": "Concept verwijderen: {{name}}",
       "discardMenu": "Concept verwijderen"
+    },
+    "continuation": {
+      "from": "Vervolg van",
+      "into": "Vervolgd in",
+      "startsFrom": "Begint met een samenvatting van ‘{{label}}’",
+      "drop": "Zonder beginnen"
     }
   },
   "terminalShells": {
@@ -3018,6 +3024,12 @@
       "otherProvider": "Je gebruikt {{model}}, een model van {{provider}}. Je connectors werken nog steeds, maar voor de beste resultaten met connectors en programmeren schakel je over naar RouteLLM, gratis inbegrepen bij je Abacus-account.",
       "switchToRouteLlm": "Overschakelen naar RouteLLM",
       "keepModel": "Dit model houden",
+      "topModels": {
+        "line": "Je abonnement bevat de topmodellen. Zet dit werk voort in een nieuwe chat met {{first}} of {{second}}.",
+        "lineOne": "Je abonnement bevat de topmodellen. Zet dit werk voort in een nieuwe chat met {{model}}.",
+        "all": "Alle modellen bekijken",
+        "dismiss": "Niet nu"
+      },
       "send": "Versturen",
       "skills": "Skills",
       "stop": "Stoppen",
@@ -3434,7 +3446,7 @@
       "copyFailed": "Kopiëren is niet gelukt"
     },
     "retryOffer": {
-      "try": "Probeer dit opnieuw met {{model}}"
+      "newChat": "Probeer opnieuw in een nieuwe chat met {{model}}"
     },
     "ratingPrompt": {
       "question": "Hoe doet de bot het in deze chat?",
@@ -3513,6 +3525,10 @@
       "diff": "Bekijk wat er is gewijzigd",
       "addDir": "Map toevoegen",
       "tooSmall": "Deze chat is nog te kort om in te korten"
+    },
+    "continuation": {
+      "preparing": "Nieuwe chat met {{model}} wordt voorbereid…",
+      "failed": "De nieuwe chat kon niet worden gestart. Probeer het opnieuw."
     }
   },
   "notch": {

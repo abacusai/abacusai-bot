@@ -2099,6 +2099,12 @@
       "undo": "Undo",
       "discard": "Discard draft: {{name}}",
       "discardMenu": "Discard draft"
+    },
+    "continuation": {
+      "from": "続きの元:",
+      "into": "続きの先:",
+      "startsFrom": "「{{label}}」の要約から始まります",
+      "drop": "要約なしで始める"
     }
   },
   "terminalShells": {
@@ -3018,6 +3024,12 @@
       "otherProvider": "{{provider}} のモデル {{model}} を使用しています。コネクタは引き続き使えますが、コネクタとコーディングで最良の結果を得るには、Abacus アカウントに無料で含まれる RouteLLM に切り替えてください。",
       "switchToRouteLlm": "RouteLLM に切り替える",
       "keepModel": "このモデルを使い続ける",
+      "topModels": {
+        "line": "ご利用のプランにはトップモデルが含まれています。この作業を {{first}} または {{second}} の新しいチャットで続けましょう。",
+        "lineOne": "ご利用のプランにはトップモデルが含まれています。この作業を {{model}} の新しいチャットで続けましょう。",
+        "all": "すべてのモデルを見る",
+        "dismiss": "今はしない"
+      },
       "send": "Send",
       "skills": "スキル",
       "stop": "停止",
@@ -3434,7 +3446,7 @@
       "copyFailed": "コピーできませんでした"
     },
     "retryOffer": {
-      "try": "{{model}} でもう一度試す"
+      "newChat": "新しいチャットで {{model}} を使ってもう一度試す"
     },
     "ratingPrompt": {
       "question": "このチャットでのボットはいかがですか？",
@@ -3513,6 +3525,10 @@
       "diff": "See what changed",
       "addDir": "Add a folder",
       "tooSmall": "This chat is too short to shorten yet"
+    },
+    "continuation": {
+      "preparing": "{{model}} の新しいチャットを準備しています…",
+      "failed": "新しいチャットを開始できませんでした。もう一度お試しください。"
     }
   },
   "notch": {

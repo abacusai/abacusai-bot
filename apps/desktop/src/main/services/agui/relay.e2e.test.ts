@@ -15,7 +15,11 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { AgentMode, type DesktopEvent } from "@abacus-ai/contract/agent-types";
+import {
+  AgentMode,
+  type DesktopEvent,
+  type UserTextTags,
+} from "@abacus-ai/contract/agent-types";
 import type { PermissionDescriptor } from "@abacus-ai/contract/contract";
 import {
   FakeProvider,
@@ -41,7 +45,9 @@ import {
   type InProcessConnection,
   type TestClient,
 } from "../../rpc/testing";
+import { carriesUserWords } from "../agent-tools/routine-report-delivery";
 import { AgentManagerService } from "../session/cli-manager-service";
+import { continuationNote } from "../session/continuation";
 import { ThreadStore } from "../session/thread-store";
 import { AguiRelayService } from "./relay-service";
 
@@ -105,18 +111,36 @@ afterEach(async () => {
   stack = null;
 });
 
-/** The real manager and relay, as ServiceHost wires them. */
-const build = (_options: { unused?: boolean } = {}): Stack => {
+/**
+ * The real manager and relay, as ServiceHost wires them. `models` adds model
+ * ids to the fake provider beside fake-1.
+ */
+const build = (
+  options: {
+    models?: string[];
+    /** Threads beside THREAD that the relay serves in the same workspace. */
+    threads?: string[];
+    /** Main's hidden notes on a user's message, as ServiceHost composes them. */
+    userMessageNotes?: (
+      threadId: string,
+      tags: UserTextTags | undefined
+    ) => { notes: string[]; taken: () => void };
+  } = {}
+): Stack => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "agui-e2e-"));
   const home = path.join(root, "home");
   const user = path.join(root, "user");
   const workspace = path.join(root, "workspace");
   for (const dir of [home, user, workspace])
     fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(
-    path.join(home, "config.json"),
-    fakeProviderConfig(provider)
-  );
+  const config = JSON.parse(fakeProviderConfig(provider)) as {
+    customProviders: Array<{ models: Array<{ id: string }> }>;
+  };
+  for (const id of options.models ?? [])
+    config.customProviders[0]!.models.push({ id, contextWindow: 131072 } as {
+      id: string;
+    });
+  fs.writeFileSync(path.join(home, "config.json"), JSON.stringify(config));
   // The spawned agent inherits these (AgentManagerService passes process.env).
   setEnv({
     HOME: user,
@@ -160,7 +184,10 @@ const build = (_options: { unused?: boolean } = {}): Stack => {
     ackTimeoutMs: 20_000,
     log: () => undefined,
     host: {
-      workspaceOf: (threadId) => (threadId === THREAD ? "w1" : null),
+      workspaceOf: (threadId) =>
+        threadId === THREAD || options.threads?.includes(threadId) === true
+          ? "w1"
+          : null,
       runtime: (threadId) => manager.getRuntimeInfo(threadId),
       start: async (threadId) =>
         // As the app's start: true once the agent is ready.
@@ -174,6 +201,9 @@ const build = (_options: { unused?: boolean } = {}): Stack => {
         ).success,
       send: (threadId, command) =>
         manager.sendCommandToSession(threadId, command),
+      ...(options.userMessageNotes != null
+        ? { userMessageNotes: options.userMessageNotes }
+        : {}),
       markSent: () => marks.push("sent"),
       markStopped: () => marks.push("stopped"),
     },
@@ -214,13 +244,14 @@ class Window {
 
   private constructor(
     readonly client: TestClient,
-    snapshot: Awaited<ReturnType<TestClient["ai"]["hydrate"]>>
+    snapshot: Awaited<ReturnType<TestClient["ai"]["hydrate"]>>,
+    readonly thread: string
   ) {
     this.received = snapshot.abacus.activeRun
       ? snapshot.abacus.activeRun.startSeq - 1
       : snapshot.abacus.cursor;
     this.chat = new ChatClient({
-      threadId: THREAD,
+      threadId: thread,
       initialMessages: snapshot.messages,
       queue: throwWhenBusy,
       connection: {
@@ -233,9 +264,9 @@ class Window {
     this.chat.subscribe();
   }
 
-  static async open(client: TestClient): Promise<Window> {
-    const snapshot = await client.ai.hydrate({ threadId: THREAD });
-    const window = new Window(client, snapshot);
+  static async open(client: TestClient, thread = THREAD): Promise<Window> {
+    const snapshot = await client.ai.hydrate({ threadId: thread });
+    const window = new Window(client, snapshot, thread);
     void window.#pump(snapshot.abacus.activeRun?.runId ?? null);
     return window;
   }
@@ -271,7 +302,7 @@ class Window {
     }
     if (this.#closed) return;
     const stream = await this.client.ai.subscribe({
-      threadId: THREAD,
+      threadId: this.thread,
       lastEventId: String(this.received),
     });
     this.#subscription = stream;
@@ -541,6 +572,130 @@ describe("main's AG-UI relay with a spawned agent", () => {
     );
     await window.disconnect();
   }, 120_000);
+
+  it("a chat continued on a top model: the old one is summarized, untouched, and the new one starts from the summary on the top model", async () => {
+    const NEXT = "session-e2e-next";
+    // Main's part, as ServiceHost composes it: the summary goes once, on the
+    // user's own first message in the new chat.
+    const seeds = new Map<string, string>();
+    const { client, manager, root } = build({
+      models: ["fake-top"],
+      threads: [NEXT],
+      userMessageNotes: (threadId, tags) => {
+        const seed = carriesUserWords(tags) ? seeds.get(threadId) : undefined;
+        return seed == null
+          ? { notes: [], taken: () => undefined }
+          : {
+              notes: [continuationNote(seed)],
+              taken: () => seeds.delete(threadId),
+            };
+      },
+    });
+    const SUMMARY =
+      "## Goal\nFix the crash on the login page.\n## Progress\n### Blocked\n" +
+      "- Guarding the session read in the login handler did not help: the token is still read before the check.\n" +
+      "## Next Steps\n1. Read the token only after the session check.";
+    replies = (index) =>
+      [
+        { say: "I edited the login handler." },
+        { say: "I changed how the session is read." },
+        { say: SUMMARY },
+        { say: "Found it: the token is read before the session check." },
+        { say: "Done." },
+      ][index] ?? { say: "ok" };
+    const from = provider.calls.length;
+    const old = await Window.open(client);
+    const finished = (window: Window, runId: string) =>
+      vi.waitFor(() => expect(window.has(isTerminal(runId))).toBe(true), WAIT);
+    await client.ai.send({
+      threadId: THREAD,
+      runId: "run-1",
+      messages: [userMessage("u-1", "fix the login crash")],
+    });
+    await finished(old, "run-1");
+    await client.ai.send({
+      threadId: THREAD,
+      runId: "run-2",
+      messages: [
+        userMessage("u-1", "fix the login crash"),
+        userMessage("u-2", "it still doesn't work, same error"),
+      ],
+    });
+    await finished(old, "run-2");
+
+    // The hand-off: the old chat's agent summarizes it.
+    manager.sendCommandToSession(THREAD, {
+      type: "session_action",
+      requestId: "handoff-1",
+      action: "handoff",
+    });
+    const done = await vi.waitFor(() => {
+      const event = stack!.compat.find(
+        (each) =>
+          each.type === "session_action_done" &&
+          (each as { requestId?: string }).requestId === "handoff-1"
+      ) as { result: { ok: boolean; summary?: string } } | undefined;
+      expect(event).toBeDefined();
+      return event!;
+    }, WAIT);
+    expect(done.result.ok).toBe(true);
+    expect(done.result.summary).toContain("Fix the crash on the login page.");
+    const summaryCall = provider.calls[from + 2]!;
+    expect(JSON.stringify(summaryCall.body)).toContain(
+      "context summarization assistant"
+    );
+    expect(summaryCall.userText.join("\n")).toContain(
+      "it still doesn't work, same error"
+    );
+    // Summarizing wrote nothing into the old chat: no compaction on its log.
+    const logs = fs
+      .readdirSync(root, { recursive: true, encoding: "utf8" })
+      .filter((file) => file.endsWith(".jsonl"))
+      .map((file) => fs.readFileSync(path.join(root, file), "utf8"));
+    expect(logs.join("\n")).toContain("I changed how the session is read.");
+    expect(logs.join("\n")).not.toContain('"type":"compaction"');
+
+    // The new chat: its first message, on the top model, carries the summary.
+    seeds.set(NEXT, done.result.summary!);
+    const next = await Window.open(client, NEXT);
+    await client.ai.send({
+      threadId: NEXT,
+      runId: "run-3",
+      messages: [userMessage("n-1", "it still doesn't work, same error")],
+      forwardedProps: { model: "fake/fake-top" },
+    });
+    await finished(next, "run-3");
+    await client.ai.send({
+      threadId: NEXT,
+      runId: "run-4",
+      messages: [
+        userMessage("n-1", "it still doesn't work, same error"),
+        userMessage("n-2", "now add a test for it"),
+      ],
+    });
+    await finished(next, "run-4");
+    const [first, second] = provider.calls.slice(from + 3);
+    expect([first!.model, second!.model]).toEqual(["fake-top", "fake-top"]);
+    const asked = first!.userText.join("\n");
+    expect(asked).toContain("You do not have its history");
+    expect(asked).toContain("Fix the crash on the login page.");
+    expect(asked).toContain("it still doesn't work, same error");
+    // Not the old chat's history: only its summary.
+    expect(JSON.stringify(first!.messages)).not.toContain(
+      "I edited the login handler."
+    );
+    // Sent once: the later message does not carry it again.
+    expect(
+      second!.userText.join("\n").split("You do not have its history").length
+    ).toBe(2);
+    expect(seeds.has(NEXT)).toBe(false);
+    // The old chat is still on its own model.
+    expect(
+      provider.calls.slice(from, from + 2).map((call) => call.model)
+    ).toEqual(["fake-1", "fake-1"]);
+    await old.disconnect();
+    await next.disconnect();
+  }, 180_000);
 
   it("converts text, multi-line and attachment-only UIMessages at the boundary, keeping the client ids (spec 02 §14.2)", async () => {
     const { client } = build();

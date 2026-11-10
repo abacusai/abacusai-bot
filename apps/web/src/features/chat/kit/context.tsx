@@ -54,6 +54,11 @@ export interface ModelChipBinding {
     free: boolean;
     onSwitch(): void;
   };
+  /**
+   * A paying plan's chat on its low-cost router: the composer offers the
+   * plan's top models (top-model-hint.tsx). `tier` is the plan's.
+   */
+  topModels?: { tier: string };
   value: string | null;
   label: string;
   /** App default's model by id, while `value` is null: whose mark and provider the chip shows. */
@@ -107,6 +112,12 @@ export interface ComposerConfig {
    * moves its bot. Answers which of the two moved.
    */
   onSwitchThisChat?(model: string): Promise<"chat" | "bot">;
+  /**
+   * A new chat on `model` that starts from a summary of this one, which
+   * keeps its own model (continue-chat.ts). With `prompt`, it is sent there
+   * at once. Only a listed session chat has it.
+   */
+  onContinueInNewChat?(model: string, prompt?: string): Promise<void>;
   /** 03-bots §24.2: sent as `forwardedProps.mode` on every admission. */
   fixedMode?: AgentMode;
   /** Sessions: `agent.setMode` for a live runtime (the route knows the workspace). */
@@ -188,6 +199,8 @@ export interface ChatViewSlots {
   deliverableOfferPreview?: boolean;
   /** The gallery shows the retry offer on this model, without its caps. */
   retryOfferPreview?: { label: string; plan: string };
+  /** The gallery's top-model hint: these models, without the account, plan or caps. */
+  topModelHintPreview?: { choices: Array<{ id: string; label: string }> };
   /** A turn's files as the route's deliverables card, opening the way it does. */
   renderDeliverables?: (items: readonly TurnDeliverable[]) => ReactNode;
   /** Route-owned actions beside the permission card (sessions §17.1). */

@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { StartComposer } from "#renderer/features/chat/composer/start-composer";
 import { COMPOSER_CONNECTORS } from "#renderer/features/library/composer-connectors";
+import { ContinuationStartLine } from "#renderer/features/sessions/continuation-links";
 import { useSessionComposerModel } from "#renderer/features/sessions/data/composer-model";
 import { restoreSessionDraft } from "#renderer/features/sessions/start/session-drafts";
 import {
@@ -127,6 +128,16 @@ const SessionsNewRoute = () => {
                 }}
                 submit={binding.submit}
               />
+              {draft.continuation != null && (
+                <ContinuationStartLine
+                  sessionId={draft.continuation.sessionId}
+                  onDrop={() =>
+                    startDraftStore.setState(
+                      ({ continuation: _dropped, ...rest }) => rest
+                    )
+                  }
+                />
+              )}
               <StartComposer
                 key={binding.threadId}
                 threadId={binding.threadId}

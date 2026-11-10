@@ -2121,6 +2121,12 @@
       "undo": "Cofnij",
       "discard": "Odrzuć szkic: {{name}}",
       "discardMenu": "Odrzuć szkic"
+    },
+    "continuation": {
+      "from": "Kontynuacja rozmowy",
+      "into": "Kontynuowane w",
+      "startsFrom": "Zaczyna od podsumowania „{{label}}”",
+      "drop": "Zacznij bez niego"
     }
   },
   "terminalShells": {
@@ -3054,6 +3060,12 @@
       "otherProvider": "Używasz {{model}}, modelu od {{provider}}. Twoje konektory nadal działają, ale aby uzyskać najlepsze wyniki z konektorami i przy kodowaniu, przełącz się na RouteLLM – dostępny za darmo w ramach konta Abacus.",
       "switchToRouteLlm": "Przełącz na RouteLLM",
       "keepModel": "Zostaw ten model",
+      "topModels": {
+        "line": "Twój plan obejmuje najlepsze modele. Kontynuuj tę pracę w nowej rozmowie z {{first}} lub {{second}}.",
+        "lineOne": "Twój plan obejmuje najlepsze modele. Kontynuuj tę pracę w nowej rozmowie z {{model}}.",
+        "all": "Zobacz wszystkie modele",
+        "dismiss": "Nie teraz"
+      },
       "send": "Wyślij",
       "skills": "Umiejętności",
       "stop": "Zatrzymaj",
@@ -3570,7 +3582,7 @@
       "copyFailed": "Nie udało się skopiować"
     },
     "retryOffer": {
-      "try": "Spróbuj ponownie z {{model}}"
+      "newChat": "Spróbuj ponownie w nowej rozmowie z {{model}}"
     },
     "ratingPrompt": {
       "question": "Jak radzi sobie bot w tym czacie?",
@@ -3649,6 +3661,10 @@
       "diff": "Zobacz, co się zmieniło",
       "addDir": "Dodaj folder",
       "tooSmall": "Ten czat jest jeszcze za krótki, by go skrócić"
+    },
+    "continuation": {
+      "preparing": "Przygotowywanie nowej rozmowy z {{model}}…",
+      "failed": "Nie udało się rozpocząć nowej rozmowy. Spróbuj ponownie."
     }
   },
   "notch": {

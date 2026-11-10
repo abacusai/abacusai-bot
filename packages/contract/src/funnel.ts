@@ -70,7 +70,8 @@ export const FUNNEL_STEPS = [
   "work_waiting_shown",
   "work_waiting_clicked",
   // The retry on a top model (retry-offer.ts). The account's half, once (on
-  // or off); the line, by why it showed; a tap and a close.
+  // or off); the line, by why it showed (with _paid on a paying plan); a tap
+  // and a close; and the message sent again on the model, once switched.
   "retry_offer_half",
   "retry_offer_shown",
   "retry_offer_tapped",
@@ -81,6 +82,14 @@ export const FUNNEL_STEPS = [
   "rating_prompt_answered",
   "rating_prompt_commented",
   "rating_prompt_dismissed",
+  "retry_offer_resumed",
+  // A paying plan's chat on its low-cost router: the top-model hint
+  // (top-model-hint.ts). Shown (detail: the plan tier); a button tapped
+  // (sonnet, opus or all); the chat switched (sonnet or opus); closed.
+  "top_model_hint_shown",
+  "top_model_hint_tapped",
+  "top_model_hint_switched",
+  "top_model_hint_dismissed",
   // The agent asked for a routine that already exists, and got that one back;
   // the detail is how it compared (same, alike or check-in) and where it lives.
   "routine_duplicate_avoided",

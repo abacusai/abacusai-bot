@@ -29,6 +29,7 @@ import type {
 } from "../routines";
 import type { SiteReadyMark } from "../site-deploy";
 import type { SuccessPitchCard, SuccessPitchMark } from "../success-pitch";
+import type { TopModelHintCard } from "../top-model-hint";
 
 /** Random per main-process start; seqs compare only within one epoch. */
 export type Epoch = string;
@@ -70,7 +71,15 @@ export type SessionRow = Omit<AgentSessionListItem, "worktreeOperationId"> & {
   worktreeOperationId?: string | null;
   /** Create-only input: the session onboarding opens first runs on the house. */
   sponsoredFirstRun?: boolean;
+  /** Create-only input: the chat this one continues, and its summary. */
+  continuation?: SessionContinuation;
 };
+
+/** A chat started from another on a top model: the summary its first message carries. */
+export interface SessionContinuation {
+  sessionId: string;
+  summary: string;
+}
 
 export type BotRow = Bot & {
   /** Create-only input; main replaces this with sponsoredUntil in its echo. */
@@ -214,6 +223,8 @@ export interface PrefsRow {
     retryOffer?: DeliverableOfferCard | null;
     /** The rating line: asked, answered, closed, or turned off. */
     ratingPrompt?: RatingPromptCard | null;
+    /** The top-model hint above the composer, shown and answered. */
+    topModelHint?: TopModelHintCard | null;
     freePlanSeenAt: number | null;
     upgradeRoutinesSeenAt: number | null;
     routineDuplicatesKept: string[];

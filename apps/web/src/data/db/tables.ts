@@ -117,6 +117,7 @@ export const sessionsCollectionOptions = (
       model: row.model,
       mode: row.mode,
       ...(row.sponsoredFirstRun === true ? { sponsoredFirstRun: true } : {}),
+      ...(row.continuation != null ? { continuation: row.continuation } : {}),
     }),
     toUpdateInput: (id, changes) => ({
       id,

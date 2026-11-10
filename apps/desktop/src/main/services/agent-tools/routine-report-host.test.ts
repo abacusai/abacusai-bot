@@ -142,6 +142,9 @@ const harness = (options: { quiet?: boolean; platform?: string } = {}) => {
       isRoutineSession: (id: string) => sessions.get(id)?.routineId != null,
       setRunOutcome: () => true,
       get: (id: string) => sessions.get(id) ?? null,
+      // No chat here continues another: no summary owed.
+      continuationSeed: () => null,
+      takeContinuationSeed: () => undefined,
       setRunReport: (id: string, report: { to: string; text: string }) => {
         const session = sessions.get(id);
         if (session != null) session.report = report;
@@ -175,6 +178,7 @@ const harness = (options: { quiet?: boolean; platform?: string } = {}) => {
     "reportChatOf",
     "reportLanesOf",
     "routineReportNotes",
+    "userMessageNotes",
     "routineDeliversToSelf",
     "routineOrigin",
     "replyChatOf",

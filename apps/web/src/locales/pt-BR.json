@@ -2099,6 +2099,12 @@
       "undo": "Undo",
       "discard": "Discard draft: {{name}}",
       "discardMenu": "Discard draft"
+    },
+    "continuation": {
+      "from": "Continuação de",
+      "into": "Continua em",
+      "startsFrom": "Começa com um resumo de “{{label}}”",
+      "drop": "Começar sem ele"
     }
   },
   "terminalShells": {
@@ -3018,6 +3024,12 @@
       "otherProvider": "Você está usando {{model}}, um modelo de {{provider}}. Seus conectores continuam funcionando, mas para os melhores resultados com conectores e programação, mude para o RouteLLM, incluído gratuitamente na sua conta Abacus.",
       "switchToRouteLlm": "Mudar para o RouteLLM",
       "keepModel": "Manter este modelo",
+      "topModels": {
+        "line": "Seu plano inclui os melhores modelos. Continue este trabalho em um novo chat com {{first}} ou {{second}}.",
+        "lineOne": "Seu plano inclui os melhores modelos. Continue este trabalho em um novo chat com {{model}}.",
+        "all": "Ver todos os modelos",
+        "dismiss": "Agora não"
+      },
       "send": "Send",
       "skills": "Skills",
       "stop": "Parar",
@@ -3434,7 +3446,7 @@
       "copyFailed": "Não foi possível copiar"
     },
     "retryOffer": {
-      "try": "Tentar de novo com {{model}}"
+      "newChat": "Tentar de novo em um novo chat com {{model}}"
     },
     "ratingPrompt": {
       "question": "Como o bot está se saindo neste chat?",
@@ -3513,6 +3525,10 @@
       "diff": "See what changed",
       "addDir": "Add a folder",
       "tooSmall": "This chat is too short to shorten yet"
+    },
+    "continuation": {
+      "preparing": "Preparando um novo chat com {{model}}…",
+      "failed": "Não foi possível iniciar o novo chat. Tente de novo."
     }
   },
   "notch": {

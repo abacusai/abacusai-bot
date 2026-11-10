@@ -53,6 +53,7 @@ export const AgentActionRequestSchema = v.object({
     "autocompact",
     "export",
     "tasks",
+    "handoff",
   ]),
   value: v.optional(v.string()),
 });

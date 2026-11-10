@@ -710,3 +710,59 @@ describe("automatic personal session names", () => {
     }
   });
 });
+
+describe("a chat continued from another on a top model", () => {
+  const SUMMARY = "## Goal\nFix the login crash.";
+
+  it("links a listed chat in the same folder and owes its first message the summary, once", () => {
+    const source = service.create(WORKSPACE);
+    const next = service.create(WORKSPACE, null, null, null, undefined, {
+      model: "abacus/claude-opus-5-5",
+      continuedFrom: { sessionId: source.id, summary: SUMMARY },
+    });
+
+    expect(next).toMatchObject({
+      continuedFrom: source.id,
+      model: "abacus/claude-opus-5-5",
+    });
+    // The old chat keeps its own model and gains no link of its own.
+    expect(
+      service.list(WORKSPACE).find((item) => item.id === source.id)
+    ).not.toHaveProperty("continuedFrom");
+    expect(service.continuationSeed(next.id)).toBe(SUMMARY);
+    // Survives a restart until it is sent.
+    const loaded = new AgentSessionManagerService();
+    loaded.initialize([WORKSPACE]);
+    expect(loaded.continuationSeed(next.id)).toBe(SUMMARY);
+
+    service.takeContinuationSeed(next.id);
+    expect(service.continuationSeed(next.id)).toBeNull();
+    // The link stays; only the summary is spent.
+    expect(service.get(next.id)).toMatchObject({ continuedFrom: source.id });
+    const reloaded = new AgentSessionManagerService();
+    reloaded.initialize([WORKSPACE]);
+    expect(reloaded.continuationSeed(next.id)).toBeNull();
+  });
+
+  it("mints a plain chat when the source is a bot's, a routine's, gone or in another folder", () => {
+    stored.set("localCode.agentSessions", [
+      record({ id: "other-folder", workspaceId: "ws-2" }),
+    ]);
+    service = new AgentSessionManagerService();
+    service.initialize([WORKSPACE, "ws-2"]);
+    const bots = service.create(WORKSPACE, null, {
+      kind: "bot",
+      botId: "b1",
+      role: "forever",
+      key: null,
+    });
+    const routine = service.create(WORKSPACE, "routine-1");
+    for (const sessionId of [bots.id, routine.id, "gone", "other-folder"]) {
+      const made = service.create(WORKSPACE, null, null, null, undefined, {
+        continuedFrom: { sessionId, summary: SUMMARY },
+      });
+      expect(made).not.toHaveProperty("continuedFrom");
+      expect(service.continuationSeed(made.id)).toBeNull();
+    }
+  });
+});

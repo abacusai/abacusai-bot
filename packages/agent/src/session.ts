@@ -3189,7 +3189,13 @@ export class AbacusBotSession {
     action: SessionAction,
     value: string | undefined
   ): Promise<SessionActionResult> {
-    return runSessionAction(this.session, this.options.cwd, action, value);
+    return runSessionAction(
+      this.session,
+      this.options.cwd,
+      action,
+      value,
+      (tokens) => this.governor.handoffSummarizer(tokens, this.session?.model)
+    );
   }
 
   /** Start a fresh conversation, discarding the transcript but keeping the process. */

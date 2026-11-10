@@ -139,6 +139,12 @@ const MODEL_GROUPS = [
   },
 ];
 
+/** The paying plan's top models in the gallery, as the hint offers them. */
+const TOP_MODEL_PREVIEW = [
+  { id: "claude-sonnet-5-5", label: "Claude Sonnet 5.5" },
+  { id: "claude-opus-5-5", label: "Claude Opus 5.5" },
+];
+
 const composerFor = (
   scenario: Scenario,
   model: { value: string | null; set(id: string | null): void }
@@ -158,12 +164,24 @@ const composerFor = (
       ? {
           value: model.value,
           label:
-            MODEL_GROUPS[0]!.items.find((item) => item.id === model.value)
-              ?.label ?? scenario.view.model,
+            [...MODEL_GROUPS[0]!.items, ...TOP_MODEL_PREVIEW].find(
+              (item) => item.id === model.value
+            )?.label ?? scenario.view.model,
           onChange: model.set,
           groups: MODEL_GROUPS,
+          // A paying plan on its router: the hint, until the chat moves.
+          ...(scenario.view.topModels === true && model.value === "route-llm"
+            ? { topModels: { tier: "basic" } }
+            : {}),
         }
       : null,
+  ...(scenario.view?.topModels === true
+    ? {
+        // The summary takes a moment; the gallery opens no chat.
+        onContinueInNewChat: () =>
+          new Promise<void>((resolve) => setTimeout(resolve, 1_500)),
+      }
+    : {}),
   ...(scenario.view?.readOnly != null
     ? { readOnly: { reason: scenario.view.readOnly } }
     : {}),
@@ -295,6 +313,9 @@ const gallerySlots = (scenario: Scenario, threadId: string): ChatViewSlots => ({
   }),
   ...(scenario.view?.retryOffer != null && {
     retryOfferPreview: scenario.view.retryOffer,
+  }),
+  ...(scenario.view?.topModels === true && {
+    topModelHintPreview: { choices: TOP_MODEL_PREVIEW },
   }),
   ...(scenario.view?.deliverables === true && {
     decorateMessage: (message, context) => {

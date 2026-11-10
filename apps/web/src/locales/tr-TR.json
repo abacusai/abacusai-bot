@@ -2099,6 +2099,12 @@
       "undo": "Geri al",
       "discard": "Taslağı at: {{name}}",
       "discardMenu": "Taslağı at"
+    },
+    "continuation": {
+      "from": "Şuradan devam:",
+      "into": "Şurada devam ediyor:",
+      "startsFrom": "“{{label}}” sohbetinin özetiyle başlar",
+      "drop": "Özetsiz başla"
     }
   },
   "terminalShells": {
@@ -3018,6 +3024,12 @@
       "otherProvider": "{{provider}} sağlayıcısının modeli {{model}} kullanıyorsun. Bağlayıcıların çalışmaya devam ediyor, ancak bağlayıcılar ve kodlamada en iyi sonuç için Abacus hesabına ücretsiz dahil olan RouteLLM'e geç.",
       "switchToRouteLlm": "RouteLLM'e geç",
       "keepModel": "Bu modelde kal",
+      "topModels": {
+        "line": "Planın en iyi modelleri içeriyor. Bu işe {{first}} veya {{second}} ile yeni bir sohbette devam et.",
+        "lineOne": "Planın en iyi modelleri içeriyor. Bu işe {{model}} ile yeni bir sohbette devam et.",
+        "all": "Tüm modelleri gör",
+        "dismiss": "Şimdi değil"
+      },
       "send": "Gönder",
       "skills": "Beceriler",
       "stop": "Durdur",
@@ -3434,7 +3446,7 @@
       "copyFailed": "Kopyalanamadı"
     },
     "retryOffer": {
-      "try": "{{model}} ile tekrar dene"
+      "newChat": "{{model}} ile yeni bir sohbette tekrar dene"
     },
     "ratingPrompt": {
       "question": "Bot bu sohbette nasıl gidiyor?",
@@ -3513,6 +3525,10 @@
       "diff": "See what changed",
       "addDir": "Add a folder",
       "tooSmall": "This chat is too short to shorten yet"
+    },
+    "continuation": {
+      "preparing": "{{model}} ile yeni bir sohbet hazırlanıyor…",
+      "failed": "Yeni sohbet başlatılamadı. Tekrar dene."
     }
   },
   "notch": {

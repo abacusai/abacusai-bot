@@ -87,6 +87,10 @@ import { SessionKnownFiles } from "#renderer/features/sessions/chat/known-files"
 import { SessionContextTray } from "#renderer/features/sessions/context/context-tray";
 import { SessionPermissionAction } from "#renderer/features/sessions/context/permission-terminal-action";
 import { SessionTasks } from "#renderer/features/sessions/context/tasks";
+import {
+  useContinuationLinks,
+  withContinuationLinks,
+} from "#renderer/features/sessions/continuation-links";
 import { useSessionComposerModel } from "#renderer/features/sessions/data/composer-model";
 import {
   useSession,
@@ -352,6 +356,7 @@ const SessionRoute = () => {
   const db = useDb();
   // Its routines' reports, as the app delivered them here.
   const reports = useRunReports(sessionId);
+  const continuations = useContinuationLinks(row);
   const sharedCommands = useChatCommands(
     row ? { workspaceId: row.workspaceId, sessionId } : null
   );
@@ -567,51 +572,55 @@ const SessionRoute = () => {
               ),
               renderDeliverables: (items) =>
                 sessionDeliverablesCard(items, deliverableOptions),
-              decorateMessage: withRunReports((message, context) => {
-                if (message.role !== "assistant") return null;
-                // A coalesced row is keyed by its host; the turn's carrier
-                // may be any message folded into it, so use the last of them.
-                const at = rowEndIndex(message, context);
-                const files =
-                  at < 0
-                    ? null
-                    : deliverablesAfter(
-                        context.messages,
-                        at,
-                        context.runActive
-                      );
-                const after =
-                  files == null
-                    ? undefined
-                    : sessionDeliverablesCard(files, deliverableOptions);
-                if (context.runActive && at === context.messages.length - 1)
-                  return after != null ? { after } : null;
-                // Keyed on the stored host message, not the shown row: the
-                // key counts stored parts, and the tool-only messages folded
-                // in after it hold no text. Nothing spoken, nothing to rate.
-                const stored = context.messages.find(
-                  (row) => row.id === message.id
-                );
-                const segmentId =
-                  stored == null ? null : feedbackSegmentId(stored);
-                if (segmentId == null) return after != null ? { after } : null;
-                return {
-                  ...(after != null ? { after } : {}),
-                  actions: (
-                    <MessageFeedback
-                      id={`${sessionId}:${segmentId}`}
-                      send={(rating, comment) =>
-                        transport.client.agent.feedback({
-                          sessionId,
-                          segmentId,
-                          rating,
-                          ...(comment ? { comment } : {}),
-                        })
-                      }
-                    />
-                  ),
-                };
-              }, reports),
+              decorateMessage: withContinuationLinks(
+                withRunReports((message, context) => {
+                  if (message.role !== "assistant") return null;
+                  // A coalesced row is keyed by its host; the turn's carrier
+                  // may be any message folded into it, so use the last of them.
+                  const at = rowEndIndex(message, context);
+                  const files =
+                    at < 0
+                      ? null
+                      : deliverablesAfter(
+                          context.messages,
+                          at,
+                          context.runActive
+                        );
+                  const after =
+                    files == null
+                      ? undefined
+                      : sessionDeliverablesCard(files, deliverableOptions);
+                  if (context.runActive && at === context.messages.length - 1)
+                    return after != null ? { after } : null;
+                  // Keyed on the stored host message, not the shown row: the
+                  // key counts stored parts, and the tool-only messages folded
+                  // in after it hold no text. Nothing spoken, nothing to rate.
+                  const stored = context.messages.find(
+                    (row) => row.id === message.id
+                  );
+                  const segmentId =
+                    stored == null ? null : feedbackSegmentId(stored);
+                  if (segmentId == null)
+                    return after != null ? { after } : null;
+                  return {
+                    ...(after != null ? { after } : {}),
+                    actions: (
+                      <MessageFeedback
+                        id={`${sessionId}:${segmentId}`}
+                        send={(rating, comment) =>
+                          transport.client.agent.feedback({
+                            sessionId,
+                            segmentId,
+                            rating,
+                            ...(comment ? { comment } : {}),
+                          })
+                        }
+                      />
+                    ),
+                  };
+                }, reports),
+                continuations
+              ),
               permissionActions: (descriptor) => (
                 <SessionPermissionAction
                   request={
@@ -669,6 +678,7 @@ const SessionRoute = () => {
                 }),
               onResumeOnModel: model.onResumeOnModel,
               onSwitchThisChat: model.onSwitchThisChat,
+              onContinueInNewChat: model.onContinueInNewChat,
               availableModes: model.availableModes,
               defaultMode: row.mode ?? prefs.defaultMode,
               blocked: model.blocked,

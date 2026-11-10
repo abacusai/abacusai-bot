@@ -2099,6 +2099,12 @@
       "undo": "Undo",
       "discard": "Discard draft: {{name}}",
       "discardMenu": "Discard draft"
+    },
+    "continuation": {
+      "from": "Lanjutan dari",
+      "into": "Dilanjutkan di",
+      "startsFrom": "Dimulai dari ringkasan “{{label}}”",
+      "drop": "Mulai tanpa ringkasan"
     }
   },
   "terminalShells": {
@@ -3018,6 +3024,12 @@
       "otherProvider": "Anda menggunakan {{model}}, model dari {{provider}}. Konektor Anda tetap berfungsi, tetapi untuk hasil terbaik dengan konektor dan coding, beralihlah ke RouteLLM, gratis bersama akun Abacus Anda.",
       "switchToRouteLlm": "Beralih ke RouteLLM",
       "keepModel": "Tetap pakai model ini",
+      "topModels": {
+        "line": "Paket Anda mencakup model-model teratas. Lanjutkan pekerjaan ini di chat baru dengan {{first}} atau {{second}}.",
+        "lineOne": "Paket Anda mencakup model-model teratas. Lanjutkan pekerjaan ini di chat baru dengan {{model}}.",
+        "all": "Lihat semua model",
+        "dismiss": "Nanti saja"
+      },
       "send": "Send",
       "skills": "Skills",
       "stop": "Hentikan",
@@ -3434,7 +3446,7 @@
       "copyFailed": "Gagal menyalin"
     },
     "retryOffer": {
-      "try": "Coba lagi dengan {{model}}"
+      "newChat": "Coba lagi di chat baru dengan {{model}}"
     },
     "ratingPrompt": {
       "question": "Bagaimana kinerja bot di chat ini?",
@@ -3513,6 +3525,10 @@
       "diff": "See what changed",
       "addDir": "Add a folder",
       "tooSmall": "This chat is too short to shorten yet"
+    },
+    "continuation": {
+      "preparing": "Menyiapkan chat baru dengan {{model}}…",
+      "failed": "Chat baru tidak dapat dimulai. Coba lagi."
     }
   },
   "notch": {

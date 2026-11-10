@@ -21,6 +21,7 @@
     "./next-step": "./src/next-step.ts",
     "./rating-prompt": "./src/rating-prompt.ts",
     "./retry-offer": "./src/retry-offer.ts",
+    "./top-model-hint": "./src/top-model-hint.ts",
     "./exec-backends": "./src/exec-backends.ts",
     "./experience": "./src/experience.ts",
     "./forbidden": "./src/forbidden.ts",

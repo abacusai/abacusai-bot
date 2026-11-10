@@ -1,4 +1,7 @@
-import type { ModelAvailability } from "@abacus-ai/contract/models";
+import {
+  ABACUS_CODE_ROUTER_LOW_ID,
+  type ModelAvailability,
+} from "@abacus-ai/contract/models";
 import { providerDisplayName } from "@abacus-ai/contract/settings";
 
 /**
@@ -144,7 +147,7 @@ export const ownKeyWords = (
 };
 
 /** The low code router: what a paid plan runs when nothing else is chosen. */
-const ABACUS_DEFAULT_MODEL_ID = "abacus/route-llm-code-low";
+const ABACUS_DEFAULT_MODEL_ID = ABACUS_CODE_ROUTER_LOW_ID;
 
 /**
  * The model the waiting message sends on once the plan is active: the

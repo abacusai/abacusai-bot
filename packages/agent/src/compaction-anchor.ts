@@ -32,7 +32,8 @@ const DIGEST_MAX_CHARS = 24_000;
 const clip = (text: string, max: number): string =>
   text.length <= max ? text : `${text.slice(0, max)}…`;
 
-const textOf = (content: unknown): string => {
+/** A message's plain text: its text blocks, without tool calls or images. */
+export const textOf = (content: unknown): string => {
   if (typeof content === "string") return content;
   if (!Array.isArray(content)) return "";
 

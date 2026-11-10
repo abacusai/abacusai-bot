@@ -1,6 +1,10 @@
 import { AgentMode } from "@abacus-ai/contract/agent-types";
 import type { SessionRow } from "@abacus-ai/contract/contract/rows";
-import { OPENLLM_ID, resolveConfiguredModel } from "@abacus-ai/contract/models";
+import {
+  ABACUS_CODE_ROUTER_LOW_ID,
+  OPENLLM_ID,
+  resolveConfiguredModel,
+} from "@abacus-ai/contract/models";
 import { useQuery } from "@tanstack/react-query";
 import { useSelector } from "@tanstack/react-store";
 import { useState } from "react";
@@ -14,17 +18,19 @@ import {
 } from "#renderer/components/model-groups";
 import { useModelSetup } from "#renderer/components/model-setup/use-model-setup";
 import { useDb } from "#renderer/data/db";
+import { isListedSession, isListedWorkspace } from "#renderer/data/db/filters";
 import { usePrefs } from "#renderer/data/db/prefs";
 import {
   draftStore,
   updateDraft,
 } from "#renderer/lib/continuity/composer-drafts";
-import { creditsTier } from "#renderer/lib/credits";
+import { accountTier, creditsTier } from "#renderer/lib/credits";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { showError } from "#renderer/lib/toast";
 import { requestPlanDialog } from "#renderer/lib/upgrade-dialog";
 import { useCreditsAccount } from "#renderer/lib/use-credits-account";
 
+import { continueInNewChat } from "./continue-chat";
 import { useCheckoutQueries, useSessionsTransport } from "./queries";
 import { setSessionModel } from "./session-actions";
 export const useSessionComposerModel = (
@@ -96,6 +102,15 @@ export const useSessionComposerModel = (
   const other = chip?.unavailable
     ? null
     : otherProviderModel(value, settings.data?.defaultModel, models);
+  // A paying plan on its low-cost router: the composer offers its top models.
+  const tier = creditsTier(account.data);
+  const topModels =
+    (tier === "basic" || tier === "paid") &&
+    (value ?? selected) === ABACUS_CODE_ROUTER_LOW_ID
+      ? { tier: accountTier(account.data) ?? tier }
+      : null;
+  const workspace = row ? db.collections.workspaces.get(row.workspaceId) : null;
+  const listedWorkspace = workspace != null && isListedWorkspace(workspace);
   const setup = useModelSetup({
     models,
     loading: catalog.isPending || settings.isPending,
@@ -128,6 +143,24 @@ export const useSessionComposerModel = (
       }
       return "chat" as const;
     },
+    // A listed chat only: a bot's chats and routine runs keep their model.
+    ...(row != null && isListedSession(row) && listedWorkspace
+      ? {
+          onContinueInNewChat: (id: string, prompt?: string) =>
+            continueInNewChat({
+              client: transport.client,
+              row,
+              model: id,
+              ...(prompt != null ? { prompt } : {}),
+              open: (search) =>
+                navigate({
+                  to: "/sessions/new",
+                  search,
+                  transition: "nav-forward",
+                }),
+            }),
+        }
+      : {}),
     missing: checkout.data?.exists === false,
     availableModes: sandbox.data?.available
       ? [
@@ -167,6 +200,7 @@ export const useSessionComposerModel = (
             },
           }
         : {}),
+      ...(topModels != null ? { topModels } : {}),
       value,
       resolved: selected,
       label: chip?.label ?? t("sessions.model.choose"),

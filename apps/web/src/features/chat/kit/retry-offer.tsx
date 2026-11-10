@@ -1,14 +1,23 @@
-import { planTopModelNames, wallOffer } from "@abacus-ai/contract/billing-plan";
+import {
+  currentPlanTopModelNames,
+  planTopModelNames,
+  wallOffer,
+} from "@abacus-ai/contract/billing-plan";
 /**
  * The retry offer's line (contract retry-offer.ts): under the latest reply
- * when a free account's task went badly, the same task again on one of the
- * plan's top models. A tap opens the upgrade dialog with the message waiting,
- * and once paid it runs again on that model. Caps live in prefs.
+ * when a task went badly, the same task again on one of the plan's top
+ * models, in a new chat that starts from a summary of this one
+ * (continue-chat.ts): the top model reads a page instead of the whole stuck
+ * history, and this chat keeps its model. On a free account a tap opens the
+ * upgrade dialog with the message waiting, and once paid the new chat starts;
+ * a paying plan already runs the model, so a tap starts it at once. Only a
+ * listed session chat has it. Caps live in prefs.
  */
 import {
   isSuggestTasksTool,
   suggestsNextStep,
 } from "@abacus-ai/contract/bots/suggested-tasks";
+import type { PrefsRow } from "@abacus-ai/contract/contract/rows";
 import { creditAccountKey } from "@abacus-ai/contract/credit-thresholds";
 import {
   type DeliverableOfferCard,
@@ -23,9 +32,10 @@ import {
   type RetryOfferReason,
   retryOfferReason,
 } from "@abacus-ai/contract/retry-offer";
+import { EMPTY_TOP_MODEL_HINT_CARD } from "@abacus-ai/contract/top-model-hint";
 import type { UIMessage } from "@tanstack/ai-client";
 import { useQuery } from "@tanstack/react-query";
-import { RotateCcw, X } from "lucide-react";
+import { Loader2, RotateCcw, X } from "lucide-react";
 import { useEffect, useEffectEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -35,6 +45,7 @@ import { messageTools } from "#renderer/lib/bot-turns/tool-parts";
 import { turnReplyText, turnsOf } from "#renderer/lib/bot-turns/turns";
 import { creditsTier } from "#renderer/lib/credits";
 import { IS_ELECTRON } from "#renderer/lib/platform";
+import { showError } from "#renderer/lib/toast";
 import {
   lastUserText,
   requestUpgradeDialog,
@@ -48,7 +59,7 @@ import { useHost, useThreadStore } from "../store/selectors";
 import { useChatView } from "./context";
 import { deliverableOfferTarget, isWorkTool } from "./deliverable-offer";
 import { useTailCardClaim } from "./tail-cards";
-import { isLive, useUpgradeResume } from "./upgrade-triggers";
+import { isLive } from "./upgrade-triggers";
 
 export interface RetryOfferTarget {
   /** The reply's message id. */
@@ -106,6 +117,17 @@ export const retryOfferTarget = (
   return reason == null ? null : { id: carrier.id, turn: turns.length, reason };
 };
 
+/** A success pitch is waiting on this chat, unanswered: it owns the space under the reply. */
+export const successPitchOnThread = (
+  prefs: Pick<PrefsRow, "successPitch" | "dismissals">,
+  threadId: string
+): boolean =>
+  Object.entries(prefs.successPitch ?? {}).some(
+    ([each, mark]) =>
+      mark.offer?.sessionId === threadId &&
+      prefs.dismissals.successPitchCards?.[each]?.answered !== mark.offer.id
+  );
+
 export const RetryOfferRow = ({
   messages,
   active,
@@ -119,7 +141,6 @@ export const RetryOfferRow = ({
   const db = useDb();
   const prefs = usePrefs();
   const { data: account } = useAccount();
-  const resume = useUpgradeResume();
   const outcome = useThreadStore(session, (state) =>
     state.runs.outcomes.at(-1)
   );
@@ -129,19 +150,20 @@ export const RetryOfferRow = ({
   );
   // A tap hides the line at once, before the dialog answers.
   const [answered, setAnswered] = useState<string | null>(null);
+  // A paying plan's tap waits on the summary with the line still up.
+  const [preparing, setPreparing] = useState(false);
   // The gallery shows it on a model of its own, and keeps no answer.
   const preview = slots.retryOfferPreview ?? null;
   const key = creditAccountKey(account);
-  const free = creditsTier(account) === "free";
+  const tier = creditsTier(account);
+  const free = tier === "free";
+  // A paying plan runs the top models already: no upgrade, no A/B half.
+  const paying = tier === "basic" || tier === "paid";
   const inHalf = key != null && retryOfferForAccount(key);
   const target = retryOfferTarget(messages);
   const card = prefs.dismissals.retryOffer ?? null;
   // The success pitch owns the space under a reply it is offered on.
-  const pitchHere = Object.entries(prefs.successPitch ?? {}).some(
-    ([each, mark]) =>
-      mark.offer?.sessionId === session.threadId &&
-      prefs.dismissals.successPitchCards?.[each]?.answered !== mark.offer.id
-  );
+  const pitchHere = successPitchOnThread(prefs, session.threadId);
   const eligible =
     target != null &&
     !active &&
@@ -150,7 +172,11 @@ export const RetryOfferRow = ({
     answered !== target.id &&
     card?.answered !== target.id &&
     deliverableOfferTarget(messages) == null &&
-    (preview != null || (IS_ELECTRON && free && inHalf && !pitchHere));
+    (preview != null ||
+      (IS_ELECTRON &&
+        composer.onContinueInNewChat != null &&
+        ((free && inHalf) || paying) &&
+        !pitchHere));
   const ended = outcome != null && (isLive(outcome) || sentHere);
   const allowed =
     eligible &&
@@ -172,12 +198,24 @@ export const RetryOfferRow = ({
     enabled: allowed && preview == null,
     staleTime: 60_000,
   });
-  const offer = billing != null ? wallOffer(billing) : null;
+  const offer = billing != null && !paying ? wallOffer(billing) : null;
   const model =
-    offer != null && catalog != null
-      ? retryOfferModel(planTopModelNames(offer.features), catalog)
-      : null;
-  const label = preview?.label ?? model?.label ?? null;
+    billing == null || catalog == null
+      ? null
+      : paying
+        ? retryOfferModel(
+            currentPlanTopModelNames(billing),
+            catalog,
+            "runnable"
+          )
+        : offer != null
+          ? retryOfferModel(planTopModelNames(offer.features), catalog)
+          : null;
+  // A chat already on that model has nothing to retry on.
+  const current = composer.model?.value ?? composer.model?.resolved ?? null;
+  const label =
+    preview?.label ??
+    (model != null && model.id !== current ? model.label : null);
   const showing = allowed && label != null ? target : null;
 
   const base: DeliverableOfferCard = card ?? EMPTY_DELIVERABLE_OFFER_CARD;
@@ -190,7 +228,20 @@ export const RetryOfferRow = ({
   const funnel = (step: FunnelStep, reason: RetryOfferReason): void => {
     if (preview != null) return;
     void transport.client.system
-      .funnelStep({ step, detail: reason })
+      .funnelStep({ step, detail: paying ? `${reason}_paid` : reason })
+      .catch(() => undefined);
+  };
+  // The chat is on a top model now: the composer's top-model hint is done.
+  const switched = (): void => {
+    void db
+      .updatePrefs({
+        dismissals: {
+          topModelHint: {
+            ...(prefs.dismissals.topModelHint ?? EMPTY_TOP_MODEL_HINT_CARD),
+            switched: true,
+          },
+        },
+      })
       .catch(() => undefined);
   };
   // Each free account reports its half once, on or off, for the comparison.
@@ -228,11 +279,28 @@ export const RetryOfferRow = ({
     showing != null && label != null ? showing.id : null
   );
   if (showing == null || label == null) return null;
+  const continueOn = async (id: string, reason: RetryOfferReason) => {
+    const prompt = lastUserText(messages);
+    await composer.onContinueInNewChat?.(id, prompt ?? undefined);
+    funnel("retry_offer_resumed", reason);
+    switched();
+  };
   const retry = () => {
-    setAnswered(showing.id);
     funnel("retry_offer_tapped", showing.reason);
-    write({ ...base, answered: showing.id, misses: 0 });
     if (model == null) return;
+    const reason = showing.reason;
+    const answer = () => write({ ...base, answered: showing.id, misses: 0 });
+    if (paying) {
+      // Up with a spinner until the new chat opens; a failure leaves it for another try.
+      setPreparing(true);
+      void continueOn(model.id, reason).then(answer, () => {
+        showError(t("chat.continuation.failed"));
+        setPreparing(false);
+      });
+      return;
+    }
+    answer();
+    setAnswered(showing.id);
     const pendingText = lastUserText(messages);
     requestUpgradeDialog(
       {
@@ -241,7 +309,11 @@ export const RetryOfferRow = ({
         threadId: session.threadId,
         src: "model_locked",
         ...(pendingText != null && { pendingText }),
-        resume: () => resume(model.id),
+        resume: () =>
+          continueOn(model.id, reason).catch((error: unknown) => {
+            showError(t("chat.continuation.failed"));
+            throw error;
+          }),
       },
       true
     );
@@ -261,7 +333,7 @@ export const RetryOfferRow = ({
       data-slot="retry-offer"
       data-reason={showing.reason}
       role="group"
-      aria-label={t("chat.retryOffer.try", { model: label })}
+      aria-label={t("chat.retryOffer.newChat", { model: label })}
       className="my-2 flex w-full max-w-[520px] flex-wrap items-center gap-1.5"
     >
       <Button
@@ -269,16 +341,25 @@ export const RetryOfferRow = ({
         variant="outline"
         className="h-auto rounded-full py-1.5"
         data-action="retry"
+        disabled={preparing}
         onClick={retry}
       >
-        <RotateCcw aria-hidden className="size-3.5 shrink-0" />
-        {t("chat.retryOffer.try", { model: label })}
+        {preparing ? (
+          <Loader2 aria-hidden className="size-3.5 shrink-0 animate-spin" />
+        ) : (
+          <RotateCcw aria-hidden className="size-3.5 shrink-0" />
+        )}
+        {preparing
+          ? t("chat.continuation.preparing", { model: label })
+          : t("chat.retryOffer.newChat", { model: label })}
       </Button>
-      <span className="text-muted-foreground text-xs">
-        {t("chat.composer.includedIn", {
-          plan: preview?.plan ?? offer?.planName,
-        })}
-      </span>
+      {!paying && (
+        <span className="text-muted-foreground text-xs">
+          {t("chat.composer.includedIn", {
+            plan: preview?.plan ?? offer?.planName,
+          })}
+        </span>
+      )}
       <Button
         variant="ghost"
         size="icon"

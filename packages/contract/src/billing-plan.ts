@@ -218,6 +218,14 @@ export const planTopModelNames = (features: readonly string[]): string[] => {
   return [];
 };
 
+/** The account's own plan's leading models (a paying plan's feature line); empty when unread. */
+export const currentPlanTopModelNames = (
+  billing: BillingPlan | null | undefined
+): string[] =>
+  planTopModelNames(
+    billing?.plans.find((plan) => plan.current)?.features ?? []
+  );
+
 const planTopModels = (
   features: readonly string[],
   locale: string

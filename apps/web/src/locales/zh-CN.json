@@ -2099,6 +2099,12 @@
       "undo": "撤销",
       "discard": "放弃草稿：{{name}}",
       "discardMenu": "放弃草稿"
+    },
+    "continuation": {
+      "from": "接续自",
+      "into": "接续于",
+      "startsFrom": "从“{{label}}”的摘要开始",
+      "drop": "不带摘要开始"
     }
   },
   "terminalShells": {
@@ -3018,6 +3024,12 @@
       "otherProvider": "你正在使用 {{model}}，这是 {{provider}} 的模型。你的连接器仍可使用，但要在连接器和编程方面获得最佳效果，请切换到 RouteLLM，它已免费包含在你的 Abacus 账号中。",
       "switchToRouteLlm": "切换到 RouteLLM",
       "keepModel": "保留此模型",
+      "topModels": {
+        "line": "你的套餐包含顶级模型。在新对话中用 {{first}} 或 {{second}} 继续这项工作。",
+        "lineOne": "你的套餐包含顶级模型。在新对话中用 {{model}} 继续这项工作。",
+        "all": "查看所有模型",
+        "dismiss": "以后再说"
+      },
       "send": "发送",
       "skills": "技能",
       "stop": "停止",
@@ -3434,7 +3446,7 @@
       "copyFailed": "无法复制"
     },
     "retryOffer": {
-      "try": "用 {{model}} 再试一次"
+      "newChat": "在新对话中用 {{model}} 再试一次"
     },
     "ratingPrompt": {
       "question": "机器人在这个对话中表现如何？",
@@ -3513,6 +3525,10 @@
       "diff": "查看改动",
       "addDir": "添加文件夹",
       "tooSmall": "此聊天还太短，暂时无法精简"
+    },
+    "continuation": {
+      "preparing": "正在用 {{model}} 准备新对话…",
+      "failed": "无法开始新对话，请重试。"
     }
   },
   "notch": {
