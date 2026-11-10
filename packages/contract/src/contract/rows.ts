@@ -140,6 +140,8 @@ export const SUPPORTED_LANGUAGES = [
   "it-IT",
   "ja-JP",
   "ko-KR",
+  "nl-NL",
+  "pl-PL",
   "pt-BR",
   "tr-TR",
   "zh-CN",

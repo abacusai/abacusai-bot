@@ -23,6 +23,8 @@ const LOADERS: Record<
   "it-IT": () => import("#locales/it-IT.json"),
   "ja-JP": () => import("#locales/ja-JP.json"),
   "ko-KR": () => import("#locales/ko-KR.json"),
+  "nl-NL": () => import("#locales/nl-NL.json"),
+  "pl-PL": () => import("#locales/pl-PL.json"),
   "pt-BR": () => import("#locales/pt-BR.json"),
   "tr-TR": () => import("#locales/tr-TR.json"),
   "zh-CN": () => import("#locales/zh-CN.json"),
