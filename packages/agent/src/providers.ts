@@ -649,7 +649,7 @@ const PROVIDER_SETTLE_ATTEMPTS = 3;
  * Abacus out. An awaited refresh lands a check that saw them all, except
  * when a background check queues after it: pi drops ours, and the refresh
  * returns before that one lands. So refresh again while a key we handed pi
- * still reads as missing, a few times at most.
+ * still reads as missing, three times at most.
  */
 export async function settleProviderRegistrations(
   registry: ModelRegistry
