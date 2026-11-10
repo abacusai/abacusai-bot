@@ -87,6 +87,7 @@ import {
   summarizerFrom,
 } from "./extensions/spend-governor.js";
 import spill from "./extensions/spill.js";
+import stuckGuard from "./extensions/stuck-guard.js";
 import syntaxCheck from "./extensions/syntax-check.js";
 import testRunner from "./extensions/test-runner.js";
 import toolCallRepair from "./extensions/tool-call-repair.js";
@@ -1141,6 +1142,10 @@ export class AbacusBotSession {
             {
               name: "abacusai-bot-knowledge",
               factory: knowledge as unknown as (pi: ExtensionAPI) => void,
+            },
+            {
+              name: "abacusai-bot-stuck-guard",
+              factory: stuckGuard as unknown as (pi: ExtensionAPI) => void,
             },
             {
               name: "abacusai-bot-syntax-check",

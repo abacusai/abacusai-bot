@@ -405,7 +405,10 @@ export default function budgets(
         reason:
           `You have already made this exact ${event.toolName} call ${count - 1} times in this run. ` +
           `Repeating it returns the same result. Step back: state what you learned from the previous ` +
-          `result and try a different approach.`,
+          `result and try a different approach.` +
+          (count > REPEAT_LIMIT
+            ? " If no other approach is left, stop and tell the user what you tried and what is still unknown."
+            : ""),
       };
     }
   });
