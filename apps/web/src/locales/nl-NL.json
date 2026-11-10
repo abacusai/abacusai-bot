@@ -1671,8 +1671,7 @@
       "other": "Gepauzeerd.",
       "denied": "Gepauzeerd: je hebt het niet toegestaan.",
       "quiet": "Gepauzeerd: {{runs}} runs op rij vonden niets nieuws, dus er worden geen credits meer gebruikt. Hervat de routine om te blijven controleren.",
-      "done": "Voltooid: waar de routine op wachtte is gebeurd, dus hij is gestopt.",
-      "budget": "Gepauzeerd: {{runs}} runs op rij stopten bij hun creditbudget."
+      "done": "Voltooid: waar de routine op wachtte is gebeurd, dus hij is gestopt."
     },
     "creditHold": {
       "notify": "Je credits zijn op, dus je routines worden niet uitgevoerd. Overgeslagen runs kosten niets en starten vanzelf weer zodra je credits hebt.",

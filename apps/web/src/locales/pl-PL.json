@@ -1693,8 +1693,7 @@
       "other": "Wstrzymano.",
       "denied": "Wstrzymano: brak Twojej zgody.",
       "quiet": "Wstrzymano: kolejne uruchomienia ({{runs}}) nie znalazły nic nowego, więc rutyna przestała zużywać kredyty. Wznów ją, aby dalej sprawdzała.",
-      "done": "Zakończono: to, na co czekała rutyna, już się wydarzyło, więc się zatrzymała.",
-      "budget": "Wstrzymano: kolejne uruchomienia ({{runs}}) zatrzymały się na limicie kredytów."
+      "done": "Zakończono: to, na co czekała rutyna, już się wydarzyło, więc się zatrzymała."
     },
     "creditHold": {
       "notify": "Skończyły Ci się kredyty, więc Twoje rutyny nie będą działać. Pominięte uruchomienia nic nie kosztują, a rutyny wznowią się same, gdy znów będziesz mieć kredyty.",
