@@ -124,17 +124,18 @@ afterAll(async () => {
   delete process.env.ABACUS_API_KEY;
 });
 
-it("a routine run that calls tools without end stops at its credit budget", async () => {
+it("a routine run on billed credits finishes its job, however much it spends", async () => {
   process.env.ABACUSAI_BOT_ROUTINE_RUN = "1";
   process.env.ABACUSAI_BOT_NOBODY_PRESENT = "1";
   writeConfig({ defaultModel: `abacus/${BILLED}`, customProviders: [] });
-  // A 3,000 plan with 2,000 left: a 150-credit budget; 5 credits a request.
   setHostCreditBalance({ remaining: 2000, granted: 3000, at: Date.now() });
-  provider.meterWith({ credits: () => 5 });
-  provider.script((call) =>
-    JSON.stringify(call.messages).includes("Stop working now")
-      ? { say: "Checked part of the list; stopping at the run's budget." }
-      : { call: { name: "ls", args: { path: "." } } }
+  // 10 credits a request, 40 tool calls, then the report: 400+ credits.
+  provider.meterWith({ credits: () => 10 });
+  let calls = 0;
+  provider.script(() =>
+    ++calls <= 40
+      ? { call: { name: "ls", args: { path: "." } } }
+      : { say: "Checked the whole list." }
   );
   const from = provider.billed.length;
   const { session, turn, agentEvents } = await start();
@@ -142,22 +143,15 @@ it("a routine run that calls tools without end stops at its credit budget", asyn
   await session.stop();
 
   const spent = sum(billedSince(from).map((entry) => entry.credits));
-  console.log(
-    `[replay] routine budget: requests=${billedSince(from).length} credits=${spent}`
-  );
-  expect(spent).toBeLessThanOrEqual(150 + 3 * 5);
-  expect(agentEvents()).toContainEqual(
-    expect.objectContaining({
-      type: "notification",
-      actions: [
-        expect.objectContaining({
-          type: "spend-limit",
-          cause: "budget",
-          amount: 150,
-        }),
-      ],
-    })
-  );
+  expect(spent).toBeGreaterThan(400);
+  expect(
+    agentEvents().some(
+      (event) =>
+        (event as { type?: string }).type === "notification" &&
+        JSON.stringify(event).includes("spend-limit")
+    )
+  ).toBe(false);
+  expect(JSON.stringify(agentEvents())).toContain("Checked the whole list.");
 }, 120_000);
 
 it("a billed chat never sends more than 160k tokens, however long it grows", async () => {

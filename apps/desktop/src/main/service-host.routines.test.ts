@@ -261,7 +261,6 @@ describe("a routine run the network let down", () => {
       },
       routineNetworkWaits: new NetworkWaitClock(),
       routineRunText: new Map([["run-1", []]]),
-      routineBudgetStops: new Map<string, number>(),
       routineHome: () => dir,
       pauseRoutine: vi.fn(),
       pauseIfFailingRepeatedly: vi.fn(),
@@ -280,80 +279,6 @@ describe("a routine run the network let down", () => {
     expect(readLastRoutineRun(dir)?.outcome).toBe("offline");
     expect(service.pauseRoutine).not.toHaveBeenCalled();
     expect(service.pauseIfFailingRepeatedly).not.toHaveBeenCalled();
-  });
-});
-
-describe("a routine whose runs keep stopping at their credit budget", () => {
-  const proto = ServiceHost.prototype as unknown as {
-    settleRoutineRun: (record: unknown) => void;
-    noteRoutineEvent: (sessionId: string, payload: unknown) => void;
-    pauseIfOverBudgetRepeatedly: (job: unknown) => void;
-    pauseRoutine: (routineId: string, reason: string) => void;
-  };
-
-  it("is paused after three budget stops in a row, by the app, with the budget note the board tells", async () => {
-    const { getJob } = await import("./services/agent-tools/cron-store");
-    const { readLastRoutineRun } =
-      await import("./services/agent-tools/routine-runs-store");
-    const job = createJob({ schedule: "0 * * * *", prompt: "check prices" });
-    const dir = path.join(home, "routine-home");
-    const startedAt = new Map<string, string>();
-    const service = {
-      agentSessionManagerService: {
-        isRoutineSession: () => true,
-        setRunOutcome: () => true,
-        get: (id: string) => ({
-          routineId: job.id,
-          createdAt: startedAt.get(id),
-        }),
-      },
-      routineNetworkWaits: { forget: vi.fn(), note: vi.fn() },
-      frozenRunWatches: new Map(),
-      routineRunText: new Map<string, string[]>(),
-      routineBudgetStops: new Map<string, number>(),
-      routineRunLast: new Map(),
-      deliversRoutineReports: () => true,
-      deliverRunReport: async () => undefined,
-      routineHome: () => dir,
-      emitEvent: vi.fn(),
-      pauseIfQuietRepeatedly: vi.fn(),
-      pauseIfOverBudgetRepeatedly: proto.pauseIfOverBudgetRepeatedly,
-      pauseRoutine: proto.pauseRoutine,
-      pauseIfFailingRepeatedly: vi.fn(),
-    };
-    for (let i = 1; i <= 3; i++) {
-      const sessionId = `run-${i}`;
-      startedAt.set(sessionId, new Date(Date.now() + i).toISOString());
-      service.routineRunText.set(sessionId, [
-        "Checked two shops; stopping at the budget.",
-      ]);
-      // What the agent's spend governor emits as it closes the run out.
-      proto.noteRoutineEvent.call(service, sessionId, {
-        type: "event",
-        event: {
-          type: "notification",
-          severity: "info",
-          message: "Stopped at its credit budget (100 credits).",
-          actions: [{ type: "spend-limit", cause: "budget", amount: 100 }],
-        },
-      });
-      proto.settleRoutineRun.call(service, {
-        turnId: sessionId,
-        sessionId,
-        kind: "reply",
-        startedAt: i,
-        endedAt: Date.now() + i,
-      });
-      if (i < 3) expect(getJob(job.id)?.enabled).toBe(true);
-    }
-    expect(readLastRoutineRun(dir)?.stopped).toBe(
-      "at its credit budget (100 credits)"
-    );
-    expect(getJob(job.id)).toMatchObject({ enabled: false, pausedBy: "app" });
-    expect(getJob(job.id)?.runs[0]).toMatchObject({
-      kind: "paused",
-      result: ROUTINE_PAUSE_NOTES.budget,
-    });
   });
 });
 
@@ -377,7 +302,6 @@ describe("a routine whose runs keep finding nothing", () => {
       },
       routineNetworkWaits: { forget: vi.fn() },
       routineRunText: text,
-      routineBudgetStops: new Map<string, number>(),
       routineRunLast: new Map(),
       // Delivery has its own tests (routine-report-host.test.ts).
       deliversRoutineReports: () => true,
@@ -486,25 +410,6 @@ describe("what the status board hears about routines (read off the store)", () =
     expect(board.get(`routine:${quiet.id}`)).toBeNull();
   });
 
-  it("a budget pause is paused-by-app for credits, and clears once the user resumes it", async () => {
-    const { recordRun, updateJob } =
-      await import("./services/agent-tools/cron-store");
-    const { board, report } = await boardHost();
-    const job = createJob({ schedule: "0 * * * *", prompt: "check prices" });
-    updateJob(job.id, { enabled: false, pausedBy: "app" });
-    recordRun(job.id, ROUTINE_PAUSE_NOTES.budget, "schedule", {
-      kind: "paused",
-    });
-    report();
-    expect(board.get(`routine:${job.id}`)).toMatchObject({
-      state: "paused-by-app",
-      reason: "credits",
-    });
-    updateJob(job.id, { enabled: true });
-    report();
-    expect(board.get(`routine:${job.id}`)).toBeNull();
-  });
-
   it("a routine that finished what it waited for is not a stop", async () => {
     const { recordRun, updateJob } =
       await import("./services/agent-tools/cron-store");
@@ -596,7 +501,6 @@ describe("when a routine stops firing", () => {
       },
       routineNetworkWaits: { forget: vi.fn() },
       routineRunText: new Map<string, string[]>(),
-      routineBudgetStops: new Map<string, number>(),
       routineRunLast: new Map(),
       // Delivery has its own tests (routine-report-host.test.ts).
       deliversRoutineReports: () => true,
@@ -724,7 +628,6 @@ describe("the note a failing routine's pause records", () => {
       },
       routineNetworkWaits: { forget: vi.fn() },
       routineRunText: new Map<string, string[]>(),
-      routineBudgetStops: new Map<string, number>(),
       routineHome: () => dir,
       emitEvent: vi.fn(),
       pauseRoutine: proto.pauseRoutine,
@@ -834,7 +737,6 @@ describe("a scheduled run the app closed under", () => {
       routineSends: sends,
       routineNetworkWaits: new NetworkWaitClock(),
       routineRunText: new Map<string, string[]>(),
-      routineBudgetStops: new Map<string, number>(),
       routineHome: () => path.join(home, "routine-home"),
       threadStore: {
         readCurrentFile: (id: string) => ({ messages: threads.get(id) ?? [] }),
@@ -1623,7 +1525,6 @@ describe("keep-awake's routine-due signal", () => {
       routineDueNow: false,
       routineDueListeners: new Set([(due: boolean) => seen.push(due)]),
       routineRunText: new Map(),
-      routineBudgetStops: new Map<string, number>(),
       turnLedger: { isOpen: () => false },
     };
     return { self, seen };

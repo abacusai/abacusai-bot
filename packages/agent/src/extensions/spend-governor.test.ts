@@ -231,40 +231,23 @@ describe("work nobody asked for", () => {
   });
 });
 
-describe("a routine run's credit budget", () => {
-  it("closes out at 5% of the plan, and says it stopped at its budget", async () => {
+describe("a routine run's credits", () => {
+  it("never close it out: the user set it going, so it finishes", async () => {
     await balance(2000, 3000);
-    const { pi, hits } = governed("routine");
+    const { pi, governor, hits } = governed("routine");
     const aborts: number[] = [];
     const ctx = ctxOn(billedModel, aborts);
     await pi.fire("input", { text: "Run the check", source: "interactive" });
     await pi.fire("agent_start", {});
-    // Five credits a request, the shape of a run that calls tools without end.
-    for (let i = 0; i < 29; i++) {
+    // Ten credits a request, well past any share of the plan.
+    for (let i = 0; i < 60; i++) {
       await pi.fire("turn_start", {}, ctx);
-      noteBilledCredits(5);
+      noteBilledCredits(10);
     }
     expect(hits).toEqual([]);
-    await pi.fire("turn_start", {}, ctx);
-    noteBilledCredits(5);
-    await pi.fire("turn_start", {}, ctx);
-    expect(hits).toEqual([{ cause: "budget", amount: 150 }]);
-    await pi.fire("turn_start", {}, ctx);
-    await pi.fire("turn_start", {}, ctx);
-    await pi.fire("turn_start", {}, ctx);
-    expect(aborts).toHaveLength(1);
-    expect(spendStopReason()).toBe(
-      "Stopped at its credit budget (150 credits)."
-    );
-  });
-
-  it("is clamped between 25 and 300 credits", async () => {
-    await balance(90, 100);
-    const small = governed("routine");
-    await small.pi.fire("agent_start", {});
-    noteBilledCredits(25);
-    await small.pi.fire("turn_start", {}, billed);
-    expect(small.hits).toEqual([{ cause: "budget", amount: 25 }]);
+    expect(governor.closing()).toBe(false);
+    expect(aborts).toHaveLength(0);
+    expect(spendStopReason()).toBeNull();
   });
 
   it("never applies to a run off Abacus credits", async () => {

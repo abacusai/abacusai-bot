@@ -3,7 +3,6 @@
  * (cron-store.ts, whose CronJob is structurally this Routine); list items carry
  * what a row shows, resolved in main because the renderer can know none of it.
  */
-import { ROUTINE_BUDGET_STOPS_BEFORE_PAUSE } from "@abacus-ai/agent/spend-policy";
 
 /**
  * `catch-up`: a scheduled fire made up after the computer was off or asleep;
@@ -78,7 +77,6 @@ export interface RoutineCreditHold {
  */
 export const ROUTINE_PAUSE_NOTES = {
   credits: "paused: out of Abacus.AI credits",
-  budget: `paused after ${ROUTINE_BUDGET_STOPS_BEFORE_PAUSE} runs in a row stopped at their credit budget`,
   failures: `paused after ${ROUTINE_FAILURES_BEFORE_PAUSE} failed runs in a row`,
   quiet: `paused after ${ROUTINE_QUIET_RUNS_BEFORE_PAUSE} runs in a row found nothing new`,
   done: "finished: what it was waiting for happened",

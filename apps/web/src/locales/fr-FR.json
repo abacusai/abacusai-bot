@@ -1671,8 +1671,7 @@
       "other": "Paused.",
       "denied": "Paused: you did not allow it.",
       "quiet": "En pause : {{runs}} exécutions d'affilée n'ont rien trouvé de nouveau, elle a donc cessé d'utiliser des crédits. Reprenez-la pour qu'elle continue de vérifier.",
-      "done": "Finished: what it was waiting for happened, so it stopped.",
-      "budget": "Paused: {{runs}} runs in a row stopped at their credit budget."
+      "done": "Finished: what it was waiting for happened, so it stopped."
     },
     "creditHold": {
       "notify": "Vous n'avez plus de crédits, vos routines ne s'exécuteront donc pas. Les exécutions ignorées ne coûtent rien, et elles reprennent toutes seules dès que vous avez des crédits.",

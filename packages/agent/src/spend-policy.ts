@@ -42,20 +42,6 @@ export const SPEND_LIMITS: Readonly<Record<SpendKind, SpendLimit>> = {
   memory: { calls: 20, timeMs: 5 * MINUTE },
 };
 
-/** A routine run's credit budget: a twentieth of the plan, within these bounds. */
-export const ROUTINE_BUDGET_SHARE = 0.05;
-export const ROUTINE_BUDGET_MIN = 25;
-export const ROUTINE_BUDGET_MAX = 300;
-
-/** Budget stops in a row before the desktop pauses the routine and says so. */
-export const ROUTINE_BUDGET_STOPS_BEFORE_PAUSE = 3;
-
-export const routineRunBudget = (planCredits: number): number =>
-  Math.min(
-    ROUTINE_BUDGET_MAX,
-    Math.max(ROUTINE_BUDGET_MIN, Math.round(planCredits * ROUTINE_BUDGET_SHARE))
-  );
-
 /**
  * Where an attended turn on a free plan stops to ask the user before it
  * spends more: a quarter of what is left or a fifth of the plan, whichever is

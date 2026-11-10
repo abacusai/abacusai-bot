@@ -1671,8 +1671,7 @@
       "other": "已暂停。",
       "denied": "已暂停：你没有允许。",
       "quiet": "已暂停：连续 {{runs}} 次运行都没有发现新内容，因此不再消耗积分。恢复后可继续检查。",
-      "done": "Finished: what it was waiting for happened, so it stopped.",
-      "budget": "Paused: {{runs}} runs in a row stopped at their credit budget."
+      "done": "Finished: what it was waiting for happened, so it stopped."
     },
     "creditHold": {
       "notify": "你的积分已用完，所以例行任务不会运行。跳过的运行不收费，等你有积分后，它们会自动重新开始。",

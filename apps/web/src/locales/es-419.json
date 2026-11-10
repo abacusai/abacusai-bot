@@ -1671,8 +1671,7 @@
       "other": "Paused.",
       "denied": "Paused: you did not allow it.",
       "quiet": "En pausa: {{runs}} ejecuciones seguidas no encontraron nada nuevo, así que dejó de usar créditos. Reanúdala para que siga revisando.",
-      "done": "Finished: what it was waiting for happened, so it stopped.",
-      "budget": "Paused: {{runs}} runs in a row stopped at their credit budget."
+      "done": "Finished: what it was waiting for happened, so it stopped."
     },
     "creditHold": {
       "notify": "Te quedaste sin créditos, así que tus rutinas no se ejecutarán. Las ejecuciones omitidas no cuestan nada y vuelven solas cuando tengas créditos.",
