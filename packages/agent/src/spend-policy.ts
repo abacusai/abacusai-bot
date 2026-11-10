@@ -56,11 +56,15 @@ export const checkInCredits = (
 export const checkInStopNotice = (credits: number): string =>
   `This task has used ${credits} credits so far. Send a message to keep going.`;
 
+const CHECK_IN_STOP = new RegExp(
+  `^${checkInStopNotice(0)
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    .replace("0", "[\\d.,]+")}$`
+);
+
 /** Whether a turn's error is the check-in stop, so a channel can say so. */
 export const isCheckInStop = (message: string): boolean =>
-  /^This task has used [\d.,]+ credits so far\. Send a message to keep going\.$/.test(
-    message.trim()
-  );
+  CHECK_IN_STOP.test(message.trim());
 
 /** What a follow-up nobody asked for may spend: a tenth of its turn, at least 10. */
 export const unaskedCredits = (turnCredits: number): number =>

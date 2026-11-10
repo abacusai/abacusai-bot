@@ -367,8 +367,7 @@ export const speakersFor = (
     (asksTeam && !together && named.length === 0)
   )
     return { botIds: members.map((member) => member.id), everyone: true };
-  // "Researcher and Writer, discuss…" is a discussion between those two
-  // only when 3+ are named; named bots otherwise answer in turn.
+  // Asked to discuss, naming nobody (or @everyone): a discussion of all.
   if (together && (named.length === 0 || EVERYONE.test(text)))
     return {
       botIds: members.map((member) => member.id),

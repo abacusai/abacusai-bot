@@ -11,6 +11,7 @@ import { noteBilledCredits } from "../abacus-credits.js";
 import { HostCore } from "../agui/queue.js";
 import { hostCreditBalance, setCreditRefresher } from "../credit-balance.js";
 import type { SpendKind, SpendLane } from "../spend-policy.js";
+import { checkInStopNotice, isCheckInStop } from "../spend-policy.js";
 import {
   reservePrompt,
   SpendGovernor,
@@ -710,5 +711,13 @@ describe("the model a too-big summary runs on", () => {
     expect(pick("own-key", "groq")).toBe("groq/big");
     expect(pick("own-key", "mistral")).toBeUndefined();
     expect(pick("pool")).toBe("openrouter/free");
+  });
+});
+
+describe("the check-in stop notice", () => {
+  it("is recognised from its own text, and nothing else is", () => {
+    expect(isCheckInStop(checkInStopNotice(301))).toBe(true);
+    expect(isCheckInStop(checkInStopNotice(12.5))).toBe(true);
+    expect(isCheckInStop("This task has used 301 credits so far.")).toBe(false);
   });
 });

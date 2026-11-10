@@ -1423,6 +1423,26 @@ describe("a team that keeps going (the user named the members once)", () => {
     expect(turns).toHaveLength(1);
   });
 
+  it("after a check-in, a later report wakes nobody until the user answers", async () => {
+    const { service, turns, works, flush } = setup();
+    const { id } = service.create({ botIds: ["chief", "res", "wri"] });
+    service.post(id, "@everyone do your part");
+    await flush();
+    turns[0]!.resolve("<reply>Ready.</reply>");
+    turns[1]!.resolve("<reply>Research. <work>Research it</work></reply>");
+    turns[2]!.resolve("<reply>Write. <work>Write it</work></reply>");
+    await flush();
+    works[0]!.reject(
+      new Error(
+        "This task has used 120 credits so far. Send a message to keep going."
+      )
+    );
+    await flush();
+    works[1]!.resolve("<reply>Written.</reply>");
+    await flush();
+    expect(turns).toHaveLength(3);
+  });
+
   it("a report that waited on other work wakes the lead when that work fails", async () => {
     const { service, turns, works, flush } = setup();
     const { id } = service.create({ botIds: ["chief", "res", "wri"] });
