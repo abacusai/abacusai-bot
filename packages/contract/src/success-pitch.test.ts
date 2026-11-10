@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { isStuckMessage } from "./retry-offer";
 import {
   isCleanReply,
   isComplaint,
@@ -127,6 +128,49 @@ describe("isCleanReply", () => {
       false
     );
     expect(isCleanReply("Não consegui abrir o arquivo.")).toBe(false);
+    expect(
+      isCleanReply("Honestly: the file still does not open in Excel.")
+    ).toBe(false);
+    expect(isCleanReply("El archivo todavía no abre en Excel.")).toBe(false);
+    expect(isCleanReply("لم أتمكن من ترجمة الملف كاملاً.")).toBe(false);
+  });
+});
+
+describe("isStuckMessage", () => {
+  it.each([
+    "it still doesn't work",
+    "this is rubbish",
+    "you did not make the actual design",
+    "the file won't open",
+    "el archivo no abre en excel",
+    "inventaste cosas",
+    "o arquivo não abre",
+    "bu hesap yanlış",
+    "das sieht schlecht aus",
+    "ما يشتغل",
+    "ترجمة حرفية",
+    "опять ошибка",
+    "не працює",
+    "nie działa",
+    "det virker ikke",
+    "werkt niet",
+    "לא עובד",
+    "まだ動かない",
+    "打不开",
+  ])("stuck: %s", (text) => {
+    expect(isStuckMessage(text)).toBe(true);
+  });
+
+  it.each([
+    "thanks!",
+    "now add a contact form",
+    "can you make the header blue?",
+    "agora traduza para inglês",
+    "شكرا، الآن أضف شعار",
+    "спасибо, теперь добавь логотип",
+    "x".repeat(301) + " doesn't work",
+  ])("not stuck: %s", (text) => {
+    expect(isStuckMessage(text)).toBe(false);
   });
 });
 
