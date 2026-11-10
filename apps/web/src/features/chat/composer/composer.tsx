@@ -20,8 +20,8 @@ import {
   type ClipboardEvent,
   type CSSProperties,
   type DragEvent,
+  type FocusEvent,
   type KeyboardEvent,
-  type MouseEventHandler,
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
@@ -108,27 +108,42 @@ const COMPOSER_MAX_HEIGHT = 200;
 export const SURFACE_RADIUS = { pill: 24, bot: 22, session: 20 } as const;
 
 /**
+ * Focus events that land on a collapsed pill's own buttons (+, Dictate,
+ * Send/Stop) or in a menu one of them opens. Those buttons exist only in the
+ * pill; expanding it renders them anew in the toolbar, so the press, the
+ * menu or the keyboard focus would end on nothing. Such focus leaves the
+ * pill as it is.
+ */
+const pillControlFocus = new WeakSet<Event>();
+
+/**
  * A child of the surface that must keep its size while the surface morphs
  * (icons, chips, buttons, text): `layout="position"` lets motion counter the
  * surface's scale and slide the child into place, so only the surface
- * itself animates its shape.
+ * itself animates its shape. `pillControls` marks the pill-only button
+ * groups (see `pillControlFocus`).
  */
 const Still = ({
   layout,
   className,
   children,
-  onMouseDown,
+  pillControls = false,
 }: {
   layout: "position" | false;
   className?: string;
   children: ReactNode;
-  onMouseDown?: MouseEventHandler<HTMLDivElement>;
+  pillControls?: boolean;
 }) => (
   <motion.div
     layout={layout}
     data-layout="position"
     className={className}
-    onMouseDown={onMouseDown}
+    onFocus={
+      pillControls
+        ? (event: FocusEvent<HTMLDivElement>) =>
+            pillControlFocus.add(event.nativeEvent)
+        : undefined
+    }
   >
     {children}
   </motion.div>
@@ -175,15 +190,31 @@ const useComposer = (): ComposerContextValue => {
 };
 
 const focusedThreads = new Store<ReadonlySet<string>>(new Set<string>());
-const modelMenus = new Store<ReadonlySet<string>>(new Set<string>());
-const setModelMenu = (threadId: string, open: boolean): void => {
-  modelMenus.setState((state) => {
+/**
+ * The toolbar popups that hold the box open while they are open (the model
+ * menu, the + menu and its connectors panel), keyed `<menu>:<threadId>`.
+ * Their content is portaled, so focus moving within it reads as leaving the
+ * composer; without the hold the box would collapse and unmount the popup
+ * under the press.
+ */
+type ComposerMenu = "model" | "attach";
+const composerMenus = new Store<ReadonlySet<string>>(new Set<string>());
+const setComposerMenu = (
+  threadId: string,
+  menu: ComposerMenu,
+  open: boolean
+): void => {
+  const key = `${menu}:${threadId}`;
+  composerMenus.setState((state) => {
+    if (state.has(key) === open) return state;
     const next = new Set(state);
-    if (open) next.add(threadId);
-    else next.delete(threadId);
+    if (open) next.add(key);
+    else next.delete(key);
     return next;
   });
 };
+const menuHolds = (state: ReadonlySet<string>, threadId: string): boolean =>
+  state.has(`model:${threadId}`) || state.has(`attach:${threadId}`);
 const setThreadFocus = (threadId: string, focused: boolean): void => {
   focusedThreads.setState((state) => {
     if (state.has(threadId) === focused) return state;
@@ -205,7 +236,9 @@ export const useComposerExpanded = (threadId: string): boolean => {
         draft.replyTo != null)
     );
   });
-  const menu = useSelector(modelMenus, (state) => state.has(threadId));
+  const menu = useSelector(composerMenus, (state) =>
+    menuHolds(state, threadId)
+  );
   return focused || drafted || menu;
 };
 
@@ -259,15 +292,25 @@ const Attachments = () => {
 const Attach = () => {
   const { t } = useTranslation();
   const { runtime, composer: config } = useChatView();
-  const { threadId } = useComposer();
+  const { threadId, expanded } = useComposer();
   const [error, setError] = useState<string | null>(null);
   const button = useRef<HTMLButtonElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   // null until first opened: nothing of the panel loads before it is asked for.
   const [connectors, setConnectors] = useState<boolean | null>(null);
+  // The toolbar's + holds the box open while its menu or panel is open. The
+  // pill's + never mounts in the box, so it holds nothing: its popups keep
+  // the pill as it is (pillControlFocus).
+  const open = menuOpen || connectors === true;
+  useEffect(() => {
+    if (!expanded) return;
+    setComposerMenu(threadId, "attach", open);
+    return () => setComposerMenu(threadId, "attach", false);
+  }, [expanded, open, threadId]);
   return (
     <>
       {error && <p role="alert">{error}</p>}
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger
           render={
             <Button
@@ -676,11 +719,14 @@ export const ThreadComposer = () => {
     liveSkills.length > 0 ? liveSkills : (config.skillsBaseline ?? []);
   const focused = useSelector(focusedThreads, (state) => state.has(threadId));
   const setFocused = (value: boolean): void => setThreadFocus(threadId, value);
-  const modelMenuOpen = useSelector(modelMenus, (state) => state.has(threadId));
+  const menuHeld = useSelector(composerMenus, (state) =>
+    menuHolds(state, threadId)
+  );
   useEffect(
     () => () => {
       setThreadFocus(threadId, false);
-      setModelMenu(threadId, false);
+      setComposerMenu(threadId, "model", false);
+      setComposerMenu(threadId, "attach", false);
     },
     [threadId]
   );
@@ -731,7 +777,7 @@ export const ThreadComposer = () => {
     ? false
     : config.mode === "full" && skin === "session"
       ? true
-      : focused || hasDraft || menuOpen || modelMenuOpen;
+      : focused || hasDraft || menuOpen || menuHeld;
   const state: ComposerState =
     config.readOnly != null
       ? "blocked"
@@ -1138,7 +1184,7 @@ export const ThreadComposer = () => {
         binding={config.model}
         ref={modelChip}
         compact={narrow}
-        onOpenChange={(open) => setModelMenu(threadId, open)}
+        onOpenChange={(open) => setComposerMenu(threadId, "model", open)}
       />
     ) : null;
 
@@ -1172,7 +1218,10 @@ export const ThreadComposer = () => {
             }));
           }
         }}
-        onFocusCapture={() => setFocused(true)}
+        // Bubble phase, so the pill's button groups mark their focus first.
+        onFocus={(event) => {
+          if (!pillControlFocus.has(event.nativeEvent)) setFocused(true);
+        }}
         onBlurCapture={(event) => {
           if (!event.currentTarget.contains(event.relatedTarget as Node | null))
             setFocused(false);
@@ -1313,7 +1362,7 @@ export const ThreadComposer = () => {
                 </fieldset>
               ) : null}
               {expanded ? null : (
-                <Still layout={still} className="flex shrink-0">
+                <Still layout={still} className="flex shrink-0" pillControls>
                   <Attach />
                 </Still>
               )}
@@ -1383,10 +1432,7 @@ export const ThreadComposer = () => {
                 <Still
                   layout={still}
                   className="flex shrink-0 items-center gap-2"
-                  // A press here must not focus the pill: focus expands it,
-                  // which renders these buttons anew elsewhere, so the press
-                  // would end on nothing and Stop would do nothing.
-                  onMouseDown={(event) => event.preventDefault()}
+                  pillControls
                 >
                   <Dictate />
                   <SendOrStop />

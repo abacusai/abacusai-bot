@@ -797,12 +797,79 @@ describe("R2-T25 composer", () => {
     current = await renderRelay(relay, "session", { mode: "mini" });
     expect(composer().hasAttribute("data-expanded")).toBe(false);
     const stop = await screen.findByRole("button", { name: "Stop" });
-    // The press must not take focus: focus would expand the pill and render
+    // Focus on the pill's own button must not expand it: that would render
     // the button anew, so the click would land on nothing.
-    expect(fireEvent.mouseDown(stop)).toBe(false);
+    act(() => stop.focus());
     expect(composer().hasAttribute("data-expanded")).toBe(false);
     fireEvent.click(stop);
     await waitFor(() => expect(relay.stats.cancel).toHaveLength(1));
+  });
+
+  it("mini: one press on the collapsed pill's + opens the attach menu", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll(b.sessionReady());
+    const rendered = await renderRelay(relay, "session", { mode: "mini" });
+    current = rendered;
+    expect(composer().hasAttribute("data-expanded")).toBe(false);
+    const attach = screen.getByRole("button", { name: "Attach" });
+    // Keyboard or mouse focus on + keeps the pill, and the same button
+    // stays mounted, so its press opens the menu at once.
+    act(() => attach.focus());
+    expect(composer().hasAttribute("data-expanded")).toBe(false);
+    fireEvent.click(attach);
+    const item = await screen.findByRole("menuitem", {
+      name: "Files or images",
+    });
+    // Focus moving into the menu does not expand the pill either.
+    act(() => item.focus());
+    expect(composer().hasAttribute("data-expanded")).toBe(false);
+    expect(attach.isConnected).toBe(true);
+    const pick = vi
+      .spyOn(rendered.runtime.host, "pickFiles")
+      .mockResolvedValue([{ path: "/repo/report.pdf", name: "report.pdf" }]);
+    fireEvent.click(item);
+    await screen.findByText("report.pdf");
+    expect(pick).toHaveBeenCalledTimes(1);
+    // The text field still expands the pill.
+    fireEvent.focus(field());
+    expect(composer().hasAttribute("data-expanded")).toBe(true);
+  });
+
+  it("bot: the box stays open while the + menu's connectors panel is used", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll(b.sessionReady());
+    const connect = vi.fn();
+    current = await renderRelay(relay, "bot", {
+      connectors: {
+        panel: (
+          <>
+            <input aria-label="Search connectors" />
+            <button onClick={connect}>Connect Slack</button>
+          </>
+        ),
+        overlay: null,
+      },
+    });
+    act(() => field().focus());
+    expect(composer().hasAttribute("data-expanded")).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Attach" }));
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Add connectors" })
+    );
+    const search = await screen.findByRole("textbox", {
+      name: "Search connectors",
+    });
+    act(() => search.focus());
+    // Focus moving within the portaled panel reads as leaving the composer;
+    // the open panel holds the box, so the button under the press survives.
+    // The browser commits the blur before the focus lands, so dispatch it on
+    // its own, as a press on the button does.
+    const add = screen.getByRole("button", { name: "Connect Slack" });
+    fireEvent.focusOut(search, { relatedTarget: add });
+    expect(composer().hasAttribute("data-expanded")).toBe(true);
+    expect(add.isConnected).toBe(true);
+    fireEvent.click(add);
+    expect(connect).toHaveBeenCalledTimes(1);
   });
 
   it.each([true, false])(
