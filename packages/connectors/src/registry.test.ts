@@ -18,6 +18,7 @@ import {
   connectorForService,
   GATEWAY_SERVER_NAME,
   mcpEntryOn,
+  ROBLOX_STUDIO_TOOLS,
   resolveConnector,
 } from "./registry.js";
 import {
@@ -222,10 +223,12 @@ describe("Roblox Studio", () => {
     ]);
     expect(mcpEntryOn(roblox, "darwin")).toEqual({
       command: "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP",
+      tools: [...ROBLOX_STUDIO_TOOLS],
     });
     expect(mcpEntryOn(roblox, "win32")).toEqual({
       command: "cmd.exe",
       args: ["/c", "%LOCALAPPDATA%\\Roblox\\mcp.bat"],
+      tools: [...ROBLOX_STUDIO_TOOLS],
     });
     expect(mcpEntryOn(roblox, "linux")).toBeNull();
     expect(connectUi(roblox)).toBe("none");
@@ -241,6 +244,14 @@ describe("Roblox Studio", () => {
     expect(describeForListing(roblox!, { state: "available" })).not.toContain(
       "multi_edit"
     );
+  });
+
+  it("offers the model a short tool list, and every tool its instructions name is on it", () => {
+    expect(ROBLOX_STUDIO_TOOLS.length).toBeLessThanOrEqual(10);
+    const named = roblox?.usage?.match(/\b[a-z]+(?:_[a-z]+)+\b/g) ?? [];
+    expect(named.length).toBeGreaterThan(0);
+    for (const tool of named.filter((name) => name !== "studio_id"))
+      expect(ROBLOX_STUDIO_TOOLS as readonly string[], tool).toContain(tool);
   });
 });
 

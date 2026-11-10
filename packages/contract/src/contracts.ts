@@ -870,6 +870,8 @@ export interface McpServerEntry {
   oauth?: McpOAuthEntry | false;
   disabled?: boolean;
   autoApprove?: string[];
+  /** Only these of the server's tools reach the model; every one when unset. */
+  tools?: string[];
   /** The CLI orders this server's tools before user-added ones. */
   isBuiltin?: boolean;
 }

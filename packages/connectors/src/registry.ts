@@ -48,6 +48,8 @@ export interface McpEntry {
   env?: Record<string, string>;
   headers?: Record<string, string>;
   oauth?: { clientId?: string; clientSecret?: string; scope?: string } | false;
+  /** Only these of the server's tools reach the model; every one when unset. */
+  tools?: string[];
 }
 
 /** How a `fields` dialog labels and treats one input. */
@@ -210,6 +212,25 @@ export const HOME_PLACEHOLDER = "{{HOME}}";
 
 /** One call to a platform connector's tool, in credits, until the server says otherwise per service. */
 const PLATFORM_CALL_CREDITS = 10;
+
+/**
+ * The Studio tools the model is offered: finding things, editing scripts,
+ * running Luau and playtesting. Studio ships some thirty, and a long tool
+ * list costs every turn and confuses smaller models; image capture and the
+ * asset generators are left out, since execute_luau covers building.
+ */
+export const ROBLOX_STUDIO_TOOLS = [
+  "list_roblox_studios",
+  "get_studio_state",
+  "search_game_tree",
+  "inspect_instance",
+  "script_search",
+  "script_read",
+  "multi_edit",
+  "execute_luau",
+  "start_stop_play",
+  "get_console_output",
+] as const;
 
 const remote = (url: string): McpEntry => ({ url });
 
@@ -391,12 +412,14 @@ export const CONNECTORS: readonly Connector[] = [
         entry: {
           command: "cmd.exe",
           args: ["/c", "%LOCALAPPDATA%\\Roblox\\mcp.bat"],
+          tools: [...ROBLOX_STUDIO_TOOLS],
         },
         app: "%LOCALAPPDATA%\\Roblox\\mcp.bat",
       },
       darwin: {
         entry: {
           command: "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP",
+          tools: [...ROBLOX_STUDIO_TOOLS],
         },
         app: "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP",
       },
@@ -404,8 +427,8 @@ export const CONNECTORS: readonly Connector[] = [
     routes: ["Roblox games", "Roblox Studio places", "Luau scripts"],
     usage:
       "Work inside the user's open place, not in chat: call list_roblox_studios first and pass its studio_id; " +
-      "write or change scripts with multi_edit (script_read, script_search and script_grep to find them), " +
-      "then test with start_stop_play and get_console_output and fix what the output shows. Do not paste Luau " +
+      "find things with search_game_tree, inspect_instance, script_search and script_read; write or change " +
+      "scripts with multi_edit; build or change the world with execute_luau; then test with start_stop_play and get_console_output and fix what the output shows. Do not paste Luau " +
       "for the user to copy unless they ask for it. If list_roblox_studios finds no Studio or a call fails, " +
       "tell the user in one line: open the place in Roblox Studio, then in Assistant choose … > Manage MCP " +
       "Servers and turn on Enable Studio as MCP server.",
