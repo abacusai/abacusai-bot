@@ -43,6 +43,8 @@ export interface McpServerConfig {
   oauth?: { clientId?: string; clientSecret?: string; scope?: string } | false;
   disabled?: boolean;
   isBuiltin?: boolean;
+  /** Only these of the server's tools are routed and offered; every one when unset. */
+  tools?: string[];
 }
 
 export interface McpServerStatus {
@@ -488,6 +490,7 @@ export async function connectMcpServers(
     result.clients.push(client);
 
     for (const tool of client.tools) {
+      if (config.tools != null && !config.tools.includes(tool.name)) continue;
       // The registry is the allowlist for the gateway: a tool the account
       // has attached but no entry names (GitHub's, say, where a token on its own
       // card does that job) is not offered.

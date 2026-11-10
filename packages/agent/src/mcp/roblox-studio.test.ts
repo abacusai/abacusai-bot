@@ -32,6 +32,9 @@ const tools = [
   ["script_read", "Reads a script by its dot-path."],
   ["start_stop_play", "Starts or stops a playtest."],
   ["get_console_output", "Reads Studio's output log."],
+  ["generate_mesh", "Generates a textured 3D mesh from a prompt."],
+  ["screen_capture", "Captures the Studio viewport as an image."],
+  ["user_mouse_input", "Sends mouse actions to the playtest."],
 ].map(([name, description]) => ({ name, description, inputSchema: { type: "object" } }));
 const text = (value) => ({ content: [{ type: "text", text: JSON.stringify(value) }] });
 const call = (name, args) => {
@@ -119,8 +122,12 @@ describe("Roblox Studio over stdio", () => {
     }
   });
 
-  it("puts Studio's tools in the agent's list, named by the connector", async () => {
-    const mcp = await connect(configWith({}));
+  it("puts Studio's core tools in the agent's list, named by the connector, and leaves the rest out", async () => {
+    const roblox = connectorById("roblox-studio");
+    if (roblox?.kind !== "mcp") throw new Error("missing");
+    const mcp = await connect(
+      configWith({ tools: mcpEntryOn(roblox, "darwin")?.tools })
+    );
     expect(mcp.statuses).toEqual([
       expect.objectContaining({ id: "roblox-studio", status: "connected" }),
     ]);
@@ -131,6 +138,19 @@ describe("Roblox Studio over stdio", () => {
       "roblox-studio_script_read",
       "roblox-studio_start_stop_play",
     ]);
+    for (const left of [
+      "generate_mesh",
+      "screen_capture",
+      "user_mouse_input",
+    ]) {
+      expect(mcp.routes.has(`roblox-studio_${left}`)).toBe(false);
+      expect(mcp.routes.has(left)).toBe(false);
+    }
+  });
+
+  it("offers every tool of a server whose entry names none", async () => {
+    const mcp = await connect(configWith({}));
+    expect(mcp.tools).toHaveLength(8);
   });
 
   it("writes a script into the place and playtests it, the loop the model is told to run", async () => {

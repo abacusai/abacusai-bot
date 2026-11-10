@@ -4,7 +4,10 @@
  * "not ready" while the running agent cannot reach Studio. The card, the
  * Connect button and the model read these same answers.
  */
-import { connectorById } from "@abacus-ai/connectors/registry";
+import {
+  connectorById,
+  ROBLOX_STUDIO_TOOLS,
+} from "@abacus-ai/connectors/registry";
 import type { McpServerEntry } from "@abacus-ai/contract/contracts";
 import { describe, expect, it, vi } from "vitest";
 
@@ -182,13 +185,17 @@ describe("connecting Roblox Studio", () => {
   it("installs Studio's own stdio server for this system in one click, with no sign-in", async () => {
     const mac = flowOn("darwin", [MAC_BIN]);
     expect(await mac.flow.connect("roblox-studio")).toEqual({ ok: true });
-    expect(mac.installed.get("roblox-studio")).toEqual({ command: MAC_BIN });
+    expect(mac.installed.get("roblox-studio")).toEqual({
+      command: MAC_BIN,
+      tools: [...ROBLOX_STUDIO_TOOLS],
+    });
 
     const win = flowOn("win32", [WIN_BAT]);
     expect(await win.flow.connect("roblox-studio")).toEqual({ ok: true });
     expect(win.installed.get("roblox-studio")).toEqual({
       command: "cmd.exe",
       args: ["/c", "%LOCALAPPDATA%\\Roblox\\mcp.bat"],
+      tools: [...ROBLOX_STUDIO_TOOLS],
     });
   });
 
