@@ -261,15 +261,17 @@ export const ConnectorDialog = ({ connector }: { connector: string }) => {
   const appReason = localAppReason(status);
   const { scope } = useMcpRuntimeScope();
   const [retrying, setRetrying] = useState(false);
-  const retry = async () => {
+  // A promise chain, not try/finally: the compiler takes no finally block.
+  const retry = () => {
     if (!scope) return;
     setRetrying(true);
-    try {
-      await transport.client.mcp.refresh(scope);
-    } finally {
-      setRetrying(false);
-      void statuses.refetch();
-    }
+    void transport.client.mcp
+      .refresh(scope)
+      .catch(() => undefined)
+      .then(() => {
+        setRetrying(false);
+        void statuses.refetch();
+      });
   };
   const waiting =
     flow.state.connectorId === connector && flow.state.phase !== "idle";
@@ -406,7 +408,7 @@ export const ConnectorDialog = ({ connector }: { connector: string }) => {
               size="lg"
               className={CONNECT_PRIMARY}
               disabled={!scope || retrying}
-              onClick={() => void retry()}
+              onClick={retry}
             >
               {t("phase5.tryAgain")}
             </Button>
