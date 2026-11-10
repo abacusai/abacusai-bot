@@ -11,7 +11,6 @@ import { noteBilledCredits } from "../abacus-credits.js";
 import { HostCore } from "../agui/queue.js";
 import { hostCreditBalance, setCreditRefresher } from "../credit-balance.js";
 import type { SpendKind, SpendLane } from "../spend-policy.js";
-import { checkInStopNotice, isCheckInStop } from "../spend-policy.js";
 import {
   reservePrompt,
   SpendGovernor,
@@ -27,8 +26,7 @@ const balance = (
   remaining: number,
   granted = 2000,
   planCredits?: number,
-  paid = false,
-  free = false
+  paid = false
 ) =>
   core.handle({
     type: "credit_balance",
@@ -37,7 +35,6 @@ const balance = (
     at: ++stamp,
     ...(planCredits != null ? { planCredits } : {}),
     ...(paid ? { paid: true } : {}),
-    ...(free ? { free: true } : {}),
   });
 
 const billedModel = {
@@ -261,25 +258,11 @@ describe("a routine run's credits", () => {
   });
 });
 
-describe("a free plan's per-turn check-in", () => {
-  it("stops to ask at a fifth of the plan, never under 50", async () => {
-    await balance(100, 100, undefined, false, true);
-    const { pi, hits } = governed("attended");
-    await pi.fire("input", { text: "build", source: "interactive" });
-    await pi.fire("agent_start", {});
-    noteBilledCredits(49);
-    await pi.fire("turn_start", {}, billed);
-    expect(hits).toEqual([]);
-    noteBilledCredits(2);
-    await pi.fire("turn_start", {}, billed);
-    expect(hits).toEqual([{ cause: "check-in", amount: 51 }]);
-  });
-
-  it("never stops a paid, team or unread plan's turn: only a plan read as free has it", async () => {
+describe("a chat the user is in has no per-turn credit stop", () => {
+  it("keeps working past any share of the credits, on a free or a paid plan", async () => {
     for (const read of [
-      () => balance(10_000, 20_000, 20_000, true),
-      // A team plan, or one not read yet: neither paid nor free.
       () => balance(100, 100),
+      () => balance(10_000, 20_000, 20_000, true),
     ]) {
       await read();
       const { pi, hits } = governed("attended");
@@ -711,13 +694,5 @@ describe("the model a too-big summary runs on", () => {
     expect(pick("own-key", "groq")).toBe("groq/big");
     expect(pick("own-key", "mistral")).toBeUndefined();
     expect(pick("pool")).toBe("openrouter/free");
-  });
-});
-
-describe("the check-in stop notice", () => {
-  it("is recognised from its own text, and nothing else is", () => {
-    expect(isCheckInStop(checkInStopNotice(301))).toBe(true);
-    expect(isCheckInStop(checkInStopNotice(12.5))).toBe(true);
-    expect(isCheckInStop("This task has used 301 credits so far.")).toBe(false);
   });
 });

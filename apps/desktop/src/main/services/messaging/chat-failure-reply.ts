@@ -338,7 +338,6 @@ export const chatLineForBackgroundJob = (
 
 /** The spend governor's lines, in the chat app: reserve began, or a limit closed the run out. */
 const SPEND_LINE_KEYS = {
-  "check-in": "chat.notice.spendCheckIn",
   budget: "chat.notice.spendBudget",
   calls: "chat.notice.spendCalls",
   time: "chat.notice.spendTime",
