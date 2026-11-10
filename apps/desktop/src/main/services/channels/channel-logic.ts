@@ -47,14 +47,16 @@ export type TurnKind =
   | "discuss"
   /** The discussion is over: the lead sums up what the team agreed. */
   | "conclude"
-  /** A member's work report just landed: the lead keeps the user's goal moving. */
+  /** A member's work just ended (a report or a failure): the lead keeps the user's goal moving. */
   | "report";
 
 export interface Speakers {
   botIds: string[];
   everyone: boolean;
-  /** The user asked the team to work it out together (3+ members, see DISCUSS). */
+  /** The user asked the team to work it out together (see DISCUSS). */
   discussion?: boolean;
+  /** A debate: two sides, so it ends without an "Agreed:" summary. */
+  debate?: boolean;
 }
 
 /** Rounds a discussion runs at most; it ends sooner when a round adds nothing. */
@@ -62,6 +64,16 @@ export const MAX_DISCUSSION_ROUNDS = 3;
 
 const DISCUSS =
   /\b(?:discuss|debate|ideate|brainstorm|deliberate|hash (?:it|this) out|(?:work|think|figure|talk|plan|decide|ideate)(?: (?:it|this|that))?(?: out| over| through)? together|together as a team|as a team|all of you|you all|you guys|agree on|align on|come to (?:an )?agreement|reach (?:a )?consensus|all agree|weigh in|talk (?:it|this) (?:over|through)|both of you|you two|you both)\b/i;
+
+/**
+ * Asking for the exchange itself, not only addressing the group: two bots,
+ * or the bots the user named, discuss only on these ("both of you, say hi"
+ * is each answering).
+ */
+const DISCUSS_ITSELF =
+  /\b(?:discuss(?:ion)?|debat(?:e|ing)|brainstorm|deliberate|hash (?:it|this) out|(?:work|think|figure|talk|plan|decide|ideate)(?: (?:it|this|that))?(?: out| over| through)? together|agree on|align on|come to (?:an )?agreement|reach (?:a )?consensus|talk (?:it|this) (?:over|through)|(?:respond|reply|answer) to each other|tag(?:ging)? each other)\b/i;
+
+const DEBATE = /\bdebat(?:e|ing)\b/i;
 
 const escape = (text: string): string =>
   text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -353,8 +365,10 @@ export const speakersFor = (
   const noAnswer =
     wantsNoAnswer(message, members) && options.lastSpeakerAsked !== true;
   const asksTeam = DISCUSS.test(text) && !noAnswer;
-  const together = asksTeam && members.length >= 3;
-  // "Both of you, say hi": two bots cannot discuss, but each answers.
+  const itself = DISCUSS_ITSELF.test(text) && !noAnswer;
+  const together = asksTeam && (members.length >= 3 || itself);
+  const debate = DEBATE.test(text) ? { debate: true } : {};
+  // "Both of you, say hi": each of two bots answers.
   if ((EVERYONE.test(text) && !together) || (asksTeam && !together))
     return { botIds: members.map((member) => member.id), everyone: true };
   const named = unique([
@@ -363,14 +377,17 @@ export const speakersFor = (
       : []),
     ...mergeByPosition(text, members),
   ]);
-  // "Researcher and Writer, discuss…" is a discussion between those two
-  // only when 3+ are named; named bots otherwise answer in turn.
+  // Naming nobody (or @everyone), it is a discussion of every member.
   if (together && (named.length === 0 || EVERYONE.test(text)))
     return {
       botIds: members.map((member) => member.id),
       everyone: false,
       discussion: true,
+      ...debate,
     };
+  // "@bot1 for the motion, @bot2 against: debate": the named bots discuss.
+  if (itself && named.length >= 2)
+    return { botIds: named, everyone: false, discussion: true, ...debate };
   if (named.length > 0) return { botIds: named, everyone: false };
   // "hi both, one line each": every member, each on its own; "hi all,
   // Coder can you…" is for Coder, wherever the name stands.
@@ -431,7 +448,11 @@ export const envelope = (
   const from =
     message.author.kind === "user" ? "the user" : nameOf(message.author.botId);
   const kind = message.author.kind === "user" ? "user" : "bot";
-  const body = message.text.replace(/<\s*\/?\s*msg\b/gi, "[msg");
+  const failed =
+    message.work?.status === "failed"
+      ? `\n(This work failed: ${message.work.error ?? "no reason given"})`
+      : "";
+  const body = (message.text + failed).replace(/<\s*\/?\s*msg\b/gi, "[msg");
   return `<msg from="${attr(from)}" kind="${kind}">\n${body}\n</msg>`;
 };
 
@@ -580,7 +601,7 @@ export const turnPrompt = (input: {
       break;
     case "report":
       lines.push(
-        `${others}'s work report just landed above. You are the lead: keep the user's goal in this channel moving without waiting to be asked.`,
+        `${others}'s work just ended above (its report, or why it failed). You are the lead: keep the user's goal in this channel moving without waiting to be asked.`,
         "If part of what the user asked for is still not done, start the next piece now: <work> for your own part, or a <chain> of the members it needs, or @Name a member and say exactly what they should do. Use only members the user named in this channel.",
         "If everything the user asked for is done and checked, tell the user so in a short summary of what was made and where. If nothing is needed from you, reply <reply>NO_REPLY</reply>.",
         WORK_RULE,

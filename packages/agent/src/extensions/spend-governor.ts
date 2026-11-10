@@ -38,6 +38,7 @@ import type { OpenLlmRouter } from "../openllm-router.js";
 import { listModels, resolveModel } from "../providers.js";
 import {
   checkInCredits,
+  checkInStopNotice,
   CONTEXT_CAP_FLOOR,
   COSTLY_REQUEST_SHARE,
   contextCap,
@@ -203,7 +204,7 @@ const stoppedMessage = (hit: SpendLimitHit): string => {
         `still in the workspace. Send a message to carry on from here, or ask it to present what it has.`
       );
     case "check-in":
-      return `This task has used ${hit.amount} credits so far. Send a message to keep going.`;
+      return checkInStopNotice(hit.amount);
     case "budget":
       return `Stopped at its credit budget (${hit.amount} credits).`;
   }
@@ -247,7 +248,7 @@ export const SPEND_LIMIT_ACTION = "spend-limit";
 export const spendLimitNotice = (hit: SpendLimitHit): string => {
   switch (hit.cause) {
     case "check-in":
-      return `This task has used ${hit.amount} credits so far. Send a message to keep going.`;
+      return checkInStopNotice(hit.amount);
     case "budget":
       return `Stopped at its credit budget (${hit.amount} credits).`;
     case "calls":

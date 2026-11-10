@@ -335,8 +335,26 @@ describe("a discussion", () => {
     expect(speakersFor(text, M).discussion).toBeUndefined();
   });
 
-  it("needs three members", () => {
-    expect(speakersFor("discuss it", M.slice(0, 2)).discussion).toBeUndefined();
+  it("two members discuss when asked for the exchange itself", () => {
+    expect(speakersFor("discuss it", M.slice(0, 2))).toEqual({
+      botIds: ["chief", "res"],
+      everyone: false,
+      discussion: true,
+    });
+  });
+
+  it("the bots the user named debate, for and against, with no summary", () => {
+    expect(
+      speakersFor(
+        "@Chief - you will debate for the motion\n@Writer - you will debate against it. Tag each other and keep going",
+        M
+      )
+    ).toEqual({
+      botIds: ["chief", "wri"],
+      everyone: false,
+      discussion: true,
+      debate: true,
+    });
   });
 });
 
@@ -426,15 +444,16 @@ describe("the bot a stop names answers it", () => {
 });
 
 describe("two bots asked as a group", () => {
-  it("each answers, since two cannot discuss", () => {
+  it("each answers when only addressed together", () => {
     const two = M.slice(0, 2);
     expect(speakersFor("both of you, introduce yourselves", two)).toEqual({
       botIds: ["chief", "res"],
       everyone: true,
     });
-    expect(speakersFor("discuss the launch date together", two).everyone).toBe(
-      true
-    );
+    expect(speakersFor("you two, what do you think?", two).everyone).toBe(true);
+    expect(
+      speakersFor("discuss the launch date together", two).discussion
+    ).toBe(true);
   });
 });
 

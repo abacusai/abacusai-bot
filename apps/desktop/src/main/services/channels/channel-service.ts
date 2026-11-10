@@ -16,6 +16,7 @@ import path from "node:path";
 
 import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
 import { BOT_TASK_PREFIX } from "@abacus-ai/agent/bot-task";
+import { isCheckInStop } from "@abacus-ai/agent/spend-policy";
 import type { BotTaskTag } from "@abacus-ai/contract/agent-types";
 import {
   MAX_CHANNEL_MEMBERS,
@@ -177,6 +178,14 @@ export class ChannelService {
   private readonly working = new Map<string, Set<string>>();
   /** Hand-off chains running in each channel: Stop and a stop word end them. */
   private readonly chains = new Map<string, Set<{ cancelled: boolean }>>();
+  /**
+   * A report that found other work still running, per channel: whichever of
+   * that work ends last wakes the lead for it, plan work and failures too.
+   */
+  private readonly owedWakes = new Map<
+    string,
+    { reporter: string; userMessageId: string }
+  >();
   /** Lead turns since the user's last message, per channel (MAX_LEAD_TURNS). */
   private readonly leadTurns = new Map<string, number>();
   /** Work running in bots' own chats: message id → its channel and bot. */
@@ -296,6 +305,7 @@ export class ChannelService {
       this.addDecision(channel.id, decided, message.id);
     this.setPending(channelId, (ids) => [...ids, message.id]);
     this.leadTurns.delete(channelId);
+    this.owedWakes.delete(channelId);
     this.enqueue(channelId, message.id);
   }
 
@@ -686,7 +696,12 @@ export class ChannelService {
     }
 
     if (speakers.discussion === true) {
-      await this.discuss(channelId, round, speakers.botIds);
+      await this.discuss(
+        channelId,
+        round,
+        speakers.botIds,
+        speakers.debate !== true
+      );
       return;
     }
 
@@ -1016,14 +1031,16 @@ export class ChannelService {
   /**
    * The user asked the team to work it out together: rounds in which every
    * member speaks in turn, seeing the others, until a round adds nothing
-   * (each may pass) or MAX_DISCUSSION_ROUNDS; then the lead sums up. The
+   * (each may pass) or MAX_DISCUSSION_ROUNDS; then the lead sums up, except
+   * after a debate, which has two sides and no "Agreed:". The
    * rule bounds it, not the bots: they cannot start rounds or bring anyone
    * in, and Stop ends it.
    */
   private async discuss(
     channelId: string,
     round: Round,
-    botIds: readonly string[]
+    botIds: readonly string[],
+    conclude = true
   ): Promise<void> {
     let spoke = 0;
     for (let at = 1; at <= MAX_DISCUSSION_ROUNDS; at++) {
@@ -1051,7 +1068,7 @@ export class ChannelService {
       if (added === 0 || (at > 1 && added <= 1)) break;
     }
     const lead = botIds[0];
-    if (lead == null || round.cancelled || spoke < 2) return;
+    if (lead == null || round.cancelled || spoke < 2 || !conclude) return;
     await this.turn(channelId, round, lead, "conclude", [], undefined, {
       conclusion: true,
     });
@@ -1135,8 +1152,10 @@ export class ChannelService {
         });
         if (chain == null) {
           // An agreed plan is a scope the team settled and the user started:
-          // the lead is not woken to add work beyond it.
+          // the lead is not woken to add work beyond it, only for a report
+          // that waited on it.
           if (!fromPlan) this.wakeLead(channelId, botId, userMessageId);
+          else this.payOwedWake(channelId);
           return report;
         }
         // The next step gets the whole turn, not only the posted message.
@@ -1150,6 +1169,26 @@ export class ChannelService {
         if (this.stoppedWorks.delete(messageId)) return null;
         const why = error instanceof Error ? error.message : String(error);
         this.setWork(channelId, messageId, { status: "failed", error: why });
+        // The free plan's check-in: said in the channel too, and nobody is
+        // woken to spend more before the user answers.
+        if (isCheckInStop(why)) {
+          this.owedWakes.delete(channelId);
+          this.cancelChains(channelId);
+          this.append(channelId, {
+            id: this.newId(),
+            author: { kind: "bot", botId },
+            text: why,
+            at: this.now(),
+            replyTo: userMessageId,
+          });
+          return null;
+        }
+        // Failed: the lead decides what next, as after a report (a chain's
+        // lead is woken when the chain ends).
+        if (chain == null) {
+          if (!fromPlan) this.wakeLead(channelId, botId, userMessageId);
+          else this.payOwedWake(channelId);
+        }
         return null;
       })
       .finally(() => {
@@ -1261,12 +1300,11 @@ export class ChannelService {
   ): void {
     if (this.deps.runWork == null || this.maybeChannel(channelId) == null)
       return;
-    const busy =
-      (this.chains.get(channelId)?.size ?? 0) > 0 ||
-      this.deps.store
-        .readMessages(channelId)
-        .some((message) => message.work != null && isOpen(message.work.status));
-    if (busy) return;
+    if (this.busy(channelId)) {
+      this.owedWakes.set(channelId, { reporter, userMessageId });
+      return;
+    }
+    this.owedWakes.delete(channelId);
     const turns = this.leadTurns.get(channelId) ?? 0;
     if (turns >= MAX_LEAD_TURNS) {
       this.log(
@@ -1281,6 +1319,23 @@ export class ChannelService {
     this.log(`lead woken in ${channelId} after ${reporter}'s report`);
     this.deps.changed(channelId);
     this.pump(channelId);
+  }
+
+  /** Work or a hand-off chain still running in the channel. */
+  private busy(channelId: string): boolean {
+    return (
+      (this.chains.get(channelId)?.size ?? 0) > 0 ||
+      this.deps.store
+        .readMessages(channelId)
+        .some((message) => message.work != null && isOpen(message.work.status))
+    );
+  }
+
+  /** The lead's wake a report left owed, once nothing is running. */
+  private payOwedWake(channelId: string): void {
+    const owed = this.owedWakes.get(channelId);
+    if (owed != null && !this.busy(channelId))
+      this.wakeLead(channelId, owed.reporter, owed.userMessageId);
   }
 
   /** The channel's hand-off chains run no further step. */
