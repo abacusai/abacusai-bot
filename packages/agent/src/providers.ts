@@ -641,7 +641,7 @@ export async function registerAbacusProvider(
 const PROVIDER_SETTLE_ATTEMPTS = 3;
 
 /**
- * Call after the registrations above, before anything reads the registry. Each
+ * Call this after the registrations above, before anything reads the registry. Each
  * one has pi re-check the providers' keys in the background, unawaited, and
  * a check that started before the last registration can land after it and
  * drop that provider from `getAvailable()` until the newer check lands: the
