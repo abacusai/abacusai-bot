@@ -5038,7 +5038,15 @@
   "workWaiting": {
     "title": "İşin seni bekliyor",
     "site": "Siten hazır. Kaldığın yerden devam et.",
-    "file": "Dosyan hazır. Kaldığın yerden devam et."
+    "file": "Dosyan hazır. Kaldığın yerden devam et.",
+    "question": "{{name}} yanıtını bekliyor.",
+    "questionPlain": "Sohbetin yanıtını bekliyor.",
+    "unfinished": "{{name}} yarıda durdu. Kaldığın yerden devam et.",
+    "unfinishedPlain": "Görevin yarıda durdu. Kaldığın yerden devam et.",
+    "chat": "{{name}} içinde kaldığın yerden devam et.",
+    "chatPlain": "Kaldığın yerden devam et.",
+    "routine": "{{name}} senin için yeni sonuçlar buldu.",
+    "routinePlain": "Rutinin senin için yeni sonuçlar buldu."
   },
   "kickoff": {
     "connectOne": "Önce, sistem hatırlatıcısı {{name}} için bağlı demiyorsa hemen bunun için connect_connector çağır.",

@@ -525,13 +525,13 @@ describe("SuccessPitchWatch: the chat's latest site, on any plan", () => {
   });
 });
 
-describe("the result it hands to the work-waiting reminder", () => {
+describe("how a turn ended, for the work-waiting reminder", () => {
   const nextStep = (tasks: object[]) =>
     tool("agent-tools_suggest_tasks", { after_result: true, tasks });
 
   it("names the first work task the result ended on, never a routine", async () => {
-    const resultDelivered = vi.fn();
-    const { run } = setup({ deps: { resultDelivered } });
+    const turnEnded = vi.fn();
+    const { run } = setup({ deps: { turnEnded } });
     await run("Build me a portfolio page", [
       presentSite,
       text(LONG_REPLY),
@@ -540,7 +540,7 @@ describe("the result it hands to the work-waiting reminder", () => {
         { text: "Put my real name and projects in" },
       ]),
     ]);
-    expect(resultDelivered).toHaveBeenCalledWith(
+    expect(turnEnded).toHaveBeenCalledWith(
       "s1",
       "site",
       "Put my real name and projects in"
@@ -548,26 +548,26 @@ describe("the result it hands to the work-waiting reminder", () => {
   });
 
   it("hands a result over with no task when the turn ended without a next step", async () => {
-    const resultDelivered = vi.fn();
-    const { run } = setup({ deps: { resultDelivered } });
+    const turnEnded = vi.fn();
+    const { run } = setup({ deps: { turnEnded } });
     await run("Make my CV a PDF", [presentFile, text(LONG_REPLY)]);
-    expect(resultDelivered).toHaveBeenCalledWith("s1", "file", null);
+    expect(turnEnded).toHaveBeenCalledWith("s1", "file", null);
   });
 
   it("ignores tasks that are not a next step", async () => {
-    const resultDelivered = vi.fn();
-    const { run } = setup({ deps: { resultDelivered } });
+    const turnEnded = vi.fn();
+    const { run } = setup({ deps: { turnEnded } });
     await run("Build me a portfolio page", [
       presentSite,
       text(LONG_REPLY),
       tool("agent-tools_suggest_tasks", { tasks: [{ text: "Something" }] }),
     ]);
-    expect(resultDelivered).toHaveBeenCalledWith("s1", "site", null);
+    expect(turnEnded).toHaveBeenCalledWith("s1", "site", null);
   });
 
-  it("hands over nothing for a turn answering a chat app, or a troubled one", async () => {
-    const resultDelivered = vi.fn();
-    const { run } = setup({ deps: { resultDelivered } });
+  it("tells every chat's ending: a chat app's result, a troubled turn, a question, a plain reply", async () => {
+    const turnEnded = vi.fn();
+    const { run } = setup({ deps: { turnEnded } });
     await run(
       "Build me a portfolio page",
       [presentSite, text(LONG_REPLY)],
@@ -578,7 +578,14 @@ describe("the result it hands to the work-waiting reminder", () => {
       event({ type: "error", error: "boom" }),
       text(LONG_REPLY),
     ]);
-    expect(resultDelivered).not.toHaveBeenCalled();
+    await run("Plan my week", [text("Which days are you free?")]);
+    await run("Thanks", [text("Glad it helped.")]);
+    expect(turnEnded.mock.calls).toEqual([
+      ["s1", "site", null],
+      ["s1", "unfinished", null],
+      ["s1", "question", null],
+      ["s1", "chat", null],
+    ]);
   });
 
   it("tells it the user wrote, only for their own words", () => {

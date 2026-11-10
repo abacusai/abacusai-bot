@@ -5038,7 +5038,15 @@
   "workWaiting": {
     "title": "Votre travail vous attend",
     "site": "Votre site est prêt. Reprenez là où vous vous êtes arrêté.",
-    "file": "Votre fichier est prêt. Reprenez là où vous vous êtes arrêté."
+    "file": "Votre fichier est prêt. Reprenez là où vous vous êtes arrêté.",
+    "question": "{{name}} attend votre réponse.",
+    "questionPlain": "Votre discussion attend votre réponse.",
+    "unfinished": "{{name}} s'est arrêté en cours de route. Reprenez là où vous en étiez.",
+    "unfinishedPlain": "Votre tâche s'est arrêtée en cours de route. Reprenez là où vous en étiez.",
+    "chat": "Reprenez là où vous en étiez dans {{name}}.",
+    "chatPlain": "Reprenez là où vous en étiez.",
+    "routine": "{{name}} a de nouveaux résultats pour vous.",
+    "routinePlain": "Votre routine a de nouveaux résultats pour vous."
   },
   "kickoff": {
     "connectOne": "D'abord, si le rappel système n'indique pas {{name}} comme connecté, appelle connect_connector pour le connecter maintenant.",

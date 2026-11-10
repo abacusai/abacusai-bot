@@ -14,6 +14,13 @@ export const notificationOptions = (metadata: NotificationMetadata) => {
   switch (metadata.kind) {
     case "messaging":
       return { to: "/library/messaging" } as const;
+    case "channel":
+      return metadata.channelId == null
+        ? null
+        : ({
+            to: "/bots/channels/$channelId",
+            params: { channelId: metadata.channelId },
+          } as const);
     case "bot":
       return metadata.botId == null
         ? null

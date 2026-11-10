@@ -5038,7 +5038,15 @@
   "workWaiting": {
     "title": "Your work is waiting",
     "site": "Your site is ready. Pick up where you left off.",
-    "file": "Your file is ready. Pick up where you left off."
+    "file": "Your file is ready. Pick up where you left off.",
+    "question": "{{name}} is waiting for your answer.",
+    "questionPlain": "Your chat is waiting for your answer.",
+    "unfinished": "{{name}} stopped partway. Pick up where you left off.",
+    "unfinishedPlain": "Your task stopped partway. Pick up where you left off.",
+    "chat": "Pick up where you left off in {{name}}.",
+    "chatPlain": "Pick up where you left off.",
+    "routine": "{{name}} has new results for you.",
+    "routinePlain": "Your routine has new results for you."
   },
   "kickoff": {
     "connectOne": "First, if the system reminder does not list {{name}} as connected, call connect_connector for it now.",

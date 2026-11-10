@@ -343,6 +343,7 @@ import {
   ranOutOfAbacusCredits,
   ROUTINE_RUN_TIMEOUT_MS,
   runEndsRoutine,
+  isQuietReply,
   runOutcomeOf,
   shouldPauseAfter,
   shouldPauseQuiet,
@@ -615,7 +616,9 @@ import {
   WORK_WAITING_CHECK_EVERY_MS,
   WORK_WAITING_FIRST_CHECK_MS,
   WorkWaiting,
-  workWaitingTask,
+  workWaitingMetadata,
+  workWaitingLine,
+  type WorkWaitingPlace,
 } from "./services/providers/work-waiting";
 import { SandboxProbeService } from "./services/sandbox/sandbox-probe-service";
 import { agentTurnBusy } from "./services/session/agent-busy";
@@ -1404,21 +1407,19 @@ export class ServiceHost {
     quiet: (now) =>
       isQuietNow(this.prefs?.()?.get().sounds?.quietHours, new Date(now)),
     busy: () => this.turnLedger.anyOpen(),
-    sessionExists: (sessionId) =>
-      this.agentSessionManagerService.get(sessionId) != null,
+    nameOf: (place) => this.workWaitingName(place),
     words: async () => {
       const words = await channelWords(
         channelLocale(readUserLanguage()?.name ?? null, this.appLanguage())
       );
-      return (key) => words.t(key);
+      return (key, values) => words.t(key, values);
     },
     show: (notice, clicked) =>
       this.userNotifier?.({
         title: notice.title,
         body: notice.body,
         dedupeKey: notice.dedupeKey,
-        // No kind: a bot's chat opens in its bot, any other chat as itself.
-        metadata: { sessionId: notice.sessionId },
+        metadata: workWaitingMetadata(notice.place),
         clicked,
       }),
     funnel: (step, detail) => reportFunnelStep(step, detail),
@@ -1440,14 +1441,15 @@ export class ServiceHost {
       this.messagingGatewayService.tellSuccessPitch(sessionId),
     funnel: (step, detail) => reportFunnelStep(step, detail),
     nextStep: nextStepOn,
-    resultDelivered: (sessionId, kind, task) =>
-      this.workWaiting.resultDelivered(sessionId, kind, workWaitingTask(task)),
-    // Another person writing to the user's bot is not the user coming back.
+    // Another person writing to the user's bot is not the user coming back,
+    // and a bot's turn in a channel answers the channel, which the user left.
+    turnEnded: (sessionId, ending, task) => {
+      if (this.isUsersOwnChat(sessionId))
+        this.workWaiting.turnEnded(sessionId, ending, workWaitingLine(task));
+    },
     userWrote: (sessionId) => {
-      if (
-        this.agentSessionManagerService.get(sessionId)?.owner?.role !== "sender"
-      )
-        this.workWaiting.userWrote();
+      if (this.isUsersOwnChat(sessionId))
+        this.workWaiting.userWrote({ kind: "session", sessionId });
     },
   });
 
@@ -3678,6 +3680,49 @@ export class ServiceHost {
   /** Startup catch-up starts after the main renderer is interactive. */
   startBackgroundSync(): void {
     this.debugSyncService.sweepOnStartup();
+  }
+
+  /** A chat that is the user's own: not a contact's chat with their bot, nor a bot's turn for a channel. */
+  private isUsersOwnChat(sessionId: string): boolean {
+    return (
+      this.agentSessionManagerService.get(sessionId)?.owner?.role !== "sender"
+    );
+  }
+
+  /** What the place the user left is called now; null when it is gone. */
+  private workWaitingName(
+    place: WorkWaitingPlace
+  ): { name: string | null } | null {
+    if (place.kind === "channel") {
+      const channel = this.channelService
+        .list()
+        .find((entry) => entry.id === place.channelId);
+      return channel == null
+        ? null
+        : {
+            name:
+              channelTitle(
+                channel,
+                (id) =>
+                  this.botService.list().find((bot) => bot.id === id)?.name ??
+                  null
+              ) || null,
+          };
+    }
+    if (place.kind === "routine") {
+      const job = getJob(place.routineId);
+      return job == null ? null : { name: job.name || null };
+    }
+    const session = this.agentSessionManagerService.get(place.sessionId);
+    if (session == null) return null;
+    // A bot's chat goes by the bot's name. A plain chat's label is its first
+    // message cut short, which reads badly in a sentence: it gets the plain words.
+    const botId = session.owner?.botId;
+    const bot =
+      botId == null
+        ? null
+        : this.botService.list().find((entry) => entry.id === botId);
+    return { name: bot?.name ?? null };
   }
 
   /** A first look soon after launch (a login start), then every quarter hour. */
@@ -6123,6 +6168,10 @@ export class ServiceHost {
       return;
     }
     if (outcome === "completed") {
+      // Something to look at while the user is away; a run that found
+      // nothing new is not.
+      if (!isQuietReply(text))
+        this.workWaiting.routineRan(session.routineId, sessionId);
       if (this.deliversRoutineReports())
         void this.deliverRunReport(
           finishedJob,
@@ -7156,12 +7205,14 @@ export class ServiceHost {
       for (const [key] of listSenderSessionEntries())
         if (keys.has(key)) removeSenderSession(key);
     },
-    changed: (channelId) =>
+    changed: (channelId) => {
+      if (channelId != null) this.workWaiting.channelSpoke(channelId);
       this.emitEvent({
         type: "channels-updated",
         channelId,
         emittedAt: new Date().toISOString(),
-      }),
+      });
+    },
     log: (line) => console.log(line),
   });
 
@@ -7371,6 +7422,7 @@ export class ServiceHost {
 
   postToChannel(channelId: string, text: string, replyTo?: string): void {
     this.channelService.post(channelId, text, replyTo);
+    this.workWaiting.userWrote({ kind: "channel", channelId });
   }
 
   pinInChannel(

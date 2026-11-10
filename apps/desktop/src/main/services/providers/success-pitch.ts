@@ -99,16 +99,30 @@ export interface SuccessPitchDeps {
   funnel: (step: FunnelStep, detail: string) => void;
   /** Results end on a next step, which takes the card's place (off on the hosted computer). */
   nextStep: () => boolean;
-  /** A result handed over in the app, with the next step it ended on. */
-  resultDelivered?: (
+  /**
+   * A turn the user's own words opened ended, in any chat: a result handed
+   * over (with the next step it ended on), a question for them, a stop
+   * partway, or a plain reply.
+   */
+  turnEnded?: (
     sessionId: string,
-    kind: Exclude<SuccessPitchMoment, "reaction">,
+    ending: TurnEnding,
     task: string | null
   ) => void;
   /** Someone's own words reached `sessionId` (any chat). */
   userWrote?: (sessionId: string) => void;
   now?: () => number;
 }
+
+/** How a turn the user opened ended, for "your work is waiting" (work-waiting.ts). */
+export type TurnEnding =
+  | Exclude<SuccessPitchMoment, "reaction">
+  | "question"
+  | "unfinished"
+  | "chat";
+
+/** A reply that ends asking the user something (any script's question mark). */
+const ASKS = /[?？؟\u037e]\s*$/u;
 
 /** Tools that are another card of their own: the pitch never stacks on them. */
 const CARD_TOOLS = ["paid_feature", "offer_session"];
@@ -277,6 +291,7 @@ export class SuccessPitchWatch {
     this.turns.delete(record.sessionId);
     const previous = this.lastReply.get(record.sessionId) ?? null;
     this.lastReply.delete(record.sessionId);
+    if (facts?.byUser === true) this.tellTurnEnded(record, facts);
     if (
       record.kind !== "reply" ||
       facts == null ||
@@ -303,12 +318,6 @@ export class SuccessPitchWatch {
     const nextStep = this.deps.nextStep();
     if (clean && facts.delivered != null)
       this.deps.funnel("result_delivered", facts.delivered);
-    if (clean && facts.delivered != null && where === "app")
-      this.deps.resultDelivered?.(
-        record.sessionId,
-        facts.delivered,
-        facts.nextTask
-      );
     const signal: {
       trigger: SuccessPitchTrigger;
       moment: SuccessPitchMoment;
@@ -324,6 +333,28 @@ export class SuccessPitchWatch {
             }
           : null;
     return this.decide(record.sessionId, where, signal, record.turnId);
+  }
+
+  /** How the user's turn ended, in any chat: what "your work is waiting" says about it. */
+  private tellTurnEnded(record: TurnRecord, facts: TurnFacts): void {
+    const clean =
+      record.kind === "reply" &&
+      facts.tools > 0 &&
+      !facts.troubled &&
+      isCleanReply(facts.reply);
+    const ending: TurnEnding =
+      clean && facts.delivered != null
+        ? facts.delivered
+        : record.kind !== "reply" || (facts.tools > 0 && !clean)
+          ? "unfinished"
+          : ASKS.test(facts.reply.trim())
+            ? "question"
+            : "chat";
+    this.deps.turnEnded?.(
+      record.sessionId,
+      ending,
+      clean && facts.delivered != null ? facts.nextTask : null
+    );
   }
 
   /**

@@ -28,8 +28,15 @@ export interface SystemInfo {
 }
 
 export interface NotificationMetadata {
-  kind?: "bot" | "session" | "routine" | "routine-run" | "messaging";
+  kind?:
+    | "bot"
+    | "session"
+    | "routine"
+    | "routine-run"
+    | "messaging"
+    | "channel";
   botId?: string;
+  channelId?: string;
   routineId?: string;
   workspaceId?: string;
   sessionId?: string;
@@ -148,9 +155,11 @@ export const system = {
                 "routine",
                 "routine-run",
                 "messaging",
+                "channel",
               ])
             ),
             botId: v.optional(v.string()),
+            channelId: v.optional(v.string()),
             routineId: v.optional(v.string()),
             workspaceId: v.optional(v.string()),
             sessionId: v.optional(v.string()),

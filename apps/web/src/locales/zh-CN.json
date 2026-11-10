@@ -5038,7 +5038,15 @@
   "workWaiting": {
     "title": "你的作品在等你",
     "site": "你的网站已经做好了，接着上次继续吧。",
-    "file": "你的文件已经做好了，接着上次继续吧。"
+    "file": "你的文件已经做好了，接着上次继续吧。",
+    "question": "{{name}} 正在等你回复。",
+    "questionPlain": "你的对话正在等你回复。",
+    "unfinished": "{{name}} 中途停下了。从上次停下的地方继续吧。",
+    "unfinishedPlain": "你的任务中途停下了。从上次停下的地方继续吧。",
+    "chat": "在 {{name}} 中从上次停下的地方继续吧。",
+    "chatPlain": "从上次停下的地方继续吧。",
+    "routine": "{{name}} 有新结果给你。",
+    "routinePlain": "你的例行任务有新结果给你。"
   },
   "kickoff": {
     "connectOne": "首先，如果系统提醒没有把 {{name}} 列为已连接，请立即为它调用 connect_connector。",

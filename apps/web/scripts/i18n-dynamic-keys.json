@@ -1851,7 +1851,19 @@
   },
   {
     "prefix": "workWaiting.",
-    "values": ["title", "site", "file"],
+    "values": [
+      "title",
+      "site",
+      "file",
+      "question",
+      "questionPlain",
+      "unfinished",
+      "unfinishedPlain",
+      "chat",
+      "chatPlain",
+      "routine",
+      "routinePlain"
+    ],
     "sources": ["../../desktop/src/main/services/providers/work-waiting.ts"]
   }
 ]

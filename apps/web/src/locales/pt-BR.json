@@ -5038,7 +5038,15 @@
   "workWaiting": {
     "title": "Seu trabalho está esperando",
     "site": "Seu site está pronto. Continue de onde parou.",
-    "file": "Seu arquivo está pronto. Continue de onde parou."
+    "file": "Seu arquivo está pronto. Continue de onde parou.",
+    "question": "{{name}} está esperando sua resposta.",
+    "questionPlain": "Seu chat está esperando sua resposta.",
+    "unfinished": "{{name}} parou no meio do caminho. Continue de onde parou.",
+    "unfinishedPlain": "Sua tarefa parou no meio do caminho. Continue de onde parou.",
+    "chat": "Continue de onde parou em {{name}}.",
+    "chatPlain": "Continue de onde parou.",
+    "routine": "{{name}} tem novos resultados para você.",
+    "routinePlain": "Sua rotina tem novos resultados para você."
   },
   "kickoff": {
     "connectOne": "Primeiro, se o lembrete do sistema não listar {{name}} como conectado, chame connect_connector para ele agora.",

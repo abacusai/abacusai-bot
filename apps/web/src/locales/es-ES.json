@@ -5038,7 +5038,15 @@
   "workWaiting": {
     "title": "Tu trabajo te espera",
     "site": "Tu web está lista. Sigue donde lo dejaste.",
-    "file": "Tu archivo está listo. Sigue donde lo dejaste."
+    "file": "Tu archivo está listo. Sigue donde lo dejaste.",
+    "question": "{{name}} está esperando tu respuesta.",
+    "questionPlain": "Tu chat está esperando tu respuesta.",
+    "unfinished": "{{name}} se detuvo a medias. Retoma donde lo dejaste.",
+    "unfinishedPlain": "Tu tarea se detuvo a medias. Retoma donde la dejaste.",
+    "chat": "Retoma donde lo dejaste en {{name}}.",
+    "chatPlain": "Retoma donde lo dejaste.",
+    "routine": "{{name}} tiene resultados nuevos para ti.",
+    "routinePlain": "Tu rutina tiene resultados nuevos para ti."
   },
   "kickoff": {
     "connectOne": "Primero, si el recordatorio del sistema no indica que {{name}} está conectado, llama ahora a connect_connector para conectarlo.",
