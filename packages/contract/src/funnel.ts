@@ -40,6 +40,13 @@ export const FUNNEL_STEPS = [
   "session_offer_opened",
   // A coding starter on the session start page; the detail is which.
   "code_starter_tapped",
+  // The session start page, once per draft: shown (detail: its starters and
+  // whether an example waits in the box), another starter tapped (which), the
+  // box first edited, and what was sent (example, starter, edited or own).
+  "start_page_shown",
+  "start_starter_tapped",
+  "start_prompt_edited",
+  "start_sent",
   // A bot's reply ended with tap-to-run tasks (suggest_tasks); the detail is
   // the bot's template, and a tap's also whether it copied.
   "task_suggestions_shown",
