@@ -167,17 +167,17 @@ export const LOCAL_ROUTINE_FACTS = [
 
 /**
  * Where routines that run with the computer off are, for this plan: a paid
- * plan has them in Abacus AI Agent on the web. One sentence, said by a local
- * create's once-per-user note and by `bot_help`.
+ * plan has them in Abacus AI Agent on the web, at its link. A free plan is
+ * pointed at its upgrade link only: the web agent's page is not theirs yet.
+ * One sentence, said by a local create's once-per-user note and by `bot_help`.
  */
 export const alwaysOnLine = (plan: "free" | "paid"): string =>
   plan === "paid"
     ? `if it needs to run while their computer is off, their plan already includes ${ALWAYS_ON_ASK.gives}, ` +
       `set up there as a scheduled task: ${ABACUS_AGENT_ROUTINES_URL} (give the link as written).`
-    : `if it should keep running with their computer off, the Basic plan gives ${ALWAYS_ON_ASK.gives} ` +
-      `(${ABACUS_AGENT_ROUTINES_URL}).` +
+    : `if it should keep running with their computer off, the Basic plan gives ${ALWAYS_ON_ASK.gives}.` +
       (billingPlanReady()
-        ? " Call billing_plan with upgrade: true and give their upgrade link with it."
+        ? " Call billing_plan with upgrade: true and give their upgrade link with it, and no other link."
         : "");
 
 /**

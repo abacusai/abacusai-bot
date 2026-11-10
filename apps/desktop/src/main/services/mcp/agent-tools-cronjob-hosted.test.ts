@@ -493,7 +493,8 @@ describe("cronjob, local", () => {
     expect(free).toContain(
       "the Basic plan gives personal agents in Abacus AI Agent on the web that run 24/7 with the computer off"
     );
-    expect(free).toContain("https://apps.abacus.ai/chatllm/agent");
+    // A free plan gets its upgrade link, never the web agent's page.
+    expect(free).not.toContain("https://apps.abacus.ai/chatllm/agent");
     expect(free).toContain("billing_plan with upgrade: true");
 
     const paid = await harness({ alwaysOn: "paid" }).call({
@@ -572,6 +573,7 @@ describe("bot_help, routines", () => {
       "the Basic plan gives personal agents in Abacus AI Agent on the web that run 24/7 with the computer off"
     );
     expect(free).toContain("Call billing_plan with upgrade: true");
+    expect(free).not.toContain("https://apps.abacus.ai/chatllm/agent");
     const paid = await guide({ runner: "local", tier: "paid" });
     expect(paid).toContain(
       "their plan already includes personal agents in Abacus AI Agent on the web that run 24/7"
