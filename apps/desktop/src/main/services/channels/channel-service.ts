@@ -714,17 +714,12 @@ export class ChannelService {
     }
 
     const spoken = new Set<string>();
-    // A named bot @addressed another that had already answered.
-    let askedBack = false;
     for (const botId of speakers.botIds) {
       if (round.cancelled) return;
       if (spoken.has(botId)) continue;
       const reply = await this.turn(channelId, round, botId, "answer", []);
       spoken.add(botId);
       if (reply.length === 0) continue;
-      askedBack ||= mentionedIn(reply, members).some(
-        (id) => id !== botId && spoken.has(id) && speakers.botIds.includes(id)
-      );
       // One the user named answers in its own turn, not as brought in.
       const brought = await this.bringIn(
         channelId,
@@ -743,11 +738,6 @@ export class ChannelService {
           brought.map((id) => this.deps.bot(id)?.name ?? "A bot")
         );
     }
-    // "@Pro for, @Con against": the bots the user named have answered in
-    // turn, and one asked another back. They go on as a discussion, in any
-    // language, under its rule: it ends when a round adds nothing.
-    if (askedBack && !round.cancelled)
-      await this.discuss(channelId, round, speakers.botIds, 2);
   }
 
   /**
@@ -787,7 +777,7 @@ export class ChannelService {
     others: string[],
     /** For "everyone": show nothing after this message. */
     upTo?: string,
-    extra: { round?: number; conclusion?: boolean } = {}
+    extra: { round?: { at: number; of: number }; conclusion?: boolean } = {}
   ): Promise<string> {
     if (round.cancelled) return "";
     const channel = this.maybeChannel(channelId);
@@ -1042,29 +1032,22 @@ export class ChannelService {
    * member speaks in turn, seeing the others, until a round adds nothing
    * (each may pass) or MAX_DISCUSSION_ROUNDS; then the lead sums up. The
    * rule bounds it, not the bots: they cannot start rounds or bring anyone
-   * in, and Stop ends it. `from` 2: the bots have each answered already
-   * (the user named them) and go on from the second round.
+   * in, and Stop ends it.
    */
   private async discuss(
     channelId: string,
     round: Round,
-    botIds: readonly string[],
-    from: 1 | 2 = 1
+    botIds: readonly string[]
   ): Promise<void> {
-    let spoke = from === 1 ? 0 : botIds.length;
-    let userSpoke = false;
-    for (
-      let at: number = from;
-      at <= MAX_DISCUSSION_ROUNDS && !userSpoke;
-      at++
-    ) {
+    let spoke = 0;
+    for (let at = 1; at <= MAX_DISCUSSION_ROUNDS; at++) {
       let added = 0;
       for (const botId of botIds) {
         if (round.cancelled) return;
         // The user spoke: the team stops debating and the lead sums up;
         // their message is answered next, with the discussion in view.
         if ((this.queues.get(channelId) ?? []).length > 0) {
-          userSpoke = true;
+          at = MAX_DISCUSSION_ROUNDS;
           break;
         }
         const words = await this.turn(
@@ -1074,16 +1057,12 @@ export class ChannelService {
           "discuss",
           [],
           undefined,
-          { round: at }
+          { round: { at, of: MAX_DISCUSSION_ROUNDS } }
         );
         if (words.length > 0) added++;
       }
       spoke += added;
       if (added === 0 || (at > 1 && added <= 1)) break;
-      if (at === MAX_DISCUSSION_ROUNDS && !userSpoke)
-        this.log(
-          `discussion in ${channelId} reached ${MAX_DISCUSSION_ROUNDS} rounds`
-        );
     }
     const lead = botIds[0];
     if (lead == null || round.cancelled || spoke < 2) return;

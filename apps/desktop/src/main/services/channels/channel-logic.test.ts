@@ -425,14 +425,6 @@ describe("the bot a stop names answers it", () => {
   });
 });
 
-describe("bots the user named, with a group word", () => {
-  it("answer in turn, so they can answer each other", () => {
-    expect(
-      speakersFor("@Chief for the motion, @Writer against: debate it", M)
-    ).toEqual({ botIds: ["chief", "wri"], everyone: false });
-  });
-});
-
 describe("two bots asked as a group", () => {
   it("each answers, since two cannot discuss", () => {
     const two = M.slice(0, 2);
