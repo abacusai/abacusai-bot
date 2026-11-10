@@ -44,7 +44,13 @@ const write = (relative: string): string => {
   const target = path.join(workspace, relative);
 
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.writeFileSync(target, "x", "utf8");
+  fs.writeFileSync(
+    target,
+    target.endsWith(".pdf")
+      ? "%PDF-1.7\n1 0 obj << /Type /Page >> endobj\ntrailer\n%%EOF\n"
+      : "x",
+    "utf8"
+  );
 
   return target;
 };
@@ -133,6 +139,18 @@ describe("handing the work over", () => {
     expect(text).not.toContain(`[artifact] ${dead}`);
     expect(text).toContain("Not presented, because nothing answered there:");
     expect(text).toContain("connection refused");
+  });
+
+  it("does not present a file that does not open, and says why", async () => {
+    write("index.html");
+    fs.writeFileSync(path.join(workspace, "sheet.xlsx"), "not a zip", "utf8");
+    const text = (
+      await run({ items: [{ path: "sheet.xlsx" }, { path: "index.html" }] })
+    ).content[0]!.text;
+
+    expect(text).not.toContain("[sheet.xlsx]");
+    expect(text).toContain("Not presented, because the file does not open");
+    expect(text).toContain("not a valid Office file");
   });
 
   it("names a missing file rather than dropping it", async () => {

@@ -10,6 +10,10 @@ import path from "path";
 import { pathToFileURL } from "url";
 
 import { checkLocalUrl, isLoopbackUrl } from "./deliverable-url.js";
+import {
+  checkDeliverableFile,
+  deliverableProblemLines,
+} from "./office-check.js";
 
 interface PiToolDefinitionLike {
   name: string;
@@ -75,6 +79,10 @@ export function buildPresentDeliverableTool(
   const resolve = (raw: string): string =>
     path.isAbsolute(raw) ? raw : path.resolve(workspacePath(), raw);
 
+  // The problems each file was last presented with, to notice a fix round
+  // that changed nothing.
+  const lastProblems = new Map<string, string>();
+
   return {
     name: PRESENT_DELIVERABLE_TOOL_NAME,
     label: PRESENT_DELIVERABLE_TOOL_NAME,
@@ -96,6 +104,7 @@ export function buildPresentDeliverableTool(
       "",
       "A URL on this computer is opened first: one that does not answer is not presented,",
       "and the result says why. Get the app running (serve) before you call it done.",
+      "An office file (xlsx, docx, pptx, pdf, csv, jsonl) is opened and checked the same way: fix what the result lists before you call it done.",
     ].join("\n"),
     parameters: {
       type: "object",
@@ -112,6 +121,11 @@ export function buildPresentDeliverableTool(
                 description:
                   "Path to the file, or an http(s) URL (a served app). A relative path resolves against " +
                   "the workspace directory. Files must exist and URLs must answer: this reports the ones that do not.",
+              },
+              translatedFrom: {
+                type: "string",
+                description:
+                  "For a translated file: the file it was translated from. Every string is then compared with its source (missing, untranslated, broken placeholders or numbers, shifted lines).",
               },
               label: {
                 type: "string",
@@ -144,6 +158,8 @@ export function buildPresentDeliverableTool(
       const missing: string[] = [];
       const dead: string[] = [];
       const notes: string[] = [];
+      const fileProblems: string[] = [];
+      const unopened: string[] = [];
 
       for (const entry of rawItems) {
         const item = (
@@ -173,6 +189,21 @@ export function buildPresentDeliverableTool(
           notes.push(`${raw} answered (HTTP ${check.status}).`);
         }
 
+        // A file is opened the way a viewer would before it counts.
+        if (!isUrl) {
+          const from = String(item.translatedFrom ?? "").trim();
+          const check = await checkDeliverableFile(
+            target,
+            from.length > 0 ? resolve(from) : null
+          );
+          if (check.refused != null) {
+            unopened.push(`${raw}: ${check.refused}`);
+            continue;
+          }
+          notes.push(...check.notes);
+          fileProblems.push(...check.problems);
+        }
+
         const label = String(item.label ?? "").trim();
 
         valid.push({
@@ -184,7 +215,7 @@ export function buildPresentDeliverableTool(
       }
 
       if (valid.length === 0) {
-        const detail = [...missing, ...dead];
+        const detail = [...missing, ...dead, ...unopened];
 
         return text(
           `Nothing could be presented: none of those exist or answer. Check the paths, and get the server running.${detail.length > 0 ? `\n\n${detail.join("\n")}` : ""}`,
@@ -217,7 +248,22 @@ export function buildPresentDeliverableTool(
           ...dead.map((line) => `- ${line}`)
         );
       }
+      if (unopened.length > 0)
+        lines.push(
+          "",
+          "Not presented, because the file does not open. Fix it, then present it again:",
+          ...unopened.map((line) => `- ${line}`)
+        );
       if (notes.length > 0) lines.push("", "Checked:", ...notes);
+      const signature = fileProblems.join("\n");
+      const presented = valid.map((item) => item.target).join("\n");
+      lines.push(
+        ...deliverableProblemLines(
+          fileProblems,
+          signature.length > 0 && lastProblems.get(presented) === signature
+        )
+      );
+      lastProblems.set(presented, signature);
       lines.push(
         "",
         ...valid.map((item) => `${ARTIFACT_PATH_MARKER} ${item.target}`)

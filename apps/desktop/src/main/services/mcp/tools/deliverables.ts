@@ -20,6 +20,14 @@ const LOCAL_URL_CHECK = [
   "until it has been presented this way. A page `serve` handed out keeps its URL, and is",
   "served again when it is opened after a restart.",
 ].join("\n");
+
+/** What `present_deliverable` does with a file before it presents one. */
+const FILE_CHECK = [
+  "A file is opened first: an office file (xlsx, docx, pptx, pdf, csv, jsonl) that does not",
+  "open is not presented, and anything the user would hit (broken formulas, links to another",
+  "workbook, unfilled blanks) is listed. A translated strings file is compared with its",
+  "source: give translatedFrom. Fix what it lists before you call the work done.",
+].join("\n");
 export const DELIVERABLES_TOOLS: ToolDefinition[] = [
   {
     name: "artifact",
@@ -158,6 +166,8 @@ export const DELIVERABLES_TOOLS: ToolDefinition[] = [
             "into the chat, does not show it. Presenting the same file twice is cheap and safe.",
             "",
             LOCAL_URL_CHECK,
+            "",
+            FILE_CHECK,
           ].join("\n"),
     inputSchema: (channel) => ({
       type: "object",
@@ -176,6 +186,12 @@ export const DELIVERABLES_TOOLS: ToolDefinition[] = [
                   "Path to the file, or an http(s) URL (a served app). A relative path resolves against " +
                   "the workspace directory. Files must exist and a URL on this computer must work; this " +
                   "reports the ones that do not.",
+              },
+              translatedFrom: {
+                type: "string",
+                description:
+                  "For a translated file: the file it was translated from. Every string is compared with its " +
+                  "source (missing, untranslated, broken placeholders or numbers, lines shifted onto another id).",
               },
               label: {
                 type: "string",

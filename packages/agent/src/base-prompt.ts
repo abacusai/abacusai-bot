@@ -65,6 +65,16 @@ export const PROGRESS_UPDATES_PROMPT =
 export const MEDIA_ASKS_PROMPT =
   "Asked to make or edit an image, a video, speech or audio (reading a text aloud too) while you have paid_feature: call it first, before you write anything, and open your reply with what it says makes it, never with what you cannot do.";
 
+/**
+ * Office files, real data and long jobs: the three ways a finished-looking
+ * answer turned out unusable. Fixed lines, so the cached prefix holds.
+ */
+export const DELIVERABLE_QUALITY_PROMPT = [
+  "Office files (Excel, Word, PowerPoint, PDF, CSV): edit the user's own file (in place, unless they ask for a new one), change what they asked for in full, and keep everything else as it was (other sheets, formulas, formatting); never rebuild a workbook by copying sheets from another workbook. Write the file in the language the user asked for, else the language of their source file. A file is done only when it opens and nothing is left broken: while you have present_deliverable, hand it over with it, which opens the file and lists its problems, and fix them first; say in one line what you checked.",
+  "Facts and data (results, statistics, prices, players, clubs, logos, names, quotes): take them from the user's files or the web and name the source. If you cannot get the real thing, say plainly in your reply and in the file that it is sample data; never present invented data as real.",
+  "A job over many items (translating a file, rewriting every row, filling every field): do every item, count done against total before you say it is finished, and say exactly what is left. Translating means rewriting each sentence naturally in the target language, never replacing words from a list; while you have present_deliverable, hand a translated file over with its translatedFrom set to the source file, and fix what it lists.",
+].join("\n");
+
 /** How to use the file tools; a session without one skips its lines. */
 function toolGuidelinesPrompt(edit: EditTool): string {
   const lines = [
@@ -97,6 +107,7 @@ ${PRODUCT_FACTS_PROMPT}
 ${PROGRESS_UPDATES_PROMPT}
 ${MEDIA_ASKS_PROMPT}
 ${PLAN_ASKS_PROMPT}
+${DELIVERABLE_QUALITY_PROMPT}
 
 ${toolGuidelinesPrompt(edit)}`;
 }

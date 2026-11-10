@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   PROGRESS_UPDATES_PROMPT,
+  DELIVERABLE_QUALITY_PROMPT,
   MEDIA_ASKS_PROMPT,
   PRODUCT_FACTS_PROMPT,
   basePrompt,
@@ -94,7 +95,7 @@ describe("questions about the app itself", () => {
       const prompt = basePrompt(edit);
       expect(
         prompt.startsWith(
-          `${identityPrompt()}\n${PRODUCT_FACTS_PROMPT}\n${PROGRESS_UPDATES_PROMPT}\n${MEDIA_ASKS_PROMPT}\n${PLAN_ASKS_PROMPT}\n\n`
+          `${identityPrompt()}\n${PRODUCT_FACTS_PROMPT}\n${PROGRESS_UPDATES_PROMPT}\n${MEDIA_ASKS_PROMPT}\n${PLAN_ASKS_PROMPT}\n${DELIVERABLE_QUALITY_PROMPT}\n\n`
         )
       ).toBe(true);
       expect(basePrompt(edit)).toBe(prompt);
@@ -110,6 +111,12 @@ describe("questions about the app itself", () => {
     expect(MEDIA_ASKS_PROMPT).toMatch(
       /paid_feature: call it first, before you write anything/
     );
+    // A file is done when it opens; data is sourced or called sample; a long job counts.
+    expect(DELIVERABLE_QUALITY_PROMPT).toMatch(
+      /done only when it opens and nothing is left broken/
+    );
+    expect(DELIVERABLE_QUALITY_PROMPT).toMatch(/it is sample data/);
+    expect(DELIVERABLE_QUALITY_PROMPT).toMatch(/count done against total/);
   });
 
   /**
