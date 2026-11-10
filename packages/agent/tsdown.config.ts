@@ -75,6 +75,7 @@ export default defineConfig({
     "src/send-media.ts",
     // Whether a presented URL answers: main's present_deliverable asks it too.
     "src/deliverable-url.ts",
+    "src/office-check.ts",
     // What a chat can do, and which tools it gets: main and its tests read them.
     "src/channel.ts",
     "src/secret-files.ts",

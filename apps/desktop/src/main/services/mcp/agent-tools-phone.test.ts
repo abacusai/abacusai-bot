@@ -46,7 +46,10 @@ const WEBP = Buffer.concat([
 const SHOT = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 7]);
 
 const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "phone-deliver-"));
-fs.writeFileSync(path.join(workspace, "love.pdf"), "%PDF-1.7 love");
+fs.writeFileSync(
+  path.join(workspace, "love.pdf"),
+  "%PDF-1.7\n1 0 obj << /Type /Page >> endobj\n%%EOF\n"
+);
 fs.writeFileSync(path.join(workspace, "notes.docx"), "PK\u0003\u0004 notes");
 fs.writeFileSync(path.join(workspace, "chart.png"), PNG);
 fs.writeFileSync(path.join(workspace, "sky.webp"), WEBP);

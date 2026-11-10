@@ -15,6 +15,10 @@ import {
 } from "@abacus-ai/agent/channel";
 import { checkLocalUrl, isLoopbackUrl } from "@abacus-ai/agent/deliverable-url";
 import { modelPath } from "@abacus-ai/agent/model-path";
+import {
+  checkDeliverableFile,
+  deliverableProblemLines,
+} from "@abacus-ai/agent/office-check";
 import { isWithin, resolveSecretPaths } from "@abacus-ai/agent/secret-paths";
 import {
   DOCUMENT_MAX_BYTES,
@@ -756,6 +760,8 @@ export class McpAgentToolsServer extends McpHttpServer {
 
   /** The loopback origins `serve` returned to each session. */
   private readonly servedOrigins = new Map<string, Set<string>>();
+  /** The problems each set of files was last presented with: a fix round that changed nothing shows. */
+  private readonly lastDeliverableProblems = new Map<string, string>();
 
   private readonly routineSends: RoutineSendLedger;
 
@@ -2172,10 +2178,11 @@ export class McpAgentToolsServer extends McpHttpServer {
         "At least one item is required, each with a path or an http(s) URL."
       );
 
-    const valid: Array<{ label: string; target: string; isUrl: boolean }> = [];
+    let valid: Array<{ label: string; target: string; isUrl: boolean }> = [];
     const missing: string[] = [];
     const unanswered: string[] = [];
     const checked: string[] = [];
+    const translatedFrom = new Map<string, string>();
 
     for (const entry of rawItems) {
       const item = (
@@ -2207,6 +2214,9 @@ export class McpAgentToolsServer extends McpHttpServer {
         missing.push(this.resolveOutputPath(raw, callerSession));
         continue;
       }
+      const from = String(item.translatedFrom ?? "").trim();
+      if (!isUrl && from.length > 0)
+        translatedFrom.set(target, this.resolveOutputPath(from, callerSession));
 
       const label = String(item.label ?? "").trim();
       valid.push({
@@ -2239,6 +2249,43 @@ export class McpAgentToolsServer extends McpHttpServer {
         chatMedia,
         callerSession
       );
+
+    // A file is opened the way a viewer would before it is handed over. Only
+    // here, where the pane opens it anyway: the chat path has its own checks
+    // on what may leave the computer.
+    const fileProblems: string[] = [];
+    const secrets = resolveSecretPaths({
+      workspaceRoot: this.options.workspacePath() ?? process.cwd(),
+    }).denied;
+    const unopened = new Set<string>();
+    for (const item of valid) {
+      if (item.isUrl || secrets.some((secret) => isWithin(item.target, secret)))
+        continue;
+      const check = await checkDeliverableFile(
+        item.target,
+        translatedFrom.get(item.target) ?? null
+      );
+      if (check.refused != null) {
+        unopened.add(item.target);
+        unanswered.push(`${path.basename(item.target)}: ${check.refused}`);
+        continue;
+      }
+      checked.push(...check.notes);
+      fileProblems.push(...check.problems);
+    }
+    valid = valid.filter((item) => !unopened.has(item.target));
+    if (valid.length === 0)
+      return this.err(
+        `${NOTHING_PRESENTED}: none of those exist, answer or open.\n\n${[...missing, ...unanswered].join("\n")}`
+      );
+    const presented = valid.map((item) => item.target).join("\n");
+    const signature = fileProblems.join("\n");
+    const problemLines = deliverableProblemLines(
+      fileProblems,
+      signature.length > 0 &&
+        this.lastDeliverableProblems.get(presented) === signature
+    );
+    this.lastDeliverableProblems.set(presented, signature);
 
     const first = valid[0]!;
     // Only the first item goes to the preview pane; the rest are rows of the
@@ -2280,6 +2327,7 @@ export class McpAgentToolsServer extends McpHttpServer {
         ...unanswered.map((line) => `- ${line}`)
       );
     if (checked.length > 0) lines.push("", "Checked:", ...checked);
+    lines.push(...problemLines);
     // The files card and the artifacts ledger read these, not the arguments.
     lines.push("", ...valid.map((item) => artifactPathLine(item.target)));
 

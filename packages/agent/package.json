@@ -81,6 +81,10 @@
       "types": "./dist/deliverable-url.d.ts",
       "default": "./dist/deliverable-url.js"
     },
+    "./office-check": {
+      "types": "./dist/office-check.d.ts",
+      "default": "./dist/office-check.js"
+    },
     "./channel": {
       "types": "./dist/channel.d.ts",
       "default": "./dist/channel.js"
