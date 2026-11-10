@@ -35,6 +35,13 @@ export const FUNNEL_STEPS = [
   "first_choice_images",
   "first_choice_freetext",
   "screen_b_shown",
+  // A bot the user made: the detail is its template, own_words for a bot made
+  // from their own words, or custom.
+  "bot_created",
+  // A Connect card shown in a chat, and an account connected; the detail is
+  // the connector.
+  "connect_card_shown",
+  "connect_done",
   // A bot asked to build offers a session (offer_session's card).
   "session_offer_shown",
   "session_offer_opened",
@@ -163,6 +170,10 @@ export const onboardingOfferAccountStep = (
     : null;
 
 /** A detail is a short code, never free text. */
+/** A template or connector id as a detail: "abacus-gmailuser" is gmailuser, "personal-admin" personal_admin. */
+export const funnelId = (id: string): string =>
+  id.replace(/^abacus-/, "").replace(/-/g, "_");
+
 export const funnelDetail = (value: unknown): string =>
   typeof value === "string"
     ? value.replace(/[^A-Za-z0-9_]/g, "").slice(0, 32)

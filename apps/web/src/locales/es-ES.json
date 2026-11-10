@@ -3658,6 +3658,7 @@
       "failed": "Failed",
       "skipped": "Skipped",
       "skipped-link": "Omitida: app de chat sin vincular",
+      "skipped-account": "Omitida: esperando una cuenta",
       "skipped-offline": "Omitida: sin conexión",
       "skipped-credits": "Omitida: sin créditos",
       "offline": "No se pudo conectar con Abacus",
@@ -5011,7 +5012,7 @@
   },
   "kickoff": {
     "connectOne": "Primero, si el recordatorio del sistema no indica que {{name}} está conectado, llama ahora a connect_connector para conectarlo.",
-    "connectMany": "Primero, llama ahora a connect_connector para cada uno de {{names}} que el recordatorio del sistema no indique como conectado.",
+    "resultFirst": "Primero entrega un resultado real con lo que funciona sin ninguna cuenta o, si la tarea empieza por algo que solo el usuario puede dar (su pregunta, un tema, una lista), pídelo en una sola pregunta breve; solo después, ofrece como máximo una conexión, la que más mejore el resultado.",
     "introduce": "Preséntate una sola vez y luego {{start}}.",
     "startMission": "empieza con tu misión",
     "startGoal": "da el primer paso hacia lo que pidió el usuario: «{{goal}}»",
@@ -5217,6 +5218,7 @@
     "body": {
       "signedOut": "No puede ejecutarse mientras tengas la sesión cerrada. Inicia sesión y volverá a ejecutarse.",
       "routineLinkLost": "Sus ejecuciones esperan hasta que {{platform}} vuelva a estar conectado. Entonces se recupera la ejecución perdida.",
+      "routineNeedsAccount": "Sus revisiones esperan hasta que {{account}} esté conectado. Conéctalo y empezarán solas.",
       "loginNotFinished": "El inicio de sesión en {{platform}} no terminó, así que está en pausa. Haz clic en Conectar para terminarlo.",
       "missedMany_one": "{{routines}} rutinas se han saltado {{count}} ejecución mientras el ordenador dormía o la app estaba cerrada. {{madeUp}} recuperadas.",
       "missedMany_other": "{{routines}} rutinas se han saltado {{count}} ejecuciones mientras el ordenador dormía o la app estaba cerrada. {{madeUp}} recuperadas.",

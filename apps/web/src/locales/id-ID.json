@@ -3658,6 +3658,7 @@
       "failed": "Failed",
       "skipped": "Skipped",
       "skipped-link": "Dilewati: aplikasi chat tidak tertaut",
+      "skipped-account": "Dilewati: menunggu akun",
       "skipped-offline": "Dilewati: offline",
       "skipped-credits": "Dilewati: kredit habis",
       "offline": "Tidak dapat menjangkau Abacus",
@@ -5011,7 +5012,7 @@
   },
   "kickoff": {
     "connectOne": "Pertama, jika pengingat sistem tidak mencantumkan {{name}} sebagai terhubung, panggil connect_connector untuknya sekarang.",
-    "connectMany": "Pertama, panggil connect_connector sekarang untuk setiap {{names}} yang tidak dicantumkan sebagai terhubung oleh pengingat sistem.",
+    "resultFirst": "Pertama, serahkan hasil nyata dengan apa yang bisa dilakukan tanpa akun apa pun, atau, jika tugasnya dimulai dari sesuatu yang hanya bisa diberikan pengguna (pertanyaannya, topik, daftar), mintalah dalam satu pertanyaan singkat; baru setelah itu, tawarkan paling banyak satu koneksi, yang paling meningkatkan hasilnya.",
     "introduce": "Perkenalkan dirimu sekali, lalu {{start}}.",
     "startMission": "mulailah misimu",
     "startGoal": "ambil langkah pertama menuju apa yang diminta pengguna: \"{{goal}}\"",
@@ -5217,6 +5218,7 @@
     "body": {
       "signedOut": "Rutinitas ini tidak bisa berjalan saat Anda keluar. Masuk dan rutinitas berjalan lagi.",
       "routineLinkLost": "Jalankannya menunggu sampai {{platform}} terhubung lagi. Jalankan yang terlewat akan disusulkan saat itu.",
+      "routineNeedsAccount": "Check-in-nya menunggu sampai {{account}} terhubung. Hubungkan, dan check-in akan mulai sendiri.",
       "loginNotFinished": "Proses masuk {{platform}} belum selesai, jadi dijeda. Klik Hubungkan untuk menyelesaikannya.",
       "missedMany_one": "{{routines}} rutinitas melewatkan {{count}} jalankan saat komputer tidur atau aplikasi ditutup. {{madeUp}} disusulkan.",
       "missedMany_other": "{{routines}} rutinitas melewatkan {{count}} jalankan saat komputer tidur atau aplikasi ditutup. {{madeUp}} disusulkan.",

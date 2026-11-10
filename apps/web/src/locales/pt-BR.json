@@ -3658,6 +3658,7 @@
       "failed": "Failed",
       "skipped": "Skipped",
       "skipped-link": "Ignorada: app de chat não vinculado",
+      "skipped-account": "Ignorada: aguardando uma conta",
       "skipped-offline": "Ignorada: offline",
       "skipped-credits": "Ignorada: sem créditos",
       "offline": "Não foi possível acessar o Abacus",
@@ -5011,7 +5012,7 @@
   },
   "kickoff": {
     "connectOne": "Primeiro, se o lembrete do sistema não listar {{name}} como conectado, chame connect_connector para ele agora.",
-    "connectMany": "Primeiro, chame connect_connector agora para cada um de {{names}} que o lembrete do sistema não listar como conectado.",
+    "resultFirst": "Primeiro entregue um resultado real com o que funciona sem nenhuma conta ou, se a tarefa começa com algo que só o usuário pode dar (a pergunta dele, um tema, uma lista), peça isso em uma única pergunta curta; só depois, ofereça no máximo uma conexão, a que mais melhora o resultado.",
     "introduce": "Apresente-se uma única vez e depois {{start}}.",
     "startMission": "comece sua missão",
     "startGoal": "dê o primeiro passo rumo ao que o usuário pediu: \"{{goal}}\"",
@@ -5217,6 +5218,7 @@
     "body": {
       "signedOut": "Ela não pode rodar enquanto você está desconectado. Entre e ela volta a rodar.",
       "routineLinkLost": "As execuções esperam até o {{platform}} ser conectado de novo. A execução perdida é recuperada então.",
+      "routineNeedsAccount": "As verificações aguardam até que {{account}} esteja conectado. Conecte e elas começam sozinhas.",
       "loginNotFinished": "O login no {{platform}} não terminou, então está pausado. Clique em Conectar para terminar.",
       "missedMany_one": "{{routines}} rotinas perderam {{count}} execução enquanto o computador dormia ou o app estava fechado. {{madeUp}} recuperadas.",
       "missedMany_other": "{{routines}} rotinas perderam {{count}} execuções enquanto o computador dormia ou o app estava fechado. {{madeUp}} recuperadas.",

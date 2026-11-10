@@ -3658,6 +3658,7 @@
       "failed": "失败",
       "skipped": "已跳过",
       "skipped-link": "已跳过：未关联聊天应用",
+      "skipped-account": "已跳过：等待账号",
       "skipped-offline": "已跳过：离线",
       "skipped-credits": "已跳过：积分不足",
       "offline": "无法连接到 Abacus",
@@ -5011,7 +5012,7 @@
   },
   "kickoff": {
     "connectOne": "首先，如果系统提醒没有把 {{name}} 列为已连接，请立即为它调用 connect_connector。",
-    "connectMany": "首先，对于 {{names}} 中系统提醒未列为已连接的每一项，请立即调用 connect_connector。",
+    "resultFirst": "先用不需要任何账号就能做的事交付一个实际结果；如果这项工作要从只有用户能给的东西开始（他们的问题、一个主题、一份清单），就用一个简短的问题来问；之后才最多提议一个连接，选最能改进结果的那个。",
     "introduce": "先做一次自我介绍，然后 {{start}}。",
     "startMission": "开始执行你的使命",
     "startGoal": "朝用户的要求迈出第一步：“{{goal}}”",
@@ -5217,6 +5218,7 @@
     "body": {
       "signedOut": "你退出登录时它无法运行。登录后会再次运行。",
       "routineLinkLost": "它的运行会等到 {{platform}} 重新连接，届时会补上错过的运行。",
+      "routineNeedsAccount": "在 {{account}} 连接之前，它的定期检查会等待。连接后会自动开始。",
       "loginNotFinished": "{{platform}} 登录没有完成，所以已暂停。点击“连接”完成登录。",
       "missedMany_one": "电脑休眠或应用关闭期间，{{routines}} 个例行任务错过了 {{count}} 次运行，已补上 {{madeUp}} 次。",
       "missedMany_other": "电脑休眠或应用关闭期间，{{routines}} 个例行任务错过了 {{count}} 次运行，已补上 {{madeUp}} 次。",

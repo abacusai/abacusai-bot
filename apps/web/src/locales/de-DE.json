@@ -3658,6 +3658,7 @@
       "failed": "Failed",
       "skipped": "Skipped",
       "skipped-link": "Übersprungen: Chat-App nicht verbunden",
+      "skipped-account": "Übersprungen: wartet auf ein Konto",
       "skipped-offline": "Übersprungen: offline",
       "skipped-credits": "Übersprungen: keine Credits",
       "offline": "Abacus nicht erreichbar",
@@ -5011,7 +5012,7 @@
   },
   "kickoff": {
     "connectOne": "Falls die Systemerinnerung {{name}} nicht als verbunden aufführt, rufe zuerst sofort connect_connector dafür auf.",
-    "connectMany": "Rufe zuerst sofort connect_connector für jeden von {{names}} auf, den die Systemerinnerung nicht als verbunden aufführt.",
+    "resultFirst": "Gib zuerst ein echtes Ergebnis ab, mit dem, was ohne Konto funktioniert, oder, wenn die Aufgabe mit etwas beginnt, das nur der Nutzer geben kann (seine Frage, ein Thema, eine Liste), frag in einer kurzen Frage danach; biete erst danach höchstens eine Verbindung an, die das Ergebnis am meisten verbessert.",
     "introduce": "Stell dich einmal vor, dann {{start}}.",
     "startMission": "beginne mit deiner Mission",
     "startGoal": "mach den ersten Schritt zu dem, worum der Nutzer gebeten hat: „{{goal}}“",
@@ -5217,6 +5218,7 @@
     "body": {
       "signedOut": "Sie kann nicht laufen, solange du abgemeldet bist. Melde dich an, dann läuft sie wieder.",
       "routineLinkLost": "Ihre Läufe warten, bis {{platform}} wieder verbunden ist. Der verpasste Lauf wird dann nachgeholt.",
+      "routineNeedsAccount": "Die Check-ins warten, bis {{account}} verbunden ist. Verbinde es, dann starten sie von selbst.",
       "loginNotFinished": "Die Anmeldung bei {{platform}} wurde nicht abgeschlossen, daher ist es pausiert. Klicke auf Verbinden, um sie abzuschließen.",
       "missedMany_one": "{{routines}} Routinen haben {{count}} Lauf verpasst, während der Computer schlief oder die App geschlossen war. {{madeUp}} nachgeholt.",
       "missedMany_other": "{{routines}} Routinen haben {{count}} Läufe verpasst, während der Computer schlief oder die App geschlossen war. {{madeUp}} nachgeholt.",

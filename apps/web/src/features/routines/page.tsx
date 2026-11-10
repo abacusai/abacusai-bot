@@ -11,6 +11,7 @@ import {
   Pause,
   Pencil,
   Play,
+  Plug,
   SquareArrowOutUpRight,
   Trash2,
   WifiOff,
@@ -125,6 +126,9 @@ const RunsRail = ({
                     a.outcome === "skipped-link" ? (
                     // The network's doing, not the routine's: no red.
                     <WifiOff className="text-muted-foreground size-3.5 shrink-0" />
+                  ) : a.outcome === "skipped-account" ? (
+                    // Waiting on the user to connect an account: no red.
+                    <Plug className="text-muted-foreground size-3.5 shrink-0" />
                   ) : a.outcome === "skipped-credits" ? (
                     // Nothing ran and nothing was billed: no red either.
                     <Coins className="text-muted-foreground size-3.5 shrink-0" />

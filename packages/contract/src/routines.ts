@@ -24,7 +24,8 @@ export type RoutineTrigger =
  * one per fire: `started` and `start-failed` (a session exists), `skipped`,
  * `skipped-offline` (held for the network, and its next fire came first),
  * `skipped-credits` (the account is out of credits: nothing ran, nothing was
- * billed) and `no-workspace` (none), and `unknown` (a legacy entry main could
+ * billed), `skipped-account` (a bot's check-in whose one required account is
+ * not connected: nothing ran) and `no-workspace` (none), and `unknown` (a legacy entry main could
  * not classify). **Follow-up kinds** are not fires: `timed-out` (the reaper
  * stopped a started run; it names that attempt) and `paused` (an
  * administrative note, no session).
@@ -36,6 +37,7 @@ export type RoutineRunKind =
   | "skipped-offline"
   | "skipped-credits"
   | "skipped-link"
+  | "skipped-account"
   | "no-workspace"
   | "unknown"
   | "timed-out"

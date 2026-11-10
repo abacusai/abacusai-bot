@@ -3658,6 +3658,7 @@
       "failed": "Failed",
       "skipped": "Skipped",
       "skipped-link": "Saltata: app di chat non collegata",
+      "skipped-account": "Saltata: in attesa di un account",
       "skipped-offline": "Saltata: offline",
       "skipped-credits": "Saltata: crediti esauriti",
       "offline": "Impossibile raggiungere Abacus",
@@ -5011,7 +5012,7 @@
   },
   "kickoff": {
     "connectOne": "Per prima cosa, se il promemoria di sistema non indica {{name}} come connesso, chiama subito connect_connector per collegarlo.",
-    "connectMany": "Per prima cosa, chiama subito connect_connector per ciascuno di {{names}} che il promemoria di sistema non indica come connesso.",
+    "resultFirst": "Prima consegna un risultato reale con ciò che funziona senza alcun account oppure, se il lavoro parte da qualcosa che solo l'utente può dare (la sua domanda, un argomento, un elenco), chiedilo con una sola domanda breve; solo dopo, proponi al massimo una connessione, quella che migliora di più il risultato.",
     "introduce": "Presentati una sola volta, poi {{start}}.",
     "startMission": "inizia la tua missione",
     "startGoal": "fai il primo passo verso ciò che l'utente ha chiesto: «{{goal}}»",
@@ -5217,6 +5218,7 @@
     "body": {
       "signedOut": "Non può essere eseguita finché sei disconnesso. Accedi e riprenderà.",
       "routineLinkLost": "Le sue esecuzioni aspettano che {{platform}} sia di nuovo connesso. L'esecuzione saltata viene recuperata allora.",
+      "routineNeedsAccount": "I suoi check-in aspettano che {{account}} sia collegato. Collegalo e partiranno da soli.",
       "loginNotFinished": "L'accesso a {{platform}} non è stato completato, quindi è in pausa. Fai clic su Connetti per completarlo.",
       "missedMany_one": "{{routines}} routine hanno saltato {{count}} esecuzione mentre il computer era in sospensione o l'app era chiusa. {{madeUp}} recuperate.",
       "missedMany_other": "{{routines}} routine hanno saltato {{count}} esecuzioni mentre il computer era in sospensione o l'app era chiusa. {{madeUp}} recuperate.",

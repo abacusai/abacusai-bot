@@ -138,15 +138,37 @@ describe("the templates behind the tabs", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("names only real connectors a mission needs, the home app left implied", () => {
+  it("names only real connectors, the home app left implied", () => {
     for (const template of BOT_TEMPLATES)
-      for (const id of template.needs ?? []) {
+      for (const id of [
+        ...(template.requires != null ? [template.requires] : []),
+        ...(template.improves ?? []),
+      ]) {
         expect(connectorById(id), `${template.id}: ${id}`).toBeDefined();
         expect(id, template.id).not.toBe(`messaging-${template.homeChannel}`);
       }
-    expect(BOT_TEMPLATES.find((t) => t.id === "email-drafting")?.needs).toEqual(
-      ["abacus-gmailuser", "abacus-googledriveuser"]
-    );
+  });
+
+  it("requires an account only where the job has nothing to work from without it", () => {
+    expect(
+      BOT_TEMPLATES.filter((t) => t.requires != null).map((t) => t.id)
+    ).toEqual([
+      "chief-of-staff",
+      "email-drafting",
+      "inbox-to-calendar",
+      "social-inbox-manager",
+      "comment-mention-assistant",
+      "spending-digest",
+      "bills-renewal-watch",
+    ]);
+    for (const template of BOT_TEMPLATES) {
+      expect(template.improves ?? [], template.id).not.toContain(
+        template.requires
+      );
+      // Every other template says what it hands over before any account.
+      if (template.requires == null && (template.improves ?? []).length > 0)
+        expect(template.withoutAccounts, template.id).toBeTruthy();
+    }
   });
 
   it("gives each chat-app agent its home app, and no other template one", () => {

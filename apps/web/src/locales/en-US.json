@@ -3658,6 +3658,7 @@
       "failed": "Failed",
       "skipped": "Skipped",
       "skipped-link": "Skipped: chat app not linked",
+      "skipped-account": "Skipped: waiting for an account",
       "skipped-offline": "Skipped: offline",
       "skipped-credits": "Skipped: out of credits",
       "offline": "Couldn't reach Abacus",
@@ -5011,7 +5012,7 @@
   },
   "kickoff": {
     "connectOne": "First, if the system reminder does not list {{name}} as connected, call connect_connector for it now.",
-    "connectMany": "First, call connect_connector now for each of {{names}} that the system reminder does not list as connected.",
+    "resultFirst": "First hand over a real result made with what works without any account, or, when the job starts from something only the user can give (their question, a topic, a list), ask for it in one short question; only after that, offer at most one connection, the one that most improves the result.",
     "introduce": "Introduce yourself once, then {{start}}.",
     "startMission": "get started on your mission",
     "startGoal": "take the first step toward what the user asked for: \"{{goal}}\"",
@@ -5217,6 +5218,7 @@
     "body": {
       "signedOut": "It can't run while you're signed out. Sign in and it runs again.",
       "routineLinkLost": "Its runs wait until {{platform}} is connected again. The missed run is made up then.",
+      "routineNeedsAccount": "Its check-ins wait until {{account}} is connected. Connect it and they start on their own.",
       "loginNotFinished": "The {{platform}} sign-in didn't finish, so it's paused. Click Connect to finish it.",
       "missedMany_one": "{{routines}} routines missed {{count}} run while the computer slept or the app was closed. {{madeUp}} made up.",
       "missedMany_other": "{{routines}} routines missed {{count}} runs while the computer slept or the app was closed. {{madeUp}} made up.",

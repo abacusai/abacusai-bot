@@ -41,6 +41,12 @@ vi.mock("electron", () => {
   );
 });
 
+// Creating a bot reports it; no beacon leaves a test.
+vi.mock("../services/debug-sync/funnel-beacon", () => ({
+  reportFunnelStep: () => undefined,
+  reportFunnelStepOnce: () => undefined,
+}));
+
 const { ServiceHost } = await import("../service-host");
 
 let home: string;

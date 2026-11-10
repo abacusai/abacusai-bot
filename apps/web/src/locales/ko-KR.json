@@ -3658,6 +3658,7 @@
       "failed": "Failed",
       "skipped": "Skipped",
       "skipped-link": "건너뜀: 채팅 앱 연결 안 됨",
+      "skipped-account": "건너뜀: 계정 대기 중",
       "skipped-offline": "건너뜀: 오프라인",
       "skipped-credits": "건너뜀: 크레딧 없음",
       "offline": "Abacus에 연결할 수 없음",
@@ -5011,7 +5012,7 @@
   },
   "kickoff": {
     "connectOne": "먼저, 시스템 알림에 {{name}}이(가) 연결됨으로 표시되지 않으면 지금 connect_connector를 호출하세요.",
-    "connectMany": "먼저, {{names}} 중 시스템 알림에 연결됨으로 표시되지 않은 각 항목에 대해 지금 connect_connector를 호출하세요.",
+    "resultFirst": "먼저 계정 없이 할 수 있는 것으로 실제 결과를 전달하세요. 작업이 사용자만 줄 수 있는 것(질문, 주제, 목록)에서 시작한다면 짧은 질문 하나로 요청하세요. 그다음에만 결과를 가장 좋게 만드는 연결을 하나까지 제안하세요.",
     "introduce": "자기소개는 한 번만 하고, 그다음 {{start}}.",
     "startMission": "미션을 시작하세요",
     "startGoal": "사용자가 요청한 것을 향해 첫걸음을 내디디세요: \"{{goal}}\"",
@@ -5217,6 +5218,7 @@
     "body": {
       "signedOut": "로그아웃 상태에서는 실행할 수 없습니다. 로그인하면 다시 실행됩니다.",
       "routineLinkLost": "{{platform}}이(가) 다시 연결될 때까지 실행이 대기합니다. 그때 놓친 실행을 보충합니다.",
+      "routineNeedsAccount": "{{account}}이(가) 연결될 때까지 체크인이 대기합니다. 연결하면 자동으로 시작됩니다.",
       "loginNotFinished": "{{platform}} 로그인이 끝나지 않아 일시 중지되었습니다. 연결을 눌러 마무리하세요.",
       "missedMany_one": "컴퓨터가 잠자기 상태이거나 앱이 닫혀 있는 동안 루틴 {{routines}}개가 실행 {{count}}회를 놓쳤습니다. {{madeUp}}회를 보충했습니다.",
       "missedMany_other": "컴퓨터가 잠자기 상태이거나 앱이 닫혀 있는 동안 루틴 {{routines}}개가 실행 {{count}}회를 놓쳤습니다. {{madeUp}}회를 보충했습니다.",

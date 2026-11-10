@@ -127,6 +127,7 @@ export const runsView = (
             "skipped-offline": "skipped-offline",
             "skipped-credits": "skipped-credits",
             "skipped-link": "skipped-link",
+            "skipped-account": "skipped-account",
             "no-workspace": "failed",
             unknown: "unknown",
             paused: "paused",

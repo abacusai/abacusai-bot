@@ -3658,6 +3658,7 @@
       "failed": "Failed",
       "skipped": "Skipped",
       "skipped-link": "Ignorée : application de chat non liée",
+      "skipped-account": "Ignorée : en attente d'un compte",
       "skipped-offline": "Ignorée : hors ligne",
       "skipped-credits": "Ignorée : plus de crédits",
       "offline": "Abacus injoignable",
@@ -5011,7 +5012,7 @@
   },
   "kickoff": {
     "connectOne": "D'abord, si le rappel système n'indique pas {{name}} comme connecté, appelle connect_connector pour le connecter maintenant.",
-    "connectMany": "D'abord, appelle connect_connector maintenant pour chacun de {{names}} que le rappel système n'indique pas comme connecté.",
+    "resultFirst": "Commence par remettre un vrai résultat avec ce qui fonctionne sans aucun compte, ou, si la tâche part de quelque chose que seul l'utilisateur peut donner (sa question, un sujet, une liste), demande-le en une seule question courte ; ensuite seulement, propose au plus une connexion, celle qui améliore le plus le résultat.",
     "introduce": "Présente-toi une seule fois, puis {{start}}.",
     "startMission": "commence ta mission",
     "startGoal": "fais le premier pas vers ce que l'utilisateur a demandé : « {{goal}} »",
@@ -5217,6 +5218,7 @@
     "body": {
       "signedOut": "Elle ne peut pas tourner tant que vous êtes déconnecté. Connectez-vous et elle reprendra.",
       "routineLinkLost": "Ses exécutions attendent que {{platform}} soit de nouveau connecté. L'exécution manquée est alors rattrapée.",
+      "routineNeedsAccount": "Ses points réguliers attendent que {{account}} soit connecté. Connecte-le et ils démarrent tout seuls.",
       "loginNotFinished": "La connexion à {{platform}} n'a pas été terminée, il est donc en pause. Cliquez sur Connecter pour la terminer.",
       "missedMany_one": "{{routines}} routines ont manqué {{count}} exécution pendant que l'ordinateur était en veille ou l'app fermée. {{madeUp}} rattrapée(s).",
       "missedMany_other": "{{routines}} routines ont manqué {{count}} exécutions pendant que l'ordinateur était en veille ou l'app fermée. {{madeUp}} rattrapée(s).",
