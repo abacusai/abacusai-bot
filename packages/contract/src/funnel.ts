@@ -58,10 +58,8 @@ export const FUNNEL_STEPS = [
   // the bot's template, and a tap's also whether it copied.
   "task_suggestions_shown",
   "task_suggestion_tapped",
-  // The next step (next-step.ts). The install's half, once (on or off); a
-  // result handed over, by what it was and the half; then the offer under it,
-  // and a tap, as work or routine.
-  "next_step_half",
+  // The next step (next-step.ts): a result handed over, by what it was; then
+  // the offer under it, and a tap, as work or routine.
   "result_delivered",
   "next_step_shown",
   "next_step_tapped",

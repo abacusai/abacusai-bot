@@ -274,6 +274,31 @@ describe.each(LOOPS)("%s", (_name, Loop) => {
     expect(idle(events)).toBe(true);
   });
 
+  it("asks only for the buttons when a result's reply already ends on its own question", async () => {
+    process.env.ABACUSAI_BOT_NEXT_STEP_ASK = "1";
+    const BUTTONS_ONLY = "Your reply ends on a question";
+    scripted((last, index) =>
+      last.includes(BUTTONS_ONLY)
+        ? { say: "" }
+        : index === 0
+          ? {
+              say: "",
+              call: {
+                name: "write",
+                args: { path: "site.html", content: "<h1>Your Name</h1>" },
+              },
+            }
+          : { say: "The page is ready. Want me to put your real name in?" }
+    );
+    const { loop, events } = await start(Loop);
+    await loop.send("Build me a one-page site");
+
+    expect(asked(BUTTONS_ONLY)).toBe(1);
+    expect(asked("The work above is done")).toBe(0);
+    expect(ends(events)).toHaveLength(1);
+    expect(idle(events)).toBe(true);
+  });
+
   it("asks again when the saved language says the reply's script is not theirs", async () => {
     fs.writeFileSync(
       path.join(home, "user-language.json"),

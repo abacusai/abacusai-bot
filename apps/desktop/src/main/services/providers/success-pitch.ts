@@ -95,7 +95,7 @@ export interface SuccessPitchDeps {
   /** The pitch in the user's own chat app, right after `sessionId`'s turn there; whether it went. */
   tellInChat: (sessionId: string) => Promise<boolean>;
   funnel: (step: FunnelStep, detail: string) => void;
-  /** This install's results end on a next step, which takes the card's place. */
+  /** Results end on a next step, which takes the card's place (off on the hosted computer). */
   nextStep: () => boolean;
   now?: () => number;
 }
@@ -273,10 +273,7 @@ export class SuccessPitchWatch {
     if (clean) this.markSite(record.sessionId, record.turnId, facts);
     const nextStep = this.deps.nextStep();
     if (clean && facts.delivered != null)
-      this.deps.funnel(
-        "result_delivered",
-        `${facts.delivered}_${nextStep ? "on" : "off"}`
-      );
+      this.deps.funnel("result_delivered", facts.delivered);
     const signal: {
       trigger: SuccessPitchTrigger;
       moment: SuccessPitchMoment;
