@@ -95,10 +95,12 @@ const mount = async ({
   account = PAID_ACCOUNT as typeof PAID_ACCOUNT,
   card = undefined as TopModelHintCard | undefined,
   topModels = { tier: "basic" } as { tier: string } | null,
-  switchFails = false,
+  continueFails = false,
+  continues = true,
 } = {}) => {
   const steps: Array<{ step: string; detail?: string }> = [];
-  const switched: string[] = [];
+  const continued: Array<[string, string | undefined]> = [];
+  const moved: string[] = [];
   const relay = new FakeRelay();
   relay.emitAll(b.sessionReady());
   const os = implement(contract);
@@ -115,10 +117,17 @@ const mount = async ({
     {
       model,
       onSwitchThisChat: vi.fn(async (id: string) => {
-        if (switchFails) throw new Error("refused");
-        switched.push(id);
+        moved.push(id);
         return "chat" as const;
       }),
+      ...(continues
+        ? {
+            onContinueInNewChat: vi.fn(async (id: string, prompt?: string) => {
+              if (continueFails) throw new Error("failed");
+              continued.push([id, prompt]);
+            }),
+          }
+        : {}),
     },
     {},
     undefined,
@@ -142,7 +151,7 @@ const mount = async ({
   await act(async () => relay.emitAll(live));
   const record = () =>
     current!.db.collections.prefs.get("app")?.dismissals.topModelHint;
-  return { relay, steps, switched, record };
+  return { relay, steps, continued, moved, record };
 };
 
 const hint = () => document.querySelector('[data-slot="top-model-hint"]');
@@ -158,7 +167,7 @@ describe("TopModelHint", () => {
   it("offers the plan's Sonnet first, then Opus, then the picker, once per chat", async () => {
     const h = await mount();
     await screen.findByText(
-      "Your plan includes the top models. Try this conversation with Claude Sonnet 5.5 or Claude Opus 5.5."
+      "Your plan includes the top models. Continue this work in a new chat with Claude Sonnet 5.5 or Claude Opus 5.5."
     );
     const buttons = [...hint()!.querySelectorAll("button")].map(
       (button) => button.textContent || button.getAttribute("aria-label")
@@ -184,12 +193,15 @@ describe("TopModelHint", () => {
     ]);
   });
 
-  it("moves this chat onto the model in one tap and is done for good", async () => {
+  it("continues this work in a new chat on the model in one tap, leaving this chat's model, and is done for good", async () => {
     const h = await mount();
     fireEvent.click(
       await screen.findByRole("button", { name: "Claude Sonnet 5.5" })
     );
-    await waitFor(() => expect(h.switched).toEqual([SONNET]));
+    // No message to send: the new chat waits for the user's words.
+    await waitFor(() => expect(h.continued).toEqual([[SONNET, undefined]]));
+    expect(h.moved).toEqual([]);
+    expect(h.relay.stats.send).toHaveLength(0);
     await waitFor(() => expect(h.record()?.switched).toBe(true));
     expect(hint()).toBeNull();
     await settled();
@@ -200,8 +212,8 @@ describe("TopModelHint", () => {
     ]);
   });
 
-  it("keeps the line when the agent refuses the model, and records no switch", async () => {
-    const h = await mount({ switchFails: true });
+  it("keeps the line when the new chat could not be prepared, and records no switch", async () => {
+    const h = await mount({ continueFails: true });
     fireEvent.click(
       await screen.findByRole("button", { name: "Claude Opus 5.5" })
     );
@@ -290,6 +302,10 @@ describe("TopModelHint", () => {
       "without the binding (a free plan, or another model)",
       { topModels: null },
     ],
+    [
+      "in a chat that cannot be continued (a bot's, a routine run)",
+      { continues: false },
+    ],
   ])("stays down %s", async (_name, options) => {
     await mount(options as Parameters<typeof mount>[0]);
     await settled();
@@ -319,10 +335,10 @@ describe("TopModelHint", () => {
     });
     await screen.findByRole(
       "button",
-      { name: "Try this again with Claude Opus 5.5" },
+      { name: "Try again in a new chat with Claude Opus 5.5" },
       { timeout: 5000 }
     );
     await settled();
     expect(hint()).toBeNull();
-  });
+  }, 15_000);
 });

@@ -2099,6 +2099,12 @@
       "undo": "Geri al",
       "discard": "Taslağı at: {{name}}",
       "discardMenu": "Taslağı at"
+    },
+    "continuation": {
+      "from": "Şuradan devam:",
+      "into": "Şurada devam ediyor:",
+      "startsFrom": "“{{label}}” sohbetinin özetiyle başlar",
+      "drop": "Özetsiz başla"
     }
   },
   "terminalShells": {
@@ -3019,8 +3025,8 @@
       "switchToRouteLlm": "RouteLLM'e geç",
       "keepModel": "Bu modelde kal",
       "topModels": {
-        "line": "Planın en iyi modelleri içeriyor. Bu sohbeti {{first}} ya da {{second}} ile dene.",
-        "lineOne": "Planın en iyi modelleri içeriyor. Bu sohbeti {{model}} ile dene.",
+        "line": "Planın en iyi modelleri içeriyor. Bu işe {{first}} veya {{second}} ile yeni bir sohbette devam et.",
+        "lineOne": "Planın en iyi modelleri içeriyor. Bu işe {{model}} ile yeni bir sohbette devam et.",
         "all": "Tüm modelleri gör",
         "dismiss": "Şimdi değil"
       },
@@ -3440,7 +3446,7 @@
       "copyFailed": "Kopyalanamadı"
     },
     "retryOffer": {
-      "try": "{{model}} ile tekrar dene"
+      "newChat": "{{model}} ile yeni bir sohbette tekrar dene"
     },
     "ratingPrompt": {
       "question": "Bot bu sohbette nasıl gidiyor?",
@@ -3519,6 +3525,10 @@
       "diff": "See what changed",
       "addDir": "Add a folder",
       "tooSmall": "This chat is too short to shorten yet"
+    },
+    "continuation": {
+      "preparing": "{{model}} ile yeni bir sohbet hazırlanıyor…",
+      "failed": "Yeni sohbet başlatılamadı. Tekrar dene."
     }
   },
   "notch": {

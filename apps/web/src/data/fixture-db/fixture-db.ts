@@ -157,6 +157,7 @@ export const fixtureDbClient = (db: FixtureDb): DbClient =>
         workspaceId: string;
         model?: string | null;
         mode?: SessionRow["mode"];
+        continuation?: { sessionId: string; summary: string };
       }) => {
         const now = new Date().toISOString();
         return db.sessions.upsert({
@@ -181,6 +182,10 @@ export const fixtureDbClient = (db: FixtureDb): DbClient =>
           botOwned: false,
           owner: null,
           turn: null,
+          // As main stamps it: the link, never the summary.
+          ...(input.continuation != null
+            ? { continuedFrom: input.continuation.sessionId }
+            : {}),
         });
       },
       update: ({ id, patch }: { id: string; patch: Partial<SessionRow> }) =>

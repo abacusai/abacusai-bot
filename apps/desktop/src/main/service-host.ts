@@ -626,6 +626,7 @@ import { AgentSessionManagerService } from "./services/session/agent-session-man
 import { ArtifactResolverService } from "./services/session/artifact-resolver-service";
 import { AgentCommunicationService } from "./services/session/cli-communication-service";
 import { AgentManagerService } from "./services/session/cli-manager-service";
+import { continuationNote } from "./services/session/continuation";
 import { IdleAgentReaper } from "./services/session/idle-agent-reaper";
 import { deliverMessage } from "./services/session/message-delivery";
 import { ModelSwitchWaiters } from "./services/session/model-switch";
@@ -1068,35 +1069,11 @@ export class ServiceHost {
           : workspaceId;
       },
       runtime: (threadId) => this.agentManagerService.getRuntimeInfo(threadId),
-      start: async (threadId) => {
-        // A bot session starts on its bot's effective model (spec 03
-        // §24.10 b); errors leave the stored pin.
-        await this.botService.pinSession(threadId).catch((error: unknown) => {
-          console.warn(`[bots] pinning ${threadId} failed: ${String(error)}`);
-        });
-        const session = this.agentSessionManagerService.get(threadId);
-        if (session == null) return false;
-        const result = await this.startAgentSession({
-          workspaceId: session.workspaceId,
-          sessionId: threadId,
-          // The session's own model and mode, as sendAgentMessage restarts it.
-          ...(session.model != null ? { model: session.model } : {}),
-          ...(session.mode != null ? { mode: session.mode } : {}),
-        });
-        // A first send can start an idle session without renderer warm-up.
-        // Put restoration on the same command pipe before the admitted run.
-        if (result.success && session.conversationId)
-          this.switchAgentConversation({
-            workspaceId: session.workspaceId,
-            sessionId: threadId,
-            conversationId: session.conversationId,
-          });
-        return result.success;
-      },
+      start: (threadId) => this.startSessionAgent(threadId),
       send: (threadId, command) =>
         this.agentManagerService.sendCommandToSession(threadId, command),
       userMessageNotes: (threadId, tags) =>
-        this.routineReportNotes(threadId, tags),
+        this.userMessageNotes(threadId, tags),
       acceptedMessage: (threadId, message, tags) => {
         this.successPitch.userSaid(threadId, message, tags);
         this.noteTurnOpener(threadId, message, tags);
@@ -4198,6 +4175,7 @@ export class ServiceHost {
       model?: string | null;
       mode?: AgentMode | null;
       sponsoredUntil?: number;
+      continuedFrom?: { sessionId: string; summary: string };
     } = {}
   ): AgentSessionListItem {
     if (this.isWorkspaceDeleted(workspaceId)) {
@@ -4968,10 +4946,7 @@ export class ServiceHost {
   }> {
     // Into a running agent too: the turn runs on the plan's model.
     this.moveSessionPinToTier(request.workspaceId, request.sessionId);
-    const reports = this.routineReportNotes(
-      request.sessionId,
-      request.userText
-    );
+    const reports = this.userMessageNotes(request.sessionId, request.userText);
     const vaulted = await this.withVaultNotes(request);
     const noted =
       reports.notes.length === 0
@@ -5035,6 +5010,28 @@ export class ServiceHost {
    * route into it), so an answer to a run's question has the run's context.
    * `taken` once the message has reached the agent.
    */
+  /**
+   * Hidden notes owed to the user's next message in a chat: a routine report
+   * it may answer, and, once, the summary of the chat it continues.
+   */
+  private userMessageNotes(
+    sessionId: string,
+    tags: UserTextTags | undefined
+  ): { notes: string[]; taken: () => void } {
+    const reports = this.routineReportNotes(sessionId, tags);
+    const seed = carriesUserWords(tags)
+      ? this.agentSessionManagerService.continuationSeed(sessionId)
+      : null;
+    if (seed == null) return reports;
+    return {
+      notes: [continuationNote(seed), ...reports.notes],
+      taken: () => {
+        reports.taken();
+        this.agentSessionManagerService.takeContinuationSeed(sessionId);
+      },
+    };
+  }
+
   private routineReportNotes(
     sessionId: string,
     tags: UserTextTags | undefined
@@ -5231,8 +5228,60 @@ export class ServiceHost {
     );
   }
 
-  /** A slash command run on the agent; `compact` calls a model, so it gets minutes. */
-  runAgentAction(request: AgentActionRequest): Promise<SessionActionResult> {
+  /**
+   * A session's agent, started on its own model and mode with its
+   * conversation restored: the relay's start-on-send, and a hand-off that
+   * reads a chat whose agent has stopped.
+   */
+  private async startSessionAgent(threadId: string): Promise<boolean> {
+    // A bot session starts on its bot's effective model (spec 03
+    // §24.10 b); errors leave the stored pin.
+    await this.botService.pinSession(threadId).catch((error: unknown) => {
+      console.warn(`[bots] pinning ${threadId} failed: ${String(error)}`);
+    });
+    const session = this.agentSessionManagerService.get(threadId);
+    if (session == null) return false;
+    const result = await this.startAgentSession({
+      workspaceId: session.workspaceId,
+      sessionId: threadId,
+      // The session's own model and mode, as sendAgentMessage restarts it.
+      ...(session.model != null ? { model: session.model } : {}),
+      ...(session.mode != null ? { mode: session.mode } : {}),
+    });
+    // A first send can start an idle session without renderer warm-up.
+    // Put restoration on the same command pipe before the admitted run.
+    if (result.success && session.conversationId)
+      this.switchAgentConversation({
+        workspaceId: session.workspaceId,
+        sessionId: threadId,
+        conversationId: session.conversationId,
+      });
+    return result.success;
+  }
+
+  /**
+   * A slash command run on the agent; `compact` and `handoff` call a model,
+   * so they get minutes. A hand-off reads a chat that may have sat idle long
+   * enough for its agent to stop: that one is started for it.
+   */
+  async runAgentAction(
+    request: AgentActionRequest
+  ): Promise<SessionActionResult> {
+    const result = await this.sendAgentAction(request);
+    const notRunning =
+      !result.ok && "reason" in result && result.reason === "not-running";
+    if (
+      request.action !== "handoff" ||
+      !notRunning ||
+      !(await this.startSessionAgent(request.sessionId))
+    )
+      return result;
+    return this.sendAgentAction(request);
+  }
+
+  private sendAgentAction(
+    request: AgentActionRequest
+  ): Promise<SessionActionResult> {
     const requestId = randomUUID();
     return new Promise((resolve) => {
       const settle = (result: SessionActionResult) => {

@@ -144,6 +144,7 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
     "context/context-tray",
     "context/permission-terminal-action",
     "context/tasks",
+    "continuation-links",
     "data/composer-model",
     "data/queries",
     "data/unread-store",

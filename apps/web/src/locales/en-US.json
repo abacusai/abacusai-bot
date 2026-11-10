@@ -2099,6 +2099,12 @@
       "undo": "Undo",
       "discard": "Discard draft: {{name}}",
       "discardMenu": "Discard draft"
+    },
+    "continuation": {
+      "from": "Continued from",
+      "into": "Continued in",
+      "startsFrom": "Starts from a summary of “{{label}}”",
+      "drop": "Start without it"
     }
   },
   "terminalShells": {
@@ -3019,8 +3025,8 @@
       "switchToRouteLlm": "Switch to RouteLLM",
       "keepModel": "Keep this model",
       "topModels": {
-        "line": "Your plan includes the top models. Try this conversation with {{first}} or {{second}}.",
-        "lineOne": "Your plan includes the top models. Try this conversation with {{model}}.",
+        "line": "Your plan includes the top models. Continue this work in a new chat with {{first}} or {{second}}.",
+        "lineOne": "Your plan includes the top models. Continue this work in a new chat with {{model}}.",
         "all": "See all models",
         "dismiss": "Not now"
       },
@@ -3440,7 +3446,7 @@
       "copyFailed": "Couldn't copy that"
     },
     "retryOffer": {
-      "try": "Try this again with {{model}}"
+      "newChat": "Try again in a new chat with {{model}}"
     },
     "ratingPrompt": {
       "question": "How is the bot doing in this chat?",
@@ -3519,6 +3525,10 @@
       "diff": "See what changed",
       "addDir": "Add a folder",
       "tooSmall": "This chat is too short to shorten yet"
+    },
+    "continuation": {
+      "preparing": "Preparing a new chat with {{model}}…",
+      "failed": "Couldn't start the new chat. Try again."
     }
   },
   "notch": {

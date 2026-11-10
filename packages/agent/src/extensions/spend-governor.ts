@@ -512,6 +512,21 @@ export class SpendGovernor {
     return this.options.laneOf(this.model);
   }
 
+  /**
+   * The model a hand-off summary of `tokens` runs on: the one a too-big
+   * compaction would use, paid for as this chat is. Null leaves it unwritten.
+   */
+  handoffSummarizer(
+    tokens: number,
+    current: GovernedModel | undefined
+  ): Promise<Summarizer | null> {
+    this.model = current ?? this.model;
+    return (
+      this.options.summarizer?.(tokens, this.lane(), this.model) ??
+      Promise.resolve(null)
+    );
+  }
+
   private planCredits(): number | null {
     const balance = hostCreditBalance();
     return balance == null ? null : lowCreditBase(balance);

@@ -112,6 +112,12 @@ export interface ComposerConfig {
    * moves its bot. Answers which of the two moved.
    */
   onSwitchThisChat?(model: string): Promise<"chat" | "bot">;
+  /**
+   * A new chat on `model` that starts from a summary of this one, which
+   * keeps its own model (continue-chat.ts). With `prompt`, it is sent there
+   * at once. Only a listed session chat has it.
+   */
+  onContinueInNewChat?(model: string, prompt?: string): Promise<void>;
   /** 03-bots §24.2: sent as `forwardedProps.mode` on every admission. */
   fixedMode?: AgentMode;
   /** Sessions: `agent.setMode` for a live runtime (the route knows the workspace). */

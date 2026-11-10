@@ -892,8 +892,15 @@ export const SessionMessage = ({ message }: MessageProps<unknown>) => {
   const streaming = useStreaming(message);
   const turn = useTurnEnd(message);
   if (isEmptyAssistant(message)) return null;
+  // What the route draws around the user's words: a report, a link to the chat this one continues.
   if (message.role === "user")
-    return <UserMessage message={message} tint={false} />;
+    return (
+      <>
+        {decoration?.before}
+        <UserMessage message={message} tint={false} />
+        {decoration?.after}
+      </>
+    );
   const grouped = (
     message.metadata as { abacus?: { segments?: Loose[] } } | undefined
   )?.abacus?.segments?.some((segment) => segment.type === "tool_group");

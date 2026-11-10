@@ -152,6 +152,9 @@ export const dbRouter = impl.db.router({
           ...(input.sponsoredFirstRun === true
             ? { sponsoredUntil: Date.now() + SPONSORED_FIRST_RUN_WINDOW_MS }
             : {}),
+          ...(input.continuation != null
+            ? { continuedFrom: input.continuation }
+            : {}),
         }
       );
       return echo(context.deps.tables.sessions, session.id);

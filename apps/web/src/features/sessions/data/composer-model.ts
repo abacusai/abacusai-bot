@@ -18,6 +18,7 @@ import {
 } from "#renderer/components/model-groups";
 import { useModelSetup } from "#renderer/components/model-setup/use-model-setup";
 import { useDb } from "#renderer/data/db";
+import { isListedSession, isListedWorkspace } from "#renderer/data/db/filters";
 import { usePrefs } from "#renderer/data/db/prefs";
 import {
   draftStore,
@@ -29,6 +30,7 @@ import { showError } from "#renderer/lib/toast";
 import { requestPlanDialog } from "#renderer/lib/upgrade-dialog";
 import { useCreditsAccount } from "#renderer/lib/use-credits-account";
 
+import { continueInNewChat } from "./continue-chat";
 import { useCheckoutQueries, useSessionsTransport } from "./queries";
 import { setSessionModel } from "./session-actions";
 export const useSessionComposerModel = (
@@ -107,6 +109,8 @@ export const useSessionComposerModel = (
     (value ?? selected) === ABACUS_CODE_ROUTER_LOW_ID
       ? { tier: accountTier(account.data) ?? tier }
       : null;
+  const workspace = row ? db.collections.workspaces.get(row.workspaceId) : null;
+  const listedWorkspace = workspace != null && isListedWorkspace(workspace);
   const setup = useModelSetup({
     models,
     loading: catalog.isPending || settings.isPending,
@@ -139,6 +143,24 @@ export const useSessionComposerModel = (
       }
       return "chat" as const;
     },
+    // A listed chat only: a bot's chats and routine runs keep their model.
+    ...(row != null && isListedSession(row) && listedWorkspace
+      ? {
+          onContinueInNewChat: (id: string, prompt?: string) =>
+            continueInNewChat({
+              client: transport.client,
+              row,
+              model: id,
+              ...(prompt != null ? { prompt } : {}),
+              open: (search) =>
+                navigate({
+                  to: "/sessions/new",
+                  search,
+                  transition: "nav-forward",
+                }),
+            }),
+        }
+      : {}),
     missing: checkout.data?.exists === false,
     availableModes: sandbox.data?.available
       ? [

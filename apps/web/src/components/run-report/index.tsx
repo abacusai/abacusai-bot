@@ -143,7 +143,10 @@ export const reportAnchors = <Report extends { at: Date }>(
 };
 
 /** The last stored message a shown row covers (a session row folds several). */
-const rowEnd = (messages: readonly UIMessage[], host: number): number => {
+export const rowEnd = (
+  messages: readonly UIMessage[],
+  host: number
+): number => {
   let end = host;
   for (const id of (
     messages[host]!.metadata as

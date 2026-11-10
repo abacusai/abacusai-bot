@@ -40,6 +40,9 @@ import type {
   WorkspaceRow,
 } from "./rows";
 
+/** A hand-off summary is a few thousand words at most; this is far past that. */
+export const CONTINUATION_SUMMARY_MAX_CHARS = 60_000;
+
 const readTable = <Row, Key extends string = string>() => ({
   snapshot: query
     .input(v.optional(v.object({})))
@@ -481,6 +484,17 @@ export const db = {
         model: v.optional(v.nullable(v.pipe(v.string(), v.nonEmpty()))),
         mode: v.optional(v.nullable(AgentModeSchema)),
         sponsoredFirstRun: v.optional(v.boolean()),
+        /** The chat this one continues; its summary goes with the first message. */
+        continuation: v.optional(
+          v.object({
+            sessionId: SessionId,
+            summary: v.pipe(
+              v.string(),
+              v.nonEmpty(),
+              v.maxLength(CONTINUATION_SUMMARY_MAX_CHARS)
+            ),
+          })
+        ),
       })
     ),
     /** Only `label` and `model` are writable; any other field is `FORBIDDEN`. */

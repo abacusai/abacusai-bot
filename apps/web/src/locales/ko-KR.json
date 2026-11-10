@@ -2099,6 +2099,12 @@
       "undo": "Undo",
       "discard": "Discard draft: {{name}}",
       "discardMenu": "Discard draft"
+    },
+    "continuation": {
+      "from": "이어온 채팅:",
+      "into": "이어진 채팅:",
+      "startsFrom": "“{{label}}” 요약으로 시작합니다",
+      "drop": "요약 없이 시작"
     }
   },
   "terminalShells": {
@@ -3019,8 +3025,8 @@
       "switchToRouteLlm": "RouteLLM으로 전환",
       "keepModel": "이 모델 유지",
       "topModels": {
-        "line": "요금제에 최상위 모델이 포함되어 있어요. 이 대화를 {{first}} 또는 {{second}}(으)로 사용해 보세요.",
-        "lineOne": "요금제에 최상위 모델이 포함되어 있어요. 이 대화를 {{model}}(으)로 사용해 보세요.",
+        "line": "요금제에 최상위 모델이 포함되어 있습니다. {{first}} 또는 {{second}}(으)로 새 채팅에서 이 작업을 이어가세요.",
+        "lineOne": "요금제에 최상위 모델이 포함되어 있습니다. {{model}}(으)로 새 채팅에서 이 작업을 이어가세요.",
         "all": "모든 모델 보기",
         "dismiss": "나중에"
       },
@@ -3440,7 +3446,7 @@
       "copyFailed": "복사하지 못했어요"
     },
     "retryOffer": {
-      "try": "{{model}}(으)로 다시 시도"
+      "newChat": "{{model}}(으)로 새 채팅에서 다시 시도"
     },
     "ratingPrompt": {
       "question": "이 채팅에서 봇은 어땠나요?",
@@ -3519,6 +3525,10 @@
       "diff": "See what changed",
       "addDir": "Add a folder",
       "tooSmall": "This chat is too short to shorten yet"
+    },
+    "continuation": {
+      "preparing": "{{model}}(으)로 새 채팅을 준비하는 중…",
+      "failed": "새 채팅을 시작하지 못했습니다. 다시 시도하세요."
     }
   },
   "notch": {

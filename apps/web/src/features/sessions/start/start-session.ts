@@ -1,5 +1,8 @@
 import type { AgentMode } from "@abacus-ai/contract/agent-types";
-import type { SessionRow } from "@abacus-ai/contract/contract/rows";
+import type {
+  SessionContinuation,
+  SessionRow,
+} from "@abacus-ai/contract/contract/rows";
 import {
   draftConversationKey,
   draftConversationRef,
@@ -40,6 +43,8 @@ export interface StartDraft {
   sponsored?: true;
   /** Which suggestions the start page shows; onboarding's Build and GitHub picks open on their own. */
   starters?: "build" | "code";
+  /** The chat this one continues, with its summary; see continue-chat.ts. */
+  continuation?: SessionContinuation;
 }
 export const newStartDraft = (): StartDraft => ({
   id: crypto.randomUUID(),
@@ -150,6 +155,12 @@ export const optimisticSession = (draft: StartDraft): SessionRow => {
     owner: null,
     turn: null,
     ...(draft.sponsored ? { sponsoredFirstRun: true } : {}),
+    ...(draft.continuation != null
+      ? {
+          continuation: draft.continuation,
+          continuedFrom: draft.continuation.sessionId,
+        }
+      : {}),
   };
 };
 export interface StartSessionDeps {

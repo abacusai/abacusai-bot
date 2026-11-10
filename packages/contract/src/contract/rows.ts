@@ -71,7 +71,15 @@ export type SessionRow = Omit<AgentSessionListItem, "worktreeOperationId"> & {
   worktreeOperationId?: string | null;
   /** Create-only input: the session onboarding opens first runs on the house. */
   sponsoredFirstRun?: boolean;
+  /** Create-only input: the chat this one continues, and its summary. */
+  continuation?: SessionContinuation;
 };
+
+/** A chat started from another on a top model: the summary its first message carries. */
+export interface SessionContinuation {
+  sessionId: string;
+  summary: string;
+}
 
 export type BotRow = Bot & {
   /** Create-only input; main replaces this with sponsoredUntil in its echo. */

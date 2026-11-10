@@ -472,8 +472,9 @@ export class HostCore {
 
       case "session_action": {
         const { requestId, action, value } = command;
-        // A compaction under a running turn would rewrite what it is reading.
-        if (action === "compact" && this.busy) {
+        // A compaction under a running turn would rewrite what it is reading;
+        // a hand-off would summarize a turn that has not ended.
+        if ((action === "compact" || action === "handoff") && this.busy) {
           this.emit({
             type: "session_action_done",
             requestId,

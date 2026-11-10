@@ -15,7 +15,11 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { AgentMode, type DesktopEvent } from "@abacus-ai/contract/agent-types";
+import {
+  AgentMode,
+  type DesktopEvent,
+  type UserTextTags,
+} from "@abacus-ai/contract/agent-types";
 import type { PermissionDescriptor } from "@abacus-ai/contract/contract";
 import {
   FakeProvider,
@@ -41,7 +45,9 @@ import {
   type InProcessConnection,
   type TestClient,
 } from "../../rpc/testing";
+import { carriesUserWords } from "../agent-tools/routine-report-delivery";
 import { AgentManagerService } from "../session/cli-manager-service";
+import { continuationNote } from "../session/continuation";
 import { ThreadStore } from "../session/thread-store";
 import { AguiRelayService } from "./relay-service";
 
@@ -109,7 +115,18 @@ afterEach(async () => {
  * The real manager and relay, as ServiceHost wires them. `models` adds model
  * ids to the fake provider beside fake-1.
  */
-const build = (options: { models?: string[] } = {}): Stack => {
+const build = (
+  options: {
+    models?: string[];
+    /** Threads beside THREAD that the relay serves in the same workspace. */
+    threads?: string[];
+    /** Main's hidden notes on a user's message, as ServiceHost composes them. */
+    userMessageNotes?: (
+      threadId: string,
+      tags: UserTextTags | undefined
+    ) => { notes: string[]; taken: () => void };
+  } = {}
+): Stack => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "agui-e2e-"));
   const home = path.join(root, "home");
   const user = path.join(root, "user");
@@ -167,7 +184,10 @@ const build = (options: { models?: string[] } = {}): Stack => {
     ackTimeoutMs: 20_000,
     log: () => undefined,
     host: {
-      workspaceOf: (threadId) => (threadId === THREAD ? "w1" : null),
+      workspaceOf: (threadId) =>
+        threadId === THREAD || options.threads?.includes(threadId) === true
+          ? "w1"
+          : null,
       runtime: (threadId) => manager.getRuntimeInfo(threadId),
       start: async (threadId) =>
         // As the app's start: true once the agent is ready.
@@ -181,6 +201,9 @@ const build = (options: { models?: string[] } = {}): Stack => {
         ).success,
       send: (threadId, command) =>
         manager.sendCommandToSession(threadId, command),
+      ...(options.userMessageNotes != null
+        ? { userMessageNotes: options.userMessageNotes }
+        : {}),
       markSent: () => marks.push("sent"),
       markStopped: () => marks.push("stopped"),
     },
@@ -221,13 +244,14 @@ class Window {
 
   private constructor(
     readonly client: TestClient,
-    snapshot: Awaited<ReturnType<TestClient["ai"]["hydrate"]>>
+    snapshot: Awaited<ReturnType<TestClient["ai"]["hydrate"]>>,
+    readonly thread: string
   ) {
     this.received = snapshot.abacus.activeRun
       ? snapshot.abacus.activeRun.startSeq - 1
       : snapshot.abacus.cursor;
     this.chat = new ChatClient({
-      threadId: THREAD,
+      threadId: thread,
       initialMessages: snapshot.messages,
       queue: throwWhenBusy,
       connection: {
@@ -240,9 +264,9 @@ class Window {
     this.chat.subscribe();
   }
 
-  static async open(client: TestClient): Promise<Window> {
-    const snapshot = await client.ai.hydrate({ threadId: THREAD });
-    const window = new Window(client, snapshot);
+  static async open(client: TestClient, thread = THREAD): Promise<Window> {
+    const snapshot = await client.ai.hydrate({ threadId: thread });
+    const window = new Window(client, snapshot, thread);
     void window.#pump(snapshot.abacus.activeRun?.runId ?? null);
     return window;
   }
@@ -278,7 +302,7 @@ class Window {
     }
     if (this.#closed) return;
     const stream = await this.client.ai.subscribe({
-      threadId: THREAD,
+      threadId: this.thread,
       lastEventId: String(this.received),
     });
     this.#subscription = stream;
@@ -549,91 +573,129 @@ describe("main's AG-UI relay with a spawned agent", () => {
     await window.disconnect();
   }, 120_000);
 
-  it("a retry on another model moves the chat: that run and every later one go to it", async () => {
-    const { client } = build({ models: ["fake-top"] });
+  it("a chat continued on a top model: the old one is summarized, untouched, and the new one starts from the summary on the top model", async () => {
+    const NEXT = "session-e2e-next";
+    // Main's part, as ServiceHost composes it: the summary goes once, on the
+    // user's own first message in the new chat.
+    const seeds = new Map<string, string>();
+    const { client, manager, root } = build({
+      models: ["fake-top"],
+      threads: [NEXT],
+      userMessageNotes: (threadId, tags) => {
+        const seed = carriesUserWords(tags) ? seeds.get(threadId) : undefined;
+        return seed == null
+          ? { notes: [], taken: () => undefined }
+          : {
+              notes: [continuationNote(seed)],
+              taken: () => seeds.delete(threadId),
+            };
+      },
+    });
+    const SUMMARY =
+      "## Goal\nFix the crash on the login page.\n## Progress\n### Blocked\n" +
+      "- Guarding the session read in the login handler did not help: the token is still read before the check.\n" +
+      "## Next Steps\n1. Read the token only after the session check.";
+    replies = (index) =>
+      [
+        { say: "I edited the login handler." },
+        { say: "I changed how the session is read." },
+        { say: SUMMARY },
+        { say: "Found it: the token is read before the session check." },
+        { say: "Done." },
+      ][index] ?? { say: "ok" };
     const from = provider.calls.length;
-    const window = await Window.open(client);
-    const finished = (runId: string) =>
+    const old = await Window.open(client);
+    const finished = (window: Window, runId: string) =>
       vi.waitFor(() => expect(window.has(isTerminal(runId))).toBe(true), WAIT);
-    // The chat runs on its own model.
     await client.ai.send({
       threadId: THREAD,
       runId: "run-1",
       messages: [userMessage("u-1", "fix the login crash")],
     });
-    await finished("run-1");
-    // The retry under a stuck task: the same message again, carrying the model.
+    await finished(old, "run-1");
     await client.ai.send({
       threadId: THREAD,
       runId: "run-2",
-      messages: [userMessage("u-1", "fix the login crash")],
-      forwardedProps: { model: "fake/fake-top" },
-    });
-    await finished("run-2");
-    // A later message names no model: the chat stays where the retry moved it.
-    await client.ai.send({
-      threadId: THREAD,
-      runId: "run-3",
       messages: [
         userMessage("u-1", "fix the login crash"),
-        userMessage("u-2", "now the signup page"),
+        userMessage("u-2", "it still doesn't work, same error"),
       ],
     });
-    await finished("run-3");
-    const calls = provider.calls.slice(from);
-    expect(calls.map((call) => call.model)).toEqual([
-      "fake-1",
-      "fake-top",
-      "fake-top",
-    ]);
-    expect(calls[2]!.userText.join("\n")).toContain("now the signup page");
-    await window.disconnect();
-  }, 120_000);
+    await finished(old, "run-2");
 
-  it("a chat switched to another model sends its next message there", async () => {
-    const { client, manager } = build({ models: ["fake-top"] });
-    const from = provider.calls.length;
-    const window = await Window.open(client);
-    const finished = (runId: string) =>
-      vi.waitFor(() => expect(window.has(isTerminal(runId))).toBe(true), WAIT);
-    await client.ai.send({
-      threadId: THREAD,
-      runId: "run-1",
-      messages: [userMessage("u-1", "make the header sticky")],
-    });
-    await finished("run-1");
-    // The composer's one-tap switch: the running agent's set_model.
+    // The hand-off: the old chat's agent summarizes it.
     manager.sendCommandToSession(THREAD, {
-      type: "set_model",
-      model: "fake/fake-top",
+      type: "session_action",
+      requestId: "handoff-1",
+      action: "handoff",
     });
-    // The agent answers with its new model on the chat's state.
-    await vi.waitFor(
-      () =>
-        expect(
-          window.has(
-            (event) =>
-              event.type === "STATE_DELTA" &&
-              JSON.stringify(event).includes('"value":"fake/fake-top"')
-          )
-        ).toBe(true),
-      WAIT
+    const done = await vi.waitFor(() => {
+      const event = stack!.compat.find(
+        (each) =>
+          each.type === "session_action_done" &&
+          (each as { requestId?: string }).requestId === "handoff-1"
+      ) as { result: { ok: boolean; summary?: string } } | undefined;
+      expect(event).toBeDefined();
+      return event!;
+    }, WAIT);
+    expect(done.result.ok).toBe(true);
+    expect(done.result.summary).toContain("Fix the crash on the login page.");
+    const summaryCall = provider.calls[from + 2]!;
+    expect(JSON.stringify(summaryCall.body)).toContain(
+      "context summarization assistant"
     );
+    expect(summaryCall.userText.join("\n")).toContain(
+      "it still doesn't work, same error"
+    );
+    // Summarizing wrote nothing into the old chat: no compaction on its log.
+    const logs = fs
+      .readdirSync(root, { recursive: true, encoding: "utf8" })
+      .filter((file) => file.endsWith(".jsonl"))
+      .map((file) => fs.readFileSync(path.join(root, file), "utf8"));
+    expect(logs.join("\n")).toContain("I changed how the session is read.");
+    expect(logs.join("\n")).not.toContain('"type":"compaction"');
+
+    // The new chat: its first message, on the top model, carries the summary.
+    seeds.set(NEXT, done.result.summary!);
+    const next = await Window.open(client, NEXT);
     await client.ai.send({
-      threadId: THREAD,
-      runId: "run-2",
+      threadId: NEXT,
+      runId: "run-3",
+      messages: [userMessage("n-1", "it still doesn't work, same error")],
+      forwardedProps: { model: "fake/fake-top" },
+    });
+    await finished(next, "run-3");
+    await client.ai.send({
+      threadId: NEXT,
+      runId: "run-4",
       messages: [
-        userMessage("u-1", "make the header sticky"),
-        userMessage("u-2", "now the footer"),
+        userMessage("n-1", "it still doesn't work, same error"),
+        userMessage("n-2", "now add a test for it"),
       ],
     });
-    await finished("run-2");
-    expect(provider.calls.slice(from).map((call) => call.model)).toEqual([
-      "fake-1",
-      "fake-top",
-    ]);
-    await window.disconnect();
-  }, 120_000);
+    await finished(next, "run-4");
+    const [first, second] = provider.calls.slice(from + 3);
+    expect([first!.model, second!.model]).toEqual(["fake-top", "fake-top"]);
+    const asked = first!.userText.join("\n");
+    expect(asked).toContain("You do not have its history");
+    expect(asked).toContain("Fix the crash on the login page.");
+    expect(asked).toContain("it still doesn't work, same error");
+    // Not the old chat's history: only its summary.
+    expect(JSON.stringify(first!.messages)).not.toContain(
+      "I edited the login handler."
+    );
+    // Sent once: the later message does not carry it again.
+    expect(
+      second!.userText.join("\n").split("You do not have its history").length
+    ).toBe(2);
+    expect(seeds.has(NEXT)).toBe(false);
+    // The old chat is still on its own model.
+    expect(
+      provider.calls.slice(from, from + 2).map((call) => call.model)
+    ).toEqual(["fake-1", "fake-1"]);
+    await old.disconnect();
+    await next.disconnect();
+  }, 180_000);
 
   it("converts text, multi-line and attachment-only UIMessages at the boundary, keeping the client ids (spec 02 §14.2)", async () => {
     const { client } = build();

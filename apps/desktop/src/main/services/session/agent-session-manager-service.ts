@@ -73,6 +73,10 @@ type SessionRecord = {
   unattended?: UnattendedPolicy;
   /** Until when this session's runs are on the house (onboarding's first session). */
   sponsoredUntil?: number;
+  /** The chat this one continues, stamped at mint. See continuationFrom. */
+  continuedFrom?: string;
+  /** That chat's summary, owed to this one's first message and then dropped. */
+  continuationSeed?: string;
 };
 
 // Persisted, so the old name stays. See workspace-store.ts.
@@ -102,6 +106,9 @@ const toListItem = (record: SessionRecord): AgentSessionListItem => ({
   runOutcome: record.runOutcome ?? null,
   runTrigger: record.runTrigger ?? null,
   ...(record.report != null ? { report: record.report } : {}),
+  ...(record.continuedFrom != null
+    ? { continuedFrom: record.continuedFrom }
+    : {}),
   editorFor: record.editorFor ?? null,
   botOwned: record.botOwned === true || record.owner != null,
   owner: record.owner ?? null,
@@ -185,6 +192,7 @@ export class AgentSessionManagerService {
       model?: string | null;
       mode?: AgentMode | null;
       sponsoredUntil?: number;
+      continuedFrom?: { sessionId: string; summary: string };
     } = {}
   ): AgentSessionListItem {
     if (
@@ -218,6 +226,7 @@ export class AgentSessionManagerService {
       ...(initial.sponsoredUntil != null
         ? { sponsoredUntil: initial.sponsoredUntil }
         : {}),
+      ...this.continuationFrom(workspaceId, routineId, owner, initial),
     };
     this.sessions.set(sessionId, record);
     const workspaceSessionIds = this.workspaceSessionIds.get(workspaceId) ?? [];
@@ -227,6 +236,46 @@ export class AgentSessionManagerService {
     ]);
     this.persist();
     return toListItem(record);
+  }
+
+  /**
+   * A chat continued from another (a top model offered on a stuck task, or
+   * the composer's top-model line): only a listed chat into a listed chat of
+   * the same workspace. Anything else is minted as a plain chat.
+   */
+  private continuationFrom(
+    workspaceId: string,
+    routineId: string | null,
+    owner: SessionOwner | null,
+    initial: { continuedFrom?: { sessionId: string; summary: string } }
+  ): Pick<SessionRecord, "continuedFrom" | "continuationSeed"> {
+    const from = initial.continuedFrom;
+    if (from == null || routineId != null || owner != null) return {};
+    const source = this.sessions.get(from.sessionId);
+    if (
+      source == null ||
+      source.workspaceId !== workspaceId ||
+      source.routineId != null ||
+      source.editorFor != null ||
+      source.botOwned === true ||
+      source.owner != null ||
+      source.lane != null
+    )
+      return {};
+    return { continuedFrom: source.id, continuationSeed: from.summary };
+  }
+
+  /** The summary owed to the chat's first message, until it is taken. */
+  continuationSeed(sessionId: string): string | null {
+    return this.sessions.get(sessionId)?.continuationSeed ?? null;
+  }
+
+  /** The first message carried the summary: it is not sent again. */
+  takeContinuationSeed(sessionId: string): void {
+    const record = this.sessions.get(sessionId);
+    if (record?.continuationSeed == null) return;
+    delete record.continuationSeed;
+    this.persist();
   }
 
   /**

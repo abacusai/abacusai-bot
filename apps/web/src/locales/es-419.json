@@ -2099,6 +2099,12 @@
       "undo": "Undo",
       "discard": "Discard draft: {{name}}",
       "discardMenu": "Discard draft"
+    },
+    "continuation": {
+      "from": "Continuación de",
+      "into": "Continúa en",
+      "startsFrom": "Empieza con un resumen de “{{label}}”",
+      "drop": "Empezar sin él"
     }
   },
   "terminalShells": {
@@ -3019,8 +3025,8 @@
       "switchToRouteLlm": "Cambiar a RouteLLM",
       "keepModel": "Mantener este modelo",
       "topModels": {
-        "line": "Tu plan incluye los mejores modelos. Prueba esta conversación con {{first}} o {{second}}.",
-        "lineOne": "Tu plan incluye los mejores modelos. Prueba esta conversación con {{model}}.",
+        "line": "Tu plan incluye los mejores modelos. Continúa este trabajo en un chat nuevo con {{first}} o {{second}}.",
+        "lineOne": "Tu plan incluye los mejores modelos. Continúa este trabajo en un chat nuevo con {{model}}.",
         "all": "Ver todos los modelos",
         "dismiss": "Ahora no"
       },
@@ -3440,7 +3446,7 @@
       "copyFailed": "No se pudo copiar"
     },
     "retryOffer": {
-      "try": "Intentar de nuevo con {{model}}"
+      "newChat": "Intentar de nuevo en un chat nuevo con {{model}}"
     },
     "ratingPrompt": {
       "question": "¿Qué tal lo está haciendo el bot en este chat?",
@@ -3519,6 +3525,10 @@
       "diff": "See what changed",
       "addDir": "Add a folder",
       "tooSmall": "This chat is too short to shorten yet"
+    },
+    "continuation": {
+      "preparing": "Preparando un chat nuevo con {{model}}…",
+      "failed": "No se pudo iniciar el chat nuevo. Inténtalo de nuevo."
     }
   },
   "notch": {

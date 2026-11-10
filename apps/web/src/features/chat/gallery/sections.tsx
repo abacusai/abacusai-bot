@@ -177,10 +177,9 @@ const composerFor = (
       : null,
   ...(scenario.view?.topModels === true
     ? {
-        onSwitchThisChat: async (id: string) => {
-          model.set(id);
-          return "chat" as const;
-        },
+        // The summary takes a moment; the gallery opens no chat.
+        onContinueInNewChat: () =>
+          new Promise<void>((resolve) => setTimeout(resolve, 1_500)),
       }
     : {}),
   ...(scenario.view?.readOnly != null

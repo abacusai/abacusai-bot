@@ -2099,6 +2099,12 @@
       "undo": "復原",
       "discard": "捨棄草稿：{{name}}",
       "discardMenu": "捨棄草稿"
+    },
+    "continuation": {
+      "from": "接續自",
+      "into": "接續於",
+      "startsFrom": "從「{{label}}」的摘要開始",
+      "drop": "不帶摘要開始"
     }
   },
   "terminalShells": {
@@ -3019,8 +3025,8 @@
       "switchToRouteLlm": "切換至 RouteLLM",
       "keepModel": "保留這個模型",
       "topModels": {
-        "line": "你的方案包含頂級模型。用 {{first}} 或 {{second}} 試試這段對話。",
-        "lineOne": "你的方案包含頂級模型。用 {{model}} 試試這段對話。",
+        "line": "你的方案包含頂級模型。在新對話中用 {{first}} 或 {{second}} 繼續這項工作。",
+        "lineOne": "你的方案包含頂級模型。在新對話中用 {{model}} 繼續這項工作。",
         "all": "查看所有模型",
         "dismiss": "以後再說"
       },
@@ -3440,7 +3446,7 @@
       "copyFailed": "無法複製"
     },
     "retryOffer": {
-      "try": "用 {{model}} 再試一次"
+      "newChat": "在新對話中用 {{model}} 再試一次"
     },
     "ratingPrompt": {
       "question": "機器人在這個對話中表現如何？",
@@ -3519,6 +3525,10 @@
       "diff": "查看變更",
       "addDir": "新增資料夾",
       "tooSmall": "此聊天還太短，暫時無法精簡"
+    },
+    "continuation": {
+      "preparing": "正在用 {{model}} 準備新對話…",
+      "failed": "無法開始新對話，請再試一次。"
     }
   },
   "notch": {

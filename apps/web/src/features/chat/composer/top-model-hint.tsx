@@ -1,8 +1,10 @@
 /**
  * The top-model hint (contract top-model-hint.ts): a paying plan's chat on
  * its low-cost router, one line above the composer offering the plan's Sonnet
- * and Opus in one tap each, and the model picker for the rest. A tap moves
- * this chat only; the app's default stays. It waits for a quiet turn: never
+ * and Opus in one tap each, and the model picker for the rest. A model's tap
+ * continues this work in a new chat on it, from a summary of this one
+ * (continue-chat.ts); this chat and the app's default keep their model. Only
+ * a listed session chat has it. It waits for a quiet turn: never
  * while a run is going, after a failed one, or under a reply that has a card
  * of its own (a retry, a document offer, task buttons, a success pitch), and
  * it steps aside once half the month's credits are used, where the credit
@@ -22,7 +24,7 @@ import {
 } from "@abacus-ai/contract/top-model-hint";
 import type { UIMessage } from "@tanstack/ai-client";
 import { useQuery } from "@tanstack/react-query";
-import { Sparkles, X } from "lucide-react";
+import { Loader2, Sparkles, X } from "lucide-react";
 import { useEffect, useEffectEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -79,6 +81,8 @@ export const TopModelHint = ({
   const running = useThreadStore(session, (state) => state.runs.active != null);
   // A close or a tap hides it at once, before the prefs write lands.
   const [answered, setAnswered] = useState(false);
+  // The model whose new chat is being prepared, with the line still up.
+  const [preparing, setPreparing] = useState<string | null>(null);
   const [now] = useState(() => Date.now());
 
   // The gallery shows it on models of its own, and keeps no record.
@@ -102,6 +106,7 @@ export const TopModelHint = ({
     !answered &&
     quiet &&
     !othersHere &&
+    composer.onContinueInNewChat != null &&
     (preview != null ||
       (account != null &&
         !topModelHintCreditsSpent(account) &&
@@ -155,14 +160,16 @@ export const TopModelHint = ({
   const pick = async (model: { id: string; label: string }) => {
     const which = family(model.label);
     funnel("top_model_hint_tapped", which);
-    setAnswered(true);
+    setPreparing(model.id);
     try {
-      await composer.onSwitchThisChat?.(model.id);
+      await composer.onContinueInNewChat?.(model.id);
     } catch {
-      showError(t("workspace.modelSwitchFailed"));
-      setAnswered(false);
+      // Nothing opened: the line stays for another try.
+      showError(t("chat.continuation.failed"));
+      setPreparing(null);
       return;
     }
+    setAnswered(true);
     funnel("top_model_hint_switched", which);
     write({ ...base, switched: true });
   };
@@ -205,8 +212,12 @@ export const TopModelHint = ({
                   variant={model === first ? "default" : "outline"}
                   className="h-7 rounded-lg"
                   data-model={model.id}
+                  disabled={preparing != null}
                   onClick={() => void pick(model)}
                 >
+                  {preparing === model.id && (
+                    <Loader2 aria-hidden className="size-3.5 animate-spin" />
+                  )}
                   {model.label}
                 </Button>
               ))}

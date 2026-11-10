@@ -6,11 +6,12 @@ import {
 /**
  * The retry offer's line (contract retry-offer.ts): under the latest reply
  * when a task went badly, the same task again on one of the plan's top
- * models. On a free account a tap opens the upgrade dialog with the message
- * waiting, and once paid it runs again on that model; a paying plan already
- * runs it, so a tap runs it again at once. Either way the chat moves onto the
- * model (never the app's default), so the messages after it stay there too.
- * Caps live in prefs.
+ * models, in a new chat that starts from a summary of this one
+ * (continue-chat.ts): the top model reads a page instead of the whole stuck
+ * history, and this chat keeps its model. On a free account a tap opens the
+ * upgrade dialog with the message waiting, and once paid the new chat starts;
+ * a paying plan already runs the model, so a tap starts it at once. Only a
+ * listed session chat has it. Caps live in prefs.
  */
 import {
   isSuggestTasksTool,
@@ -34,7 +35,7 @@ import {
 import { EMPTY_TOP_MODEL_HINT_CARD } from "@abacus-ai/contract/top-model-hint";
 import type { UIMessage } from "@tanstack/ai-client";
 import { useQuery } from "@tanstack/react-query";
-import { RotateCcw, X } from "lucide-react";
+import { Loader2, RotateCcw, X } from "lucide-react";
 import { useEffect, useEffectEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -44,6 +45,7 @@ import { messageTools } from "#renderer/lib/bot-turns/tool-parts";
 import { turnReplyText, turnsOf } from "#renderer/lib/bot-turns/turns";
 import { creditsTier } from "#renderer/lib/credits";
 import { IS_ELECTRON } from "#renderer/lib/platform";
+import { showError } from "#renderer/lib/toast";
 import {
   lastUserText,
   requestUpgradeDialog,
@@ -57,7 +59,7 @@ import { useHost, useThreadStore } from "../store/selectors";
 import { useChatView } from "./context";
 import { deliverableOfferTarget, isWorkTool } from "./deliverable-offer";
 import { useTailCardClaim } from "./tail-cards";
-import { isLive, useUpgradeResume } from "./upgrade-triggers";
+import { isLive } from "./upgrade-triggers";
 
 export interface RetryOfferTarget {
   /** The reply's message id. */
@@ -139,7 +141,6 @@ export const RetryOfferRow = ({
   const db = useDb();
   const prefs = usePrefs();
   const { data: account } = useAccount();
-  const resume = useUpgradeResume({ thisChatOnly: true });
   const outcome = useThreadStore(session, (state) =>
     state.runs.outcomes.at(-1)
   );
@@ -149,6 +150,8 @@ export const RetryOfferRow = ({
   );
   // A tap hides the line at once, before the dialog answers.
   const [answered, setAnswered] = useState<string | null>(null);
+  // A paying plan's tap waits on the summary with the line still up.
+  const [preparing, setPreparing] = useState(false);
   // The gallery shows it on a model of its own, and keeps no answer.
   const preview = slots.retryOfferPreview ?? null;
   const key = creditAccountKey(account);
@@ -170,7 +173,10 @@ export const RetryOfferRow = ({
     card?.answered !== target.id &&
     deliverableOfferTarget(messages) == null &&
     (preview != null ||
-      (IS_ELECTRON && ((free && inHalf) || paying) && !pitchHere));
+      (IS_ELECTRON &&
+        composer.onContinueInNewChat != null &&
+        ((free && inHalf) || paying) &&
+        !pitchHere));
   const ended = outcome != null && (isLive(outcome) || sentHere);
   const allowed =
     eligible &&
@@ -273,24 +279,28 @@ export const RetryOfferRow = ({
     showing != null && label != null ? showing.id : null
   );
   if (showing == null || label == null) return null;
+  const continueOn = async (id: string, reason: RetryOfferReason) => {
+    const prompt = lastUserText(messages);
+    await composer.onContinueInNewChat?.(id, prompt ?? undefined);
+    funnel("retry_offer_resumed", reason);
+    switched();
+  };
   const retry = () => {
-    setAnswered(showing.id);
     funnel("retry_offer_tapped", showing.reason);
-    write({ ...base, answered: showing.id, misses: 0 });
     if (model == null) return;
     const reason = showing.reason;
-    const again = async () => {
-      const result = await resume(model.id);
-      if (result.kind === "started" || result.kind === "queued") {
-        funnel("retry_offer_resumed", reason);
-        switched();
-      }
-      return result;
-    };
+    const answer = () => write({ ...base, answered: showing.id, misses: 0 });
     if (paying) {
-      void again().catch(() => undefined);
+      // Up with a spinner until the new chat opens; a failure leaves it for another try.
+      setPreparing(true);
+      void continueOn(model.id, reason).then(answer, () => {
+        showError(t("chat.continuation.failed"));
+        setPreparing(false);
+      });
       return;
     }
+    answer();
+    setAnswered(showing.id);
     const pendingText = lastUserText(messages);
     requestUpgradeDialog(
       {
@@ -299,7 +309,11 @@ export const RetryOfferRow = ({
         threadId: session.threadId,
         src: "model_locked",
         ...(pendingText != null && { pendingText }),
-        resume: again,
+        resume: () =>
+          continueOn(model.id, reason).catch((error: unknown) => {
+            showError(t("chat.continuation.failed"));
+            throw error;
+          }),
       },
       true
     );
@@ -319,7 +333,7 @@ export const RetryOfferRow = ({
       data-slot="retry-offer"
       data-reason={showing.reason}
       role="group"
-      aria-label={t("chat.retryOffer.try", { model: label })}
+      aria-label={t("chat.retryOffer.newChat", { model: label })}
       className="my-2 flex w-full max-w-[520px] flex-wrap items-center gap-1.5"
     >
       <Button
@@ -327,10 +341,17 @@ export const RetryOfferRow = ({
         variant="outline"
         className="h-auto rounded-full py-1.5"
         data-action="retry"
+        disabled={preparing}
         onClick={retry}
       >
-        <RotateCcw aria-hidden className="size-3.5 shrink-0" />
-        {t("chat.retryOffer.try", { model: label })}
+        {preparing ? (
+          <Loader2 aria-hidden className="size-3.5 shrink-0 animate-spin" />
+        ) : (
+          <RotateCcw aria-hidden className="size-3.5 shrink-0" />
+        )}
+        {preparing
+          ? t("chat.continuation.preparing", { model: label })
+          : t("chat.retryOffer.newChat", { model: label })}
       </Button>
       {!paying && (
         <span className="text-muted-foreground text-xs">

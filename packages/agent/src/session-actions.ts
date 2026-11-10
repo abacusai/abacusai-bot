@@ -1,7 +1,8 @@
 /**
  * The commands a user runs on the agent itself rather than sends to it: pi
  * has each of these, but only its own terminal reaches them. Nothing here
- * starts a turn; `compact` alone calls a model.
+ * starts a turn; `compact` and `handoff` call a model, and only `compact`
+ * changes the history.
  */
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -9,6 +10,8 @@ import { join } from "node:path";
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 
 import { liveBackgroundJobCount } from "./background-processes.js";
+import type { Summarizer } from "./extensions/spend-governor.js";
+import { handoffSummary } from "./handoff-summary.js";
 import type { SessionAction, SessionActionResult } from "./protocol.js";
 import { listServed } from "./static-server.js";
 
@@ -43,7 +46,9 @@ export const runSessionAction = async (
   session: AgentSession | undefined,
   cwd: string,
   action: SessionAction,
-  value: string | undefined
+  value: string | undefined,
+  summarizerFor: (tokens: number) => Promise<Summarizer | null> = () =>
+    Promise.resolve(null)
 ): Promise<SessionActionResult> => {
   if (action === "tasks")
     return { ok: true, live: liveBackgroundJobCount() + listServed().length };
@@ -78,5 +83,14 @@ export const runSessionAction = async (
       return { ok: true };
     case "export":
       return exportChat(session, cwd);
+    case "handoff": {
+      const entries = session.sessionManager.getBranch();
+      if (!entries.some((entry) => entry.type === "message"))
+        return { ok: false, reason: "too-small" };
+      const summary = await handoffSummary(entries, summarizerFor);
+      return summary == null
+        ? { ok: false, reason: "failed" }
+        : { ok: true, summary };
+    }
   }
 };

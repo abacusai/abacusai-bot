@@ -126,9 +126,25 @@ afterEach(async () => {
   closeUpgradeDialog();
 });
 
-const mount = async (tier: "free" | "basic") => {
+/** A deferred answer, so a test can look while the new chat is prepared. */
+const later = () => {
+  let settle!: { resolve: () => void; reject: (error: Error) => void };
+  const promise = new Promise<void>((resolve, reject) => {
+    settle = { resolve, reject };
+  });
+  return { promise, ...settle };
+};
+
+const mount = async (
+  tier: "free" | "basic",
+  {
+    continues = true,
+    answer = () => Promise.resolve(),
+  }: { continues?: boolean; answer?: () => Promise<void> } = {}
+) => {
   const steps: Array<{ step: string; detail?: string }> = [];
-  const moved: Array<[string, string]> = [];
+  const continued: Array<[string, string | undefined]> = [];
+  const moved: string[] = [];
   const relay = new FakeRelay();
   relay.emitAll(b.sessionReady());
   const os = implement(contract);
@@ -143,12 +159,22 @@ const mount = async (tier: "free" | "basic") => {
         groups: [],
       },
       onSwitchThisChat: vi.fn(async (id: string) => {
-        moved.push(["chat", id]);
+        moved.push(id);
         return "chat" as const;
       }),
       onResumeOnModel: vi.fn(async (id: string) => {
-        moved.push(["app", id]);
+        moved.push(id);
       }),
+      ...(continues
+        ? {
+            onContinueInNewChat: vi.fn(
+              async (model: string, prompt?: string) => {
+                continued.push([model, prompt]);
+                await answer();
+              }
+            ),
+          }
+        : {}),
     },
     {},
     undefined,
@@ -166,70 +192,105 @@ const mount = async (tier: "free" | "basic") => {
     }
   );
   await act(async () => relay.emitAll(COMPLAINT));
-  const line = await screen.findByRole(
-    "button",
-    { name: "Try this again with Claude Opus 5.5" },
-    { timeout: 5000 }
-  );
   const prefs = () => current!.db.collections.prefs.get("app")?.dismissals;
-  return { relay, steps, moved, line, prefs };
+  return { relay, steps, continued, moved, prefs };
 };
 
-/** The last message sent, with what it carried. */
-const lastSend = (relay: FakeRelay) =>
-  JSON.stringify(relay.stats.send.at(-1) ?? null);
+const LINE = "Try again in a new chat with Claude Opus 5.5";
+const findLine = () =>
+  screen.findByRole("button", { name: LINE }, { timeout: 5000 });
+
+const settled = async () => {
+  for (let index = 0; index < 4; index += 1)
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+};
 
 describe("RetryOfferRow on a paying plan", () => {
-  it("runs the message again on Opus at once and keeps this chat on it", async () => {
-    const h = await mount("basic");
+  it("continues in a new chat on Opus with the stuck message, leaving this chat and its model alone", async () => {
+    const pending = later();
+    const h = await mount("basic", { answer: () => pending.promise });
+    const line = await findLine();
     // No upgrade on a plan that has it: no "Included in" tag.
     expect(
-      h.line.closest('[data-slot="retry-offer"]')?.textContent
+      line.closest('[data-slot="retry-offer"]')?.textContent
     ).not.toContain("Included in");
-    fireEvent.click(h.line);
-    await waitFor(() => expect(h.relay.stats.send).toHaveLength(1));
-    // This chat moved, never the app's default.
-    expect(h.moved).toEqual([["chat", OPUS]]);
-    expect(lastSend(h.relay)).toContain(OPUS);
-    expect(lastSend(h.relay)).toContain("It still doesn't work, same error");
-    expect(upgradeDialogStore.state.request).toBeNull();
+    fireEvent.click(line);
+    // Up with a spinner while the summary is written.
+    expect(
+      await screen.findByRole("button", {
+        name: "Preparing a new chat with Claude Opus 5.5…",
+      })
+    ).toHaveProperty("disabled", true);
+    expect(h.continued).toEqual([[OPUS, "It still doesn't work, same error"]]);
+    await act(async () => pending.resolve());
     await waitFor(() => expect(h.prefs()?.topModelHint?.switched).toBe(true));
     await waitFor(() =>
-      expect(h.steps).toEqual([
-        { step: "retry_offer_shown", detail: "complaint_paid" },
-        { step: "retry_offer_tapped", detail: "complaint_paid" },
-        { step: "retry_offer_resumed", detail: "complaint_paid" },
-      ])
+      expect(h.prefs()?.retryOffer?.answered).toEqual(expect.any(String))
+    );
+    // Nothing ran again here, and this chat kept its model.
+    expect(h.relay.stats.send).toHaveLength(0);
+    expect(h.moved).toEqual([]);
+    expect(upgradeDialogStore.state.request).toBeNull();
+    expect(h.steps).toEqual([
+      { step: "retry_offer_shown", detail: "complaint_paid" },
+      { step: "retry_offer_tapped", detail: "complaint_paid" },
+      { step: "retry_offer_resumed", detail: "complaint_paid" },
+    ]);
+  });
+
+  it("keeps the line for another try when the new chat could not be prepared", async () => {
+    const h = await mount("basic", {
+      answer: () => Promise.reject(new Error("failed")),
+    });
+    fireEvent.click(await findLine());
+    expect(await findLine()).toHaveProperty("disabled", false);
+    await settled();
+    expect(h.prefs()?.retryOffer?.answered ?? null).toBeNull();
+    expect(h.prefs()?.topModelHint?.switched ?? false).toBe(false);
+    expect(h.steps.map((step) => step.step)).not.toContain(
+      "retry_offer_resumed"
     );
   });
 });
 
 describe("RetryOfferRow on a free plan", () => {
-  it("opens the upgrade dialog, and once paid moves this chat only and sends on Opus", async () => {
+  it("opens the upgrade dialog, and once paid continues in a new chat on Opus", async () => {
     const h = await mount("free");
-    expect(h.line.closest('[data-slot="retry-offer"]')?.textContent).toContain(
+    const line = await findLine();
+    expect(line.closest('[data-slot="retry-offer"]')?.textContent).toContain(
       "Included in Basic"
     );
-    fireEvent.click(h.line);
+    fireEvent.click(line);
     const request = upgradeDialogStore.state.request;
     expect(request).toMatchObject({
       kind: "plan",
       src: "model_locked",
       pendingText: "It still doesn't work, same error",
     });
-    expect(h.relay.stats.send).toHaveLength(0);
+    expect(h.continued).toEqual([]);
     // The plan is paid: the dialog resumes.
     await act(async () => {
       await request!.resume!();
     });
-    await waitFor(() => expect(h.relay.stats.send).toHaveLength(1));
-    expect(h.moved).toEqual([["chat", OPUS]]);
-    expect(lastSend(h.relay)).toContain(OPUS);
+    expect(h.continued).toEqual([[OPUS, "It still doesn't work, same error"]]);
+    expect(h.relay.stats.send).toHaveLength(0);
+    expect(h.moved).toEqual([]);
     await waitFor(() =>
       expect(h.steps.map((step) => [step.step, step.detail])).toContainEqual([
         "retry_offer_resumed",
         "complaint",
       ])
     );
+  });
+});
+
+describe("RetryOfferRow in a chat that cannot be continued", () => {
+  it("stays down: a bot's chat or a routine run keeps its model", async () => {
+    await mount("basic", { continues: false });
+    await settled();
+    await settled();
+    expect(document.querySelector('[data-slot="retry-offer"]')).toBeNull();
   });
 });
