@@ -630,7 +630,11 @@ import { type StepEvent, StepEvents } from "./services/session/step-events";
 import { ThreadStore } from "./services/session/thread-store";
 import { TranscriptService } from "./services/session/transcript-service";
 import { TurnAbandoner } from "./services/session/turn-abandoner";
-import { TurnLedger, type TurnRecord } from "./services/session/turn-ledger";
+import {
+  TurnLedger,
+  type TurnRecord,
+  turnOpenerOf,
+} from "./services/session/turn-ledger";
 import { StatusBoard } from "./services/status/status-board";
 import { VaultClient } from "./services/vault/vault-client";
 import { Vault } from "./services/vault/vault-tools";
@@ -971,6 +975,15 @@ export class ServiceHost {
     // routine record hear about it from the ledger, and the upload gets it.
     // Every turn's one ending (TurnLedger) is what each sink acts on: the chat
     // app it answers, the routine run it is, a caller waiting on its text.
+    // Usage counts for the daily report, one per closed turn; never throws.
+    const reportUsage = createUsageReporter(
+      platform === "web-host" ? "web" : "desktop",
+      {
+        laneOf: (id) => this.agentSessionManagerService.laneOf(id),
+        isRoutineSession: (id) =>
+          this.agentSessionManagerService.isRoutineSession(id),
+      }
+    );
     this.turnLedger.onClose((record) => {
       // The app's own thread: a run the app closed under gets its terminal.
       if (record.kind === "app_closed" && record.cause !== FROZEN_RUN_CAUSE) {
@@ -989,6 +1002,7 @@ export class ServiceHost {
         console.warn(`[success-pitch] deciding failed: ${String(error)}`);
       });
       this.debugSyncService.enqueue(record.sessionId);
+      reportUsage(record);
     });
     // A turn in any session (a chat, a bot, a routine with nobody watching)
     // that ends at the credit wall stamps it, so the card is there on the
@@ -1015,15 +1029,6 @@ export class ServiceHost {
     );
     // What each running turn did, for the success pitch at its close.
     this.onAgentEvent(successPitchListener(this.successPitch));
-    // Usage counts for the daily report; the listener never throws.
-    this.onAgentEvent(
-      createUsageReporter(platform === "web-host" ? "web" : "desktop", {
-        laneOf: (id) => this.agentSessionManagerService.laneOf(id),
-        isRoutineSession: (id) =>
-          this.agentSessionManagerService.isRoutineSession(id),
-        isBotSession: (id) => this.agentSessionManagerService.isBotSession(id),
-      })
-    );
   }
 
   /** MCP connects through the web host's own `/mcp/*` routes; null on the desktop. */
@@ -1085,6 +1090,7 @@ export class ServiceHost {
         this.routineReportNotes(threadId, tags),
       acceptedMessage: (threadId, message, tags) => {
         this.successPitch.userSaid(threadId, message, tags);
+        this.noteTurnOpener(threadId, message, tags);
         this.noteUserWords(threadId, message, tags);
         this.agentSessionManagerService.nameFromMessage(
           threadId,
@@ -4787,6 +4793,8 @@ export class ServiceHost {
     // passes through, rather than left to the model's whim. The message still
     // goes through untouched.
     void this.rememberIfAsked(request.message);
+    // Before markSent: the turn it opens takes it.
+    this.noteTurnOpener(request.sessionId, request.message, request.userText);
     this.noteUserWords(request.sessionId, request.message, request.userText);
 
     this.idleAgentReaper?.touch(request.sessionId);
@@ -7347,6 +7355,22 @@ export class ServiceHost {
     string,
     Array<{ text: string; at: number }>
   >();
+
+  /**
+   * What a message reaching the session is, for the turn it opens. Another
+   * bot's words in a conversation it holds with this one are not the user's.
+   */
+  private noteTurnOpener(
+    sessionId: string,
+    message: string,
+    tags: UserTextTags | undefined
+  ): void {
+    const opener = turnOpenerOf(message, tags);
+    this.turnLedger.noteOpener(
+      sessionId,
+      opener === "user" && this.isBotAskSession(sessionId) ? "app" : opener
+    );
+  }
 
   private noteUserWords(
     sessionId: string,

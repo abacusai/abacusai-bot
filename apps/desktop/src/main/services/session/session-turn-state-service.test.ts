@@ -766,6 +766,30 @@ describe("every turn closes once, with how it ended", () => {
     expect(heard).toEqual(["app_closed"]);
   });
 
+  it("names the message that opened a turn, noted before or after its send", () => {
+    const ledger = new TurnLedger();
+    const heard: Array<{ opener?: string }> = [];
+    ledger.onClose((record) => heard.push(record));
+    // Noted just before the send: the turn the send opens takes it.
+    ledger.noteOpener(SESSION, "app");
+    ledger.begin(SESSION);
+    ledger.noteOpener(SESSION, "user");
+    ledger.end(SESSION, "reply");
+    // Noted once the run started: the open turn takes it.
+    ledger.begin(SESSION);
+    ledger.noteOpener(SESSION, "user");
+    ledger.end(SESSION, "reply");
+    // A run the agent started itself names none.
+    ledger.begin(SESSION);
+    ledger.end(SESSION, "reply");
+
+    expect(heard.map((record) => record.opener)).toEqual([
+      "app",
+      "user",
+      undefined,
+    ]);
+  });
+
   it("a session cleared away ends its open turn", () => {
     ledgered.markSent(WS, SESSION);
     ledgered.clearSession(SESSION);

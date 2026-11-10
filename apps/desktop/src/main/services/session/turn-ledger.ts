@@ -2,11 +2,14 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
+import { isBotTask } from "@abacus-ai/agent/bot-task";
+import { isRoutineFire, visibleUserText } from "@abacus-ai/agent/user-text";
 import {
   type AgentEvent,
   AgentStatus,
   type DesktopEvent,
   type TurnOutcome,
+  type UserTextTags,
 } from "@abacus-ai/contract/agent-types";
 
 /**
@@ -31,6 +34,23 @@ export interface TurnChannel {
   userName: string | null;
 }
 
+/**
+ * What the message that opened a turn was: the user's own words, a routine
+ * firing, or the app's own message with no words of the user in it (a first
+ * run, a note, a task another bot passed on).
+ */
+export type TurnOpener = "user" | "routine" | "app";
+
+/** What a message opening a turn is, read off its text and tags. */
+export const turnOpenerOf = (
+  message: string,
+  tags?: UserTextTags
+): TurnOpener => {
+  if (tags?.routineFire === true || isRoutineFire(message)) return "routine";
+  if (isBotTask(message)) return "app";
+  return visibleUserText(message, tags).trim().length > 0 ? "user" : "app";
+};
+
 /** The error a turn reported, as its event carried it. */
 export type TurnError = Extract<AgentEvent, { type: "error" }>["error"];
 
@@ -46,6 +66,8 @@ export interface TurnRecord {
   endedAt: number;
   /** Set when the turn answered a chat app; see annotate. */
   channel?: TurnChannel;
+  /** The message that opened it; absent for a run the agent started itself. */
+  opener?: TurnOpener;
 }
 
 interface OpenTurn {
@@ -56,6 +78,7 @@ interface OpenTurn {
   error: TurnError | null;
   outcome: TurnOutcome | null;
   channel?: TurnChannel;
+  opener?: TurnOpener;
 }
 
 /** What the journal keeps of an open turn, enough to close it after a restart. */
@@ -95,6 +118,8 @@ export class TurnLedger {
   private readonly open = new Map<string, OpenTurn>();
   /** A chat named for the send about to open a turn; see annotate. */
   private readonly pendingChannel = new Map<string, TurnChannel>();
+  /** What the send about to open a turn is; see noteOpener. */
+  private readonly pendingOpener = new Map<string, TurnOpener>();
   private readonly listeners = new Set<(record: TurnRecord) => void>();
   private sequence = 0;
   /** The app is going away; see appClosing. */
@@ -111,8 +136,11 @@ export class TurnLedger {
     if (this.closingApp) return;
     const channel = this.pendingChannel.get(sessionId);
     this.pendingChannel.delete(sessionId);
+    const opener = this.pendingOpener.get(sessionId);
+    this.pendingOpener.delete(sessionId);
     if (this.open.has(sessionId)) {
       if (channel != null) this.annotate(sessionId, channel);
+      if (opener != null) this.noteOpener(sessionId, opener);
       return;
     }
     this.sequence += 1;
@@ -124,8 +152,21 @@ export class TurnLedger {
       error: null,
       outcome: null,
       ...(channel != null ? { channel } : {}),
+      ...(opener != null ? { opener } : {}),
     });
     this.saveJournal();
+  }
+
+  /**
+   * A message reached the session. The first one a turn hears is what opened
+   * it; later ones join it. Noted just before its send, the turn the send
+   * opens takes it.
+   */
+  noteOpener(sessionId: string, opener: TurnOpener): void {
+    if (this.closingApp) return;
+    const turn = this.open.get(sessionId);
+    if (turn == null) this.pendingOpener.set(sessionId, opener);
+    else turn.opener ??= opener;
   }
 
   /** The open turn answers a chat app: its ending is owed there too. */
@@ -153,6 +194,7 @@ export class TurnLedger {
     this.closingApp = false;
     this.open.clear();
     this.pendingChannel.clear();
+    this.pendingOpener.clear();
     const file = this.options.journal?.();
     if (file == null) return;
     let entries: JournalEntry[] = [];
@@ -278,6 +320,7 @@ export class TurnLedger {
     if (turn == null || this.closingApp) return;
     this.open.delete(sessionId);
     this.pendingChannel.delete(sessionId);
+    this.pendingOpener.delete(sessionId);
     const record: TurnRecord = {
       turnId: turn.turnId,
       sessionId,
@@ -289,6 +332,7 @@ export class TurnLedger {
       startedAt: turn.startedAt,
       endedAt: this.now(),
       ...(turn.channel != null ? { channel: turn.channel } : {}),
+      ...(turn.opener != null ? { opener: turn.opener } : {}),
     };
     this.options.log?.(
       `[${sessionId.slice(0, 8)}] turn outcome ${record.kind}` +
@@ -329,10 +373,11 @@ export class TurnLedger {
     return path.join(dir, `${sessionId}.json`);
   }
 
-  /** Kept without the error or the chat: the kind and cause are what is uploaded. */
+  /** Kept without the error, the chat or the opener: the kind and cause are what is uploaded. */
   private keep({
     error: _error,
     channel: _channel,
+    opener: _opener,
     ...record
   }: TurnRecord): void {
     const file = this.fileOf(record.sessionId);

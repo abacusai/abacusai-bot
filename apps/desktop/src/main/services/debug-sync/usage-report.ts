@@ -4,18 +4,28 @@
  * the web app and the desktop app and how much.
  *
  * One POST per turn, carrying only a random turn id, the surface (web or
- * desktop) and the kind of turn: the user's own chat, a bot's session, or a
- * routine run. No content. The phone lane's turns are counted by the server,
- * so they are skipped here. Fire and forget: never awaited, never retried,
- * and nothing here can throw into the caller.
+ * desktop) and the kind of turn, decided by what opened the turn rather than
+ * by the session it ran in:
+ *
+ * - `routine`: a routine's run, in its own session or fired into a chat;
+ * - `channel`: a message from a chat app (the user's own WhatsApp, Telegram
+ *   or Discord, or someone writing to their bot) that the turn answered;
+ * - `user`: the user's own words typed in the app, in any chat, their bots'
+ *   included.
+ *
+ * Not reported: a turn the app opened with no words of the user's (a bot's
+ * first run, a note, a task one bot passed to another), a turn that never
+ * started or was cut off by the app closing, and the phone lane's turns,
+ * which the server counts itself. No content. Fire and forget: never
+ * awaited, never retried, and nothing here can throw into the caller.
  */
 import { randomUUID } from "crypto";
 
-import type { DesktopEvent } from "@abacus-ai/contract/agent-types";
 import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
 
 import { readSettings } from "../config/settings";
 import { abacusRoutellmV1 } from "../providers/abacus-host";
+import type { TurnRecord } from "../session/turn-ledger";
 
 const TIMEOUT_MS = 10_000;
 
@@ -26,35 +36,35 @@ export interface UsageSessionFacts {
   /** The host lane keeping this session (the phone loop), if any. */
   laneOf(sessionId: string): string | null;
   isRoutineSession(sessionId: string): boolean;
-  /** A bot's session: its loop or a conversation with someone it serves. */
-  isBotSession(sessionId: string): boolean;
 }
 
-/** The kind of turn a session runs, or null for one counted elsewhere. */
+/** The kind of a closed turn, or null for one not reported here. */
 export function usageTurnKind(
   facts: UsageSessionFacts,
-  sessionId: string
+  record: Pick<TurnRecord, "sessionId" | "kind" | "channel" | "opener">
 ): UsageTurnKind | null {
-  if (facts.laneOf(sessionId) != null) return null;
-  if (facts.isRoutineSession(sessionId)) return "routine";
-  if (facts.isBotSession(sessionId)) return "channel";
-  return "user";
+  // Nothing ran, or the close is replayed from the last run's journal.
+  if (record.kind === "not_started" || record.kind === "app_closed")
+    return null;
+  if (facts.laneOf(record.sessionId) != null) return null;
+  if (record.opener === "routine" || facts.isRoutineSession(record.sessionId))
+    return "routine";
+  if (record.opener !== "user") return null;
+  return record.channel != null ? "channel" : "user";
 }
 
 /**
- * A listener for ServiceHost.onAgentEvent: one report per `turn_complete`.
- * Swallows every error, so it can never disturb the listeners after it.
+ * A listener for TurnLedger.onClose: one report per closed turn. Swallows
+ * every error, so it can never disturb the listeners after it.
  */
 export function createUsageReporter(
   surface: UsageSurface,
   facts: UsageSessionFacts,
   fetchImpl: typeof fetch = fetch
-): (sessionId: string, payload: DesktopEvent) => void {
-  return (sessionId, payload) => {
+): (record: TurnRecord) => void {
+  return (record) => {
     try {
-      if (payload.type !== "event" || payload.event.type !== "turn_complete")
-        return;
-      const kind = usageTurnKind(facts, sessionId);
+      const kind = usageTurnKind(facts, record);
       if (kind == null) return;
       const key = readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus]?.trim();
       if (!key) return;
