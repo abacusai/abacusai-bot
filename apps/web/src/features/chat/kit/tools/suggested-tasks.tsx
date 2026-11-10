@@ -33,6 +33,7 @@ import { Button } from "#renderer/ui/button";
 
 import { useHost, useThreadStore } from "../../store/selectors";
 import { useChatView } from "../context";
+import { retryOfferTarget } from "../retry-offer";
 import { useSendAsUser } from "../send-as-user";
 import { toolInput } from "./normalize";
 
@@ -106,6 +107,8 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
     !running &&
     composer.readOnly == null &&
     isLatestOffer(messages, part.id) &&
+    // The retry line wins a turn it has a reason for (complaint, repeat).
+    (!nextStep || retryOfferTarget(messages) == null) &&
     (!nextStep ||
       card?.shownOffer === part.id ||
       nextStepAllowed(card, {

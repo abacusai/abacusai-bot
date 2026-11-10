@@ -5,7 +5,10 @@ import { planTopModelNames, wallOffer } from "@abacus-ai/contract/billing-plan";
  * plan's top models. A tap opens the upgrade dialog with the message waiting,
  * and once paid it runs again on that model. Caps live in prefs.
  */
-import { isSuggestTasksTool } from "@abacus-ai/contract/bots/suggested-tasks";
+import {
+  isSuggestTasksTool,
+  suggestsNextStep,
+} from "@abacus-ai/contract/bots/suggested-tasks";
 import { creditAccountKey } from "@abacus-ai/contract/credit-thresholds";
 import {
   type DeliverableOfferCard,
@@ -72,7 +75,13 @@ export const retryOfferTarget = (
   const carrier = assistants.at(-1);
   if (ask === "" || carrier == null) return null;
   const tools = assistants.flatMap(messageTools);
-  if (tools.some((tool) => isSuggestTasksTool(tool.name))) return null;
+  // Plain tasks are an offer of their own; a next step under a result yields to this line.
+  if (
+    tools.some(
+      (tool) => isSuggestTasksTool(tool.name) && !suggestsNextStep(tool.input)
+    )
+  )
+    return null;
   const ranWork = (indices: readonly number[]): boolean =>
     indices.some((index) =>
       messageTools(messages[index]!).some((tool) => isWorkTool(tool.name))
