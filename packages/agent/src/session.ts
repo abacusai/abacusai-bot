@@ -132,13 +132,7 @@ import {
   runOrigin,
   type NetworkSuspect,
 } from "./network-wait.js";
-import {
-  endedOnResult,
-  NEXT_STEP_PROMPT,
-  NEXT_STEP_TYPE,
-  NextStepAsk,
-  nextStepAskOn,
-} from "./next-step-ask.js";
+import { NEXT_STEP_TYPE, NextStepAsk, nextStepAskOn } from "./next-step-ask.js";
 import { endedOnLeakedToolCall, networkVerdict } from "./openllm-failures.js";
 import {
   OPENLLM_CONTINUATION_PROMPT,
@@ -2118,7 +2112,7 @@ export class AbacusBotSession {
         await this.session?.sendCustomMessage(
           {
             customType: NEXT_STEP_TYPE,
-            content: NEXT_STEP_PROMPT,
+            content: this.nextStepAsk.note,
             display: false,
           },
           { triggerTurn: true }
@@ -2705,8 +2699,7 @@ export class AbacusBotSession {
       this.ownedTurn != null &&
       nextStepAskOn() &&
       mayAskForPromisedWork(this.mode) &&
-      endedOnResult(messages) &&
-      this.nextStepAsk.claim()
+      this.nextStepAsk.claim(messages)
     );
   }
 

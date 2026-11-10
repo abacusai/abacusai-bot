@@ -1,8 +1,7 @@
 /**
  * The next step: when a chat finishes a piece of work, its reply ends on one
  * question and the buttons that answer it, and a task that repeats can become
- * a routine. Half the installs get it, by device, so what it does to people
- * coming back can be read against the half that do not.
+ * a routine.
  */
 import {
   DELIVERABLE_OFFER_MAX_MISSES,
@@ -12,20 +11,6 @@ import {
 
 /** The renderer's record (prefs `dismissals.nextStepOffer`): the deliverable offer's, with no close button. */
 export type NextStepCard = DeliverableOfferCard;
-
-/** FNV-1a: the half must not move between launches or builds. */
-const hash = (text: string): number => {
-  let value = 0x811c9dc5;
-  for (let index = 0; index < text.length; index += 1) {
-    value ^= text.charCodeAt(index);
-    value = Math.imul(value, 0x01000193);
-  }
-  return value >>> 0;
-};
-
-/** Whether this install is in the half that gets the next step. */
-export const nextStepForDevice = (deviceId: string): boolean =>
-  hash(`next-step:${deviceId}`) % 2 === 0;
 
 /**
  * Whether the offer `offerId`, on turn `turn` of `threadId`, may show: never

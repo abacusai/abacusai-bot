@@ -110,8 +110,6 @@ import {
   type NetworkSuspect,
 } from "../network-wait.js";
 import {
-  endedOnResult,
-  NEXT_STEP_PROMPT,
   NEXT_STEP_TYPE,
   NextStepAsk,
   nextStepAskOn,
@@ -1457,7 +1455,7 @@ export class ForeverEngine {
         await this.session?.sendCustomMessage(
           {
             customType: NEXT_STEP_TYPE,
-            content: NEXT_STEP_PROMPT,
+            content: this.nextStepAsk.note,
             display: false,
           },
           { triggerTurn: true }
@@ -2264,8 +2262,7 @@ export class ForeverEngine {
       this.ownedTurn != null &&
       nextStepAskOn() &&
       mayAskForPromisedWork(this.mode) &&
-      endedOnResult(messages) &&
-      this.nextStepAsk.claim()
+      this.nextStepAsk.claim(messages)
     );
   }
 
