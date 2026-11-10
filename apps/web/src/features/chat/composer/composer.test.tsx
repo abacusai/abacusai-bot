@@ -835,6 +835,43 @@ describe("R2-T25 composer", () => {
     expect(composer().hasAttribute("data-expanded")).toBe(true);
   });
 
+  it("bot: the box stays open while the + menu's connectors panel is used", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll(b.sessionReady());
+    const connect = vi.fn();
+    current = await renderRelay(relay, "bot", {
+      connectors: {
+        panel: (
+          <>
+            <input aria-label="Search connectors" />
+            <button onClick={connect}>Connect Slack</button>
+          </>
+        ),
+        overlay: null,
+      },
+    });
+    act(() => field().focus());
+    expect(composer().hasAttribute("data-expanded")).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Attach" }));
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Add connectors" })
+    );
+    const search = await screen.findByRole("textbox", {
+      name: "Search connectors",
+    });
+    act(() => search.focus());
+    // Focus moving within the portaled panel reads as leaving the composer;
+    // the open panel holds the box, so the button under the press survives.
+    // The browser commits the blur before the focus lands, so dispatch it on
+    // its own, as a press on the button does.
+    const add = screen.getByRole("button", { name: "Connect Slack" });
+    fireEvent.focusOut(search, { relatedTarget: add });
+    expect(composer().hasAttribute("data-expanded")).toBe(true);
+    expect(add.isConnected).toBe(true);
+    fireEvent.click(add);
+    expect(connect).toHaveBeenCalledTimes(1);
+  });
+
   it.each([true, false])(
     "Mod+. stops only the focused view (%s)",
     async (focused) => {

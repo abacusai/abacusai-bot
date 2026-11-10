@@ -190,15 +190,31 @@ const useComposer = (): ComposerContextValue => {
 };
 
 const focusedThreads = new Store<ReadonlySet<string>>(new Set<string>());
-const modelMenus = new Store<ReadonlySet<string>>(new Set<string>());
-const setModelMenu = (threadId: string, open: boolean): void => {
-  modelMenus.setState((state) => {
+/**
+ * The toolbar popups that hold the box open while they are open (the model
+ * menu, the + menu and its connectors panel), keyed `<menu>:<threadId>`.
+ * Their content is portaled, so focus moving within it reads as leaving the
+ * composer; without the hold the box would collapse and unmount the popup
+ * under the press.
+ */
+type ComposerMenu = "model" | "attach";
+const composerMenus = new Store<ReadonlySet<string>>(new Set<string>());
+const setComposerMenu = (
+  threadId: string,
+  menu: ComposerMenu,
+  open: boolean
+): void => {
+  const key = `${menu}:${threadId}`;
+  composerMenus.setState((state) => {
+    if (state.has(key) === open) return state;
     const next = new Set(state);
-    if (open) next.add(threadId);
-    else next.delete(threadId);
+    if (open) next.add(key);
+    else next.delete(key);
     return next;
   });
 };
+const menuHolds = (state: ReadonlySet<string>, threadId: string): boolean =>
+  state.has(`model:${threadId}`) || state.has(`attach:${threadId}`);
 const setThreadFocus = (threadId: string, focused: boolean): void => {
   focusedThreads.setState((state) => {
     if (state.has(threadId) === focused) return state;
@@ -220,7 +236,9 @@ export const useComposerExpanded = (threadId: string): boolean => {
         draft.replyTo != null)
     );
   });
-  const menu = useSelector(modelMenus, (state) => state.has(threadId));
+  const menu = useSelector(composerMenus, (state) =>
+    menuHolds(state, threadId)
+  );
   return focused || drafted || menu;
 };
 
@@ -274,15 +292,25 @@ const Attachments = () => {
 const Attach = () => {
   const { t } = useTranslation();
   const { runtime, composer: config } = useChatView();
-  const { threadId } = useComposer();
+  const { threadId, expanded } = useComposer();
   const [error, setError] = useState<string | null>(null);
   const button = useRef<HTMLButtonElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   // null until first opened: nothing of the panel loads before it is asked for.
   const [connectors, setConnectors] = useState<boolean | null>(null);
+  // The toolbar's + holds the box open while its menu or panel is open. The
+  // pill's + never mounts in the box, so it holds nothing: its popups keep
+  // the pill as it is (pillControlFocus).
+  const open = menuOpen || connectors === true;
+  useEffect(() => {
+    if (!expanded) return;
+    setComposerMenu(threadId, "attach", open);
+    return () => setComposerMenu(threadId, "attach", false);
+  }, [expanded, open, threadId]);
   return (
     <>
       {error && <p role="alert">{error}</p>}
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger
           render={
             <Button
@@ -691,11 +719,14 @@ export const ThreadComposer = () => {
     liveSkills.length > 0 ? liveSkills : (config.skillsBaseline ?? []);
   const focused = useSelector(focusedThreads, (state) => state.has(threadId));
   const setFocused = (value: boolean): void => setThreadFocus(threadId, value);
-  const modelMenuOpen = useSelector(modelMenus, (state) => state.has(threadId));
+  const menuHeld = useSelector(composerMenus, (state) =>
+    menuHolds(state, threadId)
+  );
   useEffect(
     () => () => {
       setThreadFocus(threadId, false);
-      setModelMenu(threadId, false);
+      setComposerMenu(threadId, "model", false);
+      setComposerMenu(threadId, "attach", false);
     },
     [threadId]
   );
@@ -746,7 +777,7 @@ export const ThreadComposer = () => {
     ? false
     : config.mode === "full" && skin === "session"
       ? true
-      : focused || hasDraft || menuOpen || modelMenuOpen;
+      : focused || hasDraft || menuOpen || menuHeld;
   const state: ComposerState =
     config.readOnly != null
       ? "blocked"
@@ -1153,7 +1184,7 @@ export const ThreadComposer = () => {
         binding={config.model}
         ref={modelChip}
         compact={narrow}
-        onOpenChange={(open) => setModelMenu(threadId, open)}
+        onOpenChange={(open) => setComposerMenu(threadId, "model", open)}
       />
     ) : null;
 
