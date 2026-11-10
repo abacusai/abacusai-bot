@@ -343,6 +343,7 @@ import {
   ranOutOfAbacusCredits,
   ROUTINE_RUN_TIMEOUT_MS,
   runEndsRoutine,
+  isQuietReply,
   runOutcomeOf,
   shouldPauseAfter,
   shouldPauseQuiet,
@@ -611,6 +612,14 @@ import {
   successPitchListener,
   SuccessPitchWatch,
 } from "./services/providers/success-pitch";
+import {
+  WORK_WAITING_CHECK_EVERY_MS,
+  WORK_WAITING_FIRST_CHECK_MS,
+  WorkWaiting,
+  workWaitingMetadata,
+  workWaitingLine,
+  type WorkWaitingPlace,
+} from "./services/providers/work-waiting";
 import { SandboxProbeService } from "./services/sandbox/sandbox-probe-service";
 import { agentTurnBusy } from "./services/session/agent-busy";
 import { AgentSessionManagerService } from "./services/session/agent-session-manager-service";
@@ -1395,6 +1404,34 @@ export class ServiceHost {
   });
 
   /** The success pitch, decided at each turn's close (TurnLedger). */
+  /** "Your work is waiting": a result the user left, brought up again (work-waiting.ts). */
+  private readonly workWaiting = new WorkWaiting({
+    file: () =>
+      this.platform === "web-host"
+        ? null
+        : path.join(abacusBotHome(), "work-waiting.json"),
+    quiet: (now) =>
+      isQuietNow(this.prefs?.()?.get().sounds?.quietHours, new Date(now)),
+    busy: () => this.turnLedger.anyOpen(),
+    nameOf: (place) => this.workWaitingName(place),
+    words: async () => {
+      const words = await channelWords(
+        channelLocale(readUserLanguage()?.name ?? null, this.appLanguage())
+      );
+      return (key, values) => words.t(key, values);
+    },
+    show: (notice, clicked) =>
+      this.userNotifier?.({
+        title: notice.title,
+        body: notice.body,
+        dedupeKey: notice.dedupeKey,
+        metadata: workWaitingMetadata(notice.place),
+        clicked,
+      }),
+    funnel: (step, detail) => reportFunnelStep(step, detail),
+  });
+  private workWaitingTimers: NodeJS.Timeout[] = [];
+
   private readonly successPitch = new SuccessPitchWatch({
     prefs: () => this.prefs?.() ?? null,
     account: () => cachedAbacusAccount(),
@@ -1410,6 +1447,16 @@ export class ServiceHost {
       this.messagingGatewayService.tellSuccessPitch(sessionId),
     funnel: (step, detail) => reportFunnelStep(step, detail),
     nextStep: nextStepOn,
+    // Another person writing to the user's bot is not the user coming back,
+    // and a bot's turn in a channel answers the channel, which the user left.
+    turnEnded: (sessionId, ending, task) => {
+      if (this.isUsersOwnChat(sessionId))
+        this.workWaiting.turnEnded(sessionId, ending, workWaitingLine(task));
+    },
+    userWrote: (sessionId) => {
+      if (this.isUsersOwnChat(sessionId))
+        this.workWaiting.userWrote({ kind: "session", sessionId });
+    },
   });
 
   /** What a turn in `sessionId` counts as for the milestone card's estimate. */
@@ -1702,6 +1749,7 @@ export class ServiceHost {
         body: string;
         dedupeKey: string;
         metadata?: NotificationMetadata;
+        clicked?: () => void;
       }) => void)
     | null = null;
   private windowFocused: (() => boolean) | null = null;
@@ -1713,6 +1761,8 @@ export class ServiceHost {
       body: string;
       dedupeKey: string;
       metadata?: NotificationMetadata;
+      /** Told when the user clicks the notice. */
+      clicked?: () => void;
     }) => void,
     focused: () => boolean
   ): void {
@@ -3589,6 +3639,7 @@ export class ServiceHost {
     if (this.platform === "electron")
       void this.builtinMcpLifecycle.startBrowserServer();
     this.startIdleAgentReaper();
+    if (this.platform === "electron") this.startWorkWaiting();
     // Requests between bots the app closed on run again; queued ones start.
     this.botAskService.recover();
     this.channelService.recover();
@@ -3637,8 +3688,67 @@ export class ServiceHost {
     this.debugSyncService.sweepOnStartup();
   }
 
+  /** A chat that is the user's own: not a contact's chat with their bot, nor a bot's turn for a channel. */
+  private isUsersOwnChat(sessionId: string): boolean {
+    return (
+      this.agentSessionManagerService.get(sessionId)?.owner?.role !== "sender"
+    );
+  }
+
+  /** What the place the user left is called now; null when it is gone. */
+  private workWaitingName(
+    place: WorkWaitingPlace
+  ): { name: string | null } | null {
+    if (place.kind === "channel") {
+      const channel = this.channelService
+        .list()
+        .find((entry) => entry.id === place.channelId);
+      return channel == null
+        ? null
+        : {
+            name:
+              channelTitle(
+                channel,
+                (id) =>
+                  this.botService.list().find((bot) => bot.id === id)?.name ??
+                  null
+              ) || null,
+          };
+    }
+    if (place.kind === "routine") {
+      const job = getJob(place.routineId);
+      return job == null ? null : { name: job.name || null };
+    }
+    const session = this.agentSessionManagerService.get(place.sessionId);
+    if (session == null) return null;
+    // A bot's chat goes by the bot's name. A plain chat's label is its first
+    // message cut short, which reads badly in a sentence: it gets the plain words.
+    const botId = session.owner?.botId;
+    const bot =
+      botId == null
+        ? null
+        : this.botService.list().find((entry) => entry.id === botId);
+    return { name: bot?.name ?? null };
+  }
+
+  /** A first look soon after launch (a login start), then every quarter hour. */
+  private startWorkWaiting(): void {
+    const tick = (): void => {
+      void this.workWaiting.tick().catch((error: unknown) => {
+        console.warn(`[work-waiting] check failed: ${String(error)}`);
+      });
+    };
+    const first = setTimeout(tick, WORK_WAITING_FIRST_CHECK_MS);
+    const every = setInterval(tick, WORK_WAITING_CHECK_EVERY_MS);
+    first.unref();
+    every.unref();
+    this.workWaitingTimers = [first, every];
+  }
+
   stop(): void {
     this.startedAt = null;
+    for (const timer of this.workWaitingTimers) clearTimeout(timer);
+    this.workWaitingTimers = [];
     this.idleAgentReaper?.dispose();
     this.idleAgentReaper = null;
     this.workspaceRuntimeService.stop();
@@ -6066,6 +6176,10 @@ export class ServiceHost {
       return;
     }
     if (outcome === "completed") {
+      // Something to look at while the user is away; a run that found
+      // nothing new is not.
+      if (!isQuietReply(text))
+        this.workWaiting.routineRan(session.routineId, sessionId);
       if (this.deliversRoutineReports())
         void this.deliverRunReport(
           finishedJob,
@@ -7099,12 +7213,14 @@ export class ServiceHost {
       for (const [key] of listSenderSessionEntries())
         if (keys.has(key)) removeSenderSession(key);
     },
-    changed: (channelId) =>
+    changed: (channelId) => {
+      if (channelId != null) this.workWaiting.channelSpoke(channelId);
       this.emitEvent({
         type: "channels-updated",
         channelId,
         emittedAt: new Date().toISOString(),
-      }),
+      });
+    },
     log: (line) => console.log(line),
   });
 
@@ -7314,6 +7430,7 @@ export class ServiceHost {
 
   postToChannel(channelId: string, text: string, replyTo?: string): void {
     this.channelService.post(channelId, text, replyTo);
+    this.workWaiting.userWrote({ kind: "channel", channelId });
   }
 
   pinInChannel(

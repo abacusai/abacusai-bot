@@ -5035,6 +5035,19 @@
       "once": "Aku tidak akan membahas ini lagi di sini."
     }
   },
+  "workWaiting": {
+    "title": "Pekerjaanmu menunggu",
+    "site": "Situsmu sudah siap. Lanjutkan dari tempat terakhir.",
+    "file": "Filemu sudah siap. Lanjutkan dari tempat terakhir.",
+    "question": "{{name}} menunggu jawaban Anda.",
+    "questionPlain": "Obrolan Anda menunggu jawaban Anda.",
+    "unfinished": "{{name}} berhenti di tengah jalan. Lanjutkan dari tempat Anda berhenti.",
+    "unfinishedPlain": "Tugas Anda berhenti di tengah jalan. Lanjutkan dari tempat Anda berhenti.",
+    "chat": "Lanjutkan dari tempat Anda berhenti di {{name}}.",
+    "chatPlain": "Lanjutkan dari tempat Anda berhenti.",
+    "routine": "{{name}} punya hasil baru untuk Anda.",
+    "routinePlain": "Rutinitas Anda punya hasil baru untuk Anda."
+  },
   "kickoff": {
     "connectOne": "Pertama, jika pengingat sistem tidak mencantumkan {{name}} sebagai terhubung, panggil connect_connector untuknya sekarang.",
     "resultFirst": "Pertama, serahkan hasil nyata dengan apa yang bisa dilakukan tanpa akun apa pun, atau, jika tugasnya dimulai dari sesuatu yang hanya bisa diberikan pengguna (pertanyaannya, topik, daftar), mintalah dalam satu pertanyaan singkat; baru setelah itu, tawarkan paling banyak satu koneksi, yang paling meningkatkan hasilnya.",

@@ -5035,6 +5035,19 @@
       "once": "Je n'en reparlerai plus ici."
     }
   },
+  "workWaiting": {
+    "title": "Votre travail vous attend",
+    "site": "Votre site est prêt. Reprenez là où vous vous êtes arrêté.",
+    "file": "Votre fichier est prêt. Reprenez là où vous vous êtes arrêté.",
+    "question": "{{name}} attend votre réponse.",
+    "questionPlain": "Votre discussion attend votre réponse.",
+    "unfinished": "{{name}} s'est arrêté en cours de route. Reprenez là où vous en étiez.",
+    "unfinishedPlain": "Votre tâche s'est arrêtée en cours de route. Reprenez là où vous en étiez.",
+    "chat": "Reprenez là où vous en étiez dans {{name}}.",
+    "chatPlain": "Reprenez là où vous en étiez.",
+    "routine": "{{name}} a de nouveaux résultats pour vous.",
+    "routinePlain": "Votre routine a de nouveaux résultats pour vous."
+  },
   "kickoff": {
     "connectOne": "D'abord, si le rappel système n'indique pas {{name}} comme connecté, appelle connect_connector pour le connecter maintenant.",
     "resultFirst": "Commence par remettre un vrai résultat avec ce qui fonctionne sans aucun compte, ou, si la tâche part de quelque chose que seul l'utilisateur peut donner (sa question, un sujet, une liste), demande-le en une seule question courte ; ensuite seulement, propose au plus une connexion, celle qui améliore le plus le résultat.",

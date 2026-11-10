@@ -5035,6 +5035,19 @@
       "once": "Ik begin hier niet meer over."
     }
   },
+  "workWaiting": {
+    "title": "Je werk wacht op je",
+    "site": "Je site is klaar. Ga verder waar je gebleven was.",
+    "file": "Je bestand is klaar. Ga verder waar je gebleven was.",
+    "question": "{{name}} wacht op je antwoord.",
+    "questionPlain": "Je chat wacht op je antwoord.",
+    "unfinished": "{{name}} is halverwege gestopt. Ga verder waar je gebleven was.",
+    "unfinishedPlain": "Je taak is halverwege gestopt. Ga verder waar je gebleven was.",
+    "chat": "Ga verder waar je gebleven was in {{name}}.",
+    "chatPlain": "Ga verder waar je gebleven was.",
+    "routine": "{{name}} heeft nieuwe resultaten voor je.",
+    "routinePlain": "Je routine heeft nieuwe resultaten voor je."
+  },
   "kickoff": {
     "connectOne": "Als de systeemherinnering {{name}} niet als verbonden vermeldt, roep dan eerst nu connect_connector daarvoor aan.",
     "resultFirst": "Lever eerst een echt resultaat af met wat zonder account werkt, of, als de taak begint met iets dat alleen de gebruiker kan geven (hun vraag, een onderwerp, een lijst), vraag erom in één korte vraag; bied pas daarna hooguit één verbinding aan, degene die het resultaat het meest verbetert.",

@@ -96,7 +96,9 @@ export interface AppOperations {
     title: string,
     body: string,
     metadata?: NotificationMetadata,
-    attention?: { kind?: "needs-you" | "done" | "failed"; dedupeKey?: string }
+    attention?: { kind?: "needs-you" | "done" | "failed"; dedupeKey?: string },
+    /** Main's own notices only: told when the user clicks it. */
+    clicked?: () => void
   ): void;
   readImageAsDataUrl(args: HostFileArgs): Promise<{
     success: boolean;

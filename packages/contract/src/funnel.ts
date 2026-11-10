@@ -6,6 +6,8 @@
 export const FUNNEL_STEPS = [
   // Main process.
   "app_opened",
+  // Beside app_opened when the OS started the app at login, not the user.
+  "opened_at_login",
   "auto_signin",
   "signup_clicked",
   "browser_returned",
@@ -63,6 +65,10 @@ export const FUNNEL_STEPS = [
   "result_delivered",
   "next_step_shown",
   "next_step_tapped",
+  // "Your work is waiting" (work-waiting.ts): a notice for a result the user
+  // left, by which one, kind and whether it named a task; then a click.
+  "work_waiting_shown",
+  "work_waiting_clicked",
   // The retry on a top model (retry-offer.ts). The account's half, once (on
   // or off); the line, by why it showed; a tap and a close.
   "retry_offer_half",

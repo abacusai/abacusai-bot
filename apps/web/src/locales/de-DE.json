@@ -5035,6 +5035,19 @@
       "once": "Ich spreche das hier nicht noch einmal an."
     }
   },
+  "workWaiting": {
+    "title": "Deine Arbeit wartet",
+    "site": "Deine Website ist fertig. Mach da weiter, wo du aufgehört hast.",
+    "file": "Deine Datei ist fertig. Mach da weiter, wo du aufgehört hast.",
+    "question": "{{name}} wartet auf deine Antwort.",
+    "questionPlain": "Dein Chat wartet auf deine Antwort.",
+    "unfinished": "{{name}} wurde mittendrin angehalten. Mach dort weiter, wo du aufgehört hast.",
+    "unfinishedPlain": "Deine Aufgabe wurde mittendrin angehalten. Mach dort weiter, wo du aufgehört hast.",
+    "chat": "Mach in {{name}} dort weiter, wo du aufgehört hast.",
+    "chatPlain": "Mach dort weiter, wo du aufgehört hast.",
+    "routine": "{{name}} hat neue Ergebnisse für dich.",
+    "routinePlain": "Deine Routine hat neue Ergebnisse für dich."
+  },
   "kickoff": {
     "connectOne": "Falls die Systemerinnerung {{name}} nicht als verbunden aufführt, rufe zuerst sofort connect_connector dafür auf.",
     "resultFirst": "Gib zuerst ein echtes Ergebnis ab, mit dem, was ohne Konto funktioniert, oder, wenn die Aufgabe mit etwas beginnt, das nur der Nutzer geben kann (seine Frage, ein Thema, eine Liste), frag in einer kurzen Frage danach; biete erst danach höchstens eine Verbindung an, die das Ergebnis am meisten verbessert.",

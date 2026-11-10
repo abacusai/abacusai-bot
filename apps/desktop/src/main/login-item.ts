@@ -4,6 +4,7 @@
  * off in the system settings is not signed up again.
  */
 import fs from "fs";
+import os from "os";
 import path from "path";
 
 import { app } from "electron";
@@ -25,5 +26,24 @@ export const registerLoginItem = (): void => {
     console.warn(
       `[login-item] not registered: ${error instanceof Error ? error.message : String(error)}`
     );
+  }
+};
+
+/** A start this soon after the computer booted, with the login item on, is the login item's. */
+const LOGIN_START_WITHIN_S = 180;
+
+/** Whether the OS started this launch at login, rather than the user. */
+export const openedAtLogin = (): boolean => {
+  if (!app.isPackaged) return false;
+  if (process.platform !== "darwin" && process.platform !== "win32")
+    return false;
+  try {
+    const settings = app.getLoginItemSettings();
+    if (!settings.openAtLogin) return false;
+    return (
+      settings.wasOpenedAtLogin === true || os.uptime() < LOGIN_START_WITHIN_S
+    );
+  } catch {
+    return false;
   }
 };

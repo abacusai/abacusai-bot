@@ -260,6 +260,7 @@ describe("a routine run the network let down", () => {
         get: () => ({ routineId: job.id, createdAt: "2026-10-13T09:00:00Z" }),
       },
       routineNetworkWaits: new NetworkWaitClock(),
+      workWaiting: { routineRan: vi.fn() },
       routineRunText: new Map([["run-1", []]]),
       routineHome: () => dir,
       pauseRoutine: vi.fn(),
@@ -301,6 +302,7 @@ describe("a routine whose runs keep finding nothing", () => {
         get: (id: string) => ({ routineId, createdAt: startedAt.get(id) }),
       },
       routineNetworkWaits: { forget: vi.fn() },
+      workWaiting: { routineRan: vi.fn() },
       routineRunText: text,
       routineRunLast: new Map(),
       // Delivery has its own tests (routine-report-host.test.ts).
@@ -500,6 +502,7 @@ describe("when a routine stops firing", () => {
         }),
       },
       routineNetworkWaits: { forget: vi.fn() },
+      workWaiting: { routineRan: vi.fn() },
       routineRunText: new Map<string, string[]>(),
       routineRunLast: new Map(),
       // Delivery has its own tests (routine-report-host.test.ts).
@@ -627,6 +630,7 @@ describe("the note a failing routine's pause records", () => {
           })),
       },
       routineNetworkWaits: { forget: vi.fn() },
+      workWaiting: { routineRan: vi.fn() },
       routineRunText: new Map<string, string[]>(),
       routineHome: () => dir,
       emitEvent: vi.fn(),
@@ -736,6 +740,7 @@ describe("a scheduled run the app closed under", () => {
       agentSessionManagerService: sessions,
       routineSends: sends,
       routineNetworkWaits: new NetworkWaitClock(),
+      workWaiting: { routineRan: vi.fn() },
       routineRunText: new Map<string, string[]>(),
       routineHome: () => path.join(home, "routine-home"),
       threadStore: {
