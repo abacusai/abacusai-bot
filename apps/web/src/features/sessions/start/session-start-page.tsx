@@ -31,6 +31,7 @@ import { useDb } from "#renderer/data/db";
 import { isListedSession } from "#renderer/data/db/filters";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { isDiskFullError } from "#renderer/data/query-client";
+import type { Transport } from "#renderer/data/transport";
 import { defaultLook } from "#renderer/lib/bots/avatar";
 import {
   BUILD_STARTER_IDS,
@@ -82,6 +83,12 @@ const funnelDrafts = new Map<
   string,
   { example: string; starter: string | null; edited: boolean }
 >();
+/** Fire-and-forget: a lost beacon must never block the page. */
+const reportFunnel = (
+  client: Transport["client"],
+  step: FunnelStep,
+  detail: string
+) => void client.system.funnelStep({ step, detail }).catch(() => undefined);
 const sentText = (envelope: SubmissionEnvelope): string =>
   envelope.parts
     .map((part) => (part.type === "text" ? part.content : ""))
@@ -184,10 +191,7 @@ export const SessionStartPage = ({
         inFlight.delete("submit");
         setPending(false);
       });
-  const funnel = (step: FunnelStep, detail: string) =>
-    void transport.client.system
-      .funnelStep({ step, detail })
-      .catch(() => undefined);
+  const client = transport.client;
   const submit = async (envelope: SubmissionEnvelope) => {
     if (inFlight.has("submit")) return;
     inFlight.add("submit");
@@ -195,7 +199,8 @@ export const SessionStartPage = ({
     if (seen) {
       funnelDrafts.delete(draft.id);
       const text = sentText(envelope);
-      funnel(
+      reportFunnel(
+        client,
         "start_sent",
         seen.example && text === seen.example.trim()
           ? "example"
@@ -234,13 +239,13 @@ export const SessionStartPage = ({
     if (draft.stage !== "draft" || funnelDrafts.has(draft.id)) return;
     const example = draftStore.state[id]?.text ?? "";
     funnelDrafts.set(draft.id, { example, starter: null, edited: false });
-    funnel(
+    reportFunnel(
+      client,
       "start_page_shown",
       `${draft.starters ?? "none"}_${example ? "example" : "blank"}`
     );
-    // Once per draft: the page's first showing, not every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft.id, draft.stage]);
+    // The map entry keeps it to once per draft.
+  }, [draft.id, draft.stage, draft.starters, id, client]);
   const boxText = useSelector(draftStore, (s) => s[id]?.text ?? "");
   useEffect(() => {
     const seen = funnelDrafts.get(draft.id);
@@ -252,10 +257,9 @@ export const SessionStartPage = ({
     )
       return;
     seen.edited = true;
-    funnel("start_prompt_edited", draft.starters ?? "none");
-    // Fires on the box's text alone.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [boxText, draft.id]);
+    reportFunnel(client, "start_prompt_edited", draft.starters ?? "none");
+    // `edited` keeps it to once per draft.
+  }, [boxText, draft.id, draft.starters, client]);
   const buildStarters = BUILD_STARTER_IDS.map((starterId) => ({
     id: starterId,
     name: t(`sessions.start.build.${starterId}.name`),
@@ -419,7 +423,7 @@ export const SessionStartPage = ({
                   const seen = funnelDrafts.get(draft.id);
                   if (seen) seen.starter = starter.prompt;
                   if (!codeStarters.some((code) => code.id === starter.id))
-                    funnel("start_starter_tapped", starter.id);
+                    reportFunnel(client, "start_starter_tapped", starter.id);
                   if (codeStarters.some((code) => code.id === starter.id))
                     void transport.client.system
                       .funnelStep({
