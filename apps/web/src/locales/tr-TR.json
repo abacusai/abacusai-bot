@@ -3018,6 +3018,12 @@
       "otherProvider": "{{provider}} sağlayıcısının modeli {{model}} kullanıyorsun. Bağlayıcıların çalışmaya devam ediyor, ancak bağlayıcılar ve kodlamada en iyi sonuç için Abacus hesabına ücretsiz dahil olan RouteLLM'e geç.",
       "switchToRouteLlm": "RouteLLM'e geç",
       "keepModel": "Bu modelde kal",
+      "topModels": {
+        "line": "Planın en iyi modelleri içeriyor. Bu sohbeti {{first}} ya da {{second}} ile dene.",
+        "lineOne": "Planın en iyi modelleri içeriyor. Bu sohbeti {{model}} ile dene.",
+        "all": "Tüm modelleri gör",
+        "dismiss": "Şimdi değil"
+      },
       "send": "Gönder",
       "skills": "Beceriler",
       "stop": "Durdur",

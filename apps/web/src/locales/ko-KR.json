@@ -3018,6 +3018,12 @@
       "otherProvider": "{{provider}}의 모델 {{model}}을(를) 사용 중입니다. 커넥터는 계속 작동하지만, 커넥터와 코딩에서 최상의 결과를 얻으려면 Abacus 계정에 무료로 포함된 RouteLLM으로 전환하세요.",
       "switchToRouteLlm": "RouteLLM으로 전환",
       "keepModel": "이 모델 유지",
+      "topModels": {
+        "line": "요금제에 최상위 모델이 포함되어 있어요. 이 대화를 {{first}} 또는 {{second}}(으)로 사용해 보세요.",
+        "lineOne": "요금제에 최상위 모델이 포함되어 있어요. 이 대화를 {{model}}(으)로 사용해 보세요.",
+        "all": "모든 모델 보기",
+        "dismiss": "나중에"
+      },
       "send": "Send",
       "skills": "스킬",
       "stop": "중지",

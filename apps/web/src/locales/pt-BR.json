@@ -3018,6 +3018,12 @@
       "otherProvider": "Você está usando {{model}}, um modelo de {{provider}}. Seus conectores continuam funcionando, mas para os melhores resultados com conectores e programação, mude para o RouteLLM, incluído gratuitamente na sua conta Abacus.",
       "switchToRouteLlm": "Mudar para o RouteLLM",
       "keepModel": "Manter este modelo",
+      "topModels": {
+        "line": "Seu plano inclui os melhores modelos. Experimente esta conversa com {{first}} ou {{second}}.",
+        "lineOne": "Seu plano inclui os melhores modelos. Experimente esta conversa com {{model}}.",
+        "all": "Ver todos os modelos",
+        "dismiss": "Agora não"
+      },
       "send": "Send",
       "skills": "Skills",
       "stop": "Parar",

@@ -29,6 +29,7 @@ import type {
 } from "../routines";
 import type { SiteReadyMark } from "../site-deploy";
 import type { SuccessPitchCard, SuccessPitchMark } from "../success-pitch";
+import type { TopModelHintCard } from "../top-model-hint";
 
 /** Random per main-process start; seqs compare only within one epoch. */
 export type Epoch = string;
@@ -214,6 +215,8 @@ export interface PrefsRow {
     retryOffer?: DeliverableOfferCard | null;
     /** The rating line: asked, answered, closed, or turned off. */
     ratingPrompt?: RatingPromptCard | null;
+    /** The top-model hint above the composer, shown and answered. */
+    topModelHint?: TopModelHintCard | null;
     freePlanSeenAt: number | null;
     upgradeRoutinesSeenAt: number | null;
     routineDuplicatesKept: string[];

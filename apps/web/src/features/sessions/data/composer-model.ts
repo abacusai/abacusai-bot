@@ -1,6 +1,10 @@
 import { AgentMode } from "@abacus-ai/contract/agent-types";
 import type { SessionRow } from "@abacus-ai/contract/contract/rows";
-import { OPENLLM_ID, resolveConfiguredModel } from "@abacus-ai/contract/models";
+import {
+  ABACUS_CODE_ROUTER_LOW_ID,
+  OPENLLM_ID,
+  resolveConfiguredModel,
+} from "@abacus-ai/contract/models";
 import { useQuery } from "@tanstack/react-query";
 import { useSelector } from "@tanstack/react-store";
 import { useState } from "react";
@@ -19,7 +23,7 @@ import {
   draftStore,
   updateDraft,
 } from "#renderer/lib/continuity/composer-drafts";
-import { creditsTier } from "#renderer/lib/credits";
+import { accountTier, creditsTier } from "#renderer/lib/credits";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { showError } from "#renderer/lib/toast";
 import { requestPlanDialog } from "#renderer/lib/upgrade-dialog";
@@ -96,6 +100,13 @@ export const useSessionComposerModel = (
   const other = chip?.unavailable
     ? null
     : otherProviderModel(value, settings.data?.defaultModel, models);
+  // A paying plan on its low-cost router: the composer offers its top models.
+  const tier = creditsTier(account.data);
+  const topModels =
+    (tier === "basic" || tier === "paid") &&
+    (value ?? selected) === ABACUS_CODE_ROUTER_LOW_ID
+      ? { tier: accountTier(account.data) ?? tier }
+      : null;
   const setup = useModelSetup({
     models,
     loading: catalog.isPending || settings.isPending,
@@ -167,6 +178,7 @@ export const useSessionComposerModel = (
             },
           }
         : {}),
+      ...(topModels != null ? { topModels } : {}),
       value,
       resolved: selected,
       label: chip?.label ?? t("sessions.model.choose"),

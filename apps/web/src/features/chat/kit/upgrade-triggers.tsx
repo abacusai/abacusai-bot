@@ -44,14 +44,21 @@ export const creditsExpired = (
 /**
  * Sends the waiting message again once the plan is active. With a model the
  * chat moves onto it first, since the key that failed stays dry; the retry
- * carries the model too, so a refused move still sends.
+ * carries the model too, so a refused move still sends. `thisChatOnly` moves
+ * the chat (a bot's chat, its bot) and leaves the app's default alone: a
+ * choice made for one task, which later messages in that chat keep.
  */
-export const useUpgradeResume = () => {
+export const useUpgradeResume = ({
+  thisChatOnly = false,
+}: { thisChatOnly?: boolean } = {}) => {
   const { t } = useTranslation();
   const { session, composer, skin } = useChatView();
   const fixedMode = composer.fixedMode;
+  const move = thisChatOnly
+    ? composer.onSwitchThisChat
+    : composer.onResumeOnModel;
   return async (model?: string) => {
-    if (model != null) await composer.onResumeOnModel?.(model).catch(() => {});
+    if (model != null) await move?.(model).catch(() => {});
     return session.retry(
       model != null || fixedMode
         ? {

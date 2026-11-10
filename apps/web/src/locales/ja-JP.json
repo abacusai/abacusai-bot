@@ -3018,6 +3018,12 @@
       "otherProvider": "{{provider}} のモデル {{model}} を使用しています。コネクタは引き続き使えますが、コネクタとコーディングで最良の結果を得るには、Abacus アカウントに無料で含まれる RouteLLM に切り替えてください。",
       "switchToRouteLlm": "RouteLLM に切り替える",
       "keepModel": "このモデルを使い続ける",
+      "topModels": {
+        "line": "ご利用のプランには最上位モデルが含まれています。この会話を {{first}} または {{second}} で試してみましょう。",
+        "lineOne": "ご利用のプランには最上位モデルが含まれています。この会話を {{model}} で試してみましょう。",
+        "all": "すべてのモデルを見る",
+        "dismiss": "今はしない"
+      },
       "send": "Send",
       "skills": "スキル",
       "stop": "停止",

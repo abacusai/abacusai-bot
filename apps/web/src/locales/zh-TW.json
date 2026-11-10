@@ -3018,6 +3018,12 @@
       "otherProvider": "你正在使用 {{model}}，這是 {{provider}} 的模型。你的連接器仍可使用，但想在連接器和寫程式上獲得最佳效果，請切換至 RouteLLM，它已免費包含在你的 Abacus 帳號中。",
       "switchToRouteLlm": "切換至 RouteLLM",
       "keepModel": "保留這個模型",
+      "topModels": {
+        "line": "你的方案包含頂級模型。用 {{first}} 或 {{second}} 試試這段對話。",
+        "lineOne": "你的方案包含頂級模型。用 {{model}} 試試這段對話。",
+        "all": "查看所有模型",
+        "dismiss": "以後再說"
+      },
       "send": "傳送",
       "skills": "技能",
       "stop": "停止",

@@ -105,18 +105,25 @@ afterEach(async () => {
   stack = null;
 });
 
-/** The real manager and relay, as ServiceHost wires them. */
-const build = (_options: { unused?: boolean } = {}): Stack => {
+/**
+ * The real manager and relay, as ServiceHost wires them. `models` adds model
+ * ids to the fake provider beside fake-1.
+ */
+const build = (options: { models?: string[] } = {}): Stack => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "agui-e2e-"));
   const home = path.join(root, "home");
   const user = path.join(root, "user");
   const workspace = path.join(root, "workspace");
   for (const dir of [home, user, workspace])
     fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(
-    path.join(home, "config.json"),
-    fakeProviderConfig(provider)
-  );
+  const config = JSON.parse(fakeProviderConfig(provider)) as {
+    customProviders: Array<{ models: Array<{ id: string }> }>;
+  };
+  for (const id of options.models ?? [])
+    config.customProviders[0]!.models.push({ id, contextWindow: 131072 } as {
+      id: string;
+    });
+  fs.writeFileSync(path.join(home, "config.json"), JSON.stringify(config));
   // The spawned agent inherits these (AgentManagerService passes process.env).
   setEnv({
     HOME: user,
@@ -539,6 +546,92 @@ describe("main's AG-UI relay with a spawned agent", () => {
         ),
       WAIT
     );
+    await window.disconnect();
+  }, 120_000);
+
+  it("a retry on another model moves the chat: that run and every later one go to it", async () => {
+    const { client } = build({ models: ["fake-top"] });
+    const from = provider.calls.length;
+    const window = await Window.open(client);
+    const finished = (runId: string) =>
+      vi.waitFor(() => expect(window.has(isTerminal(runId))).toBe(true), WAIT);
+    // The chat runs on its own model.
+    await client.ai.send({
+      threadId: THREAD,
+      runId: "run-1",
+      messages: [userMessage("u-1", "fix the login crash")],
+    });
+    await finished("run-1");
+    // The retry under a stuck task: the same message again, carrying the model.
+    await client.ai.send({
+      threadId: THREAD,
+      runId: "run-2",
+      messages: [userMessage("u-1", "fix the login crash")],
+      forwardedProps: { model: "fake/fake-top" },
+    });
+    await finished("run-2");
+    // A later message names no model: the chat stays where the retry moved it.
+    await client.ai.send({
+      threadId: THREAD,
+      runId: "run-3",
+      messages: [
+        userMessage("u-1", "fix the login crash"),
+        userMessage("u-2", "now the signup page"),
+      ],
+    });
+    await finished("run-3");
+    const calls = provider.calls.slice(from);
+    expect(calls.map((call) => call.model)).toEqual([
+      "fake-1",
+      "fake-top",
+      "fake-top",
+    ]);
+    expect(calls[2]!.userText.join("\n")).toContain("now the signup page");
+    await window.disconnect();
+  }, 120_000);
+
+  it("a chat switched to another model sends its next message there", async () => {
+    const { client, manager } = build({ models: ["fake-top"] });
+    const from = provider.calls.length;
+    const window = await Window.open(client);
+    const finished = (runId: string) =>
+      vi.waitFor(() => expect(window.has(isTerminal(runId))).toBe(true), WAIT);
+    await client.ai.send({
+      threadId: THREAD,
+      runId: "run-1",
+      messages: [userMessage("u-1", "make the header sticky")],
+    });
+    await finished("run-1");
+    // The composer's one-tap switch: the running agent's set_model.
+    manager.sendCommandToSession(THREAD, {
+      type: "set_model",
+      model: "fake/fake-top",
+    });
+    // The agent answers with its new model on the chat's state.
+    await vi.waitFor(
+      () =>
+        expect(
+          window.has(
+            (event) =>
+              event.type === "STATE_DELTA" &&
+              JSON.stringify(event).includes('"value":"fake/fake-top"')
+          )
+        ).toBe(true),
+      WAIT
+    );
+    await client.ai.send({
+      threadId: THREAD,
+      runId: "run-2",
+      messages: [
+        userMessage("u-1", "make the header sticky"),
+        userMessage("u-2", "now the footer"),
+      ],
+    });
+    await finished("run-2");
+    expect(provider.calls.slice(from).map((call) => call.model)).toEqual([
+      "fake-1",
+      "fake-top",
+    ]);
     await window.disconnect();
   }, 120_000);
 

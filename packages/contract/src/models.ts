@@ -400,6 +400,9 @@ export const hasUsableModel = (
  */
 export const ABACUS_CODE_ROUTER_ID = "abacus/route-llm-code";
 
+/** The low-cost code router: what Basic and Go run when nothing else is chosen. */
+export const ABACUS_CODE_ROUTER_LOW_ID = "abacus/route-llm-code-low";
+
 /**
  * The paying self-serve tiers. Their onboarding skips the models step (the
  * plan already covers the catalog, and RouteLLM is preselected), and their

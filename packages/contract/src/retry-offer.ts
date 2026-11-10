@@ -1,9 +1,11 @@
 /**
- * The retry offer: when a task goes badly on a free account, one line under
- * the reply offering the same task again on one of the plan's top models. The
- * renderer reads the reason off the chat; a tap opens the upgrade dialog, and
- * once paid the message runs again on that model. Half the free accounts get
+ * The retry offer: when a task goes badly, one line under the reply offering
+ * the same task again on one of the plan's top models. The renderer reads the
+ * reason off the chat. On a free account a tap opens the upgrade dialog, and
+ * once paid the message runs again on that model; half the free accounts get
  * it, so what it does to upgrades can be read against the half that do not.
+ * A paying account's plan already runs the model: a tap moves the chat onto
+ * it and runs the message again. Either way the chat stays on that model.
  */
 import { isCleanReply, normalizedText, wordsPattern } from "./success-pitch";
 
@@ -354,31 +356,64 @@ const hash = (text: string): number => {
 export const retryOfferForAccount = (accountKey: string): boolean =>
   hash(`retry-offer:${accountKey}`) % 2 === 0;
 
+/** A model picker row, as far as the offers read it. */
+interface CatalogRow {
+  id: string;
+  label: string;
+  /** Runnable now: a credential (or the account's plan) covers it. */
+  configured?: boolean;
+  access?: string;
+}
+
 const comparable = (text: string): string =>
   text.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 
 /**
- * The model to offer: of the plan's top models, Claude Opus first, then the
- * plan's order, the first the catalog lists as locked. Null when none is: the
- * plan's line and the catalog must agree, or the rerun would land on a model
- * the plan cannot run.
+ * The catalog row a plan's model name stands for, with the access asked for:
+ * `locked` for a model the next plan unlocks, `runnable` for one the account's
+ * own plan runs now. Names are the server's feature line and rows match by
+ * label, the exact name before a longer one that contains it ("Opus 5.5"
+ * before "Opus 5.5 XHigh"), so a plan whose list and catalog disagree finds
+ * nothing.
  */
-export const retryOfferModel = <
-  T extends { id: string; label: string; access?: string },
->(
-  topModels: readonly string[],
-  catalog: readonly T[]
+export const planCatalogModel = <T extends CatalogRow>(
+  name: string,
+  catalog: readonly T[],
+  access: "locked" | "runnable"
 ): T | null => {
-  const locked = catalog.filter((model) => model.access === "locked");
+  const wanted = comparable(name);
+  if (wanted === "") return null;
+  const usable = catalog.filter((model) =>
+    access === "locked"
+      ? model.access === "locked"
+      : model.configured === true && model.access !== "locked"
+  );
+  return (
+    usable.find((model) => comparable(model.label) === wanted) ??
+    usable.find((model) => comparable(model.label).includes(wanted)) ??
+    null
+  );
+};
+
+/**
+ * The model to offer: of the plan's top models, Claude Opus first, then the
+ * plan's order, the first the catalog lists with the access asked for. A free
+ * account asks for `locked` (the upgrade unlocks it), a paying one for
+ * `runnable` (its plan runs it now). Null when none is: the plan's line and
+ * the catalog must agree, or the rerun would land on a model the plan cannot
+ * run.
+ */
+export const retryOfferModel = <T extends CatalogRow>(
+  topModels: readonly string[],
+  catalog: readonly T[],
+  access: "locked" | "runnable" = "locked"
+): T | null => {
   const ordered = [
     ...topModels.filter((name) => /opus/i.test(name)),
     ...topModels.filter((name) => !/opus/i.test(name)),
   ];
   for (const name of ordered) {
-    const wanted = comparable(name);
-    const found = locked.find((model) =>
-      comparable(model.label).includes(wanted)
-    );
+    const found = planCatalogModel(name, catalog, access);
     if (found != null) return found;
   }
   return null;

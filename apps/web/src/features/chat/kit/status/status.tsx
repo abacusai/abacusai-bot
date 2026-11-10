@@ -93,6 +93,7 @@ import type {
 } from "../../store/thread-store";
 import { formatElapsed, useSeconds } from "../clock";
 import { useChatView } from "../context";
+import { openModelPicker } from "../open-model-picker";
 import { toolTitle } from "../tools/tool-line";
 import { creditsExpired, useUpgradeResume } from "../upgrade-triggers";
 import { TurnCredits } from "./turn-credits";
@@ -462,13 +463,6 @@ const exhaustedScope = (actions?: ErrorAction[]): "abacus" | "pool" =>
   actions?.some((action) => action.type === "upgrade-abacus") === true
     ? "abacus"
     : "pool";
-
-/** Opens the chat's model picker, from a card's button inside the chat. */
-const openModelPicker = (from: HTMLElement): void =>
-  from
-    .closest('[data-slot="chat-view"]')
-    ?.querySelector<HTMLButtonElement>('[data-slot="chat-model-picker"]')
-    ?.click();
 
 /** The kept message goes again on RouteLLM - Open, by the person's choice. */
 const useSwitchToAbacus = () => {

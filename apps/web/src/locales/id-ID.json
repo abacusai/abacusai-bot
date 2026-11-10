@@ -3018,6 +3018,12 @@
       "otherProvider": "Anda menggunakan {{model}}, model dari {{provider}}. Konektor Anda tetap berfungsi, tetapi untuk hasil terbaik dengan konektor dan coding, beralihlah ke RouteLLM, gratis bersama akun Abacus Anda.",
       "switchToRouteLlm": "Beralih ke RouteLLM",
       "keepModel": "Tetap pakai model ini",
+      "topModels": {
+        "line": "Paketmu sudah termasuk model-model teratas. Coba percakapan ini dengan {{first}} atau {{second}}.",
+        "lineOne": "Paketmu sudah termasuk model-model teratas. Coba percakapan ini dengan {{model}}.",
+        "all": "Lihat semua model",
+        "dismiss": "Nanti saja"
+      },
       "send": "Send",
       "skills": "Skills",
       "stop": "Hentikan",

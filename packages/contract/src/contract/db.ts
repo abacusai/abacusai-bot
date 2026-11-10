@@ -286,6 +286,18 @@ export const PREFS_GROUP_ENTRIES = {
         off: v.boolean(),
       })
     ),
+    /** The top-model hint above the composer, shown and answered (top-model-hint.ts). */
+    topModelHint: v.nullable(
+      v.strictObject({
+        shown: v.pipe(v.number(), v.integer(), v.minValue(0)),
+        threads: v.array(v.string()),
+        shownThread: v.nullable(v.string()),
+        shownTurn: v.nullable(v.pipe(v.number(), v.integer(), v.minValue(1))),
+        dismissed: v.pipe(v.number(), v.integer(), v.minValue(0)),
+        dismissedAt: NullableTimestamp,
+        switched: v.boolean(),
+      })
+    ),
     /** The account first read on the free plan here, so a paid read after it is an upgrade. */
     freePlanSeenAt: NullableTimestamp,
     /** An older build's after-upgrade card, seen: that upgrade counts as welcomed. */

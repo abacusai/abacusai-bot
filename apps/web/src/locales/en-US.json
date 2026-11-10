@@ -3018,6 +3018,12 @@
       "otherProvider": "You're on {{model}}, a model from {{provider}}. Your connectors still work, but for the best results with connectors and coding, switch to RouteLLM, included free with your Abacus account.",
       "switchToRouteLlm": "Switch to RouteLLM",
       "keepModel": "Keep this model",
+      "topModels": {
+        "line": "Your plan includes the top models. Try this conversation with {{first}} or {{second}}.",
+        "lineOne": "Your plan includes the top models. Try this conversation with {{model}}.",
+        "all": "See all models",
+        "dismiss": "Not now"
+      },
       "send": "Send",
       "skills": "Skills",
       "stop": "Stop",

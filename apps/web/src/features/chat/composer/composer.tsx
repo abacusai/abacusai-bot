@@ -89,6 +89,7 @@ import { ModeChip, ModelChip, type ModelChipHandle } from "./chips";
 import { composerCommands } from "./commands";
 import { OtherProviderNotice } from "./other-provider-notice";
 import { setQueueEditing } from "./queue-editing";
+import { TopModelHint } from "./top-model-hint";
 import {
   matchCommand,
   TriggerMenu,
@@ -1254,13 +1255,20 @@ export const ThreadComposer = () => {
         ) : null}
         {!config.preStart && <SendError error={error} reserve={false} />}
         {view.slots.composerNotice}
-        {config.model?.otherProvider != null && (
+        {/* One model line at a time: the two are for different plans anyway. */}
+        {config.model?.otherProvider != null ? (
           <OtherProviderNotice
             key={threadId}
             threadId={threadId}
             notice={config.model.otherProvider}
           />
-        )}
+        ) : config.model?.topModels != null ? (
+          <TopModelHint
+            key={threadId}
+            threadId={threadId}
+            tier={config.model.topModels.tier}
+          />
+        ) : null}
         <label htmlFor={fieldId} className="sr-only">
           {config.placeholder}
         </label>
