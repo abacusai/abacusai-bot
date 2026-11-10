@@ -59,11 +59,14 @@ const IDLE: FeedbackState = {
 };
 const states = new Map<string, FeedbackState>();
 const listeners = new Map<string, Set<() => void>>();
+/** Told of every reply's change, for whole-thread questions. */
+const anyListeners = new Set<() => void>();
 
 const readState = (id: string): FeedbackState => states.get(id) ?? IDLE;
 const writeState = (id: string, patch: Partial<FeedbackState>): void => {
   states.set(id, { ...readState(id), ...patch });
   for (const listener of listeners.get(id) ?? []) listener();
+  for (const listener of anyListeners) listener();
 };
 const subscribeState = (id: string, listener: () => void): (() => void) => {
   const set = listeners.get(id) ?? new Set();
@@ -73,6 +76,24 @@ const subscribeState = (id: string, listener: () => void): (() => void) => {
     set.delete(listener);
     if (set.size === 0) listeners.delete(id);
   };
+};
+
+/** A reply of `threadId` holds a thumb (keys are `<thread>:<segment>`). */
+const threadHasThumb = (threadId: string): boolean => {
+  for (const [key, state] of states)
+    if (state.rating != null && key.startsWith(`${threadId}:`)) return true;
+  return false;
+};
+
+const subscribeAny = (listener: () => void): (() => void) => {
+  anyListeners.add(listener);
+  return () => anyListeners.delete(listener);
+};
+
+/** Whether the user thumbed any reply of `threadId`, kept current. */
+export const useThreadHasThumb = (threadId: string): boolean => {
+  const read = (): boolean => threadHasThumb(threadId);
+  return useSyncExternalStore(subscribeAny, read, read);
 };
 
 /** Tests: forget every reply's feedback state. */

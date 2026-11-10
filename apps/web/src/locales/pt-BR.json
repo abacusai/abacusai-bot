@@ -3438,6 +3438,21 @@
     "retryOffer": {
       "try": "Tentar de novo com {{model}}"
     },
+    "ratingPrompt": {
+      "question": "Como o bot está se saindo neste chat?",
+      "bad": "Ruim",
+      "okay": "Mais ou menos",
+      "good": "Bom",
+      "great": "Ótimo",
+      "dismiss": "Fechar",
+      "whatWrong": "O que deu errado?",
+      "whatGood": "Do que você gostou?",
+      "privacy": "Opcional. Não inclua dados pessoais.",
+      "send": "Enviar",
+      "skip": "Pular",
+      "thanks": "Obrigado pelo feedback.",
+      "failed": "Não foi possível enviar. Tente de novo:"
+    },
     "deliverableOffer": {
       "label": "Guardar esta resposta como documento",
       "doc": "Transformar em documento",
@@ -3825,6 +3840,8 @@
       "notificationDetail": "What AbacusAI Bot tells you while you are looking elsewhere.",
       "notify": "Notify me",
       "notifyDetail": "When a task finishes, or a tool is waiting for you. Only while the window is not focused.",
+      "ratingPrompt": "Perguntar como o bot está se saindo",
+      "ratingPromptDetail": "De vez em quando, uma linha abaixo de uma resposta. Só sua avaliação e seu comentário são enviados, nunca o chat.",
       "sounds": "Play sounds",
       "quietHours": "Horas tranquilas",
       "perBot": "Per bot",

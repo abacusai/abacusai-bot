@@ -24,6 +24,7 @@ import {
   successPitchAllowed,
   underHalfOfFreeCredits,
 } from "@abacus-ai/contract/success-pitch";
+import type { UIMessage } from "@tanstack/ai-client";
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles, X } from "lucide-react";
 import { useEffect, useEffectEvent } from "react";
@@ -49,6 +50,7 @@ import {
 } from "../../upgrade-dialog/plan-pitch";
 import { useChatView } from "./context";
 import { SiteDeployCard } from "./site-deploy-card";
+import { useTailCardClaim } from "./tail-cards";
 
 export interface SuccessPitchCardProps {
   moment: SuccessPitchMoment;
@@ -140,7 +142,13 @@ export const SuccessPitchCard = ({
  * or the payment screen. A read-only view never shows it. Without the plan
  * it is not shown at all, rather than half a pitch.
  */
-export const SuccessPitchRow = ({ active }: { active: boolean }) => {
+export const SuccessPitchRow = ({
+  messages,
+  active,
+}: {
+  messages: readonly UIMessage[];
+  active: boolean;
+}) => {
   const { session, composer, slots } = useChatView();
   const { transport } = useAppContext();
   const db = useDb();
@@ -223,6 +231,14 @@ export const SuccessPitchRow = ({ active }: { active: boolean }) => {
     if (showing != null) shown(showing);
   }, [showing]);
 
+  // The offer is for the session's latest reply.
+  const latestReply = messages.findLast((each) => each.role === "assistant");
+  useTailCardClaim(
+    session.threadId,
+    showing != null && billing != null && !payingAccount(account)
+      ? (latestReply?.id ?? showing.id)
+      : null
+  );
   // A paid plan is never pitched: its slot holds the deploy steps after a site.
   if (payingAccount(account)) return <SiteDeployCard active={active} />;
   if (showing == null || billing == null) return null;

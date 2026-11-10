@@ -8,6 +8,7 @@ import type {
   StopAgentSessionResult,
   TurnFeedbackOutcome,
 } from "../contracts";
+import { CHAT_RATINGS, RATING_TASK_TYPES } from "../rating-prompt";
 import { mutation, query } from "./base";
 import { AgentModeSchema, SessionId, WorkspaceId } from "./ids";
 
@@ -17,6 +18,17 @@ export const TurnFeedbackInputSchema = v.object({
   rating: v.picklist(["up", "down", "clear"]),
   comment: v.optional(v.string()),
   model: v.optional(v.nullable(v.string())),
+});
+
+export const ChatRatingInputSchema = v.object({
+  sessionId: SessionId,
+  segmentId: v.pipe(v.string(), v.nonEmpty()),
+  ratingId: v.pipe(v.string(), v.regex(/^[A-Za-z0-9-]{8,64}$/)),
+  rating: v.picklist(CHAT_RATINGS),
+  comment: v.optional(v.string()),
+  taskType: v.picklist(RATING_TASK_TYPES),
+  turns: v.pipe(v.number(), v.integer(), v.minValue(1)),
+  locale: v.optional(v.string()),
 });
 
 export const StartAgentSessionRequestSchema = v.object({
@@ -89,6 +101,10 @@ export const AgentUpdateQueueMessageRequestSchema = v.object({
 export const agent = {
   feedback: mutation
     .input(TurnFeedbackInputSchema)
+    .output(type<TurnFeedbackOutcome>()),
+  /** The chat's rating line; the same outcome as a thumb's. */
+  rate: mutation
+    .input(ChatRatingInputSchema)
     .output(type<TurnFeedbackOutcome>()),
   /**
    * Spawns the child; its stream arrives on `ai.subscribe`. Without a

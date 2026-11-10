@@ -35,6 +35,7 @@ import { Button } from "#renderer/ui/button";
 import { useHost, useThreadStore } from "../store/selectors";
 import { useChatView } from "./context";
 import { useSendAsUser } from "./send-as-user";
+import { useTailCardClaim } from "./tail-cards";
 import { isLive } from "./upgrade-triggers";
 
 /** Tools that build or change something: such a turn was work, not an answer. */
@@ -183,6 +184,7 @@ export const DeliverableOfferRow = ({
     if (shownId != null) shown();
   }, [shownId]);
 
+  useTailCardClaim(session.threadId, showing?.id ?? null);
   if (showing == null) return null;
   const report = showing.kind === "report";
   const make = () =>

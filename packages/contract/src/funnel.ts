@@ -71,6 +71,12 @@ export const FUNNEL_STEPS = [
   "retry_offer_shown",
   "retry_offer_tapped",
   "retry_offer_dismissed",
+  // The rating line (rating-prompt.ts): shown (detail: the chat's task kind),
+  // answered (the rating), a comment sent with it (the rating), closed.
+  "rating_prompt_shown",
+  "rating_prompt_answered",
+  "rating_prompt_commented",
+  "rating_prompt_dismissed",
   // The agent asked for a routine that already exists, and got that one back;
   // the detail is how it compared (same, alike or check-in) and where it lives.
   "routine_duplicate_avoided",

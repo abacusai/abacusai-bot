@@ -1140,6 +1140,30 @@ export interface TurnFeedbackInput {
   model?: string | null;
 }
 
+/** The chat's rating line (rating-prompt.ts), on its latest reply. */
+export interface ChatRatingInput {
+  sessionId: string;
+  /** The reply the line sat under, as a thumb names it. */
+  segmentId: string;
+  /** Made by the line; a comment or a changed score sends it again. */
+  ratingId: string;
+  rating: "bad" | "okay" | "good" | "great";
+  comment?: string;
+  taskType:
+    | "chat"
+    | "site"
+    | "files"
+    | "email"
+    | "research"
+    | "media"
+    | "routine"
+    | "connector";
+  /** The user's own messages in the chat. */
+  turns: number;
+  /** The app's language. */
+  locale?: string;
+}
+
 export interface TurnFeedbackOutcome {
   ok: boolean;
   reason?: string;

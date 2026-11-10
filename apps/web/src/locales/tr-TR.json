@@ -3438,6 +3438,21 @@
     "retryOffer": {
       "try": "{{model}} ile tekrar dene"
     },
+    "ratingPrompt": {
+      "question": "Bot bu sohbette nasıl gidiyor?",
+      "bad": "Kötü",
+      "okay": "İdare eder",
+      "good": "İyi",
+      "great": "Harika",
+      "dismiss": "Kapat",
+      "whatWrong": "Ne ters gitti?",
+      "whatGood": "Neyi beğendin?",
+      "privacy": "İsteğe bağlı. Kişisel bilgi yazma.",
+      "send": "Gönder",
+      "skip": "Atla",
+      "thanks": "Geri bildirimin için teşekkürler.",
+      "failed": "Gönderilemedi. Tekrar dene:"
+    },
     "deliverableOffer": {
       "label": "Bu yanıtı belge olarak sakla",
       "doc": "Belgeye dönüştür",
@@ -3825,6 +3840,8 @@
       "notificationDetail": "Sen başka yere bakarken AbacusAI Bot'un sana bildirdikleri.",
       "notify": "Bana bildir",
       "notifyDetail": "Bir görev bittiğinde ya da bir araç seni beklediğinde. Yalnızca pencere odakta değilken.",
+      "ratingPrompt": "Botun nasıl gittiğini sor",
+      "ratingPromptDetail": "Ara sıra bir yanıtın altında tek satır. Yalnızca puanın ve yorumun gönderilir, sohbet asla gönderilmez.",
       "sounds": "Ses çal",
       "quietHours": "Sessiz saatler",
       "perBot": "Bot başına",

@@ -44,6 +44,7 @@ import { Button } from "#renderer/ui/button";
 import { useHost, useThreadStore } from "../store/selectors";
 import { useChatView } from "./context";
 import { deliverableOfferTarget, isWorkTool } from "./deliverable-offer";
+import { useTailCardClaim } from "./tail-cards";
 import { isLive, useUpgradeResume } from "./upgrade-triggers";
 
 export interface RetryOfferTarget {
@@ -213,6 +214,10 @@ export const RetryOfferRow = ({
     if (shownId != null) shown();
   }, [shownId]);
 
+  useTailCardClaim(
+    session.threadId,
+    showing != null && label != null ? showing.id : null
+  );
   if (showing == null || label == null) return null;
   const retry = () => {
     setAnswered(showing.id);
