@@ -100,7 +100,8 @@ export interface SpendGovernorOptions {
   summarizer?: (
     tokens: number,
     lane: SpendLane,
-    current: GovernedModel | undefined
+    current: GovernedModel | undefined,
+    preferCurrent?: boolean
   ) => Promise<Summarizer | null>;
 }
 
@@ -332,6 +333,8 @@ export const summaryModelFor = <T extends SummaryChoice>(
  * - the free lane: free models only;
  * - Abacus: a free Abacus model first, else the cheapest that fits, never the
  *   priciest by window. Its requests go through the runtime, metered like any.
+ * With `preferCurrent`, the running model itself when it holds `tokens`: the
+ * rule a compaction follows, for a summary that is not one (a hand-off).
  * Null leaves the summary on the running model.
  */
 export const summarizerFrom =
@@ -344,18 +347,30 @@ export const summarizerFrom =
   async (
     tokens: number,
     lane: SpendLane,
-    current: GovernedModel | undefined
+    current: GovernedModel | undefined,
+    preferCurrent = false
   ): Promise<Summarizer | null> => {
     const models = registry();
     const run = runtime();
     if (models == null || run == null) return null;
-    const choice = summaryModelFor(listModels(models), {
-      tokens,
-      lane,
-      current,
-      freeProviders: router().freeLaneProviders(models),
-      credits: !creditWallActive() && (hostCreditBalance()?.remaining ?? 1) > 0,
-    });
+    const own =
+      preferCurrent &&
+      current != null &&
+      (current.contextWindow ?? 0) * 0.8 > tokens
+        ? listModels(models).find(
+            (model) => model.id === `${current.provider}/${current.id}`
+          )
+        : undefined;
+    const choice =
+      own ??
+      summaryModelFor(listModels(models), {
+        tokens,
+        lane,
+        current,
+        freeProviders: router().freeLaneProviders(models),
+        credits:
+          !creditWallActive() && (hostCreditBalance()?.remaining ?? 1) > 0,
+      });
     if (choice == null) return null;
     const resolved = resolveModel(run, choice.id, maxOutputTokens);
     if (resolved.model == null) return null;
@@ -513,8 +528,10 @@ export class SpendGovernor {
   }
 
   /**
-   * The model a hand-off summary of `tokens` runs on: the one a too-big
-   * compaction would use, paid for as this chat is. Null leaves it unwritten.
+   * The model a hand-off summary of `tokens` runs on, as a compaction picks
+   * it: the chat's own model when the history fits it (a chat offered a top
+   * model runs on a low-cost one), else the one a too-big compaction would
+   * use, paid for as this chat is. Null leaves it unwritten.
    */
   handoffSummarizer(
     tokens: number,
@@ -522,7 +539,7 @@ export class SpendGovernor {
   ): Promise<Summarizer | null> {
     this.model = current ?? this.model;
     return (
-      this.options.summarizer?.(tokens, this.lane(), this.model) ??
+      this.options.summarizer?.(tokens, this.lane(), this.model, true) ??
       Promise.resolve(null)
     );
   }

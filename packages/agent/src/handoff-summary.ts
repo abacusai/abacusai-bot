@@ -3,9 +3,9 @@
  * from this one, so it does not re-read this chat's whole history on every
  * call. pi's branch summary (newest entries first, within the summarizer's
  * window; the files read and changed listed from the tool calls) runs on the
- * model a too-big compaction would use. The session is only read, never
- * written. The summary never sees tool output, so the latest failing tool
- * result is quoted word for word after it.
+ * model a compaction would use: the chat's own when the history fits it. The
+ * session is only read, never written. The summary never sees tool output, so
+ * the latest failing tool result is quoted word for word after it.
  */
 import {
   estimateTokens,
