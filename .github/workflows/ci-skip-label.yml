@@ -1,0 +1,42 @@
+name: CI skip label
+
+# `ci:skip` takes effect when a CI run starts (ci.yml's gate job), and a label
+# starts no CI run. So when the label goes on, this reruns the pull request's
+# CI run; the gate then decides whether whoever added it may skip the tests.
+# It is its own workflow because a ci.yml run started by a label would post a
+# skipped `CI result`, which counts as passing, for every unrelated label.
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions: {}
+
+jobs:
+  rerun:
+    name: Rerun CI for ci:skip
+    if: github.event.label.name == 'ci:skip'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?event=pull_request&head_sha=$HEAD_SHA&per_page=1" \
+            --jq '.workflow_runs[0].id // empty')
+          if [ -z "$run" ]; then
+            echo "No CI run for $HEAD_SHA yet; the one that starts will read the label."
+            exit 0
+          fi
+          status() { gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq .status; }
+          if [ "$(status)" != completed ]; then
+            gh run cancel "$run" -R "$GITHUB_REPOSITORY"
+            for _ in $(seq 1 30); do
+              [ "$(status)" = completed ] && break
+              sleep 5
+            done
+          fi
+          gh run rerun "$run" -R "$GITHUB_REPOSITORY"

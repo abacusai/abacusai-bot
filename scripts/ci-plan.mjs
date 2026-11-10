@@ -90,8 +90,8 @@ for (const shard of [1, 2])
     vitest("apps/desktop", ` --project main-serial --shard=${shard}/2`)
   );
 // PLATFORMS=linux (the workflow's platforms step) keeps macOS and Windows out:
-// a pull request without `ci:all-os`, a push to main, a merge queue run with
-// `ci:skip-os`, or a manual run that asks.
+// a pull request, a push to main, a merge queue run with `ci:skip-os`, or a
+// manual run that asks.
 // A change to the renderer alone reaches the desktop app only as its built
 // renderer, which Linux's Electron suites drive; macOS and Windows test what
 // differs by system, so they wait for a change outside apps/web.

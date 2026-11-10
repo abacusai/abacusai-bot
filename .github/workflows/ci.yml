@@ -8,11 +8,16 @@ name: CI
 # pull request from a fork runs the same checks as a push to main, and no
 # workflow in this repo can reach a signing key.
 #
-# A pull request runs what its diff reaches (scripts/ci-plan.mjs) on Linux; the
-# `ci:all-os` label adds macOS and Windows. The merge queue runs the same plan
-# on all three systems before a pull request lands (`ci:skip-os` keeps it to
-# Linux). A push to main runs everything on Linux, and a scheduled run tests
-# main on all three systems twice a day.
+# A pull request runs what its diff reaches (scripts/ci-plan.mjs) on Linux,
+# and never macOS or Windows. The merge queue runs the same plan on all three
+# systems before a pull request lands. A push to main runs everything on Linux,
+# and a scheduled run tests main on all three systems twice a day.
+#
+# Two labels change that, and only when a repository admin put them on:
+# `ci:skip-os` keeps the merge queue run to Linux, and `ci:skip` is the
+# emergency path: no job tests anything, on the pull request or in the merge
+# queue, so `CI result` passes in seconds both times. ci-skip-label.yml reruns
+# the pull request's run when `ci:skip` goes on.
 
 on:
   push:
@@ -52,6 +57,59 @@ env:
   ABACUS_BUILD_COMMIT: ${{ github.sha }}
 
 jobs:
+  # Whether an admin's label takes this run's tests away (`ci:skip`) or keeps
+  # a merge queue run to Linux (`ci:skip-os`).
+  gate:
+    name: Gate
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+      issues: read
+    outputs:
+      skip: ${{ steps.gate.outputs.skip }}
+      linux_only: ${{ steps.gate.outputs.linux_only }}
+    steps:
+      - id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PULL_REQUEST: ${{ github.event.pull_request.number }}
+          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+        run: |
+          set -euo pipefail
+          number=""
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            number=$PULL_REQUEST
+          elif [ "$GITHUB_EVENT_NAME" = merge_group ]; then
+            # The queue's ref ends in pr-<number>-<sha>.
+            number=${QUEUE_REF##*/pr-}
+            number=${number%%-*}
+          fi
+          # Whether a repository admin put this label on, going by its last
+          # event, read now so a rerun sees it. Anything that cannot be read
+          # leaves the tests on.
+          from_admin() {
+            local last who role
+            last=$(gh api "repos/$GITHUB_REPOSITORY/issues/$number/events" --paginate \
+              --jq ".[] | select(.label.name == \"$1\") | \"\(.event) \(.actor.login)\"" | tail -n 1) || last=""
+            [ "${last%% *}" = labeled ] || return 1
+            who=${last#* }
+            role=$(gh api "repos/$GITHUB_REPOSITORY/collaborators/$who/permission" --jq .permission) || role=""
+            if [ "$role" != admin ]; then
+              echo "::warning::$1 on #$number was added by $who, who is not a repository admin; it is ignored."
+              return 1
+            fi
+            echo "\`$1\` from @$who." >> "$GITHUB_STEP_SUMMARY"
+          }
+          skip=false
+          linux_only=false
+          if [ -n "$number" ]; then
+            if from_admin ci:skip; then skip=true; fi
+            if from_admin ci:skip-os; then linux_only=true; fi
+          fi
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+          echo "linux_only=$linux_only" >> "$GITHUB_OUTPUT"
+
   # What this run has to test, and which release unit the change touches.
   # Renderer and agent source are an experience release (hot-swapped over TUF,
   # no relaunch); anything else fails toward a full signed foundation release.
@@ -60,12 +118,9 @@ jobs:
   # from.
   plan:
     name: Plan
-    if: github.event.action != 'closed'
+    needs: gate
+    if: github.event.action != 'closed' && needs.gate.outputs.skip != 'true'
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      # The platforms step reads the pull request's labels.
-      pull-requests: read
     outputs:
       tests: ${{ steps.plan.outputs.tests }}
       any: ${{ steps.plan.outputs.any }}
@@ -87,32 +142,14 @@ jobs:
       - id: platforms
         name: Which systems this run tests
         env:
-          GH_TOKEN: ${{ github.token }}
           REQUESTED: ${{ inputs.platforms }}
-          PULL_REQUEST: ${{ github.event.pull_request.number }}
-          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+          LINUX_ONLY: ${{ needs.gate.outputs.linux_only }}
         run: |
           set -euo pipefail
-          number=""
-          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
-            number=$PULL_REQUEST
-          elif [ "$GITHUB_EVENT_NAME" = merge_group ]; then
-            # The queue's ref ends in pr-<number>-<sha>.
-            number=${QUEUE_REF##*/pr-}
-            number=${number%%-*}
-          fi
-          labels=""
-          if [ -n "$number" ]; then
-            # Read now rather than from the event, so a rerun sees a label added since.
-            labels=$(gh pr view "$number" -R "$GITHUB_REPOSITORY" --json labels --jq '.labels[].name') ||
-              echo "::warning::Could not read the labels of #$number; this run tests the default systems for its event."
-          fi
-          has() { grep -qx "$1" <<< "$labels"; }
           case "$GITHUB_EVENT_NAME" in
             workflow_dispatch) platforms=$REQUESTED ;;
             schedule) platforms=all ;;
-            pull_request) if has ci:all-os; then platforms=all; else platforms=linux; fi ;;
-            merge_group) if has ci:skip-os; then platforms=linux; else platforms=all; fi ;;
+            merge_group) if [ "$LINUX_ONLY" = true ]; then platforms=linux; else platforms=all; fi ;;
             *) platforms=linux ;;
           esac
           echo "platforms=$platforms" >> "$GITHUB_OUTPUT"
@@ -154,7 +191,8 @@ jobs:
 
   check:
     name: Typecheck, lint and format
-    if: github.event.action != 'closed'
+    needs: gate
+    if: github.event.action != 'closed' && needs.gate.outputs.skip != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -426,8 +464,7 @@ jobs:
 
   # Linux packages whenever the desktop app is affected. macOS and Windows
   # package the scheduled run on main and a manual run on all systems, and a
-  # merge queue run or a `ci:all-os` pull request only when the plan job finds
-  # a packaging input in its diff.
+  # merge queue run only when the plan job finds a packaging input in its diff.
   package:
     name: Package (${{ matrix.os }})
     needs: plan
@@ -536,10 +573,11 @@ jobs:
           fi
 
   # The one required check, which the merge queue waits on. A job skipped by its
-  # `if:` is fine; a failed or cancelled one is not.
+  # `if:` is fine, which is how a `ci:skip` run passes; a failed or cancelled
+  # one is not.
   result:
     name: CI result
-    needs: [plan, check, test, system, screenshots, package]
+    needs: [gate, plan, check, test, system, screenshots, package]
     if: always() && github.event.action != 'closed'
     runs-on: ubuntu-latest
     steps:
