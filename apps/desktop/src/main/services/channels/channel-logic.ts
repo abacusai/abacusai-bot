@@ -45,8 +45,6 @@ export type TurnKind =
   | "follow-up"
   /** The user asked the team to discuss: one round of a discussion. */
   | "discuss"
-  /** The user asked for a debate: one side's turn, until both settle. */
-  | "debate"
   /** The discussion is over: the lead sums up what the team agreed. */
   | "conclude"
   /** A member's work just ended (a report or a failure): the lead keeps the user's goal moving. */
@@ -55,10 +53,8 @@ export type TurnKind =
 export interface Speakers {
   botIds: string[];
   everyone: boolean;
-  /** The user asked the team to work it out together (see DISCUSS). */
+  /** The user asked the team to work it out together (3+ members, see DISCUSS). */
   discussion?: boolean;
-  /** A debate: it runs until the sides agree or agree to disagree. */
-  debate?: boolean;
 }
 
 /** Rounds a discussion runs at most; it ends sooner when a round adds nothing. */
@@ -66,16 +62,6 @@ export const MAX_DISCUSSION_ROUNDS = 3;
 
 const DISCUSS =
   /\b(?:discuss|debate|ideate|brainstorm|deliberate|hash (?:it|this) out|(?:work|think|figure|talk|plan|decide|ideate)(?: (?:it|this|that))?(?: out| over| through)? together|together as a team|as a team|all of you|you all|you guys|agree on|align on|come to (?:an )?agreement|reach (?:a )?consensus|all agree|weigh in|talk (?:it|this) (?:over|through)|both of you|you two|you both)\b/i;
-
-/**
- * Asking for the exchange itself, not only addressing the group: two bots,
- * or the bots the user named, discuss only on these ("both of you, say hi"
- * is each answering).
- */
-const DISCUSS_ITSELF =
-  /\b(?:discuss(?:ion)?|debat(?:e|ing)|brainstorm|deliberate|hash (?:it|this) out|(?:work|think|figure|talk|plan|decide|ideate)(?: (?:it|this|that))?(?: out| over| through)? together|agree on|align on|come to (?:an )?agreement|reach (?:a )?consensus|talk (?:it|this) (?:over|through)|(?:respond|reply|answer) to each other|tag(?:ging)? each other)\b/i;
-
-const DEBATE = /\bdebat(?:e|ing)\b/i;
 
 const escape = (text: string): string =>
   text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -367,29 +353,28 @@ export const speakersFor = (
   const noAnswer =
     wantsNoAnswer(message, members) && options.lastSpeakerAsked !== true;
   const asksTeam = DISCUSS.test(text) && !noAnswer;
-  const itself = DISCUSS_ITSELF.test(text) && !noAnswer;
-  const together = asksTeam && (members.length >= 3 || itself);
-  const debate = DEBATE.test(text) ? { debate: true } : {};
-  // "Both of you, say hi": each of two bots answers.
-  if ((EVERYONE.test(text) && !together) || (asksTeam && !together))
-    return { botIds: members.map((member) => member.id), everyone: true };
+  const together = asksTeam && members.length >= 3;
   const named = unique([
     ...(options.replyToBot != null && ids.has(options.replyToBot)
       ? [options.replyToBot]
       : []),
     ...mergeByPosition(text, members),
   ]);
-  // Naming nobody (or @everyone), it is a discussion of every member.
+  // "Both of you, say hi": two bots cannot discuss, but each answers. Named
+  // ("@A for, @B against"), they answer in turn and can answer each other.
+  if (
+    (EVERYONE.test(text) && !together) ||
+    (asksTeam && !together && named.length === 0)
+  )
+    return { botIds: members.map((member) => member.id), everyone: true };
+  // "Researcher and Writer, discuss…" is a discussion between those two
+  // only when 3+ are named; named bots otherwise answer in turn.
   if (together && (named.length === 0 || EVERYONE.test(text)))
     return {
       botIds: members.map((member) => member.id),
       everyone: false,
       discussion: true,
-      ...debate,
     };
-  // "@bot1 for the motion, @bot2 against: debate": the named bots discuss.
-  if (itself && named.length >= 2)
-    return { botIds: named, everyone: false, discussion: true, ...debate };
   if (named.length > 0) return { botIds: named, everyone: false };
   // "hi both, one line each": every member, each on its own; "hi all,
   // Coder can you…" is for Coder, wherever the name stands.
@@ -595,7 +580,7 @@ export const turnPrompt = (input: {
       break;
     case "brought-in":
       lines.push(
-        `${others} brought you in above. Answer what they need, for the user, in the group. Don't @mention anyone: nobody else will be called in.`,
+        `${others} brought you in above. Answer what they need, for the user, in the group. If you need an answer back from a member, @Name them and they answer you next; otherwise don't @mention anyone (write a name without @ to only mention someone), and the exchange ends with your message.`,
         input.mayWork === true
           ? `The user named you in this channel for its work, so if ${others} needs real work from you (files, code, a browser), start it now: ${WORK_RULE}`
           : "You can't take work that needs files, code, a browser or the user's accounts on from here: say what you would do, and that the user can ask you for it directly."
@@ -622,13 +607,6 @@ export const turnPrompt = (input: {
           ? "Give your view from your own role and expertise. Build on or challenge what the others said above; don't repeat it."
           : "React to what the others said since your last turn: agree, push back with a reason, or refine. Address someone with @Name. If you agree and have nothing new, reply <reply>NO_REPLY</reply>: the discussion ends when nobody has anything new.",
         "Be concrete (numbers, owners, trade-offs) and brief: under 120 words. Talk to your colleagues, not only to the user. Don't sum up for the team: the lead does that at the end."
-      );
-      break;
-    case "debate":
-      lines.push(
-        "The user asked for a debate. Argue your side from your role: answer the other side's latest points directly, with reasons and evidence; don't repeat yourself. Address the other side with @Name.",
-        "Keep debating while you still disagree. When you are persuaded, or it is clear neither side will move, say so in one line (you agree, or you agree to disagree, and on what) and add <settled/>. The debate ends when both sides have settled. Don't settle just to end it.",
-        "Be concrete and brief: under 120 words."
       );
       break;
     case "conclude":
@@ -690,16 +668,6 @@ const workState = (work: ChannelWork): string =>
         : work.status === "stopped"
           ? "the user stopped it partway, so it may be half done"
           : `failed: ${work.error ?? "no reason given"}`;
-
-const SETTLED = /<settled\s*\/?>(?:\s*<\/settled>)?/gi;
-
-/** Whether a debater settled (`<settled/>`: agreed, or agreed to disagree), and its words without the tag. */
-export const settledIn = (
-  words: string
-): { settled: boolean; words: string } => ({
-  settled: words.search(SETTLED) >= 0,
-  words: words.replace(SETTLED, "").trim(),
-});
 
 const STOP_WORK = /<stop_work\s*\/?>(?:\s*<\/stop_work>)?/gi;
 

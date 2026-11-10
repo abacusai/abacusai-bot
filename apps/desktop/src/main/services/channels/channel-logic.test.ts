@@ -252,10 +252,10 @@ describe("turnPrompt", () => {
     ).not.toContain("Your own chat with the user");
   });
 
-  it("brought-in and everyone turns may not bring anyone in", () => {
+  it("a brought-in bot may ask back; everyone turns bring nobody in", () => {
     expect(
       turnPrompt({ ...base, kind: "brought-in", others: ["Chief"] })
-    ).toContain("Don't @mention anyone");
+    ).toContain("@Name them and they answer you next");
     expect(turnPrompt({ ...base, kind: "everyone" })).toContain(
       "Don't @mention anyone"
     );
@@ -335,26 +335,8 @@ describe("a discussion", () => {
     expect(speakersFor(text, M).discussion).toBeUndefined();
   });
 
-  it("two members discuss when asked for the exchange itself", () => {
-    expect(speakersFor("discuss it", M.slice(0, 2))).toEqual({
-      botIds: ["chief", "res"],
-      everyone: false,
-      discussion: true,
-    });
-  });
-
-  it("the bots the user named debate, for and against, with no summary", () => {
-    expect(
-      speakersFor(
-        "@Chief - you will debate for the motion\n@Writer - you will debate against it. Tag each other and keep going",
-        M
-      )
-    ).toEqual({
-      botIds: ["chief", "wri"],
-      everyone: false,
-      discussion: true,
-      debate: true,
-    });
+  it("needs three members", () => {
+    expect(speakersFor("discuss it", M.slice(0, 2)).discussion).toBeUndefined();
   });
 });
 
@@ -443,17 +425,24 @@ describe("the bot a stop names answers it", () => {
   });
 });
 
+describe("bots the user named, with a group word", () => {
+  it("answer in turn, so they can answer each other", () => {
+    expect(
+      speakersFor("@Chief for the motion, @Writer against: debate it", M)
+    ).toEqual({ botIds: ["chief", "wri"], everyone: false });
+  });
+});
+
 describe("two bots asked as a group", () => {
-  it("each answers when only addressed together", () => {
+  it("each answers, since two cannot discuss", () => {
     const two = M.slice(0, 2);
     expect(speakersFor("both of you, introduce yourselves", two)).toEqual({
       botIds: ["chief", "res"],
       everyone: true,
     });
-    expect(speakersFor("you two, what do you think?", two).everyone).toBe(true);
-    expect(
-      speakersFor("discuss the launch date together", two).discussion
-    ).toBe(true);
+    expect(speakersFor("discuss the launch date together", two).everyone).toBe(
+      true
+    );
   });
 });
 
