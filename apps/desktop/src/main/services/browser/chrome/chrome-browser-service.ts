@@ -78,6 +78,7 @@ export class ChromeBrowserService {
       connecting: this.connecting,
       connected: this.relay?.connected === true,
       tabs: this.relay?.attachedTabs().length ?? 0,
+      tokenSet: extensionTokenOf(this.options.token()).length > 0,
       error: this.lastError,
     };
   }

@@ -91,6 +91,7 @@ describe("ChromeBrowserService", () => {
       connecting: false,
       connected: false,
       tabs: 0,
+      tokenSet: false,
       error: null,
     });
   });

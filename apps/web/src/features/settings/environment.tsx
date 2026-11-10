@@ -180,9 +180,12 @@ const ElectronBrowserPage = () => {
   const cache = useQueryClient();
   const prefs = usePrefs();
   const update = useUpdatePrefs();
-  const query = useQuery(
-    transport.orpc.browser.status.queryOptions({ input: {} })
-  );
+  // Re-read while Chrome connects: the user allows it there, not here.
+  const [waiting, setWaiting] = useState(false);
+  const query = useQuery({
+    ...transport.orpc.browser.status.queryOptions({ input: {} }),
+    refetchInterval: waiting ? 1500 : false,
+  });
   const [token, setToken] = useState("");
   const [home, setHome] = useState(prefs.browserHomepage ?? "");
   const status = query.data;
@@ -203,13 +206,23 @@ const ElectronBrowserPage = () => {
     browser.setEngine.mutationOptions(writesStatus)
   );
   const connectChrome = useMutation(
-    browser.chrome.connect.mutationOptions(writesStatus)
+    browser.chrome.connect.mutationOptions({
+      ...writesStatus,
+      onMutate: () => setWaiting(true),
+      onSettled: () => setWaiting(false),
+    })
   );
   const disconnectChrome = useMutation(
     browser.chrome.disconnect.mutationOptions(writesStatus)
   );
   const setExtensionToken = useMutation(
-    browser.chrome.setExtensionToken.mutationOptions(writesStatus)
+    browser.chrome.setExtensionToken.mutationOptions({
+      ...writesStatus,
+      onSuccess: (value: NonNullable<typeof status>) => {
+        writesStatus.onSuccess(value);
+        showInfo(t("browserSettings.chrome.tokenSaved"));
+      },
+    })
   );
   const setApproval = useMutation(
     browser.permissions.setApproval.mutationOptions(writesStatus)
@@ -221,6 +234,24 @@ const ElectronBrowserPage = () => {
     })
   );
   const chromeBusy = connectChrome.isPending || disconnectChrome.isPending;
+  const chrome = status?.chrome;
+  // What the user should know or do next, in the row's second line.
+  const chromeDetail =
+    chrome == null
+      ? undefined
+      : (chrome.error ??
+        (chrome.connecting || connectChrome.isPending
+          ? t("browserSettings.chrome.connecting")
+          : chrome.connected
+            ? t("browserSettings.chrome.connected", {
+                browser: chrome.browser ?? "Chrome",
+                count: chrome.tabs,
+              })
+            : chrome.browser == null
+              ? t("browserSettings.chrome.notFound")
+              : chrome.extensionInstalled
+                ? t("browserSettings.chrome.ready", { browser: chrome.browser })
+                : undefined));
   return (
     <AreaPage title={t("settings.pages.browser")}>
       <GroupCard>
@@ -255,7 +286,7 @@ const ElectronBrowserPage = () => {
             <SettingRow
               id="chromeExtension"
               title={t("phase5.chromeExtension")}
-              detail={status.chrome.error ?? undefined}
+              detail={chromeDetail}
             >
               <StatePill>
                 {t(
@@ -296,11 +327,18 @@ const ElectronBrowserPage = () => {
               <Input
                 aria-label={t("phase5.extensionToken")}
                 type="password"
+                placeholder={t(
+                  status.chrome.tokenSet
+                    ? "browserSettings.chrome.tokenSaved"
+                    : "browserSettings.chrome.tokenPlaceholder"
+                )}
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
               />
               <Button
-                disabled={setExtensionToken.isPending}
+                disabled={
+                  setExtensionToken.isPending || token.trim().length === 0
+                }
                 onClick={() => {
                   setExtensionToken.mutate({ token: token.trim() });
                   setToken("");

@@ -906,6 +906,8 @@ export interface ChromeBrowserStatus {
   connected: boolean;
   /** Tabs in the app's tab group while connected. */
   tabs: number;
+  /** A token is saved, so the connection skips the extension's allow page. */
+  tokenSet: boolean;
   /** Why the last connection attempt failed, if it did. */
   error: string | null;
 }
