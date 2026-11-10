@@ -96,6 +96,9 @@ let queuedPrompt: { threadId: string; text: string } | null = null;
 export const queueStartPrompt = (draftId: string, text: string): void => {
   queuedPrompt = { threadId: `draft:${draftId}`, text };
 };
+/** Whether a prompt waits to be sent for this draft, without taking it. */
+export const hasStartPrompt = (threadId: string): boolean =>
+  queuedPrompt?.threadId === threadId;
 export const takeStartPrompt = (threadId: string): string | null => {
   if (queuedPrompt?.threadId !== threadId) return null;
   const { text } = queuedPrompt;
@@ -104,24 +107,21 @@ export const takeStartPrompt = (threadId: string): string | null => {
 };
 
 /**
- * Onboarding's Build and GitHub picks: a fresh draft on their starters, its
- * first runs on the house. `example` waits in the box, editable, so Enter
- * starts something.
+ * Onboarding's Build and GitHub picks: a fresh draft on their starters whose
+ * first task the start page sends at once, on the house. A pick that left its
+ * task waiting in the box for Send went unsent too often.
  */
-export const startExampleDraft = (
+export const startFirstTask = (
   starters: NonNullable<StartDraft["starters"]>,
   sponsored: boolean,
-  example?: string
-): string => {
+  prompt: string
+): void => {
   startDraftStore.setState(() => ({
     ...newStartDraft(),
     starters,
     ...(sponsored ? { sponsored: true as const } : {}),
   }));
-  const { id } = startDraftStore.state;
-  if (example != null)
-    updateDraft(`draft:${id}`, (draft) => ({ ...draft, text: example }));
-  return id;
+  queueStartPrompt(startDraftStore.state.id, prompt);
 };
 
 export const optimisticSession = (draft: StartDraft): SessionRow => {

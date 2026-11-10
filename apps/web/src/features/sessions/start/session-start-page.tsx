@@ -54,6 +54,7 @@ import {
   startDraftStore,
   startSession,
   optimisticSession,
+  hasStartPrompt,
   takeStartPrompt,
   type SubmissionEnvelope,
 } from "./start-session";
@@ -83,6 +84,11 @@ const funnelDrafts = new Map<
   string,
   { example: string; starter: string | null; edited: boolean }
 >();
+/**
+ * Prompts the app sent for a draft by itself (a first-run pick's task), by
+ * draft id: their send is "auto", never the user's own words or an edit.
+ */
+const autoSent = new Map<string, string>();
 /** Fire-and-forget: a lost beacon must never block the page. */
 const reportFunnel = (
   client: Transport["client"],
@@ -111,6 +117,7 @@ export const QueuedPrompt = ({
     if (!ready) return;
     const text = takeStartPrompt(threadId);
     if (text == null) return;
+    autoSent.set(threadId.replace(/^draft:/, ""), text);
     void submit({
       runId: crypto.randomUUID(),
       messageId: crypto.randomUUID(),
@@ -196,19 +203,23 @@ export const SessionStartPage = ({
     if (inFlight.has("submit")) return;
     inFlight.add("submit");
     const seen = funnelDrafts.get(draft.id);
-    if (seen) {
+    const auto = autoSent.get(draft.id);
+    autoSent.delete(draft.id);
+    if (seen || auto != null) {
       funnelDrafts.delete(draft.id);
       const text = sentText(envelope);
       reportFunnel(
         client,
         "start_sent",
-        seen.example && text === seen.example.trim()
-          ? "example"
-          : seen.starter && text === seen.starter.trim()
-            ? "starter"
-            : seen.example || seen.starter
-              ? "edited"
-              : "own"
+        auto != null && text === auto.trim()
+          ? "auto"
+          : seen?.example && text === seen.example.trim()
+            ? "example"
+            : seen?.starter && text === seen.starter.trim()
+              ? "starter"
+              : seen?.example || seen?.starter
+                ? "edited"
+                : "own"
       );
     }
     setPending(true);
@@ -223,7 +234,7 @@ export const SessionStartPage = ({
   useEffect(() => {
     if (resume) resumeStart();
   }, [resume]);
-  // Onboarding's picks open on an example in the box: the cursor waits at its end.
+  // Onboarding's picks open with their first task running: the cursor waits in the box.
   const opensOnExample = draft.starters != null;
   useEffect(() => {
     if (!opensOnExample) return;
@@ -239,10 +250,12 @@ export const SessionStartPage = ({
     if (draft.stage !== "draft" || funnelDrafts.has(draft.id)) return;
     const example = draftStore.state[id]?.text ?? "";
     funnelDrafts.set(draft.id, { example, starter: null, edited: false });
+    // A first task the app sends itself may already be on its way.
+    const auto = hasStartPrompt(id) || autoSent.has(draft.id);
     reportFunnel(
       client,
       "start_page_shown",
-      `${draft.starters ?? "none"}_${example ? "example" : "blank"}`
+      `${draft.starters ?? "none"}_${auto ? "auto" : example ? "example" : "blank"}`
     );
     // The map entry keeps it to once per draft.
   }, [draft.id, draft.stage, draft.starters, id, client]);

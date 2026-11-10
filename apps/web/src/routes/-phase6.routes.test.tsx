@@ -183,7 +183,7 @@ it.each([null, "telegram"] as const)(
   },
   15000
 );
-it("Start building opens a new session on the build examples, the first in the box, and makes no bot", async () => {
+it("Start building opens a new session on the build examples and sends the first at once, making no bot", async () => {
   const seed = defaultSeed();
   seed.bots = [];
   seed.routines = [];
@@ -191,6 +191,16 @@ it("Start building opens a new session on the build examples, the first in the b
     onboarded: false,
     signedIn: true,
     seed,
+    models: [
+      {
+        id: "abacus/route-llm",
+        label: "RouteLLM",
+        provider: "abacus",
+        tier: "default",
+        configured: true,
+        recommended: true,
+      },
+    ],
   });
   fireEvent.click(
     await screen.findByRole("button", {
@@ -198,25 +208,30 @@ it("Start building opens a new session on the build examples, the first in the b
     })
   );
   await waitFor(() =>
-    expect(harness!.router.state.location.pathname).toBe("/sessions/new")
+    expect(harness!.router.state.location.pathname).not.toBe(
+      "/onboarding/first-bot"
+    )
   );
   expect(harness.collections.bots.toArray).toHaveLength(0);
   expect(harness.collections.routines.toArray).toHaveLength(0);
+  // A task left waiting for Send went unsent too often: the sample starts now.
+  await waitFor(() => expect(startDraftStore.state.stage).not.toBe("draft"));
   expect(startDraftStore.state).toMatchObject({
     starters: "build",
     sponsored: true,
   });
-  expect(
-    await screen.findByRole("button", { name: /Portfolio site/ })
-  ).toBeTruthy();
-  // The first example waits in the box, cursor at its end, so Enter sends it.
-  const box = document.querySelector<HTMLTextAreaElement>(
-    '[data-slot="composer"] textarea'
-  )!;
-  expect(box.value).toMatch(/^Build me a one-page portfolio website/);
-  await waitFor(() => expect(document.activeElement).toBe(box));
-  expect(box.selectionStart).toBe(box.value.length);
-  expect(harness.calls.filter(([name]) => name === "ai.send")).toHaveLength(0);
+  expect(JSON.stringify(startDraftStore.state.envelope?.parts)).toContain(
+    "Build me a one-page portfolio website"
+  );
+  // The app's own send is counted as such, never as the user's words.
+  const funnel = harness.calls
+    .filter(([name]) => name === "system.funnelStep")
+    .map(([, input]) => input);
+  expect(funnel).toContainEqual({
+    step: "start_page_shown",
+    detail: "build_auto",
+  });
+  expect(funnel).toContainEqual({ step: "start_sent", detail: "auto" });
   expect(
     harness.calls.filter(([name]) => name === "account.skipOnboarding")
   ).toHaveLength(1);
