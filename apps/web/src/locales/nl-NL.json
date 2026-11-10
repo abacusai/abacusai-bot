@@ -3448,8 +3448,7 @@
       "privacy": "Optioneel. Laat persoonlijke gegevens weg.",
       "send": "Versturen",
       "skip": "Overslaan",
-      "thanks": "Bedankt voor je feedback.",
-      "failed": "Versturen mislukt. Probeer het opnieuw:"
+      "thanks": "Bedankt voor je feedback."
     },
     "deliverableOffer": {
       "label": "Bewaar dit antwoord als document",

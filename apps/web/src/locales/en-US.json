@@ -3448,8 +3448,7 @@
       "privacy": "Optional. Please leave out personal details.",
       "send": "Send",
       "skip": "Skip",
-      "thanks": "Thanks for the feedback.",
-      "failed": "Couldn't send that. Try again:"
+      "thanks": "Thanks for the feedback."
     },
     "deliverableOffer": {
       "label": "Keep this answer as a document",

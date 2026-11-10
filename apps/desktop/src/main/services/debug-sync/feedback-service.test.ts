@@ -102,7 +102,11 @@ describe("reporting a turn's thumbs", () => {
         segmentId: "text:0:9",
         rating: "up",
       })
-    ).toEqual({ ok: false, reason: "that turn has not been synced yet" });
+    ).toEqual({
+      ok: false,
+      reason: "that turn has not been synced yet",
+      retryable: false,
+    });
   });
 
   it("rates an earlier reply under the sequence that reply was uploaded as", async () => {
@@ -131,7 +135,7 @@ describe("reporting a turn's thumbs", () => {
         segmentId: "text:0:404",
         rating: "up",
       })
-    ).toEqual({ ok: false, reason: "not-synced" });
+    ).toEqual({ ok: false, reason: "not-synced", retryable: true });
     expect(flush).toHaveBeenCalledWith("sess-1");
     expect(fetchImpl).not.toHaveBeenCalled();
   });
@@ -147,7 +151,7 @@ describe("reporting a turn's thumbs", () => {
         segmentId: "text:0:9",
         rating: "up",
       })
-    ).toEqual({ ok: false, reason: "no-key" });
+    ).toEqual({ ok: false, reason: "no-key", retryable: false });
     expect(flush).not.toHaveBeenCalled();
     expect(fetchImpl).not.toHaveBeenCalled();
   });

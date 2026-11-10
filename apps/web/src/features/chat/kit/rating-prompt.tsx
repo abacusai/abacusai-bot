@@ -1,3 +1,4 @@
+import type { TurnFeedbackOutcome } from "@abacus-ai/contract/contracts";
 /**
  * The rating line (contract rating-prompt.ts): under the latest reply of a
  * chat worth rating, "how is the bot doing in this chat?" with four answers
@@ -27,7 +28,7 @@ import { isComplaint } from "@abacus-ai/contract/success-pitch";
 import { feedbackSegmentId } from "@abacus-ai/contract/transcript/feedback-target";
 import type { UIMessage } from "@tanstack/ai-client";
 import { X } from "lucide-react";
-import { useEffect, useEffectEvent, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useThreadHasThumb } from "#renderer/components/message-feedback";
@@ -124,15 +125,50 @@ export const ratingPromptTarget = (
 /** Lets the other cards under a reply claim it before the line asks. */
 const SETTLE_MS = 1500;
 
-/** Where the user is on one reply's line; the rating id is made at the first tap. */
+/** Where the user is on one reply's line. */
 type Phase =
   | { kind: "ask" }
-  | { kind: "sending"; rating: ChatRating; ratingId: string }
-  | { kind: "comment"; rating: ChatRating; ratingId: string }
-  | { kind: "thanks" }
-  | { kind: "failed"; ratingId: string };
+  | { kind: "comment"; rating: ChatRating }
+  | { kind: "thanks" };
 
-const newRatingId = (): string => crypto.randomUUID();
+/** A tapped rating not sent yet: it goes once, with its comment if any. */
+interface PendingRating {
+  replyId: string;
+  ratingId: string;
+  rating: ChatRating;
+  segmentId: string;
+  taskType: RatingTaskType;
+  turns: number;
+}
+
+/**
+ * Pauses after each send the server could not take yet, then one more try;
+ * the last pause outlasts the server's ten-minute hold on a send that may
+ * have gone out, so a rating is not given up while that hold lasts.
+ */
+const SEND_RETRY_MS = [5_000, 30_000, 120_000, 660_000, 0];
+
+/**
+ * Sends one rating, in the background: the line has already said thanks.
+ * Retries what may still go through (busy, a server error, no network) with
+ * the same id, so the server posts it once; stops on a final answer.
+ */
+const deliverRating = (
+  send: (
+    pending: PendingRating,
+    comment?: string
+  ) => Promise<TurnFeedbackOutcome>,
+  pending: PendingRating,
+  comment?: string
+): void => {
+  void (async () => {
+    for (const wait of SEND_RETRY_MS) {
+      const outcome = await send(pending, comment).catch(() => null);
+      if (outcome?.ok || outcome?.retryable === false) return;
+      await new Promise((resolve) => setTimeout(resolve, wait));
+    }
+  })();
+};
 
 export const RatingPromptRow = ({
   messages,
@@ -259,49 +295,65 @@ export const RatingPromptRow = ({
     if (shownId != null) shown();
   }, [shownId]);
 
+  // One send per rating: the tap waits for Send or Skip, or goes on its own
+  // when the user moves on (a new message, another chat, the app closing).
+  const pending = useRef<PendingRating | null>(null);
+  const send = (rating: PendingRating, text?: string) =>
+    transport.client.agent.rate({
+      sessionId: session.threadId,
+      segmentId: rating.segmentId,
+      ratingId: rating.ratingId,
+      rating: rating.rating,
+      taskType: rating.taskType,
+      turns: rating.turns,
+      locale: i18n.language,
+      ...(text ? { comment: text } : {}),
+    });
+  const sendRef = useRef(send);
+  useEffect(() => {
+    sendRef.current = send;
+  });
+  const flush = (text?: string): void => {
+    const rating = pending.current;
+    if (rating == null) return;
+    pending.current = null;
+    deliverRating(sendRef.current, rating, text);
+  };
+  useEffect(() => {
+    if (
+      active ||
+      (pending.current != null && pending.current.replyId !== shownId)
+    )
+      flush();
+  }, [active, shownId]);
+  useEffect(() => () => flush(), []);
+
   if (showing == null) return null;
   const phase: Phase =
     answer?.on === showing.id ? answer.phase : { kind: "ask" };
   const setPhase = (next: Phase): void =>
     setAnswer({ on: showing.id, phase: next });
 
-  const send = (rating: ChatRating, ratingId: string, text?: string) =>
-    transport.client.agent.rate({
-      sessionId: session.threadId,
-      segmentId: showing.segmentId,
-      ratingId,
+  const rate = (rating: ChatRating): void => {
+    pending.current = {
+      replyId: showing.id,
+      ratingId: crypto.randomUUID(),
       rating,
+      segmentId: showing.segmentId,
       taskType: showing.taskType,
       turns: showing.turns,
-      locale: i18n.language,
-      ...(text ? { comment: text } : {}),
-    });
-
-  const rate = (rating: ChatRating): void => {
-    // A retry after a failed send keeps its id: the server counts it once.
-    const ratingId = phase.kind === "failed" ? phase.ratingId : newRatingId();
+    };
     setHeld(showing.id);
     setComment("");
-    setPhase({ kind: "sending", rating, ratingId });
-    void send(rating, ratingId)
-      .then((result) => {
-        if (!result.ok) {
-          setPhase({ kind: "failed", ratingId });
-          return;
-        }
-        funnel("rating_prompt_answered", rating);
-        write({ ...card, answered: showing.id, dismissStreak: 0 });
-        setPhase({ kind: "comment", rating, ratingId });
-      })
-      .catch(() => setPhase({ kind: "failed", ratingId }));
+    setPhase({ kind: "comment", rating });
+    funnel("rating_prompt_answered", rating);
+    write({ ...card, answered: showing.id, dismissStreak: 0 });
   };
-  const finish = (): void => setPhase({ kind: "thanks" });
-  const sendComment = (rating: ChatRating, ratingId: string): void => {
+  const sendRating = (rating: ChatRating): void => {
     const text = comment.trim();
-    if (text.length === 0) return finish();
-    funnel("rating_prompt_commented", rating);
-    void send(rating, ratingId, text).catch(() => undefined);
-    finish();
+    if (text.length > 0) funnel("rating_prompt_commented", rating);
+    flush(text.length > 0 ? text : undefined);
+    setPhase({ kind: "thanks" });
   };
   const dismiss = (): void => {
     funnel("rating_prompt_dismissed", showing.taskType);
@@ -333,7 +385,7 @@ export const RatingPromptRow = ({
         className="my-2 flex w-full max-w-[520px] flex-wrap items-center gap-1.5"
         onSubmit={(event) => {
           event.preventDefault();
-          sendComment(phase.rating, phase.ratingId);
+          sendRating(phase.rating);
         }}
       >
         <label
@@ -361,7 +413,7 @@ export const RatingPromptRow = ({
           size="sm"
           variant="ghost"
           className="text-muted-foreground h-8 rounded-full"
-          onClick={finish}
+          onClick={() => sendRating(phase.rating)}
         >
           {t("chat.ratingPrompt.skip")}
         </Button>
@@ -378,9 +430,7 @@ export const RatingPromptRow = ({
       className="my-2 flex w-full max-w-[520px] flex-wrap items-center gap-1.5"
     >
       <span className="text-muted-foreground mr-1 text-xs">
-        {phase.kind === "failed"
-          ? t("chat.ratingPrompt.failed")
-          : t("chat.ratingPrompt.question")}
+        {t("chat.ratingPrompt.question")}
       </span>
       {CHAT_RATINGS.map((rating) => (
         <Button
@@ -389,8 +439,6 @@ export const RatingPromptRow = ({
           variant="outline"
           className="h-7 rounded-full px-3 text-xs"
           data-rating={rating}
-          disabled={phase.kind === "sending"}
-          aria-pressed={phase.kind === "sending" && phase.rating === rating}
           onClick={() => rate(rating)}
         >
           {t(`chat.ratingPrompt.${rating}`)}

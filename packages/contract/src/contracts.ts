@@ -1169,6 +1169,8 @@ export interface ChatRatingInput {
 export interface TurnFeedbackOutcome {
   ok: boolean;
   reason?: string;
+  /** Not taken, but worth sending again later (busy, a server error, no network). */
+  retryable?: boolean;
 }
 
 /** What the user asked to keep, the agent's notes, what it knows of the person. */

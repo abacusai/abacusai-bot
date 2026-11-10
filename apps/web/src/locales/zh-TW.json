@@ -3448,8 +3448,7 @@
       "privacy": "選填。請勿填寫個人資訊。",
       "send": "傳送",
       "skip": "略過",
-      "thanks": "感謝你的回饋。",
-      "failed": "傳送失敗，請再試一次："
+      "thanks": "感謝你的回饋。"
     },
     "deliverableOffer": {
       "label": "把這個回答存成文件",
