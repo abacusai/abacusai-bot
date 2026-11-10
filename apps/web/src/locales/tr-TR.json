@@ -3967,9 +3967,13 @@
     "connectTimedOut": "Bağlantı zaman aşımına uğradı. Lütfen tekrar dene.",
     "connectFailed": "Bağlantı tamamlanmadı. Lütfen tekrar dene.",
     "connectUnreachable": "Şu anda Abacus'a ulaşılamıyor. İnternet bağlantını kontrol edip tekrar dene.",
+    "connectAppMissing": "Önce uygulamayı bu bilgisayara yükleyin, sonra yeniden bağlanın.",
+    "connectOtherOs": "Bu bağlayıcı Windows veya macOS gerektirir.",
     "connectorsLastSeen": "Şu anda Abacus'a ulaşılamıyor. Bağlantıların en son görüldükleri hâliyle gösteriliyor.",
     "connectorsUnchecked": "Şu anda Abacus'a ulaşılamıyor, bu yüzden bağlantıların kontrol edilemiyor.",
     "cantCheck": "Kontrol edilemiyor",
+    "appMissing": "Yüklü değil",
+    "appNotReady": "Hazır değil",
     "connectChatAppOnDesktop": "Bu sohbet uygulaması AbacusAI Bot masaüstü uygulamasından bağlanır.",
     "connectorsDescription": "Ajanının görevleri tamamlamak için kullanabileceği hizmetleri bağla.",
     "credentialsLocal": "Kimlik bilgileri bu bilgisayarda saklanır.",
@@ -4139,7 +4143,15 @@
     },
     "connecting": "Yükleniyor",
     "toolsUnavailable": "Bu araçlar bu sürümde kullanılamıyor.",
-    "noInstalledSkills": "Bu kapsamda yüklü beceri yok. Bir beceri içe aktar ya da pazar yerine göz at."
+    "noInstalledSkills": "Bu kapsamda yüklü beceri yok. Bir beceri içe aktar ya da pazar yerine göz at.",
+    "localApp": {
+      "robloxStudio": {
+        "ready": "Roblox Studio'da yerinizi açık tutun ve Enable Studio as MCP server açık olsun (Assistant > … > Manage MCP Servers).",
+        "missing": "Roblox Studio bu bilgisayarda yok. Yükleyin, sonra yeniden bağlanın.",
+        "notReady": "Roblox Studio yanıt vermedi. Yerinizi Studio'da açın, Enable Studio as MCP server'ı açın (Assistant > … > Manage MCP Servers) ve yeniden deneyin.",
+        "get": "Roblox Studio'yu edinin"
+      }
+    }
   },
   "browserPermission": {
     "allow": "İzin ver",

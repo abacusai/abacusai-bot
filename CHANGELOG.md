@@ -26,6 +26,7 @@ On first launch, Updating your data may appear while conversations are converted
 - Each rail item has its own sidebar.
 - Open connectors and messaging from Library.
 - Connect 20 more services from Library: Google Ads, Google Analytics, Search Console, YouTube, Meta Ads, Instagram, HubSpot, QuickBooks, Monday.com, Smartsheet, Dynamics 365, Teams, SharePoint, OneNote, Box, GitLab, Azure, Autodesk, Messenger and WhatsApp Business.
+- Connect Roblox Studio from Library on Windows and Mac: the bot writes, runs and playtests scripts in your open place through Studio's own MCP server.
 - With GitHub connected, new sessions suggest fixing a bug, adding a feature or reviewing your pull requests, and Work on my code in setup opens a session.
 - The companion shows ongoing work; the background Task still running notification is removed.
 - Finishing setup opens the saved destination without switching a workspace.

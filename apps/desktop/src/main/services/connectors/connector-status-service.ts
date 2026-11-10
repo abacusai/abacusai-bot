@@ -9,6 +9,7 @@
  */
 import { CONNECTORS, type Connector } from "@abacus-ai/connectors/registry";
 import type {
+  AgentMcpStatus,
   ConnectorStatus,
   ConnectorStatuses,
   McpServerInfo,
@@ -20,6 +21,7 @@ import {
 } from "@abacus-ai/contract/messaging";
 
 import type { McpTokenState } from "../mcp/mcp-oauth-service";
+import type { LocalAppState } from "./local-app";
 
 export interface StatusInputs {
   /**
@@ -43,6 +45,10 @@ export interface StatusInputs {
   mcpTokens: ReadonlyMap<string, McpTokenState>;
   /** The user's WhatsApp is linked to AbacusAI Bot's own number (the hosted computer only). */
   botNumber?: boolean;
+  /** For a `local` MCP connector: whether its app runs here and is installed. */
+  localApp?: (connector: Connector) => LocalAppState;
+  /** What a running agent last reported for each server, by server id. */
+  mcpRuntime?: ReadonlyMap<string, AgentMcpStatus>;
 }
 
 const statusOf = (
@@ -91,8 +97,20 @@ const statusOf = (
         ? { state: "pending", reason: "not-live" }
         : { state: "available" };
     case "mcp": {
+      // A server another app ships: hidden where that app cannot run, and
+      // says so while the app is not installed or not answering.
+      const app = inputs.localApp?.(connector) ?? "none";
+      if (app === "other-os")
+        return { state: "unavailable", reason: "other-os" };
       const server = inputs.mcpServers.find((item) => item.id === connector.id);
-      if (server == null) return { state: "available" };
+      if (server == null)
+        return app === "missing"
+          ? { state: "available", reason: "app-missing" }
+          : { state: "available" };
+      if (app === "missing") return { state: "pending", reason: "app-missing" };
+      const live = inputs.mcpRuntime?.get(server.id);
+      if (app === "installed" && (live === "error" || live === "disconnected"))
+        return { state: "pending", reason: "app-not-ready" };
       const token = inputs.mcpTokens.get(server.id) ?? "absent";
       // An OAuth server needs a valid token; any other, just not a refused one.
       const signsIn =
@@ -134,6 +152,8 @@ export interface StatusSources {
   mcpTokens: () => ReadonlyMap<string, McpTokenState>;
   /** Absent where there is no AbacusAI Bot number (the desktop app). */
   botNumber?: (options?: { fresh?: boolean }) => Promise<boolean>;
+  localApp?: (connector: Connector) => LocalAppState;
+  mcpRuntime?: () => ReadonlyMap<string, AgentMcpStatus>;
 }
 
 /**
@@ -159,6 +179,12 @@ export class ConnectorStatusService {
       mcpServers: this.sources.mcpServers(),
       mcpTokens: this.sources.mcpTokens(),
       botNumber: (await this.sources.botNumber?.(options)) === true,
+      ...(this.sources.localApp != null
+        ? { localApp: this.sources.localApp }
+        : {}),
+      ...(this.sources.mcpRuntime != null
+        ? { mcpRuntime: this.sources.mcpRuntime() }
+        : {}),
     });
   }
 }

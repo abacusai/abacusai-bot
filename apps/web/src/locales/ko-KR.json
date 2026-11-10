@@ -3967,9 +3967,13 @@
     "connectTimedOut": "연결 시간이 초과되었습니다. 다시 시도하세요.",
     "connectFailed": "연결이 완료되지 않았습니다. 다시 시도하세요.",
     "connectUnreachable": "지금은 Abacus에 연결할 수 없습니다. 인터넷 연결을 확인하고 다시 시도하세요.",
+    "connectAppMissing": "먼저 이 컴퓨터에 앱을 설치한 다음 다시 연결하세요.",
+    "connectOtherOs": "이 커넥터는 Windows 또는 macOS가 필요합니다.",
     "connectorsLastSeen": "지금은 Abacus에 연결할 수 없습니다. 마지막으로 확인된 연결 상태를 표시합니다.",
     "connectorsUnchecked": "지금은 Abacus에 연결할 수 없어 연결 상태를 확인할 수 없습니다.",
     "cantCheck": "확인할 수 없음",
+    "appMissing": "설치되지 않음",
+    "appNotReady": "준비되지 않음",
     "connectChatAppOnDesktop": "This chat app connects from the AbacusAI Bot desktop app.",
     "connectorsDescription": "에이전트가 작업을 완료하는 데 사용할 서비스를 연결하세요.",
     "credentialsLocal": "인증 정보는 이 컴퓨터에 저장됩니다.",
@@ -4139,7 +4143,15 @@
     },
     "connecting": "Loading",
     "toolsUnavailable": "이 버전에서는 이 도구를 사용할 수 없습니다.",
-    "noInstalledSkills": "이 범위에 설치된 스킬이 없습니다. 스킬을 가져오거나 마켓플레이스를 둘러보세요."
+    "noInstalledSkills": "이 범위에 설치된 스킬이 없습니다. 스킬을 가져오거나 마켓플레이스를 둘러보세요.",
+    "localApp": {
+      "robloxStudio": {
+        "ready": "Roblox Studio에서 플레이스를 연 상태로 Enable Studio as MCP server를 켜 두세요(Assistant > … > Manage MCP Servers).",
+        "missing": "이 컴퓨터에 Roblox Studio가 없습니다. 설치한 다음 다시 연결하세요.",
+        "notReady": "Roblox Studio가 응답하지 않았습니다. Studio에서 플레이스를 열고 Enable Studio as MCP server를 켠 다음(Assistant > … > Manage MCP Servers) 다시 시도하세요.",
+        "get": "Roblox Studio 받기"
+      }
+    }
   },
   "browserPermission": {
     "allow": "허용",

@@ -3967,9 +3967,13 @@
     "connectTimedOut": "Tempo di connessione scaduto. Riprova.",
     "connectFailed": "La connessione non è stata completata. Riprova.",
     "connectUnreachable": "Impossibile raggiungere Abacus in questo momento. Controlla la connessione a internet e riprova.",
+    "connectAppMissing": "Installa prima l’app su questo computer, poi collegati di nuovo.",
+    "connectOtherOs": "Questo connettore richiede Windows o macOS.",
     "connectorsLastSeen": "Impossibile raggiungere Abacus in questo momento. Le tue connessioni sono mostrate come all'ultimo controllo.",
     "connectorsUnchecked": "Impossibile raggiungere Abacus in questo momento, quindi non è possibile verificare le tue connessioni.",
     "cantCheck": "Verifica non possibile",
+    "appMissing": "Non installato",
+    "appNotReady": "Non pronto",
     "connectChatAppOnDesktop": "This chat app connects from the AbacusAI Bot desktop app.",
     "connectorsDescription": "Collega i servizi che il tuo agente può usare per completare le attività.",
     "credentialsLocal": "Le credenziali vengono salvate su questo computer.",
@@ -4139,7 +4143,15 @@
     },
     "connecting": "Loading",
     "toolsUnavailable": "Questi strumenti non sono disponibili in questa versione.",
-    "noInstalledSkills": "Nessuna competenza installata in questo ambito. Importane una o esplora il catalogo."
+    "noInstalledSkills": "Nessuna competenza installata in questo ambito. Importane una o esplora il catalogo.",
+    "localApp": {
+      "robloxStudio": {
+        "ready": "Tieni aperta la tua esperienza in Roblox Studio con Enable Studio as MCP server attivo (Assistant > … > Manage MCP Servers).",
+        "missing": "Roblox Studio non è su questo computer. Installalo, poi collegati di nuovo.",
+        "notReady": "Roblox Studio non ha risposto. Apri la tua esperienza in Studio, attiva Enable Studio as MCP server (Assistant > … > Manage MCP Servers) e riprova.",
+        "get": "Scarica Roblox Studio"
+      }
+    }
   },
   "browserPermission": {
     "allow": "Consenti",

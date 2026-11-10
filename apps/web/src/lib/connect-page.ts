@@ -30,6 +30,9 @@ const CONNECT_ERRORS: Readonly<Record<string, string>> = {
   timeout: "phase5.connectTimedOut",
   failed: "phase5.connectFailed",
   unreachable: "phase5.connectUnreachable",
+  // A connector whose server ships in another app (Roblox Studio).
+  "app-missing": "phase5.connectAppMissing",
+  "other-os": "phase5.connectOtherOs",
   // A browser has no chat-app pairing; the desktop keeps its own wording.
   ...(IS_ELECTRON ? {} : { "needs-pairing": "phase5.connectChatAppOnDesktop" }),
 };

@@ -3967,9 +3967,13 @@
     "connectTimedOut": "Koppelen duurde te lang. Probeer het opnieuw.",
     "connectFailed": "Koppelen is niet voltooid. Probeer het opnieuw.",
     "connectUnreachable": "Abacus is nu niet bereikbaar. Controleer je internetverbinding en probeer het opnieuw.",
+    "connectAppMissing": "Installeer eerst de app op deze computer en maak daarna opnieuw verbinding.",
+    "connectOtherOs": "Deze connector heeft Windows of macOS nodig.",
     "connectorsLastSeen": "Abacus is nu niet bereikbaar. Je koppelingen worden getoond zoals ze het laatst waren.",
     "connectorsUnchecked": "Abacus is nu niet bereikbaar, dus je koppelingen kunnen niet worden gecontroleerd.",
     "cantCheck": "Kan niet controleren",
+    "appMissing": "Niet geïnstalleerd",
+    "appNotReady": "Niet klaar",
     "connectChatAppOnDesktop": "Deze chatapp koppel je via de desktopapp van AbacusAI Bot.",
     "connectorsDescription": "Koppel de diensten die je agent kan gebruiken om taken uit te voeren.",
     "credentialsLocal": "Inloggegevens worden op deze computer opgeslagen.",
@@ -4139,7 +4143,15 @@
     },
     "connecting": "Laden",
     "toolsUnavailable": "Deze tools zijn niet beschikbaar in deze versie.",
-    "noInstalledSkills": "Geen skills geïnstalleerd in dit bereik. Importeer een skill of bekijk de marketplace."
+    "noInstalledSkills": "Geen skills geïnstalleerd in dit bereik. Importeer een skill of bekijk de marketplace.",
+    "localApp": {
+      "robloxStudio": {
+        "ready": "Houd je place open in Roblox Studio met Enable Studio as MCP server aan (Assistant > … > Manage MCP Servers).",
+        "missing": "Roblox Studio staat niet op deze computer. Installeer het en maak daarna opnieuw verbinding.",
+        "notReady": "Roblox Studio reageerde niet. Open je place in Studio, zet Enable Studio as MCP server aan (Assistant > … > Manage MCP Servers) en probeer het opnieuw.",
+        "get": "Roblox Studio downloaden"
+      }
+    }
   },
   "browserPermission": {
     "allow": "Toestaan",

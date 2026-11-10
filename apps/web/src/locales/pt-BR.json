@@ -3967,9 +3967,13 @@
     "connectTimedOut": "A conexão expirou. Tente novamente.",
     "connectFailed": "A conexão não foi concluída. Tente novamente.",
     "connectUnreachable": "Não foi possível acessar o Abacus agora. Verifique sua conexão com a internet e tente novamente.",
+    "connectAppMissing": "Instale o app neste computador primeiro e depois conecte de novo.",
+    "connectOtherOs": "Este conector precisa de Windows ou macOS.",
     "connectorsLastSeen": "Não foi possível acessar o Abacus agora. Mostrando suas conexões como estavam da última vez.",
     "connectorsUnchecked": "Não foi possível acessar o Abacus agora, então suas conexões não podem ser verificadas.",
     "cantCheck": "Não é possível verificar",
+    "appMissing": "Não instalado",
+    "appNotReady": "Não está pronto",
     "connectChatAppOnDesktop": "This chat app connects from the AbacusAI Bot desktop app.",
     "connectorsDescription": "Conecte os serviços que seu agente pode usar para concluir tarefas.",
     "credentialsLocal": "As credenciais são salvas neste computador.",
@@ -4139,7 +4143,15 @@
     },
     "connecting": "Loading",
     "toolsUnavailable": "Estas ferramentas não estão disponíveis nesta versão.",
-    "noInstalledSkills": "Nenhuma habilidade instalada neste escopo. Importe uma ou explore o catálogo."
+    "noInstalledSkills": "Nenhuma habilidade instalada neste escopo. Importe uma ou explore o catálogo.",
+    "localApp": {
+      "robloxStudio": {
+        "ready": "Mantenha sua experiência aberta no Roblox Studio com Enable Studio as MCP server ativado (Assistant > … > Manage MCP Servers).",
+        "missing": "O Roblox Studio não está neste computador. Instale e depois conecte de novo.",
+        "notReady": "O Roblox Studio não respondeu. Abra sua experiência no Studio, ative Enable Studio as MCP server (Assistant > … > Manage MCP Servers) e tente de novo.",
+        "get": "Baixar o Roblox Studio"
+      }
+    }
   },
   "browserPermission": {
     "allow": "Permitir",

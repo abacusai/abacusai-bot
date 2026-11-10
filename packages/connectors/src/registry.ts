@@ -16,6 +16,8 @@
  *               agent credential; no server.
  * - messaging:  a chat app the agent can be reached from, paired in the app.
  * - mcp:        an MCP server the app installs, with or without a credential.
+ *               A `local` one is a program another app put on the computer
+ *               (Roblox Studio's): offered only on the systems it exists on.
  */
 
 export type ConnectorKind = "platform" | "messaging" | "mcp";
@@ -77,6 +79,11 @@ interface ConnectorBase {
    * ("mail", "pull requests"). The routing prompt is generated from these.
    */
   routes?: readonly string[];
+  /**
+   * How the model should use it once connected, in the model's words: what
+   * to reach for first, and what to tell the user when it is not ready.
+   */
+  usage?: string;
 }
 
 export interface PlatformConnector extends ConnectorBase {
@@ -99,6 +106,19 @@ export interface MessagingConnector extends ConnectorBase {
   platform: MessagingPlatform;
 }
 
+/** The desktop systems, as Node names them. */
+export type DesktopOs = "darwin" | "win32" | "linux";
+
+/**
+ * A server that ships inside another app on the user's computer: the entry
+ * that starts it on this system, and the file whose presence says that app
+ * is installed. `%NAME%` in `app` is the environment variable's value.
+ */
+export interface LocalServer {
+  entry: McpEntry;
+  app: string;
+}
+
 export interface McpConnector extends ConnectorBase {
   kind: "mcp";
   /**
@@ -107,7 +127,15 @@ export interface McpConnector extends ConnectorBase {
    * 'oauth-client' is the same against an OAuth app the user creates first.
    */
   auth: "none" | "token" | "key" | "oauth" | "oauth-client";
-  entry: McpEntry;
+  /** What it installs as; a `local` connector says it per system instead. */
+  entry?: McpEntry;
+  /**
+   * A server another app installs, by the systems that app runs on. The
+   * connector is offered only on those, and connects once the app is there.
+   */
+  local?: Partial<Record<DesktopOs, LocalServer>>;
+  /** Where the user gets the app a `local` server ships in. */
+  appUrl?: string;
   /** Environment variables the user must fill in for a `key` server. */
   env?: readonly string[];
   /** For a `token` server: the header the token goes in and its label. */
@@ -161,6 +189,18 @@ export const connectUi = (connector: Connector): ConnectUi => {
           : "fields";
   }
 };
+
+/**
+ * The entry this MCP connector installs as on `os`: its system's own for a
+ * `local` connector (null where that app does not run), else its one entry.
+ */
+export const mcpEntryOn = (
+  connector: McpConnector,
+  os: string
+): McpEntry | null =>
+  connector.local != null
+    ? (connector.local[os as DesktopOs]?.entry ?? null)
+    : (connector.entry ?? null);
 
 /**
  * A literal `~` reaches a server unexpanded (no shell is involved); the
@@ -332,6 +372,44 @@ export const CONNECTORS: readonly Connector[] = [
       via: "`gh` and git in bash",
     }
   ),
+  // Roblox Studio's own server, which ships with Studio (Windows and macOS
+  // only) and speaks stdio. Studio must be open with "Enable Studio as MCP
+  // server" turned on in its Assistant; until then its tools find no Studio.
+  {
+    kind: "mcp",
+    id: "roblox-studio",
+    name: "Roblox Studio",
+    description:
+      "Build in your open place: write and run scripts, edit the game and playtest it.",
+    category: "development",
+    auth: "none",
+    docsUrl: "https://create.roblox.com/docs/studio/mcp",
+    logo: "roblox",
+    appUrl: "https://create.roblox.com/",
+    local: {
+      win32: {
+        entry: {
+          command: "cmd.exe",
+          args: ["/c", "%LOCALAPPDATA%\\Roblox\\mcp.bat"],
+        },
+        app: "%LOCALAPPDATA%\\Roblox\\mcp.bat",
+      },
+      darwin: {
+        entry: {
+          command: "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP",
+        },
+        app: "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP",
+      },
+    },
+    routes: ["Roblox games", "Roblox Studio places", "Luau scripts"],
+    usage:
+      "Work inside the user's open place, not in chat: call list_roblox_studios first and pass its studio_id; " +
+      "write or change scripts with multi_edit (script_read, script_search and script_grep to find them), " +
+      "then test with start_stop_play and get_console_output and fix what the output shows. Do not paste Luau " +
+      "for the user to copy unless they ask for it. If list_roblox_studios finds no Studio or a call fails, " +
+      "tell the user in one line: open the place in Roblox Studio, then in Assistant choose … > Manage MCP " +
+      "Servers and turn on Enable Studio as MCP server.",
+  },
   {
     kind: "mcp",
     id: "huggingface",

@@ -48,6 +48,8 @@ import {
   uncheckable,
   useConnectorStatuses,
 } from "./connector-status";
+import { LOCAL_APP_PILL, localAppCopy, localAppReason } from "./local-app";
+import { useMcpRuntimeScope } from "./mcp";
 import { CONNECTOR_CATEGORY_TABS } from "./search";
 export const visibleTabsFor = (entry: Connector): string[] =>
   entry.kind === "messaging"
@@ -140,6 +142,10 @@ export const ConnectorsPage = () => {
                 // Installed, but its sign-in never finished: offer the sign-in.
                 const signIn =
                   statuses.data?.[e.id]?.reason === "sign-in-required";
+                // Its app (Roblox Studio) is not installed or not answering:
+                // the card says so, and opens the dialog that says the fix.
+                const appReason = localAppReason(statuses.data?.[e.id]);
+                const warn = signIn || appReason != null;
                 const cantCheck = uncheckable(statuses.data?.[e.id]);
                 const inFlight =
                   flow.state.connectorId === e.id &&
@@ -160,23 +166,23 @@ export const ConnectorsPage = () => {
                     >
                       {/* The section heading already says it; a phone folds the pill. */}
                       <span
-                        className={
-                          signIn ? "contents" : "phone:hidden contents"
-                        }
+                        className={warn ? "contents" : "phone:hidden contents"}
                       >
                         <StatePill
                           tone={
-                            signIn ? "warning" : group ? "success" : "neutral"
+                            warn ? "warning" : group ? "success" : "neutral"
                           }
                         >
                           {t(
-                            signIn
-                              ? "phase5.signInNeeded"
-                              : group
-                                ? "phase5.connected"
-                                : cantCheck
-                                  ? "phase5.cantCheck"
-                                  : "phase5.available"
+                            appReason != null
+                              ? LOCAL_APP_PILL[appReason]
+                              : signIn
+                                ? "phase5.signInNeeded"
+                                : group
+                                  ? "phase5.connected"
+                                  : cantCheck
+                                    ? "phase5.cantCheck"
+                                    : "phase5.available"
                           )}
                         </StatePill>
                       </span>
@@ -189,7 +195,13 @@ export const ConnectorsPage = () => {
                           size="sm"
                           variant="secondary"
                           onClick={() => {
-                            if (group && !signIn && e.kind === "messaging")
+                            if (appReason != null)
+                              void navigate({
+                                to: "/library/connectors",
+                                search: (p) => ({ ...p, connector: e.id }),
+                                transition: "none",
+                              });
+                            else if (group && !signIn && e.kind === "messaging")
                               void navigate({
                                 to: "/library/messaging",
                                 search: { platform: e.platform },
@@ -205,11 +217,13 @@ export const ConnectorsPage = () => {
                           }}
                         >
                           {t(
-                            signIn
-                              ? "phase5.signIn"
-                              : group
-                                ? "phase5.manage"
-                                : "phase5.add"
+                            appReason != null
+                              ? "phase5.details"
+                              : signIn
+                                ? "phase5.signIn"
+                                : group
+                                  ? "phase5.manage"
+                                  : "phase5.add"
                           )}
                         </Button>
                       )}
@@ -242,6 +256,23 @@ export const ConnectorDialog = ({ connector }: { connector: string }) => {
   const connected = status?.state === "connected";
   const signIn = status?.reason === "sign-in-required";
   const cantCheck = uncheckable(status);
+  // A server that ships in another app (Roblox Studio): that app's state.
+  const app = localAppCopy(entry);
+  const appReason = localAppReason(status);
+  const { scope } = useMcpRuntimeScope();
+  const [retrying, setRetrying] = useState(false);
+  // A promise chain, not try/finally: the compiler takes no finally block.
+  const retry = () => {
+    if (!scope) return;
+    setRetrying(true);
+    void transport.client.mcp
+      .refresh(scope)
+      .catch(() => undefined)
+      .then(() => {
+        setRetrying(false);
+        void statuses.refetch();
+      });
+  };
   const waiting =
     flow.state.connectorId === connector && flow.state.phase !== "idle";
   const tools =
@@ -250,7 +281,7 @@ export const ConnectorDialog = ({ connector }: { connector: string }) => {
         ? [entry.via]
         : entry.tools
       : entry?.kind === "mcp"
-        ? [entry.entry.url ?? entry.entry.command ?? ""].filter(Boolean)
+        ? [entry.entry?.url ?? entry.entry?.command ?? ""].filter(Boolean)
         : [];
   const close = () =>
     void navigate({
@@ -275,13 +306,15 @@ export const ConnectorDialog = ({ connector }: { connector: string }) => {
           status={
             status && {
               label: t(
-                connected
-                  ? "phase5.connected"
-                  : signIn
-                    ? "phase5.signInNeeded"
-                    : cantCheck
-                      ? "phase5.cantCheck"
-                      : "phase5.notConnected"
+                appReason != null
+                  ? LOCAL_APP_PILL[appReason]
+                  : connected
+                    ? "phase5.connected"
+                    : signIn
+                      ? "phase5.signInNeeded"
+                      : cantCheck
+                        ? "phase5.cantCheck"
+                        : "phase5.notConnected"
               ),
               tone: connected ? "success" : "warning",
             }
@@ -335,6 +368,17 @@ export const ConnectorDialog = ({ connector }: { connector: string }) => {
               {t("phase5.documentation")}
             </Button>
           )}
+          {app && (
+            <ConnectNote data-testid="local-app-note" error={appReason != null}>
+              {t(
+                appReason === "app-missing"
+                  ? app.missing
+                  : appReason === "app-not-ready"
+                    ? app.notReady
+                    : app.ready
+              )}
+            </ConnectNote>
+          )}
           {waiting && (
             <ConnectWaiting className="justify-center">
               {t("phase5.connectWaiting")}
@@ -345,7 +389,30 @@ export const ConnectorDialog = ({ connector }: { connector: string }) => {
               {connectErrorText(t, flow.state.error)}
             </ConnectNote>
           )}
-          {connected ? (
+          {app && appReason === "app-missing" && entry?.kind === "mcp" ? (
+            <Button
+              size="lg"
+              className={CONNECT_PRIMARY}
+              onClick={() =>
+                entry.appUrl != null &&
+                void platformSystem(transport.client).openExternal({
+                  url: entry.appUrl,
+                })
+              }
+            >
+              <ExternalLinkIcon data-icon="inline-start" />
+              {t(app.get)}
+            </Button>
+          ) : app && appReason === "app-not-ready" ? (
+            <Button
+              size="lg"
+              className={CONNECT_PRIMARY}
+              disabled={!scope || retrying}
+              onClick={retry}
+            >
+              {t("phase5.tryAgain")}
+            </Button>
+          ) : connected ? (
             <Button size="lg" className={CONNECT_PRIMARY} onClick={close}>
               {t("phase5.done")}
             </Button>
@@ -367,22 +434,25 @@ export const ConnectorDialog = ({ connector }: { connector: string }) => {
               {t(signIn ? "phase5.signIn" : "phase5.connect")}
             </Button>
           )}
-          {connected && (
-            <div className="flex justify-center">
-              <ConfirmAction
-                title={t("phase5.disconnectTitle", { name: entry?.name })}
-                description={t("phase5.disconnectDescription")}
-                label={t("phase5.disconnect")}
-                onConfirm={async () => {
-                  const result = await transport.client.connectors.disconnect({
-                    connectorId: connector,
-                  });
-                  if (!result.ok) throw new Error(result.error);
-                  close();
-                }}
-              />
-            </div>
-          )}
+          {(connected || appReason != null) &&
+            status?.state !== "available" && (
+              <div className="flex justify-center">
+                <ConfirmAction
+                  title={t("phase5.disconnectTitle", { name: entry?.name })}
+                  description={t("phase5.disconnectDescription")}
+                  label={t("phase5.disconnect")}
+                  onConfirm={async () => {
+                    const result = await transport.client.connectors.disconnect(
+                      {
+                        connectorId: connector,
+                      }
+                    );
+                    if (!result.ok) throw new Error(result.error);
+                    close();
+                  }}
+                />
+              </div>
+            )}
         </div>
       </ConnectDialogContent>
     </Dialog>

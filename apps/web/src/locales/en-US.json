@@ -3967,9 +3967,13 @@
     "connectTimedOut": "Connecting timed out. Please try again.",
     "connectFailed": "Connecting didn't finish. Please try again.",
     "connectUnreachable": "Can't reach Abacus right now. Check your internet connection and try again.",
+    "connectAppMissing": "Install the app on this computer first, then connect again.",
+    "connectOtherOs": "This connector needs Windows or macOS.",
     "connectorsLastSeen": "Can't reach Abacus right now. Showing your connections as they were last seen.",
     "connectorsUnchecked": "Can't reach Abacus right now, so your connections can't be checked.",
     "cantCheck": "Can't check",
+    "appMissing": "Not installed",
+    "appNotReady": "Not ready",
     "connectChatAppOnDesktop": "This chat app connects from the AbacusAI Bot desktop app.",
     "connectorsDescription": "Connect the services your agent can use to complete tasks.",
     "credentialsLocal": "Credentials are stored on this computer.",
@@ -4139,7 +4143,15 @@
     },
     "connecting": "Loading",
     "toolsUnavailable": "These tools are not available in this version.",
-    "noInstalledSkills": "No skills installed in this scope. Import a skill or browse the marketplace."
+    "noInstalledSkills": "No skills installed in this scope. Import a skill or browse the marketplace.",
+    "localApp": {
+      "robloxStudio": {
+        "ready": "Keep your place open in Roblox Studio with Enable Studio as MCP server turned on (Assistant > … > Manage MCP Servers).",
+        "missing": "Roblox Studio isn't on this computer. Install it, then connect again.",
+        "notReady": "Roblox Studio didn't answer. Open your place in Studio, turn on Enable Studio as MCP server (Assistant > … > Manage MCP Servers), then try again.",
+        "get": "Get Roblox Studio"
+      }
+    }
   },
   "browserPermission": {
     "allow": "Allow",

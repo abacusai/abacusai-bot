@@ -214,7 +214,7 @@ export class HostedMcpConnect {
   ): Promise<HostedResponse> {
     const plan = this.options.plan(name);
     if (plan.kind === "missing") return { kind: "missing" };
-    if (plan.kind === "needs-fields") {
+    if (plan.kind === "needs-fields" || plan.kind === "app") {
       this.options.failed(name);
       return needsAppPage(plan.label);
     }

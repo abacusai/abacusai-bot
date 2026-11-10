@@ -2985,7 +2985,9 @@ export class McpAgentToolsServer extends McpHttpServer {
         code: "unavailable",
         name: match.name,
         reason:
-          status.reason === "not-signed-in" || status.reason === "not-offered"
+          status.reason === "not-signed-in" ||
+          status.reason === "not-offered" ||
+          status.reason === "other-os"
             ? status.reason
             : "unreachable",
       };

@@ -3967,9 +3967,13 @@
     "connectTimedOut": "Die Verbindung hat zu lange gedauert. Bitte versuchen Sie es erneut.",
     "connectFailed": "Die Verbindung wurde nicht abgeschlossen. Bitte versuchen Sie es erneut.",
     "connectUnreachable": "Abacus ist gerade nicht erreichbar. Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
+    "connectAppMissing": "Installiere zuerst die App auf diesem Computer und verbinde dann erneut.",
+    "connectOtherOs": "Dieser Connector braucht Windows oder macOS.",
     "connectorsLastSeen": "Abacus ist gerade nicht erreichbar. Ihre Verbindungen werden so angezeigt, wie sie zuletzt waren.",
     "connectorsUnchecked": "Abacus ist gerade nicht erreichbar, daher können Ihre Verbindungen nicht geprüft werden.",
     "cantCheck": "Nicht prüfbar",
+    "appMissing": "Nicht installiert",
+    "appNotReady": "Nicht bereit",
     "connectChatAppOnDesktop": "This chat app connects from the AbacusAI Bot desktop app.",
     "connectorsDescription": "Verbinde Dienste, die dein Agent für Aufgaben nutzen kann.",
     "credentialsLocal": "Zugangsdaten werden auf diesem Computer gespeichert.",
@@ -4139,7 +4143,15 @@
     },
     "connecting": "Loading",
     "toolsUnavailable": "Diese Werkzeuge sind in dieser Version nicht verfügbar.",
-    "noInstalledSkills": "In diesem Bereich sind keine Skills installiert. Importiere einen Skill oder öffne den Marktplatz."
+    "noInstalledSkills": "In diesem Bereich sind keine Skills installiert. Importiere einen Skill oder öffne den Marktplatz.",
+    "localApp": {
+      "robloxStudio": {
+        "ready": "Lass deinen Ort in Roblox Studio geöffnet und Enable Studio as MCP server eingeschaltet (Assistant > … > Manage MCP Servers).",
+        "missing": "Roblox Studio ist nicht auf diesem Computer. Installiere es und verbinde dann erneut.",
+        "notReady": "Roblox Studio hat nicht geantwortet. Öffne deinen Ort in Studio, schalte Enable Studio as MCP server ein (Assistant > … > Manage MCP Servers) und versuche es erneut.",
+        "get": "Roblox Studio holen"
+      }
+    }
   },
   "browserPermission": {
     "allow": "Zulassen",

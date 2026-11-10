@@ -480,6 +480,10 @@ import {
 } from "./services/connectors/connector-flow-service";
 import { ConnectorStatusService } from "./services/connectors/connector-status-service";
 import { ConnectorSync } from "./services/connectors/connector-sync";
+import {
+  localAppState,
+  type LocalAppProbe,
+} from "./services/connectors/local-app";
 import { DebugSyncService } from "./services/debug-sync/debug-sync-service";
 import {
   DiagnosticsSyncService,
@@ -930,6 +934,13 @@ const appPauseOf = (job: CronJob): "quiet" | "failing" | null => {
   if (note == null) return null;
   if (note === ROUTINE_PAUSE_NOTES.quiet) return "quiet";
   return note === ROUTINE_PAUSE_NOTES.failures ? "failing" : null;
+};
+
+/** This computer, for a connector whose server another app installs. */
+const LOCAL_APP_PROBE: LocalAppProbe = {
+  os: process.platform,
+  env: process.env,
+  exists: (path) => fs.existsSync(path),
 };
 
 export class ServiceHost {
@@ -2347,7 +2358,22 @@ export class ServiceHost {
     mcpTokens: () => this.mcpTokenStates(),
     botNumber: (options) =>
       this.botNumber?.read(options) ?? Promise.resolve(false),
+    localApp: (connector) => localAppState(connector, LOCAL_APP_PROBE),
+    mcpRuntime: () => this.mcpRuntimeStatuses(),
   });
+
+  /**
+   * Each server's status as the running agents report it; one that any
+   * agent has connected reads connected.
+   */
+  private mcpRuntimeStatuses(): ReadonlyMap<string, AgentMcpStatus> {
+    const statuses = new Map<string, AgentMcpStatus>();
+    for (const runtime of this.agentManagerService.getRuntimeDiagnostics())
+      for (const server of runtime.mcpServers.values())
+        if (statuses.get(server.id) !== "connected")
+          statuses.set(server.id, server.status);
+    return statuses;
+  }
 
   /**
    * Each installed server's sign-in, from the token file; a server the live
@@ -2406,6 +2432,8 @@ export class ServiceHost {
       connectUrl: (name) => this.hostedMcp?.connectUrl(name) ?? null,
     },
     homeDir: () => os.homedir(),
+    os: process.platform,
+    localApp: (connector) => localAppState(connector, LOCAL_APP_PROBE),
   });
 
   /** An installed server's sign-in through the desktop's loopback. */
@@ -4988,7 +5016,7 @@ export class ServiceHost {
           return [
             `${connector.name} (${id})${
               account != null && account.length > 0 ? `, as ${account}` : ""
-            }`,
+            }${connector.usage != null ? ` [how to use: ${connector.usage}]` : ""}`,
           ];
         });
     } catch (err) {

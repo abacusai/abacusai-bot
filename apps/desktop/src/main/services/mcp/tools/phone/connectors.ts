@@ -92,7 +92,9 @@ export function phoneConnectResult(
         `${outcome.name} cannot be connected right now${
           outcome.reason === "not-offered"
             ? ": the user's Abacus.AI account does not offer it"
-            : ""
+            : outcome.reason === "other-os"
+              ? ": its app does not run on this computer's operating system"
+              : ""
         }. Say so plainly, and do whatever part of the task does not need it.`
       );
     case "not_here":
