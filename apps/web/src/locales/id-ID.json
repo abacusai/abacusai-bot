@@ -3448,8 +3448,7 @@
       "privacy": "Opsional. Jangan sertakan data pribadi.",
       "send": "Kirim",
       "skip": "Lewati",
-      "thanks": "Terima kasih atas masukannya.",
-      "failed": "Gagal mengirim. Coba lagi:"
+      "thanks": "Terima kasih atas masukannya."
     },
     "deliverableOffer": {
       "label": "Simpan jawaban ini sebagai dokumen",

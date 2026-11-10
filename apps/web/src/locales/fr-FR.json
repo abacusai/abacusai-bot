@@ -3448,8 +3448,7 @@
       "privacy": "Facultatif. N'indiquez pas d'informations personnelles.",
       "send": "Envoyer",
       "skip": "Passer",
-      "thanks": "Merci pour votre avis.",
-      "failed": "Envoi impossible. Réessayez :"
+      "thanks": "Merci pour votre avis."
     },
     "deliverableOffer": {
       "label": "Garder cette réponse comme document",

@@ -3448,8 +3448,7 @@
       "privacy": "Opcional. No incluyas datos personales.",
       "send": "Enviar",
       "skip": "Omitir",
-      "thanks": "Gracias por tus comentarios.",
-      "failed": "No se pudo enviar. Inténtalo de nuevo:"
+      "thanks": "Gracias por tus comentarios."
     },
     "deliverableOffer": {
       "label": "Guardar esta respuesta como documento",

@@ -3448,8 +3448,7 @@
       "privacy": "Optional. Bitte keine persönlichen Daten.",
       "send": "Senden",
       "skip": "Überspringen",
-      "thanks": "Danke für dein Feedback.",
-      "failed": "Konnte nicht gesendet werden. Nochmal:"
+      "thanks": "Danke für dein Feedback."
     },
     "deliverableOffer": {
       "label": "Diese Antwort als Dokument behalten",

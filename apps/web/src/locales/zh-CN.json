@@ -3448,8 +3448,7 @@
       "privacy": "可选。请勿填写个人信息。",
       "send": "发送",
       "skip": "跳过",
-      "thanks": "感谢你的反馈。",
-      "failed": "发送失败，请重试："
+      "thanks": "感谢你的反馈。"
     },
     "deliverableOffer": {
       "label": "将此回答保存为文档",

@@ -3448,8 +3448,7 @@
       "privacy": "Facoltativo. Non inserire dati personali.",
       "send": "Invia",
       "skip": "Salta",
-      "thanks": "Grazie per il feedback.",
-      "failed": "Invio non riuscito. Riprova:"
+      "thanks": "Grazie per il feedback."
     },
     "deliverableOffer": {
       "label": "Conserva questa risposta come documento",

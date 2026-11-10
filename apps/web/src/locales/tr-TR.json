@@ -3448,8 +3448,7 @@
       "privacy": "İsteğe bağlı. Kişisel bilgi yazma.",
       "send": "Gönder",
       "skip": "Atla",
-      "thanks": "Geri bildirimin için teşekkürler.",
-      "failed": "Gönderilemedi. Tekrar dene:"
+      "thanks": "Geri bildirimin için teşekkürler."
     },
     "deliverableOffer": {
       "label": "Bu yanıtı belge olarak sakla",
