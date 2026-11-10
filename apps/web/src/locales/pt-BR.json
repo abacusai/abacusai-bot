@@ -1300,7 +1300,7 @@
       "subtitle": "Escolha uma opção. Seu bot começa na hora.",
       "build": {
         "title": "Criar algo",
-        "body": "Um site, um app ou um jogo. Descreva e veja aparecer.",
+        "body": "Um site, app ou jogo. Toque em um abaixo ou comece com um site de exemplo que você pode mudar.",
         "cta": "Começar a criar"
       },
       "chatApp": {

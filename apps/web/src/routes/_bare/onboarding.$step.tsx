@@ -48,10 +48,7 @@ import {
   startSignIn,
   cancelSignIn,
 } from "#renderer/features/onboarding/store";
-import {
-  queueStartPrompt,
-  startExampleDraft,
-} from "#renderer/features/sessions/start/start-session";
+import { startFirstTask } from "#renderer/features/sessions/start/start-session";
 import { startTour } from "#renderer/features/tour/store";
 import {
   PaidWelcomeHost,
@@ -60,7 +57,7 @@ import {
 } from "#renderer/features/upgrade-dialog";
 import {
   BUILD_STARTER_IDS,
-  CODE_STARTER_IDS,
+  GITHUB_FIRST_TASK,
 } from "#renderer/lib/build-starters";
 import {
   ONBOARDING_STEPS,
@@ -215,20 +212,16 @@ const OnboardingRoute = () => {
       await open(bot.id);
     };
     switch (choice.kind) {
-      case "build": {
-        // An example sends at once; the card itself leaves the first one in
-        // the box to edit or send, the others a tap away under it.
-        const draftId = startExampleDraft(
+      case "build":
+        // The example tapped, or the card's own sample: it starts at once.
+        startFirstTask(
           "build",
           sponsored,
-          choice.prompt == null
-            ? t(`sessions.start.build.${BUILD_STARTER_IDS[0]}.prompt`)
-            : undefined
+          choice.prompt ??
+            t(`sessions.start.build.${BUILD_STARTER_IDS[0]}.prompt`)
         );
-        if (choice.prompt != null) queueStartPrompt(draftId, choice.prompt);
         await finish({ to: "new-session" });
         return;
-      }
       case "chat-app": {
         const templateId = chatAppTemplateId(choice.app);
         const { bot } = await createBotFromTemplate(db, templateId, {
@@ -240,10 +233,10 @@ const OnboardingRoute = () => {
         return;
       }
       case "github":
-        startExampleDraft(
+        startFirstTask(
           "code",
           sponsored,
-          t(`sessions.start.code.${CODE_STARTER_IDS[0]}.prompt`)
+          t(`sessions.start.code.${GITHUB_FIRST_TASK}.prompt`)
         );
         await finish({ to: "new-session" });
         return;
