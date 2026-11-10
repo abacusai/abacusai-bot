@@ -43,6 +43,8 @@ export type StatusReason =
   | "interrupted"
   | "crashed"
   | "signed-out"
+  /** A bot's check-in waits for the one account its job needs. */
+  | "needs-account"
   /** The watchdog's: due twice over with the app online, and never fired. */
   | "unfired"
   | "ok";
@@ -55,6 +57,9 @@ export interface StatusDetail {
   sessionId?: string;
   /** The chat app it is about, or the one a routine delivers through. */
   platform?: string;
+  /** `needs-account`: the account to connect, by name ("Gmail") and registry id. */
+  account?: string;
+  accountId?: string;
   /** `missed`: slots that passed unrun, and how many of them were made up. */
   count?: number;
   madeUp?: number;

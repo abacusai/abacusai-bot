@@ -53,10 +53,22 @@ export interface BotTemplate {
    */
   connectors?: readonly string[];
   /**
-   * Connector ids (the registry's) the mission works through. The bot asks
-   * for the missing ones on its first turn; a home channel is implied.
+   * The one connector (the registry's id) the mission can do nothing without:
+   * asked for on the first turn, and its check-in waits for it. Most
+   * templates have none; a home channel is implied.
    */
-  needs?: readonly string[];
+  requires?: string;
+  /**
+   * Connectors that make the result better. None is needed to start: the bot
+   * hands over a result first and offers one at a time, when it helps.
+   */
+  improves?: readonly string[];
+  /**
+   * The job with none of `improves` connected: what the first reply and each
+   * check-in hand over until they are. Set whenever `improves` is and
+   * nothing is required.
+   */
+  withoutAccounts?: string;
   /**
    * What the first reply hands over when the mission's first step comes up
    * empty. Beside the mission rather than in it: it is the app's play for a
@@ -101,7 +113,7 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Drafts only: never send an email. I review and send them myself.",
     ].join("\n"),
     categories: ["featured"],
-    needs: ["abacus-gmailuser"],
+    requires: "abacus-gmailuser",
     firstReply: [
       'If no thread needs a reply, do not report zero or "nothing to draft": the pass still read the inbox, so hand over what it found.',
       "In a few lines: a digest of what came in (receipts, security alerts, newsletters worth reading, one line each), any deadline, bill or renewal you spotted with its date, and how many promotional or bulk emails there were.",
@@ -143,7 +155,8 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Never send the email without my approval.",
     ].join("\n"),
     categories: ["featured"],
-    needs: ["abacus-gmailuser", "abacus-googledriveuser"],
+    requires: "abacus-gmailuser",
+    improves: ["abacus-googledriveuser"],
     avatarColor: "#3b82f6",
     avatarShape: "pebble",
     connectors: ["gmail", "drive"],
@@ -199,7 +212,9 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Keep the full brief readable in under 5 minutes.",
     ].join("\n"),
     categories: ["featured"],
-    needs: ["abacus-gmailuser", "abacus-googlecalendar", "abacus-slack"],
+    improves: ["abacus-gmailuser", "abacus-googlecalendar", "abacus-slack"],
+    withoutAccounts:
+      "Brief me from the web: the weather where I am, the 5 news stories most relevant to my interests, and my top 3 priorities from what I have told you.",
     avatarColor: "#0ea5e9",
     avatarShape: "blob",
     connectors: ["gmail", "calendar", "slack"],
@@ -219,7 +234,9 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Do not place trades or present any idea as guaranteed.",
     ].join("\n"),
     categories: ["featured", "finance"],
-    needs: ["abacus-googledriveuser"],
+    improves: ["abacus-googledriveuser"],
+    withoutAccounts:
+      "Ask for my watchlist and risk level in the chat, keep them in your memory, and run the same research from Google News and Google Search.",
     avatarColor: "#6366f1",
     avatarShape: "tablet",
   },
@@ -238,11 +255,13 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Save the briefing to Google Drive.",
     ].join("\n"),
     categories: ["featured"],
-    needs: [
+    improves: [
       "abacus-googlecalendar",
       "abacus-gmailuser",
       "abacus-googledriveuser",
     ],
+    withoutAccounts:
+      "Prepare the meeting I name in the chat: research the people, their company and the topic on the web, and hand the one-page brief over here.",
     avatarColor: "#ec4899",
     avatarShape: "drop",
   },
@@ -276,12 +295,14 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Do not send any follow-up without my approval.",
     ].join("\n"),
     categories: ["featured"],
-    needs: [
+    improves: [
       "abacus-gmailuser",
       "abacus-slack",
       "messaging-whatsapp",
       "abacus-googlecalendar",
     ],
+    withoutAccounts:
+      "Track the follow-ups I mention in the chat, keep the list in your memory, and draft each follow-up here for me to send.",
     avatarColor: "#eab308",
     avatarShape: "cone",
   },
@@ -301,7 +322,9 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Never move or cancel an existing event without my approval.",
     ].join("\n"),
     categories: ["personal-assistant"],
-    needs: ["abacus-gmailuser", "abacus-googlecalendar"],
+    improves: ["abacus-gmailuser", "abacus-googlecalendar"],
+    withoutAccounts:
+      "When I paste a scheduling request and my free times, suggest the best 3 slots and draft the reply here.",
     avatarColor: "#b08968",
     avatarShape: "pebble",
   },
@@ -320,7 +343,8 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Ignore marketing emails, tentative holds, and unclear dates.",
     ].join("\n"),
     categories: ["personal-assistant"],
-    needs: ["abacus-gmailuser", "abacus-googlecalendar"],
+    requires: "abacus-gmailuser",
+    improves: ["abacus-googlecalendar"],
     avatarColor: "#8b5cf6",
     avatarShape: "cloud",
   },
@@ -340,11 +364,13 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Never make a reservation or purchase without my approval.",
     ].join("\n"),
     categories: ["personal-assistant"],
-    needs: [
+    improves: [
       "abacus-gmailuser",
       "abacus-googlecalendar",
       "abacus-googledriveuser",
     ],
+    withoutAccounts:
+      "Plan the trip I describe in the chat: research activities, restaurants and transport on the web, and hand the day-by-day itinerary over here.",
     avatarColor: "#22c55e",
     avatarShape: "pill",
   },
@@ -363,11 +389,13 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Never submit a form, cancel a service, or make a payment without my approval.",
     ].join("\n"),
     categories: ["personal-assistant"],
-    needs: [
+    improves: [
       "abacus-gmailuser",
       "abacus-googlecalendar",
       "abacus-googledriveuser",
     ],
+    withoutAccounts:
+      "Brief me each weekday from the web: the weather where I am, the headlines that matter to me, and one useful thing to do today. Help with any form, renewal or appointment I mention in the chat, and keep its due date in your memory.",
     avatarColor: "#a855f7",
     avatarShape: "blob",
   },
@@ -387,7 +415,13 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Never send the message without my approval.",
     ].join("\n"),
     categories: ["personal-assistant"],
-    needs: ["abacus-gmailuser", "abacus-googlecalendar", "messaging-whatsapp"],
+    improves: [
+      "abacus-gmailuser",
+      "abacus-googlecalendar",
+      "messaging-whatsapp",
+    ],
+    withoutAccounts:
+      "Keep the appointments I mention in the chat in your memory, remind me 24 hours before when preparation is needed, and draft any confirmation or reschedule message here.",
     avatarColor: "#3b82f6",
     avatarShape: "tablet",
   },
@@ -407,7 +441,9 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "If a new urgent task appears, tell me what should move rather than adding more work.",
     ].join("\n"),
     categories: ["productivity"],
-    needs: ["abacus-googlecalendar", "abacus-gmailuser", "abacus-slack"],
+    improves: ["abacus-googlecalendar", "abacus-gmailuser", "abacus-slack"],
+    withoutAccounts:
+      "Work from what I tell you is on my plate today: pick the 3–5 highest-value tasks and suggest focus blocks around the times I give you.",
     avatarColor: "#f97316",
     avatarShape: "drop",
   },
@@ -427,12 +463,14 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Never send the follow-up without my approval.",
     ].join("\n"),
     categories: ["productivity"],
-    needs: [
+    improves: [
       "abacus-googlecalendar",
       "abacus-googledriveuser",
       "abacus-gmailuser",
       "abacus-slack",
     ],
+    withoutAccounts:
+      "Work from notes or a transcript I paste or drop in the chat, and hand the summary and the follow-up draft over here.",
     avatarColor: "#ef4444",
     avatarShape: "squircle",
   },
@@ -451,12 +489,14 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Do not report planned work as completed work.",
     ].join("\n"),
     categories: ["productivity"],
-    needs: [
+    improves: [
       "abacus-slack",
       "abacus-gmailuser",
       "abacus-googlecalendar",
       "abacus-googledriveuser",
     ],
+    withoutAccounts:
+      "Keep a running project log in your memory from what I tell you in the chat, and report Done, Next, Blocked, Overdue and Decisions Needed from it.",
     avatarColor: "#0ea5e9",
     avatarShape: "cone",
   },
@@ -475,7 +515,9 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "If sources conflict, show the conflict instead of guessing.",
     ].join("\n"),
     categories: ["productivity"],
-    needs: ["abacus-gmailuser", "abacus-slack", "abacus-googledriveuser"],
+    improves: ["abacus-gmailuser", "abacus-slack", "abacus-googledriveuser"],
+    withoutAccounts:
+      "Search the files on this computer, our past chats and the web for what I ask, and answer with the sources.",
     avatarColor: "#6366f1",
     avatarShape: "pebble",
   },
@@ -495,12 +537,14 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Keep routine activity out unless it changed an outcome.",
     ].join("\n"),
     categories: ["productivity"],
-    needs: [
+    improves: [
       "abacus-googlecalendar",
       "abacus-gmailuser",
       "abacus-slack",
       "abacus-googledriveuser",
     ],
+    withoutAccounts:
+      "Run the review from what I tell you about my week and what you remember of our chats, and recommend next week's top 5 priorities.",
     avatarColor: "#ec4899",
     avatarShape: "cloud",
   },
@@ -519,7 +563,7 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Never publish or send anything without my approval.",
     ].join("\n"),
     categories: ["social-media"],
-    needs: ["abacus-twitter"],
+    requires: "abacus-twitter",
     avatarColor: "#14b8a6",
     avatarShape: "pill",
   },
@@ -556,7 +600,9 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Return the drafts for review. Never publish automatically.",
     ].join("\n"),
     categories: ["social-media"],
-    needs: ["abacus-googledriveuser"],
+    improves: ["abacus-googledriveuser"],
+    withoutAccounts:
+      "Work from a document, note or link I paste or drop in the chat, and return the drafts here.",
     avatarColor: "#b08968",
     avatarShape: "tablet",
   },
@@ -576,7 +622,9 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Never publish without my approval.",
     ].join("\n"),
     categories: ["social-media"],
-    needs: ["abacus-googledriveuser"],
+    improves: ["abacus-googledriveuser"],
+    withoutAccounts:
+      "Use Google News, X, LinkedIn and what you know of my interests to propose the angles and write the post here.",
     avatarColor: "#8b5cf6",
     avatarShape: "drop",
   },
@@ -595,7 +643,7 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Never post a reply without my approval.",
     ].join("\n"),
     categories: ["social-media"],
-    needs: ["abacus-twitter"],
+    requires: "abacus-twitter",
     avatarColor: "#22c55e",
     avatarShape: "squircle",
   },
@@ -615,7 +663,9 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Do not fill gaps with guesses.",
     ].join("\n"),
     categories: ["research"],
-    needs: ["abacus-googledriveuser"],
+    improves: ["abacus-googledriveuser"],
+    withoutAccounts:
+      "Hand the brief over in the chat, as a document when it is long.",
     avatarColor: "#a855f7",
     avatarShape: "cone",
   },
@@ -670,7 +720,8 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Do not overstate conclusions beyond the paper.",
     ].join("\n"),
     categories: ["research"],
-    needs: ["abacus-googledriveuser"],
+    improves: ["abacus-googledriveuser"],
+    withoutAccounts: "Hand the reading list over in the chat.",
     avatarColor: "#ef4444",
     avatarShape: "pill",
   },
@@ -690,7 +741,9 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Do not hide uncertainty or missing information.",
     ].join("\n"),
     categories: ["research"],
-    needs: ["abacus-googledriveuser"],
+    improves: ["abacus-googledriveuser"],
+    withoutAccounts:
+      "Build the comparison as a table in the chat, or as a spreadsheet file when it is large.",
     avatarColor: "#0ea5e9",
     avatarShape: "blob",
   },
@@ -709,7 +762,9 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Do not place trades.",
     ].join("\n"),
     categories: ["finance"],
-    needs: ["abacus-googledriveuser"],
+    improves: ["abacus-googledriveuser"],
+    withoutAccounts:
+      "Ask for my holdings and watchlist in the chat, keep them in your memory, and run the same checks from Google News and Google Search.",
     avatarColor: "#6366f1",
     avatarShape: "tablet",
   },
@@ -729,7 +784,9 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Do not place trades.",
     ].join("\n"),
     categories: ["finance"],
-    needs: ["abacus-googledriveuser", "abacus-googlecalendar"],
+    improves: ["abacus-googledriveuser", "abacus-googlecalendar"],
+    withoutAccounts:
+      "Ask for my watchlist in the chat, keep it in your memory, and remind me of earnings dates here instead of in a calendar.",
     avatarColor: "#ec4899",
     avatarShape: "drop",
   },
@@ -749,7 +806,8 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Never move money or change any financial account.",
     ].join("\n"),
     categories: ["finance"],
-    needs: ["abacus-gmailuser", "abacus-googledriveuser"],
+    requires: "abacus-gmailuser",
+    improves: ["abacus-googledriveuser"],
     avatarColor: "#14b8a6",
     avatarShape: "squircle",
   },
@@ -768,7 +826,8 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Never cancel a service or make a payment without my approval.",
     ].join("\n"),
     categories: ["finance"],
-    needs: ["abacus-gmailuser", "abacus-googlecalendar"],
+    requires: "abacus-gmailuser",
+    improves: ["abacus-googlecalendar"],
     avatarColor: "#eab308",
     avatarShape: "cone",
   },
@@ -788,12 +847,14 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Never send messages or move launch dates without my approval.",
     ].join("\n"),
     categories: ["marketing"],
-    needs: [
+    improves: [
       "abacus-slack",
       "abacus-gmailuser",
       "abacus-googlecalendar",
       "abacus-googledriveuser",
     ],
+    withoutAccounts:
+      "Track the launch from what I tell you in the chat: keep the milestones, owners and dates in your memory and report On track, At risk, Blocked and Decisions needed.",
     avatarColor: "#b08968",
     avatarShape: "pebble",
   },
@@ -813,7 +874,9 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Do not invent customer quotes or inflate weak patterns.",
     ].join("\n"),
     categories: ["marketing"],
-    needs: ["abacus-gmailuser", "abacus-slack", "abacus-googledriveuser"],
+    improves: ["abacus-gmailuser", "abacus-slack", "abacus-googledriveuser"],
+    withoutAccounts:
+      "Work from the feedback, emails or call notes I paste or drop in the chat.",
     avatarColor: "#8b5cf6",
     avatarShape: "cloud",
   },
@@ -832,7 +895,9 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Do not repeat unchanged campaigns from prior reports.",
     ].join("\n"),
     categories: ["marketing"],
-    needs: ["abacus-googledriveuser"],
+    improves: ["abacus-googledriveuser"],
+    withoutAccounts:
+      "Hand the findings over in the chat, as a document when they are long.",
     avatarColor: "#22c55e",
     avatarShape: "pill",
   },
@@ -852,7 +917,9 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Never publish content automatically.",
     ].join("\n"),
     categories: ["marketing"],
-    needs: ["abacus-googledriveuser", "abacus-slack"],
+    improves: ["abacus-googledriveuser", "abacus-slack"],
+    withoutAccounts:
+      "Keep the content calendar from what I tell you in the chat, or a spreadsheet I drop here, and flag what is overdue or missing.",
     avatarColor: "#a855f7",
     avatarShape: "blob",
   },
@@ -871,7 +938,9 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "- Call out missing or unreliable data instead of inventing an explanation.",
     ].join("\n"),
     categories: ["marketing"],
-    needs: ["abacus-googledriveuser", "abacus-gmailuser", "abacus-slack"],
+    improves: ["abacus-googledriveuser", "abacus-gmailuser", "abacus-slack"],
+    withoutAccounts:
+      "Work from the metrics I paste or a spreadsheet I drop in the chat.",
     avatarColor: "#3b82f6",
     avatarShape: "tablet",
   },
@@ -890,7 +959,8 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Do not infer sensitive personal traits or make the final hiring decision.",
     ].join("\n"),
     categories: ["recruiting"],
-    needs: ["abacus-gmailuser"],
+    improves: ["abacus-gmailuser"],
+    withoutAccounts: "Draft each outreach message here for me to send.",
     avatarColor: "#f97316",
     avatarShape: "drop",
   },
@@ -909,7 +979,9 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Do not infer sensitive traits, rank candidates, or make the final hiring decision.",
     ].join("\n"),
     categories: ["recruiting"],
-    needs: ["abacus-googledriveuser", "abacus-gmailuser"],
+    improves: ["abacus-googledriveuser", "abacus-gmailuser"],
+    withoutAccounts:
+      "Work from a job description and resume I paste or drop in the chat.",
     avatarColor: "#ef4444",
     avatarShape: "squircle",
   },
@@ -929,7 +1001,9 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Never cancel or materially reschedule an interview without confirmation.",
     ].join("\n"),
     categories: ["recruiting"],
-    needs: ["abacus-gmailuser", "abacus-googlecalendar"],
+    improves: ["abacus-gmailuser", "abacus-googlecalendar"],
+    withoutAccounts:
+      "When I paste the interview constraints and the interviewers' free times, find 3 options and draft the scheduling email here.",
     avatarColor: "#0ea5e9",
     avatarShape: "cone",
   },
@@ -948,7 +1022,9 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Require my approval before sending rejection, compensation, or offer-related messages.",
     ].join("\n"),
     categories: ["recruiting"],
-    needs: ["abacus-gmailuser", "abacus-googlecalendar", "abacus-slack"],
+    improves: ["abacus-gmailuser", "abacus-googlecalendar", "abacus-slack"],
+    withoutAccounts:
+      "Track the candidates I mention in the chat, keep them in your memory, and draft each follow-up here.",
     avatarColor: "#6366f1",
     avatarShape: "pebble",
   },
@@ -967,12 +1043,14 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Exclude sensitive or non-job-related personal information.",
     ].join("\n"),
     categories: ["recruiting"],
-    needs: [
+    improves: [
       "abacus-googlecalendar",
       "abacus-gmailuser",
       "abacus-googledriveuser",
       "abacus-slack",
     ],
+    withoutAccounts:
+      "Work from a resume and job description I paste or drop in the chat, and hand the brief over here.",
     avatarColor: "#ec4899",
     avatarShape: "cloud",
   },

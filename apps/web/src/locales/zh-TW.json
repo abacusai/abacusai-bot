@@ -3657,6 +3657,7 @@
       "failed": "失敗",
       "skipped": "已略過",
       "skipped-link": "已略過：尚未連結聊天應用程式",
+      "skipped-account": "已略過：等待帳號",
       "skipped-offline": "已略過：離線",
       "skipped-credits": "已略過：點數不足",
       "offline": "無法連線到 Abacus",
@@ -5010,7 +5011,7 @@
   },
   "kickoff": {
     "connectOne": "首先，如果系統提醒沒有將 {{name}} 列為已連接，請立即為它呼叫 connect_connector。",
-    "connectMany": "首先，對於 {{names}} 中系統提醒未列為已連接的每一項，請立即呼叫 connect_connector。",
+    "resultFirst": "先用不需要任何帳號就能做的事交付一個實際結果；如果這項工作要從只有使用者能給的東西開始（他們的問題、一個主題、一份清單），就用一個簡短的問題來問；之後才最多提議一個連線，選最能改善結果的那個。",
     "introduce": "先做一次自我介紹，然後 {{start}}。",
     "startMission": "開始執行你的任務目標",
     "startGoal": "朝使用者的要求踏出第一步：「{{goal}}」",
@@ -5216,6 +5217,7 @@
     "body": {
       "signedOut": "你登出時它無法執行。登入後會再次執行。",
       "routineLinkLost": "它的執行會等到 {{platform}} 重新連線，屆時會補上錯過的執行。",
+      "routineNeedsAccount": "在 {{account}} 連線之前，它的定期檢查會等待。連線後會自動開始。",
       "loginNotFinished": "{{platform}} 登入沒有完成，所以已暫停。點擊「連線」完成登入。",
       "missedMany_one": "電腦睡眠或應用程式關閉期間，{{routines}} 個例行任務錯過了 {{count}} 次執行，已補上 {{madeUp}} 次。",
       "missedMany_other": "電腦睡眠或應用程式關閉期間，{{routines}} 個例行任務錯過了 {{count}} 次執行，已補上 {{madeUp}} 次。",

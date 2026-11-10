@@ -188,6 +188,7 @@ import type {
   BackendId,
   BackendStatus,
 } from "@abacus-ai/contract/exec-backends";
+import { funnelId } from "@abacus-ai/contract/funnel";
 import {
   APP_OF_SELF_LANE,
   SELF_LANE_FOR_APP,
@@ -389,6 +390,12 @@ import { stopAllServed } from "./services/agent-tools/static-server";
 import { WebhookRelay } from "./services/agent-tools/webhook-relay";
 import { WebhookService } from "./services/agent-tools/webhook-service";
 import { AguiRelayService } from "./services/agui/relay-service";
+import {
+  botAccounts,
+  botCreatedDetail,
+  checkInAccountLine,
+  formatRegion,
+} from "./services/bots/bot-accounts";
 import {
   BOT_ANSWER_SEGMENT,
   BOT_ASK_PLATFORM,
@@ -1764,7 +1771,10 @@ export class ServiceHost {
           ...(link.expiresAt != null ? { expiresAt: link.expiresAt } : {}),
         };
       },
-      show: (input) => this.connectorGate.show(input),
+      show: (input) => {
+        this.connectorGate.show(input);
+        reportFunnelStep("connect_card_shown", funnelId(input.connectorId));
+      },
       watch: (input) => {
         this.connectWatcher.watch(input);
         // Only a host lane's session (the hosted phone) reads its waits.
@@ -2280,6 +2290,8 @@ export class ServiceHost {
       })
     )
       this.refreshAgentProviders();
+    for (const id of connectorIds)
+      reportFunnelStep("connect_done", funnelId(id));
     this.connectorGate.clearFor(connectorIds);
     this.pendingWaits.connectLanded(connectorIds);
   }
@@ -2533,6 +2545,27 @@ export class ServiceHost {
       emittedAt: new Date().toISOString(),
     });
     void this.pruneKeptConnectorCards();
+    void this.releaseRoutinesHeldForAccounts();
+  }
+
+  /** A check-in held for its account is no longer stopped once that account is connected. */
+  private async releaseRoutinesHeldForAccounts(): Promise<void> {
+    const held = this.statusBoard
+      .list()
+      .filter(
+        (item) =>
+          item.key.startsWith("routine:") && item.reason === "needs-account"
+      );
+    if (held.length === 0) return;
+    const statuses = await this.connectorStatuses.list().catch(() => null);
+    if (statuses == null) return;
+    for (const item of held) {
+      const job = getJob(item.key.slice("routine:".length));
+      const bot = job?.botId == null ? null : getBot(job.botId);
+      const requiredId = bot == null ? null : botAccounts(bot).requiredId;
+      if (requiredId == null || statuses[requiredId]?.state === "connected")
+        this.statusBoard.clear(item.key, ["needs-account"]);
+    }
   }
 
   /**
@@ -2992,6 +3025,7 @@ export class ServiceHost {
       );
     },
     appLanguage: () => this.appLanguage(),
+    computerRegion: () => this.computerRegion(),
     saveHomeBot: (app, botId) => {
       saveGatewaySettings({ selfBotIds: { [SELF_LANE_FOR_APP[app]]: botId } });
       this.emitEvent({
@@ -4362,7 +4396,9 @@ export class ServiceHost {
   }
 
   createBot(input: BotCreateInput, id?: string): Bot {
-    return this.botService.create(input, id);
+    const bot = this.botService.create(input, id);
+    reportFunnelStep("bot_created", botCreatedDetail(bot));
+    return bot;
   }
 
   updateBot(id: string, changes: BotUpdateInput): Bot {
@@ -6415,6 +6451,25 @@ export class ServiceHost {
     }
   }
 
+  /**
+   * The account a bot's check-in cannot start without, when the user has not
+   * connected it; null otherwise. Only a definite "not connected" holds a
+   * run: an account list that cannot be read lets it go.
+   */
+  private async routineMissingAccount(
+    job: CronJob
+  ): Promise<{ id: string; name: string } | null> {
+    if (job.prompt !== CHECK_IN_PROMPT || job.botId == null) return null;
+    const bot = getBot(job.botId);
+    if (bot == null) return null;
+    const { required, requiredId } = botAccounts(bot);
+    if (required == null || requiredId == null) return null;
+    const statuses = await this.connectorStatuses.list().catch(() => null);
+    return statuses?.[requiredId]?.state === "available"
+      ? { id: requiredId, name: required }
+      : null;
+  }
+
   /** A routine that keeps failing pauses itself rather than failing forever. */
   private pauseIfFailingRepeatedly(routineId: string): void {
     // Failures before the user last resumed it are the old streak.
@@ -6745,14 +6800,18 @@ export class ServiceHost {
     const bot = job.botId == null ? null : getBot(job.botId);
     if (bot == null) return prompt;
     const memory = readBotMemoryText(bot.id);
-    const mission =
-      job.prompt === CHECK_IN_PROMPT
-        ? missionForCheckIn(bot.description)
-        : null;
+    const checkIn = job.prompt === CHECK_IN_PROMPT;
+    const mission = checkIn ? missionForCheckIn(bot.description) : null;
+    const accounts = checkIn ? checkInAccountLine(bot) : null;
+    const region = this.computerRegion();
     const voice = [
       `You are ${bot.name}, running a routine you set up for the user.`,
       bot.persona.length > 0 ? `Your voice, every message: ${bot.persona}` : "",
       mission != null ? `Your mission:\n${mission}` : "",
+      accounts ?? "",
+      region != null
+        ? `This computer is set to ${region}: use it for weather, local news and local times unless the user named another place.`
+        : "",
       memory.length > 0
         ? `What you remember about the user and this work:\n${memory}`
         : "",
@@ -8416,6 +8475,27 @@ export class ServiceHost {
       return "skipped";
     }
 
+    // Its job cannot start without an account the user has not connected: a
+    // run would bill for saying so again. Someone pressing Run asked for it.
+    const missing =
+      trigger === "manual" ? null : await this.routineMissingAccount(job);
+    if (missing != null) {
+      recordRun(jobId, ROUTINE_RESULTS.skippedAccount, trigger, {
+        id: attemptId,
+        kind: "skipped-account",
+      });
+      this.statusBoard.routineStopped(jobId, "needs-account", {
+        ...this.routineDetail(job),
+        account: missing.name,
+        accountId: missing.id,
+      });
+      this.emitEvent({
+        type: "cronjobs-updated",
+        emittedAt: new Date().toISOString(),
+      });
+      return "skipped";
+    }
+
     // One run at a time, or a five-minute routine whose runs take eight stacks.
     if (hasRunInFlight(this.listRoutineRuns(jobId))) {
       recordRun(jobId, ROUTINE_RESULTS.skipped, trigger, {
@@ -8708,6 +8788,22 @@ export class ServiceHost {
   /** The app's language tag, the OS's while the user has not picked one; the UI resolves the same way. */
   private appLanguage(): string {
     return appLanguage(this.prefs?.().get().language).tag;
+  }
+
+  /**
+   * Where this computer says its user is. A hosted server's region is its
+   * data centre's, not the user's, so it names none.
+   */
+  private computerRegion(): string | null {
+    if (
+      this.platform !== "electron" ||
+      import.meta.env.ABACUS_WEB_HOST === true
+    )
+      return null;
+    return formatRegion(
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+      app.getLocaleCountryCode()
+    );
   }
 
   /**

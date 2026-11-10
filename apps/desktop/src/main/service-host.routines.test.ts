@@ -938,6 +938,7 @@ describe("a routine whose chat app lost its link", () => {
       routineLinkDown: proto.routineLinkDown,
       markRoutineLinkLost: proto.markRoutineLinkLost,
       routineAtCreditWall: async () => false,
+      routineMissingAccount: async () => null,
       routineActsElsewhere: proto.routineActsElsewhere,
       threadStore: { readCurrentFile: (id: string) => threads[id] },
       emitEvent: () => undefined,

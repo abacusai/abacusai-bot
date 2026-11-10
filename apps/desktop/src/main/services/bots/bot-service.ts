@@ -11,7 +11,6 @@ import {
   resolveReplyLanguage,
 } from "@abacus-ai/agent/user-language";
 import { appNoteTag } from "@abacus-ai/agent/user-text";
-import { connectorById } from "@abacus-ai/connectors/registry";
 import type { UserTextTags } from "@abacus-ai/contract/agent-types";
 import {
   type Bot,
@@ -47,6 +46,7 @@ import {
   type ChannelWords,
 } from "../messaging/channel-words";
 import { resolveAbacusApiKey } from "../providers/abacus";
+import { accountLines, botAccounts, regionLine } from "./bot-accounts";
 import { BOT_ASK_PLATFORM, colleagueLines } from "./bot-ask";
 import {
   botDir,
@@ -134,6 +134,8 @@ export interface BotServiceCallbacks {
   saveHomeBot?: (app: HomeChannel, botId: string) => void;
   /** The app's language tag (en-US, pt-BR); a first run writes in it. */
   appLanguage?: () => string;
+  /** Where the computer says the user is (time zone and country); null when it cannot tell. */
+  computerRegion?: () => string | null;
   /** The bot's routines right now, for the note an edit sends it. */
   botRoutines?: (botId: string) => BotRoutineLine[];
 }
@@ -174,36 +176,6 @@ const homeChannelLines = (bot: Bot): string[] => {
     `${app} right now, marked copy: true (for example "remind me at 6pm to call`,
     `mom"), with a few words on where to send it (${phoneChatRoute(bot.homeChannel, import.meta.env.ABACUS_WEB_HOST === true ? "hosted" : "desktop")};`,
     "once connected, if it is not yet); then one or two things you can do right here.",
-  ];
-};
-
-/** What the bot's mission works through, by name: its home app first. */
-const neededConnectorNames = (bot: Bot): string[] => [
-  ...new Set([
-    ...(bot.homeChannel != null ? [HOME_CHANNEL_NAMES[bot.homeChannel]] : []),
-    ...(
-      BOT_TEMPLATES.find((row) => row.id === bot.templateId)?.needs ?? []
-    ).flatMap((id) => connectorById(id)?.name ?? []),
-  ]),
-];
-
-/** Static per bot, so the cached prompt holds; the live state is in the reminder. */
-const neededConnectorLines = (bot: Bot): string[] => {
-  const names = neededConnectorNames(bot);
-  if (names.length === 0) return [];
-  return [
-    "",
-    `**Connectors your mission needs:** ${names.join(", ")}.`,
-    "On your first turn, call connect_connector for each of these that the",
-    "system reminder does not list as connected, before or with your greeting,",
-    "then start on what works without them.",
-    // A Connect card nobody taps must not leave the chat waiting on it.
-    "Never wait on one that is missing or fails to connect: that same first",
-    "reply says in a line what you will do once it is connected and ends with",
-    "two or three tasks you can do without it (suggest_tasks), such as",
-    '"Research a topic and give me a report", "Write an email for me" or',
-    '"Make me a one-page website". The Connect card stays beside them; you',
-    "are told when it is connected, and take up your mission then.",
   ];
 };
 
@@ -281,7 +253,9 @@ const isStaleTemplateRole = (bot: Bot): boolean => {
 export const renderPersona = (
   bot: Bot,
   homes: Partial<Record<HomeChannel, Bot>>,
-  bots: readonly Bot[] = []
+  bots: readonly Bot[] = [],
+  /** Where the computer says the user is; null when it cannot tell. */
+  region: string | null = null
 ): string => {
   const role = bot.title.length > 0 ? bot.title : "assistant";
 
@@ -296,7 +270,8 @@ export const renderPersona = (
       : []),
     ...firstReplyLines(bot),
     ...homeChannelLines(bot),
-    ...neededConnectorLines(bot),
+    ...accountLines(bot),
+    ...regionLine(region),
     ...homeBotLines(bot, homes),
     // A colleague's stale template role is dropped, as for the bot's own.
     ...colleagueLines(
@@ -427,17 +402,15 @@ export const kickstartMessage = (
   words: ChannelWords
 ): string => {
   const { t } = words;
-  const names = neededConnectorNames(bot);
+  const { required, improves } = botAccounts(bot);
+  // The one account the job cannot start without is asked for at once; the
+  // rest wait until a result is in the user's hands.
   const connect =
-    names.length === 0
-      ? null
-      : names.length === 1
-        ? t("kickoff.connectOne", { name: names[0]! })
-        : t("kickoff.connectMany", {
-            names: new Intl.ListFormat(words.locale, {
-              type: "conjunction",
-            }).format(names),
-          });
+    required != null
+      ? t("kickoff.connectOne", { name: required })
+      : improves.length > 0
+        ? t("kickoff.resultFirst")
+        : null;
   const goal = goalOfMission(bot.description);
   const start =
     goal == null ? t("kickoff.startMission") : t("kickoff.startGoal", { goal });
@@ -1060,7 +1033,7 @@ export class BotService {
   private writePersona(bot: Bot, homes = this.homes()): void {
     writeFileAtomicSync(
       personaPath(bot.id),
-      `${renderPersona(bot, homes, listBots())}\n`
+      `${renderPersona(bot, homes, listBots(), this.callbacks.computerRegion?.() ?? null)}\n`
     );
   }
 

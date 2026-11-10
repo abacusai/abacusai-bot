@@ -57,7 +57,16 @@ export const RoutineStatusNote = ({ row }: { row: RoutineRow }) => {
                 search: { platform: item.detail.platform as never },
               }),
           }
-        : null;
+        : isReason(item, "needs-account") && item.detail.accountId != null
+          ? {
+              label: t("phase5.connect"),
+              run: () =>
+                void navigate({
+                  to: "/library/connectors",
+                  search: { connector: item.detail.accountId as never },
+                }),
+            }
+          : null;
   // An app pause's reason is the history line above (RoutinePausedReason); here its way back.
   if (item.state === "paused-by-app" && action != null && !row.enabled)
     return (

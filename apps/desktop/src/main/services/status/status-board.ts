@@ -141,6 +141,7 @@ export type RoutineStopCause =
   | "failing-pause"
   | "link-down"
   | "signed-out"
+  | "needs-account"
   | "user-pause";
 
 const ROUTINE_STOPS: Record<
@@ -154,6 +155,7 @@ const ROUTINE_STOPS: Record<
   "failing-pause": { state: "paused-by-app", reason: "failing" },
   "link-down": { state: "paused-by-app", reason: "link-lost" },
   "signed-out": { state: "stopped-needs-user", reason: "signed-out" },
+  "needs-account": { state: "stopped-needs-user", reason: "needs-account" },
 };
 
 interface Pending {
@@ -673,6 +675,10 @@ const bodyOf = (entry: Pending, t: PlanT): string => {
       return t("routines.creditHold.notify");
     case "signed-out":
       return t("status.body.signedOut");
+    case "needs-account":
+      return t("status.body.routineNeedsAccount", {
+        account: entry.detail.account ?? "",
+      });
     case "link-lost":
     case "needs-login":
       return entry.key.startsWith("lane:")

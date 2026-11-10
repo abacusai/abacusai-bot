@@ -79,6 +79,10 @@ export const statusLine = (item: StatusItem, t: TFunction): string => {
       return t("routines.creditHold.note");
     case "signed-out":
       return t("status.body.signedOut");
+    case "needs-account":
+      return t("status.body.routineNeedsAccount", {
+        account: item.detail.account ?? "",
+      });
     case "link-lost":
     case "needs-login":
       return lane

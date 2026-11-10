@@ -3657,6 +3657,7 @@
       "failed": "Başarısız",
       "skipped": "Atlandı",
       "skipped-link": "Atlandı: sohbet uygulaması bağlı değil",
+      "skipped-account": "Atlandı: bir hesap bekleniyor",
       "skipped-offline": "Atlandı: çevrimdışı",
       "skipped-credits": "Atlandı: kredi kalmadı",
       "offline": "Abacus'a ulaşılamadı",
@@ -5010,7 +5011,7 @@
   },
   "kickoff": {
     "connectOne": "Önce, sistem hatırlatıcısı {{name}} için bağlı demiyorsa hemen bunun için connect_connector çağır.",
-    "connectMany": "Önce, {{names}} arasından sistem hatırlatıcısının bağlı olarak listelemediği her biri için hemen connect_connector çağır.",
+    "resultFirst": "Önce hiçbir hesap olmadan çalışanlarla gerçek bir sonuç teslim et ya da iş yalnızca kullanıcının verebileceği bir şeyle başlıyorsa (sorusu, bir konu, bir liste) bunu tek kısa bir soruyla iste; ancak ondan sonra, sonucu en çok iyileştirecek en fazla bir bağlantı öner.",
     "introduce": "Kendini bir kez tanıt, sonra {{start}}.",
     "startMission": "görevine başla",
     "startGoal": "kullanıcının istediği şeye doğru ilk adımı at: \"{{goal}}\"",
@@ -5216,6 +5217,7 @@
     "body": {
       "signedOut": "Oturum kapalıyken çalışamaz. Oturum açın, yeniden çalışır.",
       "routineLinkLost": "Çalıştırmaları {{platform}} yeniden bağlanana kadar bekler. Kaçırılan çalıştırma o zaman telafi edilir.",
+      "routineNeedsAccount": "Kontrolleri {{account}} bağlanana kadar bekler. Bağla, kendiliğinden başlarlar.",
       "loginNotFinished": "{{platform}} oturum açma işlemi tamamlanmadı, bu yüzden duraklatıldı. Tamamlamak için Bağlan'a tıklayın.",
       "missedMany_one": "Bilgisayar uykudayken veya uygulama kapalıyken {{routines}} rutin {{count}} çalıştırmayı kaçırdı. {{madeUp}} telafi edildi.",
       "missedMany_other": "Bilgisayar uykudayken veya uygulama kapalıyken {{routines}} rutin {{count}} çalıştırmayı kaçırdı. {{madeUp}} telafi edildi.",

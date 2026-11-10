@@ -96,7 +96,9 @@ describe("creating a bot", () => {
     expect(bot.homeChannel).toBe("telegram");
     const persona = fs.readFileSync(personaPath(bot.id), "utf8");
     expect(persona).toContain("**Your main connector to use is Telegram.**");
-    expect(persona).toContain("**Connectors your mission needs:** Telegram.");
+    expect(persona).toContain(
+      "**The one account your mission needs:** Telegram."
+    );
   });
 
   it("names what the mission needs, home app first, and never says offer", () => {
@@ -112,8 +114,13 @@ describe("creating a bot", () => {
     });
 
     const persona = fs.readFileSync(personaPath(bot.id), "utf8");
+    // Its home app is the one account; a mission the user rewrote keeps the
+    // template's other accounts as ones that only make the work better.
     expect(persona).toContain(
-      "**Connectors your mission needs:** WhatsApp, Gmail, Slack, Google Calendar."
+      "**The one account your mission needs:** WhatsApp."
+    );
+    expect(persona).toContain(
+      "**Accounts that make your work better:** Gmail, Slack, Google Calendar."
     );
     expect(persona).toContain("call connect_connector for it right away");
     expect(persona).toContain(
@@ -181,7 +188,9 @@ describe("creating a bot", () => {
 
     const persona = fs.readFileSync(personaPath(bot.id), "utf8");
     expect(persona).not.toContain("Your main connector to use is");
-    expect(persona).not.toContain("Connectors your mission needs");
+    expect(persona).not.toMatch(
+      /account your mission needs|Accounts that make/
+    );
   });
 });
 
@@ -247,7 +256,9 @@ describe("opening the forever chat", () => {
     await service.openChat(bot.id);
 
     const persona = fs.readFileSync(personaPath(bot.id), "utf8");
-    expect(persona).not.toContain("Connectors your mission needs");
+    expect(persona).not.toMatch(
+      /account your mission needs|Accounts that make/
+    );
     const [, , kickstart] = vi.mocked(callbacks.sendMessage).mock.calls[0]!;
     expect(kickstart).not.toContain("connect_connector");
   });
@@ -338,7 +349,9 @@ describe("opening the forever chat", () => {
     expect(persona).toContain(
       '**Your mission, yours alone:** The user created you for this, in their own words: "Study Buddy for my exams".'
     );
-    expect(persona).not.toContain("Connectors your mission needs");
+    expect(persona).not.toMatch(
+      /account your mission needs|Accounts that make/
+    );
     const [, , kickstart] = vi.mocked(callbacks.sendMessage).mock.calls[0]!;
     expect(kickstart).toContain(
       'kullanıcının istediği şeye doğru ilk adımı at: "Study Buddy for my exams".'
@@ -1040,5 +1053,99 @@ describe("an older install's self-lane bot", () => {
     service.adoptChannelBots();
 
     expect(stored.whatsapp).toBe(chosen.id);
+  });
+});
+
+describe("a template bot's accounts", () => {
+  const fromTemplate = (service: BotService, id: string, mission?: string) => {
+    const template = BOT_TEMPLATES.find((row) => row.id === id)!;
+    return service.create({
+      name: template.name,
+      title: template.title,
+      persona: template.persona,
+      description: mission ?? template.mission,
+      templateId: template.id,
+    });
+  };
+
+  it("hands over a result first when no account is required, then offers one", async () => {
+    // Asking for three accounts in one link before anything useful lost the user.
+    const callbacks = makeCallbacks({ appLanguage: () => "en-US" });
+    const service = new BotService(callbacks);
+    const bot = fromTemplate(service, "personal-admin");
+
+    await service.openChat(bot.id);
+
+    const persona = fs.readFileSync(personaPath(bot.id), "utf8");
+    expect(persona).not.toContain("account your mission needs");
+    expect(persona).toContain(
+      "**Accounts that make your work better:** Gmail, Google Calendar, Google Drive."
+    );
+    expect(persona).toContain(
+      "Until one is connected: Brief me each weekday from the web: the weather where I am"
+    );
+    expect(persona).toContain("may offer one of them");
+    expect(persona).toContain("never several at once");
+    const [, , kickstart] = vi.mocked(callbacks.sendMessage).mock.calls[0]!;
+    expect(kickstart).toMatch(
+      /^\[first run\] First hand over a real result made with what works without any account, or, when the job starts from something only the user can give/
+    );
+    expect(kickstart).not.toContain("call connect_connector");
+  });
+
+  it("asks at once for the one account a job cannot start without", async () => {
+    const callbacks = makeCallbacks({ appLanguage: () => "en-US" });
+    const service = new BotService(callbacks);
+    const bot = fromTemplate(service, "chief-of-staff");
+
+    await service.openChat(bot.id);
+
+    const persona = fs.readFileSync(personaPath(bot.id), "utf8");
+    expect(persona).toContain("**The one account your mission needs:** Gmail.");
+    expect(persona).toContain(
+      "hand\nover a short sample of what you will deliver"
+    );
+    expect(persona).not.toContain("Accounts that make");
+    const [, , kickstart] = vi.mocked(callbacks.sendMessage).mock.calls[0]!;
+    expect(kickstart).toContain(
+      "does not list Gmail as connected, call connect_connector for it now."
+    );
+  });
+
+  it("only offers a required account once the user rewrote the mission", async () => {
+    const callbacks = makeCallbacks({ appLanguage: () => "en-US" });
+    const service = new BotService(callbacks);
+    const bot = fromTemplate(
+      service,
+      "chief-of-staff",
+      "Keep me on top of my week."
+    );
+
+    await service.openChat(bot.id);
+
+    const persona = fs.readFileSync(personaPath(bot.id), "utf8");
+    expect(persona).not.toContain("account your mission needs");
+    expect(persona).toContain(
+      "**Accounts that make your work better:** Gmail."
+    );
+    // The template's play for an empty account is for its own mission only.
+    expect(persona).not.toContain("Until one is connected");
+    const [, , kickstart] = vi.mocked(callbacks.sendMessage).mock.calls[0]!;
+    expect(kickstart).not.toContain("call connect_connector");
+  });
+
+  it("tells every bot where the computer says the user is", () => {
+    const service = new BotService(
+      makeCallbacks({
+        computerRegion: () => "Europe/London time zone, United Kingdom",
+      })
+    );
+    const bot = fromTemplate(service, "morning-brief");
+
+    const persona = fs.readFileSync(personaPath(bot.id), "utf8");
+    expect(persona).toContain(
+      "**Where the user is:** this computer is set to Europe/London time zone, United Kingdom."
+    );
+    expect(persona).toContain("weather, local news and local times");
   });
 });

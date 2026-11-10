@@ -14,6 +14,7 @@ export const ROUTINE_RESULTS = {
   skippedOffline: "skipped: no network connection before the next run",
   skippedCredits: "skipped: out of Abacus.AI credits",
   skippedLink: "skipped: the chat app it sends through is not linked",
+  skippedAccount: "skipped: waiting for the account its job needs",
   noWorkspace: "no workspace to run in",
   timedOut: "failed: the run was stopped after 30 minutes",
   /** Main's own pause notes (`ROUTINE_PAUSE_NOTES`) and older ones. */
@@ -34,6 +35,7 @@ export const ATTEMPT_KINDS: ReadonlySet<RoutineRunKind> = new Set([
   "skipped-offline",
   "skipped-credits",
   "skipped-link",
+  "skipped-account",
   "no-workspace",
   "unknown",
 ]);
@@ -73,6 +75,7 @@ export const legacyKind = (result: string): RoutineRunKind => {
   if (result === ROUTINE_RESULTS.skippedOffline) return "skipped-offline";
   if (result === ROUTINE_RESULTS.skippedCredits) return "skipped-credits";
   if (result === ROUTINE_RESULTS.skippedLink) return "skipped-link";
+  if (result === ROUTINE_RESULTS.skippedAccount) return "skipped-account";
   if (result === ROUTINE_RESULTS.noWorkspace) return "no-workspace";
   if (result === ROUTINE_RESULTS.timedOut) return "timed-out";
   if (

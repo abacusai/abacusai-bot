@@ -819,6 +819,7 @@
       "skipped-offline",
       "skipped-credits",
       "skipped-link",
+      "skipped-account",
       "offline",
       "interrupted",
       "unknown",
@@ -1704,7 +1705,7 @@
     "prefix": "kickoff.",
     "values": [
       "connectOne",
-      "connectMany",
+      "resultFirst",
       "introduce",
       "startMission",
       "startGoal",
