@@ -76,6 +76,7 @@ export const WEB_HOST_ALLOWED = [
   "files.events",
   "sessions.turnState",
   "agent.feedback",
+  "agent.rate",
   "agent.start",
   "agent.stop",
   "agent.state",

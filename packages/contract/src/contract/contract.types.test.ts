@@ -65,6 +65,7 @@ import type {
   StreamDeviceTouchRequest,
   TerminalRuntimeRequest,
   TurnFeedbackInput,
+  ChatRatingInput,
   UpdateMcpServerRequest,
   WorkspaceGitContext,
   WriteTerminalInputRequest,
@@ -96,6 +97,7 @@ import type {
   AgentUpdateQueueMessageRequestSchema,
   StartAgentSessionRequestSchema,
   TurnFeedbackInputSchema,
+  ChatRatingInputSchema,
 } from "./agent";
 import type { BotChangeNoticeSchema } from "./bots";
 import type {
@@ -282,6 +284,9 @@ describe("contract types (A-T1)", () => {
     >().toEqualTypeOf<true>();
     expectTypeOf<
       Mirrors<typeof TurnFeedbackInputSchema, TurnFeedbackInput>
+    >().toEqualTypeOf<true>();
+    expectTypeOf<
+      Mirrors<typeof ChatRatingInputSchema, ChatRatingInput>
     >().toEqualTypeOf<true>();
     expectTypeOf<
       Mirrors<

@@ -3436,6 +3436,21 @@
     "retryOffer": {
       "try": "用 {{model}} 再试一次"
     },
+    "ratingPrompt": {
+      "question": "机器人在这个对话中表现如何？",
+      "bad": "差",
+      "okay": "一般",
+      "good": "好",
+      "great": "很棒",
+      "dismiss": "关闭",
+      "whatWrong": "哪里出了问题？",
+      "whatGood": "你喜欢哪一点？",
+      "privacy": "可选。请勿填写个人信息。",
+      "send": "发送",
+      "skip": "跳过",
+      "thanks": "感谢你的反馈。",
+      "failed": "发送失败，请重试："
+    },
     "deliverableOffer": {
       "label": "将此回答保存为文档",
       "doc": "生成文档",
@@ -3823,6 +3838,8 @@
       "notificationDetail": "当你在忙别的事时，AbacusAI Bot 会告诉你什么。",
       "notify": "通知我",
       "notifyDetail": "任务完成或工具在等你时通知。仅在窗口未聚焦时。",
+      "ratingPrompt": "询问机器人的表现",
+      "ratingPromptDetail": "偶尔在回复下方显示一行。只会发送你的评分和评论，绝不会发送对话内容。",
       "sounds": "播放声音",
       "quietHours": "静默时段",
       "perBot": "按机器人",

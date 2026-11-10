@@ -3436,6 +3436,21 @@
     "retryOffer": {
       "try": "Probeer dit opnieuw met {{model}}"
     },
+    "ratingPrompt": {
+      "question": "Hoe doet de bot het in deze chat?",
+      "bad": "Slecht",
+      "okay": "Matig",
+      "good": "Goed",
+      "great": "Geweldig",
+      "dismiss": "Sluiten",
+      "whatWrong": "Wat ging er mis?",
+      "whatGood": "Wat vond je goed?",
+      "privacy": "Optioneel. Laat persoonlijke gegevens weg.",
+      "send": "Versturen",
+      "skip": "Overslaan",
+      "thanks": "Bedankt voor je feedback.",
+      "failed": "Versturen mislukt. Probeer het opnieuw:"
+    },
     "deliverableOffer": {
       "label": "Bewaar dit antwoord als document",
       "doc": "Maak er een document van",
@@ -3823,6 +3838,8 @@
       "notificationDetail": "Wat AbacusAI Bot je laat weten terwijl je met iets anders bezig bent.",
       "notify": "Stuur me een melding",
       "notifyDetail": "Als een taak klaar is of een tool op je wacht. Alleen als het venster niet actief is.",
+      "ratingPrompt": "Vragen hoe de bot het doet",
+      "ratingPromptDetail": "Af en toe één regel onder een antwoord. Alleen je beoordeling en opmerking worden verstuurd, nooit de chat.",
       "sounds": "Geluiden afspelen",
       "quietHours": "Stille uren",
       "perBot": "Per bot",

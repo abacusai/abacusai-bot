@@ -86,6 +86,7 @@ const DEFAULTS: PrefsValues = {
     deliverableOffer: null,
     nextStepOffer: null,
     retryOffer: null,
+    ratingPrompt: null,
     freePlanSeenAt: null,
     upgradeRoutinesSeenAt: null,
     routineDuplicatesKept: [],

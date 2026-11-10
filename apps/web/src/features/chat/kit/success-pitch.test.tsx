@@ -146,7 +146,7 @@ const mount = async ({
         <RouterContextProvider router={harness.router}>
           <DbProvider value={harness.appDb}>
             <ChatViewProvider value={chat}>
-              <SuccessPitchRow active={active} />
+              <SuccessPitchRow messages={[]} active={active} />
             </ChatViewProvider>
           </DbProvider>
         </RouterContextProvider>

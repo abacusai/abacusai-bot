@@ -57,6 +57,7 @@ import type { GitStateRow, PrefsRow } from "@abacus-ai/contract/contract/rows";
 import type {
   TranscriptSegment,
   TurnFeedbackInput,
+  ChatRatingInput,
   TurnFeedbackOutcome,
   MemorySnapshot,
   MemoryTargetId,
@@ -4654,6 +4655,13 @@ export class ServiceHost {
     if (outcome.ok && feedback.rating === "up")
       void this.successPitch.reacted(feedback.sessionId);
     return outcome;
+  }
+
+  /** The chat's rating line, sent with the model the chat runs on. */
+  submitChatRating(rating: ChatRatingInput): Promise<TurnFeedbackOutcome> {
+    const model =
+      this.agentSessionManagerService.get(rating.sessionId)?.model ?? null;
+    return this.feedbackService.rate({ ...rating, model });
   }
 
   async startAgentSession(

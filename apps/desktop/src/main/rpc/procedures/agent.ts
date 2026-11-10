@@ -6,6 +6,9 @@ export const agentRouter = impl.agent.router({
   feedback: impl.agent.feedback.handler(({ input, context }) =>
     context.deps.serviceHost.submitTurnFeedback(input)
   ),
+  rate: impl.agent.rate.handler(({ input, context }) =>
+    context.deps.serviceHost.submitChatRating(input)
+  ),
   // Without overrides, the row's model and mode (spec 04 §26.4 d): the
   // legacy IPC start keeps its own defaults. A bot session's row first takes
   // its bot's effective model (spec 03 §24.10 b), as the relay's start does:

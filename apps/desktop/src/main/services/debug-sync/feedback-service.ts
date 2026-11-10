@@ -1,10 +1,19 @@
-import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
 /**
- * A thumbs up/down on one assistant turn, reported to the platform. The
- * verdict is keyed on the synced transcript (session + event sequence), so the
- * transcript is flushed first and the rated segment is named by the sequence
- * it was uploaded under.
+ * A verdict on one assistant turn, reported to the platform: a thumbs
+ * up/down on a reply, or the chat's rating line (rating-prompt.ts) on its
+ * latest reply. The verdict is keyed on the synced transcript (session +
+ * event sequence), so the transcript is flushed first and the rated segment
+ * is named by the sequence it was uploaded under.
  */
+import {
+  CHAT_RATINGS,
+  type ChatRating,
+  RATING_COMMENT_MAX,
+  RATING_TASK_TYPES,
+  type RatingTaskType,
+  redactContactDetails,
+} from "@abacus-ai/contract/rating-prompt";
+import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
 import { app } from "electron";
 
 import { readSettings } from "../config/settings";
@@ -76,6 +85,68 @@ export const sanitizeFeedback = (input: unknown): TurnFeedback | null => {
   };
 };
 
+export interface ChatRatingVerdict {
+  sessionId: string;
+  segmentId: string;
+  ratingId: string;
+  rating: ChatRating;
+  comment?: string;
+  taskType: RatingTaskType;
+  turns: number;
+  locale: string | null;
+  model?: string | null;
+}
+
+const RATING_ID = /^[A-Za-z0-9-]{8,64}$/;
+const LOCALE = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/;
+
+/**
+ * The chat rating the platform will see, checked here as a thumb is. The
+ * comment loses any email address or phone number before it leaves.
+ */
+export const sanitizeChatRating = (
+  input: unknown
+): ChatRatingVerdict | null => {
+  if (typeof input !== "object" || input == null) return null;
+  const raw = input as Record<string, unknown>;
+  const { sessionId, segmentId, ratingId, rating, taskType, turns } = raw;
+  if (typeof sessionId !== "string" || !SESSION_ID.test(sessionId)) return null;
+  if (
+    typeof segmentId !== "string" ||
+    segmentId.length === 0 ||
+    segmentId.length > MAX_SEGMENT_ID_LENGTH
+  )
+    return null;
+  if (typeof ratingId !== "string" || !RATING_ID.test(ratingId)) return null;
+  if (!CHAT_RATINGS.includes(rating as ChatRating)) return null;
+  if (!RATING_TASK_TYPES.includes(taskType as RatingTaskType)) return null;
+  if (typeof turns !== "number" || !Number.isInteger(turns) || turns < 1)
+    return null;
+  const comment =
+    typeof raw.comment === "string"
+      ? redactContactDetails(raw.comment.trim().slice(0, RATING_COMMENT_MAX))
+      : "";
+  const locale =
+    typeof raw.locale === "string" && LOCALE.test(raw.locale)
+      ? raw.locale
+      : null;
+  const model =
+    typeof raw.model === "string" && raw.model.length > 0
+      ? raw.model.slice(0, MAX_MODEL_LENGTH)
+      : null;
+  return {
+    sessionId,
+    segmentId,
+    ratingId,
+    rating: rating as ChatRating,
+    ...(comment.length > 0 ? { comment } : {}),
+    taskType: taskType as RatingTaskType,
+    turns,
+    locale,
+    model,
+  };
+};
+
 export class FeedbackService {
   constructor(
     private readonly options: {
@@ -99,17 +170,41 @@ export class FeedbackService {
   async submit(input: unknown): Promise<FeedbackOutcome> {
     const feedback = sanitizeFeedback(input);
     if (feedback == null) return { ok: false, reason: "invalid" };
+    return this.post(feedback.sessionId, feedback.segmentId, {
+      rating: feedback.rating,
+      comment: feedback.comment ?? "",
+      model: feedback.model ?? null,
+    });
+  }
 
+  /** The chat's rating line, on the same endpoint as a thumb. */
+  async rate(input: unknown): Promise<FeedbackOutcome> {
+    const verdict = sanitizeChatRating(input);
+    if (verdict == null) return { ok: false, reason: "invalid" };
+    return this.post(verdict.sessionId, verdict.segmentId, {
+      rating: verdict.rating,
+      rating_id: verdict.ratingId,
+      comment: verdict.comment ?? "",
+      task_type: verdict.taskType,
+      turns: verdict.turns,
+      locale: verdict.locale,
+      model: verdict.model ?? null,
+    });
+  }
+
+  /** Flushes the session, names the segment's sequence, and posts `body`. */
+  private async post(
+    sessionId: string,
+    segmentId: string,
+    body: Record<string, unknown>
+  ): Promise<FeedbackOutcome> {
     const key = readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus];
     if (key == null || key.trim().length === 0)
       return { ok: false, reason: "no-key" };
 
     // The server rates a synced event; make sure this turn is one.
-    await this.options.debugSync.flush(feedback.sessionId);
-    const sequence = this.options.debugSync.sequenceOf(
-      feedback.sessionId,
-      feedback.segmentId
-    );
+    await this.options.debugSync.flush(sessionId);
+    const sequence = this.options.debugSync.sequenceOf(sessionId, segmentId);
     if (sequence == null) return { ok: false, reason: "not-synced" };
 
     const doFetch = this.options.fetchImpl ?? fetch;
@@ -123,11 +218,9 @@ export class FeedbackService {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          session_id: feedback.sessionId,
+          session_id: sessionId,
           event_sequence_number: sequence,
-          rating: feedback.rating,
-          comment: feedback.comment ?? "",
-          model: feedback.model ?? null,
+          ...body,
           platform: clientEnvironment().os_name,
           client_version: this.options.clientVersion,
         }),
@@ -136,8 +229,8 @@ export class FeedbackService {
       if (response.ok) return { ok: true };
       let reason = `http-${response.status}`;
       try {
-        const body = (await response.json()) as { error?: unknown };
-        if (typeof body.error === "string") reason = body.error;
+        const answer = (await response.json()) as { error?: unknown };
+        if (typeof answer.error === "string") reason = answer.error;
       } catch {
         // The status is reason enough.
       }

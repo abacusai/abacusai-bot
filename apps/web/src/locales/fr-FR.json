@@ -3436,6 +3436,21 @@
     "retryOffer": {
       "try": "Réessayer avec {{model}}"
     },
+    "ratingPrompt": {
+      "question": "Comment s'en sort le bot dans ce chat ?",
+      "bad": "Mauvais",
+      "okay": "Moyen",
+      "good": "Bien",
+      "great": "Excellent",
+      "dismiss": "Fermer",
+      "whatWrong": "Qu'est-ce qui n'a pas marché ?",
+      "whatGood": "Qu'avez-vous aimé ?",
+      "privacy": "Facultatif. N'indiquez pas d'informations personnelles.",
+      "send": "Envoyer",
+      "skip": "Passer",
+      "thanks": "Merci pour votre avis.",
+      "failed": "Envoi impossible. Réessayez :"
+    },
     "deliverableOffer": {
       "label": "Garder cette réponse comme document",
       "doc": "En faire un document",
@@ -3823,6 +3838,8 @@
       "notificationDetail": "What AbacusAI Bot tells you while you are looking elsewhere.",
       "notify": "Notify me",
       "notifyDetail": "When a task finishes, or a tool is waiting for you. Only while the window is not focused.",
+      "ratingPrompt": "Demander comment s'en sort le bot",
+      "ratingPromptDetail": "De temps en temps, une ligne sous une réponse. Votre note et votre commentaire sont envoyés, jamais la conversation.",
       "sounds": "Play sounds",
       "quietHours": "Heures calmes",
       "perBot": "Per bot",

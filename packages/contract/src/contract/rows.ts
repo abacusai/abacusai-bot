@@ -21,6 +21,7 @@ import type {
 } from "../credit-thresholds";
 import type { DeliverableOfferCard } from "../deliverable-offer";
 import type { NextStepCard } from "../next-step";
+import type { RatingPromptCard } from "../rating-prompt";
 import type {
   RoutineCreditHold,
   RoutineListItem,
@@ -211,6 +212,8 @@ export interface PrefsRow {
     nextStepOffer?: NextStepCard | null;
     /** The retry on a top model, shown and answered. */
     retryOffer?: DeliverableOfferCard | null;
+    /** The rating line: asked, answered, closed, or turned off. */
+    ratingPrompt?: RatingPromptCard | null;
     freePlanSeenAt: number | null;
     upgradeRoutinesSeenAt: number | null;
     routineDuplicatesKept: string[];

@@ -6,6 +6,7 @@ import {
   type SupportedLanguage,
 } from "@abacus-ai/contract/contract/rows";
 import { isQuietNow } from "@abacus-ai/contract/quiet-hours";
+import { EMPTY_RATING_PROMPT_CARD } from "@abacus-ai/contract/rating-prompt";
 import { useLiveQuery } from "@tanstack/react-db";
 import { revalidateLogic } from "@tanstack/react-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -545,6 +546,29 @@ export const NotificationsPage = () => {
             // only mirrors Play sounds, which is the one sound control.
             onCheckedChange={(enabled) =>
               setNotify.mutate({ enabled, sound: prefs.sounds.enabled })
+            }
+          />
+        </SettingRow>
+      </GroupCard>
+      <GroupCard>
+        <SettingRow
+          id="ratingPrompt"
+          title={t("phase5.settings.ratingPrompt")}
+          detail={t("phase5.settings.ratingPromptDetail")}
+        >
+          <SettingSwitch
+            id="ratingPrompt"
+            checked={!(prefs.dismissals.ratingPrompt?.off ?? false)}
+            onCheckedChange={(enabled) =>
+              void update({
+                dismissals: {
+                  ratingPrompt: {
+                    ...(prefs.dismissals.ratingPrompt ??
+                      EMPTY_RATING_PROMPT_CARD),
+                    off: !enabled,
+                  },
+                },
+              }).catch(fail)
             }
           />
         </SettingRow>

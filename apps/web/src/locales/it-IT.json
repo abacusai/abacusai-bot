@@ -3436,6 +3436,21 @@
     "retryOffer": {
       "try": "Riprova con {{model}}"
     },
+    "ratingPrompt": {
+      "question": "Come se la cava il bot in questa chat?",
+      "bad": "Male",
+      "okay": "Così così",
+      "good": "Bene",
+      "great": "Ottimo",
+      "dismiss": "Chiudi",
+      "whatWrong": "Cosa è andato storto?",
+      "whatGood": "Cosa ti è piaciuto?",
+      "privacy": "Facoltativo. Non inserire dati personali.",
+      "send": "Invia",
+      "skip": "Salta",
+      "thanks": "Grazie per il feedback.",
+      "failed": "Invio non riuscito. Riprova:"
+    },
     "deliverableOffer": {
       "label": "Conserva questa risposta come documento",
       "doc": "Trasforma in documento",
@@ -3823,6 +3838,8 @@
       "notificationDetail": "What AbacusAI Bot tells you while you are looking elsewhere.",
       "notify": "Notify me",
       "notifyDetail": "When a task finishes, or a tool is waiting for you. Only while the window is not focused.",
+      "ratingPrompt": "Chiedi come se la cava il bot",
+      "ratingPromptDetail": "Ogni tanto, una riga sotto una risposta. Vengono inviati il voto e il commento, mai la chat.",
       "sounds": "Play sounds",
       "quietHours": "Ore tranquille",
       "perBot": "Per bot",

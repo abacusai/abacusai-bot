@@ -3436,6 +3436,21 @@
     "retryOffer": {
       "try": "{{model}}(으)로 다시 시도"
     },
+    "ratingPrompt": {
+      "question": "이 채팅에서 봇은 어땠나요?",
+      "bad": "별로",
+      "okay": "보통",
+      "good": "좋음",
+      "great": "아주 좋음",
+      "dismiss": "닫기",
+      "whatWrong": "무엇이 잘못됐나요?",
+      "whatGood": "무엇이 좋았나요?",
+      "privacy": "선택 사항. 개인 정보는 적지 마세요.",
+      "send": "보내기",
+      "skip": "건너뛰기",
+      "thanks": "의견 감사합니다.",
+      "failed": "보내지 못했어요. 다시 시도:"
+    },
     "deliverableOffer": {
       "label": "이 답변을 문서로 남기기",
       "doc": "문서로 만들기",
@@ -3823,6 +3838,8 @@
       "notificationDetail": "What AbacusAI Bot tells you while you are looking elsewhere.",
       "notify": "Notify me",
       "notifyDetail": "When a task finishes, or a tool is waiting for you. Only while the window is not focused.",
+      "ratingPrompt": "봇이 어땠는지 묻기",
+      "ratingPromptDetail": "가끔 답변 아래에 한 줄이 표시됩니다. 평가와 의견만 전송되며 채팅 내용은 전송되지 않습니다.",
       "sounds": "Play sounds",
       "quietHours": "조용한 시간",
       "perBot": "Per bot",

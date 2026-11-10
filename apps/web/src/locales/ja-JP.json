@@ -3436,6 +3436,21 @@
     "retryOffer": {
       "try": "{{model}} でもう一度試す"
     },
+    "ratingPrompt": {
+      "question": "このチャットでのボットはいかがですか？",
+      "bad": "悪い",
+      "okay": "まあまあ",
+      "good": "良い",
+      "great": "とても良い",
+      "dismiss": "閉じる",
+      "whatWrong": "何がうまくいきませんでしたか？",
+      "whatGood": "何が良かったですか？",
+      "privacy": "任意。個人情報は書かないでください。",
+      "send": "送信",
+      "skip": "スキップ",
+      "thanks": "フィードバックありがとうございます。",
+      "failed": "送信できませんでした。もう一度："
+    },
     "deliverableOffer": {
       "label": "この回答をドキュメントとして残す",
       "doc": "ドキュメントにする",
@@ -3823,6 +3838,8 @@
       "notificationDetail": "What AbacusAI Bot tells you while you are looking elsewhere.",
       "notify": "Notify me",
       "notifyDetail": "When a task finishes, or a tool is waiting for you. Only while the window is not focused.",
+      "ratingPrompt": "ボットの評価をたずねる",
+      "ratingPromptDetail": "ときどき返信の下に1行表示します。送信されるのは評価とコメントだけで、チャットの内容は送信されません。",
       "sounds": "Play sounds",
       "quietHours": "静かな時間",
       "perBot": "Per bot",

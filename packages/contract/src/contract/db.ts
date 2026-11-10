@@ -272,6 +272,20 @@ export const PREFS_GROUP_ENTRIES = {
         dismissed: v.pipe(v.number(), v.integer(), v.minValue(0)),
       })
     ),
+    /** The rating line: asked, answered, closed, or turned off. */
+    ratingPrompt: v.nullable(
+      v.strictObject({
+        shownOffer: v.nullable(v.string()),
+        shownThread: v.nullable(v.string()),
+        shownAt: NullableTimestamp,
+        answered: v.nullable(v.string()),
+        dismissStreak: v.pipe(v.number(), v.integer(), v.minValue(0)),
+        dismissedAt: NullableTimestamp,
+        qualified: v.array(v.string()),
+        askedThreads: v.array(v.string()),
+        off: v.boolean(),
+      })
+    ),
     /** The account first read on the free plan here, so a paid read after it is an upgrade. */
     freePlanSeenAt: NullableTimestamp,
     /** An older build's after-upgrade card, seen: that upgrade counts as welcomed. */

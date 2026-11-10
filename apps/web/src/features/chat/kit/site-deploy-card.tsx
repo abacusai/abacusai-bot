@@ -16,6 +16,7 @@ import { useAccount } from "#renderer/lib/use-account";
 import { useAppContext } from "#renderer/lib/use-app-context";
 
 import { useChatView } from "./context";
+import { useTailCardClaim } from "./tail-cards";
 
 /** Under the latest reply while nothing runs, on a paid plan, never over the upgrade dialog. */
 export const SiteDeployCard = ({ active }: { active: boolean }) => {
@@ -47,6 +48,7 @@ export const SiteDeployCard = ({ active }: { active: boolean }) => {
   useEffect(() => {
     if (turnId != null) shown();
   }, [turnId]);
+  useTailCardClaim(sessionId, turnId == null ? null : `site:${turnId}`);
   if (showing == null) return null;
   return (
     <SiteDeployCardView

@@ -3436,6 +3436,21 @@
     "retryOffer": {
       "try": "Coba lagi dengan {{model}}"
     },
+    "ratingPrompt": {
+      "question": "Bagaimana kinerja bot di chat ini?",
+      "bad": "Buruk",
+      "okay": "Lumayan",
+      "good": "Bagus",
+      "great": "Hebat",
+      "dismiss": "Tutup",
+      "whatWrong": "Apa yang salah?",
+      "whatGood": "Apa yang kamu suka?",
+      "privacy": "Opsional. Jangan sertakan data pribadi.",
+      "send": "Kirim",
+      "skip": "Lewati",
+      "thanks": "Terima kasih atas masukannya.",
+      "failed": "Gagal mengirim. Coba lagi:"
+    },
     "deliverableOffer": {
       "label": "Simpan jawaban ini sebagai dokumen",
       "doc": "Jadikan dokumen",
@@ -3823,6 +3838,8 @@
       "notificationDetail": "What AbacusAI Bot tells you while you are looking elsewhere.",
       "notify": "Notify me",
       "notifyDetail": "When a task finishes, or a tool is waiting for you. Only while the window is not focused.",
+      "ratingPrompt": "Tanyakan kinerja bot",
+      "ratingPromptDetail": "Sesekali, satu baris di bawah balasan. Yang dikirim hanya nilai dan komentarmu, bukan isi chat.",
       "sounds": "Play sounds",
       "quietHours": "Jam tenang",
       "perBot": "Per bot",
