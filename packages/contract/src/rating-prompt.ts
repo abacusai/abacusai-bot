@@ -141,10 +141,11 @@ export const ratingTaskType = (
 const EMAIL = /(?<![\w.+-])[\w.+-]{1,64}@[\w-]{1,63}(?:\.[\w-]{1,63}){1,8}/g;
 /**
  * 7 to 15 digits with up to two phone separators between them (spaces,
- * dashes, dots, brackets); an ISO date or a dotted version is not one.
+ * dashes, dots, brackets); an ISO date, a dotted version or an IP (3-4
+ * groups of 1-3 digits) is not one, while 5 dotted pairs are.
  */
 const PHONE =
-  /(?<![\w.])(?!\d{4}-\d{2}-\d{2}\b)(?!\d{1,3}(?:\.\d{1,3}){2,6}(?![\d.]))\+?\(?\d(?:[\s().-]{0,2}\d){6,14}(?!\w|\.\d)/g;
+  /(?<![\w.])(?!\d{4}-\d{2}-\d{2}\b)(?!\d{1,3}(?:\.\d{1,3}){2,3}(?![\d.]))\+?\(?\d(?:[\s().-]{0,2}\d){6,14}(?!\w|\.\d)/g;
 
 /** The comment as it may leave the machine: no email address or phone number. */
 export const redactContactDetails = (text: string): string =>
