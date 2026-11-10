@@ -4222,6 +4222,7 @@
       "notFound": "Google Chrome oder Microsoft Edge wurde auf diesem Computer nicht gefunden.",
       "ready": "{{browser}} ist bereit. Stellen Sie jetzt eine Verbindung her, oder die erste Browseraufgabe des Agenten fragt nach {{browser}}.",
       "connecting": "Ich warte darauf, dass Sie die Verbindung in Ihrem Browser zulassen …",
+      "connectingWithToken": "Verbindung zu {{browser}} mit dem gespeicherten Token…",
       "connected": "Verbunden mit {{browser}}: Registerkarte(n) {{count}} in der Gruppe AbacusAI Bot.",
       "install": "Installieren Sie die Erweiterung",
       "connect": "Verbinden",
@@ -4230,6 +4231,8 @@
       "tokenPlaceholder": "Fügen Sie das Token der Erweiterung ein, um die Zulassungsseite zu überspringen",
       "tokenSave": "Token speichern",
       "tokenSaved": "Token gespeichert.",
+      "tokenRemove": "Token entfernen",
+      "tokenRemoved": "Token entfernt.",
       "tokenHint": "Optional. Das Token wird auf der Zulassungsseite der Erweiterung angezeigt. Wenn es gespeichert ist, stellt die App eine Verbindung her, ohne jedes Mal nachzufragen."
     },
     "clearAction": "Alle Browser-Daten löschen",

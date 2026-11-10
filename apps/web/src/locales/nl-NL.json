@@ -4222,6 +4222,7 @@
       "notFound": "Google Chrome of Microsoft Edge is niet gevonden op deze computer.",
       "ready": "{{browser}} is klaar. Maak nu verbinding, of de eerste browsertaak van de agent vraagt erom in {{browser}}.",
       "connecting": "Wachten tot je de verbinding toestaat in je browser…",
+      "connectingWithToken": "Verbinden met {{browser}} met het opgeslagen token…",
       "connected": "Verbonden met {{browser}}: {{count}} tabblad(en) in de AbacusAI Bot-groep.",
       "install": "Extensie installeren",
       "connect": "Verbinden",
@@ -4230,6 +4231,8 @@
       "tokenPlaceholder": "Plak de token van de extensie om de toestemmingspagina over te slaan",
       "tokenSave": "Token opslaan",
       "tokenSaved": "Token opgeslagen.",
+      "tokenRemove": "Token verwijderen",
+      "tokenRemoved": "Token verwijderd.",
       "tokenHint": "Optioneel. De token staat op de toestemmingspagina van de extensie; als je hem opslaat, maakt de app verbinding zonder elke keer te vragen."
     },
     "clearAction": "Alle browsegegevens wissen",

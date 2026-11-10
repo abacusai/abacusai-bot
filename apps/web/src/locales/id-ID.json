@@ -4222,6 +4222,7 @@
       "notFound": "Google Chrome atau Microsoft Edge tidak ditemukan di komputer ini.",
       "ready": "{{browser}} sudah siap. Hubungkan sekarang, atau tugas browser pertama agen akan ditanyakan di {{browser}}.",
       "connecting": "Menunggu Anda mengizinkan koneksi di browser Anda…",
+      "connectingWithToken": "Menghubungkan ke {{browser}} dengan token yang disimpan…",
       "connected": "Terhubung ke {{browser}}: tab {{count}} di grup AbacusAI Bot.",
       "install": "Instal ekstensi",
       "connect": "Hubungkan",
@@ -4230,6 +4231,8 @@
       "tokenPlaceholder": "Tempelkan token ekstensi untuk melewati halaman izinkan",
       "tokenSave": "Simpan token",
       "tokenSaved": "Token disimpan.",
+      "tokenRemove": "Hapus token",
+      "tokenRemoved": "Token dihapus.",
       "tokenHint": "Opsional. Token ditampilkan di halaman izin ekstensi; setelah disimpan, aplikasi terhubung tanpa bertanya setiap saat."
     },
     "clearAction": "Hapus semua data peramban",

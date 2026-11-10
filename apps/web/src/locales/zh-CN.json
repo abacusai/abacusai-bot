@@ -4222,6 +4222,7 @@
       "notFound": "在这台电脑上未找到 Google Chrome 或 Microsoft Edge。",
       "ready": "{{browser}} 已就绪。你可以立即连接，否则智能体首次执行浏览器任务时会在 {{browser}} 中询问。",
       "connecting": "正在等待你在浏览器中允许连接…",
+      "connectingWithToken": "正在使用已保存的令牌连接 {{browser}}…",
       "connected": "已连接到 {{browser}}：AbacusAI Bot 分组中有 {{count}} 个标签页。",
       "install": "安装扩展",
       "connect": "连接",
@@ -4230,6 +4231,8 @@
       "tokenPlaceholder": "粘贴扩展的令牌以跳过允许页面",
       "tokenSave": "保存令牌",
       "tokenSaved": "令牌已保存。",
+      "tokenRemove": "移除令牌",
+      "tokenRemoved": "令牌已移除。",
       "tokenHint": "可选。令牌显示在扩展的允许页面上；保存后，应用连接时无需每次询问。"
     },
     "clearAction": "清除所有浏览数据",

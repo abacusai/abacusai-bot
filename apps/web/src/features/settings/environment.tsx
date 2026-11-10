@@ -218,9 +218,16 @@ const ElectronBrowserPage = () => {
   const setExtensionToken = useMutation(
     browser.chrome.setExtensionToken.mutationOptions({
       ...writesStatus,
+      // The answer says whether a token is still saved: an empty line removes it.
       onSuccess: (value: NonNullable<typeof status>) => {
         writesStatus.onSuccess(value);
-        showInfo(t("browserSettings.chrome.tokenSaved"));
+        showInfo(
+          t(
+            value.chrome.tokenSet
+              ? "browserSettings.chrome.tokenSaved"
+              : "browserSettings.chrome.tokenRemoved"
+          )
+        );
       },
     })
   );
@@ -241,7 +248,11 @@ const ElectronBrowserPage = () => {
       ? undefined
       : (chrome.error ??
         (chrome.connecting || connectChrome.isPending
-          ? t("browserSettings.chrome.connecting")
+          ? chrome.tokenSet
+            ? t("browserSettings.chrome.connectingWithToken", {
+                browser: chrome.browser ?? "Chrome",
+              })
+            : t("browserSettings.chrome.connecting")
           : chrome.connected
             ? t("browserSettings.chrome.connected", {
                 browser: chrome.browser ?? "Chrome",
@@ -346,6 +357,15 @@ const ElectronBrowserPage = () => {
               >
                 {t("phase5.save")}
               </Button>
+              {status.chrome.tokenSet && (
+                <Button
+                  variant="secondary"
+                  disabled={setExtensionToken.isPending}
+                  onClick={() => setExtensionToken.mutate({ token: "" })}
+                >
+                  {t("browserSettings.chrome.tokenRemove")}
+                </Button>
+              )}
             </div>
           </>
         )}

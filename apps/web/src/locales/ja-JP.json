@@ -4222,6 +4222,7 @@
       "notFound": "Google Chrome または Microsoft Edge がこのコンピューター上に見つかりませんでした。",
       "ready": "{{browser}} の準備が完了しました。今すぐ接続してください。そうしないと、エージェントの最初のブラウザ タスクが {{browser}} で要求します。",
       "connecting": "ブラウザで接続を許可するのを待っています…",
+      "connectingWithToken": "保存したトークンで {{browser}} に接続しています…",
       "connected": "{{browser}} に接続されています: AbacusAI Bot グループの {{count}} タブ。",
       "install": "拡張機能をインストールする",
       "connect": "接続する",
@@ -4230,6 +4231,8 @@
       "tokenPlaceholder": "拡張機能のトークンを貼り付けて、許可ページをスキップします",
       "tokenSave": "トークンの保存",
       "tokenSaved": "トークンが保存されました。",
+      "tokenRemove": "トークンを削除",
+      "tokenRemoved": "トークンを削除しました。",
       "tokenHint": "オプション。トークンは拡張機能の許可ページに表示されます。それを保存すると、アプリは毎回問い合わせることなく接続します。"
     },
     "clearAction": "すべての閲覧データを削除",

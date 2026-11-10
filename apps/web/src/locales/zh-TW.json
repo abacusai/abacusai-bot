@@ -4222,6 +4222,7 @@
       "notFound": "在這台電腦上找不到 Google Chrome 或 Microsoft Edge。",
       "ready": "{{browser}} 已就緒。你可以立即連線，否則 AI 代理第一次執行瀏覽器任務時會在 {{browser}} 中詢問。",
       "connecting": "正在等候你在瀏覽器中允許連線…",
+      "connectingWithToken": "正在使用已儲存的權杖連線至 {{browser}}…",
       "connected": "已連線到 {{browser}}：AbacusAI Bot 群組中有 {{count}} 個分頁。",
       "install": "安裝擴充功能",
       "connect": "連接",
@@ -4230,6 +4231,8 @@
       "tokenPlaceholder": "貼上擴充功能的權杖以略過允許頁面",
       "tokenSave": "儲存權杖",
       "tokenSaved": "權杖已儲存。",
+      "tokenRemove": "移除權杖",
+      "tokenRemoved": "權杖已移除。",
       "tokenHint": "選用。權杖顯示在擴充功能的允許頁面上；儲存後，應用程式連線時就不必每次詢問。"
     },
     "clearAction": "清除所有瀏覽資料",
