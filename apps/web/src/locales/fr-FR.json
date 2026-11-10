@@ -3099,8 +3099,6 @@
       "unsaved": "Le disque est plein : cette conversation n'est pas enregistrée. Libérez de l'espace ; elle sera de nouveau enregistrée avec votre prochain message.",
       "creditsLow_one": "{{count}} credit left. The agent keeps going and hands over each piece as it's ready.",
       "creditsLow_other": "{{count}} credits left. The agent keeps going and hands over each piece as it's ready.",
-      "spendCheckIn_one": "This task has used {{count}} credit so far. Send a message to keep going.",
-      "spendCheckIn_other": "This task has used {{count}} credits so far. Send a message to keep going.",
       "spendBudget_one": "Stopped at its credit budget ({{count}} credit).",
       "spendBudget_other": "Stopped at its credit budget ({{count}} credits).",
       "spendCalls_one": "This task reached its limit of {{count}} step, so it's wrapping up. Send a message to keep going.",

@@ -42,30 +42,6 @@ export const SPEND_LIMITS: Readonly<Record<SpendKind, SpendLimit>> = {
   memory: { calls: 20, timeMs: 5 * MINUTE },
 };
 
-/**
- * Where an attended turn on a free plan stops to ask the user before it
- * spends more: a quarter of what is left or a fifth of the plan, whichever is
- * smaller, never under 50. Paid plans have no per-turn check-in.
- */
-export const checkInCredits = (
-  remaining: number,
-  planCredits: number
-): number => Math.max(50, Math.min(remaining * 0.25, planCredits * 0.2));
-
-/** What the user reads when a free-plan turn stops at its check-in. */
-export const checkInStopNotice = (credits: number): string =>
-  `This task has used ${credits} credits so far. Send a message to keep going.`;
-
-const CHECK_IN_STOP = new RegExp(
-  `^${checkInStopNotice(0)
-    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-    .replace("0", "[\\d.,]+")}$`
-);
-
-/** Whether a turn's error is the check-in stop, so a channel can say so. */
-export const isCheckInStop = (message: string): boolean =>
-  CHECK_IN_STOP.test(message.trim());
-
 /** What a follow-up nobody asked for may spend: a tenth of its turn, at least 10. */
 export const unaskedCredits = (turnCredits: number): number =>
   Math.max(10, turnCredits * 0.1);

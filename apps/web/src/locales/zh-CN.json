@@ -3099,8 +3099,6 @@
       "unsaved": "磁盘已满，此聊天目前没有保存。请释放一些空间；你发送下一条消息时会重新保存。",
       "creditsLow_one": "{{count}} credit left. The agent keeps going and hands over each piece as it's ready.",
       "creditsLow_other": "{{count}} credits left. The agent keeps going and hands over each piece as it's ready.",
-      "spendCheckIn_one": "This task has used {{count}} credit so far. Send a message to keep going.",
-      "spendCheckIn_other": "This task has used {{count}} credits so far. Send a message to keep going.",
       "spendBudget_one": "Stopped at its credit budget ({{count}} credit).",
       "spendBudget_other": "Stopped at its credit budget ({{count}} credits).",
       "spendCalls_one": "This task reached its limit of {{count}} step, so it's wrapping up. Send a message to keep going.",

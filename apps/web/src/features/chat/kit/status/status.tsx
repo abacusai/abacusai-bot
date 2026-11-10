@@ -1589,7 +1589,6 @@ const SPEND_LIMIT_ACTION = "spend-limit";
 const COMPACTED_ACTION = "compacted";
 
 const SPEND_LIMIT_KEYS = {
-  "check-in": "chat.notice.spendCheckIn",
   budget: "chat.notice.spendBudget",
   calls: "chat.notice.spendCalls",
   time: "chat.notice.spendTime",

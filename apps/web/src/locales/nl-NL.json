@@ -3099,8 +3099,6 @@
       "unsaved": "De schijf is vol, dus deze chat wordt niet opgeslagen. Maak wat ruimte vrij; bij je volgende bericht wordt hij weer opgeslagen.",
       "creditsLow_one": "Nog {{count}} credit over. De agent gaat door en levert elk onderdeel op zodra het klaar is.",
       "creditsLow_other": "Nog {{count}} credits over. De agent gaat door en levert elk onderdeel op zodra het klaar is.",
-      "spendCheckIn_one": "Deze taak heeft tot nu toe {{count}} credit gebruikt. Stuur een bericht om door te gaan.",
-      "spendCheckIn_other": "Deze taak heeft tot nu toe {{count}} credits gebruikt. Stuur een bericht om door te gaan.",
       "spendBudget_one": "Gestopt bij het creditbudget ({{count}} credit).",
       "spendBudget_other": "Gestopt bij het creditbudget ({{count}} credits).",
       "spendCalls_one": "Deze taak heeft de limiet van {{count}} stap bereikt en wordt afgerond. Stuur een bericht om door te gaan.",

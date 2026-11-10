@@ -158,8 +158,8 @@ interface NotificationAction {
   /** `retry` on a full disk: the bytes left where the agent writes. */
   bytesFree?: number;
   /**
-   * `spend-limit`: the limit a close-out names (`cause`: check-in, budget,
-   * calls or time) and its size in credits, calls or minutes.
+   * `spend-limit`: the limit a close-out names (`cause`: budget, calls
+   * or time) and its size in credits, calls or minutes.
    * `credits-low`: the credits left as reserve began.
    */
   amount?: number;

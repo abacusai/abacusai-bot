@@ -37,8 +37,6 @@ import { creditWallActive } from "../credit-wall.js";
 import type { OpenLlmRouter } from "../openllm-router.js";
 import { listModels, resolveModel } from "../providers.js";
 import {
-  checkInCredits,
-  checkInStopNotice,
   CONTEXT_CAP_FLOOR,
   COSTLY_REQUEST_SHARE,
   contextCap,
@@ -72,7 +70,6 @@ export const spendStopReason = (): string | null => stoppedBecause;
 export type SpendLimitHit =
   | { cause: "calls"; amount: number }
   | { cause: "time"; amount: number }
-  | { cause: "check-in"; amount: number }
   | { cause: "budget"; amount: number };
 
 /** The slice of a pi model the governor reads. */
@@ -182,8 +179,6 @@ const closeOutReason = (hit: SpendLimitHit): string => {
       return `This run has reached its limit of ${hit.amount} model calls.`;
     case "time":
       return `This run has been working for ${hit.amount} minutes, its limit.`;
-    case "check-in":
-      return `This task has used ${hit.amount} credits so far, the point where the user is asked before it spends more.`;
     case "budget":
       return `This run has used its credit budget of ${hit.amount} credits.`;
   }
@@ -203,8 +198,6 @@ const stoppedMessage = (hit: SpendLimitHit): string => {
         `This run worked for ${hit.amount} minutes without finishing and was stopped. Whatever it built is ` +
         `still in the workspace. Send a message to carry on from here, or ask it to present what it has.`
       );
-    case "check-in":
-      return checkInStopNotice(hit.amount);
     case "budget":
       return `Stopped at its credit budget (${hit.amount} credits).`;
   }
@@ -247,8 +240,6 @@ export const creditsLowNotice = (left: number): string =>
 export const SPEND_LIMIT_ACTION = "spend-limit";
 export const spendLimitNotice = (hit: SpendLimitHit): string => {
   switch (hit.cause) {
-    case "check-in":
-      return checkInStopNotice(hit.amount);
     case "budget":
       return `Stopped at its credit budget (${hit.amount} credits).`;
     case "calls":
@@ -763,28 +754,15 @@ export class SpendGovernor {
   }
 
   /**
-   * The credit limit this turn has, if any: memory upkeep's, a free plan's
-   * check-in. A routine run has none: the user set it going, so it finishes.
+   * The credit limit this turn has, if any: memory upkeep's alone. A chat the
+   * user is in runs until it is done or the credits run out (the credit wall),
+   * and a routine run finishes because the user set it going.
    */
   private creditLimit(): SpendLimitHit | null {
-    if (this.lane() !== "abacus-billed") return null;
-    const balance = hostCreditBalance();
-    if (balance == null) return null;
-    const plan = lowCreditBase(balance);
-    if (this.kind === "routine") return null;
-    if (this.kind === "memory")
-      return this.turnCredits - (this.memoryStart?.credits ?? 0) >=
-        MEMORY_CREDITS
-        ? { cause: "budget", amount: MEMORY_CREDITS }
-        : null;
-    // Paid plans: the plan's own cards and reserve, no per-turn stop.
-    // Only a plan read as free: paid, team and unknown plans have no per-turn stop.
-    if (balance.free !== true) return null;
-    const checkIn = Math.round(
-      checkInCredits(balance.remaining + this.turnCredits, plan)
-    );
-    return this.turnCredits >= checkIn
-      ? { cause: "check-in", amount: Math.round(this.turnCredits) }
+    if (this.kind !== "memory" || this.lane() !== "abacus-billed") return null;
+    if (hostCreditBalance() == null) return null;
+    return this.turnCredits - (this.memoryStart?.credits ?? 0) >= MEMORY_CREDITS
+      ? { cause: "budget", amount: MEMORY_CREDITS }
       : null;
   }
 

@@ -469,8 +469,6 @@ export interface CreditSnapshot {
   planCredits?: number;
   /** A plan the user pays for (creditMilestonePlan): the agent tells them when it wraps up. */
   paid?: boolean;
-  /** A plan read as free: the agent's per-turn credit check-in applies to it alone. */
-  free?: boolean;
 }
 
 const snapshotOf = (
@@ -489,7 +487,6 @@ const snapshotOf = (
     at: cached.at,
     ...(planCredits != null ? { planCredits } : {}),
     ...(creditMilestonePlan(cached.value) === "paid" ? { paid: true } : {}),
-    ...(creditMilestonePlan(cached.value) === "free" ? { free: true } : {}),
   };
 };
 

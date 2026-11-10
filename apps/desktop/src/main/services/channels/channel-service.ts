@@ -16,7 +16,6 @@ import path from "node:path";
 
 import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
 import { BOT_TASK_PREFIX } from "@abacus-ai/agent/bot-task";
-import { isCheckInStop } from "@abacus-ai/agent/spend-policy";
 import type { BotTaskTag } from "@abacus-ai/contract/agent-types";
 import {
   MAX_CHANNEL_MEMBERS,
@@ -186,8 +185,6 @@ export class ChannelService {
     string,
     { reporter: string; userMessageId: string }
   >();
-  /** Channels where work stopped at the free plan's check-in: no lead is woken until the user answers. */
-  private readonly checkedIn = new Set<string>();
   /** Lead turns since the user's last message, per channel (MAX_LEAD_TURNS). */
   private readonly leadTurns = new Map<string, number>();
   /** Work running in bots' own chats: message id → its channel and bot. */
@@ -308,7 +305,6 @@ export class ChannelService {
     this.setPending(channelId, (ids) => [...ids, message.id]);
     this.leadTurns.delete(channelId);
     this.owedWakes.delete(channelId);
-    this.checkedIn.delete(channelId);
     this.enqueue(channelId, message.id);
   }
 
@@ -1166,20 +1162,6 @@ export class ChannelService {
         if (this.stoppedWorks.delete(messageId)) return null;
         const why = error instanceof Error ? error.message : String(error);
         this.setWork(channelId, messageId, { status: "failed", error: why });
-        // The free plan's check-in: said in the channel too, and nobody is
-        // woken to spend more before the user answers.
-        if (isCheckInStop(why)) {
-          this.checkedIn.add(channelId);
-          this.owedWakes.delete(channelId);
-          this.append(channelId, {
-            id: this.newId(),
-            author: { kind: "bot", botId },
-            text: why,
-            at: this.now(),
-            replyTo: userMessageId,
-          });
-          return null;
-        }
         // Failed: the lead decides what next, as after a report (a chain's
         // lead is woken when the chain ends).
         if (chain == null) {
@@ -1297,12 +1279,6 @@ export class ChannelService {
   ): void {
     if (this.deps.runWork == null || this.maybeChannel(channelId) == null)
       return;
-    if (this.checkedIn.has(channelId)) {
-      this.log(
-        `lead not woken in ${channelId}: waiting for the user after a credit check-in`
-      );
-      return;
-    }
     if (this.busy(channelId)) {
       this.owedWakes.set(channelId, { reporter, userMessageId });
       return;
