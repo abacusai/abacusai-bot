@@ -22,6 +22,9 @@ import type {
  * they answer once each, and their own @mentions bring in nobody. The bot
  * that brought them in then finishes its answer with theirs. One level deep,
  * by rule rather than by a count.
+ * Bots talk back and forth only in a discussion, which the app runs in
+ * rounds: when the user asks the team to discuss, or when bots the user
+ * named together have answered and one @addresses another of them.
  */
 import type { OwnChatLine } from "../bots/bot-ask";
 
@@ -57,8 +60,12 @@ export interface Speakers {
   discussion?: boolean;
 }
 
-/** Rounds a discussion runs at most; it ends sooner when a round adds nothing. */
-export const MAX_DISCUSSION_ROUNDS = 3;
+/**
+ * A discussion ends when a round adds nothing. This many rounds is the stop
+ * for one that never does: the lead then sums up where it stands. The bots
+ * are not told the number, or they fill it.
+ */
+export const MAX_DISCUSSION_ROUNDS = 6;
 
 const DISCUSS =
   /\b(?:discuss|debate|ideate|brainstorm|deliberate|hash (?:it|this) out|(?:work|think|figure|talk|plan|decide|ideate)(?: (?:it|this|that))?(?: out| over| through)? together|together as a team|as a team|all of you|you all|you guys|agree on|align on|come to (?:an )?agreement|reach (?:a )?consensus|all agree|weigh in|talk (?:it|this) (?:over|through)|both of you|you two|you both)\b/i;
@@ -361,7 +368,8 @@ export const speakersFor = (
     ...mergeByPosition(text, members),
   ]);
   // "Both of you, say hi": two bots cannot discuss, but each answers. Named
-  // ("@A for, @B against"), they answer in turn and can answer each other.
+  // ("@A for, @B against"), they answer in turn, and go on as a discussion
+  // if one asks another back (see runRound).
   if (
     (EVERYONE.test(text) && !together) ||
     (asksTeam && !together && named.length === 0)
@@ -489,8 +497,8 @@ export const turnPrompt = (input: {
   others?: readonly string[];
   /** The user's bots not in the channel, which this bot may suggest inviting. */
   outsiders?: readonly Member[];
-  /** For discuss: which round, of how many at most. */
-  round?: { at: number; of: number };
+  /** For discuss: which round. */
+  round?: number;
   /** Work this bot took on here, oldest first: what became of it. */
   myWork?: readonly ChannelWork[];
   /** Its own chat with the user: a turn running there, and its last exchanges, both sides. */
@@ -579,7 +587,7 @@ export const turnPrompt = (input: {
       break;
     case "brought-in":
       lines.push(
-        `${others} brought you in above. Answer what they need, for the user, in the group. If you need an answer back from a member, @Name them and they answer you next; otherwise don't @mention anyone (write a name without @ to only mention someone), and the exchange ends with your message.`,
+        `${others} brought you in above. Answer what they need, for the user, in the group. Don't @mention anyone: nobody else will be called in.`,
         input.mayWork === true
           ? `The user named you in this channel for its work, so if ${others} needs real work from you (files, code, a browser), start it now: ${WORK_RULE}`
           : "You can't take work that needs files, code, a browser or the user's accounts on from here: say what you would do, and that the user can ask you for it directly."
@@ -601,8 +609,8 @@ export const turnPrompt = (input: {
       break;
     case "discuss":
       lines.push(
-        `The user asked the team to work this out together. This is round ${input.round?.at ?? 1} of at most ${input.round?.of ?? MAX_DISCUSSION_ROUNDS}; everyone speaks in turn and sees what the others said.`,
-        (input.round?.at ?? 1) === 1
+        "The team is working this out together, for the user: everyone speaks in turn and sees what the others said.",
+        (input.round ?? 1) === 1
           ? "Give your view from your own role and expertise. Build on or challenge what the others said above; don't repeat it."
           : "React to what the others said since your last turn: agree, push back with a reason, or refine. Address someone with @Name. If you agree and have nothing new, reply <reply>NO_REPLY</reply>: the discussion ends when nobody has anything new.",
         "Be concrete (numbers, owners, trade-offs) and brief: under 120 words. Talk to your colleagues, not only to the user. Don't sum up for the team: the lead does that at the end."

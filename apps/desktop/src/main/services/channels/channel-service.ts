@@ -167,11 +167,6 @@ interface Round {
  * message, or Stop, starts again or ends it).
  */
 export const MAX_LEAD_TURNS = 8;
-/**
- * Turns in one exchange of bots @mentioning each other: a runaway catch, not
- * its end (a reply that @mentions nobody, the user's message or Stop is).
- */
-export const MAX_EXCHANGE_TURNS = 40;
 
 /** Asked once of a bot whose reply says work is happening that it never started. */
 const CLAIM_NUDGE =
@@ -719,25 +714,27 @@ export class ChannelService {
     }
 
     const spoken = new Set<string>();
+    // A named bot @addressed another that had already answered.
+    let askedBack = false;
     for (const botId of speakers.botIds) {
       if (round.cancelled) return;
       if (spoken.has(botId)) continue;
       const reply = await this.turn(channelId, round, botId, "answer", []);
       spoken.add(botId);
       if (reply.length === 0) continue;
+      askedBack ||= mentionedIn(reply, members).some(
+        (id) => id !== botId && spoken.has(id) && speakers.botIds.includes(id)
+      );
       // One the user named answers in its own turn, not as brought in.
-      const exchange = await this.bringIn(
+      const brought = await this.bringIn(
         channelId,
         round,
         botId,
         reply,
-        new Set(speakers.botIds.filter((id) => !spoken.has(id)))
+        new Set([...spoken, ...speakers.botIds])
       );
-      const brought = exchange.first;
       for (const id of brought) spoken.add(id);
-      // Asked and answered: it finishes its answer, unless the exchange came
-      // back to it and ended where the bots left it.
-      if (brought.length > 0 && !exchange.back && !round.cancelled)
+      if (brought.length > 0 && !round.cancelled)
         await this.turn(
           channelId,
           round,
@@ -746,13 +743,17 @@ export class ChannelService {
           brought.map((id) => this.deps.bot(id)?.name ?? "A bot")
         );
     }
+    // "@Pro for, @Con against": the bots the user named have answered in
+    // turn, and one asked another back. They go on as a discussion, in any
+    // language, under its rule: it ends when a round adds nothing.
+    if (askedBack && !round.cancelled)
+      await this.discuss(channelId, round, speakers.botIds, 2);
   }
 
   /**
-   * The members a bot @named in its reply (not itself, not those in `skip`)
-   * answer it in turn, and those they @name answer them: the exchange goes on
-   * while replies @name someone, until the user speaks or Stop. `first` is
-   * who the reply named; `back` whether the exchange came back to `botId`.
+   * The members a bot @named in its reply, other than itself and those in
+   * `skip`, answer it once each, in turn: one level deep, their own
+   * @mentions bring nobody in. Resolves with who was named.
    */
   private async bringIn(
     channelId: string,
@@ -760,40 +761,18 @@ export class ChannelService {
     botId: string,
     reply: string,
     skip: ReadonlySet<string>
-  ): Promise<{ first: string[]; back: boolean }> {
-    const named = (from: string, words: string): string[] =>
-      mentionedIn(words, this.members(this.channel(channelId))).filter(
-        (id) => id !== from && !skip.has(id)
-      );
-    const first = reply.length === 0 ? [] : named(botId, reply);
-    const pending = first.map((id) => ({ id, asker: botId }));
-    let turns = 0;
-    let back = false;
-    while (pending.length > 0) {
-      // The user spoke: the exchange stops; their message is answered next.
-      const userWaits = (this.queues.get(channelId) ?? []).some(
-        (queued) => queued.leadAfter == null
-      );
-      if (round.cancelled || userWaits) break;
-      if (turns >= MAX_EXCHANGE_TURNS) {
-        this.log(
-          `exchange in ${channelId} reached ${MAX_EXCHANGE_TURNS} turns`
-        );
-        break;
-      }
-      const next = pending.shift()!;
-      const words = await this.turn(channelId, round, next.id, "brought-in", [
-        this.deps.bot(next.asker)?.name ?? "Another bot",
-      ]);
-      turns++;
-      if (words.length === 0) continue;
-      for (const id of named(next.id, words)) {
-        if (pending.some((entry) => entry.id === id)) continue;
-        pending.push({ id, asker: next.id });
-        if (id === botId) back = true;
-      }
+  ): Promise<string[]> {
+    if (reply.length === 0) return [];
+    const asker = this.deps.bot(botId)?.name ?? "Another bot";
+    const brought = mentionedIn(
+      reply,
+      this.members(this.channel(channelId))
+    ).filter((id) => id !== botId && !skip.has(id));
+    for (const other of brought) {
+      if (round.cancelled) break;
+      await this.turn(channelId, round, other, "brought-in", [asker]);
     }
-    return { first, back };
+    return brought;
   }
 
   /**
@@ -808,7 +787,7 @@ export class ChannelService {
     others: string[],
     /** For "everyone": show nothing after this message. */
     upTo?: string,
-    extra: { round?: { at: number; of: number }; conclusion?: boolean } = {}
+    extra: { round?: number; conclusion?: boolean } = {}
   ): Promise<string> {
     if (round.cancelled) return "";
     const channel = this.maybeChannel(channelId);
@@ -1063,22 +1042,29 @@ export class ChannelService {
    * member speaks in turn, seeing the others, until a round adds nothing
    * (each may pass) or MAX_DISCUSSION_ROUNDS; then the lead sums up. The
    * rule bounds it, not the bots: they cannot start rounds or bring anyone
-   * in, and Stop ends it.
+   * in, and Stop ends it. `from` 2: the bots have each answered already
+   * (the user named them) and go on from the second round.
    */
   private async discuss(
     channelId: string,
     round: Round,
-    botIds: readonly string[]
+    botIds: readonly string[],
+    from: 1 | 2 = 1
   ): Promise<void> {
-    let spoke = 0;
-    for (let at = 1; at <= MAX_DISCUSSION_ROUNDS; at++) {
+    let spoke = from === 1 ? 0 : botIds.length;
+    let userSpoke = false;
+    for (
+      let at: number = from;
+      at <= MAX_DISCUSSION_ROUNDS && !userSpoke;
+      at++
+    ) {
       let added = 0;
       for (const botId of botIds) {
         if (round.cancelled) return;
         // The user spoke: the team stops debating and the lead sums up;
         // their message is answered next, with the discussion in view.
         if ((this.queues.get(channelId) ?? []).length > 0) {
-          at = MAX_DISCUSSION_ROUNDS;
+          userSpoke = true;
           break;
         }
         const words = await this.turn(
@@ -1088,12 +1074,16 @@ export class ChannelService {
           "discuss",
           [],
           undefined,
-          { round: { at, of: MAX_DISCUSSION_ROUNDS } }
+          { round: at }
         );
         if (words.length > 0) added++;
       }
       spoke += added;
       if (added === 0 || (at > 1 && added <= 1)) break;
+      if (at === MAX_DISCUSSION_ROUNDS && !userSpoke)
+        this.log(
+          `discussion in ${channelId} reached ${MAX_DISCUSSION_ROUNDS} rounds`
+        );
     }
     const lead = botIds[0];
     if (lead == null || round.cancelled || spoke < 2) return;

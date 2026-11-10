@@ -8,6 +8,7 @@ import type { BotTaskTag } from "@abacus-ai/contract/agent-types";
 import type { ChannelMessage } from "@abacus-ai/contract/channels";
 import { describe, expect, it, vi } from "vitest";
 
+import { MAX_DISCUSSION_ROUNDS } from "./channel-logic";
 import {
   type ChannelDeps,
   ChannelService,
@@ -143,9 +144,9 @@ describe("ChannelService", () => {
     expect(turns[1]?.botId).toBe("res");
     expect(turns[1]?.prompt).toContain("Chief brought you in");
     expect(turns[1]?.prompt).toContain("@Researcher who are our competitors?");
-    // A name without @ calls nobody.
+    // One level deep: a brought-in bot's own @mention calls nobody.
     turns[1]!.resolve(
-      "<reply>Blue Tokai and Starbucks. Writer could use this.</reply>"
+      "<reply>Blue Tokai and Starbucks. @Writer could use this.</reply>"
     );
     await flush();
     expect(turns[2]?.botId).toBe("chief");
@@ -155,7 +156,7 @@ describe("ChannelService", () => {
     expect(turns).toHaveLength(3);
     expect(texts(id).slice(1)).toEqual([
       "chief: @Researcher who are our competitors?",
-      "res: Blue Tokai and Starbucks. Writer could use this.",
+      "res: Blue Tokai and Starbucks. @Writer could use this.",
       "chief: Plan: undercut Blue Tokai.",
     ]);
   });
@@ -697,10 +698,10 @@ describe("team discussions", () => {
       "res",
       "wri",
     ]);
-    expect(turns[0]!.prompt).toContain("round 1 of at most 3");
+    expect(turns[0]!.prompt).toContain("Give your view");
     expect(turns[1]!.prompt).toContain("chief idea");
     // Round 2: two react, one passes.
-    expect(turns[3]!.prompt).toContain("round 2 of at most 3");
+    expect(turns[3]!.prompt).toContain("React to what the others said");
     await say(3, "<reply>@Writer yours is cheaper</reply>");
     await say(4, "<reply>NO_REPLY</reply>");
     await say(5, "<reply>Agree with Chief</reply>");
@@ -782,41 +783,60 @@ describe("bots proposing a new bot", () => {
   });
 });
 
-describe("bots that @mention each other", () => {
-  it("keep answering each other until a reply names nobody", async () => {
+describe("bots the user named together", () => {
+  it("go on as a discussion when one asks another back, in any language", async () => {
     const { service, turns, flush, texts } = setup();
     const { id } = service.create({ botIds: ["chief", "wri"] });
-    service.post(id, "@Chief argue for, @Writer argue against: debate it");
+    service.post(id, "@Chief a favor, @Writer en contra: el trabajo remoto");
     await flush();
     const said = [
-      "For, point 1. @Writer your turn.",
-      "Against, point 1. @Chief answer that.",
-      "@Writer point 2 stands.",
-      "@Chief fair, we agree to disagree on cost.",
-      "Agreed to disagree.",
-    ];
-    for (const [i, words] of said.entries()) {
-      expect(turns[i]!.botId).toBe(i % 2 === 0 ? "chief" : "wri");
+      ["chief", "A favor, punto 1. @Writer te toca."],
+      ["wri", "En contra, punto 1. @Chief responde a eso."],
+      // Round 2 of the discussion: each reacts.
+      ["chief", "@Writer el punto 2 se mantiene."],
+      ["wri", "De acuerdo en parte; discrepamos en el coste."],
+      // Round 3 adds nothing: it ends, and the first named sums up.
+      ["chief", "NO_REPLY"],
+      ["wri", "NO_REPLY"],
+      ["chief", "Agreed:\n1. Remote suits focused work\nOpen: cost"],
+    ] as const;
+    for (const [i, [botId, words]] of said.entries()) {
+      expect(turns[i]!.botId).toBe(botId);
       turns[i]!.resolve(`<reply>${words}</reply>`);
       await flush();
     }
-    expect(turns[2]!.prompt).toContain("Writer brought you in");
-    expect(turns).toHaveLength(5);
-    expect(texts(id).at(-1)).toBe("chief: Agreed to disagree.");
+    expect(turns[1]!.prompt).toContain("Answer the user's latest message");
+    expect(turns[2]!.prompt).toContain("React to what the others said");
+    expect(turns[6]!.prompt).toContain("discussion above is over");
+    expect(turns).toHaveLength(7);
+    expect(texts(id).at(-1)).toContain("chief: Agreed:");
   });
 
-  it("stop when the user speaks", async () => {
+  it("answer once each when nobody asks back", async () => {
     const { service, turns, flush } = setup();
     const { id } = service.create({ botIds: ["chief", "wri"] });
-    service.post(id, "@Chief ask @Writer for a tagline");
+    service.post(id, "@Chief the plan, @Writer the tagline");
     await flush();
-    turns[0]!.resolve("<reply>@Writer a tagline?</reply>");
+    turns[0]!.resolve("<reply>The plan. @Writer adds the tagline.</reply>");
     await flush();
-    service.post(id, "Chief, stop and tell me the plan");
-    turns[1]!.resolve("<reply>@Chief how about this one?</reply>");
+    turns[1]!.resolve("<reply>The tagline. Chief's plan works.</reply>");
     await flush();
-    // Writer's @Chief is not followed: the user's message is answered next.
-    expect(turns[2]!.prompt).toContain("Chief, stop and tell me the plan");
+    expect(turns).toHaveLength(2);
+  });
+
+  it("stop at the round limit when no round adds nothing, and the first named sums up", async () => {
+    const { service, turns, flush } = setup();
+    const { id } = service.create({ botIds: ["chief", "wri"] });
+    service.post(id, "@Chief for, @Writer against");
+    for (let i = 0; i < 2 * MAX_DISCUSSION_ROUNDS; i++) {
+      await flush();
+      turns[i]!.resolve(
+        `<reply>point ${i} @${i % 2 === 0 ? "Writer" : "Chief"}</reply>`
+      );
+    }
+    await flush();
+    expect(turns).toHaveLength(2 * MAX_DISCUSSION_ROUNDS + 1);
+    expect(turns.at(-1)!.prompt).toContain("discussion above is over");
   });
 });
 

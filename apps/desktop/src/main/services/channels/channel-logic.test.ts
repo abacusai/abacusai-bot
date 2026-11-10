@@ -252,10 +252,10 @@ describe("turnPrompt", () => {
     ).not.toContain("Your own chat with the user");
   });
 
-  it("a brought-in bot may ask back; everyone turns bring nobody in", () => {
+  it("brought-in and everyone turns are told to bring nobody in", () => {
     expect(
       turnPrompt({ ...base, kind: "brought-in", others: ["Chief"] })
-    ).toContain("@Name them and they answer you next");
+    ).toContain("Don't @mention anyone");
     expect(turnPrompt({ ...base, kind: "everyone" })).toContain(
       "Don't @mention anyone"
     );
