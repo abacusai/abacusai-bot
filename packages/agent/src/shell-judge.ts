@@ -1633,3 +1633,4 @@ function detectForkBomb(
   };
   script.commands.forEach(visit);
 }
+// mq-sandbox test E
