@@ -134,6 +134,9 @@ type Phase =
 
 const newRatingId = (): string => crypto.randomUUID();
 
+/** Pauses after each failed comment send; the last one ends the tries. */
+const COMMENT_RETRY_MS = [3000, 15000, 0];
+
 export const RatingPromptRow = ({
   messages,
   active,
@@ -300,7 +303,15 @@ export const RatingPromptRow = ({
     const text = comment.trim();
     if (text.length === 0) return finish();
     funnel("rating_prompt_commented", rating);
-    void send(rating, ratingId, text).catch(() => undefined);
+    // The line has said thanks: a comment the server could not take yet
+    // (busy, or the post failed) is sent again a couple of times, same id.
+    void (async () => {
+      for (const wait of COMMENT_RETRY_MS) {
+        const outcome = await send(rating, ratingId, text).catch(() => null);
+        if (outcome?.ok) return;
+        await new Promise((resolve) => setTimeout(resolve, wait));
+      }
+    })();
     finish();
   };
   const dismiss = (): void => {
