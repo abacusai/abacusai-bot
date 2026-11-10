@@ -66,15 +66,6 @@ export const MEDIA_ASKS_PROMPT =
   "Asked to make or edit an image, a video, speech or audio (reading a text aloud too) while you have paid_feature: call it first, before you write anything, and open your reply with what it says makes it, never with what you cannot do.";
 
 /**
- * Fixes that broke other parts, and "fixed" said of things never run, were what
- * made people give up on hard bugs. Two fixed lines; the stuck guard does the rest.
- */
-export const SCOPE_AND_HONESTY_PROMPT = [
-  "Change what the user asked for and keep every other section, page and style as it is. If the fix needs a change somewhere else (a build step, another file), make it and say so. Ask first only before removing or replacing content the user made.",
-  "Never say something is fixed or working unless you ran it and saw it. Otherwise say what you changed and what the user should check.",
-].join("\n");
-
-/**
  * Office files, real data and long jobs: the three ways a finished-looking
  * answer turned out unusable. Fixed lines, so the cached prefix holds.
  */
@@ -116,7 +107,6 @@ ${PRODUCT_FACTS_PROMPT}
 ${PROGRESS_UPDATES_PROMPT}
 ${MEDIA_ASKS_PROMPT}
 ${PLAN_ASKS_PROMPT}
-${SCOPE_AND_HONESTY_PROMPT}
 ${DELIVERABLE_QUALITY_PROMPT}
 
 ${toolGuidelinesPrompt(edit)}`;
