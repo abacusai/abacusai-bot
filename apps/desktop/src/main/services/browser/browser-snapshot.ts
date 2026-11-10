@@ -374,23 +374,40 @@ export const SNAPSHOT_BUILD_JS = `(function() {
 /** Where the page is, for a model that wants the gist without a tree. */
 export const PAGE_SUMMARY_JS = `(function() {
   const clean = (t) => String(t ?? '').replace(/\\s+/g, ' ').trim();
-  // A hidden element still has text: only what is drawn counts.
-  const shown = (el) => {
+  // A hidden element still has text: only what is drawn counts. The box
+  // drawn for an element: its own, or, when it has none (display: contents,
+  // a 0x0 portal wrapper), the first drawn one inside it; null when hidden.
+  const drawnBox = (el, depth) => {
     const box = el.getBoundingClientRect();
-    if (box.width === 0 || box.height === 0) return false;
-    return el.checkVisibility
+    if (box.width === 0 || box.height === 0) {
+      if (depth >= 3) return null;
+      for (const child of el.children) {
+        const inner = drawnBox(child, depth + 1);
+        if (inner) return inner;
+      }
+      return null;
+    }
+    const visible = el.checkVisibility
       ? el.checkVisibility({ opacityProperty: true, visibilityProperty: true })
       : getComputedStyle(el).visibility !== 'hidden';
+    return visible ? box : null;
+  };
+  const shown = (el) => drawnBox(el, 0) != null;
+  // A dialog on top: drawn inside the window, not hidden from assistive tech.
+  const onTop = (el) => {
+    if (el.closest('[aria-hidden="true"]')) return false;
+    const box = drawnBox(el, 0);
+    return box != null && box.right > 0 && box.bottom > 0 && box.left < innerWidth && box.top < innerHeight;
   };
   const headings = [...document.querySelectorAll('h1,h2,h3')]
-    .filter(shown).map(h => clean(h.innerText)).filter(Boolean).slice(0, 8);
+    .filter((h) => shown(h)).map(h => clean(h.innerText)).filter(Boolean).slice(0, 8);
   const active = document.activeElement;
   const focused = active && active !== document.body
     ? active.tagName.toLowerCase() + (active.getAttribute('aria-label') || active.placeholder || active.name ? ' "' + clean(active.getAttribute('aria-label') || active.placeholder || active.name) + '"' : '')
     : null;
   const main = document.querySelector('main, [role="main"], article') || document.body;
   const dialogs = [...document.querySelectorAll('[role="dialog"],[role="alertdialog"],dialog[open]')]
-    .filter(shown).map(d => clean(d.innerText).slice(0, 120)).filter(Boolean).slice(0, 2);
+    .filter(onTop).map(d => clean(d.innerText).slice(0, 120)).filter(Boolean).slice(0, 2);
   return {
     title: document.title,
     url: location.href,
