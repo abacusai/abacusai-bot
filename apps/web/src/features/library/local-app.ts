@@ -37,10 +37,14 @@ export const localAppCopy = (
 /** Why its app cannot serve now, when that is the news on the card. */
 export const localAppReason = (
   status: ConnectorStatus | undefined
-): LocalAppReason | null =>
-  status?.reason === "app-missing" || status?.reason === "app-not-ready"
-    ? status.reason
-    : null;
+): LocalAppReason | null => {
+  const why = status?.reason ?? "";
+  return (
+    (["app-missing", "app-not-ready"] as const).find((code) =>
+      [code].includes(why as LocalAppReason)
+    ) ?? null
+  );
+};
 
 /** The pill for that reason. */
 export const LOCAL_APP_PILL: Readonly<Record<LocalAppReason, string>> = {
@@ -58,4 +62,4 @@ export const localAppHidden = (
 ): boolean =>
   connector.kind === "mcp" &&
   connector.local != null &&
-  (status == null || status.reason === "other-os");
+  (status == null || ["other-os"].includes(status.reason ?? ""));
