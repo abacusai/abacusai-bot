@@ -26,6 +26,15 @@ const SPAWNS_SOMETHING = [
   // project's 5s default, the spawn alone times out on a contended Windows
   // runner.
   "src/background-bash.test.ts",
+  // Starts a session against a local MCP server; the glob above misses it
+  // because nothing comes before ".integration".
+  "src/mcp/integration.test.ts",
+  // Resolves the server command against the runner's real PATH, every
+  // directory and PATHEXT extension, which ran past 5s on Windows.
+  "src/mcp/stdio-env.test.ts",
+  // Installs the busybox payload with its hard-linked applets for real, which
+  // ran past 5s on a contended Windows runner.
+  "src/posix-shell.test.ts",
 ];
 
 export default defineConfig({
