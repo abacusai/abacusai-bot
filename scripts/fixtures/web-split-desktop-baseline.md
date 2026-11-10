@@ -8,7 +8,20 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `7406b281`, who auto-reply answers
+## Current: `61f525ba`, the app in Dutch and Polish
+
+**442 / 9332008 / 3129101.** Records the renderer with Dutch and Polish. Each
+language is one locale chunk, loaded only when that language is picked. Against
+`fe576f91` (main before this change, 440 / 8890341 / 2986027): +2 chunks
+(+0.45%), +441667 bytes (+4.97%), +143074 gzip bytes (+4.79%). Polish carries
+the extra CLDR plural forms (`_few`, `_many`). `apps/web`'s dependencies did not
+change. The 1% allowance is unchanged.
+
+Measured from a frozen-lockfile build of `61f525ba` and of `fe576f91` (Linux
+x64), summed the same way as `check-desktop-parity.mjs`. This baseline-only
+change touches no renderer code.
+
+### `7406b281`, who auto-reply answers
 
 **438 / 8828912 / 2965713.** Records the renderer with the Messaging page's
 Auto-reply card (the rule, who is answered, who waits, and the confirm before
