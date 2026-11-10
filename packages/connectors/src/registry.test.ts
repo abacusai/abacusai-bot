@@ -17,6 +17,7 @@ import {
   connectorById,
   connectorForService,
   GATEWAY_SERVER_NAME,
+  mcpEntryOn,
   resolveConnector,
 } from "./registry.js";
 import {
@@ -202,5 +203,55 @@ describe("what the model is told", () => {
     expect(describeForListing(github, { state: "available" })).toContain(
       "not connected: ask for it with this tool"
     );
+  });
+});
+
+describe("Roblox Studio", () => {
+  const roblox = connectorById("roblox-studio");
+
+  it("is Studio's own stdio server, on the two systems Studio runs on", () => {
+    expect(roblox).toMatchObject({
+      kind: "mcp",
+      auth: "none",
+      category: "development",
+    });
+    if (roblox?.kind !== "mcp") throw new Error("not an mcp connector");
+    expect(Object.keys(roblox.local ?? {}).toSorted()).toEqual([
+      "darwin",
+      "win32",
+    ]);
+    expect(mcpEntryOn(roblox, "darwin")).toEqual({
+      command: "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP",
+    });
+    expect(mcpEntryOn(roblox, "win32")).toEqual({
+      command: "cmd.exe",
+      args: ["/c", "%LOCALAPPDATA%\\Roblox\\mcp.bat"],
+    });
+    expect(mcpEntryOn(roblox, "linux")).toBeNull();
+    expect(connectUi(roblox)).toBe("none");
+  });
+
+  it("is what a Roblox or Luau task routes to, and what the model hears once connected", () => {
+    expect(routingPrompt()).toContain("Luau scripts → Roblox Studio");
+    expect(resolveConnector("roblox")).toEqual({ match: roblox });
+    const line = describeForListing(roblox!, { state: "connected" });
+    expect(line).toContain("list_roblox_studios");
+    expect(line).toContain("multi_edit");
+    expect(line).toContain("Enable Studio as MCP server");
+    expect(describeForListing(roblox!, { state: "available" })).not.toContain(
+      "multi_edit"
+    );
+  });
+});
+
+describe("mcp entries", () => {
+  it("each install as something: one entry, or one per system they run on", () => {
+    for (const connector of CONNECTORS) {
+      if (connector.kind !== "mcp") continue;
+      const onSome = ["darwin", "win32", "linux"].some(
+        (os) => mcpEntryOn(connector, os) != null
+      );
+      expect(onSome, connector.id).toBe(true);
+    }
   });
 });

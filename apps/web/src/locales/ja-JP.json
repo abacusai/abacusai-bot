@@ -3967,9 +3967,13 @@
     "connectTimedOut": "接続がタイムアウトしました。もう一度お試しください。",
     "connectFailed": "接続が完了しませんでした。もう一度お試しください。",
     "connectUnreachable": "現在 Abacus に接続できません。インターネット接続を確認して、もう一度お試しください。",
+    "connectAppMissing": "まずこのコンピューターにアプリをインストールしてから、もう一度接続してください。",
+    "connectOtherOs": "このコネクタには Windows または macOS が必要です。",
     "connectorsLastSeen": "現在 Abacus に接続できません。最後に確認した時点の接続状態を表示しています。",
     "connectorsUnchecked": "現在 Abacus に接続できないため、接続状態を確認できません。",
     "cantCheck": "確認できません",
+    "appMissing": "未インストール",
+    "appNotReady": "準備ができていません",
     "connectChatAppOnDesktop": "This chat app connects from the AbacusAI Bot desktop app.",
     "connectorsDescription": "エージェントが作業に使用できるサービスを接続します。",
     "credentialsLocal": "認証情報はこのコンピューターに保存されます。",
@@ -4139,7 +4143,15 @@
     },
     "connecting": "Loading",
     "toolsUnavailable": "このバージョンでは、これらのツールは利用できません。",
-    "noInstalledSkills": "この範囲にはスキルがインストールされていません。インポートするか、マーケットプレイスを開いてください。"
+    "noInstalledSkills": "この範囲にはスキルがインストールされていません。インポートするか、マーケットプレイスを開いてください。",
+    "localApp": {
+      "robloxStudio": {
+        "ready": "Roblox Studio でプレイスを開いたまま、Enable Studio as MCP server をオンにしておいてください（Assistant > … > Manage MCP Servers）。",
+        "missing": "このコンピューターに Roblox Studio がありません。インストールしてから、もう一度接続してください。",
+        "notReady": "Roblox Studio から応答がありません。Studio でプレイスを開き、Enable Studio as MCP server をオンにして（Assistant > … > Manage MCP Servers）、もう一度お試しください。",
+        "get": "Roblox Studio を入手"
+      }
+    }
   },
   "browserPermission": {
     "allow": "許可",

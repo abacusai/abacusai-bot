@@ -3967,9 +3967,13 @@
     "connectTimedOut": "Waktu menghubungkan habis. Silakan coba lagi.",
     "connectFailed": "Proses menghubungkan tidak selesai. Silakan coba lagi.",
     "connectUnreachable": "Abacus tidak dapat dijangkau saat ini. Periksa koneksi internet Anda dan coba lagi.",
+    "connectAppMissing": "Pasang dulu aplikasinya di komputer ini, lalu hubungkan lagi.",
+    "connectOtherOs": "Konektor ini memerlukan Windows atau macOS.",
     "connectorsLastSeen": "Abacus tidak dapat dijangkau saat ini. Koneksi Anda ditampilkan seperti terakhir terlihat.",
     "connectorsUnchecked": "Abacus tidak dapat dijangkau saat ini, jadi koneksi Anda tidak dapat diperiksa.",
     "cantCheck": "Tidak dapat diperiksa",
+    "appMissing": "Belum terpasang",
+    "appNotReady": "Belum siap",
     "connectChatAppOnDesktop": "This chat app connects from the AbacusAI Bot desktop app.",
     "connectorsDescription": "Hubungkan layanan yang dapat digunakan agen untuk menyelesaikan tugas.",
     "credentialsLocal": "Kredensial disimpan di komputer ini.",
@@ -4139,7 +4143,15 @@
     },
     "connecting": "Loading",
     "toolsUnavailable": "Alat ini tidak tersedia dalam versi ini.",
-    "noInstalledSkills": "Belum ada skill terpasang dalam cakupan ini. Impor skill atau jelajahi marketplace."
+    "noInstalledSkills": "Belum ada skill terpasang dalam cakupan ini. Impor skill atau jelajahi marketplace.",
+    "localApp": {
+      "robloxStudio": {
+        "ready": "Biarkan place kamu tetap terbuka di Roblox Studio dengan Enable Studio as MCP server aktif (Assistant > … > Manage MCP Servers).",
+        "missing": "Roblox Studio belum ada di komputer ini. Pasang dulu, lalu hubungkan lagi.",
+        "notReady": "Roblox Studio tidak merespons. Buka place kamu di Studio, aktifkan Enable Studio as MCP server (Assistant > … > Manage MCP Servers), lalu coba lagi.",
+        "get": "Dapatkan Roblox Studio"
+      }
+    }
   },
   "browserPermission": {
     "allow": "Izinkan",

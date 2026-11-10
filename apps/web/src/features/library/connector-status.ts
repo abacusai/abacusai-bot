@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import { useAppContext } from "#renderer/lib/use-app-context";
 
 import type { useConnectFlow } from "./connect-flow";
+import { localAppHidden } from "./local-app";
 
 /** Abacus could not be read and nothing was known before: neither connected nor not. */
 export const uncheckable = (status: ConnectorStatus | undefined): boolean =>
@@ -47,7 +48,10 @@ export const useConnectorStatuses = (
   }, [reachable, flow.store]);
   return { statuses, stale, unchecked };
 };
-/** What this account can add; chat apps only where they can pair. */
+/**
+ * What this account can add; chat apps only where they can pair, and an
+ * app's own server only where that app runs.
+ */
 export const offeredConnectors = (
   statuses: ConnectorStatuses | undefined,
   messaging: boolean
@@ -55,7 +59,8 @@ export const offeredConnectors = (
   CONNECTORS.filter(
     (e) =>
       (messaging || e.kind !== "messaging") &&
-      statuses?.[e.id]?.reason !== "not-offered"
+      statuses?.[e.id]?.reason !== "not-offered" &&
+      !localAppHidden(e, statuses?.[e.id])
   );
 export const connectorAdded = (status: ConnectorStatus | undefined): boolean =>
   ["connected", "pending"].includes(status?.state ?? "");

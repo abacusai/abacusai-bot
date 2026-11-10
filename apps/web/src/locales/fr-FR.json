@@ -3967,9 +3967,13 @@
     "connectTimedOut": "La connexion a expiré. Veuillez réessayer.",
     "connectFailed": "La connexion n'a pas abouti. Veuillez réessayer.",
     "connectUnreachable": "Impossible de joindre Abacus pour le moment. Vérifiez votre connexion internet et réessayez.",
+    "connectAppMissing": "Installez d’abord l’app sur cet ordinateur, puis reconnectez-vous.",
+    "connectOtherOs": "Ce connecteur nécessite Windows ou macOS.",
     "connectorsLastSeen": "Impossible de joindre Abacus pour le moment. Vos connexions sont affichées telles qu'elles étaient la dernière fois.",
     "connectorsUnchecked": "Impossible de joindre Abacus pour le moment : vos connexions ne peuvent pas être vérifiées.",
     "cantCheck": "Vérification impossible",
+    "appMissing": "Non installé",
+    "appNotReady": "Pas prêt",
     "connectChatAppOnDesktop": "This chat app connects from the AbacusAI Bot desktop app.",
     "connectorsDescription": "Connectez les services que votre agent peut utiliser pour accomplir ses tâches.",
     "credentialsLocal": "Les identifiants sont enregistrés sur cet ordinateur.",
@@ -4139,7 +4143,15 @@
     },
     "connecting": "Loading",
     "toolsUnavailable": "Ces outils ne sont pas disponibles dans cette version.",
-    "noInstalledSkills": "Aucune compétence installée dans cet espace. Importez-en une ou parcourez le catalogue."
+    "noInstalledSkills": "Aucune compétence installée dans cet espace. Importez-en une ou parcourez le catalogue.",
+    "localApp": {
+      "robloxStudio": {
+        "ready": "Gardez votre expérience ouverte dans Roblox Studio avec Enable Studio as MCP server activé (Assistant > … > Manage MCP Servers).",
+        "missing": "Roblox Studio n’est pas installé sur cet ordinateur. Installez-le, puis reconnectez-vous.",
+        "notReady": "Roblox Studio n’a pas répondu. Ouvrez votre expérience dans Studio, activez Enable Studio as MCP server (Assistant > … > Manage MCP Servers), puis réessayez.",
+        "get": "Obtenir Roblox Studio"
+      }
+    }
   },
   "browserPermission": {
     "allow": "Autoriser",

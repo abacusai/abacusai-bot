@@ -42,7 +42,7 @@ export type ConnectOutcome =
   | {
       code: "unavailable";
       name: string;
-      reason: "not-signed-in" | "not-offered" | "unreachable";
+      reason: "not-signed-in" | "not-offered" | "other-os" | "unreachable";
     }
   /** An account service this surface does not connect; no link was made. */
   | { code: "not_here"; name: string }

@@ -84,7 +84,7 @@ export const describeForListing = (
           ? "connected: send with its send_<platform>_message tool"
           : "not connected: ask for it with this tool"
       : connected
-        ? `connected${account}${connector.kind === "platform" && connector.via != null ? `: use ${connector.via}` : ""}`
+        ? `connected${account}${connector.kind === "platform" && connector.via != null ? `: use ${connector.via}` : ""}${connector.usage != null ? `. ${connector.usage}` : ""}`
         : "not connected: ask for it with this tool";
   return `${connector.id}  ${connector.name}  ${how}`;
 };

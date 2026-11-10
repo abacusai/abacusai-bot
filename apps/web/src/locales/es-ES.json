@@ -3967,9 +3967,13 @@
     "connectTimedOut": "Se ha agotado el tiempo de conexión. Vuelve a intentarlo.",
     "connectFailed": "No se ha completado la conexión. Vuelve a intentarlo.",
     "connectUnreachable": "No se puede conectar con Abacus ahora mismo. Comprueba tu conexión a internet e inténtalo de nuevo.",
+    "connectAppMissing": "Primero instala la app en este ordenador y luego vuelve a conectar.",
+    "connectOtherOs": "Este conector necesita Windows o macOS.",
     "connectorsLastSeen": "No se puede conectar con Abacus ahora mismo. Mostramos tus conexiones tal como estaban la última vez.",
     "connectorsUnchecked": "No se puede conectar con Abacus ahora mismo, así que no se pueden comprobar tus conexiones.",
     "cantCheck": "No se puede comprobar",
+    "appMissing": "No instalado",
+    "appNotReady": "No está listo",
     "connectChatAppOnDesktop": "This chat app connects from the AbacusAI Bot desktop app.",
     "connectorsDescription": "Conecta los servicios que tu agente puede usar para completar tareas.",
     "credentialsLocal": "Las credenciales se guardan en este ordenador.",
@@ -4139,7 +4143,15 @@
     },
     "connecting": "Loading",
     "toolsUnavailable": "Estas herramientas no están disponibles en esta versión.",
-    "noInstalledSkills": "No hay habilidades instaladas en este ámbito. Importa una o explora el mercado."
+    "noInstalledSkills": "No hay habilidades instaladas en este ámbito. Importa una o explora el mercado.",
+    "localApp": {
+      "robloxStudio": {
+        "ready": "Deja tu experiencia abierta en Roblox Studio con Enable Studio as MCP server activado (Assistant > … > Manage MCP Servers).",
+        "missing": "Roblox Studio no está en este ordenador. Instálalo y luego vuelve a conectar.",
+        "notReady": "Roblox Studio no ha respondido. Abre tu experiencia en Studio, activa Enable Studio as MCP server (Assistant > … > Manage MCP Servers) y vuelve a intentarlo.",
+        "get": "Obtener Roblox Studio"
+      }
+    }
   },
   "browserPermission": {
     "allow": "Permitir",

@@ -9,12 +9,15 @@ import {
   connectorById,
   connectUi,
   HOME_PLACEHOLDER,
+  mcpEntryOn,
   type McpConnector,
 } from "@abacus-ai/connectors/registry";
 import type {
   ConnectorOutcome,
   McpServerEntry,
 } from "@abacus-ai/contract/contracts";
+
+import type { LocalAppState } from "./local-app";
 
 /** How a server's sign-in went: done, no sign-in asked for, or why not. */
 export type McpSignIn =
@@ -58,7 +61,18 @@ export interface FlowSources {
     connectUrl: (name: string) => string | null;
   };
   homeDir: () => string;
+  /** This computer's system, as Node names it: picks a `local` connector's entry. */
+  os?: string;
+  /** Whether a `local` connector's app runs here and is installed; unasked, it is. */
+  localApp?: (connector: McpConnector) => LocalAppState;
 }
+
+/**
+ * Error codes the renderer words itself: the app behind a `local` connector
+ * is not installed, or does not run on this system.
+ */
+export const APP_MISSING = "app-missing";
+export const OTHER_OS = "other-os";
 
 const failure = (error: string): ConnectorOutcome => ({ ok: false, error });
 
@@ -73,9 +87,10 @@ const unknown = (id: string): ConnectorOutcome =>
 export const mcpEntryFor = (
   connector: McpConnector,
   values: Record<string, string>,
-  homeDir: string
+  homeDir: string,
+  os: string = process.platform
 ): McpServerEntry => {
-  const entry: McpServerEntry = { ...connector.entry };
+  const entry: McpServerEntry = { ...mcpEntryOn(connector, os) };
   if (entry.args?.includes(HOME_PLACEHOLDER) === true)
     entry.args = entry.args.map((arg) =>
       arg === HOME_PLACEHOLDER ? homeDir : arg
@@ -120,6 +135,8 @@ export type McpConnectPlan =
   | { kind: "missing" }
   /** A registry connector that needs the user's fields (keys) first. */
   | { kind: "needs-fields"; label: string }
+  /** A `local` connector whose app is not installed, or does not run here. */
+  | { kind: "app"; label: string; reason: string }
   | {
       kind: "ready";
       label: string;
@@ -196,7 +213,12 @@ export class ConnectorFlowService {
       return failure(`${connector.name} takes no fields.`);
     const added = this.sources.mcp.add(
       connector.id,
-      mcpEntryFor(connector, values, this.sources.homeDir())
+      mcpEntryFor(
+        connector,
+        values,
+        this.sources.homeDir(),
+        this.sources.os ?? process.platform
+      )
     );
     if (!added.success)
       return failure(added.error ?? `Could not add ${connector.name}.`);
@@ -226,7 +248,22 @@ export class ConnectorFlowService {
     if (connector == null) return { kind: "missing" };
     if (connectUi(connector) === "fields")
       return { kind: "needs-fields", label };
-    return ready(mcpEntryFor(connector, {}, this.sources.homeDir()), false);
+    const app = this.sources.localApp?.(connector) ?? "none";
+    if (app === "other-os" || app === "missing")
+      return {
+        kind: "app",
+        label,
+        reason: app === "missing" ? APP_MISSING : OTHER_OS,
+      };
+    return ready(
+      mcpEntryFor(
+        connector,
+        {},
+        this.sources.homeDir(),
+        this.sources.os ?? process.platform
+      ),
+      false
+    );
   }
 
   /** Adds `entry` under `name` unless an entry is there already, which is never touched. */
@@ -254,6 +291,9 @@ export class ConnectorFlowService {
         label,
         error: `${label} needs its fields first.`,
       };
+    // The code, not a sentence: the renderer says what to install, in the user's language.
+    if (plan.kind === "app")
+      return { kind: "failed", label, error: plan.reason };
     if (!plan.installed) {
       const added = this.sources.mcp.add(name, plan.entry);
       if (!added.success)

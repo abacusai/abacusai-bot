@@ -177,7 +177,9 @@ export function appConnectResult(
           ? "the app is not signed in to Abacus.AI"
           : outcome.reason === "not-offered"
             ? "the user's Abacus.AI account does not offer it"
-            : "it cannot be reached right now";
+            : outcome.reason === "other-os"
+              ? "its app does not run on this computer's operating system (it needs Windows or macOS)"
+              : "it cannot be reached right now";
       return host.ok(
         `${outcome.name} cannot be connected from here: ${why}. Say so, and offer whatever ` +
           "part of the task does not need it."

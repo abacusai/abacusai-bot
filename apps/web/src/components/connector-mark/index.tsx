@@ -72,6 +72,7 @@ export const CONNECTOR_MARK_IDS = [
   "canva",
   "paypal",
   "autodesk",
+  "roblox",
   "azure",
   "box",
   "dynamics365",
@@ -151,6 +152,13 @@ const LOGO_ASSETS: Record<string, string> = {
 const MARKS: Record<ConnectorMarkId, { parts: Part[] }> = {
   autodesk: {
     parts: [{ d: "M2 20 15 5h7v15h-5v-4h-4l-3.5 4z", fill: INK }],
+  },
+  // Roblox: the tilted square with its square cut-out, in the text colour.
+  roblox: {
+    parts: [
+      { d: "M5.99 1.59 22.41 5.99 18.01 22.41 1.59 18.01z", fill: INK },
+      { d: "M10.23 8.94 15.06 10.23 13.77 15.06 8.94 13.77z", fill: TILE },
+    ],
   },
   azure: { parts: [] },
   box: { parts: [] },

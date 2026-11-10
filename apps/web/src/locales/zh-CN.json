@@ -3967,9 +3967,13 @@
     "connectTimedOut": "连接超时。请重试。",
     "connectFailed": "连接未完成。请重试。",
     "connectUnreachable": "目前无法连接到 Abacus。请检查你的网络连接，然后重试。",
+    "connectAppMissing": "请先在这台电脑上安装该应用，然后重新连接。",
+    "connectOtherOs": "此连接器需要 Windows 或 macOS。",
     "connectorsLastSeen": "目前无法连接到 Abacus。正在显示你的连接上次的状态。",
     "connectorsUnchecked": "目前无法连接到 Abacus，因此无法检查你的连接。",
     "cantCheck": "无法检查",
+    "appMissing": "未安装",
+    "appNotReady": "未就绪",
     "connectChatAppOnDesktop": "此聊天应用需要在 AbacusAI Bot 桌面应用中连接。",
     "connectorsDescription": "连接你的智能体可用来完成任务的服务。",
     "credentialsLocal": "凭据存储在这台电脑上。",
@@ -4139,7 +4143,15 @@
     },
     "connecting": "加载中",
     "toolsUnavailable": "这些工具在此版本中不可用。",
-    "noInstalledSkills": "此范围内未安装技能。请导入技能或浏览市场。"
+    "noInstalledSkills": "此范围内未安装技能。请导入技能或浏览市场。",
+    "localApp": {
+      "robloxStudio": {
+        "ready": "请在 Roblox Studio 中保持体验打开，并开启 Enable Studio as MCP server（Assistant > … > Manage MCP Servers）。",
+        "missing": "这台电脑上没有 Roblox Studio。请先安装，然后重新连接。",
+        "notReady": "Roblox Studio 没有响应。请在 Studio 中打开你的体验，开启 Enable Studio as MCP server（Assistant > … > Manage MCP Servers），然后重试。",
+        "get": "获取 Roblox Studio"
+      }
+    }
   },
   "browserPermission": {
     "allow": "允许",
