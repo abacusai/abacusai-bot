@@ -5,11 +5,18 @@ import type { TopModelHintCard } from "@abacus-ai/contract/top-model-hint";
 import { EMPTY_TOP_MODEL_HINT_CARD } from "@abacus-ai/contract/top-model-hint";
 import { implement } from "@orpc/server";
 import type { StreamChunk } from "@tanstack/ai";
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
+import { useTailCards } from "../kit/tail-cards";
 import { renderRelay } from "../testing";
 
 const ROUTER = "abacus/route-llm-code-low";
@@ -223,6 +230,16 @@ describe("TopModelHint", () => {
     expect(h.steps.map((step) => step.step)).not.toContain(
       "top_model_hint_switched"
     );
+  });
+
+  it("claims the space under the reply while it is up, so the rating line stands down", async () => {
+    const h = await mount();
+    await screen.findByRole("button", { name: "Claude Sonnet 5.5" });
+    const tail = renderHook(() => useTailCards(h.relay.threadId));
+    await waitFor(() => expect(tail.result.current.claimed).toBe(true));
+    fireEvent.click(await screen.findByRole("button", { name: "Not now" }));
+    await waitFor(() => expect(tail.result.current.claimed).toBe(false));
+    tail.unmount();
   });
 
   it("opens the chat's model picker from See all models", async () => {

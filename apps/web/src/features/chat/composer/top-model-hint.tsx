@@ -41,6 +41,7 @@ import { useChatView } from "../kit/context";
 import { deliverableOfferTarget } from "../kit/deliverable-offer";
 import { openModelPicker } from "../kit/open-model-picker";
 import { retryOfferTarget, successPitchOnThread } from "../kit/retry-offer";
+import { useTailCardClaim } from "../kit/tail-cards";
 import { useHost, useThreadStore } from "../store/selectors";
 
 /** The latest reply ended with tap-to-run task buttons of its own. */
@@ -153,6 +154,9 @@ export const TopModelHint = ({
   useEffect(() => {
     if (visible) shown();
   }, [visible]);
+
+  // While it is up, the rating line under the reply stands down (tail-cards.ts).
+  useTailCardClaim(threadId, visible ? (messages.at(-1)?.id ?? null) : null);
 
   if (!visible) return null;
   const base = card ?? EMPTY_TOP_MODEL_HINT_CARD;
