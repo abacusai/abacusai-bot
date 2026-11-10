@@ -10,14 +10,14 @@ name: CI
 #
 # A pull request runs what its diff reaches (scripts/ci-plan.mjs) on Linux,
 # and never macOS or Windows. The merge queue runs the same plan on all three
-# systems before a pull request lands (`ci:skip-os` keeps it to Linux). A push
-# to main runs everything on Linux, and a scheduled run tests main on all three
-# systems twice a day.
+# systems before a pull request lands. A push to main runs everything on Linux,
+# and a scheduled run tests main on all three systems twice a day.
 #
-# `ci:skip`, put on by a repository admin, is the emergency path: no job tests
-# anything, on the pull request or in the merge queue, so `CI result` passes in
-# seconds both times. ci-skip-label.yml reruns the pull request's run when the
-# label goes on.
+# Two labels change that, and only when a repository admin put them on:
+# `ci:skip-os` keeps the merge queue run to Linux, and `ci:skip` is the
+# emergency path: no job tests anything, on the pull request or in the merge
+# queue, so `CI result` passes in seconds both times. ci-skip-label.yml reruns
+# the pull request's run when `ci:skip` goes on.
 
 on:
   push:
@@ -57,7 +57,8 @@ env:
   ABACUS_BUILD_COMMIT: ${{ github.sha }}
 
 jobs:
-  # Whether an admin's `ci:skip` label takes this run's tests away.
+  # Whether an admin's label takes this run's tests away (`ci:skip`) or keeps
+  # a merge queue run to Linux (`ci:skip-os`).
   gate:
     name: Gate
     if: github.event.action != 'closed'
@@ -67,6 +68,7 @@ jobs:
       issues: read
     outputs:
       skip: ${{ steps.gate.outputs.skip }}
+      linux_only: ${{ steps.gate.outputs.linux_only }}
     steps:
       - id: gate
         env:
@@ -83,24 +85,30 @@ jobs:
             number=${QUEUE_REF##*/pr-}
             number=${number%%-*}
           fi
-          skip=false
-          if [ -n "$number" ]; then
-            # The label's last event, read now so a rerun sees it. Anything
-            # that cannot be read leaves the tests on.
+          # Whether a repository admin put this label on, going by its last
+          # event, read now so a rerun sees it. Anything that cannot be read
+          # leaves the tests on.
+          from_admin() {
+            local last who role
             last=$(gh api "repos/$GITHUB_REPOSITORY/issues/$number/events" --paginate \
-              --jq '.[] | select(.label.name == "ci:skip") | "\(.event) \(.actor.login)"' | tail -n 1) || last=""
-            if [ "${last%% *}" = labeled ]; then
-              who=${last#* }
-              role=$(gh api "repos/$GITHUB_REPOSITORY/collaborators/$who/permission" --jq .permission) || role=""
-              if [ "$role" = admin ]; then
-                skip=true
-                echo "\`ci:skip\` from @$who: this run tests nothing." >> "$GITHUB_STEP_SUMMARY"
-              else
-                echo "::warning::ci:skip on #$number was added by $who, who is not a repository admin; the tests run."
-              fi
+              --jq ".[] | select(.label.name == \"$1\") | \"\(.event) \(.actor.login)\"" | tail -n 1) || last=""
+            [ "${last%% *}" = labeled ] || return 1
+            who=${last#* }
+            role=$(gh api "repos/$GITHUB_REPOSITORY/collaborators/$who/permission" --jq .permission) || role=""
+            if [ "$role" != admin ]; then
+              echo "::warning::$1 on #$number was added by $who, who is not a repository admin; it is ignored."
+              return 1
             fi
+            echo "\`$1\` from @$who." >> "$GITHUB_STEP_SUMMARY"
+          }
+          skip=false
+          linux_only=false
+          if [ -n "$number" ]; then
+            if from_admin ci:skip; then skip=true; fi
+            if from_admin ci:skip-os; then linux_only=true; fi
           fi
           echo "skip=$skip" >> "$GITHUB_OUTPUT"
+          echo "linux_only=$linux_only" >> "$GITHUB_OUTPUT"
 
   # What this run has to test, and which release unit the change touches.
   # Renderer and agent source are an experience release (hot-swapped over TUF,
@@ -113,10 +121,6 @@ jobs:
     needs: gate
     if: github.event.action != 'closed' && needs.gate.outputs.skip != 'true'
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      # The platforms step reads the queued pull request's labels.
-      pull-requests: read
     outputs:
       tests: ${{ steps.plan.outputs.tests }}
       any: ${{ steps.plan.outputs.any }}
@@ -138,25 +142,14 @@ jobs:
       - id: platforms
         name: Which systems this run tests
         env:
-          GH_TOKEN: ${{ github.token }}
           REQUESTED: ${{ inputs.platforms }}
-          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+          LINUX_ONLY: ${{ needs.gate.outputs.linux_only }}
         run: |
           set -euo pipefail
-          labels=""
-          if [ "$GITHUB_EVENT_NAME" = merge_group ]; then
-            # The queue's ref ends in pr-<number>-<sha>.
-            number=${QUEUE_REF##*/pr-}
-            number=${number%%-*}
-            # Read now rather than from the event, so a rerun sees a label added since.
-            labels=$(gh pr view "$number" -R "$GITHUB_REPOSITORY" --json labels --jq '.labels[].name') ||
-              echo "::warning::Could not read the labels of #$number; this run tests all three systems."
-          fi
-          has() { grep -qx "$1" <<< "$labels"; }
           case "$GITHUB_EVENT_NAME" in
             workflow_dispatch) platforms=$REQUESTED ;;
             schedule) platforms=all ;;
-            merge_group) if has ci:skip-os; then platforms=linux; else platforms=all; fi ;;
+            merge_group) if [ "$LINUX_ONLY" = true ]; then platforms=linux; else platforms=all; fi ;;
             *) platforms=linux ;;
           esac
           echo "platforms=$platforms" >> "$GITHUB_OUTPUT"
