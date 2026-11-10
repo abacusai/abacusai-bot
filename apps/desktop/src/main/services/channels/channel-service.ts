@@ -49,6 +49,8 @@ import {
   goesAhead,
   MAX_NEW_MESSAGES,
   mentionedIn,
+  channelUserWords,
+  claimsWork,
   type Member,
   type OwnChat,
   postedWords,
@@ -154,7 +156,20 @@ const DECIDED = /^\s*(?:decided|decision)\s*:\s*(.+)$/is;
 interface Round {
   userMessageId: string;
   cancelled: boolean;
+  /** A lead turn after this member's work report, not an answer to the user. */
+  leadAfter?: string;
 }
+
+/**
+ * Lead turns after work reports, per user message: the lead keeps the user's
+ * goal moving between their messages, and this bounds it (the user's next
+ * message, or Stop, starts again or ends it).
+ */
+export const MAX_LEAD_TURNS = 8;
+
+/** Asked once of a bot whose reply says work is happening that it never started. */
+const CLAIM_NUDGE =
+  "Your last message in the channel said you are doing work, but you started nothing, so nothing is running. Reply again in the channel: start it now with <work>the task, complete on its own</work>, or say plainly that you have not started and what you are waiting for.";
 
 export class ChannelService {
   private readonly queues = new Map<string, Round[]>();
@@ -162,6 +177,8 @@ export class ChannelService {
   private readonly working = new Map<string, Set<string>>();
   /** Hand-off chains running in each channel: Stop and a stop word end them. */
   private readonly chains = new Map<string, Set<{ cancelled: boolean }>>();
+  /** Lead turns since the user's last message, per channel (MAX_LEAD_TURNS). */
+  private readonly leadTurns = new Map<string, number>();
   /** Work running in bots' own chats: message id → its channel and bot. */
   private readonly works = new Map<
     string,
@@ -278,6 +295,7 @@ export class ChannelService {
     if (decided != null && decided.length > 0)
       this.addDecision(channel.id, decided, message.id);
     this.setPending(channelId, (ids) => [...ids, message.id]);
+    this.leadTurns.delete(channelId);
     this.enqueue(channelId, message.id);
   }
 
@@ -616,6 +634,15 @@ export class ChannelService {
     );
     const userMessage = messages[index];
     if (userMessage == null) return;
+    // A work report landed: the lead (the first member) picks the goal up.
+    if (round.leadAfter != null) {
+      const lead = channel.memberBotIds[0];
+      if (lead != null)
+        await this.turn(channelId, round, lead, "report", [
+          this.deps.bot(round.leadAfter)?.name ?? "A member",
+        ]);
+      return;
+    }
     const before = messages.slice(0, index);
     const lastSpeaker = [...before]
       .reverse()
@@ -755,6 +782,17 @@ export class ChannelService {
     const cap = seenAt < 0 ? FIRST_TURN_MESSAGES : MAX_NEW_MESSAGES;
     const unseen = fresh.slice(-cap);
     const nameOf = (id: string): string => this.deps.bot(id)?.name ?? "a bot";
+    // Who the user named anywhere in this channel: their words, not the
+    // latest message alone, say which members may take work on or be chained.
+    const userWordsHere = channelUserWords(all);
+    const namedByUser = (id: string): boolean =>
+      chainAllowed(userWordsHere, [{ botId: id, task: "" }], members, "");
+    const mayWork =
+      this.deps.runWork != null &&
+      (kind === "answer" ||
+        kind === "everyone" ||
+        kind === "report" ||
+        (kind === "brought-in" && namedByUser(botId)));
     const prompt = turnPrompt({
       channelTitle: channelTitle(
         channel,
@@ -777,6 +815,7 @@ export class ChannelService {
       skipped: fresh.length - unseen.length,
       kind,
       others,
+      ...(kind === "brought-in" ? { mayWork } : {}),
       nameOf,
       myWork: all.flatMap((message) =>
         message.work != null &&
@@ -796,7 +835,21 @@ export class ChannelService {
     this.working.set(channelId, set);
     this.deps.changed(channelId);
     try {
-      const raw = await this.deps.runTurn(botId, channel, prompt);
+      let raw = await this.deps.runTurn(botId, channel, prompt);
+      // It says work is happening and started none: asked once to start it
+      // or say plainly it has not, so the channel holds no false progress.
+      if (
+        mayWork &&
+        !round.cancelled &&
+        !/<work>|<chain\b/i.test(raw) &&
+        claimsWork(postedWords(answerWords(raw), me)) &&
+        !this.hasLiveWork(channelId, botId)
+      ) {
+        this.log(
+          `${botId} claimed work it had not started in ${channelId}: asked again`
+        );
+        raw = await this.deps.runTurn(botId, channel, CLAIM_NUDGE);
+      }
       // Seen up to the last message shown; a user message kept from a
       // discussion turn, and everything after it, is still new next time.
       const hiddenAt = all.findIndex(
@@ -835,10 +888,8 @@ export class ChannelService {
       // A hand-off chain (answering the user only, every bot in it named by
       // the user): it runs past this round, step after step.
       const chained = chainIn(proposed.words, members);
-      const userWordsHere =
-        all.find((each) => each.id === userMessageId)?.text ?? "";
       const steps =
-        kind === "answer" &&
+        (kind === "answer" || kind === "report") &&
         this.deps.runWork != null &&
         chained.steps != null &&
         chainAllowed(userWordsHere, chained.steps, members, botId)
@@ -852,15 +903,12 @@ export class ChannelService {
       // Only a bot answering the user's own message (alone or as one of
       // everyone) may take work on, and only when it is not asking whether to.
       const task =
-        steps == null &&
-        (kind === "answer" || kind === "everyone") &&
-        this.deps.runWork != null &&
-        !asksFirst(taken.words)
-          ? taken.task
-          : null;
+        steps == null && mayWork && !asksFirst(taken.words) ? taken.task : null;
       // A chain it was not let run: its words would promise work nobody does.
       const unnamed =
-        chained.steps != null && steps == null && kind === "answer"
+        chained.steps != null &&
+        steps == null &&
+        (kind === "answer" || kind === "report")
           ? [
               ...new Set(
                 chained.steps
@@ -875,7 +923,7 @@ export class ChannelService {
           : [];
       const refused =
         unnamed.length > 0
-          ? `\n\n(The hand-off did not start: your message did not name ${unnamed.join(" or ")}. Ask again naming every bot it needs, e.g. "have ${unnamed[0]} fix it".)`
+          ? `\n\n(The hand-off did not start: you have not named ${unnamed.join(" or ")} in this channel. Ask again naming every bot it needs, e.g. "have ${unnamed[0]} fix it".)`
           : "";
       const words =
         taken.words.length > 0
@@ -1064,7 +1112,12 @@ export class ChannelService {
           at: this.now(),
           replyTo: userMessageId,
         });
-        if (chain == null) return report;
+        if (chain == null) {
+          // An agreed plan is a scope the team settled and the user started:
+          // the lead is not woken to add work beyond it.
+          if (!fromPlan) this.wakeLead(channelId, botId, userMessageId);
+          return report;
+        }
         // The next step gets the whole turn, not only the posted message.
         const whole = chainDoneIn(
           stepHandoff(raw.split(BOT_ANSWER_SEGMENT))
@@ -1155,7 +1208,58 @@ export class ChannelService {
       this.log(`chain ${id} in ${channelId} ran all ${steps.length} steps`);
     } finally {
       running.delete(run);
+      const last = steps.at(-1);
+      if (!run.cancelled && last != null)
+        this.wakeLead(channelId, last.botId, userMessageId);
     }
+  }
+
+  /** Whether the bot has work in this channel waiting or running. */
+  private hasLiveWork(channelId: string, botId: string): boolean {
+    return this.deps.store
+      .readMessages(channelId)
+      .some(
+        (message) =>
+          message.work != null &&
+          isOpen(message.work.status) &&
+          message.author.kind === "bot" &&
+          message.author.botId === botId
+      );
+  }
+
+  /**
+   * A member's work report landed: once nothing else is running in the
+   * channel (the last report wakes it), the lead gets a turn to start the
+   * next piece or tell the user it is done. Bounded by MAX_LEAD_TURNS per
+   * user message; the user's next message or Stop ends it.
+   */
+  private wakeLead(
+    channelId: string,
+    reporter: string,
+    userMessageId: string
+  ): void {
+    if (this.deps.runWork == null || this.maybeChannel(channelId) == null)
+      return;
+    const busy =
+      (this.chains.get(channelId)?.size ?? 0) > 0 ||
+      this.deps.store
+        .readMessages(channelId)
+        .some((message) => message.work != null && isOpen(message.work.status));
+    if (busy) return;
+    const turns = this.leadTurns.get(channelId) ?? 0;
+    if (turns >= MAX_LEAD_TURNS) {
+      this.log(
+        `lead turns in ${channelId} reached ${MAX_LEAD_TURNS}: waiting for the user`
+      );
+      return;
+    }
+    this.leadTurns.set(channelId, turns + 1);
+    const queue = this.queues.get(channelId) ?? [];
+    queue.push({ userMessageId, cancelled: false, leadAfter: reporter });
+    this.queues.set(channelId, queue);
+    this.log(`lead woken in ${channelId} after ${reporter}'s report`);
+    this.deps.changed(channelId);
+    this.pump(channelId);
   }
 
   /** The channel's hand-off chains run no further step. */
