@@ -82,6 +82,7 @@ const harness = (options: { quiet?: boolean; platform?: string } = {}) => {
     routineRunText: new Map<string, string[]>(),
     routineRunLast: new Map<string, { id: string; text: string }>(),
     routineNetworkWaits: { forget: () => undefined },
+    workWaiting: { routineRan: vi.fn() },
     routineHome: () => path.join(home, "routine"),
     emitEvent: () => undefined,
     pauseIfQuietRepeatedly: () => undefined,
