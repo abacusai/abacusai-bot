@@ -374,15 +374,23 @@ export const SNAPSHOT_BUILD_JS = `(function() {
 /** Where the page is, for a model that wants the gist without a tree. */
 export const PAGE_SUMMARY_JS = `(function() {
   const clean = (t) => String(t ?? '').replace(/\\s+/g, ' ').trim();
+  // A hidden element still has text: only what is drawn counts.
+  const shown = (el) => {
+    const box = el.getBoundingClientRect();
+    if (box.width === 0 || box.height === 0) return false;
+    return el.checkVisibility
+      ? el.checkVisibility({ opacityProperty: true, visibilityProperty: true })
+      : getComputedStyle(el).visibility !== 'hidden';
+  };
   const headings = [...document.querySelectorAll('h1,h2,h3')]
-    .map(h => clean(h.innerText)).filter(Boolean).slice(0, 8);
+    .filter(shown).map(h => clean(h.innerText)).filter(Boolean).slice(0, 8);
   const active = document.activeElement;
   const focused = active && active !== document.body
     ? active.tagName.toLowerCase() + (active.getAttribute('aria-label') || active.placeholder || active.name ? ' "' + clean(active.getAttribute('aria-label') || active.placeholder || active.name) + '"' : '')
     : null;
   const main = document.querySelector('main, [role="main"], article') || document.body;
   const dialogs = [...document.querySelectorAll('[role="dialog"],[role="alertdialog"],dialog[open]')]
-    .map(d => clean(d.innerText).slice(0, 120)).filter(Boolean).slice(0, 2);
+    .filter(shown).map(d => clean(d.innerText).slice(0, 120)).filter(Boolean).slice(0, 2);
   return {
     title: document.title,
     url: location.href,
