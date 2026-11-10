@@ -1323,6 +1323,30 @@ describe("a team that keeps going (the user named the members once)", () => {
     expect(texts(id).at(-1)).toBe("wri: Starting it.");
   });
 
+  it("a member the lead @names after a report answers it", async () => {
+    const { service, turns, works, flush } = setup();
+    const { id } = service.create({ botIds: ["chief", "wri"] });
+    service.post(
+      id,
+      "@Chief find the options and pass the list to @Writer to pick one"
+    );
+    await flush();
+    turns[0]!.resolve("<reply>On it. <work>Find the options</work></reply>");
+    await flush();
+    turns[1]!.resolve("<reply>Waiting on Chief's list.</reply>");
+    await flush();
+    works[0]!.resolve("<reply>Ten options, ranked.</reply>");
+    await flush();
+    expect(turns[2]!.botId).toBe("chief");
+    turns[2]!.resolve("<reply>@Writer the list is above: pick one.</reply>");
+    await flush();
+    expect(turns[3]!.botId).toBe("wri");
+    expect(turns[3]!.prompt).toContain("Chief brought you in");
+    turns[3]!.resolve("<reply>Option 2.</reply>");
+    await flush();
+    expect(turns).toHaveLength(4);
+  });
+
   it("the lead is woken only when the last running work reports, and at most MAX_LEAD_TURNS times per user message", async () => {
     const { service, turns, works, flush } = setup();
     const { id } = service.create({ botIds: ["chief", "res", "wri"] });

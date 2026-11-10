@@ -637,10 +637,12 @@ export class ChannelService {
     // A work report landed: the lead (the first member) picks the goal up.
     if (round.leadAfter != null) {
       const lead = channel.memberBotIds[0];
-      if (lead != null)
-        await this.turn(channelId, round, lead, "report", [
-          this.deps.bot(round.leadAfter)?.name ?? "A member",
-        ]);
+      if (lead == null) return;
+      const reply = await this.turn(channelId, round, lead, "report", [
+        this.deps.bot(round.leadAfter)?.name ?? "A member",
+      ]);
+      // "@Chooser, pick the winner": the lead's hand-off by name is answered.
+      await this.bringIn(channelId, round, lead, reply, new Set());
       return;
     }
     const before = messages.slice(0, index);
@@ -705,20 +707,15 @@ export class ChannelService {
       const reply = await this.turn(channelId, round, botId, "answer", []);
       spoken.add(botId);
       if (reply.length === 0) continue;
-      const asker = this.deps.bot(botId);
-      const brought = mentionedIn(reply, this.members(this.channel(channelId)))
-        // One the user named answers in its own turn, not as brought in.
-        .filter(
-          (id) =>
-            id !== botId && !spoken.has(id) && !speakers.botIds.includes(id)
-        );
-      for (const other of brought) {
-        if (round.cancelled) return;
-        await this.turn(channelId, round, other, "brought-in", [
-          asker?.name ?? "Another bot",
-        ]);
-        spoken.add(other);
-      }
+      // One the user named answers in its own turn, not as brought in.
+      const brought = await this.bringIn(
+        channelId,
+        round,
+        botId,
+        reply,
+        new Set([...spoken, ...speakers.botIds])
+      );
+      for (const id of brought) spoken.add(id);
       if (brought.length > 0 && !round.cancelled)
         await this.turn(
           channelId,
@@ -728,6 +725,30 @@ export class ChannelService {
           brought.map((id) => this.deps.bot(id)?.name ?? "A bot")
         );
     }
+  }
+
+  /**
+   * The members a bot @named in its reply, other than itself and those in
+   * `skip`, answer it in turn. Resolves with who was named.
+   */
+  private async bringIn(
+    channelId: string,
+    round: Round,
+    botId: string,
+    reply: string,
+    skip: ReadonlySet<string>
+  ): Promise<string[]> {
+    if (reply.length === 0) return [];
+    const asker = this.deps.bot(botId)?.name ?? "Another bot";
+    const brought = mentionedIn(
+      reply,
+      this.members(this.channel(channelId))
+    ).filter((id) => id !== botId && !skip.has(id));
+    for (const other of brought) {
+      if (round.cancelled) break;
+      await this.turn(channelId, round, other, "brought-in", [asker]);
+    }
+    return brought;
   }
 
   /**
