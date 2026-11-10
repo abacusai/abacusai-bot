@@ -5195,6 +5195,19 @@
       "once": "Nie będę już tu do tego wracać."
     }
   },
+  "workWaiting": {
+    "title": "Twoja praca czeka",
+    "site": "Twoja strona jest gotowa. Kontynuuj tam, gdzie skończyłeś.",
+    "file": "Twój plik jest gotowy. Kontynuuj tam, gdzie skończyłeś.",
+    "question": "{{name}}: czeka na Twoją odpowiedź.",
+    "questionPlain": "Twój czat czeka na Twoją odpowiedź.",
+    "unfinished": "{{name}}: praca zatrzymała się w połowie. Kontynuuj tam, gdzie skończyłeś.",
+    "unfinishedPlain": "Twoje zadanie zatrzymało się w połowie. Kontynuuj tam, gdzie skończyłeś.",
+    "chat": "Kontynuuj tam, gdzie skończyłeś w {{name}}.",
+    "chatPlain": "Kontynuuj tam, gdzie skończyłeś.",
+    "routine": "{{name}}: masz nowe wyniki.",
+    "routinePlain": "Twoja rutyna ma dla Ciebie nowe wyniki."
+  },
   "kickoff": {
     "connectOne": "Najpierw, jeśli przypomnienie systemowe nie wymienia {{name}} jako połączonego, wywołaj teraz dla niego connect_connector.",
     "resultFirst": "Najpierw przekaż prawdziwy wynik zrobiony tym, co działa bez żadnego konta, albo, jeśli zadanie zaczyna się od czegoś, co może dać tylko użytkownik (jego pytanie, temat, lista), poproś o to jednym krótkim pytaniem; dopiero potem zaproponuj najwyżej jedno połączenie, to, które najbardziej poprawi wynik.",
