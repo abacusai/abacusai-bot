@@ -2,12 +2,21 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
+import {
+  AgentStatus,
+  type DesktopEvent,
+  type UserTextTags,
+} from "@abacus-ai/contract/agent-types";
 import { isFunnelStep } from "@abacus-ai/contract/funnel";
+import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const home = vi.hoisted(() => ({ current: "" }));
 const settings = vi.hoisted(() => ({
-  current: {} as { serverDebugSync?: boolean },
+  current: {} as {
+    serverDebugSync?: boolean;
+    apiKeys?: Record<string, string>;
+  },
 }));
 
 vi.mock("electron", () => ({
@@ -21,13 +30,20 @@ vi.mock("../config/settings", () => ({
 vi.mock("../providers/abacus-host", () => ({
   abacusAppHost: () => "https://apps.example.test",
   abacusUserAgent: () => "test-agent",
+  abacusRoutellmV1: () => "https://routellm.example.test/v1",
 }));
 
+import {
+  type TurnChannel,
+  TurnLedger,
+  turnOpenerOf,
+} from "../session/turn-ledger";
 import {
   reportFunnelStep,
   reportFunnelStepOnce,
   resetFunnelOnceForTests,
 } from "./funnel-beacon";
+import { createUsageReporter } from "./usage-report";
 
 const fetchMock = vi.fn(async () => new Response(null, { status: 404 }));
 
@@ -134,5 +150,168 @@ describe("reportFunnelStepOnce", () => {
         fs.readFileSync(path.join(home.current, "funnel-once.json"), "utf-8")
       )
     ).toEqual({ first_message: true, tour_done: true });
+  });
+});
+
+describe("usage report: the turn's opening message decides its kind", () => {
+  const SESSION = "s-1";
+  const idle = {
+    type: "event",
+    event: { type: "status_changed", status: AgentStatus.Idle },
+  } as DesktopEvent;
+  const relay = (owner: boolean): TurnChannel => ({
+    platform: "whatsapp",
+    chatId: "chat-1",
+    owner,
+    userName: owner ? null : "Ana",
+  });
+  const intro = "[auto-reply] You answer for the owner.\n\n";
+
+  /** One turn through a real ledger; the kind POSTed, or null for none. */
+  const reported = (turn: {
+    message: string;
+    tags?: UserTextTags;
+    channel?: TurnChannel;
+    lane?: string;
+    routineSession?: boolean;
+    /** The AG-UI relay hears the message once its run has started. */
+    notedAfterSend?: boolean;
+  }): string | null => {
+    settings.current = { apiKeys: { [PROVIDER_ENV_VARS.abacus]: "test-key" } };
+    fetchMock.mockClear();
+    const ledger = new TurnLedger();
+    ledger.onClose(
+      createUsageReporter(
+        "desktop",
+        {
+          laneOf: () => turn.lane ?? null,
+          isRoutineSession: () => turn.routineSession === true,
+        },
+        fetchMock as unknown as typeof fetch
+      )
+    );
+    const opener = turnOpenerOf(turn.message, turn.tags);
+    if (turn.channel != null) ledger.annotate(SESSION, turn.channel);
+    if (turn.notedAfterSend !== true) ledger.noteOpener(SESSION, opener);
+    ledger.begin(SESSION);
+    if (turn.notedAfterSend === true) ledger.noteOpener(SESSION, opener);
+    ledger.observe(SESSION, idle);
+    if (fetchMock.mock.calls.length === 0) return null;
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toBe("https://routellm.example.test/v1/abacusaibot_usage");
+    const body = JSON.parse(String(init.body)) as Record<string, string>;
+    expect(Object.keys(body).sort()).toEqual(["kind", "surface", "turn_id"]);
+    return body.kind;
+  };
+
+  it.each([
+    ["typed in a plain chat", { message: "Build me a site" }, "user"],
+    [
+      "typed in the in-app bot chat (its relay hears it after the run starts)",
+      { message: "Find me flights", notedAfterSend: true },
+      "user",
+    ],
+    [
+      "the bot's first-run kickstart",
+      {
+        message: "[first run] Introduce yourself.",
+        tags: { operator: { kind: "kickstart" } },
+      },
+      null,
+    ],
+    [
+      "a routine fired into the bot chat",
+      {
+        message: '[routine] "Morning news" Summarize the news.',
+        tags: { routineFire: true },
+      },
+      "routine",
+    ],
+    [
+      "a routine's own run session",
+      { message: "Summarize the news.", routineSession: true },
+      "routine",
+    ],
+    [
+      "the owner's own chat-app message, relayed",
+      { message: "What is on today?", channel: relay(true) },
+      "channel",
+    ],
+    [
+      "someone else writing to the user's bot",
+      {
+        message: `${intro}Is the shop open?`,
+        tags: {
+          operator: { kind: "auto-reply-intro", visibleFrom: intro.length },
+        },
+        channel: relay(false),
+      },
+      "channel",
+    ],
+    [
+      "a hidden note the app relays to a chat",
+      {
+        message: "The connector is ready.",
+        tags: {
+          systemReminder: true,
+          operator: { kind: "environment-notice" },
+        },
+        channel: relay(true),
+      },
+      null,
+    ],
+    [
+      "a task one bot passed to another",
+      {
+        message: "[task from the user, passed on by Scout] Do it.",
+        tags: {
+          operator: {
+            kind: "bot-task",
+            task: {
+              askId: "a1",
+              passerId: "b1",
+              passer: "Scout",
+              task: "Do it.",
+              userWords: "Do it.",
+            },
+          },
+        },
+      },
+      null,
+    ],
+    ["the phone lane", { message: "Hello", lane: "phone" }, null],
+  ] as const)("%s", (_name, turn, kind) => {
+    expect(reported(turn)).toBe(kind);
+  });
+
+  it("a message joining a turn the app opened does not make it the user's", () => {
+    settings.current = { apiKeys: { [PROVIDER_ENV_VARS.abacus]: "test-key" } };
+    const ledger = new TurnLedger();
+    ledger.onClose(
+      createUsageReporter(
+        "desktop",
+        { laneOf: () => null, isRoutineSession: () => false },
+        fetchMock as unknown as typeof fetch
+      )
+    );
+    ledger.noteOpener(
+      SESSION,
+      turnOpenerOf("[first run] Introduce yourself.", {
+        operator: { kind: "kickstart" },
+      })
+    );
+    ledger.begin(SESSION);
+    ledger.noteOpener(SESSION, turnOpenerOf("hi there"));
+    ledger.begin(SESSION);
+    ledger.observe(SESSION, idle);
+    // A turn that never started is not a turn either.
+    ledger.noteOpener(SESSION, turnOpenerOf("Build me a site"));
+    ledger.begin(SESSION);
+    ledger.end(SESSION, "not_started");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
