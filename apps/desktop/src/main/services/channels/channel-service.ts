@@ -16,6 +16,7 @@ import path from "node:path";
 
 import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
 import { BOT_TASK_PREFIX } from "@abacus-ai/agent/bot-task";
+import { isCheckInStop } from "@abacus-ai/agent/spend-policy";
 import type { BotTaskTag } from "@abacus-ai/contract/agent-types";
 import {
   MAX_CHANNEL_MEMBERS,
@@ -177,6 +178,16 @@ export class ChannelService {
   private readonly working = new Map<string, Set<string>>();
   /** Hand-off chains running in each channel: Stop and a stop word end them. */
   private readonly chains = new Map<string, Set<{ cancelled: boolean }>>();
+  /**
+   * A report that found other work still running, per channel: whichever of
+   * that work ends last wakes the lead for it, plan work and failures too.
+   */
+  private readonly owedWakes = new Map<
+    string,
+    { reporter: string; userMessageId: string }
+  >();
+  /** Channels where work stopped at the free plan's check-in: no lead is woken until the user answers. */
+  private readonly checkedIn = new Set<string>();
   /** Lead turns since the user's last message, per channel (MAX_LEAD_TURNS). */
   private readonly leadTurns = new Map<string, number>();
   /** Work running in bots' own chats: message id → its channel and bot. */
@@ -296,6 +307,8 @@ export class ChannelService {
       this.addDecision(channel.id, decided, message.id);
     this.setPending(channelId, (ids) => [...ids, message.id]);
     this.leadTurns.delete(channelId);
+    this.owedWakes.delete(channelId);
+    this.checkedIn.delete(channelId);
     this.enqueue(channelId, message.id);
   }
 
@@ -637,10 +650,12 @@ export class ChannelService {
     // A work report landed: the lead (the first member) picks the goal up.
     if (round.leadAfter != null) {
       const lead = channel.memberBotIds[0];
-      if (lead != null)
-        await this.turn(channelId, round, lead, "report", [
-          this.deps.bot(round.leadAfter)?.name ?? "A member",
-        ]);
+      if (lead == null) return;
+      const reply = await this.turn(channelId, round, lead, "report", [
+        this.deps.bot(round.leadAfter)?.name ?? "A member",
+      ]);
+      // "@Chooser, pick the winner": the lead's hand-off by name is answered.
+      await this.bringIn(channelId, round, lead, reply, new Set());
       return;
     }
     const before = messages.slice(0, index);
@@ -705,20 +720,15 @@ export class ChannelService {
       const reply = await this.turn(channelId, round, botId, "answer", []);
       spoken.add(botId);
       if (reply.length === 0) continue;
-      const asker = this.deps.bot(botId);
-      const brought = mentionedIn(reply, this.members(this.channel(channelId)))
-        // One the user named answers in its own turn, not as brought in.
-        .filter(
-          (id) =>
-            id !== botId && !spoken.has(id) && !speakers.botIds.includes(id)
-        );
-      for (const other of brought) {
-        if (round.cancelled) return;
-        await this.turn(channelId, round, other, "brought-in", [
-          asker?.name ?? "Another bot",
-        ]);
-        spoken.add(other);
-      }
+      // One the user named answers in its own turn, not as brought in.
+      const brought = await this.bringIn(
+        channelId,
+        round,
+        botId,
+        reply,
+        new Set([...spoken, ...speakers.botIds])
+      );
+      for (const id of brought) spoken.add(id);
       if (brought.length > 0 && !round.cancelled)
         await this.turn(
           channelId,
@@ -728,6 +738,31 @@ export class ChannelService {
           brought.map((id) => this.deps.bot(id)?.name ?? "A bot")
         );
     }
+  }
+
+  /**
+   * The members a bot @named in its reply, other than itself and those in
+   * `skip`, answer it once each, in turn: one level deep, their own
+   * @mentions bring nobody in. Resolves with who was named.
+   */
+  private async bringIn(
+    channelId: string,
+    round: Round,
+    botId: string,
+    reply: string,
+    skip: ReadonlySet<string>
+  ): Promise<string[]> {
+    if (reply.length === 0) return [];
+    const asker = this.deps.bot(botId)?.name ?? "Another bot";
+    const brought = mentionedIn(
+      reply,
+      this.members(this.channel(channelId))
+    ).filter((id) => id !== botId && !skip.has(id));
+    for (const other of brought) {
+      if (round.cancelled) break;
+      await this.turn(channelId, round, other, "brought-in", [asker]);
+    }
+    return brought;
   }
 
   /**
@@ -1114,8 +1149,10 @@ export class ChannelService {
         });
         if (chain == null) {
           // An agreed plan is a scope the team settled and the user started:
-          // the lead is not woken to add work beyond it.
+          // the lead is not woken to add work beyond it, only for a report
+          // that waited on it.
           if (!fromPlan) this.wakeLead(channelId, botId, userMessageId);
+          else this.payOwedWake(channelId);
           return report;
         }
         // The next step gets the whole turn, not only the posted message.
@@ -1129,6 +1166,26 @@ export class ChannelService {
         if (this.stoppedWorks.delete(messageId)) return null;
         const why = error instanceof Error ? error.message : String(error);
         this.setWork(channelId, messageId, { status: "failed", error: why });
+        // The free plan's check-in: said in the channel too, and nobody is
+        // woken to spend more before the user answers.
+        if (isCheckInStop(why)) {
+          this.checkedIn.add(channelId);
+          this.owedWakes.delete(channelId);
+          this.append(channelId, {
+            id: this.newId(),
+            author: { kind: "bot", botId },
+            text: why,
+            at: this.now(),
+            replyTo: userMessageId,
+          });
+          return null;
+        }
+        // Failed: the lead decides what next, as after a report (a chain's
+        // lead is woken when the chain ends).
+        if (chain == null) {
+          if (!fromPlan) this.wakeLead(channelId, botId, userMessageId);
+          else this.payOwedWake(channelId);
+        }
         return null;
       })
       .finally(() => {
@@ -1240,12 +1297,17 @@ export class ChannelService {
   ): void {
     if (this.deps.runWork == null || this.maybeChannel(channelId) == null)
       return;
-    const busy =
-      (this.chains.get(channelId)?.size ?? 0) > 0 ||
-      this.deps.store
-        .readMessages(channelId)
-        .some((message) => message.work != null && isOpen(message.work.status));
-    if (busy) return;
+    if (this.checkedIn.has(channelId)) {
+      this.log(
+        `lead not woken in ${channelId}: waiting for the user after a credit check-in`
+      );
+      return;
+    }
+    if (this.busy(channelId)) {
+      this.owedWakes.set(channelId, { reporter, userMessageId });
+      return;
+    }
+    this.owedWakes.delete(channelId);
     const turns = this.leadTurns.get(channelId) ?? 0;
     if (turns >= MAX_LEAD_TURNS) {
       this.log(
@@ -1260,6 +1322,23 @@ export class ChannelService {
     this.log(`lead woken in ${channelId} after ${reporter}'s report`);
     this.deps.changed(channelId);
     this.pump(channelId);
+  }
+
+  /** Work or a hand-off chain still running in the channel. */
+  private busy(channelId: string): boolean {
+    return (
+      (this.chains.get(channelId)?.size ?? 0) > 0 ||
+      this.deps.store
+        .readMessages(channelId)
+        .some((message) => message.work != null && isOpen(message.work.status))
+    );
+  }
+
+  /** The lead's wake a report left owed, once nothing is running. */
+  private payOwedWake(channelId: string): void {
+    const owed = this.owedWakes.get(channelId);
+    if (owed != null && !this.busy(channelId))
+      this.wakeLead(channelId, owed.reporter, owed.userMessageId);
   }
 
   /** The channel's hand-off chains run no further step. */

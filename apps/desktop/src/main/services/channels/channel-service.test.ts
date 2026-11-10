@@ -417,7 +417,7 @@ describe("work taken on in a channel", () => {
     );
     // The lead picks the goal up after the report; nothing more needed here.
     expect(turns[2]?.botId).toBe("chief");
-    expect(turns[2]!.prompt).toContain("Writer's work report just landed");
+    expect(turns[2]!.prompt).toContain("Writer's work just ended above");
     turns[2]!.resolve("<reply>NO_REPLY</reply>");
     await flush();
     expect(service.list()[0]?.working).toEqual([]);
@@ -1321,6 +1321,107 @@ describe("a team that keeps going (the user named the members once)", () => {
     await flush();
     expect(works.map((work) => work.botId)).toEqual(["wri"]);
     expect(texts(id).at(-1)).toBe("wri: Starting it.");
+  });
+
+  it("a member the lead @names after a report answers it", async () => {
+    const { service, turns, works, flush } = setup();
+    const { id } = service.create({ botIds: ["chief", "wri"] });
+    service.post(
+      id,
+      "@Chief find the options and pass the list to @Writer to pick one"
+    );
+    await flush();
+    turns[0]!.resolve("<reply>On it. <work>Find the options</work></reply>");
+    await flush();
+    turns[1]!.resolve("<reply>Waiting on Chief's list.</reply>");
+    await flush();
+    works[0]!.resolve("<reply>Ten options, ranked.</reply>");
+    await flush();
+    expect(turns[2]!.botId).toBe("chief");
+    turns[2]!.resolve("<reply>@Writer the list is above: pick one.</reply>");
+    await flush();
+    expect(turns[3]!.botId).toBe("wri");
+    expect(turns[3]!.prompt).toContain("Chief brought you in");
+    turns[3]!.resolve("<reply>Option 2.</reply>");
+    await flush();
+    expect(turns).toHaveLength(4);
+  });
+
+  it("failed work wakes the lead, which sees why", async () => {
+    const { service, turns, works, flush } = setup();
+    const { id } = service.create({ botIds: ["chief", "wri"] });
+    service.post(id, "@Writer write the launch email");
+    await flush();
+    turns[0]!.resolve(
+      "<reply>On it. <work>Write the launch email</work></reply>"
+    );
+    await flush();
+    works[0]!.reject(new Error("its turn ended without a report."));
+    await flush();
+    expect(turns[1]!.botId).toBe("chief");
+    expect(turns[1]!.prompt).toContain(
+      "This work failed: its turn ended without a report."
+    );
+  });
+
+  it("the free plan's check-in is said in the channel and wakes nobody", async () => {
+    const { service, turns, works, flush, texts } = setup();
+    const { id } = service.create({ botIds: ["chief", "wri"] });
+    service.post(id, "@Writer write the launch email");
+    await flush();
+    turns[0]!.resolve(
+      "<reply>On it. <work>Write the launch email</work></reply>"
+    );
+    await flush();
+    works[0]!.reject(
+      new Error(
+        "This task has used 301 credits so far. Send a message to keep going."
+      )
+    );
+    await flush();
+    expect(texts(id).at(-1)).toBe(
+      "wri: This task has used 301 credits so far. Send a message to keep going."
+    );
+    expect(turns).toHaveLength(1);
+  });
+
+  it("after a check-in, a later report wakes nobody until the user answers", async () => {
+    const { service, turns, works, flush } = setup();
+    const { id } = service.create({ botIds: ["chief", "res", "wri"] });
+    service.post(id, "@everyone do your part");
+    await flush();
+    turns[0]!.resolve("<reply>Ready.</reply>");
+    turns[1]!.resolve("<reply>Research. <work>Research it</work></reply>");
+    turns[2]!.resolve("<reply>Write. <work>Write it</work></reply>");
+    await flush();
+    works[0]!.reject(
+      new Error(
+        "This task has used 120 credits so far. Send a message to keep going."
+      )
+    );
+    await flush();
+    works[1]!.resolve("<reply>Written.</reply>");
+    await flush();
+    expect(turns).toHaveLength(3);
+  });
+
+  it("a report that waited on other work wakes the lead when that work fails", async () => {
+    const { service, turns, works, flush } = setup();
+    const { id } = service.create({ botIds: ["chief", "res", "wri"] });
+    service.post(id, "@everyone do your part");
+    await flush();
+    turns[0]!.resolve("<reply>Ready.</reply>");
+    turns[1]!.resolve("<reply>Research. <work>Research it</work></reply>");
+    turns[2]!.resolve("<reply>Write. <work>Write it</work></reply>");
+    await flush();
+    works[0]!.resolve("<reply>Researched.</reply>");
+    await flush();
+    expect(turns).toHaveLength(3);
+    works[1]!.reject(
+      new Error("it took more than 30 minutes, so it was stopped.")
+    );
+    await flush();
+    expect(turns[3]!.botId).toBe("chief");
   });
 
   it("the lead is woken only when the last running work reports, and at most MAX_LEAD_TURNS times per user message", async () => {

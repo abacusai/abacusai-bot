@@ -47,7 +47,7 @@ export type TurnKind =
   | "discuss"
   /** The discussion is over: the lead sums up what the team agreed. */
   | "conclude"
-  /** A member's work report just landed: the lead keeps the user's goal moving. */
+  /** A member's work just ended (a report or a failure): the lead keeps the user's goal moving. */
   | "report";
 
 export interface Speakers {
@@ -431,7 +431,11 @@ export const envelope = (
   const from =
     message.author.kind === "user" ? "the user" : nameOf(message.author.botId);
   const kind = message.author.kind === "user" ? "user" : "bot";
-  const body = message.text.replace(/<\s*\/?\s*msg\b/gi, "[msg");
+  const failed =
+    message.work?.status === "failed"
+      ? `\n(This work failed: ${message.work.error ?? "no reason given"})`
+      : "";
+  const body = (message.text + failed).replace(/<\s*\/?\s*msg\b/gi, "[msg");
   return `<msg from="${attr(from)}" kind="${kind}">\n${body}\n</msg>`;
 };
 
@@ -580,7 +584,7 @@ export const turnPrompt = (input: {
       break;
     case "report":
       lines.push(
-        `${others}'s work report just landed above. You are the lead: keep the user's goal in this channel moving without waiting to be asked.`,
+        `${others}'s work just ended above (its report, or why it failed). You are the lead: keep the user's goal in this channel moving without waiting to be asked.`,
         "If part of what the user asked for is still not done, start the next piece now: <work> for your own part, or a <chain> of the members it needs, or @Name a member and say exactly what they should do. Use only members the user named in this channel.",
         "If everything the user asked for is done and checked, tell the user so in a short summary of what was made and where. If nothing is needed from you, reply <reply>NO_REPLY</reply>.",
         WORK_RULE,
