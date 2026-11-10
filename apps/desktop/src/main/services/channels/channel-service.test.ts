@@ -783,17 +783,26 @@ describe("bots proposing a new bot", () => {
 });
 
 describe("two bots asked to debate", () => {
-  it("answer each other in rounds, with no Agreed summary", async () => {
-    const { service, turns, flush } = setup();
+  it("answer each other until both settle, with no summary", async () => {
+    const { service, turns, flush, texts } = setup();
     const { id } = service.create({ botIds: ["chief", "wri"] });
     service.post(id, "@Chief argue for, @Writer argue against: debate it");
     await flush();
-    for (let i = 0; i < 6; i++) {
+    const said = [
+      "For, point 1.",
+      "Against, point 1.",
+      "For, point 2.",
+      "We agree to disagree on cost. <settled/>",
+      "Fair, agree to disagree. <settled/>",
+    ];
+    for (const [i, words] of said.entries()) {
       expect(turns[i]!.botId).toBe(i % 2 === 0 ? "chief" : "wri");
-      turns[i]!.resolve(`<reply>Point ${i}.</reply>`);
+      expect(turns[i]!.prompt).toContain("The user asked for a debate");
+      turns[i]!.resolve(`<reply>${words}</reply>`);
       await flush();
     }
-    expect(turns).toHaveLength(6);
+    expect(turns).toHaveLength(5);
+    expect(texts(id).at(-1)).toBe("chief: Fair, agree to disagree.");
   });
 });
 

@@ -45,6 +45,8 @@ export type TurnKind =
   | "follow-up"
   /** The user asked the team to discuss: one round of a discussion. */
   | "discuss"
+  /** The user asked for a debate: one side's turn, until both settle. */
+  | "debate"
   /** The discussion is over: the lead sums up what the team agreed. */
   | "conclude"
   /** A member's work just ended (a report or a failure): the lead keeps the user's goal moving. */
@@ -55,7 +57,7 @@ export interface Speakers {
   everyone: boolean;
   /** The user asked the team to work it out together (see DISCUSS). */
   discussion?: boolean;
-  /** A debate: two sides, so it ends without an "Agreed:" summary. */
+  /** A debate: it runs until the sides agree or agree to disagree. */
   debate?: boolean;
 }
 
@@ -622,6 +624,13 @@ export const turnPrompt = (input: {
         "Be concrete (numbers, owners, trade-offs) and brief: under 120 words. Talk to your colleagues, not only to the user. Don't sum up for the team: the lead does that at the end."
       );
       break;
+    case "debate":
+      lines.push(
+        "The user asked for a debate. Argue your side from your role: answer the other side's latest points directly, with reasons and evidence; don't repeat yourself. Address the other side with @Name.",
+        "Keep debating while you still disagree. When you are persuaded, or it is clear neither side will move, say so in one line (you agree, or you agree to disagree, and on what) and add <settled/>. The debate ends when both sides have settled. Don't settle just to end it.",
+        "Be concrete and brief: under 120 words."
+      );
+      break;
     case "conclude":
       lines.push(
         "The team's discussion above is over. As the lead, post the outcome for the user: start with \"Agreed:\" and a numbered list of what the team agreed (with owners where there are any), then any point still open, in one line each, not numbered (numbered lines are the agreed work). Only what was actually said above; don't add new ideas."
@@ -681,6 +690,16 @@ const workState = (work: ChannelWork): string =>
         : work.status === "stopped"
           ? "the user stopped it partway, so it may be half done"
           : `failed: ${work.error ?? "no reason given"}`;
+
+const SETTLED = /<settled\s*\/?>(?:\s*<\/settled>)?/gi;
+
+/** Whether a debater settled (`<settled/>`: agreed, or agreed to disagree), and its words without the tag. */
+export const settledIn = (
+  words: string
+): { settled: boolean; words: string } => ({
+  settled: words.search(SETTLED) >= 0,
+  words: words.replace(SETTLED, "").trim(),
+});
 
 const STOP_WORK = /<stop_work\s*\/?>(?:\s*<\/stop_work>)?/gi;
 

@@ -57,6 +57,7 @@ import {
   postedWords,
   plainStop,
   speakersFor,
+  settledIn,
   stopWorkIn,
   turnPrompt,
   type TurnKind,
@@ -167,6 +168,8 @@ interface Round {
  * message, or Stop, starts again or ends it).
  */
 export const MAX_LEAD_TURNS = 8;
+/** A debate's turns, all sides together: a runaway catch, not its end. */
+export const MAX_DEBATE_TURNS = 40;
 
 /** Asked once of a bot whose reply says work is happening that it never started. */
 const CLAIM_NUDGE =
@@ -696,12 +699,9 @@ export class ChannelService {
     }
 
     if (speakers.discussion === true) {
-      await this.discuss(
-        channelId,
-        round,
-        speakers.botIds,
-        speakers.debate !== true
-      );
+      if (speakers.debate === true)
+        await this.debate(channelId, round, speakers.botIds);
+      else await this.discuss(channelId, round, speakers.botIds);
       return;
     }
 
@@ -778,7 +778,12 @@ export class ChannelService {
     others: string[],
     /** For "everyone": show nothing after this message. */
     upTo?: string,
-    extra: { round?: { at: number; of: number }; conclusion?: boolean } = {}
+    extra: {
+      round?: { at: number; of: number };
+      conclusion?: boolean;
+      /** Set when a debater settles. */
+      settled?: { value: boolean };
+    } = {}
   ): Promise<string> {
     if (round.cancelled) return "";
     const channel = this.maybeChannel(channelId);
@@ -800,7 +805,7 @@ export class ChannelService {
       // writes meanwhile ends it (see discuss) and is answered after.
       .filter(
         (message, index) =>
-          (kind !== "discuss" && kind !== "conclude") ||
+          (kind !== "discuss" && kind !== "conclude" && kind !== "debate") ||
           index <= trigger ||
           message.author.kind !== "user"
       );
@@ -904,7 +909,9 @@ export class ChannelService {
         this.stopWorks(channelId, botId);
         this.log(`${botId} stopped its work in ${channelId}`);
       }
-      const proposed = proposalIn(stopped.words);
+      const ended = settledIn(stopped.words);
+      if (extra.settled != null) extra.settled.value = ended.settled;
+      const proposed = proposalIn(ended.words);
       // A bot answering the user, or the lead summing up, may suggest a bot:
       // one of the user's not here (invite), or a new one (create).
       const suggested = proposed.proposal;
@@ -1031,16 +1038,14 @@ export class ChannelService {
   /**
    * The user asked the team to work it out together: rounds in which every
    * member speaks in turn, seeing the others, until a round adds nothing
-   * (each may pass) or MAX_DISCUSSION_ROUNDS; then the lead sums up, except
-   * after a debate, which has two sides and no "Agreed:". The
+   * (each may pass) or MAX_DISCUSSION_ROUNDS; then the lead sums up. The
    * rule bounds it, not the bots: they cannot start rounds or bring anyone
    * in, and Stop ends it.
    */
   private async discuss(
     channelId: string,
     round: Round,
-    botIds: readonly string[],
-    conclude = true
+    botIds: readonly string[]
   ): Promise<void> {
     let spoke = 0;
     for (let at = 1; at <= MAX_DISCUSSION_ROUNDS; at++) {
@@ -1068,10 +1073,44 @@ export class ChannelService {
       if (added === 0 || (at > 1 && added <= 1)) break;
     }
     const lead = botIds[0];
-    if (lead == null || round.cancelled || spoke < 2 || !conclude) return;
+    if (lead == null || round.cancelled || spoke < 2) return;
     await this.turn(channelId, round, lead, "conclude", [], undefined, {
       conclusion: true,
     });
+  }
+
+  /**
+   * A debate: the sides answer each other in turn until every side has
+   * settled (agreed, or agreed to disagree) or has nothing to add. The user's
+   * message or Stop ends it; MAX_DEBATE_TURNS only catches a runaway.
+   */
+  private async debate(
+    channelId: string,
+    round: Round,
+    botIds: readonly string[]
+  ): Promise<void> {
+    const settled = new Map<string, boolean>();
+    for (let at = 0; at < MAX_DEBATE_TURNS; at++) {
+      if (round.cancelled) return;
+      if ((this.queues.get(channelId) ?? []).length > 0) return;
+      const botId = botIds[at % botIds.length]!;
+      const said = { value: false };
+      const words = await this.turn(
+        channelId,
+        round,
+        botId,
+        "debate",
+        [],
+        undefined,
+        { settled: said }
+      );
+      settled.set(botId, said.value || words.length === 0);
+      if (botIds.every((id) => settled.get(id) === true)) {
+        this.log(`debate in ${channelId} settled after ${at + 1} turns`);
+        return;
+      }
+    }
+    this.log(`debate in ${channelId} reached ${MAX_DEBATE_TURNS} turns`);
   }
 
   /**
