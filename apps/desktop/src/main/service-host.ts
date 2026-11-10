@@ -6316,6 +6316,31 @@ export class ServiceHost {
       .trim();
   }
 
+  /**
+   * What a session's latest turn wrote after its last tool call, as its
+   * thread kept it (several messages joined); null when there is none.
+   */
+  private closingText(sessionId: string): string | null {
+    const messages =
+      this.threadStore.readCurrentFile(sessionId)?.messages ?? [];
+    const turnStart = messages.findLastIndex(
+      (message) => message.role === "user"
+    );
+    const parts = messages
+      .slice(turnStart + 1)
+      .filter((message) => message.role === "assistant")
+      .flatMap((message) => message.parts);
+    const lastTool = parts.findLastIndex((part) =>
+      part.type.startsWith("tool")
+    );
+    const text = parts
+      .slice(lastTool + 1)
+      .flatMap((part) => (part.type === "text" ? [part.content.trim()] : []))
+      .filter((content) => content.length > 0)
+      .join("\n\n");
+    return text.length > 0 ? text : null;
+  }
+
   /** The text of a session's answers as its thread kept them. */
   private threadReply(sessionId: string): string {
     return (this.threadStore.readCurrentFile(sessionId)?.messages ?? [])
@@ -6863,8 +6888,6 @@ export class ServiceHost {
       stopped?: string;
       /** Mark each new message and tool call with this, so the last part can be told apart. */
       segment?: string;
-      /** Mark only tool calls: the messages after the last one are all its last part. */
-      joinMessages?: boolean;
       /** The message the last text belonged to. */
       messageId?: string | null;
       resolve: (text: string) => void;
@@ -6883,9 +6906,7 @@ export class ServiceHost {
         waiter.messageId != null &&
         event.messageId !== waiter.messageId
       )
-        waiter.text.push(
-          waiter.joinMessages === true ? "\n\n" : waiter.segment
-        );
+        waiter.text.push(waiter.segment);
       if (event.messageId != null) waiter.messageId = event.messageId;
       waiter.text.push(event.content);
     } else if (event.type === "tool_call_start" && waiter.segment != null)
@@ -6911,7 +6932,6 @@ export class ServiceHost {
       failed: string;
       stopped?: string;
       segment?: string;
-      joinMessages?: boolean;
     } = {
       timeout: "The routine did not answer in time.",
       failed: "The editor did not answer.",
@@ -6930,7 +6950,6 @@ export class ServiceHost {
         ...(messages.segment != null
           ? { segment: messages.segment, messageId: null }
           : {}),
-        ...(messages.joinMessages === true ? { joinMessages: true } : {}),
         resolve: (text) => {
           cancel();
           resolve(text);
@@ -7203,9 +7222,6 @@ export class ServiceHost {
           failed: "its turn ended without a report.",
           stopped: "it was stopped partway, so it may be half done.",
           segment: BOT_ANSWER_SEGMENT,
-          // A report written as several messages ("the list…", then "want me
-          // to re-check prices?") is posted whole, not only its last line.
-          joinMessages: true,
         }
       );
       // The card stops saying it waits for the chat: the prompt goes now.
@@ -7225,7 +7241,21 @@ export class ServiceHost {
         this.turnWaiters.delete(handle.sessionId);
         waiter?.reject(new Error("it could not be started."));
       }
-      return await answer;
+      const streamed = await answer;
+      // A report written as several messages ("the list…", then "want me to
+      // re-check prices?") is posted whole: all it wrote after its last tool
+      // call, as its chat kept it, never the notes between its steps.
+      const closing = this.closingText(handle.sessionId);
+      // Its chat not written up to the end yet: what streamed, as before.
+      const lastPart =
+        streamed
+          .split(BOT_ANSWER_SEGMENT)
+          .map((part) => part.trim())
+          .filter((part) => part.length > 0)
+          .at(-1) ?? "";
+      return closing != null && closing.includes(lastPart.slice(-200))
+        ? closing
+        : streamed;
     } catch (error) {
       if (error instanceof TimeoutError)
         this.agentManagerService.stopSession(

@@ -40,6 +40,8 @@ const workHost = (ends: string | null = null) => {
     channelWorks: new Map(),
     channelWorkLanes: new Map(),
     turnLedger: { isOpen: () => false },
+    // Its chat as kept; nothing here unless a test sets it.
+    threadStore: { readCurrentFile: () => null },
     botService: {
       openChat: vi.fn(async () => ({
         botId: "wri",
@@ -59,6 +61,7 @@ const workHost = (ends: string | null = null) => {
     "waitForTurn",
     "feedTurnWaiter",
     "settleTurnWaiter",
+    "closingText",
   ])
     self[name] = proto[name].bind(self);
   self.stopAgentTurn = vi.fn(({ sessionId }: { sessionId: string }) =>
@@ -113,23 +116,55 @@ describe("channel work", () => {
     ).toHaveBeenCalledWith("w1");
   });
 
-  it("reports everything after the last tool call, even across messages", async () => {
+  it("reports all it wrote after its last tool call, from its chat, never the notes between steps", async () => {
     const { self, run } = workHost();
     const feed = (event: Record<string, unknown>) =>
       (self.feedTurnWaiter as Method)("wri-main", { type: "event", event });
+    // Its chat as kept: notes, a tool call, more notes, a tool call, then the
+    // result and a closing question as two messages.
+    self.threadStore = {
+      readCurrentFile: () => ({
+        messages: [
+          { role: "user", parts: [{ type: "text", content: "WORK" }] },
+          {
+            role: "assistant",
+            parts: [
+              { type: "text", content: "Looking it up." },
+              { type: "tool-call" },
+              { type: "tool-result" },
+              { type: "text", content: "Currency is INR, switching." },
+              { type: "tool-call" },
+              { type: "tool-result" },
+            ],
+          },
+          {
+            role: "assistant",
+            parts: [{ type: "text", content: "The ranked list: 1. A, 2. B" }],
+          },
+          {
+            role: "assistant",
+            parts: [{ type: "text", content: "Want me to re-check prices?" }],
+          },
+        ],
+      }),
+    };
+    // The stream saw no tool events for these steps.
     self.sendAgentMessage = vi.fn(async () => {
       feed({ type: "text_delta", content: "Looking it up.", messageId: "m1" });
-      feed({ type: "tool_call_start" });
       feed({
         type: "text_delta",
-        content: "The ranked list: 1. A",
+        content: "Currency is INR, switching.",
         messageId: "m2",
       });
-      feed({ type: "text_delta", content: ", 2. B", messageId: "m2" });
+      feed({
+        type: "text_delta",
+        content: "The ranked list: 1. A, 2. B",
+        messageId: "m3",
+      });
       feed({
         type: "text_delta",
         content: "Want me to re-check prices?",
-        messageId: "m3",
+        messageId: "m4",
       });
       (self.settleTurnWaiter as Method)({
         sessionId: "wri-main",
@@ -137,10 +172,25 @@ describe("channel work", () => {
       });
       return true;
     });
-    const report = answerWords(await run("w1"));
-    expect(report).toBe(
+    expect(answerWords(await run("w1"))).toBe(
       "The ranked list: 1. A, 2. B\n\nWant me to re-check prices?"
     );
+  });
+
+  it("its chat not written up to the end yet: the report is what streamed", async () => {
+    const { self, run } = workHost("reply");
+    self.threadStore = {
+      readCurrentFile: () => ({
+        messages: [
+          { role: "user", parts: [{ type: "text", content: "WORK" }] },
+          {
+            role: "assistant",
+            parts: [{ type: "text", content: "Older words." }],
+          },
+        ],
+      }),
+    };
+    await expect(run("w1")).resolves.toBe("Done.");
   });
 
   it("a stop before its turn starts: it never starts", async () => {
