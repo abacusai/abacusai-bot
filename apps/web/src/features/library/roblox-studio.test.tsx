@@ -62,7 +62,7 @@ it("is not offered where Studio does not run, nor before the host has said", () 
 });
 
 it("is in Development, added in one click when Studio is installed", async () => {
-  const connect = vi.fn(async () => ({ ok: true }) as const);
+  const connect = vi.fn(async (_context: unknown) => ({ ok: true }) as const);
   app = await withRoblox(
     { state: "available" },
     "/library/connectors?category=development",
