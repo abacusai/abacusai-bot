@@ -26,12 +26,7 @@ export const RoutineStatusNote = ({ row }: { row: RoutineRow }) => {
   const navigate = useAppNavigate();
   const item = useStatusItem(`routine:${row.id}`);
   if (item == null) return null;
-  // A paused-by-app "credits" is the budget pause (its runs kept stopping at
-  // their credit budget): Resume, like any app pause. The wall is credits-out.
-  if (
-    isReason(item, "credits-out") ||
-    (isReason(item, "credits") && item.state !== "paused-by-app")
-  )
+  if (isReason(item, "credits-out") || isReason(item, "credits"))
     return <RoutineCreditHoldNote row={row} />;
   if (item.state === "missed")
     return (

@@ -81,7 +81,6 @@ const harness = (options: { quiet?: boolean; platform?: string } = {}) => {
     routineFires: new Map<string, string>(),
     routineRunText: new Map<string, string[]>(),
     routineRunLast: new Map<string, { id: string; text: string }>(),
-    routineBudgetStops: new Map<string, number>(),
     routineNetworkWaits: { forget: () => undefined },
     routineHome: () => path.join(home, "routine"),
     emitEvent: () => undefined,

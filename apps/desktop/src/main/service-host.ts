@@ -12,7 +12,6 @@ import { appendDailyNote } from "@abacus-ai/agent/bot-memory";
 import type { ChannelCapabilities } from "@abacus-ai/agent/channel";
 import { HOSTED_LOCAL_TOOLS_ENV } from "@abacus-ai/agent/hosted-local-tools";
 import { modelPath } from "@abacus-ai/agent/model-path";
-import { ROUTINE_BUDGET_STOPS_BEFORE_PAUSE } from "@abacus-ai/agent/spend-policy";
 import type { UnattendedPolicy } from "@abacus-ai/agent/tool-policy";
 import {
   readUserLanguage,
@@ -670,8 +669,6 @@ type CreatedRoutine = Routine & Pick<RoutineListItem, "hosted">;
 /** Routine runs whose fire is kept for their sends; far more than run at once. */
 /** How far back a routine's runs show what it reaches besides a chat app. */
 const ROUTINE_RUNS_FOR_REACH = 5;
-/** What a run file says of a run the spend governor stopped at its credit budget. */
-const RUN_BUDGET_STOP = "at its credit budget";
 const ROUTINE_FIRES_KEPT = 200;
 /** On an install with the next step, how long a routine runs before the free plan's 24/7 line. */
 const ALWAYS_ON_WAIT_MS = 24 * 60 * 60_000;
@@ -918,15 +915,13 @@ const ROUTINE_DUE_LEAD_MS = 2 * 60_000;
  * Why the app paused this routine, if it did: `pausedBy`, else (a pause an
  * older build made) its newest pause note since the user last resumed it.
  */
-const appPauseOf = (job: CronJob): "quiet" | "failing" | "credits" | null => {
+const appPauseOf = (job: CronJob): "quiet" | "failing" | null => {
   if (job.enabled || job.pausedBy === "user") return null;
   const note = job.runs.find(
     (run) => run.kind === "paused" && run.at > (job.resumedAt ?? 0)
   )?.result;
   if (note == null) return null;
   if (note === ROUTINE_PAUSE_NOTES.quiet) return "quiet";
-  // Its runs kept stopping at their credit budget (the spend governor's).
-  if (note === ROUTINE_PAUSE_NOTES.budget) return "credits";
   return note === ROUTINE_PAUSE_NOTES.failures ? "failing" : null;
 };
 
@@ -5887,8 +5882,6 @@ export class ServiceHost {
   private readonly routineRunText = new Map<string, string[]>();
   /** Since when the app has been up and awake: the watchdog counts no earlier miss. */
   private awakeSince = Date.now();
-  /** Routine runs the spend governor closed out at their credit budget, with the budget. */
-  private readonly routineBudgetStops = new Map<string, number>();
 
   /**
    * The watchdog: a routine due twice over, with the app online, that never
@@ -5935,16 +5928,6 @@ export class ServiceHost {
       event.type === "retry" && event.waitingForConnection === true,
       Date.now()
     );
-    // The spend governor closed the run out at its credit budget.
-    const budget =
-      event.type === "notification"
-        ? event.actions?.find(
-            (action) =>
-              action.type === "spend-limit" && action.cause === "budget"
-          )
-        : undefined;
-    if (budget != null)
-      this.routineBudgetStops.set(sessionId, budget.amount ?? 0);
     if (event.type !== "text_delta") return;
     const text = this.routineRunText.get(sessionId) ?? [];
     text.push(event.content);
@@ -5981,21 +5964,14 @@ export class ServiceHost {
       outcome === "failed" &&
       record.error != null &&
       ranOutOfAbacusCredits(record.error);
-    const budget = this.routineBudgetStops.get(sessionId);
-    this.routineBudgetStops.delete(sessionId);
     const runFile = recordRoutineRun(this.routineHome(finishedJob), {
       sessionId,
       startedAt: session.createdAt,
       endedAt: new Date(record.endedAt).toISOString(),
       outcome,
       reply: withoutRoutineDone(text).trim(),
-      ...(creditsOut
-        ? { stopped: "out of Abacus.AI credits" }
-        : budget != null
-          ? { stopped: `${RUN_BUDGET_STOP} (${budget} credits)` }
-          : {}),
+      ...(creditsOut ? { stopped: "out of Abacus.AI credits" } : {}),
     });
-    if (budget != null) this.pauseIfOverBudgetRepeatedly(finishedJob);
     // Not the routine's doing: a scheduled fire is made up once, never paused for.
     if (outcome === "interrupted") {
       const attempt = attemptOfSession(session.routineId, sessionId);
@@ -6451,23 +6427,6 @@ export class ServiceHost {
   }
 
   /**
-   * A routine whose runs keep stopping at their credit budget pauses itself:
-   * its job does not fit what a run may spend. The board tells it.
-   */
-  private pauseIfOverBudgetRepeatedly(job: CronJob): void {
-    const resumedAt = job.resumedAt ?? 0;
-    const runs = recentRoutineRuns(
-      this.routineHome(job),
-      ROUTINE_BUDGET_STOPS_BEFORE_PAUSE
-    ).filter((run) => new Date(run.startedAt).getTime() > resumedAt);
-    if (
-      runs.length >= ROUTINE_BUDGET_STOPS_BEFORE_PAUSE &&
-      runs.every((run) => run.stopped?.startsWith(RUN_BUDGET_STOP) === true)
-    )
-      this.pauseRoutine(job.id, ROUTINE_PAUSE_NOTES.budget);
-  }
-
-  /**
    * A routine whose runs keep finding nothing new pauses itself: each run
    * spends credits, and the user is better told once than polled for nothing.
    */
@@ -6592,8 +6551,6 @@ export class ServiceHost {
         this.statusBoard.clear(key, [
           "quiet",
           "failing",
-          // The budget pause, resumed.
-          "credits",
           "link-lost",
           "lane-off",
         ]);

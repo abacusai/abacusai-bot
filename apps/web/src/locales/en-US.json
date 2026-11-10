@@ -1671,8 +1671,7 @@
       "other": "Paused.",
       "denied": "Paused: you did not allow it.",
       "quiet": "Paused: {{runs}} runs in a row found nothing new, so it stopped using credits. Resume it to keep checking.",
-      "done": "Finished: what it was waiting for happened, so it stopped.",
-      "budget": "Paused: {{runs}} runs in a row stopped at their credit budget."
+      "done": "Finished: what it was waiting for happened, so it stopped."
     },
     "creditHold": {
       "notify": "You're out of credits, so your routines won't run. Skipped runs cost nothing, and they start again on their own when you have credits.",

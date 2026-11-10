@@ -43,7 +43,6 @@ import {
   contextCap,
   MEMORY_CREDITS,
   reserveStarts,
-  routineRunBudget,
   SPEND_LIMITS,
   type SpendKind,
   type SpendLane,
@@ -762,18 +761,16 @@ export class SpendGovernor {
       this.options.onCloseOut?.(hit);
   }
 
-  /** The credit limit this turn has, if any: a routine's budget, a free plan's check-in. */
+  /**
+   * The credit limit this turn has, if any: memory upkeep's, a free plan's
+   * check-in. A routine run has none: the user set it going, so it finishes.
+   */
   private creditLimit(): SpendLimitHit | null {
     if (this.lane() !== "abacus-billed") return null;
     const balance = hostCreditBalance();
     if (balance == null) return null;
     const plan = lowCreditBase(balance);
-    if (this.kind === "routine") {
-      const budget = routineRunBudget(plan);
-      return this.turnCredits >= budget
-        ? { cause: "budget", amount: budget }
-        : null;
-    }
+    if (this.kind === "routine") return null;
     if (this.kind === "memory")
       return this.turnCredits - (this.memoryStart?.credits ?? 0) >=
         MEMORY_CREDITS
@@ -791,8 +788,8 @@ export class SpendGovernor {
   }
 
   /**
-   * Reserve: attended chats on billed credits only. Routine runs have their
-   * budget instead; telling a run nobody watches to economize skips its job.
+   * Reserve: attended chats on billed credits only. Telling a routine run
+   * nobody watches to economize skips its job.
    */
   private reserve(pi: ExtensionAPI): void {
     if (this.kind !== "attended" && this.kind !== "phone") return;

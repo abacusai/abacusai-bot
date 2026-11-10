@@ -1671,8 +1671,7 @@
       "other": "Paused.",
       "denied": "Paused: you did not allow it.",
       "quiet": "일시 중지됨: {{runs}}번 연속으로 새로운 내용이 없어 크레딧 사용을 멈췄습니다. 계속 확인하려면 다시 시작하세요.",
-      "done": "Finished: what it was waiting for happened, so it stopped.",
-      "budget": "Paused: {{runs}} runs in a row stopped at their credit budget."
+      "done": "Finished: what it was waiting for happened, so it stopped."
     },
     "creditHold": {
       "notify": "크레딧이 소진되어 루틴이 실행되지 않습니다. 건너뛴 실행에는 비용이 들지 않으며, 크레딧이 생기면 자동으로 다시 시작됩니다.",
