@@ -1,7 +1,8 @@
 /**
- * A finished turn's Abacus credits beside its "Done in", and on the latest
- * turn what is left; a click opens the plan (free) or the top-up and next
- * plan (paid). Only a turn whose own requests reported their charge shows it.
+ * A paid turn's Abacus credits beside its "Done in", and on the latest turn
+ * what is left; a click opens the top-up and next plan. Only a turn whose own
+ * requests reported their charge shows it. A free account sees no per-turn
+ * count: its credit cards and the out-of-credits dialog say when it runs low.
  */
 import type { RunOutcomeRecord } from "@abacus-ai/contract/contract/ai-thread";
 import { creditAccountKey } from "@abacus-ai/contract/credit-thresholds";
@@ -67,7 +68,7 @@ export const TurnCredits = ({
   }, [latest, shown, outcome.runId, outcome.startedAt, credits]);
 
   const tier = creditsTier(data);
-  if (!shown || tier === "unknown") return null;
+  if (!shown || tier === "free" || tier === "unknown") return null;
   const left = latest ? leftAfter(ceiling, key, outcome) : null;
   const number = new Intl.NumberFormat(i18n.language, {
     maximumFractionDigits: 0,

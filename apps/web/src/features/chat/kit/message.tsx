@@ -50,6 +50,8 @@ import {
   isPaidFeatureTool,
 } from "#renderer/lib/bot-turns/turns";
 import { cn } from "#renderer/lib/cn";
+import { creditsTier } from "#renderer/lib/credits";
+import { useAccount } from "#renderer/lib/use-account";
 import {
   Attachment,
   AttachmentContent,
@@ -389,14 +391,27 @@ const UserMessage = ({
 };
 
 const Credits = ({ message }: { message: UIMessage }) => {
-  const { t } = useTranslation();
   const credits = (
     message.metadata as
       | { abacus?: { credits?: Array<{ creditsUsed: number }> } }
       | undefined
   )?.abacus?.credits;
   if (credits == null || credits.length === 0) return null;
-  const total = credits.reduce((sum, item) => sum + item.creditsUsed, 0);
+  return (
+    <CreditsLine
+      total={credits.reduce((sum, item) => sum + item.creditsUsed, 0)}
+    />
+  );
+};
+
+/**
+ * Paid plans only: a free account sees no per-message count (its low-balance
+ * cards say when it runs low), and nothing shows while the plan is unread.
+ */
+const CreditsLine = ({ total }: { total: number }) => {
+  const { t } = useTranslation();
+  const tier = creditsTier(useAccount().data);
+  if (tier === "free" || tier === "unknown") return null;
   return (
     <div
       className="text-muted-foreground text-xs select-none"

@@ -1852,6 +1852,7 @@ describe("the turn's credits", () => {
     credits_used: 618,
     credits_granted: 2000,
   };
+  const BASIC = { ...ACCOUNT, plan: "Basic", subscription_tier: "basic" };
   const turn = (credits: unknown) => {
     const relay = new FakeRelay();
     relay.emitAll([
@@ -1888,16 +1889,11 @@ describe("the turn's credits", () => {
   afterEach(() => closeUpgradeDialog());
 
   it.each([
+    ["a Basic turn, with what is left", BASIC, 18.4, "18 credits · 1,382 left"],
+    ["a tiny turn", BASIC, 0.3, "<1 credit · 1,382 left"],
     [
-      "a free turn, with what is left",
-      ACCOUNT,
-      18.4,
-      "18 credits · 1,382 left",
-    ],
-    ["a tiny turn", ACCOUNT, 0.3, "<1 credit · 1,382 left"],
-    [
-      "a paid turn",
-      { ...ACCOUNT, plan: "Basic", subscription_tier: "basic" },
+      "a Pro turn",
+      { ...ACCOUNT, plan: "Pro", subscription_tier: "pro" },
       1240.6,
       "1,241 credits · 1,382 left",
     ],
@@ -1917,9 +1913,11 @@ describe("the turn's credits", () => {
   });
 
   it.each([
-    ["an own-key turn (no Abacus request)", ACCOUNT, undefined],
-    ["a turn whose charge is unknown", ACCOUNT, null],
-    ["a free-model turn", ACCOUNT, 0],
+    ["a free account's Abacus turn", ACCOUNT, 18.4],
+    ["a free account's tiny turn", ACCOUNT, 0.3],
+    ["an own-key turn (no Abacus request)", BASIC, undefined],
+    ["a turn whose charge is unknown", BASIC, null],
+    ["a free-model turn", BASIC, 0],
     [
       "an account with no plan to offer",
       { ...ACCOUNT, plan: null, subscription_tier: null },
@@ -1947,7 +1945,7 @@ describe("the turn's credits", () => {
       {},
       {},
       undefined,
-      served(ACCOUNT, funnel)
+      served(BASIC, funnel)
     );
     fireEvent.click(await screen.findByRole("button", { name: /^18 credits/ }));
     expect(upgradeDialogStore.state.request).toMatchObject({
@@ -1957,7 +1955,7 @@ describe("the turn's credits", () => {
     await waitFor(() =>
       expect(funnel).toHaveBeenCalledWith({
         step: "turn_credits_clicked",
-        detail: "free",
+        detail: "basic",
       })
     );
   });

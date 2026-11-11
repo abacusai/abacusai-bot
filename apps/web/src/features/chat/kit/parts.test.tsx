@@ -1,3 +1,4 @@
+import { contract } from "@abacus-ai/contract/contract";
 import { v1ToUiMessages } from "@abacus-ai/contract/transcript/v1-to-ui-messages";
 /**
  * R2-T11 (spec 02 §5.3): the exported `SessionUI`/`BotUI` configurations
@@ -6,6 +7,7 @@ import { v1ToUiMessages } from "@abacus-ai/contract/transcript/v1-to-ui-messages
  * helpers (reminders stripped, routine fires hidden, attachment chips); an
  * empty assistant message renders nothing (F12).
  */
+import { implement } from "@orpc/server";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -65,11 +67,52 @@ describe("R2-T11 parts", () => {
     ).toBeTruthy();
   });
 
-  it("credits footers", async () => {
-    await migrated("credits");
+  const onPlan = (
+    subscription_tier: string
+  ): Parameters<typeof renderRelay>[5] => {
+    const os = implement(contract);
+    return {
+      account: {
+        abacus: os.account.abacus.handler(
+          () =>
+            ({
+              user_id: "u1",
+              plan: subscription_tier,
+              subscription_tier,
+            }) as never
+        ),
+      },
+    };
+  };
+
+  it("credits footers on a paid plan", async () => {
+    current = await renderRelay(
+      new FakeRelay({ history: fixture("credits") }),
+      "session",
+      {},
+      {},
+      undefined,
+      onPlan("basic")
+    );
     expect(
       (await screen.findAllByText(/Used \d+ credits?/)).length
     ).toBeGreaterThan(0);
+  });
+
+  it("no credits footer on the free plan", async () => {
+    current = await renderRelay(
+      new FakeRelay({ history: fixture("credits") }),
+      "session",
+      {},
+      {},
+      undefined,
+      onPlan("free")
+    );
+    await waitFor(() =>
+      expect(document.querySelector('[data-role="assistant"]')).toBeTruthy()
+    );
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByText(/Used \d+ credits?/)).toBeNull();
   });
 
   it("thinking, collapsible and feature limit", async () => {
