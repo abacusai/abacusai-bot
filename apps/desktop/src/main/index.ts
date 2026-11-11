@@ -56,6 +56,7 @@ import { markQuitting, isQuitting } from "./app-quit-state";
 import { setBringToFront, setMainWindow } from "./bring-to-front";
 import { composeHost } from "./compose-host";
 import { installCrashGuard } from "./crash-guard";
+import { hasDeepLink, registerDeepLinkProtocol } from "./deep-link";
 import { isSafeExternalUrl } from "./external-links";
 import type { HostOperations } from "./handler";
 import { electronHostPlatform } from "./host-operations/electron";
@@ -1761,11 +1762,21 @@ function revealOnRelaunch(): void {
 if (gotSingleInstanceLock) {
   app.on("second-instance", revealOnRelaunch);
 }
+// macOS hands the app's own links (deep-link.ts) here, before ready on a cold start.
+app.on("open-url", (event) => {
+  event.preventDefault();
+  revealOnRelaunch();
+});
 
 app
   .whenReady()
   .then(async () => {
     if (!gotSingleInstanceLock) {
+      // A link's launch: the running app already heard it as second-instance.
+      if (hasDeepLink(process.argv)) {
+        app.quit();
+        return;
+      }
       // Thirty seconds: a dying parent's shutdown (agent children, connectors)
       // routinely outlives five, and giving up first leaves the user with no
       // app. A genuinely running primary keeps the lock and this process quits.
@@ -1793,6 +1804,7 @@ app
     }
 
     app.setAppUserModelId("ai.abacus.bot");
+    registerDeepLinkProtocol();
     if (legacyInstall && process.platform === "linux") seedLinuxNativeFrame();
 
     // Serve the renderer CSP as a response header too (see renderer-csp.ts).

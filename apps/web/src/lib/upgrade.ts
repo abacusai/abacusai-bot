@@ -13,7 +13,7 @@ import {
   ABACUS_PLAN_URL,
 } from "./abacus-links";
 import { creditsTier } from "./credits";
-import { openPendingLink } from "./platform-system";
+import { openPendingLink, withUpgradeReturn } from "./platform-system";
 
 /** How often the account is read again while checkout is open. */
 const PLAN_POLL_MS = 5_000;
@@ -149,11 +149,11 @@ export const openUpgrade = async (
   client: AppClient,
   src: UpgradeSrc
 ): Promise<void> => {
-  await openPendingLink(
-    client,
-    async () =>
+  await openPendingLink(client, async () =>
+    withUpgradeReturn(
       (await client.account.upgradeUrl({ src }).catch(() => null)) ??
-      ABACUS_PLAN_URL
+        ABACUS_PLAN_URL
+    )
   );
   void watchForPlan(client);
 };

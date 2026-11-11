@@ -131,3 +131,11 @@ Var abacusBaseDir
 !macroend
 
 !endif
+
+; The app's URL scheme (src/main/deep-link.ts), which it registers under HKCU
+; at every launch. An update keeps it: the app is about to run again.
+!macro customUnInstall
+  ${IfNot} ${isUpdated}
+    DeleteRegKey HKCU "Software\Classes\abacusai-bot"
+  ${EndIf}
+!macroend
