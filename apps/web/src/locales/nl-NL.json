@@ -185,6 +185,10 @@
         "description": "Houdt een lancering op koers door blokkades, ontbrekende goedkeuringen en toezeggingen te signaleren voordat ze uitlopen.",
         "name": "Lanceringscentrum"
       },
+      "lead-finder": {
+        "description": "Vindt elke ochtend nieuwe klanten voor je bedrijf en stelt voor elk een eerste e-mail op.",
+        "name": "Klantenzoeker"
+      },
       "meeting-notes-actions": {
         "description": "Maakt van meetingnotities besluiten, eigenaren, deadlines en vervolgacties waarmee je aan de slag kunt.",
         "name": "Meetingnotities & acties"
@@ -374,6 +378,7 @@
     },
     "start": {
       "categories": {
+        "business": "Zakelijk",
         "featured": "Uitgelicht",
         "finance": "Financiën",
         "marketing": "Marketing",
@@ -1302,6 +1307,21 @@
         "title": "Iets bouwen",
         "body": "Een website, app of game. Beschrijf het en zie het verschijnen.",
         "cta": "Begin met bouwen"
+      },
+      "business": {
+        "title": "Ik heb een bedrijf",
+        "body": "Software voor je bedrijf, of elke ochtend je kantoorwerk geregeld.",
+        "cta": "Bouw mijn systeem",
+        "orders": {
+          "name": "Een systeem voor mijn bestellingen",
+          "prompt": "Ik heb een klein bedrijf. Bouw een eenvoudige app op deze computer waarmee ik mijn bestellingen, boekingen of opdrachten kan bijhouden: een lijst waaraan ik dingen kan toevoegen en die ik kan doorzoeken en filteren, een pagina per item met de klant, datum, status en prijs, en een dagelijks overzicht. Bouw meteen een eerste versie met voorbeeldgegevens voor een typische kleine winkel en open die voor me. Vraag me daarna in één kort bericht wat mijn bedrijf doet en wat ik moet bijhouden, zodat je de app op maat kunt maken."
+        },
+        "inbox": {
+          "name": "Elke ochtend mijn e-mail beantwoorden"
+        },
+        "leads": {
+          "name": "Klanten vinden en een eerste mail opstellen"
+        }
       },
       "chatApp": {
         "title": "Antwoord me via {{app}}",

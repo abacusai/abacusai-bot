@@ -7,6 +7,7 @@ import type { BotRow } from "@abacus-ai/contract/contract";
 import type { FunnelStep } from "@abacus-ai/contract/funnel";
 import {
   ArrowUp,
+  Briefcase,
   Code2,
   FileText,
   GitBranch,
@@ -195,6 +196,81 @@ export const FirstBotStep = ({
       </div>
     </ChoiceCard>
   );
+  /**
+   * Business owners' starters, from what the ones who stay did: a system for
+   * their orders, the morning inbox, new customers. Beside a Chief of Staff
+   * the inbox already leads, so its starter is left out.
+   */
+  const businessCard = (primary: boolean, inboxShown: boolean) => {
+    const orders = () =>
+      pick(
+        "first_choice_business",
+        {
+          kind: "build",
+          prompt: t("onboarding.firstRun.business.orders.prompt"),
+        },
+        "orders"
+      );
+    const starters = [
+      { id: "orders", run: orders },
+      ...(inboxShown
+        ? []
+        : [
+            {
+              id: "inbox",
+              run: () =>
+                pick(
+                  "first_choice_business",
+                  { kind: "template", templateId: "chief-of-staff" },
+                  "inbox"
+                ),
+            },
+          ]),
+      {
+        id: "leads",
+        run: () =>
+          pick(
+            "first_choice_business",
+            { kind: "template", templateId: "lead-finder" },
+            "leads"
+          ),
+      },
+    ] as const;
+    return (
+      <ChoiceCard
+        key="business"
+        slot="business"
+        primary={primary}
+        icon={<Briefcase aria-hidden className="size-5" />}
+        title={t("onboarding.firstRun.business.title")}
+        body={t("onboarding.firstRun.business.body")}
+        action={
+          <CardAction primary={primary} disabled={busy} onClick={orders}>
+            {t("onboarding.firstRun.business.cta")}
+          </CardAction>
+        }
+      >
+        <div className="flex flex-wrap gap-2 pl-13">
+          {starters.map((starter) => (
+            <Button
+              key={starter.id}
+              size="sm"
+              variant="secondary"
+              className="rounded-full"
+              disabled={busy}
+              onClick={starter.run}
+            >
+              {starter.id === "orders"
+                ? t("onboarding.firstRun.business.orders.name")
+                : starter.id === "inbox"
+                  ? t("onboarding.firstRun.business.inbox.name")
+                  : t("onboarding.firstRun.business.leads.name")}
+            </Button>
+          ))}
+        </div>
+      </ChoiceCard>
+    );
+  };
   const tour = (botId: string | null) => (
     <StepLinks className="mt-3 justify-center">
       {[
@@ -373,6 +449,8 @@ export const FirstBotStep = ({
             ? t("onboarding.firstRun.inbox.buildTitle")
             : t("onboarding.firstRun.build.title")
         );
+      case "business":
+        return businessCard(primary, cosBot != null);
       case "github":
         return githubCard(card.github, primary);
       case "chat-app":

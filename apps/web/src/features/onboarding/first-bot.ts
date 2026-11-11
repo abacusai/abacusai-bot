@@ -21,6 +21,8 @@ export type FirstChoice =
   | { kind: "github" }
   | { kind: "research" }
   | { kind: "goal"; goal: string }
+  /** A bot from the template catalog, as the business card's starters make. */
+  | { kind: "template"; templateId: string }
   | { kind: "images" }
   | { kind: "bot"; botId: string };
 
@@ -72,6 +74,7 @@ export const pickBotId = (): string => {
 export type FirstRunCard =
   | { slot: "inbox" }
   | { slot: "build" }
+  | { slot: "business" }
   | { slot: "github"; github: "connect" | "start" }
   | { slot: "chat-app"; app: HomeChannel }
   | { slot: "research" }
@@ -80,8 +83,8 @@ export type FirstRunCard =
 /**
  * Both first-run screens draw this one list, so they cannot drift apart.
  * The one thing set up for the person leads: the inbox pass, else the chat
- * app linked last, else a connected GitHub, else Build. Then Build, GitHub,
- * the other chat apps, research and images. An inbox with nothing to review
+ * app linked last, else a connected GitHub, else Build. Then Build, the
+ * business starters, GitHub, the other chat apps, research and images. An inbox with nothing to review
  * (`quiet`) hands the lead to Build and follows it.
  */
 export const firstRunCards = ({
@@ -106,6 +109,7 @@ export const firstRunCards = ({
   const rest: FirstRunCard[] = [
     ...(inbox === "quiet" ? [{ slot: "inbox" } as const] : []),
     { slot: "build" },
+    { slot: "business" },
     ...(githubCard != null ? [githubCard] : []),
     ...chatApps.map((app) => ({ slot: "chat-app", app }) as const),
     { slot: "research" },

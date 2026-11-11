@@ -185,6 +185,10 @@
         "description": "Engelleri, eksik onayları ve taahhütleri aksamadan önce ortaya çıkararak bir lansmanı ilerletir.",
         "name": "Lansman Komuta Merkezi"
       },
+      "lead-finder": {
+        "description": "Her sabah işletmen için yeni müşteriler bulur ve her birine ilk e-postanın taslağını hazırlar.",
+        "name": "Müşteri Bulucu"
+      },
       "meeting-notes-actions": {
         "description": "Toplantı notlarını harekete geçebileceğin kararlara, sorumlulara, son tarihlere ve takiplere dönüştürür.",
         "name": "Toplantı Notları ve Aksiyonlar"
@@ -374,6 +378,7 @@
     },
     "start": {
       "categories": {
+        "business": "İşletme",
         "featured": "Öne çıkanlar",
         "finance": "Finans",
         "marketing": "Pazarlama",
@@ -1302,6 +1307,21 @@
         "title": "Bir şey oluştur",
         "body": "Bir web sitesi, uygulama ya da oyun. Aşağıdan birine dokun ya da değiştirebileceğin örnek bir siteyle başla.",
         "cta": "Oluşturmaya başla"
+      },
+      "business": {
+        "title": "Bir işletmem var",
+        "body": "İşletmen için yazılım ya da her sabah yapılan ofis işleri.",
+        "cta": "Sistemimi oluştur",
+        "orders": {
+          "name": "Siparişlerim için bir sistem",
+          "prompt": "Küçük bir işletmem var. Bu bilgisayarda siparişlerimi, rezervasyonlarımı veya servis işlerimi takip edebileceğim basit bir uygulama yap: ekleme yapabileceğim, arayıp filtreleyebileceğim bir liste; her biri için müşteri, tarih, durum ve fiyatın yer aldığı bir sayfa; bir de günlük özet. Tipik bir küçük dükkân için örnek verilerle hemen ilk sürümü oluştur ve benim için aç. Sonra işletmemin ne iş yaptığını ve neleri takip etmem gerektiğini tek bir kısa mesajla sor, böylece uygulamayı bana göre uyarlayabilirsin."
+        },
+        "inbox": {
+          "name": "Her sabah e-postalarımı yanıtla"
+        },
+        "leads": {
+          "name": "Müşteri bul ve ilk mesajları hazırla"
+        }
       },
       "chatApp": {
         "title": "Bana {{app}} üzerinden cevap ver",

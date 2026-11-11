@@ -190,12 +190,12 @@ describe("firstRunCards: one list for both first-run screens", () => {
     [
       "Gmail only",
       { inbox: "lead", chatApps: [], github: "connect" },
-      ["*inbox", "build", "github:connect", "research", "images"],
+      ["*inbox", "build", "business", "github:connect", "research", "images"],
     ],
     [
       "Gmail + GitHub",
       { inbox: "lead", chatApps: [], github: "start" },
-      ["*inbox", "build", "github:start", "research", "images"],
+      ["*inbox", "build", "business", "github:start", "research", "images"],
     ],
     [
       "Gmail + chat app",
@@ -203,6 +203,7 @@ describe("firstRunCards: one list for both first-run screens", () => {
       [
         "*inbox",
         "build",
+        "business",
         "github:connect",
         "chat-app:telegram",
         "research",
@@ -215,6 +216,7 @@ describe("firstRunCards: one list for both first-run screens", () => {
       [
         "*inbox",
         "build",
+        "business",
         "github:start",
         "chat-app:telegram",
         "chat-app:discord",
@@ -228,6 +230,7 @@ describe("firstRunCards: one list for both first-run screens", () => {
       [
         "*build",
         "inbox",
+        "business",
         "github:start",
         "chat-app:discord",
         "research",
@@ -237,22 +240,29 @@ describe("firstRunCards: one list for both first-run screens", () => {
     [
       "Gmail where GitHub can't be offered",
       { inbox: "lead", chatApps: [], github: null },
-      ["*inbox", "build", "research", "images"],
+      ["*inbox", "build", "business", "research", "images"],
     ],
     [
       "no Gmail, nothing connected",
       { inbox: null, chatApps: [], github: "connect" },
-      ["*build", "github:connect", "research", "images"],
+      ["*build", "business", "github:connect", "research", "images"],
     ],
     [
       "no Gmail + GitHub",
       { inbox: null, chatApps: [], github: "start" },
-      ["*github:start", "build", "research", "images"],
+      ["*github:start", "build", "business", "research", "images"],
     ],
     [
       "no Gmail + chat app",
       { inbox: null, chatApps: ["whatsapp"], github: "connect" },
-      ["*chat-app:whatsapp", "build", "github:connect", "research", "images"],
+      [
+        "*chat-app:whatsapp",
+        "build",
+        "business",
+        "github:connect",
+        "research",
+        "images",
+      ],
     ],
     [
       "no Gmail + GitHub + two chat apps",
@@ -260,6 +270,7 @@ describe("firstRunCards: one list for both first-run screens", () => {
       [
         "*chat-app:discord",
         "build",
+        "business",
         "github:start",
         "chat-app:telegram",
         "research",
@@ -269,7 +280,7 @@ describe("firstRunCards: one list for both first-run screens", () => {
     [
       "no Gmail where GitHub can't be offered",
       { inbox: null, chatApps: [], github: null },
-      ["*build", "research", "images"],
+      ["*build", "business", "research", "images"],
     ],
   ])("%s", (_name, input, expected) => {
     expect(

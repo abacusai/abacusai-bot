@@ -185,6 +185,10 @@
         "description": "Menjaga peluncuran tetap berjalan dengan memunculkan hambatan, kehilangan persetujuan, dan komitmen sebelum hal tersebut hilang.",
         "name": "Luncurkan Pusat Komando"
       },
+      "lead-finder": {
+        "description": "Mencari pelanggan baru untuk bisnis Anda setiap pagi dan menyiapkan draf email pertama untuk masing-masing.",
+        "name": "Pencari Prospek"
+      },
       "meeting-notes-actions": {
         "description": "Mengubah catatan rapat menjadi keputusan, pemilik, tenggat waktu, dan tindak lanjut yang dapat Anda tindak lanjuti.",
         "name": "Catatan & Tindakan Rapat"
@@ -374,6 +378,7 @@
     },
     "start": {
       "categories": {
+        "business": "Bisnis",
         "featured": "Featured",
         "finance": "Finance",
         "marketing": "Marketing",
@@ -1302,6 +1307,21 @@
         "title": "Buat sesuatu",
         "body": "Situs web, aplikasi, atau game. Ketuk salah satu di bawah, atau mulai dengan situs contoh yang bisa kamu ubah.",
         "cta": "Mulai membuat"
+      },
+      "business": {
+        "title": "Saya punya usaha",
+        "body": "Perangkat lunak untuk bisnis Anda, atau urusan kantor yang dikerjakan tiap pagi.",
+        "cta": "Buat sistem saya",
+        "orders": {
+          "name": "Sistem untuk pesanan saya",
+          "prompt": "Saya punya usaha kecil. Buatkan saya aplikasi sederhana di komputer ini untuk mencatat pesanan, reservasi, atau pekerjaan servis saya. Saya ingin ada daftar yang bisa saya tambah, cari, dan filter, halaman untuk setiap entri berisi pelanggan, tanggal, status, dan harga, serta ringkasan harian. Langsung buat versi pertama dengan data contoh untuk toko kecil pada umumnya, lalu bukakan untuk saya. Setelah itu, tanyakan dalam satu pesan singkat apa bidang usaha saya dan apa saja yang perlu saya catat, supaya kamu bisa menyesuaikannya."
+        },
+        "inbox": {
+          "name": "Balas email saya setiap pagi"
+        },
+        "leads": {
+          "name": "Cari pelanggan dan siapkan draf penawaran"
+        }
       },
       "chatApp": {
         "title": "Balas saya di {{app}}",

@@ -185,6 +185,10 @@
         "description": "Maintient un lancement en mouvement en faisant apparaître les bloqueurs, les approbations manquantes et les engagements avant qu'ils ne glissent.",
         "name": "Lancer le centre de commande"
       },
+      "lead-finder": {
+        "description": "Trouve chaque matin de nouveaux clients pour votre entreprise et rédige un premier e-mail pour chacun.",
+        "name": "Prospecteur"
+      },
       "meeting-notes-actions": {
         "description": "Transforme les notes de réunion en décisions, propriétaires, délais et suivis sur lesquels vous pouvez agir.",
         "name": "Notes de réunion et actions"
@@ -374,6 +378,7 @@
     },
     "start": {
       "categories": {
+        "business": "Entreprise",
         "featured": "Featured",
         "finance": "Finance",
         "marketing": "Marketing",
@@ -1302,6 +1307,21 @@
         "title": "Créer quelque chose",
         "body": "Un site, une app ou un jeu. Touche-en un ci-dessous, ou commence par un site d'exemple que tu peux modifier.",
         "cta": "Commencer à créer"
+      },
+      "business": {
+        "title": "J'ai une entreprise",
+        "body": "Un logiciel pour votre activité, ou vos tâches de bureau faites chaque matin.",
+        "cta": "Créer mon système",
+        "orders": {
+          "name": "Un système pour mes commandes",
+          "prompt": "Je gère une petite entreprise. Créez-moi une application simple sur cet ordinateur pour suivre mes commandes, réservations ou interventions : une liste que je peux compléter, rechercher et filtrer, une page pour chacune avec le client, la date, le statut et le prix, et un récapitulatif quotidien. Créez tout de suite une première version avec des données d'exemple pour un petit commerce typique, et ouvrez-la pour moi. Ensuite, demandez-moi en un court message ce que fait mon entreprise et ce que j'ai besoin de suivre, pour pouvoir l'adapter."
+        },
+        "inbox": {
+          "name": "Répondre à mes e-mails chaque matin"
+        },
+        "leads": {
+          "name": "Trouver des clients et préparer la prospection"
+        }
       },
       "chatApp": {
         "title": "Réponds-moi sur {{app}}",

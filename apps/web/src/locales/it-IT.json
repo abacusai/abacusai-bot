@@ -185,6 +185,10 @@
         "description": "Mantiene il lancio in movimento facendo emergere ostacoli, approvazioni mancanti e impegni prima che scivolino.",
         "name": "Avvia il Centro di comando"
       },
+      "lead-finder": {
+        "description": "Trova nuovi clienti per la tua attività ogni mattina e prepara una prima email per ciascuno.",
+        "name": "Cerca clienti"
+      },
       "meeting-notes-actions": {
         "description": "Trasforma gli appunti della riunione in decisioni, proprietari, scadenze e follow-up su cui puoi agire.",
         "name": "Note e azioni della riunione"
@@ -374,6 +378,7 @@
     },
     "start": {
       "categories": {
+        "business": "Attività",
         "featured": "Featured",
         "finance": "Finance",
         "marketing": "Marketing",
@@ -1302,6 +1307,21 @@
         "title": "Crea qualcosa",
         "body": "Un sito, un'app o un gioco. Toccane uno qui sotto o inizia con un sito di esempio che puoi modificare.",
         "cta": "Inizia a creare"
+      },
+      "business": {
+        "title": "Ho un'attività",
+        "body": "Software per la tua attività, o il lavoro d'ufficio sbrigato ogni mattina.",
+        "cta": "Crea il mio sistema",
+        "orders": {
+          "name": "Un sistema per i miei ordini",
+          "prompt": "Ho una piccola attività. Creami su questo computer una semplice app per tenere traccia di ordini, prenotazioni o interventi: un elenco in cui posso aggiungere, cercare e filtrare, una pagina per ciascuno con cliente, data, stato e prezzo, e un riepilogo giornaliero. Crea subito una prima versione con dati di esempio per un tipico piccolo negozio e aprimela. Poi chiedimi in un breve messaggio di cosa si occupa la mia attività e cosa devo monitorare, così puoi adattarla."
+        },
+        "inbox": {
+          "name": "Rispondi alle mie email ogni mattina"
+        },
+        "leads": {
+          "name": "Trova clienti e prepara i primi contatti"
+        }
       },
       "chatApp": {
         "title": "Rispondimi su {{app}}",

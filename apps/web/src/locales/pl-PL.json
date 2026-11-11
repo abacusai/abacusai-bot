@@ -187,6 +187,10 @@
         "description": "Pilnuje postępów premiery, wyłapując blokery, brakujące akceptacje i zobowiązania, zanim się opóźnią.",
         "name": "Centrum dowodzenia premierą"
       },
+      "lead-finder": {
+        "description": "Co rano znajduje nowych klientów dla Twojej firmy i przygotowuje pierwszego maila do każdego z nich.",
+        "name": "Łowca klientów"
+      },
       "meeting-notes-actions": {
         "description": "Zamienia notatki ze spotkań w decyzje, osoby odpowiedzialne, terminy i dalsze kroki do wykonania.",
         "name": "Notatki i zadania ze spotkań"
@@ -380,6 +384,7 @@
     },
     "start": {
       "categories": {
+        "business": "Biznes",
         "featured": "Polecane",
         "finance": "Finanse",
         "marketing": "Marketing",
@@ -1316,6 +1321,21 @@
         "title": "Zbuduj coś",
         "body": "Stronę, aplikację lub grę. Opisz ją i patrz, jak powstaje.",
         "cta": "Zacznij budować"
+      },
+      "business": {
+        "title": "Prowadzę firmę",
+        "body": "Oprogramowanie dla Twojej firmy lub poranna praca biurowa załatwiana za Ciebie.",
+        "cta": "Zbuduj mój system",
+        "orders": {
+          "name": "System do moich zamówień",
+          "prompt": "Prowadzę małą firmę. Zbuduj mi na tym komputerze prostą aplikację do śledzenia zamówień, rezerwacji lub zleceń: listę, do której mogę dodawać pozycje i którą mogę przeszukiwać i filtrować, osobną stronę dla każdej pozycji z klientem, datą, statusem i ceną oraz dzienne podsumowanie. Od razu zbuduj pierwszą wersję z przykładowymi danymi dla typowego małego sklepu i otwórz ją dla mnie. Potem w jednej krótkiej wiadomości zapytaj mnie, czym zajmuje się moja firma i co chcę śledzić, aby dopasować aplikację do moich potrzeb."
+        },
+        "inbox": {
+          "name": "Odpowiadaj co rano na moje maile"
+        },
+        "leads": {
+          "name": "Znajdź klientów i przygotuj pierwsze maile"
+        }
       },
       "chatApp": {
         "title": "Odpowiadaj mi na {{app}}",

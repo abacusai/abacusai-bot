@@ -185,6 +185,10 @@
         "description": "Mantiene un lanzamiento en movimiento al sacar a la luz los obstáculos, las aprobaciones faltantes y los compromisos antes de que se escapen.",
         "name": "Centro de comando de lanzamiento"
       },
+      "lead-finder": {
+        "description": "Busca nuevos clientes para tu negocio cada mañana y redacta un primer correo para cada uno.",
+        "name": "Buscador de clientes"
+      },
       "meeting-notes-actions": {
         "description": "Convierte las notas de la reunión en decisiones, propietarios, plazos y seguimientos sobre los que puedes actuar.",
         "name": "Notas y acciones de la reunión"
@@ -374,6 +378,7 @@
     },
     "start": {
       "categories": {
+        "business": "Negocios",
         "featured": "Featured",
         "finance": "Finance",
         "marketing": "Marketing",
@@ -1302,6 +1307,21 @@
         "title": "Crear algo",
         "body": "Una web, una app o un juego. Toca uno abajo o empieza con una web de ejemplo que puedes cambiar.",
         "cta": "Empezar a crear"
+      },
+      "business": {
+        "title": "Tengo un negocio",
+        "body": "Software para tu negocio, o el trabajo de oficina resuelto cada mañana.",
+        "cta": "Crear mi sistema",
+        "orders": {
+          "name": "Un sistema para mis pedidos",
+          "prompt": "Tengo un pequeño negocio. Créame una app sencilla en este ordenador para llevar el control de mis pedidos, reservas o encargos: una lista en la que pueda añadir, buscar y filtrar, una página para cada uno con el cliente, la fecha, el estado y el precio, y un resumen diario. Haz ya una primera versión con datos de ejemplo de una tienda pequeña típica y ábremela. Luego pregúntame en un mensaje breve a qué se dedica mi negocio y qué necesito controlar, para que puedas adaptarla."
+        },
+        "inbox": {
+          "name": "Contestar mi correo cada mañana"
+        },
+        "leads": {
+          "name": "Encontrar clientes y redactar mensajes"
+        }
       },
       "chatApp": {
         "title": "Respóndeme en {{app}}",

@@ -31,6 +31,8 @@ export const FUNNEL_STEPS = [
   "first_build_chosen",
   // The first-run screen: the card picked, and the inbox result after a Gmail sign-in.
   "first_choice_build",
+  // The business card: its starter (orders, inbox, leads) is the detail.
+  "first_choice_business",
   "first_choice_whatsapp",
   "first_choice_github",
   "first_choice_research",

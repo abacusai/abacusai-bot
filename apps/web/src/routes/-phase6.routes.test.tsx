@@ -364,6 +364,33 @@ it("the first-run choices wait for a pick, and a pick opens the bot it made", as
   );
 });
 
+it("the business card's lead starter makes the Lead Finder from its template and opens it", async () => {
+  const seed = defaultSeed();
+  seed.bots = [];
+  seed.routines = [];
+  harness = await renderApp("/onboarding/first-bot", {
+    onboarded: false,
+    signedIn: true,
+    seed,
+  });
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: "Find customers and draft outreach",
+    })
+  );
+  await waitFor(
+    () =>
+      expect(harness!.router.state.location.pathname).toMatch(/^\/bots\/bot-/),
+    { timeout: 5000 }
+  );
+  expect(harness.collections.bots.toArray).toHaveLength(1);
+  expect(harness.collections.bots.toArray[0]).toMatchObject({
+    templateId: "lead-finder",
+    name: "Lead Finder",
+    sponsoredFirstRun: true,
+  });
+});
+
 it("after a Gmail sign-in the Chief of Staff starts on the inbox while the screen waits for it", async () => {
   const seed = defaultSeed();
   seed.bots = [];
@@ -454,7 +481,15 @@ it("beside the inbox pass, GitHub starts its pull request review at once", async
     [...document.querySelectorAll("[data-first-choice]")].map((card) =>
       card.getAttribute("data-first-choice")
     )
-  ).toEqual(["inbox", "build", "github", "chat-app", "research", "images"]);
+  ).toEqual([
+    "inbox",
+    "build",
+    "business",
+    "github",
+    "chat-app",
+    "research",
+    "images",
+  ]);
   const github = document.querySelector('[data-first-choice="github"]')!;
   fireEvent.click(within(github as HTMLElement).getByRole("button"));
   await waitFor(() =>

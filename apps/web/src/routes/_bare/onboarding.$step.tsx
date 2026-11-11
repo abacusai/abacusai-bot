@@ -236,6 +236,15 @@ const OnboardingRoute = () => {
         await open(bot.id);
         return;
       }
+      case "template": {
+        const { bot } = await createBotFromTemplate(db, choice.templateId, {
+          ...(id != null ? { id } : {}),
+          name: t(`bots.templates.${choice.templateId}.name`),
+          ...(sponsored ? { sponsoredFirstRun: true } : {}),
+        });
+        await open(bot.id);
+        return;
+      }
       case "github":
         startFirstTask(
           "code",
@@ -431,7 +440,9 @@ export const Route = createFileRoute("/_bare/onboarding/$step")({
     if (params.step === "connectors")
       void warm(
         context.queryClient.ensureQueryData(
-          context.transport.orpc.connectors.statuses.queryOptions({ input: {} })
+          context.transport.orpc.connectors.statuses.queryOptions({
+            input: {},
+          })
         )
       ).catch(() => undefined);
     if (params.step === "first-bot")

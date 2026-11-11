@@ -83,7 +83,13 @@ describe("FirstBotStep: what to do first", () => {
     expect(
       screen.getByText("Pick one. Your bot starts on it right away.")
     ).toBeTruthy();
-    expect(cards()).toEqual(["build", "github", "research", "images"]);
+    expect(cards()).toEqual([
+      "build",
+      "business",
+      "github",
+      "research",
+      "images",
+    ]);
     expect(
       document
         .querySelector('[data-first-choice="build"]')
@@ -118,6 +124,40 @@ describe("FirstBotStep: what to do first", () => {
     await vi.waitFor(() =>
       expect(context.props.choose).toHaveBeenCalledWith({ kind: "research" })
     );
+    // The business card: a system for orders is built at once; the inbox and lead starters make their bots.
+    fireEvent.click(screen.getByRole("button", { name: "Build my system" }));
+    await vi.waitFor(() =>
+      expect(context.props.choose).toHaveBeenCalledWith({
+        kind: "build",
+        prompt: expect.stringContaining("orders, bookings or service jobs"),
+      })
+    );
+    expect(funnelStep).toHaveBeenCalledWith({
+      step: "first_choice_business",
+      detail: "orders",
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Answer my email every morning" })
+    );
+    await vi.waitFor(() =>
+      expect(context.props.choose).toHaveBeenCalledWith({
+        kind: "template",
+        templateId: "chief-of-staff",
+      })
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Find customers and draft outreach" })
+    );
+    await vi.waitFor(() =>
+      expect(context.props.choose).toHaveBeenCalledWith({
+        kind: "template",
+        templateId: "lead-finder",
+      })
+    );
+    expect(funnelStep).toHaveBeenCalledWith({
+      step: "first_choice_business",
+      detail: "leads",
+    });
     fireEvent.click(screen.getByRole("button", { name: "See Basic" }));
     await vi.waitFor(() =>
       expect(context.props.choose).toHaveBeenCalledWith({ kind: "images" })
@@ -168,6 +208,7 @@ describe("FirstBotStep: what to do first", () => {
     expect(cards()).toEqual([
       "chat-app",
       "build",
+      "business",
       "github",
       "research",
       "images",
@@ -234,7 +275,13 @@ describe("FirstBotStep: what to do first", () => {
     const { context } = ctx();
     context.props.connect = vi.fn(async () => ({ ok: true }));
     renderGithub(context, "start");
-    expect(cards()).toEqual(["github", "build", "research", "images"]);
+    expect(cards()).toEqual([
+      "github",
+      "build",
+      "business",
+      "research",
+      "images",
+    ]);
     const card = document.querySelector('[data-first-choice="github"]')!;
     fireEvent.click(card.querySelector("button")!);
     await vi.waitFor(() =>
@@ -246,7 +293,7 @@ describe("FirstBotStep: what to do first", () => {
   it("leaves the GitHub card out where it can't be connected", async () => {
     await initI18n();
     renderGithub(ctx().context, null);
-    expect(cards()).toEqual(["build", "research", "images"]);
+    expect(cards()).toEqual(["build", "business", "research", "images"]);
   });
 
   it.each([
@@ -327,7 +374,18 @@ describe("FirstBotStep: after a Gmail sign-in", () => {
     expect(
       screen.getByText("Drafts ready for each. Nothing is sent without you.")
     ).toBeTruthy();
-    expect(cards()).toEqual(["inbox", "build", "github", "research", "images"]);
+    expect(cards()).toEqual([
+      "inbox",
+      "build",
+      "business",
+      "github",
+      "research",
+      "images",
+    ]);
+    // The inbox already leads, so the business card leaves its inbox starter out.
+    expect(
+      screen.queryByRole("button", { name: "Answer my email every morning" })
+    ).toBeNull();
     expect(screen.getByText("Or build something")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Review drafts" }));
     await vi.waitFor(() =>
@@ -352,7 +410,14 @@ describe("FirstBotStep: after a Gmail sign-in", () => {
     expect(screen.getByRole("heading").textContent).toBe(
       "Nothing needs you today"
     );
-    expect(cards()).toEqual(["build", "inbox", "github", "research", "images"]);
+    expect(cards()).toEqual([
+      "build",
+      "inbox",
+      "business",
+      "github",
+      "research",
+      "images",
+    ]);
     expect(
       document
         .querySelector('[data-first-choice="build"]')
@@ -387,6 +452,7 @@ describe("FirstBotStep: after a Gmail sign-in", () => {
     expect(cards()).toEqual([
       "inbox",
       "build",
+      "business",
       "github",
       "chat-app",
       "chat-app",

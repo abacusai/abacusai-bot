@@ -185,6 +185,10 @@
         "description": "Keeps a launch moving by surfacing blockers, missing approvals, and commitments before they slip.",
         "name": "Launch Command Center"
       },
+      "lead-finder": {
+        "description": "Finds new customers for your business every morning and drafts a first email to each.",
+        "name": "Lead Finder"
+      },
       "meeting-notes-actions": {
         "description": "Turns meeting notes into decisions, owners, deadlines, and follow-ups you can act on.",
         "name": "Meeting Notes & Actions"
@@ -374,6 +378,7 @@
     },
     "start": {
       "categories": {
+        "business": "Business",
         "featured": "Featured",
         "finance": "Finance",
         "marketing": "Marketing",
@@ -1302,6 +1307,21 @@
         "title": "Build something",
         "body": "A website, app or game. Tap one below, or start with a sample site you can change.",
         "cta": "Start building"
+      },
+      "business": {
+        "title": "I run a business",
+        "body": "Software for your business, or the office work done every morning.",
+        "cta": "Build my system",
+        "orders": {
+          "name": "A system for my orders",
+          "prompt": "I run a small business. Build me a simple app on this computer to keep track of my orders, bookings or service jobs: a list I can add to, search and filter, a page for each one with the customer, date, status and price, and a daily summary. Build a first version right away with sample data for a typical small shop and open it for me. Then ask me in one short message what my business does and what I need to track, so you can tailor it."
+        },
+        "inbox": {
+          "name": "Answer my email every morning"
+        },
+        "leads": {
+          "name": "Find customers and draft outreach"
+        }
       },
       "chatApp": {
         "title": "Answer me on {{app}}",

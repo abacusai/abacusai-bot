@@ -185,6 +185,10 @@
         "description": "Hält einen Start am Laufen, indem Hindernisse, fehlende Genehmigungen und Verpflichtungen aufgedeckt werden, bevor sie ins Wanken geraten.",
         "name": "Starten Sie das Command Center"
       },
+      "lead-finder": {
+        "description": "Findet jeden Morgen neue Kunden für dein Unternehmen und entwirft für jeden eine erste E-Mail.",
+        "name": "Kundenfinder"
+      },
       "meeting-notes-actions": {
         "description": "Wandelt Besprechungsnotizen in Entscheidungen, Eigentümer, Fristen und Folgemaßnahmen um, auf die Sie reagieren können.",
         "name": "Besprechungsnotizen und -aktionen"
@@ -374,6 +378,7 @@
     },
     "start": {
       "categories": {
+        "business": "Unternehmen",
         "featured": "Featured",
         "finance": "Finance",
         "marketing": "Marketing",
@@ -1302,6 +1307,21 @@
         "title": "Etwas bauen",
         "body": "Eine Website, App oder ein Spiel. Tippe unten auf eins oder starte mit einer Beispielseite, die du ändern kannst.",
         "cta": "Loslegen"
+      },
+      "business": {
+        "title": "Ich führe ein Unternehmen",
+        "body": "Software für dein Unternehmen oder Büroarbeit, die jeden Morgen für dich erledigt wird.",
+        "cta": "Mein System bauen",
+        "orders": {
+          "name": "Ein System für meine Aufträge",
+          "prompt": "Ich habe ein kleines Unternehmen. Bau mir auf diesem Computer eine einfache App, mit der ich meine Bestellungen, Buchungen oder Aufträge im Blick behalte: eine Liste, die ich ergänzen, durchsuchen und filtern kann, eine eigene Seite für jeden Eintrag mit Kunde, Datum, Status und Preis sowie eine tägliche Zusammenfassung. Bau sofort eine erste Version mit Beispieldaten für einen typischen kleinen Laden und öffne sie für mich. Frag mich danach in einer kurzen Nachricht, was mein Unternehmen macht und was ich erfassen muss, damit du die App anpassen kannst."
+        },
+        "inbox": {
+          "name": "Jeden Morgen meine E-Mails beantworten"
+        },
+        "leads": {
+          "name": "Kunden finden und Anschreiben entwerfen"
+        }
       },
       "chatApp": {
         "title": "Antworte mir auf {{app}}",

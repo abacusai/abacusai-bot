@@ -185,6 +185,10 @@
         "description": "Mantém um lançamento em andamento revelando bloqueadores, falta de aprovações e compromissos antes que eles deslizem.",
         "name": "Iniciar Centro de Comando"
       },
+      "lead-finder": {
+        "description": "Encontra novos clientes para o seu negócio toda manhã e prepara um primeiro e-mail para cada um.",
+        "name": "Buscador de clientes"
+      },
       "meeting-notes-actions": {
         "description": "Transforma notas de reuniões em decisões, proprietários, prazos e acompanhamentos nos quais você pode agir.",
         "name": "Notas e ações da reunião"
@@ -374,6 +378,7 @@
     },
     "start": {
       "categories": {
+        "business": "Negócios",
         "featured": "Featured",
         "finance": "Finance",
         "marketing": "Marketing",
@@ -1302,6 +1307,21 @@
         "title": "Criar algo",
         "body": "Um site, app ou jogo. Toque em um abaixo ou comece com um site de exemplo que você pode mudar.",
         "cta": "Começar a criar"
+      },
+      "business": {
+        "title": "Tenho um negócio",
+        "body": "Um software para o seu negócio ou o trabalho de escritório de todas as manhãs.",
+        "cta": "Criar meu sistema",
+        "orders": {
+          "name": "Um sistema para meus pedidos",
+          "prompt": "Tenho um pequeno negócio. Crie para mim um app simples neste computador para acompanhar meus pedidos, reservas ou ordens de serviço: uma lista em que eu possa adicionar itens, pesquisar e filtrar, uma página para cada um com o cliente, a data, o status e o preço, e um resumo diário. Crie agora mesmo uma primeira versão com dados de exemplo de uma pequena loja típica e abra para mim. Depois, me pergunte em uma mensagem curta o que meu negócio faz e o que eu preciso acompanhar, para você poder adaptar o app."
+        },
+        "inbox": {
+          "name": "Responder meus e-mails toda manhã"
+        },
+        "leads": {
+          "name": "Encontrar clientes e preparar mensagens"
+        }
       },
       "chatApp": {
         "title": "Me responda no {{app}}",
