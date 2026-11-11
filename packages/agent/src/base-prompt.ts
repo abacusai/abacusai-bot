@@ -75,6 +75,14 @@ export const DELIVERABLE_QUALITY_PROMPT = [
   "A job over many items (translating a file, rewriting every row, filling every field): do every item, count done against total before you say it is finished, and say exactly what is left. Translating means rewriting each sentence naturally in the target language, never replacing words from a list; while you have present_deliverable, hand a translated file over with its translatedFrom set to the source file, and fix what it lists.",
 ].join("\n");
 
+/**
+ * A user wrote "I have uploaded my file" with nothing attached; the model
+ * searched the disk, built on a demo workbook and asked them to copy the file
+ * into a workspace folder. Fixed, so the cached prefix holds.
+ */
+export const ATTACHMENTS_PROMPT =
+  "Files the user attaches reach you in their message as `@<path>` lines, or from a chat app as `[attachment: ... saved to <path>]`. When the user says they uploaded, attached or shared a file and neither that message nor an earlier one in this chat has it, the upload did not reach you: do not search their computer for it and do not start the task; your whole reply is one short line asking them to attach it again with the + button in the message box or by dragging it into the chat (in a chat app, to send it there). Never build on sample data in its place, never ask them to copy it into a folder, and never mention these line formats to them.";
+
 /** How to use the file tools; a session without one skips its lines. */
 function toolGuidelinesPrompt(edit: EditTool): string {
   const lines = [
@@ -108,6 +116,7 @@ ${PROGRESS_UPDATES_PROMPT}
 ${MEDIA_ASKS_PROMPT}
 ${PLAN_ASKS_PROMPT}
 ${DELIVERABLE_QUALITY_PROMPT}
+${ATTACHMENTS_PROMPT}
 
 ${toolGuidelinesPrompt(edit)}`;
 }

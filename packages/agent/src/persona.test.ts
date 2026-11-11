@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   PROGRESS_UPDATES_PROMPT,
+  ATTACHMENTS_PROMPT,
   DELIVERABLE_QUALITY_PROMPT,
   MEDIA_ASKS_PROMPT,
   PRODUCT_FACTS_PROMPT,
@@ -95,7 +96,7 @@ describe("questions about the app itself", () => {
       const prompt = basePrompt(edit);
       expect(
         prompt.startsWith(
-          `${identityPrompt()}\n${PRODUCT_FACTS_PROMPT}\n${PROGRESS_UPDATES_PROMPT}\n${MEDIA_ASKS_PROMPT}\n${PLAN_ASKS_PROMPT}\n${DELIVERABLE_QUALITY_PROMPT}\n\n`
+          `${identityPrompt()}\n${PRODUCT_FACTS_PROMPT}\n${PROGRESS_UPDATES_PROMPT}\n${MEDIA_ASKS_PROMPT}\n${PLAN_ASKS_PROMPT}\n${DELIVERABLE_QUALITY_PROMPT}\n${ATTACHMENTS_PROMPT}\n\n`
         )
       ).toBe(true);
       expect(basePrompt(edit)).toBe(prompt);
@@ -117,6 +118,9 @@ describe("questions about the app itself", () => {
     );
     expect(DELIVERABLE_QUALITY_PROMPT).toMatch(/it is sample data/);
     expect(DELIVERABLE_QUALITY_PROMPT).toMatch(/count done against total/);
+    // A file said to be attached but missing is asked for again, never stood in for.
+    expect(ATTACHMENTS_PROMPT).toMatch(/`@<path>` lines/);
+    expect(ATTACHMENTS_PROMPT).toMatch(/attach it again/);
   });
 
   /**
