@@ -85,7 +85,7 @@ export const WallReopenHost = ({
     let returning = armedWall < openedAt;
     let leftAt: number | null = null;
     const away = () => {
-      leftAt ??= Date.now();
+      if (leftAt == null) leftAt = Date.now();
     };
     const back = () => {
       if (leftAt != null && Date.now() - leftAt >= WALL_REOPEN_AWAY_MS)
