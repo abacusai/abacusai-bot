@@ -109,3 +109,42 @@ export const welcomeLandedPlan = (
   if (host?.(account, from, landed) === true) return;
   void landed.paused?.resume().catch(() => {});
 };
+
+/**
+ * What the welcome leads with: the turn the upgrade paused, else the person's
+ * last chat on the plan's top model, else a first task on it; `none` keeps the
+ * plain steps when no top model runs on the plan.
+ */
+export type WelcomeLead = "paused" | "chat" | "task" | "none";
+
+/** A chat touched within this long is still the work to pick up. */
+export const WELCOME_LAST_CHAT_MS = 7 * 24 * 60 * 60 * 1000;
+
+export const welcomeLead = ({
+  paused,
+  lastChat,
+  topModel,
+}: {
+  paused: boolean;
+  lastChat: boolean;
+  topModel: boolean;
+}): WelcomeLead =>
+  paused ? "paused" : !topModel ? "none" : lastChat ? "chat" : "task";
+
+/** The most recently updated chat, when it is recent enough to pick up. */
+export const welcomeLastChat = <T extends { updatedAt: string }>(
+  chats: readonly T[],
+  now: number
+): T | null => {
+  const latest = chats.reduce<T | null>(
+    (best, chat) =>
+      best == null || Date.parse(chat.updatedAt) > Date.parse(best.updatedAt)
+        ? chat
+        : best,
+    null
+  );
+  return latest != null &&
+    now - Date.parse(latest.updatedAt) <= WELCOME_LAST_CHAT_MS
+    ? latest
+    : null;
+};

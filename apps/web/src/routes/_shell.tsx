@@ -42,6 +42,8 @@ import {
   UpgradeDialogHost,
   WallReopenHost,
 } from "#renderer/features/upgrade-dialog";
+
+import { WELCOME_STARTS } from "./-welcome-starts";
 const TourHost = lazy(() =>
   import("#renderer/features/tour").then((m) => ({ default: m.TourHost }))
 );
@@ -124,7 +126,9 @@ const ShellRoute = () => {
           }
         />
       )}
-      {!provisional && tour == null && <PaidWelcomeHost />}
+      {!provisional && tour == null && (
+        <PaidWelcomeHost starts={WELCOME_STARTS} />
+      )}
       {!provisional && tour == null && (
         <WallReopenHost
           messagesOf={async (threadId) => {

@@ -1,5 +1,5 @@
 export { PlanPitchList } from "./plan-pitch";
-export { PaidWelcomeHost } from "./paid-welcome";
+export { PaidWelcomeHost, type WelcomeStarts } from "./paid-welcome";
 export {
   PAID_WELCOME_GALLERY_VARIANTS,
   PaidWelcomeGallery,

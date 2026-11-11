@@ -1,5 +1,6 @@
 import { contract } from "@abacus-ai/contract/contract";
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
+import type { ModelAvailability } from "@abacus-ai/contract/models";
 import { implement } from "@orpc/server";
 import {
   act,
@@ -10,6 +11,7 @@ import {
 } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 
+import { startDraftStore } from "#renderer/features/sessions/start/start-session";
 import { welcomeLandedPlan } from "#renderer/lib/paid-welcome";
 import { IS_BROWSER } from "#renderer/lib/platform";
 import {
@@ -418,6 +420,141 @@ it.runIf(!IS_BROWSER)(
           "site_deploy_pack:welcome",
           "site_deploy_open_agent:welcome",
         ])
+      );
+    } finally {
+      app.view.unmount();
+      await app.cleanup();
+    }
+  },
+  15000
+);
+
+const OPUS = "abacus/claude-opus-5-5";
+const TOP_CATALOG: ModelAvailability[] = [
+  ["abacus/route-llm-code-low", "RouteLLM", true],
+  [OPUS, "Claude Opus 5.5", false],
+].map(([id, label, recommended]) => ({
+  id: id as string,
+  label: label as string,
+  provider: "abacus",
+  tier: "default",
+  configured: true,
+  recommended: recommended as boolean,
+}));
+
+/** A free account that pays on the web: the next account read is Basic. */
+const webPayment = async (
+  sessions: ReturnType<typeof defaultSeed>["sessions"]
+) => {
+  let tier = "free";
+  const handoffs: unknown[] = [];
+  const steps: { step: string; detail?: string }[] = [];
+  const seed = defaultSeed();
+  seed.sessions = sessions;
+  const app = await renderApp("/routines", {
+    seed,
+    models: TOP_CATALOG,
+    procedures: {
+      account: { abacus: os.account.abacus.handler(() => account(tier)) },
+      system: {
+        funnelStep: os.system.funnelStep.handler(({ input }) => {
+          steps.push(input);
+        }),
+      },
+      agent: {
+        action: os.agent.action.handler(({ input }) => {
+          handoffs.push(input);
+          return { ok: true, summary: "## Goal\nClean up the sheet." };
+        }),
+      },
+    },
+  } as never);
+  const dismissals = () => app.collections.prefs.get("app")?.dismissals;
+  await waitFor(() => expect(dismissals()?.freePlanSeenAt).not.toBeNull());
+  tier = "basic";
+  await act(async () => {
+    await app.router.options.context.queryClient.invalidateQueries({
+      queryKey: app.transport.orpc.account.abacus.queryKey(),
+    });
+  });
+  const dialog = await screen.findByRole("dialog", {
+    name: "You're on basic",
+  });
+  return { app, dialog, steps, handoffs };
+};
+
+it.runIf(!IS_BROWSER)(
+  "a payer with a recent chat picks it up on the top model, in a new chat from its summary",
+  async () => {
+    const recent = defaultSeed().sessions!.find(
+      (row) => row.id === "spreadsheet"
+    )!;
+    const { app, dialog, steps, handoffs } = await webPayment([
+      { ...recent, updatedAt: new Date().toISOString() },
+    ]);
+    try {
+      expect(dialog.getAttribute("data-lead")).toBe("chat");
+      expect(
+        within(dialog).getByText(
+          "Claude Opus 5.5 for your hardest tasks. RouteLLM for everyday chat, so your credits last."
+        )
+      ).toBeTruthy();
+      fireEvent.click(
+        within(dialog).getByRole("button", {
+          name: /Pick up “Clean up a spreadsheet” on Claude Opus 5.5/,
+        })
+      );
+      await waitFor(() =>
+        expect(app.router.state.location.pathname).toBe("/sessions/new")
+      );
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      expect(handoffs).toEqual([
+        { workspaceId: "default", sessionId: "spreadsheet", action: "handoff" },
+      ]);
+      expect(startDraftStore.state.continuation?.sessionId).toBe("spreadsheet");
+      expect(steps.filter(({ step }) => step.startsWith("paid_"))).toEqual([
+        { step: "paid_welcome_shown", detail: "basic_chat" },
+        { step: "paid_welcome_continue", detail: "basic" },
+      ]);
+      // "Pick up where we left off" goes out at once in the new chat.
+      await waitFor(() =>
+        expect(steps).toContainEqual({ step: "start_sent", detail: "auto" })
+      );
+    } finally {
+      app.view.unmount();
+      await app.cleanup();
+    }
+  },
+  15000
+);
+
+it.runIf(!IS_BROWSER)(
+  "a payer who did nothing yet gets three first tasks, each starting at once on the top model",
+  async () => {
+    const { app, dialog, steps } = await webPayment([]);
+    try {
+      expect(dialog.getAttribute("data-lead")).toBe("task");
+      expect(
+        [...dialog.querySelectorAll("[data-step]")].map((node) =>
+          node.getAttribute("data-step")
+        )
+      ).toEqual(["build", "inbox", "business"]);
+      fireEvent.click(
+        within(dialog).getByRole("button", {
+          name: /Build your own app or site/,
+        })
+      );
+      await waitFor(() =>
+        expect(app.router.state.location.pathname).toBe("/sessions/new")
+      );
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      expect(steps.filter(({ step }) => step.startsWith("paid_"))).toEqual([
+        { step: "paid_welcome_shown", detail: "basic_task" },
+        { step: "paid_welcome_task", detail: "build" },
+      ]);
+      // The task goes out at once, as onboarding's first tasks do.
+      await waitFor(() =>
+        expect(steps).toContainEqual({ step: "start_sent", detail: "auto" })
       );
     } finally {
       app.view.unmount();

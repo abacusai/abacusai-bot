@@ -5,6 +5,8 @@ import {
   paidWelcomeDecision,
   registerPaidWelcome,
   welcomeLandedPlan,
+  welcomeLastChat,
+  welcomeLead,
 } from "./paid-welcome";
 
 const account = (tier: string): AbacusAccountInfo => ({
@@ -154,5 +156,34 @@ describe("welcomeLandedPlan", () => {
     unregister();
     expect(host).toHaveBeenCalledOnce();
     expect(resume).not.toHaveBeenCalled();
+  });
+});
+
+describe("welcomeLead", () => {
+  it.each([
+    [{ paused: true, lastChat: true, topModel: true }, "paused"],
+    [{ paused: true, lastChat: false, topModel: false }, "paused"],
+    [{ paused: false, lastChat: true, topModel: true }, "chat"],
+    [{ paused: false, lastChat: false, topModel: true }, "task"],
+    [{ paused: false, lastChat: true, topModel: false }, "none"],
+  ] as const)("%o leads with %s", (input, lead) => {
+    expect(welcomeLead(input)).toBe(lead);
+  });
+});
+
+describe("welcomeLastChat", () => {
+  const now = Date.parse("2026-11-11T12:00:00Z");
+  const at = (id: string, daysAgo: number) => ({
+    id,
+    updatedAt: new Date(now - daysAgo * 86_400_000).toISOString(),
+  });
+  it("picks the latest chat touched within a week", () => {
+    expect(welcomeLastChat([at("a", 3), at("b", 1), at("c", 6)], now)?.id).toBe(
+      "b"
+    );
+  });
+  it("has nothing to pick up past a week, or with no chats", () => {
+    expect(welcomeLastChat([at("old", 8)], now)).toBeNull();
+    expect(welcomeLastChat([], now)).toBeNull();
   });
 });

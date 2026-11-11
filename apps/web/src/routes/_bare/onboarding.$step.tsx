@@ -68,6 +68,8 @@ import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { requestPlanDialog } from "#renderer/lib/upgrade-dialog";
+
+import { WELCOME_STARTS } from "../-welcome-starts";
 const OnboardingRoute = () => {
   const { t } = useTranslation();
   const step = Route.useParams().step as OnboardingStepId;
@@ -288,7 +290,9 @@ const OnboardingRoute = () => {
     <>
       {/* Outside the shell, which hosts the dialog everywhere else. */}
       <UpgradeDialogHost />
-      {facts.signedIn && !facts.provisional && <PaidWelcomeHost />}
+      {facts.signedIn && !facts.provisional && (
+        <PaidWelcomeHost starts={WELCOME_STARTS} />
+      )}
       <OnboardingStepPage
         step={step}
         facts={facts}
