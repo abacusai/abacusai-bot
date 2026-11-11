@@ -8,7 +8,22 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `61f525ba`, the app in Dutch and Polish
+## Current: `0f0f684f`, the cheaper-model button on the credit cards
+
+**444 / 9422499 / 3161020.** Records the renderer with the paid credit cards'
+"continue on RouteLLM in a new chat" button, its line under the button and its
+strings in 15 languages. Against `204231b1` (main before this change, 443 /
+9411477 / 3157139): +1 chunk, +11022 bytes (+0.12%), +3881 gzip bytes
+(+0.12%). Main had already grown 0.90% in gzip bytes past `61f525ba` without a
+new baseline, so this change crossed the 1% allowance. The extra chunk is the
+new-chat hand-off, which the shell now imports for the card. `apps/web`'s
+dependencies did not change. The 1% allowance is unchanged.
+
+Measured from frozen-lockfile builds of `0f0f684f` and `204231b1` (Linux
+x64, clean `dist`), summed the same way as `check-desktop-parity.mjs`. This
+baseline-only change touches no renderer code.
+
+### `61f525ba`, the app in Dutch and Polish
 
 **442 / 9332008 / 3129101.** Records the renderer with Dutch and Polish. Each
 language is one locale chunk, loaded only when that language is picked. Against
