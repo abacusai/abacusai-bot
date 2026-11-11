@@ -6,8 +6,6 @@ import type { StreamChunk } from "@tanstack/ai";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 
-import { fixtureSessions } from "#renderer/data/fixture-db/rows";
-
 import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
 import { renderRelay } from "../testing";
@@ -80,8 +78,11 @@ afterEach(async () => {
 
 const mount = async (
   reply: string,
-  resumed: boolean,
-  { continuedFrom }: { continuedFrom?: string } = {}
+  {
+    resumed = false,
+    pinned = OPUS as string | null,
+    defaultModel = ROUTER,
+  }: { resumed?: boolean; pinned?: string | null; defaultModel?: string } = {}
 ) => {
   const continued: Array<[string, string | undefined]> = [];
   // A chat of its own: the offer's answers are kept per chat.
@@ -93,7 +94,8 @@ const mount = async (
     "session",
     {
       model: {
-        value: OPUS,
+        value: pinned,
+        ...(pinned == null && { resolved: defaultModel }),
         label: "Claude Opus 5.5",
         onChange: () => {},
         groups: [],
@@ -110,27 +112,30 @@ const mount = async (
         billingPlan: os.account.billingPlan.handler(() => BILLING),
       },
       models: { list: os.models.list.handler(() => CATALOG) },
+      settings: {
+        get: os.settings.get.handler(
+          () => ({ defaultModel, apiKeys: {} }) as never
+        ),
+      },
     }
   );
   if (resumed) noteTopModelResume(relay.threadId);
-  // The chat's row, as a continued chat is started (start-session.ts).
-  if (continuedFrom != null)
-    act(() => {
-      current!.db.collections.sessions.insert({
-        ...fixtureSessions()[0]!,
-        id: relay.threadId,
-        continuedFrom,
-        continuation: { sessionId: continuedFrom, summary: "The goal." },
-      } as never);
-    });
   await act(async () => relay.emitAll(turn(reply)));
   return { continued };
 };
 
 const LINE = "Make your credits last: continue on RouteLLM in a new chat";
+const CLEAN = "Fixed: the last row now fits on the page.";
+
+const noLine = async () => {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  });
+  expect(screen.queryByRole("button", { name: LINE })).toBeNull();
+};
 
 it("after the upgrade's clean result on Opus: continue on the plan's router in a new chat, or stay", async () => {
-  const h = await mount("Fixed: the last row now fits on the page.", true);
+  const h = await mount(CLEAN, { resumed: true });
   const line = await screen.findByRole(
     "button",
     { name: LINE },
@@ -147,7 +152,7 @@ it("after the upgrade's clean result on Opus: continue on the plan's router in a
 });
 
 it("Stay keeps the chat on Opus and the line goes", async () => {
-  const h = await mount("Fixed: the last row now fits on the page.", true);
+  const h = await mount(CLEAN, { resumed: true });
   fireEvent.click(
     await screen.findByRole(
       "button",
@@ -161,22 +166,24 @@ it("Stay keeps the chat on Opus and the line goes", async () => {
   expect(h.continued).toEqual([]);
 });
 
-it("a chat continued in a new one on Opus gets the line under its first result", async () => {
-  await mount("Fixed: the last row now fits on the page.", false, {
-    continuedFrom: "s-before",
-  });
+it("a chat pinned to Opus on its first turn, with the router as the app's default, gets the line", async () => {
+  await mount(CLEAN);
   expect(
     await screen.findByRole("button", { name: LINE }, { timeout: 5000 })
   ).toBeTruthy();
 });
 
-it.each([
-  ["a turn the upgrade did not resume", "Fixed: the last row fits.", false],
-  ["a reply that declines", "I can't do that.", true],
-])("no line after %s", async (_name, reply, resumed) => {
-  await mount(reply, resumed);
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-  });
-  expect(screen.queryByRole("button", { name: LINE })).toBeNull();
+it("someone whose default is Opus chose it: no line", async () => {
+  await mount(CLEAN, { defaultModel: OPUS });
+  await noLine();
+});
+
+it("a chat on the app's default, not pinned and not resumed: no line", async () => {
+  await mount(CLEAN, { pinned: null, defaultModel: OPUS });
+  await noLine();
+});
+
+it("a reply that declines: no line", async () => {
+  await mount("I can't do that.", { resumed: true });
+  await noLine();
 });
