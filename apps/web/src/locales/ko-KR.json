@@ -5038,7 +5038,11 @@
     "upgradeMonthly": "업그레이드 · 월 {{price}}",
     "upgrade": "업그레이드",
     "continueFree": "무료로 계속하기",
-    "keepGoing": "Keep going"
+    "keepGoing": "Keep going",
+    "switchCheaper": "크레딧을 더 오래 쓰기: 새 채팅에서 {{model}}(으)로 계속하기",
+    "switchCheaperHint": "{{model}}은(는) 단계마다 저비용 모델을 골라 크레딧이 훨씬 오래갑니다. 새 채팅도 이 모델로 시작하며, 작업이 막히면 언제든 상위 모델을 고를 수 있어요.",
+    "switchedCheaper": "새 채팅에서 {{model}}(으)로 계속합니다",
+    "switchedCheaperBack": "다시 막히면 모델 선택에서 언제든 {{model}}을(를) 고를 수 있어요."
   },
   "successPitch": {
     "moment": {

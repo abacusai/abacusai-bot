@@ -2,6 +2,7 @@ import type { BillingPlan } from "@abacus-ai/contract/billing-plan";
 import { contract } from "@abacus-ai/contract/contract";
 import type { PrefsRow, SessionRow } from "@abacus-ai/contract/contract/rows";
 import type { CreditThresholdMark } from "@abacus-ai/contract/credit-thresholds";
+import type { ModelAvailability } from "@abacus-ai/contract/models";
 import { implement } from "@orpc/server";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterContextProvider } from "@tanstack/react-router";
@@ -391,10 +392,17 @@ describe("the plan's credit milestone card", () => {
     mark = MARK,
     sessions = [] as Array<Partial<SessionRow>>,
     billing = BILLING as BillingPlan,
+    models = [] as ModelAvailability[],
+    continueInNewChat = vi.fn(async () => undefined) as (
+      row: SessionRow,
+      model: string
+    ) => Promise<void>,
   } = {}) => {
     const os = implement(contract);
     const seed = defaultSeed();
+    const defaults: string[] = [];
     const harness = await createHarness("/", {
+      models,
       seed: {
         ...seed,
         sessions: busy
@@ -417,6 +425,12 @@ describe("the plan's credit milestone card", () => {
           abacus: os.account.abacus.handler(() => account),
           billingPlan: os.account.billingPlan.handler(() => billing),
         },
+        settings: {
+          setDefaultModel: os.settings.setDefaultModel.handler(({ input }) => {
+            defaults.push(input.modelId);
+            return { defaultModel: input.modelId, apiKeys: {} } as never;
+          }),
+        },
       },
     });
     const queryClient = harness.router.options.context.queryClient;
@@ -424,7 +438,7 @@ describe("the plan's credit milestone card", () => {
       <QueryClientProvider client={queryClient}>
         <RouterContextProvider router={harness.router}>
           <DbProvider value={harness.appDb}>
-            <CreditThresholdHost />
+            <CreditThresholdHost continueInNewChat={continueInNewChat} />
           </DbProvider>
         </RouterContextProvider>
       </QueryClientProvider>
@@ -444,7 +458,7 @@ describe("the plan's credit milestone card", () => {
     const cards = () =>
       harness.appDb.collections.prefs.get("app")?.dismissals
         .creditThresholdCards;
-    return { harness, steps, cards };
+    return { harness, steps, cards, defaults };
   };
 
   it("shows once for a free account between turns, and Continue free keeps it away", async () => {
@@ -617,6 +631,94 @@ describe("the plan's credit milestone card", () => {
       document.querySelectorAll('[data-slot="credit-threshold-benefits"] li')
         .length
     ).toBeGreaterThan(0);
+  });
+
+  // A paid chat on a top model: one more button moves it to the plan's router.
+  const CATALOG: ModelAvailability[] = [
+    {
+      id: "abacus/route-llm-code",
+      label: "RouteLLM",
+      provider: "abacus",
+      tier: "default",
+      configured: true,
+      recommended: true,
+    },
+    {
+      id: "abacus/claude-opus-5-5",
+      label: "Claude Opus 5.5",
+      provider: "abacus",
+      tier: "strong",
+      configured: true,
+    },
+  ];
+  const CHEAPER = "Make your credits last: continue on RouteLLM in a new chat";
+
+  it("a paid chat on a top model: the cheaper button continues that chat in a new one on the plan's router", async () => {
+    const continueInNewChat = vi.fn(async () => undefined);
+    const h = await host({
+      account: PAID_ACCOUNT,
+      mark: PAID_MARK,
+      billing: PAID_BILLING,
+      models: CATALOG,
+      continueInNewChat,
+      sessions: [{ id: "s1", label: "Shop", model: "abacus/claude-opus-5-5" }],
+    });
+    const button = await screen.findByRole("button", { name: CHEAPER });
+    expect(screen.getByRole("button", { name: "Top up" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Upgrade to Max" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Keep going" })).toBeTruthy();
+    fireEvent.click(button);
+    await waitFor(() =>
+      expect(h.steps()).toContain("credit_card_paid_80_switch_cheaper")
+    );
+    expect(continueInNewChat).toHaveBeenCalledOnce();
+    expect(continueInNewChat).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "s1" }),
+      "abacus/route-llm-code"
+    );
+    // The old chat keeps its model; new chats start on the router again.
+    expect(h.harness.appDb.collections.sessions.get("s1")?.model).toBe(
+      "abacus/claude-opus-5-5"
+    );
+    await waitFor(() => expect(h.defaults).toEqual(["abacus/route-llm-code"]));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("a hand-off that fails leaves the card up for another try", async () => {
+    const h = await host({
+      account: PAID_ACCOUNT,
+      mark: PAID_MARK,
+      billing: PAID_BILLING,
+      models: CATALOG,
+      continueInNewChat: vi.fn(async () => {
+        throw new Error("no summary");
+      }),
+      sessions: [{ id: "s1", label: "Shop", model: "abacus/claude-opus-5-5" }],
+    });
+    fireEvent.click(await screen.findByRole("button", { name: CHEAPER }));
+    const again = await screen.findByRole("button", { name: CHEAPER });
+    expect(again.hasAttribute("disabled")).toBe(false);
+    expect(h.steps()).not.toContain("credit_card_paid_80_switch_cheaper");
+    expect(h.defaults).toEqual([]);
+    expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+
+  it.each([
+    ["already on the router", { model: "abacus/route-llm-code" }],
+    ["a bot's chat", { model: "abacus/claude-opus-5-5", botOwned: true }],
+  ])("no cheaper button for %s", async (_name, extra) => {
+    await host({
+      account: PAID_ACCOUNT,
+      mark: PAID_MARK,
+      billing: PAID_BILLING,
+      models: CATALOG,
+      sessions: [{ id: "s1", label: "Shop", ...extra }],
+    });
+    await screen.findByRole("button", { name: "Top up" });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(screen.queryByRole("button", { name: CHEAPER })).toBeNull();
   });
 
   it("Max, with no plan above it: Top up and Keep going", async () => {

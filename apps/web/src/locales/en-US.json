@@ -5038,7 +5038,11 @@
     "upgradeMonthly": "Upgrade · {{price}}/month",
     "upgrade": "Upgrade",
     "continueFree": "Continue free",
-    "keepGoing": "Keep going"
+    "keepGoing": "Keep going",
+    "switchCheaper": "Make your credits last: continue on {{model}} in a new chat",
+    "switchCheaperHint": "{{model}} picks a low-cost model for each step, so your credits go much further. New chats start on it too, and a top model is still one pick away when a task gets stuck.",
+    "switchedCheaper": "Continuing on {{model}} in a new chat",
+    "switchedCheaperBack": "Stuck again? You can pick {{model}} in the model picker any time."
   },
   "successPitch": {
     "moment": {

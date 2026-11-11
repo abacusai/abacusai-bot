@@ -5038,7 +5038,11 @@
     "upgradeMonthly": "Upgraden · {{price}}/maand",
     "upgrade": "Upgraden",
     "continueFree": "Gratis doorgaan",
-    "keepGoing": "Doorgaan"
+    "keepGoing": "Doorgaan",
+    "switchCheaper": "Laat je credits langer meegaan: ga verder met {{model}} in een nieuwe chat",
+    "switchCheaperHint": "{{model}} kiest voor elke stap een voordelig model, zodat je credits veel langer meegaan. Nieuwe chats starten er ook mee, en een topmodel blijft één keuze verwijderd als een taak vastloopt.",
+    "switchedCheaper": "Je gaat verder met {{model}} in een nieuwe chat",
+    "switchedCheaperBack": "Weer vast? Je kunt {{model}} altijd kiezen in de modelkiezer."
   },
   "successPitch": {
     "moment": {

@@ -5038,7 +5038,11 @@
     "upgradeMonthly": "アップグレード · {{price}}/月",
     "upgrade": "アップグレード",
     "continueFree": "無料で続ける",
-    "keepGoing": "Keep going"
+    "keepGoing": "Keep going",
+    "switchCheaper": "クレジットを長持ちさせる: 新しいチャットで {{model}} を使って続ける",
+    "switchCheaperHint": "{{model}} は各ステップに低コストのモデルを選ぶので、クレジットがずっと長持ちします。新しいチャットもこれで始まり、タスクが行き詰まったときはいつでも上位モデルを選べます。",
+    "switchedCheaper": "新しいチャットで {{model}} を使って続けます",
+    "switchedCheaperBack": "また行き詰まったら、モデル選択からいつでも {{model}} を選べます。"
   },
   "successPitch": {
     "moment": {

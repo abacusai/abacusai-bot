@@ -4,8 +4,10 @@ import {
   paidCreditsOffer,
   paidUpgradeOnly,
   planPitch,
+  planTopModelIds,
   wallOffer,
 } from "@abacus-ai/contract/billing-plan";
+import { cheaperModelOffer } from "@abacus-ai/contract/cheaper-model";
 import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 import {
   creditAccountKey,
@@ -20,14 +22,17 @@ import {
   pendingThreshold,
   tasksLeft,
 } from "@abacus-ai/contract/credit-thresholds";
+import { resolveConfiguredModel } from "@abacus-ai/contract/models";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Check, Gauge } from "lucide-react";
-import { useEffect, useEffectEvent } from "react";
+import { AlertTriangle, Check, Gauge, Leaf } from "lucide-react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useCollections, useDb } from "#renderer/data/db";
+import { isListedSession, isListedWorkspace } from "#renderer/data/db/filters";
 import { usePrefs } from "#renderer/data/db/prefs";
+import { showError, showInfo } from "#renderer/lib/toast";
 import { openNextPlan, openTopUp, openUpgrade } from "#renderer/lib/upgrade";
 import { useUpgradeDialogRequest } from "#renderer/lib/upgrade-dialog";
 import { useAccount } from "#renderer/lib/use-account";
@@ -46,7 +51,8 @@ import {
  * turns; it stays until a button is picked, and Esc keeps going. The free
  * plan is offered its upgrade; a paid plan its top-up and next plan by the
  * one offer rule (paidCreditsOffer), Basic its next plan alone, pitched as
- * the free plan's upgrade is.
+ * the free plan's upgrade is. A paid chat on a top model is also offered to
+ * continue in a new chat on its plan's low-cost model (cheaper-model.ts).
  */
 
 export interface CreditThresholdCardProps {
@@ -64,6 +70,12 @@ export interface CreditThresholdCardProps {
   /** A paid plan's next plan, beside its top-up. */
   onNextPlan?(): void;
   onTopUp?(): void;
+  /**
+   * A paid chat on a top model: continue it in a new chat on the plan's
+   * low-cost model, by name. The card stays, the button busy, until the new
+   * chat opens; a rejection leaves it for another try.
+   */
+  cheaper?: { model: string; onSwitch(): Promise<void> };
   onContinue(): void;
 }
 
@@ -78,6 +90,7 @@ export const CreditThresholdCard = ({
   onUpgrade,
   onNextPlan,
   onTopUp,
+  cheaper,
   onContinue,
 }: CreditThresholdCardProps) => {
   const { t, i18n } = useTranslation();
@@ -113,12 +126,18 @@ export const CreditThresholdCard = ({
   const first = offer?.firstMonthPriceCents;
   const price = offer?.priceCents;
   const Icon = threshold === 80 ? AlertTriangle : Gauge;
+  const [preparing, setPreparing] = useState(false);
+  const switchCheaper = () => {
+    if (cheaper == null || preparing) return;
+    setPreparing(true);
+    void cheaper.onSwitch().catch(() => setPreparing(false));
+  };
   return (
     <Dialog
       open
       disablePointerDismissal
       onOpenChange={(next) => {
-        if (!next) onContinue();
+        if (!next && !preparing) onContinue();
       }}
     >
       <DialogContent
@@ -236,6 +255,28 @@ export const CreditThresholdCard = ({
                   : t("creditThreshold.upgrade")}
             </Button>
           )}
+          {isPaid && cheaper != null && (
+            <Button
+              variant="outline"
+              className="h-auto min-h-10 py-2 text-sm font-medium whitespace-normal"
+              data-action="switch-cheaper"
+              disabled={preparing}
+              onClick={switchCheaper}
+            >
+              <Leaf aria-hidden className="text-primary size-4 shrink-0" />
+              {preparing
+                ? t("chat.continuation.preparing", { model: cheaper.model })
+                : t("creditThreshold.switchCheaper", { model: cheaper.model })}
+            </Button>
+          )}
+          {isPaid && cheaper != null && (
+            <p
+              className="text-muted-foreground px-1 pb-1 text-center text-xs/4 text-balance"
+              data-slot="credit-threshold-cheaper-hint"
+            >
+              {t("creditThreshold.switchCheaperHint", { model: cheaper.model })}
+            </p>
+          )}
           <Button
             variant="ghost"
             className="text-muted-foreground h-10 text-sm"
@@ -259,7 +300,17 @@ export const CreditThresholdCard = ({
  * answered. Never for an unread plan or spent credits (the out-of-credits
  * card's), and it never opens over a running turn or the upgrade dialog.
  */
-export const CreditThresholdHost = () => {
+export const CreditThresholdHost = ({
+  continueInNewChat,
+}: {
+  /**
+   * Continues a chat in a new one on a model, from a summary, and opens it
+   * (the sessions feature's hand-off, as the top models use going up); passed
+   * in by the shell.
+   */
+  continueInNewChat?(row: SessionRow, model: string): Promise<void>;
+}) => {
+  const { t } = useTranslation();
   const { transport } = useAppContext();
   const db = useDb();
   const prefs = usePrefs();
@@ -272,8 +323,8 @@ export const CreditThresholdHost = () => {
   const turnRunning = (sessions ?? []).some(
     (session) => session.turn?.isBusy === true
   );
-  // The chat the user worked in last, by its name; not a routine run's or a bot's.
-  const project = (sessions ?? [])
+  // The chat the user worked in last; not a routine run's or a bot's.
+  const latest = (sessions ?? [])
     .filter(
       (session) =>
         session.routineId == null &&
@@ -287,8 +338,8 @@ export const CreditThresholdHost = () => {
           ? session
           : latest,
       null
-    )
-    ?.label.trim();
+    );
+  const project = latest?.label.trim();
   const key = creditAccountKey(account);
   const mark = key != null ? prefs.creditThresholds?.[key] : undefined;
   const cards = prefs.dismissals.creditThresholdCards ?? {};
@@ -314,6 +365,37 @@ export const CreditThresholdHost = () => {
     ...transport.orpc.account.billingPlan.queryOptions({ input: {} }),
     enabled: owed != null,
     staleTime: 60_000,
+  });
+  // A paid chat on a top model is offered its plan's low-cost model. The
+  // chat's model as it runs: its pin, else the app's default, resolved.
+  const { data: catalog } = useQuery({
+    ...transport.orpc.models.list.queryOptions({ input: {} }),
+    enabled: owed != null && plan === "paid",
+    staleTime: 5 * 60_000,
+  });
+  const { data: settings } = useQuery({
+    ...transport.orpc.settings.get.queryOptions({ input: {} }),
+    enabled: owed != null && plan === "paid",
+  });
+  const workspace =
+    latest != null ? collections.workspaces.get(latest.workspaceId) : undefined;
+  const cheaper = cheaperModelOffer({
+    plan,
+    modelId:
+      latest != null && catalog != null
+        ? resolveConfiguredModel({
+            requested: latest.model,
+            defaultModel: settings?.defaultModel,
+            catalog,
+          })
+        : null,
+    listed:
+      latest != null &&
+      isListedSession(latest) &&
+      workspace != null &&
+      isListedWorkspace(workspace),
+    catalog: catalog ?? [],
+    planIds: planTopModelIds(billing),
   });
   // A paid plan's buttons are its offer's: the card waits for the plan read,
   // and a paid plan with nothing to offer gets no card.
@@ -360,7 +442,9 @@ export const CreditThresholdHost = () => {
     return null;
   const count = tasksLeft(Math.max(0, total - used), mark?.perTask ?? null);
   const offer = milestoneOffer(plan, billing);
-  const answer = (choice: "upgrade" | "top_up" | "next_plan" | "continue") => {
+  const answer = (
+    choice: "upgrade" | "top_up" | "next_plan" | "continue" | "switch_cheaper"
+  ) => {
     console.info(`[credits] threshold card ${showing} answered: ${choice}`);
     void transport.client.system
       .funnelStep({
@@ -394,6 +478,42 @@ export const CreditThresholdHost = () => {
         void openTopUp(transport.client);
         answer("top_up");
       }}
+      {...(cheaper != null && latest != null && continueInNewChat != null
+        ? {
+            cheaper: {
+              model: cheaper.target.label,
+              onSwitch: async () => {
+                try {
+                  await continueInNewChat(latest, cheaper.target.id);
+                } catch (error) {
+                  // Nothing opened: the card stays for another try.
+                  showError(t("chat.continuation.failed"));
+                  throw error;
+                }
+                answer("switch_cheaper");
+                // A model picked in the picker became the app's default, so
+                // every new chat started on it; new chats start on the router
+                // again. The hand-off already moved the user: a refused write
+                // is logged, not shown.
+                await transport.client.settings
+                  .setDefaultModel({ modelId: cheaper.target.id })
+                  .catch((error: unknown) =>
+                    console.warn("[credits] default model not reset", error)
+                  );
+                showInfo(
+                  t("creditThreshold.switchedCheaper", {
+                    model: cheaper.target.label,
+                  }),
+                  {
+                    description: t("creditThreshold.switchedCheaperBack", {
+                      model: cheaper.current.label,
+                    }),
+                  }
+                );
+              },
+            },
+          }
+        : {})}
       onContinue={() => answer("continue")}
     />
   );

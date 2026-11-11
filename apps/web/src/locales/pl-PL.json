@@ -5198,7 +5198,11 @@
     "upgradeMonthly": "Ulepsz plan · {{price}}/mies.",
     "upgrade": "Ulepsz plan",
     "continueFree": "Kontynuuj za darmo",
-    "keepGoing": "Kontynuuj"
+    "keepGoing": "Kontynuuj",
+    "switchCheaper": "Niech kredyty starczą na dłużej: kontynuuj z {{model}} w nowym czacie",
+    "switchCheaperHint": "{{model}} wybiera tani model do każdego kroku, więc kredyty starczają na dużo dłużej. Nowe czaty też zaczynają się na nim, a model z najwyższej półki wciąż jest pod ręką, gdy zadanie utknie.",
+    "switchedCheaper": "Kontynuujesz z {{model}} w nowym czacie",
+    "switchedCheaperBack": "Znowu utknąłeś? W każdej chwili możesz wybrać {{model}} w wyborze modelu."
   },
   "successPitch": {
     "moment": {

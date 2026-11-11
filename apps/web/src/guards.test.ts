@@ -146,6 +146,8 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
     "context/tasks",
     "continuation-links",
     "data/composer-model",
+    // The shell hands the credit cards the new-chat hand-off (continue-chat.ts).
+    "data/continue-chat",
     "data/queries",
     "data/unread-store",
     "dock/agent-browser",

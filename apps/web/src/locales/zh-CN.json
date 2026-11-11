@@ -5038,7 +5038,11 @@
     "upgradeMonthly": "升级 · {{price}}/月",
     "upgrade": "升级",
     "continueFree": "免费继续",
-    "keepGoing": "Keep going"
+    "keepGoing": "Keep going",
+    "switchCheaper": "让积分用得更久：在新聊天中改用 {{model}} 继续",
+    "switchCheaperHint": "{{model}} 会为每一步选择低成本模型，让积分用得更久。新聊天也会默认使用它；任务卡住时，仍可随时选择顶级模型。",
+    "switchedCheaper": "正在新聊天中使用 {{model}} 继续",
+    "switchedCheaperBack": "又卡住了？你随时可以在模型选择器中选择 {{model}}。"
   },
   "successPitch": {
     "moment": {

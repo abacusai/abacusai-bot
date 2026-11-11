@@ -1,6 +1,10 @@
 import { createFileRoute, notFound, Link } from "@tanstack/react-router";
 
-import { CreditThresholdGallery } from "#renderer/components/credits-card/threshold-gallery";
+import {
+  CreditThresholdGallery,
+  PAID_CREDIT_GALLERY_VARIANTS,
+  type PaidCreditGalleryVariant,
+} from "#renderer/components/credits-card/threshold-gallery";
 import {
   SITE_DEPLOY_GALLERY_STATES,
   SiteDeployCardGallery,
@@ -120,6 +124,10 @@ const extension = {
         "new-look",
         "credit-card-50",
         "credit-card-80",
+        ...PAID_CREDIT_GALLERY_VARIANTS.flatMap((variant) => [
+          `credit-card-paid-50-${variant}`,
+          `credit-card-paid-80-${variant}`,
+        ]),
         ...PAID_WELCOME_GALLERY_VARIANTS.map(
           (variant) => `paid-welcome-${variant}`
         ),
@@ -164,6 +172,11 @@ const extension = {
       <OnboardingGallery step={props.fixture.slice(11) as OnboardingStepId} />
     ) : props.fixture.startsWith("notch-") ? (
       <NotchGallery state={props.fixture.slice(6)} />
+    ) : props.fixture.startsWith("credit-card-paid-") ? (
+      <CreditThresholdGallery
+        threshold={props.fixture.startsWith("credit-card-paid-80") ? 80 : 50}
+        paid={props.fixture.slice(20) as PaidCreditGalleryVariant}
+      />
     ) : props.fixture === "credit-card-50" ||
       props.fixture === "credit-card-80" ? (
       <CreditThresholdGallery

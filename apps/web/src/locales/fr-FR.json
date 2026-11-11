@@ -5038,7 +5038,11 @@
     "upgradeMonthly": "Passer au forfait · {{price}}/mois",
     "upgrade": "Passer au forfait",
     "continueFree": "Continuer gratuitement",
-    "keepGoing": "Keep going"
+    "keepGoing": "Keep going",
+    "switchCheaper": "Faites durer vos crédits : continuez avec {{model}} dans un nouveau chat",
+    "switchCheaperHint": "{{model}} choisit un modèle économique pour chaque étape, vos crédits durent donc bien plus longtemps. Les nouveaux chats démarrent aussi avec lui, et un modèle haut de gamme reste à un clic si une tâche bloque.",
+    "switchedCheaper": "Vous continuez avec {{model}} dans un nouveau chat",
+    "switchedCheaperBack": "Encore bloqué ? Vous pouvez reprendre {{model}} à tout moment dans le sélecteur de modèle."
   },
   "successPitch": {
     "moment": {

@@ -5038,7 +5038,11 @@
     "upgradeMonthly": "Upgrade · {{price}}/mese",
     "upgrade": "Upgrade",
     "continueFree": "Continua gratis",
-    "keepGoing": "Keep going"
+    "keepGoing": "Keep going",
+    "switchCheaper": "Fai durare di più i tuoi crediti: continua con {{model}} in una nuova chat",
+    "switchCheaperHint": "{{model}} sceglie un modello economico per ogni passaggio, così i tuoi crediti durano molto di più. Anche le nuove chat partono con lui, e un modello top resta a un clic se un'attività si blocca.",
+    "switchedCheaper": "Continui con {{model}} in una nuova chat",
+    "switchedCheaperBack": "Di nuovo bloccato? Puoi scegliere {{model}} nel selettore dei modelli quando vuoi."
   },
   "successPitch": {
     "moment": {
