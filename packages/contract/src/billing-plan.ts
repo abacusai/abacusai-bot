@@ -65,7 +65,28 @@ export interface BillingPlan {
   upgrades: (BillingPlanTier & { url: string | null })[];
   topUpUrl: string | null;
   upgradeInMobileApp: boolean;
+  /**
+   * The paid plans' leading models, each by its Abacus catalog id (absent from
+   * older servers). Models are picked by these ids, never by parsing the
+   * pitch's feature line, which is marketing text.
+   */
+  topModels?: PlanTopModel[];
 }
+
+/** One of the paid plans' leading models. */
+export interface PlanTopModel {
+  /** The id the Abacus model list uses ("claude-opus-5-5"). */
+  id: string;
+  /** What the plan's pitch calls it. */
+  name: string;
+  /** It can drive an agent loop (the model list's flag of the same name). */
+  agentic?: boolean;
+}
+
+/** The picker's ids (`abacus/<id>`) of the paid plans' leading models; empty when unread. */
+export const planTopModelIds = (
+  billing: Pick<BillingPlan, "topModels"> | null | undefined
+): string[] => (billing?.topModels ?? []).map((model) => `abacus/${model.id}`);
 
 /** A translation function: i18next's in the app, the locale files' in main. */
 export type PlanT = (
@@ -199,7 +220,9 @@ const TOP_MODEL_COUNT = 4;
 const TOP_MODELS_FEATURE = "top models including ";
 
 /**
- * The plan's leading models, read from its feature line; null without one.
+ * The plan's leading models as its pitch names them, read from its feature
+ * line; empty without one. For the words of the pitch only: picking a model
+ * goes by `planTopModelIds`.
  * Plain string splits: the line is the server's, and a backtracking pattern
  * over it could be made slow.
  */
@@ -217,14 +240,6 @@ export const planTopModelNames = (features: readonly string[]): string[] => {
   }
   return [];
 };
-
-/** The account's own plan's leading models (a paying plan's feature line); empty when unread. */
-export const currentPlanTopModelNames = (
-  billing: BillingPlan | null | undefined
-): string[] =>
-  planTopModelNames(
-    billing?.plans.find((plan) => plan.current)?.features ?? []
-  );
 
 const planTopModels = (
   features: readonly string[],

@@ -10,9 +10,13 @@
  * it steps aside once half the month's credits are used, where the credit
  * cards speak. Caps live in prefs.
  */
-import { currentPlanTopModelNames } from "@abacus-ai/contract/billing-plan";
+import { planTopModelIds } from "@abacus-ai/contract/billing-plan";
 import { isSuggestTasksTool } from "@abacus-ai/contract/bots/suggested-tasks";
 import type { FunnelStep } from "@abacus-ai/contract/funnel";
+import {
+  modelIdentity,
+  TOP_MODEL_FAMILIES,
+} from "@abacus-ai/contract/retry-offer";
 import {
   EMPTY_TOP_MODEL_HINT_CARD,
   type TopModelHintCard,
@@ -57,8 +61,8 @@ const endedOnTasks = (messages: readonly UIMessage[]): boolean => {
 };
 
 /** The model's family, the beacons' detail. */
-const family = (label: string): "sonnet" | "opus" =>
-  /opus/i.test(label) ? "opus" : "sonnet";
+const family = (id: string): "sonnet" | "opus" =>
+  modelIdentity(id).family === TOP_MODEL_FAMILIES.opus ? "opus" : "sonnet";
 
 export const TopModelHint = ({
   threadId,
@@ -113,7 +117,8 @@ export const TopModelHint = ({
         !topModelHintCreditsSpent(account) &&
         (showingNow || topModelHintAllowed(card, { threadId, now }))));
 
-  const { data: billing } = useQuery({
+  // The plan's top models only rank versions: the catalog alone decides.
+  const { data: billing, isFetched: billingRead } = useQuery({
     ...transport.orpc.account.billingPlan.queryOptions({ input: {} }),
     enabled: may && preview == null,
     staleTime: 60_000,
@@ -127,8 +132,8 @@ export const TopModelHint = ({
     ? []
     : preview != null
       ? preview.choices
-      : billing != null && catalog != null
-        ? topModelHintChoices(currentPlanTopModelNames(billing), catalog)
+      : billingRead && catalog != null
+        ? topModelHintChoices(catalog, planTopModelIds(billing))
         : [];
   const visible = choices.length > 0;
 
@@ -162,7 +167,7 @@ export const TopModelHint = ({
   const base = card ?? EMPTY_TOP_MODEL_HINT_CARD;
 
   const pick = async (model: { id: string; label: string }) => {
-    const which = family(model.label);
+    const which = family(model.id);
     funnel("top_model_hint_tapped", which);
     setPreparing(model.id);
     try {

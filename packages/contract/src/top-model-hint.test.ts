@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { currentPlanTopModelNames, type BillingPlan } from "./billing-plan";
-import { retryOfferModel } from "./retry-offer";
+import { planTopModelIds, type PlanTopModel } from "./billing-plan";
+import { modelIdentity, retryOfferModel } from "./retry-offer";
 import {
   EMPTY_TOP_MODEL_HINT_CARD,
   TOP_MODEL_HINT_QUIET_MS,
@@ -18,30 +18,6 @@ const card = (over: Partial<TopModelHintCard> = {}): TopModelHintCard => ({
   ...EMPTY_TOP_MODEL_HINT_CARD,
   ...over,
 });
-
-const row = (
-  id: string,
-  label: string,
-  configured: boolean,
-  access?: string
-) => ({
-  id: `abacus/${id}`,
-  label,
-  configured,
-  ...(access != null ? { access } : {}),
-});
-const RUNNABLE = [
-  row("route-llm-code-low", "RouteLLM", true),
-  row("claude-opus-5-5-xhigh", "Claude Opus 5.5 XHigh", true),
-  row("claude-opus-5-5", "Claude Opus 5.5", true),
-  row("claude-sonnet-5-5", "Claude Sonnet 5.5", true),
-];
-const LOCKED = RUNNABLE.map((model) =>
-  model.id.endsWith("low")
-    ? model
-    : { ...model, configured: false, access: "locked" }
-);
-const TOP = ["Claude Opus 5.5", "Claude Sonnet 5.5", "GPT-6 Astra", "Gemini 4"];
 
 describe("topModelHintAllowed", () => {
   const at = { threadId: "t1", now: NOW };
@@ -118,74 +94,128 @@ describe("topModelHintCreditsSpent", () => {
   });
 });
 
-describe("topModelHintChoices", () => {
-  it("leads with Sonnet, then Opus, each the exact model and not its XHigh lane", () => {
-    expect(topModelHintChoices(TOP, RUNNABLE).map((model) => model.id)).toEqual(
-      ["abacus/claude-sonnet-5-5", "abacus/claude-opus-5-5"]
+// The billing plan's top models and the Abacus model list, in the shape and
+// order the server sends them today.
+const SERVER_TOP_MODELS: PlanTopModel[] = [
+  { id: "gpt-6.1-sol", name: "GPT-6.1 Sol", agentic: true },
+  { id: "gpt-6.1-terra", name: "GPT-6.1 Terra", agentic: true },
+  { id: "gpt-6-luna", name: "GPT-6 Luna", agentic: true },
+  { id: "gpt-6-astra", name: "GPT-6 Astra", agentic: true },
+  { id: "claude-sonnet-5-5", name: "Claude Sonnet 5.5", agentic: true },
+  { id: "claude-opus-5-5", name: "Claude Opus 5.5", agentic: true },
+  { id: "claude-fable-5-2", name: "Claude Fable 5.2", agentic: true },
+  { id: "gemini-3.8-flash", name: "Gemini 3.8 Flash", agentic: false },
+];
+const PAID_LIST: [string, string][] = [
+  ["route-llm-code-low", "RouteLLM"],
+  ["gpt-6-luna", "GPT-6 Luna"],
+  ["claude-sonnet-5-5", "Claude Sonnet 5.5"],
+  ["claude-opus-5-5", "Claude Opus 5.5"],
+  ["claude-fable-5-2", "Claude Fable 5.2"],
+  ["gpt-6.1-sol", "GPT-6.1 Sol"],
+  ["claude-opus-5", "Claude Opus 5"],
+  ["claude-sonnet-5", "Claude Sonnet 5"],
+  ["claude-sonnet-4-5-20250929", "Claude Sonnet 4.5"],
+  ["claude-opus-4-8", "Claude Opus 4.8"],
+];
+const runnable = (list: [string, string][]) =>
+  list.map(([id, label]) => ({ id: `abacus/${id}`, label, configured: true }));
+// A free account's locked rows: the top models, as the desktop builds them.
+const locked = (top: PlanTopModel[]) => [
+  { id: "abacus/route-llm-code-low", label: "RouteLLM", configured: true },
+  ...top.map((model) => ({
+    id: `abacus/${model.id}`,
+    label: model.name,
+    configured: false,
+    access: "locked",
+  })),
+];
+const ids = planTopModelIds({ topModels: SERVER_TOP_MODELS });
+const rename = (top: PlanTopModel[], from: string, to: string) =>
+  top.map((model) =>
+    model.id === from ? { ...model, id: to, name: `${model.name} next` } : model
+  );
+
+describe("top models by identity, on the server's list shape", () => {
+  it.each([
+    [
+      "today's list: Opus for a free retry, Opus for a paid one, Sonnet then Opus in the hint",
+      locked(SERVER_TOP_MODELS),
+      runnable(PAID_LIST),
+      ids,
+      ["abacus/claude-opus-5-5", "abacus/claude-opus-5-5"],
+      ["abacus/claude-sonnet-5-5", "abacus/claude-opus-5-5"],
+    ],
+    [
+      "the server reorders its list",
+      locked([...SERVER_TOP_MODELS].reverse()),
+      runnable([...PAID_LIST].reverse()),
+      [...ids].reverse(),
+      ["abacus/claude-opus-5-5", "abacus/claude-opus-5-5"],
+      ["abacus/claude-sonnet-5-5", "abacus/claude-opus-5-5"],
+    ],
+    [
+      "a version bump the pitch renames: Opus 5.5 to 5.6",
+      locked(rename(SERVER_TOP_MODELS, "claude-opus-5-5", "claude-opus-5-6")),
+      runnable([...PAID_LIST, ["claude-opus-5-6", "Opus next"]]),
+      planTopModelIds({
+        topModels: rename(
+          SERVER_TOP_MODELS,
+          "claude-opus-5-5",
+          "claude-opus-5-6"
+        ),
+      }),
+      ["abacus/claude-opus-5-6", "abacus/claude-opus-5-6"],
+      ["abacus/claude-sonnet-5-5", "abacus/claude-opus-5-6"],
+    ],
+    [
+      "a newer model the plan does not name yet: the plan's own wins",
+      locked(SERVER_TOP_MODELS),
+      runnable([["claude-opus-6-0-preview", "Opus preview"], ...PAID_LIST]),
+      ids,
+      ["abacus/claude-opus-5-5", "abacus/claude-opus-5-5"],
+      ["abacus/claude-sonnet-5-5", "abacus/claude-opus-5-5"],
+    ],
+    [
+      "an older server with no top models: the newest of each family",
+      locked([]),
+      runnable(PAID_LIST),
+      [],
+      [null, "abacus/claude-opus-5-5"],
+      ["abacus/claude-sonnet-5-5", "abacus/claude-opus-5-5"],
+    ],
+    [
+      "no Claude at all: the plan's first top model",
+      locked(SERVER_TOP_MODELS.filter((m) => !m.id.startsWith("claude"))),
+      runnable(PAID_LIST.filter(([id]) => !id.startsWith("claude"))),
+      ids,
+      ["abacus/gpt-6.1-sol", "abacus/gpt-6.1-sol"],
+      [],
+    ],
+  ])("%s", (_name, free, paid, planIds, [freeRetry, paidRetry], hint) => {
+    expect(retryOfferModel(free, "locked", planIds)?.id ?? null).toBe(
+      freeRetry
     );
-  });
-
-  it("offers only what the plan runs now", () => {
-    expect(topModelHintChoices(TOP, LOCKED)).toEqual([]);
-    expect(
-      topModelHintChoices(
-        TOP,
-        RUNNABLE.filter((model) => !model.label.includes("Sonnet"))
-      ).map((model) => model.id)
-    ).toEqual(["abacus/claude-opus-5-5"]);
-    expect(topModelHintChoices([], RUNNABLE)).toEqual([]);
-  });
-});
-
-describe("retryOfferModel", () => {
-  it("offers a free plan the locked Opus, and a paying plan the Opus it runs", () => {
-    expect(retryOfferModel(TOP, LOCKED)?.id).toBe("abacus/claude-opus-5-5");
-    expect(retryOfferModel(TOP, LOCKED, "runnable")).toBeNull();
-    expect(retryOfferModel(TOP, RUNNABLE, "runnable")?.id).toBe(
-      "abacus/claude-opus-5-5"
+    expect(retryOfferModel(paid, "runnable", planIds)?.id ?? null).toBe(
+      paidRetry
     );
-    expect(retryOfferModel(TOP, RUNNABLE)).toBeNull();
+    expect(topModelHintChoices(paid, planIds).map((m) => m.id)).toEqual(hint);
+    // A locked row is never offered as runnable, nor a runnable one as locked.
+    expect(retryOfferModel(free, "runnable", planIds)).toBeNull();
+    expect(topModelHintChoices(free, planIds)).toEqual([]);
   });
-});
 
-describe("currentPlanTopModelNames", () => {
-  it("reads the account's own plan, not the plan above it", () => {
-    const billing = {
-      current: {
-        plan: "basic",
-        planName: "Basic",
-        creditsRemaining: 1,
-        creditsGranted: 1,
-        freeTierExpiresAt: null,
-      },
-      plans: [
-        {
-          plan: "basic",
-          planName: "Basic",
-          priceText: "",
-          features: [
-            "Top models including Claude Opus 5.5 and Claude Sonnet 5.5",
-          ],
-          creditsPerMonth: 1,
-          current: true,
-        },
-        {
-          plan: "pro",
-          planName: "Pro",
-          priceText: "",
-          features: ["Top models including Model X"],
-          creditsPerMonth: 2,
-          current: false,
-        },
-      ],
-      upgrades: [],
-      topUpUrl: null,
-      upgradeInMobileApp: false,
-    } satisfies BillingPlan;
-    expect(currentPlanTopModelNames(billing)).toEqual([
-      "Claude Opus 5.5",
-      "Claude Sonnet 5.5",
-    ]);
-    expect(currentPlanTopModelNames(null)).toEqual([]);
+  it("reads identity off the id: family words, version numbers, no date stamp", () => {
+    expect(modelIdentity("abacus/claude-opus-5-5")).toEqual({
+      family: "claude-opus",
+      version: [5, 5],
+    });
+    expect(modelIdentity("abacus/claude-sonnet-4-5-20250929")).toEqual({
+      family: "claude-sonnet",
+      version: [4, 5],
+    });
+    expect(modelIdentity("abacus/claude-opus-5-5-thinking").family).toBe(
+      "claude-opus-thinking"
+    );
   });
 });

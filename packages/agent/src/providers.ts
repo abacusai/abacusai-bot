@@ -405,15 +405,15 @@ const STATIC_ABACUS_MODELS: AbacusPiModel[] = [
     64_000
   ),
   abacusModel(
-    "claude-sonnet-5",
-    "Claude Sonnet 5",
+    "claude-sonnet-5-5",
+    "Claude Sonnet 5.5",
     { input: 2, output: 10 },
     1_000_000,
     64_000
   ),
   abacusModel(
-    "claude-opus-5",
-    "Claude Opus 5",
+    "claude-opus-5-5",
+    "Claude Opus 5.5",
     { input: 5, output: 25 },
     1_000_000,
     128_000

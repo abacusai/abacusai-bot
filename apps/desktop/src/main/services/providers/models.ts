@@ -6,6 +6,7 @@ import {
   listBuiltinModels,
   refreshLiveModelIds,
 } from "@abacus-ai/agent/model-catalog";
+import type { PlanTopModel } from "@abacus-ai/contract/billing-plan";
 import { FREE_POOL_PROVIDERS } from "@abacus-ai/contract/free-pool";
 import {
   isPayingAbacusTier,
@@ -74,23 +75,31 @@ let lastRecommendedId: string | null = null;
 export const cachedRecommendedModelId = (): string | null => lastRecommendedId;
 
 /**
- * The plan the platform offers this account first (its billing plan's first
- * upgrade): what a locked model is "included in". Read only when a row is
- * locked, and cached, since the picker reads the catalog often.
+ * What the account's billing plan says about models: the plan the platform
+ * offers it first (its first upgrade), which a locked model is "included in",
+ * and the paid plans' leading models by catalog id. Cached, since the picker
+ * reads the catalog often.
  */
 const UNLOCK_PLAN_TTL_MS = 10 * 60_000;
-let unlockPlanCache: { name: string | null; at: number } | null = null;
+interface UnlockPlan {
+  name: string | null;
+  topModels: PlanTopModel[];
+}
+let unlockPlanCache: { plan: UnlockPlan; at: number } | null = null;
 
-const unlockPlanName = async (): Promise<string | null> => {
+const unlockPlan = async (): Promise<UnlockPlan> => {
   if (
     unlockPlanCache != null &&
     Date.now() - unlockPlanCache.at < UNLOCK_PLAN_TTL_MS
   )
-    return unlockPlanCache.name;
-  const plan = await fetchBillingPlan(false).catch(() => null);
-  const name = plan?.upgrades[0]?.planName ?? null;
-  unlockPlanCache = { name, at: Date.now() };
-  return name;
+    return unlockPlanCache.plan;
+  const billing = await fetchBillingPlan(false).catch(() => null);
+  const plan = {
+    name: billing?.upgrades[0]?.planName ?? null,
+    topModels: billing?.topModels ?? [],
+  };
+  unlockPlanCache = { plan, at: Date.now() };
+  return plan;
 };
 
 /**
@@ -277,9 +286,24 @@ export const listAvailableModels = async (
   const staticAbacus = withoutStaleFree.filter(
     (model) => model.provider === "abacus"
   );
-  const lockedStatic = freeTier
-    ? staticAbacus.filter((model) => !liveAbacusIds.has(model.id)).map(lock)
-    : [];
+  // The paid plans' leading models, by the ids the billing plan names, are
+  // the free plan's locked rows; the static rows only stand in for a server
+  // that names none (an older one, or the call failed).
+  const freePlan = freeTier ? await unlockPlan() : null;
+  const planLocked: ModelAvailability[] = (freePlan?.topModels ?? [])
+    .filter((model) => model.agentic !== false)
+    .map((model) => ({
+      id: `abacus/${model.id}`,
+      label: model.name,
+      provider: "abacus",
+      tier: "strong" as const,
+      requiresEnv: "ABACUS_API_KEY",
+      configured: false,
+      access: "locked" as const,
+    }));
+  const lockedStatic = (
+    planLocked.length > 0 ? planLocked : staticAbacus.map(lock)
+  ).filter((model) => freeTier && !liveAbacusIds.has(model.id));
   const withoutStaticAbacus =
     abacusModels.length > 0 || freeTier || abacusBlocked
       ? withoutStaleFree.filter((model) => model.provider !== "abacus")
@@ -347,16 +371,16 @@ export const listAvailableModels = async (
 
   // Every row says which of the three it is; a locked one, which plan
   // includes it.
-  const unlockPlan = withRecommendation.some(
+  const unlockPlanName = withRecommendation.some(
     (model) => model.access === "locked"
   )
-    ? await unlockPlanName()
+    ? (await unlockPlan()).name
     : null;
   const withAccess = withRecommendation.map((model): ModelAvailability =>
     model.access === "locked"
-      ? unlockPlan == null
+      ? unlockPlanName == null
         ? model
-        : { ...model, unlockPlan }
+        : { ...model, unlockPlan: unlockPlanName }
       : { ...model, access: model.configured ? "runnable" : "needs-key" }
   );
 
