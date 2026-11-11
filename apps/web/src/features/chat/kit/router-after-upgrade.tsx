@@ -1,25 +1,29 @@
 /**
- * The way back down after a top model's first result. A chat the app moved
- * onto a top model, either the upgrade's resume of the waiting message
- * (useCreditWallTask in upgrade-triggers.tsx) or a chat continued in a new
- * one (continue-chat.ts, `continuedFrom`) on its first turn, gets one line
- * under its clean result once the plan is paid: the plan's own router in a
- * new chat from a summary (cheaper-model.ts), so the credits last, or stay on
- * the top model. Answers are kept in memory: a restart can bring the line
- * back under that same reply, never under a later one.
+ * The way back down after a top model's first result, on a paid plan. Two
+ * chats get one line under their clean result: the one whose waiting message
+ * the upgrade sent again on a top model (useCreditWallTask in
+ * upgrade-triggers.tsx), and any chat pinned to a top model on its first turn
+ * while the app's default is not one (a continuation, a welcome's first task,
+ * the user's own pick). The line offers the plan's own router in a new chat
+ * from a summary (cheaper-model.ts), so the credits last, or to stay. Someone
+ * whose default is a top model chose it and is never asked. Answers are kept
+ * in memory: a restart can bring the line back under that same reply, never
+ * under a later one.
  */
 import { planTopModelIds } from "@abacus-ai/contract/billing-plan";
-import { cheaperModelOffer } from "@abacus-ai/contract/cheaper-model";
+import {
+  cheaperModelOffer,
+  isTopModel,
+} from "@abacus-ai/contract/cheaper-model";
+import { resolveConfiguredModel } from "@abacus-ai/contract/models";
 import { isCleanReply } from "@abacus-ai/contract/success-pitch";
 import type { UIMessage } from "@tanstack/ai-client";
-import { eq, useLiveQuery } from "@tanstack/react-db";
 import { useQuery } from "@tanstack/react-query";
 import { Store, useStore } from "@tanstack/react-store";
 import { Leaf, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { useCollections } from "#renderer/data/db";
 import { turnReplyText, turnsOf } from "#renderer/lib/bot-turns/turns";
 import { creditsTier } from "#renderer/lib/credits";
 import { showError } from "#renderer/lib/toast";
@@ -64,17 +68,6 @@ export const RouterAfterUpgradeRow = ({
   const { session, composer } = useChatView();
   const { transport } = useAppContext();
   const { data: account } = useAccount();
-  const collections = useCollections();
-  const threadId = session.threadId;
-  // The chat's row (a bot's chat has none): a continuation names its source.
-  const continuedFrom = useLiveQuery({
-    queryKey: ["router-after-upgrade", threadId],
-    query: (q) =>
-      q
-        .from({ s: collections.sessions })
-        .where(({ s }) => eq(s.id, threadId))
-        .findOne(),
-  }).data?.continuedFrom;
   const own = useStore(marks, (state) => state[session.threadId]);
   const outcome = useThreadStore(session, (state) =>
     state.runs.outcomes.at(-1)
@@ -85,12 +78,13 @@ export const RouterAfterUpgradeRow = ({
   const turn = turns.at(-1);
   const assistants = turn?.assistantIndices.map((index) => messages[index]!);
   const reply = assistants?.at(-1);
-  // A chat continued in a new one: its first turn's result.
-  const continued = turns.length === 1 && continuedFrom != null;
+  // A chat pinned to its model, on its first turn: checked against the default below.
+  const pinned = composer.model?.value ?? null;
+  const firstPinned = turns.length === 1 && pinned != null;
   const tier = creditsTier(account);
   const ready =
     own?.answered !== true &&
-    (own?.resumed === true || continued) &&
+    (own?.resumed === true || firstPinned) &&
     reply != null &&
     !active &&
     outcome?.kind === "success" &&
@@ -109,14 +103,33 @@ export const RouterAfterUpgradeRow = ({
     enabled: ready,
     staleTime: 60_000,
   });
+  const { data: settings } = useQuery({
+    ...transport.orpc.settings.get.queryOptions({ input: {} }),
+    enabled: ready && own?.resumed !== true,
+  });
+  const planIds = planTopModelIds(billing);
+  // The app's default as it runs: a top model there is the user's own choice.
+  const defaultId =
+    catalog != null && settings != null
+      ? resolveConfiguredModel({
+          requested: null,
+          defaultModel: settings.defaultModel,
+          catalog,
+        })
+      : undefined;
+  const defaultRow = catalog?.find((model) => model.id === defaultId);
+  const asked =
+    own?.resumed === true ||
+    (defaultId !== undefined &&
+      (defaultRow == null || !isTopModel(defaultRow, planIds)));
   const offer =
-    ready && catalog != null && billing !== undefined
+    ready && asked && catalog != null && billing !== undefined
       ? cheaperModelOffer({
           plan: "paid",
           modelId: composer.model?.value ?? composer.model?.resolved ?? null,
           listed: true,
           catalog,
-          planIds: planTopModelIds(billing),
+          planIds,
         })
       : null;
   const showing = offer != null && reply != null ? reply.id : null;
