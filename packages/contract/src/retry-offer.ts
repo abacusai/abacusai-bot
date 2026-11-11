@@ -365,56 +365,105 @@ interface CatalogRow {
   access?: string;
 }
 
-const comparable = (text: string): string =>
-  text.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
-
 /**
- * The catalog row a plan's model name stands for, with the access asked for:
- * `locked` for a model the next plan unlocks, `runnable` for one the account's
- * own plan runs now. Names are the server's feature line and rows match by
- * label, the exact name before a longer one that contains it ("Opus 5.5"
- * before "Opus 5.5 XHigh"), so a plan whose list and catalog disagree finds
- * nothing.
+ * What a model is, read off its catalog id, never its marketing name:
+ * `abacus/claude-opus-5-5` is family `claude-opus`, version 5.5. Numbers are
+ * the version, a date stamp (`-20250929`) is dropped, and every other word is
+ * the family, so `claude-opus-5-5-thinking` is a family of its own.
  */
-export const planCatalogModel = <T extends CatalogRow>(
-  name: string,
+export interface ModelIdentity {
+  family: string;
+  version: number[];
+}
+
+/** Longer runs of digits are date stamps, not versions. */
+const VERSION_MAX_DIGITS = 4;
+
+export const modelIdentity = (id: string): ModelIdentity => {
+  const words = (id.split("/").at(-1) ?? id)
+    .toLowerCase()
+    .split(/[-_.\s]+/)
+    .filter((word) => word.length > 0);
+  const numeric = (word: string) => /^\d+$/.test(word);
+  return {
+    family: words.filter((word) => !numeric(word)).join("-"),
+    version: words
+      .filter((word) => numeric(word) && word.length <= VERSION_MAX_DIGITS)
+      .map(Number),
+  };
+};
+
+/** Newer first: 5.5 before 5, 5 before 4.8. */
+const newerFirst = (a: number[], b: number[]): number => {
+  for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
+    const diff = (b[index] ?? 0) - (a[index] ?? 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+};
+
+/** The two families the offers name: Opus for a hard retry, Sonnet for every day. */
+export const TOP_MODEL_FAMILIES = {
+  opus: "claude-opus",
+  sonnet: "claude-sonnet",
+} as const;
+export type TopModelFamily = keyof typeof TOP_MODEL_FAMILIES;
+
+const usableRows = <T extends CatalogRow>(
   catalog: readonly T[],
   access: "locked" | "runnable"
-): T | null => {
-  const wanted = comparable(name);
-  if (wanted === "") return null;
-  const usable = catalog.filter((model) =>
+): T[] =>
+  catalog.filter((model) =>
     access === "locked"
       ? model.access === "locked"
       : model.configured === true && model.access !== "locked"
   );
-  return (
-    usable.find((model) => comparable(model.label) === wanted) ??
-    usable.find((model) => comparable(model.label).includes(wanted)) ??
-    null
-  );
+
+/**
+ * The catalog's model of a family, with the access asked for: `locked` for
+ * one the next plan unlocks, `runnable` for one the account's own plan runs
+ * now. One the plan names among its top models (`planIds`, the server's ids)
+ * wins; then the newest version. Matched on the id, so a plan whose pitch
+ * reorders or renames its models, or a new version, still finds it.
+ */
+export const familyCatalogModel = <T extends CatalogRow>(
+  family: TopModelFamily,
+  catalog: readonly T[],
+  access: "locked" | "runnable",
+  planIds: readonly string[] = []
+): T | null => {
+  const wanted = TOP_MODEL_FAMILIES[family];
+  const rows = usableRows(catalog, access)
+    .map((model) => ({ model, identity: modelIdentity(model.id) }))
+    .filter(({ identity }) => identity.family === wanted)
+    .sort(
+      (a, b) =>
+        Number(planIds.includes(b.model.id)) -
+          Number(planIds.includes(a.model.id)) ||
+        newerFirst(a.identity.version, b.identity.version)
+    );
+  return rows[0]?.model ?? null;
 };
 
 /**
- * The model to offer: of the plan's top models, Claude Opus first, then the
- * plan's order, the first the catalog lists with the access asked for. A free
+ * The model to offer: the plan's Opus, else its Sonnet, else the first of the
+ * plan's top models the catalog lists with the access asked for. A free
  * account asks for `locked` (the upgrade unlocks it), a paying one for
- * `runnable` (its plan runs it now). Null when none is: the plan's line and
- * the catalog must agree, or the rerun would land on a model the plan cannot
- * run.
+ * `runnable` (its plan runs it now). Null when none is: the rerun must land on
+ * a model the plan runs.
  */
 export const retryOfferModel = <T extends CatalogRow>(
-  topModels: readonly string[],
   catalog: readonly T[],
-  access: "locked" | "runnable" = "locked"
+  access: "locked" | "runnable" = "locked",
+  planIds: readonly string[] = []
 ): T | null => {
-  const ordered = [
-    ...topModels.filter((name) => /opus/i.test(name)),
-    ...topModels.filter((name) => !/opus/i.test(name)),
-  ];
-  for (const name of ordered) {
-    const found = planCatalogModel(name, catalog, access);
-    if (found != null) return found;
-  }
-  return null;
+  const usable = usableRows(catalog, access);
+  return (
+    familyCatalogModel("opus", catalog, access, planIds) ??
+    familyCatalogModel("sonnet", catalog, access, planIds) ??
+    planIds
+      .map((id) => usable.find((model) => model.id === id) ?? null)
+      .find((model) => model != null) ??
+    null
+  );
 };

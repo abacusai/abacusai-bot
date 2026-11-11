@@ -11,7 +11,7 @@
  * second button, and the retry under a stuck task offers Opus for that one
  * run (retry-offer.ts).
  */
-import { planCatalogModel } from "./retry-offer";
+import { familyCatalogModel } from "./retry-offer";
 
 /** The renderer's record: what was shown, answered and when. */
 export interface TopModelHintCard {
@@ -109,7 +109,8 @@ export const topModelHintCreditsSpent = (account: {
 
 /**
  * The hint's models, in button order: the plan's Sonnet, then its Opus, each
- * only when the account's catalog runs it now. Empty when neither does.
+ * only when the account's catalog runs it now, matched by catalog id
+ * (`planIds`, the plan's top models, preferred). Empty when neither runs.
  */
 export const topModelHintChoices = <
   T extends {
@@ -119,17 +120,10 @@ export const topModelHintChoices = <
     access?: string;
   },
 >(
-  topModels: readonly string[],
-  catalog: readonly T[]
-): T[] => {
-  const pick = (family: RegExp): T | null => {
-    for (const name of topModels.filter((each) => family.test(each))) {
-      const found = planCatalogModel(name, catalog, "runnable");
-      if (found != null) return found;
-    }
-    return null;
-  };
-  return [pick(/sonnet/i), pick(/opus/i)].filter(
-    (model): model is T => model != null
-  );
-};
+  catalog: readonly T[],
+  planIds: readonly string[] = []
+): T[] =>
+  [
+    familyCatalogModel("sonnet", catalog, "runnable", planIds),
+    familyCatalogModel("opus", catalog, "runnable", planIds),
+  ].filter((model): model is T => model != null);

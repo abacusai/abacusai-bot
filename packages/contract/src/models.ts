@@ -72,16 +72,16 @@ export const MODEL_CATALOG: AbacusBotModel[] = [
   // Agentic-capable models only, matching the live catalog's filter. This is
   // the offline fallback; /v1/models is the source when available.
   {
-    id: "abacus/claude-sonnet-5",
-    label: "Claude Sonnet 5 (Abacus)",
+    id: "abacus/claude-sonnet-5-5",
+    label: "Claude Sonnet 5.5 (Abacus)",
     provider: "abacus",
     tier: "strong",
     note: "Via your Abacus.AI subscription",
     requiresEnv: "ABACUS_API_KEY",
   },
   {
-    id: "abacus/claude-opus-5",
-    label: "Claude Opus 5 (Abacus)",
+    id: "abacus/claude-opus-5-5",
+    label: "Claude Opus 5.5 (Abacus)",
     provider: "abacus",
     tier: "strong",
     note: "Via your Abacus.AI subscription",

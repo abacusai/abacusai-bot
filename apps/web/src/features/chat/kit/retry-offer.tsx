@@ -1,8 +1,4 @@
-import {
-  currentPlanTopModelNames,
-  planTopModelNames,
-  wallOffer,
-} from "@abacus-ai/contract/billing-plan";
+import { planTopModelIds, wallOffer } from "@abacus-ai/contract/billing-plan";
 /**
  * The retry offer's line (contract retry-offer.ts): under the latest reply
  * when a task went badly, the same task again on one of the plan's top
@@ -203,13 +199,9 @@ export const RetryOfferRow = ({
     billing == null || catalog == null
       ? null
       : paying
-        ? retryOfferModel(
-            currentPlanTopModelNames(billing),
-            catalog,
-            "runnable"
-          )
+        ? retryOfferModel(catalog, "runnable", planTopModelIds(billing))
         : offer != null
-          ? retryOfferModel(planTopModelNames(offer.features), catalog)
+          ? retryOfferModel(catalog, "locked", planTopModelIds(billing))
           : null;
   // A chat already on that model has nothing to retry on.
   const current = composer.model?.value ?? composer.model?.resolved ?? null;

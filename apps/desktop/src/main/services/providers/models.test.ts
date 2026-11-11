@@ -23,6 +23,9 @@ const abacus = vi.hoisted(() => ({
   live: [] as Array<Record<string, unknown>>,
   refused: new Set<string>(),
   unlockPlan: null as string | null,
+  topModels: undefined as
+    | Array<{ id: string; name: string; agentic?: boolean }>
+    | undefined,
 }));
 
 vi.mock("./abacus", () => ({
@@ -38,7 +41,10 @@ vi.mock("./abacus-upgrade", () => ({
   fetchBillingPlan: async () =>
     abacus.unlockPlan == null
       ? null
-      : { upgrades: [{ planName: abacus.unlockPlan }] },
+      : {
+          upgrades: [{ planName: abacus.unlockPlan }],
+          topModels: abacus.topModels,
+        },
 }));
 vi.mock("./openrouter", () => ({
   cachedFreeOpenRouterModels: () => [],
@@ -71,6 +77,7 @@ beforeEach(() => {
   abacus.live = [];
   abacus.refused = new Set();
   abacus.unlockPlan = null;
+  abacus.topModels = undefined;
 });
 
 describe("a provider the user has a key for", () => {
@@ -246,7 +253,7 @@ describe("what a free Abacus.AI plan can run", () => {
 
   it("locks the paid catalog behind the plan that includes it", async () => {
     const models = await listAvailableModels(true);
-    const sonnet = models.find((m) => m.id === "abacus/claude-sonnet-5");
+    const sonnet = models.find((m) => m.id === "abacus/claude-sonnet-5-5");
 
     expect(sonnet).toMatchObject({
       configured: false,
@@ -256,6 +263,22 @@ describe("what a free Abacus.AI plan can run", () => {
     expect(
       models.find((m) => m.id === "abacus/deepseek-v4.1-flash")
     ).toMatchObject({ configured: true, access: "runnable" });
+  });
+
+  it("locks the plan's own top models, by the ids its billing plan names, over the static rows", async () => {
+    abacus.topModels = [
+      { id: "gpt-6.1-sol", name: "GPT-6.1 Sol", agentic: true },
+      { id: "claude-opus-5-5", name: "Claude Opus 5.5", agentic: true },
+      { id: "gemini-3.8-flash", name: "Gemini 3.8 Flash", agentic: false },
+    ];
+    const locked = (await listAvailableModels(true)).filter(
+      (m) => m.access === "locked"
+    );
+
+    expect(locked.map((m) => [m.id, m.label, m.unlockPlan])).toEqual([
+      ["abacus/gpt-6.1-sol", "GPT-6.1 Sol", "Basic"],
+      ["abacus/claude-opus-5-5", "Claude Opus 5.5", "Basic"],
+    ]);
   });
 
   it("marks a model with no key as needing one, not locked", async () => {
@@ -288,7 +311,7 @@ describe("what a free Abacus.AI plan can run", () => {
   it("says no plan when the platform offers none", async () => {
     abacus.unlockPlan = null;
     const sonnet = (await listAvailableModels(true)).find(
-      (m) => m.id === "abacus/claude-sonnet-5"
+      (m) => m.id === "abacus/claude-sonnet-5-5"
     );
 
     expect(sonnet?.access).toBe("locked");
