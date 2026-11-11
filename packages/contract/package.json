@@ -15,6 +15,7 @@
     "./contracts": "./src/contracts.ts",
     "./credit-thresholds": "./src/credit-thresholds.ts",
     "./success-pitch": "./src/success-pitch.ts",
+    "./cheaper-model": "./src/cheaper-model.ts",
     "./conversation-scope": "./src/conversation-scope.ts",
     "./deliverable-offer": "./src/deliverable-offer.ts",
     "./deliverables": "./src/deliverables.ts",

@@ -5038,7 +5038,10 @@
     "upgradeMonthly": "Fazer upgrade · {{price}}/mês",
     "upgrade": "Fazer upgrade",
     "continueFree": "Continuar grátis",
-    "keepGoing": "Keep going"
+    "keepGoing": "Keep going",
+    "switchCheaper": "Faça seus créditos renderem mais: continue no {{model}}",
+    "switchedCheaper": "Este chat continua no {{model}} a partir da sua próxima mensagem",
+    "switchedCheaperBack": "Você pode escolher o {{model}} de novo no seletor de modelos quando quiser."
   },
   "successPitch": {
     "moment": {

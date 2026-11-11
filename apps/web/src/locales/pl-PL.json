@@ -5198,7 +5198,10 @@
     "upgradeMonthly": "Ulepsz plan · {{price}}/mies.",
     "upgrade": "Ulepsz plan",
     "continueFree": "Kontynuuj za darmo",
-    "keepGoing": "Kontynuuj"
+    "keepGoing": "Kontynuuj",
+    "switchCheaper": "Niech kredyty starczą na dłużej: kontynuuj z {{model}}",
+    "switchedCheaper": "Od następnej wiadomości ten czat działa na {{model}}",
+    "switchedCheaperBack": "W każdej chwili możesz wrócić do {{model}} w wyborze modelu."
   },
   "successPitch": {
     "moment": {

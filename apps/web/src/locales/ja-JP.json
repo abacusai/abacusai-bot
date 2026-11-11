@@ -5038,7 +5038,10 @@
     "upgradeMonthly": "アップグレード · {{price}}/月",
     "upgrade": "アップグレード",
     "continueFree": "無料で続ける",
-    "keepGoing": "Keep going"
+    "keepGoing": "Keep going",
+    "switchCheaper": "クレジットを長持ちさせる: {{model}} で続ける",
+    "switchedCheaper": "次のメッセージから、このチャットは {{model}} で続きます",
+    "switchedCheaperBack": "{{model}} はモデル選択からいつでも選び直せます。"
   },
   "successPitch": {
     "moment": {
