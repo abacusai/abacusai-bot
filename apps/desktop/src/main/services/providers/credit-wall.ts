@@ -48,6 +48,18 @@ export const wallAfterError = (
     ? { creditsExhaustedAt: now, freeLaneChosenAt: null }
     : null;
 
+/** While a wall stands, the account is read this often even with no turn to read it, so credits that come back are heard. */
+export const WALL_ACCOUNT_READ_EVERY_MS = 60 * 60_000;
+
+/** A wall stands and the account was last read long enough ago: read it now. */
+export const accountReadDueAtWall = (
+  row: PrefsRow,
+  snapshot: CreditSnapshot | null,
+  now: number
+): boolean =>
+  row.creditsExhaustedAt != null &&
+  (snapshot == null || now - snapshot.at >= WALL_ACCOUNT_READ_EVERY_MS);
+
 /** An account read after the wall shows credits again: the wall is gone. */
 export const wallAfterAccountRead = (
   row: PrefsRow,

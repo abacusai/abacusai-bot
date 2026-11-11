@@ -5073,7 +5073,10 @@
     "chat": "Mach in {{name}} dort weiter, wo du aufgehört hast.",
     "chatPlain": "Mach dort weiter, wo du aufgehört hast.",
     "routine": "{{name}} hat neue Ergebnisse für dich.",
-    "routinePlain": "Deine Routine hat neue Ergebnisse für dich."
+    "routinePlain": "Deine Routine hat neue Ergebnisse für dich.",
+    "creditsTitle": "Deine Credits sind zurück",
+    "credits": "Du hast wieder {{credits}} Credits. Mach in {{name}} dort weiter, wo du aufgehört hast.",
+    "creditsPlain": "Du hast wieder {{credits}} Credits. Mach dort weiter, wo du aufgehört hast."
   },
   "kickoff": {
     "connectOne": "Falls die Systemerinnerung {{name}} nicht als verbunden aufführt, rufe zuerst sofort connect_connector dafür auf.",

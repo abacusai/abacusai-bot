@@ -5073,7 +5073,10 @@
     "chat": "在 {{name}} 中從上次停下的地方繼續吧。",
     "chatPlain": "從上次停下的地方繼續吧。",
     "routine": "{{name}} 有新結果給你。",
-    "routinePlain": "你的例行任務有新結果給你。"
+    "routinePlain": "你的例行任務有新結果給你。",
+    "creditsTitle": "你的點數回來了",
+    "credits": "你又有 {{credits}} 點數了。在 {{name}} 中從上次停下的地方繼續。",
+    "creditsPlain": "你又有 {{credits}} 點數了。從上次停下的地方繼續。"
   },
   "kickoff": {
     "connectOne": "首先，如果系統提醒沒有將 {{name}} 列為已連接，請立即為它呼叫 connect_connector。",

@@ -1863,7 +1863,10 @@
       "chat",
       "chatPlain",
       "routine",
-      "routinePlain"
+      "routinePlain",
+      "creditsTitle",
+      "credits",
+      "creditsPlain"
     ],
     "sources": ["../../desktop/src/main/services/providers/work-waiting.ts"]
   }

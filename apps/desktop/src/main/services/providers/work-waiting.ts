@@ -15,8 +15,12 @@
  *
  * At most three notices per absence: a few hours after it while the app is
  * still open, the next time the app runs (a computer that starts the app at
- * login gets it the next morning), and once more on day three. The user's next
- * message anywhere starts a new absence; a click ends this one. The global
+ * login gets it the next morning), and once more on day three. Credits that
+ * come back on the account while the user is away (creditsBack: at least as
+ * long as the first notice waits, on an absence not ended or expired) add one
+ * notice of their own at the next check: the work they left stopped at the
+ * credit wall and can now go on. The user's next message anywhere starts a
+ * new absence; a click ends this one. The global
  * notifications switch and quiet hours apply, and nothing shows while a turn
  * runs. A focused window is no sign of the user: one the OS opened at login
  * has focus with nobody there.
@@ -50,6 +54,8 @@ interface WorkWaitingRecord {
   leftAt: number;
   shownAt: number[];
   done: boolean;
+  /** Credits came back while the user was away: how many, and whether that notice showed. */
+  creditsBack?: { credits: number; shown: boolean };
 }
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -57,6 +63,8 @@ const HOUR_MS = 60 * 60 * 1000;
 const WORK_WAITING_AFTER_MS = [3.5 * HOUR_MS, 20 * HOUR_MS, 72 * HOUR_MS];
 /** The least time between two notices for one absence. */
 const WORK_WAITING_GAP_MS = 16 * HOUR_MS;
+/** Credits that come back this soon after the user's last word reach someone still here: no notice. */
+const CREDITS_BACK_AWAY_MS = WORK_WAITING_AFTER_MS[0];
 /** An absence older than this is not brought up again. */
 const WORK_WAITING_EXPIRES_MS = 7 * 24 * HOUR_MS;
 /** The first check after launch: a computer that starts the app at login is brought up then. */
@@ -166,7 +174,11 @@ const isRecord = (value: unknown): value is WorkWaitingRecord => {
     typeof record.leftAt === "number" &&
     Array.isArray(record.shownAt) &&
     record.shownAt.every((at) => typeof at === "number") &&
-    typeof record.done === "boolean"
+    typeof record.done === "boolean" &&
+    // Absent on a record written before credits-back notices existed.
+    (record.creditsBack === undefined ||
+      (typeof record.creditsBack?.credits === "number" &&
+        typeof record.creditsBack.shown === "boolean"))
   );
 };
 
@@ -273,10 +285,36 @@ export class WorkWaiting {
     });
   }
 
+  /**
+   * Credits came back on the account (the credit wall lifted while the user was
+   * away, not by a paid plan): the next check tells them, once, with the place
+   * they left. Nothing to point at (no absence on record): nothing to say.
+   */
+  creditsBack(credits: number): void {
+    const record = this.current();
+    const now = this.now();
+    if (
+      record == null ||
+      record.done ||
+      record.creditsBack?.shown === false ||
+      now - record.leftAt >= WORK_WAITING_EXPIRES_MS ||
+      // Not away yet: the user sees the credits in the app.
+      now - record.leftAt < CREDITS_BACK_AWAY_MS
+    )
+      return;
+    this.save({
+      ...record,
+      creditsBack: { credits: Math.floor(credits), shown: false },
+    });
+  }
+
   /** Shows the notice if one is due; called on a timer and at launch. */
   async tick(): Promise<boolean> {
     const record = this.current();
     const now = this.now();
+    const pending = record?.creditsBack;
+    if (record != null && pending != null && !pending.shown)
+      return this.showCreditsBack(record, pending.credits, now);
     if (!workWaitingDue(record, now) || record == null) return false;
     const found = this.deps.nameOf(record.place);
     if (found == null) {
@@ -302,6 +340,46 @@ export class WorkWaiting {
       "work_waiting_shown",
       `${shown}_${record.ending}_${record.task == null ? "plain" : "task"}`
     );
+    return true;
+  }
+
+  private async showCreditsBack(
+    record: WorkWaitingRecord,
+    credits: number,
+    now: number
+  ): Promise<boolean> {
+    const found = this.deps.nameOf(record.place);
+    if (found == null) {
+      this.save({
+        ...record,
+        done: true,
+        creditsBack: { credits, shown: true },
+      });
+      return false;
+    }
+    if (this.deps.quiet(now) || this.deps.busy()) return false;
+    const name = workWaitingLine(found.name);
+    // Marked before the words load, so an overlapping check cannot show it twice. It counts as one of the absence's
+    // notices, so the next one keeps the usual gap.
+    this.save({
+      ...record,
+      shownAt: [...record.shownAt, now],
+      creditsBack: { credits, shown: true },
+    });
+    const t = await this.deps.words();
+    this.deps.show(
+      {
+        title: t("workWaiting.creditsTitle"),
+        body:
+          name == null
+            ? t("workWaiting.creditsPlain", { credits })
+            : t("workWaiting.credits", { credits, name }),
+        place: record.place,
+        dedupeKey: `work-waiting:${record.leftAt}:credits`,
+      },
+      () => this.clicked(record.leftAt)
+    );
+    this.deps.funnel("work_waiting_shown", "credits_back");
     return true;
   }
 
