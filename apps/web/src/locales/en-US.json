@@ -5066,7 +5066,10 @@
     "chat": "Pick up where you left off in {{name}}.",
     "chatPlain": "Pick up where you left off.",
     "routine": "{{name}} has new results for you.",
-    "routinePlain": "Your routine has new results for you."
+    "routinePlain": "Your routine has new results for you.",
+    "creditsTitle": "Your credits are back",
+    "credits": "You have {{credits}} credits again. Pick up where you left off in {{name}}.",
+    "creditsPlain": "You have {{credits}} credits again. Pick up where you left off."
   },
   "kickoff": {
     "connectOne": "First, if the system reminder does not list {{name}} as connected, call connect_connector for it now.",

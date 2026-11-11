@@ -5066,7 +5066,10 @@
     "chat": "{{name}} の続きから始めましょう。",
     "chatPlain": "続きから始めましょう。",
     "routine": "{{name}} に新しい結果があります。",
-    "routinePlain": "ルーティンに新しい結果があります。"
+    "routinePlain": "ルーティンに新しい結果があります。",
+    "creditsTitle": "クレジットが戻りました",
+    "credits": "クレジットが{{credits}}になりました。{{name}}の続きから再開できます。",
+    "creditsPlain": "クレジットが{{credits}}になりました。続きから再開できます。"
   },
   "kickoff": {
     "connectOne": "まず、システムリマインダーで{{name}}が接続済みとして表示されていない場合は、今すぐconnect_connectorを呼び出してください。",

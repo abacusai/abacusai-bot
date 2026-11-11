@@ -5066,7 +5066,10 @@
     "chat": "Retoma donde lo dejaste en {{name}}.",
     "chatPlain": "Retoma donde lo dejaste.",
     "routine": "{{name}} tiene resultados nuevos para ti.",
-    "routinePlain": "Tu rutina tiene resultados nuevos para ti."
+    "routinePlain": "Tu rutina tiene resultados nuevos para ti.",
+    "creditsTitle": "Tus créditos volvieron",
+    "credits": "Tienes {{credits}} créditos otra vez. Sigue donde lo dejaste en {{name}}.",
+    "creditsPlain": "Tienes {{credits}} créditos otra vez. Sigue donde lo dejaste."
   },
   "kickoff": {
     "connectOne": "Primero, si el recordatorio del sistema no indica que {{name}} está conectado, llama ahora a connect_connector para conectarlo.",

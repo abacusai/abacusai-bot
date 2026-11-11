@@ -5066,7 +5066,10 @@
     "chat": "{{name}} içinde kaldığın yerden devam et.",
     "chatPlain": "Kaldığın yerden devam et.",
     "routine": "{{name}} senin için yeni sonuçlar buldu.",
-    "routinePlain": "Rutinin senin için yeni sonuçlar buldu."
+    "routinePlain": "Rutinin senin için yeni sonuçlar buldu.",
+    "creditsTitle": "Kredilerin geri geldi",
+    "credits": "Yeniden {{credits}} kredin var. {{name}} içinde kaldığın yerden devam et.",
+    "creditsPlain": "Yeniden {{credits}} kredin var. Kaldığın yerden devam et."
   },
   "kickoff": {
     "connectOne": "Önce, sistem hatırlatıcısı {{name}} için bağlı demiyorsa hemen bunun için connect_connector çağır.",

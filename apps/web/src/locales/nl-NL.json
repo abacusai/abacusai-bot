@@ -5066,7 +5066,10 @@
     "chat": "Ga verder waar je gebleven was in {{name}}.",
     "chatPlain": "Ga verder waar je gebleven was.",
     "routine": "{{name}} heeft nieuwe resultaten voor je.",
-    "routinePlain": "Je routine heeft nieuwe resultaten voor je."
+    "routinePlain": "Je routine heeft nieuwe resultaten voor je.",
+    "creditsTitle": "Je credits zijn terug",
+    "credits": "Je hebt weer {{credits}} credits. Ga verder waar je gebleven was in {{name}}.",
+    "creditsPlain": "Je hebt weer {{credits}} credits. Ga verder waar je gebleven was."
   },
   "kickoff": {
     "connectOne": "Als de systeemherinnering {{name}} niet als verbonden vermeldt, roep dan eerst nu connect_connector daarvoor aan.",

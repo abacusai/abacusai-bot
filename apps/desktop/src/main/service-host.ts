@@ -585,6 +585,7 @@ import {
   creditWallOf,
   holdLifted,
   routineStopsAtWall,
+  accountReadDueAtWall,
   wallAfterAccountRead,
   wallAfterError,
   wallMoved,
@@ -2129,7 +2130,15 @@ export class ServiceHost {
     const prefs = this.prefs?.();
     const patch =
       prefs != null ? wallAfterAccountRead(prefs.get(), snapshot) : null;
-    if (patch != null) prefs?.update(patch);
+    if (patch == null) return;
+    prefs?.update(patch);
+    // Not bought (a paid plan has its own welcome): the user, likely away, hears it.
+    if (snapshot.paid !== true) {
+      this.workWaiting.creditsBack(snapshot.remaining);
+      void this.workWaiting.tick().catch((error: unknown) => {
+        console.warn(`[work-waiting] check failed: ${String(error)}`);
+      });
+    }
   });
   /** What the model is told about cost follows the plan; see account-plan.ts. */
   private readonly stopAccountPlanForwarding = onAbacusAccountPlan((plan) => {
@@ -3714,6 +3723,13 @@ export class ServiceHost {
       void this.workWaiting.tick().catch((error: unknown) => {
         console.warn(`[work-waiting] check failed: ${String(error)}`);
       });
+      // With no turn to read the account, credits that come back at a wall would go unheard.
+      const prefs = this.prefs?.();
+      if (
+        prefs != null &&
+        accountReadDueAtWall(prefs.get(), creditSnapshot(), Date.now())
+      )
+        void fetchAbacusAccount(true).catch(() => null);
     };
     const first = setTimeout(tick, WORK_WAITING_FIRST_CHECK_MS);
     const every = setInterval(tick, WORK_WAITING_CHECK_EVERY_MS);

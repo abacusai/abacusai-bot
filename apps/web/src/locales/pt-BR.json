@@ -5066,7 +5066,10 @@
     "chat": "Continue de onde parou em {{name}}.",
     "chatPlain": "Continue de onde parou.",
     "routine": "{{name}} tem novos resultados para você.",
-    "routinePlain": "Sua rotina tem novos resultados para você."
+    "routinePlain": "Sua rotina tem novos resultados para você.",
+    "creditsTitle": "Seus créditos voltaram",
+    "credits": "Você tem {{credits}} créditos de novo. Continue de onde parou em {{name}}.",
+    "creditsPlain": "Você tem {{credits}} créditos de novo. Continue de onde parou."
   },
   "kickoff": {
     "connectOne": "Primeiro, se o lembrete do sistema não listar {{name}} como conectado, chame connect_connector para ele agora.",

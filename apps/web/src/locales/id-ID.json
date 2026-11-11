@@ -5066,7 +5066,10 @@
     "chat": "Lanjutkan dari tempat Anda berhenti di {{name}}.",
     "chatPlain": "Lanjutkan dari tempat Anda berhenti.",
     "routine": "{{name}} punya hasil baru untuk Anda.",
-    "routinePlain": "Rutinitas Anda punya hasil baru untuk Anda."
+    "routinePlain": "Rutinitas Anda punya hasil baru untuk Anda.",
+    "creditsTitle": "Kredit Anda kembali",
+    "credits": "Anda punya {{credits}} kredit lagi. Lanjutkan dari bagian terakhir di {{name}}.",
+    "creditsPlain": "Anda punya {{credits}} kredit lagi. Lanjutkan dari bagian terakhir."
   },
   "kickoff": {
     "connectOne": "Pertama, jika pengingat sistem tidak mencantumkan {{name}} sebagai terhubung, panggil connect_connector untuknya sekarang.",

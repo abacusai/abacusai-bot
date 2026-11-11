@@ -5226,7 +5226,10 @@
     "chat": "Kontynuuj tam, gdzie skończyłeś w {{name}}.",
     "chatPlain": "Kontynuuj tam, gdzie skończyłeś.",
     "routine": "{{name}}: masz nowe wyniki.",
-    "routinePlain": "Twoja rutyna ma dla Ciebie nowe wyniki."
+    "routinePlain": "Twoja rutyna ma dla Ciebie nowe wyniki.",
+    "creditsTitle": "Twoje kredyty wróciły",
+    "credits": "Znowu masz {{credits}} kredytów. Kontynuuj w {{name}} tam, gdzie skończyłeś.",
+    "creditsPlain": "Znowu masz {{credits}} kredytów. Kontynuuj tam, gdzie skończyłeś."
   },
   "kickoff": {
     "connectOne": "Najpierw, jeśli przypomnienie systemowe nie wymienia {{name}} jako połączonego, wywołaj teraz dla niego connect_connector.",

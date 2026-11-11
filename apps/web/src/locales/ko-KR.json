@@ -5066,7 +5066,10 @@
     "chat": "{{name}}에서 멈춘 곳부터 이어서 하세요.",
     "chatPlain": "멈춘 곳부터 이어서 하세요.",
     "routine": "{{name}}에 새 결과가 있어요.",
-    "routinePlain": "루틴에 새 결과가 있어요."
+    "routinePlain": "루틴에 새 결과가 있어요.",
+    "creditsTitle": "크레딧이 다시 생겼어요",
+    "credits": "크레딧이 다시 {{credits}} 있어요. {{name}}에서 멈춘 곳부터 이어서 하세요.",
+    "creditsPlain": "크레딧이 다시 {{credits}} 있어요. 멈춘 곳부터 이어서 하세요."
   },
   "kickoff": {
     "connectOne": "먼저, 시스템 알림에 {{name}}이(가) 연결됨으로 표시되지 않으면 지금 connect_connector를 호출하세요.",
