@@ -42,6 +42,8 @@ export const fillScript = (
     : (el instanceof HTMLInputElement) ? HTMLInputElement.prototype
     : null;
   if (!proto) return { status: 'not_fillable', tag: el.tagName.toLowerCase() };
+  // A file picker's value can only be set to "": the setter throws.
+  if (el instanceof HTMLInputElement && el.type === 'file') return { status: 'file_input' };
   if (el.disabled || el.readOnly) return { status: 'not_editable', tag: el.tagName.toLowerCase() };
   const nativeSet = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
   if (nativeSet) nativeSet.call(el, value);
@@ -75,6 +77,8 @@ export const typeScript = (
     : (el instanceof HTMLInputElement) ? HTMLInputElement.prototype
     : null;
   if (!proto) return { status: 'not_fillable', tag: el.tagName.toLowerCase() };
+  // A file picker's value can only be set to "": the setter throws.
+  if (el instanceof HTMLInputElement && el.type === 'file') return { status: 'file_input' };
   if (el.disabled || el.readOnly) return { status: 'not_editable', tag: el.tagName.toLowerCase() };
   const nativeSet = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
   const newVal = (el.value || '') + suffix;

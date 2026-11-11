@@ -720,6 +720,12 @@ class UnreadablePageError extends Error {
   }
 }
 
+/** A file picker is no text field, and no tool picks a file from the computer. */
+const FILE_INPUT_REFUSAL = (label: string): string =>
+  `${label} is a file picker: it takes a file, not text, and the browser tools cannot choose a file ` +
+  'from the computer. Stop with browser_pause need:"details" and fields naming the file the user ' +
+  "should upload; they choose it themselves.";
+
 export class McpBrowserServer extends McpHttpServer {
   /** The last snapshot's refs, per session. See SnapshotStore. */
   private readonly snapshots = new SnapshotStore();
@@ -2621,6 +2627,8 @@ export class McpBrowserServer extends McpHttpServer {
         const result = await this.evalJS(wc, fillScript(sel, text));
         if (result?.status === "not_found")
           return this.err(this.notFoundError(args, sel));
+        if (result?.status === "file_input")
+          return this.err(FILE_INPUT_REFUSAL(this.label(args)));
         if (result?.status === "not_fillable") {
           return this.err(
             `${this.label(args)} is a <${result.tag}>, which has no value to fill. ` +
@@ -2678,6 +2686,8 @@ export class McpBrowserServer extends McpHttpServer {
               : "Nothing is focused on the page, so there is no element to type into. Pass a ref from a snapshot."
           );
         }
+        if (result?.status === "file_input")
+          return this.err(FILE_INPUT_REFUSAL(this.label(args)));
         if (result?.status === "not_fillable") {
           return this.err(
             `${this.label(args)} is a <${result.tag}>, which has no value to type into. ` +

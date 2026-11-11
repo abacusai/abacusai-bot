@@ -934,6 +934,19 @@ describe("interacting", () => {
     expect(second.text).not.toContain("Download started");
   });
 
+  it("tells the agent a file picker takes a file it cannot choose, not a stack trace", async () => {
+    await seedRefs();
+    respondWith(() => ({ status: "file_input" }));
+    const { text, isError } = await call("browser_interact", {
+      action: "fill",
+      ref: "@e1",
+      text: "/tmp/hello.txt",
+    });
+    expect(isError).toBe(true);
+    expect(text).toContain("is a file picker");
+    expect(text).toContain('browser_pause need:"details"');
+  });
+
   it("refuses a ref the current snapshot never issued", async () => {
     await seedRefs();
     evaluated.length = 0;
