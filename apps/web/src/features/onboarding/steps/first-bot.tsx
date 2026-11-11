@@ -1,6 +1,6 @@
 /**
  * The first-run screen: what to do first, each pick starting work at once.
- * After a Gmail sign-in it shows the Chief of Staff's first inbox pass instead.
+ * After a Gmail sign-in the Chief of Staff's first inbox pass leads the same list.
  */
 import { HOME_CHANNEL_NAMES, type HomeChannel } from "@abacus-ai/contract/bots";
 import type { BotRow } from "@abacus-ai/contract/contract";
@@ -30,6 +30,8 @@ import { Input } from "#renderer/ui/input";
 import {
   type FirstBotState,
   type FirstChoice,
+  type FirstRunCard,
+  firstRunCards,
   type GithubChoice,
   type InboxPass,
 } from "../first-bot";
@@ -65,6 +67,7 @@ const ChoiceCard = ({
   primary = false,
   children,
   slot,
+  app,
 }: {
   icon: ReactNode;
   title: ReactNode;
@@ -73,9 +76,12 @@ const ChoiceCard = ({
   primary?: boolean;
   children?: ReactNode;
   slot: string;
+  /** The chat app a `chat-app` card opens. */
+  app?: HomeChannel;
 }) => (
   <div
     data-first-choice={slot}
+    data-app={app}
     data-primary={primary}
     className={cn(
       "onboarding-card flex flex-col gap-3 rounded-[14px] py-3 pr-3 pl-4",
@@ -105,7 +111,7 @@ export const FirstBotStep = ({
   present,
   heading,
   inbox,
-  chatApp,
+  chatApps,
   github,
 }: {
   ctx: StepContext;
@@ -115,8 +121,8 @@ export const FirstBotStep = ({
   present: boolean;
   heading: Ref<HTMLHeadingElement>;
   inbox: InboxPass;
-  /** The chat app linked during onboarding: its card leads. */
-  chatApp: HomeChannel | null;
+  /** The chat apps linked during onboarding, the last one first. */
+  chatApps: readonly HomeChannel[];
   github: GithubChoice;
 }) => {
   const { t, busy, props, perform } = ctx;
@@ -146,6 +152,7 @@ export const FirstBotStep = ({
     });
   const buildCard = (primary: boolean, title: string) => (
     <ChoiceCard
+      key="build"
       slot="build"
       primary={primary}
       icon={<Code2 aria-hidden className="size-5" />}
@@ -229,110 +236,90 @@ export const FirstBotStep = ({
         </div>
       </>
     );
-  if (first.state === "ready" && bot) {
-    const name = bot.name;
+  const submitGoal = () => {
+    const words = goal.trim();
+    if (words.length === 0) return;
+    pick("first_choice_freetext", { kind: "goal", goal: words });
+  };
+  const cosBot = first.state === "ready" ? bot : null;
+  const empty = inbox.state === "done" && inbox.drafts === 0;
+  const inboxCard = (primary: boolean) => {
+    if (cosBot == null) return null;
+    const name = cosBot.name;
     const look = resolveLook({
       name,
-      avatarShape: bot.avatarShape,
-      avatarColor: bot.avatarColor,
+      avatarShape: cosBot.avatarShape,
+      avatarColor: cosBot.avatarColor,
     });
-    const openBot = () =>
-      void perform(() => props.choose({ kind: "bot", botId: bot.id }));
-    const avatar = <BotAvatar animate look={look} size={40} mood="wink" />;
-    const empty = inbox.state === "done" && inbox.drafts === 0;
     return (
-      <>
-        <StepTitle ref={heading}>
-          {inbox.state === "reading"
-            ? t("onboarding.firstRun.inbox.readingTitle")
-            : inbox.state === "stopped"
-              ? t("onboarding.firstRun.inbox.stoppedTitle", { name })
-              : empty
-                ? t("onboarding.firstRun.inbox.emptyTitle")
-                : t("onboarding.firstRun.inbox.title")}
-        </StepTitle>
-        {inbox.state === "done" && (
-          <StepBody className="mt-1.5 max-w-[520px]">
-            {t("onboarding.firstRun.inbox.subtitle", { name })}
-          </StepBody>
+      <div
+        key="inbox"
+        data-first-choice="inbox"
+        data-primary={primary}
+        className={cn(
+          "onboarding-card flex items-center gap-3 rounded-[14px] py-3 pr-3 pl-4",
+          primary && "onboarding-card-primary"
         )}
-        <div
-          className="mt-6 flex w-full max-w-[560px] flex-col gap-2.5"
-          aria-live="polite"
+      >
+        <BotAvatar animate look={look} size={40} mood="wink" />
+        <span className="min-w-0 flex-1">
+          <span className="block font-medium">
+            {!present
+              ? t("onboarding.pages.removed")
+              : inbox.state === "done" && !empty
+                ? t("onboarding.firstRun.inbox.count", {
+                    count: inbox.drafts,
+                  })
+                : empty
+                  ? t("onboarding.firstRun.inbox.keepTitle")
+                  : name}
+          </span>
+          <span className="onboarding-quiet block">
+            {inbox.state === "reading"
+              ? t("onboarding.firstRun.inbox.readingBody")
+              : inbox.state === "stopped"
+                ? t("onboarding.firstRun.inbox.stoppedBody")
+                : empty
+                  ? t("onboarding.firstRun.inbox.keepBody", { name })
+                  : t("onboarding.firstRun.inbox.countBody")}
+          </span>
+        </span>
+        {inbox.state === "reading" && <Spinner />}
+        <CardAction
+          primary={primary && inbox.state !== "reading"}
+          disabled={busy || !present}
+          onClick={() =>
+            void perform(() => props.choose({ kind: "bot", botId: cosBot.id }))
+          }
         >
-          {empty && buildCard(true, t("onboarding.firstRun.build.title"))}
-          <div
-            data-first-choice="inbox"
-            data-primary={!empty}
-            className={cn(
-              "onboarding-card flex items-center gap-3 rounded-[14px] py-3 pr-3 pl-4",
-              !empty && "onboarding-card-primary"
-            )}
-          >
-            {avatar}
-            <span className="min-w-0 flex-1">
-              <span className="block font-medium">
-                {!present
-                  ? t("onboarding.pages.removed")
-                  : inbox.state === "done" && !empty
-                    ? t("onboarding.firstRun.inbox.count", {
-                        count: inbox.drafts,
-                      })
-                    : empty
-                      ? t("onboarding.firstRun.inbox.keepTitle")
-                      : name}
-              </span>
-              <span className="onboarding-quiet block">
-                {inbox.state === "reading"
-                  ? t("onboarding.firstRun.inbox.readingBody")
-                  : inbox.state === "stopped"
-                    ? t("onboarding.firstRun.inbox.stoppedBody")
-                    : empty
-                      ? t("onboarding.firstRun.inbox.keepBody", { name })
-                      : t("onboarding.firstRun.inbox.countBody")}
-              </span>
-            </span>
-            {inbox.state === "reading" && <Spinner />}
-            <CardAction
-              primary={!empty && inbox.state !== "reading"}
-              disabled={busy || !present}
-              onClick={openBot}
-            >
-              {inbox.state === "reading"
-                ? t("onboarding.firstRun.inbox.watch")
-                : inbox.state === "stopped"
-                  ? t("onboarding.firstRun.inbox.open")
-                  : empty
-                    ? t("onboarding.firstRun.inbox.keepCta")
-                    : t("onboarding.firstRun.inbox.review")}
-            </CardAction>
-          </div>
-          {!empty &&
-            buildCard(false, t("onboarding.firstRun.inbox.buildTitle"))}
-          {tour(bot.id)}
-        </div>
-      </>
+          {inbox.state === "reading"
+            ? t("onboarding.firstRun.inbox.watch")
+            : inbox.state === "stopped"
+              ? t("onboarding.firstRun.inbox.open")
+              : empty
+                ? t("onboarding.firstRun.inbox.keepCta")
+                : t("onboarding.firstRun.inbox.review")}
+        </CardAction>
+      </div>
     );
-  }
-  const chatAppCard = chatApp != null && (
+  };
+  const chatAppCard = (app: HomeChannel, primary: boolean) => (
     <ChoiceCard
+      key={`chat-app-${app}`}
       slot="chat-app"
-      primary
+      app={app}
+      primary={primary}
       icon={<MessageCircle aria-hidden className="size-5" />}
       title={t("onboarding.firstRun.chatApp.title", {
-        app: HOME_CHANNEL_NAMES[chatApp],
+        app: HOME_CHANNEL_NAMES[app],
       })}
       body={t("onboarding.firstRun.chatApp.body")}
       action={
         <CardAction
-          primary
+          primary={primary}
           disabled={busy}
           onClick={() =>
-            pick(
-              "first_choice_whatsapp",
-              { kind: "chat-app", app: chatApp },
-              chatApp
-            )
+            pick("first_choice_whatsapp", { kind: "chat-app", app }, app)
           }
         >
           {t("onboarding.firstRun.chatApp.open")}
@@ -340,12 +327,11 @@ export const FirstBotStep = ({
       }
     />
   );
-  // GitHub connected on the step before leads, as a linked chat app does.
-  const githubLeads = chatApp == null && github === "start";
-  const githubCard = github != null && (
+  const githubCard = (choice: "connect" | "start", primary: boolean) => (
     <ChoiceCard
+      key="github"
       slot="github"
-      primary={githubLeads}
+      primary={primary}
       icon={<GitBranch aria-hidden className="size-5" />}
       title={t("onboarding.firstRun.github.title")}
       body={t("onboarding.firstRun.github.body")}
@@ -358,13 +344,9 @@ export const FirstBotStep = ({
             {t("phase5.cancel")}
           </CardAction>
         ) : (
-          <CardAction
-            primary={githubLeads}
-            disabled={busy}
-            onClick={startGithub}
-          >
+          <CardAction primary={primary} disabled={busy} onClick={startGithub}>
             {t(
-              github === "start"
+              choice === "start"
                 ? "onboarding.firstRun.github.start"
                 : "onboarding.firstRun.github.connect"
             )}
@@ -373,70 +355,117 @@ export const FirstBotStep = ({
       }
     />
   );
-  const submitGoal = () => {
-    const words = goal.trim();
-    if (words.length === 0) return;
-    pick("first_choice_freetext", { kind: "goal", goal: words });
+  const card = ({
+    card,
+    primary,
+  }: {
+    card: FirstRunCard;
+    primary: boolean;
+  }) => {
+    switch (card.slot) {
+      case "inbox":
+        return inboxCard(primary);
+      case "build":
+        return buildCard(
+          primary,
+          // Under an inbox with drafts, Build is the other thing to do.
+          cosBot != null && !primary
+            ? t("onboarding.firstRun.inbox.buildTitle")
+            : t("onboarding.firstRun.build.title")
+        );
+      case "github":
+        return githubCard(card.github, primary);
+      case "chat-app":
+        return chatAppCard(card.app, primary);
+      case "research":
+        return (
+          <ChoiceCard
+            key="research"
+            slot="research"
+            primary={primary}
+            icon={<FileText aria-hidden className="size-5" />}
+            title={t("onboarding.firstRun.research.title")}
+            body={t("onboarding.firstRun.research.body")}
+            action={
+              <CardAction
+                primary={primary}
+                disabled={busy}
+                onClick={() =>
+                  pick("first_choice_research", { kind: "research" })
+                }
+              >
+                {t("onboarding.firstRun.research.cta")}
+              </CardAction>
+            }
+          />
+        );
+      case "images":
+        return (
+          <ChoiceCard
+            key="images"
+            slot="images"
+            primary={primary}
+            icon={<ImageIcon aria-hidden className="size-5" />}
+            title={
+              <>
+                {t("onboarding.firstRun.images.title")}
+                <Badge variant="secondary">
+                  {t("onboarding.firstRun.images.plan")}
+                </Badge>
+              </>
+            }
+            body={t("onboarding.firstRun.images.body")}
+            action={
+              <CardAction
+                primary={primary}
+                disabled={busy}
+                onClick={() =>
+                  pick(
+                    "first_choice_images",
+                    { kind: "images" },
+                    props.facts.payingTier ? "paid" : "free"
+                  )
+                }
+              >
+                {t("onboarding.firstRun.images.cta")}
+              </CardAction>
+            }
+          />
+        );
+    }
   };
+  const cards = firstRunCards({
+    inbox: cosBot == null ? null : empty ? "quiet" : "lead",
+    chatApps,
+    github,
+  });
   return (
     <>
-      <StepTitle ref={heading}>{t("onboarding.firstRun.title")}</StepTitle>
-      <StepBody className="mt-1.5 max-w-[520px]">
-        {t("onboarding.firstRun.subtitle")}
-      </StepBody>
-      <div className="mt-6 flex w-full max-w-[560px] flex-col gap-2.5">
-        {chatAppCard}
-        {githubLeads && githubCard}
-        {buildCard(
-          chatApp == null && !githubLeads,
-          t("onboarding.firstRun.build.title")
-        )}
-        {!githubLeads && githubCard}
-        <ChoiceCard
-          slot="research"
-          icon={<FileText aria-hidden className="size-5" />}
-          title={t("onboarding.firstRun.research.title")}
-          body={t("onboarding.firstRun.research.body")}
-          action={
-            <CardAction
-              primary={false}
-              disabled={busy}
-              onClick={() =>
-                pick("first_choice_research", { kind: "research" })
-              }
-            >
-              {t("onboarding.firstRun.research.cta")}
-            </CardAction>
-          }
-        />
-        <ChoiceCard
-          slot="images"
-          icon={<ImageIcon aria-hidden className="size-5" />}
-          title={
-            <>
-              {t("onboarding.firstRun.images.title")}
-              <Badge variant="secondary">
-                {t("onboarding.firstRun.images.plan")}
-              </Badge>
-            </>
-          }
-          body={t("onboarding.firstRun.images.body")}
-          action={
-            <CardAction
-              primary={false}
-              disabled={busy}
-              onClick={() =>
-                pick(
-                  "first_choice_images",
-                  { kind: "images" },
-                  props.facts.payingTier ? "paid" : "free"
-                )
-              }
-            >
-              {t("onboarding.firstRun.images.cta")}
-            </CardAction>
-          }
-        />
+      <StepTitle ref={heading}>
+        {cosBot == null
+          ? t("onboarding.firstRun.title")
+          : inbox.state === "reading"
+            ? t("onboarding.firstRun.inbox.readingTitle")
+            : inbox.state === "stopped"
+              ? t("onboarding.firstRun.inbox.stoppedTitle", {
+                  name: cosBot.name,
+                })
+              : empty
+                ? t("onboarding.firstRun.inbox.emptyTitle")
+                : t("onboarding.firstRun.inbox.title")}
+      </StepTitle>
+      {(cosBot == null || inbox.state === "done") && (
+        <StepBody className="mt-1.5 max-w-[520px]">
+          {cosBot == null
+            ? t("onboarding.firstRun.subtitle")
+            : t("onboarding.firstRun.inbox.subtitle", { name: cosBot.name })}
+        </StepBody>
+      )}
+      <div
+        className="mt-6 flex w-full max-w-[560px] flex-col gap-2.5"
+        aria-live={cosBot != null ? "polite" : undefined}
+      >
+        {cards.map(card)}
         <form
           className="mt-1 flex items-center gap-2"
           onSubmit={(event) => {
@@ -462,7 +491,7 @@ export const FirstBotStep = ({
             <ArrowUp aria-hidden />
           </Button>
         </form>
-        {tour(null)}
+        {tour(cosBot?.id ?? null)}
       </div>
     </>
   );

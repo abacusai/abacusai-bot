@@ -1,3 +1,4 @@
+import type { HomeChannel } from "@abacus-ai/contract/bots";
 import { useLiveQuery } from "@tanstack/react-db";
 
 import "./onboarding.css";
@@ -85,13 +86,18 @@ export const primaryAction = (
   }
 };
 
+const NO_CHAT_APPS: HomeChannel[] = [];
+
 export const OnboardingStepPage = (props: OnboardingPageProps) => {
   const { step, transport, facts } = props;
   const { t } = useTranslation();
   const db = useDb();
   const liveFirst = useSelector(firstBotStore, (s) => s);
   const liveInbox = useSelector(inboxPassStore, (s) => s);
-  const liveChatApp = useSelector(onboardingStore, (s) => s.chatApp ?? null);
+  const liveChatApps = useSelector(
+    onboardingStore,
+    (s) => s.chatApps ?? NO_CHAT_APPS
+  );
   const preview = props.previewFirstRun;
   const first: FirstBotState =
     step === "first-bot" && preview != null && preview.inbox == null
@@ -100,7 +106,8 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
         ? { state: "ready", result: props.previewBot }
         : liveFirst;
   const inbox = preview?.inbox ?? liveInbox;
-  const chatApp = preview != null ? (preview.chatApp ?? null) : liveChatApp;
+  const chatApps =
+    preview != null ? (preview.chatApps ?? NO_CHAT_APPS) : liveChatApps;
   const attempt = useSelector(onboardingStore, (s) => s.signIn);
   const payment = usePaymentRequired(
     !props.preview && (step === "welcome" || step === "connect")
@@ -368,7 +375,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
           present={present}
           heading={heading}
           inbox={inbox}
-          chatApp={chatApp}
+          chatApps={chatApps}
           github={
             preview?.github ??
             githubChoice(statuses.data?.[GITHUB_CONNECTOR_ID])

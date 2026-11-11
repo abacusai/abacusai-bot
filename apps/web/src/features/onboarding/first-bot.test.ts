@@ -9,6 +9,7 @@ import {
   countDraftReplies,
   ensureFirstBot,
   firstBotStore,
+  firstRunCards,
   inboxPassStore,
   noteConnectedChatApp,
   watchInboxPass,
@@ -82,11 +83,12 @@ describe("the chat app card", () => {
     expect(chatAppTemplateId("discord")).toBe("discord-agent");
   });
 
-  it("follows the chat app connected last", () => {
+  it("keeps every chat app linked, the last one first", () => {
     noteConnectedChatApp("whatsapp");
     noteConnectedChatApp("telegram");
+    noteConnectedChatApp("whatsapp");
 
-    expect(onboardingStore.state.chatApp).toBe("telegram");
+    expect(onboardingStore.state.chatApps).toEqual(["whatsapp", "telegram"]);
   });
 });
 
@@ -179,5 +181,108 @@ describe("the inbox pass", () => {
     await vi.waitFor(() =>
       expect(inboxPassStore.state).toEqual({ state: "stopped" })
     );
+  });
+});
+
+describe("firstRunCards: one list for both first-run screens", () => {
+  // `*` marks the one card that leads.
+  it.each<[string, Parameters<typeof firstRunCards>[0], string[]]>([
+    [
+      "Gmail only",
+      { inbox: "lead", chatApps: [], github: "connect" },
+      ["*inbox", "build", "github:connect", "research", "images"],
+    ],
+    [
+      "Gmail + GitHub",
+      { inbox: "lead", chatApps: [], github: "start" },
+      ["*inbox", "build", "github:start", "research", "images"],
+    ],
+    [
+      "Gmail + chat app",
+      { inbox: "lead", chatApps: ["telegram"], github: "connect" },
+      [
+        "*inbox",
+        "build",
+        "github:connect",
+        "chat-app:telegram",
+        "research",
+        "images",
+      ],
+    ],
+    [
+      "Gmail + GitHub + two chat apps",
+      { inbox: "lead", chatApps: ["telegram", "discord"], github: "start" },
+      [
+        "*inbox",
+        "build",
+        "github:start",
+        "chat-app:telegram",
+        "chat-app:discord",
+        "research",
+        "images",
+      ],
+    ],
+    [
+      "Gmail with nothing to review: Build leads, the inbox follows",
+      { inbox: "quiet", chatApps: ["discord"], github: "start" },
+      [
+        "*build",
+        "inbox",
+        "github:start",
+        "chat-app:discord",
+        "research",
+        "images",
+      ],
+    ],
+    [
+      "Gmail where GitHub can't be offered",
+      { inbox: "lead", chatApps: [], github: null },
+      ["*inbox", "build", "research", "images"],
+    ],
+    [
+      "no Gmail, nothing connected",
+      { inbox: null, chatApps: [], github: "connect" },
+      ["*build", "github:connect", "research", "images"],
+    ],
+    [
+      "no Gmail + GitHub",
+      { inbox: null, chatApps: [], github: "start" },
+      ["*github:start", "build", "research", "images"],
+    ],
+    [
+      "no Gmail + chat app",
+      { inbox: null, chatApps: ["whatsapp"], github: "connect" },
+      ["*chat-app:whatsapp", "build", "github:connect", "research", "images"],
+    ],
+    [
+      "no Gmail + GitHub + two chat apps",
+      { inbox: null, chatApps: ["discord", "telegram"], github: "start" },
+      [
+        "*chat-app:discord",
+        "build",
+        "github:start",
+        "chat-app:telegram",
+        "research",
+        "images",
+      ],
+    ],
+    [
+      "no Gmail where GitHub can't be offered",
+      { inbox: null, chatApps: [], github: null },
+      ["*build", "research", "images"],
+    ],
+  ])("%s", (_name, input, expected) => {
+    expect(
+      firstRunCards(input).map(
+        ({ card, primary }) =>
+          `${primary ? "*" : ""}${card.slot}${
+            card.slot === "github"
+              ? `:${card.github}`
+              : card.slot === "chat-app"
+                ? `:${card.app}`
+                : ""
+          }`
+      )
+    ).toEqual(expected);
   });
 });

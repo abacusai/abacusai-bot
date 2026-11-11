@@ -21,7 +21,7 @@ export interface OnboardingPageProps {
   /** The gallery's first-run screen: the inbox pass to show, or the choices. */
   previewFirstRun?: {
     inbox?: InboxPass;
-    chatApp?: HomeChannel;
+    chatApps?: HomeChannel[];
     github?: GithubChoice;
   };
   step: OnboardingStepId;
