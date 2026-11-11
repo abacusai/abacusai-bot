@@ -92,7 +92,7 @@ export const useCreditWallTask = () => {
     return {
       task,
       resume: (model?: string) => {
-        if (model != null) noteTopModelResume(session.threadId, model);
+        if (model != null) noteTopModelResume(session.threadId);
         return resume(model);
       },
     };

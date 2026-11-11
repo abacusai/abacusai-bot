@@ -6,6 +6,8 @@ import type { StreamChunk } from "@tanstack/ai";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 
+import { fixtureSessions } from "#renderer/data/fixture-db/rows";
+
 import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
 import { renderRelay } from "../testing";
@@ -69,15 +71,21 @@ const turn = (reply: string): StreamChunk[] => [
   b.runFinished("r1", "success"),
 ];
 
+let chats = 0;
 let current: Awaited<ReturnType<typeof renderRelay>> | undefined;
 afterEach(async () => {
   await current?.cleanup();
   current = undefined;
 });
 
-const mount = async (reply: string, resumed: boolean) => {
+const mount = async (
+  reply: string,
+  resumed: boolean,
+  { continuedFrom }: { continuedFrom?: string } = {}
+) => {
   const continued: Array<[string, string | undefined]> = [];
-  const relay = new FakeRelay();
+  // A chat of its own: the offer's answers are kept per chat.
+  const relay = new FakeRelay({ threadId: `t-${(chats += 1)}` });
   relay.emitAll(b.sessionReady());
   const os = implement(contract);
   current = await renderRelay(
@@ -104,7 +112,17 @@ const mount = async (reply: string, resumed: boolean) => {
       models: { list: os.models.list.handler(() => CATALOG) },
     }
   );
-  if (resumed) noteTopModelResume(relay.threadId, OPUS);
+  if (resumed) noteTopModelResume(relay.threadId);
+  // The chat's row, as a continued chat is started (start-session.ts).
+  if (continuedFrom != null)
+    act(() => {
+      current!.db.collections.sessions.insert({
+        ...fixtureSessions()[0]!,
+        id: relay.threadId,
+        continuedFrom,
+        continuation: { sessionId: continuedFrom, summary: "The goal." },
+      } as never);
+    });
   await act(async () => relay.emitAll(turn(reply)));
   return { continued };
 };
@@ -141,6 +159,15 @@ it("Stay keeps the chat on Opus and the line goes", async () => {
     expect(screen.queryByRole("button", { name: LINE })).toBeNull()
   );
   expect(h.continued).toEqual([]);
+});
+
+it("a chat continued in a new one on Opus gets the line under its first result", async () => {
+  await mount("Fixed: the last row now fits on the page.", false, {
+    continuedFrom: "s-before",
+  });
+  expect(
+    await screen.findByRole("button", { name: LINE }, { timeout: 5000 })
+  ).toBeTruthy();
 });
 
 it.each([
