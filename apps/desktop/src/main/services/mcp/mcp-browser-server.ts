@@ -1772,6 +1772,8 @@ export class McpBrowserServer extends McpHttpServer {
     const hint = await this.loginHint(wc, sessionId).catch(() => null);
     if (hint != null) lines.push(hint);
     if (tip != null) lines.push(`Tip for this site: ${tip}`);
+    // A goto to a file's URL stays where it was; the page saved the file.
+    lines.push(...(this.options.target?.()?.pageEvents?.(wc.id) ?? []));
 
     return lines.join("\n");
   }

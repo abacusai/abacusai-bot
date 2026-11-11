@@ -514,6 +514,7 @@ describe("Electron browser runtime", () => {
     const done: Array<(event: unknown, state: string) => void> = [];
     const download = (filename: string) => {
       const item = {
+        getURL: () => `https://example.com/files/${filename}`,
         getFilename: () => filename,
         setSavePath: vi.fn(),
         once: (
@@ -545,6 +546,53 @@ describe("Electron browser runtime", () => {
       `Download finished: ${saved}.`,
       'Download of "report (1).txt" did not finish (interrupted).',
     ]);
+  });
+
+  it("saves a file once when the same page asks for it twice at once", async () => {
+    // Navigating to a file's URL loads it twice (the preview and the view
+    // race), and each load became a download: three copies for one file.
+    mocks.downloads.dir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "runtime-downloads-")
+    );
+    const runtime = new ElectronBrowserRuntime(() => owner as never);
+    await runtime.materialize({
+      conversationKey: draftConversationKey("workspace-one"),
+      resourceId: "browser-one",
+      url: "https://example.com",
+    });
+    const handler = mocks.sessions
+      .get("persist:browser-runtime")
+      ?.listeners.get("will-download")?.[0];
+    const done: Array<(event: unknown, state: string) => void> = [];
+    const download = (url: string, pageId: number) => {
+      const event = { preventDefault: vi.fn() };
+      const item = {
+        getURL: () => url,
+        getFilename: () => path.basename(url),
+        setSavePath: vi.fn(),
+        once: (
+          _event: string,
+          listener: (event: unknown, state: string) => void
+        ) => done.push(listener),
+      };
+      handler?.(event, item, { id: pageId });
+      return event.preventDefault.mock.calls.length === 0;
+    };
+    const url = "https://example.com/download/report.txt";
+    expect(download(url, 8)).toBe(true);
+    expect(download(url, 8)).toBe(false);
+    // The preview's page and the agent's are two pages: still one file, and
+    // the page whose request was dropped is told where it is being saved.
+    expect(download(url, 9)).toBe(false);
+    const saved = path.join(mocks.downloads.dir, "report.txt");
+    expect(runtime.takePageEvents(9)).toEqual([
+      `Download started: "report.txt" is being saved to ${saved}.`,
+    ]);
+    // Another file is its own download.
+    expect(download("https://example.com/download/other.txt", 8)).toBe(true);
+    expect(runtime.takePageEvents(8)).toHaveLength(2);
+    done[0]?.({}, "completed");
+    expect(runtime.takePageEvents(9)).toEqual([`Download finished: ${saved}.`]);
   });
 
   it("clears the browsing data of the partition its views use", async () => {

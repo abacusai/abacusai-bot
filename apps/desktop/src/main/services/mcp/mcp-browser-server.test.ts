@@ -643,6 +643,21 @@ describe("navigating", () => {
     expect(page.url).toBe("https://example.test/results");
   });
 
+  it("says when the page it went to was a file the browser saved", async () => {
+    // A goto to a file's URL stays on the page it came from; the result read
+    // "Navigated to" that page, and the agent never learned a copy was saved.
+    pendingPageEvents.set(page.id, [
+      'Download started: "report.txt" is being saved to /downloads/report.txt.',
+    ]);
+    const { text, isError } = await call("browser_navigate", {
+      action: "goto",
+      url: "https://example.test/download/report.txt",
+    });
+
+    expect(isError).toBe(false);
+    expect(text).toContain('Download started: "report.txt"');
+  });
+
   it("refuses a javascript: URL, which would run in the page already loaded", async () => {
     const { text, isError } = await call("browser_navigate", {
       action: "goto",

@@ -135,10 +135,6 @@ type CrashRecovery = {
 
 const DEFAULT_PARTITION = "persist:browser-runtime";
 
-/**
- * Where a download lands: the downloads folder under the name the site gave,
- * or "name (1).ext" and up when that is taken. Only the base name is used.
- */
 /** Per page id, what it did that the page itself does not show (downloads). */
 const pendingPageEvents = new Map<number, string[]>();
 
@@ -149,6 +145,25 @@ const notePageEvent = (id: number, event: string): void => {
 /** Partition sessions that already save their downloads without a dialog (one handler each). */
 const savingDownloads = new WeakSet<Electron.Session>();
 
+/**
+ * Downloads by URL: a second request for the same file is the same download
+ * while it saves and a moment after. A goto loads its URL in two pages (the
+ * preview's and the agent's), and for a file each load downloads. Every page
+ * that asked is told about the one file.
+ */
+type RecentDownload = {
+  until: number;
+  pages: Set<number>;
+  started: string;
+  finished: string | null;
+};
+const recentDownloads = new Map<string, RecentDownload>();
+const SAME_DOWNLOAD_MS = 1_000;
+
+/**
+ * Where a download lands: the downloads folder under the name the site gave,
+ * or "name (1).ext" and up when that is taken. Only the base name is used.
+ */
 const downloadPath = (dir: string, filename: string): string => {
   const base = path.basename(filename) || "download";
   const ext = path.extname(base);
@@ -903,22 +918,40 @@ export class ElectronBrowserRuntime {
   private saveDownloadsWithoutDialog(partitionSession: Electron.Session): void {
     if (savingDownloads.has(partitionSession)) return;
     savingDownloads.add(partitionSession);
-    partitionSession.on("will-download", (_event, item, contents) => {
+    partitionSession.on("will-download", (event, item, contents) => {
+      const now = Date.now();
+      for (const [key, recent] of recentDownloads)
+        if (recent.until <= now) recentDownloads.delete(key);
+      const url = item.getURL();
+      const same = recentDownloads.get(url);
+      if (same != null) {
+        event.preventDefault();
+        if (!same.pages.has(contents.id)) {
+          same.pages.add(contents.id);
+          notePageEvent(contents.id, same.started);
+          if (same.finished != null) notePageEvent(contents.id, same.finished);
+        }
+        return;
+      }
       const saveAs = downloadPath(app.getPath("downloads"), item.getFilename());
       item.setSavePath(saveAs);
       const name = path.basename(saveAs);
-      notePageEvent(
-        contents.id,
-        `Download started: "${name}" is being saved to ${saveAs}.`
-      );
-      item.once("done", (_done, state) =>
-        notePageEvent(
-          contents.id,
+      const recent: RecentDownload = {
+        until: Number.POSITIVE_INFINITY,
+        pages: new Set([contents.id]),
+        started: `Download started: "${name}" is being saved to ${saveAs}.`,
+        finished: null,
+      };
+      recentDownloads.set(url, recent);
+      notePageEvent(contents.id, recent.started);
+      item.once("done", (_done, state) => {
+        recent.until = Date.now() + SAME_DOWNLOAD_MS;
+        recent.finished =
           state === "completed"
             ? `Download finished: ${saveAs}.`
-            : `Download of "${name}" did not finish (${state}).`
-        )
-      );
+            : `Download of "${name}" did not finish (${state}).`;
+        for (const page of recent.pages) notePageEvent(page, recent.finished);
+      });
     });
   }
 
