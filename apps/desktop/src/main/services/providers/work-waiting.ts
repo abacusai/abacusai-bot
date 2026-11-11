@@ -16,10 +16,11 @@
  * At most three notices per absence: a few hours after it while the app is
  * still open, the next time the app runs (a computer that starts the app at
  * login gets it the next morning), and once more on day three. Credits that
- * come back on the account while the user is away (creditsBack) add one notice
- * of their own, at the next check, saying so: the work they left stopped at
- * the credit wall and can now go on. The user's next
- * message anywhere starts a new absence; a click ends this one. The global
+ * come back on the account while the user is away (creditsBack: at least as
+ * long as the first notice waits, on an absence not ended or expired) add one
+ * notice of their own at the next check: the work they left stopped at the
+ * credit wall and can now go on. The user's next message anywhere starts a
+ * new absence; a click ends this one. The global
  * notifications switch and quiet hours apply, and nothing shows while a turn
  * runs. A focused window is no sign of the user: one the OS opened at login
  * has focus with nobody there.
@@ -62,6 +63,8 @@ const HOUR_MS = 60 * 60 * 1000;
 const WORK_WAITING_AFTER_MS = [3.5 * HOUR_MS, 20 * HOUR_MS, 72 * HOUR_MS];
 /** The least time between two notices for one absence. */
 const WORK_WAITING_GAP_MS = 16 * HOUR_MS;
+/** Credits that come back this soon after the user's last word reach someone still here: no notice. */
+const CREDITS_BACK_AWAY_MS = WORK_WAITING_AFTER_MS[0];
 /** An absence older than this is not brought up again. */
 const WORK_WAITING_EXPIRES_MS = 7 * 24 * HOUR_MS;
 /** The first check after launch: a computer that starts the app at login is brought up then. */
@@ -289,10 +292,18 @@ export class WorkWaiting {
    */
   creditsBack(credits: number): void {
     const record = this.current();
-    if (record == null || record.creditsBack?.shown === false) return;
+    const now = this.now();
+    if (
+      record == null ||
+      record.done ||
+      record.creditsBack?.shown === false ||
+      now - record.leftAt >= WORK_WAITING_EXPIRES_MS ||
+      // Not away yet: the user sees the credits in the app.
+      now - record.leftAt < CREDITS_BACK_AWAY_MS
+    )
+      return;
     this.save({
       ...record,
-      done: false,
       creditsBack: { credits: Math.floor(credits), shown: false },
     });
   }
@@ -348,8 +359,13 @@ export class WorkWaiting {
     }
     if (this.deps.quiet(now) || this.deps.busy()) return false;
     const name = workWaitingLine(found.name);
-    // Marked before the words load, so an overlapping check cannot show it twice.
-    this.save({ ...record, creditsBack: { credits, shown: true } });
+    // Marked before the words load, so an overlapping check cannot show it twice. It counts as one of the absence's
+    // notices, so the next one keeps the usual gap.
+    this.save({
+      ...record,
+      shownAt: [...record.shownAt, now],
+      creditsBack: { credits, shown: true },
+    });
     const t = await this.deps.words();
     this.deps.show(
       {
