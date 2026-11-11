@@ -99,3 +99,27 @@ export const wallMoved = (row: PrefsRow, previous: PrefsRow): boolean => {
     next.freeLaneChosenAt !== before.freeLaneChosenAt
   );
 };
+
+/**
+ * A turn in the user's own chat (`ownChat`: no bot's, routine's or phone
+ * lane's) ended at the wall: that chat and now are the wall the app asks about
+ * again once the user comes back (wall-reopen.tsx). Every wall re-arms it.
+ */
+export const wallReopenAfterError = (
+  sessionId: string,
+  error: { actions?: Array<{ type: string }> } | undefined,
+  ownChat: boolean,
+  now: number
+): PrefsPatch | null =>
+  ownChat && error != null && ranOutOfAbacusCredits(error)
+    ? { dismissals: { wallReopen: { sessionId, wallAt: now, askedAt: null } } }
+    : null;
+
+/** The user wrote again in the walled chat: its paused message waits no more. */
+export const wallReopenAfterWrite = (
+  row: PrefsRow,
+  sessionId: string
+): PrefsPatch | null =>
+  row.dismissals.wallReopen?.sessionId === sessionId
+    ? { dismissals: { wallReopen: null } }
+    : null;

@@ -160,6 +160,17 @@ export const SUPPORTED_LANGUAGES = [
 
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
+/**
+ * A free account's turn stopped at the credit wall in the user's own chat:
+ * which chat and when (main stamps it), and when the app asked again about it
+ * after the user came back (once per wall).
+ */
+export interface WallReopenMark {
+  sessionId: string;
+  wallAt: number;
+  askedAt: number | null;
+}
+
 export interface PrefsRow {
   id: "app";
   theme: "system" | "light" | "dark";
@@ -225,6 +236,8 @@ export interface PrefsRow {
     ratingPrompt?: RatingPromptCard | null;
     /** The top-model hint above the composer, shown and answered. */
     topModelHint?: TopModelHintCard | null;
+    /** The latest credit wall in the user's own chat, asked again once when they come back. */
+    wallReopen?: WallReopenMark | null;
     freePlanSeenAt: number | null;
     upgradeRoutinesSeenAt: number | null;
     routineDuplicatesKept: string[];

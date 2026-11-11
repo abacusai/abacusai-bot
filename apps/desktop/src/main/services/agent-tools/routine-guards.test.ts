@@ -22,6 +22,8 @@ import {
   routineStopsAtWall,
   wallAfterAccountRead,
   wallAfterError,
+  wallReopenAfterError,
+  wallReopenAfterWrite,
   wallMoved,
 } from "../providers/credit-wall";
 import {
@@ -277,6 +279,50 @@ describe("the credit wall a routine meets", () => {
         1_000 + DAY
       )
     ).toEqual({ creditsExhaustedAt: 1_000 + DAY, freeLaneChosenAt: null });
+  });
+
+  it("a wall in the user's own chat is the one asked again on their return; their next words there settle it", () => {
+    // Every wall in the user's own chat re-arms the ask, a later one included.
+    expect(wallReopenAfterError("s1", WALL, true, 5_000)).toEqual({
+      dismissals: {
+        wallReopen: { sessionId: "s1", wallAt: 5_000, askedAt: null },
+      },
+    });
+    // A bot's, a routine's or a phone lane's wall, or another failure, is not one.
+    expect(wallReopenAfterError("s1", WALL, false, 5_000)).toBeNull();
+    expect(
+      wallReopenAfterError(
+        "s1",
+        { actions: [{ type: "switch-model" }] },
+        true,
+        5_000
+      )
+    ).toBeNull();
+    const walled = row({
+      dismissals: {
+        wallReopen: { sessionId: "s1", wallAt: 5_000, askedAt: null },
+      } as PrefsRow["dismissals"],
+    });
+    expect(wallReopenAfterWrite(walled, "s1")).toEqual({
+      dismissals: { wallReopen: null },
+    });
+    expect(wallReopenAfterWrite(walled, "s2")).toBeNull();
+    // The real store takes both writes, as main makes them.
+    const store = new PrefsStore({ file: null });
+    store.update(wallReopenAfterError("s1", WALL, true, 5_000)!);
+    expect(store.get().dismissals.wallReopen).toEqual({
+      sessionId: "s1",
+      wallAt: 5_000,
+      askedAt: null,
+    });
+    store.update(wallReopenAfterWrite(store.get(), "s1")!);
+    expect(store.get().dismissals.wallReopen).toBeNull();
+    expect(
+      wallReopenAfterWrite(
+        row({ dismissals: {} as PrefsRow["dismissals"] }),
+        "s1"
+      )
+    ).toBeNull();
   });
 
   it("stops a fire only while the wall stands and the free models were not chosen", () => {

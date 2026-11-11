@@ -9,7 +9,13 @@ import { OPENLLM_ID } from "@abacus-ai/contract/models";
  */
 import { implement } from "@orpc/server";
 import type { StreamChunk } from "@tanstack/ai";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createMemoryTransport } from "#renderer/data/transport/memory";
@@ -22,6 +28,8 @@ import {
 } from "#renderer/lib/free-credits-watch";
 import {
   closeUpgradeDialog,
+  handOffResume,
+  resumeHandoffStore,
   upgradeDialogStore,
 } from "#renderer/lib/upgrade-dialog";
 
@@ -704,6 +712,28 @@ describe("the turn's outcome card", () => {
     expect(relay.stats.send[0]!.forwardedProps).toMatchObject({
       model: "abacus/claude-opus-5-5",
     });
+    closeUpgradeDialog();
+  });
+
+  it("a plan that landed for the wall asked again on return: the chat, once open, sends its waiting message on the top model", async () => {
+    const onSwitchThisChat = vi.fn(async () => "chat" as const);
+    const relay = failed(WALL);
+    current = await renderRelay(
+      relay,
+      "session",
+      { onContinueInNewChat: async () => {}, onSwitchThisChat },
+      {},
+      host("free")
+    );
+    await screen.findByRole("button", { name: "Upgrade · $7 first month" });
+    act(() => handOffResume(relay.threadId, "abacus/claude-opus-5-5"));
+    await waitFor(() => expect(relay.stats.send).toHaveLength(1));
+    expect(onSwitchThisChat).toHaveBeenCalledWith("abacus/claude-opus-5-5");
+    expect(relay.stats.send[0]!.forwardedProps).toMatchObject({
+      model: "abacus/claude-opus-5-5",
+    });
+    // Taken once.
+    expect(resumeHandoffStore.state).toBeNull();
     closeUpgradeDialog();
   });
 

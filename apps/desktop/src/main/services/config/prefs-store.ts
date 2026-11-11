@@ -88,6 +88,7 @@ const DEFAULTS: PrefsValues = {
     retryOffer: null,
     ratingPrompt: null,
     topModelHint: null,
+    wallReopen: null,
     freePlanSeenAt: null,
     upgradeRoutinesSeenAt: null,
     routineDuplicatesKept: [],

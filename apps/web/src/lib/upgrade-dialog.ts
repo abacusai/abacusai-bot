@@ -51,6 +51,8 @@ export interface UpgradeDialogRequest {
   resume?: (model?: string) => Promise<unknown>;
   /** `plan`: the screen that asked for it (a card, the model picker). */
   src?: UpgradeSrc;
+  /** `credits`: asked again after the user came back to a wall (wall-reopen.tsx). */
+  reopen?: boolean;
 }
 
 /** The screens the other kinds stand for: a free account's refusal in a chat. */
@@ -171,6 +173,32 @@ export const startCreditsCheckout = (
 ): void => {
   void open().catch(() => {});
   requestUpgradeDialog({ ...request, kind: "credits", checkout: true }, true);
+};
+
+/**
+ * A waiting message whose chat was not on screen when the plan landed (the
+ * wall asked again on return): that chat's view sends it, on `model` if
+ * given, once it opens (UpgradeTriggers).
+ */
+export interface ResumeHandoff {
+  threadId: string;
+  model?: string;
+}
+
+export const resumeHandoffStore = new Store<ResumeHandoff | null>(null);
+
+export const handOffResume = (threadId: string, model?: string): void =>
+  resumeHandoffStore.setState(() => ({
+    threadId,
+    ...(model != null && { model }),
+  }));
+
+/** The hand-off for `threadId`, taken once. */
+export const takeResumeHandoff = (threadId: string): ResumeHandoff | null => {
+  const handoff = resumeHandoffStore.state;
+  if (handoff?.threadId !== threadId) return null;
+  resumeHandoffStore.setState(() => null);
+  return handoff;
 };
 
 /** The Abacus connectors gateway's tools are named `abacus-connectors_<Tool>`. */

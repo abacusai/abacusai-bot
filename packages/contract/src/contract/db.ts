@@ -301,6 +301,16 @@ export const PREFS_GROUP_ENTRIES = {
         switched: v.boolean(),
       })
     ),
+    /** The latest credit wall in the user's own chat, asked again once on return (wall-reopen.tsx). */
+    wallReopen: v.optional(
+      v.nullable(
+        v.strictObject({
+          sessionId: v.string(),
+          wallAt: v.pipe(v.number(), v.integer(), v.minValue(0)),
+          askedAt: NullableTimestamp,
+        })
+      )
+    ),
     /** The account first read on the free plan here, so a paid read after it is an upgrade. */
     freePlanSeenAt: NullableTimestamp,
     /** An older build's after-upgrade card, seen: that upgrade counts as welcomed. */
