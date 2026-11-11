@@ -58,6 +58,20 @@ export const launchLink = (
 };
 
 /**
+ * Whether this process was started by a click on a link, as opposed to a
+ * relaunch repeating that link. Losing the single-instance lock is final for
+ * such a launch: the running app already took the link as `second-instance`,
+ * and waiting for the lock would only keep a windowless process around.
+ */
+export const isLinkLaunch = (
+  argv: readonly string[],
+  env: NodeJS.ProcessEnv
+): boolean => {
+  const raw = openLinkInArgv(argv);
+  return raw != null && env[ARGV_LINK_ENV] !== raw;
+};
+
+/**
  * Makes this install the scheme's handler. Packaged builds only: a dev run
  * would take the scheme from an installed app. macOS reads it from the
  * bundle (electron-builder `protocols`), and the Linux packages from the
