@@ -2,8 +2,7 @@
  * The retry offer: when a task goes badly, one line under the reply offering
  * the same task again on one of the plan's top models. The renderer reads the
  * reason off the chat. On a free account a tap opens the upgrade dialog, and
- * once paid the message runs again on that model; half the free accounts get
- * it, so what it does to upgrades can be read against the half that do not.
+ * once paid the message runs again on that model. Every free account gets it.
  * A paying account's plan already runs the model: a tap moves the chat onto
  * it and runs the message again. Either way the chat stays on that model.
  */
@@ -341,20 +340,6 @@ export const retryOfferReason = (
     return "repeat";
   return null;
 };
-
-/** FNV-1a: an account's half must not move between launches or builds. */
-const hash = (text: string): number => {
-  let value = 0x811c9dc5;
-  for (let index = 0; index < text.length; index += 1) {
-    value ^= text.charCodeAt(index);
-    value = Math.imul(value, 0x01000193);
-  }
-  return value >>> 0;
-};
-
-/** Whether this account is in the half that gets the offer. */
-export const retryOfferForAccount = (accountKey: string): boolean =>
-  hash(`retry-offer:${accountKey}`) % 2 === 0;
 
 /** A model picker row, as far as the offers read it. */
 interface CatalogRow {

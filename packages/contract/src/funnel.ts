@@ -69,10 +69,9 @@ export const FUNNEL_STEPS = [
   // left, by which one, kind and whether it named a task; then a click.
   "work_waiting_shown",
   "work_waiting_clicked",
-  // The retry on a top model (retry-offer.ts). The account's half, once (on
-  // or off); the line, by why it showed (with _paid on a paying plan); a tap
-  // and a close; and the message sent again on the model, once switched.
-  "retry_offer_half",
+  // The retry on a top model (retry-offer.ts). The line, by why it showed
+  // (with _paid on a paying plan); a tap and a close; and the message sent
+  // again on the model, once switched.
   "retry_offer_shown",
   "retry_offer_tapped",
   "retry_offer_dismissed",

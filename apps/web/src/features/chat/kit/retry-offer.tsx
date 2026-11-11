@@ -14,7 +14,6 @@ import {
   suggestsNextStep,
 } from "@abacus-ai/contract/bots/suggested-tasks";
 import type { PrefsRow } from "@abacus-ai/contract/contract/rows";
-import { creditAccountKey } from "@abacus-ai/contract/credit-thresholds";
 import {
   type DeliverableOfferCard,
   deliverableOfferAllowed,
@@ -23,7 +22,6 @@ import {
 } from "@abacus-ai/contract/deliverable-offer";
 import type { FunnelStep } from "@abacus-ai/contract/funnel";
 import {
-  retryOfferForAccount,
   retryOfferModel,
   type RetryOfferReason,
   retryOfferReason,
@@ -150,12 +148,11 @@ export const RetryOfferRow = ({
   const [preparing, setPreparing] = useState(false);
   // The gallery shows it on a model of its own, and keeps no answer.
   const preview = slots.retryOfferPreview ?? null;
-  const key = creditAccountKey(account);
   const tier = creditsTier(account);
   const free = tier === "free";
-  // A paying plan runs the top models already: no upgrade, no A/B half.
+  // Every free and paying account gets it. A paying plan runs the top models
+  // already, so it needs no upgrade.
   const paying = tier === "basic" || tier === "paid";
-  const inHalf = key != null && retryOfferForAccount(key);
   const target = retryOfferTarget(messages);
   const card = prefs.dismissals.retryOffer ?? null;
   // The success pitch owns the space under a reply it is offered on.
@@ -171,7 +168,7 @@ export const RetryOfferRow = ({
     (preview != null ||
       (IS_ELECTRON &&
         composer.onContinueInNewChat != null &&
-        ((free && inHalf) || paying) &&
+        (free || paying) &&
         !pitchHere));
   const ended = outcome != null && (isLive(outcome) || sentHere);
   const allowed =
@@ -236,19 +233,6 @@ export const RetryOfferRow = ({
       })
       .catch(() => undefined);
   };
-  // Each free account reports its half once, on or off, for the comparison.
-  const reportHalf = useEffectEvent(() => {
-    void transport.client.system
-      .funnelStep({
-        step: "retry_offer_half",
-        detail: inHalf ? "on" : "off",
-        once: true,
-      })
-      .catch(() => undefined);
-  });
-  useEffect(() => {
-    if (IS_ELECTRON && free && key != null) reportHalf();
-  }, [free, key]);
   // Counted once per reply, when it first comes on screen.
   const shown = useEffectEvent(() => {
     if (showing == null || card?.shownOffer === showing.id) return;
