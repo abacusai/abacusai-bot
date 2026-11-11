@@ -1,14 +1,12 @@
 /**
- * The paid credit cards' "make your credits last" option: one tap moves the
- * chat the card names off a top model and back onto the plan's own low-cost
- * router, from its next message.
+ * The way back down from a top model: whether a chat runs on a top model, and
+ * the plan's own low-cost router to offer instead. The paid credit cards use
+ * it; a card after a clean top-model result can use the same rule.
  *
- * It moves the chat in place, unlike the way up (continue-chat.ts opens a new chat from a
- * summary). Going up, a fresh chat lets the stronger model start clean;
- * going down there is nothing to restart, and a new chat would spend a
- * summary call and lose the user's place at the moment they are trying to
- * save credits. The chat keeps its history, and only this chat moves: the
- * app's default and other chats keep theirs.
+ * The move is a new chat from a summary, as the way up is (continue-chat.ts):
+ * the router then starts from a short summary instead of re-reading the top
+ * model's long history on every call. The old chat keeps its history and its
+ * model; the app's default and other chats keep theirs.
  */
 import {
   ABACUS_CODE_ROUTER_LOW_ID,

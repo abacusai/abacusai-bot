@@ -17,7 +17,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DbProvider } from "#renderer/data/db";
 import { fixturePrefs, fixtureSessions } from "#renderer/data/fixture-db/rows";
-import { setSessionModel } from "#renderer/features/sessions/data/session-actions";
 import {
   closeUpgradeDialog,
   requestUpgradeDialog,
@@ -394,6 +393,10 @@ describe("the plan's credit milestone card", () => {
     sessions = [] as Array<Partial<SessionRow>>,
     billing = BILLING as BillingPlan,
     models = [] as ModelAvailability[],
+    continueInNewChat = vi.fn(async () => undefined) as (
+      row: SessionRow,
+      model: string
+    ) => Promise<void>,
   } = {}) => {
     const os = implement(contract);
     const seed = defaultSeed();
@@ -428,7 +431,7 @@ describe("the plan's credit milestone card", () => {
       <QueryClientProvider client={queryClient}>
         <RouterContextProvider router={harness.router}>
           <DbProvider value={harness.appDb}>
-            <CreditThresholdHost setChatModel={setSessionModel} />
+            <CreditThresholdHost continueInNewChat={continueInNewChat} />
           </DbProvider>
         </RouterContextProvider>
       </QueryClientProvider>
@@ -641,14 +644,16 @@ describe("the plan's credit milestone card", () => {
       configured: true,
     },
   ];
-  const CHEAPER = "Make your credits last: continue on RouteLLM";
+  const CHEAPER = "Make your credits last: continue on RouteLLM in a new chat";
 
-  it("a paid chat on a top model: the cheaper button moves that chat to the plan's router", async () => {
+  it("a paid chat on a top model: the cheaper button continues that chat in a new one on the plan's router", async () => {
+    const continueInNewChat = vi.fn(async () => undefined);
     const h = await host({
       account: PAID_ACCOUNT,
       mark: PAID_MARK,
       billing: PAID_BILLING,
       models: CATALOG,
+      continueInNewChat,
       sessions: [{ id: "s1", label: "Shop", model: "abacus/claude-opus-5-5" }],
     });
     const button = await screen.findByRole("button", { name: CHEAPER });
@@ -657,16 +662,36 @@ describe("the plan's credit milestone card", () => {
     expect(screen.getByRole("button", { name: "Keep going" })).toBeTruthy();
     fireEvent.click(button);
     await waitFor(() =>
-      expect(h.harness.appDb.collections.sessions.get("s1")?.model).toBe(
-        "abacus/route-llm-code"
-      )
+      expect(h.steps()).toContain("credit_card_paid_80_switch_cheaper")
     );
-    expect(h.steps()).toContain("credit_card_paid_80_switch_cheaper");
-    // This chat only: the app's default stays.
-    expect(
-      h.harness.calls.some(([name]) => name === "settings.setDefaultModel")
-    ).toBe(false);
+    expect(continueInNewChat).toHaveBeenCalledOnce();
+    expect(continueInNewChat).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "s1" }),
+      "abacus/route-llm-code"
+    );
+    // The old chat keeps its model.
+    expect(h.harness.appDb.collections.sessions.get("s1")?.model).toBe(
+      "abacus/claude-opus-5-5"
+    );
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("a hand-off that fails leaves the card up for another try", async () => {
+    const h = await host({
+      account: PAID_ACCOUNT,
+      mark: PAID_MARK,
+      billing: PAID_BILLING,
+      models: CATALOG,
+      continueInNewChat: vi.fn(async () => {
+        throw new Error("no summary");
+      }),
+      sessions: [{ id: "s1", label: "Shop", model: "abacus/claude-opus-5-5" }],
+    });
+    fireEvent.click(await screen.findByRole("button", { name: CHEAPER }));
+    const again = await screen.findByRole("button", { name: CHEAPER });
+    expect(again.hasAttribute("disabled")).toBe(false);
+    expect(h.steps()).not.toContain("credit_card_paid_80_switch_cheaper");
+    expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
   it.each([

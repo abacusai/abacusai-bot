@@ -5039,9 +5039,9 @@
     "upgrade": "Upgrade",
     "continueFree": "Kostenlos weitermachen",
     "keepGoing": "Keep going",
-    "switchCheaper": "Mach deine Credits länger nutzbar: weiter mit {{model}}",
-    "switchedCheaper": "Dieser Chat läuft ab deiner nächsten Nachricht mit {{model}} weiter",
-    "switchedCheaperBack": "Du kannst {{model}} jederzeit wieder in der Modellauswahl wählen."
+    "switchCheaper": "Mach deine Credits länger nutzbar: in einem neuen Chat mit {{model}} weiter",
+    "switchedCheaper": "Weiter mit {{model}} in einem neuen Chat",
+    "switchedCheaperBack": "Wieder festgefahren? Du kannst {{model}} jederzeit in der Modellauswahl wählen."
   },
   "successPitch": {
     "moment": {

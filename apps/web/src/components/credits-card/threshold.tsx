@@ -26,13 +26,12 @@ import { resolveConfiguredModel } from "@abacus-ai/contract/models";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Check, Gauge, Leaf } from "lucide-react";
-import { useEffect, useEffectEvent } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { type Db, useCollections, useDb } from "#renderer/data/db";
+import { useCollections, useDb } from "#renderer/data/db";
 import { isListedSession, isListedWorkspace } from "#renderer/data/db/filters";
 import { usePrefs } from "#renderer/data/db/prefs";
-import type { AppClient } from "#renderer/data/transport/types";
 import { showError, showInfo } from "#renderer/lib/toast";
 import { openNextPlan, openTopUp, openUpgrade } from "#renderer/lib/upgrade";
 import { useUpgradeDialogRequest } from "#renderer/lib/upgrade-dialog";
@@ -52,8 +51,8 @@ import {
  * turns; it stays until a button is picked, and Esc keeps going. The free
  * plan is offered its upgrade; a paid plan its top-up and next plan by the
  * one offer rule (paidCreditsOffer), Basic its next plan alone, pitched as
- * the free plan's upgrade is. A paid chat on a top model is also offered its
- * plan's low-cost model (cheaper-model.ts).
+ * the free plan's upgrade is. A paid chat on a top model is also offered to
+ * continue in a new chat on its plan's low-cost model (cheaper-model.ts).
  */
 
 export interface CreditThresholdCardProps {
@@ -71,8 +70,12 @@ export interface CreditThresholdCardProps {
   /** A paid plan's next plan, beside its top-up. */
   onNextPlan?(): void;
   onTopUp?(): void;
-  /** A paid chat on a top model: move it to the plan's low-cost model, by name. */
-  cheaper?: { model: string; onSwitch(): void };
+  /**
+   * A paid chat on a top model: continue it in a new chat on the plan's
+   * low-cost model, by name. The card stays, the button busy, until the new
+   * chat opens; a rejection leaves it for another try.
+   */
+  cheaper?: { model: string; onSwitch(): Promise<void> };
   onContinue(): void;
 }
 
@@ -123,12 +126,18 @@ export const CreditThresholdCard = ({
   const first = offer?.firstMonthPriceCents;
   const price = offer?.priceCents;
   const Icon = threshold === 80 ? AlertTriangle : Gauge;
+  const [preparing, setPreparing] = useState(false);
+  const switchCheaper = () => {
+    if (cheaper == null || preparing) return;
+    setPreparing(true);
+    void cheaper.onSwitch().catch(() => setPreparing(false));
+  };
   return (
     <Dialog
       open
       disablePointerDismissal
       onOpenChange={(next) => {
-        if (!next) onContinue();
+        if (!next && !preparing) onContinue();
       }}
     >
       <DialogContent
@@ -251,10 +260,13 @@ export const CreditThresholdCard = ({
               variant="outline"
               className="h-auto min-h-10 py-2 text-sm font-medium whitespace-normal"
               data-action="switch-cheaper"
-              onClick={cheaper.onSwitch}
+              disabled={preparing}
+              onClick={switchCheaper}
             >
               <Leaf aria-hidden className="text-primary size-4 shrink-0" />
-              {t("creditThreshold.switchCheaper", { model: cheaper.model })}
+              {preparing
+                ? t("chat.continuation.preparing", { model: cheaper.model })
+                : t("creditThreshold.switchCheaper", { model: cheaper.model })}
             </Button>
           )}
           <Button
@@ -281,16 +293,14 @@ export const CreditThresholdCard = ({
  * card's), and it never opens over a running turn or the upgrade dialog.
  */
 export const CreditThresholdHost = ({
-  setChatModel,
+  continueInNewChat,
 }: {
-  /** Moves one chat to a model (the sessions feature's), passed in by the shell. */
-  setChatModel?(
-    db: Db,
-    client: AppClient,
-    row: SessionRow,
-    model: string,
-    options: { thisChatOnly: true }
-  ): Promise<void>;
+  /**
+   * Continues a chat in a new one on a model, from a summary, and opens it
+   * (the sessions feature's hand-off, as the top models use going up); passed
+   * in by the shell.
+   */
+  continueInNewChat?(row: SessionRow, model: string): Promise<void>;
 }) => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
@@ -460,34 +470,29 @@ export const CreditThresholdHost = ({
         void openTopUp(transport.client);
         answer("top_up");
       }}
-      {...(cheaper != null && latest != null && setChatModel != null
+      {...(cheaper != null && latest != null && continueInNewChat != null
         ? {
             cheaper: {
               model: cheaper.target.label,
-              onSwitch: () => {
+              onSwitch: async () => {
+                try {
+                  await continueInNewChat(latest, cheaper.target.id);
+                } catch (error) {
+                  // Nothing opened: the card stays for another try.
+                  showError(t("chat.continuation.failed"));
+                  throw error;
+                }
                 answer("switch_cheaper");
-                void setChatModel(
-                  db,
-                  transport.client,
-                  latest,
-                  cheaper.target.id,
+                showInfo(
+                  t("creditThreshold.switchedCheaper", {
+                    model: cheaper.target.label,
+                  }),
                   {
-                    thisChatOnly: true,
+                    description: t("creditThreshold.switchedCheaperBack", {
+                      model: cheaper.current.label,
+                    }),
                   }
-                )
-                  .then(() =>
-                    showInfo(
-                      t("creditThreshold.switchedCheaper", {
-                        model: cheaper.target.label,
-                      }),
-                      {
-                        description: t("creditThreshold.switchedCheaperBack", {
-                          model: cheaper.current.label,
-                        }),
-                      }
-                    )
-                  )
-                  .catch(() => showError(t("workspace.modelSwitchFailed")));
+                );
               },
             },
           }

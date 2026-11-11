@@ -5039,9 +5039,9 @@
     "upgrade": "Fazer upgrade",
     "continueFree": "Continuar grátis",
     "keepGoing": "Keep going",
-    "switchCheaper": "Faça seus créditos renderem mais: continue no {{model}}",
-    "switchedCheaper": "Este chat continua no {{model}} a partir da sua próxima mensagem",
-    "switchedCheaperBack": "Você pode escolher o {{model}} de novo no seletor de modelos quando quiser."
+    "switchCheaper": "Faça seus créditos renderem mais: continue no {{model}} em um novo chat",
+    "switchedCheaper": "Continuando no {{model}} em um novo chat",
+    "switchedCheaperBack": "Travou de novo? Você pode escolher o {{model}} no seletor de modelos quando quiser."
   },
   "successPitch": {
     "moment": {

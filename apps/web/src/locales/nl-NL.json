@@ -5039,9 +5039,9 @@
     "upgrade": "Upgraden",
     "continueFree": "Gratis doorgaan",
     "keepGoing": "Doorgaan",
-    "switchCheaper": "Laat je credits langer meegaan: ga verder met {{model}}",
-    "switchedCheaper": "Deze chat gaat vanaf je volgende bericht verder met {{model}}",
-    "switchedCheaperBack": "Je kunt {{model}} altijd weer kiezen in de modelkiezer."
+    "switchCheaper": "Laat je credits langer meegaan: ga verder met {{model}} in een nieuwe chat",
+    "switchedCheaper": "Je gaat verder met {{model}} in een nieuwe chat",
+    "switchedCheaperBack": "Weer vast? Je kunt {{model}} altijd kiezen in de modelkiezer."
   },
   "successPitch": {
     "moment": {

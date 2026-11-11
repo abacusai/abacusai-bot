@@ -5039,9 +5039,9 @@
     "upgrade": "Yükselt",
     "continueFree": "Ücretsiz devam et",
     "keepGoing": "Keep going",
-    "switchCheaper": "Kredilerin daha uzun yetsin: {{model}} ile devam et",
-    "switchedCheaper": "Bu sohbet bir sonraki mesajından itibaren {{model}} ile devam ediyor",
-    "switchedCheaperBack": "{{model}} modelini istediğin zaman model seçiciden yeniden seçebilirsin."
+    "switchCheaper": "Kredilerin daha uzun yetsin: yeni bir sohbette {{model}} ile devam et",
+    "switchedCheaper": "Yeni bir sohbette {{model}} ile devam ediliyor",
+    "switchedCheaperBack": "Yine mi takıldın? {{model}} modelini istediğin zaman model seçiciden seçebilirsin."
   },
   "successPitch": {
     "moment": {

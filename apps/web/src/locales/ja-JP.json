@@ -5039,9 +5039,9 @@
     "upgrade": "アップグレード",
     "continueFree": "無料で続ける",
     "keepGoing": "Keep going",
-    "switchCheaper": "クレジットを長持ちさせる: {{model}} で続ける",
-    "switchedCheaper": "次のメッセージから、このチャットは {{model}} で続きます",
-    "switchedCheaperBack": "{{model}} はモデル選択からいつでも選び直せます。"
+    "switchCheaper": "クレジットを長持ちさせる: 新しいチャットで {{model}} を使って続ける",
+    "switchedCheaper": "新しいチャットで {{model}} を使って続けます",
+    "switchedCheaperBack": "また行き詰まったら、モデル選択からいつでも {{model}} を選べます。"
   },
   "successPitch": {
     "moment": {

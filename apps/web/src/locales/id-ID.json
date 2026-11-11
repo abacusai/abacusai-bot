@@ -5039,9 +5039,9 @@
     "upgrade": "Upgrade",
     "continueFree": "Lanjut gratis",
     "keepGoing": "Keep going",
-    "switchCheaper": "Buat kredit Anda lebih awet: lanjutkan dengan {{model}}",
-    "switchedCheaper": "Chat ini berlanjut dengan {{model}} mulai pesan Anda berikutnya",
-    "switchedCheaperBack": "Anda bisa memilih {{model}} lagi di pemilih model kapan saja."
+    "switchCheaper": "Buat kredit Anda lebih awet: lanjutkan dengan {{model}} di chat baru",
+    "switchedCheaper": "Melanjutkan dengan {{model}} di chat baru",
+    "switchedCheaperBack": "Buntu lagi? Anda bisa memilih {{model}} di pemilih model kapan saja."
   },
   "successPitch": {
     "moment": {

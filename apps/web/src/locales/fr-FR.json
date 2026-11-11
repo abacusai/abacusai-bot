@@ -5039,9 +5039,9 @@
     "upgrade": "Passer au forfait",
     "continueFree": "Continuer gratuitement",
     "keepGoing": "Keep going",
-    "switchCheaper": "Faites durer vos crédits : continuez avec {{model}}",
-    "switchedCheaper": "Ce chat continue avec {{model}} dès votre prochain message",
-    "switchedCheaperBack": "Vous pouvez reprendre {{model}} à tout moment dans le sélecteur de modèle."
+    "switchCheaper": "Faites durer vos crédits : continuez avec {{model}} dans un nouveau chat",
+    "switchedCheaper": "Vous continuez avec {{model}} dans un nouveau chat",
+    "switchedCheaperBack": "Encore bloqué ? Vous pouvez reprendre {{model}} à tout moment dans le sélecteur de modèle."
   },
   "successPitch": {
     "moment": {

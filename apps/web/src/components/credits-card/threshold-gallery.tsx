@@ -133,7 +133,13 @@ export const CreditThresholdGallery = ({
           }
         : {})}
       {...(paid?.endsWith("top-model")
-        ? { cheaper: { model: "RouteLLM", onSwitch: close } }
+        ? {
+            cheaper: {
+              model: "RouteLLM",
+              // Stays preparing, so the gallery shows the busy button.
+              onSwitch: () => new Promise<void>(() => undefined),
+            },
+          }
         : {})}
       onUpgrade={close}
       onContinue={close}

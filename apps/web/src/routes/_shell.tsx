@@ -27,7 +27,7 @@ import {
   onboardingExitTarget,
 } from "#renderer/features/onboarding/machine";
 import { PairingQueueBanner } from "#renderer/features/onboarding/pairing-banner";
-import { setSessionModel } from "#renderer/features/sessions/data/session-actions";
+import { continueInNewChat } from "#renderer/features/sessions/data/continue-chat";
 import { SessionsGlobals } from "#renderer/features/sessions/globals";
 import { dispatchPreview } from "#renderer/features/shell/preview-consumers";
 import {
@@ -49,6 +49,7 @@ import { useChromeState } from "#renderer/lib/chrome-state";
 import { useDocumentSoundOwner } from "#renderer/lib/document-sound";
 import { ignoreLoadError } from "#renderer/lib/navigation/loaders";
 import { SHELL_DEFAULTS, ShellSearch } from "#renderer/lib/navigation/search";
+import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 
 const ShellRoute = () => {
   const { transport, db, queryClient } = Route.useRouteContext();
@@ -82,6 +83,7 @@ const ShellRoute = () => {
     ).catch((error) => console.warn("[onboarding] tail deferred", error));
   }, [db, transport, queryClient, router]);
   const chrome = useChromeState(transport);
+  const navigate = useAppNavigate();
   return (
     <>
       <ShellLayout
@@ -104,7 +106,21 @@ const ShellRoute = () => {
       <UpgradeDialogHost />
       <ShareDialogHost />
       {!provisional && tour == null && (
-        <CreditThresholdHost setChatModel={setSessionModel} />
+        <CreditThresholdHost
+          continueInNewChat={(row, model) =>
+            continueInNewChat({
+              client: transport.client,
+              row,
+              model,
+              open: (search) =>
+                navigate({
+                  to: "/sessions/new",
+                  search,
+                  transition: "nav-forward",
+                }),
+            })
+          }
+        />
       )}
       {!provisional && tour == null && <PaidWelcomeHost />}
       {!provisional && <PaymentRequiredDialog />}

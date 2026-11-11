@@ -5039,9 +5039,9 @@
     "upgrade": "업그레이드",
     "continueFree": "무료로 계속하기",
     "keepGoing": "Keep going",
-    "switchCheaper": "크레딧을 더 오래 쓰기: {{model}}(으)로 계속하기",
-    "switchedCheaper": "다음 메시지부터 이 채팅은 {{model}}(으)로 계속됩니다",
-    "switchedCheaperBack": "모델 선택에서 언제든 {{model}}을(를) 다시 고를 수 있어요."
+    "switchCheaper": "크레딧을 더 오래 쓰기: 새 채팅에서 {{model}}(으)로 계속하기",
+    "switchedCheaper": "새 채팅에서 {{model}}(으)로 계속합니다",
+    "switchedCheaperBack": "다시 막히면 모델 선택에서 언제든 {{model}}을(를) 고를 수 있어요."
   },
   "successPitch": {
     "moment": {

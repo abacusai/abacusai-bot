@@ -5199,9 +5199,9 @@
     "upgrade": "Ulepsz plan",
     "continueFree": "Kontynuuj za darmo",
     "keepGoing": "Kontynuuj",
-    "switchCheaper": "Niech kredyty starczą na dłużej: kontynuuj z {{model}}",
-    "switchedCheaper": "Od następnej wiadomości ten czat działa na {{model}}",
-    "switchedCheaperBack": "W każdej chwili możesz wrócić do {{model}} w wyborze modelu."
+    "switchCheaper": "Niech kredyty starczą na dłużej: kontynuuj z {{model}} w nowym czacie",
+    "switchedCheaper": "Kontynuujesz z {{model}} w nowym czacie",
+    "switchedCheaperBack": "Znowu utknąłeś? W każdej chwili możesz wybrać {{model}} w wyborze modelu."
   },
   "successPitch": {
     "moment": {
