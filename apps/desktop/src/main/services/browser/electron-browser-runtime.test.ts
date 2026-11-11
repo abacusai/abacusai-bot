@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -185,8 +187,15 @@ const mocks = vi.hoisted(() => {
   /** The partition sessions, keyed by partition name. */
   const sessions = new Map<
     string,
-    { userAgent: string; setUserAgent: (value: string) => void }
+    {
+      userAgent: string;
+      setUserAgent: (value: string) => void;
+      listeners: Map<string, Listener[]>;
+      clearStorageData: ReturnType<typeof vi.fn>;
+    }
   >();
+  /** Electron's downloads folder, as app.getPath answers it. */
+  const downloads = { dir: "" };
   const fromPartition = vi.fn((partition: string) => {
     const existing = sessions.get(partition);
     if (existing != null) return existing;
@@ -199,6 +208,14 @@ const mocks = vi.hoisted(() => {
         this.userAgent = value;
       },
       webRequest: { onBeforeRequest: vi.fn() },
+      listeners: new Map<string, Listener[]>(),
+      on(event: string, listener: Listener) {
+        this.listeners.set(event, [
+          ...(this.listeners.get(event) ?? []),
+          listener,
+        ]);
+      },
+      clearStorageData: vi.fn(async () => undefined),
       getUserAgent(): string {
         return this.userAgent;
       },
@@ -216,6 +233,7 @@ const mocks = vi.hoisted(() => {
     page,
     sessions,
     fromPartition,
+    downloads,
     publish: vi.fn(),
   };
 });
@@ -225,6 +243,10 @@ vi.mock("electron", () => ({
   WebContentsView: mocks.FakeWebContentsView,
   BaseWindow: mocks.FakeBaseWindow,
   session: { fromPartition: mocks.fromPartition },
+  app: {
+    getPath: (name: string) =>
+      name === "downloads" ? mocks.downloads.dir : "",
+  },
 }));
 
 import {
@@ -465,6 +487,53 @@ describe("Electron browser runtime", () => {
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
         "(KHTML, like Gecko) Chrome/150.0.7871.224 Safari/537.36"
     );
+  });
+
+  it("saves a download into the downloads folder, never asking with a save dialog", async () => {
+    // A click on a download link in the bot's hidden view opened one native
+    // Save dialog per click on the user's screen, and nothing was saved.
+    mocks.downloads.dir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "runtime-downloads-")
+    );
+    fs.writeFileSync(
+      path.join(mocks.downloads.dir, "report.txt"),
+      "an earlier one"
+    );
+    const runtime = new ElectronBrowserRuntime(() => owner as never);
+    for (const resourceId of ["browser-one", "browser-two"])
+      await runtime.materialize({
+        conversationKey: draftConversationKey("workspace-one"),
+        resourceId,
+        url: "https://example.com",
+      });
+    const handlers =
+      mocks.sessions
+        .get("persist:browser-runtime")
+        ?.listeners.get("will-download") ?? [];
+    expect(handlers).toHaveLength(1);
+    const download = (filename: string) => {
+      const item = { getFilename: () => filename, setSavePath: vi.fn() };
+      handlers[0]?.({}, item, {});
+      return item.setSavePath.mock.calls[0]?.[0];
+    };
+    expect(download("blah.txt")).toBe(
+      path.join(mocks.downloads.dir, "blah.txt")
+    );
+    expect(download("report.txt")).toBe(
+      path.join(mocks.downloads.dir, "report (1).txt")
+    );
+    expect(download("../../etc/passwd")).toBe(
+      path.join(mocks.downloads.dir, "passwd")
+    );
+  });
+
+  it("clears the browsing data of the partition its views use", async () => {
+    const runtime = new ElectronBrowserRuntime(() => owner as never);
+    await runtime.clearData();
+    expect(mocks.fromPartition).toHaveBeenCalledWith("persist:browser-runtime");
+    expect(
+      mocks.sessions.get("persist:browser-runtime")?.clearStorageData
+    ).toHaveBeenCalled();
   });
 
   it("answers with the error state when the address bar's page will not load", async () => {

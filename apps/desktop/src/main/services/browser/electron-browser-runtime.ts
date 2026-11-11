@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { realpathSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
+import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import type {
@@ -22,6 +23,7 @@ import {
 } from "@abacus-ai/contract/conversation-scope";
 import { ForbiddenError } from "@abacus-ai/contract/forbidden";
 import {
+  app,
   BaseWindow,
   session,
   WebContentsView,
@@ -132,6 +134,23 @@ type CrashRecovery = {
 };
 
 const DEFAULT_PARTITION = "persist:browser-runtime";
+
+/**
+ * Where a download lands: the downloads folder under the name the site gave,
+ * or "name (1).ext" and up when that is taken. Only the base name is used.
+ */
+/** Partition sessions that already save their downloads without a dialog (one handler each). */
+const savingDownloads = new WeakSet<Electron.Session>();
+
+const downloadPath = (dir: string, filename: string): string => {
+  const base = path.basename(filename) || "download";
+  const ext = path.extname(base);
+  const stem = base.slice(0, base.length - ext.length);
+  let candidate = path.join(dir, base);
+  for (let n = 1; existsSync(candidate); n++)
+    candidate = path.join(dir, `${stem} (${n})${ext}`);
+  return candidate;
+};
 
 const runtimeMapKey = (
   conversationKey: ConversationKey,
@@ -804,10 +823,12 @@ export class ElectronBrowserRuntime {
           ? DEFAULT_PARTITION
           : importedProfilePartition(options.profileId);
     const partitionSession = session.fromPartition(partition);
-    if (localFile == null)
+    if (localFile == null) {
       partitionSession.setUserAgent(
         plainChromeUserAgent(partitionSession.getUserAgent())
       );
+      this.saveDownloadsWithoutDialog(partitionSession);
+    }
     const view = new WebContentsView({
       webPreferences: {
         partition,
@@ -862,6 +883,26 @@ export class ElectronBrowserRuntime {
         return { action: "deny" };
       });
     return view;
+  }
+
+  /**
+   * A download goes straight to the downloads folder, as Chrome saves one by
+   * default. Electron's default is a native Save dialog per download, which
+   * a click in the bot's hidden view opened over the user's screen.
+   */
+  private saveDownloadsWithoutDialog(partitionSession: Electron.Session): void {
+    if (savingDownloads.has(partitionSession)) return;
+    savingDownloads.add(partitionSession);
+    partitionSession.on("will-download", (_event, item) => {
+      item.setSavePath(
+        downloadPath(app.getPath("downloads"), item.getFilename())
+      );
+    });
+  }
+
+  /** Clears the browsing data (sign-ins, cookies, storage) of the browser's views. */
+  async clearData(): Promise<void> {
+    await session.fromPartition(DEFAULT_PARTITION).clearStorageData();
   }
 
   /** §12.8's lock: the file, its fragments, and nothing else on top. */
