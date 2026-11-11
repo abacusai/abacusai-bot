@@ -29,10 +29,10 @@ import { AlertTriangle, Check, Gauge, Leaf } from "lucide-react";
 import { useEffect, useEffectEvent } from "react";
 import { useTranslation } from "react-i18next";
 
-import { useCollections, useDb } from "#renderer/data/db";
+import { type Db, useCollections, useDb } from "#renderer/data/db";
 import { isListedSession, isListedWorkspace } from "#renderer/data/db/filters";
 import { usePrefs } from "#renderer/data/db/prefs";
-import { setSessionModel } from "#renderer/features/sessions/data/session-actions";
+import type { AppClient } from "#renderer/data/transport/types";
 import { showError, showInfo } from "#renderer/lib/toast";
 import { openNextPlan, openTopUp, openUpgrade } from "#renderer/lib/upgrade";
 import { useUpgradeDialogRequest } from "#renderer/lib/upgrade-dialog";
@@ -280,7 +280,18 @@ export const CreditThresholdCard = ({
  * answered. Never for an unread plan or spent credits (the out-of-credits
  * card's), and it never opens over a running turn or the upgrade dialog.
  */
-export const CreditThresholdHost = () => {
+export const CreditThresholdHost = ({
+  setChatModel,
+}: {
+  /** Moves one chat to a model (the sessions feature's), passed in by the shell. */
+  setChatModel?(
+    db: Db,
+    client: AppClient,
+    row: SessionRow,
+    model: string,
+    options: { thisChatOnly: true }
+  ): Promise<void>;
+}) => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
   const db = useDb();
@@ -449,13 +460,13 @@ export const CreditThresholdHost = () => {
         void openTopUp(transport.client);
         answer("top_up");
       }}
-      {...(cheaper != null && latest != null
+      {...(cheaper != null && latest != null && setChatModel != null
         ? {
             cheaper: {
               model: cheaper.target.label,
               onSwitch: () => {
                 answer("switch_cheaper");
-                void setSessionModel(
+                void setChatModel(
                   db,
                   transport.client,
                   latest,

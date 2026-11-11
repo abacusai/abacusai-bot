@@ -17,6 +17,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DbProvider } from "#renderer/data/db";
 import { fixturePrefs, fixtureSessions } from "#renderer/data/fixture-db/rows";
+import { setSessionModel } from "#renderer/features/sessions/data/session-actions";
 import {
   closeUpgradeDialog,
   requestUpgradeDialog,
@@ -427,7 +428,7 @@ describe("the plan's credit milestone card", () => {
       <QueryClientProvider client={queryClient}>
         <RouterContextProvider router={harness.router}>
           <DbProvider value={harness.appDb}>
-            <CreditThresholdHost />
+            <CreditThresholdHost setChatModel={setSessionModel} />
           </DbProvider>
         </RouterContextProvider>
       </QueryClientProvider>

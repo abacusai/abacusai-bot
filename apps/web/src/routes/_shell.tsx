@@ -27,6 +27,7 @@ import {
   onboardingExitTarget,
 } from "#renderer/features/onboarding/machine";
 import { PairingQueueBanner } from "#renderer/features/onboarding/pairing-banner";
+import { setSessionModel } from "#renderer/features/sessions/data/session-actions";
 import { SessionsGlobals } from "#renderer/features/sessions/globals";
 import { dispatchPreview } from "#renderer/features/shell/preview-consumers";
 import {
@@ -102,7 +103,9 @@ const ShellRoute = () => {
       <SessionsGlobals preview={dispatchPreview} />
       <UpgradeDialogHost />
       <ShareDialogHost />
-      {!provisional && tour == null && <CreditThresholdHost />}
+      {!provisional && tour == null && (
+        <CreditThresholdHost setChatModel={setSessionModel} />
+      )}
       {!provisional && tour == null && <PaidWelcomeHost />}
       {!provisional && <PaymentRequiredDialog />}
     </>
