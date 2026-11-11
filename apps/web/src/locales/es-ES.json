@@ -5040,6 +5040,7 @@
     "continueFree": "Seguir gratis",
     "keepGoing": "Keep going",
     "switchCheaper": "Haz que tus créditos duren más: sigue con {{model}} en un chat nuevo",
+    "switchCheaperHint": "{{model}} elige un modelo económico para cada paso, así tus créditos duran mucho más. Los chats nuevos también empiezan con él, y un modelo superior sigue a un clic si una tarea se atasca.",
     "switchedCheaper": "Sigues con {{model}} en un chat nuevo",
     "switchedCheaperBack": "¿Otra vez atascado? Puedes elegir {{model}} en el selector de modelos cuando quieras."
   },

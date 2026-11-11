@@ -400,6 +400,7 @@ describe("the plan's credit milestone card", () => {
   } = {}) => {
     const os = implement(contract);
     const seed = defaultSeed();
+    const defaults: string[] = [];
     const harness = await createHarness("/", {
       models,
       seed: {
@@ -423,6 +424,12 @@ describe("the plan's credit milestone card", () => {
         account: {
           abacus: os.account.abacus.handler(() => account),
           billingPlan: os.account.billingPlan.handler(() => billing),
+        },
+        settings: {
+          setDefaultModel: os.settings.setDefaultModel.handler(({ input }) => {
+            defaults.push(input.modelId);
+            return { defaultModel: input.modelId, apiKeys: {} } as never;
+          }),
         },
       },
     });
@@ -451,7 +458,7 @@ describe("the plan's credit milestone card", () => {
     const cards = () =>
       harness.appDb.collections.prefs.get("app")?.dismissals
         .creditThresholdCards;
-    return { harness, steps, cards };
+    return { harness, steps, cards, defaults };
   };
 
   it("shows once for a free account between turns, and Continue free keeps it away", async () => {
@@ -669,10 +676,11 @@ describe("the plan's credit milestone card", () => {
       expect.objectContaining({ id: "s1" }),
       "abacus/route-llm-code"
     );
-    // The old chat keeps its model.
+    // The old chat keeps its model; new chats start on the router again.
     expect(h.harness.appDb.collections.sessions.get("s1")?.model).toBe(
       "abacus/claude-opus-5-5"
     );
+    await waitFor(() => expect(h.defaults).toEqual(["abacus/route-llm-code"]));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
@@ -691,6 +699,7 @@ describe("the plan's credit milestone card", () => {
     const again = await screen.findByRole("button", { name: CHEAPER });
     expect(again.hasAttribute("disabled")).toBe(false);
     expect(h.steps()).not.toContain("credit_card_paid_80_switch_cheaper");
+    expect(h.defaults).toEqual([]);
     expect(screen.getByRole("dialog")).toBeTruthy();
   });
 

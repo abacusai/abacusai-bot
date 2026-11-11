@@ -5040,6 +5040,7 @@
     "continueFree": "Ücretsiz devam et",
     "keepGoing": "Keep going",
     "switchCheaper": "Kredilerin daha uzun yetsin: yeni bir sohbette {{model}} ile devam et",
+    "switchCheaperHint": "{{model}} her adım için düşük maliyetli bir model seçer, böylece kredilerin çok daha uzun yeter. Yeni sohbetler de onunla başlar; bir görev takılırsa üst düzey bir model yine tek seçim uzaklıkta.",
     "switchedCheaper": "Yeni bir sohbette {{model}} ile devam ediliyor",
     "switchedCheaperBack": "Yine mi takıldın? {{model}} modelini istediğin zaman model seçiciden seçebilirsin."
   },

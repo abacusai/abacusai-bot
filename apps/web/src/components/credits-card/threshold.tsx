@@ -269,6 +269,14 @@ export const CreditThresholdCard = ({
                 : t("creditThreshold.switchCheaper", { model: cheaper.model })}
             </Button>
           )}
+          {isPaid && cheaper != null && (
+            <p
+              className="text-muted-foreground px-1 pb-1 text-center text-xs/4 text-balance"
+              data-slot="credit-threshold-cheaper-hint"
+            >
+              {t("creditThreshold.switchCheaperHint", { model: cheaper.model })}
+            </p>
+          )}
           <Button
             variant="ghost"
             className="text-muted-foreground h-10 text-sm"
@@ -483,6 +491,15 @@ export const CreditThresholdHost = ({
                   throw error;
                 }
                 answer("switch_cheaper");
+                // A model picked in the picker became the app's default, so
+                // every new chat started on it; new chats start on the router
+                // again. The hand-off already moved the user: a refused write
+                // is logged, not shown.
+                await transport.client.settings
+                  .setDefaultModel({ modelId: cheaper.target.id })
+                  .catch((error: unknown) =>
+                    console.warn("[credits] default model not reset", error)
+                  );
                 showInfo(
                   t("creditThreshold.switchedCheaper", {
                     model: cheaper.target.label,

@@ -5040,6 +5040,7 @@
     "continueFree": "Lanjut gratis",
     "keepGoing": "Keep going",
     "switchCheaper": "Buat kredit Anda lebih awet: lanjutkan dengan {{model}} di chat baru",
+    "switchCheaperHint": "{{model}} memilih model hemat untuk setiap langkah, jadi kredit Anda jauh lebih awet. Chat baru juga dimulai dengannya, dan model teratas tetap bisa dipilih kapan saja jika tugas macet.",
     "switchedCheaper": "Melanjutkan dengan {{model}} di chat baru",
     "switchedCheaperBack": "Buntu lagi? Anda bisa memilih {{model}} di pemilih model kapan saja."
   },
