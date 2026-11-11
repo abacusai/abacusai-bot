@@ -511,9 +511,17 @@ describe("Electron browser runtime", () => {
         .get("persist:browser-runtime")
         ?.listeners.get("will-download") ?? [];
     expect(handlers).toHaveLength(1);
+    const done: Array<(event: unknown, state: string) => void> = [];
     const download = (filename: string) => {
-      const item = { getFilename: () => filename, setSavePath: vi.fn() };
-      handlers[0]?.({}, item, {});
+      const item = {
+        getFilename: () => filename,
+        setSavePath: vi.fn(),
+        once: (
+          _event: string,
+          listener: (event: unknown, state: string) => void
+        ) => done.push(listener),
+      };
+      handlers[0]?.({}, item, { id: 7 });
       return item.setSavePath.mock.calls[0]?.[0];
     };
     expect(download("blah.txt")).toBe(
@@ -525,6 +533,18 @@ describe("Electron browser runtime", () => {
     expect(download("../../etc/passwd")).toBe(
       path.join(mocks.downloads.dir, "passwd")
     );
+    // The page that downloaded is told what was saved, each time once.
+    const saved = path.join(mocks.downloads.dir, "blah.txt");
+    expect(runtime.takePageEvents(7)).toContain(
+      `Download started: "blah.txt" is being saved to ${saved}.`
+    );
+    expect(runtime.takePageEvents(7)).toEqual([]);
+    done[0]?.({}, "completed");
+    done[1]?.({}, "interrupted");
+    expect(runtime.takePageEvents(7)).toEqual([
+      `Download finished: ${saved}.`,
+      'Download of "report (1).txt" did not finish (interrupted).',
+    ]);
   });
 
   it("clears the browsing data of the partition its views use", async () => {

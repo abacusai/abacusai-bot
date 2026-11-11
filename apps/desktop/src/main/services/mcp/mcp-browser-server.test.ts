@@ -306,8 +306,16 @@ vi.mock("electron", () => ({
   app: { isPackaged: false, getPath: () => os.tmpdir() },
 }));
 
+/** What the runtime saw a page do that no tool call reported yet (a download), per page id. */
+const pendingPageEvents = new Map<number, string[]>();
+
 /** The runtime's views, as the server asks for them. Reads `liveViews` live. */
 const fakeTarget = {
+  pageEvents: (id: number) => {
+    const events = pendingPageEvents.get(id) ?? [];
+    pendingPageEvents.delete(id);
+    return events;
+  },
   candidates: () =>
     liveViews.flatMap((view) => {
       try {
@@ -897,6 +905,33 @@ describe("interacting", () => {
 
     expect(isError).toBe(false);
     expect(text).toContain("(10,20)");
+  });
+
+  it("tells what the page did beside the click, such as a download it saved, once", async () => {
+    // A click on a download link changes nothing on the page; without this the
+    // agent clicked again and again, saving a copy each time.
+    await seedRefs();
+    respondWith(() => ({
+      status: "ok",
+      tag: "a",
+      text: "report.txt",
+      x: 1,
+      y: 2,
+    }));
+    const id = liveViews[0]!.id;
+    pendingPageEvents.set(id, [
+      'Download started: "report.txt" is being saved to /downloads/report.txt.',
+    ]);
+    const first = await call("browser_interact", {
+      action: "click",
+      ref: "@e1",
+    });
+    expect(first.text).toContain('Download started: "report.txt"');
+    const second = await call("browser_interact", {
+      action: "click",
+      ref: "@e1",
+    });
+    expect(second.text).not.toContain("Download started");
   });
 
   it("refuses a ref the current snapshot never issued", async () => {

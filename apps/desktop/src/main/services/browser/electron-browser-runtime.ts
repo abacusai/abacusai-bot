@@ -139,6 +139,13 @@ const DEFAULT_PARTITION = "persist:browser-runtime";
  * Where a download lands: the downloads folder under the name the site gave,
  * or "name (1).ext" and up when that is taken. Only the base name is used.
  */
+/** Per page id, what it did that the page itself does not show (downloads). */
+const pendingPageEvents = new Map<number, string[]>();
+
+const notePageEvent = (id: number, event: string): void => {
+  pendingPageEvents.set(id, [...(pendingPageEvents.get(id) ?? []), event]);
+};
+
 /** Partition sessions that already save their downloads without a dialog (one handler each). */
 const savingDownloads = new WeakSet<Electron.Session>();
 
@@ -872,7 +879,10 @@ export class ElectronBrowserRuntime {
       emit();
       this.scheduleCrashRecovery(view);
     });
-    contents.on("destroyed", () => this.resetCrashRecovery(view));
+    contents.on("destroyed", () => {
+      this.resetCrashRecovery(view);
+      pendingPageEvents.delete(contents.id);
+    });
     contents.on("focus", emit);
     contents.on("blur", emit);
     contents.on("devtools-opened", emit);
@@ -893,11 +903,30 @@ export class ElectronBrowserRuntime {
   private saveDownloadsWithoutDialog(partitionSession: Electron.Session): void {
     if (savingDownloads.has(partitionSession)) return;
     savingDownloads.add(partitionSession);
-    partitionSession.on("will-download", (_event, item) => {
-      item.setSavePath(
-        downloadPath(app.getPath("downloads"), item.getFilename())
+    partitionSession.on("will-download", (_event, item, contents) => {
+      const saveAs = downloadPath(app.getPath("downloads"), item.getFilename());
+      item.setSavePath(saveAs);
+      const name = path.basename(saveAs);
+      notePageEvent(
+        contents.id,
+        `Download started: "${name}" is being saved to ${saveAs}.`
+      );
+      item.once("done", (_done, state) =>
+        notePageEvent(
+          contents.id,
+          state === "completed"
+            ? `Download finished: ${saveAs}.`
+            : `Download of "${name}" did not finish (${state}).`
+        )
       );
     });
+  }
+
+  /** What page `id` did since the last call (downloads); each is told once. */
+  takePageEvents(id: number): string[] {
+    const events = pendingPageEvents.get(id) ?? [];
+    pendingPageEvents.delete(id);
+    return events;
   }
 
   /** Clears the browsing data (sign-ins, cookies, storage) of the browser's views. */

@@ -1655,8 +1655,21 @@ export class McpBrowserServer extends McpHttpServer {
     };
   }
 
-  /** What an action did to the page: URL, new elements with refs, overlays. */
+  /**
+   * What an action did to the page: URL, new elements with refs, overlays,
+   * and what the page did that it does not show (a download it saved).
+   */
   private async reportChanges(
+    wc: BrowserPage,
+    sessionId: string | undefined,
+    before: { url: string; title: string; refs: Map<string, string> }
+  ): Promise<string> {
+    const changes = await this.describeChanges(wc, sessionId, before);
+    const events = this.options.target?.()?.pageEvents?.(wc.id) ?? [];
+    return [changes, ...events].filter((line) => line.length > 0).join("\n");
+  }
+
+  private async describeChanges(
     wc: BrowserPage,
     sessionId: string | undefined,
     before: { url: string; title: string; refs: Map<string, string> }
