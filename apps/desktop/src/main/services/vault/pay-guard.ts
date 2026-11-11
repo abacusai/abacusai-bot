@@ -37,7 +37,8 @@
  * code, and never a PAN or Aadhaar field), embeds a
  * payment provider's frame or a frame that says it takes payment, submits a
  * form with card fields, is a provider's frame itself, has a checkout or
- * payment path, or its origin was a payment step earlier in this checkout.
+ * payment path and shows a price, or its origin was a payment step earlier
+ * in this checkout.
  *
  * Limits: a payment step with none of those marks (a card form drawn on a
  * canvas, in a closed shadow root, behind a frame with no telling attributes)
@@ -346,8 +347,8 @@ const REVIEW_PATH =
 /**
  * A step where the card is in play: card fields, a payment provider's frame,
  * a form with card fields, a card the site saved shown or selected, a
- * provider's own frame, or a checkout/payment path. A commit here is the
- * payment itself.
+ * provider's own frame, or a checkout/payment path showing a price. A commit
+ * here is the payment itself.
  */
 export function cardStep(facts: ControlFacts): boolean {
   if (
@@ -364,7 +365,14 @@ export function cardStep(facts: ControlFacts): boolean {
   } catch {
     return false;
   }
-  return isPaymentFrameOrigin(url.origin) || PAYMENT_PATH.test(url.pathname);
+  // A checkout or payment path counts once the page shows a price: a details
+  // step (name, address) on a /checkout-… path shows none, and its Continue
+  // only goes on toward the card. Treating it as the payment step left the
+  // run with nothing it could do, since the payment stop needs a total.
+  return (
+    isPaymentFrameOrigin(url.origin) ||
+    (facts.priceOnPage && PAYMENT_PATH.test(url.pathname))
+  );
 }
 
 /** A review or confirmation page showing a price: the step before the card. */

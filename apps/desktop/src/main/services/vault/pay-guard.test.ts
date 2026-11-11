@@ -127,7 +127,7 @@ describe("an activation on a payment step, or past the review", () => {
       { paymentFrame: true },
       { submitsCardForm: true },
       { url: "https://js.stripe.com/v3/elements" },
-      { url: "https://shop.example/checkout/step-3" },
+      { url: "https://shop.example/checkout/step-3", priceOnPage: true },
       { savedCardSelected: true },
       { maskedCardOnPage: true },
       { url: "https://shop.example/order/review", priceOnPage: true },
@@ -141,6 +141,40 @@ describe("an activation on a payment step, or past the review", () => {
     ).toBe("refuse");
     expect(
       activationVerdict(CLICK, button, state({ pastReview: true })).kind
+    ).toBe("refuse");
+  });
+
+  it("a checkout path with no card, no provider frame and no price is a step on toward the card, not the payment", () => {
+    // A shop's details step (name, address) on a /checkout-… path: Continue goes on, and words that commit
+    // without the card ("Place order") are still refused. Refusing Continue here left the run stuck: the
+    // payment stop needs a total, and this page shows none.
+    const details = { url: "https://www.saucedemo.com/checkout-step-one.html" };
+    expect(
+      activationVerdict(
+        CLICK,
+        facts({ ...details, kind: "submit", label: "Continue" }),
+        state()
+      ).kind
+    ).toBe("allow");
+    expect(
+      activationVerdict(
+        CLICK,
+        facts({ ...details, kind: "submit", label: "Place order" }),
+        state()
+      ).kind
+    ).toBe("refuse");
+    // The same path showing the order total is the payment step.
+    expect(
+      activationVerdict(
+        CLICK,
+        facts({
+          url: "https://www.saucedemo.com/checkout-step-two.html",
+          priceOnPage: true,
+          kind: "submit",
+          label: "Finish",
+        }),
+        state()
+      ).kind
     ).toBe("refuse");
   });
 
