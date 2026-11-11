@@ -10,6 +10,7 @@ import { OnboardingFrame, OnboardingStepPage } from "./index";
 export const FIRST_RUN_GALLERY_VARIANTS = [
   "chat-app",
   "github",
+  "everything",
   "reading",
   "drafts",
   "empty",
@@ -20,6 +21,8 @@ const INBOX: Record<
   Exclude<FirstRunVariant, "chat-app" | "github">,
   InboxPass
 > = {
+  // Gmail, GitHub and two chat apps connected: every card on the inbox screen.
+  everything: { state: "done", drafts: 4 },
   reading: { state: "reading" },
   drafts: { state: "done", drafts: 4 },
   empty: { state: "done", drafts: 0 },
@@ -62,8 +65,13 @@ export const OnboardingGallery = ({
           step === "first-bot"
             ? {
                 ...(inbox != null ? { inbox } : {}),
-                ...(variant === "chat-app" ? { chatApp: "whatsapp" } : {}),
-                ...(variant === "github" ? { github: "start" } : {}),
+                ...(variant === "chat-app" ? { chatApps: ["whatsapp"] } : {}),
+                ...(variant === "everything"
+                  ? { chatApps: ["telegram", "discord"] }
+                  : {}),
+                ...(variant === "github" || variant === "everything"
+                  ? { github: "start" }
+                  : {}),
               }
             : undefined
         }

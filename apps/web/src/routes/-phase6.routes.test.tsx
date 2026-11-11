@@ -16,6 +16,7 @@ import {
 } from "#renderer/features/onboarding/first-bot";
 import { startDraftStore } from "#renderer/features/sessions/start/start-session";
 import { GOAL_MISSION } from "#renderer/lib/bots/check-in";
+import { GITHUB_CONNECTOR_ID } from "#renderer/lib/build-starters";
 import {
   renderApp,
   defaultSeed,
@@ -403,6 +404,97 @@ it("after a Gmail sign-in the Chief of Staff starts on the inbox while the scree
     )
   );
   expect(harness.collections.bots.toArray).toHaveLength(1);
+});
+
+const renderGmailScreen = async () => {
+  const seed = defaultSeed();
+  seed.bots = [];
+  seed.routines = [];
+  const os = implement(contract);
+  // The connectors step linked Telegram; Gmail and GitHub are connected.
+  noteConnectedChatApp("telegram");
+  harness = await renderApp("/onboarding/first-bot", {
+    onboarded: false,
+    signedIn: true,
+    seed,
+    models: [
+      {
+        id: "abacus/route-llm",
+        label: "RouteLLM",
+        provider: "abacus",
+        tier: "default",
+        configured: true,
+        recommended: true,
+      },
+    ],
+    procedures: {
+      connectors: {
+        statuses: os.connectors.statuses.handler(
+          () =>
+            ({
+              "abacus-gmailuser": { state: "connected" },
+              [GITHUB_CONNECTOR_ID]: { state: "connected" },
+            }) as never
+        ),
+      },
+    },
+  });
+  await screen.findByRole("heading", {
+    name: "Reading your last 3 days of email…",
+  });
+  await waitFor(() =>
+    expect(document.querySelector('[data-first-choice="github"]')).toBeTruthy()
+  );
+  return harness;
+};
+
+it("beside the inbox pass, GitHub starts its pull request review at once", async () => {
+  const harness = await renderGmailScreen();
+  expect(
+    [...document.querySelectorAll("[data-first-choice]")].map((card) =>
+      card.getAttribute("data-first-choice")
+    )
+  ).toEqual(["inbox", "build", "github", "chat-app", "research", "images"]);
+  const github = document.querySelector('[data-first-choice="github"]')!;
+  fireEvent.click(within(github as HTMLElement).getByRole("button"));
+  await waitFor(() =>
+    expect(startDraftStore.state).toMatchObject({ starters: "code" })
+  );
+  await waitFor(() => expect(startDraftStore.state.stage).not.toBe("draft"));
+  // The house already paid for the Chief of Staff's first run.
+  expect(startDraftStore.state.sponsored).toBeUndefined();
+  expect(JSON.stringify(startDraftStore.state.envelope?.parts)).toMatch(
+    /pull request/i
+  );
+  const funnel = harness.calls
+    .filter(([name]) => name === "system.funnelStep")
+    .map(([, input]) => input);
+  expect(funnel).toContainEqual({ step: "first_choice_github" });
+  expect(funnel).toContainEqual({ step: "start_sent", detail: "auto" });
+  // Only the Chief of Staff: the review needs no bot.
+  expect(harness.collections.bots.toArray).toHaveLength(1);
+});
+
+it("beside the inbox pass, a chat app makes its own agent, not the Chief of Staff again", async () => {
+  const harness = await renderGmailScreen();
+  const chief = harness.collections.bots.toArray[0]!;
+  const card = document.querySelector('[data-app="telegram"]')!;
+  fireEvent.click(within(card as HTMLElement).getByRole("button"));
+  await waitFor(() =>
+    expect(harness.router.state.location.pathname).not.toBe(
+      "/onboarding/first-bot"
+    )
+  );
+  const agent = harness.collections.bots.toArray.find(
+    (row) => row.id !== chief.id
+  );
+  expect(agent).toMatchObject({
+    templateId: "telegram-agent",
+    homeChannel: "telegram",
+  });
+  // The house already paid for the Chief of Staff's first run.
+  expect(agent!.sponsoredFirstRun).not.toBe(true);
+  expect(harness.router.state.location.pathname).toBe(`/bots/${agent!.id}`);
 });
 
 it("final setup retries a failed completion without duplicating the bot it made", async () => {

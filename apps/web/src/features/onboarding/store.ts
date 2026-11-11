@@ -15,8 +15,10 @@ export interface SignInAttempt {
 export const onboardingStore = new Store<{
   signIn: SignInAttempt | null;
   createdBotId: string | null;
-  /** The chat app connected last in the connectors step; it picks the first bot. */
-  chatApp?: HomeChannel | null;
+  /** The chat apps linked in the connectors step, the last one first. */
+  chatApps?: HomeChannel[];
+  /** A bot a pick makes beside the Chief of Staff: one id, so a retry reuses it. */
+  pickBotId?: string;
   /** The plan offer was answered (Upgrade or Start free): it is not shown again. */
   offerAnswered?: boolean;
 }>({ signIn: null, createdBotId: null });

@@ -73,7 +73,7 @@ describe("FirstBotStep: what to do first", () => {
         present={false}
         heading={createRef()}
         inbox={{ state: "reading" }}
-        chatApp={null}
+        chatApps={[]}
         github="connect"
       />
     );
@@ -161,7 +161,7 @@ describe("FirstBotStep: what to do first", () => {
         present={false}
         heading={createRef()}
         inbox={{ state: "reading" }}
-        chatApp="telegram"
+        chatApps={["telegram"]}
         github="connect"
       />
     );
@@ -191,7 +191,7 @@ describe("FirstBotStep: what to do first", () => {
         present={false}
         heading={createRef()}
         inbox={{ state: "reading" }}
-        chatApp={null}
+        chatApps={[]}
         github={github}
       />
     );
@@ -269,7 +269,7 @@ describe("FirstBotStep: what to do first", () => {
         present={false}
         heading={createRef()}
         inbox={{ state: "reading" }}
-        chatApp={null}
+        chatApps={[]}
         github="connect"
       />
     );
@@ -292,7 +292,7 @@ describe("FirstBotStep: after a Gmail sign-in", () => {
         present={true}
         heading={createRef()}
         inbox={inbox}
-        chatApp={null}
+        chatApps={[]}
         github="connect"
       />
     );
@@ -313,7 +313,7 @@ describe("FirstBotStep: after a Gmail sign-in", () => {
         present={true}
         heading={createRef()}
         inbox={{ state: "done", drafts: 3 }}
-        chatApp={null}
+        chatApps={[]}
         github="connect"
       />
     );
@@ -327,7 +327,7 @@ describe("FirstBotStep: after a Gmail sign-in", () => {
     expect(
       screen.getByText("Drafts ready for each. Nothing is sent without you.")
     ).toBeTruthy();
-    expect(cards()).toEqual(["inbox", "build"]);
+    expect(cards()).toEqual(["inbox", "build", "github", "research", "images"]);
     expect(screen.getByText("Or build something")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Review drafts" }));
     await vi.waitFor(() =>
@@ -352,7 +352,7 @@ describe("FirstBotStep: after a Gmail sign-in", () => {
     expect(screen.getByRole("heading").textContent).toBe(
       "Nothing needs you today"
     );
-    expect(cards()).toEqual(["build", "inbox"]);
+    expect(cards()).toEqual(["build", "inbox", "github", "research", "images"]);
     expect(
       document
         .querySelector('[data-first-choice="build"]')
@@ -366,6 +366,61 @@ describe("FirstBotStep: after a Gmail sign-in", () => {
         botId: bot.id,
       })
     );
+  });
+
+  it("keeps every other pick under the inbox: GitHub, each chat app, images and the goal box", async () => {
+    await initI18n();
+    const { context, funnelStep } = ctx();
+    context.props.connect = vi.fn(async () => ({ ok: true }));
+    render(
+      <FirstBotStep
+        ctx={context}
+        first={ready}
+        bot={bot}
+        present={true}
+        heading={createRef()}
+        inbox={{ state: "done", drafts: 2 }}
+        chatApps={["telegram", "discord"]}
+        github="start"
+      />
+    );
+    expect(cards()).toEqual([
+      "inbox",
+      "build",
+      "github",
+      "chat-app",
+      "chat-app",
+      "research",
+      "images",
+    ]);
+    const primary = [
+      ...document.querySelectorAll('[data-first-choice][data-primary="true"]'),
+    ].map((card) => card.getAttribute("data-first-choice"));
+    expect(primary).toEqual(["inbox"]);
+    expect(screen.getByText("Answer me on Telegram")).toBeTruthy();
+    expect(screen.getByText("Answer me on Discord")).toBeTruthy();
+    expect(screen.getByRole("textbox", { name: "What you need" })).toBeTruthy();
+
+    const github = document.querySelector('[data-first-choice="github"]')!;
+    fireEvent.click(github.querySelector("button")!);
+    await vi.waitFor(() =>
+      expect(context.props.choose).toHaveBeenCalledWith({ kind: "github" })
+    );
+    expect(context.props.connect).not.toHaveBeenCalled();
+    expect(funnelStep).toHaveBeenCalledWith({ step: "first_choice_github" });
+
+    const discord = document.querySelector('[data-app="discord"]')!;
+    fireEvent.click(discord.querySelector("button")!);
+    await vi.waitFor(() =>
+      expect(context.props.choose).toHaveBeenCalledWith({
+        kind: "chat-app",
+        app: "discord",
+      })
+    );
+    expect(funnelStep).toHaveBeenCalledWith({
+      step: "first_choice_whatsapp",
+      detail: "discord",
+    });
   });
 
   it("sends a pass that stopped to its chat", async () => {

@@ -34,6 +34,7 @@ import {
   chatAppTemplateId,
   firstBotStore,
   noteConnectedChatApp,
+  pickBotId,
   watchInboxPass,
   type FirstChoice,
 } from "#renderer/features/onboarding/first-bot";
@@ -195,8 +196,11 @@ const OnboardingRoute = () => {
       await finish({ to: "bot", botId });
     };
     // One id per screen: a pick retried after a failed completion opens the
-    // bot it already made instead of making another.
-    const id = onboardingStore.state.createdBotId ?? undefined;
+    // bot it already made instead of making another. Beside a Chief of Staff
+    // that id is taken, so a pick there gets its own.
+    const id = sponsored
+      ? (onboardingStore.state.createdBotId ?? undefined)
+      : pickBotId();
     const made = id != null ? db.collections.bots.get(id) : undefined;
     if (made != null && choice.kind !== "build" && choice.kind !== "images") {
       await open(made.id);

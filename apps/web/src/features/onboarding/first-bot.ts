@@ -48,9 +48,78 @@ export const chatAppTemplateId = (app: HomeChannel): string => {
     throw new Error(`No agent template for ${app}.`);
   return agent;
 };
-/** A chat app just connected in onboarding: its card leads the first-run choices. */
+/** A chat app just connected in onboarding: newest first, so its card leads. */
 export const noteConnectedChatApp = (chatApp: HomeChannel): void => {
-  onboardingStore.setState((state) => ({ ...state, chatApp }));
+  onboardingStore.setState((state) => ({
+    ...state,
+    chatApps: [
+      chatApp,
+      ...(state.chatApps ?? []).filter((app) => app !== chatApp),
+    ],
+  }));
+};
+
+/** The id a pick on the Chief of Staff screen makes its bot with, kept for a retry. */
+export const pickBotId = (): string => {
+  const kept = onboardingStore.state.pickBotId;
+  if (kept != null) return kept;
+  const id = `bot-${crypto.randomUUID()}`;
+  onboardingStore.setState((state) => ({ ...state, pickBotId: id }));
+  return id;
+};
+
+/** A first-run card, in the order the screen draws it. */
+export type FirstRunCard =
+  | { slot: "inbox" }
+  | { slot: "build" }
+  | { slot: "github"; github: "connect" | "start" }
+  | { slot: "chat-app"; app: HomeChannel }
+  | { slot: "research" }
+  | { slot: "images" };
+
+/**
+ * Both first-run screens draw this one list, so they cannot drift apart.
+ * The one thing set up for the person leads: the inbox pass, else the chat
+ * app linked last, else a connected GitHub, else Build. Then Build, GitHub,
+ * the other chat apps, research and images. An inbox with nothing to review
+ * (`quiet`) hands the lead to Build and follows it.
+ */
+export const firstRunCards = ({
+  inbox,
+  chatApps,
+  github,
+}: {
+  inbox: "lead" | "quiet" | null;
+  chatApps: readonly HomeChannel[];
+  github: GithubChoice;
+}): { card: FirstRunCard; primary: boolean }[] => {
+  const githubCard: FirstRunCard | null =
+    github != null ? { slot: "github", github } : null;
+  const lead: FirstRunCard =
+    inbox === "lead"
+      ? { slot: "inbox" }
+      : inbox == null && chatApps[0] != null
+        ? { slot: "chat-app", app: chatApps[0] }
+        : inbox == null && github === "start" && githubCard != null
+          ? githubCard
+          : { slot: "build" };
+  const rest: FirstRunCard[] = [
+    ...(inbox === "quiet" ? [{ slot: "inbox" } as const] : []),
+    { slot: "build" },
+    ...(githubCard != null ? [githubCard] : []),
+    ...chatApps.map((app) => ({ slot: "chat-app", app }) as const),
+    { slot: "research" },
+    { slot: "images" },
+  ];
+  const same = (a: FirstRunCard, b: FirstRunCard) =>
+    a.slot === b.slot &&
+    (a.slot !== "chat-app" || (b.slot === "chat-app" && a.app === b.app));
+  return [
+    { card: lead, primary: true },
+    ...rest
+      .filter((card) => !same(card, lead))
+      .map((card) => ({ card, primary: false })),
+  ];
 };
 /**
  * `choose`: no inbox to show, so the person picks what to do first.
