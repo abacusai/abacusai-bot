@@ -40,6 +40,7 @@ import { startTour, useTourState } from "#renderer/features/tour/store";
 import {
   PaidWelcomeHost,
   UpgradeDialogHost,
+  WallReopenHost,
 } from "#renderer/features/upgrade-dialog";
 const TourHost = lazy(() =>
   import("#renderer/features/tour").then((m) => ({ default: m.TourHost }))
@@ -52,7 +53,8 @@ import { SHELL_DEFAULTS, ShellSearch } from "#renderer/lib/navigation/search";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 
 const ShellRoute = () => {
-  const { transport, db, queryClient } = Route.useRouteContext();
+  const { transport, db, queryClient, chat, prepareChat } =
+    Route.useRouteContext();
   useDocumentSoundOwner(transport);
   const router = useRouter();
   const tour = useTourState();
@@ -123,6 +125,22 @@ const ShellRoute = () => {
         />
       )}
       {!provisional && tour == null && <PaidWelcomeHost />}
+      {!provisional && tour == null && (
+        <WallReopenHost
+          messagesOf={async (threadId) => {
+            await prepareChat();
+            const session = chat.session(threadId);
+            await session.load();
+            return session.hostStore.state.messages;
+          }}
+          openChat={(sessionId) =>
+            void navigate({
+              to: "/sessions/$sessionId",
+              params: { sessionId },
+            })
+          }
+        />
+      )}
       {!provisional && <PaymentRequiredDialog />}
     </>
   );

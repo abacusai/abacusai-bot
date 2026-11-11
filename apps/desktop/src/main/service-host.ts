@@ -589,6 +589,8 @@ import {
   wallAfterAccountRead,
   wallAfterError,
   wallMoved,
+  wallReopenAfterError,
+  wallReopenAfterWrite,
 } from "./services/providers/credit-wall";
 import {
   environmentNoticeService,
@@ -1018,7 +1020,7 @@ export class ServiceHost {
     // A turn in any session (a chat, a bot, a routine with nobody watching)
     // that ends at the credit wall stamps it, so the card is there on the
     // next launch and every agent stops at it.
-    this.onAgentEvent((_sessionId, payload) => {
+    this.onAgentEvent((sessionId, payload) => {
       if (payload.type !== "event" || payload.event.type !== "error") return;
       // A model the plan refused at run time is not offered again.
       const model = planRefusedModel(payload.event.error);
@@ -1031,6 +1033,14 @@ export class ServiceHost {
         Date.now()
       );
       if (patch != null) prefs.update(patch);
+      // The user's own chat: the wall the app asks about again on their return.
+      const reopen = wallReopenAfterError(
+        sessionId,
+        payload.event.error,
+        this.isUsersOwnSessionChat(sessionId),
+        Date.now()
+      );
+      if (reopen != null) prefs.update(reopen);
     });
     // A billed turn that settles checks the plan's credit milestones.
     this.onAgentEvent(
@@ -1434,6 +1444,10 @@ export class ServiceHost {
     userWrote: (sessionId) => {
       if (this.isUsersOwnChat(sessionId))
         this.workWaiting.userWrote({ kind: "session", sessionId });
+      const prefs = this.prefs?.();
+      const resolved =
+        prefs == null ? null : wallReopenAfterWrite(prefs.get(), sessionId);
+      if (resolved != null) prefs?.update(resolved);
     },
   });
 
@@ -3675,6 +3689,17 @@ export class ServiceHost {
   }
 
   /** A chat that is the user's own: not a contact's chat with their bot, nor a bot's turn for a channel. */
+  /** The user's own session chat: not a bot's, a routine's or a phone lane's. */
+  private isUsersOwnSessionChat(sessionId: string): boolean {
+    const sessions = this.agentSessionManagerService;
+    return (
+      this.isUsersOwnChat(sessionId) &&
+      sessions.laneOf(sessionId) == null &&
+      !sessions.isRoutineSession(sessionId) &&
+      !sessions.isBotSession(sessionId)
+    );
+  }
+
   private isUsersOwnChat(sessionId: string): boolean {
     return (
       this.agentSessionManagerService.get(sessionId)?.owner?.role !== "sender"

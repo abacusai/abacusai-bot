@@ -1,4 +1,5 @@
 import type { UIMessage } from "@tanstack/ai-client";
+import { useStore } from "@tanstack/react-store";
 import { useEffect, useEffectEvent } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -10,6 +11,8 @@ import {
   connectorCreditRefusals,
   lastUserText,
   requestUpgradeDialog,
+  resumeHandoffStore,
+  takeResumeHandoff,
   taskText,
   type UpgradeDialogKind,
   type UpgradeDialogRequest,
@@ -119,6 +122,21 @@ export const UpgradeTriggers = ({
   const canReply = composer.readOnly == null;
   const resume = useUpgradeResume();
   const wallTask = useCreditWallTask();
+
+  // The wall asked again on return, and the plan landed with this chat off
+  // screen: the waiting message goes now, as the live wall's would.
+  const handoff = useStore(resumeHandoffStore, (state) =>
+    state?.threadId === session.threadId ? state : null
+  );
+  const loaded = messages.length > 0;
+  const runHandoff = useEffectEvent(() => {
+    const taken = takeResumeHandoff(session.threadId);
+    if (taken == null) return;
+    void (wallTask(messages).resume ?? resume)(taken.model).catch(() => {});
+  });
+  useEffect(() => {
+    if (handoff != null && canReply && loaded) runHandoff();
+  }, [handoff, canReply, loaded]);
 
   // This run's end, live or brought in by a snapshot when it ended before the
   // view caught up: a fast failure is the person's moment as much as a slow one.

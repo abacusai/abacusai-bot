@@ -489,6 +489,10 @@ export const DialogBody = ({
         <Button
           className="h-11 text-sm font-semibold"
           onClick={() => {
+            if (request.reopen === true)
+              void transport.client.system
+                .funnelStep({ step: "work_waiting_clicked", detail: "wall" })
+                .catch(() => {});
             // Called inside the click: the web build opens its tab here.
             void (paidUpgrade
               ? openNextPlan(transport.client)
@@ -557,6 +561,11 @@ export const UpgradeDialogHost = () => {
         if (!live) return;
         if (askedAccount(request, account)) {
           setConfirmed({ key: request.key, body: "free", account });
+          // The wall asked again on return: counted with "your work is waiting".
+          if (request.reopen === true)
+            void transport.client.system
+              .funnelStep({ step: "work_waiting_shown", detail: "wall" })
+              .catch(() => {});
           return;
         }
         // A paid plan's credits or balance request only: a free account never reads this.
