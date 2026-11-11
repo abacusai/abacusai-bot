@@ -3448,6 +3448,9 @@
     "retryOffer": {
       "newChat": "{{model}} ile yeni bir sohbette tekrar dene"
     },
+    "routerAfterUpgrade": {
+      "stay": "{{model}} ile devam et"
+    },
     "ratingPrompt": {
       "question": "Bot bu sohbette nasıl gidiyor?",
       "bad": "Kötü",
@@ -4547,6 +4550,9 @@
     "connectorsTitle": "Bağlayıcılar AbacusAI kredileriyle kullanılabilir",
     "creditsBody": "Mesajın kaydedildi. Yükselt, hemen gönderilsin.",
     "creditsBodyNoMessage": "En iyi modeller, bağlayıcılar ve rutinlerle devam etmek için yükselt.",
+    "creditsTaskTitle": "“{{task}}” işini {{model}} ile bitir",
+    "creditsTaskBody": "Mesajın kaydedildi. Yükselttiğinde, kaldığı yerden en güçlü modelimizle devam eder.",
+    "creditsTaskCta": "Yükselt ve bitir",
     "creditsTitle": "AbacusAI Bot ile devam et",
     "keepChatting": "Bağlayıcılar olmadan sohbete devam et",
     "notNow": "Şimdi değil",
@@ -5016,6 +5022,7 @@
       "title": "Yalnızca {{left}} ücretsiz kredi kaldı",
       "urge": "İşin yarıda kalmasın diye şimdi yükselt.",
       "urgeProject": "“{{project}}” yarıda kalmasın diye şimdi yükselt.",
+      "urgeProjectModel": "“{{project}}” yarıda kalmasın diye şimdi yükselt ve {{model}} ile bitir.",
       "paidTitle": "Only {{left}} credits left this month",
       "paidUrgeBoth": "Top up or move to {{plan}} so your work doesn't stop halfway.",
       "paidUrgeBothProject": "Top up or move to {{plan}} so “{{project}}” doesn't stop halfway.",

@@ -3584,6 +3584,9 @@
     "retryOffer": {
       "newChat": "Spróbuj ponownie w nowej rozmowie z {{model}}"
     },
+    "routerAfterUpgrade": {
+      "stay": "Zostań przy {{model}}"
+    },
     "ratingPrompt": {
       "question": "Jak radzi sobie bot w tym czacie?",
       "bad": "Źle",
@@ -4687,6 +4690,9 @@
     "connectorsTitle": "Konektory są dostępne z kredytami AbacusAI",
     "creditsBody": "Twoja wiadomość została zapisana. Przejdź na wyższy plan, a zostanie wysłana od razu.",
     "creditsBodyNoMessage": "Przejdź na wyższy plan, aby dalej korzystać z najlepszych modeli, konektorów i rutyn.",
+    "creditsTaskTitle": "Dokończ „{{task}}” z {{model}}",
+    "creditsTaskBody": "Twoja wiadomość jest zapisana. Po przejściu na wyższy plan praca ruszy dokładnie tam, gdzie się zatrzymała, na naszym najmocniejszym modelu.",
+    "creditsTaskCta": "Przejdź na plan i dokończ",
     "creditsTitle": "Korzystaj dalej z AbacusAI Bot",
     "keepChatting": "Czatuj dalej bez konektorów",
     "notNow": "Nie teraz",
@@ -5170,6 +5176,7 @@
       "title": "Zostało tylko {{left}} darmowych kredytów",
       "urge": "Przejdź na wyższy plan teraz, żeby Twoja praca nie stanęła w połowie.",
       "urgeProject": "Przejdź na wyższy plan teraz, żeby praca nad „{{project}}” nie stanęła w połowie.",
+      "urgeProjectModel": "Przejdź teraz na wyższy plan, żeby „{{project}}” nie zatrzymał się w połowie, i dokończ go z {{model}}.",
       "paidTitle": "W tym miesiącu zostało tylko {{left}} kredytów",
       "paidUrgeBoth": "Doładuj kredyty lub przejdź na {{plan}}, żeby Twoja praca nie stanęła w połowie.",
       "paidUrgeBothProject": "Doładuj kredyty lub przejdź na {{plan}}, żeby praca nad „{{project}}” nie stanęła w połowie.",

@@ -3448,6 +3448,9 @@
     "retryOffer": {
       "newChat": "Réessayer dans une nouvelle conversation avec {{model}}"
     },
+    "routerAfterUpgrade": {
+      "stay": "Rester sur {{model}}"
+    },
     "ratingPrompt": {
       "question": "Comment s'en sort le bot dans ce chat ?",
       "bad": "Mauvais",
@@ -4547,6 +4550,9 @@
     "connectorsTitle": "Les connecteurs sont disponibles avec des crédits AbacusAI",
     "creditsBody": "Votre message est enregistré. Passez à un forfait supérieur et il part tout de suite.",
     "creditsBodyNoMessage": "Passez à un forfait supérieur pour continuer avec les meilleurs modèles, les connecteurs et les routines.",
+    "creditsTaskTitle": "Terminez « {{task}} » avec {{model}}",
+    "creditsTaskBody": "Votre message est enregistré. Passez à l'offre supérieure et il reprendra là où il s'est arrêté, avec notre modèle le plus puissant.",
+    "creditsTaskCta": "Passer à l'offre et terminer",
     "creditsTitle": "Continuez avec AbacusAI Bot",
     "keepChatting": "Continuer à discuter sans connecteurs",
     "notNow": "Pas maintenant",
@@ -5016,6 +5022,7 @@
       "title": "Plus que {{left}} crédits gratuits",
       "urge": "Passez au forfait maintenant pour que votre travail ne s'arrête pas en plein milieu.",
       "urgeProject": "Passez au forfait maintenant pour que « {{project}} » ne s'arrête pas en plein milieu.",
+      "urgeProjectModel": "Passez à l'offre supérieure pour que « {{project}} » ne s'arrête pas à mi-chemin, et terminez-le avec {{model}}.",
       "paidTitle": "Only {{left}} credits left this month",
       "paidUrgeBoth": "Top up or move to {{plan}} so your work doesn't stop halfway.",
       "paidUrgeBothProject": "Top up or move to {{plan}} so “{{project}}” doesn't stop halfway.",

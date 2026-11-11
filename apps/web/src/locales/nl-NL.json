@@ -3448,6 +3448,9 @@
     "retryOffer": {
       "newChat": "Probeer opnieuw in een nieuwe chat met {{model}}"
     },
+    "routerAfterUpgrade": {
+      "stay": "Blijf op {{model}}"
+    },
     "ratingPrompt": {
       "question": "Hoe doet de bot het in deze chat?",
       "bad": "Slecht",
@@ -4547,6 +4550,9 @@
     "connectorsTitle": "Connectors zijn beschikbaar met AbacusAI-credits",
     "creditsBody": "Je bericht is opgeslagen. Upgrade en het wordt meteen verzonden.",
     "creditsBodyNoMessage": "Upgrade om door te gaan met de topmodellen, connectors en routines.",
+    "creditsTaskTitle": "Maak ‘{{task}}’ af met {{model}}",
+    "creditsTaskBody": "Je bericht is bewaard. Upgrade en het gaat verder waar het stopte, met ons sterkste model.",
+    "creditsTaskCta": "Upgraden en afmaken",
     "creditsTitle": "Ga verder met AbacusAI Bot",
     "keepChatting": "Verder chatten zonder connectors",
     "notNow": "Niet nu",
@@ -5016,6 +5022,7 @@
       "title": "Nog maar {{left}} gratis credits over",
       "urge": "Upgrade nu, zodat je werk niet halverwege stopt.",
       "urgeProject": "Upgrade nu, zodat “{{project}}” niet halverwege stopt.",
+      "urgeProjectModel": "Upgrade nu zodat ‘{{project}}’ niet halverwege stopt, en maak het af met {{model}}.",
       "paidTitle": "Nog maar {{left}} credits over deze maand",
       "paidUrgeBoth": "Vul aan of stap over op {{plan}}, zodat je werk niet halverwege stopt.",
       "paidUrgeBothProject": "Vul aan of stap over op {{plan}}, zodat “{{project}}” niet halverwege stopt.",

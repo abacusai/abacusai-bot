@@ -3448,6 +3448,9 @@
     "retryOffer": {
       "newChat": "{{model}}(으)로 새 채팅에서 다시 시도"
     },
+    "routerAfterUpgrade": {
+      "stay": "{{model}} 계속 사용"
+    },
     "ratingPrompt": {
       "question": "이 채팅에서 봇은 어땠나요?",
       "bad": "별로",
@@ -4547,6 +4550,9 @@
     "connectorsTitle": "커넥터는 AbacusAI 크레딧으로 이용할 수 있습니다",
     "creditsBody": "메시지가 저장되었습니다. 업그레이드하면 바로 전송됩니다.",
     "creditsBodyNoMessage": "업그레이드하고 최고 모델, 커넥터, 루틴을 계속 이용하세요.",
+    "creditsTaskTitle": "“{{task}}”을(를) {{model}}로 마무리하기",
+    "creditsTaskBody": "메시지가 저장되었습니다. 업그레이드하면 멈춘 곳에서 바로 이어서 가장 강력한 모델로 진행합니다.",
+    "creditsTaskCta": "업그레이드하고 마무리하기",
     "creditsTitle": "AbacusAI Bot과 계속하기",
     "keepChatting": "커넥터 없이 계속 채팅하기",
     "notNow": "나중에",
@@ -5016,6 +5022,7 @@
       "title": "무료 크레딧이 {{left}}만 남았어요",
       "urge": "작업이 중간에 멈추지 않도록 지금 업그레이드하세요.",
       "urgeProject": "“{{project}}” 작업이 중간에 멈추지 않도록 지금 업그레이드하세요.",
+      "urgeProjectModel": "“{{project}}”이(가) 중간에 멈추지 않도록 지금 업그레이드하고 {{model}}로 마무리하세요.",
       "paidTitle": "Only {{left}} credits left this month",
       "paidUrgeBoth": "Top up or move to {{plan}} so your work doesn't stop halfway.",
       "paidUrgeBothProject": "Top up or move to {{plan}} so “{{project}}” doesn't stop halfway.",

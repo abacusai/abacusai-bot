@@ -506,6 +506,37 @@ describe("the plan's credit milestone card", () => {
     );
   });
 
+  // A free account's catalog: the plan's top model locked behind the upgrade.
+  const LOCKED_CATALOG: ModelAvailability[] = [
+    {
+      id: "abacus/claude-opus-5-5",
+      label: "Claude Opus 5.5",
+      provider: "abacus",
+      tier: "strong",
+      configured: false,
+      access: "locked",
+    },
+  ];
+
+  it("free at four fifths, with a top model known: the chat by name and the model the upgrade finishes it on", async () => {
+    await host({
+      account: { ...ACCOUNT, credits_used: 1640 },
+      mark: { ...MARK, reached: 80, used: 1640 },
+      models: LOCKED_CATALOG,
+      sessions: [
+        {
+          id: "s1",
+          label: "Bakery website",
+          updatedAt: "2026-11-01T10:00:00Z",
+        },
+      ],
+    });
+    await screen.findByRole("heading", { name: "Only 360 free credits left" });
+    expect(screen.getByRole("dialog").textContent).toContain(
+      "Upgrade now so “Bakery website” doesn't stop halfway, and finish it on Claude Opus 5.5."
+    );
+  });
+
   it("a dismissed threshold stays dismissed; the next one still shows", async () => {
     const answered = {
       dismissals: {
@@ -807,10 +838,12 @@ describe("the plan's credit milestone card", () => {
       account = { ...ACCOUNT, credits_used: 2000 } as typeof ACCOUNT,
       billing = BILLING as BillingPlan | null,
       openExternal = vi.fn(),
+      models = [] as ModelAvailability[],
     } = {}
   ) => {
     const os = implement(contract);
     const harness = await createHarness("/", {
+      models,
       seed: { ...defaultSeed(), sessions: [] },
       procedures: {
         account: {
@@ -1063,6 +1096,63 @@ describe("the plan's credit milestone card", () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
     });
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("a wall with a task and a top model: the title names both, the pitch and price stay whole", async () => {
+    const open = await dialog(
+      {
+        kind: "credits",
+        key: "k4",
+        threadId: "t1",
+        pendingText: "still cut off, fix the last row",
+        task: "Invoice app",
+        resume: async () => {},
+      },
+      { models: LOCKED_CATALOG }
+    );
+    await screen.findByRole("heading", {
+      name: "Finish “Invoice app” on Claude Opus 5.5",
+    });
+    expect(open.textContent).toContain("Your free credits are used up");
+    expect(open.textContent).toContain(
+      "Your message is saved. Upgrade and it picks up right where it stopped, on our strongest model."
+    );
+    expect(open.textContent).toContain("still cut off, fix the last row");
+    expect(open.textContent).toContain("$7 your first month, then $10/month");
+    expect(
+      document.querySelectorAll('[data-slot="upgrade-pitch"] li')
+    ).toHaveLength(6);
+    expect(
+      screen.getByRole("button", { name: "Upgrade and finish it" })
+    ).toBeTruthy();
+  });
+
+  it.each([
+    ["no task", { models: LOCKED_CATALOG }, {}],
+    ["no top model in the catalog", { models: [] }, { task: "Invoice app" }],
+  ])("a wall with %s keeps today's words", async (_name, options, extra) => {
+    const open = await dialog(
+      {
+        kind: "credits",
+        key: `k5-${_name}`,
+        threadId: "t1",
+        pendingText: "still cut off",
+        resume: async () => {},
+        ...extra,
+      },
+      options
+    );
+    await screen.findByRole("heading", {
+      name: "Keep going with AbacusAI Bot",
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Upgrade to Basic" })
+      ).toBeTruthy()
+    );
+    expect(open.textContent).toContain(
+      "Your message is saved. Upgrade and it sends right away."
+    );
   });
 
   it("an expired free tier's dialog says it expired", async () => {

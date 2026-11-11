@@ -3448,6 +3448,9 @@
     "retryOffer": {
       "newChat": "In einem neuen Chat mit {{model}} noch einmal versuchen"
     },
+    "routerAfterUpgrade": {
+      "stay": "Bei {{model}} bleiben"
+    },
     "ratingPrompt": {
       "question": "Wie macht sich der Bot in diesem Chat?",
       "bad": "Schlecht",
@@ -4547,6 +4550,9 @@
     "connectorsTitle": "Connectors sind mit AbacusAI-Credits verfügbar",
     "creditsBody": "Deine Nachricht ist gespeichert. Upgrade, und sie wird sofort gesendet.",
     "creditsBodyNoMessage": "Upgrade, um mit den Top-Modellen, Connectors und Routinen weiterzumachen.",
+    "creditsTaskTitle": "„{{task}}“ mit {{model}} fertigstellen",
+    "creditsTaskBody": "Deine Nachricht ist gespeichert. Nach dem Upgrade geht es genau dort weiter, wo es aufgehört hat, mit unserem stärksten Modell.",
+    "creditsTaskCta": "Upgraden und fertigstellen",
     "creditsTitle": "Mach weiter mit AbacusAI Bot",
     "keepChatting": "Ohne Connectors weiterchatten",
     "notNow": "Nicht jetzt",
@@ -5016,6 +5022,7 @@
       "title": "Nur noch {{left}} kostenlose Credits",
       "urge": "Upgrade jetzt, damit deine Arbeit nicht mittendrin stoppt.",
       "urgeProject": "Upgrade jetzt, damit „{{project}}“ nicht mittendrin stoppt.",
+      "urgeProjectModel": "Jetzt upgraden, damit „{{project}}“ nicht auf halbem Weg stoppt, und mit {{model}} fertigstellen.",
       "paidTitle": "Only {{left}} credits left this month",
       "paidUrgeBoth": "Top up or move to {{plan}} so your work doesn't stop halfway.",
       "paidUrgeBothProject": "Top up or move to {{plan}} so “{{project}}” doesn't stop halfway.",

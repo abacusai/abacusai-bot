@@ -10,12 +10,15 @@ import {
   connectorCreditRefusals,
   lastUserText,
   requestUpgradeDialog,
+  taskText,
   type UpgradeDialogKind,
+  type UpgradeDialogRequest,
 } from "#renderer/lib/upgrade-dialog";
 
 import { useHost, useThreadStore } from "../store/selectors";
 import type { RunOutcomeRecord } from "../store/thread-store";
 import { useChatView } from "./context";
+import { noteTopModelResume } from "./router-after-upgrade";
 
 /** Recorded by the live post-hook, not merged from a hydrate or a page. */
 export const isLive = (outcome: RunOutcomeRecord): boolean =>
@@ -44,14 +47,20 @@ export const creditsExpired = (
 /**
  * Sends the waiting message again once the plan is active. With a model the
  * chat moves onto it first, since the key that failed stays dry; the retry
- * carries the model too, so a refused move still sends.
+ * carries the model too, so a refused move still sends. `thisChatOnly` moves
+ * the chat alone and leaves the app's default model as it is.
  */
-export const useUpgradeResume = () => {
+export const useUpgradeResume = ({ thisChatOnly = false } = {}) => {
   const { t } = useTranslation();
   const { session, composer, skin } = useChatView();
   const fixedMode = composer.fixedMode;
   return async (model?: string) => {
-    if (model != null) await composer.onResumeOnModel?.(model).catch(() => {});
+    if (model != null)
+      await (
+        thisChatOnly
+          ? composer.onSwitchThisChat?.(model)
+          : composer.onResumeOnModel?.(model)
+      )?.catch(() => {});
     return session.retry(
       model != null || fixedMode
         ? {
@@ -61,6 +70,32 @@ export const useUpgradeResume = () => {
         : undefined,
       skin === "bot" ? t("workspace.retryMessage") : undefined
     );
+  };
+};
+
+/**
+ * What a free credit wall's ask carries in a listed chat: the task the
+ * dialog's title names, and a resume that runs the waiting message on the top
+ * model the dialog picks, in this chat alone. Once that turn ends clean the
+ * chat is offered its plan's router in a new chat (router-after-upgrade.tsx).
+ * A bot's chat or a routine's keeps its model, so it gets neither.
+ */
+export const useCreditWallTask = () => {
+  const { session, composer } = useChatView();
+  const resume = useUpgradeResume({ thisChatOnly: true });
+  return (
+    messages: readonly UIMessage[]
+  ): Pick<UpgradeDialogRequest, "task" | "resume"> => {
+    const task =
+      composer.onContinueInNewChat != null ? taskText(messages) : undefined;
+    if (task == null) return {};
+    return {
+      task,
+      resume: (model?: string) => {
+        if (model != null) noteTopModelResume(session.threadId, model);
+        return resume(model);
+      },
+    };
   };
 };
 
@@ -83,6 +118,7 @@ export const UpgradeTriggers = ({
   const fresh = useThreadStore(session, (state) => state.fresh);
   const canReply = composer.readOnly == null;
   const resume = useUpgradeResume();
+  const wallTask = useCreditWallTask();
 
   // This run's end, live or brought in by a snapshot when it ended before the
   // view caught up: a fast failure is the person's moment as much as a slow one.
@@ -112,6 +148,7 @@ export const UpgradeTriggers = ({
           ? { expired: true }
           : {}),
         resume,
+        ...(kind === "credits" ? wallTask(messages) : {}),
       })
   );
   useEffect(() => {

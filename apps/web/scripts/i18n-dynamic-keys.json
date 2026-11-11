@@ -1810,6 +1810,7 @@
       "low.title",
       "low.urge",
       "low.urgeProject",
+      "low.urgeProjectModel",
       "low.estimateBuilds",
       "low.estimateMessages",
       "low.estimateTasks",

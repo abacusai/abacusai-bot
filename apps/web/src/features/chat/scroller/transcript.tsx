@@ -39,6 +39,7 @@ import { DeliverableOfferRow } from "../kit/deliverable-offer";
 import { appLineOf, userView, routeRowOf } from "../kit/message";
 import { RatingPromptRow } from "../kit/rating-prompt";
 import { RetryOfferRow } from "../kit/retry-offer";
+import { RouterAfterUpgradeRow } from "../kit/router-after-upgrade";
 import {
   BusyLine,
   busyLabel,
@@ -932,6 +933,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
           <RunTail messages={messages} />
           <DeliverableOfferRow messages={messages} active={active} />
           <RetryOfferRow messages={messages} active={active} />
+          <RouterAfterUpgradeRow messages={messages} active={active} />
           <SuccessPitchRow messages={messages} active={active} />
           <RatingPromptRow messages={messages} active={active} />
           <UpgradeTriggers

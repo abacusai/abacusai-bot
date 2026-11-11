@@ -173,6 +173,7 @@ export const CREDIT_THRESHOLD_COPY = {
     title: "creditThreshold.low.title",
     body: "creditThreshold.low.urge",
     bodyProject: "creditThreshold.low.urgeProject",
+    bodyProjectModel: "creditThreshold.low.urgeProjectModel",
     paidTitle: "creditThreshold.low.paidTitle",
     estimate: {
       builds: "creditThreshold.low.estimateBuilds",
@@ -187,6 +188,8 @@ export const CREDIT_THRESHOLD_COPY = {
     body: string;
     /** The body naming the project the user is on. */
     bodyProject?: string;
+    /** The free plan's, naming the project and the top model the upgrade unlocks. */
+    bodyProjectModel?: string;
     /** A paid plan's: its credits are this month's, and there is no "free". */
     paidTitle: string;
     paidBody?: string;
@@ -250,7 +253,8 @@ const paidUrge = (
 /**
  * The card's title and sentences, which the chat-app line repeats: what is
  * left of the grant, then the estimate at today's rate when there is one;
- * near the end, the project the user is on when it is known.
+ * near the end, the project the user is on when it is known, and on the free
+ * plan the top model the upgrade would finish it on (`topModel`, by name).
  */
 export function creditThresholdWords(
   t: PlanT,
@@ -259,7 +263,8 @@ export function creditThresholdWords(
   balance: { left: number; total: number },
   estimate: { count: number; kind: CreditTaskKind | null } | null,
   project?: string,
-  offer: MilestoneOffer = { plan: "free" }
+  offer: MilestoneOffer = { plan: "free" },
+  topModel?: string
 ): { title: string; lines: string[] } {
   const number = (value: number) =>
     new Intl.NumberFormat(locale).format(Math.max(0, Math.round(value)));
@@ -289,7 +294,12 @@ export function creditThresholdWords(
       offer.plan === "paid"
         ? paidUrge(t, offer.offer, project)
         : project != null
-          ? t(CREDIT_THRESHOLD_COPY[80].bodyProject, { project })
+          ? topModel != null
+            ? t(CREDIT_THRESHOLD_COPY[80].bodyProjectModel, {
+                project,
+                model: topModel,
+              })
+            : t(CREDIT_THRESHOLD_COPY[80].bodyProject, { project })
           : t(copy.body),
     ],
   };

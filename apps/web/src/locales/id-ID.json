@@ -3448,6 +3448,9 @@
     "retryOffer": {
       "newChat": "Coba lagi di chat baru dengan {{model}}"
     },
+    "routerAfterUpgrade": {
+      "stay": "Tetap di {{model}}"
+    },
     "ratingPrompt": {
       "question": "Bagaimana kinerja bot di chat ini?",
       "bad": "Buruk",
@@ -4547,6 +4550,9 @@
     "connectorsTitle": "Konektor tersedia dengan kredit AbacusAI",
     "creditsBody": "Pesan Anda tersimpan. Upgrade dan pesan langsung terkirim.",
     "creditsBodyNoMessage": "Upgrade untuk melanjutkan dengan model terbaik, konektor, dan rutinitas.",
+    "creditsTaskTitle": "Selesaikan “{{task}}” dengan {{model}}",
+    "creditsTaskBody": "Pesan Anda tersimpan. Upgrade dan pesan itu lanjut tepat dari tempat berhenti, dengan model terkuat kami.",
+    "creditsTaskCta": "Upgrade dan selesaikan",
     "creditsTitle": "Lanjutkan dengan AbacusAI Bot",
     "keepChatting": "Lanjutkan mengobrol tanpa konektor",
     "notNow": "Nanti saja",
@@ -5016,6 +5022,7 @@
       "title": "Kredit gratis tinggal {{left}}",
       "urge": "Upgrade sekarang supaya pekerjaanmu tidak berhenti di tengah jalan.",
       "urgeProject": "Upgrade sekarang supaya “{{project}}” tidak berhenti di tengah jalan.",
+      "urgeProjectModel": "Upgrade sekarang agar “{{project}}” tidak berhenti di tengah jalan, dan selesaikan dengan {{model}}.",
       "paidTitle": "Only {{left}} credits left this month",
       "paidUrgeBoth": "Top up or move to {{plan}} so your work doesn't stop halfway.",
       "paidUrgeBothProject": "Top up or move to {{plan}} so “{{project}}” doesn't stop halfway.",
