@@ -59,6 +59,7 @@ import { NewLookCard } from "#renderer/features/tour/new-look";
 import {
   PAID_WELCOME_GALLERY_VARIANTS,
   PaidWelcomeGallery,
+  UpgradeDialogGallery,
 } from "#renderer/features/upgrade-dialog";
 import {
   ONBOARDING_STEPS,
@@ -124,6 +125,9 @@ const extension = {
         "new-look",
         "credit-card-50",
         "credit-card-80",
+        "credit-card-80-project",
+        "upgrade-dialog-task",
+        "upgrade-dialog-plain",
         ...PAID_CREDIT_GALLERY_VARIANTS.flatMap((variant) => [
           `credit-card-paid-50-${variant}`,
           `credit-card-paid-80-${variant}`,
@@ -176,6 +180,13 @@ const extension = {
       <CreditThresholdGallery
         threshold={props.fixture.startsWith("credit-card-paid-80") ? 80 : 50}
         paid={props.fixture.slice(20) as PaidCreditGalleryVariant}
+      />
+    ) : props.fixture === "credit-card-80-project" ? (
+      <CreditThresholdGallery threshold={80} project="Invoice app" />
+    ) : props.fixture === "upgrade-dialog-task" ||
+      props.fixture === "upgrade-dialog-plain" ? (
+      <UpgradeDialogGallery
+        variant={props.fixture === "upgrade-dialog-task" ? "task" : "plain"}
       />
     ) : props.fixture === "credit-card-50" ||
       props.fixture === "credit-card-80" ? (

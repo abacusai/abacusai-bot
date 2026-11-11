@@ -41,6 +41,12 @@ export interface UpgradeDialogRequest {
   expired?: boolean;
   /** Checkout already opened (a card's Upgrade or Top up); the dialog waits for the plan or the credits. */
   checkout?: boolean;
+  /**
+   * `credits`: what stopped, in the user's own words (the wall card's task).
+   * Set only in a chat whose paused message can move onto a top model alone:
+   * the dialog names the task and that model, and `resume` gets the model.
+   */
+  task?: string;
   /** Sends that message again once the plan is active, on `model` if given. */
   resume?: (model?: string) => Promise<unknown>;
   /** `plan`: the screen that asked for it (a card, the model picker). */

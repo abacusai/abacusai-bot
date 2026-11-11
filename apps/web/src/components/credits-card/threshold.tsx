@@ -23,6 +23,7 @@ import {
   tasksLeft,
 } from "@abacus-ai/contract/credit-thresholds";
 import { resolveConfiguredModel } from "@abacus-ai/contract/models";
+import { retryOfferModel } from "@abacus-ai/contract/retry-offer";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Check, Gauge, Leaf } from "lucide-react";
@@ -63,6 +64,8 @@ export interface CreditThresholdCardProps {
   billing: BillingPlan | null;
   /** The chat the user is on, by its name: what running out would stop. */
   project?: string;
+  /** The free plan's: the top model the upgrade unlocks, by name. */
+  topModel?: string;
   /** Absent: the free plan's. */
   offer?: MilestoneOffer;
   /** The upgrade as the free plan has it, which Basic's next plan alone also opens. */
@@ -86,6 +89,7 @@ export const CreditThresholdCard = ({
   estimate,
   billing,
   project,
+  topModel,
   offer: milestone = { plan: "free" },
   onUpgrade,
   onNextPlan,
@@ -105,7 +109,8 @@ export const CreditThresholdCard = ({
     { left, total },
     estimate,
     project,
-    milestone
+    milestone,
+    topModel
   );
   const paid = milestone.plan === "paid" ? milestone.offer : null;
   const isPaid = milestone.plan === "paid";
@@ -368,9 +373,10 @@ export const CreditThresholdHost = ({
   });
   // A paid chat on a top model is offered its plan's low-cost model. The
   // chat's model as it runs: its pin, else the app's default, resolved.
-  const { data: catalog } = useQuery({
+  // The free plan's 80% card names the top model the upgrade unlocks.
+  const { data: catalog, isPending: catalogPending } = useQuery({
     ...transport.orpc.models.list.queryOptions({ input: {} }),
-    enabled: owed != null && plan === "paid",
+    enabled: owed != null && (plan === "paid" || owed === 80),
     staleTime: 5 * 60_000,
   });
   const { data: settings } = useQuery({
@@ -399,9 +405,11 @@ export const CreditThresholdHost = ({
   });
   // A paid plan's buttons are its offer's: the card waits for the plan read,
   // and a paid plan with nothing to offer gets no card.
+  // The free plan's 80% card waits for its top model, so its words never change on screen.
   const offerKnown =
-    plan !== "paid" ||
-    (!billingPending && paidCreditsOffer(billing ?? null) != null);
+    plan === "paid"
+      ? !billingPending && paidCreditsOffer(billing ?? null) != null
+      : owed !== 80 || (!billingPending && !catalogPending);
   // Once on screen it stays until answered, whatever starts behind it.
   const visible =
     owed != null &&
@@ -440,6 +448,10 @@ export const CreditThresholdHost = ({
 
   if (showing == null || used == null || total == null || plan == null)
     return null;
+  const topModel =
+    plan === "free" && billing != null && catalog != null
+      ? retryOfferModel(catalog, "locked", planTopModelIds(billing))?.label
+      : undefined;
   const count = tasksLeft(Math.max(0, total - used), mark?.perTask ?? null);
   const offer = milestoneOffer(plan, billing);
   const answer = (
@@ -465,6 +477,7 @@ export const CreditThresholdHost = ({
       billing={billing ?? null}
       offer={offer}
       {...(project != null && { project })}
+      {...(topModel != null && { topModel })}
       onUpgrade={() => {
         // Inside the click: the web build opens its checkout tab here.
         void openUpgrade(transport.client, "low_credits");

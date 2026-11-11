@@ -74,6 +74,7 @@ import {
   startCreditsCheckout,
   startPlanCheckout,
   taskText,
+  type UpgradeDialogRequest,
 } from "#renderer/lib/upgrade-dialog";
 import { useAccount } from "#renderer/lib/use-account";
 import { useAppContext } from "#renderer/lib/use-app-context";
@@ -95,7 +96,11 @@ import { formatElapsed, useSeconds } from "../clock";
 import { useChatView } from "../context";
 import { openModelPicker } from "../open-model-picker";
 import { toolTitle } from "../tools/tool-line";
-import { creditsExpired, useUpgradeResume } from "../upgrade-triggers";
+import {
+  creditsExpired,
+  useCreditWallTask,
+  useUpgradeResume,
+} from "../upgrade-triggers";
 import { TurnCredits } from "./turn-credits";
 
 export const providerMessage = (raw = ""): string => {
@@ -753,15 +758,25 @@ const useCreditsCheckout = (
   resume: (model?: string) => Promise<unknown>
 ) => {
   const { session, runtime } = useChatView();
-  const start = (open: () => Promise<void>) =>
+  const wallTask = useCreditWallTask();
+  const start = (
+    open: () => Promise<void>,
+    personal?: Pick<UpgradeDialogRequest, "task" | "resume">
+  ) =>
     startCreditsCheckout(open, {
       key: `paid-credits:${runId}:${Date.now()}`,
       threadId: session.threadId,
       pendingText: lastUserText(session.hostStore.state.messages),
       resume,
+      ...personal,
     });
   return {
-    plan: () => start(() => runtime.host.openUpgrade("chat_credits")),
+    // The free plan's: the task, and the waiting message on the top model.
+    plan: () =>
+      start(
+        () => runtime.host.openUpgrade("chat_credits"),
+        wallTask(session.hostStore.state.messages)
+      ),
     topUp: () =>
       start(() =>
         runtime.host.openTopUp != null

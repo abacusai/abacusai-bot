@@ -675,6 +675,48 @@ describe("the turn's outcome card", () => {
     closeUpgradeDialog();
   });
 
+  it("a listed chat's wall carries its task, and the resume runs on the top model in this chat alone", async () => {
+    const openUpgrade = vi.fn(async () => {});
+    const onSwitchThisChat = vi.fn(async () => "chat" as const);
+    const onResumeOnModel = vi.fn(async () => {});
+    const relay = failed(WALL);
+    current = await renderRelay(
+      relay,
+      "session",
+      {
+        onContinueInNewChat: async () => {},
+        onSwitchThisChat,
+        onResumeOnModel,
+      },
+      {},
+      host("free", { openUpgrade })
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Upgrade · $7 first month" })
+    );
+    const request = upgradeDialogStore.state.request;
+    expect(request).toMatchObject({ kind: "credits", task: "fix the bug" });
+    await request?.resume?.("abacus/claude-opus-5-5");
+    await waitFor(() => expect(relay.stats.send).toHaveLength(1));
+    // This chat moves; the app's default model does not.
+    expect(onSwitchThisChat).toHaveBeenCalledWith("abacus/claude-opus-5-5");
+    expect(onResumeOnModel).not.toHaveBeenCalled();
+    expect(relay.stats.send[0]!.forwardedProps).toMatchObject({
+      model: "abacus/claude-opus-5-5",
+    });
+    closeUpgradeDialog();
+  });
+
+  it("a chat with no way to a new chat (a bot's) asks with no task", async () => {
+    const relay = failed(WALL);
+    current = await renderRelay(relay, "session", {}, {}, host("free"));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Upgrade · $7 first month" })
+    );
+    expect(upgradeDialogStore.state.request?.task).toBeUndefined();
+    closeUpgradeDialog();
+  });
+
   it("the free models at the wall stay an explicit choice beside the offer", async () => {
     const chooseFreeLane = vi.fn(async () => {});
     const relay = failed(WALL);

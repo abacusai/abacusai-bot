@@ -3448,6 +3448,9 @@
     "retryOffer": {
       "newChat": "在新對話中用 {{model}} 再試一次"
     },
+    "routerAfterUpgrade": {
+      "stay": "繼續使用 {{model}}"
+    },
     "ratingPrompt": {
       "question": "機器人在這個對話中表現如何？",
       "bad": "差",
@@ -4547,6 +4550,9 @@
     "connectorsTitle": "使用 AbacusAI 點數就能啟用連接器",
     "creditsBody": "你的訊息已儲存。升級後會馬上送出。",
     "creditsBodyNoMessage": "升級後可繼續使用頂尖模型、連接器和例行工作。",
+    "creditsTaskTitle": "用 {{model}} 完成「{{task}}」",
+    "creditsTaskBody": "你的訊息已儲存。升級後會從中斷處接著進行，並使用我們最強的模型。",
+    "creditsTaskCta": "升級並完成",
     "creditsTitle": "繼續使用 AbacusAI Bot",
     "keepChatting": "不用連接器，繼續聊天",
     "notNow": "先不要",
@@ -5016,6 +5022,7 @@
       "title": "免費點數只剩 {{left}}",
       "urge": "現在就升級，工作才不會中途停下來。",
       "urgeProject": "現在就升級，「{{project}}」才不會中途停下來。",
+      "urgeProjectModel": "現在升級，別讓「{{project}}」停在半路，並用 {{model}} 完成它。",
       "paidTitle": "Only {{left}} credits left this month",
       "paidUrgeBoth": "Top up or move to {{plan}} so your work doesn't stop halfway.",
       "paidUrgeBothProject": "Top up or move to {{plan}} so “{{project}}” doesn't stop halfway.",

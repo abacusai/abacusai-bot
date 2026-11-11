@@ -2,9 +2,11 @@ import {
   paidCreditsOffer,
   paidUpgradeOnly,
   planPrice,
+  planTopModelIds,
   wallOffer,
 } from "@abacus-ai/contract/billing-plan";
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
+import { retryOfferModel } from "@abacus-ai/contract/retry-offer";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bot,
@@ -244,7 +246,8 @@ const PaidBody = ({
   );
 };
 
-const DialogBody = ({
+/** The free plan's dialog: the host's, and the gallery's over a seeded plan and catalog. */
+export const DialogBody = ({
   request,
   from,
   onDone,
@@ -275,6 +278,23 @@ const DialogBody = ({
   // A free account's balance ask is the plan, its whole pitch.
   const plan = request.kind === "plan" || request.kind === "balance";
   const offer = wallOffer(billing ?? null);
+  // A free wall in a chat with a task: the title names the task and the
+  // plan's top model, and once paid the waiting message runs on that model.
+  const personal =
+    request.kind === "credits" &&
+    !paidUpgrade &&
+    request.task != null &&
+    request.resume != null;
+  const { data: catalog } = useQuery({
+    ...transport.orpc.models.list.queryOptions({ input: {} }),
+    enabled: personal,
+    staleTime: 60_000,
+  });
+  // Locked until the upgrade: the model the plan unlocks, never a name in code.
+  const topModel =
+    personal && billing != null && catalog != null
+      ? retryOfferModel(catalog, "locked", planTopModelIds(billing))
+      : null;
 
   // Checkout runs in the browser: once the plan is active (lib/upgrade.ts
   // watches for it), send the waiting message and close.
@@ -295,17 +315,25 @@ const DialogBody = ({
       welcomeLandedPlan(paid, from, {
         threadId: request.threadId,
         paused: pausedTurn(request, async () => {
-          if (request.kind !== "own-key") return request.resume!();
+          if (request.kind !== "own-key" && !personal) return request.resume!();
           // The plan's catalog, which the watch has just read afresh.
           const models = await transport.client.models.list({}).catch(() => []);
-          return request.resume!(ownKeyResumeModel(models));
+          if (request.kind === "own-key")
+            return request.resume!(ownKeyResumeModel(models));
+          // The plan's top model it now runs; none, and it goes on as before.
+          const paidPlan = await transport.client.account
+            .billingPlan({})
+            .catch(() => null);
+          return request.resume!(
+            retryOfferModel(models, "runnable", planTopModelIds(paidPlan))?.id
+          );
         }),
       });
     });
     return () => {
       stopped = true;
     };
-  }, [waiting, transport, request, from, onDone, paidUpgrade]);
+  }, [waiting, transport, request, from, onDone, paidUpgrade, personal]);
 
   if (waiting)
     return (
@@ -390,11 +418,16 @@ const DialogBody = ({
               : t("upgradeDialog.creditsTitle")
             : ownKey
               ? t("upgradeDialog.ownKeyTitle")
-              : t(
-                  connectors
-                    ? "upgradeDialog.connectorsTitle"
-                    : "upgradeDialog.creditsTitle"
-                )}
+              : topModel != null
+                ? t("upgradeDialog.creditsTaskTitle", {
+                    task: request.task,
+                    model: topModel.label,
+                  })
+                : t(
+                    connectors
+                      ? "upgradeDialog.connectorsTitle"
+                      : "upgradeDialog.creditsTitle"
+                  )}
         </DialogTitle>
         {!plan && (
           <p className="text-muted-foreground text-sm/[21px]">
@@ -406,7 +439,9 @@ const DialogBody = ({
                     ? "upgradeDialog.ownKeyBody"
                     : "upgradeDialog.ownKeyBodyNoMessage"
                   : request.pendingText != null
-                    ? "upgradeDialog.creditsBody"
+                    ? topModel != null
+                      ? "upgradeDialog.creditsTaskBody"
+                      : "upgradeDialog.creditsBody"
                     : "upgradeDialog.creditsBodyNoMessage"
             )}
           </p>
@@ -461,7 +496,9 @@ const DialogBody = ({
             setWaiting(true);
           }}
         >
-          {upgradeCtaLabel(t, offer)}
+          {topModel != null
+            ? t("upgradeDialog.creditsTaskCta")
+            : upgradeCtaLabel(t, offer)}
         </Button>
         <Button
           variant="ghost"

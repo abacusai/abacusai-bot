@@ -14,7 +14,7 @@ import { CreditThresholdCard } from "./threshold";
  * The dev gallery's plan: a free account offered Basic with a first-month
  * price, its features worded as billing_plan words them.
  */
-const GALLERY_BILLING: BillingPlan = {
+export const GALLERY_BILLING: BillingPlan = {
   current: {
     planName: "Free",
     creditsRemaining: null,
@@ -104,10 +104,13 @@ export type PaidCreditGalleryVariant =
 export const CreditThresholdGallery = ({
   threshold,
   paid,
+  project,
 }: {
   threshold: CreditThreshold;
   /** Absent: the free plan's card. */
   paid?: PaidCreditGalleryVariant;
+  /** The free plan's card on a named chat, with the top model the upgrade unlocks. */
+  project?: string;
 }) => {
   const [open, setOpen] = useState(true);
   const billing =
@@ -131,7 +134,9 @@ export const CreditThresholdGallery = ({
             onNextPlan: close,
             onTopUp: close,
           }
-        : {})}
+        : project != null
+          ? { project, topModel: "Claude Opus 5.5" }
+          : {})}
       {...(paid?.endsWith("top-model")
         ? {
             cheaper: {

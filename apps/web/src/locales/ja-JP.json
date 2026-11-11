@@ -3448,6 +3448,9 @@
     "retryOffer": {
       "newChat": "新しいチャットで {{model}} を使ってもう一度試す"
     },
+    "routerAfterUpgrade": {
+      "stay": "{{model}} のまま続ける"
+    },
     "ratingPrompt": {
       "question": "このチャットでのボットはいかがですか？",
       "bad": "悪い",
@@ -4547,6 +4550,9 @@
     "connectorsTitle": "コネクタは AbacusAI クレジットで利用できます",
     "creditsBody": "メッセージは保存されています。アップグレードするとすぐに送信されます。",
     "creditsBodyNoMessage": "アップグレードして、トップモデル、コネクタ、ルーティンを使い続けましょう。",
+    "creditsTaskTitle": "「{{task}}」を {{model}} で仕上げる",
+    "creditsTaskBody": "メッセージは保存されています。アップグレードすると、止まったところから最強のモデルで続きを進めます。",
+    "creditsTaskCta": "アップグレードして仕上げる",
     "creditsTitle": "AbacusAI Bot を使い続ける",
     "keepChatting": "コネクタなしでチャットを続ける",
     "notNow": "今はしない",
@@ -5016,6 +5022,7 @@
       "title": "無料クレジットは残り {{left}} です",
       "urge": "作業が途中で止まらないよう、今すぐアップグレードしましょう。",
       "urgeProject": "「{{project}}」が途中で止まらないよう、今すぐアップグレードしましょう。",
+      "urgeProjectModel": "「{{project}}」が途中で止まらないよう今すぐアップグレードして、{{model}} で仕上げましょう。",
       "paidTitle": "Only {{left}} credits left this month",
       "paidUrgeBoth": "Top up or move to {{plan}} so your work doesn't stop halfway.",
       "paidUrgeBothProject": "Top up or move to {{plan}} so “{{project}}” doesn't stop halfway.",
