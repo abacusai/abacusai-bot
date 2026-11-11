@@ -1,7 +1,6 @@
 import type { BillingPlan } from "@abacus-ai/contract/billing-plan";
 import { contract } from "@abacus-ai/contract/contract";
 import type { ModelAvailability } from "@abacus-ai/contract/models";
-import { retryOfferForAccount } from "@abacus-ai/contract/retry-offer";
 import { implement } from "@orpc/server";
 import type { StreamChunk } from "@tanstack/ai";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
@@ -22,15 +21,8 @@ const SONNET = "abacus/claude-sonnet-5-5";
 const TOP_LINE =
   "Top models including Claude Opus 5.5, Claude Sonnet 5.5, GPT-6 Astra and Gemini 4";
 
-/** An account key in the half that gets the offer, so the free path is testable. */
-const FREE_USER = (() => {
-  for (let index = 0; index < 100; index += 1)
-    if (retryOfferForAccount(`o1:u${index}`)) return `u${index}`;
-  throw new Error("no account in the offer's half");
-})();
-
 const account = (tier: "free" | "basic") => ({
-  user_id: tier === "free" ? FREE_USER : "u1",
+  user_id: "u1",
   organization_id: "o1",
   name: null,
   email: null,
