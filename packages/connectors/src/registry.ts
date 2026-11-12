@@ -118,7 +118,17 @@ export type DesktopOs = "darwin" | "win32" | "linux";
  */
 export interface LocalServer {
   entry: McpEntry;
-  app: string;
+  /**
+   * The app itself, where an install puts it: any of these paths. A `*`
+   * segment stands for any one folder (Roblox keeps each Studio version in a
+   * folder named after it).
+   */
+  app: readonly string[];
+  /**
+   * What `entry` launches. The app can be installed without it: Studio writes
+   * its launcher only once its MCP server is turned on.
+   */
+  server: string;
 }
 
 export interface McpConnector extends ConnectorBase {
@@ -414,14 +424,19 @@ export const CONNECTORS: readonly Connector[] = [
           args: ["/c", "%LOCALAPPDATA%\\Roblox\\mcp.bat"],
           tools: [...ROBLOX_STUDIO_TOOLS],
         },
-        app: "%LOCALAPPDATA%\\Roblox\\mcp.bat",
+        app: [
+          "%LOCALAPPDATA%\\Roblox\\Versions\\*\\RobloxStudioBeta.exe",
+          "%ProgramFiles(x86)%\\Roblox\\Versions\\*\\RobloxStudioBeta.exe",
+        ],
+        server: "%LOCALAPPDATA%\\Roblox\\mcp.bat",
       },
       darwin: {
         entry: {
           command: "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP",
           tools: [...ROBLOX_STUDIO_TOOLS],
         },
-        app: "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP",
+        app: ["/Applications/RobloxStudio.app"],
+        server: "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP",
       },
     },
     routes: ["Roblox games", "Roblox Studio places", "Luau scripts"],

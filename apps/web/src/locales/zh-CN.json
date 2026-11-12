@@ -1183,6 +1183,9 @@
       "linkedAs": "已关联为 {{name}}。在 {{app}} 中给 Abacus AI 机器人发消息，就能和你的智能体对话。",
       "unlink": "取消关联",
       "telegramStep": "用手机的相机应用扫描（不要用 Telegram 内置的扫描器），或在手机上打开链接，然后点按 Start。",
+      "telegramStepHere": "此电脑上已登录 Telegram。请在那里打开 Abacus AI 机器人并点击“开始”。",
+      "startInTelegram": "在 Telegram 中开始",
+      "telegramStepPhone": "或者用手机相机应用扫描此码，然后点按“开始”。",
       "waitingTelegram": "正在等待在 Telegram 中点按 Start…"
     }
   },
@@ -4007,6 +4010,7 @@
     "connectFailed": "连接未完成。请重试。",
     "connectUnreachable": "目前无法连接到 Abacus。请检查你的网络连接，然后重试。",
     "connectAppMissing": "请先在这台电脑上安装该应用，然后重新连接。",
+    "connectAppNotReady": "应用已安装，但其服务器尚未开启。请在应用中开启，然后重新连接。",
     "connectOtherOs": "此连接器需要 Windows 或 macOS。",
     "connectorsLastSeen": "目前无法连接到 Abacus。正在显示你的连接上次的状态。",
     "connectorsUnchecked": "目前无法连接到 Abacus，因此无法检查你的连接。",

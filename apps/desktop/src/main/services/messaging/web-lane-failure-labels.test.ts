@@ -56,6 +56,10 @@ vi.mock("electron", () => ({
   BrowserWindow: FakeWindow,
   // Online throughout: the bug's condition.
   net: { isOnline: () => true },
+  // The Discord partition's loopback refusal (closeDiscordLoopback).
+  session: {
+    fromPartition: () => ({ webRequest: { onBeforeRequest: () => {} } }),
+  },
   powerMonitor: { on: () => {}, removeListener: () => {} },
 }));
 vi.mock("../../bring-to-front", () => ({

@@ -489,6 +489,28 @@ export class TelegramWebConnector implements MessagingConnector {
     presentAsDialog(win);
   }
 
+  /**
+   * Open `bot`'s chat in this signed-in page, ready for `/start <code>`, and
+   * show it: Telegram's own Start button on a new chat, the command typed in
+   * the message box on one that has history. The user's click sends it, so
+   * the shared bot links from this computer, with no phone. False while
+   * Telegram is not signed in here.
+   */
+  async presentBotStart(bot: string, code: string): Promise<boolean> {
+    if (!this.running || !this.loggedIn) return false;
+    const win = this.ensureWindow();
+    if (win == null) return false;
+    presentAsDialog(win);
+    const opened = await this.run<{ ready: string }>(BOT_START_SCRIPT, {
+      bot,
+      code,
+    });
+    this.callbacks.onLog(
+      `telegram-web: shared bot start shown (${opened?.ready ?? "page not read"})`
+    );
+    return true;
+  }
+
   /** Out of sight, still running: a scan already made can still land. */
   hideLoginWindow(): void {
     const win = this.window;
@@ -762,6 +784,43 @@ const READ_CHAT_SCRIPT = pageScript`
       at: new Date((Number(b.getAttribute('data-timestamp')) || 0) * 1000).toISOString(),
     }))
     .filter((r) => r.text.length > 0);
+`;
+
+/**
+ * Open the bot's chat through Telegram's own deep link, carrying the start
+ * parameter (the same as tapping a t.me/<bot>?start=<code> link), and wait
+ * for it. Nothing is sent: a new chat shows Telegram's Start button, and a
+ * chat with history gets "/start <code>" typed into its empty message box.
+ * Only the bot's own chat (its @username in the address) is ever typed into.
+ */
+const BOT_START_SCRIPT = pageScript`
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const bot = String(args.bot || '').replace(/^@/, '');
+  const code = String(args.code || '');
+  if (!/^[A-Za-z0-9_]{3,64}$/.test(bot) || !/^[A-Za-z0-9_-]{1,64}$/.test(code))
+    return { ready: 'bad-args' };
+  location.hash = '#?tgaddr=' + encodeURIComponent('tg://resolve?domain=' + bot + '&start=' + code);
+  const visible = (el) => el != null && el.offsetParent !== null && !el.classList.contains('hide');
+  const end = Date.now() + 10000;
+  let inChat = false;
+  while (Date.now() < end) {
+    inChat = location.hash.toLowerCase() === '#@' + bot.toLowerCase();
+    if (inChat) {
+      const start = [...document.querySelectorAll('.chat-input-control .chat-input-control-button')].find(visible);
+      if (start) return { ready: 'start-button' };
+      const box = document.querySelector('.input-message-input[contenteditable="true"]');
+      if (visible(box)) {
+        // Let a just-opened chat settle, then type only into an empty box.
+        await sleep(600);
+        if (box.textContent.trim().length > 0) return { ready: 'box-not-empty' };
+        box.focus();
+        document.execCommand('insertText', false, '/start ' + code);
+        return { ready: box.textContent.includes(code) ? 'typed' : 'not-typed' };
+      }
+    }
+    await sleep(150);
+  }
+  return { ready: inChat ? 'chat-without-input' : 'chat-not-opened' };
 `;
 
 /** Unread dialog previews, as best-effort inbound signal. */

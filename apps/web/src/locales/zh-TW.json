@@ -1183,6 +1183,9 @@
       "linkedAs": "已連結為 {{name}}。在 {{app}} 中傳訊息給 Abacus AI 機器人，就能和你的 AI 代理對話。",
       "unlink": "取消連結",
       "telegramStep": "用手機的相機應用程式掃描（不要用 Telegram 內建的掃描器），或在手機上開啟連結，然後點一下 Start。",
+      "telegramStepHere": "此電腦上已登入 Telegram。請在那裡開啟 Abacus AI 機器人並按下「開始」。",
+      "startInTelegram": "在 Telegram 中開始",
+      "telegramStepPhone": "或用手機相機應用程式掃描此碼，然後點按「開始」。",
       "waitingTelegram": "正在等待在 Telegram 中點一下 Start…"
     }
   },
@@ -4007,6 +4010,7 @@
     "connectFailed": "連接未完成。請再試一次。",
     "connectUnreachable": "目前無法連線到 Abacus。請檢查你的網路連線，然後再試一次。",
     "connectAppMissing": "請先在這台電腦上安裝該應用程式，然後重新連線。",
+    "connectAppNotReady": "應用程式已安裝，但其伺服器尚未開啟。請在應用程式中開啟，然後重新連線。",
     "connectOtherOs": "此連接器需要 Windows 或 macOS。",
     "connectorsLastSeen": "目前無法連線到 Abacus。正在顯示你的連接上次的狀態。",
     "connectorsUnchecked": "目前無法連線到 Abacus，因此無法檢查你的連接。",

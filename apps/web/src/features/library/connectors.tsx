@@ -262,11 +262,10 @@ export const ConnectorDialog = ({ connector }: { connector: string }) => {
   const { scope } = useMcpRuntimeScope();
   const [retrying, setRetrying] = useState(false);
   // A promise chain, not try/finally: the compiler takes no finally block.
+  // With no chat open there is no agent to restart: the app is read again.
   const retry = () => {
-    if (!scope) return;
     setRetrying(true);
-    void transport.client.mcp
-      .refresh(scope)
+    void (scope ? transport.client.mcp.refresh(scope) : Promise.resolve())
       .catch(() => undefined)
       .then(() => {
         setRetrying(false);
@@ -407,7 +406,7 @@ export const ConnectorDialog = ({ connector }: { connector: string }) => {
             <Button
               size="lg"
               className={CONNECT_PRIMARY}
-              disabled={!scope || retrying}
+              disabled={retrying}
               onClick={retry}
             >
               {t("phase5.tryAgain")}

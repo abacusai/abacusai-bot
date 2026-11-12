@@ -12,6 +12,10 @@ const window = vi.hoisted(() => ({
 }));
 vi.mock("electron", () => ({
   app: { isPackaged: false, getPath: () => "/tmp" },
+  // The Discord partition's loopback refusal (closeDiscordLoopback).
+  session: {
+    fromPartition: () => ({ webRequest: { onBeforeRequest: () => {} } }),
+  },
   BrowserWindow: class {
     constructor() {
       return window;

@@ -483,6 +483,7 @@ import {
 import { ConnectorStatusService } from "./services/connectors/connector-status-service";
 import { ConnectorSync } from "./services/connectors/connector-sync";
 import {
+  isLocalAppConnector,
   localAppState,
   type LocalAppProbe,
 } from "./services/connectors/local-app";
@@ -960,6 +961,14 @@ const LOCAL_APP_PROBE: LocalAppProbe = {
   os: process.platform,
   env: process.env,
   exists: (path) => fs.existsSync(path),
+  list: (dir) => {
+    try {
+      return fs.readdirSync(dir);
+    } catch {
+      // No such folder, or not one this user can read: nothing in it.
+      return [];
+    }
+  },
 };
 
 export class ServiceHost {
@@ -2427,9 +2436,18 @@ export class ServiceHost {
   private mcpRuntimeStatuses(): ReadonlyMap<string, AgentMcpStatus> {
     const statuses = new Map<string, AgentMcpStatus>();
     for (const runtime of this.agentManagerService.getRuntimeDiagnostics())
-      for (const server of runtime.mcpServers.values())
+      for (const server of runtime.mcpServers.values()) {
+        // An app's own server (Roblox Studio's) starts and answers with no
+        // tools while the app is closed or its server is switched off.
+        const status =
+          server.status === "connected" &&
+          server.toolCount === 0 &&
+          isLocalAppConnector(server.id)
+            ? "disconnected"
+            : server.status;
         if (statuses.get(server.id) !== "connected")
-          statuses.set(server.id, server.status);
+          statuses.set(server.id, status);
+      }
     return statuses;
   }
 

@@ -102,12 +102,20 @@ const statusOf = (
       const app = inputs.localApp?.(connector) ?? "none";
       if (app === "other-os")
         return { state: "unavailable", reason: "other-os" };
+      // Installed with its server still off is "not ready", never "not
+      // installed": the fix is a switch in the app, not a download.
+      const appReason =
+        app === "missing"
+          ? "app-missing"
+          : app === "server-off"
+            ? "app-not-ready"
+            : null;
       const server = inputs.mcpServers.find((item) => item.id === connector.id);
       if (server == null)
-        return app === "missing"
-          ? { state: "available", reason: "app-missing" }
+        return appReason != null
+          ? { state: "available", reason: appReason }
           : { state: "available" };
-      if (app === "missing") return { state: "pending", reason: "app-missing" };
+      if (appReason != null) return { state: "pending", reason: appReason };
       const live = inputs.mcpRuntime?.get(server.id);
       if (app === "installed" && (live === "error" || live === "disconnected"))
         return { state: "pending", reason: "app-not-ready" };

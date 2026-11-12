@@ -1183,6 +1183,9 @@
       "linkedAs": "Linked as {{name}}. Message the Abacus AI bot in {{app}} to talk to your agent.",
       "unlink": "Unlink",
       "telegramStep": "Scan this with your phone's camera app (not the scanner inside Telegram), or open the link on your phone, then tap Start.",
+      "telegramStepHere": "Telegram is signed in on this computer. Open the Abacus AI bot there and press Start.",
+      "startInTelegram": "Start in Telegram",
+      "telegramStepPhone": "Or scan this with your phone's camera app, then tap Start.",
       "waitingTelegram": "Waiting for Start to be tapped in Telegram…"
     }
   },
@@ -4007,6 +4010,7 @@
     "connectFailed": "Connecting didn't finish. Please try again.",
     "connectUnreachable": "Can't reach Abacus right now. Check your internet connection and try again.",
     "connectAppMissing": "Install the app on this computer first, then connect again.",
+    "connectAppNotReady": "The app is installed, but its server isn't turned on yet. Turn it on in the app, then connect again.",
     "connectOtherOs": "This connector needs Windows or macOS.",
     "connectorsLastSeen": "Can't reach Abacus right now. Showing your connections as they were last seen.",
     "connectorsUnchecked": "Can't reach Abacus right now, so your connections can't be checked.",
