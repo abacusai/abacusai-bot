@@ -204,10 +204,10 @@ describe("RetryOfferRow on a paying plan", () => {
     const pending = later();
     const h = await mount("basic", { answer: () => pending.promise });
     const line = await findLine();
-    // No upgrade on a plan that has it: no "Included in" tag.
-    expect(
-      line.closest('[data-slot="retry-offer"]')?.textContent
-    ).not.toContain("Included in");
+    // No upgrade on a plan that has it: no "Included in" tag, and the cost said.
+    const offer = line.closest('[data-slot="retry-offer"]')?.textContent;
+    expect(offer).not.toContain("Included in");
+    expect(offer).toContain("Uses credits faster");
     fireEvent.click(line);
     // Up with a spinner while the summary is written.
     expect(

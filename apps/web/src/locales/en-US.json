@@ -3446,7 +3446,8 @@
       "copyFailed": "Couldn't copy that"
     },
     "retryOffer": {
-      "newChat": "Try again in a new chat with {{model}}"
+      "newChat": "Try again in a new chat with {{model}}",
+      "usesCreditsFaster": "Uses credits faster"
     },
     "routerAfterUpgrade": {
       "stay": "Stay on {{model}}"

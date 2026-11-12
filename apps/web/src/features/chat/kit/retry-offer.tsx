@@ -329,13 +329,14 @@ export const RetryOfferRow = ({
           ? t("chat.continuation.preparing", { model: label })
           : t("chat.retryOffer.newChat", { model: label })}
       </Button>
-      {!paying && (
-        <span className="text-muted-foreground text-xs">
-          {t("chat.composer.includedIn", {
-            plan: preview?.plan ?? offer?.planName,
-          })}
-        </span>
-      )}
+      <span className="text-muted-foreground text-xs">
+        {paying
+          ? // The plan runs it now, at a top model's price.
+            t("chat.retryOffer.usesCreditsFaster")
+          : t("chat.composer.includedIn", {
+              plan: preview?.plan ?? offer?.planName,
+            })}
+      </span>
       <Button
         variant="ghost"
         size="icon"

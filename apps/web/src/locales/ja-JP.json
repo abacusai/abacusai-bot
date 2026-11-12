@@ -3446,7 +3446,8 @@
       "copyFailed": "コピーできませんでした"
     },
     "retryOffer": {
-      "newChat": "新しいチャットで {{model}} を使ってもう一度試す"
+      "newChat": "新しいチャットで {{model}} を使ってもう一度試す",
+      "usesCreditsFaster": "クレジットの消費が速くなります"
     },
     "routerAfterUpgrade": {
       "stay": "{{model}} のまま続ける"

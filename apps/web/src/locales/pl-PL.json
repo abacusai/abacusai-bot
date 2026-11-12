@@ -3582,7 +3582,8 @@
       "copyFailed": "Nie udało się skopiować"
     },
     "retryOffer": {
-      "newChat": "Spróbuj ponownie w nowej rozmowie z {{model}}"
+      "newChat": "Spróbuj ponownie w nowej rozmowie z {{model}}",
+      "usesCreditsFaster": "Zużywa kredyty szybciej"
     },
     "routerAfterUpgrade": {
       "stay": "Zostań przy {{model}}"
