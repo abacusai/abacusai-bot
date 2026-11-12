@@ -61,17 +61,27 @@ export const DIALOGS_TAKE = `(() => {
 const ELSEWHERE =
   "If they want it confirmed, tell them to do this step on the site in their own browser.";
 
-/** One line per dialog, as the action's result tells it. */
-export const dialogLines = (dialogs: readonly PageDialog[]): string[] =>
+/**
+ * One line per dialog, as the action's result tells it. In the app's own
+ * browser nobody can answer a page's dialog (it is cancelled for the user
+ * too); in the user's own browser the page's dialog shows there for them.
+ */
+export const dialogLines = (
+  dialogs: readonly PageDialog[],
+  where: { inApp: boolean } = { inApp: true }
+): string[] =>
   dialogs.map((dialog) => {
     const said = JSON.stringify(dialog.message);
+    const user = where.inApp
+      ? `the user cannot answer it in the Browser pane either. ${ELSEWHERE}`
+      : "if the user wants it confirmed, they can answer it themselves in that tab of their browser.";
     switch (dialog.kind) {
       case "alert":
         return `The page showed an alert: ${said}. It was closed.`;
       case "confirm":
-        return `The page asked to confirm: ${said}. The browser answered Cancel; it never answers OK, and the user cannot answer it in the Browser pane either. ${ELSEWHERE}`;
+        return `The page asked to confirm: ${said}. The browser answered Cancel; it never answers OK, and ${user}`;
       case "prompt":
-        return `The page asked for text: ${said}. The browser answered Cancel and typed nothing; the user cannot answer it in the Browser pane either. ${ELSEWHERE}`;
+        return `The page asked for text: ${said}. The browser answered Cancel and typed nothing; ${user}`;
     }
   });
 
@@ -103,7 +113,8 @@ export const answerDialogsWhileActing = async (
 
 /** What the page asked during the action, as lines; [] when it asked nothing. */
 export const takeDialogs = async (
-  cdp: (method: string, params?: Record<string, unknown>) => Promise<unknown>
+  cdp: (method: string, params?: Record<string, unknown>) => Promise<unknown>,
+  where: { inApp: boolean } = { inApp: true }
 ): Promise<string[]> => {
   try {
     const answer = (await cdp("Runtime.evaluate", {
@@ -111,7 +122,9 @@ export const takeDialogs = async (
       returnByValue: true,
     })) as { result?: { value?: unknown } } | undefined;
     const value = answer?.result?.value;
-    return Array.isArray(value) ? dialogLines(value as PageDialog[]) : [];
+    return Array.isArray(value)
+      ? dialogLines(value as PageDialog[], where)
+      : [];
   } catch {
     return [];
   }

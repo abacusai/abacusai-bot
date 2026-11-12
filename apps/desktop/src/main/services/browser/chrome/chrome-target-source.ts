@@ -77,6 +77,11 @@ export class ChromeTargetSource implements BrowserTargetSource {
     return this.pageFor(id);
   }
 
+  /** What tab `id` did that its page does not show (a download), each told once. */
+  pageEvents(id: number): string[] {
+    return this.pages.get(id)?.takeEvents() ?? [];
+  }
+
   async materialize(
     sessionId: string,
     url: string,
@@ -161,6 +166,7 @@ export const tabMethodsOf = (
   | "liveOrigin"
   | "frames"
   | "framePage"
+  | "pageEvents"
 > => ({
   sessionTabs: (sessionId) => source()?.sessionTabs(sessionId) ?? [],
   activateTab: async (sessionId, tabId) =>
@@ -177,4 +183,5 @@ export const tabMethodsOf = (
     (await source()?.liveOrigin(id, frameId)) ?? null,
   frames: (id) => source()?.frames(id) ?? [],
   framePage: (id, frameId) => source()?.framePage(id, frameId) ?? null,
+  pageEvents: (id) => source()?.pageEvents(id) ?? [],
 });

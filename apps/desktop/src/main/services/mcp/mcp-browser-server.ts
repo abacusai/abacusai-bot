@@ -1818,8 +1818,9 @@ export class McpBrowserServer extends McpHttpServer {
     before: { url: string; title: string; refs: Map<string, string> }
   ): Promise<string> {
     const changes = await this.describeChanges(wc, sessionId, before);
-    const dialogs = await takeDialogs((method, params) =>
-      this.cdp(wc, method, params)
+    const dialogs = await takeDialogs(
+      (method, params) => this.cdp(wc, method, params),
+      { inApp: this.presentsInApp() }
     );
     const events = this.options.target?.()?.pageEvents?.(wc.id) ?? [];
     return [changes, ...dialogs, ...events]
@@ -3224,8 +3225,9 @@ export class McpBrowserServer extends McpHttpServer {
         );
         const str =
           result !== undefined ? JSON.stringify(result, null, 2) : "undefined";
-        const dialogs = await takeDialogs((method, params) =>
-          this.cdp(wc, method, params)
+        const dialogs = await takeDialogs(
+          (method, params) => this.cdp(wc, method, params),
+          { inApp: this.presentsInApp() }
         );
 
         return this.ok(

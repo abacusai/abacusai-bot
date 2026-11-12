@@ -77,4 +77,16 @@ describe("a page's dialogs while the bot acts", () => {
     const [line] = dialogLines([{ kind: "prompt", message: "Name?" }]);
     expect(line).toContain("do this step on the site in their own browser");
   });
+
+  it("in the user's own browser, sends them to that tab, never to a pane", () => {
+    // In Chrome mode there is no Browser pane, and outside a bot's action the
+    // page's own dialog shows there, so the user can answer it themselves.
+    const [line] = dialogLines([{ kind: "confirm", message: "Sure?" }], {
+      inApp: false,
+    });
+    expect(line).not.toMatch(/pane/i);
+    expect(line).toContain(
+      "they can answer it themselves in that tab of their browser"
+    );
+  });
 });

@@ -41,6 +41,34 @@ const history = (index: number, count: number) => ({
 });
 
 describe("ChromePage", () => {
+  it("tells what a download did, once each: the browser tools cannot see the file", () => {
+    // In the user's Chrome a click saved a file and nothing said so; a bot
+    // claimed it was saved and named a place it never saw.
+    const { relay } = fakeRelay();
+    const page = new ChromePage(relay, { id: 7, url: "https://a.test/" });
+    page.onCdpEvent("Page.downloadWillBegin", {
+      guid: "g1",
+      suggestedFilename: "Images.txt",
+      url: "https://a.test/download/Images.txt",
+    });
+    expect(page.takeEvents()).toEqual([
+      'Download started: this browser is saving "Images.txt" in its own downloads folder. The browser tools cannot see the saved file or its path.',
+    ]);
+    expect(page.takeEvents()).toEqual([]);
+    page.onCdpEvent("Page.downloadProgress", {
+      guid: "g1",
+      state: "inProgress",
+    });
+    page.onCdpEvent("Page.downloadProgress", {
+      guid: "g1",
+      state: "completed",
+    });
+    page.onCdpEvent("Page.downloadProgress", { guid: "g2", state: "canceled" });
+    expect(page.takeEvents()).toEqual([
+      'Download finished: "Images.txt" is in this browser\'s downloads folder.',
+    ]);
+  });
+
   it("starts from what the extension knew of the tab", () => {
     const { relay } = fakeRelay();
     const page = new ChromePage(relay, {
