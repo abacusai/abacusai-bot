@@ -146,14 +146,17 @@ export class OpenLlmRouter {
   /**
    * The hosted free sources the free lane would run on, in the pool's order:
    * what the wall's card names, and empty when there is nothing to go on to.
+   * A source whose account said no (a spent daily quota, a rejected key) is
+   * left out, since `pick` would not run it either.
    */
   freeLaneProviders(registry: ModelRegistry): string[] {
-    const providers = openLlmCandidates(listModels(registry))
-      .map((choice) => choice.provider)
-      .filter(
-        (provider) => provider !== "abacus" && provider !== LOCAL_PROVIDER
-      );
-    return [...new Set(providers)];
+    const lane = openLlmCandidates(listModels(registry)).filter(
+      (choice) =>
+        choice.provider !== "abacus" && choice.provider !== LOCAL_PROVIDER
+    );
+    return [
+      ...new Set(this.rotation.open(lane).map((choice) => choice.provider)),
+    ];
   }
 
   /**
@@ -199,13 +202,18 @@ export class OpenLlmRouter {
         },
       }),
       freeLaneProviders: this.freeLaneProviders(registry),
-      // A model on the user's own key, for the wall's "continue on your key".
+      // A model on the user's own key, for the wall's "continue on your key",
+      // from a key the account has not refused.
       ownKeyModels: registry
         .getAvailable()
-        .filter(
-          (entry) =>
-            entry.provider !== "abacus" && entry.provider !== LOCAL_PROVIDER
-        )
+        .filter((entry) => {
+          if (entry.provider === "abacus" || entry.provider === LOCAL_PROVIDER)
+            return false;
+          const choice = choices.find(
+            (item) => item.id === `${entry.provider}/${entry.id}`
+          );
+          return choice == null || this.rotation.open([choice]).length > 0;
+        })
         .slice(0, 1)
         .map((entry) => {
           const id = `${entry.provider}/${entry.id}`;

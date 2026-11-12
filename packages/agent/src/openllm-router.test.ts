@@ -12,6 +12,7 @@ import type { ModelChoice } from "./providers.js";
 const pool = vi.hoisted(() => ({ models: [] as ModelChoice[] }));
 vi.mock("./providers.js", () => ({
   listModels: () => pool.models,
+  payingPlanRouter: () => null,
 }));
 
 const { OpenLlmRouter } = await import("./openllm-router.js");
@@ -139,6 +140,46 @@ describe("a provider that refuses the account", () => {
       })
     ).toBeNull();
     expect(router.wallStops(registry)).not.toBeNull();
+  });
+
+  it("names only the free sources the pool can still run: one whose account said no is left out", () => {
+    setHostCreditWall({ exhaustedAt: 1_000, freeLaneChosenAt: 1_000 });
+    const router = new OpenLlmRouter(
+      () => 1_000,
+      memoryStore(),
+      memoryQuotaStore()
+    );
+    router.failed(registry, OUT_OF_CREDITS, {
+      provider: "abacus",
+      id: "muse-spark-1.3-contributor",
+    });
+    // OpenRouter's daily free allowance is spent: the whole source sits out.
+    router.failed(
+      registry,
+      "429: Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests",
+      { provider: "openrouter", id: "big:free" }
+    );
+    expect(router.freeLaneProviders(registry)).toEqual(["gemini"]);
+    expect(router.pick(registry)?.id).toBe("gemini/gemini-3.6-flash");
+
+    // The Gemini key is rejected too: nothing is left to offer, and the
+    // pool agrees it has nothing to run.
+    router.failed(registry, "401 status code (no body)", {
+      provider: "gemini",
+      id: "gemini-3.6-flash",
+    });
+    expect(router.freeLaneProviders(registry)).toEqual([]);
+    expect(router.pick(registry)).toBeUndefined();
+    // The wall's "continue on your key" reads the same refusals.
+    const keys = {
+      getAvailable: () => [
+        { provider: "gemini", id: "gemini-3.6-flash" },
+        { provider: "openrouter", id: "big:free" },
+      ],
+    } as unknown as ModelRegistry;
+    const context = router.failureContext(keys, true, undefined);
+    expect(context.freeLaneProviders).toEqual([]);
+    expect(context.ownKeyModels).toEqual([]);
   });
 
   it("never puts a model on this computer on the free lane", () => {
