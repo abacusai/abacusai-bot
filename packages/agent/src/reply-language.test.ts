@@ -787,6 +787,11 @@ describe("which language replies fall back to", () => {
     });
     expect(result.isError).toBeUndefined();
     expect(readUserLanguage()).toEqual({ name: "Hindi", source: "user" });
+    // "Answer in Hindi." after a reply already in Hindi gave the user the
+    // same answer twice: the result says not to repeat one.
+    expect(result.content[0]?.text).toMatch(
+      /already answered[^.]*do not repeat/i
+    );
   });
 
   it("forgets once a language detected before own-words detection, keeping a chosen one", () => {

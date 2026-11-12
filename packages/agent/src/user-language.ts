@@ -389,7 +389,7 @@ export function buildSetUserLanguageTool() {
         content: [
           {
             type: "text",
-            text: `Saved: replies are now in ${name}, in every conversation. Answer in ${name}.`,
+            text: `Saved: replies are now in ${name}, in every conversation. If you already answered the user in ${name} in this reply, do not repeat it; otherwise answer in ${name}.`,
           },
         ],
         details: null,
