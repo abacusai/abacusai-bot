@@ -12,7 +12,10 @@ import type {
 } from "@abacus-ai/contract/contracts";
 
 import type { HostPlatform } from "../../platform/capabilities";
-import type { ChromeBrowserService } from "../browser/chrome/chrome-browser-service";
+import {
+  extensionTokenOf,
+  type ChromeBrowserService,
+} from "../browser/chrome/chrome-browser-service";
 import type { BuiltinPermissionScope } from "./builtin-tool-permissions";
 import type { McpAgentToolsServer } from "./mcp-agent-tools-server";
 import type { McpBrowserServer } from "./mcp-browser-server";
@@ -102,7 +105,7 @@ export class BuiltinMcpLifecycle {
 
   async setChromeExtensionToken(token: string): Promise<McpBrowserStatus> {
     const state = this.deps.mcpConfigService.readState();
-    const trimmed = token.trim();
+    const trimmed = extensionTokenOf(token);
     if (trimmed.length === 0) delete state.chromeExtensionToken;
     else state.chromeExtensionToken = trimmed;
     this.deps.mcpConfigService.writeState(state);

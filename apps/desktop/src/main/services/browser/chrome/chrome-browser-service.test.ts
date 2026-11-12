@@ -6,7 +6,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocket } from "ws";
 
-import { ChromeBrowserService } from "./chrome-browser-service";
+import {
+  ChromeBrowserService,
+  extensionTokenOf,
+} from "./chrome-browser-service";
 import type { ChromeInstall } from "./chrome-executable";
 
 const install: ChromeInstall = {
@@ -59,6 +62,18 @@ afterEach(() => {
   service = null;
 });
 
+describe("extensionTokenOf: the token alone from what the user pasted", () => {
+  it.each([
+    ["PLAYWRIGHT_MCP_EXTENSION_TOKEN=abc_-1", "abc_-1"],
+    ['  export PLAYWRIGHT_MCP_EXTENSION_TOKEN = "abc"  ', "abc"],
+    ["'abc'", "abc"],
+    ["abc", "abc"],
+    ["", ""],
+  ])("%j is %j", (pasted, token) => {
+    expect(extensionTokenOf(pasted)).toBe(token);
+  });
+});
+
 describe("ChromeBrowserService", () => {
   it("reports the browser, the extension and the install link before anything is connected", () => {
     service = new ChromeBrowserService({
@@ -105,7 +120,8 @@ describe("ChromeBrowserService", () => {
     const changes = vi.fn();
     service = new ChromeBrowserService({
       onStatusChanged: changes,
-      token: () => "tok",
+      // Pasted as the extension shows it: the line, not the bare token.
+      token: () => "PLAYWRIGHT_MCP_EXTENSION_TOKEN=tok",
       findChrome: () => install,
       isExtensionInstalled: () => true,
       openInBrowser: chrome.openInBrowser,
