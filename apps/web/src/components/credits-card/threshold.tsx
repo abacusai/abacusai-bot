@@ -48,7 +48,7 @@ import {
 
 /**
  * An account's credit milestone card (contract credit-thresholds.ts): half,
- * then four fifths, of the plan's credits used. Over the window between
+ * four fifths, then 95%, of the plan's credits used. Over the window between
  * turns; it stays until a button is picked, and Esc keeps going. The free
  * plan is offered its upgrade; a paid plan its top-up and next plan by the
  * one offer rule (paidCreditsOffer), Basic its next plan alone, pitched as
@@ -130,7 +130,8 @@ export const CreditThresholdCard = ({
   const offer = wallOffer(billing);
   const first = offer?.firstMonthPriceCents;
   const price = offer?.priceCents;
-  const Icon = threshold === 80 ? AlertTriangle : Gauge;
+  const nearEnd = threshold !== 50;
+  const Icon = nearEnd ? AlertTriangle : Gauge;
   const [preparing, setPreparing] = useState(false);
   const switchCheaper = () => {
     if (cheaper == null || preparing) return;
@@ -155,7 +156,7 @@ export const CreditThresholdCard = ({
           <span
             aria-hidden
             className={
-              threshold === 80
+              nearEnd
                 ? "flex size-10 items-center justify-center rounded-[11px] bg-[color-mix(in_oklch,var(--chat-status-attention)_14%,transparent)] text-[var(--chat-status-attention)]"
                 : "bg-primary/12 text-primary flex size-10 items-center justify-center rounded-[11px]"
             }
@@ -185,7 +186,7 @@ export const CreditThresholdCard = ({
           >
             <div
               className={
-                threshold === 80
+                nearEnd
                   ? "h-full rounded-full bg-[var(--chat-status-attention)]"
                   : "bg-primary h-full rounded-full"
               }
@@ -373,10 +374,10 @@ export const CreditThresholdHost = ({
   });
   // A paid chat on a top model is offered its plan's low-cost model. The
   // chat's model as it runs: its pin, else the app's default, resolved.
-  // The free plan's 80% card names the top model the upgrade unlocks.
+  // The free plan's 80% and 95% cards name the top model the upgrade unlocks.
   const { data: catalog, isPending: catalogPending } = useQuery({
     ...transport.orpc.models.list.queryOptions({ input: {} }),
-    enabled: owed != null && (plan === "paid" || owed === 80),
+    enabled: owed != null && (plan === "paid" || owed !== 50),
     staleTime: 5 * 60_000,
   });
   const { data: settings } = useQuery({
@@ -405,11 +406,11 @@ export const CreditThresholdHost = ({
   });
   // A paid plan's buttons are its offer's: the card waits for the plan read,
   // and a paid plan with nothing to offer gets no card.
-  // The free plan's 80% card waits for its top model, so its words never change on screen.
+  // The free plan's 80% and 95% cards wait for their top model, so their words never change on screen.
   const offerKnown =
     plan === "paid"
       ? !billingPending && paidCreditsOffer(billing ?? null) != null
-      : owed !== 80 || (!billingPending && !catalogPending);
+      : owed === 50 || (!billingPending && !catalogPending);
   // Once on screen it stays until answered, whatever starts behind it.
   const visible =
     owed != null &&

@@ -1,7 +1,7 @@
 /**
  * Every plan's credit milestones (contract credit-thresholds.ts). When a
- * billed turn settles, the account is read afresh; crossing half, then four
- * fifths, of the plan's credits is stamped in the prefs row once per
+ * billed turn settles, the account is read afresh; crossing half, four
+ * fifths, then 95%, of the plan's credits is stamped in the prefs row once per
  * spend-down, and a chat-app turn also hears it in the user's own chat. A
  * paid balance back above the mark (risenMilestone) lowers it, answered at
  * the level it stands at, or clears it below half; the free plan's one-time

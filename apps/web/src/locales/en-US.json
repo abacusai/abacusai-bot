@@ -5057,6 +5057,13 @@
       "estimateTasks_one": "Enough for about {{count}} more task.",
       "estimateTasks_other": "Enough for about {{count}} more tasks."
     },
+    "last": {
+      "title": "Almost out: {{left}} free credits left",
+      "paidTitle": "Almost out: {{left}} credits left this month",
+      "urge": "When they run out, your work stops mid-task. Upgrade now to keep going.",
+      "urgeProject": "When they run out, “{{project}}” stops mid-task. Upgrade now to keep going.",
+      "urgeProjectModel": "When they run out, “{{project}}” stops mid-task. Upgrade now to keep going, and finish it on {{model}}."
+    },
     "meterLabel": "{{used}} of {{total}} free credits used",
     "paidMeterLabel": "{{used}} of {{total}} credits used this month",
     "used": "{{used}} used",

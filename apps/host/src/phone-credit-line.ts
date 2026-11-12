@@ -36,7 +36,7 @@ export interface PhoneCreditLineDeps {
 }
 
 /**
- * An account crossed half, then four fifths, of its plan's credits in a
+ * An account crossed half, four fifths, then 95%, of its plan's credits in a
  * WhatsApp turn: the desktop's milestone line (the same words, once each),
  * in the user's language. A free account hears the plan's whole pitch, that
  * everything then works on their phone in the ChatLLM app, and the upgrade

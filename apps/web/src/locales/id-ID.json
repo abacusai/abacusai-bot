@@ -5057,6 +5057,13 @@
       "estimateTasks_one": "Cukup untuk sekitar {{count}} tugas lagi.",
       "estimateTasks_other": "Cukup untuk sekitar {{count}} tugas lagi."
     },
+    "last": {
+      "title": "Hampir habis: kredit gratis tinggal {{left}}",
+      "paidTitle": "Hampir habis: kredit bulan ini tinggal {{left}}",
+      "urge": "Saat habis, pekerjaanmu berhenti di tengah tugas. Upgrade sekarang agar tetap jalan.",
+      "urgeProject": "Saat habis, “{{project}}” berhenti di tengah tugas. Upgrade sekarang agar tetap jalan.",
+      "urgeProjectModel": "Saat habis, “{{project}}” berhenti di tengah tugas. Upgrade sekarang agar tetap jalan, dan selesaikan dengan {{model}}."
+    },
     "meterLabel": "{{used}} dari {{total}} kredit gratis terpakai",
     "paidMeterLabel": "{{used}} of {{total}} credits used this month",
     "used": "{{used}} terpakai",

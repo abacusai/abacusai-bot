@@ -5057,6 +5057,13 @@
       "estimateTasks_one": "Assez pour environ {{count}} tâche de plus.",
       "estimateTasks_other": "Assez pour environ {{count}} tâches de plus."
     },
+    "last": {
+      "title": "Presque épuisés : plus que {{left}} crédits gratuits",
+      "paidTitle": "Presque épuisés : plus que {{left}} crédits ce mois-ci",
+      "urge": "Une fois épuisés, votre travail s'arrête en pleine tâche. Passez à l'offre supérieure pour continuer.",
+      "urgeProject": "Une fois épuisés, « {{project}} » s'arrête en pleine tâche. Passez à l'offre supérieure pour continuer.",
+      "urgeProjectModel": "Une fois épuisés, « {{project}} » s'arrête en pleine tâche. Passez à l'offre supérieure pour continuer, et terminez-le avec {{model}}."
+    },
     "meterLabel": "{{used}} crédits gratuits utilisés sur {{total}}",
     "paidMeterLabel": "{{used}} of {{total}} credits used this month",
     "used": "{{used}} utilisés",

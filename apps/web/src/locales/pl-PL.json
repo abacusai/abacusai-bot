@@ -5217,6 +5217,13 @@
       "estimateTasks_few": "Wystarczy jeszcze na mniej więcej {{count}} zadania.",
       "estimateTasks_many": "Wystarczy jeszcze na mniej więcej {{count}} zadań."
     },
+    "last": {
+      "title": "Prawie koniec: zostało tylko {{left}} darmowych kredytów",
+      "paidTitle": "Prawie koniec: w tym miesiącu zostało tylko {{left}} kredytów",
+      "urge": "Gdy się skończą, praca zatrzyma się w połowie zadania. Przejdź teraz na wyższy plan, żeby działać dalej.",
+      "urgeProject": "Gdy się skończą, „{{project}}” zatrzyma się w połowie zadania. Przejdź teraz na wyższy plan, żeby działać dalej.",
+      "urgeProjectModel": "Gdy się skończą, „{{project}}” zatrzyma się w połowie zadania. Przejdź teraz na wyższy plan, żeby działać dalej, i dokończ go z {{model}}."
+    },
     "meterLabel": "Wykorzystano {{used}} z {{total}} darmowych kredytów",
     "paidMeterLabel": "Wykorzystano {{used}} z {{total}} kredytów w tym miesiącu",
     "used": "Wykorzystano: {{used}}",

@@ -537,7 +537,7 @@ describe("the plan's credit milestones", () => {
     };
   };
 
-  it("stamps half, then four fifths, each once", async () => {
+  it("stamps half, four fifths, then 95%, each once, and nothing at the whole grant", async () => {
     const h = setup();
     expect(await h.settle(900)).toBeUndefined();
     const half = await h.settle(1000);
@@ -546,6 +546,10 @@ describe("the plan's credit milestones", () => {
     expect(await h.settle(1600)).toMatchObject({ reached: 80, used: 1600 });
     const low = h.mark();
     expect(await h.settle(1700)).toEqual(low);
+    expect(await h.settle(1900)).toMatchObject({ reached: 95, used: 1900 });
+    const last = h.mark();
+    expect(await h.settle(1950)).toEqual(last);
+    expect(await h.settle(2000)).toEqual(last);
   });
 
   it("estimates from today's post-turn reads: credits per completed turn, and what they were", async () => {

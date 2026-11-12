@@ -5057,6 +5057,13 @@
       "estimateTasks_one": "Genoeg voor ongeveer {{count}} taak.",
       "estimateTasks_other": "Genoeg voor ongeveer {{count}} taken."
     },
+    "last": {
+      "title": "Bijna op: nog maar {{left}} gratis credits over",
+      "paidTitle": "Bijna op: nog maar {{left}} credits over deze maand",
+      "urge": "Als ze op zijn, stopt je werk midden in een taak. Upgrade nu om door te gaan.",
+      "urgeProject": "Als ze op zijn, stopt ‘{{project}}’ midden in een taak. Upgrade nu om door te gaan.",
+      "urgeProjectModel": "Als ze op zijn, stopt ‘{{project}}’ midden in een taak. Upgrade nu om door te gaan, en maak het af met {{model}}."
+    },
     "meterLabel": "{{used}} van {{total}} gratis credits gebruikt",
     "paidMeterLabel": "{{used}} van {{total}} credits gebruikt deze maand",
     "used": "{{used}} gebruikt",

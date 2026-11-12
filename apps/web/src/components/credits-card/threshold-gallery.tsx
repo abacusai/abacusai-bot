@@ -118,14 +118,19 @@ export const CreditThresholdGallery = ({
       ? galleryPaidBilling(paid.startsWith("pro") ? "pro" : "basic")
       : GALLERY_BILLING;
   const total = paid != null ? 20000 : 2000;
-  const used = Math.round(total * (threshold === 80 ? 0.82 : 0.52));
+  const used = Math.round(
+    total * (threshold === 95 ? 0.96 : threshold === 80 ? 0.82 : 0.52)
+  );
   const close = () => setOpen(false);
   return open ? (
     <CreditThresholdCard
       threshold={threshold}
       used={used}
       total={total}
-      estimate={{ count: threshold === 80 ? 4 : 12, kind: "builds" }}
+      estimate={{
+        count: threshold === 95 ? 1 : threshold === 80 ? 4 : 12,
+        kind: "builds",
+      }}
       billing={billing}
       {...(paid != null
         ? {

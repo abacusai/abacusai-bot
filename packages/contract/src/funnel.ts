@@ -107,6 +107,9 @@ export const FUNNEL_STEPS = [
   "credit_card_80_shown",
   "credit_card_80_upgrade",
   "credit_card_80_continue",
+  "credit_card_95_shown",
+  "credit_card_95_upgrade",
+  "credit_card_95_continue",
   // A paid plan's credit milestone card: its top-up, its next plan, keep going,
   // or (a chat on a top model) move that chat to the plan's low-cost model.
   "credit_card_paid_50_shown",
@@ -119,6 +122,11 @@ export const FUNNEL_STEPS = [
   "credit_card_paid_80_next_plan",
   "credit_card_paid_80_continue",
   "credit_card_paid_80_switch_cheaper",
+  "credit_card_paid_95_shown",
+  "credit_card_paid_95_top_up",
+  "credit_card_paid_95_next_plan",
+  "credit_card_paid_95_continue",
+  "credit_card_paid_95_switch_cheaper",
   // A free account's success pitch (success-pitch.ts); the detail is its trigger.
   "success_pitch_shown",
   "success_pitch_upgrade",
