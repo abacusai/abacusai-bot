@@ -3533,6 +3533,18 @@
     "continuation": {
       "preparing": "Menyiapkan chat baru dengan {{model}}…",
       "failed": "Chat baru tidak dapat dimulai. Coba lagi."
+    },
+    "modelSwitch": {
+      "title": "Lanjutkan dengan {{model}} di chat baru?",
+      "titleHere": "Ganti chat ini ke {{model}}?",
+      "costSized": "Chat ini panjangnya sekitar {{tokens}} token. Jika Anda mengganti model di sini, semuanya dikirim lagi ke {{model}}. Cache prompt tidak berlaku untuk model baru, jadi mulai sekarang setiap pesan membayar untuk seluruh chat.",
+      "cost": "Jika Anda mengganti model di sini, seluruh chat ini dikirim lagi ke {{model}}. Cache prompt tidak berlaku untuk model baru, jadi mulai sekarang setiap pesan membayar untuk seluruh chat.",
+      "credits": "Pada chat yang panjang, satu pesan bisa memakai sebagian besar kredit bulanan Anda.",
+      "costly": "Pada chat yang panjang, satu pesan bisa semahal puluhan pesan biasa.",
+      "newChatWhy": "Chat baru dimulai dari ringkasan singkat chat ini, di folder yang sama dengan file yang sama, sehingga biayanya jauh lebih kecil. Chat ini tetap seperti sekarang.",
+      "newChat": "Lanjutkan di chat baru dengan {{model}}",
+      "here": "Tetap ganti chat ini ke {{model}}",
+      "cancel": "Batal"
     }
   },
   "notch": {

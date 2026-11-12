@@ -3669,6 +3669,18 @@
     "continuation": {
       "preparing": "Przygotowywanie nowej rozmowy z {{model}}…",
       "failed": "Nie udało się rozpocząć nowej rozmowy. Spróbuj ponownie."
+    },
+    "modelSwitch": {
+      "title": "Kontynuować z {{model}} w nowym czacie?",
+      "titleHere": "Przełączyć ten czat na {{model}}?",
+      "costSized": "Ten czat ma około {{tokens}} tokenów. Jeśli zmienisz tu model, całość zostanie ponownie wysłana do {{model}}. Pamięć podręczna promptów nie przechodzi na nowy model, więc od teraz każda wiadomość płaci za cały czat.",
+      "cost": "Jeśli zmienisz tu model, cały ten czat zostanie ponownie wysłany do {{model}}. Pamięć podręczna promptów nie przechodzi na nowy model, więc od teraz każda wiadomość płaci za cały czat.",
+      "credits": "W długim czacie jedna wiadomość może zużyć dużą część miesięcznych kredytów.",
+      "costly": "W długim czacie jedna wiadomość może kosztować tyle, co dziesiątki zwykłych.",
+      "newChatWhy": "Nowy czat zaczyna się od krótkiego podsumowania tego, w tym samym folderze z tymi samymi plikami, więc kosztuje znacznie mniej. Ten czat zostaje bez zmian.",
+      "newChat": "Kontynuuj w nowym czacie z {{model}}",
+      "here": "Mimo to przełącz ten czat na {{model}}",
+      "cancel": "Anuluj"
     }
   },
   "notch": {

@@ -13,7 +13,11 @@ import type {
   RunOutcomeRecord,
 } from "@abacus-ai/contract/contract";
 import { withoutNoReply } from "@abacus-ai/contract/contract/ai";
-import { creditsOf, freeLaneOf } from "@abacus-ai/contract/contract/ai-thread";
+import {
+  contextTokensOf,
+  creditsOf,
+  freeLaneOf,
+} from "@abacus-ai/contract/contract/ai-thread";
 import {
   applyMessageReaction,
   type MessageReactionChange,
@@ -1353,12 +1357,14 @@ export class ThreadRelay {
   ): RunOutcomeRecord {
     const endedAt =
       typeof event.timestamp === "number" ? event.timestamp : Date.now();
+    const contextTokens = contextTokensOf(event.metadata);
     const base = {
       runId: active.runId,
       startedAt: active.startedAt,
       endedAt,
       steps: active.steps,
       afterMessageId: messages.at(-1)?.id ?? null,
+      ...(contextTokens != null && { contextTokens }),
     };
 
     if (event.type === "RUN_ERROR") {

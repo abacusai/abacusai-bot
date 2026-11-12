@@ -3533,6 +3533,18 @@
     "continuation": {
       "preparing": "Preparing a new chat with {{model}}…",
       "failed": "Couldn't start the new chat. Try again."
+    },
+    "modelSwitch": {
+      "title": "Continue with {{model}} in a new chat?",
+      "titleHere": "Switch this chat to {{model}}?",
+      "costSized": "This chat is about {{tokens}} tokens long. If you switch models here, all of it goes to {{model}} again. Prompt caching doesn't carry over to a new model, so every message from now on pays for the whole chat.",
+      "cost": "If you switch models here, this whole chat goes to {{model}} again. Prompt caching doesn't carry over to a new model, so every message from now on pays for the whole chat.",
+      "credits": "On a long chat, one message can use a large part of your month's credits.",
+      "costly": "On a long chat, one message can cost as much as dozens of normal ones.",
+      "newChatWhy": "A new chat starts from a short summary of this one, in the same folder with the same files, so it costs far less. This chat stays as it is.",
+      "newChat": "Continue in a new chat with {{model}}",
+      "here": "Switch this chat to {{model}} anyway",
+      "cancel": "Cancel"
     }
   },
   "notch": {

@@ -689,7 +689,7 @@ describe("the turn's outcome card", () => {
     closeUpgradeDialog();
   });
 
-  it("a listed chat's wall carries its task, and the resume runs on the top model in this chat alone", async () => {
+  it("a listed chat's wall carries its task; the resume asks first, and once told to switch here runs on the top model in this chat alone", async () => {
     const openUpgrade = vi.fn(async () => {});
     const onSwitchThisChat = vi.fn(async () => "chat" as const);
     const onResumeOnModel = vi.fn(async () => {});
@@ -710,7 +710,14 @@ describe("the turn's outcome card", () => {
     );
     const request = upgradeDialogStore.state.request;
     expect(request).toMatchObject({ kind: "credits", task: "fix the bug" });
-    await request?.resume?.("abacus/claude-opus-5-5");
+    const resumed = request?.resume?.("abacus/claude-opus-5-5");
+    // A chat with messages: the switch is asked first (model-switch-guard.tsx).
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Switch this chat to abacus/claude-opus-5-5 anyway",
+      })
+    );
+    await resumed;
     await waitFor(() => expect(relay.stats.send).toHaveLength(1));
     // This chat moves; the app's default model does not.
     expect(onSwitchThisChat).toHaveBeenCalledWith("abacus/claude-opus-5-5");
@@ -733,6 +740,11 @@ describe("the turn's outcome card", () => {
     );
     await screen.findByRole("button", { name: "Upgrade · $7 first month" });
     act(() => handOffResume(relay.threadId, "abacus/claude-opus-5-5"));
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Switch this chat to abacus/claude-opus-5-5 anyway",
+      })
+    );
     await waitFor(() => expect(relay.stats.send).toHaveLength(1));
     expect(onSwitchThisChat).toHaveBeenCalledWith("abacus/claude-opus-5-5");
     expect(relay.stats.send[0]!.forwardedProps).toMatchObject({
@@ -740,6 +752,40 @@ describe("the turn's outcome card", () => {
     });
     // Taken once.
     expect(resumeHandoffStore.state).toBeNull();
+    closeUpgradeDialog();
+  });
+
+  it("after the upgrade, a new chat on the top model takes the waiting message and this chat sends nothing", async () => {
+    const onSwitchThisChat = vi.fn(async () => "chat" as const);
+    const continued: Array<[string, string | undefined]> = [];
+    const relay = failed(WALL);
+    current = await renderRelay(
+      relay,
+      "session",
+      {
+        onContinueInNewChat: async (model: string, prompt?: string) => {
+          continued.push([model, prompt]);
+        },
+        onSwitchThisChat,
+      },
+      {},
+      host("free")
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Upgrade · $7 first month" })
+    );
+    const resumed = upgradeDialogStore.state.request?.resume?.(
+      "abacus/claude-opus-5-5"
+    );
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Continue in a new chat with abacus/claude-opus-5-5",
+      })
+    );
+    await resumed;
+    expect(continued).toEqual([["abacus/claude-opus-5-5", "fix the bug"]]);
+    expect(onSwitchThisChat).not.toHaveBeenCalled();
+    expect(relay.stats.send).toHaveLength(0);
     closeUpgradeDialog();
   });
 

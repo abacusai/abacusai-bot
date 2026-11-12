@@ -105,13 +105,21 @@ export interface ComposerConfig {
   onResumeOnFreePool?(): Promise<void>;
   /** Start a fresh chat beside this one (a conversation outgrew the model). */
   onNewChat?(): void;
-  /** Move the chat onto `model` before replaying a dead turn on it. */
-  onResumeOnModel?(model: string): Promise<void>;
+  /**
+   * Move the chat onto `model` before replaying a dead turn on it. In the
+   * view, a chat with messages asks first (model-switch-guard.tsx):
+   * "new-chat" or "cancelled" means this chat did not move, so nothing is
+   * replayed here.
+   */
+  onResumeOnModel?(model: string): Promise<void | "new-chat" | "cancelled">;
   /**
    * Move only this chat onto `model`, never the app's default: a bot's chat
-   * moves its bot. Answers which of the two moved.
+   * moves its bot. Answers which of the two moved, or, in the view, that the
+   * user took a new chat or cancelled instead (model-switch-guard.tsx).
    */
-  onSwitchThisChat?(model: string): Promise<"chat" | "bot">;
+  onSwitchThisChat?(
+    model: string
+  ): Promise<"chat" | "bot" | "new-chat" | "cancelled">;
   /**
    * A new chat on `model` that starts from a summary of this one, which
    * keeps its own model (continue-chat.ts). With `prompt`, it is sent there

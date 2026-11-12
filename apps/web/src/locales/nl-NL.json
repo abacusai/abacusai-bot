@@ -3533,6 +3533,18 @@
     "continuation": {
       "preparing": "Nieuwe chat met {{model}} wordt voorbereid…",
       "failed": "De nieuwe chat kon niet worden gestart. Probeer het opnieuw."
+    },
+    "modelSwitch": {
+      "title": "Verdergaan met {{model}} in een nieuwe chat?",
+      "titleHere": "Deze chat overzetten naar {{model}}?",
+      "costSized": "Deze chat is ongeveer {{tokens}} tokens lang. Als je hier van model wisselt, gaat alles opnieuw naar {{model}}. Promptcaching gaat niet mee naar een nieuw model, dus vanaf nu betaalt elk bericht voor de hele chat.",
+      "cost": "Als je hier van model wisselt, gaat deze hele chat opnieuw naar {{model}}. Promptcaching gaat niet mee naar een nieuw model, dus vanaf nu betaalt elk bericht voor de hele chat.",
+      "credits": "In een lange chat kan één bericht een groot deel van je maandcredits gebruiken.",
+      "costly": "In een lange chat kan één bericht evenveel kosten als tientallen gewone berichten.",
+      "newChatWhy": "Een nieuwe chat begint met een korte samenvatting van deze, in dezelfde map met dezelfde bestanden, en kost dus veel minder. Deze chat blijft zoals hij is.",
+      "newChat": "Verdergaan in een nieuwe chat met {{model}}",
+      "here": "Deze chat toch overzetten naar {{model}}",
+      "cancel": "Annuleren"
     }
   },
   "notch": {

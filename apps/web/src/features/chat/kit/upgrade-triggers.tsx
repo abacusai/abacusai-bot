@@ -58,12 +58,15 @@ export const useUpgradeResume = ({ thisChatOnly = false } = {}) => {
   const { session, composer, skin } = useChatView();
   const fixedMode = composer.fixedMode;
   return async (model?: string) => {
-    if (model != null)
-      await (
+    if (model != null) {
+      const moved = await (
         thisChatOnly
           ? composer.onSwitchThisChat?.(model)
           : composer.onResumeOnModel?.(model)
-      )?.catch(() => {});
+      )?.catch(() => undefined);
+      // A new chat took the waiting message, or the user kept this chat as it is.
+      if (moved === "new-chat" || moved === "cancelled") return;
+    }
     return session.retry(
       model != null || fixedMode
         ? {

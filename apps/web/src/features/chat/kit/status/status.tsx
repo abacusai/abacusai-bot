@@ -977,6 +977,8 @@ const CutOffError = ({
             void (async () => {
               const moved =
                 (await composer.onSwitchThisChat?.(OPENLLM_ID)) ?? "chat";
+              // A new chat took the work, or the user kept this one as it is.
+              if (moved === "new-chat" || moved === "cancelled") return;
               resolveCutOff(
                 outcome.runId,
                 moved === "bot" ? "switched-bot" : "switched-chat"
@@ -1031,7 +1033,11 @@ const CutOffError = ({
                   funnel("cutoff_upgraded");
                   resolveCutOff(outcome.runId, "upgraded");
                   if (model == null) return resume();
-                  await composer.onSwitchThisChat?.(model).catch(() => {});
+                  const moved = await composer
+                    .onSwitchThisChat?.(model)
+                    .catch(() => undefined);
+                  // A new chat took the waiting message, or the user kept this chat as it is.
+                  if (moved === "new-chat" || moved === "cancelled") return;
                   return goOn(model);
                 },
               },

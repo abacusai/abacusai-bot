@@ -7,6 +7,7 @@ import type {
   PermissionDescriptor,
 } from "@abacus-ai/contract/contract";
 import {
+  contextTokensOf,
   creditsOf,
   freeLaneOf,
   type AiNotice,
@@ -358,14 +359,16 @@ const fold = (
       );
     if (isTerminalEvent(event) && run != null) {
       const messages = processor.getMessages();
+      const value = record(event);
+      const contextTokens = contextTokensOf(value.metadata);
       const base = {
         runId: run.runId,
         startedAt: run.startedAt,
         endedAt: at,
         steps: run.steps,
         afterMessageId: messages.at(-1)?.id ?? null,
+        ...(contextTokens != null ? { contextTokens } : {}),
       };
-      const value = record(event);
       if (event.type === "RUN_ERROR") {
         const error = record(record(record(value.metadata).abacus).error);
         outcomes = [

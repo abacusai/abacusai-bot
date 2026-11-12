@@ -1,4 +1,8 @@
-import { creditsOf, freeLaneOf } from "@abacus-ai/contract/contract/ai-thread";
+import {
+  contextTokensOf,
+  creditsOf,
+  freeLaneOf,
+} from "@abacus-ai/contract/contract/ai-thread";
 /**
  * The thread store's reducer (spec 02 §4.2), pure. `applyEvent` runs in the
  * dispatcher just before a chunk is yielded to the client ("pre-apply");
@@ -494,6 +498,7 @@ export const recordTerminal = (
   };
   const freeLane = freeLaneOf(typed.metadata);
   const credits = creditsOf(typed.metadata);
+  const contextTokens = contextTokensOf(typed.metadata);
   const kind: RunOutcomeRecord["kind"] =
     event.type === "RUN_ERROR"
       ? "error"
@@ -513,6 +518,7 @@ export const recordTerminal = (
       : {}),
     ...(freeLane != null ? { freeLane } : {}),
     ...(kind === "success" && credits != null ? { credits } : {}),
+    ...(contextTokens != null ? { contextTokens } : {}),
     ...(kind === "error"
       ? {
           error: {
