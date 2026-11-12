@@ -12,7 +12,7 @@ import {
   NETWORK_UNREACHABLE_CODE,
   NETWORK_UNREACHABLE_MESSAGE,
 } from "./network-wait.js";
-import { networkShaped } from "./openllm-failures.js";
+import { asksForRetry, networkShaped } from "./openllm-failures.js";
 import {
   abacusRefusal,
   accountWideFailure,
@@ -175,7 +175,8 @@ export function classifyAttempt(
   )
     return "model_unavailable";
 
-  if (status === 429 || status >= 500 || BUSY.test(raw)) return "rate_limited";
+  if (status === 429 || status >= 500 || BUSY.test(raw) || asksForRetry(raw))
+    return "rate_limited";
 
   return "unknown";
 }

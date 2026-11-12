@@ -148,6 +148,16 @@ describe("what a failure means", () => {
     ).toEqual({ provider: "openrouter", free: true });
   });
 
+  it("asks again within seconds when the server says to retry", () => {
+    expect(
+      classifyFailure(
+        "RetryRequest: Something went wrong while fetching llm response, Please retry.",
+        "abacus",
+        NOON
+      )
+    ).toEqual({ cooldownMs: 5_000 });
+  });
+
   it("leaves a plain failure to the usual escalating wait", () => {
     expect(
       classifyFailure("500 Internal Server Error", "nvidia", NOON)
@@ -253,6 +263,17 @@ describe("a busy provider", () => {
     ["429 Rate limit reached for requests per day (RPD)", false],
     ["404 model not found", false],
     ["401 Invalid API Key", false],
+    // The server asked for the same request again, with no status.
+    [
+      "RetryRequest: Something went wrong while fetching llm response, Please retry.",
+      true,
+    ],
+    ["Empty response from model. Please try again.", true],
+    // A request the server refused is not fixed by sending it again.
+    [
+      "400 Invalid request parameters. Please check the request and try again.",
+      false,
+    ],
   ])("%s busy: %s", (failure, busy) => {
     expect(isBusyCause(failure, "openrouter")).toBe(busy);
   });

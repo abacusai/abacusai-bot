@@ -40,6 +40,11 @@ export type Reply =
     }
   /** A provider error, as a status and the body a provider would send with it. */
   | { fail: { status: number; message: string } }
+  /**
+   * A stream that opens and then carries an error frame instead of a reply,
+   * with no status: how a server reports a fault after it started answering.
+   */
+  | { streamError: string }
   /** The connection dies before any answer: what a lost network looks like. */
   | { drop: true }
   /**
@@ -208,7 +213,7 @@ export class FakeProvider {
         ? { fail: { status: limit.status, message: limit.message } }
         : await this.responder(call, index);
     const credits =
-      "fail" in reply || "drop" in reply
+      "fail" in reply || "drop" in reply || "streamError" in reply
         ? 0
         : (this.meter.credits?.(tokens, call) ?? 0);
     this.billed.push({ model: call.model, tokens, credits });
@@ -245,6 +250,16 @@ export class FakeProvider {
     };
 
     frame({ role: "assistant", content: "" });
+
+    if ("streamError" in reply) {
+      response.end(
+        `data: ${JSON.stringify({
+          error: { message: reply.streamError, type: "server_error" },
+        })}\n\n`
+      );
+
+      return;
+    }
 
     if ("cut" in reply) {
       frame({ content: reply.cut.say });
