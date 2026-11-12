@@ -949,6 +949,37 @@ describe("interacting", () => {
     expect(second.text).not.toContain("Download started");
   });
 
+  it("says what a dialog the click opened asked, and that it was answered Cancel", async () => {
+    // A confirm was answered Cancel without a word; the agent saw a button
+    // that did nothing and overrode window.confirm to get an OK.
+    await seedRefs();
+    respondWith((expression) =>
+      expression.includes("splice(0)")
+        ? [{ kind: "confirm", message: "I am a JS Confirm" }]
+        : {
+            status: "ok",
+            tag: "button",
+            text: "Click for JS Confirm",
+            x: 1,
+            y: 2,
+          }
+    );
+    const { text } = await call("browser_interact", {
+      action: "click",
+      ref: "@e1",
+    });
+    expect(text).toContain(
+      'The page asked to confirm: "I am a JS Confirm". The browser answered Cancel'
+    );
+    // The answerer was held for the click, before it.
+    const holds = evaluated.findIndex((e) =>
+      e.includes("state.until = Date.now()")
+    );
+    const take = evaluated.findIndex((e) => e.includes("splice(0)"));
+    expect(holds).toBeGreaterThanOrEqual(0);
+    expect(take).toBeGreaterThan(holds);
+  });
+
   it("tells the agent a file picker takes a file it cannot choose, not a stack trace", async () => {
     await seedRefs();
     respondWith(() => ({ status: "file_input" }));

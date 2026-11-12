@@ -65,6 +65,7 @@ import {
   fenceGuardExpression,
   isFencedUrl,
 } from "../browser/host-fence";
+import { answerDialogsWhileActing, takeDialogs } from "../browser/page-dialogs";
 import {
   checkServedPageIn,
   type ServedPageCheck,
@@ -1685,6 +1686,13 @@ export class McpBrowserServer extends McpHttpServer {
     return this.options.target?.()?.framePage?.(wc.id, frameId) ?? null;
   }
 
+  /** The page's dialogs answered for the bot (Cancel, never OK) while it acts. */
+  private async holdDialogs(wc: BrowserPage): Promise<void> {
+    await answerDialogsWhileActing(wc, (method, params) =>
+      this.cdp(wc, method, params)
+    );
+  }
+
   private captureBefore(
     wc: BrowserPage,
     sessionId?: string
@@ -1706,8 +1714,13 @@ export class McpBrowserServer extends McpHttpServer {
     before: { url: string; title: string; refs: Map<string, string> }
   ): Promise<string> {
     const changes = await this.describeChanges(wc, sessionId, before);
+    const dialogs = await takeDialogs((method, params) =>
+      this.cdp(wc, method, params)
+    );
     const events = this.options.target?.()?.pageEvents?.(wc.id) ?? [];
-    return [changes, ...events].filter((line) => line.length > 0).join("\n");
+    return [changes, ...dialogs, ...events]
+      .filter((line) => line.length > 0)
+      .join("\n");
   }
 
   private async describeChanges(
@@ -1838,6 +1851,7 @@ export class McpBrowserServer extends McpHttpServer {
         `${label} is a dropdown: choose its option with action "select".`
       );
     const before = this.captureBefore(wc, sessionId);
+    await this.holdDialogs(wc);
     await this.animateCursorToElement(wc, sel).catch(() => {});
     this.animateCursorClick();
     const filled = await this.evalJS(wc, fillScript(sel, text));
@@ -1941,6 +1955,7 @@ export class McpBrowserServer extends McpHttpServer {
     sessionId?: string
   ): Promise<ToolResult> {
     const before = this.captureBefore(wc, sessionId);
+    await this.holdDialogs(wc);
     const result = await this.takeSnapshot(wc, sessionId);
     const overlays = result.overlays ?? [];
     if (overlays.length === 0)
@@ -2555,6 +2570,13 @@ export class McpBrowserServer extends McpHttpServer {
     const before = McpBrowserServer.REPORTS_CHANGES.has(action)
       ? this.captureBefore(wc, sessionId)
       : null;
+    // Only for an action that will act: a ref the snapshot never issued is
+    // refused without touching the page.
+    if (
+      before != null &&
+      (typeof args.ref !== "string" || snapshot.refMap.has(args.ref))
+    )
+      await this.holdDialogs(wc);
     // A ref inside a cross-origin frame acts in that frame's own document.
     let target = this.pageForRef(wc, args.ref, sessionId);
     if (target == null)
