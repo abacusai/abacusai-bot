@@ -3538,6 +3538,18 @@
     "continuation": {
       "preparing": "{{model}} ile yeni bir sohbet hazırlanıyor…",
       "failed": "Yeni sohbet başlatılamadı. Tekrar dene."
+    },
+    "modelSwitch": {
+      "title": "{{model}} ile yeni bir sohbette devam edilsin mi?",
+      "titleHere": "Bu sohbet {{model}} modeline geçirilsin mi?",
+      "costSized": "Bu sohbet yaklaşık {{tokens}} token uzunluğunda. Burada model değiştirirseniz tamamı {{model}} modeline yeniden gönderilir. İstem önbelleği yeni bir modele taşınmaz, bu yüzden bundan sonra her mesaj sohbetin tamamı için ödeme yapar.",
+      "cost": "Burada model değiştirirseniz bu sohbetin tamamı {{model}} modeline yeniden gönderilir. İstem önbelleği yeni bir modele taşınmaz, bu yüzden bundan sonra her mesaj sohbetin tamamı için ödeme yapar.",
+      "credits": "Uzun bir sohbette tek bir mesaj aylık kredinizin büyük bir kısmını kullanabilir.",
+      "costly": "Uzun bir sohbette tek bir mesaj, onlarca normal mesaj kadar tutabilir.",
+      "newChatWhy": "Yeni sohbet, bunun kısa bir özetiyle aynı klasörde ve aynı dosyalarla başlar, bu yüzden çok daha az tutar. Bu sohbet olduğu gibi kalır.",
+      "newChat": "{{model}} ile yeni bir sohbette devam et",
+      "here": "Yine de bu sohbeti {{model}} modeline geçir",
+      "cancel": "İptal"
     }
   },
   "notch": {

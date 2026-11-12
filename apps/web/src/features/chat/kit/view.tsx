@@ -33,6 +33,7 @@ import {
 } from "./context";
 import { MessageComponentProvider } from "./layout";
 import { KitPartsProvider } from "./message-scope";
+import { useModelSwitchGuard } from "./model-switch-guard";
 import { BotUI, SessionUI } from "./ui";
 
 export interface ChatViewProps {
@@ -204,13 +205,15 @@ export const ChatView = (props: ChatViewProps) => {
       .catch(() => {})
       .finally(() => admitting.delete(pending.runId));
   }, [ready, pending, session, threadId, admitting]);
+  // Every model change of a chat with messages asks first; the kit reads this composer.
+  const guard = useModelSwitchGuard(props.composer, session);
   const value: ChatViewContextValue = {
     threadId,
     skin,
     session,
     runtime,
     authorName: props.authorName,
-    composer: props.composer,
+    composer: guard.composer,
     slots: props.slots ?? {},
     workspaceRoot: props.workspaceRoot,
     ...(props.onOpenFile != null ? { onOpenFile: props.onOpenFile } : {}),
@@ -266,6 +269,7 @@ export const ChatView = (props: ChatViewProps) => {
           ) : (
             <LoadingRows />
           )}
+          {guard.dialog}
         </div>
       </MarkdownLinksProvider>
     </ChatViewProvider>

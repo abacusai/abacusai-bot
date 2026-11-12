@@ -38,6 +38,8 @@ export interface RunOutcomeRecord {
   freeLane?: { provider: string | null };
   /** The Abacus credits the run's requests billed; absent when none went to Abacus or a charge is unknown. */
   credits?: number;
+  /** Tokens the run's last request sent: how long the chat was by then. */
+  contextTokens?: number;
   error?: AgentErrorPayload & { code?: string };
   /** The last transcript message at the terminal; null for an empty thread. */
   afterMessageId: string | null;
@@ -127,3 +129,31 @@ export interface AiThreadSnapshot {
   /** For the returned message window (`page` applies to both). */
   runOutcomes: RunOutcomeRecord[];
 }
+
+/**
+ * How long the chat was at a finished run's last request: everything that
+ * request sent (fresh input, cache reads, cache writes), read off its
+ * terminal's `metadata.abacus.turnUsage`. Undefined when unknown or zero.
+ */
+export const contextTokensOf = (metadata: unknown): number | undefined => {
+  const usage = (
+    metadata as
+      | {
+          abacus?: {
+            turnUsage?: {
+              input?: unknown;
+              cacheRead?: unknown;
+              cacheWrite?: unknown;
+            };
+          };
+        }
+      | null
+      | undefined
+  )?.abacus?.turnUsage;
+  if (usage == null) return undefined;
+  const parts = [usage.input, usage.cacheRead, usage.cacheWrite].map((part) =>
+    typeof part === "number" && Number.isFinite(part) && part > 0 ? part : 0
+  );
+  const total = parts.reduce((sum, part) => sum + part, 0);
+  return total > 0 ? total : undefined;
+};

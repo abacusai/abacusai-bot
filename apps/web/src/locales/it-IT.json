@@ -3538,6 +3538,18 @@
     "continuation": {
       "preparing": "Preparazione di una nuova chat con {{model}}…",
       "failed": "Impossibile avviare la nuova chat. Riprova."
+    },
+    "modelSwitch": {
+      "title": "Continuare con {{model}} in una nuova chat?",
+      "titleHere": "Passare questa chat a {{model}}?",
+      "costSized": "Questa chat è lunga circa {{tokens}} token. Se cambi modello qui, tutto viene inviato di nuovo a {{model}}. La cache dei prompt non vale per un nuovo modello, quindi da ora ogni messaggio paga per l'intera chat.",
+      "cost": "Se cambi modello qui, l'intera chat viene inviata di nuovo a {{model}}. La cache dei prompt non vale per un nuovo modello, quindi da ora ogni messaggio paga per l'intera chat.",
+      "credits": "In una chat lunga, un solo messaggio può usare gran parte dei crediti del mese.",
+      "costly": "In una chat lunga, un solo messaggio può costare quanto decine di messaggi normali.",
+      "newChatWhy": "Una nuova chat parte da un breve riassunto di questa, nella stessa cartella con gli stessi file, quindi costa molto meno. Questa chat resta com'è.",
+      "newChat": "Continua in una nuova chat con {{model}}",
+      "here": "Passa comunque questa chat a {{model}}",
+      "cancel": "Annulla"
     }
   },
   "notch": {

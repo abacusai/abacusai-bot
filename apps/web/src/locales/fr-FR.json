@@ -3538,6 +3538,18 @@
     "continuation": {
       "preparing": "Préparation d'une nouvelle conversation avec {{model}}…",
       "failed": "Impossible de démarrer la nouvelle conversation. Réessayez."
+    },
+    "modelSwitch": {
+      "title": "Continuer avec {{model}} dans une nouvelle conversation ?",
+      "titleHere": "Passer cette conversation à {{model}} ?",
+      "costSized": "Cette conversation fait environ {{tokens}} tokens. Si vous changez de modèle ici, tout est renvoyé à {{model}}. La mise en cache des prompts ne suit pas un nouveau modèle : chaque message paiera désormais pour toute la conversation.",
+      "cost": "Si vous changez de modèle ici, toute cette conversation est renvoyée à {{model}}. La mise en cache des prompts ne suit pas un nouveau modèle : chaque message paiera désormais pour toute la conversation.",
+      "credits": "Dans une longue conversation, un seul message peut consommer une grande partie de vos crédits du mois.",
+      "costly": "Dans une longue conversation, un seul message peut coûter autant que des dizaines de messages normaux.",
+      "newChatWhy": "Une nouvelle conversation démarre avec un court résumé de celle-ci, dans le même dossier avec les mêmes fichiers, et coûte donc beaucoup moins. Cette conversation reste telle quelle.",
+      "newChat": "Continuer dans une nouvelle conversation avec {{model}}",
+      "here": "Passer quand même cette conversation à {{model}}",
+      "cancel": "Annuler"
     }
   },
   "notch": {
