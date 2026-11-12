@@ -98,8 +98,10 @@ export interface AppOperations {
     body: string,
     metadata?: NotificationMetadata,
     attention?: { kind?: "needs-you" | "done" | "failed"; dedupeKey?: string },
-    /** Main's own notices only: told when the user clicks it. */
-    clicked?: () => void
+    /** Main's own notices only: told when the user clicks it, `action` when on the button. */
+    clicked?: (action: boolean) => void,
+    /** Main's own notices only: one button that opens its own metadata. */
+    action?: { label: string; metadata: NotificationMetadata }
   ): void;
   readImageAsDataUrl(args: HostFileArgs): Promise<{
     success: boolean;

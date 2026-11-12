@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import type { Db } from "#renderer/data/db";
 import { followNotice } from "#renderer/data/queries/notices";
 import type { Transport } from "#renderer/data/transport";
+import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
 import { markExternalOpen } from "#renderer/lib/navigation/external-open";
 import { openTargetOptions } from "#renderer/lib/navigation/open-target-options";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
@@ -41,6 +42,40 @@ export const notificationOptions = (metadata: NotificationMetadata) => {
   }
 };
 
+/** The most a notice puts in a composer. */
+const NOTICE_DRAFT_MAX_CHARS = 500;
+
+/** A notice's draft as plain text: control characters out, capped; null when nothing is left. */
+export const noticeDraft = (text: unknown): string | null => {
+  if (typeof text !== "string") return null;
+  const plain = Array.from(text)
+    .map((char) => {
+      const code = char.codePointAt(0) ?? 0;
+      if (code === 0x0a || code === 0x09) return " ";
+      return code < 0x20 || (code >= 0x7f && code < 0xa0) ? "" : char;
+    })
+    .join("")
+    .trim();
+  return plain.length === 0
+    ? null
+    : Array.from(plain).slice(0, NOTICE_DRAFT_MAX_CHARS).join("");
+};
+
+/**
+ * A notice's draft goes into its session's composer, never sent. What the user
+ * already wrote there stays: the notice only fills an empty composer.
+ */
+export const placeNoticeDraft = (
+  metadata: NotificationMetadata,
+  place: typeof updateDraft = updateDraft
+): void => {
+  const text = noticeDraft(metadata.draft);
+  if (text == null || metadata.sessionId == null) return;
+  place(metadata.sessionId, (draft) =>
+    draft.text.trim() === "" ? { ...draft, text } : draft
+  );
+};
+
 /**
  * A notice with no kind names a session; one a bot owns opens in the bot:
  * its forever chat is the bot's page (`/bots/$botId`, the chats route has
@@ -71,6 +106,7 @@ export const NotificationClicks = ({
     const clicked = (event: Event) => {
       markExternalOpen();
       const metadata = (event as CustomEvent<NotificationMetadata>).detail;
+      if (metadata) placeNoticeDraft(metadata);
       const options = metadata
         ? notificationOptions(withOwner(metadata, db))
         : null;
@@ -92,6 +128,7 @@ export const NotificationClicks = ({
         }
         if (event.type !== "notification-clicked") return;
         markExternalOpen();
+        placeNoticeDraft(event.metadata);
         const options = notificationOptions(withOwner(event.metadata, db));
         if (options != null)
           void navigate({ ...options, transition: "nav-lateral" });

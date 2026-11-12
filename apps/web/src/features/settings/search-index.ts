@@ -98,7 +98,13 @@ const groups: Partial<Record<SettingsPageId, string[]>> = {
     "bubbleTint",
     "importTheme",
   ],
-  notifications: ["notify", "sounds", "quietHours", "showInNotch"],
+  notifications: [
+    "notify",
+    "projectReminders",
+    "sounds",
+    "quietHours",
+    "showInNotch",
+  ],
   memory: ["customInstructions"],
   browser: [
     "browserEnabled",

@@ -64,6 +64,7 @@
       "panes": "default",
       "pinned.botIds": "legacy",
       "pinned.sessionIds": "legacy",
+      "projectReminders": "default",
       "recentFolders": "default",
       "routineCreditHold": "default",
       "showLinkPreviews": "default",
@@ -160,6 +161,7 @@
         "botIds": [],
         "sessionIds": ["s-1"]
       },
+      "projectReminders": true,
       "recentFolders": [],
       "routineCreditHold": null,
       "showLinkPreviews": true,

@@ -41,6 +41,8 @@ export interface NotificationMetadata {
   routineId?: string;
   workspaceId?: string;
   sessionId?: string;
+  /** Text for the session's composer, placed there and never sent; an empty composer only. */
+  draft?: string;
 }
 
 export type SystemEvent =

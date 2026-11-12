@@ -583,6 +583,7 @@ import {
   abacusUserAgent,
   hostPublicBase,
 } from "./services/providers/abacus-host";
+import { fetchBillingPlan } from "./services/providers/abacus-upgrade";
 import { readAccountState } from "./services/providers/account-service";
 import {
   CreditThresholdWatch,
@@ -633,7 +634,6 @@ import {
   WORK_WAITING_FIRST_CHECK_MS,
   WorkWaiting,
   workWaitingMetadata,
-  workWaitingLine,
   type WorkWaitingPlace,
 } from "./services/providers/work-waiting";
 import { SandboxProbeService } from "./services/sandbox/sandbox-probe-service";
@@ -982,6 +982,18 @@ const LOCAL_APP_PROBE: LocalAppProbe = {
     }
   },
 };
+
+/** A native notice from main: it reaches a closed window. */
+export interface UserNotice {
+  title: string;
+  body: string;
+  dedupeKey: string;
+  metadata?: NotificationMetadata;
+  /** One button (where the OS shows them) that opens `metadata` in place of the notice's own. */
+  action?: { label: string; metadata: NotificationMetadata };
+  /** Told when the user clicks the notice; `action` when it was the button. */
+  clicked?: (action: boolean) => void;
+}
 
 export class ServiceHost {
   constructor(readonly platform: HostPlatform = "electron") {
@@ -1422,13 +1434,25 @@ export class ServiceHost {
         : path.join(abacusBotHome(), "work-waiting.json"),
     quiet: (now) =>
       isQuietNow(this.prefs?.()?.get().sounds?.quietHours, new Date(now)),
+    enabled: () =>
+      readNotificationSettings().enabled &&
+      this.prefs?.()?.get().projectReminders !== false,
     busy: () => this.turnLedger.anyOpen(),
     nameOf: (place) => this.workWaitingName(place),
-    words: async () => {
-      const words = await channelWords(
+    words: () =>
+      channelWords(
         channelLocale(readUserLanguage()?.name ?? null, this.appLanguage())
-      );
-      return (key, values) => words.t(key, values);
+      ),
+    freeCredits: async () => {
+      if (!onFreePlan(cachedAbacusAccount())) return null;
+      const current = (await fetchBillingPlan(false))?.current;
+      return current?.creditsRemaining == null ||
+        current.freeTierExpiresAt == null
+        ? null
+        : {
+            credits: current.creditsRemaining,
+            until: current.freeTierExpiresAt,
+          };
     },
     show: (notice, clicked) =>
       this.userNotifier?.({
@@ -1436,6 +1460,17 @@ export class ServiceHost {
         body: notice.body,
         dedupeKey: notice.dedupeKey,
         metadata: workWaitingMetadata(notice.place),
+        ...(notice.action == null
+          ? {}
+          : {
+              action: {
+                label: notice.action.label,
+                metadata: {
+                  ...workWaitingMetadata(notice.place),
+                  draft: notice.action.draft,
+                },
+              },
+            }),
         clicked,
       }),
     funnel: (step, detail) => reportFunnelStep(step, detail),
@@ -1459,9 +1494,9 @@ export class ServiceHost {
     nextStep: nextStepOn,
     // Another person writing to the user's bot is not the user coming back,
     // and a bot's turn in a channel answers the channel, which the user left.
-    turnEnded: (sessionId, ending, task) => {
+    turnEnded: (sessionId, ending, task, reply) => {
       if (!this.isUsersOwnChat(sessionId)) return;
-      this.workWaiting.turnEnded(sessionId, ending, workWaitingLine(task));
+      this.workWaiting.turnEnded(sessionId, ending, task, reply);
       if (!this.agentSessionManagerService.isRoutineSession(sessionId))
         this.stampPrefs(resumeCardAfterTurn(sessionId, ending, Date.now()));
     },
@@ -1769,27 +1804,12 @@ export class ServiceHost {
 
   /** How a notice reaches the user outside any chat; the app shell owns it. */
   /** How a notice reaches the user outside any chat (the app shell's native notification). */
-  private userNotifier:
-    | ((notice: {
-        title: string;
-        body: string;
-        dedupeKey: string;
-        metadata?: NotificationMetadata;
-        clicked?: () => void;
-      }) => void)
-    | null = null;
+  private userNotifier: ((notice: UserNotice) => void) | null = null;
   private windowFocused: (() => boolean) | null = null;
 
   /** The status board's native notices, and whether a window would show them in-app. */
   attachUserNotifier(
-    notify: (notice: {
-      title: string;
-      body: string;
-      dedupeKey: string;
-      metadata?: NotificationMetadata;
-      /** Told when the user clicks the notice. */
-      clicked?: () => void;
-    }) => void,
+    notify: (notice: UserNotice) => void,
     focused: () => boolean
   ): void {
     this.userNotifier = notify;
@@ -3796,14 +3816,17 @@ export class ServiceHost {
     }
     const session = this.agentSessionManagerService.get(place.sessionId);
     if (session == null) return null;
-    // A bot's chat goes by the bot's name. A plain chat's label is its first
-    // message cut short, which reads badly in a sentence: it gets the plain words.
+    // A bot's chat goes by the bot's name, any other by its title (one the
+    // user gave it, or its first message's first line).
     const botId = session.owner?.botId;
     const bot =
       botId == null
         ? null
         : this.botService.list().find((entry) => entry.id === botId);
-    return { name: bot?.name ?? null };
+    const label = session.label.trim();
+    return {
+      name: bot?.name ?? (label === "" || label === "Untitled" ? null : label),
+    };
   }
 
   /** A first look soon after launch (a login start), then every quarter hour. */

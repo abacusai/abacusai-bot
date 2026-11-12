@@ -1,9 +1,15 @@
 import type { NotificationMetadata } from "@abacus-ai/contract/contract";
 import { expect, it } from "vitest";
 
+import type { Draft } from "#renderer/lib/continuity/composer-drafts";
 import { createHarness } from "#renderer/test-support/app-harness";
 
-import { notificationOptions, withOwner } from "./notification-clicks";
+import {
+  noticeDraft,
+  notificationOptions,
+  placeNoticeDraft,
+  withOwner,
+} from "./notification-clicks";
 
 it.each<[NotificationMetadata, string | null]>([
   [{ kind: "session", sessionId: "s" }, "/sessions/s"],
@@ -65,4 +71,32 @@ it.each<[NotificationMetadata, string | null]>([
   } finally {
     await app.cleanup();
   }
+});
+
+it.each<[unknown, string | null]>([
+  ["Add a high-score board", "Add a high-score board"],
+  ["  line one\nline two\u0007  ", "line one line two"],
+  ["\u0000\u001b", null],
+  [42, null],
+  ["x".repeat(600), "x".repeat(500)],
+])("reads a notice's draft as plain capped text: %j", (text, expected) => {
+  expect(noticeDraft(text)).toBe(expected);
+});
+
+it("puts a notice's draft in an empty composer only, never over the user's words", () => {
+  const drafts: Record<string, Draft> = {
+    empty: { text: "", attachments: [] },
+    typed: { text: "my own words", attachments: [] },
+  };
+  const place = (id: string, update: (draft: Draft) => Draft) => {
+    drafts[id] = update(drafts[id] ?? { text: "", attachments: [] });
+  };
+  placeNoticeDraft({ sessionId: "empty", draft: "Add a board" }, place);
+  placeNoticeDraft({ sessionId: "typed", draft: "Add a board" }, place);
+  placeNoticeDraft({ draft: "No session" }, place);
+  placeNoticeDraft({ sessionId: "none" }, place);
+  expect(drafts).toEqual({
+    empty: { text: "Add a board", attachments: [] },
+    typed: { text: "my own words", attachments: [] },
+  });
 });

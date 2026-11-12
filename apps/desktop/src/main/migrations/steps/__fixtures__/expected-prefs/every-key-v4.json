@@ -64,6 +64,7 @@
       "panes": "default",
       "pinned.botIds": "legacy",
       "pinned.sessionIds": "legacy",
+      "projectReminders": "default",
       "recentFolders": "legacy",
       "routineCreditHold": "default",
       "showLinkPreviews": "default",
@@ -159,6 +160,7 @@
         "botIds": ["bot-a"],
         "sessionIds": ["s-1", "s-2"]
       },
+      "projectReminders": true,
       "recentFolders": ["/Users/fixture/project", "/Users/fixture/other"],
       "routineCreditHold": null,
       "showLinkPreviews": true,

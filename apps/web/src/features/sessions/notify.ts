@@ -10,7 +10,13 @@ export interface SessionsWatcherDeps {
   mark(id: string): void;
   player: Pick<SoundPlayer, "play">;
   notifier: Pick<Notifier, "notify">;
-  labels: { done: string; needsYou: string };
+  labels: {
+    done: string;
+    needsYou: string;
+    /** A failed run's title, naming the chat. */
+    failed: (name: string) => string;
+    failedBody: string;
+  };
 }
 const delivered = new Set<string>();
 export const handleSessionRunFinished = (
@@ -28,9 +34,17 @@ export const handleSessionRunFinished = (
   delivered.add(notice.runId);
   if (delivered.size > 2000) delivered.delete(delivered.values().next().value!);
   if (!deps.seen(row.id)) deps.mark(row.id);
-  if (notice.outcome === "error")
+  if (notice.outcome === "error") {
     deps.player.play("failed", { threadId: row.id, dedupeKey: notice.runId });
-  else if (notice.hasVisibleAssistantText) {
+    deps.notifier.notify({
+      kind: "failed",
+      dedupeKey: notice.runId,
+      botId: null,
+      title: deps.labels.failed(row.label),
+      body: deps.labels.failedBody,
+      metadata: { workspaceId: row.workspaceId, sessionId: row.id },
+    });
+  } else if (notice.hasVisibleAssistantText) {
     deps.player.play("done", { threadId: row.id, dedupeKey: notice.runId });
     deps.notifier.notify({
       kind: "done",

@@ -430,6 +430,8 @@ export const PREFS_SCALAR_ENTRIES = {
   showLinkPreviews: v.boolean(),
   /** Off: no `gh` call, no PR chip, tab or review anywhere. */
   githubIntegration: v.boolean(),
+  /** Off: no "your work is waiting" reminder. */
+  projectReminders: v.boolean(),
   onboardingStep: v.nullable(v.string()),
   panes: v.record(v.string(), v.number()),
   keymap: v.record(v.string(), v.nullable(v.string())),
@@ -473,6 +475,7 @@ export const PrefsPatchSchema = v.strictObject({
   browserHomepage: v.optional(S.browserHomepage),
   showLinkPreviews: v.optional(S.showLinkPreviews),
   githubIntegration: v.optional(S.githubIntegration),
+  projectReminders: v.optional(S.projectReminders),
   onboardingStep: v.optional(S.onboardingStep),
   dismissals: prefsGroup(G.dismissals),
   panes: v.optional(S.panes),

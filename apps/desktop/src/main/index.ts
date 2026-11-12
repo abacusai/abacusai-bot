@@ -13,6 +13,7 @@ import path from "path";
 import { promisify } from "util";
 
 import type {
+  NotificationMetadata,
   WindowChromeState,
   WindowState,
 } from "@abacus-ai/contract/contract";
@@ -347,6 +348,18 @@ function showSaveDialogFromApp(
   return window === null
     ? dialog.showSaveDialog(options)
     : dialog.showSaveDialog(window, options);
+}
+
+/**
+ * Notices still on screen or in the notification center: one the garbage
+ * collector takes loses its click. The oldest goes past the cap.
+ */
+const liveNotifications = new Set<Notification>();
+const LIVE_NOTIFICATIONS_MAX = 50;
+function keepNotification(notification: Notification): void {
+  liveNotifications.add(notification);
+  if (liveNotifications.size > LIVE_NOTIFICATIONS_MAX)
+    liveNotifications.delete(liveNotifications.values().next().value!);
 }
 
 // Reveal the possibly hidden main window (notification clicks, dock activate).
@@ -1495,7 +1508,7 @@ const appOperations: AppOperations = {
     }
   },
 
-  showNotification(title, body, metadata, attention, clicked) {
+  showNotification(title, body, metadata, attention, clicked, action) {
     notchNotifications.notify(
       { ...attention, botReply: metadata?.kind === "bot" },
       () => {
@@ -1506,19 +1519,32 @@ const appOperations: AppOperations = {
           title,
           body,
           silent: notificationSilent(),
+          // macOS and Windows show the button; elsewhere the notice's own click opens it.
+          ...(action == null
+            ? {}
+            : { actions: [{ type: "button" as const, text: action.label }] }),
         });
-        notification.on("click", () => {
-          clicked?.();
+        const open = (
+          target: NotificationMetadata | undefined,
+          onButton: boolean
+        ): void => {
+          liveNotifications.delete(notification);
+          clicked?.(onButton);
           const win = revealMainWindow();
           // Consumed by the onNotificationClicked subscriber in app.tsx.
-          if (win && metadata) {
-            rendererWebContents()?.send("notification-clicked", metadata);
+          if (win && target) {
+            rendererWebContents()?.send("notification-clicked", target);
             emitBusChannel("system", {
               type: "notification-clicked",
-              metadata,
+              metadata: target,
             });
           }
-        });
+        };
+        notification.on("click", () => open(metadata, false));
+        if (action != null)
+          notification.on("action", () => open(action.metadata, true));
+        notification.on("close", () => liveNotifications.delete(notification));
+        keepNotification(notification);
         notification.show();
       }
     );
@@ -1611,7 +1637,8 @@ workspaceServiceHost.attachUserNotifier(
       notice.body,
       notice.metadata,
       { kind: "needs-you", dedupeKey: notice.dedupeKey },
-      notice.clicked
+      notice.clicked,
+      notice.action
     ),
   () => aliveMainWindow()?.isFocused() === true
 );

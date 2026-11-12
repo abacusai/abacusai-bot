@@ -69,6 +69,7 @@ const DEFAULTS: PrefsValues = {
   browserHomepage: null,
   showLinkPreviews: true,
   githubIntegration: true,
+  projectReminders: true,
   onboardingStep: null,
   dismissals: {
     referralCardUntil: null,

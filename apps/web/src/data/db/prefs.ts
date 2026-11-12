@@ -34,6 +34,7 @@ export const DEFAULT_PREFS: Required<PrefsRow> & {
   browserHomepage: null,
   showLinkPreviews: true,
   githubIntegration: true,
+  projectReminders: true,
   onboardingStep: null,
   dismissals: {
     referralCardUntil: null,
