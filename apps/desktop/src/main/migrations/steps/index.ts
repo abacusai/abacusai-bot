@@ -12,6 +12,7 @@
  * - 7 `retire-local-models`: stored `local/<id>` picks to the app default.
  * - 8 `zapier-connect-url`: Zapier servers and tokens to `/api/v1/connect`.
  * - 9 `routine-models`: each routine keeps the model it runs on now.
+ * - 10 `skill-description-yaml`: seeded skills the agent could not parse.
  */
 import type { MigrationStep } from "../types";
 import { transcriptsV2 } from "./001-transcripts-v2";
@@ -21,6 +22,7 @@ import { messageReactions } from "./006-message-reactions";
 import { retireLocalModels } from "./007-retire-local-models";
 import { zapierConnectUrl } from "./008-zapier-connect-url";
 import { routineModels } from "./009-routine-models";
+import { skillDescriptionYaml } from "./010-skill-description-yaml";
 
 export const MIGRATION_STEPS: readonly MigrationStep[] = [
   transcriptsV2(),
@@ -30,4 +32,5 @@ export const MIGRATION_STEPS: readonly MigrationStep[] = [
   retireLocalModels(),
   zapierConnectUrl(),
   routineModels(),
+  skillDescriptionYaml(),
 ];

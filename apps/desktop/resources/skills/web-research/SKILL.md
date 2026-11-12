@@ -1,6 +1,7 @@
 ---
 name: Web research
-description: Research a topic online and report what is actually supported: finding primary sources, cross-checking claims, and separating fact from consensus. Use when asked to look something up, compare options, or check whether something is true or current.
+description: >-
+  Research a topic online and report what is actually supported: finding primary sources, cross-checking claims, and separating fact from consensus. Use when asked to look something up, compare options, or check whether something is true or current.
 ---
 
 # Web research

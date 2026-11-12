@@ -1,6 +1,7 @@
 ---
 name: Excel / Spreadsheets
-description: Read, edit, analyse, and create .xlsx, .xlsm, and .csv spreadsheets: adding columns, writing formulas, formatting cells, building charts, and cleaning messy tabular data. Use whenever a spreadsheet is the input or the deliverable.
+description: >-
+  Read, edit, analyse, and create .xlsx, .xlsm, and .csv spreadsheets: adding columns, writing formulas, formatting cells, building charts, and cleaning messy tabular data. Use whenever a spreadsheet is the input or the deliverable.
 ---
 
 # Working with spreadsheets

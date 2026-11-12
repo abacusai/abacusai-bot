@@ -1,6 +1,7 @@
 ---
 name: Word documents
-description: Create, read, and edit .docx Word documents: headings, tables, styles, headers and footers, tracked changes, and converting content into a polished document. Use whenever a Word document is the input or the deliverable.
+description: >-
+  Create, read, and edit .docx Word documents: headings, tables, styles, headers and footers, tracked changes, and converting content into a polished document. Use whenever a Word document is the input or the deliverable.
 ---
 
 # Working with Word documents
