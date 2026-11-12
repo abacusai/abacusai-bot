@@ -120,6 +120,20 @@ describe("a browser run's card", () => {
   });
 });
 
+describe("when to use it", () => {
+  it("is used when the user asks for the browser, even for a public page", () => {
+    // The description said "NOT the way to read the web" and nothing else, so
+    // a bot asked to use its browser read the page with web_fetch instead.
+    const tool = buildBrowserTaskTool(
+      { cwd: process.cwd(), channel: APP_CHANNEL } as never,
+      () => undefined
+    );
+    expect(tool.description).toMatch(
+      /asks for the browser[^.]*use this[^.]*even for a public page/i
+    );
+  });
+});
+
 describe("what the caller is told about a step only the user can do", () => {
   it("sends an app chat's user to the Browser pane", async () => {
     const tool = buildBrowserTaskTool(

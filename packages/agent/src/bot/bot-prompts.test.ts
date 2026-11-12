@@ -39,6 +39,14 @@ describe("what the prompts say about the browser, per channel", () => {
     expect(paneless).toMatch(/never ask for a password/);
   });
 
+  it("uses the browser when the user asks for it, even for a public page", () => {
+    // Asked "use your browser", a bot read the page with web_fetch and curl:
+    // the prompt only said the web tools answer most questions.
+    expect(botOperatingPrompt()).toMatch(
+      /asks\s+for\s+the\s+browser[^.]*browser_task[^.]*even\s+for\s+a\s+public\s+page/i
+    );
+  });
+
   it("tells the phone loop how screenshots reach the chat, and acts only through chat, links and approval pages", () => {
     const prompt = phoneOperatingPrompt(null);
     expect(prompt).not.toMatch(/pane/i);
