@@ -20,6 +20,7 @@ import {
   type CreditTaskKind,
   type CreditThreshold,
   type CreditThresholdMark,
+  markPlan,
   milestoneBalance,
   risenMilestone,
   thresholdOf,
@@ -108,8 +109,14 @@ export class CreditThresholdWatch {
     const prefs = this.deps.prefs();
     if (prefs == null) return;
     let marks = prefs.get().creditThresholds ?? {};
-    const risen =
-      plan === "paid" ? risenMilestone(marks[key], balance) : undefined;
+    // A new plan starts its milestones afresh: a mark stamped on the old one
+    // (a free 80% before an upgrade) goes with its card's answer.
+    const stale = marks[key] != null && markPlan(marks[key]) !== plan;
+    const risen = stale
+      ? null
+      : plan === "paid"
+        ? risenMilestone(marks[key], balance)
+        : undefined;
     if (risen !== undefined)
       marks = this.lower(prefs, key, risen, balance, plan);
     const crossed = markAfterRead(

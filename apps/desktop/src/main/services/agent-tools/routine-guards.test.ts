@@ -552,6 +552,21 @@ describe("the plan's credit milestones", () => {
     expect(await h.settle(2000)).toEqual(last);
   });
 
+  it("an upgrade drops the free plan's mark and its answer; the paid plan starts its own afresh", async () => {
+    const h = setup();
+    expect(await h.settle(1640)).toMatchObject({ reached: 80, plan: "free" });
+    h.answer(80);
+    h.account.subscription_tier = "basic";
+    h.account.credits_granted = 20_000;
+    expect(await h.settle(0)).toBeUndefined();
+    expect(h.card()).toBeUndefined();
+    expect(await h.settle(10_000)).toMatchObject({
+      reached: 50,
+      plan: "paid",
+      granted: 20_000,
+    });
+  });
+
   it("estimates from today's post-turn reads: credits per completed turn, and what they were", async () => {
     const h = setup();
     await h.settle(800);

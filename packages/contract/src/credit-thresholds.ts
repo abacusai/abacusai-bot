@@ -140,12 +140,39 @@ export const risenMilestone = (
   return (level ?? 0) < mark.reached ? level : undefined;
 };
 
-/** The threshold whose card is still owed: one past the last answer. */
+/**
+ * Whether a mark still describes the account as it reads now: the same plan
+ * and a balance still at or past the mark's level. A mark from before an
+ * upgrade, a new month or a top-up speaks of credits that are gone; until the
+ * watch's next read replaces it, nothing may show it. The account query can
+ * trail the read that stamped the mark, so the mark's own count stands in
+ * while both measure the same grant.
+ */
+export const markHolds = (
+  mark: CreditThresholdMark | undefined,
+  account: AbacusAccountInfo | null | undefined
+): mark is CreditThresholdMark => {
+  const plan = creditMilestonePlan(account);
+  const balance = milestoneBalance(account);
+  if (mark == null || plan == null || balance == null) return false;
+  if (markPlan(mark) !== plan) return false;
+  const used =
+    mark.granted === balance.granted
+      ? Math.max(balance.used, mark.used)
+      : balance.used;
+  const level = thresholdOf(used, balance.granted);
+  return level != null && level >= mark.reached;
+};
+
+/** The threshold whose card is still owed: one past the last answer, while the mark holds. */
 export const pendingThreshold = (
   mark: CreditThresholdMark | undefined,
-  card: CreditThresholdCard | undefined
+  card: CreditThresholdCard | undefined,
+  account: AbacusAccountInfo | null | undefined
 ): CreditThreshold | null =>
-  mark != null && (card?.answered ?? 0) < mark.reached ? mark.reached : null;
+  markHolds(mark, account) && (card?.answered ?? 0) < mark.reached
+    ? mark.reached
+    : null;
 
 /** Whole tasks at today's rate that `left` still pays for; null below one. */
 export const tasksLeft = (

@@ -213,7 +213,8 @@ export const RatingPromptRow = ({
     key != null &&
     pendingThreshold(
       prefs.creditThresholds?.[key],
-      prefs.dismissals.creditThresholdCards?.[key]
+      prefs.dismissals.creditThresholdCards?.[key],
+      account
     ) != null;
   const shownHere = target != null && card.shownOffer === target.id;
   // Whatever happens around it, a line on screen stays until it is answered
