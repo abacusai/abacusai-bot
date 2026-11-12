@@ -133,6 +133,7 @@ minimumReleaseAgeExclude:
   - http-cache-semantics@4.3.0
 
 patchedDependencies:
-  # The Windows installer's differential-aware archive settings (see the patch).
+  # The Windows installer's differential-aware archive settings, and the LZMA
+  # dmg format the schema does not list yet (see the patch).
   app-builder-lib@26.18.0: patches/app-builder-lib@26.18.0.patch
   ghostty-web@0.4.0: patches/ghostty-web@0.4.0.patch

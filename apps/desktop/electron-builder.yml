@@ -173,6 +173,12 @@ mac:
     - NSMicrophoneUsageDescription: The microphone is used to dictate messages; speech is transcribed on this computer.
 dmg:
   artifactName: ${productName}-${version}-${arch}.${ext}
+  # LZMA. `compression: maximum` alone picks bzip2 (UDBZ), which leaves the dmg
+  # about a sixth larger for the same app. ULMO needs macOS 10.15, below the
+  # 13.0 minimum above; electron-builder's schema only lists it through
+  # patches/app-builder-lib@26.18.0.patch. The updater installs from the zip,
+  # so this changes the first download only.
+  format: ULMO
 
 linux:
   target:
