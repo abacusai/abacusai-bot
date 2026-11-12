@@ -69,6 +69,15 @@ describe("what the prompts say about the browser, per channel", () => {
     );
   });
 
+  it("never sends the user to the Browser pane for a page's confirm or prompt", () => {
+    // The built-in browser cancels them for the user too, yet a bot told the
+    // user to answer the two dialogs in the pane.
+    const flat = (text: string) => text.replace(/\s+/g, " ");
+    expect(flat(botOperatingPrompt())).toMatch(
+      /A page's confirm or prompt is the exception: the user cannot answer it in the Browser pane/
+    );
+  });
+
   it("tells the phone loop how screenshots reach the chat, and acts only through chat, links and approval pages", () => {
     const prompt = phoneOperatingPrompt(null);
     expect(prompt).not.toMatch(/pane/i);

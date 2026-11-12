@@ -98,6 +98,8 @@ export function botOperatingPrompt(
           `do it in ${userBrowserPlace()}, and when they say it is`,
           "done, call `browser_task` again with continue_from_last: true and their",
           "message as the task, so the same run carries on from the same page.",
+          "A page's confirm or prompt is the exception: the user cannot answer it in the",
+          "Browser pane either, so tell them to do that step on the site in their own browser.",
         ]
       : [
           "Relay that: they cannot see this browser and act only through this",

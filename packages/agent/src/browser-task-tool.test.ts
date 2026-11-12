@@ -156,6 +156,10 @@ describe("uploads", () => {
     expect(tool.description).toMatch(/even when the user names the path/);
     // And asked a run to press OK on a page's confirm.
     expect(tool.description).toMatch(/never answers OK on a page's confirm/);
+    // Asked to upload a workspace file, a bot overwrote it with "hello" first.
+    expect(tool.description).toMatch(
+      /A file the user names is uploaded as it is: never create or rewrite it first/
+    );
   });
 });
 
