@@ -4634,10 +4634,10 @@
     "close": "Sluiten"
   },
   "paymentRequired": {
-    "unconfirmedTitle": "Kies een abonnement om AbacusAI Bot te blijven gebruiken",
-    "unconfirmedBody": "Je bent ingelogd, maar je account heeft een abonnement nodig voordat AbacusAI Bot werkt.",
-    "alreadySubscribed": "Heb je al een abonnement? {{link}}",
-    "reportIssue": "Probleem melden",
+    "confirmingTitle": "Je betaling wordt bevestigd…",
+    "confirmingBody": "Dit duurt meestal een paar seconden. AbacusAI Bot gaat daarna verder waar je gebleven was.",
+    "lateTitle": "We zien je betaling nog niet",
+    "lateBody": "Als je net hebt betaald, kan het een paar minuten duren en gaat de app vanzelf verder. Koop niet opnieuw. Lukt het niet, neem dan contact op met support@abacus.ai.",
     "trialEndedTitle": "Je gratis proefperiode is afgelopen",
     "trialEndedBody": "Upgrade om AbacusAI Bot met dit account te blijven gebruiken.",
     "lapsedTitle": "Je abonnement is afgelopen",
@@ -4646,6 +4646,7 @@
     "renew": "Verlengen",
     "webAgent": "Naar Abacus AI Agent op het web →",
     "tryAgain": "Opnieuw proberen",
+    "checkAgain": "Opnieuw controleren",
     "checking": "Controleren…",
     "stillBlocked": "We zien nog geen betaling op dit account.",
     "waiting": "Rond de betaling af in je browser. De app gaat verder zodra je betaling is verwerkt."
@@ -5004,8 +5005,8 @@
       }
     },
     "payment": {
-      "title": "We konden je laatste betaling niet bevestigen",
-      "body": "Is je abonnement actief? Neem dan contact op met support@abacus.ai. Koop het niet opnieuw.",
+      "confirmingBody": "Je bericht wordt verstuurd zodra het klaar is.",
+      "lateBody": "Als je net hebt betaald, kan het een paar minuten duren. Koop niet opnieuw. Neem contact op met support@abacus.ai als het niet lukt.",
       "billing": "Facturering openen"
     },
     "verifyPhone": {

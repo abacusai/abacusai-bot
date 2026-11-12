@@ -4634,10 +4634,10 @@
     "close": "Kapat"
   },
   "paymentRequired": {
-    "unconfirmedTitle": "AbacusAI Bot'u kullanmaya devam etmek için bir plan seçin",
-    "unconfirmedBody": "Oturum açtınız, ancak AbacusAI Bot'un çalışması için hesabınızın bir plana ihtiyacı var.",
-    "alreadySubscribed": "Zaten abone misiniz? {{link}}",
-    "reportIssue": "Sorun bildirin",
+    "confirmingTitle": "Ödemeniz onaylanıyor…",
+    "confirmingBody": "Bu genelde birkaç saniye sürer. Biter bitmez AbacusAI Bot kaldığınız yerden devam eder.",
+    "lateTitle": "Ödemenizi henüz göremiyoruz",
+    "lateBody": "Yeni ödediyseniz birkaç dakika sürebilir ve uygulama kendiliğinden devam eder. Lütfen tekrar satın almayın. Düzelmezse support@abacus.ai ile iletişime geçin.",
     "trialEndedTitle": "Ücretsiz denemeniz sona erdi",
     "trialEndedBody": "AbacusAI Bot'u bu hesapla kullanmaya devam etmek için yükseltin.",
     "lapsedTitle": "Aboneliğiniz sona erdi",
@@ -4646,6 +4646,7 @@
     "renew": "Yenile",
     "webAgent": "Web'deki Abacus AI Agent'a git →",
     "tryAgain": "Tekrar dene",
+    "checkAgain": "Tekrar kontrol et",
     "checking": "Kontrol ediliyor…",
     "stillBlocked": "Bu hesapta henüz bir ödeme görünmüyor.",
     "waiting": "Ödemeyi tarayıcınızda tamamlayın. Ödemeniz geçer geçmez uygulama devam eder."
@@ -5004,8 +5005,8 @@
       }
     },
     "payment": {
-      "title": "Son ödemenizi doğrulayamadık",
-      "body": "Aboneliğiniz etkinse support@abacus.ai ile iletişime geçin. Lütfen tekrar satın almayın.",
+      "confirmingBody": "Biter bitmez mesajınız gönderilir.",
+      "lateBody": "Yeni ödediyseniz birkaç dakika sürebilir. Lütfen tekrar satın almayın. Düzelmezse support@abacus.ai ile iletişime geçin.",
       "billing": "Faturalandırmayı aç"
     },
     "verifyPhone": {

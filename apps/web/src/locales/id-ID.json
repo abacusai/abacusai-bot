@@ -4634,10 +4634,10 @@
     "close": "Tutup"
   },
   "paymentRequired": {
-    "unconfirmedTitle": "Pilih paket untuk terus menggunakan AbacusAI Bot",
-    "unconfirmedBody": "Anda sudah masuk, tetapi akun Anda memerlukan paket agar AbacusAI Bot dapat bekerja.",
-    "alreadySubscribed": "Sudah berlangganan? {{link}}",
-    "reportIssue": "Laporkan masalah",
+    "confirmingTitle": "Mengonfirmasi pembayaran Anda…",
+    "confirmingBody": "Biasanya hanya beberapa detik. AbacusAI Bot langsung lanjut dari titik terakhir begitu selesai.",
+    "lateTitle": "Pembayaran Anda belum terlihat",
+    "lateBody": "Jika Anda baru saja membayar, ini bisa memakan beberapa menit dan aplikasi akan lanjut sendiri. Jangan membeli lagi. Jika tidak beres, hubungi support@abacus.ai.",
     "trialEndedTitle": "Uji coba gratis Anda telah berakhir",
     "trialEndedBody": "Upgrade untuk terus menggunakan AbacusAI Bot dengan akun ini.",
     "lapsedTitle": "Langganan Anda telah berakhir",
@@ -4646,6 +4646,7 @@
     "renew": "Perpanjang",
     "webAgent": "Buka Abacus AI Agent di web →",
     "tryAgain": "Coba lagi",
+    "checkAgain": "Periksa lagi",
     "checking": "Memeriksa…",
     "stillBlocked": "Kami belum melihat pembayaran di akun ini.",
     "waiting": "Selesaikan pembayaran di browser Anda. Aplikasi akan lanjut begitu pembayaran Anda berhasil."
@@ -5004,8 +5005,8 @@
       }
     },
     "payment": {
-      "title": "Kami tidak dapat mengonfirmasi pembayaran terakhir Anda",
-      "body": "Jika langganan Anda aktif, hubungi support@abacus.ai. Jangan membeli lagi.",
+      "confirmingBody": "Pesan Anda terkirim begitu selesai.",
+      "lateBody": "Jika Anda baru saja membayar, ini bisa memakan beberapa menit. Jangan membeli lagi. Hubungi support@abacus.ai jika tidak beres.",
       "billing": "Buka penagihan"
     },
     "verifyPhone": {

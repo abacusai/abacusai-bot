@@ -22,12 +22,13 @@ import { Store, useStore } from "@tanstack/react-store";
 import {
   AlertTriangle,
   CheckCircle2,
+  Loader2,
   CircleStop,
   Info,
   X,
   XCircle,
 } from "lucide-react";
-import { useEffect, useEffectEvent, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -67,6 +68,11 @@ import {
   ownKeyWords,
   type OwnKeyFailure,
 } from "#renderer/lib/own-key-unavailable";
+import {
+  checkPaymentNow,
+  startPaymentConfirmWatch,
+  usePaymentConfirmPhase,
+} from "#renderer/lib/payment-confirming";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import {
   lastUserText,
@@ -582,11 +588,91 @@ const OwnKeyCard = ({
 };
 
 /**
- * Abacus's billing gate refused the turn: a payment it could not confirm
- * (support, never a second purchase) or a subscription that ended (renew).
- * Not the credits card: buying more would not let this account through.
+ * Abacus's billing gate refused the turn because a first payment is not
+ * recorded yet (payment-confirming.ts): "Confirming your payment…", the
+ * waiting message sent again once it lands, and after a few minutes that the
+ * payment cannot be seen yet, with billing and Check again. Never a purchase.
  */
-const PaymentCard = ({ lapsed }: { lapsed: boolean }) => {
+const PaymentConfirmingCard = ({
+  onSendAgain,
+}: {
+  onSendAgain?: () => void;
+}) => {
+  const { t } = useTranslation();
+  const { runtime } = useChatView();
+  const { transport } = useAppContext();
+  const phase = usePaymentConfirmPhase();
+  // Sent once: the phase stays "confirmed" after the resend starts.
+  const sent = useRef(false);
+  useEffect(() => {
+    startPaymentConfirmWatch(transport.client);
+  }, [transport]);
+  const sendAgain = useEffectEvent(() => {
+    if (sent.current) return;
+    sent.current = true;
+    onSendAgain?.();
+  });
+  useEffect(() => {
+    if (phase === "confirmed") sendAgain();
+  }, [phase]);
+  if (phase === "confirmed") return null;
+  const late = phase === "late";
+  return (
+    <div
+      role="group"
+      aria-label={t("chat.error.label")}
+      className="mx-auto w-full max-w-[calc(var(--composer-max-w)-var(--spacing)*8)]"
+      data-slot="error-card"
+      data-variant="payment-required"
+      data-cause="unconfirmed"
+      data-phase={late ? "late" : "confirming"}
+    >
+      <GroupCard
+        title={t(
+          late ? "paymentRequired.lateTitle" : "paymentRequired.confirmingTitle"
+        )}
+      >
+        <p
+          className="text-muted-foreground flex items-center gap-2 p-3 text-sm"
+          role="status"
+        >
+          {!late && (
+            <Loader2 aria-hidden className="size-4 shrink-0 animate-spin" />
+          )}
+          {t(
+            late ? "outcome.payment.lateBody" : "outcome.payment.confirmingBody"
+          )}
+        </p>
+        {late && (
+          <div className="flex flex-wrap gap-2 p-3">
+            <Button
+              size="sm"
+              data-action="open-billing"
+              onClick={() => void runtime.host.openExternal(ABACUS_BILLING_URL)}
+            >
+              {t("outcome.payment.billing")}
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              data-action="check-again"
+              onClick={checkPaymentNow}
+            >
+              {t("paymentRequired.checkAgain")}
+            </Button>
+          </div>
+        )}
+      </GroupCard>
+    </div>
+  );
+};
+
+/**
+ * Abacus's billing gate refused the turn because the subscription ended
+ * (renew). Not the credits card: buying more would not let this account
+ * through.
+ */
+const PaymentLapsedCard = () => {
   const { t } = useTranslation();
   const { runtime, composer } = useChatView();
   return (
@@ -596,27 +682,19 @@ const PaymentCard = ({ lapsed }: { lapsed: boolean }) => {
       className="mx-auto w-full max-w-[calc(var(--composer-max-w)-var(--spacing)*8)]"
       data-slot="error-card"
       data-variant="payment-required"
-      data-cause={lapsed ? "lapsed" : "unconfirmed"}
+      data-cause="lapsed"
     >
-      <GroupCard
-        title={t(
-          lapsed ? "paymentRequired.lapsedTitle" : "outcome.payment.title"
-        )}
-      >
+      <GroupCard title={t("paymentRequired.lapsedTitle")}>
         <p className="text-muted-foreground p-3 text-sm">
-          {t(lapsed ? "paymentRequired.lapsedBody" : "outcome.payment.body")}
+          {t("paymentRequired.lapsedBody")}
         </p>
         <div className="flex flex-wrap gap-2 p-3">
           <Button
             size="sm"
-            data-action={lapsed ? "renew" : "open-billing"}
-            onClick={() =>
-              void (lapsed
-                ? runtime.host.openUpgrade("payment_lapsed")
-                : runtime.host.openExternal(ABACUS_BILLING_URL))
-            }
+            data-action="renew"
+            onClick={() => void runtime.host.openUpgrade("payment_lapsed")}
           >
-            {t(lapsed ? "paymentRequired.renew" : "outcome.payment.billing")}
+            {t("paymentRequired.renew")}
           </Button>
           {composer.model != null && composer.readOnly == null && (
             <Button
@@ -1108,7 +1186,13 @@ export const ErrorCard = ({
     );
   const payment = actions.find((action) => action.type === "payment-required");
   if (payment != null)
-    return <PaymentCard lapsed={payment.cause === "lapsed"} />;
+    return payment.cause === "lapsed" ? (
+      <PaymentLapsedCard />
+    ) : (
+      <PaymentConfirmingCard
+        {...(latest && canReply ? { onSendAgain: retry } : {})}
+      />
+    );
   const cutOff = actions.find((action) => action.type === "cut-off");
   if (cutOff != null)
     return (

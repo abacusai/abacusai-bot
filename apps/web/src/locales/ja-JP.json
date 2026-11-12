@@ -4634,10 +4634,10 @@
     "close": "閉じる"
   },
   "paymentRequired": {
-    "unconfirmedTitle": "AbacusAI Bot を引き続き使うにはプランを選んでください",
-    "unconfirmedBody": "サインイン済みですが、AbacusAI Bot を使うにはアカウントにプランが必要です。",
-    "alreadySubscribed": "すでにご契約中ですか？{{link}}",
-    "reportIssue": "問題を報告",
+    "confirmingTitle": "お支払いを確認しています…",
+    "confirmingBody": "通常は数秒で完了します。完了するとすぐに、AbacusAI Bot は中断したところから再開します。",
+    "lateTitle": "まだお支払いを確認できません",
+    "lateBody": "お支払い直後の場合は数分かかることがあり、完了するとアプリが自動で再開します。再購入はしないでください。解決しない場合は support@abacus.ai までご連絡ください。",
     "trialEndedTitle": "無料トライアルが終了しました",
     "trialEndedBody": "このアカウントで AbacusAI Bot を引き続き使うにはアップグレードしてください。",
     "lapsedTitle": "サブスクリプションが終了しました",
@@ -4646,6 +4646,7 @@
     "renew": "更新する",
     "webAgent": "Web の Abacus AI Agent へ →",
     "tryAgain": "再試行",
+    "checkAgain": "もう一度確認",
     "checking": "確認しています…",
     "stillBlocked": "このアカウントの支払いはまだ確認できません。",
     "waiting": "ブラウザで支払いを完了してください。支払いが完了すると、アプリはそのまま続きます。"
@@ -5004,8 +5005,8 @@
       }
     },
     "payment": {
-      "title": "前回のお支払いを確認できませんでした",
-      "body": "サブスクリプションが有効な場合は support@abacus.ai までご連絡ください。再度購入しないでください。",
+      "confirmingBody": "完了するとすぐにメッセージが送信されます。",
+      "lateBody": "お支払い直後の場合は数分かかることがあります。再購入はしないでください。解決しない場合は support@abacus.ai までご連絡ください。",
       "billing": "請求ページを開く"
     },
     "verifyPhone": {
