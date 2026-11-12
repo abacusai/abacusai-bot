@@ -106,6 +106,59 @@ export const groupSessions = (
   };
 };
 
+/** A row with the chats handed off from it, which the sidebar draws under it. */
+export interface SessionFamily {
+  session: SessionRow;
+  handoffs: SessionRow[];
+}
+
+/**
+ * Nest each handed-off chat under its source when both are in `rows`, its
+ * handoffs newest first. A family sits where its newest member would, or,
+ * with `keepOrder` (the pinned list's own order), where its source is.
+ * A handoff whose source is elsewhere (pinned, waiting on the user, or
+ * filtered out) stays a row of its own.
+ */
+export const nestHandoffs = (
+  rows: readonly SessionRow[],
+  keepOrder = false
+): SessionFamily[] => {
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const sourceOf = (row: SessionRow) =>
+    row.continuationKind === "handoff" && row.continuedFrom != null
+      ? byId.get(row.continuedFrom)
+      : undefined;
+  // A handoff of a handoff goes under the first chat of the line: one level.
+  const rootOf = (row: SessionRow): SessionRow => {
+    const seen = new Set([row.id]);
+    let root = row;
+    for (let up = sourceOf(root); up != null; up = sourceOf(up)) {
+      // A loop has no first chat: the row stands on its own.
+      if (seen.has(up.id)) return row;
+      seen.add(up.id);
+      root = up;
+    }
+    return root;
+  };
+  const roots = new Map(rows.map((row) => [row.id, rootOf(row)]));
+  const families = rows
+    .filter((row) => roots.get(row.id) === row)
+    .map((session) => ({
+      session,
+      handoffs: rows
+        .filter((row) => row !== session && roots.get(row.id) === session)
+        .toSorted(newestFirst),
+    }));
+  const newest = (family: SessionFamily) =>
+    Math.max(
+      Date.parse(family.session.updatedAt),
+      ...family.handoffs.map((row) => Date.parse(row.updatedAt))
+    );
+  return keepOrder
+    ? families
+    : families.toSorted((a, b) => newest(b) - newest(a));
+};
+
 export const SessionsSidebar = () => {
   const { t } = useTranslation();
   const collections = useCollections();
@@ -148,11 +201,12 @@ export const SessionsSidebar = () => {
         ? "ready"
         : "loading";
 
-  const row = (session: SessionRow, indent: boolean) => (
+  const row = (session: SessionRow, indent: boolean, nested = false) => (
     <SessionSidebarRow
       key={session.id}
       session={session}
       indent={indent}
+      nested={nested}
       active={params.sessionId === session.id}
       asks={asks[sessionConversationKey(session.workspaceId, session.id)] ?? 0}
       query={query}
@@ -266,7 +320,10 @@ export const SessionsSidebar = () => {
             ) : null}
             {pinned.length > 0 && (
               <NavList.Group label={t("sessions.sidebar.pinned")}>
-                {pinned.map((session) => row(session, false))}
+                {nestHandoffs(pinned, true).flatMap((family) => [
+                  row(family.session, false),
+                  ...family.handoffs.map((s) => row(s, false, true)),
+                ])}
               </NavList.Group>
             )}
             {groups.map(({ workspace, sessions: rows }) => (
@@ -287,7 +344,10 @@ export const SessionsSidebar = () => {
                   }).catch(() => undefined)
                 }
               >
-                {rows.map((session) => row(session, true))}
+                {nestHandoffs(rows).flatMap((family) => [
+                  row(family.session, true),
+                  ...family.handoffs.map((s) => row(s, true, true)),
+                ])}
               </WorkspaceGroup>
             ))}
           </div>
@@ -300,6 +360,7 @@ export const SessionsSidebar = () => {
 const SessionSidebarRow = ({
   session,
   indent,
+  nested,
   active,
   asks,
   query,
@@ -307,6 +368,7 @@ const SessionSidebarRow = ({
 }: {
   session: SessionRow;
   indent: boolean;
+  nested: boolean;
   active: boolean;
   asks: number;
   query: string;
@@ -461,6 +523,7 @@ const SessionSidebarRow = ({
           )}
           hint={`${session.label} · ${session.worktreeBranch ?? session.workspaceId}`}
           indent={indent}
+          nested={nested}
           className="phone:pr-11 min-w-0 flex-1 pr-8"
           trailing={
             attention.kind !== "idle" ? (

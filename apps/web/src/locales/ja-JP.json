@@ -2109,7 +2109,13 @@
       "from": "続きの元:",
       "into": "続きの先:",
       "startsFrom": "「{{label}}」の要約から始まります",
-      "drop": "要約なしで始める"
+      "drop": "要約なしで始める",
+      "handedOffFrom": "引き継ぎ元:"
+    },
+    "handoff": {
+      "cardLabel": "別のチャットで実行中",
+      "starting": "開始しています…",
+      "ready": "完了"
     }
   },
   "terminalShells": {

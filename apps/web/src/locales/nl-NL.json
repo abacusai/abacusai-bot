@@ -2109,7 +2109,13 @@
       "from": "Vervolg van",
       "into": "Vervolgd in",
       "startsFrom": "Begint met een samenvatting van ‘{{label}}’",
-      "drop": "Zonder beginnen"
+      "drop": "Zonder beginnen",
+      "handedOffFrom": "Overgedragen vanuit"
+    },
+    "handoff": {
+      "cardLabel": "Draait in een eigen chat",
+      "starting": "Starten…",
+      "ready": "Klaar"
     }
   },
   "terminalShells": {

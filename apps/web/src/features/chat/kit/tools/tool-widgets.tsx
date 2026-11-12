@@ -11,6 +11,7 @@ import { useEffect, type ComponentType } from "react";
 
 import {
   isBotHelpTool,
+  isHandOffTool,
   isPaidFeatureTool,
   isSessionOfferTool,
 } from "#renderer/lib/bot-turns/turns";
@@ -20,6 +21,7 @@ import { toolKey } from "../../store/thread-store";
 import { useChatView, useSubagentScope } from "../context";
 import { PermissionCard } from "../permissions/permission-card";
 import { BotHelpToolCard } from "./bot-help";
+import { HandOffCard } from "./handoff";
 import { PaidFeatureToolCard } from "./paid-feature";
 import { SessionOfferCard } from "./session-offer";
 import { SuggestedTasksCard } from "./suggested-tasks";
@@ -67,7 +69,9 @@ export const sessionToolWidgets = new Proxy(KNOWN_TOOL_WIDGETS, {
           ? BotHelpToolCard
           : isSuggestTasksTool(name)
             ? SuggestedTasksCard
-            : (known[name] ?? GenericLine),
+            : isHandOffTool(name)
+              ? HandOffCard
+              : (known[name] ?? GenericLine),
 }) as Record<string, Widget>;
 
 /** Bots: the inline approval card of the canvas BotApproval board. */

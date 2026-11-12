@@ -2109,7 +2109,13 @@
       "from": "Continued from",
       "into": "Continued in",
       "startsFrom": "Starts from a summary of “{{label}}”",
-      "drop": "Start without it"
+      "drop": "Start without it",
+      "handedOffFrom": "Handed off from"
+    },
+    "handoff": {
+      "cardLabel": "Running in its own chat",
+      "starting": "Starting…",
+      "ready": "Done"
     }
   },
   "terminalShells": {

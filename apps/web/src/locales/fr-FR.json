@@ -2109,7 +2109,13 @@
       "from": "Suite de",
       "into": "Suite dans",
       "startsFrom": "Commence par un résumé de « {{label}} »",
-      "drop": "Commencer sans"
+      "drop": "Commencer sans",
+      "handedOffFrom": "Confié depuis"
+    },
+    "handoff": {
+      "cardLabel": "S’exécute dans son propre chat",
+      "starting": "Démarrage…",
+      "ready": "Terminé"
     }
   },
   "terminalShells": {

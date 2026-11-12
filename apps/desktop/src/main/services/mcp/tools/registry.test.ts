@@ -26,6 +26,8 @@ import { AGENT_TOOL_NAMES, AGENT_TOOLS, agentTool } from "./index";
  * questions about the app; switching it off would leave those to memory.
  * `suggest_tasks` draws buttons that send their own text as the user's
  * message; nothing runs until the user taps one.
+ * `hand_off_session` moves a task into a new chat on the same folder, model
+ * and mode, which the user sees and can stop: no reach the chat lacks.
  * `ask_bot`, `give_task_to_bot`, `check_bot_answers` and `cancel_bot_ask`
  * reach
  * only the user's own bots, the way
@@ -43,6 +45,7 @@ const NOT_IN_REGISTRY = new Set([
   "offer_session",
   "bot_help",
   "suggest_tasks",
+  "hand_off_session",
 ]);
 
 const registryTools = new Map<string, { toolset: string; agent: boolean }>();

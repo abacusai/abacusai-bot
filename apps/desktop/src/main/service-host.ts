@@ -706,6 +706,8 @@ const ALWAYS_ON_WAIT_MS = 24 * 60 * 60_000;
 /** The longest an unattended run's agent may take to start. */
 const UNATTENDED_STARTUP_TIMEOUT_MS = 90_000;
 const AGENT_ACTION_TIMEOUT_MS = 5 * 60_000;
+/** How many chats handed off from one chat may be working at once. */
+const HANDOFFS_WORKING_MAX = 3;
 
 /** The folder every hosted routine run works in: one, kept out of the pickers. */
 const HOSTED_RUNS_FOLDER = "hosted-runs";
@@ -1927,6 +1929,8 @@ export class ServiceHost {
         : ((await this.browserRuntime?.checkServedPage(url, signal)) ?? null),
     routineEditorFor: (sessionId) =>
       this.agentSessionManagerService.get(sessionId)?.editorFor ?? null,
+    handOffSession: (fromSessionId, task) =>
+      this.handOffSession(fromSessionId, task),
     isUnattended: (sessionId) => this.isUnattendedSession(sessionId),
     sessionRole: (sessionId) =>
       this.agentSessionManagerService.get(sessionId)?.owner?.role ?? null,
@@ -4213,12 +4217,7 @@ export class ServiceHost {
     /** The caller's own id (an optimistic insert); a taken one is `ConflictError`. */
     id?: string,
     /** `db.sessions.insert`'s model and mode, persisted at creation. */
-    initial: {
-      model?: string | null;
-      mode?: AgentMode | null;
-      sponsoredUntil?: number;
-      continuedFrom?: { sessionId: string; summary: string };
-    } = {}
+    initial: Parameters<AgentSessionManagerService["create"]>[5] = {}
   ): AgentSessionListItem {
     if (this.isWorkspaceDeleted(workspaceId)) {
       throw new Error(
@@ -4241,6 +4240,70 @@ export class ServiceHost {
       emittedAt: new Date().toISOString(),
     });
     return session;
+  }
+
+  /**
+   * `hand_off_session`: a task split off from a chat into a new one that runs
+   * beside it, on everything the chat runs on: its folder and worktree, its
+   * model and its mode. The task is the new chat's first message, sent now.
+   * Only a plain chat hands off (never a bot's, a routine's or a run nobody
+   * watches), and only a few at a time.
+   */
+  handOffSession(
+    fromSessionId: string,
+    task: { title: string; prompt: string }
+  ): { sessionId: string } | { error: string } {
+    const source = this.agentSessionManagerService.get(fromSessionId);
+    if (
+      source == null ||
+      source.routineId != null ||
+      source.editorFor != null ||
+      source.botOwned ||
+      source.owner != null ||
+      this.agentSessionManagerService.laneOf(fromSessionId) != null ||
+      this.isUnattendedSession(fromSessionId)
+    )
+      return { error: "Only a chat in a project can hand work off." };
+    const working = this.agentSessionManagerService
+      .list(source.workspaceId)
+      .filter(
+        (session) =>
+          session.continuedFrom === source.id &&
+          session.continuationKind === "handoff" &&
+          this.sessionTurnStateService.get(session.workspaceId, session.id)
+            .isBusy
+      ).length;
+    if (working >= HANDOFFS_WORKING_MAX)
+      return {
+        error: `${working} chats handed off from this one are still working. Do this here, or wait for one to finish.`,
+      };
+    const session = this.createAgentSession(
+      source.workspaceId,
+      null,
+      null,
+      undefined,
+      {
+        model: source.model,
+        mode: source.mode,
+        label: task.title,
+        continuedFrom: { sessionId: source.id, kind: "handoff" },
+        ...(source.worktreeId != null && source.worktreePath != null
+          ? {
+              worktree: {
+                id: source.worktreeId,
+                path: source.worktreePath,
+                branch: source.worktreeBranch,
+              },
+            }
+          : {}),
+      }
+    );
+    void this.sendAgentMessage({
+      workspaceId: session.workspaceId,
+      sessionId: session.id,
+      message: task.prompt,
+    });
+    return { sessionId: session.id };
   }
 
   listAgentSessions(workspaceId: string): AgentSessionListItem[] {
