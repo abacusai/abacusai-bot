@@ -120,7 +120,7 @@ describe("reportFunnelStep", () => {
 
 describe("the credit milestone card's steps", () => {
   it("are on the fixed list, and each is sent as itself", () => {
-    const steps = [50, 80].flatMap((threshold) =>
+    const steps = [50, 80, 95].flatMap((threshold) =>
       ["shown", "upgrade", "continue"].map(
         (choice) => `credit_card_${threshold}_${choice}`
       )

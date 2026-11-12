@@ -5069,6 +5069,13 @@
       "estimateTasks_one": "大约还够再完成 {{count}} 个任务。",
       "estimateTasks_other": "大约还够再完成 {{count}} 个任务。"
     },
+    "last": {
+      "title": "即将用完：免费积分仅剩 {{left}}",
+      "paidTitle": "即将用完：本月积分仅剩 {{left}}",
+      "urge": "用完后，你的工作会在任务中途停下。现在升级，继续进行。",
+      "urgeProject": "用完后，“{{project}}”会在任务中途停下。现在升级，继续进行。",
+      "urgeProjectModel": "用完后，“{{project}}”会在任务中途停下。现在升级，继续进行，并用 {{model}} 完成它。"
+    },
     "meterLabel": "已使用 {{used}}/{{total}} 免费积分",
     "paidMeterLabel": "{{used}} of {{total}} credits used this month",
     "used": "已用 {{used}}",

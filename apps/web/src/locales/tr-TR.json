@@ -5069,6 +5069,13 @@
       "estimateTasks_one": "Yaklaşık {{count}} görev daha yapmaya yeter.",
       "estimateTasks_other": "Yaklaşık {{count}} görev daha yapmaya yeter."
     },
+    "last": {
+      "title": "Bitmek üzere: yalnızca {{left}} ücretsiz kredi kaldı",
+      "paidTitle": "Bitmek üzere: bu ay yalnızca {{left}} kredi kaldı",
+      "urge": "Bittiğinde işin görevin ortasında durur. Devam etmek için şimdi yükselt.",
+      "urgeProject": "Bittiğinde “{{project}}” görevin ortasında durur. Devam etmek için şimdi yükselt.",
+      "urgeProjectModel": "Bittiğinde “{{project}}” görevin ortasında durur. Devam etmek için şimdi yükselt ve {{model}} ile bitir."
+    },
     "meterLabel": "{{total}} ücretsiz krediden {{used}} kullanıldı",
     "paidMeterLabel": "{{used}} of {{total}} credits used this month",
     "used": "{{used}} kullanıldı",

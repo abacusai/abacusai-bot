@@ -5069,6 +5069,13 @@
       "estimateTasks_one": "Alcanza para unas {{count}} tarea más.",
       "estimateTasks_other": "Alcanza para unas {{count}} tareas más."
     },
+    "last": {
+      "title": "Casi sin créditos: te quedan {{left}} créditos gratis",
+      "paidTitle": "Casi sin créditos: te quedan {{left}} este mes",
+      "urge": "Cuando se acaben, tu trabajo se detendrá a mitad de la tarea. Mejora ahora para seguir.",
+      "urgeProject": "Cuando se acaben, “{{project}}” se detendrá a mitad de la tarea. Mejora ahora para seguir.",
+      "urgeProjectModel": "Cuando se acaben, “{{project}}” se detendrá a mitad de la tarea. Mejora ahora para seguir y termínalo con {{model}}."
+    },
     "meterLabel": "{{used}} de {{total}} créditos gratis usados",
     "paidMeterLabel": "{{used}} of {{total}} credits used this month",
     "used": "{{used}} usados",

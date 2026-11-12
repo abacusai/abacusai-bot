@@ -1,7 +1,10 @@
 import type { BillingPlan } from "@abacus-ai/contract/billing-plan";
 import { contract } from "@abacus-ai/contract/contract";
 import type { PrefsRow, SessionRow } from "@abacus-ai/contract/contract/rows";
-import type { CreditThresholdMark } from "@abacus-ai/contract/credit-thresholds";
+import type {
+  CreditThreshold,
+  CreditThresholdMark,
+} from "@abacus-ai/contract/credit-thresholds";
 import type { ModelAvailability } from "@abacus-ai/contract/models";
 import { implement } from "@orpc/server";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -286,7 +289,7 @@ describe("the plan's credit milestone card", () => {
     upgradeInMobileApp: false,
   };
   const card = (
-    threshold: 50 | 80,
+    threshold: CreditThreshold,
     used: number,
     extra: Partial<Parameters<typeof CreditThresholdCard>[0]> = {}
   ) => (
@@ -535,6 +538,48 @@ describe("the plan's credit milestone card", () => {
     expect(screen.getByRole("dialog").textContent).toContain(
       "Upgrade now so “Bakery website” doesn't stop halfway, and finish it on Claude Opus 5.5."
     );
+  });
+
+  it("at 95, the last card before the wall: the 80% card answered, with what is left, the tasks it pays for and the chat by name", async () => {
+    const h = await host({
+      account: { ...ACCOUNT, credits_used: 1920 },
+      mark: { ...MARK, reached: 95, used: 1920, perTask: 40 },
+      models: LOCKED_CATALOG,
+      prefs: {
+        dismissals: {
+          ...fixturePrefs().dismissals,
+          creditThresholdCards: { "o1:u1": { shown: 80, answered: 80 } },
+        },
+      },
+      sessions: [
+        {
+          id: "s1",
+          label: "Bakery website",
+          updatedAt: "2026-11-01T10:00:00Z",
+        },
+      ],
+    });
+    await screen.findByRole("heading", {
+      name: "Almost out: 80 free credits left",
+    });
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.getAttribute("data-threshold")).toBe("95");
+    expect(dialog.textContent).toContain(
+      "Enough for about 2 more bot messages. When they run out, “Bakery website” stops mid-task. Upgrade now to keep going, and finish it on Claude Opus 5.5."
+    );
+    expect(dialog.textContent).toContain("Image and video generation");
+    await waitFor(() => expect(h.steps()).toEqual(["credit_card_95_shown"]));
+    expect(
+      screen.getByRole("button", { name: "Upgrade · $7 first month" })
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Continue free" }));
+    await waitFor(() =>
+      expect(h.cards()).toEqual({ "o1:u1": { shown: 95, answered: 95 } })
+    );
+    expect(h.steps()).toEqual([
+      "credit_card_95_shown",
+      "credit_card_95_continue",
+    ]);
   });
 
   it("a dismissed threshold stays dismissed; the next one still shows", async () => {

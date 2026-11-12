@@ -5069,6 +5069,13 @@
       "estimateTasks_one": "Bastano per circa {{count}} altra attività.",
       "estimateTasks_other": "Bastano per circa {{count}} altre attività."
     },
+    "last": {
+      "title": "Quasi finiti: restano solo {{left}} crediti gratuiti",
+      "paidTitle": "Quasi finiti: restano solo {{left}} crediti questo mese",
+      "urge": "Quando finiscono, il tuo lavoro si ferma a metà. Passa ora al piano superiore per continuare.",
+      "urgeProject": "Quando finiscono, “{{project}}” si ferma a metà. Passa ora al piano superiore per continuare.",
+      "urgeProjectModel": "Quando finiscono, “{{project}}” si ferma a metà. Passa ora al piano superiore per continuare, e completalo con {{model}}."
+    },
     "meterLabel": "{{used}} crediti gratuiti usati su {{total}}",
     "paidMeterLabel": "{{used}} of {{total}} credits used this month",
     "used": "{{used}} usati",

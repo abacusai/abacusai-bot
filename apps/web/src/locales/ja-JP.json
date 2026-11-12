@@ -5069,6 +5069,13 @@
       "estimateTasks_one": "タスクあと約 {{count}} 件分です。",
       "estimateTasks_other": "タスクあと約 {{count}} 件分です。"
     },
+    "last": {
+      "title": "もうすぐ終了：無料クレジットは残り {{left}} です",
+      "paidTitle": "もうすぐ終了：今月のクレジットは残り {{left}} です",
+      "urge": "使い切ると、作業はタスクの途中で止まります。今すぐアップグレードして続けましょう。",
+      "urgeProject": "使い切ると、「{{project}}」はタスクの途中で止まります。今すぐアップグレードして続けましょう。",
+      "urgeProjectModel": "使い切ると、「{{project}}」はタスクの途中で止まります。今すぐアップグレードして続け、{{model}} で仕上げましょう。"
+    },
     "meterLabel": "無料クレジット {{total}} のうち {{used}} を使用",
     "paidMeterLabel": "{{used}} of {{total}} credits used this month",
     "used": "{{used}} 使用",

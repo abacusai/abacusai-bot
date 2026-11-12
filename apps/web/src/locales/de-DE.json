@@ -5069,6 +5069,13 @@
       "estimateTasks_one": "Genug für etwa {{count}} weitere Aufgabe.",
       "estimateTasks_other": "Genug für etwa {{count}} weitere Aufgaben."
     },
+    "last": {
+      "title": "Fast aufgebraucht: nur noch {{left}} kostenlose Credits",
+      "paidTitle": "Fast aufgebraucht: nur noch {{left}} Credits diesen Monat",
+      "urge": "Wenn sie aufgebraucht sind, stoppt deine Arbeit mitten in der Aufgabe. Jetzt upgraden und weitermachen.",
+      "urgeProject": "Wenn sie aufgebraucht sind, stoppt „{{project}}“ mitten in der Aufgabe. Jetzt upgraden und weitermachen.",
+      "urgeProjectModel": "Wenn sie aufgebraucht sind, stoppt „{{project}}“ mitten in der Aufgabe. Jetzt upgraden, weitermachen und mit {{model}} fertigstellen."
+    },
     "meterLabel": "{{used}} von {{total}} kostenlosen Credits verbraucht",
     "paidMeterLabel": "{{used}} of {{total}} credits used this month",
     "used": "{{used}} verbraucht",

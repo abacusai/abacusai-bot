@@ -1,6 +1,7 @@
 /**
  * The credit milestones of every plan: a card once half, then four fifths,
- * of the plan's credits are used. The free plan measures its one-time grant;
+ * then nineteen twentieths (the last before the wall), of the plan's credits
+ * are used. The free plan measures its one-time grant;
  * a paid plan its monthly credits, never what was bought on top. Main stamps
  * a crossing after a turn settles; the renderer shows the card and keeps the
  * answer. A balance back above a mark (a new month, a top-up, a new plan)
@@ -16,7 +17,7 @@ import {
 import type { AbacusAccountInfo } from "./contracts";
 import { abacusAccountTier, isPayingAbacusTier } from "./models";
 
-export const CREDIT_THRESHOLDS = [50, 80] as const;
+export const CREDIT_THRESHOLDS = [50, 80, 95] as const;
 export type CreditThreshold = (typeof CREDIT_THRESHOLDS)[number];
 
 /** What today's turns were: builds in Sessions, bot messages, or a mix. */
@@ -120,7 +121,7 @@ export const thresholdOf = (
 ): CreditThreshold | null => {
   if (!(granted > 0) || used >= granted) return null;
   const share = used / granted;
-  return share >= 0.8 ? 80 : share >= 0.5 ? 50 : null;
+  return share >= 0.95 ? 95 : share >= 0.8 ? 80 : share >= 0.5 ? 50 : null;
 };
 
 /**
@@ -175,6 +176,20 @@ export const CREDIT_THRESHOLD_COPY = {
     bodyProject: "creditThreshold.low.urgeProject",
     bodyProjectModel: "creditThreshold.low.urgeProjectModel",
     paidTitle: "creditThreshold.low.paidTitle",
+    estimate: {
+      builds: "creditThreshold.low.estimateBuilds",
+      messages: "creditThreshold.low.estimateMessages",
+      tasks: "creditThreshold.low.estimateTasks",
+    },
+  },
+  // The last before the wall: the near-the-end estimate and paid ways on are
+  // the 80% card's; the title and the free plan's urge are its own.
+  95: {
+    title: "creditThreshold.last.title",
+    body: "creditThreshold.last.urge",
+    bodyProject: "creditThreshold.last.urgeProject",
+    bodyProjectModel: "creditThreshold.last.urgeProjectModel",
+    paidTitle: "creditThreshold.last.paidTitle",
     estimate: {
       builds: "creditThreshold.low.estimateBuilds",
       messages: "creditThreshold.low.estimateMessages",
@@ -285,8 +300,9 @@ export function creditThresholdWords(
         ...(guess != null ? [guess] : []),
       ],
     };
+  const near = CREDIT_THRESHOLD_COPY[threshold];
   return {
-    title: t(paid ? copy.paidTitle : copy.title, {
+    title: t(paid ? near.paidTitle : near.title, {
       left: number(balance.left),
     }),
     lines: [
@@ -295,12 +311,9 @@ export function creditThresholdWords(
         ? paidUrge(t, offer.offer, project)
         : project != null
           ? topModel != null
-            ? t(CREDIT_THRESHOLD_COPY[80].bodyProjectModel, {
-                project,
-                model: topModel,
-              })
-            : t(CREDIT_THRESHOLD_COPY[80].bodyProject, { project })
-          : t(copy.body),
+            ? t(near.bodyProjectModel, { project, model: topModel })
+            : t(near.bodyProject, { project })
+          : t(near.body),
     ],
   };
 }

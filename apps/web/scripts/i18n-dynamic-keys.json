@@ -1822,7 +1822,12 @@
       "low.paidUrgeNext",
       "low.paidUrgeNextProject",
       "low.paidUrgeMore",
-      "low.paidUrgeMoreProject"
+      "low.paidUrgeMoreProject",
+      "last.title",
+      "last.paidTitle",
+      "last.urge",
+      "last.urgeProject",
+      "last.urgeProjectModel"
     ],
     "sources": ["../../../packages/contract/src/credit-thresholds.ts"]
   },

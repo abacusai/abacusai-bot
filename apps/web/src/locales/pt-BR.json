@@ -5069,6 +5069,13 @@
       "estimateTasks_one": "Dá para cerca de {{count}} tarefa a mais.",
       "estimateTasks_other": "Dá para cerca de {{count}} tarefas a mais."
     },
+    "last": {
+      "title": "Quase no fim: restam só {{left}} créditos grátis",
+      "paidTitle": "Quase no fim: restam só {{left}} créditos este mês",
+      "urge": "Quando acabarem, seu trabalho para no meio da tarefa. Faça o upgrade agora para continuar.",
+      "urgeProject": "Quando acabarem, “{{project}}” para no meio da tarefa. Faça o upgrade agora para continuar.",
+      "urgeProjectModel": "Quando acabarem, “{{project}}” para no meio da tarefa. Faça o upgrade agora para continuar, e termine no {{model}}."
+    },
     "meterLabel": "{{used}} de {{total}} créditos grátis usados",
     "paidMeterLabel": "{{used}} of {{total}} credits used this month",
     "used": "{{used}} usados",
