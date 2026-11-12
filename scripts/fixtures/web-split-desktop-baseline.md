@@ -8,7 +8,23 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `0f0f684f`, the cheaper-model button on the credit cards
+## Current: `59388535`, the 95% credit card
+
+**445 / 9519544 / 3191332.** Records the renderer with the third credit
+milestone card (95%, the last before the wall) and its strings in 15
+languages, on main at `66ce5f7b`. Against `66ce5f7b` (445 / 9511524 /
+3189998): +0 chunks, +8020 bytes (+0.08%), +1334 gzip bytes (+0.04%). Main
+had already grown 0.95% in bytes past `0f0f684f` without a new baseline, so
+this change crossed the 1% allowance; its own growth is strings, carried once
+per language. `apps/web`'s dependencies did not change. The 1% allowance is
+unchanged.
+
+Measured from frozen-lockfile builds of `66ce5f7b` and of `66ce5f7b` with
+`59388535` applied (Linux x64, clean `dist`), summed the same way as
+`check-desktop-parity.mjs`. This baseline-only change touches no renderer
+code.
+
+### `0f0f684f`, the cheaper-model button on the credit cards
 
 **444 / 9422499 / 3161020.** Records the renderer with the paid credit cards'
 "continue on RouteLLM in a new chat" button, its line under the button and its
