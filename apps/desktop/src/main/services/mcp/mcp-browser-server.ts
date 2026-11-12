@@ -1424,9 +1424,16 @@ export class McpBrowserServer extends McpHttpServer {
    */
   private static readonly NAMED_KEYS: Record<
     string,
-    { code: string; keyCode: number }
+    {
+      code: string;
+      keyCode: number;
+      /** The character the key types: without it Chromium makes none, and Enter submits no form. */
+      text?: string;
+      /** `KeyboardEvent.key` when it is not the name. */
+      domKey?: string;
+    }
   > = {
-    Enter: { code: "Enter", keyCode: 13 },
+    Enter: { code: "Enter", keyCode: 13, text: "\r" },
     Tab: { code: "Tab", keyCode: 9 },
     Escape: { code: "Escape", keyCode: 27 },
     Backspace: { code: "Backspace", keyCode: 8 },
@@ -1439,7 +1446,7 @@ export class McpBrowserServer extends McpHttpServer {
     End: { code: "End", keyCode: 35 },
     PageUp: { code: "PageUp", keyCode: 33 },
     PageDown: { code: "PageDown", keyCode: 34 },
-    Space: { code: "Space", keyCode: 32 },
+    Space: { code: "Space", keyCode: 32, text: " ", domKey: " " },
   };
 
   /** CDP's modifier bitmask. */
@@ -1493,13 +1500,17 @@ export class McpBrowserServer extends McpHttpServer {
     })()`
     );
 
+    const domKey = named?.domKey ?? key;
     const base =
       named != null
         ? {
-            key,
+            key: domKey,
             code: named.code,
             windowsVirtualKeyCode: named.keyCode,
             nativeVirtualKeyCode: named.keyCode,
+            ...(named.text != null
+              ? { text: named.text, unmodifiedText: named.text }
+              : {}),
           }
         : { key, text: key, unmodifiedText: key };
 
@@ -1519,7 +1530,7 @@ export class McpBrowserServer extends McpHttpServer {
     const delivered = await this.evalJS(
       wc,
       `(function() {
-      const seen = window.__abacusBotKeySeen === ${JSON.stringify(key)};
+      const seen = window.__abacusBotKeySeen === ${JSON.stringify(domKey)};
       window.__abacusBotKeySeen = undefined;
       if (window.__abacusBotKeyProbe) {
         window.removeEventListener('keydown', window.__abacusBotKeyProbe, true);

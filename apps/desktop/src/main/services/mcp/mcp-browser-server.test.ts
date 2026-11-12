@@ -2165,6 +2165,37 @@ describe("pressing keys", () => {
     expect(sent[0]?.modifiers).toBe(15);
   });
 
+  it("sends Enter and Space with their text, so Enter submits the field's form", async () => {
+    // Enter went as a bare keyDown: Chromium makes no character from it, so a
+    // search box's form was never submitted (Wikipedia's search sat still).
+    const sent: Array<Record<string, unknown>> = [];
+    respondWith(
+      (expression) => expression.includes("__abacusBotKeySeen ===") || null
+    );
+    const own = page.debugger.sendCommand;
+    page.debugger.sendCommand = async (
+      method: string,
+      params?: Record<string, unknown>
+    ) => {
+      if (method !== "Input.dispatchKeyEvent") return own(method, params);
+      sent.push(params ?? {});
+      return {};
+    };
+
+    for (const key of ["Enter", "Space"])
+      await call("browser_interact", { action: "press", key });
+
+    expect(sent.filter((event) => event.type === "keyDown")).toEqual([
+      expect.objectContaining({
+        key: "Enter",
+        text: "\r",
+        unmodifiedText: "\r",
+      }),
+      expect.objectContaining({ key: " ", code: "Space", text: " " }),
+    ]);
+    expect(sent.filter((event) => event.type === "keyUp")).toHaveLength(2);
+  });
+
   it("falls back rather than refusing a key the debugger will not take", async () => {
     respondWith(() => null);
     const { text, isError } = await call("browser_interact", {
