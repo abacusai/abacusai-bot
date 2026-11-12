@@ -48,6 +48,19 @@ describe("what the prompts say about the browser, per channel", () => {
     expect(botOperatingPrompt()).toMatch(/in\s+any\s+language/i);
   });
 
+  it("reports only what the page showed, and relays only what the run reported", () => {
+    // A run read only the text and the title of a page with no heading, and
+    // reported "Page heading (H1): Example Domain"; a bot then added a link
+    // the run never mentioned.
+    const flat = (text: string) => text.replace(/\s+/g, " ");
+    expect(flat(BROWSER_SYSTEM_PROMPT)).toMatch(
+      /Report only what a tool result showed you[^.]*'not found'/
+    );
+    expect(flat(botOperatingPrompt())).toMatch(
+      /never add page details the run did not report/i
+    );
+  });
+
   it("tells the phone loop how screenshots reach the chat, and acts only through chat, links and approval pages", () => {
     const prompt = phoneOperatingPrompt(null);
     expect(prompt).not.toMatch(/pane/i);
