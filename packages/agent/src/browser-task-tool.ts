@@ -289,6 +289,8 @@ export function buildBrowserTaskTool(
         ? [
             "It cannot read files or run commands, but it can give a page's file picker a file from your",
             "workspace (the user's pasted or dropped attachments are there): name the file's path in the task.",
+            "For a file elsewhere on the computer, ask the user to attach it:",
+            "never copy a file from elsewhere on the computer into your workspace to upload it.",
             "It never types a password, card number, CVV or",
             "code itself, never solves a CAPTCHA, and never pays or books without the user's approval",
             "of that exact payment (payment_approval): the browser refuses a Pay click without one.",
@@ -299,6 +301,8 @@ export function buildBrowserTaskTool(
         : [
             "It cannot read files or run commands, but it can give a page's file picker a file from your",
             "workspace (the user's pasted or dropped attachments are there): name the file's path in the task.",
+            "For a file elsewhere on the computer, ask the user to attach it:",
+            "never copy a file from elsewhere on the computer into your workspace to upload it.",
             "It never types a password, card number, CVV or",
             "code itself, never solves a CAPTCHA, and never pays or books: the browser refuses a",
             "Pay click. At a step only the user can do it stops and says what it needs (traveler",

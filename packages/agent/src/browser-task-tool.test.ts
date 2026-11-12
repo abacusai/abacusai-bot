@@ -146,6 +146,11 @@ describe("uploads", () => {
     expect(tool.description).toMatch(
       /file picker a file from your\s+workspace[^.]*name the file's path in the task/
     );
+    // Refused /etc/hostname, a bot copied it into its workspace and uploaded
+    // the copy: a file from elsewhere is the user's to attach.
+    expect(tool.description).toMatch(
+      /never copy a file from elsewhere on the computer into your workspace to upload it/
+    );
   });
 });
 

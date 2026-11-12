@@ -568,6 +568,16 @@ export interface BatchGate {
   pause: CheckoutState | null;
 }
 
+/**
+ * How a resumed run starts. The words are the caller's (the bot that sent the
+ * run), passing on what the user did or said, or its own next step: never
+ * presented as the user's own.
+ */
+export const resumedOpening = (task: string): string =>
+  `You are continuing the run that stopped. The caller that started you says: "${task}"\n\n` +
+  "The page is as you left it. Take a snapshot to see where it is now, then continue " +
+  "from where you stopped and finish the task. Do not start over.\n\n";
+
 export const PAUSE_BATCH_REFUSAL =
   "Not run: browser_pause ends the run, so nothing else runs beside or after it.";
 
@@ -896,9 +906,7 @@ export async function runBrowserTask(
       const login = loginItemId != null ? `${loginNote(loginItemId)}\n\n` : "";
       const opening =
         resumed != null
-          ? "The user has done their part in the browser and says: " +
-            `"${task}"\n\nThe page is as you left it. Take a snapshot to see where it is now, then continue ` +
-            "from where you stopped and finish the task. Do not start over.\n\n" +
+          ? resumedOpening(task) +
             (resumeNote.length > 0 ? `${resumeNote}\n\n` : "") +
             login +
             `Your turn budget has been reset: any earlier note that you were near your limit no longer applies. ${budget.note()}`

@@ -12,6 +12,7 @@ import {
   noteBatch,
   REPEAT_HOST_LIMIT,
   RepeatTracker,
+  resumedOpening,
 } from "./browser-task.js";
 import { CHECKOUT_STATE_PREFIX } from "./checkout-run.js";
 import {
@@ -343,5 +344,18 @@ describe("signing in with a saved login", () => {
     expect(loginNote("li-7")).toContain(
       'browser_vault_fill with item_id "li-7" and field "login"'
     );
+  });
+});
+
+describe("the opening of a resumed run", () => {
+  it("says who sent the words, never that the user said them", () => {
+    // A bot resumed a refused upload with its own words ("a copy of the file
+    // is now in the workspace"), and the run read them as the user's.
+    const opening = resumedOpening("Upload hostname now.");
+    expect(opening).not.toMatch(/the user has done their part/i);
+    expect(opening).toMatch(
+      /The caller that started you says: "Upload hostname now\."/
+    );
+    expect(opening).toMatch(/The page is as you left it/);
   });
 });
