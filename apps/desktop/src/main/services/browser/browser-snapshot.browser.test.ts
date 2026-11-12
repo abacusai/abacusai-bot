@@ -180,6 +180,8 @@ const FIXTURES: Record<string, string> = {
     <button title="A title attribute"><span></span></button>
     <button>${"Very long label ".repeat(20)}</button>
     <a href="/products/42?ref=home">A product</a>
+    <a href="https://other.test/docs/page?x=1">Another site</a>
+    <a href="mailto:help@fixture.test">Mail us</a>
   `),
   multiLineLabels: wrap(`
     <button>Line one<br>Line two</button>
@@ -545,6 +547,17 @@ describeInBrowser("the snapshot walker, against real layout", () => {
     it("shows a link by its path, without the query", () => {
       expect(byName(pages.labels!.tree, "A product")?.href).toBe(
         "/products/42"
+      );
+    });
+
+    it("names the site of a link that leaves this one, and keeps a mail link whole", () => {
+      // Only the path was shown, so a footer link to another site read "→ /"
+      // and a run reported both footer links as pointing to this site's home.
+      expect(byName(pages.labels!.tree, "Another site")?.href).toBe(
+        "other.test/docs/page"
+      );
+      expect(byName(pages.labels!.tree, "Mail us")?.href).toBe(
+        "mailto:help@fixture.test"
       );
     });
   });
