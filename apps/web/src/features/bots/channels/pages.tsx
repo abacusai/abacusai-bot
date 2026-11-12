@@ -451,6 +451,25 @@ export const GroupPage = ({
             {error}
           </p>
         )}
+        {members.length < MIN_CHANNEL_MEMBERS && (
+          <div
+            data-testid="channel-few-bots"
+            className="bg-muted mb-2 flex items-center gap-3 rounded-lg px-3 py-2 text-sm"
+          >
+            <span className="min-w-0 flex-1">
+              {members[0] != null
+                ? t("channels.thread.alone", { name: members[0].name })
+                : t("channels.thread.noBots")}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setEditing("details")}
+            >
+              {t("channels.thread.addBots")}
+            </Button>
+          </div>
+        )}
         {channel.queued > 0 && (
           <p className="text-muted-foreground pb-1 text-xs">
             {t("channels.thread.queued", { count: channel.queued })}

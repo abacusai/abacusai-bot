@@ -671,7 +671,7 @@ describe("a task the user gave, passed on", () => {
     ).resolves.toBe("Posted.");
     expect(
       (self.botService as { openChat: ReturnType<typeof vi.fn> }).openChat
-    ).toHaveBeenCalledWith("wri");
+    ).toHaveBeenCalledWith("wri", { forTask: true });
     expect(self.sendAgentMessage).toHaveBeenCalledWith({
       workspaceId: "ws",
       sessionId: "wri-main",

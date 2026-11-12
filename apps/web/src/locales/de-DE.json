@@ -460,7 +460,7 @@
       "task": {
         "from": "Von dir, über {{bot}}",
         "asWritten": "So hat {{bot}} es weitergegeben:",
-        "fromChannel": "Von dir, in {{channel}}",
+        "fromChannel": "Aufgabe aus {{channel}}",
         "asTakenOn": "So im Kanal übernommen:"
       },
       "pairWith": "mit {{bot}}",
@@ -5208,6 +5208,9 @@
     "thread": {
       "label": "Kanalnachrichten",
       "goneBot": "Gelöschter Bot",
+      "alone": "{{name}} ist der einzige Bot in diesem Kanal. Füge einen weiteren hinzu, damit sie als Team arbeiten können.",
+      "noBots": "Alle Bots in diesem Kanal wurden gelöscht. Füge Bots hinzu, um ihn wieder zu nutzen.",
+      "addBots": "Bots hinzufügen",
       "working_one": "{{names}} antwortet…",
       "working_other": "{{names}} antworten…",
       "queued_one": "{{count}} Nachricht wartet auf ihre Antwort",

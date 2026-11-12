@@ -470,7 +470,7 @@
       "task": {
         "from": "Od ciebie, przez {{bot}}",
         "asWritten": "Tak, jak przekazał to {{bot}}:",
-        "fromChannel": "Od ciebie, na kanale {{channel}}",
+        "fromChannel": "Zadanie z kanału {{channel}}",
         "asTakenOn": "Tak, jak przyjęto to na kanale:"
       },
       "pairWith": "z: {{bot}}",
@@ -5378,6 +5378,9 @@
     "thread": {
       "label": "Wiadomości kanału",
       "goneBot": "Usunięty bot",
+      "alone": "{{name}} to jedyny bot, który został na tym kanale. Dodaj kolejnego, aby mogły pracować zespołowo.",
+      "noBots": "Wszystkie boty z tego kanału zostały usunięte. Dodaj boty, aby znów z niego korzystać.",
+      "addBots": "Dodaj boty",
       "working_one": "{{names}} odpowiada…",
       "working_other": "{{names}} odpowiadają…",
       "working_few": "{{names}} odpowiadają…",

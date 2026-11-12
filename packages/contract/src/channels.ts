@@ -25,6 +25,11 @@ export interface Channel {
   about?: string;
   /** Bot ids in the order they were added; the first is the lead. */
   memberBotIds: string[];
+  /**
+   * The folder its work keeps files given no place in, in the bots' shared
+   * folder: chosen once from its first name, kept through renames.
+   */
+  folder?: string;
   decisions: ChannelDecision[];
   createdAt: number;
   updatedAt: number;
@@ -48,6 +53,11 @@ export interface ChannelMessage {
   work?: ChannelWork;
   /** The lead's summing-up of a team discussion: offered for pinning. */
   conclusion?: boolean;
+  /**
+   * A work report: written in the bot's own chat, not its channel chat, so
+   * the bot is shown it in the channel like anyone else's message.
+   */
+  report?: boolean;
   /** The user started its agreed items as work. */
   planStarted?: boolean;
   /** A bot proposed to the user: a new one, or one of theirs to invite. */

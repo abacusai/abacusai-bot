@@ -460,7 +460,7 @@
       "task": {
         "from": "Senden, {{bot}} aracılığıyla",
         "asWritten": "{{bot}} bunu şöyle iletti:",
-        "fromChannel": "Senden, {{channel}} içinde",
+        "fromChannel": "{{channel}} kanalından görev",
         "asTakenOn": "Kanalda üstlenildiği şekliyle:"
       },
       "pairWith": "{{bot}} ile",
@@ -5208,6 +5208,9 @@
     "thread": {
       "label": "Kanal mesajları",
       "goneBot": "Silinmiş bot",
+      "alone": "Bu kanalda yalnızca {{name}} kaldı. Ekip olarak çalışabilmeleri için başka bir bot ekleyin.",
+      "noBots": "Bu kanaldaki tüm botlar silindi. Yeniden kullanmak için bot ekleyin.",
+      "addBots": "Bot ekle",
       "working_one": "{{names}} yanıt veriyor…",
       "working_other": "{{names}} yanıt veriyor…",
       "queued_one": "{{count}} mesaj sırasını bekliyor",

@@ -460,7 +460,7 @@
       "task": {
         "from": "From you, via {{bot}}",
         "asWritten": "As {{bot}} passed it on:",
-        "fromChannel": "From you, in {{channel}}",
+        "fromChannel": "Task from {{channel}}",
         "asTakenOn": "As taken on in the channel:"
       },
       "pairWith": "with {{bot}}",
@@ -5208,6 +5208,9 @@
     "thread": {
       "label": "Channel messages",
       "goneBot": "Deleted bot",
+      "alone": "{{name}} is the only bot left in this channel. Add another so they can work as a team.",
+      "noBots": "Every bot in this channel was deleted. Add bots to use it again.",
+      "addBots": "Add bots",
       "working_one": "{{names}} is answering…",
       "working_other": "{{names}} are answering…",
       "queued_one": "{{count}} message waiting for its turn",

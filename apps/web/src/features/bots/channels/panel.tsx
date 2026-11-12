@@ -61,7 +61,7 @@ export const ChannelPanel = ({
         </h3>
         <ul className="flex flex-col">
           {members.map((bot, index) => {
-            const answering = channel.working.includes(bot.id);
+            const answering = channel.answering.includes(bot.id);
             return (
               <li key={bot.id}>
                 <AppLink

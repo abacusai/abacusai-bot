@@ -22,6 +22,7 @@ import {
   resolveBotByName,
   taskStartedText,
   wrapBotAnswer,
+  noteGist,
 } from "./bot-ask";
 
 const bots = [
@@ -353,5 +354,14 @@ describe("a bot's colleagues, with and without the user's standing yes", () => {
     expect(lines).toContain("without offering first");
     expect(lines).not.toContain("Want me to ask it?");
     expect(lines).toContain("- Writer: Writes copy.");
+  });
+});
+
+describe("noteGist", () => {
+  it("cuts a long note at a word, never inside one", () => {
+    const text = `${"wordy ".repeat(40)}Agreed: Writer drafts the email`;
+    const gist = noteGist(text, 100);
+    expect(gist.endsWith("wordy…")).toBe(true);
+    expect(gist.length).toBeLessThanOrEqual(100);
   });
 });

@@ -785,18 +785,31 @@ export class BotService {
    * The bot's forever chat, created on first open or after its session died.
    * Fails closed on an unknown bot rather than minting a chat nothing owns.
    */
-  async openChat(botId: string): Promise<BotChatHandle> {
+  async openChat(
+    botId: string,
+    /**
+     * Opened to hand it a task (channel work, a task another bot passed on):
+     * no first-run kickstart, which would introduce itself and set out on its
+     * mission (from its notes) ahead of the task, and do it twice.
+     */
+    options: { forTask?: boolean } = {}
+  ): Promise<BotChatHandle> {
     // Two racing opens would each mint a session and send the kickstart.
     const inFlight = this.opening.get(botId);
     if (inFlight != null) return inFlight;
-    const open = this.openChatNow(botId).finally(() => {
-      this.opening.delete(botId);
-    });
+    const open = this.openChatNow(botId, options.forTask === true).finally(
+      () => {
+        this.opening.delete(botId);
+      }
+    );
     this.opening.set(botId, open);
     return open;
   }
 
-  private async openChatNow(botId: string): Promise<BotChatHandle> {
+  private async openChatNow(
+    botId: string,
+    forTask: boolean
+  ): Promise<BotChatHandle> {
     const bot = getBot(botId);
     if (bot == null)
       throw new EntityNotFoundError("bot", botId, `No bot with id "${botId}".`);
@@ -819,7 +832,8 @@ export class BotService {
       await this.pinSession(bot.sessionId, botId, workspaceId);
       // A chat whose first start failed exists but never spoke: it is owed
       // the kickstart, once, when it next comes up.
-      if (bot.kickstartedAt == null) {
+      if (bot.kickstartedAt == null && forTask) markBotKickstarted(botId);
+      else if (bot.kickstartedAt == null) {
         const started = await this.callbacks.startSession(
           workspaceId,
           bot.sessionId
@@ -854,7 +868,8 @@ export class BotService {
     // since the chat exists. Only for a bot that never had a chat: a remint
     // is the same conversation to the user, and would introduce itself again.
     const started = await this.callbacks.startSession(workspaceId, session.id);
-    if (started.success && bot.sessionId == null) {
+    if (forTask && bot.sessionId == null) markBotKickstarted(botId);
+    else if (started.success && bot.sessionId == null) {
       this.callbacks.sendMessage(
         workspaceId,
         session.id,

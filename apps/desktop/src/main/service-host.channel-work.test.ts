@@ -25,6 +25,7 @@ vi.mock("electron", () => {
   );
 });
 const { ServiceHost } = await import("./service-host");
+const { TurnStoppedError } = await import("./services/session/turn-stopped");
 const { answerWords } = await import("./services/bots/bot-ask");
 const { ConnectivityService } =
   await import("./services/connectivity/connectivity-service");
@@ -105,6 +106,35 @@ const workHost = (ends: string | null = null) => {
   return { self, run, stop };
 };
 
+describe("a channel turn", () => {
+  it("stopped while its hidden chat is still opening, it never sends", async () => {
+    let open!: (handle: unknown) => void;
+    const self: Record<string, unknown> = {
+      channelTurns: new Map(),
+      channelTurnsOpening: new Set(),
+      channelTurnsStopped: new Set(),
+      turnLedger: { isOpen: () => false },
+      botService: {
+        list: () => [],
+        openSenderChat: vi.fn(() => new Promise((resolve) => (open = resolve))),
+      },
+      sendAgentMessage: vi.fn(async () => true),
+    };
+    const turn = (proto.runChannelTurn as Method).call(
+      self,
+      "wri",
+      { id: "ch1", memberBotIds: ["wri"], name: "Launch" },
+      "PROMPT"
+    ) as Promise<string>;
+    // Stop lands now: no handle yet, so it is kept for when the chat opens.
+    expect((self.channelTurnsOpening as Set<string>).has("ch1|wri")).toBe(true);
+    (self.channelTurnsStopped as Set<string>).add("ch1|wri");
+    open({ workspaceId: "ws", sessionId: "s1" });
+    await expect(turn).rejects.toThrow("it was stopped.");
+    expect(self.sendAgentMessage).not.toHaveBeenCalled();
+  });
+});
+
 describe("channel work", () => {
   it("runs in the bot's own chat and resolves with its report", async () => {
     const { self, run } = workHost("reply");
@@ -177,6 +207,95 @@ describe("channel work", () => {
     );
   });
 
+  it("a tool it ran after its last words does not cut the report", async () => {
+    const { self, run } = workHost();
+    const feed = (event: Record<string, unknown>) =>
+      (self.feedTurnWaiter as Method)("wri-main", { type: "event", event });
+    // It wrote the file, posted the email and a question, then suggested next tasks.
+    self.threadStore = {
+      readCurrentFile: () => ({
+        messages: [
+          { role: "user", parts: [{ type: "text", content: "WORK" }] },
+          {
+            role: "assistant",
+            parts: [
+              { type: "tool-call" },
+              { type: "tool-result" },
+              { type: "text", content: "Done. The email: Hi neighbor…" },
+              { type: "text", content: "Want the Instagram version too?" },
+              { type: "tool-call" },
+              { type: "tool-result" },
+            ],
+          },
+        ],
+      }),
+    };
+    self.sendAgentMessage = vi.fn(async () => {
+      feed({ type: "tool_call_start", toolName: "write", messageId: "m1" });
+      feed({
+        type: "text_delta",
+        content: "Done. The email: Hi neighbor…",
+        messageId: "m2",
+      });
+      feed({
+        type: "text_delta",
+        content: "Want the Instagram version too?",
+        messageId: "m3",
+      });
+      feed({
+        type: "tool_call_start",
+        toolName: "suggest_tasks",
+        messageId: "m3",
+      });
+      (self.settleTurnWaiter as Method)({
+        sessionId: "wri-main",
+        kind: "reply",
+      });
+      return true;
+    });
+    expect(answerWords(await run("w1"))).toBe(
+      "Done. The email: Hi neighbor…\n\nWant the Instagram version too?"
+    );
+  });
+
+  it("its chat catches up a moment after the turn: the report waits for it", async () => {
+    const { self, run } = workHost();
+    self.closingWaitMs = 1000;
+    const feed = (event: Record<string, unknown>) =>
+      (self.feedTurnWaiter as Method)("wri-main", { type: "event", event });
+    const email = { type: "text", content: "Done. The email: Hi neighbor…" };
+    const question = {
+      type: "text",
+      content: "Want the Instagram version too?",
+    };
+    // At first its chat has the email but not yet the closing question.
+    let reads = 0;
+    self.threadStore = {
+      readCurrentFile: () => ({
+        messages: [
+          { role: "user", parts: [{ type: "text", content: "WORK" }] },
+          {
+            role: "assistant",
+            parts: [{ type: "tool-call" }, { type: "tool-result" }, email],
+          },
+          ...(++reads > 2 ? [{ role: "assistant", parts: [question] }] : []),
+        ],
+      }),
+    };
+    self.sendAgentMessage = vi.fn(async () => {
+      feed({ type: "text_delta", content: email.content, messageId: "m1" });
+      feed({ type: "text_delta", content: question.content, messageId: "m2" });
+      (self.settleTurnWaiter as Method)({
+        sessionId: "wri-main",
+        kind: "reply",
+      });
+      return true;
+    });
+    expect(answerWords(await run("w1"))).toBe(
+      "Done. The email: Hi neighbor…\n\nWant the Instagram version too?"
+    );
+  });
+
   it("its chat not written up to the end yet: the report is what streamed", async () => {
     const { self, run } = workHost("reply");
     self.threadStore = {
@@ -191,6 +310,24 @@ describe("channel work", () => {
       }),
     };
     await expect(run("w1")).resolves.toBe("Done.");
+  });
+
+  it("waits out a turn opened in its own chat while it waited, so that answer is never its report", async () => {
+    const { self, run } = workHost("reply");
+    // The chat closed, but the user wrote there before the work went in.
+    const open = [true, false];
+    self.turnLedger = { isOpen: () => open.shift() ?? false };
+    self.turnClosed = vi.fn(async () => true);
+    await expect(run("w1")).resolves.toBe("Done.");
+    expect(self.turnClosed).toHaveBeenCalledTimes(2);
+    expect(self.sendAgentMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it("stopped by the user in its own chat: it ends as stopped, not failed", async () => {
+    const { run } = workHost("stopped");
+    const result = run("w1");
+    await expect(result).rejects.toBeInstanceOf(TurnStoppedError);
+    await expect(result).rejects.toThrow("stopped partway");
   });
 
   it("a stop before its turn starts: it never starts", async () => {

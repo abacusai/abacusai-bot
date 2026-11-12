@@ -460,7 +460,7 @@
       "task": {
         "from": "Dari Anda, melalui {{bot}}",
         "asWritten": "Seperti yang diteruskan {{bot}}:",
-        "fromChannel": "Dari Anda, di {{channel}}",
+        "fromChannel": "Tugas dari {{channel}}",
         "asTakenOn": "Seperti yang diambil di kanal:"
       },
       "pairWith": "dengan {{bot}}",
@@ -5208,6 +5208,9 @@
     "thread": {
       "label": "Pesan kanal",
       "goneBot": "Bot yang dihapus",
+      "alone": "{{name}} adalah satu-satunya bot yang tersisa di kanal ini. Tambahkan bot lain agar mereka bisa bekerja sebagai tim.",
+      "noBots": "Semua bot di kanal ini telah dihapus. Tambahkan bot untuk menggunakannya lagi.",
+      "addBots": "Tambahkan bot",
       "working_one": "{{names}} sedang menjawab…",
       "working_other": "{{names}} sedang menjawab…",
       "queued_one": "{{count}} pesan menunggu giliran",

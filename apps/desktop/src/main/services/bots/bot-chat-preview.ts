@@ -1,3 +1,5 @@
+import { withoutChainDone } from "@abacus-ai/contract/contract/ai";
+
 /**
  * The last thing said in a bot's chat, for the sidebar row. Read from the
  * transcript on disk rather than tracked in the bot record: a copy would be
@@ -61,8 +63,11 @@ const aguiPreview = (messages: readonly unknown[]): BotChatPreview | null => {
         content?: unknown;
       } | null;
       if (candidate?.type !== "text") continue;
+      // A hand-off step's <chain_done/> mark is the app's, never the preview.
       const text = lastLine(
-        typeof candidate.content === "string" ? candidate.content : ""
+        withoutChainDone(
+          typeof candidate.content === "string" ? candidate.content : ""
+        )
       );
       if (text.length === 0) continue;
       return {

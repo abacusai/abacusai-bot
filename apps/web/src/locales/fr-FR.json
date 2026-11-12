@@ -460,7 +460,7 @@
       "task": {
         "from": "De votre part, via {{bot}}",
         "asWritten": "Tel que {{bot}} l'a transmis :",
-        "fromChannel": "De votre part, dans {{channel}}",
+        "fromChannel": "Tâche de {{channel}}",
         "asTakenOn": "Tel que pris en charge dans le canal :"
       },
       "pairWith": "avec {{bot}}",
@@ -5208,6 +5208,9 @@
     "thread": {
       "label": "Messages du canal",
       "goneBot": "Bot supprimé",
+      "alone": "{{name}} est le seul bot restant dans ce canal. Ajoutez-en un autre pour qu'ils travaillent en équipe.",
+      "noBots": "Tous les bots de ce canal ont été supprimés. Ajoutez des bots pour l'utiliser à nouveau.",
+      "addBots": "Ajouter des bots",
       "working_one": "{{names}} est en train de répondre…",
       "working_other": "{{names}} sont en train de répondre…",
       "queued_one": "{{count}} message attend son tour",
