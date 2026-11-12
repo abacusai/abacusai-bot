@@ -205,7 +205,7 @@ export const FirstBotStep = ({
             void perform(() =>
               botId != null
                 ? props.complete({ to: "bot-tour", botId })
-                : props.complete({ to: "new-session" }, { tour: true })
+                : props.choose({ kind: "tour" })
             )
           }
         >

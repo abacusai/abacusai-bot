@@ -49,7 +49,10 @@ import {
   startSignIn,
   cancelSignIn,
 } from "#renderer/features/onboarding/store";
-import { startFirstTask } from "#renderer/features/sessions/start/start-session";
+import {
+  prefillFirstTask,
+  startFirstTask,
+} from "#renderer/features/sessions/start/start-session";
 import { startTour } from "#renderer/features/tour/store";
 import {
   PaidWelcomeHost,
@@ -204,7 +207,12 @@ const OnboardingRoute = () => {
       ? (onboardingStore.state.createdBotId ?? undefined)
       : pickBotId();
     const made = id != null ? db.collections.bots.get(id) : undefined;
-    if (made != null && choice.kind !== "build" && choice.kind !== "images") {
+    if (
+      made != null &&
+      choice.kind !== "build" &&
+      choice.kind !== "images" &&
+      choice.kind !== "tour"
+    ) {
       await open(made.id);
       return;
     }
@@ -263,6 +271,15 @@ const OnboardingRoute = () => {
             url: abacusAgentPromptUrl(),
           });
         else requestPlanDialog("onboarding");
+        return;
+      case "tour":
+        // The tour runs over the Build sample, waiting in the box for Send.
+        prefillFirstTask(
+          "build",
+          sponsored,
+          t(`sessions.start.build.${BUILD_STARTER_IDS[0]}.prompt`)
+        );
+        await finish({ to: "new-session" }, true);
         return;
       case "bot":
         await open(choice.botId);
