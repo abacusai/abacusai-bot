@@ -132,6 +132,15 @@ export const withoutRoutineDone = (text: string): string => {
     : text;
 };
 
+/** The mark a hand-off step ends on when nothing is left to do; the app reads it, the user never sees it. */
+const CHAIN_DONE_TAG = /<chain_done\s*\/?>(?:\s*<\/chain_done>)?/gi;
+
+/** The reply without a hand-off step's `<chain_done/>` mark. */
+export const withoutChainDone = (text: string): string => {
+  const out = text.replace(CHAIN_DONE_TAG, "");
+  return out === text ? text : out.trimEnd();
+};
+
 /**
  * A run's end, once per run id, from the relay's authoritative terminal
  * (spec 03 §24.11): the first terminal of the run, main's own

@@ -48,7 +48,7 @@ export interface BotTaskTag {
   channelId?: string;
   /** The task as that bot wrote it. */
   task: string;
-  /** The user's own words, verbatim. */
+  /** What the doer's chat shows as the request: the user's own words for a task passed on by a bot; the task itself for channel work. */
   userWords: string;
 }
 

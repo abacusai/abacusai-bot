@@ -12,6 +12,7 @@ import {
   chainDoneIn,
   chainIn,
   channelWorkPrompt,
+  channelFolder,
   ownerOf,
   workIn,
   channelTitle,
@@ -69,7 +70,7 @@ describe("speakersFor", () => {
     ]);
   });
 
-  it("@everyone is every member, each on its own", () => {
+  it("@everyone is every member, in turn", () => {
     expect(speakersFor("@everyone what's our biggest risk?", M)).toEqual({
       botIds: ["chief", "res", "wri", "pla"],
       everyone: true,
@@ -251,15 +252,6 @@ describe("turnPrompt", () => {
       })
     ).not.toContain("Your own chat with the user");
   });
-
-  it("brought-in and everyone turns are told to bring nobody in", () => {
-    expect(
-      turnPrompt({ ...base, kind: "brought-in", others: ["Chief"] })
-    ).toContain("Don't @mention anyone");
-    expect(turnPrompt({ ...base, kind: "everyone" })).toContain(
-      "Don't @mention anyone"
-    );
-  });
 });
 
 describe("postedWords", () => {
@@ -312,31 +304,26 @@ describe("workIn", () => {
   });
 });
 
-describe("a discussion", () => {
+describe("a group word with no names", () => {
   it.each([
     "Ideate together on how we grow next quarter",
     "I want you guys to agree on five recommendations",
     "Discuss and decide the launch date",
-    "@everyone weigh in and reach a consensus on pricing",
-  ])("%s is a discussion of all members", (text) => {
+  ])("%s goes to the last speaker, else the lead", (text) => {
     expect(speakersFor(text, M)).toEqual({
-      botIds: ["chief", "res", "wri", "pla"],
+      botIds: ["chief"],
       everyone: false,
-      discussion: true,
+    });
+    expect(speakersFor(text, M, { lastSpeaker: "wri" })).toEqual({
+      botIds: ["wri"],
+      everyone: false,
     });
   });
 
-  it.each([
-    "Can you put together a plan?",
-    "thanks you guys!",
-    "Writer, draft it",
-    "@everyone your biggest risk?",
-  ])("%s is not", (text) => {
-    expect(speakersFor(text, M).discussion).toBeUndefined();
-  });
-
-  it("needs three members", () => {
-    expect(speakersFor("discuss it", M.slice(0, 2)).discussion).toBeUndefined();
+  it("@everyone with it is every member, in turn", () => {
+    expect(
+      speakersFor("@everyone weigh in and reach a consensus on pricing", M)
+    ).toEqual({ botIds: ["chief", "res", "wri", "pla"], everyone: true });
   });
 });
 
@@ -426,15 +413,16 @@ describe("the bot a stop names answers it", () => {
 });
 
 describe("two bots asked as a group", () => {
-  it("each answers, since two cannot discuss", () => {
+  it("both, … is every member; discuss with no names goes to the lead", () => {
     const two = M.slice(0, 2);
-    expect(speakersFor("both of you, introduce yourselves", two)).toEqual({
+    expect(speakersFor("both, introduce yourselves", two)).toEqual({
       botIds: ["chief", "res"],
       everyone: true,
     });
-    expect(speakersFor("discuss the launch date together", two).everyone).toBe(
-      true
-    );
+    expect(speakersFor("discuss the launch date together", two)).toEqual({
+      botIds: ["chief"],
+      everyone: false,
+    });
   });
 });
 
@@ -496,16 +484,16 @@ describe("hand-off chains", () => {
     expect(many.steps).toHaveLength(7);
   });
 
-  it("is no chain with an unknown bot or a single step", () => {
-    expect(
-      chainIn(
-        '<chain><step bot="Nobody">x</step><step bot="Coder">y</step></chain>',
-        members
-      ).steps
-    ).toBeNull();
+  it("is no chain with an unknown bot, which it names; a single step is a hand-off", () => {
+    const unknown = chainIn(
+      '<chain><step bot="Nobody">x</step><step bot="Coder">y</step></chain>',
+      members
+    );
+    expect(unknown.steps).toBeNull();
+    expect(unknown.unknown).toBe("Nobody");
     expect(
       chainIn('<chain><step bot="Coder">y</step></chain>', members).steps
-    ).toBeNull();
+    ).toEqual([{ botId: "cod", task: "y" }]);
   });
 
   it("runs only bots the user named, the starter aside", () => {
@@ -537,7 +525,6 @@ describe("hand-off chains", () => {
       prefix: "[task from the user, passed on by ",
       channelTitle: "Repo",
       task: "fix what Auditor found",
-      userWords: "Auditor, audit it and have Coder fix it",
       chain: {
         step: 2,
         steps: [
@@ -549,13 +536,57 @@ describe("hand-off chains", () => {
       },
     });
     expect(prompt).toContain("step 2 of 3 of a hand-off chain");
-    expect(prompt).toContain(
-      "2. Coder: fix what Auditor found (this step, yours)"
-    );
+    expect(prompt).toContain("After you, step 3: Auditor: check");
+    // Only the steps next to it, not the whole chain.
+    expect(prompt).not.toContain("Auditor: audit");
     expect(prompt).toContain('<bot_reply from="Auditor">');
     expect(prompt).toContain("Bug in add(): returns a - b.");
     expect(prompt).toContain("<chain_done/>");
     expect(prompt).toContain("the app gives your report to the next step");
+  });
+
+  it("names the channel's folder from its title", () => {
+    expect(channelFolder("Brewly launch!")).toBe("brewly-launch");
+    expect(channelFolder("बिक्री टीम")).toBe("बिक्री-टीम");
+    expect(channelFolder("???")).toBe("channel");
+  });
+
+  it("rounds repeat a fix-and-check loop, never one step on its own", () => {
+    const two = chainIn(
+      '<chain rounds="2"><step bot="Auditor">audit</step><step bot="Coder">fix</step></chain>',
+      members
+    ).steps;
+    // Audit and fix with rounds: the auditor checks the fixes again.
+    expect(two?.map((s) => s.botId)).toEqual([
+      "aud",
+      "cod",
+      "aud",
+      "cod",
+      "aud",
+    ]);
+    expect(two?.[2]?.task).toContain("Check the previous step's fixes again");
+    expect(two?.[2]?.task).toContain("audit");
+    const once = chainIn(
+      '<chain rounds="1"><step bot="Auditor">audit</step><step bot="Coder">fix</step></chain>',
+      members
+    ).steps;
+    expect(once?.map((s) => s.task)).toEqual(["audit", "fix"]);
+    const same = chainIn(
+      '<chain rounds="2"><step bot="Auditor">audit</step><step bot="Auditor">fix</step></chain>',
+      members
+    ).steps;
+    expect(same?.map((s) => s.task)).toEqual(["audit", "fix"]);
+    const three = chainIn(
+      '<chain rounds="2"><step bot="Auditor">audit</step><step bot="Coder">fix</step><step bot="Auditor">check</step></chain>',
+      members
+    ).steps;
+    expect(three?.map((s) => s.task)).toEqual([
+      "audit",
+      "fix",
+      "check",
+      "fix",
+      "check",
+    ]);
   });
 
   it("reads a step's done marker and drops it", () => {

@@ -474,7 +474,7 @@ describe("a bot-to-bot note", () => {
     );
   });
 
-  it("work taken on in a channel reads as the user's words, headed by the channel", async () => {
+  it("work taken on in a channel shows its task, headed by the channel", async () => {
     const decorate = botMessageDecorations({
       ...options(),
       bots: [],
@@ -512,7 +512,8 @@ describe("a bot-to-bot note", () => {
                 passer: "Launch",
                 channelId: "ch1",
                 task: "Write the launch email as launch-email.md",
-                userWords: "Writer, write the launch email as a doc",
+                // The app keeps the user's channel message out of the bot's chat.
+                userWords: "Write the launch email as launch-email.md",
               },
             },
           },
@@ -522,16 +523,12 @@ describe("a bot-to-bot note", () => {
     const context = { messages: [message], index: 0, runActive: false };
     const decoration = decorate(message, context);
     show(decoration?.before);
-    expect(screen.getByText("From you, in Launch")).toBeTruthy();
+    expect(screen.getByText("Task from Launch")).toBeTruthy();
     expect(
-      screen.getByText("Writer, write the launch email as a doc")
+      screen.getByText("Write the launch email as launch-email.md")
     ).toBeTruthy();
-    fireEvent.click(screen.getByText("As taken on in the channel:"));
-    await waitFor(() =>
-      expect(
-        screen.getByText("Write the launch email as launch-email.md")
-      ).toBeTruthy()
-    );
+    // Task and request are the same: nothing more to open.
+    expect(screen.queryByText("As taken on in the channel:")).toBeNull();
   });
 
   it("notes that follow one another fold into one row, opening to each", async () => {

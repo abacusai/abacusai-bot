@@ -460,7 +460,7 @@
       "task": {
         "from": "來自你，由 {{bot}} 轉達",
         "asWritten": "{{bot}} 轉達的內容：",
-        "fromChannel": "來自你，在 {{channel}} 中",
+        "fromChannel": "來自 {{channel}} 的任務",
         "asTakenOn": "在頻道中接下的任務："
       },
       "pairWith": "與 {{bot}}",
@@ -5195,6 +5195,9 @@
     "thread": {
       "label": "頻道訊息",
       "goneBot": "已刪除的機器人",
+      "alone": "此頻道只剩下 {{name}} 一個機器人。再新增一個，它們就能協作了。",
+      "noBots": "此頻道的所有機器人都已刪除。新增機器人即可重新使用。",
+      "addBots": "新增機器人",
       "working_one": "{{names}} 正在回答…",
       "working_other": "{{names}} 正在回答…",
       "queued_one": "{{count}} 則訊息正在排隊等候",

@@ -225,6 +225,21 @@ describe("opening the forever chat", () => {
     );
   });
 
+  it("opened to hand it a task, a new bot gets the task and no first-run kickstart", async () => {
+    const callbacks = makeCallbacks();
+    const service = new BotService(callbacks);
+    const bot = service.create({ name: "Scout", description: "Watch." });
+
+    const handle = await service.openChat(bot.id, { forTask: true });
+
+    expect(handle.sessionId).toBe("session-1");
+    expect(callbacks.sendMessage).not.toHaveBeenCalled();
+    // Kickstarted for good: it does not introduce itself later, mid-work.
+    expect(getBot(bot.id)?.kickstartedAt).not.toBeNull();
+    await service.openChat(bot.id);
+    expect(callbacks.sendMessage).not.toHaveBeenCalled();
+  });
+
   it("has a chat-app agent ask for its unlinked home app before greeting", async () => {
     const callbacks = makeCallbacks();
     const service = new BotService(callbacks);

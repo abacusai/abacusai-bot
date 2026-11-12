@@ -58,7 +58,11 @@ export const noteGist = (text: string, max: number): string => {
     .replace(/[*_`#>]+/g, "")
     .replace(/\s+/g, " ")
     .trim();
-  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
+  if (flat.length <= max) return flat;
+  // Cut at a word, not inside one.
+  const cut = flat.slice(0, max - 1);
+  const space = cut.lastIndexOf(" ");
+  return `${space > max * 0.6 ? cut.slice(0, space) : cut}…`;
 };
 
 /**
@@ -210,15 +214,18 @@ export const resolveBotByName = <T extends Pick<Bot, "id" | "name">>(
  * without one only the turn's last part (its final message), never the
  * narration before a tool call. Capped; "" when it gave none.
  */
-export const answerWords = (rawTurnText: string): string => {
+export const answerWords = (
+  rawTurnText: string,
+  max: number = MAX_BOT_ANSWER_CHARS
+): string => {
   const parts = rawTurnText.split(BOT_ANSWER_SEGMENT);
   const tagged = lastTaggedReply(parts.join("\n"));
   const lastPart =
     [...parts].reverse().find((part) => part.trim().length > 0) ?? "";
   const words = (tagged ?? outgoingWords(lastPart)).trim();
   if (words === "NO_REPLY") return "";
-  return words.length > MAX_BOT_ANSWER_CHARS
-    ? `${words.slice(0, MAX_BOT_ANSWER_CHARS)}\n[cut at ${MAX_BOT_ANSWER_CHARS} characters]`
+  return words.length > max
+    ? `${words.slice(0, max)}\n[cut at ${max} characters]`
     : words;
 };
 
@@ -317,7 +324,7 @@ export const taskFollowUpNote = (
   [
     `${appNoteTag("bot answer")} After the task ${ask.id} ("${requestGist(ask.request)}") you passed ${doer.name} ended, the user wrote to ${doer.name} in its chat: ${quoted(userWords)}. Its answer:`,
     wrapBotAnswer(doer, reply),
-    "This is not a message from the user to you. If it changes what you know about that task (they dropped it, changed it, or had it finished after all), go by it from now on and tell the user in one line what it means for you. If it has nothing to do with the task, reply exactly NO_REPLY.",
+    "This is not a message from the user to you. If it changes what you know about that task (they dropped it, changed it, or had it finished after all), go by it from now on and tell the user in one line what it means for you. That holds even when the task was already done: a user who no longer wants the result has dropped it. If it has nothing to do with the task, reply exactly NO_REPLY.",
   ].join("\n");
 
 /**

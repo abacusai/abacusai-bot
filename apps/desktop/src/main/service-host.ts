@@ -648,6 +648,7 @@ import {
   type TurnRecord,
   turnOpenerOf,
 } from "./services/session/turn-ledger";
+import { TurnStoppedError } from "./services/session/turn-stopped";
 import { StatusBoard } from "./services/status/status-board";
 import { VaultClient } from "./services/vault/vault-client";
 import { Vault } from "./services/vault/vault-tools";
@@ -6536,6 +6537,9 @@ export class ServiceHost {
       .trim();
   }
 
+  /** How long a work report waits for the bot's chat to catch up. */
+  private readonly closingWaitMs: number = 2000;
+
   /**
    * What a session's latest turn wrote after its last tool call, as its
    * thread kept it (several messages joined); null when there is none.
@@ -6550,11 +6554,16 @@ export class ServiceHost {
       .slice(turnStart + 1)
       .filter((message) => message.role === "assistant")
       .flatMap((message) => message.parts);
-    const lastTool = parts.findLastIndex((part) =>
-      part.type.startsWith("tool")
+    // A tool it ran after its last words (suggesting next tasks, say) does
+    // not cut those words off: the report runs from the last tool before them.
+    const lastText = parts.findLastIndex(
+      (part) => part.type === "text" && part.content.trim().length > 0
     );
+    const lastTool = parts
+      .slice(0, Math.max(lastText, 0))
+      .findLastIndex((part) => part.type.startsWith("tool"));
     const text = parts
-      .slice(lastTool + 1)
+      .slice(lastTool + 1, lastText + 1)
       .flatMap((part) => (part.type === "text" ? [part.content.trim()] : []))
       .filter((content) => content.length > 0)
       .join("\n\n");
@@ -7138,9 +7147,14 @@ export class ServiceHost {
     const waiter = this.turnWaiters.get(record.sessionId);
     if (waiter == null) return;
     this.turnWaiters.delete(record.sessionId);
-    if (record.kind === "reply") waiter.resolve(waiter.text.join("").trim());
+    // A turn that ended on a tool call (suggesting next tasks, say) leaves
+    // no dangling segment mark for the trim to cut in half.
+    const parts = [...waiter.text];
+    while (waiter.segment != null && parts.at(-1) === waiter.segment)
+      parts.pop();
+    if (record.kind === "reply") waiter.resolve(parts.join("").trim());
     else if (record.kind === "stopped" && waiter.stopped != null)
-      waiter.reject(new Error(waiter.stopped));
+      waiter.reject(new TurnStoppedError(waiter.stopped));
     else waiter.reject(new Error(record.error?.message ?? waiter.failed));
   }
 
@@ -7285,8 +7299,12 @@ export class ServiceHost {
       if (work.handle != null) this.stopAgentTurn(work.handle);
     },
     stopTurn: (botId, channelId) => {
-      const handle = this.channelTurns.get(`${channelId}|${botId}`);
+      const key = `${channelId}|${botId}`;
+      const handle = this.channelTurns.get(key);
       if (handle != null) this.stopAgentTurn(handle);
+      // Stopped while its chat was still opening: it never sends.
+      else if (this.channelTurnsOpening.has(key))
+        this.channelTurnsStopped.add(key);
     },
     forgetChats: (channelId, botIds) => {
       const keys = new Set(
@@ -7314,6 +7332,10 @@ export class ServiceHost {
     log: (line) => console.log(line),
   });
 
+  /** Channel turns whose hidden chat is still opening, and those stopped meanwhile. */
+  private readonly channelTurnsOpening = new Set<string>();
+  private readonly channelTurnsStopped = new Set<string>();
+
   /**
    * One turn of a bot in its chat for a channel (a sender chat on the
    * "bot-channel" platform, held like any other), so its main chat with the user
@@ -7328,13 +7350,18 @@ export class ServiceHost {
       channel,
       (id) => this.botService.list().find((bot) => bot.id === id)?.name ?? null
     );
-    const handle = await this.botService.openSenderChat(
-      botId,
-      CHANNEL_PLATFORM,
-      channel.id,
-      title
-    );
     const key = `${channel.id}|${botId}`;
+    this.channelTurnsOpening.add(key);
+    const handle = await this.botService
+      .openSenderChat(botId, CHANNEL_PLATFORM, channel.id, title)
+      .catch((error: unknown) => {
+        // A stop meant for this turn must not end the next one.
+        this.channelTurnsStopped.delete(key);
+        throw error;
+      })
+      .finally(() => this.channelTurnsOpening.delete(key));
+    if (this.channelTurnsStopped.delete(key))
+      throw new Error("it was stopped.");
     this.channelTurns.set(key, handle);
     try {
       if (this.turnLedger.isOpen(handle.sessionId))
@@ -7420,22 +7447,35 @@ export class ServiceHost {
     const stoppedFirst = (): Error =>
       new Error("it was stopped before it began.");
     if (work.stopped) throw stoppedFirst();
-    const handle = await this.botService.openChat(botId);
+    const handle = await this.botService.openChat(botId, { forTask: true });
     try {
-      // A stop while it waits for the user's own turn there ends the wait.
-      const closed = await Promise.race([
-        this.turnClosed(handle.sessionId, BOT_TASK_TURN_TIMEOUT_MS),
-        new Promise<false>((resolve) => {
-          work.wake = () => resolve(false);
-        }),
-      ]);
-      if (work.stopped) throw stoppedFirst();
-      if (!closed)
-        throw new Error("it stayed busy in its own chat for 30 minutes.");
-      // A turn there just stopped (the work before this one, say) closes a
-      // moment after the stop: not on this work's waiter.
-      await this.sessionTurnStateService.stopSettled(handle.sessionId, 15_000);
-      if (work.stopped) throw stoppedFirst();
+      // The user may be talking to that bot in its chat: the work waits for
+      // that turn to end. A turn there that just stopped closes a moment
+      // after the stop, not on this work's waiter; and a turn opened during
+      // that wait (the user writing there, a task passed to it) is waited
+      // out in its turn, so its answer is never taken for this report. A
+      // stop at any of these points ends the wait.
+      for (;;) {
+        const closed = await Promise.race([
+          this.turnClosed(handle.sessionId, BOT_TASK_TURN_TIMEOUT_MS),
+          new Promise<false>((resolve) => {
+            work.wake = () => resolve(false);
+          }),
+        ]);
+        if (work.stopped) throw stoppedFirst();
+        if (!closed)
+          throw new Error("it stayed busy in its own chat for 30 minutes.");
+        await this.sessionTurnStateService.stopSettled(
+          handle.sessionId,
+          15_000
+        );
+        if (work.stopped) throw stoppedFirst();
+        if (
+          !this.turnLedger.isOpen(handle.sessionId) &&
+          !this.turnWaiters.has(handle.sessionId)
+        )
+          break;
+      }
       const answer = this.waitForTurn(
         handle.sessionId,
         BOT_TASK_TURN_TIMEOUT_MS,
@@ -7467,17 +7507,24 @@ export class ServiceHost {
       // A report written as several messages ("the list…", then "want me to
       // re-check prices?") is posted whole: all it wrote after its last tool
       // call, as its chat kept it, never the notes between its steps.
-      const closing = this.closingText(handle.sessionId);
-      // Its chat not written up to the end yet: what streamed, as before.
       const lastPart =
         streamed
           .split(BOT_ANSWER_SEGMENT)
           .map((part) => part.trim())
           .filter((part) => part.length > 0)
           .at(-1) ?? "";
-      return closing != null && closing.includes(lastPart.slice(-200))
-        ? closing
-        : streamed;
+      // Its chat is written a moment after the turn ends: wait for it to
+      // hold the last words that streamed, then report from it.
+      const until = Date.now() + (this.closingWaitMs ?? 0);
+      for (;;) {
+        const closing = this.closingText(handle.sessionId);
+        if (closing != null && closing.includes(lastPart.slice(-200)))
+          return closing;
+        if (Date.now() >= until) break;
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+      // Its chat not written up to the end yet: what streamed, as before.
+      return streamed;
     } catch (error) {
       if (error instanceof TimeoutError)
         this.agentManagerService.stopSession(
@@ -8102,7 +8149,7 @@ export class ServiceHost {
     };
     const asker = this.botService.list().find((bot) => bot.id === ask.askerId);
     const handle = task
-      ? await this.botService.openChat(ask.targetId)
+      ? await this.botService.openChat(ask.targetId, { forTask: true })
       : await this.botService.openSenderChat(
           ask.targetId,
           BOT_ASK_PLATFORM,

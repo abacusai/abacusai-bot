@@ -35,6 +35,28 @@ describe("the line under the name", () => {
     expect(preview?.at).toBe(2);
   });
 
+  it("never shows a hand-off step's <chain_done/> mark", () => {
+    const preview = botChatPreview(empty, "s1", {
+      readCurrentFile: () => ({
+        source: { kind: "agui" },
+        messages: [
+          {
+            role: "assistant",
+            createdAt: "2026-11-11T10:00:00Z",
+            parts: [
+              {
+                type: "text",
+                content: "All four checks pass.\n\n<chain_done/>",
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    expect(preview?.text).toBe("All four checks pass.");
+  });
+
   it("is the last LINE of it, which is where the question is", () => {
     // A closing question is the thing the user has to answer; the opening
     // sentence is throat-clearing.

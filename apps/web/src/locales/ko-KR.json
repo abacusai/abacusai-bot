@@ -460,7 +460,7 @@
       "task": {
         "from": "나에게서, {{bot}}을(를) 통해",
         "asWritten": "{{bot}}이(가) 전달한 내용:",
-        "fromChannel": "나에게서, {{channel}}에서",
+        "fromChannel": "{{channel}}에서 온 작업",
         "asTakenOn": "채널에서 맡은 내용:"
       },
       "pairWith": "{{bot}}와(과) 함께",
@@ -5195,6 +5195,9 @@
     "thread": {
       "label": "채널 메시지",
       "goneBot": "삭제된 봇",
+      "alone": "이 채널에 남은 봇은 {{name}}뿐입니다. 팀으로 일할 수 있도록 다른 봇을 추가하세요.",
+      "noBots": "이 채널의 봇이 모두 삭제되었습니다. 다시 사용하려면 봇을 추가하세요.",
+      "addBots": "봇 추가",
       "working_one": "{{names}} 봇이 답변하는 중…",
       "working_other": "{{names}} 봇이 답변하는 중…",
       "queued_one": "메시지 {{count}}개가 차례를 기다리는 중",

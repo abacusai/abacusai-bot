@@ -31,6 +31,7 @@ import { InvalidInputError } from "@abacus-ai/contract/service-errors";
 
 import { abacusBotHome } from "../../paths";
 import { answerWords, BOT_ANSWER_SEGMENT, noteGist } from "../bots/bot-ask";
+import { TurnStoppedError } from "../session/turn-stopped";
 import {
   asksFirst,
   ownerOf,
@@ -40,23 +41,30 @@ import {
   chainIn,
   type ChainStep,
   stepHandoff,
-  MAX_DISCUSSION_ROUNDS,
   channelTitle,
   channelWorkPrompt,
+  channelFolder,
   proposalIn,
   workIn,
   FIRST_TURN_MESSAGES,
   goesAhead,
   MAX_NEW_MESSAGES,
+  MAX_STEP_HANDOFF_CHARS,
   mentionedIn,
+  mentionsEveryone,
+  EVERYONE_ALL,
+  ownWords,
   channelUserWords,
   claimsWork,
+  agreesOnWork,
   type Member,
   type OwnChat,
   postedWords,
   plainStop,
   speakersFor,
+  TALK_ROUNDS,
   stopWorkIn,
+  withTagsAfterReply,
   turnPrompt,
   type TurnKind,
 } from "./channel-logic";
@@ -171,12 +179,21 @@ export const MAX_LEAD_TURNS = 8;
 const CLAIM_NUDGE =
   "Your last message in the channel said you are doing work, but you started nothing, so nothing is running. Reply again in the channel: start it now with <work>the task, complete on its own</work>, or say plainly that you have not started and what you are waiting for.";
 
+/** A hand-off chain running in a channel: its steps, and the one it is at. */
+interface ChainRun {
+  cancelled: boolean;
+  steps: readonly ChainStep[];
+  at: number;
+  /** The card of the step running now. */
+  cardId?: string;
+}
+
 export class ChannelService {
   private readonly queues = new Map<string, Round[]>();
   private readonly running = new Map<string, Round>();
   private readonly working = new Map<string, Set<string>>();
   /** Hand-off chains running in each channel: Stop and a stop word end them. */
-  private readonly chains = new Map<string, Set<{ cancelled: boolean }>>();
+  private readonly chains = new Map<string, Set<ChainRun>>();
   /**
    * A report that found other work still running, per channel: whichever of
    * that work ends last wakes the lead for it, plan work and failures too.
@@ -185,6 +202,14 @@ export class ChannelService {
     string,
     { reporter: string; userMessageId: string }
   >();
+  /**
+   * Messages of talk (a turn that posted words and started no work) since
+   * the user's last message, per channel: at TALK_ROUNDS per member the lead
+   * checks in with the user and the floor waits for them.
+   */
+  private readonly talk = new Map<string, number>();
+  /** Channels whose lead checked in: no more talk until the user answers. */
+  private readonly talkPaused = new Set<string>();
   /** Lead turns since the user's last message, per channel (MAX_LEAD_TURNS). */
   private readonly leadTurns = new Map<string, number>();
   /** Work running in bots' own chats: message id → its channel and bot. */
@@ -237,6 +262,7 @@ export class ChannelService {
       updatedAt: at,
       seen: {},
     };
+    channel.folder = this.newFolder(channel);
     this.deps.store.writeChannels([...this.deps.store.readChannels(), channel]);
     this.deps.store.writeMessages(channel.id, []);
     this.log(`created ${channel.id} with ${memberBotIds.length} bots`);
@@ -262,7 +288,9 @@ export class ChannelService {
       if (left.length > 0) {
         for (const botId of left) {
           this.deps.stopTurn(botId, channelId);
-          this.stopWorks(channelId, botId);
+          this.stopWorks(channelId, botId, {
+            why: `${this.deps.bot(botId)?.name ?? "The bot"} left the channel, so its work stopped.`,
+          });
         }
         const seen = { ...channel.seen };
         for (const botId of left) delete seen[botId];
@@ -278,12 +306,22 @@ export class ChannelService {
   remove(channelId: string): void {
     const channel = this.channel(channelId);
     this.stop(channelId);
+    // Its notes stay in each member's memory: say they no longer apply.
+    this.noteMembers(
+      channel,
+      "This channel was deleted. What was decided or agreed in it no longer applies unless the user says so."
+    );
     this.deps.store.writeChannels(
       this.deps.store.readChannels().filter((entry) => entry.id !== channelId)
     );
     this.deps.store.removeMessages(channelId);
     this.deps.forgetChats?.(channelId, channel.memberBotIds);
     this.queues.delete(channelId);
+    this.talk.delete(channelId);
+    this.talkPaused.delete(channelId);
+    this.leadTurns.delete(channelId);
+    this.owedWakes.delete(channelId);
+    this.chains.delete(channelId);
     this.log(`removed ${channelId}`);
     this.deps.changed(null);
   }
@@ -291,6 +329,11 @@ export class ChannelService {
   /** The user's message: posted now, answered when its turn comes. */
   post(channelId: string, text: string, replyTo?: string): void {
     const channel = this.channel(channelId);
+    // Every member was deleted: nobody would ever answer.
+    if (this.members(channel).length === 0)
+      throw new InvalidInputError(
+        "This channel has no bots left. Add bots to use it again."
+      );
     const message: ChannelMessage = {
       id: this.newId(),
       author: { kind: "user" },
@@ -304,7 +347,17 @@ export class ChannelService {
       this.addDecision(channel.id, decided, message.id);
     this.setPending(channelId, (ids) => [...ids, message.id]);
     this.leadTurns.delete(channelId);
+    this.talk.delete(channelId);
+    this.talkPaused.delete(channelId);
     this.owedWakes.delete(channelId);
+    // A lead turn queued after a report gives way: the user's message is
+    // answered next, and answered once.
+    const queued = this.queues.get(channelId);
+    if (queued != null)
+      this.queues.set(
+        channelId,
+        queued.filter((round) => round.leadAfter == null)
+      );
     this.enqueue(channelId, message.id);
   }
 
@@ -467,7 +520,12 @@ export class ChannelService {
    * per item in the channel. The user's click is the authority; the items
    * are the team's words the user just approved.
    */
-  startAgreed(channelId: string, messageId: string): void {
+  startAgreed(
+    channelId: string,
+    messageId: string,
+    /** The user's own go-ahead ("yes, go ahead"): it starts the plan, no line is added for them. */
+    goAhead?: ChannelMessage
+  ): void {
     if (this.deps.runWork == null)
       throw new InvalidInputError("Work cannot be started here.");
     const channel = this.channel(channelId);
@@ -490,13 +548,17 @@ export class ChannelService {
         entry.id === messageId ? { ...entry, planStarted: true } : entry
       )
     );
-    const userMessage: ChannelMessage = {
+    // The Start button leaves a line saying what the click started; a
+    // go-ahead in words is that line already.
+    const userMessage: ChannelMessage = goAhead ?? {
       id: this.newId(),
       author: { kind: "user" },
       text: userWords,
       at: this.now(),
     };
-    this.append(channelId, userMessage);
+    if (goAhead == null) this.append(channelId, userMessage);
+    this.talk.delete(channelId);
+    this.talkPaused.delete(channelId);
     // One card per owner, with all its items: its own chat runs one turn at a time.
     const byOwner = new Map<string, string[]>();
     for (const item of items) {
@@ -553,18 +615,27 @@ export class ChannelService {
         failed: true,
       });
     }
+    // Stop ends it all: no report woken later.
+    this.owedWakes.delete(channelId);
     this.cancelChains(channelId);
     this.stopWorks(channelId);
+    this.talk.delete(channelId);
     this.log(`stopped ${channelId}`);
     this.deps.changed(channelId);
   }
 
   /** The channel's running work stops; only this bot's, when one is named. */
-  private stopWorks(channelId: string, botId?: string): void {
+  private stopWorks(
+    channelId: string,
+    botId?: string,
+    /** Only this card, if named, and why it stopped (not the user's Stop). */
+    only?: { messageId?: string; why: string }
+  ): void {
     for (const [messageId, work] of this.works)
       if (
         work.channelId === channelId &&
-        (botId == null || work.botId === botId)
+        (botId == null || work.botId === botId) &&
+        (only?.messageId == null || only.messageId === messageId)
       ) {
         this.stoppedWorks.add(messageId);
         this.works.delete(messageId);
@@ -577,7 +648,8 @@ export class ChannelService {
         // Shown at once, and so the bots' next turns read it as stopped.
         this.setWork(channelId, messageId, {
           status: "stopped",
-          error: waiting ? STOPPED_BEFORE_START : STOPPED_PARTWAY,
+          error:
+            only?.why ?? (waiting ? STOPPED_BEFORE_START : STOPPED_PARTWAY),
         });
       }
   }
@@ -601,7 +673,9 @@ export class ChannelService {
     for (const channel of this.deps.store.readChannels()) {
       if (!channel.memberBotIds.includes(botId)) continue;
       this.deps.stopTurn(botId, channel.id);
-      this.stopWorks(channel.id, botId);
+      this.stopWorks(channel.id, botId, {
+        why: "The bot was deleted, so its work stopped.",
+      });
       const seen = { ...channel.seen };
       delete seen[botId];
       this.save({
@@ -647,11 +721,14 @@ export class ChannelService {
     if (round.leadAfter != null) {
       const lead = channel.memberBotIds[0];
       if (lead == null) return;
-      const reply = await this.turn(channelId, round, lead, "report", [
-        this.deps.bot(round.leadAfter)?.name ?? "A member",
+      // "@Chooser, pick the winner": whoever the lead names speaks next.
+      await this.floor(channelId, round, [
+        {
+          botId: lead,
+          kind: "report",
+          others: [this.deps.bot(round.leadAfter)?.name ?? "A member"],
+        },
       ]);
-      // "@Chooser, pick the winner": the lead's hand-off by name is answered.
-      await this.bringIn(channelId, round, lead, reply, new Set());
       return;
     }
     const before = messages.slice(0, index);
@@ -666,7 +743,7 @@ export class ChannelService {
       this.deps.runWork != null &&
       goesAhead(userMessage.text, members)
     ) {
-      this.startAgreed(channelId, lastSpeaker.id);
+      this.startAgreed(channelId, lastSpeaker.id, userMessage);
       this.log(`agreed work started by the user's words in ${channelId}`);
       return;
     }
@@ -689,81 +766,186 @@ export class ChannelService {
     // Naming nobody ("stop", "@everyone stop"), it stops all the channel's work.
     const stopped = plainStop(userMessage.text, members);
     if (stopped != null) {
-      this.cancelChains(channelId);
+      this.cancelChains(channelId, stopped);
       if (stopped.length === 0) this.stopWorks(channelId);
       else for (const botId of stopped) this.stopWorks(channelId, botId);
     }
 
-    if (speakers.discussion === true) {
-      await this.discuss(channelId, round, speakers.botIds);
-      return;
-    }
-
     if (speakers.everyone) {
-      // Each on its own: none is shown another's answer to this message.
-      await Promise.all(
-        speakers.botIds.map((botId) =>
-          this.turn(channelId, round, botId, "everyone", [], userMessage.id)
-        )
-      );
-      return;
-    }
-
-    const spoken = new Set<string>();
-    for (const botId of speakers.botIds) {
-      if (round.cancelled) return;
-      if (spoken.has(botId)) continue;
-      const reply = await this.turn(channelId, round, botId, "answer", []);
-      spoken.add(botId);
-      if (reply.length === 0) continue;
-      // One the user named answers in its own turn, not as brought in.
-      const brought = await this.bringIn(
+      // Told to everyone: every member keeps it, in any chat.
+      if (mentionsEveryone(userMessage.text) && stopped == null)
+        this.noteMembers(
+          this.channel(channelId),
+          `The user told everyone: ${noteGist(userMessage.text, 300)}`
+        );
+      // Every member, in turn, each seeing what the others said.
+      await this.floor(
         channelId,
         round,
-        botId,
-        reply,
-        new Set([...spoken, ...speakers.botIds])
-      );
-      for (const id of brought) spoken.add(id);
-      if (brought.length > 0 && !round.cancelled)
-        await this.turn(
-          channelId,
-          round,
+        speakers.botIds.map((botId) => ({
           botId,
-          "follow-up",
-          brought.map((id) => this.deps.bot(id)?.name ?? "A bot")
-        );
+          kind: "everyone",
+          others: [],
+        })),
+        stopped != null,
+        // Only an "@everyone" round is summed up; a message to all without
+        // it ("hi both", "one line each") is answered and left there.
+        mentionsEveryone(userMessage.text)
+      );
+      return;
     }
+
+    await this.floor(
+      channelId,
+      round,
+      speakers.botIds.map((botId) => ({ botId, kind: "answer", others: [] })),
+      stopped != null
+    );
   }
 
   /**
-   * The members a bot @named in its reply, other than itself and those in
-   * `skip`, answer it once each, in turn: one level deep, their own
-   * @mentions bring nobody in. Resolves with who was named.
+   * The floor: the bots in `queue` speak in turn, and whoever a reply
+   * @names speaks next (after those already waiting), seeing the whole
+   * thread. One rule for every case: a hand-off ("@Writer, pick one"), a
+   * question to a colleague, two bots debating. It ends when a reply names
+   * nobody new, the user writes, Stop, or the talk reaches the check-in (see
+   * talk); a bot that answered the user and called others in then finishes.
    */
-  private async bringIn(
+  private async floor(
     channelId: string,
     round: Round,
-    botId: string,
-    reply: string,
-    skip: ReadonlySet<string>
-  ): Promise<string[]> {
-    if (reply.length === 0) return [];
-    const asker = this.deps.bot(botId)?.name ?? "Another bot";
-    const brought = mentionedIn(
-      reply,
-      this.members(this.channel(channelId))
-    ).filter((id) => id !== botId && !skip.has(id));
-    for (const other of brought) {
-      if (round.cancelled) break;
-      await this.turn(channelId, round, other, "brought-in", [asker]);
+    queue: { botId: string; kind: TurnKind; others: string[] }[],
+    /** Answering a stop: the bots answer it, and their @names call nobody. */
+    quiet = false,
+    /** The one that opened may sum up (not after a message to all without @everyone). */
+    sumUp = true
+  ): Promise<void> {
+    const opener = queue[0];
+    let hopped = false;
+    let last: string | null = null;
+    const answered: string[] = [];
+    let worked = false;
+    let ran = 0;
+    for (let next = queue.shift(); next != null; next = queue.shift()) {
+      // A user message waiting gets the floor, once this one's first turn is
+      // over: each message is answered by its own round.
+      if (round.cancelled || (ran > 0 && this.userWaiting(channelId))) return;
+      if (this.talkPaused.has(channelId)) return;
+      if (this.talkedOut(channelId)) {
+        await this.checkIn(channelId, round);
+        return;
+      }
+      const { words, acted, chained } = await this.turn(
+        channelId,
+        round,
+        next.botId,
+        next.kind,
+        next.others
+      );
+      ran++;
+      // A hand-off just started: its members speak through their steps, so
+      // those still waiting their turn here (named by the user) step back.
+      if (chained.length > 0)
+        for (let at = queue.length - 1; at >= 0; at--)
+          if (chained.includes(queue[at]!.botId)) queue.splice(at, 1);
+      if (words.length === 0) continue;
+      last = next.botId;
+      if (next.botId !== opener?.botId) answered.push(next.botId);
+      if (acted) worked = true;
+      else this.talk.set(channelId, (this.talk.get(channelId) ?? 0) + 1);
+      const channel = this.maybeChannel(channelId);
+      if (channel == null) return;
+      const asker = this.deps.bot(next.botId)?.name ?? "Another bot";
+      // An @name inside quoted text (an email, code) calls nobody.
+      const said = ownWords(words);
+      const called = (
+        mentionsEveryone(said)
+          ? channel.memberBotIds
+          : mentionedIn(said, this.members(channel))
+      ).filter(
+        // A hand-off's members speak through their steps, not here; in an
+        // @everyone round each member answers once and @names call nobody.
+        (id) =>
+          id !== next.botId &&
+          !chained.includes(id) &&
+          !quiet &&
+          next.kind !== "everyone"
+      );
+      // Named while already waiting (the user's order, "then Writer"): it
+      // speaks in its place, and that is no exchange to sum up.
+      const named = called.filter(
+        (id) => !queue.some((item) => item.botId === id)
+      );
+      if (named.length > 0) hopped = true;
+      for (const id of named)
+        queue.push({ botId: id, kind: "brought-in", others: [asker] });
     }
-    return brought;
+    if (
+      round.cancelled ||
+      quiet ||
+      this.talkPaused.has(channelId) ||
+      this.userWaiting(channelId)
+    )
+      return;
+    // The talk ran out on the last turn: the check-in, not a summing-up.
+    if (this.talkedOut(channelId)) {
+      await this.checkIn(channelId, round);
+      return;
+    }
+    // Others spoke after the one that opened (it called them in, or everyone
+    // answered) and started no work, whose cards say where it stands: it sums
+    // up for the user, or passes when there is nothing to sum up.
+    if (
+      sumUp &&
+      opener != null &&
+      (opener.kind === "answer" || opener.kind === "everyone") &&
+      (hopped || opener.kind === "everyone") &&
+      answered.length > 0 &&
+      !worked &&
+      last !== opener.botId
+    )
+      await this.turn(
+        channelId,
+        round,
+        opener.botId,
+        "follow-up",
+        [...new Set(answered)].map((id) => this.deps.bot(id)?.name ?? "A bot"),
+        opener.kind === "everyone" && !hopped
+      );
+  }
+
+  /** A user message waits behind this round: the bots give it the floor. */
+  private userWaiting(channelId: string): boolean {
+    return (this.queues.get(channelId) ?? []).some(
+      (queued) => queued.leadAfter == null
+    );
+  }
+
+  /** The bots have talked TALK_ROUNDS times each since the user last wrote. */
+  private talkedOut(channelId: string): boolean {
+    const channel = this.maybeChannel(channelId);
+    if (channel == null) return true;
+    return (
+      (this.talk.get(channelId) ?? 0) >=
+      TALK_ROUNDS * channel.memberBotIds.length
+    );
+  }
+
+  /**
+   * The talk reached its check-in: the lead tells the user where things
+   * stand and asks whether to go on; nobody talks again until they answer.
+   */
+  private async checkIn(channelId: string, round: Round): Promise<void> {
+    this.talkPaused.add(channelId);
+    const lead = this.maybeChannel(channelId)?.memberBotIds[0];
+    this.log(`talk in ${channelId} reached its check-in`);
+    if (lead != null) await this.turn(channelId, round, lead, "check-in", []);
   }
 
   /**
    * One bot's turn: shown what it has not seen, its answer posted. Resolves
-   * with the posted words ("" for none or a failure).
+   * with the posted words ("" for none or a failure), and whether it started
+   * work or a hand-off chain.
    */
   private async turn(
     channelId: string,
@@ -771,43 +953,27 @@ export class ChannelService {
     botId: string,
     kind: TurnKind,
     others: string[],
-    /** For "everyone": show nothing after this message. */
-    upTo?: string,
-    extra: { round?: { at: number; of: number }; conclusion?: boolean } = {}
-  ): Promise<string> {
-    if (round.cancelled) return "";
+    /** For follow-up: it closes a round to everyone, with no exchange. */
+    afterEveryone = false
+  ): Promise<{ words: string; acted: boolean; chained: string[] }> {
+    const none = { words: "", acted: false, chained: [] };
+    if (round.cancelled) return none;
     const channel = this.maybeChannel(channelId);
     const me = this.deps.bot(botId);
     if (channel == null || me == null || !channel.memberBotIds.includes(botId))
-      return "";
+      return none;
     const members = this.members(channel);
     const all = this.deps.store.readMessages(channelId);
-    const end =
-      upTo == null
-        ? all.length
-        : all.findIndex((message) => message.id === upTo) + 1;
-    const trigger = all.findIndex(
-      (message) => message.id === round.userMessageId
-    );
-    const visible = all
-      .slice(0, end > 0 ? end : all.length)
-      // A discussion is about the message that started it: what the user
-      // writes meanwhile ends it (see discuss) and is answered after.
-      .filter(
-        (message, index) =>
-          (kind !== "discuss" && kind !== "conclude") ||
-          index <= trigger ||
-          message.author.kind !== "user"
-      );
     const seenId = channel.seen?.[botId];
     const seenAt =
-      seenId == null
-        ? -1
-        : visible.findIndex((message) => message.id === seenId);
-    const fresh = visible
+      seenId == null ? -1 : all.findIndex((message) => message.id === seenId);
+    const fresh = all
       .slice(seenAt + 1)
+      // Its own messages are in its channel chat already, except a work
+      // report, written in its own chat: that it is shown, like the others'.
       .filter(
         (message) =>
+          message.report === true ||
           !(message.author.kind === "bot" && message.author.botId === botId)
       );
     const cap = seenAt < 0 ? FIRST_TURN_MESSAGES : MAX_NEW_MESSAGES;
@@ -816,14 +982,22 @@ export class ChannelService {
     // Who the user named anywhere in this channel: their words, not the
     // latest message alone, say which members may take work on or be chained.
     const userWordsHere = channelUserWords(all);
-    const namedByUser = (id: string): boolean =>
-      chainAllowed(userWordsHere, [{ botId: id, task: "" }], members, "");
+    const named = (words: string, id: string): boolean =>
+      chainAllowed(words, [{ botId: id, task: "" }], members, "");
+    // In an @everyone round, a member the message itself gives a part by
+    // name ("@everyone: Writer drafts it, Researcher checks prices").
+    const roundWords = (
+      all.find((message) => message.id === round.userMessageId)?.text ?? ""
+    ).replace(EVERYONE_ALL, " ");
     const mayWork =
       this.deps.runWork != null &&
       (kind === "answer" ||
-        kind === "everyone" ||
         kind === "report" ||
-        (kind === "brought-in" && namedByUser(botId)));
+        (kind === "brought-in" && named(userWordsHere, botId)) ||
+        // Otherwise an @everyone round is talk: its work is the summing-up's
+        // agreed list, started by the user's go.
+        (kind === "everyone" && named(roundWords, botId)));
+    const chainStep = this.chainStepFor(channelId, botId);
     const prompt = turnPrompt({
       channelTitle: channelTitle(
         channel,
@@ -846,8 +1020,17 @@ export class ChannelService {
       skipped: fresh.length - unseen.length,
       kind,
       others,
-      ...(kind === "brought-in" ? { mayWork } : {}),
+      ...(kind === "brought-in" || kind === "everyone" ? { mayWork } : {}),
       nameOf,
+      ...(chainStep != null ? { chainStep } : {}),
+      ...(afterEveryone ? { afterEveryone } : {}),
+      ...(all.some(
+        (message) =>
+          message.author.kind === "bot" &&
+          !channel.memberBotIds.includes(message.author.botId)
+      )
+        ? { othersLeft: true }
+        : {}),
       myWork: all.flatMap((message) =>
         message.work != null &&
         message.author.kind === "bot" &&
@@ -855,7 +1038,6 @@ export class ChannelService {
           ? [message.work]
           : []
       ),
-      ...(extra.round != null ? { round: extra.round } : {}),
       ...(this.deps.ownChat != null
         ? { ownChat: this.deps.ownChat(botId) }
         : {}),
@@ -881,21 +1063,16 @@ export class ChannelService {
         );
         raw = await this.deps.runTurn(botId, channel, CLAIM_NUDGE);
       }
-      // Seen up to the last message shown; a user message kept from a
-      // discussion turn, and everything after it, is still new next time.
-      const hiddenAt = all.findIndex(
-        (message, index) =>
-          !visible.includes(message) &&
-          index > trigger &&
-          index < (end > 0 ? end : all.length)
-      );
-      const last = hiddenAt > 0 ? all[hiddenAt - 1] : visible.at(-1);
+      // Seen up to the last message shown.
+      const last = all.at(-1);
       if (last != null) this.markSeen(channelId, botId, last.id);
-      if (round.cancelled || !this.isMember(channelId, botId)) return "";
+      if (round.cancelled || !this.isMember(channelId, botId)) return none;
       // The user cancelled or changed its running work: it stops first, so
       // a changed task (a new <work>) does not wait behind the old one.
-      const stopped = stopWorkIn(postedWords(answerWords(raw), me));
-      if (stopped.stop && (kind === "answer" || kind === "everyone")) {
+      const stopped = stopWorkIn(
+        postedWords(withTagsAfterReply(answerWords(raw), raw), me)
+      );
+      if (stopped.stop) {
         this.stopWorks(channelId, botId);
         this.log(`${botId} stopped its work in ${channelId}`);
       }
@@ -907,7 +1084,7 @@ export class ChannelService {
         (bot) => bot.name.toLowerCase() === suggested?.name.toLowerCase()
       );
       const proposal =
-        suggested == null || (kind !== "answer" && kind !== "conclude")
+        suggested == null || (kind !== "answer" && kind !== "follow-up")
           ? null
           : suggested.invite
             ? existing != null && !channel.memberBotIds.includes(existing.id)
@@ -933,8 +1110,14 @@ export class ChannelService {
       const taken = workIn(chained.words);
       // Only a bot answering the user's own message (alone or as one of
       // everyone) may take work on, and only when it is not asking whether to.
+      // Its part of a hand-off already running starts with its step, not now.
       const task =
-        steps == null && mayWork && !asksFirst(taken.words) ? taken.task : null;
+        steps == null &&
+        mayWork &&
+        !asksFirst(taken.words) &&
+        this.chainStepFor(channelId, botId) == null
+          ? taken.task
+          : null;
       // A chain it was not let run: its words would promise work nobody does.
       const unnamed =
         chained.steps != null &&
@@ -945,17 +1128,18 @@ export class ChannelService {
                 chained.steps
                   .filter(
                     (step) =>
-                      step.botId !== botId &&
-                      !chainAllowed(userWordsHere, [step], members, botId)
+                      step.botId !== botId && !named(userWordsHere, step.botId)
                   )
                   .map((step) => nameOf(step.botId))
               ),
             ]
           : [];
       const refused =
-        unnamed.length > 0
-          ? `\n\n(The hand-off did not start: you have not named ${unnamed.join(" or ")} in this channel. Ask again naming every bot it needs, e.g. "have ${unnamed[0]} fix it".)`
-          : "";
+        chained.unknown != null
+          ? `\n\n(The hand-off did not start: ${chained.unknown} is not in this channel. Add it to the channel, or ask a member.)`
+          : unnamed.length > 0
+            ? `\n\n(The hand-off did not start: you have not named ${unnamed.join(" or ")} in this channel. Ask again naming every bot it needs, e.g. "have ${unnamed[0]} fix it".)`
+            : "";
       const words =
         taken.words.length > 0
           ? taken.words + refused
@@ -966,7 +1150,15 @@ export class ChannelService {
               : steps != null
                 ? `Starting the hand-off: ${steps.map((step) => nameOf(step.botId)).join(" → ")}.`
                 : "";
-      if (words.length === 0) return "";
+      if (words.length === 0) return none;
+      // The opener's summing-up, or the lead's check-in, settled work: it
+      // can be pinned and started (the Start button, or the user's "yes").
+      // Not while work is under way: a summing-up of a running build is
+      // where it stands, and its Start would run that work a second time.
+      const concluded =
+        (kind === "follow-up" || kind === "check-in") &&
+        agreesOnWork(words) &&
+        !this.busy(channelId);
       const message: ChannelMessage = {
         id: this.newId(),
         author: { kind: "bot", botId },
@@ -978,7 +1170,7 @@ export class ChannelService {
               work: { task, status: "waiting" as const, startedAt: this.now() },
             }
           : {}),
-        ...(extra.conclusion === true ? { conclusion: true } : {}),
+        ...(concluded ? { conclusion: true } : {}),
         ...(proposal != null
           ? {
               proposal: {
@@ -994,18 +1186,29 @@ export class ChannelService {
           : {}),
       };
       this.append(channelId, message);
-      if (extra.conclusion === true)
+      if (concluded)
         this.noteMembers(
           channel,
-          `The team agreed, summed up by ${me.name}: ${noteGist(words, 600)}`
+          `The team agreed, summed up by ${me.name}: ${noteGist(words, 1500)}`
+        );
+      // A summing-up with no task list still settles things ("the name is
+      // Brewly"): every member keeps it.
+      else if (kind === "follow-up" || kind === "check-in")
+        this.noteMembers(
+          channel,
+          `Where the team got to, summed up by ${me.name}: ${noteGist(words, 1500)}`
         );
       if (task != null)
         void this.startWork(channelId, botId, message.id, task, userMessageId);
       if (steps != null) void this.runChain(channelId, steps, userMessageId);
-      return words;
+      return {
+        words,
+        acted: task != null || steps != null,
+        chained: (steps ?? []).map((step) => step.botId),
+      };
     } catch (error) {
       // Stopped, or it left the channel (or the channel is gone) meanwhile.
-      if (round.cancelled || !this.isMember(channelId, botId)) return "";
+      if (round.cancelled || !this.isMember(channelId, botId)) return none;
       const why = error instanceof Error ? error.message : String(error);
       this.log(`${botId} could not answer in ${channelId}: ${why}`);
       this.append(channelId, {
@@ -1016,55 +1219,11 @@ export class ChannelService {
         replyTo: userMessageId,
         failed: true,
       });
-      return "";
+      return none;
     } finally {
       this.working.get(channelId)?.delete(botId);
       this.deps.changed(channelId);
     }
-  }
-
-  /**
-   * The user asked the team to work it out together: rounds in which every
-   * member speaks in turn, seeing the others, until a round adds nothing
-   * (each may pass) or MAX_DISCUSSION_ROUNDS; then the lead sums up. The
-   * rule bounds it, not the bots: they cannot start rounds or bring anyone
-   * in, and Stop ends it.
-   */
-  private async discuss(
-    channelId: string,
-    round: Round,
-    botIds: readonly string[]
-  ): Promise<void> {
-    let spoke = 0;
-    for (let at = 1; at <= MAX_DISCUSSION_ROUNDS; at++) {
-      let added = 0;
-      for (const botId of botIds) {
-        if (round.cancelled) return;
-        // The user spoke: the team stops debating and the lead sums up;
-        // their message is answered next, with the discussion in view.
-        if ((this.queues.get(channelId) ?? []).length > 0) {
-          at = MAX_DISCUSSION_ROUNDS;
-          break;
-        }
-        const words = await this.turn(
-          channelId,
-          round,
-          botId,
-          "discuss",
-          [],
-          undefined,
-          { round: { at, of: MAX_DISCUSSION_ROUNDS } }
-        );
-        if (words.length > 0) added++;
-      }
-      spoke += added;
-      if (added === 0 || (at > 1 && added <= 1)) break;
-    }
-    const lead = botIds[0];
-    if (lead == null || round.cancelled || spoke < 2) return;
-    await this.turn(channelId, round, lead, "conclude", [], undefined, {
-      conclusion: true,
-    });
   }
 
   /**
@@ -1088,10 +1247,6 @@ export class ChannelService {
     const channel = this.maybeChannel(channelId);
     const runWork = this.deps.runWork;
     if (channel == null || runWork == null) return Promise.resolve(null);
-    const userWords =
-      this.deps.store
-        .readMessages(channelId)
-        .find((message) => message.id === userMessageId)?.text ?? "";
     const title = channelTitle(
       channel,
       (id) => this.deps.bot(id)?.name ?? null
@@ -1100,7 +1255,7 @@ export class ChannelService {
       prefix: BOT_TASK_PREFIX,
       channelTitle: title,
       task,
-      userWords,
+      folder: this.folderOf(channel),
       decisions: channel.decisions,
       fromPlan,
       ...(chain != null ? { chain } : {}),
@@ -1112,7 +1267,17 @@ export class ChannelService {
       passer: title,
       channelId,
       task,
-      userWords,
+      // Its card shows its own task, not the user's whole channel message.
+      userWords: task,
+    };
+    // Work that ends by itself (a report, or a failure) wakes the lead to keep
+    // the user's goal moving; stopped work wakes nobody, and an agreed plan's
+    // work, a scope the user started, only pays a wake another report left
+    // owed. A hand-off's lead is woken when the hand-off ends (runChain).
+    const afterWork = (wakes: boolean): void => {
+      if (chain != null) return;
+      if (wakes && !fromPlan) this.wakeLead(channelId, botId, userMessageId);
+      else this.payOwedWake(channelId);
     };
     this.works.set(messageId, { channelId, botId });
     this.log(`work started by ${botId} in ${channelId}`);
@@ -1120,10 +1285,13 @@ export class ChannelService {
       .then((raw): string | null => {
         // Stopped as it ended: it stays stopped, and its report is not posted.
         if (this.stoppedWorks.has(messageId)) return null;
-        const answered = answerWords(raw).trim();
-        // A chain step's "nothing left to do" is for the app, not the thread.
-        const ended = chain != null ? chainDoneIn(answered) : null;
-        const report = ended?.words ?? answered;
+        // A work report is the result: kept whole up to what a hand-off
+        // step passes on, not cut like a short answer.
+        const answered = answerWords(raw, MAX_STEP_HANDOFF_CHARS).trim();
+        // A step's "nothing left to do" mark is the app's, never posted (plain
+        // work can carry it over from a hand-off it ran before).
+        const ended = chainDoneIn(answered);
+        const report = ended.words;
         this.setWork(channelId, messageId, { status: "done" });
         this.noteMembers(
           channel,
@@ -1135,39 +1303,40 @@ export class ChannelService {
           author: { kind: "bot", botId },
           text:
             (report.length > 0 ? report : "Done.") +
-            (ended?.done === true &&
-            chain != null &&
-            chain.step < chain.steps.length
+            (ended.done && chain != null && chain.step < chain.steps.length
               ? `\n\nNothing left to do, so the hand-off ends here (step ${chain.step} of ${chain.steps.length}).`
               : ""),
           at: this.now(),
           replyTo: userMessageId,
+          report: true,
         });
-        if (chain == null) {
-          // An agreed plan is a scope the team settled and the user started:
-          // the lead is not woken to add work beyond it, only for a report
-          // that waited on it.
-          if (!fromPlan) this.wakeLead(channelId, botId, userMessageId);
-          else this.payOwedWake(channelId);
-          return report;
-        }
+        afterWork(true);
+        if (chain == null) return report;
         // The next step gets the whole turn, not only the posted message.
         const whole = chainDoneIn(
           stepHandoff(raw.split(BOT_ANSWER_SEGMENT))
         ).words;
-        return ended?.done === true ? `${CHAIN_DONE_MARK}${whole}` : whole;
+        return ended.done ? `${CHAIN_DONE_MARK}${whole}` : whole;
       })
       .catch((error: unknown): null => {
-        // Stopped by the user: the card was set as it was stopped.
-        if (this.stoppedWorks.delete(messageId)) return null;
+        // Stopped here (the card was set as it stopped), or in the bot's own
+        // chat: a stop, not a failure.
+        if (this.stoppedWorks.delete(messageId)) {
+          afterWork(false);
+          return null;
+        }
+        if (error instanceof TurnStoppedError) {
+          this.setWork(channelId, messageId, {
+            status: "stopped",
+            error: STOPPED_PARTWAY,
+          });
+          this.log(`work ${messageId} in ${channelId} stopped in its own chat`);
+          afterWork(false);
+          return null;
+        }
         const why = error instanceof Error ? error.message : String(error);
         this.setWork(channelId, messageId, { status: "failed", error: why });
-        // Failed: the lead decides what next, as after a report (a chain's
-        // lead is woken when the chain ends).
-        if (chain == null) {
-          if (!fromPlan) this.wakeLead(channelId, botId, userMessageId);
-          else this.payOwedWake(channelId);
-        }
+        afterWork(true);
         return null;
       })
       .finally(() => {
@@ -1190,8 +1359,17 @@ export class ChannelService {
     steps: readonly ChainStep[],
     userMessageId: string
   ): Promise<void> {
-    const run = { cancelled: false };
-    const running = this.chains.get(channelId) ?? new Set();
+    // A new hand-off is the plan now: the one running here stops, its step
+    // in flight included, so two plans never build the same thing twice.
+    for (const old of this.chains.get(channelId) ?? [])
+      if (!old.cancelled && old.cardId != null)
+        this.stopWorks(channelId, undefined, {
+          messageId: old.cardId,
+          why: "A newer hand-off replaced it.",
+        });
+    this.cancelChains(channelId);
+    const run: ChainRun = { cancelled: false, steps, at: 0 };
+    const running = this.chains.get(channelId) ?? new Set<ChainRun>();
     running.add(run);
     this.chains.set(channelId, running);
     const id = this.newId();
@@ -1203,6 +1381,7 @@ export class ChannelService {
     try {
       for (const [index, step] of steps.entries()) {
         if (run.cancelled || !this.isMember(channelId, step.botId)) return;
+        run.at = index;
         const card: ChannelMessage = {
           id: this.newId(),
           author: { kind: "bot", botId: step.botId },
@@ -1217,6 +1396,7 @@ export class ChannelService {
           },
         };
         this.append(channelId, card);
+        run.cardId = card.id;
         const report = await this.startWork(
           channelId,
           step.botId,
@@ -1231,6 +1411,15 @@ export class ChannelService {
           }
         );
         if (report == null) {
+          // Stopped (here or in its bot's chat): the hand-off ends, and the
+          // lead is not woken to carry on what the user stopped.
+          if (
+            this.deps.store
+              .readMessages(channelId)
+              .find((message) => message.id === card.id)?.work?.status ===
+            "stopped"
+          )
+            run.cancelled = true;
           this.log(
             `chain ${id} in ${channelId} ended at step ${index + 1}: failed or stopped`
           );
@@ -1250,7 +1439,43 @@ export class ChannelService {
       const last = steps.at(-1);
       if (!run.cancelled && last != null)
         this.wakeLead(channelId, last.botId, userMessageId);
+      else this.payOwedWake(channelId);
     }
+  }
+
+  /** The bot's next step in a hand-off running here that has not started yet. */
+  private chainStepFor(
+    channelId: string,
+    botId: string
+  ): { step: number; of: number } | null {
+    for (const run of this.chains.get(channelId) ?? []) {
+      if (run.cancelled) continue;
+      const index = run.steps.findIndex(
+        (step, at) => at >= run.at && step.botId === botId
+      );
+      if (index >= 0) return { step: index + 1, of: run.steps.length };
+    }
+    return null;
+  }
+
+  /**
+   * The channel's files folder: chosen once, from its name then (or its
+   * members' names), with a short id so two "Brewly"s don't share one.
+   */
+  private newFolder(channel: Channel): string {
+    const title = channelTitle(
+      channel,
+      (id) => this.deps.bot(id)?.name ?? null
+    );
+    return `${channelFolder(title)}-${channel.id.slice(0, 4)}`;
+  }
+
+  /** The folder, saved on a channel made before it had one. */
+  private folderOf(channel: Channel): string {
+    if (channel.folder != null) return channel.folder;
+    const folder = this.newFolder(channel);
+    this.save({ ...this.channel(channel.id), folder });
+    return folder;
   }
 
   /** Whether the bot has work in this channel waiting or running. */
@@ -1318,8 +1543,17 @@ export class ChannelService {
   }
 
   /** The channel's hand-off chains run no further step. */
-  private cancelChains(channelId: string): void {
-    for (const run of this.chains.get(channelId) ?? []) run.cancelled = true;
+  private cancelChains(
+    channelId: string,
+    botIds: readonly string[] = []
+  ): void {
+    // Naming bots ("Coder stop"), only the chains they are in.
+    for (const run of this.chains.get(channelId) ?? [])
+      if (
+        botIds.length === 0 ||
+        run.steps.some((step) => botIds.includes(step.botId))
+      )
+        run.cancelled = true;
   }
 
   private setWork(
@@ -1438,7 +1672,10 @@ export class ChannelService {
             .map((work) => work.botId),
         ]),
       ],
-      queued: (this.queues.get(channel.id) ?? []).length,
+      // The user's messages waiting, not the lead's own wake-ups.
+      queued: (this.queues.get(channel.id) ?? []).filter(
+        (queued) => queued.leadAfter == null
+      ).length,
       ...(last != null
         ? { last: { author: last.author, text: last.text, at: last.at } }
         : {}),

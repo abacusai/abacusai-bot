@@ -460,7 +460,7 @@
       "task": {
         "from": "あなたから({{bot}}経由)",
         "asWritten": "{{bot}}が伝えた内容:",
-        "fromChannel": "あなたから({{channel}}にて)",
+        "fromChannel": "{{channel}}からのタスク",
         "asTakenOn": "チャンネルで引き受けた内容:"
       },
       "pairWith": "{{bot}}と",
@@ -5195,6 +5195,9 @@
     "thread": {
       "label": "チャンネルのメッセージ",
       "goneBot": "削除されたボット",
+      "alone": "このチャンネルに残っているボットは{{name}}だけです。チームで作業できるよう、もう1つ追加してください。",
+      "noBots": "このチャンネルのボットはすべて削除されました。再び使うにはボットを追加してください。",
+      "addBots": "ボットを追加",
       "working_one": "{{names}}が回答中…",
       "working_other": "{{names}}が回答中…",
       "queued_one": "{{count}}件のメッセージが順番待ち",

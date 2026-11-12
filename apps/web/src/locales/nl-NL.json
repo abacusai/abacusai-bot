@@ -460,7 +460,7 @@
       "task": {
         "from": "Van jou, via {{bot}}",
         "asWritten": "Zoals {{bot}} het doorgaf:",
-        "fromChannel": "Van jou, in {{channel}}",
+        "fromChannel": "Taak uit {{channel}}",
         "asTakenOn": "Zoals opgepakt in het kanaal:"
       },
       "pairWith": "met {{bot}}",
@@ -5195,6 +5195,9 @@
     "thread": {
       "label": "Kanaalberichten",
       "goneBot": "Verwijderde bot",
+      "alone": "{{name}} is de enige bot die nog in dit kanaal zit. Voeg er nog een toe zodat ze als team kunnen werken.",
+      "noBots": "Alle bots in dit kanaal zijn verwijderd. Voeg bots toe om het weer te gebruiken.",
+      "addBots": "Bots toevoegen",
       "working_one": "{{names}} is aan het antwoorden…",
       "working_other": "{{names}} zijn aan het antwoorden…",
       "queued_one": "{{count}} bericht wacht op zijn beurt",

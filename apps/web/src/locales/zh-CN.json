@@ -460,7 +460,7 @@
       "task": {
         "from": "来自你，由 {{bot}} 转达",
         "asWritten": "{{bot}} 转达的内容：",
-        "fromChannel": "来自你，在 {{channel}} 中",
+        "fromChannel": "来自 {{channel}} 的任务",
         "asTakenOn": "在频道中接下的任务："
       },
       "pairWith": "与 {{bot}}",
@@ -5195,6 +5195,9 @@
     "thread": {
       "label": "频道消息",
       "goneBot": "已删除的机器人",
+      "alone": "此频道只剩下 {{name}} 一个机器人。再添加一个，它们就能协作了。",
+      "noBots": "此频道的所有机器人都已删除。添加机器人即可重新使用。",
+      "addBots": "添加机器人",
       "working_one": "{{names}} 正在回答…",
       "working_other": "{{names}} 正在回答…",
       "queued_one": "{{count}} 条消息正在排队等待",
