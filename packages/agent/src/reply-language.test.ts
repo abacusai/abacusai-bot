@@ -794,6 +794,14 @@ describe("which language replies fall back to", () => {
     );
   });
 
+  it("is not for a message merely written in a language", () => {
+    // A user who wrote one question in Hindi got set_user_language called and
+    // the answer twice; the app answers in the language they write in anyway.
+    expect(buildSetUserLanguageTool().description).toMatch(
+      /Writing in a language is not asking for it/
+    );
+  });
+
   it("forgets once a language detected before own-words detection, keeping a chosen one", () => {
     const file = path.join(home, "user-language.json");
     fs.writeFileSync(
