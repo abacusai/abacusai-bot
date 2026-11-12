@@ -89,6 +89,9 @@ const otherCommand = (method: string): unknown =>
 
 /** Expressions the page was asked to evaluate, in order, for the whole run. */
 const evaluated: string[] = [];
+/** The dialog answerer's calls, in order, and what the page "asked" for its next read. */
+const dialogCalls: string[] = [];
+let dialogsAsked: Array<{ kind: string; message: string }> = [];
 
 /** What the fake page returns. Replaced per test; see `respondWith`. */
 let responder: (expression: string) => unknown = () => null;
@@ -282,6 +285,18 @@ class FakeWebContents {
             },
           },
         };
+      // The dialog answerer's own calls (page-dialogs.ts) are kept apart, so
+      // the cases about a script's evaluations see only the script's.
+      if (expression.includes("__abacusDialogs")) {
+        dialogCalls.push(expression);
+        return {
+          result: {
+            value: expression.includes("splice(0)")
+              ? dialogsAsked.splice(0)
+              : undefined,
+          },
+        };
+      }
       evaluated.push(expression);
       if (params?.userGesture === true) gestures.push(expression);
       const value = responder(expression);
@@ -517,6 +532,8 @@ beforeEach(() => {
   rendererEvents.length = 0;
   responder = () => null;
   evaluated.length = 0;
+  dialogCalls.length = 0;
+  dialogsAsked = [];
 });
 
 describe("the transport", () => {
@@ -955,21 +972,35 @@ describe("interacting", () => {
     expect(second.text).not.toContain("Download started");
   });
 
+  it("answers a dialog a script opened as it answers a click's, and says what it asked", async () => {
+    // A script clicked the prompt button: the dialog went unanswered by the
+    // browser, the page did nothing, and the run reported a stale result.
+    respondWith((expression) =>
+      expression.includes("btn-prompt") ? "clicked" : null
+    );
+    dialogsAsked = [{ kind: "prompt", message: "I am a JS prompt" }];
+    const { text, isError } = await call("browser_execute", {
+      code: "document.querySelector('#btn-prompt').click(); return 'clicked';",
+    });
+    expect(isError).toBe(false);
+    expect(text).toContain('The page asked for text: "I am a JS prompt"');
+    expect(
+      dialogCalls.some((e) => e.includes("state.until = Date.now()"))
+    ).toBe(true);
+  });
+
   it("says what a dialog the click opened asked, and that it was answered Cancel", async () => {
     // A confirm was answered Cancel without a word; the agent saw a button
     // that did nothing and overrode window.confirm to get an OK.
     await seedRefs();
-    respondWith((expression) =>
-      expression.includes("splice(0)")
-        ? [{ kind: "confirm", message: "I am a JS Confirm" }]
-        : {
-            status: "ok",
-            tag: "button",
-            text: "Click for JS Confirm",
-            x: 1,
-            y: 2,
-          }
-    );
+    respondWith(() => ({
+      status: "ok",
+      tag: "button",
+      text: "Click for JS Confirm",
+      x: 1,
+      y: 2,
+    }));
+    dialogsAsked = [{ kind: "confirm", message: "I am a JS Confirm" }];
     const { text } = await call("browser_interact", {
       action: "click",
       ref: "@e1",
@@ -977,11 +1008,11 @@ describe("interacting", () => {
     expect(text).toContain(
       'The page asked to confirm: "I am a JS Confirm". The browser answered Cancel'
     );
-    // The answerer was held for the click, before it.
-    const holds = evaluated.findIndex((e) =>
+    // The answerer was held for the click, then read.
+    const holds = dialogCalls.findIndex((e) =>
       e.includes("state.until = Date.now()")
     );
-    const take = evaluated.findIndex((e) => e.includes("splice(0)"));
+    const take = dialogCalls.findIndex((e) => e.includes("splice(0)"));
     expect(holds).toBeGreaterThanOrEqual(0);
     expect(take).toBeGreaterThan(holds);
   });
@@ -2584,6 +2615,7 @@ describe("the shapes a page can come back in", () => {
         return { result: { objectId: "found" } };
       if (expression === "location.origin")
         return { result: { value: "https://example.test" } };
+      if (expression.includes("__abacusDialogs")) return { result: {} };
       attempts += 1;
       if (expression.includes("return (")) {
         return {

@@ -3170,6 +3170,8 @@ export class McpBrowserServer extends McpHttpServer {
     // From here the page may hold what a script put there (a listener, a
     // changed field, a forged total): nothing is filled into it any more.
     secrets.noteScript(page.key);
+    // A script's click opens dialogs as a click does: answered the same way.
+    await this.holdDialogs(wc);
 
     // Models write `document.title` far more often than `return document.title`,
     // so an expression is tried as one first; only non-expressions fall
@@ -3185,9 +3187,15 @@ export class McpBrowserServer extends McpHttpServer {
         );
         const str =
           result !== undefined ? JSON.stringify(result, null, 2) : "undefined";
+        const dialogs = await takeDialogs((method, params) =>
+          this.cdp(wc, method, params)
+        );
 
         return this.ok(
-          str.length > 20000 ? str.slice(0, 20000) + "\n...(truncated)" : str
+          [
+            str.length > 20000 ? str.slice(0, 20000) + "\n...(truncated)" : str,
+            ...dialogs,
+          ].join("\n")
         );
       } catch (e) {
         // The page is on an Abacus.AI host: nothing ran, and the call is refused.

@@ -3,8 +3,9 @@
  * answered them for the bot with Cancel and said nothing, so a bot saw a
  * button "do nothing" and worked around it (it overrode window.confirm to get
  * an OK). Now they are still answered Cancel, never OK, and the action's
- * result says what the page asked. Outside a bot's action (the user clicking
- * in the Browser pane) the page's own dialog shows as it always did.
+ * result says what the page asked. Outside a bot's action the page's own
+ * dialog runs as it always did; in the built-in browser that is a silent
+ * Cancel for the user too, so the result never sends them to the pane.
  */
 import type { BrowserPage } from "./browser-target";
 
@@ -56,6 +57,10 @@ export const DIALOGS_TAKE = `(() => {
   return state.seen.splice(0);
 })()`;
 
+/** The built-in browser cancels a page's own dialogs for the user as well. */
+const ELSEWHERE =
+  "If they want it confirmed, tell them to do this step on the site in their own browser.";
+
 /** One line per dialog, as the action's result tells it. */
 export const dialogLines = (dialogs: readonly PageDialog[]): string[] =>
   dialogs.map((dialog) => {
@@ -64,9 +69,9 @@ export const dialogLines = (dialogs: readonly PageDialog[]): string[] =>
       case "alert":
         return `The page showed an alert: ${said}. It was closed.`;
       case "confirm":
-        return `The page asked to confirm: ${said}. The browser answered Cancel; it never answers OK. If the user wants this confirmed, tell them: they confirm it themselves.`;
+        return `The page asked to confirm: ${said}. The browser answered Cancel; it never answers OK, and the user cannot answer it in the Browser pane either. ${ELSEWHERE}`;
       case "prompt":
-        return `The page asked for text: ${said}. The browser answered Cancel and typed nothing.`;
+        return `The page asked for text: ${said}. The browser answered Cancel and typed nothing; the user cannot answer it in the Browser pane either. ${ELSEWHERE}`;
     }
   });
 

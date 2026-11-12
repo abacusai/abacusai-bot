@@ -68,7 +68,13 @@ describe("a page's dialogs while the bot acts", () => {
     expect(
       dialogLines([{ kind: "confirm", message: "I am a JS Confirm" }])
     ).toEqual([
-      'The page asked to confirm: "I am a JS Confirm". The browser answered Cancel; it never answers OK. If the user wants this confirmed, tell them: they confirm it themselves.',
+      'The page asked to confirm: "I am a JS Confirm". The browser answered Cancel; it never answers OK, and the user cannot answer it in the Browser pane either. If they want it confirmed, tell them to do this step on the site in their own browser.',
     ]);
+  });
+
+  it("never sends the user to the Browser pane for a prompt it cancelled", () => {
+    // The built-in browser cancels a page's own dialogs for the user too.
+    const [line] = dialogLines([{ kind: "prompt", message: "Name?" }]);
+    expect(line).toContain("do this step on the site in their own browser");
   });
 });
