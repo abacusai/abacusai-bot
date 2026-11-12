@@ -743,6 +743,16 @@ const FILE_INPUT_REFUSAL = (label: string): string =>
   "in this chat's workspace (the user's attachments are there). If the task names no such file, stop " +
   'with browser_pause need:"details" and fields naming the file the user should attach.';
 
+/**
+ * A script that replaces the page's alert, confirm or prompt: the way a run
+ * got "OK" out of a confirm the browser answers Cancel. Reading them is fine.
+ */
+const REPLACES_DIALOGS =
+  /(?:^|[^.\w$])(?<!(?:let|const|var)\s+)(?:alert|confirm|prompt)\s*=(?!=)|\b(?:window|self|globalThis)\.(?:alert|confirm|prompt)\s*=(?!=)|defineProperty\s*\([^,]*,\s*["'`](?:alert|confirm|prompt)["'`]/;
+
+const DIALOG_SCRIPT_REFUSAL =
+  "Scripts may not replace the page's alert, confirm or prompt. A page's confirm is never answered OK and its prompt never filled in: the browser answers Cancel. Report what the page asked; if the user wants it confirmed, they do that step on the site in their own browser.";
+
 /** The largest file `upload` gives a page. */
 const UPLOAD_MAX_BYTES = 100 * 1024 * 1024;
 
@@ -3176,6 +3186,7 @@ export class McpBrowserServer extends McpHttpServer {
     if (!wc) return this.err(this.noBrowser(sessionId));
     const code = args.code as string;
     if (!code) return this.err('"code" is required.');
+    if (REPLACES_DIALOGS.test(code)) return this.err(DIALOG_SCRIPT_REFUSAL);
     const secrets = this.secretsOf(wc);
     const refusal = await secrets.executeRefusal(wc, this.vault != null);
     if (refusal != null) return this.err(refusal);

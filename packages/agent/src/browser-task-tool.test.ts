@@ -151,6 +151,11 @@ describe("uploads", () => {
     expect(tool.description).toMatch(
       /never copy a file from elsewhere on the computer into your workspace to upload it/
     );
+    // It then wrote the file's contents into a new workspace file instead.
+    expect(tool.description).toMatch(/nor write its contents into a new file/);
+    expect(tool.description).toMatch(/even when the user names the path/);
+    // And asked a run to press OK on a page's confirm.
+    expect(tool.description).toMatch(/never answers OK on a page's confirm/);
   });
 });
 

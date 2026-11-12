@@ -61,6 +61,14 @@ describe("what the prompts say about the browser, per channel", () => {
     );
   });
 
+  it("never has a run answer a page's confirm OK, by any means", () => {
+    // A run stubbed window.confirm to return true to get "You clicked: Ok".
+    const flat = (text: string) => text.replace(/\s+/g, " ");
+    expect(flat(BROWSER_SYSTEM_PROMPT)).toMatch(
+      /A page's confirm or prompt is never answered OK or filled in/
+    );
+  });
+
   it("tells the phone loop how screenshots reach the chat, and acts only through chat, links and approval pages", () => {
     const prompt = phoneOperatingPrompt(null);
     expect(prompt).not.toMatch(/pane/i);

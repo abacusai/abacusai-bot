@@ -972,6 +972,34 @@ describe("interacting", () => {
     expect(second.text).not.toContain("Download started");
   });
 
+  it("refuses a script that replaces the page's dialogs, so nothing answers OK", async () => {
+    // Told the confirm was answered Cancel, a run stubbed window.confirm to
+    // return true and clicked again: "You clicked: Ok".
+    respondWith(() => "ran");
+    for (const code of [
+      "window.confirm = () => true; document.querySelector('button').click()",
+      "window.prompt=()=>'hello'",
+      "confirm = function () { return true }",
+      "Object.defineProperty(window, 'confirm', { value: () => true })",
+    ]) {
+      evaluated.length = 0;
+      const { text, isError } = await call("browser_execute", { code });
+      expect(isError, code).toBe(true);
+      expect(text).toContain("never answered OK");
+      expect(evaluated.some((e) => e.includes(code.slice(0, 12)))).toBe(false);
+    }
+    // Reading them is fine, and so are a variable or a property of that name.
+    for (const code of [
+      "return typeof window.confirm",
+      "const confirm = document.querySelector('#c'); return confirm.id",
+      "settings.alert = true; return 1",
+      "return a == confirm",
+    ]) {
+      const read = await call("browser_execute", { code });
+      expect(read.isError, code).toBe(false);
+    }
+  });
+
   it("answers a dialog a script opened as it answers a click's, and says what it asked", async () => {
     // A script clicked the prompt button: the dialog went unanswered by the
     // browser, the page did nothing, and the run reported a stale result.
