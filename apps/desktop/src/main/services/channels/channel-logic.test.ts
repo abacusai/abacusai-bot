@@ -520,6 +520,22 @@ describe("hand-off chains", () => {
     );
   });
 
+  it("asks for the report in the language the user wrote in the channel", () => {
+    // Asked in Spanish, the bot answered in Spanish but its work's report,
+    // written from an English prompt, came back in English.
+    const prompt = channelWorkPrompt({
+      prefix: "[task from the user, passed on by ",
+      channelTitle: "Errands",
+      task: "open the status codes page and report its heading",
+      userWords: "@Shopper por favor usa tu navegador y publica el título",
+    });
+    expect(prompt).toContain(
+      'Write the report in the language the user wrote the request in (their message begins: "@Shopper por favor usa tu…").'
+    );
+    // Only the first words: the rest may be other members' parts.
+    expect(prompt).not.toContain("publica el título");
+  });
+
   it("tells a bot answering the user how to write one, and a step where it stands", () => {
     const prompt = channelWorkPrompt({
       prefix: "[task from the user, passed on by ",

@@ -1251,10 +1251,14 @@ export class ChannelService {
       channel,
       (id) => this.deps.bot(id)?.name ?? null
     );
+    const userWords = this.deps.store
+      .readMessages(channelId)
+      .find((message) => message.id === userMessageId)?.text;
     const prompt = channelWorkPrompt({
       prefix: BOT_TASK_PREFIX,
       channelTitle: title,
       task,
+      ...(userWords != null ? { userWords } : {}),
       folder: this.folderOf(channel),
       decisions: channel.decisions,
       fromPlan,

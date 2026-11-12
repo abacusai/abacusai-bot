@@ -811,6 +811,8 @@ export const channelWorkPrompt = (input: {
   decisions?: readonly ChannelDecision[];
   /** It comes from the team's agreed plan the user started, not one request. */
   fromPlan?: boolean;
+  /** The user's message the work answers: its language is the report's (only its first words go in). */
+  userWords?: string;
   /** One step of a hand-off chain: where it is, every step, and the report before it. */
   chain?: {
     step: number;
@@ -827,6 +829,13 @@ export const channelWorkPrompt = (input: {
     "When you are done, end with a short report for the channel:",
     "what you did, and where the results are (file paths, links). It is posted there as your message.",
     "Only your final message is posted: put the report itself in it, never a pointer to an earlier message.",
+    ...(input.userWords != null && input.userWords.trim().length > 0
+      ? [
+          // Its first words only: enough to show the language, never the
+          // parts of the message meant for other members.
+          `Write the report in the language the user wrote the request in (their message begins: "${input.userWords.trim().split(/\s+/).slice(0, 5).join(" ").replace(/"/g, "'")}…").`,
+        ]
+      : []),
     "",
     `Task: ${input.task}`,
     "",
