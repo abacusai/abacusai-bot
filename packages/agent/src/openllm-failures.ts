@@ -77,6 +77,20 @@ const status = (failure: string): number | null => {
   return code == null ? null : Number(code);
 };
 
+/**
+ * The server asked for the same request again ("Something went wrong ...,
+ * Please retry."), naming no wait: a transient fault, not the model's or the
+ * account's. A 4xx that says "try again" is the request's own fault, so it
+ * never counts.
+ */
+const RETRY_REQUESTED =
+  /\bplease (?:retry|try again)\b|\b(?:retry|try) (?:the|your) request(?: again)?\b/i;
+
+export const asksForRetry = (failure: string): boolean => {
+  const code = status(failure);
+  return (code == null || code >= 500) && RETRY_REQUESTED.test(failure);
+};
+
 const KEY_REFUSED =
   /invalid[_ ]api[_ ]key|incorrect api key|api key (?:not valid|is invalid)|unauthori[sz]ed|authentication|invalid (?:token|credentials)/i;
 const MODEL_GONE =
@@ -178,7 +192,10 @@ export function classifyFailure(
   if (code === 429 && DAILY.test(failure)) {
     return { cooldownMs: hint ?? untilNextUtcDay(now) };
   }
-  return hint != null ? { cooldownMs: hint } : {};
+  if (hint != null) return { cooldownMs: hint };
+  // Asked again at once, not after the usual minutes: the busy wait then
+  // re-asks the same model when no other is left.
+  return asksForRetry(failure) ? { cooldownMs: MIN_HINT_MS } : {};
 }
 
 /**

@@ -1272,6 +1272,47 @@ describe("OpenLLM", () => {
     log.restore();
   });
 
+  it("asks the only model again when the server says to retry", async () => {
+    // One model in the pool: no other model to move to.
+    fs.writeFileSync(
+      path.join(home, "config.json"),
+      JSON.stringify({
+        defaultModel: "openllm/auto",
+        customProviders: [
+          {
+            id: "openrouter",
+            baseUrl: provider.baseUrl,
+            apiKey: "test-key",
+            models: [{ id: "only:free", contextWindow: 131072 }],
+          },
+        ],
+      }),
+      "utf8"
+    );
+    const harness = session({ mode: "yolo" });
+    provider.scriptSequence([
+      {
+        streamError:
+          "Something went wrong while fetching llm response, Please retry.",
+      },
+      { say: "Here it is." },
+    ]);
+    try {
+      await harness.session.start();
+      await harness.session.send("hi");
+      await harness.until(() => harness.agent("turn_complete").length > 0);
+
+      expect(harness.text).toContain("Here it is.");
+      expect(harness.agent("error")).toEqual([]);
+      expect(provider.calls.map((call) => call.model)).toEqual([
+        "only:free",
+        "only:free",
+      ]);
+    } finally {
+      fs.writeFileSync(path.join(home, "config.json"), openLlmConfig(), "utf8");
+    }
+  });
+
   it("surfaces the failure once the whole pool is exhausted", async () => {
     const harness = session({ mode: "yolo" });
 
