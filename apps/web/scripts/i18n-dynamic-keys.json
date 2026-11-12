@@ -197,6 +197,7 @@
   {
     "prefix": "bots.start.categories.",
     "values": [
+      "business",
       "featured",
       "finance",
       "marketing",
@@ -273,6 +274,8 @@
       "email-drafting.name",
       "follow-up-tracker.description",
       "follow-up-tracker.name",
+      "lead-finder.description",
+      "lead-finder.name",
       "hiring-manager-brief.description",
       "hiring-manager-brief.name",
       "inbox-to-calendar.description",

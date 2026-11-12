@@ -31,6 +31,10 @@ export const FUNNEL_STEPS = [
   "first_build_chosen",
   // The first-run screen: the card picked, and the inbox result after a Gmail sign-in.
   "first_choice_build",
+  // A project that makes a bot (Lead Finder, the morning inbox): the detail is the project.
+  "first_choice_template",
+  // A project category tab tapped on the first-run screen: the detail is the category.
+  "first_project_category",
   "first_choice_whatsapp",
   "first_choice_github",
   "first_choice_research",

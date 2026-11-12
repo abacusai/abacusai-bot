@@ -185,6 +185,10 @@
         "description": "Houdt een lancering op koers door blokkades, ontbrekende goedkeuringen en toezeggingen te signaleren voordat ze uitlopen.",
         "name": "Lanceringscentrum"
       },
+      "lead-finder": {
+        "description": "Vindt elke ochtend nieuwe klanten voor je bedrijf en stelt voor elk een eerste e-mail op.",
+        "name": "Klantenzoeker"
+      },
       "meeting-notes-actions": {
         "description": "Maakt van meetingnotities besluiten, eigenaren, deadlines en vervolgacties waarmee je aan de slag kunt.",
         "name": "Meetingnotities & acties"
@@ -374,6 +378,7 @@
     },
     "start": {
       "categories": {
+        "business": "Zakelijk",
         "featured": "Uitgelicht",
         "finance": "Financiën",
         "marketing": "Marketing",
@@ -1309,9 +1314,18 @@
       "title": "Wat wil je als eerste doen?",
       "subtitle": "Kies er een. Je bot gaat er meteen mee aan de slag.",
       "build": {
-        "title": "Iets bouwen",
-        "body": "Een website, app of game. Beschrijf het en zie het verschijnen.",
         "cta": "Begin met bouwen"
+      },
+      "projects": {
+        "title": "Start een project",
+        "otherTitle": "Of start een project",
+        "body": "Je krijgt een werkende eerste versie, die je daarna naar je hand zet.",
+        "label": "Soorten projecten",
+        "popular": "Populair",
+        "business": "Voor mijn bedrijf",
+        "websites": "Websites",
+        "games": "Games",
+        "automate": "Mijn werk automatiseren"
       },
       "chatApp": {
         "title": "Antwoord me via {{app}}",
@@ -1358,8 +1372,7 @@
         "keepCta": "Blijf volgen",
         "stoppedTitle": "{{name}} is gestopt voordat het klaar was",
         "stoppedBody": "In de chat zie je wat er gevonden is en wat er nog nodig is.",
-        "open": "Chat openen",
-        "buildTitle": "Of bouw iets"
+        "open": "Chat openen"
       }
     }
   },
@@ -1860,10 +1873,38 @@
       },
       "recent": "Ga verder waar je gebleven was in {{workspace}}",
       "build": {
+        "orders-system": {
+          "name": "App voor bestellingen en boekingen",
+          "detail": "Voor een winkel, sportschool, salon of dienstverlener.",
+          "prompt": "Ik heb een klein bedrijf. Bouw een eenvoudige app op deze computer waarmee ik mijn bestellingen, boekingen of opdrachten kan bijhouden: een lijst waaraan ik dingen kan toevoegen en die ik kan doorzoeken en filteren, een pagina per item met de klant, datum, status en prijs, en een dagelijks overzicht. Bouw meteen een eerste versie met voorbeeldgegevens voor een typische kleine winkel en open die voor me. Vraag me daarna in één kort bericht wat mijn bedrijf doet en wat ik moet bijhouden, zodat je de app op maat kunt maken."
+        },
+        "business-site": {
+          "name": "Website voor mijn bedrijf",
+          "detail": "Diensten, openingstijden, reviews en een contactformulier.",
+          "prompt": "Bouw een website voor mijn bedrijf: een kopgedeelte met de naam van het bedrijf en wat het aanbiedt, een sectie met diensten en prijzen, openingstijden, een paar reviews van klanten, waar je ons kunt vinden en een contactformulier. Gebruik voorbeeldgegevens die ik later kan vervangen, en zorg dat de site er goed uitziet op een telefoon. Laat me de pagina zien als die klaar is en vraag me daarna in één kort bericht naar de naam van mijn bedrijf en wat het doet, zodat je de site op maat kunt maken."
+        },
+        "lead-finder": {
+          "name": "Klanten vinden",
+          "detail": "Elke ochtend nieuwe leads, met een concept voor de eerste e-mail."
+        },
+        "my-game": {
+          "name": "Aan mijn game werken",
+          "detail": "Unity, Godot, Unreal of Roblox, in je projectmap.",
+          "prompt": "Help me met mijn game. Als er geen projectmap open is, vraag me dan waar het project van mijn game staat. Bekijk het daarna en vertel me welke engine en versie het gebruikt, wat de belangrijkste scènes en scripts zijn en wat er kapot of onaf lijkt. Stel de drie nuttigste volgende stappen voor en wacht tot ik er een kies voordat je iets verandert."
+        },
+        "morning-inbox": {
+          "name": "Elke ochtend mijn e-mail beantwoorden",
+          "detail": "Een conceptantwoord voor elke e-mail waar jij iets mee moet."
+        },
         "portfolio-site": {
           "name": "Portfoliosite",
           "detail": "Een site van één pagina voor je werk.",
           "prompt": "Bouw een portfoliowebsite van één pagina voor me: een hero met mijn naam en een intro van één regel, een raster met drie voorbeeldprojecten, een over-mij-sectie en een contactsectie. Gebruik tijdelijke tekst en afbeeldingen die ik later kan vervangen, maak het strak en modern, en zorg dat het er goed uitziet op een telefoon. Laat me de pagina zien als hij klaar is."
+        },
+        "numbers-dashboard": {
+          "name": "Dashboard voor mijn cijfers",
+          "detail": "Omzet, kosten en trends uit je spreadsheet.",
+          "prompt": "Bouw een dashboard voor de cijfers van mijn bedrijf: totalen voor deze maand, een grafiek per maand, de beste producten of klanten en alles wat opvalt. Begin meteen met realistische voorbeeldcijfers voor de verkoop zodat het werkt, en laat het me zien. Vraag me daarna om mijn spreadsheet of CSV-bestand en zet het dashboard over op mijn echte cijfers."
         },
         "shop-page": {
           "name": "Winkelpagina voor mijn bedrijf",

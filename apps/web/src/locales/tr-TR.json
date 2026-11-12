@@ -185,6 +185,10 @@
         "description": "Engelleri, eksik onayları ve taahhütleri aksamadan önce ortaya çıkararak bir lansmanı ilerletir.",
         "name": "Lansman Komuta Merkezi"
       },
+      "lead-finder": {
+        "description": "Her sabah işletmen için yeni müşteriler bulur ve her birine ilk e-postanın taslağını hazırlar.",
+        "name": "Müşteri Bulucu"
+      },
       "meeting-notes-actions": {
         "description": "Toplantı notlarını harekete geçebileceğin kararlara, sorumlulara, son tarihlere ve takiplere dönüştürür.",
         "name": "Toplantı Notları ve Aksiyonlar"
@@ -374,6 +378,7 @@
     },
     "start": {
       "categories": {
+        "business": "İşletme",
         "featured": "Öne çıkanlar",
         "finance": "Finans",
         "marketing": "Pazarlama",
@@ -1309,9 +1314,18 @@
       "title": "Önce ne yapmak istersin?",
       "subtitle": "Birini seç. Botun hemen işe koyulur.",
       "build": {
-        "title": "Bir şey oluştur",
-        "body": "Bir web sitesi, uygulama ya da oyun. Aşağıdan birine dokun ya da değiştirebileceğin örnek bir siteyle başla.",
         "cta": "Oluşturmaya başla"
+      },
+      "projects": {
+        "title": "Bir proje başlat",
+        "otherTitle": "Ya da bir proje başlat",
+        "body": "Çalışan bir ilk sürüm hazır olur, sonra onu kendine göre uyarlarsın.",
+        "label": "Proje türleri",
+        "popular": "Popüler",
+        "business": "İşletmem için",
+        "websites": "Web siteleri",
+        "games": "Oyunlar",
+        "automate": "İşlerimi otomatikleştir"
       },
       "chatApp": {
         "title": "Bana {{app}} üzerinden cevap ver",
@@ -1358,8 +1372,7 @@
         "keepCta": "İzlemeye devam et",
         "stoppedTitle": "{{name}} bitirmeden durdu",
         "stoppedBody": "Sohbetinde ne bulduğunu ve neye ihtiyacı olduğunu görebilirsin.",
-        "open": "Sohbeti aç",
-        "buildTitle": "Ya da bir şey oluştur"
+        "open": "Sohbeti aç"
       }
     }
   },
@@ -1860,10 +1873,38 @@
       },
       "recent": "{{workspace}} içinde kaldığın yerden devam et",
       "build": {
+        "orders-system": {
+          "name": "Sipariş ve rezervasyon uygulaması",
+          "detail": "Dükkân, spor salonu, kuaför veya servis işletmeleri için.",
+          "prompt": "Küçük bir işletmem var. Bu bilgisayarda siparişlerimi, rezervasyonlarımı veya servis işlerimi takip edebileceğim basit bir uygulama yap: ekleme yapabileceğim, arayıp filtreleyebileceğim bir liste; her biri için müşteri, tarih, durum ve fiyatın yer aldığı bir sayfa; bir de günlük özet. Tipik bir küçük dükkân için örnek verilerle hemen ilk sürümü oluştur ve benim için aç. Sonra işletmemin ne iş yaptığını ve neleri takip etmem gerektiğini tek bir kısa mesajla sor, böylece uygulamayı bana göre uyarlayabilirsin."
+        },
+        "business-site": {
+          "name": "İşletmem için web sitesi",
+          "detail": "Hizmetler, çalışma saatleri, yorumlar ve iletişim formu.",
+          "prompt": "İşletmem için bir web sitesi yap: işletmenin adını ve ne sunduğunu gösteren bir üst bölüm, fiyatlarıyla birlikte bir hizmetler bölümü, çalışma saatleri, birkaç müşteri yorumu, bizi nerede bulabileceklerini gösteren bir bölüm ve bir iletişim formu. Sonradan değiştirebileceğim örnek bilgiler kullan ve telefonda da düzgün göründüğünden emin ol. Sayfa hazır olunca bana göster. Sonra işletmemin adını ve ne iş yaptığını tek bir kısa mesajla sor, böylece siteyi bana göre uyarlayabilirsin."
+        },
+        "lead-finder": {
+          "name": "Müşteri bul",
+          "detail": "Her sabah yeni potansiyel müşteriler ve hazır bir ilk e-posta taslağı."
+        },
+        "my-game": {
+          "name": "Oyunum üzerinde çalış",
+          "detail": "Unity, Godot, Unreal veya Roblox, kendi proje klasöründe.",
+          "prompt": "Oyunumda bana yardım et. Açık bir proje klasörü yoksa oyunumun projesinin nerede olduğunu bana sor. Sonra projeyi incele ve bana hangi motoru ve sürümü kullandığını, ana sahnelerini ve betiklerini, ayrıca bozuk ya da yarım kalmış görünen her şeyi söyle. En faydalı üç sonraki adımı öner ve herhangi bir şeyi değiştirmeden önce birini seçmemi bekle."
+        },
+        "morning-inbox": {
+          "name": "Her sabah e-postalarımı yanıtla",
+          "detail": "İlgilenmen gereken her e-posta için hazır bir yanıt taslağı."
+        },
         "portfolio-site": {
           "name": "Portfolyo sitesi",
           "detail": "Çalışmaların için tek sayfalık bir site.",
           "prompt": "Bana tek sayfalık bir portfolyo web sitesi yap: en üstte adım ve tek cümlelik bir tanıtım, üç örnek projeden oluşan bir ızgara, bir hakkımda bölümü ve bir iletişim bölümü. Sonradan değiştirebileceğim örnek metin ve görseller kullan, sade ve modern olsun ve telefonda da düzgün görünsün. Hazır olunca sayfayı bana göster."
+        },
+        "numbers-dashboard": {
+          "name": "Rakamlarım için gösterge paneli",
+          "detail": "E-tablondaki satışlar, maliyetler ve eğilimler.",
+          "prompt": "İşletmemin rakamları için bir gösterge paneli yap: bu ayın toplamları, aylara göre bir grafik, en çok satan ürünler veya en önemli müşteriler ve olağan dışı görünen her şey. Çalışır durumda olması için gerçekçi örnek satış verileriyle hemen başla ve bana göster. Sonra benden e-tablomu veya CSV dosyamı iste ve paneli gerçek rakamlarıma geçir."
         },
         "shop-page": {
           "name": "İşletmem için mağaza sayfası",

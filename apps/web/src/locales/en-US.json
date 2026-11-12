@@ -185,6 +185,10 @@
         "description": "Keeps a launch moving by surfacing blockers, missing approvals, and commitments before they slip.",
         "name": "Launch Command Center"
       },
+      "lead-finder": {
+        "description": "Finds new customers for your business every morning and drafts a first email to each.",
+        "name": "Lead Finder"
+      },
       "meeting-notes-actions": {
         "description": "Turns meeting notes into decisions, owners, deadlines, and follow-ups you can act on.",
         "name": "Meeting Notes & Actions"
@@ -374,6 +378,7 @@
     },
     "start": {
       "categories": {
+        "business": "Business",
         "featured": "Featured",
         "finance": "Finance",
         "marketing": "Marketing",
@@ -1309,9 +1314,18 @@
       "title": "What do you want to do first?",
       "subtitle": "Pick one. Your bot starts on it right away.",
       "build": {
-        "title": "Build something",
-        "body": "A website, app or game. Tap one below, or start with a sample site you can change.",
         "cta": "Start building"
+      },
+      "projects": {
+        "title": "Start a project",
+        "otherTitle": "Or start a project",
+        "body": "You get a working first version, then make it yours.",
+        "label": "Kinds of project",
+        "popular": "Popular",
+        "business": "For my business",
+        "websites": "Websites",
+        "games": "Games",
+        "automate": "Automate my work"
       },
       "chatApp": {
         "title": "Answer me on {{app}}",
@@ -1358,8 +1372,7 @@
         "keepCta": "Keep watching",
         "stoppedTitle": "{{name}} stopped before finishing",
         "stoppedBody": "Its chat shows what it found and what it needs.",
-        "open": "Open chat",
-        "buildTitle": "Or build something"
+        "open": "Open chat"
       }
     }
   },
@@ -1860,10 +1873,38 @@
       },
       "recent": "Pick up where you left off in {{workspace}}",
       "build": {
+        "orders-system": {
+          "name": "Orders and bookings app",
+          "detail": "For a shop, gym, salon or service business.",
+          "prompt": "I run a small business. Build me a simple app on this computer to keep track of my orders, bookings or service jobs: a list I can add to, search and filter, a page for each one with the customer, date, status and price, and a daily summary. Build a first version right away with sample data for a typical small shop and open it for me. Then ask me in one short message what my business does and what I need to track, so you can tailor it."
+        },
+        "business-site": {
+          "name": "Website for my business",
+          "detail": "Services, hours, reviews and a contact form.",
+          "prompt": "Build a website for my business: a header with the business name and what it offers, a services section with prices, opening hours, a few customer reviews, where to find us and a contact form. Use placeholder details I can swap later, and make sure it looks right on a phone. Show me the page when it is ready, then ask me in one short message for my business's name and what it does, so you can make it mine."
+        },
+        "lead-finder": {
+          "name": "Find customers",
+          "detail": "New leads each morning, with a first email drafted."
+        },
+        "my-game": {
+          "name": "Work on my game",
+          "detail": "Unity, Godot, Unreal or Roblox, in your project folder.",
+          "prompt": "Help me with my game. If no project folder is open, ask me where my game's project is. Then look through it and tell me which engine and version it uses, its main scenes and scripts, and anything that looks broken or unfinished. Suggest the three most useful next steps, and wait for me to pick one before changing anything."
+        },
+        "morning-inbox": {
+          "name": "Answer my email every morning",
+          "detail": "A reply drafted for each email that needs you."
+        },
         "portfolio-site": {
           "name": "Portfolio site",
           "detail": "A one-page site for your work.",
           "prompt": "Build me a one-page portfolio website: a hero with my name and a one-line intro, a grid of three sample projects, an about section and a contact section. Use placeholder text and images I can swap later, make it clean and modern, and make sure it looks right on a phone. Show me the page when it is ready."
+        },
+        "numbers-dashboard": {
+          "name": "Dashboard for my numbers",
+          "detail": "Sales, costs and trends from your spreadsheet.",
+          "prompt": "Build a dashboard for my business numbers: totals for this month, a chart by month, the top products or clients, and anything unusual. Start right away with realistic sample sales data so it works, and show it to me. Then ask me for my spreadsheet or CSV file, and switch the dashboard to my real numbers."
         },
         "shop-page": {
           "name": "Shop page for my business",

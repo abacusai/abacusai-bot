@@ -56,6 +56,12 @@ const ready = {
   state: "ready",
   result: { bot, checkInRoutineId: null },
 } as const;
+const projects = () =>
+  [...document.querySelectorAll("[data-project]")].map((tile) =>
+    tile.getAttribute("data-project")
+  );
+const project = (id: string) =>
+  document.querySelector<HTMLButtonElement>(`[data-project="${id}"]`)!;
 const cards = () =>
   [...document.querySelectorAll("[data-first-choice]")].map((card) =>
     card.getAttribute("data-first-choice")
@@ -96,17 +102,54 @@ describe("FirstBotStep: what to do first", () => {
       screen.getByText("Logos, product photos, posts and clips.")
     ).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Portfolio site" }));
+    // Popular: the catalog's head, business projects first.
+    expect(projects()).toEqual([
+      "orders-system",
+      "business-site",
+      "lead-finder",
+      "my-game",
+      "morning-inbox",
+      "portfolio-site",
+    ]);
+    fireEvent.click(project("orders-system"));
     await vi.waitFor(() =>
       expect(context.props.choose).toHaveBeenCalledWith({
         kind: "build",
-        prompt: expect.stringContaining("portfolio website"),
+        prompt: expect.stringContaining("orders, bookings or service jobs"),
       })
     );
     expect(funnelStep).toHaveBeenCalledWith({
       step: "first_choice_build",
-      detail: "portfolio_site",
+      detail: "orders_system",
     });
+    // A bot project makes its template's bot.
+    fireEvent.click(project("lead-finder"));
+    await vi.waitFor(() =>
+      expect(context.props.choose).toHaveBeenCalledWith({
+        kind: "template",
+        templateId: "lead-finder",
+      })
+    );
+    expect(funnelStep).toHaveBeenCalledWith({
+      step: "first_choice_template",
+      detail: "lead_finder",
+    });
+    // A tab shows its own projects and is counted.
+    fireEvent.click(screen.getByRole("tab", { name: "Games" }));
+    await vi.waitFor(() =>
+      expect(projects()).toEqual(["my-game", "simple-game"])
+    );
+    expect(funnelStep).toHaveBeenCalledWith({
+      step: "first_project_category",
+      detail: "games",
+    });
+    fireEvent.click(project("my-game"));
+    await vi.waitFor(() =>
+      expect(context.props.choose).toHaveBeenCalledWith({
+        kind: "build",
+        prompt: expect.stringContaining("Help me with my game"),
+      })
+    );
     fireEvent.click(screen.getByRole("button", { name: "Start building" }));
     await vi.waitFor(() =>
       expect(context.props.choose).toHaveBeenCalledWith({
@@ -325,7 +368,10 @@ describe("FirstBotStep: after a Gmail sign-in", () => {
       screen.getByText("Drafts ready for each. Nothing is sent without you.")
     ).toBeTruthy();
     expect(cards()).toEqual(["inbox", "build", "github", "research", "images"]);
-    expect(screen.getByText("Or build something")).toBeTruthy();
+    expect(screen.getByText("Or start a project")).toBeTruthy();
+    // The Chief of Staff already reads the inbox: its project is not offered twice.
+    expect(projects()).not.toContain("morning-inbox");
+    expect(projects()).toHaveLength(6);
     fireEvent.click(screen.getByRole("button", { name: "Review drafts" }));
     await vi.waitFor(() =>
       expect(context.props.choose).toHaveBeenCalledWith({
