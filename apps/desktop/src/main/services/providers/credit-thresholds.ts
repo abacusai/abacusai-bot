@@ -20,6 +20,7 @@ import {
   type CreditTaskKind,
   type CreditThreshold,
   type CreditThresholdMark,
+  markPlan,
   milestoneBalance,
   risenMilestone,
   thresholdOf,
@@ -107,7 +108,7 @@ export class CreditThresholdWatch {
     const estimate = this.estimate(key, account.credits_used, kind, at);
     const prefs = this.deps.prefs();
     if (prefs == null) return;
-    let marks = prefs.get().creditThresholds ?? {};
+    let marks = this.dropOtherPlan(prefs, key, plan, balance);
     const risen =
       plan === "paid" ? risenMilestone(marks[key], balance) : undefined;
     if (risen !== undefined)
@@ -141,6 +142,46 @@ export class CreditThresholdWatch {
         [key]: { ...(latest[key] ?? mark), told: mark.reached },
       },
     });
+  }
+
+  /**
+   * The plan changed (onAbacusPlanChange): a mark stamped on the old plan goes
+   * now, with its card's answer, rather than at the next billed turn. Never
+   * throws.
+   */
+  planChanged(): Promise<void> {
+    this.queue = this.queue
+      .then(async () => {
+        const account = await this.deps.readAccount();
+        const plan = creditMilestonePlan(account);
+        const key = creditAccountKey(account);
+        const balance = milestoneBalance(account);
+        const prefs = this.deps.prefs();
+        if (plan == null || key == null || balance == null || prefs == null)
+          return;
+        this.dropOtherPlan(prefs, key, plan, balance);
+      })
+      .catch((error: unknown) => {
+        console.warn(`[credits] plan change check failed: ${String(error)}`);
+      });
+    return this.queue;
+  }
+
+  /**
+   * A new plan starts its milestones afresh: a mark stamped on another plan (a
+   * free 80% before an upgrade) goes with its card's answer.
+   */
+  private dropOtherPlan(
+    prefs: { get(): PrefsRow; update(patch: PrefsPatch): unknown },
+    key: string,
+    plan: CreditMilestonePlan,
+    balance: { used: number; granted: number }
+  ): Record<string, CreditThresholdMark> {
+    const marks = prefs.get().creditThresholds ?? {};
+    const mark = marks[key];
+    return mark != null && markPlan(mark) !== plan
+      ? this.lower(prefs, key, null, balance, plan)
+      : marks;
   }
 
   /**

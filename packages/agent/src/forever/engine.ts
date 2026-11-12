@@ -489,6 +489,14 @@ export class ForeverEngine {
           actions: [{ type: CREDITS_LOW_ACTION, amount: left }],
           notificationKey: CREDITS_LOW_ACTION,
         }),
+      onCreditsRestored: () =>
+        this.emitAgentEvent({
+          type: "notification",
+          severity: "info",
+          message: "",
+          notificationKey: CREDITS_LOW_ACTION,
+          cleared: true,
+        }),
       onCloseOut: (hit) => {
         // A hidden turn's limit is its own: never a line, never a chat-app send.
         if (this.hiddenTurn) return;
@@ -506,6 +514,7 @@ export class ForeverEngine {
             severity: "info",
             message: COMPACTED_NOTICE,
             actions: [{ type: COMPACTED_ACTION }],
+            notificationKey: COMPACTED_ACTION,
           });
       },
       summarizer: summarizerFrom(

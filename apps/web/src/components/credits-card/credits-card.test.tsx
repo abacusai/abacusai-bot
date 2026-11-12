@@ -865,6 +865,53 @@ describe("the plan's credit milestone card", () => {
     }
   });
 
+  it("never from a mark the account has moved past: a free 80% mark after upgrading to Basic, a paid mark after a new month", async () => {
+    const settle = () =>
+      act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+    for (const options of [
+      // Back in the app right after paying: Basic, nothing used yet.
+      {
+        account: {
+          ...ACCOUNT,
+          subscription_tier: "basic",
+          credits_granted: 20_000,
+          credits_used: 0,
+        },
+        mark: {
+          ...MARK,
+          reached: 80 as const,
+          used: 1640,
+          plan: "free" as const,
+        },
+      },
+      // A paid plan's new month, before the watch's next read lowers the mark.
+      {
+        account: {
+          ...ACCOUNT,
+          subscription_tier: "pro",
+          credits_granted: 20_000,
+          credits_used: 1000,
+        },
+        mark: {
+          ...MARK,
+          reached: 80 as const,
+          used: 16_400,
+          granted: 20_000,
+          plan: "paid" as const,
+        },
+      },
+    ]) {
+      const h = await host(options);
+      await settle();
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(h.steps()).toEqual([]);
+      await cleanup?.();
+      cleanup = undefined;
+    }
+  });
+
   it("Upgrade opens the upgrade flow and answers the card", async () => {
     const h = await host();
     const upgrade = await screen.findByRole("button", {

@@ -169,7 +169,8 @@ export const SuccessPitchRow = ({
     key != null &&
     pendingThreshold(
       prefs.creditThresholds?.[key],
-      prefs.dismissals.creditThresholdCards?.[key]
+      prefs.dismissals.creditThresholdCards?.[key],
+      account
     ) != null;
   const eligible =
     offer != null &&

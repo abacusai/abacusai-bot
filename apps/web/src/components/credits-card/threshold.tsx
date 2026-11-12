@@ -11,7 +11,7 @@ import { cheaperModelOffer } from "@abacus-ai/contract/cheaper-model";
 import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 import {
   creditAccountKey,
-  creditMilestonePlan,
+  markHolds,
   type CreditTaskKind,
   type CreditThreshold,
   creditThresholdWords,
@@ -350,11 +350,9 @@ export const CreditThresholdHost = ({
   const mark = key != null ? prefs.creditThresholds?.[key] : undefined;
   const cards = prefs.dismissals.creditThresholdCards ?? {};
   const card = key != null ? cards[key] : undefined;
-  // The plan the watch stamped on the mark, as every surface reads it.
-  const plan =
-    mark != null && creditMilestonePlan(account) != null
-      ? markPlan(mark)
-      : null;
+  // Only a mark that still describes the account speaks: one from before an
+  // upgrade, a new month or a top-up shows nothing (markHolds).
+  const plan = markHolds(mark, account) ? markPlan(mark) : null;
   const balance = milestoneBalance(account);
   const total = balance?.granted ?? null;
   // The account query can trail the read that stamped the mark.
@@ -365,7 +363,7 @@ export const CreditThresholdHost = ({
   // At the whole of the credits the out-of-credits card speaks instead.
   const owed =
     plan != null && used != null && total != null && used < total
-      ? pendingThreshold(mark, card)
+      ? pendingThreshold(mark, card, account)
       : null;
   const { data: billing, isPending: billingPending } = useQuery({
     ...transport.orpc.account.billingPlan.queryOptions({ input: {} }),

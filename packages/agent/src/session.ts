@@ -817,6 +817,14 @@ export class AbacusBotSession {
         actions: [{ type: CREDITS_LOW_ACTION, amount: left }],
         notificationKey: CREDITS_LOW_ACTION,
       }),
+    onCreditsRestored: () =>
+      this.emitAgentEvent({
+        type: "notification",
+        severity: "info",
+        message: "",
+        notificationKey: CREDITS_LOW_ACTION,
+        cleared: true,
+      }),
     onCloseOut: (hit) =>
       this.emitAgentEvent({
         type: "notification",
@@ -830,6 +838,7 @@ export class AbacusBotSession {
         severity: "info",
         message: COMPACTED_NOTICE,
         actions: [{ type: COMPACTED_ACTION }],
+        notificationKey: COMPACTED_ACTION,
       }),
     summarizer: summarizerFrom(
       () => this.registry,

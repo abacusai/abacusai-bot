@@ -587,6 +587,7 @@ import {
   routineStopsAtWall,
   accountReadDueAtWall,
   wallAfterAccountRead,
+  wallAfterPlanChange,
   wallAfterError,
   wallMoved,
   wallReopenAfterError,
@@ -2166,6 +2167,12 @@ export class ServiceHost {
   private readonly stopPlanForwarding = onAbacusPlanChange(() => {
     this.toolAvailabilityChanged();
     this.moveModelPinsToTier();
+    // State the old plan's credits set ends with it: the wall, a free-models
+    // choice at it, and milestone marks. Every agent hears the wall move.
+    const prefs = this.prefs?.();
+    const wall = prefs != null ? wallAfterPlanChange(prefs.get()) : null;
+    if (wall != null) prefs?.update(wall);
+    void this.creditThresholds.planChanged();
   });
   private readonly cronScheduler = new CronScheduler(
     async (jobId, trigger, fire) => {

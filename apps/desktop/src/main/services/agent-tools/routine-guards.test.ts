@@ -22,6 +22,7 @@ import {
   routineStopsAtWall,
   wallAfterAccountRead,
   wallAfterError,
+  wallAfterPlanChange,
   wallReopenAfterError,
   wallReopenAfterWrite,
   wallMoved,
@@ -359,6 +360,19 @@ describe("the credit wall a routine meets", () => {
     });
   });
 
+  it("goes the moment the plan changes, with a free-models choice made at it, even right after the wall", () => {
+    expect(wallAfterPlanChange(row({ creditsExhaustedAt: 1_000 }))).toEqual({
+      creditsExhaustedAt: null,
+      freeLaneChosenAt: null,
+    });
+    expect(
+      wallAfterPlanChange(
+        row({ creditsExhaustedAt: 1_000, freeLaneChosenAt: 2_000 })
+      )
+    ).toEqual({ creditsExhaustedAt: null, freeLaneChosenAt: null });
+    expect(wallAfterPlanChange(row())).toBeNull();
+  });
+
   it("tells every agent when it moves, and only then", () => {
     expect(wallMoved(row({ creditsExhaustedAt: 1 }), row())).toBe(true);
     expect(wallMoved(row({ freeLaneChosenAt: 2 }), row())).toBe(true);
@@ -550,6 +564,37 @@ describe("the plan's credit milestones", () => {
     const last = h.mark();
     expect(await h.settle(1950)).toEqual(last);
     expect(await h.settle(2000)).toEqual(last);
+  });
+
+  it("a plan change drops the old plan's mark and its answer at once, before any turn", async () => {
+    const h = setup();
+    expect(await h.settle(1640)).toMatchObject({ reached: 80, plan: "free" });
+    h.answer(80);
+    h.account.subscription_tier = "basic";
+    h.account.credits_granted = 20_000;
+    h.account.credits_used = 0;
+    await h.watch.planChanged();
+    expect(h.mark()).toBeUndefined();
+    expect(h.card()).toBeUndefined();
+    // Nothing to drop on the plan the mark was stamped on.
+    expect(await h.settle(10_000)).toMatchObject({ reached: 50, plan: "paid" });
+    await h.watch.planChanged();
+    expect(h.mark()).toMatchObject({ reached: 50, plan: "paid" });
+  });
+
+  it("an upgrade drops the free plan's mark and its answer; the paid plan starts its own afresh", async () => {
+    const h = setup();
+    expect(await h.settle(1640)).toMatchObject({ reached: 80, plan: "free" });
+    h.answer(80);
+    h.account.subscription_tier = "basic";
+    h.account.credits_granted = 20_000;
+    expect(await h.settle(0)).toBeUndefined();
+    expect(h.card()).toBeUndefined();
+    expect(await h.settle(10_000)).toMatchObject({
+      reached: 50,
+      plan: "paid",
+      granted: 20_000,
+    });
   });
 
   it("estimates from today's post-turn reads: credits per completed turn, and what they were", async () => {
