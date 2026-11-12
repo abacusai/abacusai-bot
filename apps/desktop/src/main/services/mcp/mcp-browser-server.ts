@@ -314,6 +314,8 @@ const TOOLS_SCHEMA: Record<
       "wait:          until text appears, a URL matches, or an element exists",
       "               (params: text | url_pattern | ref, amount = timeout ms). Use this instead",
       "               of snapshotting in a loop while results load.",
+      "upload:        give a file picker a file (params: ref, path). Only a file in this chat's",
+      "               workspace, where the user's attachments are; any other path is refused.",
     ].join("\n"),
     inputSchema: {
       type: "object",
@@ -335,6 +337,7 @@ const TOOLS_SCHEMA: Record<
             "check",
             "uncheck",
             "wait",
+            "upload",
           ],
           description: "Interaction action",
         },
@@ -352,6 +355,11 @@ const TOOLS_SCHEMA: Record<
           type: "string",
           description:
             "Text for fill/pick/type, or the text to wait for in wait",
+        },
+        path: {
+          type: "string",
+          description:
+            "upload only: the file, relative to this chat's workspace or absolute inside it",
         },
         value: {
           type: "string",
@@ -684,6 +692,12 @@ export interface McpBrowserServerOptions {
   /** Where screenshots are kept for `send_media`; without one they get no media id. */
   media?: () => MediaStore | null;
   /**
+   * The chat's workspace, where its files and the attachments the user
+   * pasted or dropped are (`.abacusai-bot/temp/`): the only files `upload`
+   * gives a page. Null when the host does not know it; then nothing uploads.
+   */
+  workspaceForSession?: (sessionId: string) => string | null;
+  /**
    * The user's vault: its tools are served here, beside the page they read
    * origins from. Read per call; null (or absent) where there is none, and
    * then no vault tool is listed.
@@ -725,9 +739,19 @@ class UnreadablePageError extends Error {
 
 /** A file picker is no text field, and no tool picks a file from the computer. */
 const FILE_INPUT_REFUSAL = (label: string): string =>
-  `${label} is a file picker: it takes a file, not text, and the browser tools cannot choose a file ` +
-  'from the computer. Stop with browser_pause need:"details" and fields naming the file the user ' +
-  "should upload; they choose it themselves.";
+  `${label} is a file picker: it takes a file, not text. Use action "upload" with the path of a file ` +
+  "in this chat's workspace (the user's attachments are there). If the task names no such file, stop " +
+  'with browser_pause need:"details" and fields naming the file the user should attach.';
+
+/** The largest file `upload` gives a page. */
+const UPLOAD_MAX_BYTES = 100 * 1024 * 1024;
+
+/** Whether the element is a file input: "ok", "not_file" or "not_found". */
+const fileInputScript = (selector: string): string => `(() => {
+  const el = document.querySelector(${JSON.stringify(selector)});
+  if (el == null) return { status: "not_found" };
+  return el instanceof HTMLInputElement && el.type === "file" ? { status: "ok" } : { status: "not_file" };
+})()`;
 
 export class McpBrowserServer extends McpHttpServer {
   /** The last snapshot's refs, per session. See SnapshotStore. */
@@ -1686,6 +1710,49 @@ export class McpBrowserServer extends McpHttpServer {
     return this.options.target?.()?.framePage?.(wc.id, frameId) ?? null;
   }
 
+  /**
+   * The file `upload` may give a page: a file inside the chat's workspace,
+   * checked on real paths so a link inside it cannot point out of it.
+   */
+  private uploadFile(
+    raw: unknown,
+    sessionId?: string
+  ): { path: string } | { refused: string } {
+    if (typeof raw !== "string" || raw.trim().length === 0)
+      return {
+        refused: '"path" is required for upload: the file to give the page.',
+      };
+    const workspace =
+      sessionId == null
+        ? null
+        : (this.options.workspaceForSession?.(sessionId) ?? null);
+    if (workspace == null)
+      return {
+        refused:
+          "This chat has no workspace the browser can see, so it cannot upload a file. Tell the user to upload it themselves.",
+      };
+    const outside = `${raw} is outside this chat's workspace. Only a file in the workspace, or one the user attached to the chat, can be uploaded: ask the user to attach it.`;
+    let real: string;
+    let root: string;
+    try {
+      root = fs.realpathSync(workspace);
+      real = fs.realpathSync(path.resolve(workspace, raw.trim()));
+    } catch {
+      return {
+        refused: `There is no file at ${raw} in this chat's workspace.`,
+      };
+    }
+    if (real !== root && !real.startsWith(root + path.sep))
+      return { refused: outside };
+    const stat = fs.statSync(real);
+    if (!stat.isFile()) return { refused: `${raw} is not a file.` };
+    if (stat.size > UPLOAD_MAX_BYTES)
+      return {
+        refused: `${raw} is larger than 100 MB; ask the user to upload it themselves.`,
+      };
+    return { path: real };
+  }
+
   /** The page's dialogs answered for the bot (Cancel, never OK) while it acts. */
   private async holdDialogs(wc: BrowserPage): Promise<void> {
     await answerDialogsWhileActing(wc, (method, params) =>
@@ -2513,6 +2580,7 @@ export class McpBrowserServer extends McpHttpServer {
 
   /** Actions after which the page is expected to have changed. */
   private static readonly REPORTS_CHANGES = new Set([
+    "upload",
     "click",
     "fill",
     "type",
@@ -2661,6 +2729,35 @@ export class McpBrowserServer extends McpHttpServer {
         const detail = result?.text ? ` "${result.text.trim()}"` : "";
         return this.ok(
           `Clicked ${this.label(args)}${detail} at (${result?.x},${result?.y}).`
+        );
+      }
+
+      case "upload": {
+        const resolved = this.target(args, sessionId);
+        if (resolved.kind !== "selector")
+          return this.err(this.refError(args, snapshot.refMap.size));
+        const file = this.uploadFile(args.path, sessionId);
+        if ("refused" in file) return this.err(file.refused);
+        const found = await this.evalJS(wc, fileInputScript(resolved.selector));
+        if (found?.status === "not_found")
+          return this.err(this.notFoundError(args, resolved.selector));
+        if (found?.status !== "ok")
+          return this.err(
+            `${this.label(args)} is not a file picker: upload gives a file only to an <input type="file">.`
+          );
+        const doc = await this.cdp(wc, "DOM.getDocument", { depth: 0 });
+        const node = await this.cdp(wc, "DOM.querySelector", {
+          nodeId: doc?.root?.nodeId,
+          selector: resolved.selector,
+        });
+        if (typeof node?.nodeId !== "number" || node.nodeId === 0)
+          return this.err(this.notFoundError(args, resolved.selector));
+        await this.cdp(wc, "DOM.setFileInputFiles", {
+          files: [file.path],
+          nodeId: node.nodeId,
+        });
+        return this.ok(
+          `Chose "${path.basename(file.path)}" in ${this.label(args)}. The page has the file; submit the form if it needs that.`
         );
       }
 
@@ -3029,7 +3126,7 @@ export class McpBrowserServer extends McpHttpServer {
 
       default:
         return this.err(
-          `Unknown interact action: ${action || "(none)"}. Use click, fill, pick, type, select, press, dismiss, check, uncheck, hover, focus, scroll, scroll_into_view or wait.`
+          `Unknown interact action: ${action || "(none)"}. Use click, fill, pick, type, select, press, dismiss, check, uncheck, hover, focus, scroll, scroll_into_view, wait or upload.`
         );
     }
   }

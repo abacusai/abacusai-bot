@@ -1335,6 +1335,7 @@ export class ServiceHost {
     media: () => (this.platform === "web-host" ? this.mediaStore : null),
     conversationKeyForSession: (sessionId) =>
       this.conversationKeyForSession(sessionId),
+    workspaceForSession: (sessionId) => this.sessionDirectory(sessionId),
     vault: () => this.vault,
     channelForSession: (sessionId) => this.laneChannels.get(sessionId) ?? null,
     isOwnerSession: (sessionId) => this.isOwnerSession(sessionId),

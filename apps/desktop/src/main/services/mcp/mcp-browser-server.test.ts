@@ -13,11 +13,13 @@
  * something that did not happen, and never act on a target the caller did not
  * name.
  */
+import fs from "fs";
 import os from "os";
 import path from "path";
 
 import {
   afterAll,
+  afterEach,
   beforeAll,
   beforeEach,
   describe,
@@ -469,6 +471,9 @@ const oneButton = {
 };
 
 /** Take a snapshot so `@e1` is live for this session. */
+/** Each chat's workspace, as the host knows it; none unless a case sets one. */
+const workspaces = new Map<string, string>();
+
 const seedRefs = async (
   session = "session-1",
   payload: unknown = oneButton
@@ -490,6 +495,7 @@ beforeAll(async () => {
   server = new McpBrowserServer({
     target: () => fakeTarget,
     media: () => mediaStore,
+    workspaceForSession: (sessionId) => workspaces.get(sessionId) ?? null,
     timeouts: { attachMs: 300, navigateMs: 600, historyMs: 600 },
   });
   port = await server.start();
@@ -978,6 +984,93 @@ describe("interacting", () => {
     const take = evaluated.findIndex((e) => e.includes("splice(0)"));
     expect(holds).toBeGreaterThanOrEqual(0);
     expect(take).toBeGreaterThan(holds);
+  });
+
+  describe("upload", () => {
+    /** The page's file input found over DOM, and the files it was given. */
+    const fileInput = () => {
+      const given: unknown[] = [];
+      const own = page.debugger.sendCommand;
+      page.debugger.sendCommand = async (method, params) => {
+        if (method === "DOM.getDocument") return { root: { nodeId: 1 } };
+        if (method === "DOM.querySelector") return { nodeId: 5 };
+        if (method === "DOM.setFileInputFiles") {
+          given.push(params);
+          return {};
+        }
+        return own(method, params);
+      };
+      return given;
+    };
+    let workspace: string;
+    beforeEach(() => {
+      workspace = fs.mkdtempSync(path.join(os.tmpdir(), "upload-ws-"));
+      workspaces.set("session-1", workspace);
+    });
+    afterEach(() => workspaces.clear());
+
+    it("gives a file input a file from the chat's workspace, an attachment there too", async () => {
+      // The browser could not choose a file at all, so a bot wrote a script
+      // that built one in the page instead.
+      const attached = path.join(workspace, ".abacusai-bot", "temp", "cv.pdf");
+      fs.mkdirSync(path.dirname(attached), { recursive: true });
+      fs.writeFileSync(attached, "pdf");
+      await seedRefs();
+      const given = fileInput();
+      respondWith(() => ({ status: "ok" }));
+      const { text, isError } = await call("browser_interact", {
+        action: "upload",
+        ref: "@e1",
+        path: ".abacusai-bot/temp/cv.pdf",
+      });
+
+      expect(isError).toBe(false);
+      expect(text).toContain('Chose "cv.pdf"');
+      expect(given).toEqual([
+        { files: [fs.realpathSync(attached)], nodeId: 5 },
+      ]);
+    });
+
+    it("refuses a file outside the workspace, through a link too, and gives the page nothing", async () => {
+      const outside = path.join(os.tmpdir(), `outside-${Date.now()}.txt`);
+      fs.writeFileSync(outside, "secret");
+      fs.symlinkSync(outside, path.join(workspace, "link.txt"));
+      await seedRefs();
+      const given = fileInput();
+      respondWith(() => ({ status: "ok" }));
+      for (const file of [outside, "link.txt", "../x.txt"]) {
+        const { text, isError } = await call("browser_interact", {
+          action: "upload",
+          ref: "@e1",
+          path: file,
+        });
+        expect(isError).toBe(true);
+        expect(text).toMatch(/workspace|no file/);
+      }
+      expect(given).toEqual([]);
+    });
+
+    it("refuses when the chat has no workspace, and on an element that is not a file picker", async () => {
+      fs.writeFileSync(path.join(workspace, "a.txt"), "a");
+      await seedRefs();
+      const given = fileInput();
+      respondWith(() => ({ status: "not_file" }));
+      const notPicker = await call("browser_interact", {
+        action: "upload",
+        ref: "@e1",
+        path: "a.txt",
+      });
+      expect(notPicker.isError).toBe(true);
+      expect(notPicker.text).toContain("not a file picker");
+      workspaces.clear();
+      const none = await call("browser_interact", {
+        action: "upload",
+        ref: "@e1",
+        path: "a.txt",
+      });
+      expect(none.isError).toBe(true);
+      expect(given).toEqual([]);
+    });
   });
 
   it("tells the agent a file picker takes a file it cannot choose, not a stack trace", async () => {

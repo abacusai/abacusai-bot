@@ -286,7 +286,9 @@ export function buildBrowserTaskTool(
       "",
       ...(vault
         ? [
-            "It cannot read files or run commands. It never types a password, card number, CVV or",
+            "It cannot read files or run commands, but it can give a page's file picker a file from your",
+            "workspace (the user's pasted or dropped attachments are there): name the file's path in the task.",
+            "It never types a password, card number, CVV or",
             "code itself, never solves a CAPTCHA, and never pays or books without the user's approval",
             "of that exact payment (payment_approval): the browser refuses a Pay click without one.",
             "At a step only the user can do it stops and says what it needs (traveler details, a",
@@ -294,7 +296,9 @@ export function buildBrowserTaskTool(
             "page is the question; the result says what to do next.",
           ]
         : [
-            "It cannot read files or run commands. It never types a password, card number, CVV or",
+            "It cannot read files or run commands, but it can give a page's file picker a file from your",
+            "workspace (the user's pasted or dropped attachments are there): name the file's path in the task.",
+            "It never types a password, card number, CVV or",
             "code itself, never solves a CAPTCHA, and never pays or books: the browser refuses a",
             "Pay click. At a step only the user can do it stops and says what it needs (traveler",
             "details, a login, a code, the payment, a CAPTCHA, a choice), with a screenshot where",

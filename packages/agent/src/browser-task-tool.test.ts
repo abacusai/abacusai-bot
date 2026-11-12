@@ -134,6 +134,19 @@ describe("when to use it", () => {
   });
 });
 
+describe("uploads", () => {
+  it("tells the caller a run can upload a file from the workspace, named in the task", () => {
+    // It said only "it cannot read files", so a bot never handed it one.
+    const tool = buildBrowserTaskTool(
+      { cwd: process.cwd(), channel: APP_CHANNEL } as never,
+      () => undefined
+    );
+    expect(tool.description).toMatch(
+      /file picker a file from your\s+workspace[^.]*name the file's path in the task/
+    );
+  });
+});
+
 describe("what the caller is told about a step only the user can do", () => {
   it("sends an app chat's user to the Browser pane", async () => {
     const tool = buildBrowserTaskTool(
