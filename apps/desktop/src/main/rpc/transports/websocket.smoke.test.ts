@@ -56,6 +56,7 @@ describe("the router over a WebSocket (A-T5)", () => {
         app: {
           appVersion: () => "9.9.9",
           systemLanguages: () => ["tr-TR", "en-US"],
+          trayAvailable: () => null,
           homeDir: () => "/h",
           botHome: () => "/h/.abacusai-bot",
           legacyInstall: () => false,

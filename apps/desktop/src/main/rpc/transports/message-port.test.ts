@@ -334,6 +334,7 @@ describe("the router over a MessagePort (A-T2)", () => {
           botHome: () => "/Users/ada/.abacusai-bot",
           legacyInstall: () => false,
           systemLanguages: () => [],
+          trayAvailable: () => null,
         },
         host: { sessionHomePath: () => "/Users/ada/AbacusAI" },
         serviceHost: {

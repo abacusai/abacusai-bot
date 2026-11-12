@@ -66,7 +66,7 @@ import type { HostOperations } from "./handler";
 import { electronHostPlatform } from "./host-operations/electron";
 import { followMainAgentBusy, followRoutineDue } from "./keep-awake";
 import { decideLocalOpen } from "./local-open-guard";
-import { openedAtLogin } from "./login-item";
+import { appLinuxAutostart, openedAtLogin } from "./login-item";
 import { throttleMainWindowWhileHidden } from "./main-window-throttle";
 import { restoreLegacyFiles } from "./migrations/restore-legacy";
 import {
@@ -124,7 +124,7 @@ import {
   importLegacySoundOptOut,
   importLegacyTourSeen,
 } from "./services/config/legacy-prefs";
-import { createLoginItem, xdgAutostart } from "./services/config/login-item";
+import { createLoginItem } from "./services/config/login-item";
 import {
   appLanguage,
   nativeT,
@@ -1460,6 +1460,7 @@ const appOperations: AppOperations = {
 
   appVersion: () => app.getVersion(),
   systemLanguages: () => osLanguages(),
+  trayAvailable: () => backgroundTray.available,
   homeDir: () => os.homedir(),
   botHome: () => abacusBotHome(),
   legacyInstall: () => legacyInstall,
@@ -1637,19 +1638,7 @@ const appOperations: AppOperations = {
     return { density, appliesOnRestart: false };
   },
 
-  loginItem: createLoginItem(
-    app,
-    process.platform,
-    // A dev build would start the bare Electron binary at login.
-    process.platform === "linux" && app.isPackaged
-      ? xdgAutostart({
-          configHome:
-            process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config"),
-          executable: process.env.APPIMAGE || process.execPath,
-          name: APP_DISPLAY_NAME,
-        })
-      : null
-  ),
+  loginItem: createLoginItem(app, process.platform, appLinuxAutostart()),
 
   takeOpenLink: () => openLinks.take(),
 

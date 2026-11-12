@@ -26,6 +26,8 @@ export interface SystemInfo {
   materialIconsBasePath: string | null;
   contractVersion: number;
   foundationApi: number;
+  /** This desktop can show the app's tray icon; absent while unknown or off the desktop app. */
+  trayAvailable?: boolean;
 }
 
 export interface NotificationMetadata {

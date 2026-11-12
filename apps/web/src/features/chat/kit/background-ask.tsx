@@ -111,6 +111,7 @@ export const BackgroundAskRow = ({
         ? login.data.openAtLogin
         : null,
     asked: card != null,
+    trayAvailable: preview ? true : (info.data?.trayAvailable ?? null),
   };
   const candidate =
     eligible && card == null && ended && backgroundAskWanted(state)

@@ -1,7 +1,8 @@
 /**
  * The app opens at login, from the first sign-in on. Registered once per
  * install: the OS tells the user it happened, and a user who then turns it
- * off in the system settings is not signed up again.
+ * off in the system settings is not signed up again. On Linux it is an XDG
+ * autostart entry.
  */
 import fs from "fs";
 import os from "os";
@@ -10,17 +11,35 @@ import path from "path";
 import { app } from "electron";
 
 import { profileBaseDir } from "./profile-home";
+import {
+  type LinuxAutostart,
+  xdgAutostart,
+} from "./services/config/login-item";
 
 const MARKER = "login-item";
+
+/** A packaged Linux app's autostart entry; null elsewhere, and in a dev build (it would start the bare Electron binary). */
+export const appLinuxAutostart = (): LinuxAutostart | null =>
+  process.platform === "linux" && app.isPackaged
+    ? xdgAutostart({
+        configHome:
+          process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config"),
+        executable: process.env.APPIMAGE || process.execPath,
+        name: "AbacusAI Bot",
+      })
+    : null;
 
 export const registerLoginItem = (): void => {
   // A dev build would register the bare Electron binary.
   if (!app.isPackaged) return;
-  if (process.platform !== "darwin" && process.platform !== "win32") return;
+  const linux = appLinuxAutostart();
+  if (process.platform !== "darwin" && process.platform !== "win32" && !linux)
+    return;
   const marker = path.join(profileBaseDir(), MARKER);
   if (fs.existsSync(marker)) return;
   try {
-    app.setLoginItemSettings({ openAtLogin: true });
+    if (linux != null) linux.write(true);
+    else app.setLoginItemSettings({ openAtLogin: true });
     fs.writeFileSync(marker, `${new Date().toISOString()}\n`);
   } catch (error) {
     console.warn(

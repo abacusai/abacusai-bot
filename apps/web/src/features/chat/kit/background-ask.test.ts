@@ -8,6 +8,7 @@ const fresh = {
   keepRunning: true,
   openAtLogin: false,
   asked: false,
+  trayAvailable: true,
   settled: true,
 };
 
@@ -17,6 +18,12 @@ describe("backgroundAskShows", () => {
     ["not settled yet", null, { ...fresh, settled: false }, false],
     ["both already on", null, { ...fresh, openAtLogin: true }, false],
     ["on macOS", null, { ...fresh, platform: "darwin" }, false],
+    [
+      "on a Linux desktop with no tray",
+      null,
+      { ...fresh, platform: "linux", trayAvailable: false },
+      false,
+    ],
     ["shown under this reply", { reply: "r", answered: false }, fresh, true],
     ["answered", { reply: "r", answered: true }, fresh, false],
     [

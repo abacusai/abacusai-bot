@@ -38,7 +38,7 @@ export const run = async ({ serve }) => {
     router: createRouter(),
     deps: fakeDeps({
       bus,
-      app: { appVersion: () => "smoke", homeDir: () => "/h", botHome: () => "/h/.abacusai-bot", legacyInstall: () => false, systemLanguages: () => [], account: { get: () => ({ account: null, apps: [], onboarded: true }) }, markRendererActivity: () => {} },
+      app: { appVersion: () => "smoke", homeDir: () => "/h", botHome: () => "/h/.abacusai-bot", legacyInstall: () => false, systemLanguages: () => [], trayAvailable: () => null, account: { get: () => ({ account: null, apps: [], onboarded: true }) }, markRendererActivity: () => {} },
       host: { sessionHomePath: () => "/h/AbacusAI", readSettings: () => ({ apiKeys: { ABACUS_API_KEY: "smoke" } }), getAbacusAccount: () => null, listModels: () => [], readApiKeyProviders: () => [], getConnectorStatuses: () => ({}) },
       serviceHost: {
  ensureSessionHomeWorkspace: () => null, getMetadata: () => ({ materialIconsBasePath: null, workspaces: [], activeWorkspaceId: null }),

@@ -65,6 +65,8 @@ export interface AppOperations {
   appVersion(): string;
   /** The OS's preferred languages, in order; see contract/languages.ts. */
   systemLanguages(): string[];
+  /** The desktop can show a tray icon; null while unknown or with no desktop. */
+  trayAvailable(): boolean | null;
   homeDir(): string;
   /** Where the app keeps its own files. */
   botHome(): string;

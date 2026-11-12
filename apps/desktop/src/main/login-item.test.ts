@@ -41,13 +41,37 @@ describe("the login item", () => {
     expect(fs.existsSync(path.join(base, "login-item"))).toBe(true);
   });
 
-  it("leaves a dev build and Linux alone", () => {
+  it("leaves a dev build alone", () => {
     electron.isPackaged = false;
     registerLoginItem();
-    electron.isPackaged = true;
     Object.defineProperty(process, "platform", { value: "linux" });
     registerLoginItem();
 
     expect(electron.setLoginItemSettings).not.toHaveBeenCalled();
+    expect(fs.existsSync(path.join(base, "login-item"))).toBe(false);
+  });
+
+  it("on Linux, writes the autostart entry once, and not again after the user removes it", () => {
+    const configHome = process.env.XDG_CONFIG_HOME;
+    process.env.XDG_CONFIG_HOME = path.join(base, "config");
+    const entry = path.join(
+      base,
+      "config",
+      "autostart",
+      "abacusai-bot.desktop"
+    );
+    try {
+      Object.defineProperty(process, "platform", { value: "linux" });
+      registerLoginItem();
+      expect(fs.readFileSync(entry, "utf8")).toContain("Exec=");
+      fs.rmSync(entry);
+      registerLoginItem();
+
+      expect(fs.existsSync(entry)).toBe(false);
+      expect(electron.setLoginItemSettings).not.toHaveBeenCalled();
+    } finally {
+      if (configHome == null) delete process.env.XDG_CONFIG_HOME;
+      else process.env.XDG_CONFIG_HOME = configHome;
+    }
   });
 });

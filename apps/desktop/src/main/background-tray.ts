@@ -38,12 +38,28 @@ export class BackgroundTray {
   private tray: Tray | null = null;
   private wanted = false;
   private generation = 0;
+  private readonly host: Promise<boolean>;
+  private hostFound: boolean | null = null;
+  private createFailed = false;
 
-  constructor(private readonly options: BackgroundTrayOptions) {}
+  constructor(private readonly options: BackgroundTrayOptions) {
+    // Asked once, at launch, so the answer is in before the window asks.
+    this.host =
+      options.platform === "linux" ? linuxTrayHost() : Promise.resolve(true);
+    void this.host.then((found) => {
+      this.hostFound = found;
+    });
+  }
 
   /** The icon is up, so a closed window can come back. */
   get shown(): boolean {
     return this.tray != null && !this.tray.isDestroyed();
+  }
+
+  /** This desktop can show the icon; null until known. */
+  get available(): boolean | null {
+    if (this.createFailed) return false;
+    return this.hostFound;
   }
 
   /** Puts the icon up or takes it down; a desktop that cannot show one leaves it down. */
@@ -56,7 +72,7 @@ export class BackgroundTray {
       this.tray = null;
       return;
     }
-    if (this.options.platform === "linux" && !(await linuxTrayHost())) {
+    if (!(await this.host)) {
       console.warn("[tray] no tray on this desktop; closing quits");
       return;
     }
@@ -72,6 +88,7 @@ export class BackgroundTray {
         `[tray] not created: ${error instanceof Error ? error.message : String(error)}`
       );
       this.tray = null;
+      this.createFailed = true;
     }
   }
 
