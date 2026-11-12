@@ -1155,6 +1155,64 @@ describe("interacting", () => {
     expect(moves).toEqual([{ type: "mouseMoved", x: 120, y: 340 }]);
   });
 
+  it("says plainly when the browser will not take a file, and never clicks a file picker", async () => {
+    // In the user's Chrome the extension may not set a file ("Not allowed"):
+    // the raw error came back, the run clicked the input, and a native Open
+    // File dialog opened on the user's screen.
+    workspaces.set("session-1", fs.mkdtempSync(path.join(os.tmpdir(), "up-")));
+    fs.writeFileSync(path.join(workspaces.get("session-1")!, "a.txt"), "a");
+    await seedRefs();
+    const own = page.debugger.sendCommand;
+    page.debugger.sendCommand = async (method, params) => {
+      if (method === "DOM.getDocument") return { root: { nodeId: 1 } };
+      if (method === "DOM.querySelector") return { nodeId: 5 };
+      if (method === "DOM.setFileInputFiles") throw new Error("Not allowed");
+      return own(method, params);
+    };
+    respondWith(() => ({ status: "ok" }));
+    const refused = await call("browser_interact", {
+      action: "upload",
+      ref: "@e1",
+      path: "a.txt",
+    });
+    expect(refused.isError).toBe(true);
+    expect(refused.text).toContain(
+      "does not let the browser tools give a page a file"
+    );
+    expect(refused.text).not.toContain("Not allowed");
+    // Clicking it would open the computer's file chooser.
+    respondWith((expression) =>
+      expression.includes("filePicker")
+        ? { filePicker: true }
+        : { status: "ok", tag: "input", x: 1, y: 2 }
+    );
+    evaluated.length = 0;
+    const clicked = await call("browser_interact", {
+      action: "click",
+      ref: "@e1",
+    });
+    expect(clicked.isError).toBe(true);
+    expect(clicked.text).toContain("opens the computer's file chooser");
+    workspaces.clear();
+  });
+
+  it("refuses a script that makes up a file for the page", async () => {
+    // Refused the real file, a run built one in the page with invented contents.
+    respondWith(() => "ran");
+    for (const code of [
+      "const dt = new DataTransfer(); dt.items.add(new File(['hi'], 'a.txt')); el.files = dt.files;",
+      "input.files = list",
+    ]) {
+      const { text, isError } = await call("browser_execute", { code });
+      expect(isError, code).toBe(true);
+      expect(text).toContain("Scripts may not give a page a file");
+    }
+    expect(
+      (await call("browser_execute", { code: "return el.files.length" }))
+        .isError
+    ).toBe(false);
+  });
+
   it("tells the agent a file picker takes a file it cannot choose, not a stack trace", async () => {
     await seedRefs();
     respondWith(() => ({ status: "file_input" }));

@@ -753,6 +753,20 @@ const REPLACES_DIALOGS =
 const DIALOG_SCRIPT_REFUSAL =
   "Scripts may not replace the page's alert, confirm or prompt. A page's confirm is never answered OK and its prompt never filled in: the browser answers Cancel. Report what the page asked; if the user wants it confirmed, they do that step on the site in their own browser.";
 
+/** Whether clicking the element opens a file chooser: a file input, or a label for one. */
+const opensFileChooserScript = (selector: string): string => `(() => {
+  const el = document.querySelector(${JSON.stringify(selector)});
+  if (el == null) return { filePicker: false };
+  const control = el instanceof HTMLLabelElement ? el.control : el.closest("label")?.control ?? el;
+  return { filePicker: control instanceof HTMLInputElement && control.type === "file" };
+})()`;
+
+/** A script that puts a file of its own making into the page: invented contents under a real name. */
+const MAKES_FILES = /\.files\s*=(?!=)|\bnew\s+DataTransfer\b|\bnew\s+File\s*\(/;
+
+const FILE_SCRIPT_REFUSAL =
+  'Scripts may not give a page a file. Use browser_interact action "upload" with a file from this chat\'s workspace; where the browser does not allow that, the user chooses the file themselves.';
+
 /** The largest file `upload` gives a page. */
 const UPLOAD_MAX_BYTES = 100 * 1024 * 1024;
 
@@ -2746,6 +2760,15 @@ export class McpBrowserServer extends McpHttpServer {
         );
         if (typeof href === "string" && this.isAbacus(href))
           return this.err(ABACUS_REFUSAL);
+        // A click on a file picker opens the computer's file chooser, on the
+        // user's screen in their own browser, and leaves it there.
+        const picker = await this.evalJS(wc, opensFileChooserScript(sel)).catch(
+          () => null
+        );
+        if (picker?.filePicker === true)
+          return this.err(
+            `${this.label(args)} is a file picker: clicking it opens the computer's file chooser. Use action "upload" with a file from this chat's workspace.`
+          );
         const clicked = await this.guardedClick(
           top,
           wc,
@@ -2790,10 +2813,17 @@ export class McpBrowserServer extends McpHttpServer {
         });
         if (typeof node?.nodeId !== "number" || node.nodeId === 0)
           return this.err(this.notFoundError(args, resolved.selector));
-        await this.cdp(wc, "DOM.setFileInputFiles", {
-          files: [file.path],
-          nodeId: node.nodeId,
-        });
+        try {
+          await this.cdp(wc, "DOM.setFileInputFiles", {
+            files: [file.path],
+            nodeId: node.nodeId,
+          });
+        } catch {
+          // The user's own Chrome lets no extension set a file ("Not allowed").
+          return this.err(
+            `This browser does not let the browser tools give a page a file. Ask the user to choose "${path.basename(file.path)}" themselves in ${this.label(args)}, in that tab, and tell you when it is done. Do not click the file picker: that opens the computer's file chooser.`
+          );
+        }
         return this.ok(
           `Chose "${path.basename(file.path)}" in ${this.label(args)}. The page has the file; submit the form if it needs that.`
         );
@@ -3188,6 +3218,7 @@ export class McpBrowserServer extends McpHttpServer {
     const code = args.code as string;
     if (!code) return this.err('"code" is required.');
     if (REPLACES_DIALOGS.test(code)) return this.err(DIALOG_SCRIPT_REFUSAL);
+    if (MAKES_FILES.test(code)) return this.err(FILE_SCRIPT_REFUSAL);
     const secrets = this.secretsOf(wc);
     const refusal = await secrets.executeRefusal(wc, this.vault != null);
     if (refusal != null) return this.err(refusal);
