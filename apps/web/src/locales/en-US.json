@@ -389,7 +389,14 @@
       "namePlaceholder": "Name your bot",
       "templates": "Templates",
       "more": "More",
-      "uses": "Uses"
+      "uses": "Uses",
+      "resume": {
+        "title": "Pick up where you left off",
+        "untitled": "Untitled chat",
+        "open": "Open chat",
+        "nextSteps": "Next steps",
+        "dismiss": "Dismiss"
+      }
     },
     "chat": {
       "deliverables": {

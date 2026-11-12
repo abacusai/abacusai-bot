@@ -73,6 +73,13 @@ export const FUNNEL_STEPS = [
   // left, by which one, kind and whether it named a task; then a click.
   "work_waiting_shown",
   "work_waiting_clicked",
+  // The app opened from an abacusaibot:// link; the detail is its src code.
+  "opened_from_link",
+  // "Pick up where you left off" on the home screen: shown, a chip or the
+  // chat opened (detail: chip or chat), closed.
+  "resume_card_shown",
+  "resume_card_opened",
+  "resume_card_dismissed",
   // The retry on a top model (retry-offer.ts). The line, by why it showed
   // (with _paid on a paying plan); a tap and a close; and the message sent
   // again on the model, once switched.
@@ -236,5 +243,5 @@ export const funnelId = (id: string): string =>
 
 export const funnelDetail = (value: unknown): string =>
   typeof value === "string"
-    ? value.replace(/[^A-Za-z0-9_]/g, "").slice(0, 32)
+    ? value.replace(/[^A-Za-z0-9_]/g, "").slice(0, 40)
     : "";

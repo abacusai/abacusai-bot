@@ -26,6 +26,7 @@ import {
   onboardingOfferAccountStep,
 } from "@abacus-ai/contract/funnel";
 import { THEME_FILE_MAX_BYTES } from "@abacus-ai/contract/look";
+import { openLinkInArgv } from "@abacus-ai/contract/open-link";
 import {
   canSignOutOfAbacus,
   PROVIDER_ENV_VARS,
@@ -72,6 +73,7 @@ import { NotchController } from "./notch/controller";
 import { CueArbiter } from "./notch/cue-arbiter";
 import { wireMainNotchEvents } from "./notch/main-events";
 import { NotchNotificationPolicy } from "./notch/notifications";
+import { launchLink, OpenLinkInbox, registerOpenLinkScheme } from "./open-link";
 import { abacusBotHome, userTempDir, WORKSPACE_DIR_NAME } from "./paths";
 import { isLowEndMachine } from "./platform/low-end-machine";
 import { profileBaseDir } from "./profile-home";
@@ -1562,6 +1564,8 @@ const appOperations: AppOperations = {
 
   loginItem: createLoginItem(app),
 
+  takeOpenLink: () => openLinks.take(),
+
   markRendererActivity() {
     lastRendererActivity = Date.now();
   },
@@ -1758,8 +1762,36 @@ function revealOnRelaunch(): void {
     void app.dock.show();
   revealMainWindow();
 }
+const openLinks = new OpenLinkInbox({
+  reveal: revealOnRelaunch,
+  announce: () => emitBusChannel("system", { type: "open-link" }),
+  funnel: (src) => reportFunnelStep("opened_from_link", src),
+});
+const receiveOpenLink = (raw: string | null): void => {
+  if (raw == null) return;
+  if (app.isReady()) openLinks.receive(raw);
+  else void app.whenReady().then(() => openLinks.receive(raw));
+};
+// A launch that lost the lock asks again every half second; only its first
+// ask carries its link, or one click would open it sixty times.
+const SINGLE_INSTANCE_RETRY = { retry: true };
+function onSecondInstance(
+  _event: unknown,
+  argv: string[],
+  _workingDirectory: string,
+  data: unknown
+): void {
+  revealOnRelaunch();
+  if ((data as { retry?: unknown } | null)?.retry !== true)
+    receiveOpenLink(openLinkInArgv(argv));
+}
+// macOS, before `whenReady` too: a link can be what launched the app.
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  receiveOpenLink(url);
+});
 if (gotSingleInstanceLock) {
-  app.on("second-instance", revealOnRelaunch);
+  app.on("second-instance", onSecondInstance);
 }
 
 app
@@ -1771,13 +1803,15 @@ app
       // app. A genuinely running primary keeps the lock and this process quits.
       for (let attempt = 0; attempt < 60 && !gotSingleInstanceLock; attempt++) {
         await new Promise((resolve) => setTimeout(resolve, 500));
-        gotSingleInstanceLock = app.requestSingleInstanceLock();
+        gotSingleInstanceLock = app.requestSingleInstanceLock(
+          SINGLE_INSTANCE_RETRY
+        );
       }
       if (!gotSingleInstanceLock) {
         app.quit();
         return;
       }
-      app.on("second-instance", revealOnRelaunch);
+      app.on("second-instance", onSecondInstance);
     }
 
     if (process.argv.includes("--restore-legacy-files")) {
@@ -1791,6 +1825,9 @@ app
       }
       return;
     }
+
+    registerOpenLinkScheme(app);
+    receiveOpenLink(launchLink(process.argv, process.env));
 
     app.setAppUserModelId("ai.abacus.bot");
     if (legacyInstall && process.platform === "linux") seedLinuxNativeFrame();

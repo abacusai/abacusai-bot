@@ -19,6 +19,13 @@ files:
   - "!**/node_modules/**/*.d.{ts,mts,cts}"
   - package.json
 
+# abacusaibot://open links (main/open-link.ts): the macOS bundle's URL types and
+# the Linux .desktop file's MimeType (x-scheme-handler/abacusaibot). Windows
+# registers at runtime.
+protocols:
+  - name: AbacusAI Bot
+    schemes: [abacusaibot]
+
 beforePack: scripts/before-pack.cjs
 afterPack: scripts/after-pack.cjs
 

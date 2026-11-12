@@ -389,7 +389,14 @@
       "namePlaceholder": "给机器人起个名字",
       "templates": "模板",
       "more": "更多",
-      "uses": "使用"
+      "uses": "使用",
+      "resume": {
+        "title": "从上次中断处继续",
+        "untitled": "未命名聊天",
+        "open": "打开聊天",
+        "nextSteps": "后续步骤",
+        "dismiss": "关闭"
+      }
     },
     "chat": {
       "deliverables": {

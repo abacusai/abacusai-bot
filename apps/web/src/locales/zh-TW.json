@@ -389,7 +389,14 @@
       "namePlaceholder": "替機器人取個名字",
       "templates": "範本",
       "more": "更多",
-      "uses": "使用"
+      "uses": "使用",
+      "resume": {
+        "title": "從上次中斷處繼續",
+        "untitled": "未命名聊天",
+        "open": "開啟聊天",
+        "nextSteps": "後續步驟",
+        "dismiss": "關閉"
+      }
     },
     "chat": {
       "deliverables": {

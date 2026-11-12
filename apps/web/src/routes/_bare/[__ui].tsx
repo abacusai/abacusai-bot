@@ -23,6 +23,7 @@ import {
   botsGallerySections,
   isBotsGalleryFixture,
 } from "#renderer/features/bots/gallery/sections";
+import { ResumeCardGallery } from "#renderer/features/bots/start/resume-card";
 import { loadFixtureRuntime } from "#renderer/features/chat";
 import { chatGallerySections } from "#renderer/features/chat";
 import { useComposerExpanded } from "#renderer/features/chat/composer/composer";
@@ -123,6 +124,8 @@ const extension = {
         ),
         "tour",
         "new-look",
+        "resume-card",
+        "resume-card-plain",
         "credit-card-50",
         "credit-card-80",
         "credit-card-80-project",
@@ -225,6 +228,9 @@ const extension = {
       <SiteDeployCardGallery
         state={props.fixture.slice(12) as SiteDeployGalleryState}
       />
+    ) : props.fixture === "resume-card" ||
+      props.fixture === "resume-card-plain" ? (
+      <ResumeCardGallery chips={props.fixture === "resume-card"} />
     ) : props.fixture === "new-look" ? (
       <div className="relative h-40 transform-gpu">
         <NewLookCard onTour={() => undefined} onDismiss={() => undefined} />

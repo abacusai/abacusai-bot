@@ -28,6 +28,7 @@ import type {
   BrowserRuntimeCapture,
 } from "@abacus-ai/contract/contracts";
 import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
+import type { OpenLink } from "@abacus-ai/contract/open-link";
 import type { PptxReadResult } from "@abacus-ai/contract/pptx";
 import type {
   ImportLocalSkillsRequest,
@@ -128,6 +129,8 @@ export interface AppOperations {
   loginItem: LoginItem;
   /** The user-input beacon the renderer swap defers on. */
   markRendererActivity(): void;
+  /** The `abacusaibot://` link waiting for the renderer, once (desktop only). */
+  takeOpenLink?(): OpenLink | null;
 }
 
 /** The browser runtime's legacy channels, restricted to the main renderer. */

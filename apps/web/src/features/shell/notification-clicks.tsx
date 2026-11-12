@@ -88,6 +88,7 @@ export const NotificationClicks = ({
           });
           return;
         }
+        if (event.type !== "notification-clicked") return;
         const options = notificationOptions(withOwner(event.metadata, db));
         if (options != null)
           void navigate({ ...options, transition: "nav-lateral" });

@@ -88,6 +88,10 @@ export const systemRouter = impl.system.router({
   restart: impl.system.restart.handler(({ context }) => {
     context.deps.app.restartApp();
   }),
+  takeOpenLink: impl.system.takeOpenLink.handler(({ context }) => {
+    requireMainRenderer(context);
+    return context.deps.app.takeOpenLink?.() ?? null;
+  }),
   funnelStep: impl.system.funnelStep.handler(({ input, context }) => {
     if (input.once === true)
       context.deps.app.reportFunnelStep(input.step, input.detail, true);

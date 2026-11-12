@@ -389,7 +389,14 @@
       "namePlaceholder": "Novo bot",
       "templates": "Or start with a template",
       "more": "More",
-      "uses": "Uses"
+      "uses": "Uses",
+      "resume": {
+        "title": "Continue de onde parou",
+        "untitled": "Chat sem título",
+        "open": "Abrir chat",
+        "nextSteps": "Próximos passos",
+        "dismiss": "Dispensar"
+      }
     },
     "chat": {
       "deliverables": {

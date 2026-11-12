@@ -389,7 +389,14 @@
       "namePlaceholder": "새 봇",
       "templates": "Or start with a template",
       "more": "More",
-      "uses": "Uses"
+      "uses": "Uses",
+      "resume": {
+        "title": "하던 일 이어서 하기",
+        "untitled": "제목 없는 채팅",
+        "open": "채팅 열기",
+        "nextSteps": "다음 단계",
+        "dismiss": "닫기"
+      }
     },
     "chat": {
       "deliverables": {
