@@ -3446,7 +3446,8 @@
       "copyFailed": "Kopyalanamadı"
     },
     "retryOffer": {
-      "newChat": "{{model}} ile yeni bir sohbette tekrar dene"
+      "newChat": "{{model}} ile yeni bir sohbette tekrar dene",
+      "usesCreditsFaster": "Krediyi daha hızlı harcar"
     },
     "routerAfterUpgrade": {
       "stay": "{{model}} ile devam et"

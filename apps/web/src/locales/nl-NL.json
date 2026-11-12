@@ -3446,7 +3446,8 @@
       "copyFailed": "Kopiëren is niet gelukt"
     },
     "retryOffer": {
-      "newChat": "Probeer opnieuw in een nieuwe chat met {{model}}"
+      "newChat": "Probeer opnieuw in een nieuwe chat met {{model}}",
+      "usesCreditsFaster": "Verbruikt credits sneller"
     },
     "routerAfterUpgrade": {
       "stay": "Blijf op {{model}}"

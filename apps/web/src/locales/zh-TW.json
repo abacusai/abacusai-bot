@@ -3446,7 +3446,8 @@
       "copyFailed": "無法複製"
     },
     "retryOffer": {
-      "newChat": "在新對話中用 {{model}} 再試一次"
+      "newChat": "在新對話中用 {{model}} 再試一次",
+      "usesCreditsFaster": "消耗點數更快"
     },
     "routerAfterUpgrade": {
       "stay": "繼續使用 {{model}}"

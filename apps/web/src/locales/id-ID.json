@@ -3446,7 +3446,8 @@
       "copyFailed": "Gagal menyalin"
     },
     "retryOffer": {
-      "newChat": "Coba lagi di chat baru dengan {{model}}"
+      "newChat": "Coba lagi di chat baru dengan {{model}}",
+      "usesCreditsFaster": "Menghabiskan kredit lebih cepat"
     },
     "routerAfterUpgrade": {
       "stay": "Tetap di {{model}}"

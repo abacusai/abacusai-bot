@@ -3446,7 +3446,8 @@
       "copyFailed": "Impossible de copier"
     },
     "retryOffer": {
-      "newChat": "Réessayer dans une nouvelle conversation avec {{model}}"
+      "newChat": "Réessayer dans une nouvelle conversation avec {{model}}",
+      "usesCreditsFaster": "Consomme les crédits plus vite"
     },
     "routerAfterUpgrade": {
       "stay": "Rester sur {{model}}"

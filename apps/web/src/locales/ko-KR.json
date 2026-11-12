@@ -3446,7 +3446,8 @@
       "copyFailed": "복사하지 못했어요"
     },
     "retryOffer": {
-      "newChat": "{{model}}(으)로 새 채팅에서 다시 시도"
+      "newChat": "{{model}}(으)로 새 채팅에서 다시 시도",
+      "usesCreditsFaster": "크레딧을 더 빨리 사용합니다"
     },
     "routerAfterUpgrade": {
       "stay": "{{model}} 계속 사용"
