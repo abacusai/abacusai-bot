@@ -12,6 +12,7 @@ import { PaymentRequiredDialog } from "#renderer/components/payment-required";
 import { ShareDialogHost } from "#renderer/components/share/share-dialog";
 import { StatusBanner } from "#renderer/components/status-board";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
+import { ResumeCardReturn } from "#renderer/features/bots/start/resume-card";
 import { BotsGlobals } from "#renderer/features/bots/watcher";
 import { finishCompletion } from "#renderer/features/onboarding/actions";
 import {
@@ -149,7 +150,10 @@ const ShellRoute = () => {
       )}
       {/* Signed in and past onboarding: a link that came earlier waits in main. */}
       {!provisional && IS_ELECTRON && (
-        <OpenLinkHost transport={transport} db={db} />
+        <>
+          <OpenLinkHost transport={transport} db={db} />
+          <ResumeCardReturn />
+        </>
       )}
       {!provisional && <PaymentRequiredDialog />}
     </>

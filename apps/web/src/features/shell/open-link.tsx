@@ -15,6 +15,7 @@ import {
   type Draft,
   updateDraft,
 } from "#renderer/lib/continuity/composer-drafts";
+import { markExternalOpen } from "#renderer/lib/navigation/external-open";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 
 import { notificationOptions, withOwner } from "./notification-clicks";
@@ -87,6 +88,7 @@ export const OpenLinkHost = ({
         .takeOpenLink({})
         .catch(() => null);
       if (link == null) return;
+      markExternalOpen();
       await db.collections.sessions.preload().catch(() => undefined);
       openChatWithText(link.sessionId, link.draft, db, navigate);
     };
@@ -95,7 +97,9 @@ export const OpenLinkHost = ({
       "system",
       transport,
       (event) => {
-        if (event.type === "open-link") void take();
+        if (event.type !== "open-link") return;
+        markExternalOpen();
+        void take();
       },
       abort.signal
     );

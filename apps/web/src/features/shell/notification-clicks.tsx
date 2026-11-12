@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import type { Db } from "#renderer/data/db";
 import { followNotice } from "#renderer/data/queries/notices";
 import type { Transport } from "#renderer/data/transport";
+import { markExternalOpen } from "#renderer/lib/navigation/external-open";
 import { openTargetOptions } from "#renderer/lib/navigation/open-target-options";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { platformSystem } from "#renderer/lib/platform-system";
@@ -68,6 +69,7 @@ export const NotificationClicks = ({
   const navigate = useAppNavigate();
   useEffect(() => {
     const clicked = (event: Event) => {
+      markExternalOpen();
       const metadata = (event as CustomEvent<NotificationMetadata>).detail;
       const options = metadata
         ? notificationOptions(withOwner(metadata, db))
@@ -89,6 +91,7 @@ export const NotificationClicks = ({
           return;
         }
         if (event.type !== "notification-clicked") return;
+        markExternalOpen();
         const options = notificationOptions(withOwner(event.metadata, db));
         if (options != null)
           void navigate({ ...options, transition: "nav-lateral" });

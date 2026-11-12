@@ -22,8 +22,10 @@ import { History, X } from "lucide-react";
 import { useEffect, useEffectEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { useCollections } from "#renderer/data/db";
+import { useCollections, useDb } from "#renderer/data/db";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
+import { externalOpenSince } from "#renderer/lib/navigation/external-open";
+import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 
@@ -152,6 +154,53 @@ export const ResumeCardView = ({
       </Button>
     </section>
   );
+};
+
+/**
+ * Whether opening the app now lands on home, where the card is: once per
+ * result, the first time the app launches or its window shows while the card
+ * is due. A later visit keeps the page the user chose.
+ */
+export const createResumeLanding = () => {
+  const landed = new Set<number>();
+  return (mark: ResumeCardMark | null | undefined, now: number): boolean => {
+    if (!resumeCardDue(mark, now) || landed.has(mark.resultAt)) return false;
+    landed.add(mark.resultAt);
+    return true;
+  };
+};
+
+export const landOnResumeCard = createResumeLanding();
+
+/** A link or a notification click opens its place after the window shows; this waits it out. */
+const RESUME_LANDING_WAIT_MS = 500;
+
+/** The window shown again after a long time away: home, unless a link or notice opens somewhere. */
+export const ResumeCardReturn = (): null => {
+  const db = useDb();
+  const navigate = useAppNavigate();
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const shown = (): void => {
+      if (document.hidden) return;
+      const at = Date.now();
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (externalOpenSince(at)) return;
+        const mark = db.collections.prefs.get("app")?.dismissals.resumeCard;
+        if (landOnResumeCard(mark, Date.now()))
+          void navigate({ to: "/bots/new", transition: "nav-lateral" });
+      }, RESUME_LANDING_WAIT_MS);
+    };
+    document.addEventListener("visibilitychange", shown);
+    window.addEventListener("focus", shown);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", shown);
+      window.removeEventListener("focus", shown);
+    };
+  }, [db, navigate]);
+  return null;
 };
 
 /** Results already counted as shown, so a revisit of home counts nothing. */

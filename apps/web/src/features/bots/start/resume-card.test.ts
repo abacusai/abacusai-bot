@@ -1,7 +1,11 @@
 import type { UIMessage } from "@tanstack/ai-client";
 import { expect, it } from "vitest";
 
-import { resumeCardChips, resumeCardShown } from "./resume-card";
+import {
+  createResumeLanding,
+  resumeCardChips,
+  resumeCardShown,
+} from "./resume-card";
 
 const call = (input: unknown, name = "agent-tools_suggest_tasks") => ({
   type: "tool-call" as const,
@@ -68,4 +72,18 @@ it.each<[string, Parameters<typeof resumeCardShown>, boolean]>([
   ["with no result", [null, chat, DAY], false],
 ])("the card %s: shown %s", (_case, args, shown) => {
   expect(resumeCardShown(...args) != null).toBe(shown);
+});
+
+it("lands on home once per result when the app opens after a long time away", () => {
+  const land = createResumeLanding();
+  // Not away long enough, or nothing to pick up: the last page stays.
+  expect(land(mark, DAY / 2)).toBe(false);
+  expect(land(null, DAY)).toBe(false);
+  expect(land({ ...mark, closedAt: 1 }, DAY)).toBe(false);
+  expect(land(mark, DAY)).toBe(true);
+  // The next launch or window show keeps the page the user chose.
+  expect(land(mark, DAY + 1)).toBe(false);
+  // A newer result, after another long time away, lands again.
+  const next = { ...mark, resultAt: 2 * DAY, wroteAt: 2 * DAY };
+  expect(land(next, 3 * DAY)).toBe(true);
 });
