@@ -3,6 +3,10 @@ import { useEffect, useEffectEvent } from "react";
 
 import { BrowserTab } from "#platform/browser-tab";
 import {
+  panelTabResource,
+  showAgentBrowser,
+} from "#renderer/features/bots/browser/agent-tab";
+import {
   useSession,
   useWorkspace,
 } from "#renderer/features/sessions/data/queries";
@@ -19,9 +23,10 @@ import { shellStore } from "#renderer/features/shell/shell-store";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 
 /**
- * URLs the bot's chat or the agent opens land in a browser tab of this
- * bot's panel: one tab per page (a second open of the same page refocuses
- * it), so the agent's pages and the user's sit side by side.
+ * Pages the user opens from the bot's chat land in browser tabs of this
+ * bot's panel, one per page (a second open of the same page refocuses it).
+ * The agent's navigations show the one page it drives (`showAgentBrowser`),
+ * so what the user watches, and signs in on, is the agent's own page.
  */
 export const BotBrowserRegistration = ({
   botId,
@@ -46,11 +51,12 @@ export const BotBrowserRegistration = ({
     const unregister = registerBrowserOpen(({ sessionId, url }) =>
       open(sessionId, url)
     );
+    // The agent's navigations show its own page, never a copy in a new tab.
     const unsubscribe = registerPreviewConsumer({
       owns: (candidate) => candidate == null || candidate === key,
       open: (event) => {
         if (!event.url) return false;
-        open(sessionId, event.url);
+        showAgentBrowser(panelScopeKey("bots", botId)!, event.url);
         return true;
       },
     });
@@ -58,7 +64,7 @@ export const BotBrowserRegistration = ({
       unregister();
       unsubscribe();
     };
-  }, [key, sessionId]);
+  }, [key, sessionId, botId]);
   return null;
 };
 
@@ -82,7 +88,7 @@ export const BotBrowser = ({
   return (
     <BrowserTab
       row={row}
-      id={tab.id}
+      id={panelTabResource(tab)}
       url={tab.url}
       root={row.worktreePath ?? workspace?.path ?? ""}
       visible={active}

@@ -135,6 +135,25 @@ export const openPanelTab = (
   return id;
 };
 
+/**
+ * Open (or focus) the tab with this fixed id, and show the panel: a tab bound
+ * to something that exists once, such as the agent's own browser.
+ */
+export const openPanelTabWithId = (key: string, tab: PanelTab): void =>
+  update(key, (scope) => {
+    const existing = scope.tabs.find((candidate) => candidate.id === tab.id);
+    return {
+      ...scope,
+      open: true,
+      active: tab.id,
+      tabs: existing
+        ? scope.tabs.map((item) =>
+            item.id === tab.id ? { ...item, ...tab } : item
+          )
+        : [...scope.tabs, tab],
+    };
+  });
+
 export const activatePanelTab = (key: string, id: string): void =>
   update(key, (scope) =>
     scope.active === id && scope.open
