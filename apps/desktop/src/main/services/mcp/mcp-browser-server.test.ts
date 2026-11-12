@@ -1812,6 +1812,35 @@ describe("when the page or the debugger misbehaves", () => {
     expect(text).toContain("https://example.test/start");
   });
 
+  it("says a goto to a file saved it, at once, rather than waiting for a page that never comes", async () => {
+    // From a blank page a file's URL never becomes the page: the goto waited
+    // 20 s, said it "did not complete", and the agent learned of the file later.
+    page.loadURL = async () => {
+      pendingPageEvents.set(page.id, [
+        'Download started: "report.txt" is being saved to /downloads/report.txt.',
+      ]);
+      setTimeout(
+        () =>
+          pendingPageEvents.set(page.id, [
+            "Download finished: /downloads/report.txt.",
+          ]),
+        300
+      );
+    };
+    const started = Date.now();
+    const { text, isError } = await call("browser_navigate", {
+      action: "goto",
+      url: "https://example.test/download/report.txt",
+    });
+
+    expect(isError).toBe(false);
+    expect(text).toContain("is a file");
+    expect(text).toContain('Download started: "report.txt"');
+    expect(text).toContain("Download finished: /downloads/report.txt.");
+    expect(text).not.toContain("did not complete");
+    expect(Date.now() - started).toBeLessThan(5_000);
+  });
+
   it("says a history move had not finished rather than claiming it had", async () => {
     await call("browser_navigate", {
       action: "goto",

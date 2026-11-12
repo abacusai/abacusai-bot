@@ -172,6 +172,8 @@ const WEBVIEW_ATTACH_TIMEOUT_MS = 15_000;
 const ATTACH_RETRY_GRACE_MS = 2_000;
 // How long a `goto` insists on seeing the view leave before settling on the
 // host check alone; a `goto` to the page already open never goes loading.
+/** How long a goto that saved a file waits to say whether the download finished. */
+const DOWNLOAD_END_WAIT_MS = 5_000;
 const NAVIGATE_START_GRACE_MS = 1_500;
 // Shorter than a `goto` deadline: history moves go somewhere already visited.
 const HISTORY_NAVIGATE_TIMEOUT_MS = 10_000;
@@ -1124,7 +1126,8 @@ export class McpBrowserServer extends McpHttpServer {
     wc: BrowserPage,
     startUrl: string,
     targetHost: string | null,
-    timeoutMs: number
+    timeoutMs: number,
+    stop?: () => boolean
   ): Promise<string | null> {
     const startedAt = Date.now();
     const deadline = startedAt + timeoutMs;
@@ -1136,6 +1139,7 @@ export class McpBrowserServer extends McpHttpServer {
     let sawLoading = false;
 
     while (Date.now() < deadline) {
+      if (stop?.() === true) return null;
       const loading = wc.isLoading();
       if (loading) sawLoading = true;
       const current = wc.getURL();
@@ -1230,13 +1234,41 @@ export class McpBrowserServer extends McpHttpServer {
       // Interrupted by the renderer's own navigation to the same URL. Expected.
     });
 
+    // A file's URL is saved, not shown: from a blank page it never becomes
+    // the page, so the wait ends when the page says it saved a download.
+    const events: string[] = [];
+    const saving = (): boolean => {
+      events.push(...(this.options.target?.()?.pageEvents?.(wc.id) ?? []));
+      return events.some((event) => event.startsWith("Download started:"));
+    };
     const landed = await this.awaitNavigation(
       wc,
       startUrl,
       target.host,
-      this.navigateTimeout()
+      this.navigateTimeout(),
+      saving
     );
     if (!wc.isDestroyed()) wc.off("did-fail-load", onFailLoad);
+
+    if (saving()) {
+      this.onNavigated();
+      const ended = (): boolean =>
+        events.some((event) => /^Download (?:finished:|of )/.test(event));
+      for (
+        let waited = 0;
+        !ended() && waited < DOWNLOAD_END_WAIT_MS;
+        waited += 100
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        saving();
+      }
+      return this.ok(
+        [
+          `${url} is a file, not a page: the browser saved it, and the page stayed at ${wc.getURL() || "a blank page"}.`,
+          ...events,
+        ].join("\n")
+      );
+    }
 
     if (failure != null) {
       this.onNavigated();
@@ -1252,7 +1284,10 @@ export class McpBrowserServer extends McpHttpServer {
       this.remember(sessionId, wc.id, landed);
 
       return this.ok(
-        await this.arrival(wc, sessionId, `Navigated to ${landed}.`)
+        [
+          await this.arrival(wc, sessionId, `Navigated to ${landed}.`),
+          ...events,
+        ].join("\n")
       );
     }
 
