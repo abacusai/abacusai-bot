@@ -12,6 +12,7 @@ import { join } from "path";
 import path from "path";
 import { promisify } from "util";
 
+import { keepsRunningInBackground } from "@abacus-ai/contract/background";
 import type {
   NotificationMetadata,
   WindowChromeState,
@@ -55,6 +56,8 @@ import Store from "electron-store";
 
 import { nodeFileOperations } from "./app-operations/node";
 import { markQuitting, isQuitting } from "./app-quit-state";
+import { backgroundNoticeDue, closeAction, wantsTray } from "./background-mode";
+import { BackgroundTray } from "./background-tray";
 import { setBringToFront, setMainWindow } from "./bring-to-front";
 import { composeHost } from "./compose-host";
 import { installCrashGuard } from "./crash-guard";
@@ -121,7 +124,7 @@ import {
   importLegacySoundOptOut,
   importLegacyTourSeen,
 } from "./services/config/legacy-prefs";
-import { createLoginItem } from "./services/config/login-item";
+import { createLoginItem, xdgAutostart } from "./services/config/login-item";
 import {
   appLanguage,
   nativeT,
@@ -375,6 +378,42 @@ function revealMainWindow(): BaseWindow | null {
 setBringToFront(() => {
   revealMainWindow();
 });
+
+const backgroundTray = new BackgroundTray({
+  platform: process.platform,
+  icon: () => {
+    const icon = nativeImage.createFromPath(
+      resourcePath(process.platform === "win32" ? "icon.ico" : "icon2.png")
+    );
+    return process.platform === "win32" || icon.isEmpty()
+      ? icon
+      : icon.resize({ width: 32, height: 32 });
+  },
+  tooltip: APP_DISPLAY_NAME,
+  labels: () => ({
+    open: nativeT("trayOpen", { app: APP_DISPLAY_NAME }),
+    quit: nativeT("quit"),
+  }),
+  open: () => void revealMainWindow(),
+  quit: () => app.quit(),
+});
+
+/** Once per install: the window closed, but the app is still running. */
+function noticeStillRunning(): void {
+  const prefs = prefsStore.get();
+  if (prefs.dismissals.backgroundNoticeAt != null) return;
+  prefsStore.update({ dismissals: { backgroundNoticeAt: Date.now() } });
+  reportFunnelStep("background_first_close", process.platform);
+  if (!readNotificationSettings().enabled || !Notification.isSupported())
+    return;
+  const notification = new Notification({
+    title: APP_DISPLAY_NAME,
+    body: nativeT("backgroundNotice", { app: APP_DISPLAY_NAME }),
+    silent: notificationSilent(),
+  });
+  notification.on("click", () => void revealMainWindow());
+  notification.show();
+}
 
 const workspaceServiceHost = new ServiceHost();
 // A downloaded update restarts only when nothing user-visible is running. A
@@ -739,46 +778,52 @@ async function createWindow(restored?: RecreatedWindowState) {
     store.set("windowY", y);
   });
 
-  // Closing must not kill in-flight agent work, so the window hides instead.
-  // macOS always hides (dock convention); Windows/Linux ask first, and only
-  // when a task is running. A real quit sets `isQuitting` first.
+  // Closing must not kill in-flight agent work or the background's routines
+  // and notices: see background-mode.ts. A real quit sets `isQuitting` first.
   mainWindow.on("close", (event) => {
-    if (isQuitting()) return;
+    const action = closeAction({
+      platform: process.platform,
+      quitting: isQuitting(),
+      keepRunning: keepsRunningInBackground(prefsStore.get()),
+      trayShown: backgroundTray.shown,
+      taskRunning: hasBackgroundAgentTask(),
+    });
+    if (action === "close") return;
 
-    const taskRunning = hasBackgroundAgentTask();
-
-    if (process.platform === "darwin") {
+    if (action === "ask") {
+      const choice = dialog.showMessageBoxSync(mainWindow, {
+        type: "question",
+        buttons: [nativeT("keepRunning"), nativeT("quitAnyway")],
+        defaultId: 0,
+        cancelId: 0,
+        title: nativeT("taskRunningTitle"),
+        message: nativeT("taskRunningMessage"),
+        detail: nativeT("taskRunningDetail"),
+      });
+      if (choice !== 0) return;
       event.preventDefault();
-      // Hiding a full-screen window leaves its Space behind as a black
-      // screen; leave full screen first and hide after the transition.
-      if (mainWindow.isFullScreen()) {
-        mainWindow.once("leave-full-screen", () => {
-          if (!mainWindow.isDestroyed()) mainWindow.hide();
-        });
-        mainWindow.setFullScreen(false);
-        return;
-      }
       mainWindow.hide();
       return;
     }
 
-    if (!taskRunning) return;
-
-    const choice = dialog.showMessageBoxSync(mainWindow, {
-      type: "question",
-      buttons: [nativeT("keepRunning"), nativeT("quitAnyway")],
-      defaultId: 0,
-      cancelId: 0,
-      title: nativeT("taskRunningTitle"),
-      message: nativeT("taskRunningMessage"),
-      detail: nativeT("taskRunningDetail"),
-    });
-
-    if (choice === 0) {
-      event.preventDefault();
-      mainWindow.hide();
+    event.preventDefault();
+    // Hiding a full-screen window leaves its Space behind as a black
+    // screen; leave full screen first and hide after the transition.
+    if (process.platform === "darwin" && mainWindow.isFullScreen()) {
+      mainWindow.once("leave-full-screen", () => {
+        if (!mainWindow.isDestroyed()) mainWindow.hide();
+      });
+      mainWindow.setFullScreen(false);
+      return;
     }
+    mainWindow.hide();
+    if (
+      backgroundNoticeDue(action, process.platform, prefsStore.get().dismissals)
+    )
+      noticeStillRunning();
   });
+  // Windows log-off and shutdown: a hidden close would hold the session up.
+  mainWindow.on("session-end", () => markQuitting());
 
   // vite-plugin-electron sets this only while the dev server is running.
   const rendererUrl = process.env.VITE_DEV_SERVER_URL ?? null;
@@ -1269,8 +1314,10 @@ function updateApplicationMenu(): void {
 /** Loads the app's language for native words and relabels the menu when it changed. */
 async function applyNativeLanguage(): Promise<void> {
   try {
-    if (await setNativeLanguage(appLanguage(prefsStore.get().language).ui))
+    if (await setNativeLanguage(appLanguage(prefsStore.get().language).ui)) {
       updateApplicationMenu();
+      backgroundTray.relabel();
+    }
   } catch (error) {
     console.error(
       "[i18n] native language failed; keeping the current one",
@@ -1590,7 +1637,19 @@ const appOperations: AppOperations = {
     return { density, appliesOnRestart: false };
   },
 
-  loginItem: createLoginItem(app),
+  loginItem: createLoginItem(
+    app,
+    process.platform,
+    // A dev build would start the bare Electron binary at login.
+    process.platform === "linux" && app.isPackaged
+      ? xdgAutostart({
+          configHome:
+            process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config"),
+          executable: process.env.APPIMAGE || process.execPath,
+          name: APP_DISPLAY_NAME,
+        })
+      : null
+  ),
 
   takeOpenLink: () => openLinks.take(),
 
@@ -1927,6 +1986,10 @@ app
         prefsStore.onChanged((row, previous) => {
           if (row.language !== previous.language) void applyNativeLanguage();
         });
+        void backgroundTray.sync(wantsTray(process.platform, prefsStore.get()));
+        prefsStore.onChanged((row) => {
+          void backgroundTray.sync(wantsTray(process.platform, row));
+        });
         // Development acceptance runs only (spec 01 §12); inert when packaged.
         if (import.meta.env.ABACUS_DEV_HARNESS) {
           const { installMutationHarness } =
@@ -2058,6 +2121,8 @@ app
 
     powerMonitor.on("lock-screen", () => {});
     powerMonitor.on("unlock-screen", () => {});
+    // Linux and macOS shutdown: a window closed now is the system's, not the user's.
+    powerMonitor.on("shutdown", () => markQuitting());
 
     // The connectivity owner reads the OS's network state and hears sleep
     // and wake; agents and routines take their cue from it.

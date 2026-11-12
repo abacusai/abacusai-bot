@@ -107,8 +107,9 @@ export const system = {
     .input(v.object({ keys: v.array(v.string()) }))
     .output(type<void>()),
   /**
-   * Open at login (spec 05 §31.5 c). macOS and Windows only; Linux answers
-   * `PRECONDITION_FAILED { reason: "unsupported-platform" }`.
+   * Open at login (spec 05 §31.5 c). macOS, Windows, and a packaged Linux
+   * app (an autostart entry); elsewhere `PRECONDITION_FAILED { reason:
+   * "unsupported-platform" }`.
    */
   loginItem: {
     get: query.input(NoInput).output(type<{ openAtLogin: boolean }>()),

@@ -3548,6 +3548,12 @@
         "report": "방금 답변을 보관하고 공유할 수 있는 깔끔한 보고서로 만들어 작업 공간에 PDF로 저장해 주세요."
       }
     },
+    "backgroundAsk": {
+      "title": "이어서 할 때가 되면 알려 드릴까요?",
+      "body": "AbacusAI Bot을 백그라운드에서 계속 실행하고 컴퓨터를 켤 때 시작하세요.",
+      "turnOn": "켜기",
+      "notNow": "나중에"
+    },
     "commands": {
       "new": "Start a new chat",
       "model": "Change the model",
@@ -3923,6 +3929,8 @@
     "settings": {
       "launchAtLogin": "Launch at login",
       "launchDetail": "Start AbacusAI Bot when you sign in.",
+      "keepRunning": "백그라운드에서 계속 실행",
+      "keepRunningDetail": "창을 닫아도 AbacusAI Bot이 트레이에 남아 루틴과 알림이 계속 작동합니다.",
       "defaultWorkspace": "Last used folder",
       "workspaceDetail": "Where new sessions start. Picking a folder for a session changes it.",
       "defaultMode": "Default permission mode",
@@ -5287,7 +5295,9 @@
     "groupsCount_one": "{{count}} group",
     "groupsCount_other": "{{count}} groups",
     "morePeople_one": "{{count}} more",
-    "morePeople_other": "{{count}} more"
+    "morePeople_other": "{{count}} more",
+    "trayOpen": "{{app}} 열기",
+    "backgroundNotice": "{{app}}이(가) 백그라운드에서 계속 실행되므로 루틴과 알림이 계속 작동합니다. 종료하려면 트레이 아이콘을 마우스 오른쪽 버튼으로 클릭하세요."
   },
   "channels": {
     "sidebar": {

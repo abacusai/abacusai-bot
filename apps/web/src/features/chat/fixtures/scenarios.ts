@@ -40,6 +40,8 @@ export interface Scenario {
     >;
     /** The deliverable offer judged without its caps. */
     deliverableOffer?: boolean;
+    /** The background ask, as on Windows with nothing turned on. */
+    backgroundAsk?: boolean;
     /** The retry offer on this model, without its caps. */
     retryOffer?: { label: string; plan: string };
     /** The composer's top-model hint on a paying plan, without its caps. */
@@ -1109,6 +1111,13 @@ export const SCENARIOS: Scenario[] = [
     events: creditsTurn(CREDITS_EN),
   },
   ...offerScenarios("en", OFFER_EN),
+  {
+    id: "background-ask-shown-en",
+    canvas: ["BackgroundAsk", "shown", "en"],
+    skin: "session",
+    events: () => seqd(offerShort(OFFER_EN)),
+    view: { backgroundAsk: true },
+  },
   ...offerScenarios("pt-BR", OFFER_PT),
   {
     id: "retry-offer-session",

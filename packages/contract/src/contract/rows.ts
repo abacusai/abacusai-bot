@@ -172,6 +172,11 @@ export interface WallReopenMark {
   askedAt: number | null;
 }
 
+export interface BackgroundAskCard {
+  reply: string;
+  answered: boolean;
+}
+
 export interface PrefsRow {
   id: "app";
   theme: "system" | "light" | "dark";
@@ -213,6 +218,8 @@ export interface PrefsRow {
   githubIntegration?: boolean;
   /** The "your work is waiting" reminders; absent reads as on. */
   projectReminders?: boolean;
+  /** Windows and Linux: closing the window leaves the app in the tray. Absent reads as on. */
+  keepRunningInBackground?: boolean;
   onboardingStep: string | null;
   dismissals: {
     referralCardUntil: number | null;
@@ -241,6 +248,10 @@ export interface PrefsRow {
     ratingPrompt?: RatingPromptCard | null;
     /** The top-model hint above the composer, shown and answered. */
     topModelHint?: TopModelHintCard | null;
+    /** The one notice that a closed window left the app running. */
+    backgroundNoticeAt?: number | null;
+    /** The one ask to keep running in the background: under which reply, and answered. */
+    backgroundAsk?: BackgroundAskCard | null;
     /** The latest credit wall in the user's own chat, asked again once when they come back. */
     wallReopen?: WallReopenMark | null;
     /** The latest result in the user's own chat, offered on return (resume-card.ts); stamped by main. */

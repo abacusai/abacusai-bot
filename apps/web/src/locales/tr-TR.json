@@ -3548,6 +3548,12 @@
         "report": "Son yanıtını saklayıp paylaşabileceğim düzenli bir rapora dönüştür ve çalışma alanına PDF olarak kaydet."
       }
     },
+    "backgroundAsk": {
+      "title": "Devam etme zamanı geldiğinde hatırlatalım mı?",
+      "body": "AbacusAI Bot'u arka planda çalışır tutun ve bilgisayarınızla birlikte başlatın.",
+      "turnOn": "Aç",
+      "notNow": "Şimdi değil"
+    },
     "commands": {
       "new": "Start a new chat",
       "model": "Change the model",
@@ -3923,6 +3929,8 @@
     "settings": {
       "launchAtLogin": "Oturum açılışında başlat",
       "launchDetail": "Bilgisayarında oturum açtığında AbacusAI Bot'u başlat.",
+      "keepRunning": "Arka planda çalışmaya devam et",
+      "keepRunningDetail": "Pencereyi kapattığınızda AbacusAI Bot tepside kalır, böylece rutinler ve hatırlatıcılar çalışmayı sürdürür.",
       "defaultWorkspace": "Son kullanılan klasör",
       "workspaceDetail": "Yeni oturumların başladığı yer. Bir oturum için klasör seçmek bunu değiştirir.",
       "defaultMode": "Varsayılan izin modu",
@@ -5287,7 +5295,9 @@
     "groupsCount_one": "{{count}} group",
     "groupsCount_other": "{{count}} groups",
     "morePeople_one": "{{count}} more",
-    "morePeople_other": "{{count}} more"
+    "morePeople_other": "{{count}} more",
+    "trayOpen": "{{app}} uygulamasını aç",
+    "backgroundNotice": "{{app}} arka planda çalışmaya devam ediyor, böylece rutinleriniz ve hatırlatıcılarınız çalışmayı sürdürüyor. Çıkmak için tepsi simgesine sağ tıklayın."
   },
   "channels": {
     "sidebar": {

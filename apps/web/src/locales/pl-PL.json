@@ -3684,6 +3684,12 @@
         "report": "Zamień swoją ostatnią odpowiedź w dopracowany raport, który mogę zachować i udostępnić, i zapisz go jako PDF w obszarze roboczym."
       }
     },
+    "backgroundAsk": {
+      "title": "Chcesz przypomnienie, kiedy będzie czas wrócić do pracy?",
+      "body": "Pozwól AbacusAI Bot działać w tle i uruchamiać się razem z komputerem.",
+      "turnOn": "Włącz",
+      "notNow": "Nie teraz"
+    },
     "commands": {
       "new": "Rozpocznij nowy czat",
       "model": "Zmień model",
@@ -4059,6 +4065,8 @@
     "settings": {
       "launchAtLogin": "Uruchamiaj przy logowaniu",
       "launchDetail": "Uruchamiaj AbacusAI Bot po zalogowaniu do systemu.",
+      "keepRunning": "Działaj w tle",
+      "keepRunningDetail": "Po zamknięciu okna AbacusAI Bot zostaje w zasobniku, więc rutyny i przypomnienia działają dalej.",
       "defaultWorkspace": "Ostatnio używany folder",
       "workspaceDetail": "Tu zaczynają się nowe sesje. Wybranie folderu dla sesji zmienia to ustawienie.",
       "defaultMode": "Domyślny tryb uprawnień",
@@ -5453,7 +5461,9 @@
     "morePeople_one": "jeszcze {{count}}",
     "morePeople_other": "jeszcze {{count}}",
     "morePeople_few": "jeszcze {{count}}",
-    "morePeople_many": "jeszcze {{count}}"
+    "morePeople_many": "jeszcze {{count}}",
+    "trayOpen": "Otwórz {{app}}",
+    "backgroundNotice": "{{app}} nadal działa w tle, więc Twoje rutyny i przypomnienia działają dalej. Aby zamknąć, kliknij prawym przyciskiem ikonę w zasobniku."
   },
   "channels": {
     "sidebar": {

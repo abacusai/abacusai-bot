@@ -309,6 +309,12 @@ export const PREFS_GROUP_ENTRIES = {
         switched: v.boolean(),
       })
     ),
+    /** The one notice that a closed window left the app running. */
+    backgroundNoticeAt: NullableTimestamp,
+    /** The one ask to keep running in the background (background-ask.tsx). */
+    backgroundAsk: v.nullable(
+      v.strictObject({ reply: v.string(), answered: v.boolean() })
+    ),
     /** The latest credit wall in the user's own chat, asked again once on return (wall-reopen.tsx). */
     wallReopen: v.optional(
       v.nullable(
@@ -432,6 +438,8 @@ export const PREFS_SCALAR_ENTRIES = {
   githubIntegration: v.boolean(),
   /** Off: no "your work is waiting" reminder. */
   projectReminders: v.boolean(),
+  /** Windows and Linux: off, closing the window quits the app. */
+  keepRunningInBackground: v.boolean(),
   onboardingStep: v.nullable(v.string()),
   panes: v.record(v.string(), v.number()),
   keymap: v.record(v.string(), v.nullable(v.string())),
@@ -476,6 +484,7 @@ export const PrefsPatchSchema = v.strictObject({
   showLinkPreviews: v.optional(S.showLinkPreviews),
   githubIntegration: v.optional(S.githubIntegration),
   projectReminders: v.optional(S.projectReminders),
+  keepRunningInBackground: v.optional(S.keepRunningInBackground),
   onboardingStep: v.optional(S.onboardingStep),
   dismissals: prefsGroup(G.dismissals),
   panes: v.optional(S.panes),

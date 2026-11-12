@@ -205,6 +205,8 @@ export interface ChatViewSlots {
   successPitchOffer?: SuccessPitchOffer;
   /** The gallery shows the deliverable offer without its caps, keeping no answer. */
   deliverableOfferPreview?: boolean;
+  /** The gallery shows the background ask as Windows would, keeping no answer. */
+  backgroundAskPreview?: boolean;
   /** The gallery shows the retry offer on this model, without its caps. */
   retryOfferPreview?: { label: string; plan: string };
   /** The gallery's top-model hint: these models, without the account, plan or caps. */

@@ -215,6 +215,12 @@ export const FUNNEL_STEPS = [
   "code_routine_shown",
   "code_routine_opened",
   "code_routine_started",
+  // Windows and Linux: the window closed into the tray for the first time
+  // (detail: the platform); the ask to keep running in the background, shown
+  // and answered (on or later).
+  "background_first_close",
+  "background_ask_shown",
+  "background_ask_answered",
 ] as const;
 
 export type FunnelStep = (typeof FUNNEL_STEPS)[number];

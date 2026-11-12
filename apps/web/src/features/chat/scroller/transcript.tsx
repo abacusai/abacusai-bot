@@ -33,6 +33,7 @@ import {
   useMessageScrollerVisibility,
 } from "#renderer/ui/message-scroller";
 
+import { BackgroundAskRow } from "../kit/background-ask";
 import { useSeconds } from "../kit/clock";
 import { useChatView } from "../kit/context";
 import { DeliverableOfferRow } from "../kit/deliverable-offer";
@@ -935,6 +936,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
           <RetryOfferRow messages={messages} active={active} />
           <RouterAfterUpgradeRow messages={messages} active={active} />
           <SuccessPitchRow messages={messages} active={active} />
+          <BackgroundAskRow messages={messages} active={active} />
           <RatingPromptRow messages={messages} active={active} />
           <UpgradeTriggers
             messages={messages}

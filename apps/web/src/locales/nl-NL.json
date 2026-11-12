@@ -3548,6 +3548,12 @@
         "report": "Maak van je laatste antwoord een verzorgd rapport dat ik kan bewaren en delen, opgeslagen als pdf in de werkruimte."
       }
     },
+    "backgroundAsk": {
+      "title": "Wil je een seintje als het tijd is om verder te gaan?",
+      "body": "Laat AbacusAI Bot op de achtergrond draaien en met je computer opstarten.",
+      "turnOn": "Inschakelen",
+      "notNow": "Niet nu"
+    },
     "commands": {
       "new": "Nieuwe chat starten",
       "model": "Model wijzigen",
@@ -3923,6 +3929,8 @@
     "settings": {
       "launchAtLogin": "Starten bij inloggen",
       "launchDetail": "Start AbacusAI Bot wanneer je inlogt.",
+      "keepRunning": "Op de achtergrond blijven draaien",
+      "keepRunningDetail": "Als je het venster sluit, blijft AbacusAI Bot in het systeemvak, zodat routines en herinneringen blijven werken.",
       "defaultWorkspace": "Laatst gebruikte map",
       "workspaceDetail": "Waar nieuwe sessies starten. Dit verandert als je een map voor een sessie kiest.",
       "defaultMode": "Standaard toestemmingsmodus",
@@ -5287,7 +5295,9 @@
     "groupsCount_one": "{{count}} groep",
     "groupsCount_other": "{{count}} groepen",
     "morePeople_one": "nog {{count}}",
-    "morePeople_other": "nog {{count}}"
+    "morePeople_other": "nog {{count}}",
+    "trayOpen": "{{app}} openen",
+    "backgroundNotice": "{{app}} blijft op de achtergrond draaien, zodat je routines en herinneringen blijven werken. Klik met de rechtermuisknop op het pictogram in het systeemvak om te stoppen."
   },
   "channels": {
     "sidebar": {

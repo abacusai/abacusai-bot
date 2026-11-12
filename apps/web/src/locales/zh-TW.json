@@ -3548,6 +3548,12 @@
         "report": "把你上一則回答整理成一份精美的報告，方便我保留和分享，並以 PDF 格式儲存到工作區。"
       }
     },
+    "backgroundAsk": {
+      "title": "要在該繼續時提醒你嗎？",
+      "body": "讓 AbacusAI Bot 在背景持續執行，並隨電腦啟動。",
+      "turnOn": "開啟",
+      "notNow": "暫時不要"
+    },
     "commands": {
       "new": "開始新聊天",
       "model": "變更模型",
@@ -3923,6 +3929,8 @@
     "settings": {
       "launchAtLogin": "登入時啟動",
       "launchDetail": "在你登入時啟動 AbacusAI Bot。",
+      "keepRunning": "在背景持續執行",
+      "keepRunningDetail": "關閉視窗後，AbacusAI Bot 會留在系統匣中，例行工作和提醒會繼續運作。",
       "defaultWorkspace": "上次使用的資料夾",
       "workspaceDetail": "新工作階段的起始位置。為工作階段選擇資料夾時會跟著變更。",
       "defaultMode": "預設權限模式",
@@ -5287,7 +5295,9 @@
     "groupsCount_one": "{{count}} group",
     "groupsCount_other": "{{count}} groups",
     "morePeople_one": "{{count}} more",
-    "morePeople_other": "{{count}} more"
+    "morePeople_other": "{{count}} more",
+    "trayOpen": "開啟 {{app}}",
+    "backgroundNotice": "{{app}} 仍在背景執行，你的例行工作和提醒會繼續運作。在系統匣圖示上按右鍵即可結束。"
   },
   "channels": {
     "sidebar": {

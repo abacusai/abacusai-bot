@@ -70,6 +70,7 @@ const DEFAULTS: PrefsValues = {
   showLinkPreviews: true,
   githubIntegration: true,
   projectReminders: true,
+  keepRunningInBackground: true,
   onboardingStep: null,
   dismissals: {
     referralCardUntil: null,
@@ -90,6 +91,8 @@ const DEFAULTS: PrefsValues = {
     retryOffer: null,
     ratingPrompt: null,
     topModelHint: null,
+    backgroundNoticeAt: null,
+    backgroundAsk: null,
     wallReopen: null,
     resumeCard: null,
     freePlanSeenAt: null,

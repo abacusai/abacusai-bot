@@ -311,6 +311,9 @@ const gallerySlots = (scenario: Scenario, threadId: string): ChatViewSlots => ({
   ...(scenario.view?.deliverableOffer === true && {
     deliverableOfferPreview: true,
   }),
+  ...(scenario.view?.backgroundAsk === true && {
+    backgroundAskPreview: true,
+  }),
   ...(scenario.view?.retryOffer != null && {
     retryOfferPreview: scenario.view.retryOffer,
   }),

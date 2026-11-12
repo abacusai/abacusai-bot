@@ -1,4 +1,5 @@
 import { AgentMode } from "@abacus-ai/contract/agent-types";
+import { keepsRunningInBackground } from "@abacus-ai/contract/background";
 import { languageNameTag } from "@abacus-ai/contract/contract/languages";
 import {
   SUPPORTED_LANGUAGES,
@@ -67,10 +68,15 @@ export const GeneralPage = () => {
   const c = useCollections();
   const workspaces = useLiveQuery(c.workspaces).data ?? [];
   const info = useQuery(transport.orpc.system.info.queryOptions({ input: {} }));
+  // Linux has it only in a packaged app; a refusal hides the row.
   const login = useQuery({
     ...transport.orpc.system.loginItem.get.queryOptions({ input: {} }),
-    enabled: IS_ELECTRON && info.data != null && info.data.platform !== "linux",
+    enabled: IS_ELECTRON && info.data != null,
+    retry: false,
   });
+  const linux = info.data?.platform === "linux";
+  const keepRunningSetting =
+    IS_ELECTRON && info.data != null && info.data.platform !== "darwin";
   const sandbox = useQuery(
     transport.orpc.settings.sandboxSupport.queryOptions({ input: {} })
   );
@@ -102,7 +108,7 @@ export const GeneralPage = () => {
       <CompanionSettings />
       <GroupCard>
         <LanguageRow />
-        {IS_ELECTRON && info.data?.platform !== "linux" && (
+        {IS_ELECTRON && (!linux || login.data != null) && (
           <SettingRow
             id="launchAtLogin"
             title={t("phase5.settings.launchAtLogin")}
@@ -114,6 +120,21 @@ export const GeneralPage = () => {
               disabled={!login.data}
               onCheckedChange={(openAtLogin) =>
                 setLoginItem.mutate({ openAtLogin })
+              }
+            />
+          </SettingRow>
+        )}
+        {keepRunningSetting && (
+          <SettingRow
+            id="keepRunning"
+            title={t("phase5.settings.keepRunning")}
+            detail={t("phase5.settings.keepRunningDetail")}
+          >
+            <SettingSwitch
+              id="keepRunning"
+              checked={keepsRunningInBackground(prefs)}
+              onCheckedChange={(keepRunningInBackground) =>
+                void update({ keepRunningInBackground }).catch(fail)
               }
             />
           </SettingRow>

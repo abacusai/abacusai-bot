@@ -35,6 +35,7 @@ export const DEFAULT_PREFS: Required<PrefsRow> & {
   showLinkPreviews: true,
   githubIntegration: true,
   projectReminders: true,
+  keepRunningInBackground: true,
   onboardingStep: null,
   dismissals: {
     referralCardUntil: null,
@@ -55,6 +56,8 @@ export const DEFAULT_PREFS: Required<PrefsRow> & {
     retryOffer: null,
     ratingPrompt: null,
     topModelHint: null,
+    backgroundNoticeAt: null,
+    backgroundAsk: null,
     wallReopen: null,
     resumeCard: null,
     freePlanSeenAt: null,

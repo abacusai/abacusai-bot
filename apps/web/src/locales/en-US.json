@@ -3548,6 +3548,12 @@
         "report": "Turn your last answer into a polished report I can keep and share, saved as a PDF in the workspace."
       }
     },
+    "backgroundAsk": {
+      "title": "Want a nudge when it's time to keep going?",
+      "body": "Keep AbacusAI Bot running in the background and start it with your computer.",
+      "turnOn": "Turn on",
+      "notNow": "Not now"
+    },
     "commands": {
       "new": "Start a new chat",
       "model": "Change the model",
@@ -3923,6 +3929,8 @@
     "settings": {
       "launchAtLogin": "Launch at login",
       "launchDetail": "Start AbacusAI Bot when you sign in.",
+      "keepRunning": "Keep running in the background",
+      "keepRunningDetail": "Closing the window keeps AbacusAI Bot in the tray, so routines and reminders keep working.",
       "defaultWorkspace": "Last used folder",
       "workspaceDetail": "Where new sessions start. Picking a folder for a session changes it.",
       "defaultMode": "Default permission mode",
@@ -5287,7 +5295,9 @@
     "groupsCount_one": "{{count}} group",
     "groupsCount_other": "{{count}} groups",
     "morePeople_one": "{{count}} more",
-    "morePeople_other": "{{count}} more"
+    "morePeople_other": "{{count}} more",
+    "trayOpen": "Open {{app}}",
+    "backgroundNotice": "{{app}} is still running in the background, so your routines and reminders keep working. Right-click the tray icon to quit."
   },
   "channels": {
     "sidebar": {

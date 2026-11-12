@@ -3548,6 +3548,12 @@
         "report": "直前の回答を、保存して共有できる整ったレポートにして、ワークスペースにPDFで保存してください。"
       }
     },
+    "backgroundAsk": {
+      "title": "続きに戻るタイミングでお知らせしましょうか？",
+      "body": "AbacusAI Bot をバックグラウンドで実行し、コンピューターの起動時に開始します。",
+      "turnOn": "オンにする",
+      "notNow": "今はしない"
+    },
     "commands": {
       "new": "Start a new chat",
       "model": "Change the model",
@@ -3923,6 +3929,8 @@
     "settings": {
       "launchAtLogin": "Launch at login",
       "launchDetail": "Start AbacusAI Bot when you sign in.",
+      "keepRunning": "バックグラウンドで実行し続ける",
+      "keepRunningDetail": "ウィンドウを閉じても AbacusAI Bot はトレイに残り、ルーティンとリマインダーが動き続けます。",
       "defaultWorkspace": "Last used folder",
       "workspaceDetail": "Where new sessions start. Picking a folder for a session changes it.",
       "defaultMode": "Default permission mode",
@@ -5287,7 +5295,9 @@
     "groupsCount_one": "{{count}} group",
     "groupsCount_other": "{{count}} groups",
     "morePeople_one": "{{count}} more",
-    "morePeople_other": "{{count}} more"
+    "morePeople_other": "{{count}} more",
+    "trayOpen": "{{app}} を開く",
+    "backgroundNotice": "{{app}} はバックグラウンドで動作中のため、ルーティンとリマインダーは引き続き動きます。終了するにはトレイアイコンを右クリックしてください。"
   },
   "channels": {
     "sidebar": {

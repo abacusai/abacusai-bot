@@ -269,6 +269,8 @@ describe("PrefsStore", () => {
       retryOffer: null,
       ratingPrompt: null,
       topModelHint: null,
+      backgroundNoticeAt: null,
+      backgroundAsk: null,
       wallReopen: null,
       resumeCard: null,
       freePlanSeenAt: null,

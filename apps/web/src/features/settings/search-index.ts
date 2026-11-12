@@ -75,6 +75,7 @@ const groups: Partial<Record<SettingsPageId, string[]>> = {
     "tour",
     "language",
     "launchAtLogin",
+    "keepRunning",
     "showLinkPreviews",
     "defaultWorkspace",
     "defaultMode",
@@ -214,10 +215,11 @@ export const settingsIndexFor = (
         (!["browser", "devices"].includes(entry.page) &&
           (entry.page !== "about" ||
             ["openSourceLicenses", "appLicense"].includes(entry.id)) &&
-          !/^(notch|launchAtLogin|showInNotch|density|translucency|tour|key-notch|invite-whatsapp)/.test(
+          !/^(notch|launchAtLogin|keepRunning|showInNotch|density|translucency|tour|key-notch|invite-whatsapp)/.test(
             entry.id
           ))) &&
-      (uiOS !== "mac" || !entry.id.endsWith("@terminal")) &&
+      (uiOS !== "mac" ||
+        (!entry.id.endsWith("@terminal") && entry.id !== "keepRunning")) &&
       (uiOS !== "linux" || entry.id !== "translucency")
   ).map((entry) =>
     !electron && ["backend-local", "forgetAccount"].includes(entry.id)

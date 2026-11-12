@@ -3548,6 +3548,12 @@
         "report": "Convierte tu última respuesta en un informe bien presentado que pueda guardar y compartir, como PDF en el espacio de trabajo."
       }
     },
+    "backgroundAsk": {
+      "title": "¿Quieres un aviso cuando sea momento de seguir?",
+      "body": "Mantén AbacusAI Bot funcionando en segundo plano e inícialo con tu computadora.",
+      "turnOn": "Activar",
+      "notNow": "Ahora no"
+    },
     "commands": {
       "new": "Start a new chat",
       "model": "Change the model",
@@ -3923,6 +3929,8 @@
     "settings": {
       "launchAtLogin": "Launch at login",
       "launchDetail": "Start AbacusAI Bot when you sign in.",
+      "keepRunning": "Seguir funcionando en segundo plano",
+      "keepRunningDetail": "Al cerrar la ventana, AbacusAI Bot sigue en la bandeja para que las rutinas y los recordatorios sigan funcionando.",
       "defaultWorkspace": "Last used folder",
       "workspaceDetail": "Where new sessions start. Picking a folder for a session changes it.",
       "defaultMode": "Default permission mode",
@@ -5287,7 +5295,9 @@
     "groupsCount_one": "{{count}} group",
     "groupsCount_other": "{{count}} groups",
     "morePeople_one": "{{count}} more",
-    "morePeople_other": "{{count}} more"
+    "morePeople_other": "{{count}} more",
+    "trayOpen": "Abrir {{app}}",
+    "backgroundNotice": "{{app}} sigue funcionando en segundo plano para que tus rutinas y recordatorios sigan activos. Haz clic derecho en el ícono de la bandeja para salir."
   },
   "channels": {
     "sidebar": {

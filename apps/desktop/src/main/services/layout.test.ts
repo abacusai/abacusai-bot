@@ -69,6 +69,11 @@ const MAIN_ROOT_FILES = [
   // a process-level concern rather than any one service's.
   "agent-runtime-deps.test.ts",
   "app-quit-state.ts",
+  // What closing the main window does, and the tray icon that keeps a closed
+  // app reachable: the same process-level question as the quit flag above.
+  "background-mode.test.ts",
+  "background-mode.ts",
+  "background-tray.ts",
   // The main window's reveal, shared the way the quit flag above is: a service
   // that sends the user to their browser needs them back afterwards, and must
   // not import the entry module to say so.
