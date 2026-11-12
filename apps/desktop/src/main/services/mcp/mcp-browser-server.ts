@@ -1764,6 +1764,22 @@ export class McpBrowserServer extends McpHttpServer {
     return { path: real };
   }
 
+  /**
+   * A real mouse move to (x, y): what sets CSS :hover. Only ever a move, never
+   * a press, so it is no activation (mcp-browser-guard.test.ts holds it to that).
+   */
+  private async moveMouseTo(
+    wc: BrowserPage,
+    x: number,
+    y: number
+  ): Promise<void> {
+    await this.cdp(wc, "Input.dispatchMouseEvent", {
+      type: "mouseMoved",
+      x,
+      y,
+    }).catch(() => undefined);
+  }
+
   /** The page's dialogs answered for the bot (Cancel, never OK) while it acts. */
   private async holdDialogs(wc: BrowserPage): Promise<void> {
     await answerDialogsWhileActing(wc, (method, params) =>
@@ -2919,15 +2935,25 @@ export class McpBrowserServer extends McpHttpServer {
           wc,
           `(function() {
           const el = document.querySelector(${JSON.stringify(sel)});
-          if (!el) return 'not_found';
+          if (!el) return { status: 'not_found' };
           el.scrollIntoView({ block: 'center', behavior: 'instant' });
           el.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
           el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-          return 'ok';
+          const box = el.getBoundingClientRect();
+          return { status: 'ok', x: Math.round(box.left + box.width / 2), y: Math.round(box.top + box.height / 2) };
         })()`
         );
-        if (result === "not_found")
+        if (result === "not_found" || result?.status === "not_found")
           return this.err(this.notFoundError(args, sel));
+        // Script events run the page's handlers but never set CSS :hover; a
+        // real mouse move does. Only on the tab itself: a frame's coordinates
+        // are its own.
+        if (
+          wc.frameId == null &&
+          typeof result?.x === "number" &&
+          typeof result?.y === "number"
+        )
+          await this.moveMouseTo(wc, result.x, result.y);
         return this.ok(`Hovered over ${this.label(args)}.`);
       }
 

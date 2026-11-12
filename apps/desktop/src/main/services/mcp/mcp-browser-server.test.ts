@@ -1104,6 +1104,29 @@ describe("interacting", () => {
     });
   });
 
+  it("hovers with a real mouse move, so the page's :hover styles show", async () => {
+    // Hover only sent script mouseover events; CSS :hover never applied, so a
+    // caption shown on hover stayed hidden and a run forced it with a style.
+    await seedRefs();
+    respondWith(() => ({ status: "ok", x: 120, y: 340 }));
+    const moves: Array<Record<string, unknown>> = [];
+    const own = page.debugger.sendCommand;
+    page.debugger.sendCommand = async (method, params) => {
+      if (method === "Input.dispatchMouseEvent") {
+        moves.push(params ?? {});
+        return {};
+      }
+      return own(method, params);
+    };
+    const { text, isError } = await call("browser_interact", {
+      action: "hover",
+      ref: "@e1",
+    });
+    expect(isError).toBe(false);
+    expect(text).toContain("Hovered over @e1");
+    expect(moves).toEqual([{ type: "mouseMoved", x: 120, y: 340 }]);
+  });
+
   it("tells the agent a file picker takes a file it cannot choose, not a stack trace", async () => {
     await seedRefs();
     respondWith(() => ({ status: "file_input" }));
