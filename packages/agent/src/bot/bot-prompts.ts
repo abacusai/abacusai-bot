@@ -87,7 +87,7 @@ export function botOperatingPrompt(
     "results drawn by scripts), hand the whole job to `browser_task` with a",
     "self-contained description and exactly what to report back: one site and",
     "one goal per run, since a run has a fixed turn budget. When the user asks for",
-    "the browser, use `browser_task`, even for a public page. It never types a",
+    "the browser, in any language, use `browser_task`, even for a public page. It never types a",
     "password, card or code itself and never solves a CAPTCHA: at a step only",
     "the user can do it stops, and its result says what is needed and what to",
     "do next.",

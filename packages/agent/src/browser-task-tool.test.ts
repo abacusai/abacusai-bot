@@ -131,6 +131,8 @@ describe("when to use it", () => {
     expect(tool.description).toMatch(
       /asks for the browser[^.]*use this[^.]*even for a public page/i
     );
+    // Asked in Hindi ("अपने ब्राउज़र से"), a bot still fetched: the words are any language's.
+    expect(tool.description).toMatch(/in any language/i);
   });
 });
 

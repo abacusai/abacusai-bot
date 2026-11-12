@@ -45,6 +45,7 @@ describe("what the prompts say about the browser, per channel", () => {
     expect(botOperatingPrompt()).toMatch(
       /asks\s+for\s+the\s+browser[^.]*browser_task[^.]*even\s+for\s+a\s+public\s+page/i
     );
+    expect(botOperatingPrompt()).toMatch(/in\s+any\s+language/i);
   });
 
   it("tells the phone loop how screenshots reach the chat, and acts only through chat, links and approval pages", () => {
