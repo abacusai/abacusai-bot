@@ -186,7 +186,7 @@ it.each([null, "telegram"] as const)(
   },
   15000
 );
-it("Start building opens a new session on the build examples and sends the first at once, making no bot", async () => {
+it("Start building opens a new session with the sample waiting in the box and Send pointed at, making no bot", async () => {
   const seed = defaultSeed();
   seed.bots = [];
   seed.routines = [];
@@ -216,25 +216,54 @@ it("Start building opens a new session on the build examples and sends the first
     )
   );
   expect(harness.collections.bots.toArray).toHaveLength(0);
-  expect(harness.collections.routines.toArray).toHaveLength(0);
-  // A task left waiting for Send went unsent too often: the sample starts now.
-  await waitFor(() => expect(startDraftStore.state.stage).not.toBe("draft"));
+  // An auto-sent sample left more people with a result they never asked for:
+  // it waits in the box, on the house, and Send is pointed at.
   expect(startDraftStore.state).toMatchObject({
+    stage: "draft",
     starters: "build",
     sponsored: true,
+    firstTask: true,
   });
+  expect(draftStore.state[`draft:${startDraftStore.state.id}`]?.text).toContain(
+    "Build me a one-page portfolio website"
+  );
+  const card = await waitFor(() => {
+    const found = document.querySelector("[data-send-hint-card]");
+    expect(found).not.toBeNull();
+    return found as HTMLElement;
+  });
+  expect(card.getAttribute("data-send-hint-card")).toBe("build");
+  expect(within(card).getByText("Press Send to see it work")).toBeTruthy();
+  expect(
+    document
+      .querySelector('[data-slot="composer-send"]')
+      ?.hasAttribute("data-send-hint")
+  ).toBe(true);
+  const funnel = () =>
+    harness!.calls
+      .filter(([name]) => name === "system.funnelStep")
+      .map(([, input]) => input);
+  expect(funnel()).toContainEqual({
+    step: "start_page_shown",
+    detail: "build_example",
+  });
+  await waitFor(() =>
+    expect(funnel()).toContainEqual({
+      step: "send_hint_shown",
+      detail: "build",
+    })
+  );
+  // Sent as it is: the hint is over, and the send counts as the example.
+  fireEvent.click(
+    document.querySelector<HTMLElement>('[data-slot="composer-send"]')!
+  );
+  await waitFor(() => expect(startDraftStore.state.stage).not.toBe("draft"));
   expect(JSON.stringify(startDraftStore.state.envelope?.parts)).toContain(
     "Build me a one-page portfolio website"
   );
-  // The app's own send is counted as such, never as the user's words.
-  const funnel = harness.calls
-    .filter(([name]) => name === "system.funnelStep")
-    .map(([, input]) => input);
-  expect(funnel).toContainEqual({
-    step: "start_page_shown",
-    detail: "build_auto",
-  });
-  expect(funnel).toContainEqual({ step: "start_sent", detail: "auto" });
+  expect(startDraftStore.state.firstTask).toBeUndefined();
+  expect(document.querySelector("[data-send-hint-card]")).toBeNull();
+  expect(funnel()).toContainEqual({ step: "start_sent", detail: "example" });
   expect(
     harness.calls.filter(([name]) => name === "account.skipOnboarding")
   ).toHaveLength(1);
@@ -256,6 +285,8 @@ it("Take the tour on the pick screen tours the start page with the Build sample 
     )
   );
   await waitFor(() => expect(tourStore.state.active).not.toBeNull());
+  // One guide at a time: the hint at Send waits for the tour.
+  expect(document.querySelector("[data-send-hint-card]")).toBeNull();
   // Skipped or finished, the tour ends on one Send, not an empty page.
   expect(startDraftStore.state).toMatchObject({
     stage: "draft",
@@ -292,6 +323,26 @@ it("Take the tour on the pick screen tours the start page with the Build sample 
     "[data-slot=composer] textarea"
   );
   expect(box?.value).toContain("Build me a one-page portfolio website");
+  // Then the hint points at Send; closing it ends it for this draft.
+  const hint = await waitFor(() => {
+    const found = document.querySelector("[data-send-hint-card]");
+    expect(found).not.toBeNull();
+    return found as HTMLElement;
+  });
+  fireEvent.click(within(hint).getByRole("button", { name: "Close" }));
+  await waitFor(() =>
+    expect(document.querySelector("[data-send-hint-card]")).toBeNull()
+  );
+  expect(startDraftStore.state.firstTask).toBeUndefined();
+  expect(
+    document
+      .querySelector('[data-slot="composer-send"]')
+      ?.hasAttribute("data-send-hint")
+  ).toBe(false);
+  expect(funnel()).toContainEqual({
+    step: "send_hint_dismissed",
+    detail: "build",
+  });
   expect(funnel()).not.toContainEqual(
     expect.objectContaining({ step: "start_sent" })
   );
@@ -507,7 +558,7 @@ const renderGmailScreen = async () => {
   return harness;
 };
 
-it("beside the inbox pass, GitHub starts its pull request review at once", async () => {
+it("beside the inbox pass, GitHub opens its pull request review in the box, Send pointed at", async () => {
   const harness = await renderGmailScreen();
   expect(
     [...document.querySelectorAll("[data-first-choice]")].map((card) =>
@@ -519,17 +570,40 @@ it("beside the inbox pass, GitHub starts its pull request review at once", async
   await waitFor(() =>
     expect(startDraftStore.state).toMatchObject({ starters: "code" })
   );
-  await waitFor(() => expect(startDraftStore.state.stage).not.toBe("draft"));
   // The house already paid for the Chief of Staff's first run.
+  expect(startDraftStore.state).toMatchObject({
+    stage: "draft",
+    firstTask: true,
+  });
   expect(startDraftStore.state.sponsored).toBeUndefined();
-  expect(JSON.stringify(startDraftStore.state.envelope?.parts)).toMatch(
+  expect(draftStore.state[`draft:${startDraftStore.state.id}`]?.text).toMatch(
     /pull request/i
+  );
+  await waitFor(() =>
+    expect(
+      document
+        .querySelector("[data-send-hint-card]")
+        ?.getAttribute("data-send-hint-card")
+    ).toBe("code")
   );
   const funnel = harness.calls
     .filter(([name]) => name === "system.funnelStep")
     .map(([, input]) => input);
   expect(funnel).toContainEqual({ step: "first_choice_github" });
-  expect(funnel).toContainEqual({ step: "start_sent", detail: "auto" });
+  expect(funnel).not.toContainEqual(
+    expect.objectContaining({ step: "start_sent" })
+  );
+  // Their own words instead: the hint ends.
+  fireEvent.change(
+    document.querySelector<HTMLTextAreaElement>(
+      '[data-slot="composer"] textarea'
+    )!,
+    { target: { value: "Fix the login bug in my repo" } }
+  );
+  await waitFor(() =>
+    expect(document.querySelector("[data-send-hint-card]")).toBeNull()
+  );
+  expect(startDraftStore.state.firstTask).toBeUndefined();
   // Only the Chief of Staff: the review needs no bot.
   expect(harness.collections.bots.toArray).toHaveLength(1);
 });

@@ -678,6 +678,7 @@ const SendOrStop = () => {
   return (
     <Button
       size="icon-lg"
+      data-slot="composer-send"
       aria-label={busy ? t("chat.composer.queue") : t("chat.composer.send")}
       disabled={config.pending || !hasText || config.blocked === "loading"}
       aria-disabled={!!config.blocked}

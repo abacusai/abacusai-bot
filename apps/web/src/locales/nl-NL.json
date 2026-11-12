@@ -1825,6 +1825,11 @@
           "detail": "Bugs en ontbrekende tests, per bestand en regel.",
           "prompt": "Review mijn openstaande pull requests. Als deze map een GitHub-repository is, gebruik die; zo niet, toon mijn GitHub-repository's en vraag me welke. Vertel me per pull request wat er verandert en benoem bugs, risico's en ontbrekende tests, met bestand en regel. Vertel het me alleen hier: plaats niets op GitHub en wijzig geen code."
         }
+      },
+      "sendHint": {
+        "title": "Druk op Verzenden en zie het werken",
+        "build": "Je eerste taak staat al in het vak. Verstuur hem en zie hoe de app hem bouwt, of pas eerst de tekst aan.",
+        "code": "Je eerste taak staat al in het vak. Verstuur hem en de app beoordeelt je openstaande pull requests, of pas eerst de tekst aan."
       }
     },
     "model": {

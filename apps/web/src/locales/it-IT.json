@@ -1825,6 +1825,11 @@
           "detail": "Bug e test mancanti, per file e riga.",
           "prompt": "Rivedi le mie pull request aperte. Se questa cartella è un repository GitHub, usalo; altrimenti elenca i miei repository GitHub e chiedimi quale. Per ogni pull request, dimmi cosa cambia e segnala bug, rischi e test mancanti, con file e riga. Dimmelo solo qui: non pubblicare nulla su GitHub e non modificare il codice."
         }
+      },
+      "sendHint": {
+        "title": "Premi Invia per vederlo all’opera",
+        "build": "La tua prima attività è già nella casella. Inviala per vedere l’app costruirla, oppure modifica prima il testo.",
+        "code": "La tua prima attività è già nella casella. Inviala e l’app esaminerà le tue pull request aperte, oppure modifica prima il testo."
       }
     },
     "model": {

@@ -1825,6 +1825,11 @@
           "detail": "Bugs and missing tests, by file and line.",
           "prompt": "Review my open pull requests. If this folder is a GitHub repository, use it; if not, list my GitHub repositories and ask me which one. For each pull request, tell me what it changes and call out bugs, risks and missing tests, with the file and line. Tell me here only: do not post on GitHub or change any code."
         }
+      },
+      "sendHint": {
+        "title": "Press Send to see it work",
+        "build": "Your first task is ready in the box. Send it to watch the app build it, or change the words first.",
+        "code": "Your first task is ready in the box. Send it and the app reviews your open pull requests, or change the words first."
       }
     },
     "model": {

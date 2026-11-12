@@ -97,6 +97,7 @@ const start = v.object({
   stage: v.picklist(["draft", "created", "checkout-ready", "handed-off"]),
   submittedAt: v.optional(v.number()),
   envelope: v.nullable(envelope),
+  firstTask: v.optional(v.literal(true)),
 });
 const tabs = v.record(
   v.string(),
