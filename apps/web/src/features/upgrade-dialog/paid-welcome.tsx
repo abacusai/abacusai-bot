@@ -8,7 +8,6 @@ import { planTopModelIds } from "@abacus-ai/contract/billing-plan";
 import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
 import { funnelDetail, type FunnelStep } from "@abacus-ai/contract/funnel";
-import { OPENLLM_ID } from "@abacus-ai/contract/models";
 import { retryOfferModel } from "@abacus-ai/contract/retry-offer";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useParams } from "@tanstack/react-router";
@@ -521,7 +520,8 @@ export const PaidWelcomeHost = ({
       );
       const top = retryOfferModel(models, "runnable", planTopModelIds(billing));
       ready({
-        model: pick != null && pick.id !== OPENLLM_ID ? pick.label : null,
+        // The plan's own default: RouteLLM - Open on Basic, the code router on Pro.
+        model: pick?.label ?? null,
         // No way to open a chat here: the plain steps, so none promises one.
         top:
           top == null || starts == null
