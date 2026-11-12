@@ -146,11 +146,15 @@ export const FUNNEL_STEPS = [
   "onboarding_offer_upgrade",
   "onboarding_offer_skip",
   // The welcome right after a payment lands; shown's detail is the tier and
-  // whether a paused turn waits, the unlock's is what it opens.
+  // what it leads with (paused, chat, task or none), the unlock's is what it
+  // opens. continue (detail: tier) picks up the last chat on the top model;
+  // task (detail: build, inbox or business) starts a first task on it.
   "paid_welcome_shown",
   "paid_welcome_resume",
   "paid_welcome_routines",
   "paid_welcome_unlock",
+  "paid_welcome_continue",
+  "paid_welcome_task",
   "paid_welcome_closed",
   // A paid plan's deploy steps for a site the agent built; the detail is
   // where they showed (welcome or card).
