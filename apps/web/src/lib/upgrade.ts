@@ -27,6 +27,14 @@ export const payingAccount = (
   return tier === "basic" || tier === "paid";
 };
 
+/** The account's credits are gone: what it was granted is all used. */
+export const creditsSpent = (
+  account: AbacusAccountInfo | null | undefined
+): boolean =>
+  account?.credits_granted != null &&
+  account.credits_used != null &&
+  account.credits_used >= account.credits_granted;
+
 type PlanListener = (account: AbacusAccountInfo) => void;
 
 const planListeners = new Set<PlanListener>();

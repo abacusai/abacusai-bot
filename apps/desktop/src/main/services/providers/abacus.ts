@@ -546,8 +546,21 @@ const remember = (value: AbacusAccountInfo): void => {
  */
 export const accountMovedPlan = (plan: string | null): void => {
   const tier = plan?.trim().toLowerCase() ?? "";
-  if (accountCache != null && tier.length > 0)
-    remember({ ...accountCache.value, subscription_tier: tier });
+  // The old plan's balance is not the new one's: until the fresh read lands
+  // no credits are known, so nothing speaks from the free plan's numbers.
+  if (accountCache != null && tier.length > 0) {
+    const {
+      plan_credits: _planCredits,
+      free_credits_held: _held,
+      ...rest
+    } = accountCache.value;
+    remember({
+      ...rest,
+      subscription_tier: tier,
+      credits_used: null,
+      credits_granted: null,
+    });
+  }
   void fetchAbacusAccount(true).catch(() => null);
 };
 

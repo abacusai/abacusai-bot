@@ -1734,6 +1734,24 @@ describe("a paid plan out of credits", () => {
     ).toBe(
       "Model isn't available, and your Abacus credits are used up. Move up to Pro ($20/month) for more credits every month: https://apps.example.test/upgrade/pro"
     );
+    // Its repeat is the paid plan's too, never the free plan's reminder.
+    expect(
+      reply(
+        BASIC,
+        [
+          {
+            type: "model-unavailable",
+            cause: "retired",
+            model: "m",
+            label: "Model",
+          },
+          { type: "upgrade-abacus", cause: "exhausted" },
+        ],
+        true
+      )
+    ).toBe(
+      "Model isn't available, and your Abacus credits are used up. Move up to Pro ($20/month) for more credits every month: https://apps.example.test/upgrade/pro"
+    );
     expect(reply(BASIC, [{ type: "cut-off", cause: "out" }])).toBe(
       "Google cut my reply off partway, so I stopped. Send your message again to retry. Or move up to Pro ($20/month) for more credits every month: https://apps.example.test/upgrade/pro"
     );

@@ -74,6 +74,7 @@ import {
   usePaymentConfirmPhase,
 } from "#renderer/lib/payment-confirming";
 import { IS_ELECTRON } from "#renderer/lib/platform";
+import { onPlanActive } from "#renderer/lib/upgrade";
 import {
   lastUserText,
   requestUpgradeDialog,
@@ -1087,17 +1088,22 @@ export const ErrorCard = ({
   useEffect(() => {
     if (providedTier != null) return;
     let live = true;
-    runtime.host
-      .accountTier()
-      .then((value) => {
-        if (live) setAccountTier(value);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (live) setTierRead(true);
-      });
+    const read = () =>
+      runtime.host
+        .accountTier()
+        .then((value) => {
+          if (live) setAccountTier(value);
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (live) setTierRead(true);
+        });
+    void read();
+    // A plan bought while the card is up: it speaks for the new plan at once.
+    const stop = onPlanActive(() => void read());
     return () => {
       live = false;
+      stop();
     };
   }, [providedTier, runtime]);
   const tier = providedTier ?? accountTier;
@@ -1416,9 +1422,11 @@ export const ErrorCard = ({
               expired: creditsExpired(actions),
               ...(task != null && { task }),
               resumes: canReply,
+              // The free models are the free plan's way on: never a payer's.
               ...(continueFree != null &&
                 latest &&
-                canReply && { onContinueFree: resumeOnFreePool }),
+                canReply &&
+                !paying && { onContinueFree: resumeOnFreePool }),
               onUpgrade: upgradeNow,
               onSeePlans: seePlans,
               ...(canReply &&
