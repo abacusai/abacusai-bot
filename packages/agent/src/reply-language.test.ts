@@ -845,6 +845,14 @@ describe("which language replies fall back to", () => {
   const sentText = (fetchImpl: ReturnType<typeof detector>): string =>
     JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body)).messages[0].content;
 
+  it("reads none of a channel turn as the person's words: the app wrote its rules and thread", () => {
+    expect(
+      ownWords(
+        '[channel "Brewly"] You are Writer, one of the user\'s bots.\n\nUser: Writer, écris trois slogans pour mon café'
+      )
+    ).toBe("");
+  });
+
   it("never learns the language from a first run or other app-only turn", async () => {
     const fetchImpl = detector("English");
     const firstRun =

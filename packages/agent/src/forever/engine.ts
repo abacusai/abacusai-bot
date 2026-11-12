@@ -454,6 +454,8 @@ export class ForeverEngine {
   private flushedSinceCompaction = false;
   /** True while a flush/consolidation turn runs: its output stays hidden. */
   private hiddenTurn = false;
+  /** This send is a task the app handed the bot (passed on by another bot, or channel work): its report goes back there, not to the user. */
+  private taskTurn = false;
   /** The hidden turn's last assistant text, for its accept hook. */
   private hiddenReply = "";
   /** What the current prompt's memory block was built from. */
@@ -983,6 +985,7 @@ export class ForeverEngine {
         const words = ownWords(text, turn?.userText);
         this.appTurn =
           words.length === 0 && isAppTurnForPerson(text, turn?.userText);
+        this.taskTurn = turn?.userText?.operator?.kind === "bot-task";
         this.userWords.beginTurn(words);
         // Only the user's own words name their language: not a sender's, not a routine's.
         if (isOwnerAudience() && this.profile.statesReplyLanguage !== true)
@@ -2259,6 +2262,9 @@ export class ForeverEngine {
   private nextStepDue(messages: readonly unknown[]): boolean {
     return (
       !this.hiddenTurn &&
+      // A handed task's report is read by the bot or channel it goes back to,
+      // which decides what comes next: a question here would replace it.
+      !this.taskTurn &&
       this.ownedTurn != null &&
       nextStepAskOn() &&
       mayAskForPromisedWork(this.mode) &&

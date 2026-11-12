@@ -153,7 +153,9 @@ export type AppNoteTag =
 export const appNoteTag = (tag: AppNoteTag): string => `[${tag}]`;
 
 /** A note another bot sent ("[from bot Name] ..."), or a task it passed on. */
-const BOT_NOTE = /^\[(?:from bot |task from the user, passed on by )/;
+const BOT_NOTE =
+  // A channel turn opens with `[channel "<title>"]`: the app's rules and thread, not the user's words.
+  /^\[(?:from bot |task from the user, passed on by |channel ")/;
 /**
  * Where the words start after a "[WhatsApp message from Sam] " label, as
  * `frameChannelMessage` writes it; -1 without one. A scan, not a regex, so a
