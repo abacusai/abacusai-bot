@@ -360,17 +360,37 @@ describe("the credit wall a routine meets", () => {
     });
   });
 
-  it("goes the moment the plan changes, with a free-models choice made at it, even right after the wall", () => {
-    expect(wallAfterPlanChange(row({ creditsExhaustedAt: 1_000 }))).toEqual({
+  it("goes the moment the plan changes, with a free-models choice and the walled chat's ask, even right after the wall", () => {
+    const cleared = {
       creditsExhaustedAt: null,
       freeLaneChosenAt: null,
-    });
+      dismissals: { wallReopen: null },
+    };
     expect(
       wallAfterPlanChange(
-        row({ creditsExhaustedAt: 1_000, freeLaneChosenAt: 2_000 })
+        row({ creditsExhaustedAt: 1_000, dismissals: {} as never })
       )
-    ).toEqual({ creditsExhaustedAt: null, freeLaneChosenAt: null });
-    expect(wallAfterPlanChange(row())).toBeNull();
+    ).toEqual(cleared);
+    expect(
+      wallAfterPlanChange(
+        row({
+          creditsExhaustedAt: 1_000,
+          freeLaneChosenAt: 2_000,
+          dismissals: {} as never,
+        })
+      )
+    ).toEqual(cleared);
+    const reopen = row({ dismissals: {} as never });
+    expect(
+      wallAfterPlanChange({
+        ...reopen,
+        dismissals: {
+          ...reopen.dismissals,
+          wallReopen: { sessionId: "s1", wallAt: 1_000, askedAt: null },
+        },
+      })
+    ).toEqual(cleared);
+    expect(wallAfterPlanChange(row({ dismissals: {} as never }))).toBeNull();
   });
 
   it("tells every agent when it moves, and only then", () => {

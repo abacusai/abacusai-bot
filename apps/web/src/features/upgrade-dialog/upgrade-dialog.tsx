@@ -29,6 +29,7 @@ import {
 import { welcomeLandedPlan, type PausedTurn } from "#renderer/lib/paid-welcome";
 import {
   checkPlanNow,
+  creditsSpent,
   onPlanActive,
   openNextPlan,
   openTopUp,
@@ -568,9 +569,12 @@ export const UpgradeDialogHost = () => {
               .catch(() => {});
           return;
         }
-        // A paid plan's credits or balance request only: a free account never reads this.
+        // A paid plan's balance request, or its credits request while they are
+        // out: a wall from before a plan change offers a new payer nothing.
+        // A free account never reads this.
         const offer =
-          (request.kind === "credits" || request.kind === "balance") &&
+          (request.kind === "balance" ||
+            (request.kind === "credits" && creditsSpent(account))) &&
           payingAccount(account)
             ? paidCreditsOffer(
                 await transport.client.account.billingPlan({}).catch(() => null)

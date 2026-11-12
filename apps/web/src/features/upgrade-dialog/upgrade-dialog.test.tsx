@@ -194,3 +194,71 @@ it("the wall asked again on return is counted with “your work is waiting”: s
     ])
   );
 });
+
+it("a wall from before an upgrade offers a payer with credits nothing: no dialog, no next plan", async () => {
+  const os = implement(contract);
+  const harness = await createHarness("/", {
+    seed: { ...defaultSeed(), sessions: [] },
+    procedures: {
+      account: {
+        abacus: os.account.abacus.handler(() => ({
+          ...FREE,
+          subscription_tier: "basic",
+          credits_granted: 20_000,
+          credits_used: 0,
+        })),
+        billingPlan: os.account.billingPlan.handler(() => ({
+          ...BILLING,
+          current: { ...BILLING.current, planName: "Basic" },
+          upgrades: [
+            {
+              ...BILLING.upgrades[0]!,
+              plan: "pro",
+              planName: "Pro",
+              priceText: "$20/mo",
+            },
+          ],
+          topUpUrl: "https://example.test/top-up",
+        })),
+      },
+      system: { openExternal: os.system.openExternal.handler(vi.fn()) },
+    },
+  });
+  let rendered!: ReturnType<typeof render>;
+  await act(async () => {
+    rendered = render(
+      <QueryClientProvider client={harness.router.options.context.queryClient}>
+        <RouterContextProvider router={harness.router}>
+          <DbProvider value={harness.appDb}>
+            <UpgradeDialogHost />
+          </DbProvider>
+        </RouterContextProvider>
+      </QueryClientProvider>
+    );
+  });
+  cleanup = async () => {
+    closeUpgradeDialog();
+    rendered.unmount();
+    await harness.cleanup();
+  };
+  act(() =>
+    requestUpgradeDialog(
+      {
+        kind: "credits",
+        key: "wall-reopen:2",
+        threadId: "t1",
+        pendingText: "still cut off",
+        reopen: true,
+        resume: async () => {},
+      },
+      true
+    )
+  );
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  });
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(
+    harness.calls.filter(([name]) => name === "system.funnelStep")
+  ).toEqual([]);
+});

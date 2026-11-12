@@ -69,8 +69,13 @@ vi.mock("../config/settings", async (importActual) => ({
     name === "ABACUS_API_KEY" ? "test-key" : "",
 }));
 
-const { accountMovedPlan, accountPlan, clearAbacusCache, fetchAbacusAccount } =
-  await import("./abacus");
+const {
+  accountMovedPlan,
+  accountPlan,
+  clearAbacusCache,
+  creditSnapshot,
+  fetchAbacusAccount,
+} = await import("./abacus");
 const { ServiceHost } = await import("../../service-host");
 
 const account = (tier: string, plan: string): Response =>
@@ -115,9 +120,20 @@ it("drops the old plan's name when a payment moves free to Basic, until the read
   const broadcast = vi
     .spyOn(internals.agentManagerService, "broadcastCommand")
     .mockReturnValue(0);
-  fetchMock.mockResolvedValueOnce(account("free", "Free"));
+  fetchMock.mockResolvedValueOnce(
+    new Response(
+      JSON.stringify({
+        subscription_tier: "free",
+        plan: "Free",
+        credits_used: 1640,
+        credits_granted: 2000,
+      }),
+      { status: 200 }
+    )
+  );
   await fetchAbacusAccount(true);
   expect(accountPlan()).toEqual({ tier: "free", name: "Free" });
+  expect(creditSnapshot()).toMatchObject({ remaining: 360, granted: 2000 });
   broadcast.mockClear();
 
   let release: () => void = () => {};
@@ -129,6 +145,8 @@ it("drops the old plan's name when a payment moves free to Basic, until the read
   );
   accountMovedPlan("basic");
 
+  // The free plan's numbers are not the new plan's: no balance until the read.
+  expect(creditSnapshot()).toBeNull();
   // The tier moved at once; "Free" no longer names it.
   expect(broadcast).toHaveBeenCalledWith({
     type: "account_plan",

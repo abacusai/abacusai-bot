@@ -420,15 +420,17 @@ export const chatReplyForFailure = (
       const creditsOut =
         error.actions?.some((action) => action.type === "upgrade-abacus") ===
         true;
+      // A paying account is never sent the free plan's upgrade reminder, as
+      // in the cut-off branch above.
       if (creditsOut)
-        return repeat
-          ? reminder
-          : account === "free"
-            ? [
+        return account !== "free"
+          ? `${t("outcome.channel.unavailableOut", { model })} ${paidOutLines(words, offer, t("outcome.channel.paidOut", { link: offer.topUpUrl }), "outcome.channel.paidUpgradeOnly")}`
+          : repeat
+            ? reminder
+            : [
                 t("outcome.channel.unavailableOut", { model }),
                 ...offerLines(words, offer),
-              ].join("\n")
-            : `${t("outcome.channel.unavailableOut", { model })} ${paidOutLines(words, offer, t("outcome.channel.paidOut", { link: offer.topUpUrl }), "outcome.channel.paidUpgradeOnly")}`;
+              ].join("\n");
       if (gone?.cause !== "plan")
         return t(
           gone?.cause === "down"

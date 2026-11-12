@@ -72,14 +72,22 @@ export const wallAfterAccountRead = (
 };
 
 /**
- * The plan changed (a payment landed, a cancellation): the wall and a choice
- * made at it belonged to the old plan's credits, so they go at once. A new
+ * The plan changed (a payment landed, a cancellation): the wall, a choice
+ * made at it and the walled chat's ask to go on belonged to the old plan's
+ * credits, so they go at once. A new
  * payer is never held at the free plan's wall; a wall the new plan meets is
  * stamped again by its own refusal.
  */
 export const wallAfterPlanChange = (row: PrefsRow): PrefsPatch | null =>
-  row.creditsExhaustedAt != null || row.freeLaneChosenAt != null
-    ? { creditsExhaustedAt: null, freeLaneChosenAt: null }
+  row.creditsExhaustedAt != null ||
+  row.freeLaneChosenAt != null ||
+  row.dismissals.wallReopen != null
+    ? {
+        creditsExhaustedAt: null,
+        freeLaneChosenAt: null,
+        // The walled chat's "your work is waiting" ask belonged to the old wall.
+        dismissals: { wallReopen: null },
+      }
     : null;
 
 /**

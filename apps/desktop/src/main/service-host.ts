@@ -1468,6 +1468,10 @@ export class ServiceHost {
       type: "credit_wall",
       ...creditWallOf(row),
     });
+    // The wall went (credits back, a new plan): the agents' hour-long
+    // Abacus refusal and the old plan's catalog go with it.
+    if (row.creditsExhaustedAt == null && previous.creditsExhaustedAt != null)
+      this.refreshAgentProviders();
     if (holdLifted(row)) {
       this.prefs?.()?.update({ routineCreditHold: null });
       for (const job of listJobs())
@@ -2170,8 +2174,12 @@ export class ServiceHost {
     // State the old plan's credits set ends with it: the wall, a free-models
     // choice at it, and milestone marks. Every agent hears the wall move.
     const prefs = this.prefs?.();
+    const walled = prefs?.get().creditsExhaustedAt != null;
     const wall = prefs != null ? wallAfterPlanChange(prefs.get()) : null;
     if (wall != null) prefs?.update(wall);
+    // A wall that goes refreshes the agents (prefsChanged); without one they
+    // still take the new plan's catalog.
+    if (!walled) this.refreshAgentProviders();
     void this.creditThresholds.planChanged();
   });
   private readonly cronScheduler = new CronScheduler(

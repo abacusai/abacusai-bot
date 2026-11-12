@@ -13,6 +13,7 @@ import { ExternalLink, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { onPlanActive } from "#renderer/lib/upgrade";
 import { requestPlanDialog } from "#renderer/lib/upgrade-dialog";
 import { Button } from "#renderer/ui/button";
 
@@ -39,14 +40,19 @@ export const PaidFeatureCard = ({
   const web = (tier === "basic" || tier === "paid") && known?.inApp === false;
   useEffect(() => {
     let live = true;
-    void host
-      .accountTier()
-      .then((next) => {
-        if (live) setTier(next);
-      })
-      .catch(() => {});
+    const read = () =>
+      host
+        .accountTier()
+        .then((next) => {
+          if (live) setTier(next);
+        })
+        .catch(() => {});
+    void read();
+    // A plan bought while the card is up: it speaks for the new plan at once.
+    const stop = onPlanActive(() => void read());
     return () => {
       live = false;
+      stop();
     };
   }, [host]);
   if (known == null) return null;
