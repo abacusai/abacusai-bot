@@ -3,6 +3,7 @@ import { implement } from "@orpc/server";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
+import { resetPaymentConfirmWatch } from "#renderer/lib/payment-confirming";
 import { renderApp } from "#renderer/test-support/app-harness";
 
 import { onboardingStore } from "./store";
@@ -16,6 +17,7 @@ afterEach(async () => {
   app = undefined;
   vi.restoreAllMocks();
   onboardingStore.setState(() => ({ signIn: null, createdBotId: null }));
+  resetPaymentConfirmWatch();
 });
 
 it("resumes setup instead of showing signup when the account is already signed in", async () => {
@@ -165,16 +167,9 @@ it("cancel after credentials are saved skips signup without allowing a stale han
 });
 
 const paymentScreens = [
-  {
-    reason: "unconfirmed",
-    title: "Choose a plan to keep using AbacusAI Bot",
-    cta: "Upgrade",
-  },
-  {
-    reason: null,
-    title: "Choose a plan to keep using AbacusAI Bot",
-    cta: "Upgrade",
-  },
+  // A first payment not recorded yet: confirming, never a plan to buy.
+  { reason: "unconfirmed", title: "Confirming your payment…", cta: null },
+  { reason: null, title: "Confirming your payment…", cta: null },
   { reason: "trial_ended", title: "Your free trial has ended", cta: "Upgrade" },
   { reason: "lapsed", title: "Your subscription has ended", cta: "Renew" },
 ] as const;
@@ -246,17 +241,23 @@ it.each(paymentScreens)(
     );
 
     expect(await screen.findByRole("heading", { name: title })).not.toBeNull();
-    expect(screen.getByRole("button", { name: cta })).not.toBeNull();
-    expect(
-      screen.getByRole("button", {
-        name: "Go to Abacus AI Agent on the web →",
-      })
-    ).not.toBeNull();
+    if (cta != null) {
+      expect(screen.getByRole("button", { name: cta })).not.toBeNull();
+      expect(
+        screen.getByRole("button", {
+          name: "Go to Abacus AI Agent on the web →",
+        })
+      ).not.toBeNull();
+    } else {
+      expect(
+        screen.queryByRole("button", { name: /Upgrade|Renew/ })
+      ).toBeNull();
+    }
     expect(screen.getByRole("button", { name: "Sign out" })).not.toBeNull();
     // The plan comes from billing_plan; a lapsed plan is renewed, not sold.
     await waitFor(() =>
       expect(screen.queryByText("Upgrade to Basic — Intro offer") != null).toBe(
-        reason !== "lapsed"
+        reason === "trial_ended"
       )
     );
     expect(
@@ -268,7 +269,7 @@ it.each(paymentScreens)(
         (item) => item.textContent
       )
     ).toEqual(
-      reason === "lapsed"
+      reason !== "trial_ended"
         ? []
         : [
             "20,000 credits a month (10x the free plan)",
@@ -279,10 +280,10 @@ it.each(paymentScreens)(
             "Build and deploy powerful apps on the web, including mobile apps",
           ]
     );
-    // Only a plan whose payment did not confirm offers subscribers a report.
+    // No screen asks a subscriber to report a payment: an unconfirmed one is confirming.
     expect(
-      screen.queryByRole("button", { name: "Report an issue" }) != null
-    ).toBe(reason === "unconfirmed" || reason == null);
+      screen.queryByRole("button", { name: "Report an issue" })
+    ).toBeNull();
     expect(authStart).toHaveBeenCalledOnce();
   }
 );

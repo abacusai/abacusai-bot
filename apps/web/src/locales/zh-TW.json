@@ -4634,10 +4634,10 @@
     "close": "關閉"
   },
   "paymentRequired": {
-    "unconfirmedTitle": "選擇方案以繼續使用 AbacusAI Bot",
-    "unconfirmedBody": "你已登入，但你的帳號需要有方案，AbacusAI Bot 才能運作。",
-    "alreadySubscribed": "已經訂閱了嗎？{{link}}",
-    "reportIssue": "回報問題",
+    "confirmingTitle": "正在確認你的付款…",
+    "confirmingBody": "通常只需要幾秒鐘。完成後，AbacusAI Bot 會從你停下的地方繼續。",
+    "lateTitle": "暫時還看不到你的付款",
+    "lateBody": "如果你剛付款，可能需要幾分鐘，應用程式會自動繼續。請不要重複購買。如果一直沒有恢復，請聯絡 support@abacus.ai。",
     "trialEndedTitle": "你的免費試用已結束",
     "trialEndedBody": "升級後就能繼續用這個帳號使用 AbacusAI Bot。",
     "lapsedTitle": "你的訂閱已結束",
@@ -4646,6 +4646,7 @@
     "renew": "續訂",
     "webAgent": "前往網頁版 Abacus AI Agent →",
     "tryAgain": "再試一次",
+    "checkAgain": "重新檢查",
     "checking": "正在檢查…",
     "stillBlocked": "我們目前還看不到這個帳號的付款紀錄。",
     "waiting": "請在瀏覽器中完成結帳。付款成功後，應用程式就會馬上繼續。"
@@ -5004,8 +5005,8 @@
       }
     },
     "payment": {
-      "title": "我們無法確認你最近一筆付款",
-      "body": "如果你的訂閱仍然有效，請聯絡 support@abacus.ai。請不要重複購買。",
+      "confirmingBody": "完成後會立即送出你的訊息。",
+      "lateBody": "如果你剛付款，可能需要幾分鐘。請不要重複購買。如果一直沒有恢復，請聯絡 support@abacus.ai。",
       "billing": "開啟帳單"
     },
     "verifyPhone": {

@@ -27,6 +27,11 @@ import {
   startFreeCreditsWatch,
 } from "#renderer/lib/free-credits-watch";
 import {
+  checkPaymentNow,
+  paymentConfirmStore,
+  resetPaymentConfirmWatch,
+} from "#renderer/lib/payment-confirming";
+import {
   closeUpgradeDialog,
   handOffResume,
   resumeHandoffStore,
@@ -49,6 +54,7 @@ let current: { cleanup(): Promise<void> } | null = null;
 afterEach(async () => {
   await current?.cleanup();
   current = null;
+  resetPaymentConfirmWatch();
 });
 
 const t = (key: string, values?: Record<string, unknown>) =>
@@ -1137,38 +1143,75 @@ describe("the turn's outcome card", () => {
     });
   });
 
-  it("Abacus's billing gate is a payment card: support, the billing page, no purchase", async () => {
-    const openExternal = vi.fn(async () => {});
+  const UNCONFIRMED = {
+    message: "We couldn't confirm your last payment.",
+    cause: "payment_required",
+    actions: [
+      { type: "payment-required", cause: "unconfirmed" },
+      { type: "switch-model" },
+    ],
+  };
+
+  it("a payment still landing is Confirming, never a purchase, and the waiting message goes once it lands", async () => {
     const openUpgrade = vi.fn(async () => {});
+    let verdict: { reason: string } | null = { reason: "unconfirmed" };
+    const os = implement(contract);
+    const relay = failed(UNCONFIRMED);
     current = await renderRelay(
-      failed({
-        message: "We couldn't confirm your last payment.",
-        cause: "payment_required",
-        actions: [
-          { type: "payment-required", cause: "unconfirmed" },
-          { type: "switch-model" },
-        ],
-      }),
+      relay,
       "session",
       {},
       {},
-      host("free", { openExternal, openUpgrade })
+      host("free", { openUpgrade }),
+      {
+        account: {
+          payment: os.account.payment.handler(() => verdict as never),
+        },
+      }
     );
-    await screen.findByText("We couldn't confirm your last payment");
+    await screen.findByText("Confirming your payment…");
     expect(
-      screen.getByText(
-        "If your subscription is active, contact support@abacus.ai. Please don't purchase again."
-      )
+      screen.getByText("Your message sends as soon as it's done.")
     ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: /Upgrade|Open billing/ })
+    ).toBeNull();
+    expect(screen.queryByText(/couldn't confirm|out of credits/i)).toBeNull();
+    // The payment lands: the waiting message goes again, once.
+    verdict = null;
+    await act(async () => checkPaymentNow());
+    await waitFor(() => expect(relay.stats.send).toHaveLength(1));
+    expect(openUpgrade).not.toHaveBeenCalled();
+  });
+
+  it("a payment still not seen after the wait says so: billing and Check again, never a purchase", async () => {
+    const openExternal = vi.fn(async () => {});
+    const openUpgrade = vi.fn(async () => {});
+    const os = implement(contract);
+    current = await renderRelay(
+      failed(UNCONFIRMED),
+      "session",
+      {},
+      {},
+      host("free", { openExternal, openUpgrade }),
+      {
+        account: {
+          payment: os.account.payment.handler(
+            () => ({ reason: "unconfirmed" }) as never
+          ),
+        },
+      }
+    );
+    await screen.findByText("Confirming your payment…");
+    act(() => paymentConfirmStore.setState(() => ({ phase: "late" })));
+    await screen.findByText("We can't see your payment yet");
     screen.getByRole("button", { name: "Open billing" }).click();
     expect(openExternal).toHaveBeenCalledWith(
       "https://apps.abacus.ai/chatllm/admin/profile"
     );
+    expect(screen.getByRole("button", { name: "Check again" })).toBeTruthy();
     expect(openUpgrade).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: /Upgrade/ })).toBeNull();
-    expect(
-      screen.queryByText(/used your free credits|out of credits/i)
-    ).toBeNull();
   });
 
   it("a dropped connection is the connection card, with its details and a retry", async () => {

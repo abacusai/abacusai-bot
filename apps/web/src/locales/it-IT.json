@@ -4634,10 +4634,10 @@
     "close": "Chiudi"
   },
   "paymentRequired": {
-    "unconfirmedTitle": "Scegli un piano per continuare a usare AbacusAI Bot",
-    "unconfirmedBody": "Hai effettuato l'accesso, ma il tuo account ha bisogno di un piano perché AbacusAI Bot funzioni.",
-    "alreadySubscribed": "Hai già un abbonamento? {{link}}",
-    "reportIssue": "Segnala un problema",
+    "confirmingTitle": "Conferma del pagamento in corso…",
+    "confirmingBody": "Di solito bastano pochi secondi. AbacusAI Bot riprende esattamente da dove avevi lasciato appena è fatto.",
+    "lateTitle": "Non vediamo ancora il tuo pagamento",
+    "lateBody": "Se hai appena pagato, possono volerci alcuni minuti e l'app riprenderà da sola. Non acquistare di nuovo. Se non si risolve, contatta support@abacus.ai.",
     "trialEndedTitle": "La tua prova gratuita è terminata",
     "trialEndedBody": "Passa a un piano superiore per continuare a usare AbacusAI Bot con questo account.",
     "lapsedTitle": "Il tuo abbonamento è terminato",
@@ -4646,6 +4646,7 @@
     "renew": "Rinnova",
     "webAgent": "Vai ad Abacus AI Agent sul web →",
     "tryAgain": "Riprova",
+    "checkAgain": "Controlla di nuovo",
     "checking": "Verifica in corso…",
     "stillBlocked": "Non vediamo ancora un pagamento su questo account.",
     "waiting": "Completa il pagamento nel browser. L'app prosegue appena il pagamento va a buon fine."
@@ -5004,8 +5005,8 @@
       }
     },
     "payment": {
-      "title": "Non siamo riusciti a confermare il tuo ultimo pagamento",
-      "body": "Se il tuo abbonamento è attivo, contatta support@abacus.ai. Non acquistare di nuovo.",
+      "confirmingBody": "Il tuo messaggio partirà appena è fatto.",
+      "lateBody": "Se hai appena pagato, possono volerci alcuni minuti. Non acquistare di nuovo. Contatta support@abacus.ai se non si risolve.",
       "billing": "Apri fatturazione"
     },
     "verifyPhone": {

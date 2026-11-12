@@ -14,20 +14,23 @@ import {
 import type { AbacusPaymentRequired } from "@abacus-ai/contract/contracts";
 import { abacusAgentPromptUrl } from "@abacus-ai/contract/toolsets";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bot, Check, Loader2 } from "lucide-react";
+import { Bot, Check, Clock, Loader2 } from "lucide-react";
 import { useEffect, useEffectEvent, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { signOutAbacus } from "#platform/sign-out";
+import { ABACUS_BILLING_URL } from "#renderer/lib/abacus-links";
+import {
+  checkPaymentNow,
+  resetPaymentConfirmWatch,
+  startPaymentConfirmWatch,
+  usePaymentConfirmPhase,
+} from "#renderer/lib/payment-confirming";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { openUpgrade } from "#renderer/lib/upgrade";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "#renderer/ui/dialog";
-
-/** Where a subscriber whose payment did not confirm reports it instead of paying twice. */
-const REPORT_ISSUE_URL =
-  "https://github.com/abacusai/abacusai-bot/issues/new?template=bug_report.yml";
 
 /** How often the account is asked again while checkout is open. */
 const CHECKOUT_POLL_MS = 5_000;
@@ -44,11 +47,6 @@ export const usePaymentRequired = (enabled = true) => {
 };
 
 const COPY = {
-  unconfirmed: {
-    title: "paymentRequired.unconfirmedTitle",
-    body: "paymentRequired.unconfirmedBody",
-    cta: "paymentRequired.upgrade",
-  },
   trial_ended: {
     title: "paymentRequired.trialEndedTitle",
     body: "paymentRequired.trialEndedBody",
@@ -61,11 +59,160 @@ const COPY = {
   },
 } as const;
 
-/** A server that sends no reason gets the plan picker's words. */
-const paymentCopy = (payment: AbacusPaymentRequired | null) =>
-  COPY[payment?.reason ?? "unconfirmed"];
+/** An unconfirmed payment (a server that sends no reason too) is confirming, never a plan to buy. */
+const isUnconfirmed = (payment: AbacusPaymentRequired | null): boolean =>
+  payment?.reason == null || payment.reason === "unconfirmed";
 
-export const PaymentRequiredPanel = ({
+const paymentCopy = (payment: AbacusPaymentRequired | null) =>
+  COPY[payment?.reason === "lapsed" ? "lapsed" : "trial_ended"];
+
+/**
+ * A first payment not recorded yet (payment-confirming.ts): "Confirming your
+ * payment…" while the account is checked, then, after a few minutes, that it
+ * cannot see the payment yet, with billing and Check again. Never a plan to
+ * buy: the account already has one. Goes on by itself once it lands.
+ */
+const PaymentConfirmingPanel = ({
+  title,
+  onSignedIn,
+  onSignedOut,
+  dismiss,
+}: {
+  title: (text: string) => ReactNode;
+  onSignedIn?: () => void | Promise<void>;
+  onSignedOut?: () => void | Promise<void>;
+  dismiss?: () => void;
+}) => {
+  const { t } = useTranslation();
+  const context = useAppContext();
+  const { transport } = context;
+  const [busy, setBusy] = useState(false);
+  const queryClient = useQueryClient();
+  const phase = usePaymentConfirmPhase();
+  useEffect(() => {
+    startPaymentConfirmWatch(transport.client);
+  }, [transport]);
+  const confirmed = useEffectEvent(async () => {
+    queryClient.setQueryData(
+      transport.orpc.account.payment.queryKey({ input: {} }),
+      null
+    );
+    await queryClient.invalidateQueries();
+    await onSignedIn?.();
+  });
+  useEffect(() => {
+    if (phase === "confirmed") void confirmed();
+  }, [phase]);
+  const late = phase === "late";
+  return (
+    <div
+      data-slot="payment-required"
+      data-reason="unconfirmed"
+      data-phase={late ? "late" : "confirming"}
+      className="flex w-full max-w-[440px] flex-col gap-5 text-sm [&>*]:min-w-0"
+    >
+      <div className="flex flex-col items-center gap-3 text-center">
+        {late ? (
+          <span
+            aria-hidden
+            className="bg-primary/10 text-primary flex size-12 items-center justify-center rounded-[14px]"
+          >
+            <Clock className="size-6" />
+          </span>
+        ) : (
+          <Loader2 aria-hidden className="text-primary size-8 animate-spin" />
+        )}
+        {title(
+          t(
+            late
+              ? "paymentRequired.lateTitle"
+              : "paymentRequired.confirmingTitle"
+          )
+        )}
+        <p className="text-muted-foreground text-sm/[21px]" role="status">
+          {t(
+            late ? "paymentRequired.lateBody" : "paymentRequired.confirmingBody"
+          )}
+        </p>
+      </div>
+      <div className="flex flex-col gap-1.5 pt-1">
+        {late && (
+          <>
+            <Button
+              className="h-11 text-sm font-semibold"
+              data-action="open-billing"
+              onClick={() =>
+                void platformSystem(transport.client).openExternal({
+                  url: ABACUS_BILLING_URL,
+                })
+              }
+            >
+              {t("outcome.payment.billing")}
+            </Button>
+            <Button
+              variant="secondary"
+              className="h-10 text-sm"
+              data-action="check-again"
+              onClick={checkPaymentNow}
+            >
+              {t("paymentRequired.checkAgain")}
+            </Button>
+          </>
+        )}
+        <div className="flex flex-wrap justify-center gap-x-1">
+          {/* First, so a dialog's initial focus is never Sign out. */}
+          {dismiss != null && (
+            <Button
+              variant="ghost"
+              className="text-muted-foreground h-9 text-[13px]"
+              data-action="close"
+              onClick={dismiss}
+            >
+              {t("upgradeDialog.close")}
+            </Button>
+          )}
+          {/* Signed in as the wrong account: the way back to the first sign-in screen. */}
+          <Button
+            variant="ghost"
+            className="text-muted-foreground h-9 text-[13px]"
+            data-action="sign-out"
+            disabled={busy}
+            onClick={() => {
+              setBusy(true);
+              void signOutAbacus(context, true)
+                .then(async () => {
+                  resetPaymentConfirmWatch();
+                  await queryClient.invalidateQueries();
+                  await onSignedOut?.();
+                })
+                .catch(() => {})
+                .finally(() => setBusy(false));
+            }}
+          >
+            {t("userMenu.signOut")}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const PaymentRequiredPanel = (
+  props: Parameters<typeof PaymentPlanPanel>[0]
+) =>
+  isUnconfirmed(props.payment) ? (
+    <PaymentConfirmingPanel
+      title={props.title}
+      {...(props.onSignedIn != null && { onSignedIn: props.onSignedIn })}
+      {...(props.onSignedOut != null && { onSignedOut: props.onSignedOut })}
+      {...(props.dismiss != null && { dismiss: props.dismiss })}
+    />
+  ) : (
+    <PaymentPlanPanel {...props} />
+  );
+
+/** A free trial that ended or a plan that lapsed: the plan, and the ways out. */
+const PaymentPlanPanel = ({
   payment,
   title,
   onSignedIn,
@@ -87,7 +234,6 @@ export const PaymentRequiredPanel = ({
   const { transport } = context;
   const queryClient = useQueryClient();
   const copy = paymentCopy(payment);
-  const reportText = t("paymentRequired.reportIssue");
   const lapsed = payment?.reason === "lapsed";
   const [billing, setBilling] = useState<BillingPlan | null>(null);
   const [checkoutAt, setCheckoutAt] = useState<number | null>(null);
@@ -159,35 +305,6 @@ export const PaymentRequiredPanel = ({
         </span>
         {title(t(copy.title))}
         <p className="text-muted-foreground text-sm/[21px]">{t(copy.body)}</p>
-        {copy === COPY.unconfirmed && (
-          <p
-            className="text-muted-foreground text-xs"
-            data-slot="payment-report"
-          >
-            {/* Split on the link text so each locale keeps its own word order. */}
-            {t("paymentRequired.alreadySubscribed", { link: reportText })
-              .split(reportText)
-              .flatMap((part, index) =>
-                index === 0
-                  ? [part]
-                  : [
-                      <Button
-                        key="report"
-                        variant="link"
-                        className="text-muted-foreground h-auto p-0 text-xs underline"
-                        onClick={() =>
-                          void platformSystem(transport.client).openExternal({
-                            url: REPORT_ISSUE_URL,
-                          })
-                        }
-                      >
-                        {reportText}
-                      </Button>,
-                      part,
-                    ]
-              )}
-          </p>
-        )}
       </div>
       {offer != null && (
         <div className="flex flex-col gap-2" data-slot="payment-offer">
@@ -311,11 +428,13 @@ export const PaymentRequiredDialog = () => {
     (model) => model.configured && model.provider !== "abacus"
   );
   const open = verdict != null && dismissed !== verdict;
+  // A payment still confirming blocks nothing the user can act on: it may be closed.
+  const closable = otherProvider || isUnconfirmed(payment.data ?? null);
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next && otherProvider) setDismissed(verdict);
+        if (!next && closable) setDismissed(verdict);
       }}
     >
       {open && (
@@ -331,7 +450,7 @@ export const PaymentRequiredDialog = () => {
                 {text}
               </DialogTitle>
             )}
-            {...(otherProvider ? { dismiss: () => setDismissed(verdict) } : {})}
+            {...(closable ? { dismiss: () => setDismissed(verdict) } : {})}
           />
         </DialogContent>
       )}
