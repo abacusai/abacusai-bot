@@ -129,6 +129,27 @@ export const startFirstTask = (
   queueStartPrompt(startDraftStore.state.id, prompt);
 };
 
+/**
+ * Onboarding's tour, taken instead of a pick: a fresh draft on the Build
+ * starters with the sample task waiting in the box, so the tour ends on one
+ * Send, not an empty page. Not sent: the person chose to look first.
+ */
+export const prefillFirstTask = (
+  starters: NonNullable<StartDraft["starters"]>,
+  sponsored: boolean,
+  prompt: string
+): void => {
+  startDraftStore.setState(() => ({
+    ...newStartDraft(),
+    starters,
+    ...(sponsored ? { sponsored: true as const } : {}),
+  }));
+  updateDraft(`draft:${startDraftStore.state.id}`, (draft) => ({
+    ...draft,
+    text: prompt,
+  }));
+};
+
 export const optimisticSession = (draft: StartDraft): SessionRow => {
   const now = new Date().toISOString();
   const picks = draft.envelope?.forwardedProps;

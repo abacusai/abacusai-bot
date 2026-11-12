@@ -15,8 +15,10 @@ import {
   noteConnectedChatApp,
 } from "#renderer/features/onboarding/first-bot";
 import { startDraftStore } from "#renderer/features/sessions/start/start-session";
+import { tourStore } from "#renderer/features/tour/store";
 import { GOAL_MISSION } from "#renderer/lib/bots/check-in";
 import { GITHUB_CONNECTOR_ID } from "#renderer/lib/build-starters";
+import { draftStore } from "#renderer/lib/continuity/composer-drafts";
 import {
   renderApp,
   defaultSeed,
@@ -236,6 +238,63 @@ it("Start building opens a new session on the build examples and sends the first
   expect(
     harness.calls.filter(([name]) => name === "account.skipOnboarding")
   ).toHaveLength(1);
+});
+
+it("Take the tour on the pick screen tours the start page with the Build sample waiting in the box, unsent", async () => {
+  const seed = defaultSeed();
+  seed.bots = [];
+  seed.routines = [];
+  harness = await renderApp("/onboarding/first-bot", {
+    onboarded: false,
+    signedIn: true,
+    seed,
+  });
+  fireEvent.click(await screen.findByRole("button", { name: "Take the tour" }));
+  await waitFor(() =>
+    expect(harness!.router.state.location.pathname).not.toBe(
+      "/onboarding/first-bot"
+    )
+  );
+  await waitFor(() => expect(tourStore.state.active).not.toBeNull());
+  // Skipped or finished, the tour ends on one Send, not an empty page.
+  expect(startDraftStore.state).toMatchObject({
+    stage: "draft",
+    starters: "build",
+    sponsored: true,
+  });
+  expect(draftStore.state[`draft:${startDraftStore.state.id}`]?.text).toContain(
+    "Build me a one-page portfolio website"
+  );
+  expect(harness.collections.bots.toArray).toHaveLength(0);
+  const funnel = () =>
+    harness!.calls
+      .filter(([name]) => name === "system.funnelStep")
+      .map(([, input]) => input);
+  await waitFor(() =>
+    expect(funnel()).toContainEqual({
+      step: "start_page_shown",
+      detail: "build_example",
+    })
+  );
+  // Skipping at the first stop leaves the sample in the box on screen.
+  fireEvent.click(
+    await waitFor(() => {
+      const card = document.querySelector("[data-tour-stop]");
+      expect(card).not.toBeNull();
+      return within(card as HTMLElement).getByRole("button", {
+        name: "Close",
+      });
+    })
+  );
+  await waitFor(() => expect(tourStore.state.active).toBeNull());
+  expect(funnel()).toContainEqual({ step: "tour_skipped" });
+  const box = document.querySelector<HTMLTextAreaElement>(
+    "[data-slot=composer] textarea"
+  );
+  expect(box?.value).toContain("Build me a one-page portfolio website");
+  expect(funnel()).not.toContainEqual(
+    expect.objectContaining({ step: "start_sent" })
+  );
 });
 
 it("See Basic on a free account opens the upgrade dialog with the plan's whole pitch, not a page", async () => {

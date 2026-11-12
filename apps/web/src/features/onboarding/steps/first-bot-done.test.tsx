@@ -143,10 +143,7 @@ describe("FirstBotStep: what to do first", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Take the tour" }));
     await vi.waitFor(() =>
-      expect(context.props.complete).toHaveBeenCalledWith(
-        { to: "new-session" },
-        { tour: true }
-      )
+      expect(context.props.choose).toHaveBeenCalledWith({ kind: "tour" })
     );
   });
 

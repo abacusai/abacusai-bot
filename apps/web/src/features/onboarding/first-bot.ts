@@ -14,7 +14,7 @@ import {
 import { subscribeRunFinished } from "#renderer/lib/run-finished";
 
 import { onboardingStore } from "./store";
-/** A first-run pick. Each makes what it needs and leaves onboarding, except `images`. */
+/** A first-run pick. Each makes what it needs and leaves onboarding, except `images`; `tour` is the tour taken instead. */
 export type FirstChoice =
   | { kind: "build"; prompt: string | null }
   | { kind: "chat-app"; app: HomeChannel }
@@ -22,6 +22,7 @@ export type FirstChoice =
   | { kind: "research" }
   | { kind: "goal"; goal: string }
   | { kind: "images" }
+  | { kind: "tour" }
   | { kind: "bot"; botId: string };
 
 export type FirstBotResult = {
