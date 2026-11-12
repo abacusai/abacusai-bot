@@ -181,7 +181,7 @@ export const PaidWelcomeDialog = ({
   model,
   paused,
   topModel = null,
-  lead = paused == null ? "none" : "paused",
+  lead: leadProp,
   lastChat = null,
   busy = null,
   unlock,
@@ -204,6 +204,7 @@ export const PaidWelcomeDialog = ({
   onClose: () => void;
 }) => {
   const { t, i18n } = useTranslation();
+  const lead = leadProp ?? (paused == null ? "none" : "paused");
   const unlockIcon =
     unlock === "apps" ? (
       <AppWindow className="size-4" />
