@@ -274,6 +274,33 @@ describe.each(LOOPS)("%s", (_name, Loop) => {
     expect(idle(events)).toBe(true);
   });
 
+  // Tasks are handed only to a bot's own chat, the bot loop.
+  it.runIf(Loop === (BotSession as never))(
+    "asks no next step after a task the app handed the bot: its report goes back to the asker",
+    async () => {
+      process.env.ABACUSAI_BOT_NEXT_STEP_ASK = "1";
+      scripted((last, index) =>
+        index === 0
+          ? {
+              say: "",
+              call: {
+                name: "write",
+                args: { path: "checklist.md", content: "1. Lease" },
+              },
+            }
+          : { say: "Saved checklist.md: 1. Lease." }
+      );
+      const { loop, events } = await start(Loop);
+      await (loop as unknown as BotSession).send(
+        "[task from the user, passed on by Writer] Write the checklist.",
+        { userText: { operator: { kind: "bot-task" } } } as never
+      );
+
+      expect(asked(NEXT_STEP_PROMPT.slice(0, 40))).toBe(0);
+      expect(ends(events)).toHaveLength(1);
+    }
+  );
+
   it("asks only for the buttons when a result's reply already ends on its own question", async () => {
     process.env.ABACUSAI_BOT_NEXT_STEP_ASK = "1";
     const BUTTONS_ONLY = "Your reply ends on a question";
