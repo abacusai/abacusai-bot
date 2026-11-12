@@ -497,12 +497,16 @@ export class OpenLlmRotation {
    * not busy but shut, and waiting will not open it: only a new source will.
    */
   poolShut(candidates: ModelChoice[]): boolean {
-    const now = this.now();
+    return candidates.length > 0 && this.open(candidates).length === 0;
+  }
 
-    return (
-      candidates.length > 0 &&
-      candidates.every((choice) => this.inRefusedScope(choice, now))
-    );
+  /**
+   * The candidates whose class the account has not refused: what `pick` can
+   * run, now or once a cooldown ends. Anything offered as a way on reads this.
+   */
+  open(candidates: readonly ModelChoice[]): ModelChoice[] {
+    const now = this.now();
+    return candidates.filter((choice) => !this.inRefusedScope(choice, now));
   }
 
   /** Whether the account has this model's class shut for now. */
@@ -520,10 +524,8 @@ export class OpenLlmRotation {
   soonest(
     candidates: ModelChoice[]
   ): { id: string; readyAt: number } | undefined {
-    const now = this.now();
     let best: { id: string; readyAt: number } | undefined;
-    for (const choice of candidates) {
-      if (this.inRefusedScope(choice, now)) continue;
+    for (const choice of this.open(candidates)) {
       const readyAt = this.readyAt(choice);
       if (best == null || readyAt < best.readyAt)
         best = { id: choice.id, readyAt };
@@ -552,8 +554,8 @@ export class OpenLlmRotation {
     // A class the account refused is dropped outright rather than ranked last:
     // the soonest-expiry fallback is pointless for models sharing an allowance
     // that has run out, and saying so once beats saying it per sibling.
-    const eligible = candidates.filter(
-      (choice) => !exclude?.has(choice.id) && !this.inRefusedScope(choice, now)
+    const eligible = this.open(candidates).filter(
+      (choice) => !exclude?.has(choice.id)
     );
 
     // Out until its cooldown ends and its spent quota window reopens.

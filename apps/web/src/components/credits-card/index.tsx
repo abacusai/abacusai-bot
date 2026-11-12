@@ -155,6 +155,10 @@ export const CreditsCard = ({
   const [asking, setAsking] = useState<FreePoolProvider | null>(null);
   const [key, setKey] = useState("");
   const [busy, setBusy] = useState(false);
+  // The free models stopped answering between the card and the tap: the card
+  // drops the way on rather than offer it again.
+  const [freeGone, setFreeGone] = useState(false);
+  const continueFree = freeGone ? undefined : wall?.onContinueFree;
   const [error, setError] = useState<string | null>(null);
   const [canTopUp, setCanTopUp] = useState(false);
   useEffect(() => {
@@ -185,7 +189,7 @@ export const CreditsCard = ({
   // At the wall with a free lane to offer, its link is the way on: the
   // sources to connect are for an account with none.
   const missing =
-    paying || configured == null || wall?.onContinueFree != null
+    paying || configured == null || continueFree != null
       ? []
       : missingFreeSources(configured);
   // A paid plan's way on: credits, the next plan, or the mobile app.
@@ -292,7 +296,7 @@ export const CreditsCard = ({
                     })}
                   </p>
                 )}
-              {wall.onContinueFree != null && wall.providers.length > 0 && (
+              {continueFree != null && wall.providers.length > 0 && (
                 <div
                   role="note"
                   data-slot="wall-warning"
@@ -420,7 +424,7 @@ export const CreditsCard = ({
                 </div>
               ))
             ) : null}
-            {wall?.onContinueFree != null && (
+            {continueFree != null && (
               <Button
                 variant="link"
                 size="sm"
@@ -429,7 +433,9 @@ export const CreditsCard = ({
                 disabled={busy}
                 onClick={() => {
                   setBusy(true);
-                  void wall.onContinueFree?.().finally(() => setBusy(false));
+                  void continueFree()
+                    .catch(() => setFreeGone(true))
+                    .finally(() => setBusy(false));
                 }}
               >
                 {t("outcome.wall.continueFree")}
