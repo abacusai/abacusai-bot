@@ -12,6 +12,7 @@ import { HostCore } from "../agui/queue.js";
 import { hostCreditBalance, setCreditRefresher } from "../credit-balance.js";
 import type { SpendKind, SpendLane } from "../spend-policy.js";
 import {
+  reserveNoteStands,
   reservePrompt,
   SpendGovernor,
   type SpendLimitHit,
@@ -44,8 +45,10 @@ const billedModel = {
 };
 const ctxOn = (
   model: Record<string, unknown> | undefined,
-  aborts?: number[]
+  aborts?: number[],
+  branch: Array<Record<string, unknown>> = []
 ) => ({
+  sessionManager: { getBranch: () => branch },
   cwd: process.cwd(),
   hasUI: false,
   ui: { notify() {} },
@@ -63,15 +66,17 @@ const governed = (
   const pi = fakePi();
   const hits: SpendLimitHit[] = [];
   const lows: number[] = [];
+  const restored: number[] = [];
   const governor = new SpendGovernor({
     kind,
     laneOf: (model) =>
       model == null || model.provider !== "abacus" ? "own-key" : lane,
     onCloseOut: (hit) => hits.push(hit),
     onCreditsLow: (left) => lows.push(left),
+    onCreditsRestored: () => restored.push(1),
   });
   governor.extension(pi.api as never);
-  return { pi, governor, hits, lows };
+  return { pi, governor, hits, lows, restored };
 };
 
 const closeOuts = (pi: ReturnType<typeof fakePi>) =>
@@ -295,6 +300,62 @@ describe("near the end of the credits (reserve)", () => {
       /do not start new work|stops mid-step|wrap up/i
     );
     expect(lows).toEqual([150]);
+  });
+
+  const ended = (pi: ReturnType<typeof fakePi>) =>
+    pi.messages.filter(
+      (m) => m.customType === "abacusai-bot-credits-reserve-ended"
+    );
+
+  it("an upgrade ends it: the model hears the old note no longer applies, and the chat takes the notice back", async () => {
+    await balance(150);
+    const { pi, restored } = governed("attended");
+    await pi.fire("turn_start", {}, billed);
+    expect(reserves(pi)).toHaveLength(1);
+    // Paid: Basic's 20,000, nothing used yet.
+    await balance(20_000, 20_000, 20_000, true);
+    await pi.fire("turn_start", {}, billed);
+    await pi.fire("turn_start", {}, billed);
+    expect(ended(pi)).toHaveLength(1);
+    expect(String(ended(pi)[0]!.content)).toContain("now has 20000 credits");
+    expect(String(ended(pi)[0]!.content)).toContain("no longer applies");
+    expect(restored).toEqual([1]);
+  });
+
+  it("ends a note an earlier run of the app left in the history, once", async () => {
+    await balance(20_000, 20_000, 20_000, true);
+    const { pi, restored } = governed("attended");
+    const left = ctxOn(billedModel, undefined, [
+      { type: "message" },
+      { type: "custom_message", customType: "abacusai-bot-credits-reserve" },
+      { type: "message" },
+    ]);
+    await pi.fire("turn_start", {}, left);
+    await pi.fire("turn_start", {}, left);
+    expect(ended(pi)).toHaveLength(1);
+    expect(restored).toEqual([1]);
+  });
+
+  it("finds a standing note only when no later note ended it", () => {
+    const note = {
+      type: "custom_message",
+      customType: "abacusai-bot-credits-reserve",
+    };
+    const end = {
+      type: "custom_message",
+      customType: "abacusai-bot-credits-reserve-ended",
+    };
+    const other = { type: "custom_message", customType: "calite-budget" };
+    const rows: Array<[Array<Record<string, unknown>>, boolean]> = [
+      [[], false],
+      [[note], true],
+      [[note, { type: "message" }, other], true],
+      [[note, end], false],
+      [[end, note], true],
+      [[{ type: "message" }], false],
+    ];
+    for (const [entries, stands] of rows)
+      expect(reserveNoteStands(entries)).toBe(stands);
   });
 
   it("shows a free plan no notice: the reserve is the model's alone", async () => {

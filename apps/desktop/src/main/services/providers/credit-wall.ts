@@ -72,6 +72,17 @@ export const wallAfterAccountRead = (
 };
 
 /**
+ * The plan changed (a payment landed, a cancellation): the wall and a choice
+ * made at it belonged to the old plan's credits, so they go at once. A new
+ * payer is never held at the free plan's wall; a wall the new plan meets is
+ * stamped again by its own refusal.
+ */
+export const wallAfterPlanChange = (row: PrefsRow): PrefsPatch | null =>
+  row.creditsExhaustedAt != null || row.freeLaneChosenAt != null
+    ? { creditsExhaustedAt: null, freeLaneChosenAt: null }
+    : null;
+
+/**
  * A routine fired now would stop at the wall: the credits are out and the
  * free models were not chosen. A wall past its day stands while the account
  * still reads empty; agents only ask Abacus again, and hear the same no.

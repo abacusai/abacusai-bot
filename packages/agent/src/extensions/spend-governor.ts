@@ -92,6 +92,8 @@ export interface SpendGovernorOptions {
   laneOf: (model: GovernedModel | undefined) => SpendLane;
   /** Reserve began: the chat shows how much is left (credit-thresholds' notice). */
   onCreditsLow?: (left: number) => void;
+  /** Reserve ended (an upgrade, a top-up, a new month): the chat takes its notice back. */
+  onCreditsRestored?: () => void;
   /** A close-out began: the chat shows which limit, in one line. */
   onCloseOut?: (hit: SpendLimitHit) => void;
   /** The history was summarized. */
@@ -229,6 +231,36 @@ export const reservePrompt = (left: number, turns: number | null): string =>
   `Do what the user asks, in small steps, and hand over each deliverable with ${PRESENT_TOOL} as soon ` +
   `as it exists, so nothing is lost if the credits run out. If the request clearly needs more than ` +
   `${left} credits, say so first, in the user's language, and offer the smallest version that fits.`;
+
+/** The reserve note's own message type, and the one that ends it. */
+const RESERVE_TYPE = "abacusai-bot-credits-reserve";
+const RESERVE_ENDED_TYPE = "abacusai-bot-credits-reserve-ended";
+
+/**
+ * The note that ends a reserve: the balance rose (a new plan, a top-up, a new
+ * month). Without it the model keeps the old balance from its history and
+ * tells a paying user their credits will not stretch.
+ */
+export const reserveEndedPrompt = (left: number): string =>
+  `Credit note update: the user's Abacus.AI account now has ${left} credits. The earlier credit ` +
+  `note no longer applies: do the work at the scope the request needs, and do not raise credits ` +
+  `as a limit again unless a new credit note says so.`;
+
+/**
+ * Whether the chat's history ends on a reserve note no later note ended: a
+ * note from an earlier run of the app stays in the history the model reads.
+ */
+export const reserveNoteStands = (
+  entries: ReadonlyArray<{ type?: unknown; customType?: unknown }>
+): boolean => {
+  for (let index = entries.length - 1; index >= 0; index--) {
+    const entry = entries[index]!;
+    if (entry.type !== "custom_message") continue;
+    if (entry.customType === RESERVE_ENDED_TYPE) return false;
+    if (entry.customType === RESERVE_TYPE) return true;
+  }
+  return false;
+};
 
 /*
  * The lines the chat shows. The app shows its own translation, keyed by the
@@ -423,6 +455,8 @@ export class SpendGovernor {
     reached: boolean;
   } | null = null;
   private inReserve = false;
+  /** Whether this run has looked for a reserve note an earlier run left. */
+  private historyChecked = false;
   private reserveBucket = -2;
   /** Provider-stated limits, per model, for this session. */
   private readonly learned = new Map<string, number>();
@@ -802,15 +836,34 @@ export class SpendGovernor {
    * Reserve: attended chats on billed credits only. Telling a routine run
    * nobody watches to economize skips its job.
    */
-  private reserve(pi: ExtensionAPI): void {
+  private reserve(
+    pi: ExtensionAPI,
+    history: () => ReadonlyArray<{ type?: unknown; customType?: unknown }>
+  ): void {
     if (this.kind !== "attended" && this.kind !== "phone") return;
     if (process.env.ABACUSAI_BOT_NOBODY_PRESENT === "1") return;
     if (this.lane() !== "abacus-billed") return;
     const balance = hostCreditBalance();
     if (balance == null) return;
+    // A note an earlier run left counts as this run's own reserve.
+    if (!this.historyChecked) {
+      this.historyChecked = true;
+      if (reserveNoteStands(history())) this.inReserve = true;
+    }
     const typical = median(this.turnCosts);
     const plan = lowCreditBase(balance);
     if (!reserveStarts(balance.remaining, plan, typical)) {
+      if (this.inReserve) {
+        pi.sendMessage(
+          {
+            customType: RESERVE_ENDED_TYPE,
+            content: reserveEndedPrompt(Math.floor(balance.remaining)),
+            display: false,
+          },
+          { deliverAs: "steer" }
+        );
+        this.options.onCreditsRestored?.();
+      }
       this.inReserve = false;
       this.reserveBucket = -2;
       return;
@@ -825,7 +878,7 @@ export class SpendGovernor {
     this.reserveBucket = bucket;
     pi.sendMessage(
       {
-        customType: "abacusai-bot-credits-reserve",
+        customType: RESERVE_TYPE,
         content: reservePrompt(left, turns),
         display: false,
       },
@@ -893,7 +946,7 @@ export class SpendGovernor {
         this.compactedUntold = false;
         this.options.onCompacted?.();
       }
-      this.reserve(pi);
+      this.reserve(pi, () => ctx.sessionManager.getBranch());
 
       const cap = callCap(this.kind);
       const wrapUpAt = Math.max(1, cap - WRAP_UP_MARGIN);
