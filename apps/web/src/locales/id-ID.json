@@ -1825,6 +1825,11 @@
           "detail": "Bug dan pengujian yang kurang, per file dan baris.",
           "prompt": "Tinjau pull request saya yang masih terbuka. Jika folder ini repositori GitHub, gunakan itu; jika bukan, tampilkan daftar repositori GitHub saya dan tanyakan yang mana. Untuk setiap pull request, jelaskan apa yang berubah dan sebutkan bug, risiko, serta pengujian yang kurang, dengan file dan barisnya. Sampaikan di sini saja: jangan memposting di GitHub atau mengubah kode."
         }
+      },
+      "sendHint": {
+        "title": "Tekan Kirim untuk melihat hasilnya",
+        "build": "Tugas pertama Anda sudah ada di kotak. Kirim untuk melihat aplikasi membuatnya, atau ubah teksnya dulu.",
+        "code": "Tugas pertama Anda sudah ada di kotak. Kirim dan aplikasi akan meninjau pull request Anda yang terbuka, atau ubah teksnya dulu."
       }
     },
     "model": {

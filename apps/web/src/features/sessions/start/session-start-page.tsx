@@ -50,10 +50,12 @@ import { Button } from "#renderer/ui/button";
 import { SessionContextTray } from "../context/context-tray";
 import { useSessionsTransport, useWorkspace } from "../data/queries";
 import { SESSION_STARTERS } from "../starters";
+import { SendHint } from "./send-hint";
 import {
   startDraftStore,
   startSession,
   optimisticSession,
+  endFirstTaskHint,
   hasStartPrompt,
   takeStartPrompt,
   type SubmissionEnvelope,
@@ -85,10 +87,12 @@ const funnelDrafts = new Map<
   { example: string; starter: string | null; edited: boolean }
 >();
 /**
- * Prompts the app sent for a draft by itself (a first-run pick's task), by
- * draft id: their send is "auto", never the user's own words or an edit.
+ * Prompts the app sent for a draft by itself (the paid welcome's first task),
+ * by draft id: their send is "auto", never the user's own words or an edit.
  */
 const autoSent = new Map<string, string>();
+/** Drafts whose first-run hint at Send was reported shown: once each. */
+const hintShown = new Set<string>();
 /** Fire-and-forget: a lost beacon must never block the page. */
 const reportFunnel = (
   client: Transport["client"],
@@ -142,11 +146,14 @@ export const SessionStartPage = ({
   renderComposer,
   handoff,
   prefill,
+  hintHeld = false,
 }: {
   workspaceId: string | null;
   renderComposer: (binding: StartComposerBinding) => ReactNode;
   handoff: (id: string, envelope: SubmissionEnvelope) => Promise<void>;
   prefill: (id: string, text: string) => void;
+  /** Another guide holds the screen (the welcome tour): the hint at Send waits. */
+  hintHeld?: boolean;
 }) => {
   const { t, i18n } = useTranslation();
   const db = useDb();
@@ -222,6 +229,7 @@ export const SessionStartPage = ({
                 : "own"
       );
     }
+    endFirstTaskHint(draft.id);
     setPending(true);
     setError(null);
     await send(envelope);
@@ -234,7 +242,7 @@ export const SessionStartPage = ({
   useEffect(() => {
     if (resume) resumeStart();
   }, [resume]);
-  // Onboarding's picks open with their first task running: the cursor waits in the box.
+  // Onboarding's picks open with their sample in the box: the cursor waits there.
   const opensOnExample = draft.starters != null;
   useEffect(() => {
     if (!opensOnExample) return;
@@ -262,6 +270,8 @@ export const SessionStartPage = ({
   const boxText = useSelector(draftStore, (s) => s[id]?.text ?? "");
   useEffect(() => {
     const seen = funnelDrafts.get(draft.id);
+    // Words of their own (or none): the sample is no longer what Send would send.
+    if (seen != null && boxText !== seen.example) endFirstTaskHint(draft.id);
     if (
       seen == null ||
       seen.edited ||
@@ -273,6 +283,16 @@ export const SessionStartPage = ({
     reportFunnel(client, "start_prompt_edited", draft.starters ?? "none");
     // `edited` keeps it to once per draft.
   }, [boxText, draft.id, draft.starters, client]);
+  const hinting =
+    draft.firstTask === true &&
+    draft.stage === "draft" &&
+    !hintHeld &&
+    !pending;
+  useEffect(() => {
+    if (!hinting || hintShown.has(draft.id)) return;
+    hintShown.add(draft.id);
+    reportFunnel(client, "send_hint_shown", draft.starters ?? "none");
+  }, [hinting, draft.id, draft.starters, client]);
   const buildStarters = BUILD_STARTER_IDS.map((starterId) => ({
     id: starterId,
     name: t(`sessions.start.build.${starterId}.name`),
@@ -343,6 +363,18 @@ export const SessionStartPage = ({
           style={{ "--rise-i": 3 } as CSSProperties}
         >
           <SendError error={error} />
+          <SendHint
+            active={hinting}
+            starters={draft.starters}
+            onDismiss={() => {
+              endFirstTaskHint(draft.id);
+              reportFunnel(
+                client,
+                "send_hint_dismissed",
+                draft.starters ?? "none"
+              );
+            }}
+          />
           <div onChangeCapture={() => setError(null)}>
             {renderComposer({
               threadId: id,

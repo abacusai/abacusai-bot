@@ -1825,6 +1825,11 @@
           "detail": "Bugs et tests manquants, par fichier et ligne.",
           "prompt": "Relis mes pull requests ouvertes. Si ce dossier est un dépôt GitHub, utilise-le ; sinon, liste mes dépôts GitHub et demande-moi lequel. Pour chaque pull request, dis-moi ce qu'elle change et signale les bugs, les risques et les tests manquants, avec le fichier et la ligne. Dis-le-moi ici uniquement : ne publie rien sur GitHub et ne modifie aucun code."
         }
+      },
+      "sendHint": {
+        "title": "Appuyez sur Envoyer pour le voir à l’œuvre",
+        "build": "Votre première tâche est déjà dans la zone de saisie. Envoyez-la pour voir l’app la réaliser, ou modifiez d’abord le texte.",
+        "code": "Votre première tâche est déjà dans la zone de saisie. Envoyez-la et l’app passe en revue vos pull requests ouvertes, ou modifiez d’abord le texte."
       }
     },
     "model": {

@@ -1825,6 +1825,11 @@
           "detail": "Hatalar ve eksik testler, dosya ve satırıyla.",
           "prompt": "Açık pull request'lerimi incele. Bu klasör bir GitHub deposuysa onu kullan; değilse GitHub depolarımı listele ve hangisi olduğunu sor. Her pull request için neyi değiştirdiğini söyle; hataları, riskleri ve eksik testleri dosya ve satırıyla belirt. Yalnızca burada söyle: GitHub'da paylaşım yapma ve kodu değiştirme."
         }
+      },
+      "sendHint": {
+        "title": "Çalıştığını görmek için Gönder'e bas",
+        "build": "İlk görevin kutuda hazır. Gönder ve uygulamanın onu nasıl yaptığını izle ya da önce metni değiştir.",
+        "code": "İlk görevin kutuda hazır. Gönder, uygulama açık pull request'lerini incelesin ya da önce metni değiştir."
       }
     },
     "model": {

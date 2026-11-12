@@ -43,6 +43,8 @@ export interface StartDraft {
   sponsored?: true;
   /** Which suggestions the start page shows; onboarding's Build and GitHub picks open on their own. */
   starters?: "build" | "code";
+  /** A first-run sample waits in the box: the page points at Send (openFirstTask). */
+  firstTask?: true;
   /** The chat this one continues, with its summary; see continue-chat.ts. */
   continuation?: SessionContinuation;
 }
@@ -112,11 +114,13 @@ export const takeStartPrompt = (threadId: string): string | null => {
 };
 
 /**
- * Onboarding's Build and GitHub picks: a fresh draft on their starters whose
- * first task the start page sends at once, on the house. A pick that left its
- * task waiting in the box for Send went unsent too often.
+ * A first-run pick (Build, GitHub, or the tour taken instead): a fresh draft on
+ * its starters with the sample task waiting in the box, on the house. Not sent:
+ * an auto-sent sample left more people with a result they never asked for, and
+ * no more starting. `firstTask` has the page point at Send until the sample is
+ * sent, edited or the hint is closed.
  */
-export const startFirstTask = (
+export const openFirstTask = (
   starters: NonNullable<StartDraft["starters"]>,
   sponsored: boolean,
   prompt: string
@@ -124,30 +128,19 @@ export const startFirstTask = (
   startDraftStore.setState(() => ({
     ...newStartDraft(),
     starters,
-    ...(sponsored ? { sponsored: true as const } : {}),
-  }));
-  queueStartPrompt(startDraftStore.state.id, prompt);
-};
-
-/**
- * Onboarding's tour, taken instead of a pick: a fresh draft on the Build
- * starters with the sample task waiting in the box, so the tour ends on one
- * Send, not an empty page. Not sent: the person chose to look first.
- */
-export const prefillFirstTask = (
-  starters: NonNullable<StartDraft["starters"]>,
-  sponsored: boolean,
-  prompt: string
-): void => {
-  startDraftStore.setState(() => ({
-    ...newStartDraft(),
-    starters,
+    firstTask: true,
     ...(sponsored ? { sponsored: true as const } : {}),
   }));
   updateDraft(`draft:${startDraftStore.state.id}`, (draft) => ({
     ...draft,
     text: prompt,
   }));
+};
+/** The first-run sample was sent, edited or its hint closed: never point at Send again for it. */
+export const endFirstTaskHint = (draftId: string): void => {
+  if (startDraftStore.state.id !== draftId || !startDraftStore.state.firstTask)
+    return;
+  startDraftStore.setState(({ firstTask: _, ...draft }) => draft);
 };
 
 export const optimisticSession = (draft: StartDraft): SessionRow => {

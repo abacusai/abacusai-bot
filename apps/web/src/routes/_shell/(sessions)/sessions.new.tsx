@@ -28,6 +28,7 @@ import {
   shellStore,
 } from "#renderer/features/shell/shell-store";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
+import { useTourState } from "#renderer/features/tour";
 import { useChatCommands } from "#renderer/lib/chat-commands";
 import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
 import { NewSessionSearch } from "#renderer/lib/navigation/search";
@@ -62,6 +63,7 @@ const SessionsNewRoute = () => {
   }, [draftId, search, navigate]);
   useEffect(() => closeFloating(), [draft.id]);
   const prefs = usePrefs();
+  const tour = useTourState();
   return (
     <>
       <TopBarSlot>
@@ -89,6 +91,7 @@ const SessionsNewRoute = () => {
         <SessionStartPage
           key={draft.id}
           workspaceId={workspaceId}
+          hintHeld={tour != null}
           handoff={async (id, envelope) => {
             // This window sent it: a run that fails before the chat's view
             // loads is still this person's moment (UpgradeTriggers).

@@ -1825,6 +1825,11 @@
           "detail": "Bugs e testes faltando, por arquivo e linha.",
           "prompt": "Revise meus pull requests abertos. Se esta pasta for um repositório do GitHub, use-o; se não for, liste meus repositórios do GitHub e pergunte qual. Para cada pull request, diga o que ele muda e aponte bugs, riscos e testes faltando, com o arquivo e a linha. Diga apenas aqui: não publique nada no GitHub nem altere código."
         }
+      },
+      "sendHint": {
+        "title": "Toque em Enviar para ver funcionando",
+        "build": "Sua primeira tarefa já está na caixa. Envie para ver o app criá-la, ou mude o texto antes.",
+        "code": "Sua primeira tarefa já está na caixa. Envie e o app revisa seus pull requests abertos, ou mude o texto antes."
       }
     },
     "model": {

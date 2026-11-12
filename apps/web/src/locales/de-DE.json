@@ -1825,6 +1825,11 @@
           "detail": "Fehler und fehlende Tests, mit Datei und Zeile.",
           "prompt": "Prüfe meine offenen Pull Requests. Wenn dieser Ordner ein GitHub-Repository ist, nutze es; wenn nicht, liste meine GitHub-Repositories auf und frag mich, welches. Sag mir für jeden Pull Request, was er ändert, und nenne Fehler, Risiken und fehlende Tests mit Datei und Zeile. Sag es nur hier: Poste nichts auf GitHub und ändere keinen Code."
         }
+      },
+      "sendHint": {
+        "title": "Tippe auf Senden und sieh zu",
+        "build": "Deine erste Aufgabe steht schon im Feld. Sende sie ab und sieh zu, wie die App sie baut, oder ändere zuerst den Text.",
+        "code": "Deine erste Aufgabe steht schon im Feld. Sende sie ab, und die App prüft deine offenen Pull Requests, oder ändere zuerst den Text."
       }
     },
     "model": {

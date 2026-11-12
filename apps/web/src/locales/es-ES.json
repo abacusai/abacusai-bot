@@ -1825,6 +1825,11 @@
           "detail": "Errores y pruebas que faltan, por archivo y línea.",
           "prompt": "Revisa mis pull requests abiertos. Si esta carpeta es un repositorio de GitHub, úsalo; si no, enumera mis repositorios de GitHub y pregúntame cuál. Para cada pull request, dime qué cambia y señala errores, riesgos y pruebas que faltan, con el archivo y la línea. Dímelo solo aquí: no publiques nada en GitHub ni cambies código."
         }
+      },
+      "sendHint": {
+        "title": "Pulsa Enviar para verlo en acción",
+        "build": "Tu primera tarea ya está en el cuadro. Envíala y mira cómo la app la construye, o cambia el texto antes.",
+        "code": "Tu primera tarea ya está en el cuadro. Envíala y la app revisará tus pull requests abiertos, o cambia el texto antes."
       }
     },
     "model": {

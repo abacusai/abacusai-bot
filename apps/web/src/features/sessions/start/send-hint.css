@@ -1,0 +1,21 @@
+/* The first-run hint's ring on Send: three slow pulses, then a steady ring. */
+[data-send-hint] {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+  animation: send-hint-pulse 1.6s var(--ease-standard) 3;
+}
+@keyframes send-hint-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--ring) 55%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 12px color-mix(in oklab, var(--ring) 0%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--ring) 0%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduce-motion="off"]) [data-send-hint] { animation: none; }
+}
+html[data-reduce-motion="on"] [data-send-hint] { animation: none; }

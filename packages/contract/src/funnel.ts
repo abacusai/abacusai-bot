@@ -56,6 +56,10 @@ export const FUNNEL_STEPS = [
   "start_starter_tapped",
   "start_prompt_edited",
   "start_sent",
+  // The first-run hint at Send (a pick's sample waits in the box): shown, and
+  // closed by hand; the detail is the starters. Sent or edited ends it silently.
+  "send_hint_shown",
+  "send_hint_dismissed",
   // A bot's reply ended with tap-to-run tasks (suggest_tasks); the detail is
   // the bot's template, and a tap's also whether it copied.
   "task_suggestions_shown",

@@ -49,10 +49,7 @@ import {
   startSignIn,
   cancelSignIn,
 } from "#renderer/features/onboarding/store";
-import {
-  prefillFirstTask,
-  startFirstTask,
-} from "#renderer/features/sessions/start/start-session";
+import { openFirstTask } from "#renderer/features/sessions/start/start-session";
 import { startTour } from "#renderer/features/tour/store";
 import {
   PaidWelcomeHost,
@@ -227,8 +224,8 @@ const OnboardingRoute = () => {
     };
     switch (choice.kind) {
       case "build":
-        // The example tapped, or the card's own sample: it starts at once.
-        startFirstTask(
+        // The example tapped, or the card's own sample, waiting in the box for Send.
+        openFirstTask(
           "build",
           sponsored,
           choice.prompt ??
@@ -247,7 +244,7 @@ const OnboardingRoute = () => {
         return;
       }
       case "github":
-        startFirstTask(
+        openFirstTask(
           "code",
           sponsored,
           t(`sessions.start.code.${GITHUB_FIRST_TASK}.prompt`)
@@ -274,7 +271,7 @@ const OnboardingRoute = () => {
         return;
       case "tour":
         // The tour runs over the Build sample, waiting in the box for Send.
-        prefillFirstTask(
+        openFirstTask(
           "build",
           sponsored,
           t(`sessions.start.build.${BUILD_STARTER_IDS[0]}.prompt`)

@@ -1847,6 +1847,11 @@
           "detail": "Błędy i brakujące testy według pliku i wiersza.",
           "prompt": "Przejrzyj moje otwarte pull requesty. Jeśli ten folder jest repozytorium GitHub, użyj go; jeśli nie, wypisz moje repozytoria GitHub i zapytaj mnie, którego użyć. Dla każdego pull requesta opisz, co zmienia, i wskaż błędy, ryzyka oraz brakujące testy, podając plik i wiersz. Napisz mi to tylko tutaj: nie publikuj niczego na GitHub i nie zmieniaj kodu."
         }
+      },
+      "sendHint": {
+        "title": "Naciśnij Wyślij i zobacz, jak to działa",
+        "build": "Twoje pierwsze zadanie jest już w polu. Wyślij je i zobacz, jak aplikacja je buduje, albo najpierw zmień tekst.",
+        "code": "Twoje pierwsze zadanie jest już w polu. Wyślij je, a aplikacja przejrzy Twoje otwarte pull requesty, albo najpierw zmień tekst."
       }
     },
     "model": {
