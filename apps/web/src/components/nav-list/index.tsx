@@ -124,6 +124,11 @@ interface NavListItemProps {
   meta?: ReactNode;
   trailing?: ReactNode;
   indent?: boolean;
+  /**
+   * Rows nested under the row above (a chat handed off from another): one
+   * more step in, on a guide line under the parent's title.
+   */
+  nested?: boolean;
   /** Native tooltip (the strip shows names this way). */
   hint?: string;
   className?: string;
@@ -142,6 +147,7 @@ const NavItem = ({
   meta,
   trailing,
   indent = false,
+  nested = false,
   hint,
   className,
 }: NavListItemProps) => (
@@ -153,6 +159,10 @@ const NavItem = ({
     className={cn(
       "text-sidebar-foreground phone:px-3 phone:text-[15px] h-[calc(var(--row-h)-2px)] flex-nowrap gap-2 rounded-lg px-2 py-0 text-[13px]",
       indent && "pl-7",
+      nested &&
+        "before:bg-sidebar-border relative before:absolute before:inset-y-0.5 before:w-px",
+      nested &&
+        (indent ? "pl-12 before:left-[30px]" : "pl-7 before:left-[10px]"),
       className
     )}
     render={

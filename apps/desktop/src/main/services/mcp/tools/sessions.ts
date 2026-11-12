@@ -1,11 +1,54 @@
 import type { ToolDefinition } from "./definition";
 
 /**
+ * `hand_off_session`: a chat moves a task of its own into a new chat that
+ * runs beside it, on the same folder, worktree, model and mode. The renderer
+ * draws the call as a card that follows the new chat.
+ */
+const HAND_OFF_SESSION: ToolDefinition = {
+  name: "hand_off_session",
+  toolsets: "always",
+  appChatOnly: true,
+  description: [
+    "Start a separate task in a new chat that runs beside this one, in the same folder with the same model and mode.",
+    "The task starts at once and the user follows it from a card here and from the sidebar, where it sits under this chat.",
+    "Call it only when it is needed:",
+    "- the user asks for it: to split something off, do it separately, in parallel or in its own chat or session;",
+    "- or a task of its own comes up that does not need this conversation's result and would take long enough to be",
+    "  worth running at the same time (another bug, another feature, another document), and the user agreed or asked",
+    "  for everything to be done.",
+    "Never call it for a step of the current task, for something a few tool calls finish, for a question, or to split",
+    "one task into pieces: do those here (delegate_task is for a helper whose result you need back). Never call it",
+    "twice for the same task. When in doubt, do the work here.",
+    "The new chat knows nothing of this one: write prompt as a complete brief.",
+    "Afterwards tell the user in one short line, in their language, what you started there, and carry on with the rest here.",
+  ].join("\n"),
+  inputSchema: {
+    type: "object",
+    properties: {
+      title: {
+        type: "string",
+        description:
+          "The new chat's name in the sidebar: the task in a few words, in the user's language.",
+      },
+      prompt: {
+        type: "string",
+        description:
+          "The new chat's first message, its whole brief, in the user's language: what to do, every detail the user gave, the files or places involved, what is already known or decided here, and what done looks like.",
+      },
+    },
+    required: ["title", "prompt"],
+  },
+  run: (host, args, callerSession) => host.handOffSession(args, callerSession),
+};
+
+/**
  * `offer_session`: a bot asked to build hands the work to a session. The
  * call draws a card in the bot's chat (the renderer reads its arguments);
  * opening it starts a session with the task in its message box.
  */
 export const SESSIONS_TOOLS: ToolDefinition[] = [
+  HAND_OFF_SESSION,
   {
     name: "offer_session",
     toolsets: "always",

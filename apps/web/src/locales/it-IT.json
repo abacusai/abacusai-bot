@@ -2315,7 +2315,8 @@
       "from": "Continua da",
       "into": "Continua in",
       "startsFrom": "Inizia da un riepilogo di “{{label}}”",
-      "drop": "Inizia senza"
+      "drop": "Inizia senza",
+      "handedOffFrom": "Passato da"
     },
     "websitePrompt": {
       "label": "Il tuo compito dal sito web",
@@ -2336,6 +2337,11 @@
       "outsideTitle": "Questo file è fuori dalle cartelle di questa chat",
       "remove": "Rimuovi {{name}}",
       "removeFailed": "Impossibile rimuovere la cartella. Riprova."
+    },
+    "handoff": {
+      "cardLabel": "In esecuzione in una chat a parte",
+      "starting": "Avvio…",
+      "ready": "Fatto"
     }
   },
   "terminalShells": {

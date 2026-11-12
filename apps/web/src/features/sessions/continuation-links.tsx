@@ -16,12 +16,17 @@ import { AppLink } from "#renderer/lib/navigation/app-link";
 export interface ContinuationLinks {
   /** The chat this one continues, when it is still there. */
   from: Pick<SessionRow, "id" | "label"> | null;
+  /** This chat is a task handed off from `from`, which goes on beside it. */
+  handoff?: boolean;
   /** The chats that continue this one, oldest first. */
   into: ReadonlyArray<Pick<SessionRow, "id" | "label">>;
 }
 
 export const useContinuationLinks = (
-  row: Pick<SessionRow, "id" | "continuedFrom"> | null | undefined
+  row:
+    | Pick<SessionRow, "id" | "continuedFrom" | "continuationKind">
+    | null
+    | undefined
 ): ContinuationLinks => {
   const collections = useCollections();
   const id = row?.id ?? null;
@@ -32,7 +37,11 @@ export const useContinuationLinks = (
         ? undefined
         : q
             .from({ s: collections.sessions })
-            .fn.where(({ s }) => s.continuedFrom === id),
+            // A handoff is drawn where it was made (its tool card), not at the end.
+            .fn.where(
+              ({ s }) =>
+                s.continuedFrom === id && s.continuationKind !== "handoff"
+            ),
   });
   const from =
     row?.continuedFrom == null
@@ -40,6 +49,7 @@ export const useContinuationLinks = (
       : (collections.sessions.get(row.continuedFrom) ?? null);
   return {
     from,
+    ...(row?.continuationKind === "handoff" ? { handoff: true } : {}),
     into: (into ?? []).toSorted((a, b) =>
       a.createdAt.localeCompare(b.createdAt)
     ),
@@ -49,9 +59,11 @@ export const useContinuationLinks = (
 const ContinuationLink = ({
   to,
   direction,
+  handoff = false,
 }: {
   to: Pick<SessionRow, "id" | "label">;
   direction: "from" | "into";
+  handoff?: boolean;
 }) => {
   const { t } = useTranslation();
   const label = to.label.trim() === "" ? t("sessions.untitled") : to.label;
@@ -64,7 +76,9 @@ const ContinuationLink = ({
       <CornerDownRight aria-hidden className="size-3.5 shrink-0" />
       <span className="shrink-0">
         {direction === "from"
-          ? t("sessions.continuation.from")
+          ? handoff
+            ? t("sessions.continuation.handedOffFrom")
+            : t("sessions.continuation.from")
           : t("sessions.continuation.into")}
       </span>
       <AppLink
@@ -105,7 +119,11 @@ export const withContinuationLinks = (
         ? {
             before: (
               <>
-                <ContinuationLink to={links.from!} direction="from" />
+                <ContinuationLink
+                  to={links.from!}
+                  direction="from"
+                  handoff={links.handoff === true}
+                />
                 {inner?.before}
               </>
             ),

@@ -11,6 +11,7 @@ import { useEffect, type ComponentType } from "react";
 
 import {
   isBotHelpTool,
+  isHandOffTool,
   isPaidFeatureTool,
   isSessionOfferTool,
 } from "#renderer/lib/bot-turns/turns";
@@ -20,6 +21,7 @@ import { toolKey } from "../../store/thread-store";
 import { useChatView, useSubagentScope } from "../context";
 import { PermissionCard } from "../permissions/permission-card";
 import { BotHelpToolCard } from "./bot-help";
+import { HandOffCard } from "./handoff";
 import { MemoryToolLine } from "./memory-tool";
 import { PaidFeatureToolCard } from "./paid-feature";
 import { SessionOfferCard } from "./session-offer";
@@ -73,6 +75,8 @@ export const sessionToolWidgets = new Proxy(KNOWN_TOOL_WIDGETS, {
             ? SuggestedTasksCard
             : name === MEMORY_TOOL
               ? MemoryToolLine
+              : isHandOffTool(name)
+                ? HandOffCard
               : (known[name] ?? GenericLine),
 }) as Record<string, Widget>;
 

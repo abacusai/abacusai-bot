@@ -2315,7 +2315,8 @@
       "from": "Continuação de",
       "into": "Continua em",
       "startsFrom": "Começa com um resumo de “{{label}}”",
-      "drop": "Começar sem ele"
+      "drop": "Começar sem ele",
+      "handedOffFrom": "Repassado de"
     },
     "websitePrompt": {
       "label": "Sua tarefa do site",
@@ -2336,6 +2337,11 @@
       "outsideTitle": "Este arquivo está fora das pastas deste chat",
       "remove": "Remover {{name}}",
       "removeFailed": "Não foi possível remover a pasta. Tente de novo."
+    },
+    "handoff": {
+      "cardLabel": "Rodando em um chat próprio",
+      "starting": "Iniciando…",
+      "ready": "Pronto"
     }
   },
   "terminalShells": {

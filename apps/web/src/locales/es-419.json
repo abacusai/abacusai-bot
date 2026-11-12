@@ -2315,7 +2315,8 @@
       "from": "Continuación de",
       "into": "Continúa en",
       "startsFrom": "Empieza con un resumen de “{{label}}”",
-      "drop": "Empezar sin él"
+      "drop": "Empezar sin él",
+      "handedOffFrom": "Delegado desde"
     },
     "websitePrompt": {
       "label": "Tu tarea del sitio web",
@@ -2336,6 +2337,11 @@
       "outsideTitle": "Este archivo está fuera de las carpetas de este chat",
       "remove": "Quitar {{name}}",
       "removeFailed": "No se pudo quitar la carpeta. Inténtalo de nuevo."
+    },
+    "handoff": {
+      "cardLabel": "Se ejecuta en su propio chat",
+      "starting": "Iniciando…",
+      "ready": "Listo"
     }
   },
   "terminalShells": {

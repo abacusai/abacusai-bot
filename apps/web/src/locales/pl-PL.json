@@ -2337,7 +2337,8 @@
       "from": "Kontynuacja rozmowy",
       "into": "Kontynuowane w",
       "startsFrom": "Zaczyna od podsumowania „{{label}}”",
-      "drop": "Zacznij bez niego"
+      "drop": "Zacznij bez niego",
+      "handedOffFrom": "Przekazano z"
     },
     "websitePrompt": {
       "label": "Twoje zadanie ze strony",
@@ -2358,6 +2359,11 @@
       "outsideTitle": "Ten plik jest poza folderami tego czatu",
       "remove": "Usuń {{name}}",
       "removeFailed": "Nie udało się usunąć folderu. Spróbuj ponownie."
+    },
+    "handoff": {
+      "cardLabel": "Działa we własnym czacie",
+      "starting": "Uruchamianie…",
+      "ready": "Gotowe"
     }
   },
   "terminalShells": {

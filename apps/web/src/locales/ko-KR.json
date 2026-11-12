@@ -2315,7 +2315,8 @@
       "from": "이어온 채팅:",
       "into": "이어진 채팅:",
       "startsFrom": "“{{label}}” 요약으로 시작합니다",
-      "drop": "요약 없이 시작"
+      "drop": "요약 없이 시작",
+      "handedOffFrom": "넘겨받은 채팅:"
     },
     "websitePrompt": {
       "label": "웹사이트에서 입력한 작업",
@@ -2336,6 +2337,11 @@
       "outsideTitle": "이 파일은 이 채팅의 폴더 밖에 있습니다",
       "remove": "{{name}} 제거",
       "removeFailed": "폴더를 제거하지 못했습니다. 다시 시도하세요."
+    },
+    "handoff": {
+      "cardLabel": "별도 채팅에서 실행 중",
+      "starting": "시작하는 중…",
+      "ready": "완료"
     }
   },
   "terminalShells": {

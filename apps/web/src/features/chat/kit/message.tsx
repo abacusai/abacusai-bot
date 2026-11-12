@@ -51,6 +51,7 @@ import { containmentRootFor } from "#renderer/components/file-preview/paths";
 import {
   botVisibleMessage,
   isBotHelpTool,
+  isHandOffTool,
   isPaidFeatureTool,
 } from "#renderer/lib/bot-turns/turns";
 import { cn } from "#renderer/lib/cn";
@@ -1021,7 +1022,8 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
           if (
             isBotHelpTool(part.part.name) ||
             isSuggestTasksTool(part.part.name) ||
-            isMemoryTool(part.part.name)
+            isMemoryTool(part.part.name) ||
+            isHandOffTool(part.part.name)
           ) {
             flush();
             blocks.push({ run: false, part });

@@ -2315,7 +2315,8 @@
       "from": "接續自",
       "into": "接續於",
       "startsFrom": "從「{{label}}」的摘要開始",
-      "drop": "不帶摘要開始"
+      "drop": "不帶摘要開始",
+      "handedOffFrom": "交接自"
     },
     "websitePrompt": {
       "label": "你在網站上提交的任務",
@@ -2336,6 +2337,11 @@
       "outsideTitle": "此檔案不在此聊天的資料夾中",
       "remove": "移除 {{name}}",
       "removeFailed": "無法移除資料夾。請再試一次。"
+    },
+    "handoff": {
+      "cardLabel": "在獨立的對話中執行",
+      "starting": "正在啟動…",
+      "ready": "已完成"
     }
   },
   "terminalShells": {

@@ -2315,7 +2315,8 @@
       "from": "Lanjutan dari",
       "into": "Dilanjutkan di",
       "startsFrom": "Dimulai dari ringkasan “{{label}}”",
-      "drop": "Mulai tanpa ringkasan"
+      "drop": "Mulai tanpa ringkasan",
+      "handedOffFrom": "Dialihkan dari"
     },
     "websitePrompt": {
       "label": "Tugas Anda dari situs web",
@@ -2336,6 +2337,11 @@
       "outsideTitle": "File ini berada di luar folder chat ini",
       "remove": "Hapus {{name}}",
       "removeFailed": "Folder tidak bisa dihapus. Coba lagi."
+    },
+    "handoff": {
+      "cardLabel": "Berjalan di chat tersendiri",
+      "starting": "Memulai…",
+      "ready": "Selesai"
     }
   },
   "terminalShells": {
