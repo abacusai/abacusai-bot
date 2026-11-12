@@ -10,6 +10,7 @@ import type { PlanTopModel } from "@abacus-ai/contract/billing-plan";
 import { FREE_POOL_PROVIDERS } from "@abacus-ai/contract/free-pool";
 import {
   isPayingAbacusTier,
+  OPENLLM_ID,
   MODEL_CATALOG,
   type ModelAvailability,
 } from "@abacus-ai/contract/models";
@@ -104,28 +105,41 @@ const unlockPlan = async (): Promise<UnlockPlan> => {
 
 /**
  * Each plan's own model: what is auto-selected when nothing valid is chosen,
- * and where a pin the plan does not serve moves (`modelForTier`).
+ * and where a pin the plan does not serve moves (`modelForTier`). Free, Go
+ * and Basic run on RouteLLM - Open; Pro and Max on the code router.
  */
 const RECOMMENDED_BY_TIER: Record<string, string> = {
-  free: "openllm/auto",
-  go: "abacus/route-llm-code-low",
-  basic: "abacus/route-llm-code-low",
+  free: OPENLLM_ID,
+  go: OPENLLM_ID,
+  basic: OPENLLM_ID,
   pro: "abacus/route-llm-code",
   max: "abacus/route-llm-code",
 };
 
+/** The code routers: a plan on RouteLLM - Open neither lists nor runs them. */
+const CODE_ROUTER_IDS = new Set([
+  "abacus/route-llm-code-low",
+  "abacus/route-llm-code",
+]);
+
+/** Whether `tier` runs on RouteLLM - Open (else on its code router). */
+const runsOnOpenLlm = (tier: string | null | undefined): boolean =>
+  RECOMMENDED_BY_TIER[tier ?? ""] === OPENLLM_ID;
+
 /**
- * The model a pin to `id` runs on under `tier`: a paying tier has no OpenLLM
- * (the catalog drops it), so a pin to any OpenLLM model, the free plan's
- * default, moves to the tier's router. Every other pin, and every pin on
- * another or unknown tier, is kept as it is.
+ * The model a pin to `id` runs on under `tier`: a plan on RouteLLM - Open
+ * moves a code-router pin to it, a plan on the code router moves an OpenLLM
+ * pin to its router (its catalog has no OpenLLM). Every other pin, and every
+ * pin on an unknown tier, is kept as it is.
  */
 export const modelForTier = (
   tier: string | null | undefined,
   id: string
 ): string => {
-  if (!isPayingAbacusTier(tier) || !id.startsWith("openllm/")) return id;
-  return RECOMMENDED_BY_TIER[tier ?? ""] ?? id;
+  const own = RECOMMENDED_BY_TIER[tier ?? ""];
+  if (own == null) return id;
+  if (own === OPENLLM_ID) return CODE_ROUTER_IDS.has(id) ? own : id;
+  return id.startsWith("openllm/") ? own : id;
 };
 
 /** What a refused id is called when no catalog row names it. */
@@ -332,17 +346,18 @@ export const listAvailableModels = async (
     ...lockedRefused,
   ];
 
-  // A paying tier lives on its RouteLLM router and has no OpenLLM at all,
-  // whatever other keys are configured.
+  // A tier on the code router (Pro, Max) has no OpenLLM at all, whatever
+  // other keys are configured.
+  const tier = abacusAccount?.subscription_tier;
   const presented = (
-    payingTier
+    payingTier && !runsOnOpenLlm(tier)
       ? withoutStaticAbacus.filter((model) => model.provider !== "openllm")
       : withoutStaticAbacus
   ).map((model) => (refused.has(model.id) ? lock(model) : model));
 
-  // The free tier's dropdown is OpenLLM plus its plan models; the low code
-  // router stays off the list (still OpenLLM's routing lane underneath). The
-  // live OpenRouter list wins over a catalog row for the same id.
+  // A tier on RouteLLM - Open (Free, Go, Basic) lists OpenLLM plus its plan
+  // models; the code routers stay off the list. The live OpenRouter list wins
+  // over a catalog row for the same id.
   const composed = [
     ...presented,
     ...servableExpanded.filter((model) => !liveOpenRouterIds.has(model.id)),
@@ -350,17 +365,14 @@ export const listAvailableModels = async (
     ...abacusRows,
     ...custom,
   ];
-  const all = freeTier
-    ? composed.filter((model) => model.id !== "abacus/route-llm-code-low")
+  const all = runsOnOpenLlm(tier)
+    ? composed.filter((model) => !CODE_ROUTER_IDS.has(model.id))
     : composed;
 
   // Auto-select by plan when nothing valid is chosen. At most one entry is
   // marked, and only a runnable one: a tier whose router is missing from this
   // account's catalog recommends nothing.
-  const recommendedId =
-    abacusAccount?.subscription_tier != null
-      ? RECOMMENDED_BY_TIER[abacusAccount.subscription_tier]
-      : undefined;
+  const recommendedId = tier != null ? RECOMMENDED_BY_TIER[tier] : undefined;
   const withRecommendation = all.map((model) =>
     model.id === recommendedId && model.configured
       ? { ...model, recommended: true }

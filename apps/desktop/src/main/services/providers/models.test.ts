@@ -327,38 +327,76 @@ describe("what a free Abacus.AI plan can run", () => {
   });
 });
 
-describe("a pin once the plan is paid", () => {
+describe("a pin on the plan's own lane", () => {
   it.each([
-    // The free plan's default moves to the paid tier's router.
-    ["basic", "openllm/auto", "abacus/route-llm-code-low"],
-    ["go", "openllm/auto", "abacus/route-llm-code-low"],
+    // Free, Go and Basic run on RouteLLM - Open: a code-router pin moves to it.
+    ["basic", "openllm/auto", "openllm/auto"],
+    ["go", "openllm/auto", "openllm/auto"],
+    ["basic", "abacus/route-llm-code-low", "openllm/auto"],
+    ["go", "abacus/route-llm-code-low", "openllm/auto"],
+    ["basic", "abacus/route-llm-code", "openllm/auto"],
+    ["free", "abacus/route-llm-code-low", "openllm/auto"],
+    // Pro and Max run on the code router: an OpenLLM pin moves to it.
     ["pro", "openllm/auto", "abacus/route-llm-code"],
     ["max", "openllm/auto", "abacus/route-llm-code"],
-    // Nothing else moves: a model the user chose, or the free plan itself.
+    // Nothing else moves: a model the user chose, or an unknown plan.
     ["basic", "deepseek/deepseek-v4-flash", "deepseek/deepseek-v4-flash"],
     ["pro", "abacus/route-llm-code-low", "abacus/route-llm-code-low"],
     ["free", "openllm/auto", "openllm/auto"],
     [null, "openllm/auto", "openllm/auto"],
+    [null, "abacus/route-llm-code-low", "abacus/route-llm-code-low"],
   ])("on %s, %s runs as %s", (tier, pin, expected) => {
     expect(modelForTier(tier, pin)).toBe(expected);
   });
 
-  it("is never on a model the paid catalog drops", async () => {
-    credentials.current = new Set(["ABACUS_API_KEY"]);
-    abacus.tier = "basic";
-    abacus.live = [
-      {
-        id: "abacus/route-llm-code-low",
-        label: "RouteLLM",
-        provider: "abacus",
-        tier: "default",
-        requiresEnv: "ABACUS_API_KEY",
-        configured: true,
-      },
-    ];
-    const ids = (await listAvailableModels(true)).map((m) => m.id);
+  const routers = [
+    {
+      id: "abacus/route-llm-code-low",
+      label: "RouteLLM Code Low",
+      provider: "abacus",
+      tier: "default" as const,
+      requiresEnv: "ABACUS_API_KEY",
+      configured: true,
+    },
+    {
+      id: "abacus/route-llm-code",
+      label: "RouteLLM Code",
+      provider: "abacus",
+      tier: "default" as const,
+      requiresEnv: "ABACUS_API_KEY",
+      configured: true,
+    },
+  ];
 
-    expect(ids).not.toContain("openllm/auto");
-    expect(ids).toContain(modelForTier("basic", "openllm/auto"));
-  });
+  it.each([
+    // Basic and Go: RouteLLM - Open, recommended; no code router listed.
+    [
+      "basic",
+      "openllm/auto",
+      ["abacus/route-llm-code-low", "abacus/route-llm-code"],
+    ],
+    [
+      "go",
+      "openllm/auto",
+      ["abacus/route-llm-code-low", "abacus/route-llm-code"],
+    ],
+    // Pro and Max: the code router, recommended; no OpenLLM listed.
+    ["pro", "abacus/route-llm-code", ["openllm/auto"]],
+    ["max", "abacus/route-llm-code", ["openllm/auto"]],
+  ])(
+    "%s recommends %s and lists none of %j",
+    async (tier, recommended, absent) => {
+      credentials.current = new Set(["ABACUS_API_KEY"]);
+      abacus.tier = tier;
+      abacus.live = routers;
+      const models = await listAvailableModels(true);
+      const ids = models.map((m) => m.id);
+
+      expect(models.find((m) => m.recommended === true)?.id).toBe(recommended);
+      for (const id of absent) expect(ids).not.toContain(id);
+      // Whatever a pin was, it lands on a model the list carries.
+      for (const pin of ["openllm/auto", "abacus/route-llm-code-low"])
+        expect(ids).toContain(modelForTier(tier, pin));
+    }
+  );
 });

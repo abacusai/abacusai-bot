@@ -33,6 +33,9 @@ import { useCreditsAccount } from "#renderer/lib/use-credits-account";
 import { continueInNewChat } from "./continue-chat";
 import { useCheckoutQueries, useSessionsTransport } from "./queries";
 import { setSessionModel } from "./session-actions";
+/** The low-cost lanes a paying plan can run on; the top-model hint offers a step up from them. */
+const LOW_COST_LANES = new Set<string>([ABACUS_CODE_ROUTER_LOW_ID, OPENLLM_ID]);
+
 export const useSessionComposerModel = (
   row?: SessionRow,
   draftId?: string,
@@ -102,11 +105,12 @@ export const useSessionComposerModel = (
   const other = chip?.unavailable
     ? null
     : otherProviderModel(value, settings.data?.defaultModel, models);
-  // A paying plan on its low-cost router: the composer offers its top models.
+  // A paying plan on a low-cost lane (RouteLLM - Open, Basic's default, or
+  // the low code router): the composer offers its top models.
   const tier = creditsTier(account.data);
   const topModels =
     (tier === "basic" || tier === "paid") &&
-    (value ?? selected) === ABACUS_CODE_ROUTER_LOW_ID
+    LOW_COST_LANES.has(value ?? selected ?? "")
       ? { tier: accountTier(account.data) ?? tier }
       : null;
   const workspace = row ? db.collections.workspaces.get(row.workspaceId) : null;

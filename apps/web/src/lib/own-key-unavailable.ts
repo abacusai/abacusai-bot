@@ -1,7 +1,4 @@
-import {
-  ABACUS_CODE_ROUTER_LOW_ID,
-  type ModelAvailability,
-} from "@abacus-ai/contract/models";
+import { type ModelAvailability, OPENLLM_ID } from "@abacus-ai/contract/models";
 import { providerDisplayName } from "@abacus-ai/contract/settings";
 
 /**
@@ -146,23 +143,21 @@ export const ownKeyWords = (
   };
 };
 
-/** The low code router: what a paid plan runs when nothing else is chosen. */
-const ABACUS_DEFAULT_MODEL_ID = ABACUS_CODE_ROUTER_LOW_ID;
-
 /**
- * The model the waiting message sends on once the plan is active: the
- * catalog's Abacus recommendation, else its Abacus default, else the router
- * a paid plan starts on.
+ * The model the waiting message sends on once the plan is active: the plan's
+ * own recommendation (RouteLLM - Open on Basic, the code router on Pro),
+ * else the catalog's Abacus default, else RouteLLM - Open, which the plan's
+ * pin rules move to its router where it has none.
  */
 export const ownKeyResumeModel = (
   catalog: readonly ModelAvailability[]
 ): string => {
-  const abacus = catalog.filter(
-    (model) => model.provider === "abacus" && model.configured
-  );
+  const runnable = catalog.filter((model) => model.configured);
   return (
-    abacus.find((model) => model.recommended === true)?.id ??
-    abacus.find((model) => model.tier === "default")?.id ??
-    ABACUS_DEFAULT_MODEL_ID
+    runnable.find((model) => model.recommended === true)?.id ??
+    runnable.find(
+      (model) => model.provider === "abacus" && model.tier === "default"
+    )?.id ??
+    OPENLLM_ID
   );
 };

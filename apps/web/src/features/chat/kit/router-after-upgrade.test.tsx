@@ -82,7 +82,13 @@ const mount = async (
     resumed = false,
     pinned = OPUS as string | null,
     defaultModel = ROUTER,
-  }: { resumed?: boolean; pinned?: string | null; defaultModel?: string } = {}
+    catalog = CATALOG,
+  }: {
+    resumed?: boolean;
+    pinned?: string | null;
+    defaultModel?: string;
+    catalog?: ModelAvailability[];
+  } = {}
 ) => {
   const continued: Array<[string, string | undefined]> = [];
   // A chat of its own: the offer's answers are kept per chat.
@@ -111,7 +117,7 @@ const mount = async (
         abacus: os.account.abacus.handler(() => BASIC),
         billingPlan: os.account.billingPlan.handler(() => BILLING),
       },
-      models: { list: os.models.list.handler(() => CATALOG) },
+      models: { list: os.models.list.handler(() => catalog) },
       settings: {
         get: os.settings.get.handler(
           () => ({ defaultModel, apiKeys: {} }) as never
@@ -171,6 +177,38 @@ it("a chat pinned to Opus on its first turn, with the router as the app's defaul
   expect(
     await screen.findByRole("button", { name: LINE }, { timeout: 5000 })
   ).toBeTruthy();
+});
+
+it("on Basic, whose plan model is RouteLLM - Open: the way back is a new chat on it", async () => {
+  // Basic's catalog: RouteLLM - Open is the plan's model; no code router.
+  const basic: ModelAvailability[] = [
+    {
+      id: "openllm/auto",
+      label: "RouteLLM - Open",
+      provider: "openllm",
+      tier: "default",
+      configured: true,
+      recommended: true,
+    },
+    CATALOG[1]!,
+  ];
+  const h = await mount(CLEAN, {
+    resumed: true,
+    defaultModel: "openllm/auto",
+    catalog: basic,
+  });
+  fireEvent.click(
+    await screen.findByRole(
+      "button",
+      {
+        name: "Make your credits last: continue on RouteLLM - Open in a new chat",
+      },
+      { timeout: 5000 }
+    )
+  );
+  await waitFor(() =>
+    expect(h.continued).toEqual([["openllm/auto", undefined]])
+  );
 });
 
 it("someone whose default is Opus chose it: no line", async () => {
