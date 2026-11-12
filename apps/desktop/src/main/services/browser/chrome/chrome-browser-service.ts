@@ -23,6 +23,18 @@ import { ChromeTargetSource, tabMethodsOf } from "./chrome-target-source";
 /** The name the tab group in Chrome carries. */
 export const CLIENT_NAME = "AbacusAI Bot";
 
+/**
+ * The token alone from what the user pasted: the extension shows it as an
+ * environment line (`PLAYWRIGHT_MCP_EXTENSION_TOKEN=…`), and a pasted line
+ * sent whole is a token the extension does not know.
+ */
+export const extensionTokenOf = (pasted: string | undefined): string =>
+  (pasted ?? "")
+    .trim()
+    .replace(/^(?:export\s+)?PLAYWRIGHT_MCP_EXTENSION_TOKEN\s*=\s*/i, "")
+    .replace(/^(["'])(.*)\1$/, "$2")
+    .trim();
+
 export interface ChromeBrowserServiceOptions {
   onStatusChanged: () => void;
   /** The extension's own token, when the user pasted it: skips the allow page. */
@@ -137,7 +149,7 @@ export class ChromeBrowserService {
         relay.connectUrl(
           PLAYWRIGHT_EXTENSION_ID,
           CLIENT_NAME,
-          this.options.token()
+          extensionTokenOf(this.options.token())
         )
       );
       await relay.waitForConnection(this.options.connectTimeoutMs);
