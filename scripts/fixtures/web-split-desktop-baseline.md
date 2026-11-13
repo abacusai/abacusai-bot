@@ -8,7 +8,23 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `59388535`, the 95% credit card
+## Current: `2af11569`, coding routines
+
+**451 / 9665661 / 3240630.** Records the renderer with the coding routines:
+their starters on the session start page and the Routines landing, the one-tap
+setup sheet, and its strings in 15 languages. Against `5a7a005c` (main before
+this change, 447 / 9597706 / 3215839): +4 chunks, +67955 bytes (+0.71%),
++24791 gzip bytes (+0.77%). The extra chunks are the setup sheet and the
+modules it shares between the start page and the Routines landing. Main had
+already grown 0.82% in bytes past `59388535` without a new baseline, so this
+change crossed the 1% allowance. `apps/web`'s dependencies did not change. The
+1% allowance is unchanged.
+
+Measured from builds of `5a7a005c` and `2af11569` (Linux x64, clean `dist`),
+summed the same way as `check-desktop-parity.mjs`. This baseline-only change
+touches no renderer code.
+
+### `59388535`, the 95% credit card
 
 **445 / 9519544 / 3191332.** Records the renderer with the third credit
 milestone card (95%, the last before the wall) and its strings in 15
