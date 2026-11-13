@@ -3518,8 +3518,15 @@
       "copyFailed": "복사하지 못했어요"
     },
     "retryOffer": {
+      "title": "{{model}}(으)로 다시 시도하기",
       "newChat": "{{model}}(으)로 새 채팅에서 다시 시도",
-      "usesCreditsFaster": "크레딧을 더 빨리 사용합니다"
+      "freeTopModel": "이 작업은 저비용 모델에게는 어려워요. 가장 뛰어난 모델 중 하나인 {{model}}을(를) 여기서 쓸 수 있어요. 크레딧은 더 빨리 쓰여요.",
+      "continue": "새 채팅에서 계속하기",
+      "paidBody": "이 채팅의 요약으로 새 채팅에서 상위 모델이 이어서 작업해요. 크레딧은 더 빨리 쓰여요."
+    },
+    "topModelCard": {
+      "title": "{{plan}}으로 {{model}}을(를) 계속 쓰세요",
+      "line": "{{model}}은(는) 무료 크레딧을 빨리 써요. {{plan}}이면 계속 쓸 수 있고, 아래 혜택도 모두 받아요."
     },
     "routerAfterUpgrade": {
       "stay": "{{model}} 계속 사용"

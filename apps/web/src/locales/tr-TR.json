@@ -3518,8 +3518,15 @@
       "copyFailed": "Kopyalanamadı"
     },
     "retryOffer": {
+      "title": "{{model}} ile yeniden dene",
       "newChat": "{{model}} ile yeni bir sohbette tekrar dene",
-      "usesCreditsFaster": "Krediyi daha hızlı harcar"
+      "freeTopModel": "Bu görev düşük maliyetli model için zor. Var olan en yetenekli modellerden biri olan {{model}} burada sana açık. Kredilerini daha hızlı kullanır.",
+      "continue": "Yeni bir sohbette devam et",
+      "paidBody": "Yeni bir sohbet, bu sohbetin özetinden üst düzey bir modelle devam eder. Krediyi daha hızlı harcar."
+    },
+    "topModelCard": {
+      "title": "{{plan}} ile {{model}} ile devam et",
+      "line": "{{model}} ücretsiz kredileri hızlı harcar. {{plan}} ile onu kullanmaya devam edersin, aşağıdakilerin hepsiyle birlikte."
     },
     "routerAfterUpgrade": {
       "stay": "{{model}} ile devam et"

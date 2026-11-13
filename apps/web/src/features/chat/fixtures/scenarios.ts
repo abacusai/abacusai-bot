@@ -41,7 +41,8 @@ export interface Scenario {
     /** The deliverable offer judged without its caps. */
     deliverableOffer?: boolean;
     /** The retry offer on this model, without its caps. */
-    retryOffer?: { label: string; plan: string };
+    retryOffer?: { label: string; plan: string; freeTop?: boolean };
+    topModelCard?: { label: string };
     /** The composer's top-model hint on a paying plan, without its caps. */
     topModels?: boolean;
     /** The turns' files on the deliverables card, as the sessions route shows them. */
@@ -1116,6 +1117,22 @@ export const SCENARIOS: Scenario[] = [
     skin: "session",
     events: retryAfterComplaint,
     view: { retryOffer: { label: "Claude Opus 5.5", plan: "Basic" } },
+  },
+  {
+    id: "retry-offer-free-top",
+    canvas: ["RetryOffer", "free plan, Opus"],
+    skin: "session",
+    events: retryAfterComplaint,
+    view: {
+      retryOffer: { label: "Claude Opus 5.5", plan: "Basic", freeTop: true },
+    },
+  },
+  {
+    id: "top-model-card",
+    canvas: ["TopModelCard", "session"],
+    skin: "session",
+    events: headerAnswered,
+    view: { topModelCard: { label: "Claude Opus 5.5" } },
   },
   {
     id: "retry-offer-bot",

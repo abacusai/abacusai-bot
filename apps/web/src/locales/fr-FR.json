@@ -3518,8 +3518,15 @@
       "copyFailed": "Impossible de copier"
     },
     "retryOffer": {
+      "title": "Réessayez avec {{model}}",
       "newChat": "Réessayer dans une nouvelle conversation avec {{model}}",
-      "usesCreditsFaster": "Consomme les crédits plus vite"
+      "freeTopModel": "Cette tâche est difficile pour le modèle économique. {{model}}, l'un des modèles les plus performants qui soient, vous est ouvert ici. Il consomme vos crédits plus vite.",
+      "continue": "Continuer dans un nouveau chat",
+      "paidBody": "Un nouveau chat reprend à partir d'un résumé de celui-ci, sur un modèle haut de gamme. Il consomme les crédits plus vite."
+    },
+    "topModelCard": {
+      "title": "Continuez avec {{model}} grâce à {{plan}}",
+      "line": "{{model}} consomme vite les crédits gratuits. Avec {{plan}}, vous le gardez, avec tout ce qui suit."
     },
     "routerAfterUpgrade": {
       "stay": "Rester sur {{model}}"

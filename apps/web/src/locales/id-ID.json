@@ -3518,8 +3518,15 @@
       "copyFailed": "Gagal menyalin"
     },
     "retryOffer": {
+      "title": "Coba lagi dengan {{model}}",
       "newChat": "Coba lagi di chat baru dengan {{model}}",
-      "usesCreditsFaster": "Menghabiskan kredit lebih cepat"
+      "freeTopModel": "Tugas ini sulit untuk model hemat. {{model}}, salah satu model paling mampu yang ada, terbuka untukmu di sini. Model ini memakai kreditmu lebih cepat.",
+      "continue": "Lanjutkan di chat baru",
+      "paidBody": "Chat baru melanjutkan dari ringkasan chat ini, dengan model teratas. Kredit terpakai lebih cepat."
+    },
+    "topModelCard": {
+      "title": "Lanjutkan dengan {{model}} lewat {{plan}}",
+      "line": "{{model}} cepat menghabiskan kredit gratis. Dengan {{plan}}, kamu tetap bisa memakainya, plus semua yang ada di bawah."
     },
     "routerAfterUpgrade": {
       "stay": "Tetap di {{model}}"

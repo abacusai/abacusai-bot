@@ -3518,8 +3518,15 @@
       "copyFailed": "Couldn't copy that"
     },
     "retryOffer": {
+      "title": "Try this again on {{model}}",
       "newChat": "Try again in a new chat with {{model}}",
-      "usesCreditsFaster": "Uses credits faster"
+      "freeTopModel": "This task is hard for the low-cost model. {{model}}, one of the most capable models there is, is open to you here. It uses your credits faster.",
+      "continue": "Continue in a new chat",
+      "paidBody": "A new chat picks up from a summary of this one, on a top model. It uses credits faster."
+    },
+    "topModelCard": {
+      "title": "Keep going on {{model}} with {{plan}}",
+      "line": "{{model}} spends free credits fast. With {{plan}} you keep it, and everything below."
     },
     "routerAfterUpgrade": {
       "stay": "Stay on {{model}}"

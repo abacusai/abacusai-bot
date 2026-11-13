@@ -7,6 +7,7 @@ import { BOT_AVATAR_COLORS } from "@abacus-ai/contract/bots";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type CSSProperties } from "react";
 
+import { GALLERY_BILLING } from "#renderer/components/credits-card/threshold-gallery";
 import { ShareDialogHost } from "#renderer/components/share/share-dialog";
 import { clearDraft } from "#renderer/lib/continuity/composer-drafts";
 import { botAccentStyle } from "#renderer/lib/theme";
@@ -313,6 +314,12 @@ const gallerySlots = (scenario: Scenario, threadId: string): ChatViewSlots => ({
   }),
   ...(scenario.view?.retryOffer != null && {
     retryOfferPreview: scenario.view.retryOffer,
+  }),
+  ...(scenario.view?.topModelCard != null && {
+    topModelCardPreview: {
+      ...scenario.view.topModelCard,
+      billing: GALLERY_BILLING,
+    },
   }),
   ...(scenario.view?.topModels === true && {
     topModelHintPreview: { choices: TOP_MODEL_PREVIEW },
