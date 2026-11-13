@@ -154,7 +154,7 @@ it("a stuck chat on a paid plan continues in a new chat on Opus, and the two lin
   fireEvent.click(
     await screen.findByRole(
       "button",
-      { name: "Try again in a new chat with Claude Opus 5.5" },
+      { name: "Continue in a new chat" },
       { timeout: 10_000 }
     )
   );
