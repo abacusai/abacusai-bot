@@ -646,6 +646,24 @@ export function gateTools(tools: unknown[], gate: BatchGate): unknown[] {
  * Run one browser task and return what the sub-agent concluded. Never throws:
  * a failure is reported to the parent as text so it can adapt.
  */
+/**
+ * The line that asks for the report in the user's language: the report shows
+ * in their chat, and the task may have been written in another language.
+ * Quotes the first words of their latest message; "" when there are none.
+ */
+export function reportLanguageLine(said: readonly string[]): string {
+  const words = (said.at(-1) ?? "")
+    .split("\n")
+    .filter((line) => !/^\s*(@\S|\[attachment)/.test(line))
+    .join(" ")
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 0)
+    .slice(0, 5);
+  if (words.length === 0) return "";
+  return `\n\nWrite your report in the language the user wrote in (their message begins: "${words.join(" ").replace(/"/g, "'")}…").`;
+}
+
 /** The stamp for a run started on `startUrl`; null without the capability. */
 export function userGrantStamp(startUrl?: string): UserGrantStamp {
   const token = agentCapability();

@@ -3,6 +3,7 @@ import { Type } from "typebox";
 import {
   hasPausedRun,
   NEEDS_USER_PATTERN,
+  reportLanguageLine,
   runBrowserTask,
   type BrowserTaskContext,
   type BrowserTaskResult,
@@ -29,6 +30,7 @@ import {
   type UnattendedPolicy,
 } from "./tool-policy.js";
 import { ID_NUMBER_WITHHELD, redactIdNumbers } from "./traveler/id-numbers.js";
+import { userSaid } from "./user-grant.js";
 
 /** Whether the desktop switched this on: absent from the exclusion list. */
 export function browserTaskEnabled(): boolean {
@@ -579,17 +581,22 @@ export function buildBrowserTaskTool(
     let status: "completed" | "failed" = "failed";
     let outcome: BrowserRunOutcome | undefined;
     try {
-      result = await runBrowserTask(context, task, childEmit, {
-        startUrl,
-        signal,
-        reportFields,
-        resume,
-        sentMedia,
-        takenMedia,
-        checkout,
-        ...(note.length > 0 ? { resumeNote: note } : {}),
-        ...(loginItemId != null ? { loginItemId } : {}),
-      });
+      result = await runBrowserTask(
+        context,
+        task + reportLanguageLine(userSaid.read()),
+        childEmit,
+        {
+          startUrl,
+          signal,
+          reportFields,
+          resume,
+          sentMedia,
+          takenMedia,
+          checkout,
+          ...(note.length > 0 ? { resumeNote: note } : {}),
+          ...(loginItemId != null ? { loginItemId } : {}),
+        }
+      );
       // The card's verdict is the tool result's: a run stopped by the user or
       // at its cap still handed back what it found, and is not a failure.
       status = failedStop(result.stoppedBy) ? "failed" : "completed";
