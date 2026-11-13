@@ -3,8 +3,11 @@
  * and whether bots may use each sign-in (spec: the user signs in once, in
  * the browser pane; their password never reaches a model).
  *
- * A site joins the list when a bot's run stopped at its sign-in page for
- * the user, or when the user adds it in Settings. Guessing from cookie names
+ * A site joins the list when the browser shows its sign-in page (a password
+ * field), whoever opened it: the user browsing in the pane or a bot; when a
+ * sign-in page sends the tab back to it (single sign-on); when a bot's run
+ * stopped at its sign-in page for the user; or when the user adds it in
+ * Settings. Guessing from cookie names
  * would list every shop that sets an anonymous session cookie, so the list
  * is only what is known; a site stays listed while the browser still holds
  * cookies for it. Each has a rule: ask first (the default), allowed, or

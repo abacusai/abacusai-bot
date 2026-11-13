@@ -34,6 +34,7 @@ import {
 
 import { publishIpcEvent } from "#main/rpc/emit";
 
+import { sameSite } from "../vault/site";
 import {
   BrowserRuntimeRegistry,
   browserResourceId,
@@ -127,6 +128,13 @@ export interface ElectronBrowserRuntimeOptions {
    * page asks it, so a files card or tab opened after a restart works.
    */
   revivePreview?: (url: string) => Promise<string>;
+  /**
+   * A page in the bot's saved browser session is a sign-in page (a password
+   * field), whoever opened it: the user in the Browser pane or a bot. So is
+   * the site a sign-in page sends the tab back to (single sign-on). Connected
+   * sites lists it, and its rule applies from then on.
+   */
+  onSignInPage?: (url: string) => void;
 }
 type CrashRecovery = {
   attempts: number;
@@ -135,6 +143,26 @@ type CrashRecovery = {
 };
 
 const DEFAULT_PARTITION = BROWSER_PARTITION;
+
+/** A password field in the page's own document. */
+const SIGN_IN_PAGE_JS = "!!document.querySelector('input[type=password]')";
+/** A single-page app draws its sign-in form after the load: look again this much later. */
+const SIGN_IN_LOOK_AGAIN_MS = 1_500;
+/** A page that does not answer in this long is not looked at. */
+const SIGN_IN_LOOK_MS = 5_000;
+/** How long after a sign-in page a page-led move to another site counts as its sign-on return. */
+const SIGN_IN_RETURN_MS = 10 * 60_000;
+
+const webHost = (url: string): string | null => {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:"
+      ? parsed.hostname
+      : null;
+  } catch {
+    return null;
+  }
+};
 
 /** Per page id, what it did that the page itself does not show (downloads). */
 const pendingPageEvents = new Map<number, string[]>();
@@ -903,12 +931,71 @@ export class ElectronBrowserRuntime {
     contents.on("blur", emit);
     contents.on("devtools-opened", emit);
     contents.on("devtools-closed", emit);
+    if (partition === DEFAULT_PARTITION) this.watchSignIns(contents);
     if (localFile == null)
       contents.setWindowOpenHandler(({ url }) => {
         void this.loadUrlForView(view, url).catch(() => undefined);
         return { action: "deny" };
       });
     return view;
+  }
+
+  /**
+   * Tells `onSignInPage` about each sign-in page this tab shows, whoever
+   * drives it, and about the site such a page then sends the tab to. A move
+   * the page itself makes (a form post, a script, a redirect) counts; an
+   * address the user types or a bot's goto does not.
+   */
+  private watchSignIns(contents: Electron.WebContents): void {
+    const report = this.options.onSignInPage;
+    if (report == null) return;
+    let signIn: { host: string; at: number } | null = null;
+    let fromSignIn = false;
+    const look = async (): Promise<void> => {
+      if (contents.isDestroyed()) return;
+      const url = contents.getURL();
+      const host = webHost(url);
+      if (host == null) return;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const found = await Promise.race([
+        contents.executeJavaScript(SIGN_IN_PAGE_JS).then(
+          (value: unknown) => value === true,
+          () => false
+        ),
+        new Promise<false>((resolve) => {
+          timer = setTimeout(() => resolve(false), SIGN_IN_LOOK_MS);
+          timer.unref?.();
+        }),
+      ]);
+      clearTimeout(timer);
+      if (!found || contents.isDestroyed() || contents.getURL() !== url) return;
+      signIn = { host, at: Date.now() };
+      report(url);
+    };
+    const lookSoon = (): void => {
+      void look();
+      setTimeout(() => void look(), SIGN_IN_LOOK_AGAIN_MS).unref?.();
+    };
+    contents.on("did-finish-load", lookSoon);
+    contents.on("did-navigate-in-page", lookSoon);
+    // Only the page's own moves: `loadURL` (the address bar, a bot's goto) fires none.
+    const pageMoved = (): void => {
+      fromSignIn = signIn != null && Date.now() - signIn.at < SIGN_IN_RETURN_MS;
+    };
+    contents.on("will-navigate", pageMoved);
+    contents.on("did-navigate", () => {
+      const url = contents.getURL();
+      const host = webHost(url);
+      const returned =
+        fromSignIn &&
+        signIn != null &&
+        host != null &&
+        !sameSite(host, signIn.host);
+      fromSignIn = false;
+      if (!returned) return;
+      signIn = null;
+      report(url);
+    });
   }
 
   /**

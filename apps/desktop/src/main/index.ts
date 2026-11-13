@@ -468,6 +468,8 @@ const browserRuntime = new ElectronBrowserRuntime(browserRuntimeWindow, {
     if (isSafeExternalUrl(url)) void shell.openExternal(url);
   },
   revivePreview,
+  // Connected sites: a sign-in in the bot's browser, whoever made it.
+  onSignInPage: (url) => workspaceServiceHost.noteBrowserSignIn(url),
 });
 workspaceServiceHost.attachBrowserRuntime(browserRuntime);
 

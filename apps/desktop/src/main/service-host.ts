@@ -9999,6 +9999,14 @@ export class ServiceHost {
     return this.connectedSites.list();
   }
 
+  /**
+   * The built-in browser showed a sign-in page (the user's own browsing or a
+   * bot's) or came back from one: the site is listed, so its rule applies.
+   */
+  noteBrowserSignIn(url: string): void {
+    if (this.platform === "electron") this.connectedSites.add(url);
+  }
+
   /** "goindigo.in" or a URL; the list, with it, once it holds cookies there. */
   addConnectedSite(site: string): Promise<ConnectedSite[]> {
     assertHostCapability(this.platform, "browser.sites");

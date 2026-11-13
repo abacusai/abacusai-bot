@@ -604,6 +604,104 @@ describe("Electron browser runtime", () => {
     ).toHaveBeenCalled();
   });
 
+  describe("a sign-in in the browser, by the user or a bot (Connected sites)", () => {
+    // The user signing in on their own in the Browser pane, with no bot
+    // asked, left the site off Connected sites, so its rule never applied.
+    const signInView = async (
+      onSignInPage: (url: string) => void,
+      profileId?: string
+    ) => {
+      const runtime = new ElectronBrowserRuntime(() => owner as never, {
+        onSignInPage,
+      });
+      await runtime.materialize({
+        conversationKey: sessionConversationKey("workspace-one", "chat-one"),
+        resourceId: "agent-browser",
+        ...(profileId != null && { profileId }),
+      });
+      const contents = mocks.views.at(-1)!.webContents;
+      const passwordOn = new Set<string>();
+      contents.executeJavaScript.mockImplementation(((code: string) =>
+        code.includes("password")
+          ? Promise.resolve(passwordOn.has(contents.getURL()))
+          : new Promise(() => {})) as never);
+      return { contents, passwordOn };
+    };
+    const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+    it("lists a site whose sign-in page the user opened", async () => {
+      const seen: string[] = [];
+      const { contents, passwordOn } = await signInView((url) =>
+        seen.push(url)
+      );
+      passwordOn.add("https://shop.example.com/login");
+      await contents.loadURL("https://shop.example.com/login");
+      contents.emit("did-finish-load");
+      await settle();
+      expect(seen).toEqual(["https://shop.example.com/login"]);
+    });
+
+    it("looks again when a single-page app shows its sign-in form", async () => {
+      const seen: string[] = [];
+      const { contents, passwordOn } = await signInView((url) =>
+        seen.push(url)
+      );
+      await contents.loadURL("https://app.example.org/");
+      contents.emit("did-finish-load");
+      await settle();
+      expect(seen).toEqual([]);
+      passwordOn.add("https://app.example.org/");
+      contents.emit("did-navigate-in-page");
+      await settle();
+      expect(seen).toEqual(["https://app.example.org/"]);
+    });
+
+    it("lists the site a sign-in page sends the user back to (single sign-on)", async () => {
+      const seen: string[] = [];
+      const { contents, passwordOn } = await signInView((url) =>
+        seen.push(url)
+      );
+      passwordOn.add("https://accounts.idp.example/signin");
+      await contents.loadURL("https://accounts.idp.example/signin");
+      contents.emit("did-finish-load");
+      await settle();
+      contents.emit("will-navigate", {}, "https://notes.example.net/auth");
+      await contents.loadURL("https://notes.example.net/home");
+      expect(seen).toEqual([
+        "https://accounts.idp.example/signin",
+        "https://notes.example.net/home",
+      ]);
+    });
+
+    it("does not list a site the user typed in after a sign-in page", async () => {
+      const seen: string[] = [];
+      const { contents, passwordOn } = await signInView((url) =>
+        seen.push(url)
+      );
+      passwordOn.add("https://accounts.idp.example/signin");
+      await contents.loadURL("https://accounts.idp.example/signin");
+      contents.emit("did-finish-load");
+      await settle();
+      await contents.loadURL("https://news.example.com/");
+      contents.emit("did-finish-load");
+      await settle();
+      expect(seen).toEqual(["https://accounts.idp.example/signin"]);
+    });
+
+    it("leaves pages without a password field and imported profiles alone", async () => {
+      const seen: string[] = [];
+      const plain = await signInView((url) => seen.push(url));
+      await plain.contents.loadURL("https://example.com/");
+      plain.contents.emit("did-finish-load");
+      const imported = await signInView((url) => seen.push(url), "chrome-1");
+      imported.passwordOn.add("https://bank.example/login");
+      await imported.contents.loadURL("https://bank.example/login");
+      imported.contents.emit("did-finish-load");
+      await settle();
+      expect(seen).toEqual([]);
+    });
+  });
+
   it("answers with the error state when the address bar's page will not load", async () => {
     const runtime = new ElectronBrowserRuntime(() => owner as never);
     const state = await runtime.materialize({
