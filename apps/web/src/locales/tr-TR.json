@@ -1190,6 +1190,9 @@
       "linkedAs": "{{name}} olarak bağlandı. Ajanınla konuşmak için {{app}} üzerinden Abacus AI botuna mesaj at.",
       "unlink": "Bağlantıyı kaldır",
       "telegramStep": "Bunu telefonunun kamera uygulamasıyla tara (Telegram içindeki tarayıcıyla değil) veya bağlantıyı telefonunda aç, ardından Başlat'a dokun.",
+      "telegramStepHere": "Telegram bu bilgisayarda oturum açmış durumda. Orada Abacus AI botunu açın ve Başlat'a basın.",
+      "startInTelegram": "Telegram'da başlat",
+      "telegramStepPhone": "Ya da bunu telefonunuzun kamera uygulamasıyla tarayın, ardından Başlat'a dokunun.",
       "waitingTelegram": "Telegram'da Başlat'a dokunulması bekleniyor…"
     }
   },
@@ -4026,6 +4029,7 @@
     "connectFailed": "Bağlantı tamamlanmadı. Lütfen tekrar dene.",
     "connectUnreachable": "Şu anda Abacus'a ulaşılamıyor. İnternet bağlantını kontrol edip tekrar dene.",
     "connectAppMissing": "Önce uygulamayı bu bilgisayara yükleyin, sonra yeniden bağlanın.",
+    "connectAppNotReady": "Uygulama yüklü, ancak sunucusu henüz açık değil. Uygulamada açın, ardından yeniden bağlanın.",
     "connectOtherOs": "Bu bağlayıcı Windows veya macOS gerektirir.",
     "connectorsLastSeen": "Şu anda Abacus'a ulaşılamıyor. Bağlantıların en son görüldükleri hâliyle gösteriliyor.",
     "connectorsUnchecked": "Şu anda Abacus'a ulaşılamıyor, bu yüzden bağlantıların kontrol edilemiyor.",

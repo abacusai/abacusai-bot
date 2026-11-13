@@ -1204,6 +1204,9 @@
       "linkedAs": "Połączono jako {{name}}. Napisz do bota Abacus AI w {{app}}, aby porozmawiać z agentem.",
       "unlink": "Odłącz",
       "telegramStep": "Zeskanuj ten kod aplikacją aparatu w telefonie (nie skanerem w Telegramie) albo otwórz link na telefonie, a potem stuknij Start.",
+      "telegramStepHere": "Telegram jest zalogowany na tym komputerze. Otwórz tam bota Abacus AI i naciśnij Start.",
+      "startInTelegram": "Uruchom w Telegramie",
+      "telegramStepPhone": "Albo zeskanuj to aparatem w telefonie, a potem stuknij Start.",
       "waitingTelegram": "Czekam na stuknięcie Start w Telegramie…"
     }
   },
@@ -4162,6 +4165,7 @@
     "connectFailed": "Nie udało się dokończyć łączenia. Spróbuj ponownie.",
     "connectUnreachable": "Nie można teraz połączyć się z Abacus. Sprawdź połączenie z internetem i spróbuj ponownie.",
     "connectAppMissing": "Najpierw zainstaluj aplikację na tym komputerze, a potem połącz ponownie.",
+    "connectAppNotReady": "Aplikacja jest zainstalowana, ale jej serwer nie jest jeszcze włączony. Włącz go w aplikacji, a potem połącz ponownie.",
     "connectOtherOs": "Ten konektor wymaga systemu Windows lub macOS.",
     "connectorsLastSeen": "Nie można teraz połączyć się z Abacus. Wyświetlamy połączenia według ostatnio znanego stanu.",
     "connectorsUnchecked": "Nie można teraz połączyć się z Abacus, więc nie da się sprawdzić twoich połączeń.",

@@ -1190,6 +1190,9 @@
       "linkedAs": "Linked as {{name}}. DM the Abacus AI bot in Discord to talk to your agent.",
       "unlink": "Putuskan tautan",
       "telegramStep": "Pindai ini dengan aplikasi kamera ponsel Anda (bukan pemindai di dalam Telegram), atau buka tautan di ponsel Anda, lalu ketuk Mulai.",
+      "telegramStepHere": "Telegram sudah masuk di komputer ini. Buka bot Abacus AI di sana lalu tekan Mulai.",
+      "startInTelegram": "Mulai di Telegram",
+      "telegramStepPhone": "Atau pindai ini dengan aplikasi kamera ponsel Anda, lalu ketuk Mulai.",
       "waitingTelegram": "Menunggu Mulai disadap di Telegram…"
     }
   },
@@ -4026,6 +4029,7 @@
     "connectFailed": "Proses menghubungkan tidak selesai. Silakan coba lagi.",
     "connectUnreachable": "Abacus tidak dapat dijangkau saat ini. Periksa koneksi internet Anda dan coba lagi.",
     "connectAppMissing": "Pasang dulu aplikasinya di komputer ini, lalu hubungkan lagi.",
+    "connectAppNotReady": "Aplikasinya sudah terpasang, tetapi servernya belum diaktifkan. Aktifkan di aplikasi, lalu hubungkan lagi.",
     "connectOtherOs": "Konektor ini memerlukan Windows atau macOS.",
     "connectorsLastSeen": "Abacus tidak dapat dijangkau saat ini. Koneksi Anda ditampilkan seperti terakhir terlihat.",
     "connectorsUnchecked": "Abacus tidak dapat dijangkau saat ini, jadi koneksi Anda tidak dapat diperiksa.",

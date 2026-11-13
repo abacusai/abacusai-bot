@@ -13,6 +13,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   APP_MISSING,
+  APP_NOT_READY,
   ConnectorFlowService,
   OTHER_OS,
 } from "./connector-flow-service";
@@ -24,15 +25,44 @@ import { expandEnv, localAppState, type LocalAppProbe } from "./local-app";
 
 const roblox = connectorById("roblox-studio")!;
 const WIN_BAT = "C:\\Users\\ada\\AppData\\Local\\Roblox\\mcp.bat";
+const WIN_STUDIO =
+  "C:\\Users\\ada\\AppData\\Local\\Roblox\\Versions\\version-1a2b\\RobloxStudioBeta.exe";
+const MAC_APP = "/Applications/RobloxStudio.app";
 const MAC_BIN = "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP";
 
+/** A disk holding `files` (and the folders above them). */
 const probe = (
   os: string,
   files: readonly string[] = [],
   env: Record<string, string> = {
     LOCALAPPDATA: "C:\\Users\\ada\\AppData\\Local",
   }
-): LocalAppProbe => ({ os, env, exists: (path) => files.includes(path) });
+): LocalAppProbe => {
+  const all = new Set<string>();
+  for (const file of files)
+    for (
+      let at = file.length;
+      at > 0;
+      at = Math.max(
+        file.lastIndexOf("\\", at - 1),
+        file.lastIndexOf("/", at - 1)
+      )
+    )
+      all.add(file.slice(0, at));
+  return {
+    os,
+    env,
+    exists: (path) => all.has(path),
+    list: (dir) =>
+      [...all]
+        .filter(
+          (path) =>
+            /^[\\/][^\\/]+$/.test(path.slice(dir.length)) &&
+            path.startsWith(dir)
+        )
+        .map((path) => path.slice(dir.length + 1)),
+  };
+};
 
 describe("expandEnv", () => {
   it("fills %NAME% from the environment and leaves an unset one as written", () => {
@@ -55,6 +85,28 @@ describe("localAppState", () => {
     expect(localAppState(roblox, probe("darwin", [MAC_BIN]))).toBe("installed");
     expect(localAppState(roblox, probe("win32"))).toBe("missing");
     expect(localAppState(roblox, probe("darwin"))).toBe("missing");
+  });
+
+  it("knows Studio is installed before its MCP server is turned on", () => {
+    expect(localAppState(roblox, probe("win32", [WIN_STUDIO]))).toBe(
+      "server-off"
+    );
+    expect(
+      localAppState(
+        roblox,
+        probe(
+          "win32",
+          ["C:\\PF86\\Roblox\\Versions\\version-9\\RobloxStudioBeta.exe"],
+          { LOCALAPPDATA: "C:\\L", "ProgramFiles(x86)": "C:\\PF86" }
+        )
+      )
+    ).toBe("server-off");
+    expect(
+      localAppState(roblox, probe("darwin", [`${MAC_APP}/Contents/Info.plist`]))
+    ).toBe("server-off");
+    expect(localAppState(roblox, probe("win32", [WIN_STUDIO, WIN_BAT]))).toBe(
+      "installed"
+    );
   });
 
   it("reads missing when LOCALAPPDATA is unset, never a literal %path%", () => {
@@ -107,6 +159,17 @@ describe("Roblox Studio statuses", () => {
     expect(statusOn("darwin", [], { mcpServers: [server] })).toEqual({
       state: "pending",
       reason: "app-missing",
+    });
+  });
+
+  it("says not ready, never not installed, while Studio's server is off", () => {
+    expect(statusOn("win32", [WIN_STUDIO])).toEqual({
+      state: "available",
+      reason: "app-not-ready",
+    });
+    expect(statusOn("win32", [WIN_STUDIO], { mcpServers: [server] })).toEqual({
+      state: "pending",
+      reason: "app-not-ready",
     });
   });
 
@@ -197,6 +260,15 @@ describe("connecting Roblox Studio", () => {
       args: ["/c", "%LOCALAPPDATA%\\Roblox\\mcp.bat"],
       tools: [...ROBLOX_STUDIO_TOOLS],
     });
+  });
+
+  it("installs nothing while Studio's server is off, and says so", async () => {
+    const { flow, add } = flowOn("win32", [WIN_STUDIO]);
+    expect(await flow.connect("roblox-studio")).toEqual({
+      ok: false,
+      error: APP_NOT_READY,
+    });
+    expect(add).not.toHaveBeenCalled();
   });
 
   it("installs nothing and answers with a code the app words when Studio is missing", async () => {

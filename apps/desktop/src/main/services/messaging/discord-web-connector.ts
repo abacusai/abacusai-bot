@@ -1,6 +1,6 @@
 import { isDiskFull } from "@abacus-ai/agent/atomic-file";
 import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
-import { BrowserWindow } from "electron";
+import { BrowserWindow, session } from "electron";
 
 import {
   bringToFront,
@@ -52,6 +52,30 @@ const DISCORD_ORIGIN = "https://discord.com";
 /** Holds the login across restarts; shared with the bot's install window. */
 export const DISCORD_PARTITION = "persist:discord-web";
 
+/**
+ * discord.com looks for a running Discord desktop app on its loopback ports
+ * (6463-6472) and, when one answers, stops on "Discord App Detected" instead
+ * of its login or app: a page the connector can never drive, and one that
+ * comes back on every reload. The pages in this partition are the app's own
+ * Discord client, so nothing in it reaches this computer.
+ */
+const LOOPBACK_URLS = ["127.0.0.1", "localhost", "[::1]"].flatMap((host) =>
+  ["ws", "wss", "http", "https"].map((scheme) => `${scheme}://${host}/*`)
+);
+
+let loopbackClosed = false;
+
+/** Refuses the Discord partition's requests to this computer; once per run. */
+export const closeDiscordLoopback = (): void => {
+  if (loopbackClosed) return;
+  loopbackClosed = true;
+  session
+    .fromPartition(DISCORD_PARTITION)
+    .webRequest.onBeforeRequest({ urls: LOOPBACK_URLS }, (_details, callback) =>
+      callback({ cancel: true })
+    );
+};
+
 // discord.com can wedge its boot spinner under the default Electron UA.
 const userAgent = (): string =>
   `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
@@ -96,7 +120,12 @@ const READ_DEADLINE_MS = 45_000;
 /** Unscoped searches walk servers one by one; capped to stay a tool call. */
 const MAX_SEARCH_GUILDS = 5;
 
-type LoginState = { loggedIn: boolean; loginVisible?: boolean };
+type LoginState = {
+  loggedIn: boolean;
+  loginVisible?: boolean;
+  /** Neither login nor app: what the page holds, by shape, never its words. */
+  shape?: { path: string; textLength: number; frames: string[] };
+};
 
 type GuildRow = { guildId: string; name: string; mentions: number };
 
@@ -939,14 +968,14 @@ export class DiscordWebConnector implements MessagingConnector {
       const verdict = this.boot.stuck(Date.now(), busy);
       if (verdict === "give_up") {
         this.callbacks.onLog(
-          `discord-web: still not loaded after ${BOOT_MAX_RELOADS} reloads, parking it`
+          `discord-web: still not loaded after ${BOOT_MAX_RELOADS} reloads, parking it ${JSON.stringify(state.shape ?? null)}`
         );
         this.park("error", STUCK_LOADING, { retry: "auto", stuckBoot: true });
         return;
       }
       if (verdict === "reload") {
         this.callbacks.onLog(
-          "discord-web: stuck on the boot spinner, reloading the page"
+          `discord-web: stuck on the boot spinner, reloading the page ${JSON.stringify(state.shape ?? null)}`
         );
         if (win != null && !win.isDestroyed())
           void win
@@ -1387,6 +1416,7 @@ export class DiscordWebConnector implements MessagingConnector {
   }
 
   private buildWindow(visible: boolean): BrowserWindow {
+    closeDiscordLoopback();
     const win = new BrowserWindow({
       show: visible,
       width: 1000,
@@ -1490,7 +1520,16 @@ const LOGIN_STATE_SCRIPT = pageScript`
     !!document.querySelector('a[href^="/channels/@me/"]') ||
     !!document.querySelector('[class*="privateChannels"]') ||
     !!document.querySelector('[data-list-id="guildsnav"]');
-  return { loggedIn: appChrome, loginVisible: false };
+  if (appChrome) return { loggedIn: true, loginVisible: false };
+  const frames = [...document.querySelectorAll('iframe')]
+    .map((f) => { try { const u = new URL(f.src); return /^https?:$/.test(u.protocol) ? u.hostname : ''; } catch { return ''; } })
+    .filter((host) => host.length > 0);
+  const shape = {
+    path: path.slice(0, 60),
+    textLength: (document.body ? document.body.innerText : '').trim().length,
+    frames: [...new Set(frames)].slice(0, 5),
+  };
+  return { loggedIn: false, loginVisible: false, shape };
 `;
 
 /** The open DMs as contacts. Null off the home page: the rail is a server's. */

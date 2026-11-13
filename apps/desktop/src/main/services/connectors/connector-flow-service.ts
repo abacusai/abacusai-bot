@@ -72,6 +72,8 @@ export interface FlowSources {
  * is not installed, or does not run on this system.
  */
 export const APP_MISSING = "app-missing";
+/** Installed, but its server is not on yet: nothing to launch. */
+export const APP_NOT_READY = "app-not-ready";
 export const OTHER_OS = "other-os";
 
 const failure = (error: string): ConnectorOutcome => ({ ok: false, error });
@@ -249,11 +251,16 @@ export class ConnectorFlowService {
     if (connectUi(connector) === "fields")
       return { kind: "needs-fields", label };
     const app = this.sources.localApp?.(connector) ?? "none";
-    if (app === "other-os" || app === "missing")
+    if (app === "other-os" || app === "missing" || app === "server-off")
       return {
         kind: "app",
         label,
-        reason: app === "missing" ? APP_MISSING : OTHER_OS,
+        reason:
+          app === "missing"
+            ? APP_MISSING
+            : app === "server-off"
+              ? APP_NOT_READY
+              : OTHER_OS,
       };
     return ready(
       mcpEntryFor(

@@ -40,6 +40,7 @@ import {
   lastTaggedReply,
 } from "@abacus-ai/contract/reply-envelope";
 
+import { bringToFront } from "../../bring-to-front";
 import type { HostPlatform } from "../../platform/capabilities";
 import { readDefaultAgentMode } from "../config/settings";
 import { reportFunnelStep } from "../debug-sync/funnel-beacon";
@@ -1030,6 +1031,26 @@ export class MessagingGatewayService {
     // What came in while it was not watching is answered now it is back.
     if (state === "connected" && previous?.state !== "connected")
       void this.catchUp(platformId);
+    // Signing in to Telegram here is half its setup; the bot's Start, the other
+    // half, opens in the same window instead of waiting on a phone.
+    if (
+      platformId === "telegram" &&
+      state === "connected" &&
+      previous?.state === "needs_login"
+    )
+      void this.presentTelegramBotStart().catch(() => undefined);
+    if (
+      platformId === "abacus_telegram" &&
+      state === "connected" &&
+      this.telegramBotStartShown
+    ) {
+      this.telegramBotStartShown = false;
+      const session = this.connectors.get("telegram");
+      if (session instanceof TelegramWebConnector) {
+        session.hideLoginWindow();
+        bringToFront();
+      }
+    }
     this.supervisor.noteState(platformId, state, failure);
     this.watchSync(platformId, state);
 
@@ -2817,6 +2838,13 @@ export class MessagingGatewayService {
   ): Promise<void | string> {
     const connector = this.connectors.get(platformId);
     if (!(connector instanceof AbacusChannelsConnector)) return;
+    // Telegram signed in here starts the bot in that page, no phone needed.
+    if (
+      platformId === "abacus_telegram" &&
+      target === "install" &&
+      (await this.presentTelegramBotStart())
+    )
+      return;
     const session = this.discordSessionFor(platformId);
     if (session == null) return connector.openLink(target);
     const url = connector.linkUrl(target);
@@ -2836,6 +2864,30 @@ export class MessagingGatewayService {
         console.error(`[messaging] ${platformId}: link page failed:`, error);
       });
   }
+
+  /**
+   * The shared Telegram bot still to be linked while Telegram is signed in
+   * here: its chat opens in the app's Telegram window, ready for Start. False
+   * when there is nothing to start or no signed-in page to start it in.
+   */
+  private async presentTelegramBotStart(): Promise<boolean> {
+    const shared = this.connectors.get("abacus_telegram");
+    const session = this.connectors.get("telegram");
+    if (
+      !(shared instanceof AbacusChannelsConnector) ||
+      !(session instanceof TelegramWebConnector) ||
+      !session.isLoggedIn
+    )
+      return false;
+    const start = shared.botStart();
+    if (start == null) return false;
+    const shown = await session.presentBotStart(start.bot, start.code);
+    if (shown) this.telegramBotStartShown = true;
+    return shown;
+  }
+
+  /** Telegram's window was put up for the bot's Start, so linking puts it away. */
+  private telegramBotStartShown = false;
 
   /** The app's Discord window, where the Discord bot's link pages open. */
   private discordSessionFor(

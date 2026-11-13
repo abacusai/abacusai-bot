@@ -448,6 +448,7 @@ export const MessagingPlatformDialog = ({
               <SharedLinkSteps
                 platform={shared}
                 app={appName}
+                signedInHere={signedIn}
                 first={linkRequired ? 2 : undefined}
                 required={linkRequired}
                 preparing={preparing}
@@ -609,10 +610,13 @@ const SharedLinkSteps = ({
   required,
   preparing,
   retry,
+  signedInHere = false,
 }: {
   platform: MessagingPlatformInfo;
   /** The app the bot is reached in, e.g. Discord. */
   app: string;
+  /** The user's own account is signed in to that app on this computer. */
+  signedInHere?: boolean;
   first?: number;
   required: boolean;
   preparing: boolean;
@@ -666,7 +670,28 @@ const SharedLinkSteps = ({
   if (link.status === "pending" && platform.id === "abacus_telegram")
     return (
       <Step index={first} title={title}>
-        <ConnectNote>{t("messaging.sharedLink.telegramStep")}</ConnectNote>
+        {/* Signed in here: the bot starts in the app's own Telegram window. */}
+        {signedInHere && (
+          <>
+            <ConnectNote>
+              {t("messaging.sharedLink.telegramStepHere")}
+            </ConnectNote>
+            <Button
+              size="sm"
+              className={CONNECT_ACTION}
+              onClick={() => open("install")}
+            >
+              {t("messaging.sharedLink.startInTelegram")}
+            </Button>
+          </>
+        )}
+        <ConnectNote>
+          {t(
+            signedInHere
+              ? "messaging.sharedLink.telegramStepPhone"
+              : "messaging.sharedLink.telegramStep"
+          )}
+        </ConnectNote>
         {link.qrDataUrl && (
           <img
             className="size-[180px] self-center rounded-[18px] border bg-white p-2"
@@ -674,13 +699,9 @@ const SharedLinkSteps = ({
             alt={t("phase5.linkQr")}
           />
         )}
-        {/* No "open link" button: the pairing has to be tapped on the phone
-            that carries the account. */}
-        {
-          <ConnectWaiting>
-            {t("messaging.sharedLink.waitingTelegram")}
-          </ConnectWaiting>
-        }
+        <ConnectWaiting>
+          {t("messaging.sharedLink.waitingTelegram")}
+        </ConnectWaiting>
       </Step>
     );
   if (link.status === "pending" && link.oneClick && !withCode)

@@ -1190,6 +1190,9 @@
       "linkedAs": "Gekoppeld als {{name}}. Stuur de Abacus AI-bot een bericht in {{app}} om met je agent te praten.",
       "unlink": "Ontkoppelen",
       "telegramStep": "Scan dit met de camera-app van je telefoon (niet met de scanner in Telegram), of open de link op je telefoon en tik daarna op Start.",
+      "telegramStepHere": "Telegram is op deze computer ingelogd. Open daar de Abacus AI-bot en druk op Start.",
+      "startInTelegram": "Starten in Telegram",
+      "telegramStepPhone": "Of scan dit met de camera-app van je telefoon en tik daarna op Start.",
       "waitingTelegram": "Wachten tot er in Telegram op Start wordt getikt…"
     }
   },
@@ -4026,6 +4029,7 @@
     "connectFailed": "Koppelen is niet voltooid. Probeer het opnieuw.",
     "connectUnreachable": "Abacus is nu niet bereikbaar. Controleer je internetverbinding en probeer het opnieuw.",
     "connectAppMissing": "Installeer eerst de app op deze computer en maak daarna opnieuw verbinding.",
+    "connectAppNotReady": "De app is geïnstalleerd, maar de server staat nog niet aan. Zet hem aan in de app en maak daarna opnieuw verbinding.",
     "connectOtherOs": "Deze connector heeft Windows of macOS nodig.",
     "connectorsLastSeen": "Abacus is nu niet bereikbaar. Je koppelingen worden getoond zoals ze het laatst waren.",
     "connectorsUnchecked": "Abacus is nu niet bereikbaar, dus je koppelingen kunnen niet worden gecontroleerd.",

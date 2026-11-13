@@ -1190,6 +1190,9 @@
       "linkedAs": "Linked as {{name}}. DM the Abacus AI bot in Discord to talk to your agent.",
       "unlink": "연결 해제",
       "telegramStep": "휴대폰의 카메라 앱(Telegram 내부의 스캐너가 아님)으로 스캔하거나 휴대폰에서 링크를 연 다음 시작을 탭하세요.",
+      "telegramStepHere": "이 컴퓨터에서 Telegram에 로그인되어 있습니다. 거기에서 Abacus AI 봇을 열고 시작을 누르세요.",
+      "startInTelegram": "Telegram에서 시작",
+      "telegramStepPhone": "또는 휴대폰 카메라 앱으로 이것을 스캔한 다음 시작을 탭하세요.",
       "waitingTelegram": "Telegram에서 시작이 탭되기를 기다리는 중…"
     }
   },
@@ -4026,6 +4029,7 @@
     "connectFailed": "연결이 완료되지 않았습니다. 다시 시도하세요.",
     "connectUnreachable": "지금은 Abacus에 연결할 수 없습니다. 인터넷 연결을 확인하고 다시 시도하세요.",
     "connectAppMissing": "먼저 이 컴퓨터에 앱을 설치한 다음 다시 연결하세요.",
+    "connectAppNotReady": "앱은 설치되어 있지만 서버가 아직 켜져 있지 않습니다. 앱에서 켠 다음 다시 연결하세요.",
     "connectOtherOs": "이 커넥터는 Windows 또는 macOS가 필요합니다.",
     "connectorsLastSeen": "지금은 Abacus에 연결할 수 없습니다. 마지막으로 확인된 연결 상태를 표시합니다.",
     "connectorsUnchecked": "지금은 Abacus에 연결할 수 없어 연결 상태를 확인할 수 없습니다.",

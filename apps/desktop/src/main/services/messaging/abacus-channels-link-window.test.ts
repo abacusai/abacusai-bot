@@ -78,6 +78,7 @@ vi.mock("../providers/abacus-host", () => ({
 }));
 vi.mock("./discord-web-connector", () => ({
   DISCORD_PARTITION: "persist:discord-web",
+  closeDiscordLoopback: () => {},
 }));
 
 const { AbacusChannelsConnector, isWebUrl, keepOnTheWeb } =

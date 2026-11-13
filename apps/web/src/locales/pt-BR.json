@@ -1190,6 +1190,9 @@
       "linkedAs": "Linked as {{name}}. DM the Abacus AI bot in Discord to talk to your agent.",
       "unlink": "Desvincular",
       "telegramStep": "Digitalize com o aplicativo da câmera do seu telefone (não com o scanner dentro do Telegram) ou abra o link no seu telefone e toque em Iniciar.",
+      "telegramStepHere": "O Telegram está conectado neste computador. Abra o bot da Abacus AI lá e aperte Iniciar.",
+      "startInTelegram": "Iniciar no Telegram",
+      "telegramStepPhone": "Ou escaneie isto com o app de câmera do celular e toque em Iniciar.",
       "waitingTelegram": "Aguardando que Iniciar seja tocado em Telegram…"
     }
   },
@@ -4026,6 +4029,7 @@
     "connectFailed": "A conexão não foi concluída. Tente novamente.",
     "connectUnreachable": "Não foi possível acessar o Abacus agora. Verifique sua conexão com a internet e tente novamente.",
     "connectAppMissing": "Instale o app neste computador primeiro e depois conecte de novo.",
+    "connectAppNotReady": "O app está instalado, mas o servidor dele ainda não está ligado. Ligue-o no app e conecte de novo.",
     "connectOtherOs": "Este conector precisa de Windows ou macOS.",
     "connectorsLastSeen": "Não foi possível acessar o Abacus agora. Mostrando suas conexões como estavam da última vez.",
     "connectorsUnchecked": "Não foi possível acessar o Abacus agora, então suas conexões não podem ser verificadas.",

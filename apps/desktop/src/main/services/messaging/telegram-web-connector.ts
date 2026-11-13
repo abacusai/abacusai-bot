@@ -489,6 +489,32 @@ export class TelegramWebConnector implements MessagingConnector {
     presentAsDialog(win);
   }
 
+  /**
+   * Open `bot`'s chat in this signed-in page, ready for `/start <code>`, and
+   * show it: Telegram's own Start button on a new chat, the command typed in
+   * the message box on one that has history. The user's click sends it, so
+   * the shared bot links from this computer, with no phone. False while
+   * Telegram is not signed in here, or when the bot's chat could not be
+   * proven open with something to click.
+   */
+  async presentBotStart(bot: string, code: string): Promise<boolean> {
+    if (!this.running || !this.loggedIn) return false;
+    const win = this.ensureWindow();
+    if (win == null) return false;
+    presentAsDialog(win);
+    const opened = await this.run<{ ready: string }>(BOT_START_SCRIPT, {
+      bot,
+      code,
+    });
+    const ready = opened?.ready ?? "page not read";
+    this.callbacks.onLog(`telegram-web: shared bot start shown (${ready})`);
+    // Shown only when the user has something to click: Start, or the typed
+    // command. Otherwise the window goes back out of sight for the usual link.
+    const shown = ready === "start-button" || ready === "typed";
+    if (!shown) this.hideLoginWindow();
+    return shown;
+  }
+
   /** Out of sight, still running: a scan already made can still land. */
   hideLoginWindow(): void {
     const win = this.window;
@@ -762,6 +788,73 @@ const READ_CHAT_SCRIPT = pageScript`
       at: new Date((Number(b.getAttribute('data-timestamp')) || 0) * 1000).toISOString(),
     }))
     .filter((r) => r.text.length > 0);
+`;
+
+/**
+ * Open the bot's chat through Telegram's own deep link, carrying the start
+ * parameter (the same as tapping a t.me/<bot>?start=<code> link), and wait
+ * for it. Nothing is sent: a new chat shows Telegram's Start button, and a
+ * chat with history gets "/start <code>" typed into its message box.
+ *
+ * Typing happens only in the bot's own chat, proven twice: the address is the
+ * bot's @username, and the open chat is a different one from before the link
+ * (or the bot's chat was already open). Both are checked again right before
+ * typing, and the box is the open chat's own. Anything unproven types nothing.
+ * A box holding only an earlier "/start <code>" of ours gets the new code.
+ */
+const BOT_START_SCRIPT = pageScript`
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const bot = String(args.bot || '').replace(/^@/, '');
+  const code = String(args.code || '');
+  if (!/^[A-Za-z0-9_]{3,64}$/.test(bot) || !/^[A-Za-z0-9_-]{1,64}$/.test(code))
+    return { ready: 'bad-args' };
+  const inBotChat = () => location.hash.toLowerCase() === '#@' + bot.toLowerCase();
+  const openPeer = () => {
+    const row = document.querySelector('a.chatlist-chat.active[data-peer-id]');
+    return row ? row.getAttribute('data-peer-id') : null;
+  };
+  const visible = (el) => el != null && el.isConnected && el.offsetParent !== null && !el.classList.contains('hide');
+  const openBox = () => {
+    const chat = document.querySelector('.chat.active');
+    return chat ? chat.querySelector('.input-message-input[contenteditable="true"]') : null;
+  };
+  const alreadyThere = inBotChat();
+  const peerBefore = openPeer();
+  location.hash = '#?tgaddr=' + encodeURIComponent('tg://resolve?domain=' + bot + '&start=' + code);
+  // The bot's chat is open: its address, and a chat other than the one before
+  // the link (unless the bot's chat was the one before).
+  const botPeer = () => {
+    if (!inBotChat()) return null;
+    const peer = openPeer();
+    if (peer == null) return null;
+    return alreadyThere || peer !== peerBefore ? peer : null;
+  };
+  const ours = new RegExp('^/start [A-Za-z0-9_-]{1,64}$');
+  const end = Date.now() + 10000;
+  let inChat = false;
+  while (Date.now() < end) {
+    inChat = inBotChat();
+    if (inChat) {
+      const start = [...document.querySelectorAll('.chat.active .chat-input-control .chat-input-control-button')].find(visible);
+      if (start) return { ready: 'start-button' };
+      const peer = botPeer();
+      const box = openBox();
+      if (peer != null && visible(box)) {
+        // Let a just-opened chat settle, then prove it again before typing.
+        await sleep(600);
+        // Mid-switch, the old chat can still count as open: wait it out.
+        if (botPeer() !== peer || openBox() !== box || !visible(box)) continue;
+        const before = box.textContent.trim();
+        if (before.length > 0 && !ours.test(before)) return { ready: 'box-not-empty' };
+        box.focus();
+        if (before.length > 0) document.execCommand('selectAll', false);
+        document.execCommand('insertText', false, '/start ' + code);
+        return { ready: box.textContent.trim() === '/start ' + code ? 'typed' : 'not-typed' };
+      }
+    }
+    await sleep(150);
+  }
+  return { ready: inChat ? 'chat-unconfirmed' : 'chat-not-opened' };
 `;
 
 /** Unread dialog previews, as best-effort inbound signal. */

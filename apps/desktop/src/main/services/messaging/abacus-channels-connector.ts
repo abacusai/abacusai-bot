@@ -19,7 +19,10 @@ import {
   type ConnectorCallbacks,
   type MessagingConnector,
 } from "./connector";
-import { DISCORD_PARTITION } from "./discord-web-connector";
+import {
+  closeDiscordLoopback,
+  DISCORD_PARTITION,
+} from "./discord-web-connector";
 import type { LaneFailure } from "./lane-supervisor";
 
 /**
@@ -373,6 +376,7 @@ export class AbacusChannelsConnector implements MessagingConnector {
       this.linkWindow.focus();
       return;
     }
+    closeDiscordLoopback();
     // Discord's app-profile card needs a desktop-width viewport.
     const win = new BrowserWindow({
       width: 1000,
@@ -412,6 +416,20 @@ export class AbacusChannelsConnector implements MessagingConnector {
     if (url == null || !isWebUrl(url))
       throw new Error("There is no install link to open. Press Link first.");
     return url;
+  }
+
+  /**
+   * Telegram's pending start link as its parts (t.me/<bot>?start=<code>), for
+   * opening it in the app's signed-in Telegram page; null otherwise.
+   */
+  botStart(): { bot: string; code: string } | null {
+    if (this.channel !== "telegram" || this.link.status !== "pending")
+      return null;
+    const match =
+      /^https:\/\/t\.me\/([A-Za-z0-9_]+)\?start=([A-Za-z0-9_-]+)$/.exec(
+        this.link.deepLink ?? ""
+      );
+    return match != null ? { bot: match[1]!, code: match[2]! } : null;
   }
 
   /** Where Discord sends the consent page's answer; null without consent. */
