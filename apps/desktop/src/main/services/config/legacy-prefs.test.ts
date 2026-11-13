@@ -217,6 +217,7 @@ describe("composeLegacyPrefs", () => {
       routineDuplicatesKept: [],
       paidWelcomeTier: null,
       siteDeployCards: {},
+      streakNote: null,
     });
     expect(legacy.patch.models).toEqual(PREFS_DEFAULTS.models);
     expect(legacy.absent).toContain("theme");
@@ -282,6 +283,7 @@ describe("composeLegacyPrefs", () => {
       routineDuplicatesKept: [],
       paidWelcomeTier: null,
       siteDeployCards: {},
+      streakNote: null,
     });
     // A corrupt code store reads as its defaults there; the accordion holds.
     expect(legacy.patch.sidebar).toEqual({

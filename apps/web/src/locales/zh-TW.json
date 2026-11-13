@@ -5560,5 +5560,34 @@
     "pr": {
       "line": "這裡的 PR 收到審查或 CI 失敗時提醒我"
     }
+  },
+  "streak": {
+    "chip_other": "連續 {{count}} 天",
+    "chipStart": "開始你的連續紀錄",
+    "chipCredits": "今日 {{credits}} 點數",
+    "best_other": "最佳：{{count}} 天",
+    "dayState": {
+      "done": "{{day}}：已完成",
+      "missed": "{{day}}：錯過",
+      "today": "{{day}}：今天",
+      "later": "{{day}}：未到"
+    },
+    "todayCredits": "今日額外點數",
+    "todayLeft": "剩餘 {{left}} / {{total}}",
+    "bonusIn_other": "滿一週獎勵 +{{credits}} 點數 · 還差 {{count}} 天",
+    "bonusToday": "今天傳送一則訊息即得 +{{credits}} 獎勵點數",
+    "bonusAdded": "已為滿一週加入 +{{credits}} 獎勵點數",
+    "howKeep": "每天傳送一則訊息即可維持連續紀錄。",
+    "howCredits": "每天可獲得 {{credits}} 額外點數，優先於其他點數使用。",
+    "howMidnight": "未用完的額外點數在午夜失效。",
+    "sidebarLine": "今日 +{{credits}} 點數",
+    "noteDay_other": "連續 {{count}} 天！",
+    "noteRestart": "新的連續紀錄已開始",
+    "noteFullWeek": "滿一週囉！",
+    "noteTomorrow": "明天再來，再得 {{credits}} 點數。",
+    "noteToday": "今天已計入，做得好。",
+    "noteBonusAdded": "已在你的餘額加入 +{{credits}} 獎勵點數。",
+    "noteBonusIn_other": "距離 +{{credits}} 週獎勵還有 {{count}} 天。",
+    "noteCta": "知道了"
   }
 }

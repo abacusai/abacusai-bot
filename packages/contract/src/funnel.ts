@@ -216,6 +216,11 @@ export const FUNNEL_STEPS = [
   "share_link_opened",
   "share_unshared",
   "share_failed",
+  // The daily streak (streak.ts): its card under a reply shown and closed
+  // (detail: the streak's day), and its panel opened (detail: where).
+  "streak_card_shown",
+  "streak_card_closed",
+  "streak_panel_opened",
   // A coding routine starter (coding-routines.ts): its row or section shown
   // (detail: where), a starter opened and a routine started (detail: which).
   "code_routine_shown",

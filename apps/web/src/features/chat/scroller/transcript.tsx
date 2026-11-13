@@ -52,6 +52,7 @@ import {
   runningTools,
   Typing,
 } from "../kit/status/status";
+import { StreakNoteRow } from "../kit/streak-note";
 import { SuccessPitchRow } from "../kit/success-pitch";
 import { TopModelCardRow } from "../kit/top-model-card";
 import { outOfAbacusCredits, UpgradeTriggers } from "../kit/upgrade-triggers";
@@ -936,6 +937,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
           <RetryOfferRow messages={messages} active={active} />
           <RouterAfterUpgradeRow messages={messages} active={active} />
           <TopModelCardRow messages={messages} active={active} />
+          <StreakNoteRow messages={messages} active={active} />
           <SuccessPitchRow messages={messages} active={active} />
           <RatingPromptRow messages={messages} active={active} />
           <UpgradeTriggers

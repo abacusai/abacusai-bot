@@ -5560,5 +5560,39 @@
     "pr": {
       "line": "Avísame cuando los PR de aquí reciban una revisión o falle la CI"
     }
+  },
+  "streak": {
+    "chip_one": "Racha de {{count}} día",
+    "chip_other": "Racha de {{count}} días",
+    "chipStart": "Empieza tu racha",
+    "chipCredits": "{{credits}} créditos para hoy",
+    "best_one": "Mejor: {{count}} día",
+    "best_other": "Mejor: {{count}} días",
+    "dayState": {
+      "done": "{{day}}: hecho",
+      "missed": "{{day}}: perdido",
+      "today": "{{day}}: hoy",
+      "later": "{{day}}: próximamente"
+    },
+    "todayCredits": "Créditos extra de hoy",
+    "todayLeft": "Quedan {{left}} de {{total}}",
+    "bonusIn_one": "+{{credits}} créditos de bonificación por una semana completa · falta {{count}} día",
+    "bonusIn_other": "+{{credits}} créditos de bonificación por una semana completa · faltan {{count}} días",
+    "bonusToday": "+{{credits}} créditos de bonificación si envías un mensaje hoy",
+    "bonusAdded": "+{{credits}} créditos de bonificación añadidos por una semana completa",
+    "howKeep": "Envía un mensaje al día para mantener tu racha.",
+    "howCredits": "Cada día recibes {{credits}} créditos extra, que se usan antes que tus otros créditos.",
+    "howMidnight": "Los créditos extra que no uses vencen a medianoche.",
+    "sidebarLine": "+{{credits}} créditos para hoy",
+    "noteDay_one": "Día 1 de tu racha",
+    "noteDay_other": "¡Racha de {{count}} días!",
+    "noteRestart": "Nueva racha iniciada",
+    "noteFullWeek": "¡Una semana completa!",
+    "noteTomorrow": "Vuelve mañana y recibe {{credits}} créditos más.",
+    "noteToday": "Hoy cuenta. ¡Buen trabajo!",
+    "noteBonusAdded": "Se añadieron +{{credits}} créditos de bonificación a tu saldo.",
+    "noteBonusIn_one": "Falta {{count}} día para la bonificación semanal de +{{credits}}.",
+    "noteBonusIn_other": "Faltan {{count}} días para la bonificación semanal de +{{credits}}.",
+    "noteCta": "Entendido"
   }
 }

@@ -5560,5 +5560,34 @@
     "pr": {
       "line": "这里的 PR 收到审查或 CI 失败时提醒我"
     }
+  },
+  "streak": {
+    "chip_other": "连续 {{count}} 天",
+    "chipStart": "开始你的连续记录",
+    "chipCredits": "今日 {{credits}} 积分",
+    "best_other": "最佳：{{count}} 天",
+    "dayState": {
+      "done": "{{day}}：已完成",
+      "missed": "{{day}}：错过",
+      "today": "{{day}}：今天",
+      "later": "{{day}}：未到"
+    },
+    "todayCredits": "今日额外积分",
+    "todayLeft": "剩余 {{left}} / {{total}}",
+    "bonusIn_other": "满一周奖励 +{{credits}} 积分 · 还差 {{count}} 天",
+    "bonusToday": "今天发送一条消息即得 +{{credits}} 奖励积分",
+    "bonusAdded": "已为满一周添加 +{{credits}} 奖励积分",
+    "howKeep": "每天发送一条消息即可保持连续记录。",
+    "howCredits": "每天可获得 {{credits}} 额外积分，优先于其他积分使用。",
+    "howMidnight": "未用完的额外积分在午夜失效。",
+    "sidebarLine": "今日 +{{credits}} 积分",
+    "noteDay_other": "连续 {{count}} 天！",
+    "noteRestart": "新的连续记录已开始",
+    "noteFullWeek": "满一周啦！",
+    "noteTomorrow": "明天再来，再得 {{credits}} 积分。",
+    "noteToday": "今天已计入，做得好。",
+    "noteBonusAdded": "已向你的余额添加 +{{credits}} 奖励积分。",
+    "noteBonusIn_other": "距离 +{{credits}} 周奖励还有 {{count}} 天。",
+    "noteCta": "知道了"
   }
 }

@@ -5560,5 +5560,39 @@
     "pr": {
       "line": "Seintje als PR's hier een review krijgen of CI mislukt"
     }
+  },
+  "streak": {
+    "chip_one": "{{count}} dag op rij",
+    "chip_other": "{{count}} dagen op rij",
+    "chipStart": "Begin je reeks",
+    "chipCredits": "{{credits}} credits voor vandaag",
+    "best_one": "Record: {{count}} dag",
+    "best_other": "Record: {{count}} dagen",
+    "dayState": {
+      "done": "{{day}}: gedaan",
+      "missed": "{{day}}: gemist",
+      "today": "{{day}}: vandaag",
+      "later": "{{day}}: komt nog"
+    },
+    "todayCredits": "Extra credits van vandaag",
+    "todayLeft": "{{left}} van {{total}} over",
+    "bonusIn_one": "+{{credits}} bonuscredits voor een volle week · nog {{count}} dag",
+    "bonusIn_other": "+{{credits}} bonuscredits voor een volle week · nog {{count}} dagen",
+    "bonusToday": "+{{credits}} bonuscredits als je vandaag een bericht stuurt",
+    "bonusAdded": "+{{credits}} bonuscredits toegevoegd voor een volle week",
+    "howKeep": "Stuur één bericht per dag om je reeks vast te houden.",
+    "howCredits": "Elke dag krijg je {{credits}} extra credits, die eerst worden gebruikt.",
+    "howMidnight": "Ongebruikte extra credits vervallen om middernacht.",
+    "sidebarLine": "+{{credits}} credits voor vandaag",
+    "noteDay_one": "Dag 1 van je reeks",
+    "noteDay_other": "{{count}} dagen op rij!",
+    "noteRestart": "Nieuwe reeks gestart",
+    "noteFullWeek": "Een volle week!",
+    "noteTomorrow": "Kom morgen terug voor nog {{credits}} credits.",
+    "noteToday": "Vandaag telt. Goed bezig.",
+    "noteBonusAdded": "+{{credits}} bonuscredits toegevoegd aan je saldo.",
+    "noteBonusIn_one": "Nog {{count}} dag tot de weekbonus van +{{credits}}.",
+    "noteBonusIn_other": "Nog {{count}} dagen tot de weekbonus van +{{credits}}.",
+    "noteCta": "Begrepen"
   }
 }

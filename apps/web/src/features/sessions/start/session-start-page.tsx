@@ -32,6 +32,7 @@ import { isListedSession } from "#renderer/data/db/filters";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { isDiskFullError } from "#renderer/data/query-client";
 import type { Transport } from "#renderer/data/transport";
+import { StreakChip } from "#renderer/features/streak/streak-chip";
 import { defaultLook } from "#renderer/lib/bots/avatar";
 import {
   BUILD_STARTER_IDS,
@@ -382,6 +383,7 @@ export const SessionStartPage = ({
         <h1 className="phone-rise phone:px-5 phone:text-start phone:text-[32px] phone:leading-[38px] phone:tracking-tight text-center text-[28px] leading-9 font-semibold">
           {t("sessions.start.heading")}
         </h1>
+        <StreakChip />
         <div
           className="phone-rise phone:order-4 phone:px-3 phone:[&_[data-slot=composer]>.z-10]:min-h-[128px]"
           style={{ "--rise-i": 3 } as CSSProperties}

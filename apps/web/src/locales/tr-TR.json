@@ -5560,5 +5560,39 @@
     "pr": {
       "line": "Buradaki PR'lar inceleme alınca ya da CI başarısız olunca haber ver"
     }
+  },
+  "streak": {
+    "chip_one": "{{count}} günlük seri",
+    "chip_other": "{{count}} günlük seri",
+    "chipStart": "Serini başlat",
+    "chipCredits": "Bugün için {{credits}} kredi",
+    "best_one": "En iyi: {{count}} gün",
+    "best_other": "En iyi: {{count}} gün",
+    "dayState": {
+      "done": "{{day}}: tamam",
+      "missed": "{{day}}: kaçırıldı",
+      "today": "{{day}}: bugün",
+      "later": "{{day}}: sırada"
+    },
+    "todayCredits": "Bugünün ek kredileri",
+    "todayLeft": "{{total}} krediden {{left}} kaldı",
+    "bonusIn_one": "Tam bir hafta için +{{credits}} bonus kredi · {{count}} gün kaldı",
+    "bonusIn_other": "Tam bir hafta için +{{credits}} bonus kredi · {{count}} gün kaldı",
+    "bonusToday": "Bugün bir mesaj gönderirsen +{{credits}} bonus kredi",
+    "bonusAdded": "Tam bir hafta için +{{credits}} bonus kredi eklendi",
+    "howKeep": "Serini sürdürmek için günde bir mesaj gönder.",
+    "howCredits": "Her gün diğer kredilerinden önce kullanılan {{credits}} ek kredi alırsın.",
+    "howMidnight": "Kullanılmayan ek krediler gece yarısı sona erer.",
+    "sidebarLine": "Bugün için +{{credits}} kredi",
+    "noteDay_one": "Serinin 1. günü",
+    "noteDay_other": "{{count}} günlük seri!",
+    "noteRestart": "Yeni seri başladı",
+    "noteFullWeek": "Tam bir hafta!",
+    "noteTomorrow": "{{credits}} kredi daha için yarın tekrar gel.",
+    "noteToday": "Bugün sayıldı. Harika.",
+    "noteBonusAdded": "Bakiyene +{{credits}} bonus kredi eklendi.",
+    "noteBonusIn_one": "+{{credits}} haftalık bonusa {{count}} gün kaldı.",
+    "noteBonusIn_other": "+{{credits}} haftalık bonusa {{count}} gün kaldı.",
+    "noteCta": "Tamam"
   }
 }

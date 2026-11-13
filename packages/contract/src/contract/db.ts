@@ -320,6 +320,16 @@ export const PREFS_GROUP_ENTRIES = {
         })
       )
     ),
+    /** The daily streak's card under the day's first counted reply (streak-note.tsx). */
+    streakNote: v.optional(
+      v.nullable(
+        v.strictObject({
+          day: v.pipe(v.string(), v.regex(/^\d{4}-\d{2}-\d{2}$/)),
+          replyId: v.string(),
+          closed: v.boolean(),
+        })
+      )
+    ),
     /** The latest result in the user's own chat, offered on return (resume-card.ts). */
     resumeCard: v.optional(
       v.nullable(
