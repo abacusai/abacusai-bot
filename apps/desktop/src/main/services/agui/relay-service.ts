@@ -1212,6 +1212,11 @@ export class AguiRelayService implements AguiSource {
     );
   }
 
+  async stopTask(input: { threadId: string; id: string }): Promise<void> {
+    this.#requireAgui(input.threadId);
+    this.#write(input.threadId, { type: "task.stop", id: input.id });
+  }
+
   async respondPermission(input: AiRespondPermissionInput): Promise<void> {
     if (input.lineage.threadId !== input.threadId)
       throw badRequest("The permission belongs to another thread");

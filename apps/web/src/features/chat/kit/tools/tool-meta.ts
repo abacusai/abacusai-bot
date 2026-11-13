@@ -3,6 +3,7 @@
  * "lines a to b" for reads, "{n} matches" for greps, elapsed or the exit
  * status for bash, nothing otherwise.
  */
+import { progressOf } from "@abacus-ai/agent/terminal-progress";
 import { toToolKind, type ToolKind } from "@abacus-ai/agent/tool-display";
 
 import { resolveWorkspacePath } from "#renderer/components/file-preview/paths";
@@ -13,7 +14,14 @@ export type ToolMeta =
   | { kind: "changes"; additions: number; deletions: number }
   | { kind: "lines"; from: number; to: number }
   | { kind: "matches"; count: number }
-  | { kind: "elapsed"; since: number }
+  | {
+      kind: "elapsed";
+      since: number;
+      /** 0 to 100 when the output says how far it has got. */
+      progress: number | null;
+      /** When it last printed; `since` until it does. */
+      quietSince: number;
+    }
   | { kind: "exit"; code: number }
   | { kind: "todo"; done: number; total: number }
   | null;
@@ -38,7 +46,8 @@ export const toolMeta = (
   name: string,
   input: Record<string, unknown>,
   tool: NormalizedTool,
-  firstSeenAt: number | null
+  firstSeenAt: number | null,
+  lastOutputAt: number | null = null
 ): ToolMeta => {
   if (name === "todo" || name === "todo_write") {
     const items = todoItems(input);
@@ -70,7 +79,12 @@ export const toolMeta = (
   }
   if (name === "bash") {
     if (tool.status === "running" && firstSeenAt != null)
-      return { kind: "elapsed", since: firstSeenAt };
+      return {
+        kind: "elapsed",
+        since: firstSeenAt,
+        progress: progressOf(tool.terminal?.output ?? ""),
+        quietSince: Math.max(firstSeenAt, lastOutputAt ?? firstSeenAt),
+      };
     if (tool.terminal?.exitCode != null && tool.terminal.exitCode !== 0)
       return { kind: "exit", code: tool.terminal.exitCode };
     const exit = /exit(?:ed with)? code (\d+)/i.exec(tool.text);

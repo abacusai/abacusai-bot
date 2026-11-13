@@ -3499,7 +3499,8 @@
       "askWaiting": "Wachten op antwoord…",
       "askSkipped": "Overgeslagen",
       "askBot": "{{bot}} gevraagd: {{what}}",
-      "giveTask": "Taak doorgegeven aan {{bot}}: {{what}}"
+      "giveTask": "Taak doorgegeven aan {{bot}}: {{what}}",
+      "quiet": "Al {{time}} geen uitvoer"
     },
     "transcript": {
       "jump": "Naar het einde",
@@ -3671,6 +3672,12 @@
       "newChat": "Verdergaan in een nieuwe chat met {{model}}",
       "here": "Deze chat toch overzetten naar {{model}}",
       "cancel": "Annuleren"
+    },
+    "tasks": {
+      "title": "Bezig",
+      "stop": "Stoppen",
+      "serving": "Biedt {{url}} aan",
+      "stopFailed": "Kon niet stoppen. Probeer het opnieuw."
     }
   },
   "notch": {

@@ -112,6 +112,24 @@ describe("starting something and not waiting for it", () => {
   });
 });
 
+describe("what the user sees of a running job", () => {
+  it("keeps a redrawn progress line at its last state, with the label and when it last printed", async () => {
+    const before = Date.now();
+    const job = startBackgroundJob({
+      command: "printf 'Downloading\\n 10%%\\r 55%%\\r100%%\\ndone\\n'",
+      label: "Downloading Flutter",
+      cwd: process.cwd(),
+      operations,
+      notifyOnExit: false,
+    });
+    const finished = await settled(job.id);
+
+    expect(finished.label).toBe("Downloading Flutter");
+    expect(finished.output).toBe("Downloading\n100%\ndone\n");
+    expect(finished.lastOutputAt).toBeGreaterThanOrEqual(before);
+  });
+});
+
 describe("stopping one", () => {
   it("kills a running job and says it was killed", async () => {
     const job = start("sleep 30");

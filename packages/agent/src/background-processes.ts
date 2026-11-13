@@ -7,6 +7,8 @@
  */
 import type { BashOperations } from "@earendil-works/pi-coding-agent";
 
+import { collapseProgress } from "./terminal-progress.js";
+
 /** Kept small: this is "did it work", not a log aggregator. */
 const MAX_OUTPUT_BYTES = 64_000;
 
@@ -21,8 +23,12 @@ export interface BackgroundExit {
 export interface BackgroundJob {
   id: string;
   command: string;
+  /** What it does, in the user's words; null when the model gave none. */
+  label: string | null;
   cwd: string;
   startedAt: number;
+  /** When it last printed anything; null until it does. */
+  lastOutputAt: number | null;
   output: string;
   exit: BackgroundExit | null;
   /** Whether finishing is reported at all: a job may be started to be left alone. */
@@ -49,8 +55,10 @@ let counter = 0;
 const snapshot = (job: Tracked): BackgroundJob => ({
   id: job.id,
   command: job.command,
+  label: job.label,
   cwd: job.cwd,
   startedAt: job.startedAt,
+  lastOutputAt: job.lastOutputAt,
   output: job.output,
   exit: job.exit,
   notifyOnExit: job.notifyOnExit,
@@ -137,6 +145,28 @@ export function notifyBackgroundActivity(): void {
     }
   }
 }
+
+/**
+ * A running job printed something. Kept apart from activity: output comes
+ * many times a second, and activity's listeners only count what is running.
+ */
+const outputListeners = new Set<() => void>();
+
+export function onBackgroundOutput(listener: () => void): () => void {
+  outputListeners.add(listener);
+
+  return () => outputListeners.delete(listener);
+}
+
+const notifyBackgroundOutput = (): void => {
+  for (const listener of outputListeners) {
+    try {
+      listener();
+    } catch {
+      /* one bad listener must not stop the rest being told */
+    }
+  }
+};
 
 /** Jobs still running. */
 export function liveBackgroundJobCount(): number {
@@ -243,6 +273,7 @@ export function killAllForegroundProcesses(options: {
 
 export function startBackgroundJob(options: {
   command: string;
+  label?: string | null;
   cwd: string;
   operations: BashOperations;
   /** Seconds. Omitted means no deadline, which is the point of backgrounding. */
@@ -256,8 +287,10 @@ export function startBackgroundJob(options: {
   const job: Tracked = {
     id,
     command: options.command,
+    label: options.label ?? null,
     cwd: options.cwd,
     startedAt: Date.now(),
+    lastOutputAt: null,
     output: "",
     exit: null,
     notifyOnExit: options.notifyOnExit,
@@ -291,7 +324,13 @@ export function startBackgroundJob(options: {
   void options.operations
     .exec(options.command, options.cwd, {
       onData: (data: Buffer) => {
-        job.output = (job.output + data.toString()).slice(-MAX_OUTPUT_BYTES);
+        // Collapsed as it arrives: a progress bar would otherwise fill the
+        // buffer with redraws and push out what the job actually said.
+        job.output = collapseProgress(job.output + data.toString()).slice(
+          -MAX_OUTPUT_BYTES
+        );
+        job.lastOutputAt = Date.now();
+        notifyBackgroundOutput();
       },
       signal: controller.signal,
       ...(options.timeout != null ? { timeout: options.timeout } : {}),

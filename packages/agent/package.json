@@ -57,6 +57,10 @@
       "types": "./dist/tool-display.d.ts",
       "default": "./dist/tool-display.js"
     },
+    "./terminal-progress": {
+      "types": "./dist/terminal-progress.d.ts",
+      "default": "./dist/terminal-progress.js"
+    },
     "./bot-memory": {
       "types": "./dist/bot/bot-memory.d.ts",
       "default": "./dist/bot/bot-memory.js"

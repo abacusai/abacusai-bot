@@ -292,6 +292,16 @@ export const ai = {
     )
     .output(type<void>()),
   /**
+   * Stop one task still running past its turn (a background job or a served
+   * page) by its `background.tasks` id. The next `background.tasks` on the
+   * stream is the answer.
+   */
+  stopTask: mutation
+    .input(
+      v.object({ threadId: SessionId, id: v.pipe(v.string(), v.maxLength(64)) })
+    )
+    .output(type<void>()),
+  /**
    * The agent's host queue, which is authoritative (agent spec §3.1.6). Entry
    * ids are per agent process, so an edit or removal names the incarnation
    * it was read from; the agent checks both and finds the entry by id in one

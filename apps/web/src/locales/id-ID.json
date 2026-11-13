@@ -3499,7 +3499,8 @@
       "askWaiting": "Waiting for a response…",
       "askSkipped": "Skipped",
       "askBot": "Bertanya kepada {{bot}}: {{what}}",
-      "giveTask": "Memberikan tugas kepada {{bot}}: {{what}}"
+      "giveTask": "Memberikan tugas kepada {{bot}}: {{what}}",
+      "quiet": "Tidak ada keluaran selama {{time}}"
     },
     "transcript": {
       "jump": "Jump to the end",
@@ -3671,6 +3672,12 @@
       "newChat": "Lanjutkan di chat baru dengan {{model}}",
       "here": "Tetap ganti chat ini ke {{model}}",
       "cancel": "Batal"
+    },
+    "tasks": {
+      "title": "Berjalan",
+      "stop": "Hentikan",
+      "serving": "Menyajikan {{url}}",
+      "stopFailed": "Tidak bisa dihentikan. Coba lagi."
     }
   },
   "notch": {

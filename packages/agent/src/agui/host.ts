@@ -11,8 +11,10 @@ import type { Readable } from "node:stream";
 import {
   liveBackgroundJobCount,
   onBackgroundActivity,
+  onBackgroundOutput,
   onBackgroundReport,
 } from "../background-processes.js";
+import { backgroundTasks, stopBackgroundTask } from "../background-tasks.js";
 import { isBotSession } from "../bot/bot-config.js";
 import { BOT_REACTION_EMOJIS } from "../bot/bot-reaction-tool.js";
 import { BotSession } from "../bot/bot-session.js";
@@ -51,6 +53,9 @@ import type {
 
 /** How long compat loss waits for stdout to drain before exiting anyway. */
 export const COMPAT_LOSS_FLUSH_MS = 5_000;
+
+/** The longest a running task's new output waits before the strip shows it. */
+const BACKGROUND_TASKS_EVERY_MS = 1_000;
 
 export interface AguiHostOptions {
   cwd: string;
@@ -271,6 +276,7 @@ export class AguiHost {
   async run(): Promise<void> {
     const stopReportingActivity = this.reportBackgroundActivity();
     const stopReportingJobs = this.reportBackgroundJobs();
+    const stopReportingTasks = this.reportBackgroundTasks();
     try {
       await this.core.start();
       await this.core.readCommands(
@@ -287,6 +293,7 @@ export class AguiHost {
     } finally {
       stopReportingActivity();
       stopReportingJobs();
+      stopReportingTasks();
     }
   }
 
@@ -310,6 +317,35 @@ export class AguiHost {
         },
       });
     });
+  }
+
+  /**
+   * What is running past its turn, for the strip above the chat box: at once
+   * when a task starts or ends, and at most once a second while one prints.
+   * A process starts with nothing running; the relay clears the strip of one
+   * that exited.
+   */
+  private reportBackgroundTasks(): () => void {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let sent = "[]";
+    const send = (): void => {
+      if (timer != null) clearTimeout(timer);
+      timer = null;
+      const tasks = backgroundTasks();
+      const key = JSON.stringify(tasks);
+      if (key === sent) return;
+      sent = key;
+      this.write(custom("background.tasks", { tasks }));
+    };
+    const stopActivity = onBackgroundActivity(send);
+    const stopOutput = onBackgroundOutput(() => {
+      timer ??= setTimeout(send, BACKGROUND_TASKS_EVERY_MS);
+    });
+    return () => {
+      stopActivity();
+      stopOutput();
+      if (timer != null) clearTimeout(timer);
+    };
   }
 
   /** Tells the desktop, on each change, how much outlives a turn here. */
@@ -430,6 +466,10 @@ export class AguiHost {
         return;
       case "run":
         await this.onRun(command.input);
+
+        return;
+      case "task.stop":
+        if (typeof command.id === "string") stopBackgroundTask(command.id);
 
         return;
 
