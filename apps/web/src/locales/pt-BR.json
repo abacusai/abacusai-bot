@@ -1578,9 +1578,9 @@
       },
       "pr-review-fixes": {
         "name": "Resolver comentários de revisão nos meus PRs",
-        "description": "Verifica seus pull requests abertos a cada hora em dias úteis e envia uma correção para cada novo comentário de revisão.",
+        "description": "Envia uma correção para cada novo comentário de revisão nos seus pull requests abertos, assim que ele chega.",
         "when": "A cada hora em dias úteis, das 9 às 18",
-        "promise": "A cada hora em dias úteis, procura novos comentários de revisão nos seus pull requests, corrige cada um no branch desse pull request e responde abaixo. Comentários que precisam da sua decisão vêm para você."
+        "promise": "Quando chega um novo comentário de revisão em um dos seus pull requests, ele corrige na branch desse pull request e responde abaixo. Acompanhar não usa créditos: só roda quando há um comentário para corrigir. Comentários que precisam da sua decisão vão para você."
       },
       "site-down": {
         "name": "Me avise quando meu site cair",

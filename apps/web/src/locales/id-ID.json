@@ -1578,9 +1578,9 @@
       },
       "pr-review-fixes": {
         "name": "Perbaiki komentar review di PR saya",
-        "description": "Memeriksa pull request terbuka Anda setiap jam pada hari kerja dan mendorong perbaikan untuk setiap komentar review baru.",
+        "description": "Mendorong perbaikan untuk tiap komentar review baru di pull request terbukamu, begitu komentar itu masuk.",
         "when": "Setiap jam pada hari kerja, 9 sampai 18",
-        "promise": "Setiap jam pada hari kerja, ia mencari komentar review baru di pull request Anda, memperbaiki masing-masing di branch pull request itu, lalu membalas di bawahnya. Komentar yang memerlukan keputusan Anda dikirim ke Anda."
+        "promise": "Saat komentar review baru masuk di salah satu pull request-mu, ia memperbaikinya di branch pull request itu dan membalas di bawahnya. Memantau tidak memakai kredit: ia hanya berjalan saat ada komentar untuk diperbaiki. Komentar yang butuh keputusanmu dikirim ke kamu."
       },
       "site-down": {
         "name": "Beri tahu saya saat situs saya mati",

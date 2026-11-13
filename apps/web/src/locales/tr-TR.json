@@ -1578,9 +1578,9 @@
       },
       "pr-review-fixes": {
         "name": "PR'larımdaki inceleme yorumlarını düzelt",
-        "description": "Hafta içi her saat açık pull request'lerini kontrol eder ve her yeni inceleme yorumu için bir düzeltme gönderir.",
+        "description": "Açık pull request'lerine gelen her yeni inceleme yorumu için, geldiği anda bir düzeltme push eder.",
         "when": "Hafta içi her saat, 9–18",
-        "promise": "Hafta içi her saat pull request'lerindeki yeni inceleme yorumlarını arar, her birini o pull request'in dalında düzeltir ve altına yanıt yazar. Senin kararını gerektiren yorumlar sana gelir."
+        "promise": "Pull request'lerinden birine yeni bir inceleme yorumu gelince, o pull request'in dalında düzeltir ve altına yanıt yazar. İzlemek kredi harcamaz: yalnızca düzeltilecek bir yorum olduğunda çalışır. Senin kararını gerektiren yorumlar sana gelir."
       },
       "site-down": {
         "name": "Sitem çöktüğünde bana haber ver",

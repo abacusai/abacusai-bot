@@ -1578,9 +1578,9 @@
       },
       "pr-review-fixes": {
         "name": "Resolver los comentarios de revisión de mis PR",
-        "description": "Revisa tus pull requests abiertos cada hora en días hábiles y sube una corrección para cada comentario nuevo.",
+        "description": "Sube un arreglo para cada comentario de revisión nuevo en tus pull requests abiertos, en cuanto llega.",
         "when": "Cada hora en días hábiles, de 9 a 18",
-        "promise": "Cada hora en días hábiles busca comentarios de revisión nuevos en tus pull requests, corrige cada uno en la rama de ese pull request y responde debajo. Los comentarios que necesitan tu criterio te llegan a ti."
+        "promise": "Cuando llega un comentario de revisión nuevo a uno de tus pull requests, lo arregla en la rama de ese pull request y responde debajo. Vigilar no usa créditos: solo se ejecuta cuando hay un comentario que arreglar. Los comentarios que necesitan tu criterio te llegan a ti."
       },
       "site-down": {
         "name": "Avísame cuando mi sitio se caiga",

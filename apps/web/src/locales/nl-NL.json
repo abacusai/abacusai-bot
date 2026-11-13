@@ -1578,9 +1578,9 @@
       },
       "pr-review-fixes": {
         "name": "Reviewopmerkingen in mijn PR's verwerken",
-        "description": "Controleert op werkdagen elk uur je open pull requests en pusht voor elke nieuwe reviewopmerking een oplossing.",
+        "description": "Pusht een fix voor elke nieuwe reviewopmerking op je open pull requests, zodra die binnenkomt.",
         "when": "Elk uur op werkdagen, 9 tot 18 uur",
-        "promise": "Op werkdagen zoekt het elk uur naar nieuwe reviewopmerkingen in je pull requests, verwerkt elke opmerking op de branch van die pull request en reageert eronder. Opmerkingen die jouw oordeel vragen, komen naar jou."
+        "promise": "Komt er een nieuwe reviewopmerking op een van je pull requests, dan lost het die op in de branch van die pull request en reageert eronder. In de gaten houden kost geen credits: het draait alleen als er iets te fixen is. Opmerkingen die jouw oordeel vragen, komen bij jou terecht."
       },
       "site-down": {
         "name": "Laat me weten wanneer mijn site plat ligt",

@@ -1578,9 +1578,9 @@
       },
       "pr-review-fixes": {
         "name": "Risolvi i commenti di revisione delle mie PR",
-        "description": "Controlla le tue pull request aperte ogni ora nei giorni feriali e invia una correzione per ogni nuovo commento di revisione.",
+        "description": "Invia una correzione per ogni nuovo commento di revisione sulle tue pull request aperte, appena arriva.",
         "when": "Ogni ora nei giorni feriali, dalle 9 alle 18",
-        "promise": "Ogni ora nei giorni feriali cerca nuovi commenti di revisione sulle tue pull request, corregge ciascuno sul branch della pull request e risponde sotto. I commenti che richiedono una tua decisione arrivano a te."
+        "promise": "Quando arriva un nuovo commento di revisione su una tua pull request, lo corregge sul branch di quella pull request e risponde sotto. Il controllo non usa crediti: parte solo quando c'è un commento da sistemare. I commenti che richiedono il tuo giudizio arrivano a te."
       },
       "site-down": {
         "name": "Avvisami quando il mio sito è giù",

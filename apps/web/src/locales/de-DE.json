@@ -1578,9 +1578,9 @@
       },
       "pr-review-fixes": {
         "name": "Review-Kommentare in meinen PRs umsetzen",
-        "description": "Prüft werktags stündlich deine offenen Pull Requests und pusht für jeden neuen Review-Kommentar eine Korrektur.",
+        "description": "Pusht eine Korrektur für jeden neuen Review-Kommentar auf deinen offenen Pull Requests, sobald er kommt.",
         "when": "Werktags stündlich, 9 bis 18 Uhr",
-        "promise": "Werktags sucht es jede Stunde nach neuen Review-Kommentaren in deinen Pull Requests, setzt jeden auf dem Branch des Pull Requests um und antwortet darunter. Kommentare, die deine Entscheidung brauchen, kommen stattdessen zu dir."
+        "promise": "Kommt ein neuer Review-Kommentar auf einem deiner Pull Requests, behebt es ihn auf dessen Branch und antwortet darunter. Das Beobachten kostet keine Credits: Es läuft nur, wenn es etwas zu beheben gibt. Kommentare, die deine Entscheidung brauchen, kommen stattdessen zu dir."
       },
       "site-down": {
         "name": "Sag mir, wenn meine Website ausfällt",

@@ -1578,9 +1578,9 @@
       },
       "pr-review-fixes": {
         "name": "Traiter les commentaires de revue de mes PR",
-        "description": "Vérifie tes pull requests ouvertes toutes les heures en semaine et pousse un correctif pour chaque nouveau commentaire de revue.",
+        "description": "Pousse une correction pour chaque nouveau commentaire de revue sur tes pull requests ouvertes, dès qu'il arrive.",
         "when": "Toutes les heures en semaine, de 9 h à 18 h",
-        "promise": "Toutes les heures en semaine, il cherche les nouveaux commentaires de revue sur tes pull requests, corrige chacun sur la branche de la pull request et répond en dessous. Les commentaires qui demandent ton avis te sont transmis."
+        "promise": "Quand un nouveau commentaire de revue arrive sur une de tes pull requests, il le corrige sur la branche de cette pull request et répond dessous. La surveillance ne coûte aucun crédit : il ne tourne que s'il y a un commentaire à corriger. Les commentaires qui demandent ton avis te reviennent."
       },
       "site-down": {
         "name": "Préviens-moi quand mon site est en panne",

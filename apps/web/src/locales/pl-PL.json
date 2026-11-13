@@ -1594,9 +1594,9 @@
       },
       "pr-review-fixes": {
         "name": "Popraw komentarze z review w moich PR",
-        "description": "W dni robocze co godzinę sprawdza Twoje otwarte pull requesty i wypycha poprawkę dla każdego nowego komentarza z review.",
+        "description": "Wypycha poprawkę do każdego nowego komentarza z recenzji w Twoich otwartych pull requestach, gdy tylko się pojawi.",
         "when": "Co godzinę w dni robocze, 9–18",
-        "promise": "W dni robocze co godzinę szuka nowych komentarzy z review w Twoich pull requestach, poprawia każdy na gałęzi danego pull requesta i odpowiada pod nim. Komentarze wymagające Twojej decyzji trafiają do Ciebie."
+        "promise": "Gdy w Twoim pull requeście pojawi się nowy komentarz z recenzji, poprawia go na gałęzi tego pull requesta i odpowiada pod nim. Obserwowanie nie zużywa kredytów: działa tylko, gdy jest komentarz do poprawy. Komentarze wymagające Twojej decyzji trafiają do Ciebie."
       },
       "site-down": {
         "name": "Powiadom mnie, gdy moja strona nie działa",

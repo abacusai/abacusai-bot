@@ -1578,9 +1578,9 @@
       },
       "pr-review-fixes": {
         "name": "Fix review comments on my PRs",
-        "description": "Checks your open pull requests every hour on weekdays and pushes a fix for each new review comment.",
+        "description": "Pushes a fix for each new review comment on your open pull requests, as soon as it comes in.",
         "when": "Hourly on weekdays, 9 to 6",
-        "promise": "Every hour on weekdays it looks for new review comments on your pull requests, fixes each one on that pull request's branch and replies under it. Comments that need your judgment come to you instead."
+        "promise": "When a new review comment lands on one of your pull requests, it fixes it on that pull request's branch and replies under it. Watching costs no credits: it runs only when there is a comment to fix. Comments that need your judgment come to you instead."
       },
       "site-down": {
         "name": "Tell me when my site is down",
