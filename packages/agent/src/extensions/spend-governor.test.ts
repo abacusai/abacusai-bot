@@ -460,6 +460,17 @@ describe("refreshing the balance", () => {
 });
 
 describe("the context ceiling, by who pays", () => {
+  /** A session carrying `fixed` tokens of system prompt and tools, and `messages`. */
+  const on = (
+    model: { provider: string; id: string; contextWindow?: number } | undefined,
+    fixed = 0,
+    messages: unknown[] = []
+  ) => ({
+    model,
+    systemPrompt: "x".repeat(fixed * 4),
+    messages,
+    agent: { state: { tools: [] } },
+  });
   const holder = (reserveTokens = 16_384) => ({
     getCompactionSettings: () => ({
       enabled: true,
@@ -471,37 +482,82 @@ describe("the context ceiling, by who pays", () => {
   it("summarizes a billed chat past 160k, however large the window", () => {
     const { governor } = governed("attended");
     const manager = holder();
-    governor.governContext(manager, () => billedModel);
+    governor.governContext(manager, () => on(billedModel));
     expect(manager.getCompactionSettings().reserveTokens).toBe(840_000);
   });
 
   it("keeps a routine at 80k and a free or own-key chat at 80% of its window", () => {
     const routine = governed("routine");
     const r = holder();
-    routine.governor.governContext(r, () => billedModel);
+    routine.governor.governContext(r, () => on(billedModel));
     expect(r.getCompactionSettings().reserveTokens).toBe(920_000);
 
     const own = governed("attended", "own-key");
     const o = holder();
-    own.governor.governContext(o, () => ({
-      provider: "gemini",
-      id: "g",
-      contextWindow: 1_000_000,
-    }));
+    own.governor.governContext(o, () =>
+      on({ provider: "gemini", id: "g", contextWindow: 1_000_000 })
+    );
     expect(o.getCompactionSettings().reserveTokens).toBe(200_000);
+  });
+
+  it("sets a billed chat's ceiling above what a summary cannot shrink, so it never summarizes every request", () => {
+    // 140k of system prompt and tools: a summary leaves those plus 20k of
+    // kept turns, so the 160k ceiling would be crossed again at once. Half the
+    // ceiling (80k) is left above them for the conversation.
+    const { governor } = governed("attended");
+    const manager = holder();
+    governor.governContext(manager, () => on(billedModel, 140_000));
+    expect(manager.getCompactionSettings().reserveTokens).toBe(760_000);
+    // A chat with a usual prompt keeps the 160k ceiling.
+    const usual = governed("attended");
+    const u = holder();
+    usual.governor.governContext(u, () => on(billedModel, 30_000));
+    expect(u.getCompactionSettings().reserveTokens).toBe(840_000);
+    // The window's share still bounds it: no request past what the model holds.
+    const tight = governed("attended");
+    const t = holder();
+    tight.governor.governContext(t, () =>
+      on({ ...billedModel, contextWindow: 200_000 }, 140_000)
+    );
+    expect(t.getCompactionSettings().reserveTokens).toBe(40_000);
+  });
+
+  it("measures what a summary leaves in the provider's count, from the last request's reported size", () => {
+    // Estimated 140k + 10k of history, and the provider counted 195k: 1.3 a token.
+    const history = { role: "user", content: "y".repeat(40_000) };
+    const reply = {
+      role: "assistant",
+      content: [],
+      usage: { input: 5_000, cacheRead: 190_000, cacheWrite: 0, output: 50 },
+    };
+    const { governor } = governed("attended");
+    const manager = holder();
+    governor.governContext(manager, () =>
+      on(billedModel, 140_000, [history, reply])
+    );
+    // kept = (140k + 20k) * 1.3 = 208k; the ceiling leaves 80k above it.
+    expect(manager.getCompactionSettings().reserveTokens).toBe(712_000);
+    // An estimate that ran high is never shrunk below itself.
+    const over = governed("attended");
+    const o = holder();
+    over.governor.governContext(o, () =>
+      on(billedModel, 140_000, [
+        history,
+        { ...reply, usage: { input: 100_000, cacheRead: 0, cacheWrite: 0 } },
+      ])
+    );
+    expect(o.getCompactionSettings().reserveTokens).toBe(760_000);
   });
 
   it("keeps pi's reserve when it is larger, and leaves an unknown window alone", () => {
     const { governor } = governed("attended", "own-key");
     const small = holder();
-    governor.governContext(small, () => ({
-      provider: "x",
-      id: "y",
-      contextWindow: 32_000,
-    }));
+    governor.governContext(small, () =>
+      on({ provider: "x", id: "y", contextWindow: 32_000 })
+    );
     expect(small.getCompactionSettings().reserveTokens).toBe(16_384);
     const unknown = holder();
-    governor.governContext(unknown, () => undefined);
+    governor.governContext(unknown, () => on(undefined));
     expect(unknown.getCompactionSettings().reserveTokens).toBe(16_384);
   });
 
@@ -523,7 +579,7 @@ describe("the context ceiling, by who pays", () => {
     await balance(2000, 3000);
     const { pi, governor } = governed("attended");
     const manager = holder();
-    governor.governContext(manager, () => billedModel);
+    governor.governContext(manager, () => on(billedModel));
     await pi.fire("input", { text: "go", source: "interactive" });
     await request(pi, 40_000, 20);
     expect(manager.getCompactionSettings().reserveTokens).toBe(840_000);
@@ -544,16 +600,16 @@ describe("the context ceiling, by who pays", () => {
     await balance(2000, 3000);
     const floor = governed("attended");
     const f = holder();
-    floor.governor.governContext(f, () => billedModel);
+    floor.governor.governContext(f, () => on(billedModel));
     await request(floor.pi, 20_000, 10);
     await request(floor.pi, 30_000, 70);
-    // Half of 30k would be 15k: the floor (20k) holds.
-    expect(f.getCompactionSettings().reserveTokens).toBe(980_000);
+    // Half of 30k would be 15k: what a summary leaves (20k kept turns) plus the floor (20k) holds.
+    expect(f.getCompactionSettings().reserveTokens).toBe(960_000);
 
     // A flat price: the context grew, the price did not, so a summary saves nothing.
     const flat = governed("attended");
     const m = holder();
-    flat.governor.governContext(m, () => billedModel);
+    flat.governor.governContext(m, () => on(billedModel));
     for (const tokens of [40_000, 80_000, 120_000])
       await request(flat.pi, tokens, 70);
     expect(m.getCompactionSettings().reserveTokens).toBe(840_000);
@@ -561,7 +617,7 @@ describe("the context ceiling, by who pays", () => {
     // Sub-agents' and memory upkeep's credits reach the meter, never the trigger.
     const own = governed("phone");
     const o = holder();
-    own.governor.governContext(o, () => billedModel);
+    own.governor.governContext(o, () => on(billedModel));
     await request(own.pi, 40_000, 20);
     noteBilledCredits(500);
     expect(o.getCompactionSettings().reserveTokens).toBe(840_000);

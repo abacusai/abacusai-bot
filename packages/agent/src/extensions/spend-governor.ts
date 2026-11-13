@@ -425,6 +425,14 @@ export const fitChoices = (registry: ModelRegistry) => {
   );
 };
 
+/** What a summary never shrinks: the system prompt and the tools a request carries. */
+export interface GovernedSession {
+  model: GovernedModel | undefined;
+  systemPrompt: string;
+  messages: readonly unknown[];
+  agent: { state: { tools?: readonly unknown[] } };
+}
+
 /** The settings slice pi's compaction threshold reads; see governContext. */
 interface CompactionHolder {
   getCompactionSettings: () => {
@@ -482,6 +490,11 @@ export class SpendGovernor {
   /** What the last refusal for size needs from a model; null when none this turn. */
   private need: { need: number; oneTurnFits: boolean } | null = null;
   private model: GovernedModel | undefined;
+  /** The governed session and pi's compaction settings, once governContext ran. */
+  private governed: {
+    session: () => GovernedSession | undefined;
+    settings: () => { keepRecentTokens: number };
+  } | null = null;
   private readonly unsubscribe: () => void;
 
   constructor(options: SpendGovernorOptions) {
@@ -626,17 +639,33 @@ export class SpendGovernor {
    * summarized before the next one.
    */
   contextCapFor(window: number): number {
+    const kept = this.keptTokens();
     const cap = contextCap({
       window,
       lane: this.lane(),
       kind: this.options.kind,
       learned: this.learned.get(modelKey(this.model)) ?? null,
+      kept,
     });
     if (!this.compactSoon || this.lastContextTokens <= 0) return cap;
     return Math.min(
       cap,
-      Math.max(CONTEXT_CAP_FLOOR, Math.floor(this.lastContextTokens / 2))
+      Math.max(kept + CONTEXT_CAP_FLOOR, Math.floor(this.lastContextTokens / 2))
     );
+  }
+
+  /**
+   * Tokens a summary leaves: the system prompt and the tools, which it never
+   * shrinks, and the recent turns pi keeps, in the provider's own count. 0
+   * before governContext ran.
+   */
+  private keptTokens(): number {
+    if (this.governed == null) return 0;
+    const session = this.governed.session();
+    const estimated =
+      (session == null ? 0 : fixedTokens(session)) +
+      this.governed.settings().keepRecentTokens;
+    return Math.round(estimated * (session == null ? 1 : tokenScale(session)));
   }
 
   /**
@@ -647,12 +676,13 @@ export class SpendGovernor {
    */
   governContext(
     manager: CompactionHolder,
-    current: () => GovernedModel | undefined
+    current: () => GovernedSession | undefined
   ): void {
     const configured = manager.getCompactionSettings.bind(manager);
+    this.governed = { session: current, settings: configured };
     manager.getCompactionSettings = () => {
       const settings = configured();
-      const model = current();
+      const model = current()?.model;
       this.model = model ?? this.model;
       const window = model?.contextWindow;
       if (window == null || window <= 0) return settings;
@@ -1043,6 +1073,60 @@ export class SpendGovernor {
   };
 }
 
+/** Tool lists measured so far: pi keeps one array until the tools change. */
+const toolTokens = new WeakMap<readonly unknown[], number>();
+
+/** Rough tokens of what every request carries: the system prompt and the tools. */
+export const fixedTokens = (session: {
+  systemPrompt: string;
+  agent: { state: { tools?: readonly unknown[] } };
+}): number => {
+  const tools = session.agent.state.tools ?? [];
+  let measured = toolTokens.get(tools);
+  if (measured == null) {
+    measured = tools.length === 0 ? 0 : tokensOfText(JSON.stringify(tools));
+    toolTokens.set(tools, measured);
+  }
+  return tokensOfText(session.systemPrompt) + measured;
+};
+
+/** Scales measured so far, by the request (assistant message) they were measured on. */
+const scales = new WeakMap<object, number>();
+
+/**
+ * The provider's tokens per estimated token, from the last request that
+ * reported its size: estimates run four characters a token, and tool
+ * schemas run nearer three. Never below 1 (an estimate never shrinks), at
+ * most 2; 1 before any request reported.
+ */
+export const tokenScale = (session: {
+  systemPrompt: string;
+  messages: readonly unknown[];
+  agent: { state: { tools?: readonly unknown[] } };
+}): number => {
+  for (let index = session.messages.length - 1; index >= 0; index--) {
+    const message = session.messages[index] as {
+      role?: string;
+      usage?: { input?: number; cacheRead?: number; cacheWrite?: number };
+    };
+    if (message.role !== "assistant" || message.usage == null) continue;
+    const sent =
+      (message.usage.input ?? 0) +
+      (message.usage.cacheRead ?? 0) +
+      (message.usage.cacheWrite ?? 0);
+    if (sent <= 0) continue;
+    const known = scales.get(message);
+    if (known != null) return known;
+    const estimated =
+      fixedTokens(session) + historyTokens(session.messages.slice(0, index));
+    const scale =
+      estimated > 0 ? Math.min(2, Math.max(1, sent / estimated)) : 1;
+    scales.set(message, scale);
+    return scale;
+  }
+  return 1;
+};
+
 /** Rough tokens of what one turn carries at least: the prompt, the tools and the last message. */
 export const oneTurnTokens = (session: {
   systemPrompt: string;
@@ -1053,9 +1137,7 @@ export const oneTurnTokens = (session: {
     .reverse()
     .find((message) => (message as { role?: string }).role === "user");
   return (
-    tokensOfText(session.systemPrompt) +
-    tokensOfText(JSON.stringify(session.agent.state.tools ?? [])) +
-    (last == null ? 0 : estimateTokens(last as never))
+    fixedTokens(session) + (last == null ? 0 : estimateTokens(last as never))
   );
 };
 
