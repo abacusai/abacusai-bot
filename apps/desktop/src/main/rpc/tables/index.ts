@@ -21,12 +21,12 @@ import type { IpcEvent } from "@abacus-ai/contract/contracts";
 import type { PrefsStore } from "../../services/config/prefs-store";
 import type { MainEventBus } from "../event-bus";
 import { readGitStateRows, sameGitState } from "./git-state";
-import { MemoryWatchers, readMemoryRows, type WatchFactory } from "./memories";
+import { MemoryWatcher, type WatchFactory } from "./memories";
 import { readRoutineRunRows } from "./routine-runs";
 import { readRoutineRows, ROUTINES_CLOCK_MS } from "./routines";
 import { readSessionRows, SESSION_EVENTS } from "./sessions";
 import type { TableSources, Unhook } from "./sources";
-import { stableJson, TableFeed } from "./table-feed";
+import { TableFeed } from "./table-feed";
 import { readWorkspaceRows } from "./workspaces";
 
 export interface Tables {
@@ -51,7 +51,7 @@ export interface CreateTablesOptions {
   bus: MainEventBus;
   sources: TableSources;
   prefsStore: PrefsStore;
-  /** Watch the memory files the agent child writes (off for fakes). */
+  /** Watch the memory folder's history (off for fakes). */
   watchMemories?: boolean;
   /** The directory-watch primitive for `memories`; `fs.watch` by default. */
   watch?: WatchFactory;
@@ -81,7 +81,7 @@ const TRIGGERS: Partial<
     ])
   ),
   "sessions-reloaded": { reset: ["sessions"], notify: ["routineRuns"] },
-  // Bot names reach routines and memories only through a bots.json write
+  // Bot names reach routines only through a bots.json write
   // (the store hook below); this event also fires on every transcript save.
   "bots-updated": { notify: ["bots"] },
   "cronjobs-updated": { notify: ["routines"] },
@@ -146,7 +146,7 @@ export const createTables = (options: CreateTablesOptions): Tables => {
     }),
     memories: new TableFeed({
       name: "memories",
-      read: () => readMemoryRows(sources),
+      read: () => sources.listMemoryRows(),
       getKey: byId,
     }),
     workspaces: new TableFeed({
@@ -173,44 +173,22 @@ export const createTables = (options: CreateTablesOptions): Tables => {
     tables.routineRuns.notify();
   };
 
-  /**
-   * `memory.events { changed }` invalidates `memory.bots` (spec 00 B.2).
-   * Watchers report file changes; a bots.json write can change the view
-   * too (a rename, a bot added or removed) without touching a memory file,
-   * so it is compared with the last view published.
-   */
-  let botsView: string | null = null;
-  const readBotsView = (): string | null => {
-    try {
-      return stableJson(sources.listBotMemories());
-    } catch (error) {
-      console.error("[db] memory.bots read failed", error);
-      return null;
-    }
-  };
+  /** Every memory change is appended to its history: one watcher hears all. */
   const memoryChanged = (): void => {
     tables.memories.notify();
-    botsView = readBotsView();
     bus.dispatchChannel("memory", { type: "changed" });
   };
 
-  // The watchers run only while someone reads `memories` or listens to
-  // `memory.events`: the legacy-only app pays nothing.
+  // The watcher runs only while someone reads `memories` or listens to
+  // `memory.events`.
   const wantMemory = demand(() => {
-    botsView = readBotsView();
-    if (options.watchMemories === false)
-      return () => {
-        botsView = null;
-      };
-    const watchers = new MemoryWatchers({
+    if (options.watchMemories === false) return () => undefined;
+    const watcher = new MemoryWatcher({
       home: sources.botHome(),
       onChange: memoryChanged,
       watch: options.watch,
     });
-    return () => {
-      watchers.close();
-      botsView = null;
-    };
+    return () => watcher.close();
   });
 
   const unhooks: Unhook[] = [
@@ -227,14 +205,8 @@ export const createTables = (options: CreateTablesOptions): Tables => {
     sources.onSessionsChanged(notifySessions),
     sources.onBotsWritten(() => {
       tables.bots.notify();
-      // Routines and memories show bot names.
+      // Routines show bot names.
       tables.routines.notify();
-      tables.memories.notify();
-      if (botsView == null) return;
-      const next = readBotsView();
-      if (next == null || next === botsView) return;
-      botsView = next;
-      bus.dispatchChannel("memory", { type: "changed" });
     }),
     // A result recorded after the session notification (a timeout, a
     // start failure) changes run rows too (spec 05 §31.5 f).

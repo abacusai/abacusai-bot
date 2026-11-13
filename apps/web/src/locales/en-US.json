@@ -560,9 +560,7 @@
       "memory": {
         "empty": "Nothing remembered yet",
         "forget": "Forget",
-        "notes": "Also keeps {{count}} days of notes",
-        "clear": "Forget everything",
-        "clearConfirm": "Forget everything here?"
+        "manage": "Manage in Settings"
       },
       "delegatesFreely": "Can ask other bots without checking",
       "delegatesFreelyDetail": "Asks your other bots and passes them work when it helps, without asking you each time. Only while answering you."
@@ -1043,7 +1041,7 @@
     "empty": "Nothing remembered yet. The agent writes here on its own when it learns something worth carrying between sessions: a preference of yours, a fact about your setup.",
     "forget": "Forget this",
     "loading": "Reading memory…",
-    "readFailed": "Could not read what is remembered. The files are in ~/.abacusai-bot/memories.",
+    "readFailed": "Could not read what is remembered. The files are in ~/.abacusai-bot/memory.",
     "storeEmpty": "Nothing here yet.",
     "stores": {
       "memory": {
@@ -1063,15 +1061,9 @@
     "title": "Memory",
     "writeFailed": "Nothing was deleted. A session was writing to memory at the same moment. Try again.",
     "instructions": {
-      "title": "Custom instructions",
-      "description": "Always sent to the model, at the end of every conversation's instructions. Use it for how you want to be worked with: tone, language, house style, things to never do.",
-      "placeholder": "e.g. Answer in British English. Never use emoji. Show me the command before you run it.",
-      "save": "Save",
-      "saveFailed": "Could not save. Check that the settings folder is writable.",
-      "unsaved": "Unsaved",
-      "applies": "Applies to your next message, including in a chat already open."
+      "detail": "Every chat follows these, even with Memory off. The agent adds one when you ask; only you change the ones you wrote.",
+      "placeholder": "Add an instruction, e.g. Always reply in British English"
     },
-    "rememberedToast": "Added to my AI brain.",
     "sections": {
       "sessions": "Sessions",
       "bots": "Bots"
@@ -1079,7 +1071,59 @@
     "bots": {
       "notes": "{{count}} day(s) of working notes on disk.",
       "empty": "This bot has not saved any core memories yet."
-    }
+    },
+    "edit": "Edit",
+    "add": "Add",
+    "addPlaceholder": "Something to remember…",
+    "typeLabel": "Kind of note",
+    "saveRefused": "Not saved: {{reason}}",
+    "busy": "Memory was being changed at the same moment. Try again.",
+    "types": {
+      "profile": "Profile",
+      "rule": "Rule",
+      "preference": "Preference",
+      "fact": "Fact",
+      "decision": "Decision",
+      "reference": "Reference",
+      "status": "Status",
+      "card": "Project card"
+    },
+    "kinds": {
+      "folder": "Folder",
+      "bot": "Bot",
+      "routine": "Routine",
+      "topic": "Topic"
+    },
+    "history": {
+      "title": "History",
+      "saved": "Saved",
+      "changed": "Changed",
+      "forgot": "Forgot",
+      "noted": "Noted",
+      "undo": "Undo",
+      "changedSince": "That note has changed since. Undo the later change first."
+    },
+    "by": {
+      "you": "You",
+      "chat": "A chat",
+      "routine": "A routine",
+      "bot": "A bot",
+      "contact": "Someone's chat with a bot",
+      "app": "The app"
+    },
+    "you": {
+      "title": "About you",
+      "detail": "Who you are: your name, your work, what you prefer. Chats use it when it helps."
+    },
+    "projects": {
+      "title": "Projects"
+    },
+    "aboutContact": "About {{name}}",
+    "clearProject": "Forget this project's notes?",
+    "clearProjectDetail": "Its notes go and its card goes back to blank. Each change can be undone from History.",
+    "clearYou": "Forget everything about you?",
+    "withheld": "Removed when memory moved to its new home, because they looked like passwords or keys: {{entries}}. Keep secrets in the vault.",
+    "chatProject": "Project: {{name}}. Open it in Memory"
   },
   "messaging": {
     "advanced": "Advanced ({{count}})",
@@ -3499,7 +3543,8 @@
       "askWaiting": "Waiting for a response…",
       "askSkipped": "Skipped",
       "askBot": "Asked {{bot}}: {{what}}",
-      "giveTask": "Passed a task to {{bot}}: {{what}}"
+      "giveTask": "Passed a task to {{bot}}: {{what}}",
+      "memoryUpdated": "Memory updated: {{name}}"
     },
     "transcript": {
       "jump": "Jump to the end",
@@ -3843,7 +3888,6 @@
     "off": "Off",
     "systemLanguage": "System ({{language}})",
     "forget": "Forget this",
-    "memoryConflict": "Nothing was deleted. A session was writing to memory at the same moment. Try again.",
     "clearAll": "Clear all",
     "forgetDescription": "Forget everything here?",
     "quietUntil": "Now quiet until {{end}}",
@@ -4056,11 +4100,6 @@
       "PLAN": "Reads and plans only",
       "YOLO": "Nothing asks",
       "ACCEPTEDITS": "Edits go through, commands ask"
-    },
-    "memoryTargets": {
-      "remember": "Always remember",
-      "user": "About you",
-      "memory": "The agent’s own notes"
     },
     "cues": {
       "sent": "Sent",
@@ -4300,8 +4339,6 @@
       "too-long": "This is too long",
       "schedule-invalid": "Choose a valid schedule"
     },
-    "rememberedByBots": "Remembered by bots",
-    "botMemoryCount": "{{name}} · {{count}} things",
     "showMemory": "Show memories",
     "pairingPending": "Finish linking your messaging apps.",
     "finishPairing": "Link {{platform}}",

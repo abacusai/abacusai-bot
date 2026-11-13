@@ -94,7 +94,6 @@ export const PHONE_EXCLUDED_MCP_TOOLS: Readonly<Record<string, string>> = {
     "the chat's model sees a photo itself when it reads the file; a second model call only adds a way to fail",
   video_analyze:
     "the phone cannot watch videos: a video goes to paid_feature's upgrade",
-  memory: "the phone keeps its own memory tool",
   todo: "one list for every session, lost on restart: the phone's memory tracks follow-ups",
   skill_manage: "writes skill files the user never sees",
   my_activity: "a bot's own chat only",

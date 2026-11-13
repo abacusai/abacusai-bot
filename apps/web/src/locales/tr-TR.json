@@ -560,9 +560,7 @@
       "memory": {
         "empty": "Henüz hatırlanan bir şey yok",
         "forget": "Unut",
-        "notes": "Ayrıca {{count}} günlük not tutuyor",
-        "clear": "Her şeyi unut",
-        "clearConfirm": "Buradaki her şey unutulsun mu?"
+        "manage": "Ayarlar'da yönet"
       },
       "delegatesFreely": "Sormadan diğer botlara danışabilir",
       "delegatesFreelyDetail": "Yardımcı olduğunda her seferinde sana sormadan diğer botlarına soru sorar ve iş verir. Yalnızca sana yanıt verirken."
@@ -1043,7 +1041,7 @@
     "empty": "Henüz hatırlanan bir şey yok. Ajan, oturumlar arasında taşımaya değer bir şey öğrendiğinde buraya kendisi yazar: bir tercihin ya da kurulumunla ilgili bir bilgi.",
     "forget": "Bunu unut",
     "loading": "Bellek okunuyor…",
-    "readFailed": "Hatırlananlar okunamadı. Dosyalar ~/.abacusai-bot/memories klasöründe.",
+    "readFailed": "Hatırlananlar okunamadı. Dosyalar ~/.abacusai-bot/memory klasöründe.",
     "storeEmpty": "Burada henüz bir şey yok.",
     "stores": {
       "memory": {
@@ -1063,15 +1061,9 @@
     "title": "Bellek",
     "writeFailed": "Hiçbir şey silinmedi. Aynı anda bir oturum belleğe yazıyordu. Yeniden dene.",
     "instructions": {
-      "title": "Özel talimatlar",
-      "description": "Her sohbetin talimatlarının sonunda modele her zaman gönderilir. Seninle nasıl çalışılmasını istediğini yaz: ton, dil, üslup, asla yapılmaması gerekenler.",
-      "placeholder": "ör. İngiliz İngilizcesiyle yanıtla. Asla emoji kullanma. Çalıştırmadan önce komutu bana göster.",
-      "save": "Kaydet",
-      "saveFailed": "Kaydedilemedi. Ayarlar klasörünün yazılabilir olduğunu kontrol et.",
-      "unsaved": "Kaydedilmedi",
-      "applies": "Zaten açık bir sohbet dahil, bir sonraki mesajından itibaren geçerli olur."
+      "detail": "Bellek kapalıyken bile her sohbet bunlara uyar. İstediğinde ajan bir tane ekler; kendi yazdıklarını yalnızca sen değiştirirsin.",
+      "placeholder": "Talimat ekle, ör. Her zaman İngiliz İngilizcesiyle yanıt ver"
     },
-    "rememberedToast": "Yapay zekâ beynime eklendi.",
     "sections": {
       "sessions": "Oturumlar",
       "bots": "Botlar"
@@ -1079,7 +1071,59 @@
     "bots": {
       "notes": "Diskte {{count}} günlük çalışma notu var.",
       "empty": "Bu bot henüz temel bir anı kaydetmedi."
-    }
+    },
+    "edit": "Düzenle",
+    "add": "Ekle",
+    "addPlaceholder": "Hatırlanacak bir şey…",
+    "typeLabel": "Not türü",
+    "saveRefused": "Kaydedilmedi: {{reason}}",
+    "busy": "Bellek aynı anda değiştiriliyordu. Yeniden dene.",
+    "types": {
+      "profile": "Profil",
+      "rule": "Kural",
+      "preference": "Tercih",
+      "fact": "Bilgi",
+      "decision": "Karar",
+      "reference": "Kaynak",
+      "status": "Durum",
+      "card": "Proje kartı"
+    },
+    "kinds": {
+      "folder": "Klasör",
+      "bot": "Bot",
+      "routine": "Rutin",
+      "topic": "Konu"
+    },
+    "history": {
+      "title": "Geçmiş",
+      "saved": "Kaydedildi",
+      "changed": "Değiştirildi",
+      "forgot": "Unutuldu",
+      "noted": "Not alındı",
+      "undo": "Geri al",
+      "changedSince": "Bu not o zamandan beri değişti. Önce sonraki değişikliği geri al."
+    },
+    "by": {
+      "you": "Sen",
+      "chat": "Bir sohbet",
+      "routine": "Bir rutin",
+      "bot": "Bir bot",
+      "contact": "Birinin bir botla sohbeti",
+      "app": "Uygulama"
+    },
+    "you": {
+      "title": "Hakkında",
+      "detail": "Kim olduğun: adın, işin, tercihlerin. Sohbetler işe yaradığında kullanır."
+    },
+    "projects": {
+      "title": "Projeler"
+    },
+    "aboutContact": "{{name}} hakkında",
+    "clearProject": "Bu projenin notları unutulsun mu?",
+    "clearProjectDetail": "Notları silinir ve kartı boşaltılır. Her değişiklik Geçmiş'ten geri alınabilir.",
+    "clearYou": "Seninle ilgili her şey unutulsun mu?",
+    "withheld": "Bellek yeni yerine taşınırken parola veya anahtara benzedikleri için kaldırıldı: {{entries}}. Gizli bilgileri kasada sakla.",
+    "chatProject": "Proje: {{name}}. Bellek'te aç"
   },
   "messaging": {
     "advanced": "Gelişmiş ({{count}})",
@@ -3499,7 +3543,8 @@
       "askWaiting": "Yanıt bekleniyor…",
       "askSkipped": "Atlandı",
       "askBot": "{{bot}} botuna soruldu: {{what}}",
-      "giveTask": "{{bot}} botuna görev verildi: {{what}}"
+      "giveTask": "{{bot}} botuna görev verildi: {{what}}",
+      "memoryUpdated": "Bellek güncellendi: {{name}}"
     },
     "transcript": {
       "jump": "Sona git",
@@ -3843,7 +3888,6 @@
     "off": "Kapalı",
     "systemLanguage": "Sistem ({{language}})",
     "forget": "Bunu unut",
-    "memoryConflict": "Hiçbir şey silinmedi. Aynı anda bir oturum belleğe yazıyordu. Tekrar dene.",
     "clearAll": "Tümünü temizle",
     "forgetDescription": "Buradaki her şey unutulsun mu?",
     "quietUntil": "{{end}} saatine kadar sessiz",
@@ -4056,11 +4100,6 @@
       "PLAN": "Yalnızca okur ve planlar",
       "YOLO": "Hiçbir şey sormaz",
       "ACCEPTEDITS": "Düzenlemeler geçer, komutlar sorar"
-    },
-    "memoryTargets": {
-      "remember": "Her zaman hatırla",
-      "user": "Hakkında",
-      "memory": "Ajanın kendi notları"
     },
     "cues": {
       "sent": "Gönderildi",
@@ -4300,8 +4339,6 @@
       "too-long": "Bu çok uzun",
       "schedule-invalid": "Geçerli bir zamanlama seç"
     },
-    "rememberedByBots": "Botların hatırladıkları",
-    "botMemoryCount": "{{name}} · {{count}} şey",
     "showMemory": "Anıları göster",
     "pairingPending": "Mesajlaşma uygulamalarını bağlamayı tamamla.",
     "finishPairing": "{{platform}} bağla",

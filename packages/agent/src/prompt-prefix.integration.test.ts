@@ -58,7 +58,6 @@ it(
     const a = await firstSystemPrompt(
       {
         TZ: "America/New_York",
-        ABACUSAI_BOT_MEMORY_SNAPSHOT: "- Writes a gardening blog",
         ABACUSAI_BOT_LOCALE: "en-US",
       },
       { tier: "free", name: null },
@@ -67,7 +66,6 @@ it(
     const b = await firstSystemPrompt(
       {
         TZ: "Asia/Tokyo",
-        ABACUSAI_BOT_MEMORY_SNAPSHOT: "- Runs a bakery",
         ABACUSAI_BOT_LOCALE: "de-DE",
       },
       { tier: "paid", name: "Pro" },

@@ -18,6 +18,7 @@ import {
   isToolCallEventType,
 } from "@earendil-works/pi-coding-agent";
 
+import { memoryDir } from "../memory/notes.js";
 import { modelPath } from "../model-path.js";
 import { runOrigin } from "../network-wait.js";
 import { namesSecretFile } from "../secret-files.js";
@@ -70,7 +71,9 @@ const PROTECTED_PATH_PATTERN = /(^|\/)(\.git|node_modules)(\/|$)/;
  * Secret files are not here: the write tools keep a copy before replacing one.
  */
 export const isProtectedPath = (absolutePath: string): boolean =>
-  PROTECTED_PATH_PATTERN.test(absolutePath.replace(/\\/g, "/"));
+  PROTECTED_PATH_PATTERN.test(absolutePath.replace(/\\/g, "/")) ||
+  // Memory changes only through the `memory` tool, which checks each one.
+  isInsideDirectory(absolutePath, realPathOf(memoryDir()) ?? memoryDir());
 
 /** Whether a shell write lands inside .git or node_modules, judged on the real path. */
 function isHygieneWrite(write: LocalWrite, real: string): boolean {

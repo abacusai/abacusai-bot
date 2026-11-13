@@ -4,7 +4,7 @@
 {"type":"CUSTOM","name":"mcp.servers","value":{"servers":[]}}
 {"type":"RUN_STARTED","threadId":"t-1","runId":"srv-<1>","metadata":{"abacus":{"serverInitiated":true}}}
 {"type":"TEXT_MESSAGE_START","messageId":"srv-<1>:user","role":"user"}
-{"type":"TEXT_MESSAGE_CONTENT","messageId":"srv-<1>:user","delta":"hello bot"}
+{"type":"TEXT_MESSAGE_CONTENT","messageId":"srv-<1>:user","delta":"remember I take my tea black"}
 {"type":"TEXT_MESSAGE_END","messageId":"srv-<1>:user"}
 {"type":"CUSTOM","name":"agent.status","value":{"status":"submitted"}}
 {"type":"CUSTOM","name":"agent.status","value":{"status":"streaming"}}

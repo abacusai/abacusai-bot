@@ -19,7 +19,7 @@ import { resetOpenChats } from "./open-chat";
 import {
   botSessionsOf,
   useBotFiles,
-  useBotMemories,
+  useProjectNotes,
   useBotSessions,
   useCheckIn,
 } from "./queries";
@@ -261,7 +261,7 @@ describe("actions over real collections", () => {
   });
 });
 describe("R3-T6 the bot's rows, filtered in the live query", () => {
-  it("joins sessions by owner.botId and the check-in's runs, files by session, memories by bot and scope", async () => {
+  it("joins sessions by owner.botId and the check-in's runs, files by session, notes by project and scope", async () => {
     const { bot, forever, sender, run, feed, db } = await setup();
     // Oldest first: the run, then the sender chat, then the forever chat.
     feed.sessions.upsert({ ...run, createdAt: "2026-01-01T00:00:01.000Z" });
@@ -278,11 +278,17 @@ describe("R3-T6 the bot's rows, filtered in the live query", () => {
     feed.artifacts.upsert(artifact("a-old", "s-forever", 1));
     feed.artifacts.upsert(artifact("a-new", "s-run", 2));
     feed.artifacts.upsert(artifact("a-other", "s-other", 3));
-    const memory = (id: string, scope: string, botId: string | null) =>
-      ({ id, scope, botId, index: id.length, entry: id }) as never;
-    feed.memories.upsert(memory("m-bot", "bot", bot.id));
-    feed.memories.upsert(memory("m-global", "global", bot.id));
-    feed.memories.upsert(memory("m-else", "bot", "another-bot"));
+    const memory = (
+      id: string,
+      scope: string,
+      project: string | null,
+      type = "fact"
+    ) => ({ id, scope, project, type, name: id }) as never;
+    feed.memories.upsert(memory("m-bot", "project", "ada"));
+    feed.memories.upsert(memory("m-card", "project", "ada", "card"));
+    feed.memories.upsert(memory("m-contact", "contact", "ada"));
+    feed.memories.upsert(memory("m-you", "you", null));
+    feed.memories.upsert(memory("m-else", "project", "another-bot"));
     const wrapper = ({ children }: { children: ReactNode }) =>
       createElement(DbProvider, { value: db }, children);
     const { result, unmount } = renderHook(
@@ -291,7 +297,7 @@ describe("R3-T6 the bot's rows, filtered in the live query", () => {
         return {
           sessions: sessions.map((s) => s.id),
           files: useBotFiles(bot.id).map((a) => a.id),
-          memories: useBotMemories(bot.id).map((m) => m.id),
+          memories: useProjectNotes("ada").map((m) => m.id),
         };
       },
       { wrapper }

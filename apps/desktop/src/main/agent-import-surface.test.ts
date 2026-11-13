@@ -47,10 +47,10 @@ const ALLOWED = new Set([
   "@abacus-ai/agent/github-connector-token",
   // How a task one bot passed to another opens: no imports at all.
   "@abacus-ai/agent/bot-task",
-  // A bot's daily notes, which main writes: node's fs and path, the
-  // atomic-file leaf above, and two leaf modules of this package (the bot's
-  // file layout, id-number redaction) that import nothing else.
-  "@abacus-ai/agent/bot-memory",
+  // The memory folder, which the Memory page reads and writes: four chunks
+  // importing only node's fs, os, path and crypto (the store, its gate and
+  // lock, the config leaf), none of the native packages.
+  "@abacus-ai/agent/memory",
   // Media checks for the chat: no imports at all.
   "@abacus-ai/agent/send-media",
   // What a chat can do: no imports at all.

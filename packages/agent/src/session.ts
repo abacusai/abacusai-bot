@@ -113,9 +113,10 @@ import {
 import { McpToolSync } from "./mcp/tool-sync.js";
 import { buildMcpToolDefinitions } from "./mcp/tools.js";
 import {
-  memorySnapshot as readMemorySnapshot,
-  rememberSnapshot,
-} from "./memory-store.js";
+  ChatMemory,
+  MEMORY_CONTEXT_TYPE,
+  MEMORY_SAVE_CHECK_TYPE,
+} from "./memory/chat.js";
 import { refreshLiveModelIds } from "./model-catalog.js";
 import { MODEL_PATH_RESOURCES } from "./model-path.js";
 import {
@@ -312,53 +313,6 @@ export interface TurnHandle {
 
 interface PendingPermission {
   resolve: (decision: PermissionDecision) => void;
-}
-
-/**
- * What the agent already remembers, as a system-prompt block. The snapshot is
- * frozen at spawn: folding mid-session writes into the prompt would change
- * the cached prefix for every remaining turn. The tool's own response shows
- * the live state; the prompt catches up next session.
- */
-function memoryPrompt(hasMemoryTool: boolean): string | null {
-  // The desktop passes the snapshot it read at spawn; without one the agent
-  // reads the same store itself.
-  const snapshot = (
-    (process.env.ABACUSAI_BOT_MEMORY_SNAPSHOT ?? "").trim() ||
-    readMemorySnapshot() ||
-    ""
-  ).trim();
-
-  if (snapshot.length === 0) return null;
-
-  return [
-    "What you already know, carried over from earlier sessions:",
-    "",
-    snapshot,
-    "",
-    // Naming a tool that is not registered teaches failing calls.
-    hasMemoryTool
-      ? "Use the `memory` tool to add, correct, or drop any of it. Entries here were true when written: verify anything that names a file, flag, or command before relying on it."
-      : "Entries here were true when written: verify anything that names a file, flag, or command before relying on it. You cannot change them in this session.",
-  ].join("\n");
-}
-
-/**
- * What the user asked to be remembered, as a system-prompt block. Read per
- * turn, not frozen at spawn: "remember I like blue" means the very next
- * answer. Stated as standing fact, since this is what the user said rather
- * than what the agent wrote down for itself.
- */
-function rememberPrompt(): string | null {
-  const snapshot = rememberSnapshot();
-  if (snapshot == null) return null;
-
-  return [
-    "The user asked you to remember the following. Treat it as standing fact",
-    "about them and their preferences, and follow it without being reminded:",
-    "",
-    snapshot,
-  ].join("\n");
 }
 
 /**
@@ -886,6 +840,8 @@ export class AbacusBotSession {
   private languageRepairsThisTurn = 0;
   /** The user's own words over recent turns: what a reply's language is judged by. */
   private readonly userWords = new RecentOwnWords();
+  /** Built in start(); see memory/chat.ts. */
+  private memory: ChatMemory | null = null;
   /** The run a romanized candidate came from, until its check is done. */
   private languageCheckRun: {
     messages: readonly unknown[];
@@ -1004,9 +960,20 @@ export class AbacusBotSession {
     // reads could ask for it back. Its routine's own prompt still arrives.
     const unattended = this.mode === AgentMode.Unattended;
     const userProfile = unattended ? undefined : userProfilePrompt();
-    const memory = unattended
-      ? null
-      : memoryPrompt(qualifiedName(toolNames, "memory") != null);
+    // Built once: the block sits in the cached prefix (memory/core.ts).
+    this.memory = new ChatMemory(
+      this.options.cwd,
+      this.mode,
+      () => this.userWords.window,
+      () => {
+        const current = this.session?.model;
+        return current != null
+          ? `${current.provider}/${current.id}`
+          : undefined;
+      }
+    );
+    await this.memory.start();
+    const memory = this.memory.prompt();
     const settingsManager = SettingsManager.create(this.options.cwd, dir);
     // Only the gate, so `edit` is pi's built-in and batch_* are absent.
     const noExtensions = process.env.ABACUSAI_BOT_NO_EXTENSIONS === "1";
@@ -1057,7 +1024,6 @@ export class AbacusBotSession {
         // A bot's own persona, after the shared blocks so they stay a common prefix.
         const persona = personaPrompt();
         const instructions = unattended ? null : customInstructionsPrompt();
-        const remember = unattended ? null : rememberPrompt();
         // The check at agent_end catches language drift; this prevents it.
         const language = accountReplyLanguagePrompt();
         this.promptUserLanguage = language;
@@ -1074,7 +1040,6 @@ export class AbacusBotSession {
           ...(mcp == null ? [] : [mcp]),
           // After the static blocks: a plan change rebuilds only from here.
           plan,
-          ...(remember == null ? [] : [remember]),
           ...(instructions == null ? [] : [instructions]),
           // Last of all, so it outweighs a template or routine written in English.
           language,
@@ -1303,6 +1268,11 @@ export class AbacusBotSession {
         // call closed clients forever.
         mcp: () => this.mcp,
         provided: toolNames,
+        memoryTool: this.memory.tool(),
+        // The user's own chats and their routines; never someone else's chat.
+        pastChats:
+          this.memory.context.lane === "owner" ||
+          this.memory.context.lane === "routine",
         mode: () => this.mode,
         sessionId: () => this.session?.sessionId,
         emit: (event) => this.emitAgentEvent(event),
@@ -1579,10 +1549,21 @@ export class AbacusBotSession {
           turn?.settled?.();
           return;
         }
+        // Memory changed elsewhere since the last turn: one hidden line with
+        // this message, so the cached prompt stays as it is.
+        // A routine's run has no words of the user's; its prompt is what to match.
+        const news =
+          this.memory?.beginTurn(words.length > 0 ? words : text) ?? "";
+        if (news.length > 0)
+          await session.sendCustomMessage(
+            { customType: MEMORY_CONTEXT_TYPE, content: news, display: false },
+            { deliverAs: "nextTurn" }
+          );
         await session.prompt(text);
       }
       await this.settleRun();
       await this.verifyTurn(owned);
+      await this.checkMemorySave(owned, words);
       this.closeOwnedTurn(owned);
       turn?.settled?.();
     } catch (error) {
@@ -1658,6 +1639,35 @@ export class AbacusBotSession {
         return;
       }
     }
+  }
+
+  /**
+   * The user asked for something to be kept and nothing was saved: one hidden
+   * follow-up inside this turn, so the model saves it or says why not. A
+   * model that says "saved" without calling the tool is caught here.
+   */
+  private async checkMemorySave(
+    owned: OwnedTurn,
+    words: string
+  ): Promise<void> {
+    const session = this.session;
+    const prompt = this.memory?.saveCheck(words) ?? null;
+    if (
+      session == null ||
+      prompt == null ||
+      this.interrupted ||
+      owned.isClosed() ||
+      owned.failure != null ||
+      creditWallActive()
+    )
+      return;
+    await session.waitForIdle();
+    this.turnRunning = true;
+    await session.sendCustomMessage(
+      { customType: MEMORY_SAVE_CHECK_TYPE, content: prompt, display: false },
+      { triggerTurn: true }
+    );
+    await this.settleRun();
   }
 
   private appLine(kind: AppLine): void {

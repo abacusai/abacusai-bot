@@ -84,7 +84,7 @@ const session = (): AbacusBotSession =>
 
 describe("standing instructions in a real turn", () => {
   it("reaches the model, and sits last in the prompt", async () => {
-    writeCustomInstructions("Sign off every answer with SPARROW.");
+    await writeCustomInstructions("Sign off every answer with SPARROW.");
 
     const agent = session();
 
@@ -115,14 +115,14 @@ describe("standing instructions in a real turn", () => {
   it("picks up an edit on the next turn of the same conversation", async () => {
     // The requirement: not "next session". The user edits the box mid-chat and
     // the very next thing they send is answered under the new instructions.
-    writeCustomInstructions("Answer in French.");
+    await writeCustomInstructions("Answer in French.");
 
     const agent = session();
 
     await agent.start();
     await agent.send("one");
 
-    writeCustomInstructions("Answer in German.");
+    await writeCustomInstructions("Answer in German.");
     await agent.send("two");
     agent.dispose();
 

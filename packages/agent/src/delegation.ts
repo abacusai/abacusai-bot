@@ -22,6 +22,7 @@ import { subAgentBasePrompt } from "./base-prompt.js";
 import { excludedTools } from "./excluded-tools.js";
 import { createGuardrails } from "./extensions/guardrails.js";
 import { scopeGuard, taskScope } from "./extensions/scope-guard.js";
+import { subAgentMemory } from "./memory/chat.js";
 import { modelPath, MODEL_PATH_RESOURCES } from "./model-path.js";
 import { scriptRuntimesPrompt, windowsShellPrompt } from "./posix-shell.js";
 import type { AgentEvent } from "./protocol.js";
@@ -144,6 +145,7 @@ export async function runDelegatedTask(
         ].join("\n"),
         ...(shellPrompt == null ? [] : [shellPrompt]),
         ...(scriptsPrompt == null ? [] : [scriptsPrompt]),
+        ...subAgentMemory(),
       ],
       // Guardrails only: the permission gate would prompt a user who is not
       // watching, and budgets and the verify loop belong to the parent.

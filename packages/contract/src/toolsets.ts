@@ -326,8 +326,9 @@ export const TOOLSETS: Toolset[] = [
     id: "memory",
     labelKey: "memory",
     status: "ready",
-    delivery: "mcp-agent-tools",
-    tools: [tool("memory")],
+    // Registered by the agent process (packages/agent/src/memory/tool.ts).
+    delivery: "agent",
+    tools: [agentTool("memory")],
     defaultEnabled: true,
   },
   {

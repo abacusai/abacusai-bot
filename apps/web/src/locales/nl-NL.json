@@ -560,9 +560,7 @@
       "memory": {
         "empty": "Nog niets onthouden",
         "forget": "Vergeten",
-        "notes": "Bewaart ook {{count}} dagen aan notities",
-        "clear": "Alles vergeten",
-        "clearConfirm": "Alles hier vergeten?"
+        "manage": "Beheren in Instellingen"
       },
       "delegatesFreely": "Mag andere bots vragen zonder te overleggen",
       "delegatesFreelyDetail": "Vraagt je andere bots om hulp en geeft ze werk door als dat helpt, zonder het je elke keer te vragen. Alleen tijdens het beantwoorden van jou."
@@ -1043,7 +1041,7 @@
     "empty": "Nog niets onthouden. De agent schrijft hier zelf iets neer als hij iets leert dat het waard is om tussen sessies te bewaren: een voorkeur van je, een feit over je setup.",
     "forget": "Dit vergeten",
     "loading": "Geheugen lezen…",
-    "readFailed": "Kon niet lezen wat er onthouden is. De bestanden staan in ~/.abacusai-bot/memories.",
+    "readFailed": "Kon niet lezen wat er onthouden is. De bestanden staan in ~/.abacusai-bot/memory.",
     "storeEmpty": "Hier staat nog niets.",
     "stores": {
       "memory": {
@@ -1063,15 +1061,9 @@
     "title": "Geheugen",
     "writeFailed": "Er is niets verwijderd. Een sessie schreef op hetzelfde moment naar het geheugen. Probeer het opnieuw.",
     "instructions": {
-      "title": "Aangepaste instructies",
-      "description": "Wordt altijd naar het model gestuurd, aan het einde van de instructies van elk gesprek. Gebruik het voor hoe je wilt dat er met je wordt gewerkt: toon, taal, huisstijl, dingen die nooit mogen.",
-      "placeholder": "bijv. Antwoord in Brits Engels. Gebruik nooit emoji. Laat me de opdracht zien voordat je hem uitvoert.",
-      "save": "Opslaan",
-      "saveFailed": "Opslaan mislukt. Controleer of de instellingenmap beschrijfbaar is.",
-      "unsaved": "Niet opgeslagen",
-      "applies": "Geldt vanaf je volgende bericht, ook in een chat die al open is."
+      "detail": "Elke chat volgt deze, ook als Geheugen uit staat. De agent voegt er een toe als je dat vraagt; alleen jij wijzigt de instructies die je zelf hebt geschreven.",
+      "placeholder": "Voeg een instructie toe, bijv. Antwoord altijd in Brits Engels"
     },
-    "rememberedToast": "Toegevoegd aan mijn AI-brein.",
     "sections": {
       "sessions": "Sessies",
       "bots": "Bots"
@@ -1079,7 +1071,59 @@
     "bots": {
       "notes": "{{count}} dag(en) aan werknotities op schijf.",
       "empty": "Deze bot heeft nog geen kernherinneringen opgeslagen."
-    }
+    },
+    "edit": "Bewerken",
+    "add": "Toevoegen",
+    "addPlaceholder": "Iets om te onthouden…",
+    "typeLabel": "Soort notitie",
+    "saveRefused": "Niet opgeslagen: {{reason}}",
+    "busy": "Het geheugen werd op hetzelfde moment gewijzigd. Probeer het opnieuw.",
+    "types": {
+      "profile": "Profiel",
+      "rule": "Regel",
+      "preference": "Voorkeur",
+      "fact": "Feit",
+      "decision": "Besluit",
+      "reference": "Verwijzing",
+      "status": "Status",
+      "card": "Projectkaart"
+    },
+    "kinds": {
+      "folder": "Map",
+      "bot": "Bot",
+      "routine": "Routine",
+      "topic": "Onderwerp"
+    },
+    "history": {
+      "title": "Geschiedenis",
+      "saved": "Opgeslagen",
+      "changed": "Gewijzigd",
+      "forgot": "Vergeten",
+      "noted": "Genoteerd",
+      "undo": "Ongedaan maken",
+      "changedSince": "Die notitie is sindsdien gewijzigd. Maak eerst de latere wijziging ongedaan."
+    },
+    "by": {
+      "you": "Jij",
+      "chat": "Een chat",
+      "routine": "Een routine",
+      "bot": "Een bot",
+      "contact": "Iemands chat met een bot",
+      "app": "De app"
+    },
+    "you": {
+      "title": "Over jou",
+      "detail": "Wie je bent: je naam, je werk, wat je voorkeur heeft. Chats gebruiken het als het helpt."
+    },
+    "projects": {
+      "title": "Projecten"
+    },
+    "aboutContact": "Over {{name}}",
+    "clearProject": "De notities van dit project vergeten?",
+    "clearProjectDetail": "De notities verdwijnen en de kaart wordt weer leeg. Elke wijziging kan ongedaan worden gemaakt via Geschiedenis.",
+    "clearYou": "Alles over jou vergeten?",
+    "withheld": "Verwijderd toen het geheugen naar zijn nieuwe plek ging, omdat ze op wachtwoorden of sleutels leken: {{entries}}. Bewaar geheimen in de kluis.",
+    "chatProject": "Project: {{name}}. Open het in Geheugen"
   },
   "messaging": {
     "advanced": "Geavanceerd ({{count}})",
@@ -3499,7 +3543,8 @@
       "askWaiting": "Wachten op antwoord…",
       "askSkipped": "Overgeslagen",
       "askBot": "{{bot}} gevraagd: {{what}}",
-      "giveTask": "Taak doorgegeven aan {{bot}}: {{what}}"
+      "giveTask": "Taak doorgegeven aan {{bot}}: {{what}}",
+      "memoryUpdated": "Geheugen bijgewerkt: {{name}}"
     },
     "transcript": {
       "jump": "Naar het einde",
@@ -3843,7 +3888,6 @@
     "off": "Uit",
     "systemLanguage": "Systeem ({{language}})",
     "forget": "Vergeet dit",
-    "memoryConflict": "Er is niets verwijderd. Op hetzelfde moment schreef een sessie naar het geheugen. Probeer het opnieuw.",
     "clearAll": "Alles wissen",
     "forgetDescription": "Alles hier vergeten?",
     "quietUntil": "Nu stil tot {{end}}",
@@ -4056,11 +4100,6 @@
       "PLAN": "Alleen lezen en plannen",
       "YOLO": "Vraagt nooit iets",
       "ACCEPTEDITS": "Bewerkingen gaan door, opdrachten vragen"
-    },
-    "memoryTargets": {
-      "remember": "Altijd onthouden",
-      "user": "Over jou",
-      "memory": "Eigen notities van de agent"
     },
     "cues": {
       "sent": "Verzonden",
@@ -4300,8 +4339,6 @@
       "too-long": "Dit is te lang",
       "schedule-invalid": "Kies een geldig schema"
     },
-    "rememberedByBots": "Onthouden door bots",
-    "botMemoryCount": "{{name}} · {{count}} dingen",
     "showMemory": "Herinneringen tonen",
     "pairingPending": "Rond het koppelen van je berichtenapps af.",
     "finishPairing": "{{platform}} koppelen",

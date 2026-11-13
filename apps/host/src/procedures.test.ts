@@ -254,7 +254,11 @@ const expectedFailures: Record<string, { code: string; message: string }> = {
   },
   "db.memories.delete": {
     code: "BAD_REQUEST",
-    message: "A global memory names its target",
+    message: "That is not a note.",
+  },
+  "memory.undo": {
+    code: "CONFLICT",
+    message: "That change is no longer in the history.",
   },
   "db.workspaces.update": {
     code: "NOT_FOUND",
@@ -306,6 +310,12 @@ it("calls every retained procedure under the shim through a memory transport", a
       const schema = procedure["~orpc"].inputSchema;
       let input = procedureInput(schema, fixture.home);
       if (name === "auth.web.complete") input = { code: "fixture" };
+      if (name === "memory.save")
+        input = {
+          scope: "you",
+          type: "fact",
+          text: "Takes tea without sugar.",
+        };
       const parsed =
         schema?.kind === "schema"
           ? v.safeParse(schema, input)

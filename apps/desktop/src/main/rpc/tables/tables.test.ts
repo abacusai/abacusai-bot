@@ -33,15 +33,6 @@ import {
   recordRun,
 } from "../../services/agent-tools/cron-store";
 import {
-  forgetEntryAt,
-  listMemories,
-} from "../../services/agent-tools/memory-store";
-import {
-  forgetBotMemoryEntry,
-  listBotMemories,
-} from "../../services/bots/bot-memory-store";
-import {
-  botDir,
   createBot,
   listBots,
   onBotStoreWrite,
@@ -49,6 +40,7 @@ import {
   updateBot,
 } from "../../services/bots/bot-store";
 import { PrefsStore } from "../../services/config/prefs-store";
+import { memoryRows, saveNote } from "../../services/memory/memory-service";
 import { AgentSessionManagerService } from "../../services/session/agent-session-manager-service";
 import { SessionArtifactsService } from "../../services/session/session-artifacts-service";
 import { WorkspaceRuntimeService } from "../../services/workspace/workspace-runtime-service";
@@ -56,7 +48,7 @@ import { WorkspaceService } from "../../services/workspace/workspace-service";
 import { followPrefsTheme } from "../../startup-theme";
 import { MainEventBus } from "../event-bus";
 import { connectInProcess, fakeDeps } from "../testing";
-import { MemoryWatchers, type WatchFactory } from "./memories";
+import { MemoryWatcher, type WatchFactory } from "./memories";
 import type { TableSources } from "./sources";
 import type { TableFeed } from "./table-feed";
 
@@ -131,8 +123,7 @@ const sourcesFor = (
   listRoutines: () => routines,
   onRoutinesWritten: noHook,
   listSessionArtifacts: () => [],
-  listMemories,
-  listBotMemories,
+  listMemoryRows: memoryRows,
   getMetadata: () => ({
     workspaces: [],
     activeWorkspaceId: null,
@@ -393,7 +384,7 @@ describe("DB table wiring (B-T3)", { timeout: 20_000 }, () => {
     await feed.close();
   });
 
-  it("memories: an external write to memories/ arrives promptly", async () => {
+  it("memories: a note saved in the memory folder arrives promptly", async () => {
     const watch = fakeWatch();
     const { tables, bus } = setup({
       watchMemories: true,
@@ -404,21 +395,12 @@ describe("DB table wiring (B-T3)", { timeout: 20_000 }, () => {
     bus.listenChannel("memory", () => {
       notices += 1;
     });
+    // Nothing exists yet: the watcher waits on the home for `memory`.
+    expect(watch.live(home)).toBe(1);
 
-    const memories = path.join(home, "memories");
-    fs.mkdirSync(memories);
-    watch.emit(home, "rename", "memories");
-    // The watchers re-arm on the new directory.
-    await vi.waitFor(() => expect(watch.live(memories)).toBe(1));
-    await vi.waitFor(() => expect(notices).toBeGreaterThan(0));
     const started = Date.now();
-    fs.writeFileSync(
-      path.join(memories, "MEMORY.md"),
-      "likes tea\n§\nlives in Oslo"
-    );
-    watch.emit(memories, "change", "MEMORY.md");
-    // The watcher coalesces for 100 ms; the rest is file I/O, which the
-    // Windows runners have taken close to a second for.
+    await saveNote({ scope: "you", type: "fact", text: "Lives in Oslo." });
+    watch.emit(home, "rename", "memory");
     const batch = await feed.next(2000);
     expect(Date.now() - started).toBeLessThan(2000);
     expect(batch).toMatchObject({
@@ -426,95 +408,65 @@ describe("DB table wiring (B-T3)", { timeout: 20_000 }, () => {
         {
           type: "insert",
           value: {
-            scope: "global",
-            target: "memory",
-            entry: "likes tea",
-            index: 0,
+            id: "you/lives-in-oslo.md",
+            scope: "you",
+            body: "Lives in Oslo.",
+            by: "you",
           },
         },
-        { type: "insert", value: { entry: "lives in Oslo", index: 1 } },
       ],
     });
+    expect(notices).toBeGreaterThan(0);
+    // Now on the history itself, where every later change is appended.
+    expect(watch.live(path.join(home, "memory", ".history"))).toBe(1);
+    expect(watch.live(home)).toBe(0);
     await feed.close();
   });
 
-  it("memories: a bot's memory directory and daily notes fire memory.events", async () => {
-    const watch = fakeWatch();
-    const { tables, bus } = setup({
-      watchMemories: true,
-      watch: watch.factory,
-    });
-    tables.memories.snapshot();
-    const bot = createBot({ name: "Ada", description: "Counts" }, "bot-ada");
-    let notices = 0;
-    bus.listenChannel("memory", () => {
-      notices += 1;
-    });
-
-    fs.mkdirSync(botDir(bot.id), { recursive: true });
-    watch.emit(home, "rename", "bots");
-    await vi.waitFor(() => expect(notices).toBeGreaterThan(0));
-    await vi.waitFor(() => expect(watch.live(botDir(bot.id))).toBe(1));
-    const before = notices;
-    fs.mkdirSync(path.join(botDir(bot.id), "memory"));
-    watch.emit(botDir(bot.id), "rename", "memory");
-    await vi.waitFor(() => expect(notices).toBeGreaterThan(before));
-    const afterDir = notices;
-    fs.writeFileSync(
-      path.join(botDir(bot.id), "memory", "2026-09-30.md"),
-      "notes"
-    );
-    watch.emit(path.join(botDir(bot.id), "memory"), "rename", "2026-09-30.md");
-    await vi.waitFor(() => expect(notices).toBeGreaterThan(afterDir));
-    expect(listBotMemories()).toMatchObject([{ botId: bot.id, noteDays: 1 }]);
-  });
-
-  it("memory watchers follow bot directories in and out", async () => {
+  it("memory watcher moves down to the history as it appears", async () => {
     const watch = fakeWatch();
     const changes = vi.fn();
-    const watchers = new MemoryWatchers({
+    const watcher = new MemoryWatcher({
       home,
       onChange: changes,
       debounceMs: 1,
       watch: watch.factory,
     });
+    const memory = path.join(home, "memory");
+    const history = path.join(memory, ".history");
     try {
-      const bots = path.join(home, "bots");
-      const dir = path.join(bots, "bot-x");
-      fs.mkdirSync(path.join(dir, "memory"), { recursive: true });
+      expect(watcher.watchedPath()).toBe(home);
+      // Another store appearing in the home is not memory.
       watch.emit(home, "rename", "bots");
-      await vi.waitFor(() =>
-        expect(watchers.watchedPaths()).toEqual(
-          [home, bots, dir, path.join(dir, "memory")].sort()
-        )
-      );
-      fs.rmSync(dir, { recursive: true, force: true });
-      watch.emit(bots, "rename", "bot-x");
-      await vi.waitFor(() =>
-        expect(watchers.watchedPaths()).toEqual([home, bots].sort())
-      );
-      expect(watch.live(dir)).toBe(0);
+      fs.mkdirSync(memory);
+      watch.emit(home, "rename", "memory");
+      await vi.waitFor(() => expect(watcher.watchedPath()).toBe(memory));
+      fs.mkdirSync(history);
+      watch.emit(memory, "rename", ".history");
+      await vi.waitFor(() => expect(watcher.watchedPath()).toBe(history));
+      expect(watch.live(home)).toBe(0);
+      expect(watch.live(memory)).toBe(0);
       expect(changes).toHaveBeenCalled();
     } finally {
-      watchers.close();
+      watcher.close();
     }
-    expect(watchers.watchedPaths()).toEqual([]);
-    expect(watch.live(home)).toBe(0);
+    expect(watcher.watchedPath()).toBeNull();
+    expect(watch.live(history)).toBe(0);
   });
 
-  it("memory watchers reconcile a directory created while the initial watcher starts", async () => {
+  it("memory watcher reconciles a history created while the initial watcher starts", async () => {
     vi.useFakeTimers();
     const watch = fakeWatch();
     const changes = vi.fn();
-    const memories = path.join(home, "memories");
-    const watchers = new MemoryWatchers({
+    const history = path.join(home, "memory", ".history");
+    const watcher = new MemoryWatcher({
       home,
       onChange: changes,
       debounceMs: 1,
       watch: (dir, listener, onError) => {
         if (dir === home) {
-          fs.mkdirSync(memories);
-          fs.writeFileSync(path.join(memories, "MEMORY.md"), "early");
+          fs.mkdirSync(history, { recursive: true });
+          fs.writeFileSync(path.join(history, "2026-11.jsonl"), "{}\n");
         }
         return watch.factory(dir, listener, onError);
       },
@@ -522,135 +474,92 @@ describe("DB table wiring (B-T3)", { timeout: 20_000 }, () => {
     try {
       // No event arrives for the write made before the watcher was ready.
       await vi.advanceTimersByTimeAsync(10);
-      expect(watchers.watchedPaths()).toEqual([home, memories].sort());
+      expect(watcher.watchedPath()).toBe(history);
       expect(changes).toHaveBeenCalledTimes(2);
     } finally {
-      watchers.close();
+      watcher.close();
     }
   });
 
-  it("memory watchers notify after arming, for writes that beat the watcher", async () => {
+  it("memory watcher notifies after arming, for writes that beat it", async () => {
     const watch = fakeWatch();
     const changes = vi.fn();
-    const watchers = new MemoryWatchers({
+    const watcher = new MemoryWatcher({
       home,
       onChange: changes,
       debounceMs: 1,
       watch: watch.factory,
     });
+    const history = path.join(home, "memory", ".history");
     try {
       // Created and written before its watcher exists: no event will come.
-      fs.mkdirSync(path.join(home, "memories"));
-      fs.writeFileSync(path.join(home, "memories", "MEMORY.md"), "early");
-      watch.emit(home, "rename", "memories");
-      await vi.waitFor(() =>
-        expect(watchers.watchedPaths()).toContain(path.join(home, "memories"))
-      );
+      fs.mkdirSync(history, { recursive: true });
+      fs.writeFileSync(path.join(history, "2026-11.jsonl"), "{}\n");
+      watch.emit(home, "rename", "memory");
+      await vi.waitFor(() => expect(watcher.watchedPath()).toBe(history));
       // The arming pass and its settle pass both notify.
       await vi.waitFor(() => expect(changes).toHaveBeenCalledTimes(2));
       await new Promise((resolve) => setTimeout(resolve, 20));
       expect(changes).toHaveBeenCalledTimes(2);
     } finally {
-      watchers.close();
+      watcher.close();
     }
   });
 
-  it("memory watchers retry a directory that cannot be watched yet", async () => {
+  it("memory watcher retries a history that cannot be watched yet", async () => {
     vi.useFakeTimers();
     const watch = fakeWatch();
-    const memories = path.join(home, "memories");
-    fs.mkdirSync(memories);
-    watch.failing.set(memories, "EPERM");
+    const history = path.join(home, "memory", ".history");
+    fs.mkdirSync(history, { recursive: true });
+    watch.failing.set(history, "EPERM");
     const changes = vi.fn();
-    const watchers = new MemoryWatchers({
+    const watcher = new MemoryWatcher({
       home,
       onChange: changes,
       debounceMs: 10,
       watch: watch.factory,
     });
     try {
-      expect(watchers.watchedPaths()).toEqual([home]);
+      expect(watcher.watchedPath()).toBeNull();
       await vi.advanceTimersByTimeAsync(300);
-      expect(watchers.watchedPaths()).toEqual([home]);
-      watch.failing.delete(memories);
+      expect(watcher.watchedPath()).toBeNull();
+      watch.failing.delete(history);
       await vi.advanceTimersByTimeAsync(1_000);
-      expect(watchers.watchedPaths()).toEqual([home, memories].sort());
+      expect(watcher.watchedPath()).toBe(history);
       expect(changes).toHaveBeenCalled();
     } finally {
-      watchers.close();
+      watcher.close();
     }
   });
 
-  it("memories: a duplicate-entry delete race gives the second click CONFLICT", async () => {
+  it("memories: delete by id forgets the note; a card or a path outside memory is refused", async () => {
     const { tables, sources } = setup();
-    fs.mkdirSync(path.join(home, "memories"));
-    fs.writeFileSync(path.join(home, "memories", "REMEMBER.md"), "a\n§\na");
-    const deps = fakeDeps({
-      tables,
-      serviceHost: {
-        ...sources,
-        forgetMemory: async (
-          request: { target: "remember"; index: number; entry: string },
-          occurrences?: number
-        ) => {
-          const result = await forgetEntryAt(
-            request.target,
-            request.index,
-            request.entry,
-            occurrences
-          );
-          if (!result.ok) throw new ConflictError(result.message);
-          return listMemories();
-        },
-      },
-    });
+    await saveNote({ scope: "you", type: "fact", text: "Lives in Oslo." });
+    const deps = fakeDeps({ tables, serviceHost: sources });
     const { client } = connectInProcess(deps);
     const { rows } = await client.db.memories.snapshot();
-    expect(rows).toHaveLength(2);
-    expect(rows[0]).toMatchObject({ index: 0, entry: "a", occurrences: 2 });
-    expect(rows[0]!.id.endsWith(":0")).toBe(true);
-    expect(rows[1]!.id.endsWith(":1")).toBe(true);
+    expect(rows.map((row) => row.id)).toEqual(["you/lives-in-oslo.md"]);
 
-    // Two tabs click the same row.
-    const clicked = rows[0]!;
-    const input = {
-      id: clicked.id,
-      scope: clicked.scope,
-      target: clicked.target,
-      botId: clicked.botId,
-      index: clicked.index,
-      entry: clicked.entry,
-      occurrences: clicked.occurrences,
-    };
-    const results = await Promise.allSettled([
-      client.db.memories.delete(input),
-      client.db.memories.delete(input),
+    // Two tabs click the same row: both succeed, one note is gone.
+    await Promise.all([
+      client.db.memories.delete({ id: rows[0]!.id }),
+      client.db.memories.delete({ id: rows[0]!.id }),
     ]);
-    expect(results.map((r) => r.status).sort()).toEqual([
-      "fulfilled",
-      "rejected",
-    ]);
-    const rejected = results.find((r) => r.status === "rejected");
-    expect((rejected as PromiseRejectedResult).reason).toMatchObject({
-      code: "CONFLICT",
-      defined: true,
-    });
-    expect(listMemories().remember).toEqual(["a"]);
-    // The survivor is now the only copy.
-    expect((await client.db.memories.snapshot()).rows).toMatchObject([
-      { entry: "a", occurrences: 1 },
-    ]);
-  });
+    expect((await client.db.memories.snapshot()).rows).toEqual([]);
 
-  it("bot memories: the same stale-click guard", () => {
-    createBot({ name: "Ada", description: "Counts" }, "bot-ada");
-    fs.mkdirSync(botDir("bot-ada"), { recursive: true });
-    fs.writeFileSync(path.join(botDir("bot-ada"), "MEMORY.md"), "- a\n- a\n");
-    forgetBotMemoryEntry("bot-ada", 0, "a", 2);
-    expect(() => forgetBotMemoryEntry("bot-ada", 0, "a", 2)).toThrow(
-      ConflictError
+    const project = path.join(home, "memory", "projects", "shop");
+    fs.mkdirSync(project, { recursive: true });
+    fs.writeFileSync(
+      path.join(project, "PROJECT.md"),
+      "---\nname: project\ndescription: d\ntype: card\nupdated: 2026-11-09\nby: app\nproject: Shop\nkind: folder\nkey: /shop\n---\n\nWhat: Shop\n"
     );
-    expect(listBotMemories()[0]!.entries).toEqual(["a"]);
+    await expect(
+      client.db.memories.delete({ id: "projects/shop/PROJECT.md" })
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(
+      client.db.memories.delete({ id: "you/../../prefs.json" })
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(fs.existsSync(path.join(project, "PROJECT.md"))).toBe(true);
   });
 
   it("bots-updated with no row change still publishes previews-changed", async () => {
@@ -852,62 +761,59 @@ describe("DB table wiring (impl review r1)", { timeout: 20_000 }, () => {
     await feed.close();
   });
 
-  it("memory watchers re-arm a directory replaced within one debounce", async () => {
+  it("memory watcher re-arms a history replaced within one debounce", async () => {
     const watch = fakeWatch();
-    const memories = path.join(home, "memories");
-    fs.mkdirSync(memories);
+    const history = path.join(home, "memory", ".history");
+    fs.mkdirSync(history, { recursive: true });
     const changes = vi.fn();
-    const watchers = new MemoryWatchers({
+    const watcher = new MemoryWatcher({
       home,
       onChange: changes,
       debounceMs: 1,
       watch: watch.factory,
     });
     try {
-      expect(watchers.watchedPaths()).toContain(memories);
-      expect(watch.armedCount(memories)).toBe(1);
-      // Removed and recreated faster than the debounce; the parent reports
-      // the rename even when the inode is reused.
-      fs.rmSync(memories, { recursive: true });
-      fs.mkdirSync(memories);
-      watch.emit(home, "rename", "memories");
-      await vi.waitFor(() => expect(watch.armedCount(memories)).toBe(2));
-      expect(watch.live(memories)).toBe(1);
+      expect(watcher.watchedPath()).toBe(history);
+      expect(watch.armedCount(history)).toBe(1);
+      // Removed and recreated faster than the debounce; the directory reports
+      // its own removal even when the inode is reused.
+      fs.rmSync(history, { recursive: true });
+      fs.mkdirSync(history);
+      watch.emit(history, "rename", ".history");
+      await vi.waitFor(() => expect(watch.armedCount(history)).toBe(2));
+      expect(watch.live(history)).toBe(1);
       await vi.waitFor(() => expect(changes).toHaveBeenCalled());
       changes.mockClear();
-      fs.writeFileSync(path.join(memories, "MEMORY.md"), "a later write");
-      watch.emit(memories, "change", "MEMORY.md");
+      fs.writeFileSync(path.join(history, "2026-11.jsonl"), "{}\n");
+      watch.emit(history, "change", "2026-11.jsonl");
       await vi.waitFor(() => expect(changes).toHaveBeenCalled());
     } finally {
-      watchers.close();
+      watcher.close();
     }
   });
 
-  it("memory watchers wait for a home that does not exist yet", async () => {
+  it("memory watcher waits for a home that does not exist yet", async () => {
     const watch = fakeWatch();
     const later = path.join(home, "profile");
     const changes = vi.fn();
-    const watchers = new MemoryWatchers({
+    const watcher = new MemoryWatcher({
       home: later,
       onChange: changes,
       debounceMs: 1,
       watch: watch.factory,
     });
+    const history = path.join(later, "memory", ".history");
     try {
-      expect(watchers.watchedPaths()).toEqual([home]);
-      fs.mkdirSync(path.join(later, "memories"), { recursive: true });
+      expect(watcher.watchedPath()).toBe(home);
+      fs.mkdirSync(history, { recursive: true });
       watch.emit(home, "rename", "profile");
-      await vi.waitFor(() =>
-        expect(watchers.watchedPaths()).toEqual(
-          [later, path.join(later, "memories")].sort()
-        )
-      );
+      await vi.waitFor(() => expect(watcher.watchedPath()).toBe(history));
       changes.mockClear();
-      fs.writeFileSync(path.join(later, "memories", "MEMORY.md"), "tea");
-      watch.emit(path.join(later, "memories"), "change", "MEMORY.md");
+      fs.writeFileSync(path.join(history, "2026-11.jsonl"), "{}\n");
+      watch.emit(history, "change", "2026-11.jsonl");
       await vi.waitFor(() => expect(changes).toHaveBeenCalled());
     } finally {
-      watchers.close();
+      watcher.close();
     }
   });
 
@@ -951,28 +857,11 @@ describe("DB table wiring (impl review r1)", { timeout: 20_000 }, () => {
     await feed.close();
   });
 
-  it("memory.events: a bot rename invalidates memory.bots without a memory-file write", async () => {
-    const { bus } = setup();
-    const bot = createBot({ name: "Ada", description: "Counts" }, "bot-ada");
-    let notices = 0;
-    const off = bus.listenChannel("memory", () => {
-      notices += 1;
-    });
-    updateBot(bot.id, { name: "Ada Lovelace" });
-    expect(notices).toBe(1);
-    // A write that leaves the view alone does not.
-    updateBot(bot.id, { description: "Counts more" });
-    expect(notices).toBe(1);
-    createBot({ name: "Bea", description: "Reads" }, "bot-bea");
-    expect(notices).toBe(2);
-    off();
-  });
-
   it("bots-updated (a transcript save) re-diffs only bots", async () => {
     const listRoutines = vi.fn(() => routines);
-    const listMemoriesSpy = vi.fn(listMemories);
+    const listMemoriesSpy = vi.fn(memoryRows);
     const { tables, bus } = setup({
-      sources: { listRoutines, listMemories: listMemoriesSpy },
+      sources: { listRoutines, listMemoryRows: listMemoriesSpy },
     });
     const routineFeed = await reader(tables.routines);
     const memoryFeed = await reader(tables.memories);
@@ -983,12 +872,12 @@ describe("DB table wiring (impl review r1)", { timeout: 20_000 }, () => {
     await settle();
     expect(listRoutines).not.toHaveBeenCalled();
     expect(listMemoriesSpy).not.toHaveBeenCalled();
-    // A bots.json write still reaches both (they show bot names).
+    // A bots.json write reaches routines (they show bot names), not memory.
     createBot({ name: "Ada", description: "Counts" }, "bot-ada");
     await settle();
     await settle();
     expect(listRoutines).toHaveBeenCalled();
-    expect(listMemoriesSpy).toHaveBeenCalled();
+    expect(listMemoriesSpy).not.toHaveBeenCalled();
     await routineFeed.close();
     await memoryFeed.close();
   });

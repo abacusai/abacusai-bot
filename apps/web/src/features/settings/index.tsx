@@ -61,8 +61,8 @@ export const SettingsSidebar = () => {
   const memories = useLiveQuery(c.memories).data ?? [];
   const { transport } = useAppContext();
   const system = useSystem();
-  const notes = useQuery({
-    ...transport.orpc.memory.bots.queryOptions({ input: {} }),
+  const projects = useQuery({
+    ...transport.orpc.memory.projects.queryOptions({ input: {} }),
     enabled: !!q.trim(),
   });
   const usage = useQuery({
@@ -74,32 +74,25 @@ export const SettingsSidebar = () => {
     ? []
     : [
         ...index.settingsIndexFor(IS_ELECTRON, uiPlatform(system.platform)),
-        ...bots.flatMap((bot) => [
-          {
-            id: `sounds-bot-${bot.id}`,
-            page: "notifications" as const,
-            labelKey: "",
-            label: `${bot.name} · ${t("phase5.settings.perBot")}`,
-          },
-          ...(memories.some((row) => row.botId === bot.id) ||
-          notes.data?.some((item) => item.botId === bot.id && item.noteDays > 0)
-            ? [
-                {
-                  id: `memory-bot-${bot.id}`,
-                  page: "memory" as const,
-                  labelKey: "",
-                  label: `${bot.name} · ${t("phase5.rememberedByBots")}`,
-                },
-              ]
-            : []),
-        ]),
+        ...bots.map((bot) => ({
+          id: `sounds-bot-${bot.id}`,
+          page: "notifications" as const,
+          labelKey: "",
+          label: `${bot.name} · ${t("phase5.settings.perBot")}`,
+        })),
+        ...(projects.data ?? []).map((project) => ({
+          id: `memory-project-${project.slug}`,
+          page: "memory" as const,
+          labelKey: "",
+          label: `${project.name} · ${t("settings.pages.memory")}`,
+        })),
         ...memories
-          .filter((row) => row.scope === "global")
+          .filter((row) => row.type !== "card")
           .map((row) => ({
             id: `memory-${row.id}`,
             page: "memory" as const,
             labelKey: "",
-            label: row.entry,
+            label: row.body.split("\n")[0] ?? row.name,
           })),
         ...(usage.data?.models ?? []).map((model) => ({
           id: `usage-${model.id}`,

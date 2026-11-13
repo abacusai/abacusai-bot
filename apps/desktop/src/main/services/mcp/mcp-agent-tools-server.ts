@@ -3,7 +3,7 @@ import path from "path";
 import { pathToFileURL } from "url";
 
 /**
- * The agent-tools MCP server: skills, task planning, memory, the web, and
+ * The agent-tools MCP server: skills, task planning, the web, and
  * more. One server rather than one per toolset, since all are small and
  * in-process; each toolset toggles on its own, so `tools/list` filters by the
  * enabled set and a disabled toolset's tools are never advertised.
@@ -117,12 +117,6 @@ import {
   pollVideo,
   submitVideo,
 } from "../agent-tools/media-generation";
-import {
-  applyMemoryAction,
-  readEntries,
-  type MemoryAction,
-  type MemoryTarget,
-} from "../agent-tools/memory-store";
 import { analyze } from "../agent-tools/model-analysis";
 import { reprintPdf } from "../agent-tools/pdf-agent";
 import { agentRunWarning } from "../agent-tools/routine-guards";
@@ -1131,36 +1125,6 @@ export class McpAgentToolsServer extends McpHttpServer {
 
     return result.ok
       ? this.ok(`${result.message}\n\n${renderTodos(result.items)}`)
-      : this.err(result.message);
-  }
-
-  // ── Memory ───────────────────────────────────────────────────────────────
-
-  async memory(args: Record<string, unknown>): Promise<ToolResult> {
-    const target = String(args.target ?? "") as MemoryTarget;
-    const action = String(args.action ?? "") as MemoryAction;
-
-    if (target !== "memory" && target !== "user")
-      return this.err('target must be "memory" or "user".');
-    if (action !== "add" && action !== "replace" && action !== "remove") {
-      return this.err('action must be "add", "replace", or "remove".');
-    }
-
-    const result = await applyMemoryAction(target, action, {
-      ...(typeof args.content === "string" ? { content: args.content } : {}),
-      ...(typeof args.match === "string" ? { match: args.match } : {}),
-    });
-
-    const entries = result.entries ?? readEntries(target);
-    const rendered =
-      entries.length > 0
-        ? entries.map((entry) => `- ${entry}`).join("\n")
-        : "(empty)";
-
-    return result.ok
-      ? this.ok(
-          `${result.message}\n\n${target === "user" ? "USER PROFILE" : "MEMORY"} now:\n${rendered}`
-        )
       : this.err(result.message);
   }
 

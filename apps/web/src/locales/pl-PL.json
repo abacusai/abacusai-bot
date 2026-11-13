@@ -570,9 +570,7 @@
       "memory": {
         "empty": "Na razie nic nie zapamiętano",
         "forget": "Zapomnij",
-        "notes": "Przechowuje też notatki z ostatnich dni (liczba dni: {{count}})",
-        "clear": "Zapomnij wszystko",
-        "clearConfirm": "Zapomnieć wszystko, co tu jest?"
+        "manage": "Zarządzaj w Ustawieniach"
       },
       "delegatesFreely": "Może pytać inne boty bez pytania ciebie",
       "delegatesFreelyDetail": "Pyta twoje inne boty i przekazuje im zadania, gdy to pomaga – bez pytania cię za każdym razem. Tylko podczas odpowiadania tobie."
@@ -1057,7 +1055,7 @@
     "empty": "Nic jeszcze nie zostało zapamiętane. Agent zapisuje tu informacje sam, gdy dowie się czegoś, co warto przenieść między sesjami: Twoich preferencji czy faktów o Twojej konfiguracji.",
     "forget": "Zapomnij to",
     "loading": "Wczytuję pamięć…",
-    "readFailed": "Nie udało się odczytać zapamiętanych informacji. Pliki znajdują się w ~/.abacusai-bot/memories.",
+    "readFailed": "Nie udało się odczytać zapamiętanych informacji. Pliki znajdują się w ~/.abacusai-bot/memory.",
     "storeEmpty": "Na razie nic tu nie ma.",
     "stores": {
       "memory": {
@@ -1077,15 +1075,9 @@
     "title": "Pamięć",
     "writeFailed": "Nic nie zostało usunięte. W tym samym momencie jakaś sesja zapisywała do pamięci. Spróbuj ponownie.",
     "instructions": {
-      "title": "Własne instrukcje",
-      "description": "Zawsze wysyłane do modelu na końcu instrukcji każdej rozmowy. Opisz, jak chcesz współpracować: ton, język, styl, rzeczy, których nigdy nie robić.",
-      "placeholder": "np. Odpowiadaj po brytyjsku. Nigdy nie używaj emoji. Pokaż mi polecenie, zanim je uruchomisz.",
-      "save": "Zapisz",
-      "saveFailed": "Nie udało się zapisać. Sprawdź, czy folder ustawień ma uprawnienia do zapisu.",
-      "unsaved": "Niezapisane",
-      "applies": "Obowiązuje od Twojej następnej wiadomości, także w już otwartym czacie."
+      "detail": "Każdy czat się do nich stosuje, nawet gdy Pamięć jest wyłączona. Agent dodaje instrukcję, gdy o to poprosisz; tylko ty zmieniasz te, które sam napisałeś.",
+      "placeholder": "Dodaj instrukcję, np. Zawsze odpowiadaj po brytyjsku"
     },
-    "rememberedToast": "Dodano do mojego AI mózgu.",
     "sections": {
       "sessions": "Sesje",
       "bots": "Boty"
@@ -1093,7 +1085,59 @@
     "bots": {
       "notes": "Dni notatek roboczych na dysku: {{count}}.",
       "empty": "Ten bot nie zapisał jeszcze żadnych kluczowych wspomnień."
-    }
+    },
+    "edit": "Edytuj",
+    "add": "Dodaj",
+    "addPlaceholder": "Coś do zapamiętania…",
+    "typeLabel": "Rodzaj notatki",
+    "saveRefused": "Nie zapisano: {{reason}}",
+    "busy": "Pamięć była w tej samej chwili zmieniana. Spróbuj ponownie.",
+    "types": {
+      "profile": "Profil",
+      "rule": "Reguła",
+      "preference": "Preferencja",
+      "fact": "Fakt",
+      "decision": "Decyzja",
+      "reference": "Odnośnik",
+      "status": "Status",
+      "card": "Karta projektu"
+    },
+    "kinds": {
+      "folder": "Folder",
+      "bot": "Bot",
+      "routine": "Rutyna",
+      "topic": "Temat"
+    },
+    "history": {
+      "title": "Historia",
+      "saved": "Zapisano",
+      "changed": "Zmieniono",
+      "forgot": "Zapomniano",
+      "noted": "Zanotowano",
+      "undo": "Cofnij",
+      "changedSince": "Ta notatka zmieniła się od tamtej pory. Najpierw cofnij późniejszą zmianę."
+    },
+    "by": {
+      "you": "Ty",
+      "chat": "Czat",
+      "routine": "Rutyna",
+      "bot": "Bot",
+      "contact": "Czyjś czat z botem",
+      "app": "Aplikacja"
+    },
+    "you": {
+      "title": "O tobie",
+      "detail": "Kim jesteś: twoje imię, twoja praca, co wolisz. Czaty korzystają z tego, gdy to pomaga."
+    },
+    "projects": {
+      "title": "Projekty"
+    },
+    "aboutContact": "O {{name}}",
+    "clearProject": "Zapomnieć notatki tego projektu?",
+    "clearProjectDetail": "Notatki znikną, a karta projektu znów będzie pusta. Każdą zmianę można cofnąć w Historii.",
+    "clearYou": "Zapomnieć wszystko o tobie?",
+    "withheld": "Usunięte przy przenoszeniu pamięci w nowe miejsce, bo wyglądały jak hasła lub klucze: {{entries}}. Przechowuj sekrety w sejfie.",
+    "chatProject": "Projekt: {{name}}. Otwórz go w Pamięci"
   },
   "messaging": {
     "advanced": "Zaawansowane ({{count}})",
@@ -3631,7 +3675,8 @@
       "askWaiting": "Czekam na odpowiedź…",
       "askSkipped": "Pominięto",
       "askBot": "Zapytano {{bot}}: {{what}}",
-      "giveTask": "Przekazano zadanie do {{bot}}: {{what}}"
+      "giveTask": "Przekazano zadanie do {{bot}}: {{what}}",
+      "memoryUpdated": "Zaktualizowano pamięć: {{name}}"
     },
     "transcript": {
       "jump": "Przejdź na koniec",
@@ -3979,7 +4024,6 @@
     "off": "Wył.",
     "systemLanguage": "Systemowy ({{language}})",
     "forget": "Zapomnij to",
-    "memoryConflict": "Nic nie zostało usunięte. W tym samym momencie sesja zapisywała dane w pamięci. Spróbuj ponownie.",
     "clearAll": "Wyczyść wszystko",
     "forgetDescription": "Zapomnieć wszystko, co tu jest?",
     "quietUntil": "Wyciszenie do {{end}}",
@@ -4192,11 +4236,6 @@
       "PLAN": "Tylko czyta i planuje",
       "YOLO": "Nic nie pyta",
       "ACCEPTEDITS": "Edycje bez pytań, polecenia z pytaniem"
-    },
-    "memoryTargets": {
-      "remember": "Zawsze pamiętaj",
-      "user": "O tobie",
-      "memory": "Własne notatki agenta"
     },
     "cues": {
       "sent": "Wysłano",
@@ -4440,8 +4479,6 @@
       "too-long": "To jest za długie",
       "schedule-invalid": "Wybierz prawidłowy harmonogram"
     },
-    "rememberedByBots": "Zapamiętane przez boty",
-    "botMemoryCount": "{{name}} · elementy: {{count}}",
     "showMemory": "Pokaż wspomnienia",
     "pairingPending": "Dokończ łączenie komunikatorów.",
     "finishPairing": "Połącz {{platform}}",

@@ -1,5 +1,13 @@
 import type { MemoryEvent } from "@abacus-ai/contract/contract";
 
+import {
+  clearMemory,
+  memoryHistory,
+  memoryProjects,
+  memoryWithheld,
+  saveNote,
+  undoChange,
+} from "../../services/memory/memory-service";
 import { impl, onChannel, stream } from "./impl";
 
 export const memoryRouter = impl.memory.router({
@@ -11,16 +19,22 @@ export const memoryRouter = impl.memory.router({
       context.deps.host.setCustomInstructions(input.text)
     ),
   },
-  forgetAll: impl.memory.forgetAll.handler(({ input, context }) =>
-    context.deps.serviceHost.forgetAllMemories(input.target)
+  projects: impl.memory.projects.handler(() => memoryProjects()),
+  chatProject: impl.memory.chatProject.handler(({ input, context }) =>
+    context.deps.serviceHost.memoryProjectForChat(input.sessionId)
   ),
-  bots: impl.memory.bots.handler(({ context }) =>
-    context.deps.serviceHost.listBotMemories()
-  ),
-  clearBot: impl.memory.clearBot.handler(({ input, context }) =>
-    context.deps.serviceHost.clearBotMemory(input.botId)
-  ),
-  // Published by the memory watchers (sub-slice B); nothing publishes yet.
+  save: impl.memory.save.handler(({ input }) => saveNote(input)),
+  clear: impl.memory.clear.handler(async ({ input }) => {
+    await clearMemory(input);
+    return null;
+  }),
+  history: impl.memory.history.handler(() => memoryHistory()),
+  undo: impl.memory.undo.handler(async ({ input }) => {
+    await undoChange(input.id);
+    return null;
+  }),
+  withheld: impl.memory.withheld.handler(() => memoryWithheld()),
+  // Published by the memory watcher on every change to the history.
   events: impl.memory.events.handler(({ context, signal }) =>
     stream<MemoryEvent>({
       path: "memory.events",

@@ -40,7 +40,6 @@
     "./pptx": "./src/pptx.ts",
     "./quiet-hours": "./src/quiet-hours.ts",
     "./pptx/*": "./src/pptx/*.ts",
-    "./remember": "./src/remember.ts",
     "./reply-envelope": "./src/reply-envelope.ts",
     "./routines": "./src/routines.ts",
     "./service-errors": "./src/service-errors.ts",

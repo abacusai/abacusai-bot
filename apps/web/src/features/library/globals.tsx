@@ -27,7 +27,8 @@ export const LibraryGlobals = () => {
       for (const queryKey of keys) void cache.invalidateQueries({ queryKey });
     };
     const messaging = () => invalidate(...messagingKeys(orpc));
-    const memory = () => invalidate(orpc.memory.bots.queryKey({ input: {} }));
+    // Projects, history and withheld entries are not rows: re-read them.
+    const memory = () => invalidate(orpc.memory.key());
     followNotice("messaging", transport, messaging, abort.signal);
     followNotice("bots", transport, messaging, abort.signal);
     followNotice("memory", transport, memory, abort.signal);

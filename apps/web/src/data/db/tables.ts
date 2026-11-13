@@ -276,10 +276,7 @@ export const artifactsCollectionOptions = (
     ...overrides,
   });
 
-/**
- * Delete only. The input is the row the user clicked (`mutation.original`),
- * so main can refuse a click made stale by renumbering or a duplicate.
- */
+/** Delete only, by the note's path; saves go through `memory.save`. */
 export const memoriesCollectionOptions = (
   transport: LazyTransport,
   overrides: TableOverrides = {}
@@ -288,15 +285,7 @@ export const memoriesCollectionOptions = (
     id: "memories",
     table: tableOf(transport, (db) => db.memories),
     getKey: byId,
-    toDeleteInput: (_id, original) => ({
-      id: original.id,
-      scope: original.scope,
-      target: original.target,
-      botId: original.botId,
-      index: original.index,
-      entry: original.entry,
-      occurrences: original.occurrences,
-    }),
+    toDeleteInput: (id) => ({ id }),
     ...overrides,
   });
 

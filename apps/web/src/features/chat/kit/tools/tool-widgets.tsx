@@ -20,12 +20,16 @@ import { toolKey } from "../../store/thread-store";
 import { useChatView, useSubagentScope } from "../context";
 import { PermissionCard } from "../permissions/permission-card";
 import { BotHelpToolCard } from "./bot-help";
+import { MemoryToolLine } from "./memory-tool";
 import { PaidFeatureToolCard } from "./paid-feature";
 import { SessionOfferCard } from "./session-offer";
 import { SuggestedTasksCard } from "./suggested-tasks";
 import { expanderFor, ToolLine } from "./tool-line";
 
 type Widget = ComponentType<ToolProps<unknown>>;
+
+/** Registered by the agent itself, so never under a server prefix. */
+const MEMORY_TOOL = "memory";
 
 const lineFor = (name: string): Widget => {
   const expander = expanderFor(name);
@@ -67,7 +71,9 @@ export const sessionToolWidgets = new Proxy(KNOWN_TOOL_WIDGETS, {
           ? BotHelpToolCard
           : isSuggestTasksTool(name)
             ? SuggestedTasksCard
-            : (known[name] ?? GenericLine),
+            : name === MEMORY_TOOL
+              ? MemoryToolLine
+              : (known[name] ?? GenericLine),
 }) as Record<string, Widget>;
 
 /** Bots: the inline approval card of the canvas BotApproval board. */
@@ -98,5 +104,7 @@ export const botToolWidgets = new Proxy({} as Record<string, Widget>, {
             ? BotHelpToolCard
             : isSuggestTasksTool(name)
               ? SuggestedTasksCard
-              : BotToolSlot,
+              : name === MEMORY_TOOL
+                ? MemoryToolLine
+                : BotToolSlot,
 }) as Record<string, Widget>;

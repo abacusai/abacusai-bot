@@ -560,9 +560,7 @@
       "memory": {
         "empty": "还没有记住任何内容",
         "forget": "忘记",
-        "notes": "另存有 {{count}} 天的笔记",
-        "clear": "全部忘记",
-        "clearConfirm": "忘记这里的所有内容？"
+        "manage": "在设置中管理"
       },
       "delegatesFreely": "无需确认即可询问其他机器人",
       "delegatesFreelyDetail": "在有帮助时询问你的其他机器人并把工作交给它们，不必每次都问你。仅在回复你时。"
@@ -1043,7 +1041,7 @@
     "empty": "还没有记住任何内容。智能体学到值得跨会话保留的信息时，会自行写入这里，比如你的某个偏好，或关于你环境的某个事实。",
     "forget": "忘记这条",
     "loading": "正在读取记忆…",
-    "readFailed": "无法读取记住的内容。相关文件位于 ~/.abacusai-bot/memories。",
+    "readFailed": "无法读取记住的内容。相关文件位于 ~/.abacusai-bot/memory。",
     "storeEmpty": "这里还什么都没有。",
     "stores": {
       "memory": {
@@ -1063,15 +1061,9 @@
     "title": "记忆",
     "writeFailed": "未删除任何内容。有会话正好同时在写入记忆，请重试。",
     "instructions": {
-      "title": "自定义指令",
-      "description": "始终发送给模型，附在每段对话指令的末尾。用来说明你希望的协作方式：语气、语言、内部风格、绝对不要做的事。",
-      "placeholder": "例如：用英式英语回答。不要使用表情符号。运行命令前先给我看。",
-      "save": "保存",
-      "saveFailed": "无法保存。请检查设置文件夹是否可写。",
-      "unsaved": "未保存",
-      "applies": "从你的下一条消息起生效，包括已打开的聊天。"
+      "detail": "即使关闭记忆，每个对话也会遵循这些指令。你提出时智能体会添加一条；你自己写的只有你能修改。",
+      "placeholder": "添加指令，例如：始终用英式英语回复"
     },
-    "rememberedToast": "已存入我的 AI 大脑。",
     "sections": {
       "sessions": "会话",
       "bots": "机器人"
@@ -1079,7 +1071,59 @@
     "bots": {
       "notes": "磁盘上有 {{count}} 天的工作笔记。",
       "empty": "这个机器人还没有保存任何核心记忆。"
-    }
+    },
+    "edit": "编辑",
+    "add": "添加",
+    "addPlaceholder": "要记住的内容…",
+    "typeLabel": "笔记类型",
+    "saveRefused": "未保存：{{reason}}",
+    "busy": "记忆正在被同时修改。请重试。",
+    "types": {
+      "profile": "个人资料",
+      "rule": "规则",
+      "preference": "偏好",
+      "fact": "事实",
+      "decision": "决定",
+      "reference": "参考",
+      "status": "状态",
+      "card": "项目卡片"
+    },
+    "kinds": {
+      "folder": "文件夹",
+      "bot": "机器人",
+      "routine": "例行任务",
+      "topic": "主题"
+    },
+    "history": {
+      "title": "历史记录",
+      "saved": "已保存",
+      "changed": "已更改",
+      "forgot": "已忘记",
+      "noted": "已记录",
+      "undo": "撤销",
+      "changedSince": "该笔记之后已被更改。请先撤销较新的更改。"
+    },
+    "by": {
+      "you": "你",
+      "chat": "一次聊天",
+      "routine": "一个例行任务",
+      "bot": "一个机器人",
+      "contact": "某人与机器人的聊天",
+      "app": "应用"
+    },
+    "you": {
+      "title": "关于你",
+      "detail": "关于你：你的名字、工作和偏好。对话在有用时会参考。"
+    },
+    "projects": {
+      "title": "项目"
+    },
+    "aboutContact": "关于 {{name}}",
+    "clearProject": "忘记此项目的笔记？",
+    "clearProjectDetail": "笔记将被删除，卡片恢复为空白。每项更改都可以在历史记录中撤销。",
+    "clearYou": "忘记关于你的一切？",
+    "withheld": "迁移记忆时，因看起来像密码或密钥而被移除：{{entries}}。请将机密保存在保险库中。",
+    "chatProject": "项目：{{name}}。在记忆中打开"
   },
   "messaging": {
     "advanced": "高级（{{count}}）",
@@ -3499,7 +3543,8 @@
       "askWaiting": "正在等待回复…",
       "askSkipped": "已跳过",
       "askBot": "询问了 {{bot}}：{{what}}",
-      "giveTask": "把任务交给了 {{bot}}：{{what}}"
+      "giveTask": "把任务交给了 {{bot}}：{{what}}",
+      "memoryUpdated": "记忆已更新：{{name}}"
     },
     "transcript": {
       "jump": "跳到末尾",
@@ -3843,7 +3888,6 @@
     "off": "关闭",
     "systemLanguage": "系统（{{language}}）",
     "forget": "忘记此项",
-    "memoryConflict": "没有删除任何内容。有个会话正好同时在写入记忆。请重试。",
     "clearAll": "全部清除",
     "forgetDescription": "忘记这里的所有内容？",
     "quietUntil": "现已静默至 {{end}}",
@@ -4056,11 +4100,6 @@
       "PLAN": "只读取和规划",
       "YOLO": "一律不询问",
       "ACCEPTEDITS": "编辑直接通过，命令需询问"
-    },
-    "memoryTargets": {
-      "remember": "始终记住",
-      "user": "关于你",
-      "memory": "智能体自己的笔记"
     },
     "cues": {
       "sent": "已发送",
@@ -4300,8 +4339,6 @@
       "too-long": "内容过长",
       "schedule-invalid": "请选择有效的日程"
     },
-    "rememberedByBots": "机器人记住的内容",
-    "botMemoryCount": "{{name}} · {{count}} 项内容",
     "showMemory": "显示记忆",
     "pairingPending": "完成关联你的消息应用。",
     "finishPairing": "关联 {{platform}}",

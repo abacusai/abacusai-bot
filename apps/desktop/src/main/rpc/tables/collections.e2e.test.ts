@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { Bot } from "@abacus-ai/contract/bots";
@@ -5,7 +8,6 @@ import type {
   AgentSessionListItem,
   GitStateSnapshot,
   IpcEvent,
-  MemorySnapshot,
   SessionArtifact,
   WorkspaceListItem,
 } from "@abacus-ai/contract/contracts";
@@ -26,6 +28,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createTables, type TableName, type Tables } from ".";
 import { PrefsStore } from "../../services/config/prefs-store";
+import { memoryRows } from "../../services/memory/memory-service";
 import { MainEventBus } from "../event-bus";
 import { connectInProcess, fakeDeps, type TestClient } from "../testing";
 
@@ -158,7 +161,6 @@ const world = () => {
     bots: [bot("b1", "One")],
     routines: [routine("job-1", "Daily")],
     artifacts: [artifact("a1", "one.txt")],
-    memories: { remember: ["tea"], memory: [], user: [] } as MemorySnapshot,
     workspaces: [workspace("ws-1", "Home"), workspace("ws-2", "Work")],
     active: "ws-1" as string | null,
     git: {
@@ -183,8 +185,8 @@ const world = () => {
     listRoutines: () => state.routines,
     onRoutinesWritten: hooks.routines.add,
     listSessionArtifacts: () => state.artifacts,
-    listMemories: () => state.memories,
-    listBotMemories: () => [],
+    // The real memory folder, under a temp ABACUSAI_BOT_HOME (`connect`).
+    listMemoryRows: memoryRows,
     getMetadata: () => ({
       workspaces: state.workspaces,
       activeWorkspaceId: state.active,
@@ -221,16 +223,6 @@ const world = () => {
       hooks.routines.fire();
       return created;
     },
-    forgetMemory: async (request: { index: number; entry: string }) => {
-      state.memories = {
-        ...state.memories,
-        remember: state.memories.remember.filter(
-          (entry, index) =>
-            !(index === request.index && entry === request.entry)
-        ),
-      };
-      return state.memories;
-    },
     updateWorkspaceLabel: async (id: string, label: string) => {
       state.workspaces = state.workspaces.map((row) =>
         row.id === id ? { ...row, label } : row
@@ -248,7 +240,26 @@ afterEach(async () => {
   for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
 });
 
+/** A note file as the memory folder keeps it, written directly. */
+const writeNote = (name: string, body: string): void => {
+  const dir = path.join(process.env.ABACUSAI_BOT_HOME!, "memory", "you");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, `${name}.md`),
+    `---\nname: ${name}\ndescription: ${body}\ntype: fact\nupdated: 2026-11-09\nby: you\n---\n\n${body}\n`
+  );
+};
+
 const connect = async () => {
+  const previousHome = process.env.ABACUSAI_BOT_HOME;
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "db-collections-"));
+  process.env.ABACUSAI_BOT_HOME = home;
+  cleanups.push(() => {
+    if (previousHome == null) delete process.env.ABACUSAI_BOT_HOME;
+    else process.env.ABACUSAI_BOT_HOME = previousHome;
+    fs.rmSync(home, { recursive: true, force: true });
+  });
+  writeNote("tea", "likes tea");
   const { state, hooks, serviceHost } = world();
   const bus = new MainEventBus();
   const tables: Tables = createTables({
@@ -380,17 +391,19 @@ const CASES: TableCase[] = [
   {
     name: "memories",
     keys: ({ tables }) => tables.memories.snapshot().rows.map((row) => row.id),
-    change: ({ state, tables }) => {
-      state.memories = { ...state.memories, user: ["lives in Oslo"] };
-      // The watchers' notify.
+    change: ({ tables }) => {
+      writeNote("oslo", "lives in Oslo");
+      // The watcher's notify.
       tables.memories.notify();
-      const key = tables.memories
-        .snapshot()
-        .rows.find((row) => row.target === "user")!.id;
-      return { key, check: (row) => expect(row.entry).toBe("lives in Oslo") };
+      return {
+        key: "you/oslo.md",
+        check: (row) => expect(row.body).toBe("lives in Oslo"),
+      };
     },
-    silently: ({ state }) => {
-      state.memories = { remember: [], memory: [], user: [] };
+    silently: () => {
+      fs.rmSync(path.join(process.env.ABACUSAI_BOT_HOME!, "memory", "you"), {
+        recursive: true,
+      });
     },
   },
   {
@@ -539,14 +552,15 @@ describe("DB tables end to end (B-T4)", () => {
     expect(collection.get("job-client")).toMatchObject({ name: "Derived" });
   });
 
-  it("memories: a delete sends the row the user clicked", async () => {
+  it("memories: a delete forgets the note by its id", async () => {
     const env = await connect();
     const collection = env.collectionFor("memories");
     await collection.preload();
     const [key] = Array.from(collection.keys());
+    expect(key).toBe("you/tea.md");
     await collection.delete(key as string).isPersisted.promise;
     expect(collection.size).toBe(0);
-    expect(env.state.memories.remember).toEqual([]);
+    expect(memoryRows()).toEqual([]);
   });
 
   it("workspaces: a rename round-trips", async () => {

@@ -30,7 +30,7 @@ import { isCheckInRoutine } from "#renderer/lib/bots/check-in";
 export const botsQueries = (orpc: AppQueryUtils) => ({
   chatPreviews: () => orpc.bots.chatPreviews.queryOptions({ input: {} }),
   senderChats: () => orpc.bots.senderChats.queryOptions({ input: {} }),
-  memoryBots: () => orpc.memory.bots.queryOptions({ input: {} }),
+  memoryProjects: () => orpc.memory.projects.queryOptions({ input: {} }),
   // The host builds the catalog from provider APIs (hundreds of ms) and it
   // changes only with credentials or providers, whose changes invalidate it
   // (the settings notice follower, the models page): fresh for five minutes.
@@ -164,16 +164,24 @@ export const useBotSessions = (botId: string): SessionRow[] => {
   return (data ?? []) as SessionRow[];
 };
 
-export const useBotMemories = (botId: string): MemoryRow[] => {
+/** The notes of a bot's project (its card aside), given the project's slug. */
+export const useProjectNotes = (slug: string | null): MemoryRow[] => {
   const collections = useCollections();
-  const { data } = useLiveQuery({
-    query: (q) =>
+  const { data } = useLiveQuery(
+    (q) =>
       q
         .from({ m: collections.memories })
-        .where(({ m }) => and(eq(m.botId, botId), eq(m.scope, "bot")))
-        .orderBy(({ m }) => m.index, "asc"),
-  });
-  return data ?? [];
+        .where(({ m }) =>
+          and(
+            eq(m.project, slug ?? ""),
+            eq(m.scope, "project"),
+            not(eq(m.type, "card"))
+          )
+        )
+        .orderBy(({ m }) => m.name, "asc"),
+    [slug]
+  );
+  return slug == null ? [] : (data ?? []);
 };
 
 /**

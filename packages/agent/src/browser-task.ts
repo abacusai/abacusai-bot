@@ -27,6 +27,7 @@ import {
 } from "./checkout-run.js";
 import { abacusBotDir } from "./config.js";
 import { excludedTools, vaultEnabled } from "./excluded-tools.js";
+import { subAgentMemory } from "./memory/chat.js";
 import type { MidTaskInbox, MidTaskRun } from "./mid-task-inbox.js";
 import { MODEL_PATH_RESOURCES } from "./model-path.js";
 import type { AgentEvent } from "./protocol.js";
@@ -734,7 +735,10 @@ export async function runBrowserTask(
         settingsManager: context.settingsManager,
         // Ours in place of pi's default prompt; no file tools here.
         systemPromptOverride: () => subAgentBasePrompt(false),
-        appendSystemPrompt: [browserSubAgentPrompt(context)],
+        appendSystemPrompt: [
+          browserSubAgentPrompt(context),
+          ...subAgentMemory(),
+        ],
         // No extensions: the permission gate would prompt a user not watching.
         extensionFactories: [],
       });

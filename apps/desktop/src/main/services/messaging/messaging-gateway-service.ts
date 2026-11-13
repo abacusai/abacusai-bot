@@ -252,7 +252,11 @@ type GatewayOptions = {
   platform?: () => HostPlatform;
   /** Workspace remote messages run in; null when none is configured. */
   resolveWorkspaceId: () => string | null;
-  createAgentSession: (workspaceId: string) => AgentSessionListItem;
+  /** `chatAppSender`: the chat is someone else's, not the user's own. */
+  createAgentSession: (
+    workspaceId: string,
+    options?: { chatAppSender?: boolean }
+  ) => AgentSessionListItem;
   updateSessionLabel: (
     workspaceId: string,
     sessionId: string,
@@ -1411,7 +1415,9 @@ export class MessagingGatewayService {
   ): Promise<Route | null> {
     const existing = this.routes.get(key);
 
-    const session = this.options.createAgentSession(workspaceId);
+    const session = this.options.createAgentSession(workspaceId, {
+      chatAppSender: !owner,
+    });
     const label = `${platformLabel(platformId)} · ${message.userName ?? message.userId}`;
     this.options.updateSessionLabel(workspaceId, session.id, label);
 

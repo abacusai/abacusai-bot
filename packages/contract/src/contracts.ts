@@ -1182,24 +1182,39 @@ export interface TurnFeedbackOutcome {
   retryable?: boolean;
 }
 
-/** What the user asked to keep, the agent's notes, what it knows of the person. */
-export type MemoryTargetId = "memory" | "user" | "remember";
-
-export type MemorySnapshot = Record<MemoryTargetId, string[]>;
-
-export interface ForgetMemoryRequest {
-  target: MemoryTargetId;
-  index: number;
-  /** The entry as it was on screen, so a stale click cannot delete its successor. */
-  entry: string;
+/** A project in memory: a folder, a bot, a routine or a named topic, bound by its card. */
+export interface MemoryProjectView {
+  slug: string;
+  name: string;
+  kind: "folder" | "bot" | "routine" | "topic";
+  /** The folder's path, the bot's id, the routine's id or `topic:<slug>`. */
+  key: string;
+  path: string | null;
 }
 
-// Bots and sessions do not share memory, hence separate sections on the page.
-export interface BotMemoryView {
-  botId: string;
-  name: string;
-  entries: string[];
-  noteDays: number;
+/** One entry of the memory history, newest first on the Memory page. */
+export interface MemoryChangeView {
+  /** `${at}|${path}` */
+  id: string;
+  at: string;
+  by: "you" | "chat" | "routine" | "bot" | "contact" | "app";
+  model: string | null;
+  scope: "you" | "project" | "contact";
+  project: string | null;
+  /** The note's name; null for a journal line. */
+  name: string | null;
+  action: "saved" | "changed" | "forgot" | "noted";
+  /** The note's description, or the journal line. */
+  summary: string;
+  /** The file is still as this change left it. */
+  undoable: boolean;
+}
+
+/** An old entry the move into the memory folder left behind as a likely secret. */
+export interface MemoryWithheldView {
+  from: string;
+  /** Masked: the first few characters only. */
+  preview: string;
 }
 
 /** `session`: approved for the rest of this app run, forgotten on quit. */

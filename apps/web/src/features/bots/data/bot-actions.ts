@@ -190,11 +190,7 @@ export const setCheckInsEnabled = async (
   }).isPersisted.promise;
 };
 
-/**
- * Forget one memory: the original row goes to main, so a stale click is
- * `CONFLICT` (rolled back; the caller toasts) rather than another entry's
- * removal.
- */
+/** Forget one note by its path; a busy folder is `CONFLICT` (rolled back; the caller toasts). */
 export const forgetMemory = async (
   memories: Pick<Collections["memories"], "delete">,
   row: Pick<MemoryRow, "id">
@@ -208,11 +204,6 @@ export const forgetMemory = async (
     throw error;
   }
 };
-
-export const clearMemory = (
-  transport: Pick<Transport, "client">,
-  botId: string
-): Promise<unknown> => transport.client.memory.clearBot({ botId });
 
 /** Fire and forget (parity: errors logged, never shown). */
 export const announceChange = (

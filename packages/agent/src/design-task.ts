@@ -18,6 +18,7 @@ import { subAgentBasePrompt } from "./base-prompt.js";
 import { excludedTools } from "./excluded-tools.js";
 import { createGuardrails } from "./extensions/guardrails.js";
 import type { HostServiceClient } from "./host-services.js";
+import { subAgentMemory } from "./memory/chat.js";
 import { modelPath, MODEL_PATH_RESOURCES } from "./model-path.js";
 import type { AgentEvent } from "./protocol.js";
 import { createResourceLoader } from "./resource-loader.js";
@@ -291,7 +292,7 @@ export async function runDesignTask(
       additionalSkillPaths: context.skillPaths,
       // Ours in place of pi's default prompt; see base-prompt.ts.
       systemPromptOverride: () => subAgentBasePrompt(true),
-      appendSystemPrompt: [SYSTEM_PROMPT],
+      appendSystemPrompt: [SYSTEM_PROMPT, ...subAgentMemory()],
       extensionFactories: [
         {
           name: "abacusai-bot-guardrails",

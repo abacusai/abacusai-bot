@@ -562,23 +562,16 @@ export const SCENARIOS: GoldenScenario[] = [
     ],
   },
   {
-    // §7.1 bot: <think> + <reply>, then a hidden consolidation turn.
+    // §7.1 bot: <think> + <reply>, then a hidden housekeeping turn: asked to
+    // remember, the reply saved nothing, so the save check runs.
     name: "bot-housekeeping",
     env: { ABACUSAI_BOT_BOT_DIR: BOT_DIR, PI_OFFLINE: "1" },
-    setup: () => {
-      // A daily note makes the consolidation turn due after this reply.
-      fs.mkdirSync(path.join(BOT_DIR, "memory"), { recursive: true });
-      fs.writeFileSync(
-        path.join(BOT_DIR, "memory", "2026-01-01.md"),
-        "- met the user\n"
-      );
-    },
     reply: (index) =>
       index === 0
         ? { say: "<think>pondering</think><reply>Hi there</reply>" }
         : { say: "NO_REPLY" },
     steps: [
-      { send: { type: "send", message: "hello bot" } },
+      { send: { type: "send", message: "remember I take my tea black" } },
       { calls: 2 },
       idle(1),
     ],

@@ -560,9 +560,7 @@
       "memory": {
         "empty": "還沒有記住任何內容",
         "forget": "忘記",
-        "notes": "另存有 {{count}} 天的筆記",
-        "clear": "全部忘記",
-        "clearConfirm": "要忘記這裡的所有內容嗎？"
+        "manage": "在設定中管理"
       },
       "delegatesFreely": "無需確認即可詢問其他機器人",
       "delegatesFreelyDetail": "在有幫助時詢問你的其他機器人並把工作交給它們，不必每次都問你。僅在回覆你時。"
@@ -1043,7 +1041,7 @@
     "empty": "還沒有記住任何內容。AI 代理學到值得跨工作階段保留的資訊時，會自行寫入這裡，例如你的某個偏好，或關於你環境的某個事實。",
     "forget": "忘記這筆",
     "loading": "正在讀取記憶…",
-    "readFailed": "無法讀取記住的內容。相關檔案位於 ~/.abacusai-bot/memories。",
+    "readFailed": "無法讀取記住的內容。相關檔案位於 ~/.abacusai-bot/memory。",
     "storeEmpty": "這裡還沒有任何內容。",
     "stores": {
       "memory": {
@@ -1063,15 +1061,9 @@
     "title": "記憶",
     "writeFailed": "未刪除任何內容。有工作階段正好同時在寫入記憶，請再試一次。",
     "instructions": {
-      "title": "自訂指示",
-      "description": "一律傳送給模型，附在每段對話指示的最後。用來說明你希望的合作方式：語氣、語言、內部風格、絕對不要做的事。",
-      "placeholder": "例如：用英式英文回答。不要使用表情符號。執行指令前先讓我看過。",
-      "save": "儲存",
-      "saveFailed": "無法儲存。請檢查設定資料夾是否可寫入。",
-      "unsaved": "未儲存",
-      "applies": "從你的下一則訊息起生效，包括已開啟的聊天。"
+      "detail": "即使關閉記憶，每個對話也會遵循這些指示。你提出時代理會新增一條；你自己寫的只有你能修改。",
+      "placeholder": "新增指示，例如：一律用英式英文回覆"
     },
-    "rememberedToast": "已存入我的 AI 大腦。",
     "sections": {
       "sessions": "工作階段",
       "bots": "機器人"
@@ -1079,7 +1071,59 @@
     "bots": {
       "notes": "磁碟上有 {{count}} 天的工作筆記。",
       "empty": "這個機器人還沒有儲存任何核心記憶。"
-    }
+    },
+    "edit": "編輯",
+    "add": "新增",
+    "addPlaceholder": "要記住的內容…",
+    "typeLabel": "筆記類型",
+    "saveRefused": "未儲存：{{reason}}",
+    "busy": "記憶正在同時被修改。請再試一次。",
+    "types": {
+      "profile": "個人資料",
+      "rule": "規則",
+      "preference": "偏好",
+      "fact": "事實",
+      "decision": "決定",
+      "reference": "參考",
+      "status": "狀態",
+      "card": "專案卡片"
+    },
+    "kinds": {
+      "folder": "資料夾",
+      "bot": "機器人",
+      "routine": "例行工作",
+      "topic": "主題"
+    },
+    "history": {
+      "title": "歷史記錄",
+      "saved": "已儲存",
+      "changed": "已變更",
+      "forgot": "已忘記",
+      "noted": "已記錄",
+      "undo": "復原",
+      "changedSince": "該筆記之後已被變更。請先復原較新的變更。"
+    },
+    "by": {
+      "you": "你",
+      "chat": "一次聊天",
+      "routine": "一個例行工作",
+      "bot": "一個機器人",
+      "contact": "某人與機器人的聊天",
+      "app": "應用程式"
+    },
+    "you": {
+      "title": "關於你",
+      "detail": "關於你：你的名字、工作與偏好。對話在有幫助時會參考。"
+    },
+    "projects": {
+      "title": "專案"
+    },
+    "aboutContact": "關於 {{name}}",
+    "clearProject": "忘記此專案的筆記？",
+    "clearProjectDetail": "筆記將被刪除，卡片恢復為空白。每項變更都可以在歷史記錄中復原。",
+    "clearYou": "忘記關於你的一切？",
+    "withheld": "搬移記憶時，因看起來像密碼或金鑰而被移除：{{entries}}。請將機密存放在保險庫中。",
+    "chatProject": "專案：{{name}}。在記憶中開啟"
   },
   "messaging": {
     "advanced": "進階（{{count}}）",
@@ -3499,7 +3543,8 @@
       "askWaiting": "正在等候回覆…",
       "askSkipped": "已略過",
       "askBot": "問了 {{bot}}：{{what}}",
-      "giveTask": "把任務交給了 {{bot}}：{{what}}"
+      "giveTask": "把任務交給了 {{bot}}：{{what}}",
+      "memoryUpdated": "記憶已更新：{{name}}"
     },
     "transcript": {
       "jump": "跳到最後",
@@ -3843,7 +3888,6 @@
     "off": "關閉",
     "systemLanguage": "系統（{{language}}）",
     "forget": "忘記這項",
-    "memoryConflict": "沒有刪除任何內容。有個工作階段剛好同時在寫入記憶。請再試一次。",
     "clearAll": "全部清除",
     "forgetDescription": "要忘記這裡的所有內容嗎？",
     "quietUntil": "現在勿擾至 {{end}}",
@@ -4056,11 +4100,6 @@
       "PLAN": "只讀取和規劃",
       "YOLO": "一律不詢問",
       "ACCEPTEDITS": "編輯直接通過，指令需詢問"
-    },
-    "memoryTargets": {
-      "remember": "一律記住",
-      "user": "關於你",
-      "memory": "AI 代理自己的筆記"
     },
     "cues": {
       "sent": "已傳送",
@@ -4300,8 +4339,6 @@
       "too-long": "內容太長",
       "schedule-invalid": "請選擇有效的排程"
     },
-    "rememberedByBots": "機器人記住的內容",
-    "botMemoryCount": "{{name}} · {{count}} 項內容",
     "showMemory": "顯示記憶",
     "pairingPending": "完成連結你的訊息應用程式。",
     "finishPairing": "連結 {{platform}}",

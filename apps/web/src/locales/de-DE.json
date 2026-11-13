@@ -560,9 +560,7 @@
       "memory": {
         "empty": "This bot has not saved any core memories yet.",
         "forget": "Forget this",
-        "notes": "{{count}} day(s) of working notes on disk.",
-        "clear": "Clear all",
-        "clearConfirm": "Forget everything here?"
+        "manage": "In den Einstellungen verwalten"
       },
       "delegatesFreely": "Darf andere Bots ohne Rückfrage fragen",
       "delegatesFreelyDetail": "Fragt deine anderen Bots und gibt ihnen Arbeit, wenn es hilft, ohne dich jedes Mal zu fragen. Nur während es dir antwortet."
@@ -1043,7 +1041,7 @@
     "empty": "Noch nichts erinnert. Der Agent schreibt hier von selbst, wenn er etwas erfährt, das es wert ist, zwischen den Sitzungen mitgenommen zu werden: eine Präferenz von Ihnen, eine Tatsache über Ihr Setup.",
     "forget": "Vergiss das",
     "loading": "Erinnerung lesen…",
-    "readFailed": "Konnte nicht lesen, woran man sich erinnert. Die Dateien befinden sich in ~/.abacusai-bot/memories.",
+    "readFailed": "Konnte nicht lesen, woran man sich erinnert. Die Dateien befinden sich in ~/.abacusai-bot/memory.",
     "storeEmpty": "Hier ist noch nichts.",
     "stores": {
       "memory": {
@@ -1063,15 +1061,9 @@
     "title": "Gedächtnis",
     "writeFailed": "Es wurde nichts gelöscht. Eine Sitzung hat im selben Moment in den Speicher geschrieben. Bitte erneut versuchen.",
     "instructions": {
-      "title": "Benutzerdefinierte Anweisungen",
-      "description": "Am Ende jedes Gesprächs werden immer Anweisungen an das Model gesendet. Verwenden Sie es für die Art und Weise, wie mit Ihnen gearbeitet werden soll: Ton, Sprache, Hausstil, Dinge, die Sie niemals tun sollten.",
-      "placeholder": "z.B. Antwort in britischem Englisch. Benutze niemals Emojis. Zeigen Sie mir den Befehl, bevor Sie ihn ausführen.",
-      "save": "Speichern",
-      "saveFailed": "Konnte nicht gespeichert werden. Überprüfen Sie, ob der Einstellungsordner beschreibbar ist.",
-      "unsaved": "Nicht gespeichert",
-      "applies": "Gilt für Ihre nächste Nachricht, auch in einem bereits geöffneten Chat."
+      "detail": "Jeder Chat befolgt diese, auch wenn das Gedächtnis aus ist. Der Agent fügt eine hinzu, wenn du ihn darum bittest; nur du änderst die, die du selbst geschrieben hast.",
+      "placeholder": "Anweisung hinzufügen, z. B. Antworte immer auf britischem Englisch"
     },
-    "rememberedToast": "Zu meinem KI-Gehirn hinzugefügt.",
     "sections": {
       "sessions": "Sitzungen",
       "bots": "Bots"
@@ -1079,7 +1071,59 @@
     "bots": {
       "notes": "{{count}} Tag(e) der Arbeitsnotizen auf der Festplatte.",
       "empty": "Dieser Bot hat noch keine Kernspeicher gespeichert."
-    }
+    },
+    "edit": "Bearbeiten",
+    "add": "Hinzufügen",
+    "addPlaceholder": "Etwas, das ich mir merken soll …",
+    "typeLabel": "Art der Notiz",
+    "saveRefused": "Nicht gespeichert: {{reason}}",
+    "busy": "Der Speicher wurde gerade gleichzeitig geändert. Versuche es erneut.",
+    "types": {
+      "profile": "Profil",
+      "rule": "Regel",
+      "preference": "Vorliebe",
+      "fact": "Fakt",
+      "decision": "Entscheidung",
+      "reference": "Referenz",
+      "status": "Status",
+      "card": "Projektkarte"
+    },
+    "kinds": {
+      "folder": "Ordner",
+      "bot": "Bot",
+      "routine": "Routine",
+      "topic": "Thema"
+    },
+    "history": {
+      "title": "Verlauf",
+      "saved": "Gespeichert",
+      "changed": "Geändert",
+      "forgot": "Vergessen",
+      "noted": "Notiert",
+      "undo": "Rückgängig",
+      "changedSince": "Diese Notiz wurde seitdem geändert. Mache zuerst die spätere Änderung rückgängig."
+    },
+    "by": {
+      "you": "Du",
+      "chat": "Ein Chat",
+      "routine": "Eine Routine",
+      "bot": "Ein Bot",
+      "contact": "Der Chat einer Person mit einem Bot",
+      "app": "Die App"
+    },
+    "you": {
+      "title": "Über dich",
+      "detail": "Wer du bist: dein Name, deine Arbeit, was du bevorzugst. Chats nutzen es, wenn es hilft."
+    },
+    "projects": {
+      "title": "Projekte"
+    },
+    "aboutContact": "Über {{name}}",
+    "clearProject": "Die Notizen dieses Projekts vergessen?",
+    "clearProjectDetail": "Die Notizen werden gelöscht und die Karte wird geleert. Jede Änderung lässt sich im Verlauf rückgängig machen.",
+    "clearYou": "Alles über dich vergessen?",
+    "withheld": "Beim Umzug des Speichers entfernt, weil sie wie Passwörter oder Schlüssel aussahen: {{entries}}. Bewahre Geheimnisse im Tresor auf.",
+    "chatProject": "Projekt: {{name}}. Im Speicher öffnen"
   },
   "messaging": {
     "advanced": "Erweitert ({{count}})",
@@ -3499,7 +3543,8 @@
       "askWaiting": "Waiting for a response…",
       "askSkipped": "Skipped",
       "askBot": "{{bot}} gefragt: {{what}}",
-      "giveTask": "Aufgabe an {{bot}} übergeben: {{what}}"
+      "giveTask": "Aufgabe an {{bot}} übergeben: {{what}}",
+      "memoryUpdated": "Speicher aktualisiert: {{name}}"
     },
     "transcript": {
       "jump": "Jump to the end",
@@ -3843,7 +3888,6 @@
     "off": "Off",
     "systemLanguage": "System ({{language}})",
     "forget": "Forget this",
-    "memoryConflict": "Es wurde nichts gelöscht. Eine Sitzung hat im selben Moment in den Speicher geschrieben. Bitte erneut versuchen.",
     "clearAll": "Clear all",
     "forgetDescription": "Forget everything here?",
     "quietUntil": "Now quiet until {{end}}",
@@ -4056,11 +4100,6 @@
       "PLAN": "Reads and plans only",
       "YOLO": "Nothing asks",
       "ACCEPTEDITS": "Edits go through, commands ask"
-    },
-    "memoryTargets": {
-      "remember": "Always remember",
-      "user": "About you",
-      "memory": "The agent’s own notes"
     },
     "cues": {
       "sent": "Sent",
@@ -4300,8 +4339,6 @@
       "too-long": "This is too long",
       "schedule-invalid": "Choose a valid schedule"
     },
-    "rememberedByBots": "Remembered by bots",
-    "botMemoryCount": "{{name}} · {{count}} things",
     "showMemory": "Show memories",
     "pairingPending": "Finish linking your messaging apps.",
     "finishPairing": "Link {{platform}}",

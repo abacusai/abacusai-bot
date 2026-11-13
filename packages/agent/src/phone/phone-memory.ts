@@ -9,7 +9,17 @@ import fs from "fs";
 import path from "path";
 
 import { writeFileAtomicSync } from "../atomic-file.js";
-import { applyMemoryAction, readEntries } from "../memory-store.js";
+import { checkDraft } from "../memory/gate.js";
+import {
+  commit,
+  listNotes as listMemoryNotes,
+  type Note,
+  noteDelete,
+  noteWrite,
+  type Scope,
+  slugify as noteName,
+  today,
+} from "../memory/notes.js";
 import { redactIdNumbers } from "../traveler/id-numbers.js";
 import {
   DAY_MS,
@@ -88,10 +98,38 @@ const readText = (file: string): string => {
 
 // ---------------------------------------------------------------- about you
 
-/** Facts the user asked to keep first, then what the bot learned. */
+/**
+ * About you is the shared `you/` scope of the memory folder: what the phone
+ * lane learns, every chat sees, and the reverse. Rules the user gave first.
+ */
+const youNotes = (): Note[] =>
+  listMemoryNotes(YOU).filter(
+    (note) => note.type !== "status" || (note.expires ?? "") >= today()
+  );
+
+const YOU: Scope = { kind: "you" };
+
+/** The Memory switch off: About you is neither read nor written here either. */
+const memoryOff = (): boolean => process.env.ABACUSAI_BOT_MEMORY === "off";
+
 export function aboutYouEntries(): string[] {
-  return [...readEntries("remember"), ...readEntries("user")];
+  if (memoryOff()) return [];
+  const notes = youNotes();
+  return [
+    ...notes.filter((note) => note.type === "rule"),
+    ...notes.filter((note) => note.type !== "rule"),
+  ].map((note) => note.body);
 }
+
+/** The note whose text contains `fragment`, when exactly one does. */
+const holding = (fragment: string): Note | null | "many" => {
+  const needle = fragment.trim().toLowerCase();
+  if (needle.length === 0) return null;
+  const found = youNotes().filter((note) =>
+    note.body.toLowerCase().includes(needle)
+  );
+  return found.length === 0 ? null : found.length === 1 ? found[0]! : "many";
+};
 
 export async function rememberFact(
   fact: string,
@@ -99,6 +137,11 @@ export async function rememberFact(
 ): Promise<PhoneResult> {
   const content = flatten(fact);
 
+  if (memoryOff())
+    return {
+      ok: false,
+      message: "Memory is switched off, so nothing was saved.",
+    };
   if (content.length === 0)
     return { ok: false, message: "Nothing to remember: fact was empty." };
   if (content.length > FACT_MAX_CHARS) {
@@ -109,7 +152,6 @@ export async function rememberFact(
   }
 
   const key = dedupeKey(content);
-
   if (
     options.replaces == null &&
     aboutYouEntries().some((entry) => dedupeKey(entry) === key)
@@ -117,40 +159,82 @@ export async function rememberFact(
     return { ok: true, message: "Already known. Nothing changed." };
 
   const replaces = (options.replaces ?? "").trim();
+  const target = replaces.length > 0 ? holding(replaces) : null;
+  if (replaces.length > 0 && target == null)
+    return {
+      ok: false,
+      message: `Nothing in About you contains "${replaces}".`,
+    };
+  if (target === "many")
+    return {
+      ok: false,
+      message: `"${replaces}" matches several entries. Use a longer, more specific fragment.`,
+    };
 
-  if (replaces.length === 0)
-    return applyMemoryAction(
-      options.userAsked === true ? "remember" : "user",
-      "add",
-      {
-        content,
-      }
-    );
-
-  const owner = storeHolding(replaces);
-
-  return owner == null
-    ? { ok: false, message: `Nothing in About you contains "${replaces}".` }
-    : applyMemoryAction(owner, "replace", { content, match: replaces });
+  const now = new Date();
+  const result = await commit({ by: "chat" }, () => {
+    const siblings = listMemoryNotes(YOU);
+    const draft = checkDraft({
+      draft: {
+        name:
+          target?.name ?? noteName(content.split(/\s+/).slice(0, 6).join(" ")),
+        description: "",
+        type: target?.type ?? (options.userAsked === true ? "rule" : "fact"),
+        body: content,
+      },
+      siblings,
+      updating: target?.name ?? null,
+      userWords: options.userAsked === true ? content : "",
+      byUser: false,
+      now,
+    });
+    if (typeof draft === "string") return draft;
+    let name = draft.name;
+    for (
+      let n = 2;
+      target == null && siblings.some((note) => note.name === name);
+      n += 1
+    )
+      name = `${draft.name}-${n}`;
+    return {
+      writes: [
+        noteWrite({
+          scope: YOU,
+          ...draft,
+          name,
+          updated: today(now),
+          by: "chat",
+        }),
+      ],
+      value: null,
+    };
+  });
+  return result.ok
+    ? { ok: true, message: target == null ? "Remembered." : "Updated." }
+    : { ok: false, message: result.message };
 }
 
-/** Which About-you store holds an entry containing `fragment`. */
-const storeHolding = (fragment: string): "remember" | "user" | undefined => {
-  const needle = fragment.trim().toLowerCase();
-
-  if (needle.length === 0) return undefined;
-
-  return (["remember", "user"] as const).find((target) =>
-    readEntries(target).some((entry) => entry.toLowerCase().includes(needle))
-  );
-};
-
 export async function forgetFact(match: string): Promise<PhoneResult> {
-  const owner = storeHolding(match);
-
-  return owner == null
-    ? { ok: false, message: `Nothing in About you contains "${match}".` }
-    : applyMemoryAction(owner, "remove", { match });
+  if (memoryOff())
+    return {
+      ok: false,
+      message: "Memory is switched off, so nothing was changed.",
+    };
+  const target = holding(match);
+  if (target == null)
+    return { ok: false, message: `Nothing in About you contains "${match}".` };
+  if (target === "many")
+    return {
+      ok: false,
+      message: `"${match}" matches several entries. Use a longer, more specific fragment.`,
+    };
+  const result = await commit({ by: "chat" }, () => ({
+    writes: [noteDelete(YOU, target.name)],
+    value: null,
+  }));
+  return result.ok
+    ? { ok: true, message: "Forgotten." }
+    : { ok: false, message: result.message };
 }
 
 // --------------------------------------------------------------- open loops

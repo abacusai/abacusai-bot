@@ -38,7 +38,6 @@ import { buildExitPlanTool } from "./exit-plan-tool.js";
 import type { HostServiceClient } from "./host-services.js";
 import type { ConnectedMcp } from "./mcp/index.js";
 import { buildMcpToolDefinitions, mcpToolCaller } from "./mcp/tools.js";
-import { buildMemoryTool } from "./memory-tool.js";
 import { buildPresentDeliverableTool } from "./present-deliverable-tool.js";
 import type { AgentEvent, AgentMode } from "./protocol.js";
 import { buildServeTool } from "./serve-tool.js";
@@ -80,6 +79,10 @@ export interface RosterContext {
    * the same name is not registered twice.
    */
   provided: ReadonlySet<string>;
+  /** This chat's `memory` tool; null when the chat has no memory (memory/lanes.ts). */
+  memoryTool: RosterTool | null;
+  /** Whether past conversations are this chat's to search: never a stranger's chat. */
+  pastChats: boolean;
   mode: () => AgentMode;
   sessionId: () => string | undefined;
   emit: (event: AgentEvent) => void;
@@ -211,11 +214,16 @@ export const OWN_TOOLS: readonly RosterEntry[] = [
   // Recall over past conversations; it reads files, not app state.
   {
     name: "session_search",
-    when: () => sessionSearchEnabled(),
+    when: (ctx) => ctx.pastChats && sessionSearchEnabled(),
     build: (ctx) => buildSessionSearchTool(ctx.sessionId),
   },
   { name: "todo", unlessProvided: true, build: () => buildTodoTool() },
-  { name: "memory", unlessProvided: true, build: () => buildMemoryTool() },
+  // Built per chat: what it may read and write depends on whose chat it is.
+  {
+    name: "memory",
+    when: (ctx) => ctx.memoryTool != null,
+    build: (ctx) => ctx.memoryTool!,
+  },
   // The language every reply is in, for all conversations; see user-language.ts.
   { name: "set_user_language", build: () => buildSetUserLanguageTool() },
   // The tool every handover instruction names; there must always be one.

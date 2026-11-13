@@ -245,7 +245,8 @@ const shellRouter = (
       events: os.status.events.handler(quiet as never),
     },
     memory: {
-      bots: os.memory.bots.handler(() => []),
+      projects: os.memory.projects.handler(() => []),
+      chatProject: os.memory.chatProject.handler(() => null),
       events: os.memory.events.handler(quiet as never),
     },
     auth: {

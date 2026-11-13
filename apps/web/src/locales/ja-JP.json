@@ -560,9 +560,7 @@
       "memory": {
         "empty": "This bot has not saved any core memories yet.",
         "forget": "Forget this",
-        "notes": "{{count}} day(s) of working notes on disk.",
-        "clear": "Clear all",
-        "clearConfirm": "Forget everything here?"
+        "manage": "設定で管理"
       },
       "delegatesFreely": "確認なしで他のボットに頼める",
       "delegatesFreelyDetail": "役立つときは、毎回確認せずに他のボットへ質問したり作業を渡したりします。あなたに返信している間だけです。"
@@ -1043,7 +1041,7 @@
     "empty": "まだ何も覚えていない。エージェントは、セッション間で保持する価値のある何か (ユーザーの好み、設定に関する事実) を学習すると、独自にここに書き込みます。",
     "forget": "これは忘れてください",
     "loading": "メモリを読み込んでいます…",
-    "readFailed": "記憶されている内容を読み取ることができませんでした。ファイルは~/.abacusai-bot/memories.にあります",
+    "readFailed": "記憶されている内容を読み取ることができませんでした。ファイルは~/.abacusai-bot/memory.にあります",
     "storeEmpty": "ここにはまだ何もありません。",
     "stores": {
       "memory": {
@@ -1063,15 +1061,9 @@
     "title": "メモリ",
     "writeFailed": "削除されていません。同じタイミングで別のセッションがメモリに書き込んでいました。もう一度お試しください。",
     "instructions": {
-      "title": "カスタム命令",
-      "description": "すべての会話の指示の最後に、常にモデルに送信されます。口調、言葉遣い、家のスタイル、絶対にやってはいけないことなど、どのように仕事をしてもらいたいかに合わせて使用​​してください。",
-      "placeholder": "例えばイギリス英語で答えてください。絵文字は絶対に使用しないでください。実行する前にコマンドを見せてください。",
-      "save": "保存",
-      "saveFailed": "保存できませんでした。設定フォルダーが書き込み可能であることを確認します。",
-      "unsaved": "未保存",
-      "applies": "すでに開いているチャットも含め、次のメッセージに適用されます。"
+      "detail": "メモリーがオフでも、すべてのチャットがこれに従います。頼めばエージェントが追加しますが、あなたが書いたものを変えられるのはあなただけです。",
+      "placeholder": "指示を追加（例：常にイギリス英語で返信して）"
     },
-    "rememberedToast": "私のAI脳に追加されました。",
     "sections": {
       "sessions": "セッション",
       "bots": "ボット"
@@ -1079,7 +1071,59 @@
     "bots": {
       "notes": "{{count}} 日分のディスク上の作業メモ。",
       "empty": "このボットはまだコア メモリを保存していません。"
-    }
+    },
+    "edit": "編集",
+    "add": "追加",
+    "addPlaceholder": "覚えておくこと…",
+    "typeLabel": "メモの種類",
+    "saveRefused": "保存されませんでした: {{reason}}",
+    "busy": "同時にメモリが変更されていました。もう一度お試しください。",
+    "types": {
+      "profile": "プロフィール",
+      "rule": "ルール",
+      "preference": "好み",
+      "fact": "事実",
+      "decision": "決定事項",
+      "reference": "参考",
+      "status": "ステータス",
+      "card": "プロジェクトカード"
+    },
+    "kinds": {
+      "folder": "フォルダ",
+      "bot": "ボット",
+      "routine": "ルーティン",
+      "topic": "トピック"
+    },
+    "history": {
+      "title": "履歴",
+      "saved": "保存",
+      "changed": "変更",
+      "forgot": "削除",
+      "noted": "記録",
+      "undo": "元に戻す",
+      "changedSince": "このメモはその後変更されています。先に新しい変更を元に戻してください。"
+    },
+    "by": {
+      "you": "あなた",
+      "chat": "チャット",
+      "routine": "ルーティン",
+      "bot": "ボット",
+      "contact": "ボットと誰かのチャット",
+      "app": "アプリ"
+    },
+    "you": {
+      "title": "あなたについて",
+      "detail": "あなたについて：名前、仕事、好み。役立つときにチャットが使います。"
+    },
+    "projects": {
+      "title": "プロジェクト"
+    },
+    "aboutContact": "{{name}} について",
+    "clearProject": "このプロジェクトのメモを削除しますか？",
+    "clearProjectDetail": "メモは削除され、カードは空に戻ります。各変更は履歴から元に戻せます。",
+    "clearYou": "あなたに関する情報をすべて削除しますか？",
+    "withheld": "メモリの移行時に、パスワードやキーのように見えたため削除しました: {{entries}}。秘密情報は保管庫に保存してください。",
+    "chatProject": "プロジェクト: {{name}}。メモリで開く"
   },
   "messaging": {
     "advanced": "詳細設定 ({{count}})",
@@ -3499,7 +3543,8 @@
       "askWaiting": "Waiting for a response…",
       "askSkipped": "Skipped",
       "askBot": "{{bot}}に質問しました: {{what}}",
-      "giveTask": "{{bot}}にタスクを渡しました: {{what}}"
+      "giveTask": "{{bot}}にタスクを渡しました: {{what}}",
+      "memoryUpdated": "メモリを更新しました: {{name}}"
     },
     "transcript": {
       "jump": "Jump to the end",
@@ -3843,7 +3888,6 @@
     "off": "Off",
     "systemLanguage": "System ({{language}})",
     "forget": "Forget this",
-    "memoryConflict": "削除されていません。同じタイミングで別のセッションがメモリに書き込んでいました。もう一度お試しください。",
     "clearAll": "Clear all",
     "forgetDescription": "Forget everything here?",
     "quietUntil": "Now quiet until {{end}}",
@@ -4056,11 +4100,6 @@
       "PLAN": "Reads and plans only",
       "YOLO": "Nothing asks",
       "ACCEPTEDITS": "Edits go through, commands ask"
-    },
-    "memoryTargets": {
-      "remember": "Always remember",
-      "user": "About you",
-      "memory": "The agent’s own notes"
     },
     "cues": {
       "sent": "Sent",
@@ -4300,8 +4339,6 @@
       "too-long": "This is too long",
       "schedule-invalid": "Choose a valid schedule"
     },
-    "rememberedByBots": "Remembered by bots",
-    "botMemoryCount": "{{name}} · {{count}} things",
     "showMemory": "Show memories",
     "pairingPending": "Finish linking your messaging apps.",
     "finishPairing": "Link {{platform}}",

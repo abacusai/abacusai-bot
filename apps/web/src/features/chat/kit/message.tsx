@@ -94,6 +94,7 @@ import { useKitParts, useMessageScope, MessageScope } from "./message-scope";
 import { ReplyQuote, jumpToMessage } from "./reply";
 import { joinLabels, toolRunCounts, toolRunKind } from "./tool-run";
 import { useRunOpen } from "./tool-run-state";
+import { isMemoryTool } from "./tools/memory-tool";
 import { toolInput } from "./tools/normalize";
 import { RunLiveOutput } from "./tools/tool-line";
 
@@ -822,12 +823,14 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
             !visibleUnits.has(`${scope}\0${part.part.id}`)
           )
             continue;
-          // A card the reply points at (the upgrade, a place in the app)
-          // stands on its own: folded into a closed run, nobody saw it.
+          // A card the reply points at (the upgrade, a place in the app),
+          // and a memory change, stand on their own: folded into a closed
+          // run, nobody saw them.
           if (
             isPaidFeatureTool(part.part.name) ||
             isBotHelpTool(part.part.name) ||
-            isSuggestTasksTool(part.part.name)
+            isSuggestTasksTool(part.part.name) ||
+            isMemoryTool(part.part.name)
           ) {
             flush();
             blocks.push({ run: false, part });

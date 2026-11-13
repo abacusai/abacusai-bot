@@ -5,14 +5,10 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import {
-  excludedBuiltinTools,
-  isToolsetEnabled,
-} from "@abacus-ai/contract/toolsets";
+import { excludedBuiltinTools } from "@abacus-ai/contract/toolsets";
 
 import { agentVendorDir } from "#main/resources";
 
-import { memorySnapshot } from "../agent-tools/memory-store";
 import { abacusRoutellmV1 } from "../providers/abacus-host";
 import { resolveBackend } from "../providers/exec-backend-service";
 import { VAULT_TOOL_NAMES } from "../vault/vault-tools";
@@ -76,16 +72,6 @@ export function buildAgentConfigEnv(
   if (!vaultAvailable) excluded.push(...VAULT_TOOL_NAMES);
   if (excluded.length > 0) {
     envVars.ABACUSAI_BOT_EXCLUDED_TOOLS = excluded.join(",");
-  }
-
-  // Memory frozen at spawn rather than read live, so the system prompt stays
-  // byte-identical for the session and the provider's prefix cache survives
-  // memory writes.
-  if (isToolsetEnabled("memory", preferences)) {
-    const snapshot = memorySnapshot();
-    if (snapshot != null) {
-      envVars.ABACUSAI_BOT_MEMORY_SNAPSHOT = snapshot;
-    }
   }
 
   // Windows: the bundled POSIX shell `bash` runs under (posix-shell.ts in

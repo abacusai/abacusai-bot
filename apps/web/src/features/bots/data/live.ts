@@ -10,8 +10,8 @@ import { useSyncExternalStore } from "react";
  * pending connector asks, read from the document's `ai.attention` and keyless
  * `connectors.events` snapshots; the asks that notify as they arrive; and the
  * collection changes that also feed derived queries (a new sender session, a
- * bot rename), and what `bots.events`, `messaging.events`, `memory.events`
- * and connector status changes make stale (R3-T5).
+ * bot rename), and what `bots.events`, `messaging.events` and connector
+ * status changes make stale (R3-T5).
  */
 import type { Collections } from "#renderer/data/db";
 import { followNotice, noticeSnapshot } from "#renderer/data/queries/notices";
@@ -103,15 +103,9 @@ export const followBotsSources = (
     },
     signal
   );
-  followNotice(
-    "memory",
-    transport,
-    () => invalidate(queries.memoryBots()),
-    signal
-  );
+  // `memory.events` is followed once, app-wide (library/globals.tsx).
 
-  // A new or removed sender session is a new sender chat; a rename
-  // changes `BotMemoryView.name`.
+  // A new or removed sender session is a new sender chat.
   const sessions = collections.sessions.subscribeChanges((changes) => {
     if (
       changes.some(
@@ -122,21 +116,10 @@ export const followBotsSources = (
     )
       invalidate(queries.senderChats());
   });
-  const bots = collections.bots.subscribeChanges((changes) => {
-    if (
-      changes.some(
-        (change) =>
-          change.type !== "update" ||
-          change.previousValue?.name !== change.value.name
-      )
-    )
-      invalidate(queries.memoryBots());
-  });
   signal.addEventListener(
     "abort",
     () => {
       sessions.unsubscribe();
-      bots.unsubscribe();
     },
     { once: true }
   );
