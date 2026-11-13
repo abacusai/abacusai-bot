@@ -1,5 +1,13 @@
 appId: ai.abacus.bot
 productName: AbacusAI-Bot
+# abacusai-bot://open (src/main/deep-link.ts): CFBundleURLTypes in the macOS
+# Info.plist and x-scheme-handler in the Linux .desktop file. The NSIS target
+# registers no protocols; the app writes its own HKCU keys at launch, and
+# build/installer.nsh removes them at uninstall.
+protocols:
+  - name: AbacusAI Bot
+    schemes:
+      - abacusai-bot
 directories:
   buildResources: build
   # Not dist/, which is where Vite builds to.

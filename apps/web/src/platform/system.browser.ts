@@ -53,6 +53,9 @@ export const connectTarget = (name: string): ConnectTarget => {
   };
 };
 
+/** A browser tab stays where it is after paying; the page's web app is the way on. */
+export const withUpgradeReturn = (url: string): string => url;
+
 /** A link the host has to look up first: the tab is taken inside the click, then filled. */
 export const openPendingLink = async (
   _client: AppClient,
