@@ -24,13 +24,21 @@ const setup = (names: Record<string, string | null> = {}, file?: string) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "work-waiting-"));
   dirs.push(dir);
   const state = file ?? path.join(dir, "work-waiting.json");
-  const clock = { now: 0, quiet: false, busy: false, enabled: true };
+  const clock = {
+    now: 0,
+    quiet: false,
+    busy: false,
+    enabled: true,
+    // Whether the OS shows the notice (off: it failed or never appeared).
+    displays: true,
+  };
   const account: {
     free: { credits: number; until: string } | null;
     asked: number;
   } = { free: null, asked: 0 };
   const shown: Array<Omit<WorkWaitingNotice, "dedupeKey">> = [];
   const clicks: Array<(action: boolean) => void> = [];
+  const displays: Array<() => void> = [];
   const funnel: string[] = [];
   const deps = {
     file: () => state,
@@ -51,10 +59,16 @@ const setup = (names: Record<string, string | null> = {}, file?: string) => {
       account.asked += 1;
       return account.free;
     },
-    show: (notice: WorkWaitingNotice, clicked: (action: boolean) => void) => {
+    show: (
+      notice: WorkWaitingNotice,
+      clicked: (action: boolean) => void,
+      displayed: () => void
+    ) => {
       const { dedupeKey: _key, ...rest } = notice;
       shown.push(rest);
       clicks.push(clicked);
+      displays.push(displayed);
+      if (clock.displays) displayed();
     },
     funnel: (step: string, detail: string) => funnel.push(`${step} ${detail}`),
     now: () => clock.now,
@@ -62,7 +76,17 @@ const setup = (names: Record<string, string | null> = {}, file?: string) => {
   const waiting = new WorkWaiting(deps);
   /** A fresh instance over the same file: the app relaunched. */
   const relaunch = () => new WorkWaiting(deps);
-  return { waiting, relaunch, clock, account, shown, clicks, funnel, state };
+  return {
+    waiting,
+    relaunch,
+    clock,
+    account,
+    shown,
+    clicks,
+    displays,
+    funnel,
+    state,
+  };
 };
 
 const session = (sessionId: string): WorkWaitingPlace => ({
@@ -140,6 +164,19 @@ describe("work waiting: what each notice says", () => {
       ]);
     }
   );
+
+  it("drafts the whole next step and shortens it only in the body", async () => {
+    const t = setup({ s1: "Neon Runner" });
+    const task = `Add a high-score board ${"that keeps every run ".repeat(10)}`;
+    t.waiting.userWrote(session("s1"));
+    t.waiting.turnEnded("s1", "site", task, "Done.");
+    t.clock.now = 4 * HOUR;
+    await t.waiting.tick();
+    expect(t.shown[0]?.action?.draft).toBe(task.trim());
+    const body = t.shown[0]?.body ?? "";
+    expect(body.endsWith("…")).toBe(true);
+    expect(body.length).toBeLessThan(task.length);
+  });
 
   it("words a chat with no title yet without one, and cuts a long title", async () => {
     const t = setup({ s1: null, s2: "x".repeat(80) });
@@ -373,6 +410,18 @@ describe("work waiting: one absence at a time, from wherever the user left off",
       "work_waiting_shown 1_chat_plain",
       "work_waiting_clicked 1_chat_plain",
     ]);
+  });
+
+  it("counts a notice as shown only once the OS has shown it", async () => {
+    const t = setup({ s1: "Trip plan" });
+    t.waiting.userWrote(session("s1"));
+    t.waiting.turnEnded("s1", "site", "Add a high-score board", REPLY);
+    t.clock.displays = false;
+    t.clock.now = 4 * HOUR;
+    expect(await t.waiting.tick()).toBe(true);
+    expect(t.funnel).toEqual([]);
+    t.displays[0]!();
+    expect(t.funnel).toEqual(["work_waiting_shown 1_site_task"]);
   });
 
   it("holds while project reminders are off, during quiet hours and a running turn, and survives a relaunch", async () => {

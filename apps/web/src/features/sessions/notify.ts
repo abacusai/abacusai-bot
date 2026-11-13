@@ -18,6 +18,8 @@ export interface SessionsWatcherDeps {
     failedBody: string;
   };
 }
+/** The terminal code of a run the app closed under (at the quit, or found on the next start). */
+const APP_CLOSED_CODE = "app_closed";
 const delivered = new Set<string>();
 export const handleSessionRunFinished = (
   deps: SessionsWatcherDeps,
@@ -36,6 +38,8 @@ export const handleSessionRunFinished = (
   if (!deps.seen(row.id)) deps.mark(row.id);
   if (notice.outcome === "error") {
     deps.player.play("failed", { threadId: row.id, dedupeKey: notice.runId });
+    // The app closing under a run is not the run failing: no notice for it.
+    if (notice.errorCode === APP_CLOSED_CODE) return;
     deps.notifier.notify({
       kind: "failed",
       dedupeKey: notice.runId,

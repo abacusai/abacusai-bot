@@ -51,7 +51,7 @@ export type WorkWaitingEnding =
 interface WorkWaitingRecord {
   place: WorkWaitingPlace;
   ending: WorkWaitingEnding;
-  /** The first task of the next step a result ended on, in the user's words. */
+  /** The first task of the next step a result ended on, in full: the button's draft. The body shortens it. */
   task: string | null;
   /** The question the result's reply ended on, offering that task; absent on older records. */
   offer?: string | null;
@@ -114,8 +114,15 @@ interface WorkWaitingDeps {
   words: () => Promise<{ t: Translate; locale: string }>;
   /** A free account's credits left and when they end (ISO), when the app can tell both; null otherwise. */
   freeCredits: () => Promise<{ credits: number; until: string } | null>;
-  /** `clicked(true)` is the action button, `clicked(false)` the notice itself. */
-  show: (notice: WorkWaitingNotice, clicked: (action: boolean) => void) => void;
+  /**
+   * `clicked(true)` is the action button, `clicked(false)` the notice itself;
+   * `displayed` runs once the OS has shown it (never when it is off or failed).
+   */
+  show: (
+    notice: WorkWaitingNotice,
+    clicked: (action: boolean) => void,
+    displayed: () => void
+  ) => void;
   funnel: (
     step: "work_waiting_shown" | "work_waiting_clicked",
     detail: string
@@ -316,12 +323,12 @@ export class WorkWaiting {
       record.place.sessionId !== sessionId
     )
       return;
-    const line = workWaitingLine(task);
+    const full = typeof task === "string" ? task.trim() || null : null;
     this.save({
       ...record,
       ending,
-      task: line,
-      offer: line == null ? null : workWaitingOffer(reply),
+      task: full,
+      offer: full == null ? null : workWaitingOffer(reply),
       leftAt: this.now(),
     });
   }
@@ -420,9 +427,9 @@ export class WorkWaiting {
           ? {}
           : { action: { label: t("workWaiting.nextAction"), draft } }),
       },
-      (action) => this.clicked(record.leftAt, action ? `${code}_next` : code)
+      (action) => this.clicked(record.leftAt, action ? `${code}_next` : code),
+      () => this.deps.funnel("work_waiting_shown", code)
     );
-    this.deps.funnel("work_waiting_shown", code);
     return true;
   }
 
@@ -461,9 +468,9 @@ export class WorkWaiting {
         place: record.place,
         dedupeKey: `work-waiting:${record.leftAt}:credits`,
       },
-      () => this.clicked(record.leftAt, "credits_back")
+      () => this.clicked(record.leftAt, "credits_back"),
+      () => this.deps.funnel("work_waiting_shown", "credits_back")
     );
-    this.deps.funnel("work_waiting_shown", "credits_back");
     return true;
   }
 
@@ -486,10 +493,11 @@ export function workWaitingBody(
   t: Translate
 ): string {
   const again = stage % 2 === 0;
-  if (record.task != null)
+  const task = workWaitingLine(record.task);
+  if (task != null)
     return again
-      ? t("workWaiting.nextAgain", { task: record.task })
-      : (record.offer ?? t("workWaiting.next", { task: record.task }));
+      ? t("workWaiting.nextAgain", { task })
+      : (record.offer ?? t("workWaiting.next", { task }));
   return t(`workWaiting.${record.ending}${again ? "Again" : ""}`);
 }
 

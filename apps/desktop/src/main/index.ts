@@ -1508,7 +1508,7 @@ const appOperations: AppOperations = {
     }
   },
 
-  showNotification(title, body, metadata, attention, clicked, action) {
+  showNotification(title, body, metadata, attention, clicked, action, shown) {
     notchNotifications.notify(
       { ...attention, botReply: metadata?.kind === "bot" },
       () => {
@@ -1544,6 +1544,8 @@ const appOperations: AppOperations = {
         if (action != null)
           notification.on("action", () => open(action.metadata, true));
         notification.on("close", () => liveNotifications.delete(notification));
+        notification.on("failed", () => liveNotifications.delete(notification));
+        if (shown != null) notification.once("show", shown);
         keepNotification(notification);
         notification.show();
       }
@@ -1638,7 +1640,8 @@ workspaceServiceHost.attachUserNotifier(
       notice.metadata,
       { kind: "needs-you", dedupeKey: notice.dedupeKey },
       notice.clicked,
-      notice.action
+      notice.action,
+      notice.shown
     ),
   () => aliveMainWindow()?.isFocused() === true
 );

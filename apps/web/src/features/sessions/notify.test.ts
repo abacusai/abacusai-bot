@@ -106,3 +106,48 @@ it("tells a failed run once, naming the chat, through the same notifier as a fin
     metadata: { workspaceId: row.workspaceId, sessionId: row.id },
   });
 });
+
+it("does not tell a run the app closed under as failed, and still tells an agent exit", () => {
+  const row = {
+    ...fixtureSessions()[0]!,
+    botOwned: false,
+    editorFor: null,
+    routineId: null,
+  };
+  const notify = vi.fn();
+  const deps = {
+    sessions: () => [row],
+    seen: () => true,
+    mark: vi.fn(),
+    player: { play: vi.fn() },
+    notifier: { notify },
+    labels: {
+      done: "Done",
+      needsYou: "Waiting",
+      failed: (name: string) => `${name} stopped before finishing`,
+      failedBody: "Open it and I'll try again.",
+    },
+  };
+  const notice: RunFinishedNotice = {
+    threadId: row.id,
+    runId: "closed-at-quit",
+    owner: null,
+    routineId: null,
+    at: 0,
+    outcome: "error",
+    errorCode: "app_closed",
+    hasVisibleAssistantText: false,
+  };
+  handleSessionRunFinished(deps, notice);
+  expect(notify).not.toHaveBeenCalled();
+  handleSessionRunFinished(deps, {
+    ...notice,
+    runId: "agent-exited",
+    errorCode: "agent_exit",
+  });
+  expect(notify).toHaveBeenCalledOnce();
+  expect(notify.mock.calls[0]?.[0]).toMatchObject({
+    kind: "failed",
+    dedupeKey: "agent-exited",
+  });
+});

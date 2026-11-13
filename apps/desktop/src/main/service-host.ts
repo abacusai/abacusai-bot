@@ -993,6 +993,8 @@ export interface UserNotice {
   action?: { label: string; metadata: NotificationMetadata };
   /** Told when the user clicks the notice; `action` when it was the button. */
   clicked?: (action: boolean) => void;
+  /** Told once the OS has shown the notice; never when notifications are off or it failed. */
+  shown?: () => void;
 }
 
 export class ServiceHost {
@@ -1454,7 +1456,7 @@ export class ServiceHost {
             until: current.freeTierExpiresAt,
           };
     },
-    show: (notice, clicked) =>
+    show: (notice, clicked, shown) =>
       this.userNotifier?.({
         title: notice.title,
         body: notice.body,
@@ -1472,6 +1474,7 @@ export class ServiceHost {
               },
             }),
         clicked,
+        shown,
       }),
     funnel: (step, detail) => reportFunnelStep(step, detail),
   });
