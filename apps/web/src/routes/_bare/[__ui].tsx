@@ -57,6 +57,8 @@ import {
 import { TourGallery } from "#renderer/features/tour/gallery";
 import { NewLookCard } from "#renderer/features/tour/new-look";
 import {
+  CODER_GALLERY_FIXTURES,
+  CoderGallery,
   PAID_WELCOME_GALLERY_VARIANTS,
   PaidWelcomeGallery,
   UpgradeDialogGallery,
@@ -130,6 +132,7 @@ const extension = {
         "credit-card-95-project",
         "upgrade-dialog-task",
         "upgrade-dialog-plain",
+        ...CODER_GALLERY_FIXTURES,
         ...PAID_CREDIT_GALLERY_VARIANTS.flatMap((variant) => [
           `credit-card-paid-50-${variant}`,
           `credit-card-paid-80-${variant}`,
@@ -179,6 +182,8 @@ const extension = {
       <OnboardingGallery step={props.fixture.slice(11) as OnboardingStepId} />
     ) : props.fixture.startsWith("notch-") ? (
       <NotchGallery state={props.fixture.slice(6)} />
+    ) : props.fixture.startsWith("coder-") ? (
+      <CoderGallery fixture={props.fixture} />
     ) : props.fixture.startsWith("credit-card-paid-") ? (
       <CreditThresholdGallery
         threshold={

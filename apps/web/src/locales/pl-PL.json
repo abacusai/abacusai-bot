@@ -5544,5 +5544,23 @@
     "routinePrompt": "Utwórz zaplanowane zadanie działające 24/7 o nazwie „{{name}}”. Harmonogram (cron, mój czas lokalny): {{schedule}}. Przy każdym uruchomieniu: {{prompt}}",
     "routinePromptOnce": "Utwórz zaplanowane zadanie o nazwie „{{name}}”, które działa nawet przy wyłączonym komputerze. Co robi: {{prompt}}",
     "routinePromptNameOnly": "Utwórz zaplanowane zadanie działające 24/7, jak moja rutyna „{{name}}” w AbacusAI Bot. Zapytaj mnie, co ma robić i kiedy."
+  },
+  "coderPitch": {
+    "router": "RouteLLM Code: nasz router stworzony do kodu, który na każdym kroku wybiera najlepszy model do kodowania",
+    "codingAgent": "Agent do kodowania i CLI",
+    "agent": "Abacus AI Agent bez ograniczeń: bez limitu zadań, dopóki masz kredyty",
+    "computer": "SuperComputer: komputer, który zawsze działa",
+    "everything": "Wszystko z {{plan}}: najlepsze modele, obrazy i wideo, osobiste agenty, ponad 100 konektorów i aplikacji",
+    "low": "Przejdź na {{plan}}, aby twój kod był pisany na naszym routerze do kodu, z większą liczbą kredytów co miesiąc.",
+    "lowProject": "Przejdź na {{plan}}, aby „{{project}}” powstawał na naszym routerze do kodu, z większą liczbą kredytów co miesiąc.",
+    "last": "Gdy się skończą, twoja praca zatrzyma się w połowie zadania. Przejdź na {{plan}}, aby dokończyć ją na naszym routerze do kodu.",
+    "lastProject": "Gdy się skończą, „{{project}}” zatrzyma się w połowie zadania. Przejdź na {{plan}}, aby dokończyć go na naszym routerze do kodu.",
+    "cta": "Przejdź na {{plan}} · {{price}}/mies.",
+    "keepGoing": "Zostań przy {{plan}}",
+    "wallTaskTitle": "Dokończ „{{task}}” na {{plan}}",
+    "wallTitle": "Koduj dalej na {{plan}}",
+    "wallBody": "Twoja wiadomość jest zapisana. Przejdź na {{plan}}, a praca ruszy dokładnie tam, gdzie się zatrzymała, na naszym routerze do kodu.",
+    "wallBodyNoMessage": "Przejdź na {{plan}}, aby dalej kodować na naszym routerze do kodu, z większą liczbą kredytów co miesiąc.",
+    "wallCta": "Przejdź na {{plan}} i dokończ"
   }
 }

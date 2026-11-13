@@ -5364,5 +5364,23 @@
     "routinePrompt": "Crea una tarea programada que funcione 24/7, llamada “{{name}}”. Horario (cron, mi hora local): {{schedule}}. En cada ejecución: {{prompt}}",
     "routinePromptOnce": "Crea una tarea programada llamada “{{name}}” que funcione aunque mi computadora esté apagada. Qué hace: {{prompt}}",
     "routinePromptNameOnly": "Crea una tarea programada que funcione 24/7, como mi rutina “{{name}}” de AbacusAI Bot. Pregúntame qué debe hacer y cuándo."
+  },
+  "coderPitch": {
+    "router": "RouteLLM Code: nuestro router hecho para código, que elige el mejor modelo de código en cada paso",
+    "codingAgent": "El agente de código y la CLI",
+    "agent": "Abacus AI Agent sin restricciones: sin límite de tareas mientras tengas créditos",
+    "computer": "SuperComputer: una computadora siempre encendida",
+    "everything": "Todo lo de {{plan}}: modelos top, imagen y video, agentes personales, más de 100 conectores y apps",
+    "low": "Cámbiate a {{plan}} para que tu código se escriba con nuestro router de código, con más créditos cada mes.",
+    "lowProject": "Cámbiate a {{plan}} para que “{{project}}” se construya con nuestro router de código, con más créditos cada mes.",
+    "last": "Cuando se acaben, tu trabajo se detiene a mitad de la tarea. Cámbiate a {{plan}} para terminarlo con nuestro router de código.",
+    "lastProject": "Cuando se acaben, “{{project}}” se detiene a mitad de la tarea. Cámbiate a {{plan}} para terminarlo con nuestro router de código.",
+    "cta": "Cambiar a {{plan}} · {{price}}/mes",
+    "keepGoing": "Seguir con {{plan}}",
+    "wallTaskTitle": "Termina “{{task}}” en {{plan}}",
+    "wallTitle": "Sigue programando en {{plan}}",
+    "wallBody": "Tu mensaje está guardado. Cámbiate a {{plan}} y seguirá justo donde se detuvo, con nuestro router de código.",
+    "wallBodyNoMessage": "Cámbiate a {{plan}} para seguir programando con nuestro router de código, con más créditos cada mes.",
+    "wallCta": "Cambiar a {{plan}} y terminarlo"
   }
 }

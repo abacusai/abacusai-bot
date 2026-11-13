@@ -709,6 +709,118 @@ describe("the plan's credit milestone card", () => {
     ).toBeGreaterThan(0);
   });
 
+  // A Basic payer who codes: Pro by what it changes for code, the chat named.
+  const CODER_PRO = {
+    plan: "pro",
+    planName: "Pro",
+    priceText: "$20/mo",
+    priceCents: 2000,
+    features: ["Everything in Basic", "30,000 credits a month"],
+  };
+  const CODER_BILLING: BillingPlan = {
+    current: {
+      plan: "basic",
+      planName: "Basic",
+      creditsRemaining: 3600,
+      creditsGranted: 20_000,
+      freeTierExpiresAt: null,
+    },
+    plans: [
+      {
+        plan: "basic",
+        planName: "Basic",
+        priceText: "$10/mo",
+        priceCents: 1000,
+        features: [],
+        creditsPerMonth: 20_000,
+        current: true,
+      },
+      { ...CODER_PRO, creditsPerMonth: 30_000, current: false },
+    ],
+    upgrades: [{ ...CODER_PRO, url: "https://example.com/pro" }],
+    topUpUrl: null,
+    upgradeInMobileApp: false,
+  };
+  const CODER_ACCOUNT = { ...PAID_ACCOUNT, subscription_tier: "basic" };
+
+  it.each([
+    ["Sessions is where the account mostly works", "sessions", "messages"],
+    ["today's turns were builds", null, "builds"],
+  ] as const)(
+    "Basic, coding (%s): Pro by its coding router and credits, the chat named, Keep going on Basic",
+    async (_, focus, kind) => {
+      const h = await host({
+        account: { ...CODER_ACCOUNT, focus } as typeof ACCOUNT,
+        mark: { ...PAID_MARK, kind },
+        billing: CODER_BILLING,
+        sessions: [{ id: "s1", label: "Invoice app" }],
+      });
+      await screen.findByRole("heading", {
+        name: "Only 3,600 credits left this month",
+      });
+      expect(screen.getByRole("dialog").textContent).toContain(
+        "Move to Pro so “Invoice app” is built on our coding router, with more credits every month."
+      );
+      expect(
+        [...document.querySelectorAll('[data-slot="coder-pitch"] li')].map(
+          (item) => item.textContent
+        )
+      ).toEqual([
+        "RouteLLM Code: our router built for code, picking the best coding model for each step",
+        "30,000 credits a month (1.5x your Basic plan)",
+        "The coding agent and CLI",
+        "Unrestricted Abacus AI Agent: no limit on tasks while you have credits",
+        "SuperComputer: an always-on computer",
+        "Everything in Basic: top models, image and video, personal agents, 100+ connectors and apps",
+      ]);
+      expect(screen.queryByRole("button", { name: "Top up" })).toBeNull();
+      fireEvent.click(
+        screen.getByRole("button", { name: "Move to Pro · $20/month" })
+      );
+      await waitFor(() =>
+        expect(h.steps()).toContain("credit_card_paid_80_next_plan")
+      );
+    }
+  );
+
+  it("Basic, not coding: the card stays the general one", async () => {
+    await host({
+      account: { ...CODER_ACCOUNT, focus: "bots" } as typeof ACCOUNT,
+      mark: PAID_MARK,
+      billing: CODER_BILLING,
+    });
+    await screen.findByRole("heading", {
+      name: "Only 3,600 credits left this month",
+    });
+    expect(document.querySelector('[data-slot="coder-pitch"]')).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Upgrade · $20/month" })
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Keep going" })).toBeTruthy();
+  });
+
+  it("Basic, coding, at 95%: running out stops the named chat mid-task", async () => {
+    await host({
+      account: {
+        ...CODER_ACCOUNT,
+        focus: "sessions",
+        credits_used: 19_200,
+      } as typeof ACCOUNT,
+      mark: { ...PAID_MARK, reached: 95, used: 19_200 },
+      billing: CODER_BILLING,
+      sessions: [{ id: "s1", label: "Invoice app" }],
+    });
+    await screen.findByRole("heading", {
+      name: "Almost out: 800 credits left this month",
+    });
+    expect(screen.getByRole("dialog").textContent).toContain(
+      "When they run out, “Invoice app” stops mid-task. Move to Pro to finish it on our coding router."
+    );
+    expect(
+      screen.getByRole("button", { name: "Keep going on Basic" })
+    ).toBeTruthy();
+  });
+
   // A paid chat on a top model: one more button moves it to the plan's router.
   const CATALOG: ModelAvailability[] = [
     {
@@ -1098,6 +1210,46 @@ describe("the plan's credit milestone card", () => {
       expect(open.textContent).toContain("Finish checkout in your browser")
     );
     expect(screen.getByRole("button", { name: "I've upgraded" })).toBeTruthy();
+  });
+
+  it("Basic out of credits, coding: finish the named task on Pro, on its coding router", async () => {
+    const openExternal = vi.fn();
+    const open = await dialog(
+      {
+        kind: "credits",
+        key: "coder1",
+        threadId: "t1",
+        task: "Invoice app",
+        pendingText: "add checkout to the invoice page",
+      },
+      {
+        account: { ...BASIC_ACCOUNT, focus: "sessions" } as typeof ACCOUNT,
+        billing: BASIC_OUT,
+        openExternal,
+      }
+    );
+    await waitFor(() =>
+      expect(document.querySelector('[data-slot="coder-pitch"]')).toBeTruthy()
+    );
+    expect(
+      screen.getByRole("heading", { name: "Finish “Invoice app” on Pro" })
+    ).toBeTruthy();
+    expect(open.textContent).toContain(
+      "Your message is saved. Move to Pro and it picks up right where it stopped, on our coding router."
+    );
+    expect(open.textContent).toContain("add checkout to the invoice page");
+    expect(open.textContent).toContain("$20/month");
+    expect(document.querySelector('[data-slot="upgrade-pitch"]')).toBeNull();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Move to Pro and finish it" })
+    );
+    await waitFor(() =>
+      expect(openExternal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: { url: "https://example.com/upgrade/pro" },
+        })
+      )
+    );
   });
 
   it("Pro out of credits is offered a top-up and Max, priced by the server", async () => {

@@ -67,7 +67,7 @@ const t = (key: string, values?: Record<string, string | number>) =>
 describe("planPitch", () => {
   it("lists every line of the plan, the apps line with the plan's projects a month", () => {
     expect(planPitch(t, billing(BASIC_FEATURES), "en-US")).toEqual([
-      'outcome.pitch.credits {"credits":"20,000","times":10}',
+      'outcome.pitch.credits {"credits":"20,000","times":"10"}',
       'outcome.pitch.models {"models":"Model A, Model B, Model C, Model D"}',
       "outcome.pitch.media",
       "outcome.pitch.agents",
@@ -121,42 +121,57 @@ describe("planPitch", () => {
     const promoted = billing(BASIC_FEATURES);
     promoted.upgrades[0]!.firstMonthCredits = 14000;
     expect(planPitch(t, promoted, "en-US", ["credits"])).toEqual([
-      'outcome.pitch.introCredits {"credits":"20,000","times":10,"first":"14,000"}',
+      'outcome.pitch.introCredits {"credits":"20,000","times":"10","first":"14,000"}',
     ]);
     const unpromoted = billing(BASIC_FEATURES);
     unpromoted.upgrades[0]!.firstMonthCredits = 20000;
     expect(planPitch(t, unpromoted, "en-US", ["credits"])).toEqual([
-      'outcome.pitch.credits {"credits":"20,000","times":10}',
+      'outcome.pitch.credits {"credits":"20,000","times":"10"}',
     ]);
   });
 
-  it("measures a paid plan's next plan against its own plan, never the free one", () => {
-    const basic = billing(BASIC_FEATURES);
-    basic.current = { ...basic.current, plan: "basic", planName: "Basic" };
-    basic.plans = [
-      { ...basic.plans[1]!, current: true },
-      {
-        plan: "pro",
-        planName: "Pro",
-        priceText: "$20/mo",
-        features: [],
-        creditsPerMonth: 40000,
-        current: false,
-      },
-    ];
-    basic.upgrades = [
-      {
-        plan: "pro",
-        planName: "Pro",
-        priceText: "$20/mo",
-        features: [],
-        url: null,
-      },
-    ];
-    expect(planPitch(t, basic, "en-US", ["credits"])).toEqual([
-      'outcome.pitch.creditsVsPlan {"credits":"40,000","times":2,"plan":"Basic"}',
-    ]);
-  });
+  // Pro's 30,000 against Basic's 20,000 is 1.5x, never a rounded "2x".
+  it.each([
+    [
+      40000,
+      'outcome.pitch.creditsVsPlan {"credits":"40,000","times":"2","plan":"Basic"}',
+    ],
+    [
+      30000,
+      'outcome.pitch.creditsVsPlan {"credits":"30,000","times":"1.5","plan":"Basic"}',
+    ],
+    [
+      24000,
+      'outcome.pitch.creditsOnly {"credits":"24,000","times":"","plan":"Basic"}',
+    ],
+  ])(
+    "measures a paid plan's next plan of %i credits against its own plan, never the free one",
+    (next, line) => {
+      const basic = billing(BASIC_FEATURES);
+      basic.current = { ...basic.current, plan: "basic", planName: "Basic" };
+      basic.plans = [
+        { ...basic.plans[1]!, current: true },
+        {
+          plan: "pro",
+          planName: "Pro",
+          priceText: "$20/mo",
+          features: [],
+          creditsPerMonth: next,
+          current: false,
+        },
+      ];
+      basic.upgrades = [
+        {
+          plan: "pro",
+          planName: "Pro",
+          priceText: "$20/mo",
+          features: [],
+          url: null,
+        },
+      ];
+      expect(planPitch(t, basic, "en-US", ["credits"])).toEqual([line]);
+    }
+  );
 });
 
 describe("paidCreditsOffer", () => {
