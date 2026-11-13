@@ -5340,5 +5340,29 @@
     "row": {
       "waitingNetwork": "En attente du réseau. Elle s'exécute dès que la connexion revient."
     }
+  },
+  "bigTask": {
+    "title": "« {{task}} » est un gros projet",
+    "titleUntitled": "C'est un gros projet",
+    "line": "Terminez-le avec {{plan}} : {{model}} pour les parties difficiles, des crédits pour un projet de cette taille et un lien public une fois terminé.",
+    "lineNoModel": "Terminez-le avec {{plan}} : les meilleurs modèles pour les parties difficiles, des crédits pour un projet de cette taille et un lien public une fois terminé."
+  },
+  "keepRunning": {
+    "title": "Faire tourner « {{name}} » 24 h/24",
+    "titleUnnamed": "Le faire tourner 24 h/24",
+    "now": {
+      "server": "Pour l'instant, il ne tourne que lorsque cet ordinateur est allumé et l'app ouverte.",
+      "site": "Pour l'instant, il ne s'ouvre que sur cet ordinateur, quand il est allumé.",
+      "routine": "Pour l'instant, elle ne tourne que lorsque cet ordinateur est allumé et l'app ouverte."
+    },
+    "freeLine": "Avec {{plan}}, un agent personnel dans Abacus AI Agent sur le web le fait tourner même ordinateur éteint.",
+    "paidLine": "Il ne tourne que lorsque cet ordinateur est allumé. Votre forfait inclut des agents personnels dans Abacus AI Agent sur le web, qui le font tourner même ordinateur éteint.",
+    "prompt": "Déploie ceci à partir du zip que j'ai importé et fais-le tourner 24 h/24. La conversation qui l'a créé se trouve dans abacusai-bot-conversation.md, dans le zip.",
+    "setUp": "Le configurer dans Abacus AI Agent",
+    "moveTitle": "Transférer « {{name}} » vers Abacus AI Agent",
+    "moveTitleUnnamed": "Le transférer vers Abacus AI Agent",
+    "routinePrompt": "Crée une tâche planifiée qui tourne 24 h/24, nommée « {{name}} ». Planification (cron, mon heure locale) : {{schedule}}. À chaque exécution : {{prompt}}",
+    "routinePromptOnce": "Crée une tâche planifiée nommée « {{name}} » qui tourne même ordinateur éteint. Ce qu'elle fait : {{prompt}}",
+    "routinePromptNameOnly": "Crée une tâche planifiée qui tourne 24 h/24, comme ma routine AbacusAI Bot « {{name}} ». Demande-moi ce qu'elle doit faire et quand."
   }
 }

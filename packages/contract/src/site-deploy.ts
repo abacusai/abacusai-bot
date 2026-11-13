@@ -3,13 +3,34 @@
  * when a turn closes) and the project zip main makes of it for Abacus AI
  * Agent on the web, which hosts and deploys it.
  */
+import { type KeepKind, keepThingKey } from "./success-pitch";
 
-/** A session's latest finished turn that built a site; `siteDir` null when its folder is unknown. */
+/**
+ * A session's latest finished turn that left something to keep on: a site
+ * (also when `kind` is absent, as older builds wrote it), a server or bot
+ * started in the background, or a routine. `siteDir` is its folder, null
+ * when unknown or for a routine; `name` is what the card calls it.
+ */
 export interface SiteReadyMark {
   turnId: string;
   siteDir: string | null;
   at: number;
+  kind?: KeepKind;
+  name?: string | null;
 }
+
+/** The mark's kind; a mark from before kinds is a site. */
+export const markKind = (mark: SiteReadyMark): KeepKind => mark.kind ?? "site";
+
+/** What a closed card remembers: the thing, so it never comes back for it. */
+export const markThing = (mark: SiteReadyMark): string =>
+  keepThingKey(markKind(mark), mark.siteDir ?? mark.name);
+
+/** The card for `mark` was closed: older builds kept its turn, newer ones its thing. */
+export const markClosed = (
+  closed: string | undefined,
+  mark: SiteReadyMark
+): boolean => closed === mark.turnId || closed === markThing(mark);
 
 /** Sessions whose latest site is kept: the newest, by `at`. */
 export const SITE_READY_KEEP = 10;

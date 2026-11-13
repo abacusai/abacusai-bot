@@ -5340,5 +5340,29 @@
     "row": {
       "waitingNetwork": "In attesa della rete. Viene eseguita appena torna la connessione."
     }
+  },
+  "bigTask": {
+    "title": "“{{task}}” è un progetto grande",
+    "titleUntitled": "Questo è un progetto grande",
+    "line": "Completalo con {{plan}}: {{model}} per le parti difficili, crediti per un progetto di queste dimensioni e un link pubblico quando è pronto.",
+    "lineNoModel": "Completalo con {{plan}}: i modelli migliori per le parti difficili, crediti per un progetto di queste dimensioni e un link pubblico quando è pronto."
+  },
+  "keepRunning": {
+    "title": "Tieni “{{name}}” attivo 24/7",
+    "titleUnnamed": "Tienilo attivo 24/7",
+    "now": {
+      "server": "Per ora funziona solo mentre questo computer è acceso e l'app è aperta.",
+      "site": "Per ora si apre solo su questo computer, mentre è acceso.",
+      "routine": "Per ora funziona solo mentre questo computer è acceso e l'app è aperta."
+    },
+    "freeLine": "Con {{plan}}, un agente personale in Abacus AI Agent sul web lo tiene attivo anche a computer spento.",
+    "paidLine": "Funziona solo mentre questo computer è acceso. Il tuo piano include agenti personali in Abacus AI Agent sul web, che lo tengono attivo anche a computer spento.",
+    "prompt": "Pubblica questo dallo zip che ho caricato e tienilo attivo 24/7. La conversazione che l'ha creato è in abacusai-bot-conversation.md dentro lo zip.",
+    "setUp": "Configuralo in Abacus AI Agent",
+    "moveTitle": "Sposta “{{name}}” su Abacus AI Agent",
+    "moveTitleUnnamed": "Spostalo su Abacus AI Agent",
+    "routinePrompt": "Crea un'attività pianificata attiva 24/7, chiamata “{{name}}”. Pianificazione (cron, mio orario locale): {{schedule}}. A ogni esecuzione: {{prompt}}",
+    "routinePromptOnce": "Crea un'attività pianificata chiamata “{{name}}” che funzioni anche a computer spento. Cosa fa: {{prompt}}",
+    "routinePromptNameOnly": "Crea un'attività pianificata attiva 24/7, come la mia routine “{{name}}” di AbacusAI Bot. Chiedimi cosa deve fare e quando."
   }
 }

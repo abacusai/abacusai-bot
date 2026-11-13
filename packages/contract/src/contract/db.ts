@@ -10,6 +10,7 @@ import { HOME_CHANNELS } from "../bots";
 import { CREDIT_TASK_KINDS, CREDIT_THRESHOLDS } from "../credit-thresholds";
 import { THEME_COLOR_KEYS } from "../look";
 import {
+  KEEP_KINDS,
   SUCCESS_PITCH_LEADS,
   SUCCESS_PITCH_MOMENTS,
   SUCCESS_PITCH_TRIGGERS,
@@ -145,11 +146,23 @@ const SuccessPitchMarkSchema = v.strictObject({
       moment: v.picklist(SUCCESS_PITCH_MOMENTS),
       lead: v.nullable(v.picklist(SUCCESS_PITCH_LEADS)),
       at: v.number(),
+      name: v.optional(v.nullable(v.string())),
+      detail: v.optional(v.nullable(v.string())),
     })
   ),
   appTurns: v.number(),
   chatTurns: v.number(),
   chatToldAt: NullableTimestamp,
+  bigTaskChats: v.optional(v.array(v.string())),
+  keepOffered: v.optional(v.array(v.string())),
+});
+
+const PitchCardSchema = v.strictObject({
+  shown: v.number(),
+  lastShownAt: NullableTimestamp,
+  notNow: v.number(),
+  shownOffer: v.nullable(v.string()),
+  answered: v.nullable(v.string()),
 });
 
 export const BOT_SOUND_LEVELS = ["all", "needs-me", "nothing"] as const;
@@ -232,16 +245,9 @@ export const PREFS_GROUP_ENTRIES = {
         answered: v.nullable(CreditThresholdSchema),
       })
     ),
-    successPitchCards: v.record(
-      v.string(),
-      v.strictObject({
-        shown: v.number(),
-        lastShownAt: NullableTimestamp,
-        notNow: v.number(),
-        shownOffer: v.nullable(v.string()),
-        answered: v.nullable(v.string()),
-      })
-    ),
+    successPitchCards: v.record(v.string(), PitchCardSchema),
+    /** Per account: the free "keep it running" card, on its own budget. */
+    keepRunningCards: v.record(v.string(), PitchCardSchema),
     /** The offer to turn a long answer into a document, shown and answered. */
     deliverableOffer: v.nullable(
       v.strictObject({
@@ -403,6 +409,8 @@ export const PREFS_SCALAR_ENTRIES = {
       turnId: v.string(),
       siteDir: v.nullable(v.string()),
       at: v.number(),
+      kind: v.optional(v.picklist(KEEP_KINDS)),
+      name: v.optional(v.nullable(v.string())),
     })
   ),
   browserHomepage: v.nullable(v.string()),

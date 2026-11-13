@@ -5340,5 +5340,29 @@
     "row": {
       "waitingNetwork": "네트워크를 기다리는 중입니다. 연결이 돌아오는 즉시 실행됩니다."
     }
+  },
+  "bigTask": {
+    "title": "“{{task}}”은(는) 큰 작업이에요",
+    "titleUntitled": "큰 작업이에요",
+    "line": "{{plan}}로 완성하세요: 어려운 부분엔 {{model}}, 이만한 작업에 충분한 크레딧, 완성되면 공개 링크까지.",
+    "lineNoModel": "{{plan}}로 완성하세요: 어려운 부분엔 최고 모델, 이만한 작업에 충분한 크레딧, 완성되면 공개 링크까지."
+  },
+  "keepRunning": {
+    "title": "“{{name}}”을(를) 24시간 실행하기",
+    "titleUnnamed": "24시간 실행하기",
+    "now": {
+      "server": "지금은 이 컴퓨터가 켜져 있고 앱이 열려 있을 때만 실행돼요.",
+      "site": "지금은 이 컴퓨터가 켜져 있을 때 이 컴퓨터에서만 열려요.",
+      "routine": "지금은 이 컴퓨터가 켜져 있고 앱이 열려 있을 때만 실행돼요."
+    },
+    "freeLine": "{{plan}}에서는 웹의 Abacus AI Agent 개인 에이전트가 컴퓨터가 꺼져 있어도 실행해 줘요.",
+    "paidLine": "이 컴퓨터가 켜져 있을 때만 실행돼요. 요금제에 웹의 Abacus AI Agent 개인 에이전트가 포함되어 있어, 컴퓨터가 꺼져 있어도 계속 실행할 수 있어요.",
+    "prompt": "업로드한 zip으로 이걸 배포하고 24시간 계속 실행해 줘. 이걸 만든 대화는 zip 안의 abacusai-bot-conversation.md에 있어.",
+    "setUp": "Abacus AI Agent에서 설정하기",
+    "moveTitle": "“{{name}}”을(를) Abacus AI Agent로 옮기기",
+    "moveTitleUnnamed": "Abacus AI Agent로 옮기기",
+    "routinePrompt": "“{{name}}”이라는 이름으로 24시간 실행되는 예약 작업을 설정해 줘. 일정(cron, 내 현지 시간): {{schedule}}. 실행할 때마다: {{prompt}}",
+    "routinePromptOnce": "컴퓨터가 꺼져 있어도 실행되는 “{{name}}”이라는 예약 작업을 설정해 줘. 하는 일: {{prompt}}",
+    "routinePromptNameOnly": "AbacusAI Bot의 “{{name}}” 루틴처럼 24시간 실행되는 예약 작업을 설정해 줘. 무엇을 언제 해야 하는지 나에게 물어봐."
   }
 }

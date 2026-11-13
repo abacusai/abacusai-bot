@@ -34,7 +34,10 @@ export interface Scenario {
     dictating?: boolean;
     openPicker?: "mode" | "model";
     /** The success pitch offered under the latest reply. */
-    successPitch?: Pick<SuccessPitchOffer, "trigger" | "moment" | "lead">;
+    successPitch?: Pick<
+      SuccessPitchOffer,
+      "trigger" | "moment" | "lead" | "name" | "detail"
+    >;
     /** The deliverable offer judged without its caps. */
     deliverableOffer?: boolean;
     /** The retry offer on this model, without its caps. */
@@ -566,6 +569,98 @@ const successSite = (): RelayEvent[] =>
     b.runFinished("r1", "success", { timestamp: at(2) }),
   ]);
 
+/** A build that has written fifteen files: the big-build card's moment. */
+const successBigTask = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn(
+      "r1",
+      "u1",
+      "Build a snake game with 10 levels, a high-score board and sound effects",
+      at(9)
+    ),
+    b.textStart("a1"),
+    ...[
+      "index.html",
+      "style.css",
+      "game.js",
+      "board.js",
+      "snake.js",
+      "food.js",
+      "levels.js",
+      "level-data.json",
+      "scores.js",
+      "input.js",
+      "sound.js",
+      "menu.js",
+      "pause.js",
+      "assets/eat.wav",
+      "assets/crash.wav",
+    ].flatMap((file, index) => [
+      ...b.toolCall(`w${index}`, "write", "a1", {
+        path: `/Users/me/snake/${file}`,
+      }),
+      b.toolResult(`w${index}`, { text: `Wrote ${file}` }),
+    ]),
+    b.textDelta(
+      "a1",
+      "Levels 1 and 2 are playable in the preview: movement, food, walls, speed-up, and the high-score board. Next come levels 3 to 10, the sound effects and a pause menu."
+    ),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", { timestamp: at(2) }),
+  ]);
+
+/** A bot started in the background: "keep it running" for a server. */
+const successKeepServer = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn(
+      "r1",
+      "u1",
+      "Make a Telegram bot that posts the Bitcoin price to my channel every hour",
+      at(7)
+    ),
+    b.textStart("a1"),
+    ...b.toolCall("c1", "write", "a1", { path: "/Users/me/btc-bot/bot.py" }),
+    b.toolResult("c1", { text: "Wrote bot.py" }),
+    ...b.toolCall("c2", "bash", "a1", {
+      command: "cd btc-bot && python bot.py",
+      background: true,
+    }),
+    b.toolResult("c2", { text: "Started in the background." }),
+    b.textDelta(
+      "a1",
+      "Your bot is running and just posted the first price to your channel. It posts again every hour while this computer is on."
+    ),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", { timestamp: at(2) }),
+  ]);
+
+/** A routine created: "keep it running" for a routine. */
+const successKeepRoutine = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn(
+      "r1",
+      "u1",
+      "Every morning at 8, send me the top 5 AI headlines",
+      at(5)
+    ),
+    b.textStart("a1"),
+    ...b.toolCall("c1", "agent-tools_cronjob", "a1", {
+      action: "create",
+      name: "Morning AI headlines",
+      schedule: "0 8 * * *",
+    }),
+    b.toolResult("c1", { text: "Created. Morning AI headlines" }),
+    b.textDelta(
+      "a1",
+      "Done: “Morning AI headlines” runs every day at 8:00 and sends you the top 5 AI stories with a line on each."
+    ),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", { timestamp: at(2) }),
+  ]);
+
 /** A result, then the user's thanks and the bot's answer, in their language. */
 const successThanks =
   (words: { ask: string; done: string; thanks: string; welcome: string }) =>
@@ -1060,6 +1155,48 @@ export const SCENARIOS: Scenario[] = [
     view: {
       placeholder: "Message your bot...",
       successPitch: { trigger: "deliverable", moment: "site", lead: "apps" },
+    },
+  },
+  {
+    id: "success-big-task",
+    canvas: ["BigTaskCard", "15 files"],
+    skin: "session",
+    events: successBigTask,
+    view: {
+      successPitch: {
+        trigger: "big_task",
+        moment: "big_task",
+        lead: "apps",
+        detail: "15",
+      },
+    },
+  },
+  {
+    id: "success-keep-server",
+    canvas: ["KeepRunningCard", "server"],
+    skin: "session",
+    events: successKeepServer,
+    view: {
+      successPitch: {
+        trigger: "keep_running",
+        moment: "server",
+        lead: "agents",
+        name: "btc-bot",
+      },
+    },
+  },
+  {
+    id: "success-keep-routine",
+    canvas: ["KeepRunningCard", "routine"],
+    skin: "session",
+    events: successKeepRoutine,
+    view: {
+      successPitch: {
+        trigger: "keep_running",
+        moment: "routine",
+        lead: "agents",
+        name: "Morning AI headlines",
+      },
     },
   },
   {

@@ -3,7 +3,9 @@
  * Abacus AI Agent on the web, which hosts and deploys it. Main zips the
  * project (sites.pack) on the person's click; this shows the steps, the zip
  * and its progress.
- * The paid welcome and the paid site card both show it.
+ * The paid welcome and the paid site card both show it, and so does the
+ * paid "keep it running" card for a server or bot, whose message asks the
+ * agent to keep it running 24/7.
  */
 import type { FunnelStep } from "@abacus-ai/contract/funnel";
 import type {
@@ -27,7 +29,7 @@ import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 
 /** Where the steps are shown, as the funnel's detail. */
-export type DeploySurface = "welcome" | "card";
+export type DeploySurface = "welcome" | "card" | "keep_running";
 
 /** The zip's size, in the reader's units. */
 const sizeText = (bytes: number, locale: string): string => {
@@ -81,6 +83,8 @@ export interface DeployStepsViewProps {
   pack: SitePack | null;
   progress: SitePackProgress | null;
   copied: boolean;
+  /** The message to send with the zip; the site's own without one. */
+  prompt?: string;
   onOpenAgent(): void;
   onPack(): void;
   onReveal(): void;
@@ -96,6 +100,7 @@ export const DeployStepsView = ({
   pack,
   progress,
   copied,
+  prompt,
   onOpenAgent,
   onPack,
   onReveal,
@@ -234,7 +239,7 @@ export const DeployStepsView = ({
         }
       >
         <p className="text-muted-foreground rounded-[10px] border border-dashed px-3 py-2 text-xs/5">
-          {t("siteDeploy.prompt")}
+          {prompt ?? t("siteDeploy.prompt")}
         </p>
       </Step>
     </ol>
@@ -249,10 +254,16 @@ export const DeploySteps = ({
   sessionId,
   turnId,
   surface,
+  prompt,
+  onOpenAgent,
 }: {
   sessionId: string;
   turnId: string;
   surface: DeploySurface;
+  /** The message to send with the zip; the site's own without one. */
+  prompt?: string;
+  /** Also told when Abacus AI Agent is opened. */
+  onOpenAgent?: () => void;
 }) => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
@@ -290,8 +301,10 @@ export const DeploySteps = ({
       pack={pack.data ?? null}
       progress={progress.data ?? null}
       copied={copied}
+      prompt={prompt}
       onOpenAgent={() => {
         funnel("site_deploy_open_agent");
+        onOpenAgent?.();
         void platformSystem(client).openExternal({ url: ABACUS_AGENT_URL });
       }}
       onPack={() => {
@@ -315,7 +328,7 @@ export const DeploySteps = ({
       onCopy={() => {
         funnel("site_deploy_copy");
         void navigator.clipboard
-          .writeText(t("siteDeploy.prompt"))
+          .writeText(prompt ?? t("siteDeploy.prompt"))
           .then(() => setCopied(true))
           .catch(() => {});
       }}

@@ -5520,5 +5520,29 @@
     "row": {
       "waitingNetwork": "Czekam na sieć. Ruszy, gdy tylko połączenie wróci."
     }
+  },
+  "bigTask": {
+    "title": "„{{task}}” to duży projekt",
+    "titleUntitled": "To duży projekt",
+    "line": "Dokończ go w planie {{plan}}: {{model}} do trudnych części, kredyty na projekt tej wielkości i publiczny link, gdy będzie gotowy.",
+    "lineNoModel": "Dokończ go w planie {{plan}}: najlepsze modele do trudnych części, kredyty na projekt tej wielkości i publiczny link, gdy będzie gotowy."
+  },
+  "keepRunning": {
+    "title": "Niech „{{name}}” działa 24/7",
+    "titleUnnamed": "Niech działa 24/7",
+    "now": {
+      "server": "Teraz działa tylko wtedy, gdy ten komputer jest włączony, a aplikacja otwarta.",
+      "site": "Teraz otwiera się tylko na tym komputerze, gdy jest włączony.",
+      "routine": "Teraz działa tylko wtedy, gdy ten komputer jest włączony, a aplikacja otwarta."
+    },
+    "freeLine": "W planie {{plan}} osobisty agent w Abacus AI Agent w sieci uruchamia to nawet przy wyłączonym komputerze.",
+    "paidLine": "Działa tylko wtedy, gdy ten komputer jest włączony. Twój plan obejmuje osobistych agentów w Abacus AI Agent w sieci, którzy utrzymują to w działaniu przy wyłączonym komputerze.",
+    "prompt": "Wdróż to z przesłanego przeze mnie pliku zip i utrzymuj w działaniu 24/7. Rozmowa, w której to powstało, jest w pliku abacusai-bot-conversation.md w zipie.",
+    "setUp": "Skonfiguruj w Abacus AI Agent",
+    "moveTitle": "Przenieś „{{name}}” do Abacus AI Agent",
+    "moveTitleUnnamed": "Przenieś do Abacus AI Agent",
+    "routinePrompt": "Utwórz zaplanowane zadanie działające 24/7 o nazwie „{{name}}”. Harmonogram (cron, mój czas lokalny): {{schedule}}. Przy każdym uruchomieniu: {{prompt}}",
+    "routinePromptOnce": "Utwórz zaplanowane zadanie o nazwie „{{name}}”, które działa nawet przy wyłączonym komputerze. Co robi: {{prompt}}",
+    "routinePromptNameOnly": "Utwórz zaplanowane zadanie działające 24/7, jak moja rutyna „{{name}}” w AbacusAI Bot. Zapytaj mnie, co ma robić i kiedy."
   }
 }

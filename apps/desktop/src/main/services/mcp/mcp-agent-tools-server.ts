@@ -470,10 +470,11 @@ export interface McpAgentToolsServerOptions {
     ) => Promise<Routine>;
     hosted: HostedRoutines;
     /**
-     * The once-per-user word on 24/7 routines, claimed by this create: the
-     * plan to speak to, or null (already told, or the plan is unknown).
+     * The once-per-user word on 24/7 routines, claimed by this create in
+     * `sessionId`: the plan to speak to, or null (already told, the plan is
+     * unknown, or the chat's "keep it running" card will say it).
      */
-    alwaysOnNote?: () => Promise<"free" | "paid" | null>;
+    alwaysOnNote?: (sessionId?: string) => Promise<"free" | "paid" | null>;
   };
   /** Every conversation a bot owns, with its agent log; for my_activity. */
   ownActivity?: (botId: string) => Array<{
@@ -1485,7 +1486,7 @@ export class McpAgentToolsServer extends McpHttpServer {
           " routines here are unlimited on every plan, though each run spends credits like a chat turn." +
           " Its runs have full access, like this conversation.";
         const note = alwaysOnNote(
-          (await this.options.routines?.alwaysOnNote?.()) ?? null
+          (await this.options.routines?.alwaysOnNote?.(callerSession)) ?? null
         );
         const costly = await this.costlyModelNote(job.model);
         return this.ok(

@@ -226,6 +226,8 @@ export interface PrefsRow {
     creditThresholdCards?: Record<string, CreditThresholdCard>;
     /** Per account: the success pitch shown and answered. */
     successPitchCards?: Record<string, SuccessPitchCard>;
+    /** Per account: the free "keep it running" card, shown and answered. */
+    keepRunningCards?: Record<string, SuccessPitchCard>;
     /** The offer to turn a long answer into a document, shown and answered. */
     deliverableOffer?: DeliverableOfferCard | null;
     /** The next step under a result, shown and answered. */

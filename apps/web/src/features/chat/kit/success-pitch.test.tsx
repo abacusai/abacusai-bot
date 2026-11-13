@@ -100,6 +100,7 @@ const mount = async ({
   billing = BILLING as BillingPlan | null,
   offer = OFFER as SuccessPitchOffer | null,
   card = undefined as SuccessPitchCard | undefined,
+  keepCard = undefined as SuccessPitchCard | undefined,
   prefs = {} as Partial<PrefsRow>,
   threadId = "thread-1",
   active = false,
@@ -119,6 +120,9 @@ const mount = async ({
         dismissals: {
           ...base.dismissals,
           ...(card != null ? { successPitchCards: { "o1:u1": card } } : {}),
+          ...(keepCard != null
+            ? { keepRunningCards: { "o1:u1": keepCard } }
+            : {}),
         },
         ...prefs,
       }),
@@ -129,6 +133,18 @@ const mount = async ({
         abacus: os.account.abacus.handler(() => account),
         billingPlan: os.account.billingPlan.handler(() => billing),
         payment: os.account.payment.handler(() => null),
+      },
+      models: {
+        list: os.models.list.handler(() => [
+          {
+            id: "abacus/claude-opus-5-5",
+            label: "Claude Opus 5.5",
+            provider: "abacus",
+            tier: "strong",
+            configured: false,
+            access: "locked",
+          },
+        ]),
       },
     },
   });
@@ -163,7 +179,9 @@ const mount = async ({
       .map(([, input]) => input as { step: string; detail?: string });
   const cards = () =>
     harness.appDb.collections.prefs.get("app")?.dismissals.successPitchCards;
-  return { harness, steps, cards, opened };
+  const keepCards = () =>
+    harness.appDb.collections.prefs.get("app")?.dismissals.keepRunningCards;
+  return { harness, steps, cards, keepCards, opened };
 };
 
 const card = (patch: Partial<SuccessPitchCard> = {}): SuccessPitchCard => ({
@@ -349,5 +367,131 @@ describe("SuccessPitchRow", () => {
     await mount();
     await settled();
     expect(document.querySelector('[data-slot="success-pitch"]')).toBeNull();
+  });
+});
+
+const BIG: SuccessPitchOffer = {
+  id: "turn-4",
+  sessionId: "review-prs",
+  trigger: "big_task",
+  moment: "big_task",
+  lead: "apps",
+  at: 1,
+  detail: "15",
+};
+
+const KEEP: SuccessPitchOffer = {
+  id: "turn-2",
+  sessionId: "thread-1",
+  trigger: "keep_running",
+  moment: "server",
+  lead: "agents",
+  at: 1,
+  name: "btc-bot",
+};
+
+describe("SuccessPitchRow: a big build", () => {
+  it("names the chat's task and the plan's top model, with the whole pitch led by apps", async () => {
+    const h = await mount({ offer: BIG, threadId: "review-prs" });
+    const title = await screen.findByText(
+      "“Review my pull requests” is a big build"
+    );
+    const box = title.closest('[data-slot="big-task"]')!;
+    await waitFor(() =>
+      expect(box.textContent).toContain(
+        "Finish it on Basic: Claude Opus 5.5 for the hard parts, credits for a build this size, and a live link when it's done."
+      )
+    );
+    expect(box.textContent).toContain("$7 your first month, then $10/month");
+    expect(
+      box.querySelector('[data-slot="upgrade-pitch"] li')?.textContent
+    ).toMatch(/^Build and deploy/);
+    await waitFor(() =>
+      expect(h.steps()).toEqual([{ step: "big_task_shown", detail: "15" }])
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Upgrade to Basic" }));
+    expect(upgradeDialogStore.state.request).toMatchObject({
+      kind: "plan",
+      src: "big_task",
+    });
+    await waitFor(() =>
+      expect(h.steps().map((step) => step.step)).toContain("big_task_upgrade")
+    );
+  });
+
+  it("shares the success pitch's caps", async () => {
+    const h = await mount({
+      offer: BIG,
+      threadId: "review-prs",
+      card: card({ shown: 3, lastShownAt: 0 }),
+    });
+    await settled();
+    expect(document.querySelector('[data-slot="big-task"]')).toBeNull();
+    expect(h.steps()).toEqual([]);
+  });
+});
+
+describe("SuccessPitchRow: keep it running", () => {
+  it("says where it runs now and the personal agent that keeps it on, on its own budget", async () => {
+    // The success pitch's caps are spent; this card's are not.
+    const h = await mount({
+      offer: KEEP,
+      card: card({ shown: 3, lastShownAt: 0, notNow: 2 }),
+    });
+    const title = await screen.findByText("Keep “btc-bot” running 24/7");
+    const box = title.closest('[data-slot="keep-running"]')!;
+    expect(box.textContent).toContain(
+      "Right now it runs only while this computer is on and the app is open. On Basic, a personal agent in Abacus AI Agent on the web runs it with your computer off."
+    );
+    expect(
+      box.querySelector('[data-slot="upgrade-pitch"] li')?.textContent
+    ).toMatch(/^Personal agents/);
+    await waitFor(() =>
+      expect(h.keepCards()?.["o1:u1"]).toMatchObject({
+        shown: 1,
+        shownOffer: "turn-2",
+      })
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Not now" }));
+    await waitFor(() =>
+      expect(h.keepCards()?.["o1:u1"]).toMatchObject({
+        notNow: 1,
+        answered: "turn-2",
+      })
+    );
+    expect(h.steps()).toEqual([
+      { step: "keep_running_shown", detail: "server" },
+      { step: "keep_running_not_now", detail: "server" },
+    ]);
+    // The success pitch's record is untouched.
+    expect(h.cards()?.["o1:u1"]).toMatchObject({ shown: 3, notNow: 2 });
+  });
+
+  it("names a routine, and upgrades from its own source", async () => {
+    await mount({ offer: { ...KEEP, moment: "routine", name: "BTC news" } });
+    expect(
+      await screen.findByText("Keep “BTC news” running 24/7")
+    ).toBeTruthy();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Upgrade to Basic" })
+    );
+    expect(upgradeDialogStore.state.request).toMatchObject({
+      src: "keep_running",
+    });
+  });
+
+  it("one a day, three ever, none after two Not nows", async () => {
+    for (const spent of [
+      card({ shown: 1, lastShownAt: Date.now() - 60_000 }),
+      card({ shown: 3, lastShownAt: 0 }),
+      card({ shown: 2, lastShownAt: 0, notNow: 2 }),
+    ]) {
+      const h = await mount({ offer: KEEP, keepCard: spent });
+      await settled();
+      expect(document.querySelector('[data-slot="keep-running"]')).toBeNull();
+      expect(h.steps()).toEqual([]);
+      await cleanup?.();
+      cleanup = undefined;
+    }
   });
 });

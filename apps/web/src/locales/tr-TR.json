@@ -5340,5 +5340,29 @@
     "row": {
       "waitingNetwork": "Ağ bekleniyor. Bağlantı gelir gelmez çalışır."
     }
+  },
+  "bigTask": {
+    "title": "“{{task}}” büyük bir iş",
+    "titleUntitled": "Bu büyük bir iş",
+    "line": "{{plan}} ile bitir: zor kısımlar için {{model}}, bu boyutta bir iş için kredi ve bittiğinde canlı bir bağlantı.",
+    "lineNoModel": "{{plan}} ile bitir: zor kısımlar için en iyi modeller, bu boyutta bir iş için kredi ve bittiğinde canlı bir bağlantı."
+  },
+  "keepRunning": {
+    "title": "“{{name}}” 7/24 çalışsın",
+    "titleUnnamed": "7/24 çalışsın",
+    "now": {
+      "server": "Şu an yalnızca bu bilgisayar açıkken ve uygulama açıkken çalışıyor.",
+      "site": "Şu an yalnızca bu bilgisayarda, o açıkken açılıyor.",
+      "routine": "Şu an yalnızca bu bilgisayar açıkken ve uygulama açıkken çalışıyor."
+    },
+    "freeLine": "{{plan}} ile web'deki Abacus AI Agent'ta kişisel bir ajan, bilgisayarın kapalıyken de onu çalıştırır.",
+    "paidLine": "Yalnızca bu bilgisayar açıkken çalışıyor. Planın, web'deki Abacus AI Agent'ta bilgisayarın kapalıyken de onu çalıştıran kişisel ajanları içeriyor.",
+    "prompt": "Yüklediğim zip'ten bunu yayınla ve 7/24 çalışır tut. Onu oluşturan konuşma, zip içindeki abacusai-bot-conversation.md dosyasında.",
+    "setUp": "Abacus AI Agent'ta kur",
+    "moveTitle": "“{{name}}” uygulamasını Abacus AI Agent'a taşı",
+    "moveTitleUnnamed": "Abacus AI Agent'a taşı",
+    "routinePrompt": "7/24 çalışan, “{{name}}” adlı zamanlanmış bir görev kur. Zamanlama (cron, yerel saatim): {{schedule}}. Her çalışmada: {{prompt}}",
+    "routinePromptOnce": "Bilgisayarım kapalıyken de çalışan, “{{name}}” adlı zamanlanmış bir görev kur. Ne yapacağı: {{prompt}}",
+    "routinePromptNameOnly": "AbacusAI Bot'taki “{{name}}” rutinim gibi 7/24 çalışan zamanlanmış bir görev kur. Ne yapması ve ne zaman çalışması gerektiğini bana sor."
   }
 }

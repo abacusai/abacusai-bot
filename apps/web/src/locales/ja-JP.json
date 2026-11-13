@@ -5340,5 +5340,29 @@
     "row": {
       "waitingNetwork": "ネットワークを待っています。接続が戻りしだい実行します。"
     }
+  },
+  "bigTask": {
+    "title": "「{{task}}」は大きな作業です",
+    "titleUntitled": "これは大きな作業です",
+    "line": "{{plan}}で仕上げましょう：難しい部分には{{model}}、この規模の作業に足りるクレジット、完成したら公開リンク。",
+    "lineNoModel": "{{plan}}で仕上げましょう：難しい部分にはトップモデル、この規模の作業に足りるクレジット、完成したら公開リンク。"
+  },
+  "keepRunning": {
+    "title": "「{{name}}」を24時間動かし続ける",
+    "titleUnnamed": "24時間動かし続ける",
+    "now": {
+      "server": "今はこのコンピューターがオンで、アプリが開いている間だけ動きます。",
+      "site": "今はこのコンピューターがオンの間、このコンピューターでしか開けません。",
+      "routine": "今はこのコンピューターがオンで、アプリが開いている間だけ動きます。"
+    },
+    "freeLine": "{{plan}}なら、Web版Abacus AI Agentのパーソナルエージェントが、コンピューターがオフでも動かし続けます。",
+    "paidLine": "今はこのコンピューターがオンの間だけ動きます。ご利用のプランには、コンピューターがオフでも動かし続けるWeb版Abacus AI Agentのパーソナルエージェントが含まれています。",
+    "prompt": "アップロードしたzipからこれをデプロイし、24時間動かし続けてください。これを作った会話はzip内のabacusai-bot-conversation.mdにあります。",
+    "setUp": "Abacus AI Agentで設定する",
+    "moveTitle": "「{{name}}」をAbacus AI Agentに移す",
+    "moveTitleUnnamed": "Abacus AI Agentに移す",
+    "routinePrompt": "「{{name}}」という名前で、24時間動くスケジュールタスクを設定してください。スケジュール(cron、私の現地時間)：{{schedule}}。毎回の実行内容：{{prompt}}",
+    "routinePromptOnce": "コンピューターがオフでも動く「{{name}}」という名前のスケジュールタスクを設定してください。内容：{{prompt}}",
+    "routinePromptNameOnly": "AbacusAI Botのルーティン「{{name}}」のように、24時間動くスケジュールタスクを設定してください。何をいつ実行するか私に聞いてください。"
   }
 }

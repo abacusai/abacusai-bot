@@ -32,6 +32,8 @@ export const UPGRADE_SRCS = [
   "app_routines",
   "settings",
   "web_tab",
+  "big_task",
+  "keep_running",
 ] as const;
 
 export type UpgradeSrc = (typeof UPGRADE_SRCS)[number];
