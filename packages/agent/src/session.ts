@@ -1335,6 +1335,10 @@ export class AbacusBotSession {
 
     this.session = created.session;
     this.pi = this.loadedPi;
+    // Built with every MCP tool: take what waits behind tool_search off the list.
+    this.mcpTools.rebind(
+      new Set(this.session.getAllTools().map((tool) => tool.name))
+    );
     // A resumed chat: its earlier turns tell whose words the replies follow.
     this.userWords.seed(this.session.messages, (text) => ownWords(text));
     // The language model loads off the turn's path; a turn before it has is judged by script.
