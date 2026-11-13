@@ -102,6 +102,10 @@ const MAIN_ROOT_FILES = [
   // When the main window's page may be throttled: its window's state and
   // whether a turn is running, both process-level.
   "main-window-throttle.ts",
+  // `abacusaibot://` links: the OS hands them to the process (open-url,
+  // argv, second-instance) before any window or service exists to take them.
+  "open-link.test.ts",
+  "open-link.ts",
   "local-open-guard.test.ts",
   "local-open-guard.ts",
   // The third process-level check, next to the other two: whether the app the

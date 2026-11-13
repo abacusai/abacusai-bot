@@ -18,6 +18,7 @@ import {
 import { parsePartialJSON, type UIMessage } from "@tanstack/ai-client";
 import { eq } from "@tanstack/db";
 import { useLiveQuery } from "@tanstack/react-db";
+import { useRouter } from "@tanstack/react-router";
 import { History, X } from "lucide-react";
 import { useEffect, useEffectEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -172,21 +173,29 @@ export const createResumeLanding = () => {
 
 export const landOnResumeCard = createResumeLanding();
 
-/** A link or a notification click opens its place after the window shows; this waits it out. */
-const RESUME_LANDING_WAIT_MS = 500;
+/** A link, a notice or the user's own click opens its place after the window shows; this waits it out. */
+export const RESUME_LANDING_WAIT_MS = 500;
 
-/** The window shown again after a long time away: home, unless a link or notice opens somewhere. */
+/**
+ * The window shown again after a long time away: home, unless something chose
+ * where to go meanwhile. Any navigation since the window showed (a link, a
+ * notification or notch click, the user's own click) keeps its page; an opener
+ * that lands on the page already showing says so through markExternalOpen.
+ */
 export const ResumeCardReturn = (): null => {
   const db = useDb();
   const navigate = useAppNavigate();
+  const router = useRouter();
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const shown = (): void => {
       if (document.hidden) return;
       const at = Date.now();
+      const where = router.latestLocation.href;
       clearTimeout(timer);
       timer = setTimeout(() => {
-        if (externalOpenSince(at)) return;
+        if (externalOpenSince(at) || router.latestLocation.href !== where)
+          return;
         const mark = db.collections.prefs.get("app")?.dismissals.resumeCard;
         if (landOnResumeCard(mark, Date.now()))
           void navigate({ to: "/bots/new", transition: "nav-lateral" });
@@ -199,7 +208,7 @@ export const ResumeCardReturn = (): null => {
       document.removeEventListener("visibilitychange", shown);
       window.removeEventListener("focus", shown);
     };
-  }, [db, navigate]);
+  }, [db, navigate, router]);
   return null;
 };
 
