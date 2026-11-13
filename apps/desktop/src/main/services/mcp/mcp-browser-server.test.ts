@@ -306,8 +306,16 @@ vi.mock("electron", () => ({
   app: { isPackaged: false, getPath: () => os.tmpdir() },
 }));
 
+/** What the runtime saw a page do that no tool call reported yet (a download), per page id. */
+const pendingPageEvents = new Map<number, string[]>();
+
 /** The runtime's views, as the server asks for them. Reads `liveViews` live. */
 const fakeTarget = {
+  pageEvents: (id: number) => {
+    const events = pendingPageEvents.get(id) ?? [];
+    pendingPageEvents.delete(id);
+    return events;
+  },
   candidates: () =>
     liveViews.flatMap((view) => {
       try {
@@ -635,6 +643,21 @@ describe("navigating", () => {
     expect(page.url).toBe("https://example.test/results");
   });
 
+  it("says when the page it went to was a file the browser saved", async () => {
+    // A goto to a file's URL stays on the page it came from; the result read
+    // "Navigated to" that page, and the agent never learned a copy was saved.
+    pendingPageEvents.set(page.id, [
+      'Download started: "report.txt" is being saved to /downloads/report.txt.',
+    ]);
+    const { text, isError } = await call("browser_navigate", {
+      action: "goto",
+      url: "https://example.test/download/report.txt",
+    });
+
+    expect(isError).toBe(false);
+    expect(text).toContain('Download started: "report.txt"');
+  });
+
   it("refuses a javascript: URL, which would run in the page already loaded", async () => {
     const { text, isError } = await call("browser_navigate", {
       action: "goto",
@@ -897,6 +920,46 @@ describe("interacting", () => {
 
     expect(isError).toBe(false);
     expect(text).toContain("(10,20)");
+  });
+
+  it("tells what the page did beside the click, such as a download it saved, once", async () => {
+    // A click on a download link changes nothing on the page; without this the
+    // agent clicked again and again, saving a copy each time.
+    await seedRefs();
+    respondWith(() => ({
+      status: "ok",
+      tag: "a",
+      text: "report.txt",
+      x: 1,
+      y: 2,
+    }));
+    const id = liveViews[0]!.id;
+    pendingPageEvents.set(id, [
+      'Download started: "report.txt" is being saved to /downloads/report.txt.',
+    ]);
+    const first = await call("browser_interact", {
+      action: "click",
+      ref: "@e1",
+    });
+    expect(first.text).toContain('Download started: "report.txt"');
+    const second = await call("browser_interact", {
+      action: "click",
+      ref: "@e1",
+    });
+    expect(second.text).not.toContain("Download started");
+  });
+
+  it("tells the agent a file picker takes a file it cannot choose, not a stack trace", async () => {
+    await seedRefs();
+    respondWith(() => ({ status: "file_input" }));
+    const { text, isError } = await call("browser_interact", {
+      action: "fill",
+      ref: "@e1",
+      text: "/tmp/hello.txt",
+    });
+    expect(isError).toBe(true);
+    expect(text).toContain("is a file picker");
+    expect(text).toContain('browser_pause need:"details"');
   });
 
   it("refuses a ref the current snapshot never issued", async () => {
@@ -1747,6 +1810,35 @@ describe("when the page or the debugger misbehaves", () => {
     expect(isError).toBe(true);
     expect(text).toContain("did not complete");
     expect(text).toContain("https://example.test/start");
+  });
+
+  it("says a goto to a file saved it, at once, rather than waiting for a page that never comes", async () => {
+    // From a blank page a file's URL never becomes the page: the goto waited
+    // 20 s, said it "did not complete", and the agent learned of the file later.
+    page.loadURL = async () => {
+      pendingPageEvents.set(page.id, [
+        'Download started: "report.txt" is being saved to /downloads/report.txt.',
+      ]);
+      setTimeout(
+        () =>
+          pendingPageEvents.set(page.id, [
+            "Download finished: /downloads/report.txt.",
+          ]),
+        300
+      );
+    };
+    const started = Date.now();
+    const { text, isError } = await call("browser_navigate", {
+      action: "goto",
+      url: "https://example.test/download/report.txt",
+    });
+
+    expect(isError).toBe(false);
+    expect(text).toContain("is a file");
+    expect(text).toContain('Download started: "report.txt"');
+    expect(text).toContain("Download finished: /downloads/report.txt.");
+    expect(text).not.toContain("did not complete");
+    expect(Date.now() - started).toBeLessThan(5_000);
   });
 
   it("says a history move had not finished rather than claiming it had", async () => {

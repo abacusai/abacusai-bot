@@ -105,6 +105,11 @@ export interface BrowserTargetSource {
   releaseSession?(sessionId: string): void;
   /** The session acted (click, key, pick, select); a tab opening right after may be the act's. */
   noteAction?(sessionId: string): void;
+  /**
+   * What page `id` did that its own content does not show (a download it
+   * saved), each told once: reading them empties the list.
+   */
+  pageEvents?(id: number): string[];
   /** The session drives its page: it is alive, and its kept tabs are its again. */
   noteUse?(sessionId: string): void;
   /** The page's secret fields, where the source keeps them per tab. */

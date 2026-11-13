@@ -40,6 +40,8 @@ class FakeNode {
   protected valueStore = "";
   textContent = "";
   isContentEditable = false;
+  /** An input's type ("file" for a file picker). */
+  type = "";
   disabled: unknown = undefined;
   readOnly = false;
   checked = false;
@@ -247,6 +249,19 @@ describe("filling", () => {
     expect(input.value).toBe("Delhi");
     expect(input.events).toEqual(["input", "change"]);
     expect(input.focused).toBe(1);
+  });
+
+  it("says a file picker takes files, not text, instead of the browser's own error", () => {
+    // A real file input's value setter throws InvalidStateError for anything
+    // but ""; the agent got that stack trace back.
+    for (const script of [
+      fillScript("#cv", "/tmp/cv.pdf"),
+      typeScript("document.querySelector('#cv')", "/tmp/cv.pdf"),
+    ]) {
+      const picker = new FakeNode("INPUT", { type: "file" });
+      expect(run(script, picker)).toMatchObject({ status: "file_input" });
+      expect(picker.value).toBe("");
+    }
   });
 
   it("sets a textarea through the textarea setter, not the input one", () => {

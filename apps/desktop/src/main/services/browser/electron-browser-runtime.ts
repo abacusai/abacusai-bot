@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { realpathSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
+import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import type {
@@ -22,6 +23,7 @@ import {
 } from "@abacus-ai/contract/conversation-scope";
 import { ForbiddenError } from "@abacus-ai/contract/forbidden";
 import {
+  app,
   BaseWindow,
   session,
   WebContentsView,
@@ -132,6 +134,45 @@ type CrashRecovery = {
 };
 
 const DEFAULT_PARTITION = "persist:browser-runtime";
+
+/** Per page id, what it did that the page itself does not show (downloads). */
+const pendingPageEvents = new Map<number, string[]>();
+
+const notePageEvent = (id: number, event: string): void => {
+  pendingPageEvents.set(id, [...(pendingPageEvents.get(id) ?? []), event]);
+};
+
+/** Partition sessions that already save their downloads without a dialog (one handler each). */
+const savingDownloads = new WeakSet<Electron.Session>();
+
+/**
+ * Downloads by URL: a second request for the same file is the same download
+ * while it saves and a moment after. A goto loads its URL in two pages (the
+ * preview's and the agent's), and for a file each load downloads. Every page
+ * that asked is told about the one file.
+ */
+type RecentDownload = {
+  until: number;
+  pages: Set<number>;
+  started: string;
+  finished: string | null;
+};
+const recentDownloads = new Map<string, RecentDownload>();
+const SAME_DOWNLOAD_MS = 1_000;
+
+/**
+ * Where a download lands: the downloads folder under the name the site gave,
+ * or "name (1).ext" and up when that is taken. Only the base name is used.
+ */
+const downloadPath = (dir: string, filename: string): string => {
+  const base = path.basename(filename) || "download";
+  const ext = path.extname(base);
+  const stem = base.slice(0, base.length - ext.length);
+  let candidate = path.join(dir, base);
+  for (let n = 1; existsSync(candidate); n++)
+    candidate = path.join(dir, `${stem} (${n})${ext}`);
+  return candidate;
+};
 
 const runtimeMapKey = (
   conversationKey: ConversationKey,
@@ -804,10 +845,12 @@ export class ElectronBrowserRuntime {
           ? DEFAULT_PARTITION
           : importedProfilePartition(options.profileId);
     const partitionSession = session.fromPartition(partition);
-    if (localFile == null)
+    if (localFile == null) {
       partitionSession.setUserAgent(
         plainChromeUserAgent(partitionSession.getUserAgent())
       );
+      this.saveDownloadsWithoutDialog(partitionSession);
+    }
     const view = new WebContentsView({
       webPreferences: {
         partition,
@@ -851,7 +894,10 @@ export class ElectronBrowserRuntime {
       emit();
       this.scheduleCrashRecovery(view);
     });
-    contents.on("destroyed", () => this.resetCrashRecovery(view));
+    contents.on("destroyed", () => {
+      this.resetCrashRecovery(view);
+      pendingPageEvents.delete(contents.id);
+    });
     contents.on("focus", emit);
     contents.on("blur", emit);
     contents.on("devtools-opened", emit);
@@ -862,6 +908,63 @@ export class ElectronBrowserRuntime {
         return { action: "deny" };
       });
     return view;
+  }
+
+  /**
+   * A download goes straight to the downloads folder, as Chrome saves one by
+   * default. Electron's default is a native Save dialog per download, which
+   * a click in the bot's hidden view opened over the user's screen.
+   */
+  private saveDownloadsWithoutDialog(partitionSession: Electron.Session): void {
+    if (savingDownloads.has(partitionSession)) return;
+    savingDownloads.add(partitionSession);
+    partitionSession.on("will-download", (event, item, contents) => {
+      const now = Date.now();
+      for (const [key, recent] of recentDownloads)
+        if (recent.until <= now) recentDownloads.delete(key);
+      const url = item.getURL();
+      const same = recentDownloads.get(url);
+      if (same != null) {
+        event.preventDefault();
+        if (!same.pages.has(contents.id)) {
+          same.pages.add(contents.id);
+          notePageEvent(contents.id, same.started);
+          if (same.finished != null) notePageEvent(contents.id, same.finished);
+        }
+        return;
+      }
+      const saveAs = downloadPath(app.getPath("downloads"), item.getFilename());
+      item.setSavePath(saveAs);
+      const name = path.basename(saveAs);
+      const recent: RecentDownload = {
+        until: Number.POSITIVE_INFINITY,
+        pages: new Set([contents.id]),
+        started: `Download started: "${name}" is being saved to ${saveAs}.`,
+        finished: null,
+      };
+      recentDownloads.set(url, recent);
+      notePageEvent(contents.id, recent.started);
+      item.once("done", (_done, state) => {
+        recent.until = Date.now() + SAME_DOWNLOAD_MS;
+        recent.finished =
+          state === "completed"
+            ? `Download finished: ${saveAs}.`
+            : `Download of "${name}" did not finish (${state}).`;
+        for (const page of recent.pages) notePageEvent(page, recent.finished);
+      });
+    });
+  }
+
+  /** What page `id` did since the last call (downloads); each is told once. */
+  takePageEvents(id: number): string[] {
+    const events = pendingPageEvents.get(id) ?? [];
+    pendingPageEvents.delete(id);
+    return events;
+  }
+
+  /** Clears the browsing data (sign-ins, cookies, storage) of the browser's views. */
+  async clearData(): Promise<void> {
+    await session.fromPartition(DEFAULT_PARTITION).clearStorageData();
   }
 
   /** §12.8's lock: the file, its fragments, and nothing else on top. */

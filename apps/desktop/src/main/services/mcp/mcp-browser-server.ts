@@ -172,6 +172,8 @@ const WEBVIEW_ATTACH_TIMEOUT_MS = 15_000;
 const ATTACH_RETRY_GRACE_MS = 2_000;
 // How long a `goto` insists on seeing the view leave before settling on the
 // host check alone; a `goto` to the page already open never goes loading.
+/** How long a goto that saved a file waits to say whether the download finished. */
+const DOWNLOAD_END_WAIT_MS = 5_000;
 const NAVIGATE_START_GRACE_MS = 1_500;
 // Shorter than a `goto` deadline: history moves go somewhere already visited.
 const HISTORY_NAVIGATE_TIMEOUT_MS = 10_000;
@@ -720,6 +722,12 @@ class UnreadablePageError extends Error {
   }
 }
 
+/** A file picker is no text field, and no tool picks a file from the computer. */
+const FILE_INPUT_REFUSAL = (label: string): string =>
+  `${label} is a file picker: it takes a file, not text, and the browser tools cannot choose a file ` +
+  'from the computer. Stop with browser_pause need:"details" and fields naming the file the user ' +
+  "should upload; they choose it themselves.";
+
 export class McpBrowserServer extends McpHttpServer {
   /** The last snapshot's refs, per session. See SnapshotStore. */
   private readonly snapshots = new SnapshotStore();
@@ -1118,7 +1126,8 @@ export class McpBrowserServer extends McpHttpServer {
     wc: BrowserPage,
     startUrl: string,
     targetHost: string | null,
-    timeoutMs: number
+    timeoutMs: number,
+    stop?: () => boolean
   ): Promise<string | null> {
     const startedAt = Date.now();
     const deadline = startedAt + timeoutMs;
@@ -1130,6 +1139,7 @@ export class McpBrowserServer extends McpHttpServer {
     let sawLoading = false;
 
     while (Date.now() < deadline) {
+      if (stop?.() === true) return null;
       const loading = wc.isLoading();
       if (loading) sawLoading = true;
       const current = wc.getURL();
@@ -1224,13 +1234,41 @@ export class McpBrowserServer extends McpHttpServer {
       // Interrupted by the renderer's own navigation to the same URL. Expected.
     });
 
+    // A file's URL is saved, not shown: from a blank page it never becomes
+    // the page, so the wait ends when the page says it saved a download.
+    const events: string[] = [];
+    const saving = (): boolean => {
+      events.push(...(this.options.target?.()?.pageEvents?.(wc.id) ?? []));
+      return events.some((event) => event.startsWith("Download started:"));
+    };
     const landed = await this.awaitNavigation(
       wc,
       startUrl,
       target.host,
-      this.navigateTimeout()
+      this.navigateTimeout(),
+      saving
     );
     if (!wc.isDestroyed()) wc.off("did-fail-load", onFailLoad);
+
+    if (saving()) {
+      this.onNavigated();
+      const ended = (): boolean =>
+        events.some((event) => /^Download (?:finished:|of )/.test(event));
+      for (
+        let waited = 0;
+        !ended() && waited < DOWNLOAD_END_WAIT_MS;
+        waited += 100
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        saving();
+      }
+      return this.ok(
+        [
+          `${url} is a file, not a page: the browser saved it, and the page stayed at ${wc.getURL() || "a blank page"}.`,
+          ...events,
+        ].join("\n")
+      );
+    }
 
     if (failure != null) {
       this.onNavigated();
@@ -1246,7 +1284,10 @@ export class McpBrowserServer extends McpHttpServer {
       this.remember(sessionId, wc.id, landed);
 
       return this.ok(
-        await this.arrival(wc, sessionId, `Navigated to ${landed}.`)
+        [
+          await this.arrival(wc, sessionId, `Navigated to ${landed}.`),
+          ...events,
+        ].join("\n")
       );
     }
 
@@ -1655,8 +1696,21 @@ export class McpBrowserServer extends McpHttpServer {
     };
   }
 
-  /** What an action did to the page: URL, new elements with refs, overlays. */
+  /**
+   * What an action did to the page: URL, new elements with refs, overlays,
+   * and what the page did that it does not show (a download it saved).
+   */
   private async reportChanges(
+    wc: BrowserPage,
+    sessionId: string | undefined,
+    before: { url: string; title: string; refs: Map<string, string> }
+  ): Promise<string> {
+    const changes = await this.describeChanges(wc, sessionId, before);
+    const events = this.options.target?.()?.pageEvents?.(wc.id) ?? [];
+    return [changes, ...events].filter((line) => line.length > 0).join("\n");
+  }
+
+  private async describeChanges(
     wc: BrowserPage,
     sessionId: string | undefined,
     before: { url: string; title: string; refs: Map<string, string> }
@@ -1753,6 +1807,8 @@ export class McpBrowserServer extends McpHttpServer {
     const hint = await this.loginHint(wc, sessionId).catch(() => null);
     if (hint != null) lines.push(hint);
     if (tip != null) lines.push(`Tip for this site: ${tip}`);
+    // A goto to a file's URL stays where it was; the page saved the file.
+    lines.push(...(this.options.target?.()?.pageEvents?.(wc.id) ?? []));
 
     return lines.join("\n");
   }
@@ -2608,6 +2664,8 @@ export class McpBrowserServer extends McpHttpServer {
         const result = await this.evalJS(wc, fillScript(sel, text));
         if (result?.status === "not_found")
           return this.err(this.notFoundError(args, sel));
+        if (result?.status === "file_input")
+          return this.err(FILE_INPUT_REFUSAL(this.label(args)));
         if (result?.status === "not_fillable") {
           return this.err(
             `${this.label(args)} is a <${result.tag}>, which has no value to fill. ` +
@@ -2665,6 +2723,8 @@ export class McpBrowserServer extends McpHttpServer {
               : "Nothing is focused on the page, so there is no element to type into. Pass a ref from a snapshot."
           );
         }
+        if (result?.status === "file_input")
+          return this.err(FILE_INPUT_REFUSAL(this.label(args)));
         if (result?.status === "not_fillable") {
           return this.err(
             `${this.label(args)} is a <${result.tag}>, which has no value to type into. ` +

@@ -1648,6 +1648,7 @@ export class ServiceHost {
     return {
       candidates: () => runtime.agentViews(),
       webContents: (id) => runtime.webContentsById(id),
+      pageEvents: (id) => runtime.takePageEvents(id),
       materialize: async (sessionId, url) => {
         const session = this.agentSessionManagerService.get(sessionId);
         if (session == null) return null;
@@ -6128,9 +6129,11 @@ export class ServiceHost {
   ): Promise<ClearBrowserDataResult> {
     assertHostCapability(this.platform, "browser.clearData");
     try {
-      const { session } = await import("electron");
-      // Profile-import partitions belong to the browser-profiles flow.
-      await session.fromPartition("persist:agent-browser").clearStorageData();
+      // The browser's own views; profile-import partitions belong to the
+      // browser-profiles flow.
+      if (this.browserRuntime == null)
+        return { success: false, error: "The browser is not running." };
+      await this.browserRuntime.clearData();
       return { success: true };
     } catch (err) {
       return {
