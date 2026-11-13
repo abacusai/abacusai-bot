@@ -50,6 +50,7 @@ export type ToolHost = Pick<
   | "routineOfferClosed"
   | "githubFix"
   | "overnightOfferClosed"
+  | "noteOvernightOffered"
   | "bookOvernight"
   | "ok"
   | "err"

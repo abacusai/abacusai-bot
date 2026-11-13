@@ -137,6 +137,9 @@ export const SUGGESTED_TASKS_TOOLS: ToolDefinition[] = [
         return host.err(
           `Pass tasks: ${SUGGESTED_TASKS_MAX - 1} or ${SUGGESTED_TASKS_MAX} requests, each one line of at most ${SUGGESTED_TASK_MAX_CHARS} characters.`
         );
+      // The overnight booking takes only an offer the user saw.
+      if (tasks.some((task) => task.overnight) && callerSession != null)
+        host.noteOvernightOffered(callerSession);
       const dropped =
         Array.isArray(args.tasks) && args.tasks.length > tasks.length
           ? ` ${args.tasks.length - tasks.length} were left out (empty, repeated, too long or more than ${SUGGESTED_TASKS_MAX}).`

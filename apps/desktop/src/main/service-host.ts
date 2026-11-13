@@ -1900,6 +1900,7 @@ export class ServiceHost {
         routineOfferClosed(account?.credits_used, account?.credits_granted)
       );
     },
+    overnightOffered: (sessionId) => this.overnightOffers.add(sessionId),
     overnightOfferClosed: (sessionId) =>
       sessionId == null || this.overnightRefusal(sessionId) != null,
     bookOvernight: (sessionId, task, plan) =>
@@ -4249,11 +4250,25 @@ export class ServiceHost {
     );
   }
 
+  /** Chats that were shown an overnight task: a booking anywhere else is refused. */
+  private readonly overnightOffers = new Set<string>();
+
   /** The overnight routine booked in `sessionId` (one per chat, ever), or null. */
   private overnightBooking(sessionId: string): CronJob | null {
     return (
       listJobs().find((job) => job.overnight?.sessionId === sessionId) ?? null
     );
+  }
+
+  /** What booked overnight work is still to run (its task, one line), or null: closing the window warns of it. */
+  overnightWaiting(): string | null {
+    const job = listJobs().find(
+      (entry) =>
+        entry.overnight != null &&
+        entry.overnight.doneAt == null &&
+        entry.enabled
+    );
+    return job == null ? null : overnightLine(job.name);
   }
 
   /** Why `sessionId` cannot book overnight work now, or null when it can. */
@@ -4290,6 +4305,11 @@ export class ServiceHost {
   ): Promise<{ readyAt: number } | { refused: string }> {
     const refused = this.overnightRefusal(sessionId);
     if (refused != null) return { refused };
+    if (!this.overnightOffers.has(sessionId))
+      return {
+        refused:
+          "Book only after the user said yes to the overnight task offered in this chat.",
+      };
     const session = this.agentSessionManagerService.get(sessionId);
     if (session == null) return { refused: "This chat is gone." };
     const now = Date.now();
@@ -4310,6 +4330,7 @@ export class ServiceHost {
         overnight: { sessionId, readyAt, attempts: 0 },
       }
     );
+    this.overnightOffers.delete(sessionId);
     // The night is the run's: no "work is waiting" for this chat meanwhile.
     this.workWaiting.settle(sessionId);
     reportFunnelStep("overnight_booked", "");

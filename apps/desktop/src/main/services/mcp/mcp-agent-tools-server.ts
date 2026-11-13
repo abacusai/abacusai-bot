@@ -405,6 +405,8 @@ export interface McpAgentToolsServerOptions {
   routineOfferClosed?: () => boolean;
   /** No overnight task to offer in this chat (overnight.ts): one booked already, or credits short. */
   overnightOfferClosed?: (sessionId: string | undefined) => boolean;
+  /** `suggest_tasks` showed an overnight task in this chat: only then may it be booked. */
+  overnightOffered?: (sessionId: string) => void;
   /** Books this chat's overnight run: its ready time, or why not. */
   bookOvernight?: (
     sessionId: string,
@@ -4097,6 +4099,10 @@ export class McpAgentToolsServer extends McpHttpServer {
 
   overnightOfferClosed(sessionId: string | undefined): boolean {
     return this.options.overnightOfferClosed?.(sessionId) ?? true;
+  }
+
+  noteOvernightOffered(sessionId: string): void {
+    this.options.overnightOffered?.(sessionId);
   }
 
   async bookOvernight(
