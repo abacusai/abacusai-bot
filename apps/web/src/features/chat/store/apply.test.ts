@@ -293,6 +293,40 @@ describe("R2-T8 applyEvent", () => {
   });
 });
 
+const task = {
+  id: "bg-1",
+  kind: "job" as const,
+  label: "Downloading Flutter, 1.8 GB",
+  command: "curl -L -o flutter.zip https://example.com/flutter.zip",
+  startedAt: 1000,
+  lastOutputAt: 2000,
+  lastLine: "######             31.0%",
+  progress: 31,
+};
+
+describe("what still runs past its turn", () => {
+  it("is whole each time, outside any run", () => {
+    let state = fold([b.custom("background.tasks", { tasks: [task] })]);
+    expect(state.backgroundTasks).toEqual([task]);
+    state = applyEvent(state, 2, b.custom("background.tasks", { tasks: [] }));
+    expect(state.backgroundTasks).toEqual([]);
+  });
+
+  it("is there when the chat is opened again, and Stop reaches the agent", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll([
+      ...b.sessionReady(),
+      b.custom("background.tasks", { tasks: [task] }),
+    ]);
+    const session = new ThreadSession({ ai: relay.ai, threadId: "t-1" });
+    sessions.push(session);
+    await session.load();
+    expect(session.store.state.backgroundTasks).toEqual([task]);
+    await session.stopTask("bg-1");
+    expect(relay.stats.stopTask).toEqual(["bg-1"]);
+  });
+});
+
 describe("R2-T8 through the session", () => {
   it("hydrates session slices with no further events", async () => {
     const d = b.descriptor({ type: "run_terminal", command: "ls" } as never, {

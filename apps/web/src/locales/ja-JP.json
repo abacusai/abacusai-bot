@@ -3556,7 +3556,8 @@
       "askSkipped": "Skipped",
       "askBot": "{{bot}}に質問しました: {{what}}",
       "giveTask": "{{bot}}にタスクを渡しました: {{what}}",
-      "memoryUpdated": "メモリを更新しました: {{name}}"
+      "memoryUpdated": "メモリを更新しました: {{name}}",
+      "quiet": "{{time}} 出力なし"
     },
     "transcript": {
       "jump": "Jump to the end",
@@ -3731,6 +3732,12 @@
       "newChat": "{{model}} で新しいチャットを続ける",
       "here": "それでもこのチャットを {{model}} に切り替える",
       "cancel": "キャンセル"
+    },
+    "tasks": {
+      "title": "実行中",
+      "stop": "停止",
+      "serving": "{{url}} を公開中",
+      "stopFailed": "停止できませんでした。もう一度お試しください。"
     }
   },
   "notch": {

@@ -3556,7 +3556,8 @@
       "askSkipped": "Skipped",
       "askBot": "{{bot}} gefragt: {{what}}",
       "giveTask": "Aufgabe an {{bot}} übergeben: {{what}}",
-      "memoryUpdated": "Speicher aktualisiert: {{name}}"
+      "memoryUpdated": "Speicher aktualisiert: {{name}}",
+      "quiet": "Seit {{time}} keine Ausgabe"
     },
     "transcript": {
       "jump": "Jump to the end",
@@ -3731,6 +3732,12 @@
       "newChat": "In einem neuen Chat mit {{model}} weitermachen",
       "here": "Diesen Chat trotzdem auf {{model}} umstellen",
       "cancel": "Abbrechen"
+    },
+    "tasks": {
+      "title": "Läuft",
+      "stop": "Stoppen",
+      "serving": "Stellt {{url}} bereit",
+      "stopFailed": "Konnte nicht gestoppt werden. Versuch es noch einmal."
     }
   },
   "notch": {

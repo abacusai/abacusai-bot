@@ -16,6 +16,7 @@ import type {
 import type {
   AgentMode,
   AgentStatus,
+  BackgroundTask,
   CliMcpLogEntry,
   CliMcpServerSnapshot,
   DesktopCommand,
@@ -61,7 +62,12 @@ export type AguiControlCommand =
       message: string;
     }
   /** Remove one host queue entry by incarnation and id (spec 02 §14.6). */
-  | { type: "queue.remove"; incarnation: string; entryId: string };
+  | { type: "queue.remove"; incarnation: string; entryId: string }
+  /**
+   * Stop one task still running past its turn, by its `background.tasks` id.
+   * The answer is the next `background.tasks`, without it.
+   */
+  | { type: "task.stop"; id: string };
 
 /** AG-UI RunAgentInput as the SubscribeConnectionAdapter sends it. `resume` must be absent or empty. */
 export type RunInput = Omit<AguiRunAgentInput, "forwardedProps"> & {
@@ -335,6 +341,8 @@ export interface CustomValues {
   "queue.steered": { content: string };
   "queue.dequeued": { content: string };
   "skills.loaded": { skills: SkillMetadata[] };
+  /** Everything still running past its turn, whole each time. */
+  "background.tasks": { tasks: BackgroundTask[] };
   "mcp.servers": { servers: CliMcpServerSnapshot[] };
   "mcp.server_logs": { serverId: string; entries: CliMcpLogEntry[] };
 }

@@ -593,6 +593,11 @@ export class ThreadSession {
     }
   }
 
+  /** Stop a task still running past its turn; the strip updates from the stream. */
+  async stopTask(id: string): Promise<void> {
+    await this.#ai.stopTask({ threadId: this.threadId, id });
+  }
+
   // ─── queue (§8.5) ─────────────────────────────────────────────────
 
   async react(

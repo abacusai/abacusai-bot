@@ -48,6 +48,7 @@ const SESSION_CUSTOM: ReadonlySet<string> = new Set([
   "queue.command_rejected",
   "abacus.notice",
   "skills.loaded",
+  "background.tasks",
   "mcp.servers",
   "mcp.server_logs",
 ]);
@@ -273,6 +274,13 @@ const applySessionCustom = (
           ? (value.skills as ThreadStoreState["skills"])
           : [],
       };
+    case "background.tasks":
+      return {
+        ...state,
+        backgroundTasks: Array.isArray(value.tasks)
+          ? (value.tasks as ThreadStoreState["backgroundTasks"])
+          : [],
+      };
     default:
       return state;
   }
@@ -292,6 +300,7 @@ const applyRunCustom = (
         tools: {
           ...state.tools,
           output: { ...state.tools.output, [key]: String(value.output ?? "") },
+          outputAt: { ...state.tools.outputAt, [key]: Date.now() },
         },
       };
     }
@@ -410,7 +419,7 @@ export const applyEvent = (
             serverInitiated: meta?.abacus?.serverInitiated === true,
           },
         },
-        tools: { output: {}, display: {} },
+        tools: { output: {}, outputAt: {}, display: {} },
         activity: { ...next.activity, retry: null },
       };
     }

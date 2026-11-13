@@ -74,6 +74,15 @@ describe("tool-display entry", () => {
 
   it("titles and kinds from the final input", () => {
     expect(buildToolTitle("bash", { command: "ls -la" })).toBe("Run ls -la");
+    expect(
+      buildToolTitle("bash", {
+        command: "curl -sL -o f.zip https://example.com/f.zip",
+        label: "Downloading Flutter, 1.8 GB",
+      })
+    ).toBe("Downloading Flutter, 1.8 GB");
+    expect(buildToolTitle("bash", { command: "ls", label: "  " })).toBe(
+      "Run ls"
+    );
     expect(buildToolTitle("read", { path: "src/a.ts" })).toBe("Read src/a.ts");
     expect(buildToolTitle("bash", { command: "x".repeat(200) })).toHaveLength(
       80
