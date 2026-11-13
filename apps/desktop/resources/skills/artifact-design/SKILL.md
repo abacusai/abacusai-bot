@@ -1,6 +1,7 @@
 ---
 name: Artifact design
-description: Build a page people can use with the artifact tool: a report, dashboard, one-pager, diagram or small working tool. Read this before calling artifact.
+description: >-
+  Build a page people can use with the artifact tool: a report, dashboard, one-pager, diagram or small working tool. Read this before calling artifact.
 ---
 
 # Artifact design

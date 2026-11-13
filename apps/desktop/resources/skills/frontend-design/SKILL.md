@@ -1,6 +1,7 @@
 ---
 name: Frontend design
-description: Design and build user interfaces that look considered rather than generated: layout, spacing, type, colour, and states. Use when building or restyling any UI, or when a screen works but looks wrong and it is not obvious why.
+description: >-
+  Design and build user interfaces that look considered rather than generated: layout, spacing, type, colour, and states. Use when building or restyling any UI, or when a screen works but looks wrong and it is not obvious why.
 ---
 
 # Frontend design

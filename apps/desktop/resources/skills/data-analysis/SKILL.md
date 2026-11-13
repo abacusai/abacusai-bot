@@ -1,6 +1,7 @@
 ---
 name: Data analysis
-description: Explore, clean, and draw conclusions from a dataset: profiling it, handling missing and malformed values, aggregating, and reporting findings honestly. Use when handed a CSV, spreadsheet, or query result and asked what it shows.
+description: >-
+  Explore, clean, and draw conclusions from a dataset: profiling it, handling missing and malformed values, aggregating, and reporting findings honestly. Use when handed a CSV, spreadsheet, or query result and asked what it shows.
 ---
 
 # Data analysis

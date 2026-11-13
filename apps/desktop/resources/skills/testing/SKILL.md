@@ -1,6 +1,7 @@
 ---
 name: Writing tests
-description: Write tests that catch real regressions instead of restating the implementation: choosing what to test, structuring cases, and handling async, time, and external services. Use when adding tests, fixing a flaky suite, or asked whether something is adequately covered.
+description: >-
+  Write tests that catch real regressions instead of restating the implementation: choosing what to test, structuring cases, and handling async, time, and external services. Use when adding tests, fixing a flaky suite, or asked whether something is adequately covered.
 ---
 
 # Writing tests

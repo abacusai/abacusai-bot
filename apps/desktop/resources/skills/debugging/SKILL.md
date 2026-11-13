@@ -1,6 +1,7 @@
 ---
 name: Debugging
-description: Track down a bug methodically instead of guessing: reproducing it, bisecting the cause, and confirming the fix. Use when something is broken, intermittent, or behaving differently than expected, especially after a few obvious fixes have failed.
+description: >-
+  Track down a bug methodically instead of guessing: reproducing it, bisecting the cause, and confirming the fix. Use when something is broken, intermittent, or behaving differently than expected, especially after a few obvious fixes have failed.
 ---
 
 # Debugging
