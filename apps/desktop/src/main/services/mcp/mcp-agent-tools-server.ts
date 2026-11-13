@@ -385,6 +385,13 @@ export interface McpAgentToolsServerOptions {
   nextStep?: () => boolean;
   /** The app delivers local routine runs' answers (not on the hosted computer). */
   routineDelivery?: () => boolean;
+  /** Phone fixes of what the GitHub watcher found are on (`github_fix` is listed). */
+  githubFixOffered?: () => boolean;
+  /** Start the fix of a watcher event; `ok: false` is a refusal the model words. */
+  githubFix?: (
+    eventId: string | null,
+    callerSession: string | undefined
+  ) => Promise<{ ok: boolean; text: string }>;
   /**
    * The app delivers this routine run's answer to the user's own chat on
    * `platform`'s lane: the run's own send there is skipped, not doubled.
@@ -819,6 +826,7 @@ export class McpAgentToolsServer extends McpHttpServer {
       ),
       nextStep: this.options.nextStep?.() === true,
       routineDelivery: this.options.routineDelivery?.() === true,
+      githubFix: this.options.githubFixOffered?.() === true,
     };
   }
 
@@ -4056,6 +4064,20 @@ export class McpAgentToolsServer extends McpHttpServer {
   }
 
   // ── Result helpers ───────────────────────────────────────────────────────
+
+  async githubFix(
+    args: Record<string, unknown>,
+    callerSession?: string
+  ): Promise<ToolResult> {
+    if (this.options.githubFix == null)
+      return this.err("GitHub fixes are not available here.");
+    const eventId =
+      typeof args.event_id === "string" && args.event_id.trim().length > 0
+        ? args.event_id.trim()
+        : null;
+    const answer = await this.options.githubFix(eventId, callerSession);
+    return answer.ok ? this.ok(answer.text) : this.err(answer.text);
+  }
 
   routineOfferClosed(): boolean {
     return this.options.routineOfferClosed?.() === true;

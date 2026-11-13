@@ -35,7 +35,8 @@ export interface NotificationMetadata {
     | "routine"
     | "routine-run"
     | "messaging"
-    | "channel";
+    | "channel"
+    | "github-watch";
   botId?: string;
   channelId?: string;
   routineId?: string;
@@ -166,6 +167,7 @@ export const system = {
                 "routine-run",
                 "messaging",
                 "channel",
+                "github-watch",
               ])
             ),
             botId: v.optional(v.string()),

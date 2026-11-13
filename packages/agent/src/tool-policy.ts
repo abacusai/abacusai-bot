@@ -107,6 +107,8 @@ export const PHONE_EXCLUDED_MCP_TOOLS: Readonly<Record<string, string>> = {
   cancel_bot_ask:
     "the phone's chat is one lifelong assistant, not one of the user's bots",
   offer_session: "a card in the app's bot chat: the phone's chat is WhatsApp",
+  github_fix:
+    "starts work in a project on the user's computer, which the phone's chat has none of",
   suggest_tasks: "buttons in the app's bot chat: the phone's chat is WhatsApp",
   image_generate: MEDIA_OFF,
   text_to_speech: MEDIA_OFF,
@@ -264,6 +266,7 @@ export const UNATTENDED_EXCLUDED_TOOLS: Readonly<Record<string, string>> = {
   billing_plan: "mints one-time upgrade links for a person, not a routine",
   bot_help: "answers a person's questions about the app, not a routine's",
   offer_session: "a card the user clicks in the bot's chat",
+  github_fix: "only the user, in their own chat, starts a fix with full access",
   suggest_tasks: "buttons the user taps in the bot's chat",
   exit_plan_mode: "never in plan mode",
   delegate_task: NO_SUBAGENT,

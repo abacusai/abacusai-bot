@@ -1887,5 +1887,29 @@
       "creditsPlain"
     ],
     "sources": ["../../desktop/src/main/services/providers/work-waiting.ts"]
+  },
+  {
+    "prefix": "githubWatch.",
+    "values": [
+      "line.ci",
+      "line.review",
+      "line.changes",
+      "line.approved",
+      "line.pr",
+      "line.prYours",
+      "ping.more",
+      "ping.replyFix",
+      "ping.replyReview",
+      "ping.openApp",
+      "notice.more",
+      "fix.done",
+      "fix.reviewed",
+      "fix.failed"
+    ],
+    "sources": [
+      "../../../packages/contract/src/github-watch.ts",
+      "../../desktop/src/main/services/workspace/github-watch.ts",
+      "../../desktop/src/main/service-host.ts"
+    ]
   }
 ]

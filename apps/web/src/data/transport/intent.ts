@@ -44,7 +44,7 @@ const READS: Record<string, string> = {
   files:
     "events listDirectory pendingPreview readImageAsDataUrl readPptx readText search treeChildren treeRoot",
   git: "branches checkoutStatus currentBranch diff prInfo watch worktrees.list",
-  github: "pr prDiff status",
+  github: "pr prDiff status watch",
   links: "preview",
   mcp: "list runtime.events runtime.logs runtime.servers",
   memory: "bots customInstructions.get events",

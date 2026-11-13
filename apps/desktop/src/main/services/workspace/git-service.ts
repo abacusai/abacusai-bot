@@ -1009,6 +1009,22 @@ export class GitService {
     }
   }
 
+  /** The checkout's `origin` as `owner/name` when it is on github.com; null otherwise. */
+  async githubRepo(checkoutPath: string): Promise<string | null> {
+    try {
+      const { stdout } = await execFileAsync("git", [
+        "-C",
+        checkoutPath,
+        "remote",
+        "get-url",
+        "origin",
+      ]);
+      return parseGithubRemote(stdout.trim());
+    } catch {
+      return null;
+    }
+  }
+
   /** HEAD's object at a top-level-relative path (null: absent or unborn). */
   private async headObject(
     top: string,
@@ -1362,3 +1378,12 @@ export class GitService {
     return String(error).toLowerCase();
   }
 }
+
+/** `owner/name` from a github.com remote (https or ssh), else null. */
+export const parseGithubRemote = (url: string): string | null => {
+  const match =
+    /^(?:https?:\/\/(?:[^@/]+@)?github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?\/?$/i.exec(
+      url
+    );
+  return match == null ? null : `${match[1]}/${match[2]}`;
+};

@@ -5467,5 +5467,69 @@
     "wallBody": "Your message is saved. Move to {{plan}} and it picks up right where it stopped, on our coding router.",
     "wallBodyNoMessage": "Move to {{plan}} to keep coding on our coding router, with more credits every month.",
     "wallCta": "Move to {{plan}} and finish it"
+  },
+  "githubWatch": {
+    "line": {
+      "ci": "CI failed on {{pr}} ({{repo}}): {{detail}}",
+      "review": "{{who}} commented on {{pr}} ({{repo}})",
+      "changes": "{{who}} asked for changes on {{pr}} ({{repo}})",
+      "approved": "{{who}} approved {{pr}} ({{repo}})",
+      "pr": "New PR {{pr}} by {{who}} ({{repo}})",
+      "prYours": "New PR {{pr}} by {{who}} is waiting on your review ({{repo}})",
+      "away": "while your computer was off"
+    },
+    "ping": {
+      "more": "…and {{count}} more in AbacusAI Bot.",
+      "replyFix": "Reply \"fix\" and I'll fix it on your computer.",
+      "replyReview": "Reply \"review\" and I'll review it on your computer.",
+      "openApp": "Open AbacusAI Bot to fix it."
+    },
+    "notice": {
+      "more": "And {{count}} more. Open AbacusAI Bot to see them."
+    },
+    "fix": {
+      "done": "Done with {{pr}}.",
+      "reviewed": "Reviewed {{pr}}.",
+      "failed": "The fix for {{pr}} stopped before it finished. Open AbacusAI Bot to see how far it got."
+    },
+    "card": {
+      "title": "Ping me when my code needs me",
+      "description": "A new pull request, a review on yours, or failed CI: AbacusAI Bot tells you here and on your phone, with a Fix it button. Checking uses no credits.",
+      "start": "Watch my GitHub",
+      "watching": "Watching GitHub",
+      "repos": "{{repos}} · checked at {{time}}",
+      "edit": "Edit",
+      "empty": "Nothing needs you right now.",
+      "fix": "Fix it",
+      "review": "Review",
+      "fixing": "Fixing…",
+      "openFix": "Open the fix",
+      "noProject": "Add this repo's folder as a project to fix it here.",
+      "upsell": "Basic watches your repos 24/7, even with your computer off.",
+      "upsellAction": "See Basic"
+    },
+    "problem": {
+      "noToken": "Connect GitHub in Connectors, or sign in to the GitHub CLI, to start watching.",
+      "disabled": "GitHub integration is off in Settings.",
+      "rateLimited": "GitHub asked to wait a little. Checks start again soon."
+    },
+    "dialog": {
+      "title": "Watch my GitHub",
+      "description": "While the app is open, AbacusAI Bot checks your repos every minute and tells you about new pull requests, reviews on yours and failed CI. Checking uses no credits; only a fix does.",
+      "repos": "Repos",
+      "noRepos": "None of your projects is on GitHub yet. Open a project whose folder is a GitHub repo.",
+      "fullAccess": "Full access",
+      "phoneFix": "for fixes I start from my phone",
+      "phoneFixHint": "Reply \"fix\" on your phone and it fixes, tests and pushes on this computer. Off: open the app to fix.",
+      "where": "Pings go to this app and {{lanes}}.",
+      "whereApp": "Pings show in this app. Link WhatsApp, Telegram or Discord to get them on your phone too.",
+      "start": "Start watching",
+      "save": "Save",
+      "turnOff": "Turn off",
+      "cancel": "Cancel"
+    },
+    "pr": {
+      "line": "Ping me when PRs here get a review or CI fails"
+    }
   }
 }

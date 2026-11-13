@@ -45,6 +45,7 @@ const host = (seed: string | null, reports: string[] = []) => {
         notes: reports,
         taken: () => (taken.reports += 1),
       }),
+      githubWatchNotes: () => ({ notes: [], taken: () => undefined }),
       agentSessionManagerService: {
         continuationSeed: () => current,
         takeContinuationSeed: () => {

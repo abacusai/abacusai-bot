@@ -5467,5 +5467,69 @@
     "wallBody": "Pesanmu sudah disimpan. Pindah ke {{plan}} dan pekerjaan lanjut tepat dari titik berhentinya, dengan router coding kami.",
     "wallBodyNoMessage": "Pindah ke {{plan}} untuk lanjut coding dengan router coding kami, dengan kredit lebih banyak tiap bulan.",
     "wallCta": "Pindah ke {{plan}} dan selesaikan"
+  },
+  "githubWatch": {
+    "line": {
+      "ci": "CI gagal di {{pr}} ({{repo}}): {{detail}}",
+      "review": "{{who}} mengomentari {{pr}} ({{repo}})",
+      "changes": "{{who}} meminta perubahan di {{pr}} ({{repo}})",
+      "approved": "{{who}} menyetujui {{pr}} ({{repo}})",
+      "pr": "PR baru {{pr}} dari {{who}} ({{repo}})",
+      "prYours": "PR baru {{pr}} dari {{who}} menunggu review-mu ({{repo}})",
+      "away": "saat komputermu mati"
+    },
+    "ping": {
+      "more": "…dan {{count}} lainnya di AbacusAI Bot.",
+      "replyFix": "Balas \"fix\" dan aku perbaiki di komputermu.",
+      "replyReview": "Balas \"review\" dan aku review di komputermu.",
+      "openApp": "Buka AbacusAI Bot untuk memperbaikinya."
+    },
+    "notice": {
+      "more": "Dan {{count}} lainnya. Buka AbacusAI Bot untuk melihatnya."
+    },
+    "fix": {
+      "done": "{{pr}} selesai.",
+      "reviewed": "{{pr}} sudah di-review.",
+      "failed": "Perbaikan {{pr}} berhenti sebelum selesai. Buka AbacusAI Bot untuk melihat sejauh mana."
+    },
+    "card": {
+      "title": "Kabari aku saat kodeku butuh aku",
+      "description": "Pull request baru, review di PR-mu, atau CI gagal: AbacusAI Bot memberi tahu di sini dan di ponselmu, dengan tombol Perbaiki. Pengecekan tidak memakai kredit.",
+      "start": "Pantau GitHub-ku",
+      "watching": "Memantau GitHub",
+      "repos": "{{repos}} · dicek pukul {{time}}",
+      "edit": "Ubah",
+      "empty": "Belum ada yang butuh kamu.",
+      "fix": "Perbaiki",
+      "review": "Review",
+      "fixing": "Memperbaiki…",
+      "openFix": "Buka perbaikannya",
+      "noProject": "Tambahkan folder repo ini sebagai proyek untuk memperbaikinya di sini.",
+      "upsell": "Basic memantau repo-mu 24/7, bahkan saat komputermu mati.",
+      "upsellAction": "Lihat Basic"
+    },
+    "problem": {
+      "noToken": "Hubungkan GitHub di Konektor, atau masuk ke GitHub CLI, untuk mulai memantau.",
+      "disabled": "Integrasi GitHub mati di Pengaturan.",
+      "rateLimited": "GitHub meminta menunggu sebentar. Pengecekan segera berjalan lagi."
+    },
+    "dialog": {
+      "title": "Pantau GitHub-ku",
+      "description": "Selama aplikasi terbuka, AbacusAI Bot mengecek repo-mu tiap menit dan memberi tahu pull request baru, review di PR-mu, dan CI gagal. Pengecekan tidak memakai kredit; hanya perbaikan yang memakai.",
+      "repos": "Repo",
+      "noRepos": "Belum ada proyekmu yang ada di GitHub. Buka proyek yang foldernya repo GitHub.",
+      "fullAccess": "Akses penuh",
+      "phoneFix": "untuk perbaikan yang kumulai dari ponsel",
+      "phoneFixHint": "Balas \"fix\" di ponsel dan komputer ini akan memperbaiki, mengetes, dan push. Mati: buka aplikasi untuk memperbaiki.",
+      "where": "Notifikasi masuk ke aplikasi ini dan {{lanes}}.",
+      "whereApp": "Notifikasi muncul di aplikasi ini. Tautkan WhatsApp, Telegram, atau Discord untuk menerimanya juga di ponsel.",
+      "start": "Mulai memantau",
+      "save": "Simpan",
+      "turnOff": "Matikan",
+      "cancel": "Batal"
+    },
+    "pr": {
+      "line": "Kabari aku saat PR di sini dapat review atau CI gagal"
+    }
   }
 }

@@ -5647,5 +5647,69 @@
     "wallBody": "Twoja wiadomość jest zapisana. Przejdź na {{plan}}, a praca ruszy dokładnie tam, gdzie się zatrzymała, na naszym routerze do kodu.",
     "wallBodyNoMessage": "Przejdź na {{plan}}, aby dalej kodować na naszym routerze do kodu, z większą liczbą kredytów co miesiąc.",
     "wallCta": "Przejdź na {{plan}} i dokończ"
+  },
+  "githubWatch": {
+    "line": {
+      "ci": "CI nie przeszło w {{pr}} ({{repo}}): {{detail}}",
+      "review": "{{who}} skomentował(a) {{pr}} ({{repo}})",
+      "changes": "{{who}} prosi o zmiany w {{pr}} ({{repo}})",
+      "approved": "{{who}} zatwierdził(a) {{pr}} ({{repo}})",
+      "pr": "Nowy PR {{pr}} od {{who}} ({{repo}})",
+      "prYours": "Nowy PR {{pr}} od {{who}} czeka na Twoją recenzję ({{repo}})",
+      "away": "gdy komputer był wyłączony"
+    },
+    "ping": {
+      "more": "…i jeszcze {{count}} w AbacusAI Bot.",
+      "replyFix": "Odpowiedz „fix”, a naprawię to na Twoim komputerze.",
+      "replyReview": "Odpowiedz „review”, a sprawdzę to na Twoim komputerze.",
+      "openApp": "Otwórz AbacusAI Bot, aby to naprawić."
+    },
+    "notice": {
+      "more": "I jeszcze {{count}}. Otwórz AbacusAI Bot, aby je zobaczyć."
+    },
+    "fix": {
+      "done": "{{pr}} gotowe.",
+      "reviewed": "{{pr}} sprawdzone.",
+      "failed": "Poprawka {{pr}} zatrzymała się przed końcem. Otwórz AbacusAI Bot, aby zobaczyć, ile zrobiła."
+    },
+    "card": {
+      "title": "Daj znać, gdy mój kod mnie potrzebuje",
+      "description": "Nowy pull request, recenzja Twojego lub nieudane CI: AbacusAI Bot powie Ci o tym tutaj i na telefonie, z przyciskiem Napraw. Sprawdzanie nie zużywa kredytów.",
+      "start": "Obserwuj mój GitHub",
+      "watching": "Obserwuję GitHub",
+      "repos": "{{repos}} · sprawdzono o {{time}}",
+      "edit": "Edytuj",
+      "empty": "Teraz nic na Ciebie nie czeka.",
+      "fix": "Napraw",
+      "review": "Sprawdź",
+      "fixing": "Naprawiam…",
+      "openFix": "Otwórz poprawkę",
+      "noProject": "Dodaj folder tego repo jako projekt, aby naprawić to tutaj.",
+      "upsell": "Basic obserwuje Twoje repo 24/7, nawet przy wyłączonym komputerze.",
+      "upsellAction": "Zobacz Basic"
+    },
+    "problem": {
+      "noToken": "Połącz GitHub w Konektorach lub zaloguj się do GitHub CLI, aby zacząć.",
+      "disabled": "Integracja z GitHub jest wyłączona w Ustawieniach.",
+      "rateLimited": "GitHub prosi o chwilę przerwy. Sprawdzanie wkrótce wróci."
+    },
+    "dialog": {
+      "title": "Obserwuj mój GitHub",
+      "description": "Gdy aplikacja jest otwarta, AbacusAI Bot co minutę sprawdza Twoje repo i informuje o nowych pull requestach, recenzjach Twoich i nieudanym CI. Sprawdzanie nie zużywa kredytów; tylko poprawka.",
+      "repos": "Repozytoria",
+      "noRepos": "Żaden z Twoich projektów nie jest jeszcze na GitHub. Otwórz projekt, którego folder jest repo GitHub.",
+      "fullAccess": "Pełny dostęp",
+      "phoneFix": "dla poprawek uruchamianych z telefonu",
+      "phoneFixHint": "Odpowiedz „fix” na telefonie, a ten komputer naprawi, przetestuje i wypchnie zmiany. Wyłączone: otwórz aplikację, aby naprawić.",
+      "where": "Powiadomienia trafiają do tej aplikacji i na {{lanes}}.",
+      "whereApp": "Powiadomienia pojawiają się w tej aplikacji. Połącz WhatsApp, Telegram lub Discord, aby dostawać je też na telefon.",
+      "start": "Zacznij",
+      "save": "Zapisz",
+      "turnOff": "Wyłącz",
+      "cancel": "Anuluj"
+    },
+    "pr": {
+      "line": "Daj znać, gdy PR-y tutaj dostaną recenzję albo CI nie przejdzie"
+    }
   }
 }

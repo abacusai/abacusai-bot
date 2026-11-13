@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { errorText } from "#renderer/lib/use-app-context";
 import { Skeleton } from "#renderer/ui/skeleton";
 
+import { GithubWatchPrLine } from "../../routines/github-watch";
 import {
   useCheckoutQueries,
   useGithubIntegration,
@@ -132,6 +133,7 @@ const PrDetailView = ({
   return (
     <div data-slot="pr-tab" className="flex size-full min-h-0 flex-col">
       <PrHeader pr={pr} />
+      {pr.state === "OPEN" ? <GithubWatchPrLine prUrl={pr.url} /> : null}
       {file ? (
         <div className="min-h-0 flex-1">
           <PrFileDiff

@@ -40,6 +40,8 @@ export default defineConfig({
     "src/sandbox-support.ts",
     // And the shared atomic write. Imports only node's fs, so main pays nothing.
     "src/atomic-file.ts",
+    // The GitHub connector's token: the desktop's GitHub watcher asks too.
+    "src/github-connector-token.ts",
     // Every child process's environment: no imports at all.
     "src/child-env.ts",
     "src/hosted-local-tools.ts",

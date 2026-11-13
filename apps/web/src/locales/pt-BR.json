@@ -5467,5 +5467,69 @@
     "wallBody": "Sua mensagem está salva. Mude para o {{plan}} e ela continua exatamente de onde parou, no nosso roteador de código.",
     "wallBodyNoMessage": "Mude para o {{plan}} para continuar programando no nosso roteador de código, com mais créditos todo mês.",
     "wallCta": "Mudar para o {{plan}} e terminar"
+  },
+  "githubWatch": {
+    "line": {
+      "ci": "A CI falhou em {{pr}} ({{repo}}): {{detail}}",
+      "review": "{{who}} comentou em {{pr}} ({{repo}})",
+      "changes": "{{who}} pediu mudanças em {{pr}} ({{repo}})",
+      "approved": "{{who}} aprovou {{pr}} ({{repo}})",
+      "pr": "Novo PR {{pr}} de {{who}} ({{repo}})",
+      "prYours": "Novo PR {{pr}} de {{who}} aguarda sua revisão ({{repo}})",
+      "away": "enquanto seu computador estava desligado"
+    },
+    "ping": {
+      "more": "…e mais {{count}} no AbacusAI Bot.",
+      "replyFix": "Responda \"fix\" e eu corrijo no seu computador.",
+      "replyReview": "Responda \"review\" e eu reviso no seu computador.",
+      "openApp": "Abra o AbacusAI Bot para corrigir."
+    },
+    "notice": {
+      "more": "E mais {{count}}. Abra o AbacusAI Bot para ver."
+    },
+    "fix": {
+      "done": "{{pr}} concluído.",
+      "reviewed": "{{pr}} revisado.",
+      "failed": "A correção de {{pr}} parou antes de terminar. Abra o AbacusAI Bot para ver até onde chegou."
+    },
+    "card": {
+      "title": "Me avise quando meu código precisar de mim",
+      "description": "Um pull request novo, uma revisão no seu ou CI com falha: o AbacusAI Bot avisa aqui e no seu celular, com um botão Corrigir. Verificar não usa créditos.",
+      "start": "Acompanhar meu GitHub",
+      "watching": "Acompanhando o GitHub",
+      "repos": "{{repos}} · verificado às {{time}}",
+      "edit": "Editar",
+      "empty": "Nada precisa de você agora.",
+      "fix": "Corrigir",
+      "review": "Revisar",
+      "fixing": "Corrigindo…",
+      "openFix": "Abrir a correção",
+      "noProject": "Adicione a pasta deste repo como projeto para corrigir aqui.",
+      "upsell": "O Basic acompanha seus repos 24/7, mesmo com o computador desligado.",
+      "upsellAction": "Ver o Basic"
+    },
+    "problem": {
+      "noToken": "Conecte o GitHub em Conectores, ou entre no GitHub CLI, para começar.",
+      "disabled": "A integração com o GitHub está desativada nas Configurações.",
+      "rateLimited": "O GitHub pediu para esperar um pouco. As verificações voltam em breve."
+    },
+    "dialog": {
+      "title": "Acompanhar meu GitHub",
+      "description": "Com o app aberto, o AbacusAI Bot verifica seus repos a cada minuto e avisa sobre pull requests novos, revisões nos seus e CI com falha. Verificar não usa créditos; só uma correção usa.",
+      "repos": "Repos",
+      "noRepos": "Nenhum dos seus projetos está no GitHub ainda. Abra um projeto cuja pasta seja um repo do GitHub.",
+      "fullAccess": "Acesso total",
+      "phoneFix": "para correções que eu iniciar pelo celular",
+      "phoneFixHint": "Responda \"fix\" no celular e ele corrige, testa e envia neste computador. Desligado: abra o app para corrigir.",
+      "where": "Os avisos vão para este app e para {{lanes}}.",
+      "whereApp": "Os avisos aparecem neste app. Vincule WhatsApp, Telegram ou Discord para recebê-los também no celular.",
+      "start": "Começar",
+      "save": "Salvar",
+      "turnOff": "Desativar",
+      "cancel": "Cancelar"
+    },
+    "pr": {
+      "line": "Me avise quando PRs daqui receberem revisão ou a CI falhar"
+    }
   }
 }

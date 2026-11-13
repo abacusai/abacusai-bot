@@ -76,4 +76,10 @@ export const githubRouter = impl.github.router({
     );
     return { ok: true as const };
   }),
+  watch: impl.github.watch.handler(({ context }) =>
+    context.deps.serviceHost.githubWatchView()
+  ),
+  setWatch: impl.github.setWatch.handler(({ input, context }) =>
+    context.deps.serviceHost.setGithubWatch(input)
+  ),
 });

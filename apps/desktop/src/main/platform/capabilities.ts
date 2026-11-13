@@ -29,6 +29,9 @@ export const WEB_HOST_DENIED = [
   "sites",
   "skills.openFile",
   "voice.whisper.fetch",
+  // The GitHub watcher runs in the desktop app only: a fix runs on this computer.
+  "github.watch",
+  "github.setWatch",
   // Reads the user's own files and shows them to the world: desktop only for now.
   "shares",
   // The app delivers local routine runs' reports; the server delivers hosted ones.

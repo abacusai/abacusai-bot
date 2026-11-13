@@ -10,6 +10,7 @@ import * as v from "valibot";
 import type { PrCheck, PrInfo } from "../contracts";
 import { mutation, query } from "./base";
 import { WorkspaceGitContextSchema } from "./git";
+import { NoInput } from "./ids";
 
 /**
  * `ok`: installed and signed in. `missing`: no `gh` on PATH. `unauthenticated`:
@@ -107,6 +108,75 @@ export type PrResult =
   | { kind: "unsupported" }
   | { kind: "unavailable"; status: GithubStatus };
 
+/** What the GitHub watcher tells the user about (see github-watch.ts). */
+export type GithubWatchEventKind = "pr" | "review" | "ci";
+
+export interface GithubWatchEvent {
+  /** Stable across checks: the same thing on GitHub is one event. */
+  id: string;
+  kind: GithubWatchEventKind;
+  /** `owner/name`. */
+  repo: string;
+  /** The pull request it is about; null for a failed run on a branch with none. */
+  number: number | null;
+  /** The pull request's title, else the branch. */
+  title: string;
+  branch: string | null;
+  url: string;
+  /** Who did it: the PR's author, the reviewers, the run's actor. */
+  who: string[];
+  /** The failed workflows, or the start of a review's words; short. */
+  detail: string;
+  /** A review's verdict, when one asked for changes or approved. */
+  verdict: "changes" | "approved" | null;
+  /** A new PR that asks this user for a review. */
+  waitsOnYou: boolean;
+  /** When it happened on GitHub (ISO). */
+  at: string;
+  /** It happened while the app was closed or the computer off. */
+  whileAway: boolean;
+  /** The project on this computer it is fixed in; null when none is open here. */
+  workspaceId: string | null;
+  /** The task a Fix it starts with. */
+  prompt: string;
+  fix: {
+    state: "none" | "running" | "done" | "failed";
+    sessionId: string | null;
+  };
+}
+
+export interface GithubWatchConfig {
+  on: boolean;
+  /** `owner/name`, at most GITHUB_WATCH_MAX_REPOS. */
+  repos: string[];
+  /** A fix asked for from the phone runs here with full access. */
+  phoneFix: boolean;
+}
+
+export const GITHUB_WATCH_MAX_REPOS = 10;
+
+export interface GithubWatchView {
+  config: GithubWatchConfig;
+  /** This computer's projects on GitHub, one row per repo. */
+  candidates: Array<{ repo: string; workspaceId: string; name: string }>;
+  /** Newest first. */
+  events: GithubWatchEvent[];
+  checkedAt: string | null;
+  /**
+   * Why it is not watching right now. `no-token`: neither the GitHub
+   * connector nor a `gh` login; `disabled`: GitHub integration is off;
+   * `rate-limited`: GitHub asked it to wait.
+   */
+  problem: "no-token" | "disabled" | "rate-limited" | null;
+  /** The chat apps pings go to besides this app (WhatsApp, Telegram, Discord). */
+  lanes: string[];
+}
+
+const GithubRepoName = v.pipe(
+  v.string(),
+  v.regex(/^[A-Za-z0-9_.-]{1,100}\/[A-Za-z0-9_.-]{1,100}$/)
+);
+
 const PrTarget = v.object({
   context: WorkspaceGitContextSchema,
   /** The pull request the user is looking at; refused if HEAD's PR differs. */
@@ -133,4 +203,19 @@ export const github = {
       })
     )
     .output(type<{ ok: true }>()),
+  /** The watcher: its settings, the repos it can watch and what it found. */
+  watch: query.input(NoInput).output(type<GithubWatchView>()),
+  /** Turn it on or off, or change its repos; a repo new to it is read silently first. */
+  setWatch: mutation
+    .input(
+      v.object({
+        on: v.boolean(),
+        repos: v.pipe(
+          v.array(GithubRepoName),
+          v.maxLength(GITHUB_WATCH_MAX_REPOS)
+        ),
+        phoneFix: v.boolean(),
+      })
+    )
+    .output(type<GithubWatchView>()),
 };

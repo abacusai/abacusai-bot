@@ -24,6 +24,7 @@ import {
   useCodingRoutinesOffered,
 } from "./coding-routines";
 import { RoutineCreateAction } from "./create-action";
+import { GithubWatchCard } from "./github-watch";
 
 /** One hue per template, so each card reads apart; tints work in both themes. */
 const TEMPLATE_HUES: Record<string, number> = {
@@ -134,6 +135,7 @@ export const RoutinesLanding = () => {
           </p>
         </div>
         <RoutineCreateAction />
+        <GithubWatchCard />
         {coding && (
           <div className="mt-6 w-full">
             <CodingRoutinesSection

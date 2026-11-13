@@ -5467,5 +5467,69 @@
     "wallBody": "Je bericht is bewaard. Stap over naar {{plan}} en het gaat verder waar het stopte, op onze coderouter.",
     "wallBodyNoMessage": "Stap over naar {{plan}} om verder te coderen op onze coderouter, met elke maand meer credits.",
     "wallCta": "Overstappen naar {{plan}} en afmaken"
+  },
+  "githubWatch": {
+    "line": {
+      "ci": "CI mislukt op {{pr}} ({{repo}}): {{detail}}",
+      "review": "{{who}} reageerde op {{pr}} ({{repo}})",
+      "changes": "{{who}} vraagt om wijzigingen in {{pr}} ({{repo}})",
+      "approved": "{{who}} keurde {{pr}} goed ({{repo}})",
+      "pr": "Nieuwe PR {{pr}} van {{who}} ({{repo}})",
+      "prYours": "Nieuwe PR {{pr}} van {{who}} wacht op je review ({{repo}})",
+      "away": "terwijl je computer uit stond"
+    },
+    "ping": {
+      "more": "…en nog {{count}} in AbacusAI Bot.",
+      "replyFix": "Antwoord \"fix\" en ik los het op je computer op.",
+      "replyReview": "Antwoord \"review\" en ik review het op je computer.",
+      "openApp": "Open AbacusAI Bot om het op te lossen."
+    },
+    "notice": {
+      "more": "En nog {{count}}. Open AbacusAI Bot om ze te zien."
+    },
+    "fix": {
+      "done": "Klaar met {{pr}}.",
+      "reviewed": "{{pr}} gereviewd.",
+      "failed": "De fix voor {{pr}} stopte voordat hij klaar was. Open AbacusAI Bot om te zien hoe ver hij kwam."
+    },
+    "card": {
+      "title": "Seintje als mijn code me nodig heeft",
+      "description": "Een nieuwe pull request, een review op de jouwe of mislukte CI: AbacusAI Bot laat het je hier en op je telefoon weten, met een knop Oplossen. Controleren kost geen credits.",
+      "start": "Mijn GitHub in de gaten houden",
+      "watching": "GitHub in de gaten",
+      "repos": "{{repos}} · gecontroleerd om {{time}}",
+      "edit": "Bewerken",
+      "empty": "Er wacht nu niets op je.",
+      "fix": "Oplossen",
+      "review": "Reviewen",
+      "fixing": "Bezig met oplossen…",
+      "openFix": "Fix openen",
+      "noProject": "Voeg de map van deze repo toe als project om het hier op te lossen.",
+      "upsell": "Basic houdt je repo's 24/7 in de gaten, ook als je computer uit staat.",
+      "upsellAction": "Bekijk Basic"
+    },
+    "problem": {
+      "noToken": "Koppel GitHub bij Connectors, of log in bij de GitHub CLI, om te beginnen.",
+      "disabled": "De GitHub-integratie staat uit in Instellingen.",
+      "rateLimited": "GitHub vraagt even te wachten. De controles gaan zo weer verder."
+    },
+    "dialog": {
+      "title": "Mijn GitHub in de gaten houden",
+      "description": "Zolang de app open is, controleert AbacusAI Bot je repo's elke minuut en meldt nieuwe pull requests, reviews op de jouwe en mislukte CI. Controleren kost geen credits; alleen een fix.",
+      "repos": "Repo's",
+      "noRepos": "Nog geen van je projecten staat op GitHub. Open een project waarvan de map een GitHub-repo is.",
+      "fullAccess": "Volledige toegang",
+      "phoneFix": "voor fixes die ik vanaf mijn telefoon start",
+      "phoneFixHint": "Antwoord \"fix\" op je telefoon en het wordt op deze computer opgelost, getest en gepusht. Uit: open de app om het op te lossen.",
+      "where": "Meldingen gaan naar deze app en {{lanes}}.",
+      "whereApp": "Meldingen verschijnen in deze app. Koppel WhatsApp, Telegram of Discord om ze ook op je telefoon te krijgen.",
+      "start": "Begin",
+      "save": "Opslaan",
+      "turnOff": "Uitzetten",
+      "cancel": "Annuleren"
+    },
+    "pr": {
+      "line": "Seintje als PR's hier een review krijgen of CI mislukt"
+    }
   }
 }

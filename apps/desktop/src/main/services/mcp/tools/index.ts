@@ -6,6 +6,7 @@ import { CRONJOB_TOOLS } from "./cronjob";
 import type { ToolDefinition } from "./definition";
 import { DELIVERABLES_TOOLS } from "./deliverables";
 import { DOCUMENTS_TOOLS } from "./documents";
+import { GITHUB_WATCH_TOOLS } from "./github-watch";
 import { INTEGRATIONS_TOOLS } from "./integrations";
 import { MEDIA_TOOLS } from "./media";
 import { MEMORY_TOOLS } from "./memory";
@@ -40,6 +41,7 @@ export const AGENT_TOOLS: readonly ToolDefinition[] = [
   ...MESSAGING_TOOLS,
   ...SESSIONS_TOOLS,
   ...SUGGESTED_TASKS_TOOLS,
+  ...GITHUB_WATCH_TOOLS,
 ];
 
 const byName = new Map<string, ToolDefinition>();

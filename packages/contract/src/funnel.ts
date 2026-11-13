@@ -215,6 +215,20 @@ export const FUNNEL_STEPS = [
   "code_routine_shown",
   "code_routine_opened",
   "code_routine_started",
+  // The GitHub watcher (github-watch.ts): its card or PR-tab line first shown
+  // (once; detail: where), turned on (detail: how many repos) and off; an
+  // event found (pr, review or ci) and where it was told (app or the chat
+  // app); a Fix it (app or phone) and how that fix ended; the 24/7 line under
+  // an event found after the computer was off, shown and tapped.
+  "github_watch_offered",
+  "github_watch_on",
+  "github_watch_off",
+  "github_watch_event",
+  "github_watch_pinged",
+  "github_watch_fix",
+  "github_watch_fix_done",
+  "github_watch_upsell_shown",
+  "github_watch_upsell_tapped",
 ] as const;
 
 export type FunnelStep = (typeof FUNNEL_STEPS)[number];
