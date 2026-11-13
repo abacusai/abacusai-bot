@@ -211,6 +211,8 @@ export interface PrefsRow {
   showLinkPreviews?: boolean;
   /** Absent reads as on. */
   githubIntegration?: boolean;
+  /** The "your work is waiting" reminders; absent reads as on. */
+  projectReminders?: boolean;
   onboardingStep: string | null;
   dismissals: {
     referralCardUntil: number | null;

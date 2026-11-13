@@ -74,6 +74,11 @@ export const SessionsGlobals = ({
     labels: {
       done: t("sessions.notify.done"),
       needsYou: t("sessions.notify.needsYou"),
+      failed: (name: string) =>
+        name.trim() === "" || name === "Untitled"
+          ? t("sessions.notify.failedPlain")
+          : t("sessions.notify.failed", { name }),
+      failedBody: t("sessions.notify.failedBody"),
     },
   });
   const finished = useEffectEvent(

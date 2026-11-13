@@ -27,7 +27,11 @@ export class NotchNotificationPolicy {
       !this.suppression ||
       !this.facts.enabled() ||
       !input.dedupeKey ||
-      !(input.kind === "needs-you" || (input.kind === "done" && input.botReply))
+      !(
+        input.kind === "needs-you" ||
+        input.kind === "failed" ||
+        (input.kind === "done" && input.botReply)
+      )
     ) {
       show();
       return;

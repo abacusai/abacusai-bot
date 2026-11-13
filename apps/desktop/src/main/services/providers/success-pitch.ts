@@ -147,13 +147,14 @@ export interface SuccessPitchDeps {
   nextStep: () => boolean;
   /**
    * A turn the user's own words opened ended, in any chat: a result handed
-   * over (with the next step it ended on), a question for them, a stop
-   * partway, or a plain reply.
+   * over (with the next step it ended on and the reply offering it), a
+   * question for them, a stop partway, or a plain reply.
    */
   turnEnded?: (
     sessionId: string,
     ending: TurnEnding,
-    task: string | null
+    task: string | null,
+    reply: string | null
   ) => void;
   /** Someone's own words reached `sessionId` (any chat). */
   userWrote?: (sessionId: string) => void;
@@ -517,10 +518,12 @@ export class SuccessPitchWatch {
           : ASKS.test(facts.reply.trim())
             ? "question"
             : "chat";
+    const task = clean && facts.delivered != null ? facts.nextTask : null;
     this.deps.turnEnded?.(
       record.sessionId,
       ending,
-      clean && facts.delivered != null ? facts.nextTask : null
+      task,
+      task == null ? null : facts.reply
     );
   }
 

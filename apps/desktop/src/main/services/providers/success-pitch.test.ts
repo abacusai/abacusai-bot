@@ -779,7 +779,8 @@ describe("how a turn ended, for the work-waiting reminder", () => {
     expect(turnEnded).toHaveBeenCalledWith(
       "s1",
       "site",
-      "Put my real name and projects in"
+      "Put my real name and projects in",
+      LONG_REPLY
     );
   });
 
@@ -787,7 +788,7 @@ describe("how a turn ended, for the work-waiting reminder", () => {
     const turnEnded = vi.fn();
     const { run } = setup({ deps: { turnEnded } });
     await run("Make my CV a PDF", [presentFile, text(LONG_REPLY)]);
-    expect(turnEnded).toHaveBeenCalledWith("s1", "file", null);
+    expect(turnEnded).toHaveBeenCalledWith("s1", "file", null, null);
   });
 
   it("ignores tasks that are not a next step", async () => {
@@ -798,7 +799,7 @@ describe("how a turn ended, for the work-waiting reminder", () => {
       text(LONG_REPLY),
       tool("agent-tools_suggest_tasks", { tasks: [{ text: "Something" }] }),
     ]);
-    expect(turnEnded).toHaveBeenCalledWith("s1", "site", null);
+    expect(turnEnded).toHaveBeenCalledWith("s1", "site", null, null);
   });
 
   it("tells every chat's ending: a chat app's result, a troubled turn, a question, a plain reply", async () => {
@@ -817,10 +818,10 @@ describe("how a turn ended, for the work-waiting reminder", () => {
     await run("Plan my week", [text("Which days are you free?")]);
     await run("Thanks", [text("Glad it helped.")]);
     expect(turnEnded.mock.calls).toEqual([
-      ["s1", "site", null],
-      ["s1", "unfinished", null],
-      ["s1", "question", null],
-      ["s1", "chat", null],
+      ["s1", "site", null, null],
+      ["s1", "unfinished", null, null],
+      ["s1", "question", null, null],
+      ["s1", "chat", null, null],
     ]);
   });
 

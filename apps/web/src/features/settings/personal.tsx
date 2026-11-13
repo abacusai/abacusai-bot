@@ -549,6 +549,21 @@ export const NotificationsPage = () => {
             }
           />
         </SettingRow>
+        <SettingRow
+          id="projectReminders"
+          title={t("phase5.settings.projectReminders")}
+          detail={t("phase5.settings.projectRemindersDetail")}
+        >
+          <SettingSwitch
+            id="projectReminders"
+            // Notify me off silences these too.
+            disabled={!(notification.data?.enabled ?? true)}
+            checked={prefs.projectReminders !== false}
+            onCheckedChange={(projectReminders) =>
+              void update({ projectReminders }).catch(fail)
+            }
+          />
+        </SettingRow>
       </GroupCard>
       <GroupCard>
         <SettingRow

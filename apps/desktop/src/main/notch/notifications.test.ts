@@ -45,14 +45,26 @@ describe("R6-T28 attention notification policy", () => {
     expect(show).toHaveBeenCalledOnce();
     policy.dispose();
   });
-  it("ordinary done and failed notifications bypass the hold", () => {
+  it("ordinary done notifications bypass the hold", () => {
     const show = vi.fn();
     const policy = new NotchNotificationPolicy(
       { enabled: () => true, presented: () => true },
       true
     );
     policy.notify({ kind: "done", dedupeKey: "x" }, show);
-    policy.notify({ kind: "failed", dedupeKey: "y" }, show);
-    expect(show).toHaveBeenCalledTimes(2);
+    expect(show).toHaveBeenCalledOnce();
+  });
+  it("flag-on hold drops a failed run's banner the notch already presented", async () => {
+    vi.useFakeTimers();
+    const show = vi.fn();
+    const policy = new NotchNotificationPolicy(
+      { enabled: () => true, presented: (key) => key === "run-1" },
+      true
+    );
+    policy.notify({ kind: "failed", dedupeKey: "run-1" }, show);
+    policy.notify({ kind: "failed", dedupeKey: "run-2" }, show);
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(show).toHaveBeenCalledOnce();
+    policy.dispose();
   });
 });

@@ -28,7 +28,12 @@ it("cues one final visible reply per run and stays silent for cancellation or to
     mark: vi.fn(),
     player,
     notifier: { notify: vi.fn() },
-    labels: { done: "Done", needsYou: "Waiting" },
+    labels: {
+      done: "Done",
+      needsYou: "Waiting",
+      failed: (name: string) => `${name} stopped`,
+      failedBody: "Try again",
+    },
   };
   const notice: RunFinishedNotice = {
     threadId: row.id,
@@ -54,4 +59,95 @@ it("cues one final visible reply per run and stays silent for cancellation or to
   });
   expect(synth).toHaveBeenCalledExactlyOnceWith("done");
   player.dispose();
+});
+
+it("tells a failed run once, naming the chat, through the same notifier as a finished one", () => {
+  const row = {
+    ...fixtureSessions()[0]!,
+    botOwned: false,
+    editorFor: null,
+    routineId: null,
+  };
+  const notify = vi.fn();
+  const deps = {
+    sessions: () => [row],
+    seen: () => true,
+    mark: vi.fn(),
+    player: { play: vi.fn() },
+    notifier: { notify },
+    labels: {
+      done: "Done",
+      needsYou: "Waiting",
+      failed: (name: string) => `${name} stopped before finishing`,
+      failedBody: "Open it and I'll try again.",
+    },
+  };
+  const notice: RunFinishedNotice = {
+    threadId: row.id,
+    runId: "failed-run",
+    owner: null,
+    routineId: null,
+    at: 0,
+    outcome: "error",
+    hasVisibleAssistantText: false,
+  };
+  handleSessionRunFinished(deps, notice);
+  handleSessionRunFinished(deps, notice);
+  expect(deps.player.play).toHaveBeenCalledExactlyOnceWith("failed", {
+    threadId: row.id,
+    dedupeKey: "failed-run",
+  });
+  expect(notify).toHaveBeenCalledExactlyOnceWith({
+    kind: "failed",
+    dedupeKey: "failed-run",
+    botId: null,
+    title: `${row.label} stopped before finishing`,
+    body: "Open it and I'll try again.",
+    metadata: { workspaceId: row.workspaceId, sessionId: row.id },
+  });
+});
+
+it("does not tell a run the app closed under as failed, and still tells an agent exit", () => {
+  const row = {
+    ...fixtureSessions()[0]!,
+    botOwned: false,
+    editorFor: null,
+    routineId: null,
+  };
+  const notify = vi.fn();
+  const deps = {
+    sessions: () => [row],
+    seen: () => true,
+    mark: vi.fn(),
+    player: { play: vi.fn() },
+    notifier: { notify },
+    labels: {
+      done: "Done",
+      needsYou: "Waiting",
+      failed: (name: string) => `${name} stopped before finishing`,
+      failedBody: "Open it and I'll try again.",
+    },
+  };
+  const notice: RunFinishedNotice = {
+    threadId: row.id,
+    runId: "closed-at-quit",
+    owner: null,
+    routineId: null,
+    at: 0,
+    outcome: "error",
+    errorCode: "app_closed",
+    hasVisibleAssistantText: false,
+  };
+  handleSessionRunFinished(deps, notice);
+  expect(notify).not.toHaveBeenCalled();
+  handleSessionRunFinished(deps, {
+    ...notice,
+    runId: "agent-exited",
+    errorCode: "agent_exit",
+  });
+  expect(notify).toHaveBeenCalledOnce();
+  expect(notify.mock.calls[0]?.[0]).toMatchObject({
+    kind: "failed",
+    dedupeKey: "agent-exited",
+  });
 });
