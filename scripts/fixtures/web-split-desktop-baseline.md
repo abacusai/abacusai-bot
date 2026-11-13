@@ -8,7 +8,23 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `2af11569`, coding routines
+## Current: `6e9926a2`, browser security and Connected sites
+
+**451 / 9762250 / 3273516.** Records the renderer with the browser's Connected
+sites (the Settings card listing each site the bot browser is signed in to,
+its rule and Sign out, the chat's "Use your sign-in" prompt) and its strings
+in 15 languages. Against `794d991c` (main before this change, 451 / 9746088 /
+3267642): +0 chunks, +16162 bytes (+0.17%), +5874 gzip bytes (+0.18%). Of
+the bytes, 11045 are strings, carried once per language; 3631 are the
+Settings card. Main had already grown 0.83% in bytes past `2af11569` without
+a new baseline, so this change crossed the 1% allowance. `apps/web`'s
+dependencies did not change. The 1% allowance is unchanged.
+
+Measured from builds of `794d991c` and `6e9926a2` (Linux x64, clean `dist`),
+summed the same way as `check-desktop-parity.mjs`. This baseline-only change
+touches no renderer code.
+
+### `2af11569`, coding routines
 
 **451 / 9665661 / 3240630.** Records the renderer with the coding routines:
 their starters on the session start page and the Routines landing, the one-tap
