@@ -196,6 +196,7 @@ import {
   modelStallMs,
 } from "../stall-watch.js";
 import { continueCutReply, isStreamCut, streamCutStep } from "../stream-cut.js";
+import { partialOutputText } from "../terminal-progress.js";
 import { ToolCallStream } from "../tool-call-stream.js";
 import { ToolHeartbeat } from "../tool-heartbeat.js";
 import { mcpToolAllowed, type UnattendedPolicy } from "../tool-policy.js";
@@ -2590,17 +2591,13 @@ export class ForeverEngine {
       }
 
       case "tool_execution_update": {
-        const partial = event.partialResult;
+        const output = partialOutputText(event.partialResult);
 
-        if (
-          !this.hiddenTurn &&
-          typeof partial === "string" &&
-          partial.length > 0
-        ) {
+        if (!this.hiddenTurn && output.length > 0) {
           this.emitAgentEvent({
             type: "tool_output_update",
             toolCallId: event.toolCallId,
-            output: partial,
+            output,
           });
         }
 
