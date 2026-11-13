@@ -303,7 +303,14 @@ export const SNAPSHOT_BUILD_JS = `(function() {
       node.checked = !!el.checked;
     }
     if (el.tagName === 'A' && el.href) {
-      try { node.href = new URL(el.href).pathname.slice(0, 60); } catch { node.href = el.href.slice(0, 60); }
+      // The path on this site; the site too when the link leaves it, or "→ /" reads as this
+      // site's home. A mailto: or tel: link is shown whole.
+      try {
+        const url = new URL(el.href);
+        if (url.protocol !== 'http:' && url.protocol !== 'https:') node.href = el.href.slice(0, 60);
+        else if (url.origin === new URL(document.baseURI).origin) node.href = url.pathname.slice(0, 60);
+        else node.href = (url.host + url.pathname).slice(0, 60);
+      } catch { node.href = el.href.slice(0, 60); }
     }
     if (el.disabled) node.disabled = true;
     if (childNodes.length > 0) node.children = childNodes;

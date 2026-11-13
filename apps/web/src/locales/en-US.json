@@ -1951,7 +1951,13 @@
       "zoom-out": "Zoom out",
       "zoom-reset": "Reset zoom",
       "open-devtools": "Developer tools",
-      "clear-site-data": "Clear site data"
+      "clear-site-data": "Clear site data",
+      "site": {
+        "title": "Use your sign-in on {{site}}?",
+        "allow": "Allow in this chat",
+        "deny": "Don't allow",
+        "always": "Always allow"
+      }
     },
     "files": {
       "filter": "Filter files…",
@@ -4279,6 +4285,21 @@
         "notReady": "Roblox Studio didn't answer. Open your place in Studio, turn on Enable Studio as MCP server (Assistant > … > Manage MCP Servers), then try again.",
         "get": "Get Roblox Studio"
       }
+    },
+    "sites": {
+      "title": "Connected sites",
+      "intro": "Sites your bots' browser is signed in to. Choose whether bots may use each sign-in. Banks, payments, health and government sites start blocked.",
+      "signedIn": "Signed in",
+      "used": "used by a bot {{when}}",
+      "empty": "No sites yet. When a bot reaches a sign-in page and you sign in for it, the site shows up here.",
+      "addLabel": "Signed in to another site in the Browser pane?",
+      "add": "Add site",
+      "placeholder": "goindigo.in",
+      "rule": "Rule for {{site}}",
+      "ask": "Ask first",
+      "allowed": "Allowed",
+      "blocked": "Blocked",
+      "signOut": "Sign out"
     }
   },
   "browserPermission": {

@@ -1951,7 +1951,13 @@
       "zoom-out": "Uzaklaştır",
       "zoom-reset": "Yakınlaştırmayı sıfırla",
       "open-devtools": "Geliştirici araçları",
-      "clear-site-data": "Site verilerini temizle"
+      "clear-site-data": "Site verilerini temizle",
+      "site": {
+        "title": "{{site}} oturumun kullanılsın mı?",
+        "allow": "Bu sohbette izin ver",
+        "deny": "İzin verme",
+        "always": "Her zaman izin ver"
+      }
     },
     "files": {
       "filter": "Dosyaları filtrele…",
@@ -4279,6 +4285,21 @@
         "notReady": "Roblox Studio yanıt vermedi. Yerinizi Studio'da açın, Enable Studio as MCP server'ı açın (Assistant > … > Manage MCP Servers) ve yeniden deneyin.",
         "get": "Roblox Studio'yu edinin"
       }
+    },
+    "sites": {
+      "title": "Bağlı siteler",
+      "intro": "Botlarının tarayıcısının oturum açtığı siteler. Botların her oturumu kullanıp kullanamayacağını seç. Banka, ödeme, sağlık ve devlet siteleri başta engellidir.",
+      "signedIn": "Oturum açık",
+      "used": "bir bot kullandı {{when}}",
+      "empty": "Henüz site yok. Bir bot oturum açma sayfasına geldiğinde ve onun için oturum açtığında site burada görünür.",
+      "addLabel": "Tarayıcı panelinde başka bir sitede oturum mu açtın?",
+      "add": "Site ekle",
+      "placeholder": "goindigo.in",
+      "rule": "{{site}} kuralı",
+      "ask": "Önce sor",
+      "allowed": "İzin verildi",
+      "blocked": "Engellendi",
+      "signOut": "Oturumu kapat"
     }
   },
   "browserPermission": {

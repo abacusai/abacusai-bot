@@ -215,6 +215,7 @@ import {
   type TurnFailure,
 } from "../turn-outcome.js";
 import { addRunUsage, turnUsage, type TurnUsage } from "../turn-usage.js";
+import { userSaid } from "../user-grant.js";
 import {
   accountReplyLanguagePrompt,
   isSenderChat,
@@ -995,6 +996,7 @@ export class ForeverEngine {
       if (turn?.continueCut === true) await continueCutReply(session);
       else {
         this.profile.noteUserWords?.(text);
+        userSaid.note(text, turn?.userText);
         const words = ownWords(text, turn?.userText);
         this.appTurn =
           words.length === 0 && isAppTurnForPerson(text, turn?.userText);
@@ -2031,6 +2033,7 @@ export class ForeverEngine {
     // Steered into housekeeping it would be answered where no one reads.
     if (this.upkeep || this.hiddenTurn) return;
     this.profile.noteUserWords?.(text);
+    userSaid.note(text);
     this.userWords.add(ownWords(text));
     if (this.midTask.live) {
       try {

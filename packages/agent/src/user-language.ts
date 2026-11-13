@@ -351,8 +351,9 @@ export function buildSetUserLanguageTool() {
       'in a language from now on, including a bare language name such as "türkçe" or',
       '"in English please", whatever language they ask in, and when they ask to go back',
       'to an earlier one ("go back to Turkish"). Do not call it for a one-off request',
-      "(say this in English, translate this, write this email in German). Then answer in",
-      "that language.",
+      "(say this in English, translate this, write this email in German). Writing in a language is",
+      "not asking for it: the app already answers in the language the user writes in, so a",
+      "question that is simply in Hindi needs no call. Then answer in that language.",
     ].join(" "),
     parameters: {
       type: "object",
@@ -389,7 +390,7 @@ export function buildSetUserLanguageTool() {
         content: [
           {
             type: "text",
-            text: `Saved: replies are now in ${name}, in every conversation. Answer in ${name}.`,
+            text: `Saved: replies are now in ${name}, in every conversation. If you already answered the user in ${name} in this reply, do not repeat it; otherwise answer in ${name}.`,
           },
         ],
         details: null,

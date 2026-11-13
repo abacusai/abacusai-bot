@@ -70,9 +70,45 @@ export class ChromePage implements BrowserPage {
         }
         return;
       }
+      // A download saves nothing on the page; without these lines a run
+      // could not tell a click did anything, nor where the file went.
+      case "Page.downloadWillBegin": {
+        const name =
+          typeof p.suggestedFilename === "string"
+            ? p.suggestedFilename
+            : "a file";
+        if (typeof p.guid === "string") this.downloads.set(p.guid, name);
+        this.events.push(
+          `Download started: this browser is saving "${name}" in its own downloads folder. The browser tools cannot see the saved file or its path.`
+        );
+        return;
+      }
+      case "Page.downloadProgress": {
+        const name =
+          typeof p.guid === "string" ? this.downloads.get(p.guid) : undefined;
+        if (name == null || (p.state !== "completed" && p.state !== "canceled"))
+          return;
+        this.downloads.delete(p.guid as string);
+        this.events.push(
+          p.state === "completed"
+            ? `Download finished: "${name}" is in this browser's downloads folder.`
+            : `Download of "${name}" was cancelled.`
+        );
+        return;
+      }
       default:
         return;
     }
+  }
+
+  /** What the tab did that its page does not show (downloads), each told once. */
+  private events: string[] = [];
+  private readonly downloads = new Map<string, string>();
+
+  takeEvents(): string[] {
+    const events = this.events;
+    this.events = [];
+    return events;
   }
 
   private mainFrameId: string | null = null;

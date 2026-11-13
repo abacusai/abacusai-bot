@@ -22,6 +22,7 @@ import { showError, showInfo } from "#renderer/lib/toast";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
+import { NativeSelect, NativeSelectOption } from "#renderer/ui/native-select";
 
 import { GithubSettings } from "./github";
 export const EnvironmentPage = () => {
@@ -236,7 +237,12 @@ const ElectronBrowserPage = () => {
   );
   const clearData = useMutation(
     browser.clearData.mutationOptions({
-      onSuccess: () => showInfo(t("phase5.cleared")),
+      onSuccess: () => {
+        showInfo(t("phase5.cleared"));
+        void cache.invalidateQueries({
+          queryKey: browser.sites.list.queryKey({ input: {} }),
+        });
+      },
       meta: { errorToast: true },
     })
   );
@@ -423,7 +429,128 @@ const ElectronBrowserPage = () => {
           </Button>
         </SettingRow>
       </GroupCard>
+      <ConnectedSitesCard />
     </AreaPage>
+  );
+};
+
+/** "5 min ago", in the reader's language. */
+const usedAgo = (at: number, language: string): string => {
+  const minutes = Math.max(0, Math.floor((Date.now() - at) / 60000));
+  const format = new Intl.RelativeTimeFormat(language, {
+    numeric: "auto",
+    style: "short",
+  });
+  if (minutes < 1) return format.format(0, "second");
+  if (minutes < 60) return format.format(-minutes, "minute");
+  if (minutes < 1440) return format.format(-Math.floor(minutes / 60), "hour");
+  return format.format(-Math.floor(minutes / 1440), "day");
+};
+
+/**
+ * The sites the bot's browser is signed in to, and whether bots may use each
+ * sign-in. A site appears once the bot's browser reached its sign-in page, or
+ * the user added it here, and while the browser still holds its cookies.
+ */
+const ConnectedSitesCard = () => {
+  const { t, i18n } = useTranslation();
+  const { transport } = useAppContext();
+  const cache = useQueryClient();
+  const { sites } = transport.orpc.browser;
+  const list = useQuery(sites.list.queryOptions({ input: {} }));
+  const [adding, setAdding] = useState("");
+  // Each write answers with the new list.
+  const writesList = {
+    onSuccess: (value: NonNullable<typeof list.data>) =>
+      cache.setQueryData(sites.list.queryKey({ input: {} }), value),
+    meta: { errorToast: true },
+  } as const;
+  const add = useMutation(sites.add.mutationOptions(writesList));
+  const setPolicy = useMutation(sites.setPolicy.mutationOptions(writesList));
+  const signOut = useMutation(sites.signOut.mutationOptions(writesList));
+  const rows = list.data ?? [];
+  return (
+    <GroupCard title={t("phase5.sites.title")}>
+      <PageNote className="px-3 pb-2">{t("phase5.sites.intro")}</PageNote>
+      {rows.length === 0 ? (
+        <PageNote className="px-3 py-4">{t("phase5.sites.empty")}</PageNote>
+      ) : (
+        rows.map((row) => (
+          <SettingRow
+            key={row.site}
+            id={`site-${row.site}`}
+            title={row.site}
+            media={
+              <span
+                aria-hidden
+                className="bg-muted text-muted-foreground flex size-8 items-center justify-center rounded-lg text-sm font-semibold uppercase"
+              >
+                {row.site.charAt(0)}
+              </span>
+            }
+            detail={
+              row.lastUsedAt != null
+                ? `${t("phase5.sites.signedIn")} · ${t("phase5.sites.used", {
+                    when: usedAgo(row.lastUsedAt, i18n.language),
+                  })}`
+                : t("phase5.sites.signedIn")
+            }
+          >
+            <NativeSelect
+              size="sm"
+              aria-label={t("phase5.sites.rule", { site: row.site })}
+              value={row.policy}
+              onChange={(e) =>
+                setPolicy.mutate({
+                  site: row.site,
+                  policy: e.target.value as "ask" | "allowed" | "blocked",
+                })
+              }
+            >
+              {(["ask", "allowed", "blocked"] as const).map((x) => (
+                <NativeSelectOption key={x} value={x}>
+                  {t(`phase5.sites.${x}`)}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={signOut.isPending}
+              onClick={() => signOut.mutate({ site: row.site })}
+            >
+              {t("phase5.sites.signOut")}
+            </Button>
+          </SettingRow>
+        ))
+      )}
+      <SettingRow id="addSite" title={t("phase5.sites.addLabel")}>
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const site = adding.trim();
+            if (site.length === 0) return;
+            add.mutate({ site }, { onSuccess: () => setAdding("") });
+          }}
+        >
+          <Input
+            aria-labelledby="addSite-label"
+            placeholder={t("phase5.sites.placeholder")}
+            value={adding}
+            onChange={(e) => setAdding(e.target.value)}
+          />
+          <Button
+            type="submit"
+            size="sm"
+            variant="secondary"
+            disabled={add.isPending || adding.trim().length === 0}
+          >
+            {t("phase5.sites.add")}
+          </Button>
+        </form>
+      </SettingRow>
+    </GroupCard>
   );
 };
 export const DevicesPage = () => (IS_ELECTRON ? <ElectronDevicesPage /> : null);

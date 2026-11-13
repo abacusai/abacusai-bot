@@ -1951,7 +1951,13 @@
       "zoom-out": "Uitzoomen",
       "zoom-reset": "Zoom herstellen",
       "open-devtools": "Ontwikkelaarstools",
-      "clear-site-data": "Sitegegevens wissen"
+      "clear-site-data": "Sitegegevens wissen",
+      "site": {
+        "title": "Je aanmelding op {{site}} gebruiken?",
+        "allow": "Toestaan in deze chat",
+        "deny": "Niet toestaan",
+        "always": "Altijd toestaan"
+      }
     },
     "files": {
       "filter": "Bestanden filteren…",
@@ -4279,6 +4285,21 @@
         "notReady": "Roblox Studio reageerde niet. Open je place in Studio, zet Enable Studio as MCP server aan (Assistant > … > Manage MCP Servers) en probeer het opnieuw.",
         "get": "Roblox Studio downloaden"
       }
+    },
+    "sites": {
+      "title": "Verbonden sites",
+      "intro": "Sites waarop de browser van je bots is aangemeld. Kies of bots elke aanmelding mogen gebruiken. Sites van banken, betalingen, gezondheid en overheid zijn in het begin geblokkeerd.",
+      "signedIn": "Aangemeld",
+      "used": "door een bot gebruikt {{when}}",
+      "empty": "Nog geen sites. Als een bot een aanmeldpagina bereikt en jij je daar voor hem aanmeldt, verschijnt de site hier.",
+      "addLabel": "Aangemeld op een andere site in het Browser-paneel?",
+      "add": "Site toevoegen",
+      "placeholder": "goindigo.in",
+      "rule": "Regel voor {{site}}",
+      "ask": "Eerst vragen",
+      "allowed": "Toegestaan",
+      "blocked": "Geblokkeerd",
+      "signOut": "Afmelden"
     }
   },
   "browserPermission": {

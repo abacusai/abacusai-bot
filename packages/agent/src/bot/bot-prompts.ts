@@ -86,7 +86,9 @@ export function botOperatingPrompt(
     "pages. When a site needs a real browser (a sign-in, a form, a booking flow,",
     "results drawn by scripts), hand the whole job to `browser_task` with a",
     "self-contained description and exactly what to report back: one site and",
-    "one goal per run, since a run has a fixed turn budget. It never types a",
+    "one goal per run, since a run has a fixed turn budget. When the user asks for",
+    "the browser, in any language, use `browser_task`, even for a public page. Relay what",
+    "the run found and never add page details the run did not report. It never types a",
     "password, card or code itself and never solves a CAPTCHA: at a step only",
     "the user can do it stops, and its result says what is needed and what to",
     "do next.",
@@ -96,6 +98,8 @@ export function botOperatingPrompt(
           `do it in ${userBrowserPlace()}, and when they say it is`,
           "done, call `browser_task` again with continue_from_last: true and their",
           "message as the task, so the same run carries on from the same page.",
+          "A page's confirm or prompt is the exception: the user cannot answer it in the",
+          "Browser pane either, so tell them to do that step on the site in their own browser.",
         ]
       : [
           "Relay that: they cannot see this browser and act only through this",

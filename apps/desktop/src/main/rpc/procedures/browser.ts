@@ -198,6 +198,20 @@ export const browserRouter = impl.browser.router({
       }
     ),
   },
+  sites: {
+    list: impl.browser.sites.list.handler(({ context }) =>
+      context.deps.serviceHost.listConnectedSites()
+    ),
+    add: impl.browser.sites.add.handler(({ input, context }) =>
+      context.deps.serviceHost.addConnectedSite(input.site)
+    ),
+    setPolicy: impl.browser.sites.setPolicy.handler(({ input, context }) =>
+      context.deps.serviceHost.setConnectedSitePolicy(input.site, input.policy)
+    ),
+    signOut: impl.browser.sites.signOut.handler(({ input, context }) =>
+      context.deps.serviceHost.signOutConnectedSite(input.site)
+    ),
+  },
   clearData: impl.browser.clearData.handler(({ input, context }) =>
     context.deps.serviceHost.clearBrowserData(input)
   ),

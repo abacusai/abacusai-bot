@@ -120,6 +120,49 @@ describe("a browser run's card", () => {
   });
 });
 
+describe("when to use it", () => {
+  it("is used when the user asks for the browser, even for a public page", () => {
+    // The description said "NOT the way to read the web" and nothing else, so
+    // a bot asked to use its browser read the page with web_fetch instead.
+    const tool = buildBrowserTaskTool(
+      { cwd: process.cwd(), channel: APP_CHANNEL } as never,
+      () => undefined
+    );
+    expect(tool.description).toMatch(
+      /asks for the browser[^.]*use this[^.]*even for a public page/i
+    );
+    // Asked in Hindi ("अपने ब्राउज़र से"), a bot still fetched: the words are any language's.
+    expect(tool.description).toMatch(/in any language/i);
+  });
+});
+
+describe("uploads", () => {
+  it("tells the caller a run can upload a file from the workspace, named in the task", () => {
+    // It said only "it cannot read files", so a bot never handed it one.
+    const tool = buildBrowserTaskTool(
+      { cwd: process.cwd(), channel: APP_CHANNEL } as never,
+      () => undefined
+    );
+    expect(tool.description).toMatch(
+      /file picker a file from your\s+workspace[^.]*name the file's path in the task/
+    );
+    // Refused /etc/hostname, a bot copied it into its workspace and uploaded
+    // the copy: a file from elsewhere is the user's to attach.
+    expect(tool.description).toMatch(
+      /never copy a file from elsewhere on the computer into your workspace to upload it/
+    );
+    // It then wrote the file's contents into a new workspace file instead.
+    expect(tool.description).toMatch(/nor write its contents into a new file/);
+    expect(tool.description).toMatch(/even when the user names the path/);
+    // And asked a run to press OK on a page's confirm.
+    expect(tool.description).toMatch(/never answers OK on a page's confirm/);
+    // Asked to upload a workspace file, a bot overwrote it with "hello" first.
+    expect(tool.description).toMatch(
+      /A file the user names is uploaded as it is: never create or rewrite it first/
+    );
+  });
+});
+
 describe("what the caller is told about a step only the user can do", () => {
   it("sends an app chat's user to the Browser pane", async () => {
     const tool = buildBrowserTaskTool(

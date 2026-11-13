@@ -22,7 +22,8 @@ const RAW: Record<string, readonly string[]> = {
   "this.dispatchTrustedKey(": ["guardedPress"],
   // The trusted key itself, and the page-side activations a script can do.
   "Input.dispatchKeyEvent": ["dispatchTrustedKey"],
-  "Input.dispatchMouseEvent": [],
+  // Only a move (hover's :hover), never a press: held to that below.
+  "Input.dispatchMouseEvent": ["moveMouseTo"],
   "Input.dispatchTouchEvent": [],
   "userGesture: true": ["evalJS", "guardedClick"],
   ".click(": [],
@@ -124,5 +125,16 @@ describe("the browser server's activations", () => {
       )
     ).toEqual([]);
     expect(callers).toContain("executeTool");
+  });
+
+  it("move the mouse only, never press it, outside the guard", () => {
+    const start = SOURCE.indexOf("private async moveMouseTo(");
+    expect(start).toBeGreaterThan(0);
+    const body = SOURCE.slice(start, SOURCE.indexOf("\n  }\n", start));
+    const types = [...body.matchAll(/type:\s*"(\w+)"/g)].map((m) => m[1]);
+    expect(types).toEqual(["mouseMoved"]);
+    expect(body).not.toMatch(
+      /mousePressed|mouseReleased|clickCount|\.\.\.params/
+    );
   });
 });

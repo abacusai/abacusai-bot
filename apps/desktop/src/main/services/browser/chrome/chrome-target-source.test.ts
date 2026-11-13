@@ -27,7 +27,7 @@ import {
 } from "../secret-fields";
 import { SESSION_TABS_KEPT_MS, UNCLAIMED_TAB_GRACE_MS } from "./browser-tabs";
 import type { ChromeRelay, ChromeTabInfo } from "./chrome-relay";
-import { ChromeTargetSource } from "./chrome-target-source";
+import { ChromeTargetSource, tabMethodsOf } from "./chrome-target-source";
 
 class FakeRelay extends EventEmitter {
   connected = true;
@@ -142,6 +142,24 @@ describe("ChromeTargetSource", () => {
     });
 
     expect(page.getURL()).toBe("https://next.test/");
+  });
+
+  it("gives the browser tools what a tab did that its page does not show", async () => {
+    const { relay, source } = setup();
+    await source.materialize("s1", "https://start.test/");
+    relay.emit("cdpEvent", 100, "Page.downloadWillBegin", {
+      guid: "g",
+      suggestedFilename: "a.txt",
+    });
+    expect(source.pageEvents(100)).toEqual([
+      expect.stringContaining(
+        'Download started: this browser is saving "a.txt"'
+      ),
+    ]);
+    expect(source.pageEvents(100)).toEqual([]);
+    expect(source.pageEvents(999)).toEqual([]);
+    // Through the service's view of whichever source is current too.
+    expect(tabMethodsOf(() => source).pageEvents(100)).toEqual([]);
   });
 
   it("drops a tab that left the group or closed", async () => {

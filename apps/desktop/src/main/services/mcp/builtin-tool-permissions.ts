@@ -11,7 +11,11 @@ import type {
 } from "@abacus-ai/contract/contracts";
 import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
 
+import type { SiteDecision } from "../browser/connected-sites";
 import type { McpConfigService } from "./mcp-config-service";
+
+/** How long a site ask waits for an answer in the app before it counts as a no. */
+const SITE_ASK_TIMEOUT_MS = 5 * 60_000;
 
 export type BuiltinPermissionScope = "browser" | "device";
 
@@ -35,6 +39,8 @@ export class BuiltinToolPermissions {
       resolve: (decision: "allow" | "deny") => void;
       server: BuiltinPermissionScope;
       request: BrowserPermissionRequest;
+      /** A site ask: answered with the user's exact choice, never by a settings flip. */
+      site?: (decision: SiteDecision) => void;
     }
   >();
 
@@ -58,6 +64,11 @@ export class BuiltinToolPermissions {
     // Only the conversation the prompt was put in may answer it.
     if (pending.request.conversationKey !== request.conversationKey) return;
     this.pendingBrowserPermissions.delete(request.requestId);
+    if (pending.site != null) {
+      pending.site(request.decision);
+      this.cleared(request.requestId);
+      return;
+    }
     if (request.decision === "session") {
       this.approveForSession(pending.server);
       pending.resolve("allow");
@@ -141,6 +152,64 @@ export class BuiltinToolPermissions {
     return decision;
   }
 
+  /**
+   * "May this chat use your sign-in on <site>?" (a connected site whose rule
+   * is ask first). Asked even when browsing never asks and in a mode where
+   * nothing asks: the per-site rule is the user's. Nobody to ask (a routine, a chat-app turn the user does not
+   * answer in the app within `timeoutMs`) is a no.
+   */
+  async askSite(
+    site: string,
+    summary: string,
+    sessionId: string,
+    timeoutMs = SITE_ASK_TIMEOUT_MS
+  ): Promise<SiteDecision> {
+    // Not even a mode where nothing asks answers it (bots run in one by
+    // default): "ask first" is the user's rule for this site, not a tool prompt.
+    if (this.deps.isUnattended?.(sessionId) === true) return "deny";
+    const conversationKey = this.deps.conversationKeyForSession(sessionId);
+    if (conversationKey == null) return "deny";
+    const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const request: BrowserPermissionRequest = {
+      requestId,
+      tool: "browser_site",
+      summary,
+      server: "browser",
+      conversationKey,
+      site,
+    };
+    return new Promise<SiteDecision>((resolve) => {
+      const timer = setTimeout(() => {
+        if (!this.pendingBrowserPermissions.delete(requestId)) return;
+        this.cleared(requestId);
+        resolve("deny");
+      }, timeoutMs);
+      const done = (decision: SiteDecision): void => {
+        clearTimeout(timer);
+        resolve(decision);
+      };
+      this.pendingBrowserPermissions.set(requestId, {
+        resolve: (decision) => done(decision),
+        server: "browser",
+        request,
+        site: done,
+      });
+      this.deps.emitEvent({
+        type: "browser-permission-request",
+        request,
+        emittedAt: new Date().toISOString(),
+      });
+    });
+  }
+
+  private cleared(requestId: string): void {
+    this.deps.emitEvent({
+      type: "browser-permission-cleared",
+      requestId,
+      emittedAt: new Date().toISOString(),
+    });
+  }
+
   /** For the rest of this app run. Never persisted. */
   approveForSession(server: BuiltinPermissionScope): void {
     this.sessionApprovedServers.add(server);
@@ -153,6 +222,9 @@ export class BuiltinToolPermissions {
   ): void {
     for (const [requestId, pending] of this.pendingBrowserPermissions) {
       if (server != null && pending.server !== server) continue;
+      // A site ask is the user's per-site rule: a browsing setting turned
+      // to "never ask" does not answer it.
+      if (pending.site != null && decision === "allow") continue;
       pending.resolve(decision);
       this.pendingBrowserPermissions.delete(requestId);
       this.deps.emitEvent({

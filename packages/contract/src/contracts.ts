@@ -1130,6 +1130,11 @@ export interface BrowserPermissionRequest {
   server?: "browser" | "device";
   /** The prompt shows in this conversation and nowhere else. */
   conversationKey: ConversationKey;
+  /**
+   * Set when the ask is to use the user's sign-in on this site (a connected
+   * site whose rule is "ask first"): "always" then allows the site for good.
+   */
+  site?: string;
 }
 
 // Structurally a `ConversationSegment`, kept opaque so the IPC layer has no
@@ -1244,6 +1249,19 @@ export interface ClearBrowserDataRequest {
 export interface ClearBrowserDataResult {
   success: boolean;
   error?: string;
+}
+
+/** Whether bots may use the user's sign-in on a site: ask each chat first, go ahead, or never. */
+export type ConnectedSitePolicy = "ask" | "allowed" | "blocked";
+
+/** A site the bot's browser is signed in to (Settings → Browser → Connected sites). */
+export interface ConnectedSite {
+  /** The registrable domain, e.g. `goindigo.in`. */
+  site: string;
+  policy: ConnectedSitePolicy;
+  addedAt: number;
+  /** When a bot last used the sign-in. */
+  lastUsedAt?: number;
 }
 
 export interface ListMcpServersRequest {

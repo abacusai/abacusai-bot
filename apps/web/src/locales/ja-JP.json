@@ -1951,7 +1951,13 @@
       "zoom-out": "Zoom out",
       "zoom-reset": "Reset zoom",
       "open-devtools": "Developer tools",
-      "clear-site-data": "Clear site data"
+      "clear-site-data": "Clear site data",
+      "site": {
+        "title": "{{site}} のサインインを使いますか？",
+        "allow": "このチャットで許可",
+        "deny": "許可しない",
+        "always": "常に許可"
+      }
     },
     "files": {
       "filter": "Filter files…",
@@ -4279,6 +4285,21 @@
         "notReady": "Roblox Studio から応答がありません。Studio でプレイスを開き、Enable Studio as MCP server をオンにして（Assistant > … > Manage MCP Servers）、もう一度お試しください。",
         "get": "Roblox Studio を入手"
       }
+    },
+    "sites": {
+      "title": "接続済みサイト",
+      "intro": "ボットのブラウザがサインインしているサイトです。サインインごとにボットが使ってよいか選べます。銀行、決済、医療、行政のサイトは最初はブロックされます。",
+      "signedIn": "サインイン済み",
+      "used": "ボットが使用 {{when}}",
+      "empty": "まだサイトはありません。ボットがサインインページに着き、あなたが代わりにサインインすると、ここに表示されます。",
+      "addLabel": "ブラウザパネルで別のサイトにサインインしましたか？",
+      "add": "サイトを追加",
+      "placeholder": "goindigo.in",
+      "rule": "{{site}} のルール",
+      "ask": "先に確認",
+      "allowed": "許可",
+      "blocked": "ブロック",
+      "signOut": "サインアウト"
     }
   },
   "browserPermission": {

@@ -194,13 +194,17 @@ const PART_NOTE = tagPattern(APP_NOTE_TAGS.part);
 export const frameChannelMessage = (label: string, text: string): string =>
   `[${label}] ${text}`;
 
-/** One paragraph's own words: labels, attachment and media lines dropped. */
-const ownPart = (part: string): string =>
+/** One paragraph's own words: labels, attachment and media lines dropped (attachments kept when asked). */
+const ownPart = (part: string, keepAttachments = false): string =>
   part
     .slice(Math.max(channelLabelEnd(part), 0))
     .replace(MID_TASK, "")
     .split("\n")
-    .filter((line) => !ATTACHMENT_LINE.test(line) && !MEDIA_LINE.test(line))
+    .filter(
+      (line) =>
+        (keepAttachments || !ATTACHMENT_LINE.test(line)) &&
+        !MEDIA_LINE.test(line)
+    )
     .map((line) => line.replace(VOICE_PREFIX, ""))
     .join("\n")
     .trim();
@@ -213,7 +217,22 @@ const ownPart = (part: string): string =>
  * tags decide where they exist, the declared envelopes otherwise (a resumed
  * transcript carries none).
  */
-export const ownWords = (text: string, tags?: UserTextTags): string => {
+export const ownWords = (text: string, tags?: UserTextTags): string =>
+  ownText(text, tags, false);
+
+/**
+ * The user's own message as they sent it: their words and the files they
+ * attached (`[attachment: ...]` lines kept), nothing the app or another bot
+ * wrapped around it. What a browser run may take a file name or address from.
+ */
+export const userTurnText = (text: string, tags?: UserTextTags): string =>
+  ownText(text, tags, true);
+
+const ownText = (
+  text: string,
+  tags: UserTextTags | undefined,
+  keepAttachments: boolean
+): string => {
   let words = visibleUserText(text, tags);
   if (words.length === 0 || BOT_NOTE.test(words) || WHOLE_NOTE.test(words))
     return "";
@@ -229,7 +248,7 @@ export const ownWords = (text: string, tags?: UserTextTags): string => {
   return parts
     .slice(Math.max(labelled, 0))
     .filter((part) => !PART_NOTE.test(part))
-    .map(ownPart)
+    .map((part) => ownPart(part, keepAttachments))
     .filter((part) => part.length > 0)
     .join("\n\n");
 };

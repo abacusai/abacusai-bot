@@ -1951,7 +1951,13 @@
       "zoom-out": "Zoom out",
       "zoom-reset": "Reset zoom",
       "open-devtools": "Developer tools",
-      "clear-site-data": "Clear site data"
+      "clear-site-data": "Clear site data",
+      "site": {
+        "title": "{{site}} 로그인을 사용할까요?",
+        "allow": "이 채팅에서 허용",
+        "deny": "허용 안 함",
+        "always": "항상 허용"
+      }
     },
     "files": {
       "filter": "Filter files…",
@@ -4279,6 +4285,21 @@
         "notReady": "Roblox Studio가 응답하지 않았습니다. Studio에서 플레이스를 열고 Enable Studio as MCP server를 켠 다음(Assistant > … > Manage MCP Servers) 다시 시도하세요.",
         "get": "Roblox Studio 받기"
       }
+    },
+    "sites": {
+      "title": "연결된 사이트",
+      "intro": "봇의 브라우저가 로그인된 사이트입니다. 각 로그인을 봇이 써도 되는지 고르세요. 은행, 결제, 의료, 정부 사이트는 처음에 차단됩니다.",
+      "signedIn": "로그인됨",
+      "used": "봇이 사용 {{when}}",
+      "empty": "아직 사이트가 없습니다. 봇이 로그인 페이지에 도착해 당신이 대신 로그인하면 여기에 표시됩니다.",
+      "addLabel": "브라우저 패널에서 다른 사이트에 로그인했나요?",
+      "add": "사이트 추가",
+      "placeholder": "goindigo.in",
+      "rule": "{{site}} 규칙",
+      "ask": "먼저 묻기",
+      "allowed": "허용",
+      "blocked": "차단",
+      "signOut": "로그아웃"
     }
   },
   "browserPermission": {

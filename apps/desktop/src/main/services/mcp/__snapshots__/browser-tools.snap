@@ -73,7 +73,7 @@
   },
   {
     "name": "browser_interact",
-    "description": "Act on an element by its @eN ref. The result says what changed (new elements with\ntheir refs, a new URL, a dialog that appeared), so you rarely need\nanother snapshot. Refs stay valid while the element exists.\n\nclick:         click (params: ref)\nfill:          replace a field's text (params: ref, text)\npick:          fill an autocomplete and choose the matching suggestion from its dropdown,\n               then confirm the field took it (params: ref, text). Use this for city,\n               airport, product and address boxes; plain fill leaves them unchanged.\ntype:          append text without clearing (params: ref, text)\nselect:        choose an option in a <select> (params: ref, value; option text works)\npress:         a key or combo (params: key, e.g. Enter, Escape, ArrowDown, Control+a)\ndismiss:       close the cookie banner, consent dialog or overlay on top of the page\ncheck / uncheck: a checkbox (params: ref)\nhover, focus, scroll_into_view: (params: ref)\nscroll:        the page or an element (params: direction, amount, optional ref)\nwait:          until text appears, a URL matches, or an element exists\n               (params: text | url_pattern | ref, amount = timeout ms). Use this instead\n               of snapshotting in a loop while results load.",
+    "description": "Act on an element by its @eN ref. The result says what changed (new elements with\ntheir refs, a new URL, a dialog that appeared), so you rarely need\nanother snapshot. Refs stay valid while the element exists.\n\nclick:         click (params: ref)\nfill:          replace a field's text (params: ref, text)\npick:          fill an autocomplete and choose the matching suggestion from its dropdown,\n               then confirm the field took it (params: ref, text). Use this for city,\n               airport, product and address boxes; plain fill leaves them unchanged.\ntype:          append text without clearing (params: ref, text)\nselect:        choose an option in a <select> (params: ref, value; option text works)\npress:         a key or combo (params: key, e.g. Enter, Escape, ArrowDown, Control+a)\ndismiss:       close the cookie banner, consent dialog or overlay on top of the page\ncheck / uncheck: a checkbox (params: ref)\nhover, focus, scroll_into_view: (params: ref)\nscroll:        the page or an element (params: direction, amount, optional ref)\nwait:          until text appears, a URL matches, or an element exists\n               (params: text | url_pattern | ref, amount = timeout ms). Use this instead\n               of snapshotting in a loop while results load.\nupload:        give a file picker a file (params: ref, path). Only a file in this chat's\n               workspace, where the user's attachments are; any other path is refused.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -93,7 +93,8 @@
             "focus",
             "check",
             "uncheck",
-            "wait"
+            "wait",
+            "upload"
           ],
           "description": "Interaction action"
         },
@@ -108,6 +109,10 @@
         "text": {
           "type": "string",
           "description": "Text for fill/pick/type, or the text to wait for in wait"
+        },
+        "path": {
+          "type": "string",
+          "description": "upload only: the file, relative to this chat's workspace or absolute inside it"
         },
         "value": {
           "type": "string",

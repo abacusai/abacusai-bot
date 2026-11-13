@@ -61,6 +61,8 @@ const BANNED = ["electron", "framer-motion", "zustand", "sonner"];
 const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
   artifacts: ["gallery"],
   bots: [
+    // The bot panel's tab bound to the page the agent drives.
+    "browser/agent-tab",
     // A channel's pages; the route passes the title bar and chat Markdown.
     "channels/pages",
     "chat/activity",

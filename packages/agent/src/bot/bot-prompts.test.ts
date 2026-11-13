@@ -39,6 +39,45 @@ describe("what the prompts say about the browser, per channel", () => {
     expect(paneless).toMatch(/never ask for a password/);
   });
 
+  it("uses the browser when the user asks for it, even for a public page", () => {
+    // Asked "use your browser", a bot read the page with web_fetch and curl:
+    // the prompt only said the web tools answer most questions.
+    expect(botOperatingPrompt()).toMatch(
+      /asks\s+for\s+the\s+browser[^.]*browser_task[^.]*even\s+for\s+a\s+public\s+page/i
+    );
+    expect(botOperatingPrompt()).toMatch(/in\s+any\s+language/i);
+  });
+
+  it("reports only what the page showed, and relays only what the run reported", () => {
+    // A run read only the text and the title of a page with no heading, and
+    // reported "Page heading (H1): Example Domain"; a bot then added a link
+    // the run never mentioned.
+    const flat = (text: string) => text.replace(/\s+/g, " ");
+    expect(flat(BROWSER_SYSTEM_PROMPT)).toMatch(
+      /Report only what a tool result showed you[^.]*'not found'/
+    );
+    expect(flat(botOperatingPrompt())).toMatch(
+      /never add page details the run did not report/i
+    );
+  });
+
+  it("never has a run answer a page's confirm OK, by any means", () => {
+    // A run stubbed window.confirm to return true to get "You clicked: Ok".
+    const flat = (text: string) => text.replace(/\s+/g, " ");
+    expect(flat(BROWSER_SYSTEM_PROMPT)).toMatch(
+      /A page's confirm or prompt is never answered OK or filled in/
+    );
+  });
+
+  it("never sends the user to the Browser pane for a page's confirm or prompt", () => {
+    // The built-in browser cancels them for the user too, yet a bot told the
+    // user to answer the two dialogs in the pane.
+    const flat = (text: string) => text.replace(/\s+/g, " ");
+    expect(flat(botOperatingPrompt())).toMatch(
+      /A page's confirm or prompt is the exception: the user cannot answer it in the Browser pane/
+    );
+  });
+
   it("tells the phone loop how screenshots reach the chat, and acts only through chat, links and approval pages", () => {
     const prompt = phoneOperatingPrompt(null);
     expect(prompt).not.toMatch(/pane/i);

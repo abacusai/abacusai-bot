@@ -3,6 +3,7 @@ import { Type } from "typebox";
 import {
   hasPausedRun,
   NEEDS_USER_PATTERN,
+  reportLanguageLine,
   runBrowserTask,
   type BrowserTaskContext,
   type BrowserTaskResult,
@@ -29,6 +30,7 @@ import {
   type UnattendedPolicy,
 } from "./tool-policy.js";
 import { ID_NUMBER_WITHHELD, redactIdNumbers } from "./traveler/id-numbers.js";
+import { userSaid } from "./user-grant.js";
 
 /** Whether the desktop switched this on: absent from the exclusion list. */
 export function browserTaskEnabled(): boolean {
@@ -252,6 +254,9 @@ export function buildBrowserTaskTool(
       'article, a repository, a reference page, "what is the current X". Both return text in',
       "seconds. A browser run takes minutes, holds a lock no other run can pass, and arrives at",
       "the same answer. Look something up that way first; come here when that is not enough.",
+      'When the user asks for the browser, in any language ("use your browser", "open it in the browser",',
+      '"अपने ब्राउज़र से", "usa el navegador"), use this, even for a public page: they asked for what',
+      "the page shows in a browser, not its text.",
       "",
       "Hands the whole job to a sub-agent that has the browser: it navigates, fills forms,",
       "clicks through, waits for results, and reports what it found. You get its conclusion,",
@@ -284,7 +289,13 @@ export function buildBrowserTaskTool(
       "",
       ...(vault
         ? [
-            "It cannot read files or run commands. It never types a password, card number, CVV or",
+            "It cannot read files or run commands, but it can give a page's file picker a file from your",
+            "workspace (the user's pasted or dropped attachments are there): name the file's path in the task.",
+            "For a file elsewhere on the computer, ask the user to attach it, even when the user names the path:",
+            "never copy a file from elsewhere on the computer into your workspace to upload it,",
+            "nor write its contents into a new file. A file the user names is uploaded as it is: never create or rewrite it first.",
+            "It never answers OK on a page's confirm.",
+            "It never types a password, card number, CVV or",
             "code itself, never solves a CAPTCHA, and never pays or books without the user's approval",
             "of that exact payment (payment_approval): the browser refuses a Pay click without one.",
             "At a step only the user can do it stops and says what it needs (traveler details, a",
@@ -292,7 +303,13 @@ export function buildBrowserTaskTool(
             "page is the question; the result says what to do next.",
           ]
         : [
-            "It cannot read files or run commands. It never types a password, card number, CVV or",
+            "It cannot read files or run commands, but it can give a page's file picker a file from your",
+            "workspace (the user's pasted or dropped attachments are there): name the file's path in the task.",
+            "For a file elsewhere on the computer, ask the user to attach it, even when the user names the path:",
+            "never copy a file from elsewhere on the computer into your workspace to upload it,",
+            "nor write its contents into a new file. A file the user names is uploaded as it is: never create or rewrite it first.",
+            "It never answers OK on a page's confirm.",
+            "It never types a password, card number, CVV or",
             "code itself, never solves a CAPTCHA, and never pays or books: the browser refuses a",
             "Pay click. At a step only the user can do it stops and says what it needs (traveler",
             "details, a login, a code, the payment, a CAPTCHA, a choice), with a screenshot where",
@@ -564,17 +581,22 @@ export function buildBrowserTaskTool(
     let status: "completed" | "failed" = "failed";
     let outcome: BrowserRunOutcome | undefined;
     try {
-      result = await runBrowserTask(context, task, childEmit, {
-        startUrl,
-        signal,
-        reportFields,
-        resume,
-        sentMedia,
-        takenMedia,
-        checkout,
-        ...(note.length > 0 ? { resumeNote: note } : {}),
-        ...(loginItemId != null ? { loginItemId } : {}),
-      });
+      result = await runBrowserTask(
+        context,
+        task + reportLanguageLine(userSaid.read()),
+        childEmit,
+        {
+          startUrl,
+          signal,
+          reportFields,
+          resume,
+          sentMedia,
+          takenMedia,
+          checkout,
+          ...(note.length > 0 ? { resumeNote: note } : {}),
+          ...(loginItemId != null ? { loginItemId } : {}),
+        }
+      );
       // The card's verdict is the tool result's: a run stopped by the user or
       // at its cap still handed back what it found, and is not a failure.
       status = failedStop(result.stoppedBy) ? "failed" : "completed";

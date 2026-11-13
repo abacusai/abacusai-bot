@@ -8,6 +8,7 @@ import type {
   BrowserRuntimeLease,
   BrowserRuntimeState,
   ClearBrowserDataResult,
+  ConnectedSite,
   ImportBrowserProfileResult,
   McpBrowserStatus,
 } from "../contracts";
@@ -205,6 +206,25 @@ export const browser = {
   clearData: mutation
     .input(v.optional(ClearBrowserDataRequestSchema))
     .output(type<ClearBrowserDataResult>()),
+  /** The sites the bot's browser is signed in to, and each one's rule. */
+  sites: {
+    list: query.input(NoInput).output(type<ConnectedSite[]>()),
+    /** Lists a site the user signed in to; answers the list. */
+    add: mutation
+      .input(v.object({ site: v.pipe(v.string(), v.nonEmpty()) }))
+      .output(type<ConnectedSite[]>()),
+    setPolicy: mutation
+      .input(
+        v.object({
+          site: v.pipe(v.string(), v.nonEmpty()),
+          policy: v.picklist(["ask", "allowed", "blocked"]),
+        })
+      )
+      .output(type<ConnectedSite[]>()),
+    signOut: mutation
+      .input(v.object({ site: v.pipe(v.string(), v.nonEmpty()) }))
+      .output(type<ConnectedSite[]>()),
+  },
   /**
    * Permission asks, previews and materialized runtimes are delivered
    * losslessly; cursor, status and runtime state are coalesced. With a
