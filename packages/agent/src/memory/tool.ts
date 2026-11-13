@@ -55,6 +55,12 @@ export interface MemoryTurn {
   saved(): void;
   /** Told when the chat opened a project, so recall searches it. */
   opened?(project: Project): void;
+  /**
+   * Asked before a journal line is added in a chat someone is watching: false
+   * when this turn already added one. A journal is for finished work, not a
+   * running log of the chat.
+   */
+  journal?(): boolean;
 }
 
 interface ToolResult {
@@ -297,11 +303,12 @@ export function buildMemoryTool(
     label: MEMORY_TOOL_NAME,
     description: [
       "Your memory across chats. The app writes the files; you give the words.",
+      "Most turns need no memory call: write only what must outlive this chat.",
       "",
       'Actions: "save" a new note (text, type, optional name, description, about),',
       '"update" a note by name (new text and/or description), "forget" a note by name,',
       '"read" a note by name, "search" notes and journals (query),',
-      '"note" a dated journal line about what was done or found (text),',
+      '"note" a dated journal line when a piece of work is finished and worth finding later (text; one per task, never per message),',
       '"open" a project when this chat turns out to be about one (project: its name, or a new name for ongoing work the user returns to).',
       "",
       `Types: ${NOTE_TYPES.join(", ")}. "status" needs "expires" (YYYY-MM-DD, 14 days at most).`,
@@ -473,6 +480,11 @@ export function buildMemoryTool(
               : { kind: "project", slug: own.slug };
         if (!mayJournal(context, scope, own?.slug ?? null))
           return reply("This chat cannot keep a journal.", true);
+        if (!context.unattended && turn.journal?.() === false)
+          return reply(
+            "This turn already added a journal line; one per task is enough.",
+            true
+          );
         // Secrets are refused here too; what happened at a moment is what a journal is for.
         if (looksSecret(text))
           return reply(

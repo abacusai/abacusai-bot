@@ -52,6 +52,7 @@ export class ChatMemory {
   private block: string | null = null;
   private cursor = "";
   private savedThisTurn = false;
+  private journaledThisTurn = false;
   /** The project recall searches first: the chat's own, or the one it opened. */
   private slug: string | null = null;
   private readonly memoryTool: ReturnType<typeof buildMemoryTool>;
@@ -72,6 +73,11 @@ export class ChatMemory {
       },
       opened: (project) => {
         this.slug = project.slug;
+      },
+      journal: () => {
+        if (this.journaledThisTurn) return false;
+        this.journaledThisTurn = true;
+        return true;
       },
     });
   }
@@ -130,6 +136,7 @@ export class ChatMemory {
    */
   beginTurn(message: string): string {
     this.savedThisTurn = false;
+    this.journaledThisTurn = false;
     if (!hasMemory(this.context) || this.block == null) return "";
     try {
       const news = memoryNews(this.context, this.cursor, SESSION_ID);

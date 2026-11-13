@@ -13,6 +13,7 @@ import {
   customInstructionsPrompt,
   writeCustomInstructions,
 } from "../custom-instructions.js";
+import { ChatMemory } from "./chat.js";
 import { memoryBlock, memoryNews } from "./core.js";
 import { type Lane, readMemoryContext } from "./lanes.js";
 import { migrateOnce, readMigrationReport } from "./migrate.js";
@@ -179,6 +180,41 @@ describe("the memory tool", () => {
     expect(readJournal({ kind: "project", slug: "shop" })[0]).toContain(
       "Friday digest"
     );
+  });
+
+  it("adds at most one journal line per turn in a chat someone watches", async () => {
+    const env = {
+      ABACUSAI_BOT_MEMORY: "owner",
+      ABACUSAI_BOT_MEMORY_PROJECT: JSON.stringify(SHOP),
+    };
+    const before = { ...process.env };
+    Object.assign(process.env, env);
+    try {
+      const memory = new ChatMemory(
+        "/work/shop",
+        "default",
+        () => "",
+        () => "test/model"
+      );
+      await memory.start();
+      const note = async (text: string) =>
+        (await memory.tool()!.execute("id", { action: "note", text }))
+          .isError === true;
+
+      memory.beginTurn("ship the Friday digest");
+      expect(await note("Sent the Friday digest.")).toBe(false);
+      expect(await note("Customer asked about Friday.")).toBe(true);
+      memory.beginTurn("now the Monday one");
+      expect(await note("Sent the Monday digest.")).toBe(false);
+
+      const journal = readJournal({ kind: "project", slug: "shop" }).join("\n");
+      expect(journal).toContain("Friday digest");
+      expect(journal).toContain("Monday digest");
+      expect(journal).not.toContain("Customer asked");
+    } finally {
+      for (const key of Object.keys(env)) delete process.env[key];
+      Object.assign(process.env, before);
+    }
   });
 
   it("keeps a sender's notes in their own folder, away from the user", async () => {

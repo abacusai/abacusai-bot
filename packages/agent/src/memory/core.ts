@@ -268,12 +268,13 @@ const memoryInstructions = (context: MemoryContext): string => {
     return 'How to use memory here: add what this run did or found with memory action "note" (one line). You cannot change other notes in a run nobody is watching.';
   return [
     "How to use memory (memory tool):",
-    "- Save when the user states a preference, a rule, a correction, a decision, or a lasting fact about themselves or their project. Save it when you hear it.",
+    "- Most turns write nothing. Save only when the user states a preference, a rule, a correction, a decision, or a lasting fact about themselves or their project, or asks you to remember something. Save it when you hear it.",
+    "- Never write for an acknowledgement, a link or file they shared, small talk, or what you just did.",
     '- One fact per note. If a note already covers it, use "update" on that note; never add a second.',
     "- When the user corrects something, update the note that was wrong.",
     "- Never save passwords, keys or codes; never save that something does not exist or is not connected.",
     '- Things that change (status, waiting on someone) are type "status" with "expires".',
-    '- Run logs and what you did go in "note" (a dated journal line), not in notes.',
+    '- When a piece of work is finished and worth finding later, add one "note" (a dated journal line), not a note. One per task, never per message.',
     "- Only say something is saved after the tool said Saved.",
     '- A rule about the user (type "rule", about "you") applies to every chat from then on. Notes the user wrote themselves only they change, on the Memory page.',
     ...(context.project == null || context.project.kind === "topic"
