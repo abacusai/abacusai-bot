@@ -25,6 +25,7 @@ import { closesReply, hasWords } from "../forever/reply-end.js";
 import { connectorToolMeta } from "../mcp/index.js";
 import { isOwnerAudience } from "../owner-tools.js";
 import { WRITE_TOOLS } from "../permissions.js";
+import { RunNotes } from "../repeated-notes.js";
 import { toToolKind } from "../tool-display.js";
 import { ownEntry, UNATTENDED_CONNECTOR_READS } from "../tool-policy.js";
 
@@ -198,6 +199,8 @@ export default function budgets(
   let reminders = 0;
   let unanswered = 0;
   let showWorkTurn = -1;
+  // A note that only restates an earlier one is not shown, so it is not heard.
+  const notes = new RunNotes();
   const track = (change: () => void): void => {
     const now = Date.now();
     if (activeSince != null) workedMs += now - activeSince;
@@ -245,6 +248,7 @@ export default function budgets(
     callsUnheard = 0;
     lastReminderAt = null;
     showWorkTurn = -1;
+    notes.reset();
   });
 
   pi.on("message_end", (event) => {
@@ -252,13 +256,16 @@ export default function budgets(
     track(() => {
       generating = false;
     });
+    const message = event.message as Parameters<typeof hasWords>[0];
+    const text = message.content
+      .map((block) => (block.type === "text" ? block.text : ""))
+      .join("");
+    const note = message.content.some((block) => block.type === "toolCall");
+    const hidden = note && notes.hides(text);
+    if (note) notes.add(text);
     // On the desktop the model's own words reach the user; a messaging chat
     // hears only what its progress tools send.
-    if (
-      checkInTools.length === 0 &&
-      hasWords(event.message as Parameters<typeof hasWords>[0])
-    )
-      hear();
+    if (checkInTools.length === 0 && !hidden && hasWords(message)) hear();
   });
 
   pi.on("tool_execution_start", (event) => {
