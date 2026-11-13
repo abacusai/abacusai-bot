@@ -283,6 +283,7 @@ import {
   setChatLinkLost,
   setHeld,
   setOriginSession,
+  setUptime,
   type RoutineRunStarted,
   removeJob,
   updateJob,
@@ -357,6 +358,7 @@ import { readMigrationMarker } from "./services/agent-tools/routine-migration";
 import {
   buildRoutineEditorPrompt,
   buildRoutineFirePrompt,
+  type SiteCheck,
 } from "./services/agent-tools/routine-prompt";
 import { policyFor } from "./services/agent-tools/routine-reach";
 import {
@@ -393,6 +395,7 @@ import {
   siteExportDir,
 } from "./services/agent-tools/site-pack";
 import { stopAllServed } from "./services/agent-tools/static-server";
+import { nextUptime, probeSite } from "./services/agent-tools/uptime-check";
 import { WebhookRelay } from "./services/agent-tools/webhook-relay";
 import { WebhookService } from "./services/agent-tools/webhook-service";
 import { AguiRelayService } from "./services/agui/relay-service";
@@ -6793,6 +6796,32 @@ export class ServiceHost {
       : null;
   }
 
+  /** The routine's site, checked now; null while this computer itself is offline. */
+  private async checkRoutineSite(
+    routineId: string,
+    url: string
+  ): Promise<SiteCheck | null> {
+    const probe = await probeSite(url);
+    if (
+      probe.unreachable &&
+      (await this.connectivity.ensureFresh()) !== "online"
+    )
+      return null;
+    const { uptime, change } = nextUptime(
+      getJob(routineId)?.uptime,
+      probe,
+      Date.now()
+    );
+    setUptime(routineId, uptime);
+    return {
+      url,
+      change,
+      down: uptime.down,
+      detail: uptime.detail,
+      since: uptime.since,
+    };
+  }
+
   /** A routine that keeps failing pauses itself rather than failing forever. */
   private pauseIfFailingRepeatedly(routineId: string): void {
     // Failures before the user last resumed it are the old streak.
@@ -6810,7 +6839,7 @@ export class ServiceHost {
    */
   private pauseIfQuietRepeatedly(routineId: string): void {
     const job = getJob(routineId);
-    if (job == null) return;
+    if (job == null || job.quietIsNormal === true) return;
     // Runs before the user last resumed it are the old streak.
     const resumedAt = job.resumedAt ?? 0;
     // Read past a few failed or offline runs, which the streak skips over.
@@ -8813,6 +8842,16 @@ export class ServiceHost {
     // One id for this attempt, whichever way it ends: a scheduled fire's
     // was claimed with its slot before this run began.
     const attemptId = fire?.attemptId ?? mintAttemptId();
+    // A watched site is checked first, with no model call: a scheduled fire
+    // runs only when it went down or came back, and records nothing otherwise.
+    // A make-up of a cut-off run always goes: that run had news to tell.
+    let siteCheck: SiteCheck | undefined;
+    if (job.uptimeUrl != null) {
+      const checked = await this.checkRoutineSite(job.id, job.uptimeUrl);
+      const scheduled = trigger === "schedule" || trigger === "catch-up";
+      if (scheduled && checked?.change == null) return "skipped";
+      siteCheck = checked ?? undefined;
+    }
     // Signed out, with no other key: every run would fail and pause the
     // routine, three at a time, in silence.
     if (
@@ -8924,6 +8963,7 @@ export class ServiceHost {
         ...(this.deliversRoutineReports()
           ? { deliveredTo: this.reportDestination(job) }
           : {}),
+        ...(siteCheck != null ? { siteCheck } : {}),
         dir: home,
         // The project when there is one; the run's cwd is that folder and its
         // records sit inside it. Otherwise the routine's own folder is both.

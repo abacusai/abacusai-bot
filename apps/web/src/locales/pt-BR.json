@@ -1566,6 +1566,36 @@
       "week-in-review": {
         "description": "O que foi enviado esta semana do histórico de commits, agrupado por tema, terminando com o que parece travado.",
         "name": "Semana em revisão"
+      },
+      "nightly-tests": {
+        "name": "Rodar meus testes e corrigir falhas",
+        "description": "Toda noite roda os testes e corrige o que falha em um branch próprio, com um rascunho de pull request esperando de manhã.",
+        "when": "Toda noite",
+        "promise": "Roda seus testes toda noite. As falhas são corrigidas em um branch separado com um rascunho de pull request, nunca no seu branch principal nem na sua cópia de trabalho."
+      },
+      "pr-review-fixes": {
+        "name": "Resolver comentários de revisão nos meus PRs",
+        "description": "Verifica seus pull requests abertos a cada hora em dias úteis e envia uma correção para cada novo comentário de revisão.",
+        "when": "A cada hora em dias úteis, das 9 às 18",
+        "promise": "A cada hora em dias úteis, procura novos comentários de revisão nos seus pull requests, corrige cada um no branch desse pull request e responde abaixo. Comentários que precisam da sua decisão vêm para você."
+      },
+      "site-down": {
+        "name": "Me avise quando meu site cair",
+        "description": "Verificado a cada 5 minutos, sem custo. Uma mensagem quando cai e outra quando volta.",
+        "when": "A cada 5 minutos",
+        "promise": "O app verifica seu site a cada 5 minutos. As verificações não usam créditos: você só fica sabendo quando ele cai e quando volta."
+      },
+      "overnight-changes": {
+        "name": "O que mudou no meu repositório durante a noite",
+        "description": "Toda manhã de dia útil: novos commits, pull requests esperando sua revisão e o status do CI, em cinco linhas.",
+        "when": "Manhãs de dias úteis",
+        "promise": "Toda manhã de dia útil você recebe o que mudou no repositório desde ontem, com a primeira coisa a olhar."
+      },
+      "game-check": {
+        "name": "Recompilar e verificar meu jogo",
+        "description": "Toda noite compila o jogo, joga o primeiro minuto e diz o que quebrou.",
+        "when": "Toda noite",
+        "promise": "Toda noite compila seu jogo, inicia, joga o primeiro minuto e relata erros de build, travamentos e o que viu. Não altera nenhum código."
       }
     },
     "templatesLead": "Ou comece por um destes",
@@ -1723,6 +1753,29 @@
     "reply": {
       "label": "Responder a esta execução",
       "failed": "Não foi possível enviar sua resposta."
+    },
+    "coding": {
+      "rowTitle": "Mantenha {{project}} saudável enquanto você está fora",
+      "alreadyOn": "Já ativa",
+      "sectionTitle": "Para {{project}}",
+      "sectionTitleNoProject": "Para o seu código",
+      "everythingElse": "Todo o resto",
+      "siteLabel": "Site para monitorar",
+      "sitePlaceholder": "example.com",
+      "siteInvalid": "Digite um endereço da web, como example.com.",
+      "projectLabel": "Projeto",
+      "projectPick": "Escolha um projeto",
+      "whenLabel": "Quando",
+      "dailyAt": "Todo dia às",
+      "weekdaysAt": "Dias úteis às",
+      "reportsTo": "Relatórios aqui e no {{apps}}.",
+      "reportsHere": "Relatórios aqui no app. Conecte seu celular para recebê-los lá também.",
+      "connectPhone": "Conectar seu celular",
+      "where": "Roda neste computador enquanto ele estiver ligado e o AbacusAI Bot aberto. Uma execução perdida é feita quando você voltar.",
+      "whereSite": "Só verifica enquanto este computador estiver ligado e o AbacusAI Bot aberto.",
+      "alwaysOnFree": "No plano Basic, as rotinas continuam rodando 24/7 com este computador desligado.",
+      "firstRun": "A primeira execução começa agora, para você ver um relatório.",
+      "start": "Começar"
     }
   },
   "sessions": {

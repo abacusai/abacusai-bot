@@ -1566,6 +1566,36 @@
       "week-in-review": {
         "description": "根据提交历史总结本周发布的内容，按主题分组，最后列出看起来卡住的部分。",
         "name": "一周回顾"
+      },
+      "nightly-tests": {
+        "name": "运行测试并修复失败",
+        "description": "每晚运行测试，在单独的分支上修复失败项，早上为你准备好一个草稿拉取请求。",
+        "when": "每晚",
+        "promise": "每晚运行你的测试。失败会在单独的分支上修复并提交草稿拉取请求，绝不改动你的主分支或工作副本。"
+      },
+      "pr-review-fixes": {
+        "name": "处理我的 PR 中的评审意见",
+        "description": "工作日每小时检查你未关闭的拉取请求，为每条新的评审意见推送修复。",
+        "when": "工作日 9 点到 18 点，每小时",
+        "promise": "工作日每小时查找你的拉取请求中的新评审意见，在该拉取请求的分支上逐条修复，并在下方回复。需要你判断的意见会转给你。"
+      },
+      "site-down": {
+        "name": "网站宕机时通知我",
+        "description": "每 5 分钟免费检查一次。宕机时发一条消息，恢复时再发一条。",
+        "when": "每 5 分钟",
+        "promise": "应用每 5 分钟检查一次你的网站。检查不消耗积分：只有在宕机和恢复时才会通知你。"
+      },
+      "overnight-changes": {
+        "name": "我的仓库昨晚有哪些变化",
+        "description": "每个工作日早上：新的提交、等你评审的拉取请求和 CI 状态，五行说清。",
+        "when": "工作日早上",
+        "promise": "每个工作日早上，你会收到仓库自昨天以来的变化，以及最先该看的一件事。"
+      },
+      "game-check": {
+        "name": "重新构建并检查我的游戏",
+        "description": "每天傍晚构建游戏、试玩第一分钟，并告诉你哪里坏了。",
+        "when": "每天傍晚",
+        "promise": "每天傍晚构建你的游戏并启动，试玩第一分钟，报告构建错误、崩溃和看到的画面。不会修改任何代码。"
       }
     },
     "templatesLead": "或者从下面选一个开始",
@@ -1723,6 +1753,29 @@
     "reply": {
       "label": "回复这次运行",
       "failed": "无法发送你的回复。"
+    },
+    "coding": {
+      "rowTitle": "你不在时也让 {{project}} 保持健康",
+      "alreadyOn": "已开启",
+      "sectionTitle": "{{project}} 专用",
+      "sectionTitleNoProject": "你的代码专用",
+      "everythingElse": "其他",
+      "siteLabel": "要监控的网站",
+      "sitePlaceholder": "example.com",
+      "siteInvalid": "请输入网址，例如 example.com。",
+      "projectLabel": "项目",
+      "projectPick": "选择项目",
+      "whenLabel": "时间",
+      "dailyAt": "每天",
+      "weekdaysAt": "工作日",
+      "reportsTo": "在这里和 {{apps}} 上报告。",
+      "reportsHere": "在应用中报告。连接手机后也会发送到手机。",
+      "connectPhone": "连接手机",
+      "where": "在这台电脑开机且 AbacusAI Bot 打开时运行。错过的运行会在你回来后补上。",
+      "whereSite": "仅在这台电脑开机且 AbacusAI Bot 打开时检查。",
+      "alwaysOnFree": "使用 Basic 套餐，即使这台电脑关机，例程也会全天候运行。",
+      "firstRun": "第一次运行现在开始，方便你看到报告。",
+      "start": "开始"
     }
   },
   "sessions": {

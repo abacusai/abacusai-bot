@@ -1566,6 +1566,36 @@
       "week-in-review": {
         "description": "Wat er deze week is opgeleverd volgens de commitgeschiedenis, gegroepeerd per thema, afgesloten met wat vast lijkt te zitten.",
         "name": "Weekoverzicht"
+      },
+      "nightly-tests": {
+        "name": "Mijn tests draaien en fouten oplossen",
+        "description": "Elke nacht draait het de tests en lost het op wat faalt op een eigen branch, met 's ochtends een concept-pull-request klaar.",
+        "when": "Elke nacht",
+        "promise": "Draait je tests elke nacht. Fouten worden opgelost op een aparte branch met een concept-pull-request, nooit op je hoofdbranch of in je werkkopie."
+      },
+      "pr-review-fixes": {
+        "name": "Reviewopmerkingen in mijn PR's verwerken",
+        "description": "Controleert op werkdagen elk uur je open pull requests en pusht voor elke nieuwe reviewopmerking een oplossing.",
+        "when": "Elk uur op werkdagen, 9 tot 18 uur",
+        "promise": "Op werkdagen zoekt het elk uur naar nieuwe reviewopmerkingen in je pull requests, verwerkt elke opmerking op de branch van die pull request en reageert eronder. Opmerkingen die jouw oordeel vragen, komen naar jou."
+      },
+      "site-down": {
+        "name": "Laat me weten wanneer mijn site plat ligt",
+        "description": "Elke 5 minuten gratis gecontroleerd. Eén bericht als hij plat gaat, één als hij terug is.",
+        "when": "Elke 5 minuten",
+        "promise": "De app controleert je site elke 5 minuten. Controles kosten geen credits: je hoort het alleen als hij plat gaat en als hij terug is."
+      },
+      "overnight-changes": {
+        "name": "Wat er vannacht in mijn repo is veranderd",
+        "description": "Elke werkdagochtend: nieuwe commits, pull requests die op jou wachten en de CI-status, in vijf regels.",
+        "when": "Werkdagochtenden",
+        "promise": "Elke werkdagochtend krijg je wat er sinds gisteren in de repository is veranderd, met het eerste waar je naar moet kijken."
+      },
+      "game-check": {
+        "name": "Mijn game opnieuw bouwen en controleren",
+        "description": "Elke avond bouwt het de game, speelt de eerste minuut en vertelt wat er kapot is.",
+        "when": "Elke avond",
+        "promise": "Elke avond bouwt het je game, start hem, speelt de eerste minuut en meldt buildfouten, crashes en wat het zag. Het verandert geen code."
       }
     },
     "templatesLead": "Of begin met een van deze",
@@ -1723,6 +1753,29 @@
     "reply": {
       "label": "Reageer op deze run",
       "failed": "Je reactie kon niet worden verzonden."
+    },
+    "coding": {
+      "rowTitle": "Houd {{project}} gezond terwijl je weg bent",
+      "alreadyOn": "Staat al aan",
+      "sectionTitle": "Voor {{project}}",
+      "sectionTitleNoProject": "Voor je code",
+      "everythingElse": "Al het andere",
+      "siteLabel": "Site om te bewaken",
+      "sitePlaceholder": "example.com",
+      "siteInvalid": "Voer een webadres in, zoals example.com.",
+      "projectLabel": "Project",
+      "projectPick": "Kies een project",
+      "whenLabel": "Wanneer",
+      "dailyAt": "Elke dag om",
+      "weekdaysAt": "Op werkdagen om",
+      "reportsTo": "Rapporteert hier en op {{apps}}.",
+      "reportsHere": "Rapporteert hier in de app. Verbind je telefoon om ze daar ook te krijgen.",
+      "connectPhone": "Je telefoon verbinden",
+      "where": "Draait op deze computer zolang hij aan staat en AbacusAI Bot open is. Een gemiste run wordt ingehaald als je terug bent.",
+      "whereSite": "Controleert alleen zolang deze computer aan staat en AbacusAI Bot open is.",
+      "alwaysOnFree": "Met het Basic-abonnement blijven routines 24/7 draaien, ook als deze computer uit staat.",
+      "firstRun": "De eerste run start nu, zodat je een rapport ziet.",
+      "start": "Starten"
     }
   },
   "sessions": {

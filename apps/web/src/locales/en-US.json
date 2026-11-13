@@ -1566,6 +1566,36 @@
       "week-in-review": {
         "description": "What shipped this week from the commit history, grouped by theme, ending with what looks stuck.",
         "name": "Week in review"
+      },
+      "nightly-tests": {
+        "name": "Run my tests and fix failures",
+        "description": "Every night it runs the suite and fixes what fails on its own branch, with a draft pull request waiting in the morning.",
+        "when": "Every night",
+        "promise": "Runs your tests every night. Failures are fixed on a separate branch with a draft pull request, never on your main branch or in your working copy."
+      },
+      "pr-review-fixes": {
+        "name": "Fix review comments on my PRs",
+        "description": "Checks your open pull requests every hour on weekdays and pushes a fix for each new review comment.",
+        "when": "Hourly on weekdays, 9 to 6",
+        "promise": "Every hour on weekdays it looks for new review comments on your pull requests, fixes each one on that pull request's branch and replies under it. Comments that need your judgment come to you instead."
+      },
+      "site-down": {
+        "name": "Tell me when my site is down",
+        "description": "Checked every 5 minutes at no cost. One message when it goes down, one when it's back.",
+        "when": "Every 5 minutes",
+        "promise": "The app checks your site every 5 minutes. Checks use no credits: you hear only when it goes down and when it comes back."
+      },
+      "overnight-changes": {
+        "name": "What changed in my repo overnight",
+        "description": "Every weekday morning: new commits, pull requests waiting on you and CI status, in five lines.",
+        "when": "Weekday mornings",
+        "promise": "Each weekday morning you get what changed in the repository since yesterday, with the one thing to look at first."
+      },
+      "game-check": {
+        "name": "Rebuild and check my game",
+        "description": "Every evening it builds the game, plays the first minute and tells you what broke.",
+        "when": "Every evening",
+        "promise": "Every evening it builds your game, starts it, plays the first minute and reports build errors, crashes and what it saw. It changes no code."
       }
     },
     "templatesLead": "Or start from one of these",
@@ -1723,6 +1753,29 @@
     "reply": {
       "label": "Reply to this run",
       "failed": "Couldn't send your reply."
+    },
+    "coding": {
+      "rowTitle": "Keep {{project}} healthy while you're away",
+      "alreadyOn": "Already on",
+      "sectionTitle": "For {{project}}",
+      "sectionTitleNoProject": "For your code",
+      "everythingElse": "Everything else",
+      "siteLabel": "Site to watch",
+      "sitePlaceholder": "example.com",
+      "siteInvalid": "Enter a web address, like example.com.",
+      "projectLabel": "Project",
+      "projectPick": "Choose a project",
+      "whenLabel": "When",
+      "dailyAt": "Every day at",
+      "weekdaysAt": "Weekdays at",
+      "reportsTo": "Reports here and on {{apps}}.",
+      "reportsHere": "Reports here in the app. Connect your phone to get them there too.",
+      "connectPhone": "Connect your phone",
+      "where": "Runs on this computer while it's on and AbacusAI Bot is open. A run it misses is made up when you're back.",
+      "whereSite": "Checks only while this computer is on and AbacusAI Bot is open.",
+      "alwaysOnFree": "On the Basic plan, routines keep running 24/7 with this computer off.",
+      "firstRun": "The first run starts now, so you see a report.",
+      "start": "Start"
     }
   },
   "sessions": {

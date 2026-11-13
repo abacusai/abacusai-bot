@@ -1566,6 +1566,36 @@
       "week-in-review": {
         "description": "Apa yang dikirimkan minggu ini dari riwayat penerapan, dikelompokkan berdasarkan tema, diakhiri dengan apa yang tampak macet.",
         "name": "Ulasan minggu"
+      },
+      "nightly-tests": {
+        "name": "Jalankan tes saya dan perbaiki yang gagal",
+        "description": "Setiap malam menjalankan tes dan memperbaiki yang gagal di branch sendiri, dengan draf pull request yang menunggu di pagi hari.",
+        "when": "Setiap malam",
+        "promise": "Menjalankan tes Anda setiap malam. Kegagalan diperbaiki di branch terpisah dengan draf pull request, tidak pernah di branch utama atau salinan kerja Anda."
+      },
+      "pr-review-fixes": {
+        "name": "Perbaiki komentar review di PR saya",
+        "description": "Memeriksa pull request terbuka Anda setiap jam pada hari kerja dan mendorong perbaikan untuk setiap komentar review baru.",
+        "when": "Setiap jam pada hari kerja, 9 sampai 18",
+        "promise": "Setiap jam pada hari kerja, ia mencari komentar review baru di pull request Anda, memperbaiki masing-masing di branch pull request itu, lalu membalas di bawahnya. Komentar yang memerlukan keputusan Anda dikirim ke Anda."
+      },
+      "site-down": {
+        "name": "Beri tahu saya saat situs saya mati",
+        "description": "Diperiksa setiap 5 menit tanpa biaya. Satu pesan saat mati, satu lagi saat kembali.",
+        "when": "Setiap 5 menit",
+        "promise": "Aplikasi memeriksa situs Anda setiap 5 menit. Pemeriksaan tidak memakai kredit: Anda hanya diberi tahu saat situs mati dan saat kembali."
+      },
+      "overnight-changes": {
+        "name": "Apa yang berubah di repo saya semalam",
+        "description": "Setiap pagi hari kerja: commit baru, pull request yang menunggu review Anda, dan status CI, dalam lima baris.",
+        "when": "Pagi hari kerja",
+        "promise": "Setiap pagi hari kerja Anda menerima apa yang berubah di repositori sejak kemarin, beserta hal pertama yang perlu dilihat."
+      },
+      "game-check": {
+        "name": "Build ulang dan periksa game saya",
+        "description": "Setiap sore ia mem-build game, memainkan menit pertama, dan memberi tahu apa yang rusak.",
+        "when": "Setiap sore",
+        "promise": "Setiap sore ia mem-build game Anda, menjalankannya, memainkan menit pertama, dan melaporkan error build, crash, serta apa yang terlihat. Tidak ada kode yang diubah."
       }
     },
     "templatesLead": "Atau mulai dari salah satunya",
@@ -1723,6 +1753,29 @@
     "reply": {
       "label": "Balas eksekusi ini",
       "failed": "Balasan Anda tidak dapat dikirim."
+    },
+    "coding": {
+      "rowTitle": "Jaga {{project}} tetap sehat selagi Anda pergi",
+      "alreadyOn": "Sudah aktif",
+      "sectionTitle": "Untuk {{project}}",
+      "sectionTitleNoProject": "Untuk kode Anda",
+      "everythingElse": "Lainnya",
+      "siteLabel": "Situs yang dipantau",
+      "sitePlaceholder": "example.com",
+      "siteInvalid": "Masukkan alamat web, seperti example.com.",
+      "projectLabel": "Proyek",
+      "projectPick": "Pilih proyek",
+      "whenLabel": "Kapan",
+      "dailyAt": "Setiap hari pukul",
+      "weekdaysAt": "Hari kerja pukul",
+      "reportsTo": "Laporan di sini dan di {{apps}}.",
+      "reportsHere": "Laporan di sini, di aplikasi. Hubungkan ponsel Anda untuk menerimanya di sana juga.",
+      "connectPhone": "Hubungkan ponsel Anda",
+      "where": "Berjalan di komputer ini selama menyala dan AbacusAI Bot terbuka. Jalannya yang terlewat dijalankan saat Anda kembali.",
+      "whereSite": "Hanya memeriksa selama komputer ini menyala dan AbacusAI Bot terbuka.",
+      "alwaysOnFree": "Dengan paket Basic, rutinitas tetap berjalan 24/7 meskipun komputer ini mati.",
+      "firstRun": "Jalannya pertama dimulai sekarang, agar Anda melihat laporannya.",
+      "start": "Mulai"
     }
   },
   "sessions": {

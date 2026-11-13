@@ -33,7 +33,7 @@ const alwaysOnPlan = (
       : "paid";
 };
 
-const useAlwaysOnPlan = (): AlwaysOnPlan | null =>
+export const useAlwaysOnPlan = (): AlwaysOnPlan | null =>
   alwaysOnPlan(useAccount().data);
 
 /** Opens Abacus AI Agent on the web, where a paid plan sets up its 24/7 routines. */
@@ -56,7 +56,7 @@ const alwaysOnAction = (
         run: () => openWebRoutines(client),
       };
 
-const AlwaysOnButton = ({
+export const AlwaysOnButton = ({
   plan,
   variant,
 }: {

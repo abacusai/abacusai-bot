@@ -142,3 +142,24 @@ it("says what an hourly or faster schedule costs where it is picked, and nothing
     await app.cleanup();
   }
 });
+
+it("the full form offers no coding routine: its settings come only with its own setup", async () => {
+  const app = await renderApp("/routines/new?template=site-down");
+  try {
+    const instruction = await screen.findByRole("textbox", {
+      name: "Instruction",
+    });
+    // The search param is not one of the form's templates: a blank form.
+    expect((instruction as HTMLTextAreaElement).value).toBe("");
+    expect(screen.getByRole("button", { name: "Test watch" })).not.toBeNull();
+    for (const name of [
+      "Tell me when my site is down",
+      "Run my tests and fix failures",
+      "Fix review comments on my PRs",
+    ])
+      expect(screen.queryByRole("button", { name })).toBeNull();
+  } finally {
+    app.view.unmount();
+    await app.cleanup();
+  }
+});

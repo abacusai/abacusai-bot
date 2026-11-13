@@ -1582,6 +1582,36 @@
       "week-in-review": {
         "description": "Co wydano w tym tygodniu według historii commitów, pogrupowane tematycznie, a na koniec to, co wygląda na zablokowane.",
         "name": "Podsumowanie tygodnia"
+      },
+      "nightly-tests": {
+        "name": "Uruchom moje testy i napraw błędy",
+        "description": "Co noc uruchamia testy i naprawia to, co nie przechodzi, na osobnej gałęzi — rano czeka szkic pull requesta.",
+        "when": "Co noc",
+        "promise": "Co noc uruchamia Twoje testy. Błędy są naprawiane na osobnej gałęzi ze szkicem pull requesta, nigdy na gałęzi głównej ani w Twojej kopii roboczej."
+      },
+      "pr-review-fixes": {
+        "name": "Popraw komentarze z review w moich PR",
+        "description": "W dni robocze co godzinę sprawdza Twoje otwarte pull requesty i wypycha poprawkę dla każdego nowego komentarza z review.",
+        "when": "Co godzinę w dni robocze, 9–18",
+        "promise": "W dni robocze co godzinę szuka nowych komentarzy z review w Twoich pull requestach, poprawia każdy na gałęzi danego pull requesta i odpowiada pod nim. Komentarze wymagające Twojej decyzji trafiają do Ciebie."
+      },
+      "site-down": {
+        "name": "Powiadom mnie, gdy moja strona nie działa",
+        "description": "Sprawdzana co 5 minut bez kosztów. Jedna wiadomość, gdy padnie, druga, gdy wróci.",
+        "when": "Co 5 minut",
+        "promise": "Aplikacja sprawdza Twoją stronę co 5 minut. Sprawdzanie nie zużywa kredytów: dowiesz się tylko, gdy strona padnie i gdy wróci."
+      },
+      "overnight-changes": {
+        "name": "Co zmieniło się w moim repo w nocy",
+        "description": "W każdy poranek dnia roboczego: nowe commity, pull requesty czekające na Twoje review i stan CI, w pięciu linijkach.",
+        "when": "Poranki w dni robocze",
+        "promise": "W każdy poranek dnia roboczego dostajesz to, co zmieniło się w repozytorium od wczoraj, i to, na co spojrzeć najpierw."
+      },
+      "game-check": {
+        "name": "Przebuduj i sprawdź moją grę",
+        "description": "Co wieczór buduje grę, gra przez pierwszą minutę i mówi, co się zepsuło.",
+        "when": "Co wieczór",
+        "promise": "Co wieczór buduje Twoją grę, uruchamia ją, gra przez pierwszą minutę i zgłasza błędy kompilacji, awarie i to, co zobaczył. Nie zmienia kodu."
       }
     },
     "templatesLead": "Albo zacznij od jednej z poniższych",
@@ -1745,6 +1775,29 @@
     "reply": {
       "label": "Odpowiedz na to uruchomienie",
       "failed": "Nie udało się wysłać odpowiedzi."
+    },
+    "coding": {
+      "rowTitle": "Dbaj o {{project}}, gdy Cię nie ma",
+      "alreadyOn": "Już włączona",
+      "sectionTitle": "Dla {{project}}",
+      "sectionTitleNoProject": "Dla Twojego kodu",
+      "everythingElse": "Wszystko inne",
+      "siteLabel": "Strona do obserwowania",
+      "sitePlaceholder": "example.com",
+      "siteInvalid": "Wpisz adres strony, np. example.com.",
+      "projectLabel": "Projekt",
+      "projectPick": "Wybierz projekt",
+      "whenLabel": "Kiedy",
+      "dailyAt": "Codziennie o",
+      "weekdaysAt": "W dni robocze o",
+      "reportsTo": "Raporty tutaj i w {{apps}}.",
+      "reportsHere": "Raporty tutaj, w aplikacji. Połącz telefon, aby dostawać je także tam.",
+      "connectPhone": "Połącz telefon",
+      "where": "Działa na tym komputerze, gdy jest włączony, a AbacusAI Bot otwarty. Pominięte uruchomienie zostanie nadrobione po Twoim powrocie.",
+      "whereSite": "Sprawdza tylko wtedy, gdy ten komputer jest włączony, a AbacusAI Bot otwarty.",
+      "alwaysOnFree": "W planie Basic rutyny działają 24/7, nawet gdy ten komputer jest wyłączony.",
+      "firstRun": "Pierwsze uruchomienie startuje teraz, żebyś zobaczył raport.",
+      "start": "Uruchom"
     }
   },
   "sessions": {
