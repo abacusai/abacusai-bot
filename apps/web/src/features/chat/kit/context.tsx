@@ -1,4 +1,5 @@
 import type { AgentMode } from "@abacus-ai/contract/agent-types";
+import type { BillingPlan } from "@abacus-ai/contract/billing-plan";
 import type { SuccessPitchOffer } from "@abacus-ai/contract/success-pitch";
 /**
  * The thread view's context: the session, the runtime, the skin and the
@@ -206,7 +207,9 @@ export interface ChatViewSlots {
   /** The gallery shows the deliverable offer without its caps, keeping no answer. */
   deliverableOfferPreview?: boolean;
   /** The gallery shows the retry offer on this model, without its caps. */
-  retryOfferPreview?: { label: string; plan: string };
+  retryOfferPreview?: { label: string; plan: string; freeTop?: boolean };
+  /** The gallery shows the top-model card for this model, without the account. */
+  topModelCardPreview?: { label: string; billing: BillingPlan };
   /** The gallery's top-model hint: these models, without the account, plan or caps. */
   topModelHintPreview?: { choices: Array<{ id: string; label: string }> };
   /** A turn's files as the route's deliverables card, opening the way it does. */

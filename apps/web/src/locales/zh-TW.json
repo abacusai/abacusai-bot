@@ -3514,8 +3514,15 @@
       "copyFailed": "無法複製"
     },
     "retryOffer": {
+      "title": "用 {{model}} 再試一次",
       "newChat": "在新對話中用 {{model}} 再試一次",
-      "usesCreditsFaster": "消耗點數更快"
+      "freeTopModel": "這個任務對低成本模型來說很難。{{model}} 是目前最強的模型之一，在這裡可以直接使用。它消耗點數更快。",
+      "continue": "在新對話中繼續",
+      "paidBody": "新對話會根據本對話的摘要，由頂級模型繼續。消耗點數更快。"
+    },
+    "topModelCard": {
+      "title": "升級 {{plan}}，繼續使用 {{model}}",
+      "line": "{{model}} 消耗免費點數很快。升級 {{plan}} 即可繼續使用，還包括以下全部內容。"
     },
     "routerAfterUpgrade": {
       "stay": "繼續使用 {{model}}"

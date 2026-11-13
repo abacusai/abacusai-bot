@@ -3514,8 +3514,15 @@
       "copyFailed": "Kopiëren is niet gelukt"
     },
     "retryOffer": {
+      "title": "Probeer het opnieuw met {{model}}",
       "newChat": "Probeer opnieuw in een nieuwe chat met {{model}}",
-      "usesCreditsFaster": "Verbruikt credits sneller"
+      "freeTopModel": "Deze taak is lastig voor het goedkope model. {{model}}, een van de sterkste modellen die er zijn, staat hier voor je open. Het gebruikt je credits sneller.",
+      "continue": "Ga verder in een nieuwe chat",
+      "paidBody": "Een nieuwe chat gaat verder vanaf een samenvatting van deze, op een topmodel. Die verbruikt credits sneller."
+    },
+    "topModelCard": {
+      "title": "Ga door met {{model}} via {{plan}}",
+      "line": "{{model}} verbruikt gratis credits snel. Met {{plan}} houd je het, plus alles hieronder."
     },
     "routerAfterUpgrade": {
       "stay": "Blijf op {{model}}"

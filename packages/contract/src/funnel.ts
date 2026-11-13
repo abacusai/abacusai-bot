@@ -82,10 +82,16 @@ export const FUNNEL_STEPS = [
   "resume_card_dismissed",
   // The retry on a top model (retry-offer.ts). The line, by why it showed
   // (with _paid on a paying plan); a tap and a close; and the message sent
-  // again on the model, once switched.
+  // again on the model, once switched. A free plan's retry on Opus is
+  // detailed with _free_top.
   "retry_offer_shown",
   "retry_offer_tapped",
   "retry_offer_dismissed",
+  // The card under each reply a free plan gets from a top model it does not
+  // include (top-model-card.tsx); the detail is the model.
+  "top_model_card_shown",
+  "top_model_card_upgrade",
+  "top_model_card_not_now",
   // The rating line (rating-prompt.ts): shown (detail: the chat's task kind),
   // answered (the rating), a comment sent with it (the rating), closed.
   "rating_prompt_shown",

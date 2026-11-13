@@ -605,6 +605,26 @@ const writeLastGoodCatalog = (
 };
 
 /**
+ * A list plus the static catalog's models it leaves out, routers aside (a
+ * paying plan is told apart by its router). A chat pinned to one (the retry
+ * offer's top model on a free plan) then runs, and the server decides: it
+ * serves the free plan's retry model and refuses the rest with the plan card.
+ * Never pooled, so the free pool and the fallback never pick one.
+ */
+const withUnlisted = (listed: AbacusPiModel[]): AbacusPiModel[] => {
+  const ids = new Set(listed.map((model) => model.id));
+  return [
+    ...listed,
+    ...STATIC_ABACUS_MODELS.filter(
+      (model) =>
+        !ids.has(model.id) &&
+        !model.id.startsWith(CHAT_ROUTER_ID) &&
+        model.poolEligible !== true
+    ),
+  ];
+};
+
+/**
  * Abacus.AI, gated on a key like Gemini but with its model list FETCHED: the
  * desktop picker offers every model `/v1/models` returns, and pi can only run
  * a model registered here, so the two have to come from the same source.
@@ -630,9 +650,9 @@ export async function registerAbacusProvider(
     streamSimple: abacusStreamSimple,
     models:
       live.length > 0
-        ? live
+        ? withUnlisted(live)
         : lastGood.length > 0
-          ? lastGood
+          ? withUnlisted(lastGood)
           : STATIC_ABACUS_MODELS,
     ...(Object.keys(sponsored).length > 0 ? { headers: sponsored } : {}),
   });
