@@ -18,6 +18,7 @@ import {
   type Project,
   readJournal,
   type Scope,
+  oneLine,
 } from "./notes.js";
 
 const MAX_HITS = 3;
@@ -90,7 +91,7 @@ const scopeIndex = (
     notes: listNotes(scope)
       .filter((note) => !inPrompt(note))
       .map((note) => {
-        const body = note.body.replace(/\s*\r?\n\s*/g, " ");
+        const body = oneLine(note.body);
         return {
           words: contentWords(
             `${note.name} ${note.description} ${note.body} ${note.keywords ?? ""}`

@@ -5,7 +5,7 @@
  * the Memory page run them under the folder's lock.
  */
 import { redactIdNumbers } from "../traveler/id-numbers.js";
-import type { Note, NoteType } from "./notes.js";
+import { oneLine, type Note, type NoteType } from "./notes.js";
 
 export const MAX_NOTE_CHARS = 1_500;
 export const MAX_CARD_CHARS = 3_000;
@@ -155,10 +155,7 @@ export const checkDraft = (input: GateInput): Draft | string => {
     MAX_DESCRIPTION_CHARS
   );
 
-  const keywords = (draft.keywords ?? "")
-    .replace(/\s*\r?\n\s*/g, " ")
-    .trim()
-    .slice(0, MAX_KEYWORDS_CHARS);
+  const keywords = oneLine(draft.keywords ?? "").slice(0, MAX_KEYWORDS_CHARS);
 
   if (body.length === 0) return "Nothing to save: the text is empty.";
   if (body.length > sizeLimit(draft.type))

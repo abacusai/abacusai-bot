@@ -101,13 +101,21 @@ const lockPath = (): string => path.join(memoryDir(), ".lock");
 
 export const isValidName = (name: string): boolean => NAME_PATTERN.test(name);
 
+/** Text folded onto one line: each line trimmed, blank lines dropped. Linear, unlike a \s*\n\s* regex. */
+export const oneLine = (text: string): string =>
+  text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== "")
+    .join(" ");
+
 /** A file-safe name from free text: "Shop website!" -> "shop-website". */
 export const slugify = (text: string, fallback = "note"): string => {
   const slug = text
     .normalize("NFKD")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+    .replace(/^-|-$/g, "")
     .slice(0, 40)
     .replace(/-+$/g, "");
   return slug.length > 0 ? slug : fallback;
@@ -274,7 +282,6 @@ export const findProject = (key: string): Project | null =>
 // ── writing ────────────────────────────────────────────────────────────────
 
 const serialize = (note: Note, binding?: ProjectRef): string => {
-  const oneLine = (value: string) => value.replace(/\s*\r?\n\s*/g, " ").trim();
   const lines = [
     "---",
     `name: ${note.name}`,
@@ -417,7 +424,7 @@ export const journalAppend = (
   const stamp = now.toISOString().slice(0, 16).replace("T", " ");
   return {
     file: journalFile(scope, now),
-    append: `- ${stamp} · ${line.replace(/\s*\r?\n\s*/g, " ").trim()}\n`,
+    append: `- ${stamp} · ${oneLine(line)}\n`,
   };
 };
 

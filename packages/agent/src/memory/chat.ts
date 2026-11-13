@@ -16,7 +16,7 @@ import {
   readsYou,
 } from "./lanes.js";
 import { migrateOnce } from "./migrate.js";
-import { historyCursor, listNotes, SESSION_ID } from "./notes.js";
+import { historyCursor, listNotes, oneLine, SESSION_ID } from "./notes.js";
 import { recallFor } from "./recall.js";
 
 const SUB_AGENT_CHARS = 2_000;
@@ -112,9 +112,7 @@ export class ChatMemory {
         note.type === "profile"
     );
     if (notes.length === 0) return null;
-    const lines = notes.map(
-      (note) => `- ${note.body.replace(/\s*\r?\n\s*/g, " ")}`
-    );
+    const lines = notes.map((note) => `- ${oneLine(note.body)}`);
     return capText(
       [
         "The user's standing rules and preferences (follow them in what you produce):",

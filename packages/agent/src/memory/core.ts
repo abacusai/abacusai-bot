@@ -26,6 +26,7 @@ import {
   type Scope,
   scopeOfPath,
   today,
+  oneLine,
 } from "./notes.js";
 
 /** The whole block: about-you, the project, and the list of projects. */
@@ -67,7 +68,7 @@ const scopeBlock = (notes: readonly Note[], now: Date): string[] => {
   if (whole.length > 0) {
     lines.push("Rules and preferences:");
     for (const note of whole)
-      lines.push(`- ${note.body.replace(/\s*\r?\n\s*/g, " ")} [${note.name}]`);
+      lines.push(`- ${oneLine(note.body)} [${note.name}]`);
   }
   const indexed = live.filter(
     (note) => note.type !== "profile" && !isWhole(note)
@@ -325,7 +326,7 @@ export const memoryNews = (
         note.type === "rule" ||
         note.type === "preference" ||
         note.type === "card"
-          ? note.body.replace(/\s*\r?\n\s*/g, " ")
+          ? oneLine(note.body)
           : note.description
       }`
     );
