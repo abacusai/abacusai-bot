@@ -3173,6 +3173,10 @@
       "testRepairLimit": "Ich habe die Testreparatur beendet: Diese automatische Korrektur hat ihr Limit erreicht. Es läuft nichts weiter, bis du eine Nachricht sendest.",
       "testsLeftAlone": "Tests schlagen fehl, aber ich konnte nicht feststellen, ob meine Änderung die Ursache ist, also habe ich sie nicht angefasst."
     },
+    "overnight": {
+      "booked": "Geplant für {{when}}",
+      "bookedLine": "Es läuft auf diesem Computer, sobald du diesen Chat verlassen hast. Ist die App dann geschlossen, ist es wenige Minuten nach dem Öffnen fertig."
+    },
     "notice": {
       "dismiss": "Dismiss",
       "backgroundFinished": "Eine Hintergrundaufgabe ist fertig: {{command}}. Sende eine Nachricht, um hier weiterzumachen.",
@@ -5209,6 +5213,10 @@
     "creditsTitle": "Deine Credits sind zurück",
     "credits": "Du hast wieder {{credits}} Credits. Mach in {{name}} dort weiter, wo du aufgehört hast.",
     "creditsPlain": "Du hast wieder {{credits}} Credits. Mach dort weiter, wo du aufgehört hast."
+  },
+  "overnight": {
+    "title": "Heute Morgen fertig",
+    "titleLate": "Deine Arbeit über Nacht ist fertig"
   },
   "kickoff": {
     "connectOne": "Falls die Systemerinnerung {{name}} nicht als verbunden aufführt, rufe zuerst sofort connect_connector dafür auf.",

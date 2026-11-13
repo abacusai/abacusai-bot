@@ -3173,6 +3173,10 @@
       "testRepairLimit": "Testleri düzeltmeyi bıraktım: bu otomatik onarım sınırına ulaştı. Siz mesaj gönderene kadar başka bir şey çalışmayacak.",
       "testsLeftAlone": "Testler başarısız oluyor, ancak nedeninin değişikliğim olup olmadığını anlayamadım, bu yüzden dokunmadım."
     },
+    "overnight": {
+      "booked": "{{when}} için planlandı",
+      "bookedLine": "Bu sohbetten ayrıldığında bu bilgisayarda çalışır. Uygulama o sırada kapalıysa, açtıktan birkaç dakika sonra hazır olur."
+    },
     "notice": {
       "dismiss": "Kapat",
       "backgroundFinished": "Bir arka plan işi bitti: {{command}}. Buradan devam etmek için mesaj gönderin.",
@@ -5209,6 +5213,10 @@
     "creditsTitle": "Kredilerin geri geldi",
     "credits": "Yeniden {{credits}} kredin var. {{name}} içinde kaldığın yerden devam et.",
     "creditsPlain": "Yeniden {{credits}} kredin var. Kaldığın yerden devam et."
+  },
+  "overnight": {
+    "title": "Bu sabah hazır",
+    "titleLate": "Gece yapılan işin hazır"
   },
   "kickoff": {
     "connectOne": "Önce, sistem hatırlatıcısı {{name}} için bağlı demiyorsa hemen bunun için connect_connector çağır.",

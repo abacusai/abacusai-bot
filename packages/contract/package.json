@@ -20,6 +20,7 @@
     "./deliverable-offer": "./src/deliverable-offer.ts",
     "./deliverables": "./src/deliverables.ts",
     "./next-step": "./src/next-step.ts",
+    "./overnight": "./src/overnight.ts",
     "./rating-prompt": "./src/rating-prompt.ts",
     "./resume-card": "./src/resume-card.ts",
     "./retry-offer": "./src/retry-offer.ts",

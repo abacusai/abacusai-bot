@@ -25,7 +25,8 @@ import { AGENT_TOOL_NAMES, AGENT_TOOLS, agentTool } from "./index";
  * until the user clicks it. `bot_help` reads the app's own state to answer
  * questions about the app; switching it off would leave those to memory.
  * `suggest_tasks` draws buttons that send their own text as the user's
- * message; nothing runs until the user taps one.
+ * message; nothing runs until the user taps one. `overnight_task` books work
+ * the user just said yes to on one of those buttons.
  * `ask_bot`, `give_task_to_bot`, `check_bot_answers` and `cancel_bot_ask`
  * reach
  * only the user's own bots, the way
@@ -45,6 +46,7 @@ const NOT_IN_REGISTRY = new Set([
   "suggest_tasks",
   // Its switch is the GitHub watcher's own "fixes from my phone".
   "github_fix",
+  "overnight_task",
 ]);
 
 const registryTools = new Map<string, { toolset: string; agent: boolean }>();

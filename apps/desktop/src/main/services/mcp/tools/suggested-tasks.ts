@@ -50,6 +50,11 @@ const NEXT_STEP_DESCRIPTION = [
   "the source it needs is not connected, the next step is connecting it, never the routine. When a routine task is",
   "tapped, create it with cronjob and firstRun: false, then say in a line when it first runs and that it runs while",
   "this app is open.",
+  "Instead of a routine, the second task may be overnight: true, once in a chat: the next piece of this same",
+  "work, done tonight while the user is away and ready tomorrow morning at 9, when it is real work worth coming",
+  'back to (a version 2, the fixes found, the next chapter): "Have version 2 of my site ready by 9am". Write it',
+  "so the morning has one choice for the user to make (two versions of one thing). When it is tapped, book it",
+  "with overnight_task; never do it now.",
   "When your reply already ends on a question about what comes next, the tasks answer that question and you",
   "write no more text. Not after a plain answer, a failure or a refusal, not when your question asks for something",
   "only the user can give (their name, a file, a choice you cannot guess), not when your reply shows another card,",
@@ -103,6 +108,11 @@ export const SUGGESTED_TASKS_TOOLS: ToolDefinition[] = [
                 description:
                   "True for a task that asks for a routine: the button shows a clock.",
               },
+              overnight: {
+                type: "boolean",
+                description:
+                  "True for this work done overnight, ready tomorrow morning: the button shows a moon.",
+              },
             },
             required: ["text"],
           },
@@ -110,11 +120,18 @@ export const SUGGESTED_TASKS_TOOLS: ToolDefinition[] = [
       },
       required: ["tasks"],
     },
-    run: (host, args) => {
+    run: (host, args, callerSession) => {
       const tasks = suggestedTasks(args);
       if (tasks.some((task) => task.routine) && host.routineOfferClosed())
         return host.err(
           "The user's free credits are nearly used, and a routine spends them on every run. Call this again without the routine task."
+        );
+      if (
+        tasks.some((task) => task.overnight) &&
+        host.overnightOfferClosed(callerSession)
+      )
+        return host.err(
+          "No overnight task can be offered in this chat now. Call this again without the overnight task."
         );
       if (tasks.length === 0)
         return host.err(

@@ -3173,6 +3173,10 @@
       "testRepairLimit": "테스트 수정을 중단했습니다. 이 자동 수정이 한도에 도달했습니다. 메시지를 보낼 때까지 더 이상 실행되지 않습니다.",
       "testsLeftAlone": "테스트가 실패하고 있지만 제 변경이 원인인지 알 수 없어 그대로 두었습니다."
     },
+    "overnight": {
+      "booked": "{{when}}에 예약됨",
+      "bookedLine": "이 채팅을 떠나면 이 컴퓨터에서 실행돼요. 그때 앱이 닫혀 있으면 앱을 연 뒤 몇 분 안에 완료돼요."
+    },
     "notice": {
       "dismiss": "Dismiss",
       "backgroundFinished": "백그라운드 작업이 완료되었습니다: {{command}}. 이어서 진행하려면 메시지를 보내세요.",
@@ -5209,6 +5213,10 @@
     "creditsTitle": "크레딧이 다시 생겼어요",
     "credits": "크레딧이 다시 {{credits}} 있어요. {{name}}에서 멈춘 곳부터 이어서 하세요.",
     "creditsPlain": "크레딧이 다시 {{credits}} 있어요. 멈춘 곳부터 이어서 하세요."
+  },
+  "overnight": {
+    "title": "오늘 아침 준비 완료",
+    "titleLate": "밤사이 작업이 준비됐어요"
   },
   "kickoff": {
     "connectOne": "먼저, 시스템 알림에 {{name}}이(가) 연결됨으로 표시되지 않으면 지금 connect_connector를 호출하세요.",

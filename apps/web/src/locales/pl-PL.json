@@ -3213,6 +3213,10 @@
       "testRepairLimit": "Przestałem naprawiać testy: automatyczna naprawa osiągnęła limit. Nic więcej się nie uruchomi, dopóki nie wyślesz wiadomości.",
       "testsLeftAlone": "Testy nie przechodzą, ale nie mogłem ustalić, czy to przez moją zmianę, więc ich nie ruszałem."
     },
+    "overnight": {
+      "booked": "Zaplanowano na {{when}}",
+      "bookedLine": "Uruchomi się na tym komputerze, gdy opuścisz ten czat. Jeśli aplikacja będzie wtedy zamknięta, będzie gotowe kilka minut po jej otwarciu."
+    },
     "notice": {
       "dismiss": "Zamknij",
       "backgroundFinished": "Zadanie w tle zakończyło się: {{command}}. Wyślij wiadomość, aby kontynuować.",
@@ -5369,6 +5373,10 @@
     "creditsTitle": "Twoje kredyty wróciły",
     "credits": "Znowu masz {{credits}} kredytów. Kontynuuj w {{name}} tam, gdzie skończyłeś.",
     "creditsPlain": "Znowu masz {{credits}} kredytów. Kontynuuj tam, gdzie skończyłeś."
+  },
+  "overnight": {
+    "title": "Gotowe dziś rano",
+    "titleLate": "Twoja praca z nocy jest gotowa"
   },
   "kickoff": {
     "connectOne": "Najpierw, jeśli przypomnienie systemowe nie wymienia {{name}} jako połączonego, wywołaj teraz dla niego connect_connector.",

@@ -15,6 +15,7 @@ import { ConflictError } from "@abacus-ai/contract/conflict";
 import { EntityNotFoundError } from "@abacus-ai/contract/not-found";
 import type {
   RoutineMissed,
+  RoutineOvernight,
   RoutineReach,
   RoutineRun,
   RoutineRunKind,
@@ -144,6 +145,8 @@ export interface CronJob {
   quietIsNormal?: boolean;
   /** Fired by the GitHub watcher's new reviews (see `Routine.githubReviews`). */
   githubReviews?: boolean;
+  /** Tomorrow's result: booked from a chat's next step, shown at its ready hour. */
+  overnight?: RoutineOvernight | null;
 }
 
 /** Why a fire waits: the network, a missed fire, or a run the app closed under. */
@@ -397,6 +400,7 @@ export const createJob = (
     uptimeUrl?: string | null;
     quietIsNormal?: boolean;
     githubReviews?: boolean;
+    overnight?: RoutineOvernight | null;
   },
   id?: string
 ): CronJob => {
@@ -453,6 +457,7 @@ export const createJob = (
     ...(uptimeUrl != null ? { uptimeUrl } : {}),
     ...(input.quietIsNormal === true ? { quietIsNormal: true } : {}),
     ...(input.githubReviews === true ? { githubReviews: true } : {}),
+    ...(input.overnight != null ? { overnight: input.overnight } : {}),
   };
 
   write([...existing, job]);
@@ -637,6 +642,19 @@ export const setOriginSession = (id: string, sessionId: string): void => {
   const index = jobs.findIndex((job) => job.id === id);
   if (index < 0 || jobs[index].originSessionId === sessionId) return;
   jobs[index] = { ...jobs[index], originSessionId: sessionId };
+  write(jobs);
+};
+
+/** An overnight routine's record, changed (overnight.ts); nothing for any other. */
+export const updateOvernight = (
+  id: string,
+  change: (overnight: RoutineOvernight) => RoutineOvernight
+): void => {
+  const jobs = readForWrite();
+  const index = jobs.findIndex((job) => job.id === id);
+  const overnight = index < 0 ? null : jobs[index].overnight;
+  if (overnight == null) return;
+  jobs[index] = { ...jobs[index], overnight: change(overnight) };
   write(jobs);
 };
 

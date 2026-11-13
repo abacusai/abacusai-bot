@@ -3173,6 +3173,10 @@
       "testRepairLimit": "Ik ben gestopt met het repareren van de tests: deze automatische reparatie heeft de limiet bereikt. Er gebeurt niets meer totdat je een bericht stuurt.",
       "testsLeftAlone": "Tests mislukken, maar ik kon niet vaststellen of mijn wijziging de oorzaak was, dus ik heb ze niet aangeraakt."
     },
+    "overnight": {
+      "booked": "Gepland voor {{when}}",
+      "bookedLine": "Het draait op deze computer zodra je deze chat hebt verlaten. Is de app dan gesloten, dan is het een paar minuten na het openen klaar."
+    },
     "notice": {
       "dismiss": "Sluiten",
       "backgroundFinished": "Een achtergrondtaak is voltooid: {{command}}. Stuur een bericht om verder te gaan.",
@@ -5209,6 +5213,10 @@
     "creditsTitle": "Je credits zijn terug",
     "credits": "Je hebt weer {{credits}} credits. Ga verder waar je gebleven was in {{name}}.",
     "creditsPlain": "Je hebt weer {{credits}} credits. Ga verder waar je gebleven was."
+  },
+  "overnight": {
+    "title": "Klaar vanochtend",
+    "titleLate": "Je werk van vannacht is klaar"
   },
   "kickoff": {
     "connectOne": "Als de systeemherinnering {{name}} niet als verbonden vermeldt, roep dan eerst nu connect_connector daarvoor aan.",

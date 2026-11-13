@@ -3173,6 +3173,10 @@
       "testRepairLimit": "Parei de corrigir os testes: esta correção automática atingiu o limite. Nada mais será executado até você enviar uma mensagem.",
       "testsLeftAlone": "Os testes estão falhando, mas não consegui saber se foi por causa da minha alteração, então não mexi neles."
     },
+    "overnight": {
+      "booked": "Agendado para {{when}}",
+      "bookedLine": "Roda neste computador depois que você sair deste chat. Se o app estiver fechado, ficará pronto alguns minutos depois de abri-lo."
+    },
     "notice": {
       "dismiss": "Dismiss",
       "backgroundFinished": "Uma tarefa em segundo plano terminou: {{command}}. Envie uma mensagem para continuar daqui.",
@@ -5209,6 +5213,10 @@
     "creditsTitle": "Seus créditos voltaram",
     "credits": "Você tem {{credits}} créditos de novo. Continue de onde parou em {{name}}.",
     "creditsPlain": "Você tem {{credits}} créditos de novo. Continue de onde parou."
+  },
+  "overnight": {
+    "title": "Pronto hoje de manhã",
+    "titleLate": "Seu trabalho da noite está pronto"
   },
   "kickoff": {
     "connectOne": "Primeiro, se o lembrete do sistema não listar {{name}} como conectado, chame connect_connector para ele agora.",

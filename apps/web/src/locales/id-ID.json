@@ -3173,6 +3173,10 @@
       "testRepairLimit": "Saya berhenti memperbaiki tes: perbaikan otomatis ini mencapai batasnya. Tidak ada yang berjalan lagi sampai Anda mengirim pesan.",
       "testsLeftAlone": "Tes gagal, tetapi saya tidak bisa memastikan apakah perubahan saya penyebabnya, jadi saya membiarkannya."
     },
+    "overnight": {
+      "booked": "Dijadwalkan untuk {{when}}",
+      "bookedLine": "Ini berjalan di komputer ini setelah Anda meninggalkan chat ini. Jika aplikasi tertutup, ini akan selesai beberapa menit setelah Anda membukanya."
+    },
     "notice": {
       "dismiss": "Dismiss",
       "backgroundFinished": "Tugas latar belakang selesai: {{command}}. Kirim pesan untuk melanjutkan dari sini.",
@@ -5209,6 +5213,10 @@
     "creditsTitle": "Kredit Anda kembali",
     "credits": "Anda punya {{credits}} kredit lagi. Lanjutkan dari bagian terakhir di {{name}}.",
     "creditsPlain": "Anda punya {{credits}} kredit lagi. Lanjutkan dari bagian terakhir."
+  },
+  "overnight": {
+    "title": "Siap pagi ini",
+    "titleLate": "Pekerjaan semalam Anda sudah siap"
   },
   "kickoff": {
     "connectOne": "Pertama, jika pengingat sistem tidak mencantumkan {{name}} sebagai terhubung, panggil connect_connector untuknya sekarang.",

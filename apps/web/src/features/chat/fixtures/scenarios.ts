@@ -547,6 +547,59 @@ const nextStepStore = (): RelayEvent[] =>
     b.runFinished("r1", "success", { timestamp: at(1) }),
   ]);
 
+/** Tomorrow's result: the moon button under a result, and the booking (contract overnight.ts). */
+const OVERNIGHT_READY = "2026-11-14T09:00:00";
+
+const overnightOffer = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn(
+      "r1",
+      "u1",
+      "Make a website for my bakery, Maya's Breads",
+      at(3)
+    ),
+    b.textStart("a1"),
+    ...b.toolCall("c1", "write", "a1", {
+      file_path: "/Users/me/bakery/index.html",
+    }),
+    b.toolResult("c1", { text: "Wrote index.html" }),
+    b.textDelta(
+      "a1",
+      "Your site is ready on your computer, with the menu, hours and map. Want me to make version 2 tonight, with a phone layout, an order form and two hero designs to pick from?"
+    ),
+    ...b.toolCall("c2", "suggest_tasks", "a1", {
+      after_result: true,
+      tasks: [
+        { text: "Have version 2 of my site ready by 9am", overnight: true },
+        { text: "Add an order form now" },
+      ],
+    }),
+    b.toolResult("c2", { text: "The user sees 2 buttons under your reply." }),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", { timestamp: at(2) }),
+  ]);
+
+const overnightBooked = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn("r1", "u1", "Have version 2 of my site ready by 9am", at(2)),
+    b.textStart("a1"),
+    ...b.toolCall("c1", "overnight_task", "a1", {
+      task: "Version 2 of Maya's Breads: phone layout, order form, two hero designs",
+      plan: "Work in /Users/me/bakery.",
+    }),
+    b.toolResult("c1", {
+      text: `Booked for ${OVERNIGHT_READY}. It runs on this computer once the user has left this chat.`,
+    }),
+    b.textDelta(
+      "a1",
+      "Done, it's booked. I'll work on version 2 this evening and leave it here for you."
+    ),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", { timestamp: at(1) }),
+  ]);
+
 const successSite = (): RelayEvent[] =>
   seqd([
     ...b.sessionReady("inc-1", "YOLO"),
@@ -1163,6 +1216,18 @@ export const SCENARIOS: Scenario[] = [
     skin: "bot",
     events: nextStepStore,
     view: { placeholder: "Message your bot..." },
+  },
+  {
+    id: "overnight-offer",
+    canvas: ["Overnight", "offer"],
+    skin: "session",
+    events: overnightOffer,
+  },
+  {
+    id: "overnight-booked",
+    canvas: ["Overnight", "booked"],
+    skin: "session",
+    events: overnightBooked,
   },
   {
     id: "success-site",

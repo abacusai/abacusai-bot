@@ -3173,6 +3173,10 @@
       "testRepairLimit": "我已停止修复测试：这次自动修复已达到上限。在你发送消息之前，不会再运行其他内容。",
       "testsLeftAlone": "测试失败了，但我无法判断是否由我的改动引起，所以没有处理。"
     },
+    "overnight": {
+      "booked": "已预约在{{when}}",
+      "bookedLine": "你离开此聊天后，它会在这台电脑上运行。如果届时应用已关闭，打开后几分钟内就会完成。"
+    },
     "notice": {
       "dismiss": "关闭",
       "backgroundFinished": "后台作业已完成：{{command}}。发送消息即可从这里继续。",
@@ -5209,6 +5213,10 @@
     "creditsTitle": "你的积分回来了",
     "credits": "你又有 {{credits}} 积分了。在 {{name}} 中从上次停下的地方继续。",
     "creditsPlain": "你又有 {{credits}} 积分了。从上次停下的地方继续。"
+  },
+  "overnight": {
+    "title": "今早已就绪",
+    "titleLate": "夜间工作已完成"
   },
   "kickoff": {
     "connectOne": "首先，如果系统提醒没有把 {{name}} 列为已连接，请立即为它调用 connect_connector。",

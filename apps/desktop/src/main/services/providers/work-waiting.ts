@@ -333,6 +333,18 @@ export class WorkWaiting {
     });
   }
 
+  /** Something else brings `sessionId` up (tomorrow's result): this absence says nothing about it. */
+  settle(sessionId: string): void {
+    const record = this.current();
+    if (
+      record == null ||
+      record.done ||
+      !samePlace(record.place, { kind: "session", sessionId })
+    )
+      return;
+    this.save({ ...record, done: true });
+  }
+
   /** The channel the user left still talks: the absence starts at its last word. */
   channelSpoke(channelId: string): void {
     const record = this.current();

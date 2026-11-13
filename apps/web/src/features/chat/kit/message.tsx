@@ -1,4 +1,5 @@
 import { isSuggestTasksTool } from "@abacus-ai/contract/bots/suggested-tasks";
+import { isOvernightTool } from "@abacus-ai/contract/overnight";
 import {
   stripAttachmentRefs,
   visibleUserText,
@@ -827,7 +828,8 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
           if (
             isPaidFeatureTool(part.part.name) ||
             isBotHelpTool(part.part.name) ||
-            isSuggestTasksTool(part.part.name)
+            isSuggestTasksTool(part.part.name) ||
+            isOvernightTool(part.part.name)
           ) {
             flush();
             blocks.push({ run: false, part });

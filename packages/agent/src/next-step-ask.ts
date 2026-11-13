@@ -20,6 +20,8 @@ export const NEXT_STEP_PROMPT = [
   "mail, job ads, prices, a live site, a topic, a project's tests, its pull",
   "requests' reviews, a build), make the second task a routine: true task, in",
   "words naming when it runs; never one that needs a connection that is missing.",
+  "Otherwise, where the tool describes one, the second task may be overnight: true,",
+  "the next piece of this work ready tomorrow morning.",
   "In a reply to a message from a chat app, write the question only. If the work",
   "did not really succeed, ask only what would unblock it, with no tool call.",
 ].join(" ");

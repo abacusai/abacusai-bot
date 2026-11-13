@@ -69,6 +69,12 @@ export const FUNNEL_STEPS = [
   "result_delivered",
   "next_step_shown",
   "next_step_tapped",
+  // Tomorrow's result (overnight.ts): booked, its run started, the morning
+  // notice shown, then a click.
+  "overnight_booked",
+  "overnight_ran",
+  "overnight_shown",
+  "overnight_clicked",
   // "Your work is waiting" (work-waiting.ts): a notice for a result the user
   // left, by which one, kind and whether it named a task; then a click.
   "work_waiting_shown",

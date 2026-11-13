@@ -3173,6 +3173,10 @@
       "testRepairLimit": "I stopped fixing the tests: this automatic repair reached its limit. Nothing else runs until you send a message.",
       "testsLeftAlone": "Tests are failing, but I couldn't tell whether my change caused it, so I left them alone."
     },
+    "overnight": {
+      "booked": "Booked for {{when}}",
+      "bookedLine": "It runs on this computer once you've left this chat. If the app is closed then, it will be done a few minutes after you open it."
+    },
     "notice": {
       "dismiss": "Dismiss",
       "backgroundFinished": "A background job finished: {{command}}. Send a message to pick up from here.",
@@ -5209,6 +5213,10 @@
     "creditsTitle": "Your credits are back",
     "credits": "You have {{credits}} credits again. Pick up where you left off in {{name}}.",
     "creditsPlain": "You have {{credits}} credits again. Pick up where you left off."
+  },
+  "overnight": {
+    "title": "Ready this morning",
+    "titleLate": "Your overnight work is ready"
   },
   "kickoff": {
     "connectOne": "First, if the system reminder does not list {{name}} as connected, call connect_connector for it now.",

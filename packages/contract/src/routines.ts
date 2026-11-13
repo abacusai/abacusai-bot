@@ -245,6 +245,22 @@ export interface Routine {
    * at once.
    */
   githubReviews?: boolean;
+  /** Tomorrow's result (overnight.ts): a one-time run booked from a chat's next step. */
+  overnight?: RoutineOvernight | null;
+}
+
+/** A booked overnight run: the chat it continues, when it is shown, and how it went. */
+export interface RoutineOvernight {
+  /** The chat it was booked in. */
+  sessionId: string;
+  /** When the result is brought up (epoch ms). */
+  readyAt: number;
+  /** Its run finished with an answer. */
+  doneAt?: number | null;
+  /** The morning notice showed. */
+  shownAt?: number | null;
+  /** Runs started, so a failed one is tried once more. */
+  attempts?: number;
 }
 
 /** A watched site's state between fires. */

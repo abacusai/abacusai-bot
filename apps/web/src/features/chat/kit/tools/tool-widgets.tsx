@@ -6,6 +6,7 @@
  * joins it (§5.4 bot skin, §6.2).
  */
 import { isSuggestTasksTool } from "@abacus-ai/contract/bots/suggested-tasks";
+import { isOvernightTool } from "@abacus-ai/contract/overnight";
 import type { ToolProps } from "@tanstack/ai-react/ui";
 import { useEffect, type ComponentType } from "react";
 
@@ -20,6 +21,7 @@ import { toolKey } from "../../store/thread-store";
 import { useChatView, useSubagentScope } from "../context";
 import { PermissionCard } from "../permissions/permission-card";
 import { BotHelpToolCard } from "./bot-help";
+import { OvernightToolCard } from "./overnight";
 import { PaidFeatureToolCard } from "./paid-feature";
 import { SessionOfferCard } from "./session-offer";
 import { SuggestedTasksCard } from "./suggested-tasks";
@@ -67,7 +69,9 @@ export const sessionToolWidgets = new Proxy(KNOWN_TOOL_WIDGETS, {
           ? BotHelpToolCard
           : isSuggestTasksTool(name)
             ? SuggestedTasksCard
-            : (known[name] ?? GenericLine),
+            : isOvernightTool(name)
+              ? OvernightToolCard
+              : (known[name] ?? GenericLine),
 }) as Record<string, Widget>;
 
 /** Bots: the inline approval card of the canvas BotApproval board. */
@@ -98,5 +102,7 @@ export const botToolWidgets = new Proxy({} as Record<string, Widget>, {
             ? BotHelpToolCard
             : isSuggestTasksTool(name)
               ? SuggestedTasksCard
-              : BotToolSlot,
+              : isOvernightTool(name)
+                ? OvernightToolCard
+                : BotToolSlot,
 }) as Record<string, Widget>;

@@ -66,6 +66,10 @@ import {
   type AbacusPlanTier,
   type ModelAvailability,
 } from "@abacus-ai/contract/models";
+import {
+  localIso,
+  OVERNIGHT_BOOKED_PREFIX,
+} from "@abacus-ai/contract/overnight";
 import type {
   Routine,
   RoutineCreateInput,
@@ -399,6 +403,14 @@ export interface McpAgentToolsServerOptions {
   routineDeliversToSelf?: (sessionId: string, platform: string) => boolean;
   /** A free grant is nearly used: `suggest_tasks` offers no routine. */
   routineOfferClosed?: () => boolean;
+  /** No overnight task to offer in this chat (overnight.ts): one booked already, or credits short. */
+  overnightOfferClosed?: (sessionId: string | undefined) => boolean;
+  /** Books this chat's overnight run: its ready time, or why not. */
+  bookOvernight?: (
+    sessionId: string,
+    task: string,
+    plan: string
+  ) => Promise<{ readyAt: number } | { refused: string }>;
   /**
    * The conversation a deliverable from this session belongs to, so the
    * renderer opens it in that pane and no other. Null for an unknown session.
@@ -4081,6 +4093,27 @@ export class McpAgentToolsServer extends McpHttpServer {
 
   routineOfferClosed(): boolean {
     return this.options.routineOfferClosed?.() === true;
+  }
+
+  overnightOfferClosed(sessionId: string | undefined): boolean {
+    return this.options.overnightOfferClosed?.(sessionId) ?? true;
+  }
+
+  async bookOvernight(
+    sessionId: string,
+    task: string,
+    plan: string
+  ): Promise<ToolResult> {
+    const booked = (await this.options.bookOvernight?.(
+      sessionId,
+      task,
+      plan
+    )) ?? { refused: "Overnight work is not available in this app." };
+    if ("refused" in booked) return this.err(booked.refused);
+    return this.ok(
+      `${OVERNIGHT_BOOKED_PREFIX}${localIso(booked.readyAt)}. ` +
+        "It runs on this computer once the user has left this chat, and its answer comes back here. Tell the user now, in their language, and do not start the work."
+    );
   }
 
   ok(text: string): ToolResult {
