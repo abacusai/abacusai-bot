@@ -3213,6 +3213,10 @@
       "testRepairLimit": "Przestałem naprawiać testy: automatyczna naprawa osiągnęła limit. Nic więcej się nie uruchomi, dopóki nie wyślesz wiadomości.",
       "testsLeftAlone": "Testy nie przechodzą, ale nie mogłem ustalić, czy to przez moją zmianę, więc ich nie ruszałem."
     },
+    "overnight": {
+      "booked": "Zaplanowano na {{when}}",
+      "bookedLine": "Uruchomi się na tym komputerze, gdy opuścisz ten czat. Jeśli aplikacja będzie wtedy zamknięta, będzie gotowe kilka minut po jej otwarciu."
+    },
     "notice": {
       "dismiss": "Zamknij",
       "backgroundFinished": "Zadanie w tle zakończyło się: {{command}}. Wyślij wiadomość, aby kontynuować.",
@@ -5370,6 +5374,10 @@
     "credits": "Znowu masz {{credits}} kredytów. Kontynuuj w {{name}} tam, gdzie skończyłeś.",
     "creditsPlain": "Znowu masz {{credits}} kredytów. Kontynuuj tam, gdzie skończyłeś."
   },
+  "overnight": {
+    "title": "Gotowe dziś rano",
+    "titleLate": "Twoja praca z nocy jest gotowa"
+  },
   "kickoff": {
     "connectOne": "Najpierw, jeśli przypomnienie systemowe nie wymienia {{name}} jako połączonego, wywołaj teraz dla niego connect_connector.",
     "resultFirst": "Najpierw przekaż prawdziwy wynik zrobiony tym, co działa bez żadnego konta, albo, jeśli zadanie zaczyna się od czegoś, co może dać tylko użytkownik (jego pytanie, temat, lista), poproś o to jednym krótkim pytaniem; dopiero potem zaproponuj najwyżej jedno połączenie, to, które najbardziej poprawi wynik.",
@@ -5413,6 +5421,9 @@
     "taskRunningTitle": "Trwa zadanie",
     "taskRunningMessage": "Zadanie wciąż trwa.",
     "taskRunningDetail": "Zostawić je w tle czy zakończyć i je przerwać?",
+    "overnightBookedTitle": "Na dziś w nocy zaplanowano pracę",
+    "overnightBookedMessage": "„{{task}}” uruchomi się dziś w nocy na tym komputerze.",
+    "overnightBookedDetail": "Zostaw aplikację działającą w tle, aby było gotowe rano. Jeśli ją zamkniesz, uruchomi się przy następnym otwarciu aplikacji.",
     "restart": "Uruchom ponownie",
     "quit": "Zakończ",
     "wait": "Czekaj",

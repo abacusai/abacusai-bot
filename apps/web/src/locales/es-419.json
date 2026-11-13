@@ -3173,6 +3173,10 @@
       "testRepairLimit": "Dejé de corregir las pruebas: esta corrección automática llegó a su límite. No se ejecutará nada más hasta que envíes un mensaje.",
       "testsLeftAlone": "Las pruebas están fallando, pero no pude saber si fue por mi cambio, así que no las toqué."
     },
+    "overnight": {
+      "booked": "Programado para {{when}}",
+      "bookedLine": "Se ejecuta en esta computadora cuando salgas de este chat. Si la app está cerrada, estará listo unos minutos después de abrirla."
+    },
     "notice": {
       "dismiss": "Dismiss",
       "backgroundFinished": "Terminó una tarea en segundo plano: {{command}}. Envía un mensaje para seguir desde aquí.",
@@ -5210,6 +5214,10 @@
     "credits": "Tienes {{credits}} créditos otra vez. Sigue donde lo dejaste en {{name}}.",
     "creditsPlain": "Tienes {{credits}} créditos otra vez. Sigue donde lo dejaste."
   },
+  "overnight": {
+    "title": "Listo esta mañana",
+    "titleLate": "Tu trabajo de la noche está listo"
+  },
   "kickoff": {
     "connectOne": "Primero, si el recordatorio del sistema no indica que {{name}} está conectado, llama ahora a connect_connector para conectarlo.",
     "resultFirst": "Primero entrega un resultado real con lo que funciona sin ninguna cuenta o, si la tarea empieza por algo que solo el usuario puede dar (su pregunta, un tema, una lista), pídelo en una sola pregunta breve; solo después, ofrece como máximo una conexión, la que más mejore el resultado.",
@@ -5253,6 +5261,9 @@
     "taskRunningTitle": "Se está ejecutando una tarea",
     "taskRunningMessage": "Todavía hay una tarea en ejecución.",
     "taskRunningDetail": "¿Mantenerlo ejecutándose en segundo plano o cerrarlo y detenerlo?",
+    "overnightBookedTitle": "Hay trabajo programado para esta noche",
+    "overnightBookedMessage": "“{{task}}” se ejecuta esta noche en esta computadora.",
+    "overnightBookedDetail": "Deja la app en segundo plano para que esté lista en la mañana. Si sales, se ejecutará la próxima vez que abras la app.",
     "restart": "Reiniciar",
     "quit": "Salir",
     "wait": "Esperar",

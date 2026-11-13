@@ -3173,6 +3173,10 @@
       "testRepairLimit": "Ik ben gestopt met het repareren van de tests: deze automatische reparatie heeft de limiet bereikt. Er gebeurt niets meer totdat je een bericht stuurt.",
       "testsLeftAlone": "Tests mislukken, maar ik kon niet vaststellen of mijn wijziging de oorzaak was, dus ik heb ze niet aangeraakt."
     },
+    "overnight": {
+      "booked": "Gepland voor {{when}}",
+      "bookedLine": "Het draait op deze computer zodra je deze chat hebt verlaten. Is de app dan gesloten, dan is het een paar minuten na het openen klaar."
+    },
     "notice": {
       "dismiss": "Sluiten",
       "backgroundFinished": "Een achtergrondtaak is voltooid: {{command}}. Stuur een bericht om verder te gaan.",
@@ -5210,6 +5214,10 @@
     "credits": "Je hebt weer {{credits}} credits. Ga verder waar je gebleven was in {{name}}.",
     "creditsPlain": "Je hebt weer {{credits}} credits. Ga verder waar je gebleven was."
   },
+  "overnight": {
+    "title": "Klaar vanochtend",
+    "titleLate": "Je werk van vannacht is klaar"
+  },
   "kickoff": {
     "connectOne": "Als de systeemherinnering {{name}} niet als verbonden vermeldt, roep dan eerst nu connect_connector daarvoor aan.",
     "resultFirst": "Lever eerst een echt resultaat af met wat zonder account werkt, of, als de taak begint met iets dat alleen de gebruiker kan geven (hun vraag, een onderwerp, een lijst), vraag erom in één korte vraag; bied pas daarna hooguit één verbinding aan, degene die het resultaat het meest verbetert.",
@@ -5253,6 +5261,9 @@
     "taskRunningTitle": "Er loopt een taak",
     "taskRunningMessage": "Er loopt nog een taak.",
     "taskRunningDetail": "Op de achtergrond laten doorlopen, of afsluiten en de taak stoppen?",
+    "overnightBookedTitle": "Er staat werk gepland voor vannacht",
+    "overnightBookedMessage": "“{{task}}” draait vannacht op deze computer.",
+    "overnightBookedDetail": "Laat de app op de achtergrond draaien zodat het morgenochtend klaar is. Als je stopt, draait het de volgende keer dat je de app opent.",
     "restart": "Opnieuw starten",
     "quit": "Afsluiten",
     "wait": "Wachten",

@@ -3173,6 +3173,10 @@
       "testRepairLimit": "Saya berhenti memperbaiki tes: perbaikan otomatis ini mencapai batasnya. Tidak ada yang berjalan lagi sampai Anda mengirim pesan.",
       "testsLeftAlone": "Tes gagal, tetapi saya tidak bisa memastikan apakah perubahan saya penyebabnya, jadi saya membiarkannya."
     },
+    "overnight": {
+      "booked": "Dijadwalkan untuk {{when}}",
+      "bookedLine": "Ini berjalan di komputer ini setelah Anda meninggalkan chat ini. Jika aplikasi tertutup, ini akan selesai beberapa menit setelah Anda membukanya."
+    },
     "notice": {
       "dismiss": "Dismiss",
       "backgroundFinished": "Tugas latar belakang selesai: {{command}}. Kirim pesan untuk melanjutkan dari sini.",
@@ -5210,6 +5214,10 @@
     "credits": "Anda punya {{credits}} kredit lagi. Lanjutkan dari bagian terakhir di {{name}}.",
     "creditsPlain": "Anda punya {{credits}} kredit lagi. Lanjutkan dari bagian terakhir."
   },
+  "overnight": {
+    "title": "Siap pagi ini",
+    "titleLate": "Pekerjaan semalam Anda sudah siap"
+  },
   "kickoff": {
     "connectOne": "Pertama, jika pengingat sistem tidak mencantumkan {{name}} sebagai terhubung, panggil connect_connector untuknya sekarang.",
     "resultFirst": "Pertama, serahkan hasil nyata dengan apa yang bisa dilakukan tanpa akun apa pun, atau, jika tugasnya dimulai dari sesuatu yang hanya bisa diberikan pengguna (pertanyaannya, topik, daftar), mintalah dalam satu pertanyaan singkat; baru setelah itu, tawarkan paling banyak satu koneksi, yang paling meningkatkan hasilnya.",
@@ -5253,6 +5261,9 @@
     "taskRunningTitle": "Sebuah tugas sedang berjalan",
     "taskRunningMessage": "Ada tugas yang masih berjalan.",
     "taskRunningDetail": "Tetap berjalan di latar belakang, atau berhenti dan menghentikannya?",
+    "overnightBookedTitle": "Ada pekerjaan dijadwalkan malam ini",
+    "overnightBookedMessage": "“{{task}}” berjalan malam ini di komputer ini.",
+    "overnightBookedDetail": "Biarkan aplikasi berjalan di latar belakang agar siap besok pagi. Jika Anda keluar, ini akan berjalan saat Anda membuka aplikasi lagi.",
     "restart": "Mulai ulang",
     "quit": "Keluar",
     "wait": "Tunggu",

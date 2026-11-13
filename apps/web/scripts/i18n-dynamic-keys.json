@@ -1649,6 +1649,9 @@
       "taskRunningTitle",
       "taskRunningMessage",
       "taskRunningDetail",
+      "overnightBookedTitle",
+      "overnightBookedMessage",
+      "overnightBookedDetail",
       "restart",
       "quit",
       "wait",
@@ -1911,5 +1914,10 @@
       "../../desktop/src/main/services/workspace/github-watch.ts",
       "../../desktop/src/main/service-host.ts"
     ]
+  },
+  {
+    "prefix": "overnight.",
+    "values": ["title", "titleLate"],
+    "sources": ["../../desktop/src/main/service-host.ts"]
   }
 ]

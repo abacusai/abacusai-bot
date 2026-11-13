@@ -3173,6 +3173,10 @@
       "testRepairLimit": "Parei de corrigir os testes: esta correção automática atingiu o limite. Nada mais será executado até você enviar uma mensagem.",
       "testsLeftAlone": "Os testes estão falhando, mas não consegui saber se foi por causa da minha alteração, então não mexi neles."
     },
+    "overnight": {
+      "booked": "Agendado para {{when}}",
+      "bookedLine": "Roda neste computador depois que você sair deste chat. Se o app estiver fechado, ficará pronto alguns minutos depois de abri-lo."
+    },
     "notice": {
       "dismiss": "Dismiss",
       "backgroundFinished": "Uma tarefa em segundo plano terminou: {{command}}. Envie uma mensagem para continuar daqui.",
@@ -5210,6 +5214,10 @@
     "credits": "Você tem {{credits}} créditos de novo. Continue de onde parou em {{name}}.",
     "creditsPlain": "Você tem {{credits}} créditos de novo. Continue de onde parou."
   },
+  "overnight": {
+    "title": "Pronto hoje de manhã",
+    "titleLate": "Seu trabalho da noite está pronto"
+  },
   "kickoff": {
     "connectOne": "Primeiro, se o lembrete do sistema não listar {{name}} como conectado, chame connect_connector para ele agora.",
     "resultFirst": "Primeiro entregue um resultado real com o que funciona sem nenhuma conta ou, se a tarefa começa com algo que só o usuário pode dar (a pergunta dele, um tema, uma lista), peça isso em uma única pergunta curta; só depois, ofereça no máximo uma conexão, a que mais melhora o resultado.",
@@ -5253,6 +5261,9 @@
     "taskRunningTitle": "Uma tarefa está em execução",
     "taskRunningMessage": "Uma tarefa ainda está em execução.",
     "taskRunningDetail": "Mantê-lo funcionando em segundo plano ou sair e interrompê-lo?",
+    "overnightBookedTitle": "Há trabalho agendado para esta noite",
+    "overnightBookedMessage": "“{{task}}” roda esta noite neste computador.",
+    "overnightBookedDetail": "Deixe o app rodando em segundo plano para ficar pronto de manhã. Se você sair, ele roda na próxima vez que abrir o app.",
     "restart": "Reiniciar",
     "quit": "Sair",
     "wait": "Aguardar",

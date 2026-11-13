@@ -3173,6 +3173,10 @@
       "testRepairLimit": "我已停止修复测试：这次自动修复已达到上限。在你发送消息之前，不会再运行其他内容。",
       "testsLeftAlone": "测试失败了，但我无法判断是否由我的改动引起，所以没有处理。"
     },
+    "overnight": {
+      "booked": "已预约在{{when}}",
+      "bookedLine": "你离开此聊天后，它会在这台电脑上运行。如果届时应用已关闭，打开后几分钟内就会完成。"
+    },
     "notice": {
       "dismiss": "关闭",
       "backgroundFinished": "后台作业已完成：{{command}}。发送消息即可从这里继续。",
@@ -5210,6 +5214,10 @@
     "credits": "你又有 {{credits}} 积分了。在 {{name}} 中从上次停下的地方继续。",
     "creditsPlain": "你又有 {{credits}} 积分了。从上次停下的地方继续。"
   },
+  "overnight": {
+    "title": "今早已就绪",
+    "titleLate": "夜间工作已完成"
+  },
   "kickoff": {
     "connectOne": "首先，如果系统提醒没有把 {{name}} 列为已连接，请立即为它调用 connect_connector。",
     "resultFirst": "先用不需要任何账号就能做的事交付一个实际结果；如果这项工作要从只有用户能给的东西开始（他们的问题、一个主题、一份清单），就用一个简短的问题来问；之后才最多提议一个连接，选最能改进结果的那个。",
@@ -5253,6 +5261,9 @@
     "taskRunningTitle": "有任务正在运行",
     "taskRunningMessage": "有任务仍在运行。",
     "taskRunningDetail": "让它继续在后台运行，还是退出并停止任务？",
+    "overnightBookedTitle": "今晚已预约工作",
+    "overnightBookedMessage": "“{{task}}”将于今晚在这台电脑上运行。",
+    "overnightBookedDetail": "请让应用在后台保持运行，以便早上准备好。如果退出，它会在你下次打开应用时运行。",
     "restart": "重启",
     "quit": "退出",
     "wait": "等待",

@@ -3173,6 +3173,10 @@
       "testRepairLimit": "J'ai arrêté de corriger les tests : cette réparation automatique a atteint sa limite. Rien d'autre ne s'exécutera tant que vous n'aurez pas envoyé de message.",
       "testsLeftAlone": "Des tests échouent, mais je n'ai pas pu déterminer si ma modification en est la cause, je n'y ai donc pas touché."
     },
+    "overnight": {
+      "booked": "Prévu pour {{when}}",
+      "bookedLine": "Cela s'exécute sur cet ordinateur une fois que vous avez quitté ce chat. Si l'app est fermée, ce sera prêt quelques minutes après son ouverture."
+    },
     "notice": {
       "dismiss": "Dismiss",
       "backgroundFinished": "Une tâche en arrière-plan est terminée : {{command}}. Envoyez un message pour reprendre ici.",
@@ -5210,6 +5214,10 @@
     "credits": "Vous avez de nouveau {{credits}} crédits. Reprenez là où vous vous étiez arrêté dans {{name}}.",
     "creditsPlain": "Vous avez de nouveau {{credits}} crédits. Reprenez là où vous vous étiez arrêté."
   },
+  "overnight": {
+    "title": "Prêt ce matin",
+    "titleLate": "Votre travail de la nuit est prêt"
+  },
   "kickoff": {
     "connectOne": "D'abord, si le rappel système n'indique pas {{name}} comme connecté, appelle connect_connector pour le connecter maintenant.",
     "resultFirst": "Commence par remettre un vrai résultat avec ce qui fonctionne sans aucun compte, ou, si la tâche part de quelque chose que seul l'utilisateur peut donner (sa question, un sujet, une liste), demande-le en une seule question courte ; ensuite seulement, propose au plus une connexion, celle qui améliore le plus le résultat.",
@@ -5253,6 +5261,9 @@
     "taskRunningTitle": "Une tâche est en cours d'exécution",
     "taskRunningMessage": "Une tâche est toujours en cours d'exécution.",
     "taskRunningDetail": "Le laisser fonctionner en arrière-plan, ou le quitter et l'arrêter ?",
+    "overnightBookedTitle": "Du travail est prévu pour cette nuit",
+    "overnightBookedMessage": "« {{task}} » s'exécute cette nuit sur cet ordinateur.",
+    "overnightBookedDetail": "Laissez l'app tourner en arrière-plan pour que ce soit prêt demain matin. Si vous quittez, cela s'exécutera à la prochaine ouverture de l'app.",
     "restart": "Redémarrer",
     "quit": "Quitter",
     "wait": "Attendre",

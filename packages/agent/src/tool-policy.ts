@@ -110,6 +110,8 @@ export const PHONE_EXCLUDED_MCP_TOOLS: Readonly<Record<string, string>> = {
   github_fix:
     "starts work in a project on the user's computer, which the phone's chat has none of",
   suggest_tasks: "buttons in the app's bot chat: the phone's chat is WhatsApp",
+  overnight_task:
+    "booked from a button in the app's chat: the phone's chat is WhatsApp",
   image_generate: MEDIA_OFF,
   text_to_speech: MEDIA_OFF,
   video_generate: MEDIA_OFF,
@@ -268,6 +270,7 @@ export const UNATTENDED_EXCLUDED_TOOLS: Readonly<Record<string, string>> = {
   offer_session: "a card the user clicks in the bot's chat",
   github_fix: "only the user, in their own chat, starts a fix with full access",
   suggest_tasks: "buttons the user taps in the bot's chat",
+  overnight_task: "books work after the user taps its offer in a chat",
   exit_plan_mode: "never in plan mode",
   delegate_task: NO_SUBAGENT,
   document: NO_SUBAGENT,

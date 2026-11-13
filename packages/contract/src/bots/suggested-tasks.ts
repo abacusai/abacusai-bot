@@ -25,6 +25,8 @@ export interface SuggestedTask {
   copy: boolean;
   /** Tapping it asks for a routine: the button shows a clock. */
   routine: boolean;
+  /** Tapping it asks for this work done overnight (overnight.ts): the button shows a moon. */
+  overnight: boolean;
 }
 
 // Control characters and the bidi and zero-width marks that make what a
@@ -73,7 +75,12 @@ export const suggestedTasks = (input: unknown): SuggestedTask[] => {
       typeof entry === "string"
         ? { text: entry }
         : entry != null && typeof entry === "object"
-          ? (entry as { text?: unknown; copy?: unknown; routine?: unknown })
+          ? (entry as {
+              text?: unknown;
+              copy?: unknown;
+              routine?: unknown;
+              overnight?: unknown;
+            })
           : null;
     const text = taskText(item?.text);
     if (text == null || out.some((task) => task.text === text)) continue;
@@ -81,6 +88,8 @@ export const suggestedTasks = (input: unknown): SuggestedTask[] => {
       text,
       copy: item?.copy === true,
       routine: item?.routine === true,
+      // One kind per button: a routine repeats, an overnight run is once.
+      overnight: item?.overnight === true && item?.routine !== true,
     });
     if (out.length === SUGGESTED_TASKS_MAX) break;
   }

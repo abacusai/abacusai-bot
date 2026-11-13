@@ -3173,6 +3173,10 @@
       "testRepairLimit": "I stopped fixing the tests: this automatic repair reached its limit. Nothing else runs until you send a message.",
       "testsLeftAlone": "Tests are failing, but I couldn't tell whether my change caused it, so I left them alone."
     },
+    "overnight": {
+      "booked": "Booked for {{when}}",
+      "bookedLine": "It runs on this computer once you've left this chat. If the app is closed then, it will be done a few minutes after you open it."
+    },
     "notice": {
       "dismiss": "Dismiss",
       "backgroundFinished": "A background job finished: {{command}}. Send a message to pick up from here.",
@@ -5210,6 +5214,10 @@
     "credits": "You have {{credits}} credits again. Pick up where you left off in {{name}}.",
     "creditsPlain": "You have {{credits}} credits again. Pick up where you left off."
   },
+  "overnight": {
+    "title": "Ready this morning",
+    "titleLate": "Your overnight work is ready"
+  },
   "kickoff": {
     "connectOne": "First, if the system reminder does not list {{name}} as connected, call connect_connector for it now.",
     "resultFirst": "First hand over a real result made with what works without any account, or, when the job starts from something only the user can give (their question, a topic, a list), ask for it in one short question; only after that, offer at most one connection, the one that most improves the result.",
@@ -5253,6 +5261,9 @@
     "taskRunningTitle": "A task is running",
     "taskRunningMessage": "A task is still running.",
     "taskRunningDetail": "Keep it running in the background, or quit and stop it?",
+    "overnightBookedTitle": "Work is booked for tonight",
+    "overnightBookedMessage": "“{{task}}” runs tonight on this computer.",
+    "overnightBookedDetail": "Keep the app running in the background so it is ready in the morning. If you quit, it runs the next time you open the app.",
     "restart": "Restart",
     "quit": "Quit",
     "wait": "Wait",

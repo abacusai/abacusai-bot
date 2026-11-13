@@ -741,7 +741,8 @@ async function createWindow(restored?: RecreatedWindowState) {
 
   // Closing must not kill in-flight agent work, so the window hides instead.
   // macOS always hides (dock convention); Windows/Linux ask first, and only
-  // when a task is running. A real quit sets `isQuitting` first.
+  // when a task is running or overnight work is booked (overnight.ts). A real
+  // quit sets `isQuitting` first.
   mainWindow.on("close", (event) => {
     if (isQuitting()) return;
 
@@ -762,16 +763,24 @@ async function createWindow(restored?: RecreatedWindowState) {
       return;
     }
 
-    if (!taskRunning) return;
+    const overnight = taskRunning
+      ? null
+      : workspaceServiceHost.overnightWaiting();
+    if (!taskRunning && overnight == null) return;
 
     const choice = dialog.showMessageBoxSync(mainWindow, {
       type: "question",
       buttons: [nativeT("keepRunning"), nativeT("quitAnyway")],
       defaultId: 0,
       cancelId: 0,
-      title: nativeT("taskRunningTitle"),
-      message: nativeT("taskRunningMessage"),
-      detail: nativeT("taskRunningDetail"),
+      title: nativeT(taskRunning ? "taskRunningTitle" : "overnightBookedTitle"),
+      message:
+        overnight == null
+          ? nativeT("taskRunningMessage")
+          : nativeT("overnightBookedMessage", { task: overnight }),
+      detail: nativeT(
+        taskRunning ? "taskRunningDetail" : "overnightBookedDetail"
+      ),
     });
 
     if (choice === 0) {

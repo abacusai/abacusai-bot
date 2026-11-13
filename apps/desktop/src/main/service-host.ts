@@ -176,6 +176,7 @@ import type {
   BotChatPreview,
   BotSenderChat,
   NotificationSettings,
+  RoutineRunOutcome,
 } from "@abacus-ai/contract/contracts";
 import {
   ABACUS_CONNECTORS_SERVER_NAME,
@@ -226,6 +227,11 @@ import {
   EntityNotFoundError,
   WORKSPACE_NOT_FOUND,
 } from "@abacus-ai/contract/not-found";
+import {
+  OVERNIGHT_MIN_CREDITS_LEFT,
+  overnightReadyAt,
+  overnightStartAt,
+} from "@abacus-ai/contract/overnight";
 import { isQuietNow, quietEndsAt } from "@abacus-ai/contract/quiet-hours";
 import { detectRememberRequest } from "@abacus-ai/contract/remember";
 import {
@@ -234,6 +240,7 @@ import {
   type Routine,
   type RoutineCreateInput,
   type RoutineListItem,
+  type RoutineOvernight,
   type RoutineRunner,
   type RoutineUpdateInput,
 } from "@abacus-ai/contract/routines";
@@ -296,6 +303,7 @@ import {
   setOriginSession,
   setUptime,
   type RoutineRunStarted,
+  updateOvernight,
   removeJob,
   updateJob,
   type CronJob,
@@ -626,6 +634,12 @@ import {
 } from "./services/providers/exec-backend-service";
 import { listAvailableModels, modelForTier } from "./services/providers/models";
 import { nextStepOn } from "./services/providers/next-step";
+import {
+  overnightLine,
+  overnightNoticeStep,
+  overnightPrompt,
+  overnightRetries,
+} from "./services/providers/overnight";
 import {
   resumeCardAfterTurn,
   resumeCardAfterWrite,
@@ -1074,6 +1088,7 @@ export class ServiceHost {
       this.messagingGatewayService.noteTurnClosed(record);
       this.settleRoutineRun(record);
       this.settleTurnWaiter(record);
+      this.overnightVisited(record.sessionId);
       void this.successPitch.turnClosed(record).catch((error: unknown) => {
         console.warn(`[success-pitch] deciding failed: ${String(error)}`);
       });
@@ -1526,11 +1541,14 @@ export class ServiceHost {
     // and a bot's turn in a channel answers the channel, which the user left.
     turnEnded: (sessionId, ending, task, reply) => {
       if (!this.isUsersOwnChat(sessionId)) return;
-      this.workWaiting.turnEnded(sessionId, ending, task, reply);
+      // The night is the booked work's: no work-waiting notice for it meanwhile.
+      if (this.overnightBooking(sessionId) == null)
+        this.workWaiting.turnEnded(sessionId, ending, task, reply);
       if (!this.agentSessionManagerService.isRoutineSession(sessionId))
         this.stampPrefs(resumeCardAfterTurn(sessionId, ending, Date.now()));
     },
     userWrote: (sessionId) => {
+      this.overnightVisited(sessionId);
       if (this.isUsersOwnChat(sessionId)) {
         this.workWaiting.userWrote({ kind: "session", sessionId });
         this.userWasHere();
@@ -1882,6 +1900,11 @@ export class ServiceHost {
         routineOfferClosed(account?.credits_used, account?.credits_granted)
       );
     },
+    overnightOffered: (sessionId) => this.overnightOffers.add(sessionId),
+    overnightOfferClosed: (sessionId) =>
+      sessionId == null || this.overnightRefusal(sessionId) != null,
+    bookOvernight: (sessionId, task, plan) =>
+      this.bookOvernight(sessionId, task, plan),
     planName: () => cachedAbacusAccount()?.plan ?? null,
     models: () => listAvailableModels(),
     bots: () =>
@@ -4227,6 +4250,161 @@ export class ServiceHost {
     );
   }
 
+  /** Chats that were shown an overnight task: a booking anywhere else is refused. */
+  private readonly overnightOffers = new Set<string>();
+
+  /** The overnight routine booked in `sessionId` (one per chat, ever), or null. */
+  private overnightBooking(sessionId: string): CronJob | null {
+    return (
+      listJobs().find((job) => job.overnight?.sessionId === sessionId) ?? null
+    );
+  }
+
+  /** What booked overnight work is still to run (its task, one line), or null: closing the window warns of it. */
+  overnightWaiting(): string | null {
+    const job = listJobs().find(
+      (entry) =>
+        entry.overnight != null &&
+        entry.overnight.doneAt == null &&
+        entry.enabled
+    );
+    return job == null ? null : overnightLine(job.name);
+  }
+
+  /** Why `sessionId` cannot book overnight work now, or null when it can. */
+  private overnightRefusal(sessionId: string): string | null {
+    const sessions = this.agentSessionManagerService;
+    if (
+      !nextStepOn() ||
+      !this.isUsersOwnChat(sessionId) ||
+      sessions.laneOf(sessionId) != null ||
+      sessions.isRoutineSession(sessionId)
+    )
+      return "Overnight work is booked only in the user's own chat in this app.";
+    if (this.overnightBooking(sessionId) != null)
+      return "This chat already had its overnight work booked; it is booked once per chat.";
+    const account = cachedAbacusAccount();
+    if (
+      abacusPlanTier(account) === "free" &&
+      account?.credits_granted != null &&
+      account.credits_granted - (account.credits_used ?? 0) <
+        OVERNIGHT_MIN_CREDITS_LEFT
+    )
+      return "The user's free credits are nearly used, and the run would spend them.";
+    return null;
+  }
+
+  /**
+   * Books tomorrow's result: a one-time local routine with the chat's plan,
+   * starting once the user has left the chat, reporting into it.
+   */
+  private async bookOvernight(
+    sessionId: string,
+    task: string,
+    plan: string
+  ): Promise<{ readyAt: number } | { refused: string }> {
+    const refused = this.overnightRefusal(sessionId);
+    if (refused != null) return { refused };
+    if (!this.overnightOffers.has(sessionId))
+      return {
+        refused:
+          "Book only after the user said yes to the overnight task offered in this chat.",
+      };
+    const session = this.agentSessionManagerService.get(sessionId);
+    if (session == null) return { refused: "This chat is gone." };
+    const now = Date.now();
+    const readyAt = overnightReadyAt(now);
+    await this.createRoutine(
+      {
+        name: task,
+        prompt: overnightPrompt(sessionId, plan),
+        runAt: overnightStartAt(now),
+        workspaceId: this.realProject(session.workspaceId)?.id ?? null,
+        botId: this.botOfSession(sessionId),
+        runner: "local",
+      },
+      undefined,
+      {
+        chatModel: session.model,
+        originSessionId: this.routineOrigin(sessionId),
+        overnight: { sessionId, readyAt, attempts: 0 },
+      }
+    );
+    this.overnightOffers.delete(sessionId);
+    // The night is the run's: no "work is waiting" for this chat meanwhile.
+    this.workWaiting.settle(sessionId);
+    reportFunnelStep("overnight_booked", "");
+    return { readyAt };
+  }
+
+  /** The user is in a chat with booked overnight work: its run waits until they have left again. */
+  private overnightVisited(sessionId: string): void {
+    const job = this.overnightBooking(sessionId);
+    if (job == null || !job.enabled || job.runAt == null) return;
+    const startAt = overnightStartAt(Date.now());
+    if (startAt <= job.runAt) return;
+    updateJob(job.id, { runAt: startAt });
+    this.emitEvent({
+      type: "cronjobs-updated",
+      emittedAt: new Date().toISOString(),
+    });
+  }
+
+  /** An overnight routine's run ended: done, or booked once more after a failure. */
+  private overnightRunEnded(job: CronJob, outcome: RoutineRunOutcome): void {
+    if (job.overnight == null) return;
+    const now = Date.now();
+    const attempts = (job.overnight.attempts ?? 0) + 1;
+    updateOvernight(job.id, (o) => ({
+      ...o,
+      attempts,
+      ...(outcome === "completed" ? { doneAt: now } : {}),
+    }));
+    if (outcome === "completed") {
+      this.overnightMorning();
+      return;
+    }
+    if (
+      outcome === "failed" &&
+      overnightRetries({ ...job.overnight, attempts })
+    )
+      updateJob(job.id, { runAt: overnightStartAt(now) });
+  }
+
+  /** At the ready hour, one notice for each overnight result that is done (overnight.ts). */
+  private overnightMorning(): void {
+    const now = Date.now();
+    const quiet = isQuietNow(
+      this.prefs?.()?.get().sounds?.quietHours,
+      new Date(now)
+    );
+    for (const job of listJobs()) {
+      const overnight = job.overnight;
+      if (overnight == null) continue;
+      const step = overnightNoticeStep(overnight, now, quiet);
+      if (step == null) continue;
+      // Marked before the words load, so an overlapping check cannot show it twice.
+      updateOvernight(job.id, (o) => ({ ...o, shownAt: now }));
+      if (step === "expired") continue;
+      const chat = this.agentSessionManagerService.get(overnight.sessionId);
+      if (chat == null) continue;
+      void channelWords(
+        channelLocale(readUserLanguage()?.name ?? null, this.appLanguage())
+      ).then((words) => {
+        this.userNotifier?.({
+          title: words.t(
+            step === "late" ? "overnight.titleLate" : "overnight.title"
+          ),
+          body: overnightLine(job.name),
+          dedupeKey: `overnight:${job.id}`,
+          metadata: { sessionId: overnight.sessionId },
+          clicked: () => reportFunnelStep("overnight_clicked", step),
+        });
+        reportFunnelStep("overnight_shown", step);
+      });
+    }
+  }
+
   /** What the place the user left is called now; null when it is gone. */
   private workWaitingName(
     place: WorkWaitingPlace
@@ -4269,6 +4447,7 @@ export class ServiceHost {
   /** A first look soon after launch (a login start), then every quarter hour. */
   private startWorkWaiting(): void {
     const tick = (): void => {
+      this.overnightMorning();
       void this.workWaiting.tick().catch((error: unknown) => {
         console.warn(`[work-waiting] check failed: ${String(error)}`);
       });
@@ -6787,6 +6966,8 @@ export class ServiceHost {
       reply: withoutRoutineDone(text).trim(),
       ...(creditsOut ? { stopped: "out of Abacus.AI credits" } : {}),
     });
+    if (finishedJob.overnight != null)
+      this.overnightRunEnded(finishedJob, outcome);
     // Not the routine's doing: a scheduled fire is made up once, never paused for.
     if (outcome === "interrupted") {
       const attempt = attemptOfSession(session.routineId, sessionId);
@@ -6803,7 +6984,8 @@ export class ServiceHost {
     if (outcome === "completed") {
       // Something to look at while the user is away; a run that found
       // nothing new is not.
-      if (!isQuietReply(text))
+      // An overnight result has its own notice at the ready hour.
+      if (!isQuietReply(text) && finishedJob.overnight == null)
         this.workWaiting.routineRan(session.routineId, sessionId);
       if (this.deliversRoutineReports())
         void this.deliverRunReport(
@@ -9146,6 +9328,8 @@ export class ServiceHost {
       chatModel?: string | null;
       /** The chat it was made from: its reports go there. */
       originSessionId?: string | null;
+      /** Tomorrow's result: booked from that chat's next step (overnight.ts). */
+      overnight?: RoutineOvernight | null;
     } = {}
   ): Promise<CreatedRoutine> {
     if (this.platform === "web-host" && onFreePlan(await fetchAbacusAccount()))
@@ -9211,6 +9395,7 @@ export class ServiceHost {
         ...input,
         model,
         originSessionId: options.originSessionId ?? null,
+        overnight: options.overnight ?? null,
       },
       id
     );

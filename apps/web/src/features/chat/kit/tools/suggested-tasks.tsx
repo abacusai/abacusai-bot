@@ -20,7 +20,7 @@ import { funnelDetail } from "@abacus-ai/contract/funnel";
 import { nextStepAllowed } from "@abacus-ai/contract/next-step";
 import { parsePartialJSON, type UIMessage } from "@tanstack/ai-client";
 import type { ToolProps } from "@tanstack/ai-react/ui";
-import { Check, Clock, Copy } from "lucide-react";
+import { Check, Clock, Copy, Moon } from "lucide-react";
 import { useEffect, useEffectEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -122,6 +122,7 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
       : null;
   const detail = funnelDetail(template ?? "custom");
   const offersRoutine = tasks.some((task) => task.routine);
+  const offersOvernight = tasks.some((task) => task.overnight);
   const reportShown = useEffectEvent(() => {
     // A relaunch redraws an offer already counted.
     if (nextStep && card?.shownOffer === part.id) return;
@@ -147,7 +148,11 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
         nextStep
           ? {
               step: "next_step_shown",
-              detail: offersRoutine ? "routine" : "work",
+              detail: offersRoutine
+                ? "routine"
+                : offersOvernight
+                  ? "overnight"
+                  : "work",
             }
           : { step: "task_suggestions_shown", detail }
       )
@@ -165,7 +170,7 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
   }, [copied]);
   if (!ready) return null;
 
-  const tapped = (copy: boolean, routine = false) => {
+  const tapped = (copy: boolean, kind: "work" | "routine" | "overnight") => {
     if (nextStep)
       void db
         ?.updatePrefs({
@@ -181,7 +186,7 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
     void transport.client.system
       .funnelStep(
         nextStep
-          ? { step: "next_step_tapped", detail: routine ? "routine" : "work" }
+          ? { step: "next_step_tapped", detail: kind }
           : {
               step: "task_suggestion_tapped",
               detail: funnelDetail(`${copy ? "copy_" : ""}${detail}`),
@@ -189,18 +194,18 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
       )
       .catch(() => undefined);
   };
-  const send = (text: string, routine: boolean) =>
+  const send = (text: string, kind: "work" | "routine" | "overnight") =>
     sendAsUser(text, {
       accepted: () => {
         setSent(true);
-        tapped(false, routine);
+        tapped(false, kind);
       },
       failed: () => setSent(false),
     });
   const copy = (text: string) =>
     void navigator.clipboard.writeText(text).then(
       () => {
-        tapped(true);
+        tapped(true, "work");
         setCopied(text);
       },
       () => showError(t("chat.suggestedTasks.copyFailed"))
@@ -227,10 +232,20 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
               }
             : {})}
           onClick={() =>
-            task.copy ? copy(task.text) : send(task.text, task.routine)
+            task.copy
+              ? copy(task.text)
+              : send(
+                  task.text,
+                  task.routine
+                    ? "routine"
+                    : task.overnight
+                      ? "overnight"
+                      : "work"
+                )
           }
         >
           {task.routine && <Clock aria-hidden className="size-3.5 shrink-0" />}
+          {task.overnight && <Moon aria-hidden className="size-3.5 shrink-0" />}
           {task.copy &&
             (copied === task.text ? (
               <Check aria-hidden className="size-3.5 shrink-0" />

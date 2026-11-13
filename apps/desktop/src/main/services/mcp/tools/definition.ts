@@ -49,6 +49,9 @@ export type ToolHost = Pick<
   | "botHelp"
   | "routineOfferClosed"
   | "githubFix"
+  | "overnightOfferClosed"
+  | "noteOvernightOffered"
+  | "bookOvernight"
   | "ok"
   | "err"
 >;

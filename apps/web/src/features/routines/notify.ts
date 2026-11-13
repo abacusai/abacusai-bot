@@ -34,7 +34,10 @@ export const completionNotice = (
   routines: readonly RoutineRow[]
 ) => {
   const routine = routines.find((r) => r.id === notice.routineId);
-  return routineOwns(routine) && notice.outcome !== "cancelled"
+  // Tomorrow's result says so once, at its ready hour (main's notice).
+  return routineOwns(routine) &&
+    routine?.overnight == null &&
+    notice.outcome !== "cancelled"
     ? {
         routine: routine!,
         kind:

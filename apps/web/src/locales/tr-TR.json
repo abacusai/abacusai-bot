@@ -3173,6 +3173,10 @@
       "testRepairLimit": "Testleri düzeltmeyi bıraktım: bu otomatik onarım sınırına ulaştı. Siz mesaj gönderene kadar başka bir şey çalışmayacak.",
       "testsLeftAlone": "Testler başarısız oluyor, ancak nedeninin değişikliğim olup olmadığını anlayamadım, bu yüzden dokunmadım."
     },
+    "overnight": {
+      "booked": "{{when}} için planlandı",
+      "bookedLine": "Bu sohbetten ayrıldığında bu bilgisayarda çalışır. Uygulama o sırada kapalıysa, açtıktan birkaç dakika sonra hazır olur."
+    },
     "notice": {
       "dismiss": "Kapat",
       "backgroundFinished": "Bir arka plan işi bitti: {{command}}. Buradan devam etmek için mesaj gönderin.",
@@ -5210,6 +5214,10 @@
     "credits": "Yeniden {{credits}} kredin var. {{name}} içinde kaldığın yerden devam et.",
     "creditsPlain": "Yeniden {{credits}} kredin var. Kaldığın yerden devam et."
   },
+  "overnight": {
+    "title": "Bu sabah hazır",
+    "titleLate": "Gece yapılan işin hazır"
+  },
   "kickoff": {
     "connectOne": "Önce, sistem hatırlatıcısı {{name}} için bağlı demiyorsa hemen bunun için connect_connector çağır.",
     "resultFirst": "Önce hiçbir hesap olmadan çalışanlarla gerçek bir sonuç teslim et ya da iş yalnızca kullanıcının verebileceği bir şeyle başlıyorsa (sorusu, bir konu, bir liste) bunu tek kısa bir soruyla iste; ancak ondan sonra, sonucu en çok iyileştirecek en fazla bir bağlantı öner.",
@@ -5253,6 +5261,9 @@
     "taskRunningTitle": "Bir görev çalışıyor",
     "taskRunningMessage": "Bir görev hâlâ çalışıyor.",
     "taskRunningDetail": "Arka planda çalışmaya devam etsin mi, yoksa çıkıp durdurulsun mu?",
+    "overnightBookedTitle": "Bu gece için iş planlandı",
+    "overnightBookedMessage": "“{{task}}” bu gece bu bilgisayarda çalışacak.",
+    "overnightBookedDetail": "Sabaha hazır olması için uygulamayı arka planda açık bırak. Çıkarsan, uygulamayı bir sonraki açışında çalışır.",
     "restart": "Yeniden Başlat",
     "quit": "Çık",
     "wait": "Bekle",

@@ -3173,6 +3173,10 @@
       "testRepairLimit": "Ho smesso di correggere i test: questa riparazione automatica ha raggiunto il limite. Non verrà eseguito altro finché non invii un messaggio.",
       "testsLeftAlone": "Alcuni test non riescono, ma non ho potuto stabilire se la causa sia la mia modifica, quindi non li ho toccati."
     },
+    "overnight": {
+      "booked": "Programmato per {{when}}",
+      "bookedLine": "Viene eseguito su questo computer quando lasci questa chat. Se l'app è chiusa, sarà pronto pochi minuti dopo averla aperta."
+    },
     "notice": {
       "dismiss": "Dismiss",
       "backgroundFinished": "Un'attività in background è terminata: {{command}}. Invia un messaggio per riprendere da qui.",
@@ -5210,6 +5214,10 @@
     "credits": "Hai di nuovo {{credits}} crediti. Riprendi da dove avevi lasciato in {{name}}.",
     "creditsPlain": "Hai di nuovo {{credits}} crediti. Riprendi da dove avevi lasciato."
   },
+  "overnight": {
+    "title": "Pronto stamattina",
+    "titleLate": "Il lavoro della notte è pronto"
+  },
   "kickoff": {
     "connectOne": "Per prima cosa, se il promemoria di sistema non indica {{name}} come connesso, chiama subito connect_connector per collegarlo.",
     "resultFirst": "Prima consegna un risultato reale con ciò che funziona senza alcun account oppure, se il lavoro parte da qualcosa che solo l'utente può dare (la sua domanda, un argomento, un elenco), chiedilo con una sola domanda breve; solo dopo, proponi al massimo una connessione, quella che migliora di più il risultato.",
@@ -5253,6 +5261,9 @@
     "taskRunningTitle": "Un'attività è in esecuzione",
     "taskRunningMessage": "Un'attività è ancora in esecuzione.",
     "taskRunningDetail": "Continuarlo a funzionare in background o chiuderlo e interromperlo?",
+    "overnightBookedTitle": "C'è del lavoro programmato per stanotte",
+    "overnightBookedMessage": "“{{task}}” verrà eseguito stanotte su questo computer.",
+    "overnightBookedDetail": "Lascia l'app attiva in background così sarà pronto domattina. Se esci, verrà eseguito la prossima volta che apri l'app.",
     "restart": "Riavvia",
     "quit": "Esci",
     "wait": "Attendi",
