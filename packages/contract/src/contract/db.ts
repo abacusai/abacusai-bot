@@ -317,6 +317,17 @@ export const PREFS_GROUP_ENTRIES = {
         })
       )
     ),
+    /** The latest result in the user's own chat, offered on return (resume-card.ts). */
+    resumeCard: v.optional(
+      v.nullable(
+        v.strictObject({
+          sessionId: v.string(),
+          resultAt: v.pipe(v.number(), v.integer(), v.minValue(0)),
+          wroteAt: v.pipe(v.number(), v.integer(), v.minValue(0)),
+          closedAt: NullableTimestamp,
+        })
+      )
+    ),
     /** The account first read on the free plan here, so a paid read after it is an upgrade. */
     freePlanSeenAt: NullableTimestamp,
     /** An older build's after-upgrade card, seen: that upgrade counts as welcomed. */

@@ -389,7 +389,14 @@
       "namePlaceholder": "Geef je bot een naam",
       "templates": "Sjablonen",
       "more": "Meer",
-      "uses": "Gebruikt"
+      "uses": "Gebruikt",
+      "resume": {
+        "title": "Ga verder waar je gebleven was",
+        "untitled": "Naamloze chat",
+        "open": "Chat openen",
+        "nextSteps": "Volgende stappen",
+        "dismiss": "Sluiten"
+      }
     },
     "chat": {
       "deliverables": {

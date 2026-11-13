@@ -53,7 +53,11 @@ import {
   checkoutKey,
   type GitDiffResult,
 } from "@abacus-ai/contract/contract/checkout";
-import type { GitStateRow, PrefsRow } from "@abacus-ai/contract/contract/rows";
+import type {
+  GitStateRow,
+  PrefsPatch,
+  PrefsRow,
+} from "@abacus-ai/contract/contract/rows";
 import type {
   TranscriptSegment,
   TurnFeedbackInput,
@@ -606,6 +610,10 @@ import {
 } from "./services/providers/exec-backend-service";
 import { listAvailableModels, modelForTier } from "./services/providers/models";
 import { nextStepOn } from "./services/providers/next-step";
+import {
+  resumeCardAfterTurn,
+  resumeCardAfterWrite,
+} from "./services/providers/resume-card";
 import {
   currentTier,
   newRoutineModel,
@@ -1440,12 +1448,16 @@ export class ServiceHost {
     // Another person writing to the user's bot is not the user coming back,
     // and a bot's turn in a channel answers the channel, which the user left.
     turnEnded: (sessionId, ending, task) => {
-      if (this.isUsersOwnChat(sessionId))
-        this.workWaiting.turnEnded(sessionId, ending, workWaitingLine(task));
+      if (!this.isUsersOwnChat(sessionId)) return;
+      this.workWaiting.turnEnded(sessionId, ending, workWaitingLine(task));
+      if (!this.agentSessionManagerService.isRoutineSession(sessionId))
+        this.stampPrefs(resumeCardAfterTurn(sessionId, ending, Date.now()));
     },
     userWrote: (sessionId) => {
-      if (this.isUsersOwnChat(sessionId))
+      if (this.isUsersOwnChat(sessionId)) {
         this.workWaiting.userWrote({ kind: "session", sessionId });
+        this.userWasHere();
+      }
       const prefs = this.prefs?.();
       const resolved =
         prefs == null ? null : wallReopenAfterWrite(prefs.get(), sessionId);
@@ -3717,6 +3729,17 @@ export class ServiceHost {
       !sessions.isRoutineSession(sessionId) &&
       !sessions.isBotSession(sessionId)
     );
+  }
+
+  private stampPrefs(patch: PrefsPatch | null): void {
+    if (patch != null) this.prefs?.()?.update(patch);
+  }
+
+  /** The user's own words went somewhere: the resume card's wait starts again. */
+  private userWasHere(): void {
+    const prefs = this.prefs?.();
+    if (prefs != null)
+      this.stampPrefs(resumeCardAfterWrite(prefs.get(), Date.now()));
   }
 
   private isUsersOwnChat(sessionId: string): boolean {
@@ -7586,6 +7609,7 @@ export class ServiceHost {
   postToChannel(channelId: string, text: string, replyTo?: string): void {
     this.channelService.post(channelId, text, replyTo);
     this.workWaiting.userWrote({ kind: "channel", channelId });
+    this.userWasHere();
   }
 
   pinInChannel(

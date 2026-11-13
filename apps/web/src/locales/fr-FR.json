@@ -389,7 +389,14 @@
       "namePlaceholder": "Nouveau bot",
       "templates": "Or start with a template",
       "more": "More",
-      "uses": "Uses"
+      "uses": "Uses",
+      "resume": {
+        "title": "Reprenez là où vous vous étiez arrêté",
+        "untitled": "Discussion sans titre",
+        "open": "Ouvrir la discussion",
+        "nextSteps": "Prochaines étapes",
+        "dismiss": "Ignorer"
+      }
     },
     "chat": {
       "deliverables": {

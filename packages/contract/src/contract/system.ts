@@ -3,6 +3,7 @@ import * as v from "valibot";
 
 import type { OpenFilePathResult } from "../contracts";
 import { FUNNEL_STEPS } from "../funnel";
+import type { OpenLink } from "../open-link";
 import { mutation, query, subscription } from "./base";
 import { NoInput } from "./ids";
 
@@ -52,7 +53,9 @@ export type SystemEvent =
   | {
       type: "notification-clicked";
       metadata: NotificationMetadata;
-    };
+    }
+  /** An `abacusaibot://` link is waiting: `takeOpenLink` hands it over. */
+  | { type: "open-link" };
 
 export interface PickedFile {
   path: string;
@@ -115,6 +118,11 @@ export const system = {
   deleteAllData: mutation
     .input(v.strictObject({ confirmation: v.literal("DELETE_ALL_LOCAL_DATA") }))
     .output(type<void>()),
+  /**
+   * The `abacusaibot://` link the app last opened from, once: null when
+   * there is none or another caller took it.
+   */
+  takeOpenLink: mutation.input(NoInput).output(type<OpenLink | null>()),
   /** First-run milestones; fire-and-forget. */
   funnelStep: mutation
     .input(

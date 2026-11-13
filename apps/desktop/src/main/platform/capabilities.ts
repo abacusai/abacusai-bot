@@ -24,6 +24,8 @@ export const WEB_HOST_DENIED = [
   "system.openPath",
   "system.showItemInFolder",
   "system.openPrivacyPane",
+  // Links open the desktop app; a hosted computer has no URL scheme.
+  "system.takeOpenLink",
   "sites",
   "skills.openFile",
   "voice.whisper.fetch",

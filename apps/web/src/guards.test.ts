@@ -78,6 +78,8 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
     "panel/bot-side-panel",
     "sidebar/bots-sidebar",
     "start/bot-start-page",
+    // "Pick up where you left off" on the start page, and its gallery.
+    "start/resume-card",
     "watcher",
   ],
   chat: [

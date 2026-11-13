@@ -389,7 +389,14 @@
       "namePlaceholder": "Bot baru",
       "templates": "Or start with a template",
       "more": "More",
-      "uses": "Uses"
+      "uses": "Uses",
+      "resume": {
+        "title": "Lanjutkan dari terakhir kali",
+        "untitled": "Chat tanpa judul",
+        "open": "Buka chat",
+        "nextSteps": "Langkah berikutnya",
+        "dismiss": "Tutup"
+      }
     },
     "chat": {
       "deliverables": {

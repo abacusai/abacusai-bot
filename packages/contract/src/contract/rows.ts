@@ -22,6 +22,7 @@ import type {
 import type { DeliverableOfferCard } from "../deliverable-offer";
 import type { NextStepCard } from "../next-step";
 import type { RatingPromptCard } from "../rating-prompt";
+import type { ResumeCardMark } from "../resume-card";
 import type {
   RoutineCreditHold,
   RoutineListItem,
@@ -240,6 +241,8 @@ export interface PrefsRow {
     topModelHint?: TopModelHintCard | null;
     /** The latest credit wall in the user's own chat, asked again once when they come back. */
     wallReopen?: WallReopenMark | null;
+    /** The latest result in the user's own chat, offered on return (resume-card.ts); stamped by main. */
+    resumeCard?: ResumeCardMark | null;
     freePlanSeenAt: number | null;
     upgradeRoutinesSeenAt: number | null;
     routineDuplicatesKept: string[];

@@ -389,7 +389,14 @@
       "namePlaceholder": "Botuna bir ad ver",
       "templates": "Şablonlar",
       "more": "Daha fazla",
-      "uses": "Kullanır"
+      "uses": "Kullanır",
+      "resume": {
+        "title": "Kaldığın yerden devam et",
+        "untitled": "Başlıksız sohbet",
+        "open": "Sohbeti aç",
+        "nextSteps": "Sonraki adımlar",
+        "dismiss": "Kapat"
+      }
     },
     "chat": {
       "deliverables": {

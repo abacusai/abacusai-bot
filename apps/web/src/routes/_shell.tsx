@@ -12,6 +12,7 @@ import { PaymentRequiredDialog } from "#renderer/components/payment-required";
 import { ShareDialogHost } from "#renderer/components/share/share-dialog";
 import { StatusBanner } from "#renderer/components/status-board";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
+import { ResumeCardReturn } from "#renderer/features/bots/start/resume-card";
 import { BotsGlobals } from "#renderer/features/bots/watcher";
 import { finishCompletion } from "#renderer/features/onboarding/actions";
 import {
@@ -29,6 +30,7 @@ import {
 import { PairingQueueBanner } from "#renderer/features/onboarding/pairing-banner";
 import { continueInNewChat } from "#renderer/features/sessions/data/continue-chat";
 import { SessionsGlobals } from "#renderer/features/sessions/globals";
+import { OpenLinkHost } from "#renderer/features/shell";
 import { dispatchPreview } from "#renderer/features/shell/preview-consumers";
 import {
   ShellLayout,
@@ -53,6 +55,7 @@ import { useDocumentSoundOwner } from "#renderer/lib/document-sound";
 import { ignoreLoadError } from "#renderer/lib/navigation/loaders";
 import { SHELL_DEFAULTS, ShellSearch } from "#renderer/lib/navigation/search";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 
 const ShellRoute = () => {
   const { transport, db, queryClient, chat, prepareChat } =
@@ -144,6 +147,13 @@ const ShellRoute = () => {
             })
           }
         />
+      )}
+      {/* Signed in and past onboarding: a link that came earlier waits in main. */}
+      {!provisional && IS_ELECTRON && (
+        <>
+          <OpenLinkHost transport={transport} db={db} />
+          <ResumeCardReturn />
+        </>
       )}
       {!provisional && <PaymentRequiredDialog />}
     </>

@@ -12,11 +12,21 @@ import {
   getDraft,
 } from "#renderer/features/bots/form/draft-store";
 import { BotStartPage } from "#renderer/features/bots/start/bot-start-page";
+import { ResumeCard } from "#renderer/features/bots/start/resume-card";
+import { openChatWithText } from "#renderer/features/shell";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
+import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 const NewRoute = () => {
   const { t } = useTranslation();
   const search = Route.useSearch();
-  const { chat, prepareChat } = Route.useRouteContext();
+  const { chat, prepareChat, db } = Route.useRouteContext();
+  const navigate = useAppNavigate();
+  const messagesOf = async (threadId: string) => {
+    await prepareChat();
+    const session = chat.session(threadId);
+    await session.load();
+    return session.hostStore.state.messages;
+  };
   return (
     <>
       <TopBarSlot>{t("bots.page.newTitle")}</TopBarSlot>
@@ -28,7 +38,17 @@ const NewRoute = () => {
           }}
         />
       ) : (
-        <BotStartPage category={search.category} />
+        <BotStartPage
+          category={search.category}
+          resume={
+            <ResumeCard
+              messagesOf={messagesOf}
+              openChat={(sessionId, text) =>
+                openChatWithText(sessionId, text, db, navigate)
+              }
+            />
+          }
+        />
       )}
     </>
   );

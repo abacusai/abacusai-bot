@@ -395,7 +395,14 @@
       "namePlaceholder": "Nazwij swojego bota",
       "templates": "Szablony",
       "more": "Więcej",
-      "uses": "Zastosowania"
+      "uses": "Zastosowania",
+      "resume": {
+        "title": "Wróć do przerwanej pracy",
+        "untitled": "Czat bez tytułu",
+        "open": "Otwórz czat",
+        "nextSteps": "Następne kroki",
+        "dismiss": "Zamknij"
+      }
     },
     "chat": {
       "deliverables": {

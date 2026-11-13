@@ -389,7 +389,14 @@
       "namePlaceholder": "新しいボット",
       "templates": "Or start with a template",
       "more": "More",
-      "uses": "Uses"
+      "uses": "Uses",
+      "resume": {
+        "title": "前回の続きから",
+        "untitled": "無題のチャット",
+        "open": "チャットを開く",
+        "nextSteps": "次のステップ",
+        "dismiss": "閉じる"
+      }
     },
     "chat": {
       "deliverables": {

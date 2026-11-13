@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
-import { useState, type CSSProperties } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { BotAvatar } from "#renderer/components/bot-avatar";
@@ -41,8 +41,11 @@ import { useBotDraft, updateDraft, selectTemplate } from "../form/draft-store";
 import { templateColumns } from "./template-columns";
 export const BotStartPage = ({
   category = "featured",
+  resume,
 }: {
   category?: BotTemplateCategory;
+  /** "Pick up where you left off", above the hero when it shows. */
+  resume?: ReactNode;
 }) => {
   const { t } = useTranslation();
   const { bots } = useBots();
@@ -84,6 +87,7 @@ export const BotStartPage = ({
       style={accentVars(look)}
     >
       <div className="content-col page-column items-center">
+        {resume}
         {/* The hero (canvas BotNew): avatar, shapes and the name pill sit
             centred in a fixed band above the templates, so the page reads
             as a composed whole rather than content pushed to the top. */}
