@@ -73,6 +73,7 @@ const MAIN_ROOT_FILES = [
   // app reachable: the same process-level question as the quit flag above.
   "background-mode.test.ts",
   "background-mode.ts",
+  "background-tray.test.ts",
   "background-tray.ts",
   // The main window's reveal, shared the way the quit flag above is: a service
   // that sends the user to their browser needs them back afterwards, and must
