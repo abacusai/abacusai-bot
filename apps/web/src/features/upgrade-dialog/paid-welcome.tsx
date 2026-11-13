@@ -9,6 +9,7 @@ import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
 import { funnelDetail, type FunnelStep } from "@abacus-ai/contract/funnel";
 import { retryOfferModel } from "@abacus-ai/contract/retry-offer";
+import type { SiteReadyMark } from "@abacus-ai/contract/site-deploy";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useParams } from "@tanstack/react-router";
 import {
@@ -35,7 +36,10 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import { DeploySteps } from "#renderer/components/site-deploy/deploy-steps";
+import {
+  KeepSteps,
+  moveTitle,
+} from "#renderer/components/site-deploy/keep-steps";
 import { useCollections, useDb } from "#renderer/data/db";
 import { isListedSession, isListedWorkspace } from "#renderer/data/db/filters";
 import { useUpdatePrefs } from "#renderer/data/db/prefs";
@@ -170,8 +174,9 @@ const StepButton = ({
  * paused turn, the last chat (`lastChat`, its title) on `topModel`, or three
  * first tasks on it; `none` keeps the plain ones. `busy` is the step whose
  * new chat is being prepared. `deploy`, when the chat's latest result is a
- * site, takes the place of the next steps: its deploy steps, with the paused
- * turn still offered under them.
+ * site, a server or a routine, takes the place of the next steps: moving it
+ * to Abacus AI Agent (`deployTitle`), with the paused turn still offered
+ * under it.
  */
 export const PaidWelcomeDialog = ({
   open,
@@ -185,6 +190,7 @@ export const PaidWelcomeDialog = ({
   busy = null,
   unlock,
   deploy = null,
+  deployTitle = null,
   onStep,
   onClose,
 }: {
@@ -199,6 +205,7 @@ export const PaidWelcomeDialog = ({
   paused: string | null;
   unlock: WelcomeUnlock;
   deploy?: ReactNode;
+  deployTitle?: string | null;
   onStep: (step: WelcomeStep) => void;
   onClose: () => void;
 }) => {
@@ -352,7 +359,7 @@ export const PaidWelcomeDialog = ({
             {deploy != null ? (
               <>
                 <p className="pb-2 text-base font-semibold">
-                  {t("siteDeploy.title")}
+                  {deployTitle ?? t("siteDeploy.title")}
                 </p>
                 {deploy}
                 <div className="pt-3">{resume?.node(false)}</div>
@@ -383,8 +390,8 @@ export const PaidWelcomeDialog = ({
 interface Showing {
   account: AbacusAccountInfo;
   paused: PausedTurn | null;
-  /** The chat's latest site, when its latest result is one: the deploy steps lead. */
-  site: { sessionId: string; turnId: string } | null;
+  /** The chat's latest thing left on (a site, a server, a routine): moving it leads. */
+  site: { sessionId: string; mark: SiteReadyMark } | null;
 }
 
 /**
@@ -463,9 +470,7 @@ export const PaidWelcomeHost = ({
       chatId == null
         ? null
         : db.collections.prefs.get("app")?.siteReady?.[chatId];
-    return mark == null || chatId == null
-      ? null
-      : { sessionId: chatId, turnId: mark.turnId };
+    return mark == null || chatId == null ? null : { sessionId: chatId, mark };
   };
 
   // The person's latest listed chat in a listed folder, when recent: what they were working on.
@@ -716,12 +721,15 @@ export const PaidWelcomeHost = ({
       unlock={welcomeUnlock(account)}
       deploy={
         showing?.site == null ? null : (
-          <DeploySteps
+          <KeepSteps
             sessionId={showing.site.sessionId}
-            turnId={showing.site.turnId}
+            mark={showing.site.mark}
             surface="welcome"
           />
         )
+      }
+      deployTitle={
+        showing?.site == null ? null : moveTitle(t, showing.site.mark)
       }
       onStep={close}
       onClose={() => close(null)}

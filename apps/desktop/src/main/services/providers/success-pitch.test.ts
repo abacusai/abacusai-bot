@@ -118,6 +118,12 @@ const setup = (
         dismissals: { ...row.dismissals, successPitchCards: { [KEY]: card } },
       } as PrefsRow;
     },
+    setKeepCard: (card: object) => {
+      row = {
+        ...row,
+        dismissals: { ...row.dismissals, keepRunningCards: { [KEY]: card } },
+      } as PrefsRow;
+    },
     advance: (ms: number) => {
       now += ms;
     },
@@ -231,10 +237,7 @@ describe("SuccessPitchWatch: a deliverable on a clean turn", () => {
         presentSite,
         text(reply),
       ]);
-      expect(t.offer()).toMatchObject({
-        trigger: "deliverable",
-        moment: "site",
-      });
+      expect(t.offer()).toMatchObject({ moment: "site" });
     }
   });
 
@@ -266,7 +269,7 @@ describe("SuccessPitchWatch: a deliverable on a clean turn", () => {
 
     const worked = setup();
     await worked.run("Build it", [presentSite, text(LONG_REPLY), ...buttons()]);
-    expect(worked.offer()).toMatchObject({ trigger: "deliverable" });
+    expect(worked.offer()).toMatchObject({ moment: "site" });
   });
 
   it("never on a failed or stopped turn, a file edit, or plain browsing", async () => {
@@ -392,7 +395,7 @@ describe("SuccessPitchWatch: a positive reaction", () => {
 describe("SuccessPitchWatch: the offer and its limits", () => {
   it("the next message ends the offer, and a complaint is logged as withdrawn", async () => {
     const t = setup();
-    await t.run("Build it", [presentSite, text(LONG_REPLY)]);
+    await t.run("Write it", [presentFile, text(LONG_REPLY)]);
     expect(t.offer()).not.toBeNull();
     t.watch.userSaid("s1", "the button doesn't work");
     expect(t.offer()).toBeNull();
@@ -402,7 +405,7 @@ describe("SuccessPitchWatch: the offer and its limits", () => {
     );
 
     const moved = setup();
-    await moved.run("Build it", [presentSite, text(LONG_REPLY)]);
+    await moved.run("Write it", [presentFile, text(LONG_REPLY)]);
     moved.watch.userSaid("s1", "now add a contact form");
     expect(moved.offer()).toBeNull();
     expect(moved.funnel).not.toHaveBeenCalledWith(
@@ -414,21 +417,254 @@ describe("SuccessPitchWatch: the offer and its limits", () => {
   it("one every three days, three ever, none after two Not nows", async () => {
     const t = setup();
     t.setCard(card(1, 100 * SUCCESS_PITCH_GAP_MS - 60_000));
-    await t.run("Build it", [presentSite, text(LONG_REPLY)]);
+    await t.run("Write it", [presentFile, text(LONG_REPLY)]);
     expect(t.offer()).toBeNull();
     t.advance(SUCCESS_PITCH_GAP_MS);
-    await t.run("Build another", [presentSite, text(LONG_REPLY)]);
+    await t.run("Write another", [presentFile, text(LONG_REPLY)]);
     expect(t.offer()).not.toBeNull();
 
     const capped = setup();
     capped.setCard(card(3, 0));
-    await capped.run("Build it", [presentSite, text(LONG_REPLY)]);
+    await capped.run("Write it", [presentFile, text(LONG_REPLY)]);
     expect(capped.offer()).toBeNull();
 
     const declined = setup();
     declined.setCard(card(2, 0, 2));
-    await declined.run("Build it", [presentSite, text(LONG_REPLY)]);
+    await declined.run("Write it", [presentFile, text(LONG_REPLY)]);
     expect(declined.offer()).toBeNull();
+  });
+});
+
+const writes = (from: number, count: number) =>
+  Array.from({ length: count }, (_, index) =>
+    tool("write", { path: `app/file-${from + index}.ts` })
+  );
+const busy = (count: number) =>
+  Array.from({ length: count }, () => tool("read", { path: "app/a.ts" }));
+
+describe("SuccessPitchWatch: a big build", () => {
+  it("offers it once the chat has written fifteen distinct files, once per chat", async () => {
+    const t = setup();
+    await t.run("Build my shop", [...writes(0, 10), text(LONG_REPLY)]);
+    expect(t.offer()).toBeNull();
+    // The same files again are not new ones.
+    await t.run("Fix it", [...writes(0, 10), text(LONG_REPLY)]);
+    expect(t.offer()).toBeNull();
+    await t.run("Add the cart", [...writes(10, 5), text(LONG_REPLY)]);
+    expect(t.offer()).toMatchObject({
+      id: "turn-3",
+      trigger: "big_task",
+      moment: "big_task",
+      lead: "apps",
+      detail: "15",
+    });
+    expect(t.mark()?.bigTaskChats).toEqual(["s1"]);
+    t.advance(SUCCESS_PITCH_GAP_MS);
+    await t.run("Add checkout", [...writes(15, 4), text(LONG_REPLY)]);
+    expect(t.offer()).toBeNull();
+  });
+
+  it("a long turn alone is not a big build, and a tool that failed along the way does not hold it back", async () => {
+    const long = setup();
+    await long.run("Build it", [...busy(150), text(LONG_REPLY)]);
+    expect(long.offer()).toBeNull();
+
+    const bumpy = setup();
+    await bumpy.run("Build it", [
+      ...writes(0, 15),
+      tool("bash", { command: "npm test" }, "1 failed", true),
+      text(LONG_REPLY),
+    ]);
+    expect(bumpy.offer()).toMatchObject({ trigger: "big_task" });
+  });
+
+  it("never on a troubled turn, in a chat app, on a paid plan, past half the grant, or over the pitch's caps", async () => {
+    const troubled = setup();
+    await troubled.run("Build it", [
+      ...writes(0, 15),
+      event({ type: "error" }),
+      text(LONG_REPLY),
+    ]);
+    expect(troubled.offer()).toBeNull();
+
+    const chat = setup();
+    await chat.run("Build it", [...writes(0, 15), text(LONG_REPLY)], CHAT);
+    expect(chat.offer()).toBeNull();
+
+    for (const account of [
+      { ...FREE, subscription_tier: "pro" },
+      { ...FREE, credits_used: 1200 },
+    ] as AbacusAccountInfo[]) {
+      const t = setup({ account });
+      await t.run("Build it", [...writes(0, 15), text(LONG_REPLY)]);
+      expect(t.offer()).toBeNull();
+    }
+
+    const capped = setup();
+    capped.setCard(card(3, 0));
+    await capped.run("Build it", [...writes(0, 15), text(LONG_REPLY)]);
+    expect(capped.offer()).toBeNull();
+  });
+
+  it("a complaint after it is logged as withdrawn, with its file count", async () => {
+    const t = setup();
+    await t.run("Build it", [...writes(0, 15), text(LONG_REPLY)]);
+    t.watch.userSaid("s1", "it's broken");
+    expect(t.offer()).toBeNull();
+    expect(t.funnel).toHaveBeenCalledWith("big_task_withdrawn", "15");
+  });
+});
+
+const background = (command: string, content = "Started in the background.") =>
+  tool("bash", { command, background: true }, content);
+const createRoutine = (
+  input: Record<string, unknown>,
+  content = "Created. ..."
+) => tool("agent-tools_cronjob", { action: "create", ...input }, content);
+
+describe("SuccessPitchWatch: keep it running", () => {
+  it("offers it for a server started in the background, named by its folder, once per thing", async () => {
+    const t = setup();
+    await t.run("Make my price bot", [
+      background("cd btc-bot && python bot.py"),
+      text(LONG_REPLY),
+    ]);
+    expect(t.offer()).toMatchObject({
+      trigger: "keep_running",
+      moment: "server",
+      lead: "agents",
+      name: "btc-bot",
+    });
+    expect(t.sites()?.s1).toMatchObject({
+      kind: "server",
+      siteDir: path.resolve("/home/me", "btc-bot"),
+      name: "btc-bot",
+    });
+    t.watch.userSaid("s1", "now log to a file");
+    t.advance(2 * SUCCESS_PITCH_GAP_MS);
+    await t.run("Restart it", [
+      background("cd btc-bot && python bot.py"),
+      text(LONG_REPLY),
+    ]);
+    expect(t.offer()).toBeNull();
+  });
+
+  it("never for a served site, which is mostly a preview: that stays the deploy steps' mark", async () => {
+    const t = setup({ deps: { nextStep: () => true } });
+    await t.run("Build my bakery site", [
+      tool("serve", { action: "start", directory: "bakery" }),
+      text(LONG_REPLY),
+    ]);
+    expect(t.offer()).toBeNull();
+    expect(t.sites()?.s1).toMatchObject({ kind: "site", name: "bakery" });
+  });
+
+  it("never for one-off work set aside: an install, a build, tests", async () => {
+    for (const command of [
+      "npm install",
+      "cd app && npm run build",
+      "pytest -q",
+      "sleep 30",
+    ]) {
+      const t = setup();
+      await t.run("Do it", [background(command), text(LONG_REPLY)]);
+      expect(t.offer()).toBeNull();
+      expect(t.sites()?.s1).toBeUndefined();
+    }
+  });
+
+  it("offers it for a routine it created, by its name or its prompt's opening", async () => {
+    const named = setup();
+    await named.run("Every morning, send me BTC news", [
+      createRoutine({
+        name: "BTC morning news",
+        prompt: "x",
+        schedule: "0 9 * * *",
+      }),
+      text(LONG_REPLY),
+    ]);
+    expect(named.offer()).toMatchObject({
+      moment: "routine",
+      name: "BTC morning news",
+    });
+    expect(named.sites()?.s1).toMatchObject({ kind: "routine", siteDir: null });
+
+    const unnamed = setup();
+    await unnamed.run("Remind me", [
+      createRoutine({
+        prompt: "Check the weather in Lisbon and tell me if it rains",
+      }),
+      text(LONG_REPLY),
+    ]);
+    expect(unnamed.offer()?.name).toBe("Check the weather in Lisbon and");
+
+    const refused = setup();
+    await refused.run("Remind me", [
+      createRoutine({ prompt: "x" }, "A routine needs a schedule."),
+      text(LONG_REPLY),
+    ]);
+    expect(refused.offer()).toBeNull();
+  });
+
+  it("comes ahead of a big build, on a budget of its own", async () => {
+    const both = setup();
+    await both.run("Build and run it", [
+      ...writes(0, 15),
+      background("node server.js"),
+      text(LONG_REPLY),
+    ]);
+    expect(both.offer()).toMatchObject({ trigger: "keep_running" });
+
+    // The pitch's caps spent: keep it running still comes.
+    const pitched = setup();
+    pitched.setCard(card(3, 0));
+    await pitched.run("Run it", [
+      background("node server.js"),
+      text(LONG_REPLY),
+    ]);
+    expect(pitched.offer()).toMatchObject({ trigger: "keep_running" });
+
+    // Its own spent (one a day, three ever, two Not nows): the big build comes instead.
+    for (const spent of [
+      card(1, 100 * SUCCESS_PITCH_GAP_MS - 60_000),
+      card(3, 0),
+      card(2, 0, 2),
+    ]) {
+      const t = setup();
+      t.setKeepCard(spent);
+      await t.run("Build and run it", [
+        ...writes(0, 15),
+        background("node server.js"),
+        text(LONG_REPLY),
+      ]);
+      expect(t.offer()).toMatchObject({ trigger: "big_task" });
+    }
+  });
+
+  it("a paid plan gets no offer, only the mark for its deploy steps", async () => {
+    const t = setup({
+      account: { ...FREE, subscription_tier: "pro" } as AbacusAccountInfo,
+    });
+    await t.run("Run my bot", [
+      background("cd bot && npm start"),
+      text(LONG_REPLY),
+    ]);
+    expect(t.offer()).toBeNull();
+    expect(t.sites()?.s1).toMatchObject({ kind: "server", name: "bot" });
+  });
+
+  it("says whether a routine's card will come, so its create skips the 24/7 line", () => {
+    expect(setup().watch.keepCardFor("s1")).toBe(true);
+    const spent = setup();
+    spent.setKeepCard(card(3, 0));
+    expect(spent.watch.keepCardFor("s1")).toBe(false);
+    expect(setup({ pitchable: false }).watch.keepCardFor("s1")).toBe(false);
+    expect(
+      setup({
+        account: { ...FREE, subscription_tier: "pro" } as AbacusAccountInfo,
+      }).watch.keepCardFor("s1")
+    ).toBe(true);
+    expect(setup({ account: null }).watch.keepCardFor("s1")).toBe(false);
   });
 });
 

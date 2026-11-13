@@ -5340,5 +5340,29 @@
     "row": {
       "waitingNetwork": "Wachten op het netwerk. Het draait zodra de verbinding terug is."
     }
+  },
+  "bigTask": {
+    "title": "“{{task}}” is een groot project",
+    "titleUntitled": "Dit is een groot project",
+    "line": "Maak het af met {{plan}}: {{model}} voor de moeilijke delen, credits voor een project van deze omvang en een openbare link als het klaar is.",
+    "lineNoModel": "Maak het af met {{plan}}: topmodellen voor de moeilijke delen, credits voor een project van deze omvang en een openbare link als het klaar is."
+  },
+  "keepRunning": {
+    "title": "Laat “{{name}}” 24/7 draaien",
+    "titleUnnamed": "Laat het 24/7 draaien",
+    "now": {
+      "server": "Nu draait het alleen als deze computer aan staat en de app open is.",
+      "site": "Nu opent het alleen op deze computer, zolang die aan staat.",
+      "routine": "Nu draait hij alleen als deze computer aan staat en de app open is."
+    },
+    "freeLine": "Met {{plan}} laat een persoonlijke agent in Abacus AI Agent op het web het draaien, ook als je computer uit staat.",
+    "paidLine": "Het draait alleen als deze computer aan staat. Je abonnement bevat persoonlijke agents in Abacus AI Agent op het web, die het laten draaien als je computer uit staat.",
+    "prompt": "Publiceer dit vanuit de zip die ik heb geüpload en laat het 24/7 draaien. Het gesprek waarin het is gemaakt staat in abacusai-bot-conversation.md in de zip.",
+    "setUp": "Instellen in Abacus AI Agent",
+    "moveTitle": "Zet “{{name}}” over naar Abacus AI Agent",
+    "moveTitleUnnamed": "Zet het over naar Abacus AI Agent",
+    "routinePrompt": "Stel een geplande taak in die 24/7 draait, genaamd “{{name}}”. Planning (cron, mijn lokale tijd): {{schedule}}. Bij elke run: {{prompt}}",
+    "routinePromptOnce": "Stel een geplande taak in genaamd “{{name}}” die ook draait als mijn computer uit staat. Wat hij doet: {{prompt}}",
+    "routinePromptNameOnly": "Stel een geplande taak in die 24/7 draait, zoals mijn AbacusAI Bot-routine “{{name}}”. Vraag me wat hij moet doen en wanneer."
   }
 }

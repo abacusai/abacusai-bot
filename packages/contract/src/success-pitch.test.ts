@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { isStuckMessage } from "./retry-offer";
+import { markClosed, markThing } from "./site-deploy";
 import {
+  commandFolder,
+  isBigBuild,
   isCleanReply,
+  isLongRunningCommand,
+  KEEP_RUNNING_CAPS,
+  rememberOffered,
   isComplaint,
   isPositiveReaction,
   isPositiveReactionEmoji,
@@ -237,5 +243,105 @@ describe("mainlyInChatApps", () => {
     expect(mainlyInChatApps({ appTurns: 2, chatTurns: 3 })).toBe(true);
     expect(mainlyInChatApps({ appTurns: 3, chatTurns: 3 })).toBe(false);
     expect(mainlyInChatApps(undefined)).toBe(false);
+  });
+});
+
+describe("a big build", () => {
+  it("is fifteen distinct files", () => {
+    expect(isBigBuild(14)).toBe(false);
+    expect(isBigBuild(15)).toBe(true);
+  });
+});
+
+describe("something meant to stay on", () => {
+  it.each([
+    "python bot.py",
+    "cd btc-bot && python bot.py",
+    "npm run dev",
+    "npm start",
+    "node server.js",
+    "cd app && npx serve -l 3000",
+    "uvicorn main:app --port 8000",
+  ])("keeps running: %s", (command) => {
+    expect(isLongRunningCommand(command)).toBe(true);
+  });
+
+  it.each([
+    "npm install",
+    "npm i express",
+    "pnpm add zod",
+    "cd app && npm run build",
+    "npm test",
+    "pytest -q",
+    "sleep 30",
+    "pip install -r requirements.txt",
+    "git clone https://example.com/repo",
+    "cd app",
+  ])("one-off: %s", (command) => {
+    expect(isLongRunningCommand(command)).toBe(false);
+  });
+
+  it("reads a leading cd as the folder", () => {
+    expect(commandFolder("cd btc-bot && python bot.py")).toBe("btc-bot");
+    expect(commandFolder('cd "my bot" && npm start')).toBe("my bot");
+    expect(commandFolder("python bot.py")).toBeNull();
+  });
+
+  it("is remembered as offered once, newest last, the oldest dropped", () => {
+    let list: string[] = [];
+    for (let index = 0; index < 25; index += 1)
+      list = rememberOffered(list, `t${index}`);
+    expect(list).toHaveLength(20);
+    expect(rememberOffered(list, "t10").at(-1)).toBe("t10");
+    expect(rememberOffered(list, "t10")).toHaveLength(20);
+  });
+
+  it("has its own budget: one a day, three ever, two Not nows", () => {
+    const day = 24 * 60 * 60 * 1000;
+    const card = (shown: number, lastShownAt: number, notNow = 0) => ({
+      shown,
+      lastShownAt,
+      notNow,
+      shownOffer: null,
+      answered: null,
+    });
+    const now = 10 * day;
+    expect(
+      successPitchAllowed(
+        card(1, now - day + 1),
+        undefined,
+        now,
+        KEEP_RUNNING_CAPS
+      )
+    ).toBe(false);
+    expect(
+      successPitchAllowed(card(1, now - day), undefined, now, KEEP_RUNNING_CAPS)
+    ).toBe(true);
+    expect(
+      successPitchAllowed(card(3, 0), undefined, now, KEEP_RUNNING_CAPS)
+    ).toBe(false);
+    expect(
+      successPitchAllowed(card(1, 0, 2), undefined, now, KEEP_RUNNING_CAPS)
+    ).toBe(false);
+  });
+
+  it("a closed card stays closed for its thing, and for a turn an older build closed", () => {
+    const mark = {
+      turnId: "turn-2",
+      siteDir: "/w/bot",
+      at: 1,
+      kind: "server" as const,
+      name: "bot",
+    };
+    expect(markThing(mark)).toBe("server:/w/bot");
+    expect(markThing({ turnId: "t", siteDir: "/w/site", at: 1 })).toBe(
+      "site:/w/site"
+    );
+    expect(markClosed("server:/w/bot", { ...mark, turnId: "turn-9" })).toBe(
+      true
+    );
+    expect(markClosed("turn-2", mark)).toBe(true);
+    expect(markClosed("turn-1", mark)).toBe(false);
+    expect(markClosed(undefined, mark)).toBe(false);
   });
 });

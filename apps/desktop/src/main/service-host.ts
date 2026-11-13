@@ -1568,9 +1568,12 @@ export class ServiceHost {
    * first local routine: the plan to speak to, or null once told, on the
    * hosted computer, or while the account cannot be read.
    */
-  async claimAlwaysOnNote(): Promise<"free" | "paid" | null> {
+  async claimAlwaysOnNote(sessionId?: string): Promise<"free" | "paid" | null> {
     const prefs = this.platform === "web-host" ? null : this.prefs?.();
     if (prefs == null || prefs.get().dismissals.routinesAlwaysOnToldAt != null)
+      return null;
+    // The chat's "keep it running" card says it when the turn closes.
+    if (sessionId != null && this.successPitch.keepCardFor(sessionId))
       return null;
     const tier = abacusPlanTier(await fetchAbacusAccount());
     if (tier === "unknown") return null;
@@ -1952,7 +1955,7 @@ export class ServiceHost {
         return routine;
       },
       hosted: this.hostedRoutines,
-      alwaysOnNote: () => this.claimAlwaysOnNote(),
+      alwaysOnNote: (sessionId) => this.claimAlwaysOnNote(sessionId),
     },
     ownActivity: (botId) => {
       const owned = this.agentSessionManagerService.listOwnedBy(botId);

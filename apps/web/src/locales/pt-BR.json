@@ -5340,5 +5340,29 @@
     "row": {
       "waitingNetwork": "Aguardando a rede. Ela roda assim que a conexão voltar."
     }
+  },
+  "bigTask": {
+    "title": "“{{task}}” é um projeto grande",
+    "titleUntitled": "Este é um projeto grande",
+    "line": "Termine no {{plan}}: {{model}} para as partes difíceis, créditos para um projeto deste tamanho e um link público quando ficar pronto.",
+    "lineNoModel": "Termine no {{plan}}: modelos de ponta para as partes difíceis, créditos para um projeto deste tamanho e um link público quando ficar pronto."
+  },
+  "keepRunning": {
+    "title": "Mantenha “{{name}}” rodando 24/7",
+    "titleUnnamed": "Mantenha rodando 24/7",
+    "now": {
+      "server": "Agora ele só roda enquanto este computador está ligado e o app está aberto.",
+      "site": "Agora ele só abre neste computador, enquanto está ligado.",
+      "routine": "Agora ela só roda enquanto este computador está ligado e o app está aberto."
+    },
+    "freeLine": "No {{plan}}, um agente pessoal no Abacus AI Agent na web roda isso com o seu computador desligado.",
+    "paidLine": "Ele só roda enquanto este computador está ligado. Seu plano inclui agentes pessoais no Abacus AI Agent na web, que o mantêm rodando com o computador desligado.",
+    "prompt": "Publique isto a partir do zip que enviei e mantenha rodando 24/7. A conversa que o criou está em abacusai-bot-conversation.md dentro do zip.",
+    "setUp": "Configurar no Abacus AI Agent",
+    "moveTitle": "Leve “{{name}}” para o Abacus AI Agent",
+    "moveTitleUnnamed": "Leve para o Abacus AI Agent",
+    "routinePrompt": "Crie uma tarefa agendada que rode 24/7, chamada “{{name}}”. Agenda (cron, meu horário local): {{schedule}}. Em cada execução: {{prompt}}",
+    "routinePromptOnce": "Crie uma tarefa agendada chamada “{{name}}” que rode mesmo com meu computador desligado. O que ela faz: {{prompt}}",
+    "routinePromptNameOnly": "Crie uma tarefa agendada que rode 24/7, como minha rotina “{{name}}” do AbacusAI Bot. Pergunte o que ela deve fazer e quando."
   }
 }

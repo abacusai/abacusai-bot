@@ -5340,5 +5340,29 @@
     "row": {
       "waitingNetwork": "Menunggu jaringan. Berjalan segera setelah koneksi kembali."
     }
+  },
+  "bigTask": {
+    "title": "“{{task}}” adalah proyek besar",
+    "titleUntitled": "Ini proyek besar",
+    "line": "Selesaikan dengan {{plan}}: {{model}} untuk bagian yang sulit, kredit untuk proyek sebesar ini, dan tautan publik saat selesai.",
+    "lineNoModel": "Selesaikan dengan {{plan}}: model terbaik untuk bagian yang sulit, kredit untuk proyek sebesar ini, dan tautan publik saat selesai."
+  },
+  "keepRunning": {
+    "title": "Jalankan “{{name}}” 24/7",
+    "titleUnnamed": "Jalankan 24/7",
+    "now": {
+      "server": "Saat ini hanya berjalan selama komputer ini menyala dan aplikasinya terbuka.",
+      "site": "Saat ini hanya terbuka di komputer ini, selama komputernya menyala.",
+      "routine": "Saat ini hanya berjalan selama komputer ini menyala dan aplikasinya terbuka."
+    },
+    "freeLine": "Dengan {{plan}}, agen pribadi di Abacus AI Agent di web menjalankannya meski komputer Anda mati.",
+    "paidLine": "Ini hanya berjalan selama komputer ini menyala. Paket Anda mencakup agen pribadi di Abacus AI Agent di web, yang tetap menjalankannya meski komputer Anda mati.",
+    "prompt": "Deploy ini dari zip yang saya unggah dan jalankan terus 24/7. Percakapan yang membuatnya ada di abacusai-bot-conversation.md di dalam zip.",
+    "setUp": "Siapkan di Abacus AI Agent",
+    "moveTitle": "Pindahkan “{{name}}” ke Abacus AI Agent",
+    "moveTitleUnnamed": "Pindahkan ke Abacus AI Agent",
+    "routinePrompt": "Buat tugas terjadwal yang berjalan 24/7, bernama “{{name}}”. Jadwal (cron, waktu lokal saya): {{schedule}}. Setiap kali berjalan: {{prompt}}",
+    "routinePromptOnce": "Buat tugas terjadwal bernama “{{name}}” yang tetap berjalan meski komputer saya mati. Yang dilakukannya: {{prompt}}",
+    "routinePromptNameOnly": "Buat tugas terjadwal yang berjalan 24/7, seperti rutinitas AbacusAI Bot saya “{{name}}”. Tanyakan kepada saya apa yang harus dilakukan dan kapan."
   }
 }

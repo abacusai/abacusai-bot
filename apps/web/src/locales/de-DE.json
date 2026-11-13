@@ -5340,5 +5340,29 @@
     "row": {
       "waitingNetwork": "Wartet auf das Netzwerk. Sie läuft, sobald die Verbindung wieder da ist."
     }
+  },
+  "bigTask": {
+    "title": "„{{task}}“ ist ein großes Projekt",
+    "titleUntitled": "Das ist ein großes Projekt",
+    "line": "Stell es mit {{plan}} fertig: {{model}} für die schwierigen Teile, Credits für ein Projekt dieser Größe und ein öffentlicher Link, wenn es fertig ist.",
+    "lineNoModel": "Stell es mit {{plan}} fertig: Top-Modelle für die schwierigen Teile, Credits für ein Projekt dieser Größe und ein öffentlicher Link, wenn es fertig ist."
+  },
+  "keepRunning": {
+    "title": "„{{name}}“ rund um die Uhr laufen lassen",
+    "titleUnnamed": "Rund um die Uhr laufen lassen",
+    "now": {
+      "server": "Im Moment läuft es nur, solange dieser Computer an und die App geöffnet ist.",
+      "site": "Im Moment öffnet sie sich nur auf diesem Computer, solange er an ist.",
+      "routine": "Im Moment läuft sie nur, solange dieser Computer an und die App geöffnet ist."
+    },
+    "freeLine": "Mit {{plan}} lässt ein persönlicher Agent in Abacus AI Agent im Web es laufen, auch wenn dein Computer aus ist.",
+    "paidLine": "Es läuft nur, solange dieser Computer an ist. Dein Plan enthält persönliche Agenten in Abacus AI Agent im Web, die es auch bei ausgeschaltetem Computer laufen lassen.",
+    "prompt": "Veröffentliche das aus der hochgeladenen ZIP-Datei und lass es rund um die Uhr laufen. Die Unterhaltung, in der es entstanden ist, liegt in abacusai-bot-conversation.md in der ZIP-Datei.",
+    "setUp": "In Abacus AI Agent einrichten",
+    "moveTitle": "„{{name}}“ zu Abacus AI Agent umziehen",
+    "moveTitleUnnamed": "Zu Abacus AI Agent umziehen",
+    "routinePrompt": "Richte eine geplante Aufgabe ein, die rund um die Uhr läuft, namens „{{name}}“. Zeitplan (Cron, meine Ortszeit): {{schedule}}. Bei jedem Lauf: {{prompt}}",
+    "routinePromptOnce": "Richte eine geplante Aufgabe namens „{{name}}“ ein, die auch bei ausgeschaltetem Computer läuft. Was sie tut: {{prompt}}",
+    "routinePromptNameOnly": "Richte eine geplante Aufgabe ein, die rund um die Uhr läuft, wie meine AbacusAI-Bot-Routine „{{name}}“. Frag mich, was sie tun soll und wann."
   }
 }

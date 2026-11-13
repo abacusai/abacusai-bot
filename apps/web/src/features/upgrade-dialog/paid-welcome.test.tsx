@@ -429,6 +429,75 @@ it.runIf(!IS_BROWSER)(
   15000
 );
 
+it.runIf(!IS_BROWSER)(
+  "leads with moving a server the chat left running to Abacus AI Agent",
+  async () => {
+    const seed = defaultSeed();
+    seed.prefs!.dismissals.freePlanSeenAt = 1;
+    seed.prefs!.siteReady = {
+      "chat-1": {
+        turnId: "turn-1",
+        siteDir: "/work/btc-bot",
+        at: 1,
+        kind: "server",
+        name: "btc-bot",
+      },
+    };
+    const steps: string[] = [];
+    const app = await renderApp("/routines", {
+      seed,
+      procedures: {
+        account: { abacus: os.account.abacus.handler(() => account("free")) },
+        sites: {
+          pack: os.sites.pack.handler(() => ({ state: "none" as const })),
+          progress: os.sites.progress.handler(() => null),
+        },
+        system: {
+          openExternal: os.system.openExternal.handler(() => undefined),
+          funnelStep: os.system.funnelStep.handler(({ input }) => {
+            steps.push(`${input.step}:${input.detail ?? ""}`);
+          }),
+        },
+      },
+    });
+    try {
+      await screen.findByRole("navigation", { name: "Routines" });
+      act(() =>
+        welcomeLandedPlan(account("basic"), account("free"), {
+          threadId: "chat-1",
+          paused: null,
+        })
+      );
+      const dialog = await screen.findByRole("dialog", {
+        name: "You're on basic",
+      });
+      expect(
+        within(dialog).getByText("Move “btc-bot” to Abacus AI Agent")
+      ).toBeTruthy();
+      expect(
+        within(dialog).getByText(
+          "Deploy this from the zip I uploaded and keep it running 24/7. The conversation that built it is in abacusai-bot-conversation.md inside the zip."
+        )
+      ).toBeTruthy();
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: /Open Abacus AI Agent/ })
+      );
+      await waitFor(() =>
+        expect(steps).toEqual(
+          expect.arrayContaining([
+            "site_deploy_open_agent:welcome",
+            "paid_welcome_move:server",
+          ])
+        )
+      );
+    } finally {
+      app.view.unmount();
+      await app.cleanup();
+    }
+  },
+  15000
+);
+
 const OPUS = "abacus/claude-opus-5-5";
 const TOP_CATALOG: ModelAvailability[] = [
   ["abacus/route-llm-code-low", "RouteLLM", true],

@@ -5340,5 +5340,29 @@
     "row": {
       "waitingNetwork": "正在等待网络。连接恢复后立即运行。"
     }
+  },
+  "bigTask": {
+    "title": "“{{task}}”是个大项目",
+    "titleUntitled": "这是个大项目",
+    "line": "用 {{plan}} 完成它：难点交给 {{model}}，积分够这种规模的项目用，完成后还有公开链接。",
+    "lineNoModel": "用 {{plan}} 完成它：难点交给顶级模型，积分够这种规模的项目用，完成后还有公开链接。"
+  },
+  "keepRunning": {
+    "title": "让“{{name}}”全天候运行",
+    "titleUnnamed": "让它全天候运行",
+    "now": {
+      "server": "现在它只在这台电脑开着、应用打开时运行。",
+      "site": "现在它只能在这台电脑上打开，而且电脑要开着。",
+      "routine": "现在它只在这台电脑开着、应用打开时运行。"
+    },
+    "freeLine": "使用 {{plan}}，网页版 Abacus AI Agent 中的个人智能体会在你关机时也让它继续运行。",
+    "paidLine": "它只在这台电脑开着时运行。你的套餐包含网页版 Abacus AI Agent 中的个人智能体，关机时也能让它继续运行。",
+    "prompt": "请用我上传的 zip 部署这个项目，并让它全天候运行。构建它的对话在 zip 内的 abacusai-bot-conversation.md 中。",
+    "setUp": "在 Abacus AI Agent 中设置",
+    "moveTitle": "把“{{name}}”迁移到 Abacus AI Agent",
+    "moveTitleUnnamed": "迁移到 Abacus AI Agent",
+    "routinePrompt": "设置一个全天候运行的定时任务，名为“{{name}}”。时间表(cron，我的当地时间)：{{schedule}}。每次运行：{{prompt}}",
+    "routinePromptOnce": "设置一个名为“{{name}}”的定时任务，电脑关机时也能运行。它要做的事：{{prompt}}",
+    "routinePromptNameOnly": "设置一个全天候运行的定时任务，类似我在 AbacusAI Bot 中的例行任务“{{name}}”。问我它该做什么、什么时候做。"
   }
 }

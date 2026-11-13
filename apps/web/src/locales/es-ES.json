@@ -5340,5 +5340,29 @@
     "row": {
       "waitingNetwork": "Esperando la red. Se ejecuta en cuanto vuelva la conexión."
     }
+  },
+  "bigTask": {
+    "title": "“{{task}}” es un proyecto grande",
+    "titleUntitled": "Este es un proyecto grande",
+    "line": "Termínalo con {{plan}}: {{model}} para las partes difíciles, créditos para un proyecto de este tamaño y un enlace público cuando esté listo.",
+    "lineNoModel": "Termínalo con {{plan}}: modelos de primer nivel para las partes difíciles, créditos para un proyecto de este tamaño y un enlace público cuando esté listo."
+  },
+  "keepRunning": {
+    "title": "Mantén “{{name}}” funcionando 24/7",
+    "titleUnnamed": "Mantenlo funcionando 24/7",
+    "now": {
+      "server": "Ahora solo funciona mientras este ordenador está encendido y la app está abierta.",
+      "site": "Ahora solo se abre en este ordenador, mientras está encendido.",
+      "routine": "Ahora solo funciona mientras este ordenador está encendido y la app está abierta."
+    },
+    "freeLine": "Con {{plan}}, un agente personal en Abacus AI Agent en la web lo mantiene funcionando con tu ordenador apagado.",
+    "paidLine": "Solo funciona mientras este ordenador está encendido. Tu plan incluye agentes personales en Abacus AI Agent en la web, que lo mantienen funcionando con el ordenador apagado.",
+    "prompt": "Publica esto desde el zip que subí y mantenlo funcionando 24/7. La conversación que lo creó está en abacusai-bot-conversation.md dentro del zip.",
+    "setUp": "Configurarlo en Abacus AI Agent",
+    "moveTitle": "Lleva “{{name}}” a Abacus AI Agent",
+    "moveTitleUnnamed": "Llévalo a Abacus AI Agent",
+    "routinePrompt": "Crea una tarea programada que funcione 24/7, llamada “{{name}}”. Horario (cron, mi hora local): {{schedule}}. En cada ejecución: {{prompt}}",
+    "routinePromptOnce": "Crea una tarea programada llamada “{{name}}” que funcione aunque mi ordenador esté apagado. Qué hace: {{prompt}}",
+    "routinePromptNameOnly": "Crea una tarea programada que funcione 24/7, como mi rutina “{{name}}” de AbacusAI Bot. Pregúntame qué debe hacer y cuándo."
   }
 }

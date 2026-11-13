@@ -6,17 +6,33 @@
  * that closed (TurnLedger) and stamps an offer in the prefs row; the renderer
  * shows it and keeps the answer. Once half the free grant is used, the credit
  * milestone cards own the pitch and this one stops.
+ *
+ * Two more cards share its slot and offer: a chat whose build got big
+ * (`big_task`), and a turn that left something meant to stay on, a server or
+ * bot started in the background or a routine (`keep_running`), which offers
+ * a personal agent on the web that keeps it running with the computer off.
+ * A paid plan gets the second as the deploy steps instead (site-deploy.ts),
+ * as it does for a site.
  */
 
 /** Why the card was offered; the funnel's detail. */
 export const SUCCESS_PITCH_TRIGGERS = [
   "positive_reaction",
   "deliverable",
+  "big_task",
+  "keep_running",
 ] as const;
 export type SuccessPitchTrigger = (typeof SUCCESS_PITCH_TRIGGERS)[number];
 
 /** What the user got, for the card's first line. */
-export const SUCCESS_PITCH_MOMENTS = ["site", "file", "reaction"] as const;
+export const SUCCESS_PITCH_MOMENTS = [
+  "site",
+  "file",
+  "reaction",
+  "big_task",
+  "server",
+  "routine",
+] as const;
 export type SuccessPitchMoment = (typeof SUCCESS_PITCH_MOMENTS)[number];
 
 /** The pitch line that leads for the moment (billing-plan PitchLine). */
@@ -32,6 +48,10 @@ export interface SuccessPitchOffer {
   moment: SuccessPitchMoment;
   lead: SuccessPitchLead | null;
   at: number;
+  /** `big_task`: the chat's task; `keep_running`: the thing to keep on. */
+  name?: string | null;
+  /** The funnel's detail when it is not the trigger: the big build's file count. */
+  detail?: string | null;
 }
 
 /** Main's record for one account (creditAccountKey). */
@@ -42,6 +62,10 @@ export interface SuccessPitchMark {
   chatTurns: number;
   /** When the once-ever line went to the user's own chat app. */
   chatToldAt: number | null;
+  /** Chats offered the big-build card, newest last: once per chat. */
+  bigTaskChats?: string[];
+  /** Things offered "keep it running" (keepThingKey), newest last: once per thing. */
+  keepOffered?: string[];
 }
 
 /** The renderer's record for one account: what was shown and answered. */
@@ -64,6 +88,91 @@ export const SUCCESS_PITCH_MAX_SHOWN = 3;
 /** Two "Not now"s and it never comes back. */
 export const SUCCESS_PITCH_MAX_NOT_NOW = 2;
 
+/** How often a card may show: the gap between two, and the lifetime caps. */
+export interface PitchCaps {
+  gapMs: number;
+  maxShown: number;
+  maxNotNow: number;
+}
+
+export const SUCCESS_PITCH_CAPS: PitchCaps = {
+  gapMs: SUCCESS_PITCH_GAP_MS,
+  maxShown: SUCCESS_PITCH_MAX_SHOWN,
+  maxNotNow: SUCCESS_PITCH_MAX_NOT_NOW,
+};
+
+/**
+ * "Keep it running" offers an action, not only a pitch: its own budget, at
+ * most one a day and three ever, and two "Not now"s end it.
+ */
+export const KEEP_RUNNING_CAPS: PitchCaps = {
+  gapMs: 24 * 60 * 60 * 1000,
+  maxShown: 3,
+  maxNotNow: 2,
+};
+
+/** The trigger's budget: "keep it running" has its own; the rest share the pitch's. */
+export const pitchCaps = (trigger: SuccessPitchTrigger): PitchCaps =>
+  trigger === "keep_running" ? KEEP_RUNNING_CAPS : SUCCESS_PITCH_CAPS;
+
+/** Chats and things remembered as offered, per account. */
+export const PITCH_OFFERED_KEEP = 20;
+
+/** `list` with `item` last, at most PITCH_OFFERED_KEEP long. */
+export const rememberOffered = (
+  list: readonly string[] | undefined,
+  item: string
+): string[] =>
+  [...(list ?? []).filter((each) => each !== item), item].slice(
+    -PITCH_OFFERED_KEEP
+  );
+
+// ─── a big build ─────────────────────────────────────────────────────────
+
+/**
+ * Distinct files written or edited in one chat: from here a build is big.
+ * Replayed over a week of chats, about one coder chat in five gets there and
+ * almost no other; a long turn or the credits a chat billed fired on most
+ * coder chats from their first turn, so they are not signals.
+ */
+export const BIG_TASK_FILES = 15;
+
+export const isBigBuild = (files: number): boolean => files >= BIG_TASK_FILES;
+
+// ─── something meant to stay on ──────────────────────────────────────────
+
+export const KEEP_KINDS = ["server", "site", "routine"] as const;
+export type KeepKind = (typeof KEEP_KINDS)[number];
+
+/** One thing to keep on, so it is offered once: its kind and its folder or name. */
+export const keepThingKey = (
+  kind: KeepKind,
+  where: string | null | undefined
+): string => `${kind}:${where ?? ""}`;
+
+/**
+ * A backgrounded command that is meant to keep running (a server, a bot's
+ * loop, a poller), not one-off work set aside: installs, builds, tests.
+ */
+const ONE_OFF_COMMAND =
+  /\b(?:install|i|add|ci|build|test|tests|lint|compile|tsc|pytest|jest|vitest|playwright|sleep|wait|download|curl|wget|tar|unzip|zip|cp|mv|rm|git|docker\s+(?:build|pull|push))\b/i;
+
+export const isLongRunningCommand = (command: string): boolean => {
+  const last =
+    command
+      .split(/&&|;|\|\|/)
+      .map((part) => part.trim())
+      .filter((part) => part.length > 0)
+      .at(-1) ?? "";
+  return last.length > 0 && !/^cd\s/.test(last) && !ONE_OFF_COMMAND.test(last);
+};
+
+/** The folder a command runs in, from a leading `cd`; null without one. */
+export const commandFolder = (command: string): string | null => {
+  const match = /^\s*cd\s+("[^"]+"|'[^']+'|[^\s;&|]+)/.exec(command);
+  return match == null ? null : match[1]!.replace(/^["']|["']$/g, "");
+};
+
 export const EMPTY_SUCCESS_PITCH_MARK: SuccessPitchMark = {
   offer: null,
   appTurns: 0,
@@ -78,15 +187,16 @@ export const EMPTY_SUCCESS_PITCH_MARK: SuccessPitchMark = {
 export const successPitchAllowed = (
   card: SuccessPitchCard | undefined,
   mark: Pick<SuccessPitchMark, "chatToldAt"> | undefined,
-  now: number
+  now: number,
+  caps: PitchCaps = SUCCESS_PITCH_CAPS
 ): boolean => {
   const told = mark?.chatToldAt ?? null;
   const shown = (card?.shown ?? 0) + (told != null ? 1 : 0);
   const last = Math.max(card?.lastShownAt ?? -Infinity, told ?? -Infinity);
   return (
-    shown < SUCCESS_PITCH_MAX_SHOWN &&
-    (card?.notNow ?? 0) < SUCCESS_PITCH_MAX_NOT_NOW &&
-    !(now - last < SUCCESS_PITCH_GAP_MS)
+    shown < caps.maxShown &&
+    (card?.notNow ?? 0) < caps.maxNotNow &&
+    !(now - last < caps.gapMs)
   );
 };
 
@@ -110,7 +220,10 @@ export const SUCCESS_PITCH_MOMENT_COPY = {
   site: "successPitch.moment.site",
   file: "successPitch.moment.file",
   reaction: "successPitch.moment.reaction",
-} as const satisfies Record<SuccessPitchMoment, string>;
+} as const satisfies Record<
+  Exclude<SuccessPitchMoment, "big_task" | "server" | "routine">,
+  string
+>;
 
 // ─── what a message says about the result ───────────────────────────────
 

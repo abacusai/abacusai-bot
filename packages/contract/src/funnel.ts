@@ -133,6 +133,19 @@ export const FUNNEL_STEPS = [
   "success_pitch_not_now",
   "success_pitch_withdrawn",
   "success_pitch_chat_told",
+  // A free chat's build got big (success-pitch.ts big_task); the detail is
+  // the signal: files, tools or credits.
+  "big_task_shown",
+  "big_task_upgrade",
+  "big_task_not_now",
+  "big_task_withdrawn",
+  // Something meant to stay on (a server, a site, a routine): the free card
+  // and the paid one's move; the detail is the kind.
+  "keep_running_shown",
+  "keep_running_upgrade",
+  "keep_running_not_now",
+  "keep_running_withdrawn",
+  "keep_running_move",
   // The offer to turn a long answer into a document (deliverable-offer.ts);
   // the detail is the button (doc or report) and the chat's skin.
   "deliverable_offer_shown",
@@ -168,8 +181,11 @@ export const FUNNEL_STEPS = [
   "paid_welcome_continue",
   "paid_welcome_task",
   "paid_welcome_closed",
+  // A new payer took the welcome's first step: moving what they left on to
+  // Abacus AI Agent; the detail is the kind.
+  "paid_welcome_move",
   // A paid plan's deploy steps for a site the agent built; the detail is
-  // where they showed (welcome or card).
+  // where they showed (welcome, card or keep_running).
   "site_deploy_shown",
   "site_deploy_open_agent",
   "site_deploy_pack",

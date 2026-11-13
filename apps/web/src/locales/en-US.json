@@ -5340,5 +5340,29 @@
     "row": {
       "waitingNetwork": "Waiting for the network. It runs as soon as the connection is back."
     }
+  },
+  "bigTask": {
+    "title": "“{{task}}” is a big build",
+    "titleUntitled": "This is a big build",
+    "line": "Finish it on {{plan}}: {{model}} for the hard parts, credits for a build this size, and a live link when it's done.",
+    "lineNoModel": "Finish it on {{plan}}: top models for the hard parts, credits for a build this size, and a live link when it's done."
+  },
+  "keepRunning": {
+    "title": "Keep “{{name}}” running 24/7",
+    "titleUnnamed": "Keep it running 24/7",
+    "now": {
+      "server": "Right now it runs only while this computer is on and the app is open.",
+      "site": "Right now it opens only on this computer, while it's on.",
+      "routine": "Right now it runs only while this computer is on and the app is open."
+    },
+    "freeLine": "On {{plan}}, a personal agent in Abacus AI Agent on the web runs it with your computer off.",
+    "paidLine": "It runs only while this computer is on. Your plan includes personal agents in Abacus AI Agent on the web, which keep it running with your computer off.",
+    "prompt": "Deploy this from the zip I uploaded and keep it running 24/7. The conversation that built it is in abacusai-bot-conversation.md inside the zip.",
+    "setUp": "Set it up in Abacus AI Agent",
+    "moveTitle": "Move “{{name}}” to Abacus AI Agent",
+    "moveTitleUnnamed": "Move it to Abacus AI Agent",
+    "routinePrompt": "Set up a scheduled task that runs 24/7, called “{{name}}”. Schedule (cron, my local time): {{schedule}}. Each run: {{prompt}}",
+    "routinePromptOnce": "Set up a scheduled task called “{{name}}” that runs even with my computer off. What it does: {{prompt}}",
+    "routinePromptNameOnly": "Set up a scheduled task that runs 24/7, like my AbacusAI Bot routine “{{name}}”. Ask me what it should do and when."
   }
 }

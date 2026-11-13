@@ -4,10 +4,17 @@
  * plan's price and its whole pitch (the upgrade dialog's own list), Upgrade
  * (the dialog's checkout) and Not now. Main stamps the offer when the turn
  * closes; this shows it and keeps the answer.
+ *
+ * The same slot holds the big-build card (the chat's task, the plan's top
+ * model) and the free "keep it running 24/7" card (what was left on, which
+ * a personal agent on the web keeps running), each with its own events and
+ * upgrade source; "keep it running" keeps its own budget.
  */
 import {
   type BillingPlan,
   planPrice,
+  planTopModelIds,
+  type UpgradeSrc,
   wallOffer,
 } from "@abacus-ai/contract/billing-plan";
 import {
@@ -15,23 +22,28 @@ import {
   pendingThreshold,
 } from "@abacus-ai/contract/credit-thresholds";
 import type { FunnelStep } from "@abacus-ai/contract/funnel";
+import { retryOfferModel } from "@abacus-ai/contract/retry-offer";
 import {
+  type KeepKind,
+  pitchCaps,
   SUCCESS_PITCH_MOMENT_COPY,
   type SuccessPitchCard as SuccessPitchCardState,
   type SuccessPitchLead,
   type SuccessPitchMoment,
   type SuccessPitchOffer,
   successPitchAllowed,
+  type SuccessPitchTrigger,
   underHalfOfFreeCredits,
 } from "@abacus-ai/contract/success-pitch";
 import type { UIMessage } from "@tanstack/ai-client";
+import { eq, useLiveQuery } from "@tanstack/react-db";
 import { useQuery } from "@tanstack/react-query";
-import { Sparkles, X } from "lucide-react";
-import { useEffect, useEffectEvent } from "react";
+import { Layers, Moon, Sparkles, X } from "lucide-react";
+import { type ReactNode, useEffect, useEffectEvent } from "react";
 import { useTranslation } from "react-i18next";
 
 import { usePaymentRequired } from "#renderer/components/payment-required";
-import { useDb } from "#renderer/data/db";
+import { useCollections, useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { creditsTier } from "#renderer/lib/credits";
 import { payingAccount } from "#renderer/lib/upgrade";
@@ -61,19 +73,33 @@ export interface SuccessPitchCardProps {
   onNotNow(): void;
 }
 
-export const SuccessPitchCard = ({
+/**
+ * One pitch card: its icon and first lines, the plan's price, its whole
+ * list (led by `lead`), Upgrade and Not now.
+ */
+const PitchCardFrame = ({
+  slot,
   moment,
+  icon,
+  title,
+  line,
   lead,
   billing,
   onUpgrade,
   onNotNow,
-}: SuccessPitchCardProps) => {
+}: {
+  slot: string;
+  moment: string;
+  icon: ReactNode;
+  title: string;
+  line: string;
+} & Omit<SuccessPitchCardProps, "moment">) => {
   const { t, i18n } = useTranslation();
   const offer = wallOffer(billing);
   if (offer == null) return null;
   return (
     <div
-      data-slot="success-pitch"
+      data-slot={slot}
       data-moment={moment}
       className="relative my-2 flex w-full max-w-[520px] gap-3 rounded-xl border border-violet-200 bg-violet-50/70 p-3.5 pr-9 text-sm dark:border-violet-900/70 dark:bg-violet-950/30"
     >
@@ -81,16 +107,12 @@ export const SuccessPitchCard = ({
         aria-hidden
         className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-violet-600 text-white"
       >
-        <Sparkles className="size-4" />
+        {icon}
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-2.5">
         <div className="flex flex-col gap-0.5">
-          <p className="font-semibold">
-            {t(SUCCESS_PITCH_MOMENT_COPY[moment])}
-          </p>
-          <p className="text-muted-foreground">
-            {t("successPitch.line", { plan: offer.planName })}
-          </p>
+          <p className="font-semibold">{title}</p>
+          <p className="text-muted-foreground">{line}</p>
           <p className="font-semibold" data-slot="success-pitch-price">
             {planPrice(t, offer, i18n.language)}
           </p>
@@ -135,6 +157,147 @@ export const SuccessPitchCard = ({
   );
 };
 
+export const SuccessPitchCard = ({
+  moment,
+  ...props
+}: SuccessPitchCardProps) => {
+  const { t } = useTranslation();
+  const offer = wallOffer(props.billing);
+  if (offer == null || !(moment in SUCCESS_PITCH_MOMENT_COPY)) return null;
+  return (
+    <PitchCardFrame
+      slot="success-pitch"
+      moment={moment}
+      icon={<Sparkles className="size-4" />}
+      title={t(
+        SUCCESS_PITCH_MOMENT_COPY[
+          moment as keyof typeof SUCCESS_PITCH_MOMENT_COPY
+        ]
+      )}
+      line={t("successPitch.line", { plan: offer.planName })}
+      {...props}
+    />
+  );
+};
+
+/** The free card for a big build: the chat's task, and the plan's top model to finish it. */
+export const BigTaskCard = ({
+  task,
+  topModel,
+  ...props
+}: Omit<SuccessPitchCardProps, "moment" | "lead"> & {
+  task: string | null;
+  /** The model the plan unlocks, by its catalog name; null when unknown. */
+  topModel: string | null;
+}) => {
+  const { t } = useTranslation();
+  const offer = wallOffer(props.billing);
+  if (offer == null) return null;
+  return (
+    <PitchCardFrame
+      slot="big-task"
+      moment="big_task"
+      icon={<Layers className="size-4" />}
+      title={
+        task != null ? t("bigTask.title", { task }) : t("bigTask.titleUntitled")
+      }
+      line={
+        topModel != null
+          ? t("bigTask.line", { plan: offer.planName, model: topModel })
+          : t("bigTask.lineNoModel", { plan: offer.planName })
+      }
+      lead="apps"
+      {...props}
+    />
+  );
+};
+
+/** Where it runs today, per kind. */
+const KEEP_NOW_COPY = {
+  server: "keepRunning.now.server",
+  site: "keepRunning.now.site",
+  routine: "keepRunning.now.routine",
+} as const satisfies Record<KeepKind, string>;
+
+/** The free "keep it running 24/7" card: where it runs now, and the personal agent that keeps it on. */
+export const KeepRunningCard = ({
+  kind,
+  name,
+  ...props
+}: Omit<SuccessPitchCardProps, "moment" | "lead"> & {
+  kind: KeepKind;
+  name: string | null;
+}) => {
+  const { t } = useTranslation();
+  const offer = wallOffer(props.billing);
+  if (offer == null) return null;
+  return (
+    <PitchCardFrame
+      slot="keep-running"
+      moment={kind}
+      icon={<Moon className="size-4" />}
+      title={
+        name != null && name.length > 0
+          ? t("keepRunning.title", { name })
+          : t("keepRunning.titleUnnamed")
+      }
+      line={`${t(KEEP_NOW_COPY[kind])} ${t("keepRunning.freeLine", { plan: offer.planName })}`}
+      lead="agents"
+      {...props}
+    />
+  );
+};
+
+/** Each trigger's events and upgrade source. */
+const TRIGGER_EVENTS: Record<
+  SuccessPitchTrigger,
+  {
+    shown: FunnelStep;
+    upgrade: FunnelStep;
+    notNow: FunnelStep;
+    src: UpgradeSrc;
+  }
+> = {
+  positive_reaction: {
+    shown: "success_pitch_shown",
+    upgrade: "success_pitch_upgrade",
+    notNow: "success_pitch_not_now",
+    src: "success_pitch",
+  },
+  deliverable: {
+    shown: "success_pitch_shown",
+    upgrade: "success_pitch_upgrade",
+    notNow: "success_pitch_not_now",
+    src: "success_pitch",
+  },
+  big_task: {
+    shown: "big_task_shown",
+    upgrade: "big_task_upgrade",
+    notNow: "big_task_not_now",
+    src: "big_task",
+  },
+  keep_running: {
+    shown: "keep_running_shown",
+    upgrade: "keep_running_upgrade",
+    notNow: "keep_running_not_now",
+    src: "keep_running",
+  },
+};
+
+/** The funnel's detail: the trigger, the big build's signal, or what to keep on. */
+const triggerDetail = (offer: SuccessPitchOffer): string =>
+  offer.trigger === "big_task"
+    ? (offer.detail ?? "files")
+    : offer.trigger === "keep_running"
+      ? offer.moment
+      : offer.trigger;
+
+/** Where the card's answers are kept: "keep it running" on its own budget. */
+const cardsKey = (
+  trigger: SuccessPitchTrigger
+): "keepRunningCards" | "successPitchCards" =>
+  trigger === "keep_running" ? "keepRunningCards" : "successPitchCards";
+
 /**
  * The card for this chat's offer, under its latest reply while nothing runs.
  * Only for a free account under half its free grant, under the caps, and
@@ -163,8 +326,12 @@ export const SuccessPitchRow = ({
   const preview = slots.successPitchOffer != null;
   const offer: SuccessPitchOffer | null =
     slots.successPitchOffer ?? mark?.offer ?? null;
-  const cards = prefs.dismissals.successPitchCards ?? {};
+  const trigger = offer?.trigger ?? "deliverable";
+  const cardsAt = cardsKey(trigger);
+  const cards = prefs.dismissals[cardsAt] ?? {};
   const card = key != null ? cards[key] : undefined;
+  // "Keep it running" is on its own budget: the chat-app line is not one of its shows.
+  const capsMark = trigger === "keep_running" ? undefined : mark;
   const milestoneOwed =
     key != null &&
     pendingThreshold(
@@ -187,7 +354,8 @@ export const SuccessPitchRow = ({
   const visible =
     eligible &&
     (card?.shownOffer === offer.id ||
-      (!upgradeAsked && successPitchAllowed(card, mark, now)));
+      (!upgradeAsked &&
+        successPitchAllowed(card, capsMark, now, pitchCaps(trigger))));
   const { data: billing } = useQuery({
     ...transport.orpc.account.billingPlan.queryOptions({ input: {} }),
     enabled: visible,
@@ -195,12 +363,34 @@ export const SuccessPitchRow = ({
   });
   const showing =
     visible && billing != null && wallOffer(billing) != null ? offer : null;
+  const bigTask = showing?.trigger === "big_task";
+  // The big build's title: the chat's own title, which is the task in its words.
+  const collections = useCollections();
+  const chat = useLiveQuery({
+    query: (q) =>
+      q
+        .from({ s: collections.sessions })
+        .where(({ s }) => eq(s.id, session.threadId))
+        .findOne(),
+  }).data;
+  const { data: catalog } = useQuery({
+    ...transport.orpc.models.list.queryOptions({ input: {} }),
+    enabled: bigTask,
+    staleTime: 60_000,
+  });
+  // Locked until the upgrade: the model the plan unlocks, never a name in code.
+  const topModel =
+    bigTask && billing != null && catalog != null
+      ? (retryOfferModel(catalog, "locked", planTopModelIds(billing))?.label ??
+        null)
+      : null;
+  const events = TRIGGER_EVENTS[trigger];
 
   const write = (next: SuccessPitchCardState): void => {
     if (preview) return;
     void db
       .updatePrefs({
-        dismissals: { successPitchCards: { ...cards, [key!]: next } },
+        dismissals: { [cardsAt]: { ...cards, [key!]: next } },
       })
       .catch(() => undefined);
   };
@@ -211,15 +401,15 @@ export const SuccessPitchRow = ({
     shownOffer: card?.shownOffer ?? null,
     answered: card?.answered ?? null,
   });
-  const funnel = (step: FunnelStep, trigger: string): void => {
+  const funnel = (step: FunnelStep, detail: string): void => {
     if (preview) return;
     void transport.client.system
-      .funnelStep({ step, detail: trigger })
+      .funnelStep({ step, detail })
       .catch(() => undefined);
   };
   const shown = useEffectEvent((seen: SuccessPitchOffer) => {
     if (card?.shownOffer === seen.id) return;
-    funnel("success_pitch_shown", seen.trigger);
+    funnel(TRIGGER_EVENTS[seen.trigger].shown, triggerDetail(seen));
     const previous = base();
     write({
       ...previous,
@@ -243,26 +433,47 @@ export const SuccessPitchRow = ({
   // A paid plan is never pitched: its slot holds the deploy steps after a site.
   if (payingAccount(account)) return <SiteDeployCard active={active} />;
   if (showing == null || billing == null) return null;
+  const answers = {
+    billing,
+    onUpgrade: () => {
+      // Inside the click: the web build opens its checkout tab here.
+      startPlanCheckout(transport.client, events.src);
+      funnel(events.upgrade, triggerDetail(showing));
+      write({ ...base(), answered: showing.id });
+    },
+    onNotNow: () => {
+      funnel(events.notNow, triggerDetail(showing));
+      const previous = base();
+      write({
+        ...previous,
+        notNow: previous.notNow + 1,
+        answered: showing.id,
+      });
+    },
+  };
+  if (showing.trigger === "big_task") {
+    const title = chat?.label?.trim() ?? "";
+    return (
+      <BigTaskCard
+        task={title.length > 0 ? title : null}
+        topModel={topModel}
+        {...answers}
+      />
+    );
+  }
+  if (showing.trigger === "keep_running")
+    return (
+      <KeepRunningCard
+        kind={showing.moment as KeepKind}
+        name={showing.name ?? null}
+        {...answers}
+      />
+    );
   return (
     <SuccessPitchCard
       moment={showing.moment}
       lead={showing.lead}
-      billing={billing}
-      onUpgrade={() => {
-        // Inside the click: the web build opens its checkout tab here.
-        startPlanCheckout(transport.client, "success_pitch");
-        funnel("success_pitch_upgrade", showing.trigger);
-        write({ ...base(), answered: showing.id });
-      }}
-      onNotNow={() => {
-        funnel("success_pitch_not_now", showing.trigger);
-        const previous = base();
-        write({
-          ...previous,
-          notNow: previous.notNow + 1,
-          answered: showing.id,
-        });
-      }}
+      {...answers}
     />
   );
 };
