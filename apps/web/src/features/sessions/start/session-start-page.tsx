@@ -47,8 +47,16 @@ import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { Button } from "#renderer/ui/button";
 
+import {
+  CodingRoutinesRow,
+  useCodingRoutinesOffered,
+} from "../../routines/coding-routines";
 import { SessionContextTray } from "../context/context-tray";
-import { useSessionsTransport, useWorkspace } from "../data/queries";
+import {
+  useGitState,
+  useSessionsTransport,
+  useWorkspace,
+} from "../data/queries";
 import { SESSION_STARTERS } from "../starters";
 import { SendHint } from "./send-hint";
 import {
@@ -323,6 +331,22 @@ export const SessionStartPage = ({
             ...sessionStarters.filter((s) => s.id !== "review-pull-requests"),
           ].slice(0, STARTER_SLOTS)
         : sessionStarters;
+  // Routines that keep this project healthy: a git project, past the first
+  // task (value before routines), and never beside the build picks.
+  const gitState = useGitState({ workspaceId: draft.workspaceId ?? "" });
+  const routinesOffered = useCodingRoutinesOffered();
+  const projectName =
+    workspace?.label || workspace?.path?.split(/[\\/]/).pop() || null;
+  const codingProject =
+    routinesOffered &&
+    draft.workspaceId != null &&
+    projectName != null &&
+    gitState?.gitAvailable === true &&
+    draft.stage === "draft" &&
+    draft.firstTask !== true &&
+    draft.starters !== "build"
+      ? { workspaceId: draft.workspaceId, name: projectName }
+      : null;
   const context = draft.workspaceId ? (
     <SessionContextTray
       workspaceId={draft.workspaceId}
@@ -503,6 +527,14 @@ export const SessionStartPage = ({
               </Button>
             ))}
           </div>
+          {codingProject != null && (
+            <div className="mt-4">
+              <CodingRoutinesRow
+                workspaceId={codingProject.workspaceId}
+                projectName={codingProject.name}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

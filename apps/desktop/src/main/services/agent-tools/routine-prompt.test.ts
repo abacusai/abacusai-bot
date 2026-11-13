@@ -498,4 +498,73 @@ describe("the fire prompt", () => {
       for (const text of never) expect(prompt).not.toContain(text);
     }
   );
+
+  it("tells a run why the app's site check started it, and never to stay quiet then", () => {
+    const memory = (change: "down" | "up" | null) => ({
+      dir: "/x/routines/job-1",
+      notes: noNotes("/x/routines/job-1"),
+      runs: 4,
+      workingDirectory: "/x/routines/job-1",
+      workspaces: [],
+      lastRun: null,
+      siteCheck: {
+        url: "https://example.com",
+        change,
+        down: change === "down",
+        detail: change === "down" ? "HTTP 502" : "HTTP 200",
+        since: 0,
+      },
+    });
+    const down = buildRoutineFirePrompt(
+      job(),
+      "schedule",
+      null,
+      memory("down")
+    );
+    expect(down).toContain("The app checks https://example.com itself");
+    expect(down).toContain("It just found the site down (HTTP 502");
+    expect(down).toContain("Never write NO_REPLY on this run");
+    expect(
+      buildRoutineFirePrompt(job(), "schedule", null, memory("up"))
+    ).toContain("It just found the site back up (HTTP 200)");
+    expect(
+      buildRoutineFirePrompt(job(), "create", null, memory(null))
+    ).toContain("It answers HTTP 200 right now.");
+    // No site, no site lines.
+    expect(
+      buildRoutineFirePrompt(job(), "schedule", null, {
+        ...memory(null),
+        siteCheck: undefined,
+      })
+    ).not.toContain("The app checks");
+  });
+
+  it("does not warn a watcher that quiet runs pause it", () => {
+    const memory = {
+      dir: "/x/routines/job-1",
+      notes: noNotes("/x/routines/job-1"),
+      runs: 4,
+      workingDirectory: "/x/routines/job-1",
+      workspaces: [],
+      lastRun: {
+        sessionId: "s",
+        startedAt: "2026-09-04T08:00:00.000Z",
+        endedAt: "2026-09-04T08:01:00.000Z",
+        outcome: "completed" as const,
+        reply: "NO_REPLY",
+      },
+    };
+    const pauses = "A routine whose runs keep finding nothing pauses itself";
+    expect(buildRoutineFirePrompt(job(), "schedule", null, memory)).toContain(
+      pauses
+    );
+    const watcher = buildRoutineFirePrompt(
+      job({ quietIsNormal: true }),
+      "schedule",
+      null,
+      memory
+    );
+    expect(watcher).not.toContain(pauses);
+    expect(watcher).toContain("reply with exactly NO_REPLY");
+  });
 });

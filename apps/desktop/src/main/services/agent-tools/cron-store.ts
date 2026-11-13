@@ -19,6 +19,7 @@ import type {
   RoutineRun,
   RoutineRunKind,
   RoutineTrigger,
+  RoutineUptime,
 } from "@abacus-ai/contract/routines";
 import {
   matches,
@@ -40,6 +41,7 @@ import {
   mintAttemptId,
   isStoredRun,
 } from "./routine-attempts";
+import { isWebUrl } from "./uptime-check";
 
 // One parser for main and the new renderer (spec 05 §31.7).
 export {
@@ -135,6 +137,11 @@ export interface CronJob {
   model?: string | null;
   /** The chat it was made from or replied in: its runs' reports go there. */
   originSessionId?: string | null;
+  /** A site checked without the model before each fire (see `Routine.uptimeUrl`). */
+  uptimeUrl?: string | null;
+  uptime?: RoutineUptime | null;
+  /** Its runs mostly find nothing: never paused for that. */
+  quietIsNormal?: boolean;
 }
 
 /** Why a fire waits: the network, a missed fire, or a run the app closed under. */
@@ -385,6 +392,8 @@ export const createJob = (
     botId?: string | null;
     model?: string | null;
     originSessionId?: string | null;
+    uptimeUrl?: string | null;
+    quietIsNormal?: boolean;
   },
   id?: string
 ): CronJob => {
@@ -399,6 +408,9 @@ export const createJob = (
 
   if (input.prompt.trim().length === 0)
     throw new Error("A prompt is required.");
+  const uptimeUrl = input.uptimeUrl?.trim() || null;
+  if (uptimeUrl != null && !isWebUrl(uptimeUrl))
+    throw new Error("A site to watch must be an http or https address.");
 
   const existing = readForWrite();
   if (id != null && existing.some((job) => job.id === id))
@@ -435,6 +447,8 @@ export const createJob = (
     ...(input.originSessionId != null
       ? { originSessionId: input.originSessionId }
       : {}),
+    ...(uptimeUrl != null ? { uptimeUrl } : {}),
+    ...(input.quietIsNormal === true ? { quietIsNormal: true } : {}),
   };
 
   write([...existing, job]);
@@ -711,6 +725,24 @@ export const setMissed = (id: string, missed: RoutineMissed | null): void => {
   const index = jobs.findIndex((job) => job.id === id);
   if (index < 0 || (jobs[index].missed == null && missed == null)) return;
   jobs[index] = { ...jobs[index], missed };
+  write(jobs);
+};
+
+/** What the last check of a job's site found. */
+export const setUptime = (id: string, uptime: RoutineUptime): void => {
+  const jobs = readForWrite();
+  const index = jobs.findIndex((job) => job.id === id);
+  if (index < 0) return;
+  const was = jobs[index].uptime;
+  if (
+    was != null &&
+    was.down === uptime.down &&
+    was.failures === uptime.failures &&
+    was.since === uptime.since &&
+    was.detail === uptime.detail
+  )
+    return;
+  jobs[index] = { ...jobs[index], uptime };
   write(jobs);
 };
 

@@ -1569,6 +1569,36 @@
       "week-in-review": {
         "description": "Ce qui a été expédié cette semaine à partir de l'historique des commits, regroupé par thème, se terminant par ce qui semble bloqué.",
         "name": "Bilan de la semaine"
+      },
+      "nightly-tests": {
+        "name": "Lancer mes tests et corriger les échecs",
+        "description": "Chaque nuit, il lance les tests et corrige ce qui échoue sur sa propre branche, avec une pull request en brouillon qui t'attend le matin.",
+        "when": "Chaque nuit",
+        "promise": "Lance tes tests chaque nuit. Les échecs sont corrigés sur une branche à part avec une pull request en brouillon, jamais sur ta branche principale ni dans ta copie de travail."
+      },
+      "pr-review-fixes": {
+        "name": "Traiter les commentaires de revue de mes PR",
+        "description": "Vérifie tes pull requests ouvertes toutes les heures en semaine et pousse un correctif pour chaque nouveau commentaire de revue.",
+        "when": "Toutes les heures en semaine, de 9 h à 18 h",
+        "promise": "Toutes les heures en semaine, il cherche les nouveaux commentaires de revue sur tes pull requests, corrige chacun sur la branche de la pull request et répond en dessous. Les commentaires qui demandent ton avis te sont transmis."
+      },
+      "site-down": {
+        "name": "Préviens-moi quand mon site est en panne",
+        "description": "Vérifié toutes les 5 minutes, gratuitement. Un message quand il tombe, un autre quand il revient.",
+        "when": "Toutes les 5 minutes",
+        "promise": "L'app vérifie ton site toutes les 5 minutes. Les vérifications ne consomment aucun crédit : tu n'es prévenu que lorsqu'il tombe et lorsqu'il revient."
+      },
+      "overnight-changes": {
+        "name": "Ce qui a changé dans mon dépôt cette nuit",
+        "description": "Chaque matin en semaine : nouveaux commits, pull requests qui attendent ta revue et état de la CI, en cinq lignes.",
+        "when": "Le matin en semaine",
+        "promise": "Chaque matin en semaine, tu reçois ce qui a changé dans le dépôt depuis hier, avec la première chose à regarder."
+      },
+      "game-check": {
+        "name": "Recompiler et vérifier mon jeu",
+        "description": "Chaque soir, il compile le jeu, joue la première minute et te dit ce qui est cassé.",
+        "when": "Chaque soir",
+        "promise": "Chaque soir, il compile ton jeu, le lance, joue la première minute et signale les erreurs de compilation, les plantages et ce qu'il a vu. Il ne modifie aucun code."
       }
     },
     "templatesLead": "Ou commencez par l'un d'entre eux",
@@ -1726,6 +1756,29 @@
     "reply": {
       "label": "Répondre à cette exécution",
       "failed": "Impossible d'envoyer votre réponse."
+    },
+    "coding": {
+      "rowTitle": "Garde {{project}} en bonne santé pendant ton absence",
+      "alreadyOn": "Déjà activée",
+      "sectionTitle": "Pour {{project}}",
+      "sectionTitleNoProject": "Pour ton code",
+      "everythingElse": "Tout le reste",
+      "siteLabel": "Site à surveiller",
+      "sitePlaceholder": "example.com",
+      "siteInvalid": "Saisis une adresse web, comme example.com.",
+      "projectLabel": "Projet",
+      "projectPick": "Choisis un projet",
+      "whenLabel": "Quand",
+      "dailyAt": "Tous les jours à",
+      "weekdaysAt": "En semaine à",
+      "reportsTo": "Rapports ici et sur {{apps}}.",
+      "reportsHere": "Rapports ici, dans l'app. Connecte ton téléphone pour les recevoir aussi là-bas.",
+      "connectPhone": "Connecter ton téléphone",
+      "where": "S'exécute sur cet ordinateur tant qu'il est allumé et qu'AbacusAI Bot est ouvert. Une exécution manquée est rattrapée à ton retour.",
+      "whereSite": "Ne vérifie que lorsque cet ordinateur est allumé et qu'AbacusAI Bot est ouvert.",
+      "alwaysOnFree": "Avec le forfait Basic, les routines continuent 24 h/24 et 7 j/7, même ordinateur éteint.",
+      "firstRun": "La première exécution démarre maintenant, pour que tu voies un rapport.",
+      "start": "Démarrer"
     }
   },
   "sessions": {

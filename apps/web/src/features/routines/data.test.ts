@@ -6,8 +6,9 @@ import {
   fixtureRoutines,
   fixtureSessions,
 } from "#renderer/data/fixture-db/rows";
+import { CODING_ROUTINE_TEMPLATES } from "#renderer/lib/routines/templates";
 
-import { routineState, runsView, stats } from "./data";
+import { routineState, runsView, scheduleLabel, stats } from "./data";
 import {
   RoutineFormSchema,
   routineFormSchema,
@@ -238,5 +239,22 @@ describe("R5-T8/T9 form values", () => {
     expect(dirtyPatch({ ...value, name: "Changed" }, value)).toEqual({
       name: "Changed",
     });
+  });
+});
+
+describe("a routine's schedule in words", () => {
+  const t = ((key: string, options?: { cron?: string }) =>
+    options?.cron != null ? `${key} ${options.cron}` : key) as never;
+
+  it("says a coding routine's own schedule in words, and any other cron as written", () => {
+    const site = CODING_ROUTINE_TEMPLATES.find((x) => x.id === "site-down")!;
+    const row = { schedule: site.custom!, runAt: null, prompt: site.prompt };
+    expect(scheduleLabel(row, t, "en-US")).toBe(
+      "routines.templates.site-down.when"
+    );
+    // The same cron with the user's own words is theirs: shown as written.
+    expect(scheduleLabel({ ...row, prompt: "ping it" }, t, "en-US")).toBe(
+      "phase5.customCron */5 * * * *"
+    );
   });
 });

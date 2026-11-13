@@ -1569,6 +1569,36 @@
       "week-in-review": {
         "description": "Commit geçmişine göre bu hafta yayınlananlar, temaya göre gruplanmış ve takılı kalmış görünenlerle biten.",
         "name": "Haftanın özeti"
+      },
+      "nightly-tests": {
+        "name": "Testlerimi çalıştır ve hataları düzelt",
+        "description": "Her gece testleri çalıştırır, başarısız olanları kendi dalında düzeltir; sabah seni taslak bir pull request bekler.",
+        "when": "Her gece",
+        "promise": "Testlerini her gece çalıştırır. Hatalar ayrı bir dalda taslak pull request ile düzeltilir; ana dalına ya da çalışma kopyana asla dokunulmaz."
+      },
+      "pr-review-fixes": {
+        "name": "PR'larımdaki inceleme yorumlarını düzelt",
+        "description": "Hafta içi her saat açık pull request'lerini kontrol eder ve her yeni inceleme yorumu için bir düzeltme gönderir.",
+        "when": "Hafta içi her saat, 9–18",
+        "promise": "Hafta içi her saat pull request'lerindeki yeni inceleme yorumlarını arar, her birini o pull request'in dalında düzeltir ve altına yanıt yazar. Senin kararını gerektiren yorumlar sana gelir."
+      },
+      "site-down": {
+        "name": "Sitem çöktüğünde bana haber ver",
+        "description": "Her 5 dakikada bir ücretsiz kontrol edilir. Çöktüğünde bir, geri geldiğinde bir mesaj.",
+        "when": "Her 5 dakikada",
+        "promise": "Uygulama siteni her 5 dakikada bir kontrol eder. Kontroller kredi harcamaz: yalnızca çöktüğünde ve geri geldiğinde haber alırsın."
+      },
+      "overnight-changes": {
+        "name": "Deponda gece neler değişti",
+        "description": "Her hafta içi sabahı: yeni commit'ler, incelemeni bekleyen pull request'ler ve CI durumu, beş satırda.",
+        "when": "Hafta içi sabahları",
+        "promise": "Her hafta içi sabahı, dünden beri depoda neyin değiştiğini ve ilk bakman gereken şeyi alırsın."
+      },
+      "game-check": {
+        "name": "Oyunumu yeniden derle ve kontrol et",
+        "description": "Her akşam oyunu derler, ilk dakikayı oynar ve neyin bozulduğunu söyler.",
+        "when": "Her akşam",
+        "promise": "Her akşam oyununu derler, başlatır, ilk dakikayı oynar ve derleme hatalarını, çökmeleri ve ekranda gördüklerini bildirir. Hiçbir kodu değiştirmez."
       }
     },
     "templatesLead": "Ya da bunlardan biriyle başla",
@@ -1726,6 +1756,29 @@
     "reply": {
       "label": "Bu çalışmaya yanıt ver",
       "failed": "Yanıtın gönderilemedi."
+    },
+    "coding": {
+      "rowTitle": "Sen yokken {{project}} sağlıklı kalsın",
+      "alreadyOn": "Zaten açık",
+      "sectionTitle": "{{project}} için",
+      "sectionTitleNoProject": "Kodun için",
+      "everythingElse": "Diğer her şey",
+      "siteLabel": "İzlenecek site",
+      "sitePlaceholder": "example.com",
+      "siteInvalid": "example.com gibi bir web adresi gir.",
+      "projectLabel": "Proje",
+      "projectPick": "Bir proje seç",
+      "whenLabel": "Ne zaman",
+      "dailyAt": "Her gün saat",
+      "weekdaysAt": "Hafta içi saat",
+      "reportsTo": "Burada ve {{apps}} üzerinde raporlar.",
+      "reportsHere": "Uygulamada raporlar. Telefonunu bağlarsan raporlar oraya da gelir.",
+      "connectPhone": "Telefonunu bağla",
+      "where": "Bu bilgisayar açıkken ve AbacusAI Bot açıkken çalışır. Kaçırılan bir çalıştırma döndüğünde yapılır.",
+      "whereSite": "Yalnızca bu bilgisayar ve AbacusAI Bot açıkken kontrol eder.",
+      "alwaysOnFree": "Basic planda rutinler bu bilgisayar kapalıyken de 7/24 çalışmaya devam eder.",
+      "firstRun": "İlk çalıştırma şimdi başlıyor, böylece bir rapor görürsün.",
+      "start": "Başlat"
     }
   },
   "sessions": {

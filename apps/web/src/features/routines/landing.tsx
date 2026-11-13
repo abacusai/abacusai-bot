@@ -2,14 +2,27 @@
  * The Routines area with no routine open: always the way to make one, with
  * the templates beside it. The routines themselves are in the sidebar.
  */
+import { useLiveQuery } from "@tanstack/react-db";
+import { useQuery } from "@tanstack/react-query";
 import { Clock3, Inbox, Sun, type LucideIcon } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useCollections } from "#renderer/data/db";
+import { usePrefs } from "#renderer/data/db/prefs";
+import { GITHUB_CONNECTOR_ID } from "#renderer/lib/build-starters";
 import { AppLink } from "#renderer/lib/navigation/app-link";
-import { ROUTINE_TEMPLATES } from "#renderer/lib/routines/templates";
+import {
+  CODING_COVERED_TEMPLATE_IDS,
+  FORM_ROUTINE_TEMPLATES,
+} from "#renderer/lib/routines/templates";
+import { useAppContext } from "#renderer/lib/use-app-context";
 
 import { RoutinesAlwaysOnCard } from "./always-on";
+import {
+  CodingRoutinesSection,
+  useCodingRoutinesOffered,
+} from "./coding-routines";
 import { RoutineCreateAction } from "./create-action";
 
 /** One hue per template, so each card reads apart; tints work in both themes. */
@@ -49,8 +62,58 @@ const Tile = ({
   </span>
 );
 
+/**
+ * The project a coder works in, for the coding routines: the last picked one
+ * that is a git repository, else any that is. Null with none open.
+ */
+const useCodingProject = (): {
+  coder: boolean;
+  workspaceId: string | null;
+  name: string | null;
+} => {
+  const { transport } = useAppContext();
+  const c = useCollections();
+  const prefs = usePrefs();
+  const workspaces = useLiveQuery(c.workspaces).data ?? [];
+  const repos = new Set(
+    (useLiveQuery(c.gitState).data ?? [])
+      .filter((row) => row.gitAvailable)
+      .map((row) => row.workspaceId)
+  );
+  const connectors = useQuery(
+    transport.orpc.connectors.statuses.queryOptions({ input: {} })
+  );
+  const pickable = workspaces.filter(
+    (w) =>
+      w.status !== "deleted" &&
+      (w.kind == null || w.kind === "auto") &&
+      repos.has(w.id)
+  );
+  const project =
+    pickable.find((w) => w.id === prefs.lastPickedWorkspaceId) ??
+    pickable[0] ??
+    null;
+  return {
+    coder:
+      project != null ||
+      connectors.data?.[GITHUB_CONNECTOR_ID]?.state === "connected",
+    workspaceId: project?.id ?? null,
+    name:
+      project == null
+        ? null
+        : project.label || (project.path?.split(/[\\/]/).pop() ?? null),
+  };
+};
+
 export const RoutinesLanding = () => {
   const { t } = useTranslation();
+  const project = useCodingProject();
+  const coding = useCodingRoutinesOffered() && project.coder;
+  const templates = coding
+    ? FORM_ROUTINE_TEMPLATES.filter(
+        (template) => !CODING_COVERED_TEMPLATE_IDS.has(template.id)
+      )
+    : FORM_ROUTINE_TEMPLATES;
   return (
     <div
       className="scroll-fade-y @container size-full overflow-y-auto"
@@ -71,12 +134,24 @@ export const RoutinesLanding = () => {
           </p>
         </div>
         <RoutineCreateAction />
+        {coding && (
+          <div className="mt-6 w-full">
+            <CodingRoutinesSection
+              workspaceId={project.workspaceId}
+              projectName={project.name}
+            />
+          </div>
+        )}
         <section className="mt-6 flex w-full flex-col gap-2">
           <h2 className="text-muted-foreground text-[13px] font-medium">
-            {t("routines.page.templatesLead")}
+            {t(
+              coding
+                ? "routines.coding.everythingElse"
+                : "routines.page.templatesLead"
+            )}
           </h2>
           <div className="grid gap-3 @lg:grid-cols-2 @3xl:grid-cols-3">
-            {ROUTINE_TEMPLATES.map((template) => (
+            {templates.map((template) => (
               <AppLink
                 key={template.id}
                 to="/routines/new"

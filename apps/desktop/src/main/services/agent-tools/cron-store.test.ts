@@ -19,6 +19,7 @@ import {
   missedJobs,
   overdueJobs,
   setMissed,
+  setUptime,
   recordRun,
   removeJob,
   updateJob,
@@ -81,6 +82,43 @@ describe("creating a routine", () => {
     });
 
     expect(getJob(job.id)?.botId).toBe("bot-1");
+  });
+
+  it("keeps a watched site and a watcher's quiet runs, and refuses a site that is not on the web", () => {
+    const watcher = createJob({
+      schedule: "*/5 * * * *",
+      prompt: "watch my site",
+      uptimeUrl: " https://example.com ",
+      quietIsNormal: true,
+    });
+    expect(getJob(watcher.id)).toMatchObject({
+      uptimeUrl: "https://example.com",
+      quietIsNormal: true,
+    });
+    // Neither is written for an ordinary routine.
+    const plain = createJob({ schedule: "0 9 * * *", prompt: "do it" });
+    expect(getJob(plain.id)).not.toHaveProperty("uptimeUrl");
+    expect(getJob(plain.id)).not.toHaveProperty("quietIsNormal");
+    expect(() =>
+      createJob({ prompt: "watch", uptimeUrl: "ftp://example.com" })
+    ).toThrow(/http or https/);
+  });
+
+  it("writes a site's state only when it changed", () => {
+    const job = createJob({
+      prompt: "watch",
+      uptimeUrl: "https://example.com",
+    });
+    const writes: number[] = [];
+    const off = onCronStoreWrite(() => writes.push(1));
+    const up = { down: false, failures: 0, since: 1, detail: "HTTP 200" };
+    setUptime(job.id, up);
+    setUptime(job.id, { ...up });
+    expect(writes).toHaveLength(1);
+    setUptime(job.id, { ...up, failures: 1, detail: "HTTP 502" });
+    expect(writes).toHaveLength(2);
+    expect(getJob(job.id)?.uptime).toMatchObject({ failures: 1 });
+    off();
   });
 });
 

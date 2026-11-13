@@ -1569,6 +1569,36 @@
       "week-in-review": {
         "description": "Was diese Woche aus dem Commit-Verlauf verschickt wurde, gruppiert nach Thema, endet mit dem, was feststeckt.",
         "name": "Wochenrückblick"
+      },
+      "nightly-tests": {
+        "name": "Tests ausführen und Fehler beheben",
+        "description": "Jede Nacht laufen die Tests, und was fehlschlägt, wird auf einem eigenen Branch behoben – morgens wartet ein Pull-Request-Entwurf.",
+        "when": "Jede Nacht",
+        "promise": "Führt jede Nacht deine Tests aus. Fehler werden auf einem separaten Branch mit Pull-Request-Entwurf behoben, nie auf deinem Haupt-Branch oder in deiner Arbeitskopie."
+      },
+      "pr-review-fixes": {
+        "name": "Review-Kommentare in meinen PRs umsetzen",
+        "description": "Prüft werktags stündlich deine offenen Pull Requests und pusht für jeden neuen Review-Kommentar eine Korrektur.",
+        "when": "Werktags stündlich, 9 bis 18 Uhr",
+        "promise": "Werktags sucht es jede Stunde nach neuen Review-Kommentaren in deinen Pull Requests, setzt jeden auf dem Branch des Pull Requests um und antwortet darunter. Kommentare, die deine Entscheidung brauchen, kommen stattdessen zu dir."
+      },
+      "site-down": {
+        "name": "Sag mir, wenn meine Website ausfällt",
+        "description": "Alle 5 Minuten kostenlos geprüft. Eine Nachricht, wenn sie ausfällt, eine, wenn sie wieder da ist.",
+        "when": "Alle 5 Minuten",
+        "promise": "Die App prüft deine Website alle 5 Minuten. Die Prüfungen kosten keine Credits: Du hörst nur davon, wenn sie ausfällt und wenn sie wieder da ist."
+      },
+      "overnight-changes": {
+        "name": "Was sich über Nacht in meinem Repo geändert hat",
+        "description": "Jeden Werktagmorgen: neue Commits, Pull Requests, die auf dich warten, und der CI-Status, in fünf Zeilen.",
+        "when": "Werktags morgens",
+        "promise": "Jeden Werktagmorgen erfährst du, was sich seit gestern im Repository geändert hat, und was du dir zuerst ansehen solltest."
+      },
+      "game-check": {
+        "name": "Mein Spiel neu bauen und prüfen",
+        "description": "Jeden Abend baut es das Spiel, spielt die erste Minute und sagt dir, was kaputt ist.",
+        "when": "Jeden Abend",
+        "promise": "Jeden Abend baut es dein Spiel, startet es, spielt die erste Minute und meldet Build-Fehler, Abstürze und was es gesehen hat. Es ändert keinen Code."
       }
     },
     "templatesLead": "Oder beginnen Sie mit einem davon",
@@ -1726,6 +1756,29 @@
     "reply": {
       "label": "Auf diesen Lauf antworten",
       "failed": "Deine Antwort konnte nicht gesendet werden."
+    },
+    "coding": {
+      "rowTitle": "Halte {{project}} gesund, während du weg bist",
+      "alreadyOn": "Schon aktiv",
+      "sectionTitle": "Für {{project}}",
+      "sectionTitleNoProject": "Für deinen Code",
+      "everythingElse": "Alles andere",
+      "siteLabel": "Zu überwachende Website",
+      "sitePlaceholder": "example.com",
+      "siteInvalid": "Gib eine Webadresse ein, z. B. example.com.",
+      "projectLabel": "Projekt",
+      "projectPick": "Projekt auswählen",
+      "whenLabel": "Wann",
+      "dailyAt": "Jeden Tag um",
+      "weekdaysAt": "Werktags um",
+      "reportsTo": "Berichte hier und auf {{apps}}.",
+      "reportsHere": "Berichte hier in der App. Verbinde dein Handy, um sie auch dort zu bekommen.",
+      "connectPhone": "Handy verbinden",
+      "where": "Läuft auf diesem Computer, solange er an ist und AbacusAI Bot geöffnet ist. Einen verpassten Lauf holt es nach, wenn du zurück bist.",
+      "whereSite": "Prüft nur, solange dieser Computer an ist und AbacusAI Bot geöffnet ist.",
+      "alwaysOnFree": "Mit dem Basic-Plan laufen Routinen rund um die Uhr weiter, auch wenn dieser Computer aus ist.",
+      "firstRun": "Der erste Lauf startet jetzt, damit du einen Bericht siehst.",
+      "start": "Starten"
     }
   },
   "sessions": {

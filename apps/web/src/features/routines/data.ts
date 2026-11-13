@@ -12,6 +12,7 @@ import {
   formatTime,
   weekdayName,
 } from "#renderer/lib/bots/schedule";
+import { CODING_ROUTINE_TEMPLATES } from "#renderer/lib/routines/templates";
 
 import { hostedRunFailed } from "./hosted";
 export const useRoutinesData = () => {
@@ -151,11 +152,16 @@ export const runsView = (
   return result.toSorted((a, b) => b.at - a.at);
 };
 export const scheduleLabel = (
-  r: Pick<RoutineRow, "schedule" | "runAt">,
+  r: Pick<RoutineRow, "schedule" | "runAt"> & { prompt?: string },
   t: TFunction,
   locale: string
 ): string => {
   const d = decomposeSchedule(r.schedule, r.runAt);
+  // A coding routine on its own schedule says it in words, not as a cron.
+  const coding = CODING_ROUTINE_TEMPLATES.find(
+    (x) => x.custom != null && x.custom === r.schedule && x.prompt === r.prompt
+  );
+  if (coding != null) return t(`routines.templates.${coding.id}.when`);
   if (d.preset === "once")
     return t("phase5.onceOn", {
       date: new Intl.DateTimeFormat(locale, {

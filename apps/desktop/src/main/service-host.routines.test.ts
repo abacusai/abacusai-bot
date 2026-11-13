@@ -359,6 +359,112 @@ describe("a routine whose runs keep finding nothing", () => {
     for (let i = 0; i < 4; i++) run("NO_REPLY");
     expect(getJob(job.id)?.enabled).toBe(true);
   });
+
+  it("never pauses a watcher, whose runs mostly find nothing", async () => {
+    const { getJob } = await import("./services/agent-tools/cron-store");
+    const job = createJob({
+      schedule: "0 * * * *",
+      prompt: "fix new review comments",
+      quietIsNormal: true,
+    });
+    const run = runner(job.id, path.join(home, "routine-home"));
+    for (let i = 0; i < 6; i++) run("NO_REPLY");
+    expect(getJob(job.id)?.enabled).toBe(true);
+  });
+});
+
+describe("a routine that watches a site", () => {
+  const proto = ServiceHost.prototype as unknown as {
+    startRoutineRun: (id: string, trigger: string) => Promise<string>;
+    checkRoutineSite: (id: string, url: string) => Promise<unknown>;
+    routineLinkDown: (job: unknown) => boolean;
+    routineActsElsewhere: (job: unknown) => boolean;
+  };
+  const answers: Array<number | "none"> = [];
+  let online = true;
+  const host = () => ({
+    connectivity: {
+      ensureFresh: async () => (online ? "online" : "offline"),
+    },
+    checkRoutineSite: proto.checkRoutineSite,
+    messagingGatewayService: { unlinkedPlatforms: () => [] },
+    deliversRoutineReports: () => true,
+    agentSessionManagerService: { get: () => null },
+    routineLinkDown: proto.routineLinkDown,
+    routineActsElsewhere: proto.routineActsElsewhere,
+    routineAtCreditWall: async () => false,
+    routineMissingAccount: async () => null,
+    emitEvent: () => undefined,
+    listRoutineRuns: () => [],
+    // Past every check: the run itself would start here.
+    get ensureRoutineWorkspace() {
+      throw new Error("ran");
+    },
+  });
+  const fire = (id: string, trigger = "schedule") =>
+    proto.startRoutineRun.call(host(), id, trigger).catch(() => "ran");
+
+  beforeEach(() => {
+    answers.length = 0;
+    online = true;
+    fs.writeFileSync(
+      path.join(home, "config.json"),
+      JSON.stringify({ apiKeys: { ABACUS_API_KEY: "x" } })
+    );
+    vi.stubGlobal("fetch", async () => {
+      const next = answers.shift() ?? 200;
+      if (next === "none") throw new TypeError("fetch failed");
+      return new Response(null, { status: next });
+    });
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("runs only when the site goes down or comes back, and records nothing between", async () => {
+    const { getJob } = await import("./services/agent-tools/cron-store");
+    const job = createJob({
+      schedule: "*/5 * * * *",
+      prompt: "watch my site",
+      uptimeUrl: "https://example.com",
+    });
+    answers.push(200, 502, 502, 503, 200, 404);
+    expect(await fire(job.id)).toBe("skipped"); // up
+    expect(await fire(job.id)).toBe("skipped"); // one failure is a blip
+    expect(await fire(job.id)).toBe("ran"); // down
+    expect(getJob(job.id)?.uptime).toMatchObject({ down: true, failures: 2 });
+    expect(await fire(job.id)).toBe("skipped"); // still down: said once
+    expect(await fire(job.id)).toBe("ran"); // back up
+    expect(await fire(job.id)).toBe("skipped"); // a 404 is an answer: up
+    expect(getJob(job.id)?.runs).toEqual([]);
+  });
+
+  it("counts nothing while this computer is offline", async () => {
+    const { getJob } = await import("./services/agent-tools/cron-store");
+    const job = createJob({
+      schedule: "*/5 * * * *",
+      prompt: "watch my site",
+      uptimeUrl: "https://example.com",
+    });
+    online = false;
+    answers.push("none", "none", "none");
+    for (let i = 0; i < 3; i++) expect(await fire(job.id)).toBe("skipped");
+    expect(getJob(job.id)?.uptime ?? null).toBeNull();
+    // No answer while the network is up: the site is the one down.
+    online = true;
+    answers.push("none", "none");
+    expect(await fire(job.id)).toBe("skipped");
+    expect(await fire(job.id)).toBe("ran");
+  });
+
+  it("always runs when asked, with the site as it is", async () => {
+    const job = createJob({
+      prompt: "watch my site",
+      uptimeUrl: "https://example.com",
+    });
+    expect(await fire(job.id, "create")).toBe("ran");
+    expect(await fire(job.id, "manual")).toBe("ran");
+    // A cut-off run is made up even though the site has not changed since.
+    expect(await fire(job.id, "interrupted")).toBe("ran");
+  });
 });
 
 describe("what the status board hears about routines (read off the store)", () => {

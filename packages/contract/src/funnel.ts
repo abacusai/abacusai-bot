@@ -210,6 +210,11 @@ export const FUNNEL_STEPS = [
   "share_link_opened",
   "share_unshared",
   "share_failed",
+  // A coding routine starter (coding-routines.ts): its row or section shown
+  // (detail: where), a starter opened and a routine started (detail: which).
+  "code_routine_shown",
+  "code_routine_opened",
+  "code_routine_started",
 ] as const;
 
 export type FunnelStep = (typeof FUNNEL_STEPS)[number];

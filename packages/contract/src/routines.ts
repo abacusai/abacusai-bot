@@ -227,7 +227,30 @@ export interface Routine {
    * its runs' reports are delivered there. Absent on older routines.
    */
   originSessionId?: string | null;
+  /**
+   * Local only: a site the app checks itself, with no model call, on every
+   * fire; a run happens only when it goes down or comes back.
+   */
+  uptimeUrl?: string | null;
+  /** That site as the last check found it. */
+  uptime?: RoutineUptime | null;
+  /** Local only: a watcher whose runs mostly find nothing; never paused for it. */
+  quietIsNormal?: boolean;
 }
+
+/** A watched site's state between fires. */
+export interface RoutineUptime {
+  down: boolean;
+  /** Failed checks in a row; it counts as down from `UPTIME_FAILS_BEFORE_DOWN`. */
+  failures: number;
+  /** When it last went down or came back (epoch ms). */
+  since: number;
+  /** What the last check saw: `HTTP 502`, `timed out`. */
+  detail: string;
+}
+
+/** Failed checks in a row before a site counts as down: one blip is not an outage. */
+export const UPTIME_FAILS_BEFORE_DOWN = 2;
 
 export interface RoutineListItem extends Routine {
   nextRunAt: number | null;
@@ -271,6 +294,10 @@ export interface RoutineCreateInput {
   watchUrl?: string | null;
   /** A reminder's fixed text, sent as written. */
   reminderText?: string | null;
+  /** Local only: see `Routine.uptimeUrl`. */
+  uptimeUrl?: string | null;
+  /** Local only: see `Routine.quietIsNormal`. */
+  quietIsNormal?: boolean;
 }
 
 export type RoutineUpdateInput = Partial<

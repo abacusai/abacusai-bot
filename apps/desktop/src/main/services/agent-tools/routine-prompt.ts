@@ -10,10 +10,12 @@ import {
   ROUTINE_EDITOR_WORDS,
 } from "@abacus-ai/agent/user-text";
 import { ROUTINE_DONE } from "@abacus-ai/contract/contract/ai";
+import { UPTIME_FAILS_BEFORE_DOWN } from "@abacus-ai/contract/routines";
 
 import type { CronJob, CronTrigger } from "./cron-store";
 import { isQuietReply } from "./routine-guards";
 import type { RoutineNotes, RoutineRunRecord } from "./routine-runs-store";
+import type { UptimeChange } from "./uptime-check";
 
 /** What a fire is told about the runs before it, and where it stands. */
 export interface RoutineMemory {
@@ -44,7 +46,31 @@ export interface RoutineMemory {
    * the run, e.g. "in your chat in the app and on WhatsApp".
    */
   deliveredTo?: string;
+  /** The app's own check of the routine's site, made just before this run. */
+  siteCheck?: SiteCheck;
 }
+
+export interface SiteCheck {
+  url: string;
+  /** Why this run happens: it went down or came back; null for a run asked for. */
+  change: UptimeChange;
+  down: boolean;
+  detail: string;
+  /** When it went down or came back. */
+  since: number;
+}
+
+const siteCheckLines = (check: SiteCheck): string[] => [
+  "",
+  `The app checks ${check.url} itself each time this routine fires, without you,`,
+  "and starts a run only when the site goes down or comes back.",
+  check.change === "down"
+    ? `It just found the site down (${check.detail}, ${UPTIME_FAILS_BEFORE_DOWN} checks in a row, since ${new Date(check.since).toLocaleString()}). Tell the user it is down and since when, then anything in the project that may explain it, such as the latest commit or deploy. Keep it short.`
+    : check.change === "up"
+      ? `It just found the site back up (${check.detail}) after being down. Tell the user it is back, in one or two lines.`
+      : `It answers ${check.detail} right now${check.down ? ", and counts as down" : ""}. Say in one or two lines what it answered and that you will message only if that changes.`,
+  "Never write NO_REPLY on this run: it happens because there is news.",
+];
 
 /** Fires nobody pressed for: a quiet one ends on NO_REPLY rather than a "nothing new" line. */
 const UNASKED: ReadonlySet<CronTrigger> = new Set<CronTrigger>([
@@ -218,7 +244,12 @@ export const buildRoutineFirePrompt = (
         "brief of the day) is not that: write it, even when little changed. NO_REPLY",
         "also goes for a blocker that run already told them about, such as a",
         "connection that is missing or signed out: it is said once, not on every run.",
-        "A routine whose runs keep finding nothing pauses itself until the user resumes it."
+        // A watcher's quiet runs are its normal case, and it is never paused for them.
+        ...(job.quietIsNormal === true
+          ? []
+          : [
+              "A routine whose runs keep finding nothing pauses itself until the user resumes it.",
+            ])
       );
     if (memory.endsOnAction === true && UNASKED.has(trigger))
       lines.push(
@@ -296,6 +327,9 @@ export const buildRoutineFirePrompt = (
       "one and why: one already running may be something the user started."
     );
   }
+
+  if (memory?.siteCheck != null)
+    lines.push(...siteCheckLines(memory.siteCheck));
 
   if (payload != null) {
     lines.push(

@@ -229,6 +229,8 @@ export const routinesCollectionOptions = (
       ...(row.hosted != null
         ? { sources: row.hosted.sources, reads: row.hosted.reads }
         : {}),
+      ...(row.uptimeUrl != null ? { uptimeUrl: row.uptimeUrl } : {}),
+      ...(row.quietIsNormal === true ? { quietIsNormal: true } : {}),
     }),
     toUpdateInput: (id, changes) => ({
       id,

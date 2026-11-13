@@ -22,7 +22,7 @@ import { creditsTier } from "#renderer/lib/credits";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_BROWSER } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
-import { ROUTINE_TEMPLATES } from "#renderer/lib/routines/templates";
+import { FORM_ROUTINE_TEMPLATES as ROUTINE_TEMPLATES } from "#renderer/lib/routines/templates";
 import { showError } from "#renderer/lib/toast";
 import { useAccount } from "#renderer/lib/use-account";
 import { useAppContext } from "#renderer/lib/use-app-context";
@@ -84,6 +84,7 @@ export const RoutineDialog = ({
       ...initial.schedule,
       preset: picked.preset,
       time: picked.time,
+      custom: picked.custom ?? "",
     };
     initial.workspaceId = picked.needsWorkspace
       ? prefs.lastPickedWorkspaceId
@@ -255,6 +256,7 @@ export const RoutineDialog = ({
       ...form.state.values.schedule,
       preset: x.preset,
       time: x.time,
+      custom: x.custom ?? "",
     });
     form.setFieldValue(
       "workspaceId",

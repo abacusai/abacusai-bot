@@ -1569,6 +1569,36 @@
       "week-in-review": {
         "description": "Ciò che è stato spedito questa settimana dalla cronologia dei commit, raggruppato per tema, per finire con ciò che sembra bloccato.",
         "name": "Settimana in rassegna"
+      },
+      "nightly-tests": {
+        "name": "Esegui i miei test e correggi gli errori",
+        "description": "Ogni notte esegue i test e corregge ciò che fallisce su un branch dedicato, con una pull request in bozza pronta al mattino.",
+        "when": "Ogni notte",
+        "promise": "Esegue i tuoi test ogni notte. Gli errori vengono corretti su un branch separato con una pull request in bozza, mai sul branch principale né nella tua copia di lavoro."
+      },
+      "pr-review-fixes": {
+        "name": "Risolvi i commenti di revisione delle mie PR",
+        "description": "Controlla le tue pull request aperte ogni ora nei giorni feriali e invia una correzione per ogni nuovo commento di revisione.",
+        "when": "Ogni ora nei giorni feriali, dalle 9 alle 18",
+        "promise": "Ogni ora nei giorni feriali cerca nuovi commenti di revisione sulle tue pull request, corregge ciascuno sul branch della pull request e risponde sotto. I commenti che richiedono una tua decisione arrivano a te."
+      },
+      "site-down": {
+        "name": "Avvisami quando il mio sito è giù",
+        "description": "Controllato ogni 5 minuti senza costi. Un messaggio quando va giù, uno quando torna.",
+        "when": "Ogni 5 minuti",
+        "promise": "L'app controlla il tuo sito ogni 5 minuti. I controlli non usano crediti: vieni avvisato solo quando va giù e quando torna."
+      },
+      "overnight-changes": {
+        "name": "Cosa è cambiato nel mio repo durante la notte",
+        "description": "Ogni mattina feriale: nuovi commit, pull request in attesa della tua revisione e stato della CI, in cinque righe.",
+        "when": "Mattine feriali",
+        "promise": "Ogni mattina feriale ricevi cosa è cambiato nel repository da ieri, con la prima cosa da guardare."
+      },
+      "game-check": {
+        "name": "Ricompila e controlla il mio gioco",
+        "description": "Ogni sera compila il gioco, gioca il primo minuto e ti dice cosa si è rotto.",
+        "when": "Ogni sera",
+        "promise": "Ogni sera compila il tuo gioco, lo avvia, gioca il primo minuto e segnala errori di build, crash e ciò che ha visto. Non modifica il codice."
       }
     },
     "templatesLead": "Oppure inizia da uno di questi",
@@ -1726,6 +1756,29 @@
     "reply": {
       "label": "Rispondi a questa esecuzione",
       "failed": "Impossibile inviare la tua risposta."
+    },
+    "coding": {
+      "rowTitle": "Mantieni {{project}} in salute mentre sei via",
+      "alreadyOn": "Già attiva",
+      "sectionTitle": "Per {{project}}",
+      "sectionTitleNoProject": "Per il tuo codice",
+      "everythingElse": "Tutto il resto",
+      "siteLabel": "Sito da monitorare",
+      "sitePlaceholder": "example.com",
+      "siteInvalid": "Inserisci un indirizzo web, ad esempio example.com.",
+      "projectLabel": "Progetto",
+      "projectPick": "Scegli un progetto",
+      "whenLabel": "Quando",
+      "dailyAt": "Ogni giorno alle",
+      "weekdaysAt": "Nei giorni feriali alle",
+      "reportsTo": "Report qui e su {{apps}}.",
+      "reportsHere": "Report qui nell'app. Collega il telefono per riceverli anche lì.",
+      "connectPhone": "Collega il telefono",
+      "where": "Viene eseguita su questo computer finché è acceso e AbacusAI Bot è aperto. Un'esecuzione persa viene recuperata al tuo ritorno.",
+      "whereSite": "Controlla solo finché questo computer è acceso e AbacusAI Bot è aperto.",
+      "alwaysOnFree": "Con il piano Basic le routine continuano 24/7 anche a computer spento.",
+      "firstRun": "La prima esecuzione parte ora, così vedi un report.",
+      "start": "Avvia"
     }
   },
   "sessions": {
