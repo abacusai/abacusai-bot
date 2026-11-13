@@ -80,21 +80,27 @@ export const ROUTINE_CONTEXT_CAP = 80_000;
 export const CONTEXT_WINDOW_SHARE = 0.8;
 /** Below this the session would thrash summaries instead of working. */
 export const CONTEXT_CAP_FLOOR = 20_000;
-
 /**
  * The most a request may carry: a share of the window, the payer's cap, and
- * any limit a provider stated in a refusal this session.
+ * any limit a provider stated in a refusal this session. A summary never
+ * shrinks the system prompt, the tools or the recent turns pi keeps
+ * (`kept`), so the payer's cap always leaves half of itself above them for
+ * the conversation: a chat whose tools alone fill the cap would otherwise
+ * summarize before every request and never get under it.
  */
 export const contextCap = ({
   window,
   lane,
   kind,
   learned,
+  kept = 0,
 }: {
   window: number;
   lane: SpendLane;
   kind: SpendKind;
   learned?: number | null;
+  /** Tokens a summary leaves: the system prompt, the tools and the kept turns. */
+  kept?: number;
 }): number => {
   const laneCap =
     kind === "routine"
@@ -102,11 +108,11 @@ export const contextCap = ({
       : lane === "abacus-billed"
         ? BILLED_CONTEXT_CAP
         : Number.POSITIVE_INFINITY;
-  const cap = Math.min(
+  const hard = Math.min(
     Math.floor(window * CONTEXT_WINDOW_SHARE),
-    laneCap,
     learned ?? Number.POSITIVE_INFINITY
   );
+  const cap = Math.min(hard, Math.max(laneCap, kept + laneCap / 2));
   return Math.max(Math.min(CONTEXT_CAP_FLOOR, window), cap);
 };
 

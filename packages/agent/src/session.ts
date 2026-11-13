@@ -1014,7 +1014,7 @@ export class AbacusBotSession {
 
     capRetriesWhileRouting(settingsManager, () => this.openLlmActive);
     // The context ceiling by who pays; sub-agents keep pi's flat reserve.
-    this.governor.governContext(settingsManager, () => this.session?.model);
+    this.governor.governContext(settingsManager, () => this.session);
     const resourceLoader = createResourceLoader({
       // Skill and AGENTS.md paths as the model should copy them.
       ...MODEL_PATH_RESOURCES,

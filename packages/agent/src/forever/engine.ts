@@ -570,7 +570,7 @@ export class ForeverEngine {
     capRetriesWhileRouting(settingsManager, () => this.openLlmActive);
 
     // The context ceiling by who pays (spend-governor.ts).
-    this.governor.governContext(settingsManager, () => this.session?.model);
+    this.governor.governContext(settingsManager, () => this.session);
 
     // Re-read on prompt rebuilds, like standing memory: a note the app
     // writes mid-session (what the bot settled in a channel, did for another
