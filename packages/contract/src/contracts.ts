@@ -1670,6 +1670,33 @@ export interface AbacusAccountInfo {
   onboarding_offer?: boolean;
   /** Share on the files card: the platform takes public links. Absent from older servers: never. */
   share_artifact?: boolean;
+  /** The daily streak of a new free account; absent or null when the platform offers none today. */
+  streak?: AbacusStreak | null;
+}
+
+/** One day of the streak's week, as the platform reads it in the user's time zone. */
+export type AbacusStreakDay = "done" | "missed" | "today" | "later";
+
+/** The daily streak: extra credits each day, and a bonus for a full week of days. */
+export interface AbacusStreak {
+  /** 1..7: which day of the week this is. */
+  day: number;
+  /** Days in a row the user sent a message, today included once it counts. */
+  streak: number;
+  best: number;
+  /** Today already counts. */
+  today_done: boolean;
+  week: AbacusStreakDay[];
+  daily_credits: number;
+  /** What is left of today's extra credits; they are used before the others. */
+  today_credits_left: number;
+  bonus_credits: number;
+  /** pending: still possible; added: in the balance; missed: a day was missed. */
+  bonus_state: "pending" | "added" | "missed";
+  /** Days until the bonus while pending, else null. */
+  bonus_in_days: number | null;
+  /** When today's extra credits end, ISO. */
+  day_ends_at: string;
 }
 
 /** Why the platform's payment gate refuses a signed-in account: the 402's `reason`. */

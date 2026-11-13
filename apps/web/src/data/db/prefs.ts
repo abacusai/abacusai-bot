@@ -56,6 +56,7 @@ export const DEFAULT_PREFS: Required<PrefsRow> & {
     ratingPrompt: null,
     topModelHint: null,
     wallReopen: null,
+    streakNote: null,
     resumeCard: null,
     freePlanSeenAt: null,
     upgradeRoutinesSeenAt: null,

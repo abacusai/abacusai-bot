@@ -5560,5 +5560,39 @@
     "pr": {
       "line": "Me avise quando PRs daqui receberem revisão ou a CI falhar"
     }
+  },
+  "streak": {
+    "chip_one": "Sequência de {{count}} dia",
+    "chip_other": "Sequência de {{count}} dias",
+    "chipStart": "Comece sua sequência",
+    "chipCredits": "{{credits}} créditos para hoje",
+    "best_one": "Recorde: {{count}} dia",
+    "best_other": "Recorde: {{count}} dias",
+    "dayState": {
+      "done": "{{day}}: feito",
+      "missed": "{{day}}: perdido",
+      "today": "{{day}}: hoje",
+      "later": "{{day}}: em breve"
+    },
+    "todayCredits": "Créditos extras de hoje",
+    "todayLeft": "{{left}} de {{total}} restantes",
+    "bonusIn_one": "+{{credits}} créditos bônus por uma semana completa · falta {{count}} dia",
+    "bonusIn_other": "+{{credits}} créditos bônus por uma semana completa · faltam {{count}} dias",
+    "bonusToday": "+{{credits}} créditos bônus se você enviar uma mensagem hoje",
+    "bonusAdded": "+{{credits}} créditos bônus adicionados por uma semana completa",
+    "howKeep": "Envie uma mensagem por dia para manter sua sequência.",
+    "howCredits": "Todo dia você ganha {{credits}} créditos extras, usados antes dos seus outros créditos.",
+    "howMidnight": "Créditos extras não usados expiram à meia-noite.",
+    "sidebarLine": "+{{credits}} créditos para hoje",
+    "noteDay_one": "Dia 1 da sua sequência",
+    "noteDay_other": "Sequência de {{count}} dias!",
+    "noteRestart": "Nova sequência iniciada",
+    "noteFullWeek": "Uma semana completa!",
+    "noteTomorrow": "Volte amanhã para mais {{credits}} créditos.",
+    "noteToday": "Hoje conta. Bom trabalho.",
+    "noteBonusAdded": "+{{credits}} créditos bônus adicionados ao seu saldo.",
+    "noteBonusIn_one": "Falta {{count}} dia para o bônus semanal de +{{credits}}.",
+    "noteBonusIn_other": "Faltam {{count}} dias para o bônus semanal de +{{credits}}.",
+    "noteCta": "Entendi"
   }
 }

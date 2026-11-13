@@ -5740,5 +5740,49 @@
     "pr": {
       "line": "Daj znać, gdy PR-y tutaj dostaną recenzję albo CI nie przejdzie"
     }
+  },
+  "streak": {
+    "chip_one": "{{count}} dzień z rzędu",
+    "chip_few": "{{count}} dni z rzędu",
+    "chip_many": "{{count}} dni z rzędu",
+    "chip_other": "{{count}} dni z rzędu",
+    "chipStart": "Zacznij swoją serię",
+    "chipCredits": "{{credits}} kredytów na dziś",
+    "best_one": "Rekord: {{count}} dzień",
+    "best_few": "Rekord: {{count}} dni",
+    "best_many": "Rekord: {{count}} dni",
+    "best_other": "Rekord: {{count}} dni",
+    "dayState": {
+      "done": "{{day}}: zrobione",
+      "missed": "{{day}}: pominięty",
+      "today": "{{day}}: dziś",
+      "later": "{{day}}: wkrótce"
+    },
+    "todayCredits": "Dzisiejsze dodatkowe kredyty",
+    "todayLeft": "Zostało {{left}} z {{total}}",
+    "bonusIn_one": "+{{credits}} kredytów bonusowych za pełny tydzień · został {{count}} dzień",
+    "bonusIn_few": "+{{credits}} kredytów bonusowych za pełny tydzień · zostały {{count}} dni",
+    "bonusIn_many": "+{{credits}} kredytów bonusowych za pełny tydzień · zostało {{count}} dni",
+    "bonusIn_other": "+{{credits}} kredytów bonusowych za pełny tydzień · zostało {{count}} dni",
+    "bonusToday": "+{{credits}} kredytów bonusowych, jeśli wyślesz dziś wiadomość",
+    "bonusAdded": "Dodano +{{credits}} kredytów bonusowych za pełny tydzień",
+    "howKeep": "Wysyłaj jedną wiadomość dziennie, aby utrzymać serię.",
+    "howCredits": "Codziennie dostajesz {{credits}} dodatkowych kredytów, zużywanych przed pozostałymi.",
+    "howMidnight": "Niewykorzystane dodatkowe kredyty wygasają o północy.",
+    "sidebarLine": "+{{credits}} kredytów na dziś",
+    "noteDay_one": "Dzień 1 Twojej serii",
+    "noteDay_few": "{{count}} dni z rzędu!",
+    "noteDay_many": "{{count}} dni z rzędu!",
+    "noteDay_other": "{{count}} dni z rzędu!",
+    "noteRestart": "Nowa seria rozpoczęta",
+    "noteFullWeek": "Pełny tydzień!",
+    "noteTomorrow": "Wróć jutro po kolejne {{credits}} kredytów.",
+    "noteToday": "Dzisiejszy dzień się liczy. Świetnie.",
+    "noteBonusAdded": "Do Twojego salda dodano +{{credits}} kredytów bonusowych.",
+    "noteBonusIn_one": "Jeszcze {{count}} dzień do tygodniowego bonusu +{{credits}}.",
+    "noteBonusIn_few": "Jeszcze {{count}} dni do tygodniowego bonusu +{{credits}}.",
+    "noteBonusIn_many": "Jeszcze {{count}} dni do tygodniowego bonusu +{{credits}}.",
+    "noteBonusIn_other": "Jeszcze {{count}} dni do tygodniowego bonusu +{{credits}}.",
+    "noteCta": "Rozumiem"
   }
 }

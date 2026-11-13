@@ -204,7 +204,12 @@ describe("usage report: the turn's opening message decides its kind", () => {
     ];
     expect(url).toBe("https://routellm.example.test/v1/abacusaibot_usage");
     const body = JSON.parse(String(init.body)) as Record<string, string>;
-    expect(Object.keys(body).sort()).toEqual(["kind", "surface", "turn_id"]);
+    expect(Object.keys(body).sort()).toEqual([
+      "kind",
+      "surface",
+      "turn_id",
+      "utc_offset_minutes",
+    ]);
     return body.kind;
   };
 

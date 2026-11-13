@@ -5560,5 +5560,39 @@
     "pr": {
       "line": "Ping me when PRs here get a review or CI fails"
     }
+  },
+  "streak": {
+    "chip_one": "{{count}}-day streak",
+    "chip_other": "{{count}}-day streak",
+    "chipStart": "Start your streak",
+    "chipCredits": "{{credits}} credits for today",
+    "best_one": "Best: {{count}} day",
+    "best_other": "Best: {{count}} days",
+    "dayState": {
+      "done": "{{day}}: done",
+      "missed": "{{day}}: missed",
+      "today": "{{day}}: today",
+      "later": "{{day}}: coming up"
+    },
+    "todayCredits": "Today's extra credits",
+    "todayLeft": "{{left}} of {{total}} left",
+    "bonusIn_one": "+{{credits}} bonus credits for a full week · {{count}} day to go",
+    "bonusIn_other": "+{{credits}} bonus credits for a full week · {{count}} days to go",
+    "bonusToday": "+{{credits}} bonus credits when you send a message today",
+    "bonusAdded": "+{{credits}} bonus credits added for a full week",
+    "howKeep": "Send one message a day to keep your streak going.",
+    "howCredits": "Each day you get {{credits}} extra credits, used before your other credits.",
+    "howMidnight": "Unused extra credits end at midnight.",
+    "sidebarLine": "+{{credits}} credits for today",
+    "noteDay_one": "Day 1 of your streak",
+    "noteDay_other": "{{count}}-day streak!",
+    "noteRestart": "New streak started",
+    "noteFullWeek": "A full week!",
+    "noteTomorrow": "Come back tomorrow for {{credits}} more credits.",
+    "noteToday": "Today counts. Nice work.",
+    "noteBonusAdded": "+{{credits}} bonus credits added to your balance.",
+    "noteBonusIn_one": "{{count}} more day to the +{{credits}} full-week bonus.",
+    "noteBonusIn_other": "{{count}} more days to the +{{credits}} full-week bonus.",
+    "noteCta": "Got it"
   }
 }

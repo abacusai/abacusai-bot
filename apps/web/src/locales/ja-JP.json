@@ -5560,5 +5560,34 @@
     "pr": {
       "line": "ここのPRにレビューが付いたりCIが失敗したら知らせる"
     }
+  },
+  "streak": {
+    "chip_other": "{{count}}日連続",
+    "chipStart": "連続記録を始めよう",
+    "chipCredits": "今日の{{credits}}クレジット",
+    "best_other": "最高記録: {{count}}日",
+    "dayState": {
+      "done": "{{day}}: 達成",
+      "missed": "{{day}}: 未達成",
+      "today": "{{day}}: 今日",
+      "later": "{{day}}: これから"
+    },
+    "todayCredits": "今日の追加クレジット",
+    "todayLeft": "{{total}}中{{left}}残り",
+    "bonusIn_other": "1週間達成で+{{credits}}ボーナスクレジット · あと{{count}}日",
+    "bonusToday": "今日メッセージを送ると+{{credits}}ボーナスクレジット",
+    "bonusAdded": "1週間達成で+{{credits}}ボーナスクレジットを追加しました",
+    "howKeep": "1日1回メッセージを送ると連続記録が続きます。",
+    "howCredits": "毎日{{credits}}の追加クレジットがもらえ、ほかのクレジットより先に使われます。",
+    "howMidnight": "使わなかった追加クレジットは深夜0時に失効します。",
+    "sidebarLine": "今日の+{{credits}}クレジット",
+    "noteDay_other": "{{count}}日連続！",
+    "noteRestart": "新しい連続記録がスタート",
+    "noteFullWeek": "1週間達成！",
+    "noteTomorrow": "明日また来るとさらに{{credits}}クレジット。",
+    "noteToday": "今日もカウントされました。",
+    "noteBonusAdded": "残高に+{{credits}}ボーナスクレジットを追加しました。",
+    "noteBonusIn_other": "+{{credits}}の週間ボーナスまであと{{count}}日。",
+    "noteCta": "OK"
   }
 }

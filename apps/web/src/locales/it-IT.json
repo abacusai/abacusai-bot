@@ -5560,5 +5560,39 @@
     "pr": {
       "line": "Avvisami quando le PR di qui ricevono una revisione o la CI fallisce"
     }
+  },
+  "streak": {
+    "chip_one": "Serie di {{count}} giorno",
+    "chip_other": "Serie di {{count}} giorni",
+    "chipStart": "Inizia la tua serie",
+    "chipCredits": "{{credits}} crediti per oggi",
+    "best_one": "Record: {{count}} giorno",
+    "best_other": "Record: {{count}} giorni",
+    "dayState": {
+      "done": "{{day}}: fatto",
+      "missed": "{{day}}: saltato",
+      "today": "{{day}}: oggi",
+      "later": "{{day}}: in arrivo"
+    },
+    "todayCredits": "Crediti extra di oggi",
+    "todayLeft": "{{left}} su {{total}} rimasti",
+    "bonusIn_one": "+{{credits}} crediti bonus per una settimana completa · manca {{count}} giorno",
+    "bonusIn_other": "+{{credits}} crediti bonus per una settimana completa · mancano {{count}} giorni",
+    "bonusToday": "+{{credits}} crediti bonus se invii un messaggio oggi",
+    "bonusAdded": "+{{credits}} crediti bonus aggiunti per una settimana completa",
+    "howKeep": "Invia un messaggio al giorno per mantenere la tua serie.",
+    "howCredits": "Ogni giorno ricevi {{credits}} crediti extra, usati prima degli altri crediti.",
+    "howMidnight": "I crediti extra non usati scadono a mezzanotte.",
+    "sidebarLine": "+{{credits}} crediti per oggi",
+    "noteDay_one": "Giorno 1 della tua serie",
+    "noteDay_other": "Serie di {{count}} giorni!",
+    "noteRestart": "Nuova serie iniziata",
+    "noteFullWeek": "Una settimana completa!",
+    "noteTomorrow": "Torna domani per altri {{credits}} crediti.",
+    "noteToday": "Oggi conta. Ottimo lavoro.",
+    "noteBonusAdded": "+{{credits}} crediti bonus aggiunti al tuo saldo.",
+    "noteBonusIn_one": "Manca {{count}} giorno al bonus settimanale di +{{credits}}.",
+    "noteBonusIn_other": "Mancano {{count}} giorni al bonus settimanale di +{{credits}}.",
+    "noteCta": "Ok"
   }
 }

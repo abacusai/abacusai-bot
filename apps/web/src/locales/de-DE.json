@@ -5560,5 +5560,39 @@
     "pr": {
       "line": "Melde mich, wenn PRs hier ein Review bekommen oder CI fehlschlägt"
     }
+  },
+  "streak": {
+    "chip_one": "{{count}} Tag in Folge",
+    "chip_other": "{{count}} Tage in Folge",
+    "chipStart": "Starte deine Serie",
+    "chipCredits": "{{credits}} Credits für heute",
+    "best_one": "Bestwert: {{count}} Tag",
+    "best_other": "Bestwert: {{count}} Tage",
+    "dayState": {
+      "done": "{{day}}: geschafft",
+      "missed": "{{day}}: verpasst",
+      "today": "{{day}}: heute",
+      "later": "{{day}}: kommt noch"
+    },
+    "todayCredits": "Heutige Extra-Credits",
+    "todayLeft": "{{left}} von {{total}} übrig",
+    "bonusIn_one": "+{{credits}} Bonus-Credits für eine volle Woche · noch {{count}} Tag",
+    "bonusIn_other": "+{{credits}} Bonus-Credits für eine volle Woche · noch {{count}} Tage",
+    "bonusToday": "+{{credits}} Bonus-Credits, wenn du heute eine Nachricht sendest",
+    "bonusAdded": "+{{credits}} Bonus-Credits für eine volle Woche hinzugefügt",
+    "howKeep": "Sende eine Nachricht pro Tag, um deine Serie zu halten.",
+    "howCredits": "Jeden Tag bekommst du {{credits}} Extra-Credits, die vor deinen anderen Credits verbraucht werden.",
+    "howMidnight": "Nicht genutzte Extra-Credits verfallen um Mitternacht.",
+    "sidebarLine": "+{{credits}} Credits für heute",
+    "noteDay_one": "Tag 1 deiner Serie",
+    "noteDay_other": "{{count}} Tage in Folge!",
+    "noteRestart": "Neue Serie gestartet",
+    "noteFullWeek": "Eine volle Woche!",
+    "noteTomorrow": "Komm morgen wieder für {{credits}} weitere Credits.",
+    "noteToday": "Heute zählt. Gut gemacht.",
+    "noteBonusAdded": "+{{credits}} Bonus-Credits wurden deinem Guthaben hinzugefügt.",
+    "noteBonusIn_one": "Noch {{count}} Tag bis zum Wochenbonus von +{{credits}}.",
+    "noteBonusIn_other": "Noch {{count}} Tage bis zum Wochenbonus von +{{credits}}.",
+    "noteCta": "Verstanden"
   }
 }
