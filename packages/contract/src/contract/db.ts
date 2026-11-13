@@ -110,6 +110,7 @@ export const RoutineCreateInputSchema = v.object({
   reminderText: v.optional(v.nullable(v.string())),
   uptimeUrl: v.optional(v.nullable(v.pipe(v.string(), v.url()))),
   quietIsNormal: v.optional(v.boolean()),
+  githubReviews: v.optional(v.boolean()),
 });
 
 export const RoutineUpdateInputSchema = v.object({

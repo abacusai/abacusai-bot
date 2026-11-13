@@ -1642,7 +1642,8 @@
       "catch-up": "補執行",
       "interrupted": "中斷之後",
       "webhook": "Webhook 觸發",
-      "agent": "由 AI 代理觸發"
+      "agent": "由 AI 代理觸發",
+      "github": "GitHub"
     },
     "hosted": {
       "badge": "自動執行",

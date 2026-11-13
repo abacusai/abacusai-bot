@@ -467,6 +467,142 @@ describe("a routine that watches a site", () => {
   });
 });
 
+describe("a review routine the GitHub watcher reads for", () => {
+  const proto = ServiceHost.prototype as unknown as {
+    startRoutineRun: (id: string, trigger: string) => Promise<string>;
+    fireGithubReviewRoutines: (events: unknown[]) => Promise<Set<string>>;
+    githubReviewRoutines: () => unknown[];
+    githubWatchReads: (repo: string) => boolean;
+    routineLinkDown: (job: unknown) => boolean;
+    routineActsElsewhere: (job: unknown) => boolean;
+  };
+  const REVIEW_REPO = "acme/web";
+  const state = {
+    reviewFoundAt: 0,
+    problem: null as string | null,
+    checkedAt: Date.now(),
+    repo: REVIEW_REPO as string | null,
+  };
+  const ran: Array<{ id: string; trigger: string; payload: string }> = [];
+  const host = () => ({
+    githubRepoOfWorkspace: async () => state.repo,
+    githubWatchReads: proto.githubWatchReads,
+    githubReviewRoutines: proto.githubReviewRoutines,
+    githubWatch: {
+      problem: () => state.problem,
+      lastCheckedAt: () => state.checkedAt,
+    },
+    githubWatchStore: {
+      memoryOf: () => ({}),
+      reviewFoundSince: (_repo: string, since: number) =>
+        state.reviewFoundAt > since,
+    },
+    runRoutine: async (id: string, trigger: string, payload: string) => {
+      ran.push({ id, trigger, payload });
+      return "started";
+    },
+    messagingGatewayService: { unlinkedPlatforms: () => [] },
+    deliversRoutineReports: () => true,
+    agentSessionManagerService: { get: () => null },
+    routineLinkDown: proto.routineLinkDown,
+    routineActsElsewhere: proto.routineActsElsewhere,
+    routineAtCreditWall: async () => false,
+    routineMissingAccount: async () => null,
+    emitEvent: () => undefined,
+    listRoutineRuns: () => [],
+    get ensureRoutineWorkspace() {
+      throw new Error("ran");
+    },
+  });
+  const fire = (id: string, trigger = "schedule") =>
+    proto.startRoutineRun.call(host(), id, trigger).catch(() => "ran");
+  const review = (over: Record<string, unknown> = {}) => ({
+    id: "review:acme/web#42@t",
+    kind: "review",
+    repo: REVIEW_REPO,
+    number: 42,
+    title: "Add login",
+    branch: "feature/login",
+    url: "https://github.com/acme/web/pull/42",
+    who: ["reviewer-a"],
+    detail: "Needs a test",
+    verdict: "changes",
+    ...over,
+  });
+
+  beforeEach(() => {
+    Object.assign(state, {
+      reviewFoundAt: 0,
+      problem: null,
+      checkedAt: Date.now(),
+      repo: REVIEW_REPO,
+    });
+    ran.length = 0;
+    fs.writeFileSync(
+      path.join(home, "config.json"),
+      JSON.stringify({ apiKeys: { ABACUS_API_KEY: "x" } })
+    );
+  });
+
+  it("skips a scheduled fire, recording nothing, until the watcher finds a new review", async () => {
+    const { getJob } = await import("./services/agent-tools/cron-store");
+    const job = createJob({
+      schedule: "0 9-18 * * 1-5",
+      prompt: "fix review comments",
+      githubReviews: true,
+    });
+    expect(await fire(job.id)).toBe("skipped");
+    expect(await fire(job.id, "catch-up")).toBe("skipped");
+    expect(getJob(job.id)?.runs).toEqual([]);
+    state.reviewFoundAt = Date.now() + 1;
+    expect(await fire(job.id)).toBe("ran");
+  });
+
+  it("runs on its schedule as before when the watcher cannot read GitHub", async () => {
+    const job = createJob({
+      schedule: "0 9-18 * * 1-5",
+      prompt: "fix review comments",
+      githubReviews: true,
+    });
+    state.problem = "no-token";
+    expect(await fire(job.id)).toBe("ran");
+    state.problem = null;
+    state.checkedAt = Date.now() - 60 * 60_000;
+    expect(await fire(job.id)).toBe("ran");
+    state.checkedAt = Date.now();
+    state.repo = null;
+    expect(await fire(job.id)).toBe("ran");
+  });
+
+  it("always runs when asked or fired by a review", async () => {
+    const job = createJob({
+      prompt: "fix review comments",
+      githubReviews: true,
+    });
+    for (const trigger of ["create", "manual", "github", "interrupted"])
+      expect(await fire(job.id, trigger)).toBe("ran");
+  });
+
+  it("is fired at once by a new review on its repo, which then needs no ping", async () => {
+    const job = createJob({
+      schedule: "0 9-18 * * 1-5",
+      prompt: "fix review comments",
+      githubReviews: true,
+    });
+    createJob({ schedule: "0 9 * * *", prompt: "something else" });
+    const taken = await proto.fireGithubReviewRoutines.call(host(), [
+      review(),
+      review({ id: "ci:acme/web@x", kind: "ci" }),
+      review({ id: "review:other/repo#1@t", repo: "other/repo" }),
+    ]);
+    expect(ran).toHaveLength(1);
+    expect(ran[0]).toMatchObject({ id: job.id, trigger: "github" });
+    expect(ran[0]!.payload).toContain("#42 Add login (branch feature/login)");
+    expect(ran[0]!.payload).toContain("asked for changes");
+    expect([...taken]).toEqual(["review:acme/web#42@t"]);
+  });
+});
+
 describe("what the status board hears about routines (read off the store)", () => {
   const proto = ServiceHost.prototype as unknown as {
     reportRoutineStates: () => void;

@@ -747,6 +747,8 @@ const HOSTED_RUNS_FOLDER = "hosted-runs";
 const GITHUB_FIX_DEADLINE_MS = 30 * 60_000;
 const GITHUB_WATCH_TOKEN_TTL_MS = 5 * 60_000;
 const GITHUB_PROJECTS_TTL_MS = 10 * 60_000;
+/** A watcher check this recent stands in for a review routine's own look. */
+const GITHUB_WATCH_FRESH_MS = 5 * 60_000;
 
 /** Where the hosted results feed keeps the last read's `since`. */
 const FEED_FILE = "routines-feed.json";
@@ -2913,6 +2915,7 @@ export class ServiceHost {
     store: this.githubWatchStore,
     token: () => this.githubWatchToken(),
     allowed: () => this.prefs?.()?.get().githubIntegration !== false,
+    repos: () => this.githubReadRepos(),
     workspaceFor: async (repo) =>
       (await this.githubProjects()).find((row) => row.repo === repo)
         ?.workspaceId ?? null,
@@ -2971,6 +2974,59 @@ export class ServiceHost {
     }
     this.githubProjectRows = { at: now, rows };
     return rows;
+  }
+
+  /** Each project folder's GitHub repo, as git last said. */
+  private readonly githubRepoOfPath = new Map<string, string | null>();
+
+  /** The GitHub repo of a project, or null (no project, or not on GitHub). */
+  private async githubRepoOfWorkspace(
+    workspaceId: string | null
+  ): Promise<string | null> {
+    const project = this.realProject(workspaceId);
+    if (project == null) return null;
+    if (!this.githubRepoOfPath.has(project.path))
+      this.githubRepoOfPath.set(
+        project.path,
+        await this.gitService.githubRepo(project.path)
+      );
+    return this.githubRepoOfPath.get(project.path) ?? null;
+  }
+
+  /** The routines that fix review comments (#842's), on now, run here. */
+  private githubReviewRoutines(): CronJob[] {
+    return listJobs().filter(
+      (job) =>
+        job.githubReviews === true &&
+        job.enabled &&
+        (job.runner ?? "local") === "local"
+    );
+  }
+
+  /**
+   * What the watcher reads: the repos the user watches, and every repo a
+   * review routine works on, so that routine runs on a new review instead of
+   * every hour, whether or not the user turned the watcher on.
+   */
+  private async githubReadRepos(): Promise<string[]> {
+    const config = this.githubWatchStore.config();
+    const repos = new Set(config.on ? config.repos : []);
+    for (const job of this.githubReviewRoutines()) {
+      const repo = await this.githubRepoOfWorkspace(job.workspaceId);
+      if (repo != null) repos.add(repo);
+    }
+    return [...repos];
+  }
+
+  /** The watcher read `repo` in the last few minutes: what it found can stand in for a model call. */
+  private githubWatchReads(repo: string): boolean {
+    const checkedAt = this.githubWatch.lastCheckedAt();
+    return (
+      this.githubWatch.problem() == null &&
+      checkedAt != null &&
+      Date.now() - checkedAt < GITHUB_WATCH_FRESH_MS &&
+      this.githubWatchStore.memoryOf(repo) != null
+    );
   }
 
   /** The user's own chat apps that are up, with the home bot that answers each. */
@@ -3034,11 +3090,19 @@ export class ServiceHost {
   }
 
   /** A check's events: a native notice, one message on each chat app, and a note for the chat that may answer it. */
-  private async tellGithubEvents(events: GithubWatchEvent[]): Promise<void> {
+  private async tellGithubEvents(found: GithubWatchEvent[]): Promise<void> {
+    for (const event of found)
+      reportFunnelStep("github_watch_event", event.kind);
+    // A new review on a repo a review routine works on runs that routine now;
+    // its report is the user's news about it, so no ping of its own.
+    const handled = await this.fireGithubReviewRoutines(found);
+    const config = this.githubWatchStore.config();
+    const events = found.filter(
+      (event) =>
+        config.on && config.repos.includes(event.repo) && !handled.has(event.id)
+    );
     const first = events[0];
     if (first == null) return;
-    for (const event of events)
-      reportFunnelStep("github_watch_event", event.kind);
     const words = await this.channelWordsNow();
     const t: GithubWatchWords = (key, values) => words.t(key, values);
     this.userNotifier?.({
@@ -3058,7 +3122,6 @@ export class ServiceHost {
       !this.githubWatchStore.takePing(localDay(now), GITHUB_WATCH_PINGS_PER_DAY)
     )
       return;
-    const config = this.githubWatchStore.config();
     const text = githubPingText(events, t, config.phoneFix);
     const notBefore =
       quietEndsAt(this.prefs?.()?.get().sounds.quietHours, new Date(now)) ??
@@ -3092,6 +3155,34 @@ export class ServiceHost {
         console.error(`[github-watch] ${botId}'s chat would not open:`, error);
       }
     }
+  }
+
+  /** Run each review routine whose repo has new reviews; the ids of the events they took. */
+  private async fireGithubReviewRoutines(
+    events: GithubWatchEvent[]
+  ): Promise<Set<string>> {
+    const taken = new Set<string>();
+    const reviews = events.filter((event) => event.kind === "review");
+    if (reviews.length === 0) return taken;
+    for (const job of this.githubReviewRoutines()) {
+      const repo = await this.githubRepoOfWorkspace(job.workspaceId);
+      const mine = reviews.filter((event) => event.repo === repo);
+      if (mine.length === 0) continue;
+      const payload = mine
+        .map(
+          (event) =>
+            `#${event.number} ${event.title} (branch ${event.branch ?? "?"}): ${event.who.join(", ")}` +
+            `${event.verdict === "changes" ? " asked for changes" : event.verdict === "approved" ? " approved" : " commented"}` +
+            `${event.detail.length > 0 ? `: "${event.detail}"` : ""} ${event.url}`
+        )
+        .join("\n");
+      const started = await this.runRoutine(job.id, "github", payload).catch(
+        () => "failed" as const
+      );
+      if (started === "failed") continue;
+      for (const event of mine) taken.add(event.id);
+    }
+    return taken;
   }
 
   /** The watcher's notes owed to the user's next message in their own chat. */
@@ -9274,6 +9365,25 @@ export class ServiceHost {
       const scheduled = trigger === "schedule" || trigger === "catch-up";
       if (scheduled && checked?.change == null) return "skipped";
       siteCheck = checked ?? undefined;
+    }
+    // A review routine whose repo the GitHub watcher reads: a scheduled fire
+    // runs only when the watcher found a new review since the routine last
+    // ran (a new one already ran it at once), and records nothing otherwise.
+    // When the watcher cannot read GitHub, the schedule runs as it always did.
+    if (
+      job.githubReviews === true &&
+      (trigger === "schedule" || trigger === "catch-up")
+    ) {
+      const repo = await this.githubRepoOfWorkspace(job.workspaceId);
+      if (
+        repo != null &&
+        this.githubWatchReads(repo) &&
+        !this.githubWatchStore.reviewFoundSince(
+          repo,
+          job.lastRunAt ?? job.createdAt
+        )
+      )
+        return "skipped";
     }
     // Signed out, with no other key: every run would fail and pause the
     // routine, three at a time, in silence.

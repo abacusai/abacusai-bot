@@ -1642,7 +1642,8 @@
       "catch-up": "보충 실행",
       "interrupted": "중단 후 재실행",
       "webhook": "웹훅",
-      "agent": "에이전트가 실행"
+      "agent": "에이전트가 실행",
+      "github": "GitHub"
     },
     "hosted": {
       "badge": "Runs on its own",

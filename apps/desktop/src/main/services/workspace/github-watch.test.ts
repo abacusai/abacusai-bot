@@ -27,6 +27,8 @@ const NOW = Date.parse("2026-11-13T12:00:00Z");
 const ago = (minutes: number) =>
   new Date(NOW - minutes * 60_000).toISOString().replace(/\.\d{3}Z$/, "Z");
 const REPO = "acme/web";
+/** The watcher tests read one repo, except the one that checks it reads none while off. */
+let REPOS_WATCHED: string[] = [REPO];
 const ME = "dev-me";
 
 const pr = (over: Partial<WatchPr> = {}): WatchPr => ({
@@ -354,6 +356,7 @@ describe("the watcher", () => {
     );
 
   it("does nothing while off, and asks for no token", async () => {
+    REPOS_WATCHED = [];
     let asked = 0;
     const watch = new GithubWatch({
       store: store(),
@@ -362,6 +365,7 @@ describe("the watcher", () => {
         return "t";
       },
       allowed: () => true,
+      repos: async () => REPOS_WATCHED,
       workspaceFor: async () => null,
       found: () => undefined,
     });
@@ -370,12 +374,14 @@ describe("the watcher", () => {
   });
 
   it("says no-token when there is no way to read GitHub", async () => {
+    REPOS_WATCHED = [REPO];
     const kept = store();
     kept.setConfig({ on: true, repos: [REPO], phoneFix: false });
     const watch = new GithubWatch({
       store: kept,
       token: async () => null,
       allowed: () => true,
+      repos: async () => REPOS_WATCHED,
       workspaceFor: async () => null,
       found: () => undefined,
     });
@@ -399,6 +405,7 @@ describe("the watcher", () => {
       store: kept,
       token: async () => "t",
       allowed: () => true,
+      repos: async () => REPOS_WATCHED,
       workspaceFor: async () => "ws-1",
       found: (events) => told.push(events),
       doFetch: github.doFetch,
@@ -444,6 +451,7 @@ describe("the watcher", () => {
       store: kept,
       token: async () => "t",
       allowed: () => true,
+      repos: async () => REPOS_WATCHED,
       workspaceFor: async () => null,
       found: () => undefined,
       doFetch: (async () => {
@@ -542,6 +550,26 @@ describe("the daily ping allowance and notes", () => {
     expect(kept.notesFor("chat", NOW + 2000).notes).toEqual([]);
     kept.addNote("chat", "late", NOW);
     expect(kept.notesFor("chat", NOW + 25 * 60 * 60_000).notes).toEqual([]);
+  });
+});
+
+describe("the review mark a review routine reads", () => {
+  it("says whether a review was found after a time, per repo", () => {
+    const kept = new GithubWatchStore(() => null);
+    expect(kept.reviewFoundSince(REPO, 0)).toBe(false);
+    kept.noteReviewFound(REPO, NOW);
+    expect(kept.reviewFoundSince(REPO, NOW - 1)).toBe(true);
+    expect(kept.reviewFoundSince(REPO, NOW)).toBe(false);
+    expect(kept.reviewFoundSince("other/repo", 0)).toBe(false);
+  });
+
+  it("forgets what it read of a repo no longer read", () => {
+    const kept = new GithubWatchStore(() => null);
+    kept.memory(REPO);
+    kept.memory("other/repo");
+    kept.keepOnly([REPO]);
+    expect(kept.memoryOf(REPO)).not.toBeNull();
+    expect(kept.memoryOf("other/repo")).toBeNull();
   });
 });
 

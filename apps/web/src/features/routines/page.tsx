@@ -156,6 +156,7 @@ const RunsRail = ({
                           "interrupted",
                           "webhook",
                           "agent",
+                          "github",
                         ].includes(a.trigger)
                           ? `routines.triggers.${a.trigger}`
                           : "routines.triggers.schedule"

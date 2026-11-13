@@ -1642,7 +1642,8 @@
       "catch-up": "Telafi",
       "interrupted": "Kesintiden sonra",
       "webhook": "Webhook",
-      "agent": "Ajan tarafından"
+      "agent": "Ajan tarafından",
+      "github": "GitHub"
     },
     "hosted": {
       "badge": "Kendi kendine çalışır",

@@ -1642,7 +1642,8 @@
       "catch-up": "補完実行",
       "interrupted": "中断後の再実行",
       "webhook": "Webhook",
-      "agent": "エージェントによる"
+      "agent": "エージェントによる",
+      "github": "GitHub"
     },
     "hosted": {
       "badge": "Runs on its own",

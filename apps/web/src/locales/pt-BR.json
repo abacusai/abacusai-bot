@@ -1642,7 +1642,8 @@
       "catch-up": "Recuperada",
       "interrupted": "Após uma interrupção",
       "webhook": "Webhook",
-      "agent": "Pelo agente"
+      "agent": "Pelo agente",
+      "github": "GitHub"
     },
     "hosted": {
       "badge": "Runs on its own",

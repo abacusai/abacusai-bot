@@ -377,6 +377,9 @@ export const CodingRoutineSheet = ({
         ...(template.coding?.quietIsNormal === true
           ? { quietIsNormal: true }
           : {}),
+        ...(template.coding?.githubReviews === true
+          ? { githubReviews: true }
+          : {}),
       }).isPersisted.promise;
     try {
       const id = await insertFresh(insert);

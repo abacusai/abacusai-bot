@@ -707,6 +707,8 @@ interface Stored {
   pings: Record<string, number>;
   /** Notes owed to a chat's next user message, by session. */
   notes: Record<string, Array<{ text: string; at: number }>>;
+  /** When a check last found a new review, by repo (this computer's clock). */
+  reviewsFoundAt: Record<string, number>;
 }
 
 const OFF: GithubWatchConfig = { on: false, repos: [], phoneFix: false };
@@ -725,6 +727,7 @@ export class GithubWatchStore {
       lastCheckAt: null,
       pings: {},
       notes: {},
+      reviewsFoundAt: {},
     };
     const file = this.file();
     if (file == null) return this.stored;
@@ -740,6 +743,8 @@ export class GithubWatchStore {
         this.stored.lastCheckAt = parsed.lastCheckAt;
       if (parsed.pings != null) this.stored.pings = parsed.pings;
       if (parsed.notes != null) this.stored.notes = parsed.notes;
+      if (parsed.reviewsFoundAt != null)
+        this.stored.reviewsFoundAt = parsed.reviewsFoundAt;
     } catch {
       // Never turned on.
     }
@@ -763,10 +768,24 @@ export class GithubWatchStore {
   /** New settings; a repo no longer watched forgets what it read. */
   setConfig(config: GithubWatchConfig): void {
     this.state.config = config;
-    for (const repo of Object.keys(this.state.repos))
-      if (!config.repos.includes(repo)) delete this.state.repos[repo];
-    if (!config.on) this.state.lastCheckAt = null;
     this.save();
+  }
+
+  /** Forget what was read of repos no longer read (a watched one, or a review routine's). */
+  keepOnly(repos: readonly string[]): void {
+    for (const repo of Object.keys(this.state.repos))
+      if (!repos.includes(repo)) delete this.state.repos[repo];
+  }
+
+  /** A check found a new review on `repo` at `at`. */
+  noteReviewFound(repo: string, at: number): void {
+    this.state.reviewsFoundAt[repo] = at;
+    this.save();
+  }
+
+  /** Whether a check found a new review on `repo` after `since`. */
+  reviewFoundSince(repo: string, since: number): boolean {
+    return (this.state.reviewsFoundAt[repo] ?? 0) > since;
   }
 
   /** The repo's memory, and whether this is its first read. */
@@ -776,6 +795,11 @@ export class GithubWatchStore {
     const created = emptyRepoMemory();
     this.state.repos[repo] = created;
     return { memory: created, seeding: true };
+  }
+
+  /** What was read of `repo`, or null before its first read. */
+  memoryOf(repo: string): RepoMemory | null {
+    return this.state.repos[repo] ?? null;
   }
 
   /** Forget a repo's memory so its next read is a first one (a check that failed partway). */
@@ -867,6 +891,8 @@ export interface GithubWatchDeps {
   token: () => Promise<string | null>;
   /** Whether the user allows GitHub at all (the GitHub integration pref). */
   allowed: () => boolean;
+  /** The repos to read: the ones the user watches and the review routines' repos. */
+  repos: () => Promise<string[]>;
   /** The project on this computer for a repo, or null. */
   workspaceFor: (repo: string) => Promise<string | null>;
   /** Events this check found, after they are stored. */
@@ -928,8 +954,9 @@ export class GithubWatch {
   }
 
   private async checkOnce(): Promise<void> {
-    const config = this.deps.store.config();
-    if (!config.on || config.repos.length === 0) return;
+    const repos = await this.deps.repos();
+    this.deps.store.keepOnly(repos);
+    if (repos.length === 0) return;
     if (!this.deps.allowed()) {
       this.problemNow = "disabled";
       return;
@@ -961,7 +988,7 @@ export class GithubWatch {
           ? { from: previous, to: now - GITHUB_WATCH_EVERY_MS }
           : null;
       const found: Array<FoundEvent & { whileAway: boolean }> = [];
-      for (const repo of config.repos) {
+      for (const repo of repos) {
         const { memory, seeding } = this.deps.store.memory(repo);
         try {
           const events = await checkRepo(
@@ -998,6 +1025,9 @@ export class GithubWatch {
           prompt: githubFixPrompt({ ...event, runIds: _runIds }),
           fix: { state: "none", sessionId: null },
         });
+      for (const event of events)
+        if (event.kind === "review")
+          this.deps.store.noteReviewFound(event.repo, now);
       if (events.length > 0) this.deps.store.addEvents(events);
       else this.deps.store.save();
       if (events.length > 0) this.deps.found(events);

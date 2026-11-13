@@ -1658,7 +1658,8 @@
       "catch-up": "Nadrabianie",
       "interrupted": "Po przerwaniu",
       "webhook": "Webhook",
-      "agent": "Przez agenta"
+      "agent": "Przez agenta",
+      "github": "GitHub"
     },
     "hosted": {
       "badge": "Działa samodzielnie",

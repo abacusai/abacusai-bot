@@ -1642,7 +1642,8 @@
       "catch-up": "Susulan",
       "interrupted": "Setelah terputus",
       "webhook": "Webhook",
-      "agent": "Oleh agen"
+      "agent": "Oleh agen",
+      "github": "GitHub"
     },
     "hosted": {
       "badge": "Runs on its own",

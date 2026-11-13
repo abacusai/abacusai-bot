@@ -1642,7 +1642,8 @@
       "catch-up": "补运行",
       "interrupted": "中断之后",
       "webhook": "Webhook 触发",
-      "agent": "由智能体触发"
+      "agent": "由智能体触发",
+      "github": "GitHub"
     },
     "hosted": {
       "badge": "自动运行",

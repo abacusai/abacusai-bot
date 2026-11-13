@@ -1642,7 +1642,8 @@
       "catch-up": "Inhaalrun",
       "interrupted": "Na een onderbreking",
       "webhook": "Webhook",
-      "agent": "Door de agent"
+      "agent": "Door de agent",
+      "github": "GitHub"
     },
     "hosted": {
       "badge": "Draait zelfstandig",
