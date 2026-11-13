@@ -18,7 +18,6 @@ import { appNoteTag } from "@abacus-ai/agent/user-text";
 import type {
   GithubWatchConfig,
   GithubWatchEvent,
-  GithubWatchEventKind,
 } from "@abacus-ai/contract/contract/github";
 import {
   githubEventLine,
@@ -346,10 +345,6 @@ export const githubFixPrompt = (event: FoundEvent): string => {
       ].join(" ");
   }
 };
-
-/** The kind of a found event, for the funnel. */
-export const eventKind = (event: { kind: GithubWatchEventKind }): string =>
-  event.kind;
 
 /* ----------------------------------------------------------------- words */
 

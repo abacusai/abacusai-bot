@@ -23,6 +23,7 @@ import { useTranslation } from "react-i18next";
 import { useMutation } from "#renderer/data/query-client";
 import type { AppClient } from "#renderer/data/transport/types";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { openUpgrade } from "#renderer/lib/upgrade";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
@@ -61,6 +62,8 @@ export const useGithubWatch = () => {
   const { transport } = useAppContext();
   return useQuery({
     ...transport.orpc.github.watch.queryOptions({ input: {} }),
+    // The watcher runs in the desktop app only: a fix runs on this computer.
+    enabled: IS_ELECTRON,
     refetchInterval: REFRESH_MS,
     refetchOnWindowFocus: true,
   });
