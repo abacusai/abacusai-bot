@@ -5364,5 +5364,23 @@
     "routinePrompt": "Stel een geplande taak in die 24/7 draait, genaamd “{{name}}”. Planning (cron, mijn lokale tijd): {{schedule}}. Bij elke run: {{prompt}}",
     "routinePromptOnce": "Stel een geplande taak in genaamd “{{name}}” die ook draait als mijn computer uit staat. Wat hij doet: {{prompt}}",
     "routinePromptNameOnly": "Stel een geplande taak in die 24/7 draait, zoals mijn AbacusAI Bot-routine “{{name}}”. Vraag me wat hij moet doen en wanneer."
+  },
+  "coderPitch": {
+    "router": "RouteLLM Code: onze router gemaakt voor code, die bij elke stap het beste codeermodel kiest",
+    "codingAgent": "De codeeragent en de CLI",
+    "agent": "Onbeperkte Abacus AI Agent: geen limiet op taken zolang je credits hebt",
+    "computer": "SuperComputer: een computer die altijd aan staat",
+    "everything": "Alles uit {{plan}}: topmodellen, beeld en video, persoonlijke agents, 100+ connectors en apps",
+    "low": "Stap over naar {{plan}}, zodat je code wordt geschreven op onze coderouter, met elke maand meer credits.",
+    "lowProject": "Stap over naar {{plan}}, zodat “{{project}}” wordt gebouwd op onze coderouter, met elke maand meer credits.",
+    "last": "Als ze op zijn, stopt je werk halverwege. Stap over naar {{plan}} om het af te maken op onze coderouter.",
+    "lastProject": "Als ze op zijn, stopt “{{project}}” halverwege. Stap over naar {{plan}} om het af te maken op onze coderouter.",
+    "cta": "Overstappen naar {{plan}} · {{price}}/maand",
+    "keepGoing": "Doorgaan met {{plan}}",
+    "wallTaskTitle": "Maak “{{task}}” af met {{plan}}",
+    "wallTitle": "Blijf coderen met {{plan}}",
+    "wallBody": "Je bericht is bewaard. Stap over naar {{plan}} en het gaat verder waar het stopte, op onze coderouter.",
+    "wallBodyNoMessage": "Stap over naar {{plan}} om verder te coderen op onze coderouter, met elke maand meer credits.",
+    "wallCta": "Overstappen naar {{plan}} en afmaken"
   }
 }

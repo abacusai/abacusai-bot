@@ -5364,5 +5364,23 @@
     "routinePrompt": "設定一個全天候運作的排程任務，名為「{{name}}」。排程(cron，我的當地時間)：{{schedule}}。每次執行：{{prompt}}",
     "routinePromptOnce": "設定一個名為「{{name}}」的排程任務，電腦關機時也能運作。它要做的事：{{prompt}}",
     "routinePromptNameOnly": "設定一個全天候運作的排程任務，類似我在 AbacusAI Bot 的例行任務「{{name}}」。問我它該做什麼、什麼時候做。"
+  },
+  "coderPitch": {
+    "router": "RouteLLM Code：專為程式碼打造的路由器，每一步都選最合適的程式模型",
+    "codingAgent": "程式設計代理與 CLI",
+    "agent": "不受限制的 Abacus AI Agent：只要有點數，任務數量不設上限",
+    "computer": "SuperComputer：一台永遠在線的電腦",
+    "everything": "{{plan}} 的全部內容：頂級模型、圖片與影片、個人 AI 代理、100 多個連接器與應用程式",
+    "low": "升級到 {{plan}}，讓你的程式碼由我們的程式路由器來寫，每月點數也更多。",
+    "lowProject": "升級到 {{plan}}，讓「{{project}}」由我們的程式路由器來打造，每月點數也更多。",
+    "last": "點數用完時，你的工作會在任務途中停下。升級到 {{plan}}，用我們的程式路由器把它完成。",
+    "lastProject": "點數用完時，「{{project}}」會在任務途中停下。升級到 {{plan}}，用我們的程式路由器把它完成。",
+    "cta": "升級到 {{plan}} · 每月 {{price}}",
+    "keepGoing": "繼續使用 {{plan}}",
+    "wallTaskTitle": "在 {{plan}} 上完成「{{task}}」",
+    "wallTitle": "在 {{plan}} 上繼續寫程式",
+    "wallBody": "你的訊息已儲存。升級到 {{plan}}，它會從停下的地方繼續，用我們的程式路由器。",
+    "wallBodyNoMessage": "升級到 {{plan}}，用我們的程式路由器繼續寫程式，每月點數也更多。",
+    "wallCta": "升級到 {{plan}} 並完成它"
   }
 }

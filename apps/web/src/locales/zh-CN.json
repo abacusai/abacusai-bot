@@ -5364,5 +5364,23 @@
     "routinePrompt": "设置一个全天候运行的定时任务，名为“{{name}}”。时间表(cron，我的当地时间)：{{schedule}}。每次运行：{{prompt}}",
     "routinePromptOnce": "设置一个名为“{{name}}”的定时任务，电脑关机时也能运行。它要做的事：{{prompt}}",
     "routinePromptNameOnly": "设置一个全天候运行的定时任务，类似我在 AbacusAI Bot 中的例行任务“{{name}}”。问我它该做什么、什么时候做。"
+  },
+  "coderPitch": {
+    "router": "RouteLLM Code：专为代码打造的路由器，每一步都选最合适的编程模型",
+    "codingAgent": "编程智能体和 CLI",
+    "agent": "不受限制的 Abacus AI Agent：只要有积分，任务数量不设上限",
+    "computer": "SuperComputer：一台始终在线的电脑",
+    "everything": "{{plan}} 的全部内容：顶级模型、图片和视频、个人智能体、100 多个连接器和应用",
+    "low": "升级到 {{plan}}，让你的代码由我们的编程路由器来写，每月积分也更多。",
+    "lowProject": "升级到 {{plan}}，让“{{project}}”由我们的编程路由器来构建，每月积分也更多。",
+    "last": "积分用完时，你的工作会在任务中途停下。升级到 {{plan}}，用我们的编程路由器把它完成。",
+    "lastProject": "积分用完时，“{{project}}”会在任务中途停下。升级到 {{plan}}，用我们的编程路由器把它完成。",
+    "cta": "升级到 {{plan}} · 每月 {{price}}",
+    "keepGoing": "继续使用 {{plan}}",
+    "wallTaskTitle": "在 {{plan}} 上完成“{{task}}”",
+    "wallTitle": "在 {{plan}} 上继续编程",
+    "wallBody": "你的消息已保存。升级到 {{plan}}，它会从停下的地方继续，用我们的编程路由器。",
+    "wallBodyNoMessage": "升级到 {{plan}}，用我们的编程路由器继续编程，每月积分也更多。",
+    "wallCta": "升级到 {{plan}} 并完成它"
   }
 }

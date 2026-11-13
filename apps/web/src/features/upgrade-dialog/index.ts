@@ -7,3 +7,4 @@ export {
 export { UpgradeDialogHost } from "./upgrade-dialog";
 export { WallReopenHost } from "./wall-reopen";
 export { UpgradeDialogGallery } from "./upgrade-dialog-gallery";
+export { CODER_GALLERY_FIXTURES, CoderGallery } from "./coder-gallery";

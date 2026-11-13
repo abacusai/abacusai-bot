@@ -6,6 +6,10 @@ import {
   wallOffer,
 } from "@abacus-ai/contract/billing-plan";
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
+import {
+  accountCodes,
+  creditAccountKey,
+} from "@abacus-ai/contract/credit-thresholds";
 import { retryOfferModel } from "@abacus-ai/contract/retry-offer";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -20,7 +24,9 @@ import {
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { CoderPitchList } from "#renderer/components/credits-card/coder-pitch";
 import { PaidOfferDetails } from "#renderer/components/credits-card/paid-offer";
+import { usePrefs } from "#renderer/data/db/prefs";
 import { creditsTier } from "#renderer/lib/credits";
 import {
   ownKeyResumeModel,
@@ -253,6 +259,7 @@ export const DialogBody = ({
   from,
   onDone,
   paidUpgrade = false,
+  coder = false,
 }: {
   request: UpgradeDialogRequest;
   /** The account the dialog opened for. */
@@ -265,6 +272,8 @@ export const DialogBody = ({
    * the plan (or its credits) change.
    */
   paidUpgrade?: boolean;
+  /** A Basic payer who codes: finish the named task on the next plan. */
+  coder?: boolean;
 }) => {
   const { t, i18n } = useTranslation();
   const { transport } = useAppContext();
@@ -279,6 +288,8 @@ export const DialogBody = ({
   // A free account's balance ask is the plan, its whole pitch.
   const plan = request.kind === "plan" || request.kind === "balance";
   const offer = wallOffer(billing ?? null);
+  const coding =
+    coder && paidUpgrade && request.kind === "credits" && offer != null;
   // A free wall in a chat with a task: the title names the task and the
   // plan's top model, and once paid the waiting message runs on that model.
   const personal =
@@ -419,16 +430,23 @@ export const DialogBody = ({
               : t("upgradeDialog.creditsTitle")
             : ownKey
               ? t("upgradeDialog.ownKeyTitle")
-              : topModel != null
-                ? t("upgradeDialog.creditsTaskTitle", {
-                    task: request.task,
-                    model: topModel.label,
-                  })
-                : t(
-                    connectors
-                      ? "upgradeDialog.connectorsTitle"
-                      : "upgradeDialog.creditsTitle"
-                  )}
+              : coding
+                ? request.task != null
+                  ? t("coderPitch.wallTaskTitle", {
+                      task: request.task,
+                      plan: offer.planName,
+                    })
+                  : t("coderPitch.wallTitle", { plan: offer.planName })
+                : topModel != null
+                  ? t("upgradeDialog.creditsTaskTitle", {
+                      task: request.task,
+                      model: topModel.label,
+                    })
+                  : t(
+                      connectors
+                        ? "upgradeDialog.connectorsTitle"
+                        : "upgradeDialog.creditsTitle"
+                    )}
         </DialogTitle>
         {!plan && (
           <p className="text-muted-foreground text-sm/[21px]">
@@ -439,11 +457,16 @@ export const DialogBody = ({
                   ? request.pendingText != null
                     ? "upgradeDialog.ownKeyBody"
                     : "upgradeDialog.ownKeyBodyNoMessage"
-                  : request.pendingText != null
-                    ? topModel != null
-                      ? "upgradeDialog.creditsTaskBody"
-                      : "upgradeDialog.creditsBody"
-                    : "upgradeDialog.creditsBodyNoMessage"
+                  : coding
+                    ? request.pendingText != null
+                      ? "coderPitch.wallBody"
+                      : "coderPitch.wallBodyNoMessage"
+                    : request.pendingText != null
+                      ? topModel != null
+                        ? "upgradeDialog.creditsTaskBody"
+                        : "upgradeDialog.creditsBody"
+                      : "upgradeDialog.creditsBodyNoMessage",
+              { plan: offer?.planName ?? "" }
             )}
           </p>
         )}
@@ -476,16 +499,20 @@ export const DialogBody = ({
           </p>
         </div>
       )}
-      <PlanPitchList
-        billing={billing ?? null}
-        lead={
-          ownKey || request.src === "model_locked"
-            ? "models"
-            : connectors
-              ? "connectors"
-              : null
-        }
-      />
+      {coding ? (
+        <CoderPitchList billing={billing ?? null} />
+      ) : (
+        <PlanPitchList
+          billing={billing ?? null}
+          lead={
+            ownKey || request.src === "model_locked"
+              ? "models"
+              : connectors
+                ? "connectors"
+                : null
+          }
+        />
+      )}
       <div className="flex flex-col gap-1.5 pt-1">
         <Button
           className="h-11 text-sm font-semibold"
@@ -501,9 +528,11 @@ export const DialogBody = ({
             setWaiting(true);
           }}
         >
-          {topModel != null
-            ? t("upgradeDialog.creditsTaskCta")
-            : upgradeCtaLabel(t, offer)}
+          {coding
+            ? t("coderPitch.wallCta", { plan: offer.planName })
+            : topModel != null
+              ? t("upgradeDialog.creditsTaskCta")
+              : upgradeCtaLabel(t, offer)}
         </Button>
         <Button
           variant="ghost"
@@ -529,6 +558,7 @@ export const DialogBody = ({
 export const UpgradeDialogHost = () => {
   const request = useUpgradeDialogRequest();
   const { transport } = useAppContext();
+  const prefs = usePrefs();
   const qc = useQueryClient();
   // `free`: the free plan's dialog; `upgrade`: the same dialog for a paid
   // plan whose way on is the next plan alone (Basic); `paid`: top-up and plan.
@@ -598,6 +628,7 @@ export const UpgradeDialogHost = () => {
   }, [request, transport]);
 
   const open = request != null && confirmed?.key === request.key;
+  const key = creditAccountKey(confirmed?.account);
   const done = (dismissed: boolean) => {
     setConfirmed(null);
     closeUpgradeDialog(dismissed);
@@ -625,6 +656,13 @@ export const UpgradeDialogHost = () => {
               from={confirmed?.account ?? null}
               onDone={done}
               paidUpgrade={confirmed?.body === "upgrade"}
+              coder={
+                confirmed?.body === "upgrade" &&
+                accountCodes(
+                  confirmed.account,
+                  key != null ? prefs.creditThresholds?.[key] : undefined
+                )
+              }
             />
           )}
         </DialogContent>

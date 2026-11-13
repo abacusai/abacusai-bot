@@ -10,6 +10,7 @@ import {
 import { cheaperModelOffer } from "@abacus-ai/contract/cheaper-model";
 import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 import {
+  accountCodes,
   creditAccountKey,
   markHolds,
   type CreditTaskKind,
@@ -26,7 +27,7 @@ import { resolveConfiguredModel } from "@abacus-ai/contract/models";
 import { retryOfferModel } from "@abacus-ai/contract/retry-offer";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Check, Gauge, Leaf } from "lucide-react";
+import { AlertTriangle, Check, CodeXml, Gauge, Leaf } from "lucide-react";
 import { useEffect, useEffectEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -45,6 +46,8 @@ import {
   DialogDescription,
   DialogTitle,
 } from "#renderer/ui/dialog";
+
+import { CoderPitchList, coderCta } from "./coder-pitch";
 
 /**
  * An account's credit milestone card (contract credit-thresholds.ts): half,
@@ -79,6 +82,8 @@ export interface CreditThresholdCardProps {
    * chat opens; a rejection leaves it for another try.
    */
   cheaper?: { model: string; onSwitch(): Promise<void> };
+  /** A Basic payer who codes: Pro pitched by its coding router and credits. */
+  coder?: boolean;
   onContinue(): void;
 }
 
@@ -95,6 +100,7 @@ export const CreditThresholdCard = ({
   onNextPlan,
   onTopUp,
   cheaper,
+  coder = false,
   onContinue,
 }: CreditThresholdCardProps) => {
   const { t, i18n } = useTranslation();
@@ -102,7 +108,7 @@ export const CreditThresholdCard = ({
   const number = (value: number) =>
     new Intl.NumberFormat(locale).format(Math.max(0, Math.round(value)));
   const left = Math.max(0, total - used);
-  const { title, lines } = creditThresholdWords(
+  const words = creditThresholdWords(
     t,
     locale,
     threshold,
@@ -113,6 +119,25 @@ export const CreditThresholdCard = ({
     topModel
   );
   const paid = milestone.plan === "paid" ? milestone.offer : null;
+  const coding = coder && threshold !== 50 && paidUpgradeOnly(paid);
+  const nextName = paid?.next?.planName ?? "";
+  const { title } = words;
+  // A coder's 80% and 95% cards keep the estimate, then urge Pro's coding router.
+  const lines = coding
+    ? [
+        ...words.lines.slice(0, -1),
+        t(
+          threshold === 95
+            ? project != null
+              ? "coderPitch.lastProject"
+              : "coderPitch.last"
+            : project != null
+              ? "coderPitch.lowProject"
+              : "coderPitch.low",
+          { plan: nextName, ...(project != null && { project }) }
+        ),
+      ]
+    : words.lines;
   const isPaid = milestone.plan === "paid";
   // Basic's next plan alone reads as the free plan's upgrade.
   const upgradeLike = !isPaid || paidUpgradeOnly(paid);
@@ -131,7 +156,7 @@ export const CreditThresholdCard = ({
   const first = offer?.firstMonthPriceCents;
   const price = offer?.priceCents;
   const nearEnd = threshold !== 50;
-  const Icon = nearEnd ? AlertTriangle : Gauge;
+  const Icon = coding ? CodeXml : nearEnd ? AlertTriangle : Gauge;
   const [preparing, setPreparing] = useState(false);
   const switchCheaper = () => {
     if (cheaper == null || preparing) return;
@@ -207,6 +232,8 @@ export const CreditThresholdCard = ({
           >
             {t("outcome.wall.paidMobile")}
           </p>
+        ) : coding ? (
+          <CoderPitchList billing={billing} />
         ) : pitched ? (
           <ul
             className="flex flex-col gap-2"
@@ -250,15 +277,17 @@ export const CreditThresholdCard = ({
               data-action="upgrade"
               onClick={onUpgrade}
             >
-              {first != null && price != null && first < price
-                ? t("creditThreshold.upgradeIntro", {
-                    price: formatUsd(first, locale),
-                  })
-                : price != null
-                  ? t("creditThreshold.upgradeMonthly", {
-                      price: formatUsd(price, locale),
+              {coding
+                ? coderCta(t, billing, locale)
+                : first != null && price != null && first < price
+                  ? t("creditThreshold.upgradeIntro", {
+                      price: formatUsd(first, locale),
                     })
-                  : t("creditThreshold.upgrade")}
+                  : price != null
+                    ? t("creditThreshold.upgradeMonthly", {
+                        price: formatUsd(price, locale),
+                      })
+                    : t("creditThreshold.upgrade")}
             </Button>
           )}
           {isPaid && cheaper != null && (
@@ -289,11 +318,15 @@ export const CreditThresholdCard = ({
             data-action="continue-free"
             onClick={onContinue}
           >
-            {t(
-              isPaid
-                ? "creditThreshold.keepGoing"
-                : "creditThreshold.continueFree"
-            )}
+            {coding
+              ? t("coderPitch.keepGoing", {
+                  plan: billing?.current.planName ?? "",
+                })
+              : t(
+                  isPaid
+                    ? "creditThreshold.keepGoing"
+                    : "creditThreshold.continueFree"
+                )}
           </Button>
         </div>
       </DialogContent>
@@ -475,6 +508,7 @@ export const CreditThresholdHost = ({
       estimate={count != null ? { count, kind: mark?.kind ?? null } : null}
       billing={billing ?? null}
       offer={offer}
+      coder={accountCodes(account, mark)}
       {...(project != null && { project })}
       {...(topModel != null && { topModel })}
       onUpgrade={() => {

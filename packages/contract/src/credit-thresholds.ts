@@ -344,3 +344,15 @@ export function creditThresholdWords(
     ],
   };
 }
+
+/**
+ * The account codes: the platform reads Sessions as where it mostly works,
+ * or the mark that still holds says today's turns were builds. Its next-plan
+ * pitch leads with the coding router.
+ */
+export const accountCodes = (
+  account: AbacusAccountInfo | null | undefined,
+  mark: CreditThresholdMark | undefined
+): boolean =>
+  account?.focus === "sessions" ||
+  (markHolds(mark, account) && mark.kind === "builds");

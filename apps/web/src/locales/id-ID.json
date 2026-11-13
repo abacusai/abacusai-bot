@@ -5364,5 +5364,23 @@
     "routinePrompt": "Buat tugas terjadwal yang berjalan 24/7, bernama “{{name}}”. Jadwal (cron, waktu lokal saya): {{schedule}}. Setiap kali berjalan: {{prompt}}",
     "routinePromptOnce": "Buat tugas terjadwal bernama “{{name}}” yang tetap berjalan meski komputer saya mati. Yang dilakukannya: {{prompt}}",
     "routinePromptNameOnly": "Buat tugas terjadwal yang berjalan 24/7, seperti rutinitas AbacusAI Bot saya “{{name}}”. Tanyakan kepada saya apa yang harus dilakukan dan kapan."
+  },
+  "coderPitch": {
+    "router": "RouteLLM Code: router kami yang dibuat untuk kode, memilih model coding terbaik di setiap langkah",
+    "codingAgent": "Agen coding dan CLI",
+    "agent": "Abacus AI Agent tanpa batasan: tugas tanpa batas selama kamu punya kredit",
+    "computer": "SuperComputer: komputer yang selalu menyala",
+    "everything": "Semua yang ada di {{plan}}: model teratas, gambar dan video, agen pribadi, 100+ konektor dan aplikasi",
+    "low": "Pindah ke {{plan}} agar kodemu ditulis dengan router coding kami, dengan kredit lebih banyak tiap bulan.",
+    "lowProject": "Pindah ke {{plan}} agar “{{project}}” dibangun dengan router coding kami, dengan kredit lebih banyak tiap bulan.",
+    "last": "Saat habis, pekerjaanmu berhenti di tengah tugas. Pindah ke {{plan}} untuk menyelesaikannya dengan router coding kami.",
+    "lastProject": "Saat habis, “{{project}}” berhenti di tengah tugas. Pindah ke {{plan}} untuk menyelesaikannya dengan router coding kami.",
+    "cta": "Pindah ke {{plan}} · {{price}}/bulan",
+    "keepGoing": "Lanjut dengan {{plan}}",
+    "wallTaskTitle": "Selesaikan “{{task}}” di {{plan}}",
+    "wallTitle": "Lanjut coding di {{plan}}",
+    "wallBody": "Pesanmu sudah disimpan. Pindah ke {{plan}} dan pekerjaan lanjut tepat dari titik berhentinya, dengan router coding kami.",
+    "wallBodyNoMessage": "Pindah ke {{plan}} untuk lanjut coding dengan router coding kami, dengan kredit lebih banyak tiap bulan.",
+    "wallCta": "Pindah ke {{plan}} dan selesaikan"
   }
 }

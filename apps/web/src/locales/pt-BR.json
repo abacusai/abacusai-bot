@@ -5364,5 +5364,23 @@
     "routinePrompt": "Crie uma tarefa agendada que rode 24/7, chamada “{{name}}”. Agenda (cron, meu horário local): {{schedule}}. Em cada execução: {{prompt}}",
     "routinePromptOnce": "Crie uma tarefa agendada chamada “{{name}}” que rode mesmo com meu computador desligado. O que ela faz: {{prompt}}",
     "routinePromptNameOnly": "Crie uma tarefa agendada que rode 24/7, como minha rotina “{{name}}” do AbacusAI Bot. Pergunte o que ela deve fazer e quando."
+  },
+  "coderPitch": {
+    "router": "RouteLLM Code: nosso roteador feito para código, que escolhe o melhor modelo de código a cada passo",
+    "codingAgent": "O agente de código e a CLI",
+    "agent": "Abacus AI Agent sem restrições: sem limite de tarefas enquanto você tiver créditos",
+    "computer": "SuperComputer: um computador sempre ligado",
+    "everything": "Tudo do {{plan}}: modelos top, imagem e vídeo, agentes pessoais, mais de 100 conectores e apps",
+    "low": "Mude para o {{plan}} para que seu código seja escrito no nosso roteador de código, com mais créditos todo mês.",
+    "lowProject": "Mude para o {{plan}} para que “{{project}}” seja construído no nosso roteador de código, com mais créditos todo mês.",
+    "last": "Quando acabarem, seu trabalho para no meio da tarefa. Mude para o {{plan}} para terminá-lo no nosso roteador de código.",
+    "lastProject": "Quando acabarem, “{{project}}” para no meio da tarefa. Mude para o {{plan}} para terminá-lo no nosso roteador de código.",
+    "cta": "Mudar para o {{plan}} · {{price}}/mês",
+    "keepGoing": "Continuar no {{plan}}",
+    "wallTaskTitle": "Termine “{{task}}” no {{plan}}",
+    "wallTitle": "Continue programando no {{plan}}",
+    "wallBody": "Sua mensagem está salva. Mude para o {{plan}} e ela continua exatamente de onde parou, no nosso roteador de código.",
+    "wallBodyNoMessage": "Mude para o {{plan}} para continuar programando no nosso roteador de código, com mais créditos todo mês.",
+    "wallCta": "Mudar para o {{plan}} e terminar"
   }
 }

@@ -5364,5 +5364,23 @@
     "routinePrompt": "Richte eine geplante Aufgabe ein, die rund um die Uhr läuft, namens „{{name}}“. Zeitplan (Cron, meine Ortszeit): {{schedule}}. Bei jedem Lauf: {{prompt}}",
     "routinePromptOnce": "Richte eine geplante Aufgabe namens „{{name}}“ ein, die auch bei ausgeschaltetem Computer läuft. Was sie tut: {{prompt}}",
     "routinePromptNameOnly": "Richte eine geplante Aufgabe ein, die rund um die Uhr läuft, wie meine AbacusAI-Bot-Routine „{{name}}“. Frag mich, was sie tun soll und wann."
+  },
+  "coderPitch": {
+    "router": "RouteLLM Code: unser Router für Code, der für jeden Schritt das beste Coding-Modell wählt",
+    "codingAgent": "Der Coding-Agent und die CLI",
+    "agent": "Uneingeschränkter Abacus AI Agent: keine Grenze bei Aufgaben, solange du Credits hast",
+    "computer": "SuperComputer: ein Computer, der immer läuft",
+    "everything": "Alles aus {{plan}}: Top-Modelle, Bild und Video, persönliche Agents, über 100 Connectors und Apps",
+    "low": "Wechsle zu {{plan}}, damit dein Code mit unserem Coding-Router geschrieben wird, mit mehr Credits jeden Monat.",
+    "lowProject": "Wechsle zu {{plan}}, damit „{{project}}“ mit unserem Coding-Router gebaut wird, mit mehr Credits jeden Monat.",
+    "last": "Wenn sie aufgebraucht sind, stoppt deine Arbeit mitten in der Aufgabe. Wechsle zu {{plan}}, um sie mit unserem Coding-Router fertigzustellen.",
+    "lastProject": "Wenn sie aufgebraucht sind, stoppt „{{project}}“ mitten in der Aufgabe. Wechsle zu {{plan}}, um es mit unserem Coding-Router fertigzustellen.",
+    "cta": "Zu {{plan}} wechseln · {{price}}/Monat",
+    "keepGoing": "Mit {{plan}} weitermachen",
+    "wallTaskTitle": "„{{task}}“ mit {{plan}} fertigstellen",
+    "wallTitle": "Mit {{plan}} weiter coden",
+    "wallBody": "Deine Nachricht ist gespeichert. Wechsle zu {{plan}}, dann geht es genau dort weiter, wo es aufgehört hat, mit unserem Coding-Router.",
+    "wallBodyNoMessage": "Wechsle zu {{plan}}, um mit unserem Coding-Router weiter zu coden, mit mehr Credits jeden Monat.",
+    "wallCta": "Zu {{plan}} wechseln und fertigstellen"
   }
 }

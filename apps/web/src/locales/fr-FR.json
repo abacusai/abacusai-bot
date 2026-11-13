@@ -5364,5 +5364,23 @@
     "routinePrompt": "Crée une tâche planifiée qui tourne 24 h/24, nommée « {{name}} ». Planification (cron, mon heure locale) : {{schedule}}. À chaque exécution : {{prompt}}",
     "routinePromptOnce": "Crée une tâche planifiée nommée « {{name}} » qui tourne même ordinateur éteint. Ce qu'elle fait : {{prompt}}",
     "routinePromptNameOnly": "Crée une tâche planifiée qui tourne 24 h/24, comme ma routine AbacusAI Bot « {{name}} ». Demande-moi ce qu'elle doit faire et quand."
+  },
+  "coderPitch": {
+    "router": "RouteLLM Code : notre routeur conçu pour le code, qui choisit le meilleur modèle de code à chaque étape",
+    "codingAgent": "L’agent de code et la CLI",
+    "agent": "Abacus AI Agent sans restriction : aucune limite de tâches tant que vous avez des crédits",
+    "computer": "SuperComputer : un ordinateur toujours allumé",
+    "everything": "Tout ce qu’offre {{plan}} : les meilleurs modèles, image et vidéo, agents personnels, plus de 100 connecteurs et apps",
+    "low": "Passez à {{plan}} pour que votre code soit écrit avec notre routeur de code, avec plus de crédits chaque mois.",
+    "lowProject": "Passez à {{plan}} pour que « {{project}} » soit construit avec notre routeur de code, avec plus de crédits chaque mois.",
+    "last": "Quand ils seront épuisés, votre travail s’arrêtera en pleine tâche. Passez à {{plan}} pour le terminer avec notre routeur de code.",
+    "lastProject": "Quand ils seront épuisés, « {{project}} » s’arrêtera en pleine tâche. Passez à {{plan}} pour le terminer avec notre routeur de code.",
+    "cta": "Passer à {{plan}} · {{price}}/mois",
+    "keepGoing": "Continuer avec {{plan}}",
+    "wallTaskTitle": "Terminez « {{task}} » avec {{plan}}",
+    "wallTitle": "Continuez à coder avec {{plan}}",
+    "wallBody": "Votre message est enregistré. Passez à {{plan}} et il reprendra là où il s’est arrêté, avec notre routeur de code.",
+    "wallBodyNoMessage": "Passez à {{plan}} pour continuer à coder avec notre routeur de code, avec plus de crédits chaque mois.",
+    "wallCta": "Passer à {{plan}} et terminer"
   }
 }

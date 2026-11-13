@@ -5364,5 +5364,23 @@
     "routinePrompt": "7/24 çalışan, “{{name}}” adlı zamanlanmış bir görev kur. Zamanlama (cron, yerel saatim): {{schedule}}. Her çalışmada: {{prompt}}",
     "routinePromptOnce": "Bilgisayarım kapalıyken de çalışan, “{{name}}” adlı zamanlanmış bir görev kur. Ne yapacağı: {{prompt}}",
     "routinePromptNameOnly": "AbacusAI Bot'taki “{{name}}” rutinim gibi 7/24 çalışan zamanlanmış bir görev kur. Ne yapması ve ne zaman çalışması gerektiğini bana sor."
+  },
+  "coderPitch": {
+    "router": "RouteLLM Code: kod için yapılmış yönlendiricimiz, her adımda en iyi kodlama modelini seçer",
+    "codingAgent": "Kodlama ajanı ve CLI",
+    "agent": "Sınırsız Abacus AI Agent: kredin olduğu sürece görev sınırı yok",
+    "computer": "SuperComputer: her zaman açık bir bilgisayar",
+    "everything": "{{plan}} planındaki her şey: en iyi modeller, görsel ve video, kişisel ajanlar, 100+ bağlayıcı ve uygulama",
+    "low": "Kodunun kodlama yönlendiricimizle yazılması ve her ay daha fazla kredi için {{plan}} planına geç.",
+    "lowProject": "“{{project}}” projesinin kodlama yönlendiricimizle yapılması ve her ay daha fazla kredi için {{plan}} planına geç.",
+    "last": "Bittiğinde işin görevin ortasında durur. Kodlama yönlendiricimizle bitirmek için {{plan}} planına geç.",
+    "lastProject": "Bittiğinde “{{project}}” görevin ortasında durur. Kodlama yönlendiricimizle bitirmek için {{plan}} planına geç.",
+    "cta": "{{plan}} planına geç · aylık {{price}}",
+    "keepGoing": "{{plan}} ile devam et",
+    "wallTaskTitle": "“{{task}}” işini {{plan}} ile bitir",
+    "wallTitle": "{{plan}} ile kodlamaya devam et",
+    "wallBody": "Mesajın kaydedildi. {{plan}} planına geç, kaldığı yerden kodlama yönlendiricimizle devam etsin.",
+    "wallBodyNoMessage": "Kodlama yönlendiricimizle kodlamaya devam etmek ve her ay daha fazla kredi için {{plan}} planına geç.",
+    "wallCta": "{{plan}} planına geç ve bitir"
   }
 }

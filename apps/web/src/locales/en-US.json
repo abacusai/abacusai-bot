@@ -5364,5 +5364,23 @@
     "routinePrompt": "Set up a scheduled task that runs 24/7, called “{{name}}”. Schedule (cron, my local time): {{schedule}}. Each run: {{prompt}}",
     "routinePromptOnce": "Set up a scheduled task called “{{name}}” that runs even with my computer off. What it does: {{prompt}}",
     "routinePromptNameOnly": "Set up a scheduled task that runs 24/7, like my AbacusAI Bot routine “{{name}}”. Ask me what it should do and when."
+  },
+  "coderPitch": {
+    "router": "RouteLLM Code: our router built for code, picking the best coding model for each step",
+    "codingAgent": "The coding agent and CLI",
+    "agent": "Unrestricted Abacus AI Agent: no limit on tasks while you have credits",
+    "computer": "SuperComputer: an always-on computer",
+    "everything": "Everything in {{plan}}: top models, image and video, personal agents, 100+ connectors and apps",
+    "low": "Move to {{plan}} so your code is written on our coding router, with more credits every month.",
+    "lowProject": "Move to {{plan}} so “{{project}}” is built on our coding router, with more credits every month.",
+    "last": "When they run out, your work stops mid-task. Move to {{plan}} to finish it on our coding router.",
+    "lastProject": "When they run out, “{{project}}” stops mid-task. Move to {{plan}} to finish it on our coding router.",
+    "cta": "Move to {{plan}} · {{price}}/month",
+    "keepGoing": "Keep going on {{plan}}",
+    "wallTaskTitle": "Finish “{{task}}” on {{plan}}",
+    "wallTitle": "Keep coding on {{plan}}",
+    "wallBody": "Your message is saved. Move to {{plan}} and it picks up right where it stopped, on our coding router.",
+    "wallBodyNoMessage": "Move to {{plan}} to keep coding on our coding router, with more credits every month.",
+    "wallCta": "Move to {{plan}} and finish it"
   }
 }

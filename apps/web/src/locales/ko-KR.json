@@ -5364,5 +5364,23 @@
     "routinePrompt": "“{{name}}”이라는 이름으로 24시간 실행되는 예약 작업을 설정해 줘. 일정(cron, 내 현지 시간): {{schedule}}. 실행할 때마다: {{prompt}}",
     "routinePromptOnce": "컴퓨터가 꺼져 있어도 실행되는 “{{name}}”이라는 예약 작업을 설정해 줘. 하는 일: {{prompt}}",
     "routinePromptNameOnly": "AbacusAI Bot의 “{{name}}” 루틴처럼 24시간 실행되는 예약 작업을 설정해 줘. 무엇을 언제 해야 하는지 나에게 물어봐."
+  },
+  "coderPitch": {
+    "router": "RouteLLM Code: 코드 전용 라우터가 단계마다 최적의 코딩 모델을 선택",
+    "codingAgent": "코딩 에이전트와 CLI",
+    "agent": "제한 없는 Abacus AI Agent: 크레딧이 있는 한 작업 수 제한 없음",
+    "computer": "SuperComputer: 항상 켜져 있는 컴퓨터",
+    "everything": "{{plan}}의 모든 것: 최고 모델, 이미지와 동영상, 개인 에이전트, 100개 이상의 커넥터와 앱",
+    "low": "{{plan}}로 옮기면 코드가 코딩 라우터로 작성되고, 매달 크레딧도 더 많아집니다.",
+    "lowProject": "{{plan}}로 옮기면 “{{project}}”이(가) 코딩 라우터로 만들어지고, 매달 크레딧도 더 많아집니다.",
+    "last": "다 쓰면 작업이 도중에 멈춥니다. {{plan}}로 옮겨 코딩 라우터로 마무리하세요.",
+    "lastProject": "다 쓰면 “{{project}}”이(가) 도중에 멈춥니다. {{plan}}로 옮겨 코딩 라우터로 마무리하세요.",
+    "cta": "{{plan}}로 옮기기 · 월 {{price}}",
+    "keepGoing": "{{plan}}로 계속하기",
+    "wallTaskTitle": "{{plan}}에서 “{{task}}” 마무리하기",
+    "wallTitle": "{{plan}}에서 계속 코딩하기",
+    "wallBody": "메시지는 저장되어 있습니다. {{plan}}로 옮기면 멈춘 곳에서 바로 이어서, 코딩 라우터로 진행됩니다.",
+    "wallBodyNoMessage": "{{plan}}로 옮겨 코딩 라우터로 계속 코딩하세요. 매달 크레딧도 더 많아집니다.",
+    "wallCta": "{{plan}}로 옮기고 마무리하기"
   }
 }

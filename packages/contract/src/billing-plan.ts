@@ -301,6 +301,22 @@ export const PITCH_LINES: readonly PitchLine[] = [
  * app names no figure or model of its own; a line it cannot read is left out
  * rather than guessed, and the apps line drops only its count.
  */
+/**
+ * A plan's monthly credits against another's, to one decimal ("1.5", never a
+ * rounded "2"); null when it is not at least half as many again.
+ */
+export const creditsTimes = (
+  credits: number | null | undefined,
+  against: number | null | undefined,
+  locale: string
+): string | null => {
+  if (credits == null || against == null || against <= 0) return null;
+  const times = Math.round((credits / against) * 10) / 10;
+  return times >= 1.5
+    ? new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(times)
+    : null;
+};
+
 export function planPitch(
   t: PlanT,
   billing: BillingPlan | null,
@@ -322,10 +338,7 @@ export function planPitch(
     currentPlan != null && currentPlan !== "free"
       ? (current?.planName ?? billing?.current.planName ?? null)
       : null;
-  const times =
-    monthly != null && free != null && free > 0
-      ? Math.round(monthly / free)
-      : null;
+  const times = creditsTimes(monthly, free, locale);
   const first = monthly != null ? firstMonthCredits(offer, monthly) : null;
   const models = offer != null ? planTopModels(offer.features, locale) : null;
   const projects = offer != null ? planAppProjects(offer.features) : null;
@@ -333,7 +346,7 @@ export function planPitch(
     switch (name) {
       case "credits":
         if (monthly == null) return null;
-        const multiple = times != null && times >= 2;
+        const multiple = times != null;
         return t(
           first != null
             ? multiple
@@ -348,7 +361,7 @@ export function planPitch(
               : "outcome.pitch.creditsOnly",
           {
             credits: number(monthly),
-            times: times ?? 0,
+            times: times ?? "",
             ...(first != null ? { first: number(first) } : {}),
             ...(against != null ? { plan: against } : {}),
           }
