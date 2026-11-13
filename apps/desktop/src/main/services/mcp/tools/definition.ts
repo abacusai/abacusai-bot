@@ -48,6 +48,7 @@ export type ToolHost = Pick<
   | "paidFeature"
   | "botHelp"
   | "routineOfferClosed"
+  | "handOffSession"
   | "ok"
   | "err"
 >;
@@ -114,6 +115,11 @@ export interface ToolDefinition {
    * and the Capabilities toggles: never a run nobody is watching.
    */
   sessionsWhen?: (host: HostCapabilities) => boolean;
+  /**
+   * Only a plain chat in the app with someone watching: never a bot's chat,
+   * a chat app's, a routine's run or editor. Left out of their tool lists.
+   */
+  appChatOnly?: boolean;
   /**
    * Only a bot's own chat in the app, where a card can be clicked: never a
    * bot that lives in a chat app, a sender's chat or a routine's run.

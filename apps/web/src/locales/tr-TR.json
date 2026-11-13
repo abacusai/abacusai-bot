@@ -2116,7 +2116,13 @@
       "from": "Şuradan devam:",
       "into": "Şurada devam ediyor:",
       "startsFrom": "“{{label}}” sohbetinin özetiyle başlar",
-      "drop": "Özetsiz başla"
+      "drop": "Özetsiz başla",
+      "handedOffFrom": "Şuradan devredildi:"
+    },
+    "handoff": {
+      "cardLabel": "Kendi sohbetinde çalışıyor",
+      "starting": "Başlatılıyor…",
+      "ready": "Bitti"
     }
   },
   "terminalShells": {

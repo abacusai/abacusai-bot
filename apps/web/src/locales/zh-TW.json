@@ -2116,7 +2116,13 @@
       "from": "接續自",
       "into": "接續於",
       "startsFrom": "從「{{label}}」的摘要開始",
-      "drop": "不帶摘要開始"
+      "drop": "不帶摘要開始",
+      "handedOffFrom": "交接自"
+    },
+    "handoff": {
+      "cardLabel": "在獨立的對話中執行",
+      "starting": "正在啟動…",
+      "ready": "已完成"
     }
   },
   "terminalShells": {

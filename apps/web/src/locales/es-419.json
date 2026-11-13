@@ -2116,7 +2116,13 @@
       "from": "Continuación de",
       "into": "Continúa en",
       "startsFrom": "Empieza con un resumen de “{{label}}”",
-      "drop": "Empezar sin él"
+      "drop": "Empezar sin él",
+      "handedOffFrom": "Delegado desde"
+    },
+    "handoff": {
+      "cardLabel": "Se ejecuta en su propio chat",
+      "starting": "Iniciando…",
+      "ready": "Listo"
     }
   },
   "terminalShells": {

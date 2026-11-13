@@ -2138,7 +2138,13 @@
       "from": "Kontynuacja rozmowy",
       "into": "Kontynuowane w",
       "startsFrom": "Zaczyna od podsumowania „{{label}}”",
-      "drop": "Zacznij bez niego"
+      "drop": "Zacznij bez niego",
+      "handedOffFrom": "Przekazano z"
+    },
+    "handoff": {
+      "cardLabel": "Działa we własnym czacie",
+      "starting": "Uruchamianie…",
+      "ready": "Gotowe"
     }
   },
   "terminalShells": {

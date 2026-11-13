@@ -75,9 +75,21 @@ type SessionRecord = {
   sponsoredUntil?: number;
   /** The chat this one continues, stamped at mint. See continuationFrom. */
   continuedFrom?: string;
+  /** "handoff": a task split off from `continuedFrom`, which goes on beside it. */
+  continuationKind?: "handoff";
   /** That chat's summary, owed to this one's first message and then dropped. */
   continuationSeed?: string;
 };
+
+/**
+ * The chat a new one continues: a summary its first message carries (a move
+ * to another model), or a handoff, whose first message is the task itself.
+ */
+export interface SessionContinuedFrom {
+  sessionId: string;
+  summary?: string;
+  kind?: "handoff";
+}
 
 // Persisted, so the old name stays. See workspace-store.ts.
 const SESSIONS_STORAGE_KEY = "localCode.agentSessions";
@@ -108,6 +120,9 @@ const toListItem = (record: SessionRecord): AgentSessionListItem => ({
   ...(record.report != null ? { report: record.report } : {}),
   ...(record.continuedFrom != null
     ? { continuedFrom: record.continuedFrom }
+    : {}),
+  ...(record.continuationKind != null
+    ? { continuationKind: record.continuationKind }
     : {}),
   editorFor: record.editorFor ?? null,
   botOwned: record.botOwned === true || record.owner != null,
@@ -192,7 +207,11 @@ export class AgentSessionManagerService {
       model?: string | null;
       mode?: AgentMode | null;
       sponsoredUntil?: number;
-      continuedFrom?: { sessionId: string; summary: string };
+      continuedFrom?: SessionContinuedFrom;
+      /** Its title from the start (a handoff's), so no auto-title replaces it. */
+      label?: string;
+      /** The worktree it runs in from the start (a handoff shares its source's). */
+      worktree?: { id: string; path: string; branch: string | null };
     } = {}
   ): AgentSessionListItem {
     if (
@@ -212,7 +231,7 @@ export class AgentSessionManagerService {
       runTrigger: routineId != null ? runTrigger : null,
       owner,
       botOwned: owner != null,
-      label: "Untitled",
+      label: initial.label ?? "Untitled",
       conversationId: null,
       createdAt: now,
       updatedAt: now,
@@ -220,9 +239,9 @@ export class AgentSessionManagerService {
       agentStatus: AgentStatus.Idle,
       model: initial.model ?? null,
       mode: initial.mode ?? null,
-      worktreeId: null,
-      worktreePath: null,
-      worktreeBranch: null,
+      worktreeId: initial.worktree?.id ?? null,
+      worktreePath: initial.worktree?.path ?? null,
+      worktreeBranch: initial.worktree?.branch ?? null,
       ...(initial.sponsoredUntil != null
         ? { sponsoredUntil: initial.sponsoredUntil }
         : {}),
@@ -247,8 +266,11 @@ export class AgentSessionManagerService {
     workspaceId: string,
     routineId: string | null,
     owner: SessionOwner | null,
-    initial: { continuedFrom?: { sessionId: string; summary: string } }
-  ): Pick<SessionRecord, "continuedFrom" | "continuationSeed"> {
+    initial: { continuedFrom?: SessionContinuedFrom }
+  ): Pick<
+    SessionRecord,
+    "continuedFrom" | "continuationSeed" | "continuationKind"
+  > {
     const from = initial.continuedFrom;
     if (from == null || routineId != null || owner != null) return {};
     const source = this.sessions.get(from.sessionId);
@@ -262,7 +284,11 @@ export class AgentSessionManagerService {
       source.lane != null
     )
       return {};
-    return { continuedFrom: source.id, continuationSeed: from.summary };
+    return {
+      continuedFrom: source.id,
+      ...(from.summary != null ? { continuationSeed: from.summary } : {}),
+      ...(from.kind === "handoff" ? { continuationKind: "handoff" } : {}),
+    };
   }
 
   /** The summary owed to the chat's first message, until it is taken. */

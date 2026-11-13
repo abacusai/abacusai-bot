@@ -2116,7 +2116,13 @@
       "from": "Lanjutan dari",
       "into": "Dilanjutkan di",
       "startsFrom": "Dimulai dari ringkasan “{{label}}”",
-      "drop": "Mulai tanpa ringkasan"
+      "drop": "Mulai tanpa ringkasan",
+      "handedOffFrom": "Dialihkan dari"
+    },
+    "handoff": {
+      "cardLabel": "Berjalan di chat tersendiri",
+      "starting": "Memulai…",
+      "ready": "Selesai"
     }
   },
   "terminalShells": {

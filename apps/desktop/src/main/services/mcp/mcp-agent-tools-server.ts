@@ -233,6 +233,8 @@ const SERVER_VERSION = "1.0.0";
 
 /** Chats an "everything unread" read opens before pointing at the list. */
 const UNREAD_CHATS_READ_CAP = 10;
+/** A handed-off chat's title, as the sidebar shows it. */
+const HAND_OFF_TITLE_MAX = 80;
 /** Messages per chat in an unread read when the caller gives no limit. */
 const UNREAD_PER_CHAT_DEFAULT = 50;
 /** For a chat marked unread by hand, which has no count to go by. */
@@ -445,6 +447,11 @@ export interface McpAgentToolsServerOptions {
   ) => Promise<ServedPageCheck | null>;
   /** Set for the turn behind a routine page's composer; it sees only cron. */
   routineEditorFor?: (sessionId: string) => string | null;
+  /** ServiceHost.handOffSession: a new chat, beside this one, on the task. */
+  handOffSession?: (
+    fromSessionId: string,
+    task: { title: string; prompt: string }
+  ) => { sessionId: string } | { error: string };
   /** A run nobody is watching: it gets only the unattended allowlist. */
   isUnattended?: (sessionId: string) => boolean;
   /** What a bot-owned session is to its bot: its own chat, or one with someone else. */
@@ -924,11 +931,23 @@ export class McpAgentToolsServer extends McpHttpServer {
    * Is the caller a bot's chat rather than a session? An absent session
    * counts as a session: the restricted answer is the safe one.
    */
-  /** A tool for a bot's own app chat reaches no other caller. */
+  /**
+   * A tool for a bot's own app chat reaches no other caller; one for a plain
+   * app chat (`appChatOnly`) reaches no bot, chat app, routine or held run.
+   */
   private reachesCaller(
     definition: ListedTool,
     callerSession?: string
   ): boolean {
+    if ("appChatOnly" in definition && definition.appChatOnly === true)
+      return (
+        callerSession != null &&
+        !this.isBotCaller(callerSession) &&
+        !this.isHeld(callerSession) &&
+        !this.isRoutineEditor(callerSession) &&
+        !this.isPhoneCaller(callerSession) &&
+        this.options.channelForSession?.(callerSession) == null
+      );
     if (!("appBotChatOnly" in definition) || definition.appBotChatOnly !== true)
       return true;
     return (
@@ -1011,7 +1030,9 @@ export class McpAgentToolsServer extends McpHttpServer {
 
     if (!this.reachesCaller(definition, callerSession)) {
       return this.err(
-        `${name} is only available in a bot's chat in the app. Carry on and use your best judgement.`
+        "appChatOnly" in definition && definition.appChatOnly === true
+          ? `${name} is only available in a chat in the app. Do the work here.`
+          : `${name} is only available in a bot's chat in the app. Carry on and use your best judgement.`
       );
     }
 
@@ -3912,6 +3933,32 @@ export class McpAgentToolsServer extends McpHttpServer {
   }
 
   // ── The app itself ───────────────────────────────────────────────────────
+
+  /**
+   * `hand_off_session`: the task moves to a new chat beside the caller's, on
+   * the same folder, worktree, model and mode, and starts there now.
+   */
+  handOffSession(
+    args: Record<string, unknown>,
+    callerSession?: string
+  ): ToolResult {
+    const title = typeof args.title === "string" ? args.title.trim() : "";
+    const prompt = typeof args.prompt === "string" ? args.prompt.trim() : "";
+    if (title === "" || prompt === "")
+      return this.err(
+        "Pass title and prompt: the new chat's name and its task."
+      );
+    if (callerSession == null || this.options.handOffSession == null)
+      return this.err("This chat cannot hand work off. Do it here.");
+    const started = this.options.handOffSession(callerSession, {
+      title: title.slice(0, HAND_OFF_TITLE_MAX),
+      prompt,
+    });
+    if ("error" in started) return this.err(started.error);
+    return this.ok(
+      `Started “${title}” in a new chat (session: ${started.sessionId}). It runs on its own; the user follows it from the card here and the sidebar. Do not do that task here too.`
+    );
+  }
 
   /**
    * `bot_help`: the app's state for the asked topic, read now. A part that

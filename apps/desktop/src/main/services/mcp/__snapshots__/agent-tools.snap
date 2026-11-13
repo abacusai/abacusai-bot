@@ -312,6 +312,27 @@
           }
         }
       }
+    },
+    {
+      "name": "hand_off_session",
+      "description": "Start a separate task in a new chat that runs beside this one, in the same folder with the same model and mode.\nThe task starts at once and the user follows it from a card here and from the sidebar, where it sits under this chat.\nCall it only when it is needed:\n- the user asks for it: to split something off, do it separately, in parallel or in its own chat or session;\n- or a task of its own comes up that does not need this conversation's result and would take long enough to be\n  worth running at the same time (another bug, another feature, another document), and the user agreed or asked\n  for everything to be done.\nNever call it for a step of the current task, for something a few tool calls finish, for a question, or to split\none task into pieces: do those here (delegate_task is for a helper whose result you need back). Never call it\ntwice for the same task. When in doubt, do the work here.\nThe new chat knows nothing of this one: write prompt as a complete brief.\nAfterwards tell the user in one short line, in their language, what you started there, and carry on with the rest here.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "The new chat's name in the sidebar: the task in a few words, in the user's language."
+          },
+          "prompt": {
+            "type": "string",
+            "description": "The new chat's first message, its whole brief, in the user's language: what to do, every detail the user gave, the files or places involved, what is already known or decided here, and what done looks like."
+          }
+        },
+        "required": [
+          "title",
+          "prompt"
+        ]
+      }
     }
   ],
   "bot": [

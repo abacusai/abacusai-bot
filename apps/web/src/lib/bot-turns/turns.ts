@@ -70,6 +70,10 @@ export type SpokenPart =
 export const isSessionOfferTool = (name: string): boolean =>
   name === "offer_session" || name.endsWith("_offer_session");
 
+/** `hand_off_session` (a task moved to a chat of its own), under its MCP server's prefix or bare. */
+export const isHandOffTool = (name: string): boolean =>
+  name === "hand_off_session" || name.endsWith("_hand_off_session");
+
 /** `paid_feature`, under its MCP server's prefix or bare. */
 export const isPaidFeatureTool = (name: string): boolean =>
   name === PAID_FEATURE_TOOL || name.endsWith(`_${PAID_FEATURE_TOOL}`);
