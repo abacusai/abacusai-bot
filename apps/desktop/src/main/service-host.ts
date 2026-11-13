@@ -2915,6 +2915,8 @@ export class ServiceHost {
       return key == null ? null : JSON.stringify(key);
     },
     isOwnChat: (sessionId) => this.isOwnerSession(sessionId),
+    // Sign-ins the bot's browser held before the list knew of them.
+    seedExisting: true,
   });
   private readonly workspaceService = new WorkspaceService();
   private readonly browserProfilesService = new BrowserProfilesService();

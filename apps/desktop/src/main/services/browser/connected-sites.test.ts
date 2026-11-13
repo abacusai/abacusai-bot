@@ -11,11 +11,18 @@ import {
   type SiteStore,
 } from "./connected-sites";
 
-type Cookie = { name: string; domain: string; path?: string; secure?: boolean };
+type Cookie = {
+  name: string;
+  domain: string;
+  path?: string;
+  secure?: boolean;
+  session?: boolean;
+};
 
 const setup = (
   cookies: Cookie[],
-  answer: SiteDecision | (() => Promise<SiteDecision>) = "allow"
+  answer: SiteDecision | (() => Promise<SiteDecision>) = "allow",
+  options: { seedExisting?: boolean } = {}
 ) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sites-"));
   const jar = [...cookies];
@@ -55,6 +62,7 @@ const setup = (
     // "contact/…" sessions are a contact's chat with the bot.
     isOwnChat: (sessionId) => !sessionId.startsWith("contact"),
     now: () => now,
+    ...options,
   });
   return {
     sites,
@@ -212,6 +220,54 @@ describe("connected sites", () => {
     expect(cleared).toContain("https://goindigo.in");
     expect(cleared).toContain("https://book.goindigo.in");
     expect(await sites.list()).toEqual([]);
+  });
+
+  describe("sign-ins the browser held before Connected sites", () => {
+    // A site the user signed in to before this version was never listed, so
+    // no rule applied to it and any bot could use the sign-in.
+    const before = [
+      INDIGO,
+      { name: "__Secure-1PSID", domain: ".google.com" },
+      { name: "SESSIONID", domain: "app.notes.io" },
+      { name: "_ga", domain: ".shop.com" },
+      { name: "consent", domain: ".news.com" },
+      { name: "cart", domain: "store.example" },
+      { name: "remember_user_token", domain: ".icicibank.com" },
+      { name: "visit_session", domain: ".blog.example", session: true },
+    ];
+
+    it("lists, once, the sites holding a sign-in cookie, under their default rule", async () => {
+      const { sites } = setup(before, "allow", { seedExisting: true });
+      const listed = await sites.list();
+      expect(listed.map((s) => s.site).sort()).toEqual([
+        "goindigo.in",
+        "google.com",
+        "icicibank.com",
+        "notes.io",
+      ]);
+      expect(listed.find((s) => s.site === "icicibank.com")?.policy).toBe(
+        "blocked"
+      );
+      expect(listed.find((s) => s.site === "google.com")?.policy).toBe("ask");
+    });
+
+    it("so a bot is asked before using one", async () => {
+      const { sites, ask } = setup(before, "deny", { seedExisting: true });
+      expect(await sites.gate("https://www.goindigo.in/trips", "a")).toContain(
+        "did not allow"
+      );
+      expect(ask).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not bring back a site the user signed out of", async () => {
+      const { sites, jar } = setup(before, "allow", { seedExisting: true });
+      await sites.list();
+      await sites.signOut("google.com");
+      jar.push({ name: "SID", domain: ".google.com" });
+      expect((await sites.list()).map((s) => s.site)).not.toContain(
+        "google.com"
+      );
+    });
   });
 
   it("ignores what is not a website", () => {

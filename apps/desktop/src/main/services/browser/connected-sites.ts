@@ -38,6 +38,8 @@ export interface SiteStore {
         domain?: string;
         path?: string;
         secure?: boolean;
+        /** Gone when the browser quits (no expiry). */
+        session?: boolean;
       }>
     >;
     remove(url: string, name: string): Promise<void>;
@@ -61,6 +63,12 @@ export interface ConnectedSitesDeps {
    * nobody watches) never uses the user's sign-ins, whatever the rule says.
    */
   isOwnChat: (sessionId: string) => boolean;
+  /**
+   * List, once, the sites the browser already held a sign-in for before
+   * Connected sites knew of them (see `seedExisting`). The app sets it; the
+   * list then starts from what the browser holds, not from empty.
+   */
+  seedExisting?: boolean;
   now?: () => number;
 }
 
@@ -82,11 +90,21 @@ const DENIED_FOR_MS = 2 * 60_000;
 /** How long after a chat's bot stopped at a site's sign-in page the user's sign-in there counts as their yes (a paused run's life). */
 const SIGNED_IN_FOR_CHAT_MS = 45 * 60_000;
 
+/**
+ * A cookie that keeps a sign-in, by its name: a session id, an auth token,
+ * "remember me". Used once, for sign-ins the browser held before the list
+ * existed; from then on a site joins by its sign-in page, never by a guess.
+ */
+const SIGN_IN_COOKIE =
+  /sess|auth|token|login|logged|remember|jwt|sso|(?:^|[^a-z])s?sid(?:[^a-z]|$)|^sid|psid|li_at|user_?id|account/i;
+
 interface Saved {
   sites: Record<
     string,
     { policy: ConnectedSitePolicy; addedAt: number; lastUsedAt?: number }
   >;
+  /** The browser's earlier sign-ins were listed (`seedExisting`). */
+  seeded?: boolean;
 }
 
 export class ConnectedSites {
@@ -100,7 +118,45 @@ export class ConnectedSites {
   /** One prompt per chat and site at a time; later calls share its answer. */
   private readonly asking = new Map<string, Promise<SiteDecision>>();
 
+  private seeding: Promise<void> | null = null;
+
   constructor(private readonly deps: ConnectedSitesDeps) {}
+
+  /**
+   * Lists, once, each site the browser holds a lasting sign-in cookie for,
+   * under its default rule: a sign-in made before Connected sites (or before
+   * the browser reported sign-in pages) is held to a rule too, instead of
+   * being free for any bot to use. A site the user signs out of later is not
+   * brought back by this.
+   */
+  private seedExisting(): Promise<void> {
+    if (this.deps.seedExisting !== true) return Promise.resolve();
+    this.seeding ??= (async () => {
+      if (this.read().seeded === true) return;
+      const cookies = await this.deps
+        .store()
+        .cookies.get({})
+        .catch(() => []);
+      // Read after the wait: a site added meanwhile is kept.
+      const saved = this.read();
+      for (const cookie of cookies) {
+        if (cookie.session === true || !SIGN_IN_COOKIE.test(cookie.name))
+          continue;
+        const site =
+          cookie.domain == null
+            ? null
+            : this.siteOf(cookie.domain.replace(/^\./, ""));
+        if (site != null && saved.sites[site] == null)
+          saved.sites[site] = {
+            policy: defaultPolicy(site),
+            addedAt: this.now(),
+          };
+      }
+      saved.seeded = true;
+      this.write(saved);
+    })().catch(() => undefined);
+    return this.seeding;
+  }
 
   private now(): number {
     return this.deps.now?.() ?? Date.now();
@@ -177,6 +233,7 @@ export class ConnectedSites {
 
   /** The listed sites the browser still holds cookies for, newest first. */
   async list(): Promise<ConnectedSite[]> {
+    await this.seedExisting();
     const saved = this.read();
     const out: ConnectedSite[] = [];
     for (const [site, entry] of Object.entries(saved.sites)) {
@@ -224,7 +281,7 @@ export class ConnectedSites {
 
   /** Forgets every site (the browser's data was cleared). */
   clear(): void {
-    this.write({ sites: {} });
+    this.write({ sites: {}, seeded: true });
     this.allowedInChat.clear();
     this.allowedUntilQuit.clear();
     this.deniedInChat.clear();
@@ -246,6 +303,7 @@ export class ConnectedSites {
   async gate(url: string, sessionId: string): Promise<string | null> {
     const site = this.siteOf(url);
     if (site == null) return null;
+    await this.seedExisting();
     const saved = this.read();
     const entry = saved.sites[site];
     if (entry == null) return null;
