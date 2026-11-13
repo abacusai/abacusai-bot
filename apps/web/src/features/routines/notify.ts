@@ -21,7 +21,8 @@ export const createFireHandler = (
       event.trigger !== "schedule" &&
       event.trigger !== "catch-up" &&
       event.trigger !== "interrupted" &&
-      event.trigger !== "webhook"
+      event.trigger !== "webhook" &&
+      event.trigger !== "github"
     )
       return;
     const routine = routines().find((r) => r.id === event.routineId);

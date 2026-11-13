@@ -87,6 +87,7 @@ const harness = (options: { quiet?: boolean; platform?: string } = {}) => {
     emitEvent: () => undefined,
     pauseIfQuietRepeatedly: () => undefined,
     isUnattendedSession: () => false,
+    githubWatchNotes: () => ({ notes: [], taken: () => undefined }),
     appLanguage: () => "en-US",
     listRoutineRuns: (routineId: string) =>
       [...sessions.values()]

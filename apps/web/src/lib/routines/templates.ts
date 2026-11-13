@@ -45,6 +45,8 @@ export interface RoutineTemplate {
     watchesSite?: boolean;
     /** A watcher: most runs find nothing (`quietIsNormal`). */
     quietIsNormal?: boolean;
+    /** Runs when the GitHub watcher finds a new review (`githubReviews`). */
+    githubReviews?: boolean;
   };
 }
 
@@ -154,7 +156,7 @@ export const ROUTINE_TEMPLATES: RoutineTemplate[] = [
   {
     id: "pr-review-fixes",
     needsWorkspace: true,
-    coding: { quietIsNormal: true },
+    coding: { quietIsNormal: true, githubReviews: true },
     icon: MessageSquareCode,
     preset: "custom",
     time: "09:00",

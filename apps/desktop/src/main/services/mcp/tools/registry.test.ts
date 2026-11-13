@@ -43,6 +43,8 @@ const NOT_IN_REGISTRY = new Set([
   "offer_session",
   "bot_help",
   "suggest_tasks",
+  // Its switch is the GitHub watcher's own "fixes from my phone".
+  "github_fix",
 ]);
 
 const registryTools = new Map<string, { toolset: string; agent: boolean }>();

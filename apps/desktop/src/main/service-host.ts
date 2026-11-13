@@ -10,6 +10,7 @@ import path from "path";
 
 import { appendDailyNote } from "@abacus-ai/agent/bot-memory";
 import type { ChannelCapabilities } from "@abacus-ai/agent/channel";
+import { fetchGithubConnectorToken } from "@abacus-ai/agent/github-connector-token";
 import { HOSTED_LOCAL_TOOLS_ENV } from "@abacus-ai/agent/hosted-local-tools";
 import { modelPath } from "@abacus-ai/agent/model-path";
 import type { UnattendedPolicy } from "@abacus-ai/agent/tool-policy";
@@ -53,6 +54,12 @@ import {
   checkoutKey,
   type GitDiffResult,
 } from "@abacus-ai/contract/contract/checkout";
+import {
+  GITHUB_WATCH_MAX_REPOS,
+  type GithubWatchConfig,
+  type GithubWatchEvent,
+  type GithubWatchView,
+} from "@abacus-ai/contract/contract/github";
 import type {
   GitStateRow,
   PrefsPatch,
@@ -194,6 +201,10 @@ import type {
   BackendStatus,
 } from "@abacus-ai/contract/exec-backends";
 import { funnelId } from "@abacus-ai/contract/funnel";
+import {
+  githubEventLine,
+  type GithubWatchWords,
+} from "@abacus-ai/contract/github-watch";
 import {
   APP_OF_SELF_LANE,
   SELF_LANE_FOR_APP,
@@ -673,7 +684,17 @@ import {
 } from "./services/workspace/file-search-service";
 import { FileTreeService } from "./services/workspace/file-tree-service";
 import { GitService } from "./services/workspace/git-service";
+import { runGh } from "./services/workspace/github-cli";
 import { GithubService } from "./services/workspace/github-service";
+import {
+  GITHUB_WATCH_PINGS_PER_DAY,
+  GithubWatch,
+  GithubWatchStore,
+  githubFixDoneText,
+  githubPingNote,
+  githubPingText,
+  localDay,
+} from "./services/workspace/github-watch";
 import { resolveSessionWorkspacePath } from "./services/workspace/session-workspace-context";
 import { SkillsService } from "./services/workspace/skills-service";
 import { TerminalSessionService } from "./services/workspace/terminal-session-service";
@@ -722,6 +743,12 @@ const AGENT_ACTION_TIMEOUT_MS = 5 * 60_000;
 
 /** The folder every hosted routine run works in: one, kept out of the pickers. */
 const HOSTED_RUNS_FOLDER = "hosted-runs";
+/** A fix asked for from the phone gets this long (awake time). */
+const GITHUB_FIX_DEADLINE_MS = 30 * 60_000;
+const GITHUB_WATCH_TOKEN_TTL_MS = 5 * 60_000;
+const GITHUB_PROJECTS_TTL_MS = 10 * 60_000;
+/** A watcher check this recent stands in for a review routine's own look. */
+const GITHUB_WATCH_FRESH_MS = 5 * 60_000;
 
 /** Where the hosted results feed keeps the last read's `since`. */
 const FEED_FILE = "routines-feed.json";
@@ -1936,6 +1963,9 @@ export class ServiceHost {
     },
     routineSends: this.routineSends,
     routineDelivery: () => this.deliversRoutineReports(),
+    githubFixOffered: () => this.githubFixOffered(),
+    githubFix: (eventId, callerSession) =>
+      this.githubFix(eventId, callerSession),
     routineDeliversToSelf: (sessionId, platform) =>
       this.routineDeliversToSelf(sessionId, platform),
     // A routine's run is its bot's work too: a routine made from inside one
@@ -2866,6 +2896,409 @@ export class ServiceHost {
   /** The user's `gh`, for the `github.*` procedures (spec 04 §14.3). */
   readonly github = new GithubService();
 
+  /** The GitHub watcher's settings, what it has read and what it found. */
+  private readonly githubWatchStore = new GithubWatchStore(() =>
+    this.platform === "web-host"
+      ? null
+      : path.join(abacusBotHome(), "github-watch.json")
+  );
+  /** Each project's GitHub repo, read again every ten minutes. */
+  private githubProjectRows: {
+    at: number;
+    rows: GithubWatchView["candidates"];
+  } | null = null;
+  /** The token the watcher reads with, asked for again every five minutes. */
+  private githubWatchTokenCache: { at: number; token: string | null } | null =
+    null;
+
+  private readonly githubWatch = new GithubWatch({
+    store: this.githubWatchStore,
+    token: () => this.githubWatchToken(),
+    allowed: () => this.prefs?.()?.get().githubIntegration !== false,
+    repos: () => this.githubReadRepos(),
+    workspaceFor: async (repo) =>
+      (await this.githubProjects()).find((row) => row.repo === repo)
+        ?.workspaceId ?? null,
+    found: (events) => {
+      void this.tellGithubEvents(events).catch((error: unknown) => {
+        console.error("[github-watch] telling the user failed:", error);
+      });
+    },
+  });
+
+  /** The connector's token, else a stored GH_TOKEN, else the user's own `gh` login. */
+  private async githubWatchToken(): Promise<string | null> {
+    const now = Date.now();
+    const cached = this.githubWatchTokenCache;
+    if (cached != null && now - cached.at < GITHUB_WATCH_TOKEN_TTL_MS)
+      return cached.token;
+    const key = credentialFor("ABACUS_API_KEY");
+    const connector =
+      key.length > 0 ? await fetchGithubConnectorToken(key) : null;
+    let token: string | null;
+    if (connector != null) token = connector;
+    // The platform could not say: the last answer stands.
+    else if (connector === undefined && cached?.token != null)
+      token = cached.token;
+    else {
+      const stored = credentialFor("GH_TOKEN");
+      token =
+        stored.length > 0
+          ? stored
+          : await runGh(["auth", "token"], { timeoutMs: 10_000 })
+              .then((out) => out.stdout.trim() || null)
+              .catch(() => null);
+    }
+    this.githubWatchTokenCache = { at: now, token };
+    return token;
+  }
+
+  /** This computer's projects on GitHub, one row per repo. */
+  private async githubProjects(): Promise<GithubWatchView["candidates"]> {
+    const now = Date.now();
+    const cached = this.githubProjectRows;
+    if (cached != null && now - cached.at < GITHUB_PROJECTS_TTL_MS)
+      return cached.rows;
+    const rows: GithubWatchView["candidates"] = [];
+    for (const entry of this.workspaceService.getWorkspaces()) {
+      if (
+        entry.status === "deleted" ||
+        entry.kind != null ||
+        entry.path == null ||
+        entry.isRemote === true
+      )
+        continue;
+      const repo = await this.gitService.githubRepo(entry.path);
+      if (repo != null && !rows.some((row) => row.repo === repo))
+        rows.push({ repo, workspaceId: entry.id, name: entry.label });
+    }
+    this.githubProjectRows = { at: now, rows };
+    return rows;
+  }
+
+  /** Each project folder's GitHub repo, as git last said. */
+  private readonly githubRepoOfPath = new Map<string, string | null>();
+
+  /** The GitHub repo of a project, or null (no project, or not on GitHub). */
+  private async githubRepoOfWorkspace(
+    workspaceId: string | null
+  ): Promise<string | null> {
+    const project = this.realProject(workspaceId);
+    if (project == null) return null;
+    if (!this.githubRepoOfPath.has(project.path))
+      this.githubRepoOfPath.set(
+        project.path,
+        await this.gitService.githubRepo(project.path)
+      );
+    return this.githubRepoOfPath.get(project.path) ?? null;
+  }
+
+  /** The routines that fix review comments (#842's), on now, run here. */
+  private githubReviewRoutines(): CronJob[] {
+    return listJobs().filter(
+      (job) =>
+        job.githubReviews === true &&
+        job.enabled &&
+        (job.runner ?? "local") === "local"
+    );
+  }
+
+  /**
+   * What the watcher reads: the repos the user watches, and every repo a
+   * review routine works on, so that routine runs on a new review instead of
+   * every hour, whether or not the user turned the watcher on.
+   */
+  private async githubReadRepos(): Promise<string[]> {
+    const config = this.githubWatchStore.config();
+    const repos = new Set(config.on ? config.repos : []);
+    for (const job of this.githubReviewRoutines()) {
+      const repo = await this.githubRepoOfWorkspace(job.workspaceId);
+      if (repo != null) repos.add(repo);
+    }
+    return [...repos];
+  }
+
+  /** The watcher read `repo` in the last few minutes: what it found can stand in for a model call. */
+  private githubWatchReads(repo: string): boolean {
+    const checkedAt = this.githubWatch.lastCheckedAt();
+    return (
+      this.githubWatch.problem() == null &&
+      checkedAt != null &&
+      Date.now() - checkedAt < GITHUB_WATCH_FRESH_MS &&
+      this.githubWatchStore.memoryOf(repo) != null
+    );
+  }
+
+  /** The user's own chat apps that are up, with the home bot that answers each. */
+  private githubPingLanes(): Array<{ lane: SelfLanePlatform; botId: string }> {
+    const running = this.messagingGatewayService.runningPlatforms();
+    return (
+      Object.entries(SELF_LANE_FOR_APP) as Array<
+        [HomeChannel, SelfLanePlatform]
+      >
+    ).flatMap(([app, lane]) => {
+      const botId = this.botService.homeBotId(app);
+      return running.includes(lane) && botId != null ? [{ lane, botId }] : [];
+    });
+  }
+
+  /** What the watcher shows: settings, repos, events and why it is not watching. */
+  async githubWatchView(): Promise<GithubWatchView> {
+    const checkedAt = this.githubWatch.lastCheckedAt();
+    return {
+      config: this.githubWatchStore.config(),
+      candidates: await this.githubProjects(),
+      events: this.githubWatchStore.events(),
+      checkedAt: checkedAt == null ? null : new Date(checkedAt).toISOString(),
+      problem:
+        this.prefs?.()?.get().githubIntegration === false
+          ? "disabled"
+          : this.githubWatch.problem(),
+      lanes: this.githubPingLanes().map(({ lane }) => REPORT_LANE_NAMES[lane]),
+    };
+  }
+
+  /** New watcher settings; a repo new to it is read once, silently, right away. */
+  async setGithubWatch(config: GithubWatchConfig): Promise<GithubWatchView> {
+    const before = this.githubWatchStore.config();
+    const repos = [...new Set(config.repos)].slice(0, GITHUB_WATCH_MAX_REPOS);
+    const next = {
+      on: config.on && repos.length > 0,
+      repos,
+      phoneFix: config.phoneFix,
+    };
+    this.githubWatchStore.setConfig(next);
+    if (next.on && !before.on)
+      reportFunnelStep("github_watch_on", String(Math.min(repos.length, 5)));
+    if (!next.on && before.on) reportFunnelStep("github_watch_off");
+    // The fix tool is listed only while phone fixes are on.
+    if (before.on && before.phoneFix !== (next.on && next.phoneFix))
+      this.toolAvailabilityChanged();
+    else if (!before.on && next.on && next.phoneFix)
+      this.toolAvailabilityChanged();
+    if (next.on) {
+      this.githubProjectRows = null;
+      await this.githubWatch.check();
+    }
+    return this.githubWatchView();
+  }
+
+  /** Phone fixes are on: the fix tool is listed for the user's own chats. */
+  private githubFixOffered(): boolean {
+    const config = this.githubWatchStore.config();
+    return this.platform === "electron" && config.on && config.phoneFix;
+  }
+
+  /** A check's events: a native notice, one message on each chat app, and a note for the chat that may answer it. */
+  private async tellGithubEvents(found: GithubWatchEvent[]): Promise<void> {
+    for (const event of found)
+      reportFunnelStep("github_watch_event", event.kind);
+    // A new review on a repo a review routine works on runs that routine now;
+    // its report is the user's news about it, so no ping of its own.
+    const handled = await this.fireGithubReviewRoutines(found);
+    const config = this.githubWatchStore.config();
+    const events = found.filter(
+      (event) =>
+        config.on && config.repos.includes(event.repo) && !handled.has(event.id)
+    );
+    const first = events[0];
+    if (first == null) return;
+    const words = await this.channelWordsNow();
+    const t: GithubWatchWords = (key, values) => words.t(key, values);
+    this.userNotifier?.({
+      title: githubEventLine(first, t),
+      body:
+        events.length > 1
+          ? t("githubWatch.notice.more", { count: events.length - 1 })
+          : first.repo,
+      dedupeKey: `github-watch:${first.id}`,
+      metadata: { kind: "github-watch" },
+    });
+    reportFunnelStep("github_watch_pinged", "app");
+    const lanes = this.githubPingLanes();
+    const now = Date.now();
+    if (
+      lanes.length === 0 ||
+      !this.githubWatchStore.takePing(localDay(now), GITHUB_WATCH_PINGS_PER_DAY)
+    )
+      return;
+    const text = githubPingText(events, t, config.phoneFix);
+    const notBefore =
+      quietEndsAt(this.prefs?.()?.get().sounds.quietHours, new Date(now)) ??
+      undefined;
+    const told: SelfLanePlatform[] = [];
+    for (const { lane } of lanes) {
+      const status = await this.messagingGatewayService.sendToOwnChat(lane, {
+        id: `github-watch:${first.id}:${lane}`,
+        text,
+        ...(notBefore != null ? { notBefore } : {}),
+        expiresAt: now + REPORT_OUTBOX_KEPT_MS,
+      });
+      if (status === "dropped") continue;
+      told.push(lane);
+      reportFunnelStep("github_watch_pinged", lane);
+    }
+    if (!config.phoneFix || told.length === 0) return;
+    const note = githubPingNote(
+      events,
+      told.map((lane) => REPORT_LANE_NAMES[lane]),
+      t
+    );
+    const botIds = new Set(
+      lanes.filter(({ lane }) => told.includes(lane)).map(({ botId }) => botId)
+    );
+    for (const botId of botIds) {
+      try {
+        const { sessionId } = await this.botService.openChat(botId);
+        this.githubWatchStore.addNote(sessionId, note, now);
+      } catch (error) {
+        console.error(`[github-watch] ${botId}'s chat would not open:`, error);
+      }
+    }
+  }
+
+  /** Run each review routine whose repo has new reviews; the ids of the events they took. */
+  private async fireGithubReviewRoutines(
+    events: GithubWatchEvent[]
+  ): Promise<Set<string>> {
+    const taken = new Set<string>();
+    const reviews = events.filter((event) => event.kind === "review");
+    if (reviews.length === 0) return taken;
+    for (const job of this.githubReviewRoutines()) {
+      const repo = await this.githubRepoOfWorkspace(job.workspaceId);
+      const mine = reviews.filter((event) => event.repo === repo);
+      if (mine.length === 0) continue;
+      const payload = mine
+        .map(
+          (event) =>
+            `#${event.number} ${event.title} (branch ${event.branch ?? "?"}): ${event.who.join(", ")}` +
+            `${event.verdict === "changes" ? " asked for changes" : event.verdict === "approved" ? " approved" : " commented"}` +
+            `${event.detail.length > 0 ? `: "${event.detail}"` : ""} ${event.url}`
+        )
+        .join("\n");
+      const started = await this.runRoutine(job.id, "github", payload).catch(
+        () => "failed" as const
+      );
+      if (started === "failed") continue;
+      for (const event of mine) taken.add(event.id);
+    }
+    return taken;
+  }
+
+  /** The watcher's notes owed to the user's next message in their own chat. */
+  private githubWatchNotes(
+    sessionId: string,
+    tags: UserTextTags | undefined
+  ): { notes: string[]; taken: () => void } {
+    if (!carriesUserWords(tags) || !this.isOwnerSession(sessionId))
+      return { notes: [], taken: () => undefined };
+    return this.githubWatchStore.notesFor(sessionId, Date.now());
+  }
+
+  /**
+   * `github_fix`: the user asked, in their own chat, to fix (or review) what
+   * the watcher told them. It starts on this computer with full access, which
+   * they allowed when they turned phone fixes on, and the answer goes back
+   * to their chat apps when it ends.
+   */
+  async githubFix(
+    eventId: string | null,
+    callerSession: string | undefined
+  ): Promise<{ ok: boolean; text: string }> {
+    if (callerSession == null || !this.isOwnerSession(callerSession))
+      return { ok: false, text: "Only the user's own chat can start a fix." };
+    if (!this.githubFixOffered())
+      return {
+        ok: false,
+        text: "Fixes from the chat are off. Tell the user to press Fix it in AbacusAI Bot under Routines, where they can also allow phone fixes.",
+      };
+    const event =
+      eventId != null
+        ? this.githubWatchStore.event(eventId)
+        : (this.githubWatchStore
+            .events()
+            .find((entry) => entry.fix.state === "none") ?? null);
+    if (event == null)
+      return {
+        ok: false,
+        text: "No such GitHub event. Pass an event_id from the latest [github watch] note.",
+      };
+    if (event.fix.state === "running")
+      return {
+        ok: true,
+        text: "It is already being worked on; tell the user the result will come here.",
+      };
+    const project = this.realProject(
+      event.workspaceId ??
+        (await this.githubProjects()).find((row) => row.repo === event.repo)
+          ?.workspaceId ??
+        null
+    );
+    if (project == null)
+      return {
+        ok: false,
+        text: `${event.repo} is not a project in AbacusAI Bot on this computer. Tell the user to add its folder as a project in the app first.`,
+      };
+    if (await this.routineAtCreditWall())
+      return {
+        ok: false,
+        text: "The account is out of credits, so nothing was started. Tell the user.",
+      };
+    reportFunnelStep("github_watch_fix", "phone");
+    const session = this.agentSessionManagerService.create(project.id);
+    this.githubWatchStore.setFix(event.id, {
+      state: "running",
+      sessionId: session.id,
+    });
+    void this.runGithubFix(event, project.id, session).catch(
+      (error: unknown) => {
+        console.error("[github-watch] fix failed:", error);
+        this.githubWatchStore.setFix(event.id, {
+          state: "failed",
+          sessionId: session.id,
+        });
+      }
+    );
+    return {
+      ok: true,
+      text: `Started on the user's computer in ${event.repo}. Tell them in one short line, in their language, that it is on it and the result will come here.`,
+    };
+  }
+
+  private async runGithubFix(
+    event: GithubWatchEvent,
+    target: string,
+    session: ReturnType<AgentSessionManagerService["create"]>
+  ): Promise<void> {
+    const words = await this.channelWordsNow();
+    const t: GithubWatchWords = (key, values) => words.t(key, values);
+    const result = await this.runSessionToEnd(target, session, {
+      label: githubEventLine(event, t).replace(/^\S+\s/, ""),
+      message: event.prompt,
+      full: true,
+      deadlineMs: GITHUB_FIX_DEADLINE_MS,
+    });
+    this.githubWatchStore.setFix(event.id, {
+      state: result.outcome === "completed" ? "done" : "failed",
+      sessionId: session.id,
+    });
+    reportFunnelStep("github_watch_fix_done", result.outcome);
+    const text = githubFixDoneText(event, result.outcome, result.text, t);
+    this.userNotifier?.({
+      title: text.split("\n")[0] ?? text,
+      body: event.repo,
+      dedupeKey: `github-fix:${event.id}`,
+      metadata: { sessionId: session.id },
+    });
+    const now = Date.now();
+    for (const { lane } of this.githubPingLanes())
+      await this.messagingGatewayService.sendToOwnChat(lane, {
+        id: `github-fix:${event.id}:${lane}`,
+        text,
+        expiresAt: now + REPORT_OUTBOX_KEPT_MS,
+      });
+  }
+
   /**
    * Checkout-aware file and git operations (spec 04 §26.4): the procedures
    * with a `checkout` call these; the ones without keep the legacy active
@@ -3716,6 +4149,7 @@ export class ServiceHost {
       void this.builtinMcpLifecycle.startBrowserServer();
     this.startIdleAgentReaper();
     if (this.platform === "electron") this.startWorkWaiting();
+    if (this.platform === "electron") this.githubWatch.start();
     // Requests between bots the app closed on run again; queued ones start.
     this.botAskService.recover();
     this.channelService.recover();
@@ -5149,7 +5583,15 @@ export class ServiceHost {
     sessionId: string,
     tags: UserTextTags | undefined
   ): { notes: string[]; taken: () => void } {
-    const reports = this.routineReportNotes(sessionId, tags);
+    const routine = this.routineReportNotes(sessionId, tags);
+    const github = this.githubWatchNotes(sessionId, tags);
+    const reports = {
+      notes: [...routine.notes, ...github.notes],
+      taken: () => {
+        routine.taken();
+        github.taken();
+      },
+    };
     const seed = carriesUserWords(tags)
       ? this.agentSessionManagerService.continuationSeed(sessionId)
       : null;
@@ -6248,6 +6690,7 @@ export class ServiceHost {
     this.connectivity.stop();
     this.webhookService.stop();
     this.webhookRelay.stop();
+    this.githubWatch.stop();
   }
 
   /** What each running routine session has said so far, for its run file. */
@@ -6715,6 +7158,38 @@ export class ServiceHost {
       this.agentSessionManagerService.remove(target, session.id);
       return { outcome: "not-started", text: "" };
     }
+    return this.runSessionToEnd(target, session, {
+      label: `Routine: ${request.name}`,
+      message: buildHostedRunPrompt(request),
+      userText: { routineFire: true },
+      full,
+      deadlineMs: request.deadlineSecs * 1000,
+    });
+  }
+
+  /**
+   * A new session given one message and stopped at the end of its turn or
+   * at its deadline (awake time): how it ended and its final answer's text;
+   * at full access, what it did outward. The hosted runs and a GitHub fix
+   * asked for from the phone go through here.
+   */
+  private async runSessionToEnd(
+    target: string,
+    session: ReturnType<AgentSessionManagerService["create"]>,
+    run: {
+      label: string;
+      message: string;
+      userText?: UserTextTags;
+      full: boolean;
+      deadlineMs: number;
+    }
+  ): Promise<{
+    outcome: "completed" | "failed" | "timeout" | "not-started";
+    text: string;
+    creditsOut?: boolean;
+    actions?: string[];
+  }> {
+    const full = run.full;
     this.emitEvent({
       type: "local-cli-session-created",
       workspaceId: target,
@@ -6722,11 +7197,7 @@ export class ServiceHost {
       session,
       emittedAt: new Date().toISOString(),
     });
-    this.updateAgentSessionLabel(
-      target,
-      session.id,
-      `Routine: ${request.name}`
-    );
+    this.updateAgentSessionLabel(target, session.id, run.label);
 
     // The final answer is the last assistant message's text.
     const texts = new Map<string, string>();
@@ -6783,10 +7254,7 @@ export class ServiceHost {
       sessionId: session.id,
       ...(full ? { mode: AgentMode.Yolo } : {}),
       // Startup comes out of the run's own time.
-      startupTimeoutMs: Math.min(
-        UNATTENDED_STARTUP_TIMEOUT_MS,
-        request.deadlineSecs * 1000
-      ),
+      startupTimeoutMs: Math.min(UNATTENDED_STARTUP_TIMEOUT_MS, run.deadlineMs),
     });
     if (!started.success) {
       await stop();
@@ -6796,16 +7264,15 @@ export class ServiceHost {
     this.sendAgentMessage({
       workspaceId: target,
       sessionId: session.id,
-      message: buildHostedRunPrompt(request),
-      userText: { routineFire: true },
+      message: run.message,
+      ...(run.userText != null ? { userText: run.userText } : {}),
     });
 
     // Counted in awake time (the power clock): a sleep does not use it up.
     let cancelDeadline: (() => void) | undefined;
     const deadline = new Promise<"timeout">((resolve) => {
-      cancelDeadline = this.connectivity.awakeTimeout(
-        request.deadlineSecs * 1000,
-        () => resolve("timeout")
+      cancelDeadline = this.connectivity.awakeTimeout(run.deadlineMs, () =>
+        resolve("timeout")
       );
     });
     try {
@@ -8898,6 +9365,25 @@ export class ServiceHost {
       const scheduled = trigger === "schedule" || trigger === "catch-up";
       if (scheduled && checked?.change == null) return "skipped";
       siteCheck = checked ?? undefined;
+    }
+    // A review routine whose repo the GitHub watcher reads: a scheduled fire
+    // runs only when the watcher found a new review since the routine last
+    // ran (a new one already ran it at once), and records nothing otherwise.
+    // When the watcher cannot read GitHub, the schedule runs as it always did.
+    if (
+      job.githubReviews === true &&
+      (trigger === "schedule" || trigger === "catch-up")
+    ) {
+      const repo = await this.githubRepoOfWorkspace(job.workspaceId);
+      if (
+        repo != null &&
+        this.githubWatchReads(repo) &&
+        !this.githubWatchStore.reviewFoundSince(
+          repo,
+          job.lastRunAt ?? job.createdAt
+        )
+      )
+        return "skipped";
     }
     // Signed out, with no other key: every run would fail and pause the
     // routine, three at a time, in silence.

@@ -1578,9 +1578,9 @@
       },
       "pr-review-fixes": {
         "name": "處理我的 PR 審查意見",
-        "description": "平日每小時檢查你尚未關閉的提取要求，為每則新的審查意見推送修正。",
+        "description": "你開啟的拉取請求一收到新的審查留言，就推送修正。",
         "when": "平日 9 點到 18 點，每小時",
-        "promise": "平日每小時尋找你的提取要求中的新審查意見，在該提取要求的分支上逐一修正，並在下方回覆。需要你判斷的意見會轉給你。"
+        "promise": "你的拉取請求收到新的審查留言時，它會在該拉取請求的分支上修正，並在留言下回覆。關注不消耗點數：只有在有留言要修正時才會執行。需要你判斷的留言會轉給你。"
       },
       "site-down": {
         "name": "網站當機時通知我",
@@ -1642,7 +1642,8 @@
       "catch-up": "補執行",
       "interrupted": "中斷之後",
       "webhook": "Webhook 觸發",
-      "agent": "由 AI 代理觸發"
+      "agent": "由 AI 代理觸發",
+      "github": "GitHub"
     },
     "hosted": {
       "badge": "自動執行",
@@ -5467,5 +5468,69 @@
     "wallBody": "你的訊息已儲存。升級到 {{plan}}，它會從停下的地方繼續，用我們的程式路由器。",
     "wallBodyNoMessage": "升級到 {{plan}}，用我們的程式路由器繼續寫程式，每月點數也更多。",
     "wallCta": "升級到 {{plan}} 並完成它"
+  },
+  "githubWatch": {
+    "line": {
+      "ci": "{{pr}}（{{repo}}）的 CI 失敗：{{detail}}",
+      "review": "{{who}} 留言於 {{pr}}（{{repo}}）",
+      "changes": "{{who}} 要求修改 {{pr}}（{{repo}}）",
+      "approved": "{{who}} 核准了 {{pr}}（{{repo}}）",
+      "pr": "{{who}} 提出新的 PR {{pr}}（{{repo}}）",
+      "prYours": "{{who}} 的新 PR {{pr}} 等你審查（{{repo}}）",
+      "away": "在你的電腦關機期間"
+    },
+    "ping": {
+      "more": "…還有 {{count}} 則，請在 AbacusAI Bot 查看。",
+      "replyFix": "回覆「fix」，我就在你的電腦上修正。",
+      "replyReview": "回覆「review」，我就在你的電腦上審查。",
+      "openApp": "打開 AbacusAI Bot 來修正。"
+    },
+    "notice": {
+      "more": "還有 {{count}} 則。打開 AbacusAI Bot 查看。"
+    },
+    "fix": {
+      "done": "{{pr}} 已完成。",
+      "reviewed": "{{pr}} 已審查。",
+      "failed": "{{pr}} 的修正沒有完成就停了。打開 AbacusAI Bot 查看進度。"
+    },
+    "card": {
+      "title": "程式碼需要我時提醒我",
+      "description": "新的拉取請求、你的 PR 收到審查、CI 失敗：AbacusAI Bot 會在這裡和你的手機上提醒你，並附上「修正」按鈕。檢查不消耗點數。",
+      "start": "關注我的 GitHub",
+      "watching": "正在關注 GitHub",
+      "repos": "{{repos}} · {{time}} 檢查",
+      "edit": "編輯",
+      "empty": "目前沒有需要你處理的事。",
+      "fix": "修正",
+      "review": "審查",
+      "fixing": "修正中…",
+      "openFix": "開啟修正",
+      "noProject": "把這個儲存庫的資料夾加入為專案，就能在這裡修正。",
+      "upsell": "Basic 會全天候關注你的儲存庫，即使電腦關機也一樣。",
+      "upsellAction": "了解 Basic"
+    },
+    "problem": {
+      "noToken": "在連接器中連接 GitHub，或登入 GitHub CLI，即可開始關注。",
+      "disabled": "設定中的 GitHub 整合已關閉。",
+      "rateLimited": "GitHub 要求稍候片刻，檢查很快恢復。"
+    },
+    "dialog": {
+      "title": "關注我的 GitHub",
+      "description": "應用程式開啟時，AbacusAI Bot 每分鐘檢查你的儲存庫，並提醒新的拉取請求、你的 PR 收到的審查和失敗的 CI。檢查不消耗點數，只有修正才消耗。",
+      "repos": "儲存庫",
+      "noRepos": "你還沒有在 GitHub 上的專案。開啟一個資料夾是 GitHub 儲存庫的專案。",
+      "fullAccess": "完整存取",
+      "phoneFix": "用於我從手機發起的修正",
+      "phoneFixHint": "在手機上回覆「fix」，這台電腦就會修正、測試並推送。關閉時：打開應用程式來修正。",
+      "where": "提醒會傳到此應用程式和 {{lanes}}。",
+      "whereApp": "提醒會顯示在此應用程式中。連結 WhatsApp、Telegram 或 Discord，手機上也能收到。",
+      "start": "開始關注",
+      "save": "儲存",
+      "turnOff": "關閉",
+      "cancel": "取消"
+    },
+    "pr": {
+      "line": "這裡的 PR 收到審查或 CI 失敗時提醒我"
+    }
   }
 }

@@ -1578,9 +1578,9 @@
       },
       "pr-review-fixes": {
         "name": "PR'larımdaki inceleme yorumlarını düzelt",
-        "description": "Hafta içi her saat açık pull request'lerini kontrol eder ve her yeni inceleme yorumu için bir düzeltme gönderir.",
+        "description": "Açık pull request'lerine gelen her yeni inceleme yorumu için, geldiği anda bir düzeltme push eder.",
         "when": "Hafta içi her saat, 9–18",
-        "promise": "Hafta içi her saat pull request'lerindeki yeni inceleme yorumlarını arar, her birini o pull request'in dalında düzeltir ve altına yanıt yazar. Senin kararını gerektiren yorumlar sana gelir."
+        "promise": "Pull request'lerinden birine yeni bir inceleme yorumu gelince, o pull request'in dalında düzeltir ve altına yanıt yazar. İzlemek kredi harcamaz: yalnızca düzeltilecek bir yorum olduğunda çalışır. Senin kararını gerektiren yorumlar sana gelir."
       },
       "site-down": {
         "name": "Sitem çöktüğünde bana haber ver",
@@ -1642,7 +1642,8 @@
       "catch-up": "Telafi",
       "interrupted": "Kesintiden sonra",
       "webhook": "Webhook",
-      "agent": "Ajan tarafından"
+      "agent": "Ajan tarafından",
+      "github": "GitHub"
     },
     "hosted": {
       "badge": "Kendi kendine çalışır",
@@ -5467,5 +5468,69 @@
     "wallBody": "Mesajın kaydedildi. {{plan}} planına geç, kaldığı yerden kodlama yönlendiricimizle devam etsin.",
     "wallBodyNoMessage": "Kodlama yönlendiricimizle kodlamaya devam etmek ve her ay daha fazla kredi için {{plan}} planına geç.",
     "wallCta": "{{plan}} planına geç ve bitir"
+  },
+  "githubWatch": {
+    "line": {
+      "ci": "{{pr}} ({{repo}}) üzerinde CI başarısız: {{detail}}",
+      "review": "{{who}}, {{pr}} ({{repo}}) için yorum yaptı",
+      "changes": "{{who}}, {{pr}} ({{repo}}) için değişiklik istedi",
+      "approved": "{{who}}, {{pr}} ({{repo}}) onayladı",
+      "pr": "{{who}} tarafından yeni PR {{pr}} ({{repo}})",
+      "prYours": "{{who}} tarafından yeni PR {{pr}} incelemeni bekliyor ({{repo}})",
+      "away": "bilgisayarın kapalıyken"
+    },
+    "ping": {
+      "more": "…ve AbacusAI Bot'ta {{count}} tane daha.",
+      "replyFix": "\"fix\" yaz, bilgisayarında düzelteyim.",
+      "replyReview": "\"review\" yaz, bilgisayarında inceleyeyim.",
+      "openApp": "Düzeltmek için AbacusAI Bot'u aç."
+    },
+    "notice": {
+      "more": "Ve {{count}} tane daha. Görmek için AbacusAI Bot'u aç."
+    },
+    "fix": {
+      "done": "{{pr}} tamam.",
+      "reviewed": "{{pr}} incelendi.",
+      "failed": "{{pr}} düzeltmesi bitmeden durdu. Nereye kadar geldiğini görmek için AbacusAI Bot'u aç."
+    },
+    "card": {
+      "title": "Kodum bana ihtiyaç duyunca haber ver",
+      "description": "Yeni bir pull request, PR'ına bir inceleme ya da başarısız CI: AbacusAI Bot burada ve telefonunda Düzelt düğmesiyle haber verir. Kontrol kredi harcamaz.",
+      "start": "GitHub'ımı izle",
+      "watching": "GitHub izleniyor",
+      "repos": "{{repos}} · {{time}} itibarıyla kontrol edildi",
+      "edit": "Düzenle",
+      "empty": "Şu an seni bekleyen bir şey yok.",
+      "fix": "Düzelt",
+      "review": "İncele",
+      "fixing": "Düzeltiliyor…",
+      "openFix": "Düzeltmeyi aç",
+      "noProject": "Burada düzeltmek için bu reponun klasörünü proje olarak ekle.",
+      "upsell": "Basic, bilgisayarın kapalıyken bile repolarını 7/24 izler.",
+      "upsellAction": "Basic'e bak"
+    },
+    "problem": {
+      "noToken": "İzlemeye başlamak için Bağlayıcılar'da GitHub'ı bağla ya da GitHub CLI'da oturum aç.",
+      "disabled": "GitHub entegrasyonu Ayarlar'da kapalı.",
+      "rateLimited": "GitHub biraz beklememizi istedi. Kontroller yakında devam eder."
+    },
+    "dialog": {
+      "title": "GitHub'ımı izle",
+      "description": "Uygulama açıkken AbacusAI Bot repolarını her dakika kontrol eder; yeni pull request'leri, PR'larına gelen incelemeleri ve başarısız CI'yı haber verir. Kontrol kredi harcamaz; yalnızca düzeltme harcar.",
+      "repos": "Repolar",
+      "noRepos": "Henüz GitHub'da projen yok. Klasörü bir GitHub reposu olan bir proje aç.",
+      "fullAccess": "Tam erişim",
+      "phoneFix": "telefondan başlattığım düzeltmeler için",
+      "phoneFixHint": "Telefondan \"fix\" yaz; bu bilgisayar düzeltir, test eder ve push eder. Kapalı: düzeltmek için uygulamayı aç.",
+      "where": "Bildirimler bu uygulamaya ve {{lanes}} hesabına gider.",
+      "whereApp": "Bildirimler bu uygulamada görünür. Telefonda da almak için WhatsApp, Telegram veya Discord bağla.",
+      "start": "İzlemeye başla",
+      "save": "Kaydet",
+      "turnOff": "Kapat",
+      "cancel": "İptal"
+    },
+    "pr": {
+      "line": "Buradaki PR'lar inceleme alınca ya da CI başarısız olunca haber ver"
+    }
   }
 }

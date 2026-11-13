@@ -16,6 +16,8 @@ export const notificationOptions = (metadata: NotificationMetadata) => {
   switch (metadata.kind) {
     case "messaging":
       return { to: "/library/messaging" } as const;
+    case "github-watch":
+      return { to: "/routines" } as const;
     case "channel":
       return metadata.channelId == null
         ? null

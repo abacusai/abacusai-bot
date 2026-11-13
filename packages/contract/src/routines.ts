@@ -7,7 +7,8 @@
 /**
  * `catch-up`: a scheduled fire made up after the computer was off or asleep;
  * `interrupted`: a scheduled run made up once after the app closed under it;
- * `agent`: the agent ran it from a conversation, not the user's Run now.
+ * `agent`: the agent ran it from a conversation, not the user's Run now;
+ * `github`: the GitHub watcher found a new review on its project's repo.
  */
 export type RoutineTrigger =
   | "schedule"
@@ -16,7 +17,8 @@ export type RoutineTrigger =
   | "webhook"
   | "manual"
   | "create"
-  | "agent";
+  | "agent"
+  | "github";
 
 /**
  * One entry of a routine's history (spec 05 §31.5 f). **Attempt kinds** are
@@ -236,6 +238,13 @@ export interface Routine {
   uptime?: RoutineUptime | null;
   /** Local only: a watcher whose runs mostly find nothing; never paused for it. */
   quietIsNormal?: boolean;
+  /**
+   * Local only: it acts on review comments on its project's GitHub repo. While
+   * the GitHub watcher watches that repo, a scheduled fire runs only when the
+   * watcher found a new review since its last run, and a new review fires it
+   * at once.
+   */
+  githubReviews?: boolean;
 }
 
 /** A watched site's state between fires. */
@@ -298,6 +307,8 @@ export interface RoutineCreateInput {
   uptimeUrl?: string | null;
   /** Local only: see `Routine.quietIsNormal`. */
   quietIsNormal?: boolean;
+  /** Local only: see `Routine.githubReviews`. */
+  githubReviews?: boolean;
 }
 
 export type RoutineUpdateInput = Partial<

@@ -37,6 +37,10 @@
       "types": "./dist/child-env.d.ts",
       "default": "./dist/child-env.js"
     },
+    "./github-connector-token": {
+      "types": "./dist/github-connector-token.d.ts",
+      "default": "./dist/github-connector-token.js"
+    },
     "./atomic-file": {
       "types": "./dist/atomic-file.d.ts",
       "default": "./dist/atomic-file.js"

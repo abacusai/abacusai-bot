@@ -1578,9 +1578,9 @@
       },
       "pr-review-fixes": {
         "name": "处理我的 PR 中的评审意见",
-        "description": "工作日每小时检查你未关闭的拉取请求，为每条新的评审意见推送修复。",
+        "description": "你打开的拉取请求一收到新的审查评论，就推送修复。",
         "when": "工作日 9 点到 18 点，每小时",
-        "promise": "工作日每小时查找你的拉取请求中的新评审意见，在该拉取请求的分支上逐条修复，并在下方回复。需要你判断的意见会转给你。"
+        "promise": "你的拉取请求收到新的审查评论时，它会在该拉取请求的分支上修复，并在评论下回复。关注不消耗积分：只有在有评论要修复时才会运行。需要你判断的评论会转给你。"
       },
       "site-down": {
         "name": "网站宕机时通知我",
@@ -1642,7 +1642,8 @@
       "catch-up": "补运行",
       "interrupted": "中断之后",
       "webhook": "Webhook 触发",
-      "agent": "由智能体触发"
+      "agent": "由智能体触发",
+      "github": "GitHub"
     },
     "hosted": {
       "badge": "自动运行",
@@ -5467,5 +5468,69 @@
     "wallBody": "你的消息已保存。升级到 {{plan}}，它会从停下的地方继续，用我们的编程路由器。",
     "wallBodyNoMessage": "升级到 {{plan}}，用我们的编程路由器继续编程，每月积分也更多。",
     "wallCta": "升级到 {{plan}} 并完成它"
+  },
+  "githubWatch": {
+    "line": {
+      "ci": "{{pr}}（{{repo}}）的 CI 失败：{{detail}}",
+      "review": "{{who}} 评论了 {{pr}}（{{repo}}）",
+      "changes": "{{who}} 要求修改 {{pr}}（{{repo}}）",
+      "approved": "{{who}} 批准了 {{pr}}（{{repo}}）",
+      "pr": "{{who}} 提交了新 PR {{pr}}（{{repo}}）",
+      "prYours": "{{who}} 的新 PR {{pr}} 等你审查（{{repo}}）",
+      "away": "在你的电脑关机期间"
+    },
+    "ping": {
+      "more": "…还有 {{count}} 条，请在 AbacusAI Bot 查看。",
+      "replyFix": "回复“fix”，我就在你的电脑上修复。",
+      "replyReview": "回复“review”，我就在你的电脑上审查。",
+      "openApp": "打开 AbacusAI Bot 来修复。"
+    },
+    "notice": {
+      "more": "还有 {{count}} 条。打开 AbacusAI Bot 查看。"
+    },
+    "fix": {
+      "done": "{{pr}} 已完成。",
+      "reviewed": "{{pr}} 已审查。",
+      "failed": "{{pr}} 的修复没有完成就停了。打开 AbacusAI Bot 查看进度。"
+    },
+    "card": {
+      "title": "代码需要我时提醒我",
+      "description": "新的拉取请求、你的 PR 收到审查、CI 失败：AbacusAI Bot 会在这里和你的手机上提醒你，并附带“修复”按钮。检查不消耗积分。",
+      "start": "关注我的 GitHub",
+      "watching": "正在关注 GitHub",
+      "repos": "{{repos}} · {{time}} 检查",
+      "edit": "编辑",
+      "empty": "现在没有需要你处理的事。",
+      "fix": "修复",
+      "review": "审查",
+      "fixing": "修复中…",
+      "openFix": "打开修复",
+      "noProject": "把这个仓库的文件夹添加为项目，就能在这里修复。",
+      "upsell": "Basic 会全天候关注你的仓库，即使电脑关机也一样。",
+      "upsellAction": "了解 Basic"
+    },
+    "problem": {
+      "noToken": "在连接器中连接 GitHub，或登录 GitHub CLI，即可开始关注。",
+      "disabled": "设置中的 GitHub 集成已关闭。",
+      "rateLimited": "GitHub 要求稍等片刻，检查很快恢复。"
+    },
+    "dialog": {
+      "title": "关注我的 GitHub",
+      "description": "应用打开时，AbacusAI Bot 每分钟检查你的仓库，并提醒新的拉取请求、你的 PR 收到的审查和失败的 CI。检查不消耗积分，只有修复才消耗。",
+      "repos": "仓库",
+      "noRepos": "你还没有在 GitHub 上的项目。打开一个文件夹是 GitHub 仓库的项目。",
+      "fullAccess": "完全访问",
+      "phoneFix": "用于我从手机发起的修复",
+      "phoneFixHint": "在手机上回复“fix”，这台电脑就会修复、测试并推送。关闭时：打开应用来修复。",
+      "where": "提醒会发到此应用和 {{lanes}}。",
+      "whereApp": "提醒显示在此应用中。关联 WhatsApp、Telegram 或 Discord，手机上也能收到。",
+      "start": "开始关注",
+      "save": "保存",
+      "turnOff": "关闭",
+      "cancel": "取消"
+    },
+    "pr": {
+      "line": "这里的 PR 收到审查或 CI 失败时提醒我"
+    }
   }
 }

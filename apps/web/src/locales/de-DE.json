@@ -1578,9 +1578,9 @@
       },
       "pr-review-fixes": {
         "name": "Review-Kommentare in meinen PRs umsetzen",
-        "description": "Prüft werktags stündlich deine offenen Pull Requests und pusht für jeden neuen Review-Kommentar eine Korrektur.",
+        "description": "Pusht eine Korrektur für jeden neuen Review-Kommentar auf deinen offenen Pull Requests, sobald er kommt.",
         "when": "Werktags stündlich, 9 bis 18 Uhr",
-        "promise": "Werktags sucht es jede Stunde nach neuen Review-Kommentaren in deinen Pull Requests, setzt jeden auf dem Branch des Pull Requests um und antwortet darunter. Kommentare, die deine Entscheidung brauchen, kommen stattdessen zu dir."
+        "promise": "Kommt ein neuer Review-Kommentar auf einem deiner Pull Requests, behebt es ihn auf dessen Branch und antwortet darunter. Das Beobachten kostet keine Credits: Es läuft nur, wenn es etwas zu beheben gibt. Kommentare, die deine Entscheidung brauchen, kommen stattdessen zu dir."
       },
       "site-down": {
         "name": "Sag mir, wenn meine Website ausfällt",
@@ -1642,7 +1642,8 @@
       "catch-up": "Nachgeholt",
       "interrupted": "Nach Unterbrechung",
       "webhook": "Webhook",
-      "agent": "Vom Agenten"
+      "agent": "Vom Agenten",
+      "github": "GitHub"
     },
     "hosted": {
       "badge": "Runs on its own",
@@ -5467,5 +5468,69 @@
     "wallBody": "Deine Nachricht ist gespeichert. Wechsle zu {{plan}}, dann geht es genau dort weiter, wo es aufgehört hat, mit unserem Coding-Router.",
     "wallBodyNoMessage": "Wechsle zu {{plan}}, um mit unserem Coding-Router weiter zu coden, mit mehr Credits jeden Monat.",
     "wallCta": "Zu {{plan}} wechseln und fertigstellen"
+  },
+  "githubWatch": {
+    "line": {
+      "ci": "CI fehlgeschlagen bei {{pr}} ({{repo}}): {{detail}}",
+      "review": "{{who}} hat {{pr}} kommentiert ({{repo}})",
+      "changes": "{{who}} bittet um Änderungen an {{pr}} ({{repo}})",
+      "approved": "{{who}} hat {{pr}} genehmigt ({{repo}})",
+      "pr": "Neuer PR {{pr}} von {{who}} ({{repo}})",
+      "prYours": "Neuer PR {{pr}} von {{who}} wartet auf dein Review ({{repo}})",
+      "away": "während dein Computer aus war"
+    },
+    "ping": {
+      "more": "…und {{count}} weitere in AbacusAI Bot.",
+      "replyFix": "Antworte „fix“, dann behebe ich es auf deinem Computer.",
+      "replyReview": "Antworte „review“, dann prüfe ich es auf deinem Computer.",
+      "openApp": "Öffne AbacusAI Bot, um es zu beheben."
+    },
+    "notice": {
+      "more": "Und {{count}} weitere. Öffne AbacusAI Bot, um sie zu sehen."
+    },
+    "fix": {
+      "done": "{{pr}} erledigt.",
+      "reviewed": "{{pr}} geprüft.",
+      "failed": "Die Korrektur für {{pr}} wurde nicht fertig. Öffne AbacusAI Bot, um zu sehen, wie weit sie kam."
+    },
+    "card": {
+      "title": "Sag mir Bescheid, wenn mein Code mich braucht",
+      "description": "Ein neuer Pull Request, ein Review auf deinen oder fehlgeschlagene CI: AbacusAI Bot sagt es dir hier und auf dem Handy, mit einem Beheben-Button. Das Prüfen kostet keine Credits.",
+      "start": "Mein GitHub beobachten",
+      "watching": "GitHub wird beobachtet",
+      "repos": "{{repos}} · geprüft um {{time}}",
+      "edit": "Bearbeiten",
+      "empty": "Gerade braucht dich nichts.",
+      "fix": "Beheben",
+      "review": "Prüfen",
+      "fixing": "Wird behoben…",
+      "openFix": "Korrektur öffnen",
+      "noProject": "Füge den Ordner dieses Repos als Projekt hinzu, um es hier zu beheben.",
+      "upsell": "Basic beobachtet deine Repos rund um die Uhr, auch wenn dein Computer aus ist.",
+      "upsellAction": "Basic ansehen"
+    },
+    "problem": {
+      "noToken": "Verbinde GitHub unter Connectors oder melde dich in der GitHub CLI an, um zu beobachten.",
+      "disabled": "Die GitHub-Integration ist in den Einstellungen aus.",
+      "rateLimited": "GitHub bittet um eine kurze Pause. Die Prüfungen laufen bald wieder."
+    },
+    "dialog": {
+      "title": "Mein GitHub beobachten",
+      "description": "Solange die App offen ist, prüft AbacusAI Bot deine Repos jede Minute und meldet neue Pull Requests, Reviews auf deine und fehlgeschlagene CI. Das Prüfen kostet keine Credits, nur eine Korrektur.",
+      "repos": "Repos",
+      "noRepos": "Noch keins deiner Projekte ist auf GitHub. Öffne ein Projekt, dessen Ordner ein GitHub-Repo ist.",
+      "fullAccess": "Vollzugriff",
+      "phoneFix": "für Korrekturen, die ich vom Handy starte",
+      "phoneFixHint": "Antworte „fix“ auf dem Handy, und es wird auf diesem Computer behoben, getestet und gepusht. Aus: öffne die App zum Beheben.",
+      "where": "Meldungen gehen an diese App und {{lanes}}.",
+      "whereApp": "Meldungen erscheinen in dieser App. Verknüpfe WhatsApp, Telegram oder Discord, um sie auch auf dem Handy zu bekommen.",
+      "start": "Beobachten starten",
+      "save": "Speichern",
+      "turnOff": "Ausschalten",
+      "cancel": "Abbrechen"
+    },
+    "pr": {
+      "line": "Melde mich, wenn PRs hier ein Review bekommen oder CI fehlschlägt"
+    }
   }
 }

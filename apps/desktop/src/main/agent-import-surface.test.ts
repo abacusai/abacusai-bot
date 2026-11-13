@@ -43,6 +43,8 @@ const ALLOWED = new Set([
   "@abacus-ai/agent/atomic-file",
   // A child process's environment: no imports at all.
   "@abacus-ai/agent/child-env",
+  // The GitHub connector's token: plain fetch and the endpoint leaf (no imports).
+  "@abacus-ai/agent/github-connector-token",
   // How a task one bot passed to another opens: no imports at all.
   "@abacus-ai/agent/bot-task",
   // A bot's daily notes, which main writes: node's fs and path, the

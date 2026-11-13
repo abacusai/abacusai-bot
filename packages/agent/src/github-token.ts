@@ -6,11 +6,10 @@
  * minutes; held in memory only. A connection replaces a token pasted on the
  * card; disconnecting hands GH_TOKEN back to it.
  */
-import { abacusV1BaseUrl } from "./abacus-endpoint.js";
 import { applyStoredApiKeys } from "./config.js";
+import { fetchGithubConnectorToken } from "./github-connector-token.js";
 
 const REFRESH_EVERY_MS = 5 * 60_000;
-const REQUEST_TIMEOUT_MS = 10_000;
 
 /** The token this module put in GH_TOKEN, so it never clears one it did not set. */
 let held: string | null = null;
@@ -20,30 +19,11 @@ export async function refreshGithubToken(
 ): Promise<void> {
   const key = (env.ABACUS_API_KEY ?? "").trim();
   if (key.length === 0) return;
-  let answer: { connected?: unknown; token?: unknown };
-  try {
-    const response = await fetch(
-      `${abacusV1BaseUrl(env)}/abacusaibot_github_token`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${key}`,
-          "content-type": "application/json",
-          "user-agent": "abacusai-bot",
-        },
-        body: "{}",
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      }
-    );
-    // A platform without the endpoint, or a hiccup: keep what is there.
-    if (!response.ok) return;
-    answer = (await response.json()) as typeof answer;
-  } catch {
-    return;
-  }
-  if (answer.connected === true && typeof answer.token === "string") {
-    held = answer.token;
-    env.GH_TOKEN = answer.token;
+  const token = await fetchGithubConnectorToken(key, env);
+  if (token === undefined) return;
+  if (token != null) {
+    held = token;
+    env.GH_TOKEN = token;
     return;
   }
   if (held != null && env.GH_TOKEN === held) {

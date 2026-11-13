@@ -142,6 +142,8 @@ export interface CronJob {
   uptime?: RoutineUptime | null;
   /** Its runs mostly find nothing: never paused for that. */
   quietIsNormal?: boolean;
+  /** Fired by the GitHub watcher's new reviews (see `Routine.githubReviews`). */
+  githubReviews?: boolean;
 }
 
 /** Why a fire waits: the network, a missed fire, or a run the app closed under. */
@@ -394,6 +396,7 @@ export const createJob = (
     originSessionId?: string | null;
     uptimeUrl?: string | null;
     quietIsNormal?: boolean;
+    githubReviews?: boolean;
   },
   id?: string
 ): CronJob => {
@@ -449,6 +452,7 @@ export const createJob = (
       : {}),
     ...(uptimeUrl != null ? { uptimeUrl } : {}),
     ...(input.quietIsNormal === true ? { quietIsNormal: true } : {}),
+    ...(input.githubReviews === true ? { githubReviews: true } : {}),
   };
 
   write([...existing, job]);

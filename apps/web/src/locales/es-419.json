@@ -1578,9 +1578,9 @@
       },
       "pr-review-fixes": {
         "name": "Resolver los comentarios de revisión de mis PR",
-        "description": "Revisa tus pull requests abiertos cada hora en días hábiles y sube una corrección para cada comentario nuevo.",
+        "description": "Sube un arreglo para cada comentario de revisión nuevo en tus pull requests abiertos, en cuanto llega.",
         "when": "Cada hora en días hábiles, de 9 a 18",
-        "promise": "Cada hora en días hábiles busca comentarios de revisión nuevos en tus pull requests, corrige cada uno en la rama de ese pull request y responde debajo. Los comentarios que necesitan tu criterio te llegan a ti."
+        "promise": "Cuando llega un comentario de revisión nuevo a uno de tus pull requests, lo arregla en la rama de ese pull request y responde debajo. Vigilar no usa créditos: solo se ejecuta cuando hay un comentario que arreglar. Los comentarios que necesitan tu criterio te llegan a ti."
       },
       "site-down": {
         "name": "Avísame cuando mi sitio se caiga",
@@ -1642,7 +1642,8 @@
       "catch-up": "Recuperada",
       "interrupted": "Tras una interrupción",
       "webhook": "Webhook",
-      "agent": "Por el agente"
+      "agent": "Por el agente",
+      "github": "GitHub"
     },
     "hosted": {
       "badge": "Runs on its own",
@@ -5467,5 +5468,69 @@
     "wallBody": "Tu mensaje está guardado. Cámbiate a {{plan}} y seguirá justo donde se detuvo, con nuestro router de código.",
     "wallBodyNoMessage": "Cámbiate a {{plan}} para seguir programando con nuestro router de código, con más créditos cada mes.",
     "wallCta": "Cambiar a {{plan}} y terminarlo"
+  },
+  "githubWatch": {
+    "line": {
+      "ci": "Falló la CI en {{pr}} ({{repo}}): {{detail}}",
+      "review": "{{who}} comentó en {{pr}} ({{repo}})",
+      "changes": "{{who}} pidió cambios en {{pr}} ({{repo}})",
+      "approved": "{{who}} aprobó {{pr}} ({{repo}})",
+      "pr": "Nuevo PR {{pr}} de {{who}} ({{repo}})",
+      "prYours": "Nuevo PR {{pr}} de {{who}} espera tu revisión ({{repo}})",
+      "away": "mientras tu computadora estaba apagada"
+    },
+    "ping": {
+      "more": "…y {{count}} más en AbacusAI Bot.",
+      "replyFix": "Responde \"fix\" y lo arreglo en tu computadora.",
+      "replyReview": "Responde \"review\" y lo reviso en tu computadora.",
+      "openApp": "Abre AbacusAI Bot para arreglarlo."
+    },
+    "notice": {
+      "more": "Y {{count}} más. Abre AbacusAI Bot para verlos."
+    },
+    "fix": {
+      "done": "Listo con {{pr}}.",
+      "reviewed": "{{pr}} revisado.",
+      "failed": "El arreglo de {{pr}} se detuvo antes de terminar. Abre AbacusAI Bot para ver hasta dónde llegó."
+    },
+    "card": {
+      "title": "Avísame cuando mi código me necesite",
+      "description": "Un pull request nuevo, una revisión en el tuyo o una CI fallida: AbacusAI Bot te avisa aquí y en tu teléfono, con un botón Arreglar. Revisar no usa créditos.",
+      "start": "Vigilar mi GitHub",
+      "watching": "Vigilando GitHub",
+      "repos": "{{repos}} · revisado a las {{time}}",
+      "edit": "Editar",
+      "empty": "Nada te necesita ahora.",
+      "fix": "Arreglar",
+      "review": "Revisar",
+      "fixing": "Arreglando…",
+      "openFix": "Abrir el arreglo",
+      "noProject": "Agrega la carpeta de este repo como proyecto para arreglarlo aquí.",
+      "upsell": "Basic vigila tus repos 24/7, incluso con tu computadora apagada.",
+      "upsellAction": "Ver Basic"
+    },
+    "problem": {
+      "noToken": "Conecta GitHub en Conectores o inicia sesión en GitHub CLI para empezar a vigilar.",
+      "disabled": "La integración con GitHub está desactivada en Configuración.",
+      "rateLimited": "GitHub pidió esperar un poco. Las revisiones vuelven pronto."
+    },
+    "dialog": {
+      "title": "Vigilar mi GitHub",
+      "description": "Mientras la app está abierta, AbacusAI Bot revisa tus repos cada minuto y te avisa de pull requests nuevos, revisiones en los tuyos y CI fallida. Revisar no usa créditos; solo un arreglo.",
+      "repos": "Repos",
+      "noRepos": "Ninguno de tus proyectos está en GitHub todavía. Abre un proyecto cuya carpeta sea un repo de GitHub.",
+      "fullAccess": "Acceso total",
+      "phoneFix": "para arreglos que inicio desde mi teléfono",
+      "phoneFixHint": "Responde \"fix\" en tu teléfono y se arregla, prueba y sube en esta computadora. Desactivado: abre la app para arreglarlo.",
+      "where": "Los avisos llegan a esta app y a {{lanes}}.",
+      "whereApp": "Los avisos aparecen en esta app. Vincula WhatsApp, Telegram o Discord para recibirlos también en tu teléfono.",
+      "start": "Empezar a vigilar",
+      "save": "Guardar",
+      "turnOff": "Desactivar",
+      "cancel": "Cancelar"
+    },
+    "pr": {
+      "line": "Avísame cuando los PR de aquí reciban una revisión o falle la CI"
+    }
   }
 }

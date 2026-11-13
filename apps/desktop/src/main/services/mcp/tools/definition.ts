@@ -48,6 +48,7 @@ export type ToolHost = Pick<
   | "paidFeature"
   | "botHelp"
   | "routineOfferClosed"
+  | "githubFix"
   | "ok"
   | "err"
 >;
@@ -71,6 +72,8 @@ export interface HostCapabilities {
   nextStep: boolean;
   /** The app delivers local routine runs' answers (not on the hosted computer). */
   routineDelivery?: boolean;
+  /** The user allowed fixes of what the GitHub watcher found from their chats. */
+  githubFix?: boolean;
 }
 
 export interface ToolDefinition {
