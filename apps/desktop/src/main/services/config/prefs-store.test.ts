@@ -278,6 +278,7 @@ describe("PrefsStore", () => {
       routineDuplicatesKept: [],
       paidWelcomeTier: null,
       siteDeployCards: {},
+      streakNote: null,
     });
     expect(store.provenance()).toMatchObject({
       "dismissals.upsell": "legacy",

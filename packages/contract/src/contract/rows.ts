@@ -182,6 +182,13 @@ export interface WallReopenMark {
   askedAt: number | null;
 }
 
+/** The streak card under a reply: the local day and the reply it was for, and whether it was closed. */
+export interface StreakNoteMark {
+  day: string;
+  replyId: string;
+  closed: boolean;
+}
+
 export interface PrefsRow {
   id: "app";
   theme: "system" | "light" | "dark";
@@ -255,6 +262,8 @@ export interface PrefsRow {
     topModelHint?: TopModelHintCard | null;
     /** The latest credit wall in the user's own chat, asked again once when they come back. */
     wallReopen?: WallReopenMark | null;
+    /** The daily streak's card under the day's first counted reply, once a day. */
+    streakNote?: StreakNoteMark | null;
     /** The latest result in the user's own chat, offered on return (resume-card.ts); stamped by main. */
     resumeCard?: ResumeCardMark | null;
     /** The session-1 "Retry with <top model>" line, closed with its ×. */

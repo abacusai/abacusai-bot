@@ -17,6 +17,7 @@ import {
   type ModelAvailability,
   type ModelTier,
 } from "@abacus-ai/contract/models";
+import { parseStreak, streakCreditsLeft } from "@abacus-ai/contract/streak";
 
 import { abacusBotHome } from "../../paths";
 import { credentialFor, hasCredential } from "../config/settings";
@@ -482,7 +483,10 @@ const snapshotOf = (
   } = cached.value;
   if (used == null || granted == null || granted <= 0) return null;
   return {
-    remaining: Math.max(0, granted - used),
+    // The streak's credits for today are spent first, so they count as left.
+    remaining:
+      Math.max(0, granted - used) +
+      streakCreditsLeft(cached.value.streak, cached.at),
     granted,
     at: cached.at,
     ...(planCredits != null ? { planCredits } : {}),
@@ -710,6 +714,7 @@ export const requestAbacusAccount = async (
           ABACUS_ACCOUNT_FOCI.find((focus) => focus === body.focus) ?? null,
         onboarding_offer: body.onboarding_offer === true,
         share_artifact: body.share_artifact === true,
+        streak: parseStreak(body.streak),
       },
     };
   } catch {

@@ -1,3 +1,4 @@
+import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
 import {
   conversationRefFromKey,
   type ConversationKey,
@@ -134,10 +135,15 @@ export const SessionsGlobals = ({
       if (abort.signal.aborted) return;
       finished(notice);
       // The turn spent credits: refresh the pill now, not on the next poll.
-      if (notice.outcome !== "cancelled")
-        void qc.invalidateQueries({
-          queryKey: transport.orpc.account.abacus.queryKey(),
-        });
+      if (notice.outcome !== "cancelled") {
+        const queryKey = transport.orpc.account.abacus.queryKey();
+        void qc.invalidateQueries({ queryKey });
+        // The turn's report marks today's streak day a moment after the turn
+        // closes: read again then, so its card shows under this reply.
+        const account = qc.getQueryData<AbacusAccountInfo | null>(queryKey);
+        if (account?.streak != null && !account.streak.today_done)
+          setTimeout(() => void qc.invalidateQueries({ queryKey }), 4000);
+      }
     });
     let first = true;
     const waiting = new Set<string>();

@@ -92,6 +92,7 @@ const DEFAULTS: PrefsValues = {
     shareOffer: null,
     topModelHint: null,
     wallReopen: null,
+    streakNote: null,
     resumeCard: null,
     topModelRetryClosedAt: null,
     freePlanSeenAt: null,
