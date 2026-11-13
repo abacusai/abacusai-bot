@@ -183,6 +183,7 @@ import {
   settleProviderRegistrations,
   DEFAULT_MAX_OUTPUT_TOKENS,
 } from "./providers.js";
+import { NoteGate } from "./repeated-notes.js";
 import {
   progressLanguageSteer,
   RecentOwnWords,
@@ -748,6 +749,8 @@ export class AbacusBotSession {
    * they glue into one segment with thinking blocks landing after it.
    */
   private currentMessageId: string | null = null;
+  /** Holds back a note that only restates an earlier one in the run. */
+  private readonly noteGate = new NoteGate();
   private messageCounter = 0;
   /** Streamed tool calls, for the AG-UI emitter only. */
   private readonly toolCallStream = new ToolCallStream(
@@ -3290,6 +3293,7 @@ export class AbacusBotSession {
 
     switch (event.type) {
       case "agent_start":
+        this.noteGate.beginRun();
         this.emitAgentEvent({
           type: "status_changed",
           status: AgentStatus.Streaming,
@@ -3304,6 +3308,7 @@ export class AbacusBotSession {
           this.currentMessageId = `msg-${++this.messageCounter}`;
           this.toolCallStream.reset();
           this.reply.messageStarted();
+          this.noteGate.beginMessage();
           const messageId = this.aguiMessageId(event.message);
 
           this.emitInternal({
@@ -3341,14 +3346,8 @@ export class AbacusBotSession {
           ? full.slice(this.streamedText.length)
           : "";
 
-        if (remainder.length > 0) {
-          this.reply.textStreamed(remainder);
-          this.emitAgentEvent({
-            type: "text_delta",
-            content: remainder,
-            messageId: this.messageId(),
-          });
-        }
+        this.showText(this.noteGate.text(remainder));
+        this.showText(this.noteGate.endMessage(full, callsTool(event.message)));
         this.reply.messageEnded(callsTool(event.message));
         if (callsTool(event.message)) this.checkProgressLanguage(full);
 
@@ -3599,8 +3598,22 @@ export class AbacusBotSession {
     }
   }
 
+  /** Text the user sees: it is also what the turn's reply is made of. */
+  private showText(text: string): void {
+    if (text.length === 0) return;
+    this.reply.textStreamed(text);
+    this.emitAgentEvent({
+      type: "text_delta",
+      content: text,
+      messageId: this.messageId(),
+    });
+  }
+
   private onStreamEvent(streamEvent: { type: string; delta?: string }): void {
     if (streamEvent.type.startsWith("toolcall_")) {
+      // The held words are a note, shown (or not) before the call they precede.
+      if (streamEvent.type === "toolcall_start")
+        this.showText(this.noteGate.toolCall());
       for (const internal of this.toolCallStream.handle(streamEvent)) {
         this.emitInternal(internal);
       }
@@ -3613,12 +3626,7 @@ export class AbacusBotSession {
         if (streamEvent.delta) {
           this.settleRoutingLine();
           this.streamedText += streamEvent.delta;
-          this.reply.textStreamed(streamEvent.delta);
-          this.emitAgentEvent({
-            type: "text_delta",
-            content: streamEvent.delta,
-            messageId: this.messageId(),
-          });
+          this.showText(this.noteGate.text(streamEvent.delta));
         }
 
         return;
