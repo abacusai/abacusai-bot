@@ -1,3 +1,5 @@
+import { contract } from "@abacus-ai/contract/contract";
+import { implement } from "@orpc/server";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { expect, it } from "vitest";
 
@@ -158,6 +160,51 @@ it("the full form offers no coding routine: its settings come only with its own 
       "Fix review comments on my PRs",
     ])
       expect(screen.queryByRole("button", { name })).toBeNull();
+  } finally {
+    app.view.unmount();
+    await app.cleanup();
+  }
+});
+
+it("a coding routine's setup offers the user's folders and Choose a folder, never the app's own workspace", async () => {
+  const os = implement(contract);
+  // GitHub connected and no repo open: the setup asks for the project.
+  const app = await renderApp("/routines", {
+    procedures: {
+      connectors: {
+        statuses: os.connectors.statuses.handler(() => ({
+          "abacus-githubbot": { state: "connected" },
+        })),
+      },
+    },
+  });
+  try {
+    fireEvent.click(
+      await screen.findByTestId("coding-routine-pr-review-fixes")
+    );
+    const project = (await screen.findByRole("combobox", {
+      name: "Project",
+    })) as HTMLSelectElement;
+    const options = Array.from(project.options, (option) => option.text);
+    expect(options).toContain("abacusai-bot");
+    expect(options).not.toContain("Default workspace");
+    expect(options.at(-1)).toBe("Choose a folder…");
+  } finally {
+    app.view.unmount();
+    await app.cleanup();
+  }
+});
+
+it("the full form names the app's own workspace and ends on Choose a folder", async () => {
+  const app = await renderApp("/routines/new");
+  try {
+    const folder = (await screen.findByRole("combobox", {
+      name: "Folder",
+    })) as HTMLSelectElement;
+    const options = Array.from(folder.options, (option) => option.text);
+    expect(options[0]).toBe("Its own folder");
+    expect(options).toContain("Default workspace");
+    expect(options.at(-1)).toBe("Choose a folder…");
   } finally {
     app.view.unmount();
     await app.cleanup();
