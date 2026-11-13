@@ -2393,7 +2393,10 @@ export class McpBrowserServer extends McpHttpServer {
               );
             }
           }
-          return (await this.leaveAbacusPage(sessionId)) ?? result;
+          return this.withPageEvents(
+            (await this.leaveAbacusPage(sessionId)) ?? result,
+            sessionId
+          );
         };
         try {
           return await this.inSessionOrder(sessionId ?? "", guarded);
@@ -4456,6 +4459,34 @@ export class McpBrowserServer extends McpHttpServer {
     );
     if (set) this.abacusBlocked.add(wc);
     return set;
+  }
+
+  /**
+   * What the page did during the call that its result did not already say (a
+   * download a countdown started while the run waited): told now, on this
+   * call, so the next one is not blamed for it and the run does not fetch
+   * the file again.
+   */
+  private withPageEvents(result: ToolResult, sessionId?: string): ToolResult {
+    const page = this.findView(sessionId);
+    const events =
+      page == null
+        ? []
+        : (this.options.target?.()?.pageEvents?.(page.id) ?? []);
+    if (events.length === 0) return result;
+    const content = result.content ?? [];
+    const first = content[0];
+    // A screenshot's result is an image: the events go in a text part of their own.
+    return {
+      ...result,
+      content:
+        first?.type === "text"
+          ? [
+              { ...first, text: [first.text, ...events].join("\n") },
+              ...content.slice(1),
+            ]
+          : [...content, { type: "text", text: events.join("\n") }],
+    };
   }
 
   /** Whether the user's own words, as the runtime stamped them on this call, open `url`. */
