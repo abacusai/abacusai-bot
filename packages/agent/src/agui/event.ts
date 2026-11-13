@@ -70,6 +70,7 @@ export const SESSION_SCOPED_CUSTOM: ReadonlySet<string> = new Set<CustomName>([
   "permission.pending",
   "queue.updated",
   "skills.loaded",
+  "background.tasks",
   "mcp.servers",
   "mcp.server_logs",
 ]);

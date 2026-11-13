@@ -3499,7 +3499,8 @@
       "askWaiting": "Waiting for a response…",
       "askSkipped": "Skipped",
       "askBot": "Perguntou a {{bot}}: {{what}}",
-      "giveTask": "Passou uma tarefa para {{bot}}: {{what}}"
+      "giveTask": "Passou uma tarefa para {{bot}}: {{what}}",
+      "quiet": "Sem saída há {{time}}"
     },
     "transcript": {
       "jump": "Jump to the end",
@@ -3671,6 +3672,12 @@
       "newChat": "Continuar em um novo chat com {{model}}",
       "here": "Mudar este chat para {{model}} mesmo assim",
       "cancel": "Cancelar"
+    },
+    "tasks": {
+      "title": "Em execução",
+      "stop": "Parar",
+      "serving": "Servindo {{url}}",
+      "stopFailed": "Não foi possível parar. Tente de novo."
     }
   },
   "notch": {

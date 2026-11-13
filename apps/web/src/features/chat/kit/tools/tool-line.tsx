@@ -3,6 +3,7 @@
  * meta and an expander, fed only by `NormalizedTool` (§5.4a). Plus the
  * expanders (bash, diff, read, browser, generic).
  */
+import { collapseProgress } from "@abacus-ai/agent/terminal-progress";
 import { buildToolTitle } from "@abacus-ai/agent/tool-display";
 import {
   parsePartialJSON,
@@ -144,6 +145,7 @@ const useNormalizedTool = (
   tool: NormalizedTool;
   input: Record<string, unknown>;
   needsYou: string | null;
+  outputAt: number | null;
 } => {
   const { session } = useChatView();
   const scope = useSubagentScope();
@@ -160,6 +162,7 @@ const useNormalizedTool = (
     session,
     (state) => ({
       output: state.tools.output[key],
+      outputAt: state.tools.outputAt[key] ?? null,
       display: state.tools.display[key],
       runActive:
         state.runs.active != null &&
@@ -170,6 +173,7 @@ const useNormalizedTool = (
     }),
     (a, b) =>
       a.output === b.output &&
+      a.outputAt === b.outputAt &&
       a.display === b.display &&
       a.runActive === b.runActive &&
       a.needsYou === b.needsYou
@@ -196,7 +200,12 @@ const useNormalizedTool = (
     tool.status !== "refused"
       ? { ...tool, diff: { final: written } }
       : tool;
-  return { tool: shown, input, needsYou: live.needsYou };
+  return {
+    tool: shown,
+    input,
+    needsYou: live.needsYou,
+    outputAt: live.outputAt,
+  };
 };
 
 /** A request to another bot reads as what it was ("Asked Planner: …"). */
@@ -228,6 +237,28 @@ export const toolTitle = (
   }
 };
 
+/** Silence long enough that "is it stuck?" deserves an answer on the row. */
+export const QUIET_AFTER_MS = 30_000;
+
+/** How far a running command says it has got: a short bar and the number. */
+export const ProgressMeter = ({ value }: { value: number }) => (
+  <span
+    className="flex items-center gap-1.5"
+    role="progressbar"
+    aria-valuemin={0}
+    aria-valuemax={100}
+    aria-valuenow={value}
+  >
+    <span className="bg-muted h-1 w-12 overflow-hidden rounded-full">
+      <span
+        className="block h-full rounded-full bg-[var(--chat-status-running)]"
+        style={{ width: `${value}%` }}
+      />
+    </span>
+    <span className="tabular-nums">{value}%</span>
+  </span>
+);
+
 const Meta = ({ meta }: { meta: ToolMeta }) => {
   const { t } = useTranslation();
   const now = useSeconds(meta?.kind === "elapsed");
@@ -258,8 +289,18 @@ const Meta = ({ meta }: { meta: ToolMeta }) => {
       );
     case "elapsed":
       return (
-        <span className="text-muted-foreground">
-          {formatElapsed(now - meta.since)}
+        <span className="text-muted-foreground flex shrink-0 items-center gap-2">
+          {meta.progress != null ? (
+            <ProgressMeter value={meta.progress} />
+          ) : null}
+          {now - meta.quietSince >= QUIET_AFTER_MS ? (
+            <span data-tool-quiet>
+              {t("chat.tool.quiet", {
+                time: formatElapsed(now - meta.quietSince),
+              })}
+            </span>
+          ) : null}
+          <span>{formatElapsed(now - meta.since)}</span>
         </span>
       );
     case "todo":
@@ -338,9 +379,13 @@ const AnsiText = ({ text }: { text: string }) => (
   </>
 );
 
+/** Output as a terminal shows it: a redrawn progress line at its last state. */
+const shownOutput = (output: string): string =>
+  collapseProgress(output).replace(/\r$/, "");
+
 /** The last lines of a still-running command, shown even while collapsed. */
 const LivePreview = ({ output }: { output: string }) => {
-  const tail = tailLines(output, 4).text;
+  const tail = tailLines(shownOutput(output), 4).text;
   return tail === "" ? null : (
     <pre
       className="chat-terminal ms-5.5 mt-1 max-h-16 text-xs"
@@ -374,7 +419,9 @@ const BashBody = ({ tool }: { tool: NormalizedTool }) => {
   const ref = useRef<HTMLPreElement>(null);
   const [following, setFollowing] = useState(true);
   const terminalOutput = tool.terminal?.output ?? "";
-  const output = terminalOutput !== "" ? terminalOutput : tool.text;
+  const output = shownOutput(
+    terminalOutput !== "" ? terminalOutput : tool.text
+  );
   const { text: tail, hidden } = tailLines(output);
   const running = tool.status === "running";
   useEffect(() => {
@@ -836,7 +883,9 @@ const MountedToolLine = ({ part, result, expander: fixed }: ToolLineProps) => {
   const firstSeen =
     runStart ?? (message ? (messageTime(message)?.getTime() ?? null) : null);
   const scope = useSubagentScope();
-  const { tool, input, needsYou } = useNormalizedTool(part, result);
+  const { tool, input, needsYou, outputAt } = useNormalizedTool(part, result);
+  // Silence counts from when the row appeared: no command starts before it.
+  const [mountedAt] = useState(() => Date.now());
   const expander = fixed ?? expanderFor(part.name);
   const Icon = KIND_ICONS[kindOf(part.name)] ?? Wrench;
   const title =
@@ -859,7 +908,8 @@ const MountedToolLine = ({ part, result, expander: fixed }: ToolLineProps) => {
     part.name,
     input,
     tool,
-    tool.status === "running" ? firstSeen : null
+    tool.status === "running" ? firstSeen : null,
+    Math.max(outputAt ?? mountedAt, mountedAt)
   );
   const bodyId = useId();
   const openPath = toolOpenPath(part.name, input, workspaceRoot);

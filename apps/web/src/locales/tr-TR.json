@@ -3499,7 +3499,8 @@
       "askWaiting": "Yanıt bekleniyor…",
       "askSkipped": "Atlandı",
       "askBot": "{{bot}} botuna soruldu: {{what}}",
-      "giveTask": "{{bot}} botuna görev verildi: {{what}}"
+      "giveTask": "{{bot}} botuna görev verildi: {{what}}",
+      "quiet": "{{time}} süredir çıktı yok"
     },
     "transcript": {
       "jump": "Sona git",
@@ -3671,6 +3672,12 @@
       "newChat": "{{model}} ile yeni bir sohbette devam et",
       "here": "Yine de bu sohbeti {{model}} modeline geçir",
       "cancel": "İptal"
+    },
+    "tasks": {
+      "title": "Çalışıyor",
+      "stop": "Durdur",
+      "serving": "{{url}} sunuluyor",
+      "stopFailed": "Durdurulamadı. Tekrar dene."
     }
   },
   "notch": {

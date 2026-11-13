@@ -3499,7 +3499,8 @@
       "askWaiting": "Waiting for a response…",
       "askSkipped": "Skipped",
       "askBot": "{{bot}}에게 질문함: {{what}}",
-      "giveTask": "{{bot}}에게 작업을 전달함: {{what}}"
+      "giveTask": "{{bot}}에게 작업을 전달함: {{what}}",
+      "quiet": "{{time}} 동안 출력 없음"
     },
     "transcript": {
       "jump": "Jump to the end",
@@ -3671,6 +3672,12 @@
       "newChat": "{{model}}(으)로 새 채팅에서 계속",
       "here": "그래도 이 채팅을 {{model}}(으)로 바꾸기",
       "cancel": "취소"
+    },
+    "tasks": {
+      "title": "실행 중",
+      "stop": "중지",
+      "serving": "{{url}} 제공 중",
+      "stopFailed": "중지하지 못했습니다. 다시 시도하세요."
     }
   },
   "notch": {

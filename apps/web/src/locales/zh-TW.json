@@ -3499,7 +3499,8 @@
       "askWaiting": "正在等候回覆…",
       "askSkipped": "已略過",
       "askBot": "問了 {{bot}}：{{what}}",
-      "giveTask": "把任務交給了 {{bot}}：{{what}}"
+      "giveTask": "把任務交給了 {{bot}}：{{what}}",
+      "quiet": "已 {{time}} 沒有輸出"
     },
     "transcript": {
       "jump": "跳到最後",
@@ -3671,6 +3672,12 @@
       "newChat": "在新對話中使用 {{model}} 繼續",
       "here": "仍將此對話切換到 {{model}}",
       "cancel": "取消"
+    },
+    "tasks": {
+      "title": "執行中",
+      "stop": "停止",
+      "serving": "正在提供 {{url}}",
+      "stopFailed": "無法停止，請再試一次。"
     }
   },
   "notch": {

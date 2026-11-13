@@ -107,6 +107,66 @@ describe("R2-T12/T13 rendered tool rows", () => {
     expect(document.querySelector('[data-status="done"]')).toBeTruthy();
   });
 
+  it("long work reads as its label, with how far it has got and its last line", async () => {
+    const relay = await memoryRelay();
+    relay.emitAll([
+      ...b.sessionReady(),
+      b.runStarted("r"),
+      b.textStart("a"),
+      ...b.toolCall("dl", "bash", "a", {
+        command: "curl -L -o flutter.zip https://example.com/flutter.zip",
+        label: "Downloading Flutter, 1.8 GB",
+      }),
+      b.custom("tool.output", {
+        toolCallId: "dl",
+        output: "######   12.0%\r##########   31.0%",
+      }),
+    ]);
+    current = await renderRelay(relay, "session");
+    openRuns();
+    expect(
+      await screen.findByRole("button", {
+        name: /Downloading Flutter, 1\.8 GB/,
+      })
+    ).toBeTruthy();
+    expect(
+      (await screen.findByRole("progressbar")).getAttribute("aria-valuenow")
+    ).toBe("31");
+    const preview = document.querySelector("[data-live-output]");
+    expect(preview?.textContent).toBe("##########   31.0%");
+  });
+
+  it("lists work running past its turn above the composer, and Stop asks the agent", async () => {
+    const relay = await memoryRelay();
+    relay.emitAll([
+      ...b.sessionReady(),
+      b.custom("background.tasks", {
+        tasks: [
+          {
+            id: "bg-1",
+            kind: "job",
+            label: "Building the app",
+            command: "npm run build",
+            startedAt: Date.now() - 5_000,
+            lastOutputAt: Date.now() - 1_000,
+            lastLine: "transforming (812) src/main.tsx",
+            progress: null,
+          },
+        ],
+      }),
+    ]);
+    current = await renderRelay(relay, "session");
+    const strip = await screen.findByRole("region", { name: "Running" });
+    expect(strip.textContent).toContain("Building the app");
+    expect(strip.textContent).toContain("transforming (812) src/main.tsx");
+    fireEvent.click(screen.getByRole("button", { name: "Stop" }));
+    await waitFor(() => expect(relay.stats.stopTask).toEqual(["bg-1"]));
+    relay.emitAll([b.custom("background.tasks", { tasks: [] })]);
+    await waitFor(() =>
+      expect(screen.queryByRole("region", { name: "Running" })).toBeNull()
+    );
+  });
+
   it("renders todo_write as a checklist with struck-through completed items", async () => {
     const relay = await memoryRelay();
     relay.emitAll([

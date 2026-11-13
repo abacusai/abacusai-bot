@@ -7,6 +7,7 @@
 import { Type } from "typebox";
 
 import { startBackgroundJob } from "./background-processes.js";
+import { collapseProgress } from "./terminal-progress.js";
 
 interface BashLikeDefinition {
   name: string;
@@ -65,6 +66,49 @@ const BACKGROUND_GUIDANCE = [
 ].join("\n");
 
 /**
+ * The user watches long work as it runs: the row shows the label and the
+ * command's live output, and a backgrounded job stays listed above the chat
+ * box until it ends. Redrawn progress lines reach the model as their last state.
+ */
+const VISIBILITY_GUIDANCE = [
+  "",
+  "Set label for anything that may take more than a few seconds: what it does, in a few words",
+  'of the user\'s language ("Downloading Flutter, 1.8 GB", "Installing the app\'s packages").',
+  "The user sees it while the command runs. Never silence a download, install or build",
+  "(curl -s, -q, --quiet, > /dev/null): its progress is how the user sees it is moving, and",
+  "only each progress line's final state reaches you, so it costs you nothing.",
+].join("\n");
+
+/** A short, plain title for the user; never the command itself. */
+const LABEL_MAX = 80;
+
+const labelOf = (value: unknown): string | null => {
+  if (typeof value !== "string") return null;
+  const label = value.replace(/\s+/g, " ").trim();
+  if (label === "") return null;
+  return label.length > LABEL_MAX ? `${label.slice(0, LABEL_MAX - 1)}…` : label;
+};
+
+interface ResultLike {
+  content?: Array<{ type: string; text?: string }>;
+  [key: string]: unknown;
+}
+
+/** The result as the model reads it: each redrawn line at its last state. */
+const collapsedResult = (result: unknown): unknown => {
+  const typed = result as ResultLike | null;
+  if (typed == null || !Array.isArray(typed.content)) return result;
+  return {
+    ...typed,
+    content: typed.content.map((part) =>
+      part.type === "text" && typeof part.text === "string"
+        ? { ...part, text: collapseProgress(part.text).replace(/\r$/, "") }
+        : part
+    ),
+  };
+};
+
+/**
  * pi's bash tool with the extra argument. `operations` is what the foreground
  * tool was built with, so a background command is confined the same way; its
  * own `spawn` would make `background: true` a way out of the sandbox.
@@ -76,7 +120,7 @@ export function withBackgroundOption<T extends BashLikeDefinition>(
 ): T {
   return {
     ...definition,
-    description: `${definition.description}\n${TIMEOUT_GUIDANCE}\n${BACKGROUND_GUIDANCE}`,
+    description: `${definition.description}\n${TIMEOUT_GUIDANCE}\n${BACKGROUND_GUIDANCE}\n${VISIBILITY_GUIDANCE}`,
     parameters: Type.Object({
       ...definition.parameters.properties,
       // pi's own text says "no default timeout"; tool-timeouts makes that
@@ -86,6 +130,12 @@ export function withBackgroundOption<T extends BashLikeDefinition>(
           description:
             "Seconds to allow, up to 600 (1800 for an install or a scaffold). Unset means " +
             "120, or 1800 for an install or a scaffold, which are recognised by their command.",
+        })
+      ),
+      label: Type.Optional(
+        Type.String({
+          description:
+            "What this does, in a few words of the user's language. Shown to the user while it runs.",
         })
       ),
       background: Type.Optional(
@@ -99,10 +149,13 @@ export function withBackgroundOption<T extends BashLikeDefinition>(
     }),
     async execute(toolCallId, params, signal, onUpdate, ctx) {
       if (params.background !== true) {
-        // `background` is dropped, not forwarded: pi validates its own schema.
-        const { background: _background, ...forwarded } = params;
+        // `background` and `label` are dropped, not forwarded: pi validates
+        // its own schema.
+        const { background: _background, label: _label, ...forwarded } = params;
 
-        return definition.execute(toolCallId, forwarded, signal, onUpdate, ctx);
+        return collapsedResult(
+          await definition.execute(toolCallId, forwarded, signal, onUpdate, ctx)
+        );
       }
 
       const command =
@@ -118,6 +171,7 @@ export function withBackgroundOption<T extends BashLikeDefinition>(
 
       const job = startBackgroundJob({
         command,
+        label: labelOf(params.label),
         cwd,
         operations,
         // tool-timeouts leaves background calls unstamped; any deadline here

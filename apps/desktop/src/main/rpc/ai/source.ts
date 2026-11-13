@@ -80,6 +80,7 @@ export interface AguiSource {
   hydrate(threadId: string): Promise<AiHydration>;
   cancel(threadId: string, runId?: string): Promise<void>;
   respondPermission(input: AiRespondPermissionInput): Promise<void>;
+  stopTask(input: { threadId: string; id: string }): Promise<void>;
   queue: {
     enqueue(
       threadId: string,
@@ -150,6 +151,10 @@ export class UnavailableAguiSource implements AguiSource {
   }
 
   respondPermission(): Promise<void> {
+    return rejected();
+  }
+
+  stopTask(): Promise<void> {
     return rejected();
   }
 

@@ -3499,7 +3499,8 @@
       "askWaiting": "Waiting for a response…",
       "askSkipped": "Skipped",
       "askBot": "Asked {{bot}}: {{what}}",
-      "giveTask": "Passed a task to {{bot}}: {{what}}"
+      "giveTask": "Passed a task to {{bot}}: {{what}}",
+      "quiet": "No output for {{time}}"
     },
     "transcript": {
       "jump": "Jump to the end",
@@ -3671,6 +3672,12 @@
       "newChat": "Continue in a new chat with {{model}}",
       "here": "Switch this chat to {{model}} anyway",
       "cancel": "Cancel"
+    },
+    "tasks": {
+      "title": "Running",
+      "stop": "Stop",
+      "serving": "Serving {{url}}",
+      "stopFailed": "Couldn't stop it. Try again."
     }
   },
   "notch": {
