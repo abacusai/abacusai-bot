@@ -91,8 +91,30 @@ describe("ChromeBrowserService", () => {
       connecting: false,
       connected: false,
       tabs: 0,
+      tokenSet: false,
       error: null,
     });
+  });
+
+  it("a second caller while connecting waits for the same attempt instead of failing", async () => {
+    const chrome = fakeChrome();
+    service = new ChromeBrowserService({
+      onStatusChanged: () => {},
+      token: () => undefined,
+      findChrome: () => install,
+      isExtensionInstalled: () => true,
+      openInBrowser: chrome.openInBrowser,
+    });
+
+    const [first, second] = await Promise.all([
+      service.connect(),
+      service.connect(),
+    ]);
+
+    expect(first.connected).toBe(true);
+    expect(second.connected).toBe(true);
+    expect(chrome.opened).toHaveLength(1);
+    expect(service.status().connecting).toBe(false);
   });
 
   it("says why it cannot connect without a browser or the extension", async () => {

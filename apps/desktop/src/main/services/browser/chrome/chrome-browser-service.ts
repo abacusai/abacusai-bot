@@ -60,7 +60,8 @@ const openInChrome = (install: ChromeInstall, url: string): void => {
 export class ChromeBrowserService {
   private relay: ChromeRelay | null = null;
   private source: ChromeTargetSource | null = null;
-  private connecting = false;
+  /** The attempt under way: a second caller waits for it rather than failing. */
+  private connecting: Promise<void> | null = null;
   private lastError: string | null = null;
 
   constructor(private readonly options: ChromeBrowserServiceOptions) {}
@@ -75,9 +76,10 @@ export class ChromeBrowserService {
           install.userDataDir
         ),
       installUrl: PLAYWRIGHT_EXTENSION_INSTALL_URL,
-      connecting: this.connecting,
+      connecting: this.connecting != null,
       connected: this.relay?.connected === true,
       tabs: this.relay?.attachedTabs().length ?? 0,
+      tokenSet: extensionTokenOf(this.options.token()).length > 0,
       error: this.lastError,
     };
   }
@@ -112,13 +114,23 @@ export class ChromeBrowserService {
    */
   async connect(): Promise<ChromeBrowserStatus> {
     if (this.relay?.connected) return this.status();
-    if (this.connecting) return this.status();
+    if (this.connecting == null) {
+      this.connecting = this.attempt().finally(() => {
+        this.connecting = null;
+        this.options.onStatusChanged();
+      });
+    }
+    await this.connecting;
+    return this.status();
+  }
+
+  private async attempt(): Promise<void> {
     const install = (this.options.findChrome ?? findChrome)();
     this.lastError = null;
     if (install == null) {
       this.lastError =
         "Google Chrome or Microsoft Edge was not found on this computer.";
-      return this.status();
+      return;
     }
     if (
       !(this.options.isExtensionInstalled ?? isExtensionInstalled)(
@@ -127,15 +139,15 @@ export class ChromeBrowserService {
     ) {
       this.lastError =
         "The Playwright Extension is not installed in the browser.";
-      return this.status();
+      return;
     }
 
-    this.connecting = true;
-    this.options.onStatusChanged();
     try {
       this.disconnect();
       const relay = new ChromeRelay();
       await relay.listen();
+      // Past the first await, so the status reads "connecting".
+      this.options.onStatusChanged();
       this.relay = relay;
       this.source = new ChromeTargetSource(relay);
       relay.on("disconnected", () => {
@@ -156,11 +168,7 @@ export class ChromeBrowserService {
     } catch (error) {
       this.lastError = error instanceof Error ? error.message : String(error);
       this.disconnect();
-    } finally {
-      this.connecting = false;
-      this.options.onStatusChanged();
     }
-    return this.status();
   }
 
   disconnect(): void {

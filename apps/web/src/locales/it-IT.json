@@ -4229,6 +4229,7 @@
       "notFound": "Google Chrome o Microsoft Edge non trovato su questo computer.",
       "ready": "{{browser}} è pronto. Connettiti adesso, altrimenti la prima attività del browser dell'agente richiederà {{browser}}.",
       "connecting": "In attesa che tu consenta la connessione nel tuo browser…",
+      "connectingWithToken": "Connessione a {{browser}} con il gettone salvato…",
       "connected": "Connesso a {{browser}}: scheda/e {{count}} nel gruppo AbacusAI Bot.",
       "install": "Installa l'estensione",
       "connect": "Connettiti",
@@ -4237,6 +4238,8 @@
       "tokenPlaceholder": "Incolla il token dell'estensione per saltare la pagina di autorizzazione",
       "tokenSave": "Salva gettone",
       "tokenSaved": "Gettone salvato.",
+      "tokenRemove": "Rimuovi gettone",
+      "tokenRemoved": "Gettone rimosso.",
       "tokenHint": "Opzionale. Il token viene visualizzato nella pagina di autorizzazione dell'estensione; con esso salvato, l'app si connette senza chiedere ogni volta."
     },
     "clearAction": "Cancella tutti i dati di navigazione",

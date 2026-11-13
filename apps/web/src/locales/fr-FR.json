@@ -4229,6 +4229,7 @@
       "notFound": "Google Chrome ou Microsoft Edge est introuvable sur cet ordinateur.",
       "ready": "{{browser}} est prêt. Connectez-vous maintenant, sinon la première tâche de navigateur de l'agent vous demandera {{browser}}.",
       "connecting": "En attendant que vous autorisiez la connexion dans votre navigateur…",
+      "connectingWithToken": "Connexion à {{browser}} avec le jeton enregistré…",
       "connected": "Connecté à {{browser}} : onglet(s) {{count}} dans le groupe AbacusAI Bot.",
       "install": "Installer l'extension",
       "connect": "Se connecter",
@@ -4237,6 +4238,8 @@
       "tokenPlaceholder": "Collez le jeton de l'extension pour ignorer la page d'autorisation",
       "tokenSave": "Enregistrer le jeton",
       "tokenSaved": "Jeton enregistré.",
+      "tokenRemove": "Supprimer le jeton",
+      "tokenRemoved": "Jeton supprimé.",
       "tokenHint": "Facultatif. Le jeton est affiché sur la page d'autorisation de l'extension ; une fois enregistré, l'application se connecte sans demander à chaque fois."
     },
     "clearAction": "Effacer toutes les données de navigation",

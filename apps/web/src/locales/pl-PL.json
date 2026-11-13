@@ -4369,6 +4369,7 @@
       "notFound": "Nie znaleziono Google Chrome ani Microsoft Edge na tym komputerze.",
       "ready": "{{browser}} jest gotowa. Połącz teraz albo przy pierwszym zadaniu agenta w przeglądarce pojawi się prośba w {{browser}}.",
       "connecting": "Czekam, aż zezwolisz na połączenie w przeglądarce…",
+      "connectingWithToken": "Łączenie z {{browser}} przy użyciu zapisanego tokenu…",
       "connected": "Połączono z {{browser}}: kart w grupie AbacusAI Bot: {{count}}.",
       "install": "Zainstaluj rozszerzenie",
       "connect": "Połącz",
@@ -4377,6 +4378,8 @@
       "tokenPlaceholder": "Wklej token rozszerzenia, aby pominąć stronę zgody",
       "tokenSave": "Zapisz token",
       "tokenSaved": "Token zapisany.",
+      "tokenRemove": "Usuń token",
+      "tokenRemoved": "Token usunięty.",
       "tokenHint": "Opcjonalne. Token jest widoczny na stronie zgody rozszerzenia; po jego zapisaniu aplikacja łączy się bez pytania za każdym razem."
     },
     "clearAction": "Wyczyść wszystkie dane przeglądania",

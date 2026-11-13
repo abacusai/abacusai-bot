@@ -32,12 +32,25 @@ export const WHATSAPP_CHANNEL: ChannelCapabilities = {
   oneTimeLinks: true,
 };
 
+/**
+ * Where the user does a step the browser stopped for, in an app chat: the
+ * Browser pane, or, when the app drives the user's own Chrome (set by the
+ * desktop as ABACUSAI_BOT_BROWSER=chrome), that Chrome. Telling a Chrome user
+ * to open a pane sends them to a browser the bot is not using.
+ */
+export const userBrowserPlace = (
+  env: NodeJS.ProcessEnv = process.env
+): string =>
+  env.ABACUSAI_BOT_BROWSER === "chrome"
+    ? "their own Chrome, on the tab the bot left open there"
+    : "the Browser pane in this chat";
+
 /** How `browser_task`'s description ends: what to do with a run stopped for the user. */
 export function browserHandoffDescription(
   channel: ChannelCapabilities
 ): string {
   return channel.pane
-    ? "Tell the user to open the Browser pane in this chat and do that step; when they say it is " +
+    ? `Tell the user to do that step in ${userBrowserPlace()}; when they say it is ` +
         "done, call this tool again with continue_from_last: true and their message as the task; " +
         "the same sub-agent carries on from the same page with everything it already found."
     : "The user cannot see this browser: they act only through this chat, one-time links " +
@@ -49,8 +62,8 @@ export function browserHandoffDescription(
 /** The note on a run's result when it stopped at a step only the user can do. */
 export function browserStopNote(channel: ChannelCapabilities): string {
   return channel.pane
-    ? "(The browser is left on that page. Tell the user to open the Browser pane in this chat, " +
-        "do the step above, and reply here. Then call browser_task with continue_from_last: true and " +
+    ? `(The browser is left on that page. Tell the user to do the step above in ${userBrowserPlace()}, ` +
+        "and reply here. Then call browser_task with continue_from_last: true and " +
         "their reply as the task; the same sub-agent continues with everything it has found.)"
     : "(The run stopped at a step only the user can do. They cannot see this browser and act only " +
         "through this chat, one-time links and approval pages: a login, card or code goes through a " +

@@ -389,3 +389,38 @@ describe("terminal.start", () => {
     }
   });
 });
+
+describe("the Chrome-mode flag for the agent", () => {
+  it.each([
+    [
+      "the desktop app driving the user's Chrome",
+      "electron",
+      "chrome",
+      "chrome",
+    ],
+    ["the desktop app's own browser", "electron", "builtin", undefined],
+    // A hosted computer always uses its own Chromium, whatever the engine says.
+    [
+      "a hosted computer with the engine left on Chrome",
+      "web-host",
+      "chrome",
+      undefined,
+    ],
+  ] as const)(
+    "is set as expected for %s",
+    async (_case, platform, engine, flag) => {
+      planIs("pro");
+      const host = new ServiceHost(platform);
+      const internals = host as unknown as Record<string, any>;
+      vi.spyOn(
+        internals.builtinMcpLifecycle,
+        "getBrowserStatus"
+      ).mockReturnValue({
+        ...internals.builtinMcpLifecycle.getBrowserStatus(),
+        engine,
+      });
+      const env = await host.buildAdditionalConfigEnv("code", "s1");
+      expect(env.ABACUSAI_BOT_BROWSER).toBe(flag);
+    }
+  );
+});

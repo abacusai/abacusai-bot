@@ -4229,6 +4229,7 @@
       "notFound": "이 컴퓨터에서 Google Chrome 또는 Microsoft Edge를 찾을 수 없습니다.",
       "ready": "{{browser}}가 준비되었습니다. 지금 연결하지 않으면 에이전트의 첫 번째 브라우저 작업이 {{browser}}에서 묻습니다.",
       "connecting": "브라우저에서 연결을 허용하기를 기다리는 중...",
+      "connectingWithToken": "저장된 토큰으로 {{browser}}에 연결하는 중…",
       "connected": "AbacusAI Bot 그룹의 {{browser}}: {{count}} 탭에 연결되었습니다.",
       "install": "확장 프로그램 설치",
       "connect": "연결하다",
@@ -4237,6 +4238,8 @@
       "tokenPlaceholder": "허용 페이지를 건너뛰려면 확장 프로그램의 토큰을 붙여넣으세요.",
       "tokenSave": "토큰 저장",
       "tokenSaved": "토큰이 저장되었습니다.",
+      "tokenRemove": "토큰 삭제",
+      "tokenRemoved": "토큰이 삭제되었습니다.",
       "tokenHint": "선택 과목. 토큰은 확장 프로그램의 허용 페이지에 표시됩니다. 저장하면 앱이 매번 묻지 않고 연결됩니다."
     },
     "clearAction": "모든 브라우징 데이터 삭제",

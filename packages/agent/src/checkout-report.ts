@@ -5,7 +5,11 @@
  * the page itself); text that came from a page is quoted as data, never as
  * an argument the parent could be steered into.
  */
-import { type ChannelCapabilities, browserStopNote } from "./channel.js";
+import {
+  type ChannelCapabilities,
+  browserStopNote,
+  userBrowserPlace,
+} from "./channel.js";
 import type { CheckoutPause, CheckoutStage } from "./checkout-run.js";
 import { vaultEnabled } from "./excluded-tools.js";
 
@@ -53,7 +57,7 @@ const CONTINUE =
 /** A step the user does on the page themselves, where there is no vault to do it through. */
 const byHand = (what: string, channel: ChannelCapabilities): string =>
   channel.pane
-    ? `The user ${what} themselves in the Browser pane in this chat; once they say it is done, ${CONTINUE}.`
+    ? `The user ${what} themselves in ${userBrowserPlace()}; once they say it is done, ${CONTINUE}.`
     : `The user ${what} themselves on the site: tell them how far it got.`;
 
 /** What the parent does next for a stop, in what this chat can do. */
@@ -93,7 +97,7 @@ function nextStep(pause: CheckoutPause, channel: ChannelCapabilities): string {
         "or saved it, call browser_task with continue_from_last: true and the item_id as " +
         "login_item_id. Never ask for the password in the chat." +
         (channel.pane
-          ? " Without the vault, the user can sign in themselves in the Browser pane."
+          ? ` Without the vault, the user can sign in themselves in ${userBrowserPlace()}.`
           : "")
       );
     case "code":
@@ -124,7 +128,7 @@ function nextStep(pause: CheckoutPause, channel: ChannelCapabilities): string {
       return (
         `${picture}if it shows letters or numbers to type, ask the user what it says and ${CONTINUE}. ` +
         (channel.pane
-          ? "If it is a picture puzzle, the user solves it in the Browser pane in this chat."
+          ? `If it is a picture puzzle, the user solves it in ${userBrowserPlace()}.`
           : "If it is a picture puzzle (pick the squares, drag a slider), say honestly it can't be " +
             "solved from this chat, and stop there.")
       );

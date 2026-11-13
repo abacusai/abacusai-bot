@@ -928,6 +928,12 @@ describeInBrowser("the tools' page scripts, against real layout", () => {
         <h1>Flights</h1><h2>Best departing</h2>
         <main>12 results found for your search.</main>
         <div role="dialog">Sign in to continue</div>
+        <div role="dialog" style="display:none">You're signed out</div>
+        <div role="dialog" style="visibility:hidden">Share this video</div>
+        <div role="dialog" aria-hidden="true">Cookie choices</div>
+        <div role="dialog" style="position:fixed;left:-9999px;top:0;width:300px">Moved off the page</div>
+        <div role="dialog" style="display:contents"><p>Choose a seat</p></div>
+        <h2 hidden>Hidden heading</h2>
         <input id="to" placeholder="Where to?">
         <script>document.getElementById("to").focus();</script>
       `),
@@ -1075,10 +1081,14 @@ describeInBrowser("the tools' page scripts, against real layout", () => {
     });
   });
 
-  it("summarises where the page is", () => {
+  // A page keeps dialogs it is not showing (a sign-out notice, a share sheet):
+  // reporting one as "on top" sent an agent to ask a signed-in user to sign in.
+  it("summarises where the page is, from what is shown", () => {
     expect(summary.page).toMatchObject({
       headings: ["Flights", "Best departing"],
-      dialogs: ["Sign in to continue"],
+      // A dialog drawn only through its children (display: contents) counts;
+      // one hidden from assistive tech or moved off the page does not.
+      dialogs: ["Sign in to continue", "Choose a seat"],
       focused: 'input "Where to?"',
     });
     expect(summary.page.text).toContain("12 results found");
