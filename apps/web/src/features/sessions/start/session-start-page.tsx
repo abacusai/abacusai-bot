@@ -4,9 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSelector } from "@tanstack/react-store";
 import {
   Bug,
-  Gamepad2,
   GitPullRequest,
-  Globe,
   PieChart,
   Plane,
   Plus,
@@ -34,7 +32,7 @@ import { isDiskFullError } from "#renderer/data/query-client";
 import type { Transport } from "#renderer/data/transport";
 import { defaultLook } from "#renderer/lib/bots/avatar";
 import {
-  BUILD_STARTER_IDS,
+  BUILD_PROJECTS,
   CODE_STARTER_IDS,
   GITHUB_CONNECTOR_ID,
 } from "#renderer/lib/build-starters";
@@ -45,6 +43,7 @@ import {
 import { formatChatStamp } from "#renderer/lib/format/chat-stamp";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { PROJECT_ICONS } from "#renderer/lib/project-icons";
 import { Button } from "#renderer/ui/button";
 
 import {
@@ -76,9 +75,7 @@ const STARTER_ICONS: Record<string, LucideIcon> = {
   "process-a-spreadsheet": Table2,
   "restyle-a-repo": Wand2,
   "find-flights": Plane,
-  "portfolio-site": Globe,
-  "shop-page": ShoppingBag,
-  "simple-game": Gamepad2,
+  ...PROJECT_ICONS,
   "fix-a-bug": Bug,
   "add-a-feature": Plus,
   "review-my-prs": GitPullRequest,
@@ -301,12 +298,14 @@ export const SessionStartPage = ({
     hintShown.add(draft.id);
     reportFunnel(client, "send_hint_shown", draft.starters ?? "none");
   }, [hinting, draft.id, draft.starters, client]);
-  const buildStarters = BUILD_STARTER_IDS.map((starterId) => ({
-    id: starterId,
-    name: t(`sessions.start.build.${starterId}.name`),
-    detail: t(`sessions.start.build.${starterId}.detail`),
-    prompt: t(`sessions.start.build.${starterId}.prompt`),
-  }));
+  const buildStarters = BUILD_PROJECTS.slice(0, STARTER_SLOTS).map(
+    ({ id: starterId }) => ({
+      id: starterId,
+      name: t(`sessions.start.build.${starterId}.name`),
+      detail: t(`sessions.start.build.${starterId}.detail`),
+      prompt: t(`sessions.start.build.${starterId}.prompt`),
+    })
+  );
   const codeStarters = CODE_STARTER_IDS.map((starterId) => ({
     id: starterId,
     name: t(`sessions.start.code.${starterId}.name`),

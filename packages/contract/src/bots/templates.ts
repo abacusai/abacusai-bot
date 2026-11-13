@@ -14,6 +14,7 @@ import type { CapabilityId } from "../capabilities";
 
 export type BotTemplateCategory =
   | "featured"
+  | "business"
   | "personal-assistant"
   | "productivity"
   | "social-media"
@@ -25,6 +26,7 @@ export type BotTemplateCategory =
 /** Tab order on the Create Bot page. i18n: bots.home.categories.<id> */
 export const BOT_TEMPLATE_CATEGORIES: readonly BotTemplateCategory[] = [
   "featured",
+  "business",
   "personal-assistant",
   "productivity",
   "social-media",
@@ -112,7 +114,7 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Whenever I ask, do the same pass again.",
       "Drafts only: never send an email. I review and send them myself.",
     ].join("\n"),
-    categories: ["featured"],
+    categories: ["featured", "business"],
     requires: "abacus-gmailuser",
     firstReply: [
       'If no thread needs a reply, do not report zero or "nothing to draft": the pass still read the inbox, so hand over what it found.',
@@ -294,7 +296,7 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "- Flag overdue items and draft the follow-up message.",
       "Do not send any follow-up without my approval.",
     ].join("\n"),
-    categories: ["featured"],
+    categories: ["featured", "business"],
     improves: [
       "abacus-gmailuser",
       "abacus-slack",
@@ -414,7 +416,7 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "- Draft a WhatsApp or Gmail message if I need to confirm or reschedule.",
       "Never send the message without my approval.",
     ].join("\n"),
-    categories: ["personal-assistant"],
+    categories: ["personal-assistant", "business"],
     improves: [
       "abacus-gmailuser",
       "abacus-googlecalendar",
@@ -859,6 +861,29 @@ export const BOT_TEMPLATES: BotTemplate[] = [
     avatarShape: "pebble",
   },
   {
+    id: "lead-finder",
+    name: "Lead Finder",
+    title: "Lead Finder",
+    persona: "Resourceful, precise, persuasive",
+    mission: [
+      "Find new customers for my business and draft the first message to each.",
+      "If you do not know yet what my business sells, to whom and where, ask me that first, in one short question.",
+      "Then every weekday morning:",
+      "- Search the web for businesses or people who match, and skip anyone already on my list.",
+      "- Keep each lead on my list: name, company, website, city, how to reach them, and why they fit.",
+      "- Draft a short, personal first email to each new lead, in my tone.",
+      "- Hand me the new leads and their drafts in one summary.",
+      "Keep the list in a Google Sheet and the emails as Gmail drafts when those are connected.",
+      "Never send an email or message without my approval.",
+    ].join("\n"),
+    categories: ["business", "marketing"],
+    improves: ["abacus-gmailuser", "abacus-googledriveuser"],
+    withoutAccounts:
+      "Keep the lead list as a spreadsheet file in the workspace, and show each draft here for me to send myself.",
+    avatarColor: "#f97316",
+    avatarShape: "pebble",
+  },
+  {
     id: "customer-voice-miner",
     name: "Customer Voice Miner",
     title: "Customer Voice Miner",
@@ -873,7 +898,7 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "- Turn the top themes into 5 messaging or content angles.",
       "Do not invent customer quotes or inflate weak patterns.",
     ].join("\n"),
-    categories: ["marketing"],
+    categories: ["marketing", "business"],
     improves: ["abacus-gmailuser", "abacus-slack", "abacus-googledriveuser"],
     withoutAccounts:
       "Work from the feedback, emails or call notes I paste or drop in the chat.",

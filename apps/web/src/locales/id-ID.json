@@ -185,6 +185,10 @@
         "description": "Menjaga peluncuran tetap berjalan dengan memunculkan hambatan, kehilangan persetujuan, dan komitmen sebelum hal tersebut hilang.",
         "name": "Luncurkan Pusat Komando"
       },
+      "lead-finder": {
+        "description": "Mencari pelanggan baru untuk bisnis Anda setiap pagi dan menyiapkan draf email pertama untuk masing-masing.",
+        "name": "Pencari Prospek"
+      },
       "meeting-notes-actions": {
         "description": "Mengubah catatan rapat menjadi keputusan, pemilik, tenggat waktu, dan tindak lanjut yang dapat Anda tindak lanjuti.",
         "name": "Catatan & Tindakan Rapat"
@@ -374,6 +378,7 @@
     },
     "start": {
       "categories": {
+        "business": "Bisnis",
         "featured": "Featured",
         "finance": "Finance",
         "marketing": "Marketing",
@@ -1309,9 +1314,18 @@
       "title": "Apa yang ingin Anda lakukan dulu?",
       "subtitle": "Pilih satu. Bot Anda langsung mengerjakannya.",
       "build": {
-        "title": "Buat sesuatu",
-        "body": "Situs web, aplikasi, atau game. Ketuk salah satu di bawah, atau mulai dengan situs contoh yang bisa kamu ubah.",
         "cta": "Mulai membuat"
+      },
+      "projects": {
+        "title": "Mulai proyek",
+        "otherTitle": "Atau mulai proyek",
+        "body": "Anda langsung dapat versi pertama yang berfungsi, lalu sesuaikan sesuka Anda.",
+        "label": "Jenis proyek",
+        "popular": "Populer",
+        "business": "Untuk usaha saya",
+        "websites": "Situs web",
+        "games": "Game",
+        "automate": "Otomatiskan pekerjaan saya"
       },
       "chatApp": {
         "title": "Balas saya di {{app}}",
@@ -1358,8 +1372,7 @@
         "keepCta": "Terus pantau",
         "stoppedTitle": "{{name}} berhenti sebelum selesai",
         "stoppedBody": "Chat-nya menunjukkan apa yang ditemukan dan apa yang dibutuhkan.",
-        "open": "Buka chat",
-        "buildTitle": "Atau buat sesuatu"
+        "open": "Buka chat"
       }
     }
   },
@@ -1860,10 +1873,38 @@
       },
       "recent": "Pick up where you left off in {{workspace}}",
       "build": {
+        "orders-system": {
+          "name": "Aplikasi pesanan dan reservasi",
+          "detail": "Untuk toko, gym, salon, atau usaha jasa.",
+          "prompt": "Saya punya usaha kecil. Buatkan saya aplikasi sederhana di komputer ini untuk mencatat pesanan, reservasi, atau pekerjaan servis saya. Saya ingin ada daftar yang bisa saya tambah, cari, dan filter, halaman untuk setiap entri berisi pelanggan, tanggal, status, dan harga, serta ringkasan harian. Langsung buat versi pertama dengan data contoh untuk toko kecil pada umumnya, lalu bukakan untuk saya. Setelah itu, tanyakan dalam satu pesan singkat apa bidang usaha saya dan apa saja yang perlu saya catat, supaya kamu bisa menyesuaikannya."
+        },
+        "business-site": {
+          "name": "Situs web untuk usaha saya",
+          "detail": "Layanan, jam buka, ulasan, dan formulir kontak.",
+          "prompt": "Buatkan situs web untuk usaha saya: bagian atas berisi nama usaha dan apa yang ditawarkan, bagian layanan beserta harganya, jam buka, beberapa ulasan pelanggan, lokasi kami, dan formulir kontak. Pakai detail contoh yang bisa saya ganti nanti, dan pastikan tampilannya pas di ponsel. Tunjukkan halamannya kalau sudah siap, lalu tanyakan dalam satu pesan singkat nama usaha saya dan apa bidangnya, supaya kamu bisa menyesuaikannya."
+        },
+        "lead-finder": {
+          "name": "Cari pelanggan",
+          "detail": "Calon pelanggan baru tiap pagi, lengkap dengan draf email pertama."
+        },
+        "my-game": {
+          "name": "Kerjakan game saya",
+          "detail": "Unity, Godot, Unreal, atau Roblox, langsung di folder proyek Anda.",
+          "prompt": "Bantu saya mengerjakan game saya. Kalau belum ada folder proyek yang terbuka, tanyakan di mana folder proyek game saya. Lalu periksa isinya dan beri tahu saya engine dan versi yang dipakai, scene dan skrip utamanya, serta apa saja yang tampak rusak atau belum selesai. Sarankan tiga langkah berikutnya yang paling berguna, dan tunggu saya memilih salah satu sebelum mengubah apa pun."
+        },
+        "morning-inbox": {
+          "name": "Balas email saya setiap pagi",
+          "detail": "Draf balasan untuk setiap email yang perlu Anda tanggapi."
+        },
         "portfolio-site": {
           "name": "Situs portofolio",
           "detail": "Situs satu halaman untuk karya Anda.",
           "prompt": "Buatkan saya situs web portofolio satu halaman: bagian atas dengan nama saya dan satu kalimat perkenalan, grid berisi tiga contoh proyek, bagian tentang saya, dan bagian kontak. Gunakan teks dan gambar contoh yang bisa saya ganti nanti, buat tampilannya bersih dan modern, dan pastikan tampil baik di ponsel. Tunjukkan halamannya kalau sudah siap."
+        },
+        "numbers-dashboard": {
+          "name": "Dasbor angka usaha saya",
+          "detail": "Penjualan, biaya, dan tren dari spreadsheet Anda.",
+          "prompt": "Buatkan dasbor untuk angka-angka usaha saya: total bulan ini, grafik per bulan, produk atau klien teratas, dan apa pun yang tidak biasa. Langsung mulai dengan data penjualan contoh yang realistis supaya dasbornya berfungsi, lalu tunjukkan kepada saya. Setelah itu, minta spreadsheet atau file CSV saya, dan ganti dasbornya dengan angka asli saya."
         },
         "shop-page": {
           "name": "Halaman toko untuk usaha saya",

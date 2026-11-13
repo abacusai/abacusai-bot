@@ -185,6 +185,10 @@
         "description": "Hält einen Start am Laufen, indem Hindernisse, fehlende Genehmigungen und Verpflichtungen aufgedeckt werden, bevor sie ins Wanken geraten.",
         "name": "Starten Sie das Command Center"
       },
+      "lead-finder": {
+        "description": "Findet jeden Morgen neue Kunden für dein Unternehmen und entwirft für jeden eine erste E-Mail.",
+        "name": "Kundenfinder"
+      },
       "meeting-notes-actions": {
         "description": "Wandelt Besprechungsnotizen in Entscheidungen, Eigentümer, Fristen und Folgemaßnahmen um, auf die Sie reagieren können.",
         "name": "Besprechungsnotizen und -aktionen"
@@ -374,6 +378,7 @@
     },
     "start": {
       "categories": {
+        "business": "Unternehmen",
         "featured": "Featured",
         "finance": "Finance",
         "marketing": "Marketing",
@@ -1309,9 +1314,18 @@
       "title": "Womit möchtest du anfangen?",
       "subtitle": "Wähl eins aus. Dein Bot legt sofort los.",
       "build": {
-        "title": "Etwas bauen",
-        "body": "Eine Website, App oder ein Spiel. Tippe unten auf eins oder starte mit einer Beispielseite, die du ändern kannst.",
         "cta": "Loslegen"
+      },
+      "projects": {
+        "title": "Starte ein Projekt",
+        "otherTitle": "Oder starte ein Projekt",
+        "body": "Du bekommst eine erste Version, die funktioniert, und machst sie dann zu deiner.",
+        "label": "Projektarten",
+        "popular": "Beliebt",
+        "business": "Für mein Unternehmen",
+        "websites": "Websites",
+        "games": "Spiele",
+        "automate": "Meine Arbeit automatisieren"
       },
       "chatApp": {
         "title": "Antworte mir auf {{app}}",
@@ -1358,8 +1372,7 @@
         "keepCta": "Im Blick behalten",
         "stoppedTitle": "{{name}} hat vor dem Ende aufgehört",
         "stoppedBody": "Im Chat steht, was gefunden wurde und was noch fehlt.",
-        "open": "Chat öffnen",
-        "buildTitle": "Oder etwas bauen"
+        "open": "Chat öffnen"
       }
     }
   },
@@ -1860,10 +1873,38 @@
       },
       "recent": "Pick up where you left off in {{workspace}}",
       "build": {
+        "orders-system": {
+          "name": "App für Bestellungen und Buchungen",
+          "detail": "Für einen Laden, ein Fitnessstudio, einen Salon oder einen Dienstleister.",
+          "prompt": "Ich habe ein kleines Unternehmen. Bau mir auf diesem Computer eine einfache App, mit der ich meine Bestellungen, Buchungen oder Aufträge im Blick behalte: eine Liste, die ich ergänzen, durchsuchen und filtern kann, eine eigene Seite für jeden Eintrag mit Kunde, Datum, Status und Preis sowie eine tägliche Zusammenfassung. Bau sofort eine erste Version mit Beispieldaten für einen typischen kleinen Laden und öffne sie für mich. Frag mich danach in einer kurzen Nachricht, was mein Unternehmen macht und was ich erfassen muss, damit du die App anpassen kannst."
+        },
+        "business-site": {
+          "name": "Website für mein Unternehmen",
+          "detail": "Leistungen, Öffnungszeiten, Bewertungen und ein Kontaktformular.",
+          "prompt": "Bau mir eine Website für mein Unternehmen: einen Kopfbereich mit dem Namen des Unternehmens und dem, was es anbietet, einen Bereich mit Leistungen und Preisen, Öffnungszeiten, ein paar Kundenbewertungen, Infos dazu, wo man uns findet, und ein Kontaktformular. Verwende Platzhalter, die ich später austauschen kann, und sorg dafür, dass die Seite auf dem Handy gut aussieht. Zeig mir die Seite, wenn sie fertig ist, und frag mich dann in einer kurzen Nachricht nach dem Namen meines Unternehmens und danach, was es macht, damit du die Seite an mich anpassen kannst."
+        },
+        "lead-finder": {
+          "name": "Kunden finden",
+          "detail": "Jeden Morgen neue Interessenten, samt Entwurf für die erste E-Mail."
+        },
+        "my-game": {
+          "name": "An meinem Spiel arbeiten",
+          "detail": "Unity, Godot, Unreal oder Roblox, in deinem Projektordner.",
+          "prompt": "Hilf mir mit meinem Spiel. Wenn kein Projektordner geöffnet ist, frag mich, wo das Projekt meines Spiels liegt. Sieh es dir dann an und sag mir, welche Engine und welche Version es verwendet, welche die wichtigsten Szenen und Skripte sind und was kaputt oder unfertig aussieht. Schlag mir die drei sinnvollsten nächsten Schritte vor und warte, bis ich einen ausgewählt habe, bevor du etwas änderst."
+        },
+        "morning-inbox": {
+          "name": "Jeden Morgen meine E-Mails beantworten",
+          "detail": "Ein Antwortentwurf für jede E-Mail, die dich braucht."
+        },
         "portfolio-site": {
           "name": "Portfolio-Website",
           "detail": "Eine einseitige Website für deine Arbeit.",
           "prompt": "Bau mir eine einseitige Portfolio-Website: oben mein Name mit einem Satz zur Vorstellung, ein Raster mit drei Beispielprojekten, ein Abschnitt über mich und ein Kontaktbereich. Nimm Platzhaltertexte und -bilder, die ich später austauschen kann, gestalte sie klar und modern und sorge dafür, dass sie auf dem Handy gut aussieht. Zeig mir die Seite, wenn sie fertig ist."
+        },
+        "numbers-dashboard": {
+          "name": "Dashboard für meine Zahlen",
+          "detail": "Umsätze, Kosten und Trends aus deiner Tabelle.",
+          "prompt": "Bau mir ein Dashboard für meine Geschäftszahlen: Summen für diesen Monat, ein Diagramm nach Monaten, die wichtigsten Produkte oder Kunden und alles, was auffällig ist. Fang sofort mit realistischen Beispiel-Verkaufsdaten an, damit es funktioniert, und zeig es mir. Frag mich dann nach meiner Tabelle oder CSV-Datei und stell das Dashboard auf meine echten Zahlen um."
         },
         "shop-page": {
           "name": "Shopseite für mein Geschäft",

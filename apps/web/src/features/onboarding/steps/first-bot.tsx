@@ -19,13 +19,18 @@ import { BotAvatar } from "#renderer/components/bot-avatar";
 import { Spinner } from "#renderer/components/spinner";
 import { resolveLook } from "#renderer/lib/bots/avatar";
 import {
-  BUILD_STARTER_IDS,
   GITHUB_CONNECTOR_ID,
+  PROJECT_TABS,
+  type ProjectStarter,
+  type ProjectTab,
+  projectsIn,
 } from "#renderer/lib/build-starters";
 import { cn } from "#renderer/lib/cn";
+import { PROJECT_ICONS } from "#renderer/lib/project-icons";
 import { Badge } from "#renderer/ui/badge";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "#renderer/ui/tabs";
 
 import {
   type FirstBotState,
@@ -127,6 +132,7 @@ export const FirstBotStep = ({
 }) => {
   const { t, busy, props, perform } = ctx;
   const [goal, setGoal] = useState("");
+  const [tab, setTab] = useState<ProjectTab>("popular");
   const funnel = (step: FunnelStep, detail?: string) =>
     props.transport.client.system.funnelStep({
       step,
@@ -150,14 +156,37 @@ export const FirstBotStep = ({
       await funnel(step, detail);
       await props.choose(choice);
     });
-  const buildCard = (primary: boolean, title: string) => (
+  const pickProject = (project: ProjectStarter) =>
+    project.kind === "build"
+      ? pick(
+          "first_choice_build",
+          {
+            kind: "build",
+            prompt: t(`sessions.start.build.${project.id}.prompt`),
+          },
+          project.id.replaceAll("-", "_")
+        )
+      : pick(
+          "first_choice_template",
+          { kind: "template", templateId: project.templateId },
+          project.id.replaceAll("-", "_")
+        );
+  const showTab = (next: ProjectTab) => {
+    setTab(next);
+    void funnel("first_project_category", next).catch(() => undefined);
+  };
+  const buildCard = (
+    primary: boolean,
+    title: string,
+    projects: readonly ProjectStarter[]
+  ) => (
     <ChoiceCard
       key="build"
       slot="build"
       primary={primary}
       icon={<Code2 aria-hidden className="size-5" />}
       title={title}
-      body={t("onboarding.firstRun.build.body")}
+      body={t("onboarding.firstRun.projects.body")}
       action={
         <CardAction
           primary={primary}
@@ -170,29 +199,62 @@ export const FirstBotStep = ({
         </CardAction>
       }
     >
-      <div className="flex flex-wrap gap-2 pl-13">
-        {BUILD_STARTER_IDS.map((id) => (
-          <Button
-            key={id}
-            size="sm"
-            variant="secondary"
-            className="rounded-full"
-            disabled={busy}
-            onClick={() =>
-              pick(
-                "first_choice_build",
-                {
-                  kind: "build",
-                  prompt: t(`sessions.start.build.${id}.prompt`),
-                },
-                id.replaceAll("-", "_")
-              )
-            }
-          >
-            {t(`sessions.start.build.${id}.name`)}
-          </Button>
-        ))}
-      </div>
+      <Tabs
+        value={tab}
+        onValueChange={(value) => {
+          const next = PROJECT_TABS.find((id) => id === value);
+          if (next != null) showTab(next);
+        }}
+        className="gap-2.5"
+      >
+        <TabsList
+          aria-label={t("onboarding.firstRun.projects.label")}
+          className="no-scrollbar w-full max-w-full justify-start overflow-x-auto"
+        >
+          {PROJECT_TABS.map((id) => (
+            <TabsTrigger
+              key={id}
+              value={id}
+              data-project-category={id}
+              className="flex-none px-2.5 text-[13px]"
+            >
+              {t(`onboarding.firstRun.projects.${id}`)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        <TabsContent
+          value={tab}
+          className="grid grid-cols-2 gap-2 max-[520px]:grid-cols-1"
+        >
+          {projects.map((project) => {
+            const Icon = PROJECT_ICONS[project.id] ?? Code2;
+            return (
+              <Button
+                key={project.id}
+                variant="secondary"
+                data-project={project.id}
+                data-project-kind={project.kind}
+                disabled={busy}
+                className="h-auto min-h-16 items-start justify-start gap-2.5 rounded-xl px-3 py-2.5 text-start whitespace-normal"
+                onClick={() => pickProject(project)}
+              >
+                <Icon
+                  aria-hidden
+                  className="text-primary mt-0.5 size-4 shrink-0"
+                />
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className="text-[13px] leading-snug font-medium">
+                    {t(`sessions.start.build.${project.id}.name`)}
+                  </span>
+                  <span className="text-foreground/70 text-xs leading-snug font-normal">
+                    {t(`sessions.start.build.${project.id}.detail`)}
+                  </span>
+                </span>
+              </Button>
+            );
+          })}
+        </TabsContent>
+      </Tabs>
     </ChoiceCard>
   );
   const tour = (botId: string | null) => (
@@ -368,10 +430,12 @@ export const FirstBotStep = ({
       case "build":
         return buildCard(
           primary,
-          // Under an inbox with drafts, Build is the other thing to do.
+          // Under an inbox with drafts, a project is the other thing to do.
           cosBot != null && !primary
-            ? t("onboarding.firstRun.inbox.buildTitle")
-            : t("onboarding.firstRun.build.title")
+            ? t("onboarding.firstRun.projects.otherTitle")
+            : t("onboarding.firstRun.projects.title"),
+          // Beside a Chief of Staff, the inbox is already being read.
+          projectsIn(tab, cosBot != null ? ["morning-inbox"] : [])
         );
       case "github":
         return githubCard(card.github, primary);

@@ -185,6 +185,10 @@
         "description": "Mantiene il lancio in movimento facendo emergere ostacoli, approvazioni mancanti e impegni prima che scivolino.",
         "name": "Avvia il Centro di comando"
       },
+      "lead-finder": {
+        "description": "Trova nuovi clienti per la tua attività ogni mattina e prepara una prima email per ciascuno.",
+        "name": "Cerca clienti"
+      },
       "meeting-notes-actions": {
         "description": "Trasforma gli appunti della riunione in decisioni, proprietari, scadenze e follow-up su cui puoi agire.",
         "name": "Note e azioni della riunione"
@@ -374,6 +378,7 @@
     },
     "start": {
       "categories": {
+        "business": "Attività",
         "featured": "Featured",
         "finance": "Finance",
         "marketing": "Marketing",
@@ -1309,9 +1314,18 @@
       "title": "Cosa vuoi fare per prima cosa?",
       "subtitle": "Scegline una. Il tuo bot inizia subito.",
       "build": {
-        "title": "Crea qualcosa",
-        "body": "Un sito, un'app o un gioco. Toccane uno qui sotto o inizia con un sito di esempio che puoi modificare.",
         "cta": "Inizia a creare"
+      },
+      "projects": {
+        "title": "Inizia un progetto",
+        "otherTitle": "Oppure inizia un progetto",
+        "body": "Ricevi una prima versione funzionante, poi la fai tua.",
+        "label": "Tipi di progetto",
+        "popular": "Popolari",
+        "business": "Per la mia attività",
+        "websites": "Siti web",
+        "games": "Giochi",
+        "automate": "Automatizza il mio lavoro"
       },
       "chatApp": {
         "title": "Rispondimi su {{app}}",
@@ -1358,8 +1372,7 @@
         "keepCta": "Continua a controllare",
         "stoppedTitle": "{{name}} si è fermato prima di finire",
         "stoppedBody": "Nella sua chat trovi cosa ha trovato e cosa gli serve.",
-        "open": "Apri la chat",
-        "buildTitle": "Oppure crea qualcosa"
+        "open": "Apri la chat"
       }
     }
   },
@@ -1860,10 +1873,38 @@
       },
       "recent": "Pick up where you left off in {{workspace}}",
       "build": {
+        "orders-system": {
+          "name": "App per ordini e prenotazioni",
+          "detail": "Per un negozio, una palestra, un salone o un'attività di servizi.",
+          "prompt": "Ho una piccola attività. Creami su questo computer una semplice app per tenere traccia di ordini, prenotazioni o interventi: un elenco in cui posso aggiungere, cercare e filtrare, una pagina per ciascuno con cliente, data, stato e prezzo, e un riepilogo giornaliero. Crea subito una prima versione con dati di esempio per un tipico piccolo negozio e aprimela. Poi chiedimi in un breve messaggio di cosa si occupa la mia attività e cosa devo monitorare, così puoi adattarla."
+        },
+        "business-site": {
+          "name": "Sito web per la mia attività",
+          "detail": "Servizi, orari, recensioni e un modulo di contatto.",
+          "prompt": "Crea un sito web per la mia attività: un'intestazione con il nome dell'attività e cosa offre, una sezione servizi con i prezzi, gli orari di apertura, alcune recensioni dei clienti, dove trovarci e un modulo di contatto. Usa dati segnaposto che posso sostituire in seguito e assicurati che si veda bene sul telefono. Mostrami la pagina quando è pronta, poi chiedimi in un breve messaggio il nome della mia attività e di cosa si occupa, così puoi personalizzarlo."
+        },
+        "lead-finder": {
+          "name": "Trova clienti",
+          "detail": "Nuovi potenziali clienti ogni mattina, con una prima email già pronta."
+        },
+        "my-game": {
+          "name": "Lavora al mio gioco",
+          "detail": "Unity, Godot, Unreal o Roblox, nella cartella del tuo progetto.",
+          "prompt": "Aiutami con il mio gioco. Se non è aperta nessuna cartella di progetto, chiedimi dove si trova il progetto del mio gioco. Poi esaminalo e dimmi quale motore e quale versione usa, quali sono le scene e gli script principali e tutto ciò che sembra non funzionare o incompleto. Suggeriscimi i tre passi successivi più utili e aspetta che ne scelga uno prima di modificare qualsiasi cosa."
+        },
+        "morning-inbox": {
+          "name": "Rispondi alle mie email ogni mattina",
+          "detail": "Una bozza di risposta per ogni email che richiede la tua attenzione."
+        },
         "portfolio-site": {
           "name": "Sito portfolio",
           "detail": "Un sito di una pagina per il tuo lavoro.",
           "prompt": "Creami un sito portfolio di una sola pagina: un'intestazione con il mio nome e una frase di presentazione, una griglia con tre progetti di esempio, una sezione chi sono e una sezione contatti. Usa testi e immagini segnaposto che potrò sostituire, con uno stile pulito e moderno, e assicurati che si veda bene sul telefono. Mostrami la pagina quando è pronta."
+        },
+        "numbers-dashboard": {
+          "name": "Dashboard dei miei numeri",
+          "detail": "Vendite, costi e andamenti dal tuo foglio di calcolo.",
+          "prompt": "Crea una dashboard per i numeri della mia attività: i totali di questo mese, un grafico per mese, i prodotti o i clienti principali e qualsiasi dato insolito. Inizia subito con dati di vendita di esempio realistici, così funziona, e mostramela. Poi chiedimi il mio foglio di calcolo o file CSV e aggiorna la dashboard con i miei numeri reali."
         },
         "shop-page": {
           "name": "Pagina negozio per la mia attività",

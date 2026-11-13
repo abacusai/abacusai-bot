@@ -21,6 +21,8 @@ export type FirstChoice =
   | { kind: "github" }
   | { kind: "research" }
   | { kind: "goal"; goal: string }
+  /** A project that makes a bot from the template catalog (Lead Finder and the like). */
+  | { kind: "template"; templateId: string }
   | { kind: "images" }
   | { kind: "tour" }
   | { kind: "bot"; botId: string };

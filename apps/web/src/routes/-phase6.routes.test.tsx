@@ -474,6 +474,65 @@ it("the first-run choices wait for a pick, and a pick opens the bot it made", as
   );
 });
 
+it("a bot project makes the Lead Finder from its template on the house and opens it", async () => {
+  const seed = defaultSeed();
+  seed.bots = [];
+  seed.routines = [];
+  harness = await renderApp("/onboarding/first-bot", {
+    onboarded: false,
+    signedIn: true,
+    seed,
+  });
+  await screen.findByRole("tab", { name: "Popular" });
+  fireEvent.click(document.querySelector('[data-project="lead-finder"]')!);
+  await waitFor(
+    () =>
+      expect(harness!.router.state.location.pathname).toMatch(/^\/bots\/bot-/),
+    { timeout: 5000 }
+  );
+  expect(harness.collections.bots.toArray).toHaveLength(1);
+  expect(harness.collections.bots.toArray[0]).toMatchObject({
+    templateId: "lead-finder",
+    name: "Lead Finder",
+    sponsoredFirstRun: true,
+  });
+});
+
+it("a build project waits in the box, and the start page offers the other build projects", async () => {
+  const seed = defaultSeed();
+  seed.bots = [];
+  seed.routines = [];
+  harness = await renderApp("/onboarding/first-bot", {
+    onboarded: false,
+    signedIn: true,
+    seed,
+  });
+  await screen.findByRole("tab", { name: "Popular" });
+  fireEvent.click(screen.getByRole("tab", { name: "For my business" }));
+  await waitFor(() =>
+    expect(
+      document.querySelector('[data-project="numbers-dashboard"]')
+    ).not.toBeNull()
+  );
+  fireEvent.click(
+    document.querySelector('[data-project="numbers-dashboard"]')!
+  );
+  await waitFor(
+    () => expect(harness!.router.state.location.pathname).toBe("/sessions/new"),
+    { timeout: 5000 }
+  );
+  await waitFor(() =>
+    expect(
+      document.querySelector<HTMLTextAreaElement>(
+        '[data-slot="composer"] textarea'
+      )?.value
+    ).toContain("dashboard for my business numbers")
+  );
+  expect(harness.collections.bots.toArray).toHaveLength(0);
+  expect(screen.getByText("Orders and bookings app")).toBeTruthy();
+  expect(screen.getByText("Work on my game")).toBeTruthy();
+});
+
 it("after a Gmail sign-in the Chief of Staff starts on the inbox while the screen waits for it", async () => {
   const seed = defaultSeed();
   seed.bots = [];

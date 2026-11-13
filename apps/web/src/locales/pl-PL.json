@@ -187,6 +187,10 @@
         "description": "Pilnuje postępów premiery, wyłapując blokery, brakujące akceptacje i zobowiązania, zanim się opóźnią.",
         "name": "Centrum dowodzenia premierą"
       },
+      "lead-finder": {
+        "description": "Co rano znajduje nowych klientów dla Twojej firmy i przygotowuje pierwszego maila do każdego z nich.",
+        "name": "Łowca klientów"
+      },
       "meeting-notes-actions": {
         "description": "Zamienia notatki ze spotkań w decyzje, osoby odpowiedzialne, terminy i dalsze kroki do wykonania.",
         "name": "Notatki i zadania ze spotkań"
@@ -380,6 +384,7 @@
     },
     "start": {
       "categories": {
+        "business": "Biznes",
         "featured": "Polecane",
         "finance": "Finanse",
         "marketing": "Marketing",
@@ -1323,9 +1328,18 @@
       "title": "Od czego chcesz zacząć?",
       "subtitle": "Wybierz jedno. Twój bot od razu weźmie się do pracy.",
       "build": {
-        "title": "Zbuduj coś",
-        "body": "Stronę, aplikację lub grę. Opisz ją i patrz, jak powstaje.",
         "cta": "Zacznij budować"
+      },
+      "projects": {
+        "title": "Zacznij projekt",
+        "otherTitle": "Albo zacznij projekt",
+        "body": "Dostaniesz działającą pierwszą wersję, a potem dopasujesz ją do siebie.",
+        "label": "Rodzaje projektów",
+        "popular": "Popularne",
+        "business": "Dla mojej firmy",
+        "websites": "Strony internetowe",
+        "games": "Gry",
+        "automate": "Zautomatyzuj moją pracę"
       },
       "chatApp": {
         "title": "Odpowiadaj mi na {{app}}",
@@ -1374,8 +1388,7 @@
         "keepCta": "Pilnuj dalej",
         "stoppedTitle": "{{name}} przerwał przed ukończeniem",
         "stoppedBody": "W czacie zobaczysz, co znalazł i czego potrzebuje.",
-        "open": "Otwórz czat",
-        "buildTitle": "Albo zbuduj coś"
+        "open": "Otwórz czat"
       }
     }
   },
@@ -1882,10 +1895,38 @@
       },
       "recent": "Kontynuuj tam, gdzie skończyłeś w {{workspace}}",
       "build": {
+        "orders-system": {
+          "name": "Aplikacja do zamówień i rezerwacji",
+          "detail": "Dla sklepu, siłowni, salonu lub firmy usługowej.",
+          "prompt": "Prowadzę małą firmę. Zbuduj mi na tym komputerze prostą aplikację do śledzenia zamówień, rezerwacji lub zleceń: listę, do której mogę dodawać pozycje i którą mogę przeszukiwać i filtrować, osobną stronę dla każdej pozycji z klientem, datą, statusem i ceną oraz dzienne podsumowanie. Od razu zbuduj pierwszą wersję z przykładowymi danymi dla typowego małego sklepu i otwórz ją dla mnie. Potem w jednej krótkiej wiadomości zapytaj mnie, czym zajmuje się moja firma i co chcę śledzić, aby dopasować aplikację do moich potrzeb."
+        },
+        "business-site": {
+          "name": "Strona dla mojej firmy",
+          "detail": "Usługi, godziny otwarcia, opinie i formularz kontaktowy.",
+          "prompt": "Zbuduj stronę internetową dla mojej firmy: nagłówek z nazwą firmy i tym, co oferuje, sekcję z usługami i cenami, godziny otwarcia, kilka opinii klientów, informację, gdzie nas znaleźć, oraz formularz kontaktowy. Użyj przykładowych danych, które później podmienię, i zadbaj o to, żeby strona dobrze wyglądała na telefonie. Pokaż mi ją, gdy będzie gotowa, a potem w jednej krótkiej wiadomości zapytaj mnie o nazwę mojej firmy i o to, czym się zajmuje, aby dopasować stronę do mojej firmy."
+        },
+        "lead-finder": {
+          "name": "Znajdź klientów",
+          "detail": "Nowi potencjalni klienci każdego ranka i gotowy szkic pierwszego maila."
+        },
+        "my-game": {
+          "name": "Praca nad moją grą",
+          "detail": "Unity, Godot, Unreal lub Roblox, w folderze twojego projektu.",
+          "prompt": "Pomóż mi z moją grą. Jeśli nie jest otwarty żaden folder projektu, zapytaj mnie, gdzie jest projekt mojej gry. Potem przejrzyj go i powiedz mi, jakiego silnika i której wersji używa, jakie ma główne sceny i skrypty oraz co wygląda na zepsute lub niedokończone. Zaproponuj trzy najbardziej przydatne kolejne kroki i zanim cokolwiek zmienisz, poczekaj, aż wybiorę jeden z nich."
+        },
+        "morning-inbox": {
+          "name": "Odpowiadaj co rano na moje maile",
+          "detail": "Szkic odpowiedzi na każdy mail, który wymaga twojej uwagi."
+        },
         "portfolio-site": {
           "name": "Strona z portfolio",
           "detail": "Jednostronicowa witryna z twoimi pracami.",
           "prompt": "Zbuduj mi jednostronicową stronę z portfolio: sekcję powitalną z moim imieniem i jednozdaniowym wstępem, siatkę z trzema przykładowymi projektami, sekcję „O mnie” i sekcję kontaktową. Użyj tekstów i obrazów zastępczych, które później podmienię, zadbaj o czysty, nowoczesny wygląd i upewnij się, że strona dobrze wygląda na telefonie. Pokaż mi ją, gdy będzie gotowa."
+        },
+        "numbers-dashboard": {
+          "name": "Panel z moimi wynikami",
+          "detail": "Sprzedaż, koszty i trendy z twojego arkusza kalkulacyjnego.",
+          "prompt": "Zbuduj panel z wynikami mojej firmy: sumy za bieżący miesiąc, wykres w podziale na miesiące, najlepsze produkty lub klientów oraz wszystko, co odbiega od normy. Zacznij od razu od realistycznych przykładowych danych sprzedażowych, żeby panel działał, i pokaż mi go. Potem poproś mnie o mój arkusz kalkulacyjny lub plik CSV i przełącz panel na moje prawdziwe dane."
         },
         "shop-page": {
           "name": "Strona sklepu dla mojej firmy",

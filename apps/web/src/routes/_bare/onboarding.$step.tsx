@@ -57,7 +57,7 @@ import {
   UpgradeDialogHost,
 } from "#renderer/features/upgrade-dialog";
 import {
-  BUILD_STARTER_IDS,
+  BUILD_SAMPLE_ID,
   GITHUB_FIRST_TASK,
 } from "#renderer/lib/build-starters";
 import {
@@ -228,8 +228,7 @@ const OnboardingRoute = () => {
         openFirstTask(
           "build",
           sponsored,
-          choice.prompt ??
-            t(`sessions.start.build.${BUILD_STARTER_IDS[0]}.prompt`)
+          choice.prompt ?? t(`sessions.start.build.${BUILD_SAMPLE_ID}.prompt`)
         );
         await finish({ to: "new-session" });
         return;
@@ -238,6 +237,15 @@ const OnboardingRoute = () => {
         const { bot } = await createBotFromTemplate(db, templateId, {
           ...(id != null ? { id } : {}),
           name: t(`bots.templates.${templateId}.name`),
+          ...(sponsored ? { sponsoredFirstRun: true } : {}),
+        });
+        await open(bot.id);
+        return;
+      }
+      case "template": {
+        const { bot } = await createBotFromTemplate(db, choice.templateId, {
+          ...(id != null ? { id } : {}),
+          name: t(`bots.templates.${choice.templateId}.name`),
           ...(sponsored ? { sponsoredFirstRun: true } : {}),
         });
         await open(bot.id);
@@ -274,7 +282,7 @@ const OnboardingRoute = () => {
         openFirstTask(
           "build",
           sponsored,
-          t(`sessions.start.build.${BUILD_STARTER_IDS[0]}.prompt`)
+          t(`sessions.start.build.${BUILD_SAMPLE_ID}.prompt`)
         );
         await finish({ to: "new-session" }, true);
         return;
