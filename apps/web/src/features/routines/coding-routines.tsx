@@ -379,14 +379,7 @@ export const CodingRoutineSheet = ({
           : {}),
       }).isPersisted.promise;
     try {
-      let id = `routine-${crypto.randomUUID()}`;
-      try {
-        await insert(id);
-      } catch (e) {
-        if (!isRpcError(e) || e.code !== "CONFLICT") throw e;
-        id = `routine-${crypto.randomUUID()}`;
-        await insert(id);
-      }
+      const id = await insertFresh(insert);
       reportStep(transport.client, "code_routine_started", template.id);
       void transport.client.routines
         .run({ id, trigger: "create" })
@@ -563,6 +556,22 @@ export const CodingRoutineSheet = ({
       </DialogContent>
     </Dialog>
   );
+};
+
+/** Inserted under a new id, and once more under another if that one is taken. */
+const insertFresh = async (
+  insert: (id: string) => Promise<unknown>
+): Promise<string> => {
+  const id = `routine-${crypto.randomUUID()}`;
+  try {
+    await insert(id);
+    return id;
+  } catch (e) {
+    if (!isRpcError(e) || e.code !== "CONFLICT") throw e;
+  }
+  const retry = `routine-${crypto.randomUUID()}`;
+  await insert(retry);
+  return retry;
 };
 
 /** A site as typed: a bare host gets https. */
