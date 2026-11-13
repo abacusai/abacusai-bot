@@ -121,6 +121,12 @@ function takeCheckoutToken(): string | null {
   return checkoutToken;
 }
 
+/**
+ * The capability as the browser's own grant stamp (user-grant.ts): the same
+ * secret, which only this process and the desktop hold. Null without one.
+ */
+export const agentCapability = (): string | null => takeCheckoutToken();
+
 /** `call` with this process's checkout capability on every request; null without one. */
 export function withCheckoutToken(
   call: HostCheckoutCall

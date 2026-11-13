@@ -250,6 +250,7 @@ import {
   type TurnFailure,
 } from "./turn-outcome.js";
 import { addRunUsage, turnUsage, type TurnUsage } from "./turn-usage.js";
+import { userSaid } from "./user-grant.js";
 import {
   accountReplyLanguagePrompt,
   isSenderChat,
@@ -1488,6 +1489,7 @@ export class AbacusBotSession {
     // Edited instructions apply to this turn, not the next session.
     await this.refreshCustomInstructions();
     this.userWords.beginTurn(words);
+    userSaid.note(text, turn?.userText);
     if (this.mode !== AgentMode.Unattended && !isSenderChat())
       void learnUserLanguage(words, (process.env.ABACUS_API_KEY ?? "").trim());
     // The sponsored window closing (or opening) changes the headers the
@@ -2820,6 +2822,7 @@ export class AbacusBotSession {
   async steer(text: string, messageId?: string): Promise<void> {
     this.pendingSteers.add(text, messageId);
     this.userWords.add(ownWords(text));
+    userSaid.note(text);
     // The user spoke: they go first, not a test run nobody asked for.
     this.verifyLoop.cancel();
     await this.requireSession().steer(text);
@@ -3251,6 +3254,7 @@ export class AbacusBotSession {
       this.session = created.session;
       this.pi = this.loadedPi;
       this.userWords.clear();
+      userSaid.clear();
       this.wordsLanguage.clear();
       endTurnOnClosedReply(this.session.agent);
       // A fresh session has only the tools it was built with.
