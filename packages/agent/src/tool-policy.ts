@@ -270,6 +270,7 @@ export const UNATTENDED_EXCLUDED_TOOLS: Readonly<Record<string, string>> = {
   offer_session: "a card the user clicks in the bot's chat",
   github_fix: "only the user, in their own chat, starts a fix with full access",
   suggest_tasks: "buttons the user taps in the bot's chat",
+  overnight_task: "books work after the user taps its offer in a chat",
   exit_plan_mode: "never in plan mode",
   delegate_task: NO_SUBAGENT,
   document: NO_SUBAGENT,
