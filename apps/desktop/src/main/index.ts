@@ -940,7 +940,10 @@ async function createWindow(restored?: RecreatedWindowState) {
       publishChromeCapability(chromeCapability);
       // A silent update restart of a hidden window comes back hidden, but
       // only where the Dock or the tray icon can bring it back.
-      if (!startHiddenAfterUpdate) mainWindow.show();
+      // A link or relaunch that came before the window did still shows it.
+      const revealWanted = revealedBeforeWindow;
+      revealedBeforeWindow = false;
+      if (!startHiddenAfterUpdate || revealWanted) mainWindow.show();
       else if (relaunchedHidden)
         void backgroundTray.settled().then((trayShown) => {
           if (
@@ -1850,6 +1853,8 @@ registerAppScheme();
 // sessions. Losing the lock is not final: a relaunch's child arrives while
 // its parent is still dying, so whenReady retries before giving up.
 let gotSingleInstanceLock = app.requestSingleInstanceLock();
+/** A reveal asked for before the main window existed: it must not start hidden. */
+let revealedBeforeWindow = false;
 // Relaunching during staging cancels the pending quit and restores the Dock.
 function revealOnRelaunch(): void {
   if (quitAwaitingUpdate != null) {
@@ -1858,7 +1863,7 @@ function revealOnRelaunch(): void {
   }
   if (process.platform === "darwin" && app.dock?.isVisible() === false)
     void app.dock.show();
-  revealMainWindow();
+  if (revealMainWindow() == null) revealedBeforeWindow = true;
 }
 const openLinks = new OpenLinkInbox({
   reveal: revealOnRelaunch,
