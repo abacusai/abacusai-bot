@@ -2881,8 +2881,9 @@ export class MessagingGatewayService {
       return false;
     const start = shared.botStart();
     if (start == null) return false;
-    this.telegramBotStartShown = true;
-    return session.presentBotStart(start.bot, start.code);
+    const shown = await session.presentBotStart(start.bot, start.code);
+    if (shown) this.telegramBotStartShown = true;
+    return shown;
   }
 
   /** Telegram's window was put up for the bot's Start, so linking puts it away. */
