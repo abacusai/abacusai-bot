@@ -1,6 +1,7 @@
 /**
- * A compaction keeps the original request word for word, and a summarizer
- * that returns nothing is replaced by a record of what it was handed.
+ * A compaction keeps the open request word for word when it summarizes it out
+ * of view, and a summarizer that returns nothing is replaced by a record of
+ * what it was handed.
  */
 import type { SessionEntry } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it, vi } from "vitest";
@@ -12,7 +13,7 @@ import {
   anchoredSummary,
   isDegenerateSummary,
   mechanicalDigest,
-  originalRequest,
+  openRequest,
 } from "./compaction-anchor.js";
 
 const entry = (id: string, message: unknown): SessionEntry =>
@@ -30,10 +31,12 @@ const user = (id: string, text: string): SessionEntry =>
 const assistant = (
   id: string,
   text: string,
-  calls: { name: string; args: unknown }[] = []
+  calls: { name: string; args: unknown }[] = [],
+  stopReason = calls.length > 0 ? "toolUse" : "stop"
 ): SessionEntry =>
   entry(id, {
     role: "assistant",
+    stopReason,
     content: [
       ...(text ? [{ type: "text", text }] : []),
       ...calls.map((call, i) => ({
@@ -73,17 +76,70 @@ const branch = (): SessionEntry[] => [
   result("r1", "abacus-connectors_Gmail_Tool", "x".repeat(20_000)),
   assistant("a2", "", [{ name: "current_time", args: {} }]),
   result("r2", "current_time", "2pm"),
-  assistant("a3", "Still going."),
+  assistant("a3", "Still going.", [{ name: "current_time", args: {} }]),
 ];
 
-describe("the original request", () => {
-  it("is the first user message", () => {
-    expect(originalRequest(branch())).toBe(PROMPT);
+const FIRST_RUN =
+  '[first run] Introduce yourself once, then take the first step toward what the user asked: "hi".';
+const ASK = "Make the menu blue and add my credits.";
+
+/** A chat on its third request: the first two were answered, the third is mid-run. */
+const longChat = (): SessionEntry[] => [
+  user("u0", FIRST_RUN),
+  assistant("a0", "Hi! I'm your assistant."),
+  user("u1", "Build a mod called Larp Client."),
+  assistant("a1", "", [{ name: "bash", args: { command: "gradle build" } }]),
+  result("r1", "bash", "BUILD SUCCESSFUL"),
+  assistant("a2", "Built it: larp-client.jar."),
+  user("u2", ASK),
+  assistant("a3", "Looking at the theme.", [
+    { name: "bash", args: { command: "cat Client.java" } },
+  ]),
+  result("r3", "bash", "x".repeat(20_000)),
+  assistant("a4", "", [{ name: "bash", args: { command: "cat Theme.java" } }]),
+  result("r4", "bash", "class Theme {}"),
+];
+
+describe("the open request", () => {
+  it("is the ask in progress when the summary takes it out of view, not the chat's first message", () => {
+    expect(openRequest(longChat(), "a4")).toBe(ASK);
+  });
+
+  it("is null while the ask in progress is still kept word for word", () => {
+    expect(openRequest(longChat(), "u2")).toBeNull();
+    expect(openRequest(longChat(), "a3")).toBe(ASK);
+  });
+
+  it("is null when every compacted ask was answered", () => {
+    expect(openRequest(longChat().slice(0, 6), "a2")).toBeNull();
+  });
+
+  it("keeps a stopped run's ask open alongside the message that followed it", () => {
+    const stopped = [
+      ...longChat(),
+      assistant("a5", "", [], "aborted"),
+      user("u3", "Also remove the Meteor credits."),
+      assistant("a6", "", [{ name: "bash", args: { command: "ls" } }]),
+    ];
+
+    expect(openRequest(stopped, "a6")).toBe(
+      `${ASK}\n\nAlso remove the Meteor credits.`
+    );
+  });
+
+  it("is the first-run note itself while that first run is the one in progress", () => {
+    const firstRun = [
+      user("u0", FIRST_RUN),
+      assistant("a0", "", [{ name: "memory", args: {} }]),
+      result("r0", "memory", "ok"),
+    ];
+
+    expect(openRequest(firstRun, "r0")).toBe(FIRST_RUN);
   });
 
   it("is kept as head and tail when very long", () => {
     const long = `${"a".repeat(3_000)}${"b".repeat(3_000)}${"c".repeat(3_000)}`;
-    const anchored = originalRequest([user("u1", long)]) ?? "";
+    const anchored = openRequest([user("u1", long)], "") ?? "";
 
     expect(anchored.length).toBeLessThan(4_100);
     expect(anchored.startsWith("aaa")).toBe(true);
@@ -91,7 +147,7 @@ describe("the original request", () => {
   });
 
   it("is null when nobody has asked anything", () => {
-    expect(originalRequest([assistant("a1", "hello")])).toBeNull();
+    expect(openRequest([assistant("a1", "hello")], "")).toBeNull();
   });
 });
 
@@ -155,6 +211,29 @@ describe("the stored summary", () => {
     expect(stored).toContain("two urgent replies pending");
   });
 
+  it("pins the ask in progress, never a finished or dropped earlier one", () => {
+    const stored = anchoredSummary(
+      longChat(),
+      "## Progress\nBuilt Larp Client earlier; now reading Client.java to find where the purple accent is set before changing it.",
+      "a4"
+    );
+
+    expect(stored.startsWith(ANCHOR_START)).toBe(true);
+    expect(stored).toContain(ASK);
+    expect(stored.split(ANCHOR_END)[0]).not.toContain("first run");
+    expect(stored.split(ANCHOR_END)[0]).not.toContain("Larp Client");
+  });
+
+  it("adds no anchor when the summary keeps the ask in progress in view", () => {
+    const stored = anchoredSummary(
+      longChat(),
+      "## Progress\nBuilt Larp Client and handed over larp-client.jar; the user then asked for a new change.",
+      "u2"
+    );
+
+    expect(stored).not.toContain(ANCHOR_START);
+  });
+
   it("does not stack anchors when the summarizer echoed the last one", () => {
     const first = anchoredSummary(
       branch(),
@@ -208,7 +287,7 @@ describe("a chat that never ends", () => {
     const stored = anchoredSummary(branch(), old, "a3", options);
 
     expect(stored).not.toContain(ANCHOR_START);
-    expect(stored).not.toContain("Original request");
+    expect(stored).not.toContain("open request");
     expect(stored).toContain("two urgent replies");
     expect(anchoredSummary(branch(), "##", "a3", options)).toContain(
       "mechanical record"

@@ -5,10 +5,11 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 
 /**
- * Compaction must never lose the original request, and a summarizer that
- * returns nothing usable must not wipe the history. Every summary is prefixed
- * with the first user message verbatim; a degenerate summary is replaced by a
- * mechanical digest of the compacted entries with tool results truncated.
+ * Compaction must never lose the request being worked on, and a summarizer
+ * that returns nothing usable must not wipe the history. When the summary
+ * takes the open request's own words out of view (a long task summarized
+ * mid-run), it opens with them verbatim; a degenerate summary is replaced by
+ * a mechanical digest of the compacted entries with tool results truncated.
  */
 
 export const ANCHOR_START = "<!-- original-request -->";
@@ -52,22 +53,56 @@ export const textOf = (content: unknown): string => {
 const isMessageEntry = (entry: SessionEntry): entry is SessionMessageEntry =>
   entry.type === "message";
 
-/** The first user message on the branch, or null when there is none. */
-export function originalRequest(entries: SessionEntry[]): string | null {
-  for (const entry of entries) {
+/** The model stopped on its own with no tool call: a reply the user got. */
+const endsReply = (entry: SessionEntry): boolean => {
+  if (!isMessageEntry(entry) || entry.message.role !== "assistant")
+    return false;
+  const message = entry.message as { stopReason?: unknown; content?: unknown };
+  return (
+    message.stopReason === "stop" &&
+    !(
+      Array.isArray(message.content) &&
+      message.content.some(
+        (block) => (block as { type?: unknown })?.type === "toolCall"
+      )
+    )
+  );
+};
+
+/**
+ * The open request's words that the summary is about to take out of view:
+ * the user messages after the branch's last finished reply (a stopped or
+ * failed run's ask is still open) and before the first kept entry. Null when there are
+ * none: earlier requests were answered, and a kept one is still read as is.
+ * A chat's first message is not its task: it may be the app's own first-run
+ * note, or a job the user since finished or dropped.
+ */
+export function openRequest(
+  entries: SessionEntry[],
+  firstKeptEntryId: string
+): string | null {
+  const kept = entries.findIndex((entry) => entry.id === firstKeptEntryId);
+  const end = kept === -1 ? entries.length : kept;
+  let asks: string[] = [];
+  for (const [index, entry] of entries.entries()) {
+    if (endsReply(entry)) {
+      asks = [];
+      continue;
+    }
+    if (index >= end) continue;
     if (!isMessageEntry(entry) || entry.message.role !== "user") continue;
     const text = textOf(entry.message.content).trim();
-    if (text.length === 0) continue;
-    if (text.length <= ANCHOR_MAX_CHARS) return text;
-
-    return (
-      `${text.slice(0, ANCHOR_HEAD_CHARS)}\n\n` +
-      `[… ${text.length - ANCHOR_HEAD_CHARS - ANCHOR_TAIL_CHARS} chars omitted …]\n\n` +
-      text.slice(-ANCHOR_TAIL_CHARS)
-    );
+    if (text.length > 0) asks.push(text);
   }
+  if (asks.length === 0) return null;
+  const text = asks.join("\n\n");
+  if (text.length <= ANCHOR_MAX_CHARS) return text;
 
-  return null;
+  return (
+    `${text.slice(0, ANCHOR_HEAD_CHARS)}\n\n` +
+    `[… ${text.length - ANCHOR_HEAD_CHARS - ANCHOR_TAIL_CHARS} chars omitted …]\n\n` +
+    text.slice(-ANCHOR_TAIL_CHARS)
+  );
 }
 
 const ANCHOR_BLOCK_RE = new RegExp(
@@ -185,11 +220,11 @@ export function anchoredSummary(
     ? mechanicalDigest(entries, firstKeptEntryId)
     : stripAnchor(summary);
   if (!options.anchorRequest) return body;
-  const request = originalRequest(entries);
+  const request = openRequest(entries, firstKeptEntryId);
   if (request == null) return body;
 
   return (
-    `${ANCHOR_START}\n## Original request (verbatim, keep working on this)\n` +
+    `${ANCHOR_START}\n## The user's open request (verbatim, keep working on this)\n` +
     `${request}\n${ANCHOR_END}\n\n${body}`
   );
 }
