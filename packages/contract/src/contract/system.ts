@@ -26,8 +26,6 @@ export interface SystemInfo {
   materialIconsBasePath: string | null;
   contractVersion: number;
   foundationApi: number;
-  /** This desktop can show the app's tray icon; absent while unknown or off the desktop app. */
-  trayAvailable?: boolean;
 }
 
 export interface NotificationMetadata {
@@ -105,6 +103,12 @@ export const system = {
     .input(v.object({ path: v.pipe(v.string(), v.nonEmpty()) }))
     .output(type<void>()),
   info: query.input(NoInput).output(type<SystemInfo>()),
+  /**
+   * This desktop can show the app's tray icon. Answers once the desktop has
+   * (a Linux tray host is probed at launch), so it is not part of `info`;
+   * null off the desktop app.
+   */
+  trayAvailable: query.input(NoInput).output(type<boolean | null>()),
   acknowledgeLegacyDrafts: mutation
     .input(v.object({ keys: v.array(v.string()) }))
     .output(type<void>()),

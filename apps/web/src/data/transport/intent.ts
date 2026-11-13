@@ -60,7 +60,7 @@ const READS: Record<string, string> = {
   sites: "progress",
   status: "events list",
   skills: "listInstalled search",
-  system: "events info loginItem.get",
+  system: "events info loginItem.get trayAvailable",
   terminal: "events output shell.get",
   update: "events status",
   voice: "language whisper.progress",

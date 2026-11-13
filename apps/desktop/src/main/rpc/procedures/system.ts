@@ -47,10 +47,12 @@ export const systemRouter = impl.system.router({
       context.deps.app.showItemInFolder(input.path);
     }
   ),
+  trayAvailable: impl.system.trayAvailable.handler(({ context }) =>
+    context.deps.app.trayAvailable()
+  ),
   info: impl.system.info.handler(({ context }) => {
     const { app, host, serviceHost } = context.deps;
     const homeDir = app.homeDir();
-    const tray = app.trayAvailable();
     let legacyComposerDrafts: Record<string, string> = {};
     try {
       legacyComposerDrafts = pendingLegacyDrafts(app.botHome());
@@ -63,7 +65,6 @@ export const systemRouter = impl.system.router({
       legacyInstall: app.legacyInstall(),
       platform: process.platform,
       systemLanguages: app.systemLanguages(),
-      ...(tray != null ? { trayAvailable: tray } : {}),
       arch: process.arch,
       versions: { ...process.versions },
       homeDir,

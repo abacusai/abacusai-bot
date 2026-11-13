@@ -76,7 +76,7 @@ const run = async (): Promise<Record<string, unknown>> => {
       botHome: () => "/home/.abacusai-bot",
       legacyInstall: () => false,
       systemLanguages: () => [],
-      trayAvailable: () => null,
+      trayAvailable: async () => null,
     },
     host: { sessionHomePath: () => "/home/AbacusAI" },
     serviceHost: { getMetadata: () => ({ materialIconsBasePath: null }) },

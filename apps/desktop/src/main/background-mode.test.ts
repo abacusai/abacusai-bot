@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { backgroundNoticeDue, closeAction, wantsTray } from "./background-mode";
+import {
+  backgroundNoticeDue,
+  closeAction,
+  hiddenRelaunchStays,
+  wantsTray,
+} from "./background-mode";
 
 describe("closeAction", () => {
   it.each([
@@ -52,5 +57,17 @@ describe("backgroundNoticeDue", () => {
     expect(
       backgroundNoticeDue(action, platform, { backgroundNoticeAt: at })
     ).toBe(due)
+  );
+});
+
+describe("hiddenRelaunchStays", () => {
+  it.each([
+    ["darwin", false, true],
+    ["win32", true, true],
+    ["win32", false, false],
+    ["linux", true, true],
+    ["linux", false, false],
+  ] as const)("%s, tray shown %s: %s", (platform, trayShown, stays) =>
+    expect(hiddenRelaunchStays(platform, trayShown)).toBe(stays)
   );
 });

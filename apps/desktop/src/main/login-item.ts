@@ -48,6 +48,20 @@ export const registerLoginItem = (): void => {
   }
 };
 
+/**
+ * On each launch: an AppImage update moves the app to a new versioned file
+ * and deletes the old one, so an enabled autostart entry follows it.
+ */
+export const refreshLinuxAutostart = (): void => {
+  try {
+    appLinuxAutostart()?.refresh();
+  } catch (error) {
+    console.warn(
+      `[login-item] autostart not refreshed: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+};
+
 /** A start this soon after the computer booted, with the login item on, is the login item's. */
 const LOGIN_START_WITHIN_S = 180;
 

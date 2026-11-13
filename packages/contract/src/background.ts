@@ -23,12 +23,29 @@ export interface BackgroundAskState {
 }
 
 /**
+ * The tray can hold a closed window. Windows has one unless creating the icon
+ * failed; on Linux it depends on the desktop, so an unanswered probe is a no.
+ */
+const trayUsable = (
+  platform: string | null,
+  trayAvailable: boolean | null
+): boolean =>
+  platform === "win32"
+    ? trayAvailable !== false
+    : platform === "linux" && trayAvailable === true;
+
+/**
  * Asked once, on Windows and Linux, and only when there is something to turn
  * on: the background setting was turned off, or the app does not open at
  * login. Never on a desktop with no tray, where a close still quits.
  */
 export const backgroundAskWanted = (state: BackgroundAskState): boolean =>
   !state.asked &&
-  (state.platform === "win32" || state.platform === "linux") &&
-  state.trayAvailable !== false &&
+  trayUsable(state.platform, state.trayAvailable) &&
   (!state.keepRunning || state.openAtLogin === false);
+
+/** The "Keep running in the background" switch: only where a tray can hold the window. */
+export const keepRunningSettingShown = (
+  platform: string | null,
+  trayAvailable: boolean | null
+): boolean => trayUsable(platform, trayAvailable);

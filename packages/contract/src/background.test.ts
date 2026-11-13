@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { backgroundAskWanted, keepsRunningInBackground } from "./background";
+import {
+  backgroundAskWanted,
+  keepRunningSettingShown,
+  keepsRunningInBackground,
+} from "./background";
 
 describe("keepsRunningInBackground", () => {
   it.each([
@@ -27,7 +31,7 @@ describe("backgroundAskWanted", () => {
     ["linux", true, true, false, true, false],
     ["linux", false, false, false, false, false],
     ["linux", true, false, false, false, false],
-    ["linux", false, false, false, null, true],
+    ["linux", false, false, false, null, false],
     ["darwin", false, false, false, true, false],
     [null, false, false, false, true, false],
   ] as const)(
@@ -42,5 +46,21 @@ describe("backgroundAskWanted", () => {
           trayAvailable,
         })
       ).toBe(wanted)
+  );
+});
+
+describe("keepRunningSettingShown", () => {
+  it.each([
+    // platform, tray available → shown
+    ["win32", true, true],
+    ["win32", null, true],
+    ["win32", false, false],
+    ["linux", true, true],
+    ["linux", null, false],
+    ["linux", false, false],
+    ["darwin", true, false],
+    [null, null, false],
+  ] as const)("%s, tray %s: %s", (platform, trayAvailable, shown) =>
+    expect(keepRunningSettingShown(platform, trayAvailable)).toBe(shown)
   );
 });

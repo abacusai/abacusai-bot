@@ -140,6 +140,8 @@ const MANUAL_INSTALL_ERROR = "Install this update from a terminal";
  */
 export interface UpdateServiceDeps {
   isSafeToRestart?: (context: { requested: boolean }) => boolean;
+  /** Windows and Linux: the tray icon is up, so a hidden window can be reopened from it. */
+  trayShown?: () => boolean;
 }
 
 const initialStatus = (): UpdateStatus => ({
@@ -513,14 +515,16 @@ export class UpdateService {
       return true;
     }
 
-    // macOS can relaunch hidden through the Dock. A hidden Windows window has
-    // no tray entry here, so restart it visibly instead of stranding the update.
+    // A hidden window comes back hidden where the Dock (macOS) or the tray
+    // icon reopens it. Without either, Windows restarts visibly rather than
+    // strand the update, and Linux waits for the window or the quit.
     const windowVisible = BaseWindow.getAllWindows().some(
       (win) => !isNotchWindow(win) && !win.isDestroyed() && win.isVisible()
     );
     let relaunchHidden = false;
     if (!windowVisible) {
-      if (process.platform === "darwin") relaunchHidden = true;
+      if (process.platform === "darwin" || this.deps.trayShown?.() === true)
+        relaunchHidden = true;
       else if (process.platform !== "win32") return false;
     }
 
@@ -709,7 +713,7 @@ export class UpdateService {
   installUpdate(options?: {
     /** An automatic install (idle restart, quit): NSIS runs with no UI. */
     silent?: boolean;
-    /** macOS: the window was hidden at restart, so come back hidden. */
+    /** The window was hidden at restart, so come back hidden. */
     relaunchHidden?: boolean;
     /**
      * A user's click: while a restart is not safe, wait for it through the

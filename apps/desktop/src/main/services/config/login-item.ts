@@ -39,6 +39,8 @@ const SUPPORTED = new Set<string>(["darwin", "win32"]);
 export interface LinuxAutostart {
   read(): boolean;
   write(openAtLogin: boolean): void;
+  /** Points an enabled entry at the current executable; an update can rename an AppImage. */
+  refresh(): void;
 }
 
 /** A desktop-entry string value, quoted for `Exec` (XDG Desktop Entry spec). */
@@ -60,35 +62,56 @@ export const xdgAutostart = (options: {
     "autostart",
     "abacusai-bot.desktop"
   );
+  const exec = `Exec=${execArgument(options.executable)}`;
+  const readEntry = (): string | null => {
+    try {
+      return fs.readFileSync(file, "utf8");
+    } catch {
+      return null;
+    }
+  };
+  // How a desktop's own startup settings turn an entry off.
+  const enabled = (entry: string): boolean =>
+    !/^(Hidden\s*=\s*true|X-GNOME-Autostart-enabled\s*=\s*false)\s*$/m.test(
+      entry
+    );
+  const writeEntry = (): void => {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(
+      file,
+      [
+        "[Desktop Entry]",
+        "Type=Application",
+        `Name=${options.name}`,
+        exec,
+        "X-GNOME-Autostart-enabled=true",
+        "",
+      ].join("\n")
+    );
+  };
   return {
     read() {
-      try {
-        const entry = fs.readFileSync(file, "utf8");
-        // How a desktop's own startup settings turn an entry off.
-        return !/^(Hidden\s*=\s*true|X-GNOME-Autostart-enabled\s*=\s*false)\s*$/m.test(
-          entry
+      const entry = readEntry();
+      return entry != null && enabled(entry);
+    },
+    refresh() {
+      const entry = readEntry();
+      if (entry == null || !enabled(entry)) return;
+      const current = /^Exec=.*$/m.exec(entry)?.[0];
+      if (current === exec) return;
+      if (current == null) writeEntry();
+      else
+        fs.writeFileSync(
+          file,
+          entry.replace(current, () => exec)
         );
-      } catch {
-        return false;
-      }
     },
     write(openAtLogin) {
       if (!openAtLogin) {
         fs.rmSync(file, { force: true });
         return;
       }
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      fs.writeFileSync(
-        file,
-        [
-          "[Desktop Entry]",
-          "Type=Application",
-          `Name=${options.name}`,
-          `Exec=${execArgument(options.executable)}`,
-          "X-GNOME-Autostart-enabled=true",
-          "",
-        ].join("\n")
-      );
+      writeEntry();
     },
   };
 };

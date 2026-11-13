@@ -39,16 +39,14 @@ export class BackgroundTray {
   private wanted = false;
   private generation = 0;
   private readonly host: Promise<boolean>;
-  private hostFound: boolean | null = null;
   private createFailed = false;
+  private disposed = false;
+  private syncing: Promise<void> = Promise.resolve();
 
   constructor(private readonly options: BackgroundTrayOptions) {
     // Asked once, at launch, so the answer is in before the window asks.
     this.host =
       options.platform === "linux" ? linuxTrayHost() : Promise.resolve(true);
-    void this.host.then((found) => {
-      this.hostFound = found;
-    });
   }
 
   /** The icon is up, so a closed window can come back. */
@@ -56,17 +54,41 @@ export class BackgroundTray {
     return this.tray != null && !this.tray.isDestroyed();
   }
 
-  /** This desktop can show the icon; null until known. */
-  get available(): boolean | null {
-    if (this.createFailed) return false;
-    return this.hostFound;
+  /** This desktop can show the icon: the desktop's answer, then the latest sync's. */
+  async available(): Promise<boolean> {
+    const host = await this.host;
+    await this.settled();
+    return host && !this.createFailed;
   }
 
   /** Puts the icon up or takes it down; a desktop that cannot show one leaves it down. */
-  async sync(want: boolean): Promise<void> {
-    if (want === this.wanted) return;
+  sync(want: boolean): Promise<void> {
+    if (this.disposed || want === this.wanted) return this.syncing;
     this.wanted = want;
-    const generation = ++this.generation;
+    this.syncing = this.apply(want, ++this.generation);
+    return this.syncing;
+  }
+
+  /** Whether the icon is up once the latest sync has finished. */
+  async settled(): Promise<boolean> {
+    let current: Promise<void>;
+    do {
+      current = this.syncing;
+      await current;
+    } while (current !== this.syncing);
+    return this.shown;
+  }
+
+  /** On quit: an icon left behind lingers in the Windows tray until hovered. */
+  dispose(): void {
+    this.disposed = true;
+    this.wanted = false;
+    this.generation++;
+    this.tray?.destroy();
+    this.tray = null;
+  }
+
+  private async apply(want: boolean, generation: number): Promise<void> {
     if (!want) {
       this.tray?.destroy();
       this.tray = null;

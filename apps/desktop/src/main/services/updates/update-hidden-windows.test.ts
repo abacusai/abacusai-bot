@@ -90,6 +90,34 @@ it("installs a downloaded update from a hidden Windows window", async () => {
   expect(service.getStatus().installing).toBe(true);
 });
 
+it.each(["win32", "linux"] as const)(
+  "a window hidden into the %s tray restarts into its update hidden",
+  async (platform) => {
+    vi.spyOn(process, "platform", "get").mockReturnValue(platform);
+    const service = new UpdateService({
+      isSafeToRestart: () => true,
+      trayShown: () => true,
+    });
+    autoUpdater.emit("update-downloaded", { version: "1.0.82" });
+
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    expect(autoUpdater.quitAndInstall).toHaveBeenCalledWith(true, true);
+    expect(markRelaunchHidden).toHaveBeenCalledTimes(1);
+    expect(service.getStatus().installing).toBe(true);
+  }
+);
+
+it("a hidden Linux window with no tray waits for the window or the quit", async () => {
+  vi.spyOn(process, "platform", "get").mockReturnValue("linux");
+  new UpdateService({ isSafeToRestart: () => true, trayShown: () => false });
+  autoUpdater.emit("update-downloaded", { version: "1.0.82" });
+
+  await vi.advanceTimersByTimeAsync(60_000);
+
+  expect(autoUpdater.quitAndInstall).not.toHaveBeenCalled();
+});
+
 it("an idle Linux AppImage still restarts into its update", async () => {
   vi.spyOn(process, "platform", "get").mockReturnValue("linux");
   windows.visible = true;

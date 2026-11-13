@@ -43,3 +43,13 @@ export const backgroundNoticeDue = (
   action === "hide" &&
   platform !== "darwin" &&
   dismissals.backgroundNoticeAt == null;
+
+/**
+ * An update restart of a hidden window stays hidden only where something can
+ * bring it back: the Dock on macOS, the tray icon elsewhere. Never an
+ * invisible app with no way back.
+ */
+export const hiddenRelaunchStays = (
+  platform: string,
+  trayShown: boolean
+): boolean => platform === "darwin" || trayShown;

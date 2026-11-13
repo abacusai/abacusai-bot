@@ -13,7 +13,8 @@ vi.mock("electron", () => ({ app: electron }));
 let base = "";
 vi.mock("./profile-home", () => ({ profileBaseDir: () => base }));
 
-const { registerLoginItem } = await import("./login-item");
+const { refreshLinuxAutostart, registerLoginItem } =
+  await import("./login-item");
 
 describe("the login item", () => {
   const platform = process.platform;
@@ -72,6 +73,35 @@ describe("the login item", () => {
     } finally {
       if (configHome == null) delete process.env.XDG_CONFIG_HOME;
       else process.env.XDG_CONFIG_HOME = configHome;
+    }
+  });
+
+  it("on Linux, a launch after an AppImage update points the entry at the new file", () => {
+    const configHome = process.env.XDG_CONFIG_HOME;
+    const appImage = process.env.APPIMAGE;
+    process.env.XDG_CONFIG_HOME = path.join(base, "config");
+    const entry = path.join(
+      base,
+      "config",
+      "autostart",
+      "abacusai-bot.desktop"
+    );
+    try {
+      Object.defineProperty(process, "platform", { value: "linux" });
+      process.env.APPIMAGE = "/apps/AbacusAI-Bot-1.0.0.AppImage";
+      registerLoginItem();
+      process.env.APPIMAGE = "/apps/AbacusAI-Bot-1.1.0.AppImage";
+      registerLoginItem();
+      refreshLinuxAutostart();
+
+      expect(fs.readFileSync(entry, "utf8")).toContain(
+        'Exec="/apps/AbacusAI-Bot-1.1.0.AppImage"'
+      );
+    } finally {
+      if (configHome == null) delete process.env.XDG_CONFIG_HOME;
+      else process.env.XDG_CONFIG_HOME = configHome;
+      if (appImage == null) delete process.env.APPIMAGE;
+      else process.env.APPIMAGE = appImage;
     }
   });
 });

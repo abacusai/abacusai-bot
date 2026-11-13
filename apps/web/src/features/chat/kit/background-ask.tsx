@@ -83,6 +83,11 @@ export const BackgroundAskRow = ({
   });
   const platform = preview ? "win32" : (info.data?.platform ?? null);
   const desktop = platform === "win32" || platform === "linux";
+  const tray = useQuery({
+    ...transport.orpc.system.trayAvailable.queryOptions({ input: {} }),
+    enabled: IS_ELECTRON && desktop && !preview,
+    retry: false,
+  });
   const loginKey = transport.orpc.system.loginItem.get.queryKey({ input: {} });
   const login = useQuery({
     ...transport.orpc.system.loginItem.get.queryOptions({ input: {} }),
@@ -111,7 +116,7 @@ export const BackgroundAskRow = ({
         ? login.data.openAtLogin
         : null,
     asked: card != null,
-    trayAvailable: preview ? true : (info.data?.trayAvailable ?? null),
+    trayAvailable: preview ? true : (tray.data ?? null),
   };
   const candidate =
     eligible && card == null && ended && backgroundAskWanted(state)

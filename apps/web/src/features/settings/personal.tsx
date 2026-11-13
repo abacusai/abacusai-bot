@@ -1,5 +1,8 @@
 import { AgentMode } from "@abacus-ai/contract/agent-types";
-import { keepsRunningInBackground } from "@abacus-ai/contract/background";
+import {
+  keepRunningSettingShown,
+  keepsRunningInBackground,
+} from "@abacus-ai/contract/background";
 import { languageNameTag } from "@abacus-ai/contract/contract/languages";
 import {
   SUPPORTED_LANGUAGES,
@@ -75,8 +78,16 @@ export const GeneralPage = () => {
     retry: false,
   });
   const linux = info.data?.platform === "linux";
+  const tray = useQuery({
+    ...transport.orpc.system.trayAvailable.queryOptions({ input: {} }),
+    enabled:
+      IS_ELECTRON && info.data != null && info.data.platform !== "darwin",
+    retry: false,
+  });
+  // On a Linux desktop with no tray a close still quits, so the switch would do nothing.
   const keepRunningSetting =
-    IS_ELECTRON && info.data != null && info.data.platform !== "darwin";
+    IS_ELECTRON &&
+    keepRunningSettingShown(info.data?.platform ?? null, tray.data ?? null);
   const sandbox = useQuery(
     transport.orpc.settings.sandboxSupport.queryOptions({ input: {} })
   );

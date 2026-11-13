@@ -56,7 +56,12 @@ import Store from "electron-store";
 
 import { nodeFileOperations } from "./app-operations/node";
 import { markQuitting, isQuitting } from "./app-quit-state";
-import { backgroundNoticeDue, closeAction, wantsTray } from "./background-mode";
+import {
+  backgroundNoticeDue,
+  closeAction,
+  hiddenRelaunchStays,
+  wantsTray,
+} from "./background-mode";
 import { BackgroundTray } from "./background-tray";
 import { setBringToFront, setMainWindow } from "./bring-to-front";
 import { composeHost } from "./compose-host";
@@ -66,7 +71,11 @@ import type { HostOperations } from "./handler";
 import { electronHostPlatform } from "./host-operations/electron";
 import { followMainAgentBusy, followRoutineDue } from "./keep-awake";
 import { decideLocalOpen } from "./local-open-guard";
-import { appLinuxAutostart, openedAtLogin } from "./login-item";
+import {
+  appLinuxAutostart,
+  openedAtLogin,
+  refreshLinuxAutostart,
+} from "./login-item";
 import { throttleMainWindowWhileHidden } from "./main-window-throttle";
 import { restoreLegacyFiles } from "./migrations/restore-legacy";
 import {
@@ -422,6 +431,7 @@ const updateService = new UpdateService({
   isSafeToRestart: ({ requested }) =>
     !workspaceServiceHost.hasActiveAgentTurn() &&
     (requested || !workspaceServiceHost.hasLiveTerminalSessions()),
+  trayShown: () => backgroundTray.shown,
 });
 let mainWindowRef: BaseWindow | null = null;
 let rendererHost: RendererHost | null = null;
@@ -610,8 +620,9 @@ async function createWindow(restored?: RecreatedWindowState) {
 
   // Set before a silent update restart of a hidden window, so the relaunch
   // stays hidden instead of popping over the user's work.
+  const relaunchedHidden = restored === undefined && consumeRelaunchHidden();
   const startHiddenAfterUpdate =
-    restored !== undefined ? !restored.visible : consumeRelaunchHidden();
+    restored !== undefined ? !restored.visible : relaunchedHidden;
 
   const { width: screenWidth, height: screenHeight } =
     screen.getPrimaryDisplay().workAreaSize;
@@ -927,8 +938,17 @@ async function createWindow(restored?: RecreatedWindowState) {
         mainWindow.center();
       }
       publishChromeCapability(chromeCapability);
-      // A silent update restart of a hidden window comes back hidden.
+      // A silent update restart of a hidden window comes back hidden, but
+      // only where the Dock or the tray icon can bring it back.
       if (!startHiddenAfterUpdate) mainWindow.show();
+      else if (relaunchedHidden)
+        void backgroundTray.settled().then((trayShown) => {
+          if (
+            !hiddenRelaunchStays(process.platform, trayShown) &&
+            !mainWindow.isDestroyed()
+          )
+            mainWindow.show();
+        });
       if (chromeCapability === "overlay-pending") {
         let retryTimer: ReturnType<typeof setTimeout> | undefined;
         mainWindow.once("closed", () => clearTimeout(retryTimer));
@@ -1460,7 +1480,7 @@ const appOperations: AppOperations = {
 
   appVersion: () => app.getVersion(),
   systemLanguages: () => osLanguages(),
-  trayAvailable: () => backgroundTray.available,
+  trayAvailable: () => backgroundTray.available(),
   homeDir: () => os.homedir(),
   botHome: () => abacusBotHome(),
   legacyInstall: () => legacyInstall,
@@ -2064,6 +2084,7 @@ app
         : "signed_out"
     );
     if (openedAtLogin()) reportFunnelStep("opened_at_login");
+    refreshLinuxAutostart();
 
     // Backs the "Paste image" attach item, which has no paste event to read
     // because the click happens in a menu. Null when there is no image.
@@ -2192,6 +2213,7 @@ app.on("before-quit", (event) => {
   }
   // So the window 'close' handler stops intercepting.
   markQuitting();
+  backgroundTray.dispose();
   notchController?.dispose();
   notchNotifications.dispose();
   // The progress window refuses to close by itself; free it before the quit.

@@ -71,6 +71,37 @@ describe("createLoginItem (spec 05 §31.5 c)", () => {
     expect(app.setLoginItemSettings).not.toHaveBeenCalled();
   });
 
+  it("points an enabled entry at the current executable, and leaves a matching or turned-off one alone", () => {
+    const configHome = fs.mkdtempSync(path.join(os.tmpdir(), "autostart-"));
+    const entry = path.join(configHome, "autostart", "abacusai-bot.desktop");
+    const autostart = (executable: string) =>
+      xdgAutostart({ configHome, executable, name: "AbacusAI Bot" });
+    autostart("/apps/AbacusAI-Bot-1.0.0.AppImage").write(true);
+    fs.appendFileSync(entry, "Comment=kept\n");
+
+    autostart("/apps/AbacusAI-Bot-1.1.0.AppImage").refresh();
+    const updated = fs.readFileSync(entry, "utf8");
+    expect(updated).toContain('Exec="/apps/AbacusAI-Bot-1.1.0.AppImage"');
+    expect(updated).not.toContain("1.0.0");
+    expect(updated).toContain("Comment=kept");
+
+    const write = vi.spyOn(fs, "writeFileSync");
+    try {
+      autostart("/apps/AbacusAI-Bot-1.1.0.AppImage").refresh();
+      expect(write).not.toHaveBeenCalled();
+    } finally {
+      write.mockRestore();
+    }
+
+    fs.appendFileSync(entry, "Hidden=true\n");
+    autostart("/apps/AbacusAI-Bot-1.2.0.AppImage").refresh();
+    expect(fs.readFileSync(entry, "utf8")).not.toContain("1.2.0");
+
+    fs.rmSync(entry);
+    autostart("/apps/AbacusAI-Bot-1.2.0.AppImage").refresh();
+    expect(fs.existsSync(entry)).toBe(false);
+  });
+
   it("quotes an executable path with the desktop entry's special characters", () => {
     const configHome = fs.mkdtempSync(path.join(os.tmpdir(), "autostart-"));
     xdgAutostart({
