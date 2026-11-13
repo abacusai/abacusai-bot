@@ -4187,6 +4187,8 @@ describe("a connected site's rule", () => {
         return url.includes("bank.test") ? refuse : null;
       },
       onSignInPage: (site) => loginStops.push(site),
+      signedInOn: async (url) =>
+        url.includes("mail.test") ? "mail.test" : null,
       workspaceForSession: (sessionId) => workspaces.get(sessionId) ?? null,
       checkoutToken: AGENT_TOKEN,
     });
@@ -4198,6 +4200,27 @@ describe("a connected site's rule", () => {
   beforeEach(() => {
     gateCalls.length = 0;
     loginStops.length = 0;
+  });
+
+  it("tells the run a page is on a site where it uses the user's own sign-in, once per site", async () => {
+    // A run that read the user's account said the page "loaded without
+    // needing a sign-in": it could not tell the browser held the user's.
+    const opened = await sitedCall("browser_navigate", {
+      action: "goto",
+      url: "https://mail.test/inbox",
+    });
+    expect(opened.isError).toBe(false);
+    expect(opened.text).toContain(
+      "The browser is signed in to mail.test with the user's own account"
+    );
+    respondWith(() => oneButton);
+    const again = await sitedCall("browser_snapshot", { action: "snapshot" });
+    expect(again.text).not.toContain("signed in to mail.test");
+    const elsewhere = await sitedCall("browser_navigate", {
+      action: "goto",
+      url: "https://example.test/next",
+    });
+    expect(elsewhere.text).not.toContain("user's own account");
   });
 
   it("refuses a navigation to a site whose rule says no, before it loads", async () => {

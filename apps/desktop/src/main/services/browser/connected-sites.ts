@@ -279,6 +279,18 @@ export class ConnectedSites {
     this.forget(site);
   }
 
+  /**
+   * The listed site `url` is on, when the browser holds its sign-in: a page
+   * there shows the user's own account. Null for any other page.
+   */
+  async signedInOn(url: string): Promise<string | null> {
+    const site = this.siteOf(url);
+    if (site == null) return null;
+    await this.seedExisting();
+    if (this.read().sites[site] == null) return null;
+    return (await this.cookiesOf(site)).length > 0 ? site : null;
+  }
+
   /** Forgets every site (the browser's data was cleared). */
   clear(): void {
     this.write({ sites: {}, seeded: true });

@@ -270,6 +270,18 @@ describe("connected sites", () => {
     });
   });
 
+  it("names the site a page uses the user's sign-in on, only while it is listed and signed in", async () => {
+    const { sites, jar } = setup([INDIGO]);
+    expect(await sites.signedInOn("https://www.goindigo.in/trips")).toBeNull();
+    sites.add("goindigo.in");
+    expect(await sites.signedInOn("https://www.goindigo.in/trips")).toBe(
+      "goindigo.in"
+    );
+    expect(await sites.signedInOn("https://example.com/")).toBeNull();
+    jar.length = 0;
+    expect(await sites.signedInOn("https://www.goindigo.in/trips")).toBeNull();
+  });
+
   it("ignores what is not a website", () => {
     const { sites } = setup([]);
     expect(sites.add("about:blank")).toBeNull();

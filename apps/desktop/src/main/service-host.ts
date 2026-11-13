@@ -1346,6 +1346,10 @@ export class ServiceHost {
       if (this.platform === "electron")
         this.connectedSites.signInPage(site, sessionId);
     },
+    signedInOn: (url) =>
+      this.platform === "electron"
+        ? this.connectedSites.signedInOn(url)
+        : Promise.resolve(null),
     target: () => this.browserTargetSource(),
     // Only the hosted computer carries a chat that takes media (WhatsApp).
     media: () => (this.platform === "web-host" ? this.mediaStore : null),

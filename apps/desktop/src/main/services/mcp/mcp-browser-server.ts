@@ -669,6 +669,9 @@ const CARD_DETAILS: ReadonlySet<VaultField> = new Set([
   "cardholder_name",
 ]);
 
+/** How long a run, once told a page uses the user's sign-in, is not told again. */
+const SIGNED_IN_TOLD_MS = 5 * 60_000;
+
 /** Calls after which the page is looked at for a sign-in form. */
 const SIGN_IN_WATCHED = new Set([
   "browser_navigate",
@@ -698,6 +701,11 @@ export interface McpBrowserServerOptions {
    * sign in there for the bot.
    */
   onSignInPage?: (site: string, sessionId: string) => void;
+  /**
+   * The connected site `url` is on when the browser holds the user's sign-in
+   * there, else null: the run is told its page shows the user's own account.
+   */
+  signedInOn?: (url: string) => Promise<string | null>;
   /** Gate consulted before each tool call; when omitted, nothing is gated. */
   requestPermission?: (
     tool: string,
@@ -2393,9 +2401,13 @@ export class McpBrowserServer extends McpHttpServer {
               );
             }
           }
+          const left = await this.leaveAbacusPage(sessionId);
           return this.withPageEvents(
-            (await this.leaveAbacusPage(sessionId)) ?? result,
-            sessionId
+            left ?? result,
+            sessionId,
+            left == null && result.isError !== true
+              ? await this.signedInNote(sessionId)
+              : []
           );
         };
         try {
@@ -4467,12 +4479,18 @@ export class McpBrowserServer extends McpHttpServer {
    * call, so the next one is not blamed for it and the run does not fetch
    * the file again.
    */
-  private withPageEvents(result: ToolResult, sessionId?: string): ToolResult {
+  private withPageEvents(
+    result: ToolResult,
+    sessionId?: string,
+    notes: string[] = []
+  ): ToolResult {
     const page = this.findView(sessionId);
-    const events =
-      page == null
+    const events = [
+      ...notes,
+      ...(page == null
         ? []
-        : (this.options.target?.()?.pageEvents?.(page.id) ?? []);
+        : (this.options.target?.()?.pageEvents?.(page.id) ?? [])),
+    ];
     if (events.length === 0) return result;
     const content = result.content ?? [];
     const first = content[0];
@@ -4487,6 +4505,31 @@ export class McpBrowserServer extends McpHttpServer {
             ]
           : [...content, { type: "text", text: events.join("\n") }],
     };
+  }
+
+  /** "session|site" → when its run was last told the page uses the user's sign-in. */
+  private readonly toldSignedIn = new Map<string, number>();
+
+  /**
+   * Once per run and site: the page is on a site where the browser holds the
+   * user's own sign-in. Without it a run that read the user's account
+   * reported the page as one that "loaded without needing a sign-in".
+   */
+  private async signedInNote(sessionId?: string): Promise<string[]> {
+    const signedInOn = this.options.signedInOn;
+    const url = this.findView(sessionId)?.getURL();
+    if (signedInOn == null || sessionId == null || url == null) return [];
+    const site = await signedInOn(url).catch(() => null);
+    if (site == null) return [];
+    // A chat's browser outlives a run: a later run (minutes on) is told again.
+    const key = `${sessionId}|${site}`;
+    const now = Date.now();
+    const told = this.toldSignedIn.get(key);
+    if (told != null && now - told < SIGNED_IN_TOLD_MS) return [];
+    this.toldSignedIn.set(key, now);
+    return [
+      `The browser is signed in to ${site} with the user's own account (Connected sites): this page shows their account, not what anyone would see. Say that the user's sign-in was used when you report it.`,
+    ];
   }
 
   /** Whether the user's own words, as the runtime stamped them on this call, open `url`. */
