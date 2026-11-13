@@ -24,6 +24,21 @@ export const collapseProgress = (text: string): string => {
     .join("\n");
 };
 
+/**
+ * A running tool's output so far, from pi's partial result: bash reports
+ * `{ content: [{ type: "text", text }] }`, the whole output each time.
+ */
+export const partialOutputText = (partial: unknown): string => {
+  if (typeof partial === "string") return partial;
+  const content = (partial as { content?: unknown } | null)?.content;
+  if (!Array.isArray(content)) return "";
+  return content
+    .map((part: { type?: unknown; text?: unknown }) =>
+      part?.type === "text" && typeof part.text === "string" ? part.text : ""
+    )
+    .join("");
+};
+
 // oxlint-disable-next-line no-control-regex -- an escape sequence starts with ESC
 const ANSI = /\u001b\[[0-9;?]*[ -/]*[@-~]/g;
 

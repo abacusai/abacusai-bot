@@ -1,7 +1,12 @@
 /** What a person sees of terminal output, and how far along it says it is. */
 import { describe, expect, it } from "vitest";
 
-import { collapseProgress, lastLine, progressOf } from "./terminal-progress.js";
+import {
+  collapseProgress,
+  lastLine,
+  partialOutputText,
+  progressOf,
+} from "./terminal-progress.js";
 
 describe("collapseProgress", () => {
   it.each([
@@ -76,5 +81,25 @@ describe("lastLine", () => {
     expect(lastLine("first\n\u001b[1msecond\u001b[0m\r third \n\n")).toBe(
       "third"
     );
+  });
+});
+
+describe("partialOutputText", () => {
+  it.each([
+    [
+      "pi's bash update",
+      { content: [{ type: "text", text: "step 3" }] },
+      "step 3",
+    ],
+    ["its first, empty update", { content: [], details: undefined }, ""],
+    ["a plain string", "live", "live"],
+    [
+      "text beside an image",
+      { content: [{ type: "image" }, { type: "text", text: "a" }] },
+      "a",
+    ],
+    ["nothing", undefined, ""],
+  ])("%s", (_case, partial, expected) => {
+    expect(partialOutputText(partial)).toBe(expected);
   });
 });

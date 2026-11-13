@@ -226,6 +226,7 @@ import {
   modelStallMs,
 } from "./stall-watch.js";
 import { continueCutReply, isStreamCut, streamCutStep } from "./stream-cut.js";
+import { partialOutputText } from "./terminal-progress.js";
 import { readTodos } from "./todo-store.js";
 import { ToolCallStream } from "./tool-call-stream.js";
 import { ToolHeartbeat } from "./tool-heartbeat.js";
@@ -3465,13 +3466,13 @@ export class AbacusBotSession {
 
       case "tool_execution_update": {
         // Long-running bash streams its output; the tool card shows it live.
-        const partial = event.partialResult;
+        const output = partialOutputText(event.partialResult);
 
-        if (typeof partial === "string" && partial.length > 0) {
+        if (output.length > 0) {
           this.emitAgentEvent({
             type: "tool_output_update",
             toolCallId: event.toolCallId,
-            output: partial,
+            output,
           });
         }
 
