@@ -1956,9 +1956,14 @@
           "prompt": "Bau eine einseitige Shopseite für mein kleines Geschäft: oben der Name des Shops, sechs Beispielprodukte mit Fotos, Namen, Preisen und einem Button „In den Warenkorb“, ein einfacher Warenkorb und ein Kontaktbereich. Nimm Platzhalterprodukte, die ich später austauschen kann, und sorge dafür, dass sie auf dem Handy gut aussieht. Zeig mir die Seite, wenn sie fertig ist."
         },
         "simple-game": {
-          "name": "Ein einfaches Spiel",
-          "detail": "Direkt im Browser spielbar.",
-          "prompt": "Bau ein einfaches Spiel, das ich sofort im Browser spielen kann: ein Snake-Spiel mit Pfeiltasten- und Wischsteuerung, Punktestand, Bestwert und einem Neustart-Button. Alles auf einer Seite, und zeig es mir, wenn es fertig ist."
+          "name": "Ein Spiel zum Spielen",
+          "detail": "In etwa einer Minute spielbar.",
+          "prompt": "Bau mir ein unterhaltsames Spiel, das ich in etwa einer Minute im Browser spielen kann: ein Arcade-Spiel, in dem ich herabfallenden Objekten ausweiche, mit Startbildschirm, Pfeiltasten- und Touch-Steuerung, Punktestand und Bestwert, Game-over-Bildschirm und Neustart-Button. Halte es auf einer Seite, die ins Fenster passt, prüfe, dass jede Steuerung funktioniert, und zeig es mir, wenn es fertig ist. Frag mich dann in einer kurzen Nachricht, was für ein Spiel ich möchte, damit du daraus meins machst."
+        },
+        "my-project": {
+          "name": "An meiner App oder Website arbeiten",
+          "detail": "Eine App oder Website in einem Ordner auf diesem Computer.",
+          "prompt": "Hilf mir mit meinem App- oder Website-Projekt. Wenn kein Projektordner geöffnet ist, frag mich, wo mein Projekt liegt. Sieh es dir dann an und sag mir, womit es gebaut ist, wie man es startet, welche Hauptteile es hat und was kaputt oder unfertig aussieht. Schlag die drei nützlichsten nächsten Schritte vor und warte, bis ich einen auswähle, bevor du etwas änderst."
         }
       },
       "code": {

@@ -1956,9 +1956,14 @@
           "prompt": "Build a one-page shop for my small business: a header with the shop name, six sample products with photos, names, prices and an Add to cart button, a simple cart, and a contact section. Use placeholder products I can swap later, and make sure it looks right on a phone. Show me the page when it is ready."
         },
         "simple-game": {
-          "name": "A simple game",
-          "detail": "Playable in your browser.",
-          "prompt": "Build a simple game I can play in the browser right away: a snake game with arrow-key and swipe controls, a score, a best score and a restart button. Keep it to one page and show it to me when it is ready."
+          "name": "A game I can play",
+          "detail": "Playable in about a minute.",
+          "prompt": "Build me a fun game I can play in the browser in about a minute: an arcade game where I dodge falling objects, with a start screen, arrow-key and touch controls, a score and best score, a game over screen and a restart button. Keep it to one page that fits the window, check that every control works, and show it to me when it is ready. Then ask me in one short message what game I want, so you can turn it into mine."
+        },
+        "my-project": {
+          "name": "Work on my app or site",
+          "detail": "An app or site in a folder on this computer.",
+          "prompt": "Help me with my app or website project. If no project folder is open, ask me where my project is. Then look through it and tell me what it is built with, how to run it, its main parts, and anything that looks broken or unfinished. Suggest the three most useful next steps, and wait for me to pick one before changing anything."
         }
       },
       "code": {

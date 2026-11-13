@@ -434,8 +434,12 @@ export const FirstBotStep = ({
           cosBot != null && !primary
             ? t("onboarding.firstRun.projects.otherTitle")
             : t("onboarding.firstRun.projects.title"),
-          // Beside a Chief of Staff, the inbox is already being read.
-          projectsIn(tab, cosBot != null ? ["morning-inbox"] : [])
+          // Beside a Chief of Staff, the inbox is already being read; beside a
+          // connected GitHub, the GitHub card is the way into the person's code.
+          projectsIn(tab, [
+            ...(cosBot != null ? ["morning-inbox"] : []),
+            ...(github === "start" ? ["my-project"] : []),
+          ])
         );
       case "github":
         return githubCard(card.github, primary);

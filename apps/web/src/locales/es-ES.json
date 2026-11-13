@@ -1956,9 +1956,14 @@
           "prompt": "Crea una tienda de una sola página para mi pequeño negocio: una cabecera con el nombre de la tienda, seis productos de ejemplo con fotos, nombres, precios y un botón de Añadir al carrito, un carrito sencillo y una sección de contacto. Usa productos de muestra que pueda cambiar después y asegúrate de que se vea bien en el móvil. Enséñame la página cuando esté lista."
         },
         "simple-game": {
-          "name": "Un juego sencillo",
-          "detail": "Para jugar en tu navegador.",
-          "prompt": "Crea un juego sencillo al que pueda jugar ya en el navegador: un juego de la serpiente con controles de flechas y deslizamiento, puntuación, mejor puntuación y un botón para reiniciar. Que quepa en una sola página y enséñamelo cuando esté listo."
+          "name": "Un juego para jugar",
+          "detail": "Listo para jugar en un minuto.",
+          "prompt": "Hazme un juego divertido al que pueda jugar en el navegador en más o menos un minuto: un juego arcade en el que esquive objetos que caen, con pantalla de inicio, controles con flechas y táctiles, puntuación y mejor puntuación, pantalla de fin de partida y un botón para reiniciar. Que quede en una sola página que se ajuste a la ventana, comprueba que todos los controles funcionan y enséñamelo cuando esté listo. Después pregúntame en un mensaje corto qué juego quiero, para convertirlo en el mío."
+        },
+        "my-project": {
+          "name": "Trabajar en mi app o web",
+          "detail": "Una app o una web en una carpeta de este ordenador.",
+          "prompt": "Ayúdame con mi proyecto de app o web. Si no hay una carpeta de proyecto abierta, pregúntame dónde está mi proyecto. Luego revísalo y dime con qué está hecho, cómo se ejecuta, sus partes principales y cualquier cosa que parezca rota o sin terminar. Sugiere los tres siguientes pasos más útiles y espera a que elija uno antes de cambiar nada."
         }
       },
       "code": {

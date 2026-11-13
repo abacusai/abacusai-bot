@@ -1956,9 +1956,14 @@
           "prompt": "Buat toko satu halaman untuk usaha kecil saya: header dengan nama toko, enam contoh produk dengan foto, nama, harga, dan tombol Tambah ke keranjang, keranjang sederhana, dan bagian kontak. Gunakan produk contoh yang bisa saya ganti nanti, dan pastikan tampil baik di ponsel. Tunjukkan halamannya kalau sudah siap."
         },
         "simple-game": {
-          "name": "Game sederhana",
-          "detail": "Bisa dimainkan di browser.",
-          "prompt": "Buat game sederhana yang bisa langsung saya mainkan di browser: game ular dengan kontrol tombol panah dan geser, skor, skor terbaik, dan tombol mulai ulang. Cukup satu halaman, dan tunjukkan kalau sudah siap."
+          "name": "Game yang bisa kumainkan",
+          "detail": "Bisa dimainkan dalam sekitar satu menit.",
+          "prompt": "Buatkan aku game seru yang bisa kumainkan di browser dalam sekitar satu menit: game arcade di mana aku menghindari benda yang jatuh, dengan layar mulai, kontrol tombol panah dan sentuh, skor dan skor terbaik, layar game over, dan tombol main lagi. Buat dalam satu halaman yang pas di jendela, pastikan setiap kontrol berfungsi, dan tunjukkan padaku kalau sudah siap. Lalu tanyakan dalam satu pesan singkat game apa yang kuinginkan, supaya bisa kamu ubah jadi milikku."
+        },
+        "my-project": {
+          "name": "Kerjakan aplikasi atau situsku",
+          "detail": "Aplikasi atau situs di folder komputer ini.",
+          "prompt": "Bantu aku dengan proyek aplikasi atau situs webku. Kalau belum ada folder proyek yang terbuka, tanyakan di mana proyekku. Lalu periksa dan beri tahu aku dibuat dengan apa, cara menjalankannya, bagian-bagian utamanya, dan apa saja yang tampak rusak atau belum selesai. Sarankan tiga langkah berikutnya yang paling berguna, dan tunggu aku memilih satu sebelum mengubah apa pun."
         }
       },
       "code": {

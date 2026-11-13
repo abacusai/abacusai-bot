@@ -1956,9 +1956,14 @@
           "prompt": "Crie uma loja de uma página para o meu pequeno negócio: um cabeçalho com o nome da loja, seis produtos de exemplo com fotos, nomes, preços e um botão Adicionar ao carrinho, um carrinho simples e uma seção de contato. Use produtos provisórios que eu possa trocar depois e garanta que fique bom no celular. Me mostre a página quando estiver pronta."
         },
         "simple-game": {
-          "name": "Um jogo simples",
-          "detail": "Para jogar no navegador.",
-          "prompt": "Crie um jogo simples que eu possa jogar agora no navegador: um jogo da cobrinha com controles pelas setas e por deslizar, pontuação, recorde e um botão para recomeçar. Tudo em uma página só, e me mostre quando estiver pronto."
+          "name": "Um jogo para jogar",
+          "detail": "Pronto para jogar em cerca de um minuto.",
+          "prompt": "Crie um jogo divertido que eu possa jogar no navegador em cerca de um minuto: um jogo de arcade em que eu desvio de objetos que caem, com tela inicial, controles pelas setas e por toque, pontuação e recorde, tela de fim de jogo e um botão para recomeçar. Deixe tudo em uma página que caiba na janela, confira se todos os controles funcionam e me mostre quando estiver pronto. Depois me pergunte em uma mensagem curta qual jogo eu quero, para transformá-lo no meu."
+        },
+        "my-project": {
+          "name": "Trabalhar no meu app ou site",
+          "detail": "Um app ou site em uma pasta deste computador.",
+          "prompt": "Me ajude com meu projeto de app ou site. Se nenhuma pasta de projeto estiver aberta, me pergunte onde está meu projeto. Depois analise e me diga com o que ele foi feito, como rodá-lo, as partes principais e o que parece quebrado ou inacabado. Sugira os três próximos passos mais úteis e espere eu escolher um antes de mudar qualquer coisa."
         }
       },
       "code": {

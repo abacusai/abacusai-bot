@@ -1956,9 +1956,14 @@
           "prompt": "Bouw een winkel van één pagina voor mijn kleine bedrijf: een header met de winkelnaam, zes voorbeeldproducten met foto's, namen, prijzen en een knop In winkelwagen, een eenvoudige winkelwagen en een contactsectie. Gebruik tijdelijke producten die ik later kan vervangen, en zorg dat het er goed uitziet op een telefoon. Laat me de pagina zien als hij klaar is."
         },
         "simple-game": {
-          "name": "Een simpel spel",
-          "detail": "Speelbaar in je browser.",
-          "prompt": "Bouw een simpel spel dat ik meteen in de browser kan spelen: een snake-spel met besturing via pijltjestoetsen en swipen, een score, een beste score en een knop om opnieuw te beginnen. Houd het bij één pagina en laat het me zien als het klaar is."
+          "name": "Een spel om te spelen",
+          "detail": "Binnen een minuut speelbaar.",
+          "prompt": "Maak een leuk spel dat ik binnen ongeveer een minuut in de browser kan spelen: een arcadespel waarin ik vallende voorwerpen ontwijk, met een startscherm, besturing met pijltjestoetsen en aanraking, een score en beste score, een game-overscherm en een knop om opnieuw te beginnen. Houd het op één pagina die in het venster past, controleer dat elke besturing werkt en laat het zien als het klaar is. Vraag me daarna in één kort bericht wat voor spel ik wil, zodat je er mijn spel van maakt."
+        },
+        "my-project": {
+          "name": "Aan mijn app of site werken",
+          "detail": "Een app of site in een map op deze computer.",
+          "prompt": "Help me met mijn app- of websiteproject. Als er geen projectmap open is, vraag me waar mijn project staat. Bekijk het daarna en vertel me waarmee het gebouwd is, hoe je het start, wat de belangrijkste onderdelen zijn en wat er kapot of onaf lijkt. Stel de drie nuttigste volgende stappen voor en wacht tot ik er een kies voordat je iets verandert."
         }
       },
       "code": {

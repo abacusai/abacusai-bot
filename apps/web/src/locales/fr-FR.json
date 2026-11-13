@@ -1956,9 +1956,14 @@
           "prompt": "Crée une boutique d’une seule page pour ma petite entreprise : un en-tête avec le nom de la boutique, six produits d’exemple avec photos, noms, prix et un bouton Ajouter au panier, un panier simple et une section contact. Utilise des produits provisoires que je pourrai remplacer, et vérifie qu’elle s’affiche bien sur téléphone. Montre-moi la page quand elle est prête."
         },
         "simple-game": {
-          "name": "Un petit jeu",
-          "detail": "Jouable dans votre navigateur.",
-          "prompt": "Crée un petit jeu auquel je peux jouer tout de suite dans le navigateur : un jeu du serpent avec les flèches du clavier et le balayage, un score, un meilleur score et un bouton pour recommencer. Le tout sur une seule page, et montre-le-moi quand il est prêt."
+          "name": "Un jeu à jouer",
+          "detail": "Jouable en une minute environ.",
+          "prompt": "Crée-moi un jeu amusant auquel je peux jouer dans le navigateur en une minute environ : un jeu d'arcade où j'esquive des objets qui tombent, avec un écran d'accueil, des contrôles aux flèches et au toucher, un score et un meilleur score, un écran de fin de partie et un bouton pour rejouer. Garde-le sur une seule page qui tient dans la fenêtre, vérifie que chaque contrôle fonctionne et montre-le-moi quand il est prêt. Puis demande-moi en un court message quel jeu je veux, pour en faire le mien."
+        },
+        "my-project": {
+          "name": "Travailler sur mon app ou site",
+          "detail": "Une app ou un site dans un dossier de cet ordinateur.",
+          "prompt": "Aide-moi avec mon projet d'app ou de site web. Si aucun dossier de projet n'est ouvert, demande-moi où se trouve mon projet. Puis parcours-le et dis-moi avec quoi il est construit, comment le lancer, ses parties principales et tout ce qui semble cassé ou inachevé. Propose les trois prochaines étapes les plus utiles et attends que j'en choisisse une avant de modifier quoi que ce soit."
         }
       },
       "code": {

@@ -1956,9 +1956,14 @@
           "prompt": "Küçük işletmem için tek sayfalık bir mağaza yap: mağaza adının olduğu bir üst kısım, fotoğraf, ad, fiyat ve Sepete ekle düğmesi olan altı örnek ürün, basit bir sepet ve bir iletişim bölümü. Sonradan değiştirebileceğim örnek ürünler kullan ve telefonda da düzgün görünsün. Hazır olunca sayfayı bana göster."
         },
         "simple-game": {
-          "name": "Basit bir oyun",
-          "detail": "Tarayıcında hemen oynanır.",
-          "prompt": "Tarayıcıda hemen oynayabileceğim basit bir oyun yap: ok tuşları ve kaydırmayla oynanan bir yılan oyunu; skor, en yüksek skor ve yeniden başlat düğmesi olsun. Tek sayfada olsun ve hazır olunca bana göster."
+          "name": "Oynayabileceğim bir oyun",
+          "detail": "Yaklaşık bir dakikada oynanabilir.",
+          "prompt": "Tarayıcıda yaklaşık bir dakikada oynayabileceğim eğlenceli bir oyun yap: düşen nesnelerden kaçtığım bir arcade oyunu; başlangıç ekranı, ok tuşu ve dokunmatik kontroller, skor ve en yüksek skor, oyun bitti ekranı ve yeniden başlat düğmesi olsun. Pencereye sığan tek bir sayfada tut, her kontrolün çalıştığını kontrol et ve hazır olunca bana göster. Sonra hangi oyunu istediğimi kısa bir mesajla sor, böylece onu benim oyunum yapabilirsin."
+        },
+        "my-project": {
+          "name": "Uygulamam ya da sitem üzerinde çalış",
+          "detail": "Bu bilgisayardaki bir klasörde bir uygulama ya da site.",
+          "prompt": "Uygulama veya web sitesi projemde bana yardım et. Açık bir proje klasörü yoksa projemin nerede olduğunu sor. Sonra incele ve neyle yapıldığını, nasıl çalıştırıldığını, ana parçalarını ve bozuk ya da yarım görünen her şeyi söyle. En faydalı üç sonraki adımı öner ve bir şeyi değiştirmeden önce birini seçmemi bekle."
         }
       },
       "code": {

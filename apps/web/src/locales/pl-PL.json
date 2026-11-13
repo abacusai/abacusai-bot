@@ -1978,9 +1978,14 @@
           "prompt": "Zbuduj jednostronicowy sklep dla mojej małej firmy: nagłówek z nazwą sklepu, sześć przykładowych produktów ze zdjęciami, nazwami, cenami i przyciskiem „Dodaj do koszyka”, prosty koszyk oraz sekcję kontaktową. Użyj produktów zastępczych, które później podmienię, i upewnij się, że strona dobrze wygląda na telefonie. Pokaż mi ją, gdy będzie gotowa."
         },
         "simple-game": {
-          "name": "Prosta gra",
-          "detail": "Do zagrania w przeglądarce.",
-          "prompt": "Zbuduj prostą grę, w którą od razu zagram w przeglądarce: węża sterowanego strzałkami i przesunięciami palcem, z wynikiem, najlepszym wynikiem i przyciskiem restartu. Zmieść wszystko na jednej stronie i pokaż mi grę, gdy będzie gotowa."
+          "name": "Gra do zagrania",
+          "detail": "Gotowa do gry w około minutę.",
+          "prompt": "Zrób mi zabawną grę, w którą zagram w przeglądarce w około minutę: grę zręcznościową, w której unikam spadających przedmiotów, z ekranem startowym, sterowaniem strzałkami i dotykiem, wynikiem i rekordem, ekranem końca gry i przyciskiem restartu. Zmieść ją na jednej stronie dopasowanej do okna, sprawdź, czy każde sterowanie działa, i pokaż mi ją, gdy będzie gotowa. Potem zapytaj mnie w jednej krótkiej wiadomości, jaką grę chcę, żeby zrobić z niej moją."
+        },
+        "my-project": {
+          "name": "Praca nad moją aplikacją lub stroną",
+          "detail": "Aplikacja lub strona w folderze na tym komputerze.",
+          "prompt": "Pomóż mi z moim projektem aplikacji lub strony. Jeśli żaden folder projektu nie jest otwarty, zapytaj, gdzie jest mój projekt. Potem przejrzyj go i powiedz mi, z czego jest zbudowany, jak go uruchomić, jakie ma główne części i co wygląda na zepsute lub niedokończone. Zaproponuj trzy najbardziej przydatne kolejne kroki i poczekaj, aż wybiorę jeden, zanim cokolwiek zmienisz."
         }
       },
       "code": {
