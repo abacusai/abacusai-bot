@@ -13,7 +13,6 @@
 import {
   type BillingPlan,
   planPrice,
-  type PitchLine,
   planTopModelIds,
   type UpgradeSrc,
   wallOffer,
@@ -78,7 +77,7 @@ export interface SuccessPitchCardProps {
  * One pitch card: its icon and first lines, the plan's price, its whole
  * list (led by `lead`), Upgrade and Not now.
  */
-export const PitchCardFrame = ({
+const PitchCardFrame = ({
   slot,
   moment,
   icon,
@@ -94,8 +93,7 @@ export const PitchCardFrame = ({
   icon: ReactNode;
   title: string;
   line: string;
-  lead: PitchLine | null;
-} & Omit<SuccessPitchCardProps, "moment" | "lead">) => {
+} & Omit<SuccessPitchCardProps, "moment">) => {
   const { t, i18n } = useTranslation();
   const offer = wallOffer(billing);
   if (offer == null) return null;

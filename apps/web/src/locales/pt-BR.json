@@ -3610,15 +3610,8 @@
       "copyFailed": "Não foi possível copiar"
     },
     "retryOffer": {
-      "title": "Tente de novo com o {{model}}",
       "newChat": "Tentar de novo em um novo chat com {{model}}",
-      "freeTopModel": "Esta tarefa é difícil para o modelo econômico. O {{model}}, um dos modelos mais capazes que existem, está liberado para você aqui. Ele gasta seus créditos mais rápido.",
-      "continue": "Continuar em um novo chat",
-      "paidBody": "Um novo chat continua a partir de um resumo deste, em um modelo de ponta. Ele gasta créditos mais rápido."
-    },
-    "topModelCard": {
-      "title": "Continue com o {{model}} no {{plan}}",
-      "line": "O {{model}} gasta os créditos grátis rápido. Com o {{plan}} você continua com ele, e com tudo abaixo."
+      "usesCreditsFaster": "Gasta créditos mais rápido"
     },
     "routerAfterUpgrade": {
       "stay": "Continuar no {{model}}"

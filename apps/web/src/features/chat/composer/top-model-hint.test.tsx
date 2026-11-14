@@ -352,7 +352,7 @@ describe("TopModelHint", () => {
     });
     await screen.findByRole(
       "button",
-      { name: "Continue in a new chat" },
+      { name: "Try again in a new chat with Claude Opus 5.5" },
       { timeout: 5000 }
     );
     await settled();

@@ -188,7 +188,7 @@ const mount = async (
   return { relay, steps, continued, moved, prefs };
 };
 
-const LINE = "Continue in a new chat";
+const LINE = "Try again in a new chat with Claude Opus 5.5";
 const findLine = () =>
   screen.findByRole("button", { name: LINE }, { timeout: 5000 });
 
@@ -207,8 +207,7 @@ describe("RetryOfferRow on a paying plan", () => {
     // No upgrade on a plan that has it: no "Included in" tag, and the cost said.
     const offer = line.closest('[data-slot="retry-offer"]')?.textContent;
     expect(offer).not.toContain("Included in");
-    expect(offer).toContain("Try this again on Claude Opus 5.5");
-    expect(offer).toContain("It uses credits faster.");
+    expect(offer).toContain("Uses credits faster");
     fireEvent.click(line);
     // Up with a spinner while the summary is written.
     expect(
@@ -249,23 +248,31 @@ describe("RetryOfferRow on a paying plan", () => {
 });
 
 describe("RetryOfferRow on a free plan", () => {
-  it("continues in a new chat on Opus at once, on the account's own credits", async () => {
+  it("opens the upgrade dialog, and once paid continues in a new chat on Opus", async () => {
     const h = await mount("free");
     const line = await findLine();
     expect(line.closest('[data-slot="retry-offer"]')?.textContent).toContain(
-      "uses your credits faster"
+      "Included in Basic"
     );
     fireEvent.click(line);
-    await waitFor(() =>
-      expect(h.continued).toEqual([[OPUS, "It still doesn't work, same error"]])
-    );
-    expect(upgradeDialogStore.state.request).toBeNull();
+    const request = upgradeDialogStore.state.request;
+    expect(request).toMatchObject({
+      kind: "plan",
+      src: "model_locked",
+      pendingText: "It still doesn't work, same error",
+    });
+    expect(h.continued).toEqual([]);
+    // The plan is paid: the dialog resumes.
+    await act(async () => {
+      await request!.resume!();
+    });
+    expect(h.continued).toEqual([[OPUS, "It still doesn't work, same error"]]);
     expect(h.relay.stats.send).toHaveLength(0);
     expect(h.moved).toEqual([]);
     await waitFor(() =>
       expect(h.steps.map((step) => [step.step, step.detail])).toContainEqual([
         "retry_offer_resumed",
-        "complaint_free_top",
+        "complaint",
       ])
     );
   });

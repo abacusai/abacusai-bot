@@ -3610,15 +3610,8 @@
       "copyFailed": "Kopieren fehlgeschlagen"
     },
     "retryOffer": {
-      "title": "Versuch es noch einmal mit {{model}}",
       "newChat": "In einem neuen Chat mit {{model}} noch einmal versuchen",
-      "freeTopModel": "Diese Aufgabe ist für das günstige Modell schwer. {{model}}, eines der stärksten Modelle überhaupt, steht dir hier offen. Es verbraucht deine Credits schneller.",
-      "continue": "In einem neuen Chat weitermachen",
-      "paidBody": "Ein neuer Chat setzt mit einer Zusammenfassung dieses Chats auf einem Top-Modell fort. Er verbraucht Credits schneller."
-    },
-    "topModelCard": {
-      "title": "Mit {{plan}} weiter mit {{model}}",
-      "line": "{{model}} verbraucht freie Credits schnell. Mit {{plan}} behältst du es, dazu alles hier unten."
+      "usesCreditsFaster": "Verbraucht Credits schneller"
     },
     "routerAfterUpgrade": {
       "stay": "Bei {{model}} bleiben"

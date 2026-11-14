@@ -3746,15 +3746,8 @@
       "copyFailed": "Nie udało się skopiować"
     },
     "retryOffer": {
-      "title": "Spróbuj ponownie z {{model}}",
       "newChat": "Spróbuj ponownie w nowej rozmowie z {{model}}",
-      "freeTopModel": "To zadanie jest trudne dla taniego modelu. {{model}}, jeden z najlepszych modeli w ogóle, jest tu dla Ciebie dostępny. Szybciej zużywa kredyty.",
-      "continue": "Kontynuuj w nowym czacie",
-      "paidBody": "Nowy czat zacznie od podsumowania tego, na najlepszym modelu. Szybciej zużywa kredyty."
-    },
-    "topModelCard": {
-      "title": "Pracuj dalej z {{model}} w planie {{plan}}",
-      "line": "{{model}} szybko zużywa darmowe kredyty. Z planem {{plan}} zachowasz go, razem ze wszystkim poniżej."
+      "usesCreditsFaster": "Zużywa kredyty szybciej"
     },
     "routerAfterUpgrade": {
       "stay": "Zostań przy {{model}}"
