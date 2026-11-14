@@ -4,12 +4,10 @@ import { planTopModelIds, wallOffer } from "@abacus-ai/contract/billing-plan";
  * when a task went badly, the same task again on one of the plan's top
  * models, in a new chat that starts from a summary of this one
  * (continue-chat.ts): the top model reads a page instead of the whole stuck
- * history, and this chat keeps its model. A paying plan already runs the
- * model, so a tap starts it at once. A free plan runs the paid plans' Opus
- * there too, on its own credits (the server serves it for this retry), and
- * that chat pitches the plan after each turn (top-model-card.tsx); any other
- * top model opens the upgrade dialog with the message waiting. Only a listed
- * session chat has it. Caps live in prefs.
+ * history, and this chat keeps its model. On a free account a tap opens the
+ * upgrade dialog with the message waiting, and once paid the new chat starts;
+ * a paying plan already runs the model, so a tap starts it at once. Only a
+ * listed session chat has it. Caps live in prefs.
  */
 import {
   isSuggestTasksTool,
@@ -24,16 +22,14 @@ import {
 } from "@abacus-ai/contract/deliverable-offer";
 import type { FunnelStep } from "@abacus-ai/contract/funnel";
 import {
-  modelIdentity,
   retryOfferModel,
   type RetryOfferReason,
   retryOfferReason,
-  TOP_MODEL_FAMILIES,
 } from "@abacus-ai/contract/retry-offer";
 import { EMPTY_TOP_MODEL_HINT_CARD } from "@abacus-ai/contract/top-model-hint";
 import type { UIMessage } from "@tanstack/ai-client";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, RotateCcw, Sparkles, X } from "lucide-react";
+import { Loader2, RotateCcw, X } from "lucide-react";
 import { useEffect, useEffectEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -209,13 +205,6 @@ export const RetryOfferRow = ({
   const label =
     preview?.label ??
     (model != null && model.id !== current ? model.label : null);
-  // A free plan's retry on the paid plans' Opus starts at once, like a paying one's.
-  const freeTop =
-    preview?.freeTop ??
-    (free &&
-      model != null &&
-      modelIdentity(model.id).family === TOP_MODEL_FAMILIES.opus);
-  const direct = paying || freeTop;
   const showing = allowed && label != null ? target : null;
 
   const base: DeliverableOfferCard = card ?? EMPTY_DELIVERABLE_OFFER_CARD;
@@ -228,14 +217,7 @@ export const RetryOfferRow = ({
   const funnel = (step: FunnelStep, reason: RetryOfferReason): void => {
     if (preview != null) return;
     void transport.client.system
-      .funnelStep({
-        step,
-        detail: paying
-          ? `${reason}_paid`
-          : freeTop
-            ? `${reason}_free_top`
-            : reason,
-      })
+      .funnelStep({ step, detail: paying ? `${reason}_paid` : reason })
       .catch(() => undefined);
   };
   // The chat is on a top model now: the composer's top-model hint is done.
@@ -284,7 +266,7 @@ export const RetryOfferRow = ({
     if (model == null) return;
     const reason = showing.reason;
     const answer = () => write({ ...base, answered: showing.id, misses: 0 });
-    if (direct) {
+    if (paying) {
       // Up with a spinner until the new chat opens; a failure leaves it for another try.
       setPreparing(true);
       void continueOn(model.id, reason).then(answer, () => {
@@ -328,67 +310,42 @@ export const RetryOfferRow = ({
       data-reason={showing.reason}
       role="group"
       aria-label={t("chat.retryOffer.newChat", { model: label })}
-      className="relative my-2 flex w-full max-w-[520px] gap-3 rounded-xl border border-violet-200 bg-violet-50/70 p-3.5 pr-9 text-sm dark:border-violet-900/70 dark:bg-violet-950/30"
+      className="my-2 flex w-full max-w-[520px] flex-wrap items-center gap-1.5"
     >
-      <span
-        aria-hidden
-        className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-violet-600 text-white"
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-auto rounded-full py-1.5"
+        data-action="retry"
+        disabled={preparing}
+        onClick={retry}
       >
-        <Sparkles className="size-4" />
+        {preparing ? (
+          <Loader2 aria-hidden className="size-3.5 shrink-0 animate-spin" />
+        ) : (
+          <RotateCcw aria-hidden className="size-3.5 shrink-0" />
+        )}
+        {preparing
+          ? t("chat.continuation.preparing", { model: label })
+          : t("chat.retryOffer.newChat", { model: label })}
+      </Button>
+      <span className="text-muted-foreground text-xs">
+        {paying
+          ? // The plan runs it now, at a top model's price.
+            t("chat.retryOffer.usesCreditsFaster")
+          : t("chat.composer.includedIn", {
+              plan: preview?.plan ?? offer?.planName,
+            })}
       </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-2.5">
-        <div className="flex flex-col gap-0.5">
-          <p className="font-semibold">
-            {t("chat.retryOffer.title", { model: label })}
-          </p>
-          <p className="text-muted-foreground">
-            {paying
-              ? // The plan runs it now, at a top model's price.
-                t("chat.retryOffer.paidBody")
-              : freeTop
-                ? t("chat.retryOffer.freeTopModel", { model: label })
-                : t("chat.composer.includedIn", {
-                    plan: preview?.plan ?? offer?.planName,
-                  })}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Button
-            size="sm"
-            className="bg-violet-600 text-white hover:bg-violet-700"
-            data-action="retry"
-            disabled={preparing}
-            onClick={retry}
-          >
-            {preparing ? (
-              <Loader2 aria-hidden className="size-3.5 shrink-0 animate-spin" />
-            ) : (
-              <RotateCcw aria-hidden className="size-3.5 shrink-0" />
-            )}
-            {preparing
-              ? t("chat.continuation.preparing", { model: label })
-              : t("chat.retryOffer.continue")}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-muted-foreground"
-            data-action="not-now"
-            onClick={dismiss}
-          >
-            {t("upgradeDialog.notNow")}
-          </Button>
-        </div>
-      </div>
       <Button
         variant="ghost"
         size="icon"
-        className="text-muted-foreground absolute top-2 right-2 size-7"
+        className="text-muted-foreground size-7 rounded-full"
         aria-label={t("chat.deliverableOffer.dismiss")}
         data-action="dismiss"
         onClick={dismiss}
       >
-        <X className="size-4" />
+        <X className="size-3.5" />
       </Button>
     </div>
   );

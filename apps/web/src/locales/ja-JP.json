@@ -3610,15 +3610,8 @@
       "copyFailed": "コピーできませんでした"
     },
     "retryOffer": {
-      "title": "{{model}}でもう一度試す",
       "newChat": "新しいチャットで {{model}} を使ってもう一度試す",
-      "freeTopModel": "このタスクは低コストのモデルには難しいものです。最も高性能なモデルのひとつである{{model}}をここで使えます。クレジットの消費は速くなります。",
-      "continue": "新しいチャットで続ける",
-      "paidBody": "このチャットの要約から、新しいチャットで上位モデルが引き継ぎます。クレジットの消費は速くなります。"
-    },
-    "topModelCard": {
-      "title": "{{plan}}で{{model}}を使い続ける",
-      "line": "{{model}}は無料クレジットを速く消費します。{{plan}}ならそのまま使えて、以下もすべて含まれます。"
+      "usesCreditsFaster": "クレジットの消費が速くなります"
     },
     "routerAfterUpgrade": {
       "stay": "{{model}} のまま続ける"
