@@ -129,10 +129,11 @@ export interface ElectronBrowserRuntimeOptions {
    */
   revivePreview?: (url: string) => Promise<string>;
   /**
-   * A page in the bot's saved browser session is a sign-in page (a password
-   * field), whoever opened it: the user in the Browser pane or a bot. So is
-   * the site a sign-in page sends the tab back to (single sign-on). Connected
-   * sites lists it, and its rule applies from then on.
+   * A page in the bot's browser (its own session or an imported profile) is
+   * a sign-in page (a password field, in the page or a frame of it), whoever
+   * opened it: the user in the Browser pane or a bot. So is the site a
+   * sign-in page sends the tab back to (single sign-on). Connected sites
+   * lists it, and its rule applies from then on.
    */
   onSignInPage?: (url: string) => void;
 }
@@ -144,7 +145,7 @@ type CrashRecovery = {
 
 const DEFAULT_PARTITION = BROWSER_PARTITION;
 
-/** A password field in the page's own document. */
+/** A password field in a document (the page's own, or a frame's). */
 const SIGN_IN_PAGE_JS = "!!document.querySelector('input[type=password]')";
 /** A single-page app draws its sign-in form after the load: look again this much later. */
 const SIGN_IN_LOOK_AGAIN_MS = 1_500;
@@ -802,6 +803,17 @@ export class ElectronBrowserRuntime {
     return out;
   }
 
+  /**
+   * The imported browser profile (its partition) tab `id` uses, or null for
+   * the app's own browser or a tab it does not know.
+   */
+  importedPartitionOf(id: number): string | null {
+    const partition = this.partitionsById.get(id);
+    return partition == null || partition === DEFAULT_PARTITION
+      ? null
+      : partition;
+  }
+
   webContentsById(id: number): WebContents | null {
     for (const lease of this.leases.values()) {
       try {
@@ -931,7 +943,13 @@ export class ElectronBrowserRuntime {
     contents.on("blur", emit);
     contents.on("devtools-opened", emit);
     contents.on("devtools-closed", emit);
-    if (partition === DEFAULT_PARTITION) this.watchSignIns(contents);
+    // The app's own browser and an imported profile: both hold sign-ins
+    // Connected sites rules over. Not a local file's preview.
+    if (localFile == null) {
+      this.partitionsById.set(contents.id, partition);
+      contents.on("destroyed", () => this.partitionsById.delete(contents.id));
+      this.watchSignIns(contents);
+    }
     if (localFile == null)
       contents.setWindowOpenHandler(({ url }) => {
         void this.loadUrlForView(view, url).catch(() => undefined);
@@ -940,25 +958,33 @@ export class ElectronBrowserRuntime {
     return view;
   }
 
+  /** Each web tab's browser session (partition), by its id. */
+  private readonly partitionsById = new Map<number, string>();
+
   /**
    * Tells `onSignInPage` about each sign-in page this tab shows, whoever
    * drives it, and about the site such a page then sends the tab to. A move
    * the page itself makes (a form post, a script, a redirect) counts; an
-   * address the user types or a bot's goto does not.
+   * address the user types or a bot's goto does not. Listed on sight, not
+   * once a sign-in is seen: a sign-in is kept under any cookie name (or none
+   * the app can tell), and a site left off the list is used with no rule. A
+   * page only looked at costs one extra prompt.
    */
   private watchSignIns(contents: Electron.WebContents): void {
     const report = this.options.onSignInPage;
     if (report == null) return;
     let signIn: { host: string; at: number } | null = null;
     let fromSignIn = false;
-    const look = async (): Promise<void> => {
-      if (contents.isDestroyed()) return;
-      const url = contents.getURL();
-      const host = webHost(url);
-      if (host == null) return;
+    // Every frame, not only the page's own document: a sign-in form can be
+    // a frame from another site (an embedded sign-in widget). Each frame on
+    // its own clock: one frame that never answers (an ad) does not hide a
+    // sign-in form in another.
+    const hasPassword = async (frame: {
+      executeJavaScript(code: string): Promise<unknown>;
+    }): Promise<boolean> => {
       let timer: ReturnType<typeof setTimeout> | undefined;
       const found = await Promise.race([
-        contents.executeJavaScript(SIGN_IN_PAGE_JS).then(
+        frame.executeJavaScript(SIGN_IN_PAGE_JS).then(
           (value: unknown) => value === true,
           () => false
         ),
@@ -968,9 +994,40 @@ export class ElectronBrowserRuntime {
         }),
       ]);
       clearTimeout(timer);
-      if (!found || contents.isDestroyed() || contents.getURL() !== url) return;
-      signIn = { host, at: Date.now() };
-      report(url);
+      return found;
+    };
+    const look = async (): Promise<void> => {
+      if (contents.isDestroyed()) return;
+      const url = contents.getURL();
+      const host = webHost(url);
+      if (host == null) return;
+      let frames: Array<{
+        url: string;
+        executeJavaScript(code: string): Promise<unknown>;
+      }>;
+      try {
+        frames = contents.mainFrame.framesInSubtree;
+      } catch {
+        frames = [];
+      }
+      if (frames.length === 0)
+        frames = [
+          {
+            url,
+            executeJavaScript: (code) => contents.executeJavaScript(code),
+          },
+        ];
+      // Each frame counts as soon as it answers, not when the slowest does.
+      await Promise.all(
+        frames.map(async (frame) => {
+          if (webHost(frame.url) == null || !(await hasPassword(frame))) return;
+          if (contents.isDestroyed() || contents.getURL() !== url) return;
+          signIn = { host, at: Date.now() };
+          // The page's own site too: a widget's sign-in is often kept by the page.
+          if (frame.url !== url) report(frame.url);
+          report(url);
+        })
+      );
     };
     const lookSoon = (): void => {
       void look();

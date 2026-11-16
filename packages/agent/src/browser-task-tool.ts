@@ -25,6 +25,7 @@ import { scopeEmit, tagEvent } from "./event-meta.js";
 import { vaultEnabled } from "./excluded-tools.js";
 import { AgentMode, type AgentEvent } from "./protocol.js";
 import { DeliveredMedia } from "./send-media-tool.js";
+import { signedInLine } from "./signed-in-note.js";
 import {
   UNATTENDED_BROWSER_TOOLS,
   type UnattendedPolicy,
@@ -257,6 +258,9 @@ export function buildBrowserTaskTool(
       'When the user asks for the browser, in any language ("use your browser", "open it in the browser",',
       '"अपने ब्राउज़र से", "usa el navegador"), use this, even for a public page: they asked for what',
       "the page shows in a browser, not its text.",
+      'When the user only asks to open the browser ("open the browser", nothing to do on it), start',
+      'one short run with start_url "about:blank" that opens it and reports, and nothing else: do not',
+      "pick a site for them. Then say the browser is open and ask what to do there.",
       "",
       "Hands the whole job to a sub-agent that has the browser: it navigates, fills forms,",
       "clicks through, waits for results, and reports what it found. You get its conclusion,",
@@ -665,11 +669,20 @@ export function buildBrowserTaskTool(
         ? `\n\n(Screenshots this run took and did not send, newest last: ${unsent.join(", ")}. To show one, send_media that id; never another.)`
         : "";
 
+    // First, not after the report: a reply that sums the report up kept
+    // what was found and dropped whose account it came from.
+    const signedInLineText = signedInLine(
+      result.signedInSites ?? [],
+      result.signedInByRunSites ?? []
+    );
+    const signedInFirst =
+      signedInLineText.length > 0 ? `${signedInLineText}\n\n` : "";
+
     return {
       content: [
         {
           type: "text" as const,
-          text: `${result.text}${tail}${heardNote}${sentNote}${takenNote}${budgetNote}`,
+          text: `${signedInFirst}${result.text}${tail}${heardNote}${sentNote}${takenNote}${budgetNote}`,
         },
       ],
       details: {

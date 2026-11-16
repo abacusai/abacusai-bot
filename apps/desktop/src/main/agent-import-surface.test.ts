@@ -53,6 +53,8 @@ const ALLOWED = new Set([
   "@abacus-ai/agent/memory",
   // Media checks for the chat: no imports at all.
   "@abacus-ai/agent/send-media",
+  // The user's-sign-in note and its _meta key: no imports at all.
+  "@abacus-ai/agent/signed-in-note",
   // What a chat can do: no imports at all.
   "@abacus-ai/agent/channel",
   // Which tools a chat gets: no imports at all.

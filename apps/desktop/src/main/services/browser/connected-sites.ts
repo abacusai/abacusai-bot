@@ -4,8 +4,9 @@
  * the browser pane; their password never reaches a model).
  *
  * A site joins the list when the browser shows its sign-in page (a password
- * field), whoever opened it: the user browsing in the pane or a bot; when a
- * sign-in page sends the tab back to it (single sign-on); when a bot's run
+ * field, in the page or a frame of it), whoever opened it: the user browsing
+ * in the pane or a bot; when a sign-in page sends the tab back to it (single
+ * sign-on); when a bot's run
  * stopped at its sign-in page for the user; or when the user adds it in
  * Settings. Guessing from cookie names
  * would list every shop that sets an anonymous session cookie, so the list
@@ -14,7 +15,9 @@
  * blocked (the default for banks, payments, health and government).
  *
  * The rule is checked by the app before a browser tool acts on or reads a
- * page of the site, never left to the model.
+ * page of the site, never left to the model. It covers an imported Chrome
+ * profile too: a tab on one is checked against that profile's cookies, and
+ * the sign-ins it holds are listed the first time a bot uses it.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -47,14 +50,33 @@ export interface SiteStore {
   clearStorageData(options: { origin: string }): Promise<void>;
 }
 
-/** How the user answered "may this chat use your sign-in on <site>?". */
-export type SiteDecision = "allow" | "deny" | "session" | "always";
+/**
+ * The imported Chrome profile (partition) the tab a browser call acts in
+ * uses, or undefined for the app's own browser. Only the built-in browser's
+ * tabs are looked up: on the user's own Chrome a tab id is Chrome's, and the
+ * same number can be an unrelated tab of the app's.
+ */
+export function importedPartitionForTab(
+  engine: string,
+  pageId: number | undefined,
+  lookup: (id: number) => string | null
+): string | undefined {
+  if (engine === "chrome" || pageId == null) return undefined;
+  return lookup(pageId) ?? undefined;
+}
+
+/**
+ * How the user answered "may this chat use your sign-in on <site>?";
+ * "unasked" when nobody could answer (no one watching, no answer in time).
+ */
+export type SiteDecision = "allow" | "deny" | "session" | "always" | "unasked";
 
 export interface ConnectedSitesDeps {
   /** Where the list and rules are kept. */
   file: () => string;
-  store: () => SiteStore;
-  /** Asks the user in the chat; resolves "deny" when nobody can answer. */
+  /** The app's own browser session, or an imported profile's by its partition. */
+  store: (partition?: string) => SiteStore;
+  /** Asks the user in the chat; resolves "unasked" when nobody can answer. */
   ask: (site: string, sessionId: string) => Promise<SiteDecision>;
   /** The conversation a session belongs to, for "allow in this chat". */
   conversationOf: (sessionId: string) => string | null;
@@ -92,19 +114,74 @@ const SIGNED_IN_FOR_CHAT_MS = 45 * 60_000;
 
 /**
  * A cookie that keeps a sign-in, by its name: a session id, an auth token,
- * "remember me". Used once, for sign-ins the browser held before the list
- * existed; from then on a site joins by its sign-in page, never by a guess.
+ * "remember me". Read once per browser session (the app's own, an imported
+ * profile), for sign-ins it held before the list knew of them; from then on
+ * a site joins by its sign-in page, never by a guess.
  */
 const SIGN_IN_COOKIE =
   /sess|auth|token|login|logged|remember|jwt|sso|(?:^|[^a-z])s?sid(?:[^a-z]|$)|^sid|psid|li_at|user_?id|account/i;
 
+/**
+ * A page storage key (localStorage key or IndexedDB name) that keeps a
+ * sign-in, by a name only sign-in libraries use: a key merely containing
+ * "token" or "session" is set for visitors on most big sites (bot checks,
+ * analytics), so it lists nothing.
+ */
+const SIGN_IN_STORAGE =
+  /access[_-]?token|id[_-]?token|refresh[_-]?token|auth[_-]?token|authUser|@@auth0spajs@@|okta-token-storage|CognitoIdentityServiceProvider|^msal\.|oidc\.user|firebaseLocalStorageDb|^(jwt|token|session_?token|user_?token)$/i;
+const NOT_SIGN_IN_STORAGE =
+  /^(_ga|_gid|_gcl|_hj|_fbp|_fbc|_uet|_clck|_clsk|_pk_|__insp|ajs_|amplitude|amp_|mp_|mixpanel|optimizely|intercom|ld:|segment|statsig|posthog|ph_|heap|fs_|_dd_|datadog|sentry|aws_?waf|recaptcha|theme|lang|locale|consent|cookie)/i;
+
+/**
+ * What a page holds in its own storage: every key, and the keys whose value
+ * is shaped like a sign-in token (a JWT, or JSON carrying an access, id or
+ * refresh token). The values never leave the page.
+ */
+export interface PageStorageKeys {
+  keys: string[];
+  tokens: string[];
+}
+
+/** Reads the page's own storage; nothing when it cannot. */
+export type PageStorage = () => Promise<PageStorageKeys>;
+
+const strings = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((key): key is string => typeof key === "string")
+    : [];
+
+const readStorage = async (storage?: PageStorage): Promise<PageStorageKeys> => {
+  if (storage == null) return { keys: [], tokens: [] };
+  try {
+    const found = await storage();
+    return { keys: strings(found?.keys), tokens: strings(found?.tokens) };
+  } catch {
+    return { keys: [], tokens: [] };
+  }
+};
+
+/** Whether the page's storage keeps a sign-in: a sign-in library's key, or a token-shaped value. */
+const keepsSignIn = ({ keys, tokens }: PageStorageKeys): boolean =>
+  tokens.some((key) => !NOT_SIGN_IN_STORAGE.test(key)) ||
+  keys.some(
+    (key) => SIGN_IN_STORAGE.test(key) && !NOT_SIGN_IN_STORAGE.test(key)
+  );
+
 interface Saved {
   sites: Record<
     string,
-    { policy: ConnectedSitePolicy; addedAt: number; lastUsedAt?: number }
+    {
+      policy: ConnectedSitePolicy;
+      addedAt: number;
+      lastUsedAt?: number;
+      /** Seen keeping its sign-in in page storage: shown even with no cookies. */
+      storage?: boolean;
+    }
   >;
   /** The browser's earlier sign-ins were listed (`seedExisting`). */
   seeded?: boolean;
+  /** Imported browser profiles (partitions) whose sign-ins were listed. */
+  seededProfiles?: string[];
 }
 
 export class ConnectedSites {
@@ -112,13 +189,32 @@ export class ConnectedSites {
   private readonly allowedInChat = new Set<string>();
   /** Sites allowed in every chat until the app quits. */
   private readonly allowedUntilQuit = new Set<string>();
-  private readonly deniedInChat = new Map<string, number>();
+  /** "conversation|site": the user's no (or no answer), and when. */
+  private readonly deniedInChat = new Map<
+    string,
+    { at: number; why: "deny" | "unasked" }
+  >();
   /** "conversation|site": that chat's bot stopped at the site's sign-in page, when. */
   private readonly signInAsked = new Map<string, number>();
   /** One prompt per chat and site at a time; later calls share its answer. */
   private readonly asking = new Map<string, Promise<SiteDecision>>();
 
   private seeding: Promise<void> | null = null;
+  private readonly seedingProfiles = new Map<string, Promise<void>>();
+  /**
+   * Writes that wait (on the browser's cookies) run one after another: two
+   * overlapping ones each wrote the list as read before the other's, and a
+   * re-import during a listing was undone by it.
+   */
+  private writes: Promise<unknown> = Promise.resolve();
+  /** Bumped when the list is cleared: a listing begun before it writes nothing. */
+  private generation = 0;
+
+  private inTurn<T>(work: () => Promise<T>): Promise<T> {
+    const run = this.writes.then(work, work);
+    this.writes = run.catch(() => undefined);
+    return run;
+  }
 
   constructor(private readonly deps: ConnectedSitesDeps) {}
 
@@ -131,31 +227,94 @@ export class ConnectedSites {
    */
   private seedExisting(): Promise<void> {
     if (this.deps.seedExisting !== true) return Promise.resolve();
-    this.seeding ??= (async () => {
+    this.seeding ??= this.inTurn(async () => {
       if (this.read().seeded === true) return;
-      const cookies = await this.deps
-        .store()
-        .cookies.get({})
-        .catch(() => []);
-      // Read after the wait: a site added meanwhile is kept.
-      const saved = this.read();
-      for (const cookie of cookies) {
-        if (cookie.session === true || !SIGN_IN_COOKIE.test(cookie.name))
-          continue;
-        const site =
-          cookie.domain == null
-            ? null
-            : this.siteOf(cookie.domain.replace(/^\./, ""));
-        if (site != null && saved.sites[site] == null)
-          saved.sites[site] = {
-            policy: defaultPolicy(site),
-            addedAt: this.now(),
-          };
-      }
+      const began = this.generation;
+      const found = await this.signInSites(undefined);
+      if (began !== this.generation) return;
+      // Read, merged and written in one step: nothing else writes between.
+      const saved = this.withSites(found);
       saved.seeded = true;
       this.write(saved);
-    })().catch(() => undefined);
+    }).catch(() => undefined);
     return this.seeding;
+  }
+
+  /**
+   * An imported browser profile holds a copy of the user's Chrome sign-ins,
+   * every one of them: they are listed once, under their default rules, the
+   * first time a bot's browser uses the profile (again after a re-import).
+   */
+  private seedProfile(partition: string | undefined): Promise<void> {
+    if (partition == null) return this.seedExisting();
+    let seeding = this.seedingProfiles.get(partition);
+    if (seeding == null) {
+      seeding = this.inTurn(async () => {
+        if (this.read().seededProfiles?.includes(partition) === true) return;
+        const began = this.generation;
+        const found = await this.signInSites(partition);
+        if (began !== this.generation) return;
+        const saved = this.withSites(found);
+        saved.seededProfiles = [
+          ...new Set([...(saved.seededProfiles ?? []), partition]),
+        ];
+        this.write(saved);
+      }).catch(() => undefined);
+      this.seedingProfiles.set(partition, seeding);
+    }
+    return seeding;
+  }
+
+  /** The sites a browser session holds a lasting sign-in cookie for. */
+  private async signInSites(partition: string | undefined): Promise<string[]> {
+    const cookies = await this.deps
+      .store(partition)
+      .cookies.get({})
+      .catch(() => []);
+    const sites = new Set<string>();
+    for (const cookie of cookies) {
+      if (cookie.session === true || !SIGN_IN_COOKIE.test(cookie.name))
+        continue;
+      const site =
+        cookie.domain == null
+          ? null
+          : this.siteOf(cookie.domain.replace(/^\./, ""));
+      if (site != null) sites.add(site);
+    }
+    return [...sites];
+  }
+
+  /** The saved list as it is now, with each of `sites` not listed yet added. */
+  private withSites(sites: readonly string[]): Saved {
+    const saved = this.read();
+    for (const site of sites)
+      saved.sites[site] ??= {
+        policy: defaultPolicy(site),
+        addedAt: this.now(),
+      };
+    return saved;
+  }
+
+  /**
+   * An imported profile was imported again: its sign-ins are listed anew. In
+   * turn, so a listing still running from the old copy cannot undo it.
+   */
+  profileImported(partition: string): Promise<void> {
+    // At once: the next use lists the profile again, after this in turn.
+    this.seedingProfiles.delete(partition);
+    return this.inTurn(async () => {
+      const saved = this.read();
+      if (saved.seededProfiles?.includes(partition) !== true) return;
+      saved.seededProfiles = saved.seededProfiles.filter(
+        (p) => p !== partition
+      );
+      this.write(saved);
+    });
+  }
+
+  /** The app's own browser and each imported profile whose sign-ins are listed. */
+  private partitions(): Array<string | undefined> {
+    return [undefined, ...(this.read().seededProfiles ?? [])];
   }
 
   private now(): number {
@@ -199,8 +358,8 @@ export class ConnectedSites {
   // Every cookie, grouped here: Electron's `domain` filter leaves out a
   // host-only cookie a subdomain set (`shop.example.com` for `example.com`),
   // which is how most sign-ins are kept.
-  private async cookiesOf(site: string) {
-    return (await this.deps.store().cookies.get({})).filter(
+  private async cookiesOf(site: string, partition?: string) {
+    return (await this.deps.store(partition).cookies.get({})).filter(
       (cookie) =>
         cookie.domain != null &&
         this.siteOf(cookie.domain.replace(/^\./, "")) === site
@@ -236,8 +395,17 @@ export class ConnectedSites {
     await this.seedExisting();
     const saved = this.read();
     const out: ConnectedSite[] = [];
+    const partitions = this.partitions();
     for (const [site, entry] of Object.entries(saved.sites)) {
-      if ((await this.cookiesOf(site)).length === 0) continue;
+      let held = entry.storage === true;
+      for (const partition of held ? [] : partitions)
+        if (
+          (await this.cookiesOf(site, partition).catch(() => [])).length > 0
+        ) {
+          held = true;
+          break;
+        }
+      if (!held) continue;
       out.push({
         site,
         policy: entry.policy,
@@ -261,21 +429,29 @@ export class ConnectedSites {
     }
   }
 
-  /** Signs the browser out of the site (its cookies and storage) and drops it from the list. */
+  /**
+   * Signs the browser out of the site (its cookies and storage), in the app's
+   * own browser and each imported profile, and drops it from the list.
+   */
   async signOut(site: string): Promise<void> {
-    const store = this.deps.store();
-    const cookies = await this.cookiesOf(site);
-    const origins = new Set<string>([`https://${site}`, `https://www.${site}`]);
-    await Promise.all(
-      cookies.map((cookie) => {
-        const host = (cookie.domain ?? site).replace(/^\./, "");
-        origins.add(`https://${host}`);
-        const url = `${cookie.secure === false ? "http" : "https"}://${host}${cookie.path ?? "/"}`;
-        return store.cookies.remove(url, cookie.name).catch(() => undefined);
-      })
-    );
-    for (const origin of origins)
-      await store.clearStorageData({ origin }).catch(() => undefined);
+    for (const partition of this.partitions()) {
+      const store = this.deps.store(partition);
+      const cookies = await this.cookiesOf(site, partition).catch(() => []);
+      const origins = new Set<string>([
+        `https://${site}`,
+        `https://www.${site}`,
+      ]);
+      await Promise.all(
+        cookies.map((cookie) => {
+          const host = (cookie.domain ?? site).replace(/^\./, "");
+          origins.add(`https://${host}`);
+          const url = `${cookie.secure === false ? "http" : "https"}://${host}${cookie.path ?? "/"}`;
+          return store.cookies.remove(url, cookie.name).catch(() => undefined);
+        })
+      );
+      for (const origin of origins)
+        await store.clearStorageData({ origin }).catch(() => undefined);
+    }
     this.forget(site);
   }
 
@@ -283,17 +459,53 @@ export class ConnectedSites {
    * The listed site `url` is on, when the browser holds its sign-in: a page
    * there shows the user's own account. Null for any other page.
    */
-  async signedInOn(url: string): Promise<string | null> {
+  async signedInOn(
+    url: string,
+    partition?: string,
+    storage?: PageStorage
+  ): Promise<string | null> {
     const site = this.siteOf(url);
     if (site == null) return null;
-    await this.seedExisting();
+    await this.seedProfile(partition);
     if (this.read().sites[site] == null) return null;
-    return (await this.cookiesOf(site)).length > 0 ? site : null;
+    if ((await this.cookiesOf(site, partition)).length > 0) return site;
+    return (await readStorage(storage)).keys.length > 0 ? site : null;
   }
 
-  /** Forgets every site (the browser's data was cleared). */
+  /**
+   * Whether the browser holds a sign-in on a site, by its cookies or, with
+   * none, the page's own storage (a token in localStorage or IndexedDB).
+   * An unlisted site whose storage keeps a sign-in is listed (default rule).
+   */
+  private async held(
+    site: string,
+    partition: string | undefined,
+    storage: PageStorage | undefined
+  ): Promise<boolean> {
+    const listed = this.read().sites[site] != null;
+    if (listed && (await this.cookiesOf(site, partition)).length > 0)
+      return true;
+    const found = await readStorage(storage);
+    if (listed) return found.keys.length > 0;
+    if (!keepsSignIn(found)) return false;
+    const saved = this.read();
+    saved.sites[site] ??= {
+      policy: defaultPolicy(site),
+      addedAt: this.now(),
+    };
+    saved.sites[site].storage = true;
+    this.write(saved);
+    return true;
+  }
+
+  /**
+   * Forgets every site (the browser's data was cleared). An imported
+   * profile's sign-ins are listed again the next time a bot uses it.
+   */
   clear(): void {
     this.write({ sites: {}, seeded: true });
+    this.generation += 1;
+    this.seedingProfiles.clear();
     this.allowedInChat.clear();
     this.allowedUntilQuit.clear();
     this.deniedInChat.clear();
@@ -310,16 +522,22 @@ export class ConnectedSites {
   /**
    * Why a browser call on `url` may not run now, or null when it may: the
    * page is on a listed site the browser is signed in to, and its rule says
-   * no, or says ask and the user did not allow it in this chat.
+   * no, or says ask and the user did not allow it in this chat. `partition`
+   * is the imported profile the page's browser uses, if it uses one;
+   * `storage` reads the page's own storage, when the page is on that site.
    */
-  async gate(url: string, sessionId: string): Promise<string | null> {
+  async gate(
+    url: string,
+    sessionId: string,
+    partition?: string,
+    storage?: PageStorage
+  ): Promise<string | null> {
     const site = this.siteOf(url);
     if (site == null) return null;
-    await this.seedExisting();
-    const saved = this.read();
-    const entry = saved.sites[site];
+    await this.seedProfile(partition);
+    if (!(await this.held(site, partition, storage))) return null;
+    const entry = this.read().sites[site];
     if (entry == null) return null;
-    if ((await this.cookiesOf(site)).length === 0) return null;
     if (!this.deps.isOwnChat(sessionId))
       return `Only the user's own chats can use their sign-in on ${site}; this chat is not theirs. Do not use ${site} here.`;
     const touch = (): null => {
@@ -345,9 +563,9 @@ export class ConnectedSites {
       this.allowedInChat.add(key);
       return touch();
     }
-    const deniedAt = this.deniedInChat.get(key);
-    if (deniedAt != null && this.now() - deniedAt < DENIED_FOR_MS)
-      return this.refusal(site);
+    const denied = this.deniedInChat.get(key);
+    if (denied != null && this.now() - denied.at < DENIED_FOR_MS)
+      return this.refusal(site, denied.why);
     let pending = this.asking.get(key);
     if (pending == null) {
       pending = this.deps.ask(site, sessionId);
@@ -355,9 +573,9 @@ export class ConnectedSites {
       void pending.finally(() => this.asking.delete(key));
     }
     const decision = await pending;
-    if (decision === "deny") {
-      this.deniedInChat.set(key, this.now());
-      return this.refusal(site);
+    if (decision === "deny" || decision === "unasked") {
+      this.deniedInChat.set(key, { at: this.now(), why: decision });
+      return this.refusal(site, decision);
     }
     if (decision === "always") this.setPolicy(site, "allowed");
     else if (decision === "session") this.allowedUntilQuit.add(site);
@@ -365,7 +583,11 @@ export class ConnectedSites {
     return touch();
   }
 
-  private refusal(site: string): string {
-    return `The user did not allow using their sign-in on ${site} for this (or could not be asked: the prompt shows in the app). Do not use ${site}. Tell the user, and that they can allow it when the app asks, or in Settings → Browser → Connected sites.`;
+  // Two cases, told apart: a run that said "could not ask" after a clear no
+  // told the user something untrue.
+  private refusal(site: string, why: "deny" | "unasked"): string {
+    return why === "deny"
+      ? `The user said no to using their sign-in on ${site} in this chat. Do not use ${site} and do not look for a way around it. Tell the user you did not use their ${site} sign-in because they said no; they can allow it in Settings → Browser → Connected sites.`
+      : `The user could not be asked whether this chat may use their sign-in on ${site}: nobody answered the prompt in the app. Do not use ${site}. Tell the user it needs their OK, which they can give when the app asks, or in Settings → Browser → Connected sites.`;
   }
 }

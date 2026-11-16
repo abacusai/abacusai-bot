@@ -93,6 +93,42 @@ describe("a browser run's card", () => {
     );
   });
 
+  it("opens with the user's own sign-in the run used, for the caller to tell the user", async () => {
+    stubs.run.mockResolvedValue({
+      ...finished("completed"),
+      signedInSites: ["localtest.me"],
+    });
+    const tool = buildBrowserTaskTool(
+      { cwd: process.cwd() } as never,
+      () => {}
+    );
+    const text = (await tool.execute("call-1", { task: "my booking" }))
+      .content[0]?.text;
+    expect(text).toMatch(
+      /^\(This run used the user's own sign-in on localtest\.me[^\n]*Tell the user[^\n]*\)\n\nthe report/
+    );
+  });
+
+  it("says the run signed in itself where it did, not that the user's sign-in was used", async () => {
+    stubs.run.mockResolvedValue({
+      ...finished("completed"),
+      signedInByRunSites: ["saucedemo.com"],
+    });
+    const tool = buildBrowserTaskTool(
+      { cwd: process.cwd() } as never,
+      () => {}
+    );
+    const text = (await tool.execute("call-1", { task: "check out" }))
+      .content[0]?.text;
+    expect(text).toMatch(/^\(This run signed in to saucedemo\.com itself/);
+    expect(text).not.toMatch(/user's own sign-in/);
+  });
+
+  it("says nothing of a sign-in when the run used none", async () => {
+    const { result } = await run("completed");
+    expect(result.content[0]?.text).not.toMatch(/sign-in/);
+  });
+
   it("quotes the user's mid-run words clipped, with codes and ID numbers withheld", () => {
     expect(quotedUserWords("the code is 482913, take the 1840 flight")).toBe(
       "the code is [number withheld], take the 1840 flight"
@@ -133,6 +169,19 @@ describe("when to use it", () => {
     );
     // Asked in Hindi ("अपने ब्राउज़र से"), a bot still fetched: the words are any language's.
     expect(tool.description).toMatch(/in any language/i);
+  });
+
+  it("opens the browser and nothing else when the user only asks to open it", () => {
+    // Asked only "open the browser", one bot asked where to point it (the
+    // pane never opened) and another sent its run to a booking site.
+    const tool = buildBrowserTaskTool(
+      { cwd: process.cwd(), channel: APP_CHANNEL } as never,
+      () => undefined
+    );
+    expect(tool.description).toMatch(
+      /only (asks|wants) to open the browser[^.]*one short run[^.]*about:blank/i
+    );
+    expect(tool.description).toMatch(/do not\s+pick a site/i);
   });
 });
 

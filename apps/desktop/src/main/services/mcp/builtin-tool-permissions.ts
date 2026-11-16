@@ -156,7 +156,8 @@ export class BuiltinToolPermissions {
    * "May this chat use your sign-in on <site>?" (a connected site whose rule
    * is ask first). Asked even when browsing never asks and in a mode where
    * nothing asks: the per-site rule is the user's. Nobody to ask (a routine, a chat-app turn the user does not
-   * answer in the app within `timeoutMs`) is a no.
+   * answer in the app within `timeoutMs`) is "unasked": refused,
+   * but told apart from the user's no.
    */
   async askSite(
     site: string,
@@ -166,9 +167,9 @@ export class BuiltinToolPermissions {
   ): Promise<SiteDecision> {
     // Not even a mode where nothing asks answers it (bots run in one by
     // default): "ask first" is the user's rule for this site, not a tool prompt.
-    if (this.deps.isUnattended?.(sessionId) === true) return "deny";
+    if (this.deps.isUnattended?.(sessionId) === true) return "unasked";
     const conversationKey = this.deps.conversationKeyForSession(sessionId);
-    if (conversationKey == null) return "deny";
+    if (conversationKey == null) return "unasked";
     const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const request: BrowserPermissionRequest = {
       requestId,
@@ -182,7 +183,7 @@ export class BuiltinToolPermissions {
       const timer = setTimeout(() => {
         if (!this.pendingBrowserPermissions.delete(requestId)) return;
         this.cleared(requestId);
-        resolve("deny");
+        resolve("unasked");
       }, timeoutMs);
       const done = (decision: SiteDecision): void => {
         clearTimeout(timer);
@@ -225,7 +226,9 @@ export class BuiltinToolPermissions {
       // A site ask is the user's per-site rule: a browsing setting turned
       // to "never ask" does not answer it.
       if (pending.site != null && decision === "allow") continue;
-      pending.resolve(decision);
+      // Nor is a browsing setting turned off the user's no to this site.
+      if (pending.site != null) pending.site("unasked");
+      else pending.resolve(decision);
       this.pendingBrowserPermissions.delete(requestId);
       this.deps.emitEvent({
         type: "browser-permission-cleared",

@@ -75,6 +75,8 @@ export default defineConfig({
     "src/plan-asks.ts",
     // Media for the chat: the hosted app's lane and main's media store read it.
     "src/send-media.ts",
+    // The user's-sign-in note: main's browser server writes it, a run reads it back.
+    "src/signed-in-note.ts",
     // Whether a presented URL answers: main's present_deliverable asks it too.
     "src/deliverable-url.ts",
     "src/office-check.ts",

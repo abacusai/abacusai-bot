@@ -14,7 +14,9 @@ const mocks = vi.hoisted(() => {
   /** URLs whose document never arrives: the load and every read wait on. */
   const stalledUrls = new Set<string>();
 
+  let nextContentsId = 1;
   class FakeWebContents {
+    readonly id = nextContentsId++;
     readonly listeners = new Map<string, Listener[]>();
     readonly close = vi.fn();
     readonly reload = vi.fn();
@@ -621,15 +623,33 @@ describe("Electron browser runtime", () => {
       });
       const contents = mocks.views.at(-1)!.webContents;
       const passwordOn = new Set<string>();
+      const look = (url: string) => Promise.resolve(passwordOn.has(url));
       contents.executeJavaScript.mockImplementation(((code: string) =>
         code.includes("password")
-          ? Promise.resolve(passwordOn.has(contents.getURL()))
+          ? look(contents.getURL())
           : new Promise(() => {})) as never);
-      return { contents, passwordOn };
+      /** Frames inside the page, by their address. */
+      const frames: string[] = [];
+      Object.assign(contents, {
+        mainFrame: {
+          get framesInSubtree() {
+            return [contents.getURL(), ...frames].map((url) => ({
+              url,
+              executeJavaScript: (code: string) =>
+                code.includes("password") && !url.includes("ads.")
+                  ? look(url)
+                  : new Promise(() => {}),
+            }));
+          },
+        },
+      });
+      return { runtime, contents, passwordOn, frames };
     };
     const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
     it("lists a site whose sign-in page the user opened", async () => {
+      // On sight, not once a sign-in cookie is seen: sign-ins are kept under
+      // any name, and a site left off the list is used with no rule.
       const seen: string[] = [];
       const { contents, passwordOn } = await signInView((url) =>
         seen.push(url)
@@ -654,6 +674,24 @@ describe("Electron browser runtime", () => {
       contents.emit("did-navigate-in-page");
       await settle();
       expect(seen).toEqual(["https://app.example.org/"]);
+    });
+
+    it("sees a sign-in form in a frame from another site, and lists that site and the page's", async () => {
+      const seen: string[] = [];
+      const { contents, passwordOn, frames } = await signInView((url) =>
+        seen.push(url)
+      );
+      // A frame that never answers does not hide the form in another.
+      frames.push("https://ads.example.org/slot");
+      frames.push("https://login.widget.example/embed");
+      passwordOn.add("https://login.widget.example/embed");
+      await contents.loadURL("https://store.example.net/account");
+      contents.emit("did-finish-load");
+      await settle();
+      expect(seen).toEqual([
+        "https://login.widget.example/embed",
+        "https://store.example.net/account",
+      ]);
     });
 
     it("lists the site a sign-in page sends the user back to (single sign-on)", async () => {
@@ -688,17 +726,30 @@ describe("Electron browser runtime", () => {
       expect(seen).toEqual(["https://accounts.idp.example/signin"]);
     });
 
-    it("leaves pages without a password field and imported profiles alone", async () => {
+    it("leaves pages without a password field alone", async () => {
       const seen: string[] = [];
       const plain = await signInView((url) => seen.push(url));
       await plain.contents.loadURL("https://example.com/");
       plain.contents.emit("did-finish-load");
+      await settle();
+      expect(seen).toEqual([]);
+    });
+
+    it("lists a sign-in page in an imported profile too, and says which tabs use one", async () => {
+      // The rules cover an imported Chrome profile: a sign-in made there is
+      // the user's as much as one in the app's own browser.
+      const seen: string[] = [];
       const imported = await signInView((url) => seen.push(url), "chrome-1");
       imported.passwordOn.add("https://bank.example/login");
       await imported.contents.loadURL("https://bank.example/login");
       imported.contents.emit("did-finish-load");
       await settle();
-      expect(seen).toEqual([]);
+      expect(seen).toEqual(["https://bank.example/login"]);
+      expect(imported.runtime.importedPartitionOf(imported.contents.id)).toBe(
+        "persist:bp-chrome-1"
+      );
+      const plain = await signInView(() => undefined);
+      expect(plain.runtime.importedPartitionOf(plain.contents.id)).toBeNull();
     });
   });
 

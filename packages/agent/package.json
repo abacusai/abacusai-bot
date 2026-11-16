@@ -77,6 +77,10 @@
       "types": "./dist/reply-language.d.ts",
       "default": "./dist/reply-language.js"
     },
+    "./signed-in-note": {
+      "types": "./dist/signed-in-note.d.ts",
+      "default": "./dist/signed-in-note.js"
+    },
     "./send-media": {
       "types": "./dist/send-media.d.ts",
       "default": "./dist/send-media.js"

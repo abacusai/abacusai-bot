@@ -548,13 +548,19 @@ export class McpClient {
     text: string;
     isError: boolean;
     blocks: Array<Record<string, unknown>>;
+    /** The result's MCP `_meta`, as the server sent it. */
+    meta?: Record<string, unknown>;
   }> {
     const result = (await this.transport.request(
       "tools/call",
       { name: toolName, arguments: args },
       signal
     )) as
-      | { content?: Array<Record<string, unknown>>; isError?: boolean }
+      | {
+          content?: Array<Record<string, unknown>>;
+          isError?: boolean;
+          _meta?: Record<string, unknown>;
+        }
       | undefined;
 
     const blocks = result?.content ?? [];
@@ -570,7 +576,14 @@ export class McpClient {
       .filter((line) => line.length > 0)
       .join("\n");
 
-    return { text, isError: result?.isError === true, blocks };
+    return {
+      text,
+      isError: result?.isError === true,
+      blocks,
+      ...(result?._meta != null && typeof result._meta === "object"
+        ? { meta: result._meta }
+        : {}),
+    };
   }
 
   close(): void {
