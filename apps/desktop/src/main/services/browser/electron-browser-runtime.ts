@@ -807,6 +807,17 @@ export class ElectronBrowserRuntime {
     return out;
   }
 
+  /**
+   * The imported browser profile (its partition) tab `id` uses, or null for
+   * the app's own browser or a tab it does not know.
+   */
+  importedPartitionOf(id: number): string | null {
+    const partition = this.partitionsById.get(id);
+    return partition == null || partition === DEFAULT_PARTITION
+      ? null
+      : partition;
+  }
+
   webContentsById(id: number): WebContents | null {
     for (const lease of this.leases.values()) {
       try {
@@ -936,7 +947,13 @@ export class ElectronBrowserRuntime {
     contents.on("blur", emit);
     contents.on("devtools-opened", emit);
     contents.on("devtools-closed", emit);
-    if (partition === DEFAULT_PARTITION) this.watchSignIns(contents);
+    // The app's own browser and an imported profile: both hold sign-ins
+    // Connected sites rules over. Not a local file's preview.
+    if (localFile == null) {
+      this.partitionsById.set(contents.id, partition);
+      contents.on("destroyed", () => this.partitionsById.delete(contents.id));
+      this.watchSignIns(contents);
+    }
     if (localFile == null)
       contents.setWindowOpenHandler(({ url }) => {
         void this.loadUrlForView(view, url).catch(() => undefined);
@@ -951,6 +968,8 @@ export class ElectronBrowserRuntime {
    * tab to. One browser session, so one map for every tab.
    */
   private readonly signInExpected = new Map<string, number>();
+  /** Each web tab's browser session (partition), by its id. */
+  private readonly partitionsById = new Map<number, string>();
   private readonly watchedCookieStores = new WeakSet<object>();
 
   /**

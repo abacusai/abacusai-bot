@@ -4147,6 +4147,8 @@ describe("a connected site's rule", () => {
   let sited: import("./mcp-browser-server").McpBrowserServer;
   let sitedPort: number;
   const gateCalls: string[] = [];
+  /** The tab each gate call named: its browser profile holds the sign-ins. */
+  const gatePages: Array<number | undefined> = [];
   const loginStops: string[] = [];
   const refuse = "The user blocked bots from using their sign-in on bank.test.";
 
@@ -4183,8 +4185,9 @@ describe("a connected site's rule", () => {
     sited = new McpBrowserServer({
       target: () => fakeTarget,
       timeouts: { attachMs: 300, navigateMs: 600, historyMs: 600 },
-      siteGate: async (url) => {
+      siteGate: async (url, _sessionId, pageId) => {
         gateCalls.push(url);
+        gatePages.push(pageId);
         return url.includes("bank.test") ? refuse : null;
       },
       onSignInPage: (site) => loginStops.push(site),
@@ -4200,6 +4203,7 @@ describe("a connected site's rule", () => {
 
   beforeEach(() => {
     gateCalls.length = 0;
+    gatePages.length = 0;
     loginStops.length = 0;
   });
 
@@ -4240,6 +4244,9 @@ describe("a connected site's rule", () => {
     });
     expect(result.isError).toBe(false);
     expect(gateCalls[0]).toBe("https://example.test/next");
+    // Named with the tab it goes in: an imported Chrome profile's sign-ins
+    // are held to the rules only when the gate knows the tab uses one.
+    expect(gatePages[0]).toBe(page.id);
   });
 
   it("holds a call on a page already on such a site, and never holds the tab list", async () => {

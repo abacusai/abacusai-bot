@@ -15,7 +15,9 @@
  * blocked (the default for banks, payments, health and government).
  *
  * The rule is checked by the app before a browser tool acts on or reads a
- * page of the site, never left to the model.
+ * page of the site, never left to the model. It covers an imported Chrome
+ * profile too: a tab on one is checked against that profile's cookies, and
+ * the sign-ins it holds are listed the first time a bot uses it.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -57,7 +59,8 @@ export type SiteDecision = "allow" | "deny" | "session" | "always" | "unasked";
 export interface ConnectedSitesDeps {
   /** Where the list and rules are kept. */
   file: () => string;
-  store: () => SiteStore;
+  /** The app's own browser session, or an imported profile's by its partition. */
+  store: (partition?: string) => SiteStore;
   /** Asks the user in the chat; resolves "unasked" when nobody can answer. */
   ask: (site: string, sessionId: string) => Promise<SiteDecision>;
   /** The conversation a session belongs to, for "allow in this chat". */
@@ -110,6 +113,8 @@ interface Saved {
   >;
   /** The browser's earlier sign-ins were listed (`seedExisting`). */
   seeded?: boolean;
+  /** Imported browser profiles (partitions) whose sign-ins were listed. */
+  seededProfiles?: string[];
 }
 
 export class ConnectedSites {
@@ -128,6 +133,7 @@ export class ConnectedSites {
   private readonly asking = new Map<string, Promise<SiteDecision>>();
 
   private seeding: Promise<void> | null = null;
+  private readonly seedingProfiles = new Map<string, Promise<void>>();
 
   constructor(private readonly deps: ConnectedSitesDeps) {}
 
@@ -142,29 +148,71 @@ export class ConnectedSites {
     if (this.deps.seedExisting !== true) return Promise.resolve();
     this.seeding ??= (async () => {
       if (this.read().seeded === true) return;
-      const cookies = await this.deps
-        .store()
-        .cookies.get({})
-        .catch(() => []);
-      // Read after the wait: a site added meanwhile is kept.
-      const saved = this.read();
-      for (const cookie of cookies) {
-        if (cookie.session === true || !SIGN_IN_COOKIE.test(cookie.name))
-          continue;
-        const site =
-          cookie.domain == null
-            ? null
-            : this.siteOf(cookie.domain.replace(/^\./, ""));
-        if (site != null && saved.sites[site] == null)
-          saved.sites[site] = {
-            policy: defaultPolicy(site),
-            addedAt: this.now(),
-          };
-      }
+      const saved = await this.listSignIns(undefined);
       saved.seeded = true;
       this.write(saved);
     })().catch(() => undefined);
     return this.seeding;
+  }
+
+  /**
+   * An imported browser profile holds a copy of the user's Chrome sign-ins,
+   * every one of them: they are listed once, under their default rules, the
+   * first time a bot's browser uses the profile (again after a re-import).
+   */
+  private seedProfile(partition: string | undefined): Promise<void> {
+    if (partition == null) return this.seedExisting();
+    let seeding = this.seedingProfiles.get(partition);
+    if (seeding == null) {
+      seeding = (async () => {
+        if (this.read().seededProfiles?.includes(partition) === true) return;
+        const saved = await this.listSignIns(partition);
+        saved.seededProfiles = [
+          ...new Set([...(saved.seededProfiles ?? []), partition]),
+        ];
+        this.write(saved);
+      })().catch(() => undefined);
+      this.seedingProfiles.set(partition, seeding);
+    }
+    return seeding;
+  }
+
+  /** The saved list, with each site the store holds a lasting sign-in cookie for added. */
+  private async listSignIns(partition: string | undefined): Promise<Saved> {
+    const cookies = await this.deps
+      .store(partition)
+      .cookies.get({})
+      .catch(() => []);
+    // Read after the wait: a site added meanwhile is kept.
+    const saved = this.read();
+    for (const cookie of cookies) {
+      if (cookie.session === true || !SIGN_IN_COOKIE.test(cookie.name))
+        continue;
+      const site =
+        cookie.domain == null
+          ? null
+          : this.siteOf(cookie.domain.replace(/^\./, ""));
+      if (site != null && saved.sites[site] == null)
+        saved.sites[site] = {
+          policy: defaultPolicy(site),
+          addedAt: this.now(),
+        };
+    }
+    return saved;
+  }
+
+  /** An imported profile was imported again: its sign-ins are listed anew. */
+  profileImported(partition: string): void {
+    this.seedingProfiles.delete(partition);
+    const saved = this.read();
+    if (saved.seededProfiles?.includes(partition) !== true) return;
+    saved.seededProfiles = saved.seededProfiles.filter((p) => p !== partition);
+    this.write(saved);
+  }
+
+  /** The app's own browser and each imported profile whose sign-ins are listed. */
+  private partitions(): Array<string | undefined> {
+    return [undefined, ...(this.read().seededProfiles ?? [])];
   }
 
   private now(): number {
@@ -208,8 +256,8 @@ export class ConnectedSites {
   // Every cookie, grouped here: Electron's `domain` filter leaves out a
   // host-only cookie a subdomain set (`shop.example.com` for `example.com`),
   // which is how most sign-ins are kept.
-  private async cookiesOf(site: string) {
-    return (await this.deps.store().cookies.get({})).filter(
+  private async cookiesOf(site: string, partition?: string) {
+    return (await this.deps.store(partition).cookies.get({})).filter(
       (cookie) =>
         cookie.domain != null &&
         this.siteOf(cookie.domain.replace(/^\./, "")) === site
@@ -245,8 +293,17 @@ export class ConnectedSites {
     await this.seedExisting();
     const saved = this.read();
     const out: ConnectedSite[] = [];
+    const partitions = this.partitions();
     for (const [site, entry] of Object.entries(saved.sites)) {
-      if ((await this.cookiesOf(site)).length === 0) continue;
+      let held = false;
+      for (const partition of partitions)
+        if (
+          (await this.cookiesOf(site, partition).catch(() => [])).length > 0
+        ) {
+          held = true;
+          break;
+        }
+      if (!held) continue;
       out.push({
         site,
         policy: entry.policy,
@@ -270,21 +327,29 @@ export class ConnectedSites {
     }
   }
 
-  /** Signs the browser out of the site (its cookies and storage) and drops it from the list. */
+  /**
+   * Signs the browser out of the site (its cookies and storage), in the app's
+   * own browser and each imported profile, and drops it from the list.
+   */
   async signOut(site: string): Promise<void> {
-    const store = this.deps.store();
-    const cookies = await this.cookiesOf(site);
-    const origins = new Set<string>([`https://${site}`, `https://www.${site}`]);
-    await Promise.all(
-      cookies.map((cookie) => {
-        const host = (cookie.domain ?? site).replace(/^\./, "");
-        origins.add(`https://${host}`);
-        const url = `${cookie.secure === false ? "http" : "https"}://${host}${cookie.path ?? "/"}`;
-        return store.cookies.remove(url, cookie.name).catch(() => undefined);
-      })
-    );
-    for (const origin of origins)
-      await store.clearStorageData({ origin }).catch(() => undefined);
+    for (const partition of this.partitions()) {
+      const store = this.deps.store(partition);
+      const cookies = await this.cookiesOf(site, partition).catch(() => []);
+      const origins = new Set<string>([
+        `https://${site}`,
+        `https://www.${site}`,
+      ]);
+      await Promise.all(
+        cookies.map((cookie) => {
+          const host = (cookie.domain ?? site).replace(/^\./, "");
+          origins.add(`https://${host}`);
+          const url = `${cookie.secure === false ? "http" : "https"}://${host}${cookie.path ?? "/"}`;
+          return store.cookies.remove(url, cookie.name).catch(() => undefined);
+        })
+      );
+      for (const origin of origins)
+        await store.clearStorageData({ origin }).catch(() => undefined);
+    }
     this.forget(site);
   }
 
@@ -292,17 +357,21 @@ export class ConnectedSites {
    * The listed site `url` is on, when the browser holds its sign-in: a page
    * there shows the user's own account. Null for any other page.
    */
-  async signedInOn(url: string): Promise<string | null> {
+  async signedInOn(url: string, partition?: string): Promise<string | null> {
     const site = this.siteOf(url);
     if (site == null) return null;
-    await this.seedExisting();
+    await this.seedProfile(partition);
     if (this.read().sites[site] == null) return null;
-    return (await this.cookiesOf(site)).length > 0 ? site : null;
+    return (await this.cookiesOf(site, partition)).length > 0 ? site : null;
   }
 
-  /** Forgets every site (the browser's data was cleared). */
+  /**
+   * Forgets every site (the browser's data was cleared). An imported
+   * profile's sign-ins are listed again the next time a bot uses it.
+   */
   clear(): void {
     this.write({ sites: {}, seeded: true });
+    this.seedingProfiles.clear();
     this.allowedInChat.clear();
     this.allowedUntilQuit.clear();
     this.deniedInChat.clear();
@@ -319,16 +388,21 @@ export class ConnectedSites {
   /**
    * Why a browser call on `url` may not run now, or null when it may: the
    * page is on a listed site the browser is signed in to, and its rule says
-   * no, or says ask and the user did not allow it in this chat.
+   * no, or says ask and the user did not allow it in this chat. `partition`
+   * is the imported profile the page's browser uses, if it uses one.
    */
-  async gate(url: string, sessionId: string): Promise<string | null> {
+  async gate(
+    url: string,
+    sessionId: string,
+    partition?: string
+  ): Promise<string | null> {
     const site = this.siteOf(url);
     if (site == null) return null;
-    await this.seedExisting();
+    await this.seedProfile(partition);
     const saved = this.read();
     const entry = saved.sites[site];
     if (entry == null) return null;
-    if ((await this.cookiesOf(site)).length === 0) return null;
+    if ((await this.cookiesOf(site, partition)).length === 0) return null;
     if (!this.deps.isOwnChat(sessionId))
       return `Only the user's own chats can use their sign-in on ${site}; this chat is not theirs. Do not use ${site} here.`;
     const touch = (): null => {

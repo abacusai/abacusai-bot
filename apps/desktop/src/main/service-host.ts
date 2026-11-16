@@ -1329,18 +1329,23 @@ export class ServiceHost {
   private readonly mcpBrowserServer = new McpBrowserServer({
     requestPermission: (tool, summary, sessionId) =>
       this.requestBrowserToolPermission(tool, summary, sessionId),
-    // Connected sites live in the desktop browser's saved session.
-    siteGate: (url, sessionId) =>
+    // Connected sites live in the desktop browser's saved session, or in the
+    // imported Chrome profile the tab uses.
+    siteGate: (url, sessionId, pageId) =>
       this.platform === "electron"
-        ? this.connectedSites.gate(url, sessionId)
+        ? this.connectedSites.gate(
+            url,
+            sessionId,
+            this.importedPartition(pageId)
+          )
         : Promise.resolve(null),
     onSignInPage: (site, sessionId) => {
       if (this.platform === "electron")
         this.connectedSites.signInPage(site, sessionId);
     },
-    signedInOn: (url) =>
+    signedInOn: (url, pageId) =>
       this.platform === "electron"
-        ? this.connectedSites.signedInOn(url)
+        ? this.connectedSites.signedInOn(url, this.importedPartition(pageId))
         : Promise.resolve(null),
     target: () => this.browserTargetSource(),
     // Only the hosted computer carries a chat that takes media (WhatsApp).
@@ -2900,7 +2905,8 @@ export class ServiceHost {
   /** The sites the bot's browser is signed in to, and whether bots may use each. */
   private readonly connectedSites = new ConnectedSites({
     file: () => path.join(abacusBotHome(), "connected-sites.json"),
-    store: () => electronSession.fromPartition(BROWSER_PARTITION),
+    store: (partition) =>
+      electronSession.fromPartition(partition ?? BROWSER_PARTITION),
     ask: (site, sessionId) =>
       this.builtinToolPermissions.askSite(
         site,
@@ -10040,11 +10046,21 @@ export class ServiceHost {
     return this.browserProfilesService.refreshProfiles();
   }
 
-  importBrowserProfile(
+  async importBrowserProfile(
     profileId: string
   ): ReturnType<BrowserProfilesService["importProfile"]> {
     assertHostCapability(this.platform, "browser.profiles");
-    return this.browserProfilesService.importProfile(profileId);
+    const result = await this.browserProfilesService.importProfile(profileId);
+    // Fresh copies of the user's Chrome sign-ins: listed again for the rules.
+    if (result.success && result.partition.length > 0)
+      this.connectedSites.profileImported(result.partition);
+    return result;
+  }
+
+  /** The imported Chrome profile (partition) tab `pageId` uses, if any. */
+  private importedPartition(pageId?: number): string | undefined {
+    if (pageId == null) return undefined;
+    return this.browserRuntime?.importedPartitionOf(pageId) ?? undefined;
   }
 
   clearImportedBrowserProfile(

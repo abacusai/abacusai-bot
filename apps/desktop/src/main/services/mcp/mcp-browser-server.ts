@@ -693,9 +693,14 @@ export interface McpBrowserServerOptions {
   /**
    * Why a call may not touch `url` (a connected site whose rule says no, or
    * ask and the user did not allow it here), or null. Checked on the page a
-   * call acts on or reads, and on the page it lands on.
+   * call acts on or reads, and on the page it lands on. `pageId` is the tab
+   * the call acts in (its browser profile holds the sign-ins), when it has one.
    */
-  siteGate?: (url: string, sessionId: string) => Promise<string | null>;
+  siteGate?: (
+    url: string,
+    sessionId: string,
+    pageId?: number
+  ) => Promise<string | null>;
   /**
    * The bot's browser reached a site's sign-in page (a password field on
    * the page, or the run stopped there for the user): the user is about to
@@ -706,7 +711,7 @@ export interface McpBrowserServerOptions {
    * The connected site `url` is on when the browser holds the user's sign-in
    * there, else null: the run is told its page shows the user's own account.
    */
-  signedInOn?: (url: string) => Promise<string | null>;
+  signedInOn?: (url: string, pageId?: number) => Promise<string | null>;
   /** Gate consulted before each tool call; when omitted, nothing is gated. */
   requestPermission?: (
     tool: string,
@@ -4340,14 +4345,15 @@ export class McpBrowserServer extends McpHttpServer {
     const gate = this.options.siteGate;
     if (gate == null || sessionId == null) return null;
     if (name === BROWSER_PAUSE_TOOL || name === "browser_tabs") return null;
+    const page = this.findView(sessionId);
     const url =
       name === "browser_navigate" &&
       typeof args.url === "string" &&
       (args.action == null || args.action === "goto")
         ? args.url
-        : (this.findView(sessionId)?.getURL() ?? null);
+        : (page?.getURL() ?? null);
     if (url == null) return null;
-    const refusal = await gate(url, sessionId);
+    const refusal = await gate(url, sessionId, page?.id);
     return refusal == null ? null : this.err(refusal);
   }
 
@@ -4396,7 +4402,7 @@ export class McpBrowserServer extends McpHttpServer {
     const was = hostOf(before);
     const is = hostOf(now);
     if (is == null || (was != null && sameSite(was, is))) return null;
-    const refusal = await gate(now, sessionId);
+    const refusal = await gate(now, sessionId, page.id);
     if (refusal == null) return null;
     await page.loadURL("about:blank").catch(() => undefined);
     return this.err(refusal);
@@ -4518,9 +4524,11 @@ export class McpBrowserServer extends McpHttpServer {
    */
   private async signedInNote(sessionId?: string): Promise<string[]> {
     const signedInOn = this.options.signedInOn;
-    const url = this.findView(sessionId)?.getURL();
-    if (signedInOn == null || sessionId == null || url == null) return [];
-    const site = await signedInOn(url).catch(() => null);
+    const page = this.findView(sessionId);
+    const url = page?.getURL();
+    if (signedInOn == null || sessionId == null || page == null || url == null)
+      return [];
+    const site = await signedInOn(url, page.id).catch(() => null);
     if (site == null) return [];
     // A chat's browser outlives a run: a later run (minutes on) is told again.
     const key = `${sessionId}|${site}`;

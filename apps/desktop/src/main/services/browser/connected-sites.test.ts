@@ -22,12 +22,13 @@ type Cookie = {
 const setup = (
   cookies: Cookie[],
   answer: SiteDecision | (() => Promise<SiteDecision>) = "allow",
-  options: { seedExisting?: boolean } = {}
+  options: { seedExisting?: boolean; profiles?: Record<string, Cookie[]> } = {}
 ) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sites-"));
   const jar = [...cookies];
   const cleared: string[] = [];
-  const store: SiteStore = {
+  const { profiles = {}, ...rest } = options;
+  const makeStore = (jar: Cookie[]): SiteStore => ({
     cookies: {
       // As Electron does: a host-only cookie (no leading dot) matches only
       // its own host, so `domain: "goindigo.in"` misses one set by a subdomain.
@@ -51,18 +52,27 @@ const setup = (
     clearStorageData: vi.fn(async ({ origin }: { origin: string }) => {
       cleared.push(origin);
     }),
-  };
+  });
+  const store = makeStore(jar);
+  /** An imported browser profile's jar, by its partition. */
+  const profileStores = new Map(
+    Object.entries(profiles).map(([partition, cookies]) => [
+      partition,
+      makeStore(cookies),
+    ])
+  );
   const ask = vi.fn(typeof answer === "function" ? answer : async () => answer);
   let now = 1_000_000;
   const sites = new ConnectedSites({
     file: () => path.join(dir, "connected-sites.json"),
-    store: () => store,
+    store: (partition) =>
+      partition == null ? store : (profileStores.get(partition) ?? store),
     ask,
     conversationOf: (sessionId) => `chat-${sessionId.split("/")[0]}`,
     // "contact/…" sessions are a contact's chat with the bot.
     isOwnChat: (sessionId) => !sessionId.startsWith("contact"),
     now: () => now,
-    ...options,
+    ...rest,
   });
   return {
     sites,
@@ -307,5 +317,73 @@ describe("connected sites", () => {
     expect(sites.add("about:blank")).toBeNull();
     expect(sites.add("localhost")).toBeNull();
     expect(sites.add("Goindigo.in")).toBe("goindigo.in");
+  });
+});
+
+describe("an imported browser profile (the user's Chrome sign-ins)", () => {
+  // A chat's browser on an imported Chrome profile used every sign-in it
+  // holds with no rule: the rules read only the app's own browser.
+  const CHROME = "persist:bp-chrome-1";
+  const chrome = (): Cookie[] => [
+    { name: "auth_token", domain: ".goindigo.in" },
+    { name: "SID", domain: ".icicibank.com" },
+    { name: "_ga", domain: ".news.example" },
+  ];
+
+  it("holds a bot on that profile to the rules: asked first, and a bank is blocked", async () => {
+    const { sites, ask } = setup([], "deny", {
+      profiles: { [CHROME]: chrome() },
+    });
+    expect(
+      await sites.gate("https://www.goindigo.in/trips", "1/s", CHROME)
+    ).toMatch(/said no/);
+    expect(ask).toHaveBeenCalledTimes(1);
+    expect(await sites.gate("https://icicibank.com/", "1/s", CHROME)).toMatch(
+      /blocked/
+    );
+    expect(await sites.gate("https://news.example/", "1/s", CHROME)).toBeNull();
+    // The app's own browser holds none of these: no rule there.
+    expect(await sites.gate("https://www.goindigo.in/", "2/s")).toBeNull();
+  });
+
+  it("shows those sign-ins in Connected sites, so the user can set their rules", async () => {
+    const { sites } = setup([], "allow", { profiles: { [CHROME]: chrome() } });
+    await sites.gate("https://example.org/", "1/s", CHROME);
+    const listed = await sites.list();
+    expect(listed.map((s) => s.site).sort()).toEqual([
+      "goindigo.in",
+      "icicibank.com",
+    ]);
+    sites.setPolicy("goindigo.in", "allowed");
+    expect(await sites.gate("https://goindigo.in/", "1/s", CHROME)).toBeNull();
+  });
+
+  it("tells a run the page shows the user's account there", async () => {
+    const { sites } = setup([], "allow", { profiles: { [CHROME]: chrome() } });
+    expect(await sites.signedInOn("https://goindigo.in/trips", CHROME)).toBe(
+      "goindigo.in"
+    );
+    expect(await sites.signedInOn("https://goindigo.in/trips")).toBeNull();
+  });
+
+  it("lists a profile's sign-ins again once it is imported again", async () => {
+    const jar = chrome();
+    const { sites } = setup([], "allow", { profiles: { [CHROME]: jar } });
+    await sites.gate("https://example.org/", "1/s", CHROME);
+    jar.push({ name: "session", domain: ".notes.io" });
+    await sites.gate("https://example.org/", "1/s", CHROME);
+    expect((await sites.list()).map((s) => s.site)).not.toContain("notes.io");
+    sites.profileImported(CHROME);
+    await sites.gate("https://example.org/", "1/s", CHROME);
+    expect((await sites.list()).map((s) => s.site)).toContain("notes.io");
+  });
+
+  it("signs the profile out of a site too", async () => {
+    const jar = chrome();
+    const { sites } = setup([], "allow", { profiles: { [CHROME]: jar } });
+    await sites.gate("https://example.org/", "1/s", CHROME);
+    await sites.signOut("goindigo.in");
+    expect(jar.some((c) => c.domain.endsWith("goindigo.in"))).toBe(false);
+    expect((await sites.list()).map((s) => s.site)).toEqual(["icicibank.com"]);
   });
 });

@@ -14,7 +14,9 @@ const mocks = vi.hoisted(() => {
   /** URLs whose document never arrives: the load and every read wait on. */
   const stalledUrls = new Set<string>();
 
+  let nextContentsId = 1;
   class FakeWebContents {
+    readonly id = nextContentsId++;
     readonly listeners = new Map<string, Listener[]>();
     readonly close = vi.fn();
     readonly reload = vi.fn();
@@ -655,7 +657,7 @@ describe("Electron browser runtime", () => {
         for (const listener of contents.session.cookies.changed)
           listener({}, { name, domain }, "explicit", removed);
       };
-      return { contents, passwordOn, frames, setCookie };
+      return { runtime, contents, passwordOn, frames, setCookie };
     };
     const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -775,20 +777,32 @@ describe("Electron browser runtime", () => {
       expect(seen).toEqual([]);
     });
 
-    it("leaves pages without a password field and imported profiles alone", async () => {
+    it("leaves pages without a password field alone", async () => {
       const seen: string[] = [];
       const plain = await signInView((url) => seen.push(url));
       await plain.contents.loadURL("https://example.com/");
       plain.contents.emit("did-finish-load");
       await settle();
       plain.setCookie("sessionid", "example.com");
+      expect(seen).toEqual([]);
+    });
+
+    it("lists a sign-in made in an imported profile too, and says which tabs use one", async () => {
+      // The rules cover an imported Chrome profile: a sign-in made there is
+      // the user's as much as one in the app's own browser.
+      const seen: string[] = [];
       const imported = await signInView((url) => seen.push(url), "chrome-1");
       imported.passwordOn.add("https://bank.example/login");
       await imported.contents.loadURL("https://bank.example/login");
       imported.contents.emit("did-finish-load");
       await settle();
       imported.setCookie("sessionid", "bank.example");
-      expect(seen).toEqual([]);
+      expect(seen).toEqual(["https://bank.example/"]);
+      expect(imported.runtime.importedPartitionOf(imported.contents.id)).toBe(
+        "persist:bp-chrome-1"
+      );
+      const plain = await signInView(() => undefined);
+      expect(plain.runtime.importedPartitionOf(plain.contents.id)).toBeNull();
     });
   });
 
