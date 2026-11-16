@@ -46,6 +46,7 @@ const RESULT_TOOLS: ReadonlySet<string> = new Set([
   "document",
   "ppt",
   "design",
+  "motion",
 ]);
 
 interface RunMessage {

@@ -30,6 +30,7 @@ import { runDesignTask } from "./design-task.js";
 import { runDocumentTask } from "./document-task.js";
 import { HostServiceClient } from "./host-services.js";
 import { modelPath } from "./model-path.js";
+import { runMotionTask } from "./motion-task.js";
 import type { AgentEvent } from "./protocol.js";
 import { createModelRuntime } from "./providers.js";
 
@@ -541,6 +542,17 @@ describe("every sub-agent's system prompt", () => {
           "a design",
           path.join(cwd, "out"),
           {},
+          none
+        ),
+    },
+    {
+      name: "motion",
+      fileTools: true,
+      run: async (cwd: string) =>
+        runMotionTask(
+          { ...(await context(cwd)), hostServices },
+          "a video",
+          path.join(cwd, "out"),
           none
         ),
     },

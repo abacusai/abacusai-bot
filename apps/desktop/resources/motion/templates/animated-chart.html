@@ -1,0 +1,62 @@
+<style>
+  @property --n { syntax: '<integer>'; inherits: false; initial-value: 0; }
+  .ch { justify-content: flex-start; align-items: stretch; text-align: start; gap: calc(var(--u) * 4); }
+  .ch-head { display: flex; flex-direction: column; gap: calc(var(--u) * 2); }
+  .ch-title { font-size: calc(var(--u) * var(--t-h1)); font-weight: 850; letter-spacing: -.03em; line-height: 1.04; max-height: calc(var(--u) * 24); }
+  .ch-head .rule { width: calc(var(--u) * 14); }
+  /* The bars take whatever height is left, one row each. */
+  .ch-bars {
+    flex: 1; min-height: 0; display: grid; grid-auto-rows: minmax(0, 1fr);
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr) minmax(0, auto);
+    column-gap: calc(var(--u) * 2.6); align-items: center;
+    padding: calc(var(--u) * 1.5) 0;
+    background: repeating-linear-gradient(90deg, transparent 0 calc(25% - 1px), color-mix(in srgb, var(--ink) 7%, transparent) calc(25% - 1px) 25%);
+    background-size: calc(100% - 0px) 100%;
+  }
+  .ch-row { display: contents; }
+  .ch-label { font-size: calc(var(--u) * var(--t-h3)); font-weight: 700; max-width: calc(var(--w) * .3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .9; }
+  .ch-track { height: min(64%, calc(var(--u) * 12)); border-radius: calc(var(--u) * 1.4); background: color-mix(in srgb, var(--ink) 7%, transparent); overflow: hidden; }
+  .ch-bar {
+    width: var(--pct); height: 100%; border-radius: calc(var(--u) * 1.4);
+    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 55%, var(--paper)), var(--accent));
+    transform-origin: left center; animation: wipe 1.3s var(--ease-out) var(--d) both;
+  }
+  .ch-top .ch-bar { background: var(--gradient); box-shadow: 0 0 calc(var(--u) * 4) color-mix(in srgb, var(--accent2) 45%, transparent); }
+  .ch-value { font-size: calc(var(--u) * var(--t-h2)); font-weight: 850; letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap; animation: fade .5s ease-out var(--d) both; }
+  .ch-top .ch-value { color: var(--accent2); }
+  .ch-value .unit { font-size: .62em; font-weight: 700; opacity: .75; }
+  .num { counter-reset: n var(--n); animation: ch-count 1.3s var(--ease-out) var(--d) both; }
+  .num::after { content: counter(n); }
+  @keyframes ch-count { from { --n: 0; } to { --n: var(--to); } }
+  .ch-caption {
+    align-self: flex-start; font-size: calc(var(--u) * var(--t-body)); font-weight: 600; line-height: 1.3;
+    padding: .55em 1em; border-radius: calc(var(--u) * 1.6);
+    background: color-mix(in srgb, var(--accent) 14%, transparent); border-left: calc(var(--u) * .8) solid var(--accent2);
+    max-height: calc(var(--u) * 18);
+  }
+  .size-16x9 .ch-value { font-size: calc(var(--u) * 6.2); }
+  .size-9x16 .ch-title { max-height: calc(var(--u) * 40); }
+  /* Tall: the label and the number on a line, the bar the full width below. */
+  .size-9x16 .ch-bars {
+    grid-template-columns: minmax(0, 1fr) auto; grid-auto-rows: auto;
+    grid-auto-flow: row dense; align-content: space-evenly; row-gap: calc(var(--u) * 1.6); background: none;
+  }
+  .size-9x16 .ch-label { max-width: none; }
+  .size-9x16 .ch-track { grid-column: 1 / -1; grid-row: span 1; height: calc(var(--u) * 9); margin-bottom: calc(var(--u) * 3); }
+  .size-9x16 .ch-value { text-align: end; }
+  .size-9x16 .ch-caption { max-height: calc(var(--u) * 30); }
+</style>
+<div class="stage ch">
+  <div class="ch-head">
+    <h2 class="ch-title rise" dir="auto" style="--d:.3s" data-fit>{{title}}</h2>
+    <div class="rule wipe" style="--d:.7s"></div>
+  </div>
+  <div class="ch-bars">
+    {{#bars}}<div class="ch-row{{#top}} ch-top{{/top}}" style="--d:{{d}}s">
+      <div class="ch-label fade" dir="auto">{{label}}</div>
+      <div class="ch-track"><div class="ch-bar" style="--pct:{{pct}}%"></div></div>
+      <div class="ch-value">{{prefix}}{{#count}}<span class="num" style="--to:{{count}}"></span>{{/count}}{{#text}}{{text}}{{/text}}{{#unit}}<span class="unit">{{unit}}</span>{{/unit}}</div>
+    </div>{{/bars}}
+  </div>
+  {{#caption}}<p class="ch-caption rise" dir="auto" style="--d:{{captionAt}}s" data-fit>{{caption}}</p>{{/caption}}
+</div>

@@ -5,6 +5,7 @@
       "entry": [
         "src/main/index.ts",
         "src/main/window-chrome.e2e-entry.ts",
+        "src/main/services/agent-tools/motion-render.e2e-entry.ts",
         "src/main/rpc/transports/rpc-handshake.e2e-main.ts",
         "src/preload/index.ts",
         "src/**/*.test.{ts,tsx}",

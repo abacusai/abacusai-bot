@@ -187,6 +187,7 @@ const MUTATING_TOOLS = new Set([
   "document",
   "ppt",
   "design",
+  "motion",
   "browser_task",
   // `serve` puts a directory on an http port, an outbound channel carrying
   // whatever is in it; an absolute path reaches anywhere the user can read.
@@ -209,6 +210,7 @@ const SUBAGENT_TOOLS = new Set([
   "document",
   "ppt",
   "design",
+  "motion",
   "browser_task",
 ]);
 

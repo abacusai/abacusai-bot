@@ -133,7 +133,7 @@ describe("building the roster", () => {
       (tool) => tool.name
     );
 
-    for (const name of ["document", "design", "ppt"]) {
+    for (const name of ["document", "design", "ppt", "motion"]) {
       expect(names).not.toContain(name);
     }
   });

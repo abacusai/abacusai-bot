@@ -1,0 +1,158 @@
+/*
+ * Shared by every motion template. Sizes are in --u, 1% of the frame's short
+ * side, so one template serves 16:9, 9:16 and 1:1. Every animation is finite
+ * and starts after var(--d) + var(--k): the renderer seeks them frame by frame.
+ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --u: calc(min(var(--w), var(--h)) / 100);
+
+  /* Type scale (in --u). A Reel is seen on a phone: its type is larger. */
+  --t-display: 12;
+  --t-h1: 9.5;
+  --t-h2: 7.2;
+  --t-h3: 5.2;
+  --t-body: 4;
+  --t-small: 2.7;
+
+  /* Easing: things arrive fast and settle; they leave quickly. */
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ease-in-out: cubic-bezier(.65, 0, .35, 1);
+  --ease-back: cubic-bezier(.34, 1.45, .64, 1);
+  --ease-in: cubic-bezier(.55, 0, .75, .2);
+
+  --pad: calc(var(--u) * 9);
+  --gradient: linear-gradient(100deg, var(--accent), var(--accent2));
+}
+.size-16x9 {
+  --t-display: 13.5;
+  --t-h1: 10.5;
+  --t-h2: 8;
+  --t-h3: 5.6;
+  --t-body: 4.4;
+  --t-small: 2.9;
+}
+.size-9x16 {
+  --t-display: 15;
+  --t-h1: 12;
+  --t-h2: 9.5;
+  --t-h3: 6.6;
+  --t-body: 5.4;
+  --t-small: 3.6;
+  --pad: calc(var(--u) * 8);
+}
+html, body { width: var(--w); height: var(--h); overflow: hidden; }
+body {
+  position: relative;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+  font-kerning: normal;
+}
+
+/*
+ * Background: a gradient between the two paper tones, three soft glows in the
+ * accents drifting for the whole video, fine grain, and a vignette. Radial
+ * gradients, not blur filters: the same softness at a fraction of the cost
+ * per frame.
+ */
+.bg {
+  position: absolute; inset: 0; overflow: hidden; z-index: 0;
+  background: linear-gradient(160deg, var(--paper2) 0%, var(--paper) 58%);
+}
+.bg::after {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 45%, transparent 55%, color-mix(in srgb, #000 42%, transparent) 100%);
+}
+.glow {
+  position: absolute; border-radius: 50%;
+  animation: drift var(--total) linear both;
+}
+.glow.g1 {
+  width: calc(var(--u) * 110); height: calc(var(--u) * 110); left: -30%; top: -45%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 38%, transparent), transparent 68%);
+}
+.glow.g2 {
+  width: calc(var(--u) * 95); height: calc(var(--u) * 95); right: -28%; bottom: -40%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent2) 28%, transparent), transparent 68%);
+  animation-name: drift2;
+}
+.glow.g3 {
+  width: calc(var(--u) * 60); height: calc(var(--u) * 60); left: 55%; top: 10%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%);
+  animation-name: drift3;
+}
+.grain {
+  position: absolute; inset: 0; opacity: .07; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+@keyframes drift { to { transform: translate(calc(var(--u) * 16), calc(var(--u) * 10)) scale(1.12); } }
+@keyframes drift2 { to { transform: translate(calc(var(--u) * -14), calc(var(--u) * -8)) scale(1.08); } }
+@keyframes drift3 { to { transform: translate(calc(var(--u) * -20), calc(var(--u) * 14)); } }
+
+/* A full-frame layer of content. */
+.stage, .scene {
+  position: absolute; inset: 0; z-index: 1;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  text-align: center; gap: calc(var(--u) * 3.2);
+  padding: var(--pad);
+}
+/*
+ * A flex item never shrinks below its longest word, so without this a long
+ * word widens its box instead of overflowing it: the fit script sees nothing
+ * to shrink, and the word breaks mid-way once wrapping is back on.
+ */
+.stage > *, .scene > * { min-width: 0; max-width: 100%; }
+
+/* A scene enters at --d and leaves at --d + --len; the last one stays. */
+.scene {
+  opacity: 0;
+  animation:
+    scene-in .4s var(--ease-out) var(--d) both,
+    scene-out .45s var(--ease-in) calc(var(--d) + var(--len) - .45s) forwards;
+}
+.scene.last { animation: scene-in .4s var(--ease-out) var(--d) both; }
+@keyframes scene-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scene-out {
+  from { opacity: 1; }
+  to { opacity: 0; transform: translateY(calc(var(--u) * -3)) scale(.985); filter: blur(calc(var(--u) * .5)); }
+}
+
+/* Entrances. --k offsets an element inside its scene. */
+.rise { animation: rise .9s var(--ease-out) calc(var(--d, 0s) + var(--k, 0s)) both; }
+.fade { animation: fade .7s ease-out calc(var(--d, 0s) + var(--k, 0s)) both; }
+.pop { animation: pop .75s var(--ease-back) calc(var(--d, 0s) + var(--k, 0s)) both; }
+.wipe { transform-origin: left center; animation: wipe .9s var(--ease-in-out) calc(var(--d, 0s) + var(--k, 0s)) both; }
+[dir="rtl"] .wipe, .wipe:dir(rtl) { transform-origin: right center; }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(calc(var(--u) * 5)); filter: blur(calc(var(--u) * .6)); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pop { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
+@keyframes wipe { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Words that slide up out of their own line, one after another (--wd each). */
+.word { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .08em; margin-bottom: -.08em; }
+.word > span { display: inline-block; animation: word-up .8s var(--ease-out) var(--wd) both; }
+@keyframes word-up { from { transform: translateY(105%); opacity: 0; } 40% { opacity: 1; } to { transform: none; opacity: 1; } }
+
+/* Text that must fit its box: motion-plan.ts shrinks it at load if needed. */
+[data-fit] { max-width: 100%; overflow: hidden; overflow-wrap: anywhere; text-wrap: balance; }
+
+.gradient-text {
+  background: var(--gradient); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.rule {
+  width: calc(var(--u) * 20); height: calc(var(--u) * 1); border-radius: 99px; background: var(--gradient);
+}
+.pill {
+  display: inline-flex; align-items: center; gap: .5em;
+  padding: .45em 1.1em; border-radius: 99px;
+  border: calc(var(--u) * .25) solid color-mix(in srgb, var(--accent) 60%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: color-mix(in srgb, var(--accent) 70%, var(--ink));
+  font-size: calc(var(--u) * var(--t-small)); font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+}

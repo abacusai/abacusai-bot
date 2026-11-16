@@ -365,7 +365,12 @@ export const TOOLSETS: Toolset[] = [
     labelKey: "design",
     status: "ready",
     delivery: "agent",
-    tools: [agentTool("design"), tool("present_deliverable")],
+    // Motion rides the same switch: both are pictures made from templates.
+    tools: [
+      agentTool("design"),
+      agentTool("motion"),
+      tool("present_deliverable"),
+    ],
     // On by default: no setup beyond a key checked at call time.
     defaultEnabled: true,
   },

@@ -38,6 +38,7 @@ import { buildExitPlanTool } from "./exit-plan-tool.js";
 import type { HostServiceClient } from "./host-services.js";
 import type { ConnectedMcp } from "./mcp/index.js";
 import { buildMcpToolDefinitions, mcpToolCaller } from "./mcp/tools.js";
+import { buildMotionTool, motionToolEnabled } from "./motion-tool.js";
 import { buildPresentDeliverableTool } from "./present-deliverable-tool.js";
 import type { AgentEvent, AgentMode } from "./protocol.js";
 import { buildServeTool } from "./serve-tool.js";
@@ -308,6 +309,17 @@ export const SUB_AGENT_TOOLS: readonly RosterEntry[] = [
     when: (ctx) => ctx.hostServices != null && designToolEnabled(),
     build: (ctx) =>
       buildDesignTool(
+        subAgentOptions(ctx, { hostServices: ctx.hostServices! }),
+        ctx.emit
+      ),
+  },
+  // The motion component: a video from a template, rendered on the desktop
+  // (motion-task.ts).
+  {
+    name: "motion",
+    when: (ctx) => ctx.hostServices != null && motionToolEnabled(),
+    build: (ctx) =>
+      buildMotionTool(
         subAgentOptions(ctx, { hostServices: ctx.hostServices! }),
         ctx.emit
       ),

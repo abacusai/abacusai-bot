@@ -119,6 +119,13 @@ const CASES: Case[] = [
     plan: "refuse",
   },
   {
+    name: "motion",
+    input: { brief: "an intro", output_dir: "out" },
+    normal: "ask",
+    acceptEdits: "ask",
+    plan: "refuse",
+  },
+  {
     name: "browser_task",
     input: { task: "open a page" },
     normal: "ask",

@@ -1,0 +1,61 @@
+<style>
+  .ex-title { font-size: calc(var(--u) * var(--t-display)); font-weight: 850; line-height: 1.02; letter-spacing: -.035em; max-height: calc(var(--u) * 50); }
+  .size-9x16 .ex-title { max-height: calc(var(--u) * 90); }
+  /* The timeline: one dot per step, joined; done steps fill, the current one glows. */
+  .ex-line {
+    position: absolute; top: calc(var(--u) * 7); left: var(--pad); right: var(--pad);
+    display: flex; align-items: center; z-index: 2;
+  }
+  .ex-dot {
+    flex: none; width: calc(var(--u) * 6.4); height: calc(var(--u) * 6.4); border-radius: 50%;
+    display: grid; place-items: center; font-size: calc(var(--u) * 2.8); font-weight: 800; font-variant-numeric: tabular-nums;
+    border: calc(var(--u) * .35) solid color-mix(in srgb, var(--ink) 25%, transparent); color: color-mix(in srgb, var(--ink) 55%, transparent);
+  }
+  .ex-join:last-child { display: none; }
+  .ex-join { flex: 1; height: calc(var(--u) * .35); background: color-mix(in srgb, var(--ink) 18%, transparent); margin: 0 calc(var(--u) * 1.2); border-radius: 99px; }
+  .ex-dot.done { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+  .ex-dot.now {
+    background: var(--gradient); border-color: transparent; color: var(--paper);
+    box-shadow: 0 0 0 calc(var(--u) * 1.2) color-mix(in srgb, var(--accent) 22%, transparent);
+    animation: pop .6s var(--ease-back) calc(var(--d) + .15s) both;
+  }
+  .ex-title-line { position: static; width: min(100%, calc(var(--u) * 90)); margin-top: calc(var(--u) * 3); }
+  /* A step: the number large beside (16:9) or above (tall, square) the words. */
+  .ex-step { flex-direction: row; align-items: center; justify-content: flex-start; text-align: start; gap: calc(var(--u) * 7); padding-top: calc(var(--pad) + var(--u) * 6); }
+  .ex-num {
+    flex: none; font-size: calc(var(--u) * 30); font-weight: 900; line-height: .8; letter-spacing: -.05em;
+    font-variant-numeric: tabular-nums;
+  }
+  .ex-body { display: flex; flex-direction: column; gap: calc(var(--u) * 2.6); min-width: 0; flex: 1; }
+  .ex-heading { font-size: calc(var(--u) * var(--t-h2)); font-weight: 850; line-height: 1.06; letter-spacing: -.025em; max-height: calc(var(--u) * 32); width: 100%; }
+  .ex-text { font-size: calc(var(--u) * var(--t-body)); font-weight: 450; line-height: 1.4; opacity: .84; max-height: calc(var(--u) * 36); width: 100%; }
+  .ex-outro { font-size: calc(var(--u) * var(--t-h1)); font-weight: 850; line-height: 1.08; letter-spacing: -.025em; max-height: calc(var(--u) * 50); }
+  .size-9x16 .ex-step, .size-1x1 .ex-step { flex-direction: column; align-items: flex-start; justify-content: center; gap: calc(var(--u) * 4); }
+  .size-9x16 .ex-body, .size-1x1 .ex-body { flex: none; width: 100%; }
+  .size-16x9 .ex-num { font-size: calc(var(--u) * 38); }
+  .size-16x9 .ex-heading { font-size: calc(var(--u) * var(--t-h1)); max-height: calc(var(--u) * 36); }
+  .size-16x9 .ex-text { font-size: calc(var(--u) * var(--t-h3)); }
+  .size-1x1 .ex-num { font-size: calc(var(--u) * 22); }
+  .size-9x16 .ex-num { font-size: calc(var(--u) * 34); }
+  .size-9x16 .ex-heading { max-height: calc(var(--u) * 48); }
+  .size-9x16 .ex-text { max-height: calc(var(--u) * 80); }
+  .size-9x16 .ex-outro { max-height: calc(var(--u) * 90); }
+  .size-9x16 .ex-line { top: calc(var(--u) * 14); }
+</style>
+<div class="scene" style="--d:0s;--len:{{titleLen}}s">
+  <h1 class="ex-title rise" dir="auto" style="--k:.2s" data-fit>{{title}}</h1>
+  <div class="ex-line ex-title-line fade" style="--k:.8s">{{#titleDots}}<div class="ex-dot">{{n}}</div><div class="ex-join"></div>{{/titleDots}}</div>
+</div>
+{{#steps}}<div class="scene ex-step{{#last}} last{{/last}}" style="--d:{{d}}s;--len:{{len}}s">
+  <div class="ex-line">{{#dots}}<div class="ex-dot {{state}}">{{n}}</div><div class="ex-join"></div>{{/dots}}</div>
+  <div class="ex-num gradient-text pop" style="--k:.05s">{{number}}</div>
+  <div class="ex-body">
+    <h2 class="ex-heading rise" dir="auto" style="--k:.2s" data-fit>{{heading}}</h2>
+    <p class="ex-text rise" dir="auto" style="--k:.5s" data-fit>{{text}}</p>
+  </div>
+</div>
+{{/steps}}
+{{#outro}}<div class="scene last" style="--d:{{outroAt}}s">
+  <p class="ex-outro gradient-text rise" dir="auto" style="--k:.15s" data-fit>{{outro}}</p>
+  <div class="rule wipe" style="--k:.6s"></div>
+</div>{{/outro}}
