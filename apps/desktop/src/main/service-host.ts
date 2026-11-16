@@ -9996,8 +9996,8 @@ export class ServiceHost {
   }
 
   /**
-   * The built-in browser showed a sign-in page (the user's own browsing or a
-   * bot's) or came back from one: the site is listed, so its rule applies.
+   * A sign-in was made in the built-in browser (the user's own browsing or a
+   * bot's), there or by single sign-on: the site is listed, so its rule applies.
    */
   noteBrowserSignIn(url: string): void {
     if (this.platform === "electron") this.connectedSites.add(url);
