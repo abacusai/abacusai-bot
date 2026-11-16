@@ -17,6 +17,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
+import { signedInNote, signedInSites } from "@abacus-ai/agent/signed-in-note";
 import {
   afterAll,
   afterEach,
@@ -4210,9 +4211,9 @@ describe("a connected site's rule", () => {
       url: "https://mail.test/inbox",
     });
     expect(opened.isError).toBe(false);
-    expect(opened.text).toContain(
-      "The browser is signed in to mail.test with the user's own account"
-    );
+    expect(opened.text).toContain(signedInNote("mail.test"));
+    // Read back by the run, which tells the chat's model to say so.
+    expect(signedInSites(opened.text)).toEqual(["mail.test"]);
     respondWith(() => oneButton);
     const again = await sitedCall("browser_snapshot", { action: "snapshot" });
     expect(again.text).not.toContain("signed in to mail.test");

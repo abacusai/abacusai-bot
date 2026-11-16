@@ -25,6 +25,7 @@ import { scopeEmit, tagEvent } from "./event-meta.js";
 import { vaultEnabled } from "./excluded-tools.js";
 import { AgentMode, type AgentEvent } from "./protocol.js";
 import { DeliveredMedia } from "./send-media-tool.js";
+import { signedInLine } from "./signed-in-note.js";
 import {
   UNATTENDED_BROWSER_TOOLS,
   type UnattendedPolicy,
@@ -665,11 +666,17 @@ export function buildBrowserTaskTool(
         ? `\n\n(Screenshots this run took and did not send, newest last: ${unsent.join(", ")}. To show one, send_media that id; never another.)`
         : "";
 
+    // First, not after the report: a reply that sums the report up kept
+    // what was found and dropped whose account it came from.
+    const signedInLineText = signedInLine(result.signedInSites ?? []);
+    const signedInFirst =
+      signedInLineText.length > 0 ? `${signedInLineText}\n\n` : "";
+
     return {
       content: [
         {
           type: "text" as const,
-          text: `${result.text}${tail}${heardNote}${sentNote}${takenNote}${budgetNote}`,
+          text: `${signedInFirst}${result.text}${tail}${heardNote}${sentNote}${takenNote}${budgetNote}`,
         },
       ],
       details: {

@@ -22,6 +22,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { BotSession } from "./bot/bot-session.js";
 import { DISPATCH_LIMIT } from "./browser-task-tool.js";
 import type { ForeverEngine } from "./forever/engine.js";
+import { signedInNote } from "./signed-in-note.js";
 
 const REPORT =
   "The export finished and the file is listed under Reports. " +
@@ -98,7 +99,14 @@ beforeAll(async () => {
     fakeProviderConfig(provider),
     "utf8"
   );
-  server = await FakeMcpServer.start([{ name: "browser_navigate" }]);
+  server = await FakeMcpServer.start([
+    { name: "browser_navigate" },
+    // A page of a connected site: the browser adds the user's-sign-in note.
+    {
+      name: "browser_get_text",
+      reply: () => `My trips\n${signedInNote("localtest.me")}`,
+    },
+  ]);
   const configPath = path.join(home, "mcp.json");
   fs.writeFileSync(
     configPath,
@@ -138,6 +146,25 @@ const startBot = async (): Promise<ForeverEngine> => {
   await bot.start();
   return bot;
 };
+
+describe("a run that read a page with the user's own sign-in", () => {
+  it("hands the chat's model the sign-in first, for it to tell the user", async () => {
+    scriptChat((_call, turn) =>
+      turn === 1
+        ? { call: { name: "browser_get_text", args: {} } }
+        : { say: REPORT }
+    );
+    await (await startBot()).send("what is my booking");
+
+    const [result] = toolResults();
+    expect(result).toMatch(
+      /This run used the user's own sign-in on localtest\.me[^\n]*Tell the user/
+    );
+    expect(result!.indexOf("localtest.me")).toBeLessThan(
+      result!.indexOf(REPORT)
+    );
+  }, 60_000);
+});
 
 describe("a run whose report is sent back for a missing field", () => {
   it("hands back the whole report with the answer after it", async () => {

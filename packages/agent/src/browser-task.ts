@@ -34,6 +34,7 @@ import type { AgentEvent } from "./protocol.js";
 import { createResourceLoader } from "./resource-loader.js";
 import { DeliveredMedia, type MediaCheck } from "./send-media-tool.js";
 import { isMediaId } from "./send-media.js";
+import { signedInSites } from "./signed-in-note.js";
 import { whenAborted } from "./subagent-abort.js";
 import { forwardChildToolEvents, traceChildEvent } from "./subagent-events.js";
 import {
@@ -282,6 +283,8 @@ export interface BrowserTaskResult {
   steers: string[];
   /** The `browser_pause` the run stopped at; its stop is "needs-user". */
   pause?: CheckoutPause;
+  /** Sites where the browser used the user's own sign-in (Connected sites). */
+  signedInSites?: string[];
   stoppedBy:
     | "completed"
     | "needs-user"
@@ -701,6 +704,8 @@ export async function runBrowserTask(
   let retries = 0;
   let providerError = "";
   let readChars = 0;
+  /** Sites where the browser said the page used the user's own sign-in. */
+  const signedIn = new Set<string>();
   let warnedRepeating = false;
   const repeats = new RepeatTracker();
   const executes = new ExecuteStreakTracker();
@@ -845,6 +850,7 @@ export async function runBrowserTask(
           readChars += text.length;
           for (const id of screenshotMediaIds(text))
             options.takenMedia?.add(id);
+          for (const site of signedInSites(text)) signedIn.add(site);
         }
 
         if (event.type === "tool_execution_start") {
@@ -1088,6 +1094,7 @@ export async function runBrowserTask(
       turns: budget.turns,
       executeCalls: executes.total,
       steers,
+      ...(signedIn.size > 0 ? { signedInSites: [...signedIn] } : {}),
       ...(midTask != null && midTask.consumedIds().length > 0
         ? { consumedMessageIds: midTask.consumedIds() }
         : {}),

@@ -93,6 +93,27 @@ describe("a browser run's card", () => {
     );
   });
 
+  it("opens with the user's own sign-in the run used, for the caller to tell the user", async () => {
+    stubs.run.mockResolvedValue({
+      ...finished("completed"),
+      signedInSites: ["localtest.me"],
+    });
+    const tool = buildBrowserTaskTool(
+      { cwd: process.cwd() } as never,
+      () => {}
+    );
+    const text = (await tool.execute("call-1", { task: "my booking" }))
+      .content[0]?.text;
+    expect(text).toMatch(
+      /^\(This run used the user's own sign-in on localtest\.me[^\n]*Tell the user[^\n]*\)\n\nthe report/
+    );
+  });
+
+  it("says nothing of a sign-in when the run used none", async () => {
+    const { result } = await run("completed");
+    expect(result.content[0]?.text).not.toMatch(/sign-in/);
+  });
+
   it("quotes the user's mid-run words clipped, with codes and ID numbers withheld", () => {
     expect(quotedUserWords("the code is 482913, take the 1840 flight")).toBe(
       "the code is [number withheld], take the 1840 flight"

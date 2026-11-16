@@ -4,6 +4,7 @@ import path from "path";
 import type { ChannelCapabilities } from "@abacus-ai/agent/channel";
 import { modelPath } from "@abacus-ai/agent/model-path";
 import { MEDIA_CHECK_TOOL_NAME, MEDIA_HELD } from "@abacus-ai/agent/send-media";
+import { signedInNote } from "@abacus-ai/agent/signed-in-note";
 import { readTravelers } from "@abacus-ai/agent/traveler-store";
 import type { IpcEvent } from "@abacus-ai/contract/contracts";
 import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
@@ -4527,9 +4528,7 @@ export class McpBrowserServer extends McpHttpServer {
     const told = this.toldSignedIn.get(key);
     if (told != null && now - told < SIGNED_IN_TOLD_MS) return [];
     this.toldSignedIn.set(key, now);
-    return [
-      `The browser is signed in to ${site} with the user's own account (Connected sites): this page shows their account, not what anyone would see. Say that the user's sign-in was used when you report it.`,
-    ];
+    return [signedInNote(site)];
   }
 
   /** Whether the user's own words, as the runtime stamped them on this call, open `url`. */
