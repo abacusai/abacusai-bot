@@ -8,7 +8,20 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `6e9926a2`, browser security and Connected sites
+## Current: `94544149`, one folder picker for routines
+
+**456 / 9844405 / 3304119.** Records the renderer with the routines folder
+picker (one picker everywhere, with Choose a folder). Measured on this branch
+merged with main `367ada38`. Against main `367ada38` alone (455 / 9843155 /
+3303241): +1 chunk, +1250 bytes (+0.01%), +878 gzip bytes (+0.03%). Main had
+already grown 4 chunks (+0.89%) and 0.83% in bytes past `6e9926a2` without a
+new baseline, so this one chunk crossed the 1% allowance. `apps/web`'s
+dependencies did not change. The 1% allowance is unchanged.
+
+Measured from builds on Linux x64, clean `dist`, summed the same way as
+`check-desktop-parity.mjs`. This baseline-only change touches no renderer code.
+
+### `6e9926a2`, browser security and Connected sites
 
 **451 / 9762250 / 3273516.** Records the renderer with the browser's Connected
 sites (the Settings card listing each site the bot browser is signed in to,
