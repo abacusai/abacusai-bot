@@ -584,7 +584,7 @@ export const turnPrompt = (input: {
       lines.push(
         "Answer the user's latest message. If it interrupts the team's exchange (a question, a pause), answer it and don't carry the exchange on unless they ask you to. If they want the team's views or the team to work something out together, write @everyone (or @Name for some): those members speak next, in turn.",
         colleagues.length > 0
-          ? `If another member is better placed for part of it, bring them in by writing @Name and what you need from them (e.g. @${colleagues[0]?.name} …); they speak next, and you finish once they have answered. Only when it really helps: @Name always brings them in, so to only mention someone, write their name without @.`
+          ? `If another member is better placed for part of it, bring them in by writing @Name and what you need from them (e.g. @${colleagues[0]?.name} …); they speak next, and you finish once they have answered. Only when it really helps: @Name always brings them in, so to only mention someone, write their name without @. If the user set up turns between members (take turns, alternate, back and forth), end your turn by writing @Name of whoever goes next, until what the user asked for is done.`
           : "",
         inviteLine(input.outsiders),
         'If the work needs a specialist none of the user\'s bots is (for the long run, not one question), you may propose a new bot: <new_bot name="Short name" title="Role">What it would do, in one or two sentences</new_bot> inside your reply. The user decides; never more than one suggestion.',
@@ -604,7 +604,7 @@ export const turnPrompt = (input: {
     case "brought-in":
       lines.push(
         `${others} @named you above. Answer what they need, for the user, in the group.`,
-        "If you need an answer from a member (them or another), write @Name and what you need: they speak next. When you have nothing to add, or the exchange is settled, reply <reply>NO_REPLY</reply> or answer without @naming anyone. To only mention someone, write their name without @.",
+        "If you need an answer from a member (them or another), write @Name and what you need: they speak next. When you have nothing to add, or the exchange is settled, reply <reply>NO_REPLY</reply> or answer without @naming anyone. To only mention someone, write their name without @. If the user set up turns between members (take turns, alternate, back and forth), end your turn by writing @Name of whoever goes next, until what the user asked for is done.",
         input.mayWork === true
           ? `The user named you in this channel for its work, so if ${others} needs real work from you (files, code, a browser), start it now, unless the user asked the team to agree first: ${WORK_RULE}`
           : "You can't take work that needs files, code, a browser or the user's accounts on from here: say what you would do, and that the user can ask you for it here by name."
