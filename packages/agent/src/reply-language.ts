@@ -788,3 +788,59 @@ export const progressLanguageSteer = (
   const { got, expected } = mismatchNames(mismatch);
   return `You just wrote to the person in ${got}, but they write in ${expected}. Write everything from here on in their language, progress notes included, and finish the work as planned.`;
 };
+
+/** A script as the model is told it: "the Latin alphabet". */
+export const scriptName = (script: Script): string => SCRIPT_NAMES[script];
+
+/**
+ * The script a message is written in, from as few as a handful of letters
+ * ("what is on this page?"), or null when it has too few or no clear one.
+ */
+export const wordsScript = (text: string): Script | null => {
+  const { counts, letters } = scriptCounts(text);
+  if (letters < USED_LETTERS) return null;
+  let best: Script | null = null;
+  let bestCount = 0;
+  for (const [script, count] of counts)
+    if (count > bestCount) {
+      best = script;
+      bestCount = count;
+    }
+  return best != null && bestCount / letters >= DOMINANT_SHARE ? best : null;
+};
+
+/**
+ * Whether a browser run's report, shown in the user's chat, is in a script
+ * or language they do not write in: the bot's own reply check, and for words
+ * too short to judge that way ("what is on this page?"), Han in a report to
+ * someone who wrote none, a known model drift.
+ */
+export const reportLanguageMismatch = (
+  said: readonly string[],
+  report: string
+): ReplyLanguageMismatch | null => {
+  const turn = said.at(-1) ?? "";
+  if (turn.trim().length === 0) return null;
+  const mismatch = textLanguageMismatch(report, {
+    turn,
+    recent: said.slice(0, -1),
+  });
+  if (mismatch != null) return mismatch.romanized === true ? null : mismatch;
+  const theirs = scriptCounts(said.join("\n"));
+  if ((theirs.counts.get("cjk") ?? 0) > 0) return null;
+  const expected = wordsScript(said.join("\n"));
+  if (expected == null) return null;
+  const written = scriptCounts(report);
+  const han = written.counts.get("cjk") ?? 0;
+  return han >= MIN_LETTERS && han / written.letters >= FOREIGN_SHARE
+    ? { expected, got: "cjk" }
+    : null;
+};
+
+/** What a browser run is told when its report came back in the wrong language. */
+export const reportLanguageRepairPrompt = (
+  mismatch: ReplyLanguageMismatch
+): string => {
+  const { got, expected } = mismatchNames(mismatch);
+  return `Your report is written in ${got}, but the user writes in ${expected}. Write the whole report again in their language, with the same content and nothing left out.`;
+};

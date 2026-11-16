@@ -91,6 +91,17 @@ describe("the report's language", () => {
     expect(line).not.toContain("@/ws");
   });
 
+  it("names the user's alphabet, so a report in another script is plainly wrong", () => {
+    // Told only "the language the user wrote in", a run asked "what is on
+    // this page?" wrote its report in Chinese, shown in the chat.
+    expect(reportLanguageLine(["what is on this page?"])).toMatch(
+      /Latin alphabet[^.]*not in another script/
+    );
+    expect(reportLanguageLine(["इस पेज पर क्या है, मुझे बताओ"])).toMatch(
+      /Devanagari/
+    );
+  });
+
   it("adds nothing without words of the user's", () => {
     expect(reportLanguageLine([])).toBe("");
     expect(reportLanguageLine(["@/ws/a.pdf"])).toBe("");

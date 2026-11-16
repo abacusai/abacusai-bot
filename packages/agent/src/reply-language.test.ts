@@ -1140,3 +1140,35 @@ describe("the language within one script (language-id.ts)", () => {
     });
   });
 });
+
+describe("a browser run's report, against the user's words", () => {
+  it("is Chinese where the user writes only short English, and is sent back", async () => {
+    const { reportLanguageMismatch, reportLanguageRepairPrompt } =
+      await import("./reply-language.js");
+    const chinese =
+      "## 页面报告 页面标题：订单页面。页面主标题只有一行内容，没有其他按钮或链接，也没有账户名称。";
+    const said = ["open the browser", "what is on this page?"];
+    const mismatch = reportLanguageMismatch(said, chinese);
+    expect(mismatch).toMatchObject({ got: "cjk" });
+    expect(reportLanguageRepairPrompt(mismatch!)).toMatch(
+      /^Your report is written in Chinese.*, but the user writes in the Latin alphabet\. Write the whole report again/
+    );
+    // English with a few characters quoted from a page is English.
+    expect(
+      reportLanguageMismatch(
+        said,
+        'The page says "订单" (orders) above one line: Booking K7Q2ZX, Delhi to Bengaluru, Friday.'
+      )
+    ).toBeNull();
+    // Chinese for a Chinese ask is right.
+    expect(reportLanguageMismatch(["这个页面上有什么？"], chinese)).toBeNull();
+    expect(reportLanguageMismatch([], chinese)).toBeNull();
+  });
+
+  it("names the script of even a short message", async () => {
+    const { wordsScript } = await import("./reply-language.js");
+    expect(wordsScript("what is on this page?")).toBe("latin");
+    expect(wordsScript("इस पेज पर क्या है")).toBe("devanagari");
+    expect(wordsScript("ok")).toBeNull();
+  });
+});
