@@ -464,3 +464,104 @@ describe("which browser session a tab's sign-ins are in", () => {
     expect(lookup).not.toHaveBeenCalled();
   });
 });
+
+describe("a sign-in kept only in page storage (no cookies)", () => {
+  // A site keeping its sign-in as a token in localStorage or IndexedDB has
+  // no cookies: it was used with no rule, and never found among earlier
+  // sign-ins. The page's storage is read in the page, by the browser.
+  const keys = (...names: string[]) => vi.fn(async () => names);
+
+  it("holds a listed site to its rule when the page holds storage", async () => {
+    const { sites, ask } = setup([], "deny");
+    sites.add("notes.app");
+    expect(
+      await sites.gate(
+        "https://notes.app/",
+        "1/s",
+        undefined,
+        keys("auth_token")
+      )
+    ).toMatch(/said no/);
+    expect(ask).toHaveBeenCalledTimes(1);
+    expect(
+      await sites.gate("https://notes.app/", "2/s", undefined, keys())
+    ).toBeNull();
+  });
+
+  it("lists an unlisted site whose page keeps a sign-in token, and asks before anything is read", async () => {
+    const { sites, ask } = setup([], "deny");
+    for (const name of [
+      "access_token",
+      "firebase:authUser:x",
+      "jwt",
+      "session",
+    ]) {
+      const site = `${name.replace(/[^a-z]/gi, "")}.example`;
+      expect(
+        await sites.gate(
+          `https://${site}/`,
+          "1/s",
+          undefined,
+          keys("theme", name)
+        )
+      ).toMatch(/said no/);
+    }
+    expect(ask).toHaveBeenCalledTimes(4);
+    const listed = await sites.list();
+    expect(listed.map((s) => s.site)).toContain("accesstoken.example");
+    expect(listed.find((s) => s.site === "accesstoken.example")?.policy).toBe(
+      "ask"
+    );
+  });
+
+  it("never lists a site on analytics or preferences alone", async () => {
+    const { sites, ask } = setup([]);
+    expect(
+      await sites.gate(
+        "https://news.example/",
+        "1/s",
+        undefined,
+        keys(
+          "_ga",
+          "amplitude_unsent",
+          "ajs_user_id",
+          "_hjSession_1",
+          "mp_x_mixpanel",
+          "theme"
+        )
+      )
+    ).toBeNull();
+    expect(ask).not.toHaveBeenCalled();
+    expect(await sites.list()).toEqual([]);
+  });
+
+  it("treats a page that blocks or throws on storage as holding nothing", async () => {
+    const { sites, ask } = setup([]);
+    sites.add("notes.app");
+    const throws = vi.fn(async () => {
+      throw new Error("SecurityError");
+    });
+    expect(
+      await sites.gate("https://notes.app/", "1/s", undefined, throws)
+    ).toBeNull();
+    expect(ask).not.toHaveBeenCalled();
+  });
+
+  it("reads the page only when cookies do not already answer", async () => {
+    const { sites } = setup([INDIGO]);
+    sites.add("goindigo.in");
+    const read = keys("auth_token");
+    await sites.gate("https://goindigo.in/", "1/s", undefined, read);
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it("tells a run the page shows the user's account, and keeps the site in Settings", async () => {
+    const { sites } = setup([]);
+    await sites.gate("https://notes.app/", "1/s", undefined, keys("id_token"));
+    expect(
+      await sites.signedInOn("https://notes.app/x", undefined, keys("id_token"))
+    ).toBe("notes.app");
+    expect(await sites.signedInOn("https://notes.app/x")).toBeNull();
+    expect((await sites.list()).map((s) => s.site)).toEqual(["notes.app"]);
+  });
+});

@@ -685,6 +685,20 @@ const SIGN_IN_WATCHED = new Set([
   "browser_interact",
 ]);
 /** A password field on the page, or one that was before a "show password" toggle. */
+/**
+ * The page's own storage keys: localStorage keys and IndexedDB database
+ * names, where a sign-in kept with no cookies lives. Anything the page
+ * blocks or throws is nothing.
+ */
+const PAGE_STORAGE_JS = `(async () => {
+  const keys = [];
+  try { for (let i = 0; i < localStorage.length && keys.length < 200; i++) { const k = localStorage.key(i); if (k != null) keys.push(k); } } catch {}
+  try { if (indexedDB.databases) for (const db of await indexedDB.databases()) if (db.name) keys.push(db.name); } catch {}
+  return keys;
+})()`;
+/** A page that does not answer about its storage in this long holds nothing. */
+const PAGE_STORAGE_MS = 800;
+
 const HAS_PASSWORD_FIELD_JS = `!!document.querySelector('input[type=password], input[${WAS_PASSWORD_ATTRIBUTE}]')`;
 
 /** A card detail the vault cannot give, left to the user, never guessed. */
@@ -704,7 +718,9 @@ export interface McpBrowserServerOptions {
   siteGate?: (
     url: string,
     sessionId: string,
-    pageId?: number
+    pageId?: number,
+    /** The page's own storage keys, when the page is on `url`'s site. */
+    storage?: () => Promise<string[]>
   ) => Promise<string | null>;
   /**
    * The bot's browser reached a site's sign-in page (a password field on
@@ -716,7 +732,11 @@ export interface McpBrowserServerOptions {
    * The connected site `url` is on when the browser holds the user's sign-in
    * there, else null: the run is told its page shows the user's own account.
    */
-  signedInOn?: (url: string, pageId?: number) => Promise<string | null>;
+  signedInOn?: (
+    url: string,
+    pageId?: number,
+    storage?: () => Promise<string[]>
+  ) => Promise<string | null>;
   /** Gate consulted before each tool call; when omitted, nothing is gated. */
   requestPermission?: (
     tool: string,
@@ -4393,7 +4413,12 @@ export class McpBrowserServer extends McpHttpServer {
         ? args.url
         : (page?.getURL() ?? null);
     if (url == null) return null;
-    const refusal = await gate(url, sessionId, page?.id);
+    const refusal = await gate(
+      url,
+      sessionId,
+      page?.id,
+      this.storageReader(page, url)
+    );
     return refusal == null ? null : this.err(refusal);
   }
 
@@ -4442,7 +4467,12 @@ export class McpBrowserServer extends McpHttpServer {
     const was = hostOf(before);
     const is = hostOf(now);
     if (is == null || (was != null && sameSite(was, is))) return null;
-    const refusal = await gate(now, sessionId, page.id);
+    const refusal = await gate(
+      now,
+      sessionId,
+      page.id,
+      this.storageReader(page, now)
+    );
     if (refusal == null) return null;
     await page.loadURL("about:blank").catch(() => undefined);
     return this.err(refusal);
@@ -4564,7 +4594,48 @@ export class McpBrowserServer extends McpHttpServer {
     const url = page?.getURL();
     if (signedInOn == null || sessionId == null || page == null || url == null)
       return null;
-    return signedInOn(url, page.id).catch(() => null);
+    return signedInOn(url, page.id, this.storageReader(page, url)).catch(
+      () => null
+    );
+  }
+
+  /**
+   * Reads `page`'s own storage keys, when the page is on `url`'s site (a goto
+   * elsewhere: the page's storage is another site's). Called only when
+   * cookies do not answer; bounded, and nothing on any failure.
+   */
+  private storageReader(
+    page: BrowserPage | null,
+    url: string
+  ): (() => Promise<string[]>) | undefined {
+    if (page == null) return undefined;
+    let here: string;
+    let there: string;
+    try {
+      here = new URL(page.getURL()).hostname;
+      there = new URL(url).hostname;
+    } catch {
+      return undefined;
+    }
+    if (!sameSite(here, there)) return undefined;
+    return async () => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        const keys = await Promise.race([
+          this.readPage(page, PAGE_STORAGE_JS),
+          new Promise<string[]>((resolve) => {
+            timer = setTimeout(() => resolve([]), PAGE_STORAGE_MS);
+          }),
+        ]);
+        return Array.isArray(keys)
+          ? keys.filter((key): key is string => typeof key === "string")
+          : [];
+      } catch {
+        return [];
+      } finally {
+        clearTimeout(timer);
+      }
+    };
   }
 
   /**

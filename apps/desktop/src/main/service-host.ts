@@ -1332,21 +1332,26 @@ export class ServiceHost {
       this.requestBrowserToolPermission(tool, summary, sessionId),
     // Connected sites live in the desktop browser's saved session, or in the
     // imported Chrome profile the tab uses.
-    siteGate: (url, sessionId, pageId) =>
+    siteGate: (url, sessionId, pageId, storage) =>
       this.platform === "electron"
         ? this.connectedSites.gate(
             url,
             sessionId,
-            this.importedPartition(pageId)
+            this.importedPartition(pageId),
+            storage
           )
         : Promise.resolve(null),
     onSignInPage: (site, sessionId) => {
       if (this.platform === "electron")
         this.connectedSites.signInPage(site, sessionId);
     },
-    signedInOn: (url, pageId) =>
+    signedInOn: (url, pageId, storage) =>
       this.platform === "electron"
-        ? this.connectedSites.signedInOn(url, this.importedPartition(pageId))
+        ? this.connectedSites.signedInOn(
+            url,
+            this.importedPartition(pageId),
+            storage
+          )
         : Promise.resolve(null),
     target: () => this.browserTargetSource(),
     // Only the hosted computer carries a chat that takes media (WhatsApp).

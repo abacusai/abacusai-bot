@@ -121,10 +121,44 @@ const SIGNED_IN_FOR_CHAT_MS = 45 * 60_000;
 const SIGN_IN_COOKIE =
   /sess|auth|token|login|logged|remember|jwt|sso|(?:^|[^a-z])s?sid(?:[^a-z]|$)|^sid|psid|li_at|user_?id|account/i;
 
+/**
+ * A page storage key (localStorage key or IndexedDB name) that keeps a
+ * sign-in: a token, a session, the signed-in user. Analytics and
+ * preferences never count, however they are named.
+ */
+const SIGN_IN_STORAGE =
+  /token|auth|sess|jwt|sso|login|logged|credential|account|user|oidc|msal|identity/i;
+const NOT_SIGN_IN_STORAGE =
+  /^(_ga|_gid|_gcl|_hj|_fbp|_fbc|_uet|_clck|_clsk|_pk_|__insp|ajs_|amplitude|amp_|mp_|mixpanel|optimizely|intercom|ld:|segment|statsig|posthog|ph_|heap|fs_|_dd_|datadog|sentry|theme|lang|locale|consent|cookie)/i;
+
+/** Reads the page's storage keys (localStorage, IndexedDB names); [] when it cannot. */
+export type PageStorage = () => Promise<string[]>;
+
+const readStorage = async (storage?: PageStorage): Promise<string[]> => {
+  if (storage == null) return [];
+  try {
+    const keys = await storage();
+    return Array.isArray(keys)
+      ? keys.filter((key): key is string => typeof key === "string")
+      : [];
+  } catch {
+    return [];
+  }
+};
+
+const keepsSignIn = (key: string): boolean =>
+  SIGN_IN_STORAGE.test(key) && !NOT_SIGN_IN_STORAGE.test(key);
+
 interface Saved {
   sites: Record<
     string,
-    { policy: ConnectedSitePolicy; addedAt: number; lastUsedAt?: number }
+    {
+      policy: ConnectedSitePolicy;
+      addedAt: number;
+      lastUsedAt?: number;
+      /** Seen keeping its sign-in in page storage: shown even with no cookies. */
+      storage?: boolean;
+    }
   >;
   /** The browser's earlier sign-ins were listed (`seedExisting`). */
   seeded?: boolean;
@@ -345,8 +379,8 @@ export class ConnectedSites {
     const out: ConnectedSite[] = [];
     const partitions = this.partitions();
     for (const [site, entry] of Object.entries(saved.sites)) {
-      let held = false;
-      for (const partition of partitions)
+      let held = entry.storage === true;
+      for (const partition of held ? [] : partitions)
         if (
           (await this.cookiesOf(site, partition).catch(() => [])).length > 0
         ) {
@@ -407,12 +441,43 @@ export class ConnectedSites {
    * The listed site `url` is on, when the browser holds its sign-in: a page
    * there shows the user's own account. Null for any other page.
    */
-  async signedInOn(url: string, partition?: string): Promise<string | null> {
+  async signedInOn(
+    url: string,
+    partition?: string,
+    storage?: PageStorage
+  ): Promise<string | null> {
     const site = this.siteOf(url);
     if (site == null) return null;
     await this.seedProfile(partition);
     if (this.read().sites[site] == null) return null;
-    return (await this.cookiesOf(site, partition)).length > 0 ? site : null;
+    if ((await this.cookiesOf(site, partition)).length > 0) return site;
+    return (await readStorage(storage)).length > 0 ? site : null;
+  }
+
+  /**
+   * Whether the browser holds a sign-in on a site, by its cookies or, with
+   * none, the page's own storage (a token in localStorage or IndexedDB).
+   * An unlisted site whose storage keeps a sign-in is listed (default rule).
+   */
+  private async held(
+    site: string,
+    partition: string | undefined,
+    storage: PageStorage | undefined
+  ): Promise<boolean> {
+    const listed = this.read().sites[site] != null;
+    if (listed && (await this.cookiesOf(site, partition)).length > 0)
+      return true;
+    const keys = await readStorage(storage);
+    if (listed) return keys.length > 0;
+    if (!keys.some(keepsSignIn)) return false;
+    const saved = this.read();
+    saved.sites[site] ??= {
+      policy: defaultPolicy(site),
+      addedAt: this.now(),
+    };
+    saved.sites[site].storage = true;
+    this.write(saved);
+    return true;
   }
 
   /**
@@ -440,20 +505,21 @@ export class ConnectedSites {
    * Why a browser call on `url` may not run now, or null when it may: the
    * page is on a listed site the browser is signed in to, and its rule says
    * no, or says ask and the user did not allow it in this chat. `partition`
-   * is the imported profile the page's browser uses, if it uses one.
+   * is the imported profile the page's browser uses, if it uses one;
+   * `storage` reads the page's own storage, when the page is on that site.
    */
   async gate(
     url: string,
     sessionId: string,
-    partition?: string
+    partition?: string,
+    storage?: PageStorage
   ): Promise<string | null> {
     const site = this.siteOf(url);
     if (site == null) return null;
     await this.seedProfile(partition);
-    const saved = this.read();
-    const entry = saved.sites[site];
+    if (!(await this.held(site, partition, storage))) return null;
+    const entry = this.read().sites[site];
     if (entry == null) return null;
-    if ((await this.cookiesOf(site, partition)).length === 0) return null;
     if (!this.deps.isOwnChat(sessionId))
       return `Only the user's own chats can use their sign-in on ${site}; this chat is not theirs. Do not use ${site} here.`;
     const touch = (): null => {

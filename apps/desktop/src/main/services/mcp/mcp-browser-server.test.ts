@@ -4154,6 +4154,8 @@ describe("a connected site's rule", () => {
   const gateCalls: string[] = [];
   /** The tab each gate call named: its browser profile holds the sign-ins. */
   const gatePages: Array<number | undefined> = [];
+  /** What each gate call's page-storage reader found (null: none given). */
+  const gateStorage: Array<string[] | null> = [];
   const loginStops: string[] = [];
   const refuse = "The user blocked bots from using their sign-in on bank.test.";
 
@@ -4214,9 +4216,10 @@ describe("a connected site's rule", () => {
     sited = new McpBrowserServer({
       target: () => fakeTarget,
       timeouts: { attachMs: 300, navigateMs: 600, historyMs: 600 },
-      siteGate: async (url, _sessionId, pageId) => {
+      siteGate: async (url, _sessionId, pageId, storage) => {
         gateCalls.push(url);
         gatePages.push(pageId);
+        gateStorage.push(storage == null ? null : await storage());
         return url.includes("bank.test") ? refuse : null;
       },
       onSignInPage: (site) => loginStops.push(site),
@@ -4233,6 +4236,7 @@ describe("a connected site's rule", () => {
   beforeEach(() => {
     gateCalls.length = 0;
     gatePages.length = 0;
+    gateStorage.length = 0;
     loginStops.length = 0;
   });
 
@@ -4335,6 +4339,35 @@ describe("a connected site's rule", () => {
     expect(signedInSitesOf(after._meta, SIGNED_IN_BY_RUN_META)).toEqual([
       "mail.test",
     ]);
+  });
+
+  it("lets the rule read the page's own storage on the site it checks, and nothing when the page cannot answer", async () => {
+    // A sign-in kept as a token in localStorage/IndexedDB has no cookies.
+    page.url = "https://notes.example.test/home";
+    respondWith((expression) =>
+      expression.includes("localStorage.length")
+        ? ["auth_token", "theme"]
+        : oneButton
+    );
+    await sitedCall("browser_snapshot", { action: "snapshot" });
+    expect(gateStorage[0]).toEqual(["auth_token", "theme"]);
+    // A goto to another site: the current page's storage is not that site's.
+    gateStorage.length = 0;
+    await sitedCall("browser_navigate", {
+      action: "goto",
+      url: "https://other.test/next",
+    });
+    expect(gateStorage[0]).toBeNull();
+    // A page that blocks storage (throws): nothing found.
+    page.url = "https://notes.example.test/home";
+    gateStorage.length = 0;
+    respondWith((expression) => {
+      if (expression.includes("localStorage.length"))
+        throw new Error("SecurityError");
+      return oneButton;
+    });
+    await sitedCall("browser_snapshot", { action: "snapshot" });
+    expect(gateStorage[0]).toEqual([]);
   });
 
   it("notes a site whose page has a password field, by the app's own look", async () => {
