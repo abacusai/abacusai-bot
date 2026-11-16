@@ -10053,7 +10053,7 @@ export class ServiceHost {
     const result = await this.browserProfilesService.importProfile(profileId);
     // Fresh copies of the user's Chrome sign-ins: listed again for the rules.
     if (result.success && result.partition.length > 0)
-      this.connectedSites.profileImported(result.partition);
+      await this.connectedSites.profileImported(result.partition);
     return result;
   }
 

@@ -387,3 +387,61 @@ describe("an imported browser profile (the user's Chrome sign-ins)", () => {
     expect((await sites.list()).map((s) => s.site)).toEqual(["icicibank.com"]);
   });
 });
+
+describe("the saved list, when its writes overlap", () => {
+  const CHROME = "persist:bp-chrome-1";
+
+  it("keeps a site added while a profile's sign-ins are being listed, and lists a profile again when it is re-imported mid-listing", async () => {
+    const jar: Cookie[] = [{ name: "auth_token", domain: ".goindigo.in" }];
+    const { sites, store } = setup([], "allow", {
+      profiles: { [CHROME]: jar },
+    });
+    // The profile's cookies arrive late: the list is written meanwhile.
+    let release: () => void = () => undefined;
+    const slow = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const profileStore = (
+      sites as unknown as {
+        deps: { store: (p?: string) => typeof store };
+      }
+    ).deps.store(CHROME);
+    const get = profileStore.cookies.get;
+    vi.mocked(get).mockImplementationOnce(async () => {
+      const before = [...jar];
+      await slow;
+      return before;
+    });
+    const first = sites.gate("https://example.org/", "1/s", CHROME);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    sites.add("notes.io");
+    jar.push({ name: "session", domain: ".notes.io" });
+    jar.push({ name: "sid", domain: ".mail.app" });
+    const reimported = sites.profileImported(CHROME);
+    release();
+    await first;
+    await reimported;
+    await sites.gate("https://example.org/", "1/s", CHROME);
+    const listed = (await sites.list()).map((s) => s.site).sort();
+    // notes.io was added by hand mid-listing; mail.app came with the re-import.
+    expect(listed).toEqual(["goindigo.in", "mail.app", "notes.io"]);
+  });
+
+  it("does not bring sites back when the browser's data is cleared mid-listing", async () => {
+    let release: () => void = () => undefined;
+    const slow = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { sites, store } = setup([INDIGO], "allow", { seedExisting: true });
+    vi.mocked(store.cookies.get).mockImplementationOnce(async () => {
+      await slow;
+      return [INDIGO];
+    });
+    const listing = sites.list();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    sites.clear();
+    release();
+    await listing;
+    expect(await sites.list()).toEqual([]);
+  });
+});

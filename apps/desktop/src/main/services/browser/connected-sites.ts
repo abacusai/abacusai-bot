@@ -134,6 +134,20 @@ export class ConnectedSites {
 
   private seeding: Promise<void> | null = null;
   private readonly seedingProfiles = new Map<string, Promise<void>>();
+  /**
+   * Writes that wait (on the browser's cookies) run one after another: two
+   * overlapping ones each wrote the list as read before the other's, and a
+   * re-import during a listing was undone by it.
+   */
+  private writes: Promise<unknown> = Promise.resolve();
+  /** Bumped when the list is cleared: a listing begun before it writes nothing. */
+  private generation = 0;
+
+  private inTurn<T>(work: () => Promise<T>): Promise<T> {
+    const run = this.writes.then(work, work);
+    this.writes = run.catch(() => undefined);
+    return run;
+  }
 
   constructor(private readonly deps: ConnectedSitesDeps) {}
 
@@ -146,12 +160,16 @@ export class ConnectedSites {
    */
   private seedExisting(): Promise<void> {
     if (this.deps.seedExisting !== true) return Promise.resolve();
-    this.seeding ??= (async () => {
+    this.seeding ??= this.inTurn(async () => {
       if (this.read().seeded === true) return;
-      const saved = await this.listSignIns(undefined);
+      const began = this.generation;
+      const found = await this.signInSites(undefined);
+      if (began !== this.generation) return;
+      // Read, merged and written in one step: nothing else writes between.
+      const saved = this.withSites(found);
       saved.seeded = true;
       this.write(saved);
-    })().catch(() => undefined);
+    }).catch(() => undefined);
     return this.seeding;
   }
 
@@ -164,27 +182,29 @@ export class ConnectedSites {
     if (partition == null) return this.seedExisting();
     let seeding = this.seedingProfiles.get(partition);
     if (seeding == null) {
-      seeding = (async () => {
+      seeding = this.inTurn(async () => {
         if (this.read().seededProfiles?.includes(partition) === true) return;
-        const saved = await this.listSignIns(partition);
+        const began = this.generation;
+        const found = await this.signInSites(partition);
+        if (began !== this.generation) return;
+        const saved = this.withSites(found);
         saved.seededProfiles = [
           ...new Set([...(saved.seededProfiles ?? []), partition]),
         ];
         this.write(saved);
-      })().catch(() => undefined);
+      }).catch(() => undefined);
       this.seedingProfiles.set(partition, seeding);
     }
     return seeding;
   }
 
-  /** The saved list, with each site the store holds a lasting sign-in cookie for added. */
-  private async listSignIns(partition: string | undefined): Promise<Saved> {
+  /** The sites a browser session holds a lasting sign-in cookie for. */
+  private async signInSites(partition: string | undefined): Promise<string[]> {
     const cookies = await this.deps
       .store(partition)
       .cookies.get({})
       .catch(() => []);
-    // Read after the wait: a site added meanwhile is kept.
-    const saved = this.read();
+    const sites = new Set<string>();
     for (const cookie of cookies) {
       if (cookie.session === true || !SIGN_IN_COOKIE.test(cookie.name))
         continue;
@@ -192,22 +212,37 @@ export class ConnectedSites {
         cookie.domain == null
           ? null
           : this.siteOf(cookie.domain.replace(/^\./, ""));
-      if (site != null && saved.sites[site] == null)
-        saved.sites[site] = {
-          policy: defaultPolicy(site),
-          addedAt: this.now(),
-        };
+      if (site != null) sites.add(site);
     }
+    return [...sites];
+  }
+
+  /** The saved list as it is now, with each of `sites` not listed yet added. */
+  private withSites(sites: readonly string[]): Saved {
+    const saved = this.read();
+    for (const site of sites)
+      saved.sites[site] ??= {
+        policy: defaultPolicy(site),
+        addedAt: this.now(),
+      };
     return saved;
   }
 
-  /** An imported profile was imported again: its sign-ins are listed anew. */
-  profileImported(partition: string): void {
+  /**
+   * An imported profile was imported again: its sign-ins are listed anew. In
+   * turn, so a listing still running from the old copy cannot undo it.
+   */
+  profileImported(partition: string): Promise<void> {
+    // At once: the next use lists the profile again, after this in turn.
     this.seedingProfiles.delete(partition);
-    const saved = this.read();
-    if (saved.seededProfiles?.includes(partition) !== true) return;
-    saved.seededProfiles = saved.seededProfiles.filter((p) => p !== partition);
-    this.write(saved);
+    return this.inTurn(async () => {
+      const saved = this.read();
+      if (saved.seededProfiles?.includes(partition) !== true) return;
+      saved.seededProfiles = saved.seededProfiles.filter(
+        (p) => p !== partition
+      );
+      this.write(saved);
+    });
   }
 
   /** The app's own browser and each imported profile whose sign-ins are listed. */
@@ -371,6 +406,7 @@ export class ConnectedSites {
    */
   clear(): void {
     this.write({ sites: {}, seeded: true });
+    this.generation += 1;
     this.seedingProfiles.clear();
     this.allowedInChat.clear();
     this.allowedUntilQuit.clear();
