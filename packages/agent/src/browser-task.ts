@@ -34,7 +34,7 @@ import type { AgentEvent } from "./protocol.js";
 import { createResourceLoader } from "./resource-loader.js";
 import { DeliveredMedia, type MediaCheck } from "./send-media-tool.js";
 import { isMediaId } from "./send-media.js";
-import { signedInSitesOf } from "./signed-in-note.js";
+import { SIGNED_IN_BY_RUN_META, signedInSitesOf } from "./signed-in-note.js";
 import { whenAborted } from "./subagent-abort.js";
 import { forwardChildToolEvents, traceChildEvent } from "./subagent-events.js";
 import {
@@ -285,6 +285,8 @@ export interface BrowserTaskResult {
   pause?: CheckoutPause;
   /** Sites where the browser used the user's own sign-in (Connected sites). */
   signedInSites?: string[];
+  /** Sites where the run itself signed in, with details the user gave. */
+  signedInByRunSites?: string[];
   stoppedBy:
     | "completed"
     | "needs-user"
@@ -706,6 +708,8 @@ export async function runBrowserTask(
   let readChars = 0;
   /** Sites where the browser said the page used the user's own sign-in. */
   const signedIn = new Set<string>();
+  /** Sites where the run itself signed in during this chat. */
+  const signedInByRun = new Set<string>();
   let warnedRepeating = false;
   const repeats = new RepeatTracker();
   const executes = new ExecuteStreakTracker();
@@ -855,6 +859,8 @@ export async function runBrowserTask(
             event as unknown as { result?: { details?: unknown } }
           ).result?.details;
           for (const site of signedInSitesOf(details)) signedIn.add(site);
+          for (const site of signedInSitesOf(details, SIGNED_IN_BY_RUN_META))
+            signedInByRun.add(site);
         }
 
         if (event.type === "tool_execution_start") {
@@ -1099,6 +1105,9 @@ export async function runBrowserTask(
       executeCalls: executes.total,
       steers,
       ...(signedIn.size > 0 ? { signedInSites: [...signedIn] } : {}),
+      ...(signedInByRun.size > 0
+        ? { signedInByRunSites: [...signedInByRun] }
+        : {}),
       ...(midTask != null && midTask.consumedIds().length > 0
         ? { consumedMessageIds: midTask.consumedIds() }
         : {}),

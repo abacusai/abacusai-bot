@@ -109,6 +109,21 @@ describe("a browser run's card", () => {
     );
   });
 
+  it("says the run signed in itself where it did, not that the user's sign-in was used", async () => {
+    stubs.run.mockResolvedValue({
+      ...finished("completed"),
+      signedInByRunSites: ["saucedemo.com"],
+    });
+    const tool = buildBrowserTaskTool(
+      { cwd: process.cwd() } as never,
+      () => {}
+    );
+    const text = (await tool.execute("call-1", { task: "check out" }))
+      .content[0]?.text;
+    expect(text).toMatch(/^\(This run signed in to saucedemo\.com itself/);
+    expect(text).not.toMatch(/user's own sign-in/);
+  });
+
   it("says nothing of a sign-in when the run used none", async () => {
     const { result } = await run("completed");
     expect(result.content[0]?.text).not.toMatch(/sign-in/);

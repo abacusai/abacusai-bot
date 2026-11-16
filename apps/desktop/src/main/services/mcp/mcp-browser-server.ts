@@ -4,7 +4,12 @@ import path from "path";
 import type { ChannelCapabilities } from "@abacus-ai/agent/channel";
 import { modelPath } from "@abacus-ai/agent/model-path";
 import { MEDIA_CHECK_TOOL_NAME, MEDIA_HELD } from "@abacus-ai/agent/send-media";
-import { signedInMeta, signedInNote } from "@abacus-ai/agent/signed-in-note";
+import {
+  signedInByRunMeta,
+  signedInByRunNote,
+  signedInMeta,
+  signedInNote,
+} from "@abacus-ai/agent/signed-in-note";
 import { readTravelers } from "@abacus-ai/agent/traveler-store";
 import type { IpcEvent } from "@abacus-ai/contract/contracts";
 import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
@@ -2390,6 +2395,22 @@ export class McpBrowserServer extends McpHttpServer {
               return this.err("The routine's page is not open.");
           }
           const result = await act();
+          // Typed into a sign-in form: the run signs in itself, with details
+          // the user gave, not with a sign-in the browser already held.
+          // Looked at after the call, so a refused call never reads the page.
+          if (
+            name === "browser_interact" &&
+            (args.action === "fill" || args.action === "type") &&
+            result.isError !== true &&
+            sessionId != null
+          ) {
+            const site = await this.signInFormSite(sessionId);
+            const key = `${sessionId}|${site}`;
+            if (site != null && !this.signedInByRun.has(key)) {
+              this.signedInByRunAt.set(key, Date.now());
+              this.signedInByRun.add(key);
+            }
+          }
           // Landed on this computer or its network where the user never sent it.
           const local = await this.leaveLocalPage(args, sessionId);
           if (local != null) return local;
@@ -2420,11 +2441,19 @@ export class McpBrowserServer extends McpHttpServer {
               : []
           );
           // The run reads the site from here, never from the page's text.
+          const byRun =
+            signedIn != null &&
+            this.signedInByRun.has(`${sessionId}|${signedIn}`);
           return signedIn == null
             ? out
             : {
                 ...out,
-                _meta: { ...out._meta, ...signedInMeta([signedIn]) },
+                _meta: {
+                  ...out._meta,
+                  ...(byRun
+                    ? signedInByRunMeta([signedIn])
+                    : signedInMeta([signedIn])),
+                },
               };
         };
         try {
@@ -4547,12 +4576,47 @@ export class McpBrowserServer extends McpHttpServer {
    */
   private signedInLines(sessionId: string, site: string): string[] {
     const key = `${sessionId}|${site}`;
+    const byRun = this.signedInByRun.has(key);
     const now = Date.now();
     const told = this.toldSignedIn.get(key);
-    if (told != null && now - told < SIGNED_IN_TOLD_MS)
-      return [`(Signed in to ${site} with the user's own account.)`];
+    if (
+      told != null &&
+      now - told < SIGNED_IN_TOLD_MS &&
+      told >= (this.signedInByRunAt.get(key) ?? 0)
+    )
+      return [
+        byRun
+          ? `(Signed in to ${site} in this chat with the sign-in details the user gave.)`
+          : `(Signed in to ${site} with the user's own account.)`,
+      ];
     this.toldSignedIn.set(key, now);
-    return [signedInNote(site)];
+    return [byRun ? signedInByRunNote(site) : signedInNote(site)];
+  }
+
+  /**
+   * "session|site": the run typed into that site's sign-in form in this chat
+   * (details the user gave), and when. A sign-in there is then the run's
+   * own, not one the browser held before.
+   */
+  private readonly signedInByRun = new Set<string>();
+  private readonly signedInByRunAt = new Map<string, number>();
+
+  /** The site of the session's page when it shows a sign-in form, or null. */
+  private async signInFormSite(sessionId: string): Promise<string | null> {
+    const page = this.findView(sessionId);
+    if (page == null) return null;
+    let host: string;
+    try {
+      const url = new URL(page.getURL());
+      if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+      host = url.hostname;
+    } catch {
+      return null;
+    }
+    const form = await this.readPage(page, HAS_PASSWORD_FIELD_JS).catch(
+      () => false
+    );
+    return form === true ? registrableDomain(host) : null;
   }
 
   /** Whether the user's own words, as the runtime stamped them on this call, open `url`. */

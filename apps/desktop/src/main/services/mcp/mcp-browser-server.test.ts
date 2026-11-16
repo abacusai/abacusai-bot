@@ -17,7 +17,12 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-import { signedInNote, signedInSitesOf } from "@abacus-ai/agent/signed-in-note";
+import {
+  SIGNED_IN_BY_RUN_META,
+  signedInByRunNote,
+  signedInNote,
+  signedInSitesOf,
+} from "@abacus-ai/agent/signed-in-note";
 import {
   afterAll,
   afterEach,
@@ -4289,6 +4294,47 @@ describe("a connected site's rule", () => {
     gateCalls.length = 0;
     await sitedCall("browser_tabs", { action: "list" });
     expect(gateCalls).toEqual([]);
+  });
+
+  it("says the run signed in itself on a site where it typed into the sign-in form, never the user's own account", async () => {
+    // A run that logged in with details the user gave in the chat was told
+    // the page showed "the user's own account", and told the user the
+    // browser had "an existing saved sign-in" there.
+    const signInForm = (other: unknown) => (expression: string) =>
+      expression.includes("querySelector('input[type=password], input[")
+        ? true
+        : other;
+    const loginPage = {
+      ...oneButton,
+      title: "Sign in",
+      url: "https://mail.test/login",
+    };
+    respondWith(signInForm(loginPage));
+    await sitedRaw("browser_navigate", {
+      action: "goto",
+      url: "https://mail.test/login",
+    });
+    await sitedRaw("browser_snapshot", { action: "snapshot" });
+    respondWith(signInForm({ status: "ok" }));
+    const typed = await sitedRaw("browser_interact", {
+      action: "fill",
+      ref: "@e1",
+      text: "demo_user",
+    });
+    expect(typed.isError).not.toBe(true);
+    // Said on the call that typed into the form, the full sentence.
+    expect(typed.content?.[0]?.text).toContain(signedInByRunNote("mail.test"));
+    respondWith(() => loginPage);
+    const after = await sitedRaw("browser_snapshot", { action: "snapshot" });
+    const text = after.content?.[0]?.text ?? "";
+    expect(text).toMatch(
+      /signed in to mail\.test in this chat with the sign-in details the user gave/i
+    );
+    expect(text).not.toMatch(/user's own account/);
+    expect(signedInSitesOf(after._meta)).toEqual([]);
+    expect(signedInSitesOf(after._meta, SIGNED_IN_BY_RUN_META)).toEqual([
+      "mail.test",
+    ]);
   });
 
   it("notes a site whose page has a password field, by the app's own look", async () => {

@@ -668,7 +668,10 @@ export function buildBrowserTaskTool(
 
     // First, not after the report: a reply that sums the report up kept
     // what was found and dropped whose account it came from.
-    const signedInLineText = signedInLine(result.signedInSites ?? []);
+    const signedInLineText = signedInLine(
+      result.signedInSites ?? [],
+      result.signedInByRunSites ?? []
+    );
     const signedInFirst =
       signedInLineText.length > 0 ? `${signedInLineText}\n\n` : "";
 

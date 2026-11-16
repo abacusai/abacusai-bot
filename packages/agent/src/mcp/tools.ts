@@ -11,6 +11,7 @@ import {
   withCallBudget,
 } from "../extensions/tool-timeouts.js";
 import {
+  SIGNED_IN_BY_RUN_META,
   SIGNED_IN_META,
   SIGNED_IN_SERVER,
   signedInSitesOf,
@@ -185,16 +186,18 @@ export function buildMcpToolDefinitions(
 
             // The app's browser names the sites whose sign-in a page used;
             // no other server's word is taken for it.
-            const signedIn =
-              route.client.name === SIGNED_IN_SERVER
-                ? signedInSitesOf(result.meta)
-                : [];
+            const browser = route.client.name === SIGNED_IN_SERVER;
+            const signedIn = browser ? signedInSitesOf(result.meta) : [];
+            const byRun = browser
+              ? signedInSitesOf(result.meta, SIGNED_IN_BY_RUN_META)
+              : [];
             return {
               content: [{ type: "text" as const, text }, ...images],
               details: {
                 server: route.client.name,
                 tool: route.toolName,
                 ...(signedIn.length > 0 ? { [SIGNED_IN_META]: signedIn } : {}),
+                ...(byRun.length > 0 ? { [SIGNED_IN_BY_RUN_META]: byRun } : {}),
               },
               isError: result.isError,
             };

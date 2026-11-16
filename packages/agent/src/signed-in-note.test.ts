@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  SIGNED_IN_BY_RUN_META,
   SIGNED_IN_META,
   signedInLine,
   signedInMeta,
@@ -31,5 +32,27 @@ describe("the user's own sign-in, from the browser to the user", () => {
     expect(line).toMatch(/user's own sign-in/);
     expect(line).toMatch(/Tell the user/);
     expect(signedInLine([])).toBe("");
+  });
+});
+
+describe("a sign-in the run made itself, with details the user gave", () => {
+  it("is read from its own _meta key, and its line never calls it the user's own sign-in", () => {
+    expect(
+      signedInSitesOf(
+        { [SIGNED_IN_BY_RUN_META]: ["saucedemo.com"] },
+        SIGNED_IN_BY_RUN_META
+      )
+    ).toEqual(["saucedemo.com"]);
+    expect(
+      signedInSitesOf({ [SIGNED_IN_BY_RUN_META]: ["saucedemo.com"] })
+    ).toEqual([]);
+    const line = signedInLine([], ["saucedemo.com"]);
+    expect(line).toMatch(
+      /signed in to saucedemo\.com itself, with the sign-in details the user gave/
+    );
+    expect(line).not.toMatch(/user's own sign-in/);
+    expect(signedInLine(["mail.test"], ["saucedemo.com"])).toMatch(
+      /own sign-in on mail\.test[\s\S]*signed in to saucedemo\.com itself/
+    );
   });
 });

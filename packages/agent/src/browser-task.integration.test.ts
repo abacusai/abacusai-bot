@@ -22,7 +22,11 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { BotSession } from "./bot/bot-session.js";
 import { DISPATCH_LIMIT } from "./browser-task-tool.js";
 import type { ForeverEngine } from "./forever/engine.js";
-import { SIGNED_IN_META, signedInNote } from "./signed-in-note.js";
+import {
+  SIGNED_IN_BY_RUN_META,
+  SIGNED_IN_META,
+  signedInNote,
+} from "./signed-in-note.js";
 
 const REPORT =
   "The export finished and the file is listed under Reports. " +
@@ -108,6 +112,12 @@ beforeAll(async () => {
       reply: () => `My trips\n${signedInNote("localtest.me")}`,
       meta: () => ({ [SIGNED_IN_META]: ["localtest.me"] }),
     },
+    // A page where the run itself signed in, with details the user gave.
+    {
+      name: "browser_interact",
+      reply: () => "Filled @e3.",
+      meta: () => ({ [SIGNED_IN_BY_RUN_META]: ["saucedemo.com"] }),
+    },
     // A page whose own text claims a sign-in: only text, no _meta.
     {
       name: "browser_snapshot",
@@ -170,6 +180,19 @@ describe("a run that read a page with the user's own sign-in", () => {
     expect(result!.indexOf("localtest.me")).toBeLessThan(
       result!.indexOf(REPORT)
     );
+  }, 60_000);
+
+  it("hands the chat's model a sign-in the run made itself as that, not the user's own", async () => {
+    scriptChat((_call, turn) =>
+      turn === 1
+        ? { call: { name: "browser_interact", args: {} } }
+        : { say: REPORT }
+    );
+    await (await startBot()).send("check out on the demo shop");
+
+    const [result] = toolResults();
+    expect(result).toMatch(/This run signed in to saucedemo\.com itself/);
+    expect(result).not.toMatch(/user's own sign-in/);
   }, 60_000);
 
   it("never takes a page's own text for a sign-in", async () => {
