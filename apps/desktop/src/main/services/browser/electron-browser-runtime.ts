@@ -146,7 +146,7 @@ type CrashRecovery = {
 
 const DEFAULT_PARTITION = BROWSER_PARTITION;
 
-/** A password field in the page's own document. */
+/** A password field in a document (the page's own, or a frame's). */
 const SIGN_IN_PAGE_JS = "!!document.querySelector('input[type=password]')";
 /** A single-page app draws its sign-in form after the load: look again this much later. */
 const SIGN_IN_LOOK_AGAIN_MS = 1_500;
@@ -984,14 +984,16 @@ export class ElectronBrowserRuntime {
     }
     let signIn: { host: string; at: number } | null = null;
     let fromSignIn = false;
-    const look = async (): Promise<void> => {
-      if (contents.isDestroyed()) return;
-      const url = contents.getURL();
-      const host = webHost(url);
-      if (host == null) return;
+    // Every frame, not only the page's own document: a sign-in form can be
+    // a frame from another site (an embedded sign-in widget).
+    // Each frame on its own clock: one frame that never answers (an ad)
+    // does not hide a sign-in form in another.
+    const hasPassword = async (frame: {
+      executeJavaScript(code: string): Promise<unknown>;
+    }): Promise<boolean> => {
       let timer: ReturnType<typeof setTimeout> | undefined;
       const found = await Promise.race([
-        contents.executeJavaScript(SIGN_IN_PAGE_JS).then(
+        frame.executeJavaScript(SIGN_IN_PAGE_JS).then(
           (value: unknown) => value === true,
           () => false
         ),
@@ -1001,9 +1003,41 @@ export class ElectronBrowserRuntime {
         }),
       ]);
       clearTimeout(timer);
-      if (!found || contents.isDestroyed() || contents.getURL() !== url) return;
-      signIn = { host, at: Date.now() };
-      expect(host);
+      return found;
+    };
+    const look = async (): Promise<void> => {
+      if (contents.isDestroyed()) return;
+      const url = contents.getURL();
+      const host = webHost(url);
+      if (host == null) return;
+      let frames: Array<{
+        url: string;
+        executeJavaScript(code: string): Promise<unknown>;
+      }>;
+      try {
+        frames = contents.mainFrame.framesInSubtree;
+      } catch {
+        frames = [];
+      }
+      if (frames.length === 0)
+        frames = [
+          {
+            url,
+            executeJavaScript: (code) => contents.executeJavaScript(code),
+          },
+        ];
+      // Each frame counts as soon as it answers, not when the slowest does.
+      await Promise.all(
+        frames.map(async (frame) => {
+          const frameHost = webHost(frame.url);
+          if (frameHost == null || !(await hasPassword(frame))) return;
+          if (contents.isDestroyed() || contents.getURL() !== url) return;
+          signIn = { host, at: Date.now() };
+          expect(frameHost);
+          // The page's own site too: a widget's sign-in is often kept by the page.
+          expect(host);
+        })
+      );
     };
     const lookSoon = (): void => {
       void look();

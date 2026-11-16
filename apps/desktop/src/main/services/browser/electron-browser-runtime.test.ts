@@ -644,7 +644,9 @@ describe("Electron browser runtime", () => {
             return [contents.getURL(), ...frames].map((url) => ({
               url,
               executeJavaScript: (code: string) =>
-                code.includes("password") ? look(url) : new Promise(() => {}),
+                code.includes("password") && !url.includes("ads.")
+                  ? look(url)
+                  : new Promise(() => {}),
             }));
           },
         },
@@ -709,6 +711,31 @@ describe("Electron browser runtime", () => {
       await settle();
       setCookie("auth_token", "app.example.org");
       expect(seen).toEqual(["https://app.example.org/"]);
+    });
+
+    it("sees a sign-in form in a frame from another site", async () => {
+      const seen: string[] = [];
+      const { contents, passwordOn, frames, setCookie } = await signInView(
+        (url) => seen.push(url)
+      );
+      frames.push("https://login.widget.example/embed");
+      passwordOn.add("https://login.widget.example/embed");
+      await contents.loadURL("https://store.example.net/account");
+      contents.emit("did-finish-load");
+      await settle();
+      setCookie("auth_token", "login.widget.example");
+      setCookie("store_session", ".store.example.net");
+      // A frame that never answers does not hide the form in another.
+      frames.unshift("https://ads.example.org/slot");
+      await contents.loadURL("https://store.example.net/account");
+      contents.emit("did-finish-load");
+      await settle();
+      setCookie("auth_token", "login.widget.example");
+      expect(seen).toEqual([
+        "https://login.widget.example/",
+        "https://store.example.net/",
+        "https://login.widget.example/",
+      ]);
     });
 
     it("lists the site a sign-in page sends the user back to (single sign-on), once it keeps the sign-in", async () => {
