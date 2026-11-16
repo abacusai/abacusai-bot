@@ -501,17 +501,18 @@ export class TelegramWebConnector implements MessagingConnector {
     if (!this.running || !this.loggedIn) return false;
     const win = this.ensureWindow();
     if (win == null) return false;
-    presentAsDialog(win);
+    // The chat is opened while the window is out of sight, and the window is
+    // shown only once there is something to click. When the chat does not
+    // open, nothing comes up and setup goes on with the phone's Start.
     const opened = await this.run<{ ready: string }>(BOT_START_SCRIPT, {
       bot,
       code,
     });
     const ready = opened?.ready ?? "page not read";
-    this.callbacks.onLog(`telegram-web: shared bot start shown (${ready})`);
-    // Shown only when the user has something to click: Start, or the typed
-    // command. Otherwise the window goes back out of sight for the usual link.
+    this.callbacks.onLog(`telegram-web: shared bot start (${ready})`);
     const shown = ready === "start-button" || ready === "typed";
-    if (!shown) this.hideLoginWindow();
+    if (shown) presentAsDialog(win);
+    else this.hideLoginWindow();
     return shown;
   }
 
