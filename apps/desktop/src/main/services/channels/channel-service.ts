@@ -62,6 +62,7 @@ import {
   type OwnChat,
   postedWords,
   plainStop,
+  namedInOrder,
   speakersFor,
   TALK_ROUNDS,
   stopWorkIn,
@@ -211,6 +212,11 @@ export class ChannelService {
   private readonly talk = new Map<string, number>();
   /** Channels whose lead checked in: no more talk until the user answers. */
   private readonly talkPaused = new Set<string>();
+  /** The turns waiting when the lead checked in: a message naming nobody goes on with them. */
+  private readonly pausedTurns = new Map<
+    string,
+    { botId: string; kind: TurnKind; others: string[] }[]
+  >();
   /** Lead turns since the user's last message, per channel (MAX_LEAD_TURNS). */
   private readonly leadTurns = new Map<string, number>();
   /** Work running in bots' own chats: message id → its channel and bot. */
@@ -320,6 +326,7 @@ export class ChannelService {
     this.queues.delete(channelId);
     this.talk.delete(channelId);
     this.talkPaused.delete(channelId);
+    this.pausedTurns.delete(channelId);
     this.leadTurns.delete(channelId);
     this.owedWakes.delete(channelId);
     this.chains.delete(channelId);
@@ -751,15 +758,23 @@ export class ChannelService {
     const repliedTo = messages.find(
       (message) => message.id === userMessage.replyTo
     );
-    // The bots the user's previous message named: "go on" continues with them.
-    const lastUser = [...before]
-      .reverse()
-      .find((message) => message.author.kind === "user");
+    // The bots the user last named (a later "go on" names nobody): a message
+    // naming nobody goes on with them; after a check-in, with the turns it paused.
     const lastNamed =
-      lastUser == null ? null : speakersFor(lastUser.text, members);
+      [...before]
+        .reverse()
+        .filter(
+          (message) =>
+            message.author.kind === "user" && !mentionsEveryone(message.text)
+        )
+        .map((message) => namedInOrder(message.text, members))
+        .find((ids) => ids.length > 0) ?? [];
+    const paused = this.pausedTurns.get(channelId) ?? [];
+    this.pausedTurns.delete(channelId);
     const speakers = speakersFor(userMessage.text, members, {
-      ...(lastNamed != null && !lastNamed.everyone
-        ? { lastNamed: lastNamed.botIds }
+      ...(lastNamed.length > 0 ? { lastNamed } : {}),
+      ...(paused.length > 0
+        ? { resume: paused.map((item) => item.botId) }
         : {}),
       replyToBot:
         repliedTo?.author.kind === "bot" ? repliedTo.author.botId : null,
@@ -808,7 +823,13 @@ export class ChannelService {
     await this.floor(
       channelId,
       round,
-      speakers.botIds.map((botId) => ({ botId, kind: "answer", others: [] })),
+      speakers.resumed === true
+        ? paused
+        : speakers.botIds.map((botId) => ({
+            botId,
+            kind: "answer",
+            others: [],
+          })),
       stopped != null
     );
   }
@@ -842,6 +863,7 @@ export class ChannelService {
       if (round.cancelled || (ran > 0 && this.userWaiting(channelId))) return;
       if (this.talkPaused.has(channelId)) return;
       if (this.talkedOut(channelId)) {
+        this.pausedTurns.set(channelId, [next, ...queue]);
         await this.checkIn(channelId, round);
         return;
       }

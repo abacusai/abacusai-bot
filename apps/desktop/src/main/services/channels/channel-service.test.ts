@@ -893,6 +893,60 @@ describe("the lead checks in after a while of talk", () => {
   });
 });
 
+describe("going on after the check-in", () => {
+  it("a message naming nobody picks the talk up where the check-in paused it", async () => {
+    const t = setup();
+    const { id } = t.service.create({ botIds: ["chief", "res"] });
+    t.service.post(id, "Chief and Researcher, take turns listing launch risks");
+    for (let i = 0; i < 6; i++) {
+      await t.flush();
+      const other = t.turns[i]!.botId === "chief" ? "Researcher" : "Chief";
+      t.turns[i]!.resolve(`<reply>Risk ${i}. @${other} your turn.</reply>`);
+    }
+    await t.flush();
+    // turns[6] is Chief's check-in, which asks the user whether to go on.
+    expect(t.turns[6]!.prompt).toContain(
+      "talking among themselves for a while"
+    );
+    t.turns[6]!.resolve("<reply>Six risks so far. Shall we go on?</reply>");
+    await t.flush();
+    t.service.post(id, "go on");
+    await t.flush();
+    // Researcher had called Chief in when the talk paused: Chief goes on, as called in.
+    expect(t.turns[7]!.botId).toBe("chief");
+    expect(t.turns[7]!.prompt).toContain("Researcher @named you above");
+    t.turns[7]!.resolve("<reply>Risk 6. @Researcher your turn.</reply>");
+    await t.flush();
+    expect(t.turns[8]!.botId).toBe("res");
+  });
+
+  it("a later message naming nobody still goes to the bots the user last named", async () => {
+    const t = setup();
+    const { id } = t.service.create({ botIds: ["chief", "res", "wri"] });
+    t.service.post(id, "Chief and Researcher, one line each on the price");
+    await t.flush();
+    t.turns[0]!.resolve("<reply>₹110.</reply>");
+    await t.flush();
+    t.turns[1]!.resolve("<reply>₹120.</reply>");
+    await t.flush();
+    t.service.post(id, "go on");
+    await t.flush();
+    expect(t.turns[2]!.botId).toBe("chief");
+    t.turns[2]!.resolve("<reply>₹115 then.</reply>");
+    await t.flush();
+    expect(t.turns[3]!.botId).toBe("res");
+    t.turns[3]!.resolve("<reply>Fine.</reply>");
+    await t.flush();
+    // The second "go on" names nobody either: the same two again, not only the last.
+    t.service.post(id, "go on");
+    await t.flush();
+    expect(t.turns.slice(4).map((turn) => turn.botId)).toEqual(["chief"]);
+    t.turns[4]!.resolve("<reply>Done.</reply>");
+    await t.flush();
+    expect(t.turns[5]?.botId).toBe("res");
+  });
+});
+
 describe("bots proposing a new bot", () => {
   it("shows a proposal; only the user's Create makes the bot and adds it", async () => {
     const { service, turns, flush, store } = setup();

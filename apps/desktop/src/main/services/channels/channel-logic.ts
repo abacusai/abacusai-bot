@@ -54,6 +54,8 @@ export type TurnKind =
 export interface Speakers {
   botIds: string[];
   everyone: boolean;
+  /** The talk the check-in paused goes on (its waiting turns, in order). */
+  resumed?: boolean;
 }
 
 /**
@@ -354,8 +356,10 @@ export const speakersFor = (
     lastSpeaker?: string | null;
     /** The last bot message asked something: a plain "yes"/"ok" answers it. */
     lastSpeakerAsked?: boolean;
-    /** The bots the user's previous message named, in order. */
+    /** The bots the user's last message that named any named, in order. */
     lastNamed?: readonly string[];
+    /** The turns waiting when the lead checked in and the talk paused. */
+    resume?: readonly string[];
   } = {}
 ): Speakers => {
   const text = ownWords(message);
@@ -366,7 +370,7 @@ export const speakersFor = (
     ...(options.replyToBot != null && ids.has(options.replyToBot)
       ? [options.replyToBot]
       : []),
-    ...mergeByPosition(text, members),
+    ...namedInOrder(text, members),
   ]);
   // "@everyone, what do you think?": every member, in turn, each seeing
   // the others (a discussion is this plus their @names of each other).
@@ -393,6 +397,10 @@ export const speakersFor = (
   if (stopNamed != null && stopNamed.length > 0)
     return { botIds: stopNamed, everyone: false };
   if (noAnswer) return { botIds: [], everyone: false };
+  // "go on" after the check-in: the talk goes on with the turns it paused.
+  const resume = (options.resume ?? []).filter((id) => ids.has(id));
+  if (resume.length > 0)
+    return { botIds: resume, everyone: false, resumed: true };
   // "go on" after the user named several bots, one of them the last to
   // speak: the same bots go on in turn, starting after the last to speak.
   const lastNamed = (options.lastNamed ?? []).filter((id) => ids.has(id));
@@ -416,7 +424,7 @@ export const speakersFor = (
 };
 
 /** @mentions and addressed names together, in the order the user wrote them. */
-const mergeByPosition = (
+export const namedInOrder = (
   text: string,
   members: readonly Member[]
 ): string[] => {
