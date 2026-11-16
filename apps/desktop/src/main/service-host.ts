@@ -526,7 +526,10 @@ import {
 import { HostedMcpConnect } from "./services/mcp/hosted-mcp-connect";
 import { McpAdminService } from "./services/mcp/mcp-admin-service";
 import { McpAgentToolsServer } from "./services/mcp/mcp-agent-tools-server";
-import { McpBrowserServer } from "./services/mcp/mcp-browser-server";
+import {
+  McpBrowserServer,
+  paneMovedNote,
+} from "./services/mcp/mcp-browser-server";
 import {
   isLocalCommandServer,
   McpConfigService,
@@ -5583,6 +5586,17 @@ export class ServiceHost {
         github.taken();
       },
     };
+    // The user moved the chat's Browser pane: "this page" means that page.
+    const moved =
+      this.platform === "electron" &&
+      carriesUserWords(tags) &&
+      !this.isUnattendedSession(sessionId)
+        ? // Absent in a host built for a test of other notes.
+          ((
+            this.mcpBrowserServer as McpBrowserServer | undefined
+          )?.pageMovedByUser(sessionId) ?? null)
+        : null;
+    if (moved != null) reports.notes.push(paneMovedNote(moved));
     const seed = carriesUserWords(tags)
       ? this.agentSessionManagerService.continuationSeed(sessionId)
       : null;
