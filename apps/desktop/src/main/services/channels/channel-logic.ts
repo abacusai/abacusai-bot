@@ -655,7 +655,7 @@ export const turnPrompt = (input: {
       break;
     case "check-in":
       lines.push(
-        "The team has been talking among themselves for a while without the user. As the lead, post where things stand for the user in a few lines: if tasks someone will now do that need their tools (files, code, a browser, the user's accounts) were settled, not only points agreed in a debate, start with \"Agreed:\" and a numbered list of them (with owners); then what is still open; then ask whether to go on (with an agreed list: say go to start it, or tell the team to keep talking). Don't @mention anyone."
+        "The team has been talking among themselves for a while without the user. As the lead, post where things stand for the user in a few lines: if tasks someone will now do that need their tools (files, code, a browser, the user's accounts) were settled, not only points agreed in a debate, start with \"Agreed:\" and a numbered list of them (with owners); then what is still open; then ask whether to go on (with an agreed list: say go to start it, or tell the team to keep talking). This message is only for the user: don't take your own next turn in it (no next point, step or reply in the exchange); the exchange goes on from where it stopped when the user says so. Don't @mention anyone."
       );
       break;
   }
