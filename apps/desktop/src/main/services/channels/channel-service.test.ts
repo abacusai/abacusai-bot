@@ -412,7 +412,7 @@ describe("ChannelService", () => {
     await first.flush();
     first.turns[0]!.resolve("<reply>On it.</reply>");
     await first.flush();
-    first.service.post(id, "second question");
+    first.service.post(id, "Chief, second question");
     // The app closes here: Researcher's turn and "second question" never ran.
     const channels = first.store.readChannels();
     const thread = first.store.readMessages(id);
@@ -890,6 +890,60 @@ describe("the lead checks in after a while of talk", () => {
     await flush();
     expect(turns[8]!.botId).toBe("chief");
     expect(turns[8]!.prompt).toContain("Researcher @named you above");
+  });
+});
+
+describe("going on after the check-in", () => {
+  it("a message naming nobody picks the talk up where the check-in paused it", async () => {
+    const t = setup();
+    const { id } = t.service.create({ botIds: ["chief", "res"] });
+    t.service.post(id, "Chief and Researcher, take turns listing launch risks");
+    for (let i = 0; i < 6; i++) {
+      await t.flush();
+      const other = t.turns[i]!.botId === "chief" ? "Researcher" : "Chief";
+      t.turns[i]!.resolve(`<reply>Risk ${i}. @${other} your turn.</reply>`);
+    }
+    await t.flush();
+    // turns[6] is Chief's check-in, which asks the user whether to go on.
+    expect(t.turns[6]!.prompt).toContain(
+      "talking among themselves for a while"
+    );
+    t.turns[6]!.resolve("<reply>Six risks so far. Shall we go on?</reply>");
+    await t.flush();
+    t.service.post(id, "go on");
+    await t.flush();
+    // Researcher had called Chief in when the talk paused: Chief goes on, as called in.
+    expect(t.turns[7]!.botId).toBe("chief");
+    expect(t.turns[7]!.prompt).toContain("Researcher @named you above");
+    t.turns[7]!.resolve("<reply>Risk 6. @Researcher your turn.</reply>");
+    await t.flush();
+    expect(t.turns[8]!.botId).toBe("res");
+  });
+
+  it("a later message naming nobody still goes to the bots the user last named", async () => {
+    const t = setup();
+    const { id } = t.service.create({ botIds: ["chief", "res", "wri"] });
+    t.service.post(id, "Chief and Researcher, one line each on the price");
+    await t.flush();
+    t.turns[0]!.resolve("<reply>₹110.</reply>");
+    await t.flush();
+    t.turns[1]!.resolve("<reply>₹120.</reply>");
+    await t.flush();
+    t.service.post(id, "go on");
+    await t.flush();
+    expect(t.turns[2]!.botId).toBe("chief");
+    t.turns[2]!.resolve("<reply>₹115 then.</reply>");
+    await t.flush();
+    expect(t.turns[3]!.botId).toBe("res");
+    t.turns[3]!.resolve("<reply>Fine.</reply>");
+    await t.flush();
+    // The second "go on" names nobody either: the same two again, not only the last.
+    t.service.post(id, "go on");
+    await t.flush();
+    expect(t.turns.slice(4).map((turn) => turn.botId)).toEqual(["chief"]);
+    t.turns[4]!.resolve("<reply>Done.</reply>");
+    await t.flush();
+    expect(t.turns[5]?.botId).toBe("res");
   });
 });
 
@@ -1598,6 +1652,21 @@ describe("a hand-off chain", () => {
     expect(texts(id)).toContain("res: The audit is done: findings above.");
     expect(works[1]!.prompt).toContain("B1: add() subtracts.");
     expect(works[1]!.prompt).toContain("B2: average() divides by length - 1.");
+  });
+
+  it("only a checking step ends it: an audit or a fix that says nothing is left does not", async () => {
+    const { works, flush, texts, id } = await start();
+    expect(works[0]!.prompt).not.toContain("<chain_done/>");
+    works[0]!.resolve("<reply>Found 15 bugs. <chain_done/></reply>");
+    await flush();
+    expect(works[1]!.prompt).not.toContain("<chain_done/>");
+    expect(texts(id).join("\n")).not.toContain("the hand-off ends here");
+    works[1]!.resolve("<reply>Fixed all 15. <chain_done/></reply>");
+    await flush();
+    // The re-check still runs, and it may end the hand-off.
+    expect(works.map((w) => w.botId)).toEqual(["res", "wri", "res"]);
+    expect(works[2]!.prompt).toContain("<chain_done/>");
+    expect(texts(id).join("\n")).not.toContain("the hand-off ends here");
   });
 
   it("ends when a check finds nothing left, and says so; the tag is never posted", async () => {

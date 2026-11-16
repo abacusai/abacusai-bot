@@ -38,6 +38,7 @@ import {
   agreedItems,
   chainAllowed,
   chainDoneIn,
+  checksEarlierWork,
   chainIn,
   type ChainStep,
   stepHandoff,
@@ -61,6 +62,7 @@ import {
   type OwnChat,
   postedWords,
   plainStop,
+  namedInOrder,
   speakersFor,
   TALK_ROUNDS,
   stopWorkIn,
@@ -177,7 +179,7 @@ export const MAX_LEAD_TURNS = 8;
 
 /** Asked once of a bot whose reply says work is happening that it never started. */
 const CLAIM_NUDGE =
-  "Your last message in the channel said you are doing work, but you started nothing, so nothing is running. Reply again in the channel: start it now with <work>the task, complete on its own</work>, or say plainly that you have not started and what you are waiting for.";
+  "Your last message in the channel said you are doing work, but you started nothing, so nothing is running. Write that message again, keeping everything else you said in it: start the work now with <work>the task, complete on its own</work>, or say plainly that you have not started and what you are waiting for.";
 
 /** A hand-off chain running in a channel: its steps, and the one it is at. */
 interface ChainRun {
@@ -210,6 +212,11 @@ export class ChannelService {
   private readonly talk = new Map<string, number>();
   /** Channels whose lead checked in: no more talk until the user answers. */
   private readonly talkPaused = new Set<string>();
+  /** The turns waiting when the lead checked in: a message naming nobody goes on with them. */
+  private readonly pausedTurns = new Map<
+    string,
+    { botId: string; kind: TurnKind; others: string[] }[]
+  >();
   /** Lead turns since the user's last message, per channel (MAX_LEAD_TURNS). */
   private readonly leadTurns = new Map<string, number>();
   /** Work running in bots' own chats: message id → its channel and bot. */
@@ -319,6 +326,7 @@ export class ChannelService {
     this.queues.delete(channelId);
     this.talk.delete(channelId);
     this.talkPaused.delete(channelId);
+    this.pausedTurns.delete(channelId);
     this.leadTurns.delete(channelId);
     this.owedWakes.delete(channelId);
     this.chains.delete(channelId);
@@ -750,7 +758,24 @@ export class ChannelService {
     const repliedTo = messages.find(
       (message) => message.id === userMessage.replyTo
     );
+    // The bots the user last named (a later "go on" names nobody): a message
+    // naming nobody goes on with them; after a check-in, with the turns it paused.
+    const lastNamed =
+      [...before]
+        .reverse()
+        .filter(
+          (message) =>
+            message.author.kind === "user" && !mentionsEveryone(message.text)
+        )
+        .map((message) => namedInOrder(message.text, members))
+        .find((ids) => ids.length > 0) ?? [];
+    const paused = this.pausedTurns.get(channelId) ?? [];
+    this.pausedTurns.delete(channelId);
     const speakers = speakersFor(userMessage.text, members, {
+      ...(lastNamed.length > 0 ? { lastNamed } : {}),
+      ...(paused.length > 0
+        ? { resume: paused.map((item) => item.botId) }
+        : {}),
       replyToBot:
         repliedTo?.author.kind === "bot" ? repliedTo.author.botId : null,
       lastSpeaker:
@@ -798,7 +823,13 @@ export class ChannelService {
     await this.floor(
       channelId,
       round,
-      speakers.botIds.map((botId) => ({ botId, kind: "answer", others: [] })),
+      speakers.resumed === true
+        ? paused
+        : speakers.botIds.map((botId) => ({
+            botId,
+            kind: "answer",
+            others: [],
+          })),
       stopped != null
     );
   }
@@ -832,6 +863,7 @@ export class ChannelService {
       if (round.cancelled || (ran > 0 && this.userWaiting(channelId))) return;
       if (this.talkPaused.has(channelId)) return;
       if (this.talkedOut(channelId)) {
+        this.pausedTurns.set(channelId, [next, ...queue]);
         await this.checkIn(channelId, round);
         return;
       }
@@ -1296,6 +1328,12 @@ export class ChannelService {
         // work can carry it over from a hand-off it ran before).
         const ended = chainDoneIn(answered);
         const report = ended.words;
+        // Only a step back to check earlier work ends a hand-off early.
+        const endsChain =
+          ended.done &&
+          chain != null &&
+          chain.step < chain.steps.length &&
+          checksEarlierWork(chain.steps, chain.step);
         this.setWork(channelId, messageId, { status: "done" });
         this.noteMembers(
           channel,
@@ -1307,7 +1345,7 @@ export class ChannelService {
           author: { kind: "bot", botId },
           text:
             (report.length > 0 ? report : "Done.") +
-            (ended.done && chain != null && chain.step < chain.steps.length
+            (endsChain && chain != null
               ? `\n\nNothing left to do, so the hand-off ends here (step ${chain.step} of ${chain.steps.length}).`
               : ""),
           at: this.now(),
@@ -1320,7 +1358,7 @@ export class ChannelService {
         const whole = chainDoneIn(
           stepHandoff(raw.split(BOT_ANSWER_SEGMENT))
         ).words;
-        return ended.done ? `${CHAIN_DONE_MARK}${whole}` : whole;
+        return endsChain ? `${CHAIN_DONE_MARK}${whole}` : whole;
       })
       .catch((error: unknown): null => {
         // Stopped here (the card was set as it stopped), or in the bot's own

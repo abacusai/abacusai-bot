@@ -54,6 +54,8 @@ export type TurnKind =
 export interface Speakers {
   botIds: string[];
   everyone: boolean;
+  /** The talk the check-in paused goes on (its waiting turns, in order). */
+  resumed?: boolean;
 }
 
 /**
@@ -354,6 +356,10 @@ export const speakersFor = (
     lastSpeaker?: string | null;
     /** The last bot message asked something: a plain "yes"/"ok" answers it. */
     lastSpeakerAsked?: boolean;
+    /** The bots the user's last message that named any named, in order. */
+    lastNamed?: readonly string[];
+    /** The turns waiting when the lead checked in and the talk paused. */
+    resume?: readonly string[];
   } = {}
 ): Speakers => {
   const text = ownWords(message);
@@ -364,7 +370,7 @@ export const speakersFor = (
     ...(options.replyToBot != null && ids.has(options.replyToBot)
       ? [options.replyToBot]
       : []),
-    ...mergeByPosition(text, members),
+    ...namedInOrder(text, members),
   ]);
   // "@everyone, what do you think?": every member, in turn, each seeing
   // the others (a discussion is this plus their @names of each other).
@@ -391,6 +397,25 @@ export const speakersFor = (
   if (stopNamed != null && stopNamed.length > 0)
     return { botIds: stopNamed, everyone: false };
   if (noAnswer) return { botIds: [], everyone: false };
+  // "go on" after the check-in: the talk goes on with the turns it paused.
+  const resume = (options.resume ?? []).filter((id) => ids.has(id));
+  if (resume.length > 0)
+    return { botIds: resume, everyone: false, resumed: true };
+  // "go on" after the user named several bots, one of them the last to
+  // speak: the same bots go on in turn, starting after the last to speak.
+  const lastNamed = (options.lastNamed ?? []).filter((id) => ids.has(id));
+  if (
+    lastNamed.length > 1 &&
+    options.lastSpeakerAsked !== true &&
+    options.lastSpeaker != null &&
+    lastNamed.includes(options.lastSpeaker)
+  ) {
+    const after = lastNamed.indexOf(options.lastSpeaker) + 1;
+    return {
+      botIds: [...lastNamed.slice(after), ...lastNamed.slice(0, after)],
+      everyone: false,
+    };
+  }
   const fallback =
     options.lastSpeaker != null && ids.has(options.lastSpeaker)
       ? options.lastSpeaker
@@ -399,7 +424,7 @@ export const speakersFor = (
 };
 
 /** @mentions and addressed names together, in the order the user wrote them. */
-const mergeByPosition = (
+export const namedInOrder = (
   text: string,
   members: readonly Member[]
 ): string[] => {
@@ -584,7 +609,7 @@ export const turnPrompt = (input: {
       lines.push(
         "Answer the user's latest message. If it interrupts the team's exchange (a question, a pause), answer it and don't carry the exchange on unless they ask you to. If they want the team's views or the team to work something out together, write @everyone (or @Name for some): those members speak next, in turn.",
         colleagues.length > 0
-          ? `If another member is better placed for part of it, bring them in by writing @Name and what you need from them (e.g. @${colleagues[0]?.name} …); they speak next, and you finish once they have answered. Only when it really helps: @Name always brings them in, so to only mention someone, write their name without @.`
+          ? `If another member is better placed for part of it, bring them in by writing @Name and what you need from them (e.g. @${colleagues[0]?.name} …); they speak next, and you finish once they have answered. Only when it really helps: @Name always brings them in, so to only mention someone, write their name without @. If the user set up turns between members (take turns, alternate, back and forth), end your turn by writing @Name of whoever goes next, until what the user asked for is done.`
           : "",
         inviteLine(input.outsiders),
         'If the work needs a specialist none of the user\'s bots is (for the long run, not one question), you may propose a new bot: <new_bot name="Short name" title="Role">What it would do, in one or two sentences</new_bot> inside your reply. The user decides; never more than one suggestion.',
@@ -604,7 +629,7 @@ export const turnPrompt = (input: {
     case "brought-in":
       lines.push(
         `${others} @named you above. Answer what they need, for the user, in the group.`,
-        "If you need an answer from a member (them or another), write @Name and what you need: they speak next. When you have nothing to add, or the exchange is settled, reply <reply>NO_REPLY</reply> or answer without @naming anyone. To only mention someone, write their name without @.",
+        "If you need an answer from a member (them or another), write @Name and what you need: they speak next. When you have nothing to add, or the exchange is settled, reply <reply>NO_REPLY</reply> or answer without @naming anyone. To only mention someone, write their name without @. If the user set up turns between members (take turns, alternate, back and forth), end your turn by writing @Name of whoever goes next, until what the user asked for is done.",
         input.mayWork === true
           ? `The user named you in this channel for its work, so if ${others} needs real work from you (files, code, a browser), start it now, unless the user asked the team to agree first: ${WORK_RULE}`
           : "You can't take work that needs files, code, a browser or the user's accounts on from here: say what you would do, and that the user can ask you for it here by name."
@@ -624,13 +649,13 @@ export const turnPrompt = (input: {
         input.afterEveryone === true
           ? "Everyone has answered the user's message above. Unless the user asked the team to decide, agree or plan something, reply <reply>NO_REPLY</reply>: their answers stand on their own."
           : "",
-        `${others} answered above. Sum up for the user, briefly. If the user asked the team to choose or agree on something, lead with the choice the answers point to (or say plainly they are split, and between what). If work is already under way, say where it stands, without "Agreed:". If there are tasks someone will now do (not only points agreed in a debate), put them in a line "Agreed:" followed by a numbered list of them (with owners where there are any): only that list is what the user's go starts, so never say a task starts on their go unless it is in it. Then any point still open in one line each, not numbered. Otherwise finish your answer to the user's latest message with what they said. Only what was said above. If there is nothing to sum up (greetings, an announcement acknowledged, or answers that stand on their own), reply <reply>NO_REPLY</reply>. Don't @mention anyone.`,
+        `${others} answered above. Sum up for the user, briefly. If the user asked the team to choose or agree on something, lead with the choice the answers point to (or say plainly they are split, and between what). If work is already under way, say where it stands, without "Agreed:". If there are tasks someone will now do that need their tools (files, code, a browser, the user's accounts), not only points agreed in a debate, put them in a line "Agreed:" followed by a numbered list of them (with owners where there are any): only that list is what the user's go starts, so never say a task starts on their go unless it is in it. Then any point still open in one line each, not numbered. Otherwise finish your answer to the user's latest message with what they said. Each item runs as work in its owner's own chat, away from this channel: something a member can just say here (an answer, a view, a reply to another member) is never an item; the members say it here. Only what was said above. If there is nothing to sum up (greetings, an announcement acknowledged, or answers that stand on their own), reply <reply>NO_REPLY</reply>. Don't @mention anyone.`,
         inviteLine(input.outsiders)
       );
       break;
     case "check-in":
       lines.push(
-        'The team has been talking among themselves for a while without the user. As the lead, post where things stand for the user in a few lines: if tasks someone will now do were settled (not only points agreed in a debate), start with "Agreed:" and a numbered list of them (with owners); then what is still open; then ask whether to go on (with an agreed list: say go to start it, or tell the team to keep talking). Don\'t @mention anyone.'
+        "The team has been talking among themselves for a while without the user. As the lead, post where things stand for the user in a few lines: if tasks someone will now do that need their tools (files, code, a browser, the user's accounts) were settled, not only points agreed in a debate, start with \"Agreed:\" and a numbered list of them (with owners); then what is still open; then ask whether to go on (with an agreed list: say go to start it, or tell the team to keep talking). This message is only for the user: don't take your own next turn in it (no next point, step or reply in the exchange); the exchange goes on from where it stopped when the user says so. Don't @mention anyone."
       );
       break;
   }
@@ -739,13 +764,21 @@ const ASKS_FIRST =
   /\b(?:want me to|should i|shall i|do you want me to|would you like me to|like me to)\b[^?]*\?\s*$/i;
 
 /**
- * Words that say work is happening ("building it now", "on it", "I'm
- * scaffolding…"): a reply like that with no <work> promises what nobody does.
+ * A reply that closes on the bot saying it is doing something ("Building it
+ * now.", "On it. I'm scaffolding the app."): its last sentence has "I" with a
+ * verb in -ing, or opens on one and says "now". A plan ("we're testing…") or
+ * a point made earlier in the reply is talk, not a claim.
  */
 const CLAIMS_WORK =
-  /\b(?:i'?m|i am|we'?re|we are)\s+(?:now\s+)?(?:starting|building|working on|implementing|writing|producing|scaffolding|fixing|testing|coding|setting up|creating)\b|\b(?:starting|building|producing|writing|implementing|scaffolding|coding|fixing|creating|setting up)\b[^.!?\n]{0,60}\bnow\b/i;
+  /\bI(?:['’]m| am)\s+(?:now\s+|already\s+)?(?!not\b|going\b)[a-z]+ing\b|^\W*[a-z]+ing\b.*\bnow\b/i;
 
-export const claimsWork = (words: string): boolean => CLAIMS_WORK.test(words);
+export const claimsWork = (words: string): boolean =>
+  CLAIMS_WORK.test(
+    words
+      .trim()
+      .split(/(?<=[.!?…])\s+/)
+      .at(-1) ?? ""
+  );
 
 /**
  * A summing-up that settles work: a line "Agreed:" opening a numbered list
@@ -856,6 +889,19 @@ export const channelWorkPrompt = (input: {
       : "do not pass anything on or ask other bots in this turn.",
   ].join("\n");
 
+/**
+ * A step that checks earlier work: its bot ran an earlier step of the chain
+ * and is back after the steps since (audit, fix, re-check). Only such a
+ * step may end a hand-off early; a first audit or a fix never does.
+ */
+export const checksEarlierWork = (
+  steps: readonly { bot: string }[],
+  step: number
+): boolean =>
+  steps
+    .slice(0, step - 1)
+    .some((earlier) => earlier.bot === steps[step - 1]?.bot);
+
 /** Where a chain step stands: the steps, which is this one, and what the step before reported. */
 const chainLines = (chain: {
   step: number;
@@ -881,7 +927,15 @@ const chainLines = (chain: {
     : []),
   "",
   chain.step < chain.steps.length
-    ? "Everything you write in this turn goes to the next step, so put every finding in it. If your step is checking earlier work and nothing is left to do, end your report with <chain_done/>: the steps after yours are skipped. Otherwise say exactly what is left, so the next step can act on it."
+    ? [
+        "Everything you write in this turn goes to the next step, so put every finding in it.",
+        ...(checksEarlierWork(chain.steps, chain.step)
+          ? [
+              "You are back to check the work done since your earlier step: if nothing is left to do, end your report with <chain_done/>: the steps after yours are skipped.",
+            ]
+          : []),
+        "Say exactly what is left, so the next step can act on it.",
+      ].join(" ")
     : "This is the last step: end with what is done and anything still open.",
   "The steps after yours start on their own: never ask the user whether to run them; end with your report.",
 ];

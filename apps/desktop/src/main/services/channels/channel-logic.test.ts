@@ -6,6 +6,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  claimsWork,
   addressedIn,
   agreedItems,
   chainAllowed,
@@ -68,6 +69,29 @@ describe("speakersFor", () => {
     expect(who("is the planner's date ok?", { lastSpeaker: "wri" })).toEqual([
       "wri",
     ]);
+  });
+
+  it("a message naming nobody goes on with the bots the user's last message named", () => {
+    // "@Researcher @Writer take turns", then "go on": both again, in turn,
+    // starting after the last to speak.
+    expect(
+      who("go on", { lastSpeaker: "wri", lastNamed: ["res", "wri"] })
+    ).toEqual(["res", "wri"]);
+    expect(
+      who("go on", { lastSpeaker: "res", lastNamed: ["res", "wri"] })
+    ).toEqual(["wri", "res"]);
+    // A question from the last speaker is answered by it alone.
+    expect(
+      who("yes", {
+        lastSpeaker: "wri",
+        lastSpeakerAsked: true,
+        lastNamed: ["res", "wri"],
+      })
+    ).toEqual(["wri"]);
+    // Someone else spoke since: the last speaker answers, as before.
+    expect(
+      who("go on", { lastSpeaker: "pla", lastNamed: ["res", "wri"] })
+    ).toEqual(["pla"]);
   });
 
   it("@everyone is every member, in turn", () => {
@@ -373,6 +397,25 @@ describe("plainStop", () => {
   });
 });
 
+describe("claimsWork", () => {
+  it("is a closing line saying the bot is doing it, not talk that mentions doing", () => {
+    expect(claimsWork("Building it now, will post the link.")).toBe(true);
+    expect(claimsWork("On it. I'm scaffolding the app.")).toBe(true);
+    expect(claimsWork("Sure. I am now drafting the brief…")).toBe(true);
+    // A debate: the team's plan, and an argument that goes on after it.
+    expect(
+      claimsWork(
+        "We're testing 6am, so I'd keep the deploy at 7. Moving it risks the run."
+      )
+    ).toBe(false);
+    expect(
+      claimsWork("I'm testing that idea against the logs. It does not hold.")
+    ).toBe(false);
+    expect(claimsWork("We're building it on Friday.")).toBe(false);
+    expect(claimsWork("I'm not starting until you confirm.")).toBe(false);
+  });
+});
+
 describe("stopWorkIn", () => {
   it("finds the tag in any spelling and drops it from the words", () => {
     expect(stopWorkIn("Stopped. <stop_work/>")).toEqual({
@@ -557,7 +600,8 @@ describe("hand-off chains", () => {
     expect(prompt).not.toContain("Auditor: audit");
     expect(prompt).toContain('<bot_reply from="Auditor">');
     expect(prompt).toContain("Bug in add(): returns a - b.");
-    expect(prompt).toContain("<chain_done/>");
+    // A fixer's step checks nothing: only a bot back after its own earlier step may end it.
+    expect(prompt).not.toContain("<chain_done/>");
     expect(prompt).toContain("the app gives your report to the next step");
   });
 
