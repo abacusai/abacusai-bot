@@ -739,13 +739,21 @@ const ASKS_FIRST =
   /\b(?:want me to|should i|shall i|do you want me to|would you like me to|like me to)\b[^?]*\?\s*$/i;
 
 /**
- * Words that say work is happening ("building it now", "on it", "I'm
- * scaffolding…"): a reply like that with no <work> promises what nobody does.
+ * A reply that closes on the bot saying it is doing something ("Building it
+ * now.", "On it. I'm scaffolding the app."): its last sentence has "I" with a
+ * verb in -ing, or opens on one and says "now". A plan ("we're testing…") or
+ * a point made earlier in the reply is talk, not a claim.
  */
 const CLAIMS_WORK =
-  /\b(?:i'?m|i am|we'?re|we are)\s+(?:now\s+)?(?:starting|building|working on|implementing|writing|producing|scaffolding|fixing|testing|coding|setting up|creating)\b|\b(?:starting|building|producing|writing|implementing|scaffolding|coding|fixing|creating|setting up)\b[^.!?\n]{0,60}\bnow\b/i;
+  /\bI(?:['’]m| am)\s+(?:now\s+|already\s+)?(?!not\b|going\b)[a-z]+ing\b|^\W*[a-z]+ing\b.*\bnow\b/i;
 
-export const claimsWork = (words: string): boolean => CLAIMS_WORK.test(words);
+export const claimsWork = (words: string): boolean =>
+  CLAIMS_WORK.test(
+    words
+      .trim()
+      .split(/(?<=[.!?…])\s+/)
+      .at(-1) ?? ""
+  );
 
 /**
  * A summing-up that settles work: a line "Agreed:" opening a numbered list

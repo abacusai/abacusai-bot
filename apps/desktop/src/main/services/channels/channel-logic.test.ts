@@ -6,6 +6,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  claimsWork,
   addressedIn,
   agreedItems,
   chainAllowed,
@@ -370,6 +371,25 @@ describe("plainStop", () => {
     "cancel culture is a good topic for a post",
   ])("%s is not", (text) => {
     expect(plainStop(text, M)).toBeNull();
+  });
+});
+
+describe("claimsWork", () => {
+  it("is a closing line saying the bot is doing it, not talk that mentions doing", () => {
+    expect(claimsWork("Building it now, will post the link.")).toBe(true);
+    expect(claimsWork("On it. I'm scaffolding the app.")).toBe(true);
+    expect(claimsWork("Sure. I am now drafting the brief…")).toBe(true);
+    // A debate: the team's plan, and an argument that goes on after it.
+    expect(
+      claimsWork(
+        "We're testing 6am, so I'd keep the deploy at 7. Moving it risks the run."
+      )
+    ).toBe(false);
+    expect(
+      claimsWork("I'm testing that idea against the logs. It does not hold.")
+    ).toBe(false);
+    expect(claimsWork("We're building it on Friday.")).toBe(false);
+    expect(claimsWork("I'm not starting until you confirm.")).toBe(false);
   });
 });
 
