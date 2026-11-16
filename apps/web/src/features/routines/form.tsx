@@ -21,7 +21,6 @@ import {
 import { creditsTier } from "#renderer/lib/credits";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_BROWSER } from "#renderer/lib/platform";
-import { platformSystem } from "#renderer/lib/platform-system";
 import { FORM_ROUTINE_TEMPLATES as ROUTINE_TEMPLATES } from "#renderer/lib/routines/templates";
 import { showError } from "#renderer/lib/toast";
 import { useAccount } from "#renderer/lib/use-account";
@@ -52,6 +51,7 @@ import { Switch } from "#renderer/ui/switch";
 
 import { RoutineUpgradeActions, RoutineUpgradeAvatar } from "./create-action";
 import { useRoutinesData } from "./data";
+import { RoutineFolderSelect } from "./folder-select";
 import { browserTimeZone, isHosted } from "./hosted";
 import { routineRefusal, type RoutineRefusalText } from "./refusal";
 import { RoutineRefusalNotice } from "./refusal-notice";
@@ -73,7 +73,7 @@ export const RoutineDialog = ({
   const router = useRouter();
   const navigate = useAppNavigate();
   const prefs = usePrefs();
-  const { routines, workspaces } = useRoutinesData();
+  const { routines } = useRoutinesData();
   const row = routines.find((r) => r.id === routineId);
   const initial = valuesForRoutine(row);
   const picked = ROUTINE_TEMPLATES.find((x) => x.id === template);
@@ -554,50 +554,14 @@ export const RoutineDialog = ({
                           <FieldLabel htmlFor="routine-folder">
                             {t("phase5.folder")}
                           </FieldLabel>
-                          <NativeSelect
+                          <RoutineFolderSelect
                             id="routine-folder"
-                            value={value.workspaceId ?? ""}
-                            onChange={(e) => {
-                              if (e.target.value === "choose") {
-                                void platformSystem(transport.client)
-                                  .dialog.openFolder({})
-                                  .then(async (path) => {
-                                    if (!path) return;
-                                    const added =
-                                      await transport.client.workspaces.add({
-                                        path,
-                                      });
-                                    form.setFieldValue(
-                                      "workspaceId",
-                                      added.workspaceId
-                                    );
-                                  })
-                                  .catch(() =>
-                                    showError(t("phase5.folderFailed"))
-                                  );
-                              } else
-                                form.setFieldValue(
-                                  "workspaceId",
-                                  e.target.value || null
-                                );
-                            }}
-                          >
-                            <NativeSelectOption value="">
-                              {t("phase5.ownFolder")}
-                            </NativeSelectOption>
-                            {workspaces
-                              .filter(
-                                (w) => w.kind == null || w.kind === "auto"
-                              )
-                              .map((w) => (
-                                <NativeSelectOption key={w.id} value={w.id}>
-                                  {w.label ?? w.path}
-                                </NativeSelectOption>
-                              ))}
-                            <NativeSelectOption value="choose">
-                              {t("phase5.chooseFolder")}
-                            </NativeSelectOption>
-                          </NativeSelect>
+                            value={value.workspaceId}
+                            emptyLabel={t("phase5.ownFolder")}
+                            onChange={(id) =>
+                              form.setFieldValue("workspaceId", id)
+                            }
+                          />
                         </Field>
                       )}
                       <Field orientation="horizontal">

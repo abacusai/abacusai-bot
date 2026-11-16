@@ -43,9 +43,9 @@ import {
 } from "#renderer/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "#renderer/ui/field";
 import { Input } from "#renderer/ui/input";
-import { NativeSelect, NativeSelectOption } from "#renderer/ui/native-select";
 
 import { AlwaysOnButton, useAlwaysOnPlan } from "./always-on";
+import { RoutineFolderSelect, useRoutineFolders } from "./folder-select";
 
 /** Where a starter was offered, as the funnel names it. */
 export type CodingRoutineSurface = "start" | "library";
@@ -316,19 +316,18 @@ export const CodingRoutineSheet = ({
   const { db, transport } = useAppContext();
   const navigate = useAppNavigate();
   const prefs = usePrefs();
-  const c = useCollections();
   const plan = useAlwaysOnPlan();
-  const workspaces = (useLiveQuery(c.workspaces).data ?? []).filter(
-    (w) => w.status !== "deleted" && (w.kind == null || w.kind === "auto")
-  );
   const messaging = useQuery(
     transport.orpc.messaging.snapshot.queryOptions({ input: {} })
   );
   const lanes = reportLanes(messaging.data);
   const needsProject = template.needsWorkspace === true;
-  const [workspaceId, setWorkspaceId] = useState<string | null>(
+  const folders = useRoutineFolders(needsProject);
+  const [picked, setPicked] = useState<string | null>(
     offeredWorkspaceId ?? prefs.lastPickedWorkspaceId ?? null
   );
+  // A remembered folder this routine cannot run in is no pick at all.
+  const workspaceId = folders.some((w) => w.id === picked) ? picked : null;
   const [time, setTime] = useState(template.time);
   const [site, setSite] = useState("");
   const [siteError, setSiteError] = useState(false);
@@ -453,24 +452,19 @@ export const CodingRoutineSheet = ({
             <FieldLabel htmlFor="coding-routine-project">
               {t("routines.coding.projectLabel")}
             </FieldLabel>
-            <NativeSelect
+            <RoutineFolderSelect
               id="coding-routine-project"
-              value={workspaceId ?? ""}
-              onChange={(e) => setWorkspaceId(e.target.value || null)}
-            >
-              {(!needsProject || workspaceId == null) && (
-                <NativeSelectOption value="">
-                  {needsProject
+              value={workspaceId}
+              onChange={setPicked}
+              codeOnly={needsProject}
+              emptyLabel={
+                !needsProject
+                  ? t("phase5.ownFolder")
+                  : workspaceId == null
                     ? t("routines.coding.projectPick")
-                    : t("phase5.ownFolder")}
-                </NativeSelectOption>
-              )}
-              {workspaces.map((w) => (
-                <NativeSelectOption key={w.id} value={w.id}>
-                  {w.label ?? w.path}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
+                    : null
+              }
+            />
           </Field>
           <Field>
             <FieldLabel htmlFor="coding-routine-time">
