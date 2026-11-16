@@ -311,7 +311,7 @@ export const RoutineDialog = ({
         }}
       >
         <DialogContent
-          className="flex max-h-[calc(100dvh-48px)] flex-col overflow-hidden rounded-2xl p-5 sm:max-w-[640px]"
+          className="top-6 flex max-h-[calc(100dvh-48px)] translate-y-0 flex-col overflow-hidden rounded-2xl p-5 sm:max-w-[640px]"
           data-testid="routine-dialog"
         >
           <DialogHeader>
@@ -329,7 +329,7 @@ export const RoutineDialog = ({
             }}
           >
             {error && <SendError error={error} />}
-            <FieldGroup className="min-h-0 scrollbar-gutter-stable overflow-y-auto pr-1">
+            <FieldGroup className="min-h-0 scrollbar-gutter-stable overflow-x-hidden overflow-y-auto pr-1">
               {!routineId && (
                 <div>
                   <h2 className="mb-2 text-sm font-medium">
