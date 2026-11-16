@@ -64,6 +64,7 @@ import {
   type BrowserTargetMemory,
   type BrowserTargetSource,
 } from "../browser/browser-target";
+import type { PageStorageKeys } from "../browser/connected-sites";
 import {
   FENCE_ERROR,
   fenceBlockPatterns,
@@ -692,9 +693,20 @@ const SIGN_IN_WATCHED = new Set([
  */
 const PAGE_STORAGE_JS = `(async () => {
   const keys = [];
-  try { for (let i = 0; i < localStorage.length && keys.length < 200; i++) { const k = localStorage.key(i); if (k != null) keys.push(k); } } catch {}
+  const tokens = [];
+  const jwt = /^(Bearer )?eyJ[\\w-]{5,}\\.[\\w-]{5,}\\.[\\w-]*$/;
+  const holdsToken = /"(access_token|id_token|refresh_token|accessToken|idToken|refreshToken)"\\s*:\\s*"[^"]{16,}/;
+  try {
+    for (let i = 0; i < localStorage.length && keys.length < 200; i++) {
+      const k = localStorage.key(i);
+      if (k == null) continue;
+      keys.push(k);
+      const v = String(localStorage.getItem(k) ?? "").slice(0, 20000).trim().replace(/^"|"$/g, "");
+      if (jwt.test(v) || holdsToken.test(v)) tokens.push(k);
+    }
+  } catch {}
   try { if (indexedDB.databases) for (const db of await indexedDB.databases()) if (db.name) keys.push(db.name); } catch {}
-  return keys;
+  return { keys, tokens };
 })()`;
 /** A page that does not answer about its storage in this long holds nothing. */
 const PAGE_STORAGE_MS = 800;
@@ -720,7 +732,7 @@ export interface McpBrowserServerOptions {
     sessionId: string,
     pageId?: number,
     /** The page's own storage keys, when the page is on `url`'s site. */
-    storage?: () => Promise<string[]>
+    storage?: () => Promise<PageStorageKeys>
   ) => Promise<string | null>;
   /**
    * The bot's browser reached a site's sign-in page (a password field on
@@ -735,7 +747,7 @@ export interface McpBrowserServerOptions {
   signedInOn?: (
     url: string,
     pageId?: number,
-    storage?: () => Promise<string[]>
+    storage?: () => Promise<PageStorageKeys>
   ) => Promise<string | null>;
   /** Gate consulted before each tool call; when omitted, nothing is gated. */
   requestPermission?: (
@@ -4607,7 +4619,7 @@ export class McpBrowserServer extends McpHttpServer {
   private storageReader(
     page: BrowserPage | null,
     url: string
-  ): (() => Promise<string[]>) | undefined {
+  ): (() => Promise<PageStorageKeys>) | undefined {
     if (page == null) return undefined;
     let here: string;
     let there: string;
@@ -4621,17 +4633,19 @@ export class McpBrowserServer extends McpHttpServer {
     return async () => {
       let timer: ReturnType<typeof setTimeout> | undefined;
       try {
-        const keys = await Promise.race([
+        const found = (await Promise.race([
           this.readPage(page, PAGE_STORAGE_JS),
-          new Promise<string[]>((resolve) => {
-            timer = setTimeout(() => resolve([]), PAGE_STORAGE_MS);
+          new Promise<null>((resolve) => {
+            timer = setTimeout(() => resolve(null), PAGE_STORAGE_MS);
           }),
-        ]);
-        return Array.isArray(keys)
-          ? keys.filter((key): key is string => typeof key === "string")
-          : [];
+        ])) as Partial<PageStorageKeys> | null;
+        const strings = (value: unknown): string[] =>
+          Array.isArray(value)
+            ? value.filter((key): key is string => typeof key === "string")
+            : [];
+        return { keys: strings(found?.keys), tokens: strings(found?.tokens) };
       } catch {
-        return [];
+        return { keys: [], tokens: [] };
       } finally {
         clearTimeout(timer);
       }

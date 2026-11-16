@@ -123,31 +123,49 @@ const SIGN_IN_COOKIE =
 
 /**
  * A page storage key (localStorage key or IndexedDB name) that keeps a
- * sign-in: a token, a session, the signed-in user. Analytics and
- * preferences never count, however they are named.
+ * sign-in, by a name only sign-in libraries use: a key merely containing
+ * "token" or "session" is set for visitors on most big sites (bot checks,
+ * analytics), so it lists nothing.
  */
 const SIGN_IN_STORAGE =
-  /token|auth|sess|jwt|sso|login|logged|credential|account|user|oidc|msal|identity/i;
+  /access[_-]?token|id[_-]?token|refresh[_-]?token|auth[_-]?token|authUser|@@auth0spajs@@|okta-token-storage|CognitoIdentityServiceProvider|^msal\.|oidc\.user|firebaseLocalStorageDb|^(jwt|token|session_?token|user_?token)$/i;
 const NOT_SIGN_IN_STORAGE =
-  /^(_ga|_gid|_gcl|_hj|_fbp|_fbc|_uet|_clck|_clsk|_pk_|__insp|ajs_|amplitude|amp_|mp_|mixpanel|optimizely|intercom|ld:|segment|statsig|posthog|ph_|heap|fs_|_dd_|datadog|sentry|theme|lang|locale|consent|cookie)/i;
+  /^(_ga|_gid|_gcl|_hj|_fbp|_fbc|_uet|_clck|_clsk|_pk_|__insp|ajs_|amplitude|amp_|mp_|mixpanel|optimizely|intercom|ld:|segment|statsig|posthog|ph_|heap|fs_|_dd_|datadog|sentry|aws_?waf|recaptcha|theme|lang|locale|consent|cookie)/i;
 
-/** Reads the page's storage keys (localStorage, IndexedDB names); [] when it cannot. */
-export type PageStorage = () => Promise<string[]>;
+/**
+ * What a page holds in its own storage: every key, and the keys whose value
+ * is shaped like a sign-in token (a JWT, or JSON carrying an access, id or
+ * refresh token). The values never leave the page.
+ */
+export interface PageStorageKeys {
+  keys: string[];
+  tokens: string[];
+}
 
-const readStorage = async (storage?: PageStorage): Promise<string[]> => {
-  if (storage == null) return [];
+/** Reads the page's own storage; nothing when it cannot. */
+export type PageStorage = () => Promise<PageStorageKeys>;
+
+const strings = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((key): key is string => typeof key === "string")
+    : [];
+
+const readStorage = async (storage?: PageStorage): Promise<PageStorageKeys> => {
+  if (storage == null) return { keys: [], tokens: [] };
   try {
-    const keys = await storage();
-    return Array.isArray(keys)
-      ? keys.filter((key): key is string => typeof key === "string")
-      : [];
+    const found = await storage();
+    return { keys: strings(found?.keys), tokens: strings(found?.tokens) };
   } catch {
-    return [];
+    return { keys: [], tokens: [] };
   }
 };
 
-const keepsSignIn = (key: string): boolean =>
-  SIGN_IN_STORAGE.test(key) && !NOT_SIGN_IN_STORAGE.test(key);
+/** Whether the page's storage keeps a sign-in: a sign-in library's key, or a token-shaped value. */
+const keepsSignIn = ({ keys, tokens }: PageStorageKeys): boolean =>
+  tokens.some((key) => !NOT_SIGN_IN_STORAGE.test(key)) ||
+  keys.some(
+    (key) => SIGN_IN_STORAGE.test(key) && !NOT_SIGN_IN_STORAGE.test(key)
+  );
 
 interface Saved {
   sites: Record<
@@ -451,7 +469,7 @@ export class ConnectedSites {
     await this.seedProfile(partition);
     if (this.read().sites[site] == null) return null;
     if ((await this.cookiesOf(site, partition)).length > 0) return site;
-    return (await readStorage(storage)).length > 0 ? site : null;
+    return (await readStorage(storage)).keys.length > 0 ? site : null;
   }
 
   /**
@@ -467,9 +485,9 @@ export class ConnectedSites {
     const listed = this.read().sites[site] != null;
     if (listed && (await this.cookiesOf(site, partition)).length > 0)
       return true;
-    const keys = await readStorage(storage);
-    if (listed) return keys.length > 0;
-    if (!keys.some(keepsSignIn)) return false;
+    const found = await readStorage(storage);
+    if (listed) return found.keys.length > 0;
+    if (!keepsSignIn(found)) return false;
     const saved = this.read();
     saved.sites[site] ??= {
       policy: defaultPolicy(site),

@@ -4155,7 +4155,7 @@ describe("a connected site's rule", () => {
   /** The tab each gate call named: its browser profile holds the sign-ins. */
   const gatePages: Array<number | undefined> = [];
   /** What each gate call's page-storage reader found (null: none given). */
-  const gateStorage: Array<string[] | null> = [];
+  const gateStorage: Array<{ keys: string[]; tokens: string[] } | null> = [];
   const loginStops: string[] = [];
   const refuse = "The user blocked bots from using their sign-in on bank.test.";
 
@@ -4346,11 +4346,11 @@ describe("a connected site's rule", () => {
     page.url = "https://notes.example.test/home";
     respondWith((expression) =>
       expression.includes("localStorage.length")
-        ? ["auth_token", "theme"]
+        ? { keys: ["st", "theme"], tokens: ["st"] }
         : oneButton
     );
     await sitedCall("browser_snapshot", { action: "snapshot" });
-    expect(gateStorage[0]).toEqual(["auth_token", "theme"]);
+    expect(gateStorage[0]).toEqual({ keys: ["st", "theme"], tokens: ["st"] });
     // A goto to another site: the current page's storage is not that site's.
     gateStorage.length = 0;
     await sitedCall("browser_navigate", {
@@ -4367,7 +4367,7 @@ describe("a connected site's rule", () => {
       return oneButton;
     });
     await sitedCall("browser_snapshot", { action: "snapshot" });
-    expect(gateStorage[0]).toEqual([]);
+    expect(gateStorage[0]).toEqual({ keys: [], tokens: [] });
   });
 
   it("notes a site whose page has a password field, by the app's own look", async () => {

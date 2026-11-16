@@ -469,7 +469,11 @@ describe("a sign-in kept only in page storage (no cookies)", () => {
   // A site keeping its sign-in as a token in localStorage or IndexedDB has
   // no cookies: it was used with no rule, and never found among earlier
   // sign-ins. The page's storage is read in the page, by the browser.
-  const keys = (...names: string[]) => vi.fn(async () => names);
+  const keys = (...names: string[]) =>
+    vi.fn(async () => ({ keys: names, tokens: [] as string[] }));
+  /** Keys whose values look like a sign-in token (a JWT), as the page says. */
+  const tokens = (...names: string[]) =>
+    vi.fn(async () => ({ keys: names, tokens: names }));
 
   it("holds a listed site to its rule when the page holds storage", async () => {
     const { sites, ask } = setup([], "deny");
@@ -494,7 +498,7 @@ describe("a sign-in kept only in page storage (no cookies)", () => {
       "access_token",
       "firebase:authUser:x",
       "jwt",
-      "session",
+      "firebaseLocalStorageDb",
     ]) {
       const site = `${name.replace(/[^a-z]/gi, "")}.example`;
       expect(
@@ -512,6 +516,47 @@ describe("a sign-in kept only in page storage (no cookies)", () => {
     expect(listed.find((s) => s.site === "accesstoken.example")?.policy).toBe(
       "ask"
     );
+  });
+
+  it("lists a site whose page keeps a token-shaped value, whatever the key is called", async () => {
+    const { sites, ask } = setup([], "deny");
+    expect(
+      await sites.gate("https://app.example/", "1/s", undefined, tokens("st"))
+    ).toMatch(/said no/);
+    expect(ask).toHaveBeenCalledTimes(1);
+  });
+
+  it("never lists a public site a visitor is not signed in to (its real keys)", async () => {
+    // Keys these sites set for a visitor who is not signed in (16 Nov).
+    const visitor: Record<string, string[]> = {
+      "booking.com": [
+        "aws_waf_token_challenge_attempts",
+        "awswaf_session_storage",
+        "awswaf_token_refresh_timestamp",
+        "_uetsid",
+        "pacs_data",
+      ],
+      "wikipedia.org": ["portal_session_id", "translationHash"],
+      "amazon.in": ["csa-ctoken-YE4V643Q51YJE5E83P19", "csm-hit", "amznfbgid"],
+      "flipkart.com": ["NRBA_SESSION::b2b54ff9", "keyval-store", "v4-database"],
+      "bbc.com": [
+        "permutiveIdentityManagerId_exp",
+        "_sp_user_consent_26225",
+        "fedIDpiano",
+      ],
+    };
+    const { sites, ask } = setup([]);
+    for (const [site, names] of Object.entries(visitor))
+      expect(
+        await sites.gate(
+          `https://www.${site}/`,
+          "1/s",
+          undefined,
+          keys(...names)
+        )
+      ).toBeNull();
+    expect(ask).not.toHaveBeenCalled();
+    expect(await sites.list()).toEqual([]);
   });
 
   it("never lists a site on analytics or preferences alone", async () => {
