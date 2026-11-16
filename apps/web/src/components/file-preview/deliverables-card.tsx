@@ -8,6 +8,7 @@ import {
   ExternalLink,
   File,
   FileImage,
+  FilePlay,
   FileText,
   FolderOpen,
   Globe,
@@ -48,6 +49,8 @@ const iconFor = (item: DeliverableItem) => {
       return FileImage;
     case "presentation":
       return Presentation;
+    case "video":
+      return FilePlay;
     case "markdown":
     case "text":
     case "document":

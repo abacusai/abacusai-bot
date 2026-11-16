@@ -155,17 +155,28 @@ export const FilePreview = ({
         return { state: "binary", sizeBytes: await previewSize(input, signal) };
       if (
         browserPreview &&
-        (kind === "pdf" || (kind === "html" && htmlPreview))
+        (kind === "pdf" || kind === "video" || (kind === "html" && htmlPreview))
       )
         return {
           state: "local",
           url: await previewBlob(
             input,
-            kind === "pdf" ? "application/pdf" : "text/html",
+            kind === "pdf"
+              ? "application/pdf"
+              : kind === "video"
+                ? path.toLowerCase().endsWith(".webm")
+                  ? "video/webm"
+                  : "video/mp4"
+                : "text/html",
             signal
           ),
         };
-      if (!browserPreview && (kind === "pdf" || kind === "html")) {
+      // A video plays in the webview too: Chromium shows its own player for
+      // a media URL.
+      if (
+        !browserPreview &&
+        (kind === "pdf" || kind === "html" || kind === "video")
+      ) {
         if (!read.localUrl)
           throw new Error("Host file URL resolver unavailable");
         const url = new URL(await read.localUrl(path, hostRoot));
@@ -446,7 +457,16 @@ export const FilePreview = ({
         ) : loaded.state === "slides" ? (
           <PptxSlides deck={loaded.deck} />
         ) : loaded.state === "local" ? (
-          browserPreview ? (
+          browserPreview && kind === "video" ? (
+            <video
+              src={loaded.url}
+              controls
+              loop
+              playsInline
+              aria-label={baseName(path)}
+              className="min-h-0 w-full flex-1 bg-black object-contain"
+            />
+          ) : browserPreview ? (
             <iframe
               title={baseName(path)}
               src={kind === "pdf" ? `${loaded.url}#view=FitH` : loaded.url}
