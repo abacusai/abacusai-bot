@@ -122,9 +122,29 @@ describe("connected sites", () => {
     const { sites, ask } = setup([INDIGO], "deny");
     sites.add("goindigo.in");
     expect(await sites.gate("https://goindigo.in/", "1/s")).toMatch(
-      /did not allow using their sign-in on goindigo\.in/
+      /said no to using their sign-in on goindigo\.in/
     );
     expect(await sites.gate("https://goindigo.in/", "1/s")).not.toBeNull();
+    expect(ask).toHaveBeenCalledTimes(1);
+  });
+
+  it("a clear no is told as the user's no, never as a prompt nobody answered", async () => {
+    const { sites } = setup([INDIGO], "deny");
+    sites.add("goindigo.in");
+    const refusal = await sites.gate("https://goindigo.in/", "1/s");
+    expect(refusal).toMatch(/said no/);
+    expect(refusal).not.toMatch(/could not be asked|nobody|did not answer/i);
+  });
+
+  it("a prompt nobody could answer is told as that, not as the user's no, and is not asked again right away", async () => {
+    const { sites, ask } = setup([INDIGO], "unasked");
+    sites.add("goindigo.in");
+    const refusal = await sites.gate("https://goindigo.in/", "1/s");
+    expect(refusal).toMatch(/could not be asked/);
+    expect(refusal).not.toMatch(/did not allow|said no/);
+    expect(await sites.gate("https://goindigo.in/", "1/s")).toMatch(
+      /could not be asked/
+    );
     expect(ask).toHaveBeenCalledTimes(1);
   });
 
@@ -254,7 +274,7 @@ describe("connected sites", () => {
     it("so a bot is asked before using one", async () => {
       const { sites, ask } = setup(before, "deny", { seedExisting: true });
       expect(await sites.gate("https://www.goindigo.in/trips", "a")).toContain(
-        "did not allow"
+        "said no"
       );
       expect(ask).toHaveBeenCalledTimes(1);
     });

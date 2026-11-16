@@ -162,18 +162,20 @@ describe("a connected site's ask (may this chat use your sign-in?)", () => {
     });
     const pending = yolo.askSite("goindigo.in", "s", "session-1", 50);
     expect(emitted(events).site).toBe("goindigo.in");
-    await expect(pending).resolves.toBe("deny");
+    await expect(pending).resolves.toBe("unasked");
   });
 
-  it("is a no when nobody answers in time, or there is nobody to ask", async () => {
+  it("is unasked (not the user's no) when nobody answers in time, or there is nobody to ask", async () => {
     const { gate: g, events } = gate();
     await expect(g.askSite("goindigo.in", "s", "session-1", 20)).resolves.toBe(
-      "deny"
+      "unasked"
     );
     expect(events.some((e) => e.type === "browser-permission-cleared")).toBe(
       true
     );
-    await expect(g.askSite("goindigo.in", "s", "nobody")).resolves.toBe("deny");
+    await expect(g.askSite("goindigo.in", "s", "nobody")).resolves.toBe(
+      "unasked"
+    );
   });
 
   it("is not answered by a browsing setting turned to never ask", async () => {
@@ -181,6 +183,14 @@ describe("a connected site's ask (may this chat use your sign-in?)", () => {
     const pending = g.askSite("goindigo.in", "s", "session-1", 50);
     emitted(events);
     g.flushPending("allow", "browser");
-    await expect(pending).resolves.toBe("deny");
+    await expect(pending).resolves.toBe("unasked");
+  });
+
+  it("is unasked, not the user's no, when browsing is turned off while it waits", async () => {
+    const { gate: g, events } = gate();
+    const pending = g.askSite("goindigo.in", "s", "session-1", 5_000);
+    emitted(events);
+    g.flushPending("deny", "browser");
+    await expect(pending).resolves.toBe("unasked");
   });
 });

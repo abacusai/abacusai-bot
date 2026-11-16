@@ -47,14 +47,17 @@ export interface SiteStore {
   clearStorageData(options: { origin: string }): Promise<void>;
 }
 
-/** How the user answered "may this chat use your sign-in on <site>?". */
-export type SiteDecision = "allow" | "deny" | "session" | "always";
+/**
+ * How the user answered "may this chat use your sign-in on <site>?";
+ * "unasked" when nobody could answer (no one watching, no answer in time).
+ */
+export type SiteDecision = "allow" | "deny" | "session" | "always" | "unasked";
 
 export interface ConnectedSitesDeps {
   /** Where the list and rules are kept. */
   file: () => string;
   store: () => SiteStore;
-  /** Asks the user in the chat; resolves "deny" when nobody can answer. */
+  /** Asks the user in the chat; resolves "unasked" when nobody can answer. */
   ask: (site: string, sessionId: string) => Promise<SiteDecision>;
   /** The conversation a session belongs to, for "allow in this chat". */
   conversationOf: (sessionId: string) => string | null;
@@ -112,7 +115,11 @@ export class ConnectedSites {
   private readonly allowedInChat = new Set<string>();
   /** Sites allowed in every chat until the app quits. */
   private readonly allowedUntilQuit = new Set<string>();
-  private readonly deniedInChat = new Map<string, number>();
+  /** "conversation|site": the user's no (or no answer), and when. */
+  private readonly deniedInChat = new Map<
+    string,
+    { at: number; why: "deny" | "unasked" }
+  >();
   /** "conversation|site": that chat's bot stopped at the site's sign-in page, when. */
   private readonly signInAsked = new Map<string, number>();
   /** One prompt per chat and site at a time; later calls share its answer. */
@@ -345,9 +352,9 @@ export class ConnectedSites {
       this.allowedInChat.add(key);
       return touch();
     }
-    const deniedAt = this.deniedInChat.get(key);
-    if (deniedAt != null && this.now() - deniedAt < DENIED_FOR_MS)
-      return this.refusal(site);
+    const denied = this.deniedInChat.get(key);
+    if (denied != null && this.now() - denied.at < DENIED_FOR_MS)
+      return this.refusal(site, denied.why);
     let pending = this.asking.get(key);
     if (pending == null) {
       pending = this.deps.ask(site, sessionId);
@@ -355,9 +362,9 @@ export class ConnectedSites {
       void pending.finally(() => this.asking.delete(key));
     }
     const decision = await pending;
-    if (decision === "deny") {
-      this.deniedInChat.set(key, this.now());
-      return this.refusal(site);
+    if (decision === "deny" || decision === "unasked") {
+      this.deniedInChat.set(key, { at: this.now(), why: decision });
+      return this.refusal(site, decision);
     }
     if (decision === "always") this.setPolicy(site, "allowed");
     else if (decision === "session") this.allowedUntilQuit.add(site);
@@ -365,7 +372,11 @@ export class ConnectedSites {
     return touch();
   }
 
-  private refusal(site: string): string {
-    return `The user did not allow using their sign-in on ${site} for this (or could not be asked: the prompt shows in the app). Do not use ${site}. Tell the user, and that they can allow it when the app asks, or in Settings → Browser → Connected sites.`;
+  // Two cases, told apart: a run that said "could not ask" after a clear no
+  // told the user something untrue.
+  private refusal(site: string, why: "deny" | "unasked"): string {
+    return why === "deny"
+      ? `The user said no to using their sign-in on ${site} in this chat. Do not use ${site} and do not look for a way around it. Tell the user you did not use their ${site} sign-in because they said no; they can allow it in Settings → Browser → Connected sites.`
+      : `The user could not be asked whether this chat may use their sign-in on ${site}: nobody answered the prompt in the app. Do not use ${site}. Tell the user it needs their OK, which they can give when the app asks, or in Settings → Browser → Connected sites.`;
   }
 }
