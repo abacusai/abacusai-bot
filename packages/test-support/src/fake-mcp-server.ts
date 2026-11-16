@@ -14,6 +14,8 @@ export interface FakeMcpTool {
   reply?: (args: Record<string, unknown>) => string;
   /** Whether `tools/call` answers as a refusal. */
   refuses?: (args: Record<string, unknown>) => boolean;
+  /** The result's MCP `_meta`, when it carries one. */
+  meta?: (args: Record<string, unknown>) => Record<string, unknown>;
 }
 
 export class FakeMcpServer {
@@ -117,6 +119,7 @@ export class FakeMcpServer {
             { type: "text", text: tool?.reply?.(args) ?? `${name} ran` },
           ],
           isError: tool?.refuses?.(args) === true,
+          ...(tool?.meta != null ? { _meta: tool.meta(args) } : {}),
         });
 
         return;

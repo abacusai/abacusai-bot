@@ -34,7 +34,7 @@ import type { AgentEvent } from "./protocol.js";
 import { createResourceLoader } from "./resource-loader.js";
 import { DeliveredMedia, type MediaCheck } from "./send-media-tool.js";
 import { isMediaId } from "./send-media.js";
-import { signedInSites } from "./signed-in-note.js";
+import { signedInSitesOf } from "./signed-in-note.js";
 import { whenAborted } from "./subagent-abort.js";
 import { forwardChildToolEvents, traceChildEvent } from "./subagent-events.js";
 import {
@@ -850,7 +850,11 @@ export async function runBrowserTask(
           readChars += text.length;
           for (const id of screenshotMediaIds(text))
             options.takenMedia?.add(id);
-          for (const site of signedInSites(text)) signedIn.add(site);
+          // From the browser's structured field, never the page's text.
+          const details = (
+            event as unknown as { result?: { details?: unknown } }
+          ).result?.details;
+          for (const site of signedInSitesOf(details)) signedIn.add(site);
         }
 
         if (event.type === "tool_execution_start") {

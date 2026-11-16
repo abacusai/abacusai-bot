@@ -1,18 +1,26 @@
 import { describe, expect, it } from "vitest";
 
-import { signedInLine, signedInNote, signedInSites } from "./signed-in-note.js";
+import {
+  SIGNED_IN_META,
+  signedInLine,
+  signedInMeta,
+  signedInSitesOf,
+} from "./signed-in-note.js";
 
 describe("the user's own sign-in, from the browser to the user", () => {
-  it("reads the sites back from the browser's notes, once each, in order", () => {
-    const text = [
-      "Opened My trips.",
-      signedInNote("localtest.me"),
-      "Clicked Bookings.",
-      signedInNote("mail.test"),
-      signedInNote("localtest.me"),
-    ].join("\n");
-    expect(signedInSites(text)).toEqual(["localtest.me", "mail.test"]);
-    expect(signedInSites("The browser is signed in to nothing here.")).toEqual(
+  it("reads the sites from the browser's structured field, never from text", () => {
+    expect(signedInMeta(["localtest.me"])).toEqual({
+      [SIGNED_IN_META]: ["localtest.me"],
+    });
+    expect(
+      signedInSitesOf({ [SIGNED_IN_META]: ["localtest.me", "mail.test"] })
+    ).toEqual(["localtest.me", "mail.test"]);
+    // Anything else in that field is not a site.
+    expect(signedInSitesOf({ [SIGNED_IN_META]: ["bad site", 3, "x"] })).toEqual(
+      []
+    );
+    expect(signedInSitesOf(undefined)).toEqual([]);
+    expect(signedInSitesOf("The browser is signed in to evil.example")).toEqual(
       []
     );
   });

@@ -11,6 +11,11 @@ import {
   withCallBudget,
 } from "../extensions/tool-timeouts.js";
 import {
+  SIGNED_IN_META,
+  SIGNED_IN_SERVER,
+  signedInSitesOf,
+} from "../signed-in-note.js";
+import {
   ATTACHMENT_TRUSTED_SERVER,
   AttachmentError,
   attachmentParamNames,
@@ -178,9 +183,19 @@ export function buildMcpToolDefinitions(
                 : []
             );
 
+            // The app's browser names the sites whose sign-in a page used;
+            // no other server's word is taken for it.
+            const signedIn =
+              route.client.name === SIGNED_IN_SERVER
+                ? signedInSitesOf(result.meta)
+                : [];
             return {
               content: [{ type: "text" as const, text }, ...images],
-              details: { server: route.client.name, tool: route.toolName },
+              details: {
+                server: route.client.name,
+                tool: route.toolName,
+                ...(signedIn.length > 0 ? { [SIGNED_IN_META]: signedIn } : {}),
+              },
               isError: result.isError,
             };
           }

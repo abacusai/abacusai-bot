@@ -4,7 +4,7 @@ import path from "path";
 import type { ChannelCapabilities } from "@abacus-ai/agent/channel";
 import { modelPath } from "@abacus-ai/agent/model-path";
 import { MEDIA_CHECK_TOOL_NAME, MEDIA_HELD } from "@abacus-ai/agent/send-media";
-import { signedInNote } from "@abacus-ai/agent/signed-in-note";
+import { signedInMeta, signedInNote } from "@abacus-ai/agent/signed-in-note";
 import { readTravelers } from "@abacus-ai/agent/traveler-store";
 import type { IpcEvent } from "@abacus-ai/contract/contracts";
 import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
@@ -670,7 +670,7 @@ const CARD_DETAILS: ReadonlySet<VaultField> = new Set([
   "cardholder_name",
 ]);
 
-/** How long a run, once told a page uses the user's sign-in, is not told again. */
+/** How long after the full user's-sign-in sentence a call gets only the short line. */
 const SIGNED_IN_TOLD_MS = 5 * 60_000;
 
 /** Calls after which the page is looked at for a sign-in form. */
@@ -2408,13 +2408,24 @@ export class McpBrowserServer extends McpHttpServer {
             }
           }
           const left = await this.leaveAbacusPage(sessionId);
-          return this.withPageEvents(
+          const signedIn =
+            left == null && result.isError !== true && sessionId != null
+              ? await this.signedInSite(sessionId)
+              : null;
+          const out = this.withPageEvents(
             left ?? result,
             sessionId,
-            left == null && result.isError !== true
-              ? await this.signedInNote(sessionId)
+            signedIn != null && sessionId != null
+              ? this.signedInLines(sessionId, signedIn)
               : []
           );
+          // The run reads the site from here, never from the page's text.
+          return signedIn == null
+            ? out
+            : {
+                ...out,
+                _meta: { ...out._meta, ...signedInMeta([signedIn]) },
+              };
         };
         try {
           return await this.inSessionOrder(sessionId ?? "", guarded);
@@ -4514,27 +4525,32 @@ export class McpBrowserServer extends McpHttpServer {
     };
   }
 
-  /** "session|site" → when its run was last told the page uses the user's sign-in. */
+  /** "session|site" → when the full sentence was last given. */
   private readonly toldSignedIn = new Map<string, number>();
 
-  /**
-   * Once per run and site: the page is on a site where the browser holds the
-   * user's own sign-in. Without it a run that read the user's account
-   * reported the page as one that "loaded without needing a sign-in".
-   */
-  private async signedInNote(sessionId?: string): Promise<string[]> {
+  /** The listed site the session's page shows the user's own account on, or null. */
+  private async signedInSite(sessionId?: string): Promise<string | null> {
     const signedInOn = this.options.signedInOn;
     const page = this.findView(sessionId);
     const url = page?.getURL();
     if (signedInOn == null || sessionId == null || page == null || url == null)
-      return [];
-    const site = await signedInOn(url, page.id).catch(() => null);
-    if (site == null) return [];
-    // A chat's browser outlives a run: a later run (minutes on) is told again.
+      return null;
+    return signedInOn(url, page.id).catch(() => null);
+  }
+
+  /**
+   * Every call on such a page says so: without it a run that read the
+   * user's account reported a page that "loaded without needing a sign-in",
+   * and a second run in the same chat (the full sentence given minutes
+   * before, to the first) was told nothing. The full sentence once in a
+   * while, a short line otherwise.
+   */
+  private signedInLines(sessionId: string, site: string): string[] {
     const key = `${sessionId}|${site}`;
     const now = Date.now();
     const told = this.toldSignedIn.get(key);
-    if (told != null && now - told < SIGNED_IN_TOLD_MS) return [];
+    if (told != null && now - told < SIGNED_IN_TOLD_MS)
+      return [`(Signed in to ${site} with the user's own account.)`];
     this.toldSignedIn.set(key, now);
     return [signedInNote(site)];
   }

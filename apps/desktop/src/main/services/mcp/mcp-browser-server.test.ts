@@ -17,7 +17,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-import { signedInNote, signedInSites } from "@abacus-ai/agent/signed-in-note";
+import { signedInNote, signedInSitesOf } from "@abacus-ai/agent/signed-in-note";
 import {
   afterAll,
   afterEach,
@@ -4152,6 +4152,30 @@ describe("a connected site's rule", () => {
   const loginStops: string[] = [];
   const refuse = "The user blocked bots from using their sign-in on bank.test.";
 
+  /** The whole result, `_meta` and all. */
+  const sitedRaw = async (
+    name: string,
+    args: Record<string, unknown>
+  ): Promise<ToolResult & { _meta?: Record<string, unknown> }> => {
+    const res = await fetch(
+      `http://127.0.0.1:${sitedPort}/mcp?session=session-1`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: ++nextId,
+          method: "tools/call",
+          params: { name, arguments: args },
+        }),
+      }
+    );
+    return ((await res.json()) as { result: ToolResult }).result;
+  };
   const sitedCall = async (
     name: string,
     args: Record<string, unknown>
@@ -4207,25 +4231,29 @@ describe("a connected site's rule", () => {
     loginStops.length = 0;
   });
 
-  it("tells the run a page is on a site where it uses the user's own sign-in, once per site", async () => {
+  it("tells every call on a site where it uses the user's own sign-in, and names the site where page text cannot", async () => {
     // A run that read the user's account said the page "loaded without
     // needing a sign-in": it could not tell the browser held the user's.
-    const opened = await sitedCall("browser_navigate", {
+    const opened = await sitedRaw("browser_navigate", {
       action: "goto",
       url: "https://mail.test/inbox",
     });
-    expect(opened.isError).toBe(false);
-    expect(opened.text).toContain(signedInNote("mail.test"));
-    // Read back by the run, which tells the chat's model to say so.
-    expect(signedInSites(opened.text)).toEqual(["mail.test"]);
+    expect(opened.isError).not.toBe(true);
+    expect(opened.content?.[0]?.text).toContain(signedInNote("mail.test"));
+    expect(signedInSitesOf(opened._meta)).toEqual(["mail.test"]);
+    // A second run in the same chat, minutes later: told again, shortly.
     respondWith(() => oneButton);
-    const again = await sitedCall("browser_snapshot", { action: "snapshot" });
-    expect(again.text).not.toContain("signed in to mail.test");
-    const elsewhere = await sitedCall("browser_navigate", {
+    const again = await sitedRaw("browser_snapshot", { action: "snapshot" });
+    expect(again.content?.[0]?.text).toContain(
+      "Signed in to mail.test with the user's own account"
+    );
+    expect(signedInSitesOf(again._meta)).toEqual(["mail.test"]);
+    const elsewhere = await sitedRaw("browser_navigate", {
       action: "goto",
       url: "https://example.test/next",
     });
-    expect(elsewhere.text).not.toContain("user's own account");
+    expect(elsewhere.content?.[0]?.text).not.toContain("user's own account");
+    expect(signedInSitesOf(elsewhere._meta)).toEqual([]);
   });
 
   it("refuses a navigation to a site whose rule says no, before it loads", async () => {

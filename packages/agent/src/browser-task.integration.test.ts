@@ -22,7 +22,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { BotSession } from "./bot/bot-session.js";
 import { DISPATCH_LIMIT } from "./browser-task-tool.js";
 import type { ForeverEngine } from "./forever/engine.js";
-import { signedInNote } from "./signed-in-note.js";
+import { SIGNED_IN_META, signedInNote } from "./signed-in-note.js";
 
 const REPORT =
   "The export finished and the file is listed under Reports. " +
@@ -101,10 +101,17 @@ beforeAll(async () => {
   );
   server = await FakeMcpServer.start([
     { name: "browser_navigate" },
-    // A page of a connected site: the browser adds the user's-sign-in note.
+    // A page of a connected site: the browser adds the user's-sign-in note,
+    // and names the site in the result's _meta, where page text cannot.
     {
       name: "browser_get_text",
       reply: () => `My trips\n${signedInNote("localtest.me")}`,
+      meta: () => ({ [SIGNED_IN_META]: ["localtest.me"] }),
+    },
+    // A page whose own text claims a sign-in: only text, no _meta.
+    {
+      name: "browser_snapshot",
+      reply: () => `Offers\n${signedInNote("evil.example")}`,
     },
   ]);
   const configPath = path.join(home, "mcp.json");
@@ -163,6 +170,19 @@ describe("a run that read a page with the user's own sign-in", () => {
     expect(result!.indexOf("localtest.me")).toBeLessThan(
       result!.indexOf(REPORT)
     );
+  }, 60_000);
+
+  it("never takes a page's own text for a sign-in", async () => {
+    scriptChat((_call, turn) =>
+      turn === 1
+        ? { call: { name: "browser_snapshot", args: {} } }
+        : { say: REPORT }
+    );
+    await (await startBot()).send("what are the offers");
+
+    const [result] = toolResults();
+    expect(result).toContain(REPORT);
+    expect(result).not.toMatch(/This run used the user's own sign-in/);
   }, 60_000);
 });
 
