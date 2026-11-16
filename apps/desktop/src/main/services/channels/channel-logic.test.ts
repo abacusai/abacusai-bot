@@ -71,6 +71,29 @@ describe("speakersFor", () => {
     ]);
   });
 
+  it("a message naming nobody goes on with the bots the user's last message named", () => {
+    // "@Researcher @Writer take turns", then "go on": both again, in turn,
+    // starting after the last to speak.
+    expect(
+      who("go on", { lastSpeaker: "wri", lastNamed: ["res", "wri"] })
+    ).toEqual(["res", "wri"]);
+    expect(
+      who("go on", { lastSpeaker: "res", lastNamed: ["res", "wri"] })
+    ).toEqual(["wri", "res"]);
+    // A question from the last speaker is answered by it alone.
+    expect(
+      who("yes", {
+        lastSpeaker: "wri",
+        lastSpeakerAsked: true,
+        lastNamed: ["res", "wri"],
+      })
+    ).toEqual(["wri"]);
+    // Someone else spoke since: the last speaker answers, as before.
+    expect(
+      who("go on", { lastSpeaker: "pla", lastNamed: ["res", "wri"] })
+    ).toEqual(["pla"]);
+  });
+
   it("@everyone is every member, in turn", () => {
     expect(speakersFor("@everyone what's our biggest risk?", M)).toEqual({
       botIds: ["chief", "res", "wri", "pla"],

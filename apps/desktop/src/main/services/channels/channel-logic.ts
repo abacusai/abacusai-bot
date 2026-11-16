@@ -354,6 +354,8 @@ export const speakersFor = (
     lastSpeaker?: string | null;
     /** The last bot message asked something: a plain "yes"/"ok" answers it. */
     lastSpeakerAsked?: boolean;
+    /** The bots the user's previous message named, in order. */
+    lastNamed?: readonly string[];
   } = {}
 ): Speakers => {
   const text = ownWords(message);
@@ -391,6 +393,21 @@ export const speakersFor = (
   if (stopNamed != null && stopNamed.length > 0)
     return { botIds: stopNamed, everyone: false };
   if (noAnswer) return { botIds: [], everyone: false };
+  // "go on" after the user named several bots, one of them the last to
+  // speak: the same bots go on in turn, starting after the last to speak.
+  const lastNamed = (options.lastNamed ?? []).filter((id) => ids.has(id));
+  if (
+    lastNamed.length > 1 &&
+    options.lastSpeakerAsked !== true &&
+    options.lastSpeaker != null &&
+    lastNamed.includes(options.lastSpeaker)
+  ) {
+    const after = lastNamed.indexOf(options.lastSpeaker) + 1;
+    return {
+      botIds: [...lastNamed.slice(after), ...lastNamed.slice(0, after)],
+      everyone: false,
+    };
+  }
   const fallback =
     options.lastSpeaker != null && ids.has(options.lastSpeaker)
       ? options.lastSpeaker

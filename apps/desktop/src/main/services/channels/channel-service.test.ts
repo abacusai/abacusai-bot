@@ -412,7 +412,7 @@ describe("ChannelService", () => {
     await first.flush();
     first.turns[0]!.resolve("<reply>On it.</reply>");
     await first.flush();
-    first.service.post(id, "second question");
+    first.service.post(id, "Chief, second question");
     // The app closes here: Researcher's turn and "second question" never ran.
     const channels = first.store.readChannels();
     const thread = first.store.readMessages(id);

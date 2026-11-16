@@ -751,7 +751,16 @@ export class ChannelService {
     const repliedTo = messages.find(
       (message) => message.id === userMessage.replyTo
     );
+    // The bots the user's previous message named: "go on" continues with them.
+    const lastUser = [...before]
+      .reverse()
+      .find((message) => message.author.kind === "user");
+    const lastNamed =
+      lastUser == null ? null : speakersFor(lastUser.text, members);
     const speakers = speakersFor(userMessage.text, members, {
+      ...(lastNamed != null && !lastNamed.everyone
+        ? { lastNamed: lastNamed.botIds }
+        : {}),
       replyToBot:
         repliedTo?.author.kind === "bot" ? repliedTo.author.botId : null,
       lastSpeaker:
