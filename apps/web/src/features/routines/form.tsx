@@ -329,7 +329,7 @@ export const RoutineDialog = ({
             }}
           >
             {error && <SendError error={error} />}
-            <FieldGroup className="min-h-0 overflow-y-auto pr-1">
+            <FieldGroup className="min-h-0 scrollbar-gutter-stable overflow-y-auto pr-1">
               {!routineId && (
                 <div>
                   <h2 className="mb-2 text-sm font-medium">
