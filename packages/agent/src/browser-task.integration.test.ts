@@ -209,6 +209,23 @@ describe("a run that read a page with the user's own sign-in", () => {
   }, 60_000);
 });
 
+describe("a run that reports in another script than the user's", () => {
+  it("is asked once to rewrite it in the user's language, and that is what the chat gets", async () => {
+    const CHINESE =
+      "页面报告：这个页面只有一个标题和一行订单内容，没有其他按钮或链接。";
+    scriptChat((call) =>
+      call.userText.at(-1)?.includes("Write the whole report again")
+        ? { say: REPORT }
+        : { say: CHINESE }
+    );
+    await (await startBot()).send("what is on this page?");
+
+    const [result] = toolResults();
+    expect(result).toContain(REPORT);
+    expect(result).not.toContain(CHINESE);
+  }, 60_000);
+});
+
 describe("a run whose report is sent back for a missing field", () => {
   it("hands back the whole report with the answer after it", async () => {
     scriptNudged({ say: FOLLOW_UP });

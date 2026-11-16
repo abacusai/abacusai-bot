@@ -31,6 +31,12 @@ import { subAgentMemory } from "./memory/chat.js";
 import type { MidTaskInbox, MidTaskRun } from "./mid-task-inbox.js";
 import { MODEL_PATH_RESOURCES } from "./model-path.js";
 import type { AgentEvent } from "./protocol.js";
+import {
+  reportLanguageMismatch,
+  reportLanguageRepairPrompt,
+  scriptName,
+  wordsScript,
+} from "./reply-language.js";
 import { createResourceLoader } from "./resource-loader.js";
 import { DeliveredMedia, type MediaCheck } from "./send-media-tool.js";
 import { isMediaId } from "./send-media.js";
@@ -268,6 +274,8 @@ export interface BrowserTaskOptions {
   resumeNote?: string;
   /** The saved login (vault item id) the run signs in with. */
   loginItemId?: string;
+  /** The user's own recent words: a report in another language is sent back once. */
+  userWords?: readonly string[];
 }
 
 export interface BrowserTaskResult {
@@ -657,17 +665,29 @@ export function gateTools(tools: unknown[], gate: BatchGate): unknown[] {
  * in their chat, and the task may have been written in another language.
  * Quotes the first words of their latest message; "" when there are none.
  */
-export function reportLanguageLine(said: readonly string[]): string {
-  const words = (said.at(-1) ?? "")
+/** The user's latest words, without attachment and mention lines. */
+const latestWords = (said: readonly string[]): string =>
+  (said.at(-1) ?? "")
     .split("\n")
     .filter((line) => !/^\s*(@\S|\[attachment)/.test(line))
     .join(" ")
-    .trim()
+    .trim();
+
+export function reportLanguageLine(said: readonly string[]): string {
+  const text = latestWords(said);
+  const words = text
     .split(/\s+/)
     .filter((word) => word.length > 0)
     .slice(0, 5);
   if (words.length === 0) return "";
-  return `\n\nWrite your report in the language the user wrote in (their message begins: "${words.join(" ").replace(/"/g, "'")}…").`;
+  // Told only "the language the user wrote in", a run wrote a report in
+  // Chinese for an English ask: the alphabet is named too.
+  const script = wordsScript(text);
+  const alphabet =
+    script == null
+      ? ""
+      : ` That is ${scriptName(script)}: write it in ${scriptName(script)}, not in another script, whatever language this task or the page is in.`;
+  return `\n\nWrite your report in the language the user wrote in (their message begins: "${words.join(" ").replace(/"/g, "'")}…").${alphabet}`;
 }
 
 /** The stamp for a run started on `startUrl`; null without the capability. */
@@ -1033,6 +1053,23 @@ export async function runBrowserTask(
             );
             noteUserStop();
           }
+        }
+
+        // One rewrite for a report in another script than the user's: it is
+        // shown in their chat (a run wrote Chinese for an English ask).
+        const written = `${nudgedReport}\n\n${lastText}`;
+        const mismatch =
+          outcome.stoppedBy === "completed"
+            ? reportLanguageMismatch(options.userWords ?? [], written)
+            : null;
+        if (mismatch != null) {
+          trace.write({ type: "nudge", language: mismatch });
+          const wrong = written.trim();
+          nudgedReport = "";
+          lastText = "";
+          await prompt(reportLanguageRepairPrompt(mismatch));
+          noteUserStop();
+          if (lastText.trim().length === 0) lastText = wrong;
         }
 
         // The report was finished; failing at the extra does not undo it.

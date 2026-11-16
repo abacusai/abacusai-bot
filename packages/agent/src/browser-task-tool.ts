@@ -591,6 +591,7 @@ export function buildBrowserTaskTool(
         childEmit,
         {
           startUrl,
+          userWords: userSaid.read(),
           signal,
           reportFields,
           resume,
