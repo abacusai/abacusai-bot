@@ -448,6 +448,7 @@ import {
 import {
   BROWSER_PARTITION,
   ConnectedSites,
+  importedPartitionForTab,
 } from "./services/browser/connected-sites";
 import type { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import { channelTitle } from "./services/channels/channel-logic";
@@ -10059,8 +10060,11 @@ export class ServiceHost {
 
   /** The imported Chrome profile (partition) tab `pageId` uses, if any. */
   private importedPartition(pageId?: number): string | undefined {
-    if (pageId == null) return undefined;
-    return this.browserRuntime?.importedPartitionOf(pageId) ?? undefined;
+    return importedPartitionForTab(
+      this.builtinMcpLifecycle.getBrowserEngine(),
+      pageId,
+      (id) => this.browserRuntime?.importedPartitionOf(id) ?? null
+    );
   }
 
   clearImportedBrowserProfile(

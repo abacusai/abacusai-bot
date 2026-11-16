@@ -51,6 +51,21 @@ export interface SiteStore {
 }
 
 /**
+ * The imported Chrome profile (partition) the tab a browser call acts in
+ * uses, or undefined for the app's own browser. Only the built-in browser's
+ * tabs are looked up: on the user's own Chrome a tab id is Chrome's, and the
+ * same number can be an unrelated tab of the app's.
+ */
+export function importedPartitionForTab(
+  engine: string,
+  pageId: number | undefined,
+  lookup: (id: number) => string | null
+): string | undefined {
+  if (engine === "chrome" || pageId == null) return undefined;
+  return lookup(pageId) ?? undefined;
+}
+
+/**
  * How the user answered "may this chat use your sign-in on <site>?";
  * "unasked" when nobody could answer (no one watching, no answer in time).
  */

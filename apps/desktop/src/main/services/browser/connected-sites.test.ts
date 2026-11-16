@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   ConnectedSites,
   defaultPolicy,
+  importedPartitionForTab,
   type SiteDecision,
   type SiteStore,
 } from "./connected-sites";
@@ -443,5 +444,23 @@ describe("the saved list, when its writes overlap", () => {
     release();
     await listing;
     expect(await sites.list()).toEqual([]);
+  });
+});
+
+describe("which browser session a tab's sign-ins are in", () => {
+  it("looks a tab up only on the built-in browser, never a Chrome tab id", () => {
+    const lookup = vi.fn((id: number) =>
+      id === 7 ? "persist:bp-chrome-1" : null
+    );
+    expect(importedPartitionForTab("builtin", 7, lookup)).toBe(
+      "persist:bp-chrome-1"
+    );
+    expect(importedPartitionForTab("builtin", 8, lookup)).toBeUndefined();
+    expect(
+      importedPartitionForTab("builtin", undefined, lookup)
+    ).toBeUndefined();
+    lookup.mockClear();
+    expect(importedPartitionForTab("chrome", 7, lookup)).toBeUndefined();
+    expect(lookup).not.toHaveBeenCalled();
   });
 });
