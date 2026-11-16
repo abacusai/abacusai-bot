@@ -170,6 +170,19 @@ describe("when to use it", () => {
     // Asked in Hindi ("अपने ब्राउज़र से"), a bot still fetched: the words are any language's.
     expect(tool.description).toMatch(/in any language/i);
   });
+
+  it("opens the browser and nothing else when the user only asks to open it", () => {
+    // Asked only "open the browser", one bot asked where to point it (the
+    // pane never opened) and another sent its run to a booking site.
+    const tool = buildBrowserTaskTool(
+      { cwd: process.cwd(), channel: APP_CHANNEL } as never,
+      () => undefined
+    );
+    expect(tool.description).toMatch(
+      /only (asks|wants) to open the browser[^.]*one short run[^.]*about:blank/i
+    );
+    expect(tool.description).toMatch(/do not\s+pick a site/i);
+  });
 });
 
 describe("uploads", () => {
