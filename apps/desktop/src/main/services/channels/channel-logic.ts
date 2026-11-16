@@ -864,7 +864,6 @@ export const channelWorkPrompt = (input: {
       : "do not pass anything on or ask other bots in this turn.",
   ].join("\n");
 
-/** Where a chain step stands: the steps, which is this one, and what the step before reported. */
 /**
  * A step that checks earlier work: its bot ran an earlier step of the chain
  * and is back after the steps since (audit, fix, re-check). Only such a
@@ -878,6 +877,7 @@ export const checksEarlierWork = (
     .slice(0, step - 1)
     .some((earlier) => earlier.bot === steps[step - 1]?.bot);
 
+/** Where a chain step stands: the steps, which is this one, and what the step before reported. */
 const chainLines = (chain: {
   step: number;
   steps: readonly { bot: string; task: string }[];

@@ -178,7 +178,7 @@ export const MAX_LEAD_TURNS = 8;
 
 /** Asked once of a bot whose reply says work is happening that it never started. */
 const CLAIM_NUDGE =
-  "Your last message in the channel said you are doing work, but you started nothing, so nothing is running. Reply again in the channel: start it now with <work>the task, complete on its own</work>, or say plainly that you have not started and what you are waiting for.";
+  "Your last message in the channel said you are doing work, but you started nothing, so nothing is running. Write that message again, keeping everything else you said in it: start the work now with <work>the task, complete on its own</work>, or say plainly that you have not started and what you are waiting for.";
 
 /** A hand-off chain running in a channel: its steps, and the one it is at. */
 interface ChainRun {
