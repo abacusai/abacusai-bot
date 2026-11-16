@@ -34,13 +34,13 @@ import {
 
 import { publishIpcEvent } from "#main/rpc/emit";
 
-import { registrableDomain } from "../vault/site";
+import { sameSite } from "../vault/site";
 import {
   BrowserRuntimeRegistry,
   browserResourceId,
   type BrowserRuntimeLease,
 } from "./browser-runtime-registry";
-import { BROWSER_PARTITION, SIGN_IN_COOKIE } from "./connected-sites";
+import { BROWSER_PARTITION } from "./connected-sites";
 import { isInsideRoot } from "./local-preview-file";
 import { checkServedPageIn, type ServedPageCheck } from "./page-errors";
 
@@ -129,12 +129,11 @@ export interface ElectronBrowserRuntimeOptions {
    */
   revivePreview?: (url: string) => Promise<string>;
   /**
-   * A sign-in was made in the bot's saved browser session, whoever drove it
-   * (the user in the Browser pane or a bot): a sign-in cookie set on a site
-   * soon after its sign-in page (a password field) showed, or after a
-   * sign-in page sent the tab to it (single sign-on). Connected sites lists
-   * it, and its rule applies from then on. A sign-in page only looked at is
-   * not reported.
+   * A page in the bot's browser (its own session or an imported profile) is
+   * a sign-in page (a password field, in the page or a frame of it), whoever
+   * opened it: the user in the Browser pane or a bot. So is the site a
+   * sign-in page sends the tab back to (single sign-on). Connected sites
+   * lists it, and its rule applies from then on.
    */
   onSignInPage?: (url: string) => void;
 }
@@ -152,10 +151,7 @@ const SIGN_IN_PAGE_JS = "!!document.querySelector('input[type=password]')";
 const SIGN_IN_LOOK_AGAIN_MS = 1_500;
 /** A page that does not answer in this long is not looked at. */
 const SIGN_IN_LOOK_MS = 5_000;
-/**
- * How long after a sign-in page a sign-in cookie on its site, or a page-led
- * move to another site (its sign-on return), counts as that sign-in.
- */
+/** How long after a sign-in page a page-led move to another site counts as its sign-on return. */
 const SIGN_IN_RETURN_MS = 10 * 60_000;
 
 const webHost = (url: string): string | null => {
@@ -962,51 +958,27 @@ export class ElectronBrowserRuntime {
     return view;
   }
 
-  /**
-   * Site → until when a sign-in cookie set there is a sign-in just made: the
-   * site of a sign-in page a tab showed, or of a page a sign-in page sent a
-   * tab to. One browser session, so one map for every tab.
-   */
-  private readonly signInExpected = new Map<string, number>();
   /** Each web tab's browser session (partition), by its id. */
   private readonly partitionsById = new Map<number, string>();
-  private readonly watchedCookieStores = new WeakSet<object>();
 
   /**
-   * Tells `onSignInPage` about each sign-in made in this tab, whoever drives
-   * it: a sign-in cookie set on a site soon after its sign-in page showed,
-   * or after a sign-in page sent the tab there by itself (a form post, a
-   * script, a redirect; an address the user types or a bot's goto does not).
+   * Tells `onSignInPage` about each sign-in page this tab shows, whoever
+   * drives it, and about the site such a page then sends the tab to. A move
+   * the page itself makes (a form post, a script, a redirect) counts; an
+   * address the user types or a bot's goto does not. Listed on sight, not
+   * once a sign-in is seen: a sign-in is kept under any cookie name (or none
+   * the app can tell), and a site left off the list is used with no rule. A
+   * page only looked at costs one extra prompt.
    */
   private watchSignIns(contents: Electron.WebContents): void {
     const report = this.options.onSignInPage;
     if (report == null) return;
-    const expect = (host: string): void => {
-      this.signInExpected.set(
-        registrableDomain(host),
-        Date.now() + SIGN_IN_RETURN_MS
-      );
-    };
-    const cookies = contents.session.cookies;
-    if (!this.watchedCookieStores.has(cookies)) {
-      this.watchedCookieStores.add(cookies);
-      cookies.on("changed", (_event, cookie, _cause, removed) => {
-        if (removed || !SIGN_IN_COOKIE.test(cookie.name)) return;
-        const host = (cookie.domain ?? "").replace(/^\./, "");
-        if (host.length === 0) return;
-        const site = registrableDomain(host);
-        const until = this.signInExpected.get(site);
-        if (until == null) return;
-        this.signInExpected.delete(site);
-        if (Date.now() <= until) report(`https://${host}/`);
-      });
-    }
     let signIn: { host: string; at: number } | null = null;
     let fromSignIn = false;
     // Every frame, not only the page's own document: a sign-in form can be
-    // a frame from another site (an embedded sign-in widget).
-    // Each frame on its own clock: one frame that never answers (an ad)
-    // does not hide a sign-in form in another.
+    // a frame from another site (an embedded sign-in widget). Each frame on
+    // its own clock: one frame that never answers (an ad) does not hide a
+    // sign-in form in another.
     const hasPassword = async (frame: {
       executeJavaScript(code: string): Promise<unknown>;
     }): Promise<boolean> => {
@@ -1048,13 +1020,12 @@ export class ElectronBrowserRuntime {
       // Each frame counts as soon as it answers, not when the slowest does.
       await Promise.all(
         frames.map(async (frame) => {
-          const frameHost = webHost(frame.url);
-          if (frameHost == null || !(await hasPassword(frame))) return;
+          if (webHost(frame.url) == null || !(await hasPassword(frame))) return;
           if (contents.isDestroyed() || contents.getURL() !== url) return;
           signIn = { host, at: Date.now() };
-          expect(frameHost);
           // The page's own site too: a widget's sign-in is often kept by the page.
-          expect(host);
+          if (frame.url !== url) report(frame.url);
+          report(url);
         })
       );
     };
@@ -1064,23 +1035,23 @@ export class ElectronBrowserRuntime {
     };
     contents.on("did-finish-load", lookSoon);
     contents.on("did-navigate-in-page", lookSoon);
-    // Only the page's own moves: `loadURL` (the address bar, a bot's goto)
-    // fires no will-navigate. The return site keeps its sign-in on the
-    // redirect, before its page shows: expect it from the first move on.
-    const pageMoved = (_event: unknown, url: string): void => {
+    // Only the page's own moves: `loadURL` (the address bar, a bot's goto) fires none.
+    const pageMoved = (): void => {
       fromSignIn = signIn != null && Date.now() - signIn.at < SIGN_IN_RETURN_MS;
-      const host = fromSignIn ? webHost(url) : null;
-      if (host != null) expect(host);
     };
     contents.on("will-navigate", pageMoved);
-    contents.on("will-redirect", (_event, url) => {
-      const host = fromSignIn ? webHost(url) : null;
-      if (host != null) expect(host);
-    });
     contents.on("did-navigate", () => {
-      const host = fromSignIn ? webHost(contents.getURL()) : null;
-      if (host != null) expect(host);
+      const url = contents.getURL();
+      const host = webHost(url);
+      const returned =
+        fromSignIn &&
+        signIn != null &&
+        host != null &&
+        !sameSite(host, signIn.host);
       fromSignIn = false;
+      if (!returned) return;
+      signIn = null;
+      report(url);
     });
   }
 

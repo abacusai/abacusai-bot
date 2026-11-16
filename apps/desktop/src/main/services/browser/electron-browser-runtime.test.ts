@@ -71,14 +71,7 @@ const mocks = vi.hoisted(() => {
     readonly session = {
       clearCache: vi.fn(),
       clearStorageData: vi.fn(),
-      cookies: {
-        get: vi.fn(async () => []),
-        remove: vi.fn(),
-        changed: [] as Listener[],
-        on(event: string, listener: Listener) {
-          if (event === "changed") this.changed.push(listener);
-        },
-      },
+      cookies: { get: vi.fn(async () => []), remove: vi.fn() },
     };
     readonly navigationHistory = {
       canGoBack: vi.fn(() => false),
@@ -616,9 +609,6 @@ describe("Electron browser runtime", () => {
   describe("a sign-in in the browser, by the user or a bot (Connected sites)", () => {
     // The user signing in on their own in the Browser pane, with no bot
     // asked, left the site off Connected sites, so its rule never applied.
-    // A site is listed once a sign-in happened there: a sign-in cookie set
-    // after a sign-in page (a password field, in the page or any frame of
-    // it) showed; a page only looked at is not.
     const signInView = async (
       onSignInPage: (url: string) => void,
       profileId?: string
@@ -653,117 +643,77 @@ describe("Electron browser runtime", () => {
           },
         },
       });
-      const setCookie = (name: string, domain: string, removed = false) => {
-        for (const listener of contents.session.cookies.changed)
-          listener({}, { name, domain }, "explicit", removed);
-      };
-      return { runtime, contents, passwordOn, frames, setCookie };
+      return { runtime, contents, passwordOn, frames };
     };
     const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-    it("lists a site once the user signs in on its sign-in page", async () => {
+    it("lists a site whose sign-in page the user opened", async () => {
+      // On sight, not once a sign-in cookie is seen: sign-ins are kept under
+      // any name, and a site left off the list is used with no rule.
       const seen: string[] = [];
-      const { contents, passwordOn, setCookie } = await signInView((url) =>
+      const { contents, passwordOn } = await signInView((url) =>
         seen.push(url)
       );
       passwordOn.add("https://shop.example.com/login");
       await contents.loadURL("https://shop.example.com/login");
       contents.emit("did-finish-load");
       await settle();
-      expect(seen).toEqual([]);
-      setCookie("session_id", ".shop.example.com");
-      setCookie("session_id", ".shop.example.com");
-      expect(seen).toEqual(["https://shop.example.com/"]);
-    });
-
-    it("does not list a site whose sign-in page the user only looked at", async () => {
-      const seen: string[] = [];
-      const { contents, passwordOn, setCookie } = await signInView((url) =>
-        seen.push(url)
-      );
-      passwordOn.add("https://shop.example.com/login");
-      await contents.loadURL("https://shop.example.com/login");
-      contents.emit("did-finish-load");
-      await settle();
-      // A tracker, a removed cookie, a sign-in cookie elsewhere: no sign-in here.
-      setCookie("_ga", ".example.com");
-      setCookie("session_id", ".shop.example.com", true);
-      setCookie("sessionid", "news.example.org");
-      expect(seen).toEqual([]);
-      // Long after the page, a cookie is not that sign-in.
-      const now = Date.now();
-      const later = vi.spyOn(Date, "now").mockReturnValue(now + 11 * 60_000);
-      setCookie("session_id", ".shop.example.com");
-      later.mockRestore();
-      expect(seen).toEqual([]);
+      expect(seen).toEqual(["https://shop.example.com/login"]);
     });
 
     it("looks again when a single-page app shows its sign-in form", async () => {
       const seen: string[] = [];
-      const { contents, passwordOn, setCookie } = await signInView((url) =>
+      const { contents, passwordOn } = await signInView((url) =>
         seen.push(url)
       );
       await contents.loadURL("https://app.example.org/");
       contents.emit("did-finish-load");
       await settle();
-      setCookie("auth_token", "app.example.org");
       expect(seen).toEqual([]);
       passwordOn.add("https://app.example.org/");
       contents.emit("did-navigate-in-page");
       await settle();
-      setCookie("auth_token", "app.example.org");
       expect(seen).toEqual(["https://app.example.org/"]);
     });
 
-    it("sees a sign-in form in a frame from another site", async () => {
+    it("sees a sign-in form in a frame from another site, and lists that site and the page's", async () => {
       const seen: string[] = [];
-      const { contents, passwordOn, frames, setCookie } = await signInView(
-        (url) => seen.push(url)
+      const { contents, passwordOn, frames } = await signInView((url) =>
+        seen.push(url)
       );
+      // A frame that never answers does not hide the form in another.
+      frames.push("https://ads.example.org/slot");
       frames.push("https://login.widget.example/embed");
       passwordOn.add("https://login.widget.example/embed");
       await contents.loadURL("https://store.example.net/account");
       contents.emit("did-finish-load");
       await settle();
-      setCookie("auth_token", "login.widget.example");
-      setCookie("store_session", ".store.example.net");
-      // A frame that never answers does not hide the form in another.
-      frames.unshift("https://ads.example.org/slot");
-      await contents.loadURL("https://store.example.net/account");
-      contents.emit("did-finish-load");
-      await settle();
-      setCookie("auth_token", "login.widget.example");
       expect(seen).toEqual([
-        "https://login.widget.example/",
-        "https://store.example.net/",
-        "https://login.widget.example/",
+        "https://login.widget.example/embed",
+        "https://store.example.net/account",
       ]);
     });
 
-    it("lists the site a sign-in page sends the user back to (single sign-on), once it keeps the sign-in", async () => {
+    it("lists the site a sign-in page sends the user back to (single sign-on)", async () => {
       const seen: string[] = [];
-      const { contents, passwordOn, setCookie } = await signInView((url) =>
+      const { contents, passwordOn } = await signInView((url) =>
         seen.push(url)
       );
       passwordOn.add("https://accounts.idp.example/signin");
       await contents.loadURL("https://accounts.idp.example/signin");
       contents.emit("did-finish-load");
       await settle();
-      setCookie("SSID", ".idp.example");
       contents.emit("will-navigate", {}, "https://notes.example.net/auth");
-      // The return page's cookie is set on the redirect, before it shows.
-      contents.emit("will-redirect", {}, "https://app.notes.example.net/cb");
-      setCookie("notes_session", "app.notes.example.net");
-      await contents.loadURL("https://app.notes.example.net/home");
+      await contents.loadURL("https://notes.example.net/home");
       expect(seen).toEqual([
-        "https://idp.example/",
-        "https://app.notes.example.net/",
+        "https://accounts.idp.example/signin",
+        "https://notes.example.net/home",
       ]);
     });
 
     it("does not list a site the user typed in after a sign-in page", async () => {
       const seen: string[] = [];
-      const { contents, passwordOn, setCookie } = await signInView((url) =>
+      const { contents, passwordOn } = await signInView((url) =>
         seen.push(url)
       );
       passwordOn.add("https://accounts.idp.example/signin");
@@ -773,8 +723,7 @@ describe("Electron browser runtime", () => {
       await contents.loadURL("https://news.example.com/");
       contents.emit("did-finish-load");
       await settle();
-      setCookie("sessionid", "news.example.com");
-      expect(seen).toEqual([]);
+      expect(seen).toEqual(["https://accounts.idp.example/signin"]);
     });
 
     it("leaves pages without a password field alone", async () => {
@@ -783,11 +732,10 @@ describe("Electron browser runtime", () => {
       await plain.contents.loadURL("https://example.com/");
       plain.contents.emit("did-finish-load");
       await settle();
-      plain.setCookie("sessionid", "example.com");
       expect(seen).toEqual([]);
     });
 
-    it("lists a sign-in made in an imported profile too, and says which tabs use one", async () => {
+    it("lists a sign-in page in an imported profile too, and says which tabs use one", async () => {
       // The rules cover an imported Chrome profile: a sign-in made there is
       // the user's as much as one in the app's own browser.
       const seen: string[] = [];
@@ -796,8 +744,7 @@ describe("Electron browser runtime", () => {
       await imported.contents.loadURL("https://bank.example/login");
       imported.contents.emit("did-finish-load");
       await settle();
-      imported.setCookie("sessionid", "bank.example");
-      expect(seen).toEqual(["https://bank.example/"]);
+      expect(seen).toEqual(["https://bank.example/login"]);
       expect(imported.runtime.importedPartitionOf(imported.contents.id)).toBe(
         "persist:bp-chrome-1"
       );

@@ -3,10 +3,10 @@
  * and whether bots may use each sign-in (spec: the user signs in once, in
  * the browser pane; their password never reaches a model).
  *
- * A site joins the list when a sign-in is made there in the browser, whoever
- * drives it (the user in the pane or a bot): a sign-in cookie set after its
- * sign-in page (a password field) showed, or after a sign-in page sent the
- * tab to it (single sign-on); when a bot's run
+ * A site joins the list when the browser shows its sign-in page (a password
+ * field, in the page or a frame of it), whoever opened it: the user browsing
+ * in the pane or a bot; when a sign-in page sends the tab back to it (single
+ * sign-on); when a bot's run
  * stopped at its sign-in page for the user; or when the user adds it in
  * Settings. Guessing from cookie names
  * would list every shop that sets an anonymous session cookie, so the list
@@ -99,11 +99,11 @@ const SIGNED_IN_FOR_CHAT_MS = 45 * 60_000;
 
 /**
  * A cookie that keeps a sign-in, by its name: a session id, an auth token,
- * "remember me". Read once, for sign-ins the browser held before the list
- * existed, and by the browser after a sign-in page, to tell a sign-in made
- * there from a page only looked at; never alone, as a guess.
+ * "remember me". Read once per browser session (the app's own, an imported
+ * profile), for sign-ins it held before the list knew of them; from then on
+ * a site joins by its sign-in page, never by a guess.
  */
-export const SIGN_IN_COOKIE =
+const SIGN_IN_COOKIE =
   /sess|auth|token|login|logged|remember|jwt|sso|(?:^|[^a-z])s?sid(?:[^a-z]|$)|^sid|psid|li_at|user_?id|account/i;
 
 interface Saved {
