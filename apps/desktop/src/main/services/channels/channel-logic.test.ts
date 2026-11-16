@@ -577,7 +577,8 @@ describe("hand-off chains", () => {
     expect(prompt).not.toContain("Auditor: audit");
     expect(prompt).toContain('<bot_reply from="Auditor">');
     expect(prompt).toContain("Bug in add(): returns a - b.");
-    expect(prompt).toContain("<chain_done/>");
+    // A fixer's step checks nothing: only a bot back after its own earlier step may end it.
+    expect(prompt).not.toContain("<chain_done/>");
     expect(prompt).toContain("the app gives your report to the next step");
   });
 

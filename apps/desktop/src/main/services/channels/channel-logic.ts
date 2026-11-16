@@ -865,6 +865,19 @@ export const channelWorkPrompt = (input: {
   ].join("\n");
 
 /** Where a chain step stands: the steps, which is this one, and what the step before reported. */
+/**
+ * A step that checks earlier work: its bot ran an earlier step of the chain
+ * and is back after the steps since (audit, fix, re-check). Only such a
+ * step may end a hand-off early; a first audit or a fix never does.
+ */
+export const checksEarlierWork = (
+  steps: readonly { bot: string }[],
+  step: number
+): boolean =>
+  steps
+    .slice(0, step - 1)
+    .some((earlier) => earlier.bot === steps[step - 1]?.bot);
+
 const chainLines = (chain: {
   step: number;
   steps: readonly { bot: string; task: string }[];
@@ -889,7 +902,15 @@ const chainLines = (chain: {
     : []),
   "",
   chain.step < chain.steps.length
-    ? "Everything you write in this turn goes to the next step, so put every finding in it. If your step is checking earlier work and nothing is left to do, end your report with <chain_done/>: the steps after yours are skipped. Otherwise say exactly what is left, so the next step can act on it."
+    ? [
+        "Everything you write in this turn goes to the next step, so put every finding in it.",
+        ...(checksEarlierWork(chain.steps, chain.step)
+          ? [
+              "You are back to check the work done since your earlier step: if nothing is left to do, end your report with <chain_done/>: the steps after yours are skipped.",
+            ]
+          : []),
+        "Say exactly what is left, so the next step can act on it.",
+      ].join(" ")
     : "This is the last step: end with what is done and anything still open.",
   "The steps after yours start on their own: never ask the user whether to run them; end with your report.",
 ];

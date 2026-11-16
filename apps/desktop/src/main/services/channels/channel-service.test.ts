@@ -1600,6 +1600,21 @@ describe("a hand-off chain", () => {
     expect(works[1]!.prompt).toContain("B2: average() divides by length - 1.");
   });
 
+  it("only a checking step ends it: an audit or a fix that says nothing is left does not", async () => {
+    const { works, flush, texts, id } = await start();
+    expect(works[0]!.prompt).not.toContain("<chain_done/>");
+    works[0]!.resolve("<reply>Found 15 bugs. <chain_done/></reply>");
+    await flush();
+    expect(works[1]!.prompt).not.toContain("<chain_done/>");
+    expect(texts(id).join("\n")).not.toContain("the hand-off ends here");
+    works[1]!.resolve("<reply>Fixed all 15. <chain_done/></reply>");
+    await flush();
+    // The re-check still runs, and it may end the hand-off.
+    expect(works.map((w) => w.botId)).toEqual(["res", "wri", "res"]);
+    expect(works[2]!.prompt).toContain("<chain_done/>");
+    expect(texts(id).join("\n")).not.toContain("the hand-off ends here");
+  });
+
   it("ends when a check finds nothing left, and says so; the tag is never posted", async () => {
     const { works, flush, texts, id } = await start();
     works[0]!.resolve("<reply>Found a bug.</reply>");

@@ -38,6 +38,7 @@ import {
   agreedItems,
   chainAllowed,
   chainDoneIn,
+  checksEarlierWork,
   chainIn,
   type ChainStep,
   stepHandoff,
@@ -1296,6 +1297,12 @@ export class ChannelService {
         // work can carry it over from a hand-off it ran before).
         const ended = chainDoneIn(answered);
         const report = ended.words;
+        // Only a step back to check earlier work ends a hand-off early.
+        const endsChain =
+          ended.done &&
+          chain != null &&
+          chain.step < chain.steps.length &&
+          checksEarlierWork(chain.steps, chain.step);
         this.setWork(channelId, messageId, { status: "done" });
         this.noteMembers(
           channel,
@@ -1307,7 +1314,7 @@ export class ChannelService {
           author: { kind: "bot", botId },
           text:
             (report.length > 0 ? report : "Done.") +
-            (ended.done && chain != null && chain.step < chain.steps.length
+            (endsChain && chain != null
               ? `\n\nNothing left to do, so the hand-off ends here (step ${chain.step} of ${chain.steps.length}).`
               : ""),
           at: this.now(),
@@ -1320,7 +1327,7 @@ export class ChannelService {
         const whole = chainDoneIn(
           stepHandoff(raw.split(BOT_ANSWER_SEGMENT))
         ).words;
-        return ended.done ? `${CHAIN_DONE_MARK}${whole}` : whole;
+        return endsChain ? `${CHAIN_DONE_MARK}${whole}` : whole;
       })
       .catch((error: unknown): null => {
         // Stopped here (the card was set as it stopped), or in the bot's own
