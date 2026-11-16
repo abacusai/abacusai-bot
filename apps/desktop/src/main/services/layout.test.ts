@@ -83,6 +83,8 @@ const MAIN_ROOT_FILES = [
   "compose-host.ts",
   "crash-guard.test.ts",
   "crash-guard.ts",
+  // Applied before the app is ready: a Chromium switch for the whole process.
+  "dev-shm.ts",
   "external-links.test.ts",
   "external-links.ts",
   // A fourth check of the same kind, and here for the same reason as the

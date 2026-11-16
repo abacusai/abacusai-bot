@@ -58,6 +58,7 @@ import { markQuitting, isQuitting } from "./app-quit-state";
 import { setBringToFront, setMainWindow } from "./bring-to-front";
 import { composeHost } from "./compose-host";
 import { installCrashGuard } from "./crash-guard";
+import { devShmTooSmall } from "./dev-shm";
 import { isSafeExternalUrl } from "./external-links";
 import type { HostOperations } from "./handler";
 import { electronHostPlatform } from "./host-operations/electron";
@@ -283,6 +284,10 @@ if (!app.isPackaged && process.env.ABACUSAI_BOT_DEBUG_PORT) {
   );
   app.commandLine.appendSwitch("remote-allow-origins", "http://127.0.0.1");
 }
+
+// Small Linux VMs and containers mount a tiny /dev/shm; big captures (a motion
+// render's frames) would exhaust it and crash the GPU process (dev-shm.ts).
+if (devShmTooSmall()) app.commandLine.appendSwitch("disable-dev-shm-usage");
 
 // Apps launched from Finder get a minimal PATH without user-installed tools.
 // Async, not execSync: shell rc files (nvm, pyenv, oh-my-zsh) can take tens of
