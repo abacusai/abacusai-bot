@@ -331,6 +331,8 @@ export const PREFS_GROUP_ENTRIES = {
         })
       )
     ),
+    /** The session-1 "Retry with <top model>" line, closed with its ×. */
+    session1RetryClosedAt: v.optional(NullableTimestamp),
     /** The account first read on the free plan here, so a paid read after it is an upgrade. */
     freePlanSeenAt: NullableTimestamp,
     /** An older build's after-upgrade card, seen: that upgrade counts as welcomed. */

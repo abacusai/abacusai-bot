@@ -271,6 +271,7 @@ describe("PrefsStore", () => {
       topModelHint: null,
       wallReopen: null,
       resumeCard: null,
+      session1RetryClosedAt: null,
       freePlanSeenAt: null,
       upgradeRoutinesSeenAt: null,
       routineDuplicatesKept: [],

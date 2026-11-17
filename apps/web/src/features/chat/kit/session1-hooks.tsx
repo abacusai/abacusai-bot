@@ -11,9 +11,11 @@ import { retryOfferModel } from "@abacus-ai/contract/retry-offer";
 import type { UIMessage } from "@tanstack/ai-client";
 import { useQuery } from "@tanstack/react-query";
 import { RotateCcw, X } from "lucide-react";
-import { useEffect, useEffectEvent, useState } from "react";
+import { useEffect, useEffectEvent } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useDb } from "#renderer/data/db";
+import { usePrefs } from "#renderer/data/db/prefs";
 import { useSession1Hooks } from "#renderer/lib/session1-hooks";
 import { requestPlanDialog } from "#renderer/lib/upgrade-dialog";
 import { useAppContext } from "#renderer/lib/use-app-context";
@@ -24,9 +26,8 @@ import { useChatView } from "./context";
 import { useTailCardClaim, useTailCards } from "./tail-cards";
 import { isLive } from "./upgrade-triggers";
 
-/** Replies the line was counted under, and whether the × closed it for this run of the app. */
+/** Replies the line was counted under. Its × is kept in prefs. */
 const shownOn = new Set<string>();
-let closed = false;
 
 export const Session1RetryRow = ({
   messages,
@@ -40,7 +41,8 @@ export const Session1RetryRow = ({
   const { transport } = useAppContext();
   const hooks = useSession1Hooks();
   const tail = useTailCards(session.threadId);
-  const [, setClosedOn] = useState<string | null>(null);
+  const db = useDb();
+  const closed = usePrefs().dismissals.session1RetryClosedAt != null;
   const outcome = useThreadStore(session, (state) =>
     state.runs.outcomes.at(-1)
   );
@@ -120,8 +122,9 @@ export const Session1RetryRow = ({
         aria-label={t("chat.session1Retry.dismiss")}
         data-action="dismiss"
         onClick={() => {
-          closed = true;
-          setClosedOn(showing);
+          void db
+            .updatePrefs({ dismissals: { session1RetryClosedAt: Date.now() } })
+            .catch(() => undefined);
         }}
       >
         <X className="size-3.5" />

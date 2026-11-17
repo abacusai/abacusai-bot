@@ -254,6 +254,8 @@ export interface PrefsRow {
     wallReopen?: WallReopenMark | null;
     /** The latest result in the user's own chat, offered on return (resume-card.ts); stamped by main. */
     resumeCard?: ResumeCardMark | null;
+    /** The session-1 "Retry with <top model>" line, closed with its ×. */
+    session1RetryClosedAt?: number | null;
     freePlanSeenAt: number | null;
     upgradeRoutinesSeenAt: number | null;
     routineDuplicatesKept: string[];
