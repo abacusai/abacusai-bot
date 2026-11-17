@@ -92,6 +92,7 @@ const DEFAULTS: PrefsValues = {
     topModelHint: null,
     wallReopen: null,
     resumeCard: null,
+    firstResultOffer: null,
     freePlanSeenAt: null,
     upgradeRoutinesSeenAt: null,
     routineDuplicatesKept: [],

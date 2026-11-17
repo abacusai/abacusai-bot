@@ -36,6 +36,7 @@ import {
 import { useSeconds } from "../kit/clock";
 import { useChatView } from "../kit/context";
 import { DeliverableOfferRow } from "../kit/deliverable-offer";
+import { FirstResultOfferRow } from "../kit/first-result-offer";
 import { appLineOf, userView, routeRowOf } from "../kit/message";
 import { RatingPromptRow } from "../kit/rating-prompt";
 import { RetryOfferRow } from "../kit/retry-offer";
@@ -935,6 +936,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
           <DeliverableOfferRow messages={messages} active={active} />
           <RetryOfferRow messages={messages} active={active} />
           <RouterAfterUpgradeRow messages={messages} active={active} />
+          <FirstResultOfferRow messages={messages} active={active} />
           <TopModelCardRow messages={messages} active={active} />
           <SuccessPitchRow messages={messages} active={active} />
           <RatingPromptRow messages={messages} active={active} />

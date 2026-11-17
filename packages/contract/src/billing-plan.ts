@@ -34,6 +34,7 @@ export const UPGRADE_SRCS = [
   "web_tab",
   "big_task",
   "keep_running",
+  "first_result",
 ] as const;
 
 export type UpgradeSrc = (typeof UPGRADE_SRCS)[number];
@@ -73,7 +74,15 @@ export interface BillingPlan {
    * pitch's feature line, which is marketing text.
    */
   topModels?: PlanTopModel[];
+  /**
+   * Where the platform puts a new account's onboarding offer: on the
+   * onboarding screen, or held for one card under the first finished result
+   * (the onboarding offer test). Absent from older servers: onboarding.
+   */
+  onboardingOffer?: OnboardingOfferPlacement;
 }
+
+export type OnboardingOfferPlacement = "onboarding" | "after_first_result";
 
 /** One of the paid plans' leading models. */
 export interface PlanTopModel {

@@ -57,6 +57,7 @@ export const DEFAULT_PREFS: Required<PrefsRow> & {
     topModelHint: null,
     wallReopen: null,
     resumeCard: null,
+    firstResultOffer: null,
     freePlanSeenAt: null,
     upgradeRoutinesSeenAt: null,
     routineDuplicatesKept: [],
@@ -109,7 +110,7 @@ export const usePrefs = (): PrefsRow => {
 };
 
 /** The row as it is now, outside React. */
-const currentPrefs = (db: Pick<Db, "collections">): PrefsRow =>
+export const currentPrefs = (db: Pick<Db, "collections">): PrefsRow =>
   db.collections.prefs.get("app") ?? DEFAULT_PREFS;
 
 /** Optimistic write of named leaves; resolves once main echoed it. */

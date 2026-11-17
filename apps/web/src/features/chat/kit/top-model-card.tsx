@@ -7,6 +7,7 @@
  * credit milestones and the wall stay theirs.
  */
 import { wallOffer } from "@abacus-ai/contract/billing-plan";
+import { firstResultOfferPending } from "@abacus-ai/contract/first-result-offer";
 import type { FunnelStep } from "@abacus-ai/contract/funnel";
 import type { UIMessage } from "@tanstack/ai-client";
 import { useQuery } from "@tanstack/react-query";
@@ -63,7 +64,8 @@ export const TopModelCardRow = ({
       outcome?.kind === "success" &&
       (isLive(outcome) || sentHere) &&
       answeredOn.get(session.threadId) !== reply.id &&
-      !successPitchOnThread(prefs, session.threadId));
+      !successPitchOnThread(prefs, session.threadId) &&
+      !firstResultOfferPending(prefs.dismissals.firstResultOffer));
   const { data: live } = useQuery({
     ...transport.orpc.account.billingPlan.queryOptions({ input: {} }),
     enabled: eligible && preview == null,

@@ -331,6 +331,16 @@ export const PREFS_GROUP_ENTRIES = {
         })
       )
     ),
+    /** The onboarding offer held for the first finished result (first-result-offer.ts). */
+    firstResultOffer: v.optional(
+      v.nullable(
+        v.strictObject({
+          heldAt: v.pipe(v.number(), v.integer(), v.minValue(0)),
+          shownOn: v.nullable(v.string()),
+          answered: v.nullable(v.picklist(["upgrade", "skip", "passed"])),
+        })
+      )
+    ),
     /** The account first read on the free plan here, so a paid read after it is an upgrade. */
     freePlanSeenAt: NullableTimestamp,
     /** An older build's after-upgrade card, seen: that upgrade counts as welcomed. */

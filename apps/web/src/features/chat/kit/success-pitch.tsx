@@ -22,6 +22,7 @@ import {
   creditAccountKey,
   pendingThreshold,
 } from "@abacus-ai/contract/credit-thresholds";
+import { firstResultOfferPending } from "@abacus-ai/contract/first-result-offer";
 import type { FunnelStep } from "@abacus-ai/contract/funnel";
 import { retryOfferModel } from "@abacus-ai/contract/retry-offer";
 import {
@@ -351,7 +352,8 @@ export const SuccessPitchRow = ({
     creditsTier(account) === "free" &&
     underHalfOfFreeCredits(account?.credits_used, account?.credits_granted) &&
     !milestoneOwed &&
-    payment.data == null;
+    payment.data == null &&
+    !firstResultOfferPending(prefs.dismissals.firstResultOffer);
   // Once on screen it stays until answered; a new one waits for the caps.
   const visible =
     eligible &&
