@@ -39,7 +39,7 @@ export const FirstResultOfferRow = ({
   active: boolean;
 }) => {
   const { t } = useTranslation();
-  const { session, composer } = useChatView();
+  const { session, composer, slots } = useChatView();
   const { transport } = useAppContext();
   const db = useDb();
   const prefs = usePrefs();
@@ -52,6 +52,8 @@ export const FirstResultOfferRow = ({
     () => outcome != null && session.sentHere(outcome.runId)
   );
   const mark = prefs.dismissals.firstResultOffer ?? null;
+  // The tour's steps come first: the card waits for the tour to end.
+  const touring = slots.offersWait === true;
   const reply = messages.findLast((each) => each.role === "assistant");
   const owed =
     mark != null &&
@@ -59,6 +61,7 @@ export const FirstResultOfferRow = ({
     reply != null &&
     creditsTier(account) === "free" &&
     composer.readOnly == null &&
+    !touring &&
     !active;
   // The first finished result is the reply it shows under; it stays there.
   const eligible =
