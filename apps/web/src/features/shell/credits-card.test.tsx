@@ -52,7 +52,7 @@ vi.mock("@tanstack/react-query", () => ({
   },
 }));
 vi.mock("#renderer/data/db/prefs", () => ({
-  usePrefs: () => ({ creditsExhaustedAt: state.exhaustedAt }),
+  usePrefs: () => ({ creditsExhaustedAt: state.exhaustedAt, dismissals: {} }),
   useUpdatePrefs: () => state.update,
 }));
 vi.mock("#renderer/lib/use-app-context", () => ({
