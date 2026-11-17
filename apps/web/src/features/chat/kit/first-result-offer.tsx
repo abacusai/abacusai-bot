@@ -1,7 +1,7 @@
 /**
  * The onboarding offer test's card: the plan offer onboarding held back
  * (features/onboarding/first-result-offer.ts), once under the account's first
- * finished result, with the screen's words, the plan's price and whole pitch.
+ * finished result, in words for after a result, the plan's price and whole pitch.
  * It stays on that reply until answered; a chat that moves on to another
  * reply passes it. The other cards under a reply yield to it while it is
  * owed.
@@ -107,8 +107,8 @@ export const FirstResultOfferRow = ({
       slot="first-result-offer"
       moment="first_result"
       icon={<Sparkles className="size-4" />}
-      title={t("onboarding.offer.title")}
-      line={t("onboarding.offer.body")}
+      title={t("onboarding.offer.afterResultTitle")}
+      line={t("onboarding.offer.afterResultBody")}
       lead={null}
       billing={billing}
       onUpgrade={() => {

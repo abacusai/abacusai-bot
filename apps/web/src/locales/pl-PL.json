@@ -1279,6 +1279,8 @@
     "connectorsContinue": "Dalej",
     "offer.title": "Zacznij za darmo albo zyskaj więcej od pierwszego dnia",
     "offer.body": "Twoje darmowe kredyty czekają. Możesz też od razu przejść na wyższy plan i dostać wszystko poniżej. Zrobisz to również w dowolnym momencie później.",
+    "offer.afterResultTitle": "Chcesz więcej takich wyników?",
+    "offer.afterResultBody": "Przejdź na wyższy plan, aby mieć najlepsze modele, więcej kredytów i wszystko poniżej. Albo działaj dalej za darmo.",
     "offer.startFree": "Zacznij za darmo",
     "frame.progress": "Krok {{n}} z 5",
     "frame.failed": "Coś poszło nie tak. Spróbuj ponownie.",

@@ -1265,6 +1265,8 @@
     "connectorsContinue": "Devam et",
     "offer.title": "Ücretsiz başlayın ya da ilk günden daha fazlasını alın",
     "offer.body": "Ücretsiz kredileriniz hazır. İsterseniz şimdi yükseltip her şeyi kullanmaya başlayın: yükseltmeyi daha sonra da istediğiniz zaman yapabilirsiniz.",
+    "offer.afterResultTitle": "Bunun gibi daha fazla sonuç ister misiniz?",
+    "offer.afterResultBody": "En iyi modeller, daha fazla kredi ve aşağıdakilerin hepsi için yükseltin. Ya da ücretsiz devam edin.",
     "offer.startFree": "Ücretsiz başla",
     "frame.progress": "Adım {{n}} / 5",
     "frame.failed": "Bir şeyler ters gitti. Yeniden dene.",

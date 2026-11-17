@@ -1265,6 +1265,8 @@
     "connectorsContinue": "Continue",
     "offer.title": "Commencez gratuitement, ou profitez de plus dès le premier jour",
     "offer.body": "Vos crédits gratuits sont prêts. Ou passez à l’offre supérieure maintenant : vous pourrez aussi le faire plus tard, à tout moment.",
+    "offer.afterResultTitle": "Envie d'autres résultats comme celui-ci ?",
+    "offer.afterResultBody": "Passez à l'offre supérieure pour les meilleurs modèles, plus de crédits et tout ce qui suit. Ou continuez gratuitement.",
     "offer.startFree": "Commencer gratuitement",
     "frame.progress": "Étape {{n}} sur 5",
     "frame.failed": "Une erreur est survenue. Réessayez.",

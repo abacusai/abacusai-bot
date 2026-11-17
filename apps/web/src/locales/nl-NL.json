@@ -1265,6 +1265,8 @@
     "connectorsContinue": "Doorgaan",
     "offer.title": "Begin gratis, of haal er vanaf dag één meer uit",
     "offer.body": "Je gratis credits staan klaar. Of upgrade nu voor alles hieronder. Je kunt ook later op elk moment upgraden.",
+    "offer.afterResultTitle": "Meer resultaten zoals dit?",
+    "offer.afterResultBody": "Upgrade voor topmodellen, meer credits en alles hieronder. Of ga gratis verder.",
     "offer.startFree": "Gratis beginnen",
     "frame.progress": "Stap {{n}} van 5",
     "frame.failed": "Er ging iets mis. Probeer het opnieuw.",

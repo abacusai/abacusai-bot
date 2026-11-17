@@ -1265,6 +1265,8 @@
     "connectorsContinue": "繼續",
     "offer.title": "免費開始，或從第一天就獲得更多",
     "offer.body": "你的免費點數已經準備好了。你也可以現在升級，取得下方所有內容。之後隨時都能升級。",
+    "offer.afterResultTitle": "想要更多這樣的結果嗎？",
+    "offer.afterResultBody": "升級即可使用頂級模型、更多點數和下方的所有功能。也可以繼續免費使用。",
     "offer.startFree": "免費開始",
     "frame.progress": "第 {{n}} 步，共 5 步",
     "frame.failed": "發生問題。請再試一次。",

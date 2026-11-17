@@ -1265,6 +1265,8 @@
     "connectorsContinue": "继续",
     "offer.title": "免费开始，或从第一天起获得更多",
     "offer.body": "你的免费积分已准备好。你也可以现在升级，获得下方所有内容。之后随时都能升级。",
+    "offer.afterResultTitle": "想要更多这样的结果吗？",
+    "offer.afterResultBody": "升级即可使用顶级模型、更多积分和下面的全部功能。也可以继续免费使用。",
     "offer.startFree": "免费开始",
     "frame.progress": "第 {{n}} 步，共 5 步",
     "frame.failed": "出了点问题。请重试。",
