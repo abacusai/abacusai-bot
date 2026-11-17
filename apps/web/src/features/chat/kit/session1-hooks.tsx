@@ -1,7 +1,8 @@
 /**
  * The session-1 coin toss (the billing plan's `session1Hooks`): a free
  * account in its hooks arm gets one line under each finished reply, "Retry
- * with <top model>", opening the plan dialog. The arm read and the picker
+ * with <top model>": the plan dialog naming that model, and once the plan is
+ * active the reply runs again on it, in this chat. The arm read and the picker
  * beacon are in #renderer/lib/session1-hooks. The control arm and every paid
  * plan get nothing from here.
  */
@@ -16,15 +17,20 @@ import { useTranslation } from "react-i18next";
 
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
+import { creditsTier } from "#renderer/lib/credits";
 import { useSession1Hooks } from "#renderer/lib/session1-hooks";
-import { requestPlanDialog } from "#renderer/lib/upgrade-dialog";
+import {
+  lastUserText,
+  requestUpgradeDialog,
+} from "#renderer/lib/upgrade-dialog";
+import { useAccount } from "#renderer/lib/use-account";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 
 import { useHost, useThreadStore } from "../store/selectors";
 import { useChatView } from "./context";
 import { useTailCardClaim, useTailCards } from "./tail-cards";
-import { isLive } from "./upgrade-triggers";
+import { isLive, useUpgradeResume } from "./upgrade-triggers";
 
 /** Replies the line was counted under. Its × is kept in prefs. */
 const shownOn = new Set<string>();
@@ -43,6 +49,9 @@ export const Session1RetryRow = ({
   const tail = useTailCards(session.threadId);
   const db = useDb();
   const closed = usePrefs().dismissals.session1RetryClosedAt != null;
+  const { data: account } = useAccount();
+  // This chat alone moves onto the model, and the last ask runs again there.
+  const resume = useUpgradeResume({ thisChatOnly: true });
   const outcome = useThreadStore(session, (state) =>
     state.runs.outcomes.at(-1)
   );
@@ -109,7 +118,24 @@ export const Session1RetryRow = ({
         data-action="retry"
         onClick={() => {
           funnel("session1_retry_click");
-          requestPlanDialog("retry_top_model");
+          const tier = creditsTier(account);
+          if (tier === "basic" || tier === "paid") {
+            void resume(model.id);
+            return;
+          }
+          const pendingText = lastUserText(messages);
+          requestUpgradeDialog(
+            {
+              kind: "plan",
+              key: `session1:${showing}`,
+              threadId: session.threadId,
+              src: "retry_top_model",
+              model: model.label,
+              ...(pendingText != null && { pendingText }),
+              resume: () => resume(model.id),
+            },
+            true
+          );
         }}
       >
         <RotateCcw aria-hidden className="size-3.5 shrink-0" />

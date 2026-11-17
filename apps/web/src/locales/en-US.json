@@ -4769,6 +4769,7 @@
     "paidWaitingTitle": "Finish in your browser",
     "planLine": "{{plan}} plan · cancel anytime",
     "planTitle": "Everything {{plan}} gives you",
+    "planModelTitle": "Run it again on {{model}} with {{plan}}",
     "startAt": "Start at",
     "waitingBody": "Your message sends as soon as your plan is active.",
     "waitingBodyNoMessage": "This closes as soon as your plan is active.",

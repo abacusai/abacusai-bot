@@ -4769,6 +4769,7 @@
     "paidWaitingTitle": "請在瀏覽器中完成",
     "planLine": "{{plan}} 方案 · 隨時可取消",
     "planTitle": "{{plan}} 提供給你的所有內容",
+    "planModelTitle": "使用 {{plan}}，在 {{model}} 上重新執行",
     "startAt": "起價",
     "waitingBody": "方案一啟用，你的訊息就會送出。",
     "waitingBodyNoMessage": "方案一啟用，這個視窗就會關閉。",

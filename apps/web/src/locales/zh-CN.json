@@ -4769,6 +4769,7 @@
     "paidWaitingTitle": "请在浏览器中完成",
     "planLine": "{{plan}} 套餐 · 随时取消",
     "planTitle": "{{plan}} 为你提供的全部内容",
+    "planModelTitle": "使用 {{plan}}，在 {{model}} 上重新运行",
     "startAt": "起价",
     "waitingBody": "套餐一生效，你的消息就会发送。",
     "waitingBodyNoMessage": "套餐一生效，此窗口就会关闭。",

@@ -4769,6 +4769,7 @@
     "paidWaitingTitle": "Selesaikan di browser Anda",
     "planLine": "Paket {{plan}} · batalkan kapan saja",
     "planTitle": "Semua yang diberikan {{plan}}",
+    "planModelTitle": "Jalankan lagi di {{model}} dengan {{plan}}",
     "startAt": "Mulai dari",
     "waitingBody": "Pesan Anda terkirim begitu paket Anda aktif.",
     "waitingBodyNoMessage": "Ini akan tertutup begitu paket Anda aktif.",

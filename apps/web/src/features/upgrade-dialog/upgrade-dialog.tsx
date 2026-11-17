@@ -426,7 +426,12 @@ export const DialogBody = ({
         <DialogTitle className="text-[22px]/7 font-semibold tracking-[-0.01em] text-balance">
           {plan
             ? offer != null
-              ? t("upgradeDialog.planTitle", { plan: offer.planName })
+              ? request.model != null
+                ? t("upgradeDialog.planModelTitle", {
+                    model: request.model,
+                    plan: offer.planName,
+                  })
+                : t("upgradeDialog.planTitle", { plan: offer.planName })
               : t("upgradeDialog.creditsTitle")
             : ownKey
               ? t("upgradeDialog.ownKeyTitle")
@@ -505,7 +510,7 @@ export const DialogBody = ({
         <PlanPitchList
           billing={billing ?? null}
           lead={
-            ownKey || request.src === "model_locked"
+            ownKey || request.src === "model_locked" || request.model != null
               ? "models"
               : connectors
                 ? "connectors"

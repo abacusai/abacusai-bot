@@ -4769,6 +4769,7 @@
     "paidWaitingTitle": "브라우저에서 마무리하세요",
     "planLine": "{{plan}} 플랜 · 언제든 해지 가능",
     "planTitle": "{{plan}}로 할 수 있는 모든 것",
+    "planModelTitle": "{{plan}}으로 {{model}}에서 다시 실행",
     "startAt": "시작 가격",
     "waitingBody": "플랜이 활성화되면 바로 메시지가 전송됩니다.",
     "waitingBodyNoMessage": "플랜이 활성화되면 바로 닫힙니다.",

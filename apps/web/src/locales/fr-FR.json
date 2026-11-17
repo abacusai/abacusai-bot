@@ -4769,6 +4769,7 @@
     "paidWaitingTitle": "Terminez dans votre navigateur",
     "planLine": "Forfait {{plan}} · résiliable à tout moment",
     "planTitle": "Tout ce que {{plan}} vous offre",
+    "planModelTitle": "Relancez-le sur {{model}} avec {{plan}}",
     "startAt": "À partir de",
     "waitingBody": "Votre message part dès que votre forfait est actif.",
     "waitingBodyNoMessage": "Cette fenêtre se ferme dès que votre forfait est actif.",

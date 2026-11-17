@@ -4769,6 +4769,7 @@
     "paidWaitingTitle": "Schließe den Kauf in deinem Browser ab",
     "planLine": "{{plan}}-Plan · jederzeit kündbar",
     "planTitle": "Alles, was {{plan}} dir bietet",
+    "planModelTitle": "Mit {{plan}} noch einmal auf {{model}} ausführen",
     "startAt": "Ab",
     "waitingBody": "Deine Nachricht wird gesendet, sobald dein Plan aktiv ist.",
     "waitingBodyNoMessage": "Das schließt sich, sobald dein Plan aktiv ist.",

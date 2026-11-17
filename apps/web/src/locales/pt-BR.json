@@ -4769,6 +4769,7 @@
     "paidWaitingTitle": "Conclua no seu navegador",
     "planLine": "Plano {{plan}} · cancele quando quiser",
     "planTitle": "Tudo o que o {{plan}} oferece",
+    "planModelTitle": "Execute de novo no {{model}} com o {{plan}}",
     "startAt": "A partir de",
     "waitingBody": "Sua mensagem será enviada assim que seu plano estiver ativo.",
     "waitingBodyNoMessage": "Isso fecha assim que seu plano estiver ativo.",

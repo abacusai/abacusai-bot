@@ -4769,6 +4769,7 @@
     "paidWaitingTitle": "Tarayıcında tamamla",
     "planLine": "{{plan}} plan · istediğin zaman iptal et",
     "planTitle": "{{plan}} ile gelen her şey",
+    "planModelTitle": "{{plan}} ile {{model}} üzerinde yeniden çalıştır",
     "startAt": "Başlangıç fiyatı",
     "waitingBody": "Planın etkinleşir etkinleşmez mesajın gönderilir.",
     "waitingBodyNoMessage": "Planın etkinleşir etkinleşmez bu pencere kapanır.",

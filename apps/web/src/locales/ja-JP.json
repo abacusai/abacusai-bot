@@ -4769,6 +4769,7 @@
     "paidWaitingTitle": "ブラウザで手続きを完了してください",
     "planLine": "{{plan}} プラン · いつでも解約可能",
     "planTitle": "{{plan}} でできること",
+    "planModelTitle": "{{plan}} で {{model}} を使ってもう一度実行",
     "startAt": "開始価格",
     "waitingBody": "プランが有効になるとすぐにメッセージが送信されます。",
     "waitingBodyNoMessage": "プランが有効になるとすぐにこの画面は閉じます。",

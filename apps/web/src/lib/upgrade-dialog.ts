@@ -51,6 +51,8 @@ export interface UpgradeDialogRequest {
   resume?: (model?: string) => Promise<unknown>;
   /** `plan`: the screen that asked for it (a card, the model picker). */
   src?: UpgradeSrc;
+  /** `plan`: the top model a retry asked for, by name; the title names it. */
+  model?: string;
   /** `credits`: asked again after the user came back to a wall (wall-reopen.tsx). */
   reopen?: boolean;
 }

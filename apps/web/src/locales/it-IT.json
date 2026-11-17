@@ -4769,6 +4769,7 @@
     "paidWaitingTitle": "Completa nel browser",
     "planLine": "Piano {{plan}} · disdici quando vuoi",
     "planTitle": "Tutto ciò che ti offre {{plan}}",
+    "planModelTitle": "Rieseguilo su {{model}} con {{plan}}",
     "startAt": "A partire da",
     "waitingBody": "Il tuo messaggio partirà appena il piano sarà attivo.",
     "waitingBodyNoMessage": "Si chiuderà appena il piano sarà attivo.",

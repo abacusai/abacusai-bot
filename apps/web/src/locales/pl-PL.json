@@ -4909,6 +4909,7 @@
     "paidWaitingTitle": "Dokończ w przeglądarce",
     "planLine": "Plan {{plan}} · anuluj w dowolnym momencie",
     "planTitle": "Wszystko, co daje Ci {{plan}}",
+    "planModelTitle": "Uruchom ponownie na {{model}} z planem {{plan}}",
     "startAt": "Już od",
     "waitingBody": "Twoja wiadomość zostanie wysłana, gdy tylko plan będzie aktywny.",
     "waitingBodyNoMessage": "To okno zamknie się, gdy tylko plan będzie aktywny.",
