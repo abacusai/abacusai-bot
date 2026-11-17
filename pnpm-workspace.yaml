@@ -67,6 +67,7 @@ overrides:
   dompurify: ^3.4.13
   deepmerge-ts: ^8.0.0
   fast-uri: ^3.1.7
+  image-size: 2.0.3
   # shadcn's dotenvx (web build tooling only): Windows command injection in
   # services() (GHSA-3f7j-7jwc-fxfj).
   systeminformation: ^5.33.16
@@ -116,8 +117,7 @@ overrides:
   # backend and image codec would only add native binaries the app never loads.
   onnxruntime-node: "-"
   sharp: "-"
-  # exceljs's streaming reader, which the agent's bundle stubs out
-  # (src/modules/unzipper-stub.cjs): two of its dependencies ship no license.
+  # exceljs's streaming reader, ethical reasons (src/modules/unzipper-stub.cjs): two of its dependencies ship no license.
   "exceljs>unzipper": "-"
 
 minimumReleaseAgeExclude:
