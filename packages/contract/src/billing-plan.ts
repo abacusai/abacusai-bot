@@ -34,6 +34,7 @@ export const UPGRADE_SRCS = [
   "web_tab",
   "big_task",
   "keep_running",
+  "retry_top_model",
 ] as const;
 
 export type UpgradeSrc = (typeof UPGRADE_SRCS)[number];
@@ -73,6 +74,12 @@ export interface BillingPlan {
    * pitch's feature line, which is marketing text.
    */
   topModels?: PlanTopModel[];
+  /**
+   * The free account is in the hooks arm of the session-1 coin toss: a
+   * "Retry with <top model>" line under each finished reply, and the locked
+   * picker rows counted. Absent from older servers and false for a paid plan.
+   */
+  session1Hooks?: boolean;
 }
 
 /** One of the paid plans' leading models. */

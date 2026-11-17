@@ -3752,6 +3752,10 @@
       "continue": "Kontynuuj w nowym czacie",
       "paidBody": "Nowy czat zacznie od podsumowania tego, na najlepszym modelu. Szybciej zużywa kredyty."
     },
+    "session1Retry": {
+      "retry": "Ponów z {{model}}",
+      "dismiss": "Zamknij"
+    },
     "topModelCard": {
       "title": "Pracuj dalej z {{model}} w planie {{plan}}",
       "line": "{{model}} szybko zużywa darmowe kredyty. Z planem {{plan}} zachowasz go, razem ze wszystkim poniżej."

@@ -3616,6 +3616,10 @@
       "continue": "Continue in a new chat",
       "paidBody": "A new chat picks up from a summary of this one, on a top model. It uses credits faster."
     },
+    "session1Retry": {
+      "retry": "Retry with {{model}}",
+      "dismiss": "Close"
+    },
     "topModelCard": {
       "title": "Keep going on {{model}} with {{plan}}",
       "line": "{{model}} spends free credits fast. With {{plan}} you keep it, and everything below."

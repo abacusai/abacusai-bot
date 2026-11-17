@@ -3616,6 +3616,10 @@
       "continue": "Lanjutkan di chat baru",
       "paidBody": "Chat baru melanjutkan dari ringkasan chat ini, dengan model teratas. Kredit terpakai lebih cepat."
     },
+    "session1Retry": {
+      "retry": "Coba lagi dengan {{model}}",
+      "dismiss": "Tutup"
+    },
     "topModelCard": {
       "title": "Lanjutkan dengan {{model}} lewat {{plan}}",
       "line": "{{model}} cepat menghabiskan kredit gratis. Dengan {{plan}}, kamu tetap bisa memakainya, plus semua yang ada di bawah."

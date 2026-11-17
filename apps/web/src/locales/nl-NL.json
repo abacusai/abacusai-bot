@@ -3616,6 +3616,10 @@
       "continue": "Ga verder in een nieuwe chat",
       "paidBody": "Een nieuwe chat gaat verder vanaf een samenvatting van deze, op een topmodel. Die verbruikt credits sneller."
     },
+    "session1Retry": {
+      "retry": "Opnieuw met {{model}}",
+      "dismiss": "Sluiten"
+    },
     "topModelCard": {
       "title": "Ga door met {{model}} via {{plan}}",
       "line": "{{model}} verbruikt gratis credits snel. Met {{plan}} houd je het, plus alles hieronder."

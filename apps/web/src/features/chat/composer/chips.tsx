@@ -48,6 +48,7 @@ import {
   motionFor,
   useMotionPreference,
 } from "#renderer/lib/motion";
+import { LockedShownBeacon } from "#renderer/lib/session1-hooks";
 import { Button } from "#renderer/ui/button";
 import {
   Combobox,
@@ -605,6 +606,11 @@ export const ModelChip = ({
         data-slot="chat-model-panel"
         className="flex h-[min(320px,var(--available-height))] w-[min(360px,var(--available-width))] min-w-0 flex-row gap-1 rounded-[20px] p-1 text-[13px]"
       >
+        <LockedShownBeacon
+          open={open}
+          groups={binding.groups}
+          where="composer"
+        />
         <div
           role="tablist"
           aria-label={t("chat.composer.providers")}

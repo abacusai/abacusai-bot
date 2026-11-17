@@ -3616,6 +3616,10 @@
       "continue": "Continuar em um novo chat",
       "paidBody": "Um novo chat continua a partir de um resumo deste, em um modelo de ponta. Ele gasta créditos mais rápido."
     },
+    "session1Retry": {
+      "retry": "Tentar de novo com {{model}}",
+      "dismiss": "Fechar"
+    },
     "topModelCard": {
       "title": "Continue com o {{model}} no {{plan}}",
       "line": "O {{model}} gasta os créditos grátis rápido. Com o {{plan}} você continua com ele, e com tudo abaixo."

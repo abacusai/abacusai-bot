@@ -3616,6 +3616,10 @@
       "continue": "Yeni bir sohbette devam et",
       "paidBody": "Yeni bir sohbet, bu sohbetin özetinden üst düzey bir modelle devam eder. Krediyi daha hızlı harcar."
     },
+    "session1Retry": {
+      "retry": "{{model}} ile yeniden dene",
+      "dismiss": "Kapat"
+    },
     "topModelCard": {
       "title": "{{plan}} ile {{model}} ile devam et",
       "line": "{{model}} ücretsiz kredileri hızlı harcar. {{plan}} ile onu kullanmaya devam edersin, aşağıdakilerin hepsiyle birlikte."

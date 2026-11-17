@@ -239,6 +239,12 @@ export const FUNNEL_STEPS = [
   "github_watch_fix_done",
   "github_watch_upsell_shown",
   "github_watch_upsell_tapped",
+  // The session-1 coin toss's hooks arm (session1-hooks.tsx): the picker
+  // opened with locked top-model rows (detail: composer or picker), and the
+  // "Retry with <top model>" line shown and clicked (detail: the model).
+  "session1_locked_shown",
+  "session1_retry_shown",
+  "session1_retry_click",
 ] as const;
 
 export type FunnelStep = (typeof FUNNEL_STEPS)[number];

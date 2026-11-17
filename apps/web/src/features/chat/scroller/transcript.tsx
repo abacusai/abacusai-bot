@@ -40,6 +40,7 @@ import { appLineOf, userView, routeRowOf } from "../kit/message";
 import { RatingPromptRow } from "../kit/rating-prompt";
 import { RetryOfferRow } from "../kit/retry-offer";
 import { RouterAfterUpgradeRow } from "../kit/router-after-upgrade";
+import { Session1RetryRow } from "../kit/session1-hooks";
 import {
   BusyLine,
   busyLabel,
@@ -937,6 +938,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
           <RouterAfterUpgradeRow messages={messages} active={active} />
           <TopModelCardRow messages={messages} active={active} />
           <SuccessPitchRow messages={messages} active={active} />
+          <Session1RetryRow messages={messages} active={active} />
           <RatingPromptRow messages={messages} active={active} />
           <UpgradeTriggers
             messages={messages}

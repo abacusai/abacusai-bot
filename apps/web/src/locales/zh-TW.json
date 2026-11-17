@@ -3616,6 +3616,10 @@
       "continue": "在新對話中繼續",
       "paidBody": "新對話會根據本對話的摘要，由頂級模型繼續。消耗點數更快。"
     },
+    "session1Retry": {
+      "retry": "用 {{model}} 重試",
+      "dismiss": "關閉"
+    },
     "topModelCard": {
       "title": "升級 {{plan}}，繼續使用 {{model}}",
       "line": "{{model}} 消耗免費點數很快。升級 {{plan}} 即可繼續使用，還包括以下全部內容。"

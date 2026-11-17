@@ -16,6 +16,7 @@ import { usePrefs } from "#renderer/data/db/prefs";
 import { accountTier } from "#renderer/lib/credits";
 import { useMotionPreference } from "#renderer/lib/motion";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { LockedShownBeacon } from "#renderer/lib/session1-hooks";
 import { requestPlanDialog } from "#renderer/lib/upgrade-dialog";
 import { useAccount } from "#renderer/lib/use-account";
 import { Button } from "#renderer/ui/button";
@@ -169,6 +170,7 @@ export const ModelPicker = ({
         </motion.span>
       </PopoverTrigger>
       <PopoverContent className="w-[min(360px,var(--available-width))] rounded-[14px] p-1.5 [&_button]:h-8">
+        <LockedShownBeacon open={open} groups={binding.groups} where="picker" />
         <Input
           aria-label={t("bots.model.search")}
           placeholder={t("bots.model.search")}
