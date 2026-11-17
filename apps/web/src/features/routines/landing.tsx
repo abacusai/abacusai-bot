@@ -5,7 +5,7 @@
 import { useLiveQuery } from "@tanstack/react-db";
 import { useQuery } from "@tanstack/react-query";
 import { Clock3, Inbox, Sun, type LucideIcon } from "lucide-react";
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useCollections } from "#renderer/data/db";
@@ -109,7 +109,14 @@ const useCodingProject = (): {
 export const RoutinesLanding = () => {
   const { t } = useTranslation();
   const project = useCodingProject();
-  const coding = useCodingRoutinesOffered() && project.coder;
+  const offered = useCodingRoutinesOffered() && project.coder;
+  // Once shown, the starters stay for this visit: a folder added from a
+  // starter's setup becomes the active workspace, and the old checkout's git
+  // state goes before the new one's arrives. Dropping the section in between
+  // would close the setup the user is in the middle of.
+  const [shown, setShown] = useState(false);
+  if (offered && !shown) setShown(true);
+  const coding = offered || shown;
   const templates = coding
     ? FORM_ROUTINE_TEMPLATES.filter(
         (template) => !CODING_COVERED_TEMPLATE_IDS.has(template.id)
