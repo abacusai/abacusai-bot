@@ -21,6 +21,19 @@ export const openPendingLink = async (
 ): Promise<void> => {
   await client.system.openExternal({ url: await resolve() });
 };
+/**
+ * The upgrade page's way back once paid: `back=desktop` asks it to open the
+ * app again (its abacusai-bot:// link) instead of the web app. Only the bot's
+ * own page reads it; the plan page the account falls back to does not.
+ */
+export const withUpgradeReturn = (url: string): string => {
+  // An unparseable link is left for openExternal to refuse.
+  if (!URL.canParse(url)) return url;
+  const parsed = new URL(url);
+  if (!parsed.pathname.endsWith("/bot/link/upgrade")) return url;
+  parsed.searchParams.set("back", "desktop");
+  return parsed.toString();
+};
 /** Abacus sign-in: PKCE through main on Electron, the web handoff in browsers. */
 export const signInAbacus = (
   transport: Transport,

@@ -74,7 +74,12 @@ import { NotchController } from "./notch/controller";
 import { CueArbiter } from "./notch/cue-arbiter";
 import { wireMainNotchEvents } from "./notch/main-events";
 import { NotchNotificationPolicy } from "./notch/notifications";
-import { launchLink, OpenLinkInbox, registerOpenLinkScheme } from "./open-link";
+import {
+  isLinkLaunch,
+  launchLink,
+  OpenLinkInbox,
+  registerOpenLinkScheme,
+} from "./open-link";
 import { abacusBotHome, userTempDir, WORKSPACE_DIR_NAME } from "./paths";
 import { isLowEndMachine } from "./platform/low-end-machine";
 import { profileBaseDir } from "./profile-home";
@@ -1830,6 +1835,11 @@ app
   .whenReady()
   .then(async () => {
     if (!gotSingleInstanceLock) {
+      // A link's launch: the running app already heard it as second-instance.
+      if (isLinkLaunch(process.argv, process.env)) {
+        app.quit();
+        return;
+      }
       // Thirty seconds: a dying parent's shutdown (agent children, connectors)
       // routinely outlives five, and giving up first leaves the user with no
       // app. A genuinely running primary keeps the lock and this process quits.

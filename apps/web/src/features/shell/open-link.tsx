@@ -2,10 +2,14 @@
  * `abacusaibot://open` links (contract open-link.ts), once the user is signed
  * in: main holds the latest link and this takes it, at mount and whenever
  * main says one arrived. A chat this app has opens with the link's text in
- * its composer, never sent; anything else opens home.
+ * its composer, never sent; the upgrade page's link reads the account where
+ * the app is; anything else opens home.
  */
 import type { SessionRow } from "@abacus-ai/contract/contract/rows";
-import type { OpenLink } from "@abacus-ai/contract/open-link";
+import {
+  OPEN_LINK_UPGRADE_SRC,
+  type OpenLink,
+} from "@abacus-ai/contract/open-link";
 import { useEffect } from "react";
 
 import type { Db } from "#renderer/data/db";
@@ -17,6 +21,7 @@ import {
 } from "#renderer/lib/continuity/composer-drafts";
 import { markExternalOpen } from "#renderer/lib/navigation/external-open";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { planReturned } from "#renderer/lib/upgrade";
 
 import { notificationOptions, withOwner } from "./notification-clicks";
 
@@ -89,6 +94,12 @@ export const OpenLinkHost = ({
         .catch(() => null);
       if (link == null) return;
       markExternalOpen();
+      // Back from paying in the browser: the screen that sent the user there
+      // is still up, and hears the plan land.
+      if (link.sessionId == null && link.src === OPEN_LINK_UPGRADE_SRC) {
+        planReturned(transport.client);
+        return;
+      }
       await db.collections.sessions.preload().catch(() => undefined);
       openChatWithText(link.sessionId, link.draft, db, navigate);
     };

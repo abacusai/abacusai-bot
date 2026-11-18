@@ -21,7 +21,7 @@ files:
 
 # abacusaibot://open links (main/open-link.ts): the macOS bundle's URL types and
 # the Linux .desktop file's MimeType (x-scheme-handler/abacusaibot). Windows
-# registers at runtime.
+# registers at install (build/installer.nsh) and again at every launch.
 protocols:
   - name: AbacusAI Bot
     schemes: [abacusaibot]

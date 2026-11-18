@@ -6,6 +6,9 @@
 
 export const OPEN_LINK_SCHEME = "abacusaibot";
 
+/** The `src` of the link the upgrade page fires once a plan is paid for: the app is to read its account again, where it is. */
+export const OPEN_LINK_UPGRADE_SRC = "upgrade";
+
 /** A draft longer than this is cut; it is a starting point, not a message. */
 export const OPEN_LINK_DRAFT_MAX = 500;
 
