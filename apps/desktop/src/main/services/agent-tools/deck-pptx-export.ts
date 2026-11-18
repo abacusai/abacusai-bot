@@ -738,7 +738,8 @@ const build = async (
  * screen. Neither a printed page nor a measured one has an active slide, so
  * both the print styles and the .pptx capture show it with this rule.
  */
-export const SHOW_ANIMATED_TEXT = `[data-anim] {
+export const SHOW_ANIMATED_TEXT = `
+  [data-anim] {
     opacity: 1 !important;
     animation: none !important;
   }`;

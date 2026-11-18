@@ -178,7 +178,7 @@ const MARK_DECK = `(() => {
  */
 const DROP_EMPTY_COLUMNS = `(() => {
   let dropped = 0;
-  for (const table of document.querySelectorAll('[data-deck-slide] table')) {
+  for (const table of document.querySelectorAll('*[data-deck-slide] table')) {
     const rows = [...table.rows];
     const body = rows.filter((row) => !row.closest('thead') && [...row.cells].every((c) => c.tagName === 'TD'));
     if (body.length === 0) continue;
