@@ -252,9 +252,18 @@ export const planTopModelNames = (features: readonly string[]): string[] => {
 
 const planTopModels = (
   features: readonly string[],
-  locale: string
+  locale: string,
+  lead?: string
 ): string | null => {
-  const names = planTopModelNames(features);
+  const listed = planTopModelNames(features);
+  // A moment that names one top model shows it first, never cut off by the count.
+  const names =
+    lead != null && lead.length > 0
+      ? [lead, ...listed.filter((name) => name !== lead)].slice(
+          0,
+          TOP_MODEL_COUNT
+        )
+      : listed;
   if (names.length === 0) return null;
   // Chinese's unit list has no separator at all: names would run together.
   return locale.startsWith("zh")
@@ -328,7 +337,9 @@ export function planPitch(
   t: PlanT,
   billing: BillingPlan | null,
   locale: string,
-  order: readonly PitchLine[] = PITCH_LINES
+  order: readonly PitchLine[] = PITCH_LINES,
+  /** A top model the moment names (a retry on it): first in the models line. */
+  leadModel?: string
 ): string[] {
   const offer = wallOffer(billing);
   const number = (value: number) =>
@@ -347,7 +358,8 @@ export function planPitch(
       : null;
   const times = creditsTimes(monthly, free, locale);
   const first = monthly != null ? firstMonthCredits(offer, monthly) : null;
-  const models = offer != null ? planTopModels(offer.features, locale) : null;
+  const models =
+    offer != null ? planTopModels(offer.features, locale, leadModel) : null;
   const projects = offer != null ? planAppProjects(offer.features) : null;
   const line = (name: PitchLine): string | null => {
     switch (name) {

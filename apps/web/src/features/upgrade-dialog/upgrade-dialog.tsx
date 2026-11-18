@@ -509,6 +509,7 @@ export const DialogBody = ({
       ) : (
         <PlanPitchList
           billing={billing ?? null}
+          {...(request.model != null && { model: request.model })}
           lead={
             ownKey || request.src === "model_locked" || request.model != null
               ? "models"
