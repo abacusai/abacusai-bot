@@ -426,6 +426,7 @@ export type DeckTemplateSummary = {
   mood?: string;
   tone?: string;
   formality?: string;
+  slide_count?: number;
 };
 
 /** The catalogue minus the markup: a chooser needs the feel, not the HTML. */
@@ -450,6 +451,10 @@ export const deckTemplates = async (): Promise<{
         ? { avoid_for: String(entry.avoid_for) }
         : {}),
       ...(entry.mood != null ? { mood: String(entry.mood) } : {}),
+      // How many slides it has: a 15-slide ask got a 6-slide template.
+      ...(typeof entry.slide_count === "number"
+        ? { slide_count: entry.slide_count }
+        : {}),
       ...(entry.tone != null ? { tone: String(entry.tone) } : {}),
       ...(entry.formality != null
         ? { formality: String(entry.formality) }
@@ -813,6 +818,21 @@ export const renderDeck = async (
       `the slides were written to ${modelPath(htmlPath)} but the PDF export failed: ${(error as Error)?.message ?? "unknown error"}`
     );
   });
+
+  // A cover with no <h1> (its title in styled divs) kept the template's own
+  // <title>, "Emerald Editorial Deck": the printed cover title names it.
+  const printedTitle = (exported.coverTitle ?? "").replace(/\s+/g, " ").trim();
+  if (printedTitle.length > 0 && !/<h1\b/i.test(filled[0] ?? "")) {
+    const html = await fs.readFile(htmlPath, "utf8");
+    await fs.writeFile(
+      htmlPath,
+      html.replace(
+        /<title>[\s\S]*?<\/title>/i,
+        `<title>${escapeAttr(printedTitle.slice(0, 120))}</title>`
+      ),
+      "utf8"
+    );
+  }
 
   return {
     pdfPath: exported.pdfPath,

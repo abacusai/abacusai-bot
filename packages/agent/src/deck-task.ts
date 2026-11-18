@@ -250,6 +250,10 @@ export interface Draft {
   today?: string;
   /** Set once numbers not in the request were sent back; then they are dropped. */
   numbersChecked?: boolean;
+  /** Each offered slide's label ("statement and three points"), by index. */
+  labels?: Map<number, string>;
+  /** How often a slide counting more items than it holds was sent back. */
+  itemsChecked?: number;
   /** Set once a printed cover title without the topic was sent back. */
   coverTitleChecked?: boolean;
   /** Set once a cover without the deck's topic was sent back. */
@@ -300,15 +304,26 @@ export const catalogueFor = (
   list: Array<Record<string, unknown>>,
   audience: Audience | null | undefined,
   seedText: string,
-  words = ""
+  words = "",
+  wanted = 0
 ): Array<Record<string, unknown>> => {
+  // Enough slides for the count asked: a 15-slide ask got a 6-slide
+  // template. Where none of the rest has enough, those with the most.
+  const enough = (items: Array<Record<string, unknown>>) => {
+    const count = (t: Record<string, unknown>): number =>
+      typeof t.slide_count === "number" ? t.slide_count : 99;
+    const fit = items.filter((t) => count(t) >= wanted);
+    if (fit.length > 0 || items.length === 0) return fit;
+    const most = Math.max(...items.map(count));
+    return items.filter((t) => count(t) === most);
+  };
   let seed = 0;
   for (const ch of seedText) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
   const turn = <T>(items: T[]): T[] => {
     const at = items.length > 0 ? seed % items.length : 0;
     return [...items.slice(at), ...items.slice(0, at)];
   };
-  if (audience == null || audience === "business") return turn(list);
+  if (audience == null || audience === "business") return turn(enough(list));
   const text = (t: Record<string, unknown>, ...keys: string[]): string =>
     keys.map((k) => String(t[k] ?? "")).join(" ");
   const serious = SERIOUS.test(words);
@@ -327,7 +342,7 @@ export const catalogueFor = (
         /\b(school|lessons?|children'?s?|student)/i.test(text(t, "avoid_for"))
       )
   );
-  if (audience === "casual") return turn(fits);
+  if (audience === "casual") return turn(enough(fits));
   const made = fits.filter(
     (t) =>
       /school lesson|children's lesson|school assembly|classroom|explainer/i.test(
@@ -343,13 +358,64 @@ export const catalogueFor = (
         text(t, "mood")
       )
   );
-  return [...turn(low), ...turn(rest), ...turn(playful)];
+  const ordered = [...turn(low), ...turn(rest), ...turn(playful)];
+  return ordered.filter((t) => enough(ordered).includes(t));
+};
+
+const NUMBER_WORDS = [
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+  "eleven",
+  "twelve",
+];
+const asNumber = (word: string): number | null => {
+  const n = /^\d{1,2}$/.test(word)
+    ? Number(word)
+    : NUMBER_WORDS.indexOf(word.toLowerCase());
+  return n >= 2 ? n : null;
+};
+
+/**
+ * How many items a slide holds: from its label ("statement and three points",
+ * "four KPI figures") or, failing that, its numbered markers ("01", "02").
+ */
+export const itemSlots = (label: string, samples: string[]): number | null => {
+  // A slide of figures shows numbers, not a counted list.
+  if (/\b(figures?|kpis?|stats?|numbers?|metrics?)\b/i.test(label)) return null;
+  const named =
+    /\b(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\d{1,2})(?:\s+|-)(?:[\w-]+\s+)?(points|items|cards|steps?|columns|figures|findings|rules|reasons|stats|tiles|boxes|panels|rows|people|members|quotes|questions|options|features|services|cases|ideas|lessons|events|sessions)\b/i.exec(
+      label
+    );
+  if (named != null) return asNumber(named[1]!);
+  const markers = samples.filter((sample) => /^0\d$/.test(sample)).length;
+  return markers >= 2 ? markers : null;
+};
+
+const COUNT_WORD =
+  /\b(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\d{1,2})\s+(?=(?:[A-Za-z][\w-]*\s+)?[A-Za-z][\w-]*s\b)/i;
+
+/** The count a heading gives its list: "Four Exhibitions", "5 reasons to…". */
+export const countIn = (heading: string): number | null => {
+  const m =
+    /\b(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\d{1,2})\s+(?:[A-Za-z][\w-]*\s+)?[A-Za-z][\w-]*s\b/i.exec(
+      heading
+    );
+  return m == null ? null : asNumber(m[1]!);
 };
 
 /** Words that ask for a deck rather than name its topic, in the languages seen. */
 const ASK_WORDS = new Set(
   (
-    "make create build prepare give do generate design want need please can you me my i a an the of on about for to with and in by " +
+    "make create build prepare give do generate design want need please can you me my our your their i a an the of on about for to with and in by " +
     "ppt pptx powerpoint presentation presentations slide slides deck decks pitch short simple nice good " +
     "class grade std standard school students student kids children college level basics basic intro introduction " +
     "it is its that this some one two three four five six seven eight nine ten " +
@@ -359,9 +425,25 @@ const ASK_WORDS = new Set(
   ).split(" ")
 );
 
+/** A title the user gave word for word ("titled How Small Coastal Towns…"). */
+export const titledWords = (request: string): string[] | null => {
+  const m = /\btitled\s+["“']?([^"”'\n]{3,160})/i.exec(request);
+  if (m == null) return null;
+  return m[1]!
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .split(/[^\p{L}\p{M}\p{N}]+/u)
+    .filter((w) => w.length >= 3);
+};
+
 /** The topic's words in the user's own request ("climate change", "water conservation"). */
 export const topicWords = (request: string): string[] => {
+  // "in the emerald-editorial template" names the look, not the topic.
+  // The topic comes before its details ("…arts centre: 4 exhibitions, …").
   const plain = request
+    .split(/:\s/)[0]!
+    .replace(/\bin the [\w -]{1,40}? (template|design|look)\b/gi, " ")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
@@ -371,7 +453,7 @@ export const topicWords = (request: string): string[] => {
         .split(/[^\p{L}\p{M}\p{N}]+/u)
         .filter(
           (w) =>
-            w.length > 0 &&
+            (w.length >= 3 || /[\u0080-\uffff]/.test(w)) &&
             !ASK_WORDS.has(w) &&
             !(/^\d+$/.test(w) && w.length <= 2)
         )
@@ -384,13 +466,18 @@ export const topicWords = (request: string): string[] => {
  * needs all of them, a longer one a third. Master's read (18 Nov): e1's cover
  * read "Causes Impacts Solutions", m01's "Ages 12-16 Every Drop Counts".
  */
-export const coverNamesTopic = (cover: string, words: string[]): boolean => {
+export const coverNamesTopic = (
+  cover: string,
+  words: string[],
+  exact = false
+): boolean => {
   if (words.length === 0) return true;
   const text = cover
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
   const found = words.filter((w) => text.includes(w)).length;
+  if (exact) return found === words.length;
   return words.length <= 3
     ? found === words.length
     : found >= Math.ceil(words.length / 3);
@@ -422,7 +509,8 @@ export const buildTools = (
           list,
           draft.audience ?? audienceOf(draft.audienceWords ?? ""),
           path.basename(outputPath),
-          draft.audienceWords ?? ""
+          draft.audienceWords ?? "",
+          wantedSlides
         );
         return ok(JSON.stringify(turned, null, 1), {
           count: list.length,
@@ -488,13 +576,18 @@ export const buildTools = (
             slide.slots.map((slot) => slot.text),
           ])
         );
+        draft.labels = new Map(
+          (result.slides ?? []).map((slide) => [slide.index, slide.label])
+        );
 
         const offered = (result.slides ?? []).length;
         const pick = Math.min(wantedSlides, offered);
         const note =
           offered <= wantedSlides
             ? `\nThis template has ${offered} slides: use all of them.`
-            : `\nPick ${pick} of these ${offered} slides: slide 1 first, the last slide last if it closes the deck, and between them the ones your content fills. Render only those.`;
+            : pick === 1
+              ? `\nPick 1 of these ${offered} slides: the one whose layout holds the content (a statement, points or explainer slide), not the title slide. Render only that one.`
+              : `\nPick ${pick} of these ${offered} slides: slide 1 first, the last slide last if it closes the deck, and between them the ones your content fills. Render only those.`;
 
         // One slide per line: every slide is listed now, and a weak model
         // reads a long indented listing worse than a compact one.
@@ -558,6 +651,8 @@ export const buildTools = (
       const wordsForFigures: string[] = [];
       // Slides built around big figures whose figures all came out empty.
       const figureless: number[] = [];
+      // Slides whose heading counts more items than the slide holds.
+      const overfull: string[] = [];
       const slides: Array<{ index: number; values: Record<string, string> }> =
         [];
       // Template text a slide keeps, listed back once: a sample figure, name
@@ -657,6 +752,15 @@ export const buildTools = (
             // taken out without asking.
             if (placeholdersIn(sample).length > 0)
               values[id] = withoutPlaceholders(sample) || REMOVE;
+            // A connector of the template's own split title ("The STATE of
+            // THE WORK AHEAD") kept round the user's words read "The Autumn
+            // of Programme": it goes.
+            else if (/^(the|of|at|and|in|for|a|an|&)$/i.test(sample.trim()))
+              values[id] = REMOVE;
+            // A cover's sample text is always the template's own (its title,
+            // subtitle, presenter, date): kept, it printed "THE WORK AHEAD"
+            // and "A presentation for the leadership team" (live pick).
+            else if (index === 1 && sample.length > 0) values[id] = REMOVE;
             else if (sample.length > 0)
               (replacement == null ? unsent : kept).push(
                 `slide ${index} slot ${position + 1}: "${sample}"`
@@ -675,6 +779,40 @@ export const buildTools = (
           figureAt.every(({ id }) => values[id] === REMOVE)
         )
           figureless.push(index);
+
+        // "Four Exhibitions" on a slide of three points printed Exhibition
+        // 1-3 (live pick, 18 Nov): a counted list needs the slots to hold it.
+        const holds = itemSlots(
+          draft.labels?.get(index) ?? "",
+          samples.map((sample) => sample.trim())
+        );
+        if (holds != null) {
+          const heading = ids
+            .slice(0, 3)
+            .map((id) => values[id])
+            .filter((v): v is string => typeof v === "string" && v !== REMOVE)
+            .join(" ");
+          const counted = countIn(heading);
+          // Up to twice what it holds: "Twelve talks" over four strands
+          // sums the season up rather than listing it.
+          if (counted != null && counted > holds && counted <= holds * 2) {
+            if (draft.itemsChecked === 2) {
+              // Asked twice: the heading stops claiming more than it shows.
+              for (const id of ids.slice(0, 3))
+                if (typeof values[id] === "string" && values[id] !== REMOVE)
+                  values[id] = values[id]!.replace(COUNT_WORD, "")
+                    .replace(/^\s+/, "")
+                    .replace(/^./, (c) => c.toUpperCase());
+            } else {
+              const roomy = [...(draft.labels ?? new Map<number, string>())]
+                .filter(([, label]) => (itemSlots(label, []) ?? 0) >= counted)
+                .map(([at]) => at);
+              overfull.push(
+                `slide ${index} ("${heading.slice(0, 60)}") counts ${counted} but holds ${holds}${roomy.length > 0 ? `; slide ${roomy.join(" or ")} holds ${counted} or more` : "; no offered slide holds that many, so split the items over two slides"}`
+              );
+            }
+          }
+        }
 
         slides.push({ index, values });
       }
@@ -760,7 +898,8 @@ export const buildTools = (
 
       // The cover's title is the topic the user asked for; a slogan goes in
       // the subtitle. Sent back once, naming the words.
-      const topic = topicWords(draft.audienceWords ?? "");
+      const titled = titledWords(draft.audienceWords ?? "");
+      const topic = titled ?? topicWords(draft.audienceWords ?? "");
       const cover = slides.reduce<(typeof slides)[number] | undefined>(
         (first, slide) =>
           first == null || slide.index < first.index ? slide : first,
@@ -773,14 +912,28 @@ export const buildTools = (
           Object.values(cover.values)
             .filter((v) => v !== REMOVE)
             .join(" "),
-          topic
+          topic,
+          titled != null
         )
       ) {
         draft.coverChecked = true;
         return failed(
           [
-            `Not printed yet: the cover (slide ${cover.index}) does not name the topic the user asked for (${topic.join(" ")}).`,
+            titled != null
+              ? `Not printed yet: the user gave the title word for word; the cover (slide ${cover.index}) must carry all of it (${topic.join(" ")}).`
+              : `Not printed yet: the cover (slide ${cover.index}) does not name the topic the user asked for (${topic.join(" ")}).`,
             "Put the topic itself, in the user's words, in the cover's title slots (split over the title lines if the template has two); a tagline or slogan goes in the subtitle slot. Then call render_deck again.",
+          ].join("\n")
+        );
+      }
+
+      if (overfull.length > 0 && (draft.itemsChecked ?? 0) < 2) {
+        draft.itemsChecked = (draft.itemsChecked ?? 0) + 1;
+        return failed(
+          [
+            "Not printed yet: these slides count more items than they have room for, so some would be missing:",
+            ...overfull.map((line) => `  ${line}`),
+            "Use an offered slide with enough item slots, or put the items over two slides (each heading counting its own), then call render_deck again.",
           ].join("\n")
         );
       }
@@ -860,20 +1013,24 @@ export const buildTools = (
       }
 
       try {
-        const result = (await hostServices.request("render_deck", {
-          template: draft.template,
-          outputPath,
-          // In the order sent: the filler tells the story (the host keeps the
-          // cover first and the closing last).
-          slides,
-          ...(draft.facts != null
-            ? {
-                facts: draft.facts,
-                today: draft.today,
-                dropUnsupported: draft.numbersChecked === true,
-              }
-            : {}),
-        })) as {
+        const result = (await hostServices.request(
+          "render_deck",
+          {
+            template: draft.template,
+            outputPath,
+            // In the order sent: the filler tells the story (the host keeps the
+            // cover first and the closing last).
+            slides,
+            ...(draft.facts != null
+              ? {
+                  facts: draft.facts,
+                  today: draft.today,
+                  dropUnsupported: draft.numbersChecked === true,
+                }
+              : {}),
+          },
+          300_000
+        )) as {
           pdfPath?: string;
           htmlPath?: string;
           pptxPath?: string | null;
@@ -922,12 +1079,13 @@ export const buildTools = (
         // The cover's title as printed (its largest text) names the topic:
         // m01 printed "Conservation / Every drop counts" with "Water" in a
         // small tag (master, 18 Nov).
-        const words = topicWords(draft.audienceWords ?? "");
+        const titledAs = titledWords(draft.audienceWords ?? "");
+        const words = titledAs ?? topicWords(draft.audienceWords ?? "");
         if (
           typeof result.coverTitle === "string" &&
           result.coverTitle.length > 0 &&
           draft.coverTitleChecked !== true &&
-          !coverNamesTopic(result.coverTitle, words)
+          !coverNamesTopic(result.coverTitle, words, titledAs != null)
         ) {
           draft.coverTitleChecked = true;
           return failed(

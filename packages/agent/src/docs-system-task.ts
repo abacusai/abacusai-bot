@@ -94,6 +94,13 @@ export interface DocsSystemResult {
 }
 
 /** Where a document's HTML source lives: beside the file, in `<name>-source/`. */
+/**
+ * A document's print is several page loads, fit passes, the PDF and the .docx:
+ * past the host's default 2 minutes on a slow machine, which told the user it
+ * failed while the files were still being written.
+ */
+const RENDER_DOCS_TIMEOUT_MS = 300_000;
+
 export const sourceFor = (outputPath: string): string => {
   const base = outputPath.replace(/\.(pdf|pptx|docx)$/i, "");
   return path.join(`${base}-source`, `${path.basename(base)}.html`);
@@ -294,18 +301,22 @@ export async function runDocsSystemTask(
       await fs.writeFile(briefFileFor(sourcePath), brief);
       await fs.writeFile(factsFileFor(sourcePath), facts);
     }
-    const made = (await context.hostServices.request("render_docs", {
-      htmlPath: sourcePath,
-      outBase,
-      kind,
-      brief: checkBrief,
-      facts,
-      request: requestWords(sources, checkBrief),
-      today,
-      last,
-      ...(slides != null ? { slides } : {}),
-      ...(word === true ? { word: true } : {}),
-    })) as MadeFile;
+    const made = (await context.hostServices.request(
+      "render_docs",
+      {
+        htmlPath: sourcePath,
+        outBase,
+        kind,
+        brief: checkBrief,
+        facts,
+        request: requestWords(sources, checkBrief),
+        today,
+        last,
+        ...(slides != null ? { slides } : {}),
+        ...(word === true ? { word: true } : {}),
+      },
+      RENDER_DOCS_TIMEOUT_MS
+    )) as MadeFile;
     // The user's picture, asked for and left out (live chat photo deck).
     // Not on a change, which may be to take it out.
     let pictures =

@@ -77,6 +77,9 @@ export type MakeResult = {
 
 type ChartsReport = ReturnType<typeof drawCharts>;
 
+/** A page that never settles is closed, so its window does not outlive the ask (as deck-pdf.ts). */
+const PREPARE_TIMEOUT_MS = 120_000;
+
 const READY = `(async () => { try { await document.fonts.ready } catch {} await Promise.all([...document.images].map((i) => i.complete ? null : new Promise((r) => { i.addEventListener('load', r); i.addEventListener('error', r); setTimeout(r, 10000) }))); await new Promise((r) => setTimeout(r, 200)); return true })()`;
 
 /** Copies the stylesheet and fonts beside the HTML, which links "system.css". */
@@ -256,6 +259,9 @@ const prepare = async (
     height: kind === "deck" ? 720 : 1123,
     webPreferences: { nodeIntegration: false, contextIsolation: true },
   });
+  const timeout = setTimeout(() => {
+    if (!win.isDestroyed()) win.destroy();
+  }, PREPARE_TIMEOUT_MS);
   try {
     await win.loadFile(sourcePath);
     await win.webContents.executeJavaScript(READY);
@@ -531,6 +537,7 @@ const prepare = async (
       sparse,
     };
   } finally {
+    clearTimeout(timeout);
     if (!win.isDestroyed()) win.destroy();
   }
 };

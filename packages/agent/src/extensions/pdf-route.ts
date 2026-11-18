@@ -13,6 +13,15 @@ const MAKES_PDF =
 /** A new deck made by script: python-pptx with no file, or pptxgenjs. */
 const MAKES_DECK = /\bPresentation\(\s*\)|\bnew\s+(PptxGenJS|pptxgen)\s*\(/i;
 
+/**
+ * The script also names the file it makes. A one-off build does
+ * (`write_pdf("certificate.pdf")`, `prs.save("deck.pptx")`); app code that
+ * renders into a buffer, an install, or a search of the code does not, and a
+ * coding session must be able to write those.
+ */
+const NAMES_PDF = /\.pdf\b/i;
+const NAMES_PPTX = /\.pptx\b/i;
+
 const scriptText = (toolName: string, input: unknown): string | null => {
   const i = (input ?? {}) as {
     command?: unknown;
@@ -28,16 +37,26 @@ const scriptText = (toolName: string, input: unknown): string | null => {
   return null;
 };
 
-export const handBuiltPdf = (toolName: string, input: unknown): boolean =>
-  MAKES_PDF.test(scriptText(toolName, input) ?? "");
+/** A browser printing a web page (`--print-to-pdf … https://…`): a page saved as it is, not a document made. */
+const PRINTS_URL = /--print-to-pdf\S*/g;
+
+export const handBuiltPdf = (toolName: string, input: unknown): boolean => {
+  const given = scriptText(toolName, input) ?? "";
+  const text = /\bhttps?:\/\//i.test(given)
+    ? given.replace(PRINTS_URL, "")
+    : given;
+  return MAKES_PDF.test(text) && NAMES_PDF.test(text);
+};
 
 /**
  * Live (chat, "improve my presentation"): a new deck built with python-pptx,
  * so the ppt tool and its checks never ran. Opening the user's own file to
  * change something they named is not caught.
  */
-export const handBuiltDeck = (toolName: string, input: unknown): boolean =>
-  MAKES_DECK.test(scriptText(toolName, input) ?? "");
+export const handBuiltDeck = (toolName: string, input: unknown): boolean => {
+  const text = scriptText(toolName, input) ?? "";
+  return MAKES_DECK.test(text) && NAMES_PPTX.test(text);
+};
 
 /** Registered where the document or ppt tool is (session.ts, forever/components.ts). */
 export default (tools: { document?: string; ppt?: string }) =>

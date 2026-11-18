@@ -8,7 +8,8 @@ const BRACKETED = /\[([^[\]\n]{1,48})\]/g;
 const PHRASES =
   /\b(?:lorem ipsum|placeholder|tbc|tbd|xx+|(?:your|company|client|studio|presenter|app|founder|product|brand|startup) name(?: here)?)\b/gi;
 /** "X%", "XX users", "Email: ____": a figure or field left for later. */
-const STANDINS = /(?<![\w])X{1,3}%|_{3,}/g;
+const STANDINS =
+  /(?<![\w])X{1,3}%|_{3,}|^\s*(?:item|exhibition|speaker|event|feature|session|talk|name|title)\s+\d{1,2}(?:\s*$|\s+[—–-].*$)|\b(?:title|name)\s*\/\s*(?:artist|author|speaker|date|role|venue)\b|(?:\ba\s+)?\b(?:a|one)[ -](?:line|short|brief)\s+(?:note|description|line)\b[^.]*\.?/gim;
 
 export const placeholdersIn = (text: string): string[] => {
   const found: Array<{ at: number; text: string }> = [];
@@ -16,7 +17,14 @@ export const placeholdersIn = (text: string): string[] => {
   for (const match of text.matchAll(BRACKETED)) {
     const inner = match[1]!;
     if (inner.trim().toLowerCase() === "remove") continue;
-    if (/[A-Z@#]/.test(inner)) found.push({ at: match.index, text: match[0] });
+    // "[place]", "[company name]": a short lowercase stand-in counts too.
+    if (
+      /[A-Z@#]/.test(inner) ||
+      (/^[a-z][a-z ]{1,24}$/.test(inner.trim()) &&
+        inner.trim().split(/\s+/).length <= 2 &&
+        !/^(sic|sic\.|note|aside)$/.test(inner.trim()))
+    )
+      found.push({ at: match.index, text: match[0] });
   }
   for (const match of text.matchAll(PHRASES))
     found.push({ at: match.index, text: match[0] });
