@@ -275,8 +275,15 @@ const REMOVED_MARK = "\u2063";
  */
 export const dropRemoved = (slide: string): string => {
   if (!slide.includes(REMOVED_MARK)) return slide;
-  const textOf = (html: string): string =>
-    html.replace(/<[^>]*>/g, "").replace(/\s+/g, "");
+  const textOf = (html: string): string => {
+    // Strip tags until none is left, so a tag split by another is gone too.
+    let text = html;
+    for (let last = ""; last !== text;) {
+      last = text;
+      text = text.replace(/<[^>]*>/g, "");
+    }
+    return text.replace(/\s+/g, "");
+  };
   const innermost =
     /<(tr|li|div|article|p|h[1-6]|span|small|strong|em|b|a|button)\b[^>]*>((?:(?!<\/?\1\b)[\s\S])*?)<\/\1>/gi;
   // A kept element's inside is looked at too: matched first, an outer
