@@ -126,8 +126,28 @@ Var abacusBaseDir
   ${EndIf}
 !macroend
 
+; abacusaibot:// links (src/main/open-link.ts): the same keys Electron writes
+; at launch, so a link works from the install on, before the app's first run.
+!define ABACUS_LINK_SCHEME "abacusaibot"
+!macro abacusRegisterLinkScheme
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${ABACUS_LINK_SCHEME}" "" "URL:${ABACUS_LINK_SCHEME}"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${ABACUS_LINK_SCHEME}" "URL Protocol" ""
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${ABACUS_LINK_SCHEME}\DefaultIcon" "" "$appExe,1"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${ABACUS_LINK_SCHEME}\shell\open\command" "" '"$appExe" "%1"'
+!macroend
+
 !macro customInstall
+  !insertmacro abacusRegisterLinkScheme
   !insertmacro abacusBeacon "installer_done"
 !macroend
 
 !endif
+
+; The link scheme goes with the app: the install's hive, and the per-user key
+; the app itself writes at every launch. An update keeps both.
+!macro customUnInstall
+  ${IfNot} ${isUpdated}
+    DeleteRegKey SHELL_CONTEXT "Software\Classes\abacusaibot"
+    DeleteRegKey HKCU "Software\Classes\abacusaibot"
+  ${EndIf}
+!macroend

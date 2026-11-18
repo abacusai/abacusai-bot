@@ -55,6 +55,15 @@ const TARGETS = {
         "the user added; the worst case is one of those crashing the app it " +
         "was added to. Delete when the desktop moves to zod 4 or zod 3 ships " +
         "a patched release.",
+      // https://github.com/advisories/GHSA-fc5q-39xc-vjpf: no patched
+      // release (<=4.0.7 is every release there is).
+      "GHSA-fc5q-39xc-vjpf":
+        "picomatch <=4.0.7: a glob with a repeated single-branch extglob " +
+        "takes exponential time to compile. It is reached only by build and " +
+        "dev tooling (the shadcn CLI, ultracite's lint config, vite, vitest, " +
+        "tsdown, knip, electron-builder) on patterns written in this repo; " +
+        "nothing shipped matches a glob from outside. Delete when picomatch " +
+        "ships a release after 4.0.7.",
     },
   },
 };
