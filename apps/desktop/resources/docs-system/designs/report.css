@@ -1,0 +1,146 @@
+/* report designs: html[data-design="report-…"] over the report markup of
+   guide.md (.cover or .doc-head, .summary-band, h2 sections, .tiles,
+   table.data, .callout, figure.chart, .split, .dash, .timeline, ol.steps). */
+
+/* ------------------------------------------------------------------ */
+/* Journal: a magazine feature. A masthead bar, a large Playfair title, */
+/* a standfirst in italic, serif text, headings under a short red bar,  */
+/* the callout as a pull quote.                                         */
+/* ------------------------------------------------------------------ */
+html[data-design="report-journal"]:root {
+  --accent: #b5302a; --accent-soft: #f8e9e6; --ink: #1b1a19; --muted: #66625d; --line: #dcd8d2;
+  --display: "Playfair Display", var(--serif);
+  --text: "Lora", var(--serif);
+  --label: "DM Sans", var(--sans);
+}
+html[data-design="report-journal"] body.doc { font-family: var(--text); line-height: 1.6; }
+html[data-design="report-journal"] .kicker { font-family: var(--label); color: var(--accent); letter-spacing: 0.2em; }
+html[data-design="report-journal"] .doc-head { border-top: 5pt solid var(--ink); border-bottom: 0.75pt solid var(--ink); padding: 5mm 0 5mm; margin-bottom: 7mm; align-items: flex-end; }
+html[data-design="report-journal"] .doc-head h1, html[data-design="report-journal"] body.doc .cover h1 { font-family: var(--display); font-weight: 700; font-size: calc(36pt * var(--fit)); letter-spacing: -0.015em; line-height: 1.05; }
+html[data-design="report-journal"] .doc-head .lead { font-style: italic; margin: 0; }
+html[data-design="report-journal"] .doc-head .meta { font-family: var(--label); font-size: calc(9.5pt * var(--fit)); line-height: 1.55; border-left: 0.75pt solid var(--line); padding-left: 4mm; text-align: left; }
+html[data-design="report-journal"] .lead { font-family: var(--text); }
+html[data-design="report-journal"] .summary-band { background: none; border-radius: 0; padding: 0 0 5mm; border-bottom: 0.75pt solid var(--ink); }
+html[data-design="report-journal"] .summary-band .lead { font-family: var(--display); font-style: italic; font-size: calc(15pt * var(--fit)); line-height: 1.4; color: var(--ink); }
+html[data-design="report-journal"] .tiles { gap: 0; }
+html[data-design="report-journal"] .tile, html[data-design="report-journal"] .summary-band .tile { background: none; border-radius: 0; padding: 1mm 5mm 1mm; border-left: 0.75pt solid var(--line); }
+html[data-design="report-journal"] .tile:first-child { border-left: 0; padding-left: 0; }
+html[data-design="report-journal"] .tile .value { font-family: var(--display); font-weight: 700; color: var(--accent); font-size: calc(24pt * var(--fit)); }
+html[data-design="report-journal"] .tile .label, html[data-design="report-journal"] .tile .delta { font-family: var(--label); }
+html[data-design="report-journal"] body.doc h2 { font-family: var(--display); font-weight: 700; font-size: calc(19pt * var(--fit)); color: var(--ink); letter-spacing: -0.005em; margin-top: 9mm; }
+html[data-design="report-journal"] body.doc h2 { background: linear-gradient(var(--accent), var(--accent)) top left / 12mm 1.2mm no-repeat; padding-top: 3.7mm; break-inside: avoid; }
+html[data-design="report-journal"] body.doc h3 { font-family: var(--display); font-weight: 700; font-size: calc(12.5pt * var(--fit)); }
+html[data-design="report-journal"] .callout { background: none; border: 0; border-top: 1.5pt solid var(--ink); border-bottom: 0.75pt solid var(--ink); padding: 4mm 2mm 3mm 16mm; position: relative; font-family: var(--display); font-style: italic; font-size: calc(13pt * var(--fit)); line-height: 1.45; }
+html[data-design="report-journal"] .callout::before { content: "\201C"; position: absolute; left: 1mm; top: -1mm; font-family: var(--display); font-style: normal; font-size: calc(48pt * var(--fit)); line-height: 1; color: var(--accent); }
+html[data-design="report-journal"] table.data { font-family: var(--label); }
+html[data-design="report-journal"] table.data th { color: var(--ink); border-bottom: 1.2pt solid var(--ink); border-top: 0.75pt solid var(--ink); }
+html[data-design="report-journal"] figure.chart figcaption { font-family: var(--text); font-style: italic; }
+html[data-design="report-journal"] body.doc .timeline { border-top: 0.75pt solid var(--ink); }
+html[data-design="report-journal"] body.doc .timeline .when { font-family: var(--display); font-style: italic; font-size: calc(12pt * var(--fit)); }
+html[data-design="report-journal"] ol.steps > li::before { background: none; color: var(--accent); font-family: var(--display); font-weight: 700; font-size: calc(15pt * var(--fit)); border-radius: 0; width: 7mm; height: auto; top: -0.5mm; display: block; }
+html[data-design="report-journal"] ul > li::marker, html[data-design="report-journal"] ol:not(.steps) > li::marker { color: var(--accent); font-family: var(--label); }
+html[data-design="report-journal"] .hero-figure { border-color: var(--ink); }
+html[data-design="report-journal"] .hero-figure .value { font-family: var(--display); }
+html[data-design="report-journal"] .dash > .panel { border: 0; border-top: 1.5pt solid var(--ink); border-radius: 0; padding: 3mm 0 0; }
+html[data-design="report-journal"] .dash > .panel h3 { font-family: var(--label); color: var(--accent); }
+html[data-design="report-journal"] body.doc:not(.plain) .cover .top { background: none; color: var(--ink); border-radius: 0; border-top: 8pt solid var(--ink); border-bottom: 0.75pt solid var(--ink); }
+html[data-design="report-journal"] body.doc .cover .top h1 { color: var(--ink); font-size: calc(46pt * var(--fit)); }
+html[data-design="report-journal"] body.doc .cover .top .kicker { color: var(--accent); opacity: 1; }
+html[data-design="report-journal"] body.doc .cover .top .lead { color: var(--muted); font-style: italic; opacity: 1; }
+
+/* ------------------------------------------------------------------ */
+/* Boardroom: corporate. A navy title band with a striped edge, blue   */
+/* as the signal colour, square markers on the headings, white tiles   */
+/* under a blue rule, a navy table header with banded rows.            */
+/* ------------------------------------------------------------------ */
+html[data-design="report-boardroom"]:root {
+  --accent: #1769c2; --accent-soft: #e7f0fa; --ink: #14202e; --muted: #56606d; --line: #d8dee6;
+  --navy: #0c2340;
+  --sans: "Manrope", "Inter", "Noto Sans Bengali", "Noto Sans Devanagari", "Noto Sans Math", "Noto Sans Symbols 2", sans-serif;
+}
+html[data-design="report-boardroom"] .doc-head { position: relative; overflow: hidden; background: var(--navy); color: #fff; border: 0; border-bottom: 2mm solid var(--accent); padding: 10mm 9mm 8mm; margin-bottom: 7mm; }
+html[data-design="report-boardroom"] .doc-head::after { content: ""; position: absolute; right: 0; top: 0; bottom: 0; width: 38mm; background: repeating-linear-gradient(-55deg, rgba(255, 255, 255, 0.07) 0 2mm, transparent 2mm 5mm); }
+html[data-design="report-boardroom"] .doc-head > * { position: relative; z-index: 1; }
+html[data-design="report-boardroom"] .doc-head h1 { color: #fff; font-weight: 800; letter-spacing: -0.02em; }
+html[data-design="report-boardroom"] .doc-head .kicker { color: #8cc3ff; }
+html[data-design="report-boardroom"] .doc-head .lead, html[data-design="report-boardroom"] .doc-head .meta { color: #fff; opacity: 0.86; }
+html[data-design="report-boardroom"] .doc-head .lead { margin: 0; }
+html[data-design="report-boardroom"] body.doc h1 { font-weight: 800; }
+html[data-design="report-boardroom"] body.doc h2 { color: var(--navy); font-weight: 800; letter-spacing: -0.01em; display: flex; align-items: center; gap: 3mm; border-bottom: 0.75pt solid var(--line); padding-bottom: 2mm; }
+html[data-design="report-boardroom"] body.doc h2 { break-inside: avoid; }
+html[data-design="report-boardroom"] body.doc h2::before { content: ""; flex: none; width: 3.5mm; height: 3.5mm; background: var(--accent); }
+html[data-design="report-boardroom"] body.doc h3 { color: var(--navy); font-weight: 700; }
+html[data-design="report-boardroom"] .summary-band { background: #f4f6f9; border-radius: 0; border-left: 2mm solid var(--navy); }
+html[data-design="report-boardroom"] .summary-band .lead { font-weight: 600; color: var(--navy); }
+html[data-design="report-boardroom"] .tile, html[data-design="report-boardroom"] .summary-band .tile { background: #fff; border-radius: 0; border-top: 1.2mm solid var(--accent); box-shadow: 0 0 0 0.75pt var(--line) inset; }
+html[data-design="report-boardroom"] .tile .value { color: var(--navy); font-weight: 800; letter-spacing: -0.02em; }
+html[data-design="report-boardroom"] table.data th { background: var(--navy); color: #fff; border: 0; padding: 2.5mm; }
+html[data-design="report-boardroom"] table.data tr:nth-child(odd) td { background: #f4f6f9; }
+html[data-design="report-boardroom"] table.data td { border-bottom: 0; }
+html[data-design="report-boardroom"] .callout { background: var(--accent-soft); border-left: 2mm solid var(--accent); border-radius: 0; font-weight: 500; }
+html[data-design="report-boardroom"] body.doc .timeline { border-top: 2mm solid var(--navy); }
+html[data-design="report-boardroom"] body.doc .timeline .when { color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; }
+html[data-design="report-boardroom"] ol.steps > li::before { background: var(--navy); border-radius: 0; }
+html[data-design="report-boardroom"] ul > li::marker { color: var(--accent); }
+html[data-design="report-boardroom"] .hero-figure { border-color: var(--navy); }
+html[data-design="report-boardroom"] .hero-figure .value { color: var(--navy); }
+html[data-design="report-boardroom"] .dash > .panel { border-radius: 0; border-top: 1.2mm solid var(--navy); }
+html[data-design="report-boardroom"] body.doc:not(.plain) .cover .top { background: var(--navy); border-radius: 0; border-bottom: 3mm solid var(--accent); }
+html[data-design="report-boardroom"] body.doc .cover .top .kicker { color: #8cc3ff; opacity: 1; }
+
+/* ------------------------------------------------------------------ */
+/* Schematic: a minimal technical report. Space Grotesk headings on a  */
+/* hairline with an orange tick, monospaced labels and figures, a      */
+/* header on graph paper, tiles as one ruled strip.                    */
+/* ------------------------------------------------------------------ */
+html[data-design="report-schematic"]:root {
+  --accent: #d9480f; --accent-soft: #fdeee6; --ink: #121417; --muted: #5c6168; --line: #d5d8dc;
+  --head: "Space Grotesk", var(--sans);
+}
+html[data-design="report-schematic"] .kicker { font-family: var(--mono); font-weight: 400; color: var(--accent); letter-spacing: 0.08em; }
+html[data-design="report-schematic"] .doc-head { border: 0.75pt solid var(--ink); padding: 8mm 7mm 6mm; margin-bottom: 7mm; align-items: stretch;
+  background-color: #fff;
+  background-image: linear-gradient(#eceef1 0.6px, transparent 0.6px), linear-gradient(90deg, #eceef1 0.6px, transparent 0.6px);
+  background-size: 5mm 5mm; }
+html[data-design="report-schematic"] .doc-head h1, html[data-design="report-schematic"] body.doc .cover h1 { font-family: var(--head); font-weight: 600; letter-spacing: -0.03em; }
+html[data-design="report-schematic"] .doc-head .lead { margin: 0; color: var(--muted); }
+html[data-design="report-schematic"] .doc-head .meta { font-family: var(--mono); font-size: calc(9pt * var(--fit)); color: var(--ink); text-align: left; line-height: 1.7; border-left: 0.75pt solid var(--ink); padding-left: 4mm; display: flex; flex-direction: column; justify-content: flex-end; background: #fff; }
+html[data-design="report-schematic"] body.doc h2 { font-family: var(--head); font-weight: 600; font-size: calc(15pt * var(--fit)); color: var(--ink); letter-spacing: -0.01em; position: relative; border-top: 0.75pt solid var(--ink); padding-top: 2.5mm; margin-top: 9mm; }
+html[data-design="report-schematic"] body.doc h2 { background: linear-gradient(var(--accent), var(--accent)) top left / 12mm 1.5mm no-repeat; break-inside: avoid; }
+html[data-design="report-schematic"] body.doc h3 { font-family: var(--head); font-weight: 600; }
+html[data-design="report-schematic"] .summary-band { background: none; border: 0.75pt solid var(--ink); border-radius: 0; padding: 5mm 6mm; }
+html[data-design="report-schematic"] .summary-band .lead { font-family: var(--head); font-weight: 500; color: var(--ink); }
+html[data-design="report-schematic"] .tiles { gap: 0; border: 0.75pt solid var(--ink); }
+html[data-design="report-schematic"] .tile, html[data-design="report-schematic"] .summary-band .tile { background: #fff; border-radius: 0; }
+html[data-design="report-schematic"] .tile + .tile { border-left: 0.75pt solid var(--ink); }
+html[data-design="report-schematic"] .tile .value { font-family: var(--mono); font-weight: 400; color: var(--ink); font-size: calc(19pt * var(--fit)); letter-spacing: -0.02em; }
+html[data-design="report-schematic"] .tile:first-child .value { color: var(--accent); }
+html[data-design="report-schematic"] .tile .label { font-family: var(--mono); font-size: calc(9pt * var(--fit)); color: var(--muted); }
+html[data-design="report-schematic"] .tile .delta { font-family: var(--mono); font-weight: 400; }
+html[data-design="report-schematic"] table.data th { font-family: var(--mono); font-weight: 400; color: var(--muted); border-bottom: 0.75pt solid var(--ink); }
+html[data-design="report-schematic"] table.data td { border-bottom: 0.5pt dashed #c6c9ce; }
+html[data-design="report-schematic"] table.data td.num { font-family: var(--mono); font-size: calc(10pt * var(--fit)); }
+html[data-design="report-schematic"] .callout { background: var(--accent-soft); border: 0.75pt solid var(--ink); border-left: 3pt solid var(--accent); border-radius: 0; }
+html[data-design="report-schematic"] figure.chart figcaption { font-family: var(--mono); }
+html[data-design="report-schematic"] body.doc .timeline { border-top: 0.75pt solid var(--ink); }
+html[data-design="report-schematic"] body.doc .timeline .when { font-family: var(--mono); font-weight: 400; color: var(--accent); }
+html[data-design="report-schematic"] ol.steps > li::before { border-radius: 0; background: #fff; color: var(--ink); border: 0.75pt solid var(--ink); font-family: var(--mono); font-weight: 400; }
+html[data-design="report-schematic"] ul { list-style: none; padding-left: 0; }
+html[data-design="report-schematic"] ul > li { position: relative; padding-left: 5mm; }
+html[data-design="report-schematic"] ul > li::before { content: ""; position: absolute; left: 0.5mm; top: 0.62em; width: 1.6mm; height: 1.6mm; background: var(--accent); }
+html[data-design="report-schematic"] ol:not(.steps) > li::marker { color: var(--accent); font-weight: 700; }
+html[data-design="report-schematic"] .hero-figure { border-color: var(--ink); border-width: 0.75pt; }
+html[data-design="report-schematic"] .hero-figure .value { font-family: var(--mono); font-weight: 400; }
+html[data-design="report-schematic"] .dash > .panel { border-radius: 0; border-color: var(--ink); }
+html[data-design="report-schematic"] .dash > .panel h3 { font-family: var(--mono); font-weight: 400; }
+html[data-design="report-schematic"] body.doc:not(.plain) .cover .top { background: #fff; color: var(--ink); border: 0.75pt solid var(--ink); border-radius: 0;
+  background-image: linear-gradient(#eceef1 0.6px, transparent 0.6px), linear-gradient(90deg, #eceef1 0.6px, transparent 0.6px); background-size: 5mm 5mm; }
+html[data-design="report-schematic"] body.doc .cover .top h1 { color: var(--ink); }
+html[data-design="report-schematic"] body.doc .cover .top .kicker { color: var(--accent); opacity: 1; }
+html[data-design="report-schematic"] body.doc .cover .top .lead { color: var(--muted); opacity: 1; }
+/* The cover box holds its title large and centred, under any look: an outlined box with the title at its foot read as a missing picture (master's read, 18 Nov). */
+html[data-design="report-schematic"] body.doc:not(.plain) .cover .top, html[data-design="report-schematic"][data-look] body.doc:not(.plain) .cover .top { justify-content: center; padding: 16mm 14mm; min-height: 120mm; background-color: #fff; background-image: linear-gradient(#dfe3e8 0.7px, transparent 0.7px), linear-gradient(90deg, #dfe3e8 0.7px, transparent 0.7px); background-size: 5mm 5mm; border: 0.75pt solid var(--ink); border-top: 3pt solid var(--accent); }
+html[data-design="report-schematic"] body.doc .cover .top h1, html[data-design="report-schematic"][data-look] body.doc .cover .top h1 { font-size: calc(46pt * var(--fit)) !important; line-height: 1.02; margin: 6mm 0 5mm; color: var(--ink); }
+html[data-design="report-schematic"] body.doc .cover .top .lead { font-size: calc(14pt * var(--fit)); max-width: 150mm; }
+/* A look's header colour must not hide the design's white-on-navy headers (master's read: m17's empty bands). */
+html[data-design="report-boardroom"][data-look] table.data th { color: #fff; font-variant: normal; text-transform: none; }

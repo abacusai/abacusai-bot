@@ -4145,6 +4145,68 @@ export class ServiceHost {
         return await deckSlots(payload as DeckSlotsRequest);
       case "render_deck":
         return await renderDeck(payload as RenderDeckRequest);
+      // The design system's guide, and its print (docs-system/make.ts).
+      case "docs_guide": {
+        const { resourcePath } = await import("#main/resources");
+        const fsp = await import("fs/promises");
+        const { designsGuide } =
+          await import("./services/agent-tools/docs-system/designs");
+        return (
+          (await fsp.readFile(resourcePath("docs-system/guide.md"), "utf8")) +
+          designsGuide()
+        );
+      }
+      case "render_docs": {
+        const { makeDocument } =
+          await import("./services/agent-tools/docs-system/make");
+        const { readAsk } =
+          await import("./services/agent-tools/docs-system/ask");
+        const p = payload as {
+          htmlPath: string;
+          outBase: string;
+          kind: "doc" | "deck";
+          brief: string;
+          facts?: string;
+          request?: string;
+          today: string;
+          last: boolean;
+          slides?: number;
+          word?: boolean;
+        };
+        const ask = readAsk(p.brief);
+        if (p.slides != null) ask.slides = p.slides;
+        if (p.word === true && !ask.formats.includes("docx"))
+          ask.formats = ["docx", ...ask.formats];
+        if (p.kind === "deck" && !ask.formats.includes("pptx"))
+          ask.formats = ["pptx"];
+        const made = await makeDocument({
+          htmlPath: p.htmlPath,
+          outBase: p.outBase,
+          kind: p.kind,
+          ask,
+          brief: p.brief,
+          ...(p.facts != null ? { facts: p.facts } : {}),
+          ...(p.request != null ? { request: p.request } : {}),
+          today: p.today,
+          dropUnsupported: p.last,
+        });
+        return {
+          pdfPath: made.pdfPath,
+          pptxPath: made.pptxPath,
+          docxPath: made.docxPath,
+          pages: made.pages,
+          sums: {
+            total: made.sums.total,
+            marks: made.sums.marks,
+          },
+          sendBack: made.sendBack,
+          failed: made.failed,
+          layout: made.layout,
+          images: made.images,
+          dropped: made.dropped,
+          foreignFonts: made.foreignFonts,
+        };
+      }
       case "credit_balance":
         // The read itself broadcasts the snapshot to every agent.
         await fetchAbacusAccount(true);
