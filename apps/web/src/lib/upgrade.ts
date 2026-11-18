@@ -13,7 +13,7 @@ import {
   ABACUS_PLAN_URL,
 } from "./abacus-links";
 import { creditsTier } from "./credits";
-import { openPendingLink } from "./platform-system";
+import { openPendingLink, withUpgradeReturn } from "./platform-system";
 
 /** How often the account is read again while checkout is open. */
 const PLAN_POLL_MS = 5_000;
@@ -103,6 +103,7 @@ const watchAccount = (
     }
     if (Date.now() - started > PLAN_POLL_LIMIT_MS) finish(null);
   }
+  // Set before anything awaits: planReturned reads it right after starting a watch.
   watch = { done, checkNow: () => void check() };
   timer = setInterval(() => void check(), PLAN_POLL_MS);
   window.addEventListener("focus", check);
@@ -147,6 +148,17 @@ export const watchForCredits = (
 export const checkPlanNow = (): void => watch?.checkNow();
 
 /**
+ * The upgrade page opened the app again (its abacusaibot://open?src=upgrade
+ * link): the account is read at once, by the watch checkout started, or a
+ * new one when the app was restarted in between.
+ */
+export const planReturned = (client: AppClient): void => {
+  if (watch == null) void watchForPlan(client);
+  // watchAccount registers the watch synchronously; this is its first read.
+  watch?.checkNow();
+};
+
+/**
  * Upgrade: the account's own upgrade page, asked for at click time (its link
  * is one-time and short-lived), or the plan page when the account has none.
  * `src` is the screen it is opened from, so the platform can tell which
@@ -157,11 +169,11 @@ export const openUpgrade = async (
   client: AppClient,
   src: UpgradeSrc
 ): Promise<void> => {
-  await openPendingLink(
-    client,
-    async () =>
+  await openPendingLink(client, async () =>
+    withUpgradeReturn(
       (await client.account.upgradeUrl({ src }).catch(() => null)) ??
-      ABACUS_PLAN_URL
+        ABACUS_PLAN_URL
+    )
   );
   void watchForPlan(client);
 };
