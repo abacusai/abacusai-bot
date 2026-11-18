@@ -19,19 +19,6 @@ const TARGETS = {
     packageManager: "pnpm",
     cwd: repoRoot,
     accepted: {
-      // Both name a patched version npm does not have yet, so there is nothing
-      // to pin in `overrides`; both are defended at the call site. When the
-      // release lands, the stale-entry check below fails on the entry.
-      "GHSA-w3rx-r6r6-pgpr":
-        "image-size <=2.0.2 via pptxgenjs: the ICNS parser hangs on a crafted " +
-        "image. deck-pptx-export.ts only hands pptxgenjs images whose content " +
-        "signature is on its allowlist (isSupportedImage), which was written " +
-        "for this advisory and its sibling: ICNS, JXL and HEIF never reach " +
-        "image-size. Delete when image-size >=2.0.3 ships.",
-      "GHSA-5p2g-fcmc-qvqq":
-        "image-size <=2.0.2 via pptxgenjs: the JXL and HEIF parsers hang on a " +
-        "crafted image. Same allowlist as GHSA-w3rx-r6r6-pgpr above, and the " +
-        "same reason it cannot be reached. Delete when image-size >=2.0.3 ships.",
       "GHSA-jmr9-qjv8-65gv":
         "extract-zip <=2.0.1: a zip whose entries are symlinks can write " +
         "outside the extraction directory. The one caller, " +
