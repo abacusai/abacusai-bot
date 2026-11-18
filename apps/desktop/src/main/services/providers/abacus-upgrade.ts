@@ -78,6 +78,13 @@ export const fetchUpgradeUrl = async (
  * only then). Null when signed out, when the platform offers none, or when
  * the call fails.
  */
+/**
+ * The server's coin tosses this build can show, sent with every plan read
+ * (`experiments`): a toss runs, and counts an account, only for a build that
+ * lists it.
+ */
+const APP_EXPERIMENTS = ["onboarding_offer"];
+
 export const fetchBillingPlan = async (
   upgrade: boolean,
   /** A held sign-in's key, in place of the stored one. */
@@ -86,13 +93,14 @@ export const fetchBillingPlan = async (
   src?: string
 ): Promise<BillingPlan | null> => {
   const query = {
+    experiments: APP_EXPERIMENTS.join(","),
     ...(upgrade ? { includeUpgradeLinks: true } : {}),
     ...(src != null ? { src } : {}),
   };
   const { ok, result } = await abacusApiCall(
     "_getAbacusbotBillingPlan",
     "GET",
-    Object.keys(query).length > 0 ? query : undefined,
+    query,
     undefined,
     heldKey
   );
