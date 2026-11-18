@@ -4,18 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mat Presentation</title>
+  <link rel="stylesheet" href="fonts.css">
 
     <!-- Preconnect to Google Fonts for faster loading -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Bricolage Grotesque: heavy rounded grotesque — the display workhorse of this template.
          DM Sans: clean and neutral for body copy.
          DM Mono: for labels, kickers, and metadata.
          Noto Sans SC: Chinese fallback for all roles. -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400&family=Noto+Sans+SC:wght@400;500;700&display=swap"
-      rel="stylesheet"
-    />
 
     <style>
       /* ╔══════════════════════════════════════════════════════════════════════╗
@@ -35,11 +30,11 @@
         --c-bg-light-alt: #e4dac4;
 
         --c-fg: #f0e8d2; /* warm cream — primary text on dark     */
-        --c-fg-2: rgba(240, 232, 210, 0.58);
-        --c-fg-3: rgba(240, 232, 210, 0.3);
+        --c-fg-2: rgba(240, 232, 210, 0.75);
+        --c-fg-3: rgba(240, 232, 210, 0.55);
         --c-fg-light: #1e2820; /* dark green — text on cream slides     */
-        --c-fg-light-2: rgba(30, 40, 32, 0.6);
-        --c-fg-light-3: rgba(30, 40, 32, 0.3);
+        --c-fg-light-2: rgba(30, 40, 32, 0.75);
+        --c-fg-light-3: rgba(30, 40, 32, 0.55);
 
         --c-accent: #c07030; /* warm orange accent                    */
         --c-border: rgba(240, 232, 210, 0.12);
@@ -64,10 +59,10 @@
         --sz-h1: 7vw; /* chapter / end slide headline                  */
         --sz-h2: 4vw; /* content slide headline                        */
         --sz-h3: 2.4vw; /* sub-headline, compare panel title             */
-        --sz-lead: 1.5vw; /* lead paragraph — slightly larger than body    */
-        --sz-body: 1.05vw; /* body text, bullets                            */
-        --sz-caption: 0.82vw; /* image captions, footnotes                     */
-        --sz-label: 0.7vw; /* chrome labels, kickers, mono tags             */
+        --sz-lead: 2vw; /* lead paragraph — slightly larger than body    */
+        --sz-body: 1.65vw; /* body text, bullets                            */
+        --sz-caption: 1.45vw; /* image captions, footnotes                     */
+        --sz-label: 1.3vw; /* chrome labels, kickers, mono tags             */
 
         /* ── Spacing ─────────────────────────────────────────────────────── */
         --pad-x: 5.5vw; /* slide horizontal padding — tighter than skeleton */
@@ -175,9 +170,9 @@
         bottom: 20px;
         right: 28px;
         font-family: var(--f-mono);
-        font-size: 10px;
+        font-size: 16px;
         letter-spacing: 0.12em;
-        color: rgba(255, 255, 255, 0.25);
+        color: rgba(240, 232, 210, 0.55);
         z-index: 100;
         user-select: none;
       }
@@ -423,7 +418,7 @@
         background: var(--c-bg-light);
         color: var(--c-fg-light);
         padding: var(--gap-md) calc(var(--pad-x) * 0.8);
-        max-width: 28vw;
+        max-width: 34vw;
         display: flex;
         flex-direction: column;
         gap: var(--gap-sm);
@@ -572,10 +567,10 @@
         justify-content: center;
       }
       .slide--stats .slide-body {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0;
-        align-items: stretch;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        flex: 1;
         min-height: 0;
       }
       /* Each stat cell: left-padded except the first */
@@ -644,6 +639,9 @@
         color: var(--c-accent);
         margin-bottom: var(--gap-md);
         font-weight: 800;
+      }
+      .quote-mark::before {
+        content: '"';
       }
       /* The quote text: large, rounded grotesque, mixed case */
       .quote-text {
@@ -872,6 +870,11 @@
         padding-top: var(--gap-sm);
         margin-top: var(--gap-md);
       }
+      @media print {
+        #nav-dots {
+          display: none !important;
+        }
+      }
     </style>
   </head>
   <body>
@@ -884,13 +887,13 @@
            Bottom-right: attribution label.
            The side-label on the right edge echoes the product spec callout. -->
       <section
-        class="slide dark slide--cover"
+        class="slide dark slide--cover" data-label="title: a kicker, a two-word name set huge, a lead sentence, a tagline, a cream card with a two-line heading and a sentence, and a footer label"
         data-slide="1"
         style="position: relative"
       >
         <div class="cover-headline">
           <span class="kicker">[Studio Name] · 2026</span>
-          <h1 class="display" style="color: var(--c-fg)">Craft<br />Matters</h1>
+          <h1 class="display" style="color: var(--c-fg)">Craft Matters</h1>
         </div>
         <div class="cover-copy">
           <p class="lead" style="color: var(--c-fg-2); max-width: 90%">
@@ -917,10 +920,10 @@
       <!-- ═══ SLIDE 02 · STATEMENT ══════════════════════════════════════════ -->
       <!-- Wide asymmetric grid: bold claim left, context + bullets right.
            The left column width (1.1fr) gives the headline room to land. -->
-      <section class="slide dark slide--statement" data-slide="2">
+      <section class="slide dark slide--statement" data-label="statement: a section label, a kicker and a bold claim of a few words, beside a lead sentence and three bullets" data-slide="2">
         <header class="slide-chrome">
           <span class="label muted">The Thesis</span>
-          <span class="label muted">02</span>
+          <span class="label muted">02 / 09</span>
         </header>
         <div class="slide-body">
           <div class="stmt-headline">
@@ -955,10 +958,10 @@
       <!-- ═══ SLIDE 03 · SPLIT ══════════════════════════════════════════════ -->
       <!-- Three-column layout: headline left, image center, detail bullets right.
            The center column is the visual object — the product in its environment. -->
-      <section class="slide dark slide--split" data-slide="3">
+      <section class="slide dark slide--split" data-label="text either side of a product image placeholder: a heading, a sentence and three bullets" data-deck-skip data-slide="3">
         <header class="slide-chrome">
           <span class="label muted">The Object</span>
-          <span class="label muted">03</span>
+          <span class="label muted">03 / 09</span>
         </header>
         <div class="slide-body">
           <div class="split-left">
@@ -992,10 +995,10 @@
       <!-- ═══ SLIDE 04 · STATS ══════════════════════════════════════════════ -->
       <!-- Three large numbers separated by vertical dividers.
            The <em> tag inside .mat-stat-val renders in warm orange. -->
-      <section class="slide dark slide--stats" data-slide="4">
+      <section class="slide dark slide--stats" data-label="three big figures, each a short figure (like 4.7k, 3.2× or #1) and a sentence, under a heading" data-slide="4">
         <header class="slide-chrome">
           <span class="label muted">By the Numbers</span>
-          <span class="label muted">04</span>
+          <span class="label muted">04 / 09</span>
         </header>
         <div class="slide-body">
           <!-- Headline above the three stats -->
@@ -1008,6 +1011,7 @@
           <!-- Three stat cells — vertical borders between them -->
           <div
             style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0"
+            data-deck-grow
           >
             <div class="mat-stat">
               <div class="mat-stat-val">4.7k</div>
@@ -1041,8 +1045,8 @@
       <!-- Chromeless. Full-slide pull quote with warm orange mark.
            Bricolage Grotesque at 3.4vw — weighted, not delicate.
            Attribution stacked below in mono label format. -->
-      <section class="slide dark slide--quote" data-slide="5">
-        <div class="quote-mark">"</div>
+      <section class="slide dark slide--quote" data-label="quote: a short quote, the speaker and their role" data-slide="5">
+        <div class="quote-mark" aria-hidden="true"></div>
         <div class="quote-text">
           Good design is as little design as possible.
         </div>
@@ -1057,12 +1061,12 @@
            Wide left margin holds the headline zone.
            Right 60% holds the bullet list.
            This is the one slide in the deck where light background is used. -->
-      <section class="slide light slide--list" data-slide="6">
+      <section class="slide light slide--list" data-label="list on cream: a kicker, a heading, a lead sentence and four one-line points" data-slide="6">
         <header class="slide-chrome">
           <span class="label" style="color: var(--c-fg-light-3)"
             >Why It Matters</span
           >
-          <span class="label" style="color: var(--c-fg-light-3)">06</span>
+          <span class="label" style="color: var(--c-fg-light-3)">06 / 09</span>
         </header>
         <div class="slide-body">
           <div class="list-head">
@@ -1075,7 +1079,7 @@
               decision in the [product category]'s design.
             </p>
           </div>
-          <div class="list-items">
+          <div class="list-items" data-deck-grow>
             <ul class="bullet-list">
               <li>Disappear when in use so the work takes all the attention</li>
               <li>
@@ -1107,10 +1111,10 @@
       <!-- Three-column grid: left panel | 1px divider line | right panel.
            Before label is muted mono. After label gets warm orange accent.
            Each panel has a heading, lead context, and 3 bullets. -->
-      <section class="slide dark slide--compare" data-slide="7">
+      <section class="slide dark slide--compare" data-label="before and after comparison, two panels each a label, a heading, a sentence and three short bullets" data-slide="7">
         <header class="slide-chrome">
           <span class="label muted">Before / After</span>
-          <span class="label muted">07</span>
+          <span class="label muted">07 / 09</span>
         </header>
         <div class="slide-body">
           <div class="compare-panel left">
@@ -1122,7 +1126,7 @@
               Works until it does not. Warps in heat, discolors with use, and
               feels like an afterthought.
             </p>
-            <ul class="bullet-list" style="--sz-lead: 1.05vw">
+            <ul class="bullet-list" style="--sz-lead: 1.65vw">
               <li>Slips on polished surfaces without a grip layer</li>
               <li>Grooves deepen and skew precision over time</li>
               <li>Replaced every six months on average</li>
@@ -1139,7 +1143,7 @@
               A surface that gets better with use. The material compresses and
               recovers, keeping edges clean.
             </p>
-            <ul class="bullet-list" style="--sz-lead: 1.05vw">
+            <ul class="bullet-list" style="--sz-lead: 1.65vw">
               <li>Self-heals around use lines, keeping the surface flat</li>
               <li>Grip base holds any workbench without adhesives</li>
               <li>
@@ -1158,10 +1162,10 @@
       <!-- Vertical bar chart. One bar is highlighted in warm orange (.accent).
            Bar heights set inline as percentages of the 30vh bar-track.
            Source attribution at the bottom in DM Mono. -->
-      <section class="slide dark slide--chart" data-slide="8">
+      <section class="slide dark slide--chart" data-label="bar chart, five bars of sample data" data-deck-skip data-slide="8">
         <header class="slide-chrome">
           <span class="label muted">Performance</span>
-          <span class="label muted">08</span>
+          <span class="label muted">08 / 09</span>
         </header>
         <div class="slide-body">
           <div class="chart-header">
@@ -1222,7 +1226,7 @@
            Bottom foot: label pair, separated by a top border.
            Side label on the right edge echoes Slide 01. -->
       <section
-        class="slide dark slide--end"
+        class="slide dark slide--end" data-label="closing: a kicker, a sign-off in a few words, a sentence, a cream card with a short heading and three contact lines, and two footer labels"
         data-slide="9"
         style="position: relative"
       >

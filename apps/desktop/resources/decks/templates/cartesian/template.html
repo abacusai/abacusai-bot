@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cartesian Presentation Template</title>
+  <link rel="stylesheet" href="fonts.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -112,7 +112,7 @@
             bottom: 3vh;
             right: 3vw;
             font-family: 'Inter', sans-serif;
-            font-size: 0.75rem;
+            font-size: 1rem;
             color: var(--accent);
             letter-spacing: 2px;
             z-index: 100;
@@ -162,19 +162,19 @@
         }
 
         h3 {
-            font-size: clamp(1.2rem, 2vw, 1.6rem);
+            font-size: clamp(1.4rem, 2.2vw, 2rem);
         }
 
         p, li {
             font-family: 'Inter', sans-serif;
-            font-size: clamp(0.9rem, 1.2vw, 1.1rem);
+            font-size: clamp(1.25rem, 1.6vw, 1.6rem);
             line-height: 1.6;
             color: var(--text-secondary);
         }
 
         .label {
             font-family: 'Inter', sans-serif;
-            font-size: 0.75rem;
+            font-size: 1rem;
             text-transform: uppercase;
             letter-spacing: 3px;
             color: var(--accent);
@@ -203,7 +203,7 @@
 
         .slide-title .subtitle {
             font-family: 'Inter', sans-serif;
-            font-size: clamp(1rem, 1.5vw, 1.3rem);
+            font-size: clamp(1.4rem, 1.9vw, 1.8rem);
             color: var(--text-secondary);
             max-width: 40vw;
         }
@@ -272,7 +272,7 @@
 
         .slide-agenda .agenda-number {
             font-family: 'Playfair Display', serif;
-            font-size: 1.5rem;
+            font-size: 1.75rem;
             color: var(--accent);
             min-width: 3vw;
         }
@@ -311,7 +311,7 @@
         }
 
         .slide-statement .attribution {
-            font-size: 0.85rem;
+            font-size: 1rem;
             color: var(--accent);
             text-transform: uppercase;
             letter-spacing: 2px;
@@ -382,7 +382,7 @@
         .slide-twocol .image-label {
             position: relative;
             z-index: 1;
-            font-size: 0.8rem;
+            font-size: 1rem;
             text-transform: uppercase;
             letter-spacing: 2px;
             color: var(--accent);
@@ -411,7 +411,7 @@
         }
 
         .slide-twocol .stat-item span {
-            font-size: 0.8rem;
+            font-size: 1rem;
             color: var(--accent);
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -461,17 +461,17 @@
             align-items: center;
             justify-content: center;
             margin-bottom: 3vh;
-            font-size: 1rem;
+            font-size: 1.1rem;
             color: var(--accent);
         }
 
         .slide-cards .card h3 {
             margin-bottom: 2vh;
-            font-size: 1.3rem;
+            font-size: 1.6rem;
         }
 
         .slide-cards .card p {
-            font-size: 0.9rem;
+            font-size: 1.25rem;
         }
 
         /* Slide 7: Line Chart */
@@ -545,13 +545,13 @@
 
         .slide-timeline .timeline-item h4 {
             font-family: 'Playfair Display', serif;
-            font-size: 1.2rem;
+            font-size: 1.5rem;
             margin-bottom: 1vh;
             margin-top: 2vh;
         }
 
         .slide-timeline .timeline-item .year {
-            font-size: 0.75rem;
+            font-size: 1rem;
             color: var(--accent);
             text-transform: uppercase;
             letter-spacing: 2px;
@@ -559,7 +559,7 @@
         }
 
         .slide-timeline .timeline-item p {
-            font-size: 0.85rem;
+            font-size: 1.2rem;
         }
 
         /* Slide 9: Team */
@@ -608,7 +608,7 @@
         }
 
         .slide-team .team-member span {
-            font-size: 0.8rem;
+            font-size: 1rem;
             color: var(--accent);
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -635,7 +635,7 @@
             color: var(--accent);
             text-transform: uppercase;
             letter-spacing: 3px;
-            font-size: 0.9rem;
+            font-size: 1.4rem;
         }
 
         .slide-closing .geo-ring {
@@ -685,7 +685,7 @@
             z-index: 0;
         }
 
-        @media (max-aspect-ratio: 4/3) {
+        @media screen and (max-aspect-ratio: 4/3) {
             .slide-agenda .content,
             .slide-barchart .content,
             .slide-twocol .content {
@@ -711,12 +711,20 @@
                 gap: 3vh;
             }
         }
-    </style>
+        /* Curated for print: glyphs drawn by CSS are not text slots, and the
+           on-screen navigation stays off paper. */
+        [data-glyph]::before { content: attr(data-glyph); }
+        @media print {
+            .nav-dots, .nav-arrows { display: none !important; }
+        }
+      /* Print-size type (review of 17 Nov: a filled deck read as tiny text on big empty slides). */
+  html { font-size: 19px; }
+</style>
 </head>
 <body>
     <div class="presentation">
         <!-- Slide 1: Title -->
-        <div class="slide slide-title active">
+        <div class="slide slide-title active" data-label="title">
             <div class="geo-decoration"></div>
             <div class="content">
                 <div class="label">Presentation Template</div>
@@ -726,7 +734,7 @@
         </div>
 
         <!-- Slide 2: Agenda -->
-        <div class="slide slide-agenda">
+        <div class="slide slide-agenda" data-label="agenda: heading and intro beside four numbered items">
             <div class="content">
                 <div class="left-col">
                     <div class="label">Overview</div>
@@ -745,9 +753,9 @@
         </div>
 
         <!-- Slide 3: Statement -->
-        <div class="slide slide-statement">
+        <div class="slide slide-statement" data-label="big statement with a short attribution">
             <div class="content">
-                <span class="quote-mark">"</span>
+                <span class="quote-mark" data-glyph="&#8220;"></span>
                 <h2>Precision in approach defines the boundary between noise and signal.</h2>
                 <div class="attribution">Guiding Principle</div>
             </div>
@@ -755,7 +763,7 @@
         </div>
 
         <!-- Slide 4: Bar Chart -->
-        <div class="slide slide-barchart">
+        <div class="slide slide-barchart" data-label="bar chart (sample data)" data-deck-skip>
             <div class="content">
                 <div class="left-col">
                     <div class="label">Performance Data</div>
@@ -771,7 +779,7 @@
         </div>
 
         <!-- Slide 5: Two Column -->
-        <div class="slide slide-twocol">
+        <div class="slide slide-twocol" data-label="case study with image and three figures" data-deck-skip>
             <div class="content">
                 <div class="left-col">
                     <div class="image-placeholder">
@@ -802,25 +810,25 @@
         </div>
 
         <!-- Slide 6: Three Cards -->
-        <div class="slide slide-cards">
+        <div class="slide slide-cards" data-label="three numbered cards, each a title and a sentence">
             <div class="content">
                 <div class="header">
                     <div class="label">Capabilities</div>
                     <h2>Core Competencies</h2>
                 </div>
-                <div class="cards-grid">
+                <div class="cards-grid" data-deck-grow>
                     <div class="card">
-                        <div class="card-icon">I</div>
+                        <div class="card-icon" data-glyph="I"></div>
                         <h3>Analytical Depth</h3>
                         <p>Rigorous data-driven methodologies that transform raw information into actionable strategic intelligence.</p>
                     </div>
                     <div class="card">
-                        <div class="card-icon">II</div>
+                        <div class="card-icon" data-glyph="II"></div>
                         <h3>Operational Scale</h3>
                         <p>Streamlined processes designed to expand seamlessly while maintaining quality and consistency.</p>
                     </div>
                     <div class="card">
-                        <div class="card-icon">III</div>
+                        <div class="card-icon" data-glyph="III"></div>
                         <h3>Adaptive Design</h3>
                         <p>Flexible frameworks that evolve with changing conditions and emerging opportunities.</p>
                     </div>
@@ -829,7 +837,7 @@
         </div>
 
         <!-- Slide 7: Line Chart -->
-        <div class="slide slide-linechart">
+        <div class="slide slide-linechart" data-label="line chart (sample data)" data-deck-skip>
             <div class="content">
                 <div class="header">
                     <div>
@@ -845,13 +853,13 @@
         </div>
 
         <!-- Slide 8: Timeline -->
-        <div class="slide slide-timeline">
+        <div class="slide slide-timeline" data-label="four phases in a row, each a name and a sentence">
             <div class="content">
                 <div class="header">
                     <div class="label">Roadmap</div>
                     <h2>Implementation Phases</h2>
                 </div>
-                <div class="timeline">
+                <div class="timeline" data-deck-grow>
                     <div class="timeline-item">
                         <div class="year">Phase One</div>
                         <h4>Discovery</h4>
@@ -877,7 +885,7 @@
         </div>
 
         <!-- Slide 9: Team -->
-        <div class="slide slide-team">
+        <div class="slide slide-team" data-label="team of four with initials" data-deck-skip>
             <div class="content">
                 <div class="header">
                     <div class="label">Leadership</div>
@@ -909,13 +917,13 @@
         </div>
 
         <!-- Slide 10: Closing -->
-        <div class="slide slide-closing">
+        <div class="slide slide-closing" data-label="closing">
             <div class="geo-ring"></div>
             <div class="content">
                 <div class="label">Conclusion</div>
                 <h1>Thank You</h1>
                 <p>Questions & Discussion</p>
-                <div style="margin-top: 4vh; font-size: 0.85rem; color: var(--accent);">
+                <div style="margin-top: 4vh; font-size: 1.25rem; color: var(--accent);">
                     contact@example.com
                 </div>
             </div>

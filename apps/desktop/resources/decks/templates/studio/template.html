@@ -4,9 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Studio Presentation</title>
+  <link rel="stylesheet" href="fonts.css">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!--
       Studio style uses three font families:
         1. Barlow 900       — the entire display and heading system; becomes graphic at scale
@@ -14,10 +13,6 @@
         3. IBM Plex Mono    — footer metadata, slide counters, caption labels
         4. Noto Sans SC     — Chinese fallback for all roles
     -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;700;800;900&family=IBM+Plex+Mono:wght@300;400;500&family=Noto+Sans+SC:wght@400;500;700;900&display=swap"
-      rel="stylesheet"
-    />
 
     <style>
       /* ╔══════════════════════════════════════════════════════════════════════╗
@@ -73,10 +68,10 @@
         --sz-h1: 7.5vw; /* chapter titles, statement headlines */
         --sz-h2: 4.8vw; /* section headers */
         --sz-h3: 2.8vw; /* sub-headlines */
-        --sz-lead: 1.6vw; /* intro paragraphs */
-        --sz-body: 1.15vw; /* body text, bullets */
-        --sz-caption: 0.85vw; /* captions, footnotes */
-        --sz-label: 0.72vw; /* mono metadata, chrome */
+        --sz-lead: 1.95vw; /* intro paragraphs */
+        --sz-body: 1.5vw; /* body text, bullets */
+        --sz-caption: 1.1vw; /* captions, footnotes */
+        --sz-label: 0.85vw; /* mono metadata, chrome */
 
         /* ── Spacing ─────────────────────────────────────────────────────── */
         /* Studio pads tighter than Signal — type runs to near-edge */
@@ -848,11 +843,9 @@
            "PROPOSAL" in huge yellow display type across the top.
            Three-column meta footer at bottom edge.
            ═══════════════════════════════════════════════════════════════════ -->
-      <section class="slide dark slide--cover">
+      <section class="slide dark slide--cover" data-label="title">
         <!-- Full-bleed image placeholder: sits behind all content -->
-        <div class="cover-img-area" data-anim="fade-in" data-delay="0">
-          IMAGE PLACEHOLDER
-        </div>
+        <div class="cover-img-area" data-anim="fade-in" data-delay="0"></div>
 
         <!-- Type block: "PROPOSAL" at display scale — type over image -->
         <div class="cover-type">
@@ -885,7 +878,7 @@
            Section divider: mono section number + huge black title.
            Yellow background — no decoration, type IS the design.
            ═══════════════════════════════════════════════════════════════════ -->
-      <section class="slide light slide--chapter">
+      <section class="slide light slide--chapter" data-label="section opener">
         <!-- Section number: mono label in muted near-black -->
         <div class="chapter-num" data-anim="fade-in" data-delay="0">
           01 / WHO WE ARE
@@ -906,7 +899,7 @@
            Single huge statement on near-black.
            Yellow type, no decoration, no chrome.
            ═══════════════════════════════════════════════════════════════════ -->
-      <section class="slide dark slide--statement">
+      <section class="slide dark slide--statement" data-label="big statement: one sentence of at most 12 words">
         <div
           class="statement-body"
           style="
@@ -932,7 +925,7 @@
            Text left + image placeholder right.
            Black on yellow — tight, structured, zero ornament.
            ═══════════════════════════════════════════════════════════════════ -->
-      <section class="slide light slide--split">
+      <section class="slide light slide--split" data-label="image + text" data-deck-skip>
         <!-- Chrome bar -->
         <div class="slide-chrome">
           <span
@@ -1017,7 +1010,7 @@
            3 huge stats with weight-900 display numbers.
            Numbers at near-display scale — the numbers are the layout.
            ═══════════════════════════════════════════════════════════════════ -->
-      <section class="slide light slide--stats">
+      <section class="slide light slide--stats" data-label="three big numbers">
         <!-- Chrome bar -->
         <div class="slide-chrome">
           <span
@@ -1085,7 +1078,7 @@
            "WHAT WE OFFER" heading left, 5 yellow bullets right.
            Dark background, yellow type throughout.
            ═══════════════════════════════════════════════════════════════════ -->
-      <section class="slide dark slide--list">
+      <section class="slide dark slide--list" data-label="heading + bullet list">
         <!-- Chrome bar -->
         <div class="slide-chrome">
           <span class="label muted" data-anim="fade-in" data-delay="0"
@@ -1134,7 +1127,7 @@
            Large client quote, no quote mark, just raw uppercase weight-900 type.
            Attribution below in mono label.
            ═══════════════════════════════════════════════════════════════════ -->
-      <section class="slide dark slide--quote">
+      <section class="slide dark slide--quote" data-label="statement / quote">
         <!-- Quote body: uppercase grotesque, no quote marks needed -->
         <p
           class="quote-text"
@@ -1158,7 +1151,7 @@
            Before/after on yellow background.
            Two panels divided by a heavy vertical rule.
            ═══════════════════════════════════════════════════════════════════ -->
-      <section class="slide light slide--compare">
+      <section class="slide light slide--compare" data-label="two-column comparison">
         <!-- Chrome bar -->
         <div class="slide-chrome">
           <span
@@ -1242,7 +1235,7 @@
       <!-- ═══════ SLIDE 9 · CHAPTER dark ════════════════════════════════════
            Dark chapter divider — "THE WORK" in huge yellow type.
            ═══════════════════════════════════════════════════════════════════ -->
-      <section class="slide dark slide--chapter">
+      <section class="slide dark slide--chapter" data-label="section opener">
         <!-- Section number -->
         <div class="chapter-num" data-anim="fade-in" data-delay="0">
           02 / THE WORK
@@ -1262,7 +1255,7 @@
       <!-- ═══════ SLIDE 10 · STATEMENT light (yellow bg) ════════════════════
            Huge statement on yellow — black type filling most of the slide.
            ═══════════════════════════════════════════════════════════════════ -->
-      <section class="slide light slide--statement">
+      <section class="slide light slide--statement" data-label="big statement: one sentence of at most 12 words">
         <div
           class="statement-body"
           style="
@@ -1288,7 +1281,7 @@
            Bar chart with yellow accent on the highlight bar.
            Near-black background, yellow accent bar, muted bars for others.
            ═══════════════════════════════════════════════════════════════════ -->
-      <section class="slide dark slide--chart">
+      <section class="slide dark slide--chart" data-label="bar chart" data-deck-skip>
         <!-- Chrome bar -->
         <div class="slide-chrome">
           <span class="label muted" data-anim="fade-in" data-delay="0"
@@ -1370,7 +1363,7 @@
            Huge closing question fills top portion, two-column contact info below.
            Studio signature ending layout from the Boring Studios reference.
            ═══════════════════════════════════════════════════════════════════ -->
-      <section class="slide light slide--end">
+      <section class="slide light slide--end" data-label="closing / questions">
         <!-- Main closing statement: display scale, fills the top of the slide -->
         <h1
           class="h1"

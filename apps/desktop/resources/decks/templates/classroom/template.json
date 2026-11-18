@@ -1,0 +1,43 @@
+{
+  "slug": "classroom",
+  "name": "Classroom",
+  "tagline": "Warm paper, deep teal and sunny amber: a clear, friendly lesson deck.",
+  "mood": [
+    "friendly",
+    "clear",
+    "encouraging",
+    "structured"
+  ],
+  "occasion": [
+    "school lesson",
+    "training session",
+    "workshop",
+    "onboarding",
+    "course module",
+    "explainer"
+  ],
+  "tone": [
+    "warm",
+    "plain-spoken",
+    "supportive"
+  ],
+  "formality": "medium",
+  "density": "medium",
+  "palette": {
+    "bg": "#FFFDF7",
+    "primary": "#0F766E",
+    "text": "#1F2937",
+    "text_muted": "#4B5563",
+    "description": "warm paper with deep teal headings and a sunny amber accent"
+  },
+  "typography": {
+    "display": "Fraunces",
+    "body": "Inter",
+    "style": "soft serif headlines over a clean sans; readable from the back of a room"
+  },
+  "scheme": "light",
+  "best_for": "Teaching anything step by step: school lessons, staff training, workshops, onboarding modules and explainers. Has slides for objectives, a key definition, three building blocks, a worked example, a comparison, a big fact, an activity, a quick quiz and a recap.",
+  "avoid_for": "Sales pitches, investor decks and moody brand storytelling: it reads as a classroom by design.",
+  "slide_count": 10,
+  "navigation": "inline keyboard handler with on-page slide counter"
+}

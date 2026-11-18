@@ -1,0 +1,43 @@
+{
+  "slug": "status-report",
+  "name": "Status Report",
+  "tagline": "Crisp white and slate with indigo and traffic-light status pills: a working review deck.",
+  "mood": [
+    "clear",
+    "professional",
+    "data-forward",
+    "calm"
+  ],
+  "occasion": [
+    "project status update",
+    "quarterly business review",
+    "steering committee",
+    "board update",
+    "weekly report",
+    "program review"
+  ],
+  "tone": [
+    "factual",
+    "concise",
+    "accountable"
+  ],
+  "formality": "medium-high",
+  "density": "high",
+  "palette": {
+    "bg": "#FFFFFF",
+    "primary": "#4338CA",
+    "text": "#0F172A",
+    "text_muted": "#475569",
+    "description": "clean white with slate ink, one indigo accent and green/amber/red status pills"
+  },
+  "typography": {
+    "display": "Inter Tight",
+    "body": "Inter",
+    "style": "tight modern sans; tables and numbers read at a glance"
+  },
+  "scheme": "mixed",
+  "best_for": "Reporting where work stands: project and program status, QBRs, steering committees, board and weekly updates. Has slides for an executive summary with an overall status, four KPIs, a workstream status table, a milestone timeline, progress bars, a risk table, decisions needed and next steps with owners and dates.",
+  "avoid_for": "Inspirational keynotes, lifestyle brands and anything that should feel playful.",
+  "slide_count": 10,
+  "navigation": "inline keyboard handler with on-page slide counter"
+}

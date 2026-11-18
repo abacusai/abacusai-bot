@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RAW GRID — Neobrutalist Presentation Template</title>
+  <link rel="stylesheet" href="fonts.css">
 <style>
 /* =============================================
    RAW GRID — Neobrutalist Presentation Template
@@ -24,7 +25,7 @@
 }
 html, body {
   width: 100%; height: 100%;
-  font-family: 'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif;
+  font-family: 'Archivo', 'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif;
   background: var(--white);
   color: var(--black);
   overflow: hidden;
@@ -73,19 +74,19 @@ html, body {
   letter-spacing: 0.01em;
 }
 .t-subtitle {
-  font-size: clamp(16px, 1.4vw, 22px);
+  font-size: clamp(20px, 1.7vw, 26px);
   font-weight: 700;
   line-height: 1.3;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 .t-body {
-  font-size: clamp(16px, 1.3vw, 20px);
+  font-size: clamp(20px, 1.8vw, 26px);
   font-weight: 500;
   line-height: 1.6;
 }
 .t-caption {
-  font-size: clamp(11px, 1vw, 13px);
+  font-size: clamp(16px, 1.3vw, 18px);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -133,7 +134,7 @@ html, body {
   background: var(--black);
   color: var(--white);
   padding: 6px 14px;
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -280,7 +281,7 @@ html, body {
   margin-bottom: 20px;
 }
 .s3-bar-label {
-  font-size: 12px;
+  font-size: 17px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -298,7 +299,7 @@ html, body {
   display: flex;
   align-items: center;
   padding-left: 10px;
-  font-size: 12px;
+  font-size: 17px;
   font-weight: 800;
   transition: width 0.8s ease;
 }
@@ -324,7 +325,7 @@ html, body {
   margin-bottom: 8px;
 }
 .s3-stat-label {
-  font-size: 12px;
+  font-size: 17px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -491,7 +492,7 @@ html, body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   border-right: var(--border);
 }
 .s7-donut-container {
@@ -512,7 +513,7 @@ html, body {
   line-height: 1;
 }
 .s7-donut-label {
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -528,7 +529,7 @@ html, body {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -693,7 +694,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -704,6 +705,25 @@ html, body {
 /* =============================================
    PRINT
    ============================================= */
+
+/* Numerals, arrows and quotation marks are drawn, not text a deck fills:
+   a dropped card or step takes its number with it. */
+.s4-grid { counter-reset: s4; }
+.s4-card { counter-increment: s4; }
+i.s4-card-top, i.s4-num, i.s4-icon, i.s6-step-num, i.s6-connector, i.s8-quote-mark { font-style: normal; }
+.s4-num::before { content: counter(s4, decimal-leading-zero); }
+.s4-icon::before { content: counter(s4, upper-roman); }
+.s6-body { counter-reset: s6; }
+.s6-step { counter-increment: s6; }
+.s6-step-num::before { content: counter(s6, decimal-leading-zero); }
+.s6-connector::before { content: "\2192"; }
+.s6-step:last-child .s6-connector { display: none; }
+.s8-quote-mark::before { content: "\201C"; }
+/* Text at 16px or more on the 1280 slide. */
+.t-caption, .label, .s10-rb-block { font-size: 16px; }
+.s9-table th { font-size: 16px; }
+.s9-table td { font-size: clamp(16px, 1.3vw, 20px); }
+.s9-table th:empty, .s9-table td:empty { padding: 0; }
 @media print {
   /* print styles */
   .slide { position: static; display: flex !important; page-break-after: always; }
@@ -715,7 +735,7 @@ html, body {
 <div class="slide-deck" id="deck">
 
 <!-- ====== SLIDE 1: COVER ====== -->
-<div class="slide s1 active">
+<div class="slide s1 active" data-label="title: company name and a one-line promise; down the right up to seven separate items (cities, products or agenda points), each complete in one to four words. Never split one sentence across them; leave unused items empty">
   <div class="slide-content">
     <div class="s1-left">
       <div class="s1-brand">
@@ -742,7 +762,7 @@ html, body {
 </div>
 
 <!-- ====== SLIDE 2: SPLIT FEATURE ====== -->
-<div class="slide s2">
+<div class="slide s2" data-label="problem or opportunity, in this order: a small tag, a headline, a paragraph, then two big numbers, each a figure, a two-word caption and a short line">
   <div class="slide-content">
     <div class="s2-left">
       <div class="s2-meta">
@@ -768,7 +788,7 @@ html, body {
 </div>
 
 <!-- ====== SLIDE 3: BAR CHART ====== -->
-<div class="slide s3">
+<div class="slide s3" data-label="bar chart" data-deck-skip>
   <div class="slide-content">
     <div class="s3-header">
       <span class="t-title">Quarterly Growth Metrics</span>
@@ -813,7 +833,7 @@ html, body {
 </div>
 
 <!-- ====== SLIDE 4: 4-CARD GRID ====== -->
-<div class="slide s4">
+<div class="slide s4" data-label="four cards, in this order: a heading and a small line, then four cards, each a short title and one sentence (the numbers are drawn for you): features, services or how the business makes money">
   <div class="slide-content">
     <div class="s4-header">
       <span class="t-title">Core Services</span>
@@ -821,40 +841,28 @@ html, body {
     </div>
     <div class="s4-grid">
       <div class="s4-card">
-        <div class="s4-card-top">
-          <span class="s4-num">01</span>
-          <div class="s4-icon">I</div>
-        </div>
+        <i class="s4-card-top" aria-hidden="true"><i class="s4-num"></i><i class="s4-icon"></i></i>
         <div>
           <div class="t-subtitle" style="margin-bottom: 10px;">Venture Funding</div>
           <p class="t-body">Direct access to seed and series funding through our curated investor network.</p>
         </div>
       </div>
       <div class="s4-card">
-        <div class="s4-card-top">
-          <span class="s4-num">02</span>
-          <div class="s4-icon">II</div>
-        </div>
+        <i class="s4-card-top" aria-hidden="true"><i class="s4-num"></i><i class="s4-icon"></i></i>
         <div>
           <div class="t-subtitle" style="margin-bottom: 10px;">Mentorship</div>
           <p class="t-body">One-on-one guidance from industry veterans who have built and exited companies.</p>
         </div>
       </div>
       <div class="s4-card">
-        <div class="s4-card-top">
-          <span class="s4-num">03</span>
-          <div class="s4-icon">III</div>
-        </div>
+        <i class="s4-card-top" aria-hidden="true"><i class="s4-num"></i><i class="s4-icon"></i></i>
         <div>
           <div class="t-subtitle" style="margin-bottom: 10px;">Workspace</div>
           <p class="t-body">Flexible office arrangements in prime locations across all partner cities.</p>
         </div>
       </div>
       <div class="s4-card">
-        <div class="s4-card-top">
-          <span class="s4-num">04</span>
-          <div class="s4-icon">IV</div>
-        </div>
+        <i class="s4-card-top" aria-hidden="true"><i class="s4-num"></i><i class="s4-icon"></i></i>
         <div>
           <div class="t-subtitle" style="margin-bottom: 10px;">Community</div>
           <p class="t-body">A tight-knit network of founders sharing resources, referrals, and support.</p>
@@ -865,7 +873,7 @@ html, body {
 </div>
 
 <!-- ====== SLIDE 5: IMAGE + TEXT ====== -->
-<div class="slide s5">
+<div class="slide s5" data-label="image and text (only with a real photo)" data-deck-skip>
   <div class="slide-content">
     <div class="s5-image-area">
       <div class="s5-image-placeholder">[ Image Placeholder ]</div>
@@ -881,32 +889,32 @@ html, body {
 </div>
 
 <!-- ====== SLIDE 6: TIMELINE ====== -->
-<div class="slide s6">
+<div class="slide s6" data-label="four steps in order: a heading, then four steps, each a one-word title and one sentence (numbers and arrows are drawn for you): how it works, a process or a plan">
   <div class="slide-content">
     <div class="s6-header">
       <div class="t-title">Application Process</div>
     </div>
     <div class="s6-body">
       <div class="s6-step">
-        <span class="s6-step-num">01</span>
-        <div class="s6-connector">&rarr;</div>
+        <i class="s6-step-num" aria-hidden="true"></i>
+        <i class="s6-connector" aria-hidden="true"></i>
         <div class="t-subtitle s6-step-title">Submit</div>
         <p class="t-body">Complete the online application with your pitch deck and team overview.</p>
       </div>
       <div class="s6-step">
-        <span class="s6-step-num">02</span>
-        <div class="s6-connector">&rarr;</div>
+        <i class="s6-step-num" aria-hidden="true"></i>
+        <i class="s6-connector" aria-hidden="true"></i>
         <div class="t-subtitle s6-step-title">Review</div>
         <p class="t-body">Our committee evaluates fit, market potential, and team capability.</p>
       </div>
       <div class="s6-step">
-        <span class="s6-step-num">03</span>
-        <div class="s6-connector">&rarr;</div>
+        <i class="s6-step-num" aria-hidden="true"></i>
+        <i class="s6-connector" aria-hidden="true"></i>
         <div class="t-subtitle s6-step-title">Interview</div>
         <p class="t-body">Shortlisted teams present to our panel of partners and alumni founders.</p>
       </div>
       <div class="s6-step">
-        <span class="s6-step-num">04</span>
+        <i class="s6-step-num" aria-hidden="true"></i>
         <div class="t-subtitle s6-step-title">Onboard</div>
         <p class="t-body">Accepted ventures join the next cohort with full access to all resources.</p>
       </div>
@@ -915,26 +923,15 @@ html, body {
 </div>
 
 <!-- ====== SLIDE 7: DONUT CHART + METRICS ====== -->
-<div class="slide s7">
+<div class="slide s7" data-label="traction, in this order: a small tag, a headline, a paragraph, then four big figures, each a figure, a two-word caption and a short line">
   <div class="slide-content">
     <div class="s7-left">
-      <div class="s7-donut-container">
-        <svg viewBox="0 0 200 200" width="100%" height="100%">
-          <circle cx="100" cy="100" r="80" fill="none" stroke="#0a0a0a" stroke-width="24" stroke-dasharray="314 502" stroke-dashoffset="0" transform="rotate(-90 100 100)"/>
-          <circle cx="100" cy="100" r="80" fill="none" stroke="#f2d4cf" stroke-width="24" stroke-dasharray="126 502" stroke-dashoffset="-314" transform="rotate(-90 100 100)"/>
-          <circle cx="100" cy="100" r="80" fill="none" stroke="#e5edd6" stroke-width="24" stroke-dasharray="50 502" stroke-dashoffset="-440" transform="rotate(-90 100 100)"/>
-          <circle cx="100" cy="100" r="68" fill="none" stroke="#0a0a0a" stroke-width="1.5" opacity="0.1"/>
-        </svg>
-        <div class="s7-donut-center">
-          <div class="s7-donut-value">63%</div>
-          <div class="s7-donut-label">Market Share</div>
-        </div>
+      <div class="s2-meta">
+        <div class="line"></div>
+        <span class="t-caption">Traction</span>
       </div>
-      <div class="s7-legend">
-        <div class="s7-legend-item"><div class="s7-legend-swatch bg-black"></div>Enterprise</div>
-        <div class="s7-legend-item"><div class="s7-legend-swatch bg-pink"></div>Consumer</div>
-        <div class="s7-legend-item"><div class="s7-legend-swatch bg-green"></div>Non-Profit</div>
-      </div>
+      <div class="t-headline" style="margin-bottom: 24px;">Growing Every Single Month</div>
+      <p class="t-body">Paying customers in every city we have launched in, and revenue that has grown faster each quarter since our first pilot.</p>
     </div>
     <div class="s7-right">
       <div class="s7-metric-row">
@@ -970,10 +967,10 @@ html, body {
 </div>
 
 <!-- ====== SLIDE 8: STATEMENT / QUOTE ====== -->
-<div class="slide s8">
+<div class="slide s8" data-label="statement or quote: one sentence (no quotation marks), then four small figures, each a figure followed by a one- or two-word caption">
   <div class="slide-content">
     <div class="s8-top">
-      <div class="s8-quote-mark">"</div>
+      <i class="s8-quote-mark" aria-hidden="true"></i>
       <div class="s8-statement">
         <div class="t-headline" style="margin-bottom: 24px;">We don't incubate ideas. We accelerate the people bold enough to build them.</div>
         <div class="line"></div>
@@ -1001,13 +998,13 @@ html, body {
 </div>
 
 <!-- ====== SLIDE 9: COMPARISON TABLE ====== -->
-<div class="slide s9">
+<div class="slide s9" data-label="comparison table: a heading and a small line, then a table of exactly 4 columns (what is compared, then three options): first the 4 column headings, then up to six rows of 4 cells each, row by row (the row's name, then a short value for each option). Drop an option you do not have by sending [remove] for its heading and every cell under it">
   <div class="slide-content">
     <div class="s9-header">
       <span class="t-title">Plan Comparison</span>
       <span class="label">Pricing Tiers</span>
     </div>
-    <div class="s9-table-wrap">
+    <div class="s9-table-wrap" data-deck-grow>
       <table class="s9-table">
         <thead>
           <tr>
@@ -1061,7 +1058,7 @@ html, body {
 </div>
 
 <!-- ====== SLIDE 10: CLOSING / CTA ====== -->
-<div class="slide s10">
+<div class="slide s10" data-label="closing, in this order: a two-word call (one word per line), a sentence, a short button label, a small heading, then four contact details (email, phone, location, hours; the labels are kept), then two short links (e.g. social networks)">
   <div class="slide-content">
     <div class="s10-left">
       <div class="t-display" style="margin-bottom: 24px;">Let's<br>Build.</div>
@@ -1071,10 +1068,10 @@ html, body {
     <div class="s10-right">
       <div class="s10-r-top">
         <div class="t-title" style="margin-bottom: 20px;">Get In Touch</div>
-        <p class="t-body" style="margin-bottom: 8px;"><strong>Email:</strong> hello@rawgrid.studio</p>
-        <p class="t-body" style="margin-bottom: 8px;"><strong>Phone:</strong> +1 (555) 000-0000</p>
-        <p class="t-body" style="margin-bottom: 8px;"><strong>Location:</strong> 123 Innovation Drive, San Francisco</p>
-        <p class="t-body"><strong>Hours:</strong> Monday — Friday, 9:00 — 18:00</p>
+        <p class="t-body" style="margin-bottom: 8px;"><strong data-deck-label>Email:</strong> hello@rawgrid.studio</p>
+        <p class="t-body" style="margin-bottom: 8px;"><strong data-deck-label>Phone:</strong> +1 (555) 000-0000</p>
+        <p class="t-body" style="margin-bottom: 8px;"><strong data-deck-label>Location:</strong> 123 Innovation Drive, San Francisco</p>
+        <p class="t-body"><strong data-deck-label>Hours:</strong> Monday — Friday, 9:00 — 18:00</p>
       </div>
       <div class="s10-r-bottom">
         <div class="s10-rb-block">Instagram</div>

@@ -12,23 +12,12 @@ import { modelPath } from "@abacus-ai/agent/model-path";
 import { resourcePath } from "#main/resources";
 
 import { exportDeckPdf } from "./deck-pdf";
+import { unsupportedNumbers } from "./docs-system/faithful";
 
 const MAX_SLIDES = 20;
 
 /** Templates ship 8-18 demo slides (a catalogue); five is what gets presented. */
 const DEFAULT_SLIDES = 5;
-
-type TemplateIndexEntry = {
-  slug: string;
-  name: string;
-  tagline: string;
-  mood?: string[];
-  tone?: string[];
-  formality?: string;
-  scheme?: string;
-  best_for?: string;
-  slide_count?: number;
-};
 
 const decksDir = async (): Promise<string> => {
   const dir = resourcePath("decks");
@@ -44,11 +33,9 @@ const decksDir = async (): Promise<string> => {
   return dir;
 };
 
-/** `gaps[i]` is the markup between slide i and slide i+1, kept for reassembly. */
 type SplitDeck = {
   head: string;
   slides: string[];
-  gaps: string[];
   tail: string;
 };
 
@@ -62,10 +49,9 @@ const hasSlideClass = (openTag: string): boolean => {
  * Slides are found by class and closed by counting depth of the same tag
  * name: a `<div class="slide">` holds more divs, so a regex cannot split it.
  */
-const splitTemplate = (html: string): SplitDeck => {
+export const splitTemplate = (html: string): SplitDeck => {
   const opening = /<(section|div|article)\b[^>]*>/gi;
   const slides: string[] = [];
-  const gaps: string[] = [];
   let firstStart = -1;
   let lastEnd = -1;
   let match: RegExpExecArray | null;
@@ -89,7 +75,6 @@ const splitTemplate = (html: string): SplitDeck => {
     }
     if (end < 0) continue;
 
-    if (firstStart >= 0) gaps.push(html.slice(lastEnd, start));
     slides.push(html.slice(start, end));
     if (firstStart < 0) firstStart = start;
     lastEnd = end;
@@ -97,12 +82,10 @@ const splitTemplate = (html: string): SplitDeck => {
     opening.lastIndex = end;
   }
 
-  if (slides.length === 0)
-    return { head: html, slides: [], gaps: [], tail: "" };
+  if (slides.length === 0) return { head: html, slides: [], tail: "" };
   return {
     head: html.slice(0, firstStart),
     slides,
-    gaps,
     tail: html.slice(lastEnd),
   };
 };
@@ -185,20 +168,84 @@ const escapeHtmlText = (value: string): string =>
  * Decoded on the way out, escaped on the way in: an example reading `&amp;`
  * invites a filler to answer in entities, which would print literally.
  */
+const safeChar = (code: number, whole: string): string =>
+  Number.isInteger(code) && code > 0 && code <= 0x10ffff
+    ? String.fromCodePoint(code)
+    : whole;
+
+/** Named entities templates and fillers use; anything else is left as written. */
+const NAMED_ENTITIES: Record<string, string> = {
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: " ",
+  middot: "·",
+  bull: "•",
+  mdash: "—",
+  ndash: "–",
+  hellip: "…",
+  lsquo: "‘",
+  rsquo: "’",
+  ldquo: "“",
+  rdquo: "”",
+  laquo: "«",
+  raquo: "»",
+  uarr: "↑",
+  darr: "↓",
+  larr: "←",
+  rarr: "→",
+  times: "×",
+  divide: "÷",
+  plusmn: "±",
+  minus: "−",
+  deg: "°",
+  pound: "£",
+  euro: "€",
+  yen: "¥",
+  cent: "¢",
+  copy: "©",
+  reg: "®",
+  trade: "™",
+  sect: "§",
+  para: "¶",
+  frac12: "½",
+  frac14: "¼",
+  frac34: "¾",
+};
+
 const decodeHtmlText = (value: string): string =>
   value
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&nbsp;/g, " ")
+    .replace(/&#(\d+);/g, (whole, digits: string) =>
+      safeChar(Number(digits), whole)
+    )
+    .replace(/&#x([0-9a-f]+);/gi, (whole, hex: string) =>
+      safeChar(Number.parseInt(hex, 16), whole)
+    )
+    .replace(
+      /&([a-z][a-z0-9]*);/gi,
+      (whole, name: string) => NAMED_ENTITIES[name] ?? whole
+    )
     // Ampersand last, so `&amp;lt;` does not become a tag.
     .replace(/&amp;/g, "&");
 
-const slotsOf = (slide: string): SlideSlot[] => {
+/**
+ * A slide's own number written into it as text ("03 / 18"): the second figure
+ * is the template's slide count, which tells it from a figure such as "4 / 5".
+ */
+const PAGE_NUMBER = /^(\d{1,3})(\s*(?:\/|of)\s*)(\d{1,3})$/;
+
+const isPageNumber = (text: string, templateSlides: number): boolean => {
+  const match = PAGE_NUMBER.exec(text.trim());
+  return match != null && Number(match[3]) === templateSlides;
+};
+
+const slotsOf = (slide: string, templateSlides: number): SlideSlot[] => {
   const slots: SlideSlot[] = [];
 
   eachTextNode(slide, (text, _start, _end, enclosing, ordinal) => {
+    // Numbered in code once the slides are picked, not by the filler.
+    if (isPageNumber(text, templateSlides)) return;
     const trimmed = decodeHtmlText(text.trim());
     slots.push({
       id: `t${ordinal}`,
@@ -211,19 +258,108 @@ const slotsOf = (slide: string): SlideSlot[] => {
   return slots;
 };
 
+/** What the filler sends for a slot to drop; see dropRemoved. */
+const REMOVE_SLOT = "[remove]";
+/** A marked label's stand-in while dropped slots are swept (see dropRemoved). */
+const LABEL_TOKEN = /\u2064\d+\u2065/g;
+/** An empty decoration element's stand-in while dropped slots are swept. */
+const DECOR_TOKEN = /\u2066\d+\u2067/g;
+/** Stands in for a dropped slot until its element is gone (invisible). */
+const REMOVED_MARK = "\u2063";
+
+/**
+ * Takes out what the filler dropped: an element whose only text is dropped
+ * slots goes (a card, a table row, a list item), and its parent goes too when
+ * nothing else in it has text. Decoration with no text is never touched, and
+ * table cells stay so a row keeps its columns.
+ */
+export const dropRemoved = (slide: string): string => {
+  if (!slide.includes(REMOVED_MARK)) return slide;
+  const textOf = (html: string): string =>
+    html.replace(/<[^>]*>/g, "").replace(/\s+/g, "");
+  const innermost =
+    /<(tr|li|div|article|p|h[1-6]|span|small|strong|em|b|a|button)\b[^>]*>((?:(?!<\/?\1\b)[\s\S])*?)<\/\1>/gi;
+  // A kept element's inside is looked at too: matched first, an outer
+  // element would hide an emptied link or item within it from this pass.
+  const sweep = (html: string): string =>
+    html.replace(innermost, (whole, tag: string, inner: string) => {
+      const text = textOf(inner);
+      if (!text.includes(REMOVED_MARK)) return whole;
+      // A marked label ("Email") does not keep its block: it names a value.
+      const left = text
+        .replace(LABEL_TOKEN, "")
+        .replace(DECOR_TOKEN, "")
+        .split(REMOVED_MARK)
+        .join("");
+      // Nothing left, or only the item's own number ("05", "3."): an
+      // emptied list item kept printing its numeral.
+      if (left.length === 0 || /^0?\d{1,2}[.)]?$/.test(left))
+        return REMOVED_MARK;
+      const open = whole.slice(0, whole.length - inner.length - tag.length - 3);
+      return `${open}${sweep(inner)}</${tag}>`;
+    });
+  // Labels become tokens first: a <div> label inside a <div> block would
+  // otherwise hide the block from the innermost-element match.
+  const labels: string[] = [];
+  let out = slide.replace(
+    /<([a-z][\w-]*)\b[^>]*\bdata-deck-label\b[^>]*>[\s\S]*?<\/\1>/gi,
+    (label) => {
+      labels.push(label);
+      return `\u2064${labels.length - 1}\u2065`;
+    }
+  );
+  // Empty decoration (a number box, a colour strip) becomes a token too: a
+  // text-less <div> inside a card hid the card from the innermost match, so
+  // a dropped card stayed on the slide with its numeral (retired templates).
+  const decor: string[] = [];
+  out = out.replace(
+    /<(div|span|i|b|em|strong|small)\b[^>]*>\s*<\/\1>/gi,
+    (empty) => {
+      decor.push(empty);
+      return `\u2066${decor.length - 1}\u2067`;
+    }
+  );
+  for (let pass = 0; pass < 12; pass++) {
+    const next = sweep(out);
+    if (next === out) break;
+    out = next;
+  }
+  return out
+    .split(REMOVED_MARK)
+    .join("")
+    .replace(
+      /\u2066(\d+)\u2067/g,
+      (_, index: string) => decor[Number(index)] ?? ""
+    )
+    .replace(
+      /\u2064(\d+)\u2065/g,
+      (_, index: string) => labels[Number(index)] ?? ""
+    );
+};
+
 /**
  * Substitutes text into a slide, leaving every tag untouched. A skipped slot
  * keeps the template's text: a blank label is worse than a wrong one.
  * Replacements are escaped, since a stray `<` would close a tag.
  */
-const fillSlots = (slide: string, values: Record<string, string>): string => {
+export const fillSlots = (
+  slide: string,
+  values: Record<string, string>
+): string => {
   const edits: Array<{ start: number; end: number; text: string }> = [];
 
-  eachTextNode(slide, (text, start, end, _enclosing, ordinal) => {
-    const replacement = values[`t${ordinal}`];
+  eachTextNode(slide, (text, start, end, enclosing, ordinal) => {
+    const given = values[`t${ordinal}`];
+    // A list item draws its own marker; a number typed in front of it prints
+    // twice ("• 1. Evaporation."). "1.5 million" is a figure, not a marker.
+    const replacement =
+      enclosing === "li" && typeof given === "string"
+        ? given.replace(/^\s*\d{1,2}[.)]\s+/, "")
+        : given;
 
     if (typeof replacement !== "string" || replacement.trim().length === 0)
       return;
+    const removed = replacement.trim() === REMOVE_SLOT;
 
     // Only the trimmed span is replaced; the whitespace is the indentation.
     const leading = text.length - text.trimStart().length;
@@ -232,7 +368,11 @@ const fillSlots = (slide: string, values: Record<string, string>): string => {
     edits.push({
       start: start + leading,
       end: end - trailing,
-      text: escapeHtmlText(replacement.trim()),
+      // Decoded first: a filler that writes "&amp;" means "&", and escaping
+      // it as written printed "&amp;amp;" as "&amp;".
+      text: removed
+        ? REMOVED_MARK
+        : escapeHtmlText(decodeHtmlText(replacement.trim())),
     });
   });
 
@@ -275,6 +415,7 @@ export type DeckTemplateSummary = {
   slug: string;
   name?: string;
   best_for?: string;
+  avoid_for?: string;
   mood?: string;
   tone?: string;
   formality?: string;
@@ -296,6 +437,11 @@ export const deckTemplates = async (): Promise<{
       slug: String(entry.slug ?? ""),
       ...(entry.name != null ? { name: String(entry.name) } : {}),
       ...(entry.best_for != null ? { best_for: String(entry.best_for) } : {}),
+      // What it is wrong for, too: without it monochrome kept being picked
+      // for a student project.
+      ...(entry.avoid_for != null
+        ? { avoid_for: String(entry.avoid_for) }
+        : {}),
       ...(entry.mood != null ? { mood: String(entry.mood) } : {}),
       ...(entry.tone != null ? { tone: String(entry.tone) } : {}),
       ...(entry.formality != null
@@ -312,7 +458,7 @@ const loadTemplate = async (
   const index = JSON.parse(
     await fs.readFile(path.join(skillDir, "templates.json"), "utf8")
   ) as {
-    templates: TemplateIndexEntry[];
+    templates: Array<{ slug: string }>;
   };
 
   if (!index.templates.some((entry) => entry.slug === slug))
@@ -331,27 +477,138 @@ const loadTemplate = async (
 
 export type DeckSlotsRequest = { template: string; slides?: number };
 
+/**
+ * Whether the filler is offered a slide. A template marks a slide
+ * `data-deck-skip` when it needs what a brief does not give: a photo (else a
+ * grey placeholder prints) or a chart's data (else the sample chart prints).
+ */
+export const isOffered = (slide: string): boolean =>
+  !/^<[^>]*\sdata-deck-skip\b/.test(slide.trimStart());
+
+/**
+ * What a slide is for, as the filler reads it: the template's own
+ * `data-label`, or else its first heading and how many text slots it has, so
+ * "a stats slide with 4 figures" can be told from "the closing slide" without
+ * seeing the markup.
+ */
+export const slideLabel = (
+  slide: string,
+  index: number,
+  templateSlides: number
+): string => {
+  const declared = /data-label="([^"]*)"/.exec(slide)?.[1];
+  if (declared != null && declared.trim().length > 0) return declared.trim();
+  const heading = /<h[1-3]\b[^>]*>([\s\S]*?)<\/h[1-3]>/i.exec(slide)?.[1] ?? "";
+  const text = decodeHtmlText(heading.replace(/<[^>]+>/g, " "))
+    .replace(/\s+/g, " ")
+    .trim();
+  const slots = slotsOf(slide, templateSlides).length;
+  return `slide ${index}${text.length > 0 ? `: "${text.slice(0, 60)}"` : ""} (${slots} text slot${slots === 1 ? "" : "s"})`;
+};
+
+/**
+ * The chosen slides, each filled, in index order: any of the template's
+ * slides, not only its first few, so a short deck can still end on the
+ * template's closing slide and skip a layout the content cannot fill.
+ * Duplicates and indices past the template are dropped.
+ */
+export const pickSlides = (
+  sections: readonly string[],
+  chosen: ReadonlyArray<{ index: number; values: Record<string, string> }>,
+  fill: (section: string, values: Record<string, string>) => string,
+  max: number
+): string[] => {
+  const seen = new Set<number>();
+  return (
+    [...chosen]
+      .filter(
+        (slide) =>
+          Number.isInteger(slide.index) &&
+          slide.index >= 1 &&
+          slide.index <= sections.length &&
+          !seen.has(slide.index) &&
+          seen.add(slide.index)
+      )
+      // In the filler's order, the story's (live: a museum deck came back with
+      // the budget before "what we hold", and the bot rebuilt it by hand); the
+      // template's first slide (its cover) stays first and its last (the
+      // closing) last.
+      .sort(
+        (a, b) =>
+          (a.index === 1 ? -1 : a.index === sections.length ? 1 : 0) -
+          (b.index === 1 ? -1 : b.index === sections.length ? 1 : 0)
+      )
+      .slice(0, max)
+      .map((slide) => fill(sections[slide.index - 1]!, slide.values))
+  );
+};
+
+/**
+ * Many templates write each slide's number into it as text ("03 / 18"). A
+ * picked subset renumbers those by position in the printed deck, keeping the
+ * template's zero padding; any other text is left alone.
+ */
+export const numberSlides = (
+  slides: readonly string[],
+  templateSlides: number
+): string[] =>
+  slides.map((slide, position) => {
+    const edits: Array<{ start: number; end: number; text: string }> = [];
+    eachTextNode(slide, (text, start, end) => {
+      if (!isPageNumber(text, templateSlides)) return;
+      const [, own = "", between = "", count = ""] =
+        PAGE_NUMBER.exec(text.trim()) ?? [];
+      // "01 / 18" pads both figures; "1 / 18" pads neither.
+      const width =
+        own.startsWith("0") || count.startsWith("0")
+          ? Math.max(own.length, count.length)
+          : 0;
+      const pad = (value: number): string => String(value).padStart(width, "0");
+      const leading = text.length - text.trimStart().length;
+      const trailing = text.length - text.trimEnd().length;
+      edits.push({
+        start: start + leading,
+        end: end - trailing,
+        text: `${pad(position + 1)}${between}${pad(slides.length)}`,
+      });
+    });
+    let out = slide;
+    for (const edit of edits.reverse())
+      out = out.slice(0, edit.start) + edit.text + out.slice(edit.end);
+    return out;
+  });
+
 /** The text a template's slides contain, slot by slot. See `SlideSlot`. */
 export const deckSlots = async (
   request: DeckSlotsRequest
 ): Promise<{
   template: string;
   available: number;
+  /** How many slides to choose. */
+  pick: number;
   slides: DeckSlideSlots[];
 }> => {
   const { split } = await loadTemplate(request.template);
+  // Indices stay the template's own, so render_deck finds the same slide.
+  const offered = split.slides
+    .slice(0, MAX_SLIDES)
+    .map((slide, index) => ({ slide, index: index + 1 }))
+    .filter(({ slide }) => isOffered(slide));
   const wanted = Math.max(
     1,
-    Math.min(request.slides ?? DEFAULT_SLIDES, split.slides.length, MAX_SLIDES)
+    Math.min(request.slides ?? DEFAULT_SLIDES, offered.length, MAX_SLIDES)
   );
 
+  // Every offered slide, so the filler picks the `wanted` ones its content
+  // fits rather than taking the first few.
   return {
     template: request.template,
-    available: split.slides.length,
-    slides: split.slides.slice(0, wanted).map((slide, index) => ({
-      index: index + 1,
-      label: /data-label="([^"]*)"/.exec(slide)?.[1] ?? `slide ${index + 1}`,
-      slots: slotsOf(slide),
+    available: offered.length,
+    pick: wanted,
+    slides: offered.map(({ slide, index }) => ({
+      index,
+      label: slideLabel(slide, index, split.slides.length),
+      slots: slotsOf(slide, split.slides.length),
     })),
   };
 };
@@ -361,6 +618,14 @@ export type RenderDeckRequest = {
   outputPath: string;
   /** Per slide, replacement text keyed by the slot ids from `deckSlots`. */
   slides: Array<{ index: number; values: Record<string, string> }>;
+  /**
+   * What the numbers are checked against (the user's words, their files and
+   * what the bot read) and today's date. Absent: no number check.
+   */
+  facts?: string;
+  today?: string;
+  /** The second try: a slot that still has a number not in the facts is dropped. */
+  dropUnsupported?: boolean;
 };
 
 export type RenderDeckResult = {
@@ -372,6 +637,56 @@ export type RenderDeckResult = {
   template: string;
   slides: number;
   seconds: number;
+  /** Filled text drawn over other filled text. */
+  overlaps?: string[];
+  /** The cover's largest text as printed. */
+  coverTitle?: string;
+  /** Slots dropped for a number not in the facts (the second try). */
+  dropped?: string[];
+};
+
+/**
+ * Each slot whose printed text (the filler's, or the sample it kept) has a
+ * number the facts do not give: the design system's number check, on a
+ * template. With `drop`, those slots are dropped instead.
+ */
+const checkNumbers = (
+  sections: string[],
+  request: RenderDeckRequest
+): {
+  slides: RenderDeckRequest["slides"];
+  unsupported: string[];
+  dropped: string[];
+} => {
+  const unsupported: string[] = [];
+  const dropped: string[] = [];
+  if (request.facts == null)
+    return { slides: request.slides, unsupported, dropped };
+  const slides = request.slides.map((slide) => {
+    const section = sections[slide.index];
+    if (section == null) return slide;
+    const values = { ...slide.values };
+    for (const slot of slotsOf(section, sections.length)) {
+      const sent = values[slot.id];
+      const text = sent == null || sent === "" ? slot.text : sent;
+      if (text === REMOVE_SLOT) continue;
+      const bad = unsupportedNumbers(text, {
+        brief: request.facts,
+        computed: [],
+        today: request.today ?? "",
+      });
+      if (bad.length === 0) continue;
+      if (request.dropUnsupported === true) {
+        values[slot.id] = REMOVE_SLOT;
+        dropped.push(text.length > 60 ? `${text.slice(0, 57)}…` : text);
+      } else
+        unsupported.push(
+          `slide ${slide.index}, slot ${slot.id}: "${text.length > 60 ? `${text.slice(0, 57)}…` : text}" has ${bad.join(", ")}`
+        );
+    }
+    return { ...slide, values };
+  });
+  return { slides, unsupported, dropped };
 };
 
 /**
@@ -395,18 +710,23 @@ export const renderDeck = async (
   await refuseForeignOverwrite(pdfPath, deckDir, "deck.html");
 
   const { dir: templateDir, split } = await loadTemplate(request.template);
-  const { head, slides: sections, gaps, tail } = split;
+  const { head, slides: sections, tail } = split;
 
-  const byIndex = new Map(
-    request.slides.map((slide) => [slide.index, slide.values])
+  const numbers = checkNumbers(sections, request);
+  if (numbers.unsupported.length > 0)
+    return { unsupported: numbers.unsupported } as never;
+
+  const filled = numberSlides(
+    pickSlides(
+      sections,
+      numbers.slides,
+      (slide, values) => dropRemoved(fillSlots(slide, values)),
+      MAX_SLIDES
+    ),
+    sections.length
   );
-  const wanted = Math.max(
-    1,
-    Math.min(request.slides.length, sections.length, MAX_SLIDES)
-  );
-  const filled = sections
-    .slice(0, wanted)
-    .map((section, index) => fillSlots(section, byIndex.get(index + 1) ?? {}));
+  if (filled.length === 0)
+    throw new Error("No slide of this template was chosen.");
 
   await fs.mkdir(deckDir, { recursive: true });
 
@@ -419,6 +739,16 @@ export const renderDeck = async (
       continue;
     await fs.copyFile(path.join(templateDir, asset), path.join(deckDir, asset));
   }
+  // The fonts live once, in decks/fonts, shared by every template: the deck
+  // gets the ones its fonts.css names, beside it.
+  const fontsDir = path.join(path.dirname(path.dirname(templateDir)), "fonts");
+  const fontsCss = await fs
+    .readFile(path.join(templateDir, "fonts.css"), "utf8")
+    .catch(() => "");
+  for (const [, name] of fontsCss.matchAll(
+    /url\(["']?([^"')/]+\.woff2)["']?\)/g
+  ))
+    await fs.copyFile(path.join(fontsDir, name!), path.join(deckDir, name!));
 
   // Templates carry demo speaker notes; stale notes are worse than none.
   const withoutNotes = (html: string): string =>
@@ -453,11 +783,8 @@ export const renderDeck = async (
         );
   };
 
-  const body = filled
-    .map((section, i) =>
-      i < filled.length - 1 ? section + (gaps[i] ?? "\n") : section
-    )
-    .join("");
+  // The markup between slides is whitespace or comments; a newline joins them.
+  const body = filled.join("\n");
   const htmlPath = path.join(deckDir, "deck.html");
   await fs.writeFile(
     htmlPath,
@@ -466,13 +793,19 @@ export const renderDeck = async (
   );
 
   // The HTML is openable by now, so a failed export says where it is.
-  const exported = await exportDeckPdf({ htmlPath, outputPath: pdfPath }).catch(
-    (error: unknown) => {
-      throw new Error(
-        `the slides were written to ${modelPath(htmlPath)} but the PDF export failed: ${(error as Error)?.message ?? "unknown error"}`
-      );
-    }
-  );
+  const exported = await exportDeckPdf({
+    htmlPath,
+    outputPath: pdfPath,
+    filled: numbers.slides.flatMap((slide) =>
+      Object.values(slide.values).filter(
+        (value) => value !== "" && value !== REMOVE_SLOT
+      )
+    ),
+  }).catch((error: unknown) => {
+    throw new Error(
+      `the slides were written to ${modelPath(htmlPath)} but the PDF export failed: ${(error as Error)?.message ?? "unknown error"}`
+    );
+  });
 
   return {
     pdfPath: exported.pdfPath,
@@ -482,5 +815,8 @@ export const renderDeck = async (
     template: request.template,
     slides: exported.slides,
     seconds: Math.round((Date.now() - startedAt) / 100) / 10,
+    ...(exported.overlaps != null ? { overlaps: exported.overlaps } : {}),
+    ...(exported.coverTitle != null ? { coverTitle: exported.coverTitle } : {}),
+    ...(numbers.dropped.length > 0 ? { dropped: numbers.dropped } : {}),
   };
 };

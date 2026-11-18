@@ -4,9 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Grove Presentation</title>
+  <link rel="stylesheet" href="fonts.css">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!--
       Grove style uses four font families:
         1. Playfair Display    — editorial serif for headlines, italic in coral for accent emphasis
@@ -14,10 +13,6 @@
         3. JetBrains Mono      — labels, metadata, vertical sidebar text
         4. Noto Serif SC / Noto Sans SC — Chinese fallbacks for every role
     -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500&family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&family=JetBrains+Mono:wght@300;400&family=Noto+Serif+SC:wght@300;400;500&family=Noto+Sans+SC:wght@300;400;500&display=swap"
-      rel="stylesheet"
-    />
 
     <style>
       /* ╔══════════════════════════════════════════════════════════════════════╗
@@ -72,13 +67,13 @@
         /* ── Type Scale ───────────────────────────────────────────────────── */
         /* vw units keep all sizes proportional regardless of window width */
         --sz-display: 10vw; /* hero cover title — very large, commanding */
-        --sz-h1: 5.5vw; /* chapter and statement titles */
-        --sz-h2: 3.2vw; /* slide headlines */
-        --sz-h3: 2vw; /* sub-headlines, compare panel titles */
-        --sz-lead: 1.45vw; /* lead paragraph */
-        --sz-body: 1.05vw; /* body text, bullets */
-        --sz-caption: 0.82vw; /* captions, footnotes, chart sources */
-        --sz-label: 0.7vw; /* chrome labels, kickers, mono metadata */
+        --sz-h1: 6.2vw; /* chapter and statement titles */
+        --sz-h2: 4.2vw; /* slide headlines */
+        --sz-h3: 2.5vw; /* sub-headlines, compare panel titles */
+        --sz-lead: 1.9vw; /* lead paragraph */
+        --sz-body: 1.45vw; /* body text, bullets */
+        --sz-caption: 1.1vw; /* captions, footnotes, chart sources */
+        --sz-label: 0.85vw; /* chrome labels, kickers, mono metadata */
 
         /* ── Spacing ─────────────────────────────────────────────────────── */
         /* Grove is intentionally spacious — breathing room is the aesthetic */
@@ -637,7 +632,7 @@
          --sz-body of 1.05vw reads as ~12px on typical laptop viewports. */
       .slide--list .body,
       .slide--list .bullet-list {
-        font-size: max(1.4vw, 17px);
+        font-size: max(1.8vw, 22px);
         line-height: 1.6;
       }
 
@@ -783,7 +778,7 @@
         font-family: var(--f-mono);
         /* Bumped from var(--sz-caption) (~10px on laptop) so the category
            labels are actually readable. */
-        font-size: max(1.1vw, 13px);
+        font-size: max(1.4vw, 17px);
         letter-spacing: 0.1em;
         /* Lifted from --c-fg-3 (32% opacity) to --c-fg-2 (60% opacity);
            the 32% reading was nearly invisible on the dark background. */
@@ -848,7 +843,7 @@
            grove-num watermark "01" in bottom-right corner.
            Display title in Playfair 400 with italic coral emphasis word.
            ══════════════════════════════════════════════════════════════════ -->
-      <section class="slide dark slide--cover">
+      <section class="slide dark slide--cover" data-label="title">
         <!-- Vertical sidebar label: rotated text on the left edge -->
         <div class="grove-sidebar" data-anim="fade-in" data-delay="0">
           Strategy · Presentation
@@ -917,7 +912,7 @@
            Section 01 divider. Giant watermark number creates depth.
            Kicker shows "01 / CONTEXT" then rule then h1 title.
            ══════════════════════════════════════════════════════════════════ -->
-      <section class="slide dark slide--chapter">
+      <section class="slide dark slide--chapter" data-label="section opener">
         <!-- Watermark: massive near-invisible "01" in background -->
         <div class="grove-num">01</div>
         <!-- Section kicker: "01 / CONTEXT" in mono coral -->
@@ -952,7 +947,7 @@
            One sentence, max 62% width. Italic coral emphasis word.
            grove-sidebar provides category context.
            ══════════════════════════════════════════════════════════════════ -->
-      <section class="slide dark slide--statement">
+      <section class="slide dark slide--statement" data-label="big statement">
         <!-- Vertical sidebar label -->
         <div class="grove-sidebar">The Thesis</div>
         <!-- Chrome bar: section name left, page number right -->
@@ -994,7 +989,7 @@
            Warm parchment background — editorial, considered.
            grove-sidebar provides section context.
            ══════════════════════════════════════════════════════════════════ -->
-      <section class="slide light slide--split">
+      <section class="slide light slide--split" data-label="image + text" data-deck-skip>
         <div class="grove-sidebar">The Evidence</div>
         <div class="slide-chrome">
           <span
@@ -1072,7 +1067,7 @@
            Large serif numbers in terracotta coral — let them breathe.
            grove-sidebar provides section context.
            ══════════════════════════════════════════════════════════════════ -->
-      <section class="slide dark slide--stats">
+      <section class="slide dark slide--stats" data-label="three big numbers">
         <div class="grove-sidebar">By The Numbers</div>
         <div class="slide-chrome">
           <span class="label muted" data-anim="fade-in" data-delay="0"
@@ -1133,7 +1128,7 @@
            grove-sidebar on left edge.
            Light parchment — feels like a printed document.
            ══════════════════════════════════════════════════════════════════ -->
-      <section class="slide light slide--list">
+      <section class="slide light slide--list" data-label="heading + bullet list">
         <div class="grove-sidebar">Our Approach</div>
         <div class="slide-chrome">
           <span
@@ -1203,7 +1198,7 @@
            Chromeless. Large coral opening quote mark.
            Attribution below: coral name, muted role/year.
            ══════════════════════════════════════════════════════════════════ -->
-      <section class="slide dark slide--quote">
+      <section class="slide dark slide--quote" data-label="quote">
         <!-- Large decorative opening quote mark in terracotta coral -->
         <div class="quote-mark" data-anim="fade-in" data-delay="0">"</div>
 
@@ -1225,7 +1220,7 @@
            Light parchment — document-like, considered.
            Left panel: old model (no coral). Right panel: new model (coral label).
            ══════════════════════════════════════════════════════════════════ -->
-      <section class="slide light slide--compare">
+      <section class="slide light slide--compare" data-label="two-column comparison">
         <div class="grove-sidebar">Before / After</div>
         <div class="slide-chrome">
           <span
@@ -1297,7 +1292,7 @@
       <!-- ═══════ SLIDE 9 · CHAPTER dark ════════════════════════════════════
            Section 02 divider — same pattern as slide 2, watermark "02".
            ══════════════════════════════════════════════════════════════════ -->
-      <section class="slide dark slide--chapter">
+      <section class="slide dark slide--chapter" data-label="section opener">
         <!-- Watermark: massive near-invisible "02" -->
         <div class="grove-num">02</div>
         <div class="chapter-num" data-anim="fade-in" data-delay="0">
@@ -1327,7 +1322,7 @@
            Strong thesis on warm parchment — a change of emotional register.
            Light version of the statement slide. Same structure, different texture.
            ══════════════════════════════════════════════════════════════════ -->
-      <section class="slide light slide--statement">
+      <section class="slide light slide--statement" data-label="statement with a supporting line">
         <div class="grove-sidebar">The Recommendation</div>
         <div class="slide-chrome">
           <span
@@ -1389,7 +1384,7 @@
            Muted bars for most values, accent coral bar for the highlight.
            All colors from CSS vars — no raw hex values.
            ══════════════════════════════════════════════════════════════════ -->
-      <section class="slide dark slide--chart">
+      <section class="slide dark slide--chart" data-label="bar chart" data-deck-skip>
         <div class="grove-sidebar">The Data</div>
         <div class="slide-chrome">
           <span class="label muted" data-anim="fade-in" data-delay="0"
@@ -1460,7 +1455,7 @@
            The deck ends as it began: with generosity of space.
            Watermark "12" in the background grounds the composition.
            ══════════════════════════════════════════════════════════════════ -->
-      <section class="slide dark slide--end">
+      <section class="slide dark slide--end" data-label="closing">
         <!-- Watermark number in the background -->
         <div class="grove-num">12</div>
 

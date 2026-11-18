@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Status Report</title>
+  <link rel="stylesheet" href="fonts.css">
+  <style>
+    :root { --bg: #FFFFFF; --ink: #0F172A; --muted: #475569; --primary: #4338CA; --green: #16A34A; --card: #F8FAFC; --line: #E2E8F0; --display-font: 'Inter Tight', system-ui, sans-serif; --body-font: 'Inter', system-ui, sans-serif; }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--body-font); }
+    .deck { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+    .slide { position: absolute; inset: 0; width: 100vw; height: 100vh; display: flex; flex-direction: column;
+      padding: 5.5vh 5vw 9vh 5vw; opacity: 0; pointer-events: none; transition: opacity .4s ease; overflow: hidden; background: var(--bg); }
+    .slide.active { opacity: 1; pointer-events: all; z-index: 10; }
+    h1, h2, h3 { font-family: var(--display-font); line-height: 1.08; letter-spacing: -0.015em; }
+    h1 { font-size: clamp(2.6rem, 5.4vw, 4.6rem); font-weight: 700; }
+    h2 { font-size: clamp(2rem, 3.6vw, 3.2rem); font-weight: 650; margin-bottom: 3.2vh; }
+    h3 { font-size: clamp(1rem, 1.55vw, 1.35rem); font-weight: 650; margin-bottom: .6vh; }
+    p, li { font-size: clamp(1rem, 1.55vw, 1.4rem); line-height: 1.5; color: var(--muted); }
+    .kicker { font-size: clamp(.7rem, .95vw, .82rem); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--primary); margin-bottom: 1.6vh; }
+    .grow { flex: 1; min-height: 0; }
+    .body { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+    /* A grid that fills the slide starts under the heading with full, readable cards rather than stretched empty columns. */
+    .grid.grow, .why.grow, .how.grow { align-content: start; margin-top: 2vh; }
+    .grid.grow > .card { min-height: 0; display: flex; flex-direction: column; padding: 4.4vh 2vw; }
+    .card h3 { font-size: clamp(1.15rem, 1.9vw, 1.65rem); margin-bottom: 1.2vh; }
+    .card p, .card li { font-size: clamp(.95rem, 1.4vw, 1.2rem); }
+    .why.grow { row-gap: 9vh; margin-top: 5vh; } .why h3 { font-size: clamp(1.15rem, 1.9vw, 1.6rem); } .why p { font-size: clamp(.95rem, 1.4vw, 1.2rem); }
+    .grid { display: grid; gap: 2.2vw; }
+    .g2 { grid-template-columns: 1fr 1fr; } .g3 { grid-template-columns: repeat(3, 1fr); } .g4 { grid-template-columns: repeat(4, 1fr); }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 2.6vh 1.6vw; min-width: 0; }
+    .num { font-family: var(--display-font); font-weight: 700; color: var(--primary); font-size: clamp(2rem, 4.2vw, 3.6rem); line-height: 1; margin-bottom: 1vh; }
+    .slide-counter { position: fixed; left: 5vw; bottom: 3.2vh; font-size: .78rem; color: var(--muted); z-index: 20; font-variant-numeric: tabular-nums; }
+    .nav-controls { position: fixed; right: 5vw; bottom: 2.6vh; display: flex; gap: 8px; z-index: 20; }
+    .nav-controls button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+    .nav-controls button:disabled { opacity: .35; cursor: default; }
+    .progress { position: fixed; left: 0; bottom: 0; height: 4px; background: var(--primary); z-index: 20; transition: width .3s ease; }
+
+
+    .cover { background: var(--ink); justify-content: flex-end; }
+    .cover h1 { color: #fff; max-width: 75%; }
+    .cover p { color: #CBD5E1; margin-top: 2vh; font-size: clamp(1rem, 1.5vw, 1.3rem); max-width: 60%; }
+    .cover .meta { display: flex; gap: 3vw; margin-top: 6vh; padding-top: 2.4vh; border-top: 1px solid #334155; }
+    .cover .meta div { color: #94A3B8; font-size: .82rem; letter-spacing: .1em; text-transform: uppercase; }
+    .cover .meta b { display: block; color: #fff; font-size: 1rem; letter-spacing: 0; text-transform: none; margin-top: .6vh; font-weight: 600; }
+    .cover .bar { position: absolute; top: 0; left: 0; width: 100%; height: 1.2vh; background: linear-gradient(90deg, var(--primary), var(--green)); }
+    .pill { display: inline-block; padding: .6vh 1vw; border-radius: 999px; font-size: .78rem; font-weight: 700; letter-spacing: .04em; }
+    .ok { background: #DCFCE7; color: #166534; } .warn { background: #FEF3C7; color: #92400E; } .bad { background: #FEE2E2; color: #991B1B; }
+    .summary { display: grid; grid-template-columns: 1fr 2fr; gap: 4vw; }
+    .summary .overall { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 4vh 2vw; }
+    .summary .overall .pill { font-size: 1rem; padding: 1vh 1.6vw; margin: 1.6vh 0; }
+    .summary li { color: var(--ink); margin: 0 0 2vh 1.2vw; font-size: clamp(.95rem, 1.35vw, 1.15rem); }
+    .kpi .card { justify-content: space-between; }
+    .kpi .num { font-size: clamp(2.8rem, 5.6vw, 4.8rem); color: var(--ink); }
+    .kpi .delta { font-weight: 700; font-size: .85rem; margin-top: 1vh; color: #166534; }
+    .kpi .label { font-weight: 600; color: var(--muted); font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 1.4vh; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding: 1.2vh 1vw; border-bottom: 2px solid var(--ink); }
+    td { padding: 1.7vh 1vw; border-bottom: 1px solid var(--line); font-size: clamp(.82rem, 1.15vw, 1rem); color: var(--ink); vertical-align: middle; }
+    td.note { color: var(--muted); }
+    .timeline { display: grid; grid-template-columns: repeat(5, 1fr); position: relative; margin-top: 6vh; }
+    .timeline:before { content: ""; position: absolute; left: 0; right: 0; top: 1.1vh; height: 3px; background: var(--line); }
+    .ms { position: relative; padding-right: 1.4vw; }
+    .ms .dot { width: 2.4vh; height: 2.4vh; border-radius: 50%; background: var(--card); border: 3px solid var(--primary); margin-bottom: 2.4vh; position: relative; }
+    .ms.done .dot { background: var(--primary); }
+    .ms .when { font-weight: 700; color: var(--primary); font-size: .85rem; margin-bottom: .8vh; }
+    .meter { margin-bottom: 3.4vh; }
+    .meter .top { display: flex; justify-content: space-between; margin-bottom: 1vh; }
+    .meter .top b { color: var(--ink); font-weight: 600; } .meter .top span { color: var(--primary); font-weight: 700; }
+    .meter .track { height: 1.4vh; background: var(--line); border-radius: 999px; overflow: hidden; }
+    .meter .fill { height: 100%; background: var(--primary); border-radius: 999px; }
+    .ask { display: grid; grid-template-columns: auto 1fr; gap: 1.6vw; padding: 2.6vh 1.6vw; border-left: 5px solid var(--primary); background: var(--card); border-radius: 0 12px 12px 0; margin-bottom: 2vh; }
+    .ask b { font-family: var(--display-font); font-size: 1.6rem; color: var(--primary); }
+    .ask p { color: var(--ink); }
+    .closing { background: var(--ink); justify-content: center; align-items: flex-start; }
+    .closing h1 { color: #fff; } .closing p { color: #CBD5E1; margin-top: 2vh; font-size: 1.2rem; }
+
+  </style>
+</head>
+<body>
+  <div class="deck">
+    <section class="slide cover" data-label="title">
+      <div class="bar"></div>
+      <div class="kicker" style="color:#A5B4FC">Project status</div>
+      <h1>Website Relaunch: October Review</h1>
+      <p>Where the relaunch stands, what changed this month, and what we need from leadership.</p>
+      <div class="meta"><div>Period<b>1 to 31 October</b></div><div>Owner<b>Digital team</b></div><div>Overall<b>On track</b></div></div>
+    </section>
+    <section class="slide" data-label="executive summary + overall status">
+      <div class="kicker">Executive summary</div>
+      <h2>On track for a December launch</h2>
+      <div class="body" data-deck-grow>
+      <div class="summary grow">
+        <div class="overall"><p>Overall status</p><span class="pill ok">ON TRACK</span><p>Two risks are being watched; neither threatens the launch date yet.</p></div>
+        <ul><li>Design is signed off and the new templates are built.</li><li>Content migration is 70% done, one week behind plan.</li><li>Load testing starts in the first week of November.</li></ul>
+      </div>
+      </div>
+    </section>
+    <section class="slide" data-label="four KPI figures">
+      <div class="kicker">Key numbers</div>
+      <h2>The month in four figures</h2>
+      <div class="body" data-deck-grow>
+      <div class="grid g4 grow kpi">
+        <div class="card"><div class="label">Pages migrated</div><div class="num">412</div><div class="delta">+120 this month</div></div>
+        <div class="card"><div class="label">Budget used</div><div class="num">58%</div><div class="delta">On plan</div></div>
+        <div class="card"><div class="label">Open bugs</div><div class="num">23</div><div class="delta">Down from 41</div></div>
+        <div class="card"><div class="label">Page speed</div><div class="num">1.4s</div><div class="delta">Target 2.0s</div></div>
+      </div>
+      </div>
+    </section>
+    <section class="slide" data-label="workstream status table">
+      <div class="kicker">Workstreams</div>
+      <h2>Status by workstream</h2>
+      <div class="body" data-deck-grow>
+      <table>
+        <tr><th>Workstream</th><th>Owner</th><th>Status</th><th>Note</th></tr>
+        <tr><td>Design system</td><td>Priya</td><td><span class="pill ok">ON TRACK</span></td><td class="note">Signed off on 12 October</td></tr>
+        <tr><td>Content migration</td><td>Marco</td><td><span class="pill warn">AT RISK</span></td><td class="note">One week behind plan</td></tr>
+        <tr><td>Search and SEO</td><td>Lena</td><td><span class="pill ok">ON TRACK</span></td><td class="note">Redirect map is complete</td></tr>
+        <tr><td>Payments</td><td>Tom</td><td><span class="pill bad">BLOCKED</span></td><td class="note">Waiting on provider keys</td></tr>
+      </table>
+      </div>
+    </section>
+    <section class="slide" data-label="milestones timeline">
+      <div class="kicker">Timeline</div>
+      <h2>Milestones to launch</h2>
+      <div class="body" data-deck-grow>
+      <div class="timeline">
+        <div class="ms done"><div class="dot"></div><div class="when">Sep 15</div><h3>Kickoff</h3><p>Scope agreed</p></div>
+        <div class="ms done"><div class="dot"></div><div class="when">Oct 12</div><h3>Design sign-off</h3><p>Templates approved</p></div>
+        <div class="ms"><div class="dot"></div><div class="when">Nov 7</div><h3>Load testing</h3><p>Peak traffic check</p></div>
+        <div class="ms"><div class="dot"></div><div class="when">Nov 28</div><h3>Content freeze</h3><p>No new pages</p></div>
+        <div class="ms"><div class="dot"></div><div class="when">Dec 9</div><h3>Launch</h3><p>New site goes live</p></div>
+      </div>
+      </div>
+    </section>
+    <section class="slide" data-label="progress bars (percent complete)">
+      <div class="kicker">Progress</div>
+      <h2>How far along each part is</h2>
+      <div class="body" data-deck-grow>
+      <div class="meter"><div class="top"><b>Design</b><span>100%</span></div><div class="track"><div class="fill" style="width:100%"></div></div></div>
+      <div class="meter"><div class="top"><b>Build</b><span>80%</span></div><div class="track"><div class="fill" style="width:80%"></div></div></div>
+      <div class="meter"><div class="top"><b>Content</b><span>70%</span></div><div class="track"><div class="fill" style="width:70%"></div></div></div>
+      <div class="meter"><div class="top"><b>Testing</b><span>20%</span></div><div class="track"><div class="fill" style="width:20%"></div></div></div>
+      </div>
+    </section>
+    <section class="slide" data-label="risks and mitigations table">
+      <div class="kicker">Risks</div>
+      <h2>Risks we are watching</h2>
+      <div class="body" data-deck-grow>
+      <table>
+        <tr><th>Risk</th><th>Impact</th><th>Mitigation</th></tr>
+        <tr><td>Payment keys arrive late</td><td><span class="pill bad">HIGH</span></td><td class="note">Escalated to the provider; test keys in use meanwhile</td></tr>
+        <tr><td>Migration slips further</td><td><span class="pill warn">MEDIUM</span></td><td class="note">Two writers added for November</td></tr>
+        <tr><td>Traffic spike at launch</td><td><span class="pill ok">LOW</span></td><td class="note">Load test and autoscaling planned</td></tr>
+      </table>
+      </div>
+    </section>
+    <section class="slide" data-label="decisions needed">
+      <div class="kicker">Decisions needed</div>
+      <h2>What we need from you</h2>
+      <div class="body" data-deck-grow>
+      <div class="ask"><b>1</b><p>Approve two extra contract writers for four weeks.</p></div>
+      <div class="ask"><b>2</b><p>Confirm the December 9 launch date with the sales team.</p></div>
+      <div class="ask"><b>3</b><p>Name an executive contact for the payment provider.</p></div>
+      </div>
+    </section>
+    <section class="slide" data-label="next steps with owners and dates">
+      <div class="kicker">Next steps</div>
+      <h2>The next four weeks</h2>
+      <div class="body" data-deck-grow>
+      <table>
+        <tr><th>Action</th><th>Owner</th><th>Due</th></tr>
+        <tr><td>Finish migrating the product pages</td><td>Marco</td><td>Nov 14</td></tr>
+        <tr><td>Run the load test and fix findings</td><td>Tom</td><td>Nov 21</td></tr>
+        <tr><td>Train the support team on the new site</td><td>Priya</td><td>Nov 25</td></tr>
+        <tr><td>Freeze content and final review</td><td>Lena</td><td>Nov 28</td></tr>
+      </table>
+      </div>
+    </section>
+    <section class="slide closing" data-label="closing / questions">
+      <div class="kicker" style="color:#A5B4FC">Thank you</div>
+      <h1>Questions and discussion</h1>
+      <p>Next review: the first Monday of December.</p>
+    </section>
+  </div>
+  <div class="slide-counter"><span id="current">1</span> / <span id="total">10</span></div>
+  <div class="progress" id="progress"></div>
+  <div class="nav-controls"><button id="prevBtn" aria-label="Previous slide">&#8249;</button><button id="nextBtn" aria-label="Next slide">&#8250;</button></div>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const currentEl = document.getElementById('current');
+    const totalEl = document.getElementById('total');
+    const progressEl = document.getElementById('progress');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    let current = 0;
+    const total = slides.length;
+    totalEl.textContent = total;
+    function updateSlide() {
+      slides.forEach((slide, i) => slide.classList.toggle('active', i === current));
+      currentEl.textContent = current + 1;
+      progressEl.style.width = ((current + 1) / total * 100) + '%';
+      prevBtn.disabled = current === 0;
+      nextBtn.disabled = current === total - 1;
+    }
+    function changeSlide(dir) { const next = current + dir; if (next >= 0 && next < total) { current = next; updateSlide(); } }
+    document.addEventListener('keydown', (e) => {
+      if (['ArrowRight', ' ', 'PageDown'].includes(e.key)) { e.preventDefault(); changeSlide(1); }
+      else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); changeSlide(-1); }
+      else if (e.key === 'Home') { current = 0; updateSlide(); }
+      else if (e.key === 'End') { current = total - 1; updateSlide(); }
+    });
+    prevBtn.addEventListener('click', () => changeSlide(-1));
+    nextBtn.addEventListener('click', () => changeSlide(1));
+    updateSlide();
+  </script>
+
+</body>
+</html>
