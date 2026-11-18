@@ -86,6 +86,7 @@ export function createBotProfile(): ForeverProfile {
       await memory.start();
     },
     systemPrompt: () => [botOperatingPrompt()],
+    components: true,
     tools: (cwd) => [
       ...(chatMemory().tool() != null ? [chatMemory().tool()] : []),
       buildBotTimeTool(),

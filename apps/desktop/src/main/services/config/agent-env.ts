@@ -12,6 +12,7 @@ import { agentVendorDir } from "#main/resources";
 import { abacusRoutellmV1 } from "../providers/abacus-host";
 import { resolveBackend } from "../providers/exec-backend-service";
 import { VAULT_TOOL_NAMES } from "../vault/vault-tools";
+import { excludedToolsEnv } from "./excluded-tools";
 import {
   credentialEnv,
   hasCredential,
@@ -70,8 +71,12 @@ export function buildAgentConfigEnv(
   // No vault (anywhere but the hosted bot): its tools are withheld, and the
   // agent's prompts leave out what they would do.
   if (!vaultAvailable) excluded.push(...VAULT_TOOL_NAMES);
-  if (excluded.length > 0) {
-    envVars.ABACUSAI_BOT_EXCLUDED_TOOLS = excluded.join(",");
+  const excludedTools = excludedToolsEnv(
+    excluded,
+    process.env.ABACUSAI_BOT_EXCLUDED_TOOLS
+  );
+  if (excludedTools != null) {
+    envVars.ABACUSAI_BOT_EXCLUDED_TOOLS = excludedTools;
   }
 
   // Windows: the bundled POSIX shell `bash` runs under (posix-shell.ts in

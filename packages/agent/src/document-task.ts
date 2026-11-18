@@ -20,7 +20,9 @@ import { createGuardrails } from "./extensions/guardrails.js";
 import type { HostServiceClient } from "./host-services.js";
 import { subAgentMemory } from "./memory/chat.js";
 import { modelPath, MODEL_PATH_RESOURCES } from "./model-path.js";
+import { placeholdersIn, withoutPlaceholders } from "./placeholders.js";
 import type { AgentEvent } from "./protocol.js";
+import type { RequestSources } from "./request-facts.js";
 import { createResourceLoader } from "./resource-loader.js";
 import { forwardChildToolEvents } from "./subagent-events.js";
 import {
@@ -55,6 +57,126 @@ const EXCLUDED_TOOLS = [
 ];
 
 const STYLES = ["report", "editorial", "memo"] as const;
+const FORM_KINDS = [
+  "invoice",
+  "quote",
+  "resume",
+  "letter",
+  "certificate",
+  "proposal",
+  "worksheet",
+  "activity_report",
+] as const;
+
+/** What each fixed-layout kind takes; the renderer lays it out and does the sums. */
+const FORM_FIELDS = [
+  "invoice: from_name, from_details (address/email lines), to_name, to_details, number, date,",
+  '  due_date, currency (e.g. "$", "€", "INR"), items: [{description, quantity, unit_price}],',
+  '  tax_percent, tax_label (e.g. "GST"), discount (an amount), payment_details, notes.',
+  '  Write every figure as a plain number (1200.50, not 1.200,50 or "ten").',
+  "  Give prices only: subtotal, tax and total are calculated for you.",
+  "quote (or estimate): the invoice fields without due_date and payment_details, plus",
+  '  heading ("Quote" or "Estimate"), valid_until, terms. Prices only, as for an invoice.',
+  "resume: name, headline, contact (lines: email, phone, city, links), summary,",
+  "  experience: [{role, organisation, dates, points: [achievements]}],",
+  "  education: [{qualification, institution, dates, detail}], skills: [short items].",
+  "letter: from_name, from_details, to_name, to_details, date, subject, greeting,",
+  "  body (paragraphs), closing, signature_name, signature_title.",
+  'certificate: title (e.g. "Certificate of Completion"), recipient_name, statement',
+  '  (default "has successfully completed"), achievement (the course or award), detail,',
+  "  date, issuer, signatories: [{name, title}] (up to 3), number. One landscape page.",
+  "proposal: title, from_name, from_details, to_name, date, number, valid_until, summary,",
+  "  problem, approach ([{title, detail}] steps, or paragraphs), deliverables: [short items],",
+  "  timeline: [{phase, dates, detail}], currency, items/tax_percent/tax_label/discount as",
+  "  for an invoice (prices only; totals are calculated), terms, next_steps: [short items].",
+  "worksheet (also a study guide): title, subject, level, instructions, key_points: [short",
+  '  items], key_terms: [{term, definition}], questions: [{question, type ("choice",',
+  '  "short" or "long"), choices (for choice), marks (a plain number), answer}],',
+  "  name_lines (false to leave out name/class/date), show_answers (false for no answer",
+  "  key). Questions are numbered and marks added up for you; answers print on their own page.",
+  'activity_report: title (e.g. "Monthly activity report"), organisation, period, author,',
+  "  date, summary, metrics: [{label, value, previous}] (the change is worked out for you),",
+  "  activities: [{date, activity, detail, people, hours}] (totals worked out for you),",
+  "  highlights, issues, next_steps: [short items]. Figures as plain numbers (a unit is fine).",
+].join("\n");
+/** How a brief names each fixed form, matched in its first sentence only. */
+const FORM_WORDS: Array<[FormKind, RegExp]> = [
+  ["activity_report", /\bactivity reports?\b/i],
+  ["worksheet", /\b(work ?sheets?|study guides?|revision sheets?)\b/i],
+  ["certificate", /\bcertificates?\b/i],
+  ["proposal", /\bproposals?\b/i],
+  ["quote", /\b(quotes?|quotations?|estimates?)\b/i],
+  ["invoice", /\binvoices?\b/i],
+  ["resume", /\b(r[eé]sum[eé]s?|cvs?|curriculum vitae)\b/i],
+  ["letter", /\bletters?\b/i],
+];
+
+type FormKind = (typeof FORM_KINDS)[number];
+
+/**
+ * The fixed form a brief asks for, from its first sentence: "Write and print
+ * a British trade quotation..." is a quote; a report that ends with
+ * proposals is not a proposal. The earliest match in the sentence wins.
+ */
+export const formKindOf = (brief: string): FormKind | null => {
+  const first = brief
+    .trim()
+    .split(/(?<=[.!?])\s|\n/)[0]!
+    .slice(0, 240);
+  let best: { kind: FormKind; at: number } | null = null;
+  for (const [kind, words] of FORM_WORDS) {
+    const at = first.search(words);
+    if (at >= 0 && (best == null || at < best.at)) best = { kind, at };
+  }
+  return best?.kind ?? null;
+};
+
+const formHint = (kind: FormKind): string =>
+  `This is ${kind === "activity_report" ? "an activity report" : kind === "invoice" ? "an invoice" : `a ${kind}`}: call fill_form with kind "${kind}" (its fields are listed on the tool) instead of writing sections. Its layout and sums are drawn for you; ignore any layout or styling the brief describes and take only its facts.`;
+
+/** The document looks; the host lists them, this is the fallback. */
+export const LOOKS = ["ledger", "signal", "press", "slate", "atlas"];
+
+/**
+ * The look a brief names. The looks are ordinary words ("press", "slate"),
+ * so a name counts only beside "look", "template" or "style", or
+ * capitalised after "in" or "use": "in the Signal look", "Look: Slate",
+ * "Print it in Atlas", but not "press coverage" or "a clean slate".
+ */
+export const namedLook = (
+  brief: string,
+  looks: readonly string[] = LOOKS
+): string | null => {
+  const word = "(?:look|template|style|design|theme)";
+  for (const look of looks) {
+    const title = look[0]!.toUpperCase() + look.slice(1);
+    const named = [
+      new RegExp(`\\b${look}\\s+${word}\\b`, "i"),
+      new RegExp(
+        `\\b${word}\\s*[:=]?\\s*(?:called\\s+|named\\s+)?["'“]?${look}\\b`,
+        "i"
+      ),
+      new RegExp(`\\b(?:[Ii]n|[Uu]se|[Uu]sing)\\s+(?:the\\s+)?${title}\\b`),
+    ];
+    if (named.some((pattern) => pattern.test(brief))) return look;
+  }
+  return null;
+};
+
+/** The brief as the sub-agent reads it: a form is named before anything else. */
+export const briefFor = (brief: string, look: string | null = null): string => {
+  const kind = formKindOf(brief);
+  const lines = [
+    ...(kind != null ? [formHint(kind)] : []),
+    ...(look != null
+      ? [
+          `The user asked for the "${look}" look: pass template "${look}" to set_document; no other look is accepted.`,
+        ]
+      : []),
+  ];
+  return lines.length === 0 ? brief : `${lines.join("\n")}\n\n${brief}`;
+};
+
 const THEMES = ["light", "dark"] as const;
 const TEXT_SIZES = ["normal", "large"] as const;
 
@@ -72,7 +194,10 @@ const SYSTEM_PROMPT = [
   "  2. `document_templates`: the looks available, and what each suits. Choose the one that",
   "     fits; never skip this, and never leave the template unset.",
   "  3. `set_document`: the title, a one-sentence standfirst, the shape and that template.",
-  "  4. `write_section` once per section, in order.",
+  "  4. `write_section` once per section, in order. EXCEPT an invoice, a quote or",
+  "     estimate, a proposal, a worksheet or study guide, an activity report, a",
+  "     resume/CV, a letter or a certificate: these have a fixed, designed layout. Call",
+  "     `fill_form` once instead of writing sections, and pick the template for its look.",
   "  5. `render_document`: prints it and returns the path. Call this exactly once,",
   "     when every section is written.",
   "",
@@ -84,6 +209,10 @@ const SYSTEM_PROMPT = [
   "A report shape in the Press look is a perfectly good document; so is an editorial shape",
   "in Ledger. Pick the shape from what the content is and the template from how it should",
   "feel to the person receiving it.",
+  "",
+  "Write the document in the language the user wrote in, and pass that language to",
+  'set_document (e.g. "tr"): form labels and money then print in it. Dates too: write',
+  'them as that language does ("12 Aralık 2026", not "12 December 2026").',
   "",
   "Theme and text size are arguments to set_document, not something to achieve by",
   "editing CSS. A dark theme in particular cannot be done in CSS: the page margins are",
@@ -118,6 +247,8 @@ export interface DocumentContext {
   hostServices: HostServiceClient;
   skillPaths: string[];
   model?: unknown;
+  /** The user's recent messages and what the bot read (request-facts.ts). */
+  requestSources?: () => RequestSources;
 }
 
 export interface DocumentResult {
@@ -163,6 +294,7 @@ const failed = (text: string): ReturnType<PiToolDefinitionLike["execute"]> =>
  * stateless and an abandoned run leaves nothing to clean up.
  */
 interface Draft {
+  form: { kind: string; data: Record<string, unknown> } | null;
   title: string;
   standfirst: string;
   template: string;
@@ -171,218 +303,363 @@ interface Draft {
   textSize: DocumentTextSize;
   sections: Array<{ heading: string; html: string }>;
   printed: DocumentResult | null;
+  /** The look the user named: set_document refuses any other. */
+  required?: string | null;
+  /** The document's language code: its form labels, dates and money. */
+  language?: string;
 }
 
-const buildDraftTools = (
+/** Every string in a form's fields, with the path it sits at. */
+const strings = (
+  value: unknown,
+  at: string
+): Array<{ at: string; text: string }> =>
+  typeof value === "string"
+    ? [{ at, text: value }]
+    : Array.isArray(value)
+      ? value.flatMap((each, index) => strings(each, `${at}[${index + 1}]`))
+      : value != null && typeof value === "object"
+        ? Object.entries(value).flatMap(([key, each]) =>
+            strings(each, at.length > 0 ? `${at}.${key}` : key)
+          )
+        : [];
+
+/** The same value with every stand-in taken out of its strings. */
+const scrubbed = (value: unknown): unknown =>
+  typeof value === "string"
+    ? withoutPlaceholders(value)
+    : Array.isArray(value)
+      ? value.map(scrubbed)
+      : value != null && typeof value === "object"
+        ? Object.fromEntries(
+            Object.entries(value).map(([key, each]) => [key, scrubbed(each)])
+          )
+        : value;
+
+/** Stand-ins in what is about to print, each named with where it is. */
+const standinsIn = (draft: Draft): string[] => [
+  ...(draft.form != null
+    ? strings(draft.form.data, "")
+        .filter((each) => placeholdersIn(each.text).length > 0)
+        .map((each) => `${each.at}: ${JSON.stringify(each.text)}`)
+    : []),
+  ...draft.sections.flatMap((section) =>
+    placeholdersIn(section.html.replace(/<[^>]+>/g, " ")).map(
+      (found) => `section "${section.heading}": ${found}`
+    )
+  ),
+];
+
+export const buildDraftTools = (
   draft: Draft,
   outputPath: string,
-  hostServices: HostServiceClient
-): PiToolDefinitionLike[] => [
-  {
-    name: "document_templates",
-    label: "document_templates",
-    description:
-      "The looks a document can be printed in: each one's name, what it suits, and its " +
-      "mood. Call this before set_document and choose one: there is no undecorated option, " +
-      "because an undecorated document is not a neutral choice but the absence of one.",
-    parameters: Type.Object({}),
-    execute: async () => {
-      try {
-        const result = (await hostServices.request(
-          "document_templates",
-          {}
-        )) as {
-          templates?: Array<Record<string, unknown>>;
-        };
+  hostServices: HostServiceClient,
+  /** The fixed form the brief asks for; its first section is refused once. */
+  formKind: FormKind | null = null
+): PiToolDefinitionLike[] => {
+  let pointedAtForm = false;
+  let standinsChecked = false;
+  return [
+    {
+      name: "document_templates",
+      label: "document_templates",
+      description:
+        "The looks a document can be printed in: each one's name, what it suits, and its " +
+        "mood. Call this before set_document and choose one: there is no undecorated option, " +
+        "because an undecorated document is not a neutral choice but the absence of one.",
+      parameters: Type.Object({}),
+      execute: async () => {
+        try {
+          const result = (await hostServices.request(
+            "document_templates",
+            {}
+          )) as {
+            templates?: Array<Record<string, unknown>>;
+          };
 
-        return ok(JSON.stringify(result.templates ?? [], null, 1), {
-          count: (result.templates ?? []).length,
-        });
-      } catch (error) {
-        return failed(
-          `The look-book could not be read: ${error instanceof Error ? error.message : String(error)}`
-        );
-      }
-    },
-  },
-  {
-    name: "set_document",
-    label: "set_document",
-    description:
-      "The document's title, standfirst, style and appearance. Call once, before writing " +
-      "sections; calling again replaces all of it.",
-    parameters: Type.Object({
-      title: Type.String({ description: "The document title." }),
-      standfirst: Type.String({ description: "One sentence under the title." }),
-      style: Type.Union(STYLES.map((style) => Type.Literal(style))),
-      template: Type.Optional(
-        Type.String({
-          description:
-            "A slug from document_templates. Required in practice: always choose one.",
-        })
-      ),
-      theme: Type.Optional(
-        Type.Union(
-          THEMES.map((theme) => Type.Literal(theme)),
-          {
-            description:
-              'Page colour. Defaults to light. "dark" prints edge to edge and drops page numbers.',
-          }
-        )
-      ),
-      text_size: Type.Optional(
-        Type.Union(
-          TEXT_SIZES.map((size) => Type.Literal(size)),
-          {
-            description:
-              'Defaults to normal. "large" is for reading on a screen.',
-          }
-        )
-      ),
-    }),
-    execute: async (_id, params) => {
-      const style = String(params.style ?? "");
-      const theme = String(params.theme ?? "light");
-      const textSize = String(params.text_size ?? "normal");
-
-      draft.title = String(params.title ?? "").slice(0, 160);
-      draft.standfirst = String(params.standfirst ?? "").slice(0, 400);
-      draft.style = (STYLES as readonly string[]).includes(style)
-        ? (style as DocumentStyle)
-        : "report";
-      draft.template = String(params.template ?? "").trim() || "atlas";
-      draft.theme = (THEMES as readonly string[]).includes(theme)
-        ? (theme as DocumentTheme)
-        : "light";
-      draft.textSize = (TEXT_SIZES as readonly string[]).includes(textSize)
-        ? (textSize as DocumentTextSize)
-        : "normal";
-
-      if (draft.title.length === 0) return failed("A document needs a title.");
-
-      return ok(
-        `Set: "${draft.template}" template, ${draft.style} shape, ${draft.theme} theme, ${draft.textSize} text.`
-      );
-    },
-  },
-  {
-    name: "write_section",
-    label: "write_section",
-    description:
-      "Append one section: its heading, and its body as an HTML fragment. Sections print " +
-      "in the order they are written. The heading is printed for you; do not repeat it in the body.\n\n" +
-      'Images work: `<img src="https://…">` is fetched and embedded when the document is ' +
-      "printed, as is a path to a local file. Use `<figure>` with a `<figcaption>` for a caption. " +
-      "An image that cannot be fetched is dropped and reported, so check what render_document says " +
-      "before calling the document illustrated.",
-    parameters: Type.Object({
-      heading: Type.String({ description: "The section heading." }),
-      html: Type.String({
-        description: "The section body, as an HTML fragment.",
-      }),
-    }),
-    execute: async (_id, params) => {
-      if (draft.sections.length >= MAX_SECTIONS) {
-        return failed(
-          `A document is capped at ${MAX_SECTIONS} sections. Render what you have.`
-        );
-      }
-
-      const heading = String(params.heading ?? "").trim();
-      const html = String(params.html ?? "").trim();
-
-      if (heading.length === 0) return failed("A section needs a heading.");
-      if (html.length === 0) return failed("A section needs a body.");
-
-      draft.sections.push({ heading, html });
-
-      return ok(`Section ${draft.sections.length} written: "${heading}".`);
-    },
-  },
-  {
-    name: "render_document",
-    label: "render_document",
-    description:
-      "Print the document and return its path. Call once, when every section is written. " +
-      "The page layout, stylesheet and paper size are not yours to choose: this owns them.",
-    parameters: Type.Object({}),
-    execute: async () => {
-      if (draft.title.length === 0) return failed("Call set_document first.");
-      if (draft.sections.length === 0)
-        return failed("Write at least one section first.");
-      if (draft.printed != null) {
-        return failed(
-          `Already printed to ${modelPath(draft.printed.pdfPath ?? "")}. Do not render twice.`
-        );
-      }
-
-      try {
-        const result = (await hostServices.request("render_document", {
-          outputPath,
-          title: draft.title,
-          standfirst: draft.standfirst,
-          style: draft.style,
-          template: draft.template,
-          theme: draft.theme,
-          textSize: draft.textSize,
-          sections: draft.sections,
-        })) as {
-          pdfPath?: string;
-          htmlPath?: string;
-          pages?: number;
-          previewPath?: string | null;
-          images?: number;
-          droppedImages?: string[];
-        };
-
-        if (typeof result?.pdfPath !== "string") {
-          return failed("The host printed nothing and gave no path.");
+          return ok(JSON.stringify(result.templates ?? [], null, 1), {
+            count: (result.templates ?? []).length,
+          });
+        } catch (error) {
+          return failed(
+            `The look-book could not be read: ${error instanceof Error ? error.message : String(error)}`
+          );
         }
+      },
+    },
+    {
+      name: "set_document",
+      label: "set_document",
+      description:
+        "The document's title, standfirst, style and appearance. Call once, before writing " +
+        "sections; calling again replaces all of it.",
+      parameters: Type.Object({
+        title: Type.String({ description: "The document title." }),
+        standfirst: Type.String({
+          description: "One sentence under the title.",
+        }),
+        style: Type.Union(STYLES.map((style) => Type.Literal(style))),
+        template: Type.Optional(
+          Type.String({
+            description:
+              "A slug from document_templates. Required in practice: always choose one.",
+          })
+        ),
+        theme: Type.Optional(
+          Type.Union(
+            THEMES.map((theme) => Type.Literal(theme)),
+            {
+              description:
+                'Page colour. Defaults to light. "dark" prints edge to edge and drops page numbers.',
+            }
+          )
+        ),
+        language: Type.Optional(
+          Type.String({
+            description:
+              'The language the document is written in, as a code: "en", "tr", "de-DE". Form labels and money print in it; write every field, heading and date in it too.',
+          })
+        ),
+        text_size: Type.Optional(
+          Type.Union(
+            TEXT_SIZES.map((size) => Type.Literal(size)),
+            {
+              description:
+                'Defaults to normal. "large" is for reading on a screen.',
+            }
+          )
+        ),
+      }),
+      execute: async (_id, params) => {
+        const style = String(params.style ?? "");
+        const theme = String(params.theme ?? "light");
+        const textSize = String(params.text_size ?? "normal");
 
-        draft.printed = {
-          text: "",
-          turns: 0,
-          stoppedBy: "completed",
-          pdfPath: result.pdfPath,
-          ...(typeof result.pages === "number" ? { pages: result.pages } : {}),
-          ...(typeof result.htmlPath === "string"
-            ? { htmlPath: result.htmlPath }
-            : {}),
-        };
+        draft.title = String(params.title ?? "").slice(0, 160);
+        if (
+          typeof params.language === "string" &&
+          params.language.trim().length > 0
+        )
+          draft.language = params.language.trim();
+        draft.standfirst = String(params.standfirst ?? "").slice(0, 400);
+        draft.style = (STYLES as readonly string[]).includes(style)
+          ? (style as DocumentStyle)
+          : "report";
+        const template = String(params.template ?? "")
+          .trim()
+          .toLowerCase();
+        if (
+          draft.required != null &&
+          template.length > 0 &&
+          template !== draft.required
+        )
+          return failed(
+            `The user asked for the "${draft.required}" look. Call set_document again with template "${draft.required}".`
+          );
+        draft.template = template || draft.required || "atlas";
+        draft.theme = (THEMES as readonly string[]).includes(theme)
+          ? (theme as DocumentTheme)
+          : "light";
+        draft.textSize = (TEXT_SIZES as readonly string[]).includes(textSize)
+          ? (textSize as DocumentTextSize)
+          : "normal";
 
-        // Images are reported, never assumed.
-        const dropped = Array.isArray(result.droppedImages)
-          ? result.droppedImages
-          : [];
+        if (draft.title.length === 0)
+          return failed("A document needs a title.");
 
         return ok(
-          [
-            `Printed ${result.pages ?? "?"} pages to ${modelPath(result.pdfPath)}.`,
-            `Editable source: ${result.htmlPath == null ? "not reported" : modelPath(result.htmlPath)}.`,
-            ...(typeof result.images === "number" && result.images > 0
-              ? [`Images printed: ${result.images}.`]
-              : []),
-            ...(dropped.length > 0
-              ? [
-                  `${dropped.length} image${dropped.length === 1 ? "" : "s"} could NOT be printed and ${
-                    dropped.length === 1 ? "is" : "are"
-                  } missing from the PDF:`,
-                  ...dropped.map((line) => `  ${line}`),
-                  "Do not describe the document as illustrated unless it has the images you meant.",
-                ]
-              : []),
-            "You are done. Say what you wrote.",
-          ].join("\n"),
-          { pdfPath: result.pdfPath }
+          `Set: "${draft.template}" template, ${draft.style} shape, ${draft.theme} theme, ${draft.textSize} text.`
         );
-      } catch (error) {
-        return failed(
-          `The document could not be printed: ${error instanceof Error ? error.message : String(error)}`
-        );
-      }
+      },
     },
-  },
-];
+    {
+      name: "write_section",
+      label: "write_section",
+      description:
+        "Append one section: its heading, and its body as an HTML fragment. Sections print " +
+        "in the order they are written. The heading is printed for you; do not repeat it in the body.\n\n" +
+        'Images work: `<img src="https://…">` is fetched and embedded when the document is ' +
+        "printed, as is a path to a local file. Use `<figure>` with a `<figcaption>` for a caption. " +
+        "An image that cannot be fetched is dropped and reported, so check what render_document says " +
+        "before calling the document illustrated.",
+      parameters: Type.Object({
+        heading: Type.String({ description: "The section heading." }),
+        html: Type.String({
+          description: "The section body, as an HTML fragment.",
+        }),
+      }),
+      execute: async (_id, params) => {
+        if (draft.sections.length >= MAX_SECTIONS) {
+          return failed(
+            `A document is capped at ${MAX_SECTIONS} sections. Render what you have.`
+          );
+        }
+
+        const heading = String(params.heading ?? "").trim();
+        const html = String(params.html ?? "").trim();
+
+        if (heading.length === 0) return failed("A section needs a heading.");
+        if (html.length === 0) return failed("A section needs a body.");
+        if (formKind != null && draft.form == null && !pointedAtForm) {
+          pointedAtForm = true;
+          return failed(
+            `${formHint(formKind)} If this really is not one, write the section again.`
+          );
+        }
+
+        draft.sections.push({ heading, html });
+
+        return ok(`Section ${draft.sections.length} written: "${heading}".`);
+      },
+    },
+    {
+      name: "fill_form",
+      label: "fill_form",
+      description:
+        "For an invoice, a quote/estimate, a proposal, a worksheet/study guide, an activity report, a resume/CV, a letter or a certificate: fill its fields and the renderer lays it " +
+        "out (in place of write_section). Call once, after set_document; calling again " +
+        "replaces it. Leave out fields you have no facts for; never invent them.\n\n" +
+        FORM_FIELDS,
+      parameters: Type.Object({
+        kind: Type.Union(FORM_KINDS.map((kind) => Type.Literal(kind))),
+        data: Type.Record(Type.String(), Type.Unknown(), {
+          description: "The fields for that kind, as listed above.",
+        }),
+      }),
+      execute: async (_id, params) => {
+        const kind = String(params.kind ?? "");
+        if (!(FORM_KINDS as readonly string[]).includes(kind))
+          return failed(`kind must be one of: ${FORM_KINDS.join(", ")}.`);
+        const data =
+          params.data != null && typeof params.data === "object"
+            ? (params.data as Record<string, unknown>)
+            : {};
+        draft.form = { kind, data };
+        return ok(
+          `The ${kind} is filled (${Object.keys(data).length} fields). Call render_document.`
+        );
+      },
+    },
+    {
+      name: "render_document",
+      label: "render_document",
+      description:
+        "Print the document and return its path. Call once, when every section is written. " +
+        "The page layout, stylesheet and paper size are not yours to choose: this owns them.",
+      parameters: Type.Object({}),
+      execute: async () => {
+        if (draft.title.length === 0) return failed("Call set_document first.");
+        if (draft.sections.length === 0 && draft.form == null)
+          return failed("Write at least one section (or fill_form) first.");
+        if (draft.printed != null) {
+          return failed(
+            `Already printed to ${modelPath(draft.printed.pdfPath ?? "")}. Do not render twice.`
+          );
+        }
+
+        // A stand-in such as "[Month, Year]" never prints: listed once, then
+        // taken out.
+        const standins = standinsIn(draft);
+        if (standins.length > 0 && !standinsChecked) {
+          standinsChecked = true;
+          return failed(
+            [
+              "Not printed yet: these still hold template stand-ins, which would print as written:",
+              ...standins.slice(0, 40).map((line) => `  ${line}`),
+              "",
+              "Replace each with the fact from the brief, or leave the field out. Any stand-in still",
+              "there next time is taken out. Then call render_document again.",
+            ].join("\n")
+          );
+        }
+        if (standins.length > 0) {
+          if (draft.form != null)
+            draft.form = {
+              ...draft.form,
+              data: scrubbed(draft.form.data) as Record<string, unknown>,
+            };
+          draft.sections = draft.sections.map((section) => ({
+            ...section,
+            html: section.html.replace(
+              />([^<]*)</g,
+              (_all, text: string) =>
+                `>${placeholdersIn(text).length > 0 ? withoutPlaceholders(text) : text}<`
+            ),
+          }));
+        }
+
+        try {
+          const result = (await hostServices.request("render_document", {
+            outputPath,
+            title: draft.title,
+            standfirst: draft.standfirst,
+            style: draft.style,
+            template: draft.template,
+            theme: draft.theme,
+            textSize: draft.textSize,
+            ...(draft.language != null ? { language: draft.language } : {}),
+            sections: draft.form == null ? draft.sections : [],
+            ...(draft.form != null ? { form: draft.form } : {}),
+          })) as {
+            pdfPath?: string;
+            htmlPath?: string;
+            pages?: number;
+            previewPath?: string | null;
+            images?: number;
+            droppedImages?: string[];
+          };
+
+          if (typeof result?.pdfPath !== "string") {
+            return failed("The host printed nothing and gave no path.");
+          }
+
+          draft.printed = {
+            text: "",
+            turns: 0,
+            stoppedBy: "completed",
+            pdfPath: result.pdfPath,
+            ...(typeof result.pages === "number"
+              ? { pages: result.pages }
+              : {}),
+            ...(typeof result.htmlPath === "string"
+              ? { htmlPath: result.htmlPath }
+              : {}),
+          };
+
+          // Images are reported, never assumed.
+          const dropped = Array.isArray(result.droppedImages)
+            ? result.droppedImages
+            : [];
+
+          return ok(
+            [
+              `Printed ${result.pages ?? "?"} pages to ${modelPath(result.pdfPath)}.`,
+              `Editable source: ${result.htmlPath == null ? "not reported" : modelPath(result.htmlPath)}.`,
+              ...(typeof result.images === "number" && result.images > 0
+                ? [`Images printed: ${result.images}.`]
+                : []),
+              ...(dropped.length > 0
+                ? [
+                    `${dropped.length} image${dropped.length === 1 ? "" : "s"} could NOT be printed and ${
+                      dropped.length === 1 ? "is" : "are"
+                    } missing from the PDF:`,
+                    ...dropped.map((line) => `  ${line}`),
+                    "Do not describe the document as illustrated unless it has the images you meant.",
+                  ]
+                : []),
+              "You are done. Say what you wrote.",
+            ].join("\n"),
+            { pdfPath: result.pdfPath }
+          );
+        } catch (error) {
+          return failed(
+            `The document could not be printed: ${error instanceof Error ? error.message : String(error)}`
+          );
+        }
+      },
+    },
+  ];
+};
 
 /**
  * Writes one document and returns what happened. Never throws: a failure is
@@ -393,11 +670,20 @@ export async function runDocumentTask(
   brief: string,
   outputPath: string,
   emit: (event: AgentEvent) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  /** A look the user asked for by name, from the bot's document call. */
+  requested?: string
 ): Promise<DocumentResult> {
   let run: SubagentRunResult;
 
+  // A look the user named is a rule, not a hint: asked for Ledger, the bot
+  // briefed the writer without it and the proposal came out in Atlas.
+  const asked = requested?.trim().toLowerCase();
+  const required =
+    asked != null && LOOKS.includes(asked) ? asked : namedLook(brief);
+
   const draft: Draft = {
+    form: null,
     title: "",
     standfirst: "",
     template: "atlas",
@@ -406,6 +692,7 @@ export async function runDocumentTask(
     textSize: "normal",
     sections: [],
     printed: null,
+    required,
   };
   const forwardTools = forwardChildToolEvents("doc", emit);
 
@@ -450,7 +737,12 @@ export async function runDocumentTask(
       settingsManager: context.settingsManager,
       customTools: [
         ...(confinedBash != null ? [confinedBash] : []),
-        ...buildDraftTools(draft, outputPath, context.hostServices),
+        ...buildDraftTools(
+          draft,
+          outputPath,
+          context.hostServices,
+          formKindOf(brief)
+        ),
       ] as never,
       // Capabilities choices apply here too, or the shell comes back off-
       // switch.
@@ -465,7 +757,7 @@ export async function runDocumentTask(
     const session = created.session;
 
     try {
-      run = await runSubagent(session, brief, {
+      run = await runSubagent(session, briefFor(brief, required), {
         tag: "doc",
         forwardTools,
         timeoutMs: TIMEOUT_MS,

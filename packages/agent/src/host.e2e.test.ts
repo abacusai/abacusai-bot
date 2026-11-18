@@ -55,6 +55,9 @@ class Host {
         env: {
           ...process.env,
           ABACUSAI_BOT_HOME: home,
+          // The fake host answers the template path's render_document; the
+          // design system (on by default) asks for its own services.
+          ABACUSAI_BOT_DOCS_SYSTEM: "0",
         },
         stdio: ["pipe", "pipe", "pipe"],
       }

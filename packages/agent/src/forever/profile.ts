@@ -67,6 +67,8 @@ export interface ForeverProfile {
   statesReplyLanguage?: boolean;
   /** The person's saved language, when the profile keeps its own (the phone's check-in language). */
   knownReplyLanguage?(): KnownLanguage | null;
+  /** Whether the chat gets the document and deck components (`document`, `ppt`). */
+  components?: boolean;
   /** The profile's own pi tool definitions, ahead of browser_task and MCP. */
   tools(cwd: string, host: ProfileToolHost): unknown[];
   /** The MCP tools this chat gets, none unless named there; every one without it. */
