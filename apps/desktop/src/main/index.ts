@@ -7,6 +7,7 @@ import "./profile-home-init";
 // Main's requests use the system proxy and certificate store. Keep it second.
 import "./system-network-init";
 import fs from "fs/promises";
+import { pathToFileURL } from "node:url";
 import os from "os";
 import { join } from "path";
 import path from "path";
@@ -1293,6 +1294,34 @@ async function applyNativeLanguage(): Promise<void> {
  */
 const appOperations: AppOperations = {
   ...nodeFileOperations,
+  async relookDocument(path, look, design) {
+    const { relookDocument } =
+      await import("./services/agent-tools/docs-system/relook");
+    const done = await relookDocument(
+      path,
+      look as Parameters<typeof relookDocument>[1],
+      design
+    );
+    // A preview already showing the file reloads, the way its own reload
+    // button does (a file view refuses any other URL), then repaints.
+    const url = pathToFileURL(done.path).href;
+    for (const contents of electronWebContents.getAllWebContents())
+      if (!contents.isDestroyed() && contents.getURL().split("#")[0] === url) {
+        contents.once("did-finish-load", () => {
+          for (const wait of [300, 1000, 2500])
+            setTimeout(() => {
+              if (!contents.isDestroyed()) contents.invalidate();
+            }, wait);
+        });
+        contents.reload();
+      }
+    return done;
+  },
+  async documentDesigns(path) {
+    const { designsFor } =
+      await import("./services/agent-tools/docs-system/relook");
+    return designsFor(path);
+  },
   async openFolderDialog() {
     const result = await showOpenDialogFromApp({
       properties: ["openDirectory", "dontAddToRecent", "createDirectory"],
