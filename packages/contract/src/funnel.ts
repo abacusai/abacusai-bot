@@ -193,6 +193,12 @@ export const FUNNEL_STEPS = [
   "onboarding_offer_shown",
   "onboarding_offer_upgrade",
   "onboarding_offer_skip",
+  // The onboarding offer test's arm: the screen held back, and the same
+  // offer's card under the first finished result.
+  "onboarding_offer_held",
+  "first_result_offer_shown",
+  "first_result_offer_upgrade",
+  "first_result_offer_skip",
   // The welcome right after a payment lands; shown's detail is the tier and
   // what it leads with (paused, chat, task or none), the unlock's is what it
   // opens. continue (detail: tier) picks up the last chat on the top model;
@@ -265,6 +271,10 @@ export const ONBOARDING_OFFER_ACCOUNT_STEPS = {
   onboarding_offer_shown: "shown",
   onboarding_offer_upgrade: "upgrade",
   onboarding_offer_skip: "skip",
+  onboarding_offer_held: "held",
+  first_result_offer_shown: "first_result_shown",
+  first_result_offer_upgrade: "first_result_upgrade",
+  first_result_offer_skip: "first_result_skip",
 } as const satisfies Partial<Record<FunnelStep, string>>;
 
 export type OnboardingOfferAccountStep =

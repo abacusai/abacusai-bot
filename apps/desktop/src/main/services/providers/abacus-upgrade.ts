@@ -73,18 +73,18 @@ export const fetchUpgradeUrl = async (
 };
 
 /**
+ * The server's coin tosses this build can show, sent with every plan read
+ * (`experiments`): a toss runs, and counts an account, only for a build that
+ * lists it.
+ */
+const APP_EXPERIMENTS = ["opus_retry", "onboarding_offer"];
+
+/**
  * The signed-in account's plan, credits and upgrade paths: with `upgrade`, a
  * free account's upgrades carry its own one-time Basic and Pro links (minted
  * only then). Null when signed out, when the platform offers none, or when
  * the call fails.
  */
-/**
- * The server's coin tosses this build can show, sent with every plan read
- * (`experiments`): a toss runs, and counts an account, only for a build that
- * lists it.
- */
-const APP_EXPERIMENTS = ["opus_retry"];
-
 export const fetchBillingPlan = async (
   upgrade: boolean,
   /** A held sign-in's key, in place of the stored one. */

@@ -36,6 +36,7 @@ export const UPGRADE_SRCS = [
   "keep_running",
   "retry_top_model",
   "free_model_down",
+  "first_result",
 ] as const;
 
 export type UpgradeSrc = (typeof UPGRADE_SRCS)[number];
@@ -82,10 +83,18 @@ export interface BillingPlan {
    * servers, null for a paid plan or with the test off.
    */
   opusRetry?: OpusRetryArm | null;
+  /**
+   * Where the platform puts a new account's onboarding offer: on the
+   * onboarding screen, or held for one card under the first finished result
+   * (the onboarding offer test). Absent from older servers: onboarding.
+   */
+  onboardingOffer?: OnboardingOfferPlacement;
 }
 
 /** The arms of the top-model retry 50/50 (BillingPlan.opusRetry). */
 export type OpusRetryArm = "opus" | "dialog";
+
+export type OnboardingOfferPlacement = "onboarding" | "after_first_result";
 
 /** One of the paid plans' leading models. */
 export interface PlanTopModel {

@@ -19,6 +19,7 @@ import type {
   CreditThresholdMark,
 } from "../credit-thresholds";
 import type { DeliverableOfferCard } from "../deliverable-offer";
+import type { FirstResultOfferMark } from "../first-result-offer";
 import type { NextStepCard } from "../next-step";
 import type { RatingPromptCard } from "../rating-prompt";
 import type { ResumeCardMark } from "../resume-card";
@@ -259,6 +260,8 @@ export interface PrefsRow {
     resumeCard?: ResumeCardMark | null;
     /** The session-1 "Retry with <top model>" line, closed with its ×. */
     topModelRetryClosedAt?: number | null;
+    /** The onboarding offer held for the first finished result (first-result-offer.ts): held, shown and answered. */
+    firstResultOffer?: FirstResultOfferMark | null;
     freePlanSeenAt: number | null;
     upgradeRoutinesSeenAt: number | null;
     routineDuplicatesKept: string[];

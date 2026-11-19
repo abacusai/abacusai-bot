@@ -28,6 +28,7 @@
     "./experience": "./src/experience.ts",
     "./forbidden": "./src/forbidden.ts",
     "./free-pool": "./src/free-pool.ts",
+    "./first-result-offer": "./src/first-result-offer.ts",
     "./funnel": "./src/funnel.ts",
     "./github-watch": "./src/github-watch.ts",
     "./link-time-left": "./src/link-time-left.ts",

@@ -59,6 +59,7 @@ export const DEFAULT_PREFS: Required<PrefsRow> & {
     wallReopen: null,
     resumeCard: null,
     topModelRetryClosedAt: null,
+    firstResultOffer: null,
     freePlanSeenAt: null,
     upgradeRoutinesSeenAt: null,
     routineDuplicatesKept: [],

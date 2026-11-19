@@ -211,6 +211,8 @@ export interface ChatViewSlots {
   deliverableOfferPreview?: boolean;
   /** The gallery shows the "Send it to anyone" card without its once-per-chat rule, keeping no answer. */
   shareOfferPreview?: boolean;
+  /** The route's tour is running: the plan offer under a first result waits for it. */
+  offersWait?: boolean;
   /** The gallery shows the retry offer on this model, without its caps. */
   retryOfferPreview?: { label: string; plan: string; freeTop?: boolean };
   /** The gallery shows the card under a reply for this model and opus_retry arm. */

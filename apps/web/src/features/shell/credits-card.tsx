@@ -1,4 +1,5 @@
 import { wallOffer } from "@abacus-ai/contract/billing-plan";
+import { firstResultOfferPending } from "@abacus-ai/contract/first-result-offer";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowUpRight,
@@ -147,11 +148,17 @@ export const UpgradePromo = () => {
     staleTime: 60_000,
   });
   const offer = wallOffer(billing.data ?? null);
+  // The held onboarding offer is up under a result with the same pitch: this card waits.
+  const offerUp =
+    firstResultOfferPending(prefs.dismissals.firstResultOffer) &&
+    prefs.dismissals.firstResultOffer?.shownOn != null;
   if ((!held && tier !== "free" && !web) || !host)
     return createPortal(null, target);
   return createPortal(
     <AnimatePresence>
-      {state && (!pitching || billing.status !== "pending") ? (
+      {state &&
+      !(pitching && offerUp) &&
+      (!pitching || billing.status !== "pending") ? (
         <motion.aside
           key={key}
           data-slot="upgrade-promo"

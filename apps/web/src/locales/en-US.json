@@ -1265,6 +1265,8 @@
     "connectorsContinue": "Continue",
     "offer.title": "Start free, or get more from day one",
     "offer.body": "Your free credits are ready. Or upgrade now for everything below. You can also upgrade any time later.",
+    "offer.afterResultTitle": "Want more results like this?",
+    "offer.afterResultBody": "Upgrade for top models, more credits and everything below. Or keep going free.",
     "offer.startFree": "Start free",
     "frame.progress": "Step {{n}} of 5",
     "frame.failed": "Something went wrong. Try again.",

@@ -20,6 +20,7 @@
       "defaultMode": "legacy",
       "dismissals.creditThresholdCards": "legacy",
       "dismissals.deliverableOffer": "legacy",
+      "dismissals.firstResultOffer": "legacy",
       "dismissals.freePlanSeenAt": "legacy",
       "dismissals.keepRunningCards": "legacy",
       "dismissals.newLookSeenAt": "legacy",
@@ -106,6 +107,7 @@
       "dismissals": {
         "creditThresholdCards": {},
         "deliverableOffer": null,
+        "firstResultOffer": null,
         "freePlanSeenAt": null,
         "keepRunningCards": {},
         "newLookSeenAt": null,

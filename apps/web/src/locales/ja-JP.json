@@ -1265,6 +1265,8 @@
     "connectorsContinue": "Continue",
     "offer.title": "無料で始めるか、初日からもっと活用するか",
     "offer.body": "無料クレジットの準備ができました。今すぐアップグレードしてすべてを使うこともできます。アップグレードはあとからいつでも可能です。",
+    "offer.afterResultTitle": "このような結果をもっと得たいですか？",
+    "offer.afterResultBody": "アップグレードすると、トップモデル、より多くのクレジット、下記のすべてが使えます。無料のまま続けることもできます。",
     "offer.startFree": "無料で始める",
     "frame.progress": "5 ステップ中 {{n}}",
     "frame.failed": "問題が発生しました。もう一度お試しください。",

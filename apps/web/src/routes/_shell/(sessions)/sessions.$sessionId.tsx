@@ -126,6 +126,7 @@ import {
 import { shellStore } from "#renderer/features/shell/shell-store";
 import { SidePanelOverride } from "#renderer/features/shell/side-panel-slot";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
+import { useTourState } from "#renderer/features/tour";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import {
   SESSION_DEFAULTS,
@@ -340,6 +341,8 @@ const LiveTasks = ({
   />
 );
 const SessionRoute = () => {
+  // The offer cards under a reply wait while the tour runs.
+  const touring = useTourState() != null;
   const { sessionId } = Route.useParams();
   const { transport, chat: runtime } = Route.useRouteContext();
   const { t } = useTranslation();
@@ -570,6 +573,7 @@ const SessionRoute = () => {
             onOpenSubagent={(id) => select("agents", { agent: id })}
             onOpenDiff={openDiff}
             slots={{
+              offersWait: touring,
               composerNotice: (
                 <>
                   <SessionKnownFiles sessionId={sessionId} />
