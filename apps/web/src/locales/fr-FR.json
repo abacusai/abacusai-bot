@@ -1918,27 +1918,27 @@
       "recent": "Pick up where you left off in {{workspace}}",
       "build": {
         "orders-system": {
-          "name": "Application de commandes et réservations",
-          "detail": "Pour un commerce, une salle de sport, un salon ou une entreprise de services.",
+          "name": "Commandes et réservations",
+          "detail": "Boutiques, salles, salons, services.",
           "prompt": "Je gère une petite entreprise. Créez-moi une application simple sur cet ordinateur pour suivre mes commandes, réservations ou interventions : une liste que je peux compléter, rechercher et filtrer, une page pour chacune avec le client, la date, le statut et le prix, et un récapitulatif quotidien. Créez tout de suite une première version avec des données d'exemple pour un petit commerce typique, et ouvrez-la pour moi. Ensuite, demandez-moi en un court message ce que fait mon entreprise et ce que j'ai besoin de suivre, pour pouvoir l'adapter."
         },
         "business-site": {
           "name": "Site web pour mon entreprise",
-          "detail": "Services, horaires, avis et formulaire de contact.",
+          "detail": "Services, horaires et contact.",
           "prompt": "Créez un site web pour mon entreprise : un en-tête avec le nom de l'entreprise et ce qu'elle propose, une section services avec les prix, les horaires d'ouverture, quelques avis clients, où nous trouver et un formulaire de contact. Utilisez des informations provisoires que je pourrai remplacer plus tard, et vérifiez que le site s'affiche bien sur téléphone. Montrez-moi la page quand elle est prête, puis demandez-moi en un court message le nom de mon entreprise et ce qu'elle fait, pour pouvoir le personnaliser."
         },
         "lead-finder": {
           "name": "Trouver des clients",
-          "detail": "De nouveaux prospects chaque matin, avec un premier e-mail rédigé."
+          "detail": "Des prospects et un 1er e-mail."
         },
         "my-game": {
           "name": "Travailler sur mon jeu",
-          "detail": "Unity, Godot, Unreal ou Roblox, dans votre dossier de projet.",
+          "detail": "Unity, Godot, Unreal ou Roblox.",
           "prompt": "Aidez-moi avec mon jeu. Si aucun dossier de projet n'est ouvert, demandez-moi où se trouve le projet de mon jeu. Ensuite, parcourez-le et dites-moi quel moteur et quelle version il utilise, ses principales scènes et ses principaux scripts, et tout ce qui semble cassé ou inachevé. Proposez les trois prochaines étapes les plus utiles, et attendez que j'en choisisse une avant de modifier quoi que ce soit."
         },
         "morning-inbox": {
-          "name": "Répondre à mes e-mails chaque matin",
-          "detail": "Une réponse rédigée pour chaque e-mail qui demande votre attention."
+          "name": "Répondre à mes e-mails",
+          "detail": "Des réponses prêtes chaque matin."
         },
         "portfolio-site": {
           "name": "Site portfolio",
@@ -1947,7 +1947,7 @@
         },
         "numbers-dashboard": {
           "name": "Tableau de bord de mes chiffres",
-          "detail": "Ventes, coûts et tendances à partir de votre tableur.",
+          "detail": "Ventes, coûts et tendances.",
           "prompt": "Créez un tableau de bord pour les chiffres de mon entreprise : les totaux de ce mois-ci, un graphique par mois, les meilleurs produits ou clients, et tout ce qui sort de l'ordinaire. Commencez tout de suite avec des données de ventes d'exemple réalistes pour qu'il fonctionne, et montrez-le-moi. Ensuite, demandez-moi mon tableur ou mon fichier CSV, et passez le tableau de bord sur mes vrais chiffres."
         },
         "shop-page": {
@@ -1956,9 +1956,14 @@
           "prompt": "Crée une boutique d’une seule page pour ma petite entreprise : un en-tête avec le nom de la boutique, six produits d’exemple avec photos, noms, prix et un bouton Ajouter au panier, un panier simple et une section contact. Utilise des produits provisoires que je pourrai remplacer, et vérifie qu’elle s’affiche bien sur téléphone. Montre-moi la page quand elle est prête."
         },
         "simple-game": {
-          "name": "Un petit jeu",
-          "detail": "Jouable dans votre navigateur.",
-          "prompt": "Crée un petit jeu auquel je peux jouer tout de suite dans le navigateur : un jeu du serpent avec les flèches du clavier et le balayage, un score, un meilleur score et un bouton pour recommencer. Le tout sur une seule page, et montre-le-moi quand il est prêt."
+          "name": "Un jeu à jouer",
+          "detail": "Jouable en une minute environ.",
+          "prompt": "Crée-moi un jeu amusant auquel je peux jouer dans le navigateur en une minute environ : un jeu d'arcade où j'esquive des objets qui tombent, avec un écran d'accueil, des contrôles aux flèches et au toucher, un score et un meilleur score, un écran de fin de partie et un bouton pour rejouer. Garde-le sur une seule page qui tient dans la fenêtre, vérifie que chaque contrôle fonctionne et montre-le-moi quand il est prêt. Puis demande-moi en un court message quel jeu je veux, pour en faire le mien."
+        },
+        "my-project": {
+          "name": "Travailler sur mon app ou site",
+          "detail": "Une app ou un site sur ce PC.",
+          "prompt": "Aide-moi avec mon projet d'app ou de site web. Si aucun dossier de projet n'est ouvert, demande-moi où se trouve mon projet. Puis parcours-le et dis-moi avec quoi il est construit, comment le lancer, ses parties principales et tout ce qui semble cassé ou inachevé. Propose les trois prochaines étapes les plus utiles et attends que j'en choisisse une avant de modifier quoi que ce soit."
         }
       },
       "code": {

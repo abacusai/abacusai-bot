@@ -1919,35 +1919,35 @@
       "build": {
         "orders-system": {
           "name": "App per ordini e prenotazioni",
-          "detail": "Per un negozio, una palestra, un salone o un'attività di servizi.",
+          "detail": "Per negozi, palestre e servizi.",
           "prompt": "Ho una piccola attività. Creami su questo computer una semplice app per tenere traccia di ordini, prenotazioni o interventi: un elenco in cui posso aggiungere, cercare e filtrare, una pagina per ciascuno con cliente, data, stato e prezzo, e un riepilogo giornaliero. Crea subito una prima versione con dati di esempio per un tipico piccolo negozio e aprimela. Poi chiedimi in un breve messaggio di cosa si occupa la mia attività e cosa devo monitorare, così puoi adattarla."
         },
         "business-site": {
           "name": "Sito web per la mia attività",
-          "detail": "Servizi, orari, recensioni e un modulo di contatto.",
+          "detail": "Servizi, orari e contatti.",
           "prompt": "Crea un sito web per la mia attività: un'intestazione con il nome dell'attività e cosa offre, una sezione servizi con i prezzi, gli orari di apertura, alcune recensioni dei clienti, dove trovarci e un modulo di contatto. Usa dati segnaposto che posso sostituire in seguito e assicurati che si veda bene sul telefono. Mostrami la pagina quando è pronta, poi chiedimi in un breve messaggio il nome della mia attività e di cosa si occupa, così puoi personalizzarlo."
         },
         "lead-finder": {
           "name": "Trova clienti",
-          "detail": "Nuovi potenziali clienti ogni mattina, con una prima email già pronta."
+          "detail": "Nuovi contatti e prima email."
         },
         "my-game": {
           "name": "Lavora al mio gioco",
-          "detail": "Unity, Godot, Unreal o Roblox, nella cartella del tuo progetto.",
+          "detail": "Unity, Godot, Unreal o Roblox.",
           "prompt": "Aiutami con il mio gioco. Se non è aperta nessuna cartella di progetto, chiedimi dove si trova il progetto del mio gioco. Poi esaminalo e dimmi quale motore e quale versione usa, quali sono le scene e gli script principali e tutto ciò che sembra non funzionare o incompleto. Suggeriscimi i tre passi successivi più utili e aspetta che ne scelga uno prima di modificare qualsiasi cosa."
         },
         "morning-inbox": {
-          "name": "Rispondi alle mie email ogni mattina",
-          "detail": "Una bozza di risposta per ogni email che richiede la tua attenzione."
+          "name": "Rispondi alle mie email",
+          "detail": "Risposte pronte ogni mattina."
         },
         "portfolio-site": {
           "name": "Sito portfolio",
-          "detail": "Un sito di una pagina per il tuo lavoro.",
+          "detail": "Una pagina per il tuo lavoro.",
           "prompt": "Creami un sito portfolio di una sola pagina: un'intestazione con il mio nome e una frase di presentazione, una griglia con tre progetti di esempio, una sezione chi sono e una sezione contatti. Usa testi e immagini segnaposto che potrò sostituire, con uno stile pulito e moderno, e assicurati che si veda bene sul telefono. Mostrami la pagina quando è pronta."
         },
         "numbers-dashboard": {
           "name": "Dashboard dei miei numeri",
-          "detail": "Vendite, costi e andamenti dal tuo foglio di calcolo.",
+          "detail": "Vendite, costi e tendenze.",
           "prompt": "Crea una dashboard per i numeri della mia attività: i totali di questo mese, un grafico per mese, i prodotti o i clienti principali e qualsiasi dato insolito. Inizia subito con dati di vendita di esempio realistici, così funziona, e mostramela. Poi chiedimi il mio foglio di calcolo o file CSV e aggiorna la dashboard con i miei numeri reali."
         },
         "shop-page": {
@@ -1956,9 +1956,14 @@
           "prompt": "Crea un negozio di una sola pagina per la mia piccola attività: un'intestazione con il nome del negozio, sei prodotti di esempio con foto, nomi, prezzi e un pulsante Aggiungi al carrello, un carrello semplice e una sezione contatti. Usa prodotti segnaposto che potrò sostituire e assicurati che si veda bene sul telefono. Mostrami la pagina quando è pronta."
         },
         "simple-game": {
-          "name": "Un gioco semplice",
-          "detail": "Da giocare nel browser.",
-          "prompt": "Crea un gioco semplice a cui posso giocare subito nel browser: il gioco del serpente con comandi da frecce e swipe, punteggio, record e un pulsante per ricominciare. Tutto in una sola pagina, e mostramelo quando è pronto."
+          "name": "Un gioco da giocare",
+          "detail": "Giocabile in circa un minuto.",
+          "prompt": "Creami un gioco divertente a cui posso giocare nel browser in circa un minuto: un gioco arcade in cui schivo oggetti che cadono, con schermata iniziale, comandi con le frecce e touch, punteggio e record, schermata di game over e un pulsante per ricominciare. Tienilo in una sola pagina che entra nella finestra, controlla che ogni comando funzioni e mostramelo quando è pronto. Poi chiedimi in un breve messaggio che gioco voglio, così lo trasformi nel mio."
+        },
+        "my-project": {
+          "name": "Lavora alla mia app o al mio sito",
+          "detail": "App o sito su questo computer.",
+          "prompt": "Aiutami con il mio progetto di app o sito web. Se non è aperta nessuna cartella di progetto, chiedimi dove si trova. Poi esaminalo e dimmi con cosa è fatto, come si avvia, le sue parti principali e tutto ciò che sembra rotto o incompleto. Suggerisci i tre passi successivi più utili e aspetta che ne scelga uno prima di cambiare qualsiasi cosa."
         }
       },
       "code": {

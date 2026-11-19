@@ -52,17 +52,20 @@ export const PROJECT_STARTERS: readonly ProjectStarter[] = [
     categories: ["business", "automate"],
   },
   { id: "portfolio-site", kind: "build", categories: ["websites"] },
+  // Popular's last row: a game playable in about a minute, and the coder's own project.
+  { id: "simple-game", kind: "build", categories: ["games"] },
+  { id: "my-project", kind: "build", categories: ["websites"] },
   {
     id: "numbers-dashboard",
     kind: "build",
     categories: ["business", "automate"],
   },
   { id: "shop-page", kind: "build", categories: ["business", "websites"] },
-  { id: "simple-game", kind: "build", categories: ["games"] },
 ];
 
-/** Tiles a tab shows: two rows of the screen's two columns. */
+/** Tiles a tab shows: three rows of the screen's two columns; Popular gets a fourth. */
 export const PROJECT_SLOTS = 6;
+export const POPULAR_SLOTS = 8;
 
 /**
  * The projects a tab shows, in catalog order. Popular is the catalog's head.
@@ -77,7 +80,7 @@ export const projectsIn = (
     (project) =>
       !hide.includes(project.id) &&
       (tab === "popular" || project.categories.includes(tab))
-  ).slice(0, PROJECT_SLOTS);
+  ).slice(0, tab === "popular" ? POPULAR_SLOTS : PROJECT_SLOTS);
 
 /** The build projects, as the start page offers them after a build pick. */
 export const BUILD_PROJECTS = PROJECT_STARTERS.filter(

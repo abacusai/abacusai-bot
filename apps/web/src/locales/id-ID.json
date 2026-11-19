@@ -1919,35 +1919,35 @@
       "build": {
         "orders-system": {
           "name": "Aplikasi pesanan dan reservasi",
-          "detail": "Untuk toko, gym, salon, atau usaha jasa.",
+          "detail": "Untuk toko, gym, salon, dan jasa.",
           "prompt": "Saya punya usaha kecil. Buatkan saya aplikasi sederhana di komputer ini untuk mencatat pesanan, reservasi, atau pekerjaan servis saya. Saya ingin ada daftar yang bisa saya tambah, cari, dan filter, halaman untuk setiap entri berisi pelanggan, tanggal, status, dan harga, serta ringkasan harian. Langsung buat versi pertama dengan data contoh untuk toko kecil pada umumnya, lalu bukakan untuk saya. Setelah itu, tanyakan dalam satu pesan singkat apa bidang usaha saya dan apa saja yang perlu saya catat, supaya kamu bisa menyesuaikannya."
         },
         "business-site": {
           "name": "Situs web untuk usaha saya",
-          "detail": "Layanan, jam buka, ulasan, dan formulir kontak.",
+          "detail": "Layanan, jam buka, dan kontak.",
           "prompt": "Buatkan situs web untuk usaha saya: bagian atas berisi nama usaha dan apa yang ditawarkan, bagian layanan beserta harganya, jam buka, beberapa ulasan pelanggan, lokasi kami, dan formulir kontak. Pakai detail contoh yang bisa saya ganti nanti, dan pastikan tampilannya pas di ponsel. Tunjukkan halamannya kalau sudah siap, lalu tanyakan dalam satu pesan singkat nama usaha saya dan apa bidangnya, supaya kamu bisa menyesuaikannya."
         },
         "lead-finder": {
           "name": "Cari pelanggan",
-          "detail": "Calon pelanggan baru tiap pagi, lengkap dengan draf email pertama."
+          "detail": "Prospek baru dan draf email."
         },
         "my-game": {
           "name": "Kerjakan game saya",
-          "detail": "Unity, Godot, Unreal, atau Roblox, langsung di folder proyek Anda.",
+          "detail": "Unity, Godot, Unreal, atau Roblox.",
           "prompt": "Bantu saya mengerjakan game saya. Kalau belum ada folder proyek yang terbuka, tanyakan di mana folder proyek game saya. Lalu periksa isinya dan beri tahu saya engine dan versi yang dipakai, scene dan skrip utamanya, serta apa saja yang tampak rusak atau belum selesai. Sarankan tiga langkah berikutnya yang paling berguna, dan tunggu saya memilih salah satu sebelum mengubah apa pun."
         },
         "morning-inbox": {
           "name": "Balas email saya setiap pagi",
-          "detail": "Draf balasan untuk setiap email yang perlu Anda tanggapi."
+          "detail": "Draf balasan setiap pagi."
         },
         "portfolio-site": {
           "name": "Situs portofolio",
-          "detail": "Situs satu halaman untuk karya Anda.",
+          "detail": "Satu halaman untuk karyamu.",
           "prompt": "Buatkan saya situs web portofolio satu halaman: bagian atas dengan nama saya dan satu kalimat perkenalan, grid berisi tiga contoh proyek, bagian tentang saya, dan bagian kontak. Gunakan teks dan gambar contoh yang bisa saya ganti nanti, buat tampilannya bersih dan modern, dan pastikan tampil baik di ponsel. Tunjukkan halamannya kalau sudah siap."
         },
         "numbers-dashboard": {
           "name": "Dasbor angka usaha saya",
-          "detail": "Penjualan, biaya, dan tren dari spreadsheet Anda.",
+          "detail": "Penjualan, biaya, dan tren.",
           "prompt": "Buatkan dasbor untuk angka-angka usaha saya: total bulan ini, grafik per bulan, produk atau klien teratas, dan apa pun yang tidak biasa. Langsung mulai dengan data penjualan contoh yang realistis supaya dasbornya berfungsi, lalu tunjukkan kepada saya. Setelah itu, minta spreadsheet atau file CSV saya, dan ganti dasbornya dengan angka asli saya."
         },
         "shop-page": {
@@ -1956,9 +1956,14 @@
           "prompt": "Buat toko satu halaman untuk usaha kecil saya: header dengan nama toko, enam contoh produk dengan foto, nama, harga, dan tombol Tambah ke keranjang, keranjang sederhana, dan bagian kontak. Gunakan produk contoh yang bisa saya ganti nanti, dan pastikan tampil baik di ponsel. Tunjukkan halamannya kalau sudah siap."
         },
         "simple-game": {
-          "name": "Game sederhana",
-          "detail": "Bisa dimainkan di browser.",
-          "prompt": "Buat game sederhana yang bisa langsung saya mainkan di browser: game ular dengan kontrol tombol panah dan geser, skor, skor terbaik, dan tombol mulai ulang. Cukup satu halaman, dan tunjukkan kalau sudah siap."
+          "name": "Game yang bisa kumainkan",
+          "detail": "Main dalam sekitar semenit.",
+          "prompt": "Buatkan aku game seru yang bisa kumainkan di browser dalam sekitar satu menit: game arcade di mana aku menghindari benda yang jatuh, dengan layar mulai, kontrol tombol panah dan sentuh, skor dan skor terbaik, layar game over, dan tombol main lagi. Buat dalam satu halaman yang pas di jendela, pastikan setiap kontrol berfungsi, dan tunjukkan padaku kalau sudah siap. Lalu tanyakan dalam satu pesan singkat game apa yang kuinginkan, supaya bisa kamu ubah jadi milikku."
+        },
+        "my-project": {
+          "name": "Kerjakan aplikasi atau situsku",
+          "detail": "Aplikasi atau situs di komputer ini.",
+          "prompt": "Bantu aku dengan proyek aplikasi atau situs webku. Kalau belum ada folder proyek yang terbuka, tanyakan di mana proyekku. Lalu periksa dan beri tahu aku dibuat dengan apa, cara menjalankannya, bagian-bagian utamanya, dan apa saja yang tampak rusak atau belum selesai. Sarankan tiga langkah berikutnya yang paling berguna, dan tunggu aku memilih satu sebelum mengubah apa pun."
         }
       },
       "code": {

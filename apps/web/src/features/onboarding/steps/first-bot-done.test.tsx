@@ -110,6 +110,8 @@ describe("FirstBotStep: what to do first", () => {
       "my-game",
       "morning-inbox",
       "portfolio-site",
+      "simple-game",
+      "my-project",
     ]);
     fireEvent.click(project("orders-system"));
     await vi.waitFor(() =>
@@ -371,7 +373,7 @@ describe("FirstBotStep: after a Gmail sign-in", () => {
     expect(screen.getByText("Or start a project")).toBeTruthy();
     // The Chief of Staff already reads the inbox: its project is not offered twice.
     expect(projects()).not.toContain("morning-inbox");
-    expect(projects()).toHaveLength(6);
+    expect(projects()).toHaveLength(8);
     fireEvent.click(screen.getByRole("button", { name: "Review drafts" }));
     await vi.waitFor(() =>
       expect(context.props.choose).toHaveBeenCalledWith({
@@ -443,6 +445,9 @@ describe("FirstBotStep: after a Gmail sign-in", () => {
     expect(screen.getByText("Answer me on Telegram")).toBeTruthy();
     expect(screen.getByText("Answer me on Discord")).toBeTruthy();
     expect(screen.getByRole("textbox", { name: "What you need" })).toBeTruthy();
+    // A connected GitHub is the way into the person's code: no folder tile beside it.
+    expect(projects()).not.toContain("my-project");
+    expect(projects()).toContain("numbers-dashboard");
 
     const github = document.querySelector('[data-first-choice="github"]')!;
     fireEvent.click(github.querySelector("button")!);
