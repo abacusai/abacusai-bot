@@ -3557,7 +3557,8 @@
       "askBot": "{{bot}} botuna soruldu: {{what}}",
       "giveTask": "{{bot}} botuna görev verildi: {{what}}",
       "memoryUpdated": "Bellek güncellendi: {{name}}",
-      "quiet": "{{time}} süredir çıktı yok"
+      "quiet": "{{time}} süredir çıktı yok",
+      "progress": "İlerleme"
     },
     "transcript": {
       "jump": "Sona git",

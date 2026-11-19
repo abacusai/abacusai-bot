@@ -43,6 +43,7 @@ import { RouterAfterUpgradeRow } from "../kit/router-after-upgrade";
 import { ShareOfferRow } from "../kit/share-offer";
 import {
   BusyLine,
+  runningCommandProgress,
   busyLabel,
   ErrorCard,
   FreeLaneChip,
@@ -186,6 +187,11 @@ const RunTail = ({ messages }: { messages: UIMessage[] }) => {
     <BusyLine
       label={busyLabel(t, { state, running, agents: subagents })}
       startedAt={active.startedAt}
+      command={
+        subagents === 0 && state.permissions.items.length === 0
+          ? runningCommandProgress(state, thread, messages)
+          : null
+      }
     />
   );
 };

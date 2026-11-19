@@ -3557,7 +3557,8 @@
       "askBot": "Chiesto a {{bot}}: {{what}}",
       "giveTask": "Attività assegnata a {{bot}}: {{what}}",
       "memoryUpdated": "Memoria aggiornata: {{name}}",
-      "quiet": "Nessun output da {{time}}"
+      "quiet": "Nessun output da {{time}}",
+      "progress": "Avanzamento"
     },
     "transcript": {
       "jump": "Jump to the end",

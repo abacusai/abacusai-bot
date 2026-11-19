@@ -3557,7 +3557,8 @@
       "askBot": "{{bot}}에게 질문함: {{what}}",
       "giveTask": "{{bot}}에게 작업을 전달함: {{what}}",
       "memoryUpdated": "메모리 업데이트됨: {{name}}",
-      "quiet": "{{time}} 동안 출력 없음"
+      "quiet": "{{time}} 동안 출력 없음",
+      "progress": "진행률"
     },
     "transcript": {
       "jump": "Jump to the end",

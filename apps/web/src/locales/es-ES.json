@@ -3557,7 +3557,8 @@
       "askBot": "Se ha preguntado a {{bot}}: {{what}}",
       "giveTask": "Se ha pasado una tarea a {{bot}}: {{what}}",
       "memoryUpdated": "Memoria actualizada: {{name}}",
-      "quiet": "Sin salida desde hace {{time}}"
+      "quiet": "Sin salida desde hace {{time}}",
+      "progress": "Progreso"
     },
     "transcript": {
       "jump": "Jump to the end",

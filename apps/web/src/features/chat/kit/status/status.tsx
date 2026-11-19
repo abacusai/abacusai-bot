@@ -3,6 +3,7 @@
  * bubble, run outcome markers, the error card with its action table (and
  * the upgrade variant), and notices.
  */
+import { progressOf } from "@abacus-ai/agent/terminal-progress";
 import { toolActivity } from "@abacus-ai/agent/tool-display";
 import {
   type BillingPlan,
@@ -94,15 +95,16 @@ import {
 } from "#renderer/ui/hover-card";
 import { Marker, MarkerContent, MarkerIcon } from "#renderer/ui/marker";
 
-import type {
-  Notice,
-  RunOutcomeRecord,
-  ThreadStoreState,
+import {
+  type Notice,
+  type RunOutcomeRecord,
+  type ThreadStoreState,
+  toolKey,
 } from "../../store/thread-store";
 import { formatElapsed, useSeconds } from "../clock";
 import { useChatView } from "../context";
 import { openModelPicker } from "../open-model-picker";
-import { toolTitle } from "../tools/tool-line";
+import { ProgressMeter, QUIET_AFTER_MS, toolTitle } from "../tools/tool-line";
 import {
   creditsExpired,
   useCreditWallTask,
@@ -155,7 +157,13 @@ const OUTCOME_CAUSES = new Set([
   "unknown",
 ]);
 
-type RunningCall = { id: string; name: string; title: string };
+/** `labelled`: the agent named what it does, so its title is already plain words. */
+type RunningCall = {
+  id: string;
+  name: string;
+  title: string;
+  labelled: boolean;
+};
 
 /** The tool calls of the active run still waiting on a result. */
 const runningCalls = (messages: readonly UIMessage[]): RunningCall[] => {
@@ -172,15 +180,15 @@ const runningCalls = (messages: readonly UIMessage[]): RunningCall[] => {
       part.type === "tool-call" &&
       !results.has(part.id) &&
       part.output == null
-    )
+    ) {
+      const input = (part.input as Record<string, unknown> | undefined) ?? {};
       calls.push({
         id: part.id,
         name: part.name,
-        title: toolTitle(
-          part.name,
-          (part.input as Record<string, unknown> | undefined) ?? {}
-        ),
+        title: toolTitle(part.name, input),
+        labelled: typeof input.label === "string" && input.label.trim() !== "",
       });
+    }
   return calls;
 };
 
@@ -232,12 +240,34 @@ export const longToolLabel = (
   const call = calls[0]!;
   const seenAt = callSeenAt.get(thread)?.get(call.id);
   if (seenAt == null || now - seenAt < LONG_TOOL_MS) return null;
-  const activity = toolActivity(call.name);
+  const activity = call.labelled ? null : toolActivity(call.name);
   return t("chat.busy.longTool", {
     activity:
       activity == null ? call.title : t(`chat.busy.activity.${activity}`),
     minutes: Math.floor((now - seenAt) / 60_000),
   });
+};
+
+/**
+ * How far the one running command says it has got, and since when it has
+ * been silent, for the busy line: the line the user sees while the group is
+ * collapsed. Null while several run or the one running is not a command.
+ */
+export const runningCommandProgress = (
+  state: ThreadStoreState,
+  thread: string,
+  messages: readonly UIMessage[]
+): { progress: number | null; quietSince: number } | null => {
+  const calls = runningCalls(messages);
+  if (calls.length !== 1 || calls[0]!.name !== "bash") return null;
+  const call = calls[0]!;
+  const seenAt = callSeenAt.get(thread)?.get(call.id);
+  if (seenAt == null) return null;
+  const key = toolKey(null, call.id);
+  return {
+    progress: progressOf(state.tools.output[key] ?? ""),
+    quietSince: Math.max(seenAt, state.tools.outputAt[key] ?? seenAt),
+  };
 };
 
 export const busyLabel = (
@@ -269,10 +299,13 @@ export const busyLabel = (
 export const BusyLine = ({
   label,
   startedAt,
+  command = null,
 }: {
   label: string;
   startedAt: number;
+  command?: ReturnType<typeof runningCommandProgress>;
 }) => {
+  const { t } = useTranslation();
   const now = useSeconds(true);
   return (
     <div
@@ -288,6 +321,16 @@ export const BusyLine = ({
         <span className="size-1.5 rounded-full bg-[var(--chat-status-running)]" />
       </span>
       <span className="shimmer min-w-0 truncate">{label}</span>
+      {command?.progress != null ? (
+        <ProgressMeter value={command.progress} />
+      ) : null}
+      {command != null && now - command.quietSince >= QUIET_AFTER_MS ? (
+        <span data-busy-quiet>
+          {t("chat.tool.quiet", {
+            time: formatElapsed(now - command.quietSince),
+          })}
+        </span>
+      ) : null}
       <span className="chat-mono font-normal">
         {formatElapsed(now - startedAt)}
       </span>

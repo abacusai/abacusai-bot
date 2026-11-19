@@ -323,6 +323,70 @@ const sessionRunning = (): RelayEvent[] =>
     }),
   ]);
 
+const sessionLongWork = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "DEFAULT"),
+    ...userTurn(
+      "r1",
+      "u1",
+      "Install Flutter and set up a new app in this folder.",
+      at(4)
+    ),
+    b.textStart("a1"),
+    b.textDelta(
+      "a1",
+      "Flutter's Windows bundle is about 1.8 GB, so this takes a few minutes. The Android tools install in the background meanwhile."
+    ),
+    ...b.toolCall("c1", "bash", "a1", {
+      command:
+        "curl -L -o flutter.zip https://storage.example.com/flutter_windows_3.50.0-stable.zip",
+      label: "Downloading Flutter (1.8 GB)",
+    }),
+    b.custom("tool.output", {
+      toolCallId: "c1",
+      output:
+        "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n" +
+        "                                 Dload  Upload   Total   Spent    Left  Speed\n" +
+        "\r 12 1781M   12  213M    0     0  10.1M      0  0:02:56  0:00:21  0:02:35 10.4M" +
+        "\r 45 1781M   45  801M    0     0  10.2M      0  0:02:54  0:01:18  0:01:36 11.5M",
+    }),
+    b.custom("agent.status", { status: "executing-tool" }),
+    b.custom("background.tasks", {
+      tasks: [
+        {
+          id: "bg-1",
+          kind: "job",
+          label: "Installing Android command-line tools",
+          command: "sdkmanager --install platform-tools build-tools;35.0.0",
+          startedAt: at(3),
+          lastOutputAt: Date.now() - 5_000,
+          lastLine: "[=========                ] 37% Unzipping... build-tools",
+          progress: 37,
+        },
+        {
+          id: "bg-2",
+          kind: "job",
+          label: "Accepting Android licences",
+          command: "yes | sdkmanager --licenses",
+          startedAt: at(2.5),
+          lastOutputAt: at(2),
+          lastLine: "Review licenses that have not been accepted (y/N)?",
+          progress: null,
+        },
+        {
+          id: "serve:4173",
+          kind: "serve",
+          label: null,
+          command: "http://localhost:4173",
+          startedAt: null,
+          lastOutputAt: null,
+          lastLine: "",
+          progress: null,
+        },
+      ],
+    }),
+  ]);
+
 const sessionReview = (): RelayEvent[] =>
   seqd([
     ...b.sessionReady("inc-1", "ACCEPTEDITS"),
@@ -1535,6 +1599,13 @@ export const SCENARIOS: Scenario[] = [
     canvas: ["SessionRunning"],
     skin: "session",
     events: sessionRunning,
+    view: { model: "RouteLLM" },
+  },
+  {
+    id: "session-long-work",
+    canvas: ["SessionRunning"],
+    skin: "session",
+    events: sessionLongWork,
     view: { model: "RouteLLM" },
   },
   {

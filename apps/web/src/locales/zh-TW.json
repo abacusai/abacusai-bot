@@ -3557,7 +3557,8 @@
       "askBot": "問了 {{bot}}：{{what}}",
       "giveTask": "把任務交給了 {{bot}}：{{what}}",
       "memoryUpdated": "記憶已更新：{{name}}",
-      "quiet": "已 {{time}} 沒有輸出"
+      "quiet": "已 {{time}} 沒有輸出",
+      "progress": "進度"
     },
     "transcript": {
       "jump": "跳到最後",

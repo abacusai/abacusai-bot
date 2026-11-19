@@ -3557,7 +3557,8 @@
       "askBot": "{{bot}}に質問しました: {{what}}",
       "giveTask": "{{bot}}にタスクを渡しました: {{what}}",
       "memoryUpdated": "メモリを更新しました: {{name}}",
-      "quiet": "{{time}} 出力なし"
+      "quiet": "{{time}} 出力なし",
+      "progress": "進行状況"
     },
     "transcript": {
       "jump": "Jump to the end",

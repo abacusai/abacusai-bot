@@ -3689,7 +3689,8 @@
       "askBot": "Zapytano {{bot}}: {{what}}",
       "giveTask": "Przekazano zadanie do {{bot}}: {{what}}",
       "memoryUpdated": "Zaktualizowano pamięć: {{name}}",
-      "quiet": "Brak wyjścia od {{time}}"
+      "quiet": "Brak wyjścia od {{time}}",
+      "progress": "Postęp"
     },
     "transcript": {
       "jump": "Przejdź na koniec",

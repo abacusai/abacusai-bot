@@ -3557,7 +3557,8 @@
       "askBot": "Bertanya kepada {{bot}}: {{what}}",
       "giveTask": "Memberikan tugas kepada {{bot}}: {{what}}",
       "memoryUpdated": "Memori diperbarui: {{name}}",
-      "quiet": "Tidak ada keluaran selama {{time}}"
+      "quiet": "Tidak ada keluaran selama {{time}}",
+      "progress": "Kemajuan"
     },
     "transcript": {
       "jump": "Jump to the end",

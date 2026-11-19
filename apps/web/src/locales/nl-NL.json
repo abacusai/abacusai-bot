@@ -3557,7 +3557,8 @@
       "askBot": "{{bot}} gevraagd: {{what}}",
       "giveTask": "Taak doorgegeven aan {{bot}}: {{what}}",
       "memoryUpdated": "Geheugen bijgewerkt: {{name}}",
-      "quiet": "Al {{time}} geen uitvoer"
+      "quiet": "Al {{time}} geen uitvoer",
+      "progress": "Voortgang"
     },
     "transcript": {
       "jump": "Naar het einde",

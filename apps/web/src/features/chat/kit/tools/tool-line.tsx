@@ -241,23 +241,27 @@ export const toolTitle = (
 export const QUIET_AFTER_MS = 30_000;
 
 /** How far a running command says it has got: a short bar and the number. */
-export const ProgressMeter = ({ value }: { value: number }) => (
-  <span
-    className="flex items-center gap-1.5"
-    role="progressbar"
-    aria-valuemin={0}
-    aria-valuemax={100}
-    aria-valuenow={value}
-  >
-    <span className="bg-muted h-1 w-12 overflow-hidden rounded-full">
-      <span
-        className="block h-full rounded-full bg-[var(--chat-status-running)]"
-        style={{ width: `${value}%` }}
-      />
+export const ProgressMeter = ({ value }: { value: number }) => {
+  const { t } = useTranslation();
+  return (
+    <span
+      className="flex items-center gap-1.5"
+      role="progressbar"
+      aria-label={t("chat.tool.progress")}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={value}
+    >
+      <span className="bg-muted h-1 w-12 overflow-hidden rounded-full">
+        <span
+          className="block h-full rounded-full bg-[var(--chat-status-running)]"
+          style={{ width: `${value}%` }}
+        />
+      </span>
+      <span className="tabular-nums">{value}%</span>
     </span>
-    <span className="tabular-nums">{value}%</span>
-  </span>
-);
+  );
+};
 
 const Meta = ({ meta }: { meta: ToolMeta }) => {
   const { t } = useTranslation();
