@@ -26,6 +26,12 @@ export interface ConnectivityChange {
   resumed: boolean;
 }
 
+/** One sleep, by the wall clock; `to` is null while it lasts. */
+export interface SleepSpan {
+  from: number;
+  to: number | null;
+}
+
 export interface ConnectivityOptions {
   /** Whether the Abacus API answers at all. */
   probe?: () => Promise<boolean>;
@@ -110,6 +116,7 @@ export class ConnectivityService {
   private asleepSince: number | null = null;
   private sleeps: Array<{ from: number; to: number }> = [];
   private readonly awakeTimers = new Set<AwakeTimer>();
+  private readonly sleepListeners = new Set<(span: SleepSpan) => void>();
   private readonly probe: () => Promise<boolean>;
   private readonly publicProbe: () => Promise<boolean>;
   private readonly changed: (snapshot: ConnectivitySnapshot) => void;
@@ -155,6 +162,27 @@ export class ConnectivityService {
       since: this.since,
       nextCheckAt: this.nextCheckAt,
     };
+  }
+
+  /**
+   * Each sleep as it starts (`to` null) and as it ends, at once and ahead of
+   * any probe: for the agents' own work-time budgets.
+   */
+  onSleep(listener: (span: SleepSpan) => void): () => void {
+    this.sleepListeners.add(listener);
+    return () => {
+      this.sleepListeners.delete(listener);
+    };
+  }
+
+  private publishSleep(span: SleepSpan): void {
+    for (const listener of Array.from(this.sleepListeners)) {
+      try {
+        listener(span);
+      } catch (error) {
+        console.error("[connectivity] sleep listener threw", error);
+      }
+    }
   }
 
   onChange(listener: (change: ConnectivityChange) => void): () => void {
@@ -216,6 +244,7 @@ export class ConnectivityService {
       this.log(
         `[power] suspend at ${new Date(this.asleepSince).toISOString()}`
       );
+      this.publishSleep({ from: this.asleepSince, to: null });
     }
     this.asleep = true;
     for (const timer of this.awakeTimers) {
@@ -235,6 +264,7 @@ export class ConnectivityService {
       this.log(
         `[power] resume at ${new Date(now).toISOString()} after ${Math.round((now - this.asleepSince) / 1000)}s asleep`
       );
+      this.publishSleep({ from: this.asleepSince, to: now });
     } else this.log(`[power] resume at ${new Date(now).toISOString()}`);
     this.asleepSince = null;
     this.asleep = false;

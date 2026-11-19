@@ -38,8 +38,10 @@ describe("the power clock", () => {
     expect(state.log[1]).toMatch(/^\[power\] resume at .* after 2400s asleep$/);
   });
 
-  it("a second suspend before the resume does not restart the sleep", () => {
+  it("a second suspend before the resume does not restart the sleep, and agents hear each end once", () => {
     const { state, service } = clock();
+    const spans: Array<{ from: number; to: number | null }> = [];
+    service.onSleep((span) => spans.push(span));
     const start = state.now;
     service.suspended();
     state.now += 60_000;
@@ -47,6 +49,11 @@ describe("the power clock", () => {
     state.now += 60_000;
     service.resumed();
     expect(service.asleepBetween(start, state.now)).toBe(120_000);
+    // Told at once, before any probe has answered.
+    expect(spans).toEqual([
+      { from: start, to: null },
+      { from: start, to: start + 120_000 },
+    ]);
   });
 
   it("says a resume was lost once a tick finds it asleep for over a minute", () => {
