@@ -33,6 +33,46 @@ export function onConnectivityRestored(listener: () => void): () => void {
   };
 }
 
+/** Sleeps older than this are forgotten; no budget counts back further. */
+const SLEEP_HISTORY_MS = 24 * 60 * 60_000;
+
+/** The host's power clock: when the current sleep began, and the last day's. */
+let asleepSince: number | null = null;
+let sleeps: Array<{ from: number; to: number }> = [];
+
+/**
+ * The host's word on a sleep (the `power` command): `to` null when the
+ * machine is going to sleep, set once it woke. Sent at once on each, ahead of
+ * any network probe, so a deadline read on wake already knows.
+ */
+export function setHostSleep(from: number, to: number | null): void {
+  if (to == null) {
+    asleepSince = from;
+    return;
+  }
+  sleeps = [
+    ...sleeps.filter((span) => to - span.to < SLEEP_HISTORY_MS),
+    { from, to },
+  ];
+  asleepSince = null;
+}
+
+/**
+ * Time the machine slept between `from` and `to`, a sleep not yet over
+ * included: what a work-time budget must not count.
+ */
+export function asleepBetween(from: number, to: number): number {
+  const spans =
+    asleepSince != null
+      ? [...sleeps, { from: asleepSince, to: Math.max(asleepSince, to) }]
+      : sleeps;
+  return spans.reduce(
+    (total, span) =>
+      total + Math.max(0, Math.min(to, span.to) - Math.max(from, span.from)),
+    0
+  );
+}
+
 let hostGone = false;
 const goneListeners = new Set<() => void>();
 

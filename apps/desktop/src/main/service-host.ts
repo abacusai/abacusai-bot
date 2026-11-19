@@ -6780,6 +6780,11 @@ export class ServiceHost {
   startCronScheduler(): void {
     // Every agent hears of a change at once; a routine held for the network
     // runs when it is back.
+    // Sleep goes out at once, ahead of the probe: a run's time budget read
+    // on wake must already know the night was not work.
+    this.connectivity.onSleep(({ from, to }) =>
+      this.agentManagerService.broadcastCommand({ type: "power", from, to })
+    );
     this.connectivity.onChange(({ state, resumed }) => {
       this.agentManagerService.broadcastCommand({
         type: "connectivity",

@@ -666,6 +666,8 @@ export type DesktopCommand =
   | { type: "refresh_providers" }
   /** The desktop's connectivity owner changed its mind, or the machine woke. */
   | { type: "connectivity"; state: string; resumed?: boolean }
+  /** The machine is going to sleep (`to` null) or woke from it; see connectivity.ts. */
+  | { type: "power"; from: number; to: number | null }
   /** The Abacus balance as the desktop last read it; see credit-balance.ts. */
   | { type: "credit_balance"; remaining: number; granted: number; at: number }
   /** The account's credit wall as the desktop holds it. */

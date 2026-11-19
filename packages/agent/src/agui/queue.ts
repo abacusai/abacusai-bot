@@ -18,6 +18,7 @@ import {
   hostAttached,
   markHostGone,
   setHostConnectivity,
+  setHostSleep,
 } from "../connectivity.js";
 import { setHostCreditBalance } from "../credit-balance.js";
 import { setHostCreditWall } from "../credit-wall.js";
@@ -304,6 +305,11 @@ export class HostCore {
 
       case "connectivity":
         setHostConnectivity(command.state, command.resumed === true);
+
+        return;
+
+      case "power":
+        setHostSleep(command.from, command.to);
 
         return;
 
