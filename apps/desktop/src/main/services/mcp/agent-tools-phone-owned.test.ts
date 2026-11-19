@@ -609,14 +609,21 @@ describe("paid-plan capabilities", () => {
     );
     expect(text).not.toContain("https://upgrade.example/basic");
     expect(text).toMatch(/Give the upgrade link exactly as written/);
+    // The script first, then the plan: the user leaves with something made.
     expect(text).toMatch(
-      /Open your reply with the yes: .*"Basic gives you video generation in Abacus AI Agent on the web: \$7 for the first month \(30% off the usual \$10\/mo\), then \$10\/mo\."/
+      /Your reply first does, right now and in text, the part this chat makes for their request: the script, laid out to read at a glance/
+    );
+    expect(text).toMatch(
+      /Then tell them .*Open those lines with the yes: .*"Basic gives you video generation in Abacus AI Agent on the web: \$7 for the first month \(30% off the usual \$10\/mo\), then \$10\/mo\."/
     );
     expect(text).toMatch(/Never say you cannot do it/);
     expect(text).toMatch(/no Canva, Hugging Face or other connector/);
     expect(text).toMatch(/ffmpeg, Blender, Python/);
-    // A yes reposts the link and starts nothing; a no ends the pitch.
-    expect(text).toMatch(/Offer no other work in this reply/);
+    // No question to end on, so a yes still means only the plan; a no ends the pitch.
+    expect(text).not.toMatch(/Offer no other work in this reply/);
+    expect(text).toMatch(
+      /End with no question: when suggest_tasks is in your tool list, call it last, even beside the card/
+    );
     expect(text).toMatch(
       /A yes \(yes, ok, sure, sim, evet, dale .*: .*the upgrade link again, exactly as written, on its own line\. Nothing else: do not start their request or any other work, and call no tool\./
     );
@@ -625,7 +632,7 @@ describe("paid-plan capabilities", () => {
     );
     expect(text).toMatch(/Never say you are making it/);
     expect(text).toMatch(
-      /A no or not now: .*Do not offer it again in this chat/
+      /A no or not now: one short line that it is fine, and nothing else: no plan, price or link.*Do not offer the plan again in this chat/
     );
   });
 
@@ -641,6 +648,8 @@ describe("paid-plan capabilities", () => {
     expect(text).toMatch(/Never say you cannot do it/);
     // Served here on a paid plan: no "on the web only" line.
     expect(text).not.toMatch(/This app does not make/);
+    // Nothing for this chat to make first: the plan alone, one question.
+    expect(text).toMatch(/Offer no other work in this reply/);
   });
 
   it("gives the upgrade link where no card can show: a bot answering in a chat app", async () => {
@@ -656,6 +665,9 @@ describe("paid-plan capabilities", () => {
       /image generation and editing on the web in Abacus AI Agent/
     );
     expect(text).toMatch(/attach it there/);
+    // The prompt first; a chat app shows no buttons, so the link ends it.
+    expect(text).toMatch(/first does, .*the prompt, ready to paste/);
+    expect(text).toMatch(/End on the link, with no question\./);
     // A chat app has no Settings to point at.
     expect(text).not.toMatch(/Settings, API keys/);
   });

@@ -76,8 +76,8 @@ const NEVER_CANNOT =
  * The reply's first words say what makes it and where. Asked for a video, the
  * model opened with "I can't make video here" and reached the plan only after.
  */
-const leadWithYes = (example: string): string =>
-  `Open your reply with the yes: your first words say what makes it and where, for example "${example}" (in their language). Never open with what this app or chat lacks.`;
+const leadWithYes = (example: string, opening = "your reply"): string =>
+  `Open ${opening} with the yes: your first words say what makes it and where, for example "${example}" (in their language). Never open with what this app or chat lacks.`;
 
 const NO_DETOURS =
   "Do not make it another way instead: no Canva, Hugging Face or other connector, and no local script or program (ffmpeg, Blender, Python and the like), unless the user named that app or tool themselves. This answer is the answer.";
@@ -99,23 +99,55 @@ const CHATLLM_APP_LINKS = `The ChatLLM app: iPhone ${CHATLLM_APP_URLS.iphone} An
 const elsewhere = (call: PaidFeatureCall): string =>
   call.place === "web" ? ` ${webOnly(call.feature, call.reply)}` : "";
 
-/**
- * How the next message is read. Offered a script beside the plan, users
- * answered "yes" and got a document; so the reply offers one thing, and a
- * yes, a no or a new ask each have one answer. `again` is what a yes gets.
- */
-const afterOffer = (
-  question: string,
-  again: string,
-  no = "say that is fine in one short line and carry on. Do not offer it again in this chat unless they ask for one of these again."
-): string[] => [
-  `Offer no other work in this reply (no script, storyboard or plan instead), and end with at most one short question: ${question}. A yes then means only that.`,
-  "When they answer it:",
+const NO_THANKS =
+  "say that is fine in one short line and carry on. Do not offer it again in this chat unless they ask for one of these again.";
+
+/** One answer each to a yes, a price ask, a no and anything else. */
+const answers = (again: string, no = NO_THANKS): string[] => [
   `- A yes (yes, ok, sure, sim, evet, dale or the like, in any language): one short line in their language and ${again}. Nothing else: do not start their request or any other work, and call no tool.`,
   `- Every later yes, ok, okay or sure, even right after you gave the link: ${again} once more. It is not a goodbye: never answer it with a thumbs-up or "let me know", and never say anything is being made or ready.`,
   "- They ask the price or what the plan gives: answer from the lines above, then the same link.",
   `- A no or not now: ${no}`,
   "- Anything else: do that, as usual.",
+];
+
+/**
+ * How the next message is read. Offered a script beside the plan, users
+ * answered "yes" and got a document; so the reply offers one thing, and a
+ * yes, a no or a new ask each have one answer. `again` is what a yes gets.
+ */
+const afterOffer = (question: string, again: string, no?: string): string[] => [
+  `Offer no other work in this reply (no script, storyboard or plan instead), and end with at most one short question: ${question}. A yes then means only that.`,
+  "When they answer it:",
+  ...answers(again, no),
+];
+
+/**
+ * What a free app chat makes itself for the ask, in text, before the plan.
+ * Given only the pitch, first-day users got nothing for their ask and left.
+ */
+const FREE_PART: Partial<Record<string, string>> = {
+  video_gen:
+    'the script, laid out to read at a glance: a bold one-line title, then 4 to 6 shots as a list, one short line each (the time in bold, what is on screen, then the on-screen text or voice-over in quotes), then "Caption:" with one line and a few hashtags for where it will be posted. No table and no extra notes',
+  image_gen:
+    "the prompt, ready to paste: one quote block of two to four sentences (subject, layout, style and colours, any text on it in quotes; for an edit, the exact change), then one line with the size for where it goes. No extra notes",
+  tts: "the text to be read, in one quote block of short lines with (pause) marks where the voice should rest, then one line on tone and length. No extra notes",
+};
+
+/** Told "carry on", a no got the script and the link all over again. */
+const NO_AFTER_FREE_PART =
+  "one short line that it is fine, and nothing else: no plan, price or link, and no repeat of what you made. Then offer the next step on it (suggest_tasks as above, where you have it). Do not offer the plan again in this chat unless they ask for one of these again.";
+
+/**
+ * How a reply that made the free part ends: on no question, so the plan
+ * stays the only thing a typed yes can mean. An app chat ends on buttons.
+ */
+const afterFreePart = (reply: PaidFeatureReply, again: string): string[] => [
+  reply === "card"
+    ? 'End with no question: when suggest_tasks is in your tool list, call it last, even beside the card, with one or two tasks of at most four or five words each, so they sit side by side, that carry the text you made further ("Write 3 more hooks", "Make a Reels version", "Caption in Spanish"), never one that makes the media itself.'
+    : "End on the link, with no question.",
+  "Their next message:",
+  ...answers(again, NO_AFTER_FREE_PART),
 ];
 
 /**
@@ -204,22 +236,26 @@ export function paidFeatureResult(
     call.place === "app"
       ? `${next.planName} gives you ${feature.name} right here: ${priceLine(next)}.`
       : `${next.planName} gives you ${feature.name} in Abacus AI Agent on the web: ${priceLine(next)}.`;
+  // Nobody answers a routine's result: it keeps the pitch alone.
+  const part = reply === "routine" ? undefined : FREE_PART[feature.feature];
   lines.push(
     "",
-    `Tell them in their language, in one or two short lines, that ${includes}, naming (in their language) the feature above that covers it, and its price. ${leadWithYes(example)}${call.place === "web" ? ` ${ATTACHED}` : ""}`,
+    ...(part != null
+      ? [
+          `Your reply first does, right now and in text, the part this chat makes for their request: ${part}. Short and ready to use, in their language: open straight on it, with at most one short lead-in such as "Here's your 30-second script, ready to shoot:", and say nothing about checking what this chat can do. Make it, never offer it; where a detail is missing, pick a sensible one instead of asking.`,
+        ]
+      : []),
+    `${part != null ? "Then tell them" : "Tell them"} in their language, in one or two short lines, that ${includes}, naming (in their language) the feature above that covers it, and its price. ${leadWithYes(example, part != null ? "those lines" : "your reply")}${call.place === "web" ? ` ${ATTACHED}` : ""}`,
     offer,
     `If no feature above covers ${feature.name}, do not say the plan includes it. ${NEVER_CANNOT} ${NO_DETOURS} Do not call ${PAID_FEATURE_TOOL} again for this request.`
   );
-  // Nobody answers a routine's result.
-  if (reply !== "routine")
-    lines.push(
-      ...afterOffer(
-        `whether they want ${next.planName}`,
-        link == null
-          ? "where they upgrade again (the mobile app, under Settings)"
-          : "the upgrade link again, exactly as written, on its own line"
-      )
-    );
+  const again =
+    link == null
+      ? "where they upgrade again (the mobile app, under Settings)"
+      : "the upgrade link again, exactly as written, on its own line";
+  if (part != null) lines.push(...afterFreePart(reply, again));
+  else if (reply !== "routine")
+    lines.push(...afterOffer(`whether they want ${next.planName}`, again));
   return host.ok(lines.join("\n"));
 }
 
@@ -337,8 +373,9 @@ const description = (host: HostCapabilities): string =>
     `${capitalized(names(host.withheldFeatures))}: the paid plans include these, and this account does not have them here.`,
     "When the user asks for one (to create, generate or edit an image, make a video, or make speech or audio, reading a",
     'text aloud included), call this first, before you write anything: no preamble, no "let me check", nothing about',
-    "what this chat lacks. It says which plan includes it and where, at what price, with the link and how to word your",
-    "reply, which opens with what the plan makes; the app offers them the upgrade or Abacus AI Agent on the web.",
+    "what this chat lacks. It says which plan includes it and where, at what price, with the link and how to word and",
+    "order your reply (on the free plan, the part this chat makes in text comes first); the app offers them the",
+    "upgrade or Abacus AI Agent on the web.",
     "Never tell the user you cannot do one of these or that it is not available, and never make one through a connector",
     "(Canva, Hugging Face) or a local script (ffmpeg, Blender, Python) instead, unless the user named that app. Reading",
     "or describing an image or video is not one of these.",

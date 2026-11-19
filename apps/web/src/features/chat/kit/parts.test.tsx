@@ -253,9 +253,47 @@ it("shows the card a reply points at outside the closed run", async () => {
   );
   const card = document.querySelector('[data-slot="paid-feature"]')!;
   expect(card.closest('[data-slot="tool-group"]')).toBeNull();
-  // The card splits the run: a closed run before it and one after.
-  expect(document.querySelectorAll('[data-slot="tool-group"]')).toHaveLength(2);
+  // The plan's card waits for the end of the reply: the run stays one.
+  expect(document.querySelectorAll('[data-slot="tool-group"]')).toHaveLength(1);
 });
+
+it.each(["session", "bot"] as const)(
+  "shows the plan's card under the reply and its buttons, though it was called first (%s)",
+  async (skin) => {
+    const relay = new FakeRelay();
+    relay.emitAll([
+      ...b.sessionReady(),
+      b.runStarted("free-part"),
+      b.textStart("calls"),
+      ...b.toolCall("c1", "paid_feature", "calls", { feature: "video_gen" }),
+      b.toolResult("c1", { text: "ok" }),
+      b.textEnd("calls"),
+      b.textStart("reply"),
+      b.textDelta("reply", "Here's your script, ready to shoot."),
+      ...b.toolCall("c2", "suggest_tasks", "reply", {
+        tasks: [{ text: "Write 3 more hooks" }],
+      }),
+      b.toolResult("c2", { text: "ok" }),
+      b.textEnd("reply"),
+      b.runFinished("free-part"),
+    ]);
+    current = await renderRelay(relay, skin);
+    const reply = await screen.findByText(
+      "Here's your script, ready to shoot."
+    );
+    const button = await screen.findByText("Write 3 more hooks");
+    await waitFor(() =>
+      expect(
+        document.querySelectorAll('[data-slot="paid-feature"]')
+      ).toHaveLength(1)
+    );
+    const card = document.querySelector('[data-slot="paid-feature"]')!;
+    const after = (a: Node, b: Node) =>
+      (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+    expect(after(reply, button)).toBe(true);
+    expect(after(button, card)).toBe(true);
+  }
+);
 
 it("keeps one collapsed run for every kind of tool call while streaming", async () => {
   const relay = new FakeRelay();
